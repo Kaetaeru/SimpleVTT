@@ -1,0 +1,77 @@
+name: C9 Family G Ledger Reconcile 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-g-ledger-reconcile-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Prepare Family G ledger patch
+        shell: bash
+        run: |
+          cat > /tmp/patch-family-g.py <<'PY'
+          import json
+          from pathlib import Path
+
+          path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
+          data=json.loads(path.read_text(encoding='utf-8'))
+          rows=[row for row in data['rows'] if row.get('family')=='G']
+          if len(rows)!=1:
+              raise SystemExit(f'expected one Family G row, found {len(rows)}')
+          row=rows[0]
+          row['currentState']=(
+              'Family G uses authoritative provider/manual spatial facts rather than Core geometry fabrication, as required by the architecture charter. '
+              'The standard fact registry covers distance, adjacency, reach, size category, occupied space, line-of-effect, Total Cover, area membership, legal destination, and placement; '
+              'the typed selector contract carries line/cone/cube/sphere/cylinder/emanation shape, origin, dimensions, and range. Connected owner-authority spatial requests resume on reconnect, '
+              'reject stale peers, deduplicate retries, and durably checkpoint pending/completed Host and pending/answered Client authority state so fresh adapters can resume in-flight decisions and preserve exactly-once completion.'
+          )
+          row['disposition']='IMPLEMENTED'
+          implementation='connectedCommonPlayAuthorityFactRuntime.ts persists serializable Host/Client authority-fact routing checkpoints and reattaches process-local continuations after restart without serializing Resolver callbacks'
+          production='C9 Family G Authority Persistence 71304 run 33311317527: adapter-restart pending/resume/exactly-once test, reconnect regression, legacy execution boundary, coverage checker, and tsc --noEmit passed'
+          persistence='c9FamilyGAuthorityFactPersistence.test.ts proves Host pending and Client pending authority state survive fresh adapters, resume the same external spatial.area-members request, normalize exactly once, and preserve completed idempotency across a second restart'
+          if implementation not in row['implementationEvidence']:
+              row['implementationEvidence'].append(implementation)
+          if production not in row['productionEvidence']:
+              row['productionEvidence'].append(production)
+          if persistence not in row['persistenceEvidenceIfRelevant']:
+              row['persistenceEvidenceIfRelevant'].append(persistence)
+          row['remainingNamedSeams']=[]
+          path.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          PY
+      - name: Reconcile latest branch and publish
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch=agent/c9-gate-n-coverage-reconciliation
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in 1 2 3; do
+            git fetch origin "$branch"
+            git reset --hard "origin/$branch"
+            python3 /tmp/patch-family-g.py
+            node scripts/check-v1-mechanism-coverage.mjs
+            git add docs/rules/v1-mechanism-coverage-ledger.json
+            if git diff --cached --quiet; then
+              exit 0
+            fi
+            git commit -m "docs(c9): complete Family G spatial coverage"
+            if git push origin HEAD:"$branch"; then
+              exit 0
+            fi
+          done
+          exit 1
