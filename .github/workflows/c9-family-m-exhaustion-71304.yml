@@ -1,0 +1,56 @@
+name: C9 Family M Exhaustion 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - tests/ui/c9FamilyMExhaustionProduction.test.ts
+      - .github/workflows/c9-family-m-exhaustion-71304.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: c9-family-m-exhaustion-71304
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Verify Family M portable exhaustion and self-retire
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --import tsx --test tests/ui/c9FamilyMExhaustionProduction.test.ts tests/ui/c9FamilyMConditionImmunityProduction.test.ts
+          npm exec tsc -- --noEmit
+          node scripts/check-v1-mechanism-coverage.mjs
+          node scripts/check-legacy-execution-boundary.mjs
+          branch=agent/c9-gate-n-coverage-reconciliation
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin "$branch"
+          git reset --hard "origin/$branch"
+          rm -f .github/workflows/c9-family-m-exhaustion-71304.yml
+          git add .github/workflows/c9-family-m-exhaustion-71304.yml
+          git diff --cached --check
+          git commit -m "ci(c9): retire Family M exhaustion verifier"
+          for attempt in $(seq 1 8); do
+            if git push origin HEAD:"$branch"; then
+              exit 0
+            fi
+            git fetch origin "$branch"
+            git rebase "origin/$branch" || { git rebase --abort || true; sleep 1; continue; }
+          done
+          exit 1
