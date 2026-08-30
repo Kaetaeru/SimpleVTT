@@ -505,17 +505,20 @@
         "commonPlaySpatialFactRuntime.ts COMMON_PLAY_STANDARD_FACTS defines provider/manual authority for spatial.distance-feet, spatial.adjacent, spatial.within-reach, spatial.line-of-effect, spatial.total-cover, spatial.area-members, spatial.legal-destination, and spatial.placement with normalized answers",
         "commonPlaySelectorRuntime.ts typed CommonPlayInstantArea supports line/cone/cube/sphere/cylinder/emanation with self/point origin and provider-owned authoritative area membership",
         "connectedCommonPlayAuthorityFactRuntime.ts routes authoritative Common Play fact requests and answers through the connected session authority path",
-        "common-play-resolver-architecture-charter.md section 6 requires spatial facts, target sets, and movement legality through provider or manual authority without Core geometry fabrication"
+        "common-play-resolver-architecture-charter.md section 6 requires spatial facts, target sets, and movement legality through provider or manual authority without Core geometry fabrication",
+        "commonPlayInterceptorProductionRuntimeAdapter.ts derives standard spatial.adjacent from authoritative module/theater-of-mind distance without content identity dispatch"
       ],
       "productionEvidence": [
         "c9FamilyGStandardSpatialFacts.test.ts proves provider-authoritative distance, line-of-effect, Total Cover, and normalized area membership without content identity dispatch",
         "C9 Family G Standard Spatial Facts run 33309874336: Family G targeted tests, legacy execution boundary, and tsc --noEmit all passed; only the verifier self-retirement step failed",
         "997bc175781a177496772dfba1d33aa61cfa6fae test(c9): prove standard spatial fact reconnect routing",
         "c9FamilyGConnectedSpatialFactRuntime.test.ts proves target-owner within-reach requests resume on owner reconnect, reject stale-peer responses, and resolve duplicate retries exactly once",
-        "C9 Family G Spatial Reconnect run 33310541111: commonPlaySpatialFactRuntime, connected authority routing/dispatch, legacy execution boundary, V1 coverage checker, and tsc --noEmit passed; spatial.area-members replay after owner rebind normalized membership and duplicate delivery resolved exactly once"
+        "C9 Family G Spatial Reconnect run 33310541111: commonPlaySpatialFactRuntime, connected authority routing/dispatch, legacy execution boundary, V1 coverage checker, and tsc --noEmit passed; spatial.area-members replay after owner rebind normalized membership and duplicate delivery resolved exactly once",
+        "c9FamilyGAdjacencyProduction.test.ts proves unknown and fully renamed installed RuleModules accept 5ft adjacency and reject 10ft separation through production Common Play"
       ],
       "identityInvarianceEvidence": [
-        "c9FamilyGStandardSpatialFacts.test.ts proves the same authoritative spatial facts under unrelated external resolution identities"
+        "c9FamilyGStandardSpatialFacts.test.ts proves the same authoritative spatial facts under unrelated external resolution identities",
+        "c9FamilyGAdjacencyProduction.test.ts preserves adjacency semantics after module/content/mechanic/interceptor/interaction/display rename"
       ],
       "connectedEvidenceIfRelevant": [
         "connectedCommonPlayAuthorityFactRouting.test.ts and connectedCommonPlayAuthorityFactDispatch.test.ts passed in Family G run 33309874336",
