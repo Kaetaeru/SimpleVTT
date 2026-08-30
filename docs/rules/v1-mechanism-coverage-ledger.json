@@ -688,7 +688,7 @@
         "commonPlayMovementRuntime.test.ts",
         "resolutionMovementOps.ts"
       ],
-      "currentState": "Family I is complete through canonical movement.relocate and generic RulesProfile-derived movement constraints. Unknown installed and fully renamed external Common Play production-executes walk, climb, swim, fly, crawl, jump, Difficult-Terrain-style cost multiplication, drag/carry multiplication, alternate-speed bounds, stand from Prone, push/pull/teleport, explicit no-provoke movement, zero-speed rejection, connected replay/reconnect, and event-native Undo without content identity dispatch.",
+      "currentState": "Generic movement.relocate and movement.stand cover walk, climb, swim, fly, crawl, jump, push, pull, teleport, no-provoke movement, zero-speed rejection, rules-derived cost composition, drag/carry, and Prone standing. Portable property.modify supplies identity-independent alternate-speed grants such as movement.fly, and unknown installed Common Play proves grant -> production movement -> Undo plus full identity rename invariance. Family I has no remaining Gate N movement execution seam.",
       "requiredSemantics": [
         "walk",
         "climb",
@@ -715,7 +715,8 @@
         "conditions.ts effectiveSpeed/proneStandingCost plus commonPlayOperationRuntime.ts movement.stand lowering reuse shared movement budget and Effect removal owners",
         "dnd.srd-5.2.1.profile.json registers movement.fly and movement.cost.multiplier; installedCommonPlayRuntimeAdapter.ts commonPlayActorProfileProperties resolves generic Resolver property modifiers and supplies them to commonPlayMovementRuntime.ts without content identity dispatch",
         "commonPlayMovementRuntime.ts structurally composes movement.cost.multiplier and movement.drag-carry.multiplier while preserving alternate-speed bounds through movement.<type> profile properties",
-        "commonPlayMovementRuntime.ts composes generic movement.cost.multiplier and movement.drag-carry.multiplier with movement-type speed bounds without content identity dispatch"
+        "commonPlayMovementRuntime.ts composes generic movement.cost.multiplier and movement.drag-carry.multiplier with movement-type speed bounds without content identity dispatch",
+        "Common Play property.modify supplies portable movement.<type> grants to the shared effect-aware RulesProfile property resolver; commonPlayMovementRuntime.ts consumes those structural movement properties for relocation without content identity dispatch"
       ],
       "productionEvidence": [
         "installedCommonPlayLoweredFamiliesProduction.test.ts mapless stored movement and Undo",
@@ -727,7 +728,8 @@
         "c069949e80d8931013ee621108486f979bef4dff fix(c9): normalize portable movement rejection; C9 Family I Rules Constraints 71304 run 33314826038 passed rules-derived movement cost and alternate-speed production tests, movement/Prone regressions, legacy execution boundary, V1 coverage checker, and tsc --noEmit",
         "c9FamilyIRulesDerivedMovementProduction.test.ts unknown external Common Play property.modify derives a Difficult-Terrain-style movement.cost.multiplier and alternate movement.fly speed into production movement; C9 Family I Baseline 71304 run 33315100853 passed this proof, the retained movement matrix, legacy boundary, coverage checker, and tsc --noEmit",
         "3944dec61960f3842e784dceafc29700b25e391f test(c9): verify drag carry movement property; C9 Family I Drag Carry Proof 71304 run 33315183958 passed focused domain/production movement and Prone tests, legacy execution boundary, V1 coverage checker, and tsc --noEmit",
-        "1edcedfa5a2e8e300e7106e60436fd267c407a29 test(c9): prove drag carry movement authority; C9 Family I Drag Carry Proof 71304 run 33315183958 passed unknown and renamed external RuleModule movement-cost, drag/carry, alternate-speed, Undo, legacy-boundary, coverage, and typecheck verification"
+        "1edcedfa5a2e8e300e7106e60436fd267c407a29 test(c9): prove drag carry movement authority; C9 Family I Drag Carry Proof 71304 run 33315183958 passed unknown and renamed external RuleModule movement-cost, drag/carry, alternate-speed, Undo, legacy-boundary, coverage, and typecheck verification",
+        "C9 Family I Final Verifier 71304 run 33315323863 passed unknown portable movement grant, generic movement production, rules-derived movement cost, Prone standing, legacy execution boundary, V1 coverage checker, and tsc --noEmit at 0644025b00862da8f6cf79934a656eb906a7dcd2"
       ],
       "identityInvarianceEvidence": [
         "commonPlayMovementRuntime.test.ts external definition identity independence",
@@ -736,7 +738,8 @@
         "c9FamilyIMovementProduction.test.ts retained external identity rename preserves the production movement matrix including no-provoke routing",
         "c9FamilyIRulesDerivedMovementProduction.test.ts preserves rules-derived movement cost and alternate-speed semantics after unrelated external module/content/mechanic identity rename",
         "c9FamilyIMovementProduction.test.ts preserves rules-derived Difficult Terrain and movement.drag-carry.multiplier semantics after unrelated external module/content/mechanic identity rename",
-        "c9FamilyIRulesDerivedMovementProduction.test.ts preserves Difficult Terrain, drag/carry multiplier, alternate-speed, and Undo semantics after complete external module/content/mechanic identity rename"
+        "c9FamilyIRulesDerivedMovementProduction.test.ts preserves Difficult Terrain, drag/carry multiplier, alternate-speed, and Undo semantics after complete external module/content/mechanic identity rename",
+        "c9FamilyIMovementGrantProduction.test.ts proves arbitrary external and fully renamed module/content/mechanic identities grant movement.fly through property.modify and consume it through movement.relocate without named movement dispatch"
       ],
       "connectedEvidenceIfRelevant": [
         "installedCommonPlayLoweredFamiliesProduction.test.ts unknown stored movement converges through Host replay, duplicate handling, Undo, and reconnect"
