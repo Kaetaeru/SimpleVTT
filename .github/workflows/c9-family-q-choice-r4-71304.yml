@@ -1,5 +1,5 @@
 name: C9 Family Q Choice R4 71304
-# rerun-trigger: 71304-q-choice-r4-direct-target-semantics
+# rerun-trigger: 71304-q-choice-r4-effect-expectation
 
 on:
   push:
@@ -59,18 +59,12 @@ jobs:
               text=text.replace(damage,healing,1)
           elif healing not in text:
               raise SystemExit('Q fixture operation anchor changed')
-          changed='assert.equal(snapshot.scene.entities.find((entity)=>entity.id===actorId)?.hp,hpBefore-1);'
-          unchanged='assert.equal(snapshot.scene.entities.find((entity)=>entity.id===actorId)?.hp,hpBefore);'
-          if changed in text:
-              text=text.replace(changed,unchanged,1)
-          elif text.count(unchanged)<2:
+          expected_damage='assert.equal(snapshot.scene.entities.find((entity)=>entity.id===actorId)?.hp,hpBefore-1);'
+          expected_healing='assert.equal(snapshot.scene.entities.find((entity)=>entity.id===actorId)?.hp,hpBefore+1);'
+          if expected_damage in text:
+              text=text.replace(expected_damage,expected_healing,1)
+          elif expected_healing not in text:
               raise SystemExit('Q fixture HP assertion anchor changed')
-          expected='{delta:1,selectedCount:2}'
-          neutral='{delta:0,selectedCount:2}'
-          if expected in text:
-              text=text.replace(expected,neutral)
-          elif neutral not in text:
-              raise SystemExit('Q rename-invariance delta anchor changed')
           reaction='assert.equal(snapshot.scene.economyByActor[actorId]?.reaction,false);'
           reaction_diag='assert.equal(snapshot.scene.economyByActor[actorId]?.reaction,false,JSON.stringify(snapshot.resolution));'
           if reaction in text:
