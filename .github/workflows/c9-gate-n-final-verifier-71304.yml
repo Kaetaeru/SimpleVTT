@@ -1,5 +1,5 @@
 name: C9 Gate N Final Verifier 71304
-# final verifier rerun after reconciled zero-INCOMPLETE ledger and latest evidence commits
+# final verifier rerun on reconciled zero-INCOMPLETE head after concentration evidence
 
 on:
   push:
@@ -55,7 +55,7 @@ jobs:
             exit 1
           fi
           git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git checkout -B agent/c9-gate-n-coverage-reconciliation "$VERIFIED_SHA"
           git rm .github/workflows/c9-gate-n-final-verifier-71304.yml
           git commit -m "ci(c9): verify Gate N completion"
