@@ -1,0 +1,68 @@
+name: C9 Family I Prone Stand Fast Land V2 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-i-prone-stand-fast-land-v2-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  land:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Extract verified effective-speed patcher from immutable commit
+        shell: bash
+        run: |
+          git show e9942b10f1ea68a01a95446932b203e270d97fd4:.github/workflows/c9-family-i-prone-stand-land-71304.yml > /tmp/source.yml
+          python3 - <<'PY'
+          from pathlib import Path
+          source=Path('/tmp/source.yml').read_text(encoding='utf-8')
+          start="          cat > /tmp/apply-prone.py <<'PY'\n"
+          end="\n          PY\n"
+          if start not in source:
+              raise SystemExit('immutable prone patcher marker missing')
+          body=source.split(start,1)[1].split(end,1)[0]
+          Path('/tmp/apply-prone.py').write_text('\n'.join(line[10:] if line.startswith('          ') else line for line in body.splitlines())+'\n',encoding='utf-8')
+          PY
+      - name: Land verified slice with short lease window
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch=agent/c9-gate-n-coverage-reconciliation
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in $(seq 1 60); do
+            git fetch origin "$branch" >/dev/null
+            current=$(git rev-parse "origin/$branch")
+            git reset --hard "$current" >/dev/null
+            python3 /tmp/apply-prone.py
+            npm run generate:content >/dev/null
+            npx tsx --test tests/domain/commonPlayProneStandRuntime.test.ts tests/ui/c9FamilyIMovementProduction.test.ts >/dev/null
+            node scripts/check-v1-mechanism-coverage.mjs >/dev/null
+            node scripts/check-legacy-execution-boundary.mjs >/dev/null
+            git add schemas/common-play-contract.schema.json src/domain/commonPlayOperationRuntime.ts src/domain/resolutionTypes.ts src/domain/resolutionActionOps.ts tests/domain/commonPlayProneStandRuntime.test.ts tests/ui/c9FamilyIMovementProduction.test.ts docs/rules/v1-mechanism-coverage-ledger.json
+            if git diff --cached --quiet; then
+              echo "Family I prone stand slice already landed"
+              exit 0
+            fi
+            git commit -q -m "feat(c9): route prone standing through Common Play"
+            if git push -q --force-with-lease=refs/heads/$branch:$current origin HEAD:$branch; then
+              echo "Landed on attempt $attempt"
+              exit 0
+            fi
+            sleep 0.2
+          done
+          exit 1
