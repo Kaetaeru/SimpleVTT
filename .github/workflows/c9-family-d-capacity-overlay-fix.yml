@@ -86,3 +86,5 @@ jobs:
           git commit -m "fix(c9): preserve durable temporary resource capacity projection"
           git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
           git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
+
+# Trigger the verified repo-native fixer for the current C9 convergence.
