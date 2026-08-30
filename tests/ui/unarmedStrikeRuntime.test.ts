@@ -79,6 +79,53 @@ test("Unarmed control runtime follows payload semantics after action ID rename",
   assert.ok(snapshot.scene.entities.find((entry)=>entry.id==="combatant.goblin-a")?.status.some((status)=>status.includes("붙잡힘")));
 });
 
+test("Unarmed damage grapple and shove execute from structural payloads after action identity and presentation rename", async () => {
+  const cases=[
+    {canonicalId:"action.unarmed-strike.damage",renamedId:"action.external.unarmed.damage",targetId:"combatant.goblin-a",kind:"damage" as const},
+    {canonicalId:"action.unarmed-strike.grapple",renamedId:"action.external.unarmed.control-a",targetId:"combatant.goblin-a",kind:"grapple" as const},
+    {canonicalId:"action.unarmed-strike.shove-prone",renamedId:"action.external.unarmed.control-b",targetId:"combatant.goblin-b",kind:"shove" as const},
+  ];
+
+  for(const probe of cases) {
+    const adapter=new MockAdapter();
+    await ready(adapter);
+    const baseline=await adapter.getSnapshot();
+    const source=baseline.scene.actionsByActor["char.aelar"]?.find((entry)=>entry.id===probe.canonicalId);
+    assert.ok(source);
+    if(probe.kind==="damage") {
+      assert.equal(source.runtimeAttack?.sourceKind,"unarmed");
+      assert.equal(source.damage?.[0].dice,"0d2");
+    } else {
+      assert.equal(source.runtimeSaveCondition?.choose,"highest");
+      assert.deepEqual(source.runtimeSaveCondition?.abilities,["str","dex"]);
+    }
+
+    const beforeHp=baseline.scene.entities.find((entry)=>entry.id===probe.targetId)?.hp;
+    const originalGetSnapshot=adapter.getSnapshot.bind(adapter);
+    adapter.getSnapshot=async()=>{
+      const snapshot=await originalGetSnapshot();
+      const action=snapshot.scene.actionsByActor["char.aelar"]?.find((entry)=>entry.id===probe.canonicalId);
+      if(action) {
+        action.id=probe.renamedId;
+        action.name=`External ${probe.kind}`;
+      }
+      return snapshot;
+    };
+
+    await adapter.setQueuedD20(probe.kind==="damage"?20:1);
+    await adapter.resolveAction(probe.renamedId,[probe.targetId]);
+    const snapshot=probe.kind==="damage"?await finish(adapter):await adapter.getSnapshot();
+    assert.equal(snapshot.resolution?.actionId,probe.renamedId);
+    if(probe.kind==="damage") {
+      assert.equal(snapshot.scene.entities.find((entry)=>entry.id===probe.targetId)?.hp,beforeHp!-(source.damage?.[0].flat??0));
+    } else if(probe.kind==="grapple") {
+      assert.ok(snapshot.scene.entities.find((entry)=>entry.id===probe.targetId)?.status.some((status)=>status.includes("붙잡힘")));
+    } else {
+      assert.ok(snapshot.scene.entities.find((entry)=>entry.id===probe.targetId)?.status.some((status)=>status.includes("넘어짐")));
+    }
+  }
+});
+
 test("connected unarmed condition converges once on every client", async () => {
   const sessionId="session.unarmed-condition";
   const host=new MockAdapter();
