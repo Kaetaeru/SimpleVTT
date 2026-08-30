@@ -6,6 +6,7 @@ on:
       - agent/c9-gate-n-coverage-reconciliation
     paths:
       - .github/workflows/c9-family-i-baseline-71304.yml
+      - tests/ui/c9FamilyIRulesDerivedMovementProduction.test.ts
   workflow_dispatch:
 
 permissions:
@@ -22,7 +23,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run generate:content
-      - run: node --import tsx --test tests/ui/c9FamilyIMovementProduction.test.ts
+      - run: node --import tsx --test tests/ui/c9FamilyIMovementProduction.test.ts tests/ui/c9FamilyIRulesDerivedMovementProduction.test.ts
       - run: node scripts/check-legacy-execution-boundary.mjs
       - run: node scripts/check-v1-mechanism-coverage.mjs
       - run: npm exec tsc -- --noEmit
