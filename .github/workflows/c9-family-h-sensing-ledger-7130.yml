@@ -1,0 +1,81 @@
+name: C9 Family H Sensing Ledger 7130
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-h-sensing-ledger-7130.yml
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - name: Reconcile verified Family H evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('docs/rules/v1-mechanism-coverage-ledger.json')
+          text=p.read_text(encoding='utf-8')
+          replacements=[
+            (
+              '      "currentState": "Generic status and creature-type awareness paths are production-proven; authoritative full sensing relation model remains incomplete",',
+              '      "currentState": "Generic status and creature-type awareness paths are production-proven. The standard sensing fact vocabulary now carries can-see, can-hear, detected, light, obscurement, and Hidden through provider/manual authority, and sense.can-see is verified through connected owner routing/reconnect without content identity dispatch. Full sensing-relation composition across senses, lighting, obscurement, Hidden, and reveal/search behavior remains incomplete.",'
+            ),
+            (
+              '      "implementationEvidence": [\n        "sessionStatusEffectEventRuntimeAdapter.ts",\n        "effectGrantActionRuntimeAdapter.ts"\n      ],',
+              '      "implementationEvidence": [\n        "sessionStatusEffectEventRuntimeAdapter.ts",\n        "effectGrantActionRuntimeAdapter.ts",\n        "commonPlaySpatialFactRuntime.ts COMMON_PLAY_STANDARD_FACTS defines typed sense.can-see/can-hear/detected/light/obscurement/hidden provider/manual authority"\n      ],'
+            ),
+            (
+              '      "productionEvidence": [\n        "connectedProjectedCharacterCunningHideResolution.test.ts",\n        "connectedProjectedCharacterCunningDisengageResolution.test.ts",\n        "paladinDivineSenseActionRuntime.test.ts"\n      ],',
+              '      "productionEvidence": [\n        "connectedProjectedCharacterCunningHideResolution.test.ts",\n        "connectedProjectedCharacterCunningDisengageResolution.test.ts",\n        "paladinDivineSenseActionRuntime.test.ts",\n        "9296b5dfff05127b04b29d8b28b581785f71e896 test(c9): prove standard sensing fact authority",\n        "C9 Family H Standard Sensing Facts run 33310103344: standard sensing provider facts, connected owner-authority routing/reconnect, legacy boundary, and tsc --noEmit passed"\n      ],'
+            ),
+            (
+              '      "identityInvarianceEvidence": [\n        "sessionStatusEffectEventRuntime.test.ts",\n        "effectGrantActionRuntime.test.ts"\n      ],',
+              '      "identityInvarianceEvidence": [\n        "sessionStatusEffectEventRuntime.test.ts",\n        "effectGrantActionRuntime.test.ts",\n        "commonPlaySpatialFactRuntime.test.ts standard sensing facts return identical semantics for unrelated external resolution identities"\n      ],'
+            ),
+            (
+              '      "connectedEvidenceIfRelevant": [\n        "connectedProjectedCharacterCunningHideResolution.test.ts",\n        "connectedProjectedCharacterCunningDisengageResolution.test.ts",\n        "paladinDivineSenseActionRuntime.test.ts"\n      ],',
+              '      "connectedEvidenceIfRelevant": [\n        "connectedProjectedCharacterCunningHideResolution.test.ts",\n        "connectedProjectedCharacterCunningDisengageResolution.test.ts",\n        "paladinDivineSenseActionRuntime.test.ts",\n        "connectedCommonPlayAuthorityFactRouting.test.ts and connectedCommonPlayAuthorityFactDispatch.test.ts use standard sense.can-see through owner-private request, stale/duplicate rejection, reconnect/rebind resume, and Host normalization"\n      ],'
+            ),
+            (
+              '      "remainingNamedSeams": [\n        "Rogue action projection",\n        "authoritative sensing relation",\n        "live sanctity facts"\n      ],',
+              '      "remainingNamedSeams": [\n        "Rogue action projection",\n        "full sensing relation composition across sense types, lighting, obscurement, Invisible/Hidden, detection/search, and reveal remains incomplete",\n        "live sanctity facts"\n      ],'
+            ),
+          ]
+          for old,new in replacements:
+              if text.count(old)!=1:
+                  raise SystemExit(f'Family H ledger text changed unexpectedly: {old[:100]}')
+              text=text.replace(old,new,1)
+          p.write_text(text,encoding='utf-8')
+          PY
+      - name: Verify ledger authority
+        run: node scripts/check-v1-mechanism-coverage.mjs
+      - name: Commit reconciled evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/c9-family-h-sensing-ledger-7130.yml
+          git add docs/rules/v1-mechanism-coverage-ledger.json
+          git diff --cached --check
+          git commit -m "docs(c9): reconcile standard sensing authority evidence"
+          for attempt in $(seq 1 10); do
+            git fetch origin agent/c9-gate-n-coverage-reconciliation
+            if git rebase origin/agent/c9-gate-n-coverage-reconciliation && git push origin HEAD:agent/c9-gate-n-coverage-reconciliation; then
+              exit 0
+            fi
+            git rebase --abort || true
+            sleep 2
+          done
+          exit 1
