@@ -56,4 +56,4 @@ jobs:
           git commit -m "chore(c9): retire selector pre-resolver staging"
           git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
 
-# Rerun V2 verification trigger 7130
+# Rerun V2 verification trigger 7130-2
