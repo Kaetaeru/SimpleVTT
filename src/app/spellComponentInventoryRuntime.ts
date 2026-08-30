@@ -2,6 +2,10 @@ import type { SpellComponentContext, SpellComponentRequirements, SpellComponentR
 import { resolveSpellComponents } from "../domain/commonPlaySpellcastingMeta";
 import type { CharacterSheet } from "./contracts";
 import { applyCommonPlayItemOperations } from "./commonPlayItemInventoryProjection";
+import type { RulesRuntimeState } from "../domain/combatState";
+import type { ResolutionOperation } from "../domain/resolutionTypes";
+
+const itemQuantityResourceId=(itemId:string)=>`phase09:item:${itemId}:quantity`;
 
 function occupiedHands(character:CharacterSheet) {
   return character.items.filter((item)=>item.wielded).reduce((count,item)=>count+(item.wieldSlot==="two-hand"?2:1),0);
@@ -35,4 +39,31 @@ export function consumeCharacterSpellMaterials(character:CharacterSheet,consumed
   });
   const result=applyCommonPlayItemOperations({ownerId:character.id,revision:character.runtimeRevision??0,items:character.items,operations});
   return {character:{...structuredClone(character),items:result.items,runtimeRevision:result.revision},changes:result.changes};
+}
+
+export function spellMaterialRuntimeContext(input:{
+  state:RulesRuntimeState;character:CharacterSheet;actorId:string;consumed:SpellComponentResolution["consumed"];
+}) {
+  if(!input.consumed.length)return {state:input.state,operations:[] as ResolutionOperation[],resourceIds:[] as string[]};
+  const state=structuredClone(input.state);
+  const combatant=state.combatants[input.actorId];
+  if(!combatant)throw new Error(`spell material actor is missing: ${input.actorId}`);
+  const operations:ResolutionOperation[]=[];
+  const resourceIds:string[]=[];
+  for(const {materialId,quantity} of input.consumed) {
+    const matches=input.character.items.filter((item)=>item.definitionId===materialId);
+    if(matches.length!==1)throw new Error(`spell material selector must resolve exactly one stack: ${materialId}`);
+    const item=matches[0];
+    const resourceId=itemQuantityResourceId(item.id);
+    combatant.resources=combatant.resources.filter((resource)=>resource.id!==resourceId);
+    combatant.resources.push({id:resourceId,label:`${item.name} quantity`,current:item.quantity,maximum:item.quantity});
+    operations.push({id:`spell-material:${item.id}`,kind:"spend-resource",actorId:input.actorId,resourceId,amount:quantity});
+    resourceIds.push(resourceId);
+  }
+  return {state,operations,resourceIds};
+}
+
+export function stripSpellMaterialRuntimeResources(state:RulesRuntimeState,actorId:string,resourceIds:string[]) {
+  const combatant=state.combatants[actorId];
+  if(combatant&&resourceIds.length)combatant.resources=combatant.resources.filter((resource)=>!resourceIds.includes(resource.id));
 }

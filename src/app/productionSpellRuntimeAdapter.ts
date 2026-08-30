@@ -1,13 +1,11 @@
 import "./spellcastingRuntimeContracts";
 import type { AppSnapshot, ResolutionView, SceneEntity } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
-import { projectRuntimeEventsToActivity } from "./realActivityProjectionService";
-import { recordRuntimeResolutionEvents } from "./runtimeResolutionEventHistory";
 import { selectedCombatSpellSlot } from "./spellcastingRuntimeSelection";
-import { commitAdapterTurnRuntimeState, ensureAdapterTurnRuntimeState, snapshotAdapterTurnRuntimeState } from "./turnRuntimeSessionRegistry";
+import { ensureAdapterTurnRuntimeState, snapshotAdapterTurnRuntimeState } from "./turnRuntimeSessionRegistry";
 import { SIMPLEVTT_APP_RULES_PROFILE } from "./realResolutionService";
 import { spellcastingTurnStateChange, type SpellcastingTurnSnapshot } from "../domain/runtimeStateChange";
-import { resolveSpellCast, spellMultiAttackCount, type SpellCasterContext, type SpellCastResolution, type SpellCastTarget } from "../domain/spellcasting";
+import { compileSpellCast, resolveCompiledSpellCast, spellMultiAttackCount, type SpellCasterContext, type SpellCastResolution, type SpellCastTarget } from "../domain/spellcasting";
 import { normalizedSpellDefinitionById } from "../domain/spellExecutionCatalog";
 import type { SpellMechanicDefinition } from "../domain/spellcasting";
 import type { ResolutionEvent } from "../domain/resolutionTypes";
@@ -15,7 +13,10 @@ import type { RulesRuntimeState } from "../domain/combatState";
 import { resolveRuntimeTargetingFact } from "./realRuntimeAttackFactProvider";
 import { isExecutableSpellRuntimeSupport } from "./spellcastingRuntimeContracts";
 import { allocationEntriesFromTargetSequence, resolveCommonPlayAllocation } from "../domain/commonPlayAllocationRuntime";
-import { consumeCharacterSpellMaterials, prepareCharacterSpellComponents } from "./spellComponentInventoryRuntime";
+import { prepareCharacterSpellComponents, spellMaterialRuntimeContext, stripSpellMaterialRuntimeResources } from "./spellComponentInventoryRuntime";
+import { activeCastingProcess, advanceCastingProcess, beginCastingProcess, cancelCastingProcessOperations } from "../domain/commonPlayCastingProcessRuntime";
+import { resolvePendingResolution } from "../domain/resolution";
+import { commitProductionRuntimeResolution } from "./runtimeResolutionCommit";
 
 type Internal={
   scene:AppSnapshot["scene"];
@@ -71,6 +72,7 @@ function casterFromHud(snapshot:AppSnapshot,actorId:string):SpellCasterContext|u
     preparedSpellIds:[...hud.preparedSpellIds],
     alwaysPreparedSpellIds:[...hud.alwaysPreparedSpellIds],
     cantripSpellIds:[...hud.cantripSpellIds],
+    ritualSpellIds:[...(hud.ritualSpellIds??[])],
     slotResourceIds:Object.fromEntries(hud.slots.map((slot)=>[slot.level,`spell-slot-${slot.level}`])),
   };
 }
@@ -236,8 +238,9 @@ MockAdapter.prototype.resolveAction=async function resolveProductionSpell(action
     return previousResolveAction.call(this,actionId,targetIds);
   }
 
+  const ritual=metadata.castSource==="ritual";
   const selected=selectedCombatSpellSlot(sourceAction.actorId,metadata.baseLevel||1);
-  const slotLevel=metadata.baseLevel===0 ? undefined : Math.max(metadata.baseLevel,selected);
+  const slotLevel=metadata.baseLevel===0||ritual ? undefined : Math.max(metadata.baseLevel,selected);
   const turnId=internal.sessionMode==="initiative"?currentTurnId(runtime):undefined;
   const projectileCount=definition.primary.kind==="automatic-projectiles"?definition.primary.baseProjectiles+Math.max(0,(slotLevel??definition.baseLevel)-definition.baseLevel)*(definition.primary.projectilesPerSlotAboveBase??0):0;
   const allocation=projectileCount?resolveCommonPlayAllocation({
@@ -264,8 +267,6 @@ MockAdapter.prototype.resolveAction=async function resolveProductionSpell(action
     return this.getSnapshot();
   }
 
-  const dice=spellDice(this,actionId,definition,slotLevel,caster.characterLevel,uniqueTargetIds);
-  const projectileAllocations=allocation?.status==="resolved"?allocation.allocations.map((entry)=>({targetId:entry.targetId,count:entry.units})):undefined;
   let componentPreparation;
   try {
     componentPreparation=definition.components?prepareCharacterSpellComponents({
@@ -275,10 +276,10 @@ MockAdapter.prototype.resolveAction=async function resolveProductionSpell(action
   } catch(error) {
     internal.resolution=resolutionFromCast(sourceAction.name,actionId,sourceAction.actorId,targetIds,slotLevel,{
       status:"rejected",state:runtime,spellId:metadata.spellId,slotLevel,error:error instanceof Error?error.message:String(error),events:[],results:{},
-    },dice.authoritative);
+    },[]);
     return this.getSnapshot();
   }
-  const result=resolveSpellCast(SIMPLEVTT_APP_RULES_PROFILE,definition,runtime,{
+  const requestBase={
     id:`production-spell-cast.${metadata.spellId}.${Date.now()}`,
     actorId:sourceAction.actorId,
     spellId:metadata.spellId,
@@ -288,45 +289,62 @@ MockAdapter.prototype.resolveAction=async function resolveProductionSpell(action
     componentContext:componentPreparation?.context,
     useActionEconomy:internal.sessionMode==="initiative",
     turnId,
-    dice:dice.request,
-    projectileAllocations,
-  });
-  internal.resolution=resolutionFromCast(sourceAction.name,actionId,sourceAction.actorId,targetIds,slotLevel,result,dice.authoritative);
+  };
+  let result:SpellCastResolution;
+  let authoritativeDice:number[]=[];
+  const castingDurationSeconds=ritual?(definition.castingDurationSeconds??6)+600:definition.castingDurationSeconds;
+  const casting=castingDurationSeconds?activeCastingProcess(runtime,sourceAction.actorId,metadata.spellId):undefined;
+  if(castingDurationSeconds&&!casting) {
+    const pending=beginCastingProcess({state:runtime,id:`${requestBase.id}:process`,actorId:sourceAction.actorId,definitionId:metadata.spellId,kind:ritual?"ritual":"long-cast",requiredSeconds:castingDurationSeconds,useActionEconomy:requestBase.useActionEconomy});
+    const committed=resolvePendingResolution(SIMPLEVTT_APP_RULES_PROFILE,runtime,pending);
+    result=committed.status==="committed"
+      ? {status:"committed",state:committed.state,spellId:metadata.spellId,events:committed.events,results:committed.results,consumedMaterials:[]}
+      : {status:"rejected",state:runtime,spellId:metadata.spellId,error:committed.error,failedOperationId:committed.failedOperationId,events:[],results:{}};
+  } else if(casting) {
+    const progress=advanceCastingProcess({state:runtime,id:`${requestBase.id}:progress`,actorId:sourceAction.actorId,definitionId:metadata.spellId,elapsedSeconds:6,useActionEconomy:requestBase.useActionEconomy});
+    if(progress.activity.status!=="completed") {
+      const committed=resolvePendingResolution(SIMPLEVTT_APP_RULES_PROFILE,runtime,{id:`${requestBase.id}:progress`,actorId:sourceAction.actorId,sourceId:metadata.spellId,expectedRevision:runtime.revision,operations:progress.operations});
+      result=committed.status==="committed"
+        ? {status:"committed",state:committed.state,spellId:metadata.spellId,events:committed.events,results:committed.results,consumedMaterials:[]}
+        : {status:"rejected",state:runtime,spellId:metadata.spellId,error:committed.error,failedOperationId:committed.failedOperationId,events:[],results:{}};
+    } else {
+      const dice=spellDice(this,actionId,definition,slotLevel,caster.characterLevel,uniqueTargetIds);
+      authoritativeDice=dice.authoritative;
+      const projectileAllocations=allocation?.status==="resolved"?allocation.allocations.map((entry)=>({targetId:entry.targetId,count:entry.units})):undefined;
+      const request={...requestBase,dice:dice.request,projectileAllocations};
+      try {
+        const materials=spellMaterialRuntimeContext({state:runtime,character:internal.activeCharacter,actorId:sourceAction.actorId,consumed:componentPreparation?.resolution.consumed??[]});
+        const compilation=compileSpellCast(definition,materials.state,request);
+        compilation.pending.operations=[...cancelCastingProcessOperations(casting.effect,sourceAction.actorId,"casting completed"),...materials.operations,...compilation.pending.operations];
+        result=resolveCompiledSpellCast(SIMPLEVTT_APP_RULES_PROFILE,materials.state,request,compilation);
+        if(result.status==="committed")stripSpellMaterialRuntimeResources(result.state,sourceAction.actorId,materials.resourceIds);
+      } catch(error) {
+        result={status:"rejected",state:runtime,spellId:metadata.spellId,slotLevel,error:error instanceof Error?error.message:String(error),events:[],results:{}};
+      }
+    }
+  } else {
+    const dice=spellDice(this,actionId,definition,slotLevel,caster.characterLevel,uniqueTargetIds);
+    authoritativeDice=dice.authoritative;
+    const projectileAllocations=allocation?.status==="resolved"?allocation.allocations.map((entry)=>({targetId:entry.targetId,count:entry.units})):undefined;
+    try {
+      const materials=spellMaterialRuntimeContext({state:runtime,character:internal.activeCharacter,actorId:sourceAction.actorId,consumed:componentPreparation?.resolution.consumed??[]});
+      const request={...requestBase,dice:dice.request,projectileAllocations};
+      const compilation=compileSpellCast(definition,materials.state,request);
+      compilation.pending.operations=[...materials.operations,...compilation.pending.operations];
+      result=resolveCompiledSpellCast(SIMPLEVTT_APP_RULES_PROFILE,materials.state,request,compilation);
+      if(result.status==="committed")stripSpellMaterialRuntimeResources(result.state,sourceAction.actorId,materials.resourceIds);
+    } catch(error) {
+      result={status:"rejected",state:runtime,spellId:metadata.spellId,slotLevel,error:error instanceof Error?error.message:String(error),events:[],results:{}};
+    }
+  }
+  internal.resolution=resolutionFromCast(sourceAction.name,actionId,sourceAction.actorId,targetIds,slotLevel,result,authoritativeDice);
   if (result.status==="rejected") return this.getSnapshot();
-
-  let inventory;
-  try { inventory=consumeCharacterSpellMaterials(internal.activeCharacter,componentPreparation?.resolution.consumed??[]); }
-  catch(error) {
-    internal.resolution=resolutionFromCast(sourceAction.name,actionId,sourceAction.actorId,targetIds,slotLevel,{
-      status:"rejected",state:runtime,spellId:metadata.spellId,slotLevel,error:error instanceof Error?error.message:String(error),events:[],results:{},
-    },dice.authoritative);
-    return this.getSnapshot();
-  }
-
-  if (!commitAdapterTurnRuntimeState(this,internal.scene,runtime.revision,result.state)) {
-    internal.resolution=resolutionFromCast(sourceAction.name,actionId,sourceAction.actorId,targetIds,slotLevel,{
-      status:"rejected",state:runtime,spellId:metadata.spellId,slotLevel,
-      error:"turn runtime revision changed before production spell commit",events:[],results:{},
-    },dice.authoritative);
-    return this.getSnapshot();
-  }
-
   const events=eventHistory(runtime,result,sourceAction.actorId,turnId,slotLevel);
-  internal.activeCharacter=inventory.character;
-  internal.characters=internal.characters.map((character)=>character.id===inventory.character.id?{...character,...inventory.character}:character);
-  const actorName=internal.scene.entities.find((entry)=>entry.id===sourceAction.actorId)?.name??sourceAction.actorId;
-  internal.resolution.stateChanges.push(...inventory.changes);
-  const activity=projectRuntimeEventsToActivity({
-    id:internal.resolution.id,
-    actorName,
-    title:`${sourceAction.name} 시전`,
-    summary:internal.resolution.compact,
-    events,
+  return commitProductionRuntimeResolution(this,runtime,{status:"committed",state:result.state,events,results:result.results},{
+    resolutionId:internal.resolution.id,actionId,actionName:sourceAction.name,actorId:sourceAction.actorId,targetIds,
+    targetNames:targetIds.map((id)=>internal.scene.entities.find((entry)=>entry.id===id)?.name??id),
+    compact:internal.resolution.compact,detail:internal.resolution.detail,provenance:internal.resolution.provenance,
+    calculatedOutcome:internal.resolution.calculatedOutcome,finalOutcome:internal.resolution.finalOutcome,
+    rollKind:internal.resolution.rollKind,authoritativeDice,rollTotal:internal.resolution.rollTotal,
   });
-  activity.stateChanges.push(...inventory.changes);
-  internal.activity.unshift(activity);
-  recordRuntimeResolutionEvents(this,internal.resolution.id,events);
-  internal.lastBefore=null;
-  internal.lastResolutionId=internal.resolution.id;
-  return this.getSnapshot();
 };

@@ -12,7 +12,7 @@ import { resolveSpellComponents, type SpellComponentContext, type SpellComponent
 
 export type SpellRuntimeSupport = "combat-executable" | "tracked-executable" | "partial" | "presentation-only";
 export type SpellCastingEconomy = "action" | "bonus-action" | "reaction";
-export type SpellCastSource = "prepared" | "always-prepared" | "item" | "feature";
+export type SpellCastSource = "prepared" | "always-prepared" | "item" | "feature" | "ritual";
 export type SpellSuccessDamage = "none" | "half";
 
 export interface SpellDiceFormula {
@@ -141,6 +141,7 @@ export interface SpellCasterContext {
   slotResourceIds: Partial<Record<number, string>>;
   featureSpellIds?: string[];
   featureResourceIds?: Partial<Record<string, string>>;
+  ritualSpellIds?:string[];
 }
 
 export interface SpellCastTarget extends TargetFacts {
@@ -292,6 +293,12 @@ function validateAccess(definition: SpellMechanicDefinition, request: SpellCastR
   }
   if (request.source === "always-prepared" && !(request.caster.alwaysPreparedSpellIds ?? []).includes(definition.spellId)) {
     throw new DomainEvaluationError("spell is not always prepared for this caster");
+  }
+  if(request.source==="ritual") {
+    if(!definition.ritual)throw new DomainEvaluationError("spell does not have the Ritual tag");
+    if(!(request.caster.ritualSpellIds??[]).includes(definition.spellId))throw new DomainEvaluationError("ritual spell is not available to the caster");
+    if(request.slotLevel!==undefined)throw new DomainEvaluationError("ritual casting cannot specify a spell slot");
+    return {slotted:false as const,slotResourceId:undefined,featureResourceId:undefined,consumedMaterials};
   }
   if (request.source === "item") {
     if (request.slotLevel !== undefined) throw new DomainEvaluationError("slotless item casting cannot specify a slot level");
@@ -798,6 +805,20 @@ export function resolveSpellCast(
 ): SpellCastResolution {
   try {
     const compilation = compileSpellCast(definition, inputState, request);
+    return resolveCompiledSpellCast(profile,inputState,request,compilation);
+  } catch (error) {
+    return reject(inputState, request, error);
+  }
+}
+
+export function resolveCompiledSpellCast(
+  profile:RulesProfileLike,
+  inputState:RulesRuntimeState,
+  request:SpellCastRequest,
+  compilation:SpellCastCompilation,
+):SpellCastResolution {
+  try {
+    if(compilation.pending.expectedRevision!==inputState.revision||compilation.pending.actorId!==request.actorId||compilation.pending.sourceId!==request.spellId)throw new DomainEvaluationError("compiled spell cast authority mismatch");
     const workingState = cloneRuntimeState(inputState);
     if (compilation.slotted && request.turnId) {
       const marker = workingState.spellcastingTurn?.turnId === request.turnId
@@ -823,7 +844,5 @@ export function resolveSpellCast(
       results: commit.results,
       consumedMaterials:compilation.consumedMaterials,
     };
-  } catch (error) {
-    return reject(inputState, request, error);
-  }
+  } catch (error) { return reject(inputState,request,error); }
 }

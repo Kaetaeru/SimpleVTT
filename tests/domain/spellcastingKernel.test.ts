@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { SRD_521_SPELL_MECHANICS } from "../../src/domain/spellMechanics";
+import { normalizedSpellDefinitionById } from "../../src/domain/spellExecutionCatalog";
 import { resolveSpellCast, type SpellCasterContext, type SpellCastTarget } from "../../src/domain/spellcasting";
 import { runtimeState, TEST_PROFILE } from "./rulesTestState";
 
@@ -10,6 +11,7 @@ const HEALING_WORD = "dnd.srd521.spell.healing-word";
 const CURE_WOUNDS = "dnd.srd521.spell.cure-wounds";
 const BURNING_HANDS = "dnd.srd521.spell.burning-hands";
 const MAGIC_MISSILE = "dnd.srd521.spell.magic-missile";
+const ALARM="dnd.srd521.spell.alarm";
 
 function caster(overrides: Partial<SpellCasterContext> = {}): SpellCasterContext {
   return {
@@ -259,6 +261,29 @@ test("Magic Missile allocates every dart explicitly and higher-slot projectile c
   if (result.status !== "committed") return;
   assert.equal(result.state.combatants.goblin.life.hp.current, 23, "two darts: (1+1)+(4+1) = 7");
   assert.equal(result.state.combatants.orc.life.hp.current, 27, "one dart: 2+1 = 3");
+});
+
+test("Ritual-tagged spell resolves slotlessly only through explicit caster ritual access",()=>{
+  const state=runtimeState();
+  const definition=normalizedSpellDefinitionById(ALARM)!;
+  const result=resolveSpellCast(TEST_PROFILE,definition,state,{
+    id:"cast.ritual.external",actorId:"hero",spellId:ALARM,source:"ritual",expectedRevision:state.revision,
+    caster:caster({preparedSpellIds:[],ritualSpellIds:[ALARM]}),targets:[],componentContext:{canSpeak:true,freeHands:1,hasComponentPouch:true},
+    useActionEconomy:true,turnId:"round-1:hero",dice:{},
+  });
+  assert.equal(result.status,"committed",result.status==="rejected"?result.error:undefined);
+  if(result.status!=="committed")return;
+  assert.equal(result.state.combatants.hero.resources.find((pool)=>pool.id==="spell-slot-1")?.current,2);
+  assert.equal(result.state.combatants.hero.economy.action,false);
+  assert.equal(result.state.spellcastingTurn,undefined);
+
+  const renamed={...definition,spellId:"external.renamed.ritual"};
+  const renamedResult=resolveSpellCast(TEST_PROFILE,renamed,runtimeState(),{
+    id:"cast.ritual.renamed",actorId:"hero",spellId:renamed.spellId,source:"ritual",expectedRevision:0,
+    caster:caster({preparedSpellIds:[],ritualSpellIds:[renamed.spellId]}),targets:[],componentContext:{canSpeak:true,freeHands:1,hasComponentPouch:true},
+    useActionEconomy:false,dice:{},
+  });
+  assert.equal(renamedResult.status,"committed");
 });
 
 test("unprepared spells and unsatisfied components reject before economy, slot, HP, or history can mutate", () => {

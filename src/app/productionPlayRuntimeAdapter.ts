@@ -17,6 +17,8 @@ import { LAY_ON_HANDS_ACTION_ID } from "./paladinLayOnHandsRuntimeContracts";
 import { abjureFoesMaximumTargets } from "../domain/paladinAbjureFoes";
 import { BARBARIAN_CLASS_ID, BARBARIAN_RAGE_RESOURCE_ID } from "../domain/barbarianBerserker";
 import { itemEntryById, itemMechanic } from "./characterCreationV10Data";
+import { ensureAdapterTurnRuntimeState, turnRuntimeSessions } from "./turnRuntimeSessionRegistry";
+import { addTurnRuntimeCombatant } from "./realTurnRuntimeService";
 
 const ABILITY_LABEL:Record<AbilityKey,string>={str:"근력",dex:"민첩",con:"건강",int:"지능",wis:"지혜",cha:"매력"};
 const ABILITIES:AbilityKey[]=["str","dex","con","int","wis","cha"];
@@ -45,6 +47,7 @@ type ExtendedCharacter=CharacterSheet&{
   preparedSpells?:string[];
   cantrips?:string[];
   spellbookSpells?:string[];
+  pactTomeRitualSpellIds?:string[];
 };
 
 type Internal={
@@ -447,13 +450,19 @@ function spellTokens(character:ExtendedCharacter) {
 }
 
 function spellActions(character:ExtendedCharacter):ActionVm[] {
-  const tokens=spellTokens(character);
+  const regularIds=new Set(spellTokens(character));
+  const ritualIds=new Set([
+    ...(character.preparedSpells??[]).map((token)=>String(token).replace(/^always:/,"")),
+    ...(character.spellbookSpells??[]),
+    ...(character.pactTomeRitualSpellIds??[]),
+  ].filter((spellId)=>spellPresentationById(spellId)?.ritual));
+  const tokens=[...new Set([...regularIds,...ritualIds])];
   if (!tokens.length) return [];
   const mental=(Object.entries({int:character.abilities.int,wis:character.abilities.wis,cha:character.abilities.cha}) as Array<["int"|"wis"|"cha",number]>).sort((a,b)=>b[1]-a[1])[0];
   const spellMod=mod(mental[1]);
   const dc=8+character.proficiencyBonus+spellMod;
   const cantrips=new Set((character.cantrips??[]).map((token)=>String(token).replace(/^always:/,"")));
-  return [...new Set(tokens)].map((spellId)=>{
+  return tokens.flatMap((spellId)=>{
     const spell=spellPresentationById(spellId);
     const level=spell?.level??(cantrips.has(spellId)?0:1);
     const mechanic=normalizedSpellDefinitionById(spellId);
@@ -479,7 +488,7 @@ function spellActions(character:ExtendedCharacter):ActionVm[] {
       : primary?.kind==="automatic-projectiles"
         ? [{type:primary.damageType,dice:`${primary.baseProjectiles}d${primary.projectileDice.sides}`,flat:primary.baseProjectiles*primary.projectileDice.flat,average:Math.floor(primary.baseProjectiles*(primary.projectileDice.sides+1)/2)+primary.baseProjectiles*primary.projectileDice.flat}]
         : undefined;
-    return {
+    const base={
       id:spellId==="dnd.srd521.spell.fire-bolt"?"action.fire-bolt":spellId==="dnd.srd521.spell.magic-missile"?"action.magic-missile":`action.spell.${spellId.replace(/^dnd\.srd521\.spell\./,"")}`,
       actorId:character.id,name:spell?.name??spellId.replace(/^dnd\.srd521\.spell\./,"").replaceAll("-"," "),category:"magic",target,
       economy:mechanic?.castingEconomy==="bonus-action"?"추가 행동":mechanic?.castingEconomy==="reaction"?"반응":"행동",resolutionKind,
@@ -495,6 +504,15 @@ function spellActions(character:ExtendedCharacter):ActionVm[] {
       spellCast:{spellId,runtimeSupport:executable?(mechanic!.runtimeSupport==="tracked-executable"?"tracked-executable":"combat-executable"):"partial",baseLevel:level,castSource:(character.preparedSpells??[]).includes(`always:${spellId}`)?"always-prepared":"prepared",disabledMechanicReason:executable?undefined:(mechanic?.unsupportedInteractions?.join(" ")||reason)},
       details:spell?[detail("시전 시간",spell.castingTime),detail("사거리",spell.range),detail("지속시간",spell.duration),detail("효과",spell.summary),detail("출처","SRD 5.2.1")]:[detail("주문",spellId),detail("상태",reason)],
     } satisfies ActionVm;
+    const actions:ActionVm[]=[];
+    if(regularIds.has(spellId))actions.push(base);
+    if(ritualIds.has(spellId)&&mechanic?.ritual&&executable)actions.push({
+      ...structuredClone(base),id:`${base.id}.ritual`,name:`${base.name} (의식)`,economy:"행동",
+      summary:`의식 · 슬롯 미사용 · ${base.summary}`,
+      spellCast:{...base.spellCast!,castSource:"ritual"},
+      details:[detail("의식 시전","기본 시전 시간 + 10분 · 슬롯 미사용"),...base.details],
+    });
+    return actions;
   });
 }
 
@@ -558,6 +576,8 @@ function reconcile(adapter:MockAdapter) {
     const previous=internal.scene.entities[index];
     internal.scene.entities[index]={...previous,...projected,status:[...previous.status],reactions:[...previous.reactions],resistances:[...previous.resistances],immunities:[...previous.immunities],vulnerabilities:[...previous.vulnerabilities]};
   } else internal.scene.entities.unshift(projected);
+  const turnRuntime=turnRuntimeSessions.get(adapter);
+  if(turnRuntime)addTurnRuntimeCombatant(turnRuntime,internal.scene,character.id);
 
   const actions=deriveProductionCharacterActions(character);
   const ready=readyActionConfigurationFor(adapter);
@@ -612,6 +632,7 @@ MockAdapter.prototype.startProductionLocalPlay=async function startProductionLoc
   internal.session.participants=[{id:`local:${internal.activeCharacter.id}`,name:role==="dm"?"Local DM":"Local Player",characterName:internal.activeCharacter.name,state:"connected"}];
   internal.connectionState="connected";
   reconcile(this);
+  ensureAdapterTurnRuntimeState(this,internal.scene);
   return internal.getSnapshot();
 };
 

@@ -10,6 +10,8 @@ const MAGIC_MISSILE="dnd.srd521.spell.magic-missile";
 type SpellCharacter=CharacterSheet&{
   cantrips?:string[];
   preparedSpells?:string[];
+  spellbookSpells?:string[];
+  pactTomeRitualSpellIds?:string[];
   spellSlotMaximums?:Record<number,number>;
 };
 
@@ -98,6 +100,7 @@ function projectSpellcaster(snapshot:AppSnapshot,character:SpellCharacter) {
   const preparedRaw=character.preparedSpells??[];
   const prepared=preparedRaw.filter((id)=>!id.startsWith("always:")).map(normalizedSpellId);
   const alwaysPrepared=preparedRaw.filter((id)=>id.startsWith("always:")).map(normalizedSpellId);
+  const ritualSpellIds=[...new Set([...prepared,...alwaysPrepared,...(character.spellbookSpells??[]),...(character.pactTomeRitualSpellIds??[])])];
   if (!cantrips.length&&!prepared.length&&!alwaysPrepared.length) return snapshot;
 
   const ability=spellAbility(character);
@@ -119,6 +122,7 @@ function projectSpellcaster(snapshot:AppSnapshot,character:SpellCharacter) {
     cantripSpellIds:cantrips,
     preparedSpellIds:prepared,
     alwaysPreparedSpellIds:alwaysPrepared,
+    ritualSpellIds,
     slots,
     slottedSpellCastThisTurn:false,
   };
