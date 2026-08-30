@@ -26,7 +26,7 @@ jobs:
           const fs=require('node:fs');
           const path='docs/rules/v1-mechanism-coverage-ledger.json';
           const ledger=JSON.parse(fs.readFileSync(path,'utf8'));
-          const family=ledger.families.find((entry)=>entry.family==='V'&&entry.id==='actor-artifact-summon');
+          const family=ledger.rows.find((entry)=>entry.family==='V'&&entry.id==='actor-artifact-summon');
           if(!family) throw new Error('Family V actor-artifact-summon not found');
           family.currentState='Portable actor artifacts now cover typed combatant spawn/projection, source/owner/controller and initiative semantics, definition-driven scoped actions, source-owned granted despawn, elapsed lifetime cleanup, until-source-recast replacement, Host/Client replay, duplicate handling, fresh reconnect, event-native Undo, and external identity rename through the generic artifact Resolver path.';
           family.disposition='IMPLEMENTED';
