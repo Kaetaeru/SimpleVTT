@@ -17,7 +17,7 @@ import {
 import { lowerCommonPlay, parseCommonPlayDefinition, type LoweredCommonPlayEntryPoint } from "../domain/commonPlayDefinitionRuntime";
 import { resolveCommonPlaySaveDamageEntryPoint } from "../domain/commonPlayEntryPointRuntime";
 import { appendCommonPlayDamageTakenTriggers, resolveCommonPlayEffectActivation, type CommonPlayPersistentEffectDefinition } from "../domain/commonPlayEffectRuntime";
-import { appendCommonPlaySemanticOutcomeEvents } from "../domain/commonPlaySemanticEventRuntime";
+import { appendCommonPlaySemanticOutcomeEvents, appendCommonPlaySemanticOutcomeTriggers } from "../domain/commonPlaySemanticEventRuntime";
 import { resolveCommonPlayZoneActivation, resolveCommonPlayZoneMembershipChange } from "../domain/commonPlayZoneRuntime";
 import { resolveCommonPlayArtifactActivation } from "../domain/commonPlayArtifactRuntime";
 import type { RulesRuntimeState } from "../domain/combatState";
@@ -590,8 +590,12 @@ async function executeCommonPlayAction(
     const entryPoint=lowered.definition.entryPoints.find((candidate)=>candidate.id===action.entryPointId)!;
     operationEntryPoint=entryPoint;
     const pending=compileCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,state,lowered.definition,operationExecutionInput(internal,actionId,action,prepared,resolutionId,interactionId));
-    const automaticPending=appendCommonPlayDamageTakenTriggers(
-      state,await installedPersistentEffectDefinitions(adapter),pending,actorEntity.kind==="character"?"character":"monster",
+    const effectDefinitions=await installedPersistentEffectDefinitions(adapter);
+    const damagePending=appendCommonPlayDamageTakenTriggers(
+      state,effectDefinitions,pending,actorEntity.kind==="character"?"character":"monster",
+    );
+    const automaticPending=appendCommonPlaySemanticOutcomeTriggers(
+      state,effectDefinitions,damagePending,Object.fromEntries(internal.scene.entities.map((entity)=>[entity.id,entity.kind==="character"?"character":"monster"])),
     );
     committed=appendCommonPlaySemanticOutcomeEvents(
       automaticPending,

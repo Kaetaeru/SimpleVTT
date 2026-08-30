@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { appendCommonPlaySemanticOutcomeEvents } from "../../src/domain/commonPlaySemanticEventRuntime";
+import { resolveCommonPlayEffectActivation, type CommonPlayPersistentEffectDefinition } from "../../src/domain/commonPlayEffectRuntime";
+import { appendCommonPlaySemanticOutcomeEvents, appendCommonPlaySemanticOutcomeTriggers } from "../../src/domain/commonPlaySemanticEventRuntime";
 import { resolvePendingResolution } from "../../src/domain/resolution";
 import type { PendingResolution } from "../../src/domain/resolutionTypes";
 import { runtimeState, TEST_PROFILE } from "./rulesTestState";
@@ -71,4 +72,30 @@ test("semantic outcome vocabulary is invariant under external source identity",(
     }));
   };
   assert.deepEqual(summarize("external.first.identity"),summarize("renamed.completely.unseen.identity"));
+});
+
+
+test("semantic outcomes dispatch active persistent-effect rules in the same resolution",()=>{
+  const definition:CommonPlayPersistentEffectDefinition={
+    schemaVersion:"0.2-draft",id:"external.unknown.semantic-ward",
+    entryPoints:[{id:"activate",invocation:"manual",operations:[{kind:"effect.apply",template:"ward",target:"actor"}]}],
+    artifactTemplates:[{id:"ward",artifactKind:"effect",duration:{kind:"elapsed",amount:{value:1},unit:"hours"},rules:[
+      {id:"on-hit",event:"attack.hit",frequency:"once-per-resolution",operations:[{kind:"damage.apply",amount:{value:2},damageType:"force",target:"event.actor"}]},
+      {id:"on-save-failure",event:"save.failure",frequency:"once-per-resolution",operations:[{kind:"damage.apply",amount:{value:3},damageType:"psychic",target:"event.actor"}]},
+    ],lifetime:{kind:"until-duration",onEnd:"destroy"}}],
+  };
+  let state=runtimeState();
+  const heroWard=resolveCommonPlayEffectActivation(TEST_PROFILE,state,definition,{resolutionId:"hero-ward",actorId:"hero",entryPointId:"activate"});
+  assert.equal(heroWard.status,"committed"); if(heroWard.status!=="committed") return; state=heroWard.state;
+  const goblinWard=resolveCommonPlayEffectActivation(TEST_PROFILE,state,definition,{resolutionId:"goblin-ward",actorId:"goblin",entryPointId:"activate"});
+  assert.equal(goblinWard.status,"committed"); if(goblinWard.status!=="committed") return; state=goblinWard.state;
+  const request=pending("external.renamable.semantic-source");
+  request.expectedRevision=state.revision;
+  const expanded=appendCommonPlaySemanticOutcomeTriggers(state,[definition],request,{hero:"character",goblin:"monster"});
+  const resolved=appendCommonPlaySemanticOutcomeEvents(expanded,resolvePendingResolution(TEST_PROFILE,state,expanded));
+  assert.equal(resolved.status,"committed"); if(resolved.status!=="committed") return;
+  assert.equal(resolved.state.combatants.hero.life.hp.current,18);
+  assert.equal(resolved.state.combatants.goblin.life.hp.current,12);
+  assert.equal(Object.keys(resolved.results).some((id)=>id.includes("automatic:attack.hit")),true);
+  assert.equal(Object.keys(resolved.results).some((id)=>id.includes("automatic:save.failure")),true);
 });
