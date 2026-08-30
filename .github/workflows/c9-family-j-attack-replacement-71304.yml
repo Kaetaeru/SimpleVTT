@@ -1,0 +1,197 @@
+name: C9 Family J Attack Replacement 71304
+
+on:
+  push:
+    branches: [agent/c9-gate-n-coverage-reconciliation]
+    paths: [.github/workflows/c9-family-j-attack-replacement-71304.yml]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: c9-family-j-attack-replacement-71304
+  cancel-in-progress: false
+
+jobs:
+  verify-and-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Reconcile latest branch
+        run: git pull --ff-only origin agent/c9-gate-n-coverage-reconciliation
+      - run: npm ci
+      - name: Apply structural replacement projection and regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          path=Path('src/app/installedCommonPlayRuntimeAdapter.ts')
+          text=path.read_text(encoding='utf-8')
+          old='const extraAttackAvailable=("test" in entryPoint&&entryPoint.test?.kind==="attack-roll")&&Boolean(combatant.economy.extraAttacks?.length);'
+          new='const extraAttackAvailable=payment?.kind==="economy"&&payment.actionKind==="attack"&&Boolean(combatant.economy.extraAttacks?.length);'
+          if new not in text:
+              if text.count(old)!=1:
+                  raise SystemExit(f'expected extra-attack projection anchor count={text.count(old)}')
+              path.write_text(text.replace(old,new,1),encoding='utf-8')
+          PY
+          cat > tests/ui/c9FamilyJAttackReplacementProduction71304.test.ts <<'EOF'
+          import assert from "node:assert/strict";
+          import test from "node:test";
+          import "../../src/app/offlineRuntimeAdapters";
+          import { catalogQualifiedId } from "../../src/app/contentCatalogIdentity";
+          import { installedCommonPlayActionId } from "../../src/app/installedCommonPlayActionReference";
+          import { projectCommonPlayRuntimeArtifactAction } from "../../src/app/installedCommonPlayRuntimeAdapter";
+          import { setInstalledContentStoreForTests } from "../../src/app/installedContentRuntimeAdapter";
+          import { MemoryInstalledContentStore } from "../../src/app/memoryInstalledContentStore";
+          import { MockAdapter } from "../../src/app/mockAdapter";
+          import { snapshotAdapterTurnRuntimeState } from "../../src/app/turnRuntimeSessionRegistry";
+
+          const TARGET_ID="combatant.goblin-a";
+
+          function packagePayload(prefix:string) {
+            const moduleId=`${prefix}.module`;
+            const contentId=`${prefix}.option`;
+            const mechanicId=`${prefix}.mechanic`;
+            return {
+              moduleId,contentId,mechanicId,
+              json:JSON.stringify({
+                schemaVersion:"0.1-draft",moduleId,moduleVersion:"1",
+                rulesProfile:{id:"dnd.srd-5.2.1",version:"0.1-draft"},defaultLocale:"en",
+                source:{document:"Portable attack replacement probe",version:"1",license:"CC0",srdDerived:false},
+                dependencies:[],conflicts:[],capabilities:[],content:[{
+                  id:contentId,category:"option",
+                  presentation:{defaultLocale:"en",originalName:"Portable attack options",locales:{en:{name:"Portable attack options"}}},
+                  mechanics:[{kind:"common-play",config:{
+                    schemaVersion:"0.2-draft",id:mechanicId,
+                    payments:[{kind:"economy",bucket:"action",amount:{value:1},consumeAt:"commit",refundOnCancel:true,actionKind:"attack",attacksPerAction:2}],
+                    entryPoints:[
+                      {id:"strike",invocation:"manual",targeting:{from:"targets",min:1,max:1},test:{kind:"attack-roll",roller:"actor",dc:{value:1}},operations:[{kind:"damage.apply",amount:{value:1},damageType:"bludgeoning",target:"target",when:{op:"eq",left:{ref:"test.outcome"},right:{value:"success"}}}]},
+                      {id:"control",invocation:"manual",targeting:{from:"targets",min:1,max:1},test:{kind:"saving-throw",roller:"target",property:"save.str.modifier",dc:{value:20}},operations:[{kind:"condition.apply",condition:"grappled",target:"target",when:{op:"eq",left:{ref:"test.outcome"},right:{value:"failure"}}}]},
+                    ],
+                  }}],
+                }],
+              }),
+            };
+          }
+
+          async function exercise(prefix:string) {
+            const adapter=new MockAdapter();
+            const pack=packagePayload(prefix);
+            setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
+            const preview=await adapter.previewContentImport(pack.json);
+            assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
+            await adapter.activateContentImport();
+            await adapter.startInitiative();
+            await adapter.setCurrentActor("char.aelar");
+            let snapshot=await adapter.getSnapshot();
+            const actorId=snapshot.activeCharacter.id;
+            const action=(entryPointId:string)=>installedCommonPlayActionId({catalogId:catalogQualifiedId(pack.contentId,pack.moduleId,"1"),mechanicId:pack.mechanicId,entryPointId});
+            const strike=action("strike");
+            const control=action("control");
+            const hpBefore=snapshot.scene.entities.find((entry)=>entry.id===TARGET_ID)!.hp;
+
+            await adapter.setQueuedD20(15);
+            snapshot=await adapter.resolveAction(strike,[TARGET_ID]);
+            assert.equal(snapshot.resolution?.stage,"complete");
+            assert.equal(snapshot.scene.entities.find((entry)=>entry.id===TARGET_ID)?.hp,hpBefore-1);
+            let state=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)!;
+            assert.equal(state.combatants[actorId].economy.action,false);
+            assert.equal(state.combatants[actorId].economy.extraAttacks?.length,1);
+
+            let projected=await projectCommonPlayRuntimeArtifactAction(adapter,control,actorId,snapshot,state);
+            assert.equal(projected?.resolutionKind,"saving-throw");
+            assert.equal(projected?.available,true,"an attack-option control action must be able to replace the remaining attack");
+
+            await adapter.setQueuedD20(1);
+            snapshot=await adapter.resolveAction(control,[TARGET_ID]);
+            assert.equal(snapshot.resolution?.stage,"complete");
+            state=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)!;
+            assert.equal(state.combatants[actorId].economy.extraAttacks?.length,0);
+            assert.equal(state.effects.some((effect)=>effect.targetId===TARGET_ID&&effect.conditionId==="grappled"),true);
+
+            projected=await projectCommonPlayRuntimeArtifactAction(adapter,strike,actorId,snapshot,state);
+            assert.equal(projected?.available,false,"no third attack option remains after the replacement consumes the grant");
+
+            await adapter.undoLastResolution();
+            snapshot=await adapter.getSnapshot();
+            state=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)!;
+            assert.equal(state.effects.some((effect)=>effect.targetId===TARGET_ID&&effect.conditionId==="grappled"),false);
+            assert.equal(state.combatants[actorId].economy.extraAttacks?.length,1);
+            projected=await projectCommonPlayRuntimeArtifactAction(adapter,control,actorId,snapshot,state);
+            assert.equal(projected?.available,true,"Undo must restore the replaceable attack slot");
+          }
+
+          test("unknown installed Common Play can replace one attack with a structural control option and Undo it",async()=>{
+            await exercise("external-family-j-replacement");
+          });
+
+          test("complete external identity rename preserves replace-one-attack semantics",async()=>{
+            await exercise("renamed-family-j-replacement");
+          });
+          EOF
+      - run: npm run generate:content
+      - name: Verify attack replacement and adjacent Family J flows
+        run: |
+          node --import tsx --test \
+            tests/ui/c9FamilyJAttackReplacementProduction71304.test.ts \
+            tests/ui/c9FamilyJExtraAttackProduction71304.test.ts \
+            tests/ui/c9FamilyJPortableControlProduction.test.ts \
+            tests/ui/c9FamilyJAmmunitionProduction.test.ts
+          node scripts/check-legacy-execution-boundary.mjs
+          node scripts/check-v1-mechanism-coverage.mjs
+          npm exec tsc -- --noEmit
+      - name: Record verified Family J replacement evidence
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          ledger=Path('docs/rules/v1-mechanism-coverage-ledger.json')
+          data=json.loads(ledger.read_text(encoding='utf-8'))
+          row=next(entry for entry in data['rows'] if entry['family']=='J')
+          additions={
+            'implementationEvidence':'installedCommonPlayRuntimeAdapter.ts treats structural economy payment actionKind=attack as eligible to consume an existing extraAttacks grant regardless of whether the replacement entry point is an attack roll or a save-based attack option',
+            'productionEvidence':'c9FamilyJAttackReplacementProduction71304.test.ts proves an unknown installed two-attack Common Play sequence can spend the first attack on damage and replace the second attack with a save-based grapple control option, exhaust the grant, and restore it plus the effect through Undo',
+            'identityInvarianceEvidence':'c9FamilyJAttackReplacementProduction71304.test.ts repeats mixed damage/control replace-one-attack semantics after complete external module/content/mechanic identity rename',
+          }
+          for field,value in additions.items():
+              if value not in row[field]: row[field].append(value)
+          sentence=' Portable replace-one-attack semantics now key projected availability to structural actionKind=attack rather than attack-roll presentation shape, so a remaining attack can be spent on a save-based control option with exhaustion and Undo under complete external identity rename.'
+          if sentence.strip() not in row['currentState']:
+              row['currentState']=row['currentState'].rstrip()+sentence
+          row['currentState']=row['currentState'].replace('complete Unarmed Strike source composition, Opportunity Attack qualification, reach/long range, Extra Attack/replacement, .','complete Unarmed Strike source composition.')
+          row['currentState']=row['currentState'].replace('complete Unarmed Strike source composition, attack replacement, and Loading composition','complete Unarmed Strike source composition')
+          row['remainingNamedSeams']=[seam for seam in row['remainingNamedSeams'] if not seam.startswith('attack replacement remains incomplete')]
+          ledger.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          PY
+          node scripts/check-v1-mechanism-coverage.mjs
+      - name: Publish verified change and retire workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch=agent/c9-gate-n-coverage-reconciliation
+          workflow=.github/workflows/c9-family-j-attack-replacement-71304.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm "$workflow"
+          git add src/app/installedCommonPlayRuntimeAdapter.ts tests/ui/c9FamilyJAttackReplacementProduction71304.test.ts docs/rules/v1-mechanism-coverage-ledger.json
+          git commit -m "feat(c9): support portable attack replacement"
+          for attempt in $(seq 1 5); do
+            if git push origin HEAD:"$branch"; then exit 0; fi
+            git fetch origin "$branch"
+            if git rebase "origin/$branch"; then
+              continue
+            fi
+            git rebase --abort || true
+            exit 1
+          done
+          exit 1
