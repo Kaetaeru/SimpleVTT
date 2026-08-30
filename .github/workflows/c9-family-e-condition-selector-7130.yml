@@ -114,7 +114,7 @@ jobs:
           from pathlib import Path
           path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
           data=json.loads(path.read_text(encoding='utf-8'))
-          family=next(entry for entry in data['families'] if entry.get('family')=='E')
+          family=next(entry for entry in data['rows'] if entry.get('family')=='E')
           family['currentState']=family['currentState'].replace(
             'through the shared selector kernel;',
             'through the shared selector kernel, including authoritative Scene status/condition membership;'
