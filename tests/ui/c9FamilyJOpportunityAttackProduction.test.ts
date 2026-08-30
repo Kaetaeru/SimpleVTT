@@ -11,6 +11,7 @@ async function exerciseProjectedOpportunityAttack(actionId:string,actionName:str
   const adapter=new MockAdapter();
   await adapter.startInitiative();
   await adapter.setCurrentActor(PROVOKER_ID);
+  await adapter.setQueuedD20(15);
 
   const internal=adapter as unknown as {scene:SceneVm};
   const source=(internal.scene.actionsByActor[REACTOR_ID]??[]).find((action)=>action.id==="action.scimitar");
@@ -18,7 +19,6 @@ async function exerciseProjectedOpportunityAttack(actionId:string,actionName:str
   const projected:ActionVm={...structuredClone(source),id:actionId,name:actionName};
   internal.scene.actionsByActor[REACTOR_ID]=[projected];
 
-  await adapter.setQueuedD20(15);
   await adapter.declareManualMovementReaction({
     kind:"opportunity-attack",
     provokerId:PROVOKER_ID,
@@ -31,7 +31,7 @@ async function exerciseProjectedOpportunityAttack(actionId:string,actionName:str
   });
 
   let snapshot=await adapter.getSnapshot();
-  assert.equal(snapshot.resolution?.stage,"roll-animation");
+  assert.equal(snapshot.resolution?.stage,"roll-animation",snapshot.activity[0]?.summary);
   assert.equal(snapshot.resolution?.actorId,REACTOR_ID);
   assert.match(snapshot.resolution?.actionName??"",new RegExp(actionName));
   assert.ok(snapshot.resolution?.provenance.some((entry)=>entry.includes(`action:${actionId}`)));
