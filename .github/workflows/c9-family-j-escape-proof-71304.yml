@@ -1,0 +1,125 @@
+name: C9 Family J Escape Proof 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-j-escape-proof-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  verify-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Reconcile latest branch state
+        run: git pull --ff-only origin agent/c9-gate-n-coverage-reconciliation
+      - run: npm ci
+      - name: Add portable grapple escape production proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          file=tests/ui/c9FamilyJPortableControlProduction.test.ts
+          if ! grep -q 'unknown installed Common Play can escape Grappled' "$file"; then
+            cat >> "$file" <<'TS'
+
+function escapePackagePayload(prefix:string){
+  const moduleId=`${prefix}.module`,contentId=`${prefix}.escape`,mechanicId=`${prefix}.mechanic`;
+  const config={
+    schemaVersion:"0.2-draft",id:mechanicId,
+    entryPoints:[
+      {id:"seed-grapple",invocation:"manual",operations:[{kind:"condition.apply",condition:"grappled",target:"actor"}]},
+      {id:"escape-best-save-probe",invocation:"manual",test:{kind:"saving-throw",roller:"actor",property:{choose:"highest",from:["save.str.modifier","save.dex.modifier"]},dc:{value:5},perTarget:false},operations:[{kind:"condition.remove",condition:"grappled",target:"actor",when:{op:"eq",left:{ref:"test.outcome"},right:{value:"success"}}}]},
+    ],
+  };
+  return {moduleId,contentId,mechanicId,json:JSON.stringify({schemaVersion:"0.1-draft",moduleId,moduleVersion:"1",rulesProfile:{id:"dnd.srd-5.2.1",version:"0.1-draft"},defaultLocale:"en",source:{document:"Family J portable escape probe",version:"1",license:"CC0",srdDerived:false},dependencies:[],conflicts:[],capabilities:[],content:[{id:contentId,category:"option",presentation:{defaultLocale:"en",originalName:"Portable Escape Probe",locales:{en:{name:"Portable Escape Probe"}}},mechanics:[{kind:"common-play",config}]}]})};
+}
+
+async function exerciseEscape(prefix:string){
+  const adapter=new MockAdapter();
+  const pack=escapePackagePayload(prefix);
+  setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
+  let snapshot=await adapter.previewContentImport(pack.json);
+  assert.ok(!snapshot.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(snapshot.contentImport?.validation));
+  await adapter.activateContentImport();
+  await adapter.startInitiative();
+  await adapter.setCurrentActor("char.aelar");
+  const actionId=(entryPointId:string)=>installedCommonPlayActionId({catalogId:catalogQualifiedId(pack.contentId,pack.moduleId,"1"),mechanicId:pack.mechanicId,entryPointId});
+  snapshot=await adapter.resolveAction(actionId("seed-grapple"),[]);
+  assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
+  assert.equal(snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)?.effects.some((effect)=>effect.targetId==="char.aelar"&&effect.conditionId==="grappled"),true);
+  await adapter.setQueuedD20(20);
+  snapshot=await adapter.resolveAction(actionId("escape-best-save-probe"),[]);
+  assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
+  assert.equal(snapshot.resolution?.rollKind,"save");
+  assert.equal(snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)?.effects.some((effect)=>effect.targetId==="char.aelar"&&effect.conditionId==="grappled"),false);
+  await adapter.undoLastResolution();
+  snapshot=await adapter.getSnapshot();
+  assert.equal(snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)?.effects.some((effect)=>effect.targetId==="char.aelar"&&effect.conditionId==="grappled"),true);
+}
+
+test("unknown installed Common Play can escape Grappled with best STR/DEX save and Undo under identity rename",async()=>{
+  await exerciseEscape("unknown-family-j-escape");
+  await exerciseEscape("renamed-family-j-escape");
+});
+TS
+          fi
+      - name: Verify Family J escape proof
+        run: node --import tsx --test tests/ui/c9FamilyJPortableControlProduction.test.ts
+      - name: Reconcile Family J ledger evidence
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
+          data=json.loads(path.read_text(encoding='utf-8'))
+          row=next(entry for entry in data['rows'] if entry['family']=='J')
+          old='best-of STR/DEX portable control choice and escape plus full weapon/Unarmed Strike, Opportunity Attack, reach/range/cover, Extra Attack/replacement, and ammunition/loading composition.'
+          new='full weapon/Unarmed Strike source composition, Opportunity Attack, reach/range/cover, Extra Attack/replacement, and ammunition/loading composition.'
+          row['currentState']=row['currentState'].replace(old,new)
+          implementation='commonPlayOperationRuntime.ts CommonPlayD20ModifierProperty choose-highest plus conditional condition.remove lowering composes portable STR/DEX escape through the shared Resolver without content identity dispatch'
+          production='c9FamilyJPortableControlProduction.test.ts proves unknown and fully renamed external RuleModules choose the higher STR/DEX save modifier to remove Grappled on success and event-native Undo restores the condition'
+          if implementation not in row['implementationEvidence']: row['implementationEvidence'].append(implementation)
+          if production not in row['productionEvidence']: row['productionEvidence'].append(production)
+          updated=[]
+          for seam in row['remainingNamedSeams']:
+            if 'best-of STR/DEX control choice, escape, and complete grapple/shove source composition remain incomplete' in seam:
+              seam='complete grapple/shove source composition remains incomplete'
+            updated.append(seam)
+          row['remainingNamedSeams']=updated
+          path.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          PY
+      - name: Verify shared C9 contracts
+        run: |
+          node scripts/check-v1-mechanism-coverage.mjs
+          node scripts/check-legacy-execution-boundary.mjs
+          npm exec tsc -- --noEmit
+      - name: Publish verified Family J proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch=agent/c9-gate-n-coverage-reconciliation
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/c9-family-j-escape-proof-71304.yml
+          git add tests/ui/c9FamilyJPortableControlProduction.test.ts docs/rules/v1-mechanism-coverage-ledger.json
+          git commit -m "test(c9): prove portable grapple escape"
+          for attempt in $(seq 1 8); do
+            if git push origin HEAD:"$branch"; then exit 0; fi
+            git fetch origin "$branch"
+            git rebase "origin/$branch"
+            sleep 1
+          done
+          exit 1
