@@ -72,6 +72,8 @@ jobs:
           PY
       - name: Install dependencies
         run: npm ci
+      - name: Generate content dependencies
+        run: npm run generate:content
       - name: Verify Family Q target responder
         run: npx tsx --test tests/ui/c9FamilyQTargetOwnerInteractionProduction.test.ts
       - name: Verify typecheck
