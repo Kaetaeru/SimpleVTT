@@ -31,7 +31,7 @@ jobs:
 
           path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
           data=json.loads(path.read_text(encoding='utf-8'))
-          family=next(entry for entry in data['families'] if entry.get('family')=='F')
+          family=next(entry for entry in data['rows'] if entry.get('family')=='F')
           family['currentState']='Generic fixed-pool allocation is PRODUCTION for unknown installed Common Play with integer/per-target bounds, atomic pre-execution validation, Undo, rename invariance, and Host/Client convergence; durable pending-decision reconnect resume and automatic allocation policy remain incomplete.'
           family['disposition']='INCOMPLETE'
           family['implementationEvidence']=[
