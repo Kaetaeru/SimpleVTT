@@ -12,6 +12,7 @@ import {
   submitConnectedCommonPlayAuthorityFactResponse,
 } from "../../src/app/connectedCommonPlayAuthorityFactRuntime";
 import {
+  COMMON_PLAY_STANDARD_FACTS,
   resolveCommonPlayFactQuery,
   type CommonPlayAuthorityFactRequest,
   type CommonPlayFactResolution,
@@ -39,10 +40,10 @@ function manifest(characterId:string):SessionCompatibilityManifest {
 
 async function authorityRequest(queryId:string,expectedRevision=7) {
   const resolution=await resolveCommonPlayFactQuery({
-    registry:{"target.visible":{valueType:"boolean"}},
+    registry:COMMON_PLAY_STANDARD_FACTS,
     query:{
       id:queryId,
-      fact:"target.visible",
+      fact:"sense.can-see",
       subject:ownerId,
       authority:"target-owner",
       visibility:"authority-only",
@@ -109,6 +110,7 @@ test("connected Common Play authority facts stay private to the owner, normalize
   assert.equal(prompt.sessionId,sessionId);
   assert.equal(prompt.responderId,ownerId);
   assert.equal(prompt.request.visibility,"authority-only");
+  assert.equal(prompt.request.fact,"sense.can-see");
 
   const wrongClient=await applyConnectedCommonPlayAuthorityFactRequest(client,prompt,otherId);
   assert.equal(wrongClient.status,"rejected");

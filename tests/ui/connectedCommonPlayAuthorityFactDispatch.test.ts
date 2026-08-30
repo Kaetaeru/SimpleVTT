@@ -19,7 +19,7 @@ import {
   type ConnectedWireMessage,
 } from "../../src/app/connectedSessionWire";
 import { tauriSessionTransport, type SessionTransportMessage, type SessionTransportStatus } from "../../src/app/tauriSessionTransport";
-import { resolveCommonPlayFactQuery, type CommonPlayFactResolution } from "../../src/domain/commonPlaySpatialFactRuntime";
+import { COMMON_PLAY_STANDARD_FACTS, resolveCommonPlayFactQuery, type CommonPlayFactResolution } from "../../src/domain/commonPlaySpatialFactRuntime";
 
 const ownerPeer="peer.owner.dispatch";
 
@@ -34,10 +34,10 @@ function ownerManifest(characterId:string):SessionCompatibilityManifest {
 
 async function requestFor(characterId:string,queryId:string,revision:number) {
   const resolution=await resolveCommonPlayFactQuery({
-    registry:{"target.visible":{valueType:"boolean"}},
+    registry:COMMON_PLAY_STANDARD_FACTS,
     query:{
       id:queryId,
-      fact:"target.visible",
+      fact:"sense.can-see",
       subject:characterId,
       authority:"target-owner",
       visibility:"authority-only",

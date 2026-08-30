@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  COMMON_PLAY_STANDARD_FACTS,
   answerCommonPlayFactRequest,
   resolveCommonPlayFactPredicate,
   resolveCommonPlayFactQuery,
@@ -206,6 +207,32 @@ test("Gate E unknown external content identity does not participate in fact sema
     });
     assert.equal(result.status,"resolved");
     if(result.status==="resolved")assert.equal(result.answer.value,true);
+  }
+});
+
+test("Family H standard sensing facts normalize provider authority without content identity dispatch",async()=>{
+  const cases=[
+    ["sense.can-see",true],
+    ["sense.can-hear",false],
+    ["sense.detected",true],
+    ["sense.light","dim"],
+    ["sense.obscurement","heavy"],
+    ["sense.hidden",false],
+  ] as const;
+  for(const [fact,value] of cases){
+    for(const resolutionId of ["resolution.sense.external-alpha","resolution.sense.renamed-banana"]){
+      const result=await resolveCommonPlayFactQuery({
+        registry:COMMON_PLAY_STANDARD_FACTS,
+        query:{id:`query.${fact}`,fact,subject:"actor.target",authority:"target-owner",visibility:"actor",unknownPolicy:"block"},
+        resolutionId,
+        expectedRevision:5,
+        provider:{id:"provider.sensing-authority",resolve(query){return query.fact===fact?{status:"answered",value}:{status:"unknown"};}},
+      });
+      assert.equal(result.status,"resolved");
+      if(result.status!=="resolved")continue;
+      assert.equal(result.answer.value,value);
+      assert.deepEqual(result.answer.provenance,{kind:"provider",providerId:"provider.sensing-authority"});
+    }
   }
 });
 
