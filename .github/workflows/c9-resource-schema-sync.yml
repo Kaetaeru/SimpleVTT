@@ -1,0 +1,59 @@
+name: C9 Resource Schema Sync
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - ".github/workflows/c9-resource-schema-sync.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  sync-schema:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Add source-owned resource creation contract
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path("schemas/common-play-contract.schema.json")
+          schema = json.loads(path.read_text(encoding="utf-8"))
+          resource_change = schema["$defs"]["resourceChange"]
+          resource_change["properties"]["createIfMissing"] = {
+              "type": "object",
+              "required": ["label", "maximum"],
+              "properties": {
+                  "label": {"type": "string", "minLength": 1},
+                  "maximum": {"$ref": "#/$defs/expression"},
+                  "recovery": {
+                      "type": "object",
+                      "properties": {
+                          "shortRest": {"oneOf": [{"const": "all"}, {"type": "integer", "minimum": 0}]},
+                          "longRest": {"oneOf": [{"const": "all"}, {"type": "integer", "minimum": 0}]},
+                          "turnStart": {"oneOf": [{"const": "all"}, {"type": "integer", "minimum": 0}]},
+                      },
+                      "additionalProperties": False,
+                  },
+              },
+              "additionalProperties": False,
+          }
+          path.write_text(json.dumps(schema, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+          PY
+      - name: Commit schema and remove one-shot workflow
+        run: |
+          rm .github/workflows/c9-resource-schema-sync.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add schemas/common-play-contract.schema.json .github/workflows/c9-resource-schema-sync.yml
+          git commit -m "feat(c9): validate portable resource materialization"
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
