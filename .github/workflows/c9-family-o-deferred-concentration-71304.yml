@@ -1,0 +1,47 @@
+name: C9 Family O Deferred Concentration 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-o-deferred-concentration-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run generate:content
+      - name: Verify portable deferred concentration setup
+        run: >-
+          npx tsx --test
+          tests/domain/c9FamilyODeferredConcentration.test.ts
+          tests/domain/commonPlayStoredInvocationRuntime.test.ts
+          tests/ui/c9FamilyOConcentrationProduction.test.ts
+          tests/ui/installedCommonPlayLoweredFamiliesProduction.test.ts
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - name: Retire verifier
+        if: success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin agent/c9-gate-n-coverage-reconciliation
+          git checkout -B agent/c9-gate-n-coverage-reconciliation origin/agent/c9-gate-n-coverage-reconciliation
+          git rm .github/workflows/c9-family-o-deferred-concentration-71304.yml
+          git commit -m "ci(c9): verify deferred concentration setup"
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
