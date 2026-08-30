@@ -88,6 +88,10 @@
       "classification": "LEGACY_EXECUTION"
     },
     {
+      "module": "./installedProgressionChoiceProjectionAdapter",
+      "classification": "GENERIC_ENGINE"
+    },
+    {
       "module": "./phase09RealResolutionAdapter",
       "classification": "GENERIC_ENGINE"
     },

@@ -1911,7 +1911,7 @@
         "content-entry.schema.json: progressionContributions",
         "progression.ts"
       ],
-      "currentState": "Unknown module contributions persist and execute by track/threshold; named level-up projection seams remain incomplete",
+      "currentState": "The ProgressionDraft -> Character revision authority retains the complete SRD profile materializer. Unknown installed RuleModules add track/threshold automatic grants and validated ChoiceDefinitions with exact counts, replacement/upgrade, and stable cross-content grant IDs. Granted content owns ordinary Common Play RuleSources, which project executable actions after durable Character restart without content identity dispatch.",
       "requiredSemantics": [
         "class/subclass/species/background/feat",
         "multiclass/prerequisites/thresholds",
@@ -1924,24 +1924,29 @@
         "cross-content contribution"
       ],
       "transactionDomain": "ProgressionDraft to Character revision",
-      "disposition": "INCOMPLETE",
+      "disposition": "IMPLEMENTED",
       "implementationEvidence": [
         "commonPlayProgressionContribution.ts",
         "ruleModulePackageImport.ts",
-        "commonPlayC6Runtime.test.ts"
+        "commonPlayC6Runtime.test.ts",
+        "InstalledProgressionChoiceV1 in installedContentContracts.ts and content-entry.schema.json",
+        "installedProgressionChoiceProjectionAdapter.ts",
+        "installedCommonPlayRuntimeAdapter.ts progression-grant RuleSource projection"
       ],
-      "productionEvidence": [],
-      "identityInvarianceEvidence": [],
+      "productionEvidence": [
+        "f993cb20 feat(c9): connect portable progression grants",
+        "installedProgressionContributionRuntime.test.ts: package import -> level-up ChoiceDefinition -> atomic replacement -> durable Character restart -> granted Common Play action execution",
+        "test:progression: 303 passing tests cover SRD profile prerequisites, multiclassing, HP/hit dice, proficiency/expertise/language, resources, spells, mastery, persistent options, and replacement"
+      ],
+      "identityInvarianceEvidence": [
+        "installedProgressionContributionRuntime.test.ts executes identical production behavior for external.progression and totally-renamed.reward-track identities"
+      ],
       "connectedEvidenceIfRelevant": [],
       "persistenceEvidenceIfRelevant": [
-        "InstalledCatalogEntryV1.progressionContributions"
+        "InstalledCatalogEntryV1.progressionContributions",
+        "installedProgressionContributionRuntime.test.ts durable installed catalog and Character restart preserve selected grant identity and executable RuleSource"
       ],
-      "remainingNamedSeams": [
-        "named Phase08 progression adapters",
-        "progressionRuntimeAdapter identity branches",
-        "characterCreationV10Adapter grants",
-        "installed contribution level-up projection"
-      ],
+      "remainingNamedSeams": [],
       "connectedRelevant": false,
       "persistenceRelevant": true
     },

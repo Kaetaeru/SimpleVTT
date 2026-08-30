@@ -111,6 +111,8 @@ These are migration debt when known class/subclass/feat identities select featur
 | `progressionPhase08SubclassAdapter.ts`, `progressionPhase08BardLoreAdapter.ts`, `progressionPhase08SorcererDraconicAdapter.ts`, `progressionPhase08WizardEvocationAdapter.ts`, `progressionPhase08MonkOpenHandAdapter.ts`, `progressionPhase08RogueThiefAdapter.ts` | known subclass/class IDs choose feature-specific progression | matching Phase08 subclass runtime/domain tests | Character revision / subclass level-up | portable subclass progression data + generic application |
 | `pactTomeRuntimeAdapter.ts` | Pact of the Tome resolver/eligibility | Pact Tome domain/runtime/rest tests | Character rest revision and spell selections | portable invocation spell-grant/rest definition + generic materializer |
 
+These files are retained SRD-profile materializers, not a fallback selected for installed or unknown content. Portable progression execution now enters only through validated `progressionContributions`: track/threshold grants, shared `ChoiceDefinition` validation, replacement/upgrade, durable stable grant IDs, and grant-owned Common Play RuleSources. `installedProgressionContributionRuntime.test.ts` proves two unrelated external identity sets take that same path. Further deletion of the SRD-profile materializers is source consolidation debt, not a Gate-N execution gap.
+
 ## GENERIC_ENGINE
 
 Identity-agnostic execution infrastructure is not migration debt merely because it is an adapter:
