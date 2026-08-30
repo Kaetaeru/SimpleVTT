@@ -62,7 +62,7 @@ jobs:
 
           ledger_path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
           ledger=json.loads(ledger_path.read_text(encoding='utf-8'))
-          row=next(entry for entry in ledger['families'] if entry['family']=='E')
+          row=next(entry for entry in ledger['rows'] if entry['family']=='E')
           evidence='tests/ui/installedCommonPlayProductionRuntime.test.ts: connected Common Play targeting remains Host-authoritative and converges through existing events; the same event batch is duplicate-idempotent and a fresh ClientSessionReplica replays it from cursor zero to the same HP and targetIds'
           existing=row.setdefault('persistenceEvidenceIfRelevant',[])
           if evidence not in existing:
@@ -87,7 +87,7 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git rm -f --ignore-unmatch .github/workflows/c9-family-e-targeting-replay-evidence.yml .github/workflows/c9-family-e-targeting-replay-evidence-r3.yml
+          git rm -f --ignore-unmatch .github/workflows/c9-family-e-targeting-replay-evidence.yml .github/workflows/c9-family-e-targeting-replay-evidence-r3.yml .github/workflows/c9-family-e-targeting-replay-evidence-r4.yml
           git add tests/ui/installedCommonPlayProductionRuntime.test.ts docs/rules/v1-mechanism-coverage-ledger.json
           git diff --cached --check
           git commit -m "test(c9): prove targeting reconnect retry convergence"
