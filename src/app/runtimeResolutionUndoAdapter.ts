@@ -1,4 +1,4 @@
-import type { CharacterSheet, SceneVm } from "./contracts";
+import type { AppSnapshot, CharacterSheet, SceneVm } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
 import type { ResolutionEvent } from "../domain/resolutionTypes";
 import type { RuntimeStateChange } from "../domain/runtimeStateChange";
@@ -20,6 +20,7 @@ interface AdapterState {
   activity:Array<{ id:string }>;
   lastResolutionId:string|null;
   syncChar():void;
+  getSnapshot():Promise<AppSnapshot>;
 }
 
 type ReversibleStateChange = RuntimeStateChange & {
@@ -51,7 +52,7 @@ function invertResolutionEvents(events:ResolutionEvent[]):ResolutionEvent[] {
 
 const oldUndoLastResolution=MockAdapter.prototype.undoLastResolution;
 
-MockAdapter.prototype.undoLastResolution=async function undoRuntimeResolution():Promise<boolean> {
+MockAdapter.prototype.undoLastResolution=async function undoRuntimeResolution():Promise<AppSnapshot> {
   const history=runtimeResolutionEventHistory(this);
   if (!history) return oldUndoLastResolution.call(this);
 
@@ -65,10 +66,10 @@ MockAdapter.prototype.undoLastResolution=async function undoRuntimeResolution():
     internal.activeCharacter.items,
     runtimeState,
   );
-  if (projected.status==="rejected") return false;
+  if (projected.status==="rejected") return internal.getSnapshot();
 
   const writeBack=await persistCharacterResolutionEvents(this,history.events,"inverse");
-  if (writeBack.status==="rejected") return false;
+  if (writeBack.status==="rejected") return internal.getSnapshot();
 
   if (runtimeState && projected.runtimeState) {
     const committed=commitAdapterTurnRuntimeState(
@@ -79,7 +80,7 @@ MockAdapter.prototype.undoLastResolution=async function undoRuntimeResolution():
     );
     if (!committed) {
       if (writeBack.changed) await persistCharacterResolutionEvents(this,history.events,"forward");
-      return false;
+      return internal.getSnapshot();
     }
   }
 
@@ -93,5 +94,5 @@ MockAdapter.prototype.undoLastResolution=async function undoRuntimeResolution():
   internal.lastResolutionId=null;
   clearRuntimeResolutionEventHistory(this);
   internal.syncChar();
-  return true;
+  return internal.getSnapshot();
 };
