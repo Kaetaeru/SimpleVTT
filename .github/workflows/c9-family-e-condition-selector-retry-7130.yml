@@ -130,6 +130,8 @@ jobs:
             family['identityInvarianceEvidence'].append(identity)
           path.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
           PY
+      - name: Generate builtin catalog
+        run: npm run generate:content
       - name: Verify Family E condition selector slice
         run: >-
           node --import tsx --test
@@ -154,6 +156,7 @@ jobs:
           branch=agent/c9-gate-n-coverage-reconciliation
           git fetch origin "$branch"
           git rebase "origin/$branch"
+          npm run generate:content
           node --import tsx --test tests/ui/c9FamilyEConditionSelectorProduction.test.ts tests/ui/c9FamilyETagSelectorProduction.test.ts tests/ui/commonPlayRichSelectorProduction.test.ts
           node scripts/check-v1-mechanism-coverage.mjs
           node scripts/check-legacy-execution-boundary.mjs
