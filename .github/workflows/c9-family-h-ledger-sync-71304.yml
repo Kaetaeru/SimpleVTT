@@ -24,14 +24,13 @@ jobs:
           path=docs/rules/v1-mechanism-coverage-ledger.json
           for attempt in $(seq 1 20); do
             gh api -X GET "repos/$GITHUB_REPOSITORY/contents/$path?ref=$branch" > /tmp/ledger-response.json
-            sha="$(jq -r .sha /tmp/ledger-response.json)"
-            jq -r .content /tmp/ledger-response.json | tr -d '\n' | base64 -d > /tmp/ledger.json
             python3 - <<'PY'
+          import base64
           import json
           from pathlib import Path
 
-          path=Path('/tmp/ledger.json')
-          data=json.loads(path.read_text(encoding='utf-8'))
+          response=json.loads(Path('/tmp/ledger-response.json').read_text(encoding='utf-8'))
+          data=json.loads(base64.b64decode(response['content']).decode('utf-8'))
           row=next((entry for entry in data['rows'] if entry.get('family')=='H'),None)
           if row is None:
               raise SystemExit('Family H row not found')
@@ -54,16 +53,19 @@ jobs:
           add_unique('identityInvarianceEvidence','installedCommonPlayInterceptorProductionRuntime.test.ts special-sight matrix preserves provider-authored sensing semantics after full external module/content/mechanic/interceptor/interaction/display rename')
           row['remainingNamedSeams']=['rules-derived special-sense acquisition/derivation, detection/Search, and discovery semantics remain incomplete']
 
-          path.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
-          reloaded=json.loads(path.read_text(encoding='utf-8'))
+          rendered=json.dumps(data,ensure_ascii=False,indent=2)+'\n'
+          reloaded=json.loads(rendered)
           check=next(entry for entry in reloaded['rows'] if entry.get('family')=='H')
           assert check['disposition']=='INCOMPLETE'
           assert check['remainingNamedSeams']==['rules-derived special-sense acquisition/derivation, detection/Search, and discovery semantics remain incomplete']
-          assert reloaded['gateNBlockingNamedFallbacks']==data['gateNBlockingNamedFallbacks']
+          payload={
+              'message':'docs(c9): record Family H sensing evidence',
+              'content':base64.b64encode(rendered.encode('utf-8')).decode('ascii'),
+              'sha':response['sha'],
+              'branch':'agent/c9-gate-n-coverage-reconciliation',
+          }
+          Path('/tmp/update.json').write_text(json.dumps(payload),encoding='utf-8')
           PY
-            content="$(base64 -w0 < /tmp/ledger.json)"
-            jq -n --arg message "docs(c9): record Family H sensing evidence" --arg content "$content" --arg sha "$sha" --arg branch "$branch" \
-              '{message:$message,content:$content,sha:$sha,branch:$branch}' > /tmp/update.json
             if gh api --method PUT "repos/$GITHUB_REPOSITORY/contents/$path" --input /tmp/update.json >/dev/null 2>/tmp/put.err; then
               exit 0
             fi
