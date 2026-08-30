@@ -37,84 +37,73 @@ jobs:
           set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
-
           path=Path('src/app/installedCommonPlayRuntimeAdapter.ts')
           text=path.read_text(encoding='utf-8')
           import_line='import { authoritativeCommonPlaySpatialRelation } from "./realSpatialRuntimeService";\n'
-          import_anchor='import { allocationEntriesFromTargetSequence, resolveCommonPlayAllocation } from "../domain/commonPlayAllocationRuntime";\n'
+          anchor='import { allocationEntriesFromTargetSequence, resolveCommonPlayAllocation } from "../domain/commonPlayAllocationRuntime";\n'
           if import_line not in text:
-              if import_anchor not in text:
-                  raise SystemExit('Family E spatial import anchor not found')
-              text=text.replace(import_anchor,import_anchor+import_line,1)
-
+              if anchor not in text: raise SystemExit('spatial import anchor missing')
+              text=text.replace(anchor,anchor+import_line,1)
           old='''function commonPlaySelectorCandidate(actor:SceneVm["entities"][number],target:SceneVm["entities"][number]):CommonPlaySelectorCandidate {
-            const targeting=commonPlayTargetFact(actor,target);
-            return {
-              id:target.id,
-              targeting,
-              properties:{
-                relation:targeting.relation,
-                name:target.name,
-                side:target.side,
-                kind:target.kind,
-                hp:target.hp,
-                maxHp:target.maxHp,
-                tempHp:target.tempHp,
-                ac:target.ac,
-                initiative:target.initiative,
-                status:[...target.status],
-                resistances:[...target.resistances],
-                immunities:[...target.immunities],
-                vulnerabilities:[...target.vulnerabilities],
-              },
-            };
-          }
-          '''
-          old='\n'.join(line[10:] if line.startswith('          ') else line for line in old.splitlines())+'\n'
+  const targeting=commonPlayTargetFact(actor,target);
+  return {
+    id:target.id,
+    targeting,
+    properties:{
+      relation:targeting.relation,
+      name:target.name,
+      side:target.side,
+      kind:target.kind,
+      hp:target.hp,
+      maxHp:target.maxHp,
+      tempHp:target.tempHp,
+      ac:target.ac,
+      initiative:target.initiative,
+      status:[...target.status],
+      resistances:[...target.resistances],
+      immunities:[...target.immunities],
+      vulnerabilities:[...target.vulnerabilities],
+    },
+  };
+}
+'''
           new='''function commonPlaySelectorCandidate(scene:SceneVm,actor:SceneVm["entities"][number],target:SceneVm["entities"][number]):CommonPlaySelectorCandidate {
-            const spatial=authoritativeCommonPlaySpatialRelation(scene,actor.id,target.id);
-            const targeting:TargetingFactInput={
-              ...commonPlayTargetFact(actor,target),
-              ...(spatial?{distanceFeet:spatial.distanceFeet,visible:spatial.visible,cover:spatial.cover}:{}),
-            };
-            return {
-              id:target.id,
-              targeting,
-              properties:{
-                relation:targeting.relation,
-                name:target.name,
-                side:target.side,
-                kind:target.kind,
-                hp:target.hp,
-                maxHp:target.maxHp,
-                tempHp:target.tempHp,
-                ac:target.ac,
-                initiative:target.initiative,
-                status:[...target.status],
-                resistances:[...target.resistances],
-                immunities:[...target.immunities],
-                vulnerabilities:[...target.vulnerabilities],
-                ...(spatial?{distanceFeet:spatial.distanceFeet,visible:spatial.visible,cover:spatial.cover}:{}),
-              },
-            };
-          }
-          '''
-          new='\n'.join(line[10:] if line.startswith('          ') else line for line in new.splitlines())+'\n'
+  const spatial=authoritativeCommonPlaySpatialRelation(scene,actor.id,target.id);
+  const targeting:TargetingFactInput={
+    ...commonPlayTargetFact(actor,target),
+    ...(spatial?{distanceFeet:spatial.distanceFeet,visible:spatial.visible,cover:spatial.cover}:{}),
+  };
+  return {
+    id:target.id,
+    targeting,
+    properties:{
+      relation:targeting.relation,
+      name:target.name,
+      side:target.side,
+      kind:target.kind,
+      hp:target.hp,
+      maxHp:target.maxHp,
+      tempHp:target.tempHp,
+      ac:target.ac,
+      initiative:target.initiative,
+      status:[...target.status],
+      resistances:[...target.resistances],
+      immunities:[...target.immunities],
+      vulnerabilities:[...target.vulnerabilities],
+      ...(spatial?{distanceFeet:spatial.distanceFeet,visible:spatial.visible,cover:spatial.cover}:{}),
+    },
+  };
+}
+'''
           if new not in text:
-              if old not in text:
-                  raise SystemExit('Family E selector helper anchor not found or changed')
+              if old not in text: raise SystemExit('selector helper anchor changed')
               text=text.replace(old,new,1)
-
           old_call='commonPlaySelectorCandidate(actorEntity,target)'
           new_call='commonPlaySelectorCandidate(internal.scene,actorEntity,target)'
           text=text.replace(old_call,new_call)
-          if old_call in text:
-              raise SystemExit('Family E selector call site remains unpatched')
-          if text.count(new_call)<2:
-              raise SystemExit('Family E expected both selector call sites')
+          if old_call in text or text.count(new_call)<2: raise SystemExit('selector call sites not fully patched')
           path.write_text(text,encoding='utf-8')
           PY
-
           cat > tests/ui/c9FamilyESpatialFactProduction.test.ts <<'EOF'
           import assert from "node:assert/strict";
           import test from "node:test";
@@ -127,120 +116,39 @@ jobs:
           import { MemoryInstalledContentStore } from "../../src/app/memoryInstalledContentStore";
           import { MockAdapter } from "../../src/app/mockAdapter";
           import { setSpatialRelation } from "../../src/app/spatialRuntimeContracts";
-
           type Identity={moduleId:string;contentId:string;mechanicId:string;entryPointId:string;displayName:string};
           const ORIGINAL:Identity={moduleId:"homebrew.family-e-spatial",contentId:"option.family-e-spatial",mechanicId:"external.unknown.family-e-spatial",entryPointId:"spatial-target",displayName:"Spatial Target"};
           const RENAMED:Identity={moduleId:"homebrew.renamed-family-e-spatial",contentId:"option.renamed-family-e-spatial",mechanicId:"external.renamed.family-e-spatial",entryPointId:"renamed-spatial-target",displayName:"Renamed Spatial Target"};
-
-          function payload(identity:Identity) {
-            return JSON.stringify({
-              schemaVersion:"0.1-draft",moduleId:identity.moduleId,moduleVersion:"1",
-              rulesProfile:{id:"dnd.srd-5.2.1",version:"0.1-draft"},defaultLocale:"en",
-              source:{document:"Family E Spatial Fact Probe",version:"1",license:"CC0",srdDerived:false},
-              dependencies:[],conflicts:[],capabilities:[],
-              content:[{
-                id:identity.contentId,category:"option",
-                presentation:{defaultLocale:"en",originalName:identity.displayName,locales:{en:{name:identity.displayName}}},
-                mechanics:[{kind:"common-play",config:{
-                  schemaVersion:"0.2-draft",id:identity.mechanicId,
-                  entryPoints:[{id:identity.entryPointId,invocation:"manual",targeting:{
-                    from:"targets",min:1,max:1,
-                    where:{op:"all",args:[
-                      {op:"eq",left:{ref:"relation"},right:{value:"enemy"}},
-                      {op:"lte",left:{ref:"distanceFeet"},right:{value:30}},
-                      {op:"eq",left:{ref:"visible"},right:{value:true}},
-                      {op:"ne",left:{ref:"cover"},right:{value:"total"}},
-                    ]},
-                  },operations:[]}],
-                }}],
-              }],
-            });
-          }
-
-          function trustedSpatial(scene:SceneVm,targetId:string,distanceFeet:number,visible:boolean,cover:"none"|"half"|"three-quarters"|"total") {
-            setSpatialRelation(scene,{
-              sourceId:"char.aelar",targetId,distanceFeet,visible,cover,targetCanSeeAttacker:true,
-              provenance:"module:c9-family-e-spatial-probe",
-            });
-          }
-
-          async function execute(identity:Identity) {
-            const adapter=new MockAdapter();
-            setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
-            const scene=(adapter as unknown as {scene:SceneVm}).scene;
-            trustedSpatial(scene,"combatant.goblin-a",20,true,"half");
-            trustedSpatial(scene,"combatant.goblin-b",20,false,"none");
-            trustedSpatial(scene,"combatant.training-guardian",40,true,"none");
-            setSpatialRelation(scene,{
-              sourceId:"char.aelar",targetId:"combatant.wolf",distanceFeet:10,visible:true,cover:"none",targetCanSeeAttacker:true,
-              provenance:"test:untrusted-spatial-fact",
-            });
-
-            const preview=await adapter.previewContentImport(payload(identity));
-            assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
-            await adapter.activateContentImport();
-            await adapter.startInitiative();
-            await adapter.setCurrentActor("char.aelar");
-            const actionId=installedCommonPlayActionId({
-              catalogId:catalogQualifiedId(identity.contentId,identity.moduleId,"1"),
-              mechanicId:identity.mechanicId,entryPointId:identity.entryPointId,
-            });
-
-            for(const rejectedId of ["combatant.goblin-b","combatant.training-guardian","combatant.wolf"]) {
-              await adapter.resolveAction(actionId,[rejectedId]);
-              const rejected=await adapter.getSnapshot();
-              assert.equal(rejected.resolution?.actionId,actionId);
-              assert.equal(rejected.resolution?.finalOutcome,"적용 거부");
-            }
-
-            const renamedTarget=scene.entities.find((entity)=>entity.id==="combatant.goblin-a");
-            assert.ok(renamedTarget);
-            renamedTarget.name=`renamed-target-${identity.moduleId}`;
-            await adapter.resolveAction(actionId,["combatant.goblin-a"]);
-            const snapshot=await adapter.getSnapshot();
-            assert.equal(snapshot.resolution?.stage,"complete");
-            assert.equal(snapshot.resolution?.actionId,actionId);
-            assert.deepEqual(snapshot.resolution?.targetIds,["combatant.goblin-a"]);
-            return snapshot.resolution?.targetIds;
-          }
-
-          test("unknown installed Common Play selector consumes only trusted spatial distance visibility and cover facts and survives identity rename",async()=>{
-            const original=await execute(ORIGINAL);
-            const renamed=await execute(RENAMED);
-            assert.deepEqual(renamed,original);
-          });
+          function payload(i:Identity){return JSON.stringify({schemaVersion:"0.1-draft",moduleId:i.moduleId,moduleVersion:"1",rulesProfile:{id:"dnd.srd-5.2.1",version:"0.1-draft"},defaultLocale:"en",source:{document:"Family E Spatial Fact Probe",version:"1",license:"CC0",srdDerived:false},dependencies:[],conflicts:[],capabilities:[],content:[{id:i.contentId,category:"option",presentation:{defaultLocale:"en",originalName:i.displayName,locales:{en:{name:i.displayName}}},mechanics:[{kind:"common-play",config:{schemaVersion:"0.2-draft",id:i.mechanicId,entryPoints:[{id:i.entryPointId,invocation:"manual",targeting:{from:"targets",min:1,max:1,where:{op:"all",args:[{op:"eq",left:{ref:"relation"},right:{value:"enemy"}},{op:"lte",left:{ref:"distanceFeet"},right:{value:30}},{op:"eq",left:{ref:"visible"},right:{value:true}},{op:"ne",left:{ref:"cover"},right:{value:"total"}}]}},operations:[]}]}}]}]});}
+          function spatial(scene:SceneVm,targetId:string,distanceFeet:number,visible:boolean,cover:"none"|"half"|"three-quarters"|"total",provenance="module:c9-family-e-spatial-probe"){setSpatialRelation(scene,{sourceId:"char.aelar",targetId,distanceFeet,visible,cover,targetCanSeeAttacker:true,provenance});}
+          async function execute(i:Identity){const adapter=new MockAdapter();setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());const scene=(adapter as unknown as {scene:SceneVm}).scene;spatial(scene,"combatant.goblin-a",20,true,"half");spatial(scene,"combatant.goblin-b",20,false,"none");spatial(scene,"combatant.training-guardian",40,true,"none");spatial(scene,"combatant.wolf",10,true,"none","test:untrusted-spatial-fact");const preview=await adapter.previewContentImport(payload(i));assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));await adapter.activateContentImport();await adapter.startInitiative();await adapter.setCurrentActor("char.aelar");const actionId=installedCommonPlayActionId({catalogId:catalogQualifiedId(i.contentId,i.moduleId,"1"),mechanicId:i.mechanicId,entryPointId:i.entryPointId});for(const target of ["combatant.goblin-b","combatant.training-guardian","combatant.wolf"]){await adapter.resolveAction(actionId,[target]);assert.equal((await adapter.getSnapshot()).resolution?.finalOutcome,"적용 거부");}const accepted=scene.entities.find((entity)=>entity.id==="combatant.goblin-a");assert.ok(accepted);accepted.name=`renamed-${i.moduleId}`;await adapter.resolveAction(actionId,[accepted.id]);const snapshot=await adapter.getSnapshot();assert.equal(snapshot.resolution?.stage,"complete");assert.deepEqual(snapshot.resolution?.targetIds,[accepted.id]);return snapshot.resolution?.targetIds;}
+          test("unknown installed Common Play selector consumes only trusted spatial distance visibility and cover facts and survives identity rename",async()=>{assert.deepEqual(await execute(RENAMED),await execute(ORIGINAL));});
           EOF
-      - name: Verify Family E spatial fact slice
-        run: >-
-          node --import tsx --test
-          tests/ui/c9FamilyESpatialFactProduction.test.ts
-          tests/ui/c9FamilyEConditionSelectorProduction.test.ts
-          tests/ui/c9FamilyETagSelectorProduction.test.ts
-          tests/ui/commonPlayRichSelectorProduction.test.ts
-      - name: Verify repository boundaries
-        run: |
-          node scripts/check-v1-mechanism-coverage.mjs
-          node scripts/check-legacy-execution-boundary.mjs
-          npm exec tsc -- --noEmit
-      - name: Publish verified slice and retire temporary verifiers
+      - name: Verify and publish with concurrent-push retry
         shell: bash
         run: |
           set -euo pipefail
+          tests=(tests/ui/c9FamilyESpatialFactProduction.test.ts tests/ui/c9FamilyEConditionSelectorProduction.test.ts tests/ui/c9FamilyETagSelectorProduction.test.ts tests/ui/commonPlayRichSelectorProduction.test.ts)
+          verify() {
+            npm run generate:content >/dev/null
+            node --import tsx --test "${tests[@]}"
+            node scripts/check-v1-mechanism-coverage.mjs
+            node scripts/check-legacy-execution-boundary.mjs
+            npm exec tsc -- --noEmit
+          }
+          verify
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add src/app/installedCommonPlayRuntimeAdapter.ts tests/ui/c9FamilyESpatialFactProduction.test.ts
-          git rm -f --ignore-unmatch \
-            .github/workflows/c9-family-e-spatial-fact-7130.yml \
-            .github/workflows/c9-family-e-spatial-fact-repair-7130.yml \
-            .github/workflows/c9-family-e-spatial-finalize-7130.yml
+          git rm -f --ignore-unmatch .github/workflows/c9-family-e-spatial-fact-7130.yml .github/workflows/c9-family-e-spatial-fact-repair-7130.yml .github/workflows/c9-family-e-spatial-finalize-7130.yml
           git diff --cached --check
           git commit -m "test(c9): prove Family E spatial selector facts"
           branch=agent/c9-gate-n-coverage-reconciliation
-          git fetch origin "$branch"
-          git rebase "origin/$branch"
-          npm run generate:content
-          node --import tsx --test tests/ui/c9FamilyESpatialFactProduction.test.ts tests/ui/c9FamilyEConditionSelectorProduction.test.ts tests/ui/c9FamilyETagSelectorProduction.test.ts tests/ui/commonPlayRichSelectorProduction.test.ts
-          node scripts/check-v1-mechanism-coverage.mjs
-          node scripts/check-legacy-execution-boundary.mjs
-          npm exec tsc -- --noEmit
-          git push origin HEAD:"$branch"
+          for attempt in 1 2 3 4 5; do
+            git fetch origin "$branch"
+            git rebase "origin/$branch"
+            verify
+            if git push origin HEAD:"$branch"; then exit 0; fi
+            echo "publish raced with another C9 writer; retry $attempt/5"
+          done
+          exit 1
