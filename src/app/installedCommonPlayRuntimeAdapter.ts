@@ -853,6 +853,7 @@ function operationExecutionInput(
   const {actor,actorEntity,selectedTargetId,selectedTargets,selectedTargetFacts,targetingCandidates,state}=prepared;
   const entryPoint=action.lowered.definition.entryPoints.find((candidate)=>candidate.id===action.entryPointId)!;
   const movementProperties=commonPlayActorProfileProperties(internal,state,actor.id);
+  const targetProperties=selectedTargetId?commonPlayActorProfileProperties(internal,state,selectedTargetId):undefined;
   const d20Faces=entryPoint.test?[internal.d20(actionId,0),internal.d20(actionId,1)]:undefined;
   const d20RollerId=entryPoint.test?.roller==="target"?selectedTargetId:actor.id;
   const d20ModifierSelection=entryPoint.test?commonPlayTestModifierSelection(internal,state,d20RollerId,entryPoint.test.property):undefined;
@@ -881,6 +882,7 @@ function operationExecutionInput(
     damageDiceFaces:damageDiceFaces(internal,actionId,entryPoint,operationDieDrawIndex),
     ...(Object.keys(deathSaveDiceFaces).length?{deathSaveDiceFaces}:{}),
     ...(movementProperties?{actorProperties:movementProperties,movementProperties}:{}),
+    ...(targetProperties?{targetProperties}:{}),
     ...(Object.keys(movementFactAnswers).length?{movementFactAnswers}:{}),
     ...(entryPoint.test?{d20:{faces:d20Faces!,targetId:selectedTargetId,...(d20ModifierSelection??{})}}:{}),
     ...(itemPaymentResourceIds?{itemPaymentResourceIds}:{}),

@@ -251,6 +251,7 @@ export interface CommonPlayOperationExecutionInput {
   rechargeDiceFaces?:Record<number,number[]>;
   movementFactAnswers?:Record<number,CommonPlayFactAnswer>;
   actorProperties?:Record<string,number>;
+  targetProperties?:Record<string,number>;
   movementProperties?:Record<string,number>;
   interactionResponse?:
     | {interactionId:string;accepted:true}
@@ -840,6 +841,25 @@ function actorExpressionInteger(
   return value;
 }
 
+function d20TargetExpressionInteger(
+  expression:CommonPlayExpression,
+  input:CommonPlayOperationExecutionInput,
+  label:string,
+  minimum?:number,
+) {
+  const actorProperties=input.actorProperties??{};
+  const targetProperties=input.targetProperties??{};
+  const value=evaluateExpression(expression as ExpressionNode,(property)=>{
+    const targetProperty=property.startsWith("target.")?property.slice("target.".length):undefined;
+    const resolved=targetProperty===undefined?actorProperties[property]:targetProperties[targetProperty];
+    if(!Number.isFinite(resolved)) throw new DomainEvaluationError(`${label} property is unavailable: ${property}`);
+    return Number(resolved);
+  });
+  if(!Number.isFinite(value)||!Number.isInteger(value)) throw new DomainEvaluationError(`${label} must resolve to a finite integer`);
+  if(minimum!==undefined&&value<minimum) throw new DomainEvaluationError(`${label} must resolve to an integer >= ${minimum}`);
+  return value;
+}
+
 export function compileCommonPlayPayments(
   payments:CommonPlayPayment[]|undefined,
   input:CommonPlayOperationExecutionInput,
@@ -998,7 +1018,7 @@ export function compileCommonPlayEntryPointOperations(
       ...(Object.keys(conditionContext).length?{condition:conditionContext}:{}),
       request:{
         family:entryPoint.test.kind,
-        target:actorExpressionInteger(entryPoint.test.dc,input,"d20 target",0)+attackCoverTargetModifier,
+        target:d20TargetExpressionInteger(entryPoint.test.dc,input,"d20 target",0)+attackCoverTargetModifier,
         targetSource:`common-play:${supported.id}:${entryPoint.id}:dc${attackCoverTargetModifier?":cover":""}`,
         modifierContributions:input.d20.modifierContributions??[],
         rollStateContributions:input.d20.rollStateContributions,
