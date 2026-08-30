@@ -1,24 +1,25 @@
 # Current — SimpleVTT
 
-Updated: 2026-08-29 Asia/Seoul
+Updated: 2026-08-31 Asia/Seoul
 
-This is the human/agent entry point for **what is current now**. If an older phase checklist, handoff, PR body, or archive file conflicts with this page and live GitHub state, this page plus live GitHub wins.
+This is the human/agent entry point for **what is current now**. If an older checklist, handoff, PR body, archived file, or deleted Rerun state conflicts with this page and live GitHub state, **this page plus live GitHub wins**.
 
 ## Current branch roles
 
 - Product integration target: `work/v1-composite`
-- Active convergence parent: `agent/resolver-foundation-convergence`
-- Latest integrated implementation: PR #175, `rules: add bounded Common Play interaction reaction production bridge`
-- Current boundary: Resource/Economy is `MIGRATED`; Tests/Rolls/Outcomes, Damage/Healing/HP, bounded Targeting/Selectors/Allocation, and bounded Interactions/Reactions/Interceptors are `PRODUCTION`; select the next smallest coherent mechanism-family slice from the canonical product plan and current legacy evidence
-- `main`: historical/landing reference, not the current V1 integration target
+- Active working branch: `agent/codex-c9-gate-n-finalization`
+- Frozen handoff baseline: `5fadeced4304aa8ae51267c699a1abe053eb5152`
+- Upstream reconciliation lineage: `agent/c9-gate-n-coverage-reconciliation`
+- `main`: historical/landing reference, not the V1 integration target
+- `agent/resolver-foundation-convergence`: historical convergence parent for earlier V1 slices, not the current work pointer
 
-The convergence parent is intentionally ahead of `work/v1-composite` while the Resolver program is integrated in bounded slices. Live GitHub state remains authoritative for exact branch ancestry and active PR status.
+Do not move active work back to the upstream C9 branch merely because it has newer commits. The Codex finalization branch was intentionally cut from the stated baseline to stop exact-head verification from being invalidated by self-publishing one-shot workflows.
 
-## Current product objective
+## Current objective
 
-Build one reusable declarative D&D execution model instead of accumulating named content branches.
+Finish **C9 Gate N finalization** without repeating already proven mechanism-family work.
 
-The intended normal runtime is:
+The reusable execution model remains:
 
 ```text
 RuleModule/content JSON
@@ -35,47 +36,48 @@ RuleModule/content JSON
 
 Identity such as spell/feat/class/item IDs is for lookup, provenance, and presentation. It must not select bespoke algorithms.
 
-## Current maturity
+## Immediate blocker
 
-Already established and not to be repeated without new regression evidence:
+At the frozen baseline, `C9 Family N Source Cleanup 71304` run `33319298002` proved the focused Family N lifecycle tests but failed at the repository-wide `npm run build`. Because the build failed, its ledger reconciliation and self-removal/publish step did **not** land. Family N therefore remains `INCOMPLETE` in the checked-in ledger.
 
-- Common Play foundation/kernel gates A-E
-- M0 legacy execution inventory/freeze
-- portable Resource/Economy RuleModule import, validation, persistence, rehydration, and runtime compilation
-- PR #159 integrated into the convergence parent
-- PR #168 merged as `c372c09353de58dfcc12ad3adbe6fd118fe28106`, establishing Resource/Economy `PRODUCTION` for arbitrary installed data-only Common Play mechanics through the real production/session authority
-- PR #171 merged as `24d507e809a33b9b5ec7a5bf7fefcf2c3d17ec8f` from validated candidate `8c9978a8d3a30bf08ab492cc8d805c2d77d63094`, advancing Resource/Economy to `MIGRATED`
-- PR #172 merged as `ff523a4b8b83f29b781720dcd174f0245e7c16ca` from validated candidate `350224dc10fe747ff52e8a8f2c428208edb9af2e`, establishing Tests/Rolls/Outcomes `PRODUCTION`
-- PR #173 merged as `284fcc9068292d90698d3d3ada5f128db72a77a7` from validated candidate `949d90f48fbd44cf101c47f7702c14208011a237`, establishing Damage/Healing/HP `PRODUCTION`
-- PR #174 merged as `4624a63dd8ea4a81f0716187e5ceb57a9a469497` from validated candidate `27ae09ebdc53431e57264934f58a59c70e4b023b`, establishing bounded Targeting/Selectors/Allocation `PRODUCTION`
-- PR #175 merged as `0e567d738c94000f059d351a21ef37637c28809e` from validated candidate `9b6c5cb564150ebf0e80eb01bd716ca77fc3ebbf`, establishing bounded Interactions/Reactions/Interceptors `PRODUCTION`
+Start by reproducing and fixing that exact build failure on this branch. Do not mark Family N `IMPLEMENTED` until the focused lifecycle proof, full build, coverage classification, legacy execution boundary, and ledger evidence all pass together.
 
-PR #171 proved built-in Fighter Action Surge through the same generic Common Play production path with its two-resource spend, RulesProfile-owned restricted extra Action, authoritative Character/session writeback, Undo, connected convergence, and ID/name-only rename invariance. The named `fighterActionSurgeRuntimeAdapter.ts` production path and its legacy baseline entry are removed.
+## Gate N completion rule
 
-PR #172 proved authored actor `ability-check`, `saving-throw`, and `attack-roll` Common Play tests through the existing generic Resolver `d20` semantics, installed persistence/rehydration, production authority, connected result presentation, and ID/name rename invariance. It did not remove Tactical Mind, Indomitable, Cutting Words, Peerless Skill, Dark One's Own Luck, property-backed modifier/DC, target/every-target authoring, or other named post-roll seams.
+`docs/rules/v1-mechanism-coverage-ledger.json` is the mechanism-family source of truth. Re-read it and `scripts/check-v1-mechanism-coverage.mjs --gate-n` before choosing each next slice; do not rely on an older remembered list of incomplete families.
 
-PR #173 proved authored `damage.apply` and `healing.apply` Common Play operations through the existing generic Resolver `damage-roll`, `damage`, and `healing` semantics, installed persistence/rehydration, one pre-resolved runtime target, authoritative HP writeback/Undo, connected Host/Client convergence, and ID/name rename invariance. Temporary HP, compound damage, authored defenses, concentration, critical authoring, healing dice, selectors/allocation, spell execution, and named HP seams remain outside the absorbed boundary.
+Gate N is complete only when all of the following are true on **one exact branch HEAD SHA**:
 
-PR #174 proved canonical `entryPoint.targeting` for the exact `{ from:"targets", min:1, max:1 }` selection-validator subset through validation, persistence/rehydration, existing generic Resolver targeting, authoritative production execution, Undo, connected Host/Client convergence, and ID/name rename invariance. Rich selectors, automatic discovery, multi-target, allocation, harmful targeting semantics, and spatial/range/sight/cover facts remain outside the absorbed boundary.
+1. all 36 ledger rows have a valid final disposition (`IMPLEMENTED` or evidence-backed `PROVEN_UNNEEDED`);
+2. no Gate-N-blocking named fallback remains;
+3. unknown/renamed external Common Play production evidence remains green for affected families;
+4. connected/retry/reconnect/Undo and persistence evidence required by the ledger is green;
+5. `node scripts/check-v1-mechanism-coverage.mjs --gate-n` passes;
+6. `node scripts/check-legacy-execution-boundary.mjs` passes;
+7. `npm run build` passes;
+8. contract validation passes on that same SHA;
+9. no queued/running workflow can subsequently write a different SHA to the branch;
+10. that exact verified SHA is then integrated into `work/v1-composite`.
 
-PR #175 proved canonical manual actor boolean consent through the existing `ResolutionView.interrupt` lifecycle with exactly one commit-time Reaction economy payment lowered to the existing generic `use-economy` Reaction slot. Decline is mechanically inert; accept revalidates current authority and atomically commits Reaction plus downstream Common Play operations, with Undo, duplicate-response safety, persistence/rehydration, Host-authoritative connected convergence, and ID/name rename invariance. `roll.modify`, rerolls, interceptors, triggered dispatch, remote responders/reconnect, and named post-roll migrations remain outside the absorbed boundary.
+## Workflow discipline
 
-`MIGRATED` and `PRODUCTION` are not the same as `ACCEPTED`. Do not promote any family beyond its recorded maturity without explicit remaining evidence.
+Do **not** add another self-publishing GitHub Actions loop to finish this work. Existing `c9-*` one-shot workflows are historical evidence or cleanup candidates unless the current task specifically requires their read-only checks. Prefer local/Codex edits and normal CI. Before declaring final Gate N green, remove or disable remaining temporary workflows that can write/push to the active branch and confirm no write job is queued or running.
 
-The next Phase 2 slice must be selected by mechanism family from `resolver-execution-checklist-v2.md` and current legacy evidence. Do not revive a named class/spell/feat queue, reopen validated Resource/Economy, d20, HP, bounded targeting, or bounded interaction production work without affected-surface evidence, or speculatively activate Gates F-M.
+## Known cleanup
 
-For transient exact-head CI and execution state, `.chatgpt-rerun/STATE.md` plus live GitHub is authoritative; this page intentionally records the durable product boundary.
+PRs #181 and #182 are stale Family J alternatives. Family J is already `IMPLEMENTED` on the current lineage through structural save-condition/Common Play execution and arbitrary identity invariance. Do not merge those divergent PRs into this branch; close them as superseded.
 
 ## Source of truth
 
+- Current routing: [`CANONICAL_ROOT.md`](../CANONICAL_ROOT.md)
+- Codex handoff: [`CODEX_C9_GATE_N_HANDOFF.md`](CODEX_C9_GATE_N_HANDOFF.md)
+- Gate N ledger: [`docs/rules/v1-mechanism-coverage-ledger.json`](rules/v1-mechanism-coverage-ledger.json)
 - Architecture intent: [`docs/rules/common-play-resolver-architecture-charter.md`](rules/common-play-resolver-architecture-charter.md)
-- Current execution plan: [`docs/rules/resolver-execution-checklist-v2.md`](rules/resolver-execution-checklist-v2.md)
-- Legacy execution debt/evidence: [`docs/rules/legacy-execution-inventory.md`](rules/legacy-execution-inventory.md)
-- Architecture map: [`docs/architecture/README.md`](architecture/README.md)
-- Roadmap router: [`docs/roadmap/CURRENT.md`](roadmap/CURRENT.md)
-- Branch routing: [`CANONICAL_ROOT.md`](../CANONICAL_ROOT.md)
-- Rerun automation only: [`.chatgpt-rerun/`](../.chatgpt-rerun/)
+- Execution checklist: [`docs/rules/resolver-execution-checklist-v2.md`](rules/resolver-execution-checklist-v2.md)
+- Legacy execution evidence: [`docs/rules/legacy-execution-inventory.md`](rules/legacy-execution-inventory.md)
+
+The old `.chatgpt-rerun/` files are not present on this current lineage and are **not** the current execution authority.
 
 ## Reading rule for future work
 
-Read only this page, the architecture map, the current roadmap, and the files required by the active slice. Historical Phase/V0.9/V1 agent documents are archived and must not be used as a competing `NEXT` pointer.
+Read this page, `CANONICAL_ROOT.md`, `CODEX_C9_GATE_N_HANDOFF.md`, the Gate N ledger, and only the implementation/tests needed by the active incomplete family. Historical Phase/V0.9/V1 agent documents are evidence only and must not become a competing `NEXT` pointer.
