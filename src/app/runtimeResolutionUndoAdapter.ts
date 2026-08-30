@@ -1,4 +1,4 @@
-import type { AppSnapshot, CharacterSheet, SceneVm } from "./contracts";
+import type { ActivityEntry, AppSnapshot, CharacterSheet, SceneVm } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
 import type { ResolutionEvent } from "../domain/resolutionTypes";
 import type { RuntimeStateChange } from "../domain/runtimeStateChange";
@@ -17,7 +17,7 @@ interface AdapterState {
   scene:SceneVm;
   activeCharacter:CharacterSheet;
   resolution:unknown|null;
-  activity:Array<{ id:string }>;
+  activity:ActivityEntry[];
   lastResolutionId:string|null;
   syncChar():void;
   getSnapshot():Promise<AppSnapshot>;
@@ -90,7 +90,18 @@ MockAdapter.prototype.undoLastResolution=async function undoRuntimeResolution():
   internal.activeCharacter.resources=durableResources;
   internal.activeCharacter.items=durableItems;
   internal.resolution=null;
-  internal.activity=internal.activity.filter((entry)=>entry.id!==history.resolutionId);
+  internal.activity=internal.activity.map((entry)=>entry.id===history.resolutionId?{...entry,reversed:true}:entry);
+  internal.activity.unshift({
+    id:`${history.resolutionId}:undo`,
+    time:"지금",
+    actor:"시스템",
+    title:"Resolution 되돌림",
+    summary:history.resolutionId,
+    detail:["Resolution event inverse 적용"],
+    stateChanges:["권위 상태 및 durable write-back 복원"],
+    correction:true,
+    undoOf:history.resolutionId,
+  });
   internal.lastResolutionId=null;
   clearRuntimeResolutionEventHistory(this);
   internal.syncChar();
