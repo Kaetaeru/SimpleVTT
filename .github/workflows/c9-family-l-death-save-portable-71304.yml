@@ -150,7 +150,7 @@ jobs:
             for(const face of faces) renamed.push(await exercise("renamed.family-l-death-save",face));
             assert.deepEqual(renamed,first);
           });
-          '''.replace(/^          /gm,''))
+          ''')
 
           ledger_path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
           ledger=json.loads(ledger_path.read_text())
