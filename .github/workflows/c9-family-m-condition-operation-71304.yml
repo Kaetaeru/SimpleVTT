@@ -2,10 +2,8 @@ name: C9 Family M Condition Operation 71304
 
 on:
   push:
-    branches:
-      - agent/c9-gate-n-coverage-reconciliation
-    paths:
-      - .github/workflows/c9-family-m-condition-operation-71304.yml
+    branches: [agent/c9-gate-n-coverage-reconciliation]
+    paths: [.github/workflows/c9-family-m-condition-operation-71304.yml]
 
 permissions:
   contents: write
@@ -23,112 +21,70 @@ jobs:
         with:
           ref: agent/c9-gate-n-coverage-reconciliation
           fetch-depth: 0
-
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-
       - name: Sync latest branch
         run: |
           git fetch origin agent/c9-gate-n-coverage-reconciliation
           git reset --hard origin/agent/c9-gate-n-coverage-reconciliation
-
       - name: Apply portable condition operation bridge
         run: |
           python - <<'PY'
           from pathlib import Path
-
-          runtime = Path('src/domain/commonPlayOperationRuntime.ts')
-          text = runtime.read_text()
-
-          def insert_after(anchor: str, addition: str, marker: str) -> None:
-              global text
-              if marker in text:
-                  return
-              if anchor not in text:
-                  raise SystemExit(f'missing anchor for {marker}')
-              text = text.replace(anchor, anchor + addition, 1)
-
-          insert_after(
-              'import type { RulesRuntimeState } from "./combatState";\n',
-              'import { SRD_521_CONDITIONS, type ConditionId } from "./conditions";\n',
-              'type ConditionId } from "./conditions"',
-          )
-
-          insert_after(
-              'type CommonPlayHpTarget="actor"|"self"|"target";\n',
-              '''type CommonPlayConditionTarget="actor"|"self"|"target";\ntype CommonPlayConditionChange={\n  kind:"condition.apply"|"condition.remove";\n  condition:ConditionId;\n  target?:CommonPlayConditionTarget;\n};\n''',
-              'type CommonPlayConditionChange=',
-          )
-
-          if '|CommonPlayConditionChange' not in text:
-              anchor = '  |CommonPlayRollModify;'
-              if anchor not in text:
-                  raise SystemExit('missing CommonPlayOperation union terminator')
-              text = text.replace(anchor, '  |CommonPlayConditionChange\n' + anchor, 1)
-
-          insert_after(
-              'const HEALING_APPLY_KEYS=new Set(["kind","amount","target"]);\n',
-              'const CONDITION_CHANGE_KEYS=new Set(["kind","condition","target"]);\n',
-              'const CONDITION_CHANGE_KEYS=',
-          )
-
-          if 'function conditionTarget(' not in text:
-              anchor = 'function numericExpression(value:unknown,label:string):CommonPlayExpression {'
-              helper = '''function conditionTarget(value:unknown,label:string):CommonPlayConditionTarget|undefined {\n  if(value===undefined) return undefined;\n  if(value!=="actor"&&value!=="self"&&value!=="target") {\n    throw new DomainEvaluationError(`${label} must be actor, self, or target for portable Common Play condition operations`);\n  }\n  return value;\n}\n\n'''
-              if anchor not in text:
-                  raise SystemExit('missing numericExpression anchor')
-              text = text.replace(anchor, helper + anchor, 1)
-
-          if 'condition is not a registered SRD condition' not in text:
-              anchor = '  if(operation.kind==="economy.modify") {'
-              block = '''  if(operation.kind==="condition.apply"||operation.kind==="condition.remove") {\n    supportedKeys(operation,CONDITION_CHANGE_KEYS,label);\n    const condition=nonEmptyString(operation.condition,`${label}.condition`) as ConditionId;\n    if(!(condition in SRD_521_CONDITIONS)) throw new DomainEvaluationError(`${label}.condition is not a registered SRD condition: ${condition}`);\n    const target=conditionTarget(operation.target,`${label}.target`);\n    return {kind:operation.kind,condition,...(target===undefined?{}:{target})};\n  }\n'''
-              if anchor not in text:
-                  raise SystemExit('missing parse operation anchor')
-              text = text.replace(anchor, block + anchor, 1)
-
-          if 'function conditionOperationTarget(' not in text:
-              anchor = 'function targetingSelectorCandidate(target:TargetingFactInput) {'
-              helper = '''function conditionOperationTarget(target:CommonPlayConditionTarget|undefined,input:CommonPlayOperationExecutionInput) {\n  if(target===undefined||target==="actor"||target==="self") return input.actorId;\n  if(!input.targetId) throw new DomainEvaluationError("Common Play target condition operation requires one pre-resolved target");\n  return input.targetId;\n}\n\n'''
-              if anchor not in text:
-                  raise SystemExit('missing condition target compile anchor')
-              text = text.replace(anchor, helper + anchor, 1)
-
-          if 'Common Play condition.remove found no' not in text:
-              anchor = '    if(operation.kind==="damage.apply") {'
-              block = '''    if(operation.kind==="condition.apply"||operation.kind==="condition.remove") {\n      const targetId=conditionOperationTarget(operation.target,input);\n      if(operation.kind==="condition.apply") {\n        operations.push({\n          id:operationId,\n          kind:"apply-effect",\n          effect:{\n            id:`${operationId}:condition:${operation.condition}`,\n            sourceId:`common-play:${supported.id}:${entryPoint.id}:operation:${index}`,\n            sourceActorId:input.actorId,\n            targetId,\n            kind:"condition",\n            conditionId:operation.condition,\n            tags:["common-play:condition",`condition:${operation.condition}`],\n            duration:{kind:"permanent"},\n          },\n        });\n      } else {\n        const effect=[...state.effects].reverse().find((entry)=>entry.targetId===targetId&&entry.conditionId===operation.condition);\n        if(!effect) throw new DomainEvaluationError(`Common Play condition.remove found no ${operation.condition} Effect on ${targetId}`);\n        operations.push({id:operationId,kind:"remove-effect",effectId:effect.id});\n      }\n      continue;\n    }\n\n'''
-              if anchor not in text:
-                  raise SystemExit('missing condition compile anchor')
-              text = text.replace(anchor, block + anchor, 1)
-
-          runtime.write_text(text)
-
-          test = Path('tests/domain/c9FamilyMCommonPlayConditionRuntime.test.ts')
-          if not test.exists():
-              test.write_text('''import assert from "node:assert/strict";\nimport test from "node:test";\n\nimport {\n  compileCommonPlayEntryPointOperations,\n  parseManualCommonPlayOperationDefinition,\n  resolveCommonPlayEntryPointOperations,\n} from "../../src/domain/commonPlayOperationRuntime";\nimport { runtimeState, TEST_PROFILE } from "./rulesTestState";\n\nfunction definition(id:string,kind:"condition.apply"|"condition.remove",condition:string) {\n  return parseManualCommonPlayOperationDefinition({\n    schemaVersion:"0.2-draft",\n    id,\n    entryPoints:[{id:"activate",invocation:"manual",operations:[{kind,condition,target:"target"}]}],\n  });\n}\n\ntest("portable condition.apply lowers to the canonical Effect operation and commits through Resolver",()=>{\n  const state=runtimeState();\n  const portable=definition("external.unknown.condition-source","condition.apply","poisoned");\n  const input={resolutionId:"condition-apply",actorId:"hero",entryPointId:"activate",targetId:"goblin"};\n  const pending=compileCommonPlayEntryPointOperations(TEST_PROFILE,state,portable,input);\n  const operation=pending.operations[0];\n  assert.equal(operation?.kind,"apply-effect");\n  if(operation?.kind!=="apply-effect") return;\n  assert.equal(operation.effect.conditionId,"poisoned");\n  assert.equal(operation.effect.targetId,"goblin");\n  assert.equal(operation.effect.kind,"condition");\n\n  const committed=resolveCommonPlayEntryPointOperations(TEST_PROFILE,state,portable,input);\n  assert.equal(committed.status,"committed",committed.status==="rejected"?committed.error:undefined);\n  if(committed.status!=="committed") return;\n  const effect=committed.state.effects.find((entry)=>entry.targetId==="goblin"&&entry.conditionId==="poisoned");\n  assert.ok(effect);\n  assert.ok(committed.events.flatMap((event)=>event.stateChanges).some((entry)=>entry.kind==="effect"&&entry.effectId===effect.id&&entry.change==="added"));\n});\n\ntest("portable condition.remove removes one matching condition instance without source identity dispatch",()=>{\n  const state=runtimeState();\n  const first=resolveCommonPlayEntryPointOperations(TEST_PROFILE,state,definition("external.first.source","condition.apply","exhaustion"),{resolutionId:"condition-source-a",actorId:"hero",entryPointId:"activate",targetId:"goblin"});\n  assert.equal(first.status,"committed",first.status==="rejected"?first.error:undefined);\n  if(first.status!=="committed") return;\n  const second=resolveCommonPlayEntryPointOperations(TEST_PROFILE,first.state,definition("external.renamed.source","condition.apply","exhaustion"),{resolutionId:"condition-source-b",actorId:"hero",entryPointId:"activate",targetId:"goblin"});\n  assert.equal(second.status,"committed",second.status==="rejected"?second.error:undefined);\n  if(second.status!=="committed") return;\n  assert.equal(second.state.effects.filter((entry)=>entry.targetId==="goblin"&&entry.conditionId==="exhaustion").length,2);\n\n  const removed=resolveCommonPlayEntryPointOperations(TEST_PROFILE,second.state,definition("external.unrelated.cure","condition.remove","exhaustion"),{resolutionId:"condition-remove",actorId:"hero",entryPointId:"activate",targetId:"goblin"});\n  assert.equal(removed.status,"committed",removed.status==="rejected"?removed.error:undefined);\n  if(removed.status!=="committed") return;\n  assert.equal(removed.state.effects.filter((entry)=>entry.targetId==="goblin"&&entry.conditionId==="exhaustion").length,1);\n  assert.ok(removed.events.flatMap((event)=>event.stateChanges).some((entry)=>entry.kind==="effect"&&entry.change==="removed"));\n});\n\ntest("portable condition operations fail closed for unregistered vocabulary and missing removal state",()=>{\n  assert.throws(()=>definition("external.bad.condition","condition.apply","not-a-condition"),/not a registered SRD condition/);\n  const missing=resolveCommonPlayEntryPointOperations(TEST_PROFILE,runtimeState(),definition("external.missing.cure","condition.remove","poisoned"),{resolutionId:"condition-remove-missing",actorId:"hero",entryPointId:"activate",targetId:"goblin"});\n  assert.equal(missing.status,"rejected");\n  assert.match(missing.status==="rejected"?missing.error:"",/found no poisoned Effect/);\n});\n''')
+          p=Path('src/domain/commonPlayOperationRuntime.ts')
+          s=p.read_text()
+          def after(anchor, addition, marker):
+              global s
+              if marker in s: return
+              if anchor not in s: raise SystemExit(f'missing anchor: {marker}')
+              s=s.replace(anchor,anchor+addition,1)
+          after('import type { RulesRuntimeState } from "./combatState";\n','import { SRD_521_CONDITIONS, type ConditionId } from "./conditions";\n','type ConditionId } from "./conditions"')
+          after('type CommonPlayHpTarget="actor"|"self"|"target";\n','''type CommonPlayConditionTarget="actor"|"self"|"target";\ntype CommonPlayConditionChange={\n  kind:"condition.apply"|"condition.remove";\n  condition:ConditionId;\n  target?:CommonPlayConditionTarget;\n};\n''','type CommonPlayConditionChange=')
+          if '|CommonPlayConditionChange' not in s:
+              a='  |CommonPlayRollModify;'
+              if a not in s: raise SystemExit('missing CommonPlayOperation terminator')
+              s=s.replace(a,'  |CommonPlayConditionChange\n'+a,1)
+          after('const HEALING_APPLY_KEYS=new Set(["kind","amount","target"]);\n','const CONDITION_CHANGE_KEYS=new Set(["kind","condition","target"]);\n','const CONDITION_CHANGE_KEYS=')
+          if 'function conditionTarget(' not in s:
+              a='function numericExpression(value:unknown,label:string):CommonPlayExpression {'
+              b='''function conditionTarget(value:unknown,label:string):CommonPlayConditionTarget|undefined {\n  if(value===undefined) return undefined;\n  if(value!=="actor"&&value!=="self"&&value!=="target") throw new DomainEvaluationError(`${label} must be actor, self, or target for portable Common Play condition operations`);\n  return value;\n}\n\n'''
+              if a not in s: raise SystemExit('missing condition target parser anchor')
+              s=s.replace(a,b+a,1)
+          if 'condition is not a registered SRD condition' not in s:
+              a='  if(operation.kind==="economy.modify") {'
+              b='''  if(operation.kind==="condition.apply"||operation.kind==="condition.remove") {\n    supportedKeys(operation,CONDITION_CHANGE_KEYS,label);\n    const condition=nonEmptyString(operation.condition,`${label}.condition`) as ConditionId;\n    if(!(condition in SRD_521_CONDITIONS)) throw new DomainEvaluationError(`${label}.condition is not a registered SRD condition: ${condition}`);\n    const target=conditionTarget(operation.target,`${label}.target`);\n    return {kind:operation.kind,condition,...(target===undefined?{}:{target})};\n  }\n'''
+              if a not in s: raise SystemExit('missing condition parser anchor')
+              s=s.replace(a,b+a,1)
+          if 'function conditionOperationTarget(' not in s:
+              a='function targetingSelectorCandidate(target:TargetingFactInput) {'
+              b='''function conditionOperationTarget(target:CommonPlayConditionTarget|undefined,input:CommonPlayOperationExecutionInput) {\n  if(target===undefined||target==="actor"||target==="self") return input.actorId;\n  if(!input.targetId) throw new DomainEvaluationError("Common Play target condition operation requires one pre-resolved target");\n  return input.targetId;\n}\n\n'''
+              if a not in s: raise SystemExit('missing condition compile target anchor')
+              s=s.replace(a,b+a,1)
+          if 'Common Play condition.remove found no' not in s:
+              a='    if(operation.kind==="damage.apply") {'
+              b='''    if(operation.kind==="condition.apply"||operation.kind==="condition.remove") {\n      const targetId=conditionOperationTarget(operation.target,input);\n      if(operation.kind==="condition.apply") {\n        operations.push({id:operationId,kind:"apply-effect",effect:{id:`${operationId}:condition:${operation.condition}`,sourceId:`common-play:${supported.id}:${entryPoint.id}:operation:${index}`,sourceActorId:input.actorId,targetId,kind:"condition",conditionId:operation.condition,tags:["common-play:condition",`condition:${operation.condition}`],duration:{kind:"permanent"}}});\n      } else {\n        const effect=[...state.effects].reverse().find((entry)=>entry.targetId===targetId&&entry.conditionId===operation.condition);\n        if(!effect) throw new DomainEvaluationError(`Common Play condition.remove found no ${operation.condition} Effect on ${targetId}`);\n        operations.push({id:operationId,kind:"remove-effect",effectId:effect.id});\n      }\n      continue;\n    }\n\n'''
+              if a not in s: raise SystemExit('missing condition compile anchor')
+              s=s.replace(a,b+a,1)
+          p.write_text(s)
+          Path('tests/domain/c9FamilyMCommonPlayConditionRuntime.test.ts').write_text('''import assert from "node:assert/strict";\nimport test from "node:test";\nimport {compileCommonPlayEntryPointOperations,parseManualCommonPlayOperationDefinition,resolveCommonPlayEntryPointOperations} from "../../src/domain/commonPlayOperationRuntime";\nimport {runtimeState,TEST_PROFILE} from "./rulesTestState";\nfunction definition(id:string,kind:"condition.apply"|"condition.remove",condition:string){return parseManualCommonPlayOperationDefinition({schemaVersion:"0.2-draft",id,entryPoints:[{id:"activate",invocation:"manual",operations:[{kind,condition,target:"target"}]}]});}\ntest("portable condition.apply lowers to canonical Effect and commits",()=>{const state=runtimeState();const d=definition("external.unknown.condition-source","condition.apply","poisoned");const input={resolutionId:"condition-apply",actorId:"hero",entryPointId:"activate",targetId:"goblin"};const pending=compileCommonPlayEntryPointOperations(TEST_PROFILE,state,d,input);const op=pending.operations[0];assert.equal(op?.kind,"apply-effect");if(op?.kind!=="apply-effect")return;assert.equal(op.effect.conditionId,"poisoned");assert.equal(op.effect.targetId,"goblin");const committed=resolveCommonPlayEntryPointOperations(TEST_PROFILE,state,d,input);assert.equal(committed.status,"committed",committed.status==="rejected"?committed.error:undefined);if(committed.status!=="committed")return;const effect=committed.state.effects.find(e=>e.targetId==="goblin"&&e.conditionId==="poisoned");assert.ok(effect);assert.ok(committed.events.flatMap(e=>e.stateChanges).some(c=>c.kind==="effect"&&c.effectId===effect.id&&c.operation==="added"));});\ntest("portable condition.remove removes one matching instance independent of source identity",()=>{const first=resolveCommonPlayEntryPointOperations(TEST_PROFILE,runtimeState(),definition("external.first.source","condition.apply","exhaustion"),{resolutionId:"condition-a",actorId:"hero",entryPointId:"activate",targetId:"goblin"});assert.equal(first.status,"committed",first.status==="rejected"?first.error:undefined);if(first.status!=="committed")return;const second=resolveCommonPlayEntryPointOperations(TEST_PROFILE,first.state,definition("external.renamed.source","condition.apply","exhaustion"),{resolutionId:"condition-b",actorId:"hero",entryPointId:"activate",targetId:"goblin"});assert.equal(second.status,"committed",second.status==="rejected"?second.error:undefined);if(second.status!=="committed")return;assert.equal(second.state.effects.filter(e=>e.targetId==="goblin"&&e.conditionId==="exhaustion").length,2);const removed=resolveCommonPlayEntryPointOperations(TEST_PROFILE,second.state,definition("external.unrelated.cure","condition.remove","exhaustion"),{resolutionId:"condition-remove",actorId:"hero",entryPointId:"activate",targetId:"goblin"});assert.equal(removed.status,"committed",removed.status==="rejected"?removed.error:undefined);if(removed.status!=="committed")return;assert.equal(removed.state.effects.filter(e=>e.targetId==="goblin"&&e.conditionId==="exhaustion").length,1);assert.ok(removed.events.flatMap(e=>e.stateChanges).some(c=>c.kind==="effect"&&c.operation==="removed"));});\ntest("portable condition operations fail closed",()=>{assert.throws(()=>definition("external.bad","condition.apply","not-a-condition"),/not a registered SRD condition/);const missing=resolveCommonPlayEntryPointOperations(TEST_PROFILE,runtimeState(),definition("external.cure","condition.remove","poisoned"),{resolutionId:"condition-missing",actorId:"hero",entryPointId:"activate",targetId:"goblin"});assert.equal(missing.status,"rejected");assert.match(missing.status==="rejected"?missing.error:"",/found no poisoned Effect/);});\n''')
           PY
-
       - name: Install dependencies
         run: npm ci
-
       - name: Verify Family M portable conditions
         run: npx tsx --test tests/domain/c9FamilyMCommonPlayConditionRuntime.test.ts tests/domain/c9FamilyMConditions.test.ts
-
       - name: Verify TypeScript
         run: npx tsc --noEmit
-
       - name: Verify Gate N coverage checker
         run: npm run test:v1-coverage
-
-      - name: Rebase and reverify against current branch
+      - name: Rebase and reverify
         run: |
           git fetch origin agent/c9-gate-n-coverage-reconciliation
           git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
           npx tsx --test tests/domain/c9FamilyMCommonPlayConditionRuntime.test.ts tests/domain/c9FamilyMConditions.test.ts
           npx tsc --noEmit
           npm run test:v1-coverage
-
       - name: Commit verified bridge and retire staging workflow
         run: |
           rm .github/workflows/c9-family-m-condition-operation-71304.yml
