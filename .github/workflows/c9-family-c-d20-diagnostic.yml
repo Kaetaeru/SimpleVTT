@@ -96,6 +96,7 @@ jobs:
         run: |
           set -euo pipefail
           npm ci
+          npm run generate:content
           npx tsx --test tests/domain/commonPlayReactionResourceDieRuntime.test.ts tests/domain/commonPlayReactionDefinitionRuntime.test.ts
           npx tsc --noEmit
       - name: Commit verified migration
