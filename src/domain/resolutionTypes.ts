@@ -253,6 +253,15 @@ export type ResolutionOperation =
       artifactId:string;
     })
   | (OperationBase & {
+      kind:"advance-exposure";
+      artifactId:string;
+      seconds:number;
+    })
+  | (OperationBase & {
+      kind:"recover-exposure";
+      artifactId:string;
+    })
+  | (OperationBase & {
       kind:"set-zone-membership";
       artifactId:string;
       authority:ZoneMembershipAuthority;

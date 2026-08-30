@@ -3,6 +3,7 @@ import type { RuntimeClock } from "./effects";
 import type { DamageDefenseContribution } from "./damage";
 import type { ResourceRecovery } from "./resources";
 import { validateCommonPlayMount, validateCommonPlayVehicle, type CommonPlayMountRelationship, type CommonPlayVehicleRelationship } from "./commonPlayMountRuntime";
+import { validateCommonPlayExposure, type CommonPlayExposure } from "./commonPlayExposureRuntime";
 
 interface ArtifactResource {id:string;current:number;maximum:number;recovery?:ResourceRecovery}
 
@@ -12,7 +13,7 @@ function validArtifactResource(resource:ArtifactResource){
     &&(!recovery||Object.entries(recovery).every(([trigger,amount])=>["shortRest","longRest","turnStart"].includes(trigger)&&(amount==="all"||Number.isInteger(amount)&&Number(amount)>=0)));
 }
 
-export type RuntimeArtifactKind = "zone"|"stored-invocation"|"object"|"link"|"actor"|"form";
+export type RuntimeArtifactKind = "zone"|"stored-invocation"|"object"|"link"|"actor"|"form"|"exposure";
 export type ZoneMembershipAuthority = "manual"|"spatial";
 
 export type RuntimeArtifactExpiry =
@@ -90,6 +91,7 @@ export interface RuntimeArtifactInstance {
   link?:LinkArtifactData;
   actor?:ActorArtifactData;
   form?:FormArtifactData;
+  exposure?:CommonPlayExposure;
 }
 
 export interface ZoneMembershipState {
@@ -112,6 +114,7 @@ export interface RuntimeArtifactSpawnRequest {
   link?:LinkArtifactData;
   actor?:ActorArtifactData;
   form?:FormArtifactData;
+  exposure?:CommonPlayExposure;
 }
 
 export interface RuntimeArtifactExpiryResolution {
@@ -124,7 +127,7 @@ export function createRuntimeArtifact(request:RuntimeArtifactSpawnRequest):Runti
   if (!request.id) throw new DomainEvaluationError("runtime artifact id is required");
   if (!request.sourceId) throw new DomainEvaluationError("runtime artifact sourceId is required");
   if (!request.templateId) throw new DomainEvaluationError("runtime artifact templateId is required");
-  if (!["zone","stored-invocation","object","link","actor","form"].includes(request.artifactKind)) throw new DomainEvaluationError(`unsupported runtime artifact kind: ${request.artifactKind}`);
+  if (!["zone","stored-invocation","object","link","actor","form","exposure"].includes(request.artifactKind)) throw new DomainEvaluationError(`unsupported runtime artifact kind: ${request.artifactKind}`);
   if(request.artifactKind==="stored-invocation") {
     const stored=request.storedInvocation;
     if(!stored?.ownerActorId||!stored.definitionId||!stored.entryPointId||!stored.definitionRevision) throw new DomainEvaluationError("stored invocation artifact requires owner and definition identity");
@@ -158,6 +161,10 @@ export function createRuntimeArtifact(request:RuntimeArtifactSpawnRequest):Runti
     const form=request.form;
     if(!form?.targetActorId||new Set(form.retainedProperties).size!==form.retainedProperties.length||new Set(form.replacementProperties).size!==form.replacementProperties.length||new Set(form.actionDefinitionIds).size!==form.actionDefinitionIds.length||form.resources.some((resource)=>!validArtifactResource(resource))) throw new DomainEvaluationError("form artifact requires target and valid property/action/resource policies");
   } else if(request.form) throw new DomainEvaluationError("only form artifacts can contain form data");
+  if(request.artifactKind==="exposure") {
+    if(!request.exposure||request.exposure.id!==request.id)throw new DomainEvaluationError("exposure artifact requires matching exposure state");
+    validateCommonPlayExposure(request.exposure);
+  } else if(request.exposure) throw new DomainEvaluationError("only exposure artifacts can contain exposure data");
   if (request.expiry.kind==="time"&&(!Number.isFinite(request.expiry.elapsedSeconds)||request.expiry.elapsedSeconds<0)) {
     throw new DomainEvaluationError("runtime artifact expiry must be a non-negative finite elapsed time");
   }

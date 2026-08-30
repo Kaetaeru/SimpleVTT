@@ -6,7 +6,7 @@ import type { RuntimeArtifactExpiry, RuntimeArtifactSpawnRequest, StoredInvocati
 import { compileCommonPlayPayments, parseCommonPlayPayments, type CommonPlayPayment } from "./commonPlayOperationRuntime";
 import type { ActionUseKind } from "./turnEconomy";
 
-type PortableArtifactKind="stored-invocation"|"object"|"link"|"actor"|"form";
+type PortableArtifactKind="stored-invocation"|"object"|"link"|"actor"|"form"|"exposure";
 type Obj=Record<string,unknown>;
 type CommonPlayArtifactOperation=
   | {kind:"artifact.spawn";template:string}
@@ -14,6 +14,8 @@ type CommonPlayArtifactOperation=
   | {kind:"artifact.repair";artifact:string;amount:ExpressionNode}
   | {kind:"artifact.relocate";artifact:string;placementRef:string}
   | {kind:"artifact.update";artifact:string;metadataPatch:Record<string,string|number|boolean>}
+  | {kind:"artifact.exposure.advance";artifact:string;seconds:ExpressionNode}
+  | {kind:"artifact.exposure.recover";artifact:string}
   | {kind:"artifact.remove";artifact:string};
 
 export interface CommonPlayArtifactActivationDefinition {
@@ -153,6 +155,12 @@ function artifact(
     ownerId:boundId(initial.ownerId,input.actorId,artifactIds,`artifact ${template.id} ownerId`),
     controllerId:boundId(initial.controllerId,input.actorId,artifactIds,`artifact ${template.id} controllerId`),
   } as RuntimeArtifactSpawnRequest["actor"]};
+  if(template.artifactKind==="exposure") return {...common,exposure:{
+    ...initial,
+    id:common.id,
+    subjectId:boundId(initial.subjectId??"actor",input.actorId,artifactIds,`artifact ${template.id} subjectId`),
+    definitionId:typeof initial.definitionId==="string"?initial.definitionId:definition.id,
+  } as RuntimeArtifactSpawnRequest["exposure"]};
   return {...common,form:{
     ...initial,
     targetActorId:boundId(initial.targetActorId,input.actorId,artifactIds,`artifact ${template.id} targetActorId`),
@@ -177,7 +185,7 @@ export function compileCommonPlayArtifactActivation(
     if(operation.kind==="artifact.spawn") {
       const template=templates.get(operation.template);
       if(!template) throw new DomainEvaluationError(`artifact template not found: ${operation.template}`);
-      if(!["stored-invocation","object","link","actor","form"].includes(template.artifactKind)) throw new DomainEvaluationError(`artifact ${template.id} kind is not handled by the generic artifact activation runtime`);
+      if(!["stored-invocation","object","link","actor","form","exposure"].includes(template.artifactKind)) throw new DomainEvaluationError(`artifact ${template.id} kind is not handled by the generic artifact activation runtime`);
       const lifetime=object(template.lifetime,`artifact ${template.id} lifetime`);
       if(template.artifactKind==="actor"&&lifetime.kind==="until-source-recast") {
         (state.artifacts??[])
@@ -214,6 +222,14 @@ export function compileCommonPlayArtifactActivation(
     }
     if(operation.kind==="artifact.update") {
       operations.push({id:`common-play-artifact-update-${index+1}`,kind:"update-artifact",artifactId,metadataPatch:structuredClone(operation.metadataPatch)});
+      return;
+    }
+    if(operation.kind==="artifact.exposure.advance") {
+      operations.push({id:`common-play-exposure-advance-${index+1}`,kind:"advance-exposure",artifactId,seconds:artifactOperationAmount(state,input,operation.seconds,`artifact.exposure.advance ${operation.artifact}.seconds`)});
+      return;
+    }
+    if(operation.kind==="artifact.exposure.recover") {
+      operations.push({id:`common-play-exposure-recover-${index+1}`,kind:"recover-exposure",artifactId});
       return;
     }
     operations.push({id:`common-play-artifact-remove-${index+1}`,kind:"remove-artifact",artifactId});

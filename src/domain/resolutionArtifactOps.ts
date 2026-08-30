@@ -7,6 +7,7 @@ import { createRuntimeArtifact, type ZoneMembershipState } from "./runtimeArtifa
 import type { ResolutionOperation } from "./resolutionTypes";
 import { resolveDamage, resolveHealing } from "./damage";
 import { beginTurn } from "./turnEconomy";
+import { advanceCommonPlayExposure, recoverCommonPlayExposure } from "./commonPlayExposureRuntime";
 
 type SpawnArtifactOp=Extract<ResolutionOperation,{kind:"spawn-artifact"}>;
 type UpdateArtifactOp=Extract<ResolutionOperation,{kind:"update-artifact"}>;
@@ -15,6 +16,8 @@ type RepairArtifactOp=Extract<ResolutionOperation,{kind:"repair-artifact"}>;
 type RelocateArtifactOp=Extract<ResolutionOperation,{kind:"relocate-artifact"}>;
 type SetArtifactControllerOp=Extract<ResolutionOperation,{kind:"set-artifact-controller"}>;
 type RemoveArtifactOp=Extract<ResolutionOperation,{kind:"remove-artifact"}>;
+type AdvanceExposureOp=Extract<ResolutionOperation,{kind:"advance-exposure"}>;
+type RecoverExposureOp=Extract<ResolutionOperation,{kind:"recover-exposure"}>;
 type SetZoneMembershipOp=Extract<ResolutionOperation,{kind:"set-zone-membership"}>;
 
 function artifacts(ctx:ResolutionExecutionContext) {
@@ -61,6 +64,7 @@ export function executeSpawnArtifact(ctx:ResolutionExecutionContext,operation:Sp
   if(artifact.artifactKind==="zone"&&operation.zoneMembershipAuthority!=="manual"&&operation.zoneMembershipAuthority!=="spatial") throw new DomainEvaluationError(`unsupported zone membership authority: ${operation.zoneMembershipAuthority}`);
   if(artifact.artifactKind!=="zone"&&operation.zoneMembershipAuthority!==undefined) throw new DomainEvaluationError("zone membership authority applies only to zone artifacts");
   if(artifact.artifactKind==="form") requireCombatant(ctx.state,artifact.form!.targetActorId);
+  if(artifact.artifactKind==="exposure") requireCombatant(ctx.state,artifact.exposure!.subjectId);
   if(artifact.artifactKind==="actor") {
     requireCombatant(ctx.state,artifact.actor!.ownerId);
     if(ctx.state.combatants[artifact.actor!.combatantId]||(ctx.state.artifacts??[]).some((entry)=>entry.actor?.combatantId===artifact.actor!.combatantId)) throw new DomainEvaluationError(`actor artifact combatant identity already exists: ${artifact.actor!.combatantId}`);
@@ -175,6 +179,27 @@ export function executeUpdateArtifact(ctx:ResolutionExecutionContext,operation:U
     result,
     event:makeEvent(ctx.pending,operation,`runtime artifact ${artifact.id} updated`,result,provenance,stateChanges),
   };
+}
+
+function exposureArtifact(ctx:ResolutionExecutionContext,artifactId:string) {
+  const artifact=artifacts(ctx).find((candidate)=>candidate.id===artifactId&&candidate.artifactKind==="exposure");
+  if(!artifact?.exposure)throw new DomainEvaluationError(`active exposure artifact not found: ${artifactId}`);
+  return artifact;
+}
+
+export function executeAdvanceExposure(ctx:ResolutionExecutionContext,operation:AdvanceExposureOp):OperationExecution {
+  const artifact=exposureArtifact(ctx,operation.artifactId),before=structuredClone(artifact);
+  const advanced=advanceCommonPlayExposure(artifact.exposure!,artifact.exposure!.revision,operation.seconds);
+  artifact.exposure=advanced.exposure;
+  const after=structuredClone(artifact),provenance:ProvenanceRecord[]=[{source:artifact.sourceId,status:"applied",reason:`exposure ${artifact.id} advanced ${operation.seconds}s; ${advanced.newlyTriggeredIntervals.length} interval(s) triggered`}];
+  return {result:{...advanced,newlyTriggeredCount:advanced.newlyTriggeredIntervals.length},event:makeEvent(ctx.pending,operation,`exposure ${artifact.id} advanced`,advanced,provenance,[artifactStateChange(artifact.id,artifact.id,"updated",provenance,before,after)],artifact.exposure.subjectId)};
+}
+
+export function executeRecoverExposure(ctx:ResolutionExecutionContext,operation:RecoverExposureOp):OperationExecution {
+  const artifact=exposureArtifact(ctx,operation.artifactId),before=structuredClone(artifact);
+  artifact.exposure=recoverCommonPlayExposure(artifact.exposure!,artifact.exposure!.revision);
+  const after=structuredClone(artifact),provenance:ProvenanceRecord[]=[{source:artifact.sourceId,status:"applied",reason:`exposure ${artifact.id} recovered`}];
+  return {result:{recovered:true,exposure:structuredClone(artifact.exposure)},event:makeEvent(ctx.pending,operation,`exposure ${artifact.id} recovered`,artifact.exposure,provenance,[artifactStateChange(artifact.id,artifact.id,"updated",provenance,before,after)],artifact.exposure.subjectId)};
 }
 
 export function executeRemoveArtifact(ctx:ResolutionExecutionContext,operation:RemoveArtifactOp):OperationExecution {

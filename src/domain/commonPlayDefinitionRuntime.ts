@@ -218,13 +218,13 @@ export function lowerCommonPlay(
       definition:{...base(definition),entryPoints:[structuredClone(entryPoint)],artifactTemplates:structuredClone(templates)} as unknown as CommonPlayPersistentEffectDefinition,
     };
   }
-  const artifactOperationKinds=new Set(["artifact.spawn","artifact.damage","artifact.repair","artifact.relocate","artifact.update","artifact.remove"]);
+  const artifactOperationKinds=new Set(["artifact.spawn","artifact.damage","artifact.repair","artifact.relocate","artifact.update","artifact.remove","artifact.exposure.advance","artifact.exposure.recover"]);
   if([...operationKinds].some((kind)=>artifactOperationKinds.has(String(kind)))) {
     const artifactOperations=entryPoint.operations.filter((operation)=>artifactOperationKinds.has(String(operation.kind)));
     const portableOperations=entryPoint.operations.filter((operation)=>!artifactOperationKinds.has(String(operation.kind)));
     const artifactKinds=new Set(templates.map((template)=>template.artifactKind));
     if(portableOperations.length) {
-      if(![...artifactKinds].every((kind)=>kind==="stored-invocation"||kind==="object"||kind==="link"||kind==="actor"||kind==="form")) {
+      if(![...artifactKinds].every((kind)=>kind==="stored-invocation"||kind==="object"||kind==="link"||kind==="actor"||kind==="form"||kind==="exposure")) {
         throw new DomainEvaluationError(`Common Play entry point ${entryPointId} references an unsupported composite artifact family`);
       }
       const projected={...base(definition),entryPoints:[operationEntryPointProjection({...entryPoint,operations:portableOperations})]};
@@ -252,7 +252,7 @@ export function lowerCommonPlay(
         definition:{...base(definition),entryPoints:[structuredClone(entryPoint)],artifactTemplates:structuredClone(zoneTemplates)} as unknown as CommonPlayZoneDefinition,
       };
     }
-    if([...artifactKinds].every((kind)=>kind==="stored-invocation"||kind==="object"||kind==="link"||kind==="actor"||kind==="form")) return {
+    if([...artifactKinds].every((kind)=>kind==="stored-invocation"||kind==="object"||kind==="link"||kind==="actor"||kind==="form"||kind==="exposure")) return {
       kind:"artifacts",entryPointId,
       definition:{...base(definition),entryPoints:[structuredClone(entryPoint)],artifactTemplates:structuredClone(templates)} as unknown as CommonPlayArtifactActivationDefinition,
     };
