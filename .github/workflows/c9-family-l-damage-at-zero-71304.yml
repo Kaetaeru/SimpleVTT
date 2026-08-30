@@ -1,0 +1,69 @@
+name: C9 Family L Damage At Zero 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-l-damage-at-zero-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Verify portable damage at zero
+        run: |
+          npm run generate:content
+          node --import tsx --test tests/ui/c9FamilyLDamageAtZeroProduction71304.test.ts tests/ui/c9FamilyLStabilizeProduction.test.ts tests/ui/c9FamilyLDamageDefenseProduction.test.ts
+          node scripts/check-legacy-execution-boundary.mjs
+          node scripts/check-v1-mechanism-coverage.mjs
+          npm exec tsc -- --noEmit
+      - name: Record verified Family L evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
+          data=json.loads(path.read_text(encoding='utf-8'))
+          row=next(entry for entry in data['rows'] if entry['family']=='L')
+          production='c9FamilyLDamageAtZeroProduction71304.test.ts proves unknown installed Common Play damage at 0 HP records the SRD death-save failure through production Resolver, durable character write-back, and event-native Undo'
+          identity='c9FamilyLDamageAtZeroProduction71304.test.ts repeats the damage-at-zero failure and Undo flow under unrelated external module/content/mechanic identities'
+          if production not in row['productionEvidence']: row['productionEvidence'].append(production)
+          if identity not in row['identityInvarianceEvidence']: row['identityInvarianceEvidence'].append(identity)
+          sentence=' Portable damage-at-zero is production-proven for unknown and fully renamed external RuleModules, including durable death-save failure write-back and event-native Undo.'
+          if sentence.strip() not in row['currentState']:
+              row['currentState']=row['currentState'].rstrip()+sentence
+          row['remainingNamedSeams']=[
+              seam.replace('damage-at-zero and death-save production acceptance remain incomplete','death-save production acceptance remains incomplete')
+              for seam in row['remainingNamedSeams']
+          ]
+          path.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          PY
+          rm -f .github/workflows/c9-family-l-damage-at-zero-71304.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "docs(c9): record portable damage-at-zero evidence"
+          for attempt in $(seq 1 12); do
+            if git pull --rebase origin agent/c9-gate-n-coverage-reconciliation && git push origin HEAD:agent/c9-gate-n-coverage-reconciliation; then
+              exit 0
+            fi
+            git rebase --abort >/dev/null 2>&1 || true
+            sleep 1
+          done
+          exit 1
