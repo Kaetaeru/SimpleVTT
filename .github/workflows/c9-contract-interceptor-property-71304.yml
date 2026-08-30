@@ -1,4 +1,5 @@
 name: C9 Interceptor Property Contract 71304
+# Retry after registering the one-shot workflow on the target branch.
 
 on:
   push:
