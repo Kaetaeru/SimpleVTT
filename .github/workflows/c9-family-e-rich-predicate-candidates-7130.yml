@@ -1,4 +1,5 @@
 name: C9 Family E Rich Predicate Candidates 7130
+# Retry after stale targeting assertions were reconciled.
 
 on:
   push:
@@ -57,7 +58,7 @@ jobs:
           helper='''function commonPlaySelectorCandidate(actor:SceneVm["entities"][number],target:SceneVm["entities"][number]):CommonPlaySelectorCandidate {\n  const targeting=commonPlayTargetFact(actor,target);\n  return {\n    id:target.id,\n    targeting,\n    properties:{\n      relation:targeting.relation,\n      name:target.name,\n      side:target.side,\n      kind:target.kind,\n      hp:target.hp,\n      maxHp:target.maxHp,\n      tempHp:target.tempHp,\n      ac:target.ac,\n      initiative:target.initiative,\n      status:[...target.status],\n      resistances:[...target.resistances],\n      immunities:[...target.immunities],\n      vulnerabilities:[...target.vulnerabilities],\n    },\n  };\n}\n\n'''
           if helper not in text:
               marker='function damageDiceFaces(\n'
-              if text.count(marker)!=1: raise SystemExit('selector helper insertion marker mismatch')
+              if text.count(marker)!=1: raise SystemExit('adapter helper insertion marker mismatch')
               text=text.replace(marker,helper+marker,1)
           marker='    targetingTargets:entryPoint.targeting?selectedTargets.map((target)=>commonPlayTargetFact(actorEntity,target)):undefined,\n'
           addition='    targetingCandidates:entryPoint.targeting?internal.scene.entities.filter((target)=>state.combatants[target.id]).map((target)=>commonPlaySelectorCandidate(actorEntity,target)):undefined,\n'
