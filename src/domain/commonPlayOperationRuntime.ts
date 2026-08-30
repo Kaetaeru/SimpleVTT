@@ -127,6 +127,7 @@ type CommonPlayDamageApply={
   amount:CommonPlayExpression|string;
   damageType:string;
   multiplier?:number;
+  reduction?:LiteralNumberExpression;
   target?:CommonPlayHpTarget;
   when?:CommonPlayTestOutcomePredicate;
 };
@@ -281,7 +282,7 @@ const RESOURCE_RECHARGE_KEYS=new Set(["kind","resource","die","succeedsOn"]);
 const RECHARGE_DIE_KEYS=new Set(["sides"]);
 const RECHARGE_RANGE_KEYS=new Set(["minimum","maximum"]);
 const ECONOMY_MODIFY_KEYS=new Set(["kind","bucket","amount"]);
-const DAMAGE_APPLY_KEYS=new Set(["kind","amount","damageType","multiplier","target","when"]);
+const DAMAGE_APPLY_KEYS=new Set(["kind","amount","damageType","multiplier","reduction","target","when"]);
 const HEALING_APPLY_KEYS=new Set(["kind","amount","target"]);
 const CONDITION_CHANGE_KEYS=new Set(["kind","condition","target","when"]);
 const EFFECT_REMOVE_KEYS=new Set(["kind","selector","when"]);
@@ -685,12 +686,14 @@ function parseOperation(value:unknown,label:string):CommonPlayOperation {
     } else amount=numericExpression(operation.amount,`${label}.amount`);
     const multiplier=operation.multiplier;
     if(multiplier!==undefined&&(typeof multiplier!=="number"||!Number.isFinite(multiplier)||multiplier<0)) throw new DomainEvaluationError(`${label}.multiplier must be a finite non-negative number`);
+    const reduction=operation.reduction===undefined?undefined:nonNegativeLiteralExpression(operation.reduction,`${label}.reduction`);
     const when=testOutcomePredicate(operation.when,`${label}.when`);
     return {
       kind:"damage.apply",
       amount,
       damageType:nonEmptyString(operation.damageType,`${label}.damageType`),
       ...(multiplier===undefined?{}:{multiplier}),
+      ...(reduction===undefined?{}:{reduction}),
       ...(operation.target===undefined?{}:{target:hpTarget(operation.target,`${label}.target`)}),
       ...(when?{when}:{}),
     };
@@ -1173,6 +1176,11 @@ export function compileCommonPlayEntryPointOperations(
         targetId,
         damageType:operation.damageType,
         amount,
+        ...(operation.reduction===undefined||operation.reduction.value===0?{}:{adjustments:[{
+          source:`common-play:${supported.id}:${entryPoint.id}:operation:${index}:reduction`,
+          operation:"subtract" as const,
+          value:operation.reduction.value,
+        }]}),
         creatureKind,
       });
       continue;

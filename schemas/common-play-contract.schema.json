@@ -1198,6 +1198,9 @@
           "type": "number",
           "minimum": 0
         },
+        "reduction": {
+          "$ref": "#/$defs/expression"
+        },
         "target": {
           "type": "string",
           "minLength": 1

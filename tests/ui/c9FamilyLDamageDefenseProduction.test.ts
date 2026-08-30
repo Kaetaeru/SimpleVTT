@@ -18,7 +18,7 @@ import type { DamageDefenseKind } from "../../src/domain/damage";
 const TARGET_ID="combatant.goblin-a";
 const CHARACTER_TARGET_ID="char.aelar";
 
-function packagePayload(prefix:string,multiplier?:number,amount=4,target:"target"|"self"="target") {
+function packagePayload(prefix:string,multiplier?:number,amount=4,target:"target"|"self"="target",reduction?:number) {
   const moduleId=`${prefix}.module`,contentId=`${prefix}.option`,mechanicId=`${prefix}.damage`;
   return {moduleId,contentId,mechanicId,json:JSON.stringify({
     schemaVersion:"0.1-draft",moduleId,moduleVersion:"1",
@@ -29,7 +29,7 @@ function packagePayload(prefix:string,multiplier?:number,amount=4,target:"target
       presentation:{defaultLocale:"en",originalName:"Portable Damage Probe",locales:{en:{name:"Portable Damage Probe"}}},
       mechanics:[{kind:"common-play",config:{schemaVersion:"0.2-draft",id:mechanicId,entryPoints:[{
         id:"apply",invocation:"manual",...(target==="target"?{targeting:{from:"targets",min:1,max:1}}:{}),
-        operations:[{kind:"damage.apply",amount:{value:amount},damageType:"fire",...(multiplier===undefined?{}:{multiplier}),target}],
+        operations:[{kind:"damage.apply",amount:{value:amount},damageType:"fire",...(multiplier===undefined?{}:{multiplier}),...(reduction===undefined?{}:{reduction:{value:reduction}}),target}],
       }]}}],
     }],
   })};
@@ -41,9 +41,9 @@ function hp(snapshot:Awaited<ReturnType<MockAdapter["getSnapshot"]>>,actorId:str
   return value as number;
 }
 
-async function execute(prefix:string,kind?:DamageDefenseKind,multiplier?:number) {
+async function execute(prefix:string,kind?:DamageDefenseKind,multiplier?:number,reduction?:number) {
   const adapter=new MockAdapter();
-  const pack=packagePayload(prefix,multiplier);
+  const pack=packagePayload(prefix,multiplier,4,"target",reduction);
   setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
   const preview=await adapter.previewContentImport(pack.json);
   assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
@@ -192,6 +192,11 @@ test("unknown installed resistance and vulnerability converge through Host repla
 test("unknown installed damage.apply honors schema-declared multiplier with profile rounding, rename invariance, and Undo",async()=>{
   assert.equal(await execute("external.family-l-multiplier",undefined,0.6),2);
   assert.equal(await execute("completely.renamed-family-l-multiplier",undefined,0.6),2);
+});
+
+test("unknown installed damage.apply applies structural reduction with rename invariance and Undo",async()=>{
+  assert.equal(await execute("external.family-l-reduction",undefined,undefined,3),1);
+  assert.equal(await execute("completely.renamed-family-l-reduction",undefined,undefined,3),1);
 });
 
 test("unknown installed damage.apply enforces character instant-death overkill with rename invariance and Undo",async()=>{

@@ -203,7 +203,7 @@ export function executeDamage(ctx: ResolutionExecutionContext, operation: Damage
     ...effectDamageDefenses(ctx,operation.targetId),
     ...(operation.defenses ?? []),
   ];
-  const damage = resolveDamage({ damageType:operation.damageType, amount, hp:beforeHp, defenses });
+  const damage = resolveDamage({ damageType:operation.damageType, amount, hp:beforeHp, adjustments:operation.adjustments, defenses });
   return finalizeDamage(
     ctx,
     operation,
@@ -227,6 +227,7 @@ export function executeCompoundDamage(ctx: ResolutionExecutionContext, operation
     components:operation.components.map((component) => ({
       damageType:component.damageType,
       amount:valueFromResult(ctx.results, component.amount),
+      adjustments:component.adjustments,
       defenses:[...commonDefenses, ...(component.defenses ?? [])],
     })),
   });

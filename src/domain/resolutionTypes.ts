@@ -1,5 +1,5 @@
 import type { D20TestRequest } from "./d20";
-import type { DamageDefenseContribution } from "./damage";
+import type { DamageAdjustment, DamageDefenseContribution } from "./damage";
 import type { DamageRollRequest } from "./damageRoll";
 import type { AbilityKey } from "./conditions";
 import type { ConcentrationCheckRequest } from "./concentration";
@@ -150,6 +150,7 @@ export type ResolutionOperation =
       targetId: string;
       damageType: string;
       amount: NumericOperand;
+      adjustments?: DamageAdjustment[];
       defenses?: DamageDefenseContribution[];
       creatureKind: "character" | "monster";
       criticalFrom?: string;
@@ -161,6 +162,7 @@ export type ResolutionOperation =
       components: Array<{
         damageType: string;
         amount: NumericOperand;
+        adjustments?: DamageAdjustment[];
         defenses?: DamageDefenseContribution[];
       }>;
       creatureKind: "character" | "monster";
