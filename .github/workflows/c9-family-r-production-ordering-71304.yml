@@ -53,7 +53,7 @@ jobs:
           path=Path('tests/ui/connectedActorTurnRuleProduction.test.ts')
           text=path.read_text()
           old='  const payload=JSON.parse(pack.json) as {\n'
-          new='  const seededJson=pack.json.replace(`"id":"${pack.resourceId}","current":0,"maximum":1`,`"id":"${pack.resourceId}","current":1,"maximum":1`);\n  if(seededJson===pack.json) throw new Error("simultaneous ordering seed resource was not found");\n  const payload=JSON.parse(seededJson) as {\n'
+          new='  const seededJson=pack.json.replace(`"id":"${pack.resourceId}","current":0,"maximum":1`,`"id":"${pack.resourceId}","current":1,`maximum`:1`);\n  if(seededJson===pack.json) throw new Error("simultaneous ordering seed resource was not found");\n  const payload=JSON.parse(seededJson) as {\n'
           if old not in text:
               raise SystemExit('Family R simultaneous test payload anchor missing')
           text=text.replace(old,new,1)
@@ -74,6 +74,10 @@ jobs:
             if git push origin HEAD:"$branch"; then
               exit 0
             fi
+            if git pull --rebase origin "$branch" && git push origin HEAD:"$branch"; then
+              exit 0
+            fi
+            git rebase --abort >/dev/null 2>&1 || true
             sleep 1
           done
           exit 1
