@@ -1,0 +1,61 @@
+name: C9 Family C Dark Luck Reconcile
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-c-dark-luck-reconcile.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify product ancestry and named seam boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor 9f694348844e70f1afdc3f7ee2c8dc96f3c88817 HEAD
+          ! grep -q 'FIEND_DARK_ONES_OWN_LUCK' src/app/productionPlayRuntimeAdapter.ts
+          ! grep -q 'darkOnesOwnLuck' src/app/productionPlayRuntimeAdapter.ts
+          grep -q 'feature:fighter.indomitable' src/app/productionPlayRuntimeAdapter.ts
+
+      - name: Reconcile Family C ledger
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/c9-family-c-dark-luck-reconcile.py ledger
+          node scripts/check-v1-mechanism-coverage.mjs
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/rules/v1-mechanism-coverage-ledger.json
+          git diff --cached --check
+          git commit -m "docs(c9): record Dark Luck portable evidence"
+          git push
+
+      - name: Advance Rerun STATE checkpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/c9-family-c-dark-luck-reconcile.py state
+          git add .chatgpt-rerun/STATE.md
+          git diff --cached --check
+          git commit -m "docs(rerun): checkpoint Dark Luck migration"
+          git push
+
+      - name: Publish control last and remove reconciliation files
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .github/c9-family-c-dark-luck-reconcile.py control
+          git add .chatgpt-rerun/control.json
+          git rm .github/c9-family-c-dark-luck-reconcile.py .github/workflows/c9-family-c-dark-luck-reconcile.yml
+          git diff --cached --check
+          git commit -m "docs(rerun): continue after Dark Luck migration"
+          git push
