@@ -1,0 +1,72 @@
+name: C9 Family J Projected Attack Advance 71304
+
+on:
+  push:
+    branches: [agent/c9-gate-n-coverage-reconciliation]
+    paths: [.github/workflows/c9-family-j-projected-attack-advance-71304.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Patch projected attack advancement
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path=Path('src/app/phase09RealResolutionAdapter.ts')
+          text=path.read_text(encoding='utf-8')
+          marker='''function migratedResolutionAction(action:ActionVm) {\n  return action.resolutionKind === "ability-check"\n    || action.resolutionKind === "attack"\n    || action.resolutionKind === "healing";\n}\n'''
+          helper=marker+'''\nasync function projectedAction(internal:Phase09ResolutionAdapterState,actionId:string) {\n  const canonical=internal.action(actionId);\n  if (canonical) return canonical;\n  const snapshot=await internal.getSnapshot();\n  return Object.values(snapshot.scene.actionsByActor).flat().find((action)=>action.id===actionId);\n}\n'''
+          if 'async function projectedAction(' not in text:
+              if marker not in text: raise SystemExit('migratedResolutionAction marker missing')
+              text=text.replace(marker,helper,1)
+          text=text.replace('''  const action = internal.action(actionId);\n  if (!action || !migratedResolutionAction(action)) {''','''  const action = await projectedAction(internal,actionId);\n  if (!action || !migratedResolutionAction(action)) {''',1)
+          text=text.replace('''  const action = internal.action(resolution.actionId);\n  if (!action) return oldAdvanceResolution.call(this);''','''  const action = await projectedAction(internal,resolution.actionId);\n  if (!action) return oldAdvanceResolution.call(this);''',1)
+          interface_marker='''  d20(actionId:string,index?:number):number;\n  commit(action:ActionVm):void;'''
+          if 'damageDice(action:ActionVm' not in text:
+              if interface_marker not in text: raise SystemExit('Phase09 interface marker missing')
+              text=text.replace(interface_marker,'''  d20(actionId:string,index?:number):number;\n  damageDice(action:ActionVm,critical?:boolean):number[];\n  commit(action:ActionVm):void;''',1)
+          tail='''  if (resolution.stage === "effect-preview" && action.resolutionKind === "healing") {\n    const target = internal.entity(resolution.targetIds[0]);\n    if (!target) return oldAdvanceResolution.call(this);\n    const resolved = resolveSceneHealing(target,resolution.rollTotal ?? 0);\n    target.hp = resolved.nextHp;\n    resolution.stateChanges.push(...resolved.stateChanges);\n    resolution.provenance.push(...resolved.provenance);\n    resolution.compact = `${target.name} ${resolved.restored} HP 회복`;\n    resolution.calculatedOutcome = `${resolved.restored} HP 회복`;\n    if (!resolution.adjudicated) resolution.finalOutcome = "회복 적용";\n    internal.commit(action);\n    return internal.getSnapshot();\n  }\n\n  return oldAdvanceResolution.call(this);\n};'''
+          replacement='''  if (resolution.stage === "effect-preview" && action.resolutionKind === "healing") {\n    const target = internal.entity(resolution.targetIds[0]);\n    if (!target) return oldAdvanceResolution.call(this);\n    const resolved = resolveSceneHealing(target,resolution.rollTotal ?? 0);\n    target.hp = resolved.nextHp;\n    resolution.stateChanges.push(...resolved.stateChanges);\n    resolution.provenance.push(...resolved.provenance);\n    resolution.compact = `${target.name} ${resolved.restored} HP 회복`;\n    resolution.calculatedOutcome = `${resolved.restored} HP 회복`;\n    if (!resolution.adjudicated) resolution.finalOutcome = "회복 적용";\n    internal.commit(action);\n    return internal.getSnapshot();\n  }\n\n  if (action.resolutionKind === "attack" && resolution.stage === "roll-animation") {\n    const target=internal.entity(resolution.targetIds[0]);\n    const canReact=Boolean(resolution.attackOutcome==="명중"&&target?.reactions.length&&internal.scene.economyByActor[target.id]?.reaction);\n    if (canReact&&target) {\n      const option=target.reactions[0];\n      resolution.interrupt={id:option.id,responderId:target.id,responderName:target.name,trigger:option.trigger,optionName:option.name,cost:option.cost,effect:option.effect,source:option.source};\n      resolution.stage="interrupt";\n      resolution.canAdvance=false;\n      resolution.nextLabel=undefined;\n    } else {\n      resolution.stage="attack-result";\n      resolution.canAdvance=true;\n      resolution.nextLabel=resolution.attackOutcome==="명중"?"피해 굴림":"판정 적용";\n    }\n    return internal.getSnapshot();\n  }\n\n  if (action.resolutionKind === "attack" && resolution.stage === "attack-result") {\n    if (resolution.attackOutcome === "빗나감") {\n      internal.commit(action);\n      return internal.getSnapshot();\n    }\n    resolution.stage="damage-animation";\n    resolution.rollKind="damage";\n    resolution.authoritativeDice=internal.damageDice(action,resolution.critical);\n    resolution.canAdvance=true;\n    resolution.nextLabel="피해 적용";\n    return internal.getSnapshot();\n  }\n\n  return oldAdvanceResolution.call(this);\n};'''
+          if 'action.resolutionKind === "attack" && resolution.stage === "roll-animation"' not in text:
+              if tail not in text: raise SystemExit('advanceResolution tail marker missing')
+              text=text.replace(tail,replacement,1)
+          path.write_text(text,encoding='utf-8')
+          PY
+      - name: Verify Family J projected attack identity
+        run: |
+          npm run generate:content
+          node --import tsx --test --test-concurrency=1 tests/ui/unarmedStrikeRuntime.test.ts tests/ui/c9FamilyJExtraAttackProduction71304.test.ts
+          node scripts/check-v1-mechanism-coverage.mjs
+          node scripts/check-legacy-execution-boundary.mjs
+          npm exec tsc -- --noEmit
+      - name: Publish verified fix and retire verifier
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch=agent/c9-gate-n-coverage-reconciliation
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/app/phase09RealResolutionAdapter.ts
+          git rm -f --ignore-unmatch .github/workflows/c9-family-j-projected-attack-advance-71304.yml .github/workflows/c9-family-j-attack-replacement-71304-r2.yml
+          git commit -m "fix(c9): advance projected attack identities structurally"
+          for attempt in $(seq 1 10); do
+            if git pull --rebase origin "$branch" && git push origin HEAD:"$branch"; then exit 0; fi
+            git rebase --abort >/dev/null 2>&1 || true
+            sleep 1
+          done
+          exit 1
