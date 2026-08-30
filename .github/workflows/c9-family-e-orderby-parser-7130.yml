@@ -62,7 +62,6 @@ jobs:
               tests = tests.replace(marker, new_test + marker, 1)
               test_file.write_text(tests)
           PY
-      - run: npm run generate
       - name: Verify Family E targeting slice
         run: npx tsx --test tests/domain/commonPlaySelectorRuntime.test.ts tests/domain/commonPlayTargetingRuntime.test.ts tests/domain/commonPlayMaplessTargeting.test.ts tests/ui/commonPlayRichSelectorProduction.test.ts tests/ui/installedCommonPlayProductionRuntime.test.ts
       - run: node scripts/check-legacy-execution-boundary.mjs
