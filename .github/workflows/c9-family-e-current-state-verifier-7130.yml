@@ -1,0 +1,38 @@
+name: C9 Family E Current State Verifier 7130
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-e-current-state-verifier-7130.yml
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run generate:content
+      - name: Verify current Family E production selectors
+        run: >-
+          node --import tsx --test
+          tests/domain/commonPlayTargetingRuntime.test.ts
+          tests/ui/commonPlayRichSelectorProduction.test.ts
+          tests/ui/c9FamilyEConditionSelectorProduction.test.ts
+          tests/ui/c9FamilyETagSelectorProduction.test.ts
+          tests/ui/installedCommonPlayProductionRuntime.test.ts
+      - name: Verify Gate N boundaries and types
+        run: |
+          node scripts/check-v1-mechanism-coverage.mjs
+          node scripts/check-legacy-execution-boundary.mjs
+          npm exec tsc -- --noEmit
