@@ -143,7 +143,7 @@
         "SRD 5.2.1 p.76: Dark One's Own Luck",
         "commonPlayD20Runtime.test.ts"
       ],
-      "currentState": "The generic d20 Resolver supports checks/saves/attacks and the full roll-modification kernel. Production Common Play now proves declarative Cutting Words, deterministic replace/minimum/target-add, and arbitrary installed authoritative add-die/reroll through the same d20 PendingResolution with identity rename invariance, atomic accepted payment, and Undo. Family C remains INCOMPLETE because the built-in Tactical Mind, Indomitable, Dark One's Own Luck, and Peerless Skill projections are still injected by named productionPlayRuntimeAdapter.ts checks; generic Common Play production timing does not yet structurally select failed/save/after-roll families for those representatives, Tactical Mind and Peerless Skill still require conditional pay-on-success semantics, and portable add-die/reroll still need connected duplicate/reconnect evidence.",
+      "currentState": "The generic d20 Resolver now has portable structural family/outcome selectors for ability checks, saving throws, and attack rolls. Production Common Play can pause on success, failure, or either after-roll outcome; each saving-throw result is projected through the same PendingResolution without a save-specific executor. Cutting Words declares success-only check/attack selection in content data. Unknown installed add-die/reroll now has connected Host/Client duplicate, reconnect, event-native Undo, and reconnect-after-Undo evidence. Family C remains INCOMPLETE because productionPlayRuntimeAdapter.ts still injects Tactical Mind, Indomitable, Dark One's Own Luck, and Peerless Skill runtimeD20FollowUps by identity; Tactical Mind and Peerless Skill still require generic conditional pay-on-success before their named paths can be removed.",
       "requiredSemantics": [
         "checks",
         "saves",
@@ -170,7 +170,9 @@
         "commonPlayReactionDefinitionRuntime.ts structural deterministic post-roll lowering",
         "commonPlayD20Runtime.test.ts generic reroll/replace/minimum/target-add/add-die semantics",
         "1342c99 Common Play post-roll add-die/reroll lowering reuses the generic d20 Resolver and authoritative dice",
-        "commonPlayReactionDefinitionRuntime.ts portable literal/resource dice lowering for add-die/reroll"
+        "commonPlayReactionDefinitionRuntime.ts portable literal/resource dice lowering for add-die/reroll",
+        "b537fdbd structural d20 families/outcomes selectors and saving-throw projection reuse generic PendingResolution",
+        "Cutting Words builtin Common Play data declares families ability-check/attack-roll and outcome success"
       ],
       "productionEvidence": [
         "fighterTacticalMindFollowUpRuntime.test.ts",
@@ -182,7 +184,9 @@
         "6f6ed2e arbitrary installed deterministic post-roll replace/minimum/target-add production",
         "installedCommonPlayInterceptorProductionRuntime.test.ts",
         "1342c99 unknown installed add-die/reroll production with authoritative dice and Undo",
-        "C9 Family C Portable Dice Modifiers run 33289183121: 37/37 focused tests, tsc --noEmit, vite build"
+        "C9 Family C Portable Dice Modifiers run 33289183121: 37/37 focused tests, tsc --noEmit, vite build",
+        "b537fdbd failed ability-check, failed saving-throw, and after-roll selector production acceptance",
+        "C9 Family C Structural D20 Selectors run 33290013900: 26/26 focused tests, tsc --noEmit, vite build"
       ],
       "identityInvarianceEvidence": [
         "d20FollowUpRuntime.test.ts",
@@ -204,12 +208,17 @@
       ],
       "remainingNamedSeams": [
         "productionPlayRuntimeAdapter.ts injects Tactical Mind, Indomitable, Dark One's Own Luck, and Peerless Skill runtimeD20FollowUps behind class/subclass/feature identity checks",
-        "generic Common Play production d20 timing still lacks structural family/outcome/save selection for failed, saving-throw, and after-roll representative triggers",
         "Tactical Mind and Peerless Skill require a generic conditional pay-on-success contract before their named projection can be removed",
-        "portable add-die/reroll still need connected duplicate/reconnect evidence before Family C can be final"
+        "Indomitable and Dark One's Own Luck can now be migrated onto the structural failed-save / after-roll Common Play selector path and need arbitrary-identity production proof before Family C is final"
       ],
       "connectedRelevant": true,
-      "persistenceRelevant": true
+      "persistenceRelevant": true,
+      "connectedEvidence": [
+        "b537fdbd unknown add-die/reroll Host/Client duplicate, reconnect, connected Undo, and reconnect-after-Undo"
+      ],
+      "persistenceEvidence": [
+        "b537fdbd connected add-die/reroll fresh replica reconstruction before and after event-native Undo"
+      ]
     },
     {
       "id": "payment-resource",
