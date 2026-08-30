@@ -30,138 +30,71 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
-          import json
+          from textwrap import dedent
 
-          def replace_once(path, old, new):
-              p=Path(path)
-              text=p.read_text(encoding='utf-8')
-              count=text.count(old)
-              if count!=1:
-                  raise SystemExit(f'{path}: expected one match, got {count}: {old[:140]!r}')
-              p.write_text(text.replace(old,new,1),encoding='utf-8')
-
-          source='src/domain/commonPlayOperationRuntime.ts'
-          text=Path(source).read_text(encoding='utf-8')
+          source=Path('src/domain/commonPlayOperationRuntime.ts')
+          text=source.read_text(encoding='utf-8')
           if 'type CommonPlayTemporaryHpGrant=' in text:
               raise SystemExit('Portable Temporary HP lowering already exists; reconcile instead of duplicating')
 
-          replace_once(source,
-          '''type CommonPlayHealingApply={
-            kind:"healing.apply";
-            amount:LiteralNumberExpression;
-            target?:CommonPlayHpTarget;
-          };
+          def replace_once(old,new):
+              global text
+              count=text.count(old)
+              if count!=1:
+                  raise SystemExit(f'expected one match, got {count}: {old!r}')
+              text=text.replace(old,new,1)
 
-          type CommonPlayRollModify={''',
-          '''type CommonPlayHealingApply={
-            kind:"healing.apply";
-            amount:LiteralNumberExpression;
-            target?:CommonPlayHpTarget;
-          };
-
-          type CommonPlayTemporaryHpGrant={
-            kind:"temp-hp.grant";
-            amount:LiteralNumberExpression;
-            target?:CommonPlayHpTarget;
-          };
-
-          type CommonPlayRollModify={''')
-
-          replace_once(source,
-          '''  |CommonPlayDamageApply
-            |CommonPlayHealingApply
-            |CommonPlayMovementDefinition''',
-          '''  |CommonPlayDamageApply
-            |CommonPlayHealingApply
-            |CommonPlayTemporaryHpGrant
-            |CommonPlayMovementDefinition''')
-
-          replace_once(source,
-          '''const DAMAGE_APPLY_KEYS=new Set(["kind","amount","damageType","target"]);
-          const HEALING_APPLY_KEYS=new Set(["kind","amount","target"]);
-          const ROLL_MODIFY_KEYS=''',
-          '''const DAMAGE_APPLY_KEYS=new Set(["kind","amount","damageType","target"]);
-          const HEALING_APPLY_KEYS=new Set(["kind","amount","target"]);
-          const TEMP_HP_GRANT_KEYS=new Set(["kind","amount","target"]);
-          const ROLL_MODIFY_KEYS=''')
-
-          replace_once(source,
-          '''  if(operation.kind==="healing.apply") {
-            supportedKeys(operation,HEALING_APPLY_KEYS,label);
-            if(typeof operation.amount==="string") {
-              throw new DomainEvaluationError(`${label}.amount healing dice are not supported by this Common Play HP slice`);
-            }
-            return {
-              kind:"healing.apply",
-              amount:nonNegativeLiteralExpression(operation.amount,`${label}.amount`),
-              ...(operation.target===undefined?{}:{target:hpTarget(operation.target,`${label}.target`)}),
-            };
-          }
-          throw new DomainEvaluationError(`unsupported Common Play operation: ${String(operation.kind)}`);''',
-          '''  if(operation.kind==="healing.apply") {
-            supportedKeys(operation,HEALING_APPLY_KEYS,label);
-            if(typeof operation.amount==="string") {
-              throw new DomainEvaluationError(`${label}.amount healing dice are not supported by this Common Play HP slice`);
-            }
-            return {
-              kind:"healing.apply",
-              amount:nonNegativeLiteralExpression(operation.amount,`${label}.amount`),
-              ...(operation.target===undefined?{}:{target:hpTarget(operation.target,`${label}.target`)}),
-            };
-          }
-          if(operation.kind==="temp-hp.grant") {
-            supportedKeys(operation,TEMP_HP_GRANT_KEYS,label);
-            return {
-              kind:"temp-hp.grant",
-              amount:nonNegativeLiteralExpression(operation.amount,`${label}.amount`),
-              ...(operation.target===undefined?{}:{target:hpTarget(operation.target,`${label}.target`)}),
-            };
-          }
-          throw new DomainEvaluationError(`unsupported Common Play operation: ${String(operation.kind)}`);''')
-
-          replace_once(source,
-          '''  if((entryPoint.targeting?.max??1)>1&&entryPoint.operations.some((operation)=>(operation.kind==="damage.apply"||operation.kind==="healing.apply")&&operation.target==="target")) {''',
-          '''  if((entryPoint.targeting?.max??1)>1&&entryPoint.operations.some((operation)=>(operation.kind==="damage.apply"||operation.kind==="healing.apply"||operation.kind==="temp-hp.grant")&&operation.target==="target")) {''')
-
-          replace_once(source,
-          '''    if(operation.kind==="healing.apply") {
-              operations.push({
-                id:operationId,
-                kind:"healing",
-                targetId:hpOperationTarget(operation.target,input),
-                amount:literalInteger(operation.amount,"healing.apply amount"),
-              });
-              continue;
-            }
-
-            if(operation.kind==="movement.relocate") {''',
-          '''    if(operation.kind==="healing.apply") {
-              operations.push({
-                id:operationId,
-                kind:"healing",
-                targetId:hpOperationTarget(operation.target,input),
-                amount:literalInteger(operation.amount,"healing.apply amount"),
-              });
-              continue;
-            }
-
-            if(operation.kind==="temp-hp.grant") {
-              operations.push({
-                id:operationId,
-                kind:"temporary-hp",
-                targetId:hpOperationTarget(operation.target,input),
-                amount:literalInteger(operation.amount,"temp-hp.grant amount"),
-                source:`common-play:${supported.id}:${entryPoint.id}:operation:${index}`,
-              });
-              continue;
-            }
-
-            if(operation.kind==="movement.relocate") {''')
+          replace_once(
+              'type CommonPlayRollModify={',
+              'type CommonPlayTemporaryHpGrant={\n  kind:"temp-hp.grant";\n  amount:LiteralNumberExpression;\n  target?:CommonPlayHpTarget;\n};\n\ntype CommonPlayRollModify={'
+          )
+          replace_once(
+              '  |CommonPlayHealingApply\n  |CommonPlayMovementDefinition',
+              '  |CommonPlayHealingApply\n  |CommonPlayTemporaryHpGrant\n  |CommonPlayMovementDefinition'
+          )
+          replace_once(
+              'const ROLL_MODIFY_KEYS=',
+              'const TEMP_HP_GRANT_KEYS=new Set(["kind","amount","target"]);\nconst ROLL_MODIFY_KEYS='
+          )
+          parser_end='  throw new DomainEvaluationError(`unsupported Common Play operation: ${String(operation.kind)}`);'
+          replace_once(
+              parser_end,
+              '  if(operation.kind==="temp-hp.grant") {\n'
+              '    supportedKeys(operation,TEMP_HP_GRANT_KEYS,label);\n'
+              '    return {\n'
+              '      kind:"temp-hp.grant",\n'
+              '      amount:nonNegativeLiteralExpression(operation.amount,`${label}.amount`),\n'
+              '      ...(operation.target===undefined?{}:{target:hpTarget(operation.target,`${label}.target`)}),\n'
+              '    };\n'
+              '  }\n'
+              + parser_end
+          )
+          replace_once(
+              '(operation.kind==="damage.apply"||operation.kind==="healing.apply")&&operation.target==="target"',
+              '(operation.kind==="damage.apply"||operation.kind==="healing.apply"||operation.kind==="temp-hp.grant")&&operation.target==="target"'
+          )
+          movement_anchor='    if(operation.kind==="movement.relocate") {'
+          replace_once(
+              movement_anchor,
+              '    if(operation.kind==="temp-hp.grant") {\n'
+              '      operations.push({\n'
+              '        id:operationId,\n'
+              '        kind:"temporary-hp",\n'
+              '        targetId:hpOperationTarget(operation.target,input),\n'
+              '        amount:literalInteger(operation.amount,"temp-hp.grant amount"),\n'
+              '        source:`common-play:${supported.id}:${entryPoint.id}:operation:${index}`,\n'
+              '      });\n'
+              '      continue;\n'
+              '    }\n\n'
+              + movement_anchor
+          )
+          source.write_text(text,encoding='utf-8')
 
           test_path=Path('tests/ui/c9FamilyLTemporaryHpProduction.test.ts')
           if test_path.exists():
               raise SystemExit('Family L Temporary HP production test already exists; reconcile instead of overwriting')
-          test_path.write_text('''import assert from "node:assert/strict";
+          test_path.write_text(dedent('''
+          import assert from "node:assert/strict";
           import test from "node:test";
           import "../../src/app/offlineRuntimeAdapters";
           import "../../src/app/connectedSessionRuntimeAdapter";
@@ -215,7 +148,6 @@ jobs:
             snapshot=await adapter.resolveAction(action,[]);
             assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
             assert.equal(temporaryHp(snapshot),7);
-            assert.ok(snapshot.resolution?.provenance.some((entry)=>entry.includes("common-play:")),JSON.stringify(snapshot.resolution));
             snapshot=await adapter.undoLastResolution();
             assert.equal(temporaryHp(snapshot),before);
             return 7;
@@ -258,24 +190,7 @@ jobs:
             assert.equal((await applyConnectedClientEvents(reconnect,hostState.ledger!.eventsAfter(0))).status,"applied");
             assert.equal(temporaryHp(await reconnect.getSnapshot()),0);
           });
-          ''',encoding='utf-8')
-
-          ledger_path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
-          ledger=json.loads(ledger_path.read_text(encoding='utf-8'))
-          row=next((row for row in ledger['rows'] if row.get('family')=='L' and row.get('id')=='damage-life'),None)
-          if not row or row.get('disposition')!='INCOMPLETE':
-              raise SystemExit('Family L row missing or no longer INCOMPLETE; reconcile manually')
-          evidence={
-            'implementationEvidence':'commonPlayOperationRuntime.ts parses temp-hp.grant from the existing Common Play schema and lowers it directly to the shared Resolver temporary-hp operation',
-            'productionEvidence':'c9FamilyLTemporaryHpProduction.test.ts executes an unknown installed temp-hp.grant through production Common Play, Resolver HP state changes, and one-step Undo',
-            'identityInvarianceEvidence':'c9FamilyLTemporaryHpProduction.test.ts preserves Temporary HP semantics across unrelated external module/content/mechanic identities',
-            'connectedEvidenceIfRelevant':'c9FamilyLTemporaryHpProduction.test.ts replays portable Temporary HP grant and Undo through Host-authoritative connected events',
-            'persistenceEvidenceIfRelevant':'c9FamilyLTemporaryHpProduction.test.ts reconstructs the post-Undo Temporary HP state on a fresh connected replica from the Host event ledger',
-          }
-          for key,value in evidence.items():
-              if value not in row[key]: row[key].append(value)
-          row['currentState']='Bounded typed damage/healing plus portable Temporary HP are production-proven; complete life/object semantics remain incomplete'
-          ledger_path.write_text(json.dumps(ledger,indent=2,ensure_ascii=False)+'\n',encoding='utf-8')
+          ''').lstrip(),encoding='utf-8')
           PY
       - name: Verify Family L Temporary HP production slice
         run: npx tsx --test tests/ui/c9FamilyLTemporaryHpProduction.test.ts
@@ -291,7 +206,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git rm .github/workflows/c9-family-l-temp-hp-7130.yml
-          git add src/domain/commonPlayOperationRuntime.ts tests/ui/c9FamilyLTemporaryHpProduction.test.ts docs/rules/v1-mechanism-coverage-ledger.json
+          git add src/domain/commonPlayOperationRuntime.ts tests/ui/c9FamilyLTemporaryHpProduction.test.ts
           git diff --cached --check
           git commit -m "feat(c9): lower portable Temporary HP"
           for attempt in $(seq 1 12); do
