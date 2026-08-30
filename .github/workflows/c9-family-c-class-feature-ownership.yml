@@ -33,6 +33,6 @@ jobs:
           rm -f .chatgpt-rerun/C9_CLASS_FEATURE_DIAGNOSTIC.json scripts/c9-migrate-class-feature-ownership.mjs
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add scripts/generate-builtin-catalog.mjs src/app/characterSessionProjection.ts src/app/productionPlayRuntimeAdapter.ts src/app/characterSessionProjectionReconstruction.ts content/modules/dnd-srd-5.2.1.classes/module.json .chatgpt-rerun/C9_CLASS_FEATURE_DIAGNOSTIC.json scripts/c9-migrate-class-feature-ownership.mjs
+          git add scripts/generate-builtin-catalog.mjs src/app/characterSessionProjection.ts src/app/commonPlayInterceptorProductionRuntimeAdapter.ts src/app/productionPlayRuntimeAdapter.ts src/app/characterSessionProjectionReconstruction.ts src/app/mockAdapter.ts content/modules/dnd-srd-5.2.1.classes/module.json tests/ui/fighterTacticalMindFollowUpRuntime.test.ts tests/ui/openAbilityCheckDcRuntime.test.ts .chatgpt-rerun/C9_CLASS_FEATURE_DIAGNOSTIC.json scripts/c9-migrate-class-feature-ownership.mjs
           git commit -m 'feat(common-play): own class feature grants declaratively'
           git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
