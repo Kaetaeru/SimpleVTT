@@ -1,4 +1,5 @@
 name: C9 Family Q Choice R5 71304
+# rerun-trigger: 71304-q-choice-r5-type-shapes
 
 on:
   push:
@@ -22,107 +23,72 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - name: Apply choice bridge and preserve payload through wrappers
+      - name: Apply verified Q behavior and close type shapes
         run: |
           python - <<'PY'
           from pathlib import Path
 
-          workflow=Path('.github/workflows/c9-family-q-choice-r3-71304.yml').read_text(encoding='utf-8')
+          workflow=Path('.github/workflows/c9-family-q-choice-r4-71304.yml').read_text(encoding='utf-8')
           marker="          python - <<'PY'\n"
           start=workflow.index(marker)+len(marker)
           end=workflow.index("\n          PY",start)
           code='\n'.join(line[10:] if line.startswith('          ') else line for line in workflow[start:end].splitlines())
-          exec(compile(code,'q-choice-r3-patch','exec'),{'__name__':'__main__'})
+          exec(compile(code,'q-choice-r4-patch','exec'),{'__name__':'__main__'})
 
-          test_path=Path('tests/ui/c9FamilyQChoiceInteractionProduction.test.ts')
-          text=test_path.read_text(encoding='utf-8')
-          damage='{kind:"damage.apply",amount:{value:1},damageType:"force",target:"actor"}'
-          healing='{kind:"healing.apply",amount:{value:1},target:"actor"}'
-          if damage in text:
-              text=text.replace(damage,healing,1)
-          elif healing not in text:
-              raise SystemExit('Q fixture operation anchor changed')
-          changed='assert.equal(snapshot.scene.entities.find((entity)=>entity.id===actorId)?.hp,hpBefore-1);'
-          unchanged='assert.equal(snapshot.scene.entities.find((entity)=>entity.id===actorId)?.hp,hpBefore);'
-          if changed in text:
-              text=text.replace(changed,unchanged,1)
-          elif text.count(unchanged)<2:
-              raise SystemExit('Q fixture HP assertion anchor changed')
-          expected='{delta:1,selectedCount:2}'
-          neutral='{delta:0,selectedCount:2}'
-          if expected in text:
-              text=text.replace(expected,neutral)
-          elif neutral not in text:
-              raise SystemExit('Q rename-invariance delta anchor changed')
-          test_path.write_text(text,encoding='utf-8')
+          adapter_path=Path('src/app/installedCommonPlayRuntimeAdapter.ts')
+          adapter=adapter_path.read_text(encoding='utf-8')
+          loose='interactionResponse?:{interactionId:string;accepted?:true;selectedIds?:string[]},'
+          exact='interactionResponse?:{interactionId:string;accepted:true}|{interactionId:string;selectedIds:string[]},'
+          if adapter.count(loose)!=2:
+              raise SystemExit(f'Q interaction response signature anchor changed: {adapter.count(loose)}')
+          adapter=adapter.replace(loose,exact)
+          loose_local='let interactionResponse:{interactionId:string;accepted?:true;selectedIds?:string[]};'
+          exact_local='let interactionResponse:{interactionId:string;accepted:true}|{interactionId:string;selectedIds:string[]};'
+          if adapter.count(loose_local)!=1:
+              raise SystemExit(f'Q interaction response local anchor changed: {adapter.count(loose_local)}')
+          adapter=adapter.replace(loose_local,exact_local,1)
+          min_check='choiceCandidates!.length<interaction.input.selector.min'
+          min_check_fixed='choiceCandidates!.length<(interaction.input.selector.min??0)'
+          if adapter.count(min_check)!=1:
+              raise SystemExit(f'Q choice min anchor changed: {adapter.count(min_check)}')
+          adapter=adapter.replace(min_check,min_check_fixed,1)
+          bounds='min:interaction.input.selector.min,max:interaction.input.selector.max,'
+          bounds_fixed='min:interaction.input.selector.min??0,max:interaction.input.selector.max??choiceCandidates!.length,'
+          if adapter.count(bounds)!=1:
+              raise SystemExit(f'Q choice bounds anchor changed: {adapter.count(bounds)}')
+          adapter=adapter.replace(bounds,bounds_fixed,1)
+          adapter_path.write_text(adapter,encoding='utf-8')
 
-          def forward_optional(path, old_sig, new_sig, old_call, new_call):
-              p=Path(path)
-              source=p.read_text(encoding='utf-8')
-              if new_sig not in source:
-                  if source.count(old_sig)!=1:
-                      raise SystemExit(f'{path}: signature anchor changed: {source.count(old_sig)}')
-                  source=source.replace(old_sig,new_sig,1)
-              if new_call not in source:
-                  if source.count(old_call)!=1:
-                      raise SystemExit(f'{path}: forwarding anchor changed: {source.count(old_call)}')
-                  source=source.replace(old_call,new_call,1)
-              p.write_text(source,encoding='utf-8')
+          wire_path=Path('src/app/connectedSessionWire.ts')
+          wire=wire_path.read_text(encoding='utf-8')
+          choice_anchor='function isInterrupt(value:unknown):value is InterruptView {\n  const choice=value.choice;'
+          choice_fixed='function isInterrupt(value:unknown):value is InterruptView {\n  if(!isRecord(value)) return false;\n  const choice=value.choice;'
+          if wire.count(choice_anchor)!=1:
+              raise SystemExit(f'Q wire narrowing anchor changed: {wire.count(choice_anchor)}')
+          wire_path.write_text(wire.replace(choice_anchor,choice_fixed,1),encoding='utf-8')
 
-          forward_optional(
-              'src/app/commonPlayInterceptorProductionRuntimeAdapter.ts',
-              'MockAdapter.prototype.respondToInterrupt=async function respondToPortableCommonPlayInterceptor(accept:boolean) {',
-              'MockAdapter.prototype.respondToInterrupt=async function respondToPortableCommonPlayInterceptor(accept:boolean,selectedIds?:string[]) {',
-              'return previousRespondToInterrupt.call(this,accept);',
-              'return previousRespondToInterrupt.call(this,accept,selectedIds);',
-          )
-          forward_optional(
-              'src/app/consumableD20BonusEffectFollowUpRuntimeAdapter.ts',
-              'MockAdapter.prototype.respondToInterrupt=async function respondToConsumableD20BonusEffect(accept:boolean){',
-              'MockAdapter.prototype.respondToInterrupt=async function respondToConsumableD20BonusEffect(accept:boolean,selectedIds?:string[]){',
-              'return previousRespondToInterrupt.call(this,accept);',
-              'return previousRespondToInterrupt.call(this,accept,selectedIds);',
-          )
-          forward_optional(
-              'src/app/rogueCoreRuntimeAdapter.ts',
-              'MockAdapter.prototype.respondToInterrupt=async function respondToRogueUncannyDodge(accept:boolean){',
-              'MockAdapter.prototype.respondToInterrupt=async function respondToRogueUncannyDodge(accept:boolean,selectedIds?:string[]){',
-              'const snapshot=await previousRespondToInterrupt.call(this,accept);',
-              'const snapshot=await previousRespondToInterrupt.call(this,accept,selectedIds);',
-          )
-          forward_optional(
-              'src/app/monkOpenHandQuiveringPalmRuntimeAdapter.ts',
-              'MockAdapter.prototype.respondToInterrupt=async function respondToQuiveringPalmSeed(accept:boolean){',
-              'MockAdapter.prototype.respondToInterrupt=async function respondToQuiveringPalmSeed(accept:boolean,selectedIds?:string[]){',
-              'return previousRespondToInterrupt.call(this,accept);',
-              'return previousRespondToInterrupt.call(this,accept,selectedIds);',
-          )
-          forward_optional(
-              'src/app/phase09RealTurnRuntimeAdapter.ts',
-              'MockAdapter.prototype.respondToInterrupt=async function respondToInterruptWithTurnRuntime(accept:boolean) {',
-              'MockAdapter.prototype.respondToInterrupt=async function respondToInterruptWithTurnRuntime(accept:boolean,selectedIds?:string[]) {',
-              'return previousRespondToInterrupt.call(this,accept);',
-              'return previousRespondToInterrupt.call(this,accept,selectedIds);',
-          )
-
-          connected=Path('src/app/connectedActionRoutingAdapter.ts').read_text(encoding='utf-8')
-          required=[
-              'respondConnectedInterrupt(accept:boolean,selectedIds?:string[])',
-              'previousRespondToInterrupt.call(this,accept,selectedIds)',
-              'adapter.respondToInterrupt(response.accept,response.selectedIds)',
-          ]
-          missing=[entry for entry in required if entry not in connected]
-          if missing:
-              raise SystemExit(f'connected choice bridge incomplete: {missing}')
-          contract=Path('src/app/contracts.ts').read_text(encoding='utf-8')
-          if 'respondToInterrupt(accept: boolean, selectedIds?: string[]): Promise<AppSnapshot>;' not in contract:
-              raise SystemExit('adapter contract did not preserve optional choice selection')
+          turn_path=Path('src/app/phase09RealTurnRuntimeAdapter.ts')
+          turn=turn_path.read_text(encoding='utf-8')
+          old_sig='MockAdapter.prototype.respondToInterrupt=async function respondToInterruptWithTurnRuntime(accept:boolean) {'
+          new_sig='MockAdapter.prototype.respondToInterrupt=async function respondToInterruptWithTurnRuntime(accept:boolean,selectedIds?:string[]) {'
+          if new_sig not in turn:
+              if turn.count(old_sig)!=1:
+                  raise SystemExit(f'turn interrupt signature anchor changed: {turn.count(old_sig)}')
+              turn=turn.replace(old_sig,new_sig,1)
+          old_call='if (!session||!resolution||!interrupt) return previousRespondToInterrupt.call(this,accept);'
+          new_call='if (!session||!resolution||!interrupt) return previousRespondToInterrupt.call(this,accept,selectedIds);'
+          if new_call not in turn:
+              if turn.count(old_call)!=1:
+                  raise SystemExit(f'turn interrupt forwarding anchor changed: {turn.count(old_call)}')
+              turn=turn.replace(old_call,new_call,1)
+          turn_path.write_text(turn,encoding='utf-8')
           PY
       - run: npm ci
       - run: npm run generate:content
       - name: Verify Family Q choice vertical slice
         run: |
           node --import tsx --test tests/ui/c9FamilyQChoiceInteractionProduction.test.ts tests/ui/c9FamilyQTargetOwnerInteractionProduction.test.ts tests/ui/c9FamilyQAuthorityInteractionProduction.test.ts tests/ui/installedCommonPlayActorOwnerInteractionProduction.test.ts tests/domain/commonPlayOperationRuntime.test.ts
+          node scripts/check-v1-mechanism-coverage.mjs
           node scripts/check-legacy-execution-boundary.mjs
           npm exec tsc -- --noEmit
       - name: Publish verified source and retire Q staging
