@@ -1,0 +1,80 @@
+name: C9 Family J Structural Ledger Converge 71304
+
+on:
+  push:
+    branches: [agent/c9-gate-n-coverage-reconciliation]
+    paths: [.github/workflows/c9-family-j-structural-ledger-converge-71304.yml]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: c9-family-j-structural-ledger-converge-71304
+  cancel-in-progress: false
+
+jobs:
+  verify-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Reconcile latest branch
+        run: git pull --ff-only origin agent/c9-gate-n-coverage-reconciliation
+      - name: Record verified structural weapon evidence
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          path=Path("docs/rules/v1-mechanism-coverage-ledger.json")
+          data=json.loads(path.read_text(encoding="utf-8"))
+          row=next(entry for entry in data["rows"] if entry["family"]=="J")
+          if row["disposition"]!="INCOMPLETE":
+              raise SystemExit(f"unexpected Family J disposition: {row['disposition']}")
+
+          implementation="productionPlayRuntimeAdapter.ts resolves weapon source ownership structurally through ItemInstanceVm.grantedActionIds and canonical weapon-definition catalog data; presentation text no longer determines ranged range or ability"
+          production="ff4eea4c3e20b2c25690d54cbfb10a6e94f1fe8f refactor(c9): use structural weapon action sources; C9 Family J Structural Weapon Source 71304 run 33316313480 passed 2/2 rename/no-name-inference regressions, legacy execution boundary, and tsc --noEmit"
+          identity="c9FamilyJStructuralWeaponSource.test.ts renames both attack and item presentation while preserving grantedActionIds and retains Shortbow range/DEX semantics; removing the structural link prevents Longbow display text from fabricating ranged facts"
+          for key,value in (("implementationEvidence",implementation),("productionEvidence",production),("identityInvarianceEvidence",identity)):
+              if value not in row[key]:
+                  row[key].append(value)
+
+          marker="Source-owned weapon projection now resolves equipment by grantedActionIds and canonical weapon-definition data rather than presentation names; rename/no-link regressions are proven."
+          if marker not in row["currentState"]:
+              row["currentState"] += " " + marker
+
+          old="full generic weapon and Unarmed Strike action projection is not yet proven across source-owned equipment/stat definitions"
+          new="full generic Unarmed Strike action projection is not yet proven across source-owned stat definitions"
+          seams=row["remainingNamedSeams"]
+          if old in seams:
+              seams[seams.index(old)]=new
+          elif new not in seams:
+              raise SystemExit("expected Family J structural source seam was not found")
+
+          path.write_text(json.dumps(data,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
+          PY
+      - name: Verify coverage ledger
+        run: node scripts/check-v1-mechanism-coverage.mjs
+      - name: Publish verified ledger reconciliation
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch=agent/c9-gate-n-coverage-reconciliation
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/c9-family-j-structural-ledger-converge-71304.yml
+          git add docs/rules/v1-mechanism-coverage-ledger.json
+          git commit -m "docs(c9): record structural weapon source evidence"
+          for attempt in $(seq 1 8); do
+            if git push origin HEAD:"$branch"; then exit 0; fi
+            git fetch origin "$branch"
+            git rebase "origin/$branch"
+            sleep 1
+          done
+          exit 1
