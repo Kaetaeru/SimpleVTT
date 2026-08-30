@@ -1,0 +1,119 @@
+name: C9 Family J Structural Loading Land 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-j-loading-land-rerun-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  land:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Patch structural Loading composition
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_once(text, old, new, label):
+              if new in text:
+                  return text
+              if old not in text:
+                  raise SystemExit(f'{label}: expected source text missing')
+              return text.replace(old, new, 1)
+
+          runtime = Path('src/app/productionPlayRuntimeAdapter.ts')
+          text = runtime.read_text(encoding='utf-8')
+          text = replace_once(
+              text,
+              '  if(!definition)return {rangeFeet:5};\n  const rangeFeet=(definition.properties??[]).map((property)=>property.match(/^(?:ammunition|thrown):(\\d+)(?:\\/\\d+)?$/i)?.[1]).find(Boolean);\n  const strength=mod(character.abilities.str);const dexterity=mod(character.abilities.dex);\n  const ability:AbilityKey|undefined=definition.mode==="ranged"?"dex":!definition.properties?.includes("finesse")?"str":strength===dexterity?undefined:strength>dexterity?"str":"dex";\n  return {rangeFeet:rangeFeet?Number(rangeFeet):5,...(ability?{ability}:{})};',
+              '  if(!definition)return {rangeFeet:5,loading:false};\n  const properties=definition.properties??[];\n  const rangeFeet=properties.map((property)=>property.match(/^(?:ammunition|thrown):(\\d+)(?:\\/\\d+)?$/i)?.[1]).find(Boolean);\n  const strength=mod(character.abilities.str);const dexterity=mod(character.abilities.dex);\n  const ability:AbilityKey|undefined=definition.mode==="ranged"?"dex":!properties.includes("finesse")?"str":strength===dexterity?undefined:strength>dexterity?"str":"dex";\n  return {rangeFeet:rangeFeet?Number(rangeFeet):5,...(ability?{ability}:{}),loading:properties.includes("loading")};',
+              'weaponRuntimeFact loading source',
+          )
+          text = replace_once(
+              text,
+              'function attackActions(character:CharacterSheet):ActionVm[] {\n  const attacksPerAction=weaponAttacksPerAction(character);\n  return character.attacks.map((attack,index)=>{\n    const damage=parseDamage(attack.damage);\n    const runtimeFact=weaponRuntimeFact(character,attack);',
+              'function attackActions(character:CharacterSheet):ActionVm[] {\n  const baseAttacksPerAction=weaponAttacksPerAction(character);\n  return character.attacks.map((attack,index)=>{\n    const damage=parseDamage(attack.damage);\n    const {loading,...runtimeFact}=weaponRuntimeFact(character,attack);\n    const attacksPerAction=loading?1:baseAttacksPerAction;',
+              'attackActions loading cap',
+          )
+          runtime.write_text(text, encoding='utf-8')
+
+          test_file = Path('tests/ui/c9FamilyJStructuralWeaponSource.test.ts')
+          text = test_file.read_text(encoding='utf-8')
+          text = replace_once(
+              text,
+              '  assert.equal(projected.runtimeAttack?.ability,"dex");\n});',
+              '  assert.equal(projected.runtimeAttack?.ability,"dex");\n  assert.equal(projected.attacksPerAction,2);\n});',
+              'non-loading extra attack assertion',
+          )
+          loading_test = '''\n\ntest("production weapon projection applies Loading from its structural source regardless of presentation",async()=>{\n  const adapter=new MockAdapter();\n  const character=source(adapter);\n  const attack=character.attacks.find((candidate)=>candidate.id==="action.shortbow");\n  const item=character.items.find((candidate)=>candidate.id==="item.shortbow.aelar");\n  assert.ok(attack);assert.ok(item);\n  attack.name="Renamed Loading Attack";\n  item.name="Unrelated Loading Source";item.nameEn="No Weapon Hint";\n  item.definitionId="dnd.srd521.item.weapon.heavy-crossbow";\n  const snapshot=await adapter.startProductionLocalPlay();\n  const projected=snapshot.scene.actionsByActor[character.id]?.find((candidate)=>candidate.id===attack.id);\n  assert.ok(projected);\n  assert.equal(projected.runtimeAttack?.rangeFeet,100);\n  assert.equal(projected.runtimeAttack?.ability,"dex");\n  assert.equal(projected.attacksPerAction,1);\n});\n'''
+          if 'applies Loading from its structural source regardless of presentation' not in text:
+              text = text.rstrip() + loading_test
+          test_file.write_text(text, encoding='utf-8')
+
+          ledger = Path('docs/rules/v1-mechanism-coverage-ledger.json')
+          text = ledger.read_text(encoding='utf-8')
+          text = replace_once(
+              text,
+              'Family J remains incomplete for complete Unarmed Strike source composition, Opportunity Attack qualification, reach/long range, Extra Attack/replacement, and Loading composition. Portable source-owned ammunition now composes through the generic resource PaymentContract with attack execution, including empty-ammunition atomic rejection, event-native Undo, and complete external identity rename.',
+              'Family J remains incomplete for complete Unarmed Strike source composition and multiattack/Extra Attack/replacement. Opportunity Attack, reach/long range, structural cover, source-owned ammunition, and Loading now compose generically from structural runtime/source facts without content identity dispatch.',
+              'Family J current state',
+          )
+          text = replace_once(
+              text,
+              '        "productionPlayRuntimeAdapter.ts resolves weapon range and ability from the Character equipment item structurally linked to the attack through grantedActionIds instead of attack/item presentation names",',
+              '        "productionPlayRuntimeAdapter.ts resolves weapon range and ability from the Character equipment item structurally linked to the attack through grantedActionIds instead of attack/item presentation names",\n        "productionPlayRuntimeAdapter.ts applies source-owned weapon-definition Loading structurally to cap projected attacksPerAction at one without attack/item presentation dispatch",',
+              'Family J implementation evidence',
+          )
+          text = replace_once(
+              text,
+              '        "ff4eea4c3e20b2c25690d54cbfb10a6e94f1fe8f refactor(c9): use structural weapon action sources; C9 Family J Structural Weapon Source run 33316313480 passed 2/2 structural source regressions, legacy execution boundary, and tsc --noEmit",',
+              '        "ff4eea4c3e20b2c25690d54cbfb10a6e94f1fe8f refactor(c9): use structural weapon action sources; C9 Family J Structural Weapon Source run 33316313480 passed 2/2 structural source regressions, legacy execution boundary, and tsc --noEmit",\n        "c9FamilyJStructuralWeaponSource.test.ts proves a renamed source-linked Loading weapon structurally caps a Fighter 5 projected attack at one while the non-Loading source retains Extra Attack",',
+              'Family J production evidence',
+          )
+          text = replace_once(
+              text,
+              '        "c9FamilyJStructuralWeaponSource.test.ts renames both attack and source-item presentation while preserving canonical Shortbow range/DEX semantics through grantedActionIds, and proves presentation text alone cannot infer weapon range",',
+              '        "c9FamilyJStructuralWeaponSource.test.ts renames both attack and source-item presentation while preserving canonical Shortbow range/DEX semantics through grantedActionIds, and proves presentation text alone cannot infer weapon range",\n        "c9FamilyJStructuralWeaponSource.test.ts preserves the source-owned Loading attack cap after unrelated attack/item presentation renames",',
+              'Family J identity evidence',
+          )
+          text = replace_once(
+              text,
+              '        "multiattack/Extra Attack/replacement and Loading constraints remain incomplete; reach/long range and structural cover are now generic and verified",',
+              '        "multiattack/Extra Attack/replacement remain incomplete; Loading, reach/long range, and structural cover are now generic and verified",',
+              'Family J remaining seam',
+          )
+          ledger.write_text(text, encoding='utf-8')
+          PY
+      - name: Verify Family J Loading slice
+        shell: bash
+        run: |
+          npx tsx --test tests/ui/c9FamilyJStructuralWeaponSource.test.ts tests/ui/c9FamilyJOpportunityAttackProduction.test.ts
+          node scripts/check-v1-mechanism-coverage.mjs
+          node scripts/check-legacy-execution-boundary.mjs
+          npx tsc --noEmit
+      - name: Commit verified slice
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch=agent/c9-gate-n-coverage-reconciliation
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/c9-family-j-loading-land-rerun-71304.yml
+          git add src/app/productionPlayRuntimeAdapter.ts tests/ui/c9FamilyJStructuralWeaponSource.test.ts docs/rules/v1-mechanism-coverage-ledger.json
+          git commit -m "feat(c9): apply structural loading constraint"
+          git push origin HEAD:$branch
