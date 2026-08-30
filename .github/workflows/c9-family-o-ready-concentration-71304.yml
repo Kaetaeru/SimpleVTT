@@ -26,58 +26,20 @@ jobs:
       - name: Reconcile branch
         run: git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
       - name: Patch portable Ready concentration
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          source = Path('src/app/installedCommonPlayRuntimeAdapter.ts')
-          text = source.read_text(encoding='utf-8')
-          old_import = 'import type { RulesRuntimeState } from "../domain/combatState";\n'
-          new_import = old_import + 'import type { ResolutionOperation } from "../domain/resolutionTypes";\n'
-          if 'import type { ResolutionOperation } from "../domain/resolutionTypes";' not in text:
-              if old_import not in text:
-                  raise SystemExit('RulesRuntimeState import anchor missing')
-              text = text.replace(old_import, new_import, 1)
-          old = '''  const resolutionId=`common-play-ready.${Date.now()}.${Math.floor(Math.random()*1000)}`;
-  const committed=resolveCommonPlayStoredInvocationCapture(SIMPLEVTT_APP_RULES_PROFILE,state,{
-    resolutionId,actorId:command.actorId,definitionId:action.lowered.definition.id,entryPointId:action.entryPointId,
-    definitionRevision:reference.catalogId,binding:"live",
-    trigger:{op:"eq",left:{ref:"trigger.declared"},right:{value:true}},
-    metadata:{triggerLabel:command.trigger.trim()||"DM이 선언한 트리거"},
-    captureOperations:[{id:`${resolutionId}:action`,kind:"use-economy",actorId:command.actorId,slot:"action",actionKind:"other"}],
-  });'''
-          new = '''  const resolutionId=`common-play-ready.${Date.now()}.${Math.floor(Math.random()*1000)}`;
-  const heldSpellConcentrationGroupId=action.category==="spell"?`${resolutionId}:held-spell`:undefined;
-  const captureOperations:ResolutionOperation[]=[
-    {id:`${resolutionId}:action`,kind:"use-economy",actorId:command.actorId,slot:"action",actionKind:action.category==="spell"?"magic":"other"},
-  ];
-  if(heldSpellConcentrationGroupId) captureOperations.push({
-    id:`${resolutionId}:hold-concentration`,kind:"start-concentration",actorId:command.actorId,
-    groupId:heldSpellConcentrationGroupId,sourceId:action.lowered.definition.id,
-  });
-  const committed=resolveCommonPlayStoredInvocationCapture(SIMPLEVTT_APP_RULES_PROFILE,state,{
-    resolutionId,actorId:command.actorId,definitionId:action.lowered.definition.id,entryPointId:action.entryPointId,
-    definitionRevision:reference.catalogId,binding:"live",
-    trigger:{op:"eq",left:{ref:"trigger.declared"},right:{value:true}},
-    metadata:{triggerLabel:command.trigger.trim()||"DM이 선언한 트리거"},
-    ...(heldSpellConcentrationGroupId?{concentrationGroupId:heldSpellConcentrationGroupId,onTriggerConcentration:"end" as const}:{}),
-    captureOperations,
-  });'''
-          if old not in text:
-              raise SystemExit('Ready capture anchor missing')
-          source.write_text(text.replace(old, new, 1), encoding='utf-8')
-          PY
+        run: python .github/scripts/c9-family-o-ready-concentration-71304.py
       - name: Install dependencies
         run: npm ci
       - name: Verify Family O Ready concentration
         run: npx tsx --test tests/ui/c9FamilyOReadyConcentrationProduction.test.ts tests/ui/c9FamilyOConcentrationProduction.test.ts
       - name: Typecheck
         run: npx tsc --noEmit
-      - name: Commit verified slice and remove staging workflow
+      - name: Commit verified slice and remove staging helpers
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           rm .github/workflows/c9-family-o-ready-concentration-71304.yml
-          git add src/app/installedCommonPlayRuntimeAdapter.ts tests/ui/c9FamilyOReadyConcentrationProduction.test.ts .github/workflows/c9-family-o-ready-concentration-71304.yml
+          rm .github/scripts/c9-family-o-ready-concentration-71304.py
+          git add src/app/installedCommonPlayRuntimeAdapter.ts tests/ui/c9FamilyOReadyConcentrationProduction.test.ts .github/workflows/c9-family-o-ready-concentration-71304.yml .github/scripts/c9-family-o-ready-concentration-71304.py
           git commit -m "feat(c9): route readied spell concentration through resolver"
           git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
           git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
