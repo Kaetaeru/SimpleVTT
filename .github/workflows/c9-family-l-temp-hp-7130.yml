@@ -145,7 +145,7 @@ jobs:
             let snapshot=await adapter.getSnapshot();
             const before=temporaryHp(snapshot)??0;
             assert.equal(before,0);
-            snapshot=await adapter.resolveAction(action,[]);
+            snapshot=await adapter.resolveAction(action,[snapshot.activeCharacter.id]);
             assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
             assert.equal(temporaryHp(snapshot),7);
             snapshot=await adapter.undoLastResolution();
@@ -160,6 +160,7 @@ jobs:
           test("portable Temporary HP converges through Host replay, Undo, and reconnect",async()=>{
             const prefix="external.connected-temp-hp",sessionId="session.c9-family-l-temp-hp";
             const host=new MockAdapter(),action=await install(host,prefix);
+            const hostActorId=(await host.getSnapshot()).activeCharacter.id;
             const hostState=connectedStateFor(host);
             hostState.mode="host";hostState.sessionId=sessionId;hostState.ledger=new HostSessionLedger(sessionId,connectedManifest(host));
             const originalSend=tauriSessionTransport.send;
@@ -173,7 +174,7 @@ jobs:
             const client=new MockAdapter();await install(client,prefix);
             const clientState=connectedStateFor(client);clientState.mode="client";clientState.sessionId=sessionId;clientState.replica=new ClientSessionReplica(sessionId);
 
-            const grantBatch=await runHost(()=>host.resolveAction(action,[]));
+            const grantBatch=await runHost(()=>host.resolveAction(action,[hostActorId]));
             assert.equal((await applyConnectedClientEvents(client,grantBatch.events)).status,"applied");
             let hostSnapshot=await host.getSnapshot(),clientSnapshot=await client.getSnapshot();
             assert.equal(temporaryHp(hostSnapshot),7);
