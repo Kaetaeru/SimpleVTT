@@ -125,6 +125,8 @@ jobs:
           });
           EOF
       - run: npm ci
+      - name: Generate builtin catalog
+        run: npm run generate:builtin-catalog
       - name: Verify focused Family O paths
         run: npx tsx --test tests/ui/c9FamilyOReadyConcentrationProduction.test.ts tests/ui/c9FamilyOConcentrationProduction.test.ts
       - name: Typecheck
