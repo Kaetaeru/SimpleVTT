@@ -10,6 +10,8 @@ import type { TurnSlot } from "./turnEconomy";
 
 type LiteralExpression = { value:number };
 
+type CommonPlayD20ResultCondition={kind:"d20-result";outcome:"success"|"failure"};
+
 type CommonPlayPayment =
   | {
       kind:"resource";
@@ -17,6 +19,7 @@ type CommonPlayPayment =
       amount:LiteralExpression;
       consumeAt:"stage"|"commit";
       refundOnCancel?:boolean;
+      condition?:CommonPlayD20ResultCondition;
     }
   | {
       kind:"economy";
@@ -24,6 +27,7 @@ type CommonPlayPayment =
       amount:LiteralExpression;
       consumeAt:"stage"|"commit";
       refundOnCancel?:boolean;
+      condition?:CommonPlayD20ResultCondition;
     };
 
 export interface CommonPlayPropertyModifyOperation {
@@ -204,31 +208,40 @@ function paymentOperations(
   definition:CommonPlayReactionDefinition,
   sourceActorId:string,
   interceptorId:string,
+  d20Outcome?:D20TestResult["outcome"],
+  eligibilityOnly=false,
 ):ResolutionOperation[] {
-  return definition.payments.map((payment,index)=>{
+  return definition.payments.flatMap((payment,index):ResolutionOperation[]=>{
+    if (payment.condition) {
+      if (payment.condition.kind!=="d20-result") throw new Error(`unsupported reaction payment condition: ${String((payment.condition as {kind?:unknown}).kind)}`);
+      if (!eligibilityOnly) {
+        if (!d20Outcome) throw new Error("d20-result payment condition requires a d20.roll interceptor");
+        if (payment.condition.outcome!==d20Outcome) return [];
+      }
+    }
     if (payment.consumeAt!=="commit") throw new Error("reaction runtime supports commit-time payments only");
     const amount=literalValue(payment.amount,`${payment.kind} payment amount`);
     if (payment.kind==="resource") {
       if (amount<=0) throw new Error("resource payment amount must be positive");
-      return {
+      return [{
         id:`common-play-${interceptorId}-payment-${index+1}`,
         kind:"spend-resource" as const,
         actorId:sourceActorId,
         resourceId:payment.resource,
         amount,
-      };
+      }];
     }
     if (amount!==1) throw new Error("economy payment amount must be exactly 1 in the reaction runtime slice");
     if (!(["action","bonus-action","reaction"] as string[]).includes(payment.bucket)) {
       throw new Error(`unsupported economy bucket: ${payment.bucket}`);
     }
-    return {
+    return [{
       id:`common-play-${interceptorId}-payment-${index+1}`,
       kind:"use-economy" as const,
       actorId:sourceActorId,
       slot:payment.bucket as TurnSlot,
       bonusActionGranted:payment.bucket==="bonus-action",
-    };
+    }];
   });
 }
 
@@ -278,15 +291,13 @@ function damageRollReduction(
   });
 }
 
-function acceptedPending(awaiting:AwaitingCommonPlayInteraction,authority?:CommonPlayInteractionAuthority):PendingResolution {
+function acceptedPending(profile:RulesProfileLike,inputState:RulesRuntimeState,awaiting:AwaitingCommonPlayInteraction,authority?:CommonPlayInteractionAuthority):PendingResolution {
   const { definition, interceptorId, interceptedOperationId, pending, sourceActorId }=awaiting.context;
   const interceptor=definition.interceptors.find((entry)=>entry.id===interceptorId);
   if (!interceptor) throw new Error(`interceptor not found: ${interceptorId}`);
   const operationIndex=pending.operations.findIndex((operation)=>operation.id===interceptedOperationId);
   if (operationIndex<0) throw new Error(`intercepted operation not found: ${interceptedOperationId}`);
   const intercepted=pending.operations[operationIndex];
-  const payments=paymentOperations(definition,sourceActorId,interceptor.id);
-
   if(interceptor.slot==="d20.roll") {
     if(intercepted.kind!=="d20"||(intercepted.request.family!=="ability-check"&&intercepted.request.family!=="saving-throw"&&intercepted.request.family!=="attack-roll")) {
       throw new Error("d20.roll interceptor target is not a supported d20 roll");
@@ -298,10 +309,16 @@ function acceptedPending(awaiting:AwaitingCommonPlayInteraction,authority?:Commo
         rollModifications:[...(intercepted.request.rollModifications??[]),...d20RollModifications(definition,interceptor,authority)],
       },
     };
+    const preview=stagePendingResolution(profile,inputState,{...pending,operations:[...pending.operations.slice(0,operationIndex),recalculated]});
+    if(preview.status==="rejected")throw new Error(preview.error??"conditional payment d20 preview rejected");
+    const result=preview.results[recalculated.id] as D20TestResult|undefined;
+    if(!result)throw new Error("conditional payment d20 preview result is missing");
+    const payments=paymentOperations(definition,sourceActorId,interceptor.id,result.outcome);
     return {...pending,operations:[...pending.operations.slice(0,operationIndex),...payments,recalculated,...pending.operations.slice(operationIndex+1)]};
   }
 
   if(interceptor.slot==="primary.damage") {
+    const payments=paymentOperations(definition,sourceActorId,interceptor.id);
     if(intercepted.kind!=="damage-roll")throw new Error("primary.damage interceptor target is not a damage roll");
     const recalculated:ResolutionOperation={
       ...intercepted,
@@ -321,6 +338,7 @@ function acceptedPending(awaiting:AwaitingCommonPlayInteraction,authority?:Commo
     ...intercepted,
     request:{...intercepted.request,target,targetSource:`common-play:${definition.id}:${interceptor.id}`},
   };
+  const payments=paymentOperations(definition,sourceActorId,interceptor.id);
   return {...pending,operations:[...pending.operations.slice(0,operationIndex),...payments,recalculated,...pending.operations.slice(operationIndex+1)]};
 }
 
@@ -376,7 +394,7 @@ export function startCommonPlayResolution(
 
   let payments:ResolutionOperation[];
   try {
-    payments=paymentOperations(definition,sourceActorId,interceptor.id);
+    payments=paymentOperations(definition,sourceActorId,interceptor.id,undefined,true);
   } catch (error) {
     return rejected(inputState,error instanceof Error?error.message:String(error));
   }
@@ -431,7 +449,7 @@ export function resumeCommonPlayInteraction(
   if (!response.value) return resolvePendingResolution(profile,inputState,awaiting.context.pending);
 
   try {
-    return resolvePendingResolution(profile,inputState,acceptedPending(awaiting,authority));
+    return resolvePendingResolution(profile,inputState,acceptedPending(profile,inputState,awaiting,authority));
   } catch (error) {
     return rejected(inputState,error instanceof Error?error.message:String(error));
   }

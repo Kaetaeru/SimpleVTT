@@ -397,3 +397,43 @@ test("generic primary.damage decline and missing die authority create no partial
   assert.equal(rejected.state.combatants.hero.resources.find((pool)=>pool.id==="spell-slot-1")?.current,2);
   assert.equal(rejected.state.combatants.goblin.life.hp.current,15);
 });
+
+
+const CONDITIONAL_D20_PAYMENT:CommonPlayReactionDefinition={
+  id:"external.unknown.conditional-d20-payment",
+  payments:[{kind:"resource",resource:"spell-slot-1",amount:{value:1},consumeAt:"commit",refundOnCancel:true,condition:{kind:"d20-result",outcome:"success"}}],
+  interceptors:[{
+    id:"conditional-add-die",timing:"d20.outcome-determined",
+    interaction:{id:"use-conditional-add-die",kind:"choice",responder:"actor-owner",mode:"blocking",input:{type:"boolean"},revalidate:"always",stalePolicy:"cancel"},
+    operation:"recalculate",slot:"d20.roll",families:["ability-check"],outcomes:["failure"],
+    operations:[{kind:"roll.modify",mode:"add-die",dice:"1d10"}],
+  }],
+};
+
+function failedConditionalCheck():PendingResolution {
+  return {id:"conditional-check",actorId:"hero",sourceId:"external.conditional-check",expectedRevision:0,operations:[{
+    id:"check",kind:"d20",actorId:"hero",request:{family:"ability-check",target:20,modifierContributions:[{source:"base",value:5}],dice:{id:"conditional-check-d20",purpose:"conditional check",sides:20,faces:[10]}},
+  }]};
+}
+
+test("conditional d20-result payment spends only when the modified roll succeeds",()=>{
+  const state=runtimeState();
+  const awaiting=requireAwaiting(startCommonPlayResolution(TEST_PROFILE,state,failedConditionalCheck(),CONDITIONAL_D20_PAYMENT,"hero"));
+  const accepted=resumeCommonPlayInteraction(TEST_PROFILE,state,awaiting,{interactionId:awaiting.interaction.id,idempotencyKey:awaiting.interaction.idempotencyKey,value:true},{modifierDiceFaces:{0:[6]}});
+  assert.equal(accepted.status,"committed");
+  if(accepted.status!=="committed")return;
+  assert.equal((accepted.results.check as {outcome:string;total:number}).outcome,"success");
+  assert.equal((accepted.results.check as {total:number}).total,21);
+  assert.equal(accepted.state.combatants.hero.resources.find((pool)=>pool.id==="spell-slot-1")?.current,1);
+});
+
+test("conditional d20-result payment preserves the resource when the modified roll still fails",()=>{
+  const state=runtimeState();
+  const awaiting=requireAwaiting(startCommonPlayResolution(TEST_PROFILE,state,failedConditionalCheck(),CONDITIONAL_D20_PAYMENT,"hero"));
+  const accepted=resumeCommonPlayInteraction(TEST_PROFILE,state,awaiting,{interactionId:awaiting.interaction.id,idempotencyKey:awaiting.interaction.idempotencyKey,value:true},{modifierDiceFaces:{0:[2]}});
+  assert.equal(accepted.status,"committed");
+  if(accepted.status!=="committed")return;
+  assert.equal((accepted.results.check as {outcome:string;total:number}).outcome,"failure");
+  assert.equal((accepted.results.check as {total:number}).total,17);
+  assert.equal(accepted.state.combatants.hero.resources.find((pool)=>pool.id==="spell-slot-1")?.current,2);
+});

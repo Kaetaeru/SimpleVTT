@@ -40,6 +40,16 @@ function literalNumber(value:unknown,label:string) {
   return {value:expression.value};
 }
 
+function d20ResultCondition(value:unknown,label:string):CommonPlayReactionDefinition["payments"][number]["condition"] {
+  if(value===undefined)return undefined;
+  const raw=object(value,label);
+  const unsupported=Object.keys(raw).filter((key)=>key!=="kind"&&key!=="outcome");
+  if(unsupported.length)throw new DomainEvaluationError(`${label} contains unsupported fields: ${unsupported.join(", ")}`);
+  if(raw.kind!=="d20-result")throw new DomainEvaluationError(`${label}.kind must be d20-result`);
+  if(raw.outcome!=="success"&&raw.outcome!=="failure")throw new DomainEvaluationError(`${label}.outcome must be success or failure`);
+  return {kind:"d20-result",outcome:raw.outcome};
+}
+
 function eligibility(value:Obj,label:string) {
   if(value.when===undefined&&value.factQueries===undefined)return undefined;
   if(value.when===undefined||!Array.isArray(value.factQueries)||!value.factQueries.length) {
@@ -93,6 +103,7 @@ function payment(value:Obj,index:number):CommonPlayReactionDefinition["payments"
   const label=`Common Play reaction payment[${index}]`;
   if(value.consumeAt!=="commit") throw new DomainEvaluationError(`${label}.consumeAt must be commit`);
   const amount=literalNumber(value.amount,`${label}.amount`);
+  const condition=d20ResultCondition(value.condition,`${label}.condition`);
   if(value.kind==="resource") {
     if(typeof value.resource!=="string"||!value.resource) throw new DomainEvaluationError(`${label}.resource must be a non-empty string`);
     return {
@@ -101,6 +112,7 @@ function payment(value:Obj,index:number):CommonPlayReactionDefinition["payments"
       amount,
       consumeAt:"commit",
       ...(typeof value.refundOnCancel==="boolean"?{refundOnCancel:value.refundOnCancel}:{}),
+      ...(condition?{condition}:{}),
     };
   }
   if(value.kind==="economy") {
@@ -113,6 +125,7 @@ function payment(value:Obj,index:number):CommonPlayReactionDefinition["payments"
       amount,
       consumeAt:"commit",
       ...(typeof value.refundOnCancel==="boolean"?{refundOnCancel:value.refundOnCancel}:{}),
+      ...(condition?{condition}:{}),
     };
   }
   throw new DomainEvaluationError(`${label}.kind is unsupported by the reaction runtime`);

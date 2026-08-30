@@ -26,7 +26,8 @@ import { BARD_LORE_CLASS_ID } from "../../src/domain/bardLoreProgression";
 const PEER="peer.r2.remote-peerless-skill";
 const RECONNECT_PEER="peer.r2.remote-peerless-skill.reconnect";
 const CHARACTER_ID="char.r2.remote-peerless-skill";
-const INTERRUPT_ID="follow-up.d20-modification";
+const FEATURE_ID="dnd.srd521.feature.bard.college-of-lore.peerless-skill";
+const isPeerlessInterrupt=(id:string|undefined)=>Boolean(id?.includes(FEATURE_ID)&&id.includes("common-play-interceptor"));
 type ResolvedCatalogEntry=CatalogEntry & {contentId?:string};
 type MutableAdapterState={activeCharacter:CharacterSheet;characters:CharacterSummary[];scene:SceneVm};
 
@@ -47,7 +48,7 @@ function remoteLoreBard(catalog:CatalogEntry[]):CharacterSheet {
     abilities:{str:10,dex:16,con:14,int:12,wis:12,cha:18},saves:[],skills:[],features:["비할 데 없는 기술"],equipment:[],items:[],attacks:[],
     resources:[{id:BARDIC_INSPIRATION_RESOURCE_ID,label:"바드의 영감",current:4,max:4,source:"바드 클래스 기능",recovery:{shortRest:"all",longRest:"all"}}],
     rulesProfileId:"dnd.srd-5.2.1",rulesProfileVersion:"0.1-draft",sourceRevision:2,runtimeRevision:3,
-    classLevels:[{classId:BARD_LORE_CLASS_ID,className:bard.nameKo||bard.nameEn,level:14,subclassName:lore.nameKo||lore.nameEn}],subclassIds:{[BARD_LORE_CLASS_ID]:BARD_COLLEGE_LORE_SUBCLASS_ID},
+    classLevels:[{classId:BARD_LORE_CLASS_ID,className:bard.nameKo||bard.nameEn,level:14,subclassName:lore.nameKo||lore.nameEn}],subclassIds:{[BARD_LORE_CLASS_ID]:BARD_COLLEGE_LORE_SUBCLASS_ID},subclassFeatureIds:[FEATURE_ID],
   } as CharacterSheet;
 }
 
@@ -90,15 +91,15 @@ test("host-unknown Lore Peerless Skill accepts owner interrupt, spends Inspirati
     snapshot=await host.advanceResolution();assert.equal(snapshot.resolution?.stage,"effect-preview");assert.equal(state.ledger.cursor,0);
     const failedTotal=snapshot.resolution?.rollTotal;assert.equal(typeof failedTotal,"number");
     snapshot=await host.applyDmAdjudication({type:"ability-check-dc",scope:"resolution",value:failedTotal!+6});
-    assert.equal(snapshot.resolution?.stage,"interrupt",JSON.stringify(snapshot.resolution));assert.equal(snapshot.resolution?.checkOutcome,"실패");assert.equal(snapshot.resolution?.checkTarget,failedTotal!+6);assert.equal(snapshot.resolution?.interrupt?.id,INTERRUPT_ID);assert.equal(snapshot.resolution?.interrupt?.responderId,remote.id);assert.equal(state.ledger.cursor,0);
+    assert.equal(snapshot.resolution?.stage,"interrupt",JSON.stringify(snapshot.resolution));assert.equal(snapshot.resolution?.checkOutcome,"실패");assert.equal(snapshot.resolution?.checkTarget,failedTotal!+6);assert.equal(isPeerlessInterrupt(snapshot.resolution?.interrupt?.id),true);assert.equal(snapshot.resolution?.interrupt?.responderId,remote.id);assert.equal(state.ledger.cursor,0);
     assert.ok(failedTotal!<snapshot.resolution!.checkTarget!);
-    const prompt=sentToPeer.filter((entry)=>entry.peer===PEER).map((entry)=>JSON.parse(entry.message) as {type:string;interrupt?:{id:string}}).find((message)=>message.type==="resolution-interrupt-prompt");assert.ok(prompt,"Host must send Peerless Skill only to the owning peer");assert.equal(prompt!.interrupt?.id,INTERRUPT_ID);
+    const prompt=sentToPeer.filter((entry)=>entry.peer===PEER).map((entry)=>JSON.parse(entry.message) as {type:string;interrupt?:{id:string}}).find((message)=>message.type==="resolution-interrupt-prompt");assert.ok(prompt,"Host must send Peerless Skill only to the owning peer");assert.equal(prompt!.interrupt?.id,snapshot.resolution!.interrupt!.id);
 
     await host.setQueuedD20(10);
-    const response={sessionId:state.sessionId,resolutionId:snapshot.resolution!.id,promptId:INTERRUPT_ID,accept:true};
+    const response={sessionId:state.sessionId,resolutionId:snapshot.resolution!.id,promptId:snapshot.resolution!.interrupt!.id,accept:true};
     assert.equal(await routeConnectedInterruptResponse(host,{peer:PEER,message:""},response),true);
     snapshot=await host.getSnapshot();assert.equal(state.pendingRemoteAction,null);assert.equal(state.ledger.cursor,1);assert.equal(snapshot.activeCharacter.id,before.activeCharacter.id);assert.deepEqual(snapshot.characters,before.characters);
-    assert.equal(snapshot.resolution?.stage,"complete");assert.deepEqual(snapshot.resolution?.authoritativeDice,[4,10]);assert.equal(snapshot.resolution?.rollTotal,failedTotal!+10);assert.equal(snapshot.resolution?.checkOutcome,"성공");
+    assert.equal(snapshot.resolution?.stage,"complete");assert.deepEqual(snapshot.resolution?.authoritativeDice,[4]);assert.equal(snapshot.resolution?.provenance.some((entry)=>entry.includes(FEATURE_ID)),true);assert.equal(snapshot.resolution?.rollTotal,failedTotal!+10);assert.equal(snapshot.resolution?.checkOutcome,"성공");
     assert.equal(inspirationCurrent(projectedCharacterById(host,remote.id)!.sheet),beforeUses!-1);assert.equal(snapshot.activity.some((activity)=>activity.detail.some((detail)=>detail.includes("비할 데 없는 기술"))),true);
 
     const batches=broadcasts.map((message)=>JSON.parse(message) as {type:string;events?:ConnectedSessionEvent[]}).filter((message)=>message.type==="event-batch");assert.equal(batches.length,1,"accepted owner follow-up must commit one ordered Host event batch");
@@ -148,13 +149,13 @@ test("host-unknown Lore Peerless Skill preserves Inspiration when the authoritat
     const request:ConnectedActionRequest={sessionId:state.sessionId,requestId:"request.r2.remote-peerless-skill.no-spend",actorId:remote.id,actionId:check!.id,targetIds:[],knownEventCursor:0,character:remoteManifest.character,capabilities:[...CONNECTED_CAPABILITIES]};
     assert.equal(await routeConnectedActionRequest(host,{peer:PEER,message:""},request),true);
     snapshot=await host.advanceResolution();const failedTotal=snapshot.resolution?.rollTotal;assert.equal(typeof failedTotal,"number");
-    snapshot=await host.applyDmAdjudication({type:"ability-check-dc",scope:"resolution",value:failedTotal!+10});assert.equal(snapshot.resolution?.interrupt?.id,INTERRUPT_ID);
+    snapshot=await host.applyDmAdjudication({type:"ability-check-dc",scope:"resolution",value:failedTotal!+10});assert.equal(isPeerlessInterrupt(snapshot.resolution?.interrupt?.id),true);
 
     await host.setQueuedD20(3);
-    const response={sessionId:state.sessionId,resolutionId:snapshot.resolution!.id,promptId:INTERRUPT_ID,accept:true};
+    const response={sessionId:state.sessionId,resolutionId:snapshot.resolution!.id,promptId:snapshot.resolution!.interrupt!.id,accept:true};
     assert.equal(await routeConnectedInterruptResponse(host,{peer:PEER,message:""},response),true);
     snapshot=await host.getSnapshot();assert.equal(state.pendingRemoteAction,null);assert.equal(state.ledger.cursor,1);assert.equal(snapshot.resolution?.stage,"complete");
-    assert.deepEqual(snapshot.resolution?.authoritativeDice,[4,3]);assert.equal(snapshot.resolution?.rollTotal,failedTotal!+3);assert.equal(snapshot.resolution?.checkOutcome,"실패");
+    assert.deepEqual(snapshot.resolution?.authoritativeDice,[4]);assert.equal(snapshot.resolution?.provenance.some((entry)=>entry.includes(FEATURE_ID)),true);assert.equal(snapshot.resolution?.rollTotal,failedTotal!+3);assert.equal(snapshot.resolution?.checkOutcome,"실패");
     assert.equal(inspirationCurrent(projectedCharacterById(host,remote.id)!.sheet),beforeUses);assert.deepEqual(snapshot.characters,before.characters);
 
     const batches=broadcasts.map((message)=>JSON.parse(message) as {type:string;events?:ConnectedSessionEvent[]}).filter((message)=>message.type==="event-batch");assert.equal(batches.length,1);

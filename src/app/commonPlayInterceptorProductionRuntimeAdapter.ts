@@ -339,7 +339,11 @@ async function interceptorEligible(internal:AdapterState,candidate:PassiveReacti
 }
 
 function interactionCost(definition:CommonPlayReactionDefinition) {
-  return definition.payments.map((payment)=>payment.kind==="economy"?payment.bucket:`${payment.resource} ${payment.amount.value}`).join(" + ")||"비용 없음";
+  return definition.payments.map((payment)=>{
+    const base=payment.kind==="economy"?payment.bucket:`${payment.resource} ${payment.amount.value}`;
+    const condition=payment.condition?.kind==="d20-result"?` (${payment.condition.outcome==="success"?"성공":"실패"} 시)`:"";
+    return `${base}${condition}`;
+  }).join(" + ")||"비용 없음";
 }
 
 async function offerPassiveReaction(adapter:MockAdapter) {
@@ -545,6 +549,9 @@ MockAdapter.prototype.respondToInterrupt=async function respondToPortableCommonP
       const d20=resumed.results[pending.operationId] as D20TestResult|undefined;
       if(!d20){restoreInterruptedStage(resolution);resolution.detail.push("Common Play 인터셉터 결과 누락");return internal.getSnapshot();}
       updateD20Presentation(resolution,pending,d20,authority);
+      if(pending.candidate.definition.payments.some((payment)=>payment.condition?.kind==="d20-result"&&payment.condition.outcome!==d20.outcome)) {
+        resolution.detail.push(`${pending.candidate.optionName}: 결과 조건 불충족 · 자원 보존`);
+      }
     }
   }
   restoreInterruptedStage(resolution);

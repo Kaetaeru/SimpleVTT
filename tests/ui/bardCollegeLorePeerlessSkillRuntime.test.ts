@@ -7,7 +7,8 @@ import { BARDIC_INSPIRATION_RESOURCE_ID } from "../../src/domain/bardicInspirati
 import { BARD_COLLEGE_LORE_SUBCLASS_ID } from "../../src/domain/bardCollegeLore";
 import { BARD_LORE_CLASS_ID } from "../../src/domain/bardLoreProgression";
 
-const INTERRUPT_ID="follow-up.d20-modification";
+const FEATURE_ID="dnd.srd521.feature.bard.college-of-lore.peerless-skill";
+const isPeerlessInterrupt=(id:string|undefined)=>Boolean(id?.includes(FEATURE_ID)&&id.includes("common-play-interceptor"));
 
 async function prepareLoreBard(adapter:MockAdapter,level=14){
   const internal=adapter as unknown as {activeCharacter:CharacterSheet};
@@ -19,6 +20,7 @@ async function prepareLoreBard(adapter:MockAdapter,level=14){
     abilities:{...internal.activeCharacter.abilities,cha:18},
     classLevels:[{classId:BARD_LORE_CLASS_ID,className:"바드",level,subclassName:"전승 학파"}],
     subclassIds:{[BARD_LORE_CLASS_ID]:BARD_COLLEGE_LORE_SUBCLASS_ID},
+    subclassFeatureIds:level>=14?[FEATURE_ID]:[],
     resources:[
       ...internal.activeCharacter.resources.filter((entry)=>entry.id!==BARDIC_INSPIRATION_RESOURCE_ID),
       {id:BARDIC_INSPIRATION_RESOURCE_ID,label:"바드의 영감",current:4,max:4,source:"바드 클래스 기능",recovery:{shortRest:"all",longRest:"all"}},
@@ -51,7 +53,7 @@ async function startFailedCheck(adapter:MockAdapter,dcDelta:number){
   const total=snapshot.resolution?.rollTotal;
   assert.equal(typeof total,"number");
   snapshot=await adapter.applyDmAdjudication({type:"ability-check-dc",scope:"resolution",value:total!+dcDelta});
-  assert.equal(snapshot.resolution?.interrupt?.id,INTERRUPT_ID,JSON.stringify(snapshot.resolution));
+  assert.equal(isPeerlessInterrupt(snapshot.resolution?.interrupt?.id),true,JSON.stringify(snapshot.resolution));
   return snapshot;
 }
 
@@ -112,11 +114,11 @@ test("Peerless Skill can turn the Lore Bard's missed production attack into a hi
   await adapter.resolveAction(attack.id,[targetId]);
   for(let step=0;step<4;step++){
     snapshot=await adapter.getSnapshot();
-    if(snapshot.resolution?.interrupt?.id===INTERRUPT_ID)break;
+    if(isPeerlessInterrupt(snapshot.resolution?.interrupt?.id))break;
     await adapter.advanceResolution();
   }
   snapshot=await adapter.getSnapshot();
-  assert.equal(snapshot.resolution?.interrupt?.id,INTERRUPT_ID,JSON.stringify(snapshot.resolution));
+  assert.equal(isPeerlessInterrupt(snapshot.resolution?.interrupt?.id),true,JSON.stringify(snapshot.resolution));
 
   await adapter.setQueuedD20(6);
   await adapter.respondToInterrupt(true);
@@ -124,7 +126,7 @@ test("Peerless Skill can turn the Lore Bard's missed production attack into a hi
   assert.equal(snapshot.resolution?.attackOutcome,"명중",JSON.stringify(snapshot.resolution));
   assert.equal(inspirationUses(snapshot),usesBefore!-1);
   assert.ok((snapshot.scene.entities.find((entry)=>entry.id===targetId)?.hp??0)<(hpBefore??0));
-  assert.equal(snapshot.activity.some((entry)=>entry.detail.some((detail)=>detail.includes("비할 데 없는 기술"))),true,JSON.stringify(snapshot.activity));
+  assert.equal(snapshot.resolution?.provenance.some((entry)=>entry.includes(FEATURE_ID)),true,JSON.stringify(snapshot.resolution));
 
   snapshot=await adapter.undoLastResolution();
   assert.equal(inspirationUses(snapshot),usesBefore);
@@ -148,5 +150,23 @@ test("Lore Bard below level 14 does not receive Peerless Skill follow-up",async(
   const total=snapshot.resolution?.rollTotal;
   assert.equal(typeof total,"number");
   snapshot=await adapter.applyDmAdjudication({type:"ability-check-dc",scope:"resolution",value:total!+4});
-  assert.notEqual(snapshot.resolution?.interrupt?.id,INTERRUPT_ID);
+  assert.equal(isPeerlessInterrupt(snapshot.resolution?.interrupt?.id),false);
+});
+
+
+test("Peerless Skill mechanics are selected from the owned feature identity, not presentation text",async()=>{
+  const adapter=new MockAdapter();
+  await prepareLoreBard(adapter);
+  const internal=adapter as unknown as {catalog:Array<{contentId?:string;nameKo:string;nameEn?:string}>};
+  const feature=internal.catalog.find((entry)=>entry.contentId===FEATURE_ID);
+  assert.ok(feature);
+  feature.nameKo="완전히 다른 표시 이름";
+  feature.nameEn="Renamed Peerless Presentation";
+  const before=inspirationUses(await adapter.getSnapshot());
+  let snapshot=await startFailedCheck(adapter,4);
+  assert.equal(isPeerlessInterrupt(snapshot.resolution?.interrupt?.id),true);
+  await adapter.setQueuedD20(6);
+  snapshot=await adapter.respondToInterrupt(true);
+  assert.equal(snapshot.resolution?.checkOutcome,"성공");
+  assert.equal(inspirationUses(snapshot),before!-1);
 });

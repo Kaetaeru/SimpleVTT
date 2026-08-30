@@ -17,7 +17,6 @@ import { LAY_ON_HANDS_ACTION_ID } from "./paladinLayOnHandsRuntimeContracts";
 import { abjureFoesMaximumTargets } from "../domain/paladinAbjureFoes";
 import { BARBARIAN_CLASS_ID, BARBARIAN_RAGE_RESOURCE_ID } from "../domain/barbarianBerserker";
 import { itemEntryById, itemMechanic } from "./characterCreationV10Data";
-import { BARD_COLLEGE_LORE_SUBCLASS_ID, LORE_PEERLESS_SKILL_SOURCE } from "../domain/bardCollegeLore";
 
 const ABILITY_LABEL:Record<AbilityKey,string>={str:"근력",dex:"민첩",con:"건강",int:"지능",wis:"지혜",cha:"매력"};
 const ABILITIES:AbilityKey[]=["str","dex","con","int","wis","cha"];
@@ -357,9 +356,6 @@ function featureActions(character:CharacterSheet):ActionVm[] {
   const paladinChannel=character.resources.find((resource)=>resource.id===PALADIN_CHANNEL_DIVINITY_RESOURCE_ID);
   if(paladinLevel>=3&&paladinChannel)actions.push({id:"action.paladin.divine-sense",actorId:character.id,name:"성스러운 감지",category:"basic",target:"self",economy:"추가 행동",resolutionKind:"no-roll",summary:`60피트 내 천상체·악마·언데드 감지 · ${paladinChannel.current}/${paladinChannel.max}`,available:paladinChannel.current>0,disabledReason:paladinChannel.current?undefined:"채널 디비니티 사용 횟수가 없습니다.",eligibleTargetIds:[character.id],resourceCost:{resourceId:paladinChannel.id,amount:1},runtimeEffectGrant:{tags:["divine-sense"],duration:{kind:"minutes",amount:10},termination:{targetBecomesIncapacitated:true,targetDies:true},metadata:{publicLabel:"성스러운 감지",radiusFeet:60},awarenessQuery:{creatureTypes:["celestial","fiend","undead"],radiusFeet:60}},details:[detail("범위","60피트"),detail("감지","천상체·악마·언데드 및 성역/부정한 장소"),detail("지속","10분 또는 행동불능"),detail("비용","추가 행동 1 · 채널 디비니티 1회"),detail("출처","SRD 5.2.1 · Paladin Divine Sense")]});
   if(paladinLevel>=9&&paladinChannel){const charisma=mod(character.abilities.cha);const dc=8+character.proficiencyBonus+charisma;const maximum=abjureFoesMaximumTargets(charisma);actions.push({id:"action.paladin.abjure-foes",actorId:character.id,name:"적 질책",category:"basic",target:"any",economy:"행동",resolutionKind:"saving-throw",summary:`최대 ${maximum}명 · 지혜 내성 DC ${dc} · 실패 시 공포 · ${paladinChannel.current}/${paladinChannel.max}`,available:paladinChannel.current>0,disabledReason:paladinChannel.current?undefined:"채널 디비니티 사용 횟수가 없습니다.",eligibleTargetIds:[],maxTargets:maximum,saveDc:dc,saveAbility:"지혜",resourceCost:{resourceId:paladinChannel.id,amount:1},details:[detail("대상",`60피트 내 최대 ${maximum}명`),detail("실패","1분간 공포 · 피해를 받으면 종료"),detail("행동 제한","이동·행동·추가 행동 중 하나만 사용"),detail("비용","행동 1 · 채널 디비니티 1회"),detail("출처","SRD 5.2.1 · Paladin Abjure Foes")]});}
-  if(bardLevel>=14&&character.subclassIds?.[BARD_ID]===BARD_COLLEGE_LORE_SUBCLASS_ID&&inspiration){
-    const sides=bardicInspirationDieSides(bardLevel);actions.at(-1)!.runtimeD20FollowUps=[...(actions.at(-1)!.runtimeD20FollowUps??[]),{sourceId:LORE_PEERLESS_SKILL_SOURCE,families:["ability-check","attack-roll"],trigger:"failure",modification:{mode:"add-die",diceSides:sides},payment:{resourceId:inspiration.id,amount:1,consumeWhen:"success"},presentation:{optionName:`비할 데 없는 기술 d${sides}`,cost:"성공 시 바드의 영감 1회",effect:`d${sides}을 더합니다. 실패가 유지되면 영감을 소비하지 않습니다.`,source:"SRD 5.2.1 · College of Lore · Peerless Skill"}}];
-  }
   return actions;
 }
 

@@ -3,40 +3,67 @@
   "$id": "https://simplevtt.local/schemas/common-play-contract.schema.json",
   "title": "SimpleVTT Common Play Contract",
   "type": "object",
-  "required": ["schemaVersion", "id"],
+  "required": [
+    "schemaVersion",
+    "id"
+  ],
   "properties": {
-    "$schema": { "type": "string", "format": "uri" },
-    "schemaVersion": { "const": "0.2-draft" },
-    "id": { "$ref": "#/$defs/stableId" },
+    "$schema": {
+      "type": "string",
+      "format": "uri"
+    },
+    "schemaVersion": {
+      "const": "0.2-draft"
+    },
+    "id": {
+      "$ref": "#/$defs/stableId"
+    },
     "requiresCapabilities": {
       "type": "array",
       "uniqueItems": true,
-      "items": { "type": "string", "minLength": 1 }
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
     },
-    "castProcess": { "$ref": "#/$defs/castProcess" },
+    "castProcess": {
+      "$ref": "#/$defs/castProcess"
+    },
     "payments": {
       "type": "array",
-      "items": { "$ref": "#/$defs/payment" }
+      "items": {
+        "$ref": "#/$defs/payment"
+      }
     },
     "bindings": {
       "type": "array",
-      "items": { "$ref": "#/$defs/binding" }
+      "items": {
+        "$ref": "#/$defs/binding"
+      }
     },
     "entryPoints": {
       "type": "array",
-      "items": { "$ref": "#/$defs/entryPoint" }
+      "items": {
+        "$ref": "#/$defs/entryPoint"
+      }
     },
     "artifactTemplates": {
       "type": "array",
-      "items": { "$ref": "#/$defs/artifactTemplate" }
+      "items": {
+        "$ref": "#/$defs/artifactTemplate"
+      }
     },
     "rules": {
       "type": "array",
-      "items": { "$ref": "#/$defs/rule" }
+      "items": {
+        "$ref": "#/$defs/rule"
+      }
     },
     "interceptors": {
       "type": "array",
-      "items": { "$ref": "#/$defs/interceptor" }
+      "items": {
+        "$ref": "#/$defs/interceptor"
+      }
     }
   },
   "additionalProperties": false,
@@ -49,25 +76,60 @@
       "oneOf": [
         {
           "type": "object",
-          "required": ["value"],
-          "properties": { "value": { "type": ["number", "integer", "boolean", "string", "null"] } },
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "required": ["ref"],
-          "properties": { "ref": { "type": "string", "minLength": 1 } },
-          "additionalProperties": false
-        },
-        {
-          "type": "object",
-          "required": ["op", "args"],
+          "required": [
+            "value"
+          ],
           "properties": {
-            "op": { "enum": ["add", "subtract", "multiply", "divide", "min", "max", "floor", "ceil"] },
+            "value": {
+              "type": [
+                "number",
+                "integer",
+                "boolean",
+                "string",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "ref"
+          ],
+          "properties": {
+            "ref": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "op",
+            "args"
+          ],
+          "properties": {
+            "op": {
+              "enum": [
+                "add",
+                "subtract",
+                "multiply",
+                "divide",
+                "min",
+                "max",
+                "floor",
+                "ceil"
+              ]
+            },
             "args": {
               "type": "array",
               "minItems": 1,
-              "items": { "$ref": "#/$defs/expression" }
+              "items": {
+                "$ref": "#/$defs/expression"
+              }
             }
           },
           "additionalProperties": false
@@ -76,42 +138,107 @@
     },
     "predicate": {
       "oneOf": [
-        { "type": "boolean" },
+        {
+          "type": "boolean"
+        },
         {
           "type": "object",
-          "required": ["op", "args"],
+          "required": [
+            "op",
+            "args"
+          ],
           "properties": {
-            "op": { "enum": ["all", "any"] },
-            "args": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/predicate" } }
+            "op": {
+              "enum": [
+                "all",
+                "any"
+              ]
+            },
+            "args": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/$defs/predicate"
+              }
+            }
           },
           "additionalProperties": false
         },
         {
           "type": "object",
-          "required": ["op", "arg"],
+          "required": [
+            "op",
+            "arg"
+          ],
           "properties": {
-            "op": { "const": "not" },
-            "arg": { "$ref": "#/$defs/predicate" }
+            "op": {
+              "const": "not"
+            },
+            "arg": {
+              "$ref": "#/$defs/predicate"
+            }
           },
           "additionalProperties": false
         },
         {
           "type": "object",
-          "required": ["op", "left", "right"],
+          "required": [
+            "op",
+            "left",
+            "right"
+          ],
           "properties": {
-            "op": { "enum": ["eq", "ne", "lt", "lte", "gt", "gte", "contains"] },
-            "left": { "$ref": "#/$defs/expression" },
-            "right": { "$ref": "#/$defs/expression" }
+            "op": {
+              "enum": [
+                "eq",
+                "ne",
+                "lt",
+                "lte",
+                "gt",
+                "gte",
+                "contains"
+              ]
+            },
+            "left": {
+              "$ref": "#/$defs/expression"
+            },
+            "right": {
+              "$ref": "#/$defs/expression"
+            }
           },
           "additionalProperties": false
         },
         {
           "type": "object",
-          "required": ["op", "ref"],
+          "required": [
+            "op",
+            "ref"
+          ],
           "properties": {
-            "op": { "enum": ["exists", "has-tag", "activation-is", "mode-is", "source-active", "resource-at-least", "progression-at-least", "relation-matches"] },
-            "ref": { "type": "string", "minLength": 1 },
-            "value": { "type": ["number", "integer", "boolean", "string"] }
+            "op": {
+              "enum": [
+                "exists",
+                "has-tag",
+                "activation-is",
+                "mode-is",
+                "source-active",
+                "resource-at-least",
+                "progression-at-least",
+                "relation-matches"
+              ]
+            },
+            "ref": {
+              "type": "string",
+              "minLength": 1
+            },
+            "value": {
+              "type": [
+                "number",
+                "integer",
+                "boolean",
+                "string"
+              ]
+            }
           },
           "additionalProperties": false
         }
@@ -119,48 +246,138 @@
     },
     "duration": {
       "oneOf": [
-        { "type": "object", "required": ["kind"], "properties": { "kind": { "enum": ["instant", "manual", "durable"] } }, "additionalProperties": false },
         {
           "type": "object",
-          "required": ["kind", "amount", "unit"],
+          "required": [
+            "kind"
+          ],
           "properties": {
-            "kind": { "const": "elapsed" },
-            "amount": { "$ref": "#/$defs/expression" },
-            "unit": { "enum": ["turns", "rounds", "seconds", "minutes", "hours", "days"] },
-            "decrementAt": { "type": "string", "minLength": 1 }
+            "kind": {
+              "enum": [
+                "instant",
+                "manual",
+                "durable"
+              ]
+            }
           },
           "additionalProperties": false
         },
         {
           "type": "object",
-          "required": ["kind", "timing"],
-          "properties": { "kind": { "const": "until-timing" }, "timing": { "type": "string", "minLength": 1 } },
+          "required": [
+            "kind",
+            "amount",
+            "unit"
+          ],
+          "properties": {
+            "kind": {
+              "const": "elapsed"
+            },
+            "amount": {
+              "$ref": "#/$defs/expression"
+            },
+            "unit": {
+              "enum": [
+                "turns",
+                "rounds",
+                "seconds",
+                "minutes",
+                "hours",
+                "days"
+              ]
+            },
+            "decrementAt": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
           "additionalProperties": false
         },
         {
           "type": "object",
-          "required": ["kind", "predicate"],
-          "properties": { "kind": { "const": "while" }, "predicate": { "$ref": "#/$defs/predicate" } },
+          "required": [
+            "kind",
+            "timing"
+          ],
+          "properties": {
+            "kind": {
+              "const": "until-timing"
+            },
+            "timing": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
           "additionalProperties": false
         },
         {
           "type": "object",
-          "required": ["kind", "policy"],
-          "properties": { "kind": { "const": "maintained" }, "policy": { "type": "string", "minLength": 1 } },
+          "required": [
+            "kind",
+            "predicate"
+          ],
+          "properties": {
+            "kind": {
+              "const": "while"
+            },
+            "predicate": {
+              "$ref": "#/$defs/predicate"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "kind",
+            "policy"
+          ],
+          "properties": {
+            "kind": {
+              "const": "maintained"
+            },
+            "policy": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
           "additionalProperties": false
         }
       ]
     },
     "castProcess": {
       "type": "object",
-      "required": ["duration", "activity", "onInterrupt"],
+      "required": [
+        "duration",
+        "activity",
+        "onInterrupt"
+      ],
       "properties": {
-        "duration": { "$ref": "#/$defs/duration" },
-        "activity": { "type": "string", "minLength": 1 },
-        "interruptible": { "type": "boolean", "default": true },
-        "onInterrupt": { "enum": ["cancel", "pause", "profile-policy"] },
-        "completionEntryPoint": { "$ref": "#/$defs/stableId" },
-        "ritual": { "type": "boolean", "default": false }
+        "duration": {
+          "$ref": "#/$defs/duration"
+        },
+        "activity": {
+          "type": "string",
+          "minLength": 1
+        },
+        "interruptible": {
+          "type": "boolean",
+          "default": true
+        },
+        "onInterrupt": {
+          "enum": [
+            "cancel",
+            "pause",
+            "profile-policy"
+          ]
+        },
+        "completionEntryPoint": {
+          "$ref": "#/$defs/stableId"
+        },
+        "ritual": {
+          "type": "boolean",
+          "default": false
+        }
       },
       "additionalProperties": false
     },
@@ -168,38 +385,106 @@
       "oneOf": [
         {
           "type": "object",
-          "required": ["kind", "resource", "amount", "consumeAt"],
+          "required": [
+            "kind",
+            "resource",
+            "amount",
+            "consumeAt"
+          ],
           "properties": {
-            "kind": { "const": "resource" },
-            "resource": { "type": "string", "minLength": 1 },
-            "amount": { "$ref": "#/$defs/expression" },
-            "consumeAt": { "enum": ["stage", "commit"] },
-            "refundOnCancel": { "type": "boolean", "default": true }
+            "kind": {
+              "const": "resource"
+            },
+            "resource": {
+              "type": "string",
+              "minLength": 1
+            },
+            "amount": {
+              "$ref": "#/$defs/expression"
+            },
+            "consumeAt": {
+              "enum": [
+                "stage",
+                "commit"
+              ]
+            },
+            "refundOnCancel": {
+              "type": "boolean",
+              "default": true
+            },
+            "condition": {
+              "$ref": "#/$defs/d20ResultCondition"
+            }
           },
           "additionalProperties": false
         },
         {
           "type": "object",
-          "required": ["kind", "selector", "quantity", "consumed", "consumeAt"],
+          "required": [
+            "kind",
+            "selector",
+            "quantity",
+            "consumed",
+            "consumeAt"
+          ],
           "properties": {
-            "kind": { "const": "item" },
-            "selector": { "$ref": "#/$defs/selector" },
-            "quantity": { "$ref": "#/$defs/expression" },
-            "consumed": { "type": "boolean" },
-            "consumeAt": { "enum": ["stage", "commit"] },
-            "refundOnCancel": { "type": "boolean", "default": true }
+            "kind": {
+              "const": "item"
+            },
+            "selector": {
+              "$ref": "#/$defs/selector"
+            },
+            "quantity": {
+              "$ref": "#/$defs/expression"
+            },
+            "consumed": {
+              "type": "boolean"
+            },
+            "consumeAt": {
+              "enum": [
+                "stage",
+                "commit"
+              ]
+            },
+            "refundOnCancel": {
+              "type": "boolean",
+              "default": true
+            }
           },
           "additionalProperties": false
         },
         {
           "type": "object",
-          "required": ["kind", "bucket", "amount", "consumeAt"],
+          "required": [
+            "kind",
+            "bucket",
+            "amount",
+            "consumeAt"
+          ],
           "properties": {
-            "kind": { "const": "economy" },
-            "bucket": { "type": "string", "minLength": 1 },
-            "amount": { "$ref": "#/$defs/expression" },
-            "consumeAt": { "enum": ["stage", "commit"] },
-            "refundOnCancel": { "type": "boolean", "default": true }
+            "kind": {
+              "const": "economy"
+            },
+            "bucket": {
+              "type": "string",
+              "minLength": 1
+            },
+            "amount": {
+              "$ref": "#/$defs/expression"
+            },
+            "consumeAt": {
+              "enum": [
+                "stage",
+                "commit"
+              ]
+            },
+            "refundOnCancel": {
+              "type": "boolean",
+              "default": true
+            },
+            "condition": {
+              "$ref": "#/$defs/d20ResultCondition"
+            }
           },
           "additionalProperties": false
         }
@@ -207,241 +492,709 @@
     },
     "binding": {
       "type": "object",
-      "required": ["id", "valueType", "from", "capture"],
+      "required": [
+        "id",
+        "valueType",
+        "from",
+        "capture"
+      ],
       "properties": {
-        "id": { "$ref": "#/$defs/stableId" },
-        "valueType": { "enum": ["entity-ref", "artifact-ref", "content-ref", "roll-result-ref", "outcome-ref", "selection-ref", "resolution-ref", "number", "integer", "boolean", "string"] },
-        "from": { "type": "string", "minLength": 1 },
-        "capture": { "enum": ["snapshot", "live"] }
+        "id": {
+          "$ref": "#/$defs/stableId"
+        },
+        "valueType": {
+          "enum": [
+            "entity-ref",
+            "artifact-ref",
+            "content-ref",
+            "roll-result-ref",
+            "outcome-ref",
+            "selection-ref",
+            "resolution-ref",
+            "number",
+            "integer",
+            "boolean",
+            "string"
+          ]
+        },
+        "from": {
+          "type": "string",
+          "minLength": 1
+        },
+        "capture": {
+          "enum": [
+            "snapshot",
+            "live"
+          ]
+        }
       },
       "additionalProperties": false
     },
     "instantArea": {
       "type": "object",
-      "required": ["kind", "shape", "origin"],
+      "required": [
+        "kind",
+        "shape",
+        "origin"
+      ],
       "properties": {
-        "kind": { "const": "instant" },
-        "shape": { "enum": ["line", "cone", "cube", "sphere", "cylinder", "emanation"] },
-        "origin": { "enum": ["self", "point"] },
-        "radiusFeet": { "type": "number", "exclusiveMinimum": 0 },
-        "lengthFeet": { "type": "number", "exclusiveMinimum": 0 },
-        "widthFeet": { "type": "number", "exclusiveMinimum": 0 },
-        "heightFeet": { "type": "number", "exclusiveMinimum": 0 },
-        "rangeFeet": { "type": "number", "minimum": 0 }
+        "kind": {
+          "const": "instant"
+        },
+        "shape": {
+          "enum": [
+            "line",
+            "cone",
+            "cube",
+            "sphere",
+            "cylinder",
+            "emanation"
+          ]
+        },
+        "origin": {
+          "enum": [
+            "self",
+            "point"
+          ]
+        },
+        "radiusFeet": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "lengthFeet": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "widthFeet": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "heightFeet": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "rangeFeet": {
+          "type": "number",
+          "minimum": 0
+        }
       },
       "anyOf": [
-        { "required": ["radiusFeet"] },
-        { "required": ["lengthFeet"] },
-        { "required": ["widthFeet"] },
-        { "required": ["heightFeet"] }
+        {
+          "required": [
+            "radiusFeet"
+          ]
+        },
+        {
+          "required": [
+            "lengthFeet"
+          ]
+        },
+        {
+          "required": [
+            "widthFeet"
+          ]
+        },
+        {
+          "required": [
+            "heightFeet"
+          ]
+        }
       ],
       "additionalProperties": false
     },
     "selector": {
       "type": "object",
-      "required": ["from"],
+      "required": [
+        "from"
+      ],
       "properties": {
-        "from": { "enum": ["targets", "content", "artifacts", "items", "actors", "effects"] },
-        "where": { "$ref": "#/$defs/predicate" },
-        "min": { "type": "integer", "minimum": 0 },
-        "max": { "type": "integer", "minimum": 0 },
-        "orderBy": { "type": "string", "minLength": 1 },
-        "area": { "$ref": "#/$defs/instantArea" }
+        "from": {
+          "enum": [
+            "targets",
+            "content",
+            "artifacts",
+            "items",
+            "actors",
+            "effects"
+          ]
+        },
+        "where": {
+          "$ref": "#/$defs/predicate"
+        },
+        "min": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "max": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "orderBy": {
+          "type": "string",
+          "minLength": 1
+        },
+        "area": {
+          "$ref": "#/$defs/instantArea"
+        }
       },
       "allOf": [
         {
-          "if": { "required": ["area"] },
-          "then": { "properties": { "from": { "const": "targets" } } }
+          "if": {
+            "required": [
+              "area"
+            ]
+          },
+          "then": {
+            "properties": {
+              "from": {
+                "const": "targets"
+              }
+            }
+          }
         }
       ],
       "additionalProperties": false
     },
     "allocationPlan": {
       "type": "object",
-      "required": ["units", "targets", "totalMustMatch"],
+      "required": [
+        "units",
+        "targets",
+        "totalMustMatch"
+      ],
       "properties": {
-        "units": { "$ref": "#/$defs/expression" },
-        "targets": { "$ref": "#/$defs/selector" },
-        "minimumPerTarget": { "type": "integer", "minimum": 0 },
-        "maximumPerTarget": { "type": "integer", "minimum": 1 },
-        "totalMustMatch": { "type": "boolean" }
+        "units": {
+          "$ref": "#/$defs/expression"
+        },
+        "targets": {
+          "$ref": "#/$defs/selector"
+        },
+        "minimumPerTarget": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "maximumPerTarget": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "totalMustMatch": {
+          "type": "boolean"
+        }
       },
       "additionalProperties": false
     },
     "factQuery": {
       "type": "object",
-      "required": ["id", "fact", "authority", "visibility", "unknownPolicy"],
+      "required": [
+        "id",
+        "fact",
+        "authority",
+        "visibility",
+        "unknownPolicy"
+      ],
       "properties": {
-        "id": { "$ref": "#/$defs/stableId" },
-        "fact": { "type": "string", "minLength": 1 },
-        "subject": { "type": "string", "minLength": 1 },
-        "authority": { "enum": ["host", "actor-owner", "target-owner", "dm", "profile"] },
-        "visibility": { "enum": ["public", "actor", "dm", "actor-and-dm", "authority-only"] },
-        "unknownPolicy": { "enum": ["block", "request-authority", "treat-false", "unsupported"] }
+        "id": {
+          "$ref": "#/$defs/stableId"
+        },
+        "fact": {
+          "type": "string",
+          "minLength": 1
+        },
+        "subject": {
+          "type": "string",
+          "minLength": 1
+        },
+        "authority": {
+          "enum": [
+            "host",
+            "actor-owner",
+            "target-owner",
+            "dm",
+            "profile"
+          ]
+        },
+        "visibility": {
+          "enum": [
+            "public",
+            "actor",
+            "dm",
+            "actor-and-dm",
+            "authority-only"
+          ]
+        },
+        "unknownPolicy": {
+          "enum": [
+            "block",
+            "request-authority",
+            "treat-false",
+            "unsupported"
+          ]
+        }
       },
       "additionalProperties": false
     },
     "interaction": {
       "type": "object",
-      "required": ["id", "kind", "responder", "mode", "revalidate"],
+      "required": [
+        "id",
+        "kind",
+        "responder",
+        "mode",
+        "revalidate"
+      ],
       "properties": {
-        "id": { "$ref": "#/$defs/stableId" },
-        "kind": { "enum": ["choice", "consent", "adjudication"] },
-        "responder": { "enum": ["actor", "target", "actor-owner", "target-owner", "dm", "host"] },
-        "mode": { "enum": ["notice", "input", "blocking"] },
-        "input": { "$ref": "#/$defs/interactionInput" },
-        "visibility": { "enum": ["public", "actor", "dm", "actor-and-dm", "authority-only"] },
-        "promptKey": { "type": "string", "minLength": 1 },
-        "revalidate": { "enum": ["always", "if-revision-changed"] },
-        "stalePolicy": { "enum": ["cancel", "restart", "reject"] },
-        "idempotencyKey": { "type": "string", "minLength": 1 }
+        "id": {
+          "$ref": "#/$defs/stableId"
+        },
+        "kind": {
+          "enum": [
+            "choice",
+            "consent",
+            "adjudication"
+          ]
+        },
+        "responder": {
+          "enum": [
+            "actor",
+            "target",
+            "actor-owner",
+            "target-owner",
+            "dm",
+            "host"
+          ]
+        },
+        "mode": {
+          "enum": [
+            "notice",
+            "input",
+            "blocking"
+          ]
+        },
+        "input": {
+          "$ref": "#/$defs/interactionInput"
+        },
+        "visibility": {
+          "enum": [
+            "public",
+            "actor",
+            "dm",
+            "actor-and-dm",
+            "authority-only"
+          ]
+        },
+        "promptKey": {
+          "type": "string",
+          "minLength": 1
+        },
+        "revalidate": {
+          "enum": [
+            "always",
+            "if-revision-changed"
+          ]
+        },
+        "stalePolicy": {
+          "enum": [
+            "cancel",
+            "restart",
+            "reject"
+          ]
+        },
+        "idempotencyKey": {
+          "type": "string",
+          "minLength": 1
+        }
       },
       "additionalProperties": false
     },
     "interactionInput": {
       "oneOf": [
-        { "type": "object", "required": ["type"], "properties": { "type": { "enum": ["boolean", "number", "integer", "text", "targets"] } }, "additionalProperties": false },
         {
           "type": "object",
-          "required": ["type", "selector"],
-          "properties": { "type": { "const": "choice" }, "selector": { "$ref": "#/$defs/selector" } },
+          "required": [
+            "type"
+          ],
+          "properties": {
+            "type": {
+              "enum": [
+                "boolean",
+                "number",
+                "integer",
+                "text",
+                "targets"
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "required": [
+            "type",
+            "selector"
+          ],
+          "properties": {
+            "type": {
+              "const": "choice"
+            },
+            "selector": {
+              "$ref": "#/$defs/selector"
+            }
+          },
           "additionalProperties": false
         }
       ]
     },
     "test": {
       "type": "object",
-      "required": ["kind", "roller"],
+      "required": [
+        "kind",
+        "roller"
+      ],
       "properties": {
-        "kind": { "enum": ["attack-roll", "saving-throw", "ability-check"] },
-        "roller": { "enum": ["actor", "target", "each-target"] },
-        "property": { "type": "string", "minLength": 1 },
-        "dc": { "$ref": "#/$defs/expression" },
-        "opposedBy": { "type": "string", "minLength": 1 },
-        "perTarget": { "type": "boolean" }
+        "kind": {
+          "enum": [
+            "attack-roll",
+            "saving-throw",
+            "ability-check"
+          ]
+        },
+        "roller": {
+          "enum": [
+            "actor",
+            "target",
+            "each-target"
+          ]
+        },
+        "property": {
+          "type": "string",
+          "minLength": 1
+        },
+        "dc": {
+          "$ref": "#/$defs/expression"
+        },
+        "opposedBy": {
+          "type": "string",
+          "minLength": 1
+        },
+        "perTarget": {
+          "type": "boolean"
+        }
       },
       "additionalProperties": false
     },
     "operation": {
       "oneOf": [
-        { "$ref": "#/$defs/propertyModify" },
-        { "$ref": "#/$defs/rollModify" },
-        { "$ref": "#/$defs/damageApply" },
-        { "$ref": "#/$defs/healingApply" },
-        { "$ref": "#/$defs/tempHpGrant" },
-        { "$ref": "#/$defs/resourceChange" },
-        { "$ref": "#/$defs/resourceRecharge" },
-        { "$ref": "#/$defs/effectApply" },
-        { "$ref": "#/$defs/effectRemove" },
-        { "$ref": "#/$defs/artifactSpawn" },
-        { "$ref": "#/$defs/artifactDamage" },
-        { "$ref": "#/$defs/artifactRepair" },
-        { "$ref": "#/$defs/artifactRelocate" },
-        { "$ref": "#/$defs/artifactUpdate" },
-        { "$ref": "#/$defs/artifactRemove" },
-        { "$ref": "#/$defs/conditionChange" },
-        { "$ref": "#/$defs/economyModify" },
-        { "$ref": "#/$defs/contentGrant" },
-        { "$ref": "#/$defs/movementOperation" },
-        { "$ref": "#/$defs/adjudicationRequest" }
+        {
+          "$ref": "#/$defs/propertyModify"
+        },
+        {
+          "$ref": "#/$defs/rollModify"
+        },
+        {
+          "$ref": "#/$defs/damageApply"
+        },
+        {
+          "$ref": "#/$defs/healingApply"
+        },
+        {
+          "$ref": "#/$defs/tempHpGrant"
+        },
+        {
+          "$ref": "#/$defs/resourceChange"
+        },
+        {
+          "$ref": "#/$defs/resourceRecharge"
+        },
+        {
+          "$ref": "#/$defs/effectApply"
+        },
+        {
+          "$ref": "#/$defs/effectRemove"
+        },
+        {
+          "$ref": "#/$defs/artifactSpawn"
+        },
+        {
+          "$ref": "#/$defs/artifactDamage"
+        },
+        {
+          "$ref": "#/$defs/artifactRepair"
+        },
+        {
+          "$ref": "#/$defs/artifactRelocate"
+        },
+        {
+          "$ref": "#/$defs/artifactUpdate"
+        },
+        {
+          "$ref": "#/$defs/artifactRemove"
+        },
+        {
+          "$ref": "#/$defs/conditionChange"
+        },
+        {
+          "$ref": "#/$defs/economyModify"
+        },
+        {
+          "$ref": "#/$defs/contentGrant"
+        },
+        {
+          "$ref": "#/$defs/movementOperation"
+        },
+        {
+          "$ref": "#/$defs/adjudicationRequest"
+        }
       ]
     },
     "operationBase": {
       "type": "object",
       "properties": {
-        "when": { "$ref": "#/$defs/predicate" }
+        "when": {
+          "$ref": "#/$defs/predicate"
+        }
       }
     },
     "propertyModify": {
       "type": "object",
-      "required": ["kind", "property", "operation", "value"],
+      "required": [
+        "kind",
+        "property",
+        "operation",
+        "value"
+      ],
       "properties": {
-        "kind": { "const": "property.modify" },
-        "property": { "type": "string", "minLength": 1 },
-        "operation": { "enum": ["add", "subtract", "set", "min", "max", "multiply"] },
-        "value": { "$ref": "#/$defs/expression" },
-        "when": { "$ref": "#/$defs/predicate" }
+        "kind": {
+          "const": "property.modify"
+        },
+        "property": {
+          "type": "string",
+          "minLength": 1
+        },
+        "operation": {
+          "enum": [
+            "add",
+            "subtract",
+            "set",
+            "min",
+            "max",
+            "multiply"
+          ]
+        },
+        "value": {
+          "$ref": "#/$defs/expression"
+        },
+        "when": {
+          "$ref": "#/$defs/predicate"
+        }
       },
       "additionalProperties": false
     },
     "rollModify": {
       "type": "object",
-      "required": ["kind", "mode"],
+      "required": [
+        "kind",
+        "mode"
+      ],
       "properties": {
-        "kind": { "const": "roll.modify" },
-        "mode": { "enum": ["advantage", "disadvantage", "add-die", "subtract-die", "add-flat", "target-add", "reroll", "replace", "minimum"] },
-        "value": { "$ref": "#/$defs/expression" },
-        "dice": { "type": "string", "pattern": "^[0-9]+d[0-9]+([+-][0-9]+)?$" },
-        "diceResource": { "type": "string", "minLength": 1 },
-        "when": { "$ref": "#/$defs/predicate" }
+        "kind": {
+          "const": "roll.modify"
+        },
+        "mode": {
+          "enum": [
+            "advantage",
+            "disadvantage",
+            "add-die",
+            "subtract-die",
+            "add-flat",
+            "target-add",
+            "reroll",
+            "replace",
+            "minimum"
+          ]
+        },
+        "value": {
+          "$ref": "#/$defs/expression"
+        },
+        "dice": {
+          "type": "string",
+          "pattern": "^[0-9]+d[0-9]+([+-][0-9]+)?$"
+        },
+        "diceResource": {
+          "type": "string",
+          "minLength": 1
+        },
+        "when": {
+          "$ref": "#/$defs/predicate"
+        }
       },
       "additionalProperties": false
     },
     "damageApply": {
       "type": "object",
-      "required": ["kind", "amount", "damageType"],
+      "required": [
+        "kind",
+        "amount",
+        "damageType"
+      ],
       "properties": {
-        "kind": { "const": "damage.apply" },
-        "amount": { "oneOf": [{ "$ref": "#/$defs/expression" }, { "type": "string", "pattern": "^[0-9]+d[0-9]+([+-][0-9]+)?$" }] },
-        "damageType": { "type": "string", "minLength": 1 },
-        "multiplier": { "type": "number", "minimum": 0 },
-        "target": { "type": "string", "minLength": 1 },
-        "when": { "$ref": "#/$defs/predicate" }
+        "kind": {
+          "const": "damage.apply"
+        },
+        "amount": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/expression"
+            },
+            {
+              "type": "string",
+              "pattern": "^[0-9]+d[0-9]+([+-][0-9]+)?$"
+            }
+          ]
+        },
+        "damageType": {
+          "type": "string",
+          "minLength": 1
+        },
+        "multiplier": {
+          "type": "number",
+          "minimum": 0
+        },
+        "target": {
+          "type": "string",
+          "minLength": 1
+        },
+        "when": {
+          "$ref": "#/$defs/predicate"
+        }
       },
       "additionalProperties": false
     },
     "healingApply": {
       "type": "object",
-      "required": ["kind", "amount"],
+      "required": [
+        "kind",
+        "amount"
+      ],
       "properties": {
-        "kind": { "const": "healing.apply" },
-        "amount": { "oneOf": [{ "$ref": "#/$defs/expression" }, { "type": "string", "pattern": "^[0-9]+d[0-9]+([+-][0-9]+)?$" }] },
-        "target": { "type": "string", "minLength": 1 },
-        "when": { "$ref": "#/$defs/predicate" }
+        "kind": {
+          "const": "healing.apply"
+        },
+        "amount": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/expression"
+            },
+            {
+              "type": "string",
+              "pattern": "^[0-9]+d[0-9]+([+-][0-9]+)?$"
+            }
+          ]
+        },
+        "target": {
+          "type": "string",
+          "minLength": 1
+        },
+        "when": {
+          "$ref": "#/$defs/predicate"
+        }
       },
       "additionalProperties": false
     },
     "tempHpGrant": {
       "type": "object",
-      "required": ["kind", "amount"],
+      "required": [
+        "kind",
+        "amount"
+      ],
       "properties": {
-        "kind": { "const": "temp-hp.grant" },
-        "amount": { "$ref": "#/$defs/expression" },
-        "target": { "type": "string", "minLength": 1 },
-        "when": { "$ref": "#/$defs/predicate" }
+        "kind": {
+          "const": "temp-hp.grant"
+        },
+        "amount": {
+          "$ref": "#/$defs/expression"
+        },
+        "target": {
+          "type": "string",
+          "minLength": 1
+        },
+        "when": {
+          "$ref": "#/$defs/predicate"
+        }
       },
       "additionalProperties": false
     },
     "resourceChange": {
       "type": "object",
-      "required": ["kind", "resource", "amount"],
+      "required": [
+        "kind",
+        "resource",
+        "amount"
+      ],
       "properties": {
-        "kind": { "const": "resource.change" },
-        "resource": { "type": "string", "minLength": 1 },
-        "amount": { "$ref": "#/$defs/expression" },
-        "target": { "type": "string", "minLength": 1 },
-        "when": { "$ref": "#/$defs/predicate" }
+        "kind": {
+          "const": "resource.change"
+        },
+        "resource": {
+          "type": "string",
+          "minLength": 1
+        },
+        "amount": {
+          "$ref": "#/$defs/expression"
+        },
+        "target": {
+          "type": "string",
+          "minLength": 1
+        },
+        "when": {
+          "$ref": "#/$defs/predicate"
+        }
       },
       "additionalProperties": false
     },
     "resourceRecharge": {
       "type": "object",
-      "required": ["kind", "resource", "die", "succeedsOn"],
+      "required": [
+        "kind",
+        "resource",
+        "die",
+        "succeedsOn"
+      ],
       "properties": {
-        "kind": { "const": "resource.recharge" },
-        "resource": { "type": "string", "minLength": 1 },
+        "kind": {
+          "const": "resource.recharge"
+        },
+        "resource": {
+          "type": "string",
+          "minLength": 1
+        },
         "die": {
           "type": "object",
-          "required": ["sides"],
-          "properties": { "sides": { "type": "integer", "minimum": 2, "maximum": 20 } },
+          "required": [
+            "sides"
+          ],
+          "properties": {
+            "sides": {
+              "type": "integer",
+              "minimum": 2,
+              "maximum": 20
+            }
+          },
           "additionalProperties": false
         },
         "succeedsOn": {
           "type": "object",
-          "required": ["minimum"],
+          "required": [
+            "minimum"
+          ],
           "properties": {
-            "minimum": { "type": "integer", "minimum": 1 },
-            "maximum": { "type": "integer", "minimum": 1 }
+            "minimum": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "maximum": {
+              "type": "integer",
+              "minimum": 1
+            }
           },
           "additionalProperties": false
         }
@@ -450,229 +1203,610 @@
     },
     "effectApply": {
       "type": "object",
-      "required": ["kind", "template"],
+      "required": [
+        "kind",
+        "template"
+      ],
       "properties": {
-        "kind": { "const": "effect.apply" },
-        "template": { "$ref": "#/$defs/stableId" },
-        "target": { "type": "string", "minLength": 1 },
-        "when": { "$ref": "#/$defs/predicate" }
+        "kind": {
+          "const": "effect.apply"
+        },
+        "template": {
+          "$ref": "#/$defs/stableId"
+        },
+        "target": {
+          "type": "string",
+          "minLength": 1
+        },
+        "when": {
+          "$ref": "#/$defs/predicate"
+        }
       },
       "additionalProperties": false
     },
     "effectRemove": {
       "type": "object",
-      "required": ["kind", "selector"],
+      "required": [
+        "kind",
+        "selector"
+      ],
       "properties": {
-        "kind": { "const": "effect.remove" },
-        "selector": { "$ref": "#/$defs/selector" },
-        "when": { "$ref": "#/$defs/predicate" }
+        "kind": {
+          "const": "effect.remove"
+        },
+        "selector": {
+          "$ref": "#/$defs/selector"
+        },
+        "when": {
+          "$ref": "#/$defs/predicate"
+        }
       },
       "additionalProperties": false
     },
     "artifactSpawn": {
       "type": "object",
-      "required": ["kind", "template"],
+      "required": [
+        "kind",
+        "template"
+      ],
       "properties": {
-        "kind": { "const": "artifact.spawn" },
-        "template": { "$ref": "#/$defs/stableId" },
-        "when": { "$ref": "#/$defs/predicate" }
+        "kind": {
+          "const": "artifact.spawn"
+        },
+        "template": {
+          "$ref": "#/$defs/stableId"
+        },
+        "when": {
+          "$ref": "#/$defs/predicate"
+        }
       },
       "additionalProperties": false
     },
     "artifactDamage": {
       "type": "object",
-      "required": ["kind", "artifact", "amount", "damageType"],
+      "required": [
+        "kind",
+        "artifact",
+        "amount",
+        "damageType"
+      ],
       "properties": {
-        "kind": { "const": "artifact.damage" },
-        "artifact": { "$ref": "#/$defs/stableId" },
-        "amount": { "$ref": "#/$defs/expression" },
-        "damageType": { "type": "string", "minLength": 1 }
+        "kind": {
+          "const": "artifact.damage"
+        },
+        "artifact": {
+          "$ref": "#/$defs/stableId"
+        },
+        "amount": {
+          "$ref": "#/$defs/expression"
+        },
+        "damageType": {
+          "type": "string",
+          "minLength": 1
+        }
       },
       "additionalProperties": false
     },
     "artifactRepair": {
       "type": "object",
-      "required": ["kind", "artifact", "amount"],
+      "required": [
+        "kind",
+        "artifact",
+        "amount"
+      ],
       "properties": {
-        "kind": { "const": "artifact.repair" },
-        "artifact": { "$ref": "#/$defs/stableId" },
-        "amount": { "$ref": "#/$defs/expression" }
+        "kind": {
+          "const": "artifact.repair"
+        },
+        "artifact": {
+          "$ref": "#/$defs/stableId"
+        },
+        "amount": {
+          "$ref": "#/$defs/expression"
+        }
       },
       "additionalProperties": false
     },
     "artifactRelocate": {
       "type": "object",
-      "required": ["kind", "artifact", "placementRef"],
+      "required": [
+        "kind",
+        "artifact",
+        "placementRef"
+      ],
       "properties": {
-        "kind": { "const": "artifact.relocate" },
-        "artifact": { "$ref": "#/$defs/stableId" },
-        "placementRef": { "type": "string", "minLength": 1 }
+        "kind": {
+          "const": "artifact.relocate"
+        },
+        "artifact": {
+          "$ref": "#/$defs/stableId"
+        },
+        "placementRef": {
+          "type": "string",
+          "minLength": 1
+        }
       },
       "additionalProperties": false
     },
     "artifactUpdate": {
       "type": "object",
-      "required": ["kind", "artifact", "metadataPatch"],
+      "required": [
+        "kind",
+        "artifact",
+        "metadataPatch"
+      ],
       "properties": {
-        "kind": { "const": "artifact.update" },
-        "artifact": { "$ref": "#/$defs/stableId" },
+        "kind": {
+          "const": "artifact.update"
+        },
+        "artifact": {
+          "$ref": "#/$defs/stableId"
+        },
         "metadataPatch": {
           "type": "object",
           "minProperties": 1,
-          "additionalProperties": { "type": ["string", "number", "boolean"] }
+          "additionalProperties": {
+            "type": [
+              "string",
+              "number",
+              "boolean"
+            ]
+          }
         }
       },
       "additionalProperties": false
     },
     "artifactRemove": {
       "type": "object",
-      "required": ["kind", "artifact"],
+      "required": [
+        "kind",
+        "artifact"
+      ],
       "properties": {
-        "kind": { "const": "artifact.remove" },
-        "artifact": { "$ref": "#/$defs/stableId" }
+        "kind": {
+          "const": "artifact.remove"
+        },
+        "artifact": {
+          "$ref": "#/$defs/stableId"
+        }
       },
       "additionalProperties": false
     },
     "conditionChange": {
       "type": "object",
-      "required": ["kind", "condition"],
+      "required": [
+        "kind",
+        "condition"
+      ],
       "properties": {
-        "kind": { "enum": ["condition.apply", "condition.remove"] },
-        "condition": { "type": "string", "minLength": 1 },
-        "target": { "type": "string", "minLength": 1 },
-        "when": { "$ref": "#/$defs/predicate" }
+        "kind": {
+          "enum": [
+            "condition.apply",
+            "condition.remove"
+          ]
+        },
+        "condition": {
+          "type": "string",
+          "minLength": 1
+        },
+        "target": {
+          "type": "string",
+          "minLength": 1
+        },
+        "when": {
+          "$ref": "#/$defs/predicate"
+        }
       },
       "additionalProperties": false
     },
     "economyModify": {
       "type": "object",
-      "required": ["kind", "bucket", "amount"],
+      "required": [
+        "kind",
+        "bucket",
+        "amount"
+      ],
       "properties": {
-        "kind": { "const": "economy.modify" },
-        "bucket": { "type": "string", "minLength": 1 },
-        "amount": { "$ref": "#/$defs/expression" },
-        "when": { "$ref": "#/$defs/predicate" }
+        "kind": {
+          "const": "economy.modify"
+        },
+        "bucket": {
+          "type": "string",
+          "minLength": 1
+        },
+        "amount": {
+          "$ref": "#/$defs/expression"
+        },
+        "when": {
+          "$ref": "#/$defs/predicate"
+        }
       },
       "additionalProperties": false
     },
     "contentGrant": {
       "type": "object",
-      "required": ["kind", "contentId"],
+      "required": [
+        "kind",
+        "contentId"
+      ],
       "properties": {
-        "kind": { "const": "content.grant" },
-        "contentId": { "type": "string", "minLength": 1 },
-        "target": { "type": "string", "minLength": 1 },
-        "when": { "$ref": "#/$defs/predicate" }
+        "kind": {
+          "const": "content.grant"
+        },
+        "contentId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "target": {
+          "type": "string",
+          "minLength": 1
+        },
+        "when": {
+          "$ref": "#/$defs/predicate"
+        }
       },
       "additionalProperties": false
     },
     "movementOperation": {
       "type": "object",
-      "required": ["kind", "mode", "target"],
+      "required": [
+        "kind",
+        "mode",
+        "target"
+      ],
       "properties": {
-        "kind": { "const": "movement.relocate" },
-        "mode": { "enum": ["teleport", "push", "pull", "move"] },
-        "movementType": { "enum": ["walk", "climb", "swim", "fly", "crawl", "jump"] },
-        "target": { "type": "string", "minLength": 1 },
-        "distance": { "$ref": "#/$defs/expression" },
-        "costMultiplier": { "$ref": "#/$defs/expression" },
-        "doesNotProvokeOpportunityAttacks": { "type": "boolean" },
-        "destinationFact": { "$ref": "#/$defs/factQuery" },
-        "when": { "$ref": "#/$defs/predicate" }
+        "kind": {
+          "const": "movement.relocate"
+        },
+        "mode": {
+          "enum": [
+            "teleport",
+            "push",
+            "pull",
+            "move"
+          ]
+        },
+        "movementType": {
+          "enum": [
+            "walk",
+            "climb",
+            "swim",
+            "fly",
+            "crawl",
+            "jump"
+          ]
+        },
+        "target": {
+          "type": "string",
+          "minLength": 1
+        },
+        "distance": {
+          "$ref": "#/$defs/expression"
+        },
+        "costMultiplier": {
+          "$ref": "#/$defs/expression"
+        },
+        "doesNotProvokeOpportunityAttacks": {
+          "type": "boolean"
+        },
+        "destinationFact": {
+          "$ref": "#/$defs/factQuery"
+        },
+        "when": {
+          "$ref": "#/$defs/predicate"
+        }
       },
       "additionalProperties": false
     },
     "adjudicationRequest": {
       "type": "object",
-      "required": ["kind", "interaction"],
+      "required": [
+        "kind",
+        "interaction"
+      ],
       "properties": {
-        "kind": { "const": "adjudication.request" },
-        "interaction": { "$ref": "#/$defs/interaction" },
-        "when": { "$ref": "#/$defs/predicate" }
+        "kind": {
+          "const": "adjudication.request"
+        },
+        "interaction": {
+          "$ref": "#/$defs/interaction"
+        },
+        "when": {
+          "$ref": "#/$defs/predicate"
+        }
       },
       "additionalProperties": false
     },
     "entryPoint": {
       "type": "object",
-      "required": ["id", "invocation"],
+      "required": [
+        "id",
+        "invocation"
+      ],
       "properties": {
-        "id": { "$ref": "#/$defs/stableId" },
-        "invocation": { "enum": ["manual", "triggered", "automatic", "granted"] },
-        "legality": { "$ref": "#/$defs/predicate" },
-        "factQueries": { "type": "array", "items": { "$ref": "#/$defs/factQuery" } },
-        "interaction": { "$ref": "#/$defs/interaction" },
-        "targeting": { "$ref": "#/$defs/selector" },
-        "allocation": { "$ref": "#/$defs/allocationPlan" },
-        "test": { "$ref": "#/$defs/test" },
-        "operations": { "type": "array", "items": { "$ref": "#/$defs/operation" } }
+        "id": {
+          "$ref": "#/$defs/stableId"
+        },
+        "invocation": {
+          "enum": [
+            "manual",
+            "triggered",
+            "automatic",
+            "granted"
+          ]
+        },
+        "legality": {
+          "$ref": "#/$defs/predicate"
+        },
+        "factQueries": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/factQuery"
+          }
+        },
+        "interaction": {
+          "$ref": "#/$defs/interaction"
+        },
+        "targeting": {
+          "$ref": "#/$defs/selector"
+        },
+        "allocation": {
+          "$ref": "#/$defs/allocationPlan"
+        },
+        "test": {
+          "$ref": "#/$defs/test"
+        },
+        "operations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/operation"
+          }
+        }
       },
       "additionalProperties": false
     },
     "artifactTemplate": {
       "type": "object",
-      "required": ["id", "artifactKind", "duration", "lifetime"],
+      "required": [
+        "id",
+        "artifactKind",
+        "duration",
+        "lifetime"
+      ],
       "properties": {
-        "id": { "$ref": "#/$defs/stableId" },
-        "artifactKind": { "enum": ["effect", "zone", "object", "actor", "link", "form", "stored-invocation", "item"] },
-        "duration": { "$ref": "#/$defs/duration" },
-        "stateSchema": { "type": "object" },
-        "initialState": { "type": "object" },
-        "rules": { "type": "array", "items": { "$ref": "#/$defs/rule" } },
-        "grantedEntryPoints": { "type": "array", "items": { "$ref": "#/$defs/entryPoint" } },
-        "lifetime": { "$ref": "#/$defs/lifetime" },
-        "instancePolicy": { "enum": ["stack", "refresh", "replace", "unique-by-source", "profile-policy"] }
+        "id": {
+          "$ref": "#/$defs/stableId"
+        },
+        "artifactKind": {
+          "enum": [
+            "effect",
+            "zone",
+            "object",
+            "actor",
+            "link",
+            "form",
+            "stored-invocation",
+            "item"
+          ]
+        },
+        "duration": {
+          "$ref": "#/$defs/duration"
+        },
+        "stateSchema": {
+          "type": "object"
+        },
+        "initialState": {
+          "type": "object"
+        },
+        "rules": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/rule"
+          }
+        },
+        "grantedEntryPoints": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/entryPoint"
+          }
+        },
+        "lifetime": {
+          "$ref": "#/$defs/lifetime"
+        },
+        "instancePolicy": {
+          "enum": [
+            "stack",
+            "refresh",
+            "replace",
+            "unique-by-source",
+            "profile-policy"
+          ]
+        }
       },
       "additionalProperties": false
     },
     "lifetime": {
       "type": "object",
-      "required": ["kind"],
+      "required": [
+        "kind"
+      ],
       "properties": {
-        "kind": { "enum": ["with-parent", "until-duration", "until-consumed", "until-destroyed", "until-state", "until-event", "until-source-recast", "durable", "world-persistent"] },
-        "parentBinding": { "type": "string", "minLength": 1 },
-        "event": { "type": "string", "minLength": 1 },
-        "predicate": { "$ref": "#/$defs/predicate" },
-        "onEnd": { "enum": ["destroy", "detach", "suppress", "profile-policy"] }
+        "kind": {
+          "enum": [
+            "with-parent",
+            "until-duration",
+            "until-consumed",
+            "until-destroyed",
+            "until-state",
+            "until-event",
+            "until-source-recast",
+            "durable",
+            "world-persistent"
+          ]
+        },
+        "parentBinding": {
+          "type": "string",
+          "minLength": 1
+        },
+        "event": {
+          "type": "string",
+          "minLength": 1
+        },
+        "predicate": {
+          "$ref": "#/$defs/predicate"
+        },
+        "onEnd": {
+          "enum": [
+            "destroy",
+            "detach",
+            "suppress",
+            "profile-policy"
+          ]
+        }
       },
       "additionalProperties": false
     },
     "rule": {
       "type": "object",
-      "required": ["id", "event", "operations"],
+      "required": [
+        "id",
+        "event",
+        "operations"
+      ],
       "properties": {
-        "id": { "$ref": "#/$defs/stableId" },
-        "event": { "type": "string", "minLength": 1 },
-        "when": { "$ref": "#/$defs/predicate" },
-        "frequency": { "enum": ["unlimited", "once", "once-per-turn", "once-per-round", "once-per-resolution", "profile-policy"] },
-        "interaction": { "$ref": "#/$defs/interaction" },
-        "operations": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/operation" } }
+        "id": {
+          "$ref": "#/$defs/stableId"
+        },
+        "event": {
+          "type": "string",
+          "minLength": 1
+        },
+        "when": {
+          "$ref": "#/$defs/predicate"
+        },
+        "frequency": {
+          "enum": [
+            "unlimited",
+            "once",
+            "once-per-turn",
+            "once-per-round",
+            "once-per-resolution",
+            "profile-policy"
+          ]
+        },
+        "interaction": {
+          "$ref": "#/$defs/interaction"
+        },
+        "operations": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/operation"
+          }
+        }
       },
       "additionalProperties": false
     },
     "interceptor": {
       "type": "object",
-      "required": ["id", "timing", "operation", "slot"],
+      "required": [
+        "id",
+        "timing",
+        "operation",
+        "slot"
+      ],
       "properties": {
-        "id": { "$ref": "#/$defs/stableId" },
-        "timing": { "type": "string", "minLength": 1 },
-        "factQueries": { "type": "array", "items": { "$ref": "#/$defs/factQuery" } },
-        "when": { "$ref": "#/$defs/predicate" },
-        "interaction": { "$ref": "#/$defs/interaction" },
-        "operation": { "enum": ["append", "replace", "prevent", "modify", "redirect", "recalculate"] },
-        "slot": { "enum": ["declaration", "targets", "d20.roll", "attack.roll", "attack.outcome", "primary.damage", "secondary.damage", "effects", "movement", "stateChanges"] },
+        "id": {
+          "$ref": "#/$defs/stableId"
+        },
+        "timing": {
+          "type": "string",
+          "minLength": 1
+        },
+        "factQueries": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/factQuery"
+          }
+        },
+        "when": {
+          "$ref": "#/$defs/predicate"
+        },
+        "interaction": {
+          "$ref": "#/$defs/interaction"
+        },
+        "operation": {
+          "enum": [
+            "append",
+            "replace",
+            "prevent",
+            "modify",
+            "redirect",
+            "recalculate"
+          ]
+        },
+        "slot": {
+          "enum": [
+            "declaration",
+            "targets",
+            "d20.roll",
+            "attack.roll",
+            "attack.outcome",
+            "primary.damage",
+            "secondary.damage",
+            "effects",
+            "movement",
+            "stateChanges"
+          ]
+        },
         "families": {
           "type": "array",
           "minItems": 1,
           "uniqueItems": true,
-          "items": { "enum": ["ability-check", "saving-throw", "attack-roll"] }
+          "items": {
+            "enum": [
+              "ability-check",
+              "saving-throw",
+              "attack-roll"
+            ]
+          }
         },
         "outcomes": {
           "type": "array",
           "minItems": 1,
           "uniqueItems": true,
-          "items": { "enum": ["success", "failure"] }
+          "items": {
+            "enum": [
+              "success",
+              "failure"
+            ]
+          }
         },
-        "operations": { "type": "array", "items": { "$ref": "#/$defs/operation" } }
+        "operations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/operation"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "d20ResultCondition": {
+      "type": "object",
+      "required": [
+        "kind",
+        "outcome"
+      ],
+      "properties": {
+        "kind": {
+          "const": "d20-result"
+        },
+        "outcome": {
+          "enum": [
+            "success",
+            "failure"
+          ]
+        }
       },
       "additionalProperties": false
     }
