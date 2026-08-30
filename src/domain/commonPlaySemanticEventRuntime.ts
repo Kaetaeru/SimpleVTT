@@ -1,5 +1,6 @@
 import type { RulesRuntimeState } from "./combatState";
 import type { D20TestResult } from "./d20";
+import { expireEffectsAtClock, expireEffectsForRest } from "./effects";
 import type { CommonPlayAutomaticEffectEvent, CommonPlayPersistentEffectDefinition } from "./commonPlayEffectRuntime";
 import { resolveCommonPlayFrequency } from "./commonPlayFrequencyRuntime";
 import type { EffectStateChange } from "./runtimeStateChange";
@@ -125,6 +126,61 @@ export function appendCommonPlaySemanticOutcomeTriggers(
               id:`${pending.id}:automatic:${context.event}:${definitionIndex}:${effectIndex}:${semanticIndex}:${ruleIndex}:frequency`,
               kind:"update-effect",effectId:effect.id,metadataPatch:frequency.metadataPatch,
               ...(context.when?{when:context.when}:{}),
+            });
+          }
+        }
+      }
+    }
+  }
+  let previewEffects=state.effects.map((effect)=>structuredClone(effect));
+  let previewClock=structuredClone(state.clock);
+  for(const [semanticIndex,operation] of pending.operations.entries()) {
+    const effectsBefore=previewEffects;
+    let expired:typeof previewEffects=[];
+    if(operation.kind==="begin-turn") {
+      previewClock={...previewClock,round:operation.round,activeActorId:operation.actorId,phase:"start"};
+      const expiry=expireEffectsAtClock(previewEffects,previewClock);
+      previewEffects=expiry.active; expired=expiry.expired;
+    } else if(operation.kind==="end-turn") {
+      previewClock={...previewClock,round:operation.round,activeActorId:operation.actorId,phase:"end"};
+      const expiry=expireEffectsAtClock(previewEffects,previewClock);
+      previewEffects=expiry.active; expired=expiry.expired;
+    } else if(operation.kind==="advance-time") {
+      previewClock={...previewClock,elapsedSeconds:operation.elapsedSeconds};
+      const expiry=expireEffectsAtClock(previewEffects,previewClock);
+      previewEffects=expiry.active; expired=expiry.expired;
+    } else if(operation.kind==="short-rest"||operation.kind==="long-rest") {
+      const owned=previewEffects.filter((effect)=>effect.targetId===operation.targetId);
+      const other=previewEffects.filter((effect)=>effect.targetId!==operation.targetId);
+      const expiry=expireEffectsForRest(owned,operation.kind==="short-rest"?"short":"long");
+      previewEffects=[...other,...expiry.active]; expired=expiry.expired;
+    } else {
+      continue;
+    }
+    for(const expiredEffect of expired) {
+      const subjectId=expiredEffect.targetId;
+      if(!creatureKinds[subjectId]) continue;
+      for(const [definitionIndex,definition] of definitions.entries()) {
+        for(const [effectIndex,effect] of effectsBefore.filter((candidate)=>candidate.targetId===subjectId&&candidate.sourceId===definition.id&&candidate.metadata?.[EFFECT_METADATA_DEFINITION]===definition.id).entries()) {
+          const templateId=effect.metadata?.[EFFECT_METADATA_TEMPLATE];
+          if(typeof templateId!=="string") continue;
+          const template=definition.artifactTemplates.find((candidate)=>candidate.id===templateId);
+          if(!template) continue;
+          for(const [ruleIndex,rule] of template.rules.filter((candidate)=>candidate.event==="effect.expired").entries()) {
+            const frequency=resolveCommonPlayFrequency({ruleId:rule.id,subjectId,frequency:rule.frequency??"once",resolutionId:pending.id,clock:previewClock,markers:effect.metadata??{}});
+            if(!frequency.eligible) continue;
+            for(const [operationIndex,triggered] of rule.operations.entries()) {
+              const targetId=triggered.target==="event.target"?expiredEffect.targetId:pending.actorId;
+              const targetCreatureKind=creatureKinds[targetId];
+              if(!targetCreatureKind) continue;
+              operations.push({
+                id:`${pending.id}:automatic:effect.expired:${definitionIndex}:${effectIndex}:${semanticIndex}:${ruleIndex}:${operationIndex}:${expiredEffect.id}`,
+                kind:"damage",targetId,damageType:triggered.damageType,amount:triggered.amount.value,creatureKind:targetCreatureKind,
+              });
+            }
+            if(template.lifetime.kind==="until-duration"&&Object.keys(frequency.metadataPatch).length) operations.push({
+              id:`${pending.id}:automatic:effect.expired:${definitionIndex}:${effectIndex}:${semanticIndex}:${ruleIndex}:frequency:${expiredEffect.id}`,
+              kind:"update-effect",effectId:effect.id,metadataPatch:frequency.metadataPatch,
             });
           }
         }
