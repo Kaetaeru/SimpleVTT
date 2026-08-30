@@ -1,7 +1,7 @@
 # Rerun State
 
 - run_id: `b7f27a61-29d8-4ba2-9f93-8e66722d5f41`
-- sequence: `10`
+- sequence: `11`
 - task_id: `v1-common-play-c8-rerun`
 - dispatch status to publish: `continue`
 - repository: `Kaetaeru/SimpleVTT`
@@ -12,7 +12,7 @@
 
 ## Durable checkpoint
 
-C8 Core is complete. C9 Gate N mechanism-coverage reconciliation remains active. The 36-row coverage ledger is authoritative; a row stays `INCOMPLETE` until its full required semantic/evidence matrix is satisfied. Current coverage is `IMPLEMENTED=4`, `INCOMPLETE=32`, `PROVEN_UNNEEDED=0`. `gateNBlockingNamedFallbacks` remains empty. Overall verdict: `V1 INCOMPLETE`.
+C8 Core is complete. C9 Gate N mechanism-coverage reconciliation remains active. The 36-row coverage ledger is authoritative; a row stays `INCOMPLETE` until its full required semantic/evidence matrix is satisfied. Current coverage is `IMPLEMENTED=5`, `INCOMPLETE=31`, `PROVEN_UNNEEDED=0`. `gateNBlockingNamedFallbacks` remains empty. Overall verdict: `V1 INCOMPLETE`.
 
 Previously validated C9 checkpoints remain authoritative and must not be repeated unless an affected surface changes:
 
@@ -212,6 +212,20 @@ Family C (`d20-test-lifecycle`) remains `INCOMPLETE`, but the generic post-roll 
 - Indomitable remains named for the previously recorded generic actor/progression numeric-source gap.
 - Coverage totals remain `IMPLEMENTED=4`, `INCOMPLETE=32`, `PROVEN_UNNEEDED=0`; `gateNBlockingNamedFallbacks` remains empty and overall verdict remains `V1 INCOMPLETE`.
 
+## Completed Family C — d20 test lifecycle
+
+Family C (`d20-test-lifecycle`) is final `IMPLEMENTED`. Common Play owns structural ability-check/save/attack post-roll selection, deterministic and dice-backed modifiers, conditional payment, outcome recalculation/follow-up, stable class/subclass ownership, and authoritative progression expression refs.
+
+Final migration evidence retained:
+
+- `09eaf85632a4a198fa1fbc5cc8e0e686636c5945`: stable class progression grants reach SessionProjection and Tactical Mind executes as portable Common Play; completed ability-check follow-up effects remain in the same authoritative transaction.
+- `e684898cd28bc60a1ad4808f0d24ac65840da943`, run `33294258177`: Indomitable uses an authoritative progression expression ref rather than Fighter identity dispatch; focused regressions, ledger checker, TypeScript, and Vite passed.
+- `6d1ebebc806a3e1fa782943d710569959cd7e2b3`, run `33294479836`: reconstructed Dark One's Own Luck / Peerless Skill `runtimeD20FollowUps` fallbacks were removed; portable local/connected regressions, TypeScript, and Vite passed.
+- `863808513b45d7afc6179c93b7b0a7d649091aae`, run `33294577227`: zero-producer scan allowed deletion of the legacy `ActionVm.runtimeD20FollowUps` DSL, `d20FollowUpRuntimeAdapter.ts`, its offline import, and its legacy-only test; all migrated Family C probes plus unknown portable interceptor regressions, ledger checker, TypeScript, and Vite passed.
+- Family C final reconciliation run `33294688008`: non-Gate ledger checker and explicit final-row assertion passed at `IMPLEMENTED=5 / INCOMPLETE=31 / PROVEN_UNNEEDED=0`; `remainingNamedSeams=[]`.
+
+No supported d20 content now routes through the removed compatibility side engine. Overall C9 remains incomplete because 31 other mandatory families are not final.
+
 ## Next Exact Action
 
-Continue Family C at the class-feature ownership boundary. Reuse or define the smallest canonical Character/SessionProjection identity source for granted class features so Tactical Mind can be owned as portable content and its now-supported conditional d20 payment can replace the named runtimeD20FollowUps injection. Do not infer feature mechanics from Fighter ID/name, localized feature text, or action placement. Keep Indomitable named until a separate generic authoritative actor/progression numeric expression source exists for its Fighter-level reroll bonus.
+Continue with Family D (`payment-resource`). Reconcile the existing generic payment/resource kernel against its full required semantics and durable Character ownership, then implement the smallest missing production slice rather than adding another class-resource adapter. Start at source-owned pool/recovery/write-back: prove an arbitrary portable resource can be materialized from canonical source data, spent atomically, recovered through the existing rest/turn lifecycle as applicable, persist/reconstruct across reconnect, and Undo through the owning transaction. Reuse current resource/recovery/write-back services; do not infer mechanics from class/resource display names, and do not collapse item charges into Character resources where Family X/Y owns item durability.
