@@ -941,7 +941,7 @@
         "compoundDamage.test.ts",
         "resolutionHealthOps.ts"
       ],
-      "currentState": "Bounded typed damage/healing plus portable Temporary HP, character life/death flows, structural damage threshold/reduction, and portable attack critical-dice doubling are production-proven through Common Play/Resolver with external identity invariance and event-native Undo. Remaining Family L acceptance is max-HP source-model/write-back semantics, Object/Vehicle damage production coverage, and named feature/spell HP migration debt where it bypasses portable Common Play.",
+      "currentState": "Bounded typed damage/healing plus portable Temporary HP, character life/death flows, structural damage threshold/reduction, and portable attack critical-dice doubling are production-proven through Common Play/Resolver with external identity invariance and event-native Undo. Portable Object damage/repair/destruction is additionally production-proven through the generic RuntimeArtifact Resolver path with connected replay/reconnect/Undo and external identity invariance. Remaining Family L acceptance is max-HP source-model/write-back semantics, Vehicle damage production coverage, and named feature/spell HP migration debt where it bypasses portable Common Play.",
       "requiredSemantics": [
         "typed/compound damage",
         "resistance",
@@ -980,7 +980,8 @@
         "325ddee91c87855c35816f5f16fc8134bb709209 test(c9): prove portable stabilization; C9 Family L Stabilize 71304 run 33315607390 passed unknown/renamed RuleModule 0-HP stabilization, event-native Undo, existing Family L regressions, V1 coverage checker, legacy execution boundary, and tsc --noEmit",
         "c9FamilyLDamageAtZeroProduction71304.test.ts proves unknown installed Common Play damage at 0 HP records the SRD death-save failure through production Resolver, durable character write-back, and event-native Undo",
         "e6d44f1587587668e3d1bb1e3aac7dd65850c228 feat(c9): bridge portable death saves; C9 Family L Portable Death Save 71304 run 33316957824 passed unknown/renamed RuleModule death-save production plus Undo, stabilization regression, V1 coverage checker, legacy execution boundary, and tsc --noEmit",
-        "C9 Family L Critical Dice Implementation R2 71304 run 33318001173: portable unknown/renamed attack critical doubled damage dice but not flat damage; Family L/J regressions, V1 coverage checker, and tsc --noEmit passed before verified publish"
+        "C9 Family L Critical Dice Implementation R2 71304 run 33318001173: portable unknown/renamed attack critical doubled damage dice but not flat damage; Family L/J regressions, V1 coverage checker, and tsc --noEmit passed before verified publish",
+        "connectedObjectLinkArtifactLifecycleProduction.test.ts proves unknown external object damage threshold/resistance, damage, repair, destruction, Host/Client replay, fresh reconnect, duplicate handling, and event-native Undo through the generic artifact Resolver path"
       ],
       "identityInvarianceEvidence": [
         "c9FamilyLTemporaryHpProduction.test.ts renamed external module/content/mechanic preserves Temporary HP semantics",
@@ -989,7 +990,8 @@
         "c9FamilyLStabilizeProduction.test.ts repeats 0-HP stabilization and Undo under completely unrelated external module/content/mechanic identities",
         "c9FamilyLDamageAtZeroProduction71304.test.ts repeats the damage-at-zero failure and Undo flow under unrelated external module/content/mechanic identities",
         "c9FamilyLDeathSaveProduction.test.ts repeats authoritative death-save success and event-native Undo under completely unrelated external module/content/mechanic identities",
-        "c9FamilyLCriticalDiceProduction71304.test.ts repeats natural-20 critical dice doubling after complete external module/content/mechanic identity rename"
+        "c9FamilyLCriticalDiceProduction71304.test.ts repeats natural-20 critical dice doubling after complete external module/content/mechanic identity rename",
+        "connectedObjectLinkArtifactLifecycleProduction.test.ts repeats object damage/repair/destruction semantics after complete external module/content/mechanic identity rename"
       ],
       "connectedEvidenceIfRelevant": [
         "c9FamilyLTemporaryHpProduction.test.ts Host/Client authoritative replay, event-native Undo, and fresh reconnect converge Temporary HP",
@@ -1000,7 +1002,7 @@
       ],
       "remainingNamedSeams": [
         "generic max-HP source-model/write-back acceptance remains incomplete",
-        "Object/Vehicle damage production acceptance remains incomplete",
+        "Vehicle damage production acceptance remains incomplete",
         "named feature/spell HP execution remains migration debt where it bypasses portable Common Play"
       ],
       "connectedRelevant": true,
