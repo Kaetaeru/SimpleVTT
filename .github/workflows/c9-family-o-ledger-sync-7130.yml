@@ -26,7 +26,7 @@ jobs:
           const fs=require('node:fs');
           const path='docs/rules/v1-mechanism-coverage-ledger.json';
           const ledger=JSON.parse(fs.readFileSync(path,'utf8'));
-          const family=ledger.families.find((entry)=>entry.family==='O');
+          const family=ledger.rows.find((entry)=>entry.family==='O');
           if(!family) throw new Error('Family O not found');
           family.currentState='Generic concentration kernel plus portable maintained-effect lowering now compose through the shared Resolver. Unknown installed RuleModule activation, Host/client replay, duplicate handling, Undo, fresh reconnect, and rename invariance are proven. Readied/long-cast concentration setup remains incomplete.';
           family.implementationEvidence=[
