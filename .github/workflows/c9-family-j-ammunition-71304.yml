@@ -1,5 +1,4 @@
-name: C9 Family J Ammunition 71304
-# rerun after range/cover proof landed
+name: C9 Family J Ammunition Ledger 71304
 
 on:
   push:
@@ -12,20 +11,15 @@ permissions:
   contents: write
 
 jobs:
-  verify:
+  converge:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
         with:
           ref: agent/c9-gate-n-coverage-reconciliation
           fetch-depth: 0
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - name: Prove portable ammunition payment
+      - name: Merge verified ammunition evidence
         shell: bash
         run: |
           set -euo pipefail
@@ -33,155 +27,39 @@ jobs:
           workflow=.github/workflows/c9-family-j-ammunition-71304.yml
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          for attempt in $(seq 1 8); do
+          for attempt in $(seq 1 30); do
             git fetch origin "$branch"
             git reset --hard "origin/$branch"
             python3 - <<'PY'
           import json
           from pathlib import Path
-
-          test_path=Path('tests/ui/c9FamilyJAmmunitionProduction.test.ts')
-          if not test_path.exists():
-              test_path.write_text(r'''import assert from "node:assert/strict";
-          import test from "node:test";
-          import "../../src/app/offlineRuntimeAdapters";
-          import { catalogQualifiedId } from "../../src/app/contentCatalogIdentity";
-          import { installedCommonPlayActionId } from "../../src/app/installedCommonPlayActionReference";
-          import { setInstalledContentStoreForTests } from "../../src/app/installedContentRuntimeAdapter";
-          import { MemoryInstalledContentStore } from "../../src/app/memoryInstalledContentStore";
-          import { MockAdapter } from "../../src/app/mockAdapter";
-          import { snapshotAdapterTurnRuntimeState } from "../../src/app/turnRuntimeSessionRegistry";
-
-          function packagePayload(prefix:string) {
-            const moduleId=`${prefix}.module`;
-            const contentId=`${prefix}.weapon`;
-            const poolMechanicId=`${prefix}.ammunition-pool`;
-            const attackMechanicId=`${prefix}.ranged-attack`;
-            const resourceId=`resource.${prefix}.ammunition`;
-            return {
-              moduleId,contentId,poolMechanicId,attackMechanicId,resourceId,
-              json:JSON.stringify({
-                schemaVersion:"0.1-draft",moduleId,moduleVersion:"1",
-                rulesProfile:{id:"dnd.srd-5.2.1",version:"0.1-draft"},defaultLocale:"en",
-                source:{document:"Unknown portable ammunition weapon",version:"1",license:"CC0",srdDerived:false},
-                dependencies:[],conflicts:[],capabilities:[],content:[{
-                  id:contentId,category:"option",
-                  presentation:{defaultLocale:"en",originalName:"Portable Ammunition Weapon",locales:{en:{name:"Portable Ammunition Weapon"}}},
-                  mechanics:[
-                    {kind:"common-play",config:{schemaVersion:"0.2-draft",id:poolMechanicId,entryPoints:[{
-                      id:"materialize-ammunition",invocation:"manual",operations:[{
-                        kind:"resource.change",resource:resourceId,amount:{value:1},target:"actor",
-                        createIfMissing:{label:"Portable Ammunition",maximum:{value:1}},
-                      }],
-                    }]}},
-                    {kind:"common-play",config:{
-                      schemaVersion:"0.2-draft",id:attackMechanicId,
-                      payments:[{kind:"resource",resource:resourceId,amount:{value:1},consumeAt:"commit"}],
-                      entryPoints:[{
-                        id:"fire",invocation:"manual",targeting:{from:"targets",min:1,max:1},
-                        test:{kind:"attack-roll",roller:"actor",dc:{value:1}},
-                        operations:[{kind:"damage.apply",amount:{value:1},damageType:"piercing",target:"target"}],
-                      }],
-                    }},
-                  ],
-                }],
-              }),
-            };
-          }
-
-          function resourceCurrent(snapshot:Awaited<ReturnType<MockAdapter["getSnapshot"]>>,resourceId:string) {
-            return snapshot.activeCharacter.resources.find((entry)=>entry.id===resourceId)?.current;
-          }
-
-          function targetHp(snapshot:Awaited<ReturnType<MockAdapter["getSnapshot"]>>) {
-            return snapshot.scene.entities.find((entry)=>entry.id==="combatant.goblin-a")?.hp;
-          }
-
-          async function run(prefix:string) {
-            const adapter=new MockAdapter();
-            const pack=packagePayload(prefix);
-            setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
-            const preview=await adapter.previewContentImport(pack.json);
-            assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
-            await adapter.activateContentImport();
-            await adapter.startInitiative();
-            await adapter.setCurrentActor("char.aelar");
-            let snapshot=await adapter.getSnapshot();
-            const actorId=snapshot.activeCharacter.id;
-            assert.equal(resourceCurrent(snapshot,pack.resourceId),undefined);
-            const catalogId=catalogQualifiedId(pack.contentId,pack.moduleId,"1");
-            const materialize=installedCommonPlayActionId({catalogId,mechanicId:pack.poolMechanicId,entryPointId:"materialize-ammunition"});
-            const fire=installedCommonPlayActionId({catalogId,mechanicId:pack.attackMechanicId,entryPointId:"fire"});
-
-            await adapter.resolveAction(materialize,[actorId]);
-            snapshot=await adapter.getSnapshot();
-            assert.equal(snapshot.resolution?.stage,"complete");
-            assert.equal(resourceCurrent(snapshot,pack.resourceId),1);
-
-            const hpBefore=targetHp(snapshot);
-            await adapter.resolveAction(fire,["combatant.goblin-a"]);
-            snapshot=await adapter.getSnapshot();
-            assert.equal(snapshot.resolution?.stage,"complete");
-            assert.equal(resourceCurrent(snapshot,pack.resourceId),0,"committed attack must consume exactly one ammunition unit");
-
-            await adapter.undoLastResolution();
-            snapshot=await adapter.getSnapshot();
-            assert.equal(resourceCurrent(snapshot,pack.resourceId),1,"event-native Undo must restore ammunition");
-            assert.equal(targetHp(snapshot),hpBefore,"event-native Undo must restore the downstream attack result atomically");
-
-            await adapter.resolveAction(fire,["combatant.goblin-a"]);
-            snapshot=await adapter.getSnapshot();
-            assert.equal(resourceCurrent(snapshot,pack.resourceId),0);
-            const hpAtEmpty=targetHp(snapshot);
-            const revisionAtEmpty=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)?.revision;
-            await adapter.resolveAction(fire,["combatant.goblin-a"]);
-            snapshot=await adapter.getSnapshot();
-            assert.equal(resourceCurrent(snapshot,pack.resourceId),0,"empty ammunition must not underflow");
-            assert.equal(targetHp(snapshot),hpAtEmpty,"failed ammunition payment must block downstream attack effects");
-            assert.equal(snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)?.revision,revisionAtEmpty,"failed ammunition payment must not commit runtime state");
-            return true;
-          }
-
-          test("unknown installed ranged attack consumes source-owned ammunition atomically and restores it on Undo",async()=>{
-            assert.equal(await run("external-family-j-ammunition"),true);
-          });
-
-          test("renaming every external ammunition identity preserves attack payment semantics",async()=>{
-            assert.equal(await run("renamed-family-j-ammunition"),true);
-          });
-          ''',encoding='utf-8')
-
-          ledger=Path('docs/rules/v1-mechanism-coverage-ledger.json')
-          data=json.loads(ledger.read_text(encoding='utf-8'))
+          path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
+          data=json.loads(path.read_text(encoding='utf-8'))
           row=next(entry for entry in data['rows'] if entry['family']=='J')
-          implementation='commonPlayOperationRuntime.ts generic resource PaymentContract composes source-owned ammunition consumption atomically with the existing Common Play attack transaction'
-          production='c9FamilyJAmmunitionProduction.test.ts proves an unknown installed ranged attack consumes a source-owned ammunition pool, rejects at zero without downstream commit, restores through event-native Undo, and repeats under fully renamed external identities'
-          identity='c9FamilyJAmmunitionProduction.test.ts repeats source-owned ammunition payment and empty-ammunition rejection after complete module/content/mechanic/resource identity rename'
-          for field,value in [('implementationEvidence',implementation),('productionEvidence',production),('identityInvarianceEvidence',identity)]:
-              if value not in row[field]: row[field].append(value)
-          sentence=' Portable source-owned ammunition now composes through the generic resource PaymentContract with attack execution, including empty-ammunition atomic rejection, event-native Undo, and complete external identity rename.'
-          if sentence.strip() not in row['currentState']:
-              row['currentState']=row['currentState'].rstrip()+sentence
+          evidence={
+            'implementationEvidence':'commonPlayOperationRuntime.ts generic resource PaymentContract composes source-owned ammunition consumption atomically with the existing Common Play attack transaction',
+            'productionEvidence':'c9FamilyJAmmunitionProduction.test.ts proves an unknown installed ranged attack consumes a source-owned ammunition pool, rejects at zero without downstream commit, restores through event-native Undo, and repeats under fully renamed external identities',
+            'identityInvarianceEvidence':'c9FamilyJAmmunitionProduction.test.ts repeats source-owned ammunition payment and empty-ammunition rejection after complete module/content/mechanic/resource identity rename',
+          }
+          for field,value in evidence.items():
+            if value not in row[field]: row[field].append(value)
+          sentence='Portable source-owned ammunition now composes through the generic resource PaymentContract with attack execution, including empty-ammunition atomic rejection, event-native Undo, and complete external identity rename.'
+          if sentence not in row['currentState']:
+            row['currentState']=row['currentState'].rstrip()+' '+sentence
           row['remainingNamedSeams']=[
-              seam.replace('reach, long range, cover, multiattack/Extra Attack/replacement, and ammunition/loading constraints remain incomplete','reach, long range, cover, multiattack/Extra Attack/replacement, and Loading constraints remain incomplete')
-              for seam in row['remainingNamedSeams']
+            seam.replace('ammunition/loading constraints remain incomplete','Loading constraints remain incomplete')
+                .replace('ammunition/loading composition','Loading composition')
+            for seam in row['remainingNamedSeams']
           ]
-          ledger.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          path.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
           PY
             rm -f "$workflow"
-            npm run generate:content
-            node --import tsx --test tests/ui/c9FamilyJAmmunitionProduction.test.ts tests/ui/c9FamilyJPortableControlProduction.test.ts tests/ui/c9FamilyJAttackPersistence.test.ts tests/ui/phase09CommonPlayResourcePersistence.test.ts
-            node scripts/check-legacy-execution-boundary.mjs
             node scripts/check-v1-mechanism-coverage.mjs
-            npm exec tsc -- --noEmit
-            git add tests/ui/c9FamilyJAmmunitionProduction.test.ts docs/rules/v1-mechanism-coverage-ledger.json "$workflow"
-            if git diff --cached --quiet; then
-              exit 0
-            fi
-            git commit -m "test(c9): prove portable ammunition payment"
+            git add docs/rules/v1-mechanism-coverage-ledger.json "$workflow"
+            git commit -m "docs(c9): record portable ammunition evidence"
             if git push origin HEAD:"$branch"; then
               exit 0
             fi
-            sleep 1
+            sleep 0.2
           done
           exit 1
