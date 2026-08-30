@@ -201,6 +201,17 @@ Family C (`d20-test-lifecycle`) remains `INCOMPLETE`, but another named represen
 - Tactical Mind and Peerless Skill remain named because their resource payment is conditional on the modified roll succeeding, which the current generic payment contract does not express.
 - Coverage totals remain `IMPLEMENTED=4`, `INCOMPLETE=32`, `PROVEN_UNNEEDED=0`; `gateNBlockingNamedFallbacks` remains empty and overall verdict remains `V1 INCOMPLETE`.
 
+## Family C reconciliation — conditional payment and Peerless Skill portable
+
+Family C (`d20-test-lifecycle`) remains `INCOMPLETE`, but the generic post-roll payment boundary and Peerless Skill named seam advanced:
+
+- The Common Play payment contract now supports a narrow `d20-result` condition on resource/economy commit payments. The reaction runtime previews the already-authoritative modified d20 result with the same fixed dice, then includes the payment in the final Resolver transaction only when the declared success/failure outcome matches. Availability still checks the potential payment before offering the interaction. No refund side channel or second roll engine was added.
+- Peerless Skill is now an `option` Common Play definition owned through the existing durable `subclassFeatureIds` content identity. Its failed ability-check/attack d12 and Bardic Inspiration payment are handled by the generic d20 interceptor; the resource is spent only if the recalculated result succeeds. The named `runtimeD20FollowUps` injection was deleted.
+- Run `33291256822` passed the focused domain/Peerless/Dark-Luck/unknown-interceptor suite, `tsc --noEmit`, and `vite build`, including local success/no-spend, feature presentation rename invariance, connected owner routing, exactly-once/duplicate replay, reconnect, Client persistence, and event-native Undo.
+- Tactical Mind is deliberately still named. Conditional pay-on-success is no longer the blocker; the remaining gap is ownership: current Character SessionProjection has durable subclass feature identities but no canonical class-feature identity list that can own Tactical Mind without inferring mechanics from Fighter ID/name or presentation text.
+- Indomitable remains named for the previously recorded generic actor/progression numeric-source gap.
+- Coverage totals remain `IMPLEMENTED=4`, `INCOMPLETE=32`, `PROVEN_UNNEEDED=0`; `gateNBlockingNamedFallbacks` remains empty and overall verdict remains `V1 INCOMPLETE`.
+
 ## Next Exact Action
 
-Continue Family C at the generic post-roll payment boundary: define and implement the smallest repository-native conditional pay-on-success contract that can reuse the Resolver's committed d20 outcome, then migrate Tactical Mind and Peerless Skill without content identity dispatch. Keep Indomitable on its existing named path until the portable post-roll modifier contract has an authoritative generic actor/progression numeric source for the Fighter-level bonus; do not invent a Fighter-specific branch or literal level adapter.
+Continue Family C at the class-feature ownership boundary. Reuse or define the smallest canonical Character/SessionProjection identity source for granted class features so Tactical Mind can be owned as portable content and its now-supported conditional d20 payment can replace the named runtimeD20FollowUps injection. Do not infer feature mechanics from Fighter ID/name, localized feature text, or action placement. Keep Indomitable named until a separate generic authoritative actor/progression numeric expression source exists for its Fighter-level reroll bonus.
