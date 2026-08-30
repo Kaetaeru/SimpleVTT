@@ -6,6 +6,7 @@ on:
       - agent/c9-gate-n-coverage-reconciliation
     paths:
       - .github/workflows/c9-family-i-drag-carry-71304.yml
+      - .github/scripts/c9-family-i-drag-carry-71304.py
 
 permissions:
   contents: write
