@@ -1,0 +1,226 @@
+name: C9 Family A Profile Effect Dependency
+
+on:
+  push:
+    paths:
+      - '.github/workflows/c9-family-a-profile-effect-dependency-7130.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Apply generic profile-effect composition
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+
+          const helper=`import { effectIsActive, type EffectInstance } from "./effects";
+          import { DomainEvaluationError, evaluateExpression, renderExpression, type PropertyResolution, type ProvenanceRecord, type RulesProfileLike } from "./profileEngine";
+
+          export function resolveEffectModifiedProfileProperty(
+            profile:RulesProfileLike,
+            effects:EffectInstance[],
+            targetId:string,
+            property:string,
+            inputProperties:Record<string,number>,
+          ):PropertyResolution {
+            const memo=new Map<string,PropertyResolution>();
+            const resolving=new Set<string>();
+
+            const resolve=(propertyId:string):PropertyResolution=>{
+              const cached=memo.get(propertyId);
+              if(cached) return cached;
+              if(resolving.has(propertyId)) throw new DomainEvaluationError(\`cyclic property formula or modifier: \${propertyId}\`);
+              resolving.add(propertyId);
+              try {
+                const provenance:ProvenanceRecord[]=[];
+                const append=(entries:ProvenanceRecord[])=>{
+                  for(const entry of entries) if(!provenance.some((candidate)=>candidate.source===entry.source&&candidate.status===entry.status&&candidate.reason===entry.reason)) provenance.push(entry);
+                };
+                const reference=(referenceId:string)=>{
+                  const dependency=resolve(referenceId);
+                  append(dependency.provenance);
+                  return dependency.value;
+                };
+
+                let value=inputProperties[propertyId];
+                if(!Number.isFinite(value)) {
+                  const definition=profile.properties[propertyId];
+                  if(!definition?.formula) throw new DomainEvaluationError(\`unresolved property reference: \${propertyId}\`);
+                  value=evaluateExpression(definition.formula,reference);
+                  const usesDefaultFloor="op" in definition.formula&&definition.formula.op==="floor"&&profile.roundingPolicy?.id;
+                  provenance.push({
+                    source:usesDefaultFloor?\`profile:\${profile.profileId}/\${profile.roundingPolicy!.id}\`:\`profile:\${profile.profileId}/property:\${propertyId}\`,
+                    status:"applied",
+                    reason:\`\${renderExpression(definition.formula,reference)} = \${value}\`,
+                  });
+                }
+
+                for(const effect of effects) {
+                  const modifier=effect.propertyModifier;
+                  if(effect.targetId!==targetId||!modifier||modifier.property!==propertyId) continue;
+                  if(!effectIsActive(effect)) {
+                    provenance.push({source:\`effect:\${effect.id}\`,status:"suppressed",reason:effect.suppression?.reason??"effect suppressed"});
+                    continue;
+                  }
+                  const operand=evaluateExpression(modifier.value,(referenceId)=>referenceId===propertyId?value:reference(referenceId));
+                  const before=value;
+                  switch(modifier.operation) {
+                    case "add": value+=operand; break;
+                    case "subtract": value-=operand; break;
+                    case "set": value=operand; break;
+                    case "min": value=Math.min(value,operand); break;
+                    case "max": value=Math.max(value,operand); break;
+                    case "multiply": value*=operand; break;
+                  }
+                  if(!Number.isFinite(value)) throw new DomainEvaluationError(\`property modifier produced a non-finite \${propertyId}\`);
+                  provenance.push({source:\`effect:\${effect.id}\`,status:"applied",reason:\`\${modifier.operation} \${operand}: \${before} -> \${value}\`});
+                }
+
+                const result={property:propertyId,value,provenance};
+                memo.set(propertyId,result);
+                return result;
+              } finally {
+                resolving.delete(propertyId);
+              }
+            };
+
+            return resolve(property);
+          }
+          `;
+          fs.writeFileSync('src/domain/effectProfilePropertyResolver.ts',helper);
+
+          let service=fs.readFileSync('src/app/realResolutionService.ts','utf8');
+          service=service.replace('import { resolveProfileProperty, type RollStateContribution, type RulesProfileLike } from "../domain/profileEngine";','import { type RollStateContribution, type RulesProfileLike } from "../domain/profileEngine";');
+          service=service.replace('import { resolveEffectModifiedProperty, type EffectInstance } from "../domain/effects";','import type { EffectInstance } from "../domain/effects";\nimport { resolveEffectModifiedProfileProperty } from "../domain/effectProfilePropertyResolver";');
+          const oldService=`export function resolveRuntimeProfileProperty(
+            effects:EffectInstance[],
+            targetId:string,
+            property:string,
+            inputProperties:Record<string,number>,
+          ) {
+            const base=resolveProfileProperty(SIMPLEVTT_APP_RULES_PROFILE,property,inputProperties);
+            const modified=resolveEffectModifiedProperty(
+              effects,targetId,property,{...inputProperties,[property]:base.value},
+            );
+            return {
+              property,
+              value:modified.value,
+              provenance:[...base.provenance,...modified.provenance],
+            };
+          }`;
+          const newService=`export function resolveRuntimeProfileProperty(
+            effects:EffectInstance[],
+            targetId:string,
+            property:string,
+            inputProperties:Record<string,number>,
+          ) {
+            return resolveEffectModifiedProfileProperty(
+              SIMPLEVTT_APP_RULES_PROFILE,effects,targetId,property,inputProperties,
+            );
+          }`;
+          if(!service.includes(oldService)) throw new Error('realResolutionService target changed');
+          service=service.replace(oldService,newService);
+          fs.writeFileSync('src/app/realResolutionService.ts',service);
+
+          let adapter=fs.readFileSync('src/app/installedCommonPlayRuntimeAdapter.ts','utf8');
+          const marker='function operationExecutionInput(\n';
+          if(!adapter.includes('function commonPlayActorProfileProperties(')) {
+            const helpers=`function commonPlayActorProfileProperties(
+              internal:AdapterState,
+              state:RulesRuntimeState,
+              actorId:string,
+            ):Record<string,number>|undefined {
+              const actorState=state.combatants[actorId];
+              if(!actorState) return undefined;
+              if(internal.activeCharacter.id!==actorId) {
+                return {
+                  "movement.walk":resolveRuntimeProfileProperty(
+                    state.effects,actorId,"movement.walk",{"movement.walk":actorState.baseSpeed},
+                  ).value,
+                };
+              }
+              const character=internal.activeCharacter;
+              const inputs:Record<string,number>={
+                "ability.str.score":character.abilities.str,
+                "ability.dex.score":character.abilities.dex,
+                "ability.con.score":character.abilities.con,
+                "ability.int.score":character.abilities.int,
+                "ability.wis.score":character.abilities.wis,
+                "ability.cha.score":character.abilities.cha,
+                "progression.character.level":character.level,
+                "proficiency.bonus":character.proficiencyBonus,
+                "defense.ac":character.ac,
+                "movement.walk":actorState.baseSpeed,
+                "hp.current":actorState.life.hp.current,
+                "hp.maximum":actorState.life.hp.maximum,
+                "hp.temporary":actorState.life.hp.temporary,
+              };
+              const projected={...inputs};
+              for(const [property,definition] of Object.entries(SIMPLEVTT_APP_RULES_PROFILE.properties)) {
+                if(!Number.isFinite(inputs[property])&&!definition.formula) continue;
+                projected[property]=resolveRuntimeProfileProperty(state.effects,actorId,property,inputs).value;
+              }
+              return projected;
+            }
+
+            `;
+            if(!adapter.includes(marker)) throw new Error('operationExecutionInput marker missing');
+            adapter=adapter.replace(marker,helpers+marker);
+          }
+          const oldMovement=`  const actorState=state.combatants[actor.id];
+            const movementProperties=actorState?{
+              "movement.walk":resolveRuntimeProfileProperty(
+                state.effects,actor.id,"movement.walk",{"movement.walk":actorState.baseSpeed},
+              ).value,
+            }:undefined;`;
+          const newMovement=`  const movementProperties=commonPlayActorProfileProperties(internal,state,actor.id);`;
+          if(!adapter.includes(oldMovement)) throw new Error('movement property target changed');
+          adapter=adapter.replace(oldMovement,newMovement);
+          fs.writeFileSync('src/app/installedCommonPlayRuntimeAdapter.ts',adapter);
+
+          let test=fs.readFileSync('tests/ui/installedCommonPlayPropertyModifierProduction.test.ts','utf8');
+          test=test.replace('propertyModifier:{property:"ability.str.modifier",operation:"add",value:{value:1},source:"definition",instancePolicy:"stack"},','propertyModifier:{property:"ability.str.score",operation:"add",value:{value:2},source:"definition",instancePolicy:"stack"},');
+          if(!test.includes('propertyModifier:{property:"ability.str.score",operation:"add",value:{value:2}')) throw new Error('derived dependency test target changed');
+          const oldEntries=`    {id:"slow",invocation:"manual",operations:[{kind:"property.modify",property:"movement.walk",operation:"set",value:{value:5},target:"actor",owner:"effect",source:"definition",duration:{kind:"elapsed",amount:{value:1},unit:"minutes"},lifetime:{kind:"until-duration",onEnd:"destroy"},instancePolicy:"stack"}]},
+            {id:"move",invocation:"manual",operations:[{kind:"movement.relocate",mode:"move",movementType:"walk",target:"actor",distance:{ref:"movement.walk"},destinationFact:{id:"property-move-destination",fact:"spatial.legal-destination",subject:"actor",authority:"actor-owner",visibility:"actor-and-dm",unknownPolicy:"request-authority"}}]},`;
+          const newEntries=`    {id:"slow",invocation:"manual",operations:[{kind:"property.modify",property:"movement.walk",operation:"set",value:{value:5},target:"actor",owner:"effect",source:"definition",duration:{kind:"elapsed",amount:{value:1},unit:"minutes"},lifetime:{kind:"until-duration",onEnd:"destroy"},instancePolicy:"stack"}]},
+            {id:"move",invocation:"manual",operations:[{kind:"movement.relocate",mode:"move",movementType:"walk",target:"actor",distance:{ref:"movement.walk"},destinationFact:{id:"property-move-destination",fact:"spatial.legal-destination",subject:"actor",authority:"actor-owner",visibility:"actor-and-dm",unknownPolicy:"request-authority"}}]},
+            {id:"strength",invocation:"manual",operations:[{kind:"property.modify",property:"ability.str.score",operation:"set",value:{value:14},target:"actor",owner:"effect",source:"definition",duration:{kind:"elapsed",amount:{value:1},unit:"minutes"},lifetime:{kind:"until-duration",onEnd:"destroy"},instancePolicy:"stack"}]},
+            {id:"move-strength",invocation:"manual",operations:[{kind:"movement.relocate",mode:"move",movementType:"walk",target:"actor",distance:{ref:"ability.str.modifier"},destinationFact:{id:"property-strength-move-destination",fact:"spatial.legal-destination",subject:"actor",authority:"actor-owner",visibility:"actor-and-dm",unknownPolicy:"request-authority"}}]},`;
+          if(!test.includes(oldEntries)) throw new Error('module entrypoint target changed');
+          test=test.replace(oldEntries,newEntries);
+          if(!test.includes('unknown Common Play consumes an effect-modified derived profile property')) {
+            test += `\n\ntest("unknown Common Play consumes an effect-modified derived profile property",async()=>{\n  const adapter=new MockAdapter();\n  const {action}=await install(adapter,"external-property-derived");\n  const before=await adapter.getSnapshot();\n  const initialRemaining=before.scene.economyByActor["char.aelar"]!.movement;\n  await adapter.resolveAction(action("strength"),["char.aelar"]);\n  await adapter.resolveAction(action("move-strength"),["char.aelar"]);\n  const after=await adapter.getSnapshot();\n  assert.equal(initialRemaining-after.scene.economyByActor["char.aelar"]!.movement,2,JSON.stringify(after.resolution));\n  assert.equal(after.resolution?.stage,"complete");\n});\n`;
+          }
+          fs.writeFileSync('tests/ui/installedCommonPlayPropertyModifierProduction.test.ts',test);
+          NODE
+      - name: Verify Family A property composition
+        run: |
+          npx tsx --test tests/domain/commonPlayPropertyContractRuntime.test.ts
+          npx tsx --test tests/ui/installedCommonPlayPropertyModifierProduction.test.ts
+          npx tsc --noEmit
+          node scripts/check-v1-mechanism-coverage.mjs
+      - name: Commit verified changes
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm .github/workflows/c9-family-a-profile-effect-dependency-7130.yml
+          git add src/domain/effectProfilePropertyResolver.ts src/app/realResolutionService.ts src/app/installedCommonPlayRuntimeAdapter.ts tests/ui/installedCommonPlayPropertyModifierProduction.test.ts .github/workflows/c9-family-a-profile-effect-dependency-7130.yml
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "feat(c9): compose profile properties through active effects"
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
