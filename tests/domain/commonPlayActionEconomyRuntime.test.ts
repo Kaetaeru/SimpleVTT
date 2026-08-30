@@ -278,8 +278,7 @@ test("portable attacksPerAction metadata is rejected outside an Attack Action pa
   if(!payment||payment.kind!=="economy") throw new Error("economy payment fixture missing");
   payment.bucket="reaction";
 
-  assert.throws(
-    () => resolvePortableAttack(portableAttackState(),definition,"resolution.family-j.invalid-extra-attack"),
-    /attacksPerAction requires bucket=action and actionKind=attack/,
-  );
+  const result=resolvePortableAttack(portableAttackState(),definition,"resolution.family-j.invalid-extra-attack");
+  assert.equal(result.status,"rejected");
+  assert.match(result.status==="rejected"?result.error:"",/attacksPerAction requires bucket=action and actionKind=attack/);
 });
