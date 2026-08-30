@@ -566,7 +566,7 @@ function hpPresentation(
       damage+=result.finalDamage;
       damageComponents.push({
         type:result.damageType,
-        roll:typeof operation.amount==="string"?operation.amount:String(operation.amount.value),
+        roll:typeof operation.amount==="string"?operation.amount:String(result.raw),
         raw:result.raw,
         adjusted:result.finalDamage,
         source:"Common Play · generic Resolver",
@@ -880,7 +880,7 @@ function operationExecutionInput(
     ]),
     damageDiceFaces:damageDiceFaces(internal,actionId,entryPoint,operationDieDrawIndex),
     ...(Object.keys(deathSaveDiceFaces).length?{deathSaveDiceFaces}:{}),
-    ...(movementProperties?{movementProperties}:{}),
+    ...(movementProperties?{actorProperties:movementProperties,movementProperties}:{}),
     ...(Object.keys(movementFactAnswers).length?{movementFactAnswers}:{}),
     ...(entryPoint.test?{d20:{faces:d20Faces!,targetId:selectedTargetId,...(d20ModifierSelection??{})}}:{}),
     ...(itemPaymentResourceIds?{itemPaymentResourceIds}:{}),

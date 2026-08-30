@@ -124,7 +124,7 @@ type CommonPlayEconomyModify={
 
 type CommonPlayDamageApply={
   kind:"damage.apply";
-  amount:LiteralNumberExpression|string;
+  amount:CommonPlayExpression|string;
   damageType:string;
   multiplier?:number;
   target?:CommonPlayHpTarget;
@@ -209,7 +209,7 @@ export interface CommonPlayD20TestDefinition {
   kind:D20TestFamily;
   roller:"actor"|"target";
   property?:CommonPlayD20ModifierProperty;
-  dc:LiteralNumberExpression;
+  dc:CommonPlayExpression;
   perTarget?:false;
 }
 
@@ -249,6 +249,7 @@ export interface CommonPlayOperationExecutionInput {
   deathSaveDiceFaces?:Record<number,number[]>;
   rechargeDiceFaces?:Record<number,number[]>;
   movementFactAnswers?:Record<number,CommonPlayFactAnswer>;
+  actorProperties?:Record<string,number>;
   movementProperties?:Record<string,number>;
   interactionResponse?:
     | {interactionId:string;accepted:true}
@@ -677,11 +678,11 @@ function parseOperation(value:unknown,label:string):CommonPlayOperation {
   }
   if(operation.kind==="damage.apply") {
     supportedKeys(operation,DAMAGE_APPLY_KEYS,label);
-    let amount:LiteralNumberExpression|string;
+    let amount:CommonPlayExpression|string;
     if(typeof operation.amount==="string") {
       parseCommonPlayDamageDiceFormula(operation.amount,`${label}.amount`);
       amount=operation.amount.trim();
-    } else amount=nonNegativeLiteralExpression(operation.amount,`${label}.amount`);
+    } else amount=numericExpression(operation.amount,`${label}.amount`);
     const multiplier=operation.multiplier;
     if(multiplier!==undefined&&(typeof multiplier!=="number"||!Number.isFinite(multiplier)||multiplier<0)) throw new DomainEvaluationError(`${label}.multiplier must be a finite non-negative number`);
     const when=testOutcomePredicate(operation.when,`${label}.when`);
@@ -747,7 +748,7 @@ function parseD20Test(value:unknown,label:string):CommonPlayD20TestDefinition {
   const property=parseD20ModifierProperty(definition.property,`${label}.property`);
   if(definition.roller==="target"&&!property) throw new DomainEvaluationError(`${label}.property is required for a target-rolled portable Common Play d20 test`);
   if(definition.perTarget!==undefined&&definition.perTarget!==false) throw new DomainEvaluationError(`${label}.perTarget must be false for a single portable Common Play d20 test`);
-  return {kind:definition.kind,roller:definition.roller,...(property?{property}:{}),dc:literalExpression(definition.dc,`${label}.dc`),...(definition.perTarget===false?{perTarget:false}:{})};
+  return {kind:definition.kind,roller:definition.roller,...(property?{property}:{}),dc:numericExpression(definition.dc,`${label}.dc`),...(definition.perTarget===false?{perTarget:false}:{})};
 }
 
 export function parseCommonPlayOperationDefinition(value:unknown,label="Common Play definition"):CommonPlayOperationDefinition {
@@ -817,6 +818,23 @@ function commonPlayD20Ability(property:CommonPlayD20ModifierProperty|undefined):
   if(typeof property!=="string") return undefined;
   const match=property.match(/^(?:save|ability)\.(str|dex|con|int|wis|cha)\.(?:modifier|score)$/);
   return match?.[1] as CommonPlayD20Ability|undefined;
+}
+
+function actorExpressionInteger(
+  expression:CommonPlayExpression,
+  input:CommonPlayOperationExecutionInput,
+  label:string,
+  minimum?:number,
+) {
+  const properties=input.actorProperties??{};
+  const value=evaluateExpression(expression as ExpressionNode,(property)=>{
+    const resolved=properties[property];
+    if(!Number.isFinite(resolved)) throw new DomainEvaluationError(`${label} actor property is unavailable: ${property}`);
+    return Number(resolved);
+  });
+  if(!Number.isFinite(value)||!Number.isInteger(value)) throw new DomainEvaluationError(`${label} must resolve to a finite integer`);
+  if(minimum!==undefined&&value<minimum) throw new DomainEvaluationError(`${label} must resolve to an integer >= ${minimum}`);
+  return value;
 }
 
 export function compileCommonPlayPayments(
@@ -977,7 +995,7 @@ export function compileCommonPlayEntryPointOperations(
       ...(Object.keys(conditionContext).length?{condition:conditionContext}:{}),
       request:{
         family:entryPoint.test.kind,
-        target:literalInteger(entryPoint.test.dc,"d20 target")+attackCoverTargetModifier,
+        target:actorExpressionInteger(entryPoint.test.dc,input,"d20 target",0)+attackCoverTargetModifier,
         targetSource:`common-play:${supported.id}:${entryPoint.id}:dc${attackCoverTargetModifier?":cover":""}`,
         modifierContributions:input.d20.modifierContributions??[],
         rollStateContributions:input.d20.rollStateContributions,
@@ -1141,7 +1159,7 @@ export function compileCommonPlayEntryPointOperations(
         });
         amount={operationId:rollId,field:"total",...(multiplier===undefined?{}:{multiplier,rounding})};
       } else {
-        const literal=literalInteger(operation.amount,"damage.apply amount")+propertyDamageFlat;
+        const literal=actorExpressionInteger(operation.amount,input,"damage.apply amount",0)+propertyDamageFlat;
         if(multiplier===undefined) amount=literal;
         else {
           const scaled=literal*multiplier;
