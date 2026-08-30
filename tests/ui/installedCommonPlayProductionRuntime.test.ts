@@ -657,6 +657,28 @@ test("connected Common Play targeting remains Host-authoritative and converges t
   assert.equal(clientSnapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")!.hp,hostHp);
   assert.equal(clientSnapshot.resolution?.actionId,actionId);
   assert.deepEqual(clientSnapshot.resolution?.targetIds,["combatant.goblin-a"]);
+
+  assert.equal((await applyConnectedClientEvents(client,batch.events)).status,"duplicate","retrying the same authoritative targeting event must be idempotent");
+  const retrySnapshot=await client.getSnapshot();
+  assert.equal(retrySnapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")!.hp,hostHp);
+  assert.deepEqual(retrySnapshot.resolution?.targetIds,["combatant.goblin-a"]);
+
+  const reconnected=new MockAdapter();
+  await installTargeting(reconnected);
+  injureSceneEntity(reconnected,"combatant.goblin-a",10);
+  await reconnected.startInitiative();
+  await reconnected.setCurrentActor("char.aelar");
+  const reconnectState=connectedStateFor(reconnected);
+  reconnectState.mode="client";
+  reconnectState.sessionId=sessionId;
+  reconnectState.replica=new ClientSessionReplica(sessionId);
+  assert.equal((await applyConnectedClientEvents(reconnected,batch.events)).status,"applied","a fresh reconnect replica must accept authoritative targeting history from cursor zero");
+  const reconnectSnapshot=await reconnected.getSnapshot();
+  assert.equal(reconnectSnapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")!.hp,hostHp);
+  assert.equal(reconnectSnapshot.resolution?.actionId,actionId);
+  assert.deepEqual(reconnectSnapshot.resolution?.targetIds,["combatant.goblin-a"]);
+  assert.equal((await applyConnectedClientEvents(reconnected,batch.events)).status,"duplicate","reconnect catch-up retry must not apply targeting effects twice");
+  assert.equal((await reconnected.getSnapshot()).scene.entities.find((entity)=>entity.id==="combatant.goblin-a")!.hp,hostHp);
 });
 
 test("installed Common Play consent uses the existing interrupt presentation and decline mutates nothing",async()=>{
