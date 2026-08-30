@@ -934,6 +934,12 @@ export function compileCommonPlayEntryPointOperations(
     const selectedTargetFacts=input.targetId
       ? input.targetingTargets?.find((target)=>target.id===input.targetId)
       : undefined;
+    const attackCoverTargetModifier=entryPoint.test.kind==="attack-roll"
+      ?selectedTargetFacts?.cover==="half"?2:selectedTargetFacts?.cover==="three-quarters"?5:0
+      :0;
+    if(entryPoint.test.kind==="attack-roll"&&selectedTargetFacts?.cover==="total") {
+      throw new DomainEvaluationError("Common Play attack-roll target has total cover");
+    }
     const conditionContext={
       ...(conditionAbility?{ability:conditionAbility}:{}),
       ...(selectedTargetFacts?.distanceFeet===undefined?{}:{distanceToTargetFeet:selectedTargetFacts.distanceFeet}),
@@ -946,8 +952,8 @@ export function compileCommonPlayEntryPointOperations(
       ...(Object.keys(conditionContext).length?{condition:conditionContext}:{}),
       request:{
         family:entryPoint.test.kind,
-        target:literalInteger(entryPoint.test.dc,"d20 target"),
-        targetSource:`common-play:${supported.id}:${entryPoint.id}:dc`,
+        target:literalInteger(entryPoint.test.dc,"d20 target")+attackCoverTargetModifier,
+        targetSource:`common-play:${supported.id}:${entryPoint.id}:dc${attackCoverTargetModifier?":cover":""}`,
         modifierContributions:input.d20.modifierContributions??[],
         rollStateContributions:input.d20.rollStateContributions,
         ...(rollModifications.length?{rollModifications}:{}),
