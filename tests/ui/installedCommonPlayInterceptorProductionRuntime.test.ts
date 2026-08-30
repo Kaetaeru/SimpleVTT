@@ -13,6 +13,9 @@ import { applyConnectedClientEvents, connectedManifest } from "../../src/app/con
 import { connectedStateFor } from "../../src/app/connectedSessionState";
 import { ClientSessionReplica, HostSessionLedger, type ConnectedSessionEvent } from "../../src/app/connectedSessionProtocol";
 import { tauriSessionTransport } from "../../src/app/tauriSessionTransport";
+import { commitAdapterTurnRuntimeState, snapshotAdapterTurnRuntimeState } from "../../src/app/turnRuntimeSessionRegistry";
+import { SIMPLEVTT_APP_RULES_PROFILE } from "../../src/app/realResolutionService";
+import { resolvePendingResolution } from "../../src/domain/resolution";
 
 const OTHER_CHARACTER_ID="char.portable-interceptor-target";
 const OTHER_CHARACTER_CHECK_ID="action.portable-interceptor-target.check";
@@ -63,10 +66,12 @@ function packagePayload(
               factQueries:[
                 {id:"trigger-distance",fact:"spatial.distance-feet",subject:"intercepted.actor",authority:"dm",visibility:"dm",unknownPolicy:"block"},
                 {id:"source-sees-trigger",fact:"sense.can-see",subject:"intercepted.actor",authority:"dm",visibility:"dm",unknownPolicy:"treat-false"},
+                {id:"trigger-hidden",fact:"sense.hidden",subject:"intercepted.actor",authority:"dm",visibility:"dm",unknownPolicy:"block"},
               ],
               when:{op:"all",args:[
                 {op:"lte",left:{ref:"trigger-distance"},right:{value:60}},
                 {op:"eq",left:{ref:"source-sees-trigger"},right:{value:true}},
+                {op:"eq",left:{ref:"trigger-hidden"},right:{value:true}},
               ]},
             }:{}),
             ...(selection??{}),
@@ -153,6 +158,34 @@ async function openSavingThrowInterrupt(adapter:MockAdapter){
 
 function secondWind(snapshot:Awaited<ReturnType<MockAdapter["getSnapshot"]>>){
   return snapshot.activeCharacter.resources.find((entry)=>entry.id===FIGHTER_SECOND_WIND_RESOURCE_ID)?.current;
+}
+
+function seedHiddenRuntimeEffect(adapter:MockAdapter,targetId:string){
+  const internal=adapter as unknown as {activeCharacter:CharacterSheet;scene:SceneVm};
+  const state=snapshotAdapterTurnRuntimeState(adapter,internal.scene);
+  assert.ok(state,"TurnRuntime state must exist before Hidden fact seeding");
+  const committed=resolvePendingResolution(SIMPLEVTT_APP_RULES_PROFILE,state!,{
+    id:`resolution.hidden-fact.${targetId}`,
+    actorId:internal.activeCharacter.id,
+    sourceId:"external.hidden-fact-probe",
+    expectedRevision:state!.revision,
+    operations:[{
+      id:"op.hidden-fact",
+      kind:"apply-effect",
+      effect:{
+        id:`effect.hidden-fact.${targetId}`,
+        sourceId:"external.hidden-fact-probe",
+        sourceActorId:internal.activeCharacter.id,
+        targetId,
+        kind:"marker",
+        tags:["hidden"],
+        duration:{kind:"special",key:"test.hidden-fact"},
+      },
+    }],
+  });
+  assert.notEqual(committed.status,"rejected");
+  if(committed.status==="rejected")return;
+  assert.equal(commitAdapterTurnRuntimeState(adapter,internal.scene,state!.revision,committed.state),true);
 }
 
 test("owned unknown installed interceptor passively opens after a successful ability check and pays atomically on accept",async()=>{
@@ -310,7 +343,7 @@ test("portable installed d20 interceptor can turn a successful production attack
   assert.equal(snapshot.scene.economyByActor[responderId]?.reaction,false);
 });
 
-test("portable production interceptor uses only authoritative spatial and visibility facts",async()=>{
+test("portable production interceptor uses authoritative spatial, visibility, and Hidden facts",async()=>{
   const renamed:Identity={...ORIGINAL,moduleId:"external.renamed-facts",contentId:"item.renamed-facts",mechanicId:"mechanic.renamed-facts",interceptorId:"interceptor.renamed-facts",interactionId:"interaction.renamed-facts",displayName:"Renamed Fact Reaction"};
   for(const [index,identity] of [ORIGINAL,renamed].entries()){
     const adapter=await prepare(identity,true);
@@ -318,14 +351,24 @@ test("portable production interceptor uses only authoritative spatial and visibi
     const relation={sourceId:internal.activeCharacter.id,targetId:OTHER_CHARACTER_ID,distanceFeet:30,visible:true,cover:"none" as const,targetCanSeeAttacker:true};
     if(index===0)setSpatialRelation(internal.scene,{...relation,provenance:"module:test-map:spatial"});
     else await adapter.setTheaterOfMindSpatialRelation(relation);
+    seedHiddenRuntimeEffect(adapter,OTHER_CHARACTER_ID);
     const snapshot=await openAbilityCheckInterrupt(adapter);
     assert.equal(snapshot.resolution?.stage,"interrupt",JSON.stringify(snapshot.resolution));
     await adapter.respondToInterrupt(false);
   }
 
+  const visibleButNotHidden=await prepare(ORIGINAL,true);
+  const visibleInternal=visibleButNotHidden as unknown as {activeCharacter:CharacterSheet;scene:SceneVm};
+  setSpatialRelation(visibleInternal.scene,{
+    sourceId:visibleInternal.activeCharacter.id,targetId:OTHER_CHARACTER_ID,distanceFeet:30,visible:true,cover:"none",targetCanSeeAttacker:true,provenance:"module:test-map:spatial",
+  });
+  let snapshot=await openAbilityCheckInterrupt(visibleButNotHidden);
+  assert.notEqual(snapshot.resolution?.stage,"interrupt","authoritative visible target must still fail a required Hidden fact when no Hidden effect exists");
+
   const unavailable=await prepare(ORIGINAL,true);
-  const snapshot=await openAbilityCheckInterrupt(unavailable);
-  assert.notEqual(snapshot.resolution?.stage,"interrupt","missing authority must not fabricate distance or visibility");
+  seedHiddenRuntimeEffect(unavailable,OTHER_CHARACTER_ID);
+  snapshot=await openAbilityCheckInterrupt(unavailable);
+  assert.notEqual(snapshot.resolution?.stage,"interrupt","Hidden must not fabricate missing spatial or visibility authority");
 });
 
 test("portable damage-roll interceptor reduces authoritative production damage and Undo restores HP, resource, and Reaction",async()=>{

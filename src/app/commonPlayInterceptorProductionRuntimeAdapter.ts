@@ -335,13 +335,14 @@ function factSubjectId(candidate:PassiveReactionCandidate,pending:PendingResolut
   return undefined;
 }
 
-function interceptorFactProvider(internal:AdapterState,candidate:PassiveReactionCandidate,pending:PendingResolution):CommonPlayFactProvider {
+function interceptorFactProvider(internal:AdapterState,candidate:PassiveReactionCandidate,pending:PendingResolution,runtime:RulesRuntimeState):CommonPlayFactProvider {
   return {
     id:"simplevtt.authoritative-spatial",
     resolve(query){
       const subjectId=factSubjectId(candidate,pending,query.subject);
       if(!subjectId)return {status:"unsupported",reason:`unsupported interceptor fact subject: ${query.subject??"intercepted.actor"}`};
       if(query.fact==="identity.same-entity")return {status:"answered",value:subjectId===candidate.sourceActorId};
+      if(query.fact==="sense.hidden")return {status:"answered",value:runtime.effects.some((effect)=>effect.targetId===subjectId&&effect.tags.includes("hidden"))};
       const relation=authoritativeCommonPlaySpatialRelation(internal.scene,candidate.sourceActorId,subjectId);
       if(!relation)return {status:"unknown"};
       if(query.fact==="spatial.distance-feet")return {status:"answered",value:relation.distanceFeet};
@@ -353,7 +354,7 @@ function interceptorFactProvider(internal:AdapterState,candidate:PassiveReaction
   };
 }
 
-async function interceptorEligible(internal:AdapterState,candidate:PassiveReactionCandidate,pending:PendingResolution) {
+async function interceptorEligible(internal:AdapterState,candidate:PassiveReactionCandidate,pending:PendingResolution,runtime:RulesRuntimeState) {
   const interceptor=candidate.definition.interceptors[0];
   if(!interceptor?.eligibility)return true;
   const result=await resolveCommonPlayFactPredicate({
@@ -362,7 +363,7 @@ async function interceptorEligible(internal:AdapterState,candidate:PassiveReacti
     predicate:interceptor.eligibility.when,
     resolutionId:pending.id,
     expectedRevision:pending.expectedRevision,
-    provider:interceptorFactProvider(internal,candidate,pending),
+    provider:interceptorFactProvider(internal,candidate,pending,runtime),
   });
   return result.status==="eligible";
 }
@@ -391,7 +392,7 @@ async function offerPassiveReaction(adapter:MockAdapter) {
     if(!projections.length)continue;
     for(const projected of projections){
       const seeded=seededReactionState(runtime,candidate);
-      if(!await interceptorEligible(internal,candidate,projected.pending))continue;
+      if(!await interceptorEligible(internal,candidate,projected.pending,runtime))continue;
       const started=startCommonPlayResolution(SIMPLEVTT_APP_RULES_PROFILE,seeded,projected.pending,candidate.definition,candidate.sourceActorId);
       if(started.status!=="awaiting-input")continue;
       pendingByAdapter.set(adapter,{resolutionId:resolution.id,operationId:projected.operationId,kind:damage?"damage":"d20",originalTotal:"originalTotal" in projected?projected.originalTotal:undefined,resumeCheckAfterResponse:resolution.rollKind==="check"&&resolution.stage!=="complete",candidate,awaiting:started});

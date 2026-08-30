@@ -551,7 +551,8 @@
         "sessionStatusEffectEventRuntimeAdapter.ts",
         "effectGrantActionRuntimeAdapter.ts",
         "commonPlaySpatialFactRuntime.ts COMMON_PLAY_STANDARD_FACTS defines typed sense.can-see/can-hear/detected/light/obscurement/hidden provider/manual authority",
-        "commonPlaySpatialFactRuntime.ts COMMON_PLAY_STANDARD_FACTS defines generic sense.can-see/sense.can-hear/sense.detected/sense.light/sense.obscurement/sense.hidden facts with normalized provider or authority provenance"
+        "commonPlaySpatialFactRuntime.ts COMMON_PLAY_STANDARD_FACTS defines generic sense.can-see/sense.can-hear/sense.detected/sense.light/sense.obscurement/sense.hidden facts with normalized provider or authority provenance",
+        "commonPlayInterceptorProductionRuntimeAdapter.ts answers standard sense.hidden from authoritative Resolver EffectState hidden tags before spatial fallback"
       ],
       "productionEvidence": [
         "connectedProjectedCharacterCunningHideResolution.test.ts",
@@ -559,7 +560,8 @@
         "paladinDivineSenseActionRuntime.test.ts",
         "9296b5dfff05127b04b29d8b28b581785f71e896 test(c9): prove standard sensing fact authority",
         "C9 Family H Standard Sensing Facts run 33310103344: standard sensing provider facts, connected owner-authority routing/reconnect, legacy boundary, and tsc --noEmit passed",
-        "9296b5dfff05127b04b29d8b28b581785f71e896 test(c9): prove standard sensing fact authority; commonPlaySpatialFactRuntime.test.ts validates all standard sensing fact types through the shared fact runtime"
+        "9296b5dfff05127b04b29d8b28b581785f71e896 test(c9): prove standard sensing fact authority; commonPlaySpatialFactRuntime.test.ts validates all standard sensing fact types through the shared fact runtime",
+        "installedCommonPlayInterceptorProductionRuntime.test.ts gates an unknown installed interceptor on authoritative spatial visibility plus Resolver-owned Hidden state, with external identity rename invariance and fail-closed missing facts"
       ],
       "identityInvarianceEvidence": [
         "sessionStatusEffectEventRuntime.test.ts",
