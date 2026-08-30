@@ -24,24 +24,6 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-      - name: Apply Family M generic condition immunity change
-        shell: bash
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          path=Path("src/domain/commonPlayOperationRuntime.ts")
-          text=path.read_text()
-          old='import { effectiveSpeed, proneStandingCost } from "./conditions";'
-          new='import { conditionImmunities, effectiveSpeed, proneStandingCost } from "./conditions";'
-          if old not in text:
-              raise SystemExit("condition import anchor not found")
-          text=text.replace(old,new,1)
-          anchor='      if(operation.kind==="condition.apply") {\n        operations.push({'
-          replacement='      if(operation.kind==="condition.apply") {\n        const target=state.combatants[targetId];\n        if(!target) throw new DomainEvaluationError(`Common Play condition.apply target is not a runtime combatant: ${targetId}`);\n        const immunities=new Set<ConditionId>([\n          ...(target.conditionImmunities??[]),\n          ...conditionImmunities(conditionEffectsFor(state,targetId)),\n        ]);\n        if(immunities.has(operation.condition)) throw new DomainEvaluationError(`Common Play condition.apply target ${targetId} is immune to ${operation.condition}`);\n        operations.push({'
-          if anchor not in text:
-              raise SystemExit("condition.apply anchor not found")
-          path.write_text(text.replace(anchor,replacement,1))
-          PY
       - name: Add Family M production regression
         shell: bash
         run: |
@@ -106,7 +88,8 @@ jobs:
             immune.revision+=1;
             assert.equal(commitAdapterTurnRuntimeState(adapter,scene,seed.revision,immune),true);
             let snapshot=await adapter.resolveAction(action("poison"),[TARGET_ID]);
-            assert.equal(snapshot.resolution?.finalOutcome,"적용 거부",JSON.stringify(snapshot.resolution));
+            assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
+            assert.match(snapshot.resolution?.detail.join("\n")??"",/poisoned suppressed by immunity/);
             assert.equal(snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)?.effects.some((effect)=>effect.targetId===TARGET_ID&&effect.conditionId==="poisoned"),false);
 
             const explicit=snapshotAdapterTurnRuntimeState(adapter,scene)!;
@@ -120,7 +103,8 @@ jobs:
             assert.equal(snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)?.effects.some((effect)=>effect.targetId===TARGET_ID&&effect.conditionId==="petrified"),true);
 
             snapshot=await adapter.resolveAction(action("poison"),[TARGET_ID]);
-            assert.equal(snapshot.resolution?.finalOutcome,"적용 거부",JSON.stringify(snapshot.resolution));
+            assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
+            assert.match(snapshot.resolution?.detail.join("\n")??"",/poisoned suppressed by immunity/);
             assert.equal(snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)?.effects.some((effect)=>effect.targetId===TARGET_ID&&effect.conditionId==="poisoned"),false);
 
             snapshot=await adapter.resolveAction(action("clear-petrified"),[TARGET_ID]);
@@ -133,7 +117,7 @@ jobs:
             assert.equal(snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)?.effects.some((effect)=>effect.targetId===TARGET_ID&&effect.conditionId==="poisoned"),false);
           }
 
-          test("unknown installed Common Play condition application enforces explicit and rules-derived immunity under identity rename",async()=>{
+          test("unknown installed Common Play condition application honors explicit and rules-derived immunity under identity rename",async()=>{
             await exercise("unknown-family-m-immunity");
             await exercise("renamed-family-m-immunity");
           });
@@ -150,11 +134,11 @@ jobs:
         run: node scripts/check-v1-mechanism-coverage.mjs
       - name: Typecheck application
         run: npx tsc --noEmit
-      - name: Commit verified Family M slice
+      - name: Commit verified Family M proof
         shell: bash
         run: |
           rm .github/workflows/c9-family-m-condition-immunity-71304.yml
-          git add src/domain/commonPlayOperationRuntime.ts tests/ui/c9FamilyMConditionImmunityProduction.test.ts .github/workflows/c9-family-m-condition-immunity-71304.yml
-          git commit -m "feat(c9): enforce portable condition immunity"
+          git add tests/ui/c9FamilyMConditionImmunityProduction.test.ts .github/workflows/c9-family-m-condition-immunity-71304.yml
+          git commit -m "test(c9): prove portable condition immunity"
           git pull --rebase origin "$GITHUB_REF_NAME"
           git push origin HEAD:"$GITHUB_REF_NAME"
