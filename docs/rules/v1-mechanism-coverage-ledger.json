@@ -114,7 +114,7 @@
         "dnd.srd-5.2.1.profile.json: timingPoints/economy",
         "resolutionTurnOps.ts"
       ],
-      "currentState": "Generic turn economy already owns Action, Bonus Action, Reaction, movement budget, extra Action, and extra Attack state; generic frequency owns once/turn, once/round, and once/resolution tokens; the authoritative turn lifecycle emits begin/end turn and turn-clock events; stored invocation proves identity-independent off-turn execution. B remains INCOMPLETE only for the remaining generic triggered-window/timing-dispatch matrix: those semantic event points and ordering are the unresolved Family P event vocabulary (with special initiative-count timing separately blocked in AC), so adding a second B-specific dispatcher would duplicate ownership.",
+      "currentState": "Generic turn economy owns Action, Bonus Action, Reaction, movement budget, extra Action, and extra Attack state; generic frequency owns once/turn, once/round, and once/resolution tokens; the authoritative turn lifecycle emits begin/end turn and turn-clock events; stored invocation proves identity-independent off-turn execution. Family P is IMPLEMENTED and supplies the shared semantic triggered-window vocabulary through the same Resolver transaction, so Family B does not need or permit a second timing dispatcher. Special initiative-count decisions remain owned by Family AC and are not duplicated as ordinary turn/action-economy semantics in B.",
       "requiredSemantics": [
         "Action",
         "Bonus Action",
@@ -131,27 +131,32 @@
         "once per turn"
       ],
       "transactionDomain": "Session Resolver turn transaction",
-      "disposition": "INCOMPLETE",
+      "disposition": "IMPLEMENTED",
       "implementationEvidence": [
         "commonPlayOperationRuntime.ts shared PaymentContract parsing/lowering",
         "commonPlayDefinitionRuntime.test.ts all five manual lowerers",
         "turnEconomy.ts Action/Bonus Action/Reaction/movement/extra action/extra attack state",
         "commonPlayFrequencyRuntime.ts once/turn/round/resolution tokens",
         "resolutionTurnOps.ts authoritative begin/end turn operations",
-        "commonPlayStoredInvocationRuntime.ts off-turn structural trigger execution"
+        "commonPlayStoredInvocationRuntime.ts off-turn structural trigger execution",
+        "commonPlaySemanticEventRuntime.ts plus implemented Family P provide the shared semantic triggered-window vocabulary consumed by turn/economy resolutions without a B-specific dispatcher"
       ],
       "productionEvidence": [
         "installedCommonPlayLoweredFamiliesProduction.test.ts all non-operation lowerers and Undo",
         "583ff38c generic Action/Bonus Action/Reaction payment production",
         "fbcee3c6 turn-clock event-native lifecycle",
         "c87402f9 off-turn stored invocation Host/Client/reconnect/Undo",
-        "72a2c7fd round-wrap elapsed lifecycle connected proof"
+        "72a2c7fd round-wrap elapsed lifecycle connected proof",
+        "connectedActorTurnRuleProduction.test.ts unknown installed actor-owned turn-start/end rules execute through authoritative connected turn transactions",
+        "installedCommonPlaySemanticOutcomeProduction.test.ts unknown installed semantic outcome triggers execute through the shared production Common Play/Resolver path"
       ],
       "identityInvarianceEvidence": [
         "commonPlayResourceEconomyRuntime.test.ts renamed definition",
         "installedCommonPlayLoweredFamiliesProduction.test.ts arbitrary external identities",
         "c87402f9 arbitrary installed stored-invocation identity",
-        "installed Common Play payment/turn lifecycle rename proofs retained in STATE"
+        "installed Common Play payment/turn lifecycle rename proofs retained in STATE",
+        "connectedActorTurnRuleProduction.test.ts arbitrary installed actor-rule identities preserve turn-trigger semantics",
+        "installedCommonPlaySemanticOutcomeProduction.test.ts arbitrary module/content/mechanic renames preserve semantic triggered-window behavior"
       ],
       "connectedEvidenceIfRelevant": [
         "installedCommonPlayLoweredFamiliesProduction.test.ts Host/Client payment convergence and Undo",
@@ -159,11 +164,7 @@
         "c87402f9 connected off-turn stored invocation exactly-once proof"
       ],
       "persistenceEvidenceIfRelevant": [],
-      "remainingNamedSeams": [
-        "generic triggered-window event vocabulary and ordering remain owned by incomplete Family P",
-        "special initiative-count timing remains separately blocked by Family AC session timing authority",
-        "do not add a B-specific turn/trigger dispatcher while P/AC contracts are unresolved"
-      ],
+      "remainingNamedSeams": [],
       "connectedRelevant": true,
       "persistenceRelevant": false
     },
