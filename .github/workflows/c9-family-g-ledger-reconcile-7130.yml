@@ -1,0 +1,70 @@
+name: C9 Family G Ledger Reconcile 7130
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-g-ledger-reconcile-7130.yml
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Reconcile Family G evidence
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path("docs/rules/v1-mechanism-coverage-ledger.json")
+          data = json.loads(path.read_text())
+          row = next(row for row in data["rows"] if row["family"] == "G")
+          row["currentState"] = (
+              "Provider/manual authority has production-verified standard distance, line-of-effect, Total Cover, and area-membership facts with normalized authoritative answers, identity invariance, connected authority routing, and same-session owner reconnect/retry replay with duplicate idempotence. Family G remains incomplete for engine-owned geometry breadth (adjacency/reach/size and shape intersection/placement) and process-durable restart persistence for spatial authority decisions."
+          )
+          production = "C9 Family G Spatial Reconnect run 33310541111: commonPlaySpatialFactRuntime, connected authority routing/dispatch, legacy execution boundary, V1 coverage checker, and tsc --noEmit passed; spatial.area-members replay after owner rebind normalized membership and duplicate delivery resolved exactly once"
+          connected = "connectedCommonPlayAuthorityFactRouting.test.ts proves spatial.area-members pending authority requests resend to a rebound owner peer, answered Client responses replay, Host target membership normalization is deterministic, and duplicate replay is idempotent"
+          if production not in row["productionEvidence"]:
+              row["productionEvidence"].append(production)
+          if connected not in row["connectedEvidenceIfRelevant"]:
+              row["connectedEvidenceIfRelevant"].append(connected)
+          row["remainingNamedSeams"] = [
+              "engine-owned adjacency/reach/size-space and line/cone/cube/sphere/cylinder/emanation intersection geometry remain incomplete",
+              "position/artifact placement geometry is not yet converged on the standard spatial fact authority path",
+              "process-durable restart persistence for unresolved or resolved spatial authority decisions remains absent",
+          ]
+          path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n")
+          PY
+      - name: Verify V1 mechanism ledger
+        run: node scripts/check-v1-mechanism-coverage.mjs
+      - name: Commit reconciled evidence and retire verifier
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/c9-family-g-ledger-reconcile-7130.yml
+          git add docs/rules/v1-mechanism-coverage-ledger.json
+          git commit -m "docs(c9): record spatial reconnect evidence"
+          for attempt in 1 2 3 4 5; do
+            git fetch origin agent/c9-gate-n-coverage-reconciliation
+            git rebase origin/agent/c9-gate-n-coverage-reconciliation
+            if git push origin HEAD:agent/c9-gate-n-coverage-reconciliation; then
+              exit 0
+            fi
+            sleep 2
+          done
+          exit 1
