@@ -35,13 +35,22 @@ jobs:
 
           source=Path('src/app/commonPlayInterceptorProductionRuntimeAdapter.ts')
           text=source.read_text(encoding='utf-8')
-          old='''          targetInvisible:false,\n          targetHidden:false,\n'''
-          new='''          targetInvisible:runtime.effects.some((effect)=>effect.targetId===subjectId&&effect.conditionId==="invisible"&&!effect.suppression),\n          targetHidden:false,\n'''
+          old='''function composedRelationSenses(relation:NonNullable<ReturnType<typeof authoritativeCommonPlaySpatialRelation>>) {\n  if(relation.light===undefined||relation.obscurement===undefined)return undefined;\n  return resolveCommonPlaySenses(relation.observerSenses??[{kind:"normal-sight"}],{\n    distanceFeet:relation.distanceFeet,\n    light:relation.light==="darkness"?"dark":relation.light,\n    obscurement:relation.obscurement,\n    lineOfSight:relation.visible,\n    lineOfEffect:relation.cover!=="total",\n    targetInvisible:relation.targetInvisible??false,\n    targetHidden:false,\n    targetAudible:relation.targetAudible??false,\n    observerCanHear:relation.observerCanHear??false,\n    sharedGroundContact:relation.sharedGroundContact??false,\n  });\n}\n'''
+          new='''function composedRelationSenses(relation:NonNullable<ReturnType<typeof authoritativeCommonPlaySpatialRelation>>,resolverTargetInvisible=false) {\n  if(relation.light===undefined||relation.obscurement===undefined)return undefined;\n  return resolveCommonPlaySenses(relation.observerSenses??[{kind:"normal-sight"}],{\n    distanceFeet:relation.distanceFeet,\n    light:relation.light==="darkness"?"dark":relation.light,\n    obscurement:relation.obscurement,\n    lineOfSight:relation.visible,\n    lineOfEffect:relation.cover!=="total",\n    targetInvisible:(relation.targetInvisible??false)||resolverTargetInvisible,\n    targetHidden:false,\n    targetAudible:relation.targetAudible??false,\n    observerCanHear:relation.observerCanHear??false,\n    sharedGroundContact:relation.sharedGroundContact??false,\n  });\n}\n'''
           if old not in text and new not in text:
-              raise SystemExit('production visibility anchor not found')
+              raise SystemExit('special-senses composition anchor not found')
           if old in text:
               text=text.replace(old,new,1)
-              source.write_text(text,encoding='utf-8')
+
+          old='''      const relation=authoritativeCommonPlaySpatialRelation(internal.scene,candidate.sourceActorId,subjectId);\n      if(!relation)return {status:"unknown"};\n'''
+          new='''      const relation=authoritativeCommonPlaySpatialRelation(internal.scene,candidate.sourceActorId,subjectId);\n      if(!relation)return {status:"unknown"};\n      const resolverTargetInvisible=runtime.effects.some((effect)=>effect.targetId===subjectId&&effect.conditionId==="invisible"&&!effect.suppression);\n'''
+          if old not in text and new not in text:
+              raise SystemExit('relation runtime anchor not found')
+          if old in text:
+              text=text.replace(old,new,1)
+
+          text=text.replace('const composed=composedRelationSenses(relation);','const composed=composedRelationSenses(relation,resolverTargetInvisible);')
+          source.write_text(text,encoding='utf-8')
 
           test_path=Path('tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts')
           test_text=test_path.read_text(encoding='utf-8')
@@ -66,5 +75,5 @@ jobs:
           if git diff --cached --quiet; then
             exit 0
           fi
-          git commit -m "fix(c9): respect Resolver-owned Invisible sight"
+          git commit -m "fix(c9): compose Resolver Invisible with special senses"
           git push --force origin HEAD:agent/c9-h-invisible-verified-71304
