@@ -1,0 +1,120 @@
+name: C9 Family J Loading Repair 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-j-loading-repair-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Apply, verify, and publish structural Loading
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch=agent/c9-gate-n-coverage-reconciliation
+          self=.github/workflows/c9-family-j-loading-repair-71304.yml
+          stale=.github/workflows/c9-family-j-loading-71304.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in $(seq 1 8); do
+            git fetch origin "$branch"
+            git reset --hard "origin/$branch"
+            python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          runtime=Path('src/app/productionPlayRuntimeAdapter.ts')
+          text=runtime.read_text(encoding='utf-8')
+          if 'loading:definition.properties?.includes("loading")??false' not in text:
+              text=text.replace('if(!definition)return {rangeFeet:5};','if(!definition)return {rangeFeet:5,loading:false};',1)
+              old='return {rangeFeet:rangeFeet?Number(rangeFeet):5,...(ability?{ability}:{})};'
+              new='return {rangeFeet:rangeFeet?Number(rangeFeet):5,...(ability?{ability}:{}),loading:definition.properties?.includes("loading")??false};'
+              if old not in text:
+                  raise SystemExit('weapon runtime fact return anchor missing')
+              text=text.replace(old,new,1)
+          if 'const baseAttacksPerAction=weaponAttacksPerAction(character);' not in text:
+              old='const attacksPerAction=weaponAttacksPerAction(character);\n  return character.attacks.map((attack,index)=>{'
+              new='const baseAttacksPerAction=weaponAttacksPerAction(character);\n  return character.attacks.map((attack,index)=>{'
+              if old not in text:
+                  raise SystemExit('attack count anchor missing')
+              text=text.replace(old,new,1)
+              anchor='    const runtimeFact=weaponRuntimeFact(character,attack);\n'
+              if anchor not in text:
+                  raise SystemExit('runtime fact anchor missing')
+              text=text.replace(anchor,anchor+'    const attacksPerAction=runtimeFact.loading?1:baseAttacksPerAction;\n',1)
+          spread='        ...runtimeFact,\n'
+          explicit='        rangeFeet:runtimeFact.rangeFeet,\n        ...(runtimeFact.ability?{ability:runtimeFact.ability}:{}),\n'
+          if spread in text:
+              text=text.replace(spread,explicit,1)
+          elif explicit not in text:
+              raise SystemExit('runtime attack projection anchor missing')
+          runtime.write_text(text,encoding='utf-8')
+
+          test_path=Path('tests/ui/c9FamilyJStructuralWeaponSource.test.ts')
+          test=test_path.read_text(encoding='utf-8')
+          if 'assert.equal(projected.attacksPerAction,2);' not in test:
+              anchor='  assert.equal(projected.runtimeAttack?.ability,"dex");\n'
+              if anchor not in test:
+                  raise SystemExit('structural source assertion anchor missing')
+              test=test.replace(anchor,anchor+'  assert.equal(projected.attacksPerAction,2);\n',1)
+          marker='presentation text alone must not imply Loading'
+          if marker not in test:
+              anchor='  assert.equal(projected.runtimeAttack?.ability,undefined);\n'
+              if anchor not in test:
+                  raise SystemExit('presentation assertion anchor missing')
+              test=test.replace(anchor,anchor+'  assert.equal(projected.attacksPerAction,2,"presentation text alone must not imply Loading");\n',1)
+          title='Loading is derived from the structurally linked weapon source and limits Extra Attack'
+          if title not in test:
+              test += '''\n\ntest("Loading is derived from the structurally linked weapon source and limits Extra Attack",async()=>{\n  const adapter=new MockAdapter();\n  const character=source(adapter);\n  const attack=character.attacks.find((candidate)=>candidate.id==="action.shortbow");\n  const item=character.items.find((candidate)=>candidate.id==="item.shortbow.aelar");\n  assert.ok(attack);assert.ok(item);\n  attack.name="Renamed Ranged Attack";\n  item.name="Unrelated Equipment";item.nameEn="Presentation Removed";\n  item.definitionId="dnd.srd521.item.weapon.light-crossbow";\n  const snapshot=await adapter.startProductionLocalPlay();\n  const projected=snapshot.scene.actionsByActor[character.id]?.find((candidate)=>candidate.id===attack.id);\n  assert.ok(projected);\n  assert.equal(projected.runtimeAttack?.rangeFeet,80);\n  assert.equal(projected.runtimeAttack?.ability,"dex");\n  assert.equal(projected.attacksPerAction,1,"Loading weapon must allow only one attack from the Attack action");\n});\n'''
+          test_path.write_text(test,encoding='utf-8')
+          PY
+            npm run generate:content
+            node --import tsx --test tests/ui/c9FamilyJStructuralWeaponSource.test.ts
+            node scripts/check-legacy-execution-boundary.mjs
+            node scripts/check-v1-mechanism-coverage.mjs
+            npm exec tsc -- --noEmit
+            python3 - <<'PY'
+          import json
+          from pathlib import Path
+          ledger=Path('docs/rules/v1-mechanism-coverage-ledger.json')
+          data=json.loads(ledger.read_text(encoding='utf-8'))
+          row=next(entry for entry in data['rows'] if entry['family']=='J')
+          additions={
+            'implementationEvidence':'productionPlayRuntimeAdapter.ts derives the Loading attack-count limit from the structurally linked source weapon definition and caps only that projected weapon action at one attack without presentation-name dispatch',
+            'productionEvidence':'c9FamilyJStructuralWeaponSource.test.ts proves a level-5 Fighter keeps two attacks with a structurally linked non-Loading Shortbow, is capped to one attack when the same renamed action is structurally linked to a Loading Light Crossbow, and does not infer Loading from presentation text alone',
+            'identityInvarianceEvidence':'c9FamilyJStructuralWeaponSource.test.ts derives Loading from the linked weapon definition after attack/item presentation rename and proves presentation-only Light Crossbow text cannot select the mechanic',
+          }
+          for field,value in additions.items():
+              if value not in row[field]: row[field].append(value)
+          sentence=' Loading now constrains structurally linked weapon action projection from the source weapon property itself, so a Loading weapon is capped at one attack without presentation-name or content-action-ID dispatch.'
+          if sentence.strip() not in row['currentState']:
+              row['currentState']=row['currentState'].rstrip()+sentence
+          row['currentState']=row['currentState'].replace('and Loading composition.','.')
+          row['remainingNamedSeams']=[seam.replace('multiattack/Extra Attack/replacement and Loading constraints remain incomplete','multiattack/Extra Attack/replacement remains incomplete').replace('replacement and Loading constraints remain incomplete','replacement remains incomplete') for seam in row['remainingNamedSeams']]
+          ledger.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          PY
+            rm -f "$stale" "$self"
+            git add -A
+            if git diff --cached --quiet; then exit 0; fi
+            git commit -m "feat(c9): enforce structural Loading constraint"
+            if git push origin HEAD:"$branch"; then exit 0; fi
+            sleep 1
+          done
+          exit 1
