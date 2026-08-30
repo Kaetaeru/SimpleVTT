@@ -1194,6 +1194,12 @@
           "type": "string",
           "minLength": 1
         },
+        "choice": {
+          "enum": [
+            "keep-existing",
+            "take-new"
+          ]
+        },
         "when": {
           "$ref": "#/$defs/predicate"
         }

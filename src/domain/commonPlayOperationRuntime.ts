@@ -99,6 +99,13 @@ type CommonPlayHealingApply={
   target?:CommonPlayHpTarget;
 };
 
+type CommonPlayTemporaryHpGrant={
+  kind:"temp-hp.grant";
+  amount:LiteralNumberExpression;
+  target?:CommonPlayHpTarget;
+  choice?:"keep-existing"|"take-new";
+};
+
 type CommonPlayRollModify={
   kind:"roll.modify";
   mode:"advantage"|"disadvantage"|"add-die"|"subtract-die"|"add-flat"|"target-add"|"reroll"|"replace"|"minimum";
@@ -139,6 +146,7 @@ export type CommonPlayOperation=
   |CommonPlayEconomyModify
   |CommonPlayDamageApply
   |CommonPlayHealingApply
+  |CommonPlayTemporaryHpGrant
   |CommonPlayMovementDefinition
   |CommonPlayRollModify;
 
@@ -216,6 +224,7 @@ const RECHARGE_RANGE_KEYS=new Set(["minimum","maximum"]);
 const ECONOMY_MODIFY_KEYS=new Set(["kind","bucket","amount"]);
 const DAMAGE_APPLY_KEYS=new Set(["kind","amount","damageType","target"]);
 const HEALING_APPLY_KEYS=new Set(["kind","amount","target"]);
+const TEMP_HP_GRANT_KEYS=new Set(["kind","amount","target","choice"]);
 const ROLL_MODIFY_KEYS=new Set(["kind","mode","value","dice"]);
 const MOVEMENT_RELOCATE_KEYS=new Set(["kind","mode","movementType","target","distance","costMultiplier","doesNotProvokeOpportunityAttacks","destinationFact"]);
 const FACT_QUERY_KEYS=new Set(["id","fact","subject","authority","visibility","unknownPolicy"]);
@@ -556,6 +565,17 @@ function parseOperation(value:unknown,label:string):CommonPlayOperation {
       ...(operation.target===undefined?{}:{target:hpTarget(operation.target,`${label}.target`)}),
     };
   }
+  if(operation.kind==="temp-hp.grant") {
+    supportedKeys(operation,TEMP_HP_GRANT_KEYS,label);
+    const choice=operation.choice;
+    if(choice!==undefined&&choice!=="keep-existing"&&choice!=="take-new") throw new DomainEvaluationError(`${label}.choice must be keep-existing or take-new`);
+    return {
+      kind:"temp-hp.grant",
+      amount:nonNegativeLiteralExpression(operation.amount,`${label}.amount`),
+      ...(operation.target===undefined?{}:{target:hpTarget(operation.target,`${label}.target`)}),
+      ...(choice===undefined?{}:{choice}),
+    };
+  }
   throw new DomainEvaluationError(`unsupported Common Play operation: ${String(operation.kind)}`);
 }
 
@@ -602,7 +622,7 @@ export function parseCommonPlayOperationDefinition(value:unknown,label="Common P
     };
   });
 for(const [index,entryPoint] of entryPoints.entries()) {
-  if((entryPoint.targeting?.max??1)>1&&entryPoint.operations.some((operation)=>(operation.kind==="damage.apply"||operation.kind==="healing.apply")&&operation.target==="target")) {
+  if((entryPoint.targeting?.max??1)>1&&entryPoint.operations.some((operation)=>(operation.kind==="damage.apply"||operation.kind==="healing.apply"||operation.kind==="temp-hp.grant")&&operation.target==="target")) {
     throw new DomainEvaluationError(`${label}.entryPoints[${index}] multi-target selection requires an explicit per-target effect contract`);
   }
 }
@@ -884,6 +904,18 @@ export function compileCommonPlayEntryPointOperations(
         kind:"healing",
         targetId:hpOperationTarget(operation.target,input),
         amount:literalInteger(operation.amount,"healing.apply amount"),
+      });
+      continue;
+    }
+
+    if(operation.kind==="temp-hp.grant") {
+      operations.push({
+        id:operationId,
+        kind:"temporary-hp",
+        targetId:hpOperationTarget(operation.target,input),
+        amount:literalInteger(operation.amount,"temp-hp.grant amount"),
+        source:`common-play:${supported.id}:${entryPoint.id}:operation:${index}`,
+        ...(operation.choice===undefined?{}:{choice:operation.choice}),
       });
       continue;
     }
