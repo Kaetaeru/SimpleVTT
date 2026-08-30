@@ -99,3 +99,38 @@ test("semantic outcomes dispatch active persistent-effect rules in the same reso
   assert.equal(Object.keys(resolved.results).some((id)=>id.includes("automatic:attack.hit")),true);
   assert.equal(Object.keys(resolved.results).some((id)=>id.includes("automatic:save.failure")),true);
 });
+
+test("Common Play emits idempotent rest completion semantic events independent of source identity",()=>{
+  const summarize=(sourceId:string)=>{
+    const request:PendingResolution={
+      id:`semantic-rest-${sourceId}`,
+      actorId:"hero",
+      sourceId,
+      expectedRevision:0,
+      operations:[
+        {id:"short-rest",kind:"short-rest",targetId:"hero",spends:[]},
+        {id:"long-rest",kind:"long-rest",targetId:"hero"},
+      ],
+    };
+    const committed=resolvePendingResolution(TEST_PROFILE,runtimeState(),request);
+    assert.equal(committed.status,"committed");
+    const enriched=appendCommonPlaySemanticOutcomeEvents(request,committed);
+    assert.equal(enriched.status,"committed");
+    if(enriched.status!=="committed") return [];
+    const restEvents=enriched.events.filter((event)=>event.kind.startsWith("rest.")).map((event)=>({
+      kind:event.kind,actorId:event.actorId,targetId:event.targetId,
+    }));
+    assert.deepEqual(restEvents,[
+      {kind:"rest.short.complete",actorId:"hero",targetId:"hero"},
+      {kind:"rest.long.complete",actorId:"hero",targetId:"hero"},
+    ]);
+    assert.equal(enriched.state.history.some((entry)=>entry.kind==="rest.short.complete"),true);
+    assert.equal(enriched.state.history.some((entry)=>entry.kind==="rest.long.complete"),true);
+    const replay=appendCommonPlaySemanticOutcomeEvents(request,enriched);
+    assert.equal(replay.status,"committed");
+    if(replay.status!=="committed") return [];
+    assert.equal(replay.events.filter((event)=>event.kind.startsWith("rest.")).length,2,"rest semantic enrichment must be idempotent");
+    return restEvents;
+  };
+  assert.deepEqual(summarize("external.first.rest-source"),summarize("renamed.unseen.rest-source"));
+});
