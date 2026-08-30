@@ -14,8 +14,6 @@ type CommonPlayArtifactOperation=
   | {kind:"artifact.repair";artifact:string;amount:ExpressionNode}
   | {kind:"artifact.relocate";artifact:string;placementRef:string}
   | {kind:"artifact.update";artifact:string;metadataPatch:Record<string,string|number|boolean>}
-  | {kind:"artifact.exposure.advance";artifact:string;seconds:ExpressionNode}
-  | {kind:"artifact.exposure.recover";artifact:string}
   | {kind:"artifact.remove";artifact:string};
 
 export interface CommonPlayArtifactActivationDefinition {
@@ -222,14 +220,6 @@ export function compileCommonPlayArtifactActivation(
     }
     if(operation.kind==="artifact.update") {
       operations.push({id:`common-play-artifact-update-${index+1}`,kind:"update-artifact",artifactId,metadataPatch:structuredClone(operation.metadataPatch)});
-      return;
-    }
-    if(operation.kind==="artifact.exposure.advance") {
-      operations.push({id:`common-play-exposure-advance-${index+1}`,kind:"advance-exposure",artifactId,seconds:artifactOperationAmount(state,input,operation.seconds,`artifact.exposure.advance ${operation.artifact}.seconds`)});
-      return;
-    }
-    if(operation.kind==="artifact.exposure.recover") {
-      operations.push({id:`common-play-exposure-recover-${index+1}`,kind:"recover-exposure",artifactId});
       return;
     }
     operations.push({id:`common-play-artifact-remove-${index+1}`,kind:"remove-artifact",artifactId});

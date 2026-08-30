@@ -218,7 +218,7 @@ export function lowerCommonPlay(
       definition:{...base(definition),entryPoints:[structuredClone(entryPoint)],artifactTemplates:structuredClone(templates)} as unknown as CommonPlayPersistentEffectDefinition,
     };
   }
-  const artifactOperationKinds=new Set(["artifact.spawn","artifact.damage","artifact.repair","artifact.relocate","artifact.update","artifact.remove","artifact.exposure.advance","artifact.exposure.recover"]);
+  const artifactOperationKinds=new Set(["artifact.spawn","artifact.damage","artifact.repair","artifact.relocate","artifact.update","artifact.remove"]);
   if([...operationKinds].some((kind)=>artifactOperationKinds.has(String(kind)))) {
     const artifactOperations=entryPoint.operations.filter((operation)=>artifactOperationKinds.has(String(operation.kind)));
     const portableOperations=entryPoint.operations.filter((operation)=>!artifactOperationKinds.has(String(operation.kind)));

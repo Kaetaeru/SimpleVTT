@@ -962,6 +962,8 @@ function operationExecutionInput(
     ...(movementProperties?{actorProperties:movementProperties,movementProperties}:{}),
     ...(Object.keys(movementFactAnswers).length?{movementFactAnswers}:{}),
     ...(entryPoint.test?{d20:{faces:d20Faces!,targetId:selectedTargetId,...(d20ModifierSelection??{})}}:{}),
+    exposureIntervalD20:(_operationIndex,_interval,test)=>({faces:[internal.d20(actionId,operationDieDrawIndex++)],targetId:actor.id,...(commonPlayTestModifierSelection(internal,state,actor.id,test.property)??{})}),
+    environmentFallDiceFaces:(_operationIndex,count)=>{const faces=rollFaces(internal,actionId,count,6,operationDieDrawIndex);operationDieDrawIndex+=count;return faces;},
     ...(itemPaymentResourceIds?{itemPaymentResourceIds}:{}),
     actionKind:entryPoint.test?.kind==="attack-roll"?"attack" as const:action.category==="spell"?"magic" as const:"other" as const,
     ...(projectedAction?.attacksPerAction===undefined?{}:{attacksPerAction:projectedAction.attacksPerAction}),

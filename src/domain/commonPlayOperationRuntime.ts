@@ -12,6 +12,8 @@ import { effectIsActive, resolveEffectModifiedProperty } from "./effects";
 import type { CommonPlayFactAnswer, CommonPlayFactQuery } from "./commonPlaySpatialFactRuntime";
 import { parseCommonPlaySelector, resolveCommonPlaySelector, type CommonPlaySelector, type CommonPlaySelectorCandidate } from "./commonPlaySelectorRuntime";
 import { SRD_521_CONDITIONS, type ConditionId } from "./conditions";
+import { advanceCommonPlayExposure } from "./commonPlayExposureRuntime";
+import { fallDamageDice } from "./commonPlayEnvironmentRuntime";
 
 type LiteralNumberExpression={value:number};
 type CommonPlayExpression=LiteralNumberExpression|Record<string,unknown>;
@@ -44,6 +46,10 @@ type CommonPlayMovementSpend={
   amount:CommonPlayExpression;
   activity:"mount"|"dismount";
 };
+type CommonPlayExposureAdvance={kind:"exposure.advance";artifact:string;seconds:CommonPlayExpression;onInterval:{test?:CommonPlayD20TestDefinition;operations:CommonPlayOperation[]}};
+type CommonPlayExposureRecover={kind:"exposure.recover";artifact:string};
+type CommonPlayEnvironmentFall={kind:"environment.fall";target:"actor"|"self"|"target";distanceFeet:CommonPlayExpression;feetPerDie:number;maximumDice:number;damageType:string};
+type CommonPlayTimeElapse={kind:"time.elapse";seconds:CommonPlayExpression};
 type CommonPlayMovementGrant={
   kind:"movement.grant";
   target:"actor"|"self";
@@ -222,6 +228,10 @@ export type CommonPlayOperation=
   |CommonPlayMovementGrant
   |CommonPlayMovementStand
   |CommonPlayMovementSpend
+  |CommonPlayExposureAdvance
+  |CommonPlayExposureRecover
+  |CommonPlayEnvironmentFall
+  |CommonPlayTimeElapse
   |CommonPlayConditionChange
   |CommonPlayEffectRemove
   |CommonPlayEffectSuppress
@@ -282,6 +292,8 @@ export interface CommonPlayOperationExecutionInput {
   itemPaymentResourceIds?:Record<number,string>;
   actionKind?:ActionUseKind;
   attacksPerAction?:number;
+  exposureIntervalD20?:(operationIndex:number,interval:number,test:CommonPlayD20TestDefinition)=>NonNullable<CommonPlayOperationExecutionInput["d20"]>;
+  environmentFallDiceFaces?:(operationIndex:number,count:number)=>number[];
 }
 
 type Obj=Record<string,unknown>;
@@ -321,6 +333,11 @@ const MOVEMENT_RELOCATE_KEYS=new Set(["kind","mode","movementType","target","dis
 const MOVEMENT_GRANT_KEYS=new Set(["kind","target","distance","maximumDistance","doesNotProvokeOpportunityAttacks"]);
 const MOVEMENT_STAND_KEYS=new Set(["kind","target"]);
 const MOVEMENT_SPEND_KEYS=new Set(["kind","target","amount","activity"]);
+const EXPOSURE_ADVANCE_KEYS=new Set(["kind","artifact","seconds","onInterval"]);
+const EXPOSURE_RECOVER_KEYS=new Set(["kind","artifact"]);
+const EXPOSURE_INTERVAL_KEYS=new Set(["test","operations"]);
+const ENVIRONMENT_FALL_KEYS=new Set(["kind","target","distanceFeet","feetPerDie","maximumDice","damageType"]);
+const TIME_ELAPSE_KEYS=new Set(["kind","seconds"]);
 const FACT_QUERY_KEYS=new Set(["id","fact","subject","authority","visibility","unknownPolicy"]);
 const DAMAGE_DICE=/^([0-9]+)d([0-9]+)([+-][0-9]+)?$/;
 
@@ -567,6 +584,27 @@ function parseCommonPlayInteraction(value:unknown,label:string):CommonPlayIntera
 
 function parseOperation(value:unknown,label:string):CommonPlayOperation {
   const operation=object(value,label);
+  if(operation.kind==="time.elapse") {supportedKeys(operation,TIME_ELAPSE_KEYS,label);return {kind:"time.elapse",seconds:numericExpression(operation.seconds,`${label}.seconds`)};}
+  if(operation.kind==="environment.fall") {
+    supportedKeys(operation,ENVIRONMENT_FALL_KEYS,label);
+    if(operation.target!=="actor"&&operation.target!=="self"&&operation.target!=="target")throw new DomainEvaluationError(`${label}.target must be actor, self, or target`);
+    if(!Number.isFinite(operation.feetPerDie)||Number(operation.feetPerDie)<=0||!Number.isInteger(operation.maximumDice)||Number(operation.maximumDice)<0)throw new DomainEvaluationError(`${label} fall dice parameters are invalid`);
+    return {kind:"environment.fall",target:operation.target,distanceFeet:numericExpression(operation.distanceFeet,`${label}.distanceFeet`),feetPerDie:Number(operation.feetPerDie),maximumDice:Number(operation.maximumDice),damageType:nonEmptyString(operation.damageType,`${label}.damageType`)};
+  }
+  if(operation.kind==="exposure.advance") {
+    supportedKeys(operation,EXPOSURE_ADVANCE_KEYS,label);
+    const interval=object(operation.onInterval,`${label}.onInterval`);supportedKeys(interval,EXPOSURE_INTERVAL_KEYS,`${label}.onInterval`);
+    if(!Array.isArray(interval.operations)||!interval.operations.length)throw new DomainEvaluationError(`${label}.onInterval.operations must contain operations`);
+    const operations=interval.operations.map((nested,index)=>parseOperation(nested,`${label}.onInterval.operations[${index}]`));
+    if(operations.some((nested)=>nested.kind==="exposure.advance"||nested.kind==="exposure.recover"))throw new DomainEvaluationError(`${label}.onInterval cannot nest exposure operations`);
+    const test=interval.test===undefined?undefined:parseD20Test(interval.test,`${label}.onInterval.test`);
+    if(test?.roller==="target")throw new DomainEvaluationError(`${label}.onInterval.test roller must be actor`);
+    return {kind:"exposure.advance",artifact:nonEmptyString(operation.artifact,`${label}.artifact`),seconds:numericExpression(operation.seconds,`${label}.seconds`),onInterval:{...(test?{test}:{}),operations}};
+  }
+  if(operation.kind==="exposure.recover") {
+    supportedKeys(operation,EXPOSURE_RECOVER_KEYS,label);
+    return {kind:"exposure.recover",artifact:nonEmptyString(operation.artifact,`${label}.artifact`)};
+  }
   if(operation.kind==="property.modify") {
     supportedKeys(operation,PROPERTY_MODIFY_KEYS,label);
     const mode=operation.operation;
@@ -1091,6 +1129,39 @@ export function compileCommonPlayEntryPointOperations(
     : 0;
   for(const [index,operation] of entryPoint.operations.entries()) {
     const operationId=`${input.resolutionId}:operation:${index}`;
+    if(operation.kind==="time.elapse") {const seconds=evaluateExpression(operation.seconds as ExpressionNode,(property)=>{const value=input.actorProperties?.[property];if(!Number.isFinite(value))throw new DomainEvaluationError(`time.elapse property is unavailable: ${property}`);return Number(value);});if(!Number.isFinite(seconds)||seconds<0)throw new DomainEvaluationError("time.elapse seconds must be non-negative and finite");operations.push({id:operationId,kind:"advance-time",elapsedSeconds:state.clock.elapsedSeconds+seconds});continue;}
+    if(operation.kind==="environment.fall") {
+      const distanceFeet=evaluateExpression(operation.distanceFeet as ExpressionNode,(property)=>{const value=input.actorProperties?.[property];if(!Number.isFinite(value))throw new DomainEvaluationError(`environment.fall property is unavailable: ${property}`);return Number(value);});
+      const count=fallDamageDice(distanceFeet,operation.feetPerDie,operation.maximumDice),faces=input.environmentFallDiceFaces?.(index,count);
+      if(!faces||faces.length!==count)throw new DomainEvaluationError(`environment.fall requires ${count} authoritative d6 face(s)`);
+      const targetId=hpOperationTarget(operation.target,input),creatureKind=input.creatureKinds?.[targetId];if(!creatureKind)throw new DomainEvaluationError(`environment.fall target is not a classified runtime combatant: ${targetId}`);
+      const rollId=`${operationId}:roll`;operations.push({id:rollId,kind:"damage-roll",request:{dice:[{source:`common-play:${supported.id}:${entryPoint.id}:fall`,sides:6,count,faces}]}});operations.push({id:operationId,kind:"damage",targetId,damageType:operation.damageType,amount:{operationId:rollId,field:"total"},creatureKind});
+      continue;
+    }
+    if(operation.kind==="exposure.advance"||operation.kind==="exposure.recover") {
+      const matches=(state.artifacts??[]).filter((artifact)=>artifact.artifactKind==="exposure"&&artifact.sourceId===supported.id&&artifact.sourceActorId===input.actorId&&artifact.templateId===operation.artifact&&artifact.exposure);
+      if(matches.length!==1)throw new DomainEvaluationError(`exposure artifact ${operation.artifact} must resolve to exactly one active instance`);
+      const artifact=matches[0];
+      if(operation.kind==="exposure.recover") {
+        operations.push({id:operationId,kind:"recover-exposure",artifactId:artifact.id});
+        continue;
+      }
+      const seconds=evaluateExpression(operation.seconds as ExpressionNode,(property)=>{
+        const value=input.actorProperties?.[property];
+        if(!Number.isFinite(value))throw new DomainEvaluationError(`exposure.advance property is unavailable: ${property}`);
+        return Number(value);
+      });
+      const preview=advanceCommonPlayExposure(artifact.exposure!,artifact.exposure!.revision,seconds);
+      operations.push({id:operationId,kind:"advance-exposure",artifactId:artifact.id,seconds});
+      for(const interval of preview.newlyTriggeredIntervals) {
+        const intervalId=`${input.resolutionId}:exposure:${index}:interval:${interval}`;
+        const test=operation.onInterval.test,d20=test?input.exposureIntervalD20?.(index,interval,test):undefined;
+        if(test&&!d20)throw new DomainEvaluationError("exposure interval test requires authoritative d20 input");
+        const nested=compileCommonPlayEntryPointOperations(profile,state,{schemaVersion:supported.schemaVersion,id:supported.id,entryPoints:[{id:"interval",invocation:"manual",...(test?{test}:{}),operations:operation.onInterval.operations}]},{...input,resolutionId:intervalId,entryPointId:"interval",...(d20?{d20}: {})});
+        operations.push(...nested.operations);
+      }
+      continue;
+    }
     if(operation.kind==="roll.modify") continue;
     if(operation.kind==="property.modify") {
     const targetId=operation.target==="actor"?input.actorId:input.targetId;
