@@ -53,6 +53,7 @@ jobs:
           }
           NODE
 
+            npm run generate:content
             node --import tsx --test \
               tests/ui/c9FamilyJSpatialAttackProduction.test.ts \
               tests/ui/c9FamilyJPortableControlProduction.test.ts \
