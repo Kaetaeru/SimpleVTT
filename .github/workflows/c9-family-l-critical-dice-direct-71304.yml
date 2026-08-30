@@ -1,0 +1,115 @@
+name: C9 Family L Critical Dice Direct 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-l-critical-dice-direct-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  verify-and-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Patch portable critical damage dice
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          domain=Path('src/domain/commonPlayOperationRuntime.ts')
+          text=domain.read_text(encoding='utf-8')
+          marker='const criticalFrom=entryPoint.test?.kind==="attack-roll"'
+          if marker not in text:
+              old='''      const propertyDamageFlat=index===firstAttackHitDamageIndex?attackDamageFlat:0;\n      let amount:number|{operationId:string;field:"total";multiplier?:number;rounding?:"floor"|"ceil"|"round"};'''
+              new='''      const propertyDamageFlat=index===firstAttackHitDamageIndex?attackDamageFlat:0;\n      const criticalFrom=entryPoint.test?.kind==="attack-roll"&&(operation.when===undefined||operation.when.right.value==="success")\n        ?`${input.resolutionId}:test`\n        :undefined;\n      let amount:number|{operationId:string;field:"total";multiplier?:number;rounding?:"floor"|"ceil"|"round"};'''
+              if text.count(old)!=1:
+                  raise SystemExit(f'property damage anchor count: {text.count(old)}')
+              text=text.replace(old,new,1)
+
+              old='''          id:rollId,\n          kind:"damage-roll",\n          ...(when?{when}:{}),\n          request:{'''
+              new='''          id:rollId,\n          kind:"damage-roll",\n          ...(when?{when}:{}),\n          ...(criticalFrom?{criticalFrom}:{}),\n          request:{'''
+              if text.count(old)!=1:
+                  raise SystemExit(f'damage-roll anchor count: {text.count(old)}')
+              text=text.replace(old,new,1)
+
+              old='''        id:operationId,\n        kind:"damage",\n        ...(when?{when}:{}),\n        targetId,'''
+              new='''        id:operationId,\n        kind:"damage",\n        ...(when?{when}:{}),\n        ...(criticalFrom?{criticalFrom}:{}),\n        targetId,'''
+              if text.count(old)!=1:
+                  raise SystemExit(f'damage anchor count: {text.count(old)}')
+              text=text.replace(old,new,1)
+              domain.write_text(text,encoding='utf-8')
+
+          adapter=Path('src/app/installedCommonPlayRuntimeAdapter.ts')
+          text=adapter.read_text(encoding='utf-8')
+          marker='const criticalEligible=entryPoint.test?.kind==="attack-roll"'
+          if marker not in text:
+              old='''function damageDiceFaces(\n  internal:AdapterState,\n  actionId:string,\n  entryPoint:CommonPlayOperationDefinition["entryPoints"][number],\n  startingDrawIndex:number,\n) {\n  const faces:Record<number,number[]>={};\n  let drawIndex=startingDrawIndex;\n  for(const [operationIndex,operation] of entryPoint.operations.entries()) {\n    if(operation.kind!=="damage.apply"||typeof operation.amount!=="string") continue;\n    const formula=parseCommonPlayDamageDiceFormula(operation.amount);\n    faces[operationIndex]=Array.from({length:formula.count},()=>{\n      const limit=20-(20%formula.sides);\n      let face:number;\n      do face=internal.d20(actionId,drawIndex++); while(face>limit);\n      return ((face-1)%formula.sides)+1;\n    });\n  }\n  return faces;\n}'''
+              new='''function damageDiceFaces(\n  internal:AdapterState,\n  actionId:string,\n  entryPoint:CommonPlayOperationDefinition["entryPoints"][number],\n  startingDrawIndex:number,\n) {\n  const faces:Record<number,number[]>={};\n  let drawIndex=startingDrawIndex;\n  for(const [operationIndex,operation] of entryPoint.operations.entries()) {\n    if(operation.kind!=="damage.apply"||typeof operation.amount!=="string") continue;\n    const formula=parseCommonPlayDamageDiceFormula(operation.amount);\n    const criticalEligible=entryPoint.test?.kind==="attack-roll"&&(operation.when===undefined||operation.when.right.value==="success");\n    const count=formula.count*(criticalEligible?2:1);\n    faces[operationIndex]=Array.from({length:count},()=>{\n      const limit=20-(20%formula.sides);\n      let face:number;\n      do face=internal.d20(actionId,drawIndex++); while(face>limit);\n      return ((face-1)%formula.sides)+1;\n    });\n  }\n  return faces;\n}'''
+              if text.count(old)!=1:
+                  raise SystemExit(f'damageDiceFaces anchor count: {text.count(old)}')
+              adapter.write_text(text.replace(old,new,1),encoding='utf-8')
+
+          test_file=Path('tests/ui/c9FamilyLDamageDefenseProduction.test.ts')
+          text=test_file.read_text(encoding='utf-8')
+          test_name='unknown installed attack-roll doubles damage dice but not flat damage on critical with rename invariance and Undo'
+          if test_name not in text:
+              anchor='''function hp(snapshot:Awaited<ReturnType<MockAdapter["getSnapshot"]>>,actorId:string) {'''
+              helper='''function criticalPackagePayload(prefix:string) {\n  const moduleId=`${prefix}.module`,contentId=`${prefix}.option`,mechanicId=`${prefix}.damage`;\n  return {moduleId,contentId,mechanicId,json:JSON.stringify({\n    schemaVersion:"0.1-draft",moduleId,moduleVersion:"1",\n    rulesProfile:{id:"dnd.srd-5.2.1",version:"0.1-draft"},defaultLocale:"en",\n    source:{document:"Portable Critical Damage Probe",version:"1",license:"CC0",srdDerived:false},\n    dependencies:[],conflicts:[],capabilities:[],content:[{\n      id:contentId,category:"option",\n      presentation:{defaultLocale:"en",originalName:"Portable Critical Damage Probe",locales:{en:{name:"Portable Critical Damage Probe"}}},\n      mechanics:[{kind:"common-play",config:{schemaVersion:"0.2-draft",id:mechanicId,entryPoints:[{\n        id:"attack",invocation:"manual",targeting:{from:"targets",min:1,max:1},\n        test:{kind:"attack-roll",roller:"actor",dc:{value:10}},\n        operations:[{kind:"damage.apply",amount:"1d6+2",damageType:"fire",target:"target",when:{op:"eq",left:{ref:"test.outcome"},right:{value:"success"}}}],\n      }]}}],\n    }],\n  })};\n}\n\n'''
+              if text.count(anchor)!=1:
+                  raise SystemExit(f'critical helper anchor count: {text.count(anchor)}')
+              text=text.replace(anchor,helper+anchor,1)
+
+              anchor='''async function executeInstantDeath(prefix:string) {'''
+              helper='''async function executeCritical(prefix:string) {\n  const adapter=new MockAdapter();\n  const pack=criticalPackagePayload(prefix);\n  setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());\n  const preview=await adapter.previewContentImport(pack.json);\n  assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));\n  await adapter.activateContentImport();\n  await adapter.startInitiative();\n  await adapter.setCurrentActor("char.aelar");\n  const action=installedCommonPlayActionId({catalogId:catalogQualifiedId(pack.contentId,pack.moduleId,"1"),mechanicId:pack.mechanicId,entryPointId:"attack"});\n  const before=hp(await adapter.getSnapshot(),TARGET_ID);\n  (adapter as unknown as {queuedD20:number|null}).queuedD20=20;\n  const snapshot=await adapter.resolveAction(action,[TARGET_ID]);\n  assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));\n  assert.equal(snapshot.resolution?.critical,true);\n  const component=snapshot.resolution?.damageComponents[0];\n  assert.equal(component?.raw,14,"critical must roll 2d6 but add the +2 flat contribution only once");\n  assert.equal(component?.adjusted,14);\n  await adapter.undoLastResolution();\n  assert.equal(hp(await adapter.getSnapshot(),TARGET_ID),before,"Undo must restore HP after portable critical damage");\n  return component?.raw;\n}\n\n'''
+              if text.count(anchor)!=1:
+                  raise SystemExit(f'executeCritical anchor count: {text.count(anchor)}')
+              text=text.replace(anchor,helper+anchor,1)
+
+              anchor='''test("unknown installed damage.apply enforces character instant-death overkill with rename invariance and Undo",async()=>{'''
+              block='''test("unknown installed attack-roll doubles damage dice but not flat damage on critical with rename invariance and Undo",async()=>{\n  assert.equal(await executeCritical("external.family-l-critical-dice"),14);\n  assert.equal(await executeCritical("completely.renamed-family-l-critical-dice"),14);\n});\n\n'''
+              if text.count(anchor)!=1:
+                  raise SystemExit(f'critical test anchor count: {text.count(anchor)}')
+              test_file.write_text(text.replace(anchor,block+anchor,1),encoding='utf-8')
+          PY
+      - name: Verify portable critical damage dice
+        run: |
+          npx tsx --test tests/ui/c9FamilyLDamageDefenseProduction.test.ts
+          node scripts/check-legacy-execution-boundary.mjs
+          node scripts/check-v1-mechanism-coverage.mjs
+          npx tsc -p tsconfig.json --noEmit
+      - name: Publish verified implementation
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch=agent/c9-gate-n-coverage-reconciliation
+          wf=.github/workflows/c9-family-l-critical-dice-direct-71304.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm -f "$wf"
+          git add src/domain/commonPlayOperationRuntime.ts src/app/installedCommonPlayRuntimeAdapter.ts tests/ui/c9FamilyLDamageDefenseProduction.test.ts
+          git commit -m "feat(c9): route portable critical damage dice"
+          for attempt in 1 2 3 4 5; do
+            git fetch origin "$branch"
+            if git rebase "origin/$branch"; then
+              if git push origin HEAD:"$branch"; then exit 0; fi
+            else
+              git rebase --abort || true
+              exit 1
+            fi
+          done
+          exit 1
