@@ -1,0 +1,30 @@
+name: C9 Family R Ordering Kernel 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - src/domain/commonPlaySimultaneousOrderingRuntime.ts
+      - tests/domain/commonPlaySimultaneousOrderingRuntime.test.ts
+      - .github/workflows/c9-family-r-ordering-kernel-71304.yml
+
+jobs:
+  ordering-kernel:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run generate:content
+      - name: Verify Family R ordering kernel
+        run: node --import tsx --test tests/domain/commonPlaySimultaneousOrderingRuntime.test.ts
+      - name: Verify V1 coverage ledger
+        run: node scripts/check-v1-mechanism-coverage.mjs
+      - name: Verify legacy execution boundary
+        run: node scripts/check-legacy-execution-boundary.mjs
+      - name: Typecheck application
+        run: npm exec tsc -- --noEmit
