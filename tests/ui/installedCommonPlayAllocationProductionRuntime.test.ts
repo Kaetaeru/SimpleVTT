@@ -121,6 +121,26 @@ test("portable allocation semantics are invariant under external identity rename
   assert.deepEqual(await execute("external-allocation-a"),await execute("totally-renamed-allocation-b"));
 });
 
+test("portable allocation remains executable after installed-content persistence rehydration",async()=>{
+  const ids=probeIds("persisted-allocation");
+  const store=new MemoryInstalledContentStore();
+  const installer=new MockAdapter();
+  await install(installer,store,ids);
+
+  const restarted=new MockAdapter();
+  setInstalledContentStoreForTests(restarted,store);
+  await ready(restarted);
+  await restarted.resolveAction(actionId(ids),ALLOCATION_TARGETS);
+  let snapshot=await restarted.getSnapshot();
+  assert.equal(snapshot.resolution?.stage,"complete");
+  assert.deepEqual(snapshot.resolution?.targetIds,["combatant.goblin-a","combatant.goblin-b"]);
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.extraActions?.length,1);
+
+  await restarted.undoLastResolution();
+  snapshot=await restarted.getSnapshot();
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.extraActions,undefined);
+});
+
 test("portable allocation downstream commit converges once through Host Client event transport",async()=>{
   const ids=probeIds("connected-allocation");
   const sessionId="session.family-f-allocation";
