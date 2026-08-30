@@ -252,3 +252,80 @@ test("unknown installed Common Play suppresses, pauses, resumes, expires, and un
 test("renamed external identities preserve portable effect suppression and pause-resume semantics",async()=>{
   await exercisePortableSuppression("renamed-family-n-suppression");
 });
+
+function dependentCleanupPackage(prefix:string) {
+  const moduleId=`${prefix}.module`;
+  const contentId=`${prefix}.content`;
+  const effectMechanicId=`${prefix}.maintained-effect`;
+  const conditionMechanicId=`${prefix}.incapacitate`;
+  const effectConfig={
+    schemaVersion:"0.2-draft",id:effectMechanicId,
+    entryPoints:[{id:"activate",invocation:"manual",operations:[{kind:"effect.apply",template:"focus",target:"actor"}]}],
+    artifactTemplates:[{
+      id:"focus",artifactKind:"effect",duration:{kind:"maintained",policy:"concentration"},
+      rules:[{id:"noop",event:"damage.taken",frequency:"once-per-resolution",operations:[{kind:"damage.apply",amount:{value:0},damageType:"force",target:"event.actor"}]}],
+      lifetime:{kind:"until-duration",onEnd:"destroy"},instancePolicy:"stack",
+    }],
+  };
+  const conditionConfig={
+    schemaVersion:"0.2-draft",id:conditionMechanicId,
+    entryPoints:[{
+      id:"incapacitate",invocation:"manual",targeting:{from:"targets",min:1,max:1},
+      operations:[{kind:"condition.apply",condition:"incapacitated",target:"target"}],
+    }],
+  };
+  return {moduleId,contentId,effectMechanicId,conditionMechanicId,json:JSON.stringify({
+    schemaVersion:"0.1-draft",moduleId,moduleVersion:"1",
+    rulesProfile:{id:"dnd.srd-5.2.1",version:"0.1-draft"},defaultLocale:"en",
+    source:{document:"Family N dependent cleanup probe",version:"1",license:"CC0",srdDerived:false},
+    dependencies:[],conflicts:[],capabilities:[],
+    content:[{id:contentId,category:"option",presentation:{defaultLocale:"en",originalName:"Dependent Cleanup Probe",locales:{en:{name:"Dependent Cleanup Probe"}}},mechanics:[
+      {kind:"common-play",config:effectConfig},{kind:"common-play",config:conditionConfig},
+    ]}],
+  })};
+}
+
+async function exerciseDependentCleanup(prefix:string) {
+  const adapter=new MockAdapter();
+  const pack=dependentCleanupPackage(prefix);
+  setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
+  const preview=await adapter.previewContentImport(pack.json);
+  assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
+  await adapter.activateContentImport();
+  await adapter.startInitiative();
+  await adapter.setCurrentActor("char.aelar");
+  const action=(mechanicId:string,entryPointId:string)=>installedCommonPlayActionId({
+    catalogId:catalogQualifiedId(pack.contentId,pack.moduleId,"1"),mechanicId,entryPointId,
+  });
+
+  let snapshot=await adapter.resolveAction(action(pack.effectMechanicId,"activate"),["char.aelar"]);
+  assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
+  let runtime=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)!;
+  const concentration=runtime.concentration["char.aelar"];
+  assert.equal(concentration?.sourceId,pack.effectMechanicId);
+  assert.equal(runtime.effects.some((entry)=>entry.sourceId===pack.effectMechanicId&&entry.concentrationGroupId===concentration?.groupId),true);
+
+  snapshot=await adapter.resolveAction(action(pack.conditionMechanicId,"incapacitate"),["char.aelar"]);
+  assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
+  runtime=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)!;
+  assert.equal(runtime.effects.some((entry)=>entry.targetId==="char.aelar"&&entry.conditionId==="incapacitated"),true);
+  assert.equal(runtime.concentration["char.aelar"],undefined,"Incapacitated source must end maintained concentration");
+  assert.equal(runtime.effects.some((entry)=>entry.sourceId===pack.effectMechanicId),false,"dependent maintained effect must be removed with its source concentration");
+
+  await adapter.undoLastResolution();
+  snapshot=await adapter.getSnapshot();
+  runtime=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)!;
+  const restored=runtime.concentration["char.aelar"];
+  assert.equal(runtime.effects.some((entry)=>entry.targetId==="char.aelar"&&entry.conditionId==="incapacitated"),false);
+  assert.equal(restored?.sourceId,pack.effectMechanicId);
+  assert.equal(runtime.effects.some((entry)=>entry.sourceId===pack.effectMechanicId&&entry.concentrationGroupId===restored?.groupId),true,"event-native Undo must restore the dependent maintained effect");
+
+  return {cleanup:true,undo:true};
+}
+
+test("unknown installed Common Play cleans up maintained dependents when their source becomes Incapacitated",async()=>{
+  assert.deepEqual(
+    await exerciseDependentCleanup("unknown-family-n-dependent-cleanup"),
+    await exerciseDependentCleanup("renamed-family-n-dependent-cleanup"),
+  );
+});
