@@ -54,8 +54,8 @@ jobs:
 
           fs.writeFileSync(path,JSON.stringify(doc,null,2)+'\n','utf8');
           NODE
-      - name: Install dependencies
-        run: npm install --no-audit --no-fund
+      - name: Install and generate
+        run: npm install --no-audit --no-fund && npm run generate:content
       - name: Verify structural source regression
         run: npx tsx --test tests/ui/c9FamilyJStructuralWeaponSource.test.ts
       - name: Verify canonical coverage checker
