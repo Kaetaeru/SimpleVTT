@@ -1,6 +1,6 @@
 name: C9 Family Q Host DM Interaction 71304
 
-# rerun on the latest reconciled C9 head
+# execute against the latest reconciled C9 head
 on:
   push:
     branches:
