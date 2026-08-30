@@ -1,5 +1,4 @@
 name: C9 Family H Invisible Sight 71304
-# Refresh the verified staging commit from the latest C9 target before PR integration.
 
 on:
   push:
@@ -65,16 +64,21 @@ jobs:
           node --import tsx --test tests/domain/commonPlaySenseRuntime.test.ts tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts
           node scripts/check-legacy-execution-boundary.mjs
           npm exec tsc -- --noEmit
-      - name: Publish verified patch to staging branch
+      - name: Publish verified files through Contents API
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/app/commonPlayInterceptorProductionRuntimeAdapter.ts tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts
-          git diff --cached --check
-          if git diff --cached --quiet; then
-            exit 0
-          fi
-          git commit -m "fix(c9): compose Resolver Invisible with special senses"
-          git push --force origin HEAD:agent/c9-h-invisible-verified-71304
+          branch=agent/c9-gate-n-coverage-reconciliation
+          publish_file() {
+            path="$1"
+            message="$2"
+            remote_sha="$(gh api -X GET "repos/$GITHUB_REPOSITORY/contents/$path?ref=$branch" --jq .sha)"
+            content="$(base64 -w0 < "$path")"
+            jq -n --arg message "$message" --arg content "$content" --arg sha "$remote_sha" --arg branch "$branch" \
+              '{message:$message,content:$content,sha:$sha,branch:$branch}' \
+              | gh api --method PUT "repos/$GITHUB_REPOSITORY/contents/$path" --input - >/dev/null
+          }
+          publish_file src/app/commonPlayInterceptorProductionRuntimeAdapter.ts "fix(c9): compose Resolver Invisible with special senses"
+          publish_file tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts "test(c9): prove Resolver Invisible production sight"
