@@ -48,7 +48,14 @@
     "sense.darkvision.range-feet": {"type": "integer", "storage": "stored", "minimum": 0},
     "sense.blindsight.range-feet": {"type": "integer", "storage": "stored", "minimum": 0},
     "sense.tremorsense.range-feet": {"type": "integer", "storage": "stored", "minimum": 0},
-    "sense.truesight.range-feet": {"type": "integer", "storage": "stored", "minimum": 0}
+    "sense.truesight.range-feet": {"type": "integer", "storage": "stored", "minimum": 0},
+    "inventory.carrying.pounds-per-strength": {"type": "number", "storage": "derived", "minimum": 0, "formula": {"value": 15}},
+    "inventory.carrying.size-multiplier.tiny": {"type": "number", "storage": "derived", "minimum": 0, "formula": {"value": 0.5}},
+    "inventory.carrying.size-multiplier.small": {"type": "number", "storage": "derived", "minimum": 0, "formula": {"value": 1}},
+    "inventory.carrying.size-multiplier.medium": {"type": "number", "storage": "derived", "minimum": 0, "formula": {"value": 1}},
+    "inventory.carrying.size-multiplier.large": {"type": "number", "storage": "derived", "minimum": 0, "formula": {"value": 2}},
+    "inventory.carrying.size-multiplier.huge": {"type": "number", "storage": "derived", "minimum": 0, "formula": {"value": 4}},
+    "inventory.carrying.size-multiplier.gargantuan": {"type": "number", "storage": "derived", "minimum": 0, "formula": {"value": 8}}
   },
   "proficiency": {
     "characterLevelThresholds": [

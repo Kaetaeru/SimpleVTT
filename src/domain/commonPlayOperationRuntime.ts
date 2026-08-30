@@ -16,6 +16,7 @@ import { advanceCommonPlayExposure } from "./commonPlayExposureRuntime";
 import { environmentDamageDefense, fallDamageDice, resolveEnvironmentAttack, resolveEnvironmentMovement, type CommonPlayEnvironmentProfile } from "./commonPlayEnvironmentRuntime";
 import { advanceCommonPlayProject } from "./commonPlayProjectRuntime";
 import type { RuntimeInventoryItem } from "./runtimeStateChange";
+import { resolveCommonPlayInventoryTransaction, type CommonPlayInventoryState, type CommonPlayItemInstance } from "./commonPlayInventoryRuntime";
 
 type LiteralNumberExpression={value:number};
 type CommonPlayExpression=LiteralNumberExpression|Record<string,unknown>;
@@ -311,6 +312,7 @@ export interface CommonPlayOperationExecutionInput {
   environmentFallDiceFaces?:(operationIndex:number,count:number)=>number[];
   projectToolProficiencyIds?:string[];
   projectPreparedSpellDefinitionIds?:string[];
+  inventory?:CommonPlayInventoryState;
 }
 
 type Obj=Record<string,unknown>;
@@ -360,7 +362,7 @@ const PROJECT_ADVANCE_KEYS=new Set(["kind","artifact","work","contributor","paym
 const PROJECT_CANCEL_KEYS=new Set(["kind","artifact"]);
 const PROJECT_COMPLETION_KEYS=new Set(["operations"]);
 const ITEM_GRANT_KEYS=new Set(["kind","target","item"]);
-const GRANTED_ITEM_KEYS=new Set(["id","definitionId","name","nameEn","kind","quantity","equipped","wielded","wieldSlot","attunementRequired","attuned","charges","spellcastingComponent","unitCostGp","passiveEffects","grantedActionIds","spellDefinitionIds","provenance"]);
+const GRANTED_ITEM_KEYS=new Set(["id","definitionId","name","nameEn","kind","quantity","equipped","wielded","wieldSlot","attunementRequired","attuned","charges","spellcastingComponent","unitCostGp","weightPounds","containerCapacityPounds","containerId","passiveEffects","grantedActionIds","spellDefinitionIds","provenance"]);
 const FACT_QUERY_KEYS=new Set(["id","fact","subject","authority","visibility","unknownPolicy"]);
 const DAMAGE_DICE=/^([0-9]+)d([0-9]+)([+-][0-9]+)?$/;
 
@@ -610,7 +612,7 @@ function parseOperation(value:unknown,label:string):CommonPlayOperation {
   if(operation.kind==="item.grant") {
     supportedKeys(operation,ITEM_GRANT_KEYS,label);if(operation.target!=="actor"&&operation.target!=="self")throw new DomainEvaluationError(`${label}.target must be actor or self`);
     const item=object(operation.item,`${label}.item`);supportedKeys(item,GRANTED_ITEM_KEYS,`${label}.item`);
-    if(typeof item.id!=="string"||!item.id||typeof item.definitionId!=="string"||!item.definitionId||typeof item.name!=="string"||!item.name||!Number.isInteger(item.quantity)||Number(item.quantity)<1||item.equipped!==false||item.wielded===true||!Array.isArray(item.passiveEffects)||item.passiveEffects.some((entry)=>typeof entry!=="string")||!Array.isArray(item.grantedActionIds)||item.grantedActionIds.some((entry)=>typeof entry!=="string")||!Array.isArray(item.provenance)||item.provenance.some((entry)=>typeof entry!=="string")||(item.kind!=="equipment"&&item.kind!=="consumable"&&item.kind!=="magic"))throw new DomainEvaluationError(`${label}.item is not a valid inactive portable inventory item`);
+    if(typeof item.id!=="string"||!item.id||typeof item.definitionId!=="string"||!item.definitionId||typeof item.name!=="string"||!item.name||!Number.isInteger(item.quantity)||Number(item.quantity)<1||item.equipped!==false||item.wielded===true||typeof item.weightPounds!=="number"||!Number.isFinite(item.weightPounds)||item.weightPounds<0||(item.containerCapacityPounds!==undefined&&(typeof item.containerCapacityPounds!=="number"||!Number.isFinite(item.containerCapacityPounds)||item.containerCapacityPounds<0))||(item.containerId!==undefined&&(typeof item.containerId!=="string"||!item.containerId))||!Array.isArray(item.passiveEffects)||item.passiveEffects.some((entry)=>typeof entry!=="string")||!Array.isArray(item.grantedActionIds)||item.grantedActionIds.some((entry)=>typeof entry!=="string")||!Array.isArray(item.provenance)||item.provenance.some((entry)=>typeof entry!=="string")||(item.kind!=="equipment"&&item.kind!=="consumable"&&item.kind!=="magic"))throw new DomainEvaluationError(`${label}.item is not a valid inactive portable inventory item`);
     return {kind:"item.grant",target:operation.target,item:structuredClone(item) as unknown as RuntimeInventoryItem};
   }
   if(operation.kind==="project.cancel") {supportedKeys(operation,PROJECT_CANCEL_KEYS,label);return {kind:"project.cancel",artifact:nonEmptyString(operation.artifact,`${label}.artifact`)};}
@@ -1093,6 +1095,7 @@ export function compileCommonPlayEntryPointOperations(
   const environment=activeEnvironment(state);
   const environmentAttack=environment&&entryPoint.attack?resolveEnvironmentAttack(environment,{attackKind:entryPoint.attack.kind,properties:entryPoint.attack.properties,rangeBand:entryPoint.attack.rangeBand}):undefined;
   const materializedResourceIds=new Set(state.combatants[input.actorId]?.resources.map((resource)=>resource.id)??[]);
+  let inventory=input.inventory?structuredClone(input.inventory):undefined;
   if(entryPoint.targeting) {
     if(!input.targetingTargets) throw new DomainEvaluationError(`Common Play entry point ${entryPoint.id} requires pre-resolved targeting facts`);
     if(input.targetId!==undefined&&!input.targetingTargets.some((target)=>target.id===input.targetId)) {
@@ -1187,7 +1190,12 @@ export function compileCommonPlayEntryPointOperations(
     : 0;
   for(const [index,operation] of entryPoint.operations.entries()) {
     const operationId=`${input.resolutionId}:operation:${index}`;
-    if(operation.kind==="item.grant") {operations.push({id:operationId,kind:"grant-inventory-item",targetId:input.actorId,item:structuredClone(operation.item)});continue;}
+    if(operation.kind==="item.grant") {
+      if(!inventory)throw new DomainEvaluationError("portable item grant requires authoritative inventory capacity facts");
+      const item:CommonPlayItemInstance={id:operation.item.id,definitionId:operation.item.definitionId,quantity:operation.item.quantity,stackable:!operation.item.charges&&!operation.item.attunementRequired,equipped:false,wielded:false,weightPounds:operation.item.weightPounds,containerCapacityPounds:operation.item.containerCapacityPounds,containerId:operation.item.containerId,grantedEntryPointIds:[...operation.item.grantedActionIds],spellDefinitionIds:[...(operation.item.spellDefinitionIds??[])]};
+      const validated=resolveCommonPlayInventoryTransaction(inventory,{expectedRevision:inventory.revision,operations:[{kind:"grant",item}]});if(validated.status==="rejected")throw new DomainEvaluationError(validated.error);inventory=validated.state;
+      operations.push({id:operationId,kind:"grant-inventory-item",targetId:input.actorId,item:{...structuredClone(operation.item),spellDefinitionIds:[...(operation.item.spellDefinitionIds??[])]}});continue;
+    }
     if(operation.kind==="project.advance"||operation.kind==="project.cancel") {
       const matches=(state.artifacts??[]).filter((artifact)=>artifact.artifactKind==="project"&&artifact.sourceId===supported.id&&artifact.sourceActorId===input.actorId&&artifact.templateId===operation.artifact&&artifact.project);
       if(matches.length!==1)throw new DomainEvaluationError(`project artifact ${operation.artifact} must resolve to exactly one active instance`);

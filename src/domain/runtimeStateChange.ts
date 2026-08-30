@@ -24,6 +24,9 @@ export interface RuntimeInventoryItem {
   charges?:{current:number;max:number};
   spellcastingComponent?:"focus"|"component-pouch";
   unitCostGp?:number;
+  weightPounds?:number;
+  containerCapacityPounds?:number;
+  containerId?:string;
   passiveEffects:string[];
   grantedActionIds:string[];
   spellDefinitionIds?:string[];

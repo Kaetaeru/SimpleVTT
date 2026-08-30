@@ -33,6 +33,9 @@ import { resolveCommonPlaySelector, type CommonPlayInstantArea, type CommonPlayS
 import { resolveCommonPlayStoredInvocationCancel, resolveCommonPlayStoredInvocationCapture, resolveCommonPlayStoredInvocationTrigger } from "../domain/commonPlayStoredInvocationRuntime";
 import { isReadyPreparationAction, type ReadyActionConfiguration } from "./standardActionReadyState";
 import { resolvePendingResolution } from "../domain/resolution";
+import { commonPlayCarryingCapacityPounds } from "../domain/commonPlayInventoryRuntime";
+import type { CommonPlaySize } from "../domain/commonPlayMountRuntime";
+import { projectCommonPlayInventoryState } from "./commonPlayItemInventoryProjection";
 import { allocationEntriesFromTargetSequence, resolveCommonPlayAllocation } from "../domain/commonPlayAllocationRuntime";
 import { compileCommonPlaySpecialAction, type CommonPlaySpecialActionAuthoringDefinition, type CommonPlayTimingEvent, type CommonPlayTimingWindow } from "../domain/commonPlaySpecialTimingRuntime";
 
@@ -933,6 +936,8 @@ function operationExecutionInput(
   const {actor,actorEntity,selectedTargetId,selectedTargets,selectedTargetFacts,targetingCandidates,state,projectedAction}=prepared;
   const entryPoint=action.lowered.definition.entryPoints.find((candidate)=>candidate.id===action.entryPointId)!;
   const movementProperties=commonPlayActorProfileProperties(internal,state,actor.id);
+  const size=String(internal.activeCharacter.size??"").toLowerCase() as CommonPlaySize;
+  const inventory=["tiny","small","medium","large","huge","gargantuan"].includes(size)?projectCommonPlayInventoryState({ownerId:actor.id,revision:internal.activeCharacter.runtimeRevision??0,items:internal.activeCharacter.items,capacityPounds:commonPlayCarryingCapacityPounds(SIMPLEVTT_APP_RULES_PROFILE,internal.activeCharacter.abilities.str,size)}):undefined;
   const d20Faces=entryPoint.test?[internal.d20(actionId,0),internal.d20(actionId,1)]:undefined;
   const d20RollerId=entryPoint.test?.roller==="target"?selectedTargetId:actor.id;
   const d20ModifierSelection=entryPoint.test?commonPlayTestModifierSelection(internal,state,d20RollerId,entryPoint.test.property):undefined;
@@ -967,6 +972,7 @@ function operationExecutionInput(
     environmentFallDiceFaces:(_operationIndex,count)=>{const faces=rollFaces(internal,actionId,count,6,operationDieDrawIndex);operationDieDrawIndex+=count;return faces;},
     projectToolProficiencyIds:[...(internal.activeCharacter.toolProficiencies??[])],
     projectPreparedSpellDefinitionIds:[...(internal.activeCharacter.preparedSpells??[])],
+    ...(inventory?{inventory}:{}),
     ...(itemPaymentResourceIds?{itemPaymentResourceIds}:{}),
     actionKind:entryPoint.test?.kind==="attack-roll"?"attack" as const:action.category==="spell"?"magic" as const:"other" as const,
     ...(projectedAction?.attacksPerAction===undefined?{}:{attacksPerAction:projectedAction.attacksPerAction}),

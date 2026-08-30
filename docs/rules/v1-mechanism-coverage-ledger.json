@@ -2349,7 +2349,7 @@
         "RulesProfile properties",
         "inventory item metadata"
       ],
-      "currentState": "RulesProfile expression/property infrastructure could calculate a capacity once authoritative facts exist, but the portable Common Play/source contracts do not define item weight, container capacity, carrying-capacity/cargo facts, or an enforcement transaction. Family AD still lacks authoritative mount/vehicle cargo topology and Families X/Y still lack the portable durable item/container source model. A derived scalar alone cannot safely reject inventory/vehicle mutations without those owned source facts.",
+      "currentState": "RulesProfile-owned Strength and size scaling now derives carrying capacity. Portable item weight, container capacity, and containment facts persist through the Character source model, while the shared revisioned inventory transaction rejects overweight character, mount, vehicle, and container cargo atomically. Installed Common Play grants use the same authoritative capacity projection before commit.",
       "requiredSemantics": [
         "carrying capacity",
         "size scaling",
@@ -2360,19 +2360,28 @@
         "equipment prerequisites"
       ],
       "transactionDomain": "Derived properties plus inventory/vehicle constraints",
-      "disposition": "INCOMPLETE",
-      "implementationEvidence": [],
-      "productionEvidence": [],
-      "identityInvarianceEvidence": [],
-      "connectedEvidenceIfRelevant": [],
-      "persistenceEvidenceIfRelevant": [],
-      "remainingNamedSeams": [
-        "portable item weight/container-capacity source data in the durable item model",
-        "RulesProfile-owned carrying-capacity/size-scaling derived property with authoritative inputs",
-        "inventory transaction enforcement for carried/container weight constraints",
-        "mount/vehicle cargo capacity enforcement dependent on Family AD topology ownership",
-        "connected/persistence projection of the same durable capacity facts"
+      "disposition": "IMPLEMENTED",
+      "implementationEvidence": [
+        "commonPlayInventoryRuntime.ts RulesProfile carrying capacity and revisioned cargo/container enforcement",
+        "commonPlayOperationRuntime.ts authoritative portable item grant capacity validation",
+        "characterLibraryPersistence.ts durable item weight/container facts",
+        "c9FamilyAICapacityRuntime.test.ts character/mount/vehicle/container and transfer acceptance"
       ],
+      "productionEvidence": [
+        "c9FamilyAICapacityProduction.test.ts installed portable grant rejection and durable projection",
+        "npm run build green after Family AI implementation"
+      ],
+      "identityInvarianceEvidence": [
+        "c9FamilyAICapacityProduction.test.ts external.family-ai and renamed.family-ai"
+      ],
+      "connectedEvidenceIfRelevant": [
+        "c9FamilyAICapacityProduction.test.ts Host/Client replay, duplicate delivery, reconnect, and compensating Undo"
+      ],
+      "persistenceEvidenceIfRelevant": [
+        "c9FamilyAICapacityProduction.test.ts Character restart restores weight and container capacity",
+        "characterLibraryPersistence.ts source/runtime materialization preserves weight and containment"
+      ],
+      "remainingNamedSeams": [],
       "connectedRelevant": true,
       "persistenceRelevant": true
     },

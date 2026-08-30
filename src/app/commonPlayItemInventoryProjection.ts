@@ -3,6 +3,7 @@ import {
   resolveCommonPlayAttunementLoss,
   resolveCommonPlayInventoryTransaction,
   type CommonPlayInventoryOperation,
+  type CommonPlayInventoryState,
   type CommonPlayItemInstance,
 } from "../domain/commonPlayInventoryRuntime";
 import type { ItemInstanceVm } from "./contracts";
@@ -21,7 +22,14 @@ function commonItem(item:ItemInstanceVm,ownerId:string):CommonPlayItemInstance {
     }}:{}),
     grantedEntryPointIds:[...item.grantedActionIds],
     spellDefinitionIds:[...(item.spellDefinitionIds??[])],
+    weightPounds:item.weightPounds,
+    containerCapacityPounds:item.containerCapacityPounds,
+    containerId:item.containerId,
   };
+}
+
+export function projectCommonPlayInventoryState(input:{ownerId:string;revision:number;items:ItemInstanceVm[];capacityPounds?:number}):CommonPlayInventoryState {
+  return {ownerId:input.ownerId,revision:input.revision,items:input.items.map((item)=>commonItem(item,input.ownerId)),capacityPounds:input.capacityPounds};
 }
 
 function appItems(input:{ownerId:string;items:ItemInstanceVm[];templates?:ItemInstanceVm[]},items:CommonPlayItemInstance[]) {
@@ -53,10 +61,7 @@ export function applyCommonPlayItemOperations(input:{
   operations:CommonPlayInventoryOperation[];
   templates?:ItemInstanceVm[];
 }) {
-  const result=resolveCommonPlayInventoryTransaction({
-    ownerId:input.ownerId,revision:input.revision,
-    items:input.items.map((item)=>commonItem(item,input.ownerId)),
-  },{expectedRevision:input.revision,operations:input.operations});
+  const result=resolveCommonPlayInventoryTransaction(projectCommonPlayInventoryState(input),{expectedRevision:input.revision,operations:input.operations});
   if(result.status==="rejected") throw new Error(result.error);
   return {
     revision:result.state.revision,

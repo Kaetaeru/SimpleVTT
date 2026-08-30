@@ -1,4 +1,5 @@
-import { DomainEvaluationError, evaluateSemanticPredicate, type SemanticPredicate, type SemanticValue } from "./profileEngine";
+import { DomainEvaluationError, evaluateExpression, evaluateSemanticPredicate, type RulesProfileLike, type SemanticPredicate, type SemanticValue } from "./profileEngine";
+import type { CommonPlaySize } from "./commonPlayMountRuntime";
 
 export interface CommonPlayItemInstance {
   id:string;
@@ -20,12 +21,15 @@ export interface CommonPlayItemInstance {
   effectDefinitionIds?:string[];
   spellDefinitionIds?:string[];
   containerId?:string;
+  weightPounds?:number;
+  containerCapacityPounds?:number;
 }
 
 export interface CommonPlayInventoryState {
   ownerId:string;
   revision:number;
   items:CommonPlayItemInstance[];
+  capacityPounds?:number;
 }
 
 export type CommonPlayInventoryOperation=
@@ -46,6 +50,22 @@ function validateItem(item:CommonPlayItemInstance) {
   if(item.wielded&&!item.equipped) throw new DomainEvaluationError("a wielded item must be equipped");
   if(item.wielded&&!item.wieldSlot) throw new DomainEvaluationError("a wielded item requires a wield slot");
   if(item.attunement?.attunedTo&&!item.attunement.required) throw new DomainEvaluationError("only attunement-required items can have an attuned owner");
+  if(item.weightPounds!==undefined&&(!Number.isFinite(item.weightPounds)||item.weightPounds<0))throw new DomainEvaluationError("item weight must be non-negative and finite");
+  if(item.containerCapacityPounds!==undefined&&(!Number.isFinite(item.containerCapacityPounds)||item.containerCapacityPounds<0))throw new DomainEvaluationError("container capacity must be non-negative and finite");
+}
+
+export function commonPlayCarryingCapacityPounds(profile:RulesProfileLike,strengthScore:number,size:CommonPlaySize) {
+  const poundsFormula=profile.properties["inventory.carrying.pounds-per-strength"]?.formula,multiplierFormula=profile.properties[`inventory.carrying.size-multiplier.${size}`]?.formula;
+  if(!poundsFormula||!multiplierFormula)throw new DomainEvaluationError("RulesProfile carrying-capacity properties are unavailable");
+  const unavailable=(property:string):never=>{throw new DomainEvaluationError(`RulesProfile carrying-capacity constant must not depend on ${property}`);};
+  const poundsPerStrength=evaluateExpression(poundsFormula,unavailable),multiplier=evaluateExpression(multiplierFormula,unavailable);
+  if(!Number.isFinite(poundsPerStrength)||poundsPerStrength<0||!Number.isFinite(multiplier)||multiplier<0)throw new DomainEvaluationError("RulesProfile carrying-capacity properties are invalid");
+  if(!Number.isFinite(strengthScore)||strengthScore<0)throw new DomainEvaluationError("carrying capacity requires a non-negative finite Strength score");
+  return strengthScore*poundsPerStrength*multiplier;
+}
+
+export function commonPlayInventoryWeightPounds(items:CommonPlayItemInstance[]) {
+  return items.reduce((sum,item)=>sum+(item.weightPounds??0)*item.quantity,0);
 }
 
 function validateInventory(state:CommonPlayInventoryState) {
@@ -55,12 +75,19 @@ function validateInventory(state:CommonPlayInventoryState) {
   const byId=new Map(state.items.map((item)=>[item.id,item]));
   for(const entry of state.items) {
     if(entry.containerId&&!byId.has(entry.containerId)) throw new DomainEvaluationError(`item container not found: ${entry.containerId}`);
+    if(entry.containerId&&(entry.equipped||entry.wielded))throw new DomainEvaluationError("contained items cannot be equipped or wielded");
     const seen=new Set([entry.id]);let current=entry;
     while(current.containerId) {
       if(seen.has(current.containerId)) throw new DomainEvaluationError("item containers cannot form a cycle");
       seen.add(current.containerId);current=byId.get(current.containerId)!;
     }
   }
+  if(state.capacityPounds!==undefined&&(!Number.isFinite(state.capacityPounds)||state.capacityPounds<0||commonPlayInventoryWeightPounds(state.items)>state.capacityPounds))throw new DomainEvaluationError("inventory exceeds carrying capacity");
+  for(const container of state.items.filter((entry)=>entry.containerCapacityPounds!==undefined)) {
+    const contained=state.items.filter((entry)=>{let current=entry;while(current.containerId){if(current.containerId===container.id)return true;current=byId.get(current.containerId)!;}return false;});
+    if(commonPlayInventoryWeightPounds(contained)>container.containerCapacityPounds!)throw new DomainEvaluationError(`container capacity exceeded: ${container.id}`);
+  }
+  for(const entry of state.items.filter((item)=>item.containerId))if(byId.get(entry.containerId!)?.containerCapacityPounds===undefined)throw new DomainEvaluationError(`item container has no capacity: ${entry.containerId}`);
 }
 
 function item(state:CommonPlayInventoryState,itemId:string) {
@@ -133,6 +160,7 @@ export function resolveCommonPlayItemTransfer(
     moving.quantity-=request.quantity;if(moving.quantity===0) from.items=from.items.filter((entry)=>entry.id!==moving.id);
     const transferred={...structuredClone(existing),id:request.newItemId,quantity:request.quantity,equipped:false,wielded:false};
     delete transferred.wieldSlot;
+    delete transferred.containerId;
     if(transferred.attunement) delete transferred.attunement.attunedTo;
     to.items.push(transferred);validateInventory(from);validateInventory(to);from.revision+=1;to.revision+=1;
     return {status:"committed" as const,source:from,target:to,item:transferred};

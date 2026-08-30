@@ -48,7 +48,7 @@ test("a late inventory failure rolls back every earlier operation",()=>{
 test("rules-bearing containers require valid acyclic durable ownership",()=>{
   const state=inventory();
   const committed=resolveCommonPlayInventoryTransaction(state,{expectedRevision:0,operations:[
-    {kind:"grant",item:{id:"bag",definitionId:"external.bag",quantity:1,stackable:false,equipped:false,wielded:false}},
+    {kind:"grant",item:{id:"bag",definitionId:"external.bag",quantity:1,stackable:false,equipped:false,wielded:false,containerCapacityPounds:30}},
     {kind:"grant",item:{id:"gem",definitionId:"external.gem",quantity:1,stackable:false,equipped:false,wielded:false,containerId:"bag"}},
   ]});
   assert.equal(committed.status,"committed");
