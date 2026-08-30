@@ -42,6 +42,31 @@ jobs:
               block=block.replace(old,new,1)
           path.write_text(before+marker+block)
           PY
+      - name: Repair semantic lifecycle state-change narrowing
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          path=Path('src/domain/commonPlaySemanticEventRuntime.ts')
+          text=path.read_text()
+          import_line='import type { EffectStateChange } from "./runtimeStateChange";\n'
+          anchor='import type { CommonPlayAutomaticEffectEvent, CommonPlayPersistentEffectDefinition } from "./commonPlayEffectRuntime";\n'
+          if import_line not in text:
+              if anchor not in text: raise SystemExit('semantic event import anchor missing')
+              text=text.replace(anchor,anchor+import_line,1)
+          replacements={
+            'const applied=authoritativeEvent.stateChanges.filter((change)=>change.kind==="effect"&&change.operation==="added");':
+            'const applied=authoritativeEvent.stateChanges.filter((change):change is EffectStateChange=>change.kind==="effect"&&change.operation==="added");',
+            'const expired=authoritativeEvent.stateChanges.filter((change)=>change.kind==="effect"&&change.operation==="removed");':
+            'const expired=authoritativeEvent.stateChanges.filter((change):change is EffectStateChange=>change.kind==="effect"&&change.operation==="removed");',
+          }
+          for old,new in replacements.items():
+              if new not in text:
+                  if old not in text: raise SystemExit(f'semantic narrowing target missing: {old}')
+                  text=text.replace(old,new,1)
+          path.write_text(text)
+          PY
       - run: npm ci
       - run: npm run generate:content
       - name: Verify automatic selector production and Gate N boundaries
@@ -70,9 +95,9 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git rm .github/workflows/c9-family-e-automatic-targetfree-7130.yml
-          git add tests/ui/commonPlayRichSelectorProduction.test.ts docs/rules/v1-mechanism-coverage-ledger.json
+          git add src/domain/commonPlaySemanticEventRuntime.ts tests/ui/commonPlayRichSelectorProduction.test.ts docs/rules/v1-mechanism-coverage-ledger.json
           git diff --cached --check
-          git commit -m "test(c9): prove target-free automatic selector authority"
+          git commit -m "fix(c9): restore semantic narrowing and automatic selector proof"
           branch=agent/c9-gate-n-coverage-reconciliation
           for attempt in $(seq 1 12); do
             git fetch origin "$branch"
