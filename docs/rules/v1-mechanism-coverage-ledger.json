@@ -792,7 +792,9 @@
         "commonPlayOperationRuntime.ts parses target-rolled portable d20 tests with structural property modifiers and lowers test.outcome-conditional condition operations to the shared Resolver; installedCommonPlayRuntimeAdapter.ts supplies save.<ability>.modifier through resolveRuntimeSaveModifier without content identity dispatch",
         "commonPlayOperationRuntime.ts applies authoritative target cover structurally to portable attack-roll tests: half cover +2 target, three-quarters cover +5 target, and total cover rejects the attack without content identity dispatch",
         "commonPlayOperationRuntime.ts generic resource PaymentContract composes source-owned ammunition consumption atomically with the existing Common Play attack transaction",
-        "productionPlayRuntimeAdapter.ts resolves weapon range and ability from the Character equipment item structurally linked to the attack through grantedActionIds instead of attack/item presentation names"
+        "productionPlayRuntimeAdapter.ts resolves weapon range and ability from the Character equipment item structurally linked to the attack through grantedActionIds instead of attack/item presentation names",
+        "phase09ManualMovementReactionAdapter.ts resolves Opportunity Attack from the reactor projected ActionVm runtimeAttack facts and input attackActionId, consuming reaction economy without named action/content dispatch",
+        "commonPlayOperationRuntime.ts generic roll.modify disadvantage and structural attack target adjustment compose long-range disadvantage plus authoritative cover in the shared Resolver attack-roll path"
       ],
       "productionEvidence": [
         "installedCommonPlayLoweredFamiliesProduction.test.ts#summoned Actor projects and executes its portable Common Play action with economy and Undo",
@@ -802,7 +804,10 @@
         "440a9345ecbf6459ca572e39207f3756c5ed6217 test(c9): prove portable grapple escape; C9 Family J Escape 71304 run 33315525052 passed unknown/renamed best-of STR/DEX grapple escape, legacy execution boundary, and tsc --noEmit",
         "5a082faa207fa0d8a4e15b9fa6fb17308c8872bc feat(c9): apply structural cover to portable attacks; C9 Family J Cover 71304 run 33316032590 passed targeted Family J regressions, legacy execution boundary, and tsc --noEmit",
         "c9FamilyJAmmunitionProduction.test.ts proves an unknown installed ranged attack consumes a source-owned ammunition pool, rejects at zero without downstream commit, restores through event-native Undo, and repeats under fully renamed external identities",
-        "ff4eea4c3e20b2c25690d54cbfb10a6e94f1fe8f refactor(c9): use structural weapon action sources; C9 Family J Structural Weapon Source run 33316313480 passed 2/2 structural source regressions, legacy execution boundary, and tsc --noEmit"
+        "ff4eea4c3e20b2c25690d54cbfb10a6e94f1fe8f refactor(c9): use structural weapon action sources; C9 Family J Structural Weapon Source run 33316313480 passed 2/2 structural source regressions, legacy execution boundary, and tsc --noEmit",
+        "c9FamilyJOpportunityAttackProduction.test.ts executes projected Opportunity Attacks under unrelated action IDs/names, consumes reaction but not action, commits damage, and restores HP/Temporary HP plus reaction through event-native Undo",
+        "c9FamilyJRangeCoverProduction.test.ts unknown installed Common Play composes baseline attack, long-range disadvantage, and cover target adjustment through production attack resolution; C9 Family J Spatial Attack 71304 run 33316344182 passed the spatial/OA suite, coverage checker, legacy boundary, and tsc --noEmit",
+        "c9FamilyJSpatialAttackProduction.test.ts and c9FamilyESpatialSelectorProduction.test.ts consume authoritative reach/range/Total Cover facts without content identity dispatch"
       ],
       "identityInvarianceEvidence": [
         "installedCommonPlayLoweredFamiliesProduction.test.ts executes the summoned attack from arbitrary previously-unknown module/content/mechanic/action identities rather than a registered attack content ID",
@@ -810,7 +815,10 @@
         "c9FamilyJPortableControlProduction.test.ts preserves target-save and conditional-control semantics after complete external module/content/mechanic identity rename",
         "c9FamilyJPortableControlProduction.test.ts preserves grapple escape semantics under unrelated external module/content/mechanic identities",
         "c9FamilyJAmmunitionProduction.test.ts repeats source-owned ammunition payment and empty-ammunition rejection after complete module/content/mechanic/resource identity rename",
-        "c9FamilyJStructuralWeaponSource.test.ts renames both attack and source-item presentation while preserving canonical Shortbow range/DEX semantics through grantedActionIds, and proves presentation text alone cannot infer weapon range"
+        "c9FamilyJStructuralWeaponSource.test.ts renames both attack and source-item presentation while preserving canonical Shortbow range/DEX semantics through grantedActionIds, and proves presentation text alone cannot infer weapon range",
+        "c9FamilyJOpportunityAttackProduction.test.ts repeats reaction attack semantics after replacing the projected attack with unrelated action IDs and names",
+        "c9FamilyJRangeCoverProduction.test.ts repeats long-range disadvantage and cover adjustment after complete external module/content/mechanic identity rename",
+        "c9FamilyJSpatialAttackProduction.test.ts and c9FamilyESpatialSelectorProduction.test.ts preserve authoritative reach/range/cover behavior for unknown and renamed portable content"
       ],
       "connectedEvidenceIfRelevant": [
         "installedCommonPlayLoweredFamiliesProduction.test.ts#summoned Actor action and Undo converge through Host-authoritative connected events"
@@ -821,8 +829,7 @@
       "remainingNamedSeams": [
         "generic weapon action projection is structurally source-owned and presentation-rename invariant; complete Unarmed Strike source composition remains incomplete",
         "portable target saving throws, best-of STR/DEX control choice, conditional control effects, and escape now normalize through Common Play; complete grapple/shove source composition remains incomplete",
-        "Opportunity Attack portable acceptance remains incomplete beyond existing projection-driven integration",
-        "reach, long range, multiattack/Extra Attack/replacement, and Loading constraints remain incomplete; structural cover is now generic and verified",
+        "multiattack/Extra Attack/replacement and Loading constraints remain incomplete; reach/long range and structural cover are now generic and verified",
         "Rage attack rider and other named attack/action projection remain migration debt"
       ],
       "connectedRelevant": true,
