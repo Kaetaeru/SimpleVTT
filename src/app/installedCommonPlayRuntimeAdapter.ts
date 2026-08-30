@@ -918,7 +918,12 @@ async function executeCommonPlayAction(
       allocationResult=allocation;
     }
     const itemContext=itemPaymentRuntimeContext(internal,state,lowered.definition);
-    const pending=compileCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,itemContext.state,lowered.definition,operationExecutionInput(internal,actionId,action,prepared,resolutionId,interactionId,itemContext.itemPaymentResourceIds));
+    let pending;
+    try {
+      pending=compileCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,itemContext.state,lowered.definition,operationExecutionInput(internal,actionId,action,prepared,resolutionId,interactionId,itemContext.itemPaymentResourceIds));
+    } catch(error) {
+      return {status:"rejected" as const,error:error instanceof Error?error.message:String(error),snapshot:await internal.getSnapshot()};
+    }
     const effectDefinitions=await installedPersistentEffectDefinitions(adapter);
     const damagePending=appendCommonPlayDamageTakenTriggers(
       itemContext.state,effectDefinitions,pending,actorEntity.kind==="character"?"character":"monster",
