@@ -33,6 +33,7 @@ function payload(identity:Identity) {
             where:{op:"all",args:[
               {op:"lte",left:{ref:"spatial.distance-feet"},right:{value:30}},
               {op:"eq",left:{ref:"sense.can-see"},right:{value:true}},
+              {op:"eq",left:{ref:"spatial.within-reach"},right:{value:true}},
               {op:"eq",left:{ref:"spatial.total-cover"},right:{value:false}},
             ]},
           },
@@ -43,9 +44,9 @@ function payload(identity:Identity) {
   });
 }
 
-function setRelation(internal:{activeCharacter:CharacterSheet;scene:SceneVm},distanceFeet:number,visible:boolean,cover:RuntimeCover) {
+function setRelation(internal:{activeCharacter:CharacterSheet;scene:SceneVm},distanceFeet:number,visible:boolean,cover:RuntimeCover,withinReach:boolean) {
   setSpatialRelation(internal.scene,{
-    sourceId:internal.activeCharacter.id,targetId:TARGET_ID,distanceFeet,visible,cover,targetCanSeeAttacker:true,
+    sourceId:internal.activeCharacter.id,targetId:TARGET_ID,distanceFeet,visible,cover,targetCanSeeAttacker:true,withinReach,
     provenance:"module:c9-family-e-spatial:selector",
   });
 }
@@ -64,24 +65,26 @@ async function exercise(identity:Identity) {
     mechanicId:identity.mechanicId,entryPointId:identity.entryPointId,
   });
 
-  for(const [distanceFeet,visible,cover] of [
-    [35,true,"none"],
-    [20,false,"none"],
-    [20,true,"total"],
+  for(const [distanceFeet,visible,cover,withinReach] of [
+    [35,true,"none",true],
+    [20,false,"none",true],
+    [20,true,"total",true],
+    [5,true,"none",false],
   ] as const) {
-    setRelation(internal,distanceFeet,visible,cover);
+    setRelation(internal,distanceFeet,visible,cover,withinReach);
     const rejected=await adapter.resolveAction(actionId,[TARGET_ID]);
     assert.equal(rejected.resolution?.finalOutcome,"적용 거부",JSON.stringify(rejected.resolution));
   }
 
-  setRelation(internal,20,true,"half");
+  // Reach is provider-owned: a module may author a reach result that is not derivable from distance alone.
+  setRelation(internal,20,true,"half",true);
   const accepted=await adapter.resolveAction(actionId,[TARGET_ID]);
   assert.equal(accepted.resolution?.stage,"complete",JSON.stringify(accepted.resolution));
   assert.deepEqual(accepted.resolution?.targetIds,[TARGET_ID]);
   return accepted.resolution?.targetIds;
 }
 
-test("unknown installed selector consumes authoritative range, sight, and Total Cover facts under identity rename",async()=>{
+test("unknown installed selector consumes authoritative range, sight, reach, and Total Cover facts under identity rename",async()=>{
   const original=await exercise(ORIGINAL);
   const renamed=await exercise(RENAMED);
   assert.deepEqual(renamed,original);
