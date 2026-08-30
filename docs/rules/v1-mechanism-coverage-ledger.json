@@ -764,7 +764,7 @@
         "realAttackTransactionService.ts",
         "unarmedControlRuntimeAdapter.ts"
       ],
-      "currentState": "Unknown installed Common Play attack-roll plus target damage has production evidence through a projected arbitrary-ID Actor action with Action payment, damage commit, Host/Client convergence, and Undo. Projected Unarmed grapple/shove dispatches from a typed runtimeSaveCondition action payload rather than named action IDs, with arbitrary action-ID rename evidence. Unknown installed Common Play can now also target-roll a structural saving throw from save.<ability>.modifier and conditionally apply a control condition through the shared Resolver, with failure/success branching, Undo, and complete external identity rename evidence. Family J remains incomplete for best-of STR/DEX portable control choice and escape plus full weapon/Unarmed Strike, Opportunity Attack, reach/range/cover, Extra Attack/replacement, and ammunition/loading composition.",
+      "currentState": "Unknown installed Common Play attack-roll plus target damage has production evidence through a projected arbitrary-ID Actor action with Action payment, damage commit, Host/Client convergence, and Undo. Projected Unarmed grapple/shove dispatches from a typed runtimeSaveCondition action payload rather than named action IDs, with arbitrary action-ID rename evidence. Unknown installed Common Play can now also target-roll a structural saving throw from save.<ability>.modifier and conditionally apply a control condition through the shared Resolver, with failure/success branching, Undo, and complete external identity rename evidence. Best-of STR/DEX portable control choice and escape are production-proven through unknown installed Common Play with failure/success branching and event-native Undo. Family J remains incomplete for full weapon/Unarmed Strike source composition, Opportunity Attack, reach/range/cover, Extra Attack/replacement, and ammunition/loading composition.",
       "requiredSemantics": [
         "weapon attack",
         "Unarmed Strike",
@@ -791,12 +791,14 @@
         "installedCommonPlayLoweredFamiliesProduction.test.ts#summoned Actor projects and executes its portable Common Play action with economy and Undo",
         "unarmedStrikeRuntime.test.ts executes projected grapple after replacing its action ID with an unrelated external ID",
         "c9FamilyJPortableControlProduction.test.ts unknown installed Common Play target-rolls a Goblin DEX save, applies grappled only on failure, skips it on success, reverses through Undo, and repeats under completely renamed external identities",
-        "C9 Family J Publish Retry 71304 run 33313408895: 7/7 targeted Family J/M/unarmed regressions, legacy execution boundary, and tsc --noEmit passed; verified slice published as 8c3de34cc818b833bb0f8ff9a46675471a04ddfc"
+        "C9 Family J Publish Retry 71304 run 33313408895: 7/7 targeted Family J/M/unarmed regressions, legacy execution boundary, and tsc --noEmit passed; verified slice published as 8c3de34cc818b833bb0f8ff9a46675471a04ddfc",
+        "440a9345ecbf6459ca572e39207f3756c5ed6217 test(c9): prove portable grapple escape; C9 Family J Escape 71304 run 33315525052 passed unknown/renamed best-of STR/DEX grapple escape, legacy execution boundary, and tsc --noEmit"
       ],
       "identityInvarianceEvidence": [
         "installedCommonPlayLoweredFamiliesProduction.test.ts executes the summoned attack from arbitrary previously-unknown module/content/mechanic/action identities rather than a registered attack content ID",
         "unarmedStrikeRuntime.test.ts runtimeSaveCondition rename probe preserves save/condition semantics under an unrelated action ID",
-        "c9FamilyJPortableControlProduction.test.ts preserves target-save and conditional-control semantics after complete external module/content/mechanic identity rename"
+        "c9FamilyJPortableControlProduction.test.ts preserves target-save and conditional-control semantics after complete external module/content/mechanic identity rename",
+        "c9FamilyJPortableControlProduction.test.ts preserves grapple escape semantics under unrelated external module/content/mechanic identities"
       ],
       "connectedEvidenceIfRelevant": [
         "installedCommonPlayLoweredFamiliesProduction.test.ts#summoned Actor action and Undo converge through Host-authoritative connected events"
@@ -806,7 +808,7 @@
       ],
       "remainingNamedSeams": [
         "full generic weapon and Unarmed Strike action projection is not yet proven across source-owned equipment/stat definitions",
-        "portable target saving throws and conditional control effects now normalize through Common Play; best-of STR/DEX control choice, escape, and complete grapple/shove source composition remain incomplete",
+        "portable target saving throws, best-of STR/DEX control choice, conditional control effects, and escape now normalize through Common Play; complete grapple/shove source composition remains incomplete",
         "Opportunity Attack portable acceptance remains incomplete beyond existing projection-driven integration",
         "reach, long range, cover, multiattack/Extra Attack/replacement, and ammunition/loading constraints remain incomplete",
         "Rage attack rider and other named attack/action projection remain migration debt"
