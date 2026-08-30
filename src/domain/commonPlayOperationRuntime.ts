@@ -121,6 +121,7 @@ type CommonPlayDamageApply={
   damageType:string;
   multiplier?:number;
   target?:CommonPlayHpTarget;
+  when?:CommonPlayTestOutcomePredicate;
 };
 
 type CommonPlayHealingApply={
@@ -265,7 +266,7 @@ const RESOURCE_RECHARGE_KEYS=new Set(["kind","resource","die","succeedsOn"]);
 const RECHARGE_DIE_KEYS=new Set(["sides"]);
 const RECHARGE_RANGE_KEYS=new Set(["minimum","maximum"]);
 const ECONOMY_MODIFY_KEYS=new Set(["kind","bucket","amount"]);
-const DAMAGE_APPLY_KEYS=new Set(["kind","amount","damageType","multiplier","target"]);
+const DAMAGE_APPLY_KEYS=new Set(["kind","amount","damageType","multiplier","target","when"]);
 const HEALING_APPLY_KEYS=new Set(["kind","amount","target"]);
 const CONDITION_CHANGE_KEYS=new Set(["kind","condition","target","when"]);
 const EFFECT_REMOVE_KEYS=new Set(["kind","selector","when"]);
@@ -644,12 +645,14 @@ function parseOperation(value:unknown,label:string):CommonPlayOperation {
     } else amount=nonNegativeLiteralExpression(operation.amount,`${label}.amount`);
     const multiplier=operation.multiplier;
     if(multiplier!==undefined&&(typeof multiplier!=="number"||!Number.isFinite(multiplier)||multiplier<0)) throw new DomainEvaluationError(`${label}.multiplier must be a finite non-negative number`);
+    const when=testOutcomePredicate(operation.when,`${label}.when`);
     return {
       kind:"damage.apply",
       amount,
       damageType:nonEmptyString(operation.damageType,`${label}.damageType`),
       ...(multiplier===undefined?{}:{multiplier}),
       ...(operation.target===undefined?{}:{target:hpTarget(operation.target,`${label}.target`)}),
+      ...(when?{when}:{}),
     };
   }
   if(operation.kind==="healing.apply") {
@@ -736,7 +739,7 @@ for(const [index,entryPoint] of entryPoints.entries()) {
 }
 for(const [index,entryPoint] of entryPoints.entries()) {
   if(entryPoint.test?.roller==="target"&&(!entryPoint.targeting||entryPoint.targeting.min!==1||entryPoint.targeting.max!==1)) throw new DomainEvaluationError(`${label}.entryPoints[${index}] target-rolled d20 requires targeting exactly one target`);
-  if(entryPoint.operations.some((operation)=>(operation.kind==="condition.apply"||operation.kind==="condition.remove"||operation.kind==="effect.remove")&&operation.when)&&!entryPoint.test) throw new DomainEvaluationError(`${label}.entryPoints[${index}] test.outcome conditional operation requires a d20 test`);
+  if(entryPoint.operations.some((operation)=>(operation.kind==="condition.apply"||operation.kind==="condition.remove"||operation.kind==="effect.remove"||operation.kind==="damage.apply")&&operation.when)&&!entryPoint.test) throw new DomainEvaluationError(`${label}.entryPoints[${index}] test.outcome conditional operation requires a d20 test`);
 }
 const reactionPaymentCount=payments?.filter((payment)=>payment.kind==="economy"&&payment.bucket==="reaction").length??0;
   const interactionCount=entryPoints.filter((entry)=>entry.interaction).length;
@@ -1047,6 +1050,7 @@ export function compileCommonPlayEntryPointOperations(
     }
 
     if(operation.kind==="damage.apply") {
+      const when=operation.when?{operationId:`${input.resolutionId}:test`,field:"outcome" as const,equals:operation.when.right.value}:undefined;
       const targetId=hpOperationTarget(operation.target,input);
       const creatureKind=input.creatureKinds?.[targetId];
       if(!creatureKind) throw new DomainEvaluationError(`Common Play damage target is not a classified runtime combatant: ${targetId}`);
@@ -1062,6 +1066,7 @@ export function compileCommonPlayEntryPointOperations(
         operations.push({
           id:rollId,
           kind:"damage-roll",
+          ...(when?{when}:{}),
           request:{
             dice:[{
               source:`common-play:${supported.id}:${entryPoint.id}:operation:${index}`,
@@ -1087,6 +1092,7 @@ export function compileCommonPlayEntryPointOperations(
       operations.push({
         id:operationId,
         kind:"damage",
+        ...(when?{when}:{}),
         targetId,
         damageType:operation.damageType,
         amount,
