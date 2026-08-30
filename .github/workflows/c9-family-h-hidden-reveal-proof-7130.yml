@@ -6,6 +6,8 @@ on:
       - agent/c9-gate-n-coverage-reconciliation
     paths:
       - .github/workflows/c9-family-h-hidden-reveal-proof-7130.yml
+      - src/app/runtimeResolutionUndoAdapter.ts
+      - tests/ui/sessionStatusEffectEventRuntime.test.ts
 
 permissions:
   contents: write
