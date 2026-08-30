@@ -66,11 +66,17 @@ function packagePayload(
               factQueries:[
                 {id:"trigger-distance",fact:"spatial.distance-feet",subject:"intercepted.actor",authority:"dm",visibility:"dm",unknownPolicy:"block"},
                 {id:"source-sees-trigger",fact:"sense.can-see",subject:"intercepted.actor",authority:"dm",visibility:"dm",unknownPolicy:"treat-false"},
+                {id:"trigger-light",fact:"sense.light",subject:"intercepted.actor",authority:"dm",visibility:"dm",unknownPolicy:"block"},
+                {id:"trigger-obscurement",fact:"sense.obscurement",subject:"intercepted.actor",authority:"dm",visibility:"dm",unknownPolicy:"block"},
+                {id:"trigger-detected",fact:"sense.detected",subject:"intercepted.actor",authority:"dm",visibility:"dm",unknownPolicy:"block"},
                 {id:"trigger-hidden",fact:"sense.hidden",subject:"intercepted.actor",authority:"dm",visibility:"dm",unknownPolicy:"block"},
               ],
               when:{op:"all",args:[
                 {op:"lte",left:{ref:"trigger-distance"},right:{value:60}},
                 {op:"eq",left:{ref:"source-sees-trigger"},right:{value:true}},
+                {op:"eq",left:{ref:"trigger-light"},right:{value:"dim"}},
+                {op:"eq",left:{ref:"trigger-obscurement"},right:{value:"none"}},
+                {op:"eq",left:{ref:"trigger-detected"},right:{value:true}},
                 {op:"eq",left:{ref:"trigger-hidden"},right:{value:true}},
               ]},
             }:{}),
@@ -348,9 +354,8 @@ test("portable production interceptor uses authoritative spatial, visibility, an
   for(const [index,identity] of [ORIGINAL,renamed].entries()){
     const adapter=await prepare(identity,true);
     const internal=adapter as unknown as {activeCharacter:CharacterSheet;scene:SceneVm};
-    const relation={sourceId:internal.activeCharacter.id,targetId:OTHER_CHARACTER_ID,distanceFeet:30,visible:true,cover:"none" as const,targetCanSeeAttacker:true};
-    if(index===0)setSpatialRelation(internal.scene,{...relation,provenance:"module:test-map:spatial"});
-    else await adapter.setTheaterOfMindSpatialRelation(relation);
+    const relation={sourceId:internal.activeCharacter.id,targetId:OTHER_CHARACTER_ID,distanceFeet:30,visible:true,cover:"none" as const,targetCanSeeAttacker:true,light:"dim" as const,obscurement:"none" as const,detected:true};
+    setSpatialRelation(internal.scene,{...relation,provenance:index===0?"module:test-map:spatial":"module:test-map-renamed:spatial"});
     seedHiddenRuntimeEffect(adapter,OTHER_CHARACTER_ID);
     const snapshot=await openAbilityCheckInterrupt(adapter);
     assert.equal(snapshot.resolution?.stage,"interrupt",JSON.stringify(snapshot.resolution));
@@ -360,10 +365,19 @@ test("portable production interceptor uses authoritative spatial, visibility, an
   const visibleButNotHidden=await prepare(ORIGINAL,true);
   const visibleInternal=visibleButNotHidden as unknown as {activeCharacter:CharacterSheet;scene:SceneVm};
   setSpatialRelation(visibleInternal.scene,{
-    sourceId:visibleInternal.activeCharacter.id,targetId:OTHER_CHARACTER_ID,distanceFeet:30,visible:true,cover:"none",targetCanSeeAttacker:true,provenance:"module:test-map:spatial",
+    sourceId:visibleInternal.activeCharacter.id,targetId:OTHER_CHARACTER_ID,distanceFeet:30,visible:true,cover:"none",targetCanSeeAttacker:true,light:"dim",obscurement:"none",detected:true,provenance:"module:test-map:spatial",
   });
   let snapshot=await openAbilityCheckInterrupt(visibleButNotHidden);
   assert.notEqual(snapshot.resolution?.stage,"interrupt","authoritative visible target must still fail a required Hidden fact when no Hidden effect exists");
+
+  const notDetected=await prepare(ORIGINAL,true);
+  const notDetectedInternal=notDetected as unknown as {activeCharacter:CharacterSheet;scene:SceneVm};
+  setSpatialRelation(notDetectedInternal.scene,{
+    sourceId:notDetectedInternal.activeCharacter.id,targetId:OTHER_CHARACTER_ID,distanceFeet:30,visible:true,cover:"none",targetCanSeeAttacker:true,light:"dim",obscurement:"none",detected:false,provenance:"module:test-map:spatial",
+  });
+  seedHiddenRuntimeEffect(notDetected,OTHER_CHARACTER_ID);
+  snapshot=await openAbilityCheckInterrupt(notDetected);
+  assert.notEqual(snapshot.resolution?.stage,"interrupt","authoritative detection false must fail a required sense.detected fact");
 
   const unavailable=await prepare(ORIGINAL,true);
   seedHiddenRuntimeEffect(unavailable,OTHER_CHARACTER_ID);

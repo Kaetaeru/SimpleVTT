@@ -1,6 +1,8 @@
 import type { SceneVm } from "./contracts";
 
 export type RuntimeCover = "none"|"half"|"three-quarters"|"total";
+export type RuntimeLight = "bright"|"dim"|"darkness";
+export type RuntimeObscurement = "none"|"light"|"heavy";
 
 export interface SpatialRelationVm {
   sourceId:string;
@@ -9,6 +11,9 @@ export interface SpatialRelationVm {
   visible:boolean;
   cover:RuntimeCover;
   targetCanSeeAttacker:boolean;
+  light?:RuntimeLight;
+  obscurement?:RuntimeObscurement;
+  detected?:boolean;
   provenance:string;
 }
 
