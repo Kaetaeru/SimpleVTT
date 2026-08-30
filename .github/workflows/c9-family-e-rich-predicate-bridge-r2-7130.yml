@@ -1,0 +1,84 @@
+name: C9 Family E Rich Predicate Bridge R2 7130
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-e-rich-predicate-bridge-r2-7130.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Apply rich predicate bridge and preserve bounded selector scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import textwrap
+
+          workflow=Path('.github/workflows/c9-family-e-rich-predicate-bridge-7130.yml').read_text(encoding='utf-8')
+          marker="          python3 - <<'PY'\n"
+          start=workflow.index(marker)+len(marker)
+          end=workflow.index("\n          PY",start)
+          code=textwrap.dedent(workflow[start:end])
+          exec(compile(code,'c9-family-e-rich-predicate-bridge-7130','exec'),{})
+
+          runtime=Path('src/domain/commonPlayOperationRuntime.ts')
+          text=runtime.read_text(encoding='utf-8')
+          old='''function parseTargetingSelector(value:unknown,label:string):CommonPlayTargetingSelector {\n  const selector=parseCommonPlaySelector(value,label);\n  if(selector.from!=="targets") throw new DomainEvaluationError(`${label}.from must be targets for portable Common Play targeting`);\n  if(selector.min===undefined) throw new DomainEvaluationError(`${label}.min is required for portable Common Play targeting`);\n  if(selector.max===undefined) throw new DomainEvaluationError(`${label}.max is required for portable Common Play targeting`);\n  return selector as CommonPlayTargetingSelector;\n}\n'''
+          new='''function parseTargetingSelector(value:unknown,label:string):CommonPlayTargetingSelector {\n  const authored=object(value,label);\n  if(authored.orderBy!==undefined) throw new DomainEvaluationError(`${label} contains unsupported fields: orderBy`);\n  if(authored.area!==undefined) throw new DomainEvaluationError(`${label} contains unsupported fields: area`);\n  const selector=parseCommonPlaySelector(value,label);\n  if(selector.from!=="targets") throw new DomainEvaluationError(`${label}.from must be targets for portable Common Play targeting`);\n  if(selector.min===undefined) throw new DomainEvaluationError(`${label}.min is required for portable Common Play targeting`);\n  if(selector.max===undefined) throw new DomainEvaluationError(`${label}.max is required for portable Common Play targeting`);\n  return selector as CommonPlayTargetingSelector;\n}\n'''
+          if text.count(old)!=1: raise SystemExit('patched targeting parser shape changed unexpectedly')
+          runtime.write_text(text.replace(old,new,1),encoding='utf-8')
+
+          test=Path('tests/domain/commonPlayTargetingRuntime.test.ts')
+          text=test.read_text(encoding='utf-8')
+          old='if(self.status==="rejected") assert.match(self.error,/relation filter rejected: hero/);'
+          new='if(self.status==="rejected") assert.match(self.error,/targeting selector rejected/);'
+          if text.count(old)!=1: raise SystemExit('relation rejection assertion changed unexpectedly')
+          text=text.replace(old,new,1)
+          old='if(missing.status==="rejected") assert.match(missing.error,/pre-resolved target/);'
+          new='if(missing.status==="rejected") assert.match(missing.error,/selector requires 1-1 result/);'
+          if text.count(old)!=1: raise SystemExit('missing target assertion changed unexpectedly')
+          test.write_text(text.replace(old,new,1),encoding='utf-8')
+          PY
+      - name: Generate content catalogs
+        run: npm run generate:content
+      - name: Verify rich predicate production slice
+        run: >-
+          npx tsx --test
+          tests/domain/commonPlaySelectorRuntime.test.ts
+          tests/domain/commonPlayTargetingRuntime.test.ts
+          tests/ui/installedCommonPlayProductionRuntime.test.ts
+          tests/ui/ruleModulePackageImport.test.ts
+      - name: Verify boundaries and types
+        run: |
+          node scripts/check-legacy-execution-boundary.mjs
+          npx tsc --noEmit
+      - name: Commit verified slice
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/domain/commonPlayOperationRuntime.ts src/app/installedCommonPlayRuntimeAdapter.ts tests/domain/commonPlayTargetingRuntime.test.ts tests/ui/installedCommonPlayProductionRuntime.test.ts
+          git commit -m "feat(c9): bridge rich target predicates"
+          git fetch origin agent/c9-gate-n-coverage-reconciliation
+          git rebase origin/agent/c9-gate-n-coverage-reconciliation
+          git rm .github/workflows/c9-family-e-rich-predicate-bridge-7130.yml .github/workflows/c9-family-e-rich-predicate-bridge-r2-7130.yml
+          git commit -m "chore(c9): remove consumed rich predicate verifiers"
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
