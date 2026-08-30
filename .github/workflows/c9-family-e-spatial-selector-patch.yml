@@ -1,0 +1,112 @@
+name: C9 Family E spatial selector patch
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-e-spatial-selector-patch.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply minimal Family E spatial selector bridge
+        shell: python
+        run: |
+          from pathlib import Path
+
+          source_path = Path("src/app/installedCommonPlayRuntimeAdapter.ts")
+          source = source_path.read_text(encoding="utf-8")
+          import_anchor = 'import { resolveRuntimeProfileProperty, SIMPLEVTT_APP_RULES_PROFILE } from "./realResolutionService";\n'
+          spatial_import = 'import { authoritativeCommonPlaySpatialRelation } from "./realSpatialRuntimeService";\n'
+          if spatial_import not in source:
+              if import_anchor not in source:
+                  raise SystemExit("installed Common Play import anchor changed")
+              source = source.replace(import_anchor, import_anchor + spatial_import, 1)
+
+          old_signature = 'function commonPlaySelectorCandidate(actor:SceneVm["entities"][number],target:SceneVm["entities"][number]):CommonPlaySelectorCandidate {\n  const targeting=commonPlayTargetFact(actor,target);\n'
+          new_signature = 'function commonPlaySelectorCandidate(scene:SceneVm,actor:SceneVm["entities"][number],target:SceneVm["entities"][number]):CommonPlaySelectorCandidate {\n  const targeting=commonPlayTargetFact(actor,target);\n  const spatial=authoritativeCommonPlaySpatialRelation(scene,actor.id,target.id);\n  if(spatial) {\n    targeting.distanceFeet=spatial.distanceFeet;\n    targeting.visible=spatial.visible;\n    targeting.cover=spatial.cover;\n  }\n'
+          if new_signature not in source:
+              if old_signature not in source:
+                  raise SystemExit("selector candidate signature changed")
+              source = source.replace(old_signature, new_signature, 1)
+
+          property_anchor = '      vulnerabilities:[...target.vulnerabilities],\n'
+          property_insert = '      vulnerabilities:[...target.vulnerabilities],\n      ...(spatial?{\n        "spatial.distance-feet":spatial.distanceFeet,\n        "sense.line-of-sight":spatial.visible,\n        "cover.level":spatial.cover,\n        "cover.total":spatial.cover==="total",\n      }:{}),\n'
+          if '"spatial.distance-feet":spatial.distanceFeet' not in source:
+              if property_anchor not in source:
+                  raise SystemExit("selector property anchor changed")
+              source = source.replace(property_anchor, property_insert, 1)
+
+          old_call = '.map((target)=>commonPlaySelectorCandidate(actorEntity,target));'
+          new_call = '.map((target)=>commonPlaySelectorCandidate(internal.scene,actorEntity,target));'
+          if new_call not in source:
+              if old_call not in source:
+                  raise SystemExit("selector candidate call changed")
+              source = source.replace(old_call, new_call, 1)
+          source_path.write_text(source, encoding="utf-8")
+
+          test_path = Path("tests/ui/commonPlayRichSelectorProduction.test.ts")
+          test_source = test_path.read_text(encoding="utf-8")
+          mock_import = 'import { MockAdapter } from "../../src/app/mockAdapter";\n'
+          extra_imports = 'import type { SceneVm } from "../../src/app/contracts";\nimport { setSpatialRelation } from "../../src/app/spatialRuntimeContracts";\n'
+          if extra_imports not in test_source:
+              if mock_import not in test_source:
+                  raise SystemExit("rich selector test import anchor changed")
+              test_source = test_source.replace(mock_import, mock_import + extra_imports, 1)
+
+          old_payload = 'function payload(identity:Identity,area=false) {'
+          new_payload = 'function payload(identity:Identity,area=false,distanceLimitFeet?:number) {'
+          if new_payload not in test_source:
+              if old_payload not in test_source:
+                  raise SystemExit("payload signature changed")
+              test_source = test_source.replace(old_payload, new_payload, 1)
+
+          old_targeting = '        entryPoints:[{id:identity.entryPointId,invocation:"manual",targeting:area\n          ?{from:"targets",min:1,max:3,area:{kind:"instant",shape:"cone",origin:"self",lengthFeet:15}}\n          :{from:"targets",min:1,max:2,where:{op:"eq",left:{ref:"relation"},right:{value:"enemy"}}},\n'
+          new_targeting = '        entryPoints:[{id:identity.entryPointId,invocation:"manual",targeting:area\n          ?{from:"targets",min:1,max:3,area:{kind:"instant",shape:"cone",origin:"self",lengthFeet:15}}\n          :distanceLimitFeet!==undefined\n            ?{from:"targets",min:1,max:2,where:{op:"lte",left:{ref:"spatial.distance-feet"},right:{value:distanceLimitFeet}}}\n            :{from:"targets",min:1,max:2,where:{op:"eq",left:{ref:"relation"},right:{value:"enemy"}}},\n'
+          if new_targeting not in test_source:
+              if old_targeting not in test_source:
+                  raise SystemExit("targeting fixture changed")
+              test_source = test_source.replace(old_targeting, new_targeting, 1)
+
+          old_install = 'async function install(adapter:MockAdapter,identity:Identity,area=false) {\n  setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());\n  const preview=await adapter.previewContentImport(payload(identity,area));\n'
+          new_install = 'async function install(adapter:MockAdapter,identity:Identity,area=false,distanceLimitFeet?:number) {\n  setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());\n  const preview=await adapter.previewContentImport(payload(identity,area,distanceLimitFeet));\n'
+          if new_install not in test_source:
+              if old_install not in test_source:
+                  raise SystemExit("install helper changed")
+              test_source = test_source.replace(old_install, new_install, 1)
+
+          test_marker = 'test("unknown installed area selector imports but refuses execution without provider-backed membership",async()=>{'
+          new_test = '''test("unknown installed rich selector consumes provider-backed authoritative spatial distance",async()=>{\n  const adapter=new MockAdapter();\n  const actionId=await install(adapter,ORIGINAL,false,30);\n  const internal=adapter as unknown as {scene:SceneVm};\n  setSpatialRelation(internal.scene,{sourceId:"char.aelar",targetId:"combatant.goblin-a",distanceFeet:20,visible:true,cover:"none",targetCanSeeAttacker:true,provenance:"module:test-spatial:selector"});\n  setSpatialRelation(internal.scene,{sourceId:"char.aelar",targetId:"combatant.goblin-b",distanceFeet:40,visible:true,cover:"none",targetCanSeeAttacker:true,provenance:"module:test-spatial:selector"});\n  await adapter.startInitiative();\n  await adapter.setCurrentActor("char.aelar");\n\n  await adapter.resolveAction(actionId,["combatant.goblin-b"]);\n  let snapshot=await adapter.getSnapshot();\n  assert.equal(snapshot.resolution?.actionId,actionId);\n  assert.equal(snapshot.resolution?.finalOutcome,"적용 거부");\n\n  await adapter.resolveAction(actionId,["combatant.goblin-a"]);\n  snapshot=await adapter.getSnapshot();\n  assert.equal(snapshot.resolution?.stage,"complete");\n  assert.deepEqual(snapshot.resolution?.targetIds,["combatant.goblin-a"]);\n});\n\n'''
+          if 'consumes provider-backed authoritative spatial distance' not in test_source:
+              if test_marker not in test_source:
+                  raise SystemExit("area selector test marker changed")
+              test_source = test_source.replace(test_marker, new_test + test_marker, 1)
+          test_path.write_text(test_source, encoding="utf-8")
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Generate content catalogs
+        run: npm run generate:content
+      - name: Verify Family E rich selector production path
+        run: npx tsx --test tests/ui/commonPlayRichSelectorProduction.test.ts
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - name: Commit verified patch and remove staging workflow
+        run: |
+          rm .github/workflows/c9-family-e-spatial-selector-patch.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/app/installedCommonPlayRuntimeAdapter.ts tests/ui/commonPlayRichSelectorProduction.test.ts .github/workflows/c9-family-e-spatial-selector-patch.yml
+          git diff --cached --quiet && exit 0
+          git commit -m "feat(c9): bridge authoritative spatial facts into selectors"
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
