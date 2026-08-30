@@ -1637,7 +1637,7 @@
         "druidWildShapeRuntimeAdapter.ts",
         "common-play-contract.schema.json: form artifactKind"
       ],
-      "currentState": "Named Wild Shape exists; generic form/controller artifact missing",
+      "currentState": "Generic source-owned form artifacts execute through installed Common Play and the canonical Resolver: structural property overlay/replacement/retention, HP/temp-HP policy, controller ownership, source-owned action grant/replace, restoration, connected replay/reconnect, and event-native Undo are proven without content-name or content-ID dispatch. The named Druid Wild Shape adapter is a compatibility/orchestration entry point that delegates form creation/removal to the same generic artifact/Resolver path rather than a second execution engine.",
       "requiredSemantics": [
         "property overlay/replacement/retention",
         "resource/HP/temp HP policy",
@@ -1651,15 +1651,30 @@
         "Undo"
       ],
       "transactionDomain": "Session form artifact plus Character projection",
-      "disposition": "INCOMPLETE",
-      "implementationEvidence": [],
-      "productionEvidence": [],
-      "identityInvarianceEvidence": [],
-      "connectedEvidenceIfRelevant": [],
-      "persistenceEvidenceIfRelevant": [],
-      "remainingNamedSeams": [
-        "druidWildShapeRuntimeAdapter"
+      "disposition": "IMPLEMENTED",
+      "implementationEvidence": [
+        "schemas/common-play-contract.schema.json artifactTemplates form vocabulary and structural form initialState",
+        "src/domain/commonPlayArtifactRuntime.ts generic form artifact spawn/dismiss lowering",
+        "src/domain/runtimeArtifact.ts typed form RuntimeArtifact state",
+        "src/domain/resolutionArtifactOps.ts canonical form linked-artifact projection through ResolutionEvents",
+        "src/app/installedCommonPlayRuntimeAdapter.ts installed external form action projection/dispatch without content identity branching",
+        "src/app/druidWildShapeRuntimeAdapter.ts Wild Shape compatibility path delegates form creation/removal to generic Common Play/Resolver commit"
       ],
+      "productionEvidence": [
+        "tests/ui/commonPlayFormProjectionProduction.test.ts unknown external form property projection, HP/temp-HP, source-owned action grant/replace, restoration, and Undo",
+        "tests/ui/connectedFormArtifactProjectionProduction.test.ts unknown external form Host/Client projection, reconnect, and Undo",
+        "584257b01a3158d6cc77c0bb519cd80e24437914 test(c9): prove connected form projection lifecycle"
+      ],
+      "identityInvarianceEvidence": [
+        "tests/ui/commonPlayFormProjectionProduction.test.ts renaming every external form identity preserves projection semantics"
+      ],
+      "connectedEvidenceIfRelevant": [
+        "tests/ui/connectedFormArtifactProjectionProduction.test.ts Host/Client authoritative event replay, transformed projection convergence, event-native Undo, and post-Undo convergence"
+      ],
+      "persistenceEvidenceIfRelevant": [
+        "tests/ui/connectedFormArtifactProjectionProduction.test.ts fresh reconnect reconstructs transformed form state from ordered session events and reconnect after Undo reconstructs the restored base state"
+      ],
+      "remainingNamedSeams": [],
       "connectedRelevant": true,
       "persistenceRelevant": true
     },
