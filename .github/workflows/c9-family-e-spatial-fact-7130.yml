@@ -40,7 +40,7 @@ jobs:
           node scripts/check-v1-mechanism-coverage.mjs
           node scripts/check-legacy-execution-boundary.mjs
           npm exec tsc -- --noEmit
-      - name: Commit and publish against moving branch
+      - name: Publish verified proof to staging branch
         shell: bash
         run: |
           set -euo pipefail
@@ -51,17 +51,8 @@ jobs:
           if ! git diff --cached --quiet; then
             git commit -m "test(c9): prove Family E spatial selector facts"
           fi
-          branch=agent/c9-gate-n-coverage-reconciliation
-          for attempt in 1 2 3 4 5; do
-            git fetch origin "$branch"
-            git rebase "origin/$branch"
-            node --import tsx --test tests/ui/c9FamilyESpatialFactProduction.test.ts tests/ui/c9FamilyEConditionSelectorProduction.test.ts tests/ui/c9FamilyETagSelectorProduction.test.ts tests/ui/commonPlayRichSelectorProduction.test.ts
-            node scripts/check-v1-mechanism-coverage.mjs
-            node scripts/check-legacy-execution-boundary.mjs
-            npm exec tsc -- --noEmit
-            if git push origin HEAD:"$branch"; then
-              exit 0
-            fi
-          done
-          echo "Family E spatial publish lost five branch races" >&2
-          exit 1
+          node --import tsx --test tests/ui/c9FamilyESpatialFactProduction.test.ts tests/ui/c9FamilyEConditionSelectorProduction.test.ts tests/ui/c9FamilyETagSelectorProduction.test.ts tests/ui/commonPlayRichSelectorProduction.test.ts
+          node scripts/check-v1-mechanism-coverage.mjs
+          node scripts/check-legacy-execution-boundary.mjs
+          npm exec tsc -- --noEmit
+          git push --force origin HEAD:agent/c9-family-e-spatial-stage-7130
