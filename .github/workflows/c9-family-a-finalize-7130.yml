@@ -1,17 +1,17 @@
-name: C9 Family A Finalize 7130
+name: C9 Family A Evidence Reconcile 7130
 
 on:
   push:
     branches:
       - agent/c9-gate-n-coverage-reconciliation
     paths:
-      - ".github/workflows/c9-family-a-finalize-7130.yml"
+      - .github/workflows/c9-family-a-finalize-7130.yml
 
 permissions:
   contents: write
 
 jobs:
-  finalize:
+  reconcile:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -23,161 +23,45 @@ jobs:
           node-version: 22
       - run: npm install --no-audit --no-fund
       - run: npm run generate:content
-      - name: Project non-active runtime profile inputs
-        shell: bash
+      - name: Verify resolved Family A seams
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          path=Path("src/app/installedCommonPlayRuntimeAdapter.ts")
-          text=path.read_text(encoding="utf-8")
-          start=text.index("function commonPlayActorProfileProperties(")
-          end=text.index("\nfunction operationExecutionInput(",start)
-          current=text[start:end]
-          desired='''function commonPlayActorProfileProperties(
-            internal:AdapterState,
-            state:RulesRuntimeState,
-            actorId:string,
-          ):Record<string,number>|undefined {
-            const actorState=state.combatants[actorId];
-            if(!actorState) return undefined;
-            const inputs:Record<string,number>={
-              ...(actorState.baseProperties??{}),
-              "movement.walk":actorState.baseSpeed,
-              "hp.current":actorState.life.hp.current,
-              "hp.maximum":actorState.life.hp.maximum,
-              "hp.temporary":actorState.life.hp.temporary,
-            };
-            if(internal.activeCharacter.id===actorId) {
-              const character=internal.activeCharacter;
-              Object.assign(inputs,{
-                "ability.str.score":character.abilities.str,
-                "ability.dex.score":character.abilities.dex,
-                "ability.con.score":character.abilities.con,
-                "ability.int.score":character.abilities.int,
-                "ability.wis.score":character.abilities.wis,
-                "ability.cha.score":character.abilities.cha,
-                "progression.character.level":character.level,
-                "proficiency.bonus":character.proficiencyBonus,
-                "defense.ac":character.ac,
-              });
-            }
-            const projected={...inputs};
-            for(const [property,definition] of Object.entries(SIMPLEVTT_APP_RULES_PROFILE.properties)) {
-              if(!Number.isFinite(inputs[property])&&!definition.formula) continue;
-              projected[property]=resolveRuntimeProfileProperty(state.effects,actorId,property,inputs).value;
-            }
-            return projected;
-          }
-          '''
-          desired='\n'.join(line[10:] if line.startswith('          ') else line for line in desired.splitlines())
-          if "...(actorState.baseProperties??{})" not in current:
-              if "if(internal.activeCharacter.id!==actorId)" not in current:
-                  raise SystemExit("Family A profile projection anchor changed")
-              text=text[:start]+desired+text[end:]
-              path.write_text(text,encoding="utf-8")
-          PY
-      - name: Add non-active production regression
-        shell: bash
-        run: |
-          cat > tests/ui/c9FamilyANonActiveProfileProperties.test.ts <<'EOF'
-          import assert from "node:assert/strict";
-          import test from "node:test";
-          import "../../src/app/offlineRuntimeAdapters";
-          import "../../src/app/installedContentRuntimeAdapter";
-          import { catalogQualifiedId } from "../../src/app/contentCatalogIdentity";
-          import { installedCommonPlayActionId, parseStoredInvocationCommonPlayActionId } from "../../src/app/installedCommonPlayActionReference";
-          import { setInstalledContentStoreForTests } from "../../src/app/installedContentRuntimeAdapter";
-          import { MemoryInstalledContentStore } from "../../src/app/memoryInstalledContentStore";
-          import { MockAdapter } from "../../src/app/mockAdapter";
-
-          const MODULE_ID="homebrew.family-a-nonactive";
-          const CONTENT_ID="option.family-a-nonactive";
-          const MECHANIC_ID="external.unknown.family-a-nonactive";
-          const ENTRY_POINT_ID="move-by-ac";
-
-          function payload() {
-            return JSON.stringify({
-              schemaVersion:"0.1-draft",moduleId:MODULE_ID,moduleVersion:"1",
-              rulesProfile:{id:"dnd.srd-5.2.1",version:"0.1-draft"},defaultLocale:"en",
-              source:{document:"Family A Non-Active Profile Probe",version:"1",license:"CC0",srdDerived:false},
-              dependencies:[],conflicts:[],capabilities:[],
-              content:[{
-                id:CONTENT_ID,category:"option",
-                presentation:{defaultLocale:"en",originalName:"Non-Active Profile Probe",locales:{en:{name:"Non-Active Profile Probe"}}},
-                mechanics:[{kind:"common-play",config:{
-                  schemaVersion:"0.2-draft",id:MECHANIC_ID,
-                  entryPoints:[{id:ENTRY_POINT_ID,invocation:"manual",operations:[{
-                    kind:"movement.relocate",mode:"move",movementType:"walk",target:"actor",
-                    distance:{ref:"defense.ac"},
-                    destinationFact:{id:"nonactive-ac-destination",fact:"spatial.legal-destination",subject:"actor",authority:"actor-owner",visibility:"actor-and-dm",unknownPolicy:"request-authority"}
-                  }]}]
-                }}]
-              }]
-            });
-          }
-
-          test("unknown stored Common Play reads a non-active runtime actor profile property",async()=>{
-            const adapter=new MockAdapter();
-            setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
-            const preview=await adapter.previewContentImport(payload());
-            assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
-            await adapter.activateContentImport();
-            await adapter.startInitiative();
-            const actorId="combatant.goblin-a";
-            await adapter.setCurrentActor(actorId);
-            const actionId=installedCommonPlayActionId({
-              catalogId:catalogQualifiedId(CONTENT_ID,MODULE_ID,"1"),mechanicId:MECHANIC_ID,entryPointId:ENTRY_POINT_ID
-            });
-            await adapter.configureReadyAction({actorId,actionId,trigger:"Aelar acts"});
-            await adapter.setCurrentActor("char.aelar");
-            const before=await adapter.getSnapshot();
-            const baseAc=before.scene.entities.find((entity)=>entity.id===actorId)!.ac;
-            const beforeMovement=before.scene.economyByActor[actorId]!.movement;
-            const trigger=(before.scene.actionsByActor[actorId]??[]).find((action)=>Boolean(parseStoredInvocationCommonPlayActionId(action.id)));
-            assert.ok(trigger,JSON.stringify(before.scene.actionsByActor[actorId]));
-            await adapter.resolveAction(trigger.id,[actorId]);
-            const after=await adapter.getSnapshot();
-            assert.equal(after.resolution?.stage,"complete",JSON.stringify(after.resolution));
-            assert.equal(beforeMovement-after.scene.economyByActor[actorId]!.movement,baseAc);
-          });
-          EOF
-      - name: Verify Family A production coverage
-        run: npx tsx --test tests/ui/c9FamilyANonActiveProfileProperties.test.ts tests/ui/installedCommonPlayPropertyModifierProduction.test.ts
-      - name: Verify TypeScript
-        run: npx tsc --noEmit
-      - name: Verify ledger structure
-        run: node scripts/check-v1-mechanism-coverage.mjs
-      - name: Reconcile only the verified Family A seam
-        shell: bash
-        run: |
-          python3 - <<'PY'
-          import json
-          from pathlib import Path
-          path=Path("docs/rules/v1-mechanism-coverage-ledger.json")
-          ledger=json.loads(path.read_text(encoding="utf-8"))
-          row=next(entry for entry in ledger["rows"] if entry["family"]=="A")
-          seam="Common Play profile-property input projection is generic for the active Character, but non-active runtime actors still expose only movement.walk rather than the same RulesProfile property surface"
-          row["remainingNamedSeams"]=[value for value in row["remainingNamedSeams"] if value!=seam]
-          evidence="c9FamilyANonActiveProfileProperties.test.ts unknown stored external Common Play consumes a non-active runtime actor defense.ac through CombatantRuntimeState.baseProperties and the shared RulesProfile/effect resolver"
-          if evidence not in row["productionEvidence"]: row["productionEvidence"].append(evidence)
-          implementation="installedCommonPlayRuntimeAdapter.ts commonPlayActorProfileProperties consumes CombatantRuntimeState.baseProperties for non-active actors through the same resolveRuntimeProfileProperty loop"
-          if implementation not in row["implementationEvidence"]: row["implementationEvidence"].append(implementation)
-          row["currentState"]=(
-            "Generic property/effect execution and active Character profile projection remain proven. Non-active runtime actors now expose their canonical CombatantRuntimeState.baseProperties, HP, and movement inputs through the same RulesProfile/effect evaluator, so unknown stored Common Play can consume non-movement actor properties without identity dispatch. Family A remains INCOMPLETE for named progression/runtime stat materialization and any profile-policy semantics not yet authoritatively defined by RulesProfile."
-          )
-          row["disposition"]="INCOMPLETE"
-          path.write_text(json.dumps(ledger,indent=2,ensure_ascii=False)+"\n",encoding="utf-8")
-          PY
-      - name: Recheck ledger after evidence update
-        run: node scripts/check-v1-mechanism-coverage.mjs
-      - name: Publish verified seam and retire workflow
+          npx tsx --test tests/ui/installedCommonPlayPropertyModifierProduction.test.ts tests/domain/propertyModifierProfilePolicyRuntime.test.ts
+          npx tsc --noEmit
+          node scripts/check-v1-mechanism-coverage.mjs
+      - name: Reconcile latest ledger and retire workflow
         shell: bash
         run: |
           set -euo pipefail
-          rm .github/workflows/c9-family-a-finalize-7130.yml
+          branch=agent/c9-gate-n-coverage-reconciliation
+          git fetch origin "$branch"
+          git reset --hard "origin/$branch"
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
+          ledger=json.loads(path.read_text(encoding='utf-8'))
+          row=next(entry for entry in ledger['rows'] if entry['family']=='A')
+          nonactive='Common Play profile-property input projection is generic for the active Character, but non-active runtime actors still expose only movement.walk rather than the same RulesProfile property surface'
+          row['remainingNamedSeams']=[entry for entry in row['remainingNamedSeams'] if entry!=nonactive]
+          implementation='installedCommonPlayRuntimeAdapter.ts projects non-active CombatantRuntimeState.baseProperties through the shared resolveRuntimeProfileProperty owner'
+          if implementation not in row['implementationEvidence']:
+              row['implementationEvidence'].append(implementation)
+          production='b8d81fd205db55fb7cb2f6362ae4e9840f5c9a82 feat(c9): project non-active profile properties; C9 Family A Nonactive Profile run 33311899534 passed production projection, tsc --noEmit, and coverage checker'
+          if production not in row['productionEvidence']:
+              row['productionEvidence'].append(production)
+          profile_policy='propertyModifierProfilePolicyRuntime.test.ts proves RulesProfile-owned profile-policy stacking without content identity dispatch'
+          if profile_policy not in row['implementationEvidence']:
+              row['implementationEvidence'].append(profile_policy)
+          row['currentState']='Generic property.modify lowers external modifiers to typed Effect state and the shared RulesProfile/effect resolver now serves active Characters and non-active runtime actors from authoritative property inputs without content identity dispatch. Derived profile refs, source-bound modifiers, stack/replace/unique-by-source, RulesProfile-owned profile-policy, connected replay/reconnect/Undo, and offline restart persistence are proven. Family A remains INCOMPLETE only for the ledger-listed named progression/runtime stat materialization outside the generic property owner.'
+          row['disposition']='INCOMPLETE'
+          path.write_text(json.dumps(ledger,indent=2,ensure_ascii=False)+'\n',encoding='utf-8')
+          PY
+          node scripts/check-v1-mechanism-coverage.mjs
+          rm -f .github/workflows/c9-family-a-finalize-7130.yml
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/app/installedCommonPlayRuntimeAdapter.ts tests/ui/c9FamilyANonActiveProfileProperties.test.ts docs/rules/v1-mechanism-coverage-ledger.json .github/workflows/c9-family-a-finalize-7130.yml
-          git commit -m "feat(c9): project non-active actor profile inputs"
-          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
-          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
+          git add docs/rules/v1-mechanism-coverage-ledger.json .github/workflows/c9-family-a-finalize-7130.yml
+          git diff --cached --check
+          git commit -m "docs(c9): reconcile Family A property evidence"
+          git push origin HEAD:"$branch"
