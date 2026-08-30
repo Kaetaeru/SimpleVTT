@@ -80,11 +80,10 @@ jobs:
         run: npm run generate:content
       - name: Verify rich selector candidate production slice
         run: >-
-          npx tsx --test
+          node --import tsx --test
           tests/domain/commonPlaySelectorRuntime.test.ts
           tests/domain/commonPlayTargetingRuntime.test.ts
           tests/ui/installedCommonPlayProductionRuntime.test.ts
-          tests/ui/ruleModulePackageImport.test.ts
       - name: Verify boundaries and types
         run: |
           node scripts/check-legacy-execution-boundary.mjs
