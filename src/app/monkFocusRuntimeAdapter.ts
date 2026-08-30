@@ -12,6 +12,7 @@ const STEP_FOCUS_ACTION_ID="action.monk.step-of-the-wind.focus";
 const FLURRY_SOURCE_ID="dnd.srd521.feature.monk.flurry-of-blows";
 const PATIENT_SOURCE_ID="dnd.srd521.feature.monk.patient-defense";
 const MONK_ACTION_IDS=new Set([FLURRY_ACTION_ID,PATIENT_ACTION_ID,PATIENT_FOCUS_ACTION_ID,STEP_ACTION_ID,STEP_FOCUS_ACTION_ID]);
+const MONK_RUNTIME_ACTION_IDS=new Set([FLURRY_ACTION_ID,PATIENT_ACTION_ID,PATIENT_FOCUS_ACTION_ID,STEP_FOCUS_ACTION_ID]);
 
 type AdapterState={
   sessionMode:SessionMode;
@@ -66,7 +67,7 @@ function monkActions(internal:AdapterState,snapshot:AppSnapshot):ActionVm[] {
     },
     {
       id:STEP_ACTION_ID,actorId:character.id,name:"바람의 걸음 · 질주",category:"basic",target:"self",economy:"추가 행동",resolutionKind:"no-roll",
-      summary:`이동 가능량 +${character.speed}피트`,available:bonusAvailable,disabledReason:baseDisabled,eligibleTargetIds:self,
+      summary:`이동 가능량 +${character.speed}피트`,available:bonusAvailable,disabledReason:baseDisabled,eligibleTargetIds:self,movementBudgetGainFeet:character.speed,
       details:[detail("효과",`질주 · 이동 가능량 +${character.speed}피트`),detail("비용","추가 행동 1"),detail("출처","SRD 5.2.1 · Monk · Step of the Wind",STEP_OF_THE_WIND_SOURCE_ID)],
     },
     {
@@ -114,7 +115,7 @@ function addStatus(entity:SceneEntity|undefined,status:string,resolution:Resolut
 MockAdapter.prototype.advanceResolution=async function advanceMonkFocusResolution(){
   const internal=this as unknown as AdapterState;
   const resolution=internal.resolution;
-  if(!resolution||resolution.stage!=="effect-preview"||!MONK_ACTION_IDS.has(resolution.actionId)) return previousAdvanceResolution.call(this);
+  if(!resolution||resolution.stage!=="effect-preview"||!MONK_RUNTIME_ACTION_IDS.has(resolution.actionId)) return previousAdvanceResolution.call(this);
   const actor=internal.scene.entities.find((entry)=>entry.id===resolution.actorId);
   const economy=internal.scene.economyByActor[resolution.actorId];
 
@@ -133,13 +134,13 @@ MockAdapter.prototype.advanceResolution=async function advanceMonkFocusResolutio
     addStatus(actor,"이탈",resolution);
     addStatus(actor,"회피",resolution);
     resolution.finalOutcome="이탈 + 회피 적용";
-  } else if((resolution.actionId===STEP_ACTION_ID||resolution.actionId===STEP_FOCUS_ACTION_ID)&&economy) {
+  } else if(resolution.actionId===STEP_FOCUS_ACTION_ID&&economy) {
     const before=economy.movementMax;
     economy.movementMax+=internal.activeCharacter.speed;
     economy.movement+=internal.activeCharacter.speed;
     resolution.stateChanges.push(`이동 가능량 ${before} → ${economy.movementMax}`);
-    if(resolution.actionId===STEP_FOCUS_ACTION_ID) addStatus(actor,"이탈",resolution);
-    resolution.finalOutcome=resolution.actionId===STEP_FOCUS_ACTION_ID?"질주 + 이탈 + 도약 거리 2배":"질주 적용";
+    addStatus(actor,"이탈",resolution);
+    resolution.finalOutcome="질주 + 이탈 + 도약 거리 2배";
   }
   const snapshot=await previousAdvanceResolution.call(this);
   if(snapshot.resolution?.id===resolution.id&&snapshot.resolution.stage==="complete") {
