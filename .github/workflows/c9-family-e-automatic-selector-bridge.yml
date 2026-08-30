@@ -1,0 +1,132 @@
+name: C9 Family E Automatic Selector Bridge
+
+on:
+  push:
+    branches:
+      - "agent/c9-gate-n-coverage-reconciliation"
+    paths:
+      - ".github/workflows/c9-family-e-automatic-selector-bridge.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Patch generic automatic selector production bridge
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace(path, old, new):
+              p=Path(path)
+              text=p.read_text()
+              if old not in text:
+                  raise SystemExit(f"expected patch anchor missing: {path}: {old[:80]!r}")
+              p.write_text(text.replace(old,new,1))
+
+          replace("src/domain/commonPlaySelectorRuntime.ts",
+              '  orderBy?:string;\n  area?:CommonPlayInstantArea;',
+              '  orderBy?:string;\n  selection?:"manual"|"automatic";\n  area?:CommonPlayInstantArea;')
+          replace("src/domain/commonPlaySelectorRuntime.ts",
+              'const SELECTOR_KEYS=new Set(["from","where","min","max","orderBy","area"]);',
+              'const SELECTOR_KEYS=new Set(["from","where","min","max","orderBy","selection","area"]);')
+          replace("src/domain/commonPlaySelectorRuntime.ts",
+              '  const orderBy=selector.orderBy===undefined?undefined:stringValue(selector.orderBy,`${label}.orderBy`);\n  const area=selector.area===undefined?undefined:instantArea(selector.area,`${label}.area`);',
+              '  const orderBy=selector.orderBy===undefined?undefined:stringValue(selector.orderBy,`${label}.orderBy`);\n  const selection=selector.selection===undefined?undefined:selector.selection;\n  if(selection!==undefined&&selection!=="manual"&&selection!=="automatic") throw new DomainEvaluationError(`${label}.selection must be manual or automatic`);\n  const area=selector.area===undefined?undefined:instantArea(selector.area,`${label}.area`);')
+          replace("src/domain/commonPlaySelectorRuntime.ts",
+              '    ...(orderBy===undefined?{}:{orderBy}),\n    ...(area===undefined?{}:{area}),',
+              '    ...(orderBy===undefined?{}:{orderBy}),\n    ...(selection===undefined?{}:{selection}),\n    ...(area===undefined?{}:{area}),')
+
+          replace("src/domain/commonPlayOperationRuntime.ts",
+              'const TARGETING_KEYS=new Set(["from","where","min","max","area","orderBy"]);',
+              'const TARGETING_KEYS=new Set(["from","where","min","max","area","orderBy","selection"]);')
+
+          replace("schemas/common-play-contract.schema.json",
+              '        "orderBy": {\n          "type": "string",\n          "minLength": 1\n        },\n        "area": {',
+              '        "orderBy": {\n          "type": "string",\n          "minLength": 1\n        },\n        "selection": {\n          "enum": [\n            "manual",\n            "automatic"\n          ]\n        },\n        "area": {')
+
+          replace("src/app/installedCommonPlayRuntimeAdapter.ts",
+              '  const portableEntry=entryPoint as {targeting?:{min?:number;max?:number};allocation?:{targets:{min?:number;max?:number}}};\n  const targeting=portableEntry.targeting;',
+              '  const portableEntry=entryPoint as {targeting?:{min?:number;max?:number;selection?:"manual"|"automatic"};allocation?:{targets:{min?:number;max?:number}}};\n  const targeting=portableEntry.targeting;')
+          replace("src/app/installedCommonPlayRuntimeAdapter.ts",
+              '  const multi=action.lowered.kind==="save-damage"||Boolean(targetSelector&&(targetSelector.max??1)>1);\n  const eligibleTargetIds=targeted\n    ?scene.entities.filter((entity)=>state.combatants[entity.id]).map((entity)=>entity.id)\n    :[actorId];',
+              '  const automaticTargeting=targeting?.selection==="automatic";\n  const multi=action.lowered.kind==="save-damage"||Boolean(targetSelector&&(targetSelector.max??1)>1);\n  const eligibleTargetIds=automaticTargeting\n    ?[actorId]\n    :targeted?scene.entities.filter((entity)=>state.combatants[entity.id]).map((entity)=>entity.id):[actorId];')
+          replace("src/app/installedCommonPlayRuntimeAdapter.ts",
+              '    name:action.nameKo||action.nameEn,category:action.category==="spell"?"magic":"basic",\n    target:targeted?"any":"self",economy,resolutionKind,',
+              '    name:action.nameKo||action.nameEn,category:action.category==="spell"?"magic":"basic",\n    target:targeted&&!automaticTargeting?"any":"self",economy,resolutionKind,')
+          replace("src/app/installedCommonPlayRuntimeAdapter.ts",
+              '    eligibleTargetIds,\n    ...(multi?{maxTargets:targetSelector?.max??eligibleTargetIds.length}:{}),',
+              '    eligibleTargetIds,\n    ...(multi&&!automaticTargeting?{maxTargets:targetSelector?.max??eligibleTargetIds.length}:{}),')
+
+          replace("src/app/installedCommonPlayRuntimeAdapter.ts",
+              '  const selectedTargetId=targetIds[0];\n  if(!actorEntity||!state.combatants[actor.id]) return undefined;\n  const selectedTargets=targetIds.map((id)=>internal.scene.entities.find((candidate)=>candidate.id===id));\n  if(selectedTargets.some((target,index)=>!target||!state!.combatants[targetIds[index]])) return undefined;\n  const uniqueSelectedTargets=[...new Map(selectedTargets.map((target)=>[target!.id,target!] as const)).values()];',
+              '  let effectiveTargetIds=[...targetIds];\n  let selectedTargetId=effectiveTargetIds[0];\n  if(!actorEntity||!state.combatants[actor.id]) return undefined;\n  let selectedTargets=effectiveTargetIds.map((id)=>internal.scene.entities.find((candidate)=>candidate.id===id));\n  if(selectedTargets.some((target,index)=>!target||!state!.combatants[effectiveTargetIds[index]])) return undefined;\n  let uniqueSelectedTargets=[...new Map(selectedTargets.map((target)=>[target!.id,target!] as const)).values()];')
+          replace("src/app/installedCommonPlayRuntimeAdapter.ts",
+              '  if(hasTargeting) {\n    const targeting=portableEntry.targeting!;\n    const candidates=internal.scene.entities',
+              '  if(hasTargeting) {\n    const targeting=portableEntry.targeting!;\n    const selectionMode=targeting.selection??"manual";\n    if(selectionMode==="automatic"&&targetIds.length&&!(targetIds.length===1&&targetIds[0]===actor.id)) return undefined;\n    const candidates=internal.scene.entities')
+          replace("src/app/installedCommonPlayRuntimeAdapter.ts",
+              '      candidates,\n      selectedIds:targetIds,\n      selection:"manual",\n      authority:"actor-owner",\n      directTarget:false,\n    });\n    if(selection.status!=="resolved") return undefined;\n    if(projectedAction&&(!projectedAction.available||targetIds.some((id)=>!projectedAction.eligibleTargetIds.includes(id)))) return undefined;',
+              '      candidates,\n      selectedIds:selectionMode==="manual"?targetIds:undefined,\n      selection:selectionMode,\n      authority:selectionMode==="automatic"?"host":"actor-owner",\n      directTarget:false,\n    });\n    if(selection.status!=="resolved") return undefined;\n    effectiveTargetIds=selection.targetIds;\n    selectedTargetId=effectiveTargetIds[0]??actor.id;\n    selectedTargets=effectiveTargetIds.map((id)=>internal.scene.entities.find((candidate)=>candidate.id===id));\n    if(selectedTargets.some((target,index)=>!target||!state!.combatants[effectiveTargetIds[index]])) return undefined;\n    uniqueSelectedTargets=[...new Map(selectedTargets.map((target)=>[target!.id,target!] as const)).values()];\n    if(projectedAction&&(!projectedAction.available||selectionMode==="manual"&&targetIds.some((id)=>!projectedAction.eligibleTargetIds.includes(id)))) return undefined;')
+
+          replace("tests/ui/commonPlayRichSelectorProduction.test.ts",
+              'function payload(identity:Identity,area=false) {',
+              'function payload(identity:Identity,area=false,automatic=false) {')
+          replace("tests/ui/commonPlayRichSelectorProduction.test.ts",
+              ': {from:"targets",min:1,max:2,where:{op:"eq",left:{ref:"relation"},right:{value:"enemy"}}},',
+              ': {from:"targets",min:1,max:automatic?1:2,where:{op:"eq",left:{ref:"relation"},right:{value:"enemy"}},...(automatic?{selection:"automatic",orderBy:"hp"}: {})},')
+          replace("tests/ui/commonPlayRichSelectorProduction.test.ts",
+              'async function install(adapter:MockAdapter,identity:Identity,area=false) {',
+              'async function install(adapter:MockAdapter,identity:Identity,area=false,automatic=false) {')
+          replace("tests/ui/commonPlayRichSelectorProduction.test.ts",
+              '  const preview=await adapter.previewContentImport(payload(identity,area));',
+              '  const preview=await adapter.previewContentImport(payload(identity,area,automatic));')
+          p=Path("tests/ui/commonPlayRichSelectorProduction.test.ts")
+          text=p.read_text()
+          marker='test("unknown installed area selector imports but refuses execution without provider-backed membership",async()=>{'
+          if marker not in text:
+              raise SystemExit("rich selector test insertion anchor missing")
+          test='''test("unknown installed automatic selector uses host authority and authored ordering without manual target identity",async()=>{\n  async function run(identity:Identity) {\n    const adapter=new MockAdapter();\n    const actionId=await install(adapter,identity,false,true);\n    await adapter.startInitiative();\n    await adapter.setCurrentActor("char.aelar");\n    const projected=await adapter.getSnapshot();\n    const action=projected.scene.actionsByActor["char.aelar"].find((candidate)=>candidate.id===actionId);\n    assert.equal(action?.target,"self");\n    assert.deepEqual(action?.eligibleTargetIds,["char.aelar"]);\n    await adapter.resolveAction(actionId,["char.aelar"]);\n    const snapshot=await adapter.getSnapshot();\n    assert.equal(snapshot.resolution?.stage,"complete");\n    assert.deepEqual(snapshot.resolution?.targetIds,["combatant.wolf"],"lowest-HP eligible enemy is selected by the shared orderBy kernel");\n    return snapshot.resolution?.targetIds;\n  }\n  assert.deepEqual(await run(RENAMED),await run(ORIGINAL));\n});\n\n'''
+          p.write_text(text.replace(marker,test+marker,1))
+
+          replace("docs/rules/v1-mechanism-coverage-ledger.json",
+              'Portable Common Play targeting preserves bounded selected target sets and evaluates generic predicates over authoritative production candidates through the shared selector kernel; providerless area membership fails closed, while full spatial provider integration, ordering/object/point selection, and automatic-vs-manual production authority remain incomplete.',
+              'Portable Common Play targeting preserves bounded selected target sets, evaluates generic predicates over authoritative production candidates, and routes authored automatic selection plus orderBy through the shared selector kernel with Host authority; providerless area membership fails closed, while full spatial provider integration and object/point selection remain incomplete.')
+          replace("docs/rules/v1-mechanism-coverage-ledger.json",
+              '        "commonPlayOperationRuntime.ts routes portable target predicates through commonPlaySelectorRuntime using authoritative CommonPlaySelectorCandidate facts supplied by installedCommonPlayRuntimeAdapter.ts without content identity dispatch"',
+              '        "commonPlayOperationRuntime.ts routes portable target predicates through commonPlaySelectorRuntime using authoritative CommonPlaySelectorCandidate facts supplied by installedCommonPlayRuntimeAdapter.ts without content identity dispatch",\n        "commonPlaySelectorRuntime.ts parses manual/automatic selector authority and applies structural orderBy before bounded selection; installedCommonPlayRuntimeAdapter.ts delegates automatic target choice to that shared kernel with Host authority"')
+          replace("docs/rules/v1-mechanism-coverage-ledger.json",
+              '        "C9 Family E Rich Selector Candidate Bridge 7130 run 33310268977: rich selector production/import regression, legacy execution boundary, and tsc --noEmit all passed; verifier retired after success"',
+              '        "C9 Family E Rich Selector Candidate Bridge 7130 run 33310268977: rich selector production/import regression, legacy execution boundary, and tsc --noEmit all passed; verifier retired after success",\n        "commonPlayRichSelectorProduction.test.ts unknown installed automatic selector selects the lowest-HP eligible enemy by authored orderBy through Host authority and remains identity-invariant"')
+          replace("docs/rules/v1-mechanism-coverage-ledger.json",
+              '        "range/reach/sight/cover/tag spatial facts, provider-backed area membership, ordering/object/point selection, and automatic-vs-manual production selector authority remain incomplete"',
+              '        "range/reach/sight/cover/tag spatial facts, provider-backed area membership, and object/point selection remain incomplete"')
+          PY
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Generate content catalogs
+        run: npm run generate:content
+      - name: Verify Family E automatic selector bridge
+        run: npx tsx --test tests/domain/commonPlayTargetingRuntime.test.ts tests/ui/commonPlayRichSelectorProduction.test.ts tests/ui/installedCommonPlayProductionRuntime.test.ts
+      - name: Verify legacy execution boundary
+        run: node scripts/check-legacy-execution-boundary.mjs
+      - name: Verify coverage ledger
+        run: node scripts/check-v1-mechanism-coverage.mjs
+      - name: Typecheck application
+        run: npx tsc --noEmit
+      - name: Commit verified slice and retire staging workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/c9-family-e-automatic-selector-bridge.yml
+          git add schemas/common-play-contract.schema.json src/domain/commonPlaySelectorRuntime.ts src/domain/commonPlayOperationRuntime.ts src/app/installedCommonPlayRuntimeAdapter.ts tests/ui/commonPlayRichSelectorProduction.test.ts docs/rules/v1-mechanism-coverage-ledger.json
+          git commit -m "feat(c9): bridge automatic selector authority"
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
