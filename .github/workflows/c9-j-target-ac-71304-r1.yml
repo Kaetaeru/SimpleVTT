@@ -43,20 +43,58 @@ jobs:
           replace_once('src/domain/commonPlayOperationRuntime.ts',
               '  actorProperties?:Record<string,number>;\n  movementProperties?:Record<string,number>;\n',
               '  actorProperties?:Record<string,number>;\n  targetProperties?:Record<string,number>;\n  movementProperties?:Record<string,number>;\n')
+          actor_helper='''function actorExpressionInteger(
+            expression:CommonPlayExpression,
+            input:CommonPlayOperationExecutionInput,
+            label:string,
+            minimum?:number,
+          ) {
+            const properties=input.actorProperties??{};
+            const value=evaluateExpression(expression as ExpressionNode,(property)=>{
+              const resolved=properties[property];
+              if(!Number.isFinite(resolved)) throw new DomainEvaluationError(`${label} actor property is unavailable: ${property}`);
+              return Number(resolved);
+            });
+            if(!Number.isFinite(value)||!Number.isInteger(value)) throw new DomainEvaluationError(`${label} must resolve to a finite integer`);
+            if(minimum!==undefined&&value<minimum) throw new DomainEvaluationError(`${label} must resolve to an integer >= ${minimum}`);
+            return value;
+          }
+          '''
+          actor_helper='\n'.join(line[10:] if line.startswith('          ') else line for line in actor_helper.splitlines())+'\n'
+          d20_helper=actor_helper+'''\nfunction d20TargetExpressionInteger(
+  expression:CommonPlayExpression,
+  input:CommonPlayOperationExecutionInput,
+  label:string,
+  minimum?:number,
+) {
+  const actorProperties=input.actorProperties??{};
+  const targetProperties=input.targetProperties??{};
+  const value=evaluateExpression(expression as ExpressionNode,(property)=>{
+    const targetProperty=property.startsWith("target.")?property.slice("target.".length):undefined;
+    const resolved=targetProperty===undefined?actorProperties[property]:targetProperties[targetProperty];
+    if(!Number.isFinite(resolved)) throw new DomainEvaluationError(`${label} property is unavailable: ${property}`);
+    return Number(resolved);
+  });
+  if(!Number.isFinite(value)||!Number.isInteger(value)) throw new DomainEvaluationError(`${label} must resolve to a finite integer`);
+  if(minimum!==undefined&&value<minimum) throw new DomainEvaluationError(`${label} must resolve to an integer >= ${minimum}`);
+  return value;
+}
+'''
+          replace_once('src/domain/commonPlayOperationRuntime.ts',actor_helper,d20_helper)
           replace_once('src/domain/commonPlayOperationRuntime.ts',
-              '''  const properties=input.actorProperties??{};\n  const value=evaluateExpression(expression as ExpressionNode,(property)=>{\n    const resolved=properties[property];\n    if(!Number.isFinite(resolved)) throw new DomainEvaluationError(`${label} actor property is unavailable: ${property}`);\n    return Number(resolved);\n  });\n''',
-              '''  const actorProperties=input.actorProperties??{};\n  const targetProperties=input.targetProperties??{};\n  const value=evaluateExpression(expression as ExpressionNode,(property)=>{\n    const targetProperty=property.startsWith("target.")?property.slice("target.".length):undefined;\n    const resolved=targetProperty===undefined?actorProperties[property]:targetProperties[targetProperty];\n    if(!Number.isFinite(resolved)) throw new DomainEvaluationError(`${label} property is unavailable: ${property}`);\n    return Number(resolved);\n  });\n''')
+              'target:actorExpressionInteger(entryPoint.test.dc,input,"d20 target",0)+attackCoverTargetModifier,',
+              'target:d20TargetExpressionInteger(entryPoint.test.dc,input,"d20 target",0)+attackCoverTargetModifier,')
           replace_once('src/app/installedCommonPlayRuntimeAdapter.ts',
               '  const movementProperties=commonPlayActorProfileProperties(internal,state,actor.id);\n  const d20Faces=',
               '  const movementProperties=commonPlayActorProfileProperties(internal,state,actor.id);\n  const targetProperties=selectedTargetId?commonPlayActorProfileProperties(internal,state,selectedTargetId):undefined;\n  const d20Faces=')
           replace_once('src/app/installedCommonPlayRuntimeAdapter.ts',
-              '    ...(movementProperties?{actorProperties:movementProperties,movementProperties}:{}),\n    ...(Object.keys(deathSaveDiceFaces).length?',
-              '    ...(movementProperties?{actorProperties:movementProperties,movementProperties}:{}),\n    ...(targetProperties?{targetProperties}:{}),\n    ...(Object.keys(deathSaveDiceFaces).length?')
+              '    ...(movementProperties?{actorProperties:movementProperties,movementProperties}:{}),\n    ...(Object.keys(movementFactAnswers).length?',
+              '    ...(movementProperties?{actorProperties:movementProperties,movementProperties}:{}),\n    ...(targetProperties?{targetProperties}:{}),\n    ...(Object.keys(movementFactAnswers).length?')
 
           ledger_path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
           ledger=json.loads(ledger_path.read_text(encoding='utf-8'))
           row=next(entry for entry in ledger['rows'] if entry['family']=='J')
-          sentence=' Portable attack DC expressions can now resolve target.* refs from authoritative target profile properties, so target.defense.ac is available without action/content identity dispatch.'
+          sentence=' Portable attack DC expressions can resolve target.* refs from authoritative target profile properties, so target.defense.ac is available without action/content identity dispatch.'
           if sentence.strip() not in row['currentState']:
               row['currentState']+=sentence
           evidence={
