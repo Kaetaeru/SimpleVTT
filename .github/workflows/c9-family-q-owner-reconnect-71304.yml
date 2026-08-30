@@ -52,26 +52,29 @@ jobs:
             return {status:"sent" as const};
           }
           '''
-          if anchor not in text:
-              raise SystemExit('connectedSessionRuntimeAdapter broadcast anchor not found')
-          text = text.replace(anchor, insert, 1)
+          if 'resumeConnectedInterruptPromptForCharacter' not in text:
+              if anchor not in text:
+                  raise SystemExit('connectedSessionRuntimeAdapter broadcast anchor not found')
+              text = text.replace(anchor, insert, 1)
           hello = '        if(characterId) await resumeConnectedCommonPlayAuthorityFactRequestsForCharacter(adapter,characterId);'
           replacement = '''        if(characterId) {
                   await resumeConnectedCommonPlayAuthorityFactRequestsForCharacter(adapter,characterId);
                   await resumeConnectedInterruptPromptForCharacter(adapter,message.peer,characterId);
                 }'''
-          if hello not in text:
-              raise SystemExit('connectedSessionRuntimeAdapter reconnect anchor not found')
-          text = text.replace(hello, replacement, 1)
+          if 'await resumeConnectedInterruptPromptForCharacter(adapter,message.peer,characterId);' not in text:
+              if hello not in text:
+                  raise SystemExit('connectedSessionRuntimeAdapter reconnect anchor not found')
+              text = text.replace(hello, replacement, 1)
           source.write_text(text)
 
           test = Path('tests/ui/c9FamilyQTargetOwnerInteractionProduction.test.ts')
           text = test.read_text()
           imp = 'import { connectedManifest } from "../../src/app/connectedSessionRuntimeAdapter";'
           imp2 = 'import { connectedManifest, resumeConnectedInterruptPromptForCharacter } from "../../src/app/connectedSessionRuntimeAdapter";'
-          if imp not in text:
-              raise SystemExit('Q test import anchor not found')
-          text = text.replace(imp, imp2, 1)
+          if 'resumeConnectedInterruptPromptForCharacter } from "../../src/app/connectedSessionRuntimeAdapter"' not in text:
+              if imp not in text:
+                  raise SystemExit('Q test import anchor not found')
+              text = text.replace(imp, imp2, 1)
           accept = '''    assert.equal(await routeConnectedInterruptResponse(host,{peer:"peer.target",message:""},{sessionId,resolutionId,promptId,accept:true}),true);
               snapshot=await host.getSnapshot();'''
           expanded = '''    if(responder==="target-owner") {
@@ -97,9 +100,10 @@ jobs:
                   assert.equal(await routeConnectedInterruptResponse(host,{peer:"peer.target",message:""},{sessionId,resolutionId,promptId,accept:true}),true);
                 }
                 snapshot=await host.getSnapshot();'''
-          if accept not in text:
-              raise SystemExit('Q test acceptance anchor not found')
-          text = text.replace(accept, expanded, 1)
+          if 'const reboundPeer="peer.target.reconnected";' not in text:
+              if accept not in text:
+                  raise SystemExit('Q test acceptance anchor not found')
+              text = text.replace(accept, expanded, 1)
           test.write_text(text)
           PY
       - name: Install dependencies
@@ -118,11 +122,19 @@ jobs:
       - name: Publish verified patch and self-retire
         if: success()
         run: |
+          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git rm .github/workflows/c9-family-q-owner-reconnect-71304.yml
           git add src/app/connectedSessionRuntimeAdapter.ts tests/ui/c9FamilyQTargetOwnerInteractionProduction.test.ts
           git commit -m "feat(c9): resume owner consent after reconnect"
-          git fetch origin agent/c9-gate-n-coverage-reconciliation
-          git rebase origin/agent/c9-gate-n-coverage-reconciliation
-          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
+          branch=agent/c9-gate-n-coverage-reconciliation
+          for attempt in 1 2 3 4 5 6 7 8; do
+            git fetch origin "$branch"
+            if git rebase "origin/$branch" && git push origin HEAD:"$branch"; then
+              exit 0
+            fi
+            git rebase --abort || true
+            sleep 1
+          done
+          exit 1
