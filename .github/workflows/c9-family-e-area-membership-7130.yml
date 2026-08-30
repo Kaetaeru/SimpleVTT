@@ -176,7 +176,7 @@ jobs:
       - name: Verify legacy execution boundary
         run: node scripts/check-legacy-execution-boundary.mjs
       - name: Typecheck
-        run: npx tsc --noEmit -p tsconfig.app.json
+        run: npx tsc --noEmit
       - name: Publish verified bridge and retire workflow
         run: |
           git config user.name "github-actions[bot]"
@@ -187,5 +187,5 @@ jobs:
           git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
           npx tsx --test tests/ui/commonPlayRichSelectorProduction.test.ts tests/ui/c9FamilyESpatialFactProduction.test.ts
           node scripts/check-legacy-execution-boundary.mjs
-          npx tsc --noEmit -p tsconfig.app.json
+          npx tsc --noEmit
           git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
