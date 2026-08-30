@@ -23,5 +23,7 @@ jobs:
         run: node scripts/check-v1-mechanism-coverage.mjs
       - name: Verify legacy execution boundary
         run: node scripts/check-legacy-execution-boundary.mjs
+      - name: Generate content
+        run: npm run generate:content
       - name: Typecheck
         run: npx tsc --noEmit
