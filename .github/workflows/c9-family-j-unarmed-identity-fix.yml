@@ -51,7 +51,12 @@ jobs:
           replace_once(
               resolution,
               '''  const action = internal.action(resolution.actionId);\n  if (!action) return oldAdvanceResolution.call(this);''',
-              '''  const action = internal.action(resolution.actionId) ?? projectedAction((await internal.getSnapshot()).scene,resolution.actionId);\n  if (!action) return oldAdvanceResolution.call(this);''',
+              '''  const internalAction=internal.action(resolution.actionId);\n  const action = internalAction ?? projectedAction((await internal.getSnapshot()).scene,resolution.actionId);\n  if (!action) return oldAdvanceResolution.call(this);''',
+          )
+          replace_once(
+              resolution,
+              '''  const statusEffect=action.sessionStatusEffect;''',
+              '''  if (!internalAction && resolution.stage==="roll-animation" && resolution.rollKind==="attack") {\n    const target=internal.entity(resolution.targetIds[0]);\n    const canReact=Boolean(resolution.attackOutcome==="명중"&&target?.reactions.length&&internal.scene.economyByActor[target.id]?.reaction);\n    if(canReact&&target) {\n      const option=target.reactions[0];\n      resolution.interrupt={id:option.id,responderId:target.id,responderName:target.name,trigger:option.trigger,optionName:option.name,cost:option.cost,effect:option.effect,source:option.source};\n      resolution.stage="interrupt";\n      resolution.canAdvance=false;\n      resolution.nextLabel=undefined;\n    } else {\n      resolution.stage="attack-result";\n      resolution.canAdvance=true;\n      resolution.nextLabel=resolution.attackOutcome==="명중"?"피해 굴림":"판정 적용";\n    }\n    return internal.getSnapshot();\n  }\n\n  const statusEffect=action.sessionStatusEffect;''',
           )
 
           runtime="src/app/phase09RealRuntimeAttackAdapter.ts"
@@ -70,8 +75,7 @@ jobs:
           p=Path(test)
           text=p.read_text()
           old='assert.equal(snapshot.scene.economyByActor["char.aelar"]?.extraAttacks?.length,0);'
-          count=text.count(old)
-          if count:
+          if old in text:
               text=text.replace(old,'assert.equal(snapshot.scene.economyByActor["char.aelar"]?.extraAttacks?.length??0,0);')
               p.write_text(text)
           elif 'extraAttacks?.length??0,0' not in text:
