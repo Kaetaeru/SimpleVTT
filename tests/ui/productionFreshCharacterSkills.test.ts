@@ -213,13 +213,8 @@ test("fresh non-fixture Character commits a canonical weapon attack and a non-we
   assert.equal(attack.actorId,characterId);
   assert.ok(attack.runtimeAttack?.damageSource.includes(`character:${characterId}:attack:`));
 
-  const range=attack.runtimeAttack?.rangeFeet??0;
-  const target=positioned.scene.entities.find((entity)=>{
-    if (entity.side==="ally"||entity.reactions.length) return false;
-    const distance=Number.parseInt(entity.distance??"");
-    return Number.isFinite(distance)&&distance<=range;
-  });
-  assert.ok(target,`fresh Fighter attack requires an enemy within ${range} feet`);
+  const target=positioned.scene.entities.find((entity)=>entity.id===relationTarget.id);
+  assert.ok(target,"authored spatial target must remain in the scene");
   const targetHp=target.hp;
   const economy=structuredClone(positioned.scene.economyByActor[characterId]);
 
