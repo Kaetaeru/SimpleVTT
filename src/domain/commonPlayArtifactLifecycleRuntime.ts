@@ -47,8 +47,8 @@ function metadataPatch(value:unknown,label:string) {
 }
 
 function artifactTemplate(state:RulesRuntimeState,definition:CommonPlayDefinitionIR,artifactId:string) {
-  const artifact=(state.artifacts??[]).find((candidate)=>candidate.id===artifactId&&candidate.sourceId===definition.id&&(candidate.artifactKind==="object"||candidate.artifactKind==="link"));
-  if(!artifact) throw new DomainEvaluationError(`active portable object/link artifact not found: ${artifactId}`);
+  const artifact=(state.artifacts??[]).find((candidate)=>candidate.id===artifactId&&candidate.sourceId===definition.id&&(candidate.artifactKind==="object"||candidate.artifactKind==="link"||candidate.artifactKind==="actor"));
+  if(!artifact) throw new DomainEvaluationError(`active portable object/link/actor artifact not found: ${artifactId}`);
   const template=(definition.artifactTemplates??[]).find((candidate)=>candidate.id===artifact.templateId&&candidate.artifactKind===artifact.artifactKind);
   if(!template) throw new DomainEvaluationError(`artifact template not found for active artifact: ${artifact.templateId}`);
   return {artifact,template};
