@@ -8,7 +8,7 @@ import { commitAdapterTurnRuntimeState, ensureAdapterTurnRuntimeState, snapshotA
 import { SIMPLEVTT_APP_RULES_PROFILE } from "./realResolutionService";
 import { spellcastingTurnStateChange, type SpellcastingTurnSnapshot } from "../domain/runtimeStateChange";
 import { resolveSpellCast, spellMultiAttackCount, type SpellCasterContext, type SpellCastResolution, type SpellCastTarget } from "../domain/spellcasting";
-import { spellMechanicById } from "../domain/spellMechanics";
+import { normalizedSpellDefinitionById } from "../domain/spellExecutionCatalog";
 import type { SpellMechanicDefinition } from "../domain/spellcasting";
 import type { ResolutionEvent } from "../domain/resolutionTypes";
 import type { RulesRuntimeState } from "../domain/combatState";
@@ -228,7 +228,7 @@ MockAdapter.prototype.resolveAction=async function resolveProductionSpell(action
   }
   const runtime=snapshotAdapterTurnRuntimeState(this,internal.scene);
   const caster=sourceAction ? casterFromHud(snapshot,sourceAction.actorId) : undefined;
-  const definition=metadata ? spellMechanicById(metadata.spellId) : undefined;
+  const definition=metadata ? normalizedSpellDefinitionById(metadata.spellId) : undefined;
   if (!sourceAction||!metadata||!isExecutableSpellRuntimeSupport(metadata.runtimeSupport)||!runtime||!caster||!definition) {
     return previousResolveAction.call(this,actionId,targetIds);
   }

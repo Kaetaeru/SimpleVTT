@@ -14,7 +14,7 @@ import type { RulesRuntimeState } from "../domain/combatState";
 import { spellcastingTurnStateChange, type SpellcastingTurnSnapshot } from "../domain/runtimeStateChange";
 import type { SpellCasterContext, SpellCastResolution, SpellCastTarget } from "../domain/spellcasting";
 import { resolveSpellCast } from "../domain/spellcasting";
-import { spellMechanicById } from "../domain/spellMechanics";
+import { normalizedSpellDefinitionById } from "../domain/spellExecutionCatalog";
 import type { ResolutionEvent } from "../domain/resolutionTypes";
 import { resolveRuntimeTargetingFact } from "./realRuntimeAttackFactProvider";
 
@@ -264,7 +264,7 @@ MockAdapter.prototype.resolveAction=async function resolveActionThroughAuthorita
   const runtime=seedAuthoritativeSlots(this,internal,baseline,sourceAction.actorId);
   const hud=baseline.scene.spellcastingByActor?.[sourceAction.actorId];
   const caster=hud ? casterFromHud(baseline,sourceAction.actorId,hud) : undefined;
-  const definition=spellMechanicById(metadata.spellId);
+  const definition=normalizedSpellDefinitionById(metadata.spellId);
   if (!runtime||!caster||!definition) return previousResolveAction.call(this,actionId,targetIds);
 
   const selected=selectedCombatSpellSlot(sourceAction.actorId,metadata.baseLevel||1);

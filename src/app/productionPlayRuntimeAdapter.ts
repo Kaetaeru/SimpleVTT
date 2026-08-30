@@ -5,7 +5,7 @@ import { isEphemeralSessionProjectionCharacter } from "./characterSessionProject
 import { readyActionConfigurationFor, READY_MOVEMENT_ACTION_ID } from "./standardActionReadyState";
 import { installProductionCharacterActionProjector } from "./productionCharacterActionProjectionPort";
 import { spellLevelLabel, spellPresentationById } from "./spellPresentation";
-import { spellMechanicById } from "../domain/spellMechanics";
+import { normalizedSpellDefinitionById } from "../domain/spellExecutionCatalog";
 import { spellMultiAttackCount } from "../domain/spellcasting";
 import { isExecutableSpellRuntimeSupport } from "./spellcastingRuntimeContracts";
 import { selectedCombatSpellSlot } from "./spellcastingRuntimeSelection";
@@ -456,7 +456,7 @@ function spellActions(character:ExtendedCharacter):ActionVm[] {
   return [...new Set(tokens)].map((spellId)=>{
     const spell=spellPresentationById(spellId);
     const level=spell?.level??(cantrips.has(spellId)?0:1);
-    const mechanic=spellMechanicById(spellId);
+    const mechanic=normalizedSpellDefinitionById(spellId);
     const executable=Boolean(mechanic&&isExecutableSpellRuntimeSupport(mechanic.runtimeSupport));
     const reason="이 주문은 세션 자동 판정에 아직 연결되지 않았습니다.";
     const primary=mechanic?.primary;

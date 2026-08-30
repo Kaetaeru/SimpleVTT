@@ -6,7 +6,7 @@ import type { RulesRuntimeState } from "../domain/combatState";
 import type { DamageDefenseContribution } from "../domain/damage";
 import type { SpellCasterContext, SpellCastTarget } from "../domain/spellcasting";
 import { resolveSpellCast } from "../domain/spellcasting";
-import { spellMechanicById } from "../domain/spellMechanics";
+import { normalizedSpellDefinitionById } from "../domain/spellExecutionCatalog";
 import type { RulesProfileLike } from "../domain/profileEngine";
 import { resolveRuntimeTargetingFact } from "./realRuntimeAttackFactProvider";
 
@@ -456,7 +456,7 @@ MockAdapter.prototype.resolveAction = async function resolveActionThroughSpellKe
   const actorId = sourceAction.actorId;
   const bridge = bridgeFor(this, internal);
   syncRuntimeFromScene(bridge, internal);
-  const definition = spellMechanicById(metadata.spellId);
+  const definition = normalizedSpellDefinitionById(metadata.spellId);
   const caster = bridge.casterByActor[actorId];
   if (!definition || !caster) return originalResolveAction.call(this, actionId, targetIds);
 
