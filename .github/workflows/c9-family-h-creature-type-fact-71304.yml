@@ -5,7 +5,7 @@ on:
     branches:
       - agent/c9-gate-n-coverage-reconciliation
     paths:
-      - ".github/workflows/c9-family-h-creature-type-fact-71304.yml"
+      - .github/workflows/c9-family-h-creature-type-fact-71304.yml
 
 permissions:
   contents: write
@@ -62,13 +62,7 @@ jobs:
                   raise SystemExit('AdapterState anchor changed')
               text=text.replace(state_anchor,state_replacement,1)
           provider_anchor='      if(query.fact==="identity.same-entity")return {status:"answered",value:subjectId===candidate.sourceActorId};\n      if(query.fact==="sense.hidden")'
-          provider_replacement='''      if(query.fact==="identity.same-entity")return {status:"answered",value:subjectId===candidate.sourceActorId};
-      if(query.fact==="identity.creature-type"){
-        const entity=internal.scene.entities.find((entry)=>entry.id===subjectId);
-        const creatureType=entity?resolveRuntimeCreatureType(entity,internal.combatantDefinitions):undefined;
-        return creatureType?{status:"answered",value:creatureType}:{status:"unknown"};
-      }
-      if(query.fact==="sense.hidden")'''
+          provider_replacement='      if(query.fact==="identity.same-entity")return {status:"answered",value:subjectId===candidate.sourceActorId};\n      if(query.fact==="identity.creature-type"){\n        const entity=internal.scene.entities.find((entry)=>entry.id===subjectId);\n        const creatureType=entity?resolveRuntimeCreatureType(entity,internal.combatantDefinitions):undefined;\n        return creatureType?{status:"answered",value:creatureType}:{status:"unknown"};\n      }\n      if(query.fact==="sense.hidden")'
           if 'query.fact==="identity.creature-type"' not in text:
               if provider_anchor not in text:
                   raise SystemExit('fact provider anchor changed')
