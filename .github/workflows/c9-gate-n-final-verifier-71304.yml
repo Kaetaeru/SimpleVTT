@@ -1,5 +1,5 @@
 name: C9 Gate N Final Verifier 71304
-# rerun after current Gate N ledger convergence and portable spatial-attack verification
+# rerun after final ledger convergence and latest authoritative execution repairs
 
 on:
   push:
