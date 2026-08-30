@@ -1,0 +1,111 @@
+name: C9 Family E Targeting Replay Evidence
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-e-targeting-replay-evidence.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Add reconnect and retry targeting evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          test_path=Path('tests/ui/installedCommonPlayProductionRuntime.test.ts')
+          text=test_path.read_text(encoding='utf-8')
+          anchor='''  const clientSnapshot=await client.getSnapshot();
+          assert.equal(clientSnapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")!.hp,hostHp);
+          assert.equal(clientSnapshot.resolution?.actionId,actionId);
+          assert.deepEqual(clientSnapshot.resolution?.targetIds,["combatant.goblin-a"]);
+          });'''
+          replacement='''  const clientSnapshot=await client.getSnapshot();
+          assert.equal(clientSnapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")!.hp,hostHp);
+          assert.equal(clientSnapshot.resolution?.actionId,actionId);
+          assert.deepEqual(clientSnapshot.resolution?.targetIds,["combatant.goblin-a"]);
+
+          assert.equal((await applyConnectedClientEvents(client,batch.events)).status,"duplicate","retrying the same authoritative targeting event must be idempotent");
+          const retrySnapshot=await client.getSnapshot();
+          assert.equal(retrySnapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")!.hp,hostHp);
+          assert.deepEqual(retrySnapshot.resolution?.targetIds,["combatant.goblin-a"]);
+
+          const reconnected=new MockAdapter();
+          await installTargeting(reconnected);
+          injureSceneEntity(reconnected,"combatant.goblin-a",10);
+          await reconnected.startInitiative();
+          await reconnected.setCurrentActor("char.aelar");
+          const reconnectState=connectedStateFor(reconnected);
+          reconnectState.mode="client";
+          reconnectState.sessionId=sessionId;
+          reconnectState.replica=new ClientSessionReplica(sessionId);
+          assert.equal((await applyConnectedClientEvents(reconnected,batch.events)).status,"applied","a fresh reconnect replica must accept authoritative targeting history from cursor zero");
+          const reconnectSnapshot=await reconnected.getSnapshot();
+          assert.equal(reconnectSnapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")!.hp,hostHp);
+          assert.equal(reconnectSnapshot.resolution?.actionId,actionId);
+          assert.deepEqual(reconnectSnapshot.resolution?.targetIds,["combatant.goblin-a"]);
+          assert.equal((await applyConnectedClientEvents(reconnected,batch.events)).status,"duplicate","reconnect catch-up retry must not apply targeting effects twice");
+          assert.equal((await reconnected.getSnapshot()).scene.entities.find((entity)=>entity.id==="combatant.goblin-a")!.hp,hostHp);
+          });'''
+          if replacement not in text:
+              if text.count(anchor)!=1:
+                  raise SystemExit(f'expected one connected targeting anchor, found {text.count(anchor)}')
+              test_path.write_text(text.replace(anchor,replacement,1),encoding='utf-8')
+
+          ledger_path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
+          ledger=json.loads(ledger_path.read_text(encoding='utf-8'))
+          row=next(entry for entry in ledger['families'] if entry['family']=='E')
+          evidence='tests/ui/installedCommonPlayProductionRuntime.test.ts: connected Common Play targeting remains Host-authoritative and converges through existing events; the same event batch is duplicate-idempotent and a fresh ClientSessionReplica replays it from cursor zero to the same HP and targetIds'
+          existing=row.setdefault('persistenceEvidenceIfRelevant',[])
+          if evidence not in existing:
+              existing.append(evidence)
+              ledger_path.write_text(json.dumps(ledger,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          PY
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Generate content catalogs
+        run: npm run generate:content
+      - name: Verify connected targeting replay
+        run: npx tsx --test tests/ui/installedCommonPlayProductionRuntime.test.ts
+      - name: Verify coverage ledger
+        run: node scripts/check-v1-mechanism-coverage.mjs
+      - name: Verify legacy execution boundary
+        run: node scripts/check-legacy-execution-boundary.mjs
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - name: Commit verified evidence without overwriting concurrent work
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/c9-family-e-targeting-replay-evidence.yml
+          git add tests/ui/installedCommonPlayProductionRuntime.test.ts docs/rules/v1-mechanism-coverage-ledger.json
+          git diff --cached --check
+          git commit -m "test(c9): prove targeting reconnect retry convergence"
+          for attempt in 1 2 3 4 5 6 7 8; do
+            git fetch origin agent/c9-gate-n-coverage-reconciliation
+            if git rebase origin/agent/c9-gate-n-coverage-reconciliation && git push origin HEAD:agent/c9-gate-n-coverage-reconciliation; then
+              exit 0
+            fi
+            git rebase --abort || true
+            sleep 2
+          done
+          echo "targeting replay evidence could not acquire a clean fast-forward window" >&2
+          exit 1
