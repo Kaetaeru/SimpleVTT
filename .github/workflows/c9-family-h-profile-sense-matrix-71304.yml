@@ -1,0 +1,163 @@
+name: C9 Family H Profile Sense Matrix 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-h-profile-sense-matrix-71304.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  verify-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Reconcile latest branch
+        run: git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+      - name: Expand permanent profile-sense production proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          path=Path('tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts')
+          text=path.read_text(encoding='utf-8')
+
+          old_sig='eligibilityExpectations:{light?:"bright"|"dim"|"darkness";obscurement?:"none"|"light"|"heavy"}={},'
+          new_sig='eligibilityExpectations:{light?:"bright"|"dim"|"darkness";obscurement?:"none"|"light"|"heavy";canSee?:boolean}={},'
+          count=text.count(old_sig)
+          if count:
+              if count != 2:
+                  raise SystemExit(f'unexpected eligibility signature count: {count}')
+              text=text.replace(old_sig,new_sig)
+          elif text.count(new_sig) != 2:
+              raise SystemExit('profile-sense eligibility signature anchor not found')
+
+          old_when='{op:"eq",left:{ref:"source-sees-trigger"},right:{value:true}},'
+          new_when='{op:"eq",left:{ref:"source-sees-trigger"},right:{value:eligibilityExpectations.canSee??true}},'
+          if old_when in text:
+              text=text.replace(old_when,new_when,1)
+          elif new_when not in text:
+              raise SystemExit('sense.can-see expectation anchor not found')
+
+          helper_start=text.index('function seedRulesProfileSense(')
+          test_start=text.index('test("portable production derives Darkvision from a generic RulesProfile modifier"', helper_start)
+          helper='''function seedRulesProfileSense(adapter:MockAdapter,sourceId:string,property:string,rangeFeet:number){
+  const internal=adapter as unknown as {activeCharacter:CharacterSheet;scene:SceneVm};
+  const state=snapshotAdapterTurnRuntimeState(adapter,internal.scene);
+  assert.ok(state,"TurnRuntime state must exist before sense profile seeding");
+  const definition=parseCommonPlayOperationDefinition({
+    schemaVersion:"0.2-draft",id:sourceId,entryPoints:[{id:"activate",invocation:"manual",operations:[{
+      kind:"property.modify",property,operation:"set",value:{value:rangeFeet},target:"actor",owner:"effect",source:"definition",
+      duration:{kind:"elapsed",amount:{value:1},unit:"hours"},lifetime:{kind:"until-duration",onEnd:"destroy"},instancePolicy:"unique-by-source",
+    }]}],
+  });
+  const pending=compileCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,state!,definition,{
+    resolutionId:`sense-profile.${sourceId}`,actorId:internal.activeCharacter.id,entryPointId:"activate",
+  });
+  const committed=resolvePendingResolution(SIMPLEVTT_APP_RULES_PROFILE,state!,pending);
+  assert.notEqual(committed.status,"rejected");
+  if(committed.status==="rejected")return;
+  assert.equal(commitAdapterTurnRuntimeState(adapter,internal.scene,state!.revision,committed.state),true);
+}
+
+'''
+          matrix='''test("portable production derives special senses from generic RulesProfile modifiers under external identity rename",async()=>{
+  const renamed:Identity={...ORIGINAL,moduleId:"external.profile-sense-renamed",contentId:"item.profile-sense-renamed",mechanicId:"mechanic.profile-sense-renamed",interceptorId:"interceptor.profile-sense-renamed",interactionId:"interaction.profile-sense-renamed",displayName:"Renamed Profile Sense"};
+  const scenarios=[
+    {label:"darkvision",property:"sense.darkvision.range-feet",rangeFeet:60,light:"darkness" as const,obscurement:"none" as const,targetInvisible:false,canSee:true,visible:true,sharedGroundContact:false},
+    {label:"blindsight",property:"sense.blindsight.range-feet",rangeFeet:60,light:"dim" as const,obscurement:"heavy" as const,targetInvisible:true,canSee:true,visible:true,sharedGroundContact:false},
+    {label:"tremorsense",property:"sense.tremorsense.range-feet",rangeFeet:60,light:"dim" as const,obscurement:"none" as const,targetInvisible:true,canSee:false,visible:false,sharedGroundContact:true},
+    {label:"truesight",property:"sense.truesight.range-feet",rangeFeet:120,light:"darkness" as const,obscurement:"none" as const,targetInvisible:true,canSee:true,visible:true,sharedGroundContact:false},
+  ];
+  for(const identity of [ORIGINAL,renamed]){
+    for(const scenario of scenarios){
+      const adapter=await prepare(identity,true,"d20",[{kind:"roll.modify",mode:"subtract-die",dice:"1d8"}],undefined,{light:scenario.light,obscurement:scenario.obscurement,canSee:scenario.canSee});
+      const internal=adapter as unknown as {activeCharacter:CharacterSheet;scene:SceneVm};
+      setSpatialRelation(internal.scene,{
+        sourceId:internal.activeCharacter.id,targetId:OTHER_CHARACTER_ID,distanceFeet:30,visible:scenario.visible,cover:"none",targetCanSeeAttacker:true,
+        light:scenario.light,obscurement:scenario.obscurement,targetInvisible:scenario.targetInvisible,sharedGroundContact:scenario.sharedGroundContact,
+        provenance:`module:test-rules-profile-sense:${scenario.label}`,
+      });
+      seedRulesProfileSense(adapter,`${identity.moduleId}.${scenario.label}`,scenario.property,scenario.rangeFeet);
+      seedHiddenRuntimeEffect(adapter,OTHER_CHARACTER_ID);
+      let snapshot=await openAbilityCheckInterrupt(adapter);
+      assert.equal(snapshot.resolution?.stage,"interrupt",`${scenario.label}: ${JSON.stringify(snapshot.resolution)}`);
+      snapshot=await adapter.respondToInterrupt(false);
+      assert.equal(snapshot.resolution?.stage,"complete",`${scenario.label}: ${JSON.stringify(snapshot.resolution)}`);
+    }
+  }
+});
+'''
+          text=text[:helper_start]+helper+matrix+'\n'
+          path.write_text(text,encoding='utf-8')
+          PY
+      - run: npm run generate:content
+      - name: Verify Family H permanent proof
+        run: |
+          node --import tsx --test tests/domain/commonPlaySenseRuntime.test.ts tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts tests/ui/c9FamilyHSearchDiscoveryProduction.test.ts
+          node scripts/check-legacy-execution-boundary.mjs
+          npm exec tsc -- --noEmit
+      - name: Commit permanent proof
+        run: |
+          git config user.name "chatgpt-c9-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts
+          git commit -m "test(c9): prove rules-derived special sense matrix"
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+      - name: Reconcile Family H ledger
+        env:
+          C9_RUN_ID: ${{ github.run_id }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
+          data=json.loads(path.read_text(encoding='utf-8'))
+          row=next(item for item in data['rows'] if item.get('family')=='H')
+          seam='rules-derived special-sense acquisition/derivation into authoritative observer sense profiles remains incomplete'
+          if row.get('disposition') not in ('INCOMPLETE','IMPLEMENTED'):
+              raise SystemExit(f"unexpected Family H disposition: {row.get('disposition')}")
+          if seam in row.get('remainingNamedSeams',[]):
+              row['remainingNamedSeams']=[x for x in row['remainingNamedSeams'] if x!=seam]
+          row['disposition']='IMPLEMENTED'
+          old='Family H remains incomplete only for rules-derived special-sense acquisition/derivation into authoritative observer sense profiles.'
+          new='Rules-derived Darkvision, Blindsight, Tremorsense, and Truesight ranges are derived from generic RulesProfile property modifiers into authoritative production observer sense profiles without content-name or content-ID dispatch.'
+          state=row.get('currentState','')
+          if old in state:
+              state=state.replace(old,new)
+          elif new not in state:
+              state=(state+' '+new).strip()
+          row['currentState']=state
+          impl='commonPlayInterceptorProductionRuntimeAdapter.ts rulesProfileObserverSenses resolves generic sense.*.range-feet RulesProfile properties through resolveRuntimeProfileProperty and composes them with provider observer senses'
+          if impl not in row['implementationEvidence']:
+              row['implementationEvidence'].append(impl)
+          prod=f"C9 Family H Profile Sense Matrix 71304 run {os.environ['C9_RUN_ID']}: permanent production matrix proves generic property.modify-derived Darkvision, Blindsight, Tremorsense detection, and Truesight under original and fully renamed external Common Play identities; legacy boundary and tsc --noEmit passed"
+          if prod not in row['productionEvidence']:
+              row['productionEvidence'].append(prod)
+          ident='installedCommonPlayInterceptorProductionRuntime.test.ts proves RulesProfile-derived Darkvision/Blindsight/Tremorsense/Truesight semantics are unchanged under fully renamed external module/content/mechanic/interceptor/interaction identities'
+          if ident not in row['identityInvarianceEvidence']:
+              row['identityInvarianceEvidence'].append(ident)
+          path.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          PY
+      - name: Verify coverage ledger
+        run: node scripts/check-v1-mechanism-coverage.mjs
+      - name: Publish proof and retire staging workflow
+        run: |
+          git rm .github/workflows/c9-family-h-profile-sense-matrix-71304.yml
+          git add docs/rules/v1-mechanism-coverage-ledger.json
+          git commit -m "docs(c9): close Family H sensing coverage"
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
