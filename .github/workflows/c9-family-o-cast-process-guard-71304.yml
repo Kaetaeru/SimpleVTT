@@ -1,0 +1,84 @@
+name: C9 Family O Cast Process Guard 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+
+permissions:
+  contents: write
+
+jobs:
+  guard:
+    if: github.event.head_commit.message == 'ci(c9): enforce castProcess fail closed'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Patch fail-closed castProcess boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          path=Path('src/domain/commonPlayDefinitionRuntime.ts')
+          text=path.read_text()
+          old='''  const entryPoint=definition.entryPoints?.find((candidate)=>candidate.id===entryPointId);\n  if(!entryPoint) throw new DomainEvaluationError(`Common Play entry point not found: ${entryPointId}`);\n  const operationKinds=new Set(entryPoint.operations.map((operation)=>operation.kind));'''
+          new='''  const entryPoint=definition.entryPoints?.find((candidate)=>candidate.id===entryPointId);\n  if(!entryPoint) throw new DomainEvaluationError(`Common Play entry point not found: ${entryPointId}`);\n  if(definition.castProcess!==undefined) {\n    throw new DomainEvaluationError(`Common Play definition ${definition.id} castProcess execution is not yet supported by the portable lowerer`);\n  }\n  const operationKinds=new Set(entryPoint.operations.map((operation)=>operation.kind));'''
+          if old not in text:
+              raise SystemExit('lowerCommonPlay insertion point changed; refusing stale patch')
+          path.write_text(text.replace(old,new,1))
+          PY
+          cat > tests/domain/c9FamilyOCastProcessFailClosed.test.ts <<'TEST'
+          import assert from "node:assert/strict";
+          import test from "node:test";
+          import { lowerAllCommonPlayEntryPoints, parseCommonPlayDefinition } from "../../src/domain/commonPlayDefinitionRuntime";
+
+          test("castProcess fails closed instead of silently losing long-cast semantics",()=>{
+            const definition=parseCommonPlayDefinition({
+              schemaVersion:"0.2-draft",
+              id:"external.unknown.long-cast",
+              castProcess:{
+                duration:{kind:"elapsed",amount:{value:1},unit:"minutes"},
+                activity:"cast",
+                interruptible:true,
+                onInterrupt:"cancel",
+                completionEntryPoint:"complete",
+                ritual:false,
+              },
+              entryPoints:[
+                {id:"begin",invocation:"manual",operations:[]},
+                {id:"complete",invocation:"triggered",operations:[]},
+              ],
+            });
+            assert.throws(
+              ()=>lowerAllCommonPlayEntryPoints(definition),
+              /castProcess execution is not yet supported by the portable lowerer/,
+            );
+          });
+          TEST
+      - name: Verify focused contract
+        run: |
+          node --import tsx --test tests/domain/c9FamilyOCastProcessFailClosed.test.ts
+          npm exec tsc -- --noEmit
+          node scripts/check-v1-mechanism-coverage.mjs
+          node scripts/check-legacy-execution-boundary.mjs
+      - name: Commit verified guard and retire workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm .github/workflows/c9-family-o-cast-process-guard-71304.yml
+          git add src/domain/commonPlayDefinitionRuntime.ts tests/domain/c9FamilyOCastProcessFailClosed.test.ts .github/workflows/c9-family-o-cast-process-guard-71304.yml
+          git diff --cached --check
+          git commit -m "fix(c9): fail closed on unsupported cast process"
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
