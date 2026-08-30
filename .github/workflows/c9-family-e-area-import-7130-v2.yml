@@ -92,3 +92,5 @@ jobs:
             sleep 1
           done
           exit 1
+
+# rerun after canonical targeting profile reconciliation
