@@ -46,6 +46,8 @@ jobs:
           NODE
       - name: Install dependencies
         run: npm ci
+      - name: Generate content catalogs
+        run: npm run generate:content
       - name: Verify Family I production evidence
         run: >-
           npx tsx --test
