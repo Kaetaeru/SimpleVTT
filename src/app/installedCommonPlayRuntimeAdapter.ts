@@ -241,7 +241,8 @@ function projectedArtifactAction(
     ?[actorId]
     :targeting?selectorTargetIds:targeted?scene.entities.filter((entity)=>state.combatants[entity.id]).map((entity)=>entity.id):[actorId];
   const combatant=state.combatants[actorId];
-  const slotAvailable=payment?.kind!=="economy"?true:payment.bucket==="action"?combatant.economy.action:payment.bucket==="bonus-action"?combatant.economy.bonusAction:combatant.economy.reaction;
+  const extraAttackAvailable=("test" in entryPoint&&entryPoint.test?.kind==="attack-roll")&&Boolean(combatant.economy.extraAttacks?.length);
+  const slotAvailable=payment?.kind!=="economy"?true:payment.bucket==="action"?(combatant.economy.action||extraAttackAvailable):payment.bucket==="bonus-action"?combatant.economy.bonusAction:combatant.economy.reaction;
   const resourcesAvailable=(payments??[]).every((candidate)=>candidate.kind!=="resource"||combatant.resources.some((resource)=>resource.id===candidate.resource&&resource.current>=Number(candidate.amount.value)));
   const active=state.clock.activeActorId===actorId;
   const test="test" in entryPoint?entryPoint.test:undefined;

@@ -768,7 +768,7 @@
         "realAttackTransactionService.ts",
         "unarmedControlRuntimeAdapter.ts"
       ],
-      "currentState": "Unknown installed Common Play attack-roll plus target damage has production evidence through a projected arbitrary-ID Actor action with Action payment, damage commit, Host/Client convergence, and Undo. Projected Unarmed grapple/shove dispatches from a typed runtimeSaveCondition action payload rather than named action IDs, with arbitrary action-ID rename evidence. Unknown installed Common Play can now also target-roll a structural saving throw from save.<ability>.modifier and conditionally apply a control condition through the shared Resolver, with failure/success branching, Undo, and complete external identity rename evidence. Best-of STR/DEX portable control choice and escape are production-proven through unknown installed Common Play with failure/success branching and event-native Undo. Production weapon projection now resolves canonical weapon range and attack ability from the source-owned equipment item structurally linked by grantedActionIds, and no longer infers weapon behavior from attack/item presentation names. Family J remains incomplete for complete Unarmed Strike source composition, Opportunity Attack qualification, reach/long range, Extra Attack/replacement, . Portable source-owned ammunition now composes through the generic resource PaymentContract with attack execution, including empty-ammunition atomic rejection, event-native Undo, and complete external identity rename. Loading now constrains structurally linked weapon action projection from the source weapon property itself, so a Loading weapon is capped at one attack without presentation-name or content-action-ID dispatch.",
+      "currentState": "Unknown installed Common Play attack-roll plus target damage has production evidence through a projected arbitrary-ID Actor action with Action payment, damage commit, Host/Client convergence, and Undo. Projected Unarmed grapple/shove dispatches from a typed runtimeSaveCondition action payload rather than named action IDs, with arbitrary action-ID rename evidence. Unknown installed Common Play can now also target-roll a structural saving throw from save.<ability>.modifier and conditionally apply a control condition through the shared Resolver, with failure/success branching, Undo, and complete external identity rename evidence. Best-of STR/DEX portable control choice and escape are production-proven through unknown installed Common Play with failure/success branching and event-native Undo. Production weapon projection now resolves canonical weapon range and attack ability from the source-owned equipment item structurally linked by grantedActionIds, and no longer infers weapon behavior from attack/item presentation names. Family J remains incomplete for complete Unarmed Strike source composition, Opportunity Attack qualification, reach/long range, Extra Attack/replacement, . Portable source-owned ammunition now composes through the generic resource PaymentContract with attack execution, including empty-ammunition atomic rejection, event-native Undo, and complete external identity rename. Loading now constrains structurally linked weapon action projection from the source weapon property itself, so a Loading weapon is capped at one attack without presentation-name or content-action-ID dispatch. Portable Extra Attack economy composes through structural attacksPerAction into the existing attack-only extraAttacks Resolver primitive, including projected availability, exhaustion, Undo, and complete external identity rename.",
       "requiredSemantics": [
         "weapon attack",
         "Unarmed Strike",
@@ -795,7 +795,8 @@
         "productionPlayRuntimeAdapter.ts resolves weapon range and ability from the Character equipment item structurally linked to the attack through grantedActionIds instead of attack/item presentation names",
         "phase09ManualMovementReactionAdapter.ts resolves Opportunity Attack from the reactor projected ActionVm runtimeAttack facts and input attackActionId, consuming reaction economy without named action/content dispatch",
         "commonPlayOperationRuntime.ts generic roll.modify disadvantage and structural attack target adjustment compose long-range disadvantage plus authoritative cover in the shared Resolver attack-roll path",
-        "productionPlayRuntimeAdapter.ts derives the Loading attack-count limit from the structurally linked source weapon definition and caps only that projected weapon action at one attack without presentation-name dispatch"
+        "productionPlayRuntimeAdapter.ts derives the Loading attack-count limit from the structurally linked source weapon definition and caps only that projected weapon action at one attack without presentation-name dispatch",
+        "commonPlayOperationRuntime.ts carries structural economy payment attacksPerAction into the existing Resolver use-economy operation; installedCommonPlayRuntimeAdapter.ts keeps projected attack actions available while an attack-only extraAttacks grant remains"
       ],
       "productionEvidence": [
         "installedCommonPlayLoweredFamiliesProduction.test.ts#summoned Actor projects and executes its portable Common Play action with economy and Undo",
@@ -809,7 +810,8 @@
         "c9FamilyJOpportunityAttackProduction.test.ts executes projected Opportunity Attacks under unrelated action IDs/names, consumes reaction but not action, commits damage, and restores HP/Temporary HP plus reaction through event-native Undo",
         "c9FamilyJRangeCoverProduction.test.ts unknown installed Common Play composes baseline attack, long-range disadvantage, and cover target adjustment through production attack resolution; C9 Family J Spatial Attack 71304 run 33316344182 passed the spatial/OA suite, coverage checker, legacy boundary, and tsc --noEmit",
         "c9FamilyJSpatialAttackProduction.test.ts and c9FamilyESpatialSelectorProduction.test.ts consume authoritative reach/range/Total Cover facts without content identity dispatch",
-        "c9FamilyJStructuralWeaponSource.test.ts proves a level-5 Fighter keeps two attacks with a structurally linked non-Loading Shortbow, is capped to one attack when the same renamed action is structurally linked to a Loading Light Crossbow, and does not infer Loading from presentation text alone"
+        "c9FamilyJStructuralWeaponSource.test.ts proves a level-5 Fighter keeps two attacks with a structurally linked non-Loading Shortbow, is capped to one attack when the same renamed action is structurally linked to a Loading Light Crossbow, and does not infer Loading from presentation text alone",
+        "c9FamilyJExtraAttackProduction71304.test.ts proves an unknown installed attack uses one standard Action for two sequential attack transactions, blocks a third attack, restores the consumed extra-attack grant and damage through Undo, and repeats under fully renamed external identities"
       ],
       "identityInvarianceEvidence": [
         "installedCommonPlayLoweredFamiliesProduction.test.ts executes the summoned attack from arbitrary previously-unknown module/content/mechanic/action identities rather than a registered attack content ID",
@@ -821,7 +823,8 @@
         "c9FamilyJOpportunityAttackProduction.test.ts repeats reaction attack semantics after replacing the projected attack with unrelated action IDs and names",
         "c9FamilyJRangeCoverProduction.test.ts repeats long-range disadvantage and cover adjustment after complete external module/content/mechanic identity rename",
         "c9FamilyJSpatialAttackProduction.test.ts and c9FamilyESpatialSelectorProduction.test.ts preserve authoritative reach/range/cover behavior for unknown and renamed portable content",
-        "c9FamilyJStructuralWeaponSource.test.ts derives Loading from the linked weapon definition after attack/item presentation rename and proves presentation-only Light Crossbow text cannot select the mechanic"
+        "c9FamilyJStructuralWeaponSource.test.ts derives Loading from the linked weapon definition after attack/item presentation rename and proves presentation-only Light Crossbow text cannot select the mechanic",
+        "c9FamilyJExtraAttackProduction71304.test.ts repeats the complete two-attacks-per-Action economy and Undo flow after complete external module/content/mechanic identity rename"
       ],
       "connectedEvidenceIfRelevant": [
         "installedCommonPlayLoweredFamiliesProduction.test.ts#summoned Actor action and Undo converge through Host-authoritative connected events"
@@ -832,7 +835,7 @@
       "remainingNamedSeams": [
         "generic weapon action projection is structurally source-owned and presentation-rename invariant; complete Unarmed Strike source composition remains incomplete",
         "portable target saving throws, best-of STR/DEX control choice, conditional control effects, and escape now normalize through Common Play; complete grapple/shove source composition remains incomplete",
-        "multiattack/Extra Attack/replacement remains incomplete; reach/long range and structural cover are now generic and verified",
+        "attack replacement remains incomplete; reach/long range and structural cover are now generic and verified",
         "Rage attack rider and other named attack/action projection remain migration debt"
       ],
       "connectedRelevant": true,
