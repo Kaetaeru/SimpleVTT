@@ -3,6 +3,7 @@ import test from "node:test";
 import "../../src/app/offlineRuntimeAdapters";
 import { applyResolutionEvents } from "../../src/app/realEventApplyService";
 import { MockAdapter } from "../../src/app/mockAdapter";
+import { invertRuntimeResolutionEvents } from "../../src/app/runtimeResolutionUndoAdapter";
 import { snapshotAdapterTurnRuntimeState } from "../../src/app/turnRuntimeSessionRegistry";
 import { FIGHTER_SECOND_WIND_RESOURCE_ID } from "../../src/domain/coreClassResources";
 import type { ResolutionEvent } from "../../src/domain/resolutionTypes";
@@ -65,11 +66,15 @@ test("resource capacity state changes project through app and runtime state and 
   assert.equal(forwardRuntimeResource?.maximum,baseMaximum+1);
   assert.equal(forwardRuntimeResource?.maximumAfterLongRest,baseMaximum);
 
-  const inverse=structuredClone(event);
+  const inverse=invertRuntimeResolutionEvents([event])[0];
+  assert.ok(inverse);
   const inverseChange=inverse.stateChanges[0];
   assert.equal(inverseChange.kind,"resource");
   if (inverseChange.kind!=="resource" || !inverseChange.capacity) return;
-  inverseChange.capacity={before:event.stateChanges[0].capacity!.after,after:event.stateChanges[0].capacity!.before};
+  assert.deepEqual(inverseChange.capacity,{
+    before:event.stateChanges[0].capacity!.after,
+    after:event.stateChanges[0].capacity!.before,
+  });
   const reverted=applyResolutionEvents(forward.scene,[inverse],forward.resources,[],forward.runtimeState);
   assert.equal(reverted.status,"committed",reverted.status==="rejected"?reverted.error:undefined);
   if (reverted.status!=="committed") return;
