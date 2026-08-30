@@ -1,0 +1,55 @@
+name: C9 Family G Adjacency Production 7130
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-g-adjacency-production-7130.yml
+      - tests/ui/c9FamilyGAdjacencyProduction.test.ts
+      - src/app/commonPlayInterceptorProductionRuntimeAdapter.ts
+      - src/app/realSpatialRuntimeService.ts
+      - src/app/spatialRuntimeContracts.ts
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Generate content catalogs
+        run: npm run generate:content
+      - name: Verify Family G production adjacency
+        run: node --import tsx --test tests/ui/c9FamilyGAdjacencyProduction.test.ts tests/domain/c9FamilyGStandardSpatialFacts.test.ts
+      - name: Verify coverage and legacy boundaries
+        run: |
+          node scripts/check-v1-mechanism-coverage.mjs
+          node scripts/check-legacy-execution-boundary.mjs
+          npm exec tsc -- --noEmit
+      - name: Retire verifier after success
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/c9-family-g-adjacency-production-7130.yml
+          git commit -m "chore(c9): retire Family G adjacency verifier"
+          branch=agent/c9-gate-n-coverage-reconciliation
+          for attempt in $(seq 1 12); do
+            git fetch origin "$branch"
+            if git rebase "origin/$branch"; then
+              if git push origin HEAD:"$branch"; then exit 0; fi
+            fi
+            git rebase --abort || true
+            sleep 1
+          done
+          exit 1
