@@ -1,0 +1,57 @@
+name: C9 Final Gate N Verify 71304
+
+on:
+  push:
+    branches:
+      - "agent/c9-gate-n-coverage-reconciliation"
+    paths:
+      - ".github/workflows/c9-final-gate-n-verify-71304.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Fast-forward to current branch
+        run: git pull --ff-only origin agent/c9-gate-n-coverage-reconciliation
+      - name: Verify Gate N ledger
+        run: node scripts/check-v1-mechanism-coverage.mjs --gate-n
+      - name: Verify legacy execution boundary
+        run: node scripts/check-legacy-execution-boundary.mjs
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Generate content catalogs
+        run: npm run generate:content
+      - name: Verify C9 and Common Play acceptance regressions
+        run: npx tsx --test tests/ui/c9*.test.ts tests/ui/*CommonPlay*.test.ts tests/domain/commonPlay*.test.ts
+      - name: Verify repository build
+        run: npm run build
+      - name: Retire final verifier
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/c9-final-gate-n-verify-71304.yml
+          git commit -m "chore(c9): retire final Gate N verifier"
+          for attempt in $(seq 1 12); do
+            git fetch origin agent/c9-gate-n-coverage-reconciliation
+            if ! git rebase origin/agent/c9-gate-n-coverage-reconciliation; then
+              git rebase --abort || true
+              echo "Concurrent work conflicts with final verifier retirement."
+              exit 1
+            fi
+            if git push origin HEAD:agent/c9-gate-n-coverage-reconciliation; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Branch remained busy after bounded verifier-retirement retries."
+          exit 1
