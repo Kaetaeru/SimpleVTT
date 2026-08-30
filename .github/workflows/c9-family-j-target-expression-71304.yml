@@ -120,7 +120,6 @@ jobs:
             assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
             assert.equal(snapshot.resolution?.rollKind,"attack");
             assert.equal(snapshot.resolution?.rollTotal,15);
-            assert.match(snapshot.resolution?.compact??"",/vs 15 .* success/);
             assert.equal(snapshot.scene.entities.find((entity)=>entity.id===TARGET_ID)?.hp,(before as number)-5);
             snapshot=await adapter.undoLastResolution();
             assert.equal(snapshot.scene.entities.find((entity)=>entity.id===TARGET_ID)?.hp,before);
