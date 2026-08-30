@@ -1,0 +1,87 @@
+name: C9 Family I Ledger Finalize 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-i-ledger-finalize-71304.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: c9-family-i-ledger-finalize-71304
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Generate content catalogs
+        run: npm run generate:content
+      - name: Verify Family I final production evidence
+        run: >-
+          npx tsx --test
+          tests/ui/c9FamilyIRulesDerivedMovementProduction.test.ts
+          tests/ui/c9FamilyIMovementProduction.test.ts
+          tests/ui/c9FamilyIMovementGrantProduction.test.ts
+          tests/ui/c9FamilyIRulesDerivedMovementCostProduction.test.ts
+          tests/ui/commonPlayProneStandRuntime.test.ts
+      - name: Verify legacy execution boundary
+        run: node scripts/check-legacy-execution-boundary.mjs
+      - name: Typecheck application
+        run: npx tsc --noEmit
+      - name: Publish Family I reconciliation and retire verifier
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch=agent/c9-gate-n-coverage-reconciliation
+          workflow=.github/workflows/c9-family-i-ledger-finalize-71304.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in $(seq 1 10); do
+            git fetch origin "$branch"
+            git reset --hard "origin/$branch"
+            node <<'NODE'
+          const fs = require('node:fs');
+          const path = 'docs/rules/v1-mechanism-coverage-ledger.json';
+          const ledger = JSON.parse(fs.readFileSync(path, 'utf8'));
+          const row = ledger.rows.find((candidate) => candidate.family === 'I');
+          if (!row) throw new Error('Family I ledger row missing');
+          const evidence = [
+            ...(row.implementationEvidence ?? []),
+            ...(row.productionEvidence ?? []),
+            ...(row.identityInvarianceEvidence ?? []),
+          ].join('\n');
+          if (!evidence.includes('movement grant') && !evidence.includes('movement.fly')) {
+            throw new Error('Family I portable movement-grant evidence missing');
+          }
+          row.currentState = 'Family I is complete through canonical movement.relocate and generic RulesProfile-derived movement constraints. Unknown installed and fully renamed external Common Play production-executes walk, climb, swim, fly, crawl, jump, Difficult-Terrain-style and drag/carry cost multiplication, alternate-speed bounds and portable movement grants, stand from Prone, push/pull/teleport, explicit no-provoke movement, zero-speed rejection, connected replay/reconnect, and event-native Undo without content identity dispatch.';
+          row.disposition = 'IMPLEMENTED';
+          row.remainingNamedSeams = [];
+          fs.writeFileSync(path, JSON.stringify(ledger, null, 2) + '\n');
+          NODE
+            rm -f "$workflow"
+            node scripts/check-v1-mechanism-coverage.mjs
+            git add docs/rules/v1-mechanism-coverage-ledger.json "$workflow"
+            if git diff --cached --quiet; then
+              exit 0
+            fi
+            git commit -m "docs(c9): finalize Family I movement coverage"
+            if git push origin HEAD:"$branch"; then
+              exit 0
+            fi
+            sleep 1
+          done
+          exit 1
