@@ -144,3 +144,39 @@ test("invalid recovery lockout operations reject atomically", () => {
   assert.equal(missing.status,"rejected");
   assert.equal(missing.state,state);
 });
+
+test("turn-start recovery emits the durable resource delta used by connected projection and Undo", () => {
+  const state=runtimeState();
+  state.combatants.hero.resources.push({
+    id:"feature:turn-start",
+    label:"Turn Start Feature",
+    current:0,
+    maximum:2,
+    recovery:{ turnStart:1 },
+  });
+
+  const committed=resolvePendingResolution(TEST_PROFILE,state,{
+    id:"turn-start.resource-recovery",
+    actorId:"hero",
+    sourceId:"feature:turn-start",
+    expectedRevision:0,
+    operations:[{
+      id:"turn-start.resource-recovery:begin",
+      kind:"begin-turn",
+      actorId:"hero",
+      round:1,
+    }],
+  });
+  assert.equal(committed.status,"committed");
+  if (committed.status!=="committed") return;
+
+  assert.equal(committed.state.combatants.hero.resources.find((entry)=>entry.id==="feature:turn-start")?.current,1);
+  const change=committed.events[0].stateChanges.find((entry)=>entry.kind==="resource"&&entry.resourceId==="feature:turn-start");
+  assert.ok(change&&change.kind==="resource","turn-start resource recovery must be represented in the authoritative event stream");
+  if (change?.kind==="resource") {
+    assert.equal(change.before,0);
+    assert.equal(change.after,1);
+    assert.equal(change.writeBack,"character");
+    assert.equal(change.lifetime,"character-durable");
+  }
+});
