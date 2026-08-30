@@ -1,0 +1,126 @@
+name: C9 Family E Bounded Targets Apply R2
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-e-bounded-targets-apply-r2.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Apply bounded target selector parity
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path, old, new):
+              p=Path(path)
+              text=p.read_text(encoding='utf-8')
+              count=text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{path}: expected exactly one match, got {count}: {old!r}')
+              p.write_text(text.replace(old,new,1),encoding='utf-8')
+
+          runtime='src/domain/commonPlayOperationRuntime.ts'
+          replace_once(runtime,
+              'export interface CommonPlayTargetingSelector {\n  from:"targets";\n  min:1;\n  max:1;\n}',
+              'export interface CommonPlayTargetingSelector {\n  from:"targets";\n  min:number;\n  max:number;\n}')
+          replace_once(runtime,
+              '  if(selector.min!==1||selector.max!==1) throw new DomainEvaluationError(`${label}.min and .max must both be 1 for portable Common Play targeting`);\n  return {from:"targets",min:1,max:1};',
+              '  if(!Number.isInteger(selector.min)||Number(selector.min)<1) throw new DomainEvaluationError(`${label}.min must be a positive integer for portable Common Play targeting`);\n  if(!Number.isInteger(selector.max)||Number(selector.max)<Number(selector.min)) throw new DomainEvaluationError(`${label}.max must be an integer >= min for portable Common Play targeting`);\n  return {from:"targets",min:Number(selector.min),max:Number(selector.max)};')
+          replace_once(runtime,
+              'if(input.targetingTargets.length===1&&input.targetId!==undefined&&input.targetId!==input.targetingTargets[0].id)',
+              'if(input.targetId!==undefined&&!input.targetingTargets.some((target)=>target.id===input.targetId))')
+          replace_once(runtime,
+              'rule:{kind:"creature",minTargets:1,maxTargets:1,directTarget:false}',
+              'rule:{kind:"creature",minTargets:entryPoint.targeting.min,maxTargets:entryPoint.targeting.max,directTarget:false}')
+          replace_once(runtime,
+              '  const reactionPaymentCount=payments?.filter((payment)=>payment.kind==="economy"&&payment.bucket==="reaction").length??0;',
+              '  for(const [index,entryPoint] of entryPoints.entries()) {\n    if(entryPoint.targeting&&entryPoint.targeting.max>1&&entryPoint.operations.some((operation)=>(operation.kind==="damage.apply"||operation.kind==="healing.apply")&&operation.target==="target")) {\n      throw new DomainEvaluationError(`${label}.entryPoints[${index}] multi-target selection requires an explicit per-target effect contract`);\n    }\n  }\n  const reactionPaymentCount=payments?.filter((payment)=>payment.kind==="economy"&&payment.bucket==="reaction").length??0;')
+
+          adapter='src/app/installedCommonPlayRuntimeAdapter.ts'
+          replace_once(adapter,
+              'const multi=action.lowered.kind==="save-damage";',
+              'const multi=action.lowered.kind==="save-damage"||Boolean(targeting&&(targeting.max??1)>1);')
+          replace_once(adapter,
+              'const presentationTargetIds=affectedTargetIds.length?affectedTargetIds:[selectedTargetId];',
+              'const presentationTargetIds=affectedTargetIds.length?affectedTargetIds:operationEntryPoint?.targeting?selectedTargets.map((target)=>target.id):lowered.kind==="save-damage"?selectedTargets.map((target)=>target.id):[selectedTargetId];')
+
+          domain=Path('tests/domain/commonPlayTargetingRuntime.test.ts')
+          text=domain.read_text(encoding='utf-8')
+          old='    [{from:"targets",min:0,max:1},/min and .max must both be 1/],\n    [{from:"targets",min:1,max:2},/min and .max must both be 1/],'
+          new='    [{from:"targets",min:0,max:1},/min must be a positive integer/],\n    [{from:"targets",min:2,max:1},/max must be an integer >= min/],'
+          if text.count(old)!=1:
+              raise SystemExit('domain invalid-selector assertions changed')
+          text=text.replace(old,new,1)
+          marker='test("unsupported Common Play selector shapes reject explicitly",()=>{'
+          if text.count(marker)!=1:
+              raise SystemExit('domain insertion marker mismatch')
+          addition='''test("bounded Common Play selector preserves authored multi-target limits without fabricating spatial facts",()=>{\n  const authored=structuredClone(AUTHORED);\n  authored.entryPoints[0].targeting={from:"targets",min:1,max:2};\n  authored.entryPoints[0].operations=[];\n  const definition=parseManualCommonPlayOperationDefinition(authored);\n  const selected=[target("goblin","enemy"),target("hero","self")];\n  const committed=resolveCommonPlayEntryPointOperations(TEST_PROFILE,runtimeState(),definition,{\n    resolutionId:"external-multi-targeting",actorId:"hero",entryPointId:"mend-other",targetingTargets:selected,\n  });\n  assert.equal(committed.status,"committed");\n  if(committed.status!=="committed") return;\n  assert.deepEqual((committed.results["external-multi-targeting:targeting"] as {targets:Array<{targetId:string}>}).targets.map((entry)=>entry.targetId),["goblin","hero"]);\n});\n\ntest("multi-target Common Play rejects a singular target effect until an explicit per-target effect contract exists",()=>{\n  const authored=structuredClone(AUTHORED);\n  authored.entryPoints[0].targeting={from:"targets",min:1,max:2};\n  assert.throws(()=>parseManualCommonPlayOperationDefinition(authored),/explicit per-target effect contract/);\n});\n\n'''
+          domain.write_text(text.replace(marker,addition+marker,1),encoding='utf-8')
+
+          production=Path('tests/ui/installedCommonPlayProductionRuntime.test.ts')
+          text=production.read_text(encoding='utf-8')
+          marker='test("installed Common Play targeting validates one existing target before healing and supports Undo",async()=>{'
+          if text.count(marker)!=1:
+              raise SystemExit('production insertion marker mismatch')
+          addition='''test("unknown installed Common Play preserves a bounded multi-target selection through production resolution",async()=>{\n  const adapter=new MockAdapter();\n  const payload=JSON.parse(targetingPackagePayload()) as {content:Array<{mechanics:Array<{config:{entryPoints:Array<{targeting:{from:string;min:number;max:number};operations:unknown[]}>}}>}>};\n  const entryPoint=payload.content[0].mechanics[0].config.entryPoints[0];\n  entryPoint.targeting={from:"targets",min:1,max:2};\n  entryPoint.operations=[];\n  setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());\n  const preview=await adapter.previewContentImport(JSON.stringify(payload));\n  assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));\n  await adapter.activateContentImport();\n  const actionId=installedCommonPlayActionId({\n    catalogId:catalogQualifiedId(TARGETING_IDENTITY.contentId,TARGETING_IDENTITY.moduleId,"1"),\n    mechanicId:TARGETING_IDENTITY.mechanicId,entryPointId:TARGETING_IDENTITY.entryPointId,\n  });\n  await adapter.startInitiative();\n  await adapter.setCurrentActor("char.aelar");\n  await adapter.resolveAction(actionId,["combatant.goblin-a","combatant.goblin-b"]);\n  const snapshot=await adapter.getSnapshot();\n  assert.equal(snapshot.resolution?.stage,"complete");\n  assert.equal(snapshot.resolution?.actionId,actionId);\n  assert.deepEqual(snapshot.resolution?.targetIds,["combatant.goblin-a","combatant.goblin-b"]);\n});\n\n'''
+          production.write_text(text.replace(marker,addition+marker,1),encoding='utf-8')
+
+          imports=Path('tests/ui/ruleModulePackageImport.test.ts')
+          text=imports.read_text(encoding='utf-8')
+          old='    {from:"targets",min:1,max:2},\n'
+          new='    {from:"targets",min:2,max:1},\n'
+          if text.count(old)!=1:
+              raise SystemExit('targeting import fixture changed')
+          text=text.replace(old,new,1)
+          old='entry.severity==="blocking"&&/targeting|unsupported fields/.test(entry.message)'
+          new='entry.severity==="blocking"&&/targeting|unsupported fields|positive integer|integer >= min|explicit per-target effect contract/.test(entry.message)'
+          if text.count(old)!=1:
+              raise SystemExit('targeting import assertion changed')
+          text=text.replace(old,new,1)
+          old='entry.severity==="blocking"&&/portable Common Play/.test(entry.message)'
+          new='entry.severity==="blocking"&&/portable Common Play|portable consent interaction/.test(entry.message)'
+          if text.count(old)!=1:
+              raise SystemExit('interaction import assertion changed')
+          imports.write_text(text.replace(old,new,1),encoding='utf-8')
+          PY
+      - name: Generate content catalogs
+        run: npm run generate:content
+      - name: Verify Family E bounded target slice
+        run: >-
+          npx tsx --test
+          tests/domain/commonPlayTargetingRuntime.test.ts
+          tests/ui/installedCommonPlayProductionRuntime.test.ts
+          tests/ui/ruleModulePackageImport.test.ts
+      - name: Verify legacy execution boundary
+        run: node scripts/check-legacy-execution-boundary.mjs
+      - name: Typecheck application
+        run: npx tsc --noEmit
+      - name: Commit verified change and remove helpers
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/c9-family-e-bounded-targets-apply.yml .github/workflows/c9-family-e-bounded-targets-apply-r2.yml
+          git add src/domain/commonPlayOperationRuntime.ts src/app/installedCommonPlayRuntimeAdapter.ts tests/domain/commonPlayTargetingRuntime.test.ts tests/ui/installedCommonPlayProductionRuntime.test.ts tests/ui/ruleModulePackageImport.test.ts
+          git commit -m "feat(c9): support bounded multi-target selectors"
+          git fetch origin agent/c9-gate-n-coverage-reconciliation
+          git rebase origin/agent/c9-gate-n-coverage-reconciliation
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
