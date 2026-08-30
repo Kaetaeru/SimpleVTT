@@ -1,4 +1,5 @@
 name: C9 Family P Multi-target Semantic Evidence 7130
+# Retry after fixing YAML/Python anchor dedent.
 on:
   push:
     branches: [agent/c9-gate-n-coverage-reconciliation]
