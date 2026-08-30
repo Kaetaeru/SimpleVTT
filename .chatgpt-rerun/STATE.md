@@ -1,7 +1,7 @@
 # Rerun State
 
 - run_id: `b7f27a61-29d8-4ba2-9f93-8e66722d5f41`
-- sequence: `8`
+- sequence: `9`
 - task_id: `v1-common-play-c8-rerun`
 - dispatch status to publish: `continue`
 - repository: `Kaetaeru/SimpleVTT`
@@ -189,15 +189,16 @@ Family A (`expression-property`) remains `INCOMPLETE`. The persisted schema alre
 
 Family B (`turn-action-economy-timing`) remains `INCOMPLETE`. Action/Bonus Action/Reaction, movement budget, extra Action/Attack, once-per-turn/round/resolution frequency, begin/end-turn clocks, and structural off-turn stored invocation already have generic implementation and production evidence. The remaining required triggered-window/timing-dispatch semantics are not a second economy problem: they depend on the generic semantic-event vocabulary/order still unresolved in Family P, while initiative-count special timing is separately blocked in Family AC. A B-specific dispatcher would duplicate turn ownership and violate the one-language/one-owner architecture.
 
-## Family C reconciliation — deterministic post-roll advanced, portable dice follow-ups remain
+## Family C reconciliation — portable dice execution proven, representative authoring remains
 
-Family C (`d20-test-lifecycle`) remains `INCOMPLETE`, but two named/structural gaps were closed without a second roll engine:
+Family C (`d20-test-lifecycle`) remains `INCOMPLETE`, but the generic post-roll dice mechanism advanced materially without a named executor:
 
-- `6d03412dcecc7186a2b0ee41da438f498c5333a0`: Cutting Words moved from its named side engine into declarative Common Play; the named adapter was deleted. Focused production evidence was 14/14 plus `tsc --noEmit`.
-- `6f6ed2e071b50a1b95d90a265aac541485bdf4b4`: the existing Common Play post-roll reaction path now lowers deterministic `replace`, `minimum`, `target-add`, and `add-flat` into the existing d20 Resolver. Unknown installed identity/rename, atomic Reaction/resource payment, and Undo are proven. Focused verification was 42/42, `tsc --noEmit`, and `vite build`.
-- The remaining Family C production seam is now precise: `d20FollowUpRuntimeAdapter.ts` is a generic executor, but `productionPlayRuntimeAdapter.ts` still injects Tactical Mind, Indomitable, Dark One's Own Luck, and Peerless Skill `runtimeD20FollowUps` behind named class/subclass/feature checks. Those add-die/reroll follow-ups therefore do not yet prove unknown portable content authoring.
+- `1342c9928b32f8fd986fd61a2981cee957a3685b`: Common Play `roll.modify` now lowers authoritative `add-die` and `reroll` into the existing generic d20 Resolver. Reroll updates the authoritative natural d20 presentation rather than leaving the original face visible.
+- C9 Family C Portable Dice Modifiers run `33289183121`: focused 37/37, `tsc --noEmit`, and `vite build` passed. Unknown installed add-die/reroll content executed with arbitrary renamed module/content/mechanic/interceptor/interaction/display identities, atomic accepted payment, and Undo.
+- The earlier declarative Cutting Words and deterministic replace/minimum/target-add evidence remains retained and was not repeated.
+- Family C is not final: `productionPlayRuntimeAdapter.ts` still authors Tactical Mind, Indomitable, Dark One's Own Luck, and Peerless Skill `runtimeD20FollowUps` with named identity checks. The generic production timing layer still needs structural failed/save/after-roll selection; Tactical Mind and Peerless Skill need conditional pay-on-success; portable add-die/reroll still need connected duplicate/reconnect proof.
 - Coverage totals remain `IMPLEMENTED=4`, `INCOMPLETE=32`, `PROVEN_UNNEEDED=0`; `gateNBlockingNamedFallbacks` remains empty and overall verdict remains `V1 INCOMPLETE`.
 
 ## Next Exact Action
 
-Continue Family C by moving post-roll `add-die` and `reroll` authoring for the remaining representative follow-ups out of named `productionPlayRuntimeAdapter.ts` identity checks and into the existing portable Common Play reaction/Resolver path. Reuse the current d20 Resolver, interaction authority, resource payment, persistence, and connected event transport; do not add a feature-specific executor or second roll engine. Prove an arbitrary/renamed installed definition in production, then add connected duplicate/reconnect/Undo evidence before considering Family C final.
+Continue Family C at the generic production timing boundary: add structural d20 family/outcome selection sufficient for failed checks/saves and after-roll decisions, then prove unknown portable add-die/reroll through Host/Client duplicate/reconnect/Undo. Reuse the existing Common Play interaction, d20 Resolver, payment, and connected event authority; do not migrate Tactical Mind or Peerless Skill until a generic conditional pay-on-success contract exists.
