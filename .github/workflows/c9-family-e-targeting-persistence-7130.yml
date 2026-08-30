@@ -1,0 +1,85 @@
+name: C9 Family E Targeting Persistence 7130
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-e-targeting-persistence-7130.yml
+
+permissions:
+  contents: write
+
+jobs:
+  verify-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Preserve relation selector through installed-content persistence
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin agent/c9-gate-n-coverage-reconciliation
+          git reset --hard origin/agent/c9-gate-n-coverage-reconciliation
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path=Path('tests/ui/ruleModulePackageImport.test.ts')
+          text=path.read_text(encoding='utf-8')
+          start=text.index('function portableCommonPlayTargetingMechanic() {')
+          end=text.index('\n}\n\nfunction portableCommonPlayInteractionMechanic()',start)
+          block=text[start:end]
+          old='targeting:{from:"targets",min:1,max:1},'
+          new='targeting:{from:"targets",where:{op:"relation-matches",ref:"relation",value:"enemy"},min:1,max:1},'
+          if new not in block:
+              if block.count(old)!=1:
+                  raise SystemExit(f'expected one bounded targeting fixture, found {block.count(old)}')
+              block=block.replace(old,new,1)
+              text=text[:start]+block+text[end:]
+              path.write_text(text,encoding='utf-8')
+          PY
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Generate content catalogs
+        run: npm run generate:content
+      - name: Verify targeting persistence and production regressions
+        run: >-
+          npx tsx --test
+          tests/ui/ruleModulePackageImport.test.ts
+          tests/domain/commonPlayTargetingRuntime.test.ts
+          tests/ui/installedCommonPlayProductionRuntime.test.ts
+      - name: Verify coverage and execution boundaries
+        run: |
+          node scripts/check-v1-mechanism-coverage.mjs
+          node scripts/check-legacy-execution-boundary.mjs
+          npx tsc --noEmit
+      - name: Publish verified persistence proof and remove helper
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/c9-family-e-targeting-persistence-7130.yml
+          git add tests/ui/ruleModulePackageImport.test.ts
+          git diff --cached --check
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "test(c9): persist portable relation selectors"
+          branch=agent/c9-gate-n-coverage-reconciliation
+          for attempt in $(seq 1 8); do
+            git fetch origin "$branch"
+            if git rebase "origin/$branch" && git push origin HEAD:"$branch"; then
+              exit 0
+            fi
+            git rebase --abort || true
+            sleep 2
+          done
+          echo "failed to publish targeting persistence proof after concurrent retries" >&2
+          exit 1
