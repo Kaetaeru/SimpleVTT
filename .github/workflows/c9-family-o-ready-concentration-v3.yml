@@ -136,7 +136,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           rm -f .github/workflows/c9-family-o-ready-concentration-71304.yml .github/workflows/c9-family-o-ready-concentration-v2.yml .github/workflows/c9-family-o-ready-concentration-v3.yml
-          git add src/app/installedCommonPlayRuntimeAdapter.ts tests/ui/c9FamilyOReadyConcentrationProduction.test.ts .github/workflows/c9-family-o-ready-concentration-71304.yml .github/workflows/c9-family-o-ready-concentration-v2.yml .github/workflows/c9-family-o-ready-concentration-v3.yml
+          git add -A -- src/app/installedCommonPlayRuntimeAdapter.ts tests/ui/c9FamilyOReadyConcentrationProduction.test.ts .github/workflows
           git commit -m "feat(c9): hold readied spell concentration"
           git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
           git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
