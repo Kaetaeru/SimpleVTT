@@ -4,12 +4,20 @@ on:
   push:
     branches:
       - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - ".github/workflows/c9-family-a-nonactive-profile-71304.yml"
+
+permissions:
+  contents: write
 
 jobs:
-  verify:
+  verify-and-reconcile:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -19,5 +27,44 @@ jobs:
         run: npx tsx --test tests/ui/c9FamilyANonActiveProfileProperties.test.ts tests/ui/installedCommonPlayPropertyModifierProduction.test.ts
       - name: Verify TypeScript
         run: npx tsc --noEmit
-      - name: Verify coverage ledger structure
+      - name: Reconcile Family A evidence
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          path=Path("docs/rules/v1-mechanism-coverage-ledger.json")
+          data=json.loads(path.read_text(encoding="utf-8"))
+          family=next(entry for entry in data["families"] if entry["family"]=="A")
+          family["remainingNamedSeams"]=[
+              seam for seam in family.get("remainingNamedSeams",[])
+              if "non-active runtime actors still expose only a reduced property surface" not in seam
+          ]
+          note=("Non-active runtime actors now expose their stable runtime baseProperties through the same "
+                "RulesProfile PropertyModifier owner used by active Common Play actors; an unknown external "
+                "RuleModule reads defense.ac while that actor is not active without content-identity dispatch.")
+          if note not in family["currentStateNotes"]:
+              family["currentStateNotes"].append(note)
+          evidence=("tests/ui/c9FamilyANonActiveProfileProperties.test.ts proves an imported unknown external "
+                    "RuleModule can execute stored Common Play for a non-active runtime actor and read that "
+                    "actor's RulesProfile-backed defense.ac without named registration.")
+          if evidence not in family["testStatus"]:
+              family["testStatus"].append(evidence)
+          assert family["currentState"]=="INCOMPLETE"
+          assert any("Named progression/runtime stat materialization" in seam for seam in family["remainingNamedSeams"])
+          path.write_text(json.dumps(data,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
+          PY
+      - name: Verify reconciled coverage ledger
         run: node scripts/check-v1-mechanism-coverage.mjs
+      - name: Publish reconciliation and retire verifier
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm .github/workflows/c9-family-a-nonactive-profile-71304.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/rules/v1-mechanism-coverage-ledger.json .github/workflows/c9-family-a-nonactive-profile-71304.yml
+          git commit -m "docs(c9): reconcile non-active profile coverage"
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
