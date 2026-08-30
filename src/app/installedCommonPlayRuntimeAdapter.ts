@@ -994,9 +994,9 @@ async function executeCommonPlayAction(
     provenance:[`${action.source} · ${action.contentId}`],
     calculatedOutcome:outcome,
     finalOutcome:outcome,
-    rollKind:hp?.rollKind??(roll?(roll.family==="attack-roll"?"attack":roll.family==="saving-throw"?"save":"check"):undefined),
-    authoritativeDice:hp?.authoritativeDice??(roll?.rollState==="normal"?[roll.natural]:roll?.dice.faces),
-    rollTotal:hp?.rollTotal??roll?.total,
+    rollKind:roll?(roll.family==="attack-roll"?"attack":roll.family==="saving-throw"?"save":"check"):hp?.rollKind,
+    authoritativeDice:roll?(roll.rollState==="normal"?[roll.natural]:roll.dice.faces):hp?.authoritativeDice,
+    rollTotal:roll?.total??hp?.rollTotal,
     attackTotal:roll?.family==="attack-roll"?roll.total:undefined,
     damageComponents:hp?.damageComponents,
   })};
