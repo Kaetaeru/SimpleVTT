@@ -1,4 +1,5 @@
 name: C9 Family H Invisible Sight 71304
+# Refresh the verified staging commit from the latest C9 target before PR integration.
 
 on:
   push:
