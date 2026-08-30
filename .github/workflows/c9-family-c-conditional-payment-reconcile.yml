@@ -1,0 +1,78 @@
+name: C9 Family C Conditional Payment Reconcile
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-c-conditional-payment-reconcile.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  PRODUCT_RUN_ID: "33291256822"
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify already-tested product boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          ! grep -q 'LORE_PEERLESS_SKILL_SOURCE' src/app/productionPlayRuntimeAdapter.ts
+          ! grep -q 'peerless-skill' src/app/productionPlayRuntimeAdapter.ts
+          grep -q 'feature:fighter.tactical-mind' src/app/productionPlayRuntimeAdapter.ts
+          grep -q 'feature:fighter.indomitable' src/app/productionPlayRuntimeAdapter.ts
+          grep -q 'd20ResultCondition' schemas/common-play-contract.schema.json
+
+      - name: Reconcile Family C ledger
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          path=Path('.github/c9-family-c-conditional-payment-migrate.py')
+          text=path.read_text(encoding='utf-8')
+          old='data["families"]'
+          if text.count(old)!=1:
+              raise SystemExit(f'expected one stale ledger key, got {text.count(old)}')
+          path.write_text(text.replace(old,'data["rows"]',1),encoding='utf-8')
+          PY
+          GITHUB_RUN_ID="$PRODUCT_RUN_ID" python3 .github/c9-family-c-conditional-payment-migrate.py ledger
+          node scripts/check-v1-mechanism-coverage.mjs
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/rules/v1-mechanism-coverage-ledger.json
+          git diff --cached --check
+          git commit -m "docs(c9): record conditional payment and Peerless evidence"
+          git push
+
+      - name: Advance Rerun STATE checkpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          GITHUB_RUN_ID="$PRODUCT_RUN_ID" python3 .github/c9-family-c-conditional-payment-migrate.py state
+          git add .chatgpt-rerun/STATE.md
+          git diff --cached --check
+          git commit -m "docs(rerun): checkpoint Peerless migration"
+          git push
+
+      - name: Publish control last and remove temporary migration files
+        shell: bash
+        run: |
+          set -euo pipefail
+          GITHUB_RUN_ID="$PRODUCT_RUN_ID" python3 .github/c9-family-c-conditional-payment-migrate.py control
+          git add .chatgpt-rerun/control.json
+          git rm \
+            .github/c9-family-c-conditional-payment-migrate.py \
+            .github/c9-family-c-conditional-payment-test-fix.py \
+            .github/workflows/c9-family-c-conditional-payment-migration.yml \
+            .github/workflows/c9-family-c-conditional-payment-reconcile.yml
+          git diff --cached --check
+          git commit -m "docs(rerun): continue after Peerless migration"
+          git push
