@@ -126,6 +126,52 @@ test("Unarmed damage grapple and shove execute from structural payloads after ac
   }
 });
 
+test("Unarmed grapple and shove replace individual attacks inside Extra Attack after identity rename", async () => {
+  const adapter=new MockAdapter();
+  await ready(adapter);
+  const originalGetSnapshot=adapter.getSnapshot.bind(adapter);
+  const grappleId="action.external.attack-replacement.grapple";
+  const shoveId="action.external.attack-replacement.shove";
+  adapter.getSnapshot=async()=>{
+    const snapshot=await originalGetSnapshot();
+    const grapple=snapshot.scene.actionsByActor["char.aelar"]?.find((entry)=>entry.id==="action.unarmed-strike.grapple");
+    const shove=snapshot.scene.actionsByActor["char.aelar"]?.find((entry)=>entry.id==="action.unarmed-strike.shove-prone");
+    if(grapple) {grapple.id=grappleId;grapple.name="External control alpha";}
+    if(shove) {shove.id=shoveId;shove.name="External control beta";}
+    return snapshot;
+  };
+
+  await adapter.setQueuedD20(1);
+  await adapter.resolveAction(grappleId,["combatant.goblin-a"]);
+  let snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.resolution?.actionId,grappleId);
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.action,false);
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.extraAttacks?.length,1);
+  assert.ok(snapshot.scene.entities.find((entry)=>entry.id==="combatant.goblin-a")?.status.some((status)=>status.includes("붙잡힘")));
+
+  await adapter.setQueuedD20(1);
+  await adapter.resolveAction(shoveId,["combatant.goblin-b"]);
+  snapshot=await adapter.getSnapshot();
+  const secondResolutionId=snapshot.resolution?.id;
+  assert.equal(snapshot.resolution?.actionId,shoveId);
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.action,false);
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.extraAttacks?.length,0);
+  assert.ok(snapshot.scene.entities.find((entry)=>entry.id==="combatant.goblin-b")?.status.some((status)=>status.includes("넘어짐")));
+
+  await adapter.setQueuedD20(1);
+  await adapter.resolveAction(grappleId,["combatant.goblin-b"]);
+  snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.resolution?.id,secondResolutionId);
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.extraAttacks?.length,0);
+  assert.equal(snapshot.scene.entities.find((entry)=>entry.id==="combatant.goblin-b")?.status.some((status)=>status.includes("붙잡힘")),false);
+
+  await adapter.undoLastResolution();
+  snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.action,false);
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.extraAttacks?.length,1);
+  assert.equal(snapshot.scene.entities.find((entry)=>entry.id==="combatant.goblin-b")?.status.some((status)=>status.includes("넘어짐")),false);
+});
+
 test("connected unarmed condition converges once on every client", async () => {
   const sessionId="session.unarmed-condition";
   const host=new MockAdapter();
