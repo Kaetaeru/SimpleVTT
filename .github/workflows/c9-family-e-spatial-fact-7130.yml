@@ -60,6 +60,13 @@ jobs:
               if old_call not in text:
                   raise SystemExit('Family E selector call-site anchor not found or changed')
               text=text.replace(old_call,new_call,1)
+
+          old_runtime='targetingCandidates:entryPoint.targeting?internal.scene.entities.filter((target)=>state.combatants[target.id]).map((target)=>commonPlaySelectorCandidate(actorEntity,target)):undefined,'
+          new_runtime='targetingCandidates:entryPoint.targeting?internal.scene.entities.filter((target)=>state.combatants[target.id]).map((target)=>commonPlaySelectorCandidate(internal.scene,actorEntity,target)):undefined,'
+          if new_runtime not in text:
+              if old_runtime not in text:
+                  raise SystemExit('Family E operation selector call-site anchor not found or changed')
+              text=text.replace(old_runtime,new_runtime,1)
           path.write_text(text,encoding='utf-8')
           PY
 
@@ -193,14 +200,13 @@ jobs:
           node scripts/check-v1-mechanism-coverage.mjs
           node scripts/check-legacy-execution-boundary.mjs
           npm exec tsc -- --noEmit
-      - name: Publish verified proof and retire verifier
+      - name: Publish verified proof
         shell: bash
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add src/app/installedCommonPlayRuntimeAdapter.ts tests/ui/c9FamilyESpatialFactProduction.test.ts docs/rules/v1-mechanism-coverage-ledger.json
-          git rm -f .github/workflows/c9-family-e-spatial-fact-7130.yml
           git diff --cached --check
           git commit -m "test(c9): prove Family E spatial selector facts"
           branch=agent/c9-gate-n-coverage-reconciliation
