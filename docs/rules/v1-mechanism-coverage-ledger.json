@@ -965,7 +965,7 @@
         "commonPlayEffectRuntime.test.ts",
         "effects.ts"
       ],
-      "currentState": "Installed arbitrary-ID persistent effects now activate and automatically consume/retaliate inside the incoming damage transaction with Host/Client replay, reconnect, and Undo; the exhaustive duration/suppression/dependent-cleanup matrix remains under audit",
+      "currentState": "Installed arbitrary-ID persistent effects execute through the shared Common Play/Resolver authority. Production acceptance now covers durable, maintained concentration, short-rest, long-rest, and elapsed duration materialization plus event-native Undo under unknown and renamed external identities; automatic consume/retaliation, connected replay/reconnect, and Undo are also proven. Duration-boundary expiry execution, suppression/pause-resume, source/dependent cleanup, and remaining named effect adapters remain incomplete.",
       "requiredSemantics": [
         "instant",
         "rounds/turns/elapsed",
@@ -993,11 +993,13 @@
       "productionEvidence": [
         "installedCommonPlayLoweredFamiliesProduction.test.ts automatic persistent effect atomic transaction",
         "bardicInspirationActionRuntime.test.ts",
-        "bardicInspirationFollowUpRuntime.test.ts"
+        "bardicInspirationFollowUpRuntime.test.ts",
+        "c9FamilyNEffectDurationProduction.test.ts proves unknown installed durable, concentration, short-rest, long-rest, and elapsed effect durations materialize through production Common Play/Resolver and reverse through event-native Undo"
       ],
       "identityInvarianceEvidence": [
         "commonPlayEffectRuntime.test.ts renamed definition",
-        "installedCommonPlayLoweredFamiliesProduction.test.ts arbitrary package identity"
+        "installedCommonPlayLoweredFamiliesProduction.test.ts arbitrary package identity",
+        "c9FamilyNEffectDurationProduction.test.ts repeats the complete duration-materialization matrix under unrelated external module/content/mechanic identities"
       ],
       "connectedEvidenceIfRelevant": [
         "installedCommonPlayLoweredFamiliesProduction.test.ts automatic effect connected replay/Undo"
@@ -1007,7 +1009,7 @@
       ],
       "remainingNamedSeams": [
         "named aura/form/mark effect adapters",
-        "exhaustive duration/suppression/dependent-cleanup acceptance"
+        "duration-boundary expiry execution, suppression/pause-resume, and source/dependent-cleanup acceptance remains incomplete"
       ],
       "connectedRelevant": true,
       "persistenceRelevant": true
