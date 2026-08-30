@@ -38,7 +38,9 @@ jobs:
           tests/ui/connectedCommonPlayAuthorityFactRouting.test.ts
           tests/ui/connectedCommonPlayAuthorityFactDispatch.test.ts
       - name: Verify legacy execution boundary
-        run: node scripts/check-legacy-execution-inventory.mjs
+        run: |
+          node scripts/check-legacy-execution-boundary.mjs
+          node --test tests/ui/legacyExecutionBoundary.test.mjs
       - name: Typecheck
         run: npm exec tsc -- --noEmit
       - name: Retire verifier after successful evidence run
