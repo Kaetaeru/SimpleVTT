@@ -1,0 +1,31 @@
+name: C9 Family A Profile Properties
+
+on:
+  push:
+    paths:
+      - "src/app/turnRuntimeSessionRegistry.ts"
+      - "src/app/installedCommonPlayRuntimeAdapter.ts"
+      - "src/domain/profileEngine.ts"
+      - "rules/profiles/**"
+      - "tests/ui/c9FamilyAActiveProfilePropertyBases.test.ts"
+      - "tests/ui/c9FamilyANonActiveProfileProperties.test.ts"
+      - ".github/workflows/c9-family-a-profile-properties.yml"
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Verify generic profile property ownership
+        run: >-
+          npx tsx --test
+          tests/ui/c9FamilyAActiveProfilePropertyBases.test.ts
+          tests/ui/c9FamilyANonActiveProfileProperties.test.ts
+      - name: Typecheck and build
+        run: npm run build
