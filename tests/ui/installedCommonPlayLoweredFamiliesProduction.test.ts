@@ -394,6 +394,58 @@ test("stored invocation executes mapless movement from an actor-authority destin
   assert.equal(snapshot.scene.economyByActor["char.aelar"]?.reaction,true);
 });
 
+test("unknown stored movement converges through Host replay, duplicate handling, Undo, and reconnect",async()=>{
+  const prefix="unknown-connected-movement",sessionId="session.common-play-movement";
+  const host=new MockAdapter();const {action}=await install(host,prefix);
+  const hostState=connectedStateFor(host);hostState.mode="host";hostState.sessionId=sessionId;hostState.ledger=new HostSessionLedger(sessionId,connectedManifest(host));
+  const originalSend=tauriSessionTransport.send;
+  const runHost=async(operation:()=>Promise<unknown>)=>{
+    const wires:string[]=[];tauriSessionTransport.send=async(message)=>{wires.push(message);return 1;};
+    try { await operation(); } finally { tauriSessionTransport.send=originalSend; }
+    const batch=wires.map((wire)=>JSON.parse(wire)).find((wire)=>wire.type==="event-batch") as {events:ConnectedSessionEvent[]}|undefined;
+    assert.ok(batch,JSON.stringify(wires));
+    assert.equal(wires.every((wire)=>decodeConnectedWireMessage(wire).status==="ok"),true);
+    return batch;
+  };
+
+  const captureBatch=await runHost(()=>host.resolveAction(action(8,"prepare"),["char.aelar"]));
+  const turnBatch=await runHost(()=>host.endTurn());
+
+  const client=new MockAdapter();await install(client,prefix);
+  const clientState=connectedStateFor(client);clientState.mode="client";clientState.sessionId=sessionId;clientState.replica=new ClientSessionReplica(sessionId);
+  assert.equal((await applyConnectedClientEvents(client,captureBatch.events)).status,"applied");
+  assert.equal((await applyConnectedClientEvents(client,turnBatch.events)).status,"applied");
+
+  const trigger=(await host.getSnapshot()).scene.actionsByActor["char.aelar"]?.find((candidate)=>parseStoredInvocationCommonPlayActionId(candidate.id));
+  assert.ok(trigger);
+  const before=(await host.getSnapshot()).scene.economyByActor["char.aelar"]!.movement;
+  const movementBatch=await runHost(()=>host.resolveAction(trigger.id,["char.aelar"]));
+  assert.equal((await applyConnectedClientEvents(client,movementBatch.events)).status,"applied");
+  assert.equal((await applyConnectedClientEvents(client,movementBatch.events)).status,"duplicate");
+
+  let hostSnapshot=await host.getSnapshot(),clientSnapshot=await client.getSnapshot();
+  assert.equal(hostSnapshot.scene.economyByActor["char.aelar"]?.movement,before-10);
+  assert.equal(clientSnapshot.scene.economyByActor["char.aelar"]?.movement,hostSnapshot.scene.economyByActor["char.aelar"]?.movement);
+  assert.equal(clientSnapshot.scene.economyByActor["char.aelar"]?.reaction,false);
+  assert.deepEqual(snapshotAdapterTurnRuntimeState(client,clientSnapshot.scene)?.artifacts,snapshotAdapterTurnRuntimeState(host,hostSnapshot.scene)?.artifacts);
+
+  const undoBatch=await runHost(()=>host.undoLastResolution());
+  assert.equal((await applyConnectedClientEvents(client,undoBatch.events)).status,"applied");
+  hostSnapshot=await host.getSnapshot();clientSnapshot=await client.getSnapshot();
+  assert.equal(hostSnapshot.scene.economyByActor["char.aelar"]?.movement,before);
+  assert.equal(clientSnapshot.scene.economyByActor["char.aelar"]?.movement,before);
+  assert.equal(clientSnapshot.scene.economyByActor["char.aelar"]?.reaction,true);
+  assert.deepEqual(snapshotAdapterTurnRuntimeState(client,clientSnapshot.scene)?.artifacts,snapshotAdapterTurnRuntimeState(host,hostSnapshot.scene)?.artifacts);
+
+  const reconnect=new MockAdapter();await install(reconnect,prefix);
+  const reconnectState=connectedStateFor(reconnect);reconnectState.mode="client";reconnectState.sessionId=sessionId;reconnectState.replica=new ClientSessionReplica(sessionId);
+  assert.equal((await applyConnectedClientEvents(reconnect,hostState.ledger!.eventsAfter(0))).status,"applied");
+  const reconnectSnapshot=await reconnect.getSnapshot();
+  assert.equal(reconnectSnapshot.scene.economyByActor["char.aelar"]?.movement,before);
+  assert.equal(reconnectSnapshot.scene.economyByActor["char.aelar"]?.reaction,true);
+  assert.deepEqual(snapshotAdapterTurnRuntimeState(reconnect,reconnectSnapshot.scene)?.artifacts,snapshotAdapterTurnRuntimeState(host,hostSnapshot.scene)?.artifacts);
+});
+
 test("Ready UI captures an installed Common Play payload without the legacy WeakMap execution path",async()=>{
   const prefix="unknown-ready-ui";
   const adapter=new MockAdapter();const {action}=await install(adapter,prefix);
