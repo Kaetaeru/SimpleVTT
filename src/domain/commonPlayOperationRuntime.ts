@@ -40,6 +40,19 @@ export interface CommonPlayDamageDiceFormula {
   flat:number;
 }
 
+type CommonPlayPropertyModifier={
+  kind:"property.modify";
+  property:string;
+  operation:"add"|"subtract"|"set"|"min"|"max"|"multiply";
+  value:CommonPlayExpression;
+  target:"actor"|"target";
+  owner:"effect";
+  source:"definition";
+  duration:{kind:"elapsed";amount:LiteralNumberExpression;unit:"seconds"|"minutes"|"hours"|"days"};
+  lifetime:{kind:"until-duration";onEnd:"destroy"};
+  instancePolicy:"stack"|"replace"|"unique-by-source"|"profile-policy";
+};
+
 type CommonPlayResourceChange={
   kind:"resource.change";
   resource:string;
@@ -101,6 +114,7 @@ export type CommonPlayEconomyPayment={
 export type CommonPlayPayment=CommonPlayResourcePayment|CommonPlayEconomyPayment;
 
 export type CommonPlayOperation=
+  |CommonPlayPropertyModifier
   |CommonPlayResourceChange
   |CommonPlayRechargeResource
   |CommonPlayEconomyModify
@@ -164,6 +178,9 @@ const INTERACTION_KEYS=new Set(["id","kind","responder","mode","input","revalida
 const INTERACTION_INPUT_KEYS=new Set(["type"]);
 const TARGETING_KEYS=new Set(["from","min","max"]);
 const D20_TEST_KEYS=new Set(["kind","roller","property","dc","perTarget"]);
+const PROPERTY_MODIFY_KEYS=new Set(["kind","property","operation","value","target","owner","source","duration","lifetime","instancePolicy"]);
+const PROPERTY_DURATION_KEYS=new Set(["kind","amount","unit"]);
+const PROPERTY_LIFETIME_KEYS=new Set(["kind","onEnd"]);
 const RESOURCE_CHANGE_KEYS=new Set(["kind","resource","amount","target","createIfMissing","maximumDelta","temporaryCapacityUntilLongRest"]);
 const RESOURCE_CREATION_KEYS=new Set(["label","maximum","recovery"]);
 const RESOURCE_RECOVERY_KEYS=new Set(["shortRest","longRest","turnStart"]);
@@ -260,6 +277,19 @@ function hpTarget(value:unknown,label:string):CommonPlayHpTarget|undefined {
   return value;
 }
 
+function numericExpression(value:unknown,label:string):CommonPlayExpression {
+  const expression=object(value,label);
+  if("value" in expression) return literalExpression(expression,label);
+  if("ref" in expression) {
+    supportedKeys(expression,new Set(["ref"]),label);
+    return {ref:nonEmptyString(expression.ref,`${label}.ref`)};
+  }
+  supportedKeys(expression,new Set(["op","args"]),label);
+  if(expression.op!=="add"&&expression.op!=="subtract"&&expression.op!=="multiply"&&expression.op!=="divide"&&expression.op!=="min"&&expression.op!=="max"&&expression.op!=="floor"&&expression.op!=="ceil") throw new DomainEvaluationError(`${label}.op is unsupported`);
+  if(!Array.isArray(expression.args)||!expression.args.length) throw new DomainEvaluationError(`${label}.args must be a non-empty array`);
+  return {op:expression.op,args:expression.args.map((arg,index)=>numericExpression(arg,`${label}.args[${index}]`))};
+}
+
 function parseTargetingSelector(value:unknown,label:string):CommonPlayTargetingSelector {
   const selector=object(value,label);
   supportedKeys(selector,TARGETING_KEYS,label);
@@ -319,6 +349,25 @@ function parseConsentInteraction(value:unknown,label:string):CommonPlayConsentIn
 
 function parseOperation(value:unknown,label:string):CommonPlayOperation {
   const operation=object(value,label);
+  if(operation.kind==="property.modify") {
+    supportedKeys(operation,PROPERTY_MODIFY_KEYS,label);
+    const mode=operation.operation;
+    if(mode!=="add"&&mode!=="subtract"&&mode!=="set"&&mode!=="min"&&mode!=="max"&&mode!=="multiply") throw new DomainEvaluationError(`${label}.operation is unsupported`);
+    if(operation.target!=="actor"&&operation.target!=="target") throw new DomainEvaluationError(`${label}.target must be actor or target`);
+    if(operation.owner!=="effect") throw new DomainEvaluationError(`${label}.owner must be effect`);
+    if(operation.source!=="definition") throw new DomainEvaluationError(`${label}.source must be definition`);
+    const duration=object(operation.duration,`${label}.duration`);
+    supportedKeys(duration,PROPERTY_DURATION_KEYS,`${label}.duration`);
+    if(duration.kind!=="elapsed") throw new DomainEvaluationError(`${label}.duration.kind must be elapsed for the portable property modifier slice`);
+    const amount=literalExpression(duration.amount,`${label}.duration.amount`);
+    if(amount.value<=0) throw new DomainEvaluationError(`${label}.duration.amount must be positive`);
+    if(duration.unit!=="seconds"&&duration.unit!=="minutes"&&duration.unit!=="hours"&&duration.unit!=="days") throw new DomainEvaluationError(`${label}.duration.unit is unsupported`);
+    const lifetime=object(operation.lifetime,`${label}.lifetime`);
+    supportedKeys(lifetime,PROPERTY_LIFETIME_KEYS,`${label}.lifetime`);
+    if(lifetime.kind!=="until-duration"||lifetime.onEnd!=="destroy") throw new DomainEvaluationError(`${label}.lifetime must destroy at duration end`);
+    if(operation.instancePolicy!=="stack"&&operation.instancePolicy!=="replace"&&operation.instancePolicy!=="unique-by-source"&&operation.instancePolicy!=="profile-policy") throw new DomainEvaluationError(`${label}.instancePolicy is unsupported`);
+    return {kind:"property.modify",property:nonEmptyString(operation.property,`${label}.property`),operation:mode,value:numericExpression(operation.value,`${label}.value`),target:operation.target,owner:"effect",source:"definition",duration:{kind:"elapsed",amount,unit:duration.unit},lifetime:{kind:"until-duration",onEnd:"destroy"},instancePolicy:operation.instancePolicy};
+  }
   if(operation.kind==="movement.relocate") {
     supportedKeys(operation,MOVEMENT_RELOCATE_KEYS,label);
     if(operation.mode!=="move"&&operation.mode!=="push"&&operation.mode!=="pull"&&operation.mode!=="teleport") throw new DomainEvaluationError(`${label}.mode is unsupported`);
@@ -620,6 +669,7 @@ export function compileCommonPlayEntryPointOperations(
   for(const [index,operation] of entryPoint.operations.entries()) {
     const operationId=`${input.resolutionId}:operation:${index}`;
     if(operation.kind==="roll.modify") continue;
+    if(operation.kind==="property.modify") throw new DomainEvaluationError("property.modify production lowering is not implemented; Effect-owned property modifiers must not fall through to another execution engine");
     if(operation.kind==="resource.recharge") {
       const faces=input.rechargeDiceFaces?.[index];
       if(!faces||faces.length!==1) throw new DomainEvaluationError(`Common Play recharge operation ${index} requires exactly one authoritative die face`);

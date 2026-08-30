@@ -960,7 +960,13 @@
         "kind",
         "property",
         "operation",
-        "value"
+        "value",
+        "target",
+        "owner",
+        "source",
+        "duration",
+        "lifetime",
+        "instancePolicy"
       ],
       "properties": {
         "kind": {
@@ -985,6 +991,77 @@
         },
         "when": {
           "$ref": "#/$defs/predicate"
+        },
+        "target": {
+          "enum": [
+            "actor",
+            "target"
+          ]
+        },
+        "owner": {
+          "const": "effect"
+        },
+        "source": {
+          "const": "definition"
+        },
+        "duration": {
+          "type": "object",
+          "required": [
+            "kind",
+            "amount",
+            "unit"
+          ],
+          "properties": {
+            "kind": {
+              "const": "elapsed"
+            },
+            "amount": {
+              "type": "object",
+              "required": [
+                "value"
+              ],
+              "properties": {
+                "value": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              },
+              "additionalProperties": false
+            },
+            "unit": {
+              "enum": [
+                "seconds",
+                "minutes",
+                "hours",
+                "days"
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        "lifetime": {
+          "type": "object",
+          "required": [
+            "kind",
+            "onEnd"
+          ],
+          "properties": {
+            "kind": {
+              "const": "until-duration"
+            },
+            "onEnd": {
+              "const": "destroy"
+            }
+          },
+          "additionalProperties": false
+        },
+        "instancePolicy": {
+          "enum": [
+            "stack",
+            "replace",
+            "unique-by-source",
+            "profile-policy"
+          ]
         }
       },
       "additionalProperties": false
