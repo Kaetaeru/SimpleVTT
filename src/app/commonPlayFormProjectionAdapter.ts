@@ -70,6 +70,13 @@ async function applyFormActionProjection(adapter:MockAdapter,snapshot:AppSnapsho
   snapshot.scene.actionsByActor[form.targetActorId]=[...current,...projected.filter((action)=>!existing.has(action.id))];
 }
 
+function applyFormSpellcastingProjection(snapshot:AppSnapshot,form:FormArtifactData) {
+  if(form.spellcasting!=="blocked")return;
+  const current=snapshot.scene.actionsByActor[form.targetActorId];
+  if(!current)return;
+  snapshot.scene.actionsByActor[form.targetActorId]=current.filter((action)=>action.category!=="magic");
+}
+
 MockAdapter.prototype.getSnapshot=async function getSnapshotWithCommonPlayFormProjection(){
   const snapshot=await previousGetSnapshot.call(this);
   const state=snapshotAdapterTurnRuntimeState(this,snapshot.scene);
@@ -78,6 +85,7 @@ MockAdapter.prototype.getSnapshot=async function getSnapshotWithCommonPlayFormPr
     if(artifact.artifactKind!=="form"||!artifact.form)continue;
     applyFormProjection(snapshot,artifact.form);
     await applyFormActionProjection(this,snapshot,state,artifact.form);
+    applyFormSpellcastingProjection(snapshot,artifact.form);
   }
   return snapshot;
 };
