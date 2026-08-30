@@ -26,6 +26,8 @@ jobs:
       - name: Reconcile latest branch
         run: git pull --ff-only origin agent/c9-gate-n-coverage-reconciliation
       - run: npm ci
+      - name: Generate content catalogs
+        run: npm run generate:content
       - name: Verify Family I movement evidence
         run: >-
           npx tsx --test
