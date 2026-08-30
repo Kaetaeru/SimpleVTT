@@ -10,6 +10,8 @@ import {
 import { catalogQualifiedId } from "./contentCatalogIdentity";
 import { requiredSessionInstalledContent } from "./installedContentRuntimeAdapter";
 import { appendAdapterInterruptEvents, projectAdapterTurnRuntime } from "./phase09RealTurnRuntimeAdapter";
+import { applyResolutionEvents } from "./realEventApplyService";
+import { runtimeResolutionEventHistories } from "./runtimeResolutionEventHistory";
 import { persistCharacterResolutionEvents } from "./resolutionCharacterWriteBackPort";
 import { SIMPLEVTT_APP_RULES_PROFILE } from "./realResolutionService";
 import { commitAdapterTurnRuntimeState, snapshotAdapterTurnRuntimeState } from "./turnRuntimeSessionRegistry";
@@ -25,7 +27,7 @@ import {
 import type { RulesRuntimeState } from "../domain/combatState";
 import type { D20TestResult, ModifierContribution } from "../domain/d20";
 import type { DamageRollResolution } from "../domain/damageRoll";
-import type { PendingResolution, ResolutionEvent } from "../domain/resolutionTypes";
+import type { PendingResolution, ResolutionEvent, ResolutionOperation } from "../domain/resolutionTypes";
 import {
   COMMON_PLAY_STANDARD_FACTS,
   resolveCommonPlayFactPredicate,
@@ -61,12 +63,14 @@ type PendingPassiveReaction={
   operationId:string;
   kind:"d20"|"damage";
   originalTotal?:number;
+  resumeCheckAfterResponse:boolean;
   candidate:PassiveReactionCandidate;
   awaiting:AwaitingCommonPlayInteraction;
 };
 
 type ResolutionReactionState={resolutionId:string;handled:Set<string>};
 
+const previousResolveAction=MockAdapter.prototype.resolveAction;
 const previousAdvanceResolution=MockAdapter.prototype.advanceResolution;
 const previousRespondToInterrupt=MockAdapter.prototype.respondToInterrupt;
 const pendingByAdapter=new WeakMap<MockAdapter,PendingPassiveReaction>();
@@ -242,18 +246,35 @@ function validD20(value:number|undefined):value is number {
   return value!==undefined&&Number.isInteger(value)&&value>=1&&value<=20;
 }
 
-function pendingD20s(resolution:ResolutionView,state:RulesRuntimeState):Array<{pending:PendingResolution;operationId:string}> {
+function checkSuccessOperations(scene:SceneVm,resolution:ResolutionView,operationId:string):ResolutionOperation[] {
+  if(resolution.rollKind!=="check"||resolution.checkOutcome!=="실패")return [];
+  const origin=Object.values(scene.actionsByActor).flat().find((entry)=>entry.id===resolution.actionId);
+  const targetId=resolution.targetIds[0];
+  if(!origin||!targetId)return [];
+  return (origin.checkSuccessOperations??[]).flatMap((operation,index):ResolutionOperation[]=>{
+    if(operation.kind==="stabilize"&&operation.target==="first-target")return [{
+      id:`${operationId}.success.${index}`,
+      kind:"stabilize",
+      targetId,
+      when:{operationId,field:"outcome",equals:"success"},
+    }];
+    return [];
+  });
+}
+
+function pendingD20s(resolution:ResolutionView,state:RulesRuntimeState,scene:SceneVm):Array<{pending:PendingResolution;operationId:string}> {
   const projections:Array<{pending:PendingResolution;operationId:string}>=[];
   const natural=resolution.naturalD20??resolution.authoritativeDice[0];
   if(resolution.rollKind==="check"&&resolution.checkOutcome&&Number.isFinite(resolution.checkTarget)&&validD20(natural)){
     const operationId=`op.${resolution.actionId}.ability-check`;
+    const d20Operation:ResolutionOperation={id:operationId,kind:"d20",actorId:resolution.actorId,request:{
+      family:"ability-check",target:resolution.checkTarget!,modifierContributions:d20Contributions(resolution),
+      dice:{id:`${resolution.id}:common-play:d20`,purpose:resolution.actionName,sides:20,faces:[natural]},
+    }};
     projections.push({operationId,pending:{
       id:`${resolution.id}:common-play-interceptor`,actorId:resolution.actorId,sourceId:resolution.actionId,
       expectedRevision:state.revision,
-      operations:[{id:operationId,kind:"d20",actorId:resolution.actorId,request:{
-        family:"ability-check",target:resolution.checkTarget!,modifierContributions:d20Contributions(resolution),
-        dice:{id:`${resolution.id}:common-play:d20`,purpose:resolution.actionName,sides:20,faces:[natural]},
-      }}],
+      operations:[d20Operation,...checkSuccessOperations(scene,resolution,operationId)],
     }});
   }
   if(resolution.rollKind==="attack"&&resolution.stage==="attack-result"&&resolution.attackOutcome&&Number.isFinite(resolution.targetAc)&&validD20(natural)){
@@ -358,14 +379,14 @@ async function offerPassiveReaction(adapter:MockAdapter) {
     const interceptor=candidate.definition.interceptors[0];
     const damage=interceptor?.slot==="primary.damage";
     const damageProjection=damage?pendingDamage(adapter,resolution,runtime):undefined;
-    const projections=damageProjection?[damageProjection]:pendingD20s(resolution,runtime);
+    const projections=damageProjection?[damageProjection]:pendingD20s(resolution,runtime,internal.scene);
     if(!projections.length)continue;
     for(const projected of projections){
       const seeded=seededReactionState(runtime,candidate);
       if(!await interceptorEligible(internal,candidate,projected.pending))continue;
       const started=startCommonPlayResolution(SIMPLEVTT_APP_RULES_PROFILE,seeded,projected.pending,candidate.definition,candidate.sourceActorId);
       if(started.status!=="awaiting-input")continue;
-      pendingByAdapter.set(adapter,{resolutionId:resolution.id,operationId:projected.operationId,kind:damage?"damage":"d20",originalTotal:"originalTotal" in projected?projected.originalTotal:undefined,candidate,awaiting:started});
+      pendingByAdapter.set(adapter,{resolutionId:resolution.id,operationId:projected.operationId,kind:damage?"damage":"d20",originalTotal:"originalTotal" in projected?projected.originalTotal:undefined,resumeCheckAfterResponse:resolution.rollKind==="check"&&resolution.stage!=="complete",candidate,awaiting:started});
       if(damage)resolution.rollKind="damage";
       const intercepted=projected.pending.operations.find((operation)=>operation.id===projected.operationId&&operation.kind==="d20");
       const save=resolution.rollKind==="save"&&intercepted?.kind==="d20"?resolution.saveResults.find((entry)=>entry.targetId===intercepted.actorId):undefined;
@@ -399,7 +420,7 @@ function paymentEvents(events:ResolutionEvent[]) {
   return events.filter((event)=>event.stateChanges.length>0).map((event)=>structuredClone(event));
 }
 
-function updateD20Presentation(resolution:ResolutionView,pending:PendingPassiveReaction,result:D20TestResult,authority?:CommonPlayInteractionAuthority) {
+function updateD20Presentation(resolution:ResolutionView,pending:PendingPassiveReaction,result:D20TestResult,authority:CommonPlayInteractionAuthority|undefined,scene:SceneVm) {
   const rolled=authority?.modifierDiceFaces?Object.values(authority.modifierDiceFaces).flat():[];
   if(result.family==="saving-throw"){
     const operation=pending.awaiting.context.pending.operations.find((entry)=>entry.id===pending.operationId&&entry.kind==="d20");
@@ -435,11 +456,12 @@ function updateD20Presentation(resolution:ResolutionView,pending:PendingPassiveR
   if(rolled.length)resolution.detail.push(`${pending.candidate.optionName}: ${rolled.join(", ")} · ${result.total}`);
   resolution.provenance.push(`common-play:${pending.candidate.definition.id} · generic post-roll interceptor`);
   if(result.family==="ability-check"){
+    const origin=Object.values(scene.actionsByActor).flat().find((entry)=>entry.id===resolution.actionId);
     resolution.checkTarget=result.target;
     resolution.checkOutcome=result.outcome==="success"?"성공":"실패";
     resolution.compact=`${result.total} vs DC ${result.target} · ${resolution.checkOutcome}`;
     resolution.calculatedOutcome=resolution.compact;
-    resolution.finalOutcome=resolution.checkOutcome;
+    resolution.finalOutcome=origin?.checkOutcomeLabels?.[result.outcome]??resolution.checkOutcome;
   }else{
     resolution.targetAc=result.target;
     resolution.attackTotal=result.total;
@@ -456,22 +478,44 @@ async function commitAcceptedReaction(adapter:MockAdapter,pending:PendingPassive
   const current=snapshotAdapterTurnRuntimeState(adapter,internal.scene);
   if(!current)return {status:"rejected" as const,error:"Common Play reaction lost TurnRuntime authority"};
   const durableEvents=paymentEvents(result.events);
+  const resolution=internal.resolution;
+  const completedCheck=resolution?.rollKind==="check"&&!pending.resumeCheckAfterResponse;
+  const projected=completedCheck
+    ? applyResolutionEvents(internal.scene,durableEvents,internal.activeCharacter.resources,internal.activeCharacter.items,current)
+    : undefined;
+  if(projected?.status==="rejected")return projected;
   const writeBack=await persistCharacterResolutionEvents(adapter,durableEvents,"forward");
   if(writeBack.status==="rejected")return writeBack;
   if(!commitAdapterTurnRuntimeState(adapter,internal.scene,current.revision,result.state)){
     if(writeBack.changed)await persistCharacterResolutionEvents(adapter,durableEvents,"inverse");
     return {status:"rejected" as const,error:"Common Play reaction TurnRuntime revision changed before commit"};
   }
-  if(durableEvents.length)appendAdapterInterruptEvents(adapter,pending.resolutionId,durableEvents);
+  if(projected?.status==="committed"){
+    internal.scene=projected.scene;
+    internal.activeCharacter.resources=projected.resources;
+    internal.activeCharacter.items=projected.items;
+    if(resolution)resolution.stateChanges.push(...projected.stateChanges);
+    const history=runtimeResolutionEventHistories.get(adapter);
+    runtimeResolutionEventHistories.set(adapter,{
+      resolutionId:pending.resolutionId,
+      events:[...(history?.resolutionId===pending.resolutionId?history.events:[]),...durableEvents],
+    });
+  }else if(durableEvents.length)appendAdapterInterruptEvents(adapter,pending.resolutionId,durableEvents);
   projectAdapterTurnRuntime(adapter);
   synchronizeProjectedCharacterResources(adapter,result.state);
   internal.syncChar();
   return {status:"committed" as const};
 }
 
-function restoreInterruptedStage(resolution:ResolutionView) {
+function restoreInterruptedStage(resolution:ResolutionView,pending:PendingPassiveReaction) {
   resolution.interrupt=undefined;
   if(resolution.rollKind==="check"){
+    if(!pending.resumeCheckAfterResponse){
+      resolution.stage="complete";
+      resolution.canAdvance=false;
+      resolution.nextLabel=undefined;
+      return;
+    }
     resolution.stage="roll-animation";
     resolution.canAdvance=true;
     resolution.nextLabel="판정 적용";
@@ -487,6 +531,12 @@ function restoreInterruptedStage(resolution:ResolutionView) {
     resolution.nextLabel=resolution.attackOutcome==="명중"?(damage?"피해 적용":"판정 적용"):"완료";
   }
 }
+
+MockAdapter.prototype.resolveAction=async function resolveWithPortableCommonPlayInterceptors(actionId:string,targetIds:string[]) {
+  const resolved=await previousResolveAction.call(this,actionId,targetIds);
+  if(await offerPassiveReaction(this))return (this as unknown as AdapterState).getSnapshot();
+  return resolved;
+};
 
 MockAdapter.prototype.advanceResolution=async function advanceWithPortableCommonPlayInterceptors() {
   const pending=pendingByAdapter.get(this);
@@ -507,7 +557,7 @@ MockAdapter.prototype.respondToInterrupt=async function respondToPortableCommonP
   pendingByAdapter.delete(this);
   reactionState(this,resolution.id).handled.add(pending.candidate.key);
   const current=snapshotAdapterTurnRuntimeState(this,internal.scene);
-  if(!current){restoreInterruptedStage(resolution);return internal.getSnapshot();}
+  if(!current){restoreInterruptedStage(resolution,pending);return internal.getSnapshot();}
   const seeded=seededReactionState(current,pending.candidate);
   const authority=accept?modifierAuthority(internal,pending):undefined;
   const resumed=resumeCommonPlayInteraction(SIMPLEVTT_APP_RULES_PROFILE,seeded,pending.awaiting,{
@@ -516,12 +566,12 @@ MockAdapter.prototype.respondToInterrupt=async function respondToPortableCommonP
     value:accept,
   },authority);
   if(resumed.status==="invalidated"){
-    restoreInterruptedStage(resolution);
+    restoreInterruptedStage(resolution,pending);
     resolution.detail.push(`Common Play 인터셉터 무효화: ${resumed.error}`);
     return internal.getSnapshot();
   }
   if(resumed.status==="rejected"){
-    restoreInterruptedStage(resolution);
+    restoreInterruptedStage(resolution,pending);
     resolution.detail.push(`Common Play 인터셉터 거부: ${resumed.error}`);
     return internal.getSnapshot();
   }
@@ -533,13 +583,13 @@ MockAdapter.prototype.respondToInterrupt=async function respondToPortableCommonP
   if(accept){
     const committed=await commitAcceptedReaction(this,pending,resumed);
     if(committed.status==="rejected"){
-      restoreInterruptedStage(resolution);
+      restoreInterruptedStage(resolution,pending);
       resolution.detail.push(`Common Play 인터셉터 적용 거부: ${committed.error}`);
       return internal.getSnapshot();
     }
     if(pending.kind==="damage"){
       const damage=resumed.results[pending.operationId] as DamageRollResolution|undefined;
-      if(!damage||pending.originalTotal===undefined){restoreInterruptedStage(resolution);resolution.detail.push("Common Play 피해 인터셉터 결과 누락");return internal.getSnapshot();}
+      if(!damage||pending.originalTotal===undefined){restoreInterruptedStage(resolution,pending);resolution.detail.push("Common Play 피해 인터셉터 결과 누락");return internal.getSnapshot();}
       const reduction=pending.originalTotal-damage.total;
       queueAtomicAttackDamageReduction(resolution.id,reduction,`common-play:${pending.candidate.definition.id}`);
       const rolled=authority?.modifierDiceFaces?Object.values(authority.modifierDiceFaces).flat():[];
@@ -547,18 +597,18 @@ MockAdapter.prototype.respondToInterrupt=async function respondToPortableCommonP
       resolution.provenance.push(`common-play:${pending.candidate.definition.id} · generic damage-roll interceptor`);
     }else{
       const d20=resumed.results[pending.operationId] as D20TestResult|undefined;
-      if(!d20){restoreInterruptedStage(resolution);resolution.detail.push("Common Play 인터셉터 결과 누락");return internal.getSnapshot();}
-      updateD20Presentation(resolution,pending,d20,authority);
+      if(!d20){restoreInterruptedStage(resolution,pending);resolution.detail.push("Common Play 인터셉터 결과 누락");return internal.getSnapshot();}
+      updateD20Presentation(resolution,pending,d20,authority,internal.scene);
       if(pending.candidate.definition.payments.some((payment)=>payment.condition?.kind==="d20-result"&&payment.condition.outcome!==d20.outcome)) {
         resolution.detail.push(`${pending.candidate.optionName}: 결과 조건 불충족 · 자원 보존`);
       }
     }
   }
-  restoreInterruptedStage(resolution);
+  restoreInterruptedStage(resolution,pending);
   // A response may finish one timing window, but must not enter a later one in the same interaction.
   // Attack-result remains observable before a damage.rolled interceptor is offered on the next advance.
   if(pending.kind==="d20"&&resolution.rollKind==="attack")return internal.getSnapshot();
   if(await offerPassiveReaction(this))return internal.getSnapshot();
-  if(resolution.rollKind==="check")return previousAdvanceResolution.call(this);
+  if(resolution.rollKind==="check"&&pending.resumeCheckAfterResponse)return previousAdvanceResolution.call(this);
   return internal.getSnapshot();
 };

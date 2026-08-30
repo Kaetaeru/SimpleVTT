@@ -284,7 +284,6 @@ function featureActions(character:CharacterSheet):ActionVm[] {
       eligibleTargetIds:[],
       healing:{dice:"1d10",flat:character.level,average:Math.floor(11/2)+character.level},
       resourceCost:{resourceId:secondWind.id,amount:1},
-      runtimeD20FollowUps:fighterLevel>=2?[{sourceId:"feature:fighter.tactical-mind",families:["ability-check"],trigger:"failure",modification:{mode:"add-die",diceSides:10},payment:{resourceId:secondWind.id,amount:1,consumeWhen:"success"},presentation:{optionName:"전술적 정신 d10",cost:"성공 시 재기의 바람 1회",effect:"d10을 더합니다. 그래도 실패하면 사용 횟수를 소모하지 않습니다.",source:"SRD 5.2.1 · Fighter Tactical Mind"}}]:undefined,
       details:[detail("대상","자신"),detail("회복",`1d10 + ${character.level}`),detail("자원",`${secondWind.label} 1회`,secondWind.source)],
     });
     if(fighterLevel>=9&&indomitable)actions.at(-1)!.runtimeD20FollowUps=[...(actions.at(-1)!.runtimeD20FollowUps??[]),{sourceId:"feature:fighter.indomitable",families:["saving-throw"],trigger:"failure",modification:{mode:"reroll",bonus:fighterLevel},payment:{resourceId:indomitable.id,amount:1,consumeWhen:"accept"},presentation:{optionName:"불굴 재굴림",cost:"불굴 1회",effect:`내성을 다시 굴리고 파이터 레벨 ${fighterLevel}을 더합니다. 새 결과를 사용합니다.`,source:"SRD 5.2.1 p.48 · Fighter Indomitable"}}];

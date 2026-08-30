@@ -28,7 +28,7 @@ const items: ItemInstanceVm[] = [
 ];
 
 const AELAR: CharacterSheet = {
-  id:"char.aelar", name:"Aelar", className:"전사", subclassName:"챔피언", level:5, species:"인간", background:"병사",
+  id:"char.aelar", name:"Aelar", className:"전사", subclassName:"챔피언", level:5, classLevels:[{classId:"dnd.srd521.class.fighter",className:"전사",level:5}], species:"인간", background:"군인",
   hp:31, maxHp:42, tempHp:5, ac:18, speed:30, proficiencyBonus:3, saveState:"saved",
   abilities:{str:18,dex:14,con:16,int:10,wis:12,cha:8}, saves:["근력 +7","건강 +6"], skills:["운동 +7","지각 +4","위협 +2"],
   features:["전투 방식: 방어","세컨드 윈드","액션 서지","추가 공격","경계"], equipment:["체인 메일","방패","롱소드","숏보우","치유 물약 ×2","마법 미사일 완드"], items:cp(items),

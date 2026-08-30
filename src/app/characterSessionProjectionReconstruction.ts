@@ -368,7 +368,6 @@ function actionsFor(projection:CharacterSessionProjectionV1,sheet:CharacterSheet
       eligibleTargetIds:targetSelf,
       healing:{dice:"1d10",flat:fighterLevel,average:Math.floor(5.5+fighterLevel)},
       resourceCost:{resourceId:secondWind.id,amount:1},
-      runtimeD20FollowUps:fighterLevel>=2?[{sourceId:"feature:fighter.tactical-mind",families:["ability-check"],trigger:"failure",modification:{mode:"add-die",diceSides:10},payment:{resourceId:secondWind.id,amount:1,consumeWhen:"success"},presentation:{optionName:"전술적 정신 d10",cost:"성공 시 재기의 바람 1회",effect:"d10을 더합니다. 그래도 실패하면 사용 횟수를 소모하지 않습니다.",source:"SRD 5.2.1 · Fighter Tactical Mind"}}]:undefined,
       details:[
         {label:"대상",value:"자신"},
         {label:"회복",value:`1d10 + ${fighterLevel}`,source:"SRD Fighter · Second Wind"},

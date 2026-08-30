@@ -45,7 +45,11 @@ export type CharacterSessionProjectionValidation =
   | { status:"accepted"; projection:CharacterSessionProjectionV1 }
   | { status:"rejected"; error:string };
 
-type ResolvedCatalogEntry = CatalogEntry & { contentId?:string; sourceId?:string };
+type ResolvedCatalogEntry = CatalogEntry & {
+  contentId?:string;
+  sourceId?:string;
+  progressionContributions?:Array<{track:string;threshold:number;grants:string[]}>;
+};
 type RequiredContentRef = { label:string; token:string; categories:CatalogEntry["category"][] };
 
 const PROJECTION_KEYS = new Set([
@@ -106,14 +110,16 @@ function matchesToken(entry:ResolvedCatalogEntry,token:string) {
 /** Content that can change executable Character mechanics must always resolve on Host and Client. */
 function requiredContentRefs(source:CharacterSourceSnapshotV1):RequiredContentRef[] {
   const refs:RequiredContentRef[]=[
-    { label:"primary class",token:source.build.className,categories:["class"] },
+    { label:"primary class",token:source.build.classLevels?.[0]?.classId ?? source.build.className,categories:["class"] },
     { label:"species",token:source.build.species,categories:["species"] },
     { label:"background",token:source.build.background,categories:["background"] },
   ];
   for (const track of source.build.classLevels ?? []) {
     refs.push({ label:`class track level ${track.level}`,token:track.classId,categories:["class"] });
   }
-  if (source.build.subclassName?.trim()) refs.push({ label:"subclass",token:source.build.subclassName,categories:["subclass"] });
+  for (const subclassId of Object.values(source.progression.subclassIds ?? {})) {
+    if (subclassId.trim()) refs.push({ label:"subclass",token:subclassId,categories:["subclass"] });
+  }
   for (const spellId of source.spellAndFeatureSelections.cantrips ?? []) refs.push({ label:"cantrip",token:spellId,categories:["spell"] });
   for (const spellId of source.spellAndFeatureSelections.preparedSpells ?? []) refs.push({ label:"prepared spell",token:spellId,categories:["spell"] });
   for (const spellId of source.spellAndFeatureSelections.spellbookSpells ?? []) refs.push({ label:"spellbook spell",token:spellId,categories:["spell"] });
@@ -154,6 +160,30 @@ function resolveKnownItemIdentities(source:CharacterSourceSnapshotV1,catalog:Cat
   return [...identities.values()].sort((left,right)=>left.qualifiedId.localeCompare(right.qualifiedId,"en"));
 }
 
+function resolveKnownClassFeatureIdentities(source:CharacterSourceSnapshotV1,catalog:CatalogEntry[]) {
+  const resolvedCatalog=catalog as ResolvedCatalogEntry[];
+  const identities=new Map<string,CharacterProjectionContentIdentityV1>();
+  const tracks=source.build.classLevels?.length
+    ? source.build.classLevels
+    : [{classId:source.build.className,level:source.build.level}];
+  for (const track of tracks) {
+    const classMatches=resolvedCatalog.filter((entry)=>entry.category==="class"&&matchesToken(entry,track.classId));
+    if (classMatches.length===0) throw new Error("missing canonical class progression source: "+track.classId);
+    if (classMatches.length>1) throw new Error("ambiguous canonical class progression source: "+track.classId);
+    const grants=(classMatches[0].progressionContributions ?? [])
+      .filter((contribution)=>Number.isInteger(contribution.threshold)&&contribution.threshold>0&&contribution.threshold<=track.level)
+      .flatMap((contribution)=>contribution.grants);
+    for (const featureId of grants) {
+      const matches=resolvedCatalog.filter((entry)=>(entry.category==="option"||entry.category==="feat")&&matchesToken(entry,featureId));
+      if (matches.length>1) throw new Error("ambiguous canonical content for class feature: "+featureId);
+      if (matches.length===0) continue;
+      const identity=entryIdentity(matches[0]);
+      identities.set(identity.qualifiedId,identity);
+    }
+  }
+  return [...identities.values()].sort((left,right)=>left.qualifiedId.localeCompare(right.qualifiedId,"en"));
+}
+
 function resolveKnownFeatureIdentities(source:CharacterSourceSnapshotV1,catalog:CatalogEntry[]) {
   const resolvedCatalog=catalog as ResolvedCatalogEntry[];
   const identities=new Map<string,CharacterProjectionContentIdentityV1>();
@@ -173,6 +203,7 @@ function resolveProjectionIdentities(source:CharacterSourceSnapshotV1,catalog:Ca
   for(const identity of [
     ...resolveRequiredIdentities(source,catalog),
     ...resolveKnownItemIdentities(source,catalog),
+    ...resolveKnownClassFeatureIdentities(source,catalog),
     ...resolveKnownFeatureIdentities(source,catalog),
   ]) identities.set(identity.qualifiedId,identity);
   return [...identities.values()].sort((left,right)=>left.qualifiedId.localeCompare(right.qualifiedId,"en"));
