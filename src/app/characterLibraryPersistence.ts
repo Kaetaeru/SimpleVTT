@@ -88,7 +88,7 @@ function itemSourceReference(item:ItemInstanceVm):CharacterItemSourceReferenceV1
     containerId:item.containerId,
     passiveEffects:cp(item.passiveEffects),
     grantedActionIds:cp(item.grantedActionIds),
-    spellDefinitionIds:cp(item.spellDefinitionIds??[]),
+    ...(item.spellDefinitionIds?{spellDefinitionIds:cp(item.spellDefinitionIds)}:{}),
     provenance:cp(item.provenance),
   };
 }
@@ -342,14 +342,14 @@ function materializeItems(record:CharacterLibraryRecordV1):ItemInstanceVm[] {
       ...(reference.attunementPolicy||legacy?.attunementPolicy?{attunementPolicy:cp(reference.attunementPolicy??legacy!.attunementPolicy!)}:{}),
       attuned:runtime?.attuned ?? legacy?.attuned,
       charges:maximum !== undefined ? { current:Math.min(current ?? maximum,maximum),max:maximum } : undefined,
-      spellcastingComponent:reference.spellcastingComponent ?? legacy?.spellcastingComponent,
-      unitCostGp:reference.unitCostGp ?? legacy?.unitCostGp,
-      weightPounds:reference.weightPounds ?? legacy?.weightPounds,
-      containerCapacityPounds:reference.containerCapacityPounds ?? legacy?.containerCapacityPounds,
-      containerId:reference.containerId ?? legacy?.containerId,
+      ...(reference.spellcastingComponent??legacy?.spellcastingComponent?{spellcastingComponent:reference.spellcastingComponent??legacy?.spellcastingComponent}:{}),
+      ...(reference.unitCostGp!==undefined||legacy?.unitCostGp!==undefined?{unitCostGp:reference.unitCostGp??legacy?.unitCostGp}:{}),
+      ...(reference.weightPounds!==undefined||legacy?.weightPounds!==undefined?{weightPounds:reference.weightPounds??legacy?.weightPounds}:{}),
+      ...(reference.containerCapacityPounds!==undefined||legacy?.containerCapacityPounds!==undefined?{containerCapacityPounds:reference.containerCapacityPounds??legacy?.containerCapacityPounds}:{}),
+      ...(reference.containerId??legacy?.containerId?{containerId:reference.containerId??legacy?.containerId}:{}),
       passiveEffects:cp(reference.passiveEffects ?? legacy?.passiveEffects ?? []),
       grantedActionIds:cp(reference.grantedActionIds ?? legacy?.grantedActionIds ?? []),
-      spellDefinitionIds:cp(reference.spellDefinitionIds ?? legacy?.spellDefinitionIds ?? []),
+      ...(reference.spellDefinitionIds||legacy?.spellDefinitionIds?{spellDefinitionIds:cp(reference.spellDefinitionIds??legacy!.spellDefinitionIds!)}:{}),
       provenance:cp(reference.provenance),
     };
   });

@@ -1194,7 +1194,7 @@ export function compileCommonPlayEntryPointOperations(
       if(!inventory)throw new DomainEvaluationError("portable item grant requires authoritative inventory capacity facts");
       const item:CommonPlayItemInstance={id:operation.item.id,definitionId:operation.item.definitionId,quantity:operation.item.quantity,stackable:!operation.item.charges&&!operation.item.attunementRequired,equipped:false,wielded:false,weightPounds:operation.item.weightPounds,containerCapacityPounds:operation.item.containerCapacityPounds,containerId:operation.item.containerId,grantedEntryPointIds:[...operation.item.grantedActionIds],spellDefinitionIds:[...(operation.item.spellDefinitionIds??[])]};
       const validated=resolveCommonPlayInventoryTransaction(inventory,{expectedRevision:inventory.revision,operations:[{kind:"grant",item}]});if(validated.status==="rejected")throw new DomainEvaluationError(validated.error);inventory=validated.state;
-      operations.push({id:operationId,kind:"grant-inventory-item",targetId:input.actorId,item:{...structuredClone(operation.item),spellDefinitionIds:[...(operation.item.spellDefinitionIds??[])]}});continue;
+      operations.push({id:operationId,kind:"grant-inventory-item",targetId:input.actorId,item:structuredClone(operation.item)});continue;
     }
     if(operation.kind==="project.advance"||operation.kind==="project.cancel") {
       const matches=(state.artifacts??[]).filter((artifact)=>artifact.artifactKind==="project"&&artifact.sourceId===supported.id&&artifact.sourceActorId===input.actorId&&artifact.templateId===operation.artifact&&artifact.project);
