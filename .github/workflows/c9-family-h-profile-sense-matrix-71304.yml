@@ -1,0 +1,34 @@
+name: C9 Family H Profile Sense Matrix 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-h-profile-sense-matrix-71304.yml
+      - tests/ui/c9FamilyHProfileSenseProduction.test.ts
+      - src/app/commonPlayInterceptorProductionRuntimeAdapter.ts
+      - src/domain/commonPlaySenseRuntime.ts
+      - rules/profiles/dnd.srd-5.2.1.profile.json
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run generate:content
+      - name: Verify profile-derived special senses
+        run: node --import tsx --test tests/domain/commonPlaySenseRuntime.test.ts tests/ui/c9FamilyHProfileSenseProduction.test.ts
+      - name: Verify legacy boundary
+        run: node scripts/check-legacy-execution-boundary.mjs
+      - name: Typecheck
+        run: npm exec tsc -- --noEmit
