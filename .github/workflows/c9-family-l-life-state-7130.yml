@@ -33,8 +33,8 @@ jobs:
         run: npx tsx --test tests/ui/c9FamilyLTemporaryHpProduction.test.ts tests/ui/c9FamilyLLifeStateProduction.test.ts
       - name: Verify legacy execution boundary
         run: node scripts/check-legacy-execution-boundary.mjs
-      - name: Typecheck
-        run: npx tsc --noEmit -p tsconfig.app.json
+      - name: Verify production build
+        run: npm run build
       - name: Retire verifier after green evidence
         run: |
           git config user.name "github-actions[bot]"
@@ -45,5 +45,5 @@ jobs:
           git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
           npx tsx --test tests/ui/c9FamilyLTemporaryHpProduction.test.ts tests/ui/c9FamilyLLifeStateProduction.test.ts
           node scripts/check-legacy-execution-boundary.mjs
-          npx tsc --noEmit -p tsconfig.app.json
+          npm run build
           git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
