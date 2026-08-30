@@ -13,10 +13,12 @@ async function exerciseProjectedOpportunityAttack(actionId:string,actionName:str
   await adapter.setCurrentActor(PROVOKER_ID);
   await adapter.setQueuedD20(15);
 
-  const internal=adapter as unknown as {scene:SceneVm};
+  const internal=adapter as unknown as {scene:SceneVm;action(id:string):ActionVm|undefined};
   const source=(internal.scene.actionsByActor[REACTOR_ID]??[]).find((action)=>action.id==="action.scimitar");
   assert.ok(source?.runtimeAttack,"fixture melee attack must expose structural runtimeAttack facts");
   const projected:ActionVm={...structuredClone(source),id:actionId,name:actionName};
+  const baseAction=internal.action.bind(adapter);
+  internal.action=(id:string)=>id===projected.id ? projected : baseAction(id);
   internal.scene.actionsByActor[REACTOR_ID]=[projected];
 
   await adapter.declareManualMovementReaction({
