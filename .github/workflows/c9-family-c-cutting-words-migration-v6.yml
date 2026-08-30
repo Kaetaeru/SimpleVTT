@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Apply validated migration with identity typing fix
+      - name: Apply validated migration with presentation typing fix
         shell: bash
         run: |
           set -euo pipefail
@@ -32,9 +32,6 @@ jobs:
           from pathlib import Path
           path=Path('src/app/commonPlayInterceptorProductionRuntimeAdapter.ts')
           text=path.read_text()
-          old='builtinEntries.set(catalogQualifiedId(entry.contentId,entry.sourceId,entry.version),entry);'
-          if old not in text: raise SystemExit('builtin map key changed')
-          text=text.replace(old,'builtinEntries.set(entry.id,entry);',1)
           old_name='optionName:entry.nameKo||entry.nameEn||entry.contentId,'
           if old_name not in text: raise SystemExit('candidate option name changed')
           text=text.replace(old_name,'optionName:entry.nameKo||entry.nameEn||entry.contentId||qualifiedId,',1)
