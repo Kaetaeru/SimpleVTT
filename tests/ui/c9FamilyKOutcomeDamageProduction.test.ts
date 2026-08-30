@@ -12,9 +12,7 @@ import { snapshotAdapterTurnRuntimeState } from "../../src/app/turnRuntimeSessio
 const TARGET_ID="combatant.goblin-a";
 
 function packagePayload(prefix:string) {
-  const moduleId=`${prefix}.module`;
-  const contentId=`${prefix}.mastery-probe`;
-  const mechanicId=`${prefix}.mechanic`;
+  const moduleId=`${prefix}.module`,contentId=`${prefix}.mastery-probe`,mechanicId=`${prefix}.mechanic`;
   return {moduleId,contentId,mechanicId,json:JSON.stringify({
     schemaVersion:"0.1-draft",moduleId,moduleVersion:"1",
     rulesProfile:{id:"dnd.srd-5.2.1",version:"0.1-draft"},defaultLocale:"en",
@@ -22,16 +20,13 @@ function packagePayload(prefix:string) {
     dependencies:[],conflicts:[],capabilities:[],
     content:[{id:contentId,category:"option",presentation:{defaultLocale:"en",originalName:"Portable Mastery Probe",locales:{en:{name:"Portable Mastery Probe"}}},mechanics:[{kind:"common-play",config:{
       schemaVersion:"0.2-draft",id:mechanicId,
-      entryPoints:[{id:"graze-like-miss-rider",invocation:"manual",targeting:{from:"targets",min:1,max:1},test:{kind:"attack-roll",roller:"actor",dc:{value:10}},operations:[{
-        kind:"damage.apply",amount:{value:3},damageType:"force",target:"target",when:{op:"eq",left:{ref:"test.outcome"},right:{value:"failure"}},
-      }]}],
-    }}]}],
+      entryPoints:[{id:"graze-like-miss-rider",invocation:"manual",targeting:{from:"targets",min:1,max:1},test:{kind:"attack-roll",roller:"actor",dc:{value:10}},operations:[{kind:"damage.apply",amount:{value:3},damageType:"force",target:"target",when:{op:"eq",left:{ref:"test.outcome"},right:{value:"failure"}}}]}]
+    }}]}]
   })};
 }
 
 async function prepare(prefix:string) {
-  const adapter=new MockAdapter();
-  const pack=packagePayload(prefix);
+  const adapter=new MockAdapter(),pack=packagePayload(prefix);
   setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
   const preview=await adapter.previewContentImport(pack.json);
   assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
@@ -55,24 +50,32 @@ async function exercise(prefix:string,face:number) {
   snapshot=await adapter.resolveAction(actionId,[TARGET_ID]);
   assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
   const after=targetHp(adapter,snapshot);
-  const damageEvents=runtimeResolutionEventHistory(adapter)?.events.filter((event)=>event.stateChanges.some((change)=>change.kind==="hp"&&change.targetId===TARGET_ID))??[];
+  const damageEvents=runtimeResolutionEventHistory(adapter)?.events.filter((event)=>
+    event.kind==="damage" && event.stateChanges.some((change)=>change.kind==="hp" && change.field==="current")
+  )??[];
   return {adapter,before,after,damageEvents};
 }
 
-test("unknown installed Common Play applies a failure-only damage rider and Undo restores HP",async()=>{
+test("unknown installed Common Play can apply a Graze-like damage rider only on attack failure",async()=>{
   const miss=await exercise("unknown-family-k-graze",1);
-  assert.equal(miss.after,miss.before-3);
-  assert.equal(miss.damageEvents.length,1);
+  assert.equal(miss.after,miss.before-3,"failure-only rider must reduce target HP by its declared amount");
+  assert.equal(miss.damageEvents.length,1,"failure-only rider must emit one authoritative damage event with current-HP state change");
+  const hpChange=miss.damageEvents[0]?.stateChanges.find((change)=>change.kind==="hp" && change.field==="current");
+  assert.ok(hpChange && hpChange.kind==="hp");
+  assert.equal(hpChange.before,miss.before);
+  assert.equal(hpChange.after,miss.after);
   await miss.adapter.undoLastResolution();
-  assert.equal(targetHp(miss.adapter,await miss.adapter.getSnapshot()),miss.before);
+  assert.equal(targetHp(miss.adapter,await miss.adapter.getSnapshot()),miss.before,"Undo must restore target HP");
+
   const hit=await exercise("unknown-family-k-hit-control",15);
-  assert.equal(hit.after,hit.before);
-  assert.equal(hit.damageEvents.length,0);
+  assert.equal(hit.after,hit.before,"success must skip a failure-only damage rider");
+  assert.equal(hit.damageEvents.length,0,"skipped rider must not emit a damage/HP mutation event");
 });
 
-test("outcome-conditioned damage is invariant to external identities",async()=>{
-  const first=await exercise("unknown-family-k-identity-a",1);
-  const renamed=await exercise("renamed-family-k-identity-b",1);
+test("outcome-conditioned damage is invariant to external module/content/mechanic identity",async()=>{
+  const first=await exercise("unknown-family-k-identity-a",1),renamed=await exercise("renamed-family-k-identity-b",1);
   assert.equal(first.before-first.after,3);
   assert.equal(renamed.before-renamed.after,3);
+  assert.equal(first.damageEvents.length,1);
+  assert.equal(renamed.damageEvents.length,1);
 });
