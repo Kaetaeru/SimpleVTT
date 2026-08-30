@@ -86,6 +86,27 @@ export function appendCommonPlaySemanticOutcomeEvents(
       });
       continue;
     }
+    if(operation.kind==="short-rest"||operation.kind==="long-rest") {
+      const result=commit.results[operation.id];
+      if(result===undefined) continue;
+      const kind=operation.kind==="short-rest"?"rest.short.complete":"rest.long.complete";
+      const id=`${pending.id}:${operation.id}:semantic:${kind}`;
+      if(existingIds.has(id)) continue;
+      const authoritativeEvent=commit.events.find((event)=>event.operationId===operation.id);
+      semanticEvents.push({
+        id,
+        resolutionId:pending.id,
+        operationId:operation.id,
+        kind,
+        actorId:operation.targetId,
+        targetId:operation.targetId,
+        summary:`${operation.targetId} completes ${operation.kind}`,
+        provenance:authoritativeEvent?[...authoritativeEvent.provenance]:[],
+        stateChanges:[],
+        result:structuredClone(result),
+      });
+      continue;
+    }
     if(operation.kind!=="recharge-resource") continue;
     const result=commit.results[operation.id] as {success?:unknown;face?:unknown;before?:unknown;after?:unknown}|undefined;
     if(!result||typeof result.success!=="boolean"||typeof result.face!=="number") continue;
