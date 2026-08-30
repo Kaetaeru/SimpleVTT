@@ -1,0 +1,81 @@
+name: C9 Family A Nonactive Ledger 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-a-nonactive-ledger-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Reconcile verified Family A non-active evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import json
+
+          path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
+          ledger=json.loads(path.read_text())
+          row=next((entry for entry in ledger['rows'] if entry.get('family')=='A'),None)
+          if row is None:
+              raise SystemExit('Family A ledger row missing')
+
+          stale='Common Play profile-property input projection is generic for the active Character, but non-active runtime actors still expose only movement.walk rather than the same RulesProfile property surface'
+          row['remainingNamedSeams']=[entry for entry in row['remainingNamedSeams'] if entry!=stale]
+
+          row['currentState']=row['currentState'].replace(
+              'Family A remains incomplete because non-active runtime actors still do not expose the same generic profile-property input surface, named progression/runtime stat materialization remains outside the generic property owner, and RulesProfile now owns the structural profile-policy stacking decision.',
+              'Family A remains incomplete because named progression/runtime stat materialization remains outside the generic property owner; non-active runtime actors now expose structural baseProperties through the same effect-aware profile-property resolver, and RulesProfile owns the structural profile-policy stacking decision.'
+          )
+
+          implementation='CombatantRuntimeState.baseProperties plus installedCommonPlayRuntimeAdapter.ts commonPlayActorProfileProperties expose structural non-active runtime properties through resolveRuntimeProfileProperty without content identity dispatch'
+          if implementation not in row['implementationEvidence']:
+              row['implementationEvidence'].append(implementation)
+          production='b8d81fd205db55fb7cb2f6362ae4e9840f5c9a82 feat(c9): project non-active profile properties; installedCommonPlayPropertyModifierProduction.test.ts proves stored unknown Common Play reads non-active defense.ac and spends that exact movement distance'
+          if production not in row['productionEvidence']:
+              row['productionEvidence'].append(production)
+
+          if row['disposition']!='INCOMPLETE':
+              raise SystemExit(f"Family A disposition changed unexpectedly: {row['disposition']}")
+          if row['remainingNamedSeams']!=['named progression/runtime stat materialization remains outside a generic property owner']:
+              raise SystemExit(f"unexpected Family A remaining seams: {row['remainingNamedSeams']}")
+
+          path.write_text(json.dumps(ledger,ensure_ascii=False,indent=2)+'\n')
+          PY
+      - run: node scripts/check-v1-mechanism-coverage.mjs
+      - name: Commit evidence and retire verifier
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/c9-family-a-nonactive-ledger-71304.yml
+          git add docs/rules/v1-mechanism-coverage-ledger.json
+          git diff --cached --check
+          git commit -m "docs(c9): record non-active profile evidence"
+          branch=agent/c9-gate-n-coverage-reconciliation
+          for attempt in $(seq 1 12); do
+            git fetch origin "$branch"
+            if git rebase "origin/$branch"; then
+              if git push origin HEAD:"$branch"; then exit 0; fi
+            fi
+            git rebase --abort || true
+            sleep 1
+          done
+          exit 1
