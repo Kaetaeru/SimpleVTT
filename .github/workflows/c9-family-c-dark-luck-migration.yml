@@ -1,0 +1,68 @@
+name: C9 Family C Dark Luck Portable Migration
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-c-dark-luck-migration.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Apply bounded migration
+        run: python3 .github/c9-family-c-dark-luck-migrate.py
+
+      - name: Assert named Dark Luck follow-up is gone
+        shell: bash
+        run: |
+          set -euo pipefail
+          ! grep -q 'FIEND_DARK_ONES_OWN_LUCK' src/app/productionPlayRuntimeAdapter.ts
+          ! grep -q 'darkOnesOwnLuck' src/app/productionPlayRuntimeAdapter.ts
+          grep -q 'feature:fighter.indomitable' src/app/productionPlayRuntimeAdapter.ts
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Regenerate content
+        run: npm run generate:content
+
+      - name: Focused Family C tests
+        run: npx tsx --test tests/ui/warlockFiendDarkOnesOwnLuckRuntime.test.ts tests/ui/connectedProjectedCharacterDarkOnesOwnLuckResolution.test.ts tests/ui/bardCollegeLoreCuttingWordsRuntime.test.ts tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts
+
+      - name: Verify TypeScript
+        run: npx tsc --noEmit
+
+      - name: Verify Vite build
+        run: npx vite build
+
+      - name: Commit verified product slice
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            src/app/productionPlayRuntimeAdapter.ts \
+            src/app/commonPlayInterceptorProductionRuntimeAdapter.ts \
+            content/modules/dnd-srd-5.2.1.subclasses/module.json \
+            tests/ui/warlockFiendDarkOnesOwnLuckRuntime.test.ts
+          git diff --cached --check
+          git commit -m "feat(common-play): migrate Dark One's Own Luck"
+          git push
+
+      - name: Remove temporary migration files
+        if: success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rm .github/c9-family-c-dark-luck-migrate.py .github/workflows/c9-family-c-dark-luck-migration.yml
+          git commit -m "ci(c9): remove Dark Luck migration helpers"
+          git push
