@@ -42,6 +42,8 @@ jobs:
               raise SystemExit(f'missing rejection-test marker: {old.strip()}')
           p.write_text(text,encoding='utf-8')
           PY
+      - name: Generate content catalogs
+        run: npm run generate:content
       - name: Verify rich selector production and import boundary
         run: >-
           npx tsx --test
