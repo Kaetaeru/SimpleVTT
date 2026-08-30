@@ -12,6 +12,7 @@ import { installedCommonPlayActionId } from "../../src/app/installedCommonPlayAc
 import { setInstalledContentStoreForTests } from "../../src/app/installedContentRuntimeAdapter";
 import { MemoryInstalledContentStore } from "../../src/app/memoryInstalledContentStore";
 import { MockAdapter } from "../../src/app/mockAdapter";
+import { peekAdapterTurnSimultaneousOrdering, respondToAdapterTurnSimultaneousOrdering } from "../../src/app/phase09EffectAwareTurnAdapter";
 import { ClientSessionReplica, HostSessionLedger, type ConnectedSessionEvent } from "../../src/app/connectedSessionProtocol";
 import { tauriSessionTransport } from "../../src/app/tauriSessionTransport";
 import { snapshotAdapterTurnRuntimeState } from "../../src/app/turnRuntimeSessionRegistry";
@@ -70,8 +71,7 @@ function packageJson(prefix:string) {
   };
 }
 
-async function install(adapter:MockAdapter,prefix:string) {
-  const pack=packageJson(prefix);
+async function install(adapter:MockAdapter,prefix:string,pack=packageJson(prefix)) {
   setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
   const preview=await adapter.previewContentImport(pack.json);
   assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
@@ -348,4 +348,69 @@ test("actor-owned turn-end rule converges, reconnects, deduplicates, and rolls b
   assert.equal(hostState.markers.length,1);
   assert.deepEqual(hostState.clock,before.clock);
   assert.deepEqual(clientState,hostState);
+});
+
+
+function simultaneousPackageJson(prefix:string) {
+  const pack=packageJson(prefix);
+  const seededJson=pack.json.replace(`"id":"${pack.resourceId}","current":0,"maximum":1`,`"id":"${pack.resourceId}","current":1,"maximum":1`);
+  if(seededJson===pack.json) throw new Error("simultaneous ordering seed resource was not found");
+  const payload=JSON.parse(seededJson) as {
+    content:Array<{mechanics:Array<{config:{rules?:unknown[]}}>}>;
+  };
+  payload.content[0].mechanics[0].config.rules=[
+    {id:"turn-gain",event:"turn-start",frequency:"once-per-turn",operations:[
+      {kind:"resource.change",resource:pack.resourceId,amount:{value:1},target:"actor"},
+    ]},
+    {id:"turn-spend",event:"turn-start",frequency:"once-per-turn",operations:[
+      {kind:"resource.change",resource:pack.resourceId,amount:{value:-1},target:"actor"},
+    ]},
+  ];
+  return {...pack,json:JSON.stringify(payload)};
+}
+
+async function runSimultaneousOrdering(prefix:string) {
+  const adapter=new MockAdapter();
+  const source=simultaneousPackageJson(prefix);
+  const pack=await install(adapter,prefix,source);
+  await adapter.resolveAction(pack.summonAction,["char.aelar"]);
+  let pending=peekAdapterTurnSimultaneousOrdering(adapter);
+  for(let guard=0;guard<20&&!pending;guard++) {
+    await adapter.endTurn();
+    pending=peekAdapterTurnSimultaneousOrdering(adapter);
+  }
+  assert.ok(pending,"turn-start with two eligible external rules must pause for simultaneous ordering");
+  if(!pending||pending.status!=="pending") throw new Error("simultaneous ordering did not remain pending");
+  assert.equal(pending.request.timing,"turn-start");
+  assert.equal(pending.request.authority.kind,"actor-controller");
+  assert.equal(pending.request.authority.responderId,"char.aelar");
+  assert.equal(pending.request.candidates.length,2);
+  const spend=pending.request.candidates.find((candidate)=>candidate.id.endsWith(":turn-spend"))?.id;
+  const gain=pending.request.candidates.find((candidate)=>candidate.id.endsWith(":turn-gain"))?.id;
+  assert.ok(spend&&gain,JSON.stringify(pending.request.candidates));
+  const response=respondToAdapterTurnSimultaneousOrdering(adapter,{
+    decisionId:pending.request.id,
+    revision:pending.request.revision,
+    responderId:pending.request.authority.responderId,
+    orderedCandidateIds:[spend!,gain!],
+  });
+  assert.equal(response?.status,"resolved");
+  const snapshot=await adapter.endTurn();
+  const state=actorState(adapter,snapshot,pack.summonId,pack.resourceId);
+  assert.equal(state.clock.activeActorId,pack.summonId);
+  return {
+    resource:state.resource,
+    markers:state.markers.length,
+    timing:pending.request.timing,
+    authority:pending.request.authority.kind,
+    candidateCount:pending.request.candidates.length,
+  };
+}
+
+test("production simultaneous turn rules pause before mutation and execute in the authorized external order",async()=>{
+  const original=await runSimultaneousOrdering("unknown-simultaneous-a");
+  const renamed=await runSimultaneousOrdering("fully-renamed-simultaneous-b");
+  assert.deepEqual(renamed,original);
+  assert.equal(original.resource,1,"spend-at-one then gain must end at one; natural gain-at-maximum then spend would end at zero");
+  assert.equal(original.markers,2);
 });

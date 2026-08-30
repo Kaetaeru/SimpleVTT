@@ -27,6 +27,15 @@ export interface InstalledCommonPlayActorTurnRuleBinding {
   rules:ActorTurnRule[];
 }
 
+export interface InstalledCommonPlayActorTurnRuleCandidate {
+  id:string;
+  artifactId:string;
+  actorId:string;
+  definitionId:string;
+  ruleId:string;
+  event:TurnBoundaryKind;
+}
+
 const FREQUENCIES=new Set<CommonPlayFrequency>(["unlimited","once","once-per-turn","once-per-round","once-per-resolution"]);
 
 function turnRule(value:RawRule,index:number):ActorTurnRule|undefined {
@@ -84,15 +93,12 @@ export async function installedCommonPlayActorTurnRuleBindings(
   return bindings;
 }
 
-export function compileInstalledCommonPlayActorTurnRuleOperations(
+export function collectInstalledCommonPlayActorTurnRuleCandidates(
   state:RulesRuntimeState,
   bindings:InstalledCommonPlayActorTurnRuleBinding[],
-  input:{
-    id:string;kind:TurnBoundaryKind;actorId:string;
-    rechargeDieFace?:(ruleId:string,operationIndex:number,sides:number)=>number;
-  },
-):ResolutionOperation[] {
-  const operations:ResolutionOperation[]=[];
+  input:{id:string;kind:TurnBoundaryKind;actorId:string},
+):InstalledCommonPlayActorTurnRuleCandidate[] {
+  const candidates:InstalledCommonPlayActorTurnRuleCandidate[]=[];
   for(const binding of bindings) {
     if(binding.actorId!==input.actorId) continue;
     const artifact=(state.artifacts??[]).find((candidate)=>candidate.id===binding.artifactId&&candidate.artifactKind==="actor"&&candidate.actor?.combatantId===input.actorId);
@@ -108,34 +114,88 @@ export function compileInstalledCommonPlayActorTurnRuleOperations(
         markers:artifact.metadata??{},
       });
       if(!frequency.eligible) continue;
-      const entryPointId=`turn-rule-${rule.id}`;
-      const resolutionId=`${input.id}:${artifact.id}:${rule.id}`;
-      const definition=parseCommonPlayOperationDefinition({
-        schemaVersion:"0.2-draft",
-        id:binding.definitionId,
-        entryPoints:[{id:entryPointId,invocation:"manual",operations:rule.operations}],
-      },`Common Play actor turn rule ${binding.definitionId}:${rule.id}`);
-      const rechargeDiceFaces=Object.fromEntries(rule.operations.flatMap((operation,index)=>{
-        if(operation.kind!=="resource.recharge") return [];
-        const die=operation.die as {sides?:unknown}|undefined;
-        if(!die||!Number.isInteger(die.sides)||Number(die.sides)<2||Number(die.sides)>20) {
-          throw new DomainEvaluationError(`Common Play actor turn rule ${rule.id} has an invalid recharge die`);
-        }
-        if(!input.rechargeDieFace) throw new DomainEvaluationError(`Common Play actor turn rule ${rule.id} requires authoritative recharge die input`);
-        return [[index,[input.rechargeDieFace(rule.id,index,Number(die.sides))]]];
-      }));
-      const pending=compileCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,state,definition,{
-        resolutionId,actorId:input.actorId,entryPointId,
-        ...(Object.keys(rechargeDiceFaces).length?{rechargeDiceFaces}:{}),
-      });
-      operations.push(...pending.operations);
-      if(Object.keys(frequency.metadataPatch).length) operations.push({
-        id:`${resolutionId}:frequency`,
-        kind:"update-artifact",
+      candidates.push({
+        id:`${artifact.id}:${binding.definitionId}:${rule.id}`,
         artifactId:artifact.id,
-        metadataPatch:frequency.metadataPatch,
+        actorId:input.actorId,
+        definitionId:binding.definitionId,
+        ruleId:rule.id,
+        event:rule.event,
       });
     }
+  }
+  return candidates;
+}
+
+function orderedActorTurnCandidates(
+  candidates:InstalledCommonPlayActorTurnRuleCandidate[],
+  orderedCandidateIds:string[]|undefined,
+) {
+  if(!orderedCandidateIds) return candidates;
+  const byId=new Map(candidates.map((candidate)=>[candidate.id,candidate]));
+  if(orderedCandidateIds.length!==candidates.length
+    ||new Set(orderedCandidateIds).size!==orderedCandidateIds.length
+    ||orderedCandidateIds.some((id)=>!byId.has(id))) {
+    throw new DomainEvaluationError("Common Play actor turn ordering must be an exact permutation of eligible rules");
+  }
+  return orderedCandidateIds.map((id)=>byId.get(id)!);
+}
+
+export function compileInstalledCommonPlayActorTurnRuleOperations(
+  state:RulesRuntimeState,
+  bindings:InstalledCommonPlayActorTurnRuleBinding[],
+  input:{
+    id:string;kind:TurnBoundaryKind;actorId:string;
+    rechargeDieFace?:(ruleId:string,operationIndex:number,sides:number)=>number;
+    orderedCandidateIds?:string[];
+  },
+):ResolutionOperation[] {
+  const candidates=orderedActorTurnCandidates(
+    collectInstalledCommonPlayActorTurnRuleCandidates(state,bindings,input),
+    input.orderedCandidateIds,
+  );
+  const operations:ResolutionOperation[]=[];
+  for(const candidate of candidates) {
+    const binding=bindings.find((entry)=>entry.artifactId===candidate.artifactId&&entry.actorId===candidate.actorId&&entry.definitionId===candidate.definitionId);
+    const rule=binding?.rules.find((entry)=>entry.id===candidate.ruleId&&entry.event===candidate.event);
+    const artifact=(state.artifacts??[]).find((entry)=>entry.id===candidate.artifactId&&entry.artifactKind==="actor"&&entry.actor?.combatantId===input.actorId);
+    if(!binding||!rule||!artifact) throw new DomainEvaluationError(`Common Play actor turn candidate is no longer available: ${candidate.id}`);
+    const frequency=resolveCommonPlayFrequency({
+      ruleId:`${binding.definitionId}:${rule.id}`,
+      subjectId:input.actorId,
+      frequency:rule.frequency,
+      resolutionId:input.id,
+      clock:state.clock,
+      markers:artifact.metadata??{},
+    });
+    if(!frequency.eligible) throw new DomainEvaluationError(`Common Play actor turn candidate is no longer eligible: ${candidate.id}`);
+    const entryPointId=`turn-rule-${rule.id}`;
+    const resolutionId=`${input.id}:${artifact.id}:${rule.id}`;
+    const definition=parseCommonPlayOperationDefinition({
+      schemaVersion:"0.2-draft",
+      id:binding.definitionId,
+      entryPoints:[{id:entryPointId,invocation:"manual",operations:rule.operations}],
+    },`Common Play actor turn rule ${binding.definitionId}:${rule.id}`);
+    const rechargeDiceFaces=Object.fromEntries(rule.operations.flatMap((operation,index)=>{
+      if(operation.kind!=="resource.recharge") return [];
+      const die=operation.die as {sides?:unknown}|undefined;
+      if(!die||!Number.isInteger(die.sides)||Number(die.sides)<2||Number(die.sides)>20) {
+        throw new DomainEvaluationError(`Common Play actor turn rule ${rule.id} has an invalid recharge die`);
+      }
+      if(!input.rechargeDieFace) throw new DomainEvaluationError(`Common Play actor turn rule ${rule.id} requires authoritative recharge die input`);
+      return [[index,[input.rechargeDieFace(rule.id,index,Number(die.sides))]]];
+    }));
+    const pending=compileCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,state,definition,{
+      resolutionId,actorId:input.actorId,entryPointId,
+      ...(Object.keys(rechargeDiceFaces).length?{rechargeDiceFaces}:{}),
+    });
+    operations.push(...pending.operations);
+    if(Object.keys(frequency.metadataPatch).length) operations.push({
+      id:`${resolutionId}:frequency`,
+      kind:"update-artifact",
+      artifactId:artifact.id,
+      metadataPatch:frequency.metadataPatch,
+    });
   }
   return operations;
 }

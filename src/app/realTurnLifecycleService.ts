@@ -28,7 +28,25 @@ export type TurnRuntimeLifecycleAdvanceResult =
       error:string;
     };
 
-export function advanceTurnRuntimeLifecycle(session:TurnRuntimeSession,compileAdditional?:TurnRuntimeLifecycleOperationCompiler):TurnRuntimeLifecycleAdvanceResult {
+export type TurnRuntimeLifecycleBoundaryPreview=Parameters<TurnRuntimeLifecycleOperationCompiler>[0];
+
+export type TurnRuntimeLifecyclePreviewResult=
+  | {
+      status:"ready";
+      currentActorId:string;
+      nextActorId:string;
+      nextIndex:number;
+      nextRound:number;
+      nextElapsedSeconds:number;
+      roundWrap:boolean;
+      expectedRevision:number;
+      resolutionId:string;
+      endBoundary:TurnRuntimeLifecycleBoundaryPreview;
+      beginBoundary:TurnRuntimeLifecycleBoundaryPreview;
+    }
+  | {status:"rejected";error:string};
+
+export function previewTurnRuntimeLifecycle(session:TurnRuntimeSession):TurnRuntimeLifecyclePreviewResult {
   if (!session.initiativeOrder.length) return { status:"rejected",error:"turn runtime has no initiative actors" };
   const currentActorId=session.state.clock.activeActorId ?? session.initiativeOrder[session.activeIndex];
   const currentIndex=session.initiativeOrder.indexOf(currentActorId);
@@ -44,8 +62,21 @@ export function advanceTurnRuntimeLifecycle(session:TurnRuntimeSession,compileAd
   endState.clock={...endState.clock,round:session.state.clock.round,activeActorId:currentActorId,phase:"end"};
   const beginState=structuredClone(session.state);
   beginState.clock={...beginState.clock,round:nextRound,elapsedSeconds:nextElapsedSeconds,activeActorId:nextActorId,phase:"start"};
-  const afterEnd=compileAdditional?.({state:endState,resolutionId,kind:"turn-end",actorId:currentActorId,round:session.state.clock.round})??[];
-  const afterBegin=compileAdditional?.({state:beginState,resolutionId,kind:"turn-start",actorId:nextActorId,round:nextRound})??[];
+  return {
+    status:"ready",currentActorId,nextActorId,nextIndex,nextRound,nextElapsedSeconds,roundWrap,expectedRevision,resolutionId,
+    endBoundary:{state:endState,resolutionId,kind:"turn-end",actorId:currentActorId,round:session.state.clock.round},
+    beginBoundary:{state:beginState,resolutionId,kind:"turn-start",actorId:nextActorId,round:nextRound},
+  };
+}
+
+export function advanceTurnRuntimeLifecycle(session:TurnRuntimeSession,compileAdditional?:TurnRuntimeLifecycleOperationCompiler):TurnRuntimeLifecycleAdvanceResult {
+  const preview=previewTurnRuntimeLifecycle(session);
+  if(preview.status==="rejected") return preview;
+  const {
+    currentActorId,nextActorId,nextIndex,nextRound,nextElapsedSeconds,roundWrap,expectedRevision,resolutionId,endBoundary,beginBoundary,
+  }=preview;
+  const afterEnd=compileAdditional?.(endBoundary)??[];
+  const afterBegin=compileAdditional?.(beginBoundary)??[];
   const roundTimeOperations:ResolutionOperation[]=roundWrap ? [{
     id:`${resolutionId}:advance-time`,
     kind:"advance-time",

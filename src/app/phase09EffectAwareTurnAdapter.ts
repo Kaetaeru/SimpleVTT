@@ -2,14 +2,15 @@ import "./phase09RealTurnRuntimeAdapter";
 import type { ActivityEntry, AppSnapshot, SceneEntity, SceneVm, SessionMode } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
 import { projectRuntimeEventsToActivity } from "./realActivityProjectionService";
-import { advanceTurnRuntimeLifecycle } from "./realTurnLifecycleService";
+import { advanceTurnRuntimeLifecycle, previewTurnRuntimeLifecycle, type TurnRuntimeLifecycleBoundaryPreview } from "./realTurnLifecycleService";
 import { projectTurnRuntimeToScene, synchronizeTurnRuntimeFromScene } from "./realTurnRuntimeService";
 import { recordRuntimeResolutionEvents } from "./runtimeResolutionEventHistory";
 import { clearReadyActionConfiguration, readyActionConfigurationFor, readyActionConfigurationsFor } from "./standardActionReadyState";
 import { turnRuntimeSessions } from "./turnRuntimeSessionRegistry";
 import { compileInstalledCommonPlayZoneTurnOperations, installedCommonPlayZoneDefinitions } from "./commonPlayZoneTurnComposition";
-import { compileInstalledCommonPlayActorTurnRuleOperations, installedCommonPlayActorTurnRuleBindings } from "./commonPlayActorTurnRuleComposition";
+import { collectInstalledCommonPlayActorTurnRuleCandidates, compileInstalledCommonPlayActorTurnRuleOperations, installedCommonPlayActorTurnRuleBindings, type InstalledCommonPlayActorTurnRuleBinding } from "./commonPlayActorTurnRuleComposition";
 import type { ResolutionEvent } from "../domain/resolutionTypes";
+import { beginCommonPlaySimultaneousOrdering, respondToCommonPlaySimultaneousOrdering, type CommonPlaySimultaneousOrderingResponse, type CommonPlaySimultaneousOrderingState } from "../domain/commonPlaySimultaneousOrderingRuntime";
 
 interface EffectAwareTurnAdapterState {
   sessionMode:SessionMode;
@@ -31,6 +32,68 @@ const previousEndTurn=MockAdapter.prototype.endTurn;
 const previousEndInitiative=MockAdapter.prototype.endInitiative;
 const turnLifecycleEvents=new WeakMap<MockAdapter,ResolutionEvent[]>();
 const turnLifecycleUndo=new WeakMap<MockAdapter,AdapterTurnLifecycleUndo>();
+
+const turnSimultaneousOrdering=new WeakMap<MockAdapter,Map<string,CommonPlaySimultaneousOrderingState>>();
+
+function simultaneousOrderingStates(adapter:MockAdapter) {
+  let states=turnSimultaneousOrdering.get(adapter);
+  if(!states) {
+    states=new Map();
+    turnSimultaneousOrdering.set(adapter,states);
+  }
+  return states;
+}
+
+export function peekAdapterTurnSimultaneousOrdering(adapter:MockAdapter) {
+  const pending=[...(turnSimultaneousOrdering.get(adapter)?.values()??[])].find((state)=>state.status==="pending");
+  return pending?structuredClone(pending):undefined;
+}
+
+export function respondToAdapterTurnSimultaneousOrdering(adapter:MockAdapter,response:CommonPlaySimultaneousOrderingResponse) {
+  const states=turnSimultaneousOrdering.get(adapter);
+  const current=states?.get(response.decisionId);
+  if(!current) return undefined;
+  const result=respondToCommonPlaySimultaneousOrdering(current,response);
+  if(result.status==="resolved") states!.set(response.decisionId,result.state);
+  return structuredClone(result);
+}
+
+function simultaneousOrderingAuthority(internal:EffectAwareTurnAdapterState,actorId:string) {
+  const entity=internal.scene.entities.find((candidate)=>candidate.id===actorId);
+  if(entity?.controllerId) return {kind:"actor-controller" as const,responderId:entity.controllerId};
+  if(entity?.kind==="character") return {kind:"actor-controller" as const,responderId:entity.id};
+  return {kind:"dm" as const,responderId:"dm"};
+}
+
+function ensureBoundaryOrdering(
+  adapter:MockAdapter,
+  internal:EffectAwareTurnAdapterState,
+  boundary:TurnRuntimeLifecycleBoundaryPreview,
+  bindings:InstalledCommonPlayActorTurnRuleBinding[],
+) {
+  const candidates=collectInstalledCommonPlayActorTurnRuleCandidates(boundary.state,bindings,{id:boundary.resolutionId,kind:boundary.kind,actorId:boundary.actorId});
+  if(candidates.length<=1) return true;
+  const request={
+    id:`${boundary.resolutionId}:simultaneous:${boundary.kind}:${boundary.actorId}`,
+    revision:boundary.state.revision,
+    timing:boundary.kind,
+    authority:simultaneousOrderingAuthority(internal,boundary.actorId),
+    candidates:candidates.map((candidate)=>({id:candidate.id})),
+  };
+  const states=simultaneousOrderingStates(adapter);
+  let ordering=states.get(request.id);
+  if(!ordering||ordering.request.revision!==request.revision) {
+    ordering=beginCommonPlaySimultaneousOrdering(request);
+    states.set(request.id,ordering);
+  }
+  return ordering.status==="resolved";
+}
+
+function orderedBoundaryCandidateIds(adapter:MockAdapter,boundary:TurnRuntimeLifecycleBoundaryPreview) {
+  const id=`${boundary.resolutionId}:simultaneous:${boundary.kind}:${boundary.actorId}`;
+  const ordering=turnSimultaneousOrdering.get(adapter)?.get(id);
+  return ordering?.status==="resolved"?[...ordering.orderedCandidateIds]:undefined;
+}
 
 const END_OF_TURN_STATUSES=["이탈"] as const;
 const START_OF_TURN_STATUSES=["회피","준비 행동"] as const;
@@ -81,6 +144,12 @@ MockAdapter.prototype.endTurn=async function endTurnThroughDomainLifecycle() {
   synchronizeTurnRuntimeFromScene(session,internal.scene);
   const zoneDefinitions=await installedCommonPlayZoneDefinitions(this,session.state);
   const actorTurnRules=await installedCommonPlayActorTurnRuleBindings(this,session.state);
+  const preview=previewTurnRuntimeLifecycle(session);
+  if(preview.status==="ready") {
+    const endReady=ensureBoundaryOrdering(this,internal,preview.endBoundary,actorTurnRules);
+    const beginReady=ensureBoundaryOrdering(this,internal,preview.beginBoundary,actorTurnRules);
+    if(!endReady||!beginReady) return internal.getSnapshot();
+  }
   const rechargeDrawIndex={value:0};
   const advanced=advanceTurnRuntimeLifecycle(session,(boundary)=>[
     ...compileInstalledCommonPlayZoneTurnOperations(
@@ -92,6 +161,7 @@ MockAdapter.prototype.endTurn=async function endTurnThroughDomainLifecycle() {
     ...compileInstalledCommonPlayActorTurnRuleOperations(boundary.state,actorTurnRules,{
       id:boundary.resolutionId,kind:boundary.kind,actorId:boundary.actorId,
       rechargeDieFace:(_ruleId,_operationIndex,sides)=>authoritativeRechargeFace(this,`${boundary.resolutionId}:recharge`,sides,rechargeDrawIndex),
+      orderedCandidateIds:orderedBoundaryCandidateIds(this,boundary),
     }),
   ]);
   if (advanced.status==="rejected") {
@@ -108,6 +178,7 @@ MockAdapter.prototype.endTurn=async function endTurnThroughDomainLifecycle() {
     return internal.getSnapshot();
   }
 
+  turnSimultaneousOrdering.delete(this);
   turnLifecycleEvents.set(this,advanced.events.map((event)=>structuredClone(event)));
   projectTurnRuntimeToScene(session,internal.scene);
   const next=internal.scene.entities.find((entity)=>entity.id===advanced.activeActorId);
@@ -141,6 +212,7 @@ MockAdapter.prototype.endTurn=async function endTurnThroughDomainLifecycle() {
 MockAdapter.prototype.endInitiative=async function endInitiativeClearingStandardActionStatuses() {
   const internal=this as unknown as EffectAwareTurnAdapterState;
   turnLifecycleUndo.delete(this);
+  turnSimultaneousOrdering.delete(this);
   const hadReady=readyActionConfigurationsFor(this).length>0;
   const changes=internal.scene.entities.flatMap((entity)=>clearStatuses(entity,[...END_OF_TURN_STATUSES,...START_OF_TURN_STATUSES]));
   if (hadReady) clearReadyActionConfiguration(this);
