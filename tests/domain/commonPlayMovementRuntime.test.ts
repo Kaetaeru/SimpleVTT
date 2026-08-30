@@ -125,6 +125,31 @@ test("generic movement reuses profile expressions for speed costs",()=>{
   if(compiled.status==="compiled")assert.deepEqual(compiled.operation,{id:"move",kind:"move",actorId:"hero",movementMode:"crawl",distanceFeet:20,distanceTraveledFeet:10,destinationRef:"point:b4",doesNotProvokeOpportunityAttacks:false});
 });
 
+test("rules-derived movement cost applies without content-specific dispatch",()=>{
+  const compiled=compileCommonPlayMovement({
+    id:"move-difficult",
+    definition:{...movement,distance:{value:5}},
+    properties:{"movement.walk":30,"movement.cost.multiplier":2},
+    answer:authorityAnswer,
+  });
+  assert.equal(compiled.status,"compiled");
+  if(compiled.status!=="compiled")return;
+  assert.equal(compiled.operation.kind,"move");
+  assert.equal(compiled.operation.distanceFeet,10);
+  assert.equal(compiled.operation.distanceTraveledFeet,5);
+});
+
+test("rules-derived alternate speed caps regular movement structurally",()=>{
+  const compiled=compileCommonPlayMovement({
+    id:"move-climb",
+    definition:{...movement,movementType:"climb",distance:{value:20}},
+    properties:{"movement.climb":15},
+    answer:authorityAnswer,
+  });
+  assert.equal(compiled.status,"rejected");
+  if(compiled.status==="rejected")assert.match(compiled.reason,/exceeds climb speed/);
+});
+
 test("generic movement preserves the explicit no-provoke flag",()=>{
   const compiled=compileCommonPlayMovement({
     id:"move-no-provoke",
