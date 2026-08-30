@@ -11,7 +11,7 @@ permissions:
   contents: write
 
 jobs:
-  verify-and-publish:
+  verify-and-clean:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -24,37 +24,17 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run generate:content
-      - name: Convert domain evaluation rejection into Common Play rejected resolution
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          path=Path('src/app/installedCommonPlayRuntimeAdapter.ts')
-          text=path.read_text()
-          import_anchor='import { resolvePendingResolution } from "../domain/resolution";\n'
-          import_line='import { DomainEvaluationError } from "../domain/profileEngine";\n'
-          if import_line not in text:
-              if import_anchor not in text:
-                  raise SystemExit('profile-engine import anchor not found')
-              text=text.replace(import_anchor,import_anchor+import_line,1)
-          old='    const pending=compileCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,itemContext.state,lowered.definition,operationExecutionInput(internal,actionId,action,prepared,resolutionId,interactionId,itemContext.itemPaymentResourceIds));\n'
-          new='''    let pending:ReturnType<typeof compileCommonPlayEntryPointOperations>;\n    try {\n      pending=compileCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,itemContext.state,lowered.definition,operationExecutionInput(internal,actionId,action,prepared,resolutionId,interactionId,itemContext.itemPaymentResourceIds));\n    } catch(error) {\n      if(error instanceof DomainEvaluationError) return {status:"rejected" as const,error:error.message,snapshot:await internal.getSnapshot()};\n      throw error;\n    }\n'''
-          if new not in text:
-              if old not in text:
-                  raise SystemExit('compile anchor not found')
-              text=text.replace(old,new,1)
-          path.write_text(text)
-          PY
       - name: Verify Family I rules-derived movement constraints
         run: |
           node --import tsx --test tests/ui/c9FamilyIMovementProduction.test.ts tests/domain/commonPlayMovementRuntime.test.ts tests/ui/commonPlayProneStandRuntime.test.ts
           node scripts/check-legacy-execution-boundary.mjs
           node scripts/check-v1-mechanism-coverage.mjs
           npm exec tsc -- --noEmit
-      - name: Publish verified Family I rejection fix
+      - name: Remove temporary verifier
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           rm .github/workflows/c9-family-i-rules-constraints-71304.yml
-          git add src/app/installedCommonPlayRuntimeAdapter.ts .github/workflows/c9-family-i-rules-constraints-71304.yml
-          git commit -m "fix(c9): normalize portable movement rejection"
+          git add .github/workflows/c9-family-i-rules-constraints-71304.yml
+          git commit -m "chore(c9): remove Family I temporary verifier"
           git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
