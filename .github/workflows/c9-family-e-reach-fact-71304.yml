@@ -1,0 +1,90 @@
+name: C9 Family E Reach Fact 71304
+
+on:
+  push:
+    branches:
+      - "agent/c9-gate-n-coverage-reconciliation"
+    paths:
+      - ".github/workflows/c9-family-e-reach-fact-71304.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  verify-and-land:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Add provider-owned reach fact to production selector projection
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace(path, old, new):
+              p=Path(path)
+              text=p.read_text(encoding="utf-8")
+              if new in text:
+                  return
+              if old not in text:
+                  raise SystemExit(f"anchor not found: {path}")
+              p.write_text(text.replace(old,new,1),encoding="utf-8")
+
+          replace(
+              "src/app/spatialRuntimeContracts.ts",
+              "  targetCanSeeAttacker:boolean;\n  light?:RuntimeLight;",
+              "  targetCanSeeAttacker:boolean;\n  /** Provider-owned reach result; Core must not infer this from distance. */\n  withinReach?:boolean;\n  light?:RuntimeLight;",
+          )
+          replace(
+              "src/app/movementRuntimeContracts.ts",
+              "  targetCanSeeAttacker:boolean;\n  light?:RuntimeLight;",
+              "  targetCanSeeAttacker:boolean;\n  /** Authoritative reach result supplied by the movement/spatial module. */\n  withinReach?:boolean;\n  light?:RuntimeLight;",
+          )
+          replace(
+              "src/app/installedCommonPlayRuntimeAdapter.ts",
+              '        "spatial.adjacent":spatial.distanceFeet<=5,\n        "spatial.total-cover":spatial.cover==="total",',
+              '        "spatial.adjacent":spatial.distanceFeet<=5,\n        ...(spatial.withinReach===undefined?{}:{"spatial.within-reach":spatial.withinReach}),\n        "spatial.total-cover":spatial.cover==="total",',
+          )
+          replace(
+              "tests/ui/c9FamilyESpatialSelectorProduction.test.ts",
+              '              {op:"eq",left:{ref:"sense.can-see"},right:{value:true}},\n              {op:"eq",left:{ref:"spatial.total-cover"},right:{value:false}},',
+              '              {op:"eq",left:{ref:"sense.can-see"},right:{value:true}},\n              {op:"eq",left:{ref:"spatial.within-reach"},right:{value:true}},\n              {op:"eq",left:{ref:"spatial.total-cover"},right:{value:false}},',
+          )
+          replace(
+              "tests/ui/c9FamilyESpatialSelectorProduction.test.ts",
+              "function setRelation(internal:{activeCharacter:CharacterSheet;scene:SceneVm},distanceFeet:number,visible:boolean,cover:RuntimeCover) {\n  setSpatialRelation(internal.scene,{\n    sourceId:internal.activeCharacter.id,targetId:TARGET_ID,distanceFeet,visible,cover,targetCanSeeAttacker:true,\n    provenance:\"module:c9-family-e-spatial:selector\",\n  });\n}",
+              "function setRelation(internal:{activeCharacter:CharacterSheet;scene:SceneVm},distanceFeet:number,visible:boolean,cover:RuntimeCover,withinReach:boolean) {\n  setSpatialRelation(internal.scene,{\n    sourceId:internal.activeCharacter.id,targetId:TARGET_ID,distanceFeet,visible,cover,targetCanSeeAttacker:true,withinReach,\n    provenance:\"module:c9-family-e-spatial:selector\",\n  });\n}",
+          )
+          replace(
+              "tests/ui/c9FamilyESpatialSelectorProduction.test.ts",
+              '  for(const [distanceFeet,visible,cover] of [\n    [35,true,"none"],\n    [20,false,"none"],\n    [20,true,"total"],\n  ] as const) {\n    setRelation(internal,distanceFeet,visible,cover);',
+              '  for(const [distanceFeet,visible,cover,withinReach] of [\n    [35,true,"none",true],\n    [20,false,"none",true],\n    [20,true,"total",true],\n    [5,true,"none",false],\n  ] as const) {\n    setRelation(internal,distanceFeet,visible,cover,withinReach);',
+          )
+          replace(
+              "tests/ui/c9FamilyESpatialSelectorProduction.test.ts",
+              '  setRelation(internal,20,true,"half");',
+              '  // Reach is provider-owned: a module may author a reach result that is not derivable from distance alone.\n  setRelation(internal,20,true,"half",true);',
+          )
+          PY
+      - name: Verify Family E reach slice
+        run: |
+          npx tsx --test tests/ui/c9FamilyESpatialSelectorProduction.test.ts tests/domain/commonPlaySelectorRuntime.test.ts
+          node scripts/check-v1-mechanism-coverage.mjs
+          npx tsc --noEmit
+      - name: Commit verified slice and retire workflow
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm .github/workflows/c9-family-e-reach-fact-71304.yml
+          git add src/app/spatialRuntimeContracts.ts src/app/movementRuntimeContracts.ts src/app/installedCommonPlayRuntimeAdapter.ts tests/ui/c9FamilyESpatialSelectorProduction.test.ts .github/workflows/c9-family-e-reach-fact-71304.yml
+          git commit -m "feat(c9): project provider-owned reach facts"
+          git pull --rebase origin "$GITHUB_REF_NAME"
+          git push origin HEAD:"$GITHUB_REF_NAME"
