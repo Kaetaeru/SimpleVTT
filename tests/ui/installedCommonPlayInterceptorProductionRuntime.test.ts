@@ -629,3 +629,28 @@ test("portable production special sight composes provider-authored senses under 
     }
   }
 });
+
+
+test("portable production normal sight respects Resolver-owned Invisible condition",async()=>{
+  const adapter=await prepare(ORIGINAL,true);
+  const internal=adapter as unknown as {activeCharacter:CharacterSheet;scene:SceneVm};
+  setSpatialRelation(internal.scene,{
+    sourceId:internal.activeCharacter.id,targetId:OTHER_CHARACTER_ID,distanceFeet:30,visible:true,cover:"none",targetCanSeeAttacker:true,
+    light:"dim",obscurement:"none",detected:true,provenance:"module:test-invisible:spatial",
+  });
+  seedHiddenRuntimeEffect(adapter,OTHER_CHARACTER_ID);
+  const state=snapshotAdapterTurnRuntimeState(adapter,internal.scene);
+  assert.ok(state,"TurnRuntime state must exist before Invisible condition seeding");
+  const committed=resolvePendingResolution(SIMPLEVTT_APP_RULES_PROFILE,state!,{
+    id:"resolution.invisible-fact",actorId:internal.activeCharacter.id,sourceId:"external.invisible-fact-probe",expectedRevision:state!.revision,
+    operations:[{
+      id:"op.invisible-fact",kind:"apply-effect",
+      effect:{id:"effect.invisible-fact",sourceId:"external.invisible-fact-probe",sourceActorId:internal.activeCharacter.id,targetId:OTHER_CHARACTER_ID,kind:"condition",conditionId:"invisible",tags:["condition:invisible"],duration:{kind:"special",key:"test.invisible-fact"}},
+    }],
+  });
+  assert.notEqual(committed.status,"rejected");
+  if(committed.status==="rejected")return;
+  assert.equal(commitAdapterTurnRuntimeState(adapter,internal.scene,state!.revision,committed.state),true);
+  const snapshot=await openAbilityCheckInterrupt(adapter);
+  assert.notEqual(snapshot.resolution?.stage,"interrupt","normal sight must not see a target with an active Resolver-owned Invisible condition");
+});
