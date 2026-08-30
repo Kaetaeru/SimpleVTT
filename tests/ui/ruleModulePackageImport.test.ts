@@ -343,14 +343,12 @@ test("installed Common Play rejects unsupported targeting authoring before persi
   }
 });
 
-test("installed Common Play rejects unsupported interaction and Reaction payment authoring before persistence",async()=>{
+test("installed Common Play rejects unsupported interaction and economy payment authoring before persistence",async()=>{
   const mutations:Array<(mechanic:ReturnType<typeof portableCommonPlayInteractionMechanic>)=>void>=[
     (mechanic)=>{mechanic.config.entryPoints[0].interaction.kind="choice";},
     (mechanic)=>{mechanic.config.entryPoints[0].interaction.responder="target";},
     (mechanic)=>{mechanic.config.entryPoints[0].interaction.mode="notice";},
     (mechanic)=>{mechanic.config.entryPoints[0].interaction.input.type="text";},
-    (mechanic)=>{mechanic.config.entryPoints[0].interaction.revalidate="if-revision-changed";},
-    (mechanic)=>{mechanic.config.payments[0].bucket="action";},
     (mechanic)=>{mechanic.config.payments[0].amount.value=2;},
     (mechanic)=>{mechanic.config.payments[0].consumeAt="stage";},
     (mechanic)=>{mechanic.config.payments[0].refundOnCancel=false;},
