@@ -1,0 +1,46 @@
+name: C9 Family C Final Reconciliation
+
+on:
+  push:
+    paths:
+      - '.github/workflows/c9-family-c-final-reconciliation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/c9-finalize-family-c-ledger.mjs
+      - run: node scripts/check-v1-mechanism-coverage.mjs
+      - name: Verify Family C final disposition
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const ledger=JSON.parse(fs.readFileSync('docs/rules/v1-mechanism-coverage-ledger.json','utf8'));
+          const c=ledger.rows.find((row)=>row.family==='C');
+          if(c?.disposition!=='IMPLEMENTED') throw new Error(`Family C disposition=${c?.disposition}`);
+          if(c.remainingNamedSeams.length) throw new Error(`Family C remaining seams: ${c.remainingNamedSeams.join(', ')}`);
+          const implemented=ledger.rows.filter((row)=>row.disposition==='IMPLEMENTED').length;
+          const incomplete=ledger.rows.filter((row)=>row.disposition==='INCOMPLETE').length;
+          const unneeded=ledger.rows.filter((row)=>row.disposition==='PROVEN_UNNEEDED').length;
+          if(implemented!==5||incomplete!==31||unneeded!==0) throw new Error(`unexpected totals ${implemented}/${incomplete}/${unneeded}`);
+          console.log(`Family C final; totals IMPLEMENTED=${implemented} INCOMPLETE=${incomplete} PROVEN_UNNEEDED=${unneeded}`);
+          NODE
+      - name: Commit authoritative Family C reconciliation
+        run: |
+          rm -f scripts/c9-finalize-family-c-ledger.mjs .github/workflows/c9-family-c-final-reconciliation.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'docs(c9): finalize Family C coverage'
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
