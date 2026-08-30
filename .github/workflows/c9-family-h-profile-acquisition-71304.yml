@@ -98,6 +98,7 @@ jobs:
           row['remainingNamedSeams']=[]
           ledger_path.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
           PY
+      - run: npm run generate:content
       - name: Verify Family H completion
         run: |
           node --import tsx --test tests/domain/commonPlaySenseRuntime.test.ts tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts
