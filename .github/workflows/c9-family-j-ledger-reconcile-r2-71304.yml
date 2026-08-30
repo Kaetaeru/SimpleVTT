@@ -22,6 +22,28 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Reconcile generic structural-save composition classification
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          path=Path('.agents/LEGACY_EXECUTION_BASELINE.json')
+          baseline=json.loads(path.read_text(encoding='utf-8'))
+          entries=baseline['entries']
+          old=[entry for entry in entries if entry.get('module')=='./unarmedControlRuntimeAdapter']
+          new=[entry for entry in entries if entry.get('module')=='./structuralSaveConditionRuntimeAdapter']
+          if new:
+              if len(new)!=1 or new[0].get('classification')!='GENERIC_ENGINE':
+                  raise SystemExit('structural save-condition classification is not uniquely GENERIC_ENGINE')
+              entries[:]=[entry for entry in entries if entry.get('module')!='./unarmedControlRuntimeAdapter']
+          else:
+              if len(old)!=1 or old[0].get('classification')!='GENERIC_ENGINE':
+                  raise SystemExit('stale Unarmed classification anchor changed')
+              old[0]['module']='./structuralSaveConditionRuntimeAdapter'
+          path.write_text(json.dumps(baseline,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          PY
       - name: Verify Family J generic attack-control completion evidence
         shell: bash
         run: |
@@ -80,14 +102,14 @@ jobs:
           path.write_text(json.dumps(ledger,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
           PY
           node scripts/check-v1-mechanism-coverage.mjs
-      - name: Publish verified ledger and retire verifier
+      - name: Publish verified authority updates and retire verifier
         shell: bash
         run: |
           set -euo pipefail
           branch=agent/c9-gate-n-coverage-reconciliation
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/rules/v1-mechanism-coverage-ledger.json
+          git add .agents/LEGACY_EXECUTION_BASELINE.json docs/rules/v1-mechanism-coverage-ledger.json
           git rm -f --ignore-unmatch .github/workflows/c9-family-j-ledger-reconcile-r2-71304.yml .github/workflows/c9-family-j-unarmed-source-composition-71304.yml
           git commit -m "docs(c9): finalize Family J attack-control coverage"
           for attempt in 1 2 3 4 5; do
