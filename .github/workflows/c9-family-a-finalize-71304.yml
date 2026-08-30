@@ -23,6 +23,8 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - name: Generate required catalogs
+        run: npm run generate:content
       - name: Verify Family A runtime evidence
         run: |
           npx tsx --test \
