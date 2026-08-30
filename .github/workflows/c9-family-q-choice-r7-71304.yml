@@ -64,6 +64,46 @@ jobs:
           elif test_text.count(new_summary)<2:
               raise SystemExit('choice summary expectation anchors changed')
           test_path.write_text(test_text,encoding='utf-8')
+
+          adapter_path=Path('src/app/installedCommonPlayRuntimeAdapter.ts')
+          adapter_text=adapter_path.read_text(encoding='utf-8')
+          broad='interactionResponse?:{interactionId:string;accepted?:true;selectedIds?:string[]},'
+          narrow='interactionResponse?:({interactionId:string;accepted:true}|{interactionId:string;selectedIds:string[]}),'
+          if broad in adapter_text:
+              if adapter_text.count(broad)!=2:
+                  raise SystemExit(f'interaction response signature count changed: {adapter_text.count(broad)}')
+              adapter_text=adapter_text.replace(broad,narrow)
+          elif adapter_text.count(narrow)!=2:
+              raise SystemExit('interaction response signature anchors changed')
+          broad_local='let interactionResponse:{interactionId:string;accepted?:true;selectedIds?:string[]};'
+          narrow_local='let interactionResponse:{interactionId:string;accepted:true}|{interactionId:string;selectedIds:string[]};'
+          if broad_local in adapter_text:
+              adapter_text=adapter_text.replace(broad_local,narrow_local,1)
+          elif narrow_local not in adapter_text:
+              raise SystemExit('interaction response local anchor changed')
+          old_min='choiceCandidates!.length<interaction.input.selector.min'
+          new_min='choiceCandidates!.length<(interaction.input.selector.min??0)'
+          if old_min in adapter_text:
+              adapter_text=adapter_text.replace(old_min,new_min,1)
+          elif new_min not in adapter_text:
+              raise SystemExit('choice minimum anchor changed')
+          old_view='min:interaction.input.selector.min,max:interaction.input.selector.max,'
+          new_view='min:interaction.input.selector.min??0,max:interaction.input.selector.max??choiceCandidates!.length,'
+          if old_view in adapter_text:
+              adapter_text=adapter_text.replace(old_view,new_view,1)
+          elif new_view not in adapter_text:
+              raise SystemExit('choice view bounds anchor changed')
+          adapter_path.write_text(adapter_text,encoding='utf-8')
+
+          wire_path=Path('src/app/connectedSessionWire.ts')
+          wire_text=wire_path.read_text(encoding='utf-8')
+          old_wire='''  const choice=value.choice;\n  const validChoice=choice===undefined||'''
+          new_wire='''  if(!isRecord(value)) return false;\n  const choice=value.choice;\n  const validChoice=choice===undefined||'''
+          if new_wire not in wire_text:
+              if wire_text.count(old_wire)!=1:
+                  raise SystemExit(f'wire choice guard anchor changed: {wire_text.count(old_wire)}')
+              wire_text=wire_text.replace(old_wire,new_wire,1)
+          wire_path.write_text(wire_text,encoding='utf-8')
           PY
       - run: npm ci
       - run: npm run generate:content
