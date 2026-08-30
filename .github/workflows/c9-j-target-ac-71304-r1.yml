@@ -24,6 +24,8 @@ jobs:
       - run: npm ci
       - name: Apply staging patch
         run: python3 scripts/c9-j-target-ac-stage-71304.py
+      - name: Generate production catalogs
+        run: npm run generate:content
       - name: Verify Family J target AC slice
         run: |
           node --import tsx --test tests/domain/c9FamilyJTargetDcExpression71304.test.ts
