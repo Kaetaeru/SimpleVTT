@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Apply verified migration with catalog guard
+      - name: Apply verified migration with resolved builtin identity
         shell: bash
         run: |
           set -euo pipefail
@@ -32,9 +32,9 @@ jobs:
           from pathlib import Path
           path=Path('src/app/commonPlayInterceptorProductionRuntimeAdapter.ts')
           text=path.read_text()
-          old='if(entry.scope!=="builtin"||!(entry.mechanics??[]).some((mechanic)=>mechanic.kind==="common-play")||!entry.contentId||!entry.sourceId)continue;'
-          new='if(entry.scope!=="builtin"||!(entry.mechanics??[]).some((mechanic)=>mechanic.kind==="common-play")||!entry.contentId||!entry.sourceId||!entry.version)continue;'
-          if old not in text: raise SystemExit('builtin catalog guard changed')
+          old='''  const builtinEntries=new Map<string,CatalogEntry>();\n  for(const entry of internal.catalog){\n    if(entry.scope!=="builtin"||!(entry.mechanics??[]).some((mechanic)=>mechanic.kind==="common-play")||!entry.contentId||!entry.sourceId)continue;\n    builtinEntries.set(catalogQualifiedId(entry.contentId,entry.sourceId,entry.version),entry);\n  }'''
+          new='''  const builtinEntries=new Map<string,CatalogEntry>();\n  for(const entry of internal.catalog){\n    if(entry.scope!=="builtin"||!(entry.mechanics??[]).some((mechanic)=>mechanic.kind==="common-play"))continue;\n    // Composed catalog IDs are already canonical qualified identities; do not reconstruct them.\n    builtinEntries.set(entry.id,entry);\n  }'''
+          if old not in text: raise SystemExit('builtin catalog identity block changed')
           path.write_text(text.replace(old,new,1))
           PY
       - name: Verify final Family C migration slice
