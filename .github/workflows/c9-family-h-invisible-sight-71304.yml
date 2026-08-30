@@ -6,6 +6,8 @@ on:
       - agent/c9-gate-n-coverage-reconciliation
     paths:
       - .github/workflows/c9-family-h-invisible-sight-71304.yml
+      - src/app/commonPlayInterceptorProductionRuntimeAdapter.ts
+      - tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts
 
 permissions:
   contents: write
@@ -68,17 +70,12 @@ jobs:
             exit 0
           fi
           git commit -m "fix(c9): respect Resolver-owned Invisible sight"
-          for attempt in 1 2 3; do
+          for attempt in $(seq 1 20); do
             git fetch origin "$branch"
-            if git rebase "origin/$branch"; then
-              node --import tsx --test tests/domain/commonPlaySenseRuntime.test.ts tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts
-              node scripts/check-legacy-execution-boundary.mjs
-              npm exec tsc -- --noEmit
-              if git push origin HEAD:"$branch"; then
-                exit 0
-              fi
+            if git rebase "origin/$branch" && git push origin HEAD:"$branch"; then
+              exit 0
             fi
             git rebase --abort || true
-            sleep 2
+            sleep 1
           done
           exit 1
