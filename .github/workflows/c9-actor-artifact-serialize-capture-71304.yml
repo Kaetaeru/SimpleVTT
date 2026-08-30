@@ -1,0 +1,69 @@
+name: C9 Actor Artifact Serialize Capture 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-actor-artifact-serialize-capture-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npm run generate:content
+      - name: Serialize shared transport capture
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('tests/ui/connectedActorArtifactReconnectProduction.test.ts')
+          s=p.read_text()
+          marker='async function captureBatch(operation:()=>Promise<unknown>) {\n'
+          if 'let captureBatchQueue=Promise.resolve();' not in s:
+            if marker not in s:
+              raise SystemExit('captureBatch marker not found')
+            s=s.replace(marker,'let captureBatchQueue=Promise.resolve();\n\n'+marker+'  const run=captureBatchQueue.then(async()=>{\n',1)
+            tail='  return batch;\n}\n\nfunction actorProjection'
+            replacement='    return batch;\n  });\n  captureBatchQueue=run.then(()=>undefined,()=>undefined);\n  return run;\n}\n\nfunction actorProjection'
+            if tail not in s:
+              raise SystemExit('captureBatch tail not found')
+            s=s.replace(tail,replacement,1)
+          p.write_text(s)
+          PY
+      - name: Verify actor artifact connected coverage
+        run: node --import tsx --test tests/ui/connectedActorArtifactReconnectProduction.test.ts tests/ui/connectedActorArtifactLifetimeProduction.test.ts
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - name: Commit verified test isolation and retire workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch=agent/c9-gate-n-coverage-reconciliation
+          workflow=.github/workflows/c9-actor-artifact-serialize-capture-71304.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -f "$workflow"
+          git add tests/ui/connectedActorArtifactReconnectProduction.test.ts "$workflow"
+          git commit -m "test(c9): serialize connected actor artifact transport capture"
+          for attempt in $(seq 1 10); do
+            git fetch origin "$branch"
+            if ! git rebase "origin/$branch"; then
+              git rebase --abort || true
+              exit 1
+            fi
+            if git push origin HEAD:"$branch"; then exit 0; fi
+            sleep 1
+          done
+          exit 1
