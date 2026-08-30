@@ -220,6 +220,36 @@ test("rehydration preserves canonical non-manual Common Play mechanics", async (
   assert.equal(hydration.document.entries.find((entry)=>entry.mechanics?.length)?.mechanics?.[0].config.entryPoints?.[0].invocation,"triggered");
 });
 
+test("installed Common Play accepts portable temporary resource capacity before persistence", async () => {
+  const store=new MemoryInstalledContentStore();
+  const adapter=new MockAdapter();
+  setInstalledContentStoreForTests(adapter,store);
+  const raw=JSON.parse(packagePayload()) as {content:Array<Record<string,unknown>>};
+  const mechanic=portableCommonPlayMechanic() as unknown as {config:{entryPoints:Array<{operations:Array<Record<string,unknown>>}>}};
+  mechanic.config.entryPoints[0].operations=[{
+    kind:"resource.change",
+    resource:"resource.external.primary",
+    amount:{value:0},
+    maximumDelta:{value:2},
+    temporaryCapacityUntilLongRest:true,
+  }];
+  raw.content[0].mechanics=[mechanic];
+
+  const preview=await adapter.previewContentImport(JSON.stringify(raw));
+  assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
+  await adapter.activateContentImport();
+  const generation=(await store.readGenerations())[0];
+  if(!generation?.payload) throw new Error("expected installed-content generation");
+  const operation=decodeInstalledContent(generation.payload).entries.find((entry)=>entry.contentId==="option.atomic-parent")?.mechanics?.[0].config.entryPoints?.[0].operations?.[0];
+  assert.deepEqual(operation,{
+    kind:"resource.change",
+    resource:"resource.external.primary",
+    amount:{value:0},
+    maximumDelta:{value:2},
+    temporaryCapacityUntilLongRest:true,
+  });
+});
+
 test("portable Common Play resource targets are rejected before unsupported mechanics can be persisted", async () => {
   const store=new MemoryInstalledContentStore();
   const adapter=new MockAdapter();

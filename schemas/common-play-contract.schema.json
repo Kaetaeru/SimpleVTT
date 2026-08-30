@@ -1280,6 +1280,12 @@
             }
           },
           "additionalProperties": false
+        },
+        "maximumDelta": {
+          "$ref": "#/$defs/expression"
+        },
+        "temporaryCapacityUntilLongRest": {
+          "const": true
         }
       },
       "additionalProperties": false
