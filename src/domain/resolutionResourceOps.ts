@@ -13,17 +13,19 @@ export function executeGainResource(ctx: ResolutionExecutionContext, operation: 
   const actorId = operation.actorId ?? ctx.pending.actorId;
   const actor = requireCombatant(ctx.state, actorId);
   let index = actor.resources.findIndex((pool) => pool.id === operation.resourceId);
+  let created = false;
   if (index < 0) {
     if (!operation.createIfMissing) throw new Error(`resource not found: ${operation.resourceId}`);
-    const created: ResourcePool = {
+    const createdPool: ResourcePool = {
       id:operation.resourceId,
       label:operation.createIfMissing.label,
       current:0,
       maximum:0,
       recovery:operation.createIfMissing.recovery,
     };
-    actor.resources.push(created);
+    actor.resources.push(createdPool);
     index = actor.resources.length - 1;
+    created = true;
   }
   const before = actor.resources[index];
   const resolved = gainResource(before, operation.amount, ctx.pending.sourceId, {
@@ -31,7 +33,13 @@ export function executeGainResource(ctx: ResolutionExecutionContext, operation: 
     temporaryCapacityUntilLongRest:operation.temporaryCapacityUntilLongRest,
   });
   actor.resources[index] = resolved.next;
-  const changes = [resourceStateChange(actorId, operation.resourceId, before.current, resolved.next.current, resolved.provenance)];
+  const createdResource = created ? {
+    label:resolved.next.label,
+    maximum:resolved.next.maximum,
+    ...(resolved.next.recovery ? { recovery:structuredClone(resolved.next.recovery) } : {}),
+    source:ctx.pending.sourceId,
+  } : undefined;
+  const changes = [resourceStateChange(actorId, operation.resourceId, before.current, resolved.next.current, resolved.provenance, undefined, createdResource)];
   return {
     result:resolved,
     event:makeEvent(
