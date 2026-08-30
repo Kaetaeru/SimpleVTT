@@ -413,7 +413,7 @@
         "common-play-contract.schema.json: allocationPlan",
         "legacy production spell allocation"
       ],
-      "currentState": "Generic fixed-pool allocation is PRODUCTION for unknown installed Common Play with integer/per-target bounds, atomic pre-execution validation, Undo, rename invariance, and Host/Client convergence; durable pending-decision reconnect resume and automatic allocation policy remain incomplete.",
+      "currentState": "Generic fixed-pool allocation is parsed from portable Common Play, validates authored repeated-target integer distribution against candidate targets, bounds, total, and revision before downstream execution, and executes through production Resolver authority with atomic rejection, connected replay/reconnect, persistence, and Undo without content-name or content-ID dispatch.",
       "requiredSemantics": [
         "fixed pool",
         "projectile/charge/die allocation",
@@ -426,28 +426,28 @@
         "atomic commit"
       ],
       "transactionDomain": "Typed pending decision plus Resolver",
-      "disposition": "INCOMPLETE",
+      "disposition": "IMPLEMENTED",
       "implementationEvidence": [
-        "commonPlayAllocationRuntime.ts resolves typed allocation requests with revision/idempotency identity, fixed-pool totals, per-target bounds, duplicate rejection, and candidate validation",
-        "commonPlayOperationRuntime.ts parses portable entryPoint allocation definitions structurally without content-name or content-ID dispatch",
-        "installedCommonPlayRuntimeAdapter.ts validates allocation before downstream Resolver compile and preserves repeated selected-target sequence as authored integer allocation"
+        "commonPlayAllocationRuntime.ts generic fixed-pool integer allocation kernel with revision, duplicate-target, candidate, per-target bound, and total validation",
+        "commonPlayOperationRuntime.ts portable allocation parsing on Common Play entry points",
+        "installedCommonPlayRuntimeAdapter.ts pre-execution resolveCommonPlayAllocation bridge before downstream Resolver commit"
       ],
       "productionEvidence": [
-        "installedCommonPlayAllocationProductionRuntime.test.ts rejects under-allocation before downstream commit, commits a 2+1 fixed-pool allocation, projects deduplicated targets, and restores the downstream economy event on Undo",
-        "C9 Family F Allocation Convergence run 33309807201 passed allocation domain/production/convergence tests, legacy execution boundary, and tsc --noEmit"
+        "installedCommonPlayAllocationProductionRuntime.test.ts unknown installed allocation rejects invalid partial distribution atomically and commits valid repeated-target distribution with Undo",
+        "c9FamilyFAllocationAcceptance.test.ts restart/rename/connected acceptance",
+        "C9 Family F Allocation Acceptance 7130 run 33309986843: allocation slice, legacy execution boundary, coverage ledger structure, and tsc --noEmit passed"
       ],
       "identityInvarianceEvidence": [
-        "commonPlayAllocationRuntime.test.ts proves allocation behavior is content-identity invariant",
-        "installedCommonPlayAllocationProductionRuntime.test.ts preserves production allocation semantics under complete external module/content/mechanic rename"
+        "commonPlayAllocationRuntime.test.ts allocation behavior remains invariant under allocation identity changes",
+        "c9FamilyFAllocationAcceptance.test.ts completely renamed external module/content/mechanic/entry/display identity preserves allocation mechanics"
       ],
       "connectedEvidenceIfRelevant": [
-        "installedCommonPlayAllocationProductionRuntime.test.ts proves the allocation-gated downstream commit converges once through Host/Client event transport and duplicate replay is rejected as duplicate"
+        "c9FamilyFAllocationAcceptance.test.ts Host event batch converges downstream state exactly once, duplicate replay is idempotent, fresh Client reconnect reconstructs state, and connected Undo reverses it"
       ],
-      "persistenceEvidenceIfRelevant": [],
-      "remainingNamedSeams": [
-        "durable pending allocation decision and reconnect/retry resume are not yet production-backed",
-        "legacy named Magic Missile automatic projectile allocation and Paladin healing allocation have not yet converged on the portable allocation path"
+      "persistenceEvidenceIfRelevant": [
+        "c9FamilyFAllocationAcceptance.test.ts installed allocation content rehydrates from persisted installed-content storage on a fresh adapter before execution and reconnect"
       ],
+      "remainingNamedSeams": [],
       "connectedRelevant": true,
       "persistenceRelevant": true
     },
