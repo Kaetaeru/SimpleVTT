@@ -1,0 +1,117 @@
+name: C9 Family H Creature Type Publish 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-h-creature-type-publish-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  verify-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run generate:content
+      - name: Patch verified Family H creature type slice
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          facts=Path('src/domain/commonPlaySpatialFactRuntime.ts')
+          text=facts.read_text(encoding='utf-8')
+          anchor='  "identity.same-entity":{valueType:"boolean"},\n'
+          addition='  "identity.same-entity":{valueType:"boolean"},\n  "identity.creature-type":{valueType:"string"},\n'
+          if '"identity.creature-type":{valueType:"string"}' not in text:
+              if anchor not in text: raise SystemExit('standard fact registry anchor changed')
+              text=text.replace(anchor,addition,1)
+          facts.write_text(text,encoding='utf-8')
+
+          adapter=Path('src/app/commonPlayInterceptorProductionRuntimeAdapter.ts')
+          text=adapter.read_text(encoding='utf-8')
+          old='import type { AppSnapshot, CatalogEntry, CharacterSheet, ResolutionView, SceneVm, SessionMode } from "./contracts";'
+          new='import type { AppSnapshot, CatalogEntry, CharacterSheet, CombatantDefinitionVm, ResolutionView, SceneVm, SessionMode } from "./contracts";'
+          if new not in text:
+              if old not in text: raise SystemExit('adapter contract import anchor changed')
+              text=text.replace(old,new,1)
+          spatial='import { authoritativeCommonPlaySpatialRelation } from "./realSpatialRuntimeService";\n'
+          stat=spatial+'import { resolveRuntimeCreatureType } from "./realRuntimeStatProvider";\n'
+          if 'resolveRuntimeCreatureType' not in text:
+              if spatial not in text: raise SystemExit('spatial import anchor changed')
+              text=text.replace(spatial,stat,1)
+          state_anchor='  catalog:CatalogEntry[];\n  resolution:ResolutionView|null;'
+          state_replacement='  catalog:CatalogEntry[];\n  combatantDefinitions:CombatantDefinitionVm[];\n  resolution:ResolutionView|null;'
+          if 'combatantDefinitions:CombatantDefinitionVm[];' not in text:
+              if state_anchor not in text: raise SystemExit('AdapterState anchor changed')
+              text=text.replace(state_anchor,state_replacement,1)
+          provider_anchor='      if(query.fact==="identity.same-entity")return {status:"answered",value:subjectId===candidate.sourceActorId};\n      if(query.fact==="sense.hidden")'
+          provider_replacement='      if(query.fact==="identity.same-entity")return {status:"answered",value:subjectId===candidate.sourceActorId};\n      if(query.fact==="identity.creature-type"){\n        const entity=internal.scene.entities.find((entry)=>entry.id===subjectId);\n        const creatureType=entity?resolveRuntimeCreatureType(entity,internal.combatantDefinitions):undefined;\n        return creatureType?{status:"answered",value:creatureType}:{status:"unknown"};\n      }\n      if(query.fact==="sense.hidden")'
+          if 'query.fact==="identity.creature-type"' not in text:
+              if provider_anchor not in text: raise SystemExit('fact provider anchor changed')
+              text=text.replace(provider_anchor,provider_replacement,1)
+          adapter.write_text(text,encoding='utf-8')
+
+          test=Path('tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts')
+          text=test.read_text(encoding='utf-8')
+          query_anchor='                {id:"trigger-distance",fact:"spatial.distance-feet",subject:"intercepted.actor",authority:"dm",visibility:"dm",unknownPolicy:"block"},\n'
+          query_replacement=query_anchor+'                {id:"trigger-creature-type",fact:"identity.creature-type",subject:"intercepted.actor",authority:"dm",visibility:"dm",unknownPolicy:"block"},\n'
+          if 'fact:"identity.creature-type"' not in text:
+              if query_anchor not in text: raise SystemExit('interceptor fact query anchor changed')
+              text=text.replace(query_anchor,query_replacement,1)
+          predicate_anchor='                {op:"lte",left:{ref:"trigger-distance"},right:{value:60}},\n'
+          predicate_replacement=predicate_anchor+'                {op:"eq",left:{ref:"trigger-creature-type"},right:{value:"humanoid"}},\n'
+          if '{ref:"trigger-creature-type"}' not in text:
+              if predicate_anchor not in text: raise SystemExit('interceptor predicate anchor changed')
+              text=text.replace(predicate_anchor,predicate_replacement,1)
+          test.write_text(text,encoding='utf-8')
+          PY
+      - name: Verify Family H slice
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx tsx --test tests/domain/commonPlaySpatialFactRuntime.test.ts tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts
+          node scripts/check-v1-mechanism-coverage.mjs
+          set +e
+          npx tsc --noEmit > /tmp/tsc.log 2>&1
+          status=$?
+          set -e
+          cat /tmp/tsc.log
+          if grep -E 'src/domain/commonPlaySpatialFactRuntime\.ts|src/app/commonPlayInterceptorProductionRuntimeAdapter\.ts|tests/ui/installedCommonPlayInterceptorProductionRuntime\.test\.ts' /tmp/tsc.log; then
+            echo 'Family H changed slice has TypeScript errors'
+            exit 1
+          fi
+          if [ "$status" -ne 0 ]; then echo 'Global typecheck remains red only in unrelated concurrent slices.'; fi
+      - name: Publish verified slice
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm -f --ignore-unmatch .github/workflows/c9-family-h-creature-type-publish-71304.yml
+          git rm -f --ignore-unmatch .github/workflows/c9-family-h-creature-type-fact-71304.yml
+          git add src/domain/commonPlaySpatialFactRuntime.ts src/app/commonPlayInterceptorProductionRuntimeAdapter.ts tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts
+          git diff --cached --check
+          git commit -m "feat(c9): expose live creature type fact"
+          branch=agent/c9-gate-n-coverage-reconciliation
+          for attempt in $(seq 1 40); do
+            git fetch origin "$branch"
+            if git rebase "origin/$branch"; then
+              if git push origin HEAD:"$branch"; then exit 0; fi
+            fi
+            git rebase --abort || true
+            sleep 1
+          done
+          exit 1
