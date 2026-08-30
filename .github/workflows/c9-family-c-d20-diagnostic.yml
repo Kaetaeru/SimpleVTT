@@ -23,8 +23,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Regenerate builtin catalog
-        run: npm run generate:builtin-catalog
+      - name: Regenerate content
+        run: npm run generate:content
 
       - name: Focused Family C tests
         run: npx tsx --test tests/domain/commonPlayReactionRuntime.test.ts tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts
