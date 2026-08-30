@@ -1,0 +1,71 @@
+name: C9 Family J Attack Presentation Fix 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-j-attack-presentation-fix-71304.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: c9-family-j-attack-presentation-fix-71304
+  cancel-in-progress: false
+
+jobs:
+  fix-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Preserve authoritative d20 presentation for attack plus damage
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch=agent/c9-gate-n-coverage-reconciliation
+          workflow=.github/workflows/c9-family-j-attack-presentation-fix-71304.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in $(seq 1 10); do
+            git fetch origin "$branch"
+            git reset --hard "origin/$branch"
+            node <<'NODE'
+          const fs=require('node:fs');
+          const path='src/app/installedCommonPlayRuntimeAdapter.ts';
+          let source=fs.readFileSync(path,'utf8');
+          const before=`    rollKind:hp?.rollKind??(roll?(roll.family==="attack-roll"?"attack":roll.family==="saving-throw"?"save":"check"):undefined),\n    authoritativeDice:hp?.authoritativeDice??(roll?.rollState==="normal"?[roll.natural]:roll?.dice.faces),\n    rollTotal:hp?.rollTotal??roll?.total,`;
+          const after=`    rollKind:roll?(roll.family==="attack-roll"?"attack":roll.family==="saving-throw"?"save":"check"):hp?.rollKind,\n    authoritativeDice:roll?(roll.rollState==="normal"?[roll.natural]:roll.dice.faces):hp?.authoritativeDice,\n    rollTotal:roll?.total??hp?.rollTotal,`;
+          if(source.includes(before)) {
+            source=source.replace(before,after);
+            fs.writeFileSync(path,source);
+          } else if(!source.includes(after)) {
+            throw new Error('installed Common Play presentation block no longer matches expected old or fixed shape');
+          }
+          NODE
+
+            node --import tsx --test \
+              tests/ui/c9FamilyJSpatialAttackProduction.test.ts \
+              tests/ui/c9FamilyJPortableControlProduction.test.ts \
+              tests/ui/c9FamilyJAttackPersistence.test.ts \
+              tests/ui/installedCommonPlayLoweredFamiliesProduction.test.ts
+            npx tsc --noEmit
+            node scripts/check-v1-mechanism-coverage.mjs
+            node scripts/check-legacy-execution-boundary.mjs
+            rm -f "$workflow"
+            git add src/app/installedCommonPlayRuntimeAdapter.ts "$workflow"
+            if git diff --cached --quiet; then exit 0; fi
+            git commit -m "fix(c9): preserve Common Play attack roll presentation"
+            if git push origin HEAD:"$branch"; then exit 0; fi
+            sleep 1
+          done
+          exit 1
