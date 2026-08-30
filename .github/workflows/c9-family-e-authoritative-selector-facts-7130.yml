@@ -49,14 +49,6 @@ jobs:
           duplicate='    if(targeting.where?.op==="relation-matches"&&targeting.where.ref==="relation"&&selectedTargets.some((target)=>commonPlayTargetFact(actorEntity,target!).relation!==targeting.where!.value)) return undefined;\n'
           if duplicate in app:
               adapter.write_text(app.replace(duplicate,'',1),encoding='utf-8')
-
-          domain=Path('tests/domain/commonPlayTargetingRuntime.test.ts')
-          text=domain.read_text(encoding='utf-8')
-          old='    [{from:"targets",area:{kind:"instant"},min:1,max:1},/unsupported fields: area/],'
-          new='    [{from:"targets",area:{kind:"instant"},min:1,max:1},/shape is unsupported/],'
-          if old in text: text=text.replace(old,new,1)
-          elif new not in text: raise SystemExit('area rejection expectation not found')
-          domain.write_text(text,encoding='utf-8')
           PY
       - run: npm run generate:content
       - name: Verify Family E selector slice
@@ -78,7 +70,7 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/domain/commonPlayOperationRuntime.ts src/app/installedCommonPlayRuntimeAdapter.ts tests/domain/commonPlayTargetingRuntime.test.ts tests/ui/commonPlayRichSelectorProduction.test.ts
+          git add src/domain/commonPlayOperationRuntime.ts src/app/installedCommonPlayRuntimeAdapter.ts
           git diff --cached --check
           if git diff --cached --quiet; then exit 0; fi
           git commit -m "feat(c9): complete shared selector production boundary"
