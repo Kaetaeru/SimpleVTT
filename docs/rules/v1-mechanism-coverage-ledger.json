@@ -27,7 +27,7 @@
         "common-play-contract.schema.json: expression/predicate/property.modify",
         "dnd.srd-5.2.1.profile.json: properties/proficiency/rounding"
       ],
-      "currentState": "Generic property.modify lowers external modifiers to typed Effect state and the shared RulesProfile/effect resolver now serves active Characters and non-active runtime actors from authoritative property inputs without content identity dispatch. Derived profile refs, source-bound modifiers, stack/replace/unique-by-source, RulesProfile-owned profile-policy, connected replay/reconnect/Undo, and offline restart persistence are proven. Family A remains INCOMPLETE only for the ledger-listed named progression/runtime stat materialization outside the generic property owner.",
+      "currentState": "The persisted property.modify contract lowers arbitrary external modifiers to typed Effect state and generic Resolver events. Production Common Play composes RulesProfile inputs with active Effect-owned modifiers without content-name or content-ID dispatch. Non-active runtime actors now expose canonical CombatantRuntimeState.baseProperties plus movement.walk through the same generic RulesProfile/effect resolver used by active actors, and production runtime materialization supplies properties such as defense.ac to that surface. Source-bound property modifiers retain connected replay/reconnect/retry/Undo and offline restart evidence. Family A remains incomplete because named progression/runtime stat materialization beyond the canonical runtime baseProperties surface remains outside a generic property owner.",
       "requiredSemantics": [
         "literals",
         "property refs",
@@ -59,7 +59,8 @@
         "propertyModifierProfilePolicyRuntime.test.ts proves profile-policy replacement by structural source while distinct sources continue to coexist",
         "CombatantRuntimeState.baseProperties plus installedCommonPlayRuntimeAdapter.ts commonPlayActorProfileProperties expose structural non-active runtime properties through resolveRuntimeProfileProperty without content identity dispatch",
         "installedCommonPlayRuntimeAdapter.ts projects non-active CombatantRuntimeState.baseProperties through the shared resolveRuntimeProfileProperty owner",
-        "propertyModifierProfilePolicyRuntime.test.ts proves RulesProfile-owned profile-policy stacking without content identity dispatch"
+        "propertyModifierProfilePolicyRuntime.test.ts proves RulesProfile-owned profile-policy stacking without content identity dispatch",
+        "combatState.ts CombatantRuntimeState.baseProperties plus installedCommonPlayRuntimeAdapter.ts commonPlayActorProfileProperties expose non-active runtime profile inputs through the shared effect-aware property resolver"
       ],
       "productionEvidence": [
         "95f8b220a1aefc33374b033ef9ed325f53c86f97 feat(c9): lower property modifiers to typed effects",
@@ -76,7 +77,9 @@
         "759fcf04d6a449b646b4f6645688aa8ecccb6dd7 feat(c9): resolve property modifier profile policy",
         "C9 Family A Profile Policy 71304 run 33311552359: profile-policy runtime, existing property instance-policy/production regressions, tsc --noEmit, and V1 coverage checker pass",
         "b8d81fd205db55fb7cb2f6362ae4e9840f5c9a82 feat(c9): project non-active profile properties; installedCommonPlayPropertyModifierProduction.test.ts proves stored unknown Common Play reads non-active defense.ac and spends that exact movement distance",
-        "b8d81fd205db55fb7cb2f6362ae4e9840f5c9a82 feat(c9): project non-active profile properties; C9 Family A Nonactive Profile run 33311899534 passed production projection, tsc --noEmit, and coverage checker"
+        "b8d81fd205db55fb7cb2f6362ae4e9840f5c9a82 feat(c9): project non-active profile properties; C9 Family A Nonactive Profile run 33311899534 passed production projection, tsc --noEmit, and coverage checker",
+        "installedCommonPlayPropertyModifierProduction.test.ts non-active runtime actor exposes generic profile properties to stored unknown Common Play and consumes defense.ac through movement.relocate",
+        "C9 Family A Non-Active Runtime run 33312154455: existing non-active production/property-policy regressions and V1 coverage checker passed"
       ],
       "identityInvarianceEvidence": [
         "commonPlayPropertyContractRuntime.test.ts arbitrary external definition and renamed-definition structural equivalence",
