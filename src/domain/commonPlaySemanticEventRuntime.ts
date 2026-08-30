@@ -29,8 +29,7 @@ export function appendCommonPlaySemanticOutcomeTriggers(
   for(const [d20Index,d20] of pending.operations.entries()) {
     if(d20.kind!=="d20") continue;
     const subjectId=d20.actorId??pending.actorId;
-    const creatureKind=creatureKinds[subjectId];
-    if(!creatureKind) continue;
+    if(!creatureKinds[subjectId]) continue;
     for(const context of semanticContexts(d20)) {
       const when={operationId:d20.id,field:"outcome",equals:context.outcome} as const;
       for(const [definitionIndex,definition] of definitions.entries()) {
@@ -42,10 +41,16 @@ export function appendCommonPlaySemanticOutcomeTriggers(
           for(const [ruleIndex,rule] of template.rules.filter((candidate)=>candidate.event===context.event).entries()) {
             const frequency=resolveCommonPlayFrequency({ruleId:rule.id,subjectId,frequency:rule.frequency??"once",resolutionId:pending.id,clock:state.clock,markers:effect.metadata??{}});
             if(!frequency.eligible) continue;
-            for(const [operationIndex,operation] of rule.operations.entries()) operations.push({
-              id:`${pending.id}:automatic:${context.event}:${definitionIndex}:${effectIndex}:${d20Index}:${ruleIndex}:${operationIndex}`,
-              kind:"damage",targetId:subjectId,damageType:operation.damageType,amount:operation.amount.value,creatureKind,when,
-            });
+            for(const [operationIndex,operation] of rule.operations.entries()) {
+              const targetId=operation.target==="event.target"?d20.targetId:subjectId;
+              if(!targetId) continue;
+              const targetCreatureKind=creatureKinds[targetId];
+              if(!targetCreatureKind) continue;
+              operations.push({
+                id:`${pending.id}:automatic:${context.event}:${definitionIndex}:${effectIndex}:${d20Index}:${ruleIndex}:${operationIndex}`,
+                kind:"damage",targetId,damageType:operation.damageType,amount:operation.amount.value,creatureKind:targetCreatureKind,when,
+              });
+            }
             if(template.lifetime.kind==="until-duration"&&Object.keys(frequency.metadataPatch).length) operations.push({
               id:`${pending.id}:automatic:${context.event}:${definitionIndex}:${effectIndex}:${d20Index}:${ruleIndex}:frequency`,kind:"update-effect",effectId:effect.id,metadataPatch:frequency.metadataPatch,when,
             });

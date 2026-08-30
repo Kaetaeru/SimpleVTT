@@ -14,7 +14,7 @@ import type { ActionUseKind } from "./turnEconomy";
 
 type LiteralNumberExpression={value:number};
 type EffectTarget="actor";
-type EventDamageTarget="event.actor";
+type EventDamageTarget="event.actor"|"event.target";
 type AutomaticDamageEvent="damage.taken"|"damage.dealt";
 export type CommonPlayAutomaticEffectEvent=AutomaticDamageEvent|"attack.hit"|"attack.miss"|"save.success"|"save.failure";
 type AutomaticDamageFrequency=Exclude<CommonPlayFrequency,"unlimited">;
@@ -152,8 +152,11 @@ function validateRule(rule:CommonPlayAutomaticDamageRule,templateId:string,ruleI
     const amount=literalNumber(operation.amount,`${operationLabel} amount`);
     if (!Number.isInteger(amount)||amount<0) throw new Error(`${operationLabel} amount must be a non-negative integer`);
     if (!operation.damageType) throw new Error(`${operationLabel} damageType is required`);
-    if (operation.target!=="event.actor") {
-      throw new Error(`${operationLabel} target must be event.actor in this runtime slice`);
+    if (operation.target!=="event.actor"&&operation.target!=="event.target") {
+      throw new Error(`${operationLabel} target must be event.actor or event.target in this runtime slice`);
+    }
+    if ((rule.event==="damage.taken"||rule.event==="damage.dealt")&&operation.target==="event.target") {
+      throw new Error(`${operationLabel} target must be event.actor for damage.taken/damage.dealt in this runtime slice`);
     }
   });
 }
