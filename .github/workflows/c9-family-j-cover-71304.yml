@@ -24,6 +24,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm run generate:content
       - name: Add generic attack cover semantic and regression
         run: |
           python3 - <<'PY'
