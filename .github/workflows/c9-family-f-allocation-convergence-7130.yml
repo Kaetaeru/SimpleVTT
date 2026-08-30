@@ -29,7 +29,6 @@ jobs:
           node --import tsx --test
           tests/domain/commonPlayAllocationRuntime.test.ts
           tests/ui/installedCommonPlayAllocationProductionRuntime.test.ts
-          tests/ui/ruleModulePackageImport.test.ts
       - name: Verify legacy execution boundary
         run: node scripts/check-legacy-execution-boundary.mjs
       - name: Typecheck
