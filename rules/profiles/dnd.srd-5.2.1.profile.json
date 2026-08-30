@@ -41,7 +41,11 @@
     "movement.walk": {"type": "integer", "storage": "derived", "minimum": 0},
     "hp.current": {"type": "integer", "storage": "stored", "minimum": 0},
     "hp.maximum": {"type": "integer", "storage": "derived", "minimum": 0},
-    "hp.temporary": {"type": "integer", "storage": "stored", "minimum": 0}
+    "hp.temporary": {"type": "integer", "storage": "stored", "minimum": 0},
+    "sense.darkvision.range-feet": {"type": "integer", "storage": "stored", "minimum": 0},
+    "sense.blindsight.range-feet": {"type": "integer", "storage": "stored", "minimum": 0},
+    "sense.tremorsense.range-feet": {"type": "integer", "storage": "stored", "minimum": 0},
+    "sense.truesight.range-feet": {"type": "integer", "storage": "stored", "minimum": 0}
   },
   "proficiency": {
     "characterLevelThresholds": [
