@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   beginCommonPlaySimultaneousOrdering,
+  collectCommonPlaySimultaneousOrderingWindows,
   orderCommonPlaySimultaneousCandidates,
   respondToCommonPlaySimultaneousOrdering,
 } from "../../src/domain/commonPlaySimultaneousOrderingRuntime";
@@ -26,6 +27,33 @@ test("zero and one simultaneous candidate resolve deterministically without a de
   if(single.status!=="resolved") return;
   assert.deepEqual(single.orderedCandidateIds,["effect.only"]);
   assert.equal(single.resolvedBy,"automatic");
+});
+
+test("timing candidates are collected into one typed decision per mechanical window",()=>{
+  const windows=collectCommonPlaySimultaneousOrderingWindows([
+    {decisionId:"resolution.7:turn.start",revision:12,timing:"turn.start",authority:{kind:"actor-controller",responderId:"char.controller"},candidateId:"effect.alpha:rule.tick"},
+    {decisionId:"resolution.7:turn.start",revision:12,timing:"turn.start",authority:{kind:"actor-controller",responderId:"char.controller"},candidateId:"effect.beta:rule.tick"},
+    {decisionId:"resolution.7:turn.end",revision:12,timing:"turn.end",authority:{kind:"actor-controller",responderId:"char.controller"},candidateId:"effect.gamma:rule.end"},
+  ]);
+  assert.equal(windows.length,2);
+  assert.equal(windows[0].status,"pending");
+  assert.deepEqual(windows[0].request.candidates.map((candidate)=>candidate.id),[
+    "effect.alpha:rule.tick","effect.beta:rule.tick",
+  ]);
+  assert.equal(windows[1].status,"resolved");
+  if(windows[1].status==="resolved") assert.deepEqual(windows[1].orderedCandidateIds,["effect.gamma:rule.end"]);
+});
+
+test("one timing window cannot silently mix authority, timing, or revision",()=>{
+  const base={decisionId:"resolution.7:turn.start",revision:12,timing:"turn.start",authority:{kind:"actor-controller" as const,responderId:"char.controller"}};
+  assert.throws(()=>collectCommonPlaySimultaneousOrderingWindows([
+    {...base,candidateId:"effect.alpha"},
+    {...base,revision:13,candidateId:"effect.beta"},
+  ]),/conflicting authority, timing, or revision/);
+  assert.throws(()=>collectCommonPlaySimultaneousOrderingWindows([
+    {...base,candidateId:"effect.alpha"},
+    {...base,authority:{kind:"dm" as const,responderId:"dm"},candidateId:"effect.beta"},
+  ]),/conflicting authority, timing, or revision/);
 });
 
 test("multiple simultaneous candidates stay pending until the declared authority orders them",()=>{
