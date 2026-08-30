@@ -1,5 +1,6 @@
 name: C9 Family X Item Payment Persistence 71304
 
+# Trigger after initial workflow registration.
 on:
   push:
     branches:
