@@ -42,57 +42,65 @@ jobs:
 
           provider_marker = 'export function registerAuthoritativeCommonPlayAreaMembershipProvider'
           cp_anchor = 'const cp=<T,>(value:T):T=>structuredClone(value);\n'
-          provider_block = '''const cp=<T,>(value:T):T=>structuredClone(value);
-
-export interface AuthoritativeCommonPlayAreaMembershipProvider {
-  areaMember(input:{sourceId:string;targetId:string;area:CommonPlayInstantArea}):boolean|undefined;
-}
-
-const commonPlayAreaMembershipProviders=new WeakMap<MockAdapter,AuthoritativeCommonPlayAreaMembershipProvider>();
-
-export function registerAuthoritativeCommonPlayAreaMembershipProvider(
-  adapter:MockAdapter,
-  provider:AuthoritativeCommonPlayAreaMembershipProvider,
-) {
-  commonPlayAreaMembershipProviders.set(adapter,provider);
-}
-
-export function unregisterAuthoritativeCommonPlayAreaMembershipProvider(adapter:MockAdapter) {
-  commonPlayAreaMembershipProviders.delete(adapter);
-}
-'''
+          provider_block = '\n'.join([
+              'const cp=<T,>(value:T):T=>structuredClone(value);',
+              '',
+              'export interface AuthoritativeCommonPlayAreaMembershipProvider {',
+              '  areaMember(input:{sourceId:string;targetId:string;area:CommonPlayInstantArea}):boolean|undefined;',
+              '}',
+              '',
+              'const commonPlayAreaMembershipProviders=new WeakMap<MockAdapter,AuthoritativeCommonPlayAreaMembershipProvider>();',
+              '',
+              'export function registerAuthoritativeCommonPlayAreaMembershipProvider(',
+              '  adapter:MockAdapter,',
+              '  provider:AuthoritativeCommonPlayAreaMembershipProvider,',
+              ') {',
+              '  commonPlayAreaMembershipProviders.set(adapter,provider);',
+              '}',
+              '',
+              'export function unregisterAuthoritativeCommonPlayAreaMembershipProvider(adapter:MockAdapter) {',
+              '  commonPlayAreaMembershipProviders.delete(adapter);',
+              '}',
+              '',
+          ]) + '\n'
           if provider_marker not in text:
               if cp_anchor not in text:
                   raise SystemExit('provider insertion anchor changed')
               text = text.replace(cp_anchor, provider_block, 1)
 
           old_signature = 'function commonPlaySelectorCandidate(scene:SceneVm,actor:SceneVm["entities"][number],target:SceneVm["entities"][number]):CommonPlaySelectorCandidate {'
-          new_signature = '''function commonPlaySelectorCandidate(
-  adapter:MockAdapter,
-  scene:SceneVm,
-  actor:SceneVm["entities"][number],
-  target:SceneVm["entities"][number],
-  area?:CommonPlayInstantArea,
-):CommonPlaySelectorCandidate {'''
+          new_signature = '\n'.join([
+              'function commonPlaySelectorCandidate(',
+              '  adapter:MockAdapter,',
+              '  scene:SceneVm,',
+              '  actor:SceneVm["entities"][number],',
+              '  target:SceneVm["entities"][number],',
+              '  area?:CommonPlayInstantArea,',
+              '):CommonPlaySelectorCandidate {',
+          ])
           if old_signature in text:
               text = text.replace(old_signature, new_signature, 1)
           elif new_signature not in text:
               raise SystemExit('candidate signature anchor changed')
 
-          old_return = '''  }:baseTargeting;
-  return {
-    id:target.id,
-    targeting,
-    properties:{'''
-          new_return = '''  }:baseTargeting;
-  const areaMember=area?.origin==="self"
-    ? commonPlayAreaMembershipProviders.get(adapter)?.areaMember({sourceId:actor.id,targetId:target.id,area:structuredClone(area)})
-    : undefined;
-  return {
-    id:target.id,
-    targeting,
-    ...(area?{areaMember}:{}),
-    properties:{'''
+          old_return = '\n'.join([
+              '  }:baseTargeting;',
+              '  return {',
+              '    id:target.id,',
+              '    targeting,',
+              '    properties:{',
+          ])
+          new_return = '\n'.join([
+              '  }:baseTargeting;',
+              '  const areaMember=area?.origin==="self"',
+              '    ? commonPlayAreaMembershipProviders.get(adapter)?.areaMember({sourceId:actor.id,targetId:target.id,area:structuredClone(area)})',
+              '    : undefined;',
+              '  return {',
+              '    id:target.id,',
+              '    targeting,',
+              '    ...(area?{areaMember}:{}),',
+              '    properties:{',
+          ])
           if old_return in text:
               text = text.replace(old_return, new_return, 1)
           elif new_return not in text:
@@ -120,36 +128,38 @@ export function unregisterAuthoritativeCommonPlayAreaMembershipProvider(adapter:
           if test_name not in test_text:
               if 'unknown installed area selector imports but refuses execution without provider-backed membership' not in test_text:
                   raise SystemExit('area fail-closed regression anchor missing')
-              test_text = test_text.rstrip() + '''
-
-
-test("unknown installed self-origin area selector consumes provider-backed membership and remains identity invariant",async()=>{
-  async function run(identity:Identity) {
-    const adapter=new MockAdapter();
-    const actionId=await install(adapter,identity,true);
-    registerAuthoritativeCommonPlayAreaMembershipProvider(adapter,{
-      areaMember:({sourceId,targetId,area})=>{
-        assert.equal(sourceId,"char.aelar");
-        assert.equal(area.origin,"self");
-        assert.equal(area.shape,"cone");
-        return targetId==="combatant.goblin-a";
-      },
-    });
-    await adapter.startInitiative();
-    await adapter.setCurrentActor("char.aelar");
-    await adapter.resolveAction(actionId,["combatant.goblin-b"]);
-    let snapshot=await adapter.getSnapshot();
-    assert.equal(snapshot.resolution?.actionId,actionId);
-    assert.equal(snapshot.resolution?.finalOutcome,"적용 거부");
-    await adapter.resolveAction(actionId,["combatant.goblin-a"]);
-    snapshot=await adapter.getSnapshot();
-    assert.equal(snapshot.resolution?.stage,"complete");
-    assert.deepEqual(snapshot.resolution?.targetIds,["combatant.goblin-a"]);
-    return snapshot.resolution?.targetIds;
-  }
-  assert.deepEqual(await run(RENAMED),await run(ORIGINAL));
-});
-'''
+              new_test = '\n'.join([
+                  '',
+                  '',
+                  'test("unknown installed self-origin area selector consumes provider-backed membership and remains identity invariant",async()=>{',
+                  '  async function run(identity:Identity) {',
+                  '    const adapter=new MockAdapter();',
+                  '    const actionId=await install(adapter,identity,true);',
+                  '    registerAuthoritativeCommonPlayAreaMembershipProvider(adapter,{',
+                  '      areaMember:({sourceId,targetId,area})=>{',
+                  '        assert.equal(sourceId,"char.aelar");',
+                  '        assert.equal(area.origin,"self");',
+                  '        assert.equal(area.shape,"cone");',
+                  '        return targetId==="combatant.goblin-a";',
+                  '      },',
+                  '    });',
+                  '    await adapter.startInitiative();',
+                  '    await adapter.setCurrentActor("char.aelar");',
+                  '    await adapter.resolveAction(actionId,["combatant.goblin-b"]);',
+                  '    let snapshot=await adapter.getSnapshot();',
+                  '    assert.equal(snapshot.resolution?.actionId,actionId);',
+                  '    assert.equal(snapshot.resolution?.finalOutcome,"적용 거부");',
+                  '    await adapter.resolveAction(actionId,["combatant.goblin-a"]);',
+                  '    snapshot=await adapter.getSnapshot();',
+                  '    assert.equal(snapshot.resolution?.stage,"complete");',
+                  '    assert.deepEqual(snapshot.resolution?.targetIds,["combatant.goblin-a"]);',
+                  '    return snapshot.resolution?.targetIds;',
+                  '  }',
+                  '  assert.deepEqual(await run(RENAMED),await run(ORIGINAL));',
+                  '});',
+                  '',
+              ])
+              test_text = test_text.rstrip() + new_test
           test_file.write_text(test_text, encoding='utf-8')
           PY
       - name: Generate content dependencies
