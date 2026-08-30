@@ -1,0 +1,43 @@
+name: C9 Family L Max HP Repair 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-l-max-hp-repair-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - name: Add generated content step and retire repair workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          path=Path('.github/workflows/c9-family-l-max-hp-source-71304.yml')
+          text=path.read_text()
+          anchor='''      - name: Verify Family L max HP slice\n        shell: bash\n        run: |\n          npx tsx --test'''
+          replacement='''      - name: Verify Family L max HP slice\n        shell: bash\n        run: |\n          npm run generate:content\n          npx tsx --test'''
+          if replacement not in text:
+              if anchor not in text:
+                  raise SystemExit('max HP verify anchor not found')
+              path.write_text(text.replace(anchor,replacement,1))
+          PY
+          rm .github/workflows/c9-family-l-max-hp-repair-71304.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "ci(c9): generate content before max HP verification"
+          git fetch origin agent/c9-gate-n-coverage-reconciliation
+          git rebase origin/agent/c9-gate-n-coverage-reconciliation
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
