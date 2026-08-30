@@ -63,3 +63,5 @@ jobs:
           git rm .github/c9-family-c-d20-migrate.py .github/c9-family-c-save-guard.py
           git commit -m "ci(c9): remove structural d20 migration helpers"
           git push
+
+# This workflow commits product changes only after focused tests, typecheck, and build pass.
