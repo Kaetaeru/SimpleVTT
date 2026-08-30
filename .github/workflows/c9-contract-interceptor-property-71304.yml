@@ -1,5 +1,4 @@
 name: C9 Interceptor Property Contract 71304
-# Retry after registering the one-shot workflow on the target branch.
 
 on:
   push:
@@ -7,6 +6,7 @@ on:
       - agent/c9-gate-n-coverage-reconciliation
     paths:
       - .github/workflows/c9-contract-interceptor-property-71304.yml
+      - .github/scripts/c9-contract-interceptor-property-71304.py
   workflow_dispatch:
 
 permissions:
@@ -45,87 +45,15 @@ jobs:
           for attempt in $(seq 1 8); do
             git fetch origin "$branch"
             git reset --hard "origin/$branch"
-            python3 - <<'PY'
-          from pathlib import Path
-          path=Path('schemas/common-play-contract.schema.json')
-          text=path.read_text(encoding='utf-8')
-          definition='''    "interceptorPropertyModify": {
-              "type": "object",
-              "required": [
-                "kind",
-                "property",
-                "operation",
-                "value"
-              ],
-              "properties": {
-                "kind": {
-                  "const": "property.modify"
-                },
-                "property": {
-                  "type": "string",
-                  "minLength": 1
-                },
-                "operation": {
-                  "enum": [
-                    "add",
-                    "subtract",
-                    "set",
-                    "min",
-                    "max",
-                    "multiply"
-                  ]
-                },
-                "value": {
-                  "$ref": "#/$defs/expression"
-                }
-              },
-              "additionalProperties": false
-            },
-'''
-          if '"interceptorPropertyModify"' not in text:
-              anchor='    "rollModify": {\n'
-              if text.count(anchor)!=1:
-                  raise SystemExit(f'rollModify anchor count: {text.count(anchor)}')
-              text=text.replace(anchor,definition+anchor,1)
-          marker='    "interceptor": {'
-          start=text.index(marker)
-          tail=text[start:]
-          old='''        "operations": {
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/operation"
-              }
-            }
-'''
-          new='''        "operations": {
-              "type": "array",
-              "items": {
-                "oneOf": [
-                  {
-                    "$ref": "#/$defs/interceptorPropertyModify"
-                  },
-                  {
-                    "$ref": "#/$defs/operation"
-                  }
-                ]
-              }
-            }
-'''
-          if '#/$defs/interceptorPropertyModify' not in tail:
-              if tail.count(old)!=1:
-                  raise SystemExit(f'interceptor operations anchor count: {tail.count(old)}')
-              tail=tail.replace(old,new,1)
-              text=text[:start]+tail
-          path.write_text(text,encoding='utf-8')
-          PY
+            python3 .github/scripts/c9-contract-interceptor-property-71304.py
             npm run generate:content >/dev/null
             python tools/validate_contracts.py
             node --import tsx --test tests/domain/commonPlayReactionDefinitionRuntime.test.ts
             node scripts/check-v1-mechanism-coverage.mjs
             node scripts/check-legacy-execution-boundary.mjs
             npm exec tsc -- --noEmit
-            git rm .github/workflows/c9-contract-interceptor-property-71304.yml
-            git add schemas/common-play-contract.schema.json .github/workflows/c9-contract-interceptor-property-71304.yml
+            git rm .github/workflows/c9-contract-interceptor-property-71304.yml .github/scripts/c9-contract-interceptor-property-71304.py
+            git add schemas/common-play-contract.schema.json .github/workflows/c9-contract-interceptor-property-71304.yml .github/scripts/c9-contract-interceptor-property-71304.py
             git diff --cached --check
             if git diff --cached --quiet; then
               exit 0
