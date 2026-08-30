@@ -889,7 +889,7 @@
         "conditions.ts",
         "phase05Lifecycle.test.ts"
       ],
-      "currentState": "Condition kernel exists; exhaustive semantics/production/public UI audit incomplete",
+      "currentState": "The shared Resolver condition Effect path enforces explicit combatant condition immunities, active tagged condition-immunity Effects, and rules-derived condition immunities before adding a condition Effect. Unknown installed Common Play condition.apply/remove now has production and full external identity-rename proof for explicit Poisoned immunity, Petrified-derived Poisoned immunity, successful application after immunity removal, and Undo. Exhaustive SRD condition semantics, Exhaustion levels/stacking, connected replay/reconnect persistence, and remaining named condition-specific adapters remain incomplete.",
       "requiredSemantics": [
         "Blinded",
         "Charmed",
@@ -911,13 +911,23 @@
       ],
       "transactionDomain": "Resolver effect/condition state",
       "disposition": "INCOMPLETE",
-      "implementationEvidence": [],
-      "productionEvidence": [],
-      "identityInvarianceEvidence": [],
+      "implementationEvidence": [
+        "resolutionEffectOps.ts executeApplyEffect enforces CombatantRuntimeState.conditionImmunities, active condition-immunity Effect tags, and conditions.ts rules-derived conditionImmunities(conditionEffectsFor(...)) before generic condition Effect insertion",
+        "commonPlayOperationRuntime.ts lowers portable condition.apply/remove structurally to the shared Resolver apply-effect/remove-effect operations without content name or ID dispatch"
+      ],
+      "productionEvidence": [
+        "67d7ce36dcbda0171b48a08bd9e139476bdc6245 test(c9): prove portable condition immunity; C9 Family M Condition Immunity 71304 run 33312483520 passed the unknown/renamed production proof, legacy execution boundary, coverage checker, and tsc --noEmit",
+        "c9FamilyMConditionImmunityProduction.test.ts proves explicit Poisoned immunity, Petrified-derived Poisoned immunity, condition removal, successful application after immunity clears, and event-native Undo through installed Common Play production actions"
+      ],
+      "identityInvarianceEvidence": [
+        "c9FamilyMConditionImmunityProduction.test.ts repeats the same immunity/apply/remove/Undo behavior under unrelated external module, content, and mechanic identities"
+      ],
       "connectedEvidenceIfRelevant": [],
       "persistenceEvidenceIfRelevant": [],
       "remainingNamedSeams": [
-        "named condition application adapters"
+        "exhaustive production acceptance for all SRD condition semantics and Exhaustion stacking/levels remains incomplete",
+        "connected replay/reconnect persistence evidence for portable condition apply/remove/immunity remains incomplete",
+        "named condition-specific adapters remain migration debt where they bypass portable Common Play/Resolver"
       ],
       "connectedRelevant": true,
       "persistenceRelevant": true
