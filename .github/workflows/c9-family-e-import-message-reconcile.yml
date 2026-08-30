@@ -50,6 +50,12 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add tests/ui/ruleModulePackageImport.test.ts .github/workflows/c9-family-e-import-message-reconcile.yml
           git commit -m "test(c9): align portable interaction validation assertion"
-          git fetch origin agent/c9-gate-n-coverage-reconciliation
-          git rebase origin/agent/c9-gate-n-coverage-reconciliation
-          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
+          for attempt in 1 2 3 4 5; do
+            git fetch origin agent/c9-gate-n-coverage-reconciliation
+            git rebase origin/agent/c9-gate-n-coverage-reconciliation
+            if git push origin HEAD:agent/c9-gate-n-coverage-reconciliation; then
+              exit 0
+            fi
+            sleep 1
+          done
+          exit 1
