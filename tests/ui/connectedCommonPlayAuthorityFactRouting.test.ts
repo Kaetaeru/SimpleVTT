@@ -38,12 +38,12 @@ function manifest(characterId:string):SessionCompatibilityManifest {
   };
 }
 
-async function authorityRequest(queryId:string,expectedRevision=7) {
+async function authorityRequest(queryId:string,expectedRevision=7,fact="sense.can-see") {
   const resolution=await resolveCommonPlayFactQuery({
     registry:COMMON_PLAY_STANDARD_FACTS,
     query:{
       id:queryId,
-      fact:"sense.can-see",
+      fact,
       subject:ownerId,
       authority:"target-owner",
       visibility:"authority-only",
@@ -234,4 +234,65 @@ test("connected Common Play authority fact rejects stale answers and only resume
   const afterResolved=targeted.length;
   await resumeConnectedCommonPlayAuthorityFactRequestsForCharacter(host,ownerId);
   assert.equal(targeted.length,afterResolved,"resolved request must not revive after a later rebind");
+});
+
+test("spatial area-members authority survives owner reconnect and replay without duplicate resolution",async()=>{
+  const targeted:Array<{peer:string;message:ConnectedWireMessage}>=[];
+  const clientOutbound:ConnectedWireMessage[]=[];
+  registerConnectedCommonPlayAuthorityFactTransport({
+    sendTo:async(peer,message)=>{targeted.push({peer,message});},
+    send:async(message)=>{clientOutbound.push(message);},
+  });
+  const host=hostAdapter();
+  const client=clientAdapter();
+  const state=connectedStateFor(host);
+  const request=await authorityRequest("query.spatial-area",13,"spatial.area-members");
+  const resolutions:CommonPlayFactResolution[]=[];
+  await requestConnectedCommonPlayAuthorityFact(host,{
+    request,
+    responderId:ownerId,
+    currentRevision:()=>13,
+    onResolution:(resolution)=>{resolutions.push(resolution);},
+  });
+  const firstPrompt=targeted.at(-1)?.message;
+  assert.equal(firstPrompt?.type,"common-play-fact-request");
+  if(firstPrompt?.type!=="common-play-fact-request")throw new Error("expected spatial authority request");
+  assert.equal(firstPrompt.request.fact,"spatial.area-members");
+  assert.equal(firstPrompt.request.inputType,"targets");
+  const applied=await applyConnectedCommonPlayAuthorityFactRequest(client,firstPrompt,ownerId);
+  assert.equal(applied.status,"applied");
+  const submitted=await submitConnectedCommonPlayAuthorityFactResponse(client,request.id,["combatant.goblin-b","combatant.goblin-a","combatant.goblin-b"]);
+  assert.equal(submitted.status,"sent");
+  assert.equal(clientOutbound.length,1);
+
+  state.peerManifests.delete(ownerPeer);
+  state.peerManifests.set("peer.owner.spatial-rebound",manifest(ownerId));
+  const sendsBeforeResume=targeted.length;
+  const resumed=await resumeConnectedCommonPlayAuthorityFactRequestsForCharacter(host,ownerId);
+  assert.equal(resumed.status,"resent");
+  assert.equal(targeted.length,sendsBeforeResume+1);
+  assert.equal(targeted.at(-1)?.peer,"peer.owner.spatial-rebound");
+  const replayPrompt=targeted.at(-1)?.message;
+  assert.equal(replayPrompt?.type,"common-play-fact-request");
+  if(replayPrompt?.type!=="common-play-fact-request")throw new Error("expected replayed spatial authority request");
+  const replayed=await applyConnectedCommonPlayAuthorityFactRequest(client,replayPrompt,ownerId);
+  assert.equal(replayed.status,"replayed-response");
+  assert.equal(clientOutbound.length,2,"answered Client must replay the same authoritative response after reconnect");
+  const responseWire=clientOutbound.at(-1)!;
+  assert.equal(responseWire.type,"common-play-fact-response");
+  if(responseWire.type!=="common-play-fact-response")throw new Error("expected replayed spatial authority response");
+  const resolved=await routeConnectedCommonPlayAuthorityFactResponse(host,transportMessage("peer.owner.spatial-rebound",responseWire),responseWire);
+  assert.equal(resolved.status,"resolved");
+  assert.equal(resolutions.length,1);
+  assert.equal(resolutions[0].status,"resolved");
+  if(resolutions[0].status!=="resolved")throw new Error("expected resolved spatial fact");
+  assert.deepEqual(resolutions[0].answer.value,["combatant.goblin-a","combatant.goblin-b"],"Host must normalize target membership on replay");
+  assert.deepEqual(resolutions[0].answer.provenance,{kind:"authority",responderId:ownerId});
+
+  const duplicate=await routeConnectedCommonPlayAuthorityFactResponse(host,transportMessage("peer.owner.spatial-rebound",responseWire),responseWire);
+  assert.equal(duplicate.status,"duplicate");
+  assert.equal(resolutions.length,1,"replayed response must resolve exactly once");
+  const sendsAfterResolution=targeted.length;
+  await resumeConnectedCommonPlayAuthorityFactRequestsForCharacter(host,ownerId);
+  assert.equal(targeted.length,sendsAfterResolution,"resolved spatial request must not revive after reconnect");
 });
