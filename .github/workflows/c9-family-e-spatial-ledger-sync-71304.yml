@@ -30,7 +30,7 @@ jobs:
 
           path=Path("docs/rules/v1-mechanism-coverage-ledger.json")
           data=json.loads(path.read_text())
-          family=next((entry for entry in data["families"] if entry.get("family")=="E"),None)
+          family=next((entry for entry in data["rows"] if entry.get("family")=="E"),None)
           if not family or family.get("id")!="targeting-selectors":
               raise SystemExit("Family E targeting-selectors ledger entry not found")
           if family.get("disposition")!="INCOMPLETE":
