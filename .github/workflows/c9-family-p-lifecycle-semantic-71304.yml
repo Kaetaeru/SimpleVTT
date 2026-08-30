@@ -1,0 +1,29 @@
+name: C9 Family P Lifecycle Semantics 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-p-lifecycle-semantic-71304.yml
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Verify Family P lifecycle semantics
+        run: npx tsx --test tests/domain/commonPlaySemanticEventRuntime.test.ts tests/domain/commonPlayEffectRuntime.test.ts
+      - name: Verify coverage ledger contract
+        run: node scripts/check-v1-mechanism-coverage.mjs
+      - name: Verify legacy execution boundary
+        run: node scripts/check-legacy-execution-boundary.mjs
+      - name: Typecheck
+        run: npx tsc --noEmit -p tsconfig.app.json
