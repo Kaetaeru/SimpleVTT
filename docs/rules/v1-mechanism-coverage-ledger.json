@@ -931,7 +931,7 @@
         "commonPlayEffectRuntime.ts",
         "commonPlayZoneRuntime.ts"
       ],
-      "currentState": "Installed damage.taken|damage.dealt effect rules, actor-owned turn-start/end resource rules, Zone enter/leave/stay/start/end-turn rules, recurring once-per-turn/round frequency, canonical interactive interceptor timing points, and authoritative single-target Common Play attack.hit|attack.miss|save.success|save.failure outcome events have production evidence. State/rest/expiry/recharge, multi-target save-damage semantic outcomes, and automatic semantic-event dispatcher composition remain incomplete",
+      "currentState": "Installed damage.taken|damage.dealt effect rules, actor-owned turn-start/end resource rules, Zone enter/leave/stay/start/end-turn rules, recurring once-per-turn/round frequency, canonical interactive interceptor timing points, and authoritative single-target Common Play attack.hit|attack.miss|save.success|save.failure outcome events have production evidence. State/rest/expiry/recharge and automatic semantic-event dispatcher composition remain incomplete; multi-target save-damage semantic outcomes now have production and rename-invariance evidence",
       "requiredSemantics": [
         "before/after roll/outcome",
         "hit/miss",
@@ -963,7 +963,8 @@
         "connectedTurnResolutionEventTransport.test.ts automatic Zone turn-start/end transaction",
         "connectedActorTurnRuleProduction.test.ts actor-owned turn-start/end resource rules",
         "installedCommonPlayInterceptorProductionRuntime.test.ts d20.outcome-determined and damage.rolled interactive production",
-        "installedCommonPlaySemanticOutcomeProduction.test.ts unknown installed attack/save semantic outcome events"
+        "installedCommonPlaySemanticOutcomeProduction.test.ts unknown installed attack/save semantic outcome events",
+        "installedCommonPlayLoweredFamiliesProduction.test.ts unknown external multi-target save emits per-target save.success/save.failure semantic history through the production adapter"
       ],
       "identityInvarianceEvidence": [
         "commonPlayEffectRuntime.test.ts renamed external definitions",
@@ -973,7 +974,8 @@
         "connectedTurnResolutionEventTransport.test.ts arbitrary installed Zone identity",
         "connectedActorTurnRuleProduction.test.ts arbitrary installed actor-rule identities",
         "installedCommonPlayInterceptorProductionRuntime.test.ts module/content/definition/interceptor/display rename",
-        "installedCommonPlaySemanticOutcomeProduction.test.ts module/content/mechanic rename invariance"
+        "installedCommonPlaySemanticOutcomeProduction.test.ts module/content/mechanic rename invariance",
+        "installedCommonPlayLoweredFamiliesProduction.test.ts renamed external module/content/mechanic preserves multi-target semantic save outcomes"
       ],
       "connectedEvidenceIfRelevant": [
         "installedCommonPlayLoweredFamiliesProduction.test.ts automatic effect and Zone membership Host/Client replay plus Undo",

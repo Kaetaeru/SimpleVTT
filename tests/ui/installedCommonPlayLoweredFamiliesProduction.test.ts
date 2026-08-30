@@ -129,13 +129,16 @@ async function run(prefix:string) {
   const hpBefore=before.scene.entities.filter((entity)=>entity.id.startsWith("combatant.goblin")).map((entity)=>entity.hp);
   await adapter.resolveAction(action(0,"release"),["combatant.goblin-a","combatant.goblin-b"]);
   const afterSave=await adapter.getSnapshot();
+  const saveOutcomes=snapshotAdapterTurnRuntimeState(adapter,afterSave.scene)!.history
+    .filter((entry)=>entry.kind==="save.failure"||entry.kind==="save.success")
+    .map((entry)=>({kind:entry.kind,actorId:entry.actorId}));
   const hpAfter=afterSave.scene.entities.filter((entity)=>entity.id.startsWith("combatant.goblin")).map((entity)=>entity.hp);
   await adapter.resolveAction(action(1,"activate"),["char.aelar"]);
   await adapter.resolveAction(action(2,"create-zone"),["char.aelar"]);
   await adapter.resolveAction(action(3,"create-artifacts"),["char.aelar"]);
   const afterAll=await adapter.getSnapshot();
   const runtime=snapshotAdapterTurnRuntimeState(adapter,afterAll.scene)!;
-  return {adapter,hpDelta:hpBefore.map((hp,index)=>hp-hpAfter[index]),saveResolution:afterSave.resolution,effects:runtime.effects.length,artifactKinds:(runtime.artifacts??[]).map((artifact)=>artifact.artifactKind),summon:afterAll.scene.entities.find((entity)=>entity.id===`${prefix}.summoned`)};
+  return {adapter,hpDelta:hpBefore.map((hp,index)=>hp-hpAfter[index]),saveResolution:afterSave.resolution,saveOutcomes,effects:runtime.effects.length,artifactKinds:(runtime.artifacts??[]).map((artifact)=>artifact.artifactKind),summon:afterAll.scene.entities.find((entity)=>entity.id===`${prefix}.summoned`)};
 }
 
 async function install(adapter:MockAdapter,prefix:string,paidIndex?:number) {
@@ -157,6 +160,9 @@ async function install(adapter:MockAdapter,prefix:string,paidIndex?:number) {
 test("unknown multi-category Common Play save, effect, and zone lower through one production action route",async()=>{
   const result=await run("unknown-gate-n");
   assert.deepEqual(result.hpDelta,[12,21],JSON.stringify(result.saveResolution));
+  assert.deepEqual(result.saveOutcomes.map((entry)=>entry.actorId).sort(),["combatant.goblin-a","combatant.goblin-b"]);
+  assert.equal(result.saveOutcomes.length,2);
+  assert.ok(result.saveOutcomes.every((entry)=>entry.kind==="save.failure"||entry.kind==="save.success"));
   assert.equal(result.effects,1);
   assert.deepEqual(result.artifactKinds,["zone","actor","object","form","link"]);
   assert.equal(result.summon?.name,"Unknown Summon");
@@ -169,7 +175,7 @@ test("unknown multi-category Common Play save, effect, and zone lower through on
 test("renaming every external identity preserves lowered production semantics",async()=>{
   const first=await run("unknown-gate-n-a");
   const renamed=await run("completely-renamed-b");
-  assert.deepEqual({hp:first.hpDelta,effects:first.effects,artifacts:first.artifactKinds},{hp:renamed.hpDelta,effects:renamed.effects,artifacts:renamed.artifactKinds});
+  assert.deepEqual({hp:first.hpDelta,saveOutcomes:first.saveOutcomes,effects:first.effects,artifacts:first.artifactKinds},{hp:renamed.hpDelta,saveOutcomes:renamed.saveOutcomes,effects:renamed.effects,artifacts:renamed.artifactKinds});
 });
 
 test("every non-operation lowerer commits its PaymentContract with the result and restores both on Undo",async()=>{
