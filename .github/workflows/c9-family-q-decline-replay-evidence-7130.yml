@@ -1,0 +1,95 @@
+name: C9 Family Q Decline Replay Evidence 7130
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-q-decline-replay-evidence-7130.yml
+
+permissions:
+  contents: write
+
+jobs:
+  verify-and-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Add connected decline and replay regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          path=Path('tests/ui/installedCommonPlayActorOwnerInteractionProduction.test.ts')
+          text=path.read_text(encoding='utf-8')
+          imp='import { routeConnectedInterruptResponse } from "../../src/app/connectedInterruptResponsePort";\n'
+          if imp not in text:
+              marker='import { tauriSessionTransport } from "../../src/app/tauriSessionTransport";\n'
+              if text.count(marker)!=1: raise SystemExit('interrupt-response import anchor mismatch')
+              text=text.replace(marker,marker+imp,1)
+          title='test("actor-owner decline from the owning peer is side-effect free and replay is rejected",async()=>{'
+          if title not in text:
+              addition='''\n\ntest("actor-owner decline from the owning peer is side-effect free and replay is rejected",async()=>{\n  const sessionId="session.actor-owner-decline",host=new MockAdapter();const actionId=await install(host);\n  const internal=host as unknown as {activeCharacter:{id:string;hp:number;maxHp:number};scene:{entities:Array<{id:string;hp:number}>}};internal.activeCharacter.hp=Math.max(0,internal.activeCharacter.maxHp-10);internal.scene.entities.find((entity)=>entity.id===internal.activeCharacter.id)!.hp=internal.activeCharacter.hp;\n  await host.startInitiative();await host.setCurrentActor(internal.activeCharacter.id);const before=await host.getSnapshot();\n  const hostState=connectedStateFor(host);hostState.mode="host";hostState.sessionId=sessionId;hostState.ledger=new HostSessionLedger(sessionId,connectedManifest(host));hostState.peerManifests.set("peer.owner",connectedManifest(host));\n  const direct:Array<{peer:string;message:string}>=[],broadcasts:string[]=[];const oldSend=tauriSessionTransport.send,oldSendTo=tauriSessionTransport.sendTo;tauriSessionTransport.send=async(message)=>{broadcasts.push(message);return 1;};tauriSessionTransport.sendTo=async(peer,message)=>{direct.push({peer,message});return 1;};\n  try{\n    await host.resolveAction(actionId,[internal.activeCharacter.id]);let snapshot=await host.getSnapshot();\n    assert.equal(snapshot.resolution?.stage,"interrupt",JSON.stringify(snapshot.resolution));\n    const resolutionId=snapshot.resolution!.id,promptId=snapshot.resolution!.interrupt!.id;\n    const response={sessionId,resolutionId,promptId,accept:false};\n    assert.equal(await routeConnectedInterruptResponse(host,{peer:"peer.owner",message:""},response),true);\n    snapshot=await host.getSnapshot();\n    assert.equal(snapshot.resolution?.stage,"complete");\n    assert.equal(snapshot.resolution?.finalOutcome,"Common Play 상호작용 거절");\n    assert.equal(snapshot.activeCharacter.hp,before.activeCharacter.hp);\n    assert.equal(snapshot.scene.economyByActor[internal.activeCharacter.id]?.reaction,true);\n    assert.ok(!broadcasts.map((wire)=>JSON.parse(wire)).some((wire)=>wire.type==="event-batch"),JSON.stringify(broadcasts));\n    const directBeforeReplay=direct.length;\n    assert.equal(await routeConnectedInterruptResponse(host,{peer:"peer.owner",message:""},response),true);\n    const replayErrors=direct.slice(directBeforeReplay).map((entry)=>JSON.parse(entry.message)).filter((wire)=>wire.type==="error");\n    assert.equal(replayErrors.at(-1)?.code,"interrupt-not-pending",JSON.stringify(replayErrors));\n    const afterReplay=await host.getSnapshot();\n    assert.equal(afterReplay.activeCharacter.hp,before.activeCharacter.hp);\n    assert.equal(afterReplay.scene.economyByActor[internal.activeCharacter.id]?.reaction,true);\n  }finally{tauriSessionTransport.send=oldSend;tauriSessionTransport.sendTo=oldSendTo;}\n});\n'''
+              text+=addition
+          path.write_text(text,encoding='utf-8')
+          PY
+      - name: Generate content catalogs
+        run: npm run generate:content
+      - name: Verify connected decline and replay slice
+        run: >-
+          node --import tsx --test
+          tests/domain/commonPlayActorOwnerInteractionRuntime.test.ts
+          tests/domain/commonPlayInteractionProductionRuntime.test.ts
+          tests/ui/installedCommonPlayActorOwnerInteractionProduction.test.ts
+      - name: Verify boundaries and types
+        run: |
+          node scripts/check-v1-mechanism-coverage.mjs
+          node scripts/check-legacy-execution-boundary.mjs
+          npm exec tsc -- --noEmit
+      - name: Reconcile Family Q connected evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
+          data=json.loads(path.read_text(encoding='utf-8'))
+          row=next(row for row in data['rows'] if row['family']=='Q')
+          evidence='installedCommonPlayActorOwnerInteractionProduction.test.ts owning-peer decline is side-effect free and completed-prompt replay is rejected without a second commit'
+          if evidence not in row['connectedEvidenceIfRelevant']: row['connectedEvidenceIfRelevant'].append(evidence)
+          row['currentState']=row['currentState'].replace('preserves decline-before-commit semantics,','preserves connected decline-before-commit and completed-prompt replay rejection semantics,')
+          row['remainingNamedSeams']=[
+            seam.replace('actor-owner reconnect, stale-response rejection, duplicate/replay, and decline connected evidence remain incomplete','actor-owner reconnect and revision-stale response evidence remain incomplete')
+            for seam in row['remainingNamedSeams']
+          ]
+          path.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          PY
+          node scripts/check-v1-mechanism-coverage.mjs
+      - name: Commit verified regression and retire verifier
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tests/ui/installedCommonPlayActorOwnerInteractionProduction.test.ts docs/rules/v1-mechanism-coverage-ledger.json
+          git commit -m "test(c9): prove actor-owner decline replay safety"
+          git rm .github/workflows/c9-family-q-decline-replay-evidence-7130.yml
+          git commit -m "chore(c9): remove Family Q decline verifier"
+          pushed=0
+          for attempt in 1 2 3 4 5; do
+            git fetch origin agent/c9-gate-n-coverage-reconciliation
+            if git rebase origin/agent/c9-gate-n-coverage-reconciliation && git push origin HEAD:agent/c9-gate-n-coverage-reconciliation; then pushed=1; break; fi
+            git rebase --abort || true
+            sleep 2
+          done
+          test "$pushed" -eq 1
