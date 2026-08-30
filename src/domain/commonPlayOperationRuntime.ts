@@ -281,7 +281,7 @@ const EFFECT_REMOVE_KEYS=new Set(["kind","selector","when"]);
 const TEMP_HP_GRANT_KEYS=new Set(["kind","amount","target","choice"]);
 const LIFE_STABILIZE_KEYS=new Set(["kind","target"]);
 const ROLL_MODIFY_KEYS=new Set(["kind","mode","value","dice"]);
-const MOVEMENT_RELOCATE_KEYS=new Set(["kind","mode","movementType","target","distance","costMultiplier","doesNotProvokeOpportunityAttacks","destinationFact"]);
+const MOVEMENT_RELOCATE_KEYS=new Set(["kind","mode","movementType","target","distance","costMultiplier","doesNotProvokeOpportunityAttacks","destinationFact","when"]);
 const MOVEMENT_GRANT_KEYS=new Set(["kind","target","distance","maximumDistance","doesNotProvokeOpportunityAttacks"]);
 const MOVEMENT_STAND_KEYS=new Set(["kind","target"]);
 const FACT_QUERY_KEYS=new Set(["id","fact","subject","authority","visibility","unknownPolicy"]);
@@ -554,7 +554,7 @@ function parseOperation(value:unknown,label:string):CommonPlayOperation {
     supportedKeys(operation,MOVEMENT_RELOCATE_KEYS,label);
     if(operation.mode!=="move"&&operation.mode!=="push"&&operation.mode!=="pull"&&operation.mode!=="teleport"&&operation.mode!=="granted") throw new DomainEvaluationError(`${label}.mode is unsupported`);
     if(operation.movementType!==undefined&&!(["walk","climb","swim","fly","crawl","jump"] as unknown[]).includes(operation.movementType)) throw new DomainEvaluationError(`${label}.movementType is unsupported`);
-    if(operation.target!=="actor"&&operation.target!=="self") throw new DomainEvaluationError(`${label}.target must be actor or self`);
+    if(operation.target!=="actor"&&operation.target!=="self"&&operation.target!=="target") throw new DomainEvaluationError(`${label}.target must be actor, self, or target`);
     if(operation.doesNotProvokeOpportunityAttacks!==undefined&&typeof operation.doesNotProvokeOpportunityAttacks!=="boolean") throw new DomainEvaluationError(`${label}.doesNotProvokeOpportunityAttacks must be boolean`);
     const destinationFact=object(operation.destinationFact,`${label}.destinationFact`);
     supportedKeys(destinationFact,FACT_QUERY_KEYS,`${label}.destinationFact`);
@@ -562,8 +562,10 @@ function parseOperation(value:unknown,label:string):CommonPlayOperation {
     if(destinationFact.authority!=="host"&&destinationFact.authority!=="actor-owner"&&destinationFact.authority!=="target-owner"&&destinationFact.authority!=="dm"&&destinationFact.authority!=="profile") throw new DomainEvaluationError(`${label}.destinationFact.authority is unsupported`);
     if(destinationFact.visibility!=="public"&&destinationFact.visibility!=="actor"&&destinationFact.visibility!=="dm"&&destinationFact.visibility!=="actor-and-dm"&&destinationFact.visibility!=="authority-only") throw new DomainEvaluationError(`${label}.destinationFact.visibility is unsupported`);
     if(destinationFact.unknownPolicy!=="block"&&destinationFact.unknownPolicy!=="request-authority"&&destinationFact.unknownPolicy!=="treat-false"&&destinationFact.unknownPolicy!=="unsupported") throw new DomainEvaluationError(`${label}.destinationFact.unknownPolicy is unsupported`);
+    const when=testOutcomePredicate(operation.when,`${label}.when`);
     return {
       kind:"movement.relocate",mode:operation.mode,movementType:operation.movementType as CommonPlayMovementDefinition["movementType"],target:operation.target,
+      ...(when?{when}:{}),
       distance:numericExpression(operation.distance,`${label}.distance`) as ExpressionNode,
       ...(operation.costMultiplier===undefined?{}:{costMultiplier:numericExpression(operation.costMultiplier,`${label}.costMultiplier`) as ExpressionNode}),
       ...(operation.doesNotProvokeOpportunityAttacks===undefined?{}:{doesNotProvokeOpportunityAttacks:operation.doesNotProvokeOpportunityAttacks===true}),
@@ -1192,10 +1194,15 @@ export function compileCommonPlayEntryPointOperations(
       continue;
     }
     if(operation.kind==="movement.relocate") {
-      const definition={...operation,target:input.actorId,destinationFact:{...operation.destinationFact!,subject:operation.destinationFact!.subject==="actor"||operation.destinationFact!.subject==="self"?input.actorId:operation.destinationFact!.subject}};
+      const movementTargetId=operation.target==="target"?input.targetId:input.actorId;
+      if(!movementTargetId) throw new DomainEvaluationError("Common Play target movement requires one pre-resolved target");
+      const authoredSubject=operation.destinationFact!.subject;
+      const subject=authoredSubject==="actor"||authoredSubject==="self"?input.actorId:authoredSubject==="target"?movementTargetId:authoredSubject;
+      const definition={...operation,target:movementTargetId,destinationFact:{...operation.destinationFact!,subject}};
       const compiled=compileCommonPlayMovement({id:operationId,definition,answer:input.movementFactAnswers?.[index],properties:input.movementProperties});
       if(compiled.status!=="compiled") throw new DomainEvaluationError(compiled.reason);
-      operations.push(compiled.operation);
+      const when=operation.when?{operationId:`${input.resolutionId}:test`,field:"outcome" as const,equals:operation.when.right.value}:undefined;
+      operations.push({...compiled.operation,...(when?{when}:{})});
       continue;
     }
 

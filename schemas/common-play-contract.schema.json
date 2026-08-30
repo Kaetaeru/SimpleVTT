@@ -1691,7 +1691,12 @@
         },
         "target": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "enum": [
+            "actor",
+            "self",
+            "target"
+          ]
         },
         "distance": {
           "$ref": "#/$defs/expression"
@@ -1706,7 +1711,7 @@
           "$ref": "#/$defs/factQuery"
         },
         "when": {
-          "$ref": "#/$defs/predicate"
+          "$ref": "#/$defs/d20ResultCondition"
         }
       },
       "additionalProperties": false

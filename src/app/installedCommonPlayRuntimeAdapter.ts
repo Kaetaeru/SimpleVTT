@@ -856,7 +856,7 @@ function operationExecutionInput(
   const d20ModifierSelection=entryPoint.test?commonPlayTestModifierSelection(internal,state,d20RollerId,entryPoint.test.property):undefined;
   const movementFactAnswers=Object.fromEntries(entryPoint.operations.flatMap((operation,index)=>{
     if(operation.kind!=="movement.relocate"||!operation.destinationFact) return [];
-    const subject=operation.destinationFact.subject==="actor"||operation.destinationFact.subject==="self"?actor.id:operation.destinationFact.subject;
+    const subject=operation.destinationFact.subject==="actor"||operation.destinationFact.subject==="self"?actor.id:operation.destinationFact.subject==="target"&&selectedTargetId?selectedTargetId:operation.destinationFact.subject;
     return [[index,{
       queryId:operation.destinationFact.id,fact:operation.destinationFact.fact,subject,
       value:`manual:${resolutionId}:${index}`,resolutionId,provenance:{kind:"authority" as const,responderId:actor.id},

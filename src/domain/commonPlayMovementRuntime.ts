@@ -10,6 +10,7 @@ export interface CommonPlayMovementDefinition {
   mode:CommonPlayMovementMode;
   movementType?:CommonPlayMovementType;
   target:string;
+  when?:{op:"eq";left:{ref:"test.outcome"};right:{value:"success"|"failure"}};
   distance?:ExpressionNode;
   costMultiplier?:ExpressionNode;
   doesNotProvokeOpportunityAttacks?:boolean;
