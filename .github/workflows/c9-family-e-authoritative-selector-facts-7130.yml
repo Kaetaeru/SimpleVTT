@@ -70,6 +70,12 @@ jobs:
 
           domain_test=Path("tests/domain/commonPlayTargetingRuntime.test.ts")
           domain=domain_test.read_text()
+          domain=replace_or_verify(
+              domain,
+              'import { SIMPLEVTT_APP_RULES_PROFILE } from "../../src/app/simpleVttAppRulesProfile";',
+              'import { SIMPLEVTT_APP_RULES_PROFILE } from "../../src/app/realResolutionService";',
+              "targeting test rules profile import",
+          )
           test_name='portable Common Play selector predicates consume authoritative spatial facts without fabricating them'
           if test_name not in domain:
               marker='test("unsupported Common Play selector shapes reject explicitly",()=>{\n'
