@@ -225,6 +225,7 @@ async function exercisePortableSuppression(prefix:string) {
   assert.ok(effect,"paused portable effect must survive its original expiry boundary");
   assert.equal(effect.suppression?.remainingSeconds,6);
 
+  await adapter.setCurrentActor("char.aelar");
   snapshot=await adapter.resolveAction(actionFor(pack,pack.controlMechanicId,"resume"),["char.aelar"]);
   assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
   runtime=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)!;
@@ -251,4 +252,3 @@ test("unknown installed Common Play suppresses, pauses, resumes, expires, and un
 test("renamed external identities preserve portable effect suppression and pause-resume semantics",async()=>{
   await exercisePortableSuppression("renamed-family-n-suppression");
 });
-
