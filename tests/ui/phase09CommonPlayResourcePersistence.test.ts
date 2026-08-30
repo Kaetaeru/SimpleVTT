@@ -57,7 +57,7 @@ function packagePayload() {
 
 function persistedResourceCurrent(adapter:MockAdapter,characterId:string,resourceId:string) {
   const persistence=getCharacterLibraryPersistenceStateForTests(adapter);
-  const character=persistence?.document?.characters.find((entry)=>entry.id===characterId);
+  const character=persistence?.document?.characters.find((entry)=>entry.characterId===characterId);
   return character?.runtime.resources.find((entry)=>entry.id===resourceId)?.current;
 }
 
