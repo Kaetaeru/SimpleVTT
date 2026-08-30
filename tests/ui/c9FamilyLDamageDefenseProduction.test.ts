@@ -35,6 +35,24 @@ function packagePayload(prefix:string,multiplier?:number,amount=4,target:"target
   })};
 }
 
+function criticalPackagePayload(prefix:string) {
+  const moduleId=`${prefix}.module`,contentId=`${prefix}.option`,mechanicId=`${prefix}.damage`;
+  return {moduleId,contentId,mechanicId,json:JSON.stringify({
+    schemaVersion:"0.1-draft",moduleId,moduleVersion:"1",
+    rulesProfile:{id:"dnd.srd-5.2.1",version:"0.1-draft"},defaultLocale:"en",
+    source:{document:"Portable Critical Damage Probe",version:"1",license:"CC0",srdDerived:false},
+    dependencies:[],conflicts:[],capabilities:[],content:[{
+      id:contentId,category:"option",
+      presentation:{defaultLocale:"en",originalName:"Portable Critical Damage Probe",locales:{en:{name:"Portable Critical Damage Probe"}}},
+      mechanics:[{kind:"common-play",config:{schemaVersion:"0.2-draft",id:mechanicId,entryPoints:[{
+        id:"attack",invocation:"manual",targeting:{from:"targets",min:1,max:1},
+        test:{kind:"attack-roll",roller:"actor",dc:{value:10}},
+        operations:[{kind:"damage.apply",amount:"1d6+2",damageType:"fire",target:"target",when:{op:"eq",left:{ref:"test.outcome"},right:{value:"success"}}}],
+      }]}}],
+    }],
+  })};
+}
+
 function hp(snapshot:Awaited<ReturnType<MockAdapter["getSnapshot"]>>,actorId:string) {
   const value=snapshot.scene.entities.find((entity)=>entity.id===actorId)?.hp;
   assert.equal(typeof value,"number");
@@ -68,6 +86,33 @@ async function execute(prefix:string,kind?:DamageDefenseKind,multiplier?:number,
   await adapter.undoLastResolution();
   assert.equal(hp(await adapter.getSnapshot(),TARGET_ID),before,"Undo must restore HP");
   return before-after;
+}
+
+async function executeCritical(prefix:string) {
+  const adapter=new MockAdapter();
+  const pack=criticalPackagePayload(prefix);
+  setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
+  const preview=await adapter.previewContentImport(pack.json);
+  assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
+  await adapter.activateContentImport();
+  await adapter.startInitiative();
+  await adapter.setCurrentActor("char.aelar");
+
+  const action=installedCommonPlayActionId({
+    catalogId:catalogQualifiedId(pack.contentId,pack.moduleId,"1"),
+    mechanicId:pack.mechanicId,
+    entryPointId:"attack",
+  });
+  const before=hp(await adapter.getSnapshot(),TARGET_ID);
+  (adapter as unknown as {queuedD20:number|null}).queuedD20=20;
+  const snapshot=await adapter.resolveAction(action,[TARGET_ID]);
+  assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
+  const component=snapshot.resolution?.damageComponents[0];
+  assert.equal(component?.raw,14,"critical must roll 2d6 but add the +2 flat contribution only once");
+  assert.equal(component?.adjusted,14);
+  await adapter.undoLastResolution();
+  assert.equal(hp(await adapter.getSnapshot(),TARGET_ID),before,"Undo must restore HP after portable critical damage");
+  return component?.raw;
 }
 
 async function executeInstantDeath(prefix:string) {
@@ -197,6 +242,11 @@ test("unknown installed damage.apply honors schema-declared multiplier with prof
 test("unknown installed damage.apply applies structural reduction with rename invariance and Undo",async()=>{
   assert.equal(await execute("external.family-l-reduction",undefined,undefined,3),1);
   assert.equal(await execute("completely.renamed-family-l-reduction",undefined,undefined,3),1);
+});
+
+test("unknown installed attack-roll doubles damage dice but not flat damage on critical with rename invariance and Undo",async()=>{
+  assert.equal(await executeCritical("external.family-l-critical-dice"),14);
+  assert.equal(await executeCritical("completely.renamed-family-l-critical-dice"),14);
 });
 
 test("unknown installed damage.apply enforces character instant-death overkill with rename invariance and Undo",async()=>{

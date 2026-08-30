@@ -1183,7 +1183,7 @@ export function compileCommonPlayEntryPointOperations(
 
     if(operation.kind==="damage.apply") {
       const when=operation.when?{operationId:`${input.resolutionId}:test`,field:"outcome" as const,equals:operation.when.right.value}:undefined;
-      const criticalFrom=entryPoint.test?.kind==="attack-roll"?`${input.resolutionId}:test`:undefined;
+      const criticalFrom=entryPoint.test?.kind==="attack-roll"&&(operation.when===undefined||operation.when.right.value==="success")?`${input.resolutionId}:test`:undefined;
       const targetId=hpOperationTarget(operation.target,input);
       const creatureKind=input.creatureKinds?.[targetId];
       if(!creatureKind) throw new DomainEvaluationError(`Common Play damage target is not a classified runtime combatant: ${targetId}`);

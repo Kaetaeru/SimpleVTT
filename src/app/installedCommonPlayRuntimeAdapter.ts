@@ -547,7 +547,7 @@ function damageDiceFaces(
     if(operation.kind!=="damage.apply"||typeof operation.amount!=="string") continue;
     const formula=parseCommonPlayDamageDiceFormula(operation.amount);
     faces[operationIndex]=Array.from({length:formula.count},()=>draw(formula.sides));
-    if(entryPoint.test?.kind==="attack-roll") attackDice.push({operationIndex,count:formula.count,sides:formula.sides});
+    if(entryPoint.test?.kind==="attack-roll"&&(operation.when===undefined||operation.when.right.value==="success")) attackDice.push({operationIndex,count:formula.count,sides:formula.sides});
   }
   for(const dice of attackDice) faces[dice.operationIndex].push(...Array.from({length:dice.count},()=>draw(dice.sides)));
   return faces;
