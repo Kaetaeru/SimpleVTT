@@ -842,7 +842,7 @@
         "commonPlayEffectRuntime.ts",
         "commonPlayZoneRuntime.ts"
       ],
-      "currentState": "Installed damage.taken|damage.dealt effect rules, actor-owned turn-start/end resource rules, Zone enter/leave/stay/start/end-turn rules, recurring once-per-turn/round frequency, and canonical interactive interceptor timing points have production evidence. State/rest/expiry/recharge and automatic hit/save event families remain incomplete",
+      "currentState": "Installed damage.taken|damage.dealt effect rules, actor-owned turn-start/end resource rules, Zone enter/leave/stay/start/end-turn rules, recurring once-per-turn/round frequency, canonical interactive interceptor timing points, and authoritative single-target Common Play attack.hit|attack.miss|save.success|save.failure outcome events have production evidence. State/rest/expiry/recharge, multi-target save-damage semantic outcomes, and automatic semantic-event dispatcher composition remain incomplete",
       "requiredSemantics": [
         "before/after roll/outcome",
         "hit/miss",
@@ -865,14 +865,16 @@
         "commonPlayFrequencyRuntime.ts",
         "commonPlayZoneRuntime.ts",
         "commonPlayActorTurnRuleComposition.ts actor-owned turn-start/end composition",
-        "commonPlayRuntime.ts canonical attack.outcome-determined, d20.outcome-determined, and damage.rolled interceptor timings"
+        "commonPlayRuntime.ts canonical attack.outcome-determined, d20.outcome-determined, and damage.rolled interceptor timings",
+        "commonPlaySemanticEventRuntime.ts authoritative attack.hit|attack.miss|save.success|save.failure outcome vocabulary"
       ],
       "productionEvidence": [
         "installedCommonPlayLoweredFamiliesProduction.test.ts atomic automatic damage trigger and Zone membership trigger",
         "connectedDamageDealtTriggerProduction.test.ts damage.dealt and recurring frequency production",
         "connectedTurnResolutionEventTransport.test.ts automatic Zone turn-start/end transaction",
         "connectedActorTurnRuleProduction.test.ts actor-owned turn-start/end resource rules",
-        "installedCommonPlayInterceptorProductionRuntime.test.ts d20.outcome-determined and damage.rolled interactive production"
+        "installedCommonPlayInterceptorProductionRuntime.test.ts d20.outcome-determined and damage.rolled interactive production",
+        "installedCommonPlaySemanticOutcomeProduction.test.ts unknown installed attack/save semantic outcome events"
       ],
       "identityInvarianceEvidence": [
         "commonPlayEffectRuntime.test.ts renamed external definitions",
@@ -881,7 +883,8 @@
         "connectedDamageDealtTriggerProduction.test.ts arbitrary installed damage.dealt identity",
         "connectedTurnResolutionEventTransport.test.ts arbitrary installed Zone identity",
         "connectedActorTurnRuleProduction.test.ts arbitrary installed actor-rule identities",
-        "installedCommonPlayInterceptorProductionRuntime.test.ts module/content/definition/interceptor/display rename"
+        "installedCommonPlayInterceptorProductionRuntime.test.ts module/content/definition/interceptor/display rename",
+        "installedCommonPlaySemanticOutcomeProduction.test.ts module/content/mechanic rename invariance"
       ],
       "connectedEvidenceIfRelevant": [
         "installedCommonPlayLoweredFamiliesProduction.test.ts automatic effect and Zone membership Host/Client replay plus Undo",
