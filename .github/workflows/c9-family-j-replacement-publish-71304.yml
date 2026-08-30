@@ -1,0 +1,85 @@
+name: C9 Family J Attack Replacement Publish 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-j-replacement-publish-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Generate content dependencies
+        run: npm run generate:content
+      - name: Verify portable attack replacement
+        run: |
+          node --import tsx --test tests/ui/c9FamilyJExtraAttackProduction71304.test.ts
+          node scripts/check-legacy-execution-boundary.mjs
+          node scripts/check-v1-mechanism-coverage.mjs
+          npm exec tsc -- --noEmit
+      - name: Record verified Family J evidence
+        env:
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          path = Path('docs/rules/v1-mechanism-coverage-ledger.json')
+          data = json.loads(path.read_text(encoding='utf-8'))
+          row = next(entry for entry in data['rows'] if entry['family'] == 'J')
+
+          implementation = 'Common Play economy PaymentContract actionKind=attack/attacksPerAction lets any structural attack-kind entry point consume the same remaining Resolver extraAttacks grant, enabling replace-one-attack without entry-point identity dispatch'
+          production = 'c9FamilyJExtraAttackProduction71304.test.ts proves an unknown installed strike spends the Action, then a distinct portable grapple entry point replaces the remaining Extra Attack, commits condition state, and Undo restores the attack slot while removing the condition'
+          identity = 'c9FamilyJExtraAttackProduction71304.test.ts repeats portable attack replacement after complete external module/content/mechanic identity rename'
+          run_evidence = f'C9 Family J Attack Replacement Publish 71304 run {os.environ["RUN_ID"]}: replacement production regression, legacy execution boundary, V1 coverage checker, and tsc --noEmit passed'
+
+          for field, values in {
+              'implementationEvidence': [implementation],
+              'productionEvidence': [production, run_evidence],
+              'identityInvarianceEvidence': [identity],
+          }.items():
+              for value in values:
+                  if value not in row[field]:
+                      row[field].append(value)
+
+          sentence = ' Portable replace-one-attack is production-proven: a distinct structural attack-kind Common Play entry point can consume the remaining Extra Attack grant, commit its own control effect, and reverse through event-native Undo without content identity dispatch.'
+          if sentence.strip() not in row['currentState']:
+              row['currentState'] = row['currentState'].rstrip() + sentence
+
+          row['remainingNamedSeams'] = [
+              seam for seam in row['remainingNamedSeams']
+              if not seam.startswith('attack replacement remains incomplete;')
+          ]
+
+          path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          PY
+          node scripts/check-v1-mechanism-coverage.mjs
+      - name: Publish evidence and remove one-shot workflow
+        run: |
+          rm .github/workflows/c9-family-j-replacement-publish-71304.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add docs/rules/v1-mechanism-coverage-ledger.json .github/workflows/c9-family-j-replacement-publish-71304.yml
+          git commit -m "docs(c9): record portable attack replacement evidence"
+          for attempt in 1 2 3 4 5; do
+            if git push origin HEAD:agent/c9-gate-n-coverage-reconciliation; then exit 0; fi
+            git fetch origin agent/c9-gate-n-coverage-reconciliation
+            git rebase origin/agent/c9-gate-n-coverage-reconciliation || exit 1
+            sleep 1
+          done
+          exit 1
