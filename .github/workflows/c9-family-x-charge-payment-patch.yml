@@ -1,0 +1,228 @@
+name: C9 Family X Charge Payment Patch
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-x-charge-payment-patch.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+      - name: Apply Family X charge payment slice
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import json
+
+          def replace_exact(path, old, new):
+              p = Path(path)
+              text = p.read_text(encoding='utf-8')
+              if old not in text:
+                  raise SystemExit(f'expected source block missing: {path}')
+              p.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+          runtime = 'src/domain/commonPlayOperationRuntime.ts'
+          replace_exact(runtime,
+          '''export type CommonPlayItemPayment={
+            kind:"item";
+            selector:{from:"items";definitionId:string};
+            quantity:LiteralNumberExpression;
+            consumed:true;
+            consumeAt:"commit";
+            refundOnCancel:true;
+          };''',
+          '''export type CommonPlayItemPayment={
+            kind:"item";
+            selector:{from:"items";definitionId:string};
+            quantity?:LiteralNumberExpression;
+            charges?:LiteralNumberExpression;
+            consumed:true;
+            consumeAt:"commit";
+            refundOnCancel:true;
+          };''')
+          replace_exact(runtime,
+          'const ITEM_PAYMENT_KEYS=new Set(["kind","selector","quantity","consumed","consumeAt","refundOnCancel"]);',
+          'const ITEM_PAYMENT_KEYS=new Set(["kind","selector","quantity","charges","consumed","consumeAt","refundOnCancel"]);')
+          replace_exact(runtime,
+          '''    const selector=parseItemPaymentSelector(payment.selector,`${label}.selector`);
+              const quantity=literalExpression(payment.quantity,`${label}.quantity`);
+              if(quantity.value<=0) throw new DomainEvaluationError(`${label}.quantity must be a positive integer`);
+              if(payment.consumed!==true) throw new DomainEvaluationError(`${label}.consumed must be true for portable Common Play item payment`);
+              if(payment.consumeAt!=="commit") throw new DomainEvaluationError(`${label}.consumeAt must be commit for portable Common Play item payment`);
+              if(payment.refundOnCancel!==undefined&&payment.refundOnCancel!==true) throw new DomainEvaluationError(`${label}.refundOnCancel must be true when present`);
+              return {kind:"item",selector,quantity,consumed:true,consumeAt:"commit",refundOnCancel:true};''',
+          '''    const selector=parseItemPaymentSelector(payment.selector,`${label}.selector`);
+              const quantity=payment.quantity===undefined?undefined:literalExpression(payment.quantity,`${label}.quantity`);
+              const charges=payment.charges===undefined?undefined:literalExpression(payment.charges,`${label}.charges`);
+              if(Number(quantity!==undefined)+Number(charges!==undefined)!==1) throw new DomainEvaluationError(`${label} requires exactly one of quantity or charges`);
+              const amount=quantity??charges!;
+              if(amount.value<=0) throw new DomainEvaluationError(`${label}.${quantity?"quantity":"charges"} must be a positive integer`);
+              if(payment.consumed!==true) throw new DomainEvaluationError(`${label}.consumed must be true for portable Common Play item payment`);
+              if(payment.consumeAt!=="commit") throw new DomainEvaluationError(`${label}.consumeAt must be commit for portable Common Play item payment`);
+              if(payment.refundOnCancel!==undefined&&payment.refundOnCancel!==true) throw new DomainEvaluationError(`${label}.refundOnCancel must be true when present`);
+              return {kind:"item",selector,...(quantity?{quantity}:{}),...(charges?{charges}:{}),consumed:true,consumeAt:"commit",refundOnCancel:true};''')
+          replace_exact(runtime,
+          '''      amount:literalInteger(payment.kind==="resource"?payment.amount:payment.quantity,payment.kind==="resource"?"resource payment amount":"item payment quantity"),''',
+          '''      amount:literalInteger(
+                  payment.kind==="resource"?payment.amount:(payment.quantity??payment.charges),
+                  payment.kind==="resource"?"resource payment amount":payment.quantity!==undefined?"item payment quantity":"item payment charges",
+                ),''')
+
+          adapter = 'src/app/installedCommonPlayRuntimeAdapter.ts'
+          replace_exact(adapter,
+          '''const itemQuantityResourceId=(itemId:string)=>`phase09:item:${itemId}:quantity`;''',
+          '''const itemQuantityResourceId=(itemId:string)=>`phase09:item:${itemId}:quantity`;
+          const itemChargesResourceId=(itemId:string)=>`phase09:item:${itemId}:charges`;''')
+          replace_exact(adapter,
+          '''    const item=matches[0];
+              const resourceId=itemQuantityResourceId(item.id);
+              combatant.resources=combatant.resources.filter((resource)=>resource.id!==resourceId);
+              combatant.resources.push({id:resourceId,label:`${item.name} quantity`,current:item.quantity,maximum:item.quantity});
+              itemPaymentResourceIds[index]=resourceId;
+              ephemeralResourceIds.push(resourceId);''',
+          '''    const item=matches[0];
+              const chargePayment=payment.charges!==undefined;
+              if(chargePayment&&!item.charges) throw new Error(`Common Play item charge payment requires a charged item: ${payment.selector.definitionId}`);
+              const resourceId=chargePayment?itemChargesResourceId(item.id):itemQuantityResourceId(item.id);
+              const current=chargePayment?item.charges!.current:item.quantity;
+              const maximum=chargePayment?item.charges!.max:item.quantity;
+              combatant.resources=combatant.resources.filter((resource)=>resource.id!==resourceId);
+              combatant.resources.push({id:resourceId,label:`${item.name} ${chargePayment?"charges":"quantity"}`,current,maximum});
+              itemPaymentResourceIds[index]=resourceId;
+              ephemeralResourceIds.push(resourceId);''')
+
+          schema_path = Path('schemas/common-play-contract.schema.json')
+          schema = json.loads(schema_path.read_text(encoding='utf-8'))
+          item_payment = next(entry for entry in schema['$defs']['payment']['oneOf'] if entry.get('properties', {}).get('kind', {}).get('const') == 'item')
+          if 'charges' in item_payment['properties']:
+              raise SystemExit('schema already contains item charges payment')
+          item_payment['required'] = [field for field in item_payment['required'] if field != 'quantity']
+          item_payment['properties']['charges'] = {'$ref':'#/$defs/expression'}
+          item_payment['oneOf'] = [
+              {'required':['quantity'],'not':{'required':['charges']}},
+              {'required':['charges'],'not':{'required':['quantity']}},
+          ]
+          schema_path.write_text(json.dumps(schema, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+
+          test_path = Path('tests/ui/c9FamilyXPortableItemPaymentPersistence.test.ts')
+          test_text = test_path.read_text(encoding='utf-8')
+          marker = 'unknown installed Common Play item charge payment persists through restart and Undo without named item dispatch'
+          if marker in test_text:
+              raise SystemExit('charge payment test already present')
+          test_text += r'''
+
+          function chargePackagePayload(definitionId:string) {
+            return JSON.stringify({
+              schemaVersion:"0.1-draft",
+              moduleId:MODULE_ID,
+              moduleVersion:"1",
+              rulesProfile:{id:"dnd.srd-5.2.1",version:"0.1-draft"},
+              defaultLocale:"en",
+              source:{document:"Family X Portable Item Charge Probe",version:"1",license:"CC0",srdDerived:false},
+              dependencies:[],conflicts:[],capabilities:[],
+              content:[{
+                id:CONTENT_ID,
+                category:"option",
+                presentation:{
+                  defaultLocale:"en",
+                  originalName:"Family X Portable Item Charge Probe",
+                  locales:{en:{name:"Family X Portable Item Charge Probe",description:"Unknown external item charge payment probe"}},
+                },
+                mechanics:[{
+                  kind:"common-play",
+                  config:{
+                    schemaVersion:"0.2-draft",
+                    id:MECHANIC_ID,
+                    payments:[{
+                      kind:"item",
+                      selector:{from:"items",definitionId},
+                      charges:{value:1},
+                      consumed:true,
+                      consumeAt:"commit",
+                      refundOnCancel:true,
+                    }],
+                    entryPoints:[{id:ENTRY_POINT_ID,invocation:"manual",operations:[]}],
+                  },
+                }],
+              }],
+            });
+          }
+
+          test("unknown installed Common Play item charge payment persists through restart and Undo without named item dispatch",async()=>{
+            const characterStore=new MemoryCharacterLibraryStore();
+            const adapter=new MockAdapter();
+            setCharacterLibraryStoreForTests(adapter,characterStore);
+            setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
+
+            let snapshot=await adapter.getSnapshot();
+            const item=snapshot.activeCharacter.items.find((candidate)=>
+              candidate.charges&&candidate.charges.current>0
+              &&snapshot.activeCharacter.items.filter((other)=>other.definitionId===candidate.definitionId).length===1,
+            );
+            assert.ok(item?.charges,"fixture must expose one uniquely addressable charged item");
+            const before=item.charges.current;
+
+            const preview=await adapter.previewContentImport(chargePackagePayload(item.definitionId));
+            assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
+            await adapter.activateContentImport();
+            await adapter.startInitiative();
+            await adapter.setCurrentActor(snapshot.activeCharacter.id);
+
+            snapshot=await adapter.getSnapshot();
+            const characterId=snapshot.activeCharacter.id;
+            const actionId=installedCommonPlayActionId({
+              catalogId:catalogQualifiedId(CONTENT_ID,MODULE_ID,"1"),
+              mechanicId:MECHANIC_ID,
+              entryPointId:ENTRY_POINT_ID,
+            });
+
+            await adapter.resolveAction(actionId,[characterId]);
+            snapshot=await adapter.getSnapshot();
+            assert.equal(snapshot.resolution?.stage,"complete");
+            assert.equal(snapshot.activeCharacter.items.find((entry)=>entry.definitionId===item.definitionId)?.charges?.current,before-1);
+            assert.equal((await restartedSnapshotForCharge(characterStore,item.definitionId)),before-1);
+
+            await adapter.undoLastResolution();
+            snapshot=await adapter.getSnapshot();
+            assert.equal(snapshot.activeCharacter.items.find((entry)=>entry.definitionId===item.definitionId)?.charges?.current,before);
+            assert.equal((await restartedSnapshotForCharge(characterStore,item.definitionId)),before);
+          });
+
+          async function restartedSnapshotForCharge(store:MemoryCharacterLibraryStore,definitionId:string) {
+            const restarted=new MockAdapter();
+            setCharacterLibraryStoreForTests(restarted,store);
+            const snapshot=await restarted.getSnapshot();
+            return snapshot.activeCharacter.items.find((item)=>item.definitionId===definitionId)?.charges?.current;
+          }
+          '''
+          test_path.write_text(test_text, encoding='utf-8')
+          PY
+      - name: Check patch
+        run: git diff --check
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Generate content catalogs
+        run: npm run generate:content
+      - name: Verify Family X charge payment
+        run: npx tsx --test tests/ui/c9FamilyXPortableItemPaymentPersistence.test.ts
+      - name: Typecheck application
+        run: npx tsc --noEmit
+      - name: Commit patch
+        shell: bash
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add schemas/common-play-contract.schema.json src/domain/commonPlayOperationRuntime.ts src/app/installedCommonPlayRuntimeAdapter.ts tests/ui/c9FamilyXPortableItemPaymentPersistence.test.ts
+          git commit -m "feat(c9): support portable item charge payments"
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
