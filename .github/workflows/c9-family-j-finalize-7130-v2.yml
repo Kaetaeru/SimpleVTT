@@ -1,0 +1,84 @@
+name: C9 Family J Finalize 7130 V2
+
+on:
+  push:
+    branches:
+      - agent/c9-j-finalize-7130
+    paths:
+      - .github/workflows/c9-family-j-finalize-7130-v2.yml
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Capture current typecheck baseline
+        shell: bash
+        run: |
+          set +e
+          npx tsc --noEmit > /tmp/tsc-before.log 2>&1
+          echo $? > /tmp/tsc-before.status
+          set -e
+      - name: Patch remaining action contract and projection
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          def replace_once(path, old, new):
+              p=Path(path); text=p.read_text(encoding='utf-8')
+              if new in text: return
+              count=text.count(old)
+              if count != 1: raise SystemExit(f'{path}: expected one match, found {count}')
+              p.write_text(text.replace(old,new,1),encoding='utf-8')
+          replace_once('src/app/contracts.ts','import type { DurationSpec, EffectTermination } from "../domain/effects";\n','import type { DurationSpec, EffectTermination } from "../domain/effects";\nimport type { ConditionId } from "../domain/conditions";\n')
+          replace_once('src/app/contracts.ts','  movementBudgetGainFeet?:number;\n  sessionStatusEffect?:{\n','  movementBudgetGainFeet?:number;\n  runtimeSaveCondition?:{\n    conditionId:ConditionId;\n    label:string;\n    displayName:string;\n    saveAbilities:AbilityKey[];\n    duration:DurationSpec;\n    termination?:EffectTermination;\n  };\n  sessionStatusEffect?:{\n')
+          replace_once('src/app/productionPlayRuntimeAdapter.ts','    summary:`근력/민첩 내성 DC ${unarmedSaveDc} · 실패 시 붙잡힘`,available:true,eligibleTargetIds:[],saveDc:unarmedSaveDc,saveAbility:"근력 또는 민첩",attacksPerAction:unarmedAttacks,\n    details:[detail("대상 내성","근력 또는 민첩 중 높은 값"),detail("DC",String(unarmedSaveDc)),detail("실패","붙잡힘"),detail("출처","SRD 5.2.1 · Unarmed Strike")],\n','    summary:`근력/민첩 내성 DC ${unarmedSaveDc} · 실패 시 붙잡힘`,available:true,eligibleTargetIds:[],saveDc:unarmedSaveDc,saveAbility:"근력 또는 민첩",attacksPerAction:unarmedAttacks,\n    runtimeSaveCondition:{conditionId:"grappled",label:"붙잡힘",displayName:"맨손 타격 · 붙잡기",saveAbilities:["str","dex"],duration:{kind:"special",key:`escape:${character.id}`},termination:{sourceBecomesIncapacitated:true,sourceDies:true}},\n    details:[detail("대상 내성","근력 또는 민첩 중 높은 값"),detail("DC",String(unarmedSaveDc)),detail("실패","붙잡힘"),detail("출처","SRD 5.2.1 · Unarmed Strike")],\n')
+          replace_once('src/app/productionPlayRuntimeAdapter.ts','    summary:`근력/민첩 내성 DC ${unarmedSaveDc} · 실패 시 넘어짐`,available:true,eligibleTargetIds:[],saveDc:unarmedSaveDc,saveAbility:"근력 또는 민첩",attacksPerAction:unarmedAttacks,\n    details:[detail("대상 내성","근력 또는 민첩 중 높은 값"),detail("DC",String(unarmedSaveDc)),detail("실패","넘어짐"),detail("공간 모듈","미연결 시 밀어내기 대신 넘어뜨리기만 자동 적용"),detail("출처","SRD 5.2.1 · Unarmed Strike")],\n','    summary:`근력/민첩 내성 DC ${unarmedSaveDc} · 실패 시 넘어짐`,available:true,eligibleTargetIds:[],saveDc:unarmedSaveDc,saveAbility:"근력 또는 민첩",attacksPerAction:unarmedAttacks,\n    runtimeSaveCondition:{conditionId:"prone",label:"넘어짐",displayName:"맨손 타격 · 넘어뜨리기",saveAbilities:["str","dex"],duration:{kind:"special",key:"stand-up"}},\n    details:[detail("대상 내성","근력 또는 민첩 중 높은 값"),detail("DC",String(unarmedSaveDc)),detail("실패","넘어짐"),detail("공간 모듈","미연결 시 밀어내기 대신 넘어뜨리기만 자동 적용"),detail("출처","SRD 5.2.1 · Unarmed Strike")],\n')
+          PY
+      - name: Verify Family J and typecheck delta
+        shell: bash
+        run: |
+          npm run generate:content
+          npx tsx --test tests/ui/unarmedStrikeRuntime.test.ts
+          npm run test:ui-rule-boundary
+          node scripts/check-v1-mechanism-coverage.mjs
+          set +e
+          npx tsc --noEmit > /tmp/tsc-after.log 2>&1
+          after_status=$?
+          set -e
+          if [ "$after_status" -ne 0 ]; then
+            python3 - <<'PY'
+          from pathlib import Path
+          before={line for line in Path('/tmp/tsc-before.log').read_text().splitlines() if 'error TS' in line}
+          after={line for line in Path('/tmp/tsc-after.log').read_text().splitlines() if 'error TS' in line}
+          new=sorted(after-before)
+          if new:
+              raise SystemExit('new TypeScript errors after Family J patch:\n'+'\n'.join(new))
+          print('No new TypeScript errors; remaining baseline errors:',len(after))
+          PY
+          fi
+      - name: Commit to C9 target branch
+        shell: bash
+        run: |
+          git config user.name "ChatGPT C9 Family J"
+          git config user.email "actions@users.noreply.github.com"
+          git add src/app/contracts.ts src/app/productionPlayRuntimeAdapter.ts
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "refactor(c9): project unarmed control payload"
+          for attempt in 1 2 3 4 5; do
+            if git pull --rebase origin agent/c9-gate-n-coverage-reconciliation && git push origin HEAD:agent/c9-gate-n-coverage-reconciliation; then exit 0; fi
+            git rebase --abort || true
+            sleep 2
+          done
+          exit 1
