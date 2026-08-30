@@ -148,6 +148,7 @@ type CommonPlayLifeStabilize={
   kind:"life.stabilize";
   target?:CommonPlayHpTarget;
 };
+type CommonPlayLifeDeathSave={kind:"life.death-save"};
 
 type CommonPlayRollModify={
   kind:"roll.modify";
@@ -193,6 +194,7 @@ export type CommonPlayOperation=
   |CommonPlayHealingApply
   |CommonPlayTemporaryHpGrant
   |CommonPlayLifeStabilize
+  |CommonPlayLifeDeathSave
   |CommonPlayMovementDefinition
   |CommonPlayMovementGrant
   |CommonPlayMovementStand
@@ -243,6 +245,7 @@ export interface CommonPlayOperationExecutionInput {
   targetingCandidates?:CommonPlaySelectorCandidate[];
   creatureKinds?:Record<string,"character"|"monster">;
   damageDiceFaces?:Record<number,number[]>;
+  deathSaveDiceFaces?:Record<number,number[]>;
   rechargeDiceFaces?:Record<number,number[]>;
   movementFactAnswers?:Record<number,CommonPlayFactAnswer>;
   movementProperties?:Record<string,number>;
@@ -282,6 +285,7 @@ const CONDITION_CHANGE_KEYS=new Set(["kind","condition","target","when"]);
 const EFFECT_REMOVE_KEYS=new Set(["kind","selector","when"]);
 const TEMP_HP_GRANT_KEYS=new Set(["kind","amount","target","choice"]);
 const LIFE_STABILIZE_KEYS=new Set(["kind","target"]);
+const LIFE_DEATH_SAVE_KEYS=new Set(["kind"]);
 const ROLL_MODIFY_KEYS=new Set(["kind","mode","value","dice"]);
 const MOVEMENT_RELOCATE_KEYS=new Set(["kind","mode","movementType","target","distance","costMultiplier","doesNotProvokeOpportunityAttacks","destinationFact","when"]);
 const MOVEMENT_GRANT_KEYS=new Set(["kind","target","distance","maximumDistance","doesNotProvokeOpportunityAttacks"]);
@@ -714,6 +718,10 @@ function parseOperation(value:unknown,label:string):CommonPlayOperation {
   if(operation.kind==="life.stabilize") {
     supportedKeys(operation,LIFE_STABILIZE_KEYS,label);
     return {kind:"life.stabilize",...(operation.target===undefined?{}:{target:hpTarget(operation.target,`${label}.target`)})};
+  }
+  if(operation.kind==="life.death-save") {
+    supportedKeys(operation,LIFE_DEATH_SAVE_KEYS,label);
+    return {kind:"life.death-save"};
   }
   throw new DomainEvaluationError(`unsupported Common Play operation: ${String(operation.kind)}`);
 }
@@ -1167,6 +1175,15 @@ export function compileCommonPlayEntryPointOperations(
 
     if(operation.kind==="life.stabilize") {
       operations.push({id:operationId,kind:"stabilize",targetId:hpOperationTarget(operation.target,input)});
+      continue;
+    }
+    if(operation.kind==="life.death-save") {
+      const faces=input.deathSaveDiceFaces?.[index];
+      if(!faces||faces.length!==1) throw new DomainEvaluationError(`Common Play death-save operation ${index} requires exactly one authoritative d20 face`);
+      operations.push({
+        id:operationId,kind:"death-save",actorId:input.actorId,
+        dice:{id:`${operationId}:d20`,purpose:"death saving throw",sides:20,faces:[faces[0]]},
+      });
       continue;
     }
 

@@ -952,6 +952,9 @@
           "$ref": "#/$defs/lifeStabilize"
         },
         {
+          "$ref": "#/$defs/lifeDeathSave"
+        },
+        {
           "$ref": "#/$defs/resourceChange"
         },
         {
@@ -1280,6 +1283,18 @@
             "self",
             "target"
           ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "lifeDeathSave": {
+      "type": "object",
+      "required": [
+        "kind"
+      ],
+      "properties": {
+        "kind": {
+          "const": "life.death-save"
         }
       },
       "additionalProperties": false

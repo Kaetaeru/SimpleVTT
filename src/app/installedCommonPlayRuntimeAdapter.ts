@@ -855,6 +855,12 @@ function operationExecutionInput(
   const d20Faces=entryPoint.test?[internal.d20(actionId,0),internal.d20(actionId,1)]:undefined;
   const d20RollerId=entryPoint.test?.roller==="target"?selectedTargetId:actor.id;
   const d20ModifierSelection=entryPoint.test?commonPlayTestModifierSelection(internal,state,d20RollerId,entryPoint.test.property):undefined;
+  let operationDieDrawIndex=d20Faces?.length??0;
+  const deathSaveDiceFaces:Record<number,number[]>={};
+  for(const [index,operation] of entryPoint.operations.entries()) {
+    if(operation.kind!=="life.death-save") continue;
+    deathSaveDiceFaces[index]=[internal.d20(actionId,operationDieDrawIndex++)];
+  }
   const movementFactAnswers=Object.fromEntries(entryPoint.operations.flatMap((operation,index)=>{
     if(operation.kind!=="movement.relocate"||!operation.destinationFact) return [];
     const subject=operation.destinationFact.subject==="actor"||operation.destinationFact.subject==="self"?actor.id:operation.destinationFact.subject==="target"&&selectedTargetId?selectedTargetId:operation.destinationFact.subject;
@@ -871,7 +877,8 @@ function operationExecutionInput(
       [actor.id,actorEntity.kind==="character"?"character":"monster"],
       ...selectedTargets.map((target)=>[target.id,target.kind==="character"?"character":"monster"] as const),
     ]),
-    damageDiceFaces:damageDiceFaces(internal,actionId,entryPoint,d20Faces?.length??0),
+    damageDiceFaces:damageDiceFaces(internal,actionId,entryPoint,operationDieDrawIndex),
+    ...(Object.keys(deathSaveDiceFaces).length?{deathSaveDiceFaces}:{}),
     ...(movementProperties?{movementProperties}:{}),
     ...(Object.keys(movementFactAnswers).length?{movementFactAnswers}:{}),
     ...(entryPoint.test?{d20:{faces:d20Faces!,targetId:selectedTargetId,...(d20ModifierSelection??{})}}:{}),
