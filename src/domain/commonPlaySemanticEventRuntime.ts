@@ -14,6 +14,14 @@ function semanticKind(result:D20TestResult):CommonPlayAutomaticEffectEvent|undef
 const EFFECT_METADATA_DEFINITION="commonPlayDefinitionId";
 const EFFECT_METADATA_TEMPLATE="commonPlayTemplateId";
 
+function effectStateChanges(event:ResolutionEvent,operation:EffectStateChange["operation"]):EffectStateChange[] {
+  const changes:EffectStateChange[]=[];
+  for(const change of event.stateChanges) {
+    if(change.kind==="effect"&&change.operation===operation) changes.push(change);
+  }
+  return changes;
+}
+
 function semanticContexts(operation:Extract<PendingResolution["operations"][number],{kind:"d20"}>) {
   if(operation.request.family==="attack-roll") return [{event:"attack.hit" as const,outcome:"success" as const},{event:"attack.miss" as const,outcome:"failure" as const}];
   if(operation.request.family==="saving-throw") return [{event:"save.success" as const,outcome:"success" as const},{event:"save.failure" as const,outcome:"failure" as const}];
@@ -70,7 +78,7 @@ function lifecycleSemanticEvent(
 ):ResolutionEvent|undefined {
   if(!authoritativeEvent) return undefined;
   if(operation.kind==="apply-effect") {
-    const applied=authoritativeEvent.stateChanges.filter((change):change is EffectStateChange=>change.kind==="effect"&&change.operation==="added");
+    const applied=effectStateChanges(authoritativeEvent,"added");
     if(!applied.length) return undefined;
     return {
       id:`${pending.id}:${operation.id}:semantic:state.applied`,
@@ -87,7 +95,7 @@ function lifecycleSemanticEvent(
   }
   const lifecycleBoundary=operation.kind==="advance-time"||operation.kind==="begin-turn"||operation.kind==="end-turn"||operation.kind==="short-rest"||operation.kind==="long-rest";
   if(!lifecycleBoundary) return undefined;
-  const expired=authoritativeEvent.stateChanges.filter((change):change is EffectStateChange=>change.kind==="effect"&&change.operation==="removed");
+  const expired=effectStateChanges(authoritativeEvent,"removed");
   if(!expired.length) return undefined;
   return {
     id:`${pending.id}:${operation.id}:semantic:effect.expired`,
