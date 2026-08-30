@@ -25,6 +25,18 @@ jobs:
         run: git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
       - name: Patch lifecycle semantic trigger dispatch
         run: python .github/scripts/c9-family-p-semantic-dispatch.py
+      - name: Align recharge test with authoritative turn start
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path=Path("tests/domain/commonPlaySemanticEventRuntime.test.ts")
+          text=path.read_text(encoding="utf-8")
+          old='assert.equal(activated.status,"committed"); if(activated.status!=="committed") return; state=activated.state;\n  const request:PendingResolution={'
+          new='assert.equal(activated.status,"committed"); if(activated.status!=="committed") return; state=activated.state;\n  state={...state,clock:{...state.clock,phase:"start",activeActorId:"hero"}};\n  const request:PendingResolution={'
+          if text.count(old)!=1:
+              raise SystemExit("recharge test clock anchor changed")
+          path.write_text(text.replace(old,new,1),encoding="utf-8")
+          PY
       - name: Install dependencies
         run: npm install --no-audit --no-fund
       - name: Generate content catalogs
