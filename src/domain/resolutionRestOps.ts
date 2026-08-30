@@ -1,5 +1,5 @@
 import { requireCombatant } from "./combatState";
-import { gainResource, spendResource, type ResourceRecoveryLockouts } from "./resources";
+import { gainResource, spendResource, type ResourcePool, type ResourceRecoveryLockouts } from "./resources";
 import { resolveLongRest, resolveShortRest } from "./rest";
 import { hpStateChanges } from "./stateChange";
 import {
@@ -22,6 +22,17 @@ function lockoutSnapshot(value:ResourceRecoveryLockouts|undefined):ResourceRecov
 
 function sameLockouts(left:ResourceRecoveryLockouts|null,right:ResourceRecoveryLockouts|null) {
   return left?.shortRest===right?.shortRest&&left?.longRest===right?.longRest;
+}
+
+function capacitySnapshot(pool:ResourcePool) {
+  return {
+    maximum:pool.maximum,
+    maximumAfterLongRest:pool.maximumAfterLongRest ?? null,
+  };
+}
+
+function sameCapacity(left:ReturnType<typeof capacitySnapshot>,right:ReturnType<typeof capacitySnapshot>) {
+  return left.maximum===right.maximum&&left.maximumAfterLongRest===right.maximumAfterLongRest;
 }
 
 function executeRest(
@@ -112,7 +123,10 @@ function executeRest(
     const beforeLockouts=lockoutSnapshot(before.recoveryLockouts);
     const afterLockouts=lockoutSnapshot(after.recoveryLockouts);
     const lockoutsChanged=!sameLockouts(beforeLockouts,afterLockouts);
-    if (after.current !== before.current || lockoutsChanged) {
+    const beforeCapacity=capacitySnapshot(before);
+    const afterCapacity=capacitySnapshot(after);
+    const capacityChanged=!sameCapacity(beforeCapacity,afterCapacity);
+    if (after.current !== before.current || lockoutsChanged || capacityChanged) {
       changes.push(
         resourceStateChange(
           operation.targetId,
@@ -121,6 +135,8 @@ function executeRest(
           after.current,
           provenance,
           lockoutsChanged ? { before:beforeLockouts, after:afterLockouts } : undefined,
+          undefined,
+          capacityChanged ? { before:beforeCapacity, after:afterCapacity } : undefined,
         ),
       );
     }
