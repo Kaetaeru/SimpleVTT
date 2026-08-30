@@ -18,7 +18,9 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Apply bounded product migration
-        run: python3 .github/c9-family-c-conditional-payment-migrate.py product
+        run: |
+          python3 .github/c9-family-c-conditional-payment-migrate.py product
+          python3 .github/c9-family-c-conditional-payment-test-fix.py
 
       - name: Assert named seam boundary
         shell: bash
@@ -92,7 +94,7 @@ jobs:
           set -euo pipefail
           python3 .github/c9-family-c-conditional-payment-migrate.py control
           git add .chatgpt-rerun/control.json
-          git rm .github/c9-family-c-conditional-payment-migrate.py .github/workflows/c9-family-c-conditional-payment-migration.yml
+          git rm .github/c9-family-c-conditional-payment-migrate.py .github/c9-family-c-conditional-payment-test-fix.py .github/workflows/c9-family-c-conditional-payment-migration.yml
           git diff --cached --check
           git commit -m "docs(rerun): continue after Peerless migration"
           git push
