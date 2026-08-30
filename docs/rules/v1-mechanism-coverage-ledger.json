@@ -712,7 +712,8 @@
         "full generic weapon and Unarmed Strike action projection is not yet proven across source-owned equipment/stat definitions",
         "Opportunity Attack and grapple/shove/escape control composition remain outside the portable Common Play attack acceptance",
         "reach, long range, cover, multiattack/Extra Attack/replacement, and ammunition/loading constraints remain incomplete",
-        "Rage attack rider and other named attack/action projection remain migration debt"
+        "Rage attack rider and other named attack/action projection remain migration debt",
+        "c9FamilyJAttackPersistence.test.ts unknown installed attack damage persists to the Character library through restart and Undo restores the durable HP state"
       ],
       "connectedRelevant": true,
       "persistenceRelevant": true
