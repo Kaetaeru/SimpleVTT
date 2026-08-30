@@ -1,0 +1,75 @@
+name: C9 Selector Missing Facts 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-selector-missing-facts-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Patch selector missing-fact handling and verify
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch=agent/c9-gate-n-coverage-reconciliation
+          workflow=.github/workflows/c9-selector-missing-facts-71304.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in $(seq 1 6); do
+            git fetch origin "$branch"
+            git reset --hard "origin/$branch"
+            python3 - <<'PY'
+          from pathlib import Path
+          p=Path('src/domain/commonPlaySelectorRuntime.ts')
+          text=p.read_text(encoding='utf-8')
+          old='''    let candidates=input.candidates.filter((candidate)=>!input.selector.area||candidate.areaMember===true)
+              .filter((candidate)=>!input.selector.where||evaluateSemanticPredicate(input.selector.where,(ref)=>ref==="id"?candidate.id:candidate.properties[ref]));'''
+          new='''    const matchesWhere=(candidate:CommonPlaySelectorCandidate)=>{
+              if(!input.selector.where) return true;
+              try {
+                return evaluateSemanticPredicate(input.selector.where,(ref)=>ref==="id"?candidate.id:candidate.properties[ref]);
+              } catch(error) {
+                if(error instanceof DomainEvaluationError&&error.message.startsWith("unresolved semantic reference:")) return false;
+                throw error;
+              }
+            };
+            let candidates=input.candidates.filter((candidate)=>!input.selector.area||candidate.areaMember===true)
+              .filter(matchesWhere);'''
+          if new not in text:
+              if old not in text:
+                  raise SystemExit('selector candidate filter anchor missing')
+              p.write_text(text.replace(old,new,1),encoding='utf-8')
+          PY
+            npm run generate:content
+            node --import tsx --test \
+              tests/ui/c9FamilyESpatialSelectorProduction.test.ts \
+              tests/ui/c9FamilyJSpatialAttackProduction.test.ts \
+              tests/ui/c9FamilyJPortableControlProduction.test.ts \
+              tests/ui/c9FamilyJAttackPersistence.test.ts
+            node scripts/check-legacy-execution-boundary.mjs
+            node scripts/check-v1-mechanism-coverage.mjs
+            npx tsc --noEmit
+            rm -f "$workflow"
+            git add src/domain/commonPlaySelectorRuntime.ts "$workflow"
+            git commit -m "fix(c9): ignore missing facts per selector candidate"
+            if git push origin HEAD:"$branch"; then exit 0; fi
+            sleep 1
+          done
+          exit 1
