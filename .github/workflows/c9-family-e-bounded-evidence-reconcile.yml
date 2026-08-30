@@ -21,12 +21,22 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Reconcile verified Family E bounded-target evidence
+      - name: Reconcile Family E evidence and unsupported-authoring regression
         shell: bash
         run: |
           python3 - <<'PY'
           import json
           from pathlib import Path
+
+          test_path=Path('tests/ui/ruleModulePackageImport.test.ts')
+          test_text=test_path.read_text(encoding='utf-8')
+          old='{from:"actors",min:1,max:1},'
+          new='{from:"unsupported-source",min:1,max:1},'
+          if old in test_text:
+              test_text=test_text.replace(old,new,1)
+          elif new not in test_text:
+              raise SystemExit('unsupported targeting regression fixture changed unexpectedly')
+          test_path.write_text(test_text,encoding='utf-8')
 
           ledger_path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
           ledger=json.loads(ledger_path.read_text(encoding='utf-8'))
@@ -35,24 +45,24 @@ jobs:
               raise SystemExit('Family E targeting-selectors row not found')
           if row.get('disposition')!='INCOMPLETE':
               raise SystemExit(f"Family E disposition changed unexpectedly: {row.get('disposition')}")
-          row['currentState']='Portable Common Play targeting preserves authored positive min/max bounds for pre-resolved creature target sets through generic Resolver and production execution; predicate/range/area/ordering/object/point selector composition remains incomplete.'
+          row['currentState']='Portable Common Play targeting preserves bounded selected target sets and authoritative relation-filter validation through the generic Resolver/production path; richer spatial/area/ordering/object/point selector composition remains incomplete.'
           evidence={
             'implementationEvidence':[
-              'commonPlayOperationRuntime.ts parses positive bounded from:targets min/max and lowers them to generic TargetingRule cardinality without fabricating spatial facts',
-              'targeting.ts generic Resolver enforces target cardinality and remains the shared owner of relation/range/sight/cover semantics when authoritative facts are supplied',
-              'commonPlayTargetingRuntime.test.ts proves authored 1..2 target cardinality and explicit rejection of singular target effects lacking a per-target effect contract',
+              'commonPlayOperationRuntime.ts parses bounded from:targets min/max and lowers them to generic TargetingRule cardinality without fabricating spatial facts',
+              'commonPlayTargetingRuntime.test.ts proves bounded multi-target cardinality plus authoritative relation selector validation without identity dispatch',
             ],
             'productionEvidence':[
-              'installedCommonPlayProductionRuntime.test.ts unknown installed Common Play preserves a bounded two-target selection through production resolveAction and presentation targetIds',
+              'installedCommonPlayProductionRuntime.test.ts unknown installed Common Play preserves bounded multi-target selection through production resolveAction and presentation targetIds',
+              'installedCommonPlayProductionRuntime.test.ts unknown installed relation selector rejects an ineligible target before production commit',
             ],
             'identityInvarianceEvidence':[
-              'installedCommonPlayProductionRuntime.test.ts targeting dispatch remains invariant under external module/content/mechanic/entry-point/display rename',
+              'installedCommonPlayProductionRuntime.test.ts targeting dispatch remains structural under external module/content/mechanic/entry-point/display rename',
             ],
             'connectedEvidenceIfRelevant':[
               'installedCommonPlayProductionRuntime.test.ts connected Common Play targeting remains Host-authoritative and converges through shared ResolutionEvents',
             ],
             'persistenceEvidenceIfRelevant':[
-              'ruleModulePackageImport.test.ts and installed-content activation preserve portable Common Play targeting definitions through the shared structural parser/lowerer boundary',
+              'ruleModulePackageImport.test.ts and installed-content activation preserve supported portable targeting definitions while blocking genuinely unsupported selector sources before persistence',
             ],
           }
           for field,items in evidence.items():
@@ -60,15 +70,21 @@ jobs:
               for item in items:
                   if item not in current:
                       current.append(item)
+          row['remainingNamedSeams']=[
+              'rich range/reach/sight/cover/tag/area/ordering/object/point/manual-vs-automatic selector semantics remain incomplete'
+          ]
           ledger_path.write_text(json.dumps(ledger,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
 
           checklist_path=Path('docs/rules/resolver-execution-checklist-v2.md')
           text=checklist_path.read_text(encoding='utf-8')
-          old='- [x] targeting / selectors / allocation — `PRODUCTION`; canonical `entryPoint.targeting` supports the bounded `from:targets`, exact `min/max:1/1` selection-validator subset through validation, persistence/rehydration, existing Resolver targeting, production authority, Undo, connected convergence, and rename invariance. Rich selectors and allocation remain unsupported;'
-          new='- [x] targeting / selectors / allocation — `PRODUCTION`; canonical `entryPoint.targeting` supports bounded `from:targets` positive min/max target sets through validation, persistence/rehydration, existing Resolver targeting, production authority, connected convergence, and rename-invariant structural dispatch. Multi-target singular effects remain explicitly unsupported until a per-target effect contract exists; rich predicates, spatial/area selectors, ordering, object/point targets, and allocation remain incomplete;'
-          if old in text:
-              text=text.replace(old,new,1)
-          elif new not in text:
+          old_line='- [x] targeting / selectors / allocation — `PRODUCTION`; canonical `entryPoint.targeting` supports the bounded `from:targets`, exact `min/max:1/1` selection-validator subset through validation, persistence/rehydration, existing Resolver targeting, production authority, Undo, connected convergence, and rename invariance. Rich selectors and allocation remain unsupported;'
+          bounded_line='- [x] targeting / selectors / allocation — `PRODUCTION`; canonical `entryPoint.targeting` supports bounded `from:targets` positive min/max target sets through validation, persistence/rehydration, existing Resolver targeting, production authority, connected convergence, and rename-invariant structural dispatch. Multi-target singular effects remain explicitly unsupported until a per-target effect contract exists; rich predicates, spatial/area selectors, ordering, object/point targets, and allocation remain incomplete;'
+          relation_line='- [x] targeting / selectors / allocation — `PRODUCTION`; canonical `entryPoint.targeting` supports bounded `from:targets` target sets and authoritative relation filtering through validation, persistence/rehydration, generic Resolver targeting, production authority, connected convergence, and structural dispatch. Multi-target singular effects remain explicitly unsupported until a per-target effect contract exists; richer spatial/area selectors, ordering, object/point targets, and allocation remain incomplete;'
+          if old_line in text:
+              text=text.replace(old_line,relation_line,1)
+          elif bounded_line in text:
+              text=text.replace(bounded_line,relation_line,1)
+          elif relation_line not in text:
               raise SystemExit('targeting capability maturity line changed unexpectedly')
           checklist_path.write_text(text,encoding='utf-8')
           PY
@@ -76,7 +92,7 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Generate content catalogs
         run: npm run generate:content
-      - name: Verify bounded targeting production slice
+      - name: Verify targeting production slice
         run: >-
           npx tsx --test
           tests/domain/commonPlayTargetingRuntime.test.ts
@@ -88,25 +104,27 @@ jobs:
         run: node scripts/check-legacy-execution-boundary.mjs
       - name: Typecheck application
         run: npx tsc --noEmit
-      - name: Commit evidence and remove consumed helpers
+      - name: Commit verified targeting evidence
         shell: bash
         run: |
+          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           rm -f \
             .github/workflows/c9-family-e-bounded-evidence-reconcile.yml \
+            .github/workflows/c9-family-e-bounded-evidence-finalize-7130.yml \
             .github/workflows/c9-family-e-bounded-targets-apply.yml \
             .github/workflows/c9-family-e-bounded-targets-finalize.yml \
             .github/workflows/c9-family-e-cardinality-reconcile.yml
-          git add -A docs/rules .github/workflows
-          git commit -m "docs(c9): reconcile bounded target evidence"
-          pushed=0
-          for attempt in 1 2 3 4 5; do
-            git fetch origin agent/c9-gate-n-coverage-reconciliation
-            git rebase origin/agent/c9-gate-n-coverage-reconciliation
-            if git push origin HEAD:agent/c9-gate-n-coverage-reconciliation; then
-              pushed=1
-              break
+          git add -A docs/rules tests/ui/ruleModulePackageImport.test.ts .github/workflows
+          git commit -m "test(c9): reconcile expanded targeting evidence"
+          branch=agent/c9-gate-n-coverage-reconciliation
+          for attempt in $(seq 1 12); do
+            git fetch origin "$branch"
+            git rebase "origin/$branch"
+            if git push origin HEAD:"$branch"; then
+              exit 0
             fi
           done
-          test "$pushed" -eq 1
+          echo "failed to publish targeting evidence after concurrent retries" >&2
+          exit 1
