@@ -68,6 +68,46 @@ async function exercise(prefix:string,duration:Duration,expected:(elapsed:number
   if(duration.kind==="maintained") assert.equal(undoneRuntime.concentration["char.aelar"],undefined);
 }
 
+async function exerciseElapsedBoundaryExpiry(prefix:string) {
+  const adapter=new MockAdapter();
+  const pack=packagePayload(prefix,{kind:"elapsed",amount:{value:6},unit:"seconds"});
+  setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
+  const preview=await adapter.previewContentImport(pack.json);
+  assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
+  await adapter.activateContentImport();
+  await adapter.startInitiative();
+  await adapter.setCurrentActor("char.aelar");
+
+  let snapshot=await adapter.getSnapshot();
+  let runtime=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)!;
+  const initialElapsed=runtime.clock.elapsedSeconds;
+  const action=installedCommonPlayActionId({
+    catalogId:catalogQualifiedId(pack.contentId,pack.moduleId,"1"),mechanicId:pack.mechanicId,entryPointId:"activate",
+  });
+  snapshot=await adapter.resolveAction(action,["char.aelar"]);
+  assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
+  runtime=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)!;
+  const effect=runtime.effects.find((entry)=>entry.sourceId===pack.mechanicId);
+  assert.ok(effect,JSON.stringify(runtime.effects));
+  assert.deepEqual(effect.expiry,{kind:"time",elapsedSeconds:initialElapsed+6});
+
+  const maxTurns=snapshot.scene.entities.length+1;
+  for(let turn=0;turn<maxTurns&&runtime.clock.elapsedSeconds===initialElapsed;turn+=1) {
+    await adapter.endTurn();
+    snapshot=await adapter.getSnapshot();
+    runtime=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)!;
+  }
+  assert.equal(runtime.clock.elapsedSeconds,initialElapsed+6,"one production round wrap must advance the authoritative clock by six seconds");
+  assert.equal(runtime.effects.some((entry)=>entry.sourceId===pack.mechanicId),false,"elapsed effect must expire at the production clock boundary");
+
+  await adapter.undoLastResolution();
+  snapshot=await adapter.getSnapshot();
+  runtime=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)!;
+  const restored=runtime.effects.find((entry)=>entry.sourceId===pack.mechanicId);
+  assert.ok(restored,"event-native Undo must restore the effect removed by the final turn lifecycle transaction");
+  assert.deepEqual(restored.expiry,{kind:"time",elapsedSeconds:initialElapsed+6});
+}
+
 const CASES:Array<{name:string;duration:Duration;expected:(elapsed:number)=>unknown}>=[
   {name:"durable",duration:{kind:"durable"},expected:()=>({kind:"permanent"})},
   {name:"concentration",duration:{kind:"maintained",policy:"concentration"},expected:()=>({kind:"concentration"})},
@@ -82,4 +122,12 @@ test("unknown installed Common Play materializes the portable effect-duration ma
 
 test("renamed external identities preserve the same portable effect-duration matrix",async()=>{
   for(const probe of CASES) await exercise(`renamed-family-n-${probe.name}`,probe.duration,probe.expected);
+});
+
+test("unknown installed elapsed effect expires at the production round clock boundary and Undo restores it",async()=>{
+  await exerciseElapsedBoundaryExpiry("unknown-family-n-expiry");
+});
+
+test("renamed external identity preserves production elapsed expiry and Undo",async()=>{
+  await exerciseElapsedBoundaryExpiry("renamed-family-n-expiry");
 });
