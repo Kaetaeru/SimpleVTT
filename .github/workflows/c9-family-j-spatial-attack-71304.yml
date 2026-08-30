@@ -1,5 +1,5 @@
 name: C9 Family J Spatial Attack 71304
-# rerun after queue-before-projection opportunity-attack proof; verify at current branch head
+# verify current Family J spatial/range/cover proof at branch head
 
 on:
   push:
@@ -25,6 +25,7 @@ jobs:
         run: |
           node --import tsx --test \
             tests/ui/c9FamilyJSpatialAttackProduction.test.ts \
+            tests/ui/c9FamilyJRangeCoverProduction.test.ts \
             tests/ui/c9FamilyJOpportunityAttackProduction.test.ts \
             tests/ui/c9FamilyJPortableControlProduction.test.ts \
             tests/ui/c9FamilyJAttackPersistence.test.ts \
