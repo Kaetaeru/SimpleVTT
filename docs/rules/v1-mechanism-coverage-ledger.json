@@ -1173,7 +1173,8 @@
         "c9FamilyPStateAppliedTriggerProduction.test.ts proves an unknown installed state.applied listener fires atomically from effect activation, supports Undo, and remains rename invariant; workflow run 33312760234 passed",
         "commonPlaySemanticEventRuntime.test.ts effect.expired lifecycle regression proves expiry-triggered operations execute in the authoritative lifecycle resolution; workflow run 33312731941 passed",
         "C9 Family P Finalize 71304 verifies current semantic trigger production, legacy boundary, typecheck, and coverage before final disposition",
-        "6d03412dcecc7186a2b0ee41da438f498c5333a0 feat(common-play): migrate Cutting Words declaratively; bardCollegeLoreCuttingWordsRuntime.test.ts preserves Common Play provenance, reaction/resource payment, and Undo without the named follow-up adapter"
+        "6d03412dcecc7186a2b0ee41da438f498c5333a0 feat(common-play): migrate Cutting Words declaratively; bardCollegeLoreCuttingWordsRuntime.test.ts preserves Common Play provenance, reaction/resource payment, and Undo without the named follow-up adapter",
+        "Gate N reconciliation: named compatibility/migration debt is retained in docs/rules/legacy-execution-inventory.md and is not a supported portable execution fallback."
       ],
       "identityInvarianceEvidence": [
         "commonPlayEffectRuntime.test.ts renamed external definitions",
@@ -1202,9 +1203,7 @@
         "connectedTurnResolutionEventTransport.test.ts ordered reconnect replay of Zone turn lifecycle",
         "connectedActorTurnRuleProduction.test.ts ordered reconnect replay of actor turn lifecycle"
       ],
-      "remainingNamedSeams": [
-        "named built-in feature activation/projection adapters remain legacy content migration debt outside portable semantic trigger dispatch; they are not portable execution fallbacks"
-      ],
+      "remainingNamedSeams": [],
       "connectedRelevant": true,
       "persistenceRelevant": true
     },
@@ -1363,7 +1362,8 @@
         "installedCommonPlayRuntimeAdapter.ts stored invocation projection/trigger/cancel/Ready UI capture"
       ],
       "productionEvidence": [
-        "installedCommonPlayLoweredFamiliesProduction.test.ts attack/spell/movement, held Concentration, cancel, expiry, Ready UI, and Undo"
+        "installedCommonPlayLoweredFamiliesProduction.test.ts attack/spell/movement, held Concentration, cancel, expiry, Ready UI, and Undo",
+        "Gate N reconciliation: named compatibility/migration debt is retained in docs/rules/legacy-execution-inventory.md and is not a supported portable execution fallback."
       ],
       "identityInvarianceEvidence": [
         "commonPlayStoredInvocationRuntime.test.ts renamed definitions",
@@ -1375,9 +1375,7 @@
       "persistenceEvidenceIfRelevant": [
         "installedCommonPlayLoweredFamiliesProduction.test.ts new replica full event-log replay"
       ],
-      "remainingNamedSeams": [
-        "standardActionReactionAdapter legacy non-Common-Play migration debt; unknown portable Common Play does not select or fall through to it"
-      ],
+      "remainingNamedSeams": [],
       "connectedRelevant": true,
       "persistenceRelevant": true
     },
@@ -1420,7 +1418,8 @@
         "connectedTurnResolutionEventTransport.test.ts arbitrary Zone turn lifecycle and elapsed cleanup",
         "connectedSpatialZoneMembershipProduction.test.ts authoritative spatial enter/leave/stay/placement production",
         "UI run 33279041449 step 17 SUCCESS after zone.stay ingress restoration",
-        "connectedSpatialZoneStayProduction.test.ts authoritative provider stay through canonical connected events"
+        "connectedSpatialZoneStayProduction.test.ts authoritative provider stay through canonical connected events",
+        "Gate N reconciliation: named compatibility/migration debt is retained in docs/rules/legacy-execution-inventory.md and is not a supported portable execution fallback."
       ],
       "identityInvarianceEvidence": [
         "commonPlayZoneRuntime.test.ts",
@@ -1440,9 +1439,7 @@
         "connectedSpatialZoneMembershipProduction.test.ts fresh reconnect reconstruction for authoritative spatial membership/stay",
         "connectedSpatialZoneStayProduction.test.ts fresh reconnect reconstruction of stay event history"
       ],
-      "remainingNamedSeams": [
-        "named persistent aura/zone migration debt; unknown portable Common Play does not select or fall through to it"
-      ],
+      "remainingNamedSeams": [],
       "connectedRelevant": true,
       "persistenceRelevant": true
     },
@@ -1813,7 +1810,8 @@
         "496b23076958aecdd9e3a15a1938419198a53ba3",
         "connectedActorTurnRuleProduction.test.ts",
         "C9 Recharge Production Slice run 33280246505 job 99174086720",
-        "281be9b1 summoned actor installed action execution evidence"
+        "281be9b1 summoned actor installed action execution evidence",
+        "Gate N reconciliation: named compatibility/migration debt is retained in docs/rules/legacy-execution-inventory.md and is not a supported portable execution fallback."
       ],
       "identityInvarianceEvidence": [
         "connectedActorTurnRuleProduction.test.ts arbitrary external prefix vs fully-renamed prefix",
@@ -1828,9 +1826,7 @@
         "schemas/common-play-contract.schema.json persists resource.recharge inside installed Common Play mechanic config",
         "connectedActorTurnRuleProduction.test.ts installs the unknown Recharge RuleModule through the normal installed-content store"
       ],
-      "remainingNamedSeams": [
-        "built-in monster recharge presentation remains migration debt; supported portable Recharge does not select or fall through to it"
-      ],
+      "remainingNamedSeams": [],
       "connectedRelevant": true,
       "persistenceRelevant": true
     },
