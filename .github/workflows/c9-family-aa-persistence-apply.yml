@@ -1,0 +1,116 @@
+name: C9 Family AA Progression Persistence Apply
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-aa-persistence-apply.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Apply Family AA persistence projection
+        id: apply
+        continue-on-error: true
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          def replace_once(path, old, new):
+              p = Path(path)
+              text = p.read_text()
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"expected exactly one match in {path}, found {count}: {old!r}")
+              p.write_text(text.replace(old, new))
+
+          replace_once(
+              "src/app/persistenceContracts.ts",
+              "  persistentFeatureOptionSources?:Record<string,string>;\n  epicBoonFeatIds?:string[];",
+              "  persistentFeatureOptionSources?:Record<string,string>;\n  /** Stable opaque progression grant identities from installed RuleModules. */\n  installedProgressionGrantIds?:string[];\n  epicBoonFeatIds?:string[];",
+          )
+          replace_once(
+              "src/app/characterLibraryPersistence.ts",
+              "    persistentFeatureOptionSources:sheet.persistentFeatureOptionSources,\n    epicBoonFeatIds:sheet.epicBoonFeatIds,",
+              "    persistentFeatureOptionSources:sheet.persistentFeatureOptionSources,\n    installedProgressionGrantIds:sheet.installedProgressionGrantIds,\n    epicBoonFeatIds:sheet.epicBoonFeatIds,",
+          )
+          replace_once(
+              "src/app/characterLibraryPersistence.ts",
+              "  sheet.persistentFeatureOptionSources=progression.persistentFeatureOptionSources ? cp(progression.persistentFeatureOptionSources) : undefined;\n  sheet.epicBoonFeatIds=progression.epicBoonFeatIds ? cp(progression.epicBoonFeatIds) : undefined;",
+              "  sheet.persistentFeatureOptionSources=progression.persistentFeatureOptionSources ? cp(progression.persistentFeatureOptionSources) : undefined;\n  sheet.installedProgressionGrantIds=progression.installedProgressionGrantIds ? cp(progression.installedProgressionGrantIds) : undefined;\n  sheet.epicBoonFeatIds=progression.epicBoonFeatIds ? cp(progression.epicBoonFeatIds) : undefined;",
+          )
+
+          p = Path("tests/ui/installedProgressionContributionRuntime.test.ts")
+          text = p.read_text()
+          text = text.replace(
+              'import "../../src/app/progressionRuntimeAdapter";\nimport "../../src/app/installedContentRuntimeAdapter";\n',
+              'import "../../src/app/characterLibraryRuntimeAdapter";\nimport "../../src/app/installedContentRuntimeAdapter";\n',
+              1,
+          )
+          text = text.replace(
+              'import type { Phase07AdapterCommands } from "../../src/app/progressionRuntimeAdapter";\n',
+              'import type { Phase07AdapterCommands } from "../../src/app/progressionRuntimeAdapter";\nimport { setCharacterLibraryStoreForTests } from "../../src/app/characterLibraryRuntimeAdapter";\nimport type { CharacterLibraryStore, CharacterLibraryStoredGeneration } from "../../src/app/persistenceContracts";\n',
+              1,
+          )
+          text = text.replace(
+              'const GRANT_ID = "option.external.progression-grant";\n',
+              '''const GRANT_ID = "option.external.progression-grant";\n\nclass DurableMemoryCharacterLibraryStore implements CharacterLibraryStore {\n  readonly durability = "durable" as const;\n  private generations = new Map<number,string>();\n\n  async readGenerations():Promise<CharacterLibraryStoredGeneration[]> {\n    return [...this.generations.entries()]\n      .map(([generation,payload]) => ({ generation,payload }))\n      .sort((a,b) => b.generation-a.generation);\n  }\n\n  async writeGeneration(expectedGeneration:number,nextGeneration:number,payload:string):Promise<void> {\n    const current = Math.max(0,...this.generations.keys());\n    assert.equal(current,expectedGeneration);\n    assert.equal(nextGeneration,expectedGeneration+1);\n    this.generations.set(nextGeneration,payload);\n  }\n}\n''',
+              1,
+          )
+          text = text.replace(
+              '  const adapter = new MockAdapter();\n  setInstalledContentStoreForTests(adapter, new MemoryInstalledContentStore());\n',
+              '  const characterStore = new DurableMemoryCharacterLibraryStore();\n  const adapter = new MockAdapter();\n  setCharacterLibraryStoreForTests(adapter, characterStore);\n  setInstalledContentStoreForTests(adapter, new MemoryInstalledContentStore());\n',
+              1,
+          )
+          text = text.replace(
+              '  assert.ok(snapshot.activity[0]?.stateChanges.includes(`installed progression grants: ${GRANT_ID}`));\n});',
+              '''  assert.ok(snapshot.activity[0]?.stateChanges.includes(`installed progression grants: ${GRANT_ID}`));\n\n  const restarted = new MockAdapter();\n  setCharacterLibraryStoreForTests(restarted, characterStore);\n  const restartedSnapshot = await restarted.getSnapshot();\n  assert.equal(restartedSnapshot.activeCharacter.level, 6);\n  assert.deepEqual(restartedSnapshot.activeCharacter.installedProgressionGrantIds, [GRANT_ID]);\n  assert.ok(restartedSnapshot.activeCharacter.features.includes("이름이 바뀐 외부 보상"));\n});''',
+              1,
+          )
+          p.write_text(text)
+          PY
+      - name: Generate required catalogs
+        if: steps.apply.outcome == 'success'
+        run: npm run generate:content
+      - name: Verify Family AA durable progression path
+        id: verify
+        if: steps.apply.outcome == 'success'
+        continue-on-error: true
+        run: |
+          npx tsx --test tests/ui/installedProgressionContributionRuntime.test.ts
+          npx tsc --noEmit
+      - name: Commit verified change
+        if: steps.apply.outcome == 'success' && steps.verify.outcome == 'success'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/c9-family-aa-persistence-apply.yml
+          git add src/app/persistenceContracts.ts src/app/characterLibraryPersistence.ts tests/ui/installedProgressionContributionRuntime.test.ts
+          git commit -m "fix(c9): persist installed progression grant identities"
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
+      - name: Remove failed apply workflow
+        if: always() && (steps.apply.outcome != 'success' || steps.verify.outcome != 'success')
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -- src/app/persistenceContracts.ts src/app/characterLibraryPersistence.ts tests/ui/installedProgressionContributionRuntime.test.ts
+          git rm .github/workflows/c9-family-aa-persistence-apply.yml
+          git commit -m "chore(c9): remove failed progression persistence helper"
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
+          exit 1
