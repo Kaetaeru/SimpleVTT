@@ -72,3 +72,5 @@ jobs:
             sleep 1
           done
           exit 1
+
+# rerun-trigger: dedicated drag/carry proof integrated
