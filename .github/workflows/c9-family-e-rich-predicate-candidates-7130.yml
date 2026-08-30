@@ -1,5 +1,5 @@
 name: C9 Family E Rich Predicate Candidates 7130
-# Retry after stale targeting assertions were reconciled.
+# Retry after rulesTestState import reconciliation.
 
 on:
   push:
