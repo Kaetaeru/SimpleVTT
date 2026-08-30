@@ -1,0 +1,95 @@
+name: C9 Family J Unarmed Identity Fix
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-j-unarmed-identity-fix.yml
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Patch projected runtime attack identity fallback
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path, old, new):
+              p=Path(path)
+              text=p.read_text()
+              if new in text:
+                  return
+              if old not in text:
+                  raise SystemExit(f"missing patch anchor in {path}: {old[:80]!r}")
+              p.write_text(text.replace(old,new,1))
+
+          resolution="src/app/phase09RealResolutionAdapter.ts"
+          replace_once(
+              resolution,
+              '''function rejectCost(internal:Phase09ResolutionAdapterState,error:string) {''',
+              '''function projectedAction(scene:AppSnapshot["scene"],actionId:string) {\n  return Object.values(scene.actionsByActor).flat().find((action)=>action.id===actionId);\n}\n\nfunction rejectCost(internal:Phase09ResolutionAdapterState,error:string) {''',
+          )
+          replace_once(
+              resolution,
+              '''  const action = internal.action(actionId);\n  if (!action || !migratedResolutionAction(action)) {''',
+              '''  const snapshot=await internal.getSnapshot();\n  const action = internal.action(actionId) ?? projectedAction(snapshot.scene,actionId);\n  if (!action || !migratedResolutionAction(action)) {''',
+          )
+          replace_once(
+              resolution,
+              '''  const action = internal.action(resolution.actionId);\n  if (!action) return oldAdvanceResolution.call(this);''',
+              '''  const action = internal.action(resolution.actionId) ?? projectedAction((await internal.getSnapshot()).scene,resolution.actionId);\n  if (!action) return oldAdvanceResolution.call(this);''',
+          )
+
+          runtime="src/app/phase09RealRuntimeAttackAdapter.ts"
+          replace_once(
+              runtime,
+              '''function reject(adapter:MockAdapter,internal:RuntimeAttackAdapterState,error:string,restoreBefore=true) {''',
+              '''async function actionForResolution(internal:RuntimeAttackAdapterState,actionId:string) {\n  return internal.action(actionId)\n    ?? Object.values((await internal.getSnapshot()).scene.actionsByActor).flat().find((action)=>action.id===actionId);\n}\n\nfunction reject(adapter:MockAdapter,internal:RuntimeAttackAdapterState,error:string,restoreBefore=true) {''',
+          )
+          replace_once(
+              runtime,
+              '''  const action = resolution ? internal.action(resolution.actionId) : undefined;\n  const manual = manualFor(this,action,resolution);''',
+              '''  const action = resolution ? await actionForResolution(internal,resolution.actionId) : undefined;\n  const manual = manualFor(this,action,resolution);''',
+          )
+
+          test="tests/ui/unarmedStrikeRuntime.test.ts"
+          p=Path(test)
+          text=p.read_text()
+          old='assert.equal(snapshot.scene.economyByActor["char.aelar"]?.extraAttacks?.length,0);'
+          count=text.count(old)
+          if count:
+              text=text.replace(old,'assert.equal(snapshot.scene.economyByActor["char.aelar"]?.extraAttacks?.length??0,0);')
+              p.write_text(text)
+          elif 'extraAttacks?.length??0,0' not in text:
+              raise SystemExit("missing Extra Attack exhaustion assertion anchor")
+          PY
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Generate content dependencies
+        run: npm run generate:content
+      - name: Verify Family J identity and replacement
+        run: npx tsx --test tests/ui/c9FamilyJPortableControlProduction.test.ts tests/ui/c9FamilyJSpatialAttackProduction.test.ts tests/ui/c9FamilyJExtraAttackProduction71304.test.ts tests/ui/unarmedStrikeRuntime.test.ts
+      - name: Commit fix and remove one-shot workflow
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/c9-family-j-unarmed-identity-fix.yml
+          git add src/app/phase09RealResolutionAdapter.ts src/app/phase09RealRuntimeAttackAdapter.ts tests/ui/unarmedStrikeRuntime.test.ts
+          git commit -m "fix(c9): route projected runtime attacks structurally"
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
