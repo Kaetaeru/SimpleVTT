@@ -23,54 +23,37 @@ jobs:
           node-version: 22
       - run: npm install --no-audit --no-fund
       - run: npm run generate:content
-      - name: Apply verified narrow patches
+      - name: Preserve actor artifact properties and repair semantic narrowing
         shell: bash
         run: |
           python - <<'PY'
           from pathlib import Path
-
           semantic=Path("src/domain/commonPlaySemanticEventRuntime.ts")
           text=semantic.read_text()
-          text=text.replace(
-            '    const applied=authoritativeEvent.stateChanges.filter((change):change is EffectStateChange=>change.kind==="effect"&&change.operation==="added");',
-            '    const applied:EffectStateChange[]=[];\n    for(const change of authoritativeEvent.stateChanges) if(change.kind==="effect"&&change.operation==="added") applied.push(change);',
-          )
-          text=text.replace(
-            '  const expired=authoritativeEvent.stateChanges.filter((change):change is EffectStateChange=>change.kind==="effect"&&change.operation==="removed");',
-            '  const expired:EffectStateChange[]=[];\n  for(const change of authoritativeEvent.stateChanges) if(change.kind==="effect"&&change.operation==="removed") expired.push(change);',
-          )
+          text=text.replace('    const applied=authoritativeEvent.stateChanges.filter((change):change is EffectStateChange=>change.kind==="effect"&&change.operation==="added");','    const applied:EffectStateChange[]=[];\n    for(const change of authoritativeEvent.stateChanges) if(change.kind==="effect"&&change.operation==="added") applied.push(change);')
+          text=text.replace('  const expired=authoritativeEvent.stateChanges.filter((change):change is EffectStateChange=>change.kind==="effect"&&change.operation==="removed");','  const expired:EffectStateChange[]=[];\n  for(const change of authoritativeEvent.stateChanges) if(change.kind==="effect"&&change.operation==="removed") expired.push(change);')
           semantic.write_text(text)
 
           artifact=Path("src/domain/resolutionArtifactOps.ts")
           text=artifact.read_text()
-          if 'baseProperties,' not in text[text.index('function actorCombatant('):text.index('export function executeSpawnArtifact')]:
+          section=text[text.index('function actorCombatant('):text.index('export function executeSpawnArtifact')]
+          if 'baseProperties,' not in section:
             old='''  const maximum=Number(actor.properties["hp.maximum"]);\n  const speed=Number(actor.properties["movement.walk"]);\n  return {\n    id:actor.combatantId,\n    baseSpeed:speed,\n'''
             new='''  const maximum=Number(actor.properties["hp.maximum"]);\n  const speed=Number(actor.properties["movement.walk"]);\n  const baseProperties:Record<string,number>={};\n  for(const [property,value] of Object.entries(actor.properties)) {\n    if(typeof value==="number"&&Number.isFinite(value)) baseProperties[property]=value;\n  }\n  return {\n    id:actor.combatantId,\n    baseSpeed:speed,\n    baseProperties,\n'''
             if old not in text:
               raise SystemExit("resolutionArtifactOps actorCombatant anchor changed")
             artifact.write_text(text.replace(old,new,1))
-
-          adapter=Path("src/app/installedCommonPlayRuntimeAdapter.ts")
-          text=adapter.read_text()
-          if '...(actorState.baseProperties??{})' not in text:
-            token='function commonPlayActorProfileProperties('
-            start=text.index(token)
-            end=text.index('\nfunction operationExecutionInput(',start)
-            replacement='''export function commonPlayActorProfileProperties(\n  internal:{activeCharacter:CharacterSheet;scene:SceneVm},\n  state:RulesRuntimeState,\n  actorId:string,\n):Record<string,number>|undefined {\n  const actorState=state.combatants[actorId];\n  if(!actorState) return undefined;\n  const sceneActor=internal.scene.entities.find((entity)=>entity.id===actorId);\n  const runtimeInputs:Record<string,number>={\n    ...(actorState.baseProperties??{}),\n    "movement.walk":actorState.baseSpeed,\n    "hp.current":actorState.life.hp.current,\n    "hp.maximum":actorState.life.hp.maximum,\n    "hp.temporary":actorState.life.hp.temporary,\n    ...(sceneActor?{"defense.ac":sceneActor.ac,initiative:sceneActor.initiative}:{}),\n  };\n  const character=internal.activeCharacter;\n  const inputs:Record<string,number>=character.id===actorId?{\n    ...runtimeInputs,\n    "ability.str.score":character.abilities.str,\n    "ability.dex.score":character.abilities.dex,\n    "ability.con.score":character.abilities.con,\n    "ability.int.score":character.abilities.int,\n    "ability.wis.score":character.abilities.wis,\n    "ability.cha.score":character.abilities.cha,\n    "progression.character.level":character.level,\n    "proficiency.bonus":character.proficiencyBonus,\n    "defense.ac":character.ac,\n  }:runtimeInputs;\n  const projected={...inputs};\n  for(const [property,definition] of Object.entries(SIMPLEVTT_APP_RULES_PROFILE.properties)) {\n    if(!Number.isFinite(inputs[property])&&!definition.formula) continue;\n    try {\n      projected[property]=resolveRuntimeProfileProperty(state.effects,actorId,property,inputs).value;\n    } catch(error) {\n      if(character.id===actorId) throw error;\n    }\n  }\n  return projected;\n}\n'''
-            adapter.write_text(text[:start]+replacement+text[end:])
           PY
-      - name: Add focused regression
+      - name: Add actor artifact property regression
         shell: bash
         run: |
-          cat > tests/ui/c9FamilyANonActiveProfileProperties.test.ts <<'TS'
+          cat > tests/ui/c9FamilyAActorArtifactBaseProperties.test.ts <<'TS'
           import assert from "node:assert/strict";
           import test from "node:test";
-          import { commonPlayActorProfileProperties } from "../../src/app/installedCommonPlayRuntimeAdapter";
           import { resolveCommonPlayArtifactActivation } from "../../src/domain/commonPlayArtifactRuntime";
-          import type { EffectInstance } from "../../src/domain/effects";
           import { runtimeState, TEST_PROFILE } from "../domain/rulesTestState";
 
-          test("non-active runtime actors preserve portable profile properties and resolve derived refs through active Effects",()=>{
+          test("unknown actor artifact preserves portable numeric profile properties on its runtime combatant",()=>{
             const committed=resolveCommonPlayArtifactActivation(TEST_PROFILE,runtimeState(),{
               schemaVersion:"0.2-draft",id:"external.unknown.actor-profile",
               entryPoints:[{id:"spawn",invocation:"manual",operations:[{kind:"artifact.spawn",template:"companion"}]}],
@@ -82,21 +65,17 @@ jobs:
             },{resolutionId:"external-actor-profile-spawn",actorId:"hero",entryPointId:"spawn"});
             assert.equal(committed.status,"committed",committed.status==="rejected"?committed.error:undefined);
             if(committed.status!=="committed") throw new Error("expected committed actor artifact spawn");
-            assert.equal(committed.state.combatants["external.companion"]?.baseProperties?.["ability.str.score"],14);
-            const modifier:EffectInstance={id:"effect.external.companion.str",sourceId:"external.unknown.buff",targetId:"external.companion",kind:"modifier",tags:[],expiry:{kind:"permanent"},propertyModifier:{property:"ability.str.score",operation:"add",value:{value:2},source:"definition",instancePolicy:"stack"}};
-            committed.state.effects.push(modifier);
-            const properties=commonPlayActorProfileProperties({activeCharacter:{id:"hero"} as never,scene:{entities:[{id:"external.companion",ac:13,initiative:11}]} as never},committed.state,"external.companion")!;
-            assert.equal(properties["movement.walk"],25);
-            assert.equal(properties["hp.current"],9);
-            assert.equal(properties["defense.ac"],13);
-            assert.equal(properties.initiative,11);
-            assert.equal(properties["ability.str.score"],16);
-            assert.equal(properties["ability.str.modifier"],3);
+            const actor=committed.state.combatants["external.companion"]!;
+            assert.equal(actor.baseSpeed,25);
+            assert.equal(actor.life.hp.current,9);
+            assert.equal(actor.baseProperties?.["defense.ac"],13);
+            assert.equal(actor.baseProperties?.["ability.str.score"],14);
+            assert.equal(actor.baseProperties?.["proficiency.bonus"],2);
           });
           TS
-      - name: Verify Family A slice and branch type health
+      - name: Verify Family A chain and branch type health
         run: |
-          npx tsx --test tests/ui/c9FamilyANonActiveProfileProperties.test.ts tests/ui/installedCommonPlayPropertyModifierProduction.test.ts
+          npx tsx --test tests/ui/c9FamilyAActorArtifactBaseProperties.test.ts tests/ui/installedCommonPlayPropertyModifierProduction.test.ts
           node scripts/check-v1-mechanism-coverage.mjs
           npx tsc --noEmit
       - name: Commit verified slice and retire workflow
@@ -106,7 +85,7 @@ jobs:
           rm .github/workflows/c9-family-a-nonactive-profile-properties-7130.yml
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/domain/commonPlaySemanticEventRuntime.ts src/domain/resolutionArtifactOps.ts src/app/installedCommonPlayRuntimeAdapter.ts tests/ui/c9FamilyANonActiveProfileProperties.test.ts .github/workflows/c9-family-a-nonactive-profile-properties-7130.yml
-          git commit -m "feat(c9): project non-active actor profile properties"
+          git add src/domain/commonPlaySemanticEventRuntime.ts src/domain/resolutionArtifactOps.ts tests/ui/c9FamilyAActorArtifactBaseProperties.test.ts .github/workflows/c9-family-a-nonactive-profile-properties-7130.yml
+          git commit -m "feat(c9): preserve actor artifact profile properties"
           git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
           git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
