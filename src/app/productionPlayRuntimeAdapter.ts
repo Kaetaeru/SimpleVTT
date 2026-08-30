@@ -95,18 +95,14 @@ function parseDamage(raw:string) {
   return { dice:`${count}d${sides}`,count,sides,flat,type,average:Math.floor(count*(sides+1)/2)+flat };
 }
 
-function attackRange(name:string) {
-  return /bow|crossbow|활|석궁|sling|슬링/i.test(name)?80:5;
-}
-
 type WeaponDefinition={mode?:"melee"|"ranged";properties?:string[]};
 type ArmorDefinition={training?:"light"|"medium"|"heavy"};
 
 function weaponRuntimeFact(character:CharacterSheet,attack:CharacterSheet["attacks"][number]) {
-  const item=character.items.find((candidate)=>candidate.name===attack.name||candidate.nameEn===attack.name);
+  const item=character.items.find((candidate)=>candidate.grantedActionIds.includes(attack.id));
   const entry=item&&itemEntryById(item.definitionId);
   const definition=entry?.category==="weapon"?itemMechanic(entry,"weapon-definition") as WeaponDefinition|undefined:undefined;
-  if(!definition)return {rangeFeet:attackRange(attack.name)};
+  if(!definition)return {rangeFeet:5};
   const rangeFeet=(definition.properties??[]).map((property)=>property.match(/^(?:ammunition|thrown):(\d+)(?:\/\d+)?$/i)?.[1]).find(Boolean);
   const strength=mod(character.abilities.str);const dexterity=mod(character.abilities.dex);
   const ability:AbilityKey|undefined=definition.mode==="ranged"?"dex":!definition.properties?.includes("finesse")?"str":strength===dexterity?undefined:strength>dexterity?"str":"dex";

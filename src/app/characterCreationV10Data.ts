@@ -10,6 +10,7 @@ import rogueLoadoutJson from "../../content/modules/dnd-srd-5.2.1.starting-loado
 import sorcererLoadoutJson from "../../content/modules/dnd-srd-5.2.1.starting-loadout-sorcerer/module.json";
 import backgroundLoadoutJson from "../../content/modules/dnd-srd-5.2.1.starting-loadouts-backgrounds/module.json";
 import simpleWeaponsJson from "../../content/modules/dnd-srd-5.2.1.equipment-simple-melee/module.json";
+import simpleRangedWeaponsJson from "../../content/modules/dnd-srd-5.2.1.equipment-simple-ranged/module.json";
 import martialMeleeJson from "../../content/modules/dnd-srd-5.2.1.equipment-martial-melee/module.json";
 import martialRangedJson from "../../content/modules/dnd-srd-5.2.1.equipment-martial-ranged/module.json";
 import armorJson from "../../content/modules/dnd-srd-5.2.1.equipment-armor/module.json";
@@ -84,7 +85,7 @@ const classEntries = entries(classesJson).filter((entry) => entry.category === "
 const originEntries = entries(originsJson);
 const featEntries = entries(featsJson);
 const loadoutEntries = [loadoutsAJson, loadoutsBJson, loadoutsDJson, rogueLoadoutJson, sorcererLoadoutJson, backgroundLoadoutJson].flatMap(entries);
-const itemEntries = [simpleWeaponsJson, martialMeleeJson, martialRangedJson, armorJson, gearJson, booksJson, packsJson, utilityJson, toolsJson].flatMap(entries);
+const itemEntries = [simpleWeaponsJson, simpleRangedWeaponsJson, martialMeleeJson, martialRangedJson, armorJson, gearJson, booksJson, packsJson, utilityJson, toolsJson].flatMap(entries);
 const itemById = new Map(itemEntries.map((entry) => [entry.id, entry]));
 const classById = new Map(classEntries.map((entry) => [entry.id, entry]));
 const speciesEntries = originEntries.filter((entry) => entry.category === "species");
