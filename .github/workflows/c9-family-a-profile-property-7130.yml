@@ -1,0 +1,33 @@
+name: C9 Family A Profile Property 7130
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - "src/domain/profileEngine.ts"
+      - "src/app/realResolutionService.ts"
+      - "src/app/installedCommonPlayProfilePropertyRuntime.ts"
+      - "src/app/turnRuntimeSessionRegistry.ts"
+      - "tests/ui/installedCommonPlayPropertyModifierProduction.test.ts"
+      - "docs/rules/v1-mechanism-coverage-ledger.json"
+      - ".github/workflows/c9-family-a-profile-property-7130.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: npm run generate:content
+      - name: Verify Family A generic profile-property production coverage
+        run: npx tsx --test tests/ui/installedCommonPlayPropertyModifierProduction.test.ts
+      - name: Verify TypeScript
+        run: npx tsc --noEmit
