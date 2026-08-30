@@ -768,7 +768,7 @@
         "realAttackTransactionService.ts",
         "structuralSaveConditionRuntimeAdapter.ts"
       ],
-      "currentState": "Family J attack/control semantics are covered by the canonical Resolver/Common Play path. Unknown installed RuleModules execute structural weapon-style attacks, Opportunity Attack-related attack transactions, ammunition/loading, cover/range, Extra Attack and replace-one-attack economy, and a complete Unarmed-shaped suite: flat damage, grapple, shove Prone, shove push, and best-of STR/DEX control saves. The complete suite is production- and identity-invariance-proven under unrelated external module/content/mechanic/entry-point identities with authoritative spatial facts and event-native Undo. Remaining built-in/reference named projection debt is tracked by the legacy execution inventory and is not a fallback selected by unknown supported Common Play content.",
+      "currentState": "Family J attack/control execution is complete through structural Common Play/Resolver authority. Unknown and renamed external attacks cover attack rolls, damage, control saves, range/cover, ammunition, Loading, Extra Attack, replace-one-attack, persistent attack riders, persistence, connected replay, and Undo. Built-in Unarmed Strike damage/grapple/shove now project complete source-owned structural runtimeAttack/runtimeSaveCondition payloads; the generic save-condition runtime consumes choose/save abilities/duration/termination without action-ID dispatch, and action identity plus presentation rename preserves execution. Remaining named attack/action adapters are legacy content migration/orchestration debt and are not supported portable execution fallbacks or a second attack engine.",
       "requiredSemantics": [
         "weapon attack",
         "Unarmed Strike",
@@ -801,7 +801,8 @@
         "installedCommonPlayRuntimeAdapter.ts treats structural economy payment actionKind=attack as eligible to consume an existing extraAttacks grant regardless of whether the replacement entry point is an attack roll or a save-based attack option",
         "Common Play economy PaymentContract actionKind=attack/attacksPerAction lets any structural attack-kind entry point consume the same remaining Resolver extraAttacks grant, enabling replace-one-attack without entry-point identity dispatch",
         "commonPlayOperationRuntime.ts resolves the generic attack.damage.flat Effect property on the actor and applies it exactly once to the first successful damage.apply component of an attack-roll entry point, so portable attack riders do not require Rage/content identity dispatch",
-        "commonPlayOperationRuntime.ts and installedCommonPlayRuntimeAdapter.ts compose a complete Unarmed-shaped external suite from structural attack-roll damage, best-of STR/DEX target saves, condition.apply, movement.relocate, attack economy, and event-native Undo without content identity dispatch"
+        "commonPlayOperationRuntime.ts and installedCommonPlayRuntimeAdapter.ts compose a complete Unarmed-shaped external suite from structural attack-roll damage, best-of STR/DEX target saves, condition.apply, movement.relocate, attack economy, and event-native Undo without content identity dispatch",
+        "structuralSaveConditionRuntimeAdapter.ts consumes source-owned runtimeSaveCondition choose/saveAbilities/duration/termination structurally without action-ID dispatch"
       ],
       "productionEvidence": [
         "installedCommonPlayLoweredFamiliesProduction.test.ts#summoned Actor projects and executes its portable Common Play action with economy and Undo",
@@ -824,7 +825,9 @@
         "C9 Family J Attack Replacement Publish 71304 run 33317162088: replacement production regression, legacy execution boundary, V1 coverage checker, and tsc --noEmit passed",
         "7219d0b3ad1bc21ed042d17a24f1b5ccce2a81da feat(c9): support portable attack damage riders; C9 Family J Attack Rider 71304 run 33317164478 passed unknown/renamed external attack rider production, adjacent Extra Attack/ammunition/control regressions, legacy execution boundary, V1 coverage checker, and tsc --noEmit",
         "tests/ui/c9FamilyJUnarmedSourceComposition71304.test.ts imports canonical offline production composition and installs a previously unknown RuleModule whose damage, grapple, shove-prone, and shove-push entry points execute through Common Play/Resolver with authoritative spatial facts and Undo",
-        "a734e10154169513acbcca7e5b2e5f8e051d4a4c refactor(c9): remove named unarmed control executor; UI run 33317878889 Verify C9 Family J portable control passed the portable control, spatial attack, Extra Attack, complete source-owned Unarmed composition, and existing Unarmed rename/connected regressions"
+        "a734e10154169513acbcca7e5b2e5f8e051d4a4c refactor(c9): remove named unarmed control executor; UI run 33317878889 Verify C9 Family J portable control passed the portable control, spatial attack, Extra Attack, complete source-owned Unarmed composition, and existing Unarmed rename/connected regressions",
+        "unarmedStrikeRuntime.test.ts proves Unarmed damage/grapple/shove execute after action identity and presentation rename from structural source payloads, including source-owned highest-save choice",
+        "C9 Family J Finalize 71304 run 33318027220 at a7fbee00396fd57d8fdd4cd315c75087bb87cf82: focused Family J production/persistence regressions, legacy execution boundary, and tsc --noEmit passed before ledger finalization"
       ],
       "identityInvarianceEvidence": [
         "installedCommonPlayLoweredFamiliesProduction.test.ts executes the summoned attack from arbitrary previously-unknown module/content/mechanic/action identities rather than a registered attack content ID",
@@ -842,7 +845,8 @@
         "c9FamilyJAttackReplacementProduction71304.test.ts repeats mixed damage/control replace-one-attack semantics after complete external module/content/mechanic identity rename",
         "c9FamilyJExtraAttackProduction71304.test.ts repeats portable attack replacement after complete external module/content/mechanic identity rename",
         "c9FamilyJAttackDamageRiderProduction71304.test.ts repeats persistent attack.damage.flat rider application and event-native Undo after complete external module/content/mechanic identity rename",
-        "tests/ui/c9FamilyJUnarmedSourceComposition71304.test.ts repeats the complete portable Unarmed-shaped damage/grapple/prone/push suite after renaming module, content, mechanic, and every entry-point identity"
+        "tests/ui/c9FamilyJUnarmedSourceComposition71304.test.ts repeats the complete portable Unarmed-shaped damage/grapple/prone/push suite after renaming module, content, mechanic, and every entry-point identity",
+        "unarmedStrikeRuntime.test.ts renames each Unarmed action ID and presentation while preserving damage/grapple/shove semantics through runtimeAttack/runtimeSaveCondition payloads"
       ],
       "connectedEvidenceIfRelevant": [
         "installedCommonPlayLoweredFamiliesProduction.test.ts#summoned Actor action and Undo converge through Host-authoritative connected events"
