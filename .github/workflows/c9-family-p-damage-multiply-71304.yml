@@ -6,6 +6,7 @@ on:
       - agent/c9-gate-n-coverage-reconciliation
     paths:
       - .github/workflows/c9-family-p-damage-multiply-71304.yml
+      - .github/scripts/c9-family-p-damage-multiply.py
   workflow_dispatch:
 
 permissions:
@@ -38,9 +39,22 @@ jobs:
           git config user.email "actions@users.noreply.github.com"
           git add src/domain/commonPlayRuntime.ts src/domain/commonPlayReactionDefinitionRuntime.ts schemas/common-play-contract.schema.json tests/domain/c9FamilyPDamageMultiplier.test.ts
           git commit -m "feat(c9): support structural damage multipliers"
-          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
+          for attempt in 1 2 3; do
+            git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+            if git push origin HEAD:agent/c9-gate-n-coverage-reconciliation; then
+              exit 0
+            fi
+          done
+          exit 1
       - name: Remove staging files
         run: |
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
           git rm .github/workflows/c9-family-p-damage-multiply-71304.yml .github/scripts/c9-family-p-damage-multiply.py
           git commit -m "chore(c9): remove damage multiplier staging files"
-          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
+          for attempt in 1 2 3; do
+            git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+            if git push origin HEAD:agent/c9-gate-n-coverage-reconciliation; then
+              exit 0
+            fi
+          done
+          exit 1
