@@ -708,7 +708,7 @@
         "zero speed"
       ],
       "transactionDomain": "Session Resolver movement with spatial/manual authority",
-      "disposition": "IMPLEMENTED",
+      "disposition": "INCOMPLETE",
       "implementationEvidence": [
         "commonPlayMovementRuntime.ts",
         "commonPlayOperationRuntime.ts movement.relocate lowering",
