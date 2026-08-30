@@ -40,6 +40,16 @@ jobs:
             git reset --hard "origin/$branch"
             npm run generate:content >/dev/null
             python3 .github/scripts/c9-family-r-production-ordering-71304.py
+            python3 - <<'PY'
+          from pathlib import Path
+          path=Path('src/app/phase09EffectAwareTurnAdapter.ts')
+          text=path.read_text()
+          old='const candidates=collectInstalledCommonPlayActorTurnRuleCandidates(boundary.state,bindings,boundary);'
+          new='const candidates=collectInstalledCommonPlayActorTurnRuleCandidates(boundary.state,bindings,{id:boundary.resolutionId,kind:boundary.kind,actorId:boundary.actorId});'
+          if old not in text:
+              raise SystemExit('Family R preview collector call anchor missing')
+          path.write_text(text.replace(old,new,1))
+          PY
             node --import tsx --test tests/domain/commonPlaySimultaneousOrderingRuntime.test.ts tests/ui/connectedActorTurnRuleProduction.test.ts
             npm exec tsc -- --noEmit
             node scripts/check-v1-mechanism-coverage.mjs
