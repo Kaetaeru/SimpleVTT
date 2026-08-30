@@ -29,6 +29,14 @@ type CommonPlayEffectRemove={
   selector:CommonPlaySelector&{from:"effects"};
   when?:CommonPlayTestOutcomePredicate;
 };
+type CommonPlayEffectSuppress={
+  kind:"effect.suppress";
+  selector:CommonPlaySelector&{from:"effects"};
+  suppressed:boolean;
+  reason?:string;
+  pauseDuration?:boolean;
+  when?:CommonPlayTestOutcomePredicate;
+};
 type CommonPlayMovementStand={kind:"movement.stand";target:"actor"|"self"};
 type CommonPlayMovementGrant={
   kind:"movement.grant";
@@ -201,6 +209,7 @@ export type CommonPlayOperation=
   |CommonPlayMovementStand
   |CommonPlayConditionChange
   |CommonPlayEffectRemove
+  |CommonPlayEffectSuppress
   |CommonPlayRollModify;
 
 type CommonPlayD20ModifierProperty=string|{choose:"highest";from:string[]};
@@ -286,6 +295,7 @@ const DAMAGE_APPLY_KEYS=new Set(["kind","amount","damageType","multiplier","redu
 const HEALING_APPLY_KEYS=new Set(["kind","amount","target"]);
 const CONDITION_CHANGE_KEYS=new Set(["kind","condition","target","when"]);
 const EFFECT_REMOVE_KEYS=new Set(["kind","selector","when"]);
+const EFFECT_SUPPRESS_KEYS=new Set(["kind","selector","suppressed","reason","pauseDuration","when"]);
 const TEMP_HP_GRANT_KEYS=new Set(["kind","amount","target","choice"]);
 const LIFE_STABILIZE_KEYS=new Set(["kind","target"]);
 const LIFE_DEATH_SAVE_KEYS=new Set(["kind"]);
@@ -643,6 +653,23 @@ function parseOperation(value:unknown,label:string):CommonPlayOperation {
     const when=testOutcomePredicate(operation.when,`${label}.when`);
     return {kind:"effect.remove",selector:{...selector,from:"effects"},...(when?{when}:{})};
   }
+  if(operation.kind==="effect.suppress") {
+    supportedKeys(operation,EFFECT_SUPPRESS_KEYS,label);
+    const selector=parseCommonPlaySelector(operation.selector,`${label}.selector`);
+    if(selector.from!=="effects") throw new DomainEvaluationError(`${label}.selector.from must be effects for portable Common Play effect.suppress`);
+    if(selector.selection==="manual") throw new DomainEvaluationError(`${label}.selector.selection must be automatic when changing effect suppression`);
+    if(typeof operation.suppressed!=="boolean") throw new DomainEvaluationError(`${label}.suppressed must be boolean`);
+    const reason=operation.reason===undefined?undefined:nonEmptyString(operation.reason,`${label}.reason`);
+    if(operation.pauseDuration!==undefined&&typeof operation.pauseDuration!=="boolean") throw new DomainEvaluationError(`${label}.pauseDuration must be boolean when present`);
+    if(operation.suppressed===false&&(reason!==undefined||operation.pauseDuration!==undefined)) throw new DomainEvaluationError(`${label} unsuppression must not declare reason or pauseDuration`);
+    const when=testOutcomePredicate(operation.when,`${label}.when`);
+    return {
+      kind:"effect.suppress",selector:{...selector,from:"effects"},suppressed:operation.suppressed,
+      ...(reason===undefined?{}:{reason}),
+      ...(operation.pauseDuration===undefined?{}:{pauseDuration:operation.pauseDuration}),
+      ...(when?{when}:{}),
+    };
+  }
   if(operation.kind==="condition.apply"||operation.kind==="condition.remove") {
     supportedKeys(operation,CONDITION_CHANGE_KEYS,label);
     const condition=nonEmptyString(operation.condition,`${label}.condition`) as ConditionId;
@@ -786,7 +813,7 @@ for(const [index,entryPoint] of entryPoints.entries()) {
 }
 for(const [index,entryPoint] of entryPoints.entries()) {
   if(entryPoint.test?.roller==="target"&&(!entryPoint.targeting||entryPoint.targeting.min!==1||entryPoint.targeting.max!==1)) throw new DomainEvaluationError(`${label}.entryPoints[${index}] target-rolled d20 requires targeting exactly one target`);
-  if(entryPoint.operations.some((operation)=>(operation.kind==="condition.apply"||operation.kind==="condition.remove"||operation.kind==="effect.remove"||operation.kind==="damage.apply")&&operation.when)&&!entryPoint.test) throw new DomainEvaluationError(`${label}.entryPoints[${index}] test.outcome conditional operation requires a d20 test`);
+  if(entryPoint.operations.some((operation)=>(operation.kind==="condition.apply"||operation.kind==="condition.remove"||operation.kind==="effect.remove"||operation.kind==="effect.suppress"||operation.kind==="damage.apply")&&operation.when)&&!entryPoint.test) throw new DomainEvaluationError(`${label}.entryPoints[${index}] test.outcome conditional operation requires a d20 test`);
 }
 const reactionPaymentCount=payments?.filter((payment)=>payment.kind==="economy"&&payment.bucket==="reaction").length??0;
   const interactionCount=entryPoints.filter((entry)=>entry.interaction).length;
@@ -1112,6 +1139,32 @@ export function compileCommonPlayEntryPointOperations(
       continue;
     }
 
+    if(operation.kind==="effect.suppress") {
+      const when=operation.when?{operationId:`${input.resolutionId}:test`,field:"outcome" as const,equals:operation.when.right.value}:undefined;
+      const candidates=state.effects.map((effect)=>({
+        id:effect.id,
+        properties:{
+          tags:[...effect.tags],
+          targetId:effect.targetId,
+          sourceId:effect.sourceId,
+          kind:effect.kind,
+          suppressed:!effectIsActive(effect),
+          "target.selected":input.targetId!==undefined&&effect.targetId===input.targetId,
+          "target.actor":effect.targetId===input.actorId,
+          ...(effect.sourceActorId?{sourceActorId:effect.sourceActorId}:{}),
+          ...(effect.conditionId?{conditionId:effect.conditionId}:{}),
+        },
+      }));
+      const selected=resolveCommonPlaySelector({sourceId:input.actorId,selector:operation.selector,candidates,selection:"automatic",authority:"host"});
+      if(selected.status!=="resolved") throw new DomainEvaluationError(`Common Play effect.suppress selector rejected: ${selected.reason}`);
+      selected.targetIds.forEach((effectId,suppressionIndex)=>operations.push({
+        id:`${operationId}:suppression:${suppressionIndex}`,kind:"set-effect-suppression",effectId,suppressed:operation.suppressed,
+        ...(operation.reason===undefined?{}:{reason:operation.reason}),
+        ...(operation.pauseDuration===undefined?{}:{pauseDuration:operation.pauseDuration}),
+        ...(when?{when}:{}),
+      }));
+      continue;
+    }
     if(operation.kind==="condition.apply"||operation.kind==="condition.remove") {
       const targetId=conditionOperationTarget(operation.target,input);
       const when=operation.when?{operationId:`${input.resolutionId}:test`,field:"outcome",equals:operation.when.right.value}:undefined;

@@ -967,6 +967,9 @@
           "$ref": "#/$defs/effectRemove"
         },
         {
+          "$ref": "#/$defs/effectSuppress"
+        },
+        {
           "$ref": "#/$defs/artifactSpawn"
         },
         {
@@ -2207,6 +2210,36 @@
           "$ref": "#/$defs/expression"
         },
         "doesNotProvokeOpportunityAttacks": {
+          "type": "boolean"
+        },
+        "when": {
+          "$ref": "#/$defs/predicate"
+        }
+      },
+      "additionalProperties": false
+    },
+    "effectSuppress": {
+      "type": "object",
+      "required": [
+        "kind",
+        "selector",
+        "suppressed"
+      ],
+      "properties": {
+        "kind": {
+          "const": "effect.suppress"
+        },
+        "selector": {
+          "$ref": "#/$defs/selector"
+        },
+        "suppressed": {
+          "type": "boolean"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "pauseDuration": {
           "type": "boolean"
         },
         "when": {

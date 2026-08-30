@@ -131,3 +131,124 @@ test("unknown installed elapsed effect expires at the production round clock bou
 test("renamed external identity preserves production elapsed expiry and Undo",async()=>{
   await exerciseElapsedBoundaryExpiry("renamed-family-n-expiry");
 });
+
+function suppressionPackage(prefix:string) {
+  const moduleId=`${prefix}.module`;
+  const contentId=`${prefix}.content`;
+  const effectMechanicId=`${prefix}.timed-effect`;
+  const controlMechanicId=`${prefix}.suppression-control`;
+  const effectConfig={
+    schemaVersion:"0.2-draft",id:effectMechanicId,
+    entryPoints:[{id:"activate",invocation:"manual",operations:[{kind:"effect.apply",template:"probe",target:"actor"}]}],
+    artifactTemplates:[{
+      id:"probe",artifactKind:"effect",duration:{kind:"elapsed",amount:{value:6},unit:"seconds"},
+      rules:[{id:"noop",event:"damage.taken",frequency:"once-per-resolution",operations:[{kind:"damage.apply",amount:{value:0},damageType:"force",target:"event.actor"}]}],
+      lifetime:{kind:"until-duration",onEnd:"destroy"},instancePolicy:"stack",
+    }],
+  };
+  const selector={
+    from:"effects",min:1,max:1,selection:"automatic",
+    where:{op:"eq",left:{ref:"sourceId"},right:{value:effectMechanicId}},
+  };
+  const controlConfig={
+    schemaVersion:"0.2-draft",id:controlMechanicId,
+    entryPoints:[
+      {id:"suppress",invocation:"manual",operations:[{kind:"effect.suppress",selector,suppressed:true,reason:"portable source paused",pauseDuration:true}]},
+      {id:"resume",invocation:"manual",operations:[{kind:"effect.suppress",selector,suppressed:false}]},
+    ],
+  };
+  return {moduleId,contentId,effectMechanicId,controlMechanicId,json:JSON.stringify({
+    schemaVersion:"0.1-draft",moduleId,moduleVersion:"1",
+    rulesProfile:{id:"dnd.srd-5.2.1",version:"0.1-draft"},defaultLocale:"en",
+    source:{document:"Family N suppression probe",version:"1",license:"CC0",srdDerived:false},
+    dependencies:[],conflicts:[],capabilities:[],
+    content:[{id:contentId,category:"option",presentation:{defaultLocale:"en",originalName:"Suppression Probe",locales:{en:{name:"Suppression Probe"}}},mechanics:[
+      {kind:"common-play",config:effectConfig},{kind:"common-play",config:controlConfig},
+    ]}],
+  })};
+}
+
+function actionFor(pack:ReturnType<typeof suppressionPackage>,mechanicId:string,entryPointId:string) {
+  return installedCommonPlayActionId({catalogId:catalogQualifiedId(pack.contentId,pack.moduleId,"1"),mechanicId,entryPointId});
+}
+
+async function advanceOneRound(adapter:MockAdapter,initialElapsed:number) {
+  let snapshot=await adapter.getSnapshot();
+  let runtime=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)!;
+  const maxTurns=snapshot.scene.entities.length+1;
+  for(let turn=0;turn<maxTurns&&runtime.clock.elapsedSeconds===initialElapsed;turn+=1) {
+    await adapter.endTurn();
+    snapshot=await adapter.getSnapshot();
+    runtime=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)!;
+  }
+  assert.equal(runtime.clock.elapsedSeconds,initialElapsed+6);
+  return {snapshot,runtime};
+}
+
+async function exercisePortableSuppression(prefix:string) {
+  const adapter=new MockAdapter();
+  const pack=suppressionPackage(prefix);
+  setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
+  const preview=await adapter.previewContentImport(pack.json);
+  assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
+  await adapter.activateContentImport();
+  await adapter.startInitiative();
+  await adapter.setCurrentActor("char.aelar");
+
+  let snapshot=await adapter.getSnapshot();
+  let runtime=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)!;
+  const initialElapsed=runtime.clock.elapsedSeconds;
+  snapshot=await adapter.resolveAction(actionFor(pack,pack.effectMechanicId,"activate"),["char.aelar"]);
+  assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
+  runtime=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)!;
+  let effect=runtime.effects.find((entry)=>entry.sourceId===pack.effectMechanicId);
+  assert.ok(effect);
+  assert.deepEqual(effect.expiry,{kind:"time",elapsedSeconds:initialElapsed+6});
+
+  snapshot=await adapter.resolveAction(actionFor(pack,pack.controlMechanicId,"suppress"),["char.aelar"]);
+  assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
+  runtime=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)!;
+  effect=runtime.effects.find((entry)=>entry.sourceId===pack.effectMechanicId);
+  assert.deepEqual(effect?.suppression,{reason:"portable source paused",pauseDuration:true,remainingSeconds:6});
+
+  await adapter.undoLastResolution();
+  snapshot=await adapter.getSnapshot();
+  runtime=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)!;
+  effect=runtime.effects.find((entry)=>entry.sourceId===pack.effectMechanicId);
+  assert.equal(effect?.suppression,undefined);
+  assert.deepEqual(effect?.expiry,{kind:"time",elapsedSeconds:initialElapsed+6});
+
+  snapshot=await adapter.resolveAction(actionFor(pack,pack.controlMechanicId,"suppress"),["char.aelar"]);
+  assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
+  ({snapshot,runtime}=await advanceOneRound(adapter,initialElapsed));
+  effect=runtime.effects.find((entry)=>entry.sourceId===pack.effectMechanicId);
+  assert.ok(effect,"paused portable effect must survive its original expiry boundary");
+  assert.equal(effect.suppression?.remainingSeconds,6);
+
+  snapshot=await adapter.resolveAction(actionFor(pack,pack.controlMechanicId,"resume"),["char.aelar"]);
+  assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
+  runtime=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)!;
+  effect=runtime.effects.find((entry)=>entry.sourceId===pack.effectMechanicId);
+  assert.equal(effect?.suppression,undefined);
+  assert.deepEqual(effect?.expiry,{kind:"time",elapsedSeconds:initialElapsed+12});
+
+  await adapter.undoLastResolution();
+  snapshot=await adapter.getSnapshot();
+  runtime=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)!;
+  effect=runtime.effects.find((entry)=>entry.sourceId===pack.effectMechanicId);
+  assert.equal(effect?.suppression?.pauseDuration,true,"event-native Undo must restore the paused portable effect");
+
+  snapshot=await adapter.resolveAction(actionFor(pack,pack.controlMechanicId,"resume"),["char.aelar"]);
+  assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
+  ({snapshot,runtime}=await advanceOneRound(adapter,initialElapsed+6));
+  assert.equal(runtime.effects.some((entry)=>entry.sourceId===pack.effectMechanicId),false,"resumed portable effect must expire after its preserved remaining duration");
+}
+
+test("unknown installed Common Play suppresses, pauses, resumes, expires, and undoes a portable effect",async()=>{
+  await exercisePortableSuppression("unknown-family-n-suppression");
+});
+
+test("renamed external identities preserve portable effect suppression and pause-resume semantics",async()=>{
+  await exercisePortableSuppression("renamed-family-n-suppression");
+});
+
