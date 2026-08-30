@@ -48,9 +48,11 @@ async function execute(identity:Identity) {
   await adapter.startInitiative();
   await adapter.setCurrentActor("char.aelar");
   await adapter.resolveAction(actionId,["char.aelar"]);
-  assert.notEqual((await adapter.getSnapshot()).resolution?.actionId,actionId,"relation predicate must reject self before Resolver execution");
+  let snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.resolution?.actionId,actionId);
+  assert.equal(snapshot.resolution?.finalOutcome,"적용 거부");
   await adapter.resolveAction(actionId,["combatant.goblin-a","combatant.goblin-b"]);
-  const snapshot=await adapter.getSnapshot();
+  snapshot=await adapter.getSnapshot();
   assert.equal(snapshot.resolution?.stage,"complete");
   assert.equal(snapshot.resolution?.actionId,actionId);
   assert.deepEqual(snapshot.resolution?.targetIds,["combatant.goblin-a","combatant.goblin-b"]);
@@ -70,5 +72,7 @@ test("unknown installed area selector imports but refuses execution without prov
   await adapter.startInitiative();
   await adapter.setCurrentActor("char.aelar");
   await adapter.resolveAction(actionId,["combatant.goblin-a"]);
-  assert.notEqual((await adapter.getSnapshot()).resolution?.actionId,actionId,"mapless production must not fabricate area membership");
+  const snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.resolution?.actionId,actionId);
+  assert.equal(snapshot.resolution?.finalOutcome,"적용 거부");
 });
