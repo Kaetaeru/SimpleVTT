@@ -650,11 +650,13 @@ function commonPlayActorProfileProperties(
   const actorState=state.combatants[actorId];
   if(!actorState) return undefined;
   if(internal.activeCharacter.id!==actorId) {
-    return {
-      "movement.walk":resolveRuntimeProfileProperty(
-        state.effects,actorId,"movement.walk",{"movement.walk":actorState.baseSpeed},
-      ).value,
-    };
+    const inputs:Record<string,number>={...(actorState.baseProperties??{})};
+    inputs["movement.walk"]??=actorState.baseSpeed;
+    const projected={...inputs};
+    for(const property of Object.keys(inputs).sort((left,right)=>left.localeCompare(right))) {
+      projected[property]=resolveRuntimeProfileProperty(state.effects,actorId,property,inputs).value;
+    }
+    return projected;
   }
   const character=internal.activeCharacter;
   const inputs:Record<string,number>={

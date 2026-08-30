@@ -28,6 +28,7 @@ function moduleJson(prefix:string) {
     {id:"slow",invocation:"manual",operations:[{kind:"property.modify",property:"movement.walk",operation:"set",value:{value:5},target:"actor",owner:"effect",source:"definition",duration:{kind:"elapsed",amount:{value:1},unit:"minutes"},lifetime:{kind:"until-duration",onEnd:"destroy"},instancePolicy:"stack"}]},
     {id:"guard",invocation:"manual",operations:[{kind:"property.modify",property:"defense.ac",operation:"add",value:{value:2},target:"actor",owner:"effect",source:"definition",duration:{kind:"elapsed",amount:{value:1},unit:"minutes"},lifetime:{kind:"until-duration",onEnd:"destroy"},instancePolicy:"stack"}]},
     {id:"move",invocation:"manual",operations:[{kind:"movement.relocate",mode:"move",movementType:"walk",target:"actor",distance:{ref:"movement.walk"},destinationFact:{id:"property-move-destination",fact:"spatial.legal-destination",subject:"actor",authority:"actor-owner",visibility:"actor-and-dm",unknownPolicy:"request-authority"}}]},
+    {id:"move-defense",invocation:"manual",operations:[{kind:"movement.relocate",mode:"move",movementType:"walk",target:"actor",distance:{ref:"defense.ac"},destinationFact:{id:"property-defense-move-destination",fact:"spatial.legal-destination",subject:"actor",authority:"actor-owner",visibility:"actor-and-dm",unknownPolicy:"request-authority"}}]},
     {id:"strength",invocation:"manual",operations:[{kind:"property.modify",property:"ability.str.score",operation:"set",value:{value:14},target:"actor",owner:"effect",source:"definition",duration:{kind:"elapsed",amount:{value:1},unit:"minutes"},lifetime:{kind:"until-duration",onEnd:"destroy"},instancePolicy:"stack"}]},
     {id:"move-strength",invocation:"manual",operations:[{kind:"movement.relocate",mode:"move",movementType:"walk",target:"actor",distance:{ref:"ability.str.modifier"},destinationFact:{id:"property-strength-move-destination",fact:"spatial.legal-destination",subject:"actor",authority:"actor-owner",visibility:"actor-and-dm",unknownPolicy:"request-authority"}}]},
   ]};
@@ -75,6 +76,25 @@ test("unknown Common Play property modifier projects through Effect state into p
   const result=await run("external-property-a");
   assert.equal(result.spent,5,JSON.stringify(result.resolution));
   assert.equal(result.resolution?.stage,"complete");
+});
+
+test("non-active runtime actor exposes generic profile properties to stored unknown Common Play",async()=>{
+  const actorId="combatant.goblin-a";
+  const adapter=new MockAdapter();
+  await adapter.setReferenceRole("dm");
+  const {action}=await install(adapter,"external-property-non-active");
+  await adapter.setCurrentActor(actorId);
+  const before=await adapter.getSnapshot();
+  const baseAc=before.scene.entities.find((entity)=>entity.id===actorId)!.ac;
+  const beforeMovement=before.scene.economyByActor[actorId]!.movement;
+  await adapter.configureReadyAction({actorId,actionId:action("move-defense"),trigger:"manual profile-property trigger"});
+  const ready=await adapter.getSnapshot();
+  const trigger=ready.scene.actionsByActor[actorId]?.find((candidate)=>candidate.id.startsWith("stored-invocation-common-play:"));
+  assert.ok(trigger,JSON.stringify(ready.scene.actionsByActor[actorId]));
+  await adapter.resolveAction(trigger.id,[actorId]);
+  const after=await adapter.getSnapshot();
+  assert.equal(after.resolution?.stage,"complete",JSON.stringify(after.resolution));
+  assert.equal(beforeMovement-after.scene.economyByActor[actorId]!.movement,baseAc);
 });
 
 test("unknown Common Play property modifier projects a non-movement profile property and Undo restores its base",async()=>{
