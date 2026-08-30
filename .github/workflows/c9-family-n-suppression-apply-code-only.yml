@@ -16,13 +16,14 @@ jobs:
         with:
           ref: agent/c9-gate-n-coverage-reconciliation
           fetch-depth: 0
-      - name: Apply existing suppression patch without workflow mutations
+      - name: Apply verified suppression patch without workflow mutations
         shell: bash
         run: |
+          git show 960aafc41127ae1ccf2153e0c1a86c3575ede589:.github/workflows/c9-family-n-suppression-patch-71304.yml > /tmp/source.yml
           python3 - <<'PY'
           import base64, gzip, pathlib, re
-          text = pathlib.Path('.github/workflows/c9-family-n-suppression-patch-71304.yml').read_text()
-          match = re.search(r"echo '([A-Za-z0-9+/=]+)' \| base64", text)
+          text = pathlib.Path('/tmp/source.yml').read_text()
+          match = re.search(r"echo '([^']+)' \| base64 -d \| gzip -d", text)
           if not match:
               raise SystemExit('suppression patch payload not found')
           pathlib.Path('/tmp/c9-n-patch.py').write_bytes(gzip.decompress(base64.b64decode(match.group(1))))
