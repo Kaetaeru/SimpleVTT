@@ -1,0 +1,80 @@
+name: C9 Family Q Choice Kernel R3 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-q-choice-kernel-r3-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  implement-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply staged choice kernel with narrowed interaction types
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          workflow=Path('.github/workflows/c9-family-q-choice-kernel-71304.yml').read_text(encoding='utf-8')
+
+          marker="          python - <<'PY'\n"
+          start=workflow.index(marker)+len(marker)
+          end=workflow.index("          PY\n",start)
+          patch_body=workflow[start:end]
+          patch_body='\n'.join(line[10:] if line.startswith('          ') else line for line in patch_body.splitlines())
+          exec(compile(patch_body,'choice-kernel-staged-patch','exec'),{})
+
+          marker="          cat > tests/domain/c9FamilyQChoiceInteractionKernel.test.ts <<'TS'\n"
+          start=workflow.index(marker)+len(marker)
+          end=workflow.index("          TS\n",start)
+          test_body=workflow[start:end]
+          test_body='\n'.join(line[10:] if line.startswith('          ') else line for line in test_body.splitlines())+'\n'
+          Path('tests/domain/c9FamilyQChoiceInteractionKernel.test.ts').write_text(test_body,encoding='utf-8')
+
+          path=Path('src/domain/commonPlayOperationRuntime.ts')
+          text=path.read_text(encoding='utf-8')
+          old='''  const shared={\n    id:nonEmptyString(interaction.id,`${label}.id`),responder:interaction.responder,mode:"blocking" as const,revalidate:interaction.revalidate,\n    ...(interaction.stalePolicy?{stalePolicy:"reject" as const}:{}),\n  };'''
+          new='''  const responder=interaction.responder as CommonPlayConsentInteraction["responder"];\n  const revalidate=interaction.revalidate as CommonPlayConsentInteraction["revalidate"];\n  const shared={\n    id:nonEmptyString(interaction.id,`${label}.id`),responder,mode:"blocking" as const,revalidate,\n    ...(interaction.stalePolicy?{stalePolicy:"reject" as const}:{}),\n  };'''
+          if new not in text:
+              if text.count(old)!=1: raise SystemExit(f'interaction narrowing anchor count={text.count(old)}')
+              text=text.replace(old,new,1)
+          path.write_text(text,encoding='utf-8')
+
+          path=Path('tests/domain/commonPlayInteractionProductionRuntime.test.ts')
+          text=path.read_text(encoding='utf-8')
+          text=text.replace('/portable Common Play interaction|unsupported fields/','/portable (?:Common Play )?(?:consent |choice )?interaction|unsupported fields/')
+          path.write_text(text,encoding='utf-8')
+          PY
+      - run: npm install --no-audit --no-fund
+      - run: npm run generate:content
+      - name: Verify choice interaction kernel
+        run: npx tsx --test tests/domain/c9FamilyQChoiceInteractionKernel.test.ts tests/domain/commonPlayInteractionProductionRuntime.test.ts tests/domain/commonPlaySelectorRuntime.test.ts
+      - name: Verify C9 guardrails and types
+        run: |
+          node scripts/check-v1-mechanism-coverage.mjs
+          node scripts/check-legacy-execution-boundary.mjs
+          npx tsc --noEmit
+      - name: Commit verified kernel only
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/domain/commonPlayOperationRuntime.ts src/domain/commonPlaySelectorRuntime.ts tests/domain/commonPlayInteractionProductionRuntime.test.ts tests/domain/c9FamilyQChoiceInteractionKernel.test.ts
+          git commit -m "feat(c9): validate portable choice interactions"
+          for attempt in 1 2 3 4 5; do
+            if git push origin HEAD:agent/c9-gate-n-coverage-reconciliation; then exit 0; fi
+            git fetch origin agent/c9-gate-n-coverage-reconciliation
+            git rebase origin/agent/c9-gate-n-coverage-reconciliation || exit 1
+            sleep 1
+          done
+          exit 1
