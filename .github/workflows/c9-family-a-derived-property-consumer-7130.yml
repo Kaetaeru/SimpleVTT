@@ -59,6 +59,8 @@ jobs:
             test += '''\n\ntest("unknown Common Play consumes an effect-modified derived profile property",async()=>{\n  const adapter=new MockAdapter();\n  const {action}=await install(adapter,"external-property-derived");\n  const before=await adapter.getSnapshot();\n  const initialRemaining=before.scene.economyByActor["char.aelar"]!.movement;\n  await adapter.resolveAction(action("strength"),["char.aelar"]);\n  await adapter.resolveAction(action("move-strength"),["char.aelar"]);\n  const after=await adapter.getSnapshot();\n  assert.equal(initialRemaining-after.scene.economyByActor["char.aelar"]!.movement,2,JSON.stringify(after.resolution));\n  assert.equal(after.resolution?.stage,"complete");\n});\n'''
           test_path.write_text(test)
           PY
+      - name: Generate content
+        run: npm run generate:content
       - name: Verify Family A derived property consumer
         run: |
           npx tsx --test tests/domain/commonPlayPropertyContractRuntime.test.ts
