@@ -1,0 +1,53 @@
+name: C9 Family A Property Contract Recover
+on:
+  push:
+    branches: [agent/c9-gate-n-coverage-reconciliation]
+    paths: [.github/workflows/c9-family-a-property-contract-recover.yml]
+permissions:
+  contents: write
+jobs:
+  recover:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - name: Repair Family A staging anchor
+        shell: python
+        run: |
+          from pathlib import Path
+          path=Path('.github/workflows/c9-family-a-property-contract-step.yml')
+          s=path.read_text()
+          guard="    if: github.actor != 'github-actions[bot]'\n"
+          if guard not in s:
+              raise SystemExit('Family A actor guard anchor missing')
+          s=s.replace(guard,'',1)
+          start_marker="          once('''    if(operation.kind===\"roll.modify\") continue;"
+          start=s.find(start_marker)
+          if start<0:
+              raise SystemExit('Family A lowering block start missing')
+          end_marker="''','lowering')"
+          end=s.find(end_marker,start)
+          if end<0:
+              raise SystemExit('Family A lowering block end missing')
+          end+=len(end_marker)
+          replacement='          once(\'    if(operation.kind==="roll.modify") continue;\', \'    if(operation.kind==="roll.modify") continue;\\n    if(operation.kind==="property.modify") throw new DomainEvaluationError("property.modify production lowering is not implemented; Effect-owned property modifiers must not fall through to another execution engine");\',\'lowering\')'
+          s=s[:start]+replacement+s[end:]
+          path.write_text(s)
+      - name: Commit recovery
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/workflows/c9-family-a-property-contract-step.yml
+          git rm .github/workflows/c9-family-a-property-contract-recover.yml
+          git commit -m "ci(c9): repair Family A property staging"
+          for attempt in 1 2 3 4 5; do
+            git fetch origin agent/c9-gate-n-coverage-reconciliation
+            if git rebase origin/agent/c9-gate-n-coverage-reconciliation && git push origin HEAD:agent/c9-gate-n-coverage-reconciliation; then
+              exit 0
+            fi
+            git rebase --abort || true
+            sleep 2
+          done
+          exit 1
