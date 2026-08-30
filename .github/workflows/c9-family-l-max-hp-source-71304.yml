@@ -108,6 +108,7 @@ jobs:
       - name: Verify Family L max HP slice
         shell: bash
         run: |
+          npm run generate:content
           npx tsx --test tests/ui/c9FamilyLMaximumHpProduction71304.test.ts tests/ui/c9FamilyLTemporaryHpProduction.test.ts tests/ui/c9FamilyLCriticalDiceProduction71304.test.ts
           node scripts/check-v1-mechanism-coverage.mjs
           node scripts/check-legacy-execution-boundary.mjs
