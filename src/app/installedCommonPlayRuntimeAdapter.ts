@@ -8,6 +8,7 @@ import { installedCommonPlayActionId, parseInstalledCommonPlayActionId, parseRun
 import { commitProductionRuntimeResolution } from "./runtimeResolutionCommit";
 import { commitAdapterTurnRuntimeState, snapshotAdapterTurnRuntimeState } from "./turnRuntimeSessionRegistry";
 import { resolveRuntimeProfileProperty, SIMPLEVTT_APP_RULES_PROFILE } from "./realResolutionService";
+import { authoritativeCommonPlaySpatialRelation } from "./realSpatialRuntimeService";
 import {
   parseCommonPlayDamageDiceFormula,
   compileCommonPlayEntryPointOperations,
@@ -394,8 +395,15 @@ function commonPlayTargetFact(actor:SceneVm["entities"][number],target:SceneVm["
   };
 }
 
-function commonPlaySelectorCandidate(actor:SceneVm["entities"][number],target:SceneVm["entities"][number]):CommonPlaySelectorCandidate {
-  const targeting=commonPlayTargetFact(actor,target);
+function commonPlaySelectorCandidate(scene:SceneVm,actor:SceneVm["entities"][number],target:SceneVm["entities"][number]):CommonPlaySelectorCandidate {
+  const baseTargeting=commonPlayTargetFact(actor,target);
+  const spatial=authoritativeCommonPlaySpatialRelation(scene,actor.id,target.id);
+  const targeting:TargetingFactInput=spatial?{
+    ...baseTargeting,
+    distanceFeet:spatial.distanceFeet,
+    visible:spatial.visible,
+    cover:spatial.cover,
+  }:baseTargeting;
   return {
     id:target.id,
     targeting,
@@ -413,6 +421,12 @@ function commonPlaySelectorCandidate(actor:SceneVm["entities"][number],target:Sc
       resistances:[...target.resistances],
       immunities:[...target.immunities],
       vulnerabilities:[...target.vulnerabilities],
+      ...(spatial?{
+        "spatial.distance-feet":spatial.distanceFeet,
+        "spatial.adjacent":spatial.distanceFeet<=5,
+        "spatial.total-cover":spatial.cover==="total",
+        "sense.can-see":spatial.visible,
+      }:{}),
     },
   };
 }
@@ -532,7 +546,7 @@ function prepareCommonPlayAction(
     if(selectionMode==="automatic"&&targetIds.length&&!(targetIds.length===1&&targetIds[0]===actor.id)) return undefined;
     const candidates=internal.scene.entities
       .filter((target)=>Boolean(state!.combatants[target.id]))
-      .map((target)=>commonPlaySelectorCandidate(actorEntity,target));
+      .map((target)=>commonPlaySelectorCandidate(internal.scene,actorEntity,target));
     const selection=resolveCommonPlaySelector({
       sourceId:actor.id,
       selector:targeting,
@@ -691,7 +705,7 @@ function operationExecutionInput(
   return {
     resolutionId,actorId:actor.id,entryPointId:action.entryPointId,targetId:selectedTargetId,
     targetingTargets:entryPoint.targeting?selectedTargets.map((target)=>commonPlayTargetFact(actorEntity,target)):undefined,
-    targetingCandidates:entryPoint.targeting?internal.scene.entities.filter((target)=>state.combatants[target.id]).map((target)=>commonPlaySelectorCandidate(actorEntity,target)):undefined,
+    targetingCandidates:entryPoint.targeting?internal.scene.entities.filter((target)=>state.combatants[target.id]).map((target)=>commonPlaySelectorCandidate(internal.scene,actorEntity,target)):undefined,
     creatureKinds:Object.fromEntries([
       [actor.id,actorEntity.kind==="character"?"character":"monster"],
       ...selectedTargets.map((target)=>[target.id,target.kind==="character"?"character":"monster"] as const),
