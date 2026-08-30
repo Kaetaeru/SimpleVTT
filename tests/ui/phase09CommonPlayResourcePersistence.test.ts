@@ -172,7 +172,7 @@ test("unknown installed Common Play resource payment persists through restart an
   assert.equal(await restartedResourceCurrent(characterStore,FIGHTER_SECOND_WIND_RESOURCE_ID),before);
 });
 
-test("unknown installed Common Play materializes and removes its own durable resource pool without named registration",async()=>{
+test("unknown installed Common Play materializes and spends its own durable resource pool without named registration",async()=>{
   const characterStore=new MemoryCharacterLibraryStore();
   const adapter=new MockAdapter();
   setCharacterLibraryStoreForTests(adapter,characterStore);
@@ -234,6 +234,34 @@ test("unknown installed Common Play materializes and removes its own durable res
   snapshot=await adapter.getSnapshot();
   assert.equal(snapshot.activeCharacter.resources.find((entry)=>entry.id===SOURCE_RESOURCE_ID)?.current,2);
   assert.equal(persistedResourceCurrent(adapter,characterId,SOURCE_RESOURCE_ID),2);
+  assert.equal(await restartedResourceCurrent(characterStore,SOURCE_RESOURCE_ID),2);
+});
+
+test("unknown installed Common Play materialization Undo removes its source-owned durable resource pool",async()=>{
+  const characterStore=new MemoryCharacterLibraryStore();
+  const adapter=new MockAdapter();
+  setCharacterLibraryStoreForTests(adapter,characterStore);
+  setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
+
+  const preview=await adapter.previewContentImport(sourceOwnedPackagePayload());
+  assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
+  await adapter.activateContentImport();
+  await adapter.startInitiative();
+  await adapter.setCurrentActor("char.aelar");
+
+  let snapshot=await adapter.getSnapshot();
+  const characterId=snapshot.activeCharacter.id;
+  const materializeActionId=installedCommonPlayActionId({
+    catalogId:catalogQualifiedId(SOURCE_CONTENT_ID,SOURCE_MODULE_ID,"1"),
+    mechanicId:SOURCE_MECHANIC_ID,
+    entryPointId:MATERIALIZE_ENTRY_POINT_ID,
+  });
+
+  await adapter.resolveAction(materializeActionId,[characterId]);
+  snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.activeCharacter.resources.find((entry)=>entry.id===SOURCE_RESOURCE_ID)?.current,2);
+  assert.equal(persistedResourceCurrent(adapter,characterId,SOURCE_RESOURCE_ID),2);
+  assert.equal(await restartedResourceCurrent(characterStore,SOURCE_RESOURCE_ID),2);
 
   await adapter.undoLastResolution();
   snapshot=await adapter.getSnapshot();
