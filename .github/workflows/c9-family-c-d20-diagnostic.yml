@@ -1,4 +1,4 @@
-name: C9 Family C Resource Die Migration
+name: C9 Family C Cutting Words Migration
 
 on:
   push:
@@ -16,88 +16,119 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Add generic resource-backed reaction die
+      - name: Migrate Cutting Words to declarative Common Play
         shell: bash
         run: |
           set -euo pipefail
           python3 <<'PY'
+          import json
           from pathlib import Path
 
           def replace(path, old, new):
               p=Path(path)
               text=p.read_text()
               if old not in text:
-                  raise SystemExit(f"missing expected text in {path}: {old[:100]!r}")
+                  raise SystemExit(f"missing expected text in {path}: {old[:120]!r}")
+              if text.count(old) != 1:
+                  raise SystemExit(f"expected exactly one match in {path}, found {text.count(old)}")
               p.write_text(text.replace(old,new,1))
 
-          replace("src/app/progressionContracts.ts",
-              '  interface CharacterResourceVm {\n    recovery?: {',
-              '  interface CharacterResourceVm {\n    dieSides?:number;\n    recovery?: {')
+          module_path=Path("content/modules/dnd-srd-5.2.1.class-feature-common-play/module.json")
+          module=json.loads(module_path.read_text())
+          feature_id="dnd.srd521.subclass.bard.college-of-lore.cutting-words"
+          if any(entry.get("id")==feature_id for entry in module.get("content",[])):
+              raise SystemExit("Cutting Words Common Play content already exists")
+          fact_queries=[
+              {"id":"trigger-distance","fact":"spatial.distance-feet","subject":"intercepted.actor","authority":"dm","visibility":"dm","unknownPolicy":"block"},
+              {"id":"source-sees-trigger","fact":"sense.can-see","subject":"intercepted.actor","authority":"dm","visibility":"dm","unknownPolicy":"treat-false"},
+          ]
+          when={"op":"all","args":[
+              {"op":"lte","left":{"ref":"trigger-distance"},"right":{"value":60}},
+              {"op":"eq","left":{"ref":"source-sees-trigger"},"right":{"value":True}},
+          ]}
+          def interceptor(interceptor_id,timing,slot,interaction_id):
+              return {
+                  "id":interceptor_id,
+                  "timing":timing,
+                  "factQueries":fact_queries,
+                  "when":when,
+                  "interaction":{
+                      "id":interaction_id,
+                      "kind":"choice",
+                      "responder":"actor-owner",
+                      "mode":"blocking",
+                      "input":{"type":"boolean"},
+                      "revalidate":"if-revision-changed",
+                      "stalePolicy":"reject",
+                  },
+                  "operation":"recalculate",
+                  "slot":slot,
+                  "operations":[{
+                      "kind":"roll.modify",
+                      "mode":"subtract-die",
+                      "diceResource":"resource:bard.bardic-inspiration",
+                  }],
+              }
+          module["content"].append({
+              "id":feature_id,
+              "category":"option",
+              "presentation":{
+                  "originalName":"Cutting Words",
+                  "defaultLocale":"ko-KR",
+                  "locales":{"ko-KR":{"name":"날카로운 말"}},
+              },
+              "tags":["class-feature","bard","college-of-lore","reaction"],
+              "mechanics":[{
+                  "kind":"common-play",
+                  "config":{
+                      "schemaVersion":"0.2-draft",
+                      "id":"dnd.srd521.common-play.bard-lore-cutting-words",
+                      "payments":[
+                          {"kind":"economy","bucket":"reaction","amount":{"value":1},"consumeAt":"commit"},
+                          {"kind":"resource","resource":"resource:bard.bardic-inspiration","amount":{"value":1},"consumeAt":"commit"},
+                      ],
+                      "interceptors":[
+                          interceptor("cutting-words-d20","d20.outcome-determined","d20.roll","choose-cutting-words-d20"),
+                          interceptor("cutting-words-damage","damage.rolled","primary.damage","choose-cutting-words-damage"),
+                      ],
+                  },
+              }],
+          })
+          module_path.write_text(json.dumps(module,ensure_ascii=False,separators=(",",":"))+"\n")
 
-          replace("src/domain/bardicInspiration.ts",
-              '  maximum:number;\n  recovery:ResourceRecovery;',
-              '  maximum:number;\n  dieSides:number;\n  recovery:ResourceRecovery;')
-          replace("src/domain/bardicInspiration.ts",
-              '    maximum:bardicInspirationMaximum(charismaModifier),\n    recovery:',
-              '    maximum:bardicInspirationMaximum(charismaModifier),\n    dieSides:bardicInspirationDieSides(bardLevel),\n    recovery:')
+          replace(
+              "src/app/commonPlayInterceptorProductionRuntimeAdapter.ts",
+              '''async function passiveReactionCandidates(adapter:MockAdapter):Promise<PassiveReactionCandidate[]> {\n  const internal=adapter as unknown as AdapterState;\n  const installed=await requiredSessionInstalledContent(adapter,[]);\n  if(!installed.length)return [];\n  const entries=new Map(installed.map((entry)=>[catalogQualifiedId(entry.contentId,entry.sourceId,entry.version),entry]));\n  const owners:Array<{sheet:CharacterSheet;identities:Set<string>}>=[{\n    sheet:internal.activeCharacter,\n    identities:contentIdentitySetForLocal(internal),\n  }];\n  for(const characterId of projectedCharacterIds(adapter)){\n    if(characterId===internal.activeCharacter.id)continue;\n    const mounted=projectedCharacterById(adapter,characterId);\n    if(mounted)owners.push({sheet:mounted.sheet,identities:new Set(mounted.projection.contentIdentities.map((entry)=>entry.qualifiedId))});\n  }\n\n  const candidates:PassiveReactionCandidate[]=[];\n  for(const owner of owners){\n    for(const qualifiedId of [...owner.identities].sort()){\n      const entry=entries.get(qualifiedId);''',
+              '''async function passiveReactionCandidates(adapter:MockAdapter):Promise<PassiveReactionCandidate[]> {\n  const internal=adapter as unknown as AdapterState;\n  const installed=await requiredSessionInstalledContent(adapter,[]);\n  const installedEntries=new Map(installed.map((entry)=>[catalogQualifiedId(entry.contentId,entry.sourceId,entry.version),entry]));\n  const builtinEntries=new Map(internal.catalog\n    .filter((entry)=>entry.scope==="builtin"&&entry.mechanics?.some((mechanic)=>mechanic.kind==="common-play"))\n    .map((entry)=>[entry.id,entry]));\n  const owners:Array<{sheet:CharacterSheet;identities:Set<string>}>=[{\n    sheet:internal.activeCharacter,\n    identities:contentIdentitySetForLocal(internal),\n  }];\n  for(const characterId of projectedCharacterIds(adapter)){\n    if(characterId===internal.activeCharacter.id)continue;\n    const mounted=projectedCharacterById(adapter,characterId);\n    if(mounted)owners.push({sheet:mounted.sheet,identities:new Set(mounted.projection.contentIdentities.map((entry)=>entry.qualifiedId))});\n  }\n  for(const owner of owners){\n    const featureIds=new Set(owner.sheet.subclassFeatureIds??[]);\n    for(const entry of builtinEntries.values()) if(entry.contentId&&featureIds.has(entry.contentId)) owner.identities.add(entry.id);\n  }\n\n  const candidates:PassiveReactionCandidate[]=[];\n  for(const owner of owners){\n    for(const qualifiedId of [...owner.identities].sort()){\n      const entry=installedEntries.get(qualifiedId)??builtinEntries.get(qualifiedId);''')
 
-          replace("src/app/bardicInspirationRuntimeAdapter.ts",
-              '      max:definition.maximum,\n      source:definition.source,',
-              '      max:definition.maximum,\n      dieSides:definition.dieSides,\n      source:definition.source,')
-          replace("src/app/bardicInspirationRuntimeAdapter.ts",
-              '  existing.max = definition.maximum;\n  existing.source = definition.source;',
-              '  existing.max = definition.maximum;\n  existing.dieSides = definition.dieSides;\n  existing.source = definition.source;')
+          replace(
+              "src/app/offlineRuntimeAdapters.ts",
+              'import "./bardCollegeLoreCuttingWordsFollowUpRuntimeAdapter";\n',
+              '')
 
-          replace("src/app/persistenceContracts.ts",
-              '  max:number;\n  source:string;\n  recovery?: {',
-              '  max:number;\n  dieSides?:number;\n  source:string;\n  recovery?: {')
-          replace("src/app/characterLibraryPersistence.ts",
-              '    max:resource.max,\n    source:resource.source,',
-              '    max:resource.max,\n    dieSides:resource.dieSides,\n    source:resource.source,')
-          replace("src/app/characterLibraryPersistence.ts",
-              '      max:definition.max,\n      source:definition.source,',
-              '      max:definition.max,\n      dieSides:definition.dieSides,\n      source:definition.source,')
+          test_path="tests/ui/bardCollegeLoreCuttingWordsRuntime.test.ts"
+          replace(
+              test_path,
+              '  assert.equal(snapshot.resolution?.checkOutcome,"실패");\n  assert.equal(snapshot.resolution?.rollTotal,14);',
+              '  assert.equal(snapshot.resolution?.checkOutcome,"실패");\n  assert.equal(snapshot.resolution?.rollTotal,14);\n  assert.ok(snapshot.resolution?.provenance.some((entry)=>entry.includes("common-play:")),JSON.stringify(snapshot.resolution?.provenance));')
 
-          replace("schemas/common-play-contract.schema.json",
-              '        "dice": { "type": "string", "pattern": "^[0-9]+d[0-9]+([+-][0-9]+)?$" },\n        "when":',
-              '        "dice": { "type": "string", "pattern": "^[0-9]+d[0-9]+([+-][0-9]+)?$" },\n        "diceResource": { "type": "string", "minLength": 1 },\n        "when":')
-
-          reaction=Path("src/domain/commonPlayReactionDefinitionRuntime.ts")
-          text=reaction.read_text()
-          text=text.replace(
-              'type Obj=Record<string,unknown>;\nconst STABLE_ID=',
-              'type Obj=Record<string,unknown>;\ntype ReactionLoweringOptions={ resolveResourceDie?:(resourceId:string)=>number|undefined };\nconst STABLE_ID=',1)
-          text=text.replace(
-              'function lowerD20Interceptor(value:Obj,index:number):CommonPlayD20RollInterceptor {',
-              'function lowerD20Interceptor(value:Obj,index:number,options:ReactionLoweringOptions):CommonPlayD20RollInterceptor {',1)
-          old='''      if(raw.kind!=="roll.modify"||raw.mode!=="subtract-die"||typeof raw.dice!=="string"||!/^([0-9]+)d([0-9]+)([+-][0-9]+)?$/.test(raw.dice)) {\n        throw new DomainEvaluationError(`${label}.operations[${operationIndex}] must be roll.modify subtract-die with a dice formula`);\n      }\n      return {kind:"roll.modify" as const,mode:"subtract-die" as const,dice:raw.dice};'''
-          new='''      if(raw.kind!=="roll.modify"||raw.mode!=="subtract-die") {\n        throw new DomainEvaluationError(`${label}.operations[${operationIndex}] must be roll.modify subtract-die`);\n      }\n      const hasLiteral=typeof raw.dice==="string";\n      const hasResource=typeof raw.diceResource==="string"&&raw.diceResource.length>0;\n      if(hasLiteral===hasResource) throw new DomainEvaluationError(`${label}.operations[${operationIndex}] must declare exactly one of dice or diceResource`);\n      if(hasLiteral) {\n        if(!/^([0-9]+)d([0-9]+)([+-][0-9]+)?$/.test(raw.dice as string)) throw new DomainEvaluationError(`${label}.operations[${operationIndex}].dice must be a dice formula`);\n        return {kind:"roll.modify" as const,mode:"subtract-die" as const,dice:raw.dice as string};\n      }\n      const resourceId=raw.diceResource as string;\n      const sides=options.resolveResourceDie?.(resourceId);\n      if(typeof sides!=="number"||!Number.isInteger(sides)||sides<2) throw new DomainEvaluationError(`${label}.operations[${operationIndex}].diceResource has no authoritative die size: ${resourceId}`);\n      return {kind:"roll.modify" as const,mode:"subtract-die" as const,dice:`1d${sides}`};'''
-          if old not in text: raise SystemExit("reaction operation block changed")
-          text=text.replace(old,new,1)
-          text=text.replace(
-              'function lowerDamageInterceptor(value:Obj,index:number):CommonPlayDamageRollInterceptor {\n  const label=`Common Play reaction interceptor[${index}]`;\n  const lowered=lowerD20Interceptor({...value,timing:"d20.outcome-determined",slot:"d20.roll"},index);',
-              'function lowerDamageInterceptor(value:Obj,index:number,options:ReactionLoweringOptions):CommonPlayDamageRollInterceptor {\n  const label=`Common Play reaction interceptor[${index}]`;\n  const lowered=lowerD20Interceptor({...value,timing:"d20.outcome-determined",slot:"d20.roll"},index,options);',1)
-          text=text.replace(
-              'export function lowerCommonPlayReactionDefinition(definition:CommonPlayDefinitionIR):CommonPlayReactionDefinition|undefined {',
-              'export function lowerCommonPlayReactionDefinition(definition:CommonPlayDefinitionIR,options:ReactionLoweringOptions={}):CommonPlayReactionDefinition|undefined {',1)
-          text=text.replace(
-              'candidate.slot==="d20.roll"\n        ? lowerD20Interceptor(candidate,index)\n        : candidate.slot==="primary.damage"\n          ? lowerDamageInterceptor(candidate,index)',
-              'candidate.slot==="d20.roll"\n        ? lowerD20Interceptor(candidate,index,options)\n        : candidate.slot==="primary.damage"\n          ? lowerDamageInterceptor(candidate,index,options)',1)
-          reaction.write_text(text)
-
-          replace("src/app/commonPlayInterceptorProductionRuntimeAdapter.ts",
-              '        const definition=lowerCommonPlayReactionDefinition(canonical);',
-              '        const definition=lowerCommonPlayReactionDefinition(canonical,{resolveResourceDie:(resourceId)=>owner.sheet.resources.find((resource)=>resource.id===resourceId)?.dieSides});')
-
-          Path("tests/domain/commonPlayReactionResourceDieRuntime.test.ts").write_text('''import assert from "node:assert/strict";\nimport test from "node:test";\nimport type { CommonPlayDefinitionIR } from "../../src/domain/commonPlayDefinitionRuntime";\nimport { lowerCommonPlayReactionDefinition } from "../../src/domain/commonPlayReactionDefinitionRuntime";\nimport { bardicInspirationResourceDefinition } from "../../src/domain/bardicInspiration";\n\nfunction resourceBackedReaction(resourceId:string):CommonPlayDefinitionIR {\n  return {\n    schemaVersion:"0.2-draft",\n    id:"external.resource-backed-reaction",\n    payments:[],\n    interceptors:[{\n      id:"reduce-roll",timing:"d20.outcome-determined",operation:"recalculate",slot:"d20.roll",\n      interaction:{id:"choose-reduction",kind:"choice",responder:"actor-owner",mode:"blocking",input:{type:"boolean"},revalidate:"if-revision-changed",stalePolicy:"reject"},\n      operations:[{kind:"roll.modify",mode:"subtract-die",diceResource:resourceId}],\n    }],\n  };\n}\n\ntest("resource-backed reaction dice lower through arbitrary resource identity",()=>{\n  const resourceId="resource.homebrew.scaling-reaction-die";\n  const lowered=lowerCommonPlayReactionDefinition(resourceBackedReaction(resourceId),{\n    resolveResourceDie:(candidate)=>candidate===resourceId?10:undefined,\n  });\n  assert.equal(lowered?.interceptors[0]?.operations[0]?.kind,"roll.modify");\n  assert.equal(lowered?.interceptors[0]?.operations[0]?.dice,"1d10");\n  assert.throws(()=>lowerCommonPlayReactionDefinition(resourceBackedReaction("resource.unknown")),/no authoritative die size/);\n});\n\ntest("Bardic Inspiration publishes its scaling die as resource metadata",()=>{\n  assert.equal(bardicInspirationResourceDefinition(4,3).dieSides,6);\n  assert.equal(bardicInspirationResourceDefinition(5,3).dieSides,8);\n  assert.equal(bardicInspirationResourceDefinition(10,3).dieSides,10);\n  assert.equal(bardicInspirationResourceDefinition(15,3).dieSides,12);\n});\n''')
+          legacy=Path("src/app/bardCollegeLoreCuttingWordsFollowUpRuntimeAdapter.ts")
+          if not legacy.exists():
+              raise SystemExit("legacy Cutting Words adapter is already absent")
+          legacy.unlink()
           PY
-      - name: Verify focused Family C slice
+
+          if grep -R -n 'bardCollegeLoreCuttingWordsFollowUpRuntimeAdapter' src tests --exclude-dir=generated; then
+            echo 'legacy Cutting Words adapter reference remains' >&2
+            exit 1
+          fi
+      - name: Verify focused Family C migration
         shell: bash
         run: |
           set -euo pipefail
           npm ci
           npm run generate:content
-          npx tsx --test tests/domain/commonPlayReactionResourceDieRuntime.test.ts tests/domain/commonPlayReactionDefinitionRuntime.test.ts
+          npx tsx --test tests/ui/bardCollegeLoreCuttingWordsRuntime.test.ts tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts tests/domain/commonPlayReactionDefinitionRuntime.test.ts tests/domain/commonPlayReactionResourceDieRuntime.test.ts
           npx tsc --noEmit
       - name: Commit verified migration
         shell: bash
@@ -105,7 +136,8 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add schemas/common-play-contract.schema.json src/app/progressionContracts.ts src/domain/bardicInspiration.ts src/app/bardicInspirationRuntimeAdapter.ts src/app/persistenceContracts.ts src/app/characterLibraryPersistence.ts src/domain/commonPlayReactionDefinitionRuntime.ts src/app/commonPlayInterceptorProductionRuntimeAdapter.ts tests/domain/commonPlayReactionResourceDieRuntime.test.ts
+          git add content/modules/dnd-srd-5.2.1.class-feature-common-play/module.json src/app/commonPlayInterceptorProductionRuntimeAdapter.ts src/app/offlineRuntimeAdapters.ts tests/ui/bardCollegeLoreCuttingWordsRuntime.test.ts
+          git add -u src/app/bardCollegeLoreCuttingWordsFollowUpRuntimeAdapter.ts
           git diff --cached --check
-          git commit -m "feat(common-play): lower resource-backed reaction dice"
+          git commit -m "feat(common-play): migrate Cutting Words interceptor"
           git push
