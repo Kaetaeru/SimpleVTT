@@ -37,7 +37,7 @@ jobs:
             ('    } else amount=nonNegativeLiteralExpression(operation.amount,`${label}.amount`);\n', '    } else amount=numericExpression(operation.amount,`${label}.amount`);\n'),
             ('  return {kind:definition.kind,roller:definition.roller,...(property?{property}:{}),dc:literalExpression(definition.dc,`${label}.dc`),...(definition.perTarget===false?{perTarget:false}:{})};\n', '  return {kind:definition.kind,roller:definition.roller,...(property?{property}:{}),dc:numericExpression(definition.dc,`${label}.dc`),...(definition.perTarget===false?{perTarget:false}:{})};\n'),
             ('        target:literalInteger(entryPoint.test.dc,"d20 target")+attackCoverTargetModifier,\n', '        target:actorExpressionInteger(entryPoint.test.dc,input,"d20 target",0)+attackCoverTargetModifier,\n'),
-            ('        const literal=literalInteger(operation.amount,"damage.apply amount");\n', '        const literal=actorExpressionInteger(operation.amount,input,"damage.apply amount",0);\n'),
+            ('        const literal=literalInteger(operation.amount,"damage.apply amount")+propertyDamageFlat;\n', '        const literal=actorExpressionInteger(operation.amount,input,"damage.apply amount",0)+propertyDamageFlat;\n'),
           ]
           for old, new in replacements:
             count = text.count(old)
