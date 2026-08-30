@@ -1,4 +1,5 @@
 name: C9 Family A Nonactive Profile
+# Re-run after the shared semantic-event type narrowing returned the branch baseline to typecheckable state.
 
 on:
   push:
