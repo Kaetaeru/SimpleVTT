@@ -15,74 +15,49 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: agent/c9-gate-n-coverage-reconciliation
+          ref: ${{ github.sha }}
           fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Make Unarmed save choice source-owned
+      - name: Verify source-owned Unarmed save choice is present
         shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
 
-          def replace_once(path, old, new, label):
-              p=Path(path)
-              s=p.read_text(encoding='utf-8')
-              if new in s:
-                  return
-              if s.count(old)!=1:
-                  raise SystemExit(f'{label} anchor changed: {s.count(old)}')
-              p.write_text(s.replace(old,new,1),encoding='utf-8')
+          contracts=Path('src/app/contracts.ts').read_text(encoding='utf-8')
+          if 'runtimeSaveCondition?:{' not in contracts or 'choose:"highest";' not in contracts:
+              raise SystemExit('runtimeSaveCondition highest-choice contract missing')
 
-          replace_once(
-              'src/app/contracts.ts',
-              '''  runtimeSaveCondition?:{\n    conditionId:ConditionId;\n    label:string;\n    displayName:string;\n    saveAbilities:AbilityKey[];''',
-              '''  runtimeSaveCondition?:{\n    conditionId:ConditionId;\n    label:string;\n    displayName:string;\n    choose:"highest";\n    saveAbilities:AbilityKey[];''',
-              'runtimeSaveCondition contract',
-          )
+          projection=Path('src/app/productionPlayRuntimeAdapter.ts').read_text(encoding='utf-8')
+          if projection.count('runtimeSaveCondition:{choose:"highest",conditionId:') < 2:
+              raise SystemExit('Unarmed grapple/shove source-owned choice payload missing')
 
-          p=Path('src/app/productionPlayRuntimeAdapter.ts')
-          s=p.read_text(encoding='utf-8')
-          old='runtimeSaveCondition:{conditionId:'
-          new='runtimeSaveCondition:{choose:"highest",conditionId:'
-          if new not in s:
-              if s.count(old)!=2:
-                  raise SystemExit(f'unarmed control producer count changed: {s.count(old)}')
-              s=s.replace(old,new)
-              p.write_text(s,encoding='utf-8')
+          runtime=Path('src/app/unarmedControlRuntimeAdapter.ts').read_text(encoding='utf-8')
+          required=[
+              'const control=action?.runtimeSaveCondition;',
+              'if (control.choose!=="highest") return snapshot;',
+              'saveFact(this,internal,target,control.saveAbilities)',
+              'duration:control.duration',
+              'termination:control.termination',
+          ]
+          missing=[entry for entry in required if entry not in runtime]
+          if missing:
+              raise SystemExit(f'Unarmed control runtime still lacks structural payload ownership: {missing}')
 
-          replace_once(
-              'src/app/unarmedControlRuntimeAdapter.ts',
-              '''  const control=action?.runtimeSaveCondition;\n  if (!control) return previousResolveAction.call(this,actionId,targetIds);''',
-              '''  const control=action?.runtimeSaveCondition;\n  if (!control) return previousResolveAction.call(this,actionId,targetIds);\n  if (control.choose!=="highest") return snapshot;''',
-              'unarmed control choice gate',
-          )
-
-          p=Path('tests/ui/unarmedStrikeRuntime.test.ts')
-          s=p.read_text(encoding='utf-8')
-          s=s.replace(
-              'test("Unarmed damage grapple and shove execute from structural payloads after presentation rename", async () => {',
-              'test("Unarmed damage grapple and shove execute from structural payloads after action identity and presentation rename", async () => {'
-          )
-          old='''    } else {\n      assert.deepEqual(source.runtimeSaveCondition?.saveAbilities,["str","dex"]);\n    }'''
-          new='''    } else {\n      assert.equal(source.runtimeSaveCondition?.choose,"highest");\n      assert.deepEqual(source.runtimeSaveCondition?.saveAbilities,["str","dex"]);\n    }'''
-          if new not in s:
-              if old not in s: raise SystemExit('unarmed source assertion anchor changed')
-              s=s.replace(old,new,1)
-          old='''      const action=snapshot.scene.actionsByActor["char.aelar"]?.find((entry)=>entry.id===probe.canonicalId);\n      if(action) action.name=`External ${probe.kind}`;'''
-          new='''      const action=snapshot.scene.actionsByActor["char.aelar"]?.find((entry)=>entry.id===probe.canonicalId);\n      if(action) {\n        action.id=probe.renamedId;\n        action.name=`External ${probe.kind}`;\n      }'''
-          if new not in s:
-              if old not in s: raise SystemExit('unarmed identity harness anchor changed')
-              s=s.replace(old,new,1)
-          old='''    await adapter.resolveAction(probe.canonicalId,[probe.targetId]);\n    const snapshot=probe.kind==="damage"?await finish(adapter):await adapter.getSnapshot();\n    assert.equal(snapshot.resolution?.actionId,probe.canonicalId);'''
-          new='''    await adapter.resolveAction(probe.renamedId,[probe.targetId]);\n    const snapshot=probe.kind==="damage"?await finish(adapter):await adapter.getSnapshot();\n    assert.equal(snapshot.resolution?.actionId,probe.renamedId);'''
-          if new not in s:
-              if old not in s: raise SystemExit('unarmed renamed execution anchor changed')
-              s=s.replace(old,new,1)
-          p.write_text(s,encoding='utf-8')
+          test=Path('tests/ui/unarmedStrikeRuntime.test.ts').read_text(encoding='utf-8')
+          required_test=[
+              'after action identity and presentation rename',
+              'source.runtimeSaveCondition?.choose,"highest"',
+              'action.id=probe.renamedId',
+              'adapter.resolveAction(probe.renamedId',
+          ]
+          missing_test=[entry for entry in required_test if entry not in test]
+          if missing_test:
+              raise SystemExit(f'Unarmed identity/source regression missing: {missing_test}')
           PY
       - name: Verify Family J source composition
         shell: bash
@@ -92,16 +67,16 @@ jobs:
           node scripts/check-v1-mechanism-coverage.mjs
           node scripts/check-legacy-execution-boundary.mjs
           npx tsc --noEmit
-      - name: Publish verified source and retire verifier
+      - name: Retire verifier after exact-SHA verification
         shell: bash
         run: |
           set -euo pipefail
           branch=agent/c9-gate-n-coverage-reconciliation
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/app/contracts.ts src/app/productionPlayRuntimeAdapter.ts src/app/unarmedControlRuntimeAdapter.ts tests/ui/unarmedStrikeRuntime.test.ts
+          git checkout -B "$branch" "$GITHUB_SHA"
           git rm .github/workflows/c9-family-j-unarmed-source-composition-71304.yml
-          git commit -m "fix(c9): make unarmed save choice source-owned"
+          git commit -m "ci(c9): verify unarmed source-owned save choice"
           for attempt in 1 2 3 4 5; do
             if git push origin HEAD:"$branch"; then exit 0; fi
             git fetch origin "$branch"
