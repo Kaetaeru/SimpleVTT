@@ -31,15 +31,19 @@ runtime_path.write_text(runtime, encoding="utf-8")
 
 schema_path = Path("schemas/common-play-contract.schema.json")
 schema = json.loads(schema_path.read_text(encoding="utf-8"))
-updated = 0
+matched = 0
+old_responders = ["actor", "target", "actor-owner", "target-owner"]
+full_responders = [*old_responders, "dm", "host"]
 
 def extend_responder(value):
-    global updated
+    global matched
     if isinstance(value, dict):
         enum = value.get("enum")
-        if enum == ["actor", "target", "actor-owner", "target-owner"]:
-            value["enum"] = ["actor", "target", "actor-owner", "target-owner", "dm", "host"]
-            updated += 1
+        if enum == old_responders:
+            value["enum"] = full_responders
+            matched += 1
+        elif enum == full_responders:
+            matched += 1
         for child in value.values():
             extend_responder(child)
     elif isinstance(value, list):
@@ -47,8 +51,8 @@ def extend_responder(value):
             extend_responder(child)
 
 extend_responder(schema)
-if updated != 1:
-    raise SystemExit(f"interaction responder schema: expected one enum, updated {updated}")
+if matched != 1:
+    raise SystemExit(f"interaction responder schema: expected one compatible enum, matched {matched}")
 schema_path.write_text(json.dumps(schema, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 adapter_path = Path("src/app/installedCommonPlayRuntimeAdapter.ts")
