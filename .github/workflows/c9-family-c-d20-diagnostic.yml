@@ -34,7 +34,7 @@ jobs:
           replace_once(
               'src/domain/commonPlayRuntime.ts',
               '''export type CommonPlayRollModifyOperation =\n  | { kind:"roll.modify"; mode:"subtract-die"; dice:string }\n  | { kind:"roll.modify"; mode:"add-flat"|"target-add"|"replace"|"minimum"; value:LiteralExpression };''',
-              '''export type CommonPlayRollModifyOperation =\n  | { kind:"roll.modify"; mode:"add-die"|"subtract-die"|"reroll"; dice:string }\n  | { kind:"roll.modify"; mode:"add-flat"|"target-add"|"replace"|"minimum"; value:LiteralExpression };''',
+              '''export type CommonPlayRollModifyOperation =\n  | { kind:"roll.modify"; mode:"add-die"; dice:string }\n  | { kind:"roll.modify"; mode:"subtract-die"; dice:string }\n  | { kind:"roll.modify"; mode:"reroll"; dice:string }\n  | { kind:"roll.modify"; mode:"add-flat"|"target-add"|"replace"|"minimum"; value:LiteralExpression };''',
           )
 
           replace_once(
