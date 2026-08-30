@@ -355,6 +355,7 @@ export interface ActionVm {
   };
   completionOutcome?:string;
   completionStateChange?:string;
+  readyActionRole?:"prepare"|"trigger";
   runtimeEffectGrant?:{
     excludeActor?:boolean;
     exclusiveTag?:string;

@@ -1,12 +1,17 @@
+import type { ActionVm } from "./contracts";
 import type { MockAdapter } from "./mockAdapter";
 
 export interface ReadyActionConfiguration {
   actorId:string;
   actionId:string;
   trigger:string;
+  movement?:boolean;
 }
 
 export const READY_MOVEMENT_ACTION_ID="ready.movement";
+
+export const isReadyPreparationAction=(action:ActionVm|undefined)=>action?.readyActionRole==="prepare";
+export const isReadyTriggerAction=(action:ActionVm|undefined)=>action?.readyActionRole==="trigger";
 
 const configurations=new WeakMap<MockAdapter,Map<string,ReadyActionConfiguration>>();
 

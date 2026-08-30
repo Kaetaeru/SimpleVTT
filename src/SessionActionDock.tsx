@@ -9,7 +9,7 @@ import { DEFAULT_SESSION_HOTBAR_ROWS, readSessionHotbarCategoryOrder, readSessio
 import type { TargetingAnchor } from "./SessionTargetingCursor";
 import { ActionIcon } from "./ActionIcon";
 import { actionIconDescriptor } from "./app/actionIconProjection";
-import { READY_MOVEMENT_ACTION_ID } from "./app/standardActionReadyState";
+import { isReadyPreparationAction, isReadyTriggerAction, READY_MOVEMENT_ACTION_ID } from "./app/standardActionReadyState";
 import { visibleCharacterResources } from "./app/characterResourcePresentation";
 import { buildLayOnHandsExecutionActionId, layOnHandsMaximumHealing, type LayOnHandsActionOption } from "./app/paladinLayOnHandsRuntimeContracts";
 import "./session-action-dock.css";
@@ -108,7 +108,7 @@ export function SessionActionDock({actorId,suspended,targeting,onBeginTargeting,
   const playerOwnsTurn=Boolean(snapshot&&role==="player"&&currentActor?.id===snapshot.activeCharacter.id);
   const canEndTurn=Boolean(snapshot&&snapshot.sessionMode==="initiative"&&currentActor&&snapshot.connectionState==="connected"&&!suspended&&(role==="dm"||playerOwnsTurn));
   const multiTarget=(targeting?.action.maxTargets??1)>1;
-  const readyOptions=useMemo(()=>actions.filter((action)=>action.available&&!action.id.startsWith("action.standard.ready")&&!action.id.startsWith("ui.action.standard.")),[actions]);
+  const readyOptions=useMemo(()=>actions.filter((action)=>action.available&&!isReadyPreparationAction(action)&&!isReadyTriggerAction(action)&&!action.id.startsWith("ui.action.standard.")),[actions]);
 
   useEffect(()=>{ setPage("mixed"); setFeedback(null); setPendingActionId(null); setTooltip(null); setActionMenu(null); setStandardSkillPicker(null); setReadyOpen(false); setLayOnHandsAction(null); },[actorId]);
   useEffect(()=>{ if (!targeting) setTooltip(null); },[targeting?.action.id]);
@@ -129,7 +129,7 @@ export function SessionActionDock({actorId,suspended,targeting,onBeginTargeting,
   const chooseAction=(action:ActionVm,button:HTMLButtonElement)=>{
     if (suspended||targeting?.pending) return;
     if (!action.available) { setFeedback(action.disabledReason||"현재 사용할 수 없습니다."); return; }
-    if(action.id==="action.standard.ready"){
+    if(isReadyPreparationAction(action)){
       setReadyActionId(readyOptions[0]?.id??"");setReadyTrigger("");setReadyOpen(true);setTooltip(null);return;
     }
     if(action.layOnHands){const rect=button.getBoundingClientRect();setLayOnHandsAction(action);setLayOnHandsAmount(Math.min(5,action.layOnHands.maximumSpend));setLayOnHandsConditions([]);setLayOnHandsAnchor({x:rect.left+rect.width/2,y:rect.top+rect.height/2});setTooltip(null);return;}
@@ -154,8 +154,8 @@ export function SessionActionDock({actorId,suspended,targeting,onBeginTargeting,
   const finishTurn=async()=>{ if (!canEndTurn||pendingTurn) return; setPendingTurn(true); try { await endTurn(); } finally { setPendingTurn(false); } };
   const prepareReady=async()=>{
     if(!actorId||!readyActionId||!readyTrigger.trim()||pendingActionId)return;
-    setPendingActionId("action.standard.ready");setFeedback(null);
-    try{await configureReadyAction({actorId,actionId:readyActionId,trigger:readyTrigger});setReadyOpen(false);}
+    setPendingActionId(actions.find(isReadyPreparationAction)?.id??null);setFeedback(null);
+    try{await configureReadyAction({actorId,actionId:readyActionId,trigger:readyTrigger,movement:readyActionId===READY_MOVEMENT_ACTION_ID});setReadyOpen(false);}
     catch{setFeedback("준비 행동을 설정하지 못했습니다.");}
     finally{setPendingActionId(null);}
   };

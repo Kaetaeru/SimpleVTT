@@ -249,8 +249,8 @@ function isConnectedEvent(value:unknown):value is ConnectedSessionEvent {
   } else if (payload.kind==="ready-action") {
     if (!isString(payload.actorId)||!isEconomy(payload.economy)||!['armed','cleared'].includes(String(payload.transition))) return false;
     const config=payload.configuration;
-    if (payload.transition==="armed"&&(!isRecord(config)||!isString(config.actorId)||!isString(config.actionId)||!isString(config.trigger))) return false;
-    if (config!==undefined&&(!isRecord(config)||!isString(config.actorId)||!isString(config.actionId)||!isString(config.trigger))) return false;
+    if (payload.transition==="armed"&&(!isRecord(config)||!isString(config.actorId)||!isString(config.actionId)||!isString(config.trigger)||(config.movement!==undefined&&typeof config.movement!=="boolean"))) return false;
+    if (config!==undefined&&(!isRecord(config)||!isString(config.actorId)||!isString(config.actionId)||!isString(config.trigger)||(config.movement!==undefined&&typeof config.movement!=="boolean"))) return false;
   } else return false;
   return (value.requestId===undefined||isString(value.requestId))&&(value.actorId===undefined||isString(value.actorId));
 }
@@ -258,7 +258,7 @@ function isConnectedEvent(value:unknown):value is ConnectedSessionEvent {
 function isActionRequest(value:unknown):value is ConnectedActionRequest {
   if (!isRecord(value)) return false;
   const ready=value.readyConfiguration;
-  const validReady=ready===undefined||(isRecord(ready)&&isString(ready.actorId)&&isString(ready.actionId)&&isString(ready.trigger));
+  const validReady=ready===undefined||(isRecord(ready)&&isString(ready.actorId)&&isString(ready.actionId)&&isString(ready.trigger)&&(ready.movement===undefined||typeof ready.movement==="boolean"));
   const manual=value.manualMovementReaction;
   const validManual=manual===undefined||(isRecord(manual)
     &&["opportunity-attack","other-reaction-attack"].includes(String(manual.kind))

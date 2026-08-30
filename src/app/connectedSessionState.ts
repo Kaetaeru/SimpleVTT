@@ -10,6 +10,7 @@ export interface PendingRemoteAction {
   peer:string;
   request:ConnectedActionRequest;
   resolutionId:string;
+  readyActionRole?:"prepare"|"trigger";
 }
 
 export interface ConnectedRuntimeState {

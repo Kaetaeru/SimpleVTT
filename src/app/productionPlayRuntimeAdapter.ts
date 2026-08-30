@@ -220,7 +220,7 @@ function skillActions(character:CharacterSheet):ActionVm[] {
 }
 
 function featureActions(character:CharacterSheet):ActionVm[] {
-  const standardEffect=(id:string,name:string,target:ActionVm["target"],summary:string,details:ActionVm["details"],execution:Pick<ActionVm,"sessionStatusEffect"|"completionOutcome"|"completionStateChange">={}):ActionVm=>({id:`action.standard.${id}`,actorId:character.id,name,category:"basic",target,economy:"행동",resolutionKind:"no-roll",summary,available:true,eligibleTargetIds:[],details,...execution});
+  const standardEffect=(id:string,name:string,target:ActionVm["target"],summary:string,details:ActionVm["details"],execution:Pick<ActionVm,"sessionStatusEffect"|"completionOutcome"|"completionStateChange"|"readyActionRole">={}):ActionVm=>({id:`action.standard.${id}`,actorId:character.id,name,category:"basic",target,economy:"행동",resolutionKind:"no-roll",summary,available:true,eligibleTargetIds:[],details,...execution});
   const standardCheck=(group:string,id:string,name:string,skill:string,ability:AbilityKey,sessionStatusEffect?:ActionVm["sessionStatusEffect"]):ActionVm=>({id:`action.standard.${group}.${id}`,actorId:character.id,name,category:"basic",target:"none",economy:"행동",resolutionKind:"ability-check",summary:`${ABILITY_LABEL[ability]}(${skill}) ${signed(skillBonus(character,skill,ability))}`,available:true,eligibleTargetIds:[],checkBonus:skillBonus(character,skill,ability),sessionStatusEffect,details:[detail("기본 행동",group),detail("판정",`${ABILITY_LABEL[ability]}(${skill})`),detail("비용","행동 1"),detail("출처","SRD 5.2.1 · Action")]});
   const strength=mod(character.abilities.str);
   const unarmedDamage=Math.max(0,1+strength);
@@ -265,7 +265,7 @@ function featureActions(character:CharacterSheet):ActionVm[] {
   standardEffect("help","도움","ally","아군의 다음 판정 또는 공격을 돕습니다.",[detail("대상","아군 1명"),detail("효과","다음 적격 판정 또는 공격에 유리"),detail("비용","행동 1"),detail("출처","SRD 5.2.1 · Help")],{sessionStatusEffect:{status:"도움 받음",target:"first-target",successOutcome:"지원"}}),
   standardCheck("hide","stealth","숨기","은신","dex",{status:"숨음",target:"actor",minimumRoll:15,successOutcome:"숨기 성공",failureOutcome:"숨기 실패",durationKey:"hidden-until-attack-or-discovery",endsOnAttack:true}),
   ...([{"id":"animal-handling","skill":"동물 조련","ability":"wis"},{"id":"deception","skill":"기만","ability":"cha"},{"id":"intimidation","skill":"위협","ability":"cha"},{"id":"performance","skill":"공연","ability":"cha"},{"id":"persuasion","skill":"설득","ability":"cha"}] as const).map((entry)=>standardCheck("influence",entry.id,`영향 주기 · ${entry.skill}`,entry.skill,entry.ability)),
-  standardEffect("ready","준비","self","선언한 트리거에 반응해 행동하거나 이동합니다.",[detail("선언","감지 가능한 트리거와 반응 행동/이동"),detail("비용","행동 1 · 발동 시 반응 1"),detail("출처","SRD 5.2.1 · Ready")],{sessionStatusEffect:{status:"준비 행동",target:"actor",successOutcome:"트리거와 반응 행동 준비"}}),
+  standardEffect("ready","준비","self","선언한 트리거에 반응해 행동하거나 이동합니다.",[detail("선언","감지 가능한 트리거와 반응 행동/이동"),detail("비용","행동 1 · 발동 시 반응 1"),detail("출처","SRD 5.2.1 · Ready")],{readyActionRole:"prepare",sessionStatusEffect:{status:"준비 행동",target:"actor",successOutcome:"트리거와 반응 행동 준비"}}),
   ...([{"id":"insight","skill":"통찰"},{"id":"medicine","skill":"의학"},{"id":"perception","skill":"지각"},{"id":"survival","skill":"생존"}] as const).map((entry)=>standardCheck("search",entry.id,`탐색 · ${entry.skill}`,entry.skill,"wis")),
   ...([{"id":"arcana","skill":"비전"},{"id":"history","skill":"역사"},{"id":"investigation","skill":"조사"},{"id":"nature","skill":"자연"},{"id":"religion","skill":"종교"}] as const).map((entry)=>standardCheck("study",entry.id,`연구 · ${entry.skill}`,entry.skill,"int")),
   standardEffect("utilize","물체 사용","self","비마법 물체를 사용합니다.",[detail("효과","비마법 물체 사용"),detail("비용","행동 1"),detail("출처","SRD 5.2.1 · Utilize")],{completionOutcome:"물체 사용",completionStateChange:`${character.name} 비마법 물체 사용 선언`}),
@@ -360,7 +360,7 @@ function featureActions(character:CharacterSheet):ActionVm[] {
   return actions;
 }
 
-function readyTriggerAction(character:CharacterSheet,prepared:ActionVm,trigger:string):ActionVm {
+function readyTriggerAction(character:CharacterSheet,prepared:ActionVm,trigger:string,movement=false):ActionVm {
   return {
     id:"action.standard.ready.trigger",
     actorId:character.id,
@@ -371,9 +371,10 @@ function readyTriggerAction(character:CharacterSheet,prepared:ActionVm,trigger:s
     resolutionKind:"no-roll",
     summary:`${trigger} → ${prepared.name}`,
     available:true,
+    readyActionRole:"trigger",
     eligibleTargetIds:[...prepared.eligibleTargetIds],
     maxTargets:prepared.maxTargets,
-    sessionStatusEffect:{status:"준비 행동",target:"actor",operation:"remove",successOutcome:prepared.id===READY_MOVEMENT_ACTION_ID?"준비한 이동을 반응으로 선언":"준비한 행동을 반응으로 발동"},
+    sessionStatusEffect:{status:"준비 행동",target:"actor",operation:"remove",successOutcome:movement?"준비한 이동을 반응으로 선언":"준비한 행동을 반응으로 발동"},
     details:[
       detail("트리거",trigger),
       detail("예약 행동",prepared.name),
@@ -601,10 +602,10 @@ function reconcile(adapter:MockAdapter) {
   const actions=deriveProductionCharacterActions(character);
   const ready=readyActionConfigurationFor(adapter);
   const prepared=ready?.actorId===character.id
-    ? ready.actionId===READY_MOVEMENT_ACTION_ID?preparedMovementAction(character):actions.find((action)=>action.id===ready.actionId)
+    ? ready.movement?preparedMovementAction(character):actions.find((action)=>action.id===ready.actionId)
     : undefined;
   if (prepared&&internal.scene.entities.find((entity)=>entity.id===character.id)?.status.includes("준비 행동")) {
-    actions.push(readyTriggerAction(character,prepared,ready!.trigger));
+    actions.push(readyTriggerAction(character,prepared,ready!.trigger,ready!.movement===true));
   }
   internal.scene.actionsByActor[character.id]=actions;
   internal.scene.economyByActor[character.id]??={action:true,bonusAction:true,reaction:true,movement:character.speed,movementMax:character.speed};

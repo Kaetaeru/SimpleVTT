@@ -31,7 +31,7 @@ import type { DamageRollResolution } from "../domain/damageRoll";
 import type { TargetingFactInput } from "../domain/targeting";
 import { resolveCommonPlaySelector, type CommonPlayInstantArea, type CommonPlaySelector, type CommonPlaySelectorCandidate } from "../domain/commonPlaySelectorRuntime";
 import { resolveCommonPlayStoredInvocationCancel, resolveCommonPlayStoredInvocationCapture, resolveCommonPlayStoredInvocationTrigger } from "../domain/commonPlayStoredInvocationRuntime";
-import type { ReadyActionConfiguration } from "./standardActionReadyState";
+import { isReadyPreparationAction, type ReadyActionConfiguration } from "./standardActionReadyState";
 import { resolvePendingResolution } from "../domain/resolution";
 import { allocationEntriesFromTargetSequence, resolveCommonPlayAllocation } from "../domain/commonPlayAllocationRuntime";
 import { compileCommonPlaySpecialAction, type CommonPlaySpecialActionAuthoringDefinition, type CommonPlayTimingEvent, type CommonPlayTimingWindow } from "../domain/commonPlaySpecialTimingRuntime";
@@ -428,6 +428,7 @@ MockAdapter.prototype.configureReadyAction=async function configureInstalledComm
   const action=reference?await commonPlayAction(this,command.actionId):undefined;
   if(!reference||!action||action.lowered.kind!=="operations") return previousConfigureReadyAction.call(this,command);
   const internal=this as unknown as AdapterState;
+  const readyActionId=internal.scene.actionsByActor[command.actorId]?.find(isReadyPreparationAction)?.id??"runtime.ready.prepare";
   const state=snapshotAdapterTurnRuntimeState(this,internal.scene);
   if(!state||state.clock.activeActorId!==command.actorId||!state.combatants[command.actorId]) return internal.getSnapshot();
   const resolutionId=`common-play-ready.${Date.now()}.${Math.floor(Math.random()*1000)}`;
@@ -447,9 +448,9 @@ MockAdapter.prototype.configureReadyAction=async function configureInstalledComm
     ...(heldSpellConcentrationGroupId?{concentrationGroupId:heldSpellConcentrationGroupId,onTriggerConcentration:"end" as const}:{}),
     captureOperations,
   });
-  if(committed.status==="rejected") return failAction(internal,command.actorId,"action.standard.ready","준비",[command.actorId],resolutionId,committed.error);
+  if(committed.status==="rejected") return failAction(internal,command.actorId,readyActionId,"준비",[command.actorId],resolutionId,committed.error);
   return commitProductionRuntimeResolution(this,state,committed,{
-    resolutionId,actionId:"action.standard.ready",actionName:"준비",actorId:command.actorId,targetIds:[command.actorId],
+    resolutionId,actionId:readyActionId,actionName:"준비",actorId:command.actorId,targetIds:[command.actorId],
     targetNames:[internal.scene.entities.find((entity)=>entity.id===command.actorId)?.name??command.actorId],
     compact:`${command.trigger.trim()||"트리거"} → ${action.nameKo||action.nameEn} 준비`,
     detail:[`${action.lowered.definition.id} · ${action.entryPointId}`,"행동 사용 · 저장된 호출 생성"],

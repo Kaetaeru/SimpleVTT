@@ -2235,7 +2235,7 @@
         "standardActionReactionAdapter.ts",
         "productionPlayRuntimeAdapter.ts"
       ],
-      "currentState": "Attack, Dash, Disengage, Dodge, Help, Hide, Influence, Search, Study, and Utilize have structural production projections that execute through existing attack/movement/status/d20 completion paths. Family-wide portable no-edit acceptance is still blocked because built-in Ready uses the action.standard.ready/trigger adapter to select off-turn behavior, while Magic actions enter the Family Z spell path that still selects mechanics through spellMechanicById. Unknown installed Ready has separate generic stored-invocation evidence, but the standard-action family cannot be marked final while these production identity/dependency seams remain.",
+      "currentState": "Every standard action now enters an existing structural authority: Attack, Dash, status actions, checks, and completion actions use their generic production paths; Magic uses the normalized Family Z spell definition path; Ready preparation and trigger routing use explicit action roles rather than action IDs, while installed arbitrary actions use the durable stored-invocation path. Ready capture, off-turn trigger, expiry/cancellation, connected replay/reconnect, and Undo are production-proven, including arbitrary external identities.",
       "requiredSemantics": [
         "Attack",
         "Dash",
@@ -2251,24 +2251,34 @@
         "Utilize"
       ],
       "transactionDomain": "Resolver action/effect/d20/item/stored invocation composition",
-      "disposition": "INCOMPLETE",
+      "disposition": "IMPLEMENTED",
       "implementationEvidence": [
         "productionPlayRuntimeAdapter.ts structural standard action projections",
-        "standardActionReactionAdapter.ts current Ready compatibility path",
-        "5308c15e installed Ready stored-invocation evidence"
+        "standardActionReadyState.ts structural Ready preparation/trigger roles",
+        "standardActionReactionAdapter.ts role-routed built-in Ready lifecycle",
+        "installedCommonPlayRuntimeAdapter.ts generic stored-invocation Ready lifecycle",
+        "normalizedSpellDefinitionById plus productionSpellRuntimeAdapter.ts Family Z Magic path"
       ],
       "productionEvidence": [
-        "C8 structural standard no-roll/check/movement production evidence retained in STATE",
-        "5308c15e installed Ready production capture/cancel/expiry/Undo"
+        "standardActionLifecycle.test.ts proves status/check/movement and built-in Ready capture/off-turn trigger/expiry/Undo behavior",
+        "installedCommonPlayLoweredFamiliesProduction.test.ts proves arbitrary installed Ready capture, trigger, expiry, cancellation, and Undo",
+        "c9FamilyZNormalizedSpellExecutionCatalog.test.ts proves production spell callers consume normalized mechanics rather than spellMechanicById",
+        "repository-wide npm run build passed after structural Ready routing"
       ],
-      "identityInvarianceEvidence": [],
-      "connectedEvidenceIfRelevant": [],
-      "persistenceEvidenceIfRelevant": [],
-      "remainingNamedSeams": [
-        "built-in action.standard.ready/trigger adapter still selects Ready off-turn execution",
-        "Magic action inherits Family Z productionSpellRuntimeAdapter spellMechanicById identity dispatch",
-        "full arbitrary-ID connected/persistence matrix for the complete standard-action composition set"
+      "identityInvarianceEvidence": [
+        "standardActionLifecycle.test.ts proves Ready algorithm roles survive unrelated presentation identities",
+        "installedCommonPlayLoweredFamiliesProduction.test.ts repeats stored-invocation execution under renamed external identities",
+        "c9FamilyZNormalizedSpellExecutionCatalog.test.ts proves normalized Magic component behavior under renamed material identity"
       ],
+      "connectedEvidenceIfRelevant": [
+        "connectedReadyActionProjection.test.ts proves actor-scoped arm/clear, duplicate-safe replay, and reconnect catch-up",
+        "installedCommonPlayLoweredFamiliesProduction.test.ts proves Host-authoritative stored-invocation replay, reconnect, and compensating Undo"
+      ],
+      "persistenceEvidenceIfRelevant": [
+        "installed Common Play stored-invocation RuntimeArtifact persists capture and terminal lifecycle state",
+        "installedCommonPlayLoweredFamiliesProduction.test.ts reconstructs captured and cleared Ready state through connected history/reconnect"
+      ],
+      "remainingNamedSeams": [],
       "connectedRelevant": true,
       "persistenceRelevant": true
     },

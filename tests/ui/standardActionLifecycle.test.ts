@@ -5,7 +5,7 @@ import type { SceneVm } from "../../src/app/contracts";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import { resolveSavingThrowResolution } from "../../src/app/realSavingThrowService";
 import type { ActionVm } from "../../src/app/contracts";
-import { READY_MOVEMENT_ACTION_ID, readyActionConfigurationFor, setReadyActionConfiguration } from "../../src/app/standardActionReadyState";
+import { isReadyPreparationAction, isReadyTriggerAction, READY_MOVEMENT_ACTION_ID, readyActionConfigurationFor, setReadyActionConfiguration } from "../../src/app/standardActionReadyState";
 
 type MutableAdapter={scene:SceneVm};
 
@@ -177,22 +177,27 @@ test("Ready exposes an off-turn trigger that spends Reaction and clears the prep
   await adapter.configureReadyAction({actorId:"char.aelar",actionId:prepared.id,trigger:"고블린이 문을 통과하면"});
   let snapshot=await adapter.advanceResolution();
   assert.equal(snapshot.scene.entities.find((entry)=>entry.id==="char.aelar")?.status.includes("준비 행동"),true);
-  assert.ok(snapshot.scene.actionsByActor["char.aelar"]?.some((entry)=>entry.id==="action.standard.ready.trigger"));
+  assert.ok(snapshot.scene.actionsByActor["char.aelar"]?.some((entry)=>entry.readyActionRole==="trigger"));
 
   snapshot=await adapter.endTurn();
   assert.notEqual(snapshot.scene.currentActorId,"char.aelar");
-  const trigger=snapshot.scene.actionsByActor["char.aelar"]?.find((entry)=>entry.id==="action.standard.ready.trigger");
+  const trigger=snapshot.scene.actionsByActor["char.aelar"]?.find((entry)=>entry.readyActionRole==="trigger");
   assert.equal(trigger?.available,true,"prepared reaction must remain executable off turn");
 
   assert.match(trigger?.summary??"",/고블린이 문을 통과하면/);
-  await adapter.resolveAction("action.standard.ready.trigger",[]);
+  await adapter.resolveAction(trigger!.id,[]);
   snapshot=await adapter.advanceResolution();
   assert.equal(snapshot.resolution?.stage,"complete");
   assert.equal(snapshot.scene.entities.find((entry)=>entry.id==="char.aelar")?.status.includes("준비 행동"),false);
   assert.equal(snapshot.scene.economyByActor["char.aelar"]?.reaction,false);
   assert.equal(readyActionConfigurationFor(adapter),undefined);
   assert.ok(snapshot.activity[0]?.stateChanges.some((entry)=>entry.includes("반응 사용")));
-  assert.equal(snapshot.scene.actionsByActor["char.aelar"]?.some((entry)=>entry.id==="action.standard.ready.trigger"),false);
+  assert.equal(snapshot.scene.actionsByActor["char.aelar"]?.some((entry)=>entry.readyActionRole==="trigger"),false);
+});
+
+test("Ready roles are invariant to presentation identity",()=>{
+  assert.equal(isReadyPreparationAction({readyActionRole:"prepare",id:"external.renamed.ready-preparation"} as ActionVm),true);
+  assert.equal(isReadyTriggerAction({readyActionRole:"trigger",id:"external.renamed.ready-trigger"} as ActionVm),true);
 });
 
 test("Ready movement spends Reaction but leaves coordinates to an installed map module",async()=>{
@@ -205,11 +210,13 @@ test("Ready movement spends Reaction but leaves coordinates to an installed map 
     actorId:"char.aelar",
     actionId:READY_MOVEMENT_ACTION_ID,
     trigger:"용이 착지하면",
+    movement:true,
   });
   let snapshot=await adapter.advanceResolution();
-  assert.ok(snapshot.scene.actionsByActor["char.aelar"]?.find((entry)=>entry.id==="action.standard.ready.trigger")?.summary.includes("→ 이동"));
+  const trigger=snapshot.scene.actionsByActor["char.aelar"]?.find((entry)=>entry.readyActionRole==="trigger");
+  assert.ok(trigger?.summary.includes("→ 이동"));
   await adapter.endTurn();
-  await adapter.resolveAction("action.standard.ready.trigger",["char.aelar"]);
+  await adapter.resolveAction(trigger!.id,["char.aelar"]);
   snapshot=await adapter.advanceResolution();
 
   assert.equal(snapshot.resolution?.stage,"complete");

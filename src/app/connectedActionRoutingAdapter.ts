@@ -22,7 +22,7 @@ import {
   type ProjectionResolutionContext,
 } from "./characterSessionProjectionMount";
 import { projectedCharacterById, projectedCharacterForPeer } from "./characterSessionProjectionRegistry";
-import { clearReadyActionConfiguration, readyActionConfigurationFor, setReadyActionConfiguration } from "./standardActionReadyState";
+import { clearReadyActionConfiguration, isReadyPreparationAction, isReadyTriggerAction, readyActionConfigurationFor, setReadyActionConfiguration } from "./standardActionReadyState";
 import type { ResolutionEvent } from "../domain/resolutionTypes";
 import type { ManualMovementReactionCommand } from "./manualMovementReactionContracts";
 
@@ -37,6 +37,10 @@ const projectionContexts=new WeakMap<MockAdapter,ProjectionResolutionContext>();
 
 function requestId() {
   return `request.${Date.now().toString(36)}.${Math.floor(Math.random()*1_000_000).toString(36)}`;
+}
+
+function actionFor(adapter:MockAdapter,actorId:string,actionId:string) {
+  return connectedInternal(adapter).scene.actionsByActor[actorId]?.find((action)=>action.id===actionId);
 }
 
 function restoreProjectedContext(adapter:MockAdapter) {
@@ -61,8 +65,8 @@ async function publishCommittedResolution(adapter:MockAdapter,snapshot?:AppSnaps
   if (!presentation) return current;
   state.presentationTimelineByResolution.set(resolution.id,presentation.timeline.map((entry)=>({...entry})));
   const readyConfig=readyActionConfigurationFor(adapter,resolution.actorId);
-  const readyArmed=resolution.actionId==="action.standard.ready"&&readyConfig;
-  const readyCleared=readyClearedActorId===resolution.actorId||pending?.request.actionId==="action.standard.ready.trigger";
+  const readyArmed=isReadyPreparationAction(actionFor(adapter,resolution.actorId,resolution.actionId))&&readyConfig;
+  const readyCleared=readyClearedActorId===resolution.actorId||pending?.readyActionRole==="trigger";
   if (!events?.length&&(readyArmed||readyCleared)) {
     const actorId=resolution.actorId;
     const economy=current.scene.economyByActor[actorId];
@@ -288,7 +292,7 @@ registerConnectedActionRequestHandler(async (adapter,transportMessage,request) =
   }
 
   if (request.readyConfiguration) {
-    if (request.actionId!=="action.standard.ready"||request.readyConfiguration.actorId!==request.actorId) {
+    if (!isReadyPreparationAction(actionFor(adapter,request.actorId,request.actionId))||request.readyConfiguration.actorId!==request.actorId) {
       ledger.cancelReservedActionRequest(request.requestId);
       restoreProjectedContext(adapter);
       await sendConnectedWireTo(transportMessage.peer,{type:"error",code:"ready-config-rejected",message:"Ready configuration must match the requested Ready actor",hostCursor:ledger.cursor});
@@ -310,7 +314,7 @@ registerConnectedActionRequestHandler(async (adapter,transportMessage,request) =
       :await previousResolveAction.call(adapter,request.actionId,request.targetIds);
     const resolution=next.resolution;
     const expectedActorId=request.manualMovementReaction?.reactorId??request.actorId;
-    const expectedActionId=request.manualMovementReaction?.attackActionId??(request.actionId==="action.standard.ready.trigger"
+    const expectedActionId=request.manualMovementReaction?.attackActionId??(isReadyTriggerAction(actionFor(adapter,request.actorId,request.actionId))
       ? readyActionConfigurationFor(adapter,request.actorId)?.actionId
       : request.actionId);
     if (!resolution||resolution.actorId!==expectedActorId||resolution.actionId!==expectedActionId) {
@@ -320,7 +324,7 @@ registerConnectedActionRequestHandler(async (adapter,transportMessage,request) =
       await sendConnectedWireTo(transportMessage.peer,{type:"error",code:"action-rejected",message:"host production resolution path rejected the requested actor/action/targets",hostCursor:ledger.cursor});
       return;
     }
-    state.pendingRemoteAction={peer:transportMessage.peer,request:structuredClone(request),resolutionId:resolution.id};
+    state.pendingRemoteAction={peer:transportMessage.peer,request:structuredClone(request),resolutionId:resolution.id,readyActionRole:actionFor(adapter,request.actorId,request.actionId)?.readyActionRole};
     await publishConnectedSnapshot(adapter);
     await publishConnectedResolutionPresentation(adapter,next);
     await publishCommittedResolution(adapter,next);
@@ -344,7 +348,7 @@ MockAdapter.prototype.resolveAction=async function resolveConnectedAction(action
     }
     const character=connectedManifest(this).character;
     if (!character) return app.getSnapshot();
-    const readyConfiguration=actionId==="action.standard.ready"?readyActionConfigurationFor(this,character.characterId):undefined;
+    const readyConfiguration=isReadyPreparationAction(actionFor(this,character.characterId,actionId))?readyActionConfigurationFor(this,character.characterId):undefined;
     await tauriSessionTransport.send(JSON.stringify({
       type:"action-request",
       request:{
