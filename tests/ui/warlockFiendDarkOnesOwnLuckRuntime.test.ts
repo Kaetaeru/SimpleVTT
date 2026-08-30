@@ -9,7 +9,9 @@ import {
 } from "../../src/domain/warlockFiend";
 import { WARLOCK_ID } from "../../src/domain/warlockProgressionChoices";
 
-const INTERRUPT_ID="follow-up.d20-modification";
+const INTERRUPT_SUFFIX=":use-dark-ones-own-luck";
+const FEATURE_ID="dnd.srd521.feature.warlock.fiend.dark-ones-own-luck";
+const isDarkLuckInterrupt=(id:string|undefined)=>Boolean(id?.endsWith(INTERRUPT_SUFFIX));
 const SAVE_ACTION="action.test.fiend-luck-save";
 const CASTER="char.test-fiend-luck-caster";
 type Internal={activeCharacter:CharacterSheet;characters:CharacterSheet[];scene:SceneVm;session:SessionVm};
@@ -93,7 +95,7 @@ test("Fiend level 6 failed ability check offers Dark One's Own Luck, spends one 
   snapshot=await adapter.advanceResolution();
   assert.equal(snapshot.resolution?.stage,"effect-preview",JSON.stringify(snapshot.resolution));
   snapshot=await adapter.applyDmAdjudication({type:"ability-check-dc",scope:"resolution",value:15});
-  assert.equal(snapshot.resolution?.interrupt?.id,INTERRUPT_ID,JSON.stringify(snapshot.resolution));
+  assert.equal(isDarkLuckInterrupt(snapshot.resolution?.interrupt?.id),true,JSON.stringify(snapshot.resolution));
 
   await adapter.setQueuedD20(10);
   snapshot=await adapter.respondToInterrupt(true);
@@ -119,7 +121,7 @@ test("Fiend Dark One's Own Luck can turn the Warlock's failed saving throw into 
   await adapter.setQueuedD20(1);
   await adapter.resolveAction(SAVE_ACTION,[actorId]);
   snapshot=await adapter.advanceResolution();
-  assert.equal(snapshot.resolution?.interrupt?.id,INTERRUPT_ID,JSON.stringify(snapshot.resolution));
+  assert.equal(isDarkLuckInterrupt(snapshot.resolution?.interrupt?.id),true,JSON.stringify(snapshot.resolution));
 
   await adapter.setQueuedD20(10);
   snapshot=await adapter.respondToInterrupt(true);
@@ -138,7 +140,7 @@ test("Fiend Dark One's Own Luck can turn the Warlock's failed saving throw into 
 test("SRD 5.2.1 allows Dark One's Own Luck after seeing a successful roll but no more than once per roll",async()=>{
   const adapter=new MockAdapter();await prepareFiend(adapter);await adapter.startInitiative();let snapshot=await adapter.getSnapshot();const actorId=snapshot.activeCharacter.id;await adapter.setCurrentActor(actorId);snapshot=await adapter.getSnapshot();const check=abilityCheckAction(snapshot);assert.ok(check);
   const beforeUses=snapshot.activeCharacter.resources.find((entry)=>entry.id===FIEND_DARK_ONES_OWN_LUCK_RESOURCE_ID)!.current;
-  await adapter.setQueuedD20(19);await adapter.resolveAction(check.id,[]);await adapter.advanceResolution();snapshot=await adapter.applyDmAdjudication({type:"ability-check-dc",scope:"resolution",value:10});assert.equal(snapshot.resolution?.checkOutcome,"성공");assert.equal(snapshot.resolution?.interrupt?.id,INTERRUPT_ID);
+  await adapter.setQueuedD20(19);await adapter.resolveAction(check.id,[]);await adapter.advanceResolution();snapshot=await adapter.applyDmAdjudication({type:"ability-check-dc",scope:"resolution",value:10});assert.equal(snapshot.resolution?.checkOutcome,"성공");assert.equal(isDarkLuckInterrupt(snapshot.resolution?.interrupt?.id),true);
   await adapter.setQueuedD20(1);snapshot=await adapter.respondToInterrupt(true);assert.equal(snapshot.resolution?.checkOutcome,"성공");assert.equal(snapshot.resolution?.interrupt,undefined,"one feature use must not be offered twice for the same roll");assert.equal(snapshot.activeCharacter.resources.find((entry)=>entry.id===FIEND_DARK_ONES_OWN_LUCK_RESOURCE_ID)?.current,beforeUses-1);
 });
 
@@ -156,6 +158,33 @@ test("Warlock below Fiend feature level does not receive Dark One's Own Luck",as
   await adapter.resolveAction(check.id,[]);
   await adapter.advanceResolution();
   snapshot=await adapter.applyDmAdjudication({type:"ability-check-dc",scope:"resolution",value:15});
-  assert.notEqual(snapshot.resolution?.interrupt?.id,INTERRUPT_ID);
+  assert.equal(isDarkLuckInterrupt(snapshot.resolution?.interrupt?.id),false);
   assert.equal(snapshot.activeCharacter.resources.some((entry)=>entry.id===FIEND_DARK_ONES_OWN_LUCK_RESOURCE_ID),false);
+});
+
+
+test("Dark One's Own Luck mechanics are selected structurally from owned Fiend content, not feature presentation identity",async()=>{
+  const adapter=new MockAdapter();
+  const internal=adapter as unknown as Internal&{catalog:Array<{contentId?:string;nameKo:string;nameEn?:string}>};
+  await prepareFiend(adapter);
+  const feature=internal.catalog.find((entry)=>entry.contentId===FEATURE_ID);
+  assert.ok(feature);
+  feature.nameKo="완전히 다른 표시 이름";
+  feature.nameEn="Renamed Presentation Only";
+  await adapter.startInitiative();
+  let snapshot=await adapter.getSnapshot();
+  const actorId=snapshot.activeCharacter.id;
+  await adapter.setCurrentActor(actorId);
+  snapshot=await adapter.getSnapshot();
+  const check=abilityCheckAction(snapshot);
+  assert.ok(check);
+  const before=snapshot.activeCharacter.resources.find((entry)=>entry.id===FIEND_DARK_ONES_OWN_LUCK_RESOURCE_ID)!.current;
+  await adapter.setQueuedD20(2);
+  await adapter.resolveAction(check.id,[]);
+  await adapter.advanceResolution();
+  snapshot=await adapter.applyDmAdjudication({type:"ability-check-dc",scope:"resolution",value:15});
+  assert.equal(isDarkLuckInterrupt(snapshot.resolution?.interrupt?.id),true);
+  await adapter.setQueuedD20(10);
+  snapshot=await adapter.respondToInterrupt(true);
+  assert.equal(snapshot.activeCharacter.resources.find((entry)=>entry.id===FIEND_DARK_ONES_OWN_LUCK_RESOURCE_ID)?.current,before-1);
 });

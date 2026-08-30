@@ -146,9 +146,8 @@ async function openSavingThrowInterrupt(adapter:MockAdapter){
   let snapshot=await adapter.resolveAction(OTHER_CHARACTER_SAVE_ID,[owner]);
   assert.equal(snapshot.resolution?.stage,"save-animation",JSON.stringify(snapshot.resolution));
   snapshot=await adapter.advanceResolution();
-  assert.equal(snapshot.resolution?.stage,"save-result",JSON.stringify(snapshot.resolution));
+  assert.equal(snapshot.resolution?.stage,"interrupt",JSON.stringify(snapshot.resolution));
   assert.equal(snapshot.resolution?.saveResults[0]?.outcome,"실패");
-  snapshot=await adapter.advanceResolution();
   return snapshot;
 }
 

@@ -127,6 +127,13 @@ function catalogEntryMatchesFeature(entry:CatalogEntry,featureId:string) {
   );
 }
 
+function catalogEntryMatchesSubclass(entry:CatalogEntry,subclassId:string) {
+  const token=subclassId.trim();
+  return entry.category==="subclass"&&Boolean(token)&&(
+    entry.id===token||entry.contentId===token||entry.nameKo===token||entry.nameEn===token
+  );
+}
+
 function contentIdentitySetForLocal(internal:AdapterState) {
   const identities=new Set<string>();
   try {
@@ -134,6 +141,10 @@ function contentIdentitySetForLocal(internal:AdapterState) {
   } catch {
     // Legacy/reference Characters can fail the full SessionProjection envelope for unrelated
     // source-model reasons. Passive item ownership still has a direct canonical catalog fact.
+  }
+  for(const subclassId of Object.values(internal.activeCharacter.subclassIds ?? {})) {
+    const matches=internal.catalog.filter((entry)=>catalogEntryMatchesSubclass(entry,subclassId));
+    if(matches.length===1)identities.add(matches[0].id);
   }
   for(const item of internal.activeCharacter.items) {
     const matches=internal.catalog.filter((entry)=>catalogEntryMatchesItem(entry,item));
@@ -176,6 +187,9 @@ async function passiveReactionCandidates(adapter:MockAdapter):Promise<PassiveRea
         const canonical=parseCommonPlayDefinition(mechanic.config,`Installed passive Common Play ${qualifiedId} mechanic ${mechanicIndex}`);
         const definition=lowerCommonPlayReactionDefinition(canonical,{resolveResourceDie:(resourceId)=>owner.sheet.resources.find((resource)=>resource.id===resourceId)?.dieSides});
         if(!definition)continue;
+        const presentationEntry=internal.catalog.find((candidate)=>
+          candidate.contentId===canonical.id&&candidate.sourceId===entry.sourceId&&candidate.version===entry.version
+        );
         for(const interceptor of definition.interceptors){
           const responder=interceptor.interaction.responder;
           if(responder!=="actor"&&responder!=="actor-owner")continue;
@@ -184,7 +198,7 @@ async function passiveReactionCandidates(adapter:MockAdapter):Promise<PassiveRea
             sourceActorId:owner.sheet.id,
             sourceActorName:owner.sheet.name,
             source:entry.source,
-            optionName:entry.nameKo||entry.nameEn||entry.contentId||qualifiedId,
+            optionName:presentationEntry?.nameKo||presentationEntry?.nameEn||entry.nameKo||entry.nameEn||entry.contentId||qualifiedId,
             sheet:structuredClone(owner.sheet),
             definition:{...definition,interceptors:[interceptor]},
           });
@@ -474,7 +488,9 @@ MockAdapter.prototype.advanceResolution=async function advanceWithPortableCommon
   const pending=pendingByAdapter.get(this);
   if(pending&&(this as unknown as AdapterState).resolution?.id===pending.resolutionId)return (this as unknown as AdapterState).getSnapshot();
   if(await offerPassiveReaction(this))return (this as unknown as AdapterState).getSnapshot();
-  return previousAdvanceResolution.call(this);
+  const advanced=await previousAdvanceResolution.call(this);
+  if(await offerPassiveReaction(this))return (this as unknown as AdapterState).getSnapshot();
+  return advanced;
 };
 
 MockAdapter.prototype.respondToInterrupt=async function respondToPortableCommonPlayInterceptor(accept:boolean) {
