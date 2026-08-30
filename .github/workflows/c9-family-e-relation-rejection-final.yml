@@ -1,0 +1,83 @@
+name: C9 Family E Relation Rejection Final
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-e-relation-rejection-final.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Apply relation rejection boundary fix
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path, old, new):
+              p=Path(path)
+              text=p.read_text(encoding='utf-8')
+              count=text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{path}: expected exactly one match, got {count}: {old!r}')
+              p.write_text(text.replace(old,new,1),encoding='utf-8')
+
+          adapter='src/app/installedCommonPlayRuntimeAdapter.ts'
+          replace_once(
+              adapter,
+              '    if(targeting.where?.op==="relation-matches"&&targeting.where.ref==="relation"&&selectedTargets.some((target)=>commonPlayTargetFact(actorEntity,target!).relation!==targeting.where!.value)) return undefined;\n',
+              '',
+          )
+          replace_once(
+              adapter,
+              '''    const pending=compileCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,state,lowered.definition,operationExecutionInput(internal,actionId,action,prepared,resolutionId,interactionId));\n    const effectDefinitions=await installedPersistentEffectDefinitions(adapter);\n    const damagePending=appendCommonPlayDamageTakenTriggers(\n      state,effectDefinitions,pending,actorEntity.kind==="character"?"character":"monster",\n    );\n    const automaticPending=appendCommonPlaySemanticOutcomeTriggers(\n      state,effectDefinitions,damagePending,Object.fromEntries(internal.scene.entities.map((entity)=>[entity.id,entity.kind==="character"?"character":"monster"])),\n    );\n    committed=appendCommonPlaySemanticOutcomeEvents(\n      automaticPending,\n      resolvePendingResolution(SIMPLEVTT_APP_RULES_PROFILE,state,automaticPending),\n    );''',
+              '''    try {\n      const pending=compileCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,state,lowered.definition,operationExecutionInput(internal,actionId,action,prepared,resolutionId,interactionId));\n      const effectDefinitions=await installedPersistentEffectDefinitions(adapter);\n      const damagePending=appendCommonPlayDamageTakenTriggers(\n        state,effectDefinitions,pending,actorEntity.kind==="character"?"character":"monster",\n      );\n      const automaticPending=appendCommonPlaySemanticOutcomeTriggers(\n        state,effectDefinitions,damagePending,Object.fromEntries(internal.scene.entities.map((entity)=>[entity.id,entity.kind==="character"?"character":"monster"])),\n      );\n      committed=appendCommonPlaySemanticOutcomeEvents(\n        automaticPending,\n        resolvePendingResolution(SIMPLEVTT_APP_RULES_PROFILE,state,automaticPending),\n      );\n    } catch(error) {\n      return {status:"rejected" as const,error:error instanceof Error?error.message:String(error),snapshot:await internal.getSnapshot()};\n    }''',
+          )
+
+          test_path='tests/ui/installedCommonPlayProductionRuntime.test.ts'
+          replace_once(
+              test_path,
+              '''  await adapter.resolveAction(actionId,["char.aelar"]);\n  assert.equal((await adapter.getSnapshot()).activeCharacter.hp,selfBefore,"self must be filtered before production commit");\n\n  const enemyBefore=(await adapter.getSnapshot()).scene.entities.find((entity)=>entity.id==="combatant.goblin-a")!.hp;\n  await adapter.resolveAction(actionId,["combatant.goblin-a"]);\n  const snapshot=await adapter.getSnapshot();''',
+              '''  await adapter.resolveAction(actionId,["char.aelar"]);\n  let snapshot=await adapter.getSnapshot();\n  assert.equal(snapshot.activeCharacter.hp,selfBefore,"self must be rejected before production commit");\n  assert.equal(snapshot.resolution?.finalOutcome,"적용 거부");\n  assert.match(snapshot.resolution?.compact??"",/relation filter rejected: char\\.aelar/);\n\n  const enemyBefore=snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")!.hp;\n  await adapter.resolveAction(actionId,["combatant.goblin-a"]);\n  snapshot=await adapter.getSnapshot();''',
+          )
+          PY
+      - name: Verify relation selector production slice
+        run: >-
+          npx tsx --test
+          tests/domain/commonPlayTargetingRuntime.test.ts
+          tests/ui/installedCommonPlayProductionRuntime.test.ts
+          tests/ui/ruleModulePackageImport.test.ts
+      - name: Verify legacy execution boundary
+        run: node scripts/check-legacy-execution-boundary.mjs
+      - name: Typecheck application
+        run: npx tsc --noEmit
+      - name: Commit verified fix and remove relation helpers
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm -f \
+            .github/workflows/c9-family-e-relation-selector.yml \
+            .github/workflows/c9-family-e-relation-selector-retry.yml \
+            .github/workflows/c9-family-e-relation-selector-final.yml \
+            .github/workflows/c9-family-e-relation-rejection-final.yml || true
+          git add src/app/installedCommonPlayRuntimeAdapter.ts tests/ui/installedCommonPlayProductionRuntime.test.ts .github/workflows
+          git commit -m "fix(c9): surface relation selector rejection"
+          git fetch origin agent/c9-gate-n-coverage-reconciliation
+          git rebase origin/agent/c9-gate-n-coverage-reconciliation
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
