@@ -1,0 +1,67 @@
+name: C9 Family X Charge Ledger 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-x-charge-ledger-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Reconcile Family X charge evidence
+        run: |
+          git fetch origin agent/c9-gate-n-coverage-reconciliation
+          git rebase origin/agent/c9-gate-n-coverage-reconciliation
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
+          doc=json.loads(path.read_text(encoding='utf-8'))
+          row=next(entry for entry in doc['mechanismFamilies'] if entry['family']=='X')
+          row['currentState']=(
+            'Durable inventory authority exists and unknown external Common Play item quantity and charge payments now execute through the canonical Resolver item-as-resource event bridge with durable Character write-back, restart persistence, event-native Undo, and full external identity rename invariance. Generic create/grant/copy, broader item mutation/equipment ownership, recharge, item-owned action/effect/spellcasting, and transfer remain incomplete; connected quantity-payment replay/retry/reconnect/Undo is proven.'
+          )
+          def add(field,value):
+            if value not in row[field]: row[field].append(value)
+          add('implementationEvidence','commonPlayOperationRuntime.ts portable item payment supports structural quantity or charges lowering through the canonical spend-resource operation')
+          add('implementationEvidence','installedCommonPlayRuntimeAdapter.ts itemPaymentRuntimeContext seeds either phase09:item:<id>:quantity or phase09:item:<id>:charges from the resolved durable ItemInstance without content identity dispatch')
+          add('productionEvidence','3dd0a13715b0a9218ba3e3462021c58cfe52069d feat(c9): support portable item charge payment; C9 Family X Item Charge Payment 71304 run 33318484203 passed quantity + charge production tests, V1 coverage checker, and tsc --noEmit')
+          add('productionEvidence','tests/ui/c9FamilyXPortableItemChargePaymentProduction.test.ts unknown installed Common Play spends charges through production resolveAction with durable write-back, fresh restart, and event-native Undo')
+          add('identityInvarianceEvidence','tests/ui/c9FamilyXPortableItemChargePaymentProduction.test.ts repeats the full charge spend/persist/restart/Undo proof after complete external module/content/mechanic identity rename')
+          add('persistenceEvidenceIfRelevant','tests/ui/c9FamilyXPortableItemChargePaymentProduction.test.ts MemoryCharacterLibraryStore preserves spent charges into a fresh adapter and preserves restored charges after event-native Undo')
+          row['remainingNamedSeams']=[
+            'generic create/grant/copy and destroy/update item lifecycle beyond quantity/charge payment',
+            'generic recharge, equip/unequip/wield, containers, and owner transfer',
+            'generic item-owned actions/effects/spellcasting activation',
+            'named item/spell activation compatibility paths'
+          ]
+          path.write_text(json.dumps(doc,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          PY
+          node scripts/check-v1-mechanism-coverage.mjs
+      - name: Publish ledger reconciliation
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/rules/v1-mechanism-coverage-ledger.json
+          git rm .github/workflows/c9-family-x-charge-ledger-71304.yml
+          git commit -m "docs(c9): record portable item charge evidence"
+          for attempt in 1 2 3 4 5; do
+            if git push origin HEAD:agent/c9-gate-n-coverage-reconciliation; then exit 0; fi
+            git fetch origin agent/c9-gate-n-coverage-reconciliation
+            git rebase origin/agent/c9-gate-n-coverage-reconciliation || exit 1
+            sleep 1
+          done
+          exit 1
