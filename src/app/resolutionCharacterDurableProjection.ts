@@ -2,7 +2,7 @@ import type { CharacterSheet } from "./contracts";
 import type { CharacterDurableLifeFlagsV1 } from "./persistenceContracts";
 import type { ResolutionEvent } from "../domain/resolutionTypes";
 import type { ResourceRecoveryLockouts } from "../domain/resources";
-import type { DeathSaveStateChange, LifeFlagStateChange, ResourceStateChange, RuntimeStateChange } from "../domain/runtimeStateChange";
+import type { DeathSaveStateChange, InventoryItemStateChange, LifeFlagStateChange, ResourceStateChange, RuntimeStateChange } from "../domain/runtimeStateChange";
 import type { HpStateChange } from "../domain/stateChange";
 
 export type CharacterWriteBackDirection = "forward" | "inverse";
@@ -10,12 +10,21 @@ export type CharacterWriteBackProjection =
   | { status:"committed"; changed:boolean; sheet:CharacterSheet }
   | { status:"rejected"; error:string };
 
-type CharacterDurableStateChange=HpStateChange|ResourceStateChange|LifeFlagStateChange|DeathSaveStateChange;
+type CharacterDurableStateChange=HpStateChange|ResourceStateChange|LifeFlagStateChange|DeathSaveStateChange|InventoryItemStateChange;
 type DurableCharacterResource=CharacterSheet["resources"][number]&{
   recoveryLockouts?:ResourceRecoveryLockouts;
   sourceMaximum?:number;
   maximumAfterLongRest?:number;
 };
+
+function deepEquals(left:unknown,right:unknown):boolean {
+  if(Object.is(left,right))return true;
+  if(typeof left!=="object"||left===null||typeof right!=="object"||right===null)return false;
+  if(Array.isArray(left)||Array.isArray(right))return Array.isArray(left)&&Array.isArray(right)&&left.length===right.length&&left.every((entry,index)=>deepEquals(entry,right[index]));
+  const leftRecord=left as Record<string,unknown>,rightRecord=right as Record<string,unknown>;
+  const leftKeys=Object.keys(leftRecord).filter((key)=>leftRecord[key]!==undefined).sort(),rightKeys=Object.keys(rightRecord).filter((key)=>rightRecord[key]!==undefined).sort();
+  return leftKeys.length===rightKeys.length&&leftKeys.every((key,index)=>key===rightKeys[index]&&deepEquals(leftRecord[key],rightRecord[key]));
+}
 
 const ITEM_PREFIX="phase09:item:";
 
@@ -31,10 +40,11 @@ function isCharacterDurableChange(change:RuntimeStateChange):change is Character
   // Current spell-slot counts are authoritative TurnRuntime session state. Character persistence
   // stores their maxima/source facts, not a parallel spell-slot-N resource current value.
   if (change.kind==="resource"&&/^spell-slot-\d+$/.test(change.resourceId)) return false;
-  return change.writeBack==="character" && (change.kind==="hp" || change.kind==="resource" || change.kind==="life" || change.kind==="death-save");
+  return change.writeBack==="character" && (change.kind==="hp" || change.kind==="resource" || change.kind==="life" || change.kind==="death-save" || change.kind==="inventory-item");
 }
 
 function label(change:CharacterDurableStateChange) {
+  if(change.kind==="inventory-item") return `inventory-item.${change.itemId}`;
   if (change.kind==="hp") return `hp.${change.field}`;
   if (change.kind==="resource") return `resource.${change.resourceId}`;
   if (change.kind==="death-save") return `death-save.${change.field}`;
@@ -59,6 +69,16 @@ function applyChange(
   direction:CharacterWriteBackDirection,
   fallbackLife?:CharacterDurableLifeFlagsV1,
 ):string|undefined {
+  if(change.kind==="inventory-item") {
+    const expected=direction==="forward"?change.before:change.after;
+    const next=direction==="forward"?change.after:change.before;
+    const index=sheet.items.findIndex((entry)=>entry.id===change.itemId);
+    const current=index>=0?sheet.items[index]:undefined;
+    if(!deepEquals(current,expected))return `Character write-back drift for ${change.targetId}/${label(change)}`;
+    if(next){if(index>=0)sheet.items[index]=structuredClone(next);else sheet.items.push(structuredClone(next));}
+    else if(index>=0)sheet.items.splice(index,1);
+    return;
+  }
   if (change.kind==="hp") {
     const before=direction==="forward" ? change.before : change.after;
     const after=direction==="forward" ? change.after : change.before;

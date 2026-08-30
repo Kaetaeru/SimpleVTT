@@ -23,6 +23,7 @@ function stateChangeLabel(change:RuntimeStateChange) {
   if (change.kind === "resource") {
     return `${change.targetId} resource.${change.resourceId} ${change.before} → ${change.after}`;
   }
+  if(change.kind==="inventory-item") return `${change.targetId} inventory-item.${change.itemId} ${change.operation}`;
   if (change.kind === "effect") {
     return `${change.targetId} effect.${change.effectId} ${change.operation}`;
   }

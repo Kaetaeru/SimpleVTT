@@ -11,7 +11,7 @@ import type { ActionUseKind, TurnSlot } from "./turnEconomy";
 import type { ProvenanceRecord } from "./profileEngine";
 import type { RulesRuntimeState } from "./combatState";
 import type { RuntimeArtifactSpawnRequest, ZoneMembershipAuthority } from "./runtimeArtifact";
-import type { RuntimeStateChange } from "./runtimeStateChange";
+import type { RuntimeInventoryItem, RuntimeStateChange } from "./runtimeStateChange";
 import type { TemporaryHpChoice } from "./temporaryHp";
 import type { ResourceRecovery } from "./resources";
 
@@ -260,6 +260,28 @@ export type ResolutionOperation =
   | (OperationBase & {
       kind:"recover-exposure";
       artifactId:string;
+    })
+  | (OperationBase & {
+      kind:"advance-project";
+      artifactId:string;
+      expectedRevision:number;
+      ownerId:string;
+      contributorId?:string;
+      work:number;
+      payments?:Record<string,number>;
+      toolProficiencyIds?:string[];
+      preparedSpellDefinitionIds?:string[];
+    })
+  | (OperationBase & {
+      kind:"cancel-project";
+      artifactId:string;
+      expectedRevision:number;
+      ownerId:string;
+    })
+  | (OperationBase & {
+      kind:"grant-inventory-item";
+      targetId:string;
+      item:RuntimeInventoryItem;
     })
   | (OperationBase & {
       kind:"set-zone-membership";

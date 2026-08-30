@@ -2,12 +2,13 @@ import { requireCombatant } from "./combatState";
 import { DomainEvaluationError, type ProvenanceRecord } from "./profileEngine";
 import type { OperationExecution, ResolutionExecutionContext } from "./resolutionContext";
 import { makeEvent } from "./resolutionContext";
-import { artifactStateChange, combatantStateChange, zoneMembershipStateChange, type RuntimeStateChange } from "./runtimeStateChange";
+import { artifactStateChange, combatantStateChange, inventoryItemStateChange, zoneMembershipStateChange, type RuntimeStateChange } from "./runtimeStateChange";
 import { createRuntimeArtifact, type ZoneMembershipState } from "./runtimeArtifact";
 import type { ResolutionOperation } from "./resolutionTypes";
 import { resolveDamage, resolveHealing } from "./damage";
 import { beginTurn } from "./turnEconomy";
 import { advanceCommonPlayExposure, recoverCommonPlayExposure } from "./commonPlayExposureRuntime";
+import { advanceCommonPlayProject, cancelCommonPlayProject } from "./commonPlayProjectRuntime";
 
 type SpawnArtifactOp=Extract<ResolutionOperation,{kind:"spawn-artifact"}>;
 type UpdateArtifactOp=Extract<ResolutionOperation,{kind:"update-artifact"}>;
@@ -18,6 +19,9 @@ type SetArtifactControllerOp=Extract<ResolutionOperation,{kind:"set-artifact-con
 type RemoveArtifactOp=Extract<ResolutionOperation,{kind:"remove-artifact"}>;
 type AdvanceExposureOp=Extract<ResolutionOperation,{kind:"advance-exposure"}>;
 type RecoverExposureOp=Extract<ResolutionOperation,{kind:"recover-exposure"}>;
+type AdvanceProjectOp=Extract<ResolutionOperation,{kind:"advance-project"}>;
+type CancelProjectOp=Extract<ResolutionOperation,{kind:"cancel-project"}>;
+type GrantInventoryItemOp=Extract<ResolutionOperation,{kind:"grant-inventory-item"}>;
 type SetZoneMembershipOp=Extract<ResolutionOperation,{kind:"set-zone-membership"}>;
 
 function artifacts(ctx:ResolutionExecutionContext) {
@@ -201,6 +205,38 @@ export function executeRecoverExposure(ctx:ResolutionExecutionContext,operation:
   artifact.exposure=recoverCommonPlayExposure(artifact.exposure!,artifact.exposure!.revision);
   const after=structuredClone(artifact),provenance:ProvenanceRecord[]=[{source:artifact.sourceId,status:"applied",reason:`exposure ${artifact.id} recovered`}];
   return {result:{recovered:true,exposure:structuredClone(artifact.exposure)},event:makeEvent(ctx.pending,operation,`exposure ${artifact.id} recovered`,artifact.exposure,provenance,[artifactStateChange(artifact.id,artifact.id,"updated",provenance,before,after)],artifact.exposure.subjectId)};
+}
+
+function projectArtifact(ctx:ResolutionExecutionContext,artifactId:string) {
+  const artifact=artifacts(ctx).find((candidate)=>candidate.id===artifactId&&candidate.artifactKind==="project");
+  if(!artifact?.project)throw new DomainEvaluationError(`active project artifact not found: ${artifactId}`);
+  return artifact;
+}
+
+export function executeAdvanceProject(ctx:ResolutionExecutionContext,operation:AdvanceProjectOp):OperationExecution {
+  const artifact=projectArtifact(ctx,operation.artifactId),before=structuredClone(artifact);
+  const advanced=advanceCommonPlayProject(artifact.project!,operation);
+  if(advanced.status==="rejected")throw new DomainEvaluationError(advanced.error);
+  artifact.project=advanced.project;
+  const after=structuredClone(artifact),provenance:ProvenanceRecord[]=[{source:artifact.sourceId,status:"applied",reason:`project ${artifact.id} advanced to ${advanced.project.completedWork}/${advanced.project.requiredWork}`}];
+  return {result:{project:structuredClone(advanced.project),completed:advanced.project.status==="completed"},event:makeEvent(ctx.pending,operation,`project ${artifact.id} advanced`,advanced.project,provenance,[artifactStateChange(artifact.id,artifact.id,"updated",provenance,before,after)],artifact.project.ownerId)};
+}
+
+export function executeCancelProject(ctx:ResolutionExecutionContext,operation:CancelProjectOp):OperationExecution {
+  const artifact=projectArtifact(ctx,operation.artifactId),before=structuredClone(artifact);
+  const cancelled=cancelCommonPlayProject(artifact.project!,operation);
+  if(cancelled.status==="rejected")throw new DomainEvaluationError(cancelled.error);
+  artifact.project=cancelled.project;
+  const after=structuredClone(artifact),provenance:ProvenanceRecord[]=[{source:artifact.sourceId,status:"applied",reason:`project ${artifact.id} cancelled`}];
+  return {result:{project:structuredClone(cancelled.project)},event:makeEvent(ctx.pending,operation,`project ${artifact.id} cancelled`,cancelled.project,provenance,[artifactStateChange(artifact.id,artifact.id,"updated",provenance,before,after)],artifact.project.ownerId)};
+}
+
+export function executeGrantInventoryItem(ctx:ResolutionExecutionContext,operation:GrantInventoryItemOp):OperationExecution {
+  requireCombatant(ctx.state,operation.targetId);
+  const item=structuredClone(operation.item);
+  if(!item.id||!item.definitionId||!item.name||!Number.isInteger(item.quantity)||item.quantity<1||item.equipped||item.wielded||!Array.isArray(item.passiveEffects)||!Array.isArray(item.grantedActionIds)||!Array.isArray(item.provenance))throw new DomainEvaluationError("granted inventory item is invalid or active before ownership");
+  const provenance:ProvenanceRecord[]=[{source:ctx.pending.sourceId,status:"applied",reason:`inventory item ${item.id} granted`}];
+  return {result:{item},event:makeEvent(ctx.pending,operation,`inventory item ${item.id} granted`,item,provenance,[inventoryItemStateChange(operation.targetId,item.id,"added",provenance,undefined,item)],operation.targetId)};
 }
 
 export function executeRemoveArtifact(ctx:ResolutionExecutionContext,operation:RemoveArtifactOp):OperationExecution {

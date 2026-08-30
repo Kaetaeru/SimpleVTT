@@ -6,6 +6,41 @@ import type { ProvenanceRecord } from "./profileEngine";
 import type { ResourceRecovery, ResourceRecoveryLockouts } from "./resources";
 import type { RuntimeArtifactInstance, ZoneMembershipState } from "./runtimeArtifact";
 import type { StateChange } from "./stateChange";
+import type { SemanticPredicate } from "./profileEngine";
+
+export interface RuntimeInventoryItem {
+  id:string;
+  definitionId:string;
+  name:string;
+  nameEn?:string;
+  kind:"equipment"|"consumable"|"magic";
+  quantity:number;
+  equipped:boolean;
+  wielded?:boolean;
+  wieldSlot?:"main-hand"|"off-hand"|"two-hand";
+  attunementRequired?:boolean;
+  attuned?:boolean;
+  attunementPolicy?:{prerequisite?:SemanticPredicate;cursed?:boolean;loss?:{onDeath?:boolean;maximumDistanceFeet?:number;durationSeconds?:number}};
+  charges?:{current:number;max:number};
+  spellcastingComponent?:"focus"|"component-pouch";
+  unitCostGp?:number;
+  passiveEffects:string[];
+  grantedActionIds:string[];
+  spellDefinitionIds?:string[];
+  provenance:string[];
+}
+
+export interface InventoryItemStateChange {
+  kind:"inventory-item";
+  targetId:string;
+  itemId:string;
+  operation:"added"|"updated"|"removed";
+  before?:RuntimeInventoryItem;
+  after?:RuntimeInventoryItem;
+  provenance:ProvenanceRecord[];
+  lifetime:"character-durable";
+  writeBack:"character";
+}
 
 export interface ResourceRecoveryLockoutStateChange {
   before:ResourceRecoveryLockouts|null;
@@ -158,7 +193,8 @@ export type RuntimeStateChange =
   | TurnClockStateChange
   | CombatantStateChange
   | LifeFlagStateChange
-  | DeathSaveStateChange;
+  | DeathSaveStateChange
+  | InventoryItemStateChange;
 
 export function resourceStateChange(
   targetId:string,
@@ -341,4 +377,15 @@ export function deathSaveStateChanges(targetId:string,before:LifeState,after:Lif
   return (["successes","failures"] as const)
     .filter((field)=>before.deathSaves[field]!==after.deathSaves[field])
     .map((field)=>({kind:"death-save",targetId,field,before:before.deathSaves[field],after:after.deathSaves[field],provenance,lifetime:"character-durable",writeBack:"character"}));
+}
+
+export function inventoryItemStateChange(
+  targetId:string,
+  itemId:string,
+  operation:"added"|"updated"|"removed",
+  provenance:ProvenanceRecord[],
+  before?:RuntimeInventoryItem,
+  after?:RuntimeInventoryItem,
+):InventoryItemStateChange {
+  return {kind:"inventory-item",targetId,itemId,operation,before:before?structuredClone(before):undefined,after:after?structuredClone(after):undefined,provenance,lifetime:"character-durable",writeBack:"character"};
 }

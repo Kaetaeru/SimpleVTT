@@ -204,6 +204,9 @@ function isRuntimeStateChange(value:unknown) {
     &&typeof value.before==="number"
     &&typeof value.after==="number"
     &&(value.recoveryLockouts===undefined||isRecoveryLockoutChange(value.recoveryLockouts));
+  if(value.kind==="inventory-item") return isString(value.itemId)&&["added","updated","removed"].includes(String(value.operation))
+    &&(value.before===undefined||isRecord(value.before)&&isString(value.before.id)&&isString(value.before.definitionId))
+    &&(value.after===undefined||isRecord(value.after)&&isString(value.after.id)&&isString(value.after.definitionId));
   if (value.kind==="life") return ["stable","unconscious","dead"].includes(String(value.field))&&typeof value.before==="boolean"&&typeof value.after==="boolean";
   if (value.kind==="death-save") return ["successes","failures"].includes(String(value.field))&&typeof value.before==="number"&&typeof value.after==="number";
   if (value.kind==="effect") return isString(value.effectId)&&["added","updated","removed"].includes(String(value.operation));

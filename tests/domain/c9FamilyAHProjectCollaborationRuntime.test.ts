@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { advanceCommonPlayProject, cancelCommonPlayProject, type CommonPlayProject } from "../../src/domain/commonPlayProjectRuntime";
+import { compileCommonPlayEntryPointOperations, parseCommonPlayOperationDefinition } from "../../src/domain/commonPlayOperationRuntime";
+import { resolvePendingResolution } from "../../src/domain/resolution";
+import { runtimeState, TEST_PROFILE } from "./rulesTestState";
 
 function project(overrides:Partial<CommonPlayProject>={}):CommonPlayProject {
   return {
@@ -99,4 +102,27 @@ test("project collaboration semantics are independent of external content identi
     {work:original.project.completedWork,payments:original.project.payments,status:original.project.status,revision:original.project.revision},
     {work:renamed.project.completedWork,payments:renamed.project.payments,status:renamed.project.status,revision:renamed.project.revision},
   );
+});
+
+test("portable project progress pays atomically and emits its inventory output only on completion",()=>{
+  const initial=runtimeState();
+  const spawned=resolvePendingResolution(TEST_PROFILE,initial,{id:"spawn",actorId:"hero",sourceId:"external.recipe",expectedRevision:0,operations:[{id:"project",kind:"spawn-artifact",artifact:{id:"project.instance",sourceId:"external.recipe",sourceActorId:"hero",templateId:"craft",artifactKind:"project",expiry:{kind:"permanent"},project:{id:"project.instance",ownerId:"hero",definitionId:"external.recipe",revision:0,requiredWork:2,completedWork:0,status:"active",payments:{},requirements:{toolProficiencyIds:["external.tool"],preparedSpellDefinitionIds:["external.spell"]}}}}]});
+  assert.equal(spawned.status,"committed");if(spawned.status!=="committed")return;
+  const definition=parseCommonPlayOperationDefinition({schemaVersion:"0.2-draft",id:"external.recipe",payments:[{kind:"resource",resource:"spell-slot-1",amount:{value:1},consumeAt:"commit"}],entryPoints:[{id:"work",invocation:"manual",operations:[{kind:"project.advance",artifact:"craft",work:{value:1},onComplete:{operations:[{kind:"item.grant",target:"actor",item:{id:"crafted.scroll",definitionId:"external.scroll",name:"External Scroll",kind:"consumable",quantity:1,equipped:false,passiveEffects:[],grantedActionIds:[],spellDefinitionIds:["external.spell"],provenance:["external.recipe"]}}]}}]}]});
+  const input=(resolutionId:string)=>({resolutionId,actorId:"hero",entryPointId:"work",projectToolProficiencyIds:["external.tool"],projectPreparedSpellDefinitionIds:["external.spell"]});
+  const first=resolvePendingResolution(TEST_PROFILE,spawned.state,compileCommonPlayEntryPointOperations(TEST_PROFILE,spawned.state,definition,input("work.1")));
+  assert.equal(first.status,"committed");if(first.status!=="committed")return;
+  assert.equal(first.state.artifacts?.[0].project?.completedWork,1);assert.equal(first.state.combatants.hero.resources[0].current,1);
+  assert.equal(first.events.some((event)=>event.stateChanges.some((change)=>change.kind==="inventory-item")),false);
+  const second=resolvePendingResolution(TEST_PROFILE,first.state,compileCommonPlayEntryPointOperations(TEST_PROFILE,first.state,definition,input("work.2")));
+  assert.equal(second.status,"committed");if(second.status!=="committed")return;
+  assert.equal(second.state.artifacts?.[0].project?.status,"completed");assert.equal(second.state.combatants.hero.resources[0].current,0);
+  const output=second.events.flatMap((event)=>event.stateChanges).find((change)=>change.kind==="inventory-item");
+  assert.equal(output?.kind==="inventory-item"?output.after?.definitionId:undefined,"external.scroll");
+});
+
+test("portable project prerequisites reject before any payment or project mutation",()=>{
+  const original=project({requirements:{toolProficiencyIds:["external.tool"],preparedSpellDefinitionIds:["external.spell"]}});
+  const rejected=advanceCommonPlayProject(original,{expectedRevision:3,ownerId:"owner.mage",work:1,toolProficiencyIds:["external.tool"]});
+  assert.equal(rejected.status,"rejected");assert.match(rejected.status==="rejected"?rejected.error:"",/prepared spell/);assert.deepEqual(rejected.project,original);
 });

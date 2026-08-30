@@ -2295,7 +2295,7 @@
         "Campaign persistence",
         "item/inventory transaction"
       ],
-      "currentState": "The generic project kernel owns one revision-bound owner, cumulative work, cumulative scalar payments, and completion at a required-work threshold. It does not define contributors, tool/proficiency/prepared-spell prerequisites, daily validation, cancellation semantics, completion outputs, durable project persistence, or inventory write-back. The persisted Common Play contract has no project/crafting instance vocabulary and production has no durable project owner, so forcing this state through combat Resolution or mutating Character items on completion would violate the transaction-domain boundary.",
+      "currentState": "A durable portable project artifact owns revision-bound owner/contributor authority, non-consecutive work, per-increment tool/proficiency/prepared-spell validation, cumulative material/currency payments, cancellation, and threshold completion. Completion operations join project progress, material consumption, and durable inventory output in one Resolver transaction. Project and output state survive local restart, connected replay/retry/reconnect, and compensating Undo without content identity dispatch.",
       "requiredSemantics": [
         "project instance",
         "work units",
@@ -2310,21 +2310,30 @@
         "craft item/Potion/Scroll/repair"
       ],
       "transactionDomain": "Durable project/activity owner plus inventory transaction",
-      "disposition": "INCOMPLETE",
+      "disposition": "IMPLEMENTED",
       "implementationEvidence": [
-        "commonPlayProjectRuntime.ts revision-bound owner/work/payment kernel",
-        "commonPlayC6Runtime.test.ts threshold composition proof"
+        "commonPlayProjectRuntime.ts owns revisioned owner/contributor work, requirements, cumulative payments, completion, and cancellation",
+        "runtimeArtifact.ts and commonPlayArtifactRuntime.ts persist portable project instances",
+        "commonPlayOperationRuntime.ts lowers project.advance/project.cancel, per-increment payment records, and completion operations structurally",
+        "resolutionArtifactOps.ts and runtimeStateChange.ts commit project and durable inventory item changes through canonical ResolutionEvents",
+        "commonPlayC6Runtime.test.ts and c9FamilyAHProjectCollaborationRuntime.test.ts prove threshold, collaboration, prerequisites, payment, and completion composition"
       ],
-      "productionEvidence": [],
-      "identityInvarianceEvidence": [],
-      "connectedEvidenceIfRelevant": [],
-      "persistenceEvidenceIfRelevant": [],
-      "remainingNamedSeams": [
-        "persisted portable durable project/activity contract with contributors and prerequisites",
-        "campaign/durable project repository and revision owner with non-consecutive progress/cancellation",
-        "daily validation and material/currency payment transaction ownership",
-        "completion output joined atomically to the durable inventory/item write-back boundary from Families X/Y"
+      "productionEvidence": [
+        "c9FamilyAHProjectProduction.test.ts proves create, repeated work, per-work material consumption, delayed crafted Scroll output, cancellation, and event-native Undo through installed arbitrary Common Play content",
+        "repository-wide npm run build passed after the Family AH durable project and inventory output source changes"
       ],
+      "identityInvarianceEvidence": [
+        "c9FamilyAHProjectCollaborationRuntime.test.ts proves collaboration semantics under unrelated project/content identities",
+        "c9FamilyAHProjectProduction.test.ts repeats the full production lifecycle under external.family-ah and renamed.family-ah identities"
+      ],
+      "connectedEvidenceIfRelevant": [
+        "c9FamilyAHProjectProduction.test.ts proves Host-authoritative progress/payment/output replay, duplicate rejection, fresh Client reconnect, and compensating Undo"
+      ],
+      "persistenceEvidenceIfRelevant": [
+        "project RuntimeArtifact stores complete revision/work/payment/status/requirement state in the durable turn runtime store",
+        "c9FamilyAHProjectProduction.test.ts restores completed project state and crafted inventory output through fresh adapter restart"
+      ],
+      "remainingNamedSeams": [],
       "connectedRelevant": true,
       "persistenceRelevant": true
     },

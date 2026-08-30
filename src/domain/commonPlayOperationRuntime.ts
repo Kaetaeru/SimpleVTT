@@ -14,6 +14,8 @@ import { parseCommonPlaySelector, resolveCommonPlaySelector, type CommonPlaySele
 import { SRD_521_CONDITIONS, type ConditionId } from "./conditions";
 import { advanceCommonPlayExposure } from "./commonPlayExposureRuntime";
 import { environmentDamageDefense, fallDamageDice, resolveEnvironmentAttack, resolveEnvironmentMovement, type CommonPlayEnvironmentProfile } from "./commonPlayEnvironmentRuntime";
+import { advanceCommonPlayProject } from "./commonPlayProjectRuntime";
+import type { RuntimeInventoryItem } from "./runtimeStateChange";
 
 type LiteralNumberExpression={value:number};
 type CommonPlayExpression=LiteralNumberExpression|Record<string,unknown>;
@@ -50,6 +52,9 @@ type CommonPlayExposureAdvance={kind:"exposure.advance";artifact:string;seconds:
 type CommonPlayExposureRecover={kind:"exposure.recover";artifact:string};
 type CommonPlayEnvironmentFall={kind:"environment.fall";target:"actor"|"self"|"target";distanceFeet:CommonPlayExpression;feetPerDie:number;maximumDice:number;damageType:string};
 type CommonPlayTimeElapse={kind:"time.elapse";seconds:CommonPlayExpression};
+type CommonPlayProjectAdvance={kind:"project.advance";artifact:string;work:CommonPlayExpression;contributor?:"actor";payments?:Record<string,CommonPlayExpression>;onComplete?:{operations:CommonPlayOperation[]}};
+type CommonPlayProjectCancel={kind:"project.cancel";artifact:string};
+type CommonPlayItemGrant={kind:"item.grant";target:"actor"|"self";item:RuntimeInventoryItem};
 type CommonPlayMovementGrant={
   kind:"movement.grant";
   target:"actor"|"self";
@@ -232,6 +237,9 @@ export type CommonPlayOperation=
   |CommonPlayExposureRecover
   |CommonPlayEnvironmentFall
   |CommonPlayTimeElapse
+  |CommonPlayProjectAdvance
+  |CommonPlayProjectCancel
+  |CommonPlayItemGrant
   |CommonPlayConditionChange
   |CommonPlayEffectRemove
   |CommonPlayEffectSuppress
@@ -301,6 +309,8 @@ export interface CommonPlayOperationExecutionInput {
   attacksPerAction?:number;
   exposureIntervalD20?:(operationIndex:number,interval:number,test:CommonPlayD20TestDefinition)=>NonNullable<CommonPlayOperationExecutionInput["d20"]>;
   environmentFallDiceFaces?:(operationIndex:number,count:number)=>number[];
+  projectToolProficiencyIds?:string[];
+  projectPreparedSpellDefinitionIds?:string[];
 }
 
 type Obj=Record<string,unknown>;
@@ -346,6 +356,11 @@ const EXPOSURE_RECOVER_KEYS=new Set(["kind","artifact"]);
 const EXPOSURE_INTERVAL_KEYS=new Set(["test","operations"]);
 const ENVIRONMENT_FALL_KEYS=new Set(["kind","target","distanceFeet","feetPerDie","maximumDice","damageType"]);
 const TIME_ELAPSE_KEYS=new Set(["kind","seconds"]);
+const PROJECT_ADVANCE_KEYS=new Set(["kind","artifact","work","contributor","payments","onComplete"]);
+const PROJECT_CANCEL_KEYS=new Set(["kind","artifact"]);
+const PROJECT_COMPLETION_KEYS=new Set(["operations"]);
+const ITEM_GRANT_KEYS=new Set(["kind","target","item"]);
+const GRANTED_ITEM_KEYS=new Set(["id","definitionId","name","nameEn","kind","quantity","equipped","wielded","wieldSlot","attunementRequired","attuned","charges","spellcastingComponent","unitCostGp","passiveEffects","grantedActionIds","spellDefinitionIds","provenance"]);
 const FACT_QUERY_KEYS=new Set(["id","fact","subject","authority","visibility","unknownPolicy"]);
 const DAMAGE_DICE=/^([0-9]+)d([0-9]+)([+-][0-9]+)?$/;
 
@@ -592,6 +607,21 @@ function parseCommonPlayInteraction(value:unknown,label:string):CommonPlayIntera
 
 function parseOperation(value:unknown,label:string):CommonPlayOperation {
   const operation=object(value,label);
+  if(operation.kind==="item.grant") {
+    supportedKeys(operation,ITEM_GRANT_KEYS,label);if(operation.target!=="actor"&&operation.target!=="self")throw new DomainEvaluationError(`${label}.target must be actor or self`);
+    const item=object(operation.item,`${label}.item`);supportedKeys(item,GRANTED_ITEM_KEYS,`${label}.item`);
+    if(typeof item.id!=="string"||!item.id||typeof item.definitionId!=="string"||!item.definitionId||typeof item.name!=="string"||!item.name||!Number.isInteger(item.quantity)||Number(item.quantity)<1||item.equipped!==false||item.wielded===true||!Array.isArray(item.passiveEffects)||item.passiveEffects.some((entry)=>typeof entry!=="string")||!Array.isArray(item.grantedActionIds)||item.grantedActionIds.some((entry)=>typeof entry!=="string")||!Array.isArray(item.provenance)||item.provenance.some((entry)=>typeof entry!=="string")||(item.kind!=="equipment"&&item.kind!=="consumable"&&item.kind!=="magic"))throw new DomainEvaluationError(`${label}.item is not a valid inactive portable inventory item`);
+    return {kind:"item.grant",target:operation.target,item:structuredClone(item) as unknown as RuntimeInventoryItem};
+  }
+  if(operation.kind==="project.cancel") {supportedKeys(operation,PROJECT_CANCEL_KEYS,label);return {kind:"project.cancel",artifact:nonEmptyString(operation.artifact,`${label}.artifact`)};}
+  if(operation.kind==="project.advance") {
+    supportedKeys(operation,PROJECT_ADVANCE_KEYS,label);if(operation.contributor!==undefined&&operation.contributor!=="actor")throw new DomainEvaluationError(`${label}.contributor must be actor when present`);
+    const paymentEntries=operation.payments===undefined?undefined:Object.entries(object(operation.payments,`${label}.payments`));
+    const payments=paymentEntries===undefined?undefined:Object.fromEntries(paymentEntries.map(([id,amount])=>[nonEmptyString(id,`${label}.payments key`),numericExpression(amount,`${label}.payments.${id}`)]));
+    const completion=operation.onComplete===undefined?undefined:object(operation.onComplete,`${label}.onComplete`);let completionOperations:unknown[]|undefined;if(completion){supportedKeys(completion,PROJECT_COMPLETION_KEYS,`${label}.onComplete`);if(!Array.isArray(completion.operations)||!completion.operations.length)throw new DomainEvaluationError(`${label}.onComplete.operations must contain operations`);completionOperations=completion.operations;}
+    const operations=completionOperations?.map((nested,index)=>parseOperation(nested,`${label}.onComplete.operations[${index}]`));if(operations?.some((nested)=>nested.kind==="project.advance"||nested.kind==="project.cancel"))throw new DomainEvaluationError(`${label}.onComplete cannot nest project operations`);
+    return {kind:"project.advance",artifact:nonEmptyString(operation.artifact,`${label}.artifact`),work:numericExpression(operation.work,`${label}.work`),...(operation.contributor?{contributor:"actor" as const}:{}),...(payments?{payments}:{}),...(operations?{onComplete:{operations}}:{})};
+  }
   if(operation.kind==="time.elapse") {supportedKeys(operation,TIME_ELAPSE_KEYS,label);return {kind:"time.elapse",seconds:numericExpression(operation.seconds,`${label}.seconds`)};}
   if(operation.kind==="environment.fall") {
     supportedKeys(operation,ENVIRONMENT_FALL_KEYS,label);
@@ -1157,6 +1187,27 @@ export function compileCommonPlayEntryPointOperations(
     : 0;
   for(const [index,operation] of entryPoint.operations.entries()) {
     const operationId=`${input.resolutionId}:operation:${index}`;
+    if(operation.kind==="item.grant") {operations.push({id:operationId,kind:"grant-inventory-item",targetId:input.actorId,item:structuredClone(operation.item)});continue;}
+    if(operation.kind==="project.advance"||operation.kind==="project.cancel") {
+      const matches=(state.artifacts??[]).filter((artifact)=>artifact.artifactKind==="project"&&artifact.sourceId===supported.id&&artifact.sourceActorId===input.actorId&&artifact.templateId===operation.artifact&&artifact.project);
+      if(matches.length!==1)throw new DomainEvaluationError(`project artifact ${operation.artifact} must resolve to exactly one active instance`);
+      const artifact=matches[0],project=artifact.project!;
+      if(operation.kind==="project.cancel") {operations.push({id:operationId,kind:"cancel-project",artifactId:artifact.id,expectedRevision:project.revision,ownerId:input.actorId});continue;}
+      const work=actorExpressionInteger(operation.work,input,"project work",1);
+      const payments=Object.fromEntries(Object.entries(operation.payments??{}).map(([id,amount])=>[id,actorExpressionInteger(amount,input,`project payment ${id}`,0)]));
+      for(const payment of supported.payments??[]) if(payment.kind!=="economy") {
+        const key=payment.kind==="resource"?payment.resource:`item:${payment.selector.definitionId}`;
+        payments[key]=(payments[key]??0)+literalInteger(payment.kind==="resource"?payment.amount:"charges" in payment?payment.charges:payment.quantity,"project payment");
+      }
+      const request={expectedRevision:project.revision,ownerId:input.actorId,contributorId:operation.contributor?input.actorId:undefined,work,payments,toolProficiencyIds:input.projectToolProficiencyIds,preparedSpellDefinitionIds:input.projectPreparedSpellDefinitionIds};
+      const preview=advanceCommonPlayProject(project,request);if(preview.status==="rejected")throw new DomainEvaluationError(preview.error);
+      operations.push({id:operationId,kind:"advance-project",artifactId:artifact.id,...request});
+      if(preview.project.status==="completed"&&project.status!=="completed"&&operation.onComplete) {
+        const nested=compileCommonPlayEntryPointOperations(profile,state,{schemaVersion:supported.schemaVersion,id:supported.id,entryPoints:[{id:"project-complete",invocation:"manual",operations:operation.onComplete.operations}]},{...input,resolutionId:`${input.resolutionId}:project:${index}:complete`,entryPointId:"project-complete"});
+        operations.push(...nested.operations);
+      }
+      continue;
+    }
     if(operation.kind==="time.elapse") {const seconds=evaluateExpression(operation.seconds as ExpressionNode,(property)=>{const value=input.actorProperties?.[property];if(!Number.isFinite(value))throw new DomainEvaluationError(`time.elapse property is unavailable: ${property}`);return Number(value);});if(!Number.isFinite(seconds)||seconds<0)throw new DomainEvaluationError("time.elapse seconds must be non-negative and finite");operations.push({id:operationId,kind:"advance-time",elapsedSeconds:state.clock.elapsedSeconds+seconds});continue;}
     if(operation.kind==="environment.fall") {
       const distanceFeet=evaluateExpression(operation.distanceFeet as ExpressionNode,(property)=>{const value=input.actorProperties?.[property];if(!Number.isFinite(value))throw new DomainEvaluationError(`environment.fall property is unavailable: ${property}`);return Number(value);});

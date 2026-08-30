@@ -44,6 +44,7 @@ function deepEquals(left:unknown,right:unknown):boolean {
 }
 
 function appCurrentValue(scene:SceneVm,resources:CharacterResourceVm[],items:ItemInstanceVm[],change:RuntimeStateChange):ReadValue {
+  if(change.kind==="inventory-item") return found(items.find((entry)=>entry.id===change.itemId));
   if (change.kind==="hp") {
     const entity=scene.entities.find((entry)=>entry.id===change.targetId);
     if (!entity) return missing();
@@ -117,6 +118,12 @@ function runtimeCurrentValue(runtimeState:RulesRuntimeState,change:RuntimeStateC
 }
 
 function applyAppChange(scene:SceneVm,resources:CharacterResourceVm[],items:ItemInstanceVm[],change:RuntimeStateChange) {
+  if(change.kind==="inventory-item") {
+    const index=items.findIndex((entry)=>entry.id===change.itemId);
+    if(change.before) {if(index>=0)items[index]=structuredClone(change.before);else items.push(structuredClone(change.before));}
+    else if(index>=0)items.splice(index,1);
+    return;
+  }
   if (change.kind==="hp") {
     const entity=scene.entities.find((entry)=>entry.id===change.targetId)!;
     if (change.field==="current") entity.hp=change.before;
@@ -235,6 +242,7 @@ function runtimeOnly(change:RuntimeStateChange) {
 }
 
 function changeField(change:RuntimeStateChange) {
+  if(change.kind==="inventory-item") return `inventory-item.${change.itemId}`;
   if (change.kind==="resource") return `resource.${change.resourceId}`;
   if (change.kind==="effect") return `effect.${change.effectId}`;
   if (change.kind==="artifact") return `artifact.${change.artifactId}`;
@@ -283,6 +291,7 @@ function clockLabel(state:Extract<RuntimeStateChange,{kind:"turn-clock"}>["befor
 }
 
 function undoLabel(change:RuntimeStateChange) {
+  if(change.kind==="inventory-item") return `${change.targetId} inventory-item.${change.itemId} undo ${change.operation}`;
   if (change.kind==="hp") {
     const field=change.field==="current" ? "HP" : change.field==="maximum" ? "최대 HP" : "임시 HP";
     return `${change.targetId} ${field} ${change.after} → ${change.before}`;

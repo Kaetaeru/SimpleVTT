@@ -6,7 +6,7 @@ import type { RuntimeArtifactExpiry, RuntimeArtifactSpawnRequest, StoredInvocati
 import { compileCommonPlayPayments, parseCommonPlayPayments, type CommonPlayPayment } from "./commonPlayOperationRuntime";
 import type { ActionUseKind } from "./turnEconomy";
 
-type PortableArtifactKind="stored-invocation"|"object"|"link"|"actor"|"form"|"exposure"|"environment";
+type PortableArtifactKind="stored-invocation"|"object"|"link"|"actor"|"form"|"exposure"|"environment"|"project";
 type Obj=Record<string,unknown>;
 type CommonPlayArtifactOperation=
   | {kind:"artifact.spawn";template:string}
@@ -160,6 +160,12 @@ function artifact(
     definitionId:typeof initial.definitionId==="string"?initial.definitionId:definition.id,
   } as RuntimeArtifactSpawnRequest["exposure"]};
   if(template.artifactKind==="environment") return {...common,environment:{...initial,id:typeof initial.id==="string"?initial.id:definition.id} as unknown as RuntimeArtifactSpawnRequest["environment"]};
+  if(template.artifactKind==="project") return {...common,project:{
+    ...initial,
+    id:common.id,
+    ownerId:boundId(initial.ownerId??"actor",input.actorId,artifactIds,`artifact ${template.id} ownerId`),
+    definitionId:typeof initial.definitionId==="string"?initial.definitionId:definition.id,
+  } as RuntimeArtifactSpawnRequest["project"]};
   return {...common,form:{
     ...initial,
     targetActorId:boundId(initial.targetActorId,input.actorId,artifactIds,`artifact ${template.id} targetActorId`),
@@ -184,7 +190,7 @@ export function compileCommonPlayArtifactActivation(
     if(operation.kind==="artifact.spawn") {
       const template=templates.get(operation.template);
       if(!template) throw new DomainEvaluationError(`artifact template not found: ${operation.template}`);
-      if(!["stored-invocation","object","link","actor","form","exposure","environment"].includes(template.artifactKind)) throw new DomainEvaluationError(`artifact ${template.id} kind is not handled by the generic artifact activation runtime`);
+      if(!["stored-invocation","object","link","actor","form","exposure","environment","project"].includes(template.artifactKind)) throw new DomainEvaluationError(`artifact ${template.id} kind is not handled by the generic artifact activation runtime`);
       const lifetime=object(template.lifetime,`artifact ${template.id} lifetime`);
       if(template.artifactKind==="actor"&&lifetime.kind==="until-source-recast") {
         (state.artifacts??[])

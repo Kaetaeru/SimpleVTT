@@ -28,7 +28,7 @@ import {
   executeStartConcentration,
   executeUpdateEffect,
 } from "./resolutionEffectOps";
-import { executeAdvanceExposure, executeDamageArtifact, executeRecoverExposure, executeRelocateArtifact, executeRemoveArtifact, executeRepairArtifact, executeSetArtifactController, executeSetZoneMembership, executeSpawnArtifact, executeUpdateArtifact } from "./resolutionArtifactOps";
+import { executeAdvanceExposure, executeAdvanceProject, executeCancelProject, executeDamageArtifact, executeGrantInventoryItem, executeRecoverExposure, executeRelocateArtifact, executeRemoveArtifact, executeRepairArtifact, executeSetArtifactController, executeSetZoneMembership, executeSpawnArtifact, executeUpdateArtifact } from "./resolutionArtifactOps";
 import { executeAdvanceTime, executeBeginTurn, executeEndTurn, executeSetInitiativeCount } from "./resolutionTurnOps";
 import { executeLongRest, executeShortRest } from "./resolutionRestOps";
 import type {
@@ -75,6 +75,9 @@ function executeOperation(
     case "remove-artifact": return executeRemoveArtifact(ctx,operation);
     case "advance-exposure": return executeAdvanceExposure(ctx,operation);
     case "recover-exposure": return executeRecoverExposure(ctx,operation);
+    case "advance-project": return executeAdvanceProject(ctx,operation);
+    case "cancel-project": return executeCancelProject(ctx,operation);
+    case "grant-inventory-item": return executeGrantInventoryItem(ctx,operation);
     case "set-zone-membership": return executeSetZoneMembership(ctx,operation);
     case "start-concentration": return executeStartConcentration(ctx, operation);
     case "end-concentration": return executeEndConcentration(ctx, operation);
