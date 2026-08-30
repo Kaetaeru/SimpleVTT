@@ -80,7 +80,7 @@ jobs:
 
           p=Path('docs/rules/v1-mechanism-coverage-ledger.json')
           ledger=json.loads(p.read_text(encoding='utf-8'))
-          family=next(entry for entry in ledger['mechanismFamilies'] if entry['family']=='J')
+          family=next(entry for entry in ledger['rows'] if entry['family']=='J')
           family['currentState']='Unknown installed Common Play attack-roll plus target damage has production evidence through a projected arbitrary-ID Actor action with Action payment, damage commit, Host/Client convergence, and Undo. Projected Unarmed grapple/shove now dispatches from a typed runtimeSaveCondition action payload rather than named action IDs, with arbitrary action-ID rename evidence. Family J remains incomplete for portable Common Play control composition plus full weapon/Unarmed Strike, Opportunity Attack, reach/range/cover, Extra Attack/replacement, and ammunition/loading composition.'
           evidence={
             'implementationEvidence':'productionPlayRuntimeAdapter.ts projects typed runtimeSaveCondition payloads for Unarmed grapple/shove; unarmedControlRuntimeAdapter.ts consumes the payload without action-ID dispatch',
