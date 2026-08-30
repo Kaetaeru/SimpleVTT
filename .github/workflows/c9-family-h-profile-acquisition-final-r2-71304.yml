@@ -1,0 +1,53 @@
+name: C9 Family H Profile Acquisition Final R2 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-h-profile-acquisition-final-r2-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  verify-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Reconcile branch
+        run: git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+      - run: npm ci
+      - run: npm run generate:content
+      - name: Apply corrected special-sense proof
+        run: python3 .github/scripts/c9-family-h-profile-acquisition-final-71304.py
+      - name: Verify Family H completion
+        run: |
+          node --import tsx --test tests/domain/commonPlaySenseRuntime.test.ts tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts tests/ui/c9FamilyHSearchDiscovery.test.ts
+          node scripts/check-legacy-execution-boundary.mjs
+          node scripts/check-v1-mechanism-coverage.mjs
+          npm exec tsc -- --noEmit
+      - name: Publish verified Family H proof
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts docs/rules/v1-mechanism-coverage-ledger.json
+          for path in .github/scripts/c9-family-h-profile-acquisition-final-71304.py .github/scripts/c9-family-h-profile-sense-diagnostic-71304.py .github/workflows/c9-family-h-profile-acquisition-final-71304.yml .github/workflows/c9-family-h-profile-acquisition-final-r2-71304.yml .github/workflows/c9-family-h-profile-sense-diagnostic-71304.yml .github/workflows/c9-family-h-profile-acquisition-71304.yml; do
+            if [ -f "$path" ]; then git rm "$path"; fi
+          done
+          git diff --cached --check
+          git commit -m "test(c9): complete rules-profile sense acquisition"
+          for attempt in 1 2 3 4 5; do
+            if git push origin HEAD:agent/c9-gate-n-coverage-reconciliation; then exit 0; fi
+            git fetch origin agent/c9-gate-n-coverage-reconciliation
+            git rebase origin/agent/c9-gate-n-coverage-reconciliation || exit 1
+            sleep 1
+          done
+          exit 1
