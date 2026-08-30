@@ -235,3 +235,45 @@ test("unknown installed Common Play selects provider-authored object and point t
   assert.deepEqual(await executeExternalTarget(RENAMED,"object"),await executeExternalTarget(ORIGINAL,"object"));
   assert.deepEqual(await executeExternalTarget(RENAMED,"point"),await executeExternalTarget(ORIGINAL,"point"));
 });
+
+
+function pointAreaPayload(identity:Identity) {
+  const authored=JSON.parse(payload(identity));
+  authored.content[0].mechanics[0].config.entryPoints[0].targeting={
+    from:"targets",min:1,max:2,area:{kind:"instant",shape:"sphere",origin:"point",radiusFeet:10,rangeFeet:60},
+  };
+  return JSON.stringify(authored);
+}
+
+async function executePointArea(identity:Identity) {
+  const adapter=new MockAdapter();
+  setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
+  const preview=await adapter.previewContentImport(pointAreaPayload(identity));
+  assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
+  await adapter.activateContentImport();
+  registerAuthoritativeCommonPlayAreaMembershipProvider(adapter,{
+    areaMember:({sourceId,targetId,area})=>{
+      assert.equal(sourceId,"char.aelar");
+      assert.equal(area.origin,"point");
+      assert.equal(area.shape,"sphere");
+      assert.equal(area.rangeFeet,60);
+      return targetId==="combatant.goblin-a";
+    },
+  });
+  await adapter.startInitiative();
+  await adapter.setCurrentActor("char.aelar");
+  const actionId=installedCommonPlayActionId({catalogId:catalogQualifiedId(identity.contentId,identity.moduleId,"1"),mechanicId:identity.mechanicId,entryPointId:identity.entryPointId});
+  await adapter.resolveAction(actionId,["combatant.goblin-b"]);
+  let snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.resolution?.actionId,actionId);
+  assert.equal(snapshot.resolution?.finalOutcome,"적용 거부");
+  await adapter.resolveAction(actionId,["combatant.goblin-a"]);
+  snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.resolution?.stage,"complete");
+  assert.deepEqual(snapshot.resolution?.targetIds,["combatant.goblin-a"]);
+  return snapshot.resolution?.targetIds;
+}
+
+test("unknown installed point-origin area selector consumes provider-backed membership and remains identity invariant",async()=>{
+  assert.deepEqual(await executePointArea(RENAMED),await executePointArea(ORIGINAL));
+});

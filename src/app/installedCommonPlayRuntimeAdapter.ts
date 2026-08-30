@@ -450,7 +450,7 @@ function commonPlaySelectorCandidate(
     visible:spatial.visible,
     cover:spatial.cover,
   }:baseTargeting;
-  const areaMember=area?.origin==="self"
+  const areaMember=area
     ? commonPlayAreaMembershipProviders.get(adapter)?.areaMember({sourceId:actor.id,targetId:target.id,area:structuredClone(area)})
     : undefined;
   return {
