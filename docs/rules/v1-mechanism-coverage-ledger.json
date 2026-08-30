@@ -346,7 +346,7 @@
         "common-play-contract.schema.json: selector",
         "commonPlayTargetingRuntime.test.ts"
       ],
-      "currentState": "Portable Common Play targeting preserves bounded selected target sets and authoritative relation-filter validation through the generic Resolver/production path; richer spatial/area/ordering/object/point selector composition remains incomplete.",
+      "currentState": "Portable Common Play targeting preserves bounded selected target sets and evaluates generic predicates over authoritative production candidates through the shared selector kernel; providerless area membership fails closed, while full spatial provider integration, ordering/object/point selection, and automatic-vs-manual production authority remain incomplete.",
       "requiredSemantics": [
         "self",
         "relation filters",
@@ -375,7 +375,8 @@
         "commonPlayOperationRuntime.ts bounded min/max selector parsing and relation-matches validation through the generic Common Play operations path",
         "commonPlaySelectorRuntime.ts generic selector kernel for predicates, ordering, manual/automatic authority, and provider-owned area membership",
         "commonPlayOperationRuntime.ts parses bounded from:targets min/max and lowers them to generic TargetingRule cardinality without fabricating spatial facts",
-        "commonPlayTargetingRuntime.test.ts proves bounded multi-target cardinality plus authoritative relation selector validation without identity dispatch"
+        "commonPlayTargetingRuntime.test.ts proves bounded multi-target cardinality plus authoritative relation selector validation without identity dispatch",
+        "commonPlayOperationRuntime.ts routes portable target predicates through commonPlaySelectorRuntime using authoritative CommonPlaySelectorCandidate facts supplied by installedCommonPlayRuntimeAdapter.ts without content identity dispatch"
       ],
       "productionEvidence": [
         "commonPlayTargetingRuntime.test.ts portable relation filter accepts authoritative enemy facts, rejects self facts atomically, and preserves bounded multi-target semantics",
@@ -385,14 +386,16 @@
         "installedCommonPlayProductionRuntime.test.ts unknown installed relation selector rejects an ineligible target before commit and accepts an eligible enemy target",
         "installedCommonPlayProductionRuntime.test.ts unknown installed Common Play preserves bounded multi-target selection through production resolveAction and presentation targetIds",
         "installedCommonPlayProductionRuntime.test.ts unknown installed relation selector rejects an ineligible target before production commit",
-        "C9 Family E Acceptance Evidence run 33309642186: restart/rename relation acceptance and tsc --noEmit passed"
+        "C9 Family E Acceptance Evidence run 33309642186: restart/rename relation acceptance and tsc --noEmit passed",
+        "C9 Family E Rich Selector Candidate Bridge 7130 run 33310268977: rich selector production/import regression, legacy execution boundary, and tsc --noEmit all passed; verifier retired after success"
       ],
       "identityInvarianceEvidence": [
         "installedCommonPlayProductionRuntime.test.ts targeting remains invariant under external identity and display rename",
         "commonPlayTargetingRuntime.test.ts relation selector uses authoritative relation facts without content identity dispatch",
         "installedCommonPlayProductionRuntime.test.ts targeting dispatch remains structural under external module/content/mechanic/entry-point/display rename",
         "c9FamilyERelationSelectorAcceptance.test.ts arbitrary module/content/mechanic/entry/display rename preserves portable enemy-relation semantics after installed-content restart",
-        "installedCommonPlayProductionRuntime.test.ts targeting production semantics are invariant under external identity and display rename"
+        "installedCommonPlayProductionRuntime.test.ts targeting production semantics are invariant under external identity and display rename",
+        "commonPlayRichSelectorProduction.test.ts exercises previously-unknown and completely renamed external module/content/mechanic/entry identities through the same rich-selector production path"
       ],
       "connectedEvidenceIfRelevant": [
         "installedCommonPlayProductionRuntime.test.ts connected Common Play targeting remains Host-authoritative and converges through existing targeting ResolutionEvents",
@@ -405,7 +408,7 @@
         "tests/ui/installedCommonPlayProductionRuntime.test.ts: connected Common Play targeting remains Host-authoritative and converges through existing events; the same event batch is duplicate-idempotent and a fresh ClientSessionReplica replays it from cursor zero to the same HP and targetIds"
       ],
       "remainingNamedSeams": [
-        "rich range/reach/sight/cover/tag/area/ordering/object/point/manual-vs-automatic selector semantics remain incomplete"
+        "range/reach/sight/cover/tag spatial facts, provider-backed area membership, ordering/object/point selection, and automatic-vs-manual production selector authority remain incomplete"
       ],
       "connectedRelevant": true,
       "persistenceRelevant": true
