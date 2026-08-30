@@ -6,6 +6,7 @@ on:
       - agent/c9-gate-n-coverage-reconciliation
     paths:
       - .github/workflows/c9-family-q-owner-reconnect-matrix-71304.yml
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -21,7 +22,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install --no-audit --no-fund
+          cache: npm
+      - run: npm ci
       - run: npm run generate:content
       - name: Verify and publish owner reconnect matrix
         shell: bash
@@ -29,19 +31,21 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          branch=agent/c9-gate-n-coverage-reconciliation
+          branch="agent/c9-gate-n-coverage-reconciliation"
           for attempt in $(seq 1 10); do
             git fetch origin "$branch"
             git reset --hard "origin/$branch"
             python3 .github/c9-family-q-owner-reconnect-matrix-71304.py
-            npx tsx --test tests/ui/c9FamilyQTargetOwnerInteractionProduction.test.ts tests/ui/installedCommonPlayActorOwnerInteractionProduction.test.ts
+            node --import tsx --test tests/ui/c9FamilyQTargetOwnerInteractionProduction.test.ts tests/ui/installedCommonPlayActorOwnerInteractionProduction.test.ts
             npx tsc --noEmit
             node scripts/check-v1-mechanism-coverage.mjs
             git rm --ignore-unmatch .github/c9-family-q-owner-reconnect-matrix-71304.py .github/workflows/c9-family-q-owner-reconnect-matrix-71304.yml
             git add tests/ui/installedCommonPlayActorOwnerInteractionProduction.test.ts docs/rules/v1-mechanism-coverage-ledger.json
             git diff --cached --check
             git commit -m "test(c9): prove owner consent reconnect matrix"
-            if git push origin HEAD:"$branch"; then exit 0; fi
+            if git push origin HEAD:"$branch"; then
+              exit 0
+            fi
             echo "owner reconnect matrix publish raced; retry $attempt/10"
           done
           exit 1
