@@ -13,11 +13,8 @@ import { mutateActiveCharacterDurably } from "./characterLibraryRuntimeAdapter";
 import {
   installSessionCharacterInventoryProjectionWriter,
 } from "./sessionInventoryProjectionPort";
-import {
-  resolveCommonPlayInventoryTransaction,
-  type CommonPlayInventoryOperation,
-  type CommonPlayItemInstance,
-} from "../domain/commonPlayInventoryRuntime";
+import type { CommonPlayInventoryOperation } from "../domain/commonPlayInventoryRuntime";
+import { applyCommonPlayItemOperations } from "./commonPlayItemInventoryProjection";
 
 export { refreshSessionCharacterInventoryProjection } from "./sessionInventoryProjectionPort";
 
@@ -138,47 +135,14 @@ function materializeItem(entry:CatalogEntry,actorId:string):ItemInstanceVm {
   };
 }
 
-function commonItem(item:ItemInstanceVm,ownerId:string):CommonPlayItemInstance {
-  return {
-    id:item.id,
-    definitionId:item.definitionId,
-    quantity:item.quantity,
-    stackable:!item.charges&&!item.attunementRequired,
-    equipped:item.equipped,
-    wielded:item.wielded??false,
-    ...(item.wieldSlot?{wieldSlot:item.wieldSlot}:{}),
-    ...(item.charges?{charges:{current:item.charges.current,maximum:item.charges.max}}:{}),
-    ...(item.attunementRequired?{attunement:{required:true,...(item.attuned?{attunedTo:ownerId}:{})}}:{}),
-    grantedEntryPointIds:[...item.grantedActionIds],
-  };
-}
-
 function applyItemOperations(
   inventory:SessionCharacterInventoryVm,
   operations:CommonPlayInventoryOperation[],
   templates:ItemInstanceVm[]=[],
 ) {
-  const result=resolveCommonPlayInventoryTransaction({
-    ownerId:inventory.characterId,
-    revision:inventory.revision,
-    items:inventory.items.map((item)=>commonItem(item,inventory.characterId)),
-  },{expectedRevision:inventory.revision,operations});
-  if(result.status==="rejected") throw new Error(result.error);
-  const appItems=new Map([...inventory.items,...templates].map((item)=>[item.id,item]));
-  inventory.items=result.state.items.map((item)=>{
-    const source=appItems.get(item.id);
-    if(!source) throw new Error(`inventory item presentation is missing: ${item.id}`);
-    return {
-      ...cp(source),
-      quantity:item.quantity,
-      equipped:item.equipped,
-      wielded:item.wielded,
-      ...(item.wieldSlot?{wieldSlot:item.wieldSlot}:{wieldSlot:undefined}),
-      ...(item.charges?{charges:{current:item.charges.current,max:item.charges.maximum}}:{}),
-      ...(item.attunement?{attunementRequired:item.attunement.required,attuned:item.attunement.attunedTo===inventory.characterId}:{}),
-    };
-  });
-  inventory.revision=result.state.revision;
+  const result=applyCommonPlayItemOperations({ownerId:inventory.characterId,revision:inventory.revision,items:inventory.items,operations,templates});
+  inventory.items=result.items;
+  inventory.revision=result.revision;
   return result.changes;
 }
 
@@ -194,7 +158,9 @@ function applyCommand(inventory:SessionCharacterInventoryVm,command:DmInventoryA
       changes=applyItemOperations(inventory,[{kind:"quantity",itemId:existing.id,delta:command.quantity}]);
     } else {
       template.quantity=command.quantity;
-      changes=applyItemOperations(inventory,[{kind:"grant",item:commonItem(template,inventory.characterId)}],[template]);
+      changes=applyItemOperations(inventory,[{kind:"grant",item:{
+        id:template.id,definitionId:template.definitionId,quantity:template.quantity,stackable:true,equipped:false,wielded:false,
+      }}],[template]);
     }
   } else if(command.operation==="grant-item-template"){
     if(!Number.isInteger(command.quantity)||command.quantity<1)throw new Error("지급 수량은 1 이상이어야 합니다.");
@@ -203,7 +169,13 @@ function applyCommand(inventory:SessionCharacterInventoryVm,command:DmInventoryA
     if(existing) changes=applyItemOperations(inventory,[{kind:"quantity",itemId:existing.id,delta:command.quantity}]);
     else{
       const template={id:`item.session.${inventory.characterId}.${Date.now()}.${Math.floor(Math.random()*10000)}`,...cp(source),quantity:command.quantity,equipped:false,wielded:false,attuned:false};
-      changes=applyItemOperations(inventory,[{kind:"grant",item:commonItem(template,inventory.characterId)}],[template]);
+      changes=applyItemOperations(inventory,[{kind:"grant",item:{
+        id:template.id,definitionId:template.definitionId,quantity:template.quantity,
+        stackable:!template.charges&&!template.attunementRequired,equipped:false,wielded:false,
+        ...(template.charges?{charges:{current:template.charges.current,maximum:template.charges.max}}:{}),
+        ...(template.attunementRequired?{attunement:{required:true}}:{}),
+        grantedEntryPointIds:[...template.grantedActionIds],
+      }}],[template]);
     }
   } else if (command.operation==="revoke-item") {
     if (!Number.isInteger(command.quantity)||command.quantity<1) throw new Error("회수 수량은 1 이상이어야 합니다.");

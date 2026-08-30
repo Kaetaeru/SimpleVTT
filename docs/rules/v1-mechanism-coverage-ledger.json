@@ -1730,7 +1730,7 @@
         "inventory persistence adapters",
         "phase09RealAtomicItemAdapter.ts"
       ],
-      "currentState": "Durable inventory authority exists and unknown external Common Play item quantity and charge payments execute through the canonical Resolver item-as-resource event bridge with durable Character write-back, restart persistence, event-native Undo, and full external identity rename invariance. DM session create/grant/quantity/destroy/equipment cleanup now delegates atomically to the existing generic inventory transaction instead of directly mutating item state. Portable Common Play lifecycle lowering, recharge, item-owned action/effect/spellcasting, containers, and owner transfer remain incomplete; connected quantity-payment replay/retry/reconnect/Undo is proven.",
+      "currentState": "Durable inventory authority exists and unknown external Common Play item quantity and charge payments execute through the canonical Resolver item-as-resource event bridge with durable Character write-back, restart persistence, event-native Undo, and full external identity rename invariance. DM session create/grant/quantity/destroy/equipment cleanup plus Character equip and quick-use quantity/charge changes now share the existing generic inventory transaction through one projection boundary instead of directly mutating item state. Portable Common Play lifecycle lowering, recharge, item-owned action/effect/spellcasting, containers, and owner transfer remain incomplete; connected quantity-payment replay/retry/reconnect/Undo is proven.",
       "requiredSemantics": [
         "create/grant/copy",
         "quantity",
@@ -1755,7 +1755,7 @@
         "characterLibraryPersistence.ts stores ItemInstance quantity/equipment/attunement/charge runtime state separately from source item references",
         "commonPlayOperationRuntime.ts portable item payment supports structural quantity or charges lowering through the canonical spend-resource operation",
         "installedCommonPlayRuntimeAdapter.ts itemPaymentRuntimeContext seeds either phase09:item:<id>:quantity or phase09:item:<id>:charges from the resolved durable ItemInstance without content identity dispatch",
-        "sessionInventoryRuntimeAdapter.ts maps arbitrary ItemInstance state into resolveCommonPlayInventoryTransaction for atomic DM grant, quantity, destroy, equip cleanup, and durable write-back rather than mutating items directly"
+        "commonPlayItemInventoryProjection.ts is the shared ItemInstance-to-generic-inventory projection used by sessionInventoryRuntimeAdapter.ts and MockAdapter Character equip/quick-use paths for atomic grant, quantity, destroy, equip, and charge changes"
       ],
       "productionEvidence": [
         "8b83ad86bd43fc35a512611bcd2d6b7f54de716a test(c9): prove portable item payment persistence",
