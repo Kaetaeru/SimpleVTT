@@ -76,7 +76,7 @@ jobs:
           PY
       - run: npm run generate:content
       - name: Verify Family E area slice
-        run: node --import tsx --test tests/domain/commonPlaySelectorRuntime.test.ts tests/domain/commonPlayTargetingRuntime.test.ts tests/domain/commonPlayMaplessTargeting.test.ts tests/ui/commonPlayRichSelectorProduction.test.ts tests/ui/installedCommonPlayProductionRuntime.test.ts
+        run: npx tsx --test tests/domain/commonPlaySelectorRuntime.test.ts tests/domain/commonPlayTargetingRuntime.test.ts tests/domain/commonPlayMaplessTargeting.test.ts tests/ui/commonPlayRichSelectorProduction.test.ts tests/ui/installedCommonPlayProductionRuntime.test.ts
       - name: Verify legacy boundary
         run: node scripts/check-legacy-execution-boundary.mjs
       - name: Typecheck
