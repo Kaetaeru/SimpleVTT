@@ -109,16 +109,17 @@ test("unknown installed Common Play temporary resource capacity persists through
     before:{maximum:baseMaximum,maximumAfterLongRest:null},
     after:{maximum:baseMaximum+1,maximumAfterLongRest:baseMaximum},
   });
-  const resolvedResource=resolvedSnapshot.activeCharacter.resources.find((entry)=>entry.id===FIGHTER_SECOND_WIND_RESOURCE_ID);
-  assert.equal(resolvedSnapshot.resolution?.stage,"complete");
-  assert.equal(resolvedResource?.current,baseCurrent);
-  assert.equal(resolvedResource?.max,baseMaximum+1);
 
   const persistedImmediately=persistedResource(adapter,characterId);
   assert.equal(persistedImmediately.source?.max,baseMaximum);
   assert.equal(persistedImmediately.runtime?.current,baseCurrent);
   assert.equal(persistedImmediately.runtime?.maximum,baseMaximum+1);
   assert.equal(persistedImmediately.runtime?.maximumAfterLongRest,baseMaximum);
+
+  const resolvedResource=resolvedSnapshot.activeCharacter.resources.find((entry)=>entry.id===FIGHTER_SECOND_WIND_RESOURCE_ID);
+  assert.equal(resolvedSnapshot.resolution?.stage,"complete");
+  assert.equal(resolvedResource?.current,baseCurrent);
+  assert.equal(resolvedResource?.max,baseMaximum+1);
 
   snapshot=await adapter.getSnapshot();
   const expanded=snapshot.activeCharacter.resources.find((entry)=>entry.id===FIGHTER_SECOND_WIND_RESOURCE_ID);
