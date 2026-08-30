@@ -19,28 +19,28 @@ const CONTENT_ID="option.target-owner-consent";
 const MECHANIC_ID="external.unknown.target-owner-consent";
 const ENTRY_POINT_ID="ask-target-owner";
 
-function payload(){return JSON.stringify({
+function payload(responder:"target-owner"|"target"="target-owner"){return JSON.stringify({
   schemaVersion:"0.1-draft",moduleId:MODULE_ID,moduleVersion:"1",
   rulesProfile:{id:"dnd.srd-5.2.1",version:"0.1-draft"},defaultLocale:"en",
   source:{document:"Target Owner Consent Probe",version:"1",license:"CC0",srdDerived:false},dependencies:[],conflicts:[],capabilities:[],
   content:[{id:CONTENT_ID,category:"option",presentation:{defaultLocale:"en",originalName:"Target Owner Consent",locales:{en:{name:"Target Owner Consent",description:"Portable selected-target owner consent probe"}}},mechanics:[{kind:"common-play",config:{
     schemaVersion:"0.2-draft",id:MECHANIC_ID,
     payments:[{kind:"economy",bucket:"reaction",amount:{value:1},consumeAt:"commit",refundOnCancel:true}],
-    entryPoints:[{id:ENTRY_POINT_ID,invocation:"manual",interaction:{id:"target-owner-consent",kind:"consent",responder:"target-owner",mode:"blocking",input:{type:"boolean"},revalidate:"if-revision-changed",stalePolicy:"reject"},targeting:{from:"targets",min:1,max:1},operations:[{kind:"damage.apply",amount:{value:1},damageType:"force",target:"target"}]}],
+    entryPoints:[{id:ENTRY_POINT_ID,invocation:"manual",interaction:{id:"target-owner-consent",kind:"consent",responder,mode:"blocking",input:{type:"boolean"},revalidate:"if-revision-changed",stalePolicy:"reject"},targeting:{from:"targets",min:1,max:1},operations:[{kind:"damage.apply",amount:{value:1},damageType:"force",target:"target"}]}],
   }}]}]
 });}
 
-async function install(adapter:MockAdapter){
+async function install(adapter:MockAdapter,responder:"target-owner"|"target"="target-owner"){
   setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
-  const preview=await adapter.previewContentImport(payload());
+  const preview=await adapter.previewContentImport(payload(responder));
   assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
   await adapter.activateContentImport();
   return installedCommonPlayActionId({catalogId:catalogQualifiedId(CONTENT_ID,MODULE_ID,"1"),mechanicId:MECHANIC_ID,entryPointId:ENTRY_POINT_ID});
 }
 
-test("target-owner consent routes to the selected target owner and rejects the actor peer",async()=>{
-  const sessionId="session.target-owner-consent",host=new MockAdapter();
-  const actionId=await install(host);
+for (const responder of ["target-owner","target"] as const) test(`${responder} consent routes to the selected target responder and rejects the actor peer`,async()=>{
+  const sessionId=`session.${responder}-consent`,host=new MockAdapter();
+  const actionId=await install(host,responder);
   const internal=host as unknown as {activeCharacter:{id:string};scene:{entities:Array<{id:string;name:string;hp:number}>}};
   const actorId=internal.activeCharacter.id;
   const target=internal.scene.entities.find((entity)=>entity.id!==actorId&&entity.hp>0);
