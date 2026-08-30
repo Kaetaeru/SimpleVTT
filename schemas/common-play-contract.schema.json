@@ -906,6 +906,9 @@
           "$ref": "#/$defs/tempHpGrant"
         },
         {
+          "$ref": "#/$defs/lifeStabilize"
+        },
+        {
           "$ref": "#/$defs/resourceChange"
         },
         {
@@ -1211,6 +1214,25 @@
         },
         "when": {
           "$ref": "#/$defs/predicate"
+        }
+      },
+      "additionalProperties": false
+    },
+    "lifeStabilize": {
+      "type": "object",
+      "required": [
+        "kind"
+      ],
+      "properties": {
+        "kind": {
+          "const": "life.stabilize"
+        },
+        "target": {
+          "enum": [
+            "actor",
+            "self",
+            "target"
+          ]
         }
       },
       "additionalProperties": false

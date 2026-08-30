@@ -116,6 +116,11 @@ type CommonPlayTemporaryHpGrant={
   choice?:"keep-existing"|"take-new";
 };
 
+type CommonPlayLifeStabilize={
+  kind:"life.stabilize";
+  target?:CommonPlayHpTarget;
+};
+
 type CommonPlayRollModify={
   kind:"roll.modify";
   mode:"advantage"|"disadvantage"|"add-die"|"subtract-die"|"add-flat"|"target-add"|"reroll"|"replace"|"minimum";
@@ -157,6 +162,7 @@ export type CommonPlayOperation=
   |CommonPlayDamageApply
   |CommonPlayHealingApply
   |CommonPlayTemporaryHpGrant
+  |CommonPlayLifeStabilize
   |CommonPlayMovementDefinition
   |CommonPlayMovementStand
   |CommonPlayConditionChange
@@ -238,6 +244,7 @@ const DAMAGE_APPLY_KEYS=new Set(["kind","amount","damageType","target"]);
 const HEALING_APPLY_KEYS=new Set(["kind","amount","target"]);
 const CONDITION_CHANGE_KEYS=new Set(["kind","condition","target"]);
 const TEMP_HP_GRANT_KEYS=new Set(["kind","amount","target","choice"]);
+const LIFE_STABILIZE_KEYS=new Set(["kind","target"]);
 const ROLL_MODIFY_KEYS=new Set(["kind","mode","value","dice"]);
 const MOVEMENT_RELOCATE_KEYS=new Set(["kind","mode","movementType","target","distance","costMultiplier","doesNotProvokeOpportunityAttacks","destinationFact"]);
 const MOVEMENT_STAND_KEYS=new Set(["kind","target"]);
@@ -608,6 +615,10 @@ function parseOperation(value:unknown,label:string):CommonPlayOperation {
       ...(choice===undefined?{}:{choice}),
     };
   }
+  if(operation.kind==="life.stabilize") {
+    supportedKeys(operation,LIFE_STABILIZE_KEYS,label);
+    return {kind:"life.stabilize",...(operation.target===undefined?{}:{target:hpTarget(operation.target,`${label}.target`)})};
+  }
   throw new DomainEvaluationError(`unsupported Common Play operation: ${String(operation.kind)}`);
 }
 
@@ -654,7 +665,7 @@ export function parseCommonPlayOperationDefinition(value:unknown,label="Common P
     };
   });
 for(const [index,entryPoint] of entryPoints.entries()) {
-  if((entryPoint.targeting?.max??1)>1&&entryPoint.operations.some((operation)=>(operation.kind==="damage.apply"||operation.kind==="healing.apply"||operation.kind==="temp-hp.grant")&&operation.target==="target")) {
+  if((entryPoint.targeting?.max??1)>1&&entryPoint.operations.some((operation)=>(operation.kind==="damage.apply"||operation.kind==="healing.apply"||operation.kind==="temp-hp.grant"||operation.kind==="life.stabilize")&&operation.target==="target")) {
     throw new DomainEvaluationError(`${label}.entryPoints[${index}] multi-target selection requires an explicit per-target effect contract`);
   }
 }
@@ -970,6 +981,11 @@ export function compileCommonPlayEntryPointOperations(
         source:`common-play:${supported.id}:${entryPoint.id}:operation:${index}`,
         ...(operation.choice===undefined?{}:{choice:operation.choice}),
       });
+      continue;
+    }
+
+    if(operation.kind==="life.stabilize") {
+      operations.push({id:operationId,kind:"stabilize",targetId:hpOperationTarget(operation.target,input)});
       continue;
     }
 
