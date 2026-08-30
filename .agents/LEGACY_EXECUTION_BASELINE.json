@@ -55,6 +55,7 @@
     { "module": "./productionDiceRuntimeAdapter", "classification": "GENERIC_ENGINE" },
     { "module": "./standardActionReactionAdapter", "classification": "GENERIC_ENGINE" },
     { "module": "./installedCommonPlayRuntimeAdapter", "classification": "GENERIC_ENGINE" },
+    { "module": "./installedCommonPlaySelectorGuardAdapter", "classification": "GENERIC_ENGINE" },
     { "module": "./runtimeResolutionUndoAdapter", "classification": "GENERIC_ENGINE" },
     { "module": "./installedCommonPlayArtifactLifecycleAdapter", "classification": "GENERIC_ENGINE" },
     { "module": "./spatialZoneMembershipRuntimeAdapter", "classification": "GENERIC_ENGINE" },
