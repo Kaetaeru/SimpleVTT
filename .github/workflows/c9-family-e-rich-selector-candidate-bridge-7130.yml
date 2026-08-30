@@ -1,0 +1,124 @@
+name: C9 Family E Rich Selector Candidate Bridge 7130
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-e-rich-selector-candidate-bridge-7130.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Bridge authoritative scene properties into rich target selectors
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path, old, new):
+              p=Path(path)
+              text=p.read_text(encoding='utf-8')
+              count=text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{path}: expected one match, got {count}: {old[:120]!r}')
+              p.write_text(text.replace(old,new,1),encoding='utf-8')
+
+          runtime='src/domain/commonPlayOperationRuntime.ts'
+          replace_once(runtime,
+              'import { parseCommonPlaySelector, resolveCommonPlaySelector, type CommonPlaySelector } from "./commonPlaySelectorRuntime";\n',
+              'import { parseCommonPlaySelector, resolveCommonPlaySelector, type CommonPlaySelector, type CommonPlaySelectorCandidate } from "./commonPlaySelectorRuntime";\n')
+          replace_once(runtime,
+              '  targetingTargets?:TargetingFactInput[];\n',
+              '  targetingTargets?:TargetingFactInput[];\n  targetingCandidates?:CommonPlaySelectorCandidate[];\n')
+          replace_once(runtime,
+              '      candidates:input.targetingTargets.map(targetingSelectorCandidate),\n',
+              '      candidates:input.targetingCandidates??input.targetingTargets.map(targetingSelectorCandidate),\n')
+
+          definition=Path('src/domain/commonPlayDefinitionRuntime.ts')
+          text=definition.read_text(encoding='utf-8')
+          selector_import='import { parseCommonPlaySelector } from "./commonPlaySelectorRuntime";\n'
+          if selector_import not in text:
+              marker='import { DomainEvaluationError } from "./profileEngine";\n'
+              if text.count(marker)!=1: raise SystemExit('definition import marker mismatch')
+              text=text.replace(marker,marker+selector_import,1)
+          validation='    if(entry.targeting!==undefined) parseCommonPlaySelector(entry.targeting,`${label}.entryPoints[${index}].targeting`);\n'
+          if validation not in text:
+              marker='    if(!Array.isArray(entry.operations)) throw new DomainEvaluationError(`${label}.entryPoints[${index}].operations must be an array`);\n'
+              if text.count(marker)!=1: raise SystemExit('entry point validation marker mismatch')
+              text=text.replace(marker,marker+validation,1)
+          definition.write_text(text,encoding='utf-8')
+
+          adapter='src/app/installedCommonPlayRuntimeAdapter.ts'
+          p=Path(adapter)
+          text=p.read_text(encoding='utf-8')
+          selector_import='import type { CommonPlaySelectorCandidate } from "../domain/commonPlaySelectorRuntime";\n'
+          if selector_import not in text:
+              marker='import { allocationEntriesFromTargetSequence, resolveCommonPlayAllocation } from "../domain/commonPlayAllocationRuntime";\n'
+              if text.count(marker)!=1: raise SystemExit('adapter import marker mismatch')
+              text=text.replace(marker,marker+selector_import,1)
+          helper='''function commonPlaySelectorCandidate(actor:SceneVm["entities"][number],target:SceneVm["entities"][number]):CommonPlaySelectorCandidate {\n  const targeting=commonPlayTargetFact(actor,target);\n  return {\n    id:target.id,\n    targeting,\n    properties:{id:target.id,kind:target.kind,relation:targeting.relation,status:[...target.status]},\n  };\n}\n\n'''
+          if 'function commonPlaySelectorCandidate(' not in text:
+              marker='function damageDiceFaces(\n'
+              if text.count(marker)!=1: raise SystemExit('adapter helper insertion marker mismatch')
+              text=text.replace(marker,helper+marker,1)
+          candidate_line='    targetingCandidates:entryPoint.targeting?internal.scene.entities.filter((target)=>prepared.state.combatants[target.id]).map((target)=>commonPlaySelectorCandidate(actorEntity,target)):undefined,\n'
+          if candidate_line not in text:
+              marker='    targetingTargets:entryPoint.targeting?selectedTargets.map((target)=>commonPlayTargetFact(actorEntity,target)):undefined,\n'
+              if text.count(marker)!=1: raise SystemExit('adapter targeting input marker mismatch')
+              text=text.replace(marker,marker+candidate_line,1)
+          p.write_text(text,encoding='utf-8')
+
+          production=Path('tests/ui/installedCommonPlayProductionRuntime.test.ts')
+          text=production.read_text(encoding='utf-8')
+          title='test("unknown installed Common Play rich predicate filters authoritative scene properties without identity dispatch",async()=>{'
+          if title not in text:
+              marker='test("unknown installed Common Play relation selector rejects an ineligible target before production commit",async()=>{'
+              if text.count(marker)!=1: raise SystemExit('production relation test marker mismatch')
+              addition='''test("unknown installed Common Play rich predicate filters authoritative scene properties without identity dispatch",async()=>{\n  const adapter=new MockAdapter();\n  const payload=JSON.parse(targetingPackagePayload()) as any;\n  payload.content[0].mechanics[0].config.entryPoints[0].targeting={\n    from:"targets",where:{op:"contains",left:{ref:"status"},right:{value:"중독됨"}},min:1,max:1,\n  };\n  setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());\n  const preview=await adapter.previewContentImport(JSON.stringify(payload));\n  assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));\n  await adapter.activateContentImport();\n  const actionId=installedCommonPlayActionId({\n    catalogId:catalogQualifiedId(TARGETING_IDENTITY.contentId,TARGETING_IDENTITY.moduleId,"1"),\n    mechanicId:TARGETING_IDENTITY.mechanicId,entryPointId:TARGETING_IDENTITY.entryPointId,\n  });\n  injureSceneEntity(adapter,"combatant.goblin-a",10);\n  injureSceneEntity(adapter,"combatant.goblin-b",10);\n  await adapter.startInitiative();\n  await adapter.setCurrentActor("char.aelar");\n  let snapshot=await adapter.getSnapshot();\n  const ineligibleBefore=snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-b")!.hp;\n  await adapter.resolveAction(actionId,["combatant.goblin-b"]);\n  snapshot=await adapter.getSnapshot();\n  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-b")!.hp,ineligibleBefore);\n\n  const eligibleBefore=snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")!.hp;\n  await adapter.resolveAction(actionId,["combatant.goblin-a"]);\n  snapshot=await adapter.getSnapshot();\n  assert.equal(snapshot.resolution?.stage,"complete");\n  assert.deepEqual(snapshot.resolution?.targetIds,["combatant.goblin-a"]);\n  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")!.hp,eligibleBefore+5);\n});\n\n'''
+              text=text.replace(marker,addition+marker,1)
+          production.write_text(text,encoding='utf-8')
+          PY
+      - name: Generate content catalogs
+        run: npm run generate:content
+      - name: Verify rich selector production slice
+        run: >-
+          npx tsx --test
+          tests/domain/commonPlaySelectorRuntime.test.ts
+          tests/domain/commonPlayTargetingRuntime.test.ts
+          tests/ui/installedCommonPlayProductionRuntime.test.ts
+          tests/ui/ruleModulePackageImport.test.ts
+      - name: Verify boundaries and types
+        run: |
+          node scripts/check-legacy-execution-boundary.mjs
+          npx tsc --noEmit
+      - name: Commit verified slice
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/domain/commonPlayOperationRuntime.ts src/domain/commonPlayDefinitionRuntime.ts src/app/installedCommonPlayRuntimeAdapter.ts tests/ui/installedCommonPlayProductionRuntime.test.ts
+          if ! git diff --cached --quiet; then git commit -m "feat(c9): project rich selector candidate facts"; fi
+          git fetch origin agent/c9-gate-n-coverage-reconciliation
+          git rebase origin/agent/c9-gate-n-coverage-reconciliation
+          git rm .github/workflows/c9-family-e-rich-selector-candidate-bridge-7130.yml
+          if git ls-files --error-unmatch .github/workflows/c9-family-e-rich-predicate-bridge-7130.yml >/dev/null 2>&1; then
+            git rm .github/workflows/c9-family-e-rich-predicate-bridge-7130.yml
+          fi
+          git commit -m "chore(c9): remove consumed rich selector verifiers"
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
