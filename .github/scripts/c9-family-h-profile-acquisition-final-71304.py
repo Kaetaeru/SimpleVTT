@@ -58,7 +58,7 @@ test("portable production derives remaining RulesProfile special senses from gen
       setSpatialRelation(internal.scene,{
         sourceId:internal.activeCharacter.id,targetId:OTHER_CHARACTER_ID,distanceFeet:30,visible:scenario.visible,cover:"none",targetCanSeeAttacker:true,
         light:scenario.light,obscurement:scenario.obscurement,targetInvisible:scenario.targetInvisible,sharedGroundContact:scenario.sharedGroundContact,
-        provenance:`profile:test-generic-acquisition:${scenario.label}`,
+        provenance:`module:test-generic-acquisition:${scenario.label}`,
       });
       seedRulesProfileSense(adapter,`${identity.moduleId}.${scenario.label}`,scenario.property,60);
       seedHiddenRuntimeEffect(adapter,OTHER_CHARACTER_ID);
