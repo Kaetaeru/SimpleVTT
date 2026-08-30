@@ -2,6 +2,7 @@ import type { RulesRuntimeState } from "./combatState";
 import type { D20TestResult } from "./d20";
 import type { CommonPlayAutomaticEffectEvent, CommonPlayPersistentEffectDefinition } from "./commonPlayEffectRuntime";
 import { resolveCommonPlayFrequency } from "./commonPlayFrequencyRuntime";
+import type { EffectStateChange } from "./runtimeStateChange";
 import type { PendingResolution, ResolutionCommit, ResolutionEvent, ResolutionOperation } from "./resolutionTypes";
 
 function semanticKind(result:D20TestResult):CommonPlayAutomaticEffectEvent|undefined {
@@ -69,7 +70,7 @@ function lifecycleSemanticEvent(
 ):ResolutionEvent|undefined {
   if(!authoritativeEvent) return undefined;
   if(operation.kind==="apply-effect") {
-    const applied=authoritativeEvent.stateChanges.filter((change)=>change.kind==="effect"&&change.operation==="added");
+    const applied=authoritativeEvent.stateChanges.filter((change):change is EffectStateChange=>change.kind==="effect"&&change.operation==="added");
     if(!applied.length) return undefined;
     return {
       id:`${pending.id}:${operation.id}:semantic:state.applied`,
@@ -86,7 +87,7 @@ function lifecycleSemanticEvent(
   }
   const lifecycleBoundary=operation.kind==="advance-time"||operation.kind==="begin-turn"||operation.kind==="end-turn"||operation.kind==="short-rest"||operation.kind==="long-rest";
   if(!lifecycleBoundary) return undefined;
-  const expired=authoritativeEvent.stateChanges.filter((change)=>change.kind==="effect"&&change.operation==="removed");
+  const expired=authoritativeEvent.stateChanges.filter((change):change is EffectStateChange=>change.kind==="effect"&&change.operation==="removed");
   if(!expired.length) return undefined;
   return {
     id:`${pending.id}:${operation.id}:semantic:effect.expired`,
