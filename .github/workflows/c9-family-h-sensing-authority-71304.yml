@@ -72,8 +72,8 @@ jobs:
           )
           replace_once(
               "tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts",
-              '    const relation={sourceId:internal.activeCharacter.id,targetId:OTHER_CHARACTER_ID,distanceFeet:30,visible:true,cover:"none" as const,targetCanSeeAttacker:true};',
-              '    const relation={sourceId:internal.activeCharacter.id,targetId:OTHER_CHARACTER_ID,distanceFeet:30,visible:true,cover:"none" as const,targetCanSeeAttacker:true,light:"dim" as const,obscurement:"none" as const,detected:true};'
+              '    const relation={sourceId:internal.activeCharacter.id,targetId:OTHER_CHARACTER_ID,distanceFeet:30,visible:true,cover:"none" as const,targetCanSeeAttacker:true};\n    if(index===0)setSpatialRelation(internal.scene,{...relation,provenance:"module:test-map:spatial"});\n    else await adapter.setTheaterOfMindSpatialRelation(relation);',
+              '    const relation={sourceId:internal.activeCharacter.id,targetId:OTHER_CHARACTER_ID,distanceFeet:30,visible:true,cover:"none" as const,targetCanSeeAttacker:true,light:"dim" as const,obscurement:"none" as const,detected:true};\n    setSpatialRelation(internal.scene,{...relation,provenance:index===0?"module:test-map:spatial":"module:test-map-renamed:spatial"});'
           )
           replace_once(
               "tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts",
