@@ -25,35 +25,26 @@ jobs:
 
           path=Path('tests/ui/installedCommonPlayLoweredFamiliesProduction.test.ts')
           source=path.read_text()
-          old='''  const afterSave=await adapter.getSnapshot();
-          const hpAfter=afterSave.scene.entities.filter((entity)=>entity.id.startsWith("combatant.goblin")).map((entity)=>entity.hp);'''
-          new='''  const afterSave=await adapter.getSnapshot();
-          const saveOutcomes=snapshotAdapterTurnRuntimeState(adapter,afterSave.scene)!.history
-            .filter((entry)=>entry.kind==="save.failure"||entry.kind==="save.success")
-            .map((entry)=>({kind:entry.kind,actorId:entry.actorId}));
-          const hpAfter=afterSave.scene.entities.filter((entity)=>entity.id.startsWith("combatant.goblin")).map((entity)=>entity.hp);'''
+          old='  const afterSave=await adapter.getSnapshot();\n  const hpAfter=afterSave.scene.entities.filter((entity)=>entity.id.startsWith("combatant.goblin")).map((entity)=>entity.hp);'
+          new='  const afterSave=await adapter.getSnapshot();\n  const saveOutcomes=snapshotAdapterTurnRuntimeState(adapter,afterSave.scene)!.history\n    .filter((entry)=>entry.kind==="save.failure"||entry.kind==="save.success")\n    .map((entry)=>({kind:entry.kind,actorId:entry.actorId}));\n  const hpAfter=afterSave.scene.entities.filter((entity)=>entity.id.startsWith("combatant.goblin")).map((entity)=>entity.hp);'
           if source.count(old)!=1:
             raise SystemExit(f'after-save anchor count={source.count(old)}')
           source=source.replace(old,new,1)
 
-          old='''  return {adapter,hpDelta:hpBefore.map((hp,index)=>hp-hpAfter[index]),saveResolution:afterSave.resolution,effects:runtime.effects.length,artifactKinds:(runtime.artifacts??[]).map((artifact)=>artifact.artifactKind),summon:afterAll.scene.entities.find((entity)=>entity.id===`${prefix}.summoned`)};'''
-          new='''  return {adapter,hpDelta:hpBefore.map((hp,index)=>hp-hpAfter[index]),saveResolution:afterSave.resolution,saveOutcomes,effects:runtime.effects.length,artifactKinds:(runtime.artifacts??[]).map((artifact)=>artifact.artifactKind),summon:afterAll.scene.entities.find((entity)=>entity.id===`${prefix}.summoned`)};'''
+          old='  return {adapter,hpDelta:hpBefore.map((hp,index)=>hp-hpAfter[index]),saveResolution:afterSave.resolution,effects:runtime.effects.length,artifactKinds:(runtime.artifacts??[]).map((artifact)=>artifact.artifactKind),summon:afterAll.scene.entities.find((entity)=>entity.id===`${prefix}.summoned`)};'
+          new='  return {adapter,hpDelta:hpBefore.map((hp,index)=>hp-hpAfter[index]),saveResolution:afterSave.resolution,saveOutcomes,effects:runtime.effects.length,artifactKinds:(runtime.artifacts??[]).map((artifact)=>artifact.artifactKind),summon:afterAll.scene.entities.find((entity)=>entity.id===`${prefix}.summoned`)};'
           if source.count(old)!=1:
             raise SystemExit(f'return anchor count={source.count(old)}')
           source=source.replace(old,new,1)
 
-          old='''  assert.deepEqual(result.hpDelta,[12,21],JSON.stringify(result.saveResolution));
-          assert.equal(result.effects,1);'''
-          new='''  assert.deepEqual(result.hpDelta,[12,21],JSON.stringify(result.saveResolution));
-          assert.deepEqual(result.saveOutcomes.map((entry)=>entry.actorId),["combatant.goblin-a","combatant.goblin-b"]);
-          assert.deepEqual(result.saveOutcomes.map((entry)=>entry.kind).sort(),["save.failure","save.success"]);
-          assert.equal(result.effects,1);'''
+          old='  assert.deepEqual(result.hpDelta,[12,21],JSON.stringify(result.saveResolution));\n  assert.equal(result.effects,1);'
+          new='  assert.deepEqual(result.hpDelta,[12,21],JSON.stringify(result.saveResolution));\n  assert.deepEqual(result.saveOutcomes.map((entry)=>entry.actorId),["combatant.goblin-a","combatant.goblin-b"]);\n  assert.deepEqual(result.saveOutcomes.map((entry)=>entry.kind).sort(),["save.failure","save.success"]);\n  assert.equal(result.effects,1);'
           if source.count(old)!=1:
             raise SystemExit(f'production assertion anchor count={source.count(old)}')
           source=source.replace(old,new,1)
 
-          old='''  assert.deepEqual({hp:first.hpDelta,effects:first.effects,artifacts:first.artifactKinds},{hp:renamed.hpDelta,effects:renamed.effects,artifacts:renamed.artifactKinds});'''
-          new='''  assert.deepEqual({hp:first.hpDelta,saveOutcomes:first.saveOutcomes,effects:first.effects,artifacts:first.artifactKinds},{hp:renamed.hpDelta,saveOutcomes:renamed.saveOutcomes,effects:renamed.effects,artifacts:renamed.artifactKinds});'''
+          old='  assert.deepEqual({hp:first.hpDelta,effects:first.effects,artifacts:first.artifactKinds},{hp:renamed.hpDelta,effects:renamed.effects,artifacts:renamed.artifactKinds});'
+          new='  assert.deepEqual({hp:first.hpDelta,saveOutcomes:first.saveOutcomes,effects:first.effects,artifacts:first.artifactKinds},{hp:renamed.hpDelta,saveOutcomes:renamed.saveOutcomes,effects:renamed.effects,artifacts:renamed.artifactKinds});'
           if source.count(old)!=1:
             raise SystemExit(f'rename assertion anchor count={source.count(old)}')
           path.write_text(source.replace(old,new,1))
@@ -68,9 +59,10 @@ jobs:
           row=next(row for row in data['rows'] if row['family']=='P')
           before='State/rest/expiry/recharge, multi-target save-damage semantic outcomes, and automatic semantic-event dispatcher composition remain incomplete'
           after='State/rest/expiry/recharge and automatic semantic-event dispatcher composition remain incomplete; multi-target save-damage semantic outcomes now have production and rename-invariance evidence'
-          if before not in row['currentState']:
+          if before in row['currentState']:
+            row['currentState']=row['currentState'].replace(before,after)
+          elif after not in row['currentState']:
             raise SystemExit('Family P currentState anchor missing')
-          row['currentState']=row['currentState'].replace(before,after)
           production='installedCommonPlayLoweredFamiliesProduction.test.ts unknown external multi-target save emits per-target save.success/save.failure semantic history through the production adapter'
           identity='installedCommonPlayLoweredFamiliesProduction.test.ts renamed external module/content/mechanic preserves multi-target semantic save outcomes'
           if production not in row['productionEvidence']:
