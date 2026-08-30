@@ -1,0 +1,83 @@
+name: C9 Family H Invisible Sight 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-h-invisible-sight-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  verify-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Reconcile branch
+        run: git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+      - run: npm ci
+      - name: Patch Family H production visibility
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          source=Path('src/app/commonPlayInterceptorProductionRuntimeAdapter.ts')
+          text=source.read_text(encoding='utf-8')
+          old='''          targetInvisible:false,\n          targetHidden:false,\n'''
+          new='''          targetInvisible:runtime.effects.some((effect)=>effect.targetId===subjectId&&effect.conditionId==="invisible"&&!effect.suppression),\n          targetHidden:false,\n'''
+          if old not in text and new not in text:
+              raise SystemExit('production visibility anchor not found')
+          if old in text:
+              text=text.replace(old,new,1)
+              source.write_text(text,encoding='utf-8')
+
+          test_path=Path('tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts')
+          test_text=test_path.read_text(encoding='utf-8')
+          test_name='portable production normal sight respects Resolver-owned Invisible condition'
+          if test_name not in test_text:
+              test_text += '''\n\ntest("portable production normal sight respects Resolver-owned Invisible condition",async()=>{\n  const adapter=await prepare(ORIGINAL,true);\n  const internal=adapter as unknown as {activeCharacter:CharacterSheet;scene:SceneVm};\n  setSpatialRelation(internal.scene,{\n    sourceId:internal.activeCharacter.id,targetId:OTHER_CHARACTER_ID,distanceFeet:30,visible:true,cover:"none",targetCanSeeAttacker:true,\n    light:"dim",obscurement:"none",detected:true,provenance:"module:test-invisible:spatial",\n  });\n  seedHiddenRuntimeEffect(adapter,OTHER_CHARACTER_ID);\n  const state=snapshotAdapterTurnRuntimeState(adapter,internal.scene);\n  assert.ok(state,"TurnRuntime state must exist before Invisible condition seeding");\n  const committed=resolvePendingResolution(SIMPLEVTT_APP_RULES_PROFILE,state!,{\n    id:"resolution.invisible-fact",actorId:internal.activeCharacter.id,sourceId:"external.invisible-fact-probe",expectedRevision:state!.revision,\n    operations:[{\n      id:"op.invisible-fact",kind:"apply-effect",\n      effect:{id:"effect.invisible-fact",sourceId:"external.invisible-fact-probe",sourceActorId:internal.activeCharacter.id,targetId:OTHER_CHARACTER_ID,kind:"condition",conditionId:"invisible",tags:["condition:invisible"],duration:{kind:"special",key:"test.invisible-fact"}},\n    }],\n  });\n  assert.notEqual(committed.status,"rejected");\n  if(committed.status==="rejected")return;\n  assert.equal(commitAdapterTurnRuntimeState(adapter,internal.scene,state!.revision,committed.state),true);\n  const snapshot=await openAbilityCheckInterrupt(adapter);\n  assert.notEqual(snapshot.resolution?.stage,"interrupt","normal sight must not see a target with an active Resolver-owned Invisible condition");\n});\n'''
+              test_path.write_text(test_text,encoding='utf-8')
+          PY
+      - name: Verify Family H slice
+        run: |
+          node --import tsx --test tests/domain/commonPlaySenseRuntime.test.ts tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts
+          node scripts/check-legacy-execution-boundary.mjs
+          npm exec tsc -- --noEmit
+      - name: Publish race-safely
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          branch=agent/c9-gate-n-coverage-reconciliation
+          git add src/app/commonPlayInterceptorProductionRuntimeAdapter.ts tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts
+          git diff --cached --check
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "fix(c9): respect Resolver-owned Invisible sight"
+          for attempt in 1 2 3; do
+            git fetch origin "$branch"
+            if git rebase "origin/$branch"; then
+              node --import tsx --test tests/domain/commonPlaySenseRuntime.test.ts tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts
+              node scripts/check-legacy-execution-boundary.mjs
+              npm exec tsc -- --noEmit
+              if git push origin HEAD:"$branch"; then
+                exit 0
+              fi
+            fi
+            git rebase --abort || true
+            sleep 2
+          done
+          exit 1
