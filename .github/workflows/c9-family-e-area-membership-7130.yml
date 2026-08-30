@@ -106,16 +106,18 @@ jobs:
           elif new_return not in text:
               raise SystemExit('candidate return anchor changed')
 
-          old_call = '.map((target)=>commonPlaySelectorCandidate(internal.scene,actorEntity,target));'
-          prepare_call = '.map((target)=>commonPlaySelectorCandidate(adapter,internal.scene,actorEntity,target,targeting.area));'
-          execution_call = '.map((target)=>commonPlaySelectorCandidate(internal as unknown as MockAdapter,internal.scene,actorEntity,target,entryPoint.targeting?.area));'
-          if old_call in text:
-              text = text.replace(old_call, prepare_call, 1)
-          elif prepare_call not in text:
+          prepare_old = '.map((target)=>commonPlaySelectorCandidate(internal.scene,actorEntity,target));'
+          prepare_new = '.map((target)=>commonPlaySelectorCandidate(adapter,internal.scene,actorEntity,target,targeting.area));'
+          if prepare_old in text:
+              text = text.replace(prepare_old, prepare_new, 1)
+          elif prepare_new not in text:
               raise SystemExit('prepare candidate call anchor changed')
-          if old_call in text:
-              text = text.replace(old_call, execution_call, 1)
-          elif execution_call not in text:
+
+          execution_old = 'targetingCandidates:entryPoint.targeting?internal.scene.entities.filter((target)=>state.combatants[target.id]).map((target)=>commonPlaySelectorCandidate(internal.scene,actorEntity,target)):undefined,'
+          execution_new = 'targetingCandidates:entryPoint.targeting?internal.scene.entities.filter((target)=>state.combatants[target.id]).map((target)=>commonPlaySelectorCandidate(internal as unknown as MockAdapter,internal.scene,actorEntity,target,entryPoint.targeting?.area)):undefined,'
+          if execution_old in text:
+              text = text.replace(execution_old, execution_new, 1)
+          elif execution_new not in text:
               raise SystemExit('execution candidate call anchor changed')
 
           adapter.write_text(text, encoding='utf-8')
