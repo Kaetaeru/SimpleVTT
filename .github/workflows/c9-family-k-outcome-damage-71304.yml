@@ -1,0 +1,211 @@
+name: C9 Family K Outcome Damage 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - ".github/workflows/c9-family-k-outcome-damage-71304.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  verify-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - name: Reconcile latest branch state
+        run: git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Generate runtime content
+        run: npm run generate:content
+      - name: Add generic outcome-conditioned damage
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          source_path=Path("src/domain/commonPlayOperationRuntime.ts")
+          source=source_path.read_text(encoding="utf-8")
+
+          def replace_once(old,new):
+              global source
+              count=source.count(old)
+              if count!=1:
+                  raise SystemExit(f"expected one source anchor, found {count}: {old[:100]!r}")
+              source=source.replace(old,new,1)
+
+          replace_once(
+              '  multiplier?:number;\n  target?:CommonPlayHpTarget;\n};',
+              '  multiplier?:number;\n  target?:CommonPlayHpTarget;\n  when?:CommonPlayTestOutcomePredicate;\n};',
+          )
+          replace_once(
+              'const DAMAGE_APPLY_KEYS=new Set(["kind","amount","damageType","multiplier","target"]);',
+              'const DAMAGE_APPLY_KEYS=new Set(["kind","amount","damageType","multiplier","target","when"]);',
+          )
+          replace_once(
+              '    const multiplier=operation.multiplier;\n    if(multiplier!==undefined&&(typeof multiplier!=="number"||!Number.isFinite(multiplier)||multiplier<0)) throw new DomainEvaluationError(`${label}.multiplier must be a finite non-negative number`);\n    return {\n      kind:"damage.apply",\n      amount,\n      damageType:nonEmptyString(operation.damageType,`${label}.damageType`),\n      ...(multiplier===undefined?{}:{multiplier}),\n      ...(operation.target===undefined?{}:{target:hpTarget(operation.target,`${label}.target`)}),\n    };',
+              '    const multiplier=operation.multiplier;\n    if(multiplier!==undefined&&(typeof multiplier!=="number"||!Number.isFinite(multiplier)||multiplier<0)) throw new DomainEvaluationError(`${label}.multiplier must be a finite non-negative number`);\n    const when=testOutcomePredicate(operation.when,`${label}.when`);\n    return {\n      kind:"damage.apply",\n      amount,\n      damageType:nonEmptyString(operation.damageType,`${label}.damageType`),\n      ...(multiplier===undefined?{}:{multiplier}),\n      ...(operation.target===undefined?{}:{target:hpTarget(operation.target,`${label}.target`)}),\n      ...(when?{when}:{}),\n    };',
+          )
+          replace_once(
+              '  if(entryPoint.operations.some((operation)=>(operation.kind==="condition.apply"||operation.kind==="condition.remove"||operation.kind==="effect.remove")&&operation.when)&&!entryPoint.test) throw new DomainEvaluationError(`${label}.entryPoints[${index}] test.outcome conditional operation requires a d20 test`);',
+              '  if(entryPoint.operations.some((operation)=>(operation.kind==="condition.apply"||operation.kind==="condition.remove"||operation.kind==="effect.remove"||operation.kind==="damage.apply")&&operation.when)&&!entryPoint.test) throw new DomainEvaluationError(`${label}.entryPoints[${index}] test.outcome conditional operation requires a d20 test`);',
+          )
+          replace_once(
+              '    if(operation.kind==="damage.apply") {\n      const targetId=hpOperationTarget(operation.target,input);',
+              '    if(operation.kind==="damage.apply") {\n      const when=operation.when?{operationId:`${input.resolutionId}:test`,field:"outcome" as const,equals:operation.when.right.value}:undefined;\n      const targetId=hpOperationTarget(operation.target,input);',
+          )
+          replace_once(
+              '        operations.push({\n          id:rollId,\n          kind:"damage-roll",\n          request:{',
+              '        operations.push({\n          id:rollId,\n          kind:"damage-roll",\n          ...(when?{when}:{}),\n          request:{',
+          )
+          replace_once(
+              '      operations.push({\n        id:operationId,\n        kind:"damage",\n        targetId,',
+              '      operations.push({\n        id:operationId,\n        kind:"damage",\n        ...(when?{when}:{}),\n        targetId,',
+          )
+          source_path.write_text(source,encoding="utf-8")
+
+          schema_path=Path("schemas/common-play-contract.schema.json")
+          schema=json.loads(schema_path.read_text(encoding="utf-8"))
+          damage=schema["$defs"]["damageApply"]
+          expected={"$ref":"#/$defs/predicate"}
+          existing=damage["properties"].get("when")
+          if existing not in (None,expected):
+              raise SystemExit(f"damageApply.when already incompatible: {existing!r}")
+          damage["properties"]["when"]=expected
+          schema_path.write_text(json.dumps(schema,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
+          PY
+
+          cat > tests/ui/c9FamilyKOutcomeDamageProduction.test.ts <<'TS'
+          import assert from "node:assert/strict";
+          import test from "node:test";
+          import "../../src/app/offlineRuntimeAdapters";
+          import { catalogQualifiedId } from "../../src/app/contentCatalogIdentity";
+          import { installedCommonPlayActionId } from "../../src/app/installedCommonPlayActionReference";
+          import { setInstalledContentStoreForTests } from "../../src/app/installedContentRuntimeAdapter";
+          import { MemoryInstalledContentStore } from "../../src/app/memoryInstalledContentStore";
+          import { MockAdapter } from "../../src/app/mockAdapter";
+          import { runtimeResolutionEventHistory } from "../../src/app/runtimeResolutionEventHistory";
+          import { snapshotAdapterTurnRuntimeState } from "../../src/app/turnRuntimeSessionRegistry";
+
+          const TARGET_ID="combatant.goblin-a";
+
+          function packagePayload(prefix:string) {
+            const moduleId=`${prefix}.module`;
+            const contentId=`${prefix}.mastery-probe`;
+            const mechanicId=`${prefix}.mechanic`;
+            return {
+              moduleId,contentId,mechanicId,
+              json:JSON.stringify({
+                schemaVersion:"0.1-draft",moduleId,moduleVersion:"1",
+                rulesProfile:{id:"dnd.srd-5.2.1",version:"0.1-draft"},defaultLocale:"en",
+                source:{document:"Family K outcome-conditioned damage probe",version:"1",license:"CC0",srdDerived:false},
+                dependencies:[],conflicts:[],capabilities:[],
+                content:[{
+                  id:contentId,category:"option",
+                  presentation:{defaultLocale:"en",originalName:"Portable Mastery Probe",locales:{en:{name:"Portable Mastery Probe"}}},
+                  mechanics:[{kind:"common-play",config:{
+                    schemaVersion:"0.2-draft",id:mechanicId,
+                    entryPoints:[{
+                      id:"graze-like-miss-rider",invocation:"manual",
+                      targeting:{from:"targets",min:1,max:1},
+                      test:{kind:"attack-roll",roller:"actor",dc:{value:10}},
+                      operations:[{
+                        kind:"damage.apply",amount:{value:3},damageType:"force",target:"target",
+                        when:{op:"eq",left:{ref:"test.outcome"},right:{value:"failure"}},
+                      }],
+                    }],
+                  }}],
+                }],
+              }),
+            };
+          }
+
+          async function prepare(prefix:string) {
+            const adapter=new MockAdapter();
+            const pack=packagePayload(prefix);
+            setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
+            const preview=await adapter.previewContentImport(pack.json);
+            assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
+            await adapter.activateContentImport();
+            await adapter.startInitiative();
+            await adapter.setCurrentActor("char.aelar");
+            return {adapter,actionId:installedCommonPlayActionId({catalogId:catalogQualifiedId(pack.contentId,pack.moduleId,"1"),mechanicId:pack.mechanicId,entryPointId:"graze-like-miss-rider"})};
+          }
+
+          function targetHp(adapter:MockAdapter,snapshot:Awaited<ReturnType<MockAdapter["getSnapshot"]>>) {
+            const target=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)?.combatants[TARGET_ID];
+            assert.ok(target,"target combatant must exist");
+            return target.life.hp.current;
+          }
+
+          async function exercise(prefix:string,face:number) {
+            const {adapter,actionId}=await prepare(prefix);
+            let snapshot=await adapter.getSnapshot();
+            const before=targetHp(adapter,snapshot);
+            await adapter.setQueuedD20(face);
+            snapshot=await adapter.resolveAction(actionId,[TARGET_ID]);
+            assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
+            const after=targetHp(adapter,snapshot);
+            const damageEvents=runtimeResolutionEventHistory(adapter)?.events.filter((event)=>event.stateChanges.some((change)=>change.kind==="hp"&&change.field==="current"&&change.targetId===TARGET_ID))??[];
+            return {adapter,before,after,damageEvents};
+          }
+
+          test("unknown installed Common Play can apply a Graze-like damage rider only on attack failure",async()=>{
+            const miss=await exercise("unknown-family-k-graze",1);
+            assert.equal(miss.after,miss.before-3,"miss must apply the outcome-conditioned damage rider");
+            assert.equal(miss.damageEvents.length,1,"miss must emit one authoritative HP state change");
+            await miss.adapter.undoLastResolution();
+            assert.equal(targetHp(miss.adapter,await miss.adapter.getSnapshot()),miss.before,"Undo must restore target HP");
+
+            const hit=await exercise("unknown-family-k-hit-control",15);
+            assert.equal(hit.after,hit.before,"hit must skip a failure-only damage rider");
+            assert.equal(hit.damageEvents.length,0,"skipped rider must not emit an HP state change");
+          });
+
+          test("outcome-conditioned damage is invariant to external module/content/mechanic identity",async()=>{
+            const first=await exercise("unknown-family-k-identity-a",1);
+            const renamed=await exercise("renamed-family-k-identity-b",1);
+            assert.equal(first.before-first.after,3);
+            assert.equal(renamed.before-renamed.after,3);
+          });
+          TS
+      - name: Verify Family K outcome-conditioned damage
+        run: npx tsx --test tests/ui/c9FamilyKOutcomeDamageProduction.test.ts
+      - name: Verify existing semantic outcome regressions
+        run: npx tsx --test tests/ui/installedCommonPlaySemanticOutcomeProduction.test.ts tests/ui/c9FamilyJAttackPersistence.test.ts
+      - name: Verify TypeScript
+        run: npx tsc --noEmit
+      - name: Verify coverage ledger structure
+        run: node scripts/check-v1-mechanism-coverage.mjs
+      - name: Publish verified slice and remove one-shot workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/c9-family-k-outcome-damage-71304.yml
+          git add src/domain/commonPlayOperationRuntime.ts schemas/common-play-contract.schema.json tests/ui/c9FamilyKOutcomeDamageProduction.test.ts
+          git commit -m "feat(c9): support outcome-conditioned damage"
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
+      - name: Cleanup one-shot workflow after failure
+        if: failure()
+        run: |
+          git rebase --abort || true
+          git reset --hard origin/agent/c9-gate-n-coverage-reconciliation
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm -f .github/workflows/c9-family-k-outcome-damage-71304.yml || true
+          if ! git diff --cached --quiet; then
+            git commit -m "chore(c9): remove failed Family K verifier"
+            git pull --rebase origin agent/c9-gate-n-coverage-reconciliation || true
+            git push origin HEAD:agent/c9-gate-n-coverage-reconciliation || true
+          fi
