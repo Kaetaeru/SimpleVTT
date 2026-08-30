@@ -97,6 +97,13 @@ jobs:
               'return previousRespondToInterrupt.call(this,accept);',
               'return previousRespondToInterrupt.call(this,accept,selectedIds);',
           )
+          forward_optional(
+              'src/app/phase09RealTurnRuntimeAdapter.ts',
+              'MockAdapter.prototype.respondToInterrupt=async function respondToInterruptWithTurnRuntime(accept:boolean) {',
+              'MockAdapter.prototype.respondToInterrupt=async function respondToInterruptWithTurnRuntime(accept:boolean,selectedIds?:string[]) {',
+              'return previousRespondToInterrupt.call(this,accept);',
+              'return previousRespondToInterrupt.call(this,accept,selectedIds);',
+          )
 
           connected=Path('src/app/connectedActionRoutingAdapter.ts').read_text(encoding='utf-8')
           required=[
@@ -122,7 +129,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/domain/commonPlayOperationRuntime.ts src/app/contracts.ts src/app/mockAdapter.ts src/app/installedCommonPlayRuntimeAdapter.ts src/app/connectedInterruptResponsePort.ts src/app/connectedActionRoutingAdapter.ts src/app/connectedSessionWire.ts src/app/commonPlayInterceptorProductionRuntimeAdapter.ts src/app/consumableD20BonusEffectFollowUpRuntimeAdapter.ts src/app/rogueCoreRuntimeAdapter.ts src/app/monkOpenHandQuiveringPalmRuntimeAdapter.ts tests/ui/c9FamilyQChoiceInteractionProduction.test.ts
+          git add src/domain/commonPlayOperationRuntime.ts src/app/contracts.ts src/app/mockAdapter.ts src/app/installedCommonPlayRuntimeAdapter.ts src/app/connectedInterruptResponsePort.ts src/app/connectedActionRoutingAdapter.ts src/app/connectedSessionWire.ts src/app/commonPlayInterceptorProductionRuntimeAdapter.ts src/app/consumableD20BonusEffectFollowUpRuntimeAdapter.ts src/app/rogueCoreRuntimeAdapter.ts src/app/monkOpenHandQuiveringPalmRuntimeAdapter.ts src/app/phase09RealTurnRuntimeAdapter.ts tests/ui/c9FamilyQChoiceInteractionProduction.test.ts
           git rm -f --ignore-unmatch .github/workflows/c9-family-q-choice-71304.yml .github/workflows/c9-family-q-choice-r2-71304.yml .github/workflows/c9-family-q-choice-r3-71304.yml .github/workflows/c9-family-q-choice-r4-71304.yml .github/workflows/c9-family-q-choice-r5-71304.yml .github/workflows/c9-family-q-choice-diagnostic-71304.yml .github/workflows/c9-family-q-choice-kernel-71304.yml .github/workflows/c9-family-q-choice-kernel-fix-71304.yml
           git commit -m "feat(c9): carry portable choice interactions through Resolver"
           for attempt in 1 2 3 4 5; do
