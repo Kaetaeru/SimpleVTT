@@ -141,3 +141,33 @@ When work stops before Gate N is finished, update this document with:
 - commands/checks that passed or failed;
 - the first unresolved blocker;
 - one `Next Exact Action` that another Codex run can execute without repeating completed work.
+
+## Current checkpoint — 2026-08-31
+
+- Verified code/ledger HEAD before this handoff commit: `00bca5995a9cf1119d3d173e8ff50b287f3d05ef`.
+- Branch: `agent/codex-c9-gate-n-finalization` (local branch was five commits ahead of its remote at this checkpoint).
+- Family N is `IMPLEMENTED`: the first repository-wide build failure was a stale pre-Family-L maximum-HP rejection test. The already-landed generic dependent cleanup, identity rename, duration, suppression, persistence, connected replay, and Undo evidence all passed.
+- Family X is `IMPLEMENTED`: production Character/DM inventory paths now share `commonPlayItemInventoryProjection.ts` and `resolveCommonPlayInventoryTransaction`; arbitrary owned items project installed Common Play entry points; item payment, charge/recharge, durable restart, Party Stash transfer/compensation, connected replay/retry/reconnect, and Undo evidence passed.
+- Current ledger: 36 total, 25 `IMPLEMENTED`, 11 `INCOMPLETE`.
+- Current first incomplete family: Y `attunement-magic-item`.
+- Worktree was clean at `00bca599` before this documentation update.
+
+### Validation completed on the checkpoint
+
+- Family N required focused suite: PASS (12/12).
+- Family X focused domain/production/connected/persistence suite: PASS (39/39).
+- `npm run build`: PASS on `00bca599` (content generation, typecheck, repository build suites, Vite production build).
+- `node scripts/check-v1-mechanism-coverage.mjs`: PASS, 25 implemented / 11 incomplete.
+- `node scripts/check-legacy-execution-boundary.mjs`: PASS, 84 classified imports / 18 guarded named adapter paths / 0 unclear.
+- `git diff --check`: PASS.
+- `node scripts/check-v1-mechanism-coverage.mjs --gate-n`: expected FAIL only for Y, Z, AA, AC, AD, AE, AF, AG, AH, AI, AJ.
+
+### First unresolved blocker
+
+Family Y already has a generic normative domain resolver for Short-Rest attunement, prerequisites, capacity, exclusive ownership, benefit activation, curses, rule-driven loss, charge lifecycle, and identity rename. Production still exposes `toggleItemAttunement` as an immediate boolean mutation, which bypasses the Short Rest process and generic authority. Do not promote Y from the domain test alone.
+
+### Next Exact Action
+
+Replace the production instant attunement mutation with one durable app boundary that invokes `resolveCommonPlayAttunement` from an explicit completed-Short-Rest command, preserves source/runtime item state through restart, and produces connected replay/retry/reconnect/Undo evidence under an arbitrary renamed item identity. Then promote Family Y only if its complete focused verification passes.
+
+Push note: local GitHub push from this Codex host is blocked because no non-interactive GitHub credential is available; `git -c http.sslBackend=openssl push origin agent/codex-c9-gate-n-finalization` reaches GitHub but cannot read a username. No self-publishing workflow was added.
