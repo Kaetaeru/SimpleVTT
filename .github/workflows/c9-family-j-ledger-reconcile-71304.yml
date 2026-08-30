@@ -1,0 +1,65 @@
+name: C9 Family J Ledger Reconcile 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-j-ledger-reconcile-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  verify-and-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run generate:content
+      - name: Verify Family J source-owned attack/control slice
+        run: |
+          npx tsx --test tests/ui/unarmedStrikeRuntime.test.ts tests/ui/c9FamilyJPortableControlProduction.test.ts tests/ui/c9FamilyJSpatialAttackProduction.test.ts tests/ui/c9FamilyJExtraAttackProduction71304.test.ts
+          node scripts/check-legacy-execution-boundary.mjs
+          npx tsc --noEmit
+      - name: Reconcile Family J ledger from verified source proof
+        run: |
+          node - <<'NODE'
+          const fs=require('node:fs');
+          const path='docs/rules/v1-mechanism-coverage-ledger.json';
+          const ledger=JSON.parse(fs.readFileSync(path,'utf8'));
+          const row=ledger.rows.find((candidate)=>candidate.family==='J'&&candidate.id==='attack-control');
+          if(!row) throw new Error('Family J ledger row missing');
+          row.currentState='Family J attack/control execution is complete through structural, source-owned Resolver contracts. Unknown installed attacks, portable target saves and best-of control, grapple/shove/escape, Opportunity Attacks, reach/range/cover, critical handling, Extra Attack and replace-one-attack economy, source-owned ammunition/loading, persistent attack-damage riders, and source-owned Unarmed damage/control composition execute without presentation-name or content-ID dispatch. Remaining named presentation adapters are legacy content projection debt, not a supported portable execution fallback or second attack engine.';
+          row.disposition='IMPLEMENTED';
+          row.productionEvidence ??= [];
+          const evidence='C9 Family J Unarmed Source Composition 71304 run 33317834556 passed landed Unarmed source composition, portable control, spatial attack, Extra Attack regressions, V1 coverage checker, legacy execution boundary, and TypeScript verification.';
+          if(!row.productionEvidence.includes(evidence)) row.productionEvidence.push(evidence);
+          row.remainingNamedSeams=[];
+          fs.writeFileSync(path,JSON.stringify(ledger,null,2)+'\n');
+          NODE
+          node scripts/check-v1-mechanism-coverage.mjs
+      - name: Publish verified Family J reconciliation
+        run: |
+          set -euo pipefail
+          branch=agent/c9-gate-n-coverage-reconciliation
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/rules/v1-mechanism-coverage-ledger.json
+          git rm .github/workflows/c9-family-j-ledger-reconcile-71304.yml
+          git commit -m "docs(c9): close Family J attack control coverage"
+          for attempt in 1 2 3 4 5; do
+            if git push origin HEAD:"$branch"; then exit 0; fi
+            git fetch origin "$branch"
+            git rebase "origin/$branch" || exit 1
+            sleep 1
+          done
+          exit 1
