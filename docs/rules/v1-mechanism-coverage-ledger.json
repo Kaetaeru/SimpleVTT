@@ -915,7 +915,7 @@
         "compoundDamage.test.ts",
         "resolutionHealthOps.ts"
       ],
-      "currentState": "Bounded typed damage/healing plus portable Temporary HP are production-proven; portable character instant-death overkill is production-proven with identity rename and Undo; remaining life/object semantics are incomplete Portable stabilization at 0 HP is production-proven with event-native Undo and external identity rename.",
+      "currentState": "Bounded typed damage/healing plus portable Temporary HP are production-proven; portable character instant-death overkill is production-proven with identity rename and Undo; remaining life/object semantics are incomplete Portable stabilization at 0 HP is production-proven with event-native Undo and external identity rename. Portable damage-at-zero is production-proven for unknown and fully renamed external RuleModules, including durable death-save failure write-back and event-native Undo.",
       "requiredSemantics": [
         "typed/compound damage",
         "resistance",
@@ -947,13 +947,15 @@
         "C9 Family L Portable Temporary HP 7130 run 33311003691: focused production test, coverage checker, legacy execution boundary, and tsc --noEmit passed",
         "c9FamilyLTemporaryHpProduction.test.ts executes an unknown installed temp-hp.grant through production Common Play, Resolver Temporary HP state change, and one-step Undo",
         "c59c47cad521bdd6dcfa6cffac09b353621cce17 test(c9): target active character for instant death; C9 Family L Damage Defense 71304 run 33315292373 passed unknown/renamed portable character instant-death overkill plus event-native Undo, V1 coverage checker, legacy execution boundary, and tsc --noEmit",
-        "325ddee91c87855c35816f5f16fc8134bb709209 test(c9): prove portable stabilization; C9 Family L Stabilize 71304 run 33315607390 passed unknown/renamed RuleModule 0-HP stabilization, event-native Undo, existing Family L regressions, V1 coverage checker, legacy execution boundary, and tsc --noEmit"
+        "325ddee91c87855c35816f5f16fc8134bb709209 test(c9): prove portable stabilization; C9 Family L Stabilize 71304 run 33315607390 passed unknown/renamed RuleModule 0-HP stabilization, event-native Undo, existing Family L regressions, V1 coverage checker, legacy execution boundary, and tsc --noEmit",
+        "c9FamilyLDamageAtZeroProduction71304.test.ts proves unknown installed Common Play damage at 0 HP records the SRD death-save failure through production Resolver, durable character write-back, and event-native Undo"
       ],
       "identityInvarianceEvidence": [
         "c9FamilyLTemporaryHpProduction.test.ts renamed external module/content/mechanic preserves Temporary HP semantics",
         "c9FamilyLTemporaryHpProduction.test.ts preserves Temporary HP behavior across unrelated external module/content/mechanic identities",
         "c9FamilyLDamageDefenseProduction.test.ts repeats the portable character instant-death threshold and Undo behavior under unrelated external module/content/mechanic identities",
-        "c9FamilyLStabilizeProduction.test.ts repeats 0-HP stabilization and Undo under completely unrelated external module/content/mechanic identities"
+        "c9FamilyLStabilizeProduction.test.ts repeats 0-HP stabilization and Undo under completely unrelated external module/content/mechanic identities",
+        "c9FamilyLDamageAtZeroProduction71304.test.ts repeats the damage-at-zero failure and Undo flow under unrelated external module/content/mechanic identities"
       ],
       "connectedEvidenceIfRelevant": [
         "c9FamilyLTemporaryHpProduction.test.ts Host/Client authoritative replay, event-native Undo, and fresh reconnect converge Temporary HP",
@@ -964,7 +966,7 @@
       ],
       "remainingNamedSeams": [
         "complete generic threshold/reduction/critical-dice and max-HP acceptance remains incomplete",
-        "0 HP/unconscious and stabilization are production-proven; damage-at-zero and death-save production acceptance remain incomplete",
+        "0 HP/unconscious and stabilization are production-proven; death-save production acceptance remains incomplete",
         "Object/Vehicle damage production acceptance remains incomplete",
         "named feature/spell HP execution remains migration debt where it bypasses portable Common Play"
       ],
