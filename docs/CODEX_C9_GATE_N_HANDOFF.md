@@ -169,10 +169,10 @@ When work stops before Gate N is finished, update this document with:
 
 ### First unresolved blocker
 
-Family AE has identity-independent exposure/environment kernels but no durable production owner. `RulesRuntimeState` does not retain an exposure instance, authoritative elapsed-clock advancement is not joined to interval-triggered generic save/damage/Exhaustion operations, and recovery/reconnect/restart/Undo therefore have no state-change evidence. Do not promote AE from its current kernel tests.
+Family AE now has a durable generic exposure artifact owner at `5b50bcd6`; production create/advance/recover, identity rename, and Undo pass 14/14 focused tests. The remaining blocker is joining newly crossed intervals to generic save/damage/Exhaustion operations and proving connected replay/reconnect plus restart persistence. Do not promote AE yet.
 
 ### Next Exact Action
 
-Complete Family AE by adding the smallest generic durable exposure state owner to the existing Resolver/runtime-state-change path. Compose authoritative elapsed-time advancement with threshold-only save/damage/effect operations and recovery in one revision-bound transaction; prove falling, suffocation, dehydration/malnutrition/extreme exposure, poison/trap, identity rename, connected replay/reconnect/Undo, and restart persistence. Run focused verification and `npm run build`, then promote AE only if all evidence is green.
+Continue Family AE at `5b50bcd6`: compose `advance-exposure` newly crossed intervals with threshold-only generic save/damage/effect operations in one transaction, then prove falling, suffocation, dehydration/malnutrition/extreme exposure, poison/trap, connected replay/reconnect/Undo, and restart persistence. Run focused verification and `npm run build`, then promote AE only if all evidence is green.
 
 Gate N remains incomplete. Do not repeat Families Z, AA, AC, or AD.
