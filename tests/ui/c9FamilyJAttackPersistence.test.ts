@@ -46,15 +46,17 @@ function packagePayload() {
   });
 }
 
-function persistedHp(adapter:MockAdapter,characterId:string) {
-  return getCharacterLibraryPersistenceStateForTests(adapter)?.document?.characters
-    .find((entry)=>entry.characterId===characterId)?.runtime.hp;
+function persistedHealth(adapter:MockAdapter,characterId:string) {
+  const runtime=getCharacterLibraryPersistenceStateForTests(adapter)?.document?.characters
+    .find((entry)=>entry.characterId===characterId)?.runtime;
+  return runtime ? runtime.hp+runtime.tempHp : undefined;
 }
 
-async function restartedHp(store:MemoryCharacterLibraryStore) {
+async function restartedHealth(store:MemoryCharacterLibraryStore) {
   const restarted=new MockAdapter();
   setCharacterLibraryStoreForTests(restarted,store);
-  return (await restarted.getSnapshot()).activeCharacter.hp;
+  const character=(await restarted.getSnapshot()).activeCharacter;
+  return character.hp+character.tempHp;
 }
 
 test("unknown installed attack damage persists through restart and restores durably through Undo",async()=>{
@@ -71,7 +73,7 @@ test("unknown installed attack damage persists through restart and restores dura
 
   let snapshot=await adapter.getSnapshot();
   const characterId=snapshot.activeCharacter.id;
-  const hpBefore=snapshot.activeCharacter.hp;
+  const healthBefore=snapshot.activeCharacter.hp+snapshot.activeCharacter.tempHp;
   const actionId=installedCommonPlayActionId({
     catalogId:catalogQualifiedId(CONTENT_ID,MODULE_ID,"1"),
     mechanicId:MECHANIC_ID,
@@ -82,13 +84,13 @@ test("unknown installed attack damage persists through restart and restores dura
   await adapter.resolveAction(actionId,[characterId]);
   snapshot=await adapter.getSnapshot();
   assert.equal(snapshot.resolution?.stage,"complete");
-  assert.equal(snapshot.activeCharacter.hp,hpBefore-3,JSON.stringify(snapshot.resolution));
-  assert.equal(persistedHp(adapter,characterId),hpBefore-3);
-  assert.equal(await restartedHp(characterStore),hpBefore-3);
+  assert.equal(snapshot.activeCharacter.hp+snapshot.activeCharacter.tempHp,healthBefore-3,JSON.stringify(snapshot.resolution));
+  assert.equal(persistedHealth(adapter,characterId),healthBefore-3);
+  assert.equal(await restartedHealth(characterStore),healthBefore-3);
 
   await adapter.undoLastResolution();
   snapshot=await adapter.getSnapshot();
-  assert.equal(snapshot.activeCharacter.hp,hpBefore);
-  assert.equal(persistedHp(adapter,characterId),hpBefore);
-  assert.equal(await restartedHp(characterStore),hpBefore);
+  assert.equal(snapshot.activeCharacter.hp+snapshot.activeCharacter.tempHp,healthBefore);
+  assert.equal(persistedHealth(adapter,characterId),healthBefore);
+  assert.equal(await restartedHealth(characterStore),healthBefore);
 });
