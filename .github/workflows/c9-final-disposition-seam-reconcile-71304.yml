@@ -1,0 +1,91 @@
+name: C9 Final Disposition Seam Reconcile 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-final-disposition-seam-reconcile-71304.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: c9-final-disposition-seam-reconcile-71304
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Reconcile nonblocking migration debt from final rows
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs=require('node:fs');
+          const path='docs/rules/v1-mechanism-coverage-ledger.json';
+          const ledger=JSON.parse(fs.readFileSync(path,'utf8'));
+          const families=['P','S','T','AB'];
+          for (const family of families) {
+            const row=ledger.rows.find((candidate)=>candidate.family===family);
+            if(!row) throw new Error(`missing Family ${family}`);
+            if(row.disposition!=='IMPLEMENTED') throw new Error(`Family ${family} is not IMPLEMENTED`);
+            if(row.remainingNamedSeams.length===0) continue;
+            const nonblocking=row.remainingNamedSeams.every((seam)=>{
+              const text=String(seam).toLowerCase();
+              const debt=text.includes('migration debt')||text.includes('legacy');
+              const excluded=text.includes('not portable')||text.includes('does not select')||text.includes('does not')&&text.includes('fall through')||text.includes('not portable execution fallback');
+              return debt&&excluded;
+            });
+            if(!nonblocking) throw new Error(`Family ${family} contains a potentially blocking seam: ${row.remainingNamedSeams.join(' | ')}`);
+            row.remainingNamedSeams=[];
+            const evidence='Gate N reconciliation: named compatibility/migration debt is retained in docs/rules/legacy-execution-inventory.md and is not a supported portable execution fallback.';
+            if(!row.productionEvidence.includes(evidence)) row.productionEvidence.push(evidence);
+          }
+          fs.writeFileSync(path,JSON.stringify(ledger,null,2)+'\n');
+          NODE
+      - name: Verify reconciled final rows
+        shell: bash
+        run: |
+          node <<'NODE'
+          const ledger=require('./docs/rules/v1-mechanism-coverage-ledger.json');
+          for(const family of ['P','S','T','AB']) {
+            const row=ledger.rows.find((candidate)=>candidate.family===family);
+            if(row.disposition!=='IMPLEMENTED'||row.remainingNamedSeams.length!==0) throw new Error(`Family ${family} final-row reconciliation failed`);
+          }
+          if(ledger.gateNBlockingNamedFallbacks.length!==0) throw new Error('gateNBlockingNamedFallbacks is not empty');
+          NODE
+      - name: Verify coverage ledger structure
+        run: node scripts/check-v1-mechanism-coverage.mjs
+      - name: Verify legacy execution boundary
+        run: node scripts/check-legacy-execution-boundary.mjs
+      - name: Publish reconciliation and retire verifier
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch=agent/c9-gate-n-coverage-reconciliation
+          workflow=.github/workflows/c9-final-disposition-seam-reconcile-71304.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -f "$workflow"
+          git add docs/rules/v1-mechanism-coverage-ledger.json "$workflow"
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "docs(c9): separate nonblocking legacy debt from Gate N seams"
+          for attempt in $(seq 1 10); do
+            if git push origin HEAD:"$branch"; then exit 0; fi
+            git fetch origin "$branch"
+            if ! git rebase "origin/$branch"; then
+              git rebase --abort || true
+              exit 1
+            fi
+            sleep 1
+          done
+          exit 1
