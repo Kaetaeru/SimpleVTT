@@ -23,6 +23,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm run generate:content
       - name: Reconcile latest branch before editing
         shell: bash
         run: |
@@ -154,6 +155,7 @@ jobs:
           branch=agent/c9-gate-n-coverage-reconciliation
           git fetch origin "$branch"
           git rebase "origin/$branch"
+          npm run generate:content
           node --import tsx --test tests/ui/c9FamilyEConditionSelectorProduction.test.ts tests/ui/c9FamilyETagSelectorProduction.test.ts tests/ui/commonPlayRichSelectorProduction.test.ts
           node scripts/check-v1-mechanism-coverage.mjs
           node scripts/check-legacy-execution-boundary.mjs
