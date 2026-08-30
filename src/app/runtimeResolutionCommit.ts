@@ -71,8 +71,10 @@ export async function commitProductionRuntimeResolution(
   }
 
   internal.scene=projected.scene;
-  internal.activeCharacter.resources=projected.resources;
-  internal.activeCharacter.items=projected.items;
+  if (!writeBack.changed) {
+    internal.activeCharacter.resources=projected.resources;
+    internal.activeCharacter.items=projected.items;
+  }
   const resolution:ResolutionView={
     id:presentation.resolutionId,
     actorId:presentation.actorId,
