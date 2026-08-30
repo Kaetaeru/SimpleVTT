@@ -413,7 +413,7 @@
         "common-play-contract.schema.json: allocationPlan",
         "legacy production spell allocation"
       ],
-      "currentState": "Schema only; authoritative selection/retry production path missing",
+      "currentState": "Generic fixed-pool allocation is PRODUCTION for unknown installed Common Play with integer/per-target bounds, atomic pre-execution validation, Undo, rename invariance, and Host/Client convergence; durable pending-decision reconnect resume and automatic allocation policy remain incomplete.",
       "requiredSemantics": [
         "fixed pool",
         "projectile/charge/die allocation",
@@ -427,14 +427,26 @@
       ],
       "transactionDomain": "Typed pending decision plus Resolver",
       "disposition": "INCOMPLETE",
-      "implementationEvidence": [],
-      "productionEvidence": [],
-      "identityInvarianceEvidence": [],
-      "connectedEvidenceIfRelevant": [],
+      "implementationEvidence": [
+        "commonPlayAllocationRuntime.ts resolves typed allocation requests with revision/idempotency identity, fixed-pool totals, per-target bounds, duplicate rejection, and candidate validation",
+        "commonPlayOperationRuntime.ts parses portable entryPoint allocation definitions structurally without content-name or content-ID dispatch",
+        "installedCommonPlayRuntimeAdapter.ts validates allocation before downstream Resolver compile and preserves repeated selected-target sequence as authored integer allocation"
+      ],
+      "productionEvidence": [
+        "installedCommonPlayAllocationProductionRuntime.test.ts rejects under-allocation before downstream commit, commits a 2+1 fixed-pool allocation, projects deduplicated targets, and restores the downstream economy event on Undo",
+        "C9 Family F Allocation Convergence run 33309807201 passed allocation domain/production/convergence tests, legacy execution boundary, and tsc --noEmit"
+      ],
+      "identityInvarianceEvidence": [
+        "commonPlayAllocationRuntime.test.ts proves allocation behavior is content-identity invariant",
+        "installedCommonPlayAllocationProductionRuntime.test.ts preserves production allocation semantics under complete external module/content/mechanic rename"
+      ],
+      "connectedEvidenceIfRelevant": [
+        "installedCommonPlayAllocationProductionRuntime.test.ts proves the allocation-gated downstream commit converges once through Host/Client event transport and duplicate replay is rejected as duplicate"
+      ],
       "persistenceEvidenceIfRelevant": [],
       "remainingNamedSeams": [
-        "production spell automatic allocation",
-        "Paladin healing allocation"
+        "durable pending allocation decision and reconnect/retry resume are not yet production-backed",
+        "legacy named Magic Missile automatic projectile allocation and Paladin healing allocation have not yet converged on the portable allocation path"
       ],
       "connectedRelevant": true,
       "persistenceRelevant": true
