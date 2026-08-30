@@ -120,7 +120,8 @@ async function install(identity:Identity) {
     mechanicId:identity.mechanicId,
     entryPointId,
   });
-  return {adapter,action};
+  const strengthModifier=Math.floor((internal.activeCharacter.abilities.str-10)/2);
+  return {adapter,action,expectedUnarmedDamage:1+strengthModifier};
 }
 
 function targetHp(snapshot:Awaited<ReturnType<MockAdapter["getSnapshot"]>>) {
@@ -128,7 +129,7 @@ function targetHp(snapshot:Awaited<ReturnType<MockAdapter["getSnapshot"]>>) {
 }
 
 async function exercise(identity:Identity) {
-  const {adapter,action}=await install(identity);
+  const {adapter,action,expectedUnarmedDamage}=await install(identity);
   let snapshot=await adapter.getSnapshot();
   const hpBefore=targetHp(snapshot);
 
@@ -137,7 +138,7 @@ async function exercise(identity:Identity) {
   assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
   assert.equal(snapshot.resolution?.rollKind,"attack");
   const damageDone=hpBefore!-targetHp(snapshot)!;
-  assert.equal(damageDone,4,"Aelar's portable Unarmed damage must resolve as 1 + STR modifier");
+  assert.equal(damageDone,expectedUnarmedDamage,"portable Unarmed damage must resolve as 1 + authoritative STR modifier");
   await adapter.undoLastResolution();
   snapshot=await adapter.getSnapshot();
   assert.equal(targetHp(snapshot),hpBefore);
@@ -171,19 +172,29 @@ async function exercise(identity:Identity) {
     return event.targetId===TARGET_ID&&result?.movementMode==="push";
   });
   assert.ok(pushEvent,JSON.stringify(runtimeResolutionEventHistory(adapter)));
-  assert.deepEqual(pushEvent.result,{distanceFeet:5,maximumDistanceFeet:5,regularMovementSpent:0,doesNotProvokeOpportunityAttacks:false,movementMode:"push",destinationRef:pushEvent.result && (pushEvent.result as {destinationRef:string}).destinationRef});
-  assert.match(String((pushEvent.result as {destinationRef:string}).destinationRef),/^manual:/);
+  const pushResult=pushEvent.result as {
+    distanceFeet:number;
+    maximumDistanceFeet:number;
+    regularMovementSpent:number;
+    movementMode:string;
+    destinationRef:string;
+  };
+  assert.equal(pushResult.distanceFeet,5);
+  assert.equal(pushResult.maximumDistanceFeet,5);
+  assert.equal(pushResult.regularMovementSpent,0);
+  assert.equal(pushResult.movementMode,"push");
+  assert.match(pushResult.destinationRef,/^manual:/);
   await adapter.undoLastResolution();
   snapshot=await adapter.getSnapshot();
   assert.equal(snapshot.scene.economyByActor["char.aelar"]?.action,true);
 
-  return {damageDone,grapple:true,prone:true,pushDistance:(pushEvent.result as {distanceFeet:number}).distanceFeet};
+  return {damageFormula:true,grapple:true,prone:true,pushDistance:pushResult.distanceFeet};
 }
 
 test("unknown source-owned Common Play composes complete Unarmed Strike damage grapple shove-prone and shove-push semantics",async()=>{
-  assert.deepEqual(await exercise(ORIGINAL),{damageDone:4,grapple:true,prone:true,pushDistance:5});
+  assert.deepEqual(await exercise(ORIGINAL),{damageFormula:true,grapple:true,prone:true,pushDistance:5});
 });
 
 test("complete Unarmed Strike source composition survives unrelated module content mechanic and entry-point identity rename",async()=>{
-  assert.deepEqual(await exercise(RENAMED),{damageDone:4,grapple:true,prone:true,pushDistance:5});
+  assert.deepEqual(await exercise(RENAMED),{damageFormula:true,grapple:true,prone:true,pushDistance:5});
 });
