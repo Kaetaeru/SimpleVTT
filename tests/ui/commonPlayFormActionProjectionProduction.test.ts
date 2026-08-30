@@ -24,9 +24,7 @@ function packagePayload(prefix:string,actionPolicy:ActionPolicy) {
     catalogId:catalogQualifiedId(formContentId,moduleId,"1"),mechanicId:formMechanicId,entryPointId:"transform",
   });
   return {
-    definitionActionId,
-    projectedActionId:runtimeArtifactCommonPlayActionId(ACTOR_ID,definitionActionId),
-    transformActionId,
+    projectedActionId:runtimeArtifactCommonPlayActionId(ACTOR_ID,definitionActionId),transformActionId,
     json:JSON.stringify({
       schemaVersion:"0.1-draft",moduleId,moduleVersion:"1",
       rulesProfile:{id:"dnd.srd-5.2.1",version:"0.1-draft"},defaultLocale:"en",
@@ -78,15 +76,15 @@ async function projectionShape(prefix:string,actionPolicy:ActionPolicy) {
 
   let damage=0;
   if(actionPolicy!=="retain") {
-    const hpBefore=snapshot.activeCharacter.hp;
+    const effectiveHpBefore=snapshot.activeCharacter.hp+snapshot.activeCharacter.tempHp;
     await adapter.resolveAction(pack.projectedActionId,[ACTOR_ID]);
     snapshot=await adapter.getSnapshot();
-    damage=hpBefore-snapshot.activeCharacter.hp;
+    damage=effectiveHpBefore-(snapshot.activeCharacter.hp+snapshot.activeCharacter.tempHp);
     assert.equal(damage,1,JSON.stringify(snapshot.resolution));
     assert.equal(snapshot.resolution?.stage,"complete");
     await adapter.undoLastResolution();
     snapshot=await adapter.getSnapshot();
-    assert.equal(snapshot.activeCharacter.hp,hpBefore);
+    assert.equal(snapshot.activeCharacter.hp+snapshot.activeCharacter.tempHp,effectiveHpBefore);
     assert.equal(snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)?.artifacts?.some((artifact)=>artifact.artifactKind==="form"),true);
   }
   return {policy:actionPolicy,basePreserved:actionPolicy!=="replace",projected:afterIds.includes(pack.projectedActionId),damage};
@@ -113,4 +111,15 @@ test("undoing form creation restores the original action projection",async()=>{
   snapshot=await adapter.getSnapshot();
   assert.deepEqual((snapshot.scene.actionsByActor[ACTOR_ID]??[]).map((action)=>action.id),beforeIds);
   assert.equal(snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)?.artifacts?.some((artifact)=>artifact.artifactKind==="form"),false);
+});
+
+
+test("runtime artifact action ids cannot bypass authoritative form state",async()=>{
+  const {adapter,pack}=await prepare("unknown-form-actions-forged","grant");
+  const before=await adapter.getSnapshot();
+  const effectiveHpBefore=before.activeCharacter.hp+before.activeCharacter.tempHp;
+  await adapter.resolveAction(pack.projectedActionId,[ACTOR_ID]);
+  const after=await adapter.getSnapshot();
+  assert.equal(after.activeCharacter.hp+after.activeCharacter.tempHp,effectiveHpBefore);
+  assert.notEqual(after.resolution?.actionId,pack.projectedActionId);
 });

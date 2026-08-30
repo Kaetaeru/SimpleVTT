@@ -260,6 +260,17 @@ function projectedArtifactAction(
   };
 }
 
+export async function projectCommonPlayRuntimeArtifactAction(
+  adapter:MockAdapter,
+  actionId:string,
+  actorId:string,
+  snapshot:AppSnapshot,
+  state:RulesRuntimeState,
+) {
+  const action=await commonPlayAction(adapter,actionId);
+  return action?projectedArtifactAction(adapter,actionId,actorId,action,snapshot.scene,state):undefined;
+}
+
 async function projectRuntimeArtifactActions(adapter:MockAdapter,snapshot:AppSnapshot) {
   const state=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene);
   if(!state) return;
@@ -567,6 +578,20 @@ function hpPresentation(
   };
 }
 
+function authorizedUnprojectedFormAction(
+  state:RulesRuntimeState|undefined,
+  reference:{actorId:string;definitionActionId:string},
+  snapshot:AppSnapshot,
+) {
+  if(!state) return false;
+  return (state.artifacts??[]).some((artifact)=>{
+    const form=artifact.artifactKind==="form"?artifact.form:undefined;
+    if(!form||form.targetActorId!==reference.actorId||form.actionPolicy==="retain"||!form.actionDefinitionIds.includes(reference.definitionActionId)) return false;
+    const controllerId=form.controllerId??form.targetActorId;
+    return snapshot.role==="dm"||controllerId===snapshot.activeCharacter.id;
+  });
+}
+
 interface PreparedCommonPlayAction {
   internal:AdapterState;
   state:RulesRuntimeState;
@@ -587,11 +612,12 @@ function prepareCommonPlayAction(
   action:CommonPlayProductionAction,
   actorIdOverride?:string,
   allowOffTurn=false,
+  allowUnprojectedRuntimeArtifact=false,
 ):PreparedCommonPlayAction|undefined {
   const internal=adapter as unknown as AdapterState;
   const projectedAction=Object.values(internal.scene.actionsByActor).flat().find((candidate)=>candidate.id===actionId);
   const actorId=actorIdOverride??projectedAction?.actorId??internal.activeCharacter.id;
-  if(actorIdOverride&&projectedAction?.actorId!==actorIdOverride) return undefined;
+  if(actorIdOverride&&projectedAction?.actorId!==actorIdOverride&&!allowUnprojectedRuntimeArtifact) return undefined;
   const actorEntity=internal.scene.entities.find((candidate)=>candidate.id===actorId);
   if(!actorEntity) return undefined;
   const actor={id:actorId,name:actorEntity.name};
@@ -1011,7 +1037,10 @@ MockAdapter.prototype.resolveAction=async function resolveCommonPlayProductionAc
   const definitionActionId=runtimeArtifactReference?.definitionActionId??actionId;
   const action=await commonPlayAction(this,definitionActionId);
   if (!action) return previousResolveAction.call(this,actionId,targetIds);
-  const prepared=prepareCommonPlayAction(this,actionId,targetIds,action,runtimeArtifactReference?.actorId);
+  const runtimeArtifactSnapshot=runtimeArtifactReference?await previousGetSnapshot.call(this):undefined;
+  const runtimeArtifactState=runtimeArtifactReference?snapshotAdapterTurnRuntimeState(this,(this as unknown as AdapterState).scene):undefined;
+  const allowUnprojectedRuntimeArtifact=Boolean(runtimeArtifactReference&&runtimeArtifactSnapshot&&authorizedUnprojectedFormAction(runtimeArtifactState,runtimeArtifactReference,runtimeArtifactSnapshot));
+  const prepared=prepareCommonPlayAction(this,actionId,targetIds,action,runtimeArtifactReference?.actorId,false,allowUnprojectedRuntimeArtifact);
   if(!prepared) return (this as unknown as AdapterState).getSnapshot();
   const resolutionId=`common-play.${Date.now()}.${Math.floor(Math.random()*1000)}`;
   const interaction=action.lowered.kind==="operations"
@@ -1085,12 +1114,18 @@ MockAdapter.prototype.respondToInterrupt=async function respondToCommonPlayInter
   const entryPoint=action.lowered.definition.entryPoints.find((candidate)=>candidate.id===action.entryPointId);
   if(!entryPoint?.interaction||entryPoint.interaction.id!==interrupt.id) return previousRespondToInterrupt.call(this,accept);
   const projected=Object.values(internal.scene.actionsByActor).flat().find((candidate)=>candidate.id===resolution.actionId&&candidate.actorId===resolution.actorId);
-  if(resolution.actorId!==internal.activeCharacter.id&&!projected) {
+  const runtimeArtifactSnapshot=runtimeArtifactReference?await previousGetSnapshot.call(this):undefined;
+  const runtimeArtifactState=runtimeArtifactReference?snapshotAdapterTurnRuntimeState(this,internal.scene):undefined;
+  const allowUnprojectedRuntimeArtifact=Boolean(runtimeArtifactReference&&runtimeArtifactSnapshot&&authorizedUnprojectedFormAction(runtimeArtifactState,runtimeArtifactReference,runtimeArtifactSnapshot));
+  if(runtimeArtifactReference&&!projected&&!allowUnprojectedRuntimeArtifact) {
+    return finishInteraction(internal,resolution,"Common Play 상호작용 재검증 실패");
+  }
+  if(!runtimeArtifactReference&&resolution.actorId!==internal.activeCharacter.id&&!projected) {
     return finishInteraction(internal,resolution,"Common Play 상호작용 재검증 실패");
   }
   if(!accept) return finishInteraction(internal,resolution,"Common Play 상호작용 거절");
 
-  const prepared=prepareCommonPlayAction(this,resolution.actionId,resolution.targetIds,action,runtimeArtifactReference?.actorId);
+  const prepared=prepareCommonPlayAction(this,resolution.actionId,resolution.targetIds,action,runtimeArtifactReference?.actorId,false,allowUnprojectedRuntimeArtifact);
   if(!prepared) return finishInteraction(internal,resolution,"Common Play 상호작용 현재 권한 재검증 실패");
   const result=await executeCommonPlayAction(this,resolution.actionId,action,prepared,resolution.id,interrupt.id);
   if(result.status==="rejected") return finishInteraction(internal,resolution,`Common Play 상호작용 적용 거부: ${result.error}`);
