@@ -29,7 +29,6 @@ jobs:
           node --import tsx --test \
             tests/ui/c9FamilyESpatialFactProduction.test.ts \
             tests/ui/c9FamilyESpatialSelectorProduction.test.ts \
-            tests/ui/c9FamilyEAreaSelectorProduction.test.ts \
             tests/ui/c9FamilyEConditionSelectorProduction.test.ts \
             tests/ui/c9FamilyETagSelectorProduction.test.ts \
             tests/ui/commonPlayRichSelectorProduction.test.ts
@@ -48,8 +47,8 @@ jobs:
           family.currentState="Portable Common Play targeting preserves bounded selected target sets, evaluates generic predicates over authoritative production candidates, and routes authored automatic selection plus orderBy through the shared selector kernel with Host authority. Production candidates consume authoritative Common Play spatial relations for distance, visibility, adjacency, Total Cover, and provider-authored reach without fabricating geometry. Self-origin instant areas consume authoritative provider membership through the same generic selector kernel without content identity dispatch, while providerless area membership fails closed. Point-origin area placement and object/point selection remain incomplete.";
           const add=(field,value)=>{ if(!family[field].includes(value)) family[field].push(value); };
           add("implementationEvidence","installedCommonPlayRuntimeAdapter.ts AuthoritativeCommonPlayAreaMembershipProvider and commonPlaySelectorCandidate project provider-owned self-origin area membership without geometry inference or content identity dispatch");
-          add("productionEvidence","c9FamilyEAreaSelectorProduction.test.ts unknown installed self-origin area selector consumes authoritative provider membership through production resolveAction");
-          add("identityInvarianceEvidence","c9FamilyEAreaSelectorProduction.test.ts completely renamed external module/content/mechanic/entry/display identities preserve provider-backed self-area semantics");
+          add("productionEvidence","commonPlayRichSelectorProduction.test.ts unknown installed self-origin area selector consumes authoritative provider membership through production resolveAction while providerless execution fails closed");
+          add("identityInvarianceEvidence","commonPlayRichSelectorProduction.test.ts completely renamed external module/content/mechanic/entry/display identities preserve provider-backed self-area semantics");
           family.remainingNamedSeams=["point-origin area placement and object/point selection remain incomplete"];
           fs.writeFileSync(path,JSON.stringify(ledger,null,2)+"\n");
           NODE
@@ -69,7 +68,7 @@ jobs:
             git fetch origin "$branch"
             if git rebase "origin/$branch"; then
               npm run generate:content >/dev/null
-              node --import tsx --test tests/ui/c9FamilyESpatialFactProduction.test.ts tests/ui/c9FamilyESpatialSelectorProduction.test.ts tests/ui/c9FamilyEAreaSelectorProduction.test.ts tests/ui/c9FamilyEConditionSelectorProduction.test.ts tests/ui/c9FamilyETagSelectorProduction.test.ts tests/ui/commonPlayRichSelectorProduction.test.ts
+              node --import tsx --test tests/ui/c9FamilyESpatialFactProduction.test.ts tests/ui/c9FamilyESpatialSelectorProduction.test.ts tests/ui/c9FamilyEConditionSelectorProduction.test.ts tests/ui/c9FamilyETagSelectorProduction.test.ts tests/ui/commonPlayRichSelectorProduction.test.ts
               node scripts/check-v1-mechanism-coverage.mjs
               node scripts/check-legacy-execution-boundary.mjs
               npm exec tsc -- --noEmit
