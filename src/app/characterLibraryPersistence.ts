@@ -134,6 +134,7 @@ export function projectCharacterSourceV1(sheet:CharacterSheet):CharacterSourceSn
       level:sheet.level,
       species:sheet.species,
       background:sheet.background,
+      maxHp:sheet.sourceMaxHp ?? sheet.maxHp,
       abilities:cp(sheet.abilities),
       skills:cp(sheet.skills),
       classLevels:sheet.classLevels ? cp(sheet.classLevels) : undefined,
@@ -161,8 +162,10 @@ export function projectCharacterSourceV1(sheet:CharacterSheet):CharacterSourceSn
 }
 
 export function projectCharacterRuntimeDurableV1(sheet:CharacterSheet):CharacterRuntimeDurableSnapshotV1 {
+  const sourceMaxHp=sheet.sourceMaxHp ?? sheet.maxHp;
   return {
     hp:sheet.hp,
+    maxHp:sheet.maxHp===sourceMaxHp ? undefined : sheet.maxHp,
     tempHp:sheet.tempHp,
     lifeFlags:sheet.durableLifeFlags ? cp(sheet.durableLifeFlags) : undefined,
     resources:sheet.resources.map(resourceRuntimeState),
@@ -174,6 +177,7 @@ export function projectCharacterRuntimeDurableV1(sheet:CharacterSheet):Character
 function comparableRuntime(runtime:CharacterRuntimeDurableSnapshotV1):CharacterRuntimeDurableSnapshotV1 {
   return {
     hp:runtime.hp,
+    maxHp:runtime.maxHp,
     tempHp:runtime.tempHp,
     lifeFlags:runtime.lifeFlags ? cp(runtime.lifeFlags) : undefined,
     resources:runtime.resources.map((resource) => ({
@@ -266,6 +270,9 @@ function applySourceSnapshot(sheet:CharacterSheet,source:CharacterSourceSnapshot
   sheet.level=source.build.level;
   sheet.species=source.build.species;
   sheet.background=source.build.background;
+  const sourceMaxHp=source.build.maxHp ?? sheet.sourceMaxHp ?? sheet.maxHp;
+  sheet.sourceMaxHp=sourceMaxHp;
+  sheet.maxHp=sourceMaxHp;
   sheet.abilities=cp(source.build.abilities);
   sheet.skills=cp(source.build.skills);
   sheet.classLevels=source.build.classLevels ? cp(source.build.classLevels) : undefined;
@@ -337,7 +344,10 @@ function materializeItems(record:CharacterLibraryRecordV1):ItemInstanceVm[] {
 export function materializeCharacterRecordV1(record:CharacterLibraryRecordV1):CharacterSheet {
   const sheet = cp(record.materializedCache.sheet);
   applySourceSnapshot(sheet,record.source);
-  sheet.hp = record.runtime.hp;
+  const sourceMaxHp=record.source.build.maxHp ?? sheet.sourceMaxHp ?? sheet.maxHp;
+  sheet.sourceMaxHp=sourceMaxHp;
+  sheet.maxHp=record.runtime.maxHp ?? sourceMaxHp;
+  sheet.hp = Math.min(record.runtime.hp,sheet.maxHp);
   sheet.tempHp = record.runtime.tempHp;
   sheet.resources = materializeResources(record);
   sheet.items = materializeItems(record);

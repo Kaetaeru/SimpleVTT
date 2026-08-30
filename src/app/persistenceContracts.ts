@@ -126,6 +126,7 @@ export interface CharacterSourceSnapshotV1 {
     languages?:string[];
     toolProficiencies?:string[];
     creationSelections:Record<string,string[]>;
+    maxHp?:number;
     notes?:string;
   };
   creationAuthoring?:CharacterCreationAuthoringSourceV1;
@@ -143,6 +144,7 @@ export interface CharacterSourceSnapshotV1 {
 
 export interface CharacterRuntimeDurableSnapshotV1 {
   hp:number;
+  maxHp?:number;
   tempHp:number;
   lifeFlags?:CharacterDurableLifeFlagsV1;
   resources:CharacterResourceRuntimeStateV1[];
@@ -191,6 +193,7 @@ declare module "./contracts" {
     rulesProfileVersion?:string;
     sourceRevision?:number;
     runtimeRevision?:number;
+    sourceMaxHp?:number;
     durableLifeFlags?:CharacterDurableLifeFlagsV1;
   }
 }

@@ -60,9 +60,16 @@ function applyChange(
   fallbackLife?:CharacterDurableLifeFlagsV1,
 ):string|undefined {
   if (change.kind==="hp") {
-    if (change.field==="maximum") return "Character write-back for maximum HP requires an explicit source-model contract";
     const before=direction==="forward" ? change.before : change.after;
     const after=direction==="forward" ? change.after : change.before;
+    if (change.field==="maximum") {
+      if (sheet.maxHp!==before) return `Character write-back drift for ${change.targetId}/${label(change)}: expected ${before}, current ${sheet.maxHp}`;
+      if (!Number.isInteger(after)||after<1) return `Character write-back invalid maximum HP for ${change.targetId}: ${after}`;
+      if (sheet.hp>after) return `Character write-back maximum HP ${after} is below current HP ${sheet.hp} for ${change.targetId}`;
+      if (sheet.sourceMaxHp===undefined) sheet.sourceMaxHp=before;
+      sheet.maxHp=after;
+      return;
+    }
     const current=change.field==="current" ? sheet.hp : sheet.tempHp;
     if (current!==before) return `Character write-back drift for ${change.targetId}/${label(change)}: expected ${before}, current ${current}`;
     if (change.field==="current") sheet.hp=after;
