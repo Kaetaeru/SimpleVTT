@@ -111,7 +111,7 @@ test("portable d20 interceptor lowers authoritative add-die and reroll modes str
 
   const damage=portableReaction();
   Object.assign(damage.interceptors![0],{timing:"damage.rolled",slot:"primary.damage",operations:[{kind:"roll.modify",mode:"add-die",dice:"1d6"}]});
-  assert.throws(()=>lowerCommonPlayReactionDefinition(damage),/primary.damage supports subtract-die only/);
+  assert.throws(()=>lowerCommonPlayReactionDefinition(damage),/primary.damage supports subtract-die or multiply only/);
 });
 
 test("portable d20 interceptor lowers deterministic post-roll roll.modify modes structurally",()=>{
@@ -127,7 +127,7 @@ test("portable d20 interceptor lowers deterministic post-roll roll.modify modes 
 
   const damage=portableReaction();
   Object.assign(damage.interceptors![0],{timing:"damage.rolled",slot:"primary.damage",operations:[{kind:"roll.modify",mode:"replace",value:{value:10}}]});
-  assert.throws(()=>lowerCommonPlayReactionDefinition(damage),/primary.damage supports subtract-die only/);
+  assert.throws(()=>lowerCommonPlayReactionDefinition(damage),/primary.damage supports subtract-die or multiply only/);
 });
 
 test("portable d20 numeric expressions resolve from authoritative owner progression references",()=>{

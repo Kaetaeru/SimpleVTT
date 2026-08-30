@@ -41,7 +41,7 @@ export type CommonPlayRollModifyOperation =
   | { kind:"roll.modify"; mode:"add-die"; dice:string }
   | { kind:"roll.modify"; mode:"subtract-die"; dice:string }
   | { kind:"roll.modify"; mode:"reroll"; dice:string }
-  | { kind:"roll.modify"; mode:"add-flat"|"target-add"|"replace"|"minimum"; value:LiteralExpression };
+  | { kind:"roll.modify"; mode:"add-flat"|"target-add"|"replace"|"minimum"|"multiply"; value:LiteralExpression };
 
 export interface CommonPlayInteractionDefinition {
   id:string;
@@ -265,6 +265,7 @@ function d20RollModifications(
       if(formula.flat!==0) modifications.push({source:`${source}:flat`,mode:"add-flat",value:operation.mode==="subtract-die"?-formula.flat:formula.flat});
       return modifications;
     }
+    if(operation.mode==="multiply")throw new Error("d20.roll multiply is not supported");
     const value=literalValue(operation.value,`d20.roll ${operation.mode} value`);
     if(!Number.isInteger(value)) throw new Error(`d20.roll ${operation.mode} value must be an integer`);
     if((operation.mode==="replace"||operation.mode==="minimum")&&(value<1||value>20)) {
@@ -274,20 +275,31 @@ function d20RollModifications(
   });
 }
 
-function damageRollReduction(
+function damageRollAdjustments(
   definition:CommonPlayReactionDefinition,
   interceptor:CommonPlayDamageRollInterceptor,
   authority:CommonPlayInteractionAuthority|undefined,
+  baseTotal:number,
 ) {
+  let runningTotal=baseTotal;
   return interceptor.operations.map((operation,index)=>{
-    if(operation.kind!=="roll.modify"||operation.mode!=="subtract-die")throw new Error("primary.damage interceptor supports subtract-die only in this bounded slice");
-    const formula=parseDiceFormula(operation.dice,"primary.damage subtract-die");
-    const faces=authority?.modifierDiceFaces?.[index];
-    if(!faces||faces.length!==formula.count||faces.some((face)=>!Number.isInteger(face)||face<1||face>formula.sides))throw new Error(`primary.damage interceptor ${index} requires authoritative die face(s)`);
-    return {
-      source:`common-play:${definition.id}:${interceptor.id}:operation:${index}`,
-      value:-(faces.reduce((sum,face)=>sum+face,0)+formula.flat),
-    };
+    const source=`common-play:${definition.id}:${interceptor.id}:operation:${index}`;
+    let value:number;
+    if(operation.kind!=="roll.modify")throw new Error("primary.damage interceptor requires roll.modify operations");
+    if(operation.mode==="subtract-die") {
+      const formula=parseDiceFormula(operation.dice,"primary.damage subtract-die");
+      const faces=authority?.modifierDiceFaces?.[index];
+      if(!faces||faces.length!==formula.count||faces.some((face)=>!Number.isInteger(face)||face<1||face>formula.sides))throw new Error(`primary.damage interceptor ${index} requires authoritative die face(s)`);
+      value=-(faces.reduce((sum,face)=>sum+face,0)+formula.flat);
+    } else if(operation.mode==="multiply") {
+      const factor=literalValue(operation.value,"primary.damage multiply value");
+      if(factor<0)throw new Error("primary.damage multiply value must be non-negative");
+      value=Math.floor(runningTotal*factor)-runningTotal;
+    } else {
+      throw new Error("primary.damage interceptor supports subtract-die or multiply only in this bounded slice");
+    }
+    runningTotal+=value;
+    return {source,value};
   });
 }
 
@@ -320,9 +332,13 @@ function acceptedPending(profile:RulesProfileLike,inputState:RulesRuntimeState,a
   if(interceptor.slot==="primary.damage") {
     const payments=paymentOperations(definition,sourceActorId,interceptor.id);
     if(intercepted.kind!=="damage-roll")throw new Error("primary.damage interceptor target is not a damage roll");
+    const preview=stagePendingResolution(profile,inputState,{...pending,operations:pending.operations.slice(0,operationIndex+1)});
+    if(preview.status==="rejected")throw new Error(preview.error??"primary.damage preview rejected");
+    const provisional=preview.results[intercepted.id] as DamageRollResolution|undefined;
+    if(!provisional||!Number.isFinite(provisional.total))throw new Error("primary.damage preview result is missing");
     const recalculated:ResolutionOperation={
       ...intercepted,
-      request:{...intercepted.request,flat:[...(intercepted.request.flat??[]),...damageRollReduction(definition,interceptor,authority)]},
+      request:{...intercepted.request,flat:[...(intercepted.request.flat??[]),...damageRollAdjustments(definition,interceptor,authority,provisional.total)]},
     };
     return {...pending,operations:[...pending.operations.slice(0,operationIndex),...payments,recalculated,...pending.operations.slice(operationIndex+1)]};
   }

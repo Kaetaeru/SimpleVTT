@@ -164,7 +164,7 @@ function selectorValues(value:unknown,label:string,allowed:Set<string>) {
   return value as string[];
 }
 
-function lowerD20Interceptor(value:Obj,index:number,options:ReactionLoweringOptions):CommonPlayD20RollInterceptor {
+function lowerD20Interceptor(value:Obj,index:number,options:ReactionLoweringOptions,allowMultiply=false):CommonPlayD20RollInterceptor {
   const label=`Common Play reaction interceptor[${index}]`;
   const eligibilityDefinition=eligibility(value,label);
   const families=selectorValues(value.families,`${label}.families`,D20_FAMILIES);
@@ -204,11 +204,15 @@ function lowerD20Interceptor(value:Obj,index:number,options:ReactionLoweringOpti
         if(raw.mode==="reroll"&&sides!==20) throw new DomainEvaluationError(`${label}.operations[${operationIndex}] reroll diceResource must resolve to d20`);
         return {kind:"roll.modify" as const,mode:raw.mode,dice:`1d${sides}`};
       }
-      if(raw.mode!=="add-flat"&&raw.mode!=="target-add"&&raw.mode!=="replace"&&raw.mode!=="minimum") {
+      if(raw.mode!=="add-flat"&&raw.mode!=="target-add"&&raw.mode!=="replace"&&raw.mode!=="minimum"&&(!allowMultiply||raw.mode!=="multiply")) {
         throw new DomainEvaluationError(`${label}.operations[${operationIndex}].mode is not connected to the post-roll reaction runtime`);
       }
       if(raw.dice!==undefined||raw.diceResource!==undefined) throw new DomainEvaluationError(`${label}.operations[${operationIndex}] dice authority is not allowed for ${raw.mode}`);
       const value=resolvedNumber(raw.value,`${label}.operations[${operationIndex}].value`,options);
+      if(raw.mode==="multiply") {
+        if(value.value<0)throw new DomainEvaluationError(`${label}.operations[${operationIndex}].value must be non-negative for multiply`);
+        return {kind:"roll.modify" as const,mode:"multiply",value};
+      }
       if(!Number.isInteger(value.value)) throw new DomainEvaluationError(`${label}.operations[${operationIndex}].value must be an integer`);
       if((raw.mode==="replace"||raw.mode==="minimum")&&(value.value<1||value.value>20)) throw new DomainEvaluationError(`${label}.operations[${operationIndex}].value must be between 1 and 20 for ${raw.mode}`);
       return {kind:"roll.modify" as const,mode:raw.mode,value};
@@ -219,8 +223,8 @@ function lowerD20Interceptor(value:Obj,index:number,options:ReactionLoweringOpti
 function lowerDamageInterceptor(value:Obj,index:number,options:ReactionLoweringOptions):CommonPlayDamageRollInterceptor {
   const label=`Common Play reaction interceptor[${index}]`;
   if(value.families!==undefined||value.outcomes!==undefined)throw new DomainEvaluationError(`${label} d20 selectors require slot d20.roll`);
-  const lowered=lowerD20Interceptor({...value,timing:"d20.outcome-determined",slot:"d20.roll"},index,options);
-  if(lowered.operations.some((operation)=>operation.mode!=="subtract-die")) throw new DomainEvaluationError(`${label} primary.damage supports subtract-die only`);
+  const lowered=lowerD20Interceptor({...value,timing:"d20.outcome-determined",slot:"d20.roll"},index,options,true);
+  if(lowered.operations.some((operation)=>operation.mode!=="subtract-die"&&operation.mode!=="multiply")) throw new DomainEvaluationError(`${label} primary.damage supports subtract-die or multiply only`);
   return {...lowered,timing:"damage.rolled",slot:"primary.damage"};
 }
 
