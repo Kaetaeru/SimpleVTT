@@ -1195,7 +1195,7 @@
       ],
       "identityInvarianceEvidence": [
         "installedCommonPlayActorOwnerInteractionProduction.test.ts uses arbitrary previously-unknown module/content/mechanic identities and resolves the interaction structurally rather than by content name",
-        "c9FamilyQTargetOwnerInteractionProduction.test.ts uses arbitrary previously-unknown module/content/mechanic/entry identities; responder routing depends on selected target ownership rather than content identity"
+        "c9FamilyQTargetOwnerInteractionProduction.test.ts uses arbitrary previously-unknown module/content/mechanic/entry identities for target-owner and target responders; routing depends on the selected target rather than content identity"
       ],
       "connectedEvidenceIfRelevant": [
         "installedCommonPlayActorOwnerInteractionProduction.test.ts Host directs the blocking prompt to the owning peer and broadcasts the accepted authoritative event batch",
