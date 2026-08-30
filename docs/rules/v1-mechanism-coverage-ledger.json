@@ -326,7 +326,7 @@
         "common-play-contract.schema.json: selector",
         "commonPlayTargetingRuntime.test.ts"
       ],
-      "currentState": "One pre-resolved target is bounded PRODUCTION; rich selectors incomplete",
+      "currentState": "Pre-resolved self/selected-target bounds and portable relation filters are PRODUCTION through Common Play/Resolver; richer predicate/order/range/reach/sight/cover/tag/area and automatic selector authority remain incomplete.",
       "requiredSemantics": [
         "self",
         "relation filters",
@@ -348,8 +348,16 @@
       ],
       "transactionDomain": "Resolver targeting with spatial/manual fact authority",
       "disposition": "INCOMPLETE",
-      "implementationEvidence": [],
-      "productionEvidence": [],
+      "implementationEvidence": [
+        "commonPlayOperationRuntime.ts parses portable relation-matches targeting selectors and validates authoritative TargetingFactInput relation facts before downstream Resolver operations",
+        "installedCommonPlayRuntimeAdapter.ts rejects ineligible relation selections at the production preparation boundary without content-name or content-ID dispatch",
+        "commonPlaySelectorRuntime.ts exposes explicit mapless direct-target authority while retaining generic selector/spatial-provider fail-closed behavior"
+      ],
+      "productionEvidence": [
+        "commonPlayTargetingRuntime.test.ts portable relation filter accepts authoritative enemy facts, rejects self facts atomically, and preserves bounded multi-target semantics",
+        "installedCommonPlayProductionRuntime.test.ts unknown installed RuleModule relation selector rejects ineligible self before commit and executes eligible enemy through production resolveAction",
+        "C9 Family E Relation Selector V2 run 33309310773: 38/38 targeted domain/import/production tests, legacy execution boundary, and tsc --noEmit passed; verified slice pushed as 05394e89 after clean rebase"
+      ],
       "identityInvarianceEvidence": [],
       "connectedEvidenceIfRelevant": [],
       "persistenceEvidenceIfRelevant": [],
