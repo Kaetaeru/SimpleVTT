@@ -29,8 +29,8 @@ jobs:
           from pathlib import Path
           path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
           data=json.loads(path.read_text(encoding='utf-8'))
-          families=data.get('families') if isinstance(data,dict) else data
-          row=next((entry for entry in families if entry.get('family')=='I'),None)
+          rows=data.get('rows') if isinstance(data,dict) else data
+          row=next((entry for entry in rows if entry.get('family')=='I'),None)
           if row is None: raise SystemExit('Family I ledger row not found')
           row['currentState']='Canonical movement.relocate parses through the generic operations lowerer. Unknown installed Common Play production-executes walk, climb, swim, fly, crawl, jump, cost multipliers, push, pull, teleport, explicit no-provoke movement, zero-speed rejection, Undo, connected replay/reconnect, and external identity rename invariance. Rules-derived movement cost multipliers and alternate-speed bounds are production-proven through generic profile properties, and portable compile rejection is normalized into the standard production resolution failure path. Family I remains incomplete for rules-derived Difficult Terrain/drag-carry authority and named movement-grant convergence.'
           evidence='c069949e80d8931013ee621108486f979bef4dff fix(c9): normalize portable movement rejection; C9 Family I Rules Constraints 71304 run 33314826038 passed rules-derived movement cost and alternate-speed production tests, movement/Prone regressions, legacy execution boundary, V1 coverage checker, and tsc --noEmit'
