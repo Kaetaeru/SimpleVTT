@@ -1,0 +1,105 @@
+name: C9 Family H Standard Sensing Facts 7130
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-h-standard-sensing-facts-7130.yml
+
+permissions:
+  contents: write
+
+jobs:
+  verify-and-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Reconcile Family H sensing fact evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path, old, new):
+              p=Path(path)
+              text=p.read_text(encoding='utf-8')
+              if text.count(old)!=1:
+                  raise SystemExit(f'{path}: expected one match, got {text.count(old)} for {old[:100]!r}')
+              p.write_text(text.replace(old,new,1),encoding='utf-8')
+
+          domain='tests/domain/commonPlaySpatialFactRuntime.test.ts'
+          replace_once(domain,
+              'import {\n  answerCommonPlayFactRequest,\n',
+              'import {\n  COMMON_PLAY_STANDARD_FACTS,\n  answerCommonPlayFactRequest,\n')
+          p=Path(domain)
+          text=p.read_text(encoding='utf-8')
+          marker='test("interceptor fact predicates honor provider, treat-false, and manual authority without fabricated facts",async()=>{'
+          if text.count(marker)!=1:
+              raise SystemExit('domain sensing test marker changed unexpectedly')
+          addition='''test("Family H standard sensing facts normalize provider authority without content identity dispatch",async()=>{\n  const cases=[\n    ["sense.can-see",true],\n    ["sense.can-hear",false],\n    ["sense.detected",true],\n    ["sense.light","dim"],\n    ["sense.obscurement","heavy"],\n    ["sense.hidden",false],\n  ] as const;\n  for(const [fact,value] of cases){\n    for(const resolutionId of ["resolution.sense.external-alpha","resolution.sense.renamed-banana"]){\n      const result=await resolveCommonPlayFactQuery({\n        registry:COMMON_PLAY_STANDARD_FACTS,\n        query:{id:`query.${fact}`,fact,subject:"actor.target",authority:"target-owner",visibility:"actor",unknownPolicy:"block"},\n        resolutionId,\n        expectedRevision:5,\n        provider:{id:"provider.sensing-authority",resolve(query){return query.fact===fact?{status:"answered",value}:{status:"unknown"};}},\n      });\n      assert.equal(result.status,"resolved");\n      if(result.status!=="resolved")continue;\n      assert.equal(result.answer.value,value);\n      assert.deepEqual(result.answer.provenance,{kind:"provider",providerId:"provider.sensing-authority"});\n    }\n  }\n});\n\n'''
+          p.write_text(text.replace(marker,addition+marker,1),encoding='utf-8')
+
+          routing='tests/ui/connectedCommonPlayAuthorityFactRouting.test.ts'
+          replace_once(routing,
+              'import {\n  resolveCommonPlayFactQuery,\n',
+              'import {\n  COMMON_PLAY_STANDARD_FACTS,\n  resolveCommonPlayFactQuery,\n')
+          replace_once(routing,
+              '    registry:{"target.visible":{valueType:"boolean"}},\n',
+              '    registry:COMMON_PLAY_STANDARD_FACTS,\n')
+          replace_once(routing,
+              '      fact:"target.visible",\n',
+              '      fact:"sense.can-see",\n')
+          replace_once(routing,
+              '  assert.equal(prompt.request.visibility,"authority-only");\n',
+              '  assert.equal(prompt.request.visibility,"authority-only");\n  assert.equal(prompt.request.fact,"sense.can-see");\n')
+
+          dispatch='tests/ui/connectedCommonPlayAuthorityFactDispatch.test.ts'
+          replace_once(dispatch,
+              'import { resolveCommonPlayFactQuery, type CommonPlayFactResolution } from "../../src/domain/commonPlaySpatialFactRuntime";\n',
+              'import { COMMON_PLAY_STANDARD_FACTS, resolveCommonPlayFactQuery, type CommonPlayFactResolution } from "../../src/domain/commonPlaySpatialFactRuntime";\n')
+          replace_once(dispatch,
+              '    registry:{"target.visible":{valueType:"boolean"}},\n',
+              '    registry:COMMON_PLAY_STANDARD_FACTS,\n')
+          replace_once(dispatch,
+              '      fact:"target.visible",\n',
+              '      fact:"sense.can-see",\n')
+          PY
+      - name: Verify Family H sensing authority slice
+        run: >-
+          npx tsx --test
+          tests/domain/commonPlaySpatialFactRuntime.test.ts
+          tests/ui/connectedCommonPlayAuthorityFactRouting.test.ts
+          tests/ui/connectedCommonPlayAuthorityFactDispatch.test.ts
+      - name: Verify boundaries and types
+        run: |
+          node scripts/check-legacy-execution-boundary.mjs
+          npx tsc --noEmit
+      - name: Commit verified slice
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/c9-family-h-standard-sensing-facts-7130.yml
+          git add tests/domain/commonPlaySpatialFactRuntime.test.ts tests/ui/connectedCommonPlayAuthorityFactRouting.test.ts tests/ui/connectedCommonPlayAuthorityFactDispatch.test.ts
+          git diff --cached --check
+          git commit -m "test(c9): prove standard sensing fact authority"
+          for attempt in $(seq 1 10); do
+            git fetch origin agent/c9-gate-n-coverage-reconciliation
+            if git rebase origin/agent/c9-gate-n-coverage-reconciliation && git push origin HEAD:agent/c9-gate-n-coverage-reconciliation; then
+              exit 0
+            fi
+            git rebase --abort || true
+            sleep 2
+          done
+          exit 1
