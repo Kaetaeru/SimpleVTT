@@ -347,6 +347,7 @@ function interceptorFactProvider(internal:AdapterState,candidate:PassiveReaction
       if(!relation)return {status:"unknown"};
       if(query.fact==="spatial.distance-feet")return {status:"answered",value:relation.distanceFeet};
       if(query.fact==="spatial.adjacent")return {status:"answered",value:relation.distanceFeet<=5};
+      if(query.fact==="spatial.within-reach"&&relation.withinReach!==undefined)return {status:"answered",value:relation.withinReach};
       if(query.fact==="spatial.total-cover")return {status:"answered",value:relation.cover==="total"};
       if(query.fact==="sense.can-see")return {status:"answered",value:relation.visible};
       if(query.fact==="sense.light"&&relation.light!==undefined)return {status:"answered",value:relation.light};

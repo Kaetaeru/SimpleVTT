@@ -11,6 +11,8 @@ export interface SpatialRelationVm {
   visible:boolean;
   cover:RuntimeCover;
   targetCanSeeAttacker:boolean;
+  /** Provider-authored reach eligibility; Core must not infer this from distance. */
+  withinReach?:boolean;
   light?:RuntimeLight;
   obscurement?:RuntimeObscurement;
   detected?:boolean;

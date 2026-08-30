@@ -427,6 +427,7 @@ function commonPlaySelectorCandidate(scene:SceneVm,actor:SceneVm["entities"][num
         "spatial.total-cover":spatial.cover==="total",
         "sense.can-see":spatial.visible,
       }:{}),
+      ...(spatial?.withinReach===undefined?{}:{"spatial.within-reach":spatial.withinReach}),
     },
   };
 }

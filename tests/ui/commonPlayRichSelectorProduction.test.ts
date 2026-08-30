@@ -63,6 +63,23 @@ async function installAutomatic(adapter:MockAdapter,identity:Identity) {
   return installedCommonPlayActionId({catalogId:catalogQualifiedId(identity.contentId,identity.moduleId,"1"),mechanicId:identity.mechanicId,entryPointId:identity.entryPointId});
 }
 
+function reachPayload(identity:Identity) {
+  const authored=JSON.parse(payload(identity));
+  authored.content[0].mechanics[0].config.entryPoints[0].targeting={
+    from:"targets",min:1,max:1,
+    where:{op:"eq",left:{ref:"spatial.within-reach"},right:{value:true}},
+  };
+  return JSON.stringify(authored);
+}
+
+async function installReach(adapter:MockAdapter,identity:Identity) {
+  setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
+  const preview=await adapter.previewContentImport(reachPayload(identity));
+  assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
+  await adapter.activateContentImport();
+  return installedCommonPlayActionId({catalogId:catalogQualifiedId(identity.contentId,identity.moduleId,"1"),mechanicId:identity.mechanicId,entryPointId:identity.entryPointId});
+}
+
 async function execute(identity:Identity) {
   const adapter=new MockAdapter();
   const actionId=await install(adapter,identity);
@@ -98,6 +115,28 @@ test("unknown installed automatic selector uses host authority and authored orde
     assert.equal(snapshot.resolution?.actionId,actionId,"automatic selector must produce a fresh action resolution without a manual target identity");
     assert.equal(snapshot.resolution?.stage,"complete");
     assert.deepEqual(snapshot.resolution?.targetIds,["combatant.wolf"],"lowest-HP eligible enemy is selected by the shared orderBy kernel");
+    return snapshot.resolution?.targetIds;
+  }
+  assert.deepEqual(await run(RENAMED),await run(ORIGINAL));
+});
+
+
+test("unknown installed reach selector consumes provider-owned reach without inferring it from distance and survives identity rename",async()=>{
+  async function run(identity:Identity) {
+    const adapter=new MockAdapter();
+    const actionId=await installReach(adapter,identity);
+    const internal=adapter as unknown as {scene:SceneVm};
+    setSpatialRelation(internal.scene,{sourceId:"char.aelar",targetId:"combatant.goblin-a",distanceFeet:10,visible:true,cover:"none",targetCanSeeAttacker:true,withinReach:true,provenance:"module:test-spatial:reach"});
+    setSpatialRelation(internal.scene,{sourceId:"char.aelar",targetId:"combatant.goblin-b",distanceFeet:5,visible:true,cover:"none",targetCanSeeAttacker:true,withinReach:false,provenance:"module:test-spatial:reach"});
+    await adapter.startInitiative();
+    await adapter.setCurrentActor("char.aelar");
+    await adapter.resolveAction(actionId,["combatant.goblin-b"]);
+    let snapshot=await adapter.getSnapshot();
+    assert.equal(snapshot.resolution?.finalOutcome,"적용 거부","5ft must not imply reach when the provider explicitly says false");
+    await adapter.resolveAction(actionId,["combatant.goblin-a"]);
+    snapshot=await adapter.getSnapshot();
+    assert.equal(snapshot.resolution?.stage,"complete","10ft must be eligible when the provider explicitly says true");
+    assert.deepEqual(snapshot.resolution?.targetIds,["combatant.goblin-a"]);
     return snapshot.resolution?.targetIds;
   }
   assert.deepEqual(await run(RENAMED),await run(ORIGINAL));

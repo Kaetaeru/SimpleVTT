@@ -23,6 +23,8 @@ export interface MovementSpatialUpdate {
   visible:boolean;
   cover:RuntimeCover;
   targetCanSeeAttacker:boolean;
+  /** Optional reach fact supplied by the owning spatial module. */
+  withinReach?:boolean;
   light?:RuntimeLight;
   obscurement?:RuntimeObscurement;
   detected?:boolean;

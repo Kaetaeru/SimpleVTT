@@ -91,6 +91,7 @@ function relationChanges(before:SpatialRelationVm|undefined,after:SpatialRelatio
   if (before.visible!==after.visible) changes.push(`${pair} visible ${before.visible} → ${after.visible}`);
   if (before.cover!==after.cover) changes.push(`${pair} cover ${before.cover} → ${after.cover}`);
   if (before.targetCanSeeAttacker!==after.targetCanSeeAttacker) changes.push(`${pair} target-sight ${before.targetCanSeeAttacker} → ${after.targetCanSeeAttacker}`);
+  if (before.withinReach!==after.withinReach) changes.push(`${pair} within-reach ${String(before.withinReach)} → ${String(after.withinReach)}`);
   return changes;
 }
 
