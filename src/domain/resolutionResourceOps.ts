@@ -9,6 +9,13 @@ type GainResourceOp = Extract<ResolutionOperation, { kind:"gain-resource" }>;
 type SetResourceRecoveryLockoutOp = Extract<ResolutionOperation, { kind:"set-resource-recovery-lockout" }>;
 type RechargeResourceOp = Extract<ResolutionOperation,{kind:"recharge-resource"}>;
 
+function capacity(pool:ResourcePool) {
+  return {
+    maximum:pool.maximum,
+    maximumAfterLongRest:pool.maximumAfterLongRest ?? null,
+  };
+}
+
 export function executeGainResource(ctx: ResolutionExecutionContext, operation: GainResourceOp): OperationExecution {
   const actorId = operation.actorId ?? ctx.pending.actorId;
   const actor = requireCombatant(ctx.state, actorId);
@@ -39,7 +46,20 @@ export function executeGainResource(ctx: ResolutionExecutionContext, operation: 
     ...(resolved.next.recovery ? { recovery:structuredClone(resolved.next.recovery) } : {}),
     source:ctx.pending.sourceId,
   } : undefined;
-  const changes = [resourceStateChange(actorId, operation.resourceId, before.current, resolved.next.current, resolved.provenance, undefined, createdResource)];
+  const beforeCapacity=capacity(before);
+  const afterCapacity=capacity(resolved.next);
+  const capacityChanged=beforeCapacity.maximum!==afterCapacity.maximum
+    || beforeCapacity.maximumAfterLongRest!==afterCapacity.maximumAfterLongRest;
+  const changes = [resourceStateChange(
+    actorId,
+    operation.resourceId,
+    before.current,
+    resolved.next.current,
+    resolved.provenance,
+    undefined,
+    createdResource,
+    !created && capacityChanged ? { before:beforeCapacity, after:afterCapacity } : undefined,
+  )];
   return {
     result:resolved,
     event:makeEvent(
