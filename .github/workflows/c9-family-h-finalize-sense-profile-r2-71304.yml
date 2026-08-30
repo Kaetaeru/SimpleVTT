@@ -43,8 +43,10 @@ jobs:
             meta="$(gh api -X GET "repos/$repo/contents/$path?ref=$branch")"
             sha="$(jq -r .sha <<<"$meta")"
             jq -r .content <<<"$meta" | base64 -d > /tmp/ledger.json
-            python3 - <<'PY'
+            python3 - "$sha" "$branch" <<'PY'
+          import base64
           import json
+          import sys
           from pathlib import Path
           path=Path('/tmp/ledger.json')
           data=json.loads(path.read_text(encoding='utf-8'))
@@ -62,11 +64,16 @@ jobs:
               if value not in row[key]: row[key].append(value)
           row['remainingNamedSeams']=[]
           row['disposition']='IMPLEMENTED'
-          path.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          rendered=(json.dumps(data,ensure_ascii=False,indent=2)+'\n').encode('utf-8')
+          payload={
+              'message':'docs(c9): finalize Family H coverage',
+              'content':base64.b64encode(rendered).decode('ascii'),
+              'sha':sys.argv[1],
+              'branch':sys.argv[2],
+          }
+          Path('/tmp/payload.json').write_text(json.dumps(payload),encoding='utf-8')
           PY
-            content="$(base64 -w0 < /tmp/ledger.json)"
-            payload="$(jq -n --arg message 'docs(c9): finalize Family H coverage' --arg content "$content" --arg sha "$sha" --arg branch "$branch" '{message:$message,content:$content,sha:$sha,branch:$branch}')"
-            if gh api --method PUT "repos/$repo/contents/$path" --input - <<<"$payload" >/dev/null 2>/tmp/publish.err; then
+            if gh api --method PUT "repos/$repo/contents/$path" --input /tmp/payload.json >/dev/null 2>/tmp/publish.err; then
               exit 0
             fi
             cat /tmp/publish.err >&2
