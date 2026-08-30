@@ -23,6 +23,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm run generate:content
       - name: Verify Family G spatial authority reconnect slice
         run: node --import tsx --test tests/domain/commonPlaySpatialFactRuntime.test.ts tests/ui/connectedCommonPlayAuthorityFactRouting.test.ts tests/ui/connectedCommonPlayAuthorityFactDispatch.test.ts
       - name: Verify legacy execution boundary
