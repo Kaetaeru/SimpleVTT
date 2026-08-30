@@ -18,6 +18,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Generate content dependencies
+        run: npm run generate:content
       - name: Verify portable damage defenses
         run: npx tsx --test tests/ui/c9FamilyLDamageDefenseProduction.test.ts
       - name: Verify V1 coverage structure
