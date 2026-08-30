@@ -1,4 +1,4 @@
-name: C9 Family C Portable Dice Modifiers
+name: C9 Family C Portable Dice Reconciliation
 
 on:
   push:
@@ -12,84 +12,105 @@ permissions:
   contents: write
 
 jobs:
-  migrate:
+  reconcile:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Connect portable add-die and reroll to Common Play
+      - name: Reconcile authoritative Family C ledger
         shell: bash
         run: |
           set -euo pipefail
           python3 <<'PY'
+          import json
           from pathlib import Path
-
-          def replace_once(path, old, new):
-              p=Path(path)
-              text=p.read_text()
-              count=text.count(old)
-              if count != 1:
-                  raise SystemExit(f"{path}: expected one match, found {count}: {old[:120]!r}")
-              p.write_text(text.replace(old,new,1))
-
-          replace_once(
-              'src/domain/commonPlayRuntime.ts',
-              '''export type CommonPlayRollModifyOperation =\n  | { kind:"roll.modify"; mode:"subtract-die"; dice:string }\n  | { kind:"roll.modify"; mode:"add-flat"|"target-add"|"replace"|"minimum"; value:LiteralExpression };''',
-              '''export type CommonPlayRollModifyOperation =\n  | { kind:"roll.modify"; mode:"add-die"; dice:string }\n  | { kind:"roll.modify"; mode:"subtract-die"; dice:string }\n  | { kind:"roll.modify"; mode:"reroll"; dice:string }\n  | { kind:"roll.modify"; mode:"add-flat"|"target-add"|"replace"|"minimum"; value:LiteralExpression };''',
+          path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
+          ledger=json.loads(path.read_text())
+          rows=ledger['rows']
+          assert len(rows)==36
+          row=next(item for item in rows if item['family']=='C')
+          assert row['disposition']=='INCOMPLETE'
+          row['currentState']=(
+            'The generic d20 Resolver supports checks/saves/attacks and the full roll-modification kernel. Production Common Play now proves '
+            'declarative Cutting Words, deterministic replace/minimum/target-add, and arbitrary installed authoritative add-die/reroll through '
+            'the same d20 PendingResolution with identity rename invariance, atomic accepted payment, and Undo. Family C remains INCOMPLETE '
+            'because the built-in Tactical Mind, Indomitable, Dark One\'s Own Luck, and Peerless Skill projections are still injected by named '
+            'productionPlayRuntimeAdapter.ts checks; generic Common Play production timing does not yet structurally select failed/save/after-roll '
+            'families for those representatives, Tactical Mind and Peerless Skill still require conditional pay-on-success semantics, and portable '
+            'add-die/reroll still need connected duplicate/reconnect evidence.'
           )
-
-          replace_once(
-              'src/domain/commonPlayRuntime.ts',
-              '''    if(operation.mode==="subtract-die") {\n      const formula=parseDiceFormula(operation.dice,"d20.roll subtract-die");\n      const faces=authority?.modifierDiceFaces?.[index];\n      if(!faces||faces.length!==formula.count||faces.some((face)=>!Number.isInteger(face)||face<1||face>formula.sides)) {\n        throw new Error(`d20.roll interceptor ${index} requires authoritative die face(s)`);\n      }\n      const modifications:D20RollModification[]=[{source,mode:"subtract-die",dice:{id:`${source}:dice`,purpose:source,sides:formula.sides,faces:[...faces]}}];\n      if(formula.flat!==0) modifications.push({source:`${source}:flat`,mode:"add-flat",value:-formula.flat});\n      return modifications;\n    }''',
-              '''    if(operation.mode==="add-die"||operation.mode==="subtract-die"||operation.mode==="reroll") {\n      const formula=parseDiceFormula(operation.dice,`d20.roll ${operation.mode}`);\n      if(operation.mode==="reroll"&&(formula.sides!==20||formula.flat!==0)) throw new Error("d20.roll reroll requires Xd20 with no flat modifier");\n      const faces=authority?.modifierDiceFaces?.[index];\n      if(!faces||faces.length!==formula.count||faces.some((face)=>!Number.isInteger(face)||face<1||face>formula.sides)) {\n        throw new Error(`d20.roll interceptor ${index} requires authoritative die face(s)`);\n      }\n      const dice={id:`${source}:dice`,purpose:source,sides:formula.sides,faces:[...faces]};\n      if(operation.mode==="reroll") return [{source,mode:"reroll",dice}];\n      const modifications:D20RollModification[]=[{source,mode:operation.mode,dice}];\n      if(formula.flat!==0) modifications.push({source:`${source}:flat`,mode:"add-flat",value:operation.mode==="subtract-die"?-formula.flat:formula.flat});\n      return modifications;\n    }''',
-          )
-
-          replace_once(
-              'src/domain/commonPlayReactionDefinitionRuntime.ts',
-              '''      if(raw.mode==="subtract-die") {\n        const hasLiteral=typeof raw.dice==="string";\n        const hasResource=typeof raw.diceResource==="string"&&raw.diceResource.length>0;\n        if(hasLiteral===hasResource) throw new DomainEvaluationError(`${label}.operations[${operationIndex}] must declare exactly one of dice or diceResource`);\n        if(raw.value!==undefined) throw new DomainEvaluationError(`${label}.operations[${operationIndex}].value is not allowed for subtract-die`);\n        if(hasLiteral) {\n          if(!/^([0-9]+)d([0-9]+)([+-][0-9]+)?$/.test(raw.dice as string)) throw new DomainEvaluationError(`${label}.operations[${operationIndex}].dice must be a dice formula`);\n          return {kind:"roll.modify" as const,mode:"subtract-die" as const,dice:raw.dice as string};\n        }\n        const resourceId=raw.diceResource as string;\n        const sides=options.resolveResourceDie?.(resourceId);\n        if(typeof sides!=="number"||!Number.isInteger(sides)||sides<2) throw new DomainEvaluationError(`${label}.operations[${operationIndex}].diceResource has no authoritative die size: ${resourceId}`);\n        return {kind:"roll.modify" as const,mode:"subtract-die" as const,dice:`1d${sides}`};\n      }''',
-              '''      if(raw.mode==="add-die"||raw.mode==="subtract-die"||raw.mode==="reroll") {\n        const hasLiteral=typeof raw.dice==="string";\n        const hasResource=typeof raw.diceResource==="string"&&raw.diceResource.length>0;\n        if(hasLiteral===hasResource) throw new DomainEvaluationError(`${label}.operations[${operationIndex}] must declare exactly one of dice or diceResource`);\n        if(raw.value!==undefined) throw new DomainEvaluationError(`${label}.operations[${operationIndex}].value is not allowed for ${raw.mode}`);\n        if(hasLiteral) {\n          const match=/^([0-9]+)d([0-9]+)([+-][0-9]+)?$/.exec(raw.dice as string);\n          if(!match) throw new DomainEvaluationError(`${label}.operations[${operationIndex}].dice must be a dice formula`);\n          if(raw.mode==="reroll"&&(Number(match[2])!==20||Number(match[3]??0)!==0)) throw new DomainEvaluationError(`${label}.operations[${operationIndex}] reroll requires Xd20 with no flat modifier`);\n          return {kind:"roll.modify" as const,mode:raw.mode,dice:raw.dice as string};\n        }\n        const resourceId=raw.diceResource as string;\n        const sides=options.resolveResourceDie?.(resourceId);\n        if(typeof sides!=="number"||!Number.isInteger(sides)||sides<2) throw new DomainEvaluationError(`${label}.operations[${operationIndex}].diceResource has no authoritative die size: ${resourceId}`);\n        if(raw.mode==="reroll"&&sides!==20) throw new DomainEvaluationError(`${label}.operations[${operationIndex}] reroll diceResource must resolve to d20`);\n        return {kind:"roll.modify" as const,mode:raw.mode,dice:`1d${sides}`};\n      }''',
-          )
-
-          replace_once(
-              'src/app/commonPlayInterceptorProductionRuntimeAdapter.ts',
-              '''    if(operation.mode!=="subtract-die")return;''',
-              '''    if(operation.mode!=="add-die"&&operation.mode!=="subtract-die"&&operation.mode!=="reroll")return;''',
-          )
-          replace_once(
-              'src/app/commonPlayInterceptorProductionRuntimeAdapter.ts',
-              '''  resolution.rollTotal=result.total;\n  const rolled=authority?.modifierDiceFaces?Object.values(authority.modifierDiceFaces).flat():[];''',
-              '''  resolution.rollTotal=result.total;\n  resolution.naturalD20=result.natural;\n  if(resolution.authoritativeDice.length)resolution.authoritativeDice[0]=result.natural;\n  else resolution.authoritativeDice=[result.natural];\n  const rolled=authority?.modifierDiceFaces?Object.values(authority.modifierDiceFaces).flat():[];''',
-          )
-
-          path=Path('tests/domain/commonPlayReactionDefinitionRuntime.test.ts')
-          text=path.read_text()
-          marker='''test("portable d20 interceptor lowers deterministic post-roll roll.modify modes structurally",()=>{'''
-          addition='''test("portable d20 interceptor lowers authoritative add-die and reroll modes structurally",()=>{\n  const definition=portableReaction();\n  definition.interceptors![0].operations=[\n    {kind:"roll.modify",mode:"add-die",dice:"1d8+1"},\n    {kind:"roll.modify",mode:"reroll",dice:"1d20"},\n  ];\n  const lowered=lowerCommonPlayReactionDefinition(definition)!;\n  assert.deepEqual(lowered.interceptors[0].operations,definition.interceptors![0].operations);\n\n  const invalid=portableReaction();\n  invalid.interceptors![0].operations=[{kind:"roll.modify",mode:"reroll",dice:"1d8"}];\n  assert.throws(()=>lowerCommonPlayReactionDefinition(invalid),/reroll requires Xd20/);\n\n  const damage=portableReaction();\n  Object.assign(damage.interceptors![0],{timing:"damage.rolled",slot:"primary.damage",operations:[{kind:"roll.modify",mode:"add-die",dice:"1d6"}]});\n  assert.throws(()=>lowerCommonPlayReactionDefinition(damage),/primary.damage supports subtract-die only/);\n});\n\n'''
-          if text.count(marker)!=1: raise SystemExit('reaction definition test marker changed')
-          path.write_text(text.replace(marker,addition+marker,1))
-
-          path=Path('tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts')
-          text=path.read_text()
-          marker='''test("portable installed d20 interceptor can turn a successful production attack into a miss",async()=>{'''
-          addition='''test("unknown installed add-die executes in production with rename invariance and Undo",async()=>{\n  const operations=[{kind:"roll.modify",mode:"add-die",dice:"1d8"}];\n  const renamed:Identity={...ORIGINAL,moduleId:"external.add-die-renamed",contentId:"item.add-die-renamed",mechanicId:"mechanic.add-die-renamed",interceptorId:"interceptor.add-die-renamed",interactionId:"interaction.add-die-renamed",displayName:"Renamed Add Die"};\n  const execute=async(identity:Identity)=>{\n    const adapter=await prepare(identity,false,"d20",operations);\n    let snapshot=await adapter.getSnapshot();\n    const responderId=snapshot.activeCharacter.id;\n    const resourceBefore=secondWind(snapshot)!;\n    snapshot=await openAbilityCheckInterrupt(adapter);\n    await adapter.setQueuedD20(6);\n    snapshot=await adapter.respondToInterrupt(true);\n    const mechanical={outcome:snapshot.resolution?.checkOutcome,total:snapshot.resolution?.rollTotal,natural:snapshot.resolution?.naturalD20};\n    assert.deepEqual(mechanical,{outcome:"성공",total:21,natural:15});\n    assert.equal(secondWind(snapshot),resourceBefore-1);\n    assert.equal(snapshot.scene.economyByActor[responderId]?.reaction,false);\n    snapshot=await adapter.undoLastResolution();\n    assert.equal(secondWind(snapshot),resourceBefore);\n    assert.equal(snapshot.scene.economyByActor[responderId]?.reaction,true);\n    return mechanical;\n  };\n  assert.deepEqual(await execute(renamed),await execute(ORIGINAL));\n});\n\ntest("unknown installed reroll executes in production with rename invariance and Undo",async()=>{\n  const operations=[{kind:"roll.modify",mode:"reroll",dice:"1d20"}];\n  const renamed:Identity={...ORIGINAL,moduleId:"external.reroll-renamed",contentId:"item.reroll-renamed",mechanicId:"mechanic.reroll-renamed",interceptorId:"interceptor.reroll-renamed",interactionId:"interaction.reroll-renamed",displayName:"Renamed Reroll"};\n  const execute=async(identity:Identity)=>{\n    const adapter=await prepare(identity,false,"d20",operations);\n    let snapshot=await adapter.getSnapshot();\n    const responderId=snapshot.activeCharacter.id;\n    const resourceBefore=secondWind(snapshot)!;\n    snapshot=await openAbilityCheckInterrupt(adapter);\n    await adapter.setQueuedD20(4);\n    snapshot=await adapter.respondToInterrupt(true);\n    const mechanical={outcome:snapshot.resolution?.checkOutcome,total:snapshot.resolution?.rollTotal,natural:snapshot.resolution?.naturalD20,die:snapshot.resolution?.authoritativeDice[0]};\n    assert.deepEqual(mechanical,{outcome:"실패",total:4,natural:4,die:4});\n    assert.equal(secondWind(snapshot),resourceBefore-1);\n    assert.equal(snapshot.scene.economyByActor[responderId]?.reaction,false);\n    snapshot=await adapter.undoLastResolution();\n    assert.equal(secondWind(snapshot),resourceBefore);\n    assert.equal(snapshot.scene.economyByActor[responderId]?.reaction,true);\n    return mechanical;\n  };\n  assert.deepEqual(await execute(renamed),await execute(ORIGINAL));\n});\n\n'''
-          if text.count(marker)!=1: raise SystemExit('production interceptor test marker changed')
-          path.write_text(text.replace(marker,addition+marker,1))
+          def add(field,*values):
+            target=row[field]
+            for value in values:
+              if value not in target: target.append(value)
+          add('implementationEvidence',
+              '1342c99 Common Play post-roll add-die/reroll lowering reuses the generic d20 Resolver and authoritative dice',
+              'commonPlayReactionDefinitionRuntime.ts portable literal/resource dice lowering for add-die/reroll')
+          add('productionEvidence',
+              '1342c99 unknown installed add-die/reroll production with authoritative dice and Undo',
+              'C9 Family C Portable Dice Modifiers run 33289183121: 37/37 focused tests, tsc --noEmit, vite build')
+          add('identityInvarianceEvidence',
+              '1342c99 unknown installed add-die/reroll module/content/mechanic/interceptor/interaction/display rename invariance')
+          row['remainingNamedSeams']=[
+            'productionPlayRuntimeAdapter.ts injects Tactical Mind, Indomitable, Dark One\'s Own Luck, and Peerless Skill runtimeD20FollowUps behind class/subclass/feature identity checks',
+            'generic Common Play production d20 timing still lacks structural family/outcome/save selection for failed, saving-throw, and after-roll representative triggers',
+            'Tactical Mind and Peerless Skill require a generic conditional pay-on-success contract before their named projection can be removed',
+            'portable add-die/reroll still need connected duplicate/reconnect evidence before Family C can be final'
+          ]
+          assert ledger['gateNBlockingNamedFallbacks']==[]
+          path.write_text(json.dumps(ledger,ensure_ascii=False,indent=2)+'\n')
           PY
-      - name: Verify focused Family C portable dice slice
-        shell: bash
-        run: |
-          set -euo pipefail
-          npm ci
-          npm run generate:content
-          npx tsx --test tests/domain/commonPlayReactionDefinitionRuntime.test.ts tests/domain/commonPlayReactionRuntime.test.ts tests/domain/commonPlayReactionResourceDieRuntime.test.ts tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts tests/ui/bardCollegeLoreCuttingWordsRuntime.test.ts
-          npx tsc --noEmit
-          npx vite build
-      - name: Commit verified product slice
-        shell: bash
-        run: |
-          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/domain/commonPlayRuntime.ts src/domain/commonPlayReactionDefinitionRuntime.ts src/app/commonPlayInterceptorProductionRuntimeAdapter.ts tests/domain/commonPlayReactionDefinitionRuntime.test.ts tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts
+          git add docs/rules/v1-mechanism-coverage-ledger.json
           git diff --cached --check
-          git commit -m "feat(common-play): support portable post-roll dice modifiers"
+          git commit -m "docs(c9): reconcile Family C portable dice evidence"
+          git push
+      - name: Advance Rerun STATE checkpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          git pull --ff-only
+          python3 <<'PY'
+          from pathlib import Path
+          path=Path('.chatgpt-rerun/STATE.md')
+          text=path.read_text()
+          old='- sequence: `8`'
+          if text.count(old)!=1: raise SystemExit('STATE sequence changed')
+          text=text.replace(old,'- sequence: `9`',1)
+          marker='## Family C reconciliation — deterministic post-roll advanced, portable dice follow-ups remain'
+          if text.count(marker)!=1: raise SystemExit('STATE Family C marker changed')
+          prefix=text.split(marker,1)[0]
+          section='''## Family C reconciliation — portable dice execution proven, representative authoring remains\n\nFamily C (`d20-test-lifecycle`) remains `INCOMPLETE`, but the generic post-roll dice mechanism advanced materially without a named executor:\n\n- `1342c9928b32f8fd986fd61a2981cee957a3685b`: Common Play `roll.modify` now lowers authoritative `add-die` and `reroll` into the existing generic d20 Resolver. Reroll updates the authoritative natural d20 presentation rather than leaving the original face visible.\n- C9 Family C Portable Dice Modifiers run `33289183121`: focused 37/37, `tsc --noEmit`, and `vite build` passed. Unknown installed add-die/reroll content executed with arbitrary renamed module/content/mechanic/interceptor/interaction/display identities, atomic accepted payment, and Undo.\n- The earlier declarative Cutting Words and deterministic replace/minimum/target-add evidence remains retained and was not repeated.\n- Family C is not final: `productionPlayRuntimeAdapter.ts` still authors Tactical Mind, Indomitable, Dark One's Own Luck, and Peerless Skill `runtimeD20FollowUps` with named identity checks. The generic production timing layer still needs structural failed/save/after-roll selection; Tactical Mind and Peerless Skill need conditional pay-on-success; portable add-die/reroll still need connected duplicate/reconnect proof.\n- Coverage totals remain `IMPLEMENTED=4`, `INCOMPLETE=32`, `PROVEN_UNNEEDED=0`; `gateNBlockingNamedFallbacks` remains empty and overall verdict remains `V1 INCOMPLETE`.\n\n## Next Exact Action\n\nContinue Family C at the generic production timing boundary: add structural d20 family/outcome selection sufficient for failed checks/saves and after-roll decisions, then prove unknown portable add-die/reroll through Host/Client duplicate/reconnect/Undo. Reuse the existing Common Play interaction, d20 Resolver, payment, and connected event authority; do not migrate Tactical Mind or Peerless Skill until a generic conditional pay-on-success contract exists.\n'''
+          path.write_text(prefix+section)
+          PY
+          git add .chatgpt-rerun/STATE.md
+          git diff --cached --check
+          git commit -m "docs(rerun): checkpoint Family C portable dice execution"
+          git push
+      - name: Publish control last
+        shell: bash
+        run: |
+          set -euo pipefail
+          git pull --ff-only
+          python3 <<'PY'
+          import json
+          from pathlib import Path
+          path=Path('.chatgpt-rerun/control.json')
+          control=json.loads(path.read_text())
+          assert control['sequence']==8
+          assert control['status']=='continue'
+          control['sequence']=9
+          control['status']='continue'
+          control['reason']=(
+            'C9 remains active at IMPLEMENTED=4, INCOMPLETE=32, PROVEN_UNNEEDED=0 with gateNBlockingNamedFallbacks empty. '
+            'Family C now has unknown portable add-die/reroll production evidence at 1342c99 with 37/37 focused tests, typecheck, build, '
+            'rename invariance, atomic accepted payment, and Undo. Family C remains INCOMPLETE because representative built-ins still use named '
+            'runtimeD20FollowUps pending structural failed/save/after-roll timing, connected duplicate/reconnect evidence, and conditional pay-on-success.'
+          )
+          control['updated_at']='2026-08-30'
+          path.write_text(json.dumps(control,ensure_ascii=False,indent=2)+'\n')
+          PY
+          git add .chatgpt-rerun/control.json
+          git diff --cached --check
+          git commit -m "docs(rerun): continue Family C timing and connected proof"
           git push
