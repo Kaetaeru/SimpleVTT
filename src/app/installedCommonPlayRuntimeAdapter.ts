@@ -671,34 +671,25 @@ function rollFaces(internal:AdapterState,actionId:string,count:number,sides:numb
   });
 }
 
-function commonPlayActorProfileProperties(
-  internal:AdapterState,
+export function commonPlayActorProfileProperties(
+  internal:Pick<AdapterState,"activeCharacter"|"scene">,
   state:RulesRuntimeState,
   actorId:string,
 ):Record<string,number>|undefined {
   const actorState=state.combatants[actorId];
   if(!actorState) return undefined;
-  if(internal.activeCharacter.id!==actorId) {
-    const inputs:Record<string,number>={
-      ...(actorState.baseProperties??{}),
-      "movement.walk":actorState.baseSpeed,
-      "hp.current":actorState.life.hp.current,
-      "hp.maximum":actorState.life.hp.maximum,
-      "hp.temporary":actorState.life.hp.temporary,
-    };
-    const projected={...inputs};
-    for(const [property,definition] of Object.entries(SIMPLEVTT_APP_RULES_PROFILE.properties)) {
-      if(!Number.isFinite(inputs[property])&&!definition.formula) continue;
-      try {
-        projected[property]=resolveRuntimeProfileProperty(state.effects,actorId,property,inputs).value;
-      } catch {
-        continue;
-      }
-    }
-    return projected;
-  }
+  const sceneActor=internal.scene.entities.find((entity)=>entity.id===actorId);
+  const runtimeInputs:Record<string,number>={
+    ...(actorState.baseProperties??{}),
+    "movement.walk":actorState.baseSpeed,
+    "hp.current":actorState.life.hp.current,
+    "hp.maximum":actorState.life.hp.maximum,
+    "hp.temporary":actorState.life.hp.temporary,
+    ...(sceneActor?{"defense.ac":sceneActor.ac,initiative:sceneActor.initiative}:{}),
+  };
   const character=internal.activeCharacter;
-  const inputs:Record<string,number>={
+  const inputs:Record<string,number>=character.id===actorId?{
+    ...runtimeInputs,
     "ability.str.score":character.abilities.str,
     "ability.dex.score":character.abilities.dex,
     "ability.con.score":character.abilities.con,
@@ -708,15 +699,15 @@ function commonPlayActorProfileProperties(
     "progression.character.level":character.level,
     "proficiency.bonus":character.proficiencyBonus,
     "defense.ac":character.ac,
-    "movement.walk":actorState.baseSpeed,
-    "hp.current":actorState.life.hp.current,
-    "hp.maximum":actorState.life.hp.maximum,
-    "hp.temporary":actorState.life.hp.temporary,
-  };
+  }:runtimeInputs;
   const projected={...inputs};
   for(const [property,definition] of Object.entries(SIMPLEVTT_APP_RULES_PROFILE.properties)) {
     if(!Number.isFinite(inputs[property])&&!definition.formula) continue;
-    projected[property]=resolveRuntimeProfileProperty(state.effects,actorId,property,inputs).value;
+    try {
+      projected[property]=resolveRuntimeProfileProperty(state.effects,actorId,property,inputs).value;
+    } catch(error) {
+      if(character.id===actorId) throw error;
+    }
   }
   return projected;
 }
