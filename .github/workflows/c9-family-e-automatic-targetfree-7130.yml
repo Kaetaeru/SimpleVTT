@@ -1,0 +1,85 @@
+name: C9 Family E Automatic Target-Free 7130
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-e-automatic-targetfree-7130.yml
+
+permissions:
+  contents: write
+
+jobs:
+  verify-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Strengthen automatic selector production proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          path=Path('tests/ui/commonPlayRichSelectorProduction.test.ts')
+          text=path.read_text()
+          marker='test("unknown installed automatic selector uses host authority and authored ordering without manual target identity",async()=>{'
+          if marker not in text:
+              raise SystemExit('automatic selector test marker missing')
+          before, block=text.split(marker,1)
+          old='''    await adapter.resolveAction(actionId,["char.aelar"]);\n    const snapshot=await adapter.getSnapshot();\n    assert.equal(snapshot.resolution?.stage,"complete");'''
+          new='''    await adapter.resolveAction(actionId,[]);\n    const snapshot=await adapter.getSnapshot();\n    assert.equal(snapshot.resolution?.actionId,actionId,"automatic selector must produce a fresh action resolution without a manual target identity");\n    assert.equal(snapshot.resolution?.stage,"complete");'''
+          if new not in block:
+              if old not in block:
+                  raise SystemExit('automatic selector assertion block missing')
+              block=block.replace(old,new,1)
+          path.write_text(before+marker+block)
+          PY
+      - run: npm ci
+      - run: npm run generate:content
+      - name: Verify automatic selector production and Gate N boundaries
+        run: |
+          node --import tsx --test tests/domain/commonPlayTargetingRuntime.test.ts tests/ui/commonPlayRichSelectorProduction.test.ts tests/ui/installedCommonPlayProductionRuntime.test.ts
+          node scripts/check-v1-mechanism-coverage.mjs
+          node scripts/check-legacy-execution-boundary.mjs
+          npm exec tsc -- --noEmit
+      - name: Record verified evidence and publish
+        shell: bash
+        env:
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
+          data=json.loads(path.read_text())
+          family=next(item for item in data['mechanismFamilies'] if item['family']=='E')
+          evidence=f"C9 Family E Automatic Target-Free 7130 run {os.environ['RUN_ID']}: unknown installed automatic selector executed with no caller-supplied target identity, selected the lowest-HP eligible enemy through shared orderBy/Host authority, coverage checker, legacy boundary, and tsc --noEmit passed"
+          if evidence not in family['productionEvidence']:
+              family['productionEvidence'].append(evidence)
+          path.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n')
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/c9-family-e-automatic-targetfree-7130.yml
+          git add tests/ui/commonPlayRichSelectorProduction.test.ts docs/rules/v1-mechanism-coverage-ledger.json
+          git diff --cached --check
+          git commit -m "test(c9): prove target-free automatic selector authority"
+          branch=agent/c9-gate-n-coverage-reconciliation
+          for attempt in $(seq 1 12); do
+            git fetch origin "$branch"
+            if git rebase "origin/$branch"; then
+              if git push origin HEAD:"$branch"; then exit 0; fi
+            fi
+            git rebase --abort || true
+            sleep 1
+          done
+          exit 1
