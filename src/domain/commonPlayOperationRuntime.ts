@@ -1,6 +1,6 @@
 import type { RulesRuntimeState } from "./combatState";
 import type { D20RollModification, D20TestFamily, ModifierContribution } from "./d20";
-import { DomainEvaluationError, type RollStateContribution, type RulesProfileLike } from "./profileEngine";
+import { DomainEvaluationError, type ExpressionNode, type RollStateContribution, type RulesProfileLike } from "./profileEngine";
 import { resolvePendingResolution } from "./resolution";
 import type { PendingResolution, ResolutionCommit, ResolutionOperation } from "./resolutionTypes";
 import type { ResourceRecovery } from "./resources";
@@ -669,7 +669,34 @@ export function compileCommonPlayEntryPointOperations(
   for(const [index,operation] of entryPoint.operations.entries()) {
     const operationId=`${input.resolutionId}:operation:${index}`;
     if(operation.kind==="roll.modify") continue;
-    if(operation.kind==="property.modify") throw new DomainEvaluationError("property.modify production lowering is not implemented; Effect-owned property modifiers must not fall through to another execution engine");
+    if(operation.kind==="property.modify") {
+    const targetId=operation.target==="actor"?input.actorId:input.targetId;
+    if(!targetId) throw new DomainEvaluationError("Common Play target property modifier requires one pre-resolved target");
+    const duration=operation.duration.unit==="days"
+      ? {kind:"hours" as const,amount:operation.duration.amount.value*24}
+      : {kind:operation.duration.unit,amount:operation.duration.amount.value};
+    operations.push({
+      id:operationId,
+      kind:"apply-effect",
+      effect:{
+        id:`${operationId}:effect`,
+        sourceId:`common-play:${supported.id}:${entryPoint.id}:operation:${index}`,
+        sourceActorId:input.actorId,
+        targetId,
+        kind:"modifier",
+        tags:["common-play:property-modifier"],
+        duration,
+        propertyModifier:{
+          property:operation.property,
+          operation:operation.operation,
+          value:structuredClone(operation.value) as ExpressionNode,
+          source:"definition",
+          instancePolicy:operation.instancePolicy,
+        },
+      },
+    });
+    continue;
+  }
     if(operation.kind==="resource.recharge") {
       const faces=input.rechargeDiceFaces?.[index];
       if(!faces||faces.length!==1) throw new DomainEvaluationError(`Common Play recharge operation ${index} requires exactly one authoritative die face`);

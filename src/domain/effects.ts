@@ -1,4 +1,4 @@
-import { DomainEvaluationError, type ProvenanceRecord } from "./profileEngine";
+import { DomainEvaluationError, type ExpressionNode, type ProvenanceRecord } from "./profileEngine";
 import type { ConditionId } from "./conditions";
 
 export type TurnBoundary = "start" | "end";
@@ -48,6 +48,14 @@ export interface EffectTurnActivityRestriction {
   selectedCategory?: TurnActivityCategory;
 }
 
+export interface EffectPropertyModifier {
+  property:string;
+  operation:"add"|"subtract"|"set"|"min"|"max"|"multiply";
+  value:ExpressionNode;
+  source:"definition";
+  instancePolicy:"stack"|"replace"|"unique-by-source"|"profile-policy";
+}
+
 export interface EffectInstance {
   id: string;
   sourceId: string;
@@ -55,6 +63,7 @@ export interface EffectInstance {
   targetId: string;
   kind: EffectKind;
   conditionId?: ConditionId;
+  propertyModifier?: EffectPropertyModifier;
   tags: string[];
   expiry: EffectExpiry;
   termination?: EffectTermination;
@@ -75,6 +84,7 @@ export interface EffectApplyRequest {
   targetId: string;
   kind: EffectKind;
   conditionId?: ConditionId;
+  propertyModifier?: EffectPropertyModifier;
   tags?: string[];
   duration: DurationSpec;
   termination?: EffectTermination;
@@ -129,6 +139,7 @@ function validateTurnActivity(restriction: EffectTurnActivityRestriction | undef
 export function createEffect(request: EffectApplyRequest, clock: RuntimeClock): EffectInstance {
   if (!request.id || !request.sourceId || !request.targetId) throw new DomainEvaluationError("effect id, sourceId, and targetId are required");
   if (request.kind === "condition" && !request.conditionId) throw new DomainEvaluationError("condition effect requires conditionId");
+  if (request.propertyModifier && request.kind !== "modifier") throw new DomainEvaluationError("property modifier payload requires modifier effect kind");
   if (request.duration.kind === "concentration" && !request.concentrationGroupId) throw new DomainEvaluationError("concentration effect requires concentrationGroupId");
   validateTurnActivity(request.turnActivity);
   return {
@@ -138,6 +149,7 @@ export function createEffect(request: EffectApplyRequest, clock: RuntimeClock): 
     targetId:request.targetId,
     kind:request.kind,
     conditionId:request.conditionId,
+    propertyModifier:request.propertyModifier ? structuredClone(request.propertyModifier) : undefined,
     tags:[...(request.tags ?? [])],
     expiry:materializeDuration(request.duration, clock),
     termination:request.termination ? { ...request.termination } : undefined,
