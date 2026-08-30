@@ -1,9 +1,9 @@
 {
   "version": 1,
   "run_id": "b7f27a61-29d8-4ba2-9f93-8e66722d5f41",
-  "sequence": 7,
+  "sequence": 8,
   "status": "continue",
-  "reason": "C9 remains active at IMPLEMENTED=4, INCOMPLETE=32, PROVEN_UNNEEDED=0 with gateNBlockingNamedFallbacks empty. Family B already has generic Action/Bonus Action/Reaction, movement, extra Action/Attack, frequency, turn-clock, and off-turn execution evidence; it remains INCOMPLETE because the remaining triggered-window/timing matrix depends on unresolved Family P semantic-event ordering and Family AC special timing authority. Next audit Family C d20/post-roll seams, especially the retained Cutting Words legacy path, for the smallest structural generic migration.",
+  "reason": "C9 remains active at IMPLEMENTED=4, INCOMPLETE=32, PROVEN_UNNEEDED=0 with gateNBlockingNamedFallbacks empty. Family C now has declarative Cutting Words and arbitrary installed deterministic post-roll replace/minimum/target-add production evidence; the remaining C seam is named productionPlayRuntimeAdapter runtimeD20FollowUps authoring for add-die/reroll representatives. Next migrate those follow-ups to portable Common Play and prove arbitrary identity plus connected/reconnect/Undo.",
   "task_id": "v1-common-play-c8-rerun",
   "updated_at": "2026-08-30"
 }
