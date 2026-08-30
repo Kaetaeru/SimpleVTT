@@ -29,6 +29,7 @@ jobs:
           echo "$payload" | base64 -d | gzip -d > /tmp/c9-family-e-patch.py
           python /tmp/c9-family-e-patch.py
           python -c 'from pathlib import Path; p=Path("src/domain/commonPlayOperationRuntime.ts"); t=p.read_text(); old="const TARGETING_KEYS=new Set([\"from\",\"where\",\"min\",\"max\",\"area\",\"orderBy\"]);"; new="const TARGETING_KEYS=new Set([\"from\",\"where\",\"min\",\"max\",\"area\",\"orderBy\",\"selection\"]);"; assert old in t or new in t; p.write_text(t.replace(old,new,1))'
+          python -c 'from pathlib import Path; p=Path("tests/ui/installedCommonPlayProductionRuntime.test.ts"); t=p.read_text(); marker="test(\"unknown installed Common Play automatic selector uses Host authority ordering without caller target identities\""; i=t.index(marker); old="entryPoint.operations=[];"; j=t.index(old,i); new="entryPoint.operations=[{kind:\"damage.apply\",amount:{value:1},damageType:\"force\",target:\"target\"}];"; p.write_text(t[:j]+new+t[j+len(old):])'
       - name: Install dependencies
         run: npm install --no-audit --no-fund
       - name: Generate content catalogs
