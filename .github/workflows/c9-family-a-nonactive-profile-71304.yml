@@ -1,0 +1,23 @@
+name: C9 Family A Non-Active Profile 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: npm run generate:content
+      - name: Verify Family A profile projection
+        run: npx tsx --test tests/ui/c9FamilyANonActiveProfileProperties.test.ts tests/ui/installedCommonPlayPropertyModifierProduction.test.ts
+      - name: Verify TypeScript
+        run: npx tsc --noEmit
+      - name: Verify coverage ledger structure
+        run: node scripts/check-v1-mechanism-coverage.mjs
