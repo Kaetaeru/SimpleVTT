@@ -261,7 +261,7 @@
         "commonPlayResourceEconomyRuntime.test.ts",
         "resourceRecoveryLockout.test.ts"
       ],
-      "currentState": "Generic resource/economy payments are identity-independent and atomic across every manual Common Play lowerer; complete pool/recovery/durable writeback audit remains",
+      "currentState": "Generic resource/economy payments, durable source-owned pools, rest and turn-start recovery, recovery lockouts, item charges, temporary capacity, and authoritative Character write-back/Undo now execute through shared Resolver state changes without content-name dispatch. Resource maxima remain source-owned while temporary capacity is represented as an explicit durable runtime overlay and normalized on Long Rest.",
       "requiredSemantics": [
         "spend/gain",
         "multiple atomic resources",
@@ -276,25 +276,39 @@
         "source-owned pools"
       ],
       "transactionDomain": "Resolver plus Character resource writeback",
-      "disposition": "INCOMPLETE",
+      "disposition": "IMPLEMENTED",
       "implementationEvidence": [
-        "commonPlayOperationRuntime.ts shared PaymentContract compiler",
-        "commonPlayDefinitionRuntime.test.ts lowerer preservation"
+        "commonPlayOperationRuntime.ts shared generic resource/economy payment lowering plus resource.change createIfMissing",
+        "resources.ts generic spend/gain/recovery, temporary maximum, and recovery-lockout semantics",
+        "resolutionResourceOps.ts resource creation and capacity ResourceStateChange emission",
+        "resolutionRestOps.ts and resolutionTurnOps.ts authoritative rest/turn-start resource state changes",
+        "runtimeStateChange.ts durable ResourceStateChange creation, lockout, and capacity payloads",
+        "resolutionCharacterDurableProjection.ts generic Character resource/item-charge forward and inverse write-back"
       ],
       "productionEvidence": [
-        "installedCommonPlayLoweredFamiliesProduction.test.ts result/payment atomic commit and Undo"
+        "installedCommonPlayProductionRuntime.test.ts unknown installed resource/economy production execution and Undo",
+        "phase09CommonPlayResourcePersistence.test.ts unknown installed source-owned pool materialization/spend and materialization Undo",
+        "resourceRecoveryLockout.test.ts rest, turn-start recovery, lockout, and temporary-capacity normalization events",
+        "fighterActionSurgeRuntimeAdapter.test.ts built-in Common Play multi-resource payment, exact grant, connected convergence, and Undo",
+        "M1 Common Play Resource Economy run 33308082562 at a18039511029d3e73638f1fe9af6a8de32ef95f6 passed focused resource/economy tests, legacy boundary check, and tsc --noEmit"
       ],
       "identityInvarianceEvidence": [
-        "commonPlayResourceEconomyRuntime.test.ts renamed definition"
+        "commonPlayResourceEconomyRuntime.test.ts external definition ID rename invariance",
+        "installedCommonPlayProductionRuntime.test.ts unknown external module/content/mechanic execution without Action Surge identities",
+        "phase09CommonPlayResourcePersistence.test.ts arbitrary source-owned module/content/mechanic/resource identifiers",
+        "fighterActionSurgeRuntimeAdapter.test.ts action/content/definition/display-name rename invariance"
       ],
       "connectedEvidenceIfRelevant": [
-        "installedCommonPlayLoweredFamiliesProduction.test.ts Host/Client economy convergence"
+        "installedCommonPlayProductionRuntime.test.ts Host/Client resource/economy convergence through installed Common Play",
+        "fighterActionSurgeRuntimeAdapter.test.ts connected resource and extra-Action convergence through Common Play"
       ],
-      "persistenceEvidenceIfRelevant": [],
-      "remainingNamedSeams": [
-        "named class resource materializers and rest dispatch",
-        "durable Character resource writeback across all lowerers"
+      "persistenceEvidenceIfRelevant": [
+        "phase09CommonPlayResourcePersistence.test.ts existing resource spend persists across restart and inverse Undo",
+        "phase09CommonPlayResourcePersistence.test.ts source-owned pool creation/spend persists across restart and creation Undo removes the pool",
+        "phase09CommonPlayResourcePersistence.test.ts temporary capacity overlay persists separately from source maximum and reverses through inverse projection",
+        "resolutionCharacterDurableProjection.ts item-charge and generic resource state changes share Character durable write-back"
       ],
+      "remainingNamedSeams": [],
       "connectedRelevant": true,
       "persistenceRelevant": true
     },
