@@ -1,6 +1,7 @@
 import "./installedContentContracts";
 import type { ActionVm, AppSnapshot, CatalogEntry, CharacterSheet, CombatantDefinitionVm, DamageComponentView, ResolutionView, SceneVm, SessionMode } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
+import { connectedStateFor } from "./connectedSessionState";
 import { catalogQualifiedId } from "./contentCatalogIdentity";
 import { generatedBuiltinCatalog } from "./builtinCatalogRuntimeAdapter";
 import { requiredSessionInstalledContent } from "./installedContentRuntimeAdapter";
@@ -1056,6 +1057,13 @@ MockAdapter.prototype.resolveAction=async function resolveCommonPlayProductionAc
   const actionName=prepared.projectedAction?.name||action.nameKo||action.nameEn;
   const selectedTargetResponder=interaction.responder==="target"||interaction.responder==="target-owner";
   const authorityResponder=interaction.responder==="dm"||interaction.responder==="host";
+  const authoritySnapshot=interaction.responder==="dm"?await previousGetSnapshot.call(this):undefined;
+  if(interaction.responder==="dm"&&authoritySnapshot?.role!=="dm") {
+    return failAction(prepared.internal,prepared.actor.id,actionId,actionName,targetIds,resolutionId,"dm interaction requires local DM authority");
+  }
+  if(interaction.responder==="host"&&connectedStateFor(this).mode!=="host") {
+    return failAction(prepared.internal,prepared.actor.id,actionId,actionName,targetIds,resolutionId,"host interaction requires connected Host authority");
+  }
   const interactionResponder=authorityResponder
     ?{id:`authority:${interaction.responder}`,name:interaction.responder==="dm"?"DM":"Host"}
     :selectedTargetResponder
@@ -1113,6 +1121,9 @@ MockAdapter.prototype.respondToInterrupt=async function respondToCommonPlayInter
   if(action.lowered.kind!=="operations") return previousRespondToInterrupt.call(this,accept);
   const entryPoint=action.lowered.definition.entryPoints.find((candidate)=>candidate.id===action.entryPointId);
   if(!entryPoint?.interaction||entryPoint.interaction.id!==interrupt.id) return previousRespondToInterrupt.call(this,accept);
+  const authoritySnapshot=entryPoint.interaction.responder==="dm"?await previousGetSnapshot.call(this):undefined;
+  if(entryPoint.interaction.responder==="dm"&&authoritySnapshot?.role!=="dm") return finishInteraction(internal,resolution,"Common Play 상호작용 DM 권한 재검증 실패");
+  if(entryPoint.interaction.responder==="host"&&connectedStateFor(this).mode!=="host") return finishInteraction(internal,resolution,"Common Play 상호작용 Host 권한 재검증 실패");
   const projected=Object.values(internal.scene.actionsByActor).flat().find((candidate)=>candidate.id===resolution.actionId&&candidate.actorId===resolution.actorId);
   const runtimeArtifactSnapshot=runtimeArtifactReference?await previousGetSnapshot.call(this):undefined;
   const runtimeArtifactState=runtimeArtifactReference?snapshotAdapterTurnRuntimeState(this,internal.scene):undefined;
