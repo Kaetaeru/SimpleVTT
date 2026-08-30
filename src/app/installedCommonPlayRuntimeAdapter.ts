@@ -1,5 +1,5 @@
 import "./installedContentContracts";
-import type { ActionVm, AppSnapshot, CatalogEntry, CharacterSheet, DamageComponentView, ResolutionView, SceneVm, SessionMode } from "./contracts";
+import type { ActionVm, AppSnapshot, CatalogEntry, CharacterSheet, CombatantDefinitionVm, DamageComponentView, ResolutionView, SceneVm, SessionMode } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
 import { catalogQualifiedId } from "./contentCatalogIdentity";
 import { generatedBuiltinCatalog } from "./builtinCatalogRuntimeAdapter";
@@ -8,6 +8,7 @@ import { installedCommonPlayActionId, parseInstalledCommonPlayActionId, parseRun
 import { commitProductionRuntimeResolution } from "./runtimeResolutionCommit";
 import { commitAdapterTurnRuntimeState, snapshotAdapterTurnRuntimeState } from "./turnRuntimeSessionRegistry";
 import { resolveRuntimeProfileProperty, SIMPLEVTT_APP_RULES_PROFILE } from "./realResolutionService";
+import { resolveRuntimeSaveModifier } from "./realRuntimeStatProvider";
 import { authoritativeCommonPlaySpatialRelation } from "./realSpatialRuntimeService";
 import {
   parseCommonPlayDamageDiceFormula,
@@ -36,6 +37,7 @@ interface AdapterState {
   sessionMode:SessionMode;
   scene:SceneVm;
   activeCharacter:CharacterSheet;
+  combatantDefinitions:CombatantDefinitionVm[];
   resolution:ResolutionView|null;
   d20(actionId:string,index?:number):number;
   getSnapshot():Promise<AppSnapshot>;
@@ -772,6 +774,20 @@ export function commonPlayActorProfileProperties(
   return projected;
 }
 
+function commonPlayTestModifierContributions(internal:AdapterState,state:RulesRuntimeState,rollerId:string,property:string|undefined) {
+  if(!property) return undefined;
+  const roller=internal.scene.entities.find((entity)=>entity.id===rollerId);
+  if(!roller) throw new Error(`Common Play d20 roller not found: ${rollerId}`);
+  const save=property.match(/^save\.(str|dex|con|int|wis|cha)\.modifier$/);
+  if(save) {
+    const fact=resolveRuntimeSaveModifier(roller,internal.activeCharacter,save[1],internal.combatantDefinitions);
+    return [{source:fact.source,value:fact.modifier}];
+  }
+  const value=commonPlayActorProfileProperties(internal,state,rollerId)?.[property];
+  if(!Number.isFinite(value)) throw new Error(`Common Play d20 property is unavailable: ${property}`);
+  return [{source:`profile:${rollerId}:${property}`,value:Number(value)}];
+}
+
 function operationExecutionInput(
   internal:AdapterState,
   actionId:string,
@@ -786,6 +802,8 @@ function operationExecutionInput(
   const entryPoint=action.lowered.definition.entryPoints.find((candidate)=>candidate.id===action.entryPointId)!;
   const movementProperties=commonPlayActorProfileProperties(internal,state,actor.id);
   const d20Faces=entryPoint.test?[internal.d20(actionId,0),internal.d20(actionId,1)]:undefined;
+  const d20RollerId=entryPoint.test?.roller==="target"?selectedTargetId:actor.id;
+  const d20ModifierContributions=entryPoint.test?commonPlayTestModifierContributions(internal,state,d20RollerId,entryPoint.test.property):undefined;
   const movementFactAnswers=Object.fromEntries(entryPoint.operations.flatMap((operation,index)=>{
     if(operation.kind!=="movement.relocate"||!operation.destinationFact) return [];
     const subject=operation.destinationFact.subject==="actor"||operation.destinationFact.subject==="self"?actor.id:operation.destinationFact.subject;
@@ -805,7 +823,7 @@ function operationExecutionInput(
     damageDiceFaces:damageDiceFaces(internal,actionId,entryPoint,d20Faces?.length??0),
     ...(movementProperties?{movementProperties}:{}),
     ...(Object.keys(movementFactAnswers).length?{movementFactAnswers}:{}),
-    ...(entryPoint.test?{d20:{faces:d20Faces!,targetId:selectedTargetId}}:{}),
+    ...(entryPoint.test?{d20:{faces:d20Faces!,targetId:selectedTargetId,...(d20ModifierContributions?{modifierContributions:d20ModifierContributions}:{})}}:{}),
     ...(itemPaymentResourceIds?{itemPaymentResourceIds}:{}),
     actionKind:entryPoint.test?.kind==="attack-roll"?"attack" as const:action.category==="spell"?"magic" as const:"other" as const,
     ...(interactionId?{interactionResponse:{interactionId,accepted:true as const}}:{}),

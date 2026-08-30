@@ -17,10 +17,12 @@ type LiteralNumberExpression={value:number};
 type CommonPlayExpression=LiteralNumberExpression|Record<string,unknown>;
 type CommonPlayHpTarget="actor"|"self"|"target";
 type CommonPlayConditionTarget="actor"|"self"|"target";
+type CommonPlayTestOutcomePredicate={op:"eq";left:{ref:"test.outcome"};right:{value:"success"|"failure"}};
 type CommonPlayConditionChange={
   kind:"condition.apply"|"condition.remove";
   condition:ConditionId;
   target?:CommonPlayConditionTarget;
+  when?:CommonPlayTestOutcomePredicate;
 };
 type CommonPlayMovementStand={kind:"movement.stand";target:"actor"|"self"};
 
@@ -170,7 +172,8 @@ export type CommonPlayOperation=
 
 export interface CommonPlayD20TestDefinition {
   kind:D20TestFamily;
-  roller:"actor";
+  roller:"actor"|"target";
+  property?:string;
   dc:LiteralNumberExpression;
   perTarget?:false;
 }
@@ -242,7 +245,7 @@ const RECHARGE_RANGE_KEYS=new Set(["minimum","maximum"]);
 const ECONOMY_MODIFY_KEYS=new Set(["kind","bucket","amount"]);
 const DAMAGE_APPLY_KEYS=new Set(["kind","amount","damageType","target"]);
 const HEALING_APPLY_KEYS=new Set(["kind","amount","target"]);
-const CONDITION_CHANGE_KEYS=new Set(["kind","condition","target"]);
+const CONDITION_CHANGE_KEYS=new Set(["kind","condition","target","when"]);
 const TEMP_HP_GRANT_KEYS=new Set(["kind","amount","target","choice"]);
 const LIFE_STABILIZE_KEYS=new Set(["kind","target"]);
 const ROLL_MODIFY_KEYS=new Set(["kind","mode","value","dice"]);
@@ -337,6 +340,18 @@ function conditionTarget(value:unknown,label:string):CommonPlayConditionTarget|u
   if(value===undefined) return undefined;
   if(value!=="actor"&&value!=="self"&&value!=="target") throw new DomainEvaluationError(`${label} must be actor, self, or target for portable Common Play condition operations`);
   return value;
+}
+
+function testOutcomePredicate(value:unknown,label:string):CommonPlayTestOutcomePredicate|undefined {
+  if(value===undefined) return undefined;
+  const predicate=object(value,label);
+  supportedKeys(predicate,new Set(["op","left","right"]),label);
+  const left=object(predicate.left,`${label}.left`);
+  const right=object(predicate.right,`${label}.right`);
+  supportedKeys(left,new Set(["ref"]),`${label}.left`);
+  supportedKeys(right,new Set(["value"]),`${label}.right`);
+  if(predicate.op!=="eq"||left.ref!=="test.outcome"||(right.value!=="success"&&right.value!=="failure")) throw new DomainEvaluationError(`${label} currently supports only test.outcome == success|failure`);
+  return {op:"eq",left:{ref:"test.outcome"},right:{value:right.value}};
 }
 
 function numericExpression(value:unknown,label:string):CommonPlayExpression {
@@ -551,7 +566,8 @@ function parseOperation(value:unknown,label:string):CommonPlayOperation {
     const condition=nonEmptyString(operation.condition,`${label}.condition`) as ConditionId;
     if(!(condition in SRD_521_CONDITIONS)) throw new DomainEvaluationError(`${label}.condition is not a registered SRD condition: ${condition}`);
     const target=conditionTarget(operation.target,`${label}.target`);
-    return {kind:operation.kind,condition,...(target===undefined?{}:{target})};
+    const when=testOutcomePredicate(operation.when,`${label}.when`);
+    return {kind:operation.kind,condition,...(target===undefined?{}:{target}),...(when?{when}:{})};
   }
   if(operation.kind==="economy.modify") {
     supportedKeys(operation,ECONOMY_MODIFY_KEYS,label);
@@ -625,18 +641,12 @@ function parseOperation(value:unknown,label:string):CommonPlayOperation {
 function parseD20Test(value:unknown,label:string):CommonPlayD20TestDefinition {
   const definition=object(value,label);
   supportedKeys(definition,D20_TEST_KEYS,label);
-  if(definition.kind!=="ability-check"&&definition.kind!=="saving-throw"&&definition.kind!=="attack-roll") {
-    throw new DomainEvaluationError(`${label}.kind is unsupported`);
-  }
-  if(definition.roller!=="actor") throw new DomainEvaluationError(`${label}.roller must be actor for portable Common Play d20`);
-  if(definition.property!==undefined) throw new DomainEvaluationError(`${label}.property-backed modifiers are not supported by this Common Play d20 slice`);
-  if(definition.perTarget!==undefined&&definition.perTarget!==false) throw new DomainEvaluationError(`${label}.perTarget must be false for an actor d20 test`);
-  return {
-    kind:definition.kind,
-    roller:"actor",
-    dc:literalExpression(definition.dc,`${label}.dc`),
-    ...(definition.perTarget===false?{perTarget:false}:{}),
-  };
+  if(definition.kind!=="ability-check"&&definition.kind!=="saving-throw"&&definition.kind!=="attack-roll") throw new DomainEvaluationError(`${label}.kind is unsupported`);
+  if(definition.roller!=="actor"&&definition.roller!=="target") throw new DomainEvaluationError(`${label}.roller must be actor or target for portable Common Play d20`);
+  const property=definition.property===undefined?undefined:nonEmptyString(definition.property,`${label}.property`);
+  if(definition.roller==="target"&&!property) throw new DomainEvaluationError(`${label}.property is required for a target-rolled portable Common Play d20 test`);
+  if(definition.perTarget!==undefined&&definition.perTarget!==false) throw new DomainEvaluationError(`${label}.perTarget must be false for a single portable Common Play d20 test`);
+  return {kind:definition.kind,roller:definition.roller,...(property?{property}:{}),dc:literalExpression(definition.dc,`${label}.dc`),...(definition.perTarget===false?{perTarget:false}:{})};
 }
 
 export function parseCommonPlayOperationDefinition(value:unknown,label="Common Play definition"):CommonPlayOperationDefinition {
@@ -668,6 +678,10 @@ for(const [index,entryPoint] of entryPoints.entries()) {
   if((entryPoint.targeting?.max??1)>1&&entryPoint.operations.some((operation)=>(operation.kind==="damage.apply"||operation.kind==="healing.apply"||operation.kind==="temp-hp.grant"||operation.kind==="life.stabilize")&&operation.target==="target")) {
     throw new DomainEvaluationError(`${label}.entryPoints[${index}] multi-target selection requires an explicit per-target effect contract`);
   }
+}
+for(const [index,entryPoint] of entryPoints.entries()) {
+  if(entryPoint.test?.roller==="target"&&(!entryPoint.targeting||entryPoint.targeting.min!==1||entryPoint.targeting.max!==1)) throw new DomainEvaluationError(`${label}.entryPoints[${index}] target-rolled d20 requires targeting exactly one target`);
+  if(entryPoint.operations.some((operation)=>(operation.kind==="condition.apply"||operation.kind==="condition.remove")&&operation.when)&&!entryPoint.test) throw new DomainEvaluationError(`${label}.entryPoints[${index}] test.outcome condition requires a d20 test`);
 }
 const reactionPaymentCount=payments?.filter((payment)=>payment.kind==="economy"&&payment.bucket==="reaction").length??0;
   const interactionCount=entryPoints.filter((entry)=>entry.interaction).length;
@@ -793,6 +807,8 @@ export function compileCommonPlayEntryPointOperations(
   operations.push(...compileCommonPlayPayments(supported.payments,input));
   if(entryPoint.test) {
     if(!input.d20) throw new DomainEvaluationError(`Common Play entry point ${entryPoint.id} requires authoritative d20 input`);
+    const rollerId=entryPoint.test.roller==="target"?input.targetId:input.actorId;
+    if(!rollerId) throw new DomainEvaluationError(`Common Play entry point ${entryPoint.id} target roller requires one pre-resolved target`);
     const rollModifications: D20RollModification[]=entryPoint.operations.flatMap((operation,index)=>{
       if(operation.kind!=="roll.modify") return [];
       const source=`common-play:${supported.id}:${entryPoint.id}:operation:${index}`;
@@ -817,8 +833,8 @@ export function compileCommonPlayEntryPointOperations(
     operations.push({
       id:`${input.resolutionId}:test`,
       kind:"d20",
-      actorId:input.actorId,
-      targetId:input.d20.targetId,
+      actorId:rollerId,
+      targetId:entryPoint.test.roller==="target"?input.actorId:input.d20.targetId,
       request:{
         family:entryPoint.test.kind,
         target:literalInteger(entryPoint.test.dc,"d20 target"),
@@ -910,15 +926,16 @@ export function compileCommonPlayEntryPointOperations(
 
     if(operation.kind==="condition.apply"||operation.kind==="condition.remove") {
       const targetId=conditionOperationTarget(operation.target,input);
+      const when=operation.when?{operationId:`${input.resolutionId}:test`,field:"outcome",equals:operation.when.right.value}:undefined;
       if(operation.kind==="condition.apply") {
         operations.push({
-          id:operationId,kind:"apply-effect",
+          id:operationId,kind:"apply-effect",...(when?{when}:{}),
           effect:{id:`${operationId}:condition:${operation.condition}`,sourceId:`common-play:${supported.id}:${entryPoint.id}:operation:${index}`,sourceActorId:input.actorId,targetId,kind:"condition",conditionId:operation.condition,tags:["common-play:condition",`condition:${operation.condition}`],duration:{kind:"permanent"}},
         });
       } else {
         const effect=[...state.effects].reverse().find((entry)=>entry.targetId===targetId&&entry.conditionId===operation.condition);
         if(!effect) throw new DomainEvaluationError(`Common Play condition.remove found no ${operation.condition} Effect on ${targetId}`);
-        operations.push({id:operationId,kind:"remove-effect",effectId:effect.id});
+        operations.push({id:operationId,kind:"remove-effect",effectId:effect.id,...(when?{when}:{})});
       }
       continue;
     }
