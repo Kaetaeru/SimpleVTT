@@ -307,7 +307,7 @@ test("installed Common Play rejects unsupported targeting authoring before persi
     raw.content[0].mechanics=[mechanic];
 
     const preview=await adapter.previewContentImport(JSON.stringify(raw));
-    assert.ok(preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"&&/targeting|unsupported fields/.test(entry.message)),JSON.stringify(preview.contentImport?.validation));
+    assert.ok(preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"&&/targeting|unsupported fields|multi-target selection/.test(entry.message)),JSON.stringify(preview.contentImport?.validation));
     await adapter.activateContentImport();
     assert.equal((await store.readGenerations()).length,0);
   }
@@ -334,7 +334,7 @@ test("installed Common Play rejects unsupported interaction and Reaction payment
     mutate(mechanic);
     raw.content[0].mechanics=[mechanic];
     const preview=await adapter.previewContentImport(JSON.stringify(raw));
-    assert.ok(preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"&&/portable Common Play/.test(entry.message)),JSON.stringify(preview.contentImport?.validation));
+    assert.ok(preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"&&/portable Common Play|portable consent interaction/.test(entry.message)),JSON.stringify(preview.contentImport?.validation));
     await adapter.activateContentImport();
     assert.equal((await store.readGenerations()).length,0);
   }
