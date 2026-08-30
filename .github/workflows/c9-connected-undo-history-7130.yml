@@ -15,35 +15,5 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npm run generate:content
-      - name: Diagnose connected Undo authority
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          path = Path('src/app/connectedActionRoutingAdapter.ts')
-          text = path.read_text()
-          old_import = 'import type { ManualMovementReactionCommand } from "./manualMovementReactionContracts";\n'
-          new_import = old_import + 'import { runtimeResolutionEventHistory } from "./runtimeResolutionEventHistory";\n'
-          if text.count(old_import) != 1:
-              raise SystemExit('expected manual movement import exactly once')
-          text = text.replace(old_import, new_import, 1)
-          old = '  const completed=app.resolution?.stage==="complete"?app.resolution:undefined;\n  const resolutionId=completed?.id;\n'
-          new = '  const completed=app.resolution?.stage==="complete"?app.resolution:undefined;\n  const history=runtimeResolutionEventHistory(this);\n  const resolutionId=history?.resolutionId??completed?.id;\n'
-          if text.count(old) != 1:
-              raise SystemExit('expected connected undo resolution lookup exactly once')
-          text = text.replace(old, new, 1)
-          marker = '  if(undoContext)next=await app.getSnapshot();\n  if(state.mode!=="host"||!state.ledger||!resolutionId||!originalEvents?.length)return next;\n'
-          replacement = '  if(undoContext)next=await app.getSnapshot();\n  console.log("C9_UNDO_DIAG",JSON.stringify({mode:state.mode,ledger:!!state.ledger,completed:completed?.id,history:history?.resolutionId,resolutionId,originalEvents:originalEvents?.length,published:[...state.publishedResolutionEvents.keys()],activities:next.activity.slice(0,4).map((entry)=>({id:entry.id,undoOf:entry.undoOf,title:entry.title}))}));\n  if(state.mode!=="host"||!state.ledger||!resolutionId||!originalEvents?.length)return next;\n'
-          if text.count(marker) != 1:
-              raise SystemExit('expected connected undo gate exactly once')
-          path.write_text(text.replace(marker, replacement, 1))
-          PY
-      - name: Run connected actor artifact Undo diagnostics
-        run: npx tsx --test tests/ui/connectedActorArtifactReconnectProduction.test.ts
+      - name: Locate Undo overrides
+        run: grep -R -n -E 'undoLastResolution|previousUndoLastResolution' src/app | head -200
