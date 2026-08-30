@@ -1,5 +1,5 @@
 name: C9 Family J Spatial Attack 71304
-# rerun after queue-before-projection opportunity-attack proof
+# rerun after queue-before-projection opportunity-attack proof; verify at current branch head
 
 on:
   push:
