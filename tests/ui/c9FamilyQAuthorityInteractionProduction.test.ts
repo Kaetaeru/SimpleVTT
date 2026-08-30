@@ -40,6 +40,7 @@ async function install(adapter:MockAdapter,identity:Identity,responder:Responder
 
 async function run(identity:Identity,responder:Responder){
   const sessionId=`session.${identity.moduleId}.${responder}`,host=new MockAdapter();
+  await host.startProductionLocalPlay("dm");
   const actionId=await install(host,identity,responder);
   const internal=host as unknown as {activeCharacter:{id:string};scene:{entities:Array<{id:string;name:string;hp:number}>}};
   const actorId=internal.activeCharacter.id;
