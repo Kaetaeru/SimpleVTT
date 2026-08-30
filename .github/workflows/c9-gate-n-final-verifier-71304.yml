@@ -17,18 +17,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: agent/c9-gate-n-coverage-reconciliation
+          ref: ${{ github.sha }}
           fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-      - name: Reconcile and pin verified SHA
+      - name: Pin verified SHA
         shell: bash
-        run: |
-          set -euo pipefail
-          git pull --ff-only origin agent/c9-gate-n-coverage-reconciliation
-          echo "VERIFIED_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+        run: echo "VERIFIED_SHA=$GITHUB_SHA" >> "$GITHUB_ENV"
       - run: npm ci
       - name: Generate content catalogs
         run: npm run generate:content
@@ -59,6 +56,7 @@ jobs:
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B agent/c9-gate-n-coverage-reconciliation "$VERIFIED_SHA"
           git rm .github/workflows/c9-gate-n-final-verifier-71304.yml
           git commit -m "ci(c9): verify Gate N completion"
           git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
