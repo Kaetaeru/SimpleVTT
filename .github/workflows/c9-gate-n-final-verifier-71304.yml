@@ -1,5 +1,5 @@
 name: C9 Gate N Final Verifier 71304
-# final verifier rerun after zero-INCOMPLETE ledger and legacy baseline reconciliation
+# final verifier rerun after reconciled zero-INCOMPLETE ledger and latest evidence commits
 
 on:
   push:
