@@ -26,10 +26,11 @@ const ZONE=JSON.parse(readFileSync(new URL("../fixtures/play-contract/persistent
 function artifactConfig(prefix:string) {
   const duration={kind:"durable"};const lifetime={kind:"durable"};
   const actorAction=installedCommonPlayActionId({catalogId:catalogQualifiedId(`${prefix}.actor-action`,`${prefix}.module`,"1"),mechanicId:`${prefix}.actor-action`,entryPointId:"bite"});
+  const actorPropertyAction=installedCommonPlayActionId({catalogId:catalogQualifiedId(`${prefix}.actor-action`,`${prefix}.module`,"1"),mechanicId:`${prefix}.actor-action`,entryPointId:"stride"});
   return {schemaVersion:"0.2-draft",id:`${prefix}.artifacts`,entryPoints:[{id:"create-artifacts",invocation:"manual",operations:[
     {kind:"artifact.spawn",template:"summon"},{kind:"artifact.spawn",template:"wall"},{kind:"artifact.spawn",template:"form"},{kind:"artifact.spawn",template:"tether"},
   ]}],artifactTemplates:[
-    {id:"summon",artifactKind:"actor",duration,lifetime,initialState:{combatantId:`${prefix}.summoned`,statDefinitionId:`${prefix}.stat`,ownerId:"actor",controllerId:"actor",side:"ally",initiative:"shared",properties:{"presentation.name":"Unknown Summon","defense.ac":13,"hp.maximum":10,"movement.walk":30},actionDefinitionIds:[actorAction],resources:[]}},
+    {id:"summon",artifactKind:"actor",duration,lifetime,initialState:{combatantId:`${prefix}.summoned`,statDefinitionId:`${prefix}.stat`,ownerId:"actor",controllerId:"actor",side:"ally",initiative:"shared",properties:{"presentation.name":"Unknown Summon","defense.ac":13,"hp.maximum":10,"movement.walk":30,"ability.str.score":14},actionDefinitionIds:[actorAction,actorPropertyAction],resources:[]}},
     {id:"wall",artifactKind:"object",duration,lifetime,initialState:{size:"large",armorClass:15,hp:{current:20,maximum:20},repairable:true}},
     {id:"form",artifactKind:"form",duration,lifetime,initialState:{targetActorId:"actor",propertyOverlay:{"movement.fly":30},retainedProperties:[],replacementProperties:["movement.fly"],hpPolicy:"retain",actionPolicy:"grant",spellcasting:"retain",actionDefinitionIds:[`${prefix}.claw`],resources:[]}},
     {id:"tether",artifactKind:"link",duration,lifetime,initialState:{endpointIds:["actor","artifact:summon"],relation:"tether",maximumLengthFeet:30}},
@@ -39,6 +40,7 @@ function artifactConfig(prefix:string) {
 function actorActionConfig(prefix:string) {
   return {schemaVersion:"0.2-draft",id:`${prefix}.actor-action`,payments:[{kind:"economy",bucket:"action",amount:{value:1},consumeAt:"commit",refundOnCancel:true}],entryPoints:[
     {id:"bite",invocation:"manual",targeting:{from:"targets",min:1,max:1},test:{kind:"attack-roll",roller:"actor",dc:{value:10}},operations:[{kind:"damage.apply",amount:"1d4+1",damageType:"piercing",target:"target"}]},
+    {id:"stride",invocation:"manual",operations:[{kind:"movement.relocate",mode:"move",movementType:"walk",target:"actor",distance:{ref:"ability.str.modifier"},destinationFact:{id:"summoned-stride-destination",fact:"spatial.legal-destination",subject:"actor",authority:"actor-owner",visibility:"actor-and-dm",unknownPolicy:"request-authority"}}]},
   ]};
 }
 
@@ -620,6 +622,27 @@ test("summoned Actor projects and executes its portable Common Play action with 
   snapshot=await adapter.getSnapshot();
   assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")!.hp,before);
   assert.equal(snapshot.scene.economyByActor[`${prefix}.summoned`]?.action,true);
+});
+
+test("summoned Actor resolves derived profile refs from source-owned properties without identity dispatch",async()=>{
+  const run=async(prefix:string)=>{
+    const adapter=new MockAdapter();
+    const {action}=await install(adapter,prefix);
+    await adapter.resolveAction(action(3,"create-artifacts"),["char.aelar"]);
+    const actorId=`${prefix}.summoned`;
+    await adapter.setCurrentActor(actorId);
+    let snapshot=await adapter.getSnapshot();
+    const stride=snapshot.scene.actionsByActor[actorId]?.find((entry)=>entry.summary.endsWith(" · stride"));
+    assert.ok(stride,JSON.stringify(snapshot.scene.actionsByActor[actorId]));
+    const before=snapshot.scene.economyByActor[actorId]!.movement;
+    await adapter.resolveAction(stride.id,[actorId]);
+    snapshot=await adapter.getSnapshot();
+    assert.equal(before-snapshot.scene.economyByActor[actorId]!.movement,2,JSON.stringify(snapshot.resolution));
+    assert.equal(snapshot.resolution?.stage,"complete");
+    return before-snapshot.scene.economyByActor[actorId]!.movement;
+  };
+  assert.equal(await run("unknown-summoned-profile-a"),2);
+  assert.equal(await run("renamed-summoned-profile-b"),2);
 });
 
 test("summoned Actor action and Undo converge through Host-authoritative connected events",async()=>{
