@@ -21,67 +21,23 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - name: Apply patch
+      - name: Reconcile Family N ledger
         run: python .github/scripts/c9-family-n-source-cleanup-71304.py
-      - name: Isolate source-termination production proof
-        shell: bash
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          import json
-
-          test_path = Path('tests/ui/c9FamilyNEffectDurationProduction.test.ts')
-          text = test_path.read_text(encoding='utf-8')
-          old = '''  const sourceStateConfig={
-              schemaVersion:"0.2-draft",id:sourceStateMechanicId,
-              entryPoints:[{id:"drop-source",invocation:"manual",operations:[{kind:"damage.apply",amount:{value:999},damageType:"force",target:"actor"}]}],
-            };'''.replace('            ', '')
-          new = '''  const sourceStateConfig={
-              schemaVersion:"0.2-draft",id:sourceStateMechanicId,
-              entryPoints:[{
-                id:"drop-source",invocation:"manual",targeting:{from:"targets",min:1,max:1},
-                operations:[{kind:"condition.apply",condition:"incapacitated",target:"target"}],
-              }],
-            };'''.replace('            ', '')
-          if old not in text:
-              raise SystemExit('source-state probe anchor missing')
-          text = text.replace(old, new, 1)
-          text = text.replace(
-              'source incapacitation/death must remove its dependent portable effect in the same authoritative resolution',
-              'source Incapacitation must remove its dependent portable effect in the same authoritative resolution',
-          )
-          text = text.replace(
-              'unknown installed Common Play removes a dependent effect when its source becomes incapacitated or dies and Undo restores it',
-              'unknown installed Common Play removes a dependent effect when its source becomes Incapacitated and Undo restores it',
-          )
-          test_path.write_text(text, encoding='utf-8')
-
-          ledger_path = Path('docs/rules/v1-mechanism-coverage-ledger.json')
-          ledger = json.loads(ledger_path.read_text(encoding='utf-8'))
-          row = next(entry for entry in ledger['rows'] if entry['family'] == 'N')
-          row['productionEvidence'] = [
-              entry.replace(
-                  'source becomes Incapacitated/dead in the authoritative damage resolution',
-                  'source becomes Incapacitated in the authoritative condition resolution',
-              )
-              for entry in row['productionEvidence']
-          ]
-          ledger_path.write_text(json.dumps(ledger, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
-          PY
       - run: npm ci
       - run: npm run generate:content
-      - name: Verify Family N
+      - name: Verify Family N production lifecycle
         run: npx tsx --test tests/domain/c9FamilyNEffectLifecycleAcceptance.test.ts tests/domain/commonPlayEffectSuppressionRuntime.test.ts tests/ui/c9FamilyNEffectDurationProduction.test.ts
       - run: npm run build
       - run: node scripts/check-v1-mechanism-coverage.mjs
       - run: node scripts/check-legacy-execution-boundary.mjs
+      - run: node -e "const l=require('./docs/rules/v1-mechanism-coverage-ledger.json'); const r=l.rows.find(x=>x.family==='N'); if(r.disposition!=='IMPLEMENTED'||r.remainingNamedSeams.length) process.exit(1)"
       - run: git diff --check
-      - name: Publish verified slice
+      - name: Publish verified Family N reconciliation
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git rm .github/workflows/c9-family-n-source-cleanup-71304.yml .github/scripts/c9-family-n-source-cleanup-71304.py
-          git add src/domain/commonPlayEffectRuntime.ts schemas/common-play-contract.schema.json tests/ui/c9FamilyNEffectDurationProduction.test.ts docs/rules/v1-mechanism-coverage-ledger.json
-          git commit -m "feat(c9): complete portable effect source cleanup"
+          git add docs/rules/v1-mechanism-coverage-ledger.json
+          git commit -m "docs(c9): finalize Family N effect lifecycle evidence"
           git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
           git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
