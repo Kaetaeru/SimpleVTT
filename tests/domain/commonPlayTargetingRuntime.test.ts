@@ -76,7 +76,7 @@ test("portable Common Play relation selector validates authoritative relation fa
     resolutionId:"relation-self",actorId:"hero",entryPointId:"mend-other",targetId:"hero",targetingTargets:[target("hero","self")],
   });
   assert.equal(self.status,"rejected");
-  if(self.status==="rejected") assert.match(self.error,/relation filter rejected: hero/);
+  if(self.status==="rejected") assert.match(self.error,/targeting selector rejected: manual selection contains an ineligible target/);
   assert.equal(selfState.combatants.hero.life.hp.current,10);
 });
 
@@ -138,11 +138,10 @@ test("unsupported Common Play selector shapes reject explicitly",()=>{
   const invalid:Array<[Record<string,unknown>,RegExp]>=[
     [{from:"actors",min:1,max:1},/from must be targets/],
     [{from:"artifacts",min:1,max:1},/from must be targets/],
-    [{from:"targets",where:{value:true},min:1,max:1},/currently supports relation-matches/],
-    [{from:"targets",orderBy:"distance",min:1,max:1},/unsupported fields: orderBy/],
-    [{from:"targets",area:{kind:"instant"},min:1,max:1},/unsupported fields: area/],
+    [{from:"targets",where:{value:true},min:1,max:1},/op is unsupported/],
+    [{from:"targets",area:{kind:"instant"},min:1,max:1},/shape is unsupported/],
     [{from:"targets",min:-1,max:1},/min must be a non-negative integer/],
-    [{from:"targets",min:2,max:1},/max must be an integer >= min/],
+    [{from:"targets",min:2,max:1},/max must be >= min/],
   ];
   for(const [selector,message] of invalid) {
     const definition=structuredClone(AUTHORED);
@@ -174,7 +173,7 @@ test("invalid targeting is atomic and cannot reach downstream HP mutation",()=>{
     targetingTargets:[],
   });
   assert.equal(missing.status,"rejected");
-  if(missing.status==="rejected") assert.match(missing.error,/pre-resolved target/);
+  if(missing.status==="rejected") assert.match(missing.error,/targeting selector rejected: selector requires 1-1 result/);
 
   const nonexistentState=runtimeState();
   const nonexistent=resolveCommonPlayEntryPointOperations(TEST_PROFILE,nonexistentState,definition,{
