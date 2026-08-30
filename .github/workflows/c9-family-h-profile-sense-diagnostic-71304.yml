@@ -1,0 +1,31 @@
+name: C9 Family H Profile Sense Diagnostic 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-h-profile-sense-diagnostic-71304.yml
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Reconcile branch
+        run: git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+      - run: npm ci
+      - run: npm run generate:content
+      - name: Apply remaining sense matrix
+        run: python3 .github/scripts/c9-family-h-profile-acquisition-final-71304.py
+      - name: Add direct profile-value diagnostic
+        run: python3 .github/scripts/c9-family-h-profile-sense-diagnostic-71304.py
+      - name: Run focused profile sense diagnostic
+        run: node --import tsx --test --test-name-pattern="remaining RulesProfile special senses" tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts
