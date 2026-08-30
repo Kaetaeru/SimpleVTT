@@ -1,4 +1,4 @@
-# Final Gate N one-shot verifier; touched to verify the latest reconciled branch state.
+# Final Gate N one-shot verifier; verifies the exact triggering commit.
 name: C9 Gate N Final Verification 71304
 
 on:
@@ -22,7 +22,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: agent/c9-gate-n-coverage-reconciliation
           fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
