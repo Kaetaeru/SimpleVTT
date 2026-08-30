@@ -72,6 +72,7 @@ jobs:
           tests/domain/commonPlaySimultaneousOrderingRuntime.test.ts
           tests/domain/commonPlayActionEconomyRuntime.test.ts
           tests/domain/commonPlayResourceEconomyRuntime.test.ts
+          tests/domain/c9FamilyOCastProcessLowering.test.ts
           tests/domain/commonPlaySaveDamageRuntime.test.ts
           tests/domain/commonPlayEffectRuntime.test.ts
           tests/domain/c9FamilyPEffectExpiredTrigger.test.ts
