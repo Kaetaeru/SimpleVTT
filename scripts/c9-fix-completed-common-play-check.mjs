@@ -86,3 +86,7 @@ replaceOnce(path,
 replaceOnce(path,
 `      updateD20Presentation(resolution,pending,d20,authority);`,
 `      updateD20Presentation(resolution,pending,d20,authority,internal.scene);`);
+
+replaceOnce('src/app/mockAdapter.ts',
+`classLevels:[{classId:"dnd.srd521.class.fighter",level:5}]`,
+`classLevels:[{classId:"dnd.srd521.class.fighter",className:"전사",level:5}]`);
