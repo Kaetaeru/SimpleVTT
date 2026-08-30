@@ -29,30 +29,10 @@ jobs:
           from pathlib import Path
           path=Path('src/app/turnRuntimeSessionRegistry.ts')
           text=path.read_text()
-          old='''function runtimeStorage() {
-  try {
-    return (globalThis as unknown as {localStorage?:{
-      getItem(key:string):string|null;
-      setItem(key:string,value:string):void;
-      removeItem(key:string):void;
-    }}).localStorage;
-  } catch {
-    return undefined;
-  }
-}
-'''
-          new='''function runtimeStorage() {
-  try {
-    return typeof window==="undefined"?undefined:window.localStorage;
-  } catch {
-    return undefined;
-  }
-}
-'''
-          if old in text:
-            text=text.replace(old,new,1)
-          elif new not in text:
-            raise SystemExit('runtimeStorage target changed')
+          start=text.index('function runtimeStorage() {')
+          end=text.index('\n\nfunction runtimeState',start)
+          replacement='function runtimeStorage() {\n  try {\n    return typeof window==="undefined"?undefined:window.localStorage;\n  } catch {\n    return undefined;\n  }\n}'
+          text=text[:start]+replacement+text[end:]
           path.write_text(text)
           PY
       - name: Verify persistence isolation and restart behavior
