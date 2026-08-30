@@ -40,6 +40,22 @@ jobs:
               raise SystemExit(f'expected exactly one stale parser call after R1 patch, found {count}')
           path.write_text(text.replace('parseConsentInteraction(','parseInteraction('),encoding='utf-8')
           PY
+      - name: Stabilize choice acceptance fixture
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path=Path('tests/ui/c9FamilyQChoiceInteractionProduction.test.ts')
+          text=path.read_text(encoding='utf-8')
+          hp='const hpBefore=internal.scene.entities.find((entity)=>entity.id===actorId)!.hp;'
+          if text.count(hp)!=2:
+              raise SystemExit(f'expected two hp fixture anchors, found {text.count(hp)}')
+          text=text.replace(hp,'const actorEntity=internal.scene.entities.find((entity)=>entity.id===actorId)!;actorEntity.hp=Math.max(0,actorEntity.hp-1);const hpBefore=actorEntity.hp;')
+          old='''test("portable choice decline leaves Reaction and downstream effect untouched",async()=>{\n  const {host,actionId,actorId,internal}=await setup("family-q-choice-decline");\n  const actorEntity=internal.scene.entities.find((entity)=>entity.id===actorId)!;actorEntity.hp=Math.max(0,actorEntity.hp-1);const hpBefore=actorEntity.hp;\n  await host.resolveAction(actionId,[actorId]);\n  let snapshot=await host.getSnapshot();assert.equal(snapshot.resolution?.stage,"interrupt");\n  await host.respondToInterrupt(false);\n  snapshot=await host.getSnapshot();\n  assert.equal(snapshot.resolution?.stage,"complete");\n  assert.equal(snapshot.scene.entities.find((entity)=>entity.id===actorId)?.hp,hpBefore);\n  assert.equal(snapshot.scene.economyByActor[actorId]?.reaction,true);\n});'''
+          new='''test("portable choice decline leaves Reaction and downstream effect untouched",async()=>{\n  const {host,actionId,actorId,internal}=await setup("family-q-choice-decline");\n  const actorEntity=internal.scene.entities.find((entity)=>entity.id===actorId)!;actorEntity.hp=Math.max(0,actorEntity.hp-1);const hpBefore=actorEntity.hp;\n  const oldSend=tauriSessionTransport.send,oldSendTo=tauriSessionTransport.sendTo;\n  tauriSessionTransport.send=async()=>1;tauriSessionTransport.sendTo=async()=>1;\n  try{\n    await host.resolveAction(actionId,[actorId]);\n    let snapshot=await host.getSnapshot();assert.equal(snapshot.resolution?.stage,"interrupt");\n    await host.respondToInterrupt(false);\n    snapshot=await host.getSnapshot();\n    assert.equal(snapshot.resolution?.stage,"complete");\n    assert.equal(snapshot.scene.entities.find((entity)=>entity.id===actorId)?.hp,hpBefore);\n    assert.equal(snapshot.scene.economyByActor[actorId]?.reaction,true);\n  }finally{tauriSessionTransport.send=oldSend;tauriSessionTransport.sendTo=oldSendTo;}\n});'''
+          if text.count(old)!=1:
+              raise SystemExit(f'expected one decline fixture anchor, found {text.count(old)}')
+          path.write_text(text.replace(old,new,1),encoding='utf-8')
+          PY
       - run: npm ci
       - run: npm run generate:content
       - name: Verify Family Q choice vertical slice
