@@ -1,0 +1,58 @@
+name: C9 Family K Publisher V2 7130
+on:
+  push:
+    branches: [agent/c9-gate-n-coverage-reconciliation]
+    paths: [.github/workflows/c9-family-k-publisher-v2-7130.yml]
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - name: Reapply verified Family K slice
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs=require('node:fs');
+          function replaceOrAlready(path,before,after){
+            let text=fs.readFileSync(path,'utf8');
+            if(text.includes(after)) return;
+            if(!text.includes(before)) throw new Error(`${path}: neither expected source nor verified target marker exists`);
+            fs.writeFileSync(path,text.replace(before,after));
+          }
+          replaceOrAlready('src/domain/commonPlayEffectRuntime.ts','type EventDamageTarget="event.actor";','type EventDamageTarget="event.actor"|"event.target";');
+          replaceOrAlready('src/domain/commonPlayEffectRuntime.ts','    if (operation.target!=="event.actor") {\n      throw new Error(`${operationLabel} target must be event.actor in this runtime slice`);\n    }','    if (operation.target!=="event.actor"&&operation.target!=="event.target") {\n      throw new Error(`${operationLabel} target must be event.actor or event.target in this runtime slice`);\n    }\n    if ((rule.event==="damage.taken"||rule.event==="damage.dealt")&&operation.target==="event.target") {\n      throw new Error(`${operationLabel} target must be event.actor for damage.taken/damage.dealt in this runtime slice`);\n    }');
+          replaceOrAlready('src/domain/commonPlaySemanticEventRuntime.ts','    const creatureKind=creatureKinds[subjectId];\n    if(!creatureKind) continue;','    if(!creatureKinds[subjectId]) continue;');
+          replaceOrAlready('src/domain/commonPlaySemanticEventRuntime.ts','            for(const [operationIndex,operation] of rule.operations.entries()) operations.push({\n              id:`${pending.id}:automatic:${context.event}:${definitionIndex}:${effectIndex}:${d20Index}:${ruleIndex}:${operationIndex}`,\n              kind:"damage",targetId:subjectId,damageType:operation.damageType,amount:operation.amount.value,creatureKind,when,\n            });','            for(const [operationIndex,operation] of rule.operations.entries()) {\n              const targetId=operation.target==="event.target"?d20.targetId:subjectId;\n              if(!targetId) continue;\n              const targetCreatureKind=creatureKinds[targetId];\n              if(!targetCreatureKind) continue;\n              operations.push({\n                id:`${pending.id}:automatic:${context.event}:${definitionIndex}:${effectIndex}:${d20Index}:${ruleIndex}:${operationIndex}`,\n                kind:"damage",targetId,damageType:operation.damageType,amount:operation.amount.value,creatureKind:targetCreatureKind,when,\n              });\n            }');
+          const workflow=fs.readFileSync('.github/workflows/c9-family-k-graze-7130.yml','utf8');
+          const marker="          cat > tests/ui/c9FamilyKWeaponMasteryGraze.test.ts <<'EOF'\n";
+          const start=workflow.indexOf(marker),bodyStart=start+marker.length,end=workflow.indexOf('\n          EOF\n',bodyStart);
+          if(start<0||end<0) throw new Error('Family K regression heredoc markers missing');
+          fs.writeFileSync('tests/ui/c9FamilyKWeaponMasteryGraze.test.ts',workflow.slice(bodyStart,end).replace(/^          /gm,'')+'\n');
+          NODE
+      - run: npm run generate:content
+      - run: npx tsx --test tests/ui/c9FamilyKWeaponMasteryGraze.test.ts tests/domain/commonPlayEffectRuntime.test.ts tests/domain/commonPlaySemanticEventRuntime.test.ts
+      - run: npx tsc --noEmit
+      - name: Publish with branch-race retries
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/domain/commonPlayEffectRuntime.ts src/domain/commonPlaySemanticEventRuntime.ts tests/ui/c9FamilyKWeaponMasteryGraze.test.ts
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "feat(c9): route mastery miss riders to event targets"
+          for attempt in $(seq 1 20); do
+            git fetch origin agent/c9-gate-n-coverage-reconciliation
+            if ! git rebase origin/agent/c9-gate-n-coverage-reconciliation; then git rebase --abort || true; exit 1; fi
+            if git push origin HEAD:agent/c9-gate-n-coverage-reconciliation; then exit 0; fi
+            sleep 1
+          done
+          exit 1
