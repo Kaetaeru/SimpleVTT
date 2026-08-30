@@ -68,6 +68,8 @@ export interface CommonPlayD20RollInterceptor {
   interaction:CommonPlayInteractionDefinition;
   operation:"recalculate";
   slot:"d20.roll";
+  families?:Array<"ability-check"|"saving-throw"|"attack-roll">;
+  outcomes?:Array<"success"|"failure">;
   operations:CommonPlayRollModifyOperation[];
   eligibility?:CommonPlayInterceptorEligibility;
 }
@@ -167,13 +169,20 @@ function findDamageRollOperation(pending:PendingResolution) {
   return operation.kind==="damage-roll"?{index,operation}:undefined;
 }
 
-function findSuccessfulD20Operation(profile:RulesProfileLike,state:RulesRuntimeState,pending:PendingResolution) {
+function findMatchingD20Operation(
+  profile:RulesProfileLike,
+  state:RulesRuntimeState,
+  pending:PendingResolution,
+  interceptor:CommonPlayD20RollInterceptor,
+) {
+  const families=interceptor.families??["ability-check","attack-roll"];
+  const outcomes=interceptor.outcomes??["success"];
   for(const [index,operation] of pending.operations.entries()) {
-    if(operation.kind!=="d20"||(operation.request.family!=="ability-check"&&operation.request.family!=="attack-roll")) continue;
+    if(operation.kind!=="d20"||!families.includes(operation.request.family))continue;
     const preview=stagePendingResolution(profile,state,{...pending,operations:pending.operations.slice(0,index+1)});
-    if(preview.status==="rejected") return {error:preview.error??"d20 preview rejected"};
+    if(preview.status==="rejected")return {error:preview.error??"d20 preview rejected"};
     const result=preview.results[operation.id] as D20TestResult|undefined;
-    if(result?.outcome==="success") return {index,operation,result};
+    if(result&&outcomes.includes(result.outcome))return {index,operation,result};
   }
   return undefined;
 }
@@ -279,7 +288,7 @@ function acceptedPending(awaiting:AwaitingCommonPlayInteraction,authority?:Commo
   const payments=paymentOperations(definition,sourceActorId,interceptor.id);
 
   if(interceptor.slot==="d20.roll") {
-    if(intercepted.kind!=="d20"||(intercepted.request.family!=="ability-check"&&intercepted.request.family!=="attack-roll")) {
+    if(intercepted.kind!=="d20"||(intercepted.request.family!=="ability-check"&&intercepted.request.family!=="saving-throw"&&intercepted.request.family!=="attack-roll")) {
       throw new Error("d20.roll interceptor target is not a supported d20 roll");
     }
     const recalculated:ResolutionOperation={
@@ -334,7 +343,7 @@ export function startCommonPlayResolution(
 
   let interceptedOperationId:string;
   if(interceptor.slot==="d20.roll") {
-    const d20=findSuccessfulD20Operation(profile,inputState,pending);
+    const d20=findMatchingD20Operation(profile,inputState,pending,interceptor);
     if(d20&&"error" in d20) return rejected(inputState,d20.error);
     if(!d20) return resolvePendingResolution(profile,inputState,pending);
     interceptedOperationId=d20.operation.id;

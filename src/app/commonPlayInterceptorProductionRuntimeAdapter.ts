@@ -219,33 +219,57 @@ function d20Contributions(resolution:ResolutionView):ModifierContribution[] {
   return [{source:`production-resolution:${resolution.actionId}:base-modifier`,value:total-natural}];
 }
 
-function pendingD20(resolution:ResolutionView,state:RulesRuntimeState):{pending:PendingResolution;operationId:string}|undefined {
+function saveContributions(save:ResolutionView["saveResults"][number]):ModifierContribution[] {
+  if(save.modifierContributions?.length)return save.modifierContributions.map((entry)=>({...entry}));
+  return [{source:`production-save:${save.targetId}:base-modifier`,value:save.total-save.d20}];
+}
+
+function validD20(value:number|undefined):value is number {
+  return value!==undefined&&Number.isInteger(value)&&value>=1&&value<=20;
+}
+
+function pendingD20s(resolution:ResolutionView,state:RulesRuntimeState):Array<{pending:PendingResolution;operationId:string}> {
+  const projections:Array<{pending:PendingResolution;operationId:string}>=[];
   const natural=resolution.naturalD20??resolution.authoritativeDice[0];
-  if(natural===undefined||!Number.isInteger(natural)||natural<1||natural>20)return undefined;
-  const common={
-    modifierContributions:d20Contributions(resolution),
-    dice:{id:`${resolution.id}:common-play:d20`,purpose:resolution.actionName,sides:20,faces:[natural]},
-  };
-  if(resolution.rollKind==="check"&&resolution.checkOutcome==="성공"&&Number.isFinite(resolution.checkTarget)){
+  if(resolution.rollKind==="check"&&resolution.checkOutcome&&Number.isFinite(resolution.checkTarget)&&validD20(natural)){
     const operationId=`op.${resolution.actionId}.ability-check`;
-    return {operationId,pending:{
+    projections.push({operationId,pending:{
       id:`${resolution.id}:common-play-interceptor`,actorId:resolution.actorId,sourceId:resolution.actionId,
       expectedRevision:state.revision,
-      operations:[{id:operationId,kind:"d20",actorId:resolution.actorId,request:{family:"ability-check",target:resolution.checkTarget!,...common}}],
-    }};
+      operations:[{id:operationId,kind:"d20",actorId:resolution.actorId,request:{
+        family:"ability-check",target:resolution.checkTarget!,modifierContributions:d20Contributions(resolution),
+        dice:{id:`${resolution.id}:common-play:d20`,purpose:resolution.actionName,sides:20,faces:[natural]},
+      }}],
+    }});
   }
-  if(resolution.rollKind==="attack"&&resolution.stage==="attack-result"&&resolution.attackOutcome==="명중"&&Number.isFinite(resolution.targetAc)){
+  if(resolution.rollKind==="attack"&&resolution.stage==="attack-result"&&resolution.attackOutcome&&Number.isFinite(resolution.targetAc)&&validD20(natural)){
     const operationId=`op.${resolution.actionId}.attack-roll`;
-    return {operationId,pending:{
+    projections.push({operationId,pending:{
       id:`${resolution.id}:common-play-interceptor`,actorId:resolution.actorId,sourceId:resolution.actionId,
       expectedRevision:state.revision,
       operations:[{id:operationId,kind:"d20",actorId:resolution.actorId,targetId:resolution.targetIds[0],request:{
-        family:"attack-roll",target:resolution.targetAc!,targetSource:`target:${resolution.targetIds[0]}:ac`,...common,
+        family:"attack-roll",target:resolution.targetAc!,targetSource:`target:${resolution.targetIds[0]}:ac`,
+        modifierContributions:d20Contributions(resolution),
+        dice:{id:`${resolution.id}:common-play:d20`,purpose:resolution.actionName,sides:20,faces:[natural]},
         criticalThreshold:resolution.critical?natural:undefined,
       }}],
-    }};
+    }});
   }
-  return undefined;
+  if(resolution.rollKind==="save"&&resolution.stage==="save-result"){
+    resolution.saveResults.forEach((save,index)=>{
+      if(!validD20(save.d20)||!Number.isFinite(save.dc))return;
+      const operationId=`op.${resolution.actionId}.saving-throw.${index}`;
+      projections.push({operationId,pending:{
+        id:`${resolution.id}:common-play-interceptor:${save.targetId}`,actorId:resolution.actorId,sourceId:resolution.actionId,
+        expectedRevision:state.revision,
+        operations:[{id:operationId,kind:"d20",actorId:save.targetId,request:{
+          family:"saving-throw",target:save.dc,modifierContributions:saveContributions(save),
+          dice:{id:`${resolution.id}:common-play:save:${save.targetId}`,purpose:`${resolution.actionName}:${save.targetName}`,sides:20,faces:[save.d20]},
+        }}],
+      }});
+    });
+  }
+  return projections;
 }
 
 function pendingDamage(adapter:MockAdapter,resolution:ResolutionView,state:RulesRuntimeState) {
@@ -260,7 +284,7 @@ function pendingDamage(adapter:MockAdapter,resolution:ResolutionView,state:Rules
 }
 
 function factSubjectId(candidate:PassiveReactionCandidate,pending:PendingResolution,subject:string|undefined) {
-  const intercepted=pending.operations.find((operation)=>operation.kind==="d20"&&(operation.request.family==="ability-check"||operation.request.family==="attack-roll"));
+  const intercepted=pending.operations.find((operation)=>operation.kind==="d20"&&(operation.request.family==="ability-check"||operation.request.family==="saving-throw"||operation.request.family==="attack-roll"));
   if(!intercepted||intercepted.kind!=="d20")return !subject||subject==="intercepted.actor"?pending.actorId:subject==="interceptor.source"?candidate.sourceActorId:undefined;
   if(!subject||subject==="intercepted.actor")return intercepted.actorId;
   if(subject==="intercepted.target")return intercepted.targetId;
@@ -315,38 +339,40 @@ async function offerPassiveReaction(adapter:MockAdapter) {
     if(state.handled.has(candidate.key)||!runtime.combatants[candidate.sourceActorId])continue;
     const interceptor=candidate.definition.interceptors[0];
     const damage=interceptor?.slot==="primary.damage";
-    const projected=damage?pendingDamage(adapter,resolution,runtime):pendingD20(resolution,runtime);
-    if(!projected)continue;
-    const seeded=seededReactionState(runtime,candidate);
-    if(!await interceptorEligible(internal,candidate,projected.pending)){
-      state.handled.add(candidate.key);
-      continue;
+    const damageProjection=damage?pendingDamage(adapter,resolution,runtime):undefined;
+    const projections=damageProjection?[damageProjection]:pendingD20s(resolution,runtime);
+    if(!projections.length)continue;
+    for(const projected of projections){
+      const seeded=seededReactionState(runtime,candidate);
+      if(!await interceptorEligible(internal,candidate,projected.pending))continue;
+      const started=startCommonPlayResolution(SIMPLEVTT_APP_RULES_PROFILE,seeded,projected.pending,candidate.definition,candidate.sourceActorId);
+      if(started.status!=="awaiting-input")continue;
+      pendingByAdapter.set(adapter,{resolutionId:resolution.id,operationId:projected.operationId,kind:damage?"damage":"d20",originalTotal:"originalTotal" in projected?projected.originalTotal:undefined,candidate,awaiting:started});
+      if(damage)resolution.rollKind="damage";
+      const intercepted=projected.pending.operations.find((operation)=>operation.id===projected.operationId&&operation.kind==="d20");
+      const save=resolution.rollKind==="save"&&intercepted?.kind==="d20"?resolution.saveResults.find((entry)=>entry.targetId===intercepted.actorId):undefined;
+      resolution.interrupt={
+        id:started.interaction.id,
+        responderId:candidate.sourceActorId,
+        responderName:candidate.sourceActorName,
+        trigger:damage
+          ? `${resolution.actionName} 피해 굴림 ${"originalTotal" in projected?projected.originalTotal:"—"}`
+          : save
+          ? `${resolution.actionName} · ${save.targetName} ${save.total} vs DC ${save.dc}`
+          : resolution.rollKind==="attack"
+          ? `${resolution.actionName} ${resolution.attackTotal} vs AC ${resolution.targetAc}`
+          : `${resolution.actionName} ${resolution.rollTotal} vs DC ${resolution.checkTarget}`,
+        optionName:candidate.optionName,
+        cost:interactionCost(candidate.definition),
+        effect:damage?"피해 굴림을 Common Play 인터셉터로 재계산합니다.":"d20 결과를 Common Play 인터셉터로 재계산합니다.",
+        source:candidate.source,
+      };
+      resolution.stage="interrupt";
+      resolution.canAdvance=false;
+      resolution.nextLabel=undefined;
+      return true;
     }
-    const started=startCommonPlayResolution(SIMPLEVTT_APP_RULES_PROFILE,seeded,projected.pending,candidate.definition,candidate.sourceActorId);
-    if(started.status!=="awaiting-input"){
-      state.handled.add(candidate.key);
-      continue;
-    }
-    pendingByAdapter.set(adapter,{resolutionId:resolution.id,operationId:projected.operationId,kind:damage?"damage":"d20",originalTotal:"originalTotal" in projected?projected.originalTotal:undefined,candidate,awaiting:started});
-    if(damage)resolution.rollKind="damage";
-    resolution.interrupt={
-      id:started.interaction.id,
-      responderId:candidate.sourceActorId,
-      responderName:candidate.sourceActorName,
-      trigger:damage
-        ? `${resolution.actionName} 피해 굴림 ${"originalTotal" in projected?projected.originalTotal:"—"}`
-        : resolution.rollKind==="attack"
-        ? `${resolution.actionName} ${resolution.attackTotal} vs AC ${resolution.targetAc}`
-        : `${resolution.actionName} ${resolution.rollTotal} vs DC ${resolution.checkTarget}`,
-      optionName:candidate.optionName,
-      cost:interactionCost(candidate.definition),
-      effect:damage?"피해 굴림을 Common Play 인터셉터로 재계산합니다.":"성공한 d20 결과를 Common Play 인터셉터로 재계산합니다.",
-      source:candidate.source,
-    };
-    resolution.stage="interrupt";
-    resolution.canAdvance=false;
-    resolution.nextLabel=undefined;
-    return true;
+    state.handled.add(candidate.key);
   }
   return false;
 }
@@ -356,6 +382,29 @@ function paymentEvents(events:ResolutionEvent[]) {
 }
 
 function updateD20Presentation(resolution:ResolutionView,pending:PendingPassiveReaction,result:D20TestResult,authority?:CommonPlayInteractionAuthority) {
+  const rolled=authority?.modifierDiceFaces?Object.values(authority.modifierDiceFaces).flat():[];
+  if(result.family==="saving-throw"){
+    const operation=pending.awaiting.context.pending.operations.find((entry)=>entry.id===pending.operationId&&entry.kind==="d20");
+    if(!operation||operation.kind!=="d20")throw new Error("Common Play saving-throw interceptor operation is missing");
+    const saveIndex=resolution.saveResults.findIndex((entry)=>entry.targetId===operation.actorId);
+    if(saveIndex<0)throw new Error(`Common Play saving-throw target is missing: ${operation.actorId}`);
+    const save=resolution.saveResults[saveIndex];
+    const before=saveContributions(save);
+    const beforeModifier=before.reduce((sum,entry)=>sum+entry.value,0);
+    const delta=result.modifier-beforeModifier;
+    save.modifierContributions=delta!==0?[...before,{source:`common-play:${pending.candidate.definition.id}`,value:delta}]:before;
+    save.d20=result.natural;
+    save.total=result.total;
+    save.dc=result.target;
+    save.outcome=result.outcome==="success"?"성공":"실패";
+    if(saveIndex<resolution.authoritativeDice.length)resolution.authoritativeDice[saveIndex]=result.natural;
+    if(rolled.length)resolution.detail.push(`${pending.candidate.optionName}: ${save.targetName} · ${rolled.join(", ")} · ${result.total}`);
+    resolution.provenance.push(`common-play:${pending.candidate.definition.id} · generic post-roll interceptor`);
+    resolution.compact=resolution.saveResults.map((entry)=>`${entry.targetName} ${entry.outcome}`).join(" / ");
+    resolution.calculatedOutcome="내성 결과";
+    resolution.finalOutcome=resolution.compact;
+    return;
+  }
   const before=d20Contributions(resolution);
   const beforeModifier=before.reduce((sum,entry)=>sum+entry.value,0);
   const delta=result.modifier-beforeModifier;
@@ -365,7 +414,6 @@ function updateD20Presentation(resolution:ResolutionView,pending:PendingPassiveR
   resolution.naturalD20=result.natural;
   if(resolution.authoritativeDice.length)resolution.authoritativeDice[0]=result.natural;
   else resolution.authoritativeDice=[result.natural];
-  const rolled=authority?.modifierDiceFaces?Object.values(authority.modifierDiceFaces).flat():[];
   if(rolled.length)resolution.detail.push(`${pending.candidate.optionName}: ${rolled.join(", ")} · ${result.total}`);
   resolution.provenance.push(`common-play:${pending.candidate.definition.id} · generic post-roll interceptor`);
   if(result.family==="ability-check"){
@@ -409,6 +457,10 @@ function restoreInterruptedStage(resolution:ResolutionView) {
     resolution.stage="roll-animation";
     resolution.canAdvance=true;
     resolution.nextLabel="판정 적용";
+  }else if(resolution.rollKind==="save"){
+    resolution.stage="save-result";
+    resolution.canAdvance=true;
+    resolution.nextLabel="내성 결과 적용";
   }else{
     const damage=resolution.rollKind==="damage";
     resolution.rollKind="attack";

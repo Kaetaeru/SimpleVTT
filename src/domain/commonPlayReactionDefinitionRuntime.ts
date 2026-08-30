@@ -19,6 +19,8 @@ const PROPERTY_OPERATIONS=new Set(["add","subtract","set","min","max","multiply"
 const FACT_AUTHORITIES=new Set(["host","actor-owner","target-owner","dm","profile"]);
 const FACT_VISIBILITIES=new Set(["public","actor","dm","actor-and-dm","authority-only"]);
 const UNKNOWN_POLICIES=new Set(["block","request-authority","treat-false","unsupported"]);
+const D20_FAMILIES=new Set(["ability-check","saving-throw","attack-roll"]);
+const D20_OUTCOMES=new Set(["success","failure"]);
 
 function object(value:unknown,label:string):Obj {
   if(!value||typeof value!=="object"||Array.isArray(value)) throw new DomainEvaluationError(`${label} must be an object`);
@@ -116,9 +118,20 @@ function payment(value:Obj,index:number):CommonPlayReactionDefinition["payments"
   throw new DomainEvaluationError(`${label}.kind is unsupported by the reaction runtime`);
 }
 
+function selectorValues(value:unknown,label:string,allowed:Set<string>) {
+  if(value===undefined)return undefined;
+  if(!Array.isArray(value)||!value.length||value.some((entry)=>typeof entry!=="string"||!allowed.has(entry))) {
+    throw new DomainEvaluationError(`${label} contains unsupported values`);
+  }
+  if(new Set(value).size!==value.length)throw new DomainEvaluationError(`${label} contains duplicate values`);
+  return value as string[];
+}
+
 function lowerD20Interceptor(value:Obj,index:number,options:ReactionLoweringOptions):CommonPlayD20RollInterceptor {
   const label=`Common Play reaction interceptor[${index}]`;
   const eligibilityDefinition=eligibility(value,label);
+  const families=selectorValues(value.families,`${label}.families`,D20_FAMILIES);
+  const outcomes=selectorValues(value.outcomes,`${label}.outcomes`,D20_OUTCOMES);
   if(value.timing!=="d20.outcome-determined"||value.operation!=="recalculate"||value.slot!=="d20.roll") {
     throw new DomainEvaluationError(`${label} is not a supported d20 recalculation interceptor`);
   }
@@ -130,6 +143,8 @@ function lowerD20Interceptor(value:Obj,index:number,options:ReactionLoweringOpti
     interaction:interaction(value.interaction,`${label}.interaction`),
     operation:"recalculate",
     slot:"d20.roll",
+    ...(families?{families:families as CommonPlayD20RollInterceptor["families"]}:{}),
+    ...(outcomes?{outcomes:outcomes as CommonPlayD20RollInterceptor["outcomes"]}:{}),
     ...(eligibilityDefinition?{eligibility:eligibilityDefinition}:{}),
     operations:operations.map((candidate,operationIndex)=>{
       const raw=object(candidate,`${label}.operations[${operationIndex}]`);
@@ -166,6 +181,7 @@ function lowerD20Interceptor(value:Obj,index:number,options:ReactionLoweringOpti
 
 function lowerDamageInterceptor(value:Obj,index:number,options:ReactionLoweringOptions):CommonPlayDamageRollInterceptor {
   const label=`Common Play reaction interceptor[${index}]`;
+  if(value.families!==undefined||value.outcomes!==undefined)throw new DomainEvaluationError(`${label} d20 selectors require slot d20.roll`);
   const lowered=lowerD20Interceptor({...value,timing:"d20.outcome-determined",slot:"d20.roll"},index,options);
   if(lowered.operations.some((operation)=>operation.mode!=="subtract-die")) throw new DomainEvaluationError(`${label} primary.damage supports subtract-die only`);
   return {...lowered,timing:"damage.rolled",slot:"primary.damage"};
@@ -173,6 +189,7 @@ function lowerDamageInterceptor(value:Obj,index:number,options:ReactionLoweringO
 
 function lowerAttackOutcomeInterceptor(value:Obj,index:number):CommonPlayAttackOutcomeInterceptor {
   const label=`Common Play reaction interceptor[${index}]`;
+  if(value.families!==undefined||value.outcomes!==undefined)throw new DomainEvaluationError(`${label} d20 selectors require slot d20.roll`);
   const eligibilityDefinition=eligibility(value,label);
   if(value.timing!=="attack.outcome-determined"||value.operation!=="recalculate"||value.slot!=="attack.outcome") {
     throw new DomainEvaluationError(`${label} is not a supported attack outcome recalculation interceptor`);

@@ -16,6 +16,7 @@ import { tauriSessionTransport } from "../../src/app/tauriSessionTransport";
 
 const OTHER_CHARACTER_ID="char.portable-interceptor-target";
 const OTHER_CHARACTER_CHECK_ID="action.portable-interceptor-target.check";
+const OTHER_CHARACTER_SAVE_ID="action.portable-interceptor-target.save";
 
 type Identity={moduleId:string;contentId:string;mechanicId:string;interceptorId:string;interactionId:string;displayName:string};
 const ORIGINAL:Identity={
@@ -27,7 +28,13 @@ const ORIGINAL:Identity={
   displayName:"Portable Reaction Charm",
 };
 
-function packagePayload(identity=ORIGINAL,withEligibility=false,interceptorKind:"d20"|"damage"="d20",operations:Array<Record<string,unknown>>=[{kind:"roll.modify",mode:"subtract-die",dice:"1d8"}]){
+function packagePayload(
+  identity=ORIGINAL,
+  withEligibility=false,
+  interceptorKind:"d20"|"damage"="d20",
+  operations:Array<Record<string,unknown>>=[{kind:"roll.modify",mode:"subtract-die",dice:"1d8"}],
+  selection?:{families?:Array<"ability-check"|"saving-throw"|"attack-roll">;outcomes?:Array<"success"|"failure">},
+){
   return JSON.stringify({
     schemaVersion:"0.1-draft",
     moduleId:identity.moduleId,
@@ -62,6 +69,7 @@ function packagePayload(identity=ORIGINAL,withEligibility=false,interceptorKind:
                 {op:"eq",left:{ref:"source-sees-trigger"},right:{value:true}},
               ]},
             }:{}),
+            ...(selection??{}),
             interaction:{id:identity.interactionId,kind:"choice",responder:"actor-owner",mode:"blocking",input:{type:"boolean"},revalidate:"if-revision-changed",stalePolicy:"reject"},
             operation:"recalculate",
             slot:interceptorKind==="damage"?"primary.damage":"d20.roll",
@@ -80,11 +88,25 @@ function otherCharacterCheckAction():ActionVm{
   };
 }
 
-async function prepare(identity=ORIGINAL,withEligibility=false,interceptorKind:"d20"|"damage"="d20",operations:Array<Record<string,unknown>>=[{kind:"roll.modify",mode:"subtract-die",dice:"1d8"}]){
+function otherCharacterSaveAction():ActionVm{
+  return {
+    id:OTHER_CHARACTER_SAVE_ID,actorId:OTHER_CHARACTER_ID,name:"Portable Target Save",category:"magic",target:"any",economy:"없음",
+    resolutionKind:"saving-throw",summary:"Wisdom save DC 14",available:true,eligibleTargetIds:[],saveDc:14,saveAbility:"지혜",
+    damage:[{type:"force",dice:"1d6",flat:0,average:3}],details:[{label:"내성",value:"지혜 DC 14"}],
+  };
+}
+
+async function prepare(
+  identity=ORIGINAL,
+  withEligibility=false,
+  interceptorKind:"d20"|"damage"="d20",
+  operations:Array<Record<string,unknown>>=[{kind:"roll.modify",mode:"subtract-die",dice:"1d8"}],
+  selection?:{families?:Array<"ability-check"|"saving-throw"|"attack-roll">;outcomes?:Array<"success"|"failure">},
+){
   const adapter=new MockAdapter();
   setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
   await adapter.startProductionLocalPlay("dm");
-  const preview=await adapter.previewContentImport(packagePayload(identity,withEligibility,interceptorKind,operations));
+  const preview=await adapter.previewContentImport(packagePayload(identity,withEligibility,interceptorKind,operations,selection));
   assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
   await adapter.activateContentImport();
   const internal=adapter as unknown as {activeCharacter:CharacterSheet;scene:SceneVm};
@@ -99,12 +121,12 @@ async function prepare(identity=ORIGINAL,withEligibility=false,interceptorKind:"
     id:OTHER_CHARACTER_ID,name:"Portable Interceptor Target",side:"ally",kind:"character",hp:20,maxHp:20,tempHp:0,ac:12,initiative:18,
     status:[],resistances:[],immunities:[],vulnerabilities:[],reactions:[],
   });
-  internal.scene.actionsByActor[OTHER_CHARACTER_ID]=[otherCharacterCheckAction()];
+  internal.scene.actionsByActor[OTHER_CHARACTER_ID]=[otherCharacterCheckAction(),otherCharacterSaveAction()];
   await adapter.startInitiative();
   return adapter;
 }
 
-async function openAbilityCheckInterrupt(adapter:MockAdapter){
+async function openAbilityCheckInterrupt(adapter:MockAdapter,outcome:"success"|"failure"="success"){
   await adapter.setCurrentActor(OTHER_CHARACTER_ID);
   await adapter.setQueuedD20(15);
   let snapshot=await adapter.resolveAction(OTHER_CHARACTER_CHECK_ID,[]);
@@ -113,7 +135,20 @@ async function openAbilityCheckInterrupt(adapter:MockAdapter){
   assert.equal(snapshot.resolution?.stage,"effect-preview",JSON.stringify(snapshot.resolution));
   const total=snapshot.resolution?.rollTotal;
   assert.equal(typeof total,"number");
-  snapshot=await adapter.applyDmAdjudication({type:"ability-check-dc",scope:"resolution",value:total!-2});
+  snapshot=await adapter.applyDmAdjudication({type:"ability-check-dc",scope:"resolution",value:outcome==="success"?total!-2:total!+2});
+  return snapshot;
+}
+
+async function openSavingThrowInterrupt(adapter:MockAdapter){
+  const owner=(await adapter.getSnapshot()).activeCharacter.id;
+  await adapter.setCurrentActor(OTHER_CHARACTER_ID);
+  await adapter.setQueuedD20(8);
+  let snapshot=await adapter.resolveAction(OTHER_CHARACTER_SAVE_ID,[owner]);
+  assert.equal(snapshot.resolution?.stage,"save-animation",JSON.stringify(snapshot.resolution));
+  snapshot=await adapter.advanceResolution();
+  assert.equal(snapshot.resolution?.stage,"save-result",JSON.stringify(snapshot.resolution));
+  assert.equal(snapshot.resolution?.saveResults[0]?.outcome,"실패");
+  snapshot=await adapter.advanceResolution();
   return snapshot;
 }
 
@@ -388,4 +423,104 @@ test("portable damage-roll events converge exactly once from Host to Client",asy
   assert.deepEqual({hp:clientTarget.hp,tempHp:clientTarget.tempHp},{hp:hostTarget.hp,tempHp:hostTarget.tempHp});
   assert.equal(secondWind(clientSnapshot),secondWind(hostSnapshot));
   assert.equal(clientSnapshot.scene.economyByActor[responderId]?.reaction,false);
+});
+
+
+test("portable structural selector opens on a failed ability check and can recover it with add-die",async()=>{
+  const selection={families:["ability-check"] as Array<"ability-check">,outcomes:["failure"] as Array<"failure">};
+  const adapter=await prepare(ORIGINAL,false,"d20",[{kind:"roll.modify",mode:"add-die",dice:"1d8"}],selection);
+  let snapshot=await openAbilityCheckInterrupt(adapter,"failure");
+  assert.equal(snapshot.resolution?.stage,"interrupt",JSON.stringify(snapshot.resolution));
+  assert.equal(snapshot.resolution?.checkOutcome,"실패");
+  await adapter.setQueuedD20(8);
+  snapshot=await adapter.respondToInterrupt(true);
+  assert.equal(snapshot.resolution?.checkOutcome,"성공",JSON.stringify(snapshot.resolution));
+  assert.equal(snapshot.resolution?.rollTotal,23);
+});
+
+test("portable structural selector opens on a failed saving throw and rerolls the selected save only",async()=>{
+  const selection={families:["saving-throw"] as Array<"saving-throw">,outcomes:["failure"] as Array<"failure">};
+  const adapter=await prepare(ORIGINAL,false,"d20",[{kind:"roll.modify",mode:"reroll",dice:"1d20"}],selection);
+  let snapshot=await openSavingThrowInterrupt(adapter);
+  assert.equal(snapshot.resolution?.stage,"interrupt",JSON.stringify(snapshot.resolution));
+  const resourceBefore=secondWind(snapshot)!;
+  await adapter.setQueuedD20(18);
+  snapshot=await adapter.respondToInterrupt(true);
+  assert.equal(snapshot.resolution?.stage,"save-result",JSON.stringify(snapshot.resolution));
+  assert.deepEqual(
+    {d20:snapshot.resolution?.saveResults[0]?.d20,total:snapshot.resolution?.saveResults[0]?.total,outcome:snapshot.resolution?.saveResults[0]?.outcome},
+    {d20:18,total:19,outcome:"성공"},
+  );
+  assert.equal(snapshot.resolution?.authoritativeDice[0],18);
+  assert.equal(secondWind(snapshot),resourceBefore-1);
+});
+
+test("portable after-roll selector accepts either ability-check outcome",async()=>{
+  const selection={families:["ability-check"] as Array<"ability-check">,outcomes:["success","failure"] as Array<"success"|"failure">};
+  for(const outcome of ["success","failure"] as const){
+    const adapter=await prepare(ORIGINAL,false,"d20",[{kind:"roll.modify",mode:"add-flat",value:{value:1}}],selection);
+    const snapshot=await openAbilityCheckInterrupt(adapter,outcome);
+    assert.equal(snapshot.resolution?.stage,"interrupt",`${outcome}: ${JSON.stringify(snapshot.resolution)}`);
+  }
+});
+
+async function connectedPortableDiceCase(mode:"add-die"|"reroll"){
+  const operations=mode==="add-die"
+    ? [{kind:"roll.modify",mode:"add-die",dice:"1d8"}]
+    : [{kind:"roll.modify",mode:"reroll",dice:"1d20"}];
+  const identity:Identity={...ORIGINAL,moduleId:`external.connected-${mode}`,contentId:`item.connected-${mode}`,mechanicId:`mechanic.connected-${mode}`,interceptorId:`interceptor.connected-${mode}`,interactionId:`interaction.connected-${mode}`,displayName:`Connected ${mode}`};
+  const sessionId=`session.connected-${mode}`;
+  const host=await prepare(identity,false,"d20",operations);
+  const hostState=connectedStateFor(host);
+  hostState.mode="host";hostState.sessionId=sessionId;hostState.ledger=new HostSessionLedger(sessionId,connectedManifest(host));
+  const wires:string[]=[];
+  const send=tauriSessionTransport.send;
+  let forwardWireCount=0;
+  let hostForward:Awaited<ReturnType<MockAdapter["getSnapshot"]>>;
+  let hostUndo:Awaited<ReturnType<MockAdapter["getSnapshot"]>>;
+  tauriSessionTransport.send=async(message)=>{wires.push(message);return 1;};
+  try{
+    await openAbilityCheckInterrupt(host);
+    await host.setQueuedD20(mode==="add-die"?6:4);
+    hostForward=await host.respondToInterrupt(true);
+    forwardWireCount=wires.length;
+    hostUndo=await host.undoLastResolution();
+  }finally{tauriSessionTransport.send=send;}
+  const parse=(items:string[])=>items.map((wire)=>JSON.parse(wire)).filter((wire)=>wire.type==="event-batch") as Array<{events:ConnectedSessionEvent[]}>;
+  const forward=parse(wires.slice(0,forwardWireCount));
+  const inverse=parse(wires.slice(forwardWireCount));
+  assert.ok(forward.length,`${mode}: no forward event batches`);
+  assert.ok(inverse.length,`${mode}: no Undo event batches`);
+  const kinds=forward.flatMap((batch)=>batch.events).flatMap((event)=>event.payload.kind==="resolution"?event.payload.resolutionEvents.map((entry)=>entry.kind):[]);
+  assert.ok(kinds.includes("d20"),`${mode}: ${JSON.stringify(kinds)}`);
+  assert.ok(kinds.includes("use-economy"),`${mode}: ${JSON.stringify(kinds)}`);
+  assert.ok(kinds.includes("spend-resource"),`${mode}: ${JSON.stringify(kinds)}`);
+
+  const client=await prepare(identity,false,"d20",operations);
+  await client.setCurrentActor(OTHER_CHARACTER_ID);
+  const clientState=connectedStateFor(client);
+  clientState.mode="client";clientState.sessionId=sessionId;clientState.replica=new ClientSessionReplica(sessionId);
+  for(const batch of forward)assert.equal((await applyConnectedClientEvents(client,batch.events)).status,"applied");
+  assert.equal((await applyConnectedClientEvents(client,forward.at(-1)!.events)).status,"duplicate");
+  let clientSnapshot=await client.getSnapshot();
+  assert.equal(secondWind(clientSnapshot),secondWind(hostForward!));
+  assert.equal(clientSnapshot.scene.economyByActor[clientSnapshot.activeCharacter.id]?.reaction,false);
+  for(const batch of inverse)assert.equal((await applyConnectedClientEvents(client,batch.events)).status,"applied");
+  clientSnapshot=await client.getSnapshot();
+  assert.equal(secondWind(clientSnapshot),secondWind(hostUndo!));
+  assert.equal(clientSnapshot.scene.economyByActor[clientSnapshot.activeCharacter.id]?.reaction,true);
+
+  const reconnect=await prepare(identity,false,"d20",operations);
+  await reconnect.setCurrentActor(OTHER_CHARACTER_ID);
+  const reconnectState=connectedStateFor(reconnect);
+  reconnectState.mode="client";reconnectState.sessionId=sessionId;reconnectState.replica=new ClientSessionReplica(sessionId);
+  for(const batch of [...forward,...inverse])assert.equal((await applyConnectedClientEvents(reconnect,batch.events)).status,"applied");
+  const reconnectSnapshot=await reconnect.getSnapshot();
+  assert.equal(secondWind(reconnectSnapshot),secondWind(hostUndo!));
+  assert.equal(reconnectSnapshot.scene.economyByActor[reconnectSnapshot.activeCharacter.id]?.reaction,true);
+}
+
+test("unknown portable add-die and reroll converge through connected duplicate, reconnect, and Undo",async()=>{
+  await connectedPortableDiceCase("add-die");
+  await connectedPortableDiceCase("reroll");
 });

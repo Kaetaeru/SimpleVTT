@@ -660,6 +660,18 @@
         "interaction": { "$ref": "#/$defs/interaction" },
         "operation": { "enum": ["append", "replace", "prevent", "modify", "redirect", "recalculate"] },
         "slot": { "enum": ["declaration", "targets", "d20.roll", "attack.roll", "attack.outcome", "primary.damage", "secondary.damage", "effects", "movement", "stateChanges"] },
+        "families": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "enum": ["ability-check", "saving-throw", "attack-roll"] }
+        },
+        "outcomes": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "enum": ["success", "failure"] }
+        },
         "operations": { "type": "array", "items": { "$ref": "#/$defs/operation" } }
       },
       "additionalProperties": false
