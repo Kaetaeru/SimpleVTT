@@ -338,7 +338,7 @@ function factSubjectId(candidate:PassiveReactionCandidate,pending:PendingResolut
   return undefined;
 }
 
-function composedRelationSenses(relation:NonNullable<ReturnType<typeof authoritativeCommonPlaySpatialRelation>>) {
+function composedRelationSenses(relation:NonNullable<ReturnType<typeof authoritativeCommonPlaySpatialRelation>>,resolverTargetInvisible=false) {
   if(relation.light===undefined||relation.obscurement===undefined)return undefined;
   return resolveCommonPlaySenses(relation.observerSenses??[{kind:"normal-sight"}],{
     distanceFeet:relation.distanceFeet,
@@ -346,7 +346,7 @@ function composedRelationSenses(relation:NonNullable<ReturnType<typeof authorita
     obscurement:relation.obscurement,
     lineOfSight:relation.visible,
     lineOfEffect:relation.cover!=="total",
-    targetInvisible:relation.targetInvisible??false,
+    targetInvisible:(relation.targetInvisible??false)||resolverTargetInvisible,
     targetHidden:false,
     targetAudible:relation.targetAudible??false,
     observerCanHear:relation.observerCanHear??false,
@@ -369,19 +369,20 @@ function interceptorFactProvider(internal:AdapterState,candidate:PassiveReaction
       if(query.fact==="sense.hidden")return {status:"answered",value:runtime.effects.some((effect)=>effect.targetId===subjectId&&effect.tags.includes("hidden"))};
       const relation=authoritativeCommonPlaySpatialRelation(internal.scene,candidate.sourceActorId,subjectId);
       if(!relation)return {status:"unknown"};
+      const resolverTargetInvisible=runtime.effects.some((effect)=>effect.targetId===subjectId&&effect.conditionId==="invisible"&&!effect.suppression);
       if(query.fact==="spatial.distance-feet")return {status:"answered",value:relation.distanceFeet};
       if(query.fact==="spatial.adjacent")return {status:"answered",value:relation.distanceFeet<=5};
       if(query.fact==="spatial.within-reach"&&relation.withinReach!==undefined)return {status:"answered",value:relation.withinReach};
       if(query.fact==="spatial.total-cover")return {status:"answered",value:relation.cover==="total"};
       if(query.fact==="sense.can-see"){
-        const composed=composedRelationSenses(relation);
+        const composed=composedRelationSenses(relation,resolverTargetInvisible);
         return {status:"answered",value:composed?.canSee??relation.visible};
       }
       if(query.fact==="sense.light"&&relation.light!==undefined)return {status:"answered",value:relation.light};
       if(query.fact==="sense.obscurement"&&relation.obscurement!==undefined)return {status:"answered",value:relation.obscurement};
       if(query.fact==="sense.detected"){
         if(relation.detected!==undefined)return {status:"answered",value:relation.detected};
-        const composed=composedRelationSenses(relation);
+        const composed=composedRelationSenses(relation,resolverTargetInvisible);
         if(composed)return {status:"answered",value:composed.detected};
       }
       return {status:"unknown"};
