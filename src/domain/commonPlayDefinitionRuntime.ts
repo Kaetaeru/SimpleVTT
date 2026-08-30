@@ -158,6 +158,7 @@ function base(definition:CommonPlayDefinitionIR) {
     ...(definition.$schema?{$schema:definition.$schema}:{}),
     schemaVersion:definition.schemaVersion,
     id:definition.id,
+    ...(definition.castProcess?{castProcess:structuredClone(definition.castProcess)}:{}),
     ...(definition.payments?{payments:structuredClone(definition.payments)}:{}),
   };
 }
