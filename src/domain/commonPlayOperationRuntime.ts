@@ -24,6 +24,11 @@ type CommonPlayConditionChange={
   target?:CommonPlayConditionTarget;
   when?:CommonPlayTestOutcomePredicate;
 };
+type CommonPlayEffectRemove={
+  kind:"effect.remove";
+  selector:CommonPlaySelector&{from:"effects"};
+  when?:CommonPlayTestOutcomePredicate;
+};
 type CommonPlayMovementStand={kind:"movement.stand";target:"actor"|"self"};
 
 type CommonPlayResourceCreation={
@@ -168,6 +173,7 @@ export type CommonPlayOperation=
   |CommonPlayMovementDefinition
   |CommonPlayMovementStand
   |CommonPlayConditionChange
+  |CommonPlayEffectRemove
   |CommonPlayRollModify;
 
 export interface CommonPlayD20TestDefinition {
@@ -246,6 +252,7 @@ const ECONOMY_MODIFY_KEYS=new Set(["kind","bucket","amount"]);
 const DAMAGE_APPLY_KEYS=new Set(["kind","amount","damageType","target"]);
 const HEALING_APPLY_KEYS=new Set(["kind","amount","target"]);
 const CONDITION_CHANGE_KEYS=new Set(["kind","condition","target","when"]);
+const EFFECT_REMOVE_KEYS=new Set(["kind","selector","when"]);
 const TEMP_HP_GRANT_KEYS=new Set(["kind","amount","target","choice"]);
 const LIFE_STABILIZE_KEYS=new Set(["kind","target"]);
 const ROLL_MODIFY_KEYS=new Set(["kind","mode","value","dice"]);
@@ -561,6 +568,14 @@ function parseOperation(value:unknown,label:string):CommonPlayOperation {
       ...(operation.temporaryCapacityUntilLongRest===true?{temporaryCapacityUntilLongRest:true as const}:{}),
     };
   }
+  if(operation.kind==="effect.remove") {
+    supportedKeys(operation,EFFECT_REMOVE_KEYS,label);
+    const selector=parseCommonPlaySelector(operation.selector,`${label}.selector`);
+    if(selector.from!=="effects") throw new DomainEvaluationError(`${label}.selector.from must be effects for portable Common Play effect.remove`);
+    if(selector.selection==="manual") throw new DomainEvaluationError(`${label}.selector.selection must be automatic when removing effects`);
+    const when=testOutcomePredicate(operation.when,`${label}.when`);
+    return {kind:"effect.remove",selector:{...selector,from:"effects"},...(when?{when}:{})};
+  }
   if(operation.kind==="condition.apply"||operation.kind==="condition.remove") {
     supportedKeys(operation,CONDITION_CHANGE_KEYS,label);
     const condition=nonEmptyString(operation.condition,`${label}.condition`) as ConditionId;
@@ -681,7 +696,7 @@ for(const [index,entryPoint] of entryPoints.entries()) {
 }
 for(const [index,entryPoint] of entryPoints.entries()) {
   if(entryPoint.test?.roller==="target"&&(!entryPoint.targeting||entryPoint.targeting.min!==1||entryPoint.targeting.max!==1)) throw new DomainEvaluationError(`${label}.entryPoints[${index}] target-rolled d20 requires targeting exactly one target`);
-  if(entryPoint.operations.some((operation)=>(operation.kind==="condition.apply"||operation.kind==="condition.remove")&&operation.when)&&!entryPoint.test) throw new DomainEvaluationError(`${label}.entryPoints[${index}] test.outcome condition requires a d20 test`);
+  if(entryPoint.operations.some((operation)=>(operation.kind==="condition.apply"||operation.kind==="condition.remove"||operation.kind==="effect.remove")&&operation.when)&&!entryPoint.test) throw new DomainEvaluationError(`${label}.entryPoints[${index}] test.outcome conditional operation requires a d20 test`);
 }
 const reactionPaymentCount=payments?.filter((payment)=>payment.kind==="economy"&&payment.bucket==="reaction").length??0;
   const interactionCount=entryPoints.filter((entry)=>entry.interaction).length;
@@ -935,6 +950,27 @@ export function compileCommonPlayEntryPointOperations(
           temporaryCapacityUntilLongRest:operation.temporaryCapacityUntilLongRest,
         }:{}),
       });
+      continue;
+    }
+
+    if(operation.kind==="effect.remove") {
+      const when=operation.when?{operationId:`${input.resolutionId}:test`,field:"outcome" as const,equals:operation.when.right.value}:undefined;
+      const candidates=state.effects.filter(effectIsActive).map((effect)=>({
+        id:effect.id,
+        properties:{
+          tags:[...effect.tags],
+          targetId:effect.targetId,
+          sourceId:effect.sourceId,
+          kind:effect.kind,
+          "target.selected":input.targetId!==undefined&&effect.targetId===input.targetId,
+          "target.actor":effect.targetId===input.actorId,
+          ...(effect.sourceActorId?{sourceActorId:effect.sourceActorId}:{}),
+          ...(effect.conditionId?{conditionId:effect.conditionId}:{}),
+        },
+      }));
+      const selected=resolveCommonPlaySelector({sourceId:input.actorId,selector:operation.selector,candidates,selection:"automatic",authority:"host"});
+      if(selected.status!=="resolved") throw new DomainEvaluationError(`Common Play effect.remove selector rejected: ${selected.reason}`);
+      selected.targetIds.forEach((effectId,removeIndex)=>operations.push({id:`${operationId}:remove:${removeIndex}`,kind:"remove-effect",effectId,...(when?{when}:{})}));
       continue;
     }
 

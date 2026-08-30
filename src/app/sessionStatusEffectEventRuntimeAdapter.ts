@@ -13,7 +13,6 @@ import {
   recordRuntimeResolutionEvents,
   runtimeResolutionEventHistory,
 } from "./runtimeResolutionEventHistory";
-import { authoritativeCommonPlaySpatialRelation } from "./realSpatialRuntimeService";
 
 const SESSION_STATUS_TAG="session-status";
 
@@ -95,34 +94,6 @@ function attackEndingEffects(adapter:MockAdapter,internal:AdapterState,actorId:s
   return snapshotAdapterTurnRuntimeState(adapter,internal.scene)?.effects.filter((effect)=>effect.targetId===actorId&&effect.metadata?.endsOnAttack===true)??[];
 }
 
-function detectedHiddenEffects(adapter:MockAdapter,internal:AdapterState,resolution:ResolutionView) {
-  if(!resolution.actionId.startsWith("action.standard.search.")||resolution.checkOutcome!=="성공")return [];
-  const state=snapshotAdapterTurnRuntimeState(adapter,internal.scene);
-  if(!state)return [];
-  return state.effects.filter((effect)=>{
-    if(effect.targetId===resolution.actorId||!effect.tags.includes("hidden"))return false;
-    const relation=authoritativeCommonPlaySpatialRelation(internal.scene,resolution.actorId,effect.targetId);
-    return relation?.detected===true;
-  });
-}
-
-function removeDiscoveredHiddenEffects(adapter:MockAdapter,internal:AdapterState,resolution:ResolutionView,effects:EffectInstance[]) {
-  const state=snapshotAdapterTurnRuntimeState(adapter,internal.scene);
-  if(!state||!effects.length)return [];
-  const committed=resolvePendingResolution(SIMPLEVTT_APP_RULES_PROFILE,state,{
-    id:`${resolution.id}:search-discovery`,actorId:resolution.actorId,sourceId:resolution.actionId,expectedRevision:state.revision,
-    operations:effects.map((effect,index)=>({id:`search-discovery:remove:${index}`,kind:"remove-effect" as const,effectId:effect.id})),
-  });
-  if(committed.status==="rejected"||!commitAdapterTurnRuntimeState(adapter,internal.scene,state.revision,committed.state))return;
-  for(const effect of effects) {
-    const subject=internal.scene.entities.find((entry)=>entry.id===effect.targetId);
-    const label=typeof effect.metadata?.sessionStatus==="string"?effect.metadata.sessionStatus:undefined;
-    if(label&&subject?.status.includes(label))subject.status=subject.status.filter((status)=>status!==label);
-    resolution.stateChanges.push(`${subject?.name??effect.targetId} 발견 · Hidden 종료`);
-  }
-  return committed.events;
-}
-
 function removeAttackEndingEffects(adapter:MockAdapter,internal:AdapterState,resolution:ResolutionView,effects:EffectInstance[]) {
   const state=snapshotAdapterTurnRuntimeState(adapter,internal.scene);
   if(!state||!effects.length)return;
@@ -176,14 +147,6 @@ MockAdapter.prototype.advanceResolution=async function advanceSessionStatusEffec
     const events=commitStatusEffect(this,internal,action,resolution,succeeded);
     if(after&&events) {
       combineEvents(this,resolution.id,[economyEvent(resolution,action.id,before,after),...events]);
-      return internal.getSnapshot();
-    }
-  }
-  if(snapshot.resolution?.id===resolution.id&&snapshot.resolution.stage==="complete") {
-    const discovered=detectedHiddenEffects(this,internal,resolution);
-    const events=removeDiscoveredHiddenEffects(this,internal,resolution,discovered);
-    if(events?.length) {
-      combineEvents(this,resolution.id,events);
       return internal.getSnapshot();
     }
   }
