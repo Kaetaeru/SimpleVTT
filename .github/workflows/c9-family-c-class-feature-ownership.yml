@@ -23,24 +23,19 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run generate:content
-      - name: Inspect canonical Fighter feature identity sources
+      - name: Inspect generated catalog grant shape
         run: |
           node <<'NODE'
-          const fs = require('fs');
-          const progression = JSON.parse(fs.readFileSync('src/generated/progressionCatalog.generated.json','utf8'));
-          const fighter = progression.classes.find((entry) => String(entry.id).toLowerCase().includes('fighter'));
-          if (!fighter) throw new Error('fighter progression not found');
-          const module = JSON.parse(fs.readFileSync('content/modules/dnd-srd-5.2.1.classes/module.json','utf8'));
-          const tacticalNodes=[];
-          function visit(value,path='$'){
-            if (!value || typeof value!=='object') return;
-            if (/tactical[ -]?mind|전술적 정신/i.test(JSON.stringify(value))) tacticalNodes.push({path,value});
-            if (Array.isArray(value)) value.forEach((v,i)=>visit(v,`${path}[${i}]`));
-            else Object.entries(value).forEach(([k,v])=>visit(v,`${path}.${k}`));
-          }
-          visit(module);
-          const fighterStrings=[...new Set((JSON.stringify(fighter).match(/"([^"\\]|\\.)*"/g)||[]).map(s=>JSON.parse(s)))];
-          const out={fighterId:fighter.id,progressionCandidates:fighterStrings.filter(s=>/tactical|second.wind|indomitable|fighter/i.test(s)),progressionRows:fighter.progression.filter(row=>/tactical|second wind|indomitable/i.test(JSON.stringify(row))),classModuleTacticalNodes:tacticalNodes.slice(0,12)};
+          const fs=require('fs');
+          const module=JSON.parse(fs.readFileSync('content/modules/dnd-srd-5.2.1.classes/module.json','utf8'));
+          const fighterSource=module.content.find(e=>e.id==='dnd.srd521.class.fighter');
+          const candidates=['generated/builtinCatalog.generated.json','src/generated/builtinCatalog.generated.json'];
+          const generatedPath=candidates.find(p=>fs.existsSync(p));
+          if(!generatedPath) throw new Error('generated builtin catalog not found');
+          const generated=JSON.parse(fs.readFileSync(generatedPath,'utf8'));
+          const entries=Array.isArray(generated)?generated:(generated.entries||generated.content||generated.catalog||[]);
+          const fighterGenerated=entries.find(e=>e.contentId==='dnd.srd521.class.fighter'||e.id==='dnd.srd521.class.fighter'||String(e.id||'').includes('dnd.srd521.class.fighter'));
+          const out={generatedPath,fighterSource,fighterGenerated};
           fs.writeFileSync('.chatgpt-rerun/C9_CLASS_FEATURE_DIAGNOSTIC.json',JSON.stringify(out,null,2)+'\n');
           console.log(JSON.stringify(out,null,2));
           NODE
@@ -50,5 +45,5 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add .chatgpt-rerun/C9_CLASS_FEATURE_DIAGNOSTIC.json
           if git diff --cached --quiet; then exit 0; fi
-          git commit -m 'chore(c9): refine class feature ownership diagnostic'
+          git commit -m 'chore(c9): record generated class grant shape'
           git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
