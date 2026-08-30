@@ -163,7 +163,10 @@ function base(definition:CommonPlayDefinitionIR) {
 }
 
 function referencedTemplates(entryPoint:CommonPlayEntryPointIR) {
-  return new Set(entryPoint.operations.flatMap((operation)=>typeof operation.template==="string"?[operation.template]:[]));
+  return new Set(entryPoint.operations.flatMap((operation)=>[
+    ...(typeof operation.template==="string"?[operation.template]:[]),
+    ...(typeof operation.artifact==="string"?[operation.artifact]:[]),
+  ]));
 }
 
 function referencedRuleTemplates(templates:Obj[]) {
@@ -213,10 +216,12 @@ export function lowerCommonPlay(
       definition:{...base(definition),entryPoints:[structuredClone(entryPoint)],artifactTemplates:structuredClone(templates)} as unknown as CommonPlayPersistentEffectDefinition,
     };
   }
-  if(operationKinds.has("artifact.spawn")) {
-    if([...operationKinds].some((kind)=>kind!=="artifact.spawn")) throw new DomainEvaluationError(`Common Play entry point ${entryPointId} mixes incompatible artifact activation operations`);
+  const artifactOperationKinds=new Set(["artifact.spawn","artifact.damage","artifact.repair","artifact.relocate","artifact.update","artifact.remove"]);
+  if([...operationKinds].some((kind)=>artifactOperationKinds.has(String(kind)))) {
+    if([...operationKinds].some((kind)=>!artifactOperationKinds.has(String(kind)))) throw new DomainEvaluationError(`Common Play entry point ${entryPointId} mixes incompatible artifact activation operations`);
     const artifactKinds=new Set(templates.map((template)=>template.artifactKind));
     if(artifactKinds.size===1&&artifactKinds.has("zone")) {
+      if([...operationKinds].some((kind)=>kind!=="artifact.spawn")) throw new DomainEvaluationError(`Common Play entry point ${entryPointId} zone activation supports only artifact.spawn`);
       const ruleReferenced=referencedRuleTemplates(templates);
       const zoneTemplates=[
         ...templates,
