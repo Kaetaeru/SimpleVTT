@@ -679,11 +679,21 @@ function commonPlayActorProfileProperties(
   const actorState=state.combatants[actorId];
   if(!actorState) return undefined;
   if(internal.activeCharacter.id!==actorId) {
-    const inputs:Record<string,number>={...(actorState.baseProperties??{})};
-    inputs["movement.walk"]??=actorState.baseSpeed;
+    const inputs:Record<string,number>={
+      ...(actorState.baseProperties??{}),
+      "movement.walk":actorState.baseSpeed,
+      "hp.current":actorState.life.hp.current,
+      "hp.maximum":actorState.life.hp.maximum,
+      "hp.temporary":actorState.life.hp.temporary,
+    };
     const projected={...inputs};
-    for(const property of Object.keys(inputs).sort((left,right)=>left.localeCompare(right))) {
-      projected[property]=resolveRuntimeProfileProperty(state.effects,actorId,property,inputs).value;
+    for(const [property,definition] of Object.entries(SIMPLEVTT_APP_RULES_PROFILE.properties)) {
+      if(!Number.isFinite(inputs[property])&&!definition.formula) continue;
+      try {
+        projected[property]=resolveRuntimeProfileProperty(state.effects,actorId,property,inputs).value;
+      } catch {
+        continue;
+      }
     }
     return projected;
   }
