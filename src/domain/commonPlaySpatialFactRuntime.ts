@@ -9,6 +9,7 @@ export interface CommonPlayFactDefinition {
 export type CommonPlayFactRegistry=Record<string,CommonPlayFactDefinition>;
 
 export const COMMON_PLAY_STANDARD_FACTS:CommonPlayFactRegistry={
+  "identity.same-entity":{valueType:"boolean"},
   "spatial.distance-feet":{valueType:"number"},
   "spatial.adjacent":{valueType:"boolean"},
   "spatial.within-reach":{valueType:"boolean"},

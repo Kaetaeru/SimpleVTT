@@ -119,6 +119,13 @@ function catalogEntryMatchesItem(entry:CatalogEntry,item:CharacterSheet["items"]
   );
 }
 
+function catalogEntryMatchesFeature(entry:CatalogEntry,featureId:string) {
+  const token=featureId.trim();
+  return (entry.category==="option"||entry.category==="feat")&&Boolean(token)&&(
+    entry.id===token||entry.contentId===token||entry.nameKo===token||entry.nameEn===token
+  );
+}
+
 function contentIdentitySetForLocal(internal:AdapterState) {
   const identities=new Set<string>();
   try {
@@ -131,14 +138,23 @@ function contentIdentitySetForLocal(internal:AdapterState) {
     const matches=internal.catalog.filter((entry)=>catalogEntryMatchesItem(entry,item));
     if(matches.length===1)identities.add(matches[0].id);
   }
+  for(const featureId of internal.activeCharacter.subclassFeatureIds ?? []) {
+    const matches=internal.catalog.filter((entry)=>catalogEntryMatchesFeature(entry,featureId));
+    if(matches.length===1)identities.add(matches[0].id);
+  }
   return identities;
 }
 
 async function passiveReactionCandidates(adapter:MockAdapter):Promise<PassiveReactionCandidate[]> {
   const internal=adapter as unknown as AdapterState;
   const installed=await requiredSessionInstalledContent(adapter,[]);
-  if(!installed.length)return [];
-  const entries=new Map(installed.map((entry)=>[catalogQualifiedId(entry.contentId,entry.sourceId,entry.version),entry]));
+  const installedEntries=new Map(installed.map((entry)=>[catalogQualifiedId(entry.contentId,entry.sourceId,entry.version),entry]));
+  const builtinEntries=new Map<string,CatalogEntry>();
+  for(const entry of internal.catalog){
+    if(entry.scope!=="builtin"||!(entry.mechanics??[]).some((mechanic)=>mechanic.kind==="common-play")||!entry.contentId||!entry.sourceId)continue;
+    builtinEntries.set(catalogQualifiedId(entry.contentId,entry.sourceId,entry.version),entry);
+  }
+  if(!installedEntries.size&&!builtinEntries.size)return [];
   const owners:Array<{sheet:CharacterSheet;identities:Set<string>}>=[{
     sheet:internal.activeCharacter,
     identities:contentIdentitySetForLocal(internal),
@@ -152,7 +168,7 @@ async function passiveReactionCandidates(adapter:MockAdapter):Promise<PassiveRea
   const candidates:PassiveReactionCandidate[]=[];
   for(const owner of owners){
     for(const qualifiedId of [...owner.identities].sort()){
-      const entry=entries.get(qualifiedId);
+      const entry=installedEntries.get(qualifiedId) ?? builtinEntries.get(qualifiedId);
       if(!entry)continue;
       for(const [mechanicIndex,mechanic] of (entry.mechanics??[]).entries()){
         if(mechanic.kind!=="common-play")continue;
@@ -167,7 +183,7 @@ async function passiveReactionCandidates(adapter:MockAdapter):Promise<PassiveRea
             sourceActorId:owner.sheet.id,
             sourceActorName:owner.sheet.name,
             source:entry.source,
-            optionName:entry.nameKo||entry.nameEn||entry.contentId,
+            optionName:entry.nameKo||entry.nameEn||entry.contentId||qualifiedId,
             sheet:structuredClone(owner.sheet),
             definition:{...definition,interceptors:[interceptor]},
           });
@@ -257,6 +273,7 @@ function interceptorFactProvider(internal:AdapterState,candidate:PassiveReaction
     resolve(query){
       const subjectId=factSubjectId(candidate,pending,query.subject);
       if(!subjectId)return {status:"unsupported",reason:`unsupported interceptor fact subject: ${query.subject??"intercepted.actor"}`};
+      if(query.fact==="identity.same-entity")return {status:"answered",value:subjectId===candidate.sourceActorId};
       const relation=authoritativeCommonPlaySpatialRelation(internal.scene,candidate.sourceActorId,subjectId);
       if(!relation)return {status:"unknown"};
       if(query.fact==="spatial.distance-feet")return {status:"answered",value:relation.distanceFeet};
@@ -457,6 +474,9 @@ MockAdapter.prototype.respondToInterrupt=async function respondToPortableCommonP
     }
   }
   restoreInterruptedStage(resolution);
+  // A response may finish one timing window, but must not enter a later one in the same interaction.
+  // Attack-result remains observable before a damage.rolled interceptor is offered on the next advance.
+  if(pending.kind==="d20"&&resolution.rollKind==="attack")return internal.getSnapshot();
   if(await offerPassiveReaction(this))return internal.getSnapshot();
   if(resolution.rollKind==="check")return previousAdvanceResolution.call(this);
   return internal.getSnapshot();

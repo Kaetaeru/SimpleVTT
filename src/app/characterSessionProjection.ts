@@ -154,9 +154,27 @@ function resolveKnownItemIdentities(source:CharacterSourceSnapshotV1,catalog:Cat
   return [...identities.values()].sort((left,right)=>left.qualifiedId.localeCompare(right.qualifiedId,"en"));
 }
 
+function resolveKnownFeatureIdentities(source:CharacterSourceSnapshotV1,catalog:CatalogEntry[]) {
+  const resolvedCatalog=catalog as ResolvedCatalogEntry[];
+  const identities=new Map<string,CharacterProjectionContentIdentityV1>();
+  for (const featureId of source.progression.subclassFeatureIds ?? []) {
+    if (!featureId.trim()) continue;
+    const matches=resolvedCatalog.filter((entry)=>(entry.category==="option"||entry.category==="feat")&&matchesToken(entry,featureId));
+    if (matches.length>1) throw new Error(`ambiguous canonical content for subclass feature: ${featureId}`);
+    if (matches.length===0) continue;
+    const identity=entryIdentity(matches[0]);
+    identities.set(identity.qualifiedId,identity);
+  }
+  return [...identities.values()].sort((left,right)=>left.qualifiedId.localeCompare(right.qualifiedId,"en"));
+}
+
 function resolveProjectionIdentities(source:CharacterSourceSnapshotV1,catalog:CatalogEntry[]) {
   const identities=new Map<string,CharacterProjectionContentIdentityV1>();
-  for(const identity of [...resolveRequiredIdentities(source,catalog),...resolveKnownItemIdentities(source,catalog)]) identities.set(identity.qualifiedId,identity);
+  for(const identity of [
+    ...resolveRequiredIdentities(source,catalog),
+    ...resolveKnownItemIdentities(source,catalog),
+    ...resolveKnownFeatureIdentities(source,catalog),
+  ]) identities.set(identity.qualifiedId,identity);
   return [...identities.values()].sort((left,right)=>left.qualifiedId.localeCompare(right.qualifiedId,"en"));
 }
 

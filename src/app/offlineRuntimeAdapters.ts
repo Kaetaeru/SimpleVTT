@@ -78,7 +78,6 @@ import "./unarmedControlRuntimeAdapter";
 import "./effectGrantActionRuntimeAdapter";
 import "./consumableD20BonusEffectFollowUpRuntimeAdapter";
 import "./d20FollowUpRuntimeAdapter";
-import "./bardCollegeLoreCuttingWordsFollowUpRuntimeAdapter";
 import "./clericDivineSparkActionRuntimeAdapter";
 import "./clericTurnUndeadActionRuntimeAdapter";
 import "./paladinLayOnHandsActionRuntimeAdapter";
