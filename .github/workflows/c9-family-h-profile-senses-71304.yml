@@ -1,0 +1,136 @@
+name: C9 Family H Profile Senses 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-h-profile-senses-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  verify-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Reconcile branch
+        run: git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+      - run: npm ci
+      - name: Patch profile-derived Family H senses
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          def replace_once(path, old, new, label):
+              text=path.read_text(encoding='utf-8')
+              if new in text:
+                  return text
+              if old not in text:
+                  raise SystemExit(f'{label} anchor not found')
+              text=text.replace(old,new,1)
+              path.write_text(text,encoding='utf-8')
+              return text
+
+          sense=Path('src/domain/commonPlaySenseRuntime.ts')
+          old='''function inRange(sense:CommonPlaySense,distanceFeet:number) {\n  return sense.rangeFeet===undefined||distanceFeet<=sense.rangeFeet;\n}\n'''
+          new='''function inRange(sense:CommonPlaySense,distanceFeet:number) {\n  return sense.rangeFeet===undefined||distanceFeet<=sense.rangeFeet;\n}\n\nconst PROFILE_SPECIAL_SENSE_RANGES=[\n  ["sense.darkvision.range-feet","darkvision"],\n  ["sense.blindsight.range-feet","blindsight"],\n  ["sense.tremorsense.range-feet","tremorsense"],\n  ["sense.truesight.range-feet","truesight"],\n] as const;\n\n/** Projects rules/profile-owned numeric sense ranges without inspecting content identity. */\nexport function commonPlaySpecialSensesFromProfileProperties(properties:Readonly<Record<string,number>>):CommonPlaySense[] {\n  const senses:CommonPlaySense[]=[];\n  for(const [property,kind] of PROFILE_SPECIAL_SENSE_RANGES){\n    const rangeFeet=properties[property];\n    if(Number.isFinite(rangeFeet)&&rangeFeet>0)senses.push({kind,rangeFeet});\n  }\n  return senses;\n}\n'''
+          replace_once(sense,old,new,'sense profile helper')
+
+          profile=Path('rules/profiles/dnd.srd-5.2.1.profile.json')
+          old='''    "movement.walk": {"type": "integer", "storage": "derived", "minimum": 0},\n    "hp.current": {"type": "integer", "storage": "stored", "minimum": 0},'''
+          new='''    "movement.walk": {"type": "integer", "storage": "derived", "minimum": 0},\n    "sense.darkvision.range-feet": {"type": "integer", "storage": "derived", "minimum": 0},\n    "sense.blindsight.range-feet": {"type": "integer", "storage": "derived", "minimum": 0},\n    "sense.tremorsense.range-feet": {"type": "integer", "storage": "derived", "minimum": 0},\n    "sense.truesight.range-feet": {"type": "integer", "storage": "derived", "minimum": 0},\n    "hp.current": {"type": "integer", "storage": "stored", "minimum": 0},'''
+          replace_once(profile,old,new,'rules profile sense properties')
+
+          adapter=Path('src/app/commonPlayInterceptorProductionRuntimeAdapter.ts')
+          text=adapter.read_text(encoding='utf-8')
+          old='import { requiredSessionInstalledContent } from "./installedContentRuntimeAdapter";\n'
+          new='import { requiredSessionInstalledContent } from "./installedContentRuntimeAdapter";\nimport { commonPlayActorProfileProperties } from "./installedCommonPlayRuntimeAdapter";\n'
+          if new not in text:
+              if old not in text: raise SystemExit('installed Common Play import anchor not found')
+              text=text.replace(old,new,1)
+          old='import { resolveCommonPlaySenses } from "../domain/commonPlaySenseRuntime";\n'
+          new='import { commonPlaySpecialSensesFromProfileProperties, resolveCommonPlaySenses, type CommonPlaySense } from "../domain/commonPlaySenseRuntime";\n'
+          if new not in text:
+              if old not in text: raise SystemExit('sense runtime import anchor not found')
+              text=text.replace(old,new,1)
+          old='''function composedRelationSenses(relation:NonNullable<ReturnType<typeof authoritativeCommonPlaySpatialRelation>>,resolverTargetInvisible=false) {\n  if(relation.light===undefined||relation.obscurement===undefined)return undefined;\n  return resolveCommonPlaySenses(relation.observerSenses??[{kind:"normal-sight"}],{\n'''
+          new='''function composedRelationSenses(\n  relation:NonNullable<ReturnType<typeof authoritativeCommonPlaySpatialRelation>>,\n  resolverTargetInvisible=false,\n  profileSpecialSenses:CommonPlaySense[]=[],\n) {\n  if(relation.light===undefined||relation.obscurement===undefined)return undefined;\n  const senses=relation.observerSenses\n    ?[...relation.observerSenses,...profileSpecialSenses]\n    :[{kind:"normal-sight" as const},...profileSpecialSenses];\n  return resolveCommonPlaySenses(senses,{\n'''
+          if new not in text:
+              if old not in text: raise SystemExit('sense composition anchor not found')
+              text=text.replace(old,new,1)
+          old='''      const resolverTargetInvisible=runtime.effects.some((effect)=>effect.targetId===subjectId&&effect.conditionId==="invisible"&&!effect.suppression);\n      if(query.fact==="spatial.distance-feet")return {status:"answered",value:relation.distanceFeet};\n'''
+          new='''      const resolverTargetInvisible=runtime.effects.some((effect)=>effect.targetId===subjectId&&effect.conditionId==="invisible"&&!effect.suppression);\n      const profileSpecialSenses=commonPlaySpecialSensesFromProfileProperties(\n        commonPlayActorProfileProperties(internal,runtime,candidate.sourceActorId)??{},\n      );\n      if(query.fact==="spatial.distance-feet")return {status:"answered",value:relation.distanceFeet};\n'''
+          if new not in text:
+              if old not in text: raise SystemExit('profile sense projection anchor not found')
+              text=text.replace(old,new,1)
+          text=text.replace('composedRelationSenses(relation,resolverTargetInvisible);','composedRelationSenses(relation,resolverTargetInvisible,profileSpecialSenses);')
+          adapter.write_text(text,encoding='utf-8')
+
+          domain_test=Path('tests/domain/commonPlaySenseRuntime.test.ts')
+          text=domain_test.read_text(encoding='utf-8')
+          old='import { resolveCommonPlaySenses, type CommonPlaySenseFacts } from "../../src/domain/commonPlaySenseRuntime";'
+          new='import { commonPlaySpecialSensesFromProfileProperties, resolveCommonPlaySenses, type CommonPlaySenseFacts } from "../../src/domain/commonPlaySenseRuntime";'
+          if new not in text:
+              if old not in text: raise SystemExit('domain sense test import anchor not found')
+              text=text.replace(old,new,1)
+          test_name='profile properties derive special-sense ranges without content identity'
+          if test_name not in text:
+              text += '''\n\ntest("profile properties derive special-sense ranges without content identity",()=>{\n  const properties={\n    "sense.darkvision.range-feet":60,\n    "sense.blindsight.range-feet":10,\n    "sense.tremorsense.range-feet":30,\n    "sense.truesight.range-feet":120,\n  };\n  const expected=[\n    {kind:"darkvision",rangeFeet:60},\n    {kind:"blindsight",rangeFeet:10},\n    {kind:"tremorsense",rangeFeet:30},\n    {kind:"truesight",rangeFeet:120},\n  ];\n  assert.deepEqual(commonPlaySpecialSensesFromProfileProperties(properties),expected);\n  assert.deepEqual(commonPlaySpecialSensesFromProfileProperties({...properties,"external.unrelated.rule":999}),expected);\n  assert.deepEqual(commonPlaySpecialSensesFromProfileProperties({\n    "sense.darkvision.range-feet":0,\n    "sense.blindsight.range-feet":-5,\n    "sense.tremorsense.range-feet":Number.NaN,\n  }),[]);\n});\n'''
+          domain_test.write_text(text,encoding='utf-8')
+
+          ui_test=Path('tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts')
+          text=ui_test.read_text(encoding='utf-8')
+          test_name='portable production derives special sight from rules-profile properties'
+          if test_name not in text:
+              text += '''\n\ntest("portable production derives special sight from rules-profile properties",async()=>{\n  const renamed:Identity={...ORIGINAL,moduleId:"external.profile-sight-renamed",contentId:"item.profile-sight-renamed",mechanicId:"mechanic.profile-sight-renamed",interceptorId:"interceptor.profile-sight-renamed",interactionId:"interaction.profile-sight-renamed",displayName:"Renamed Profile Sight"};\n  const scenarios=[\n    {label:"darkvision",property:"sense.darkvision.range-feet",rangeFeet:60,light:"darkness" as const,obscurement:"none" as const,targetInvisible:false},\n    {label:"blindsight",property:"sense.blindsight.range-feet",rangeFeet:60,light:"dim" as const,obscurement:"heavy" as const,targetInvisible:true},\n    {label:"truesight",property:"sense.truesight.range-feet",rangeFeet:120,light:"darkness" as const,obscurement:"none" as const,targetInvisible:true},\n  ];\n  for(const identity of [ORIGINAL,renamed]){\n    for(const scenario of scenarios){\n      const adapter=await prepare(identity,true,"d20",[{kind:"roll.modify",mode:"subtract-die",dice:"1d8"}],undefined,{light:scenario.light,obscurement:scenario.obscurement});\n      const internal=adapter as unknown as {activeCharacter:CharacterSheet;scene:SceneVm};\n      const runtime=snapshotAdapterTurnRuntimeState(adapter,internal.scene);\n      assert.ok(runtime,`${scenario.label}: missing TurnRuntime state`);\n      const expectedRevision=runtime!.revision;\n      const combatant=runtime!.combatants[internal.activeCharacter.id];\n      assert.ok(combatant,`${scenario.label}: missing source combatant`);\n      combatant!.baseProperties={...(combatant!.baseProperties??{}),[scenario.property]:scenario.rangeFeet};\n      runtime!.revision=expectedRevision+1;\n      assert.equal(commitAdapterTurnRuntimeState(adapter,internal.scene,expectedRevision,runtime!),true,`${scenario.label}: profile property commit failed`);\n      setSpatialRelation(internal.scene,{\n        sourceId:internal.activeCharacter.id,targetId:OTHER_CHARACTER_ID,distanceFeet:30,visible:true,cover:"none",targetCanSeeAttacker:true,\n        light:scenario.light,obscurement:scenario.obscurement,detected:true,targetInvisible:scenario.targetInvisible,\n        provenance:`profile:test-special-sight:${scenario.label}`,\n      });\n      seedHiddenRuntimeEffect(adapter,OTHER_CHARACTER_ID);\n      let snapshot=await openAbilityCheckInterrupt(adapter);\n      assert.equal(snapshot.resolution?.stage,"interrupt",`${scenario.label}: ${JSON.stringify(snapshot.resolution)}`);\n      snapshot=await adapter.respondToInterrupt(false);\n      assert.equal(snapshot.resolution?.stage,"complete",`${scenario.label}: ${JSON.stringify(snapshot.resolution)}`);\n    }\n  }\n});\n'''
+          ui_test.write_text(text,encoding='utf-8')
+
+          ledger=Path('docs/rules/v1-mechanism-coverage-ledger.json')
+          data=json.loads(ledger.read_text(encoding='utf-8'))
+          row=next(entry for entry in data['rows'] if entry.get('family')=='H')
+          if row.get('disposition')!='INCOMPLETE':
+              raise SystemExit(f"Family H disposition changed unexpectedly: {row.get('disposition')}")
+          row['currentState']=(
+              'Generic status and creature-type awareness paths are production-proven. Common Play defines standard sensing facts for can-see, can-hear, detected, light, obscurement, and hidden with identity-independent provider provenance and connected owner-authority routing. Resolver-owned session Hidden effects feed sense.hidden, unknown external Hide-style status actions commit Hidden as authoritative Effect StateChanges, and endsOnAttack reveal removes that Effect through the same event path with event-native Undo. Provider-authored line-of-sight, lighting, obscurement, and special-sense facts compose through the shared sensing kernel before production answers sense.can-see/detected; active Resolver-owned Invisible conditions are combined with provider target-invisibility rather than bypassing the generic sensing kernel. RulesProfile numeric special-sense range properties now derive Darkvision, Blindsight, Tremorsense, and Truesight structurally, and production sensing composes those actor profile properties without content identity dispatch. Family H remains incomplete for rules-derived special-sense acquisition/materialization plus detection/Search and discovery semantics.'
+          )
+          def add_unique(key,value):
+              items=row.setdefault(key,[])
+              if value not in items: items.append(value)
+          add_unique('implementationEvidence','commonPlaySenseRuntime.ts projects sense.darkvision/blindsight/tremorsense/truesight.range-feet profile properties into typed CommonPlaySense values without content identity dispatch')
+          add_unique('implementationEvidence','dnd.srd-5.2.1.profile.json declares generic numeric special-sense range properties and commonPlayInterceptorProductionRuntimeAdapter.ts consumes commonPlayActorProfileProperties before the shared sensing kernel')
+          add_unique('productionEvidence','installedCommonPlayInterceptorProductionRuntime.test.ts proves rules-profile Darkvision, Blindsight, and Truesight drive production sense.can-see under fully renamed external Common Play identities without provider-authored observerSenses')
+          add_unique('identityInvarianceEvidence','installedCommonPlayInterceptorProductionRuntime.test.ts profile-derived special-sight matrix is invariant under full external module/content/mechanic/interceptor/interaction/display rename')
+          row['remainingNamedSeams']=['rules-derived special-sense acquisition/materialization plus detection/Search and discovery semantics remain incomplete']
+          ledger.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          PY
+      - run: npm run generate:content
+      - name: Verify Family H profile senses
+        run: |
+          node --import tsx --test tests/domain/commonPlaySenseRuntime.test.ts tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts
+          node scripts/check-legacy-execution-boundary.mjs
+          node scripts/check-v1-mechanism-coverage.mjs
+          npm exec tsc -- --noEmit
+      - name: Publish verified patch and retire verifier
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/c9-family-h-profile-senses-71304.yml
+          git add src/domain/commonPlaySenseRuntime.ts rules/profiles/dnd.srd-5.2.1.profile.json src/app/commonPlayInterceptorProductionRuntimeAdapter.ts tests/domain/commonPlaySenseRuntime.test.ts tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts docs/rules/v1-mechanism-coverage-ledger.json
+          git diff --cached --check
+          git commit -m "feat(c9): derive special senses from profile properties"
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
