@@ -39,6 +39,7 @@ jobs:
           new='''    const originalGetSnapshot=adapter.getSnapshot.bind(adapter);\n    adapter.getSnapshot=async()=>{\n      const snapshot=await originalGetSnapshot();\n      const action=snapshot.scene.actionsByActor["char.aelar"]?.find((entry)=>entry.id===probe.canonicalId);\n      if(action) action.name=`External ${probe.kind}`;\n      return snapshot;\n    };'''
           if old not in s: raise SystemExit('unarmed presentation harness anchor changed')
           s=s.replace(old,new,1)
+          s=s.replace('assert.equal(source.runtimeSaveCondition?.choose,"highest");\n      assert.deepEqual(source.runtimeSaveCondition?.abilities,["str","dex"]);','assert.deepEqual(source.runtimeSaveCondition?.saveAbilities,["str","dex"]);',1)
           s=s.replace('await adapter.resolveAction(probe.renamedId,[probe.targetId]);','await adapter.resolveAction(probe.canonicalId,[probe.targetId]);',1)
           s=s.replace('assert.equal(snapshot.resolution?.actionId,probe.renamedId);','assert.equal(snapshot.resolution?.actionId,probe.canonicalId);',1)
 
