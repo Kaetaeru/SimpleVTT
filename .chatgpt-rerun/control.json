@@ -3,7 +3,7 @@
   "run_id": "b7f27a61-29d8-4ba2-9f93-8e66722d5f41",
   "sequence": 10,
   "status": "continue",
-  "reason": "C9 remains active at IMPLEMENTED=4, INCOMPLETE=32, PROVEN_UNNEEDED=0. Dark One's Own Luck is now portable Common Play with named runtimeD20FollowUps removed; run 33290763482 passed 25/25 focused tests, typecheck, build, presentation rename invariance, connected exactly-once/reconnect/persistence/Undo. Family C remains INCOMPLETE: Tactical Mind and Peerless Skill need generic conditional pay-on-success, and Indomitable needs a generic authoritative actor/progression numeric source for its Fighter-level reroll bonus.",
+  "reason": "C9 remains active at IMPLEMENTED=4, INCOMPLETE=32, PROVEN_UNNEEDED=0. Run 33291256822 adds generic conditional d20-result commit payments and migrates Peerless Skill to durable subclassFeatureIds-owned portable Common Play with local/connected/rename/persistence/Undo verification. Family C remains INCOMPLETE: Tactical Mind now needs a canonical class-feature identity owner in Character SessionProjection, and Indomitable still needs a generic authoritative actor/progression numeric source for its Fighter-level reroll bonus.",
   "task_id": "v1-common-play-c8-rerun",
   "updated_at": "2026-08-30"
 }
