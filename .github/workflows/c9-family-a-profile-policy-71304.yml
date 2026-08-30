@@ -48,43 +48,31 @@ jobs:
 
           effect_ops=Path('src/domain/resolutionEffectOps.ts')
           text=effect_ops.read_text()
-          old='''function displacedPropertyModifierEffects(effects:EffectInstance[],effect:EffectInstance):EffectInstance[] {
-  const modifier=effect.propertyModifier;
-  if(!modifier||modifier.instancePolicy==="stack") return [];
-  if(modifier.instancePolicy==="profile-policy") {
-    throw new DomainEvaluationError("property modifier profile-policy requires an explicit RulesProfile stacking policy");
-  }
-  return effects.filter((existing)=>{
-    const current=existing.propertyModifier;
-    if(existing.targetId!==effect.targetId||!current||current.property!==modifier.property) return false;
-    if(modifier.instancePolicy==="replace") return true;
-    return existing.sourceId===effect.sourceId;
-  });
-}
-'''
-          new='''function displacedPropertyModifierEffects(
-  effects:EffectInstance[],
-  effect:EffectInstance,
-  profile:ResolutionExecutionContext["profile"],
-):EffectInstance[] {
-  const modifier=effect.propertyModifier;
-  if(!modifier) return [];
-  const policy=modifier.instancePolicy==="profile-policy"
-    ? profile.propertyModifierPolicy?.defaultInstancePolicy
-    : modifier.instancePolicy;
-  if(!policy) throw new DomainEvaluationError("property modifier profile-policy requires an explicit RulesProfile stacking policy");
-  if(policy==="stack") return [];
-  return effects.filter((existing)=>{
-    const current=existing.propertyModifier;
-    if(existing.targetId!==effect.targetId||!current||current.property!==modifier.property) return false;
-    if(policy==="replace") return true;
-    return existing.sourceId===effect.sourceId;
-  });
-}
-'''
-          if new not in text:
-            if old not in text: raise SystemExit('resolutionEffectOps policy anchor missing')
-            text=text.replace(old,new,1)
+          start=text.find('function displacedPropertyModifierEffects(')
+          end=text.find('\nexport function executeApplyEffect',start)
+          if start<0 or end<0: raise SystemExit('resolutionEffectOps policy function anchor missing')
+          replacement='\n'.join([
+            'function displacedPropertyModifierEffects(',
+            '  effects:EffectInstance[],',
+            '  effect:EffectInstance,',
+            '  profile:ResolutionExecutionContext["profile"],',
+            '):EffectInstance[] {',
+            '  const modifier=effect.propertyModifier;',
+            '  if(!modifier) return [];',
+            '  const policy=modifier.instancePolicy==="profile-policy"',
+            '    ? profile.propertyModifierPolicy?.defaultInstancePolicy',
+            '    : modifier.instancePolicy;',
+            '  if(!policy) throw new DomainEvaluationError("property modifier profile-policy requires an explicit RulesProfile stacking policy");',
+            '  if(policy==="stack") return [];',
+            '  return effects.filter((existing)=>{',
+            '    const current=existing.propertyModifier;',
+            '    if(existing.targetId!==effect.targetId||!current||current.property!==modifier.property) return false;',
+            '    if(policy==="replace") return true;',
+            '    return existing.sourceId===effect.sourceId;',
+            '  });',
+            '}',
+          ])
+          text=text[:start]+replacement+text[end:]
           old_call='const displacedEffects=displacedPropertyModifierEffects(ctx.state.effects,effect);'
           new_call='const displacedEffects=displacedPropertyModifierEffects(ctx.state.effects,effect,ctx.profile);'
           if new_call not in text:
@@ -97,28 +85,15 @@ jobs:
           schema['properties']['propertyModifierPolicy']={
             'type':'object',
             'required':['defaultInstancePolicy'],
-            'properties':{
-              'defaultInstancePolicy':{'enum':['stack','replace','unique-by-source']},
-            },
+            'properties':{'defaultInstancePolicy':{'enum':['stack','replace','unique-by-source']}},
             'additionalProperties':False,
           }
           schema_path.write_text(json.dumps(schema,separators=(',',':')))
 
           profile_path=Path('rules/profiles/dnd.srd-5.2.1.profile.json')
           text=profile_path.read_text()
-          anchor='''  "roundingPolicy": {
-    "id": "dnd.rounding.default-floor",
-    "default": "floor"
-  },
-  "properties": {'''
-          replacement='''  "roundingPolicy": {
-    "id": "dnd.rounding.default-floor",
-    "default": "floor"
-  },
-  "propertyModifierPolicy": {
-    "defaultInstancePolicy": "unique-by-source"
-  },
-  "properties": {'''
+          anchor='  "roundingPolicy": {\n    "id": "dnd.rounding.default-floor",\n    "default": "floor"\n  },\n  "properties": {'
+          replacement='  "roundingPolicy": {\n    "id": "dnd.rounding.default-floor",\n    "default": "floor"\n  },\n  "propertyModifierPolicy": {\n    "defaultInstancePolicy": "unique-by-source"\n  },\n  "properties": {'
           if replacement not in text:
             if anchor not in text: raise SystemExit('D&D profile policy anchor missing')
             text=text.replace(anchor,replacement,1)
@@ -134,7 +109,49 @@ jobs:
           service.write_text(text)
 
           test_path=Path('tests/domain/propertyModifierProfilePolicyRuntime.test.ts')
-          test_path.write_text('''import assert from "node:assert/strict";\nimport test from "node:test";\n\nimport { compileCommonPlayEntryPointOperations, parseCommonPlayOperationDefinition } from "../../src/domain/commonPlayOperationRuntime";\nimport { resolvePendingResolution } from "../../src/domain/resolution";\nimport type { RulesRuntimeState } from "../../src/domain/combatState";\nimport { runtimeState, TEST_PROFILE } from "./rulesTestState";\n\nconst PROFILE={...TEST_PROFILE,propertyModifierPolicy:{defaultInstancePolicy:"unique-by-source" as const}};\n\nfunction definition(id:string) {\n  return parseCommonPlayOperationDefinition({schemaVersion:"0.2-draft",id,entryPoints:[{id:"activate",invocation:"manual",operations:[{kind:"property.modify",property:"movement.walk",operation:"add",value:{value:5},target:"actor",owner:"effect",source:"definition",duration:{kind:"elapsed",amount:{value:1},unit:"minutes"},lifetime:{kind:"until-duration",onEnd:"destroy"},instancePolicy:"profile-policy"}]}]});\n}\n\nfunction apply(state:RulesRuntimeState,id:string,resolutionId:string) {\n  const parsed=definition(id);\n  const pending=compileCommonPlayEntryPointOperations(PROFILE,state,parsed,{resolutionId,actorId:"hero",entryPointId:"activate"});\n  return resolvePendingResolution(PROFILE,state,pending);\n}\n\nfunction committed(result:ReturnType<typeof apply>) {\n  assert.equal(result.status,"committed",result.status==="rejected"?result.error:undefined);\n  if(result.status!=="committed") throw new Error("expected committed resolution");\n  return result;\n}\n\nfunction effects(state:RulesRuntimeState) {\n  return state.effects.filter((effect)=>effect.propertyModifier?.property==="movement.walk");\n}\n\ntest("profile-policy resolves through the RulesProfile structural stacking policy",()=>{\n  const first=committed(apply(runtimeState(),"external.profile.same","profile-policy-1"));\n  const firstEffect=effects(first.state)[0]!;\n  const second=committed(apply(first.state,"external.profile.same","profile-policy-2"));\n  assert.equal(effects(second.state).length,1);\n  const changes=second.events.flatMap((event)=>event.stateChanges).filter((change)=>change.kind==="effect");\n  assert.ok(changes.some((change)=>change.kind==="effect"&&change.effectId===firstEffect.id&&change.operation==="removed"));\n  const third=committed(apply(second.state,"external.profile.other","profile-policy-3"));\n  assert.equal(effects(third.state).length,2);\n});\n''')
+          lines=[
+            'import assert from "node:assert/strict";',
+            'import test from "node:test";',
+            '',
+            'import { compileCommonPlayEntryPointOperations, parseCommonPlayOperationDefinition } from "../../src/domain/commonPlayOperationRuntime";',
+            'import { resolvePendingResolution } from "../../src/domain/resolution";',
+            'import type { RulesRuntimeState } from "../../src/domain/combatState";',
+            'import { runtimeState, TEST_PROFILE } from "./rulesTestState";',
+            '',
+            'const PROFILE={...TEST_PROFILE,propertyModifierPolicy:{defaultInstancePolicy:"unique-by-source" as const}};',
+            '',
+            'function definition(id:string) {',
+            '  return parseCommonPlayOperationDefinition({schemaVersion:"0.2-draft",id,entryPoints:[{id:"activate",invocation:"manual",operations:[{kind:"property.modify",property:"movement.walk",operation:"add",value:{value:5},target:"actor",owner:"effect",source:"definition",duration:{kind:"elapsed",amount:{value:1},unit:"minutes"},lifetime:{kind:"until-duration",onEnd:"destroy"},instancePolicy:"profile-policy"}]}]});',
+            '}',
+            '',
+            'function apply(state:RulesRuntimeState,id:string,resolutionId:string) {',
+            '  const parsed=definition(id);',
+            '  const pending=compileCommonPlayEntryPointOperations(PROFILE,state,parsed,{resolutionId,actorId:"hero",entryPointId:"activate"});',
+            '  return resolvePendingResolution(PROFILE,state,pending);',
+            '}',
+            '',
+            'function committed(result:ReturnType<typeof apply>) {',
+            '  assert.equal(result.status,"committed",result.status==="rejected"?result.error:undefined);',
+            '  if(result.status!=="committed") throw new Error("expected committed resolution");',
+            '  return result;',
+            '}',
+            '',
+            'function effects(state:RulesRuntimeState) {',
+            '  return state.effects.filter((effect)=>effect.propertyModifier?.property==="movement.walk");',
+            '}',
+            '',
+            'test("profile-policy resolves through the RulesProfile structural stacking policy",()=>{',
+            '  const first=committed(apply(runtimeState(),"external.profile.same","profile-policy-1"));',
+            '  const firstEffect=effects(first.state)[0]!;',
+            '  const second=committed(apply(first.state,"external.profile.same","profile-policy-2"));',
+            '  assert.equal(effects(second.state).length,1);',
+            '  const changes=second.events.flatMap((event)=>event.stateChanges).filter((change)=>change.kind==="effect");',
+            '  assert.ok(changes.some((change)=>change.kind==="effect"&&change.effectId===firstEffect.id&&change.operation==="removed"));',
+            '  const third=committed(apply(second.state,"external.profile.other","profile-policy-3"));',
+            '  assert.equal(effects(third.state).length,2);',
+            '});',
+          ]
+          test_path.write_text('\n'.join(lines)+'\n')
           PY
       - run: npm run generate:content
       - name: Verify profile-policy and existing property contracts
