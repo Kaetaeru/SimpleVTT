@@ -3,6 +3,7 @@ import test from "node:test";
 import "../../src/app/offlineRuntimeAdapters";
 import "../../src/app/connectedSessionRuntimeAdapter";
 import "../../src/app/connectedActionRoutingAdapter";
+import "../../src/app/connectedTurnRoutingAdapter";
 import "../../src/app/installedContentRuntimeAdapter";
 import { applyConnectedClientEvents, connectedManifest } from "../../src/app/connectedSessionRuntimeAdapter";
 import { connectedStateFor } from "../../src/app/connectedSessionState";
