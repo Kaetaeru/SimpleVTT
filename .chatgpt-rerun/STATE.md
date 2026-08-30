@@ -1,7 +1,7 @@
 # Rerun State
 
 - run_id: `b7f27a61-29d8-4ba2-9f93-8e66722d5f41`
-- sequence: `9`
+- sequence: `10`
 - task_id: `v1-common-play-c8-rerun`
 - dispatch status to publish: `continue`
 - repository: `Kaetaeru/SimpleVTT`
@@ -189,16 +189,17 @@ Family A (`expression-property`) remains `INCOMPLETE`. The persisted schema alre
 
 Family B (`turn-action-economy-timing`) remains `INCOMPLETE`. Action/Bonus Action/Reaction, movement budget, extra Action/Attack, once-per-turn/round/resolution frequency, begin/end-turn clocks, and structural off-turn stored invocation already have generic implementation and production evidence. The remaining required triggered-window/timing-dispatch semantics are not a second economy problem: they depend on the generic semantic-event vocabulary/order still unresolved in Family P, while initiative-count special timing is separately blocked in Family AC. A B-specific dispatcher would duplicate turn ownership and violate the one-language/one-owner architecture.
 
-## Family C reconciliation — portable dice execution proven, representative authoring remains
+## Family C reconciliation — structural outcome timing and connected dice proven
 
-Family C (`d20-test-lifecycle`) remains `INCOMPLETE`, but the generic post-roll dice mechanism advanced materially without a named executor:
+Family C (`d20-test-lifecycle`) remains `INCOMPLETE`, but its generic production timing and connected evidence advanced without a named executor:
 
-- `1342c9928b32f8fd986fd61a2981cee957a3685b`: Common Play `roll.modify` now lowers authoritative `add-die` and `reroll` into the existing generic d20 Resolver. Reroll updates the authoritative natural d20 presentation rather than leaving the original face visible.
-- C9 Family C Portable Dice Modifiers run `33289183121`: focused 37/37, `tsc --noEmit`, and `vite build` passed. Unknown installed add-die/reroll content executed with arbitrary renamed module/content/mechanic/interceptor/interaction/display identities, atomic accepted payment, and Undo.
-- The earlier declarative Cutting Words and deterministic replace/minimum/target-add evidence remains retained and was not repeated.
-- Family C is not final: `productionPlayRuntimeAdapter.ts` still authors Tactical Mind, Indomitable, Dark One's Own Luck, and Peerless Skill `runtimeD20FollowUps` with named identity checks. The generic production timing layer still needs structural failed/save/after-roll selection; Tactical Mind and Peerless Skill need conditional pay-on-success; portable add-die/reroll still need connected duplicate/reconnect proof.
+- `b537fdbd8bde102c7dadcd993c4c785c2d88e25b`: Common Play d20 interceptors can declaratively select `ability-check | saving-throw | attack-roll` and `success | failure`. Existing definitions retain the prior successful check/attack default when selectors are absent.
+- Production maps failed checks and each authoritative saving-throw result into the same generic d20 PendingResolution. A failed save can be rerolled and the selected `saveResults` entry is updated before the normal damage stage. No save-specific rule engine was added.
+- Cutting Words now declares `families=[ability-check, attack-roll]` and `outcomes=[success]` in builtin content instead of relying on production success-only filtering.
+- C9 Family C Structural D20 Selectors run `33290013900` passed 26/26 focused Family C tests, `tsc --noEmit`, and `vite build`. Acceptance covers failed ability checks, failed saves, after-roll success/failure selection, and unknown installed add-die/reroll through Host/Client duplicate replay, fresh reconnect, event-native Undo, and reconnect after Undo.
+- Earlier deterministic post-roll and local rename/Undo evidence remains retained and was not repeated except where the affected production selector surface required regression coverage.
 - Coverage totals remain `IMPLEMENTED=4`, `INCOMPLETE=32`, `PROVEN_UNNEEDED=0`; `gateNBlockingNamedFallbacks` remains empty and overall verdict remains `V1 INCOMPLETE`.
 
 ## Next Exact Action
 
-Continue Family C at the generic production timing boundary: add structural d20 family/outcome selection sufficient for failed checks/saves and after-roll decisions, then prove unknown portable add-die/reroll through Host/Client duplicate/reconnect/Undo. Reuse the existing Common Play interaction, d20 Resolver, payment, and connected event authority; do not migrate Tactical Mind or Peerless Skill until a generic conditional pay-on-success contract exists.
+Continue Family C by migrating the now-unblocked built-in representatives Indomitable (failed saving throw) and Dark One's Own Luck (after-roll ability check) from named `runtimeD20FollowUps` authoring into builtin portable Common Play definitions. Preserve their existing resource/economy semantics, prove arbitrary identity/rename through production, and delete only the named injection made obsolete by that migration. Do not migrate Tactical Mind or Peerless Skill until a generic conditional pay-on-success contract exists.
