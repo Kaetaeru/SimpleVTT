@@ -1,0 +1,72 @@
+name: C9 Family A Property Projection Test Fix
+on:
+  push:
+    branches: [agent/c9-gate-n-coverage-reconciliation]
+    paths: [.github/workflows/c9-family-a-property-projection-testfix.yml]
+permissions:
+  contents: write
+jobs:
+  property-projection:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: npm run generate:content
+      - name: Reapply staged Family A changes
+        shell: python
+        run: |
+          from pathlib import Path
+
+          def run_python_step(path,name,end_marker):
+            text=Path(path).read_text()
+            start=text.index(f'      - name: {name}')
+            run=text.index('        run: |\n',start)+len('        run: |\n')
+            end=text.index(end_marker,run)
+            code='\n'.join(line[10:] if line.startswith('          ') else line for line in text[run:end].splitlines())
+            exec(compile(code,name,'exec'))
+
+          run_python_step('.github/workflows/c9-family-a-property-projection-step.yml','Apply Effect-backed movement property projection','      - run: npx tsx --test')
+          run_python_step('.github/workflows/c9-family-a-property-projection-retry.yml','Allow numeric property expressions for movement distance','      - run: npx tsx --test')
+
+          test_path=Path('tests/ui/installedCommonPlayPropertyModifierProduction.test.ts')
+          source=test_path.read_text()
+          old='''  const before=await adapter.getSnapshot();
+            const beforeState=snapshotAdapterTurnRuntimeState(adapter,before.scene)!;
+            const initialRemaining=beforeState.combatants["char.aelar"].movement.remaining;
+            await adapter.resolveAction(action("slow"),["char.aelar"]);'''
+          new='''  const before=await adapter.getSnapshot();
+            const initialRemaining=before.scene.economyByActor["char.aelar"]!.movement;
+            await adapter.resolveAction(action("slow"),["char.aelar"]);'''
+          if source.count(old)!=1:
+            raise SystemExit(f'initial movement assertion anchor count={source.count(old)}')
+          source=source.replace(old,new,1)
+          old='''  const moved=await adapter.getSnapshot();
+            const movedState=snapshotAdapterTurnRuntimeState(adapter,moved.scene)!;
+            return {spent:initialRemaining-movedState.combatants["char.aelar"].movement.remaining,resolution:moved.resolution};'''
+          new='''  const moved=await adapter.getSnapshot();
+            return {spent:initialRemaining-moved.scene.economyByActor["char.aelar"]!.movement,resolution:moved.resolution};'''
+          if source.count(old)!=1:
+            raise SystemExit(f'final movement assertion anchor count={source.count(old)}')
+          test_path.write_text(source.replace(old,new,1))
+      - run: npx tsx --test tests/domain/effectsRuntime.test.ts tests/domain/commonPlayPropertyContractRuntime.test.ts tests/ui/installedCommonPlayPropertyModifierProduction.test.ts tests/ui/installedCommonPlayLoweredFamiliesProduction.test.ts
+      - run: npx tsc --noEmit
+      - name: Commit verified Family A projection slice
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/domain/effects.ts src/domain/commonPlayOperationRuntime.ts src/app/installedCommonPlayRuntimeAdapter.ts schemas/common-play-contract.schema.json tests/ui/installedCommonPlayPropertyModifierProduction.test.ts
+          git rm .github/workflows/c9-family-a-property-projection-step.yml .github/workflows/c9-family-a-property-projection-retry.yml .github/workflows/c9-family-a-property-projection-testfix.yml
+          git commit -m "feat(c9): project property effects into movement"
+          for attempt in 1 2 3 4 5; do
+            git fetch origin agent/c9-gate-n-coverage-reconciliation
+            git rebase origin/agent/c9-gate-n-coverage-reconciliation || { git rebase --abort || true; sleep 2; continue; }
+            if git push origin HEAD:agent/c9-gate-n-coverage-reconciliation; then exit 0; fi
+            sleep 2
+          done
+          exit 1
