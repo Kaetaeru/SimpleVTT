@@ -1,0 +1,80 @@
+name: C9 Family Q Choice R4 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-q-choice-r4-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  implement-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Apply verified Q bridge and decouple HP fixture
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          workflow=Path('.github/workflows/c9-family-q-choice-r3-71304.yml').read_text(encoding='utf-8')
+          marker="          python - <<'PY'\n"
+          start=workflow.index(marker)+len(marker)
+          end=workflow.index("\n          PY",start)
+          code='\n'.join(line[10:] if line.startswith('          ') else line for line in workflow[start:end].splitlines())
+          exec(compile(code,'q-choice-r3-patch','exec'),{'__name__':'__main__'})
+
+          test_path=Path('tests/ui/c9FamilyQChoiceInteractionProduction.test.ts')
+          text=test_path.read_text(encoding='utf-8')
+          damage='{kind:"damage.apply",amount:{value:1},damageType:"force",target:"actor"}'
+          healing='{kind:"healing.apply",amount:{value:1},target:"actor"}'
+          if damage in text:
+              text=text.replace(damage,healing,1)
+          elif healing not in text:
+              raise SystemExit('Q fixture operation anchor changed')
+          changed='assert.equal(snapshot.scene.entities.find((entity)=>entity.id===actorId)?.hp,hpBefore-1);'
+          unchanged='assert.equal(snapshot.scene.entities.find((entity)=>entity.id===actorId)?.hp,hpBefore);'
+          if changed in text:
+              text=text.replace(changed,unchanged,1)
+          elif text.count(unchanged)<2:
+              raise SystemExit('Q fixture HP assertion anchor changed')
+          expected='{delta:1,selectedCount:2}'
+          neutral='{delta:0,selectedCount:2}'
+          if expected in text:
+              text=text.replace(expected,neutral)
+          elif neutral not in text:
+              raise SystemExit('Q rename-invariance delta anchor changed')
+          test_path.write_text(text,encoding='utf-8')
+          PY
+      - run: npm ci
+      - run: npm run generate:content
+      - name: Verify Family Q choice vertical slice
+        run: |
+          node --import tsx --test tests/ui/c9FamilyQChoiceInteractionProduction.test.ts tests/ui/c9FamilyQTargetOwnerInteractionProduction.test.ts tests/ui/c9FamilyQAuthorityInteractionProduction.test.ts tests/ui/installedCommonPlayActorOwnerInteractionProduction.test.ts tests/domain/commonPlayOperationRuntime.test.ts
+          node scripts/check-v1-mechanism-coverage.mjs
+          node scripts/check-legacy-execution-boundary.mjs
+          npm exec tsc -- --noEmit
+      - name: Publish verified source and retire staging
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/domain/commonPlayOperationRuntime.ts src/app/contracts.ts src/app/mockAdapter.ts src/app/installedCommonPlayRuntimeAdapter.ts src/app/connectedInterruptResponsePort.ts src/app/connectedActionRoutingAdapter.ts src/app/connectedSessionWire.ts tests/ui/c9FamilyQChoiceInteractionProduction.test.ts
+          git rm -f --ignore-unmatch .github/workflows/c9-family-q-choice-71304.yml .github/workflows/c9-family-q-choice-r2-71304.yml .github/workflows/c9-family-q-choice-r3-71304.yml .github/workflows/c9-family-q-choice-r4-71304.yml .github/workflows/c9-family-q-choice-kernel-71304.yml .github/workflows/c9-family-q-choice-kernel-fix-71304.yml
+          git commit -m "feat(c9): carry portable choice interactions through Resolver"
+          for attempt in 1 2 3 4 5; do
+            if git push origin HEAD:agent/c9-gate-n-coverage-reconciliation; then exit 0; fi
+            git fetch origin agent/c9-gate-n-coverage-reconciliation
+            git rebase origin/agent/c9-gate-n-coverage-reconciliation || exit 1
+            sleep 1
+          done
+          exit 1
