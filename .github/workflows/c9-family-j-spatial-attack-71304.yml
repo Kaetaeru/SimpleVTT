@@ -1,5 +1,5 @@
 name: C9 Family J Spatial Attack 71304
-# rerun after presentation assertion alignment
+# rerun after portable opportunity-attack identity proof
 
 on:
   push:
@@ -25,6 +25,7 @@ jobs:
         run: |
           node --import tsx --test \
             tests/ui/c9FamilyJSpatialAttackProduction.test.ts \
+            tests/ui/c9FamilyJOpportunityAttackProduction.test.ts \
             tests/ui/c9FamilyJPortableControlProduction.test.ts \
             tests/ui/c9FamilyJAttackPersistence.test.ts \
             tests/ui/c9FamilyESpatialSelectorProduction.test.ts
