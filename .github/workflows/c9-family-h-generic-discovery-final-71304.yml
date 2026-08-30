@@ -1,0 +1,52 @@
+name: C9 Family H Generic Discovery Final 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-h-generic-discovery-final-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  verify-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Reconcile branch
+        run: git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+      - run: npm ci
+      - name: Apply generic discovery patch
+        run: python3 .github/scripts/c9-family-h-generic-discovery-final-71304.py
+      - name: Verify generic Family H discovery
+        run: |
+          node --import tsx --test tests/ui/c9FamilyHSearchDiscovery.test.ts tests/ui/sessionStatusEffectEventRuntime.test.ts
+          node scripts/check-legacy-execution-boundary.mjs
+          node scripts/check-v1-mechanism-coverage.mjs
+          npm exec tsc -- --noEmit
+      - name: Publish verified patch and retire staging files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/domain/commonPlayOperationRuntime.ts src/app/sessionStatusEffectEventRuntimeAdapter.ts tests/ui/c9FamilyHSearchDiscovery.test.ts
+          git rm .github/scripts/c9-family-h-generic-discovery-final-71304.py
+          git rm .github/workflows/c9-family-h-generic-discovery-final-71304.yml
+          if [ -f .github/workflows/c9-family-h-generic-discovery-71304-r2.yml ]; then git rm .github/workflows/c9-family-h-generic-discovery-71304-r2.yml; fi
+          git diff --cached --check
+          git commit -m "fix(c9): make hidden discovery identity independent"
+          for attempt in 1 2 3 4 5; do
+            if git push origin HEAD:agent/c9-gate-n-coverage-reconciliation; then exit 0; fi
+            git fetch origin agent/c9-gate-n-coverage-reconciliation
+            git rebase origin/agent/c9-gate-n-coverage-reconciliation || exit 1
+            sleep 1
+          done
+          exit 1
