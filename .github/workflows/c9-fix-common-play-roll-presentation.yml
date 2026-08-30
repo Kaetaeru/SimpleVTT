@@ -1,0 +1,49 @@
+name: C9 Fix Common Play Roll Presentation
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-fix-common-play-roll-presentation.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Patch presentation precedence
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('src/app/installedCommonPlayRuntimeAdapter.ts')
+          text = path.read_text()
+          old = '''    rollKind:hp?.rollKind??(roll?(roll.family==="attack-roll"?"attack":roll.family==="saving-throw"?"save":"check"):undefined),
+    authoritativeDice:hp?.authoritativeDice??(roll?.rollState==="normal"?[roll.natural]:roll?.dice.faces),
+    rollTotal:hp?.rollTotal??roll?.total,'''
+          new = '''    rollKind:roll?(roll.family==="attack-roll"?"attack":roll.family==="saving-throw"?"save":"check"):hp?.rollKind,
+    authoritativeDice:roll?(roll.rollState==="normal"?[roll.natural]:roll.dice.faces):hp?.authoritativeDice,
+    rollTotal:roll?.total??hp?.rollTotal,'''
+          if text.count(old) != 1:
+              raise SystemExit(f'expected exactly one presentation block, found {text.count(old)}')
+          path.write_text(text.replace(old, new))
+          PY
+          rm .github/workflows/c9-fix-common-play-roll-presentation.yml
+      - name: Commit patch
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/app/installedCommonPlayRuntimeAdapter.ts .github/workflows/c9-fix-common-play-roll-presentation.yml
+          git commit -m "fix(c9): preserve portable d20 presentation"
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
