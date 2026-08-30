@@ -247,13 +247,13 @@ function featureActions(character:CharacterSheet):ActionVm[] {
   {
     id:"action.unarmed-strike.grapple",actorId:character.id,name:"맨손 타격 · 붙잡기",category:"basic",target:"enemy",economy:"행동",resolutionKind:"saving-throw",
     summary:`근력/민첩 내성 DC ${unarmedSaveDc} · 실패 시 붙잡힘`,available:true,eligibleTargetIds:[],saveDc:unarmedSaveDc,saveAbility:"근력 또는 민첩",attacksPerAction:unarmedAttacks,
-    runtimeSaveCondition:{conditionId:"grappled",label:"붙잡힘",displayName:"맨손 타격 · 붙잡기",saveAbilities:["str","dex"],duration:{kind:"special",key:`escape:${character.id}`},termination:{sourceBecomesIncapacitated:true,sourceDies:true}},
+    runtimeSaveCondition:{choose:"highest",conditionId:"grappled",label:"붙잡힘",displayName:"맨손 타격 · 붙잡기",saveAbilities:["str","dex"],duration:{kind:"special",key:`escape:${character.id}`},termination:{sourceBecomesIncapacitated:true,sourceDies:true}},
     details:[detail("대상 내성","근력 또는 민첩 중 높은 값"),detail("DC",String(unarmedSaveDc)),detail("실패","붙잡힘"),detail("출처","SRD 5.2.1 · Unarmed Strike")],
   },
   {
     id:"action.unarmed-strike.shove-prone",actorId:character.id,name:"맨손 타격 · 넘어뜨리기",category:"basic",target:"enemy",economy:"행동",resolutionKind:"saving-throw",
     summary:`근력/민첩 내성 DC ${unarmedSaveDc} · 실패 시 넘어짐`,available:true,eligibleTargetIds:[],saveDc:unarmedSaveDc,saveAbility:"근력 또는 민첩",attacksPerAction:unarmedAttacks,
-    runtimeSaveCondition:{conditionId:"prone",label:"넘어짐",displayName:"맨손 타격 · 넘어뜨리기",saveAbilities:["str","dex"],duration:{kind:"special",key:"stand-up"}},
+    runtimeSaveCondition:{choose:"highest",conditionId:"prone",label:"넘어짐",displayName:"맨손 타격 · 넘어뜨리기",saveAbilities:["str","dex"],duration:{kind:"special",key:"stand-up"}},
     details:[detail("대상 내성","근력 또는 민첩 중 높은 값"),detail("DC",String(unarmedSaveDc)),detail("실패","넘어짐"),detail("공간 모듈","미연결 시 밀어내기 대신 넘어뜨리기만 자동 적용"),detail("출처","SRD 5.2.1 · Unarmed Strike")],
   },
   standardEffect("disengage","이탈","self","이번 턴 이동이 기회 공격을 유발하지 않습니다.",[detail("효과","이번 턴 기회 공격 유발 안 함"),detail("비용","행동 1"),detail("출처","SRD 5.2.1 · Disengage")],{sessionStatusEffect:{status:"이탈",target:"actor",successOutcome:"이번 턴 기회 공격을 유발하지 않음"}}),

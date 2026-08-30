@@ -96,6 +96,7 @@ test("Unarmed damage grapple and shove execute from structural payloads after ac
       assert.equal(source.runtimeAttack?.sourceKind,"unarmed");
       assert.equal(source.damage?.[0].dice,"0d2");
     } else {
+      assert.equal(source.runtimeSaveCondition?.choose,"highest");
       assert.deepEqual(source.runtimeSaveCondition?.saveAbilities,["str","dex"]);
     }
 

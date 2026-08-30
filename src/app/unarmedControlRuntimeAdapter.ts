@@ -39,6 +39,7 @@ MockAdapter.prototype.resolveAction=async function resolveUnarmedControl(actionI
   const action=actorAction(snapshot.scene,actionId);
   const control=action?.runtimeSaveCondition;
   if (!control) return previousResolveAction.call(this,actionId,targetIds);
+  if (control.choose!=="highest") return snapshot;
   const targetId=targetIds[0];
   const target=internal.scene.entities.find((entry)=>entry.id===targetId);
   if (!action?.available||targetIds.length!==1||!action.eligibleTargetIds.includes(targetId)||!target||target.runtimeLife?.dead) return snapshot;

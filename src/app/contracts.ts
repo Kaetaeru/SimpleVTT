@@ -327,6 +327,7 @@ export interface ActionVm {
     conditionId:ConditionId;
     label:string;
     displayName:string;
+    choose:"highest";
     saveAbilities:AbilityKey[];
     duration:DurationSpec;
     termination?:EffectTermination;
