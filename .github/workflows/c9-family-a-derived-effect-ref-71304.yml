@@ -1,0 +1,123 @@
+name: C9 Family A Derived Effect Reference 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-a-derived-effect-ref-71304.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: c9-family-a-derived-effect-ref-71304
+  cancel-in-progress: false
+
+jobs:
+  implement-and-verify:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Sync latest branch
+        run: |
+          git fetch origin agent/c9-gate-n-coverage-reconciliation
+          git reset --hard origin/agent/c9-gate-n-coverage-reconciliation
+      - name: Apply minimal Family A derived-reference composition
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          effects = Path('src/domain/effects.ts')
+          text = effects.read_text()
+          old = '''  inputProperties:Record<string,number>,
+          ):PropertyResolution {
+            const base=inputProperties[property];
+            if(!Number.isFinite(base)) throw new DomainEvaluationError(`unresolved property reference: ${property}`);'''
+          new = '''  inputProperties:Record<string,number>,
+            resolveReference?:(property:string)=>number|undefined,
+          ):PropertyResolution {
+            const base=inputProperties[property] ?? resolveReference?.(property);
+            if(typeof base!=="number"||!Number.isFinite(base)) throw new DomainEvaluationError(`unresolved property reference: ${property}`);'''
+          if old not in text:
+              if 'resolveReference?:(property:string)=>number|undefined' not in text:
+                  raise SystemExit('effects.ts function-signature anchor changed')
+          else:
+              text = text.replace(old, new, 1)
+
+          old_ref = '''      const referenced=inputProperties[reference];
+                if(!Number.isFinite(referenced)) throw new DomainEvaluationError(`unresolved property reference: ${reference}`);
+                return referenced;'''
+          new_ref = '''      const referenced=inputProperties[reference] ?? resolveReference?.(reference);
+                if(typeof referenced!=="number"||!Number.isFinite(referenced)) throw new DomainEvaluationError(`unresolved property reference: ${reference}`);
+                return referenced;'''
+          if old_ref not in text:
+              if 'inputProperties[reference] ?? resolveReference?.(reference)' not in text:
+                  raise SystemExit('effects.ts reference anchor changed')
+          else:
+              text = text.replace(old_ref, new_ref, 1)
+          effects.write_text(text)
+
+          service = Path('src/app/realResolutionService.ts')
+          text = service.read_text()
+          old = '''  const modified=resolveEffectModifiedProperty(
+              effects,targetId,property,{...inputProperties,[property]:base.value},
+            );'''
+          new = '''  const modified=resolveEffectModifiedProperty(
+              effects,targetId,property,{...inputProperties,[property]:base.value},
+              (reference)=>resolveProfileProperty(SIMPLEVTT_APP_RULES_PROFILE,reference,inputProperties).value,
+            );'''
+          if old not in text:
+              if '(reference)=>resolveProfileProperty(SIMPLEVTT_APP_RULES_PROFILE,reference,inputProperties).value' not in text:
+                  raise SystemExit('realResolutionService.ts anchor changed')
+          else:
+              text = text.replace(old, new, 1)
+          service.write_text(text)
+
+          test_path = Path('tests/ui/installedCommonPlayPropertyModifierProduction.test.ts')
+          text = test_path.read_text()
+          marker = 'production property owner resolves derived profile references inside Effect expressions'
+          if marker not in text:
+              text += '''\n\ntest("production property owner resolves derived profile references inside Effect expressions",()=>{\n  const effect:EffectInstance={\n    id:"effect.external.derived-ref",sourceId:"external.unseen.property-owner",targetId:"char.aelar",kind:"modifier",tags:[],expiry:{kind:"permanent"},\n    propertyModifier:{property:"initiative",operation:"add",value:{ref:"ability.dex.modifier"},source:"definition",instancePolicy:"stack"},\n  };\n  const resolved=resolveRuntimeProfileProperty([effect],"char.aelar","initiative",{initiative:1,"ability.dex.score":14});\n  assert.equal(resolved.value,3);\n  assert.ok(resolved.provenance.some((entry)=>entry.source==="effect:effect.external.derived-ref"));\n});\n'''
+              test_path.write_text(text)
+          PY
+      - name: Install dependencies
+        run: npm ci
+      - name: Verify Family A production projection
+        run: npx tsx --test tests/ui/installedCommonPlayPropertyModifierProduction.test.ts
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - name: Verify coverage ledger contract
+        run: node scripts/check-v1-mechanism-coverage.mjs
+      - name: Commit implementation and retire verifier
+        run: |
+          rm .github/workflows/c9-family-a-derived-effect-ref-71304.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add src/domain/effects.ts src/app/realResolutionService.ts tests/ui/installedCommonPlayPropertyModifierProduction.test.ts .github/workflows/c9-family-a-derived-effect-ref-71304.yml
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "feat(c9): resolve derived property references in effects"
+          for attempt in 1 2; do
+            git fetch origin agent/c9-gate-n-coverage-reconciliation
+            if ! git rebase origin/agent/c9-gate-n-coverage-reconciliation; then
+              git rebase --abort || true
+              exit 1
+            fi
+            npx tsx --test tests/ui/installedCommonPlayPropertyModifierProduction.test.ts
+            npx tsc --noEmit
+            node scripts/check-v1-mechanism-coverage.mjs
+            if git push origin HEAD:agent/c9-gate-n-coverage-reconciliation; then
+              exit 0
+            fi
+          done
+          exit 1
