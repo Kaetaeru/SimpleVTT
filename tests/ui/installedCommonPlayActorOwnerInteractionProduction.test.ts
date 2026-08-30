@@ -4,7 +4,7 @@ import "../../src/app/offlineRuntimeAdapters";
 import "../../src/app/connectedSessionRuntimeAdapter";
 import "../../src/app/connectedActionRoutingAdapter";
 import { catalogQualifiedId } from "../../src/app/contentCatalogIdentity";
-import { connectedManifest } from "../../src/app/connectedSessionRuntimeAdapter";
+import { connectedManifest, resumeConnectedInterruptPromptForCharacter } from "../../src/app/connectedSessionRuntimeAdapter";
 import { connectedStateFor } from "../../src/app/connectedSessionState";
 import { installedCommonPlayActionId } from "../../src/app/installedCommonPlayActionReference";
 import { setInstalledContentStoreForTests } from "../../src/app/installedContentRuntimeAdapter";
@@ -51,6 +51,45 @@ test("actor-owner decline from the owning peer is side-effect free and replay is
     const afterReplay=await host.getSnapshot();
     assert.equal(afterReplay.activeCharacter.hp,before.activeCharacter.hp);
     assert.equal(afterReplay.scene.economyByActor[internal.activeCharacter.id]?.reaction,true);
+  }finally{tauriSessionTransport.send=oldSend;tauriSessionTransport.sendTo=oldSendTo;}
+});
+
+
+test("actor-owner pending consent resumes only for the rebound owner peer after reconnect",async()=>{
+  const sessionId="session.actor-owner-reconnect",host=new MockAdapter();const actionId=await install(host);
+  const internal=host as unknown as {activeCharacter:{id:string;hp:number;maxHp:number};scene:{entities:Array<{id:string;hp:number}>}};internal.activeCharacter.hp=Math.max(0,internal.activeCharacter.maxHp-10);internal.scene.entities.find((entity)=>entity.id===internal.activeCharacter.id)!.hp=internal.activeCharacter.hp;
+  await host.startInitiative();await host.setCurrentActor(internal.activeCharacter.id);const before=await host.getSnapshot();
+  const hostState=connectedStateFor(host);hostState.mode="host";hostState.sessionId=sessionId;hostState.ledger=new HostSessionLedger(sessionId,connectedManifest(host));
+  const ownerManifest=connectedManifest(host);hostState.peerManifests.set("peer.owner",ownerManifest);
+  const direct:Array<{peer:string;message:string}>=[],broadcasts:string[]=[];const oldSend=tauriSessionTransport.send,oldSendTo=tauriSessionTransport.sendTo;tauriSessionTransport.send=async(message)=>{broadcasts.push(message);return 1;};tauriSessionTransport.sendTo=async(peer,message)=>{direct.push({peer,message});return 1;};
+  try{
+    await host.resolveAction(actionId,[internal.activeCharacter.id]);let snapshot=await host.getSnapshot();
+    assert.equal(snapshot.resolution?.stage,"interrupt",JSON.stringify(snapshot.resolution));
+    const resolutionId=snapshot.resolution!.id,promptId=snapshot.resolution!.interrupt!.id;
+    hostState.peerManifests.delete("peer.owner");
+    const reboundPeer="peer.owner.reconnected";hostState.peerManifests.set(reboundPeer,ownerManifest);
+    const directBeforeReconnect=direct.length;
+    assert.deepEqual(await resumeConnectedInterruptPromptForCharacter(host,reboundPeer,internal.activeCharacter.id),{status:"sent"});
+    const resumed=direct.slice(directBeforeReconnect).map((entry)=>({peer:entry.peer,wire:JSON.parse(entry.message)})).find((entry)=>entry.wire.type==="resolution-interrupt-prompt");
+    assert.equal(resumed?.peer,reboundPeer,JSON.stringify(direct.slice(directBeforeReconnect)));
+    assert.equal(resumed?.wire.resolutionId,resolutionId);
+    assert.equal(resumed?.wire.interrupt.id,promptId);
+
+    const directBeforeOldPeer=direct.length;
+    assert.equal(await routeConnectedInterruptResponse(host,{peer:"peer.owner",message:""},{sessionId,resolutionId,promptId,accept:true}),true);
+    const stalePeerErrors=direct.slice(directBeforeOldPeer).map((entry)=>JSON.parse(entry.message)).filter((wire)=>wire.type==="error");
+    assert.equal(stalePeerErrors.at(-1)?.code,"interrupt-not-pending",JSON.stringify(stalePeerErrors));
+    snapshot=await host.getSnapshot();
+    assert.equal(snapshot.resolution?.stage,"interrupt");
+    assert.equal(snapshot.activeCharacter.hp,before.activeCharacter.hp);
+    assert.equal(snapshot.scene.economyByActor[internal.activeCharacter.id]?.reaction,true);
+
+    assert.equal(await routeConnectedInterruptResponse(host,{peer:reboundPeer,message:""},{sessionId,resolutionId,promptId,accept:true}),true);
+    snapshot=await host.getSnapshot();
+    assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
+    assert.equal(snapshot.activeCharacter.hp,before.activeCharacter.hp+5);
+    assert.equal(snapshot.scene.economyByActor[internal.activeCharacter.id]?.reaction,false);
+    assert.ok(broadcasts.map((wire)=>JSON.parse(wire)).some((wire)=>wire.type==="event-batch"),JSON.stringify(broadcasts));
   }finally{tauriSessionTransport.send=oldSend;tauriSessionTransport.sendTo=oldSendTo;}
 });
 
