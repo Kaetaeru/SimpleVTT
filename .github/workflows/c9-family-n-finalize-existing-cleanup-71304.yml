@@ -1,0 +1,68 @@
+name: C9 Family N Finalize Existing Cleanup 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-n-finalize-existing-cleanup-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  verify-finalize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run generate:content
+      - name: Verify existing Family N composition without source-cleanup patch
+        run: >-
+          npx tsx --test
+          tests/domain/c9FamilyNEffectLifecycleAcceptance.test.ts
+          tests/domain/commonPlayEffectSuppressionRuntime.test.ts
+          tests/ui/c9FamilyNEffectDurationProduction.test.ts
+      - name: Reconcile Family N ledger from verified existing composition
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
+          ledger=json.loads(path.read_text(encoding='utf-8'))
+          row=next(entry for entry in ledger['rows'] if entry['family']=='N')
+          row['currentState']='Installed arbitrary-ID persistent effects execute through the shared Common Play/Resolver authority. Portable duration materialization, boundary expiry, suppression/unsuppression with elapsed pause-resume, maintained source/dependent cleanup through generic concentration lifecycle, connected replay/reconnect, persistence, and event-native Undo are production-proven under unknown and renamed external identities. Named aura/form/mark adapters remain legacy content/projection migration debt and are not supported portable execution fallbacks.'
+          row['disposition']='IMPLEMENTED'
+          impl='concentration.ts plus resolutionEffectOps.ts and condition lifecycle generically end maintained concentration and remove its dependent effects when the source becomes Incapacitated, without content identity dispatch'
+          prod='c9FamilyNEffectDurationProduction.test.ts proves an unknown installed maintained effect is removed with its source concentration when the source becomes Incapacitated and event-native Undo restores both concentration and dependent effect'
+          ident='c9FamilyNEffectDurationProduction.test.ts repeats maintained source/dependent cleanup and Undo after complete external module/content/mechanic identity rename'
+          if impl not in row['implementationEvidence']: row['implementationEvidence'].append(impl)
+          if prod not in row['productionEvidence']: row['productionEvidence'].append(prod)
+          if ident not in row['identityInvarianceEvidence']: row['identityInvarianceEvidence'].append(ident)
+          row['remainingNamedSeams']=[]
+          path.write_text(json.dumps(ledger,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          PY
+      - name: Verify repository gates
+        run: |
+          npm run build
+          node scripts/check-v1-mechanism-coverage.mjs
+          node scripts/check-legacy-execution-boundary.mjs
+          git diff --check
+      - name: Publish verified Family N ledger
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/rules/v1-mechanism-coverage-ledger.json
+          git commit -m "docs(c9): finalize Family N dependent cleanup evidence"
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
