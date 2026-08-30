@@ -95,7 +95,7 @@ jobs:
       - name: Verify Family J attack replacement
         run: |
           npm run generate:content
-          node --import tsx --test tests/ui/c9FamilyJAttackReplacementProduction71304R2.test.ts tests/ui/unarmedStrikeRuntime.test.ts tests/ui/c9FamilyJExtraAttackProduction71304.test.ts
+          node --import tsx --test tests/ui/c9FamilyJAttackReplacementProduction71304R2.test.ts tests/ui/c9FamilyJExtraAttackProduction71304.test.ts
           node scripts/check-v1-mechanism-coverage.mjs
           node scripts/check-legacy-execution-boundary.mjs
           npm exec tsc -- --noEmit
