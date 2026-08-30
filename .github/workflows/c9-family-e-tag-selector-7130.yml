@@ -26,6 +26,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm run generate:content
       - name: Verify Family E tag selector production
         run: >-
           node --import tsx --test
