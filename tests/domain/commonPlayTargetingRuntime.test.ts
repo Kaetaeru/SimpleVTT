@@ -56,6 +56,30 @@ test("bounded Common Play selector accepts the acting actor as the pre-resolved 
   if(committed.status==="committed") assert.equal(committed.state.combatants.hero.life.hp.current,15);
 });
 
+test("portable Common Play relation selector validates authoritative relation facts without identity dispatch",()=>{
+  const authored=structuredClone(AUTHORED);
+  authored.entryPoints[0].targeting={from:"targets",where:{op:"relation-matches",ref:"relation",value:"enemy"},min:1,max:1};
+  const definition=parseManualCommonPlayOperationDefinition(authored);
+  assert.deepEqual(definition.entryPoints[0].targeting,authored.entryPoints[0].targeting);
+
+  const enemyState=runtimeState();
+  enemyState.combatants.goblin.life.hp.current=5;
+  const enemy=resolveCommonPlayEntryPointOperations(TEST_PROFILE,enemyState,definition,{
+    resolutionId:"relation-enemy",actorId:"hero",entryPointId:"mend-other",targetId:"goblin",targetingTargets:[target("goblin","enemy")],
+  });
+  assert.equal(enemy.status,"committed");
+  if(enemy.status==="committed") assert.equal(enemy.state.combatants.goblin.life.hp.current,10);
+
+  const selfState=runtimeState();
+  selfState.combatants.hero.life.hp.current=10;
+  const self=resolveCommonPlayEntryPointOperations(TEST_PROFILE,selfState,definition,{
+    resolutionId:"relation-self",actorId:"hero",entryPointId:"mend-other",targetId:"hero",targetingTargets:[target("hero","self")],
+  });
+  assert.equal(self.status,"rejected");
+  if(self.status==="rejected") assert.match(self.error,/relation filter rejected: hero/);
+  assert.equal(selfState.combatants.hero.life.hp.current,10);
+});
+
 test("bounded Common Play selector preserves authored multi-target limits without fabricating spatial facts",()=>{
   const authored=structuredClone(AUTHORED);
   authored.entryPoints[0].targeting={from:"targets",min:1,max:2};
@@ -114,7 +138,7 @@ test("unsupported Common Play selector shapes reject explicitly",()=>{
   const invalid:Array<[Record<string,unknown>,RegExp]>=[
     [{from:"actors",min:1,max:1},/from must be targets/],
     [{from:"artifacts",min:1,max:1},/from must be targets/],
-    [{from:"targets",where:{value:true},min:1,max:1},/unsupported fields: where/],
+    [{from:"targets",where:{value:true},min:1,max:1},/currently supports relation-matches/],
     [{from:"targets",orderBy:"distance",min:1,max:1},/unsupported fields: orderBy/],
     [{from:"targets",area:{kind:"instant"},min:1,max:1},/unsupported fields: area/],
     [{from:"targets",min:-1,max:1},/min must be a non-negative integer/],

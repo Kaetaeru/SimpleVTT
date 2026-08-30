@@ -452,7 +452,7 @@ function prepareCommonPlayAction(
 
   const entryPoint=action.lowered.definition.entryPoints.find((candidate)=>candidate.id===action.entryPointId);
   if(!entryPoint) return undefined;
-  const portableEntry=entryPoint as {targeting?:{min?:number;max?:number};operations:Array<{kind:string;target?:string}>};
+  const portableEntry=entryPoint as {targeting?:{min?:number;max?:number;where?:{op:string;ref:string;value:string}};operations:Array<{kind:string;target?:string}>};
   const hasTargeting=portableEntry.targeting!==undefined;
   if(!hasTargeting&&targetIds.length!==1) return undefined;
   const selectedTargetId=targetIds[0];
@@ -463,6 +463,7 @@ function prepareCommonPlayAction(
   if(hasTargeting) {
     const targeting=portableEntry.targeting!;
     if(targetIds.length<(targeting.min??1)||targetIds.length>(targeting.max??targetIds.length)) return undefined;
+    if(targeting.where?.op==="relation-matches"&&targeting.where.ref==="relation"&&selectedTargets.some((target)=>commonPlayTargetFact(actorEntity,target!).relation!==targeting.where!.value)) return undefined;
     if(projectedAction&&(!projectedAction.available||targetIds.some((id)=>!projectedAction.eligibleTargetIds.includes(id)))) return undefined;
   } else if(needsSelectedTarget) {
     if(!selectedTargets[0]||projectedAction&&(!projectedAction.available||!projectedAction.eligibleTargetIds.includes(selectedTargetId))) return undefined;

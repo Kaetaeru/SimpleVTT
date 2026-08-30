@@ -529,6 +529,34 @@ test("unknown installed Common Play preserves a bounded multi-target selection t
   assert.ok(snapshot.resolution?.detail.some((line)=>/validated 2 target/.test(line)));
 });
 
+test("unknown installed Common Play relation selector rejects an ineligible target before production commit",async()=>{
+  const adapter=new MockAdapter();
+  const payload=JSON.parse(targetingPackagePayload()) as any;
+  payload.content[0].mechanics[0].config.entryPoints[0].targeting={from:"targets",where:{op:"relation-matches",ref:"relation",value:"enemy"},min:1,max:1};
+  setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
+  const preview=await adapter.previewContentImport(JSON.stringify(payload));
+  assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
+  await adapter.activateContentImport();
+  const actionId=installedCommonPlayActionId({
+    catalogId:catalogQualifiedId(TARGETING_IDENTITY.contentId,TARGETING_IDENTITY.moduleId,"1"),mechanicId:TARGETING_IDENTITY.mechanicId,entryPointId:TARGETING_IDENTITY.entryPointId,
+  });
+  injureActiveCharacter(adapter,10);
+  injureSceneEntity(adapter,"combatant.goblin-a",10);
+  await adapter.startInitiative();
+  await adapter.setCurrentActor("char.aelar");
+  const selfBefore=(await adapter.getSnapshot()).activeCharacter.hp;
+  await adapter.resolveAction(actionId,["char.aelar"]);
+  assert.equal((await adapter.getSnapshot()).activeCharacter.hp,selfBefore,"self must be filtered before production commit");
+
+  const enemyBefore=(await adapter.getSnapshot()).scene.entities.find((entity)=>entity.id==="combatant.goblin-a")!.hp;
+  await adapter.resolveAction(actionId,["combatant.goblin-a"]);
+  const snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")!.hp,enemyBefore+5);
+  assert.equal(snapshot.resolution?.stage,"complete");
+  assert.equal(snapshot.resolution?.actionId,actionId);
+  assert.deepEqual(snapshot.resolution?.targetIds,["combatant.goblin-a"]);
+});
+
 test("installed Common Play targeting validates one existing target before healing and supports Undo",async()=>{
   const adapter=new MockAdapter();
   const actionId=await installTargeting(adapter);
