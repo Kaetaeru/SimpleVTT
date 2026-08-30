@@ -138,6 +138,14 @@ function catalogEntryMatchesSubclass(entry:CatalogEntry,subclassId:string) {
   );
 }
 
+const ACTOR_CLASS_LEVEL_REF="actor.class-level:";
+function ownerNumericReference(sheet:CharacterSheet,ref:string) {
+  if(!ref.startsWith(ACTOR_CLASS_LEVEL_REF))return undefined;
+  const classId=ref.slice(ACTOR_CLASS_LEVEL_REF.length);
+  if(!classId)return undefined;
+  return sheet.classLevels?.find((entry)=>entry.classId===classId)?.level;
+}
+
 function contentIdentitySetForLocal(internal:AdapterState) {
   const identities=new Set<string>();
   try {
@@ -189,7 +197,7 @@ async function passiveReactionCandidates(adapter:MockAdapter):Promise<PassiveRea
       for(const [mechanicIndex,mechanic] of (entry.mechanics??[]).entries()){
         if(mechanic.kind!=="common-play")continue;
         const canonical=parseCommonPlayDefinition(mechanic.config,`Installed passive Common Play ${qualifiedId} mechanic ${mechanicIndex}`);
-        const definition=lowerCommonPlayReactionDefinition(canonical,{resolveResourceDie:(resourceId)=>owner.sheet.resources.find((resource)=>resource.id===resourceId)?.dieSides});
+        const definition=lowerCommonPlayReactionDefinition(canonical,{resolveResourceDie:(resourceId)=>owner.sheet.resources.find((resource)=>resource.id===resourceId)?.dieSides,resolveNumericReference:(ref)=>ownerNumericReference(owner.sheet,ref)});
         if(!definition)continue;
         const presentationEntry=internal.catalog.find((candidate)=>
           candidate.contentId===canonical.id&&candidate.sourceId===entry.sourceId&&candidate.version===entry.version

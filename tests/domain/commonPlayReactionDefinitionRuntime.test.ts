@@ -130,6 +130,14 @@ test("portable d20 interceptor lowers deterministic post-roll roll.modify modes 
   assert.throws(()=>lowerCommonPlayReactionDefinition(damage),/primary.damage supports subtract-die only/);
 });
 
+test("portable d20 numeric expressions resolve from authoritative owner progression references",()=>{
+  const definition=portableReaction();
+  definition.interceptors![0].operations=[{kind:"roll.modify",mode:"add-flat",value:{ref:"actor.class-level:dnd.srd521.class.fighter"}}];
+  const lowered=lowerCommonPlayReactionDefinition(definition,{resolveNumericReference:(ref)=>ref==="actor.class-level:dnd.srd521.class.fighter"?9:undefined})!;
+  assert.deepEqual(lowered.interceptors[0].operations,[{kind:"roll.modify",mode:"add-flat",value:{value:9}}]);
+  assert.throws(()=>lowerCommonPlayReactionDefinition(definition),/unresolved numeric reference/);
+});
+
 test("existing attack outcome recalculation remains lowerable",()=>{
   const definition=parseCommonPlayDefinition({
     schemaVersion:"0.2-draft",

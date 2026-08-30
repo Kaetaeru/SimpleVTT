@@ -7,10 +7,10 @@ import type {
   CommonPlayReactionDefinition,
 } from "./commonPlayRuntime";
 import type { CommonPlayFactQuery } from "./commonPlaySpatialFactRuntime";
-import { DomainEvaluationError, type SemanticPredicate } from "./profileEngine";
+import { DomainEvaluationError, evaluateExpression, type ExpressionNode, type SemanticPredicate } from "./profileEngine";
 
 type Obj=Record<string,unknown>;
-type ReactionLoweringOptions={ resolveResourceDie?:(resourceId:string)=>number|undefined };
+type ReactionLoweringOptions={ resolveResourceDie?:(resourceId:string)=>number|undefined; resolveNumericReference?:(ref:string)=>number|undefined };
 const STABLE_ID=/^[a-z0-9][a-z0-9._-]*$/;
 const RESPONDERS=new Set(["actor","target","actor-owner","target-owner","dm","host"]);
 const VISIBILITIES=new Set(["public","actor","dm","actor-and-dm","authority-only"]);
@@ -38,6 +38,30 @@ function literalNumber(value:unknown,label:string) {
     throw new DomainEvaluationError(`${label} must be a finite literal number expression`);
   }
   return {value:expression.value};
+}
+
+const NUMERIC_EXPRESSION_OPERATORS=new Set(["add","subtract","multiply","divide","min","max","floor","ceil"]);
+function resolvedNumber(value:unknown,label:string,options:ReactionLoweringOptions) {
+  const parse=(candidate:unknown,currentLabel:string):ExpressionNode=>{
+    const expression=object(candidate,currentLabel);
+    if("value" in expression){
+      if(Object.keys(expression).some((key)=>key!=="value")||typeof expression.value!=="number"||!Number.isFinite(expression.value))throw new DomainEvaluationError(`${currentLabel} must contain a finite numeric value`);
+      return {value:expression.value};
+    }
+    if("ref" in expression){
+      if(Object.keys(expression).some((key)=>key!=="ref")||typeof expression.ref!=="string"||!expression.ref)throw new DomainEvaluationError(`${currentLabel} must contain a non-empty numeric ref`);
+      return {ref:expression.ref};
+    }
+    if(typeof expression.op!=="string"||!NUMERIC_EXPRESSION_OPERATORS.has(expression.op)||!Array.isArray(expression.args)||!expression.args.length||Object.keys(expression).some((key)=>key!=="op"&&key!=="args"))throw new DomainEvaluationError(`${currentLabel} must be a supported numeric expression`);
+    return {op:expression.op as ExpressionNode extends {op:infer T}?T:never,args:expression.args.map((entry,index)=>parse(entry,`${currentLabel}.args[${index}]`))};
+  };
+  const resolved=evaluateExpression(parse(value,label),(ref)=>{
+    const numeric=options.resolveNumericReference?.(ref);
+    if(numeric===undefined)throw new DomainEvaluationError(`${label} has unresolved numeric reference: ${ref}`);
+    if(!Number.isFinite(numeric))throw new DomainEvaluationError(`${label} resolved non-finite numeric reference: ${ref}`);
+    return numeric;
+  });
+  return {value:resolved};
 }
 
 function d20ResultCondition(value:unknown,label:string):CommonPlayReactionDefinition["payments"][number]["condition"] {
@@ -184,7 +208,7 @@ function lowerD20Interceptor(value:Obj,index:number,options:ReactionLoweringOpti
         throw new DomainEvaluationError(`${label}.operations[${operationIndex}].mode is not connected to the post-roll reaction runtime`);
       }
       if(raw.dice!==undefined||raw.diceResource!==undefined) throw new DomainEvaluationError(`${label}.operations[${operationIndex}] dice authority is not allowed for ${raw.mode}`);
-      const value=literalNumber(raw.value,`${label}.operations[${operationIndex}].value`);
+      const value=resolvedNumber(raw.value,`${label}.operations[${operationIndex}].value`,options);
       if(!Number.isInteger(value.value)) throw new DomainEvaluationError(`${label}.operations[${operationIndex}].value must be an integer`);
       if((raw.mode==="replace"||raw.mode==="minimum")&&(value.value<1||value.value>20)) throw new DomainEvaluationError(`${label}.operations[${operationIndex}].value must be between 1 and 20 for ${raw.mode}`);
       return {kind:"roll.modify" as const,mode:raw.mode,value};
