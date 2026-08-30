@@ -1,0 +1,65 @@
+name: C9 Family J Structural Source Ledger 71304
+
+on:
+  push:
+    branches: [agent/c9-gate-n-coverage-reconciliation]
+    paths: [.github/workflows/c9-family-j-structural-source-ledger-71304.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - name: Reconcile latest branch
+        run: git pull --ff-only origin agent/c9-gate-n-coverage-reconciliation
+      - name: Record verified Family J structural weapon evidence
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
+          data=json.loads(path.read_text(encoding='utf-8'))
+          row=next(entry for entry in data['families'] if entry['family']=='J')
+          sentence='Production weapon projection now resolves canonical weapon range and attack ability from the source-owned equipment item structurally linked by grantedActionIds, and no longer infers weapon behavior from attack/item presentation names.'
+          if sentence not in row['currentState']:
+              row['currentState']=row['currentState'].replace('Family J remains incomplete for full weapon/Unarmed Strike source composition, Opportunity Attack, reach/long range, Opportunity Attack qualification, Extra Attack/replacement, and ammunition/loading composition.', sentence+' Family J remains incomplete for complete Unarmed Strike source composition, Opportunity Attack qualification, reach/long range, Extra Attack/replacement, and Loading composition.')
+          impl='productionPlayRuntimeAdapter.ts resolves weapon range and ability from the Character equipment item structurally linked to the attack through grantedActionIds instead of attack/item presentation names'
+          prod='ff4eea4c3e20b2c25690d54cbfb10a6e94f1fe8f refactor(c9): use structural weapon action sources; C9 Family J Structural Weapon Source run 33316313480 passed 2/2 structural source regressions, legacy execution boundary, and tsc --noEmit'
+          ident='c9FamilyJStructuralWeaponSource.test.ts renames both attack and source-item presentation while preserving canonical Shortbow range/DEX semantics through grantedActionIds, and proves presentation text alone cannot infer weapon range'
+          for key,value in [('implementationEvidence',impl),('productionEvidence',prod),('identityInvarianceEvidence',ident)]:
+              if value not in row[key]: row[key].append(value)
+          old='full generic weapon and Unarmed Strike action projection is not yet proven across source-owned equipment/stat definitions'
+          new='generic weapon action projection is structurally source-owned and presentation-rename invariant; complete Unarmed Strike source composition remains incomplete'
+          row['remainingNamedSeams']=[new if entry==old else entry for entry in row['remainingNamedSeams']]
+          path.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          PY
+      - name: Verify ledger structure and legacy boundary
+        run: |
+          node scripts/check-v1-mechanism-coverage.mjs
+          node scripts/check-legacy-execution-boundary.mjs
+      - name: Publish reconciled evidence and retire workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch=agent/c9-gate-n-coverage-reconciliation
+          workflow=.github/workflows/c9-family-j-structural-source-ledger-71304.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm "$workflow"
+          git add docs/rules/v1-mechanism-coverage-ledger.json
+          git commit -m "docs(c9): reconcile structural weapon source evidence"
+          for attempt in $(seq 1 8); do
+            if git push origin HEAD:"$branch"; then exit 0; fi
+            git fetch origin "$branch"
+            git rebase "origin/$branch"
+            sleep 1
+          done
+          exit 1
