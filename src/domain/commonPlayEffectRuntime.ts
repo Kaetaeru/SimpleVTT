@@ -43,6 +43,7 @@ interface CommonPlayAutomaticDamageRule {
 type CommonPlayEffectDuration=
   | {kind:"durable"}
   | {kind:"maintained";policy:"concentration"}
+  | {kind:"until-timing";timing:string}
   | {
       kind:"elapsed";
       amount:LiteralNumberExpression;
@@ -125,6 +126,12 @@ function runtimeDuration(duration:CommonPlayEffectDuration,label:string):Duratio
     assertOnlyKeys(duration,["kind","policy"],label);
     if (duration.policy!=="concentration") throw new Error(`${label} maintained policy must be concentration`);
     return {kind:"concentration"};
+  }
+  if (duration.kind==="until-timing") {
+    assertOnlyKeys(duration,["kind","timing"],label);
+    if (duration.timing==="rest.short.complete") return {kind:"until-rest",rest:"short"};
+    if (duration.timing==="rest.long.complete") return {kind:"until-rest",rest:"long"};
+    throw new Error(`${label} until-timing supports rest.short.complete or rest.long.complete in this runtime slice`);
   }
   assertOnlyKeys(duration,["kind","amount","unit","decrementAt"],label);
   if (duration.decrementAt!==undefined) {
