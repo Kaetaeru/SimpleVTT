@@ -1,0 +1,91 @@
+name: C9 Reconcile Cutting Words Authority 71304
+
+on:
+  push:
+    branches:
+      - "agent/c9-gate-n-coverage-reconciliation"
+    paths:
+      - ".github/workflows/c9-reconcile-cutting-words-authority-71304.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: "agent/c9-gate-n-coverage-reconciliation"
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Sync branch
+        run: git pull --rebase origin "$GITHUB_REF_NAME"
+      - name: Reconcile canonical authority
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          inventory=Path("docs/rules/legacy-execution-inventory.md")
+          text=inventory.read_text(encoding="utf-8")
+          lines=text.splitlines()
+          cutting=[i for i,line in enumerate(lines) if "bardCollegeLoreCuttingWordsFollowUpRuntimeAdapter.ts" in line]
+          if len(cutting)>1:
+              raise SystemExit(f"expected at most one Cutting Words inventory row, found {len(cutting)}")
+          if cutting:
+              del lines[cutting[0]]
+          text="\n".join(lines)+"\n"
+          stale="Cutting Words remains the named post-roll seam."
+          replacement="Cutting Words now uses the generic declarative d20 follow-up path; no named Cutting Words follow-up adapter remains."
+          if stale in text:
+              text=text.replace(stale,replacement,1)
+          inventory.write_text(text,encoding="utf-8")
+
+          ledger_path=Path("docs/rules/v1-mechanism-coverage-ledger.json")
+          ledger=json.loads(ledger_path.read_text(encoding="utf-8"))
+          rows=ledger["rows"]
+          p=next(row for row in rows if row["family"]=="P")
+          p["currentState"]=p["currentState"].replace(
+              "Named post-roll and feature-trigger adapters remain migration debt outside the portable semantic trigger path.",
+              "Named feature-trigger adapters remain migration debt outside the portable semantic trigger path.",
+          )
+          p["remainingNamedSeams"]=[
+              "named feature trigger adapters" if seam=="named post-roll and feature trigger adapters" else seam
+              for seam in p["remainingNamedSeams"]
+          ]
+          evidence="6d03412dcecc7186a2b0ee41da438f498c5333a0 feat(common-play): migrate Cutting Words declaratively; bardCollegeLoreCuttingWordsRuntime.test.ts preserves Common Play provenance, reaction/resource payment, and Undo without the named follow-up adapter"
+          if evidence not in p["productionEvidence"]:
+              p["productionEvidence"].append(evidence)
+
+          q=next(row for row in rows if row["family"]=="Q")
+          q["remainingNamedSeams"]=[
+              seam for seam in q["remainingNamedSeams"]
+              if seam!="named post-roll follow-up adapters remain migration debt outside the portable interaction path"
+          ]
+          if evidence not in q["productionEvidence"]:
+              q["productionEvidence"].append(evidence)
+          ledger_path.write_text(json.dumps(ledger,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
+          PY
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Generate content
+        run: npm run generate:content
+      - name: Verify Cutting Words generic regression
+        run: npx tsx --test tests/ui/bardCollegeLoreCuttingWordsRuntime.test.ts
+      - name: Verify legacy execution boundary
+        run: node scripts/check-legacy-execution-boundary.mjs
+      - name: Verify mechanism ledger
+        run: node scripts/check-v1-mechanism-coverage.mjs
+      - name: Publish reconciliation and retire verifier
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm .github/workflows/c9-reconcile-cutting-words-authority-71304.yml
+          git add docs/rules/legacy-execution-inventory.md docs/rules/v1-mechanism-coverage-ledger.json .github/workflows/c9-reconcile-cutting-words-authority-71304.yml
+          git commit -m "docs(c9): reconcile migrated Cutting Words seam"
+          git pull --rebase origin "$GITHUB_REF_NAME"
+          git push origin HEAD:"$GITHUB_REF_NAME"
