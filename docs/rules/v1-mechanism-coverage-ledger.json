@@ -1695,7 +1695,7 @@
         "inventory persistence adapters",
         "phase09RealAtomicItemAdapter.ts"
       ],
-      "currentState": "Durable inventory authority exists; generic Common Play item lifecycle incomplete",
+      "currentState": "Durable inventory authority exists; unknown installed Common Play item payments now consume a structurally selected item stack atomically through the shared Resolver and Character write-back with restart, Undo, and complete external identity rename proof. Generic item create/grant/copy, equipment/container ownership, transfer, item-owned actions/effects, and charge/recharge lifecycle remain incomplete.",
       "requiredSemantics": [
         "create/grant/copy",
         "quantity",
@@ -1712,11 +1712,19 @@
       ],
       "transactionDomain": "Character inventory transaction with session orchestration",
       "disposition": "INCOMPLETE",
-      "implementationEvidence": [],
-      "productionEvidence": [],
-      "identityInvarianceEvidence": [],
+      "implementationEvidence": [
+        "commonPlayOperationRuntime.ts generic item PaymentContract plus installedCommonPlayRuntimeAdapter.ts itemPaymentRuntimeContext project a definitionId-selected ItemInstance stack as an ephemeral Resolver resource without content-name dispatch"
+      ],
+      "productionEvidence": [
+        "c9FamilyXItemPaymentPersistence.test.ts unknown installed Common Play consumes one selected durable item stack through the production action route and restores it through event-native Undo"
+      ],
+      "identityInvarianceEvidence": [
+        "c9FamilyXItemPaymentPersistence.test.ts repeats the same durable item-consumption semantics after complete external module/content/mechanic identity rename"
+      ],
       "connectedEvidenceIfRelevant": [],
-      "persistenceEvidenceIfRelevant": [],
+      "persistenceEvidenceIfRelevant": [
+        "c9FamilyXItemPaymentPersistence.test.ts fresh MockAdapter restart from the same CharacterLibrary store observes the consumed quantity, and a fresh restart after Undo observes the restored quantity"
+      ],
       "remainingNamedSeams": [
         "named item/spell activation"
       ],
