@@ -26,6 +26,10 @@ replaceOnce('src/app/characterSessionProjection.ts',
 };`);
 
 replaceOnce('src/app/characterSessionProjection.ts',
+`    { label:"primary class",token:source.build.className,categories:["class"] },`,
+`    { label:"primary class",token:source.build.classLevels?.[0]?.classId ?? source.build.className,categories:["class"] },`);
+
+replaceOnce('src/app/characterSessionProjection.ts',
 `function resolveKnownFeatureIdentities(source:CharacterSourceSnapshotV1,catalog:CatalogEntry[]) {`,
 `function resolveKnownClassFeatureIdentities(source:CharacterSourceSnapshotV1,catalog:CatalogEntry[]) {
   const resolvedCatalog=catalog as ResolvedCatalogEntry[];
@@ -60,11 +64,38 @@ replaceOnce('src/app/characterSessionProjection.ts',
     ...resolveKnownClassFeatureIdentities(source,catalog),
     ...resolveKnownFeatureIdentities(source,catalog),`);
 
+replaceOnce('src/app/commonPlayInterceptorProductionRuntimeAdapter.ts',
+`const previousAdvanceResolution=MockAdapter.prototype.advanceResolution;
+const previousRespondToInterrupt=MockAdapter.prototype.respondToInterrupt;`,
+`const previousResolveAction=MockAdapter.prototype.resolveAction;
+const previousAdvanceResolution=MockAdapter.prototype.advanceResolution;
+const previousRespondToInterrupt=MockAdapter.prototype.respondToInterrupt;`);
+
+replaceOnce('src/app/commonPlayInterceptorProductionRuntimeAdapter.ts',
+`MockAdapter.prototype.advanceResolution=async function advanceWithPortableCommonPlayInterceptors() {`,
+`MockAdapter.prototype.resolveAction=async function resolveWithPortableCommonPlayInterceptors(actionId:string,targetIds:string[]) {
+  const resolved=await previousResolveAction.call(this,actionId,targetIds);
+  if(await offerPassiveReaction(this))return (this as unknown as AdapterState).getSnapshot();
+  return resolved;
+};
+
+MockAdapter.prototype.advanceResolution=async function advanceWithPortableCommonPlayInterceptors() {`);
+
 for(const path of ['src/app/productionPlayRuntimeAdapter.ts','src/app/characterSessionProjectionReconstruction.ts']){
   const text=fs.readFileSync(path,'utf8');
   const next=text.replace(/^\s*runtimeD20FollowUps:fighterLevel>=2\?\[.*\]:undefined,\r?\n/m,'');
   if(next===text) throw new Error(`${path}: Tactical Mind named follow-up anchor missing`);
   fs.writeFileSync(path,next);
+}
+
+replaceOnce('src/app/mockAdapter.ts',
+`  id:"char.aelar", name:"Aelar", className:"전사", subclassName:"챔피언", level:5, species:"인간", background:"병사",`,
+`  id:"char.aelar", name:"Aelar", className:"전사", subclassName:"챔피언", level:5, classLevels:[{classId:"dnd.srd521.class.fighter",level:5}], species:"인간", background:"병사",`);
+
+for(const path of ['tests/ui/fighterTacticalMindFollowUpRuntime.test.ts','tests/ui/openAbilityCheckDcRuntime.test.ts']){
+  const text=fs.readFileSync(path,'utf8');
+  if(!text.includes('"follow-up.d20-modification"')) throw new Error(`${path}: legacy Tactical Mind interrupt assertion missing`);
+  fs.writeFileSync(path,text.replace('"follow-up.d20-modification"','"use-tactical-mind"'));
 }
 
 const modulePath='content/modules/dnd-srd-5.2.1.classes/module.json';
