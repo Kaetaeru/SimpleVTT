@@ -129,6 +129,7 @@ jobs:
           node --import tsx --test tests/domain/commonPlayDefinitionRuntime.test.ts tests/domain/commonPlayD20Runtime.test.ts
           node scripts/check-legacy-execution-boundary.mjs
           node scripts/check-v1-mechanism-coverage.mjs
+          npm run generate:content
           npm exec tsc -- --noEmit
       - name: Publish verified implementation and retire staging workflows
         shell: bash
