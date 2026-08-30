@@ -1,0 +1,79 @@
+name: C9 Family Q Choice R8 Diagnostic 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-q-choice-r8-diagnostic-71304.yml
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Apply current Family Q choice patch
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import subprocess
+
+          workflow=subprocess.check_output([
+              'git','show','cf008c5826ce2d2c2fcc907d9d51aed45f35dc66:.github/workflows/c9-family-q-choice-r5-71304.yml'
+          ],text=True)
+          marker="          python - <<'PY'\n"
+          start=workflow.index(marker)+len(marker)
+          end=workflow.index("\n          PY",start)
+          code='\n'.join(line[10:] if line.startswith('          ') else line for line in workflow[start:end].splitlines())
+          exec(compile(code,'q-choice-r5-patch','exec'),{'__name__':'__main__'})
+
+          path=Path('src/domain/commonPlayOperationRuntime.ts')
+          text=path.read_text(encoding='utf-8')
+          old='''        authority,\n      });\n      if(choiceResolution.status!=="resolved") throw new DomainEvaluationError(`Common Play choice selector rejected: ${choiceResolution.reason}`);'''
+          new='''        authority,\n        directTarget:false,\n      });\n      if(choiceResolution.status!=="resolved") throw new DomainEvaluationError(`Common Play choice selector rejected: ${choiceResolution.reason}`);'''
+          if new not in text:
+              if text.count(old)!=1:
+                  raise SystemExit(f'choice authorization selector anchor changed: {text.count(old)}')
+              text=text.replace(old,new,1)
+          path.write_text(text,encoding='utf-8')
+          PY
+      - run: npm ci
+      - run: npm run generate:content
+      - id: choice
+        name: Choice production test
+        continue-on-error: true
+        run: node --import tsx --test tests/ui/c9FamilyQChoiceInteractionProduction.test.ts
+      - id: target
+        name: Existing target-owner regression
+        continue-on-error: true
+        run: node --import tsx --test tests/ui/c9FamilyQTargetOwnerInteractionProduction.test.ts
+      - id: authority
+        name: Existing authority regression
+        continue-on-error: true
+        run: node --import tsx --test tests/ui/c9FamilyQAuthorityInteractionProduction.test.ts
+      - id: actorowner
+        name: Existing actor-owner regression
+        continue-on-error: true
+        run: node --import tsx --test tests/ui/installedCommonPlayActorOwnerInteractionProduction.test.ts
+      - id: domain
+        name: Common Play operation domain regression
+        continue-on-error: true
+        run: node --import tsx --test tests/domain/commonPlayOperationRuntime.test.ts
+      - id: legacy
+        name: Legacy execution boundary
+        continue-on-error: true
+        run: node scripts/check-legacy-execution-boundary.mjs
+      - id: types
+        name: Typecheck
+        continue-on-error: true
+        run: npm exec tsc -- --noEmit
+      - name: Fail on diagnostic regression
+        if: ${{ steps.choice.outcome == 'failure' || steps.target.outcome == 'failure' || steps.authority.outcome == 'failure' || steps.actorowner.outcome == 'failure' || steps.domain.outcome == 'failure' || steps.legacy.outcome == 'failure' || steps.types.outcome == 'failure' }}
+        run: exit 1
