@@ -596,7 +596,7 @@
         "conditions.ts",
         "sessionStatusEffectEventRuntimeAdapter.ts"
       ],
-      "currentState": "Generic status and creature-type awareness paths are production-proven. Common Play defines standard sensing facts for can-see, can-hear, detected, light, obscurement, and hidden with identity-independent provider provenance and connected owner-authority routing. Resolver-owned session Hidden effects feed sense.hidden, unknown external Hide-style status actions commit Hidden as authoritative Effect StateChanges, and endsOnAttack reveal removes that Effect through the same event path with event-native Undo. Provider-authored line-of-sight, lighting, obscurement, Darkvision, Blindsight, Truesight, Tremorsense-related ground contact, hearing, and target invisibility compose through the shared sensing kernel, and Resolver-owned Invisible condition state also participates in production sense.can-see without content identity dispatch. Family H remains incomplete for rules-derived sense-profile projection plus detection/Search/discovery semantics.",
+      "currentState": "Generic status and creature-type awareness paths are production-proven. Common Play defines standard sensing facts for can-see, can-hear, detected, light, obscurement, and hidden with identity-independent provider provenance and connected owner-authority routing. Resolver-owned session Hidden effects feed sense.hidden, unknown external Hide-style status actions commit Hidden as authoritative Effect StateChanges, and endsOnAttack reveal removes that Effect through the same event path with event-native Undo. Provider-authored line-of-sight, lighting, obscurement, and special-sense facts compose through the shared sensing kernel before production answers sense.can-see/detected; active Resolver-owned Invisible conditions are combined with provider target-invisibility rather than bypassing the generic sensing kernel. Family H remains incomplete for rules-derived special-sense acquisition/derivation, detection/Search, and discovery semantics.",
       "requiredSemantics": [
         "normal sight",
         "lighting",
@@ -623,7 +623,9 @@
         "commonPlayInterceptorProductionRuntimeAdapter.ts composes provider-authored line-of-sight/light/obscurement through resolveCommonPlaySenses normal-sight before answering sense.can-see",
         "commonPlaySpatialFactRuntime.ts and commonPlayInterceptorProductionRuntimeAdapter.ts expose identity.creature-type through the existing authoritative resolveRuntimeCreatureType scene/combatant-definition resolver",
         "spatialRuntimeContracts.ts carries provider-authored observerSenses, targetInvisible, hearing, and shared-ground-contact facts while commonPlayInterceptorProductionRuntimeAdapter.ts composes them through resolveCommonPlaySenses without content identity dispatch",
-        "commonPlayInterceptorProductionRuntimeAdapter.ts merges authoritative Resolver-owned Invisible Effect state into production sensing before answering sense.can-see/sense.detected"
+        "commonPlayInterceptorProductionRuntimeAdapter.ts merges authoritative Resolver-owned Invisible Effect state into production sensing before answering sense.can-see/sense.detected",
+        "commonPlayInterceptorProductionRuntimeAdapter.ts composes provider-authored observer senses/targetInvisible with active Resolver-owned Invisible Effects through resolveCommonPlaySenses rather than a named condition adapter",
+        "spatialRuntimeContracts.ts carries provider-authored observerSenses and targetInvisible facts while Core retains generic special-sense composition semantics"
       ],
       "productionEvidence": [
         "connectedProjectedCharacterCunningHideResolution.test.ts",
@@ -638,7 +640,9 @@
         "388dd0f33644a7700e99e9e3a46984b888397617 feat(c9): expose live creature type fact; installedCommonPlayInterceptorProductionRuntime.test.ts gates unknown installed Common Play on live humanoid creature type while preserving fully renamed external identities",
         "installedCommonPlayInterceptorProductionRuntime.test.ts proves Darkvision, Blindsight, and Truesight production sensing under fully renamed external Common Play identities",
         "installedCommonPlayInterceptorProductionRuntime.test.ts proves normal sight fails against a Resolver-owned Invisible condition even when raw provider line-of-sight is visible",
-        "C9 Family H Invisible Sight run 33313436110 passed the focused sensing/interceptor tests, legacy execution boundary, and TypeScript before publishing the verified staging commit f7d39af47456666437d461f4159d73cd7da08411; identical source/test blobs are present on the target branch"
+        "C9 Family H Invisible Sight run 33313436110 passed the focused sensing/interceptor tests, legacy execution boundary, and TypeScript before publishing the verified staging commit f7d39af47456666437d461f4159d73cd7da08411; identical source/test blobs are present on the target branch",
+        "42fa3c47df4c8d8efc51c8b7912fd4304e74592d feat(c9): wire special senses into production facts; installedCommonPlayInterceptorProductionRuntime.test.ts proves provider-authored Darkvision, Blindsight, and Truesight production composition under external identity rename",
+        "C9 Family H Invisible Sight 71304 run 33313630506: 21/21 targeted sensing/interceptor tests, legacy execution boundary, and tsc --noEmit passed; production normal sight consumed an active Resolver-owned Invisible condition"
       ],
       "identityInvarianceEvidence": [
         "sessionStatusEffectEventRuntime.test.ts",
@@ -646,7 +650,8 @@
         "commonPlaySpatialFactRuntime.test.ts standard sensing facts return identical semantics for unrelated external resolution identities",
         "commonPlaySpatialFactRuntime.test.ts resolves the same standard sensing semantics under unrelated external resolution identities without content-name or content-ID dispatch",
         "installedCommonPlayInterceptorProductionRuntime.test.ts preserves identity.creature-type eligibility after module/content/mechanic/interceptor/interaction/display rename",
-        "installedCommonPlayInterceptorProductionRuntime.test.ts special-sight matrix preserves Darkvision/Blindsight/Truesight and provider-authored Invisible semantics after module/content/mechanic/interceptor/interaction/display rename"
+        "installedCommonPlayInterceptorProductionRuntime.test.ts special-sight matrix preserves Darkvision/Blindsight/Truesight and provider-authored Invisible semantics after module/content/mechanic/interceptor/interaction/display rename",
+        "installedCommonPlayInterceptorProductionRuntime.test.ts special-sight matrix preserves provider-authored sensing semantics after full external module/content/mechanic/interceptor/interaction/display rename"
       ],
       "connectedEvidenceIfRelevant": [
         "connectedProjectedCharacterCunningHideResolution.test.ts",
@@ -657,7 +662,7 @@
       ],
       "persistenceEvidenceIfRelevant": [],
       "remainingNamedSeams": [
-        "rules-derived sense-profile projection plus detection/Search/discovery semantics remain incomplete"
+        "rules-derived special-sense acquisition/derivation, detection/Search, and discovery semantics remain incomplete"
       ],
       "connectedRelevant": true,
       "persistenceRelevant": false
