@@ -1,0 +1,22 @@
+name: C9 Family P Rest Semantic 7130
+on:
+  push:
+    branches: [agent/c9-gate-n-coverage-reconciliation]
+    paths: [.github/workflows/c9-family-p-rest-semantic-7130.yml]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: npm run generate:content
+      - run: npx tsx --test tests/domain/commonPlaySemanticEventRuntime.test.ts
+      - run: npx tsc --noEmit
+      - run: node scripts/check-v1-mechanism-coverage.mjs
