@@ -7,6 +7,7 @@ import { installedCommonPlayActionId } from "../../src/app/installedCommonPlayAc
 import { setInstalledContentStoreForTests } from "../../src/app/installedContentRuntimeAdapter";
 import { MemoryInstalledContentStore } from "../../src/app/memoryInstalledContentStore";
 import { MockAdapter } from "../../src/app/mockAdapter";
+import { ensureAdapterTurnRuntimeState, turnRuntimeSessions } from "../../src/app/turnRuntimeSessionRegistry";
 
 const MOVEMENT_TYPES=["walk","climb","swim","fly","crawl","jump"] as const;
 const FREE_MODES=["push","pull","teleport"] as const;
@@ -76,6 +77,7 @@ function modulePayload(prefix:string) {
         destinationFact:destinationFact("destination-full"),
       }],
     },
+    {id:"stand",invocation:"manual" as const,operations:[{kind:"movement.stand" as const,target:"actor" as const}]},
   ];
   const config={schemaVersion:"0.2-draft",id:mechanicId,entryPoints};
   return {
@@ -118,6 +120,9 @@ async function install(prefix:string) {
   });
   return {adapter,action};
 }
+
+async function seedProne(adapter:MockAdapter){const snapshot=await adapter.getSnapshot();ensureAdapterTurnRuntimeState(adapter,snapshot.scene);const session=turnRuntimeSessions.get(adapter);assert.ok(session,"turn runtime session must exist");session.state.effects.push({id:"effect.external.prone",sourceId:"external.unknown.prone-source",targetId:"char.aelar",kind:"condition",conditionId:"prone",tags:[],expiry:{kind:"permanent"}});}
+async function runPortableStand(prefix:string){const {adapter,action}=await install(prefix);await seedProne(adapter);const before=(await adapter.getSnapshot()).scene.economyByActor["char.aelar"]!.movement;await adapter.resolveAction(action("stand"),["char.aelar"]);let snapshot=await adapter.getSnapshot();assert.equal(snapshot.resolution?.stage,"complete","portable stand must commit through production Common Play");assert.equal(snapshot.scene.economyByActor["char.aelar"]?.movement,before-15);assert.equal(turnRuntimeSessions.get(adapter)?.state.effects.some((effect)=>effect.conditionId==="prone"&&effect.targetId==="char.aelar"),false);await adapter.undoLastResolution();snapshot=await adapter.getSnapshot();assert.equal(snapshot.scene.economyByActor["char.aelar"]?.movement,before,"stand Undo must restore movement budget");assert.equal(turnRuntimeSessions.get(adapter)?.state.effects.some((effect)=>effect.conditionId==="prone"&&effect.targetId==="char.aelar"),true,"stand Undo must restore Prone");return before;}
 
 async function runMovementMatrix(prefix:string) {
   const {adapter,action}=await install(prefix);
@@ -172,6 +177,9 @@ test("portable movement rejects another regular move after movement reaches zero
   assert.equal(snapshot.scene.economyByActor["char.aelar"]?.movement,0);
   assert.match(snapshot.resolution?.detail.join("\n")??"",/movement exceeds remaining speed/);
 });
+
+test("unknown installed Common Play stands from Prone through production Resolver and Undo",async()=>{assert.equal(await runPortableStand("unknown-family-i-stand"),30);});
+test("renaming the external movement.stand identities preserves production semantics",async()=>{assert.equal(await runPortableStand("renamed-family-i-stand"),30);});
 
 test("renaming every external Family I identity preserves the production movement matrix",async()=>{
   assert.equal(await runMovementMatrix("renamed-family-i"),30);

@@ -197,7 +197,9 @@ export function executeMove(ctx:ResolutionExecutionContext, operation:MoveOp):Op
     {
       source:ctx.pending.sourceId,
       status:"applied",
-      reason:`${actorId} moves ${operation.distanceFeet} ft`,
+      reason:operation.movementActivity==="stand"
+        ? `${actorId} spends ${operation.distanceFeet} ft of movement to stand`
+        : `${actorId} moves ${operation.distanceFeet} ft`,
     },
   ];
   const changes = economyStateChanges(actorId, before, actor.economy, provenance);
@@ -205,13 +207,16 @@ export function executeMove(ctx:ResolutionExecutionContext, operation:MoveOp):Op
     distanceFeet:operation.distanceTraveledFeet??operation.distanceFeet,
     remaining:actor.economy.movement,
     ...(operation.distanceTraveledFeet===undefined?{}:{movementCostFeet:operation.distanceFeet}),
+    ...(operation.movementActivity?{movementActivity:operation.movementActivity}:{}),
     ...(operation.movementMode?{movementMode:operation.movementMode}:{}),
     ...(operation.destinationRef?{destinationRef:operation.destinationRef}:{}),
     ...(operation.doesNotProvokeOpportunityAttacks===undefined?{}:{doesNotProvokeOpportunityAttacks:operation.doesNotProvokeOpportunityAttacks}),
   };
   return {
     result,
-    event:makeEvent(ctx.pending, operation, `${actorId} moves ${operation.distanceFeet} ft`, result, provenance, changes, actorId),
+    event:makeEvent(ctx.pending, operation, operation.movementActivity==="stand"
+      ? `${actorId} stands from Prone`
+      : `${actorId} moves ${operation.distanceFeet} ft`, result, provenance, changes, actorId),
   };
 }
 

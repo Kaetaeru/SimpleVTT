@@ -659,13 +659,15 @@
       "disposition": "INCOMPLETE",
       "implementationEvidence": [
         "commonPlayMovementRuntime.ts",
-        "commonPlayOperationRuntime.ts movement.relocate lowering"
+        "commonPlayOperationRuntime.ts movement.relocate lowering",
+        "conditions.ts effectiveSpeed/proneStandingCost plus commonPlayOperationRuntime.ts movement.stand lowering reuse shared movement budget and Effect removal owners"
       ],
       "productionEvidence": [
         "installedCommonPlayLoweredFamiliesProduction.test.ts mapless stored movement and Undo",
         "c9FamilyIMovementProduction.test.ts unknown installed Common Play executes walk/climb/swim/fly/crawl/jump, movement cost multiplier, push/pull/teleport, Undo, and full external identity rename through the production Resolver; C9 Family I Movement Production 7130 run 33310610095",
         "c9FamilyIMovementProduction.test.ts unknown installed RuleModule production matrix for movement types, cost multiplier, forced movement, teleport, Undo, and full external identity rename",
         "C9 Family I Movement Mode Matrix run 33310511648: production matrix, legacy execution boundary, and tsc --noEmit passed at d3b105c37a8cb2c3c715b1abddf62f3abb638fce",
+        "commonPlayProneStandRuntime.test.ts and c9FamilyIMovementProduction.test.ts prove portable Prone stand cost/removal, zero-speed rejection, production execution, rename invariance, and event-native Undo",
         "c9FamilyIMovementProduction.test.ts retained unknown installed Common Play proves walk/climb/swim/fly/crawl/jump, cost multiplier, push/pull/teleport, explicit no-provoke movement, zero-speed rejection, Undo, and full external identity rename"
       ],
       "identityInvarianceEvidence": [

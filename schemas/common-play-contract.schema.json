@@ -948,6 +948,9 @@
           "$ref": "#/$defs/movementOperation"
         },
         {
+          "$ref": "#/$defs/movementStand"
+        },
+        {
           "$ref": "#/$defs/adjudicationRequest"
         }
       ]
@@ -1956,6 +1959,25 @@
           "enum": [
             "success",
             "failure"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "movementStand": {
+      "type": "object",
+      "required": [
+        "kind",
+        "target"
+      ],
+      "properties": {
+        "kind": {
+          "const": "movement.stand"
+        },
+        "target": {
+          "enum": [
+            "actor",
+            "self"
           ]
         }
       },

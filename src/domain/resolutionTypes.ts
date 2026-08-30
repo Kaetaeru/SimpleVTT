@@ -69,6 +69,7 @@ export type ResolutionOperation =
       movementMode?:"walk"|"climb"|"swim"|"fly"|"crawl"|"jump";
       distanceFeet: number;
       distanceTraveledFeet?:number;
+      movementActivity?:"relocate"|"stand";
       destinationRef?:string;
       doesNotProvokeOpportunityAttacks?:boolean;
       destinationMovesCloserToVisibleFrighteningSource?: boolean;

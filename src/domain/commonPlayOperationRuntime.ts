@@ -1,4 +1,4 @@
-import type { RulesRuntimeState } from "./combatState";
+import { conditionEffectsFor, type RulesRuntimeState } from "./combatState";
 import type { D20RollModification, D20TestFamily, ModifierContribution } from "./d20";
 import { DomainEvaluationError, type ExpressionNode, type RollStateContribution, type RulesProfileLike } from "./profileEngine";
 import { resolvePendingResolution } from "./resolution";
@@ -7,12 +7,15 @@ import type { ResourceRecovery } from "./resources";
 import type { TargetingFactInput } from "./targeting";
 import type { ActionUseKind, TurnSlot } from "./turnEconomy";
 import { compileCommonPlayMovement, type CommonPlayMovementDefinition } from "./commonPlayMovementRuntime";
+import { effectiveSpeed, proneStandingCost } from "./conditions";
+import { effectIsActive } from "./effects";
 import type { CommonPlayFactAnswer, CommonPlayFactQuery } from "./commonPlaySpatialFactRuntime";
 import { parseCommonPlaySelector, resolveCommonPlaySelector, type CommonPlaySelector, type CommonPlaySelectorCandidate } from "./commonPlaySelectorRuntime";
 
 type LiteralNumberExpression={value:number};
 type CommonPlayExpression=LiteralNumberExpression|Record<string,unknown>;
 type CommonPlayHpTarget="actor"|"self"|"target";
+type CommonPlayMovementStand={kind:"movement.stand";target:"actor"|"self"};
 
 type CommonPlayResourceCreation={
   label:string;
@@ -148,6 +151,7 @@ export type CommonPlayOperation=
   |CommonPlayHealingApply
   |CommonPlayTemporaryHpGrant
   |CommonPlayMovementDefinition
+  |CommonPlayMovementStand
   |CommonPlayRollModify;
 
 export interface CommonPlayD20TestDefinition {
@@ -227,6 +231,7 @@ const HEALING_APPLY_KEYS=new Set(["kind","amount","target"]);
 const TEMP_HP_GRANT_KEYS=new Set(["kind","amount","target","choice"]);
 const ROLL_MODIFY_KEYS=new Set(["kind","mode","value","dice"]);
 const MOVEMENT_RELOCATE_KEYS=new Set(["kind","mode","movementType","target","distance","costMultiplier","doesNotProvokeOpportunityAttacks","destinationFact"]);
+const MOVEMENT_STAND_KEYS=new Set(["kind","target"]);
 const FACT_QUERY_KEYS=new Set(["id","fact","subject","authority","visibility","unknownPolicy"]);
 const DAMAGE_DICE=/^([0-9]+)d([0-9]+)([+-][0-9]+)?$/;
 
@@ -448,6 +453,11 @@ function parseOperation(value:unknown,label:string):CommonPlayOperation {
     if(lifetime.kind!=="until-duration"||lifetime.onEnd!=="destroy") throw new DomainEvaluationError(`${label}.lifetime must destroy at duration end`);
     if(operation.instancePolicy!=="stack"&&operation.instancePolicy!=="replace"&&operation.instancePolicy!=="unique-by-source"&&operation.instancePolicy!=="profile-policy") throw new DomainEvaluationError(`${label}.instancePolicy is unsupported`);
     return {kind:"property.modify",property:nonEmptyString(operation.property,`${label}.property`),operation:mode,value:numericExpression(operation.value,`${label}.value`),target:operation.target,owner:"effect",source:"definition",duration:{kind:"elapsed",amount,unit:duration.unit},lifetime:{kind:"until-duration",onEnd:"destroy"},instancePolicy:operation.instancePolicy};
+  }
+  if(operation.kind==="movement.stand") {
+    supportedKeys(operation,MOVEMENT_STAND_KEYS,label);
+    if(operation.target!=="actor"&&operation.target!=="self") throw new DomainEvaluationError(`${label}.target must be actor or self`);
+    return {kind:"movement.stand",target:operation.target};
   }
   if(operation.kind==="movement.relocate") {
     supportedKeys(operation,MOVEMENT_RELOCATE_KEYS,label);
@@ -920,6 +930,21 @@ export function compileCommonPlayEntryPointOperations(
       continue;
     }
 
+    if(operation.kind==="movement.stand") {
+      const actor=state.combatants[input.actorId];
+      if(!actor) throw new DomainEvaluationError(`combatant not found: ${input.actorId}`);
+      const conditions=conditionEffectsFor(state,input.actorId);
+      const proneEffects=state.effects.filter((effect)=>
+        effectIsActive(effect)&&effect.targetId===input.actorId&&effect.kind==="condition"&&effect.conditionId==="prone"
+      );
+      if(!proneEffects.length) throw new DomainEvaluationError("movement.stand requires an active explicit Prone condition");
+      const speed=effectiveSpeed(actor.economy.movementMaximum,conditions);
+      const cost=proneStandingCost(speed,conditions);
+      if(cost<=0) throw new DomainEvaluationError("movement.stand requires positive effective speed");
+      operations.push({id:operationId,kind:"move",actorId:input.actorId,distanceFeet:cost,distanceTraveledFeet:0,movementActivity:"stand"});
+      proneEffects.forEach((effect,proneIndex)=>operations.push({id:`${operationId}:remove-prone:${proneIndex}`,kind:"remove-effect",effectId:effect.id}));
+      continue;
+    }
     if(operation.kind==="movement.relocate") {
       const definition={...operation,target:input.actorId,destinationFact:{...operation.destinationFact!,subject:operation.destinationFact!.subject==="actor"||operation.destinationFact!.subject==="self"?input.actorId:operation.destinationFact!.subject}};
       const compiled=compileCommonPlayMovement({id:operationId,definition,answer:input.movementFactAnswers?.[index],properties:input.movementProperties});
