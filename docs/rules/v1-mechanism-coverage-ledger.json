@@ -1715,7 +1715,7 @@
         "inventory persistence adapters",
         "phase09RealAtomicItemAdapter.ts"
       ],
-      "currentState": "Durable inventory authority exists and unknown external Common Play item quantity payment now executes through the canonical Resolver item-as-resource event bridge with durable Character write-back, restart persistence, event-native Undo, and full external identity rename invariance. Generic create/grant/copy, broader item mutation/equipment ownership, item-owned action/effect/spellcasting, and transfer remain incomplete; connected quantity-payment replay/retry/reconnect/Undo is proven.",
+      "currentState": "Durable inventory authority exists and unknown external Common Play item quantity and charge payments now execute through the canonical Resolver item-as-resource event bridge with durable Character write-back, restart persistence, event-native Undo, and full external identity rename invariance. Generic create/grant/copy, broader item mutation/equipment ownership, recharge, item-owned action/effect/spellcasting, and transfer remain incomplete; connected quantity-payment replay/retry/reconnect/Undo is proven.",
       "requiredSemantics": [
         "create/grant/copy",
         "quantity",
@@ -1737,27 +1737,33 @@
         "installedCommonPlayRuntimeAdapter.ts itemPaymentRuntimeContext resolves exactly one durable ItemInstance by portable definitionId and seeds an ephemeral phase09:item:<id>:quantity Resolver resource without content identity dispatch",
         "realEventApplyService.ts projects canonical phase09:item pseudo-resource state changes back into ItemInstance quantity/charges",
         "resolutionCharacterDurableProjection.ts applies the same item pseudo-resource state changes to durable Character inventory for forward and inverse write-back",
-        "characterLibraryPersistence.ts stores ItemInstance quantity/equipment/attunement/charge runtime state separately from source item references"
+        "characterLibraryPersistence.ts stores ItemInstance quantity/equipment/attunement/charge runtime state separately from source item references",
+        "commonPlayOperationRuntime.ts portable item payment supports structural quantity or charges lowering through the canonical spend-resource operation",
+        "installedCommonPlayRuntimeAdapter.ts itemPaymentRuntimeContext seeds either phase09:item:<id>:quantity or phase09:item:<id>:charges from the resolved durable ItemInstance without content identity dispatch"
       ],
       "productionEvidence": [
         "8b83ad86bd43fc35a512611bcd2d6b7f54de716a test(c9): prove portable item payment persistence",
         "tests/ui/c9FamilyXPortableItemPaymentProduction.test.ts unknown installed Common Play consumes one matching inventory stack through production resolveAction, durable write-back, fresh restart, and event-native Undo",
         "C9 Family X Portable Item Payment 71304 run 33317994606: Family X production test, V1 coverage checker, and tsc --noEmit all pass; the run later fails only on concurrent legacy-boundary baseline drift outside Family X",
-        "7ce2aff851dc4e0a81eecd706a8cf50dd8f6b11b ci(c9): verify connected portable item payment; C9 Family X Portable Item Payment 71304 run 33318235057 passed production + connected item payment, coverage checker, typecheck, and legacy-boundary verification"
+        "7ce2aff851dc4e0a81eecd706a8cf50dd8f6b11b ci(c9): verify connected portable item payment; C9 Family X Portable Item Payment 71304 run 33318235057 passed production + connected item payment, coverage checker, typecheck, and legacy-boundary verification",
+        "3dd0a13715b0a9218ba3e3462021c58cfe52069d feat(c9): support portable item charge payment; C9 Family X Item Charge Payment 71304 run 33318484203 passed quantity + charge production tests, V1 coverage checker, and tsc --noEmit",
+        "tests/ui/c9FamilyXPortableItemChargePaymentProduction.test.ts unknown installed Common Play spends charges through production resolveAction with durable write-back, fresh restart, and event-native Undo"
       ],
       "identityInvarianceEvidence": [
-        "tests/ui/c9FamilyXPortableItemPaymentProduction.test.ts repeats the full consume/persist/restart/Undo proof after complete external module/content/mechanic identity rename"
+        "tests/ui/c9FamilyXPortableItemPaymentProduction.test.ts repeats the full consume/persist/restart/Undo proof after complete external module/content/mechanic identity rename",
+        "tests/ui/c9FamilyXPortableItemChargePaymentProduction.test.ts repeats the full charge spend/persist/restart/Undo proof after complete external module/content/mechanic identity rename"
       ],
       "connectedEvidenceIfRelevant": [
         "tests/ui/c9FamilyXConnectedPortableItemPaymentProduction.test.ts proves Host/Client authoritative item quantity replay, duplicate retry suppression, fresh reconnect, event-native Undo, and reconnect-after-Undo"
       ],
       "persistenceEvidenceIfRelevant": [
         "tests/ui/c9FamilyXPortableItemPaymentProduction.test.ts MemoryCharacterLibraryStore preserves consumed quantity into a fresh adapter and preserves restored quantity after event-native Undo",
-        "characterLibraryPersistence.ts projects item quantity/equipped/wielded/attuned/charge current into CharacterRuntimeDurableSnapshotV1"
+        "characterLibraryPersistence.ts projects item quantity/equipped/wielded/attuned/charge current into CharacterRuntimeDurableSnapshotV1",
+        "tests/ui/c9FamilyXPortableItemChargePaymentProduction.test.ts MemoryCharacterLibraryStore preserves spent charges into a fresh adapter and preserves restored charges after event-native Undo"
       ],
       "remainingNamedSeams": [
-        "generic create/grant/copy and destroy/update item lifecycle beyond quantity payment",
-        "generic charges/recharge, equip/unequip/wield, containers, and owner transfer",
+        "generic create/grant/copy and destroy/update item lifecycle beyond quantity/charge payment",
+        "generic recharge, equip/unequip/wield, containers, and owner transfer",
         "generic item-owned actions/effects/spellcasting activation",
         "named item/spell activation compatibility paths"
       ],
