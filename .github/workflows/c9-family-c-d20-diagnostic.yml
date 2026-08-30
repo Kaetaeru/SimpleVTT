@@ -1,4 +1,4 @@
-name: C9 Family C Cutting Words Migration
+name: C9 Family C Deterministic Post-Roll Migration
 
 on:
   push:
@@ -16,128 +16,116 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Migrate Cutting Words to declarative Common Play
+      - name: Connect deterministic roll modifiers to generic reaction runtime
         shell: bash
         run: |
           set -euo pipefail
           python3 <<'PY'
-          import json
           from pathlib import Path
 
-          def replace(path, old, new):
+          def replace_once(path, old, new):
               p=Path(path)
               text=p.read_text()
-              if old not in text:
-                  raise SystemExit(f"missing expected text in {path}: {old[:120]!r}")
-              if text.count(old) != 1:
-                  raise SystemExit(f"expected exactly one match in {path}, found {text.count(old)}")
+              count=text.count(old)
+              if count != 1:
+                  raise SystemExit(f"{path}: expected one match, found {count}: {old[:120]!r}")
               p.write_text(text.replace(old,new,1))
 
-          module_path=Path("content/modules/dnd-srd-5.2.1.class-feature-common-play/module.json")
-          module=json.loads(module_path.read_text())
-          feature_id="dnd.srd521.subclass.bard.college-of-lore.cutting-words"
-          if any(entry.get("id")==feature_id for entry in module.get("content",[])):
-              raise SystemExit("Cutting Words Common Play content already exists")
-          fact_queries=[
-              {"id":"trigger-distance","fact":"spatial.distance-feet","subject":"intercepted.actor","authority":"dm","visibility":"dm","unknownPolicy":"block"},
-              {"id":"source-sees-trigger","fact":"sense.can-see","subject":"intercepted.actor","authority":"dm","visibility":"dm","unknownPolicy":"treat-false"},
-          ]
-          when={"op":"all","args":[
-              {"op":"lte","left":{"ref":"trigger-distance"},"right":{"value":60}},
-              {"op":"eq","left":{"ref":"source-sees-trigger"},"right":{"value":True}},
-          ]}
-          def interceptor(interceptor_id,timing,slot,interaction_id):
-              return {
-                  "id":interceptor_id,
-                  "timing":timing,
-                  "factQueries":fact_queries,
-                  "when":when,
-                  "interaction":{
-                      "id":interaction_id,
-                      "kind":"choice",
-                      "responder":"actor-owner",
-                      "mode":"blocking",
-                      "input":{"type":"boolean"},
-                      "revalidate":"if-revision-changed",
-                      "stalePolicy":"reject",
-                  },
-                  "operation":"recalculate",
-                  "slot":slot,
-                  "operations":[{
-                      "kind":"roll.modify",
-                      "mode":"subtract-die",
-                      "diceResource":"resource:bard.bardic-inspiration",
-                  }],
-              }
-          module["content"].append({
-              "id":feature_id,
-              "category":"option",
-              "presentation":{
-                  "originalName":"Cutting Words",
-                  "defaultLocale":"ko-KR",
-                  "locales":{"ko-KR":{"name":"날카로운 말"}},
-              },
-              "tags":["class-feature","bard","college-of-lore","reaction"],
-              "mechanics":[{
-                  "kind":"common-play",
-                  "config":{
-                      "schemaVersion":"0.2-draft",
-                      "id":"dnd.srd521.common-play.bard-lore-cutting-words",
-                      "payments":[
-                          {"kind":"economy","bucket":"reaction","amount":{"value":1},"consumeAt":"commit"},
-                          {"kind":"resource","resource":"resource:bard.bardic-inspiration","amount":{"value":1},"consumeAt":"commit"},
-                      ],
-                      "interceptors":[
-                          interceptor("cutting-words-d20","d20.outcome-determined","d20.roll","choose-cutting-words-d20"),
-                          interceptor("cutting-words-damage","damage.rolled","primary.damage","choose-cutting-words-damage"),
-                      ],
-                  },
-              }],
-          })
-          module_path.write_text(json.dumps(module,ensure_ascii=False,separators=(",",":"))+"\n")
+          replace_once(
+              'src/domain/commonPlayRuntime.ts',
+              '''export interface CommonPlayRollModifyOperation {\n  kind:"roll.modify";\n  mode:"subtract-die";\n  dice:string;\n}''',
+              '''export type CommonPlayRollModifyOperation =\n  | { kind:"roll.modify"; mode:"subtract-die"; dice:string }\n  | { kind:"roll.modify"; mode:"add-flat"|"target-add"|"replace"|"minimum"; value:LiteralExpression };''',
+          )
 
-          replace(
-              "src/app/commonPlayInterceptorProductionRuntimeAdapter.ts",
-              '''async function passiveReactionCandidates(adapter:MockAdapter):Promise<PassiveReactionCandidate[]> {\n  const internal=adapter as unknown as AdapterState;\n  const installed=await requiredSessionInstalledContent(adapter,[]);\n  if(!installed.length)return [];\n  const entries=new Map(installed.map((entry)=>[catalogQualifiedId(entry.contentId,entry.sourceId,entry.version),entry]));\n  const owners:Array<{sheet:CharacterSheet;identities:Set<string>}>=[{\n    sheet:internal.activeCharacter,\n    identities:contentIdentitySetForLocal(internal),\n  }];\n  for(const characterId of projectedCharacterIds(adapter)){\n    if(characterId===internal.activeCharacter.id)continue;\n    const mounted=projectedCharacterById(adapter,characterId);\n    if(mounted)owners.push({sheet:mounted.sheet,identities:new Set(mounted.projection.contentIdentities.map((entry)=>entry.qualifiedId))});\n  }\n\n  const candidates:PassiveReactionCandidate[]=[];\n  for(const owner of owners){\n    for(const qualifiedId of [...owner.identities].sort()){\n      const entry=entries.get(qualifiedId);''',
-              '''async function passiveReactionCandidates(adapter:MockAdapter):Promise<PassiveReactionCandidate[]> {\n  const internal=adapter as unknown as AdapterState;\n  const installed=await requiredSessionInstalledContent(adapter,[]);\n  const installedEntries=new Map(installed.map((entry)=>[catalogQualifiedId(entry.contentId,entry.sourceId,entry.version),entry]));\n  const builtinEntries=new Map(internal.catalog\n    .filter((entry)=>entry.scope==="builtin"&&entry.mechanics?.some((mechanic)=>mechanic.kind==="common-play"))\n    .map((entry)=>[entry.id,entry]));\n  const owners:Array<{sheet:CharacterSheet;identities:Set<string>}>=[{\n    sheet:internal.activeCharacter,\n    identities:contentIdentitySetForLocal(internal),\n  }];\n  for(const characterId of projectedCharacterIds(adapter)){\n    if(characterId===internal.activeCharacter.id)continue;\n    const mounted=projectedCharacterById(adapter,characterId);\n    if(mounted)owners.push({sheet:mounted.sheet,identities:new Set(mounted.projection.contentIdentities.map((entry)=>entry.qualifiedId))});\n  }\n  for(const owner of owners){\n    const featureIds=new Set(owner.sheet.subclassFeatureIds??[]);\n    for(const entry of builtinEntries.values()) if(entry.contentId&&featureIds.has(entry.contentId)) owner.identities.add(entry.id);\n  }\n\n  const candidates:PassiveReactionCandidate[]=[];\n  for(const owner of owners){\n    for(const qualifiedId of [...owner.identities].sort()){\n      const entry=installedEntries.get(qualifiedId)??builtinEntries.get(qualifiedId);''')
+          old='''function d20RollModifications(\n  definition:CommonPlayReactionDefinition,\n  interceptor:CommonPlayD20RollInterceptor,\n  authority:CommonPlayInteractionAuthority|undefined,\n):D20RollModification[] {\n  return interceptor.operations.flatMap((operation,index)=>{\n    if(operation.kind!=="roll.modify"||operation.mode!=="subtract-die") throw new Error("d20.roll interceptor supports subtract-die only in this bounded slice");\n    const formula=parseDiceFormula(operation.dice,"d20.roll subtract-die");\n    const faces=authority?.modifierDiceFaces?.[index];\n    if(!faces||faces.length!==formula.count||faces.some((face)=>!Number.isInteger(face)||face<1||face>formula.sides)) {\n      throw new Error(`d20.roll interceptor ${index} requires authoritative die face(s)`);\n    }\n    const source=`common-play:${definition.id}:${interceptor.id}:operation:${index}`;\n    const modifications:D20RollModification[]=[{source,mode:"subtract-die",dice:{id:`${source}:dice`,purpose:source,sides:formula.sides,faces:[...faces]}}];\n    if(formula.flat!==0) modifications.push({source:`${source}:flat`,mode:"add-flat",value:-formula.flat});\n    return modifications;\n  });\n}'''
+          new='''function d20RollModifications(\n  definition:CommonPlayReactionDefinition,\n  interceptor:CommonPlayD20RollInterceptor,\n  authority:CommonPlayInteractionAuthority|undefined,\n):D20RollModification[] {\n  return interceptor.operations.flatMap((operation,index):D20RollModification[]=>{\n    const source=`common-play:${definition.id}:${interceptor.id}:operation:${index}`;\n    if(operation.mode==="subtract-die") {\n      const formula=parseDiceFormula(operation.dice,"d20.roll subtract-die");\n      const faces=authority?.modifierDiceFaces?.[index];\n      if(!faces||faces.length!==formula.count||faces.some((face)=>!Number.isInteger(face)||face<1||face>formula.sides)) {\n        throw new Error(`d20.roll interceptor ${index} requires authoritative die face(s)`);\n      }\n      const modifications:D20RollModification[]=[{source,mode:"subtract-die",dice:{id:`${source}:dice`,purpose:source,sides:formula.sides,faces:[...faces]}}];\n      if(formula.flat!==0) modifications.push({source:`${source}:flat`,mode:"add-flat",value:-formula.flat});\n      return modifications;\n    }\n    const value=literalValue(operation.value,`d20.roll ${operation.mode} value`);\n    if(!Number.isInteger(value)) throw new Error(`d20.roll ${operation.mode} value must be an integer`);\n    if((operation.mode==="replace"||operation.mode==="minimum")&&(value<1||value>20)) {\n      throw new Error(`d20.roll ${operation.mode} value must be between 1 and 20`);\n    }\n    return [{source,mode:operation.mode,value}];\n  });\n}'''
+          replace_once('src/domain/commonPlayRuntime.ts',old,new)
 
-          replace(
-              "src/app/offlineRuntimeAdapters.ts",
-              'import "./bardCollegeLoreCuttingWordsFollowUpRuntimeAdapter";\n',
-              '')
+          path=Path('src/domain/commonPlayReactionDefinitionRuntime.ts')
+          text=path.read_text()
+          old='''    operations:operations.map((candidate,operationIndex)=>{\n      const raw=object(candidate,`${label}.operations[${operationIndex}]`);\n      if(raw.when!==undefined) throw new DomainEvaluationError(`${label}.operations[${operationIndex}].when is not connected to the reaction runtime yet`);\n      if(raw.kind!=="roll.modify"||raw.mode!=="subtract-die") {\n        throw new DomainEvaluationError(`${label}.operations[${operationIndex}] must be roll.modify subtract-die`);\n      }\n      const hasLiteral=typeof raw.dice==="string";\n      const hasResource=typeof raw.diceResource==="string"&&raw.diceResource.length>0;\n      if(hasLiteral===hasResource) throw new DomainEvaluationError(`${label}.operations[${operationIndex}] must declare exactly one of dice or diceResource`);\n      if(hasLiteral) {\n        if(!/^([0-9]+)d([0-9]+)([+-][0-9]+)?$/.test(raw.dice as string)) throw new DomainEvaluationError(`${label}.operations[${operationIndex}].dice must be a dice formula`);\n        return {kind:"roll.modify" as const,mode:"subtract-die" as const,dice:raw.dice as string};\n      }\n      const resourceId=raw.diceResource as string;\n      const sides=options.resolveResourceDie?.(resourceId);\n      if(typeof sides!=="number"||!Number.isInteger(sides)||sides<2) throw new DomainEvaluationError(`${label}.operations[${operationIndex}].diceResource has no authoritative die size: ${resourceId}`);\n      return {kind:"roll.modify" as const,mode:"subtract-die" as const,dice:`1d${sides}`};\n    }),'''
+          new='''    operations:operations.map((candidate,operationIndex)=>{\n      const raw=object(candidate,`${label}.operations[${operationIndex}]`);\n      if(raw.when!==undefined) throw new DomainEvaluationError(`${label}.operations[${operationIndex}].when is not connected to the reaction runtime yet`);\n      if(raw.kind!=="roll.modify") throw new DomainEvaluationError(`${label}.operations[${operationIndex}] must be roll.modify`);\n      if(raw.mode==="subtract-die") {\n        const hasLiteral=typeof raw.dice==="string";\n        const hasResource=typeof raw.diceResource==="string"&&raw.diceResource.length>0;\n        if(hasLiteral===hasResource) throw new DomainEvaluationError(`${label}.operations[${operationIndex}] must declare exactly one of dice or diceResource`);\n        if(raw.value!==undefined) throw new DomainEvaluationError(`${label}.operations[${operationIndex}].value is not allowed for subtract-die`);\n        if(hasLiteral) {\n          if(!/^([0-9]+)d([0-9]+)([+-][0-9]+)?$/.test(raw.dice as string)) throw new DomainEvaluationError(`${label}.operations[${operationIndex}].dice must be a dice formula`);\n          return {kind:"roll.modify" as const,mode:"subtract-die" as const,dice:raw.dice as string};\n        }\n        const resourceId=raw.diceResource as string;\n        const sides=options.resolveResourceDie?.(resourceId);\n        if(typeof sides!=="number"||!Number.isInteger(sides)||sides<2) throw new DomainEvaluationError(`${label}.operations[${operationIndex}].diceResource has no authoritative die size: ${resourceId}`);\n        return {kind:"roll.modify" as const,mode:"subtract-die" as const,dice:`1d${sides}`};\n      }\n      if(raw.mode!=="add-flat"&&raw.mode!=="target-add"&&raw.mode!=="replace"&&raw.mode!=="minimum") {\n        throw new DomainEvaluationError(`${label}.operations[${operationIndex}].mode is not connected to the post-roll reaction runtime`);\n      }\n      if(raw.dice!==undefined||raw.diceResource!==undefined) throw new DomainEvaluationError(`${label}.operations[${operationIndex}] dice authority is not allowed for ${raw.mode}`);\n      const value=literalNumber(raw.value,`${label}.operations[${operationIndex}].value`);\n      if(!Number.isInteger(value.value)) throw new DomainEvaluationError(`${label}.operations[${operationIndex}].value must be an integer`);\n      if((raw.mode==="replace"||raw.mode==="minimum")&&(value.value<1||value.value>20)) throw new DomainEvaluationError(`${label}.operations[${operationIndex}].value must be between 1 and 20 for ${raw.mode}`);\n      return {kind:"roll.modify" as const,mode:raw.mode,value};\n    }),'''
+          if text.count(old)!=1: raise SystemExit('d20 lowerer body changed')
+          text=text.replace(old,new,1)
+          old='''function lowerDamageInterceptor(value:Obj,index:number,options:ReactionLoweringOptions):CommonPlayDamageRollInterceptor {\n  const label=`Common Play reaction interceptor[${index}]`;\n  const lowered=lowerD20Interceptor({...value,timing:"d20.outcome-determined",slot:"d20.roll"},index,options);\n  return {...lowered,timing:"damage.rolled",slot:"primary.damage"};\n}'''
+          new='''function lowerDamageInterceptor(value:Obj,index:number,options:ReactionLoweringOptions):CommonPlayDamageRollInterceptor {\n  const label=`Common Play reaction interceptor[${index}]`;\n  const lowered=lowerD20Interceptor({...value,timing:"d20.outcome-determined",slot:"d20.roll"},index,options);\n  if(lowered.interceptors if False else False): pass\n  if(lowered.operations.some((operation)=>operation.mode!=="subtract-die")) throw new DomainEvaluationError(`${label} primary.damage supports subtract-die only`);\n  return {...lowered,timing:"damage.rolled",slot:"primary.damage"};\n}'''
+          if text.count(old)!=1: raise SystemExit('damage lowerer changed')
+          # Avoid Python-looking dead code in TypeScript: construct the intended replacement directly.
+          new=new.replace('  if(lowered.interceptors if False else False): pass\n','')
+          path.write_text(text.replace(old,new,1))
 
-          test_path="tests/ui/bardCollegeLoreCuttingWordsRuntime.test.ts"
-          replace(
-              test_path,
-              '  assert.equal(snapshot.resolution?.checkOutcome,"실패");\n  assert.equal(snapshot.resolution?.rollTotal,14);',
-              '  assert.equal(snapshot.resolution?.checkOutcome,"실패");\n  assert.equal(snapshot.resolution?.rollTotal,14);\n  assert.ok(snapshot.resolution?.provenance.some((entry)=>entry.includes("common-play:")),JSON.stringify(snapshot.resolution?.provenance));')
+          replace_once(
+              'src/app/commonPlayInterceptorProductionRuntimeAdapter.ts',
+              '''  interceptor.operations.forEach((operation,index)=>{\n    const formula=literalDice(operation.dice);''',
+              '''  interceptor.operations.forEach((operation,index)=>{\n    if(operation.mode!=="subtract-die")return;\n    const formula=literalDice(operation.dice);''',
+          )
+          replace_once(
+              'src/app/commonPlayInterceptorProductionRuntimeAdapter.ts',
+              '''  if(result.family==="ability-check"){\n    resolution.checkOutcome=result.outcome==="success"?"성공":"실패";''',
+              '''  if(result.family==="ability-check"){\n    resolution.checkTarget=result.target;\n    resolution.checkOutcome=result.outcome==="success"?"성공":"실패";''',
+          )
+          replace_once(
+              'src/app/commonPlayInterceptorProductionRuntimeAdapter.ts',
+              '''  }else{\n    resolution.attackTotal=result.total;''',
+              '''  }else{\n    resolution.targetAc=result.target;\n    resolution.attackTotal=result.total;''',
+          )
 
-          legacy=Path("src/app/bardCollegeLoreCuttingWordsFollowUpRuntimeAdapter.ts")
-          if not legacy.exists():
-              raise SystemExit("legacy Cutting Words adapter is already absent")
-          legacy.unlink()
+          path=Path('tests/domain/commonPlayReactionDefinitionRuntime.test.ts')
+          text=path.read_text()
+          marker='''test("existing attack outcome recalculation remains lowerable",()=>{'''
+          addition='''test("portable d20 interceptor lowers deterministic post-roll roll.modify modes structurally",()=>{\n  const definition=portableReaction();\n  definition.interceptors![0].operations=[\n    {kind:"roll.modify",mode:"replace",value:{value:10}},\n    {kind:"roll.modify",mode:"minimum",value:{value:12}},\n    {kind:"roll.modify",mode:"target-add",value:{value:3}},\n    {kind:"roll.modify",mode:"add-flat",value:{value:-1}},\n  ];\n  const lowered=lowerCommonPlayReactionDefinition(definition)!;\n  assert.deepEqual(lowered.interceptors[0].operations,definition.interceptors![0].operations);\n\n  const damage=portableReaction();\n  Object.assign(damage.interceptors![0],{timing:"damage.rolled",slot:"primary.damage",operations:[{kind:"roll.modify",mode:"replace",value:{value:10}}]});\n  assert.throws(()=>lowerCommonPlayReactionDefinition(damage),/primary.damage supports subtract-die only/);\n});\n\n'''
+          if marker not in text: raise SystemExit('reaction definition test marker changed')
+          path.write_text(text.replace(marker,addition+marker,1))
+
+          path=Path('tests/domain/commonPlayReactionRuntime.test.ts')
+          text=path.read_text()
+          marker='''const EXTERNAL_DAMAGE_REDUCTION:CommonPlayReactionDefinition={'''
+          addition='''const EXTERNAL_D20_REWRITE=structuredClone(EXTERNAL_D20_REDUCTION);\nEXTERNAL_D20_REWRITE.id="external.unknown.deterministic-roll-rewrite";\nEXTERNAL_D20_REWRITE.interceptors[0].id="rewrite-post-roll";\nEXTERNAL_D20_REWRITE.interceptors[0].interaction.id="use-roll-rewrite";\nEXTERNAL_D20_REWRITE.interceptors[0].operations=[\n  {kind:"roll.modify",mode:"replace",value:{value:10}},\n  {kind:"roll.modify",mode:"minimum",value:{value:12}},\n  {kind:"roll.modify",mode:"target-add",value:{value:3}},\n];\n\n'''
+          if marker not in text: raise SystemExit('reaction runtime constant marker changed')
+          text=text.replace(marker,addition+marker,1)
+          marker='''test("generic d20.roll interceptor preserves attack natural-20 semantics",()=>{'''
+          addition='''test("generic d20.roll interceptor composes deterministic post-roll replacement, minimum, and target changes without dice authority",()=>{\n  const run=(definition:CommonPlayReactionDefinition)=>{\n    const state=runtimeState();\n    const awaiting=requireAwaiting(startCommonPlayResolution(TEST_PROFILE,state,abilityCheckPending(),definition,"hero"));\n    return resumeCommonPlayInteraction(TEST_PROFILE,state,awaiting,{\n      interactionId:awaiting.interaction.id,\n      idempotencyKey:awaiting.interaction.idempotencyKey,\n      value:true,\n    });\n  };\n  const original=run(EXTERNAL_D20_REWRITE);\n  const renamed=structuredClone(EXTERNAL_D20_REWRITE);\n  renamed.id="external.unknown.renamed-deterministic-rewrite";\n  renamed.interceptors[0].id="renamed-deterministic-interceptor";\n  renamed.interceptors[0].interaction.id="renamed-deterministic-choice";\n  const changed=run(renamed);\n  for(const committed of [original,changed]){\n    assert.equal(committed.status,"committed");\n    if(committed.status!=="committed")continue;\n    const result=committed.results.check as {natural:number;modifier:number;total:number;target:number;outcome:string};\n    assert.deepEqual({natural:result.natural,modifier:result.modifier,total:result.total,target:result.target,outcome:result.outcome},{natural:12,modifier:5,total:17,target:18,outcome:"failure"});\n    assert.equal(committed.state.combatants.hero.economy.reaction,false);\n    assert.equal(committed.state.combatants.hero.resources.find((pool)=>pool.id==="spell-slot-1")?.current,1);\n  }\n});\n\n'''
+          if marker not in text: raise SystemExit('reaction runtime test marker changed')
+          path.write_text(text.replace(marker,addition+marker,1))
+
+          path=Path('tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts')
+          text=path.read_text()
+          old='''function packagePayload(identity=ORIGINAL,withEligibility=false,interceptorKind:"d20"|"damage"="d20"){'''
+          new='''function packagePayload(identity=ORIGINAL,withEligibility=false,interceptorKind:"d20"|"damage"="d20",operations:Array<Record<string,unknown>>=[{kind:"roll.modify",mode:"subtract-die",dice:"1d8"}]){'''
+          if text.count(old)!=1: raise SystemExit('packagePayload signature changed')
+          text=text.replace(old,new,1)
+          old='''            operations:[{kind:"roll.modify",mode:"subtract-die",dice:"1d8"}],'''
+          if text.count(old)!=1: raise SystemExit('packagePayload operations changed')
+          text=text.replace(old,'''            operations,''',1)
+          old='''async function prepare(identity=ORIGINAL,withEligibility=false,interceptorKind:"d20"|"damage"="d20"){'''
+          new='''async function prepare(identity=ORIGINAL,withEligibility=false,interceptorKind:"d20"|"damage"="d20",operations:Array<Record<string,unknown>>=[{kind:"roll.modify",mode:"subtract-die",dice:"1d8"}]){'''
+          if text.count(old)!=1: raise SystemExit('prepare signature changed')
+          text=text.replace(old,new,1)
+          old='''  const preview=await adapter.previewContentImport(packagePayload(identity,withEligibility,interceptorKind));'''
+          new='''  const preview=await adapter.previewContentImport(packagePayload(identity,withEligibility,interceptorKind,operations));'''
+          if text.count(old)!=1: raise SystemExit('prepare package call changed')
+          text=text.replace(old,new,1)
+          marker='''test("portable installed d20 interceptor can turn a successful production attack into a miss",async()=>{'''
+          addition='''test("unknown installed d20 interceptor executes replace, minimum, and target-add in production and Undo restores atomic costs",async()=>{\n  const operations=[\n    {kind:"roll.modify",mode:"replace",value:{value:10}},\n    {kind:"roll.modify",mode:"minimum",value:{value:12}},\n    {kind:"roll.modify",mode:"target-add",value:{value:2}},\n  ];\n  const renamed:Identity={...ORIGINAL,moduleId:"external.deterministic-renamed",contentId:"item.deterministic-renamed",mechanicId:"mechanic.deterministic-renamed",interceptorId:"interceptor.deterministic-renamed",interactionId:"interaction.deterministic-renamed",displayName:"Renamed Deterministic Reaction"};\n  const execute=async(identity:Identity)=>{\n    const adapter=await prepare(identity,false,"d20",operations);\n    let snapshot=await adapter.getSnapshot();\n    const responderId=snapshot.activeCharacter.id;\n    const resourceBefore=secondWind(snapshot)!;\n    snapshot=await openAbilityCheckInterrupt(adapter);\n    assert.equal(snapshot.resolution?.stage,"interrupt",JSON.stringify(snapshot.resolution));\n    snapshot=await adapter.respondToInterrupt(true);\n    const mechanical={outcome:snapshot.resolution?.checkOutcome,total:snapshot.resolution?.rollTotal,target:snapshot.resolution?.checkTarget};\n    assert.deepEqual(mechanical,{outcome:"실패",total:12,target:15});\n    assert.equal(secondWind(snapshot),resourceBefore-1);\n    assert.equal(snapshot.scene.economyByActor[responderId]?.reaction,false);\n    assert.ok(snapshot.resolution?.provenance.some((entry)=>entry.includes("common-play:")));\n    snapshot=await adapter.undoLastResolution();\n    assert.equal(secondWind(snapshot),resourceBefore);\n    assert.equal(snapshot.scene.economyByActor[responderId]?.reaction,true);\n    return mechanical;\n  };\n  assert.deepEqual(await execute(renamed),await execute(ORIGINAL));\n});\n\n'''
+          if marker not in text: raise SystemExit('production test marker changed')
+          path.write_text(text.replace(marker,addition+marker,1))
           PY
-
-          if grep -R -n 'bardCollegeLoreCuttingWordsFollowUpRuntimeAdapter' src tests --exclude-dir=generated; then
-            echo 'legacy Cutting Words adapter reference remains' >&2
-            exit 1
-          fi
-      - name: Verify focused Family C migration
+      - name: Verify focused Family C deterministic post-roll slice
         shell: bash
         run: |
           set -euo pipefail
           npm ci
           npm run generate:content
-          npx tsx --test tests/ui/bardCollegeLoreCuttingWordsRuntime.test.ts tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts tests/domain/commonPlayReactionDefinitionRuntime.test.ts tests/domain/commonPlayReactionResourceDieRuntime.test.ts
+          npx tsx --test tests/domain/commonPlayD20Runtime.test.ts tests/domain/commonPlayReactionDefinitionRuntime.test.ts tests/domain/commonPlayReactionRuntime.test.ts tests/domain/commonPlayReactionResourceDieRuntime.test.ts tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts tests/ui/bardCollegeLoreCuttingWordsRuntime.test.ts
           npx tsc --noEmit
-      - name: Commit verified migration
+          npx vite build
+      - name: Commit verified product slice
         shell: bash
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add content/modules/dnd-srd-5.2.1.class-feature-common-play/module.json src/app/commonPlayInterceptorProductionRuntimeAdapter.ts src/app/offlineRuntimeAdapters.ts tests/ui/bardCollegeLoreCuttingWordsRuntime.test.ts
-          git add -u src/app/bardCollegeLoreCuttingWordsFollowUpRuntimeAdapter.ts
+          git add src/domain/commonPlayRuntime.ts src/domain/commonPlayReactionDefinitionRuntime.ts src/app/commonPlayInterceptorProductionRuntimeAdapter.ts tests/domain/commonPlayReactionDefinitionRuntime.test.ts tests/domain/commonPlayReactionRuntime.test.ts tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts
           git diff --cached --check
-          git commit -m "feat(common-play): migrate Cutting Words interceptor"
+          git commit -m "feat(common-play): support deterministic post-roll d20 modifiers"
           git push
