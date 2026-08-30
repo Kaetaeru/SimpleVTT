@@ -30,8 +30,8 @@ jobs:
 
           test_path=Path('tests/ui/ruleModulePackageImport.test.ts')
           test_text=test_path.read_text(encoding='utf-8')
-          old='{from:"actors",min:1,max:1},'
-          new='{from:"unsupported-source",min:1,max:1},'
+          old='const invalidSelectors=[\n    {from:"actors",min:1,max:1},'
+          new='const invalidSelectors=[\n    {from:"unsupported-source",min:1,max:1},'
           if old in test_text:
               test_text=test_text.replace(old,new,1)
           elif new not in test_text:
