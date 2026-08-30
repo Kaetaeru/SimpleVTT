@@ -120,6 +120,8 @@ declare module "./contracts" {
     sourceId?:string;
     /** Validated, data-only Common Play executable definitions carried by built-in or installed content. */
     mechanics?:InstalledCommonPlayMechanicV1[];
+    /** Validated, data-only progression grants projected by the production level-up runtime. */
+    progressionContributions?:InstalledProgressionContributionV1[];
     /** Read-only data-only Campaign provider projection from installed content. */
     campaignProvider?:InstalledCampaignProviderProfileV1;
   }

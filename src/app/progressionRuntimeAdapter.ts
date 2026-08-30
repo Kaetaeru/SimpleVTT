@@ -10,6 +10,7 @@ import {
 import { SPELL_PRESENTATIONS } from "./spellPresentation";
 import { MockAdapter } from "./mockAdapter";
 import type { ChoiceSelectionMap, ChoiceSelectionValue } from "../domain/choiceDefinition";
+import { resolveCommonPlayProgressionContributions } from "../domain/commonPlayProgressionContribution";
 import { classById, classByName } from "../domain/progressionCatalog";
 import { buildProgressionPlan, resolveProgression, type ProgressionPlan } from "../domain/progression";
 import { SORCERER_ID } from "../domain/sorcererProgressionChoices";
@@ -175,6 +176,14 @@ function progressionSpellOptions() {
 
 function targetClassId(sheet: CharacterSheet, draft: LevelUpDraft) {
   return draft.targetClassId ?? sheet.classLevels?.[0]?.classId ?? primaryClass(sheet)?.id ?? "dnd.srd521.class.fighter";
+}
+
+function installedProgressionContributions(state: AdapterState) {
+  return state.catalog.flatMap((entry) => entry.progressionContributions ?? []);
+}
+
+function installedProgressionGrantLabel(state: AdapterState, grantId: string) {
+  return state.catalog.find((entry) => entry.contentId === grantId || entry.id === grantId)?.nameKo ?? grantId;
 }
 
 function requestFor(state: AdapterState) {
@@ -343,10 +352,30 @@ MockAdapter.prototype.commitLevelUp = async function commitLevelUpPhase07() {
     internal.levelUpDraft.validation = [...internal.levelUpDraft.validation, { severity:"blocking", message:"Character Revision 저장에 실패했습니다. 원본은 변경되지 않았습니다." }];
     return internal.getSnapshot();
   }
+  const contributions = installedProgressionContributions(internal);
+  const contributionResult = contributions.length
+    ? resolveCommonPlayProgressionContributions({
+        revision:stateBefore.revision,
+        trackLevels:Object.fromEntries(result.state.classTracks.map((track) => [track.classId, track.level])),
+        grants:[...(internal.activeCharacter.installedProgressionGrantIds ?? [])],
+      }, stateBefore.revision, contributions)
+    : null;
+  if (contributionResult?.status === "rejected") {
+    internal.levelUpDraft.validation = [...internal.levelUpDraft.validation, { severity:"blocking", message:`Installed progression contribution rejected: ${contributionResult.error}` }];
+    return internal.getSnapshot();
+  }
   applyProgressionCharacterState(internal.activeCharacter,result.state,{
     scope:"full",
     featureLabelById:(featureId)=>internal.catalog.find((entry)=>entry.id===featureId)?.nameKo,
   });
+  const addedInstalledGrantIds = contributionResult?.status === "committed" ? contributionResult.addedGrantIds : [];
+  if (contributionResult?.status === "committed") {
+    internal.activeCharacter.installedProgressionGrantIds = [...contributionResult.state.grants];
+    for (const grantId of addedInstalledGrantIds) {
+      const label = installedProgressionGrantLabel(internal, grantId);
+      if (!internal.activeCharacter.features.includes(label)) internal.activeCharacter.features.push(label);
+    }
+  }
   ensureSignatureSpellResources(internal.activeCharacter);
   ensureSorceryPointResource(internal.activeCharacter);
   syncCommittedSheetToScene(internal);
@@ -359,7 +388,11 @@ MockAdapter.prototype.commitLevelUp = async function commitLevelUpPhase07() {
     title:`레벨 업 ${result.plan.fromTotalLevel} → ${result.plan.toTotalLevel}`,
     summary:`${result.plan.targetClassName} ${result.plan.targetClassLevel}레벨 · HP ${before.maxHp} → ${internal.activeCharacter.maxHp}`,
     detail:result.plan.diffs.map((diff) => `${diff.label}: ${diff.before} → ${diff.after} (${diff.source})`),
-    stateChanges:["Phase 08 Progression transaction → Character Revision", `progressionRevision ${stateBefore.revision} → ${result.state.revision}`],
+    stateChanges:[
+      "Phase 08 Progression transaction → Character Revision",
+      `progressionRevision ${stateBefore.revision} → ${result.state.revision}`,
+      ...(addedInstalledGrantIds.length ? [`installed progression grants: ${addedInstalledGrantIds.join(", ")}`] : []),
+    ],
   });
   internal.levelUpDraft = null;
   return internal.getSnapshot();

@@ -40,6 +40,8 @@ declare module "./contracts" {
     mysticArcanumSources?: Record<number, string>;
     persistentFeatureOptionIds?: string[];
     persistentFeatureOptionSources?: Record<string, string>;
+    /** Stable opaque grant identities contributed by installed RuleModules. */
+    installedProgressionGrantIds?: string[];
     epicBoonFeatIds?:string[];
     epicBoonFeatSources?:Record<string,string>;
     weaponMasteryIds?:string[];
