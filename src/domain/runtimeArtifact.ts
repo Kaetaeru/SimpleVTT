@@ -1,6 +1,15 @@
 import { DomainEvaluationError, type ProvenanceRecord, type SemanticPredicate } from "./profileEngine";
 import type { RuntimeClock } from "./effects";
 import type { DamageDefenseContribution } from "./damage";
+import type { ResourceRecovery } from "./resources";
+
+interface ArtifactResource {id:string;current:number;maximum:number;recovery?:ResourceRecovery}
+
+function validArtifactResource(resource:ArtifactResource){
+  const recovery=resource.recovery;
+  return Boolean(resource.id)&&Number.isInteger(resource.current)&&Number.isInteger(resource.maximum)&&resource.current>=0&&resource.maximum>=resource.current
+    &&(!recovery||Object.entries(recovery).every(([trigger,amount])=>["shortRest","longRest","turnStart"].includes(trigger)&&(amount==="all"||Number.isInteger(amount)&&Number(amount)>=0)));
+}
 
 export type RuntimeArtifactKind = "zone"|"stored-invocation"|"object"|"link"|"actor"|"form";
 export type ZoneMembershipAuthority = "manual"|"spatial";
@@ -48,7 +57,7 @@ export interface ActorArtifactData {
   initiative:"shared"|"independent"|"none";
   properties:Record<string,string|number|boolean>;
   actionDefinitionIds:string[];
-  resources:Array<{id:string;current:number;maximum:number}>;
+  resources:ArtifactResource[];
 }
 
 export interface FormArtifactData {
@@ -61,7 +70,7 @@ export interface FormArtifactData {
   actionPolicy:"retain"|"replace"|"grant";
   spellcasting:"retain"|"restricted"|"blocked";
   actionDefinitionIds:string[];
-  resources:Array<{id:string;current:number;maximum:number}>;
+  resources:ArtifactResource[];
 }
 
 export interface RuntimeArtifactInstance {
@@ -131,13 +140,13 @@ export function createRuntimeArtifact(request:RuntimeArtifactSpawnRequest):Runti
   if(request.artifactKind==="actor") {
     const actor=request.actor;
     if(!actor?.combatantId||!actor.statDefinitionId||!actor.ownerId||!actor.controllerId||(actor.side!=="ally"&&actor.side!=="enemy")) throw new DomainEvaluationError("actor artifact requires combatant, stat, owner, controller, and side");
-    if(new Set(actor.actionDefinitionIds).size!==actor.actionDefinitionIds.length||actor.resources.some((resource)=>!resource.id||!Number.isInteger(resource.current)||!Number.isInteger(resource.maximum)||resource.current<0||resource.maximum<0||resource.current>resource.maximum)) throw new DomainEvaluationError("actor artifact action or resource projection is invalid");
+    if(new Set(actor.actionDefinitionIds).size!==actor.actionDefinitionIds.length||actor.resources.some((resource)=>!validArtifactResource(resource))) throw new DomainEvaluationError("actor artifact action or resource projection is invalid");
     const maximum=actor.properties["hp.maximum"],current=actor.properties["hp.current"]??maximum,temporary=actor.properties["hp.temporary"]??0,speed=actor.properties["movement.walk"],armorClass=actor.properties["defense.ac"],initiative=actor.properties.initiative;
     if(!Number.isInteger(maximum)||Number(maximum)<1||!Number.isInteger(current)||Number(current)<0||Number(current)>Number(maximum)||!Number.isInteger(temporary)||Number(temporary)<0||!Number.isInteger(speed)||Number(speed)<0||!Number.isInteger(armorClass)||Number(armorClass)<0||(actor.initiative==="independent"&&!Number.isInteger(initiative))) throw new DomainEvaluationError("actor artifact requires valid HP, movement.walk, defense.ac, and independent initiative properties");
   } else if(request.actor) throw new DomainEvaluationError("only actor artifacts can contain actor data");
   if(request.artifactKind==="form") {
     const form=request.form;
-    if(!form?.targetActorId||new Set(form.retainedProperties).size!==form.retainedProperties.length||new Set(form.replacementProperties).size!==form.replacementProperties.length||new Set(form.actionDefinitionIds).size!==form.actionDefinitionIds.length||form.resources.some((resource)=>!resource.id||resource.current<0||resource.maximum<resource.current)) throw new DomainEvaluationError("form artifact requires target and valid property/action/resource policies");
+    if(!form?.targetActorId||new Set(form.retainedProperties).size!==form.retainedProperties.length||new Set(form.replacementProperties).size!==form.replacementProperties.length||new Set(form.actionDefinitionIds).size!==form.actionDefinitionIds.length||form.resources.some((resource)=>!validArtifactResource(resource))) throw new DomainEvaluationError("form artifact requires target and valid property/action/resource policies");
   } else if(request.form) throw new DomainEvaluationError("only form artifacts can contain form data");
   if (request.expiry.kind==="time"&&(!Number.isFinite(request.expiry.elapsedSeconds)||request.expiry.elapsedSeconds<0)) {
     throw new DomainEvaluationError("runtime artifact expiry must be a non-negative finite elapsed time");

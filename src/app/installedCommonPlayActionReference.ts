@@ -3,6 +3,7 @@ const ARTIFACT_PREFIX="runtime-artifact-common-play:";
 const STORED_INVOCATION_PREFIX="stored-invocation-common-play:";
 const STORED_INVOCATION_CANCEL_PREFIX="stored-invocation-cancel:";
 const ZONE_MEMBERSHIP_PREFIX="zone-membership-common-play:";
+const SPECIAL_ACTION_PREFIX="special-common-play:";
 
 export interface InstalledCommonPlayActionReference {
   catalogId:string;
@@ -73,4 +74,16 @@ export function parseZoneMembershipCommonPlayActionId(actionId:string) {
   if(parts.length!==3||(parts[0]!=="enter"&&parts[0]!=="leave")||!parts[1]||!parts[2]) return null;
   try { return {present:parts[0]==="enter",artifactId:decodeURIComponent(parts[1]),definitionActionId:decodeURIComponent(parts[2])}; }
   catch { return null; }
+}
+
+export function specialCommonPlayActionId(ownerActorId:string,definitionActionId:string,specialActionId:string,optionId:string) {
+  return `${SPECIAL_ACTION_PREFIX}${[ownerActorId,definitionActionId,specialActionId,optionId].map(encodeURIComponent).join("#")}`;
+}
+
+export function parseSpecialCommonPlayActionId(actionId:string) {
+  if(!actionId.startsWith(SPECIAL_ACTION_PREFIX))return null;
+  const parts=actionId.slice(SPECIAL_ACTION_PREFIX.length).split("#");
+  if(parts.length!==4||parts.some((part)=>!part))return null;
+  try{return {ownerActorId:decodeURIComponent(parts[0]),definitionActionId:decodeURIComponent(parts[1]),specialActionId:decodeURIComponent(parts[2]),optionId:decodeURIComponent(parts[3])};}
+  catch{return null;}
 }

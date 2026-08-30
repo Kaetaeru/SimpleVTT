@@ -45,7 +45,7 @@ function actorCombatant(artifact:ReturnType<typeof createRuntimeArtifact>) {
       deathSaves:{successes:0,failures:0},stable:false,unconscious:false,dead:false,
     },
     economy:beginTurn(speed),
-    resources:actor.resources.map((resource)=>({id:resource.id,label:resource.id,current:resource.current,maximum:resource.maximum})),
+    resources:actor.resources.map((resource)=>({id:resource.id,label:resource.id,current:resource.current,maximum:resource.maximum,...(resource.recovery?{recovery:structuredClone(resource.recovery)}:{})})),
     hitDice:[],
   };
 }

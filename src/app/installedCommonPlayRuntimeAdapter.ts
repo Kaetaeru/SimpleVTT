@@ -5,7 +5,7 @@ import { connectedStateFor } from "./connectedSessionState";
 import { catalogQualifiedId } from "./contentCatalogIdentity";
 import { generatedBuiltinCatalog } from "./builtinCatalogRuntimeAdapter";
 import { requiredSessionInstalledContent } from "./installedContentRuntimeAdapter";
-import { installedCommonPlayActionId, parseInstalledCommonPlayActionId, parseRuntimeArtifactCommonPlayActionId, parseStoredInvocationCancelActionId, parseStoredInvocationCommonPlayActionId, parseZoneMembershipCommonPlayActionId, runtimeArtifactCommonPlayActionId, storedInvocationCancelActionId, storedInvocationCommonPlayActionId, zoneMembershipCommonPlayActionId } from "./installedCommonPlayActionReference";
+import { installedCommonPlayActionId, parseInstalledCommonPlayActionId, parseRuntimeArtifactCommonPlayActionId, parseSpecialCommonPlayActionId, parseStoredInvocationCancelActionId, parseStoredInvocationCommonPlayActionId, parseZoneMembershipCommonPlayActionId, runtimeArtifactCommonPlayActionId, specialCommonPlayActionId, storedInvocationCancelActionId, storedInvocationCommonPlayActionId, zoneMembershipCommonPlayActionId } from "./installedCommonPlayActionReference";
 import { commitProductionRuntimeResolution } from "./runtimeResolutionCommit";
 import { commitAdapterTurnRuntimeState, snapshotAdapterTurnRuntimeState } from "./turnRuntimeSessionRegistry";
 import { resolveRuntimeProfileProperty, SIMPLEVTT_APP_RULES_PROFILE } from "./realResolutionService";
@@ -34,6 +34,7 @@ import { resolveCommonPlayStoredInvocationCancel, resolveCommonPlayStoredInvocat
 import type { ReadyActionConfiguration } from "./standardActionReadyState";
 import { resolvePendingResolution } from "../domain/resolution";
 import { allocationEntriesFromTargetSequence, resolveCommonPlayAllocation } from "../domain/commonPlayAllocationRuntime";
+import { compileCommonPlaySpecialAction, type CommonPlaySpecialActionAuthoringDefinition, type CommonPlayTimingEvent, type CommonPlayTimingWindow } from "../domain/commonPlaySpecialTimingRuntime";
 
 interface AdapterState {
   sessionMode:SessionMode;
@@ -53,6 +54,7 @@ type CommonPlayProductionAction = {
   source:string;
   lowered:LoweredCommonPlayEntryPoint;
   entryPointId:string;
+  specialActions?:CommonPlaySpecialActionAuthoringDefinition[];
 };
 
 const previousResolveAction=MockAdapter.prototype.resolveAction;
@@ -123,6 +125,7 @@ function builtinCommonPlayAction(adapter:MockAdapter,actionId:string):CommonPlay
       source:entry.source,
       lowered,
       entryPointId:entryPoint.id,
+      ...(canonical.specialActions?.length?{specialActions:canonical.specialActions}:{}),
       };
     });
   });
@@ -149,6 +152,7 @@ async function installedCommonPlayAction(adapter:MockAdapter,actionId:string):Pr
     source:entry.source,
     lowered,
     entryPointId:entryPoint.id,
+    ...(mechanic.config.specialActions?.length?{specialActions:mechanic.config.specialActions}:{}),
   };
 }
 
@@ -156,6 +160,23 @@ async function commonPlayAction(adapter:MockAdapter,actionId:string) {
   return parseInstalledCommonPlayActionId(actionId)
     ? installedCommonPlayAction(adapter,actionId)
     : builtinCommonPlayAction(adapter,actionId);
+}
+
+function specialTimingEvent(state:RulesRuntimeState,ownerActorId:string,timing:CommonPlayTimingWindow):CommonPlayTimingEvent|undefined {
+  for(const window of state.clock.specialWindows??[]){
+    if(timing.kind==="initiative-count"){
+      if(window.kind==="initiative-count"&&window.initiativeCount===timing.count)return {kind:"initiative-count",initiativeCount:window.initiativeCount};
+      continue;
+    }
+    if(window.kind!==timing.kind)continue;
+    if(timing.actor==="owner"?window.actorId===ownerActorId:window.actorId!==ownerActorId)return {kind:window.kind,actorId:window.actorId};
+  }
+  return undefined;
+}
+
+function specialOptionDefinitionActionId(definitionActionId:string,entryPointId:string) {
+  const reference=parseInstalledCommonPlayActionId(definitionActionId);
+  return reference?installedCommonPlayActionId({...reference,entryPointId}):undefined;
 }
 
 async function installedProgressionGrantActionIds(adapter:MockAdapter,grantIds:string[]) {
@@ -288,10 +309,10 @@ async function projectRuntimeArtifactActions(adapter:MockAdapter,snapshot:AppSna
   const state=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene);
   if(!state) return;
   for(const [actorId,actions] of Object.entries(snapshot.scene.actionsByActor)) {
-    snapshot.scene.actionsByActor[actorId]=actions.filter((action)=>!parseStoredInvocationCommonPlayActionId(action.id)&&!parseStoredInvocationCancelActionId(action.id)&&!parseZoneMembershipCommonPlayActionId(action.id));
+    snapshot.scene.actionsByActor[actorId]=actions.filter((action)=>!parseStoredInvocationCommonPlayActionId(action.id)&&!parseStoredInvocationCancelActionId(action.id)&&!parseZoneMembershipCommonPlayActionId(action.id)&&!parseSpecialCommonPlayActionId(action.id));
   }
   for(const [actorId,actions] of Object.entries((adapter as unknown as AdapterState).scene.actionsByActor)) {
-    (adapter as unknown as AdapterState).scene.actionsByActor[actorId]=actions.filter((action)=>!parseStoredInvocationCommonPlayActionId(action.id)&&!parseStoredInvocationCancelActionId(action.id)&&!parseZoneMembershipCommonPlayActionId(action.id));
+    (adapter as unknown as AdapterState).scene.actionsByActor[actorId]=actions.filter((action)=>!parseStoredInvocationCommonPlayActionId(action.id)&&!parseStoredInvocationCancelActionId(action.id)&&!parseZoneMembershipCommonPlayActionId(action.id)&&!parseSpecialCommonPlayActionId(action.id));
   }
   const ownerId=snapshot.activeCharacter.id;
   const itemActionIds=snapshot.activeCharacter.items
@@ -324,6 +345,26 @@ async function projectRuntimeArtifactActions(adapter:MockAdapter,snapshot:AppSna
     }))).filter((action):action is ActionVm=>Boolean(action));
     snapshot.scene.actionsByActor[actor.combatantId]=actions;
     (adapter as unknown as AdapterState).scene.actionsByActor[actor.combatantId]=cp(actions);
+    const specialGroups=await Promise.all(actor.actionDefinitionIds.map(async(definitionActionId)=>{
+      const sourceAction=await commonPlayAction(adapter,definitionActionId);
+      const definitions=sourceAction?.specialActions??[];
+      return (await Promise.all(definitions.flatMap((definition)=>definition.options.map(async(option)=>{
+        const optionActionId=specialOptionDefinitionActionId(definitionActionId,option.entryPointId);
+        const optionAction=optionActionId?await commonPlayAction(adapter,optionActionId):undefined;
+        if(!optionActionId||!optionAction)return undefined;
+        const projected=projectedArtifactAction(adapter,optionActionId,actor.combatantId,optionAction,snapshot.scene,state);
+        const event=specialTimingEvent(state,actor.combatantId,definition.timing);
+        const pool=definition.poolResourceId?state.combatants[actor.combatantId]?.resources.find((resource)=>resource.id===definition.poolResourceId):undefined;
+        const available=Boolean(event)&&(!option.cost||Boolean(pool&&pool.current>=option.cost));
+        const specialAction:ActionVm={...projected,id:specialCommonPlayActionId(actor.combatantId,optionActionId,definition.id,option.id),economy:"없음",available,...(event&&available?{}:{disabledReason:event?"자원 부족":"현재 발동 시점 아님"}),summary:`${definition.id} · ${option.id} · off-turn`};
+        return specialAction;
+      })))).filter((action):action is ActionVm=>Boolean(action));
+    }));
+    const specialActions=specialGroups.flat();
+    if(specialActions.length){
+      snapshot.scene.actionsByActor[actor.combatantId].push(...cp(specialActions));
+      (adapter as unknown as AdapterState).scene.actionsByActor[actor.combatantId].push(...cp(specialActions));
+    }
   }
   for(const artifact of state.artifacts??[]) {
     const stored=artifact.artifactKind==="stored-invocation"?artifact.storedInvocation:undefined;
@@ -1113,7 +1154,50 @@ async function changeZoneMembership(
   });
 }
 
+async function executeSpecialCommonPlayAction(
+  adapter:MockAdapter,
+  actionId:string,
+  targetIds:string[],
+  reference:NonNullable<ReturnType<typeof parseSpecialCommonPlayActionId>>,
+) {
+  const internal=adapter as unknown as AdapterState;
+  const action=await commonPlayAction(adapter,reference.definitionActionId);
+  const state=snapshotAdapterTurnRuntimeState(adapter,internal.scene);
+  const projected=Object.values(internal.scene.actionsByActor).flat().find((candidate)=>candidate.id===actionId);
+  const prepared=action&&state?prepareCommonPlayAction(adapter,actionId,targetIds,action,reference.ownerActorId,false,false,projected):undefined;
+  const definition=action?.specialActions?.find((candidate)=>candidate.id===reference.specialActionId);
+  const option=definition?.options.find((candidate)=>candidate.id===reference.optionId&&candidate.entryPointId===action?.entryPointId);
+  const event=state&&definition?specialTimingEvent(state,reference.ownerActorId,definition.timing):undefined;
+  const resolutionId=`common-play-special.${Date.now()}.${Math.floor(Math.random()*1000)}`;
+  if(!action||action.lowered.kind!=="operations"||!state||!prepared||!projected?.available||!definition||!option||!event){
+    return failAction(internal,reference.ownerActorId,actionId,projected?.name??action?.nameKo??"특수 행동",targetIds,resolutionId,"현재 특수 행동의 소유권, 시점 또는 선택지를 재검증할 수 없습니다.");
+  }
+  let pending;
+  try{
+    const payload=compileCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,state,action.lowered.definition,operationExecutionInput(internal,actionId,action,prepared,resolutionId));
+    pending=compileCommonPlaySpecialAction(state,{
+      id:definition.id,ownerActorId:reference.ownerActorId,timing:definition.timing,poolResourceId:definition.poolResourceId,
+      options:[{id:option.id,cost:option.cost,operations:payload.operations}],
+    },{resolutionId,requesterActorId:reference.ownerActorId,optionId:option.id,event});
+  }catch(error){
+    return failAction(internal,reference.ownerActorId,actionId,projected.name,targetIds,resolutionId,error instanceof Error?error.message:String(error));
+  }
+  const effectDefinitions=await installedPersistentEffectDefinitions(adapter);
+  const damagePending=appendCommonPlayDamageTakenTriggers(state,effectDefinitions,pending,prepared.actorEntity.kind==="character"?"character":"monster");
+  const automaticPending=appendCommonPlaySemanticOutcomeTriggers(state,effectDefinitions,damagePending,Object.fromEntries(internal.scene.entities.map((entity)=>[entity.id,entity.kind==="character"?"character":"monster"])));
+  const committed=appendCommonPlaySemanticOutcomeEvents(automaticPending,resolvePendingResolution(SIMPLEVTT_APP_RULES_PROFILE,state,automaticPending));
+  if(committed.status==="rejected")return failAction(internal,reference.ownerActorId,actionId,projected.name,targetIds,resolutionId,committed.error);
+  return commitProductionRuntimeResolution(adapter,state,committed,{
+    resolutionId,actionId,actionName:projected.name,actorId:reference.ownerActorId,targetIds,
+    targetNames:targetIds.map((id)=>prepared.selectedTargetNames[id]??id),compact:`${projected.name} · 특수 시점 행동`,
+    detail:[`${definition.id} · ${option.id}`,`${event.kind} window`],provenance:[`${action.source} · Common Play specialActions`],
+    calculatedOutcome:"특수 행동 적용",finalOutcome:"특수 행동 적용",
+  });
+}
+
 MockAdapter.prototype.resolveAction=async function resolveCommonPlayProductionAction(actionId:string,targetIds:string[]) {
+  const specialReference=parseSpecialCommonPlayActionId(actionId);
+  if(specialReference)return executeSpecialCommonPlayAction(this,actionId,targetIds,specialReference);
   const zoneMembershipReference=parseZoneMembershipCommonPlayActionId(actionId);
   if(zoneMembershipReference) return changeZoneMembership(this,actionId,targetIds,zoneMembershipReference);
   const storedInvocationCancelReference=parseStoredInvocationCancelActionId(actionId);

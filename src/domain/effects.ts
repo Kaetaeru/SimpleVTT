@@ -11,6 +11,10 @@ export interface RuntimeClock {
   initiativeCount?: number;
   activeActorId?: string;
   phase?: TurnBoundary | "action";
+  specialWindows?:Array<
+    |{kind:"turn-start"|"turn-end"|"after-turn";actorId:string}
+    |{kind:"initiative-count";initiativeCount:number}
+  >;
 }
 
 export type DurationSpec =

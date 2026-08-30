@@ -51,11 +51,16 @@ function expireArtifacts(ctx:ResolutionExecutionContext) {
 export function executeBeginTurn(ctx:ResolutionExecutionContext, operation:BeginTurnOp):OperationExecution {
   const actor = requireCombatant(ctx.state, operation.actorId);
   const clockBefore=structuredClone(ctx.state.clock);
+  const previousActorId=ctx.state.clock.activeActorId;
   ctx.state.clock = {
     ...ctx.state.clock,
     round:operation.round,
     activeActorId:operation.actorId,
     phase:"start",
+    specialWindows:[
+      {kind:"turn-start",actorId:operation.actorId},
+      ...(previousActorId?[{kind:"turn-end" as const,actorId:previousActorId},{kind:"after-turn" as const,actorId:previousActorId}]:[]),
+    ],
   };
   const artifactExpiry=expireArtifacts(ctx);
   ctx.state.turnFeatureUsage = { actorId:operation.actorId, featureIds:[] };
@@ -140,7 +145,7 @@ export function executeEndTurn(ctx:ResolutionExecutionContext, operation:EndTurn
 export function executeSetInitiativeCount(ctx:ResolutionExecutionContext, operation:SetInitiativeCountOp):OperationExecution {
   if(!Number.isInteger(operation.count)||operation.count<0) throw new DomainEvaluationError("initiative count must be a non-negative integer");
   const clockBefore=structuredClone(ctx.state.clock);
-  ctx.state.clock={...ctx.state.clock,initiativeCount:operation.count};
+  ctx.state.clock={...ctx.state.clock,initiativeCount:operation.count,specialWindows:[{kind:"initiative-count",initiativeCount:operation.count}]};
   const provenance:ProvenanceRecord[]=[{source:"initiative:count",status:"applied",reason:`initiative count advanced to ${operation.count}`}];
   const changes:RuntimeStateChange[]=[turnClockStateChange(clockBefore,ctx.state.clock,provenance)];
   const result={initiativeCount:operation.count};

@@ -110,7 +110,7 @@ export function createTurnRuntimeSession(scene:SceneVm):TurnRuntimeSession {
   const activeActorId=ordered[0] ?? scene.currentActorId;
   const state:RulesRuntimeState = {
     revision:0,
-    clock:{ round:1, elapsedSeconds:0, activeActorId },
+    clock:{ round:1, elapsedSeconds:0, activeActorId,...(activeActorId?{specialWindows:[{kind:"turn-start" as const,actorId:activeActorId}]}:{}) },
     combatants:Object.fromEntries(scene.entities.map((entity)=>[entity.id,runtimeCombatant(scene,entity)])),
     effects:[],
     concentration:{},
