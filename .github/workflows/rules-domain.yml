@@ -77,6 +77,7 @@ jobs:
           tests/domain/commonPlayZoneRuntime.test.ts
           tests/domain/commonPlayZoneUnsupportedOperation.test.ts
           tests/domain/commonPlaySensingFactRuntime.test.ts
+          tests/domain/c9FamilyGStandardSpatialFacts.test.ts
           tests/domain/c9FamilyMConditions.test.ts
           tests/domain/concentrationDamageResult.test.ts
           tests/domain/resourceRecoveryLockout.test.ts
