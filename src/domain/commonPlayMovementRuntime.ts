@@ -40,6 +40,11 @@ function numeric(expression:ExpressionNode|undefined,properties:Record<string,nu
   return Number.isFinite(value)&&value>=0?value:undefined;
 }
 
+function nonNegativeProperty(properties:Record<string,number>|undefined,property:string) {
+  const value=properties?.[property];
+  return value!==undefined&&Number.isFinite(value)&&value>=0?value:undefined;
+}
+
 export function compileCommonPlayMovement(input:CompileCommonPlayMovementInput):CommonPlayMovementCompileResult {
   const {definition,answer}=input;
   const distanceFeet=numeric(definition.distance,input.properties,"movement distance");
@@ -63,7 +68,14 @@ export function compileCommonPlayMovement(input:CompileCommonPlayMovementInput):
       doesNotProvokeOpportunityAttacks:definition.mode==="teleport"||definition.doesNotProvokeOpportunityAttacks===true,
     },
   };
-  const multiplier=numeric(definition.costMultiplier,input.properties,"movement cost multiplier")??1;
+  const movementType=definition.movementType??"walk";
+  const speedLimit=nonNegativeProperty(input.properties,`movement.${movementType}`);
+  if(speedLimit!==undefined&&distanceFeet>speedLimit) {
+    return {status:"rejected",reason:`movement exceeds ${movementType} speed: ${distanceFeet} > ${speedLimit}`};
+  }
+  const authoredMultiplier=numeric(definition.costMultiplier,input.properties,"movement cost multiplier");
+  const rulesMultiplier=nonNegativeProperty(input.properties,"movement.cost.multiplier");
+  const multiplier=authoredMultiplier??rulesMultiplier??1;
   const cost=Math.ceil(distanceFeet*multiplier);
   return {
     status:"compiled",
@@ -72,7 +84,7 @@ export function compileCommonPlayMovement(input:CompileCommonPlayMovementInput):
       id:input.id,
       kind:"move",
       actorId:definition.target,
-      movementMode:definition.movementType??"walk",
+      movementMode:movementType,
       distanceFeet:cost,
       distanceTraveledFeet:distanceFeet,
       destinationRef:answer.value,
