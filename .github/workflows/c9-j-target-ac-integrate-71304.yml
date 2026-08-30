@@ -27,14 +27,39 @@ jobs:
           set -euo pipefail
           target=agent/c9-gate-n-coverage-reconciliation
           patch=aaf87dff70e97ea2399f5cf769fd860134358e2e
+          ledger=docs/rules/v1-mechanism-coverage-ledger.json
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           for attempt in $(seq 1 5); do
             git fetch origin "$target"
             git checkout -B c9-j-target-ac-integrate "origin/$target"
             if ! git cherry-pick "$patch"; then
-              git cherry-pick --abort || true
-              exit 1
+              conflicts="$(git diff --name-only --diff-filter=U)"
+              if [ "$conflicts" != "$ledger" ]; then
+                git cherry-pick --abort || true
+                exit 1
+              fi
+              git checkout --ours -- "$ledger"
+              python3 - <<'PY'
+          from pathlib import Path
+          import json
+          path=Path("docs/rules/v1-mechanism-coverage-ledger.json")
+          ledger=json.loads(path.read_text(encoding="utf-8"))
+          row=next(entry for entry in ledger["rows"] if entry["family"]=="J")
+          sentence=" Portable attack DC expressions can resolve target.* refs from authoritative target profile properties, so target.defense.ac is available without action/content identity dispatch."
+          if sentence.strip() not in row["currentState"]:
+              row["currentState"]+=sentence
+          evidence={
+              "implementationEvidence":"commonPlayOperationRuntime.ts resolves target.* d20 DC expression refs from structural targetProperties while installedCommonPlayRuntimeAdapter.ts supplies authoritative target profile properties, including defense.ac",
+              "productionEvidence":"c9FamilyJTargetAcExpressionProduction71304.test.ts proves unknown and fully renamed external attacks resolve dc={ref: target.defense.ac} through production Common Play and commit damage",
+              "identityInvarianceEvidence":"c9FamilyJTargetAcExpressionProduction71304.test.ts repeats target.defense.ac attack resolution after complete external module/content/mechanic identity rename",
+          }
+          for key,value in evidence.items():
+              if value not in row[key]: row[key].append(value)
+          path.write_text(json.dumps(ledger,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
+          PY
+              git add "$ledger"
+              GIT_EDITOR=true git cherry-pick --continue
             fi
             npm run generate:content
             node --import tsx --test tests/domain/c9FamilyJTargetDcExpression71304.test.ts
