@@ -113,10 +113,7 @@ jobs:
               if(operation.instancePolicy!=="stack"&&operation.instancePolicy!=="replace"&&operation.instancePolicy!=="unique-by-source"&&operation.instancePolicy!=="profile-policy") throw new DomainEvaluationError(`${label}.instancePolicy is unsupported`);
               return {kind:"property.modify",property:nonEmptyString(operation.property,`${label}.property`),operation:mode,value:numericExpression(operation.value,`${label}.value`),target:operation.target,owner:"effect",source:"definition",duration:{kind:"elapsed",amount,unit:duration.unit},lifetime:{kind:"until-duration",onEnd:"destroy"},instancePolicy:operation.instancePolicy};
             }''','parser')
-          once('''    if(operation.kind==="roll.modify") continue;
-            if(operation.kind==="resource.recharge") {''', '''    if(operation.kind==="roll.modify") continue;
-            if(operation.kind==="property.modify") throw new DomainEvaluationError("property.modify production lowering is not implemented; Effect-owned property modifiers must not fall through to another execution engine");
-            if(operation.kind==="resource.recharge") {''','lowering')
+          once('    if(operation.kind==="roll.modify") continue;\n    if(operation.kind==="resource.recharge") {', '    if(operation.kind==="roll.modify") continue;\n    if(operation.kind==="property.modify") throw new DomainEvaluationError("property.modify production lowering is not implemented; Effect-owned property modifiers must not fall through to another execution engine");\n    if(operation.kind==="resource.recharge") {','lowering')
           path.write_text(s)
 
           Path('tests/domain/commonPlayPropertyContractRuntime.test.ts').write_text('''import assert from "node:assert/strict";
