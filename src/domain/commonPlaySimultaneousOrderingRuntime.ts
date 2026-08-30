@@ -22,6 +22,14 @@ export interface CommonPlaySimultaneousOrderingResponse {
   orderedCandidateIds:string[];
 }
 
+export interface CommonPlaySimultaneousTimingCandidate {
+  decisionId:string;
+  revision:number;
+  timing:string;
+  authority:CommonPlaySimultaneousOrderingAuthority;
+  candidateId:string;
+}
+
 export type CommonPlaySimultaneousOrderingState =
   |{
     status:"pending";
@@ -84,6 +92,34 @@ export function beginCommonPlaySimultaneousOrdering(
     return {status:"resolved",request,orderedCandidateIds:ids,resolvedBy:"automatic"};
   }
   return {status:"pending",request};
+}
+
+export function collectCommonPlaySimultaneousOrderingWindows(
+  input:readonly CommonPlaySimultaneousTimingCandidate[],
+):CommonPlaySimultaneousOrderingState[] {
+  const requests=new Map<string,CommonPlaySimultaneousOrderingRequest>();
+  for(const [index,candidate] of input.entries()) {
+    const decisionId=requiredString(candidate.decisionId,`Common Play simultaneous timing candidates[${index}].decisionId`);
+    const candidateId=requiredString(candidate.candidateId,`Common Play simultaneous timing candidates[${index}].candidateId`);
+    const existing=requests.get(decisionId);
+    if(existing) {
+      const sameWindow=existing.revision===candidate.revision
+        &&existing.timing===candidate.timing
+        &&existing.authority.kind===candidate.authority.kind
+        &&existing.authority.responderId===candidate.authority.responderId;
+      if(!sameWindow) throw new Error(`Common Play simultaneous timing window ${decisionId} has conflicting authority, timing, or revision`);
+      existing.candidates.push({id:candidateId});
+      continue;
+    }
+    requests.set(decisionId,{
+      id:decisionId,
+      revision:candidate.revision,
+      timing:candidate.timing,
+      authority:cp(candidate.authority),
+      candidates:[{id:candidateId}],
+    });
+  }
+  return [...requests.values()].map((request)=>beginCommonPlaySimultaneousOrdering(request));
 }
 
 export function respondToCommonPlaySimultaneousOrdering(
