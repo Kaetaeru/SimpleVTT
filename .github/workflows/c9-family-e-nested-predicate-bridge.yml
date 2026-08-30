@@ -1,0 +1,83 @@
+name: C9 Family E Nested Predicate Bridge
+
+on:
+  push:
+    branches:
+      - "agent/c9-gate-n-coverage-reconciliation"
+    paths:
+      - ".github/workflows/c9-family-e-nested-predicate-bridge.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  bridge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Bridge structured predicates into Common Play targeting
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path=Path('src/domain/commonPlayOperationRuntime.ts')
+          text=path.read_text()
+          text=text.replace(
+            'import type { CommonPlayFactAnswer, CommonPlayFactQuery } from "./commonPlaySpatialFactRuntime";\n',
+            'import type { CommonPlayFactAnswer, CommonPlayFactQuery } from "./commonPlaySpatialFactRuntime";\nimport { parseCommonPlaySelector, resolveCommonPlaySelector, type CommonPlaySelector } from "./commonPlaySelectorRuntime";\n'
+          )
+          old='''export interface CommonPlayTargetingSelector {\n  from:"targets";\n  min:number;\n  max:number;\n  where?:{op:"relation-matches";ref:"relation";value:TargetingFactInput["relation"]};\n}\n'''
+          new='''export interface CommonPlayTargetingSelector extends Omit<CommonPlaySelector,"from"|"min"|"max"|"orderBy"|"area"> {\n  from:"targets";\n  min:number;\n  max:number;\n}\n'''
+          if old not in text: raise SystemExit('targeting selector interface marker missing')
+          text=text.replace(old,new)
+          text=text.replace('const TARGETING_WHERE_KEYS=new Set(["op","ref","value"]);\n','')
+          old='''function parseTargetingSelector(value:unknown,label:string):CommonPlayTargetingSelector {\n  const selector=object(value,label);\n  supportedKeys(selector,TARGETING_KEYS,label);\n  if(selector.from!=="targets") throw new DomainEvaluationError(`${label}.from must be targets for portable Common Play targeting`);\n  let where:CommonPlayTargetingSelector["where"];\n  if(selector.where!==undefined) {\n    const predicate=object(selector.where,`${label}.where`);\n    supportedKeys(predicate,TARGETING_WHERE_KEYS,`${label}.where`);\n    if(predicate.op!=="relation-matches"||predicate.ref!=="relation") throw new DomainEvaluationError(`${label}.where currently supports relation-matches on relation only`);\n    if(predicate.value!=="self"&&predicate.value!=="ally"&&predicate.value!=="enemy"&&predicate.value!=="neutral") throw new DomainEvaluationError(`${label}.where.value must be self, ally, enemy, or neutral`);\n    where={op:"relation-matches",ref:"relation",value:predicate.value};\n  }\n  if(!Number.isInteger(selector.min)||Number(selector.min)<0) throw new DomainEvaluationError(`${label}.min must be a non-negative integer for portable Common Play targeting`);\n  if(!Number.isInteger(selector.max)||Number(selector.max)<Number(selector.min)) throw new DomainEvaluationError(`${label}.max must be an integer >= min for portable Common Play targeting`);\n  return {from:"targets",min:Number(selector.min),max:Number(selector.max),...(where?{where}:{})};\n}\n'''
+          new='''function parseTargetingSelector(value:unknown,label:string):CommonPlayTargetingSelector {\n  const selector=object(value,label);\n  supportedKeys(selector,TARGETING_KEYS,label);\n  const parsed=parseCommonPlaySelector(selector,label);\n  if(parsed.from!=="targets") throw new DomainEvaluationError(`${label}.from must be targets for portable Common Play targeting`);\n  if(parsed.min===undefined||!Number.isInteger(parsed.min)||parsed.min<0) throw new DomainEvaluationError(`${label}.min must be a non-negative integer for portable Common Play targeting`);\n  if(parsed.max===undefined||!Number.isInteger(parsed.max)||parsed.max<parsed.min) throw new DomainEvaluationError(`${label}.max must be an integer >= min for portable Common Play targeting`);\n  return {from:"targets",min:parsed.min,max:parsed.max,...(parsed.where===undefined?{}:{where:parsed.where})};\n}\n'''
+          if old not in text: raise SystemExit('targeting parser marker missing')
+          text=text.replace(old,new)
+          marker='''function hpOperationTarget(target:CommonPlayHpTarget|undefined,input:CommonPlayOperationExecutionInput) {\n  if(target===undefined||target==="actor"||target==="self") return input.actorId;\n  if(!input.targetId) throw new DomainEvaluationError("Common Play target HP operation requires one pre-resolved target");\n  return input.targetId;\n}\n'''
+          addition=marker+'''\nfunction targetingSelectorCandidate(target:TargetingFactInput) {\n  return {\n    id:target.id,\n    targeting:{...target},\n    properties:{\n      id:target.id,\n      kind:target.kind,\n      relation:target.relation,\n      ...(target.distanceFeet===undefined?{}:{distanceFeet:target.distanceFeet}),\n      ...(target.visible===undefined?{}:{visible:target.visible}),\n      ...(target.cover===undefined?{}:{cover:target.cover}),\n    },\n  };\n}\n'''
+          if marker not in text: raise SystemExit('hp target marker missing')
+          text=text.replace(marker,addition)
+          old='''    if(entryPoint.targeting.where) {\n      const rejected=input.targetingTargets.filter((target)=>target.relation!==entryPoint.targeting!.where!.value);\n      if(rejected.length) throw new DomainEvaluationError(`Common Play targeting relation filter rejected: ${rejected.map((target)=>target.id).join(", ")}`);\n    }\n'''
+          new='''    const selectorResolution=resolveCommonPlaySelector({\n      sourceId:input.actorId,\n      selector:entryPoint.targeting,\n      candidates:input.targetingTargets.map(targetingSelectorCandidate),\n      selectedIds:input.targetingTargets.map((target)=>target.id),\n      selection:"manual",\n      authority:"actor-owner",\n      directTarget:false,\n    });\n    if(selectorResolution.status!=="resolved") throw new DomainEvaluationError(`Common Play targeting selector rejected: ${selectorResolution.reason}`);\n'''
+          if old not in text: raise SystemExit('targeting relation filter marker missing')
+          text=text.replace(old,new)
+          path.write_text(text)
+
+          test_path=Path('tests/domain/commonPlayTargetingRuntime.test.ts')
+          tests=test_path.read_text()
+          tests=tests.replace('if(self.status==="rejected") assert.match(self.error,/relation filter rejected: hero/);','if(self.status==="rejected") assert.match(self.error,/targeting selector rejected/);')
+          marker='''test("bounded Common Play selector preserves authored multi-target limits without fabricating spatial facts",()=>{\n'''
+          addition='''test("portable Common Play nested selector predicate evaluates authoritative target facts generically",()=>{\n  const authored=structuredClone(AUTHORED);\n  authored.entryPoints[0].targeting={\n    from:"targets",\n    where:{op:"all",args:[\n      {op:"relation-matches",ref:"relation",value:"enemy"},\n      {op:"eq",left:{ref:"kind"},right:{value:"creature"}},\n      {op:"not",arg:{op:"eq",left:{ref:"id"},right:{value:"hero"}}},\n    ]},\n    min:1,max:1,\n  };\n  const definition=parseManualCommonPlayOperationDefinition(authored);\n  assert.deepEqual(definition.entryPoints[0].targeting,authored.entryPoints[0].targeting);\n\n  const enemyState=runtimeState();\n  enemyState.combatants.goblin.life.hp.current=5;\n  const enemy=resolveCommonPlayEntryPointOperations(TEST_PROFILE,enemyState,definition,{\n    resolutionId:"nested-enemy",actorId:"hero",entryPointId:"mend-other",targetId:"goblin",targetingTargets:[target("goblin","enemy")],\n  });\n  assert.equal(enemy.status,"committed");\n  if(enemy.status==="committed") assert.equal(enemy.state.combatants.goblin.life.hp.current,10);\n\n  const selfState=runtimeState();\n  selfState.combatants.hero.life.hp.current=10;\n  const self=resolveCommonPlayEntryPointOperations(TEST_PROFILE,selfState,definition,{\n    resolutionId:"nested-self",actorId:"hero",entryPointId:"mend-other",targetId:"hero",targetingTargets:[target("hero","self")],\n  });\n  assert.equal(self.status,"rejected");\n  if(self.status==="rejected") assert.match(self.error,/targeting selector rejected/);\n  assert.equal(selfState.combatants.hero.life.hp.current,10);\n});\n\n'''+marker
+          if marker not in tests: raise SystemExit('test insertion marker missing')
+          tests=tests.replace(marker,addition,1)
+          tests=tests.replace('[{from:"targets",where:{value:true},min:1,max:1},/currently supports relation-matches/],','[{from:"targets",where:{value:true},min:1,max:1},/\.where\.op is unsupported/],')
+          test_path.write_text(tests)
+          PY
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Generate content catalogs
+        run: npm run generate:content
+      - name: Verify Family E targeting slice
+        run: npx tsx --test tests/domain/commonPlayTargetingRuntime.test.ts tests/domain/commonPlaySelectorRuntime.test.ts tests/ui/installedCommonPlayProductionRuntime.test.ts
+      - name: Verify legacy execution boundary
+        run: node scripts/check-legacy-execution-boundary.mjs
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - name: Commit verified bridge
+        shell: bash
+        run: |
+          rm .github/workflows/c9-family-e-nested-predicate-bridge.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/domain/commonPlayOperationRuntime.ts tests/domain/commonPlayTargetingRuntime.test.ts .github/workflows/c9-family-e-nested-predicate-bridge.yml
+          git commit -m "feat(c9): bridge nested targeting predicates"
+          git pull --rebase origin "$GITHUB_REF_NAME"
+          git push origin HEAD:"$GITHUB_REF_NAME"
