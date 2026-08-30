@@ -87,11 +87,13 @@ async function captureBatch(operation:()=>Promise<unknown>) {
   const wires:string[]=[];
   const originalSend=tauriSessionTransport.send;
   tauriSessionTransport.send=async(message)=>{wires.push(message);return 1;};
-  try { await operation(); }
+  let result:unknown;
+  try { result=await operation(); }
   finally { tauriSessionTransport.send=originalSend; }
   const batch=wires.map((wire)=>JSON.parse(wire) as {type:string;events?:ConnectedSessionEvent[]})
     .find((wire):wire is {type:"event-batch";events:ConnectedSessionEvent[]}=>wire.type==="event-batch"&&Array.isArray(wire.events));
-  assert.ok(batch,JSON.stringify(wires));
+  const resolution=(result as {resolution?:{id?:string;stage?:string;actionId?:string}}|undefined)?.resolution;
+  assert.ok(batch,JSON.stringify({wires,resolution}));
   return batch;
 }
 
