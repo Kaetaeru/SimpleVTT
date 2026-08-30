@@ -1,0 +1,78 @@
+name: C9 Family E OrderBy Parser 7130
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-e-orderby-parser-7130.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  verify-and-land:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Patch portable targeting orderBy bridge
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          source = Path('src/domain/commonPlayOperationRuntime.ts')
+          text = source.read_text()
+          replacements = [
+              (
+                  'export interface CommonPlayTargetingSelector extends Omit<CommonPlaySelector,"from"|"min"|"max"|"orderBy"> {',
+                  'export interface CommonPlayTargetingSelector extends Omit<CommonPlaySelector,"from"|"min"|"max"> {'
+              ),
+              (
+                  'const TARGETING_KEYS=new Set(["from","where","min","max","area"]);',
+                  'const TARGETING_KEYS=new Set(["from","where","min","max","orderBy","area"]);'
+              ),
+              (
+                  'return {from:"targets",min:parsed.min,max:parsed.max,...(parsed.where===undefined?{}:{where:parsed.where}),...(parsed.area===undefined?{}:{area:parsed.area})};',
+                  'return {from:"targets",min:parsed.min,max:parsed.max,...(parsed.where===undefined?{}:{where:parsed.where}),...(parsed.orderBy===undefined?{}:{orderBy:parsed.orderBy}),...(parsed.area===undefined?{}:{area:parsed.area})};'
+              ),
+          ]
+          for old, new in replacements:
+              if old in text:
+                  text = text.replace(old, new, 1)
+              elif new not in text:
+                  raise SystemExit(f'expected source form not found: {old}')
+          source.write_text(text)
+
+          test_file = Path('tests/domain/commonPlayTargetingRuntime.test.ts')
+          tests = test_file.read_text()
+          marker = 'test("unsupported Common Play selector shapes reject explicitly",()=>{'
+          new_test = '''test("portable Common Play targeting preserves generic selector ordering vocabulary",()=>{\n  const authored=structuredClone(AUTHORED);\n  authored.entryPoints[0].targeting={from:"targets",min:1,max:2,orderBy:"initiative"};\n  authored.entryPoints[0].operations=[];\n  const definition=parseManualCommonPlayOperationDefinition(authored);\n  assert.deepEqual(definition.entryPoints[0].targeting,authored.entryPoints[0].targeting);\n});\n\n'''
+          if new_test not in tests:
+              if marker not in tests:
+                  raise SystemExit('targeting test insertion marker not found')
+              tests = tests.replace(marker, new_test + marker, 1)
+              test_file.write_text(tests)
+          PY
+      - run: npm run generate
+      - name: Verify Family E targeting slice
+        run: npx tsx --test tests/domain/commonPlaySelectorRuntime.test.ts tests/domain/commonPlayTargetingRuntime.test.ts tests/domain/commonPlayMaplessTargeting.test.ts tests/ui/commonPlayRichSelectorProduction.test.ts tests/ui/installedCommonPlayProductionRuntime.test.ts
+      - run: node scripts/check-legacy-execution-boundary.mjs
+      - run: npx tsc --noEmit
+      - name: Commit verified slice and retire helper
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/c9-family-e-orderby-parser-7130.yml
+          git add src/domain/commonPlayOperationRuntime.ts tests/domain/commonPlayTargetingRuntime.test.ts
+          git commit -m "feat(c9): preserve portable targeting ordering"
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
