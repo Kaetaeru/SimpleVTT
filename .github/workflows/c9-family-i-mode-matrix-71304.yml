@@ -1,0 +1,36 @@
+name: C9 Family I Movement Mode Matrix 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - tests/ui/c9FamilyIMovementModeAcceptance.test.ts
+      - src/domain/commonPlayMovementRuntime.ts
+      - src/domain/commonPlayOperationRuntime.ts
+      - src/domain/resolutionActionOps.ts
+      - src/domain/resolutionMovementOps.ts
+      - src/app/installedCommonPlayRuntimeAdapter.ts
+      - .github/workflows/c9-family-i-mode-matrix-71304.yml
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run generate:content
+      - name: Verify Family I production matrix
+        run: >-
+          npx tsx --test
+          tests/domain/commonPlayMovementRuntime.test.ts
+          tests/ui/c9FamilyIMovementModeAcceptance.test.ts
+          tests/ui/installedCommonPlayLoweredFamiliesProduction.test.ts
+      - name: Verify execution boundary and types
+        run: |
+          node scripts/check-legacy-execution-boundary.mjs
+          npx tsc --noEmit
