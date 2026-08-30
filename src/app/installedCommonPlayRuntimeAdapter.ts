@@ -894,6 +894,12 @@ MockAdapter.prototype.resolveAction=async function resolveCommonPlayProductionAc
   }
 
   const actionName=prepared.projectedAction?.name||action.nameKo||action.nameEn;
+  const interactionResponder=interaction.responder==="target-owner"
+    ?prepared.selectedTargets.length===1?prepared.selectedTargets[0]:undefined
+    :prepared.actorEntity;
+  if(!interactionResponder) {
+    return failAction(prepared.internal,prepared.actor.id,actionId,actionName,targetIds,resolutionId,"target-owner interaction requires exactly one selected target");
+  }
   prepared.internal.resolution={
     id:resolutionId,
     actorId:prepared.actor.id,
@@ -914,8 +920,8 @@ MockAdapter.prototype.resolveAction=async function resolveCommonPlayProductionAc
     adjudicated:false,
     interrupt:{
       id:interaction.id,
-      responderId:prepared.actor.id,
-      responderName:prepared.actor.name,
+      responderId:interactionResponder.id,
+      responderName:interactionResponder.name,
       trigger:`${actionName} 사용 선언`,
       optionName:actionName,
       cost:"반응 1",
