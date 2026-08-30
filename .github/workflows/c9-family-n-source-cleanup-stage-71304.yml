@@ -1,0 +1,246 @@
+name: C9 Family N Source Cleanup Stage 71304
+
+on:
+  push:
+    paths:
+      - ".github/workflows/c9-family-n-source-cleanup-stage-71304.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch-verify-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Bridge portable source-dependent effect cleanup
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json
+
+          path = Path("src/domain/commonPlayEffectRuntime.ts")
+          text = path.read_text()
+          text = text.replace(
+              'import type { DurationSpec, EffectInstance } from "./effects";',
+              'import type { DurationSpec, EffectInstance, EffectTermination } from "./effects";'
+          )
+          text = text.replace('type EffectTarget="actor";', 'type EffectTarget="actor"|"target";')
+          text = text.replace(
+              '  instancePolicy?:"stack";\n}',
+              '  instancePolicy?:"stack";\n  termination?:EffectTermination;\n}'
+          )
+          text = text.replace(
+              '  actionKind?:ActionUseKind;\n}',
+              '  actionKind?:ActionUseKind;\n  targetId?:string;\n}'
+          )
+          marker = 'function validateTemplate(template:CommonPlayEffectArtifactTemplate,index:number) {'
+          helper = '''function validateTermination(termination:EffectTermination|undefined,label:string) {\n  if(!termination) return;\n  assertOnlyKeys(termination,["targetTakesDamage","targetBecomesIncapacitated","targetDies","sourceBecomesIncapacitated","sourceDies"],label);\n  for(const [key,value] of Object.entries(termination)) {\n    if(typeof value!=="boolean") throw new Error(`${label}.${key} must be boolean`);\n  }\n}\n\n'''
+          if helper not in text:
+              text = text.replace(marker, helper + marker)
+          text = text.replace(
+              '  assertOnlyKeys(template,["id","artifactKind","duration","rules","lifetime","instancePolicy"],label);',
+              '  assertOnlyKeys(template,["id","artifactKind","duration","rules","lifetime","instancePolicy","termination"],label);'
+          )
+          text = text.replace(
+              '  runtimeDuration(template.duration,`${label} duration`);',
+              '  runtimeDuration(template.duration,`${label} duration`);\n  validateTermination(template.termination,`${label} termination`);'
+          )
+          text = text.replace(
+              '      metadata:{\n        [EFFECT_METADATA_DEFINITION]:definitionId,\n        [EFFECT_METADATA_TEMPLATE]:template.id,\n      },',
+              '      metadata:{\n        [EFFECT_METADATA_DEFINITION]:definitionId,\n        [EFFECT_METADATA_TEMPLATE]:template.id,\n      },\n      ...(template.termination?{termination:{...template.termination}}:{}),'
+          )
+          text = text.replace(
+              '  operationIndex:number,\n  concentrationGroupId?:string,',
+              '  operationIndex:number,\n  targetId:string,\n  concentrationGroupId?:string,'
+          )
+          text = text.replace(
+              '    targetId:input.actorId,',
+              '    targetId,'
+          )
+          text = text.replace(
+              '    if (operation.target!==undefined&&operation.target!=="actor") {\n      throw new Error(`${label} target must be actor in this runtime slice`);\n    }',
+              '    if (operation.target!==undefined&&operation.target!=="actor"&&operation.target!=="target") {\n      throw new Error(`${label} target must be actor or target in this runtime slice`);\n    }'
+          )
+          text = text.replace(
+              '    const template=templateById(definition,operation.template);\n    const concentrationGroupId=',
+              '    const template=templateById(definition,operation.template);\n    const targetId=operation.target==="target"?input.targetId:input.actorId;\n    if(!targetId) throw new Error(`${label} target requires a selected target`);\n    const concentrationGroupId='
+          )
+          text = text.replace(
+              '    activationOperations.push(effectForTemplate(definition,template,input,index,concentrationGroupId));',
+              '    activationOperations.push(effectForTemplate(definition,template,input,index,targetId,concentrationGroupId));'
+          )
+          path.write_text(text)
+
+          path = Path("src/app/installedCommonPlayRuntimeAdapter.ts")
+          text = path.read_text()
+          text = text.replace(
+              '||operations.some((operation)=>(operation.kind==="damage.apply"||operation.kind==="healing.apply")&&operation.target==="target");',
+              '||operations.some((operation)=>(operation.kind==="damage.apply"||operation.kind==="healing.apply"||operation.kind==="effect.apply")&&operation.target==="target");'
+          )
+          text = text.replace(
+              'const needsSelectedTarget=action.lowered.kind==="operations"&&portableEntry.operations.some((operation)=>(operation.kind==="damage.apply"||operation.kind==="healing.apply")&&operation.target==="target");',
+              'const needsSelectedTarget=portableEntry.operations.some((operation)=>(operation.kind==="damage.apply"||operation.kind==="healing.apply"||operation.kind==="effect.apply")&&operation.target==="target");'
+          )
+          text = text.replace(
+              'compileCommonPlayEffectActivation(state,lowered.definition,{resolutionId,actorId:actor.id,entryPointId:action.entryPointId,actionKind})',
+              'compileCommonPlayEffectActivation(state,lowered.definition,{resolutionId,actorId:actor.id,targetId:selectedTargetId,entryPointId:action.entryPointId,actionKind})'
+          )
+          path.write_text(text)
+
+          path = Path("schemas/common-play-contract.schema.json")
+          schema = json.loads(path.read_text())
+          defs = schema["$defs"]
+          defs["effectTermination"] = {
+              "type": "object",
+              "minProperties": 1,
+              "properties": {
+                  "targetTakesDamage": {"type": "boolean"},
+                  "targetBecomesIncapacitated": {"type": "boolean"},
+                  "targetDies": {"type": "boolean"},
+                  "sourceBecomesIncapacitated": {"type": "boolean"},
+                  "sourceDies": {"type": "boolean"}
+              },
+              "additionalProperties": False
+          }
+          artifact = defs.get("artifactTemplate")
+          if artifact:
+              artifact.setdefault("properties", {})["termination"] = {"$ref": "#/$defs/effectTermination"}
+
+          def patch_effect_apply(node):
+              if isinstance(node, dict):
+                  props = node.get("properties")
+                  if isinstance(props, dict):
+                      kind = props.get("kind")
+                      if isinstance(kind, dict) and kind.get("const") == "effect.apply":
+                          props["target"] = {"enum": ["actor", "target"]}
+                  for value in node.values():
+                      patch_effect_apply(value)
+              elif isinstance(node, list):
+                  for value in node:
+                      patch_effect_apply(value)
+          patch_effect_apply(schema)
+          path.write_text(json.dumps(schema, indent=2) + "\n")
+          PY
+
+          cat > tests/ui/c9FamilyNSourceDependentCleanup71304.test.ts <<'EOF'
+          import assert from "node:assert/strict";
+          import test from "node:test";
+          import "../../src/app/offlineRuntimeAdapters";
+          import "../../src/app/installedContentRuntimeAdapter";
+          import { catalogQualifiedId } from "../../src/app/contentCatalogIdentity";
+          import { installedCommonPlayActionId } from "../../src/app/installedCommonPlayActionReference";
+          import { setInstalledContentStoreForTests } from "../../src/app/installedContentRuntimeAdapter";
+          import { MemoryInstalledContentStore } from "../../src/app/memoryInstalledContentStore";
+          import { MockAdapter } from "../../src/app/mockAdapter";
+          import { snapshotAdapterTurnRuntimeState } from "../../src/app/turnRuntimeSessionRegistry";
+
+          function packagePayload(prefix:string) {
+            const moduleId=`${prefix}.module`;
+            const contentId=`${prefix}.content`;
+            const mechanicId=`${prefix}.mechanic`;
+            const config={
+              schemaVersion:"0.2-draft",id:mechanicId,
+              entryPoints:[
+                {id:"apply",invocation:"manual",operations:[{kind:"effect.apply",template:"dependent",target:"target"}]},
+                {id:"incapacitate-source",invocation:"manual",operations:[{kind:"condition.apply",condition:"incapacitated",target:"actor"}]},
+              ],
+              artifactTemplates:[{
+                id:"dependent",artifactKind:"effect",duration:{kind:"durable"},
+                rules:[{id:"noop",event:"damage.taken",frequency:"once-per-resolution",operations:[{kind:"damage.apply",amount:{value:0},damageType:"force",target:"event.actor"}]}],
+                lifetime:{kind:"until-duration",onEnd:"destroy"},instancePolicy:"stack",
+                termination:{sourceBecomesIncapacitated:true,sourceDies:true},
+              }],
+            };
+            return {moduleId,contentId,mechanicId,json:JSON.stringify({
+              schemaVersion:"0.1-draft",moduleId,moduleVersion:"1",
+              rulesProfile:{id:"dnd.srd-5.2.1",version:"0.1-draft"},defaultLocale:"en",
+              source:{document:"Family N source cleanup probe",version:"1",license:"CC0",srdDerived:false},
+              dependencies:[],conflicts:[],capabilities:[],
+              content:[{id:contentId,category:"option",presentation:{defaultLocale:"en",originalName:"Dependent Effect Probe",locales:{en:{name:"Dependent Effect Probe"}}},mechanics:[{kind:"common-play",config}]}],
+            })};
+          }
+
+          function action(pack:ReturnType<typeof packagePayload>,entryPointId:string) {
+            return installedCommonPlayActionId({
+              catalogId:catalogQualifiedId(pack.contentId,pack.moduleId,"1"),
+              mechanicId:pack.mechanicId,entryPointId,
+            });
+          }
+
+          async function exercise(prefix:string) {
+            const adapter=new MockAdapter();
+            const pack=packagePayload(prefix);
+            setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
+            const preview=await adapter.previewContentImport(pack.json);
+            assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
+            await adapter.activateContentImport();
+            await adapter.startInitiative();
+            await adapter.setCurrentActor("char.aelar");
+
+            let snapshot=await adapter.getSnapshot();
+            let runtime=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)!;
+            const sourceId="char.aelar";
+            const targetId=Object.keys(runtime.combatants).find((id)=>id!==sourceId)!;
+            assert.ok(targetId,"probe requires a second combatant");
+
+            snapshot=await adapter.resolveAction(action(pack,"apply"),[targetId]);
+            assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
+            runtime=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)!;
+            let dependent=runtime.effects.find((effect)=>effect.sourceId===pack.mechanicId&&effect.targetId===targetId);
+            assert.ok(dependent,"unknown installed effect must materialize on the selected dependent target");
+            assert.equal(dependent.sourceActorId,sourceId);
+            assert.equal(dependent.termination?.sourceBecomesIncapacitated,true);
+
+            snapshot=await adapter.resolveAction(action(pack,"incapacitate-source"),[sourceId]);
+            assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
+            runtime=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)!;
+            assert.equal(runtime.effects.some((effect)=>effect.id===dependent!.id),false,"source incapacitation must remove the dependent effect in the same Resolver transaction");
+
+            await adapter.undoLastResolution();
+            snapshot=await adapter.getSnapshot();
+            runtime=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)!;
+            dependent=runtime.effects.find((effect)=>effect.sourceId===pack.mechanicId&&effect.targetId===targetId);
+            assert.ok(dependent,"event-native Undo must restore the dependent effect");
+            assert.equal(runtime.effects.some((effect)=>effect.targetId===sourceId&&effect.conditionId==="incapacitated"),false,"Undo must also reverse the source incapacitation state");
+          }
+
+          test("unknown installed Common Play removes a dependent effect when its source becomes incapacitated and Undo restores it",async()=>{
+            await exercise("unknown-family-n-source-cleanup");
+          });
+
+          test("renamed external identities preserve source-dependent cleanup and Undo",async()=>{
+            await exercise("renamed-family-n-source-cleanup");
+          });
+          EOF
+
+      - run: npm ci
+      - name: Generate content dependencies
+        run: npm run generate:content
+      - name: Verify Family N source-dependent cleanup
+        run: >-
+          npx tsx --test
+          tests/ui/c9FamilyNSourceDependentCleanup71304.test.ts
+          tests/ui/c9FamilyNEffectDurationProduction.test.ts
+      - name: Verify C9 boundaries
+        run: |
+          node scripts/check-v1-mechanism-coverage.mjs
+          npm run build
+      - name: Publish verified implementation
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/domain/commonPlayEffectRuntime.ts src/app/installedCommonPlayRuntimeAdapter.ts schemas/common-play-contract.schema.json tests/ui/c9FamilyNSourceDependentCleanup71304.test.ts
+          git commit -m "feat(c9): bridge portable source-dependent effect cleanup"
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
+          git rm .github/workflows/c9-family-n-source-cleanup-stage-71304.yml
+          git commit -m "ci(c9): remove Family N source cleanup staging workflow"
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
