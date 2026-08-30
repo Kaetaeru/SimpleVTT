@@ -65,6 +65,7 @@ jobs:
           row["remainingNamedSeams"]=["durable adapter/process-restart persistence for in-flight spatial decisions remains absent; connected reconnect/retry routing is already covered"]
           ledger.write_text(json.dumps(data,indent=2,ensure_ascii=False)+"\n")
           PY
+            npm run generate:content
             node --import tsx --test tests/domain/commonPlaySpatialFactRuntime.test.ts tests/domain/c9FamilyGStandardSpatialFacts.test.ts tests/domain/c9FamilyGSizeSpaceFacts.test.ts
             node scripts/check-v1-mechanism-coverage.mjs
             npm exec tsc -- --noEmit
