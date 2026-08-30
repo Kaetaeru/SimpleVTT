@@ -372,19 +372,24 @@
         "installedCommonPlayProductionRuntime.test.ts unknown installed Common Play preserves bounded multi-target selection through production resolution",
         "installedCommonPlayProductionRuntime.test.ts unknown installed relation selector rejects an ineligible target before commit and accepts an eligible enemy target",
         "installedCommonPlayProductionRuntime.test.ts unknown installed Common Play preserves bounded multi-target selection through production resolveAction and presentation targetIds",
-        "installedCommonPlayProductionRuntime.test.ts unknown installed relation selector rejects an ineligible target before production commit"
+        "installedCommonPlayProductionRuntime.test.ts unknown installed relation selector rejects an ineligible target before production commit",
+        "C9 Family E Acceptance Evidence run 33309642186: restart/rename relation acceptance and tsc --noEmit passed"
       ],
       "identityInvarianceEvidence": [
         "installedCommonPlayProductionRuntime.test.ts targeting remains invariant under external identity and display rename",
         "commonPlayTargetingRuntime.test.ts relation selector uses authoritative relation facts without content identity dispatch",
-        "installedCommonPlayProductionRuntime.test.ts targeting dispatch remains structural under external module/content/mechanic/entry-point/display rename"
+        "installedCommonPlayProductionRuntime.test.ts targeting dispatch remains structural under external module/content/mechanic/entry-point/display rename",
+        "c9FamilyERelationSelectorAcceptance.test.ts arbitrary module/content/mechanic/entry/display rename preserves portable enemy-relation semantics after installed-content restart",
+        "installedCommonPlayProductionRuntime.test.ts targeting production semantics are invariant under external identity and display rename"
       ],
       "connectedEvidenceIfRelevant": [
         "installedCommonPlayProductionRuntime.test.ts connected Common Play targeting remains Host-authoritative and converges through existing targeting ResolutionEvents",
-        "installedCommonPlayProductionRuntime.test.ts connected Common Play targeting remains Host-authoritative and converges through shared ResolutionEvents"
+        "installedCommonPlayProductionRuntime.test.ts connected Common Play targeting remains Host-authoritative and converges through shared ResolutionEvents",
+        "installedCommonPlayProductionRuntime.test.ts Host-authoritative targeting ResolutionEvents converge targetIds and downstream healing on Client"
       ],
       "persistenceEvidenceIfRelevant": [
-        "ruleModulePackageImport.test.ts and installed-content activation preserve supported portable targeting definitions while blocking genuinely unsupported selector sources before persistence"
+        "ruleModulePackageImport.test.ts and installed-content activation preserve supported portable targeting definitions while blocking genuinely unsupported selector sources before persistence",
+        "c9FamilyERelationSelectorAcceptance.test.ts relation selector survives installed-content persistence and fresh MockAdapter rehydration before production execution"
       ],
       "remainingNamedSeams": [
         "rich range/reach/sight/cover/tag/area/ordering/object/point/manual-vs-automatic selector semantics remain incomplete"
