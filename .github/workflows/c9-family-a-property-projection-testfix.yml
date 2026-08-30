@@ -29,7 +29,8 @@ jobs:
             run=text.index('        run: |\n',start)+len('        run: |\n')
             end=text.index(end_marker,run)
             code='\n'.join(line[10:] if line.startswith('          ') else line for line in text[run:end].splitlines())
-            exec(compile(code,name,'exec'))
+            namespace={}
+            exec(compile(code,name,'exec'),namespace,namespace)
 
           run_python_step('.github/workflows/c9-family-a-property-projection-step.yml','Apply Effect-backed movement property projection','      - run: npx tsx --test')
           run_python_step('.github/workflows/c9-family-a-property-projection-retry.yml','Allow numeric property expressions for movement distance','      - run: npx tsx --test')
