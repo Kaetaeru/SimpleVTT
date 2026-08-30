@@ -42,7 +42,7 @@ async function action(adapter:MockAdapter,pack:ReturnType<typeof packagePayload>
   return adapter.resolveAction(installedCommonPlayActionId({
     catalogId:catalogQualifiedId(pack.contentId,pack.moduleId,"1"),
     mechanicId:pack.mechanicId,entryPointId,
-  }),[]);
+  }),[ACTOR_ID]);
 }
 
 function objectState(adapter:MockAdapter,templateId:string) {
