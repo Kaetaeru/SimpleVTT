@@ -1,0 +1,116 @@
+name: C9 Family P Lifecycle Production 71304
+
+on:
+  push:
+    branches:
+      - "agent/c9-gate-n-coverage-reconciliation"
+    paths:
+      - ".github/workflows/c9-family-p-lifecycle-production-71304.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Reconcile latest branch
+        run: git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+      - name: Connect lifecycle semantic enrichment to effect production
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          adapter = Path("src/app/installedCommonPlayRuntimeAdapter.ts")
+          text = adapter.read_text()
+          old_import = 'import { appendCommonPlayDamageTakenTriggers, resolveCommonPlayEffectActivation, type CommonPlayPersistentEffectDefinition } from "../domain/commonPlayEffectRuntime";'
+          new_import = 'import { appendCommonPlayDamageTakenTriggers, compileCommonPlayEffectActivation, resolveCommonPlayEffectActivation, type CommonPlayPersistentEffectDefinition } from "../domain/commonPlayEffectRuntime";'
+          if old_import not in text:
+              raise SystemExit("expected Common Play effect import not found")
+          text = text.replace(old_import, new_import, 1)
+          old_branch = '''  } else if(lowered.kind==="effect") {
+            committed=resolveCommonPlayEffectActivation(SIMPLEVTT_APP_RULES_PROFILE,state,lowered.definition,{resolutionId,actorId:actor.id,entryPointId:action.entryPointId,actionKind});
+          } else if(lowered.kind==="zone") {'''
+          new_branch = '''  } else if(lowered.kind==="effect") {
+            const effectInput={resolutionId,actorId:actor.id,entryPointId:action.entryPointId,actionKind};
+            committed=resolveCommonPlayEffectActivation(SIMPLEVTT_APP_RULES_PROFILE,state,lowered.definition,effectInput);
+            if(committed.status==="committed") {
+              committed=appendCommonPlaySemanticOutcomeEvents(compileCommonPlayEffectActivation(state,lowered.definition,effectInput),committed);
+            }
+          } else if(lowered.kind==="zone") {'''
+          if old_branch not in text:
+              raise SystemExit("expected effect production branch not found")
+          adapter.write_text(text.replace(old_branch, new_branch, 1))
+
+          test = Path("tests/ui/installedCommonPlaySemanticOutcomeProduction.test.ts")
+          text = test.read_text()
+          old_entries = '''            {id:"attack",invocation:"manual",targeting:{from:"targets",min:1,max:1},test:{kind:"attack-roll",roller:"actor",dc:{value:10}},operations:[]},
+            {id:"save",invocation:"manual",test:{kind:"saving-throw",roller:"actor",dc:{value:14}},operations:[]},
+          ],
+        }}],'''
+          new_entries = '''            {id:"attack",invocation:"manual",targeting:{from:"targets",min:1,max:1},test:{kind:"attack-roll",roller:"actor",dc:{value:10}},operations:[]},
+            {id:"save",invocation:"manual",test:{kind:"saving-throw",roller:"actor",dc:{value:14}},operations:[]},
+            {id:"effect",invocation:"manual",operations:[{kind:"effect.apply",template:"semantic-ward",target:"actor"}]},
+          ],
+          artifactTemplates:[{
+            id:"semantic-ward",artifactKind:"effect",duration:{kind:"elapsed",amount:{value:1},unit:"hours"},
+            rules:[{id:"semantic-retaliate",event:"damage.taken",frequency:"once",operations:[{kind:"damage.apply",amount:{value:1},damageType:"force",target:"event.actor"}]}],
+            lifetime:{kind:"until-event",event:"damage.taken",onEnd:"destroy"},instancePolicy:"stack",
+          }],
+        }}],'''
+          if old_entries not in text:
+              raise SystemExit("expected semantic production fixture entry points not found")
+          text = text.replace(old_entries, new_entries, 1)
+          old_return = '''  assert.equal(save.actorId,"char.aelar");
+            assert.equal(save.targetId,"char.aelar");
+            return [attack.kind,save.kind];'''
+          new_return = '''  assert.equal(save.actorId,"char.aelar");
+            assert.equal(save.targetId,"char.aelar");
+
+            snapshot=await adapter.resolveAction(action("effect"),["char.aelar"]);
+            assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
+            history=runtimeResolutionEventHistory(adapter);
+            const applied=history?.events.find((event)=>event.kind==="state.applied");
+            assert.ok(applied,JSON.stringify(history));
+            assert.equal(applied.actorId,"char.aelar");
+            assert.equal(applied.targetId,"char.aelar");
+            return [attack.kind,save.kind,applied.kind];'''
+          if old_return not in text:
+              raise SystemExit("expected semantic production return block not found")
+          text = text.replace(old_return, new_return, 1)
+          text = text.replace('["attack.hit","save.failure"]);', '["attack.hit","save.failure","state.applied"]);', 1)
+          test.write_text(text)
+          PY
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Generate content catalogs
+        run: npm run generate:content
+      - name: Verify lifecycle semantic production
+        run: npx tsx --test tests/domain/commonPlaySemanticEventRuntime.test.ts tests/ui/installedCommonPlaySemanticOutcomeProduction.test.ts
+      - name: Verify TypeScript
+        run: npx tsc --noEmit
+      - name: Verify V1 mechanism ledger structure
+        run: node scripts/check-v1-mechanism-coverage.mjs
+      - name: Commit verified slice and retire verifier
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/c9-family-p-lifecycle-production-71304.yml
+          git add src/app/installedCommonPlayRuntimeAdapter.ts tests/ui/installedCommonPlaySemanticOutcomeProduction.test.ts
+          git commit -m "feat(c9): emit effect lifecycle semantic events in production"
+          for attempt in 1 2 3; do
+            if git pull --rebase origin agent/c9-gate-n-coverage-reconciliation && git push origin HEAD:agent/c9-gate-n-coverage-reconciliation; then
+              exit 0
+            fi
+            git rebase --abort 2>/dev/null || true
+            sleep 2
+          done
+          exit 1
