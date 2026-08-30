@@ -27,34 +27,24 @@ jobs:
         run: git pull --ff-only origin agent/c9-gate-n-coverage-reconciliation
       - run: npm ci
       - run: npm run generate:content
-      - name: Make execution-time selector revalidation authoritative
+      - name: Restrict manual predicate evaluation to selected identities
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
-          path=Path('src/app/installedCommonPlayRuntimeAdapter.ts')
+          path=Path('src/domain/commonPlaySelectorRuntime.ts')
           text=path.read_text(encoding='utf-8')
-          old='''    if(projectedAction&&(!projectedAction.available||selectionMode==="manual"&&targetIds.some((id)=>!projectedAction.eligibleTargetIds.includes(id)))) return undefined;'''
-          new='''    if(projectedAction&&!projectedAction.available) return undefined;'''
+          old='''    let candidates=input.candidates.filter((candidate)=>!input.selector.area||candidate.areaMember===true)\n      .filter((candidate)=>!input.selector.where||evaluateSemanticPredicate(input.selector.where,(ref)=>ref==="id"?candidate.id:candidate.properties[ref]));'''
+          new='''    const selectedIds=input.selection==="manual"?new Set(input.selectedIds??[]):undefined;\n    let candidates=input.candidates.filter((candidate)=>selectedIds===undefined||selectedIds.has(candidate.id))\n      .filter((candidate)=>!input.selector.area||candidate.areaMember===true)\n      .filter((candidate)=>!input.selector.where||evaluateSemanticPredicate(input.selector.where,(ref)=>ref==="id"?candidate.id:candidate.properties[ref]));'''
           if old in text:
               text=text.replace(old,new,1)
               path.write_text(text,encoding='utf-8')
           elif new not in text:
-              raise SystemExit('Expected Common Play targeting revalidation guard not found')
-          test=Path('tests/ui/c9FamilyJSpatialAttackProduction.test.ts')
-          source=test.read_text(encoding='utf-8')
-          needle='''  assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));'''
-          diagnostic='''  assert.notEqual(snapshot.resolution?.finalOutcome,"적용 거부",JSON.stringify(snapshot.resolution));\n'''+needle
-          if diagnostic not in source:
-              source=source.replace(needle,diagnostic,1)
-              test.write_text(source,encoding='utf-8')
+              raise SystemExit('Expected selector candidate filter not found')
           PY
-      - name: Diagnose Family J spatial slice
-        run: node --import tsx --test tests/ui/c9FamilyJSpatialAttackProduction.test.ts
       - name: Verify Family J spatial slice
         run: |
-          git checkout -- tests/ui/c9FamilyJSpatialAttackProduction.test.ts
           node --import tsx --test \
             tests/ui/c9FamilyJSpatialAttackProduction.test.ts \
             tests/ui/c9FamilyJPortableControlProduction.test.ts \
@@ -72,11 +62,11 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git rm "$workflow"
-          git add src/app/installedCommonPlayRuntimeAdapter.ts
+          git add src/domain/commonPlaySelectorRuntime.ts
           if git diff --cached --quiet; then
             exit 0
           fi
-          git commit -m "fix(c9): revalidate spatial targets at execution"
+          git commit -m "fix(c9): scope manual selector facts to chosen targets"
           for attempt in $(seq 1 8); do
             if git push origin HEAD:"$branch"; then exit 0; fi
             git fetch origin "$branch"
