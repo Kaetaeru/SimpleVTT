@@ -80,8 +80,8 @@ async function exercise(identity:Identity) {
   assert.equal(snapshot.resolution?.finalOutcome,"적용 거부",JSON.stringify(snapshot.resolution));
   assert.equal(snapshot.scene.economyByActor["char.aelar"]?.action,true);
 
-  setRelation(internal,5,true,"half");
   await adapter.setQueuedD20(15);
+  setRelation(internal,5,true,"half");
   snapshot=await adapter.resolveAction(actionId,[TARGET_ID]);
   assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
   assert.notEqual(snapshot.resolution?.finalOutcome,"적용 거부",JSON.stringify(snapshot.resolution));
