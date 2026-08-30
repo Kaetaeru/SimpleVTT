@@ -47,7 +47,20 @@ export async function commitProductionRuntimeResolution(
   const internal=adapter as unknown as AdapterState;
   if (committed.status==="rejected") return internal.getSnapshot();
 
-  const projected=applyResolutionEvents(internal.scene,committed.events,internal.activeCharacter.resources,internal.activeCharacter.items,state);
+  const projectionResources=structuredClone(internal.activeCharacter.resources);
+  for (const change of committed.events.flatMap((event)=>event.stateChanges)) {
+    if (change.kind!=="resource" || !change.createdResource || change.targetId!==internal.activeCharacter.id) continue;
+    if (projectionResources.some((resource)=>resource.id===change.resourceId)) continue;
+    projectionResources.push({
+      id:change.resourceId,
+      label:change.createdResource.label,
+      current:change.before,
+      max:change.createdResource.maximum,
+      source:change.createdResource.source,
+      ...(change.createdResource.recovery?{recovery:structuredClone(change.createdResource.recovery)}:{}),
+    } as CharacterSheet["resources"][number]);
+  }
+  const projected=applyResolutionEvents(internal.scene,committed.events,projectionResources,internal.activeCharacter.items,state);
   if (projected.status==="rejected") return internal.getSnapshot();
   const writeBack=await persistCharacterResolutionEvents(adapter,committed.events,"forward");
   if (writeBack.status==="rejected") return internal.getSnapshot();
