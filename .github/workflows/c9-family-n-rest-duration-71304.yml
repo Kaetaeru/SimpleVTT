@@ -1,0 +1,131 @@
+name: C9 Family N Portable Rest Duration 71304
+
+on:
+  push:
+    branches:
+      - "agent/c9-gate-n-coverage-reconciliation"
+    paths:
+      - ".github/workflows/c9-family-n-rest-duration-71304.yml"
+      - "src/domain/commonPlayEffectRuntime.ts"
+      - "tests/domain/c9FamilyNPortableRestDuration.test.ts"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  verify-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Generate content catalogs
+        run: npm run generate:content
+      - name: Patch portable rest-bound duration lowering
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("src/domain/commonPlayEffectRuntime.ts")
+          text = path.read_text(encoding="utf-8")
+
+          old_type = '''type CommonPlayEffectDuration=\n  | {kind:"durable"}\n  | {kind:"maintained";policy:"concentration"}\n  | {\n      kind:"elapsed";\n      amount:LiteralNumberExpression;\n      unit:"seconds"|"minutes"|"hours"|"days";\n      decrementAt?:string;\n    };'''
+          new_type = '''type CommonPlayEffectDuration=\n  | {kind:"durable"}\n  | {kind:"maintained";policy:"concentration"}\n  | {kind:"until-timing";timing:string}\n  | {\n      kind:"elapsed";\n      amount:LiteralNumberExpression;\n      unit:"seconds"|"minutes"|"hours"|"days";\n      decrementAt?:string;\n    };'''
+          if old_type not in text:
+            raise SystemExit("CommonPlayEffectDuration shape changed; refusing blind patch")
+          text = text.replace(old_type, new_type, 1)
+
+          old_runtime = '''  if (duration.kind==="maintained") {\n    assertOnlyKeys(duration,["kind","policy"],label);\n    if (duration.policy!=="concentration") throw new Error(`${label} maintained policy must be concentration`);\n    return {kind:"concentration"};\n  }\n  assertOnlyKeys(duration,["kind","amount","unit","decrementAt"],label);'''
+          new_runtime = '''  if (duration.kind==="maintained") {\n    assertOnlyKeys(duration,["kind","policy"],label);\n    if (duration.policy!=="concentration") throw new Error(`${label} maintained policy must be concentration`);\n    return {kind:"concentration"};\n  }\n  if (duration.kind==="until-timing") {\n    assertOnlyKeys(duration,["kind","timing"],label);\n    if (duration.timing==="rest.short.complete") return {kind:"until-rest",rest:"short"};\n    if (duration.timing==="rest.long.complete") return {kind:"until-rest",rest:"long"};\n    throw new Error(`${label} until-timing supports rest.short.complete or rest.long.complete in this runtime slice`);\n  }\n  assertOnlyKeys(duration,["kind","amount","unit","decrementAt"],label);'''
+          if old_runtime not in text:
+            raise SystemExit("runtimeDuration shape changed; refusing blind patch")
+          path.write_text(text.replace(old_runtime, new_runtime, 1), encoding="utf-8")
+          PY
+
+          cat > tests/domain/c9FamilyNPortableRestDuration.test.ts <<'EOF'
+          import assert from "node:assert/strict";
+          import { readFileSync } from "node:fs";
+          import test from "node:test";
+          import { resolveCommonPlayEffectActivation, type CommonPlayPersistentEffectDefinition } from "../../src/domain/commonPlayEffectRuntime";
+          import { expireEffectsForRest } from "../../src/domain/effects";
+          import { runtimeState, TEST_PROFILE } from "./rulesTestState";
+
+          const BASE=JSON.parse(readFileSync(
+            new URL("../fixtures/play-contract/persistent-effect-trigger.json",import.meta.url),
+            "utf8",
+          )) as CommonPlayPersistentEffectDefinition;
+
+          function activate(timing:"rest.short.complete"|"rest.long.complete") {
+            const definition=structuredClone(BASE);
+            definition.id=`external.unknown.family-n.${timing}`;
+            definition.artifactTemplates[0].duration={kind:"until-timing",timing};
+            const result=resolveCommonPlayEffectActivation(TEST_PROFILE,runtimeState(),definition,{
+              resolutionId:`family-n-${timing}`,
+              actorId:"hero",
+              entryPointId:"activate",
+            });
+            assert.equal(result.status,"committed");
+            if(result.status!=="committed") throw new Error(result.error);
+            assert.equal(result.state.effects.length,1);
+            return result.state.effects;
+          }
+
+          test("Family N lowers portable short-rest timing to the shared rest expiry kernel",()=>{
+            const effects=activate("rest.short.complete");
+            assert.deepEqual(effects[0].expiry,{kind:"rest",rest:"short"});
+            assert.deepEqual(expireEffectsForRest(effects,"short").expired.map((effect)=>effect.id),[effects[0].id]);
+          });
+
+          test("Family N keeps long-rest timing active through short rest and expires it on long rest",()=>{
+            const effects=activate("rest.long.complete");
+            assert.deepEqual(effects[0].expiry,{kind:"rest",rest:"long"});
+            assert.equal(expireEffectsForRest(effects,"short").expired.length,0);
+            assert.deepEqual(expireEffectsForRest(effects,"long").expired.map((effect)=>effect.id),[effects[0].id]);
+          });
+
+          test("Family N rejects unrelated until-timing values instead of inventing a second lifecycle engine",()=>{
+            const definition=structuredClone(BASE);
+            definition.id="external.unknown.family-n.unsupported-timing";
+            definition.artifactTemplates[0].duration={kind:"until-timing",timing:"turn.end"};
+            const state=runtimeState();
+            const result=resolveCommonPlayEffectActivation(TEST_PROFILE,state,definition,{
+              resolutionId:"family-n-unsupported-timing",
+              actorId:"hero",
+              entryPointId:"activate",
+            });
+            assert.equal(result.status,"rejected");
+            if(result.status!=="rejected") return;
+            assert.match(result.error,/supports rest\.short\.complete or rest\.long\.complete/);
+            assert.equal(result.state,state);
+            assert.equal(state.effects.length,0);
+          });
+          EOF
+
+      - name: Verify Family N lifecycle slice
+        run: >-
+          npx tsx --test
+          tests/domain/c9FamilyNPortableRestDuration.test.ts
+          tests/domain/commonPlayEffectRuntime.test.ts
+          tests/domain/commonPlayEffectSuppressionRuntime.test.ts
+          tests/domain/c9FamilyNEffectLifecycleAcceptance.test.ts
+      - name: Verify TypeScript
+        run: npx tsc --noEmit
+      - name: Verify V1 mechanism ledger
+        run: node scripts/check-v1-mechanism-coverage.mjs
+      - name: Publish verified change and retire verifier
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/c9-family-n-rest-duration-71304.yml
+          git add src/domain/commonPlayEffectRuntime.ts tests/domain/c9FamilyNPortableRestDuration.test.ts
+          git commit -m "feat(c9): lower portable rest-bound effect durations"
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
