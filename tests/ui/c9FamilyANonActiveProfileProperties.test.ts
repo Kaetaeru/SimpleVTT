@@ -36,6 +36,7 @@ function payload() {
 
 test("unknown stored Common Play reads a non-active runtime actor profile property",async()=>{
   const adapter=new MockAdapter();
+  await adapter.setReferenceRole("dm");
   setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
   const preview=await adapter.previewContentImport(payload());
   assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
