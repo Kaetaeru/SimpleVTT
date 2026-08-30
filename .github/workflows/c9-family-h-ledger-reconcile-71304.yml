@@ -32,7 +32,7 @@ jobs:
           from pathlib import Path
           path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
           data=json.loads(path.read_text(encoding='utf-8'))
-          family=next((entry for entry in data['families'] if entry.get('family')=='H'),None)
+          family=next((entry for entry in data['rows'] if entry.get('family')=='H'),None)
           if family is None: raise SystemExit('Family H missing')
           additions={
             'implementationEvidence':'commonPlaySpatialFactRuntime.ts and commonPlayInterceptorProductionRuntimeAdapter.ts expose identity.creature-type through the existing authoritative resolveRuntimeCreatureType scene/combatant-definition resolver',
@@ -62,7 +62,7 @@ jobs:
           for attempt in $(seq 1 40); do
             git fetch origin "$branch"
             if git rebase "origin/$branch"; then
-              python3 -c "import json; d=json.load(open('docs/rules/v1-mechanism-coverage-ledger.json',encoding='utf-8')); f=next(x for x in d['families'] if x['family']=='H'); assert 'live sanctity facts' not in f['remainingNamedSeams']; assert f['disposition']=='INCOMPLETE'"
+              python3 -c "import json; d=json.load(open('docs/rules/v1-mechanism-coverage-ledger.json',encoding='utf-8')); f=next(x for x in d['rows'] if x['family']=='H'); assert 'live sanctity facts' not in f['remainingNamedSeams']; assert f['disposition']=='INCOMPLETE'"
               node scripts/check-v1-mechanism-coverage.mjs
               if git push origin HEAD:"$branch"; then exit 0; fi
             fi
