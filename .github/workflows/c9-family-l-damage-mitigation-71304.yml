@@ -36,31 +36,26 @@ jobs:
           if addition not in text:
               if text.count(anchor)!=1: raise SystemExit('damage contribution anchor mismatch')
               text=text.replace(anchor,anchor+'\n'+addition,1)
-
           anchor='''export interface DamageComponentRequest {\n  damageType: string;\n  amount: number;\n  adjustments?: DamageAdjustment[];\n  defenses?: DamageDefenseContribution[];\n}\n'''
           replacement='''export interface DamageComponentRequest {\n  damageType: string;\n  amount: number;\n  adjustments?: DamageAdjustment[];\n  defenses?: DamageDefenseContribution[];\n  reductions?: DamageReductionContribution[];\n  thresholds?: DamageThresholdContribution[];\n}\n'''
           if replacement not in text:
               if text.count(anchor)!=1: raise SystemExit('damage request anchor mismatch')
               text=text.replace(anchor,replacement,1)
-
           anchor='''export interface CompoundDamageRequest {\n  hp: HpState;\n  components: DamageComponentRequest[];\n}\n'''
           replacement='''export interface CompoundDamageRequest {\n  hp: HpState;\n  components: DamageComponentRequest[];\n  reductions?: DamageReductionContribution[];\n  thresholds?: DamageThresholdContribution[];\n}\n'''
           if replacement not in text:
               if text.count(anchor)!=1: raise SystemExit('compound request anchor mismatch')
               text=text.replace(anchor,replacement,1)
-
           anchor='''function appliesToType(contribution: DamageDefenseContribution, damageType: string) {\n  return contribution.damageType === damageType || contribution.damageType === "*";\n}\n'''
           addition='''\nfunction applyFinalDamageMitigation(\n  amount:number,\n  reductions:DamageReductionContribution[]|undefined,\n  thresholds:DamageThresholdContribution[]|undefined,\n  provenance:ProvenanceRecord[],\n) {\n  let adjusted=amount;\n  for (const reduction of reductions ?? []) {\n    requireNonNegativeInteger(reduction.amount, `damage reduction from ${reduction.source}`);\n    const before=adjusted;\n    adjusted=Math.max(0,adjusted-reduction.amount);\n    provenance.push({\n      source:reduction.source,\n      status:before!==adjusted ? "applied" : "suppressed",\n      reason:before!==adjusted\n        ? `Damage reduction ${before} -> ${adjusted}`\n        : `Damage reduction ${reduction.amount} had no remaining damage to reduce`,\n    });\n  }\n  for (const threshold of thresholds ?? []) {\n    requireNonNegativeInteger(threshold.threshold, `damage threshold from ${threshold.source}`);\n    const before=adjusted;\n    if (adjusted>0 && adjusted<threshold.threshold) {\n      adjusted=0;\n      provenance.push({source:threshold.source,status:"applied",reason:`Damage ${before} is below threshold ${threshold.threshold}; damage becomes 0`});\n    } else {\n      provenance.push({\n        source:threshold.source,\n        status:"suppressed",\n        reason:adjusted===0\n          ? `Damage threshold ${threshold.threshold} had no remaining damage to test`\n          : `Damage ${adjusted} meets threshold ${threshold.threshold}`,\n      });\n    }\n  }\n  return adjusted;\n}\n'''
           if 'function applyFinalDamageMitigation(' not in text:
               if text.count(anchor)!=1: raise SystemExit('damage mitigation helper anchor mismatch')
               text=text.replace(anchor,anchor+addition,1)
-
           anchor='''  if (immunity.length > 0) {\n    const before = adjusted;\n    adjusted = 0;\n    immunity.forEach((entry, index) => provenance.push({\n      source: entry.source,\n      status: index === 0 ? "applied" : "suppressed",\n      reason: index === 0\n        ? `Immunity ${before} -> 0`\n        : "duplicate Immunity has no additional effect",\n    }));\n  }\n\n  requireNonNegativeInteger(adjusted, "final damage");\n'''
           replacement=anchor.replace('\n\n  requireNonNegativeInteger(adjusted, "final damage");','\n\n  adjusted=applyFinalDamageMitigation(adjusted,request.reductions,request.thresholds,provenance);\n  requireNonNegativeInteger(adjusted, "final damage");')
           if 'adjusted=applyFinalDamageMitigation(adjusted,request.reductions,request.thresholds,provenance);' not in text:
               if text.count(anchor)!=1: raise SystemExit('single damage mitigation anchor mismatch')
               text=text.replace(anchor,replacement,1)
-
           old='''  const finalDamage = components.reduce((sum, component) => sum + component.finalDamage, 0);\n  const provenance = components.flatMap((component) => component.provenance.map((entry) => ({\n    ...entry,\n    reason:`${component.damageType}: ${entry.reason}`,\n  })));\n  const hp = applyDamageToHp(request.hp, finalDamage, provenance);\n'''
           new='''  let finalDamage = components.reduce((sum, component) => sum + component.finalDamage, 0);\n  const provenance = components.flatMap((component) => component.provenance.map((entry) => ({\n    ...entry,\n    reason:`${component.damageType}: ${entry.reason}`,\n  })));\n  finalDamage=applyFinalDamageMitigation(finalDamage,request.reductions,request.thresholds,provenance);\n  const hp = applyDamageToHp(request.hp, finalDamage, provenance);\n'''
           if new not in text:
@@ -80,85 +75,79 @@ jobs:
           if new not in text:
               if text.count(old)!=1: raise SystemExit('health effects import anchor mismatch')
               text=text.replace(old,new,1)
-
           anchor='''function effectDamageDefenses(ctx:ResolutionExecutionContext,targetId:string):DamageDefenseContribution[] {\n  const defenses:DamageDefenseContribution[] = [];\n  for (const effect of ctx.state.effects.filter((entry) => entry.targetId === targetId)) {\n    for (const tag of effect.tags) {\n      const match = /^(damage-resistance|damage-vulnerability|damage-immunity):(.+)$/.exec(tag);\n      if (!match) continue;\n      const kind = match[1] === "damage-resistance"\n        ? "resistance"\n        : match[1] === "damage-vulnerability"\n          ? "vulnerability"\n          : "immunity";\n      defenses.push({ source:effect.sourceId, kind, damageType:match[2] });\n    }\n  }\n  return defenses;\n}\n'''
-          addition='''\nfunction structuralDamageMitigation(ctx:ResolutionExecutionContext,targetId:string) {\n  const target=requireCombatant(ctx.state,targetId);\n  const inputs={...(target.baseProperties ?? {})};\n  const resolve=(property:string)=>resolveEffectModifiedProperty(\n    ctx.state.effects,\n    targetId,\n    property,\n    {...inputs,[property]:inputs[property] ?? 0},\n  );\n  const reduction=resolve("damage.reduction");\n  const threshold=resolve("damage.threshold");\n  for (const entry of [reduction,threshold]) {\n    if(!Number.isInteger(entry.value)||entry.value<0) throw new DomainEvaluationError(`${entry.property} must resolve to a non-negative integer`);\n  }\n  const reductions:DamageReductionContribution[]=reduction.value>0\n    ? [{source:"property:damage.reduction",amount:reduction.value}]\n    : [];\n  const thresholds:DamageThresholdContribution[]=threshold.value>0\n    ? [{source:"property:damage.threshold",threshold:threshold.value}]\n    : [];\n  return {reductions,thresholds,provenance:[...reduction.provenance,...threshold.provenance]};\n}\n'''
+          addition='''\nfunction structuralDamageMitigation(ctx:ResolutionExecutionContext,targetId:string) {\n  const target=requireCombatant(ctx.state,targetId);\n  const inputs={...(target.baseProperties ?? {})};\n  const resolve=(property:string)=>resolveEffectModifiedProperty(ctx.state.effects,targetId,property,{...inputs,[property]:inputs[property] ?? 0});\n  const reduction=resolve("damage.reduction");\n  const threshold=resolve("damage.threshold");\n  for (const entry of [reduction,threshold]) {\n    if(!Number.isInteger(entry.value)||entry.value<0) throw new DomainEvaluationError(`${entry.property} must resolve to a non-negative integer`);\n  }\n  const reductions:DamageReductionContribution[]=reduction.value>0 ? [{source:"property:damage.reduction",amount:reduction.value}] : [];\n  const thresholds:DamageThresholdContribution[]=threshold.value>0 ? [{source:"property:damage.threshold",threshold:threshold.value}] : [];\n  return {reductions,thresholds,provenance:[...reduction.provenance,...threshold.provenance]};\n}\n'''
           if 'function structuralDamageMitigation(' not in text:
               if text.count(anchor)!=1: raise SystemExit('health mitigation helper anchor mismatch')
               text=text.replace(anchor,anchor+addition,1)
-
           old='''  const damage = resolveDamage({ damageType:operation.damageType, amount, hp:beforeHp, defenses });\n  return finalizeDamage(\n'''
           new='''  const mitigation=structuralDamageMitigation(ctx,operation.targetId);\n  const damage = resolveDamage({ damageType:operation.damageType, amount, hp:beforeHp, defenses, reductions:mitigation.reductions, thresholds:mitigation.thresholds });\n  damage.provenance.unshift(...mitigation.provenance);\n  return finalizeDamage(\n'''
           if new not in text:
               if text.count(old)!=1: raise SystemExit('executeDamage anchor mismatch')
               text=text.replace(old,new,1)
-
           old='''  const damage = resolveCompoundDamage({\n    hp:beforeHp,\n    components:operation.components.map((component) => ({\n      damageType:component.damageType,\n      amount:valueFromResult(ctx.results, component.amount),\n      defenses:[...commonDefenses, ...(component.defenses ?? [])],\n    })),\n  });\n'''
           new='''  const mitigation=structuralDamageMitigation(ctx,operation.targetId);\n  const damage = resolveCompoundDamage({\n    hp:beforeHp,\n    components:operation.components.map((component) => ({\n      damageType:component.damageType,\n      amount:valueFromResult(ctx.results, component.amount),\n      defenses:[...commonDefenses, ...(component.defenses ?? [])],\n    })),\n    reductions:mitigation.reductions,\n    thresholds:mitigation.thresholds,\n  });\n  damage.provenance.unshift(...mitigation.provenance);\n'''
           if new not in text:
               if text.count(old)!=1: raise SystemExit('compound health anchor mismatch')
               text=text.replace(old,new,1)
           health.write_text(text,encoding='utf-8')
-
-          test_path=Path('tests/ui/c9FamilyLDamageDefenseProduction.test.ts')
-          tests=test_path.read_text(encoding='utf-8')
-          marker='unknown installed damage.apply consumes portable structural damage reduction and threshold'
-          if marker not in tests:
-              tests += r'''
-
-function mitigationPackage(prefix:string,property:"damage.reduction"|"damage.threshold",value:number) {
-  const moduleId=`${prefix}.module`,contentId=`${prefix}.option`,mechanicId=`${prefix}.damage`;
-  return {moduleId,contentId,mechanicId,json:JSON.stringify({
-    schemaVersion:"0.1-draft",moduleId,moduleVersion:"1",
-    rulesProfile:{id:"dnd.srd-5.2.1",version:"0.1-draft"},defaultLocale:"en",
-    source:{document:"Portable Damage Mitigation Probe",version:"1",license:"CC0",srdDerived:false},
-    dependencies:[],conflicts:[],capabilities:[],content:[{
-      id:contentId,category:"option",
-      presentation:{defaultLocale:"en",originalName:"Portable Mitigation",locales:{en:{name:"Portable Mitigation"}}},
-      mechanics:[{kind:"common-play",config:{schemaVersion:"0.2-draft",id:mechanicId,entryPoints:[
-        {id:"mitigate",invocation:"manual",targeting:{from:"targets",min:1,max:1},operations:[{
-          kind:"property.modify",property,operation:"add",value:{value},target:"target",owner:"effect",source:"definition",
-          duration:{kind:"elapsed",amount:{value:1},unit:"hours"},lifetime:{kind:"until-duration",onEnd:"destroy"},instancePolicy:"stack",
-        }]},
-        {id:"hit",invocation:"manual",targeting:{from:"targets",min:1,max:1},operations:[{kind:"damage.apply",amount:{value:4},damageType:"fire",target:"target"}]},
-      ]}}],
-    }],
-  })};
-}
-
-async function executePortableMitigation(prefix:string,property:"damage.reduction"|"damage.threshold",value:number) {
-  const adapter=new MockAdapter();
-  const pack=mitigationPackage(prefix,property,value);
-  setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
-  const preview=await adapter.previewContentImport(pack.json);
-  assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
-  await adapter.activateContentImport();
-  await adapter.startInitiative();
-  await adapter.setCurrentActor("char.aelar");
-  const action=(entryPointId:string)=>installedCommonPlayActionId({
-    catalogId:catalogQualifiedId(pack.contentId,pack.moduleId,"1"),mechanicId:pack.mechanicId,entryPointId,
-  });
-  let snapshot=await adapter.resolveAction(action("mitigate"),[TARGET_ID]);
-  assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
-  const before=hp(snapshot,TARGET_ID);
-  snapshot=await adapter.resolveAction(action("hit"),[TARGET_ID]);
-  assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
-  const dealt=before-hp(snapshot,TARGET_ID);
-  await adapter.undoLastResolution();
-  assert.equal(hp(await adapter.getSnapshot(),TARGET_ID),before,"event-native Undo must restore mitigated damage");
-  return dealt;
-}
-
-test("unknown installed damage.apply consumes portable structural damage reduction and threshold with rename invariance and Undo",async()=>{
-  assert.equal(await executePortableMitigation("external.family-l-reduction","damage.reduction",3),1);
-  assert.equal(await executePortableMitigation("completely.renamed-family-l-reduction","damage.reduction",3),1);
-  assert.equal(await executePortableMitigation("external.family-l-threshold","damage.threshold",5),0);
-  assert.equal(await executePortableMitigation("completely.renamed-family-l-threshold","damage.threshold",5),0);
-  assert.equal(await executePortableMitigation("external.family-l-threshold-equal","damage.threshold",4),4,"meeting the threshold must preserve full damage");
-});
-'''
-              test_path.write_text(tests,encoding='utf-8')
           PY
+      - name: Add production mitigation regression
+        shell: bash
+        run: |
+          if ! grep -q "unknown installed damage.apply consumes portable structural damage reduction and threshold" tests/ui/c9FamilyLDamageDefenseProduction.test.ts; then
+            cat >> tests/ui/c9FamilyLDamageDefenseProduction.test.ts <<'TS'
+
+          function mitigationPackage(prefix:string,property:"damage.reduction"|"damage.threshold",value:number) {
+            const moduleId=`${prefix}.module`,contentId=`${prefix}.option`,mechanicId=`${prefix}.damage`;
+            return {moduleId,contentId,mechanicId,json:JSON.stringify({
+              schemaVersion:"0.1-draft",moduleId,moduleVersion:"1",
+              rulesProfile:{id:"dnd.srd-5.2.1",version:"0.1-draft"},defaultLocale:"en",
+              source:{document:"Portable Damage Mitigation Probe",version:"1",license:"CC0",srdDerived:false},
+              dependencies:[],conflicts:[],capabilities:[],content:[{
+                id:contentId,category:"option",
+                presentation:{defaultLocale:"en",originalName:"Portable Mitigation",locales:{en:{name:"Portable Mitigation"}}},
+                mechanics:[{kind:"common-play",config:{schemaVersion:"0.2-draft",id:mechanicId,entryPoints:[
+                  {id:"mitigate",invocation:"manual",targeting:{from:"targets",min:1,max:1},operations:[{
+                    kind:"property.modify",property,operation:"add",value:{value},target:"target",owner:"effect",source:"definition",
+                    duration:{kind:"elapsed",amount:{value:1},unit:"hours"},lifetime:{kind:"until-duration",onEnd:"destroy"},instancePolicy:"stack",
+                  }]},
+                  {id:"hit",invocation:"manual",targeting:{from:"targets",min:1,max:1},operations:[{kind:"damage.apply",amount:{value:4},damageType:"fire",target:"target"}]},
+                ]}}],
+              }],
+            })};
+          }
+
+          async function executePortableMitigation(prefix:string,property:"damage.reduction"|"damage.threshold",value:number) {
+            const adapter=new MockAdapter();
+            const pack=mitigationPackage(prefix,property,value);
+            setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
+            const preview=await adapter.previewContentImport(pack.json);
+            assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
+            await adapter.activateContentImport();
+            await adapter.startInitiative();
+            await adapter.setCurrentActor("char.aelar");
+            const action=(entryPointId:string)=>installedCommonPlayActionId({catalogId:catalogQualifiedId(pack.contentId,pack.moduleId,"1"),mechanicId:pack.mechanicId,entryPointId});
+            let snapshot=await adapter.resolveAction(action("mitigate"),[TARGET_ID]);
+            assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
+            const before=hp(snapshot,TARGET_ID);
+            snapshot=await adapter.resolveAction(action("hit"),[TARGET_ID]);
+            assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
+            const dealt=before-hp(snapshot,TARGET_ID);
+            await adapter.undoLastResolution();
+            assert.equal(hp(await adapter.getSnapshot(),TARGET_ID),before,"event-native Undo must restore mitigated damage");
+            return dealt;
+          }
+
+          test("unknown installed damage.apply consumes portable structural damage reduction and threshold with rename invariance and Undo",async()=>{
+            assert.equal(await executePortableMitigation("external.family-l-reduction","damage.reduction",3),1);
+            assert.equal(await executePortableMitigation("completely.renamed-family-l-reduction","damage.reduction",3),1);
+            assert.equal(await executePortableMitigation("external.family-l-threshold","damage.threshold",5),0);
+            assert.equal(await executePortableMitigation("completely.renamed-family-l-threshold","damage.threshold",5),0);
+            assert.equal(await executePortableMitigation("external.family-l-threshold-equal","damage.threshold",4),4,"meeting the threshold must preserve full damage");
+          });
+          TS
+          fi
       - name: Verify Family L damage mitigation
         run: |
           node --import tsx --test tests/domain/damage.test.ts tests/ui/c9FamilyLDamageDefenseProduction.test.ts
