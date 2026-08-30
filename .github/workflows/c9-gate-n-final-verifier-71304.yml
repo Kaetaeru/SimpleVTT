@@ -1,5 +1,5 @@
 name: C9 Gate N Final Verifier 71304
-# rerun after actor artifact reconnect/Undo stabilization and latest authoritative execution repairs
+# final rerun after portable Extra Attack production publish
 
 on:
   push:
