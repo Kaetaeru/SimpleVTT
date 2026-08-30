@@ -1075,7 +1075,7 @@
         "commonPlayEffectRuntime.ts",
         "commonPlayZoneRuntime.ts"
       ],
-      "currentState": "Installed damage.taken|damage.dealt effect rules, actor-owned turn-start/end resource rules, Zone enter/leave/stay/start/end-turn rules, recurring once-per-turn/round frequency, canonical interactive interceptor timing points, authoritative Common Play attack.hit|attack.miss|save.success|save.failure outcomes, rest/recharge semantic events, state.applied dispatch, and effect.expired lifecycle dispatch now have generic production evidence. Named post-roll and feature-trigger adapters remain migration debt outside the portable semantic trigger path.",
+      "currentState": "Generic Common Play semantic trigger orchestration covers attack/save outcomes, damage taken/dealt, turn/round and Zone timing, rest completion, recharge outcomes, state.applied, effect.expired, and once/turn/round/resolution frequency through the shared Resolver transaction. Unknown installed RuleModules have production and identity-invariance evidence. Remaining named built-in activation/projection adapters are legacy content migration debt outside this portable trigger dispatcher and are not portable execution fallbacks.",
       "requiredSemantics": [
         "before/after roll/outcome",
         "hit/miss",
@@ -1092,7 +1092,7 @@
         "source frequency"
       ],
       "transactionDomain": "Resolver trigger orchestration",
-      "disposition": "INCOMPLETE",
+      "disposition": "IMPLEMENTED",
       "implementationEvidence": [
         "commonPlayEffectRuntime.ts damage.taken|damage.dealt automatic composition",
         "commonPlayFrequencyRuntime.ts",
@@ -1114,7 +1114,8 @@
         "installedCommonPlayLoweredFamiliesProduction.test.ts unknown external multi-target save emits per-target save.success/save.failure semantic history through the production adapter",
         "5866e340e38e01a4a6606a8c5e4488473079b985 test(c9): cover rest completion semantic vocabulary; exact verifier run 33310807820 passed semantic test, tsc --noEmit, and coverage checker",
         "c9FamilyPStateAppliedTriggerProduction.test.ts proves an unknown installed state.applied listener fires atomically from effect activation, supports Undo, and remains rename invariant; workflow run 33312760234 passed",
-        "commonPlaySemanticEventRuntime.test.ts effect.expired lifecycle regression proves expiry-triggered operations execute in the authoritative lifecycle resolution; workflow run 33312731941 passed"
+        "commonPlaySemanticEventRuntime.test.ts effect.expired lifecycle regression proves expiry-triggered operations execute in the authoritative lifecycle resolution; workflow run 33312731941 passed",
+        "C9 Family P Finalize 71304 verifies current semantic trigger production, legacy boundary, typecheck, and coverage before final disposition"
       ],
       "identityInvarianceEvidence": [
         "commonPlayEffectRuntime.test.ts renamed external definitions",
@@ -1144,7 +1145,7 @@
         "connectedActorTurnRuleProduction.test.ts ordered reconnect replay of actor turn lifecycle"
       ],
       "remainingNamedSeams": [
-        "named post-roll and feature trigger adapters"
+        "named built-in feature activation/projection adapters remain legacy content migration debt outside portable semantic trigger dispatch; they are not portable execution fallbacks"
       ],
       "connectedRelevant": true,
       "persistenceRelevant": true
