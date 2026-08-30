@@ -1,0 +1,66 @@
+name: C9 Connected Runtime History Fallback 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-connected-runtime-history-fallback-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - name: Integrate connected event-history fallback and verify Gate N
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch=agent/c9-gate-n-coverage-reconciliation
+          workflow=.github/workflows/c9-connected-runtime-history-fallback-71304.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in $(seq 1 8); do
+            git fetch origin "$branch"
+            git reset --hard "origin/$branch"
+            python3 - <<'PY'
+          from pathlib import Path
+          path=Path('src/app/connectedActionRoutingAdapter.ts')
+          text=path.read_text()
+          import_old='import { clearCommittedResolutionEvents, takeCommittedResolutionEvents } from "./resolutionEventCommitRegistry";\n'
+          import_new=import_old+'import { runtimeResolutionEventHistory } from "./runtimeResolutionEventHistory";\n'
+          if import_new not in text:
+              if import_old not in text: raise SystemExit('commit registry import shape changed')
+              text=text.replace(import_old,import_new,1)
+          old='''  const pending=state.pendingRemoteAction;\n  const isRemotePending=pending?.resolutionId===resolution.id;\n  const events=takeCommittedResolutionEvents(resolution.id);\n  const presentation=buildConnectedResolutionPresentation(current,state.nextPresentationSequence,"catchup",state.presentationTimelineByResolution.get(resolution.id));\n  if (!presentation) return current;\n'''
+          new='''  const pending=state.pendingRemoteAction;\n  const isRemotePending=pending?.resolutionId===resolution.id;\n  const presentation=buildConnectedResolutionPresentation(current,state.nextPresentationSequence,"catchup",state.presentationTimelineByResolution.get(resolution.id));\n  if (!presentation) return current;\n  const committedEvents=takeCommittedResolutionEvents(resolution.id);\n  const history=runtimeResolutionEventHistory(adapter);\n  const events=committedEvents?.length\n    ? committedEvents\n    : history?.resolutionId===resolution.id ? history.events : undefined;\n'''
+          if new not in text:
+              if old not in text: raise SystemExit('publishCommittedResolution shape changed')
+              text=text.replace(old,new,1)
+          path.write_text(text)
+          PY
+            rm -f "$workflow"
+            npm run generate:content
+            node --import tsx --test tests/ui/connectedActorArtifactReconnectProduction.test.ts tests/ui/connectedActorTurnRuleProduction.test.ts tests/ui/installedCommonPlayLoweredFamiliesProduction.test.ts tests/ui/installedCommonPlayPropertyModifierReconnect.test.ts tests/ui/phase09CommonPlayResourcePersistence.test.ts
+            node scripts/check-v1-mechanism-coverage.mjs --gate-n
+            node scripts/check-legacy-execution-boundary.mjs
+            npx tsc --noEmit
+            npm run build
+            git add src/app/connectedActionRoutingAdapter.ts "$workflow"
+            if git diff --cached --quiet; then exit 0; fi
+            git commit -m "fix(c9): publish connected runtime resolution history"
+            if git push origin HEAD:"$branch"; then exit 0; fi
+            sleep 1
+          done
+          exit 1
