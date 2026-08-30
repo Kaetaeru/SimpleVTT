@@ -47,6 +47,34 @@ test("Monk level 2+ projects Flurry, Patient Defense, and Step of the Wind from 
   assert.equal(action(snapshot,STEP)?.resourceCost,undefined);
 });
 
+test("base Step of the Wind uses generic movement budget execution and event-native Undo",async()=>{
+  const adapter=await monk();
+  const internal=adapter as unknown as {activeCharacter:CharacterSheet};
+  await adapter.startInitiative();
+  await adapter.setCurrentActor(internal.activeCharacter.id);
+  await adapter.selectDmActor(internal.activeCharacter.id);
+  let snapshot=await adapter.getSnapshot();
+  const actorId=snapshot.activeCharacter.id;
+  const before=structuredClone(snapshot.scene.economyByActor[actorId]);
+  const focusBefore=snapshot.activeCharacter.resources.find((entry)=>entry.id===MONK_FOCUS_RESOURCE_ID)?.current;
+  assert.equal(action(snapshot,STEP)?.movementBudgetGainFeet,snapshot.activeCharacter.speed);
+
+  await adapter.resolveAction(STEP,[actorId]);
+  snapshot=await finish(adapter);
+  assert.equal(snapshot.scene.economyByActor[actorId]?.movementMax,(before?.movementMax??0)+snapshot.activeCharacter.speed);
+  assert.equal(snapshot.scene.economyByActor[actorId]?.movement,(before?.movement??0)+snapshot.activeCharacter.speed);
+  assert.equal(snapshot.scene.economyByActor[actorId]?.bonusAction,false);
+  assert.equal(snapshot.activeCharacter.resources.find((entry)=>entry.id===MONK_FOCUS_RESOURCE_ID)?.current,focusBefore);
+
+  await adapter.undoLastResolution();
+  snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.scene.economyByActor[actorId]?.movementMax,before?.movementMax);
+  assert.equal(snapshot.scene.economyByActor[actorId]?.movement,before?.movement);
+  assert.equal(snapshot.scene.economyByActor[actorId]?.bonusAction,before?.bonusAction);
+  assert.equal(snapshot.activeCharacter.resources.find((entry)=>entry.id===MONK_FOCUS_RESOURCE_ID)?.current,focusBefore);
+  assert.equal(snapshot.activity.at(-1)?.title,"Resolution 되돌림");
+});
+
 test("Flurry spends one Focus plus Bonus Action and grants two Unarmed Strike attacks without spending the standard Action",async()=>{
   const adapter=await monk();
   const internal=adapter as unknown as {activeCharacter:CharacterSheet};
