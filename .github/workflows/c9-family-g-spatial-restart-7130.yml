@@ -24,6 +24,8 @@ jobs:
           node-version: 22
       - name: Install dependencies
         run: npm install --no-audit --no-fund
+      - name: Generate content dependencies
+        run: npm run generate:content
       - name: Verify Family G restart and authority routing
         run: >-
           npx tsx --test
