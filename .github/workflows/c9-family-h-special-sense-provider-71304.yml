@@ -59,7 +59,7 @@ jobs:
 
           ledger=Path("docs/rules/v1-mechanism-coverage-ledger.json")
           data=json.loads(ledger.read_text(encoding="utf-8"))
-          family=next(entry for entry in data["families"] if entry["family"]=="H")
+          family=next(entry for entry in data["rows"] if entry["family"]=="H")
           sentence="commonPlaySenseAuthority.ts provides an identity-independent authoritative observer sense-profile seam; commonPlayInterceptorProductionRuntimeAdapter.ts composes provider-authored special senses and range through resolveCommonPlaySenses for production sense.can-see."
           if sentence not in family["implementationEvidence"]: family["implementationEvidence"].append(sentence)
           production="installedCommonPlayInterceptorProductionRuntime.test.ts proves unknown installed Common Play consumes provider-authored darkvision with range checks under darkness and preserves behavior after full external identity rename"
