@@ -24,6 +24,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Generate content dependencies
+        run: npm run generate:content
       - name: Patch host and DM portable consent responders
         shell: bash
         run: |
