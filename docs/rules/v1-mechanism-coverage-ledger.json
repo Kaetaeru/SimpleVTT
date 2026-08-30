@@ -768,7 +768,7 @@
         "realAttackTransactionService.ts",
         "unarmedControlRuntimeAdapter.ts"
       ],
-      "currentState": "Unknown installed Common Play attack-roll plus target damage has production evidence through a projected arbitrary-ID Actor action with Action payment, damage commit, Host/Client convergence, and Undo. Projected Unarmed grapple/shove dispatches from a typed runtimeSaveCondition action payload rather than named action IDs, with arbitrary action-ID rename evidence. Unknown installed Common Play can now also target-roll a structural saving throw from save.<ability>.modifier and conditionally apply a control condition through the shared Resolver, with failure/success branching, Undo, and complete external identity rename evidence. Best-of STR/DEX portable control choice and escape are production-proven through unknown installed Common Play with failure/success branching and event-native Undo. Family J remains incomplete for full weapon/Unarmed Strike source composition, Opportunity Attack, reach/long range, Opportunity Attack qualification, Extra Attack/replacement, and ammunition/loading composition. Portable source-owned ammunition now composes through the generic resource PaymentContract with attack execution, including empty-ammunition atomic rejection, event-native Undo, and complete external identity rename.",
+      "currentState": "Unknown installed Common Play attack-roll plus target damage has production evidence through a projected arbitrary-ID Actor action with Action payment, damage commit, Host/Client convergence, and Undo. Projected Unarmed grapple/shove dispatches from a typed runtimeSaveCondition action payload rather than named action IDs, with arbitrary action-ID rename evidence. Unknown installed Common Play can now also target-roll a structural saving throw from save.<ability>.modifier and conditionally apply a control condition through the shared Resolver, with failure/success branching, Undo, and complete external identity rename evidence. Best-of STR/DEX portable control choice and escape are production-proven through unknown installed Common Play with failure/success branching and event-native Undo. Production weapon projection now resolves canonical weapon range and attack ability from the source-owned equipment item structurally linked by grantedActionIds, and no longer infers weapon behavior from attack/item presentation names. Family J remains incomplete for complete Unarmed Strike source composition, Opportunity Attack qualification, reach/long range, Extra Attack/replacement, and Loading composition. Portable source-owned ammunition now composes through the generic resource PaymentContract with attack execution, including empty-ammunition atomic rejection, event-native Undo, and complete external identity rename.",
       "requiredSemantics": [
         "weapon attack",
         "Unarmed Strike",
@@ -791,7 +791,8 @@
         "productionPlayRuntimeAdapter.ts projects typed runtimeSaveCondition payloads for Unarmed grapple/shove; unarmedControlRuntimeAdapter.ts consumes the payload without action-ID dispatch",
         "commonPlayOperationRuntime.ts parses target-rolled portable d20 tests with structural property modifiers and lowers test.outcome-conditional condition operations to the shared Resolver; installedCommonPlayRuntimeAdapter.ts supplies save.<ability>.modifier through resolveRuntimeSaveModifier without content identity dispatch",
         "commonPlayOperationRuntime.ts applies authoritative target cover structurally to portable attack-roll tests: half cover +2 target, three-quarters cover +5 target, and total cover rejects the attack without content identity dispatch",
-        "commonPlayOperationRuntime.ts generic resource PaymentContract composes source-owned ammunition consumption atomically with the existing Common Play attack transaction"
+        "commonPlayOperationRuntime.ts generic resource PaymentContract composes source-owned ammunition consumption atomically with the existing Common Play attack transaction",
+        "productionPlayRuntimeAdapter.ts resolves weapon range and ability from the Character equipment item structurally linked to the attack through grantedActionIds instead of attack/item presentation names"
       ],
       "productionEvidence": [
         "installedCommonPlayLoweredFamiliesProduction.test.ts#summoned Actor projects and executes its portable Common Play action with economy and Undo",
@@ -800,14 +801,16 @@
         "C9 Family J Publish Retry 71304 run 33313408895: 7/7 targeted Family J/M/unarmed regressions, legacy execution boundary, and tsc --noEmit passed; verified slice published as 8c3de34cc818b833bb0f8ff9a46675471a04ddfc",
         "440a9345ecbf6459ca572e39207f3756c5ed6217 test(c9): prove portable grapple escape; C9 Family J Escape 71304 run 33315525052 passed unknown/renamed best-of STR/DEX grapple escape, legacy execution boundary, and tsc --noEmit",
         "5a082faa207fa0d8a4e15b9fa6fb17308c8872bc feat(c9): apply structural cover to portable attacks; C9 Family J Cover 71304 run 33316032590 passed targeted Family J regressions, legacy execution boundary, and tsc --noEmit",
-        "c9FamilyJAmmunitionProduction.test.ts proves an unknown installed ranged attack consumes a source-owned ammunition pool, rejects at zero without downstream commit, restores through event-native Undo, and repeats under fully renamed external identities"
+        "c9FamilyJAmmunitionProduction.test.ts proves an unknown installed ranged attack consumes a source-owned ammunition pool, rejects at zero without downstream commit, restores through event-native Undo, and repeats under fully renamed external identities",
+        "ff4eea4c3e20b2c25690d54cbfb10a6e94f1fe8f refactor(c9): use structural weapon action sources; C9 Family J Structural Weapon Source run 33316313480 passed 2/2 structural source regressions, legacy execution boundary, and tsc --noEmit"
       ],
       "identityInvarianceEvidence": [
         "installedCommonPlayLoweredFamiliesProduction.test.ts executes the summoned attack from arbitrary previously-unknown module/content/mechanic/action identities rather than a registered attack content ID",
         "unarmedStrikeRuntime.test.ts runtimeSaveCondition rename probe preserves save/condition semantics under an unrelated action ID",
         "c9FamilyJPortableControlProduction.test.ts preserves target-save and conditional-control semantics after complete external module/content/mechanic identity rename",
         "c9FamilyJPortableControlProduction.test.ts preserves grapple escape semantics under unrelated external module/content/mechanic identities",
-        "c9FamilyJAmmunitionProduction.test.ts repeats source-owned ammunition payment and empty-ammunition rejection after complete module/content/mechanic/resource identity rename"
+        "c9FamilyJAmmunitionProduction.test.ts repeats source-owned ammunition payment and empty-ammunition rejection after complete module/content/mechanic/resource identity rename",
+        "c9FamilyJStructuralWeaponSource.test.ts renames both attack and source-item presentation while preserving canonical Shortbow range/DEX semantics through grantedActionIds, and proves presentation text alone cannot infer weapon range"
       ],
       "connectedEvidenceIfRelevant": [
         "installedCommonPlayLoweredFamiliesProduction.test.ts#summoned Actor action and Undo converge through Host-authoritative connected events"
@@ -816,7 +819,7 @@
         "c9FamilyJAttackPersistence.test.ts unknown installed attack damage persists to the Character library through restart and Undo restores the durable HP state"
       ],
       "remainingNamedSeams": [
-        "full generic weapon and Unarmed Strike action projection is not yet proven across source-owned equipment/stat definitions",
+        "generic weapon action projection is structurally source-owned and presentation-rename invariant; complete Unarmed Strike source composition remains incomplete",
         "portable target saving throws, best-of STR/DEX control choice, conditional control effects, and escape now normalize through Common Play; complete grapple/shove source composition remains incomplete",
         "Opportunity Attack portable acceptance remains incomplete beyond existing projection-driven integration",
         "reach, long range, multiattack/Extra Attack/replacement, and Loading constraints remain incomplete; structural cover is now generic and verified",
