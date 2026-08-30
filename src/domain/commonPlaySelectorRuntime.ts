@@ -191,7 +191,12 @@ export function resolveCommonPlaySelector(input:CommonPlaySelectorInput):CommonP
       .filter((candidate)=>!input.selector.where||evaluateSemanticPredicate(input.selector.where,(ref)=>ref==="id"?candidate.id:candidate.properties[ref]));
     if(input.selector.orderBy) {
       const property=input.selector.orderBy;
-      candidates=[...candidates].sort((left,right)=>String(left.properties[property]??"").localeCompare(String(right.properties[property]??""))||left.id.localeCompare(right.id));
+      candidates=[...candidates].sort((left,right)=>{
+        const leftValue=left.properties[property];
+        const rightValue=right.properties[property];
+        if(typeof leftValue==="number"&&typeof rightValue==="number") return leftValue-rightValue||left.id.localeCompare(right.id);
+        return String(leftValue??"").localeCompare(String(rightValue??""))||left.id.localeCompare(right.id);
+      });
     }
     let selected:CommonPlaySelectorCandidate[];
     if(input.selection==="manual") {

@@ -63,3 +63,14 @@ test("selector rejects duplicate and ineligible manual identities",()=>{
   assert.equal(resolveCommonPlaySelector({sourceId:"hero",selector,candidates,selectedIds:["orc","orc"],selection:"manual",authority:"dm"}).status,"rejected");
   assert.equal(resolveCommonPlaySelector({sourceId:"hero",selector,candidates,selectedIds:["hero"],selection:"manual",authority:"dm"}).status,"rejected");
 });
+
+test("automatic selector orders numeric properties numerically rather than lexically",()=>{
+  const selector={from:"targets" as const,min:2,max:2,orderBy:"initiative"};
+  const orderedCandidates:CommonPlaySelectorCandidate[]=[
+    {id:"ten",targeting:{id:"ten",kind:"creature",relation:"enemy",cover:"none"},properties:{initiative:10}},
+    {id:"two",targeting:{id:"two",kind:"creature",relation:"enemy",cover:"none"},properties:{initiative:2}},
+  ];
+  const resolved=resolveCommonPlaySelector({sourceId:"hero",selector,candidates:orderedCandidates,selection:"automatic",authority:"host"});
+  assert.equal(resolved.status,"resolved");
+  if(resolved.status==="resolved") assert.deepEqual(resolved.targetIds,["two","ten"]);
+});
