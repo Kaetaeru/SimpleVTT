@@ -1,0 +1,117 @@
+name: C9 Family E Bounded Evidence Finalize 7130
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-e-bounded-evidence-finalize-7130.yml
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Generate content catalogs
+        run: npm run generate:content
+      - name: Verify bounded targeting production slice
+        run: >-
+          npx tsx --test
+          tests/domain/commonPlayTargetingRuntime.test.ts
+          tests/ui/installedCommonPlayProductionRuntime.test.ts
+          tests/ui/ruleModulePackageImport.test.ts
+      - name: Verify coverage and execution boundaries
+        run: |
+          node scripts/check-v1-mechanism-coverage.mjs
+          node scripts/check-legacy-execution-boundary.mjs
+          npx tsc --noEmit
+      - name: Reconcile evidence and push against concurrent C9 writers
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          branch=agent/c9-gate-n-coverage-reconciliation
+          for attempt in $(seq 1 12); do
+            git fetch origin "$branch"
+            git reset --hard "origin/$branch"
+            python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          ledger_path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
+          ledger=json.loads(ledger_path.read_text(encoding='utf-8'))
+          row=next((entry for entry in ledger['rows'] if entry.get('family')=='E'),None)
+          if row is None or row.get('id')!='targeting-selectors':
+              raise SystemExit('Family E targeting-selectors row not found')
+          if row.get('disposition')!='INCOMPLETE':
+              raise SystemExit(f"Family E disposition changed unexpectedly: {row.get('disposition')}")
+          row['currentState']='Portable Common Play targeting preserves authored positive min/max bounds for pre-resolved creature target sets through generic Resolver and production execution; predicate/range/area/ordering/object/point selector composition remains incomplete.'
+          evidence={
+            'implementationEvidence':[
+              'commonPlayOperationRuntime.ts parses bounded from:targets min/max and lowers them to generic TargetingRule cardinality without fabricating spatial facts',
+              'targeting.ts generic Resolver enforces target cardinality and remains the shared owner of relation/range/sight/cover semantics when authoritative facts are supplied',
+              'commonPlayTargetingRuntime.test.ts proves authored multi-target cardinality and explicit rejection of singular target effects lacking a per-target effect contract',
+            ],
+            'productionEvidence':[
+              'installedCommonPlayProductionRuntime.test.ts unknown installed Common Play preserves a bounded two-target selection through production resolveAction and presentation targetIds',
+              'C9 Family E Bounded Evidence Reconcile run 33308999650: 36/36 focused tests, coverage checker, legacy execution boundary, and tsc --noEmit passed before a concurrent ref-lock-only push failure',
+            ],
+            'identityInvarianceEvidence':[
+              'installedCommonPlayProductionRuntime.test.ts targeting dispatch remains invariant under external module/content/mechanic/entry-point/display rename',
+            ],
+            'connectedEvidenceIfRelevant':[
+              'installedCommonPlayProductionRuntime.test.ts connected Common Play targeting remains Host-authoritative and converges through shared ResolutionEvents',
+            ],
+            'persistenceEvidenceIfRelevant':[
+              'ruleModulePackageImport.test.ts and installed-content activation preserve portable Common Play targeting definitions through the shared structural parser/lowerer boundary',
+            ],
+          }
+          for field,items in evidence.items():
+              current=row.setdefault(field,[])
+              for item in items:
+                  if item not in current:
+                      current.append(item)
+          row['remainingNamedSeams']=[
+              'rich predicate/range/reach/sight/cover/tag/area/ordering/object/point/manual-vs-automatic selector semantics remain incomplete'
+          ]
+          ledger_path.write_text(json.dumps(ledger,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+
+          checklist_path=Path('docs/rules/resolver-execution-checklist-v2.md')
+          text=checklist_path.read_text(encoding='utf-8')
+          old='- [x] targeting / selectors / allocation — `PRODUCTION`; canonical `entryPoint.targeting` supports the bounded `from:targets`, exact `min/max:1/1` selection-validator subset through validation, persistence/rehydration, existing Resolver targeting, production authority, Undo, connected convergence, and rename invariance. Rich selectors and allocation remain unsupported;'
+          new='- [x] targeting / selectors / allocation — `PRODUCTION`; canonical `entryPoint.targeting` supports bounded `from:targets` target sets through validation, persistence/rehydration, existing Resolver targeting, production authority, connected convergence, and rename-invariant structural dispatch. Multi-target singular effects remain explicitly unsupported until a per-target effect contract exists; rich predicates, spatial/area selectors, ordering, object/point targets, and allocation remain incomplete;'
+          if old in text:
+              text=text.replace(old,new,1)
+          elif new not in text:
+              raise SystemExit('targeting capability maturity line changed unexpectedly')
+          checklist_path.write_text(text,encoding='utf-8')
+          PY
+            rm -f \
+              .github/workflows/c9-family-e-bounded-evidence-finalize-7130.yml \
+              .github/workflows/c9-family-e-bounded-evidence-reconcile.yml \
+              .github/workflows/c9-family-e-bounded-targets-apply.yml \
+              .github/workflows/c9-family-e-bounded-targets-finalize.yml \
+              .github/workflows/c9-family-e-cardinality-reconcile.yml
+            git add -A docs/rules .github/workflows
+            if git diff --cached --quiet; then
+              exit 0
+            fi
+            git commit -m "docs(c9): reconcile bounded target evidence"
+            if git push origin HEAD:"$branch"; then
+              exit 0
+            fi
+          done
+          echo "failed to publish Family E evidence after concurrent retries" >&2
+          exit 1
