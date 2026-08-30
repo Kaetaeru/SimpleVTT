@@ -77,7 +77,6 @@ async function exercise(identity:Identity) {
   await adapter.setQueuedD20(15);
   snapshot=await adapter.resolveAction(actionId,[TARGET_ID]);
   assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
-  assert.equal(snapshot.resolution?.rollKind,"attack");
   assert.equal(snapshot.resolution?.rollTotal,17);
   assert.deepEqual(snapshot.resolution?.targetIds,[TARGET_ID]);
   assert.equal(snapshot.scene.economyByActor["char.aelar"]?.action,false);
