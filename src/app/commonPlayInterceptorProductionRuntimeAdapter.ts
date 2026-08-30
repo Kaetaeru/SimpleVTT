@@ -13,7 +13,7 @@ import { appendAdapterInterruptEvents, projectAdapterTurnRuntime } from "./phase
 import { applyResolutionEvents } from "./realEventApplyService";
 import { runtimeResolutionEventHistories } from "./runtimeResolutionEventHistory";
 import { persistCharacterResolutionEvents } from "./resolutionCharacterWriteBackPort";
-import { SIMPLEVTT_APP_RULES_PROFILE } from "./realResolutionService";
+import { resolveRuntimeProfileProperty, SIMPLEVTT_APP_RULES_PROFILE } from "./realResolutionService";
 import { commitAdapterTurnRuntimeState, snapshotAdapterTurnRuntimeState } from "./turnRuntimeSessionRegistry";
 import { parseCommonPlayDefinition } from "../domain/commonPlayDefinitionRuntime";
 import { lowerCommonPlayReactionDefinition } from "../domain/commonPlayReactionDefinitionRuntime";
@@ -35,7 +35,7 @@ import {
 } from "../domain/commonPlaySpatialFactRuntime";
 import { authoritativeCommonPlaySpatialRelation } from "./realSpatialRuntimeService";
 import { resolveRuntimeCreatureType } from "./realRuntimeStatProvider";
-import { resolveCommonPlaySenses } from "../domain/commonPlaySenseRuntime";
+import { resolveCommonPlaySenses, type CommonPlaySense } from "../domain/commonPlaySenseRuntime";
 import { previewRuntimeAtomicAttackDamage } from "./phase09RealRuntimeAttackAdapter";
 import { queueAtomicAttackDamageReduction } from "./realAttackTransactionService";
 
@@ -338,9 +338,56 @@ function factSubjectId(candidate:PassiveReactionCandidate,pending:PendingResolut
   return undefined;
 }
 
-function composedRelationSenses(relation:NonNullable<ReturnType<typeof authoritativeCommonPlaySpatialRelation>>,resolverTargetInvisible=false) {
+const RULES_PROFILE_SENSE_PROPERTIES=[
+  {property:"sense.darkvision.range-feet",kind:"darkvision"},
+  {property:"sense.blindsight.range-feet",kind:"blindsight"},
+  {property:"sense.tremorsense.range-feet",kind:"tremorsense"},
+  {property:"sense.truesight.range-feet",kind:"truesight"},
+] as const satisfies ReadonlyArray<{property:string;kind:CommonPlaySense["kind"]}>;
+
+function rulesProfileObserverSenses(candidate:PassiveReactionCandidate,runtime:RulesRuntimeState):CommonPlaySense[] {
+  const actor=runtime.combatants[candidate.sourceActorId];
+  if(!actor)return [];
+  const sheet=candidate.sheet;
+  const inputs:Record<string,number>={
+    ...(actor.baseProperties??{}),
+    "movement.walk":actor.baseSpeed,
+    "hp.current":actor.life.hp.current,
+    "hp.maximum":actor.life.hp.maximum,
+    "hp.temporary":actor.life.hp.temporary,
+    "ability.str.score":sheet.abilities.str,
+    "ability.dex.score":sheet.abilities.dex,
+    "ability.con.score":sheet.abilities.con,
+    "ability.int.score":sheet.abilities.int,
+    "ability.wis.score":sheet.abilities.wis,
+    "ability.cha.score":sheet.abilities.cha,
+    "progression.character.level":sheet.level,
+    "proficiency.bonus":sheet.proficiencyBonus,
+    "defense.ac":sheet.ac,
+  };
+  for(const entry of RULES_PROFILE_SENSE_PROPERTIES) if(!Number.isFinite(inputs[entry.property])) inputs[entry.property]=0;
+  return RULES_PROFILE_SENSE_PROPERTIES.flatMap((entry)=>{
+    try {
+      const rangeFeet=resolveRuntimeProfileProperty(runtime.effects,candidate.sourceActorId,entry.property,inputs).value;
+      return Number.isFinite(rangeFeet)&&rangeFeet>0?[{kind:entry.kind,rangeFeet}]:[];
+    } catch { return []; }
+  });
+}
+
+function mergedObserverSenses(provider:CommonPlaySense[],profile:CommonPlaySense[]):CommonPlaySense[] {
+  const merged=new Map<CommonPlaySense["kind"],CommonPlaySense>();
+  for(const sense of [...provider,...profile]) {
+    const current=merged.get(sense.kind);
+    if(!current) { merged.set(sense.kind,{...sense}); continue; }
+    if(current.rangeFeet===undefined||sense.rangeFeet===undefined) merged.set(sense.kind,{kind:sense.kind});
+    else if(sense.rangeFeet>current.rangeFeet) merged.set(sense.kind,{kind:sense.kind,rangeFeet:sense.rangeFeet});
+  }
+  return [...merged.values()];
+}
+
+function composedRelationSenses(relation:NonNullable<ReturnType<typeof authoritativeCommonPlaySpatialRelation>>,candidate:PassiveReactionCandidate,runtime:RulesRuntimeState,resolverTargetInvisible=false) {
   if(relation.light===undefined||relation.obscurement===undefined)return undefined;
-  return resolveCommonPlaySenses(relation.observerSenses??[{kind:"normal-sight"}],{
+  return resolveCommonPlaySenses(mergedObserverSenses(relation.observerSenses??[{kind:"normal-sight"}],rulesProfileObserverSenses(candidate,runtime)),{
     distanceFeet:relation.distanceFeet,
     light:relation.light==="darkness"?"dark":relation.light,
     obscurement:relation.obscurement,
@@ -375,14 +422,14 @@ function interceptorFactProvider(internal:AdapterState,candidate:PassiveReaction
       if(query.fact==="spatial.within-reach"&&relation.withinReach!==undefined)return {status:"answered",value:relation.withinReach};
       if(query.fact==="spatial.total-cover")return {status:"answered",value:relation.cover==="total"};
       if(query.fact==="sense.can-see"){
-        const composed=composedRelationSenses(relation,resolverTargetInvisible);
+        const composed=composedRelationSenses(relation,candidate,runtime,resolverTargetInvisible);
         return {status:"answered",value:composed?.canSee??relation.visible};
       }
       if(query.fact==="sense.light"&&relation.light!==undefined)return {status:"answered",value:relation.light};
       if(query.fact==="sense.obscurement"&&relation.obscurement!==undefined)return {status:"answered",value:relation.obscurement};
       if(query.fact==="sense.detected"){
         if(relation.detected!==undefined)return {status:"answered",value:relation.detected};
-        const composed=composedRelationSenses(relation,resolverTargetInvisible);
+        const composed=composedRelationSenses(relation,candidate,runtime,resolverTargetInvisible);
         if(composed)return {status:"answered",value:composed.detected};
       }
       return {status:"unknown"};
