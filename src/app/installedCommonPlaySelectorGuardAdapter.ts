@@ -60,6 +60,7 @@ function candidate(actor:SceneVm["entities"][number],target:SceneVm["entities"][
 MockAdapter.prototype.resolveAction=async function resolveInstalledCommonPlayRichSelector(actionId:string,targetIds:string[]) {
   const found=await installedSelector(this,actionId);
   if(!found?.selector) return previousResolveAction.call(this,actionId,targetIds);
+  if(found.selector.selection==="automatic") return previousResolveAction.call(this,actionId,targetIds);
   const internal=this as unknown as AdapterState;
   const state=snapshotAdapterTurnRuntimeState(this,internal.scene);
   const actorId=found.actorId??internal.activeCharacter.id;

@@ -633,6 +633,12 @@
           "type": "string",
           "minLength": 1
         },
+        "selection": {
+          "enum": [
+            "manual",
+            "automatic"
+          ]
+        },
         "area": {
           "$ref": "#/$defs/instantArea"
         }

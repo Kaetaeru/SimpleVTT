@@ -18,6 +18,7 @@ export interface CommonPlaySelector {
   min?:number;
   max?:number;
   orderBy?:string;
+  selection?:"manual"|"automatic";
   area?:CommonPlayInstantArea;
 }
 export interface CommonPlaySelectorCandidate {
@@ -42,7 +43,7 @@ export type CommonPlaySelectorResolution=
   | {status:"rejected"|"unsupported";reason:string};
 
 type Obj=Record<string,unknown>;
-const SELECTOR_KEYS=new Set(["from","where","min","max","orderBy","area"]);
+const SELECTOR_KEYS=new Set(["from","where","min","max","orderBy","selection","area"]);
 const AREA_KEYS=new Set(["kind","shape","origin","radiusFeet","lengthFeet","widthFeet","heightFeet","rangeFeet"]);
 const SOURCES=new Set(["targets","content","artifacts","items","actors","effects"]);
 const SHAPES=new Set(["line","cone","cube","sphere","cylinder","emanation"]);
@@ -163,6 +164,8 @@ export function parseCommonPlaySelector(value:unknown,label="Common Play selecto
   if(min!==undefined&&max!==undefined&&max<min) throw new DomainEvaluationError(`${label}.max must be >= min`);
   const where=selector.where===undefined?undefined:semanticPredicate(selector.where,`${label}.where`);
   const orderBy=selector.orderBy===undefined?undefined:stringValue(selector.orderBy,`${label}.orderBy`);
+  const selection=selector.selection===undefined?undefined:selector.selection;
+  if(selection!==undefined&&selection!=="manual"&&selection!=="automatic") throw new DomainEvaluationError(`${label}.selection must be manual or automatic`);
   const area=selector.area===undefined?undefined:instantArea(selector.area,`${label}.area`);
   if(area&&selector.from!=="targets") throw new DomainEvaluationError(`${label}.area requires from=targets`);
   return {
@@ -171,6 +174,7 @@ export function parseCommonPlaySelector(value:unknown,label="Common Play selecto
     ...(min===undefined?{}:{min}),
     ...(max===undefined?{}:{max}),
     ...(orderBy===undefined?{}:{orderBy}),
+    ...(selection===undefined?{}:{selection}),
     ...(area===undefined?{}:{area}),
   };
 }

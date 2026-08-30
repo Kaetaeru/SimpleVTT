@@ -42,6 +42,24 @@ async function install(adapter:MockAdapter,identity:Identity,area=false) {
   return installedCommonPlayActionId({catalogId:catalogQualifiedId(identity.contentId,identity.moduleId,"1"),mechanicId:identity.mechanicId,entryPointId:identity.entryPointId});
 }
 
+
+function automaticPayload(identity:Identity) {
+  const authored=JSON.parse(payload(identity));
+  authored.content[0].mechanics[0].config.entryPoints[0].targeting={
+    from:"targets",selection:"automatic",min:1,max:1,orderBy:"hp",
+    where:{op:"eq",left:{ref:"relation"},right:{value:"enemy"}},
+  };
+  return JSON.stringify(authored);
+}
+
+async function installAutomatic(adapter:MockAdapter,identity:Identity) {
+  setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
+  const preview=await adapter.previewContentImport(automaticPayload(identity));
+  assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
+  await adapter.activateContentImport();
+  return installedCommonPlayActionId({catalogId:catalogQualifiedId(identity.contentId,identity.moduleId,"1"),mechanicId:identity.mechanicId,entryPointId:identity.entryPointId});
+}
+
 async function execute(identity:Identity) {
   const adapter=new MockAdapter();
   const actionId=await install(adapter,identity);
@@ -64,6 +82,21 @@ test("unknown installed target predicate gates the production Common Play path a
   const original=await execute(ORIGINAL);
   const renamed=await execute(RENAMED);
   assert.deepEqual(renamed,original);
+});
+
+test("unknown installed automatic selector uses host authority and authored ordering without manual target identity",async()=>{
+  async function run(identity:Identity) {
+    const adapter=new MockAdapter();
+    const actionId=await installAutomatic(adapter,identity);
+    await adapter.startInitiative();
+    await adapter.setCurrentActor("char.aelar");
+    await adapter.resolveAction(actionId,["char.aelar"]);
+    const snapshot=await adapter.getSnapshot();
+    assert.equal(snapshot.resolution?.stage,"complete");
+    assert.deepEqual(snapshot.resolution?.targetIds,["combatant.wolf"],"lowest-HP eligible enemy is selected by the shared orderBy kernel");
+    return snapshot.resolution?.targetIds;
+  }
+  assert.deepEqual(await run(RENAMED),await run(ORIGINAL));
 });
 
 test("unknown installed area selector imports but refuses execution without provider-backed membership",async()=>{

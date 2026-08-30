@@ -180,7 +180,7 @@ function projectedArtifactAction(
 ):ActionVm {
   const entryPoint=action.lowered.definition.entryPoints.find((candidate)=>candidate.id===action.entryPointId)!;
   const operations=entryPoint.operations as Array<{kind:string;target?:string}>;
-  const portableEntry=entryPoint as {targeting?:{min?:number;max?:number};allocation?:{targets:{min?:number;max?:number}}};
+  const portableEntry=entryPoint as {targeting?:{min?:number;max?:number;selection?:"manual"|"automatic"};allocation?:{targets:{min?:number;max?:number}}};
   const targeting=portableEntry.targeting;
   const allocation=portableEntry.allocation;
   const targetSelector=targeting??allocation?.targets;
@@ -190,10 +190,11 @@ function projectedArtifactAction(
     ?payment.bucket==="action"?"행동":payment.bucket==="bonus-action"?"추가 행동":"반응"
     :"없음";
   const targeted=action.lowered.kind==="save-damage"||targetSelector!==undefined||operations.some((operation)=>(operation.kind==="damage.apply"||operation.kind==="healing.apply")&&operation.target==="target");
+  const automaticTargeting=targeting?.selection==="automatic";
   const multi=action.lowered.kind==="save-damage"||Boolean(targetSelector&&(targetSelector.max??1)>1);
-  const eligibleTargetIds=targeted
-    ?scene.entities.filter((entity)=>state.combatants[entity.id]).map((entity)=>entity.id)
-    :[actorId];
+  const eligibleTargetIds=automaticTargeting
+    ?[actorId]
+    :targeted?scene.entities.filter((entity)=>state.combatants[entity.id]).map((entity)=>entity.id):[actorId];
   const combatant=state.combatants[actorId];
   const slotAvailable=payment?.kind!=="economy"?true:payment.bucket==="action"?combatant.economy.action:payment.bucket==="bonus-action"?combatant.economy.bonusAction:combatant.economy.reaction;
   const resourcesAvailable=(payments??[]).every((candidate)=>candidate.kind!=="resource"||combatant.resources.some((resource)=>resource.id===candidate.resource&&resource.current>=Number(candidate.amount.value)));
@@ -206,12 +207,12 @@ function projectedArtifactAction(
   return {
     id:runtimeArtifactCommonPlayActionId(actorId,actionId),actorId,
     name:action.nameKo||action.nameEn,category:action.category==="spell"?"magic":"basic",
-    target:targeted?"any":"self",economy,resolutionKind,
+    target:targeted&&!automaticTargeting?"any":"self",economy,resolutionKind,
     summary:`${action.lowered.definition.id} · ${action.entryPointId}`,
     available:active&&slotAvailable&&resourcesAvailable,
     disabledReason:active?(slotAvailable?(resourcesAvailable?undefined:"자원 부족"): `${economy} 사용 불가`):"현재 턴 아님",
     eligibleTargetIds,
-    ...(multi?{maxTargets:targetSelector?.max??eligibleTargetIds.length}:{}),
+    ...(multi&&!automaticTargeting?{maxTargets:targetSelector?.max??eligibleTargetIds.length}:{}),
     details:[{label:"출처",value:`${action.source} · ${action.contentId}`}],
   };
 }
@@ -518,14 +519,17 @@ function prepareCommonPlayAction(
   const hasAllocation=portableEntry.allocation!==undefined;
   if(!hasTargeting&&!hasAllocation&&targetIds.length!==1) return undefined;
   if(hasAllocation&&!targetIds.length) return undefined;
-  const selectedTargetId=targetIds[0];
+  let effectiveTargetIds=[...targetIds];
+  let selectedTargetId=effectiveTargetIds[0];
   if(!actorEntity||!state.combatants[actor.id]) return undefined;
-  const selectedTargets=targetIds.map((id)=>internal.scene.entities.find((candidate)=>candidate.id===id));
-  if(selectedTargets.some((target,index)=>!target||!state!.combatants[targetIds[index]])) return undefined;
-  const uniqueSelectedTargets=[...new Map(selectedTargets.map((target)=>[target!.id,target!] as const)).values()];
+  let selectedTargets=effectiveTargetIds.map((id)=>internal.scene.entities.find((candidate)=>candidate.id===id));
+  if(selectedTargets.some((target,index)=>!target||!state!.combatants[effectiveTargetIds[index]])) return undefined;
+  let uniqueSelectedTargets=[...new Map(selectedTargets.map((target)=>[target!.id,target!] as const)).values()];
   const needsSelectedTarget=action.lowered.kind==="operations"&&portableEntry.operations.some((operation)=>(operation.kind==="damage.apply"||operation.kind==="healing.apply")&&operation.target==="target");
   if(hasTargeting) {
     const targeting=portableEntry.targeting!;
+    const selectionMode=targeting.selection??"manual";
+    if(selectionMode==="automatic"&&targetIds.length&&!(targetIds.length===1&&targetIds[0]===actor.id)) return undefined;
     const candidates=internal.scene.entities
       .filter((target)=>Boolean(state!.combatants[target.id]))
       .map((target)=>commonPlaySelectorCandidate(actorEntity,target));
@@ -533,13 +537,18 @@ function prepareCommonPlayAction(
       sourceId:actor.id,
       selector:targeting,
       candidates,
-      selectedIds:targetIds,
-      selection:"manual",
-      authority:"actor-owner",
+      selectedIds:selectionMode==="manual"?targetIds:undefined,
+      selection:selectionMode,
+      authority:selectionMode==="automatic"?"host":"actor-owner",
       directTarget:false,
     });
     if(selection.status!=="resolved") return undefined;
-    if(projectedAction&&(!projectedAction.available||targetIds.some((id)=>!projectedAction.eligibleTargetIds.includes(id)))) return undefined;
+    effectiveTargetIds=selection.targetIds;
+    selectedTargetId=effectiveTargetIds[0]??actor.id;
+    selectedTargets=effectiveTargetIds.map((id)=>internal.scene.entities.find((candidate)=>candidate.id===id));
+    if(selectedTargets.some((target,index)=>!target||!state!.combatants[effectiveTargetIds[index]])) return undefined;
+    uniqueSelectedTargets=[...new Map(selectedTargets.map((target)=>[target!.id,target!] as const)).values()];
+    if(projectedAction&&(!projectedAction.available||selectionMode==="manual"&&targetIds.some((id)=>!projectedAction.eligibleTargetIds.includes(id)))) return undefined;
   } else if(hasAllocation) {
     const selector=portableEntry.allocation!.targets;
     if(uniqueSelectedTargets.length<(selector.min??0)||uniqueSelectedTargets.length>(selector.max??uniqueSelectedTargets.length)) return undefined;
