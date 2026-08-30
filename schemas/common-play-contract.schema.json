@@ -1147,6 +1147,62 @@
         },
         "when": {
           "$ref": "#/$defs/predicate"
+        },
+        "createIfMissing": {
+          "type": "object",
+          "required": [
+            "label",
+            "maximum"
+          ],
+          "properties": {
+            "label": {
+              "type": "string",
+              "minLength": 1
+            },
+            "maximum": {
+              "$ref": "#/$defs/expression"
+            },
+            "recovery": {
+              "type": "object",
+              "properties": {
+                "shortRest": {
+                  "oneOf": [
+                    {
+                      "const": "all"
+                    },
+                    {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  ]
+                },
+                "longRest": {
+                  "oneOf": [
+                    {
+                      "const": "all"
+                    },
+                    {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  ]
+                },
+                "turnStart": {
+                  "oneOf": [
+                    {
+                      "const": "all"
+                    },
+                    {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  ]
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
         }
       },
       "additionalProperties": false
