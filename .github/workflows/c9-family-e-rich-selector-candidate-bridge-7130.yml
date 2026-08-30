@@ -23,25 +23,6 @@ jobs:
           node-version: 22
       - name: Install dependencies
         run: npm install --no-audit --no-fund
-      - name: Align obsolete rejection cases with supported interaction economy contract
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          from pathlib import Path
-          p=Path('tests/ui/ruleModulePackageImport.test.ts')
-          text=p.read_text(encoding='utf-8')
-          replacements={
-            '    (mechanic)=>{mechanic.config.entryPoints[0].interaction.revalidate="if-revision-changed";},\n':'    (mechanic)=>{mechanic.config.entryPoints[0].interaction.revalidate="never";},\n',
-            '    (mechanic)=>{mechanic.config.payments[0].bucket="action";},\n':'    (mechanic)=>{mechanic.config.payments[0].bucket="free-action";},\n',
-          }
-          for old,new in replacements.items():
-            if old in text:
-              text=text.replace(old,new,1)
-            elif new not in text:
-              raise SystemExit(f'missing rejection-test marker: {old.strip()}')
-          p.write_text(text,encoding='utf-8')
-          PY
       - name: Generate content catalogs
         run: npm run generate:content
       - name: Verify rich selector production and import boundary
@@ -55,16 +36,12 @@ jobs:
         run: |
           node scripts/check-legacy-execution-boundary.mjs
           npx tsc --noEmit
-      - name: Commit verified rejection coverage and retire verifier
+      - name: Retire verifier
         shell: bash
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add tests/ui/ruleModulePackageImport.test.ts
-          if ! git diff --cached --quiet; then
-            git commit -m "test(c9): align interaction rejection coverage"
-          fi
           git fetch origin agent/c9-gate-n-coverage-reconciliation
           git rebase origin/agent/c9-gate-n-coverage-reconciliation
           git rm .github/workflows/c9-family-e-rich-selector-candidate-bridge-7130.yml
