@@ -488,6 +488,17 @@
               "type": "boolean",
               "default": true
             },
+            "actionKind": {
+              "enum": [
+                "attack",
+                "magic",
+                "other"
+              ]
+            },
+            "attacksPerAction": {
+              "type": "integer",
+              "minimum": 1
+            },
             "condition": {
               "$ref": "#/$defs/d20ResultCondition"
             }

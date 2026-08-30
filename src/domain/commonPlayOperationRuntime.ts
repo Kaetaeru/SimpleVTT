@@ -169,6 +169,8 @@ export type CommonPlayEconomyPayment={
   amount:LiteralNumberExpression;
   consumeAt:"commit";
   refundOnCancel:true;
+  actionKind?:ActionUseKind;
+  attacksPerAction?:number;
 };
 
 export type CommonPlayItemPayment={
@@ -254,7 +256,7 @@ export interface CommonPlayOperationExecutionInput {
 type Obj=Record<string,unknown>;
 const DEFINITION_KEYS=new Set(["$schema","schemaVersion","id","payments","entryPoints"]);
 const RESOURCE_PAYMENT_KEYS=new Set(["kind","resource","amount","consumeAt"]);
-const ECONOMY_PAYMENT_KEYS=new Set(["kind","bucket","amount","consumeAt","refundOnCancel"]);
+const ECONOMY_PAYMENT_KEYS=new Set(["kind","bucket","amount","consumeAt","refundOnCancel","actionKind","attacksPerAction"]);
 const ITEM_PAYMENT_KEYS=new Set(["kind","selector","quantity","consumed","consumeAt","refundOnCancel"]);
 const ITEM_PAYMENT_SELECTOR_KEYS=new Set(["from","where","min","max","definitionId"]);
 const ITEM_PAYMENT_PREDICATE_KEYS=new Set(["op","left","right"]);
@@ -475,7 +477,16 @@ function parsePayment(value:unknown,label:string):CommonPlayPayment {
     if(amount.value!==1) throw new DomainEvaluationError(`${label}.amount must be exactly 1 for portable Common Play economy payment`);
     if(payment.consumeAt!=="commit") throw new DomainEvaluationError(`${label}.consumeAt must be commit for portable Common Play economy payment`);
     if(payment.refundOnCancel!==true) throw new DomainEvaluationError(`${label}.refundOnCancel must be true for portable Common Play Reaction payment`);
-    return {kind:"economy",bucket:payment.bucket,amount,consumeAt:"commit",refundOnCancel:true};
+    const actionKind=payment.actionKind;
+    if(actionKind!==undefined&&actionKind!=="attack"&&actionKind!=="magic"&&actionKind!=="other") throw new DomainEvaluationError(`${label}.actionKind is unsupported`);
+    const attacksPerAction=payment.attacksPerAction;
+    if(attacksPerAction!==undefined&&(!Number.isInteger(attacksPerAction)||Number(attacksPerAction)<1)) throw new DomainEvaluationError(`${label}.attacksPerAction must be a positive integer`);
+    if(attacksPerAction!==undefined&&(payment.bucket!=="action"||actionKind!=="attack")) throw new DomainEvaluationError(`${label}.attacksPerAction requires bucket=action and actionKind=attack`);
+    return {
+      kind:"economy",bucket:payment.bucket,amount,consumeAt:"commit",refundOnCancel:true,
+      ...(actionKind===undefined?{}:{actionKind}),
+      ...(attacksPerAction===undefined?{}:{attacksPerAction:Number(attacksPerAction)}),
+    };
   }
   throw new DomainEvaluationError(`unsupported Common Play payment kind: ${String(payment.kind)}`);
 }
@@ -810,7 +821,9 @@ export function compileCommonPlayPayments(
     if(payment.kind==="economy") {
       operations.push({
         id:`${input.resolutionId}:payment:${index}`,kind:"use-economy",actorId:input.actorId,slot:payment.bucket,
-        bonusActionGranted:payment.bucket==="bonus-action"||undefined,actionKind:input.actionKind,
+        bonusActionGranted:payment.bucket==="bonus-action"||undefined,
+        actionKind:payment.actionKind??input.actionKind,
+        ...(payment.attacksPerAction===undefined?{}:{attacksPerAction:payment.attacksPerAction}),
       });
       continue;
     }
