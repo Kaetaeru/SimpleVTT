@@ -121,3 +121,12 @@ const tactical={
 };
 module.content.splice(fighterIndex+1,0,tactical);
 fs.writeFileSync(modulePath,JSON.stringify(module)+'\n');
+
+const subclassPath='content/modules/dnd-srd-5.2.1.subclasses/module.json';
+const subclasses=JSON.parse(fs.readFileSync(subclassPath,'utf8'));
+if(!subclasses.content.some((entry)=>entry.id==='dnd.srd521.subclass.fighter.champion')){
+  const firstFighterChild=subclasses.content.findIndex((entry)=>entry.relationships?.some((relationship)=>relationship.kind==='parent'&&relationship.target==='dnd.srd521.class.fighter'));
+  const champion={id:'dnd.srd521.subclass.fighter.champion',category:'subclass',presentation:{originalName:'Champion',defaultLocale:'ko-KR',locales:{'ko-KR':{name:'챔피언',summary:'무기 전투와 육체적 기량을 극대화하는 파이터 서브클래스다.'}}},relationships:[{kind:'parent',target:'dnd.srd521.class.fighter'}]};
+  if(firstFighterChild<0)subclasses.content.push(champion);else subclasses.content.splice(firstFighterChild,0,champion);
+  fs.writeFileSync(subclassPath,JSON.stringify(subclasses)+'\n');
+}
