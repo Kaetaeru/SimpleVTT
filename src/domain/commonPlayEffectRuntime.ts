@@ -10,6 +10,7 @@ import type {
 } from "./resolutionTypes";
 import { compileCommonPlayPayments, parseCommonPlayPayments, type CommonPlayPayment } from "./commonPlayOperationRuntime";
 import { resolveCommonPlayFrequency, type CommonPlayFrequency } from "./commonPlayFrequencyRuntime";
+import { appendCommonPlaySemanticOutcomeEvents } from "./commonPlaySemanticEventRuntime";
 import type { ActionUseKind } from "./turnEconomy";
 
 type LiteralNumberExpression={value:number};
@@ -315,7 +316,8 @@ export function resolveCommonPlayEffectActivation(
   input:CommonPlayEffectActivationInput,
 ):ResolutionCommit {
   try {
-    return resolvePendingResolution(profile,inputState,compileCommonPlayEffectActivation(inputState,definition,input));
+    const pending=compileCommonPlayEffectActivation(inputState,definition,input);
+    return appendCommonPlaySemanticOutcomeEvents(pending,resolvePendingResolution(profile,inputState,pending));
   } catch (error) {
     return rejected(inputState,error instanceof Error?error.message:String(error));
   }
