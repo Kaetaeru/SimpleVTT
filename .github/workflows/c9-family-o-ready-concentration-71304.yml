@@ -20,9 +20,9 @@ jobs:
       - run: npm run generate:content
       - name: Verify Family O ready concentration and stored invocation
         run: npx tsx --test tests/ui/c9FamilyOConcentrationProduction.test.ts tests/ui/installedCommonPlayLoweredFamiliesProduction.test.ts
-      - name: Verify legacy execution boundary
-        run: node scripts/check-legacy-execution-boundary.mjs
       - name: Typecheck
         run: npx tsc --noEmit
       - name: Verify diff whitespace
         run: git diff --check
+      - name: Verify legacy execution boundary
+        run: node scripts/check-legacy-execution-boundary.mjs
