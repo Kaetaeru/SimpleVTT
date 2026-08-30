@@ -19,9 +19,14 @@ jobs:
       - name: Apply existing suppression patch without workflow mutations
         shell: bash
         run: |
-          PATCH_B64=$(sed -n "s/.*echo '\([^']*\)'.*/\1/p" .github/workflows/c9-family-n-suppression-patch-71304.yml | head -n 1)
-          test -n "$PATCH_B64"
-          printf '%s' "$PATCH_B64" | base64 -d | gzip -d > /tmp/c9-n-patch.py
+          python3 - <<'PY'
+          import base64, gzip, pathlib, re
+          text = pathlib.Path('.github/workflows/c9-family-n-suppression-patch-71304.yml').read_text()
+          match = re.search(r"echo '([A-Za-z0-9+/=]+)' \| base64", text)
+          if not match:
+              raise SystemExit('suppression patch payload not found')
+          pathlib.Path('/tmp/c9-n-patch.py').write_bytes(gzip.decompress(base64.b64decode(match.group(1))))
+          PY
           python3 /tmp/c9-n-patch.py
           git checkout -- .github/workflows
           git add -A
