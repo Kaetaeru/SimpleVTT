@@ -56,6 +56,8 @@ jobs:
               '''  await adapter.resolveAction(actionId,["char.aelar"]);\n  let snapshot=await adapter.getSnapshot();\n  assert.equal(snapshot.activeCharacter.hp,selfBefore,"self must be rejected before production commit");\n  assert.equal(snapshot.resolution?.finalOutcome,"적용 거부");\n  assert.match(snapshot.resolution?.compact??"",/relation filter rejected: char\\.aelar/);\n\n  const enemyBefore=snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")!.hp;\n  await adapter.resolveAction(actionId,["combatant.goblin-a"]);\n  snapshot=await adapter.getSnapshot();''',
           )
           PY
+      - name: Generate content catalogs
+        run: npm run generate:content
       - name: Verify relation selector production slice
         run: >-
           npx tsx --test
