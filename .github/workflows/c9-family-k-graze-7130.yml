@@ -36,7 +36,7 @@ jobs:
           replaceOnce(
             'src/domain/commonPlayEffectRuntime.ts',
             '    if (operation.target!=="event.actor") {\n      throw new Error(`${operationLabel} target must be event.actor in this runtime slice`);\n    }',
-            '    if (operation.target!=="event.actor"&&operation.target!=="event.target") {\n      throw new Error(`${operationLabel} target must be event.actor or event.target in this runtime slice`);\n    }\n    if ((rule.event==="damage.taken"||rule.event==="damage.dealt")&&operation.target==="event.target") {\n      throw new Error(`${operationLabel} event.target requires an attack/save semantic event in this runtime slice`);\n    }'
+            '    if (operation.target!=="event.actor"&&operation.target!=="event.target") {\n      throw new Error(`${operationLabel} target must be event.actor or event.target in this runtime slice`);\n    }\n    if ((rule.event==="damage.taken"||rule.event==="damage.dealt")&&operation.target==="event.target") {\n      throw new Error(`${operationLabel} target must be event.actor for damage.taken/damage.dealt in this runtime slice`);\n    }'
           );
           replaceOnce(
             'src/domain/commonPlaySemanticEventRuntime.ts',
