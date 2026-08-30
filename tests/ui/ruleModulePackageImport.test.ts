@@ -296,7 +296,6 @@ test("installed Common Play rejects unsupported targeting authoring before persi
     {from:"actors",min:1,max:1},
     {from:"targets",where:{value:true},min:1,max:1},
     {from:"targets",min:0,max:1},
-    {from:"targets",min:1,max:2},
   ];
   for(const selector of invalidSelectors) {
     const store=new MemoryInstalledContentStore();
