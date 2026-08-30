@@ -38,6 +38,24 @@ jobs:
               text=text.replace(old,new,1)
               path.write_text(text,encoding='utf-8')
           PY
+      - name: Classify generic installed selector guard
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          path=Path('.agents/LEGACY_EXECUTION_BASELINE.json')
+          baseline=json.loads(path.read_text(encoding='utf-8'))
+          module='./installedCommonPlaySelectorGuardAdapter'
+          existing=[entry for entry in baseline['entries'] if entry.get('module')==module]
+          if existing:
+              if existing[0].get('classification')!='GENERIC_ENGINE':
+                  raise SystemExit(f'unexpected selector guard classification: {existing[0]}')
+          else:
+              index=next(i for i,entry in enumerate(baseline['entries']) if entry.get('module')=='./installedCommonPlayRuntimeAdapter')+1
+              baseline['entries'].insert(index,{'module':module,'classification':'GENERIC_ENGINE'})
+              path.write_text(json.dumps(baseline,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          PY
       - name: Generate content catalogs
         run: npm run generate:content
       - name: Verify installed relation selector and import validation
@@ -58,7 +76,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git rm .github/workflows/c9-family-e-preserve-targeting-projection.yml
-          git add src/domain/commonPlayDefinitionRuntime.ts
+          git add src/domain/commonPlayDefinitionRuntime.ts .agents/LEGACY_EXECUTION_BASELINE.json
           git commit -m "fix(c9): preserve portable targeting predicates"
           pushed=0
           for attempt in 1 2 3 4 5; do
