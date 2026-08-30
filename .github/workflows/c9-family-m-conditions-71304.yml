@@ -22,6 +22,8 @@ jobs:
           node-version: 22
       - name: Install dependencies
         run: npm install --no-audit --no-fund
+      - name: Generate content
+        run: npm run generate:content
       - name: Verify Family M condition kernel and production lifecycle
         run: >-
           npx tsx --test
