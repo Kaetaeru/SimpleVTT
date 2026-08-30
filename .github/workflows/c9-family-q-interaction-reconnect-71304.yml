@@ -23,6 +23,8 @@ jobs:
         with:
           node-version: 22
       - run: npm install --no-audit --no-fund
+      - name: Generate content dependencies
+        run: npm run generate:content
       - name: Verify Family Q reconnect persistence
         run: npx tsx --test tests/ui/c9FamilyQInteractionReconnectProduction.test.ts
       - name: Typecheck
