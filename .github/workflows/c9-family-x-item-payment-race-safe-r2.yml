@@ -1,0 +1,73 @@
+name: C9 Family X Item Payment Race Safe R2
+
+on:
+  push:
+    branches:
+      - "agent/c9-gate-n-coverage-reconciliation"
+    paths:
+      - ".github/workflows/c9-family-x-item-payment-race-safe-r2.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  item-payment:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Prepare latest-compatible verified patch
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('.github/scripts/c9-family-x-item-payment-step.py')
+          text=p.read_text()
+          start=text.index('\nm1 = Path(".github/workflows/m1-common-play-resource-economy.yml")')
+          end=text.index('\n\nPath("tests/ui/installedCommonPlayItemPaymentProduction.test.ts")',start)
+          text=text[:start]+text[end:]
+          text=text.replace(
+            'const ITEM_PAYMENT_SELECTOR_KEYS=new Set(["from","where","min","max"]);',
+            'const ITEM_PAYMENT_SELECTOR_KEYS=new Set(["from","where","min","max","definitionId"]);',
+          )
+          text=text.replace(
+            '  if(selector.min!==1||selector.max!==1) throw new DomainEvaluationError(`${label} must select exactly one item stack with min=1 and max=1`);',
+            '  if(typeof selector.definitionId==="string") return {from:"items",definitionId:nonEmptyString(selector.definitionId,`${label}.definitionId`)};\n  if(selector.min!==1||selector.max!==1) throw new DomainEvaluationError(`${label} must select exactly one item stack with min=1 and max=1`);',
+          )
+          old="""    '    operationEntryPoint=entryPoint;\\n    const pending=compileCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,state,lowered.definition,operationExecutionInput(internal,actionId,action,prepared,resolutionId,interactionId));',
+    '    operationEntryPoint=entryPoint;\\n    const itemContext=itemPaymentRuntimeContext(internal,state,lowered.definition);\\n    const pending=compileCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,itemContext.state,lowered.definition,operationExecutionInput(internal,actionId,action,prepared,resolutionId,interactionId,itemContext.itemPaymentResourceIds));',"""
+          new="""    '    const pending=compileCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,state,lowered.definition,operationExecutionInput(internal,actionId,action,prepared,resolutionId,interactionId));',
+    '    const itemContext=itemPaymentRuntimeContext(internal,state,lowered.definition);\\n    const pending=compileCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,itemContext.state,lowered.definition,operationExecutionInput(internal,actionId,action,prepared,resolutionId,interactionId,itemContext.itemPaymentResourceIds));',"""
+          if old not in text:
+            raise SystemExit('missing script anchor for post-allocation pending compile')
+          text=text.replace(old,new,1)
+          Path('/tmp/c9-family-x-item-payment-step.py').write_text(text)
+          PY
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Apply, verify, and push on a current head
+        run: |
+          set -euo pipefail
+          TARGET=agent/c9-gate-n-coverage-reconciliation
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in 1 2 3; do
+            git fetch origin "$TARGET"
+            git reset --hard FETCH_HEAD
+            python /tmp/c9-family-x-item-payment-step.py
+            npm run generate:content
+            npx tsx --test tests/ui/installedCommonPlayItemPaymentProduction.test.ts tests/ui/phase09CommonPlayResourcePersistence.test.ts
+            node scripts/check-legacy-execution-boundary.mjs
+            npx tsc --noEmit
+            rm -f .github/workflows/c9-family-x-item-payment-step.yml .github/workflows/c9-family-x-item-payment-race-safe.yml .github/workflows/c9-family-x-item-payment-race-safe-r2.yml .github/scripts/c9-family-x-item-payment-step.py
+            git add src/domain/commonPlayOperationRuntime.ts src/app/installedCommonPlayRuntimeAdapter.ts tests/ui/installedCommonPlayItemPaymentProduction.test.ts .github/workflows/c9-family-x-item-payment-step.yml .github/workflows/c9-family-x-item-payment-race-safe.yml .github/workflows/c9-family-x-item-payment-race-safe-r2.yml .github/scripts/c9-family-x-item-payment-step.py
+            git commit -m "feat(c9): route portable item payments through resolver"
+            if git push origin HEAD:"$TARGET"; then
+              exit 0
+            fi
+          done
+          exit 1
