@@ -41,6 +41,7 @@ interface CommonPlayAutomaticDamageRule {
 
 type CommonPlayEffectDuration=
   | {kind:"durable"}
+  | {kind:"maintained";policy:"concentration"}
   | {
       kind:"elapsed";
       amount:LiteralNumberExpression;
@@ -118,6 +119,11 @@ function runtimeDuration(duration:CommonPlayEffectDuration,label:string):Duratio
   if (duration.kind==="durable") {
     assertOnlyKeys(duration,["kind"],label);
     return {kind:"permanent"};
+  }
+  if (duration.kind==="maintained") {
+    assertOnlyKeys(duration,["kind","policy"],label);
+    if (duration.policy!=="concentration") throw new Error(`${label} maintained policy must be concentration`);
+    return {kind:"concentration"};
   }
   assertOnlyKeys(duration,["kind","amount","unit","decrementAt"],label);
   if (duration.decrementAt!==undefined) {
@@ -219,7 +225,7 @@ function templateById(definition:CommonPlayPersistentEffectDefinition,id:string)
 export function compileCommonPlayEffectApplyOperation(
   definitionId:string,
   template:CommonPlayEffectArtifactTemplate,
-  input:{operationId:string;effectId:string;sourceActorId:string;targetId:string},
+  input:{operationId:string;effectId:string;sourceActorId:string;targetId:string;concentrationGroupId?:string},
 ):Extract<ResolutionOperation,{kind:"apply-effect"}> {
   validateTemplate(template,0);
   return {
@@ -231,6 +237,7 @@ export function compileCommonPlayEffectApplyOperation(
       sourceActorId:input.sourceActorId,
       targetId:input.targetId,
       kind:"marker",
+      ...(input.concentrationGroupId?{concentrationGroupId:input.concentrationGroupId}:{}),
       duration:runtimeDuration(template.duration,`artifact ${template.id} duration`),
       metadata:{
         [EFFECT_METADATA_DEFINITION]:definitionId,
@@ -245,12 +252,14 @@ function effectForTemplate(
   template:CommonPlayEffectArtifactTemplate,
   input:CommonPlayEffectActivationInput,
   operationIndex:number,
+  concentrationGroupId?:string,
 ):Extract<ResolutionOperation,{kind:"apply-effect"}> {
   return compileCommonPlayEffectApplyOperation(definition.id,template,{
     operationId:`common-play-effect-apply-${operationIndex+1}`,
     effectId:`${input.resolutionId}:artifact:${operationIndex+1}:${template.id}`,
     sourceActorId:input.actorId,
     targetId:input.actorId,
+    concentrationGroupId,
   });
 }
 
@@ -267,15 +276,28 @@ export function compileCommonPlayEffectActivation(
   if (entryPoint.invocation!=="manual") throw new Error("effect activation runtime requires a manual entry point");
   if (!entryPoint.operations.length) throw new Error("effect activation entry point requires at least one operation");
 
-  const operations:ResolutionOperation[]=[...compileCommonPlayPayments(parseCommonPlayPayments(definition.payments),input),...entryPoint.operations.map((operation,index)=>{
+  const activationOperations:ResolutionOperation[]=[];
+  entryPoint.operations.forEach((operation,index)=>{
     const label=`entry point ${entryPoint.id} operation ${index+1}`;
     assertOnlyKeys(operation,["kind","template","target"],label);
     if (operation.kind!=="effect.apply") throw new Error(`${label} supports only effect.apply`);
     if (operation.target!==undefined&&operation.target!=="actor") {
       throw new Error(`${label} target must be actor in this runtime slice`);
     }
-    return effectForTemplate(definition,templateById(definition,operation.template),input,index);
-  })];
+    const template=templateById(definition,operation.template);
+    const concentrationGroupId=template.duration.kind==="maintained"
+      ? `${input.resolutionId}:concentration:${index+1}:${template.id}`
+      : undefined;
+    if(concentrationGroupId) activationOperations.push({
+      id:`common-play-concentration-start-${index+1}`,
+      kind:"start-concentration",
+      actorId:input.actorId,
+      groupId:concentrationGroupId,
+      sourceId:definition.id,
+    });
+    activationOperations.push(effectForTemplate(definition,template,input,index,concentrationGroupId));
+  });
+  const operations:ResolutionOperation[]=[...compileCommonPlayPayments(parseCommonPlayPayments(definition.payments),input),...activationOperations];
 
   return {
     id:input.resolutionId,

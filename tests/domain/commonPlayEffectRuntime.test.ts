@@ -171,6 +171,47 @@ test("Common Play persistent effect behavior is independent of the external cont
   assert.equal(triggered.state.effects.length,0);
 });
 
+test("Common Play maintained concentration reuses Resolver replacement and damage-break semantics",()=>{
+  const definition=structuredClone(DEFINITION);
+  definition.id="external.unknown.concentration-a";
+  definition.artifactTemplates[0].duration={kind:"maintained",policy:"concentration"};
+
+  const first=committed(resolveCommonPlayEffectActivation(TEST_PROFILE,runtimeState(),definition,{
+    resolutionId:"external-concentration-a",actorId:"hero",entryPointId:"activate",
+  }),"portable concentration activation should commit");
+  const firstGroup=first.state.concentration.hero?.groupId;
+  assert.ok(firstGroup);
+  assert.equal(first.state.concentration.hero?.sourceId,definition.id);
+  assert.equal(first.state.effects.length,1);
+  assert.equal(first.state.effects[0].concentrationGroupId,firstGroup);
+
+  const renamed=structuredClone(definition);
+  renamed.id="external.previously-unseen.concentration-b";
+  const second=committed(resolveCommonPlayEffectActivation(TEST_PROFILE,first.state,renamed,{
+    resolutionId:"external-concentration-b",actorId:"hero",entryPointId:"activate",
+  }),"replacement concentration should commit");
+  assert.equal(second.state.effects.some((effect)=>effect.concentrationGroupId===firstGroup),false);
+  assert.equal(second.state.effects.length,1);
+  assert.equal(second.state.concentration.hero?.sourceId,renamed.id);
+  assert.equal(second.state.effects[0].concentrationGroupId,second.state.concentration.hero?.groupId);
+
+  const broken=committed(resolvePendingResolution(TEST_PROFILE,second.state,{
+    id:"external-concentration-damage",
+    actorId:"goblin",
+    sourceId:"external.unknown.damage",
+    expectedRevision:second.state.revision,
+    operations:[{
+      id:"damage",kind:"damage",targetId:"hero",damageType:"force",amount:8,creatureKind:"character",
+      concentrationCheck:{dice:{id:"portable-concentration-d20",purpose:"concentration",sides:20,faces:[1]}},
+    }],
+  }),"failed concentration save should commit the damage and cleanup");
+  assert.equal(broken.state.concentration.hero,undefined);
+  assert.equal(broken.state.effects.length,0);
+  const damage=broken.events.find((event)=>event.operationId==="damage");
+  assert.ok(damage?.stateChanges.some((change)=>change.kind==="concentration"));
+  assert.ok(damage?.stateChanges.some((change)=>change.kind==="effect"));
+});
+
 test("Common Play effect runtime rejects unsupported semantic target shapes before activation",()=>{
   const invalid=structuredClone(DEFINITION);
   (invalid.artifactTemplates[0].rules[0].operations[0] as {target:string}).target="event.target";
