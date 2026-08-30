@@ -11,10 +11,17 @@ import { effectiveSpeed, proneStandingCost } from "./conditions";
 import { effectIsActive } from "./effects";
 import type { CommonPlayFactAnswer, CommonPlayFactQuery } from "./commonPlaySpatialFactRuntime";
 import { parseCommonPlaySelector, resolveCommonPlaySelector, type CommonPlaySelector, type CommonPlaySelectorCandidate } from "./commonPlaySelectorRuntime";
+import { SRD_521_CONDITIONS, type ConditionId } from "./conditions";
 
 type LiteralNumberExpression={value:number};
 type CommonPlayExpression=LiteralNumberExpression|Record<string,unknown>;
 type CommonPlayHpTarget="actor"|"self"|"target";
+type CommonPlayConditionTarget="actor"|"self"|"target";
+type CommonPlayConditionChange={
+  kind:"condition.apply"|"condition.remove";
+  condition:ConditionId;
+  target?:CommonPlayConditionTarget;
+};
 type CommonPlayMovementStand={kind:"movement.stand";target:"actor"|"self"};
 
 type CommonPlayResourceCreation={
@@ -152,6 +159,7 @@ export type CommonPlayOperation=
   |CommonPlayTemporaryHpGrant
   |CommonPlayMovementDefinition
   |CommonPlayMovementStand
+  |CommonPlayConditionChange
   |CommonPlayRollModify;
 
 export interface CommonPlayD20TestDefinition {
@@ -228,6 +236,7 @@ const RECHARGE_RANGE_KEYS=new Set(["minimum","maximum"]);
 const ECONOMY_MODIFY_KEYS=new Set(["kind","bucket","amount"]);
 const DAMAGE_APPLY_KEYS=new Set(["kind","amount","damageType","target"]);
 const HEALING_APPLY_KEYS=new Set(["kind","amount","target"]);
+const CONDITION_CHANGE_KEYS=new Set(["kind","condition","target"]);
 const TEMP_HP_GRANT_KEYS=new Set(["kind","amount","target","choice"]);
 const ROLL_MODIFY_KEYS=new Set(["kind","mode","value","dice"]);
 const MOVEMENT_RELOCATE_KEYS=new Set(["kind","mode","movementType","target","distance","costMultiplier","doesNotProvokeOpportunityAttacks","destinationFact"]);
@@ -314,6 +323,12 @@ function hpTarget(value:unknown,label:string):CommonPlayHpTarget|undefined {
   if(value!=="actor"&&value!=="self"&&value!=="target") {
     throw new DomainEvaluationError(`${label} must be actor, self, or target for portable Common Play HP operations`);
   }
+  return value;
+}
+
+function conditionTarget(value:unknown,label:string):CommonPlayConditionTarget|undefined {
+  if(value===undefined) return undefined;
+  if(value!=="actor"&&value!=="self"&&value!=="target") throw new DomainEvaluationError(`${label} must be actor, self, or target for portable Common Play condition operations`);
   return value;
 }
 
@@ -524,6 +539,13 @@ function parseOperation(value:unknown,label:string):CommonPlayOperation {
       ...(operation.temporaryCapacityUntilLongRest===true?{temporaryCapacityUntilLongRest:true as const}:{}),
     };
   }
+  if(operation.kind==="condition.apply"||operation.kind==="condition.remove") {
+    supportedKeys(operation,CONDITION_CHANGE_KEYS,label);
+    const condition=nonEmptyString(operation.condition,`${label}.condition`) as ConditionId;
+    if(!(condition in SRD_521_CONDITIONS)) throw new DomainEvaluationError(`${label}.condition is not a registered SRD condition: ${condition}`);
+    const target=conditionTarget(operation.target,`${label}.target`);
+    return {kind:operation.kind,condition,...(target===undefined?{}:{target})};
+  }
   if(operation.kind==="economy.modify") {
     supportedKeys(operation,ECONOMY_MODIFY_KEYS,label);
     const amount=literalExpression(operation.amount,`${label}.amount`);
@@ -693,6 +715,12 @@ export function compileCommonPlayPayments(
 function hpOperationTarget(target:CommonPlayHpTarget|undefined,input:CommonPlayOperationExecutionInput) {
   if(target===undefined||target==="actor"||target==="self") return input.actorId;
   if(!input.targetId) throw new DomainEvaluationError("Common Play target HP operation requires one pre-resolved target");
+  return input.targetId;
+}
+
+function conditionOperationTarget(target:CommonPlayConditionTarget|undefined,input:CommonPlayOperationExecutionInput) {
+  if(target===undefined||target==="actor"||target==="self") return input.actorId;
+  if(!input.targetId) throw new DomainEvaluationError("Common Play target condition operation requires one pre-resolved target");
   return input.targetId;
 }
 
@@ -869,6 +897,21 @@ export function compileCommonPlayEntryPointOperations(
       continue;
     }
 
+    if(operation.kind==="condition.apply"||operation.kind==="condition.remove") {
+      const targetId=conditionOperationTarget(operation.target,input);
+      if(operation.kind==="condition.apply") {
+        operations.push({
+          id:operationId,kind:"apply-effect",
+          effect:{id:`${operationId}:condition:${operation.condition}`,sourceId:`common-play:${supported.id}:${entryPoint.id}:operation:${index}`,sourceActorId:input.actorId,targetId,kind:"condition",conditionId:operation.condition,tags:["common-play:condition",`condition:${operation.condition}`],duration:{kind:"permanent"}},
+        });
+      } else {
+        const effect=[...state.effects].reverse().find((entry)=>entry.targetId===targetId&&entry.conditionId===operation.condition);
+        if(!effect) throw new DomainEvaluationError(`Common Play condition.remove found no ${operation.condition} Effect on ${targetId}`);
+        operations.push({id:operationId,kind:"remove-effect",effectId:effect.id});
+      }
+      continue;
+    }
+
     if(operation.kind==="damage.apply") {
       const targetId=hpOperationTarget(operation.target,input);
       const creatureKind=input.creatureKinds?.[targetId];
@@ -953,6 +996,7 @@ export function compileCommonPlayEntryPointOperations(
       continue;
     }
 
+    if(operation.kind!=="economy.modify") throw new DomainEvaluationError("unexpected Common Play operation before economy.modify");
     const amount=literalInteger(operation.amount,"economy.modify amount");
     const bucket=profile.economy?.grantBuckets?.[operation.bucket];
     if(!bucket) throw new DomainEvaluationError(`unregistered economy grant bucket: ${operation.bucket}`);
