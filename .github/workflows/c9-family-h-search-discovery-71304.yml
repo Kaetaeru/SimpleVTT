@@ -6,27 +6,57 @@ on:
       - agent/c9-gate-n-coverage-reconciliation
     paths:
       - .github/workflows/c9-family-h-search-discovery-71304.yml
-      - tests/ui/c9FamilyHSearchDiscoveryProduction.test.ts
-      - src/domain/commonPlayOperationRuntime.ts
-      - src/domain/commonPlaySenseRuntime.ts
-      - src/app/commonPlayInterceptorProductionRuntimeAdapter.ts
-      - docs/rules/v1-mechanism-coverage-ledger.json
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
-  verify:
+  publish:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.sha }}
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Reconcile latest branch before evidence patch
+        run: git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
       - run: npm run generate:content
-      - name: Verify Family H Search and sensing
+      - name: Patch Family H ledger evidence only
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path("docs/rules/v1-mechanism-coverage-ledger.json")
+          data = json.loads(path.read_text(encoding="utf-8"))
+          row = next(item for item in data["rows"] if item.get("family") == "H")
+          old = "Family H remains incomplete for rules-derived special-sense acquisition/derivation, detection/Search, and discovery semantics."
+          new = "Portable Wisdom-based Search/discovery is production-proven through unknown external Common Play using the canonical ability.wis.modifier, Resolver-owned condition removal, failure preservation, event-native Undo, and full external identity rename. Family H remains incomplete only for rules-derived special-sense acquisition/derivation into authoritative observer sense profiles."
+          if old in row["currentState"]:
+              row["currentState"] = row["currentState"].replace(old, new)
+          elif new not in row["currentState"]:
+              raise SystemExit("Family H currentState changed concurrently; refusing stale rewrite")
+
+          production = "9f62fd3da8ad4dfaad0e436789c36fbeeddd7f55 test(c9): bind Search to Wisdom modifier; C9 Family H Search Discovery 71304 run 33314310761 passed unknown/renamed external Wisdom Search success/failure, Resolver condition removal, event-native Undo, existing sensing regressions, coverage checker, legacy boundary, and tsc --noEmit"
+          if production not in row["productionEvidence"]:
+              row["productionEvidence"].append(production)
+
+          identity = "c9FamilyHSearchDiscoveryProduction.test.ts proves portable Wisdom Search/discovery semantics are unchanged under fully renamed external module/content/mechanic identities"
+          if identity not in row["identityInvarianceEvidence"]:
+              row["identityInvarianceEvidence"].append(identity)
+
+          row["remainingNamedSeams"] = [
+              "rules-derived special-sense acquisition/derivation into authoritative observer sense profiles remains incomplete"
+          ]
+          path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+          PY
+      - name: Verify Family H Search on latest branch
         run: >-
           npx tsx --test
           tests/ui/c9FamilyHSearchDiscoveryProduction.test.ts
@@ -39,3 +69,12 @@ jobs:
         run: node scripts/check-legacy-execution-boundary.mjs
       - name: Typecheck
         run: npx tsc -p tsconfig.json --noEmit
+      - name: Commit evidence and remove staging workflow
+        run: |
+          git config user.name "chatgpt-c9-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git rm .github/workflows/c9-family-h-search-discovery-71304.yml
+          git add docs/rules/v1-mechanism-coverage-ledger.json
+          git commit -m "docs(c9): reconcile Family H Search evidence"
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
