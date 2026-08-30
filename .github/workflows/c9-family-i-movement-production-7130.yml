@@ -25,6 +25,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm run generate:content
       - name: Verify Family I movement production matrix
         run: node --import tsx --test tests/domain/commonPlayMovementRuntime.test.ts tests/ui/c9FamilyIMovementProduction.test.ts tests/ui/installedCommonPlayLoweredFamiliesProduction.test.ts
       - name: Verify legacy execution boundary
