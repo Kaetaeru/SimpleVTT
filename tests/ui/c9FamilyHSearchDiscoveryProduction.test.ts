@@ -29,7 +29,13 @@ function packagePayload(prefix: string) {
         id: "search-probe",
         invocation: "manual",
         targeting: { from: "targets", min: 1, max: 1 },
-        test: { kind: "ability-check", roller: "actor", dc: { value: 10 }, perTarget: false },
+        test: {
+          kind: "ability-check",
+          roller: "actor",
+          property: "ability.wis.modifier",
+          dc: { value: 10 },
+          perTarget: false,
+        },
         operations: [
           {
             kind: "condition.remove",
