@@ -1,0 +1,71 @@
+name: C9 Family E Ledger Reconcile
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-e-ledger-reconcile.yml
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Reconcile verified Family E relation evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
+          data=json.loads(path.read_text(encoding='utf-8'))
+          family=next(entry for entry in data['families'] if entry['family']=='E')
+          if family['id']!='targeting-selectors':
+              raise SystemExit('Family E identity mismatch')
+          family['currentState']='Pre-resolved self/selected-target bounds and portable relation filters are PRODUCTION through Common Play/Resolver; richer predicate/order/range/reach/sight/cover/tag/area and automatic selector authority remain incomplete.'
+          family['implementationEvidence']=[
+              'commonPlayOperationRuntime.ts parses portable relation-matches targeting selectors and validates authoritative TargetingFactInput relation facts before downstream Resolver operations',
+              'installedCommonPlayRuntimeAdapter.ts rejects ineligible relation selections at the production preparation boundary without content-name or content-ID dispatch',
+              'commonPlaySelectorRuntime.ts exposes explicit mapless direct-target authority while retaining generic selector/spatial-provider fail-closed behavior',
+          ]
+          family['productionEvidence']=[
+              'commonPlayTargetingRuntime.test.ts portable relation filter accepts authoritative enemy facts, rejects self facts atomically, and preserves bounded multi-target semantics',
+              'installedCommonPlayProductionRuntime.test.ts unknown installed RuleModule relation selector rejects ineligible self before commit and executes eligible enemy through production resolveAction',
+              'C9 Family E Relation Selector V2 run 33309310773: 38/38 targeted domain/import/production tests, legacy execution boundary, and tsc --noEmit passed; verified slice pushed as 05394e89 after clean rebase',
+          ]
+          path.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          PY
+      - name: Verify ledger contract
+        run: node scripts/check-v1-mechanism-coverage.mjs
+      - name: Commit reconciled evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/c9-family-e-ledger-reconcile.yml
+          git add docs/rules/v1-mechanism-coverage-ledger.json
+          git diff --cached --check
+          git commit -m "docs(c9): record portable relation selector evidence"
+          for attempt in 1 2 3 4 5 6 7 8; do
+            git fetch origin agent/c9-gate-n-coverage-reconciliation
+            if git rebase origin/agent/c9-gate-n-coverage-reconciliation && git push origin HEAD:agent/c9-gate-n-coverage-reconciliation; then
+              exit 0
+            fi
+            git rebase --abort || true
+            sleep 2
+          done
+          echo "Family E ledger reconcile could not acquire a clean fast-forward window" >&2
+          exit 1
