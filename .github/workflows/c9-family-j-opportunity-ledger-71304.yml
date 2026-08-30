@@ -1,0 +1,63 @@
+name: C9 Family J Opportunity Ledger 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-j-opportunity-ledger-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run generate:content
+      - name: Reconcile with current branch
+        run: git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+      - name: Verify portable Opportunity Attack evidence
+        run: |
+          node --import tsx --test \
+            tests/ui/c9FamilyJOpportunityAttackProduction.test.ts \
+            tests/ui/phase09ManualMovementReactionAdapter.test.ts
+          node scripts/check-v1-mechanism-coverage.mjs
+          node scripts/check-legacy-execution-boundary.mjs
+          npx tsc --noEmit
+      - name: Record verified Family J Opportunity evidence
+        run: |
+          node <<'NODE'
+          const fs=require('node:fs');
+          const path='docs/rules/v1-mechanism-coverage-ledger.json';
+          const doc=JSON.parse(fs.readFileSync(path,'utf8'));
+          const row=doc.rows.find((entry)=>entry.family==='J');
+          if(!row)throw new Error('Family J ledger row missing');
+          const add=(key,value)=>{ if(!row[key].includes(value))row[key].push(value); };
+          add('implementationEvidence','phase09ManualMovementReactionAdapter.ts validates Opportunity Attack eligibility from projected ActionVm resolutionKind/runtimeAttack range/economy and authoritative manual targeting facts; action IDs are references/provenance rather than content dispatch');
+          add('productionEvidence','c9FamilyJOpportunityAttackProduction.test.ts projects the same structural melee runtimeAttack under unrelated action IDs/names, commits Reaction-only attack damage, and restores Reaction/HP through event-native Undo; C9 Family J Spatial Attack 71304 run 33316344182 passed Opportunity identity, range/cover, control, persistence, coverage, legacy-boundary, and tsc');
+          add('identityInvarianceEvidence','c9FamilyJOpportunityAttackProduction.test.ts preserves Opportunity Attack qualification, Reaction payment, damage commit, and event-native Undo after unrelated projected action ID/name changes');
+          row.remainingNamedSeams=row.remainingNamedSeams.filter((entry)=>!entry.includes('Opportunity Attack portable acceptance'));
+          row.currentState=row.currentState.replace('Opportunity Attack, reach/long range, Opportunity Attack qualification, Extra Attack/replacement, and ammunition/loading composition.','reach/long range, Extra Attack/replacement, and ammunition/loading composition.');
+          if(!row.currentState.includes('Opportunity Attack projection and qualification are production-proven'))row.currentState+=' Opportunity Attack projection and qualification are production-proven under unrelated action IDs/names with Reaction-only commit and event-native Undo.';
+          fs.writeFileSync(path,JSON.stringify(doc,null,2)+'\n');
+          NODE
+          node scripts/check-v1-mechanism-coverage.mjs
+          node scripts/check-legacy-execution-boundary.mjs
+      - name: Publish ledger reconciliation and remove one-shot verifier
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add docs/rules/v1-mechanism-coverage-ledger.json
+          git rm .github/workflows/c9-family-j-opportunity-ledger-71304.yml
+          git commit -m "docs(c9): reconcile portable opportunity attack"
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
