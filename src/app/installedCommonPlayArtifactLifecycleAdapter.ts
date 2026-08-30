@@ -53,7 +53,7 @@ async function projectedActions(adapter:MockAdapter,snapshot:AppSnapshot) {
   for(const [actorId,actions] of Object.entries(internal.scene.actionsByActor)) internal.scene.actionsByActor[actorId]=removeProjected(actions);
 
   for(const artifact of state.artifacts??[]) {
-    if((artifact.artifactKind!=="object"&&artifact.artifactKind!=="link")||!artifact.sourceActorId||!state.combatants[artifact.sourceActorId]) continue;
+    if((artifact.artifactKind!=="object"&&artifact.artifactKind!=="link"&&artifact.artifactKind!=="actor")||!artifact.sourceActorId||!state.combatants[artifact.sourceActorId]) continue;
     if(snapshot.role!=="dm"&&snapshot.activeCharacter.id!==artifact.sourceActorId) continue;
     const definition=await installedDefinition(adapter,artifact.sourceId);
     if(!definition) continue;
@@ -96,7 +96,7 @@ MockAdapter.prototype.resolveAction=async function resolvePortableArtifactLifecy
   if(!reference) return previousResolveAction.call(this,actionId,targetIds);
   const internal=this as unknown as AdapterState;
   const state=snapshotAdapterTurnRuntimeState(this,internal.scene);
-  const artifact=state?.artifacts?.find((candidate)=>candidate.id===reference.artifactId&&(candidate.artifactKind==="object"||candidate.artifactKind==="link"));
+  const artifact=state?.artifacts?.find((candidate)=>candidate.id===reference.artifactId&&(candidate.artifactKind==="object"||candidate.artifactKind==="link"||candidate.artifactKind==="actor"));
   if(!state||!artifact?.sourceActorId||targetIds.length!==1||targetIds[0]!==artifact.sourceActorId||state.clock.activeActorId!==artifact.sourceActorId||state.clock.phase==="end") return internal.getSnapshot();
   const actorId=artifact.sourceActorId;
   const snapshot=await previousGetSnapshot.call(this);
