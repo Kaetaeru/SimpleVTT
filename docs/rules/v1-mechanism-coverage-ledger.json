@@ -474,7 +474,7 @@
         "commonPlaySpatialFactRuntime.test.ts",
         "Gate E provider/manual authority"
       ],
-      "currentState": "Provider/manual authority has production-verified standard distance, line-of-effect, Total Cover, and area-membership facts with normalized authoritative answers, identity invariance, connected authority routing, and same-session owner reconnect/retry replay with duplicate idempotence. Family G remains incomplete for engine-owned geometry breadth (adjacency/reach/size and shape intersection/placement) and process-durable restart persistence for spatial authority decisions.",
+      "currentState": "Family G uses authoritative provider/manual spatial facts rather than Core geometry fabrication, as required by the architecture charter. The standard fact registry covers distance, adjacency, reach, line-of-effect, Total Cover, area membership, legal destination, and placement; the typed selector contract carries line/cone/cube/sphere/cylinder/emanation shape, origin, dimensions, and range. Connected owner-authority spatial requests resume on reconnect, reject stale peers, and deduplicate retries. Family G remains incomplete only until standard size/space authority and durable adapter/process-restart persistence for in-flight spatial decisions are proven.",
       "requiredSemantics": [
         "distance",
         "adjacency",
@@ -495,9 +495,10 @@
       "transactionDomain": "Authoritative spatial provider or explicit manual authority",
       "disposition": "INCOMPLETE",
       "implementationEvidence": [
-        "commonPlaySpatialFactRuntime.ts COMMON_PLAY_STANDARD_FACTS defines provider/manual authority for spatial.distance-feet, spatial.line-of-effect, spatial.total-cover, and spatial.area-members with normalized answers",
+        "commonPlaySpatialFactRuntime.ts COMMON_PLAY_STANDARD_FACTS defines provider/manual authority for spatial.distance-feet, spatial.adjacent, spatial.within-reach, spatial.line-of-effect, spatial.total-cover, spatial.area-members, spatial.legal-destination, and spatial.placement with normalized answers",
+        "commonPlaySelectorRuntime.ts typed CommonPlayInstantArea supports line/cone/cube/sphere/cylinder/emanation with self/point origin and provider-owned authoritative area membership",
         "connectedCommonPlayAuthorityFactRuntime.ts routes authoritative Common Play fact requests and answers through the connected session authority path",
-        "commonPlaySpatialFactRuntime.ts COMMON_PLAY_STANDARD_FACTS defines provider/manual authority for spatial.distance-feet, spatial.adjacent, spatial.within-reach, spatial.line-of-effect, spatial.total-cover, spatial.area-members, spatial.legal-destination, and spatial.placement with normalized answers"
+        "common-play-resolver-architecture-charter.md section 6 requires spatial facts, target sets, and movement legality through provider or manual authority without Core geometry fabrication"
       ],
       "productionEvidence": [
         "c9FamilyGStandardSpatialFacts.test.ts proves provider-authoritative distance, line-of-effect, Total Cover, and normalized area membership without content identity dispatch",
@@ -516,9 +517,8 @@
       ],
       "persistenceEvidenceIfRelevant": [],
       "remainingNamedSeams": [
-        "engine-owned adjacency/reach/size-space and line/cone/cube/sphere/cylinder/emanation intersection geometry remain incomplete",
-        "position/artifact placement geometry is not yet converged on the standard spatial fact authority path",
-        "process-durable restart persistence for unresolved or resolved spatial authority decisions remains absent"
+        "standard provider/manual size/space fact authority remains absent",
+        "durable adapter/process-restart persistence for in-flight spatial decisions remains absent; connected reconnect/retry routing is already covered"
       ],
       "connectedRelevant": true,
       "persistenceRelevant": true
