@@ -36,89 +36,48 @@ jobs:
             git fetch origin "$branch"
             git reset --hard "origin/$branch"
             python3 - <<'PY'
-          import json
           from pathlib import Path
 
           def replace_once(path, old, new):
               p=Path(path)
-              text=p.read_text(encoding='utf-8')
+              text=p.read_text(encoding="utf-8")
               if new in text:
                   return
               if old not in text:
-                  raise SystemExit(f'expected patch anchor missing: {path}')
-              p.write_text(text.replace(old,new,1),encoding='utf-8')
+                  raise SystemExit(f"expected patch anchor missing: {path}: {old!r}")
+              p.write_text(text.replace(old,new,1),encoding="utf-8")
 
-          runtime='src/app/productionPlayRuntimeAdapter.ts'
+          runtime="src/app/productionPlayRuntimeAdapter.ts"
           replace_once(runtime,
-          '''  if(!definition)return {rangeFeet:5};
-            const rangeFeet=(definition.properties??[]).map((property)=>property.match(/^(?:ammunition|thrown):(\\d+)(?:\\/\\d+)?$/i)?.[1]).find(Boolean);
-            const strength=mod(character.abilities.str);const dexterity=mod(character.abilities.dex);
-            const ability:AbilityKey|undefined=definition.mode==="ranged"?"dex":!definition.properties?.includes("finesse")?"str":strength===dexterity?undefined:strength>dexterity?"str":"dex";
-            return {rangeFeet:rangeFeet?Number(rangeFeet):5,...(ability?{ability}:{})};''',
-          '''  if(!definition)return {rangeFeet:5,loading:false};
-            const rangeFeet=(definition.properties??[]).map((property)=>property.match(/^(?:ammunition|thrown):(\\d+)(?:\\/\\d+)?$/i)?.[1]).find(Boolean);
-            const strength=mod(character.abilities.str);const dexterity=mod(character.abilities.dex);
-            const ability:AbilityKey|undefined=definition.mode==="ranged"?"dex":!definition.properties?.includes("finesse")?"str":strength===dexterity?undefined:strength>dexterity?"str":"dex";
-            return {rangeFeet:rangeFeet?Number(rangeFeet):5,...(ability?{ability}:{}),loading:definition.properties?.includes("loading")??false};''')
+              "  if(!definition)return {rangeFeet:5};",
+              "  if(!definition)return {rangeFeet:5,loading:false};")
           replace_once(runtime,
-          '''function attackActions(character:CharacterSheet):ActionVm[] {
-            const attacksPerAction=weaponAttacksPerAction(character);
-            return character.attacks.map((attack,index)=>{
-              const damage=parseDamage(attack.damage);
-              const runtimeFact=weaponRuntimeFact(character,attack);
-              const id=attack.id?.startsWith("action.")?attack.id:`action.character-attack.${index}`;''',
-          '''function attackActions(character:CharacterSheet):ActionVm[] {
-            const baseAttacksPerAction=weaponAttacksPerAction(character);
-            return character.attacks.map((attack,index)=>{
-              const damage=parseDamage(attack.damage);
-              const runtimeFact=weaponRuntimeFact(character,attack);
-              const attacksPerAction=runtimeFact.loading?1:baseAttacksPerAction;
-              const id=attack.id?.startsWith("action.")?attack.id:`action.character-attack.${index}`;''')
+              "  return {rangeFeet:rangeFeet?Number(rangeFeet):5,...(ability?{ability}:{})};",
+              "  return {rangeFeet:rangeFeet?Number(rangeFeet):5,...(ability?{ability}:{}),loading:definition.properties?.includes(\"loading\")??false};")
           replace_once(runtime,
-          '''      runtimeAttack:{
-                sourceKind:"weapon",
-                ...runtimeFact,
-                diceSides:damage.sides,''',
-          '''      runtimeAttack:{
-                sourceKind:"weapon",
-                rangeFeet:runtimeFact.rangeFeet,
-                ...(runtimeFact.ability?{ability:runtimeFact.ability}:{}),
-                diceSides:damage.sides,''')
+              "  const attacksPerAction=weaponAttacksPerAction(character);",
+              "  const baseAttacksPerAction=weaponAttacksPerAction(character);")
+          replace_once(runtime,
+              "    const runtimeFact=weaponRuntimeFact(character,attack);\n    const id=attack.id?.startsWith(\"action.\")?attack.id:`action.character-attack.${index}`;",
+              "    const runtimeFact=weaponRuntimeFact(character,attack);\n    const attacksPerAction=runtimeFact.loading?1:baseAttacksPerAction;\n    const id=attack.id?.startsWith(\"action.\")?attack.id:`action.character-attack.${index}`;")
+          replace_once(runtime,
+              "        sourceKind:\"weapon\",\n        ...runtimeFact,\n        diceSides:damage.sides,",
+              "        sourceKind:\"weapon\",\n        rangeFeet:runtimeFact.rangeFeet,\n        ...(runtimeFact.ability?{ability:runtimeFact.ability}:{}),\n        diceSides:damage.sides,")
 
-          test_path='tests/ui/c9FamilyJStructuralWeaponSource.test.ts'
+          test_path="tests/ui/c9FamilyJStructuralWeaponSource.test.ts"
           p=Path(test_path)
-          text=p.read_text(encoding='utf-8')
-          if 'Loading is derived from the structurally linked weapon source' not in text:
-              text=text.replace('''  assert.equal(projected.runtimeAttack?.rangeFeet,80);
-            assert.equal(projected.runtimeAttack?.ability,"dex");
-          });''','''  assert.equal(projected.runtimeAttack?.rangeFeet,80);
-            assert.equal(projected.runtimeAttack?.ability,"dex");
-            assert.equal(projected.attacksPerAction,2);
-          });''',1)
-              text=text.replace('''  assert.equal(projected.runtimeAttack?.rangeFeet,5);
-            assert.equal(projected.runtimeAttack?.ability,undefined);
-          });''','''  assert.equal(projected.runtimeAttack?.rangeFeet,5);
-            assert.equal(projected.runtimeAttack?.ability,undefined);
-            assert.equal(projected.attacksPerAction,2,"presentation text alone must not imply Loading");
-          });
-
-          test("Loading is derived from the structurally linked weapon source and limits Extra Attack",async()=>{
-            const adapter=new MockAdapter();
-            const character=source(adapter);
-            const attack=character.attacks.find((candidate)=>candidate.id==="action.shortbow");
-            const item=character.items.find((candidate)=>candidate.id==="item.shortbow.aelar");
-            assert.ok(attack);assert.ok(item);
-            attack.name="Renamed Ranged Attack";
-            item.name="Unrelated Equipment";item.nameEn="Presentation Removed";
-            item.definitionId="dnd.srd521.item.weapon.light-crossbow";
-            const snapshot=await adapter.startProductionLocalPlay();
-            const projected=snapshot.scene.actionsByActor[character.id]?.find((candidate)=>candidate.id===attack.id);
-            assert.ok(projected);
-            assert.equal(projected.runtimeAttack?.rangeFeet,80);
-            assert.equal(projected.runtimeAttack?.ability,"dex");
-            assert.equal(projected.attacksPerAction,1,"Loading weapon must allow only one attack from the Attack action");
-          });''',1)
-              p.write_text(text,encoding='utf-8')
+          text=p.read_text(encoding="utf-8")
+          if "Loading is derived from the structurally linked weapon source" not in text:
+              first='''  assert.equal(projected.runtimeAttack?.rangeFeet,80);\n  assert.equal(projected.runtimeAttack?.ability,"dex");\n});'''
+              first_new='''  assert.equal(projected.runtimeAttack?.rangeFeet,80);\n  assert.equal(projected.runtimeAttack?.ability,"dex");\n  assert.equal(projected.attacksPerAction,2);\n});'''
+              if first not in text: raise SystemExit("first structural weapon test anchor missing")
+              text=text.replace(first,first_new,1)
+              second='''  assert.equal(projected.runtimeAttack?.rangeFeet,5);\n  assert.equal(projected.runtimeAttack?.ability,undefined);\n});'''
+              second_new='''  assert.equal(projected.runtimeAttack?.rangeFeet,5);\n  assert.equal(projected.runtimeAttack?.ability,undefined);\n  assert.equal(projected.attacksPerAction,2,"presentation text alone must not imply Loading");\n});'''
+              if second not in text: raise SystemExit("second structural weapon test anchor missing")
+              text=text.replace(second,second_new,1)
+              text += '''\n\ntest("Loading is derived from the structurally linked weapon source and limits Extra Attack",async()=>{\n  const adapter=new MockAdapter();\n  const character=source(adapter);\n  const attack=character.attacks.find((candidate)=>candidate.id==="action.shortbow");\n  const item=character.items.find((candidate)=>candidate.id==="item.shortbow.aelar");\n  assert.ok(attack);assert.ok(item);\n  attack.name="Renamed Ranged Attack";\n  item.name="Unrelated Equipment";item.nameEn="Presentation Removed";\n  item.definitionId="dnd.srd521.item.weapon.light-crossbow";\n  const snapshot=await adapter.startProductionLocalPlay();\n  const projected=snapshot.scene.actionsByActor[character.id]?.find((candidate)=>candidate.id===attack.id);\n  assert.ok(projected);\n  assert.equal(projected.runtimeAttack?.rangeFeet,80);\n  assert.equal(projected.runtimeAttack?.ability,"dex");\n  assert.equal(projected.attacksPerAction,1,"Loading weapon must allow only one attack from the Attack action");\n});\n'''
+              p.write_text(text,encoding="utf-8")
           PY
             npm run generate:content
             node --import tsx --test tests/ui/c9FamilyJStructuralWeaponSource.test.ts
@@ -128,30 +87,32 @@ jobs:
             python3 - <<'PY'
           import json
           from pathlib import Path
-          ledger=Path('docs/rules/v1-mechanism-coverage-ledger.json')
-          data=json.loads(ledger.read_text(encoding='utf-8'))
-          row=next(entry for entry in data['rows'] if entry['family']=='J')
+
+          ledger=Path("docs/rules/v1-mechanism-coverage-ledger.json")
+          data=json.loads(ledger.read_text(encoding="utf-8"))
+          row=next(entry for entry in data["rows"] if entry["family"]=="J")
           additions={
-            'implementationEvidence':'productionPlayRuntimeAdapter.ts derives the Loading attack-count limit from the structurally linked source weapon definition and caps only that projected weapon action at one attack without presentation-name dispatch',
-            'productionEvidence':'c9FamilyJStructuralWeaponSource.test.ts proves a level-5 Fighter keeps two attacks with a structurally linked non-Loading Shortbow, is capped to one attack when the same renamed action is structurally linked to a Loading Light Crossbow, and does not infer Loading from presentation text alone',
-            'identityInvarianceEvidence':'c9FamilyJStructuralWeaponSource.test.ts derives Loading from the linked weapon definition after attack/item presentation rename and proves presentation-only Light Crossbow text cannot select the mechanic',
+              "implementationEvidence":"productionPlayRuntimeAdapter.ts derives the Loading attack-count limit from the structurally linked source weapon definition and caps only that projected weapon action at one attack without presentation-name dispatch",
+              "productionEvidence":"c9FamilyJStructuralWeaponSource.test.ts proves a level-5 Fighter keeps two attacks with a structurally linked non-Loading Shortbow, is capped to one attack when the same renamed action is structurally linked to a Loading Light Crossbow, and does not infer Loading from presentation text alone",
+              "identityInvarianceEvidence":"c9FamilyJStructuralWeaponSource.test.ts derives Loading from the linked weapon definition after attack/item presentation rename and proves presentation-only Light Crossbow text cannot select the mechanic",
           }
           for field,value in additions.items():
               if value not in row[field]: row[field].append(value)
-          sentence=' Loading now constrains structurally linked weapon action projection from the source weapon property itself, so a Loading weapon is capped at one attack without presentation-name or content-action-ID dispatch.'
-          if sentence.strip() not in row['currentState']:
-              row['currentState']=row['currentState'].rstrip()+sentence
-          row['currentState']=row['currentState'].replace('and Loading composition.','.')
+          sentence="Loading now constrains structurally linked weapon action projection from the source weapon property itself, so a Loading weapon is capped at one attack without presentation-name or content-action-ID dispatch."
+          if sentence not in row["currentState"]:
+              row["currentState"]=row["currentState"].rstrip()+" "+sentence
           cleaned=[]
-          for seam in row['remainingNamedSeams']:
-              seam=seam.replace('multiattack/Extra Attack/replacement and Loading constraints remain incomplete','multiattack/Extra Attack/replacement remains incomplete')
-              seam=seam.replace('replacement and Loading constraints remain incomplete','replacement remains incomplete')
+          for seam in row["remainingNamedSeams"]:
+              seam=seam.replace("multiattack/Extra Attack/replacement and Loading constraints remain incomplete","multiattack/Extra Attack/replacement remains incomplete")
+              seam=seam.replace("replacement and Loading constraints remain incomplete","replacement remains incomplete")
+              seam=seam.replace(" and Loading composition","")
               cleaned.append(seam)
-          row['remainingNamedSeams']=cleaned
-          ledger.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          row["remainingNamedSeams"]=cleaned
+          ledger.write_text(json.dumps(data,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
           PY
             rm -f "$workflow"
             git add -A
+            git diff --cached --check
             if git diff --cached --quiet; then exit 0; fi
             git commit -m "feat(c9): enforce structural Loading constraint"
             if git push origin HEAD:"$branch"; then exit 0; fi
