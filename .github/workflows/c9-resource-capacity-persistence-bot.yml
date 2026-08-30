@@ -1,0 +1,239 @@
+name: C9 Resource Capacity Persistence Patch
+
+on:
+  push:
+    branches:
+      - "agent/c9-gate-n-coverage-reconciliation"
+    paths:
+      - ".github/workflows/c9-resource-capacity-persistence-bot.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply capacity persistence patch
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace(path, before, after, count=1):
+              p=Path(path)
+              text=p.read_text()
+              actual=text.count(before)
+              if actual != count:
+                  raise SystemExit(f"{path}: expected {count} matches, found {actual}")
+              p.write_text(text.replace(before,after))
+
+          replace(
+              "src/app/progressionContracts.ts",
+              '''    recoveryLockouts?: {
+                shortRest?: number;
+                longRest?: number;
+              };
+          ''',
+              '''    recoveryLockouts?: {
+                shortRest?: number;
+                longRest?: number;
+              };
+              sourceMaximum?: number;
+              maximumAfterLongRest?: number;
+          ''',
+          )
+
+          replace(
+              "src/app/characterLibraryPersistence.ts",
+              '''    max:resource.max,
+          ''',
+              '''    max:resource.sourceMaximum ?? resource.max,
+          ''',
+          )
+          replace(
+              "src/app/characterLibraryPersistence.ts",
+              '''function resourceRuntimeState(resource:CharacterResourceVm):CharacterResourceRuntimeStateV1 {
+            return {
+              id:resource.id,
+              current:resource.current,
+              recoveryLockouts:resource.recoveryLockouts ? cp(resource.recoveryLockouts) : undefined,
+            };
+          }
+          ''',
+              '''function resourceRuntimeState(resource:CharacterResourceVm):CharacterResourceRuntimeStateV1 {
+            const sourceMaximum=resource.sourceMaximum ?? resource.max;
+            return {
+              id:resource.id,
+              current:resource.current,
+              maximum:resource.max===sourceMaximum ? undefined : resource.max,
+              maximumAfterLongRest:resource.maximumAfterLongRest,
+              recoveryLockouts:resource.recoveryLockouts ? cp(resource.recoveryLockouts) : undefined,
+            };
+          }
+          ''',
+          )
+          replace(
+              "src/app/characterLibraryPersistence.ts",
+              '''    resources:runtime.resources.map((resource) => ({
+                id:resource.id,
+                current:resource.current,
+                recoveryLockouts:resource.recoveryLockouts ? cp(resource.recoveryLockouts) : undefined,
+              })),
+          ''',
+              '''    resources:runtime.resources.map((resource) => ({
+                id:resource.id,
+                current:resource.current,
+                maximum:resource.maximum,
+                maximumAfterLongRest:resource.maximumAfterLongRest,
+                recoveryLockouts:resource.recoveryLockouts ? cp(resource.recoveryLockouts) : undefined,
+              })),
+          ''',
+          )
+          replace(
+              "src/app/characterLibraryPersistence.ts",
+              '''  return definitions.map((definition)=>{
+                const runtime=runtimeById.get(definition.id);
+                return {
+                  id:definition.id,
+                  label:definition.label,
+                  current:Math.min(runtime?.current ?? definition.max,definition.max),
+                  max:definition.max,
+                  dieSides:definition.dieSides,
+                  source:definition.source,
+                  recovery:definition.recovery ? cp(definition.recovery) : undefined,
+                  recoveryLockouts:runtime?.recoveryLockouts ? cp(runtime.recoveryLockouts) : undefined,
+                };
+              });
+          ''',
+              '''  return definitions.map((definition)=>{
+                const runtime=runtimeById.get(definition.id);
+                const maximum=runtime?.maximum ?? definition.max;
+                return {
+                  id:definition.id,
+                  label:definition.label,
+                  current:Math.min(runtime?.current ?? maximum,maximum),
+                  max:maximum,
+                  sourceMaximum:definition.max,
+                  maximumAfterLongRest:runtime?.maximumAfterLongRest,
+                  dieSides:definition.dieSides,
+                  source:definition.source,
+                  recovery:definition.recovery ? cp(definition.recovery) : undefined,
+                  recoveryLockouts:runtime?.recoveryLockouts ? cp(runtime.recoveryLockouts) : undefined,
+                };
+              });
+          ''',
+          )
+
+          replace(
+              "src/app/resolutionCharacterDurableProjection.ts",
+              '''type DurableCharacterResource=CharacterSheet["resources"][number]&{recoveryLockouts?:ResourceRecoveryLockouts};
+          ''',
+              '''type DurableCharacterResource=CharacterSheet["resources"][number]&{
+            recoveryLockouts?:ResourceRecoveryLockouts;
+            sourceMaximum?:number;
+            maximumAfterLongRest?:number;
+          };
+          ''',
+          )
+          replace(
+              "src/app/resolutionCharacterDurableProjection.ts",
+              '''    if (pseudo) {
+                if (change.recoveryLockouts) return `Character write-back item resource cannot carry recovery lockouts: ${change.resourceId}`;
+          ''',
+              '''    if (pseudo) {
+                if (change.recoveryLockouts) return `Character write-back item resource cannot carry recovery lockouts: ${change.resourceId}`;
+                if (change.capacity) return `Character write-back item resource cannot carry capacity changes: ${change.resourceId}`;
+          ''',
+          )
+          replace(
+              "src/app/resolutionCharacterDurableProjection.ts",
+              '''    if (change.recoveryLockouts) {
+                const expected=direction==="forward" ? change.recoveryLockouts.before : change.recoveryLockouts.after;
+                const next=direction==="forward" ? change.recoveryLockouts.after : change.recoveryLockouts.before;
+                const current=lockoutSnapshot(resource.recoveryLockouts);
+                if (!sameLockouts(current,expected)) {
+                  return `Character write-back drift for ${change.targetId}/${label(change)}.recoveryLockouts`;
+                }
+                if (next) resource.recoveryLockouts=structuredClone(next);
+                else delete resource.recoveryLockouts;
+              }
+              resource.current=after;
+          ''',
+              '''    if (change.recoveryLockouts) {
+                const expected=direction==="forward" ? change.recoveryLockouts.before : change.recoveryLockouts.after;
+                const next=direction==="forward" ? change.recoveryLockouts.after : change.recoveryLockouts.before;
+                const current=lockoutSnapshot(resource.recoveryLockouts);
+                if (!sameLockouts(current,expected)) {
+                  return `Character write-back drift for ${change.targetId}/${label(change)}.recoveryLockouts`;
+                }
+                if (next) resource.recoveryLockouts=structuredClone(next);
+                else delete resource.recoveryLockouts;
+              }
+              if (change.capacity) {
+                const expected=direction==="forward" ? change.capacity.before : change.capacity.after;
+                const next=direction==="forward" ? change.capacity.after : change.capacity.before;
+                const currentMarker=resource.maximumAfterLongRest ?? null;
+                if (resource.max!==expected.maximum || currentMarker!==expected.maximumAfterLongRest) {
+                  return `Character write-back drift for ${change.targetId}/${label(change)}.capacity`;
+                }
+                if (next.maximum<0 || after>next.maximum) {
+                  return `Character write-back invalid capacity for ${change.targetId}/${label(change)}: maximum ${next.maximum}, current ${after}`;
+                }
+                if (resource.sourceMaximum===undefined) resource.sourceMaximum=resource.max;
+                resource.max=next.maximum;
+                if (next.maximumAfterLongRest===null) delete resource.maximumAfterLongRest;
+                else resource.maximumAfterLongRest=next.maximumAfterLongRest;
+              }
+              resource.current=after;
+          ''',
+          )
+
+          replace(
+              "tests/ui/phase09CommonPlayResourcePersistence.test.ts",
+              '''import { MemoryCharacterLibraryStore } from "../../src/app/memoryCharacterLibraryStore";
+          ''',
+              '''import { MemoryCharacterLibraryStore } from "../../src/app/memoryCharacterLibraryStore";
+          import { buildCharacterLibraryRecordV1, materializeCharacterRecordV1 } from "../../src/app/characterLibraryPersistence";
+          import { projectResolutionCharacterWriteBack } from "../../src/app/resolutionCharacterDurableProjection";
+          import type { ResolutionEvent } from "../../src/domain/resolutionTypes";
+          ''',
+          )
+          test_path=Path("tests/ui/phase09CommonPlayResourcePersistence.test.ts")
+          test_text=test_path.read_text()
+          marker='test("temporary resource capacity overlay persists without mutating source maximum and reverses through Undo projection"'
+          if marker in test_text:
+              raise SystemExit("capacity persistence test already exists")
+          test_text += '''\n\ntest("temporary resource capacity overlay persists without mutating source maximum and reverses through Undo projection",async()=>{\n  const adapter=new MockAdapter();\n  const snapshot=await adapter.getSnapshot();\n  const sheet=structuredClone(snapshot.activeCharacter);\n  const resource=sheet.resources.find((entry)=>entry.id===FIGHTER_SECOND_WIND_RESOURCE_ID);\n  assert.ok(resource);\n  const baseMaximum=resource.max;\n  const event={\n    id:"family-d-capacity-persistence:event",\n    resolutionId:"family-d-capacity-persistence",\n    operationId:"family-d-capacity-persistence:resource",\n    kind:"resource-capacity-probe",\n    actorId:sheet.id,\n    targetId:sheet.id,\n    summary:"temporary capacity probe",\n    provenance:[],\n    stateChanges:[{\n      kind:"resource",\n      targetId:sheet.id,\n      resourceId:resource.id,\n      before:resource.current,\n      after:resource.current,\n      capacity:{\n        before:{maximum:baseMaximum,maximumAfterLongRest:null},\n        after:{maximum:baseMaximum+1,maximumAfterLongRest:baseMaximum},\n      },\n      provenance:[],\n      lifetime:"character-durable",\n      writeBack:"character",\n    }],\n    result:{},\n  } satisfies ResolutionEvent;\n\n  const forward=projectResolutionCharacterWriteBack(sheet,[event],"forward");\n  assert.equal(forward.status,"committed",forward.status==="rejected"?forward.error:undefined);\n  if (forward.status!=="committed") return;\n  const expanded=forward.sheet.resources.find((entry)=>entry.id===resource.id);\n  assert.equal(expanded?.max,baseMaximum+1);\n  assert.equal(expanded?.sourceMaximum,baseMaximum);\n  assert.equal(expanded?.maximumAfterLongRest,baseMaximum);\n\n  const record=buildCharacterLibraryRecordV1(forward.sheet);\n  assert.equal(record.source.resourceDefinitions?.find((entry)=>entry.id===resource.id)?.max,baseMaximum);\n  const durable=record.runtime.resources.find((entry)=>entry.id===resource.id);\n  assert.equal(durable?.maximum,baseMaximum+1);\n  assert.equal(durable?.maximumAfterLongRest,baseMaximum);\n\n  const restarted=materializeCharacterRecordV1(record);\n  const restoredResource=restarted.resources.find((entry)=>entry.id===resource.id);\n  assert.equal(restoredResource?.max,baseMaximum+1);\n  assert.equal(restoredResource?.sourceMaximum,baseMaximum);\n  assert.equal(restoredResource?.maximumAfterLongRest,baseMaximum);\n\n  const inverse=projectResolutionCharacterWriteBack(restarted,[event],"inverse");\n  assert.equal(inverse.status,"committed",inverse.status==="rejected"?inverse.error:undefined);\n  if (inverse.status!=="committed") return;\n  const normalized=inverse.sheet.resources.find((entry)=>entry.id===resource.id);\n  assert.equal(normalized?.max,baseMaximum);\n  assert.equal(normalized?.sourceMaximum,baseMaximum);\n  assert.equal(normalized?.maximumAfterLongRest,undefined);\n\n  const undoneRecord=buildCharacterLibraryRecordV1(inverse.sheet,record);\n  assert.equal(undoneRecord.sourceRevision,record.sourceRevision);\n  assert.equal(undoneRecord.source.resourceDefinitions?.find((entry)=>entry.id===resource.id)?.max,baseMaximum);\n  const undoneRuntime=undoneRecord.runtime.resources.find((entry)=>entry.id===resource.id);\n  assert.equal(undoneRuntime?.maximum,undefined);\n  assert.equal(undoneRuntime?.maximumAfterLongRest,undefined);\n});\n'''
+          test_path.write_text(test_text)
+
+          replace(
+              ".github/workflows/m1-common-play-resource-economy.yml",
+              '''      - "src/app/resolutionCharacterDurableProjection.ts"\n''',
+              '''      - "src/app/resolutionCharacterDurableProjection.ts"\n      - "src/app/characterLibraryPersistence.ts"\n      - "src/app/persistenceContracts.ts"\n      - "src/app/progressionContracts.ts"\n''',
+              count=2,
+          )
+          PY
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Generate content catalogs
+        run: npm run generate:content
+      - name: Verify focused resource persistence
+        run: npx tsx --test tests/domain/resourceRecoveryLockout.test.ts tests/ui/phase09CommonPlayResourcePersistence.test.ts
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - name: Commit verified patch and remove patch workflow
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/c9-resource-capacity-persistence-bot.yml
+          git add src/app/progressionContracts.ts src/app/characterLibraryPersistence.ts src/app/resolutionCharacterDurableProjection.ts tests/ui/phase09CommonPlayResourcePersistence.test.ts .github/workflows/m1-common-play-resource-economy.yml
+          git commit -m "feat(c9): persist temporary resource capacity"
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
