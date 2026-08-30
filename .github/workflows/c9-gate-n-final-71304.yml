@@ -1,5 +1,5 @@
 # Final Gate N one-shot verifier; verifies the exact triggering commit.
-# Retriggered after ledger reached final dispositions.
+# Retriggered after actor artifact trace retirement.
 name: C9 Gate N Final Verification 71304
 
 on:
