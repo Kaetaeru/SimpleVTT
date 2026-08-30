@@ -48,6 +48,9 @@ on:
       - "package.json"
       - ".github/workflows/rules-domain.yml"
 
+permissions:
+  contents: read
+
 jobs:
   rules-domain:
     runs-on: ubuntu-latest
@@ -174,3 +177,11 @@ jobs:
         run: npm run test:progression
       - name: Typecheck application
         run: npx tsc --noEmit
+      - name: Verify C9 Gate N coverage
+        run: node scripts/check-v1-mechanism-coverage.mjs --gate-n
+      - name: Audit legacy execution boundary
+        run: node scripts/check-legacy-execution-boundary.mjs
+      - name: Build application
+        run: npm run build
+      - name: Check diff cleanliness
+        run: git diff --check
