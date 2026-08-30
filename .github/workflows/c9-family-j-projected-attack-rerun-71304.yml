@@ -1,0 +1,89 @@
+name: C9 Family J Projected Attack Rerun 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-j-projected-attack-rerun-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  implement-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Apply projected action fallback
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path=Path('src/app/phase09RealResolutionAdapter.ts')
+          text=path.read_text(encoding='utf-8')
+          anchor='''function migratedResolutionAction(action:ActionVm) {\n  return action.resolutionKind === "ability-check"\n    || action.resolutionKind === "attack"\n    || action.resolutionKind === "healing";\n}\n'''
+          helper='''function migratedResolutionAction(action:ActionVm) {\n  return action.resolutionKind === "ability-check"\n    || action.resolutionKind === "attack"\n    || action.resolutionKind === "healing";\n}\n\nfunction projectedAction(scene:AppSnapshot["scene"],actionId:string) {\n  return Object.values(scene.actionsByActor).flat().find((action)=>action.id===actionId);\n}\n\nasync function resolutionAction(adapter:MockAdapter,internal:Phase09ResolutionAdapterState,actionId:string) {\n  return internal.action(actionId) ?? projectedAction((await internal.getSnapshot()).scene,actionId);\n}\n'''
+          if helper not in text:
+              if text.count(anchor)!=1:
+                  raise SystemExit(f'phase09 resolution helper anchor changed: {text.count(anchor)}')
+              text=text.replace(anchor,helper,1)
+          old='''  const action = internal.action(actionId);\n  if (!action || !migratedResolutionAction(action)) {'''
+          new='''  const action = await resolutionAction(this,internal,actionId);\n  if (!action || !migratedResolutionAction(action)) {'''
+          if new not in text:
+              if text.count(old)!=1:
+                  raise SystemExit(f'phase09 resolve action anchor changed: {text.count(old)}')
+              text=text.replace(old,new,1)
+          old='''  const action = internal.action(resolution.actionId);\n  if (!action) return oldAdvanceResolution.call(this);'''
+          new='''  const action = await resolutionAction(this,internal,resolution.actionId);\n  if (!action) return oldAdvanceResolution.call(this);'''
+          if new not in text:
+              if text.count(old)!=1:
+                  raise SystemExit(f'phase09 advance action anchor changed: {text.count(old)}')
+              text=text.replace(old,new,1)
+          path.write_text(text,encoding='utf-8')
+
+          path=Path('src/app/phase09RealRuntimeAttackAdapter.ts')
+          text=path.read_text(encoding='utf-8')
+          anchor='''function isRuntimeAtomicAttack(action:ActionVm|undefined,manual?:PendingManualMovementReaction) {\n  return Boolean(action)\n    && action!.resolutionKind === "attack"\n    && (Boolean(manual) || Boolean(action!.runtimeAttack))\n    && !action!.itemCost\n    && !action!.resourceCost;\n}\n'''
+          helper='''function isRuntimeAtomicAttack(action:ActionVm|undefined,manual?:PendingManualMovementReaction) {\n  return Boolean(action)\n    && action!.resolutionKind === "attack"\n    && (Boolean(manual) || Boolean(action!.runtimeAttack))\n    && !action!.itemCost\n    && !action!.resourceCost;\n}\n\nfunction projectedAction(scene:AppSnapshot["scene"],actionId:string) {\n  return Object.values(scene.actionsByActor).flat().find((action)=>action.id===actionId);\n}\n\nasync function runtimeAttackAction(adapter:MockAdapter,internal:RuntimeAttackAdapterState,actionId:string) {\n  return internal.action(actionId) ?? projectedAction((await internal.getSnapshot()).scene,actionId);\n}\n'''
+          if helper not in text:
+              if text.count(anchor)!=1:
+                  raise SystemExit(f'runtime attack helper anchor changed: {text.count(anchor)}')
+              text=text.replace(anchor,helper,1)
+          old='''MockAdapter.prototype.advanceResolution = async function advanceResolutionWithRuntimeAttackFacts() {\n  const internal = this as unknown as RuntimeAttackAdapterState;\n  const resolution = internal.resolution;\n  const action = resolution ? internal.action(resolution.actionId) : undefined;'''
+          new='''MockAdapter.prototype.advanceResolution = async function advanceResolutionWithRuntimeAttackFacts() {\n  const internal = this as unknown as RuntimeAttackAdapterState;\n  const resolution = internal.resolution;\n  const action = resolution ? await runtimeAttackAction(this,internal,resolution.actionId) : undefined;'''
+          if new not in text:
+              if text.count(old)!=1:
+                  raise SystemExit(f'runtime attack advance anchor changed: {text.count(old)}')
+              text=text.replace(old,new,1)
+          path.write_text(text,encoding='utf-8')
+          PY
+      - run: npm ci
+      - run: npm run generate:content
+      - name: Verify Family J projected attack path
+        run: |
+          npx tsx --test tests/ui/unarmedStrikeRuntime.test.ts tests/ui/c9FamilyJExtraAttackProduction71304.test.ts tests/ui/c9FamilyJSpatialAttackProduction.test.ts
+          node scripts/check-v1-mechanism-coverage.mjs
+          node scripts/check-legacy-execution-boundary.mjs
+          npm exec tsc -- --noEmit
+      - name: Publish verified source and retire staging
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/app/phase09RealResolutionAdapter.ts src/app/phase09RealRuntimeAttackAdapter.ts
+          git rm -f .github/workflows/c9-family-j-projected-attack-rerun-71304.yml
+          git commit -m "fix(c9): resolve projected attacks by structural payload"
+          for attempt in 1 2 3 4 5; do
+            if git push origin HEAD:agent/c9-gate-n-coverage-reconciliation; then exit 0; fi
+            git fetch origin agent/c9-gate-n-coverage-reconciliation
+            git rebase origin/agent/c9-gate-n-coverage-reconciliation || exit 1
+            sleep 1
+          done
+          exit 1
