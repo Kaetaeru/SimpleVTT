@@ -1,0 +1,56 @@
+name: C9 Family E Automatic Selector Verifier Fix 7130
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-e-automatic-selector-verifier-fix-7130.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch-verifier:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - name: Make automatic selection verifier reject stale resolution state
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          path=Path('.github/workflows/c9-family-e-automatic-selector-runner-7130.yml')
+          text=path.read_text()
+          old='''    await adapter.resolveAction(actionId,["char.aelar"]);\\n    const snapshot=await adapter.getSnapshot();\\n    assert.equal(snapshot.resolution?.stage,"complete");\\n'''
+          new='''    await adapter.resolveAction(actionId,[]);\\n    const snapshot=await adapter.getSnapshot();\\n    assert.equal(snapshot.resolution?.actionId,actionId,"automatic selector must produce a fresh action resolution without a manual target identity");\\n    assert.equal(snapshot.resolution?.stage,"complete");\\n'''
+          if new not in text:
+              if old not in text:
+                  raise SystemExit('automatic selector verifier target block not found')
+              text=text.replace(old,new,1)
+          path.write_text(text)
+          PY
+      - name: Publish verifier repair and retire staging workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/workflows/c9-family-e-automatic-selector-runner-7130.yml
+          git rm .github/workflows/c9-family-e-automatic-selector-verifier-fix-7130.yml
+          git diff --cached --check
+          git commit -m "ci(c9): require target-free automatic selection"
+          branch=agent/c9-gate-n-coverage-reconciliation
+          for attempt in $(seq 1 12); do
+            git fetch origin "$branch"
+            if git rebase "origin/$branch"; then
+              if git push origin HEAD:"$branch"; then exit 0; fi
+            fi
+            git rebase --abort || true
+            sleep 1
+          done
+          exit 1
