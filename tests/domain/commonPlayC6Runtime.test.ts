@@ -35,6 +35,18 @@ test("unknown progression contributions apply by track identity with revision an
   assert.equal(resolveCommonPlayProgressionContributions(first.state,4,[]).status,"rejected");
 });
 
+test("portable progression choices validate counts and atomically replace grants",()=>{
+  const contribution={track:"renamed.track",threshold:2,grants:["old"],choices:[{id:"reward",label:"Reward",count:1,required:true,options:[{id:"upgrade",label:"Upgrade",grants:["new"],replaces:["old"]}]}]};
+  const missing=resolveCommonPlayProgressionContributions({revision:0,trackLevels:{"renamed.track":2},grants:[]},0,[contribution]);
+  assert.equal(missing.status,"rejected");
+  const result=resolveCommonPlayProgressionContributions({revision:0,trackLevels:{"renamed.track":2},grants:[]},0,[contribution],{reward:{kind:"options",optionIds:["upgrade"]}});
+  assert.equal(result.status,"committed");
+  if(result.status!=="committed")return;
+  assert.deepEqual(result.state.grants,["new"]);
+  assert.deepEqual(result.addedGrantIds,["new"]);
+  assert.deepEqual(result.removedGrantIds,["old"]);
+});
+
 test("RuleModule import preserves unknown progression contributions for activation",()=>{
   const parsed=parseRuleModulePackage(JSON.stringify({schemaVersion:"0.1-draft",moduleId:"external.progression",moduleVersion:"1",rulesProfile:{id:"test",version:"1"},defaultLocale:"en",source:{document:"External",version:"1",license:"CC0",srdDerived:false},capabilities:[],content:[{id:"class.unknown",category:"class",presentation:{defaultLocale:"en",locales:{en:{name:"Unknown"}}},progressionContributions:[{track:"external.track",threshold:3,grants:["external.feature"]}]}]}));
   assert.deepEqual(parsed.entries[0].progressionContributions,[{track:"external.track",threshold:3,grants:["external.feature"]}]);

@@ -90,7 +90,26 @@ function progressionContributions(value:unknown,label:string):InstalledProgressi
     if(!Number.isInteger(threshold)||Number(threshold)<0)throw new Error(`${label}[${index}].threshold must be a non-negative integer`);
     const grants=strings(contribution.grants,`${label}[${index}].grants`);
     if(!grants.length||new Set(grants).size!==grants.length)throw new Error(`${label}[${index}].grants must be non-empty and unique`);
-    return {track:string(contribution.track,`${label}[${index}].track`),threshold:Number(threshold),grants};
+    const choices=contribution.choices===undefined?[]:(()=>{
+      if(!Array.isArray(contribution.choices))throw new Error(`${label}[${index}].choices must be an array`);
+      return contribution.choices.map((item,choiceIndex)=>{
+        const choiceLabel=`${label}[${index}].choices[${choiceIndex}]`,choice=object(item,choiceLabel);
+        const count=choice.count;
+        if(!Number.isInteger(count)||Number(count)<1)throw new Error(`${choiceLabel}.count must be a positive integer`);
+        if(typeof choice.required!=="boolean")throw new Error(`${choiceLabel}.required must be a boolean`);
+        if(!Array.isArray(choice.options)||choice.options.length<Number(count))throw new Error(`${choiceLabel}.options must contain at least count entries`);
+        const options=choice.options.map((rawOption,optionIndex)=>{
+          const optionLabel=`${choiceLabel}.options[${optionIndex}]`,option=object(rawOption,optionLabel);
+          const optionGrants=strings(option.grants,`${optionLabel}.grants`);
+          if(!optionGrants.length||new Set(optionGrants).size!==optionGrants.length)throw new Error(`${optionLabel}.grants must be non-empty and unique`);
+          const replaces=option.replaces===undefined?[]:strings(option.replaces,`${optionLabel}.replaces`);
+          return {id:string(option.id,`${optionLabel}.id`),label:string(option.label,`${optionLabel}.label`),...(typeof option.description==="string"?{description:option.description}:{}),grants:optionGrants,...(replaces.length?{replaces}: {})};
+        });
+        if(new Set(options.map((option)=>option.id)).size!==options.length)throw new Error(`${choiceLabel}.option ids must be unique`);
+        return {id:string(choice.id,`${choiceLabel}.id`),label:string(choice.label,`${choiceLabel}.label`),...(typeof choice.description==="string"?{description:choice.description}:{}),count:Number(count),required:choice.required,options};
+      });
+    })();
+    return {track:string(contribution.track,`${label}[${index}].track`),threshold:Number(threshold),grants,...(choices.length?{choices}: {})};
   });
 }
 

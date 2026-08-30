@@ -40,6 +40,22 @@ export interface InstalledProgressionContributionV1 {
   track:string;
   threshold:number;
   grants:string[];
+  choices?:InstalledProgressionChoiceV1[];
+}
+
+export interface InstalledProgressionChoiceV1 {
+  id:string;
+  label:string;
+  description?:string;
+  count:number;
+  required:boolean;
+  options:Array<{
+    id:string;
+    label:string;
+    description?:string;
+    grants:string[];
+    replaces?:string[];
+  }>;
 }
 
 export interface InstalledCampaignCalendarProfileV1 {

@@ -23,6 +23,7 @@ import "./progressionPhase08SorcererDraconicAdapter";
 import "./progressionPhase08WizardEvocationAdapter";
 import "./progressionPhase08MonkOpenHandAdapter";
 import "./progressionPhase08RogueThiefAdapter";
+import "./installedProgressionChoiceProjectionAdapter";
 import "./phase09RealResolutionAdapter";
 import "./phase09RealItemCostAdapter";
 import "./phase09RealNoRollDamageAdapter";

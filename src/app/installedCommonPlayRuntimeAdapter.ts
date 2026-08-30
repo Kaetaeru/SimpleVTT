@@ -158,6 +158,16 @@ async function commonPlayAction(adapter:MockAdapter,actionId:string) {
     : builtinCommonPlayAction(adapter,actionId);
 }
 
+async function installedProgressionGrantActionIds(adapter:MockAdapter,grantIds:string[]) {
+  if(!grantIds.length)return [];
+  const grants=new Set(grantIds),entries=await requiredSessionInstalledContent(adapter,[]);
+  return entries.filter((entry)=>grants.has(entry.contentId)).flatMap((entry)=>(entry.mechanics??[]).flatMap((mechanic)=>
+    mechanic.kind==="common-play"?(mechanic.config.entryPoints??[]).filter((point)=>point.invocation==="manual").map((point)=>installedCommonPlayActionId({
+      catalogId:catalogQualifiedId(entry.contentId,entry.sourceId,entry.version),mechanicId:mechanic.config.id,entryPointId:point.id,
+    })):[],
+  ));
+}
+
 function referencedResourceIds(definition:CommonPlayOperationDefinition) {
   const ids=new Set((definition.payments??[]).flatMap((payment)=>payment.kind==="resource"?[payment.resource]:[]));
   for (const entryPoint of definition.entryPoints) {
@@ -284,12 +294,15 @@ async function projectRuntimeArtifactActions(adapter:MockAdapter,snapshot:AppSna
     (adapter as unknown as AdapterState).scene.actionsByActor[actorId]=actions.filter((action)=>!parseStoredInvocationCommonPlayActionId(action.id)&&!parseStoredInvocationCancelActionId(action.id)&&!parseZoneMembershipCommonPlayActionId(action.id));
   }
   const ownerId=snapshot.activeCharacter.id;
-  const ownedActions=(await Promise.all(snapshot.activeCharacter.items
+  const itemActionIds=snapshot.activeCharacter.items
     .filter((item)=>!item.attunementRequired||item.attuned)
-    .flatMap((item)=>item.grantedActionIds.map(async(actionId)=>{
+    .flatMap((item)=>item.grantedActionIds);
+  const grantActionIds=await installedProgressionGrantActionIds(adapter,snapshot.activeCharacter.installedProgressionGrantIds??[]);
+  const ownedActions=(await Promise.all([...new Set([...itemActionIds,...grantActionIds])]
+    .map(async(actionId)=>{
       const action=await commonPlayAction(adapter,actionId);
       return action?projectedArtifactAction(adapter,actionId,ownerId,action,snapshot.scene,state):undefined;
-    })))).filter((action):action is ActionVm=>Boolean(action));
+    }))).filter((action):action is ActionVm=>Boolean(action));
   if(ownedActions.length) {
     for(const scene of [snapshot.scene,(adapter as unknown as AdapterState).scene]) {
       const actions=scene.actionsByActor[ownerId]??[];
