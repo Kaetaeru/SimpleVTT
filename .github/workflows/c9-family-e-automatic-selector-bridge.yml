@@ -28,8 +28,10 @@ jobs:
           def replace(path, old, new):
               p=Path(path)
               text=p.read_text()
+              if new in text:
+                  return
               if old not in text:
-                  raise SystemExit(f"expected patch anchor missing: {path}: {old[:80]!r}")
+                  raise SystemExit(f"expected patch anchor missing: {path}: {old[:100]!r}")
               p.write_text(text.replace(old,new,1))
 
           replace("src/domain/commonPlaySelectorRuntime.ts",
@@ -65,7 +67,6 @@ jobs:
           replace("src/app/installedCommonPlayRuntimeAdapter.ts",
               '    eligibleTargetIds,\n    ...(multi?{maxTargets:targetSelector?.max??eligibleTargetIds.length}:{}),',
               '    eligibleTargetIds,\n    ...(multi&&!automaticTargeting?{maxTargets:targetSelector?.max??eligibleTargetIds.length}:{}),')
-
           replace("src/app/installedCommonPlayRuntimeAdapter.ts",
               '  const selectedTargetId=targetIds[0];\n  if(!actorEntity||!state.combatants[actor.id]) return undefined;\n  const selectedTargets=targetIds.map((id)=>internal.scene.entities.find((candidate)=>candidate.id===id));\n  if(selectedTargets.some((target,index)=>!target||!state!.combatants[targetIds[index]])) return undefined;\n  const uniqueSelectedTargets=[...new Map(selectedTargets.map((target)=>[target!.id,target!] as const)).values()];',
               '  let effectiveTargetIds=[...targetIds];\n  let selectedTargetId=effectiveTargetIds[0];\n  if(!actorEntity||!state.combatants[actor.id]) return undefined;\n  let selectedTargets=effectiveTargetIds.map((id)=>internal.scene.entities.find((candidate)=>candidate.id===id));\n  if(selectedTargets.some((target,index)=>!target||!state!.combatants[effectiveTargetIds[index]])) return undefined;\n  let uniqueSelectedTargets=[...new Map(selectedTargets.map((target)=>[target!.id,target!] as const)).values()];')
@@ -76,25 +77,21 @@ jobs:
               '      candidates,\n      selectedIds:targetIds,\n      selection:"manual",\n      authority:"actor-owner",\n      directTarget:false,\n    });\n    if(selection.status!=="resolved") return undefined;\n    if(projectedAction&&(!projectedAction.available||targetIds.some((id)=>!projectedAction.eligibleTargetIds.includes(id)))) return undefined;',
               '      candidates,\n      selectedIds:selectionMode==="manual"?targetIds:undefined,\n      selection:selectionMode,\n      authority:selectionMode==="automatic"?"host":"actor-owner",\n      directTarget:false,\n    });\n    if(selection.status!=="resolved") return undefined;\n    effectiveTargetIds=selection.targetIds;\n    selectedTargetId=effectiveTargetIds[0]??actor.id;\n    selectedTargets=effectiveTargetIds.map((id)=>internal.scene.entities.find((candidate)=>candidate.id===id));\n    if(selectedTargets.some((target,index)=>!target||!state!.combatants[effectiveTargetIds[index]])) return undefined;\n    uniqueSelectedTargets=[...new Map(selectedTargets.map((target)=>[target!.id,target!] as const)).values()];\n    if(projectedAction&&(!projectedAction.available||selectionMode==="manual"&&targetIds.some((id)=>!projectedAction.eligibleTargetIds.includes(id)))) return undefined;')
 
-          replace("tests/ui/commonPlayRichSelectorProduction.test.ts",
-              'function payload(identity:Identity,area=false) {',
-              'function payload(identity:Identity,area=false,automatic=false) {')
-          replace("tests/ui/commonPlayRichSelectorProduction.test.ts",
-              ': {from:"targets",min:1,max:2,where:{op:"eq",left:{ref:"relation"},right:{value:"enemy"}}},',
-              ': {from:"targets",min:1,max:automatic?1:2,where:{op:"eq",left:{ref:"relation"},right:{value:"enemy"}},...(automatic?{selection:"automatic",orderBy:"hp"}: {})},')
-          replace("tests/ui/commonPlayRichSelectorProduction.test.ts",
-              'async function install(adapter:MockAdapter,identity:Identity,area=false) {',
-              'async function install(adapter:MockAdapter,identity:Identity,area=false,automatic=false) {')
-          replace("tests/ui/commonPlayRichSelectorProduction.test.ts",
-              '  const preview=await adapter.previewContentImport(payload(identity,area));',
-              '  const preview=await adapter.previewContentImport(payload(identity,area,automatic));')
-          p=Path("tests/ui/commonPlayRichSelectorProduction.test.ts")
-          text=p.read_text()
-          marker='test("unknown installed area selector imports but refuses execution without provider-backed membership",async()=>{'
-          if marker not in text:
-              raise SystemExit("rich selector test insertion anchor missing")
-          test='''test("unknown installed automatic selector uses host authority and authored ordering without manual target identity",async()=>{\n  async function run(identity:Identity) {\n    const adapter=new MockAdapter();\n    const actionId=await install(adapter,identity,false,true);\n    await adapter.startInitiative();\n    await adapter.setCurrentActor("char.aelar");\n    const projected=await adapter.getSnapshot();\n    const action=projected.scene.actionsByActor["char.aelar"].find((candidate)=>candidate.id===actionId);\n    assert.equal(action?.target,"self");\n    assert.deepEqual(action?.eligibleTargetIds,["char.aelar"]);\n    await adapter.resolveAction(actionId,["char.aelar"]);\n    const snapshot=await adapter.getSnapshot();\n    assert.equal(snapshot.resolution?.stage,"complete");\n    assert.deepEqual(snapshot.resolution?.targetIds,["combatant.wolf"],"lowest-HP eligible enemy is selected by the shared orderBy kernel");\n    return snapshot.resolution?.targetIds;\n  }\n  assert.deepEqual(await run(RENAMED),await run(ORIGINAL));\n});\n\n'''
-          p.write_text(text.replace(marker,test+marker,1))
+          test_path=Path("tests/ui/commonPlayRichSelectorProduction.test.ts")
+          text=test_path.read_text()
+          helper='''\nfunction automaticPayload(identity:Identity) {\n  const authored=JSON.parse(payload(identity));\n  authored.content[0].mechanics[0].config.entryPoints[0].targeting={\n    from:"targets",selection:"automatic",min:1,max:1,orderBy:"hp",\n    where:{op:"eq",left:{ref:"relation"},right:{value:"enemy"}},\n  };\n  return JSON.stringify(authored);\n}\n\nasync function installAutomatic(adapter:MockAdapter,identity:Identity) {\n  setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());\n  const preview=await adapter.previewContentImport(automaticPayload(identity));\n  assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));\n  await adapter.activateContentImport();\n  return installedCommonPlayActionId({catalogId:catalogQualifiedId(identity.contentId,identity.moduleId,"1"),mechanicId:identity.mechanicId,entryPointId:identity.entryPointId});\n}\n'''
+          install_marker='async function execute(identity:Identity) {'
+          if 'function automaticPayload(identity:Identity)' not in text:
+              if install_marker not in text:
+                  raise SystemExit("automatic helper insertion anchor missing")
+              text=text.replace(install_marker,helper+'\n'+install_marker,1)
+          automatic_test='''test("unknown installed automatic selector uses host authority and authored ordering without manual target identity",async()=>{\n  async function run(identity:Identity) {\n    const adapter=new MockAdapter();\n    const actionId=await installAutomatic(adapter,identity);\n    await adapter.startInitiative();\n    await adapter.setCurrentActor("char.aelar");\n    const projected=await adapter.getSnapshot();\n    const action=projected.scene.actionsByActor["char.aelar"].find((candidate)=>candidate.id===actionId);\n    assert.equal(action?.target,"self");\n    assert.deepEqual(action?.eligibleTargetIds,["char.aelar"]);\n    await adapter.resolveAction(actionId,["char.aelar"]);\n    const snapshot=await adapter.getSnapshot();\n    assert.equal(snapshot.resolution?.stage,"complete");\n    assert.deepEqual(snapshot.resolution?.targetIds,["combatant.wolf"],"lowest-HP eligible enemy is selected by the shared orderBy kernel");\n    return snapshot.resolution?.targetIds;\n  }\n  assert.deepEqual(await run(RENAMED),await run(ORIGINAL));\n});\n\n'''
+          area_marker='test("unknown installed area selector imports but refuses execution without provider-backed membership",async()=>{'
+          if 'unknown installed automatic selector uses host authority' not in text:
+              if area_marker not in text:
+                  raise SystemExit("automatic test insertion anchor missing")
+              text=text.replace(area_marker,automatic_test+area_marker,1)
+          test_path.write_text(text)
 
           replace("docs/rules/v1-mechanism-coverage-ledger.json",
               'Portable Common Play targeting preserves bounded selected target sets and evaluates generic predicates over authoritative production candidates through the shared selector kernel; providerless area membership fails closed, while full spatial provider integration, ordering/object/point selection, and automatic-vs-manual production authority remain incomplete.',
