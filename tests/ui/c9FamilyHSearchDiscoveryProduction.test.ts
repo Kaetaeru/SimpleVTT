@@ -38,9 +38,20 @@ function packagePayload(prefix: string) {
         },
         operations: [
           {
-            kind: "condition.remove",
-            condition: "invisible",
-            target: "target",
+            kind: "effect.remove",
+  selector: {
+    from: "effects",
+    where: {
+      op: "all",
+      args: [
+        { op: "eq", left: { ref: "conditionId" }, right: { value: "invisible" } },
+        { op: "eq", left: { ref: "target.selected" }, right: { value: true } },
+      ],
+    },
+    min: 1,
+    max: 1,
+    selection: "automatic",
+  },
             when: { op: "eq", left: { ref: "test.outcome" }, right: { value: "success" } },
           },
         ],
