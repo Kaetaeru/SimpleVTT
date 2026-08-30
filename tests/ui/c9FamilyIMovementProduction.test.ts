@@ -152,6 +152,7 @@ async function runMovementMatrix(prefix:string) {
   const {adapter,action}=await install(prefix);
 
   for(const movementType of MOVEMENT_TYPES) {
+    if(movementType==="fly") seedMovementProperty(adapter,"movement.fly",5);
     const before=(await adapter.getSnapshot()).scene.economyByActor["char.aelar"]!.movement;
     await adapter.resolveAction(action(`move-${movementType}`),["char.aelar"]);
     let snapshot=await adapter.getSnapshot();
