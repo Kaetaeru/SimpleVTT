@@ -7,7 +7,7 @@ import { requiredSessionInstalledContent } from "./installedContentRuntimeAdapte
 import { installedCommonPlayActionId, parseInstalledCommonPlayActionId, parseRuntimeArtifactCommonPlayActionId, parseStoredInvocationCancelActionId, parseStoredInvocationCommonPlayActionId, parseZoneMembershipCommonPlayActionId, runtimeArtifactCommonPlayActionId, storedInvocationCancelActionId, storedInvocationCommonPlayActionId, zoneMembershipCommonPlayActionId } from "./installedCommonPlayActionReference";
 import { commitProductionRuntimeResolution } from "./runtimeResolutionCommit";
 import { commitAdapterTurnRuntimeState, snapshotAdapterTurnRuntimeState } from "./turnRuntimeSessionRegistry";
-import { SIMPLEVTT_APP_RULES_PROFILE } from "./realResolutionService";
+import { resolveRuntimeProfileProperty, SIMPLEVTT_APP_RULES_PROFILE } from "./realResolutionService";
 import {
   parseCommonPlayDamageDiceFormula,
   compileCommonPlayEntryPointOperations,
@@ -29,7 +29,6 @@ import { resolveCommonPlaySelector, type CommonPlaySelector, type CommonPlaySele
 import { resolveCommonPlayStoredInvocationCancel, resolveCommonPlayStoredInvocationCapture, resolveCommonPlayStoredInvocationTrigger } from "../domain/commonPlayStoredInvocationRuntime";
 import type { ReadyActionConfiguration } from "./standardActionReadyState";
 import { resolvePendingResolution } from "../domain/resolution";
-import { resolveEffectModifiedProperty } from "../domain/effects";
 import { allocationEntriesFromTargetSequence, resolveCommonPlayAllocation } from "../domain/commonPlayAllocationRuntime";
 
 interface AdapterState {
@@ -634,7 +633,7 @@ function operationExecutionInput(
   const entryPoint=action.lowered.definition.entryPoints.find((candidate)=>candidate.id===action.entryPointId)!;
   const actorState=state.combatants[actor.id];
   const movementProperties=actorState?{
-    "movement.walk":resolveEffectModifiedProperty(
+    "movement.walk":resolveRuntimeProfileProperty(
       state.effects,actor.id,"movement.walk",{"movement.walk":actorState.baseSpeed},
     ).value,
   }:undefined;

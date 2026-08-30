@@ -13,6 +13,8 @@ import { installedCommonPlayActionId } from "../../src/app/installedCommonPlayAc
 import { setInstalledContentStoreForTests } from "../../src/app/installedContentRuntimeAdapter";
 import { MemoryInstalledContentStore } from "../../src/app/memoryInstalledContentStore";
 import { MockAdapter } from "../../src/app/mockAdapter";
+import { resolveRuntimeProfileProperty } from "../../src/app/realResolutionService";
+import type { EffectInstance } from "../../src/domain/effects";
 import { tauriSessionTransport } from "../../src/app/tauriSessionTransport";
 import { snapshotAdapterTurnRuntimeState } from "../../src/app/turnRuntimeSessionRegistry";
 
@@ -54,6 +56,17 @@ async function run(prefix:string) {
   const moved=await adapter.getSnapshot();
   return {spent:initialRemaining-moved.scene.economyByActor["char.aelar"]!.movement,resolution:moved.resolution};
 }
+
+test("production property owner composes profile-derived values with active Effect modifiers",()=>{
+  const effect:EffectInstance={
+    id:"effect.external.str-modifier",sourceId:"external.unseen.property-owner",targetId:"char.aelar",kind:"modifier",tags:[],expiry:{kind:"permanent"},
+    propertyModifier:{property:"ability.str.modifier",operation:"add",value:{value:1},source:"definition",instancePolicy:"stack"},
+  };
+  const resolved=resolveRuntimeProfileProperty([effect],"char.aelar","ability.str.modifier",{"ability.str.score":14});
+  assert.equal(resolved.value,3);
+  assert.ok(resolved.provenance.some((entry)=>entry.source.startsWith("profile:dnd.srd-5.2.1/")));
+  assert.ok(resolved.provenance.some((entry)=>entry.source==="effect:effect.external.str-modifier"));
+});
 
 test("unknown Common Play property modifier projects through Effect state into production movement",async()=>{
   const result=await run("external-property-a");

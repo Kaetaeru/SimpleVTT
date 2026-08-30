@@ -2,16 +2,34 @@ import dndSrdRulesProfile from "../../rules/profiles/dnd.srd-5.2.1.profile.json"
 import type { ActionVm, ResolutionView } from "./contracts";
 import { resolveD20Test, type ModifierContribution } from "../domain/d20";
 import { resolveOpenD20Roll } from "../domain/openD20";
-import type { RollStateContribution, RulesProfileLike } from "../domain/profileEngine";
+import { resolveProfileProperty, type RollStateContribution, type RulesProfileLike } from "../domain/profileEngine";
+import { resolveEffectModifiedProperty, type EffectInstance } from "../domain/effects";
 import type { ResolutionEvent } from "../domain/resolutionTypes";
 
 export const SIMPLEVTT_APP_RULES_PROFILE:RulesProfileLike = {
   profileId:"dnd.srd-5.2.1",
   roundingPolicy:dndSrdRulesProfile.roundingPolicy as RulesProfileLike["roundingPolicy"],
-  properties:{},
+  properties:dndSrdRulesProfile.properties as RulesProfileLike["properties"],
   d20Test:{ advantageDisadvantage:{ sameSideStacks:false, opposingCancel:true } },
   economy:dndSrdRulesProfile.economy as RulesProfileLike["economy"],
 };
+
+export function resolveRuntimeProfileProperty(
+  effects:EffectInstance[],
+  targetId:string,
+  property:string,
+  inputProperties:Record<string,number>,
+) {
+  const base=resolveProfileProperty(SIMPLEVTT_APP_RULES_PROFILE,property,inputProperties);
+  const modified=resolveEffectModifiedProperty(
+    effects,targetId,property,{...inputProperties,[property]:base.value},
+  );
+  return {
+    property,
+    value:modified.value,
+    provenance:[...base.provenance,...modified.provenance],
+  };
+}
 
 export interface OpenAbilityCheckResolutionRequest {
   resolutionId:string;
