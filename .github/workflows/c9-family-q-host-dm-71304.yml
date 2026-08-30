@@ -1,6 +1,5 @@
-name: C9 Family Q Host DM Interaction 71304
+name: C9 Family Q Ledger Reconcile 71304
 
-# execute against the latest reconciled C9 head
 on:
   push:
     branches:
@@ -13,7 +12,7 @@ permissions:
   contents: write
 
 jobs:
-  patch-test-commit:
+  reconcile:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -25,16 +24,21 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Generate repository content required by production adapters
-        run: npm run generate:content
-      - name: Apply Family Q authority consent bridge
-        run: python3 .github/scripts/c9-family-q-authority-consent-71304.py
-      - name: Reconcile existing owner reconnect and stale evidence
+      - name: Reconcile verified Family Q evidence and self-retire
         shell: bash
         run: |
-          python3 - <<'PY'
+          set -euo pipefail
+          branch=agent/c9-gate-n-coverage-reconciliation
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in $(seq 1 8); do
+            git fetch origin "$branch"
+            git reset --hard "origin/$branch"
+            npm run generate:content >/dev/null
+            python3 - <<'PY'
           import json
           from pathlib import Path
+
           path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
           ledger=json.loads(path.read_text(encoding='utf-8'))
           row=next(entry for entry in ledger['rows'] if entry.get('family')=='Q')
@@ -42,27 +46,46 @@ jobs:
             'Portable boolean consent supports actor, target, actor-owner, target-owner, DM, and Host responders through the existing blocking Resolution interrupt. '
             'Character-owned prompts route only to the authoritative owning peer; DM/Host prompts remain host-local and reject remote Character responses. '
             'Target-owner reconnect resumes the same pending prompt on the rebound owning peer, stale/disconnected responses are rejected, and authoritative revision revalidation prevents a late commit after Reaction becomes unavailable. '
-            'Unknown installed Common Play preserves decline-before-commit, atomic commit, connected broadcast, and identity-independent responder semantics. Rich choice/multiple-option payloads remain incomplete.'
+            'Unknown installed Common Play preserves decline-before-commit, completed-prompt replay rejection, atomic commit, connected broadcast, and identity-independent responder semantics. Rich choice/multiple-option payloads remain incomplete.'
           )
-          evidence='c9FamilyQTargetOwnerInteractionProduction.test.ts reconnects target-owner to a rebound owning peer, rejects the stale prior peer, and rejects late approval after authoritative Reaction revision invalidation without downstream commit'
-          if evidence not in row['connectedEvidenceIfRelevant']:
-            row['connectedEvidenceIfRelevant'].append(evidence)
+          additions={
+            'implementationEvidence':[
+              'commonPlayOperationRuntime.ts and common-play-contract.schema.json represent dm|host alongside actor/target owner consent without content-name dispatch; installedCommonPlayRuntimeAdapter.ts projects authority:dm|authority:host responders through the existing blocking interrupt',
+              'connectedSessionRuntimeAdapter.ts resumes a pending Character-owned Resolution interrupt by authoritative responder Character id, independent of whether the portable responder was actor-owner or target-owner',
+            ],
+            'productionEvidence':[
+              '49f3b55bea55a8e45947d1dd1f5070e9b3b4b85c feat(c9): route DM and Host consent authority; c9FamilyQAuthorityInteractionProduction.test.ts verifies unknown installed DM/Host authority consent through the generic interrupt path',
+              'c9FamilyQTargetOwnerInteractionProduction.test.ts verifies target-owner reconnect to a rebound owning peer plus stale prior-peer rejection and revision-stale rejection without downstream commit',
+            ],
+            'identityInvarianceEvidence':[
+              'c9FamilyQAuthorityInteractionProduction.test.ts repeats DM/Host responder semantics after complete external module/content/mechanic/entry identity rename',
+            ],
+            'connectedEvidenceIfRelevant':[
+              'c9FamilyQAuthorityInteractionProduction.test.ts proves authority responders remain host-local, reject remote Character responses, and broadcast the accepted authoritative event batch',
+              'c9FamilyQTargetOwnerInteractionProduction.test.ts reconnects target-owner to a rebound owning peer, rejects the stale prior peer, and rejects late approval after authoritative Reaction revision invalidation without downstream commit',
+            ],
+          }
+          for key,values in additions.items():
+            for value in values:
+              if value not in row[key]:
+                row[key].append(value)
           row['remainingNamedSeams']=['choice and multiple-option interaction payloads are not yet represented by the boolean consent contract']
           path.write_text(json.dumps(ledger,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
           PY
-      - name: Verify Family Q authority responders
-        run: |
-          node --import tsx --test tests/ui/c9FamilyQAuthorityInteractionProduction.test.ts tests/ui/c9FamilyQTargetOwnerInteractionProduction.test.ts tests/ui/phase09CommonPlayResourcePersistence.test.ts
-          node scripts/check-v1-mechanism-coverage.mjs
-          node scripts/check-legacy-execution-boundary.mjs
-          npx tsc --noEmit
-      - name: Commit verified Family Q slice and retire staging files
-        shell: bash
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/domain/commonPlayOperationRuntime.ts schemas/common-play-contract.schema.json src/app/installedCommonPlayRuntimeAdapter.ts tests/ui/c9FamilyQAuthorityInteractionProduction.test.ts docs/rules/v1-mechanism-coverage-ledger.json
-          git rm .github/scripts/c9-family-q-authority-consent-71304.py .github/workflows/c9-family-q-host-dm-71304.yml
-          git commit -m "feat(c9): route authority consent responders"
-          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
-          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
+            node --import tsx --test tests/ui/c9FamilyQAuthorityInteractionProduction.test.ts tests/ui/c9FamilyQTargetOwnerInteractionProduction.test.ts tests/ui/installedCommonPlayActorOwnerInteractionProduction.test.ts
+            node scripts/check-v1-mechanism-coverage.mjs
+            node scripts/check-legacy-execution-boundary.mjs
+            npm exec tsc -- --noEmit
+            rm -f .github/workflows/c9-family-q-host-dm-71304.yml
+            git add docs/rules/v1-mechanism-coverage-ledger.json .github/workflows/c9-family-q-host-dm-71304.yml
+            git diff --cached --check
+            if git diff --cached --quiet; then
+              exit 0
+            fi
+            git commit -m "docs(c9): reconcile Family Q authority evidence"
+            if git push origin HEAD:"$branch"; then
+              exit 0
+            fi
+            sleep 1
+          done
+          exit 1
