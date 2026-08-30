@@ -29,6 +29,7 @@ jobs:
             git fetch origin "$branch"
             git reset --hard "origin/$branch"
             python3 - <<'PY'
+          import json
           from pathlib import Path
           path=Path("docs/rules/v1-mechanism-coverage-ledger.json")
           text=path.read_text(encoding="utf-8")
@@ -37,6 +38,10 @@ jobs:
           segment=text[start:end]
           entry="c9FamilyJAttackPersistence.test.ts unknown installed attack damage persists to the Character library through restart and Undo restores the durable HP state"
           lines=[line for line in segment.splitlines() if entry not in line]
+          seams_key=next(i for i,line in enumerate(lines) if '"remainingNamedSeams": [' in line)
+          seams_close=next(i for i in range(seams_key+1,len(lines)) if lines[i].strip()=="],")
+          if seams_close>seams_key+1 and lines[seams_close-1].rstrip().endswith(","):
+              lines[seams_close-1]=lines[seams_close-1].rstrip()[:-1]
           segment="\n".join(lines)+("\n" if segment.endswith("\n") else "")
           empty='      "persistenceEvidenceIfRelevant": [],'
           filled='      "persistenceEvidenceIfRelevant": [\n        "'+entry+'"\n      ],'
@@ -45,6 +50,7 @@ jobs:
                   raise SystemExit(f"Family J persistence slot marker count={segment.count(empty)}")
               segment=segment.replace(empty,filled,1)
           text=text[:start]+segment+text[end:]
+          json.loads(text)
           path.write_text(text,encoding="utf-8")
           PY
             git add docs/rules/v1-mechanism-coverage-ledger.json
