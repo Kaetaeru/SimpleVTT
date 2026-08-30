@@ -1,4 +1,4 @@
-import { DomainEvaluationError, type ExpressionNode, type ProvenanceRecord } from "./profileEngine";
+import { DomainEvaluationError, evaluateExpression, type ExpressionNode, type PropertyResolution, type ProvenanceRecord } from "./profileEngine";
 import type { ConditionId } from "./conditions";
 
 export type TurnBoundary = "start" | "end";
@@ -164,6 +164,44 @@ export function createEffect(request: EffectApplyRequest, clock: RuntimeClock): 
 
 export function effectIsActive(effect:EffectInstance) {
   return effect.suppression===undefined;
+}
+
+export function resolveEffectModifiedProperty(
+  effects:EffectInstance[],
+  targetId:string,
+  property:string,
+  inputProperties:Record<string,number>,
+):PropertyResolution {
+  const base=inputProperties[property];
+  if(!Number.isFinite(base)) throw new DomainEvaluationError(`unresolved property reference: ${property}`);
+  let value=base;
+  const provenance:ProvenanceRecord[]=[];
+  for(const effect of effects) {
+    const modifier=effect.propertyModifier;
+    if(effect.targetId!==targetId||!modifier||modifier.property!==property) continue;
+    if(!effectIsActive(effect)) {
+      provenance.push({source:`effect:${effect.id}`,status:"suppressed",reason:effect.suppression?.reason??"effect suppressed"});
+      continue;
+    }
+    const operand=evaluateExpression(modifier.value,(reference)=>{
+      if(reference===property) return value;
+      const referenced=inputProperties[reference];
+      if(!Number.isFinite(referenced)) throw new DomainEvaluationError(`unresolved property reference: ${reference}`);
+      return referenced;
+    });
+    const before=value;
+    switch(modifier.operation) {
+      case "add": value+=operand; break;
+      case "subtract": value-=operand; break;
+      case "set": value=operand; break;
+      case "min": value=Math.min(value,operand); break;
+      case "max": value=Math.max(value,operand); break;
+      case "multiply": value*=operand; break;
+    }
+    if(!Number.isFinite(value)) throw new DomainEvaluationError(`property modifier produced a non-finite ${property}`);
+    provenance.push({source:`effect:${effect.id}`,status:"applied",reason:`${modifier.operation} ${operand}: ${before} -> ${value}`});
+  }
+  return {property,value,provenance};
 }
 
 export function suppressEffect(effect:EffectInstance,clock:RuntimeClock,reason:string,pauseDuration=false):EffectInstance {

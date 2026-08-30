@@ -420,8 +420,8 @@ function parseOperation(value:unknown,label:string):CommonPlayOperation {
     if(destinationFact.unknownPolicy!=="block"&&destinationFact.unknownPolicy!=="request-authority"&&destinationFact.unknownPolicy!=="treat-false"&&destinationFact.unknownPolicy!=="unsupported") throw new DomainEvaluationError(`${label}.destinationFact.unknownPolicy is unsupported`);
     return {
       kind:"movement.relocate",mode:operation.mode,movementType:operation.movementType as CommonPlayMovementDefinition["movementType"],target:operation.target,
-      distance:nonNegativeLiteralExpression(operation.distance,`${label}.distance`),
-      ...(operation.costMultiplier===undefined?{}:{costMultiplier:nonNegativeLiteralExpression(operation.costMultiplier,`${label}.costMultiplier`)}),
+      distance:numericExpression(operation.distance,`${label}.distance`) as ExpressionNode,
+      ...(operation.costMultiplier===undefined?{}:{costMultiplier:numericExpression(operation.costMultiplier,`${label}.costMultiplier`) as ExpressionNode}),
       ...(operation.doesNotProvokeOpportunityAttacks===undefined?{}:{doesNotProvokeOpportunityAttacks:operation.doesNotProvokeOpportunityAttacks===true}),
       destinationFact:destinationFact as unknown as CommonPlayFactQuery,
     };

@@ -28,6 +28,7 @@ import type { TargetingFactInput } from "../domain/targeting";
 import { resolveCommonPlayStoredInvocationCancel, resolveCommonPlayStoredInvocationCapture, resolveCommonPlayStoredInvocationTrigger } from "../domain/commonPlayStoredInvocationRuntime";
 import type { ReadyActionConfiguration } from "./standardActionReadyState";
 import { resolvePendingResolution } from "../domain/resolution";
+import { resolveEffectModifiedProperty } from "../domain/effects";
 import { allocationEntriesFromTargetSequence, resolveCommonPlayAllocation } from "../domain/commonPlayAllocationRuntime";
 
 interface AdapterState {
@@ -564,8 +565,14 @@ function operationExecutionInput(
   interactionId?:string,
 ):import("../domain/commonPlayOperationRuntime").CommonPlayOperationExecutionInput {
   if(action.lowered.kind!=="operations") throw new Error("stored invocation payload requires an operations lowerer");
-  const {actor,actorEntity,selectedTargetId,selectedTargets}=prepared;
+  const {actor,actorEntity,selectedTargetId,selectedTargets,state}=prepared;
   const entryPoint=action.lowered.definition.entryPoints.find((candidate)=>candidate.id===action.entryPointId)!;
+  const actorState=state.combatants[actor.id];
+  const movementProperties=actorState?{
+    "movement.walk":resolveEffectModifiedProperty(
+      state.effects,actor.id,"movement.walk",{"movement.walk":actorState.baseSpeed},
+    ).value,
+  }:undefined;
   const d20Faces=entryPoint.test?[internal.d20(actionId,0),internal.d20(actionId,1)]:undefined;
   const movementFactAnswers=Object.fromEntries(entryPoint.operations.flatMap((operation,index)=>{
     if(operation.kind!=="movement.relocate"||!operation.destinationFact) return [];
@@ -583,6 +590,7 @@ function operationExecutionInput(
       ...selectedTargets.map((target)=>[target.id,target.kind==="character"?"character":"monster"] as const),
     ]),
     damageDiceFaces:damageDiceFaces(internal,actionId,entryPoint,d20Faces?.length??0),
+    ...(movementProperties?{movementProperties}:{}),
     ...(Object.keys(movementFactAnswers).length?{movementFactAnswers}:{}),
     ...(entryPoint.test?{d20:{faces:d20Faces!,targetId:selectedTargetId}}:{}),
     actionKind:entryPoint.test?.kind==="attack-roll"?"attack" as const:action.category==="spell"?"magic" as const:"other" as const,
