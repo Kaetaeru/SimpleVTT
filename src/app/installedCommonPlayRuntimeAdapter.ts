@@ -25,7 +25,7 @@ import type { D20TestResult } from "../domain/d20";
 import type { DamageResolution, HealingResolution } from "../domain/damage";
 import type { DamageRollResolution } from "../domain/damageRoll";
 import type { TargetingFactInput } from "../domain/targeting";
-import type { CommonPlaySelectorCandidate } from "../domain/commonPlaySelectorRuntime";
+import { resolveCommonPlaySelector, type CommonPlaySelector, type CommonPlaySelectorCandidate } from "../domain/commonPlaySelectorRuntime";
 import { resolveCommonPlayStoredInvocationCancel, resolveCommonPlayStoredInvocationCapture, resolveCommonPlayStoredInvocationTrigger } from "../domain/commonPlayStoredInvocationRuntime";
 import type { ReadyActionConfiguration } from "./standardActionReadyState";
 import { resolvePendingResolution } from "../domain/resolution";
@@ -511,7 +511,7 @@ function prepareCommonPlayAction(
   const entryPoint=action.lowered.definition.entryPoints.find((candidate)=>candidate.id===action.entryPointId);
   if(!entryPoint) return undefined;
   const portableEntry=entryPoint as {
-    targeting?:{min?:number;max?:number;where?:{op:string;ref:string;value:string}};
+    targeting?:CommonPlaySelector;
     allocation?:{targets:{min?:number;max?:number;where?:{op:string;ref:string;value:string}}};
     operations:Array<{kind:string;target?:string}>;
   };
@@ -527,8 +527,19 @@ function prepareCommonPlayAction(
   const needsSelectedTarget=action.lowered.kind==="operations"&&portableEntry.operations.some((operation)=>(operation.kind==="damage.apply"||operation.kind==="healing.apply")&&operation.target==="target");
   if(hasTargeting) {
     const targeting=portableEntry.targeting!;
-    if(targetIds.length<(targeting.min??1)||targetIds.length>(targeting.max??targetIds.length)) return undefined;
-    if(targeting.where?.op==="relation-matches"&&targeting.where.ref==="relation"&&selectedTargets.some((target)=>commonPlayTargetFact(actorEntity,target!).relation!==targeting.where!.value)) return undefined;
+    const candidates=internal.scene.entities
+      .filter((target)=>Boolean(state!.combatants[target.id]))
+      .map((target)=>commonPlaySelectorCandidate(actorEntity,target));
+    const selection=resolveCommonPlaySelector({
+      sourceId:actor.id,
+      selector:targeting,
+      candidates,
+      selectedIds:targetIds,
+      selection:"manual",
+      authority:"actor-owner",
+      directTarget:false,
+    });
+    if(selection.status!=="resolved") return undefined;
     if(projectedAction&&(!projectedAction.available||targetIds.some((id)=>!projectedAction.eligibleTargetIds.includes(id)))) return undefined;
   } else if(hasAllocation) {
     const selector=portableEntry.allocation!.targets;

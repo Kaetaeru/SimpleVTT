@@ -27,7 +27,7 @@ function payload(identity:Identity,area=false) {
         schemaVersion:"0.2-draft",id:identity.mechanicId,
         entryPoints:[{id:identity.entryPointId,invocation:"manual",targeting:area
           ?{from:"targets",min:1,max:3,area:{kind:"instant",shape:"cone",origin:"self",lengthFeet:15}}
-          :{from:"targets",min:1,max:2,where:{op:"relation-matches",ref:"relation",value:"enemy"}},
+          :{from:"targets",min:1,max:2,where:{op:"eq",left:{ref:"relation"},right:{value:"enemy"}}},
           operations:[]}],
       }}],
     }],
