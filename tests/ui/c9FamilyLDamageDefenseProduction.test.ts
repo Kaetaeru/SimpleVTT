@@ -10,9 +10,9 @@ import { turnRuntimeSessions } from "../../src/app/turnRuntimeSessionRegistry";
 import type { DamageDefenseKind } from "../../src/domain/damage";
 
 const TARGET_ID="combatant.goblin-a";
-const CHARACTER_TARGET_ID="char.mira";
+const CHARACTER_TARGET_ID="char.aelar";
 
-function packagePayload(prefix:string,multiplier?:number,amount=4) {
+function packagePayload(prefix:string,multiplier?:number,amount=4,target:"target"|"self"="target") {
   const moduleId=`${prefix}.module`,contentId=`${prefix}.option`,mechanicId=`${prefix}.damage`;
   return {moduleId,contentId,mechanicId,json:JSON.stringify({
     schemaVersion:"0.1-draft",moduleId,moduleVersion:"1",
@@ -22,8 +22,8 @@ function packagePayload(prefix:string,multiplier?:number,amount=4) {
       id:contentId,category:"option",
       presentation:{defaultLocale:"en",originalName:"Portable Damage Probe",locales:{en:{name:"Portable Damage Probe"}}},
       mechanics:[{kind:"common-play",config:{schemaVersion:"0.2-draft",id:mechanicId,entryPoints:[{
-        id:"apply",invocation:"manual",targeting:{from:"targets",min:1,max:1},
-        operations:[{kind:"damage.apply",amount:{value:amount},damageType:"fire",...(multiplier===undefined?{}:{multiplier}),target:"target"}],
+        id:"apply",invocation:"manual",...(target==="target"?{targeting:{from:"targets",min:1,max:1}}:{}),
+        operations:[{kind:"damage.apply",amount:{value:amount},damageType:"fire",...(multiplier===undefined?{}:{multiplier}),target}],
       }]}}],
     }],
   })};
@@ -66,19 +66,20 @@ async function execute(prefix:string,kind?:DamageDefenseKind,multiplier?:number)
 
 async function executeInstantDeath(prefix:string) {
   const adapter=new MockAdapter();
-  const pack=packagePayload(prefix,undefined,60);
+  const pack=packagePayload(prefix,undefined,100,"self");
   setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
   const preview=await adapter.previewContentImport(pack.json);
   assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
   await adapter.activateContentImport();
   await adapter.startInitiative();
-  await adapter.setCurrentActor("char.aelar");
+  await adapter.setCurrentActor(CHARACTER_TARGET_ID);
 
   const runtime=turnRuntimeSessions.get(adapter);
   assert.ok(runtime,"turn runtime must exist after initiative starts");
   const before=structuredClone(runtime.state.combatants[CHARACTER_TARGET_ID].life);
-  assert.equal(before.hp.current,24);
-  assert.equal(before.hp.maximum,31);
+  assert.equal(before.hp.current,31);
+  assert.equal(before.hp.maximum,42);
+  assert.equal(before.hp.temporary,5);
 
   const action=installedCommonPlayActionId({
     catalogId:catalogQualifiedId(pack.contentId,pack.moduleId,"1"),
@@ -90,7 +91,7 @@ async function executeInstantDeath(prefix:string) {
 
   const after=turnRuntimeSessions.get(adapter)!.state.combatants[CHARACTER_TARGET_ID].life;
   assert.equal(after.hp.current,0);
-  assert.equal(after.dead,true,"36 overflow damage must meet the 31 max-HP instant-death threshold");
+  assert.equal(after.dead,true,"64 overflow damage must meet the 42 max-HP instant-death threshold");
   assert.equal(after.unconscious,false,"instant death must not leave the character merely unconscious");
 
   await adapter.undoLastResolution();
