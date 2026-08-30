@@ -2185,7 +2185,7 @@
         "SRD 5.2.1: Underwater Combat",
         "movement/attack/damage/senses kernels"
       ],
-      "currentState": "Profile-driven underwater movement, weapon attack restrictions/disadvantage, and damage-defense calculations exist as identity-independent kernel helpers, but the persisted Common Play contract and session state have no authoritative environment-profile activation/ownership. Breathing/suffocation also depends on the still-unowned durable exposure lifecycle in Family AE. Production therefore cannot apply underwater rules or reconnect them without inventing environment activation and breathing state policy.",
+      "currentState": "A durable portable environment artifact now owns one authoritative session profile. Generic Common Play movement, structurally declared weapon attacks, and typed damage transactions consume that active profile without content identity dispatch. Underwater movement cost, Swim Speed bypass, melee disadvantage, long-range weapon automatic miss, and Fire resistance execute through existing Resolver authorities. Breathing and suffocation compose through Family AE's durable exposure lifecycle. Environment activation survives local restart, connected replay/reconnect, duplicate delivery, and Undo.",
       "requiredSemantics": [
         "underwater movement",
         "Swim Speed",
@@ -2195,21 +2195,31 @@
         "breathing/suffocation"
       ],
       "transactionDomain": "Session environment profile plus Resolver",
-      "disposition": "INCOMPLETE",
+      "disposition": "IMPLEMENTED",
       "implementationEvidence": [
         "commonPlayEnvironmentRuntime.ts",
+        "runtimeArtifact.ts environment artifact persistence",
+        "commonPlayArtifactRuntime.ts portable environment activation",
+        "commonPlayOperationRuntime.ts structural attack/movement/damage environment composition",
+        "d20.ts generic authoritative automatic-failure provenance",
+        "Family AE durable exposure lifecycle",
         "commonPlayC6Runtime.test.ts"
       ],
-      "productionEvidence": [],
-      "identityInvarianceEvidence": [],
-      "connectedEvidenceIfRelevant": [],
-      "persistenceEvidenceIfRelevant": [],
-      "remainingNamedSeams": [
-        "persisted portable environment-profile definition and session activation owner",
-        "authoritative session environment state projected into movement/attack/damage transactions",
-        "breathing/suffocation composition through a durable exposure owner",
-        "connected replay/reconnect and persistence of environment activation"
+      "productionEvidence": [
+        "c9FamilyAFUnderwaterEnvironmentProduction.test.ts proves session activation, doubled ordinary movement, Swim Speed bypass, melee disadvantage, long-range automatic miss, and Fire resistance",
+        "c9FamilyAEExposurePersistenceProduction.test.ts proves the composed breathing/suffocation exposure lifecycle"
       ],
+      "identityInvarianceEvidence": [
+        "c9FamilyAFUnderwaterEnvironmentProduction.test.ts executes identical behavior under external.underwater and renamed.ocean identities"
+      ],
+      "connectedEvidenceIfRelevant": [
+        "c9FamilyAFUnderwaterEnvironmentProduction.test.ts proves Host replay, duplicate rejection, fresh Client reconnect, and compensating Undo"
+      ],
+      "persistenceEvidenceIfRelevant": [
+        "environment artifact stores the complete profile in the generic runtime state",
+        "c9FamilyAFUnderwaterEnvironmentProduction.test.ts restores the active profile from a shared durable runtime store after adapter restart"
+      ],
+      "remainingNamedSeams": [],
       "connectedRelevant": true,
       "persistenceRelevant": true
     },

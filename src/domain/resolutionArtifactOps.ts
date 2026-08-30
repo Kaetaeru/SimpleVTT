@@ -65,6 +65,7 @@ export function executeSpawnArtifact(ctx:ResolutionExecutionContext,operation:Sp
   if(artifact.artifactKind!=="zone"&&operation.zoneMembershipAuthority!==undefined) throw new DomainEvaluationError("zone membership authority applies only to zone artifacts");
   if(artifact.artifactKind==="form") requireCombatant(ctx.state,artifact.form!.targetActorId);
   if(artifact.artifactKind==="exposure") requireCombatant(ctx.state,artifact.exposure!.subjectId);
+  if(artifact.artifactKind==="environment"&&artifacts(ctx).some((entry)=>entry.artifactKind==="environment"))throw new DomainEvaluationError("only one session environment can be active");
   if(artifact.artifactKind==="actor") {
     requireCombatant(ctx.state,artifact.actor!.ownerId);
     if(ctx.state.combatants[artifact.actor!.combatantId]||(ctx.state.artifacts??[]).some((entry)=>entry.actor?.combatantId===artifact.actor!.combatantId)) throw new DomainEvaluationError(`actor artifact combatant identity already exists: ${artifact.actor!.combatantId}`);

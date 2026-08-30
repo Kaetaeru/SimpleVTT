@@ -224,7 +224,7 @@ export function lowerCommonPlay(
     const portableOperations=entryPoint.operations.filter((operation)=>!artifactOperationKinds.has(String(operation.kind)));
     const artifactKinds=new Set(templates.map((template)=>template.artifactKind));
     if(portableOperations.length) {
-      if(![...artifactKinds].every((kind)=>kind==="stored-invocation"||kind==="object"||kind==="link"||kind==="actor"||kind==="form"||kind==="exposure")) {
+      if(![...artifactKinds].every((kind)=>kind==="stored-invocation"||kind==="object"||kind==="link"||kind==="actor"||kind==="form"||kind==="exposure"||kind==="environment")) {
         throw new DomainEvaluationError(`Common Play entry point ${entryPointId} references an unsupported composite artifact family`);
       }
       const projected={...base(definition),entryPoints:[operationEntryPointProjection({...entryPoint,operations:portableOperations})]};
@@ -252,7 +252,7 @@ export function lowerCommonPlay(
         definition:{...base(definition),entryPoints:[structuredClone(entryPoint)],artifactTemplates:structuredClone(zoneTemplates)} as unknown as CommonPlayZoneDefinition,
       };
     }
-    if([...artifactKinds].every((kind)=>kind==="stored-invocation"||kind==="object"||kind==="link"||kind==="actor"||kind==="form"||kind==="exposure")) return {
+    if([...artifactKinds].every((kind)=>kind==="stored-invocation"||kind==="object"||kind==="link"||kind==="actor"||kind==="form"||kind==="exposure"||kind==="environment")) return {
       kind:"artifacts",entryPointId,
       definition:{...base(definition),entryPoints:[structuredClone(entryPoint)],artifactTemplates:structuredClone(templates)} as unknown as CommonPlayArtifactActivationDefinition,
     };

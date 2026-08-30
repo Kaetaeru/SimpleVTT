@@ -13,7 +13,7 @@ import type { CommonPlayFactAnswer, CommonPlayFactQuery } from "./commonPlaySpat
 import { parseCommonPlaySelector, resolveCommonPlaySelector, type CommonPlaySelector, type CommonPlaySelectorCandidate } from "./commonPlaySelectorRuntime";
 import { SRD_521_CONDITIONS, type ConditionId } from "./conditions";
 import { advanceCommonPlayExposure } from "./commonPlayExposureRuntime";
-import { fallDamageDice } from "./commonPlayEnvironmentRuntime";
+import { environmentDamageDefense, fallDamageDice, resolveEnvironmentAttack, resolveEnvironmentMovement, type CommonPlayEnvironmentProfile } from "./commonPlayEnvironmentRuntime";
 
 type LiteralNumberExpression={value:number};
 type CommonPlayExpression=LiteralNumberExpression|Record<string,unknown>;
@@ -248,6 +248,12 @@ export interface CommonPlayD20TestDefinition {
   perTarget?:false;
 }
 
+export interface CommonPlayAttackContext {
+  kind:"melee-weapon"|"ranged-weapon";
+  properties:string[];
+  rangeBand:"normal"|"long";
+}
+
 export interface CommonPlayOperationDefinition {
   schemaVersion:string;
   id:string;
@@ -259,6 +265,7 @@ export interface CommonPlayOperationDefinition {
     targeting?:CommonPlayTargetingSelector;
     allocation?:CommonPlayAllocationDefinition;
     test?:CommonPlayD20TestDefinition;
+    attack?:CommonPlayAttackContext;
     operations:CommonPlayOperation[];
   }>;
 }
@@ -303,12 +310,13 @@ const ECONOMY_PAYMENT_KEYS=new Set(["kind","bucket","amount","consumeAt","refund
 const ITEM_PAYMENT_KEYS=new Set(["kind","selector","quantity","charges","consumed","consumeAt","refundOnCancel"]);
 const ITEM_PAYMENT_SELECTOR_KEYS=new Set(["from","where","min","max","definitionId"]);
 const ITEM_PAYMENT_PREDICATE_KEYS=new Set(["op","left","right"]);
-const ENTRY_POINT_KEYS=new Set(["id","invocation","interaction","targeting","allocation","test","operations"]);
+const ENTRY_POINT_KEYS=new Set(["id","invocation","interaction","targeting","allocation","test","attack","operations"]);
 const INTERACTION_KEYS=new Set(["id","kind","responder","mode","input","revalidate","stalePolicy"]);
 const INTERACTION_INPUT_KEYS=new Set(["type","selector"]);
 const TARGETING_KEYS=new Set(["from","where","min","max","area","orderBy","selection"]);
 const ALLOCATION_KEYS=new Set(["units","targets","minimumPerTarget","maximumPerTarget","totalMustMatch"]);
 const D20_TEST_KEYS=new Set(["kind","roller","property","dc","perTarget"]);
+const ATTACK_CONTEXT_KEYS=new Set(["kind","properties","rangeBand"]);
 const PROPERTY_MODIFY_KEYS=new Set(["kind","property","operation","value","target","owner","source","duration","lifetime","instancePolicy"]);
 const PROPERTY_DURATION_KEYS=new Set(["kind","amount","unit"]);
 const PROPERTY_LIFETIME_KEYS=new Set(["kind","onEnd"]);
@@ -858,6 +866,15 @@ function parseD20Test(value:unknown,label:string):CommonPlayD20TestDefinition {
   return {kind:definition.kind,roller:definition.roller,...(property?{property}:{}),dc:numericExpression(definition.dc,`${label}.dc`),...(definition.perTarget===false?{perTarget:false}:{})};
 }
 
+function parseAttackContext(value:unknown,label:string):CommonPlayAttackContext {
+  const attack=object(value,label);
+  supportedKeys(attack,ATTACK_CONTEXT_KEYS,label);
+  if(attack.kind!=="melee-weapon"&&attack.kind!=="ranged-weapon")throw new DomainEvaluationError(`${label}.kind is unsupported`);
+  if(!Array.isArray(attack.properties)||attack.properties.some((property)=>typeof property!=="string"||!property)||new Set(attack.properties).size!==attack.properties.length)throw new DomainEvaluationError(`${label}.properties must be unique non-empty strings`);
+  if(attack.rangeBand!=="normal"&&attack.rangeBand!=="long")throw new DomainEvaluationError(`${label}.rangeBand is unsupported`);
+  return {kind:attack.kind,properties:[...attack.properties] as string[],rangeBand:attack.rangeBand};
+}
+
 export function parseCommonPlayOperationDefinition(value:unknown,label="Common Play definition"):CommonPlayOperationDefinition {
   const definition=object(value,label);
   supportedKeys(definition,DEFINITION_KEYS,label);
@@ -880,6 +897,7 @@ export function parseCommonPlayOperationDefinition(value:unknown,label="Common P
       ...(entry.targeting===undefined?{}:{targeting:parseTargetingSelector(entry.targeting,`${label}.entryPoints[${index}].targeting`)}),
       ...(entry.allocation===undefined?{}:{allocation:parseAllocation(entry.allocation,`${label}.entryPoints[${index}].allocation`)}),
       ...(entry.test===undefined?{}:{test:parseD20Test(entry.test,`${label}.entryPoints[${index}].test`)}),
+      ...(entry.attack===undefined?{}:{attack:parseAttackContext(entry.attack,`${label}.entryPoints[${index}].attack`)}),
       operations:entry.operations.map((operation,operationIndex)=>parseOperation(operation,`${label}.entryPoints[${index}].operations[${operationIndex}]`)),
     };
   });
@@ -889,6 +907,7 @@ for(const [index,entryPoint] of entryPoints.entries()) {
   }
 }
 for(const [index,entryPoint] of entryPoints.entries()) {
+  if(entryPoint.attack&&entryPoint.test?.kind!=="attack-roll")throw new DomainEvaluationError(`${label}.entryPoints[${index}] attack context requires an attack-roll test`);
   if(entryPoint.test?.roller==="target"&&(!entryPoint.targeting||entryPoint.targeting.min!==1||entryPoint.targeting.max!==1)) throw new DomainEvaluationError(`${label}.entryPoints[${index}] target-rolled d20 requires targeting exactly one target`);
   if(entryPoint.operations.some((operation)=>(operation.kind==="condition.apply"||operation.kind==="condition.remove"||operation.kind==="effect.remove"||operation.kind==="effect.suppress"||operation.kind==="damage.apply")&&operation.when)&&!entryPoint.test) throw new DomainEvaluationError(`${label}.entryPoints[${index}] test.outcome conditional operation requires a d20 test`);
 }
@@ -1003,6 +1022,12 @@ function targetingSelectorCandidate(target:TargetingFactInput) {
   };
 }
 
+function activeEnvironment(state:RulesRuntimeState):CommonPlayEnvironmentProfile|undefined {
+  const environments=(state.artifacts??[]).filter((artifact)=>artifact.artifactKind==="environment"&&artifact.environment).map((artifact)=>artifact.environment!);
+  if(environments.length>1)throw new DomainEvaluationError("runtime state contains more than one active environment");
+  return environments[0];
+}
+
 export function compileCommonPlayEntryPointOperations(
   profile:RulesProfileLike,
   state:RulesRuntimeState,
@@ -1035,6 +1060,8 @@ export function compileCommonPlayEntryPointOperations(
   }
 
   const operations:ResolutionOperation[]=[];
+  const environment=activeEnvironment(state);
+  const environmentAttack=environment&&entryPoint.attack?resolveEnvironmentAttack(environment,{attackKind:entryPoint.attack.kind,properties:entryPoint.attack.properties,rangeBand:entryPoint.attack.rangeBand}):undefined;
   const materializedResourceIds=new Set(state.combatants[input.actorId]?.resources.map((resource)=>resource.id)??[]);
   if(entryPoint.targeting) {
     if(!input.targetingTargets) throw new DomainEvaluationError(`Common Play entry point ${entryPoint.id} requires pre-resolved targeting facts`);
@@ -1110,7 +1137,7 @@ export function compileCommonPlayEntryPointOperations(
         target:actorExpressionInteger(entryPoint.test.dc,input,"d20 target",0)+attackCoverTargetModifier,
         targetSource:`common-play:${supported.id}:${entryPoint.id}:dc${attackCoverTargetModifier?":cover":""}`,
         modifierContributions:input.d20.modifierContributions??[],
-        rollStateContributions:input.d20.rollStateContributions,
+        rollStateContributions:[...(input.d20.rollStateContributions??[]),...(environmentAttack?.disadvantage?[{source:`environment:${environment!.id}`,state:"disadvantage" as const}]:[])],
         ...(rollModifications.length?{rollModifications}:{}),
         dice:{
           id:`${input.resolutionId}:d20`,
@@ -1118,6 +1145,7 @@ export function compileCommonPlayEntryPointOperations(
           sides:20,
           faces:[...input.d20.faces],
         },
+        ...(environmentAttack&&!environmentAttack.allowed?{automaticFailureSource:`environment:${environment!.id}`}:{}),
       },
     });
   }
@@ -1339,6 +1367,7 @@ export function compileCommonPlayEntryPointOperations(
           amount=rounding==="ceil"?Math.ceil(scaled):rounding==="round"?Math.round(scaled):Math.floor(scaled);
         }
       }
+      const environmentDefense=environment?environmentDamageDefense(environment,operation.damageType):undefined;
       operations.push({
         id:operationId,
         kind:"damage",
@@ -1347,6 +1376,7 @@ export function compileCommonPlayEntryPointOperations(
         targetId,
         damageType:operation.damageType,
         amount,
+        ...(environmentDefense?{defenses:[{source:`environment:${environment!.id}`,kind:environmentDefense,damageType:operation.damageType}]}:{}),
         ...(operation.reduction===undefined||operation.reduction.value===0?{}:{adjustments:[{
           source:`common-play:${supported.id}:${entryPoint.id}:operation:${index}:reduction`,
           operation:"subtract" as const,
@@ -1461,7 +1491,14 @@ export function compileCommonPlayEntryPointOperations(
       const compiled=compileCommonPlayMovement({id:operationId,definition,answer:input.movementFactAnswers?.[index],properties:input.movementProperties});
       if(compiled.status!=="compiled") throw new DomainEvaluationError(compiled.reason);
       const when=operation.when?{operationId:`${input.resolutionId}:test`,field:"outcome" as const,equals:operation.when.right.value}:undefined;
-      operations.push({...compiled.operation,...(when?{when}:{})});
+      const movementType=operation.movementType??"walk";
+      const environmentMultiplier=environment&&operation.mode==="move"
+        ?resolveEnvironmentMovement(environment,movementType,Boolean(input.movementProperties?.[`movement.${movementType}`]))
+        :1;
+      const compiledOperation=compiled.operation.kind==="move"&&environmentMultiplier!==1
+        ?{...compiled.operation,distanceFeet:Math.ceil(compiled.operation.distanceFeet*environmentMultiplier)}
+        :compiled.operation;
+      operations.push({...compiledOperation,...(when?{when}:{})});
       continue;
     }
 

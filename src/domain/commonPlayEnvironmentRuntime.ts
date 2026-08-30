@@ -13,12 +13,21 @@ export interface CommonPlayEnvironmentProfile {
   damageDefenses:Array<{damageType:string;kind:"resistance"|"immunity"}>;
 }
 
+export function validateCommonPlayEnvironmentProfile(profile:CommonPlayEnvironmentProfile) {
+  if(!profile||typeof profile!=="object"||typeof profile.id!=="string"||!profile.id||!Number.isFinite(profile.movementCostMultiplier)||profile.movementCostMultiplier<0)throw new DomainEvaluationError("environment profile requires identity and a non-negative movement multiplier");
+  if(!Array.isArray(profile.bypassMovementMultiplierWithModes)||profile.bypassMovementMultiplierWithModes.some((mode)=>typeof mode!=="string"||!mode)||new Set(profile.bypassMovementMultiplierWithModes).size!==profile.bypassMovementMultiplierWithModes.length)throw new DomainEvaluationError("environment movement bypass modes must be non-empty and unique");
+  if(!Array.isArray(profile.attackRules)||profile.attackRules.some((rule)=>!rule||typeof rule!=="object"||rule.attackKind!=="melee-weapon"&&rule.attackKind!=="ranged-weapon"||rule.adaptedProperty!==undefined&&(typeof rule.adaptedProperty!=="string"||!rule.adaptedProperty)||rule.normalRangeOnly!==undefined&&typeof rule.normalRangeOnly!=="boolean"||rule.otherwise!=="disadvantage"&&rule.otherwise!=="automatic-miss"))throw new DomainEvaluationError("environment attack rule is invalid");
+  if(!Array.isArray(profile.damageDefenses)||profile.damageDefenses.some((defense)=>!defense||typeof defense!=="object"||typeof defense.damageType!=="string"||!defense.damageType||defense.kind!=="resistance"&&defense.kind!=="immunity"))throw new DomainEvaluationError("environment damage defense is invalid");
+  return structuredClone(profile);
+}
+
 export function resolveEnvironmentMovement(profile:CommonPlayEnvironmentProfile,movementMode:string,hasModeSpeed:boolean) {
-  if(!Number.isFinite(profile.movementCostMultiplier)||profile.movementCostMultiplier<0)throw new DomainEvaluationError("environment movement multiplier must be non-negative and finite");
+  validateCommonPlayEnvironmentProfile(profile);
   return hasModeSpeed&&profile.bypassMovementMultiplierWithModes.includes(movementMode)?1:profile.movementCostMultiplier;
 }
 
 export function resolveEnvironmentAttack(profile:CommonPlayEnvironmentProfile,input:{attackKind:"melee-weapon"|"ranged-weapon";properties:string[];rangeBand:"normal"|"long"}) {
+  validateCommonPlayEnvironmentProfile(profile);
   let disadvantage=false;
   for(const rule of profile.attackRules.filter((entry)=>entry.attackKind===input.attackKind)){
     if(rule.normalRangeOnly&&input.rangeBand==="long")return {allowed:false,disadvantage:false};
@@ -31,6 +40,7 @@ export function resolveEnvironmentAttack(profile:CommonPlayEnvironmentProfile,in
 }
 
 export function environmentDamageDefense(profile:CommonPlayEnvironmentProfile,damageType:string) {
+  validateCommonPlayEnvironmentProfile(profile);
   return profile.damageDefenses.find((entry)=>entry.damageType===damageType)?.kind;
 }
 

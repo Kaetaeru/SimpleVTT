@@ -41,6 +41,7 @@ export interface D20TestRequest {
   targetSource?: string;
   criticalThreshold?: number;
   criticalThresholdSource?: string;
+  automaticFailureSource?: string;
 }
 
 export interface D20TestResult {
@@ -160,6 +161,10 @@ export function resolveD20Test(profile: RulesProfileLike, request: D20TestReques
       critical = true;
     }
   }
+  if(request.automaticFailureSource) {
+    outcome="failure";
+    critical=false;
+  }
 
   const provenance: ProvenanceRecord[] = [
     ...rollStateResolution.provenance,
@@ -207,6 +212,7 @@ export function resolveD20Test(profile: RulesProfileLike, request: D20TestReques
         : `natural ${natural} meets critical threshold ${threshold}; attack automatically hits and is critical`,
     });
   }
+  if(request.automaticFailureSource) provenance.push({source:request.automaticFailureSource,status:"applied",reason:"rule forces this d20 test to fail"});
 
   return {
     family: request.family,
