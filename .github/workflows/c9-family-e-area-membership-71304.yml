@@ -1,0 +1,126 @@
+name: C9 Family E Area Membership 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-e-area-membership-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  verify-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Bridge provider-backed area membership into production selectors
+        shell: python
+        run: |
+          from pathlib import Path
+
+          spatial=Path("src/app/realSpatialRuntimeService.ts")
+          source=spatial.read_text(encoding="utf-8")
+          import_anchor='import type { MovementSpatialUpdate } from "./movementRuntimeContracts";\n'
+          import_insert=(
+            import_anchor
+            +'import type { CommonPlayInstantArea } from "../domain/commonPlaySelectorRuntime";\n'
+            +'import type { CommonPlayFactProviderResult } from "../domain/commonPlaySpatialFactRuntime";\n'
+          )
+          if 'CommonPlayAreaMembershipProvider' not in source:
+            if import_anchor not in source: raise SystemExit("realSpatial import anchor changed")
+            source=source.replace(import_anchor,import_insert,1)
+            plan='''export interface MovementSpatialPlan {\n  actorId:string;\n  updates:SpatialRelationVm[];\n  stateChanges:string[];\n  provenance:string[];\n}\n\n'''
+            provider='''export interface CommonPlayAreaMembershipProvider {\n  id:string;\n  resolve(input:{sourceId:string;area:CommonPlayInstantArea;candidateIds:string[]}):Promise<CommonPlayFactProviderResult>|CommonPlayFactProviderResult;\n}\n\nconst commonPlayAreaMembershipProviders=new WeakMap<SceneVm,CommonPlayAreaMembershipProvider>();\n\nexport function registerCommonPlayAreaMembershipProvider(scene:SceneVm,provider:CommonPlayAreaMembershipProvider|null) {\n  if(provider) commonPlayAreaMembershipProviders.set(scene,provider);\n  else commonPlayAreaMembershipProviders.delete(scene);\n}\n\nexport function commonPlayAreaMembershipProvider(scene:SceneVm) {\n  return commonPlayAreaMembershipProviders.get(scene)??null;\n}\n\n'''
+            if plan not in source: raise SystemExit("realSpatial plan anchor changed")
+            source=source.replace(plan,plan+provider,1)
+          spatial.write_text(source,encoding="utf-8")
+
+          adapter=Path("src/app/installedCommonPlayRuntimeAdapter.ts")
+          source=adapter.read_text(encoding="utf-8")
+          old_import='import { authoritativeCommonPlaySpatialRelation } from "./realSpatialRuntimeService";\n'
+          new_import='import { authoritativeCommonPlaySpatialRelation, commonPlayAreaMembershipProvider } from "./realSpatialRuntimeService";\n'
+          if new_import not in source:
+            if old_import not in source: raise SystemExit("installed adapter spatial import anchor changed")
+            source=source.replace(old_import,new_import,1)
+          fact_import='import { COMMON_PLAY_STANDARD_FACTS, resolveCommonPlayFactQuery } from "../domain/commonPlaySpatialFactRuntime";\n'
+          selector_import='import { resolveCommonPlaySelector, type CommonPlaySelector, type CommonPlaySelectorCandidate } from "../domain/commonPlaySelectorRuntime";\n'
+          if fact_import not in source:
+            if selector_import not in source: raise SystemExit("installed adapter selector import anchor changed")
+            source=source.replace(selector_import,selector_import+fact_import,1)
+          old_sig='function commonPlaySelectorCandidate(scene:SceneVm,actor:SceneVm["entities"][number],target:SceneVm["entities"][number]):CommonPlaySelectorCandidate {'
+          new_sig='function commonPlaySelectorCandidate(scene:SceneVm,actor:SceneVm["entities"][number],target:SceneVm["entities"][number],areaMembers?:ReadonlySet<string>):CommonPlaySelectorCandidate {'
+          if new_sig not in source:
+            if old_sig not in source: raise SystemExit("selector candidate signature changed")
+            source=source.replace(old_sig,new_sig,1)
+          old_return='''  return {\n    id:target.id,\n    targeting,\n    properties:{\n'''
+          new_return='''  return {\n    id:target.id,\n    targeting,\n    ...(areaMembers?{areaMember:areaMembers.has(target.id)}:{}),\n    properties:{\n'''
+          if 'areaMember:areaMembers.has(target.id)' not in source:
+            if old_return not in source: raise SystemExit("selector candidate return anchor changed")
+            source=source.replace(old_return,new_return,1)
+          if 'async function prepareCommonPlayAction(' not in source:
+            if 'function prepareCommonPlayAction(' not in source: raise SystemExit("prepareCommonPlayAction anchor changed")
+            source=source.replace('function prepareCommonPlayAction(','async function prepareCommonPlayAction(',1)
+          old_candidates='''    const candidates=internal.scene.entities\n      .filter((target)=>Boolean(state!.combatants[target.id]))\n      .map((target)=>commonPlaySelectorCandidate(internal.scene,actorEntity,target));\n'''
+          new_candidates='''    const candidateEntities=internal.scene.entities.filter((target)=>Boolean(state!.combatants[target.id]));\n    let areaMembers:ReadonlySet<string>|undefined;\n    if(targeting.area) {\n      const provider=commonPlayAreaMembershipProvider(internal.scene);\n      if(provider) {\n        const candidateIds=candidateEntities.map((candidate)=>candidate.id);\n        const membership=await resolveCommonPlayFactQuery({\n          registry:COMMON_PLAY_STANDARD_FACTS,\n          query:{\n            id:`${action.entryPointId}:area-members`,fact:"spatial.area-members",subject:actor.id,\n            authority:"host",visibility:"public",unknownPolicy:"unsupported",\n          },\n          resolutionId:`common-play-selector:${action.entryPointId}:${state.revision}`,\n          expectedRevision:state.revision,\n          provider:{\n            id:provider.id,\n            resolve(query){\n              return query.fact==="spatial.area-members"\n                ?provider.resolve({sourceId:actor.id,area:targeting.area!,candidateIds})\n                :{status:"unknown"};\n            },\n          },\n        });\n        if(membership.status==="resolved"&&Array.isArray(membership.answer.value)) {\n          const eligible=new Set(candidateIds);\n          if(membership.answer.value.every((id)=>eligible.has(id))) areaMembers=new Set(membership.answer.value);\n        }\n      }\n    }\n    const candidates=candidateEntities.map((target)=>commonPlaySelectorCandidate(internal.scene,actorEntity,target,areaMembers));\n'''
+          if new_candidates not in source:
+            if old_candidates not in source: raise SystemExit("selector candidate production block changed")
+            source=source.replace(old_candidates,new_candidates,1)
+          call='const prepared=prepareCommonPlayAction('
+          if call in source:
+            count=source.count(call)
+            if count!=3: raise SystemExit(f"expected 3 prepare call sites, got {count}")
+            source=source.replace(call,'const prepared=await prepareCommonPlayAction(')
+          if 'const prepared=prepareCommonPlayAction(' in source: raise SystemExit("unawaited prepareCommonPlayAction remains")
+          adapter.write_text(source,encoding="utf-8")
+
+          test=Path("tests/ui/commonPlayRichSelectorProduction.test.ts")
+          source=test.read_text(encoding="utf-8")
+          import_anchor='import { setSpatialRelation } from "../../src/app/spatialRuntimeContracts";\n'
+          provider_import='import { registerCommonPlayAreaMembershipProvider } from "../../src/app/realSpatialRuntimeService";\n'
+          if provider_import not in source:
+            if import_anchor not in source: raise SystemExit("rich selector test import anchor changed")
+            source=source.replace(import_anchor,import_anchor+provider_import,1)
+          marker='unknown installed area selector consumes provider-backed membership and survives identity rename'
+          if marker not in source:
+            source+='''\n\ntest("unknown installed area selector consumes provider-backed membership and survives identity rename",async()=>{\n  async function run(identity:Identity) {\n    const adapter=new MockAdapter();\n    const actionId=await install(adapter,identity,true);\n    const internal=adapter as unknown as {scene:SceneVm};\n    registerCommonPlayAreaMembershipProvider(internal.scene,{\n      id:"provider.c9-family-e-area",\n      resolve({sourceId,area,candidateIds}) {\n        assert.equal(sourceId,"char.aelar");\n        assert.equal(area.shape,"cone");\n        assert.equal(area.origin,"self");\n        assert.ok(candidateIds.includes("combatant.goblin-a"));\n        return {status:"answered",value:["combatant.goblin-a"]};\n      },\n    });\n    await adapter.startInitiative();\n    await adapter.setCurrentActor("char.aelar");\n    await adapter.resolveAction(actionId,["combatant.goblin-b"]);\n    let snapshot=await adapter.getSnapshot();\n    assert.equal(snapshot.resolution?.finalOutcome,"적용 거부","provider-excluded target must not enter the area target set");\n    await adapter.resolveAction(actionId,["combatant.goblin-a"]);\n    snapshot=await adapter.getSnapshot();\n    assert.equal(snapshot.resolution?.stage,"complete");\n    assert.deepEqual(snapshot.resolution?.targetIds,["combatant.goblin-a"]);\n    return snapshot.resolution?.targetIds;\n  }\n  assert.deepEqual(await run(RENAMED),await run(ORIGINAL));\n});\n'''
+          test.write_text(source,encoding="utf-8")
+      - run: npm ci
+      - run: npm run generate:content
+      - name: Verify Family E area provider bridge
+        run: |
+          node --import tsx --test tests/ui/commonPlayRichSelectorProduction.test.ts tests/domain/commonPlaySelectorRuntime.test.ts tests/domain/c9FamilyGStandardSpatialFacts.test.ts
+          node scripts/check-legacy-execution-boundary.mjs
+          npm exec tsc -- --noEmit
+      - name: Commit verified bridge and retire verifier
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/c9-family-e-area-membership-71304.yml
+          git add src/app/realSpatialRuntimeService.ts src/app/installedCommonPlayRuntimeAdapter.ts tests/ui/commonPlayRichSelectorProduction.test.ts
+          git diff --cached --check
+          git commit -m "feat(c9): bridge provider area membership into selectors"
+          branch=agent/c9-gate-n-coverage-reconciliation
+          for attempt in 1 2 3 4 5; do
+            git fetch origin "$branch"
+            if git rebase "origin/$branch"; then
+              npm run generate:content >/dev/null
+              node --import tsx --test tests/ui/commonPlayRichSelectorProduction.test.ts tests/domain/commonPlaySelectorRuntime.test.ts tests/domain/c9FamilyGStandardSpatialFacts.test.ts
+              node scripts/check-legacy-execution-boundary.mjs
+              npm exec tsc -- --noEmit
+              if git push origin HEAD:"$branch"; then exit 0; fi
+            fi
+            git rebase --abort || true
+            echo "publish raced with another C9 writer; retry $attempt/5"
+          done
+          exit 1
