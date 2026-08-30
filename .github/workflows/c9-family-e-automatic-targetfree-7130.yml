@@ -75,27 +75,14 @@ jobs:
           node scripts/check-v1-mechanism-coverage.mjs
           node scripts/check-legacy-execution-boundary.mjs
           npm exec tsc -- --noEmit
-      - name: Record verified evidence and publish
+      - name: Publish verified proof
         shell: bash
-        env:
-          RUN_ID: ${{ github.run_id }}
         run: |
           set -euo pipefail
-          python - <<'PY'
-          import json, os
-          from pathlib import Path
-          path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
-          data=json.loads(path.read_text())
-          family=next(item for item in data['mechanismFamilies'] if item['family']=='E')
-          evidence=f"C9 Family E Automatic Target-Free 7130 run {os.environ['RUN_ID']}: unknown installed automatic selector executed with no caller-supplied target identity, selected the lowest-HP eligible enemy through shared orderBy/Host authority, coverage checker, legacy boundary, and tsc --noEmit passed"
-          if evidence not in family['productionEvidence']:
-              family['productionEvidence'].append(evidence)
-          path.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n')
-          PY
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git rm .github/workflows/c9-family-e-automatic-targetfree-7130.yml
-          git add src/domain/commonPlaySemanticEventRuntime.ts tests/ui/commonPlayRichSelectorProduction.test.ts docs/rules/v1-mechanism-coverage-ledger.json
+          git add src/domain/commonPlaySemanticEventRuntime.ts tests/ui/commonPlayRichSelectorProduction.test.ts
           git diff --cached --check
           git commit -m "fix(c9): restore semantic narrowing and automatic selector proof"
           branch=agent/c9-gate-n-coverage-reconciliation
