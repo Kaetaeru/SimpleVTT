@@ -178,3 +178,43 @@ test("Common Play resource/economy semantics are invariant under external defini
   assert.equal(resourceCurrent(resolved.state, "resource.external.same-turn"), 0);
   assert.equal(resolved.state.combatants.hero.economy.extraActions?.[0]?.allowsMagicAction, false);
 });
+
+test("portable resource.change exposes temporary capacity through the canonical gain-resource operation",()=>{
+  const definition=parseManualCommonPlayOperationDefinition({
+    schemaVersion:"0.2-draft",
+    id:"external.unknown.temporary-resource-capacity",
+    entryPoints:[{
+      id:"activate",
+      invocation:"manual",
+      operations:[{
+        kind:"resource.change",
+        resource:"resource.external.primary",
+        amount:{value:0},
+        maximumDelta:{value:1},
+        temporaryCapacityUntilLongRest:true,
+      }],
+    }],
+  });
+  const state=preparedState();
+  const pending=compileCommonPlayEntryPointOperations(PROFILE,state,definition,executionInput("portable-temporary-capacity"));
+  const operation=pending.operations[0];
+  assert.equal(operation?.kind,"gain-resource");
+  if(operation?.kind!=="gain-resource") return;
+  assert.equal(operation.amount,0);
+  assert.equal(operation.maximumDelta,1);
+  assert.equal(operation.temporaryCapacityUntilLongRest,true);
+
+  const resolved=resolveCommonPlayEntryPointOperations(PROFILE,state,definition,executionInput("portable-temporary-capacity"));
+  assert.equal(resolved.status,"committed",resolved.status==="rejected"?resolved.error:undefined);
+  if(resolved.status!=="committed") return;
+  const resource=resolved.state.combatants.hero.resources.find((entry)=>entry.id==="resource.external.primary");
+  assert.equal(resource?.current,1);
+  assert.equal(resource?.maximum,2);
+  assert.equal(resource?.maximumAfterLongRest,1);
+  const change=resolved.events.flatMap((event)=>event.stateChanges).find((entry)=>entry.kind==="resource"&&entry.resourceId==="resource.external.primary");
+  assert.ok(change&&change.kind==="resource");
+  assert.deepEqual(change.capacity,{
+    before:{maximum:1,maximumAfterLongRest:null},
+    after:{maximum:2,maximumAfterLongRest:1},
+  });
+});
