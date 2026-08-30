@@ -1,0 +1,82 @@
+name: C9 Family H Invisible Sight 71304
+# Verify the already-staged Family H Invisible bridge against the current C9 target and retire this one-shot verifier after success.
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-h-invisible-sight-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  verify-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Reconcile branch
+        run: git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+      - run: npm ci
+      - run: npm run generate:content
+      - name: Patch Family H production visibility
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          source=Path('src/app/commonPlayInterceptorProductionRuntimeAdapter.ts')
+          text=source.read_text(encoding='utf-8')
+          old='''function composedRelationSenses(relation:NonNullable<ReturnType<typeof authoritativeCommonPlaySpatialRelation>>) {\n  if(relation.light===undefined||relation.obscurement===undefined)return undefined;\n  return resolveCommonPlaySenses(relation.observerSenses??[{kind:"normal-sight"}],{\n    distanceFeet:relation.distanceFeet,\n    light:relation.light==="darkness"?"dark":relation.light,\n    obscurement:relation.obscurement,\n    lineOfSight:relation.visible,\n    lineOfEffect:relation.cover!=="total",\n    targetInvisible:relation.targetInvisible??false,\n    targetHidden:false,\n    targetAudible:relation.targetAudible??false,\n    observerCanHear:relation.observerCanHear??false,\n    sharedGroundContact:relation.sharedGroundContact??false,\n  });\n}\n'''
+          new='''function composedRelationSenses(relation:NonNullable<ReturnType<typeof authoritativeCommonPlaySpatialRelation>>,resolverTargetInvisible=false) {\n  if(relation.light===undefined||relation.obscurement===undefined)return undefined;\n  return resolveCommonPlaySenses(relation.observerSenses??[{kind:"normal-sight"}],{\n    distanceFeet:relation.distanceFeet,\n    light:relation.light==="darkness"?"dark":relation.light,\n    obscurement:relation.obscurement,\n    lineOfSight:relation.visible,\n    lineOfEffect:relation.cover!=="total",\n    targetInvisible:(relation.targetInvisible??false)||resolverTargetInvisible,\n    targetHidden:false,\n    targetAudible:relation.targetAudible??false,\n    observerCanHear:relation.observerCanHear??false,\n    sharedGroundContact:relation.sharedGroundContact??false,\n  });\n}\n'''
+          if old not in text and new not in text:
+              raise SystemExit('special-senses composition anchor not found')
+          if old in text:
+              text=text.replace(old,new,1)
+
+          old='''      const relation=authoritativeCommonPlaySpatialRelation(internal.scene,candidate.sourceActorId,subjectId);\n      if(!relation)return {status:"unknown"};\n'''
+          new='''      const relation=authoritativeCommonPlaySpatialRelation(internal.scene,candidate.sourceActorId,subjectId);\n      if(!relation)return {status:"unknown"};\n      const resolverTargetInvisible=runtime.effects.some((effect)=>effect.targetId===subjectId&&effect.conditionId==="invisible"&&!effect.suppression);\n'''
+          if old not in text and new not in text:
+              raise SystemExit('relation runtime anchor not found')
+          if old in text:
+              text=text.replace(old,new,1)
+
+          text=text.replace('const composed=composedRelationSenses(relation);','const composed=composedRelationSenses(relation,resolverTargetInvisible);')
+          source.write_text(text,encoding='utf-8')
+
+          test_path=Path('tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts')
+          test_text=test_path.read_text(encoding='utf-8')
+          test_name='portable production normal sight respects Resolver-owned Invisible condition'
+          if test_name not in test_text:
+              test_text += '''\n\ntest("portable production normal sight respects Resolver-owned Invisible condition",async()=>{\n  const adapter=await prepare(ORIGINAL,true);\n  const internal=adapter as unknown as {activeCharacter:CharacterSheet;scene:SceneVm};\n  setSpatialRelation(internal.scene,{\n    sourceId:internal.activeCharacter.id,targetId:OTHER_CHARACTER_ID,distanceFeet:30,visible:true,cover:"none",targetCanSeeAttacker:true,\n    light:"dim",obscurement:"none",detected:true,provenance:"module:test-invisible:spatial",\n  });\n  seedHiddenRuntimeEffect(adapter,OTHER_CHARACTER_ID);\n  const state=snapshotAdapterTurnRuntimeState(adapter,internal.scene);\n  assert.ok(state,"TurnRuntime state must exist before Invisible condition seeding");\n  const committed=resolvePendingResolution(SIMPLEVTT_APP_RULES_PROFILE,state!,{\n    id:"resolution.invisible-fact",actorId:internal.activeCharacter.id,sourceId:"external.invisible-fact-probe",expectedRevision:state!.revision,\n    operations:[{\n      id:"op.invisible-fact",kind:"apply-effect",\n      effect:{id:"effect.invisible-fact",sourceId:"external.invisible-fact-probe",sourceActorId:internal.activeCharacter.id,targetId:OTHER_CHARACTER_ID,kind:"condition",conditionId:"invisible",tags:["condition:invisible"],duration:{kind:"special",key:"test.invisible-fact"}},\n    }],\n  });\n  assert.notEqual(committed.status,"rejected");\n  if(committed.status==="rejected")return;\n  assert.equal(commitAdapterTurnRuntimeState(adapter,internal.scene,state!.revision,committed.state),true);\n  const snapshot=await openAbilityCheckInterrupt(adapter);\n  assert.notEqual(snapshot.resolution?.stage,"interrupt","normal sight must not see a target with an active Resolver-owned Invisible condition");\n});\n'''
+              test_path.write_text(test_text,encoding='utf-8')
+          PY
+      - name: Verify Family H slice
+        run: |
+          node --import tsx --test tests/domain/commonPlaySenseRuntime.test.ts tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts
+          node scripts/check-legacy-execution-boundary.mjs
+          node scripts/check-v1-mechanism-coverage.mjs
+          npm exec tsc -- --noEmit
+      - name: Publish verified patch to target and retire verifier
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/app/commonPlayInterceptorProductionRuntimeAdapter.ts tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts
+          git diff --cached --check
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git rm .github/workflows/c9-family-h-invisible-sight-71304.yml
+          git commit -m "fix(c9): compose Resolver Invisible with special senses"
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
