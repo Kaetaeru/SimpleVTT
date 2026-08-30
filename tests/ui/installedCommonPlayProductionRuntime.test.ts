@@ -529,6 +529,47 @@ test("unknown installed Common Play preserves a bounded multi-target selection t
   assert.ok(snapshot.resolution?.detail.some((line)=>/validated 2 target/.test(line)));
 });
 
+
+test("unknown installed Common Play automatic selector uses Host authority ordering without caller target identities",async()=>{
+  const adapter=new MockAdapter();
+  const payload=JSON.parse(targetingPackagePayload()) as any;
+  const entryPoint=payload.content[0].mechanics[0].config.entryPoints[0];
+  entryPoint.targeting={
+    from:"targets",
+    where:{op:"relation-matches",ref:"relation",value:"enemy"},
+    min:1,max:1,orderBy:"initiative",selection:"automatic",
+  };
+  entryPoint.operations=[{kind:"damage.apply",amount:{value:1},damageType:"force",target:"target"}];
+  setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
+  const preview=await adapter.previewContentImport(JSON.stringify(payload));
+  assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
+  await adapter.activateContentImport();
+  const actionId=installedCommonPlayActionId({
+    catalogId:catalogQualifiedId(TARGETING_IDENTITY.contentId,TARGETING_IDENTITY.moduleId,"1"),
+    mechanicId:TARGETING_IDENTITY.mechanicId,
+    entryPointId:TARGETING_IDENTITY.entryPointId,
+  });
+  await adapter.startInitiative();
+  await adapter.setCurrentActor("char.aelar");
+  let snapshot=await adapter.getSnapshot();
+  const actor=snapshot.scene.entities.find((entity)=>entity.id==="char.aelar")!;
+  const expected=snapshot.scene.entities
+    .filter((entity)=>entity.id.startsWith("combatant.")&&entity.side!==actor.side)
+    .sort((left,right)=>left.initiative-right.initiative||left.id.localeCompare(right.id))[0]!;
+
+  await adapter.resolveAction(actionId,[]);
+  snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.resolution?.stage,"complete");
+  assert.equal(snapshot.resolution?.actionId,actionId);
+  assert.deepEqual(snapshot.resolution?.targetIds,[expected.id]);
+  assert.equal(snapshot.resolution?.damageComponents[0]?.raw,1);
+  const resolutionId=snapshot.resolution?.id;
+
+  await adapter.resolveAction(actionId,[expected.id]);
+  snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.resolution?.id,resolutionId,"automatic selection must not accept caller-supplied target identities");
+});
+
 test("unknown installed Common Play rich predicate filters authoritative scene properties without identity dispatch",async()=>{
   const adapter=new MockAdapter();
   const payload=JSON.parse(targetingPackagePayload()) as any;
