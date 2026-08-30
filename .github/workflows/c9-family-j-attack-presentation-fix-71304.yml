@@ -23,7 +23,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run generate:content
-      - name: Diagnose Family J final attack rejection
+      - name: Diagnose Family J final attack outcome
         shell: bash
         run: |
           set -euo pipefail
@@ -31,8 +31,8 @@ jobs:
           from pathlib import Path
           p=Path('tests/ui/c9FamilyJSpatialAttackProduction.test.ts')
           s=p.read_text(encoding='utf-8')
-          needle='''  assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));\n  assert.equal(snapshot.resolution?.rollKind,"attack");'''
-          repl='''  assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));\n  console.log("C9_FAMILY_J_FINAL_RESOLUTION="+JSON.stringify(snapshot.resolution));\n  console.log("C9_FAMILY_J_EVENT_HISTORY="+JSON.stringify(runtimeResolutionEventHistory(adapter)));\n  assert.equal(snapshot.resolution?.rollKind,"attack");'''
+          needle='''  assert.notEqual(snapshot.resolution?.finalOutcome,"적용 거부",JSON.stringify(snapshot.resolution));'''
+          repl='''  console.log("C9_FAMILY_J_FINAL_RESOLUTION="+JSON.stringify(snapshot.resolution));\n  console.log("C9_FAMILY_J_EVENT_HISTORY="+JSON.stringify(runtimeResolutionEventHistory(adapter)));\n  assert.notEqual(snapshot.resolution?.finalOutcome,"적용 거부",JSON.stringify(snapshot.resolution));'''
           if needle not in s:
               raise SystemExit('diagnostic insertion point not found')
           p.write_text(s.replace(needle,repl,1),encoding='utf-8')
