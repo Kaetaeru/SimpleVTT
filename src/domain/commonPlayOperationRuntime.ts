@@ -3,6 +3,7 @@ import type { D20RollModification, D20TestFamily, ModifierContribution } from ".
 import { DomainEvaluationError, type RollStateContribution, type RulesProfileLike } from "./profileEngine";
 import { resolvePendingResolution } from "./resolution";
 import type { PendingResolution, ResolutionCommit, ResolutionOperation } from "./resolutionTypes";
+import type { ResourceRecovery } from "./resources";
 import type { TargetingFactInput } from "./targeting";
 import type { ActionUseKind, TurnSlot } from "./turnEconomy";
 import { compileCommonPlayMovement, type CommonPlayMovementDefinition } from "./commonPlayMovementRuntime";
@@ -11,6 +12,12 @@ import type { CommonPlayFactAnswer, CommonPlayFactQuery } from "./commonPlaySpat
 type LiteralNumberExpression={value:number};
 type CommonPlayExpression=LiteralNumberExpression|Record<string,unknown>;
 type CommonPlayHpTarget="actor"|"self"|"target";
+
+type CommonPlayResourceCreation={
+  label:string;
+  maximum:LiteralNumberExpression;
+  recovery?:ResourceRecovery;
+};
 
 export interface CommonPlayTargetingSelector {
   from:"targets";
@@ -38,6 +45,7 @@ type CommonPlayResourceChange={
   resource:string;
   amount:CommonPlayExpression;
   target?:string;
+  createIfMissing?:CommonPlayResourceCreation;
 };
 
 type CommonPlayRechargeResource={
@@ -154,7 +162,9 @@ const INTERACTION_KEYS=new Set(["id","kind","responder","mode","input","revalida
 const INTERACTION_INPUT_KEYS=new Set(["type"]);
 const TARGETING_KEYS=new Set(["from","min","max"]);
 const D20_TEST_KEYS=new Set(["kind","roller","property","dc","perTarget"]);
-const RESOURCE_CHANGE_KEYS=new Set(["kind","resource","amount","target"]);
+const RESOURCE_CHANGE_KEYS=new Set(["kind","resource","amount","target","createIfMissing"]);
+const RESOURCE_CREATION_KEYS=new Set(["label","maximum","recovery"]);
+const RESOURCE_RECOVERY_KEYS=new Set(["shortRest","longRest","turnStart"]);
 const RESOURCE_RECHARGE_KEYS=new Set(["kind","resource","die","succeedsOn"]);
 const RECHARGE_DIE_KEYS=new Set(["sides"]);
 const RECHARGE_RANGE_KEYS=new Set(["minimum","maximum"]);
@@ -195,6 +205,38 @@ function nonNegativeLiteralExpression(value:unknown,label:string) {
   const expression=literalExpression(value,label);
   if(expression.value<0) throw new DomainEvaluationError(`${label} must be a non-negative integer literal`);
   return expression;
+}
+
+function recoveryAmount(value:unknown,label:string) {
+  if(value==="all") return "all" as const;
+  if(typeof value!=="number"||!Number.isInteger(value)||value<0) {
+    throw new DomainEvaluationError(`${label} must be all or a non-negative integer`);
+  }
+  return value;
+}
+
+function parseResourceRecovery(value:unknown,label:string):ResourceRecovery|undefined {
+  if(value===undefined) return undefined;
+  const recovery=object(value,label);
+  supportedKeys(recovery,RESOURCE_RECOVERY_KEYS,label);
+  const parsed:ResourceRecovery={};
+  if(recovery.shortRest!==undefined) parsed.shortRest=recoveryAmount(recovery.shortRest,`${label}.shortRest`);
+  if(recovery.longRest!==undefined) parsed.longRest=recoveryAmount(recovery.longRest,`${label}.longRest`);
+  if(recovery.turnStart!==undefined) parsed.turnStart=recoveryAmount(recovery.turnStart,`${label}.turnStart`);
+  return parsed;
+}
+
+function parseResourceCreation(value:unknown,label:string):CommonPlayResourceCreation {
+  const creation=object(value,label);
+  supportedKeys(creation,RESOURCE_CREATION_KEYS,label);
+  const maximum=literalExpression(creation.maximum,`${label}.maximum`);
+  if(maximum.value<=0) throw new DomainEvaluationError(`${label}.maximum must be a positive integer`);
+  const recovery=parseResourceRecovery(creation.recovery,`${label}.recovery`);
+  return {
+    label:nonEmptyString(creation.label,`${label}.label`),
+    maximum,
+    ...(recovery?{recovery}:{}),
+  };
 }
 
 export function parseCommonPlayDamageDiceFormula(value:string,label="Common Play damage amount"):CommonPlayDamageDiceFormula {
@@ -318,11 +360,14 @@ function parseOperation(value:unknown,label:string):CommonPlayOperation {
     if(target!==undefined&&target!=="actor"&&target!=="self") {
       throw new DomainEvaluationError(`${label}.target must be actor or self for portable Common Play resource.change`);
     }
+    const createIfMissing=operation.createIfMissing===undefined?undefined:parseResourceCreation(operation.createIfMissing,`${label}.createIfMissing`);
+    if(createIfMissing&&amount.value<0) throw new DomainEvaluationError(`${label}.createIfMissing is only valid for positive resource.change`);
     return {
       kind:"resource.change",
       resource:nonEmptyString(operation.resource,`${label}.resource`),
       amount,
       ...(target===undefined?{}:{target}),
+      ...(createIfMissing?{createIfMissing}:{}),
     };
   }
   if(operation.kind==="economy.modify") {
@@ -494,6 +539,7 @@ export function compileCommonPlayEntryPointOperations(
   }
 
   const operations:ResolutionOperation[]=[];
+  const materializedResourceIds=new Set(state.combatants[input.actorId]?.resources.map((resource)=>resource.id)??[]);
   if(entryPoint.targeting) {
     if(!input.targetingTargets) throw new DomainEvaluationError(`Common Play entry point ${entryPoint.id} requires pre-resolved targeting facts`);
     if(input.targetingTargets.length===1&&input.targetId!==undefined&&input.targetId!==input.targetingTargets[0].id) {
@@ -569,6 +615,8 @@ export function compileCommonPlayEntryPointOperations(
         throw new DomainEvaluationError("Common Play resource.change currently supports the acting actor only");
       }
       const amount=literalInteger(operation.amount,"resource.change amount");
+      const shouldCreate=amount>0&&Boolean(operation.createIfMissing)&&!materializedResourceIds.has(operation.resource);
+      if(shouldCreate) materializedResourceIds.add(operation.resource);
       operations.push(amount<0?{
         id:operationId,
         kind:"spend-resource",
@@ -581,6 +629,13 @@ export function compileCommonPlayEntryPointOperations(
         actorId:input.actorId,
         resourceId:operation.resource,
         amount,
+        ...(shouldCreate&&operation.createIfMissing?{
+          maximumDelta:literalInteger(operation.createIfMissing.maximum,"resource.change createIfMissing maximum"),
+          createIfMissing:{
+            label:operation.createIfMissing.label,
+            ...(operation.createIfMissing.recovery?{recovery:structuredClone(operation.createIfMissing.recovery)}:{}),
+          },
+        }:{}),
       });
       continue;
     }
