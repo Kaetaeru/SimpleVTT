@@ -23,6 +23,8 @@ jobs:
           node-version: 22
       - name: Install dependencies
         run: npm install --no-audit --no-fund
+      - name: Generate content catalogs
+        run: npm run generate:content
       - name: Apply staged selector pre-resolver transform
         run: python3 .github/scripts/c9-family-e-selector-pre-resolver-7130.py
       - name: Verify selector and package boundaries
