@@ -20,7 +20,7 @@ type CommonPlayResourceCreation={
   recovery?:ResourceRecovery;
 };
 
-export interface CommonPlayTargetingSelector extends Omit<CommonPlaySelector,"from"|"min"|"max"|"orderBy"> {
+export interface CommonPlayTargetingSelector extends Omit<CommonPlaySelector,"from"|"min"|"max"> {
   from:"targets";
   min:number;
   max:number;
@@ -201,7 +201,7 @@ const ITEM_PAYMENT_PREDICATE_KEYS=new Set(["op","left","right"]);
 const ENTRY_POINT_KEYS=new Set(["id","invocation","interaction","targeting","allocation","test","operations"]);
 const INTERACTION_KEYS=new Set(["id","kind","responder","mode","input","revalidate","stalePolicy"]);
 const INTERACTION_INPUT_KEYS=new Set(["type"]);
-const TARGETING_KEYS=new Set(["from","where","min","max","area"]);
+const TARGETING_KEYS=new Set(["from","where","min","max","area","orderBy"]);
 const ALLOCATION_KEYS=new Set(["units","targets","minimumPerTarget","maximumPerTarget","totalMustMatch"]);
 const D20_TEST_KEYS=new Set(["kind","roller","property","dc","perTarget"]);
 const PROPERTY_MODIFY_KEYS=new Set(["kind","property","operation","value","target","owner","source","duration","lifetime","instancePolicy"]);
@@ -323,7 +323,7 @@ function parseTargetingSelector(value:unknown,label:string):CommonPlayTargetingS
   if(parsed.from!=="targets") throw new DomainEvaluationError(`${label}.from must be targets for portable Common Play targeting`);
   if(parsed.min===undefined||!Number.isInteger(parsed.min)||parsed.min<0) throw new DomainEvaluationError(`${label}.min must be a non-negative integer for portable Common Play targeting`);
   if(parsed.max===undefined||!Number.isInteger(parsed.max)||parsed.max<parsed.min) throw new DomainEvaluationError(`${label}.max must be an integer >= min for portable Common Play targeting`);
-  return {from:"targets",min:parsed.min,max:parsed.max,...(parsed.where===undefined?{}:{where:parsed.where}),...(parsed.area===undefined?{}:{area:parsed.area})};
+  return {...parsed,from:"targets",min:parsed.min,max:parsed.max};
 }
 
 function parseAllocation(value:unknown,label:string):CommonPlayAllocationDefinition {
