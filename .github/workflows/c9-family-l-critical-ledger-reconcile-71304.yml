@@ -1,0 +1,71 @@
+name: C9 Family L Critical Ledger Reconcile 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-l-critical-ledger-reconcile-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Reconcile Family L critical-dice evidence
+        run: |
+          node <<'NODE'
+          const fs=require('fs');
+          const path='docs/rules/v1-mechanism-coverage-ledger.json';
+          const ledger=JSON.parse(fs.readFileSync(path,'utf8'));
+          const row=ledger.rows.find((entry)=>entry.family==='L');
+          if(!row) throw new Error('Family L row missing');
+          if(row.disposition!=='INCOMPLETE') throw new Error(`Family L disposition changed: ${row.disposition}`);
+          row.currentState='Bounded typed damage/healing plus portable Temporary HP, character life/death flows, structural damage threshold/reduction, and portable attack critical-dice doubling are production-proven through Common Play/Resolver with external identity invariance and event-native Undo. Remaining Family L acceptance is max-HP source-model/write-back semantics, Object/Vehicle damage production coverage, and named feature/spell HP migration debt where it bypasses portable Common Play.';
+          const implementation=[
+            'damage.ts generic typed resistance/vulnerability/immunity plus structural reduction/threshold mitigation with provenance',
+            'commonPlayOperationRuntime.ts propagates attack-roll criticalFrom into portable damage-roll/damage operations',
+            'installedCommonPlayRuntimeAdapter.ts supplies deterministic doubled attack damage dice on authoritative natural-20 criticals without content identity dispatch'
+          ];
+          for(const value of implementation) if(!row.implementationEvidence.includes(value)) row.implementationEvidence.push(value);
+          const production='C9 Family L Critical Dice Implementation R2 71304 run 33318001173: portable unknown/renamed attack critical doubled damage dice but not flat damage; Family L/J regressions, V1 coverage checker, and tsc --noEmit passed before verified publish';
+          if(!row.productionEvidence.includes(production)) row.productionEvidence.push(production);
+          const identity='c9FamilyLCriticalDiceProduction71304.test.ts repeats natural-20 critical dice doubling after complete external module/content/mechanic identity rename';
+          if(!row.identityInvarianceEvidence.includes(identity)) row.identityInvarianceEvidence.push(identity);
+          row.remainingNamedSeams=[
+            'generic max-HP source-model/write-back acceptance remains incomplete',
+            'Object/Vehicle damage production acceptance remains incomplete',
+            'named feature/spell HP execution remains migration debt where it bypasses portable Common Play'
+          ];
+          fs.writeFileSync(path,JSON.stringify(ledger,null,2)+'\n');
+          NODE
+      - name: Verify ledger contract
+        run: node scripts/check-v1-mechanism-coverage.mjs
+      - name: Publish ledger and retire workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch=agent/c9-gate-n-coverage-reconciliation
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/rules/v1-mechanism-coverage-ledger.json
+          git rm .github/workflows/c9-family-l-critical-ledger-reconcile-71304.yml
+          git commit -m "docs(c9): reconcile Family L critical-dice evidence"
+          for attempt in $(seq 1 10); do
+            if git pull --rebase origin "$branch" && git push origin HEAD:"$branch"; then exit 0; fi
+            git rebase --abort >/dev/null 2>&1 || true
+            sleep 1
+          done
+          exit 1
