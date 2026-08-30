@@ -1,0 +1,74 @@
+name: C9 Family A Evidence Reconcile 7130
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-a-finalize-7130.yml
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: npm run generate:content
+      - name: Verify resolved Family A seam
+        run: |
+          npx tsx --test tests/ui/installedCommonPlayPropertyModifierProduction.test.ts tests/domain/propertyModifierProfilePolicyRuntime.test.ts
+          npx tsc --noEmit
+          node scripts/check-v1-mechanism-coverage.mjs
+      - name: Reconcile latest ledger and retire superseded Family A workflows
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch=agent/c9-gate-n-coverage-reconciliation
+          git fetch origin "$branch"
+          git reset --hard "origin/$branch"
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
+          ledger=json.loads(path.read_text(encoding='utf-8'))
+          row=next(entry for entry in ledger['rows'] if entry['family']=='A')
+          stale='Common Play profile-property input projection is generic for the active Character, but non-active runtime actors still expose only movement.walk rather than the same RulesProfile property surface'
+          row['remainingNamedSeams']=[entry for entry in row['remainingNamedSeams'] if entry!=stale]
+          implementation='installedCommonPlayRuntimeAdapter.ts projects non-active CombatantRuntimeState.baseProperties through the shared resolveRuntimeProfileProperty owner'
+          if implementation not in row['implementationEvidence']:
+              row['implementationEvidence'].append(implementation)
+          production='installedCommonPlayPropertyModifierProduction.test.ts proves a non-active runtime actor exposes generic profile properties to stored unknown Common Play; C9 Family A Non-Active Profile Properties run 33311990760 retained this production regression green while the superseded helper-only export probe failed'
+          if production not in row['productionEvidence']:
+              row['productionEvidence'].append(production)
+          profile_policy='propertyModifierProfilePolicyRuntime.test.ts proves RulesProfile-owned profile-policy stacking without content identity dispatch'
+          if profile_policy not in row['implementationEvidence']:
+              row['implementationEvidence'].append(profile_policy)
+          row['currentState']='Generic property.modify lowers external modifiers to typed Effect state and the shared RulesProfile/effect resolver serves active Characters and non-active runtime actors from authoritative property inputs without content identity dispatch. Derived profile refs, source-bound modifiers, stack/replace/unique-by-source, RulesProfile-owned profile-policy, connected replay/reconnect/Undo, and offline restart persistence are proven. Family A remains INCOMPLETE only for the ledger-listed named progression/runtime stat materialization outside the generic property owner.'
+          row['disposition']='INCOMPLETE'
+          path.write_text(json.dumps(ledger,indent=2,ensure_ascii=False)+'\n',encoding='utf-8')
+          PY
+          node scripts/check-v1-mechanism-coverage.mjs
+          rm -f \
+            .github/workflows/c9-family-a-finalize-7130.yml \
+            .github/workflows/c9-family-a-ledger-sync-7130.yml \
+            .github/workflows/c9-family-a-nonactive-profile-71304.yml \
+            .github/workflows/c9-family-a-nonactive-profile-71304b.yml \
+            .github/workflows/c9-family-a-nonactive-profile-properties-7130.yml \
+            .github/workflows/c9-family-a-nonactive-properties-71304.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/rules/v1-mechanism-coverage-ledger.json .github/workflows
+          git diff --cached --check
+          git commit -m "docs(c9): reconcile Family A non-active property evidence"
+          git pull --rebase origin "$branch"
+          git push origin HEAD:"$branch"
