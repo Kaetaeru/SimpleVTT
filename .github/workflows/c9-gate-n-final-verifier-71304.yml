@@ -1,5 +1,5 @@
 name: C9 Gate N Final Verifier 71304
-# final verifier rerun after obsolete Family L verifier cleanup
+# final verifier rerun after zero-INCOMPLETE ledger and legacy baseline reconciliation
 
 on:
   push:
