@@ -15,7 +15,9 @@ async function exerciseProjectedOpportunityAttack(actionId:string,actionName:str
 
   const internal=adapter as unknown as {scene:SceneVm;action(id:string):ActionVm|undefined};
   const source=(internal.scene.actionsByActor[REACTOR_ID]??[]).find((action)=>action.id==="action.scimitar");
+  const beforeTarget=structuredClone(internal.scene.entities.find((entry)=>entry.id===PROVOKER_ID));
   assert.ok(source?.runtimeAttack,"fixture melee attack must expose structural runtimeAttack facts");
+  assert.ok(beforeTarget,"fixture provoker must exist");
   const projected:ActionVm={...structuredClone(source),id:actionId,name:actionName};
   const baseAction=internal.action.bind(adapter);
   internal.action=(id:string)=>id===projected.id ? projected : baseAction(id);
@@ -53,8 +55,9 @@ async function exerciseProjectedOpportunityAttack(actionId:string,actionName:str
   assert.equal(snapshot.resolution?.stage,"complete");
   assert.equal(snapshot.scene.economyByActor[REACTOR_ID]?.reaction,false);
   assert.equal(snapshot.scene.economyByActor[REACTOR_ID]?.action,true);
-  assert.equal(snapshot.scene.entities.find((entry)=>entry.id===PROVOKER_ID)?.tempHp,0);
-  assert.equal(snapshot.scene.entities.find((entry)=>entry.id===PROVOKER_ID)?.hp,30);
+  const afterTarget=snapshot.scene.entities.find((entry)=>entry.id===PROVOKER_ID);
+  assert.ok(afterTarget);
+  assert.ok(afterTarget.hp+afterTarget.tempHp < beforeTarget.hp+beforeTarget.tempHp,"opportunity attack must commit damage independently of fixture face choice");
   assert.ok(snapshot.activity[0]?.detail.some((line)=>line.includes(`opportunity-attack:${actionId}`)));
 
   (adapter as unknown as {lastBefore:unknown}).lastBefore=null;
@@ -62,7 +65,8 @@ async function exerciseProjectedOpportunityAttack(actionId:string,actionName:str
   snapshot=await adapter.getSnapshot();
   assert.equal(snapshot.scene.economyByActor[REACTOR_ID]?.reaction,true);
   assert.equal(snapshot.scene.economyByActor[REACTOR_ID]?.action,true);
-  assert.equal(snapshot.scene.entities.find((entry)=>entry.id===PROVOKER_ID)?.tempHp,5);
+  assert.equal(snapshot.scene.entities.find((entry)=>entry.id===PROVOKER_ID)?.hp,beforeTarget.hp);
+  assert.equal(snapshot.scene.entities.find((entry)=>entry.id===PROVOKER_ID)?.tempHp,beforeTarget.tempHp);
   assert.equal(snapshot.resolution,null);
 }
 
