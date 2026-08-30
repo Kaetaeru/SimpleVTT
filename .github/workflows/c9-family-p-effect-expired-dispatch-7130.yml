@@ -1,0 +1,140 @@
+name: C9 Family P Effect Expired Dispatch 7130
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - ".github/workflows/c9-family-p-effect-expired-dispatch-7130.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: npm run generate:content
+      - name: Add effect.expired automatic semantic dispatch
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          effect=Path("src/domain/commonPlayEffectRuntime.ts")
+          text=effect.read_text()
+          old='''export type CommonPlayAutomaticEffectEvent=AutomaticDamageEvent|"attack.hit"|"attack.miss"|"save.success"|"save.failure"|"state.applied"|"rest.short.complete"|"rest.long.complete"|"resource.recharge.success"|"resource.recharge.failure";'''
+          new='''export type CommonPlayAutomaticEffectEvent=AutomaticDamageEvent|"attack.hit"|"attack.miss"|"save.success"|"save.failure"|"state.applied"|"effect.expired"|"rest.short.complete"|"rest.long.complete"|"resource.recharge.success"|"resource.recharge.failure";'''
+          if old not in text:
+            if '"effect.expired"' not in text:
+              raise SystemExit("automatic effect event union seam changed")
+          else:
+            text=text.replace(old,new,1)
+          old_events='''["damage.taken","damage.dealt","attack.hit","attack.miss","save.success","save.failure","state.applied","rest.short.complete","rest.long.complete","resource.recharge.success","resource.recharge.failure"]'''
+          new_events='''["damage.taken","damage.dealt","attack.hit","attack.miss","save.success","save.failure","state.applied","effect.expired","rest.short.complete","rest.long.complete","resource.recharge.success","resource.recharge.failure"]'''
+          if old_events in text:
+            text=text.replace(old_events,new_events,1)
+          elif '"effect.expired"' not in text[text.index('function validateRule'):text.index('function validateTemplate')]:
+            raise SystemExit("automatic effect validation seam changed")
+          effect.write_text(text)
+
+          semantic=Path("src/domain/commonPlaySemanticEventRuntime.ts")
+          text=semantic.read_text()
+          import_anchor='''import type { D20TestResult } from "./d20";\n'''
+          import_line='''import { expireEffectsAtClock, expireEffectsForRest } from "./effects";\n'''
+          if import_line not in text:
+            if import_anchor not in text:
+              raise SystemExit("semantic event import seam changed")
+            text=text.replace(import_anchor,import_anchor+import_line,1)
+
+          return_anchor='''  return operations.length===pending.operations.length?pending:{...pending,operations};\n}\n\nfunction lifecycleSemanticEvent('''
+          dispatch='''  let previewEffects=state.effects.map((effect)=>structuredClone(effect));\n  let previewClock=structuredClone(state.clock);\n  for(const [semanticIndex,operation] of pending.operations.entries()) {\n    const effectsBefore=previewEffects;\n    let expired=typeof previewEffects;\n    if(operation.kind==="begin-turn") {\n      previewClock={...previewClock,round:operation.round,activeActorId:operation.actorId,phase:"start"};\n      const expiry=expireEffectsAtClock(previewEffects,previewClock);\n      previewEffects=expiry.active; expired=expiry.expired;\n    } else if(operation.kind==="end-turn") {\n      previewClock={...previewClock,round:operation.round,activeActorId:operation.actorId,phase:"end"};\n      const expiry=expireEffectsAtClock(previewEffects,previewClock);\n      previewEffects=expiry.active; expired=expiry.expired;\n    } else if(operation.kind==="advance-time") {\n      previewClock={...previewClock,elapsedSeconds:operation.elapsedSeconds};\n      const expiry=expireEffectsAtClock(previewEffects,previewClock);\n      previewEffects=expiry.active; expired=expiry.expired;\n    } else if(operation.kind==="short-rest"||operation.kind==="long-rest") {\n      const owned=previewEffects.filter((effect)=>effect.targetId===operation.targetId);\n      const other=previewEffects.filter((effect)=>effect.targetId!==operation.targetId);\n      const expiry=expireEffectsForRest(owned,operation.kind==="short-rest"?"short":"long");\n      previewEffects=[...other,...expiry.active]; expired=expiry.expired;\n    } else {\n      continue;\n    }\n    for(const expiredEffect of expired) {\n      const subjectId=expiredEffect.targetId;\n      if(!creatureKinds[subjectId]) continue;\n      for(const [definitionIndex,definition] of definitions.entries()) {\n        for(const [effectIndex,effect] of effectsBefore.filter((candidate)=>candidate.targetId===subjectId&&candidate.sourceId===definition.id&&candidate.metadata?.[EFFECT_METADATA_DEFINITION]===definition.id).entries()) {\n          const templateId=effect.metadata?.[EFFECT_METADATA_TEMPLATE];\n          if(typeof templateId!=="string") continue;\n          const template=definition.artifactTemplates.find((candidate)=>candidate.id===templateId);\n          if(!template) continue;\n          for(const [ruleIndex,rule] of template.rules.filter((candidate)=>candidate.event==="effect.expired").entries()) {\n            const frequency=resolveCommonPlayFrequency({ruleId:rule.id,subjectId,frequency:rule.frequency??"once",resolutionId:pending.id,clock:previewClock,markers:effect.metadata??{}});\n            if(!frequency.eligible) continue;\n            for(const [operationIndex,triggered] of rule.operations.entries()) {\n              const targetId=triggered.target==="event.target"?expiredEffect.targetId:pending.actorId;\n              const targetCreatureKind=creatureKinds[targetId];\n              if(!targetCreatureKind) continue;\n              operations.push({\n                id:`${pending.id}:automatic:effect.expired:${definitionIndex}:${effectIndex}:${semanticIndex}:${ruleIndex}:${operationIndex}:${expiredEffect.id}`,\n                kind:"damage",targetId,damageType:triggered.damageType,amount:triggered.amount.value,creatureKind:targetCreatureKind,\n              });\n            }\n            if(template.lifetime.kind==="until-duration"&&Object.keys(frequency.metadataPatch).length) operations.push({\n              id:`${pending.id}:automatic:effect.expired:${definitionIndex}:${effectIndex}:${semanticIndex}:${ruleIndex}:frequency:${expiredEffect.id}`,\n              kind:"update-effect",effectId:effect.id,metadataPatch:frequency.metadataPatch,\n            });\n          }\n        }\n      }\n    }\n  }\n  return operations.length===pending.operations.length?pending:{...pending,operations};\n}\n\nfunction lifecycleSemanticEvent('''
+          if return_anchor in text:
+            text=text.replace(return_anchor,dispatch,1)
+          elif 'automatic:effect.expired' not in text:
+            raise SystemExit("semantic event dispatch insertion seam changed")
+          semantic.write_text(text)
+          PY
+      - name: Add focused expiry-dispatch regression
+        shell: bash
+        run: |
+          cat > tests/domain/c9FamilyPEffectExpiredDispatch.test.ts <<'TS'
+          import assert from "node:assert/strict";
+          import test from "node:test";
+          import { createEffect } from "../../src/domain/effects";
+          import { resolveCommonPlayEffectActivation, type CommonPlayPersistentEffectDefinition } from "../../src/domain/commonPlayEffectRuntime";
+          import { appendCommonPlaySemanticOutcomeEvents, appendCommonPlaySemanticOutcomeTriggers } from "../../src/domain/commonPlaySemanticEventRuntime";
+          import { resolvePendingResolution } from "../../src/domain/resolution";
+          import type { PendingResolution } from "../../src/domain/resolutionTypes";
+          import { runtimeState, TEST_PROFILE } from "./rulesTestState";
+
+          function execute(definitionId:string) {
+            const definition:CommonPlayPersistentEffectDefinition={
+              schemaVersion:"0.2-draft",id:definitionId,
+              entryPoints:[{id:"activate",invocation:"manual",operations:[{kind:"effect.apply",template:"listener",target:"actor"}]}],
+              artifactTemplates:[{id:"listener",artifactKind:"effect",duration:{kind:"durable"},rules:[{
+                id:"on-expiry",event:"effect.expired",frequency:"once-per-resolution",
+                operations:[{kind:"damage.apply",amount:{value:2},damageType:"force",target:"event.target"}],
+              }],lifetime:{kind:"until-duration",onEnd:"destroy"}}],
+            };
+            let state=runtimeState();
+            const activated=resolveCommonPlayEffectActivation(TEST_PROFILE,state,definition,{resolutionId:`${definitionId}:activate`,actorId:"hero",entryPointId:"activate"});
+            assert.equal(activated.status,"committed");
+            if(activated.status!=="committed") throw new Error(activated.error);
+            state=activated.state;
+            state.effects.push(createEffect({
+              id:`${definitionId}:foreign-expiring`,sourceId:"external.foreign.expiring",sourceActorId:"goblin",targetId:"hero",kind:"marker",duration:{kind:"seconds",amount:1},
+            },state.clock));
+            const request:PendingResolution={
+              id:`${definitionId}:expiry`,actorId:"hero",sourceId:"external.unknown.lifecycle-source",expectedRevision:state.revision,
+              operations:[{id:"advance",kind:"advance-time",elapsedSeconds:1}],
+            };
+            const expanded=appendCommonPlaySemanticOutcomeTriggers(state,[definition],request,{hero:"character",goblin:"monster"});
+            const resolved=appendCommonPlaySemanticOutcomeEvents(expanded,resolvePendingResolution(TEST_PROFILE,state,expanded));
+            assert.equal(resolved.status,"committed");
+            if(resolved.status!=="committed") throw new Error(resolved.error);
+            return {
+              hp:resolved.state.combatants.hero.life.hp.current,
+              semantic:resolved.events.filter((event)=>event.kind==="effect.expired").map((event)=>({kind:event.kind,targetId:event.targetId})),
+              dispatched:Object.keys(resolved.results).filter((id)=>id.includes("automatic:effect.expired")).length,
+            };
+          }
+
+          test("effect.expired dispatches an active portable effect rule atomically and is identity invariant",()=>{
+            const first=execute("external.unknown.expiry-listener");
+            const renamed=execute("renamed.unseen.expiry-listener");
+            assert.equal(first.hp,18);
+            assert.equal(first.dispatched,1);
+            assert.deepEqual(first.semantic,[{kind:"effect.expired",targetId:"hero"}]);
+            assert.deepEqual(first,renamed);
+          });
+          TS
+      - name: Verify Family P expiry slice and branch health
+        run: |
+          npx tsx --test tests/domain/c9FamilyPEffectExpiredDispatch.test.ts tests/domain/commonPlaySemanticEventRuntime.test.ts
+          npx tsc --noEmit
+          node scripts/check-v1-mechanism-coverage.mjs
+      - name: Commit verified expiry slice
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/domain/commonPlayEffectRuntime.ts src/domain/commonPlaySemanticEventRuntime.ts tests/domain/c9FamilyPEffectExpiredDispatch.test.ts
+          git commit -m "feat(c9): dispatch effect expiry semantic rules"
+          for attempt in 1 2 3 4 5 6 7 8; do
+            git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+            if git push origin HEAD:agent/c9-gate-n-coverage-reconciliation; then
+              exit 0
+            fi
+            sleep 1
+          done
+          exit 1
