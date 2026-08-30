@@ -707,13 +707,14 @@
       "connectedEvidenceIfRelevant": [
         "installedCommonPlayLoweredFamiliesProduction.test.ts#summoned Actor action and Undo converge through Host-authoritative connected events"
       ],
-      "persistenceEvidenceIfRelevant": [],
+      "persistenceEvidenceIfRelevant": [
+        "c9FamilyJAttackPersistence.test.ts unknown installed attack damage persists to the Character library through restart and Undo restores the durable HP state"
+      ],
       "remainingNamedSeams": [
         "full generic weapon and Unarmed Strike action projection is not yet proven across source-owned equipment/stat definitions",
         "Opportunity Attack and grapple/shove/escape control composition remain outside the portable Common Play attack acceptance",
         "reach, long range, cover, multiattack/Extra Attack/replacement, and ammunition/loading constraints remain incomplete",
-        "Rage attack rider and other named attack/action projection remain migration debt",
-        "c9FamilyJAttackPersistence.test.ts unknown installed attack damage persists to the Character library through restart and Undo restores the durable HP state"
+        "Rage attack rider and other named attack/action projection remain migration debt"
       ],
       "connectedRelevant": true,
       "persistenceRelevant": true
