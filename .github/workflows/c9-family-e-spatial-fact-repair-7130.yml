@@ -61,6 +61,12 @@ jobs:
           git diff --cached --check
           git commit -m "ci(c9): fix Family E spatial verifier call sites"
           branch=agent/c9-gate-n-coverage-reconciliation
-          git fetch origin "$branch"
-          git rebase "origin/$branch"
-          git push origin HEAD:"$branch"
+          for attempt in $(seq 1 8); do
+            git fetch origin "$branch"
+            git rebase "origin/$branch"
+            if git push origin HEAD:"$branch"; then
+              exit 0
+            fi
+            sleep 2
+          done
+          exit 1
