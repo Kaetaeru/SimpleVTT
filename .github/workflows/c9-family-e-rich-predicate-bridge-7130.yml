@@ -1,4 +1,5 @@
 name: C9 Family E Rich Predicate Bridge 7130
+# Rerun V2 goal 71304a3e: execute the prepared verified slice.
 
 on:
   push:
