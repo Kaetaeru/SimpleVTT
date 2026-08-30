@@ -1,0 +1,103 @@
+name: C9 Family J Ledger Reconcile 71304
+
+on:
+  push:
+    branches: [agent/c9-gate-n-coverage-reconciliation]
+    paths: [.github/workflows/c9-family-j-ledger-reconcile-71304.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  verify-and-reconcile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Inspect Family J authority
+        id: inspect
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          ledger=json.loads(Path('docs/rules/v1-mechanism-coverage-ledger.json').read_text())
+          row=next((row for row in ledger['rows'] if row.get('family')=='J'),None)
+          if row is None:
+              raise SystemExit('Family J row missing')
+          print(json.dumps(row,ensure_ascii=False,indent=2))
+          disposition=row.get('disposition')
+          if disposition not in ('INCOMPLETE','IMPLEMENTED','PROVEN_UNNEEDED'):
+              raise SystemExit(f'Unexpected Family J disposition: {disposition}')
+          if disposition=='INCOMPLETE' and row.get('remainingNamedSeams'):
+              raise SystemExit('Family J still has named seams; refusing automatic final disposition')
+          with open(os.environ['GITHUB_OUTPUT'],'a',encoding='utf-8') as out:
+              out.write(f'disposition={disposition}\n')
+          PY
+      - name: Verify Family J completion evidence
+        if: steps.inspect.outputs.disposition == 'INCOMPLETE'
+        shell: bash
+        run: |
+          npm run generate:content
+          npx tsx --test \
+            tests/ui/c9FamilyJUnarmedSourceComposition71304.test.ts \
+            tests/ui/unarmedStrikeRuntime.test.ts \
+            tests/ui/c9FamilyJPortableControlProduction.test.ts \
+            tests/ui/c9FamilyJSpatialAttackProduction.test.ts \
+            tests/ui/c9FamilyJExtraAttackProduction71304.test.ts
+          node scripts/check-v1-mechanism-coverage.mjs
+          node scripts/check-legacy-execution-boundary.mjs
+          npx tsc --noEmit
+      - name: Reconcile Family J ledger
+        if: steps.inspect.outputs.disposition == 'INCOMPLETE'
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          p=Path('docs/rules/v1-mechanism-coverage-ledger.json')
+          ledger=json.loads(p.read_text())
+          row=next(row for row in ledger['rows'] if row.get('family')=='J')
+          if row.get('remainingNamedSeams'):
+              raise SystemExit('Family J named seams appeared during reconcile')
+          row['disposition']='IMPLEMENTED'
+          sentence=' Complete Unarmed Strike source composition is proven through unknown installed Common Play for damage, Grapple, Shove-to-Prone, Shove-to-Push, Extra Attack economy, event-native Undo, and unrelated module/content/mechanic/entry-point identities.'
+          if sentence.strip() not in row.get('currentState',''):
+              row['currentState']=row.get('currentState','').rstrip()+sentence
+          def add(key,value):
+              values=row.setdefault(key,[])
+              if value not in values:
+                  values.append(value)
+          add('implementationEvidence','Common Play test.property choose:highest plus damage.apply, condition.apply, movement.relocate, and attack-economy payment compose complete Unarmed Strike without content identity dispatch')
+          add('productionEvidence','tests/ui/c9FamilyJUnarmedSourceComposition71304.test.ts proves unknown installed complete Unarmed Strike damage/Grapple/Shove-Prone/Shove-Push execution and event-native Undo through Common Play/Resolver')
+          add('identityInvarianceEvidence','tests/ui/c9FamilyJUnarmedSourceComposition71304.test.ts repeats the complete source composition with unrelated module/content/mechanic/entry-point identities and preserves identical outcomes')
+          add('productionEvidence','49830ee9769243f3fb40a5ff3c13c9cfe32a585d makes built-in Unarmed STR/DEX best-save selection source-owned via choose:highest; C9 Family J Unarmed Source Choice R2 run 33317650788 passed targeted tests, coverage checker, legacy boundary, and tsc')
+          p.write_text(json.dumps(ledger,ensure_ascii=False,indent=2)+'\n')
+          PY
+      - name: Retire one-shot verifiers and publish
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch=agent/c9-gate-n-coverage-reconciliation
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/rules/v1-mechanism-coverage-ledger.json
+          git rm -f --ignore-unmatch .github/workflows/c9-family-j-unarmed-source-composition-71304.yml
+          git rm -f .github/workflows/c9-family-j-ledger-reconcile-71304.yml
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "docs(c9): finalize Family J coverage"
+          for attempt in 1 2 3 4 5; do
+            if git push origin HEAD:"$branch"; then exit 0; fi
+            git fetch origin "$branch"
+            git rebase "origin/$branch" || exit 1
+            sleep 1
+          done
+          exit 1
