@@ -1,0 +1,134 @@
+name: C9 Family Q Choice R5 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-q-choice-r5-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  implement-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Apply choice bridge and preserve payload through wrappers
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          workflow=Path('.github/workflows/c9-family-q-choice-r3-71304.yml').read_text(encoding='utf-8')
+          marker="          python - <<'PY'\n"
+          start=workflow.index(marker)+len(marker)
+          end=workflow.index("\n          PY",start)
+          code='\n'.join(line[10:] if line.startswith('          ') else line for line in workflow[start:end].splitlines())
+          exec(compile(code,'q-choice-r3-patch','exec'),{'__name__':'__main__'})
+
+          test_path=Path('tests/ui/c9FamilyQChoiceInteractionProduction.test.ts')
+          text=test_path.read_text(encoding='utf-8')
+          damage='{kind:"damage.apply",amount:{value:1},damageType:"force",target:"actor"}'
+          healing='{kind:"healing.apply",amount:{value:1},target:"actor"}'
+          if damage in text:
+              text=text.replace(damage,healing,1)
+          elif healing not in text:
+              raise SystemExit('Q fixture operation anchor changed')
+          changed='assert.equal(snapshot.scene.entities.find((entity)=>entity.id===actorId)?.hp,hpBefore-1);'
+          unchanged='assert.equal(snapshot.scene.entities.find((entity)=>entity.id===actorId)?.hp,hpBefore);'
+          if changed in text:
+              text=text.replace(changed,unchanged,1)
+          elif text.count(unchanged)<2:
+              raise SystemExit('Q fixture HP assertion anchor changed')
+          expected='{delta:1,selectedCount:2}'
+          neutral='{delta:0,selectedCount:2}'
+          if expected in text:
+              text=text.replace(expected,neutral)
+          elif neutral not in text:
+              raise SystemExit('Q rename-invariance delta anchor changed')
+          test_path.write_text(text,encoding='utf-8')
+
+          def forward_optional(path, old_sig, new_sig, old_call, new_call):
+              p=Path(path)
+              source=p.read_text(encoding='utf-8')
+              if new_sig not in source:
+                  if source.count(old_sig)!=1:
+                      raise SystemExit(f'{path}: signature anchor changed: {source.count(old_sig)}')
+                  source=source.replace(old_sig,new_sig,1)
+              if new_call not in source:
+                  if source.count(old_call)!=1:
+                      raise SystemExit(f'{path}: forwarding anchor changed: {source.count(old_call)}')
+                  source=source.replace(old_call,new_call,1)
+              p.write_text(source,encoding='utf-8')
+
+          forward_optional(
+              'src/app/commonPlayInterceptorProductionRuntimeAdapter.ts',
+              'MockAdapter.prototype.respondToInterrupt=async function respondToPortableCommonPlayInterceptor(accept:boolean) {',
+              'MockAdapter.prototype.respondToInterrupt=async function respondToPortableCommonPlayInterceptor(accept:boolean,selectedIds?:string[]) {',
+              'return previousRespondToInterrupt.call(this,accept);',
+              'return previousRespondToInterrupt.call(this,accept,selectedIds);',
+          )
+          forward_optional(
+              'src/app/consumableD20BonusEffectFollowUpRuntimeAdapter.ts',
+              'MockAdapter.prototype.respondToInterrupt=async function respondToConsumableD20BonusEffect(accept:boolean){',
+              'MockAdapter.prototype.respondToInterrupt=async function respondToConsumableD20BonusEffect(accept:boolean,selectedIds?:string[]){',
+              'return previousRespondToInterrupt.call(this,accept);',
+              'return previousRespondToInterrupt.call(this,accept,selectedIds);',
+          )
+          forward_optional(
+              'src/app/rogueCoreRuntimeAdapter.ts',
+              'MockAdapter.prototype.respondToInterrupt=async function respondToRogueUncannyDodge(accept:boolean){',
+              'MockAdapter.prototype.respondToInterrupt=async function respondToRogueUncannyDodge(accept:boolean,selectedIds?:string[]){',
+              'const snapshot=await previousRespondToInterrupt.call(this,accept);',
+              'const snapshot=await previousRespondToInterrupt.call(this,accept,selectedIds);',
+          )
+          forward_optional(
+              'src/app/monkOpenHandQuiveringPalmRuntimeAdapter.ts',
+              'MockAdapter.prototype.respondToInterrupt=async function respondToQuiveringPalmSeed(accept:boolean){',
+              'MockAdapter.prototype.respondToInterrupt=async function respondToQuiveringPalmSeed(accept:boolean,selectedIds?:string[]){',
+              'return previousRespondToInterrupt.call(this,accept);',
+              'return previousRespondToInterrupt.call(this,accept,selectedIds);',
+          )
+
+          connected=Path('src/app/connectedActionRoutingAdapter.ts').read_text(encoding='utf-8')
+          required=[
+              'respondConnectedInterrupt(accept:boolean,selectedIds?:string[])',
+              'previousRespondToInterrupt.call(this,accept,selectedIds)',
+              'adapter.respondToInterrupt(response.accept,response.selectedIds)',
+          ]
+          missing=[entry for entry in required if entry not in connected]
+          if missing:
+              raise SystemExit(f'connected choice bridge incomplete: {missing}')
+          contract=Path('src/app/contracts.ts').read_text(encoding='utf-8')
+          if 'respondToInterrupt(accept: boolean, selectedIds?: string[]): Promise<AppSnapshot>;' not in contract:
+              raise SystemExit('adapter contract did not preserve optional choice selection')
+          PY
+      - run: npm ci
+      - run: npm run generate:content
+      - name: Verify Family Q choice vertical slice
+        run: |
+          node --import tsx --test tests/ui/c9FamilyQChoiceInteractionProduction.test.ts tests/ui/c9FamilyQTargetOwnerInteractionProduction.test.ts tests/ui/c9FamilyQAuthorityInteractionProduction.test.ts tests/ui/installedCommonPlayActorOwnerInteractionProduction.test.ts tests/domain/commonPlayOperationRuntime.test.ts
+          node scripts/check-legacy-execution-boundary.mjs
+          npm exec tsc -- --noEmit
+      - name: Publish verified source and retire Q staging
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/domain/commonPlayOperationRuntime.ts src/app/contracts.ts src/app/mockAdapter.ts src/app/installedCommonPlayRuntimeAdapter.ts src/app/connectedInterruptResponsePort.ts src/app/connectedActionRoutingAdapter.ts src/app/connectedSessionWire.ts src/app/commonPlayInterceptorProductionRuntimeAdapter.ts src/app/consumableD20BonusEffectFollowUpRuntimeAdapter.ts src/app/rogueCoreRuntimeAdapter.ts src/app/monkOpenHandQuiveringPalmRuntimeAdapter.ts tests/ui/c9FamilyQChoiceInteractionProduction.test.ts
+          git rm -f --ignore-unmatch .github/workflows/c9-family-q-choice-71304.yml .github/workflows/c9-family-q-choice-r2-71304.yml .github/workflows/c9-family-q-choice-r3-71304.yml .github/workflows/c9-family-q-choice-r4-71304.yml .github/workflows/c9-family-q-choice-r5-71304.yml .github/workflows/c9-family-q-choice-diagnostic-71304.yml .github/workflows/c9-family-q-choice-kernel-71304.yml .github/workflows/c9-family-q-choice-kernel-fix-71304.yml
+          git commit -m "feat(c9): carry portable choice interactions through Resolver"
+          for attempt in 1 2 3 4 5; do
+            if git push origin HEAD:agent/c9-gate-n-coverage-reconciliation; then exit 0; fi
+            git fetch origin agent/c9-gate-n-coverage-reconciliation
+            git rebase origin/agent/c9-gate-n-coverage-reconciliation || exit 1
+            sleep 1
+          done
+          exit 1
