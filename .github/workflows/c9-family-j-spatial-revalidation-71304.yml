@@ -42,9 +42,19 @@ jobs:
               path.write_text(text,encoding='utf-8')
           elif new not in text:
               raise SystemExit('Expected Common Play targeting revalidation guard not found')
+          test=Path('tests/ui/c9FamilyJSpatialAttackProduction.test.ts')
+          source=test.read_text(encoding='utf-8')
+          needle='''  assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));'''
+          diagnostic='''  assert.notEqual(snapshot.resolution?.finalOutcome,"적용 거부",JSON.stringify(snapshot.resolution));\n'''+needle
+          if diagnostic not in source:
+              source=source.replace(needle,diagnostic,1)
+              test.write_text(source,encoding='utf-8')
           PY
+      - name: Diagnose Family J spatial slice
+        run: node --import tsx --test tests/ui/c9FamilyJSpatialAttackProduction.test.ts
       - name: Verify Family J spatial slice
         run: |
+          git checkout -- tests/ui/c9FamilyJSpatialAttackProduction.test.ts
           node --import tsx --test \
             tests/ui/c9FamilyJSpatialAttackProduction.test.ts \
             tests/ui/c9FamilyJPortableControlProduction.test.ts \
