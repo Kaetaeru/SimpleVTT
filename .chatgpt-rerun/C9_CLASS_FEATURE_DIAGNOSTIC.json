@@ -1,0 +1,237 @@
+{
+  "fighterId": "dnd.srd521.class.fighter",
+  "candidateIds": [
+    "dnd.srd521.class.fighter",
+    "fighter",
+    "Fighter",
+    "10-RULEBOOKS/srd-5.2.1/classes/fighter.md"
+  ],
+  "relevantRows": [],
+  "matches": [
+    {
+      "path": "src/app/characterSessionProjectionReconstruction.ts",
+      "line": 371,
+      "text": "runtimeD20FollowUps:fighterLevel>=2?[{sourceId:\"feature:fighter.tactical-mind\",families:[\"ability-check\"],trigger:\"failure\",modification:{mode:\"add-die\",diceSides:10},payment:{resourceId:secondWind.id,amount:1,consumeWhen:\"success\"},presentation:{optionName:\"전술적 정신 d10\",cost:\"성공 시 재기의 바람 1회\",effect:\"d10을 더합니다. 그래도 실패하면 사용 횟수를 소모하지 않습니다.\",source:\"SRD 5.2.1 · Fighter Tactical Mind\"}}]:undefined,"
+    },
+    {
+      "path": "src/app/productionPlayRuntimeAdapter.ts",
+      "line": 287,
+      "text": "runtimeD20FollowUps:fighterLevel>=2?[{sourceId:\"feature:fighter.tactical-mind\",families:[\"ability-check\"],trigger:\"failure\",modification:{mode:\"add-die\",diceSides:10},payment:{resourceId:secondWind.id,amount:1,consumeWhen:\"success\"},presentation:{optionName:\"전술적 정신 d10\",cost:\"성공 시 재기의 바람 1회\",effect:\"d10을 더합니다. 그래도 실패하면 사용 횟수를 소모하지 않습니다.\",source:\"SRD 5.2.1 · Fighter Tactical Mind\"}}]:undefined,"
+    },
+    {
+      "path": "src/domain/fighterTacticalMind.ts",
+      "line": 8,
+      "text": "export const FIGHTER_TACTICAL_MIND_SOURCE = \"feature:fighter.tactical-mind\";"
+    },
+    {
+      "path": "src/domain/fighterTacticalMind.ts",
+      "line": 10,
+      "text": "export interface FighterTacticalMindRequest {"
+    },
+    {
+      "path": "src/domain/fighterTacticalMind.ts",
+      "line": 21,
+      "text": "export interface FighterTacticalMindCheck {"
+    },
+    {
+      "path": "src/domain/fighterTacticalMind.ts",
+      "line": 30,
+      "text": "function validateRequest(request: FighterTacticalMindRequest) {"
+    },
+    {
+      "path": "src/domain/fighterTacticalMind.ts",
+      "line": 32,
+      "text": "throw new DomainEvaluationError(\"Tactical Mind requires Fighter level 2-20\");"
+    },
+    {
+      "path": "src/domain/fighterTacticalMind.ts",
+      "line": 35,
+      "text": "throw new DomainEvaluationError(\"Tactical Mind check total and target must be finite\");"
+    },
+    {
+      "path": "src/domain/fighterTacticalMind.ts",
+      "line": 38,
+      "text": "throw new DomainEvaluationError(\"Tactical Mind can only follow a failed ability check\");"
+    },
+    {
+      "path": "src/domain/fighterTacticalMind.ts",
+      "line": 41,
+      "text": "throw new DomainEvaluationError(\"Tactical Mind requires one fixed d10 face from 1 to 10\");"
+    },
+    {
+      "path": "src/domain/fighterTacticalMind.ts",
+      "line": 45,
+      "text": "function checkResult(request: FighterTacticalMindRequest): FighterTacticalMindCheck {"
+    },
+    {
+      "path": "src/domain/fighterTacticalMind.ts",
+      "line": 58,
+      "text": "function requireSecondWindUse(inputState: RulesRuntimeState, request: FighterTacticalMindRequest) {"
+    },
+    {
+      "path": "src/domain/fighterTacticalMind.ts",
+      "line": 61,
+      "text": "if (found.pool.current < 1) throw new DomainEvaluationError(\"Tactical Mind requires an available Second Wind use\");"
+    },
+    {
+      "path": "src/domain/fighterTacticalMind.ts",
+      "line": 64,
+      "text": "export function compileFighterTacticalMind("
+    },
+    {
+      "path": "src/domain/fighterTacticalMind.ts",
+      "line": 65,
+      "text": "request: FighterTacticalMindRequest,"
+    },
+    {
+      "path": "src/domain/fighterTacticalMind.ts",
+      "line": 66,
+      "text": "check: FighterTacticalMindCheck = checkResult(request),"
+    },
+    {
+      "path": "src/domain/fighterTacticalMind.ts",
+      "line": 99,
+      "text": "export function resolveFighterTacticalMind("
+    },
+    {
+      "path": "src/domain/fighterTacticalMind.ts",
+      "line": 102,
+      "text": "request: FighterTacticalMindRequest,"
+    },
+    {
+      "path": "src/domain/fighterTacticalMind.ts",
+      "line": 103,
+      "text": "): ResolutionCommit & { check?:FighterTacticalMindCheck } {"
+    },
+    {
+      "path": "src/domain/fighterTacticalMind.ts",
+      "line": 108,
+      "text": "const commit = resolvePendingResolution(profile, inputState, compileFighterTacticalMind(request, check));"
+    },
+    {
+      "path": "content/modules/dnd-srd-5.2.1.classes/module.json",
+      "line": 1,
+      "text": "{\"$schema\":\"https://simplevtt.local/schemas/rule-module.schema.json\",\"schemaVersion\":\"0.1-draft\",\"moduleId\":\"dnd.srd-5.2.1.classes\",\"moduleVersion\":\"0.1-draft\",\"rulesProfile\":{\"id\":\"dnd.srd-5.2.1\",\"version\":\"0.1-draft\"},\"defaultLocale\":\"ko-KR\",\"source\":{\"document\":\"System Reference Document\",\"version\":\"5.2.1\",\"license\":\"CC-BY-4.0\",\"srdDerived\":true},\"localizationSource\":{\"defaultLocale\":\"ko-KR\",\"repository\":\"Kaetaeru/D-D-2024-\",\"srdPathRoot\":\"10-RULEBOOKS/srd-5.2.1/\",\"distributionBoundary\":\"srd-"
+    },
+    {
+      "path": "tests/domain/fighterTacticalMind.test.ts",
+      "line": 4,
+      "text": "import { resolveFighterTacticalMind } from \"../../src/domain/fighterTacticalMind\";"
+    },
+    {
+      "path": "tests/domain/fighterTacticalMind.test.ts",
+      "line": 17,
+      "text": "test(\"Tactical Mind turns a failed ability check into a success and expends one Second Wind use\", () => {"
+    },
+    {
+      "path": "tests/domain/fighterTacticalMind.test.ts",
+      "line": 20,
+      "text": "const result = resolveFighterTacticalMind(TEST_PROFILE, state, {"
+    },
+    {
+      "path": "tests/domain/fighterTacticalMind.test.ts",
+      "line": 21,
+      "text": "id:\"fighter.tactical-mind.success\","
+    },
+    {
+      "path": "tests/domain/fighterTacticalMind.test.ts",
+      "line": 44,
+      "text": "test(\"Tactical Mind keeps the Second Wind use when the d10 still cannot make the check succeed\", () => {"
+    },
+    {
+      "path": "tests/domain/fighterTacticalMind.test.ts",
+      "line": 47,
+      "text": "const result = resolveFighterTacticalMind(TEST_PROFILE, state, {"
+    },
+    {
+      "path": "tests/domain/fighterTacticalMind.test.ts",
+      "line": 48,
+      "text": "id:\"fighter.tactical-mind.failure\","
+    },
+    {
+      "path": "tests/domain/fighterTacticalMind.test.ts",
+      "line": 67,
+      "text": "assert.equal(Object.keys(result.results).length, 1, \"failed Tactical Mind records only the authoritative d10 roll\");"
+    },
+    {
+      "path": "tests/domain/fighterTacticalMind.test.ts",
+      "line": 70,
+      "text": "test(\"Tactical Mind requires an available Second Wind use even when the reroll would still fail\", () => {"
+    },
+    {
+      "path": "tests/domain/fighterTacticalMind.test.ts",
+      "line": 73,
+      "text": "const result = resolveFighterTacticalMind(TEST_PROFILE, state, {"
+    },
+    {
+      "path": "tests/domain/fighterTacticalMind.test.ts",
+      "line": 74,
+      "text": "id:\"fighter.tactical-mind.depleted\","
+    },
+    {
+      "path": "tests/domain/fighterTacticalMind.test.ts",
+      "line": 88,
+      "text": "test(\"Tactical Mind rejects if the original ability check was not actually a failure\", () => {"
+    },
+    {
+      "path": "tests/domain/fighterTacticalMind.test.ts",
+      "line": 91,
+      "text": "const result = resolveFighterTacticalMind(TEST_PROFILE, state, {"
+    },
+    {
+      "path": "tests/domain/fighterTacticalMind.test.ts",
+      "line": 92,
+      "text": "id:\"fighter.tactical-mind.not-failed\","
+    },
+    {
+      "path": "tests/domain/fighterTacticalMind.test.ts",
+      "line": 105,
+      "text": "test(\"Tactical Mind rejects below Fighter 2 or an invalid d10 before mutation\", () => {"
+    },
+    {
+      "path": "tests/domain/fighterTacticalMind.test.ts",
+      "line": 108,
+      "text": "const lowLevel = resolveFighterTacticalMind(TEST_PROFILE, state, {"
+    },
+    {
+      "path": "tests/domain/fighterTacticalMind.test.ts",
+      "line": 109,
+      "text": "id:\"fighter.tactical-mind.level1\","
+    },
+    {
+      "path": "tests/domain/fighterTacticalMind.test.ts",
+      "line": 120,
+      "text": "const badFace = resolveFighterTacticalMind(TEST_PROFILE, state, {"
+    },
+    {
+      "path": "tests/domain/fighterTacticalMind.test.ts",
+      "line": 121,
+      "text": "id:\"fighter.tactical-mind.bad-face\","
+    },
+    {
+      "path": "tests/ui/fighterTacticalMindFollowUpRuntime.test.ts",
+      "line": 17,
+      "text": "test(\"failed Stabilize offers Tactical Mind, succeeds, spends Second Wind, and Undo restores all\",async()=>{const adapter=await preparedFighter();let snapshot=await adapter.getSnapshot();const beforeUses=snapshot.activeCharacter.resources.find((entry)=>entry.id===FIGHTER_SECOND_WIND_RESOURCE_ID)!.current;await adapter.setQueuedD20(1);await adapter.resolveAction(\"action.standard.stabilize\",[\"combatant.goblin-a\"]);snapshot=await adapter.getSnapshot();assert.equal(snapshot.resolution?.interrupt?.id"
+    },
+    {
+      "path": "tests/ui/fighterTacticalMindFollowUpRuntime.test.ts",
+      "line": 19,
+      "text": "test(\"Tactical Mind preserves Second Wind when the d10 still fails\",async()=>{const adapter=await preparedFighter();const before=(await adapter.getSnapshot()).activeCharacter.resources.find((entry)=>entry.id===FIGHTER_SECOND_WIND_RESOURCE_ID)!.current;await adapter.setQueuedD20(1);await adapter.resolveAction(\"action.standard.stabilize\",[\"combatant.goblin-a\"]);await adapter.setQueuedD20(1);await adapter.respondToInterrupt(true);const snapshot=await adapter.getSnapshot();assert.equal(snapshot.reso"
+    },
+    {
+      "path": "tests/ui/fighterTacticalMindFollowUpRuntime.test.ts",
+      "line": 21,
+      "text": "test(\"declined Tactical Mind is not offered twice for the same failed check\",async()=>{const adapter=await preparedFighter();await adapter.setQueuedD20(1);await adapter.resolveAction(\"action.standard.stabilize\",[\"combatant.goblin-a\"]);await adapter.respondToInterrupt(false);await adapter.resolveAction(\"action.missing\",[]);assert.equal((await adapter.getSnapshot()).resolution?.interrupt,undefined);});"
+    },
+    {
+      "path": "tests/ui/fighterTacticalMindFollowUpRuntime.test.ts",
+      "line": 23,
+      "text": "test(\"connected Tactical Mind applies Stabilize and Second Wind exactly once\",async()=>{const sessionId=\"session.tactical-mind\";const host=await preparedFighter();const hostState=connectedStateFor(host);hostState.mode=\"host\";hostState.sessionId=sessionId;hostState.ledger=new HostSessionLedger(sessionId,connectedManifest(host));const wires:string[]=[];const send=tauriSessionTransport.send;tauriSessionTransport.send=async(message)=>{wires.push(message);return 1;};try{await host.setQueuedD20(1);awa"
+    },
+    {
+      "path": "tests/ui/openAbilityCheckDcRuntime.test.ts",
+      "line": 47,
+      "text": "test(\"a failed open ability check offers Tactical Mind and only spends Second Wind on success\",async()=>{"
+    }
+  ]
+}
