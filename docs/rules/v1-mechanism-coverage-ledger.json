@@ -143,7 +143,7 @@
         "SRD 5.2.1 p.76: Dark One's Own Luck",
         "commonPlayD20Runtime.test.ts"
       ],
-      "currentState": "The generic d20 Resolver has portable structural family/outcome selectors for ability checks, saving throws, and attack rolls, and production now opens the same post-roll Common Play window immediately after authoritative check/save/attack outcome creation. Cutting Words and Dark One's Own Luck are builtin portable Common Play definitions rather than named production follow-up executors. Dark One's Own Luck is discovered from already-owned Fiend subclass content, is gated by the canonical level-owned resource payment, and has local plus connected spend/reconnect/duplicate/Undo/persistence evidence with presentation rename invariance. Family C remains INCOMPLETE because productionPlayRuntimeAdapter.ts still injects Tactical Mind, Indomitable, and Peerless Skill runtimeD20FollowUps: Tactical Mind and Peerless Skill require generic conditional pay-on-success, while Indomitable requires a generic authoritative actor/progression numeric value for its fighter-level reroll bonus; the current portable post-roll modifier contract is literal/resource-die only.",
+      "currentState": "The generic d20 Resolver now supports post-roll resource/economy payments conditioned on the recalculated d20 outcome without content identity dispatch. Peerless Skill is builtin portable Common Play discovered from the existing durable subclassFeatureIds identity and pays Bardic Inspiration only when its added die changes the failed ability-check/attack result to success. Cutting Words and Dark One's Own Luck remain portable. Family C remains INCOMPLETE because productionPlayRuntimeAdapter.ts still injects Tactical Mind and Indomitable: Tactical Mind now has expressible conditional payment semantics but lacks a canonical class-feature content identity owner in Character SessionProjection, while Indomitable still lacks a generic authoritative actor/progression numeric value for its Fighter-level reroll bonus.",
       "requiredSemantics": [
         "checks",
         "saves",
@@ -174,7 +174,8 @@
         "b537fdbd structural d20 families/outcomes selectors and saving-throw projection reuse generic PendingResolution",
         "Cutting Words builtin Common Play data declares families ability-check/attack-roll and outcome success",
         "9f694348844e70f1afdc3f7ee2c8dc96f3c88817 migrates Dark One's Own Luck to owned Fiend portable Common Play and removes its named runtimeD20FollowUps injection",
-        "commonPlayInterceptorProductionRuntimeAdapter.ts generic subclass ownership fallback plus post-authoritative-advance d20 timing"
+        "commonPlayInterceptorProductionRuntimeAdapter.ts generic subclass ownership fallback plus post-authoritative-advance d20 timing",
+        "C9 Family C Conditional Payment + Peerless Migration run 33291256822: conditional d20 payment success/no-spend, portable Peerless local/connected/rename/Undo/persistence regressions, tsc --noEmit, vite build"
       ],
       "productionEvidence": [
         "fighterTacticalMindFollowUpRuntime.test.ts",
@@ -190,14 +191,16 @@
         "b537fdbd failed ability-check, failed saving-throw, and after-roll selector production acceptance",
         "C9 Family C Structural D20 Selectors run 33290013900: 26/26 focused tests, tsc --noEmit, vite build",
         "9f694348844e70f1afdc3f7ee2c8dc96f3c88817 Dark One's Own Luck portable production migration",
-        "C9 Family C Dark Luck Portable Migration run 33290763482: 25/25 focused tests, tsc --noEmit, vite build"
+        "C9 Family C Dark Luck Portable Migration run 33290763482: 25/25 focused tests, tsc --noEmit, vite build",
+        "C9 Family C Conditional Payment + Peerless Migration run 33291256822: conditional d20 payment success/no-spend, portable Peerless local/connected/rename/Undo/persistence regressions, tsc --noEmit, vite build"
       ],
       "identityInvarianceEvidence": [
         "d20FollowUpRuntime.test.ts",
         "6f6ed2e unknown installed deterministic interceptor module/content/mechanic/interceptor/interaction/display rename invariance",
         "installedCommonPlayInterceptorProductionRuntime.test.ts portable interceptor rename invariance",
         "1342c99 unknown installed add-die/reroll module/content/mechanic/interceptor/interaction/display rename invariance",
-        "warlockFiendDarkOnesOwnLuckRuntime.test.ts feature presentation rename leaves portable mechanics unchanged"
+        "warlockFiendDarkOnesOwnLuckRuntime.test.ts feature presentation rename leaves portable mechanics unchanged",
+        "C9 Family C Conditional Payment + Peerless Migration run 33291256822: conditional d20 payment success/no-spend, portable Peerless local/connected/rename/Undo/persistence regressions, tsc --noEmit, vite build"
       ],
       "connectedEvidenceIfRelevant": [
         "fighterTacticalMindFollowUpRuntime.test.ts",
@@ -205,7 +208,8 @@
         "connectedProjectedCharacterPeerlessSkillResolution.test.ts",
         "fighterIndomitableFollowUpRuntime.test.ts",
         "b537fdbd unknown add-die/reroll Host/Client duplicate, reconnect, connected Undo, and reconnect-after-Undo",
-        "9f694348844e70f1afdc3f7ee2c8dc96f3c88817 connected Dark One's Own Luck owner prompt, exactly-once Host event, duplicate replay, reconnect, and event-native Undo"
+        "9f694348844e70f1afdc3f7ee2c8dc96f3c88817 connected Dark One's Own Luck owner prompt, exactly-once Host event, duplicate replay, reconnect, and event-native Undo",
+        "C9 Family C Conditional Payment + Peerless Migration run 33291256822: conditional d20 payment success/no-spend, portable Peerless local/connected/rename/Undo/persistence regressions, tsc --noEmit, vite build"
       ],
       "persistenceEvidenceIfRelevant": [
         "fighterTacticalMindFollowUpRuntime.test.ts",
@@ -213,12 +217,13 @@
         "connectedProjectedCharacterPeerlessSkillResolution.test.ts",
         "fighterIndomitableFollowUpRuntime.test.ts",
         "b537fdbd connected add-die/reroll fresh replica reconstruction before and after event-native Undo",
-        "9f694348844e70f1afdc3f7ee2c8dc96f3c88817 connected owning Client persists Dark One's Own Luck spend and compensating Undo before cursor advancement"
+        "9f694348844e70f1afdc3f7ee2c8dc96f3c88817 connected owning Client persists Dark One's Own Luck spend and compensating Undo before cursor advancement",
+        "C9 Family C Conditional Payment + Peerless Migration run 33291256822: conditional d20 payment success/no-spend, portable Peerless local/connected/rename/Undo/persistence regressions, tsc --noEmit, vite build"
       ],
       "remainingNamedSeams": [
-        "productionPlayRuntimeAdapter.ts still injects Tactical Mind, Indomitable, and Peerless Skill runtimeD20FollowUps; Dark One's Own Luck named injection is removed",
-        "Tactical Mind and Peerless Skill require a generic conditional pay-on-success contract before their named projection can be removed",
-        "Indomitable requires a generic authoritative actor/progression numeric value for its fighter-level reroll bonus; do not encode Fighter identity or a literal class bonus in the portable d20 path"
+        "productionPlayRuntimeAdapter.ts still injects Tactical Mind and Indomitable runtimeD20FollowUps; Peerless Skill named injection is removed",
+        "Tactical Mind conditional pay-on-success is now expressible, but Character SessionProjection has no canonical class-feature identity owner analogous to subclassFeatureIds; define/reuse that owner before removing its named projection",
+        "Indomitable requires a generic authoritative actor/progression numeric value for its Fighter-level reroll bonus; do not encode Fighter identity or a literal class bonus in the portable d20 path"
       ],
       "connectedRelevant": true,
       "persistenceRelevant": true
