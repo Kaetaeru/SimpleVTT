@@ -3,6 +3,7 @@ import { catalogQualifiedId } from "./contentCatalogIdentity";
 import { requiredSessionInstalledContent } from "./installedContentRuntimeAdapter";
 import { parseInstalledCommonPlayActionId, parseRuntimeArtifactCommonPlayActionId } from "./installedCommonPlayActionReference";
 import { MockAdapter } from "./mockAdapter";
+import { authoritativeCommonPlaySpatialRelation } from "./realSpatialRuntimeService";
 import { snapshotAdapterTurnRuntimeState } from "./turnRuntimeSessionRegistry";
 import { resolveCommonPlaySelector, type CommonPlaySelector, type CommonPlaySelectorCandidate } from "../domain/commonPlaySelectorRuntime";
 
@@ -34,11 +35,17 @@ async function installedSelector(adapter:MockAdapter,actionId:string) {
   return point?{selector:richTargetSelector(point.targeting),actorId:runtimeReference?.actorId}:undefined;
 }
 
-function candidate(actor:SceneVm["entities"][number],target:SceneVm["entities"][number]):CommonPlaySelectorCandidate {
+function candidate(scene:SceneVm,actor:SceneVm["entities"][number],target:SceneVm["entities"][number]):CommonPlaySelectorCandidate {
   const relation=target.id===actor.id?"self":target.side===actor.side?"ally":"enemy";
+  const spatial=authoritativeCommonPlaySpatialRelation(scene,actor.id,target.id);
   return {
     id:target.id,
-    targeting:{id:target.id,kind:"creature",relation},
+    targeting:{
+      id:target.id,
+      kind:"creature",
+      relation,
+      ...(spatial?{distanceFeet:spatial.distanceFeet,visible:spatial.visible,cover:spatial.cover}:{}),
+    },
     properties:{
       relation,
       name:target.name,
@@ -53,6 +60,12 @@ function candidate(actor:SceneVm["entities"][number],target:SceneVm["entities"][
       resistances:[...target.resistances],
       immunities:[...target.immunities],
       vulnerabilities:[...target.vulnerabilities],
+      ...(spatial?{
+        "spatial.distance-feet":spatial.distanceFeet,
+        "spatial.adjacent":spatial.distanceFeet<=5,
+        "spatial.total-cover":spatial.cover==="total",
+        "sense.can-see":spatial.visible,
+      }:{}),
     },
   };
 }
@@ -69,7 +82,7 @@ MockAdapter.prototype.resolveAction=async function resolveInstalledCommonPlayRic
   const selection=resolveCommonPlaySelector({
     sourceId:actorId,
     selector:found.selector,
-    candidates:internal.scene.entities.filter((entity)=>state.combatants[entity.id]).map((entity)=>candidate(actor,entity)),
+    candidates:internal.scene.entities.filter((entity)=>state.combatants[entity.id]).map((entity)=>candidate(internal.scene,actor,entity)),
     selectedIds:targetIds,
     selection:"manual",
     authority:"host",
