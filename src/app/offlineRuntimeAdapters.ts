@@ -79,7 +79,7 @@ import "./monkOpenHandQuiveringPalmRuntimeAdapter";
 import "./rogueCoreRuntimeAdapter";
 import "./deathSaveRuntimeAdapter";
 import "./stabilizeRuntimeAdapter";
-import "./unarmedControlRuntimeAdapter";
+import "./structuralSaveConditionRuntimeAdapter";
 import "./effectGrantActionRuntimeAdapter";
 import "./consumableD20BonusEffectFollowUpRuntimeAdapter";
 import "./clericDivineSparkActionRuntimeAdapter";
