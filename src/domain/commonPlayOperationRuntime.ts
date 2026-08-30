@@ -712,6 +712,11 @@ function literalInteger(expression:CommonPlayExpression|undefined,label:string) 
   return value;
 }
 
+function commonPlayD20Ability(property:string|undefined):"str"|"dex"|"con"|"int"|"wis"|"cha"|undefined {
+  const match=property?.match(/^(?:save|ability)\.(str|dex|con|int|wis|cha)\.(?:modifier|score)$/);
+  return match?.[1] as "str"|"dex"|"con"|"int"|"wis"|"cha"|undefined;
+}
+
 export function compileCommonPlayPayments(
   payments:CommonPlayPayment[]|undefined,
   input:CommonPlayOperationExecutionInput,
@@ -830,11 +835,20 @@ export function compileCommonPlayEntryPointOperations(
       if(formula.flat!==0) result.push({source:`${source}:flat`,mode:"add-flat",value:operation.mode==="subtract-die"?-formula.flat:formula.flat});
       return result;
     });
+    const conditionAbility=commonPlayD20Ability(entryPoint.test.property);
+    const selectedTargetFacts=input.targetId
+      ? input.targetingTargets?.find((target)=>target.id===input.targetId)
+      : undefined;
+    const conditionContext={
+      ...(conditionAbility?{ability:conditionAbility}:{}),
+      ...(selectedTargetFacts?.distanceFeet===undefined?{}:{distanceToTargetFeet:selectedTargetFacts.distanceFeet}),
+    };
     operations.push({
       id:`${input.resolutionId}:test`,
       kind:"d20",
       actorId:rollerId,
       targetId:entryPoint.test.roller==="target"?input.actorId:input.d20.targetId,
+      ...(Object.keys(conditionContext).length?{condition:conditionContext}:{}),
       request:{
         family:entryPoint.test.kind,
         target:literalInteger(entryPoint.test.dc,"d20 target"),
