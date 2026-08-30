@@ -56,6 +56,7 @@ jobs:
           assert.equal(schema.properties.specialActions.items.$ref,"#/$defs/specialAction");
           NODE
           node --import tsx --test tests/domain/commonPlayC6Runtime.test.ts tests/domain/commonPlayDefinitionRuntime.test.ts
+          npm run generate:content
           npx tsc --noEmit
           node scripts/check-v1-mechanism-coverage.mjs
           node scripts/check-legacy-execution-boundary.mjs
@@ -98,4 +99,4 @@ jobs:
           git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
           git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
 
-# rerun: reconcile verified AC authoring evidence
+# rerun: reconcile verified AC authoring evidence with generated catalogs
