@@ -1,0 +1,58 @@
+name: C9 Family J Cover Ledger 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-j-cover-ledger-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Publish verified Family J cover evidence
+        run: |
+          set -euo pipefail
+          branch=agent/c9-gate-n-coverage-reconciliation
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in $(seq 1 10); do
+            git fetch origin "$branch"
+            git reset --hard "origin/$branch"
+            python3 - <<'PY'
+          import json
+          from pathlib import Path
+          path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
+          data=json.loads(path.read_text())
+          row=next(entry for entry in data['rows'] if entry['family']=='J')
+          row['currentState']=row['currentState'].replace('reach/range/cover, Extra Attack/replacement, and ammunition/loading composition','reach/long range, Opportunity Attack qualification, Extra Attack/replacement, and ammunition/loading composition')
+          implementation='commonPlayOperationRuntime.ts applies authoritative target cover structurally to portable attack-roll tests: half cover +2 target, three-quarters cover +5 target, and total cover rejects the attack without content identity dispatch'
+          production='5a082faa207fa0d8a4e15b9fa6fb17308c8872bc feat(c9): apply structural cover to portable attacks; C9 Family J Cover 71304 run 33316032590 passed targeted Family J regressions, legacy execution boundary, and tsc --noEmit'
+          if implementation not in row['implementationEvidence']: row['implementationEvidence'].append(implementation)
+          if production not in row['productionEvidence']: row['productionEvidence'].append(production)
+          row['remainingNamedSeams']=[seam.replace('reach, long range, cover, multiattack/Extra Attack/replacement, and ammunition/loading constraints remain incomplete','reach, long range, multiattack/Extra Attack/replacement, and ammunition/loading constraints remain incomplete; structural cover is now generic and verified') for seam in row['remainingNamedSeams']]
+          path.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n')
+          PY
+            rm -f .github/workflows/c9-family-j-cover-ledger-71304.yml
+            node scripts/check-v1-mechanism-coverage.mjs
+            git add docs/rules/v1-mechanism-coverage-ledger.json .github/workflows/c9-family-j-cover-ledger-71304.yml
+            if git diff --cached --quiet; then exit 0; fi
+            git commit -m "docs(c9): record portable attack cover evidence"
+            if git push origin HEAD:"$branch"; then exit 0; fi
+            sleep 1
+          done
+          exit 1
