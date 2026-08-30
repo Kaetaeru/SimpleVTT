@@ -1,5 +1,5 @@
 import type { RulesRuntimeState } from "./combatState";
-import type { DurationSpec, EffectInstance } from "./effects";
+import type { DurationSpec, EffectInstance, EffectTermination } from "./effects";
 import type { RulesProfileLike } from "./profileEngine";
 import { resolvePendingResolution } from "./resolution";
 import type {
@@ -61,6 +61,7 @@ export interface CommonPlayEffectArtifactTemplate {
   duration:CommonPlayEffectDuration;
   rules:CommonPlayAutomaticDamageRule[];
   lifetime:CommonPlayEffectLifetime;
+  termination?:EffectTermination;
   instancePolicy?:"stack";
 }
 
@@ -177,10 +178,17 @@ function validateRule(rule:CommonPlayAutomaticDamageRule,templateId:string,ruleI
 
 function validateTemplate(template:CommonPlayEffectArtifactTemplate,index:number) {
   const label=`artifact template ${index+1}`;
-  assertOnlyKeys(template,["id","artifactKind","duration","rules","lifetime","instancePolicy"],label);
+  assertOnlyKeys(template,["id","artifactKind","duration","rules","lifetime","termination","instancePolicy"],label);
   if (!template.id) throw new Error(`${label} id is required`);
   if (template.artifactKind!=="effect") throw new Error(`${label} must be an effect artifact`);
   runtimeDuration(template.duration,`${label} duration`);
+  if(template.termination!==undefined) {
+    assertOnlyKeys(template.termination,["targetTakesDamage","targetBecomesIncapacitated","targetDies","sourceBecomesIncapacitated","sourceDies"],`${label} termination`);
+    const values=Object.values(template.termination);
+    if(!values.length||values.some((value)=>typeof value!=="boolean")||!values.some(Boolean)) {
+      throw new Error(`${label} termination requires at least one true boolean policy`);
+    }
+  }
   if (!Array.isArray(template.rules)||!template.rules.length) throw new Error(`${label} requires at least one rule`);
   template.rules.forEach((rule,ruleIndex)=>validateRule(rule,template.id,ruleIndex));
   const lifetime=template.lifetime;
@@ -247,6 +255,7 @@ export function compileCommonPlayEffectApplyOperation(
       kind:"marker",
       ...(input.concentrationGroupId?{concentrationGroupId:input.concentrationGroupId}:{}),
       duration:runtimeDuration(template.duration,`artifact ${template.id} duration`),
+      ...(template.termination?{termination:{...template.termination}}:{}),
       metadata:{
         [EFFECT_METADATA_DEFINITION]:definitionId,
         [EFFECT_METADATA_TEMPLATE]:template.id,

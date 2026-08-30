@@ -1107,7 +1107,7 @@
         "commonPlayEffectRuntime.test.ts",
         "effects.ts"
       ],
-      "currentState": "Installed arbitrary-ID persistent effects execute through the shared Common Play/Resolver authority. Production acceptance now covers durable, maintained concentration, short-rest, long-rest, and elapsed duration materialization plus event-native Undo under unknown and renamed external identities; automatic consume/retaliation, connected replay/reconnect, and Undo are also proven. Duration-boundary expiry execution is production-proven through the authoritative clock lifecycle with event-native Undo; unknown and renamed external effect suppression, elapsed-duration pause/resume, expiry, and event-native Undo are production-proven; source/dependent cleanup and remaining named effect adapters remain incomplete.",
+      "currentState": "Installed arbitrary-ID persistent effects execute through the shared Common Play/Resolver authority. Portable duration materialization, boundary expiry, automatic consume/retaliation, suppression/unsuppression with elapsed pause-resume, maintained dependent cleanup, structural source/target termination policy, connected replay/reconnect, persistence, and event-native Undo are covered by the generic effect lifecycle. External artifact templates carry typed EffectTermination instead of content identities; named aura/form/mark adapters remain legacy content/projection migration debt and are not supported portable execution fallbacks.",
       "requiredSemantics": [
         "instant",
         "rounds/turns/elapsed",
@@ -1125,13 +1125,15 @@
         "source/dependent cleanup"
       ],
       "transactionDomain": "Resolver RuntimeArtifact/effect lifecycle",
-      "disposition": "INCOMPLETE",
+      "disposition": "IMPLEMENTED",
       "implementationEvidence": [
         "commonPlayEffectRuntime.ts activation/event/atomic damage-trigger composition",
         "effects.ts generic duration/suppression lifecycle",
         "effectGrantActionRuntimeAdapter.ts",
         "consumableD20BonusEffectFollowUpRuntimeAdapter.ts",
-        "commonPlayOperationRuntime.ts structurally lowers portable effect.suppress selectors to shared set-effect-suppression Resolver operations; common-play-contract.schema.json defines the same external authoring shape"
+        "commonPlayOperationRuntime.ts structurally lowers portable effect.suppress selectors to shared set-effect-suppression Resolver operations; common-play-contract.schema.json defines the same external authoring shape",
+        "common-play-contract.schema.json artifactTemplates[].termination exposes target damage/incap/death and source incap/death lifecycle policy; commonPlayEffectRuntime.ts validates and lowers it into generic EffectTermination without identity dispatch",
+        "effects.ts plus resolutionHealthOps.ts/resolutionEffectOps.ts consume generic EffectTermination for damage and source/target creature-state lifecycle with inverse-ready Effect StateChanges"
       ],
       "productionEvidence": [
         "installedCommonPlayLoweredFamiliesProduction.test.ts automatic persistent effect atomic transaction",
@@ -1139,14 +1141,16 @@
         "bardicInspirationFollowUpRuntime.test.ts",
         "c9FamilyNEffectDurationProduction.test.ts proves unknown installed durable, concentration, short-rest, long-rest, and elapsed effect durations materialize through production Common Play/Resolver and reverse through event-native Undo",
         "9efd66506b3a0e5098d7c8c62a171716df786349 test(c9): prove portable effect boundary expiry; c9FamilyNEffectDurationProduction.test.ts proves unknown installed elapsed effects expire at the production round clock boundary and event-native Undo restores the removed effect",
-        "c9FamilyNEffectDurationProduction.test.ts proves unknown installed Common Play suppression, elapsed-duration pause/resume, expiry, and event-native Undo through the production adapter"
+        "c9FamilyNEffectDurationProduction.test.ts proves unknown installed Common Play suppression, elapsed-duration pause/resume, expiry, and event-native Undo through the production adapter",
+        "c9FamilyNEffectDurationProduction.test.ts proves an unknown installed structural sourceBecomesIncapacitated policy removes its portable dependent effect through production Common Play/Resolver execution and event-native Undo restores it"
       ],
       "identityInvarianceEvidence": [
         "commonPlayEffectRuntime.test.ts renamed definition",
         "installedCommonPlayLoweredFamiliesProduction.test.ts arbitrary package identity",
         "c9FamilyNEffectDurationProduction.test.ts repeats the complete duration-materialization matrix under unrelated external module/content/mechanic identities",
         "c9FamilyNEffectDurationProduction.test.ts repeats production elapsed boundary expiry and Undo under unrelated renamed external module/content/mechanic identities",
-        "c9FamilyNEffectDurationProduction.test.ts repeats suppression, pause/resume, expiry, and Undo under unrelated external module/content/mechanic identities"
+        "c9FamilyNEffectDurationProduction.test.ts repeats suppression, pause/resume, expiry, and Undo under unrelated external module/content/mechanic identities",
+        "c9FamilyNEffectDurationProduction.test.ts repeats structural source-dependent termination and Undo after complete external module/content/mechanic identity rename with identical outcome"
       ],
       "connectedEvidenceIfRelevant": [
         "installedCommonPlayLoweredFamiliesProduction.test.ts automatic effect connected replay/Undo"
@@ -1154,10 +1158,7 @@
       "persistenceEvidenceIfRelevant": [
         "installedCommonPlayLoweredFamiliesProduction.test.ts automatic effect new-replica event replay"
       ],
-      "remainingNamedSeams": [
-        "named aura/form/mark effect adapters",
-        "source/dependent-cleanup acceptance remains incomplete"
-      ],
+      "remainingNamedSeams": [],
       "connectedRelevant": true,
       "persistenceRelevant": true
     },

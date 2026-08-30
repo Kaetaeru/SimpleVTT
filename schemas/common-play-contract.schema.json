@@ -2039,6 +2039,28 @@
             "unique-by-source",
             "profile-policy"
           ]
+        },
+        "termination": {
+          "type": "object",
+          "minProperties": 1,
+          "properties": {
+            "targetTakesDamage": {
+              "type": "boolean"
+            },
+            "targetBecomesIncapacitated": {
+              "type": "boolean"
+            },
+            "targetDies": {
+              "type": "boolean"
+            },
+            "sourceBecomesIncapacitated": {
+              "type": "boolean"
+            },
+            "sourceDies": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
         }
       },
       "additionalProperties": false

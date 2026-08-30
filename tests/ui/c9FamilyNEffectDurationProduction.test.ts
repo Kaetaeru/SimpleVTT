@@ -329,3 +329,84 @@ test("unknown installed Common Play cleans up maintained dependents when their s
     await exerciseDependentCleanup("renamed-family-n-dependent-cleanup"),
   );
 });
+
+
+function structuralSourceCleanupPackage(prefix:string) {
+  const moduleId=`${prefix}.module`;
+  const contentId=`${prefix}.content`;
+  const effectMechanicId=`${prefix}.dependent-effect`;
+  const conditionMechanicId=`${prefix}.incapacitate`;
+  const effectConfig={
+    schemaVersion:"0.2-draft",id:effectMechanicId,
+    entryPoints:[{id:"activate",invocation:"manual",operations:[{kind:"effect.apply",template:"dependent",target:"actor"}]}],
+    artifactTemplates:[{
+      id:"dependent",artifactKind:"effect",duration:{kind:"durable"},
+      rules:[{id:"noop",event:"damage.taken",frequency:"once-per-resolution",operations:[{kind:"damage.apply",amount:{value:0},damageType:"force",target:"event.actor"}]}],
+      lifetime:{kind:"until-duration",onEnd:"destroy"},
+      termination:{sourceBecomesIncapacitated:true},
+      instancePolicy:"stack",
+    }],
+  };
+  const conditionConfig={
+    schemaVersion:"0.2-draft",id:conditionMechanicId,
+    entryPoints:[{
+      id:"incapacitate",invocation:"manual",targeting:{from:"targets",min:1,max:1},
+      operations:[{kind:"condition.apply",condition:"incapacitated",target:"target"}],
+    }],
+  };
+  return {moduleId,contentId,effectMechanicId,conditionMechanicId,json:JSON.stringify({
+    schemaVersion:"0.1-draft",moduleId,moduleVersion:"1",
+    rulesProfile:{id:"dnd.srd-5.2.1",version:"0.1-draft"},defaultLocale:"en",
+    source:{document:"Family N structural source cleanup probe",version:"1",license:"CC0",srdDerived:false},
+    dependencies:[],conflicts:[],capabilities:[],
+    content:[{id:contentId,category:"option",presentation:{defaultLocale:"en",originalName:"Structural Source Cleanup Probe",locales:{en:{name:"Structural Source Cleanup Probe"}}},mechanics:[
+      {kind:"common-play",config:effectConfig},{kind:"common-play",config:conditionConfig},
+    ]}],
+  })};
+}
+
+function structuralSourceCleanupAction(pack:ReturnType<typeof structuralSourceCleanupPackage>,mechanicId:string,entryPointId:string) {
+  return installedCommonPlayActionId({catalogId:catalogQualifiedId(pack.contentId,pack.moduleId,"1"),mechanicId,entryPointId});
+}
+
+async function exerciseStructuralSourceCleanup(prefix:string) {
+  const adapter=new MockAdapter();
+  const pack=structuralSourceCleanupPackage(prefix);
+  setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
+  const preview=await adapter.previewContentImport(pack.json);
+  assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
+  await adapter.activateContentImport();
+  await adapter.startInitiative();
+  await adapter.setCurrentActor("char.aelar");
+
+  let snapshot=await adapter.resolveAction(structuralSourceCleanupAction(pack,pack.effectMechanicId,"activate"),["char.aelar"]);
+  assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
+  let runtime=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)!;
+  let effect=runtime.effects.find((entry)=>entry.sourceId===pack.effectMechanicId);
+  assert.ok(effect,"portable source-dependent effect must materialize");
+  assert.equal(effect.sourceActorId,"char.aelar");
+  assert.deepEqual(effect.termination,{sourceBecomesIncapacitated:true});
+
+  snapshot=await adapter.resolveAction(structuralSourceCleanupAction(pack,pack.conditionMechanicId,"incapacitate"),["char.aelar"]);
+  assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
+  runtime=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)!;
+  assert.equal(runtime.effects.some((entry)=>entry.targetId==="char.aelar"&&entry.conditionId==="incapacitated"),true);
+  assert.equal(runtime.effects.some((entry)=>entry.sourceId===pack.effectMechanicId),false,"structural sourceBecomesIncapacitated must remove its portable dependent effect");
+
+  await adapter.undoLastResolution();
+  snapshot=await adapter.getSnapshot();
+  runtime=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)!;
+  assert.equal(runtime.effects.some((entry)=>entry.targetId==="char.aelar"&&entry.conditionId==="incapacitated"),false);
+  effect=runtime.effects.find((entry)=>entry.sourceId===pack.effectMechanicId);
+  assert.ok(effect,"event-native Undo must restore the structurally terminated effect");
+  assert.equal(effect.sourceActorId,"char.aelar");
+  assert.deepEqual(effect.termination,{sourceBecomesIncapacitated:true});
+  return {cleanup:true,undo:true};
+}
+
+test("unknown installed Common Play structurally terminates a source-dependent effect on Incapacitated and Undo restores it",async()=>{
+  assert.deepEqual(
+    await exerciseStructuralSourceCleanup("unknown-family-n-structural-cleanup"),
+    await exerciseStructuralSourceCleanup("renamed-family-n-structural-cleanup"),
+  );
+});
