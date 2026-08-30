@@ -44,4 +44,5 @@ jobs:
           git add src/domain/commonPlaySemanticEventRuntime.ts src/app/installedCommonPlayRuntimeAdapter.ts tests/domain/commonPlaySemanticEventRuntime.test.ts tests/ui/installedCommonPlaySemanticOutcomeProduction.test.ts docs/rules/v1-mechanism-coverage-ledger.json
           git diff --cached --check
           git commit -m "feat(c9): emit portable d20 outcome events"
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
           git push
