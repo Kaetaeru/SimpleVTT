@@ -1,0 +1,290 @@
+name: C9 Family H Generic Hidden Discovery 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-h-effect-remove-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  verify-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Reconcile branch
+        run: git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+      - run: npm ci
+      - run: npm run generate:content
+      - name: Patch generic effect removal and Search proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          runtime=Path('src/domain/commonPlayOperationRuntime.ts')
+          text=runtime.read_text(encoding='utf-8')
+
+          type_anchor='''type CommonPlayConditionChange={
+            kind:"condition.apply"|"condition.remove";
+            condition:ConditionId;
+            target?:CommonPlayConditionTarget;
+            when?:CommonPlayTestOutcomePredicate;
+          };
+          '''
+          type_block=type_anchor+'''type CommonPlayEffectRemove={
+            kind:"effect.remove";
+            selector:CommonPlaySelector&{from:"effects"};
+            when?:CommonPlayTestOutcomePredicate;
+          };
+          '''
+          if 'type CommonPlayEffectRemove=' not in text:
+            if type_anchor not in text: raise SystemExit('CommonPlayConditionChange anchor not found')
+            text=text.replace(type_anchor,type_block,1)
+
+          union_anchor='''  |CommonPlayMovementStand
+            |CommonPlayConditionChange
+            |CommonPlayRollModify;'''
+          union_block='''  |CommonPlayMovementStand
+            |CommonPlayConditionChange
+            |CommonPlayEffectRemove
+            |CommonPlayRollModify;'''
+          if '|CommonPlayEffectRemove' not in text:
+            if union_anchor not in text: raise SystemExit('CommonPlayOperation union anchor not found')
+            text=text.replace(union_anchor,union_block,1)
+
+          key_anchor='const CONDITION_CHANGE_KEYS=new Set(["kind","condition","target","when"]);'
+          if 'const EFFECT_REMOVE_KEYS=' not in text:
+            if key_anchor not in text: raise SystemExit('condition key anchor not found')
+            text=text.replace(key_anchor,key_anchor+'\nconst EFFECT_REMOVE_KEYS=new Set(["kind","selector","when"]);',1)
+
+          parse_anchor='''  if(operation.kind==="condition.apply"||operation.kind==="condition.remove") {
+            supportedKeys(operation,CONDITION_CHANGE_KEYS,label);
+          '''
+          parse_block='''  if(operation.kind==="effect.remove") {
+            supportedKeys(operation,EFFECT_REMOVE_KEYS,label);
+            const selector=parseCommonPlaySelector(operation.selector,`${label}.selector`);
+            if(selector.from!=="effects") throw new DomainEvaluationError(`${label}.selector.from must be effects for portable Common Play effect.remove`);
+            if(selector.selection==="manual") throw new DomainEvaluationError(`${label}.selector.selection must be automatic when removing effects`);
+            const when=testOutcomePredicate(operation.when,`${label}.when`);
+            return {kind:"effect.remove",selector:{...selector,from:"effects"},...(when?{when}:{})};
+          }
+          '''+parse_anchor
+          if 'operation.kind==="effect.remove"' not in text:
+            if parse_anchor not in text: raise SystemExit('condition parse anchor not found')
+            text=text.replace(parse_anchor,parse_block,1)
+
+          old_validation='''  if(entryPoint.operations.some((operation)=>(operation.kind==="condition.apply"||operation.kind==="condition.remove")&&operation.when)&&!entryPoint.test) throw new DomainEvaluationError(`${label}.entryPoints[${index}] test.outcome condition requires a d20 test`);'''
+          new_validation='''  if(entryPoint.operations.some((operation)=>(operation.kind==="condition.apply"||operation.kind==="condition.remove"||operation.kind==="effect.remove")&&operation.when)&&!entryPoint.test) throw new DomainEvaluationError(`${label}.entryPoints[${index}] test.outcome conditional operation requires a d20 test`);'''
+          if new_validation not in text:
+            if old_validation not in text: raise SystemExit('conditional validation anchor not found')
+            text=text.replace(old_validation,new_validation,1)
+
+          compile_anchor='''    if(operation.kind==="condition.apply"||operation.kind==="condition.remove") {
+              const targetId=conditionOperationTarget(operation.target,input);
+          '''
+          compile_block='''    if(operation.kind==="effect.remove") {
+              const when=operation.when?{operationId:`${input.resolutionId}:test`,field:"outcome" as const,equals:operation.when.right.value}:undefined;
+              const candidates=state.effects.filter(effectIsActive).map((effect)=>({
+                id:effect.id,
+                properties:{
+                  tags:[...effect.tags],
+                  targetId:effect.targetId,
+                  sourceId:effect.sourceId,
+                  kind:effect.kind,
+                  "target.selected":input.targetId!==undefined&&effect.targetId===input.targetId,
+                  ...(effect.sourceActorId?{sourceActorId:effect.sourceActorId}:{}),
+                  ...(effect.conditionId?{conditionId:effect.conditionId}:{}),
+                },
+              }));
+              const selected=resolveCommonPlaySelector({
+                sourceId:input.actorId,
+                selector:operation.selector,
+                candidates,
+                selection:"automatic",
+                authority:"host",
+              });
+              if(selected.status!=="resolved") throw new DomainEvaluationError(`Common Play effect.remove selector rejected: ${selected.reason}`);
+              selected.targetIds.forEach((effectId,removeIndex)=>operations.push({
+                id:`${operationId}:remove:${removeIndex}`,kind:"remove-effect",effectId,...(when?{when}:{}),
+              }));
+              continue;
+            }
+
+          '''+compile_anchor
+          if 'Common Play effect.remove selector rejected' not in text:
+            if compile_anchor not in text: raise SystemExit('condition compile anchor not found')
+            text=text.replace(compile_anchor,compile_block,1)
+
+          runtime.write_text(text,encoding='utf-8')
+
+          adapter=Path('src/app/sessionStatusEffectEventRuntimeAdapter.ts')
+          text=adapter.read_text(encoding='utf-8')
+          text=text.replace('import { authoritativeCommonPlaySpatialRelation } from "./realSpatialRuntimeService";\n','')
+          named='''function detectedHiddenEffects(adapter:MockAdapter,internal:AdapterState,resolution:ResolutionView) {
+            if(!resolution.actionId.startsWith("action.standard.search.")||resolution.checkOutcome!=="성공")return [];
+            const state=snapshotAdapterTurnRuntimeState(adapter,internal.scene);
+            if(!state)return [];
+            return state.effects.filter((effect)=>{
+              if(effect.targetId===resolution.actorId||!effect.tags.includes("hidden"))return false;
+              const relation=authoritativeCommonPlaySpatialRelation(internal.scene,resolution.actorId,effect.targetId);
+              return relation?.detected===true;
+            });
+          }
+
+          function removeDiscoveredHiddenEffects(adapter:MockAdapter,internal:AdapterState,resolution:ResolutionView,effects:EffectInstance[]) {
+            const state=snapshotAdapterTurnRuntimeState(adapter,internal.scene);
+            if(!state||!effects.length)return [];
+            const committed=resolvePendingResolution(SIMPLEVTT_APP_RULES_PROFILE,state,{
+              id:`${resolution.id}:search-discovery`,actorId:resolution.actorId,sourceId:resolution.actionId,expectedRevision:state.revision,
+              operations:effects.map((effect,index)=>({id:`search-discovery:remove:${index}`,kind:"remove-effect" as const,effectId:effect.id})),
+            });
+            if(committed.status==="rejected"||!commitAdapterTurnRuntimeState(adapter,internal.scene,state.revision,committed.state))return;
+            for(const effect of effects) {
+              const subject=internal.scene.entities.find((entry)=>entry.id===effect.targetId);
+              const label=typeof effect.metadata?.sessionStatus==="string"?effect.metadata.sessionStatus:undefined;
+              if(label&&subject?.status.includes(label))subject.status=subject.status.filter((status)=>status!==label);
+              resolution.stateChanges.push(`${subject?.name??effect.targetId} 발견 · Hidden 종료`);
+            }
+            return committed.events;
+          }
+
+          '''
+          if named in text:
+            text=text.replace(named,'',1)
+          elif 'function detectedHiddenEffects(' in text or 'function removeDiscoveredHiddenEffects(' in text:
+            raise SystemExit('named Search helper changed unexpectedly')
+
+          advance='''  if(snapshot.resolution?.id===resolution.id&&snapshot.resolution.stage==="complete") {
+            const discovered=detectedHiddenEffects(this,internal,resolution);
+            const events=removeDiscoveredHiddenEffects(this,internal,resolution,discovered);
+            if(events?.length) {
+              combineEvents(this,resolution.id,events);
+              return internal.getSnapshot();
+            }
+          }
+          '''
+          if advance in text:
+            text=text.replace(advance,'',1)
+          elif 'detectedHiddenEffects(this,internal,resolution)' in text:
+            raise SystemExit('named Search advance block changed unexpectedly')
+          adapter.write_text(text,encoding='utf-8')
+
+          test_path=Path('tests/ui/c9FamilyHSearchDiscovery.test.ts')
+          test_path.write_text(r'''import assert from "node:assert/strict";
+          import test from "node:test";
+          import "../../src/app/offlineRuntimeAdapters";
+          import "../../src/app/installedContentRuntimeAdapter";
+          import { catalogQualifiedId } from "../../src/app/contentCatalogIdentity";
+          import { installedCommonPlayActionId } from "../../src/app/installedCommonPlayActionReference";
+          import { setInstalledContentStoreForTests } from "../../src/app/installedContentRuntimeAdapter";
+          import { MemoryInstalledContentStore } from "../../src/app/memoryInstalledContentStore";
+          import { MockAdapter } from "../../src/app/mockAdapter";
+          import type { SceneVm } from "../../src/app/contracts";
+          import { commitAdapterTurnRuntimeState, snapshotAdapterTurnRuntimeState } from "../../src/app/turnRuntimeSessionRegistry";
+          import { SIMPLEVTT_APP_RULES_PROFILE } from "../../src/app/realResolutionService";
+          import { resolvePendingResolution } from "../../src/domain/resolution";
+
+          const TARGET_ID="combatant.goblin-a";
+
+          function packagePayload(prefix:string){
+            const moduleId=`${prefix}.module`,contentId=`${prefix}.search`,mechanicId=`${prefix}.mechanic`;
+            const config={
+              schemaVersion:"0.2-draft",id:mechanicId,
+              entryPoints:[{
+                id:"discover-hidden",invocation:"manual",targeting:{from:"targets",min:1,max:1},
+                test:{kind:"ability-check",roller:"actor",property:"ability.wis.modifier",dc:{value:10},perTarget:false},
+                operations:[{
+                  kind:"effect.remove",
+                  selector:{from:"effects",where:{op:"all",args:[
+                    {op:"has-tag",ref:"tags",value:"hidden"},
+                    {op:"eq",left:{ref:"target.selected"},right:{value:true}},
+                  ]},min:1,max:1,selection:"automatic"},
+                  when:{op:"eq",left:{ref:"test.outcome"},right:{value:"success"}},
+                }],
+              }],
+            };
+            return {moduleId,contentId,mechanicId,json:JSON.stringify({
+              schemaVersion:"0.1-draft",moduleId,moduleVersion:"1",rulesProfile:{id:"dnd.srd-5.2.1",version:"0.1-draft"},defaultLocale:"en",
+              source:{document:"Family H portable discovery probe",version:"1",license:"CC0",srdDerived:false},dependencies:[],conflicts:[],capabilities:[],
+              content:[{id:contentId,category:"option",presentation:{defaultLocale:"en",originalName:"Portable Discovery",locales:{en:{name:"Portable Discovery"}}},mechanics:[{kind:"common-play",config}]}],
+            })};
+          }
+
+          function scene(adapter:MockAdapter){return (adapter as unknown as {scene:SceneVm}).scene;}
+          function hidden(adapter:MockAdapter,targetId=TARGET_ID){
+            return snapshotAdapterTurnRuntimeState(adapter,scene(adapter))?.effects.some((effect)=>effect.targetId===targetId&&effect.tags.includes("hidden"))??false;
+          }
+          function seedHidden(adapter:MockAdapter,actorId:string,targetId=TARGET_ID){
+            const state=snapshotAdapterTurnRuntimeState(adapter,scene(adapter));
+            assert.ok(state);
+            const committed=resolvePendingResolution(SIMPLEVTT_APP_RULES_PROFILE,state!,{
+              id:`resolution.portable-hidden.${targetId}`,actorId,sourceId:"external.portable-hidden",expectedRevision:state!.revision,
+              operations:[{id:`op.portable-hidden.${targetId}`,kind:"apply-effect",effect:{
+                id:`effect.portable-hidden.${targetId}`,sourceId:"external.portable-hidden",sourceActorId:targetId,targetId,kind:"marker",tags:["hidden"],duration:{kind:"special",key:"hidden-until-discovered"},
+              }}],
+            });
+            assert.notEqual(committed.status,"rejected");
+            if(committed.status!=="rejected")assert.equal(commitAdapterTurnRuntimeState(adapter,scene(adapter),state!.revision,committed.state),true);
+          }
+
+          async function exercise(prefix:string){
+            const adapter=new MockAdapter();
+            const pack=packagePayload(prefix);
+            setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
+            let snapshot=await adapter.previewContentImport(pack.json);
+            assert.ok(!snapshot.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(snapshot.contentImport?.validation));
+            await adapter.activateContentImport();
+            await adapter.startInitiative();
+            const actorId=(await adapter.getSnapshot()).activeCharacter.id;
+            await adapter.setCurrentActor(actorId);
+            seedHidden(adapter,actorId);
+            const actionId=installedCommonPlayActionId({catalogId:catalogQualifiedId(pack.contentId,pack.moduleId,"1"),mechanicId:pack.mechanicId,entryPointId:"discover-hidden"});
+            await adapter.setQueuedD20(20);
+            snapshot=await adapter.resolveAction(actionId,[TARGET_ID]);
+            assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
+            assert.equal(hidden(adapter),false,"successful external discovery must remove selected Hidden effect");
+            snapshot=await adapter.undoLastResolution();
+            assert.equal(hidden(adapter),true,"event-native Undo must restore the removed Hidden effect");
+            await adapter.setQueuedD20(1);
+            snapshot=await adapter.resolveAction(actionId,[TARGET_ID]);
+            assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
+            assert.equal(hidden(adapter),true,"failed discovery must leave Hidden intact");
+            return true;
+          }
+
+          test("unknown installed Common Play discovers Hidden through generic effect.remove and is identity invariant",async()=>{
+            assert.equal(await exercise("external.unknown-family-h-discovery"),true);
+            assert.equal(await exercise("external.fully-renamed-family-h-discovery"),true);
+          });
+          ''',encoding='utf-8')
+          PY
+      - name: Verify Family H generic discovery
+        run: |
+          node --import tsx --test tests/ui/c9FamilyHSearchDiscovery.test.ts tests/ui/sessionStatusEffectEventRuntime.test.ts tests/ui/c9FamilyHSearchDiscoveryProduction.test.ts tests/ui/c9FamilyHTremorsenseProduction.test.ts tests/domain/commonPlaySenseRuntime.test.ts
+          node scripts/check-legacy-execution-boundary.mjs
+          node scripts/check-v1-mechanism-coverage.mjs
+          npm exec tsc -- --noEmit
+      - name: Publish verified patch and retire verifier
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/c9-family-h-effect-remove-71304.yml
+          git add src/domain/commonPlayOperationRuntime.ts src/app/sessionStatusEffectEventRuntimeAdapter.ts tests/ui/c9FamilyHSearchDiscovery.test.ts
+          git diff --cached --check
+          git commit -m "fix(c9): make Hidden discovery generic"
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
