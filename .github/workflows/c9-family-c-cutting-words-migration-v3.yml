@@ -39,7 +39,14 @@ jobs:
           item_loop='''  for(const item of internal.activeCharacter.items) {\n    const matches=internal.catalog.filter((entry)=>catalogEntryMatchesItem(entry,item));\n    if(matches.length===1)identities.add(matches[0].id);\n  }\n  return identities;'''
           feature_loop='''  for(const item of internal.activeCharacter.items) {\n    const matches=internal.catalog.filter((entry)=>catalogEntryMatchesItem(entry,item));\n    if(matches.length===1)identities.add(matches[0].id);\n  }\n  for(const featureId of internal.activeCharacter.subclassFeatureIds ?? []) {\n    const matches=internal.catalog.filter((entry)=>catalogEntryMatchesFeature(entry,featureId));\n    if(matches.length===1)identities.add(matches[0].id);\n  }\n  return identities;'''
           if item_loop not in text: raise SystemExit('local identity fallback block changed')
-          path.write_text(text.replace(item_loop,feature_loop,1))
+          text=text.replace(item_loop,feature_loop,1)
+
+          test=Path('tests/ui/bardCollegeLoreCuttingWordsRuntime.test.ts')
+          body=test.read_text()
+          old='''  snapshot=await adapter.respondToInterrupt(false);\n  assert.equal(snapshot.resolution?.stage,"attack-result",JSON.stringify(snapshot.resolution));\n\n  snapshot=await adapter.advanceResolution();\n  assert.equal(snapshot.resolution?.stage,"interrupt",JSON.stringify(snapshot.resolution));\n  assert.equal(snapshot.resolution?.interrupt?.optionName,CUTTING_WORDS_NAME);\n  assert.equal(snapshot.resolution?.rollKind,"damage");'''
+          new='''  snapshot=await adapter.respondToInterrupt(false);\n  if(snapshot.resolution?.stage!=="interrupt")snapshot=await adapter.advanceResolution();\n  assert.equal(snapshot.resolution?.stage,"interrupt",JSON.stringify(snapshot.resolution));\n  assert.equal(snapshot.resolution?.interrupt?.optionName,CUTTING_WORDS_NAME);\n  assert.equal(snapshot.resolution?.rollKind,"damage");'''
+          if old not in body: raise SystemExit('damage continuation assertion changed')
+          test.write_text(body.replace(old,new,1))
           PY
       - name: Verify full Family C production slice
         shell: bash
