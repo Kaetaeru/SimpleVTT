@@ -26,111 +26,19 @@ jobs:
         run: git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
       - run: npm ci
       - run: npm run generate:content
-      - name: Add structural drag carry probe
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          from pathlib import Path
-
-          path=Path('tests/ui/c9FamilyIMovementProduction.test.ts')
-          text=path.read_text(encoding='utf-8')
-          if 'id:"apply-drag-carry"' not in text:
-              anchor='''    {
-                id:"move-full",
-                invocation:"manual" as const,
-                operations:[{
-                  kind:"movement.relocate" as const,
-                  mode:"move" as const,
-                  movementType:"walk" as const,
-                  target:"actor",
-                  distance:{ref:"movement.walk"},
-                  destinationFact:destinationFact("destination-full"),
-                }],
-              },'''.replace('              ','')
-              block='''    {
-                id:"apply-drag-carry",
-                invocation:"manual" as const,
-                operations:[{
-                  kind:"property.modify" as const,
-                  property:"movement.cost.multiplier",
-                  operation:"set" as const,
-                  value:{value:2},
-                  target:"actor",
-                  owner:"effect" as const,
-                  source:"definition" as const,
-                  duration:{kind:"elapsed" as const,amount:{value:1},unit:"minutes" as const},
-                  lifetime:{kind:"until-duration" as const,onEnd:"destroy" as const},
-                  instancePolicy:"stack" as const,
-                }],
-              },
-'''.replace('              ','')
-              if anchor not in text: raise SystemExit('movement entry-point anchor missing')
-              text=text.replace(anchor,block+anchor,1)
-
-          if 'runRulesDerivedDragCarry' not in text:
-              anchor='''test("rules-derived alternate speed bounds unknown installed Common Play movement",async()=>{'''
-              helper='''async function runRulesDerivedDragCarry(prefix:string) {
-            const {adapter,action}=await install(prefix);
-            await adapter.resolveAction(action("apply-drag-carry"),["char.aelar"]);
-            let snapshot=await adapter.getSnapshot();
-            assert.equal(snapshot.resolution?.stage,"complete","portable drag/carry constraint must commit through production Common Play");
-            const effect=turnRuntimeSessions.get(adapter)?.state.effects.find((candidate)=>candidate.propertyModifier?.property==="movement.cost.multiplier");
-            assert.deepEqual(effect?.propertyModifier,{property:"movement.cost.multiplier",operation:"set",value:{value:2},source:"definition",instancePolicy:"stack"});
-            const before=snapshot.scene.economyByActor["char.aelar"]!.movement;
-            await adapter.resolveAction(action("move-walk"),["char.aelar"]);
-            snapshot=await adapter.getSnapshot();
-            assert.equal(snapshot.resolution?.stage,"complete");
-            assert.equal(snapshot.scene.economyByActor["char.aelar"]?.movement,before-10,"rules-derived drag/carry constraint must double regular movement cost");
-            await adapter.undoLastResolution();
-            snapshot=await adapter.getSnapshot();
-            assert.equal(snapshot.scene.economyByActor["char.aelar"]?.movement,before,"drag/carry movement Undo must restore the exact budget while the constraint remains active");
-            return before;
-          }
-
-          test("rules-derived drag/carry movement constraint is authoritative for unknown installed Common Play",async()=>{
-            assert.equal(await runRulesDerivedDragCarry("unknown-family-i-drag-carry"),30);
-          });
-
-          test("renaming external drag/carry identities preserves movement constraint semantics",async()=>{
-            assert.equal(await runRulesDerivedDragCarry("renamed-family-i-drag-carry"),30);
-          });
-
-          '''
-              if anchor not in text: raise SystemExit('alternate-speed test anchor missing')
-              text=text.replace(anchor,helper+anchor,1)
-          path.write_text(text,encoding='utf-8')
-          PY
+      - name: Apply drag carry proof
+        run: python3 .github/scripts/c9-family-i-drag-carry-71304.py
       - name: Verify Family I drag carry slice
         run: |
           node --import tsx --test tests/ui/c9FamilyIMovementProduction.test.ts tests/domain/commonPlayMovementRuntime.test.ts
           node scripts/check-legacy-execution-boundary.mjs
           node scripts/check-v1-mechanism-coverage.mjs
           npm exec tsc -- --noEmit
-      - name: Reconcile Family I evidence
-        shell: bash
+      - name: Publish verified slice
         run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          import json
-          from pathlib import Path
-          path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
-          data=json.loads(path.read_text(encoding='utf-8'))
-          row=next(entry for entry in data['rows'] if entry.get('family')=='I')
-          evidence='c9FamilyIMovementProduction.test.ts proves rules-derived drag/carry movement constraints through generic movement.cost.multiplier Effect authority, production movement consumption, event-native Undo, and full external identity rename'
-          if evidence not in row['productionEvidence']: row['productionEvidence'].append(evidence)
-          row['currentState']='Canonical movement.relocate parses through the generic operations lowerer. Unknown installed Common Play production-executes walk, climb, swim, fly, crawl, jump, Difficult Terrain and drag/carry cost constraints, push, pull, teleport, explicit no-provoke movement, zero-speed rejection, Undo, connected replay/reconnect, and external identity rename invariance. Rules-derived movement cost multipliers and alternate-speed bounds are production-proven through generic profile properties, and portable compile rejection is normalized into the standard production resolution failure path. Family I remains incomplete only for named movement-grant convergence.'
-          row['remainingNamedSeams']=['named movement grants']
-          path.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
-          PY
-          node scripts/check-v1-mechanism-coverage.mjs
-      - name: Publish verified slice and retire verifier
-        shell: bash
-        run: |
-          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git rm .github/workflows/c9-family-i-drag-carry-71304.yml
+          git rm .github/workflows/c9-family-i-drag-carry-71304.yml .github/scripts/c9-family-i-drag-carry-71304.py
           git add tests/ui/c9FamilyIMovementProduction.test.ts docs/rules/v1-mechanism-coverage-ledger.json
           git diff --cached --check
           git commit -m "test(c9): prove portable drag carry movement"
