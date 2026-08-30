@@ -150,6 +150,7 @@ async function runPortableStand(prefix:string){const {adapter,action}=await inst
 
 async function runMovementMatrix(prefix:string) {
   const {adapter,action}=await install(prefix);
+  seedMovementProperty(adapter,"movement.fly",30);
 
   for(const movementType of MOVEMENT_TYPES) {
     if(movementType==="fly") seedMovementProperty(adapter,"movement.fly",5);
