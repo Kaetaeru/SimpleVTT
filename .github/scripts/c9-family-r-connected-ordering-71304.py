@@ -1,0 +1,296 @@
+from pathlib import Path
+import json
+
+
+def replace_once(path: str, old: str, new: str, label: str) -> None:
+    target = Path(path)
+    text = target.read_text()
+    if old not in text:
+        raise SystemExit(f"{label} anchor missing in {path}")
+    target.write_text(text.replace(old, new, 1))
+
+
+replace_once(
+    "src/app/phase09EffectAwareTurnAdapter.ts",
+    'import { beginCommonPlaySimultaneousOrdering, respondToCommonPlaySimultaneousOrdering, type CommonPlaySimultaneousOrderingResponse, type CommonPlaySimultaneousOrderingState } from "../domain/commonPlaySimultaneousOrderingRuntime";',
+    'import { beginCommonPlaySimultaneousOrdering, respondToCommonPlaySimultaneousOrdering, type CommonPlaySimultaneousOrderingRequest, type CommonPlaySimultaneousOrderingResponse, type CommonPlaySimultaneousOrderingState } from "../domain/commonPlaySimultaneousOrderingRuntime";',
+    "Family R request type import",
+)
+replace_once(
+    "src/app/phase09EffectAwareTurnAdapter.ts",
+    '''export function peekAdapterTurnSimultaneousOrdering(adapter:MockAdapter) {\n  const pending=[...(turnSimultaneousOrdering.get(adapter)?.values()??[])].find((state)=>state.status==="pending");\n  return pending?structuredClone(pending):undefined;\n}\n''',
+    '''export function peekAdapterTurnSimultaneousOrdering(adapter:MockAdapter) {\n  const pending=[...(turnSimultaneousOrdering.get(adapter)?.values()??[])].find((state)=>state.status==="pending");\n  return pending?structuredClone(pending):undefined;\n}\n\nexport function installAdapterTurnSimultaneousOrderingRequest(adapter:MockAdapter,request:CommonPlaySimultaneousOrderingRequest) {\n  const state=beginCommonPlaySimultaneousOrdering(request);\n  simultaneousOrderingStates(adapter).set(request.id,state);\n  return structuredClone(state);\n}\n\nexport function clearAdapterTurnSimultaneousOrdering(adapter:MockAdapter) {\n  turnSimultaneousOrdering.delete(adapter);\n}\n''',
+    "Family R adapter install hooks",
+)
+
+Path("src/app/connectedTurnSimultaneousOrderingResponsePort.ts").write_text('''import type { MockAdapter } from "./mockAdapter";\nimport type { SessionTransportMessage } from "./tauriSessionTransport";\nimport type { CommonPlaySimultaneousOrderingResponse } from "../domain/commonPlaySimultaneousOrderingRuntime";\n\nexport interface ConnectedTurnSimultaneousOrderingResponse {\n  sessionId:string;\n  response:CommonPlaySimultaneousOrderingResponse;\n}\n\nexport type ConnectedTurnSimultaneousOrderingResponseHandler=(\n  adapter:MockAdapter,\n  transportMessage:SessionTransportMessage,\n  envelope:ConnectedTurnSimultaneousOrderingResponse,\n)=>Promise<void>;\n\nlet handler:ConnectedTurnSimultaneousOrderingResponseHandler|null=null;\n\nexport function registerConnectedTurnSimultaneousOrderingResponseHandler(next:ConnectedTurnSimultaneousOrderingResponseHandler) {\n  handler=next;\n}\n\nexport async function routeConnectedTurnSimultaneousOrderingResponse(\n  adapter:MockAdapter,\n  transportMessage:SessionTransportMessage,\n  envelope:ConnectedTurnSimultaneousOrderingResponse,\n) {\n  if(!handler)return false;\n  await handler(adapter,transportMessage,envelope);\n  return true;\n}\n''')
+
+replace_once(
+    "src/app/connectedSessionWire.ts",
+    'import type { CommonPlayAuthorityFactRequest, CommonPlayAuthorityFactResponse } from "../domain/commonPlaySpatialFactRuntime";\n',
+    'import type { CommonPlayAuthorityFactRequest, CommonPlayAuthorityFactResponse } from "../domain/commonPlaySpatialFactRuntime";\nimport type { CommonPlaySimultaneousOrderingRequest, CommonPlaySimultaneousOrderingResponse } from "../domain/commonPlaySimultaneousOrderingRuntime";\n',
+    "Family R wire imports",
+)
+replace_once(
+    "src/app/connectedSessionWire.ts",
+    '  | { type:"common-play-fact-response"; sessionId:string; response:CommonPlayAuthorityFactResponse }\n  | { type:"session-ended"; sessionId:string; reason:string }\n',
+    '  | { type:"common-play-fact-response"; sessionId:string; response:CommonPlayAuthorityFactResponse }\n  | { type:"turn-simultaneous-ordering-prompt"; sessionId:string; request:CommonPlaySimultaneousOrderingRequest }\n  | { type:"turn-simultaneous-ordering-response"; sessionId:string; response:CommonPlaySimultaneousOrderingResponse }\n  | { type:"session-ended"; sessionId:string; reason:string }\n',
+    "Family R wire union",
+)
+replace_once(
+    "src/app/connectedSessionWire.ts",
+    'function isProjectionEnvelope(value:unknown):value is CharacterSessionProjectionV1 {\n',
+    '''function isSimultaneousOrderingRequest(value:unknown):value is CommonPlaySimultaneousOrderingRequest {\n  if(!isRecord(value)||!isString(value.id)||!isCursor(value.revision)||!isString(value.timing)||!isRecord(value.authority)||!Array.isArray(value.candidates)) return false;\n  if(!["actor-controller","dm"].includes(String(value.authority.kind))||!isString(value.authority.responderId)) return false;\n  return value.candidates.length>1&&value.candidates.every((candidate)=>isRecord(candidate)&&isString(candidate.id));\n}\n\nfunction isSimultaneousOrderingResponse(value:unknown):value is CommonPlaySimultaneousOrderingResponse {\n  return isRecord(value)&&isString(value.decisionId)&&isCursor(value.revision)&&isString(value.responderId)&&isStringArray(value.orderedCandidateIds);\n}\n\nfunction isProjectionEnvelope(value:unknown):value is CharacterSessionProjectionV1 {\n''',
+    "Family R wire validators",
+)
+replace_once(
+    "src/app/connectedSessionWire.ts",
+    '''  if(value.type==="common-play-fact-response"){\n    if(!isString(value.sessionId)||!isCommonPlayFactResponse(value.response))return "invalid Common Play fact response message";\n    return value as ConnectedWireMessage;\n  }\n  if (value.type==="session-ended") {\n''',
+    '''  if(value.type==="common-play-fact-response"){\n    if(!isString(value.sessionId)||!isCommonPlayFactResponse(value.response))return "invalid Common Play fact response message";\n    return value as ConnectedWireMessage;\n  }\n  if(value.type==="turn-simultaneous-ordering-prompt"){\n    if(!isString(value.sessionId)||!isSimultaneousOrderingRequest(value.request))return "invalid turn simultaneous-ordering prompt message";\n    return value as ConnectedWireMessage;\n  }\n  if(value.type==="turn-simultaneous-ordering-response"){\n    if(!isString(value.sessionId)||!isSimultaneousOrderingResponse(value.response))return "invalid turn simultaneous-ordering response message";\n    return value as ConnectedWireMessage;\n  }\n  if (value.type==="session-ended") {\n''',
+    "Family R wire decode",
+)
+
+replace_once(
+    "src/app/connectedSessionRuntimeAdapter.ts",
+    'import { routeConnectedConcentrationResponse } from "./connectedConcentrationResponsePort";\n',
+    'import { routeConnectedConcentrationResponse } from "./connectedConcentrationResponsePort";\nimport { routeConnectedTurnSimultaneousOrderingResponse } from "./connectedTurnSimultaneousOrderingResponsePort";\nimport { clearAdapterTurnSimultaneousOrdering, installAdapterTurnSimultaneousOrderingRequest, peekAdapterTurnSimultaneousOrdering } from "./phase09EffectAwareTurnAdapter";\n',
+    "Family R connected runtime imports",
+)
+replace_once(
+    "src/app/connectedSessionRuntimeAdapter.ts",
+    'export const CONNECTED_CAPABILITIES=["resolution-event-v1","resolution-presentation-v1","interrupt-response-v1","concentration-response-v1","resolution-undo-v1","character-projection-v1","event-cursor-v1","ready-action-v1","manual-movement-reaction-v1","common-play-authority-fact-v1","ready-intent-v1","session-end-v1","scene-topology-v1"];',
+    'export const CONNECTED_CAPABILITIES=["resolution-event-v1","resolution-presentation-v1","interrupt-response-v1","concentration-response-v1","resolution-undo-v1","character-projection-v1","event-cursor-v1","ready-action-v1","manual-movement-reaction-v1","common-play-authority-fact-v1","turn-simultaneous-ordering-v1","ready-intent-v1","session-end-v1","scene-topology-v1"];',
+    "Family R capability",
+)
+replace_once(
+    "src/app/connectedSessionRuntimeAdapter.ts",
+    'registerConnectedCommonPlayAuthorityFactTransport({\n',
+    '''export async function publishConnectedTurnSimultaneousOrderingPrompt(\n  adapter:MockAdapter,\n  peerOverride?:string,\n  characterId?:string,\n) {\n  const state=connectedStateFor(adapter);\n  const ordering=peekAdapterTurnSimultaneousOrdering(adapter);\n  if(state.mode!=="host"||!state.ledger||!ordering||ordering.status!=="pending") return {status:"ignored" as const};\n  if(ordering.request.authority.kind!=="actor-controller") return {status:"local" as const};\n  const responderId=ordering.request.authority.responderId;\n  if(characterId&&characterId!==responderId) return {status:"ignored" as const};\n  const peer=peerOverride??[...state.peerManifests.entries()].find(([,manifest])=>manifest.character?.characterId===responderId)?.[0];\n  if(!peer) return {status:"unavailable" as const};\n  await sendConnectedWireTo(peer,{type:"turn-simultaneous-ordering-prompt",sessionId:state.ledger.sessionId,request:structuredClone(ordering.request)});\n  return {status:"sent" as const,peer,decisionId:ordering.request.id};\n}\n\nexport async function resumeConnectedTurnSimultaneousOrderingPromptForCharacter(adapter:MockAdapter,peer:string,characterId:string) {\n  return publishConnectedTurnSimultaneousOrderingPrompt(adapter,peer,characterId);\n}\n\nexport function applyConnectedTurnSimultaneousOrderingPrompt(adapter:MockAdapter,prompt:Extract<ConnectedWireMessage,{type:"turn-simultaneous-ordering-prompt"}>) {\n  const state=connectedStateFor(adapter);\n  const app=connectedInternal(adapter);\n  if(state.mode!=="client"||!state.sessionId||prompt.sessionId!==state.sessionId) return {status:"rejected" as const,error:"simultaneous-ordering prompt session does not match this Client"};\n  if(prompt.request.authority.kind!=="actor-controller"||prompt.request.authority.responderId!==app.activeCharacter.id) return {status:"rejected" as const,error:"simultaneous-ordering prompt does not belong to this Client Character"};\n  const installed=installAdapterTurnSimultaneousOrderingRequest(adapter,prompt.request);\n  if(installed.status!=="pending") return {status:"rejected" as const,error:"connected simultaneous-ordering prompt must contain multiple candidates"};\n  return {status:"applied" as const,decisionId:installed.request.id};\n}\n\nregisterConnectedCommonPlayAuthorityFactTransport({\n''',
+    "Family R connected prompt helpers",
+)
+replace_once(
+    "src/app/connectedSessionRuntimeAdapter.ts",
+    '        await resumeConnectedInterruptPromptForCharacter(adapter,message.peer,characterId);\n',
+    '        await resumeConnectedInterruptPromptForCharacter(adapter,message.peer,characterId);\n        await resumeConnectedTurnSimultaneousOrderingPromptForCharacter(adapter,message.peer,characterId);\n',
+    "Family R reconnect resume",
+)
+replace_once(
+    "src/app/connectedSessionRuntimeAdapter.ts",
+    '''  if(wire.type==="resolution-interrupt-response"){\n    const routed=await routeConnectedInterruptResponse(adapter,message,wire.response);\n''',
+    '''  if(wire.type==="turn-simultaneous-ordering-response"){\n    const routed=await routeConnectedTurnSimultaneousOrderingResponse(adapter,message,{sessionId:wire.sessionId,response:wire.response});\n    if(!routed) await sendConnectedWireTo(message.peer,{type:"error",code:"simultaneous-ordering-route-unavailable",message:"connected simultaneous-ordering response router is unavailable",hostCursor:ledger.cursor});\n    return;\n  }\n\n  if(wire.type==="resolution-interrupt-response"){\n    const routed=await routeConnectedInterruptResponse(adapter,message,wire.response);\n''',
+    "Family R host response route",
+)
+replace_once(
+    "src/app/connectedSessionRuntimeAdapter.ts",
+    '''  if(wire.type==="resolution-interrupt-prompt"){\n    const applied=applyConnectedInterruptPrompt(adapter,wire);\n''',
+    '''  if(wire.type==="turn-simultaneous-ordering-prompt"){\n    const applied=applyConnectedTurnSimultaneousOrderingPrompt(adapter,wire);\n    if(applied.status==="rejected"){app.session.compatibility="warning";app.session.compatibilityMessage=applied.error;}\n    await publishConnectedSnapshot(adapter);\n    return;\n  }\n\n  if(wire.type==="resolution-interrupt-prompt"){\n    const applied=applyConnectedInterruptPrompt(adapter,wire);\n''',
+    "Family R client prompt route",
+)
+replace_once(
+    "src/app/connectedSessionRuntimeAdapter.ts",
+    '    app.scene.economyByActor=structuredClone(payload.economyByActor);\n',
+    '    app.scene.economyByActor=structuredClone(payload.economyByActor);\n    clearAdapterTurnSimultaneousOrdering(adapter);\n',
+    "Family R client decision cleanup",
+)
+
+replace_once(
+    "src/app/connectedTurnRoutingAdapter.ts",
+    'import { broadcastConnectedWire, connectedInternal } from "./connectedSessionRuntimeAdapter";\nimport { consumeAdapterTurnLifecycleEvents, peekAdapterTurnLifecycleUndo } from "./phase09EffectAwareTurnAdapter";\n',
+    'import { broadcastConnectedWire, connectedInternal, publishConnectedTurnSimultaneousOrderingPrompt, sendConnectedWireTo } from "./connectedSessionRuntimeAdapter";\nimport { consumeAdapterTurnLifecycleEvents, peekAdapterTurnLifecycleUndo, peekAdapterTurnSimultaneousOrdering, respondToAdapterTurnSimultaneousOrdering } from "./phase09EffectAwareTurnAdapter";\nimport { registerConnectedTurnSimultaneousOrderingResponseHandler } from "./connectedTurnSimultaneousOrderingResponsePort";\n',
+    "Family R turn routing imports",
+)
+replace_once(
+    "src/app/connectedTurnRoutingAdapter.ts",
+    'MockAdapter.prototype.startInitiative=async function startConnectedInitiative() {\n',
+    '''export async function sendConnectedTurnSimultaneousOrderingResponse(adapter:MockAdapter,orderedCandidateIds:string[]) {\n  const state=connectedStateFor(adapter);\n  const app=connectedInternal(adapter);\n  const ordering=peekAdapterTurnSimultaneousOrdering(adapter);\n  if(state.mode!=="client"||!state.sessionId) return {status:"rejected" as const,error:"only a connected Client can send simultaneous ordering"};\n  if(!ordering||ordering.status!=="pending") return {status:"rejected" as const,error:"no simultaneous ordering decision is pending"};\n  if(ordering.request.authority.kind!=="actor-controller"||ordering.request.authority.responderId!==app.activeCharacter.id) return {status:"rejected" as const,error:"simultaneous ordering decision does not belong to this Client Character"};\n  const response={decisionId:ordering.request.id,revision:ordering.request.revision,responderId:app.activeCharacter.id,orderedCandidateIds:[...orderedCandidateIds]};\n  await broadcastConnectedWire({type:"turn-simultaneous-ordering-response",sessionId:state.sessionId,response});\n  const local=respondToAdapterTurnSimultaneousOrdering(adapter,response);\n  if(!local||local.status==="rejected") return {status:"rejected" as const,error:local?.status==="rejected"?local.reason:"simultaneous ordering state disappeared"};\n  return {status:"sent" as const,decisionId:response.decisionId};\n}\n\nregisterConnectedTurnSimultaneousOrderingResponseHandler(async(adapter,transportMessage,envelope)=>{\n  const state=connectedStateFor(adapter);\n  const ledger=state.ledger;\n  if(state.mode!=="host"||!ledger)return;\n  const reject=async(code:string,message:string)=>sendConnectedWireTo(transportMessage.peer,{type:"error",code,message,hostCursor:ledger.cursor});\n  if(envelope.sessionId!==ledger.sessionId){await reject("session-mismatch",`expected ${ledger.sessionId}, received ${envelope.sessionId}`);return;}\n  const ordering=peekAdapterTurnSimultaneousOrdering(adapter);\n  if(!ordering||ordering.status!=="pending"||ordering.request.id!==envelope.response.decisionId){await reject("simultaneous-ordering-not-pending","no matching authoritative simultaneous-ordering decision is pending");return;}\n  const characterId=state.peerManifests.get(transportMessage.peer)?.character?.characterId;\n  if(ordering.request.authority.kind!=="actor-controller"||!characterId||characterId!==ordering.request.authority.responderId||envelope.response.responderId!==characterId){\n    await reject("simultaneous-ordering-not-authorized","simultaneous-ordering response does not belong to this peer Character");\n    return;\n  }\n  const resolved=respondToAdapterTurnSimultaneousOrdering(adapter,envelope.response);\n  if(!resolved||resolved.status==="rejected"){\n    await reject("simultaneous-ordering-response-rejected",resolved?.status==="rejected"?resolved.reason:"simultaneous ordering state disappeared");\n    await publishConnectedTurnSimultaneousOrderingPrompt(adapter);\n    return;\n  }\n  await adapter.endTurn();\n});\n\nMockAdapter.prototype.startInitiative=async function startConnectedInitiative() {\n''',
+    "Family R connected response handler",
+)
+replace_once(
+    "src/app/connectedTurnRoutingAdapter.ts",
+    '''  const next=await previousEndTurn.call(this);\n  const resolutionEvents=consumeAdapterTurnLifecycleEvents(this);\n  if (state.mode!=="host") return next;\n  const readyClears=readyLifecycleClears(readyBefore,readyActionConfigurationsFor(this),"next-turn-start");\n''',
+    '''  const next=await previousEndTurn.call(this);\n  const resolutionEvents=consumeAdapterTurnLifecycleEvents(this);\n  if (state.mode!=="host") return next;\n  const ordering=peekAdapterTurnSimultaneousOrdering(this);\n  if(ordering?.status==="pending") {\n    await publishConnectedTurnSimultaneousOrderingPrompt(this);\n    return next;\n  }\n  const readyClears=readyLifecycleClears(readyBefore,readyActionConfigurationsFor(this),"next-turn-start");\n''',
+    "Family R suppress pending turn broadcast",
+)
+
+replace_once(
+    "tests/ui/connectedActorTurnRuleProduction.test.ts",
+    'import "../../src/app/connectedTurnRoutingAdapter";\n',
+    'import { sendConnectedTurnSimultaneousOrderingResponse } from "../../src/app/connectedTurnRoutingAdapter";\n',
+    "Family R test routing import",
+)
+replace_once(
+    "tests/ui/connectedActorTurnRuleProduction.test.ts",
+    'import { applyConnectedClientEvents, connectedManifest } from "../../src/app/connectedSessionRuntimeAdapter";\n',
+    'import { applyConnectedClientEvents, applyConnectedTurnSimultaneousOrderingPrompt, connectedManifest, resumeConnectedTurnSimultaneousOrderingPromptForCharacter } from "../../src/app/connectedSessionRuntimeAdapter";\nimport { decodeConnectedWireMessage } from "../../src/app/connectedSessionWire";\nimport { routeConnectedTurnSimultaneousOrderingResponse } from "../../src/app/connectedTurnSimultaneousOrderingResponsePort";\n',
+    "Family R test connected imports",
+)
+
+test_path=Path("tests/ui/connectedActorTurnRuleProduction.test.ts")
+text=test_path.read_text()
+marker='test("connected simultaneous turn ordering routes only to the owning peer, survives reconnect, rejects stale/replay responses, and converges through authoritative turn events"'
+if marker not in text:
+    text += r'''
+
+test("connected simultaneous turn ordering routes only to the owning peer, survives reconnect, rejects stale/replay responses, and converges through authoritative turn events",async()=>{
+  const prefix="unknown-connected-simultaneous",sessionId="session.common-play-simultaneous",ownerPeer="peer.owner",reconnectPeer="peer.owner.reconnect";
+  const source=simultaneousPackageJson(prefix);
+  const host=new MockAdapter();
+  const pack=await install(host,prefix,source);
+  const hostConnected=connectedStateFor(host);
+  hostConnected.mode="host";hostConnected.sessionId=sessionId;hostConnected.ledger=new HostSessionLedger(sessionId,connectedManifest(host));
+
+  const client=new MockAdapter();
+  await install(client,prefix,source);
+  const clientConnected=connectedStateFor(client);
+  clientConnected.mode="client";clientConnected.sessionId=sessionId;clientConnected.replica=new ClientSessionReplica(sessionId);
+  hostConnected.peerManifests.set(ownerPeer,structuredClone(connectedManifest(client)));
+
+  const broadcasts:string[]=[];
+  const targeted:{peer:string;message:string}[]=[];
+  const originalSend=tauriSessionTransport.send;
+  const originalSendTo=tauriSessionTransport.sendTo;
+  tauriSessionTransport.send=async(message)=>{broadcasts.push(message);return 1;};
+  tauriSessionTransport.sendTo=async(peer,message)=>{targeted.push({peer,message});return 1;};
+  try {
+    let broadcastIndex=0;
+    await host.resolveAction(pack.summonAction,["char.aelar"]);
+    while(broadcastIndex<broadcasts.length){
+      const decoded=decodeConnectedWireMessage(broadcasts[broadcastIndex++]);
+      assert.equal(decoded.status,"ok");
+      if(decoded.status==="ok"&&decoded.message.type==="event-batch") assert.notEqual((await applyConnectedClientEvents(client,decoded.message.events)).status,"rejected");
+    }
+
+    let promptWire:{peer:string;message:string}|undefined;
+    for(let guard=0;guard<20&&!promptWire;guard++){
+      const cursorBeforeTurn=hostConnected.ledger.cursor;
+      const targetedBefore=targeted.length;
+      await host.endTurn();
+      promptWire=targeted.slice(targetedBefore).find((entry)=>{
+        const decoded=decodeConnectedWireMessage(entry.message);
+        return decoded.status==="ok"&&decoded.message.type==="turn-simultaneous-ordering-prompt";
+      });
+      if(promptWire) assert.equal(hostConnected.ledger.cursor,cursorBeforeTurn,"pending ordering must not append a no-op authoritative turn event");
+      while(broadcastIndex<broadcasts.length){
+        const decoded=decodeConnectedWireMessage(broadcasts[broadcastIndex++]);
+        assert.equal(decoded.status,"ok");
+        if(decoded.status==="ok"&&decoded.message.type==="event-batch") assert.notEqual((await applyConnectedClientEvents(client,decoded.message.events)).status,"rejected");
+      }
+    }
+
+    assert.ok(promptWire,"Host must route the pending simultaneous-ordering prompt to the owning peer");
+    assert.equal(promptWire.peer,ownerPeer);
+    const decodedPrompt=decodeConnectedWireMessage(promptWire.message);
+    assert.equal(decodedPrompt.status,"ok");
+    if(decodedPrompt.status!=="ok"||decodedPrompt.message.type!=="turn-simultaneous-ordering-prompt") throw new Error("connected ordering prompt did not decode");
+    assert.equal((applyConnectedTurnSimultaneousOrderingPrompt(client,decodedPrompt.message)).status,"applied");
+    const clientPending=peekAdapterTurnSimultaneousOrdering(client);
+    assert.ok(clientPending&&clientPending.status==="pending");
+
+    const reconnect=new MockAdapter();
+    await install(reconnect,prefix,source);
+    const reconnectConnected=connectedStateFor(reconnect);
+    reconnectConnected.mode="client";reconnectConnected.sessionId=sessionId;reconnectConnected.replica=new ClientSessionReplica(sessionId);
+    assert.notEqual((await applyConnectedClientEvents(reconnect,hostConnected.ledger.eventsAfter(0))).status,"rejected");
+    hostConnected.peerManifests.delete(ownerPeer);
+    hostConnected.peerManifests.set(reconnectPeer,structuredClone(connectedManifest(reconnect)));
+    const beforeResumeTargets=targeted.length;
+    assert.equal((await resumeConnectedTurnSimultaneousOrderingPromptForCharacter(host,reconnectPeer,"char.aelar")).status,"sent");
+    const resumedRaw=targeted.slice(beforeResumeTargets).find((entry)=>entry.peer===reconnectPeer)?.message;
+    assert.ok(resumedRaw,"reconnect must resend the transient pending decision");
+    const resumed=decodeConnectedWireMessage(resumedRaw!);
+    assert.equal(resumed.status,"ok");
+    if(resumed.status!=="ok"||resumed.message.type!=="turn-simultaneous-ordering-prompt") throw new Error("resumed ordering prompt did not decode");
+    assert.equal((applyConnectedTurnSimultaneousOrderingPrompt(reconnect,resumed.message)).status,"applied");
+    const hostPending=peekAdapterTurnSimultaneousOrdering(host);
+    assert.ok(hostPending&&hostPending.status==="pending");
+    if(!hostPending||hostPending.status!=="pending") throw new Error("Host ordering disappeared before response");
+    const spend=hostPending.request.candidates.find((candidate)=>candidate.id.endsWith(":turn-spend"))?.id;
+    const gain=hostPending.request.candidates.find((candidate)=>candidate.id.endsWith(":turn-gain"))?.id;
+    assert.ok(spend&&gain);
+
+    const cursorBeforeStale=hostConnected.ledger.cursor;
+    assert.equal(await routeConnectedTurnSimultaneousOrderingResponse(host,{peer:reconnectPeer,message:"stale"},{
+      sessionId,
+      response:{decisionId:hostPending.request.id,revision:hostPending.request.revision+1,responderId:"char.aelar",orderedCandidateIds:[spend!,gain!]},
+    }),true);
+    assert.equal(hostConnected.ledger.cursor,cursorBeforeStale,"stale ordering response must not commit authoritative history");
+    assert.equal(peekAdapterTurnSimultaneousOrdering(host)?.status,"pending");
+
+    const outboundBefore=broadcasts.length;
+    assert.equal((await sendConnectedTurnSimultaneousOrderingResponse(reconnect,[spend!,gain!])).status,"sent");
+    const responseRaw=broadcasts.slice(outboundBefore).find((raw)=>{
+      const decoded=decodeConnectedWireMessage(raw);
+      return decoded.status==="ok"&&decoded.message.type==="turn-simultaneous-ordering-response";
+    });
+    assert.ok(responseRaw,"Client must send a typed simultaneous-ordering response");
+    const decodedResponse=decodeConnectedWireMessage(responseRaw!);
+    assert.equal(decodedResponse.status,"ok");
+    if(decodedResponse.status!=="ok"||decodedResponse.message.type!=="turn-simultaneous-ordering-response") throw new Error("connected ordering response did not decode");
+    const cursorBeforeCommit=hostConnected.ledger.cursor;
+    assert.equal(await routeConnectedTurnSimultaneousOrderingResponse(host,{peer:reconnectPeer,message:responseRaw!},{sessionId:decodedResponse.message.sessionId,response:decodedResponse.message.response}),true);
+    assert.ok(hostConnected.ledger.cursor>cursorBeforeCommit,"accepted ordering must commit the retried authoritative turn transition");
+    assert.equal(peekAdapterTurnSimultaneousOrdering(host),undefined);
+
+    const committedBatchRaw=broadcasts.slice(outboundBefore).find((raw)=>{
+      const decoded=decodeConnectedWireMessage(raw);
+      return decoded.status==="ok"&&decoded.message.type==="event-batch";
+    });
+    assert.ok(committedBatchRaw,"resolved ordering must publish the authoritative turn event batch");
+    const committedBatch=decodeConnectedWireMessage(committedBatchRaw!);
+    assert.equal(committedBatch.status,"ok");
+    if(committedBatch.status!=="ok"||committedBatch.message.type!=="event-batch") throw new Error("resolved ordering event batch did not decode");
+    assert.notEqual((await applyConnectedClientEvents(reconnect,committedBatch.message.events)).status,"rejected");
+    assert.notEqual((await applyConnectedClientEvents(client,committedBatch.message.events)).status,"rejected");
+    const hostState=actorState(host,await host.getSnapshot(),pack.summonId,pack.resourceId);
+    assert.equal(hostState.resource,1);
+    assert.deepEqual(actorState(reconnect,await reconnect.getSnapshot(),pack.summonId,pack.resourceId),hostState);
+    assert.deepEqual(actorState(client,await client.getSnapshot(),pack.summonId,pack.resourceId),hostState);
+
+    const postReplay=new MockAdapter();
+    await install(postReplay,prefix,source);
+    const postState=connectedStateFor(postReplay);
+    postState.mode="client";postState.sessionId=sessionId;postState.replica=new ClientSessionReplica(sessionId);
+    assert.notEqual((await applyConnectedClientEvents(postReplay,hostConnected.ledger.eventsAfter(0))).status,"rejected");
+    assert.deepEqual(actorState(postReplay,await postReplay.getSnapshot(),pack.summonId,pack.resourceId),hostState);
+
+    const cursorBeforeReplay=hostConnected.ledger.cursor;
+    assert.equal(await routeConnectedTurnSimultaneousOrderingResponse(host,{peer:reconnectPeer,message:responseRaw!},{sessionId:decodedResponse.message.sessionId,response:decodedResponse.message.response}),true);
+    assert.equal(hostConnected.ledger.cursor,cursorBeforeReplay,"replayed response after commit must not execute the turn twice");
+  } finally {
+    tauriSessionTransport.send=originalSend;
+    tauriSessionTransport.sendTo=originalSendTo;
+  }
+});
+'''
+    test_path.write_text(text)
+
+ledger_path=Path("docs/rules/v1-mechanism-coverage-ledger.json")
+ledger=json.loads(ledger_path.read_text())
+row=next((entry for entry in ledger["rows"] if entry.get("family")=="R"),None)
+if not row:
+    raise SystemExit("Family R ledger row missing")
+row["currentState"]="A generic typed simultaneous-ordering decision kernel validates eligible candidate sets, actor-controller/DM authority, stale revisions, exact permutations, deterministic ordered projection, and idempotent exact replay. Production installed Common Play turn-start/turn-end timing windows collect eligible unknown external RuleModule candidates before mutation and pause for ordering. Connected Host transport sends the pending actor-controller decision only to the owning peer, resends the transient request after reconnect, rejects stale/unauthorized/replayed responses without authoritative mutation, then retries the same turn boundary in the accepted order and persists only the resulting canonical turn ResolutionEvents in the session ledger. Fresh replicas converge from ledger replay without a second execution engine."
+row["disposition"]="IMPLEMENTED"
+additions={
+    "implementationEvidence":[
+        "connectedSessionWire.ts typed turn-simultaneous-ordering prompt/response messages reuse CommonPlaySimultaneousOrderingRequest/Response without content identity dispatch",
+        "connectedTurnRoutingAdapter.ts authorizes actor-controller ordering responses from the accepted peer Character, rejects stale/unauthorized/replayed responses, and retries the same pending turn boundary",
+        "connectedSessionRuntimeAdapter.ts resends transient ordering prompts on Character reconnect while canonical turn results remain ordinary ledger ResolutionEvents",
+    ],
+    "productionEvidence":[
+        "connectedActorTurnRuleProduction.test.ts connected simultaneous ordering routes the pending unknown external turn window to its owner and commits the authorized order through the existing Resolver turn transaction",
+    ],
+    "connectedEvidenceIfRelevant":[
+        "connectedActorTurnRuleProduction.test.ts proves owner-targeted prompt transport, stale-response rejection, accepted remote ordering, authoritative event-batch convergence, and post-commit replay rejection",
+    ],
+    "persistenceEvidenceIfRelevant":[
+        "connectedActorTurnRuleProduction.test.ts proves a fresh reconnect catches up canonical prior events, receives the still-pending transient ordering prompt again, and a second fresh replica converges from the final ledger after the ordered turn commits",
+    ],
+}
+for key,values in additions.items():
+    existing=row.setdefault(key,[])
+    for value in values:
+        if value not in existing:
+            existing.append(value)
+row["remainingNamedSeams"]=[]
+ledger_path.write_text(json.dumps(ledger,ensure_ascii=False,indent=2)+"\n")
