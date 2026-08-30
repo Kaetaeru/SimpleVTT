@@ -535,17 +535,21 @@ function damageDiceFaces(
   startingDrawIndex:number,
 ) {
   const faces:Record<number,number[]>={};
+  const attackDice:Array<{operationIndex:number;count:number;sides:number}>=[];
   let drawIndex=startingDrawIndex;
+  const draw=(sides:number)=>{
+    const limit=20-(20%sides);
+    let face:number;
+    do face=internal.d20(actionId,drawIndex++); while(face>limit);
+    return ((face-1)%sides)+1;
+  };
   for(const [operationIndex,operation] of entryPoint.operations.entries()) {
     if(operation.kind!=="damage.apply"||typeof operation.amount!=="string") continue;
     const formula=parseCommonPlayDamageDiceFormula(operation.amount);
-    faces[operationIndex]=Array.from({length:formula.count},()=>{
-      const limit=20-(20%formula.sides);
-      let face:number;
-      do face=internal.d20(actionId,drawIndex++); while(face>limit);
-      return ((face-1)%formula.sides)+1;
-    });
+    faces[operationIndex]=Array.from({length:formula.count},()=>draw(formula.sides));
+    if(entryPoint.test?.kind==="attack-roll") attackDice.push({operationIndex,count:formula.count,sides:formula.sides});
   }
+  for(const dice of attackDice) faces[dice.operationIndex].push(...Array.from({length:dice.count},()=>draw(dice.sides)));
   return faces;
 }
 
