@@ -1,5 +1,5 @@
 name: C9 Gate N Final Verifier 71304
-# rerun after final ledger convergence, portable d20 presentation repair, and latest authoritative execution repairs
+# rerun after actor artifact reconnect/Undo stabilization and latest authoritative execution repairs
 
 on:
   push:
