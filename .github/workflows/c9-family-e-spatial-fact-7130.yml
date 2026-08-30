@@ -16,20 +16,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: agent/c9-gate-n-coverage-reconciliation
+          ref: agent/c9-family-e-spatial-stage-7130
           fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Reconcile latest branch and stage Family E spatial slice
+      - name: Stage Family E spatial slice
         shell: bash
         run: |
           set -euo pipefail
-          branch=agent/c9-gate-n-coverage-reconciliation
-          git fetch origin "$branch"
-          git rebase "origin/$branch"
           npm run generate:content
           python3 .github/scripts/c9-family-e-spatial-fact-7130.py
       - name: Verify Family E spatial fact slice
@@ -40,7 +37,7 @@ jobs:
           node scripts/check-v1-mechanism-coverage.mjs
           node scripts/check-legacy-execution-boundary.mjs
           npm exec tsc -- --noEmit
-      - name: Publish verified proof to staging branch
+      - name: Publish verified proof to connector-created staging branch
         shell: bash
         run: |
           set -euo pipefail
@@ -51,8 +48,4 @@ jobs:
           if ! git diff --cached --quiet; then
             git commit -m "test(c9): prove Family E spatial selector facts"
           fi
-          node --import tsx --test tests/ui/c9FamilyESpatialFactProduction.test.ts tests/ui/c9FamilyEConditionSelectorProduction.test.ts tests/ui/c9FamilyETagSelectorProduction.test.ts tests/ui/commonPlayRichSelectorProduction.test.ts
-          node scripts/check-v1-mechanism-coverage.mjs
-          node scripts/check-legacy-execution-boundary.mjs
-          npm exec tsc -- --noEmit
-          git push --force origin HEAD:agent/c9-family-e-spatial-stage-7130
+          git push origin HEAD:agent/c9-family-e-spatial-stage-7130
