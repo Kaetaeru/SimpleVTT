@@ -29,9 +29,14 @@ function actorCombatant(artifact:ReturnType<typeof createRuntimeArtifact>) {
   const actor=artifact.actor!;
   const maximum=Number(actor.properties["hp.maximum"]);
   const speed=Number(actor.properties["movement.walk"]);
+  const baseProperties:Record<string,number>={};
+  for(const [property,value] of Object.entries(actor.properties)) {
+    if(typeof value==="number"&&Number.isFinite(value)) baseProperties[property]=value;
+  }
   return {
     id:actor.combatantId,
     baseSpeed:speed,
+    baseProperties,
     life:{
       hp:{current:Number(actor.properties["hp.current"]??maximum),maximum,temporary:Number(actor.properties["hp.temporary"]??0)},
       deathSaves:{successes:0,failures:0},stable:false,unconscious:false,dead:false,
