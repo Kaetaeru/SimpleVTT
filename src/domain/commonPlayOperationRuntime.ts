@@ -1,6 +1,6 @@
 import { conditionEffectsFor, type RulesRuntimeState } from "./combatState";
 import type { D20RollModification, D20TestFamily, ModifierContribution } from "./d20";
-import { DomainEvaluationError, type ExpressionNode, type RollStateContribution, type RulesProfileLike } from "./profileEngine";
+import { DomainEvaluationError, evaluateExpression, type ExpressionNode, type RollStateContribution, type RulesProfileLike } from "./profileEngine";
 import { resolvePendingResolution } from "./resolution";
 import type { PendingResolution, ResolutionCommit, ResolutionOperation } from "./resolutionTypes";
 import type { ResourceRecovery } from "./resources";
@@ -30,6 +30,13 @@ type CommonPlayEffectRemove={
   when?:CommonPlayTestOutcomePredicate;
 };
 type CommonPlayMovementStand={kind:"movement.stand";target:"actor"|"self"};
+type CommonPlayMovementGrant={
+  kind:"movement.grant";
+  target:"actor"|"self";
+  distance:CommonPlayExpression;
+  maximumDistance?:CommonPlayExpression;
+  doesNotProvokeOpportunityAttacks?:boolean;
+};
 
 type CommonPlayResourceCreation={
   label:string;
@@ -185,6 +192,7 @@ export type CommonPlayOperation=
   |CommonPlayTemporaryHpGrant
   |CommonPlayLifeStabilize
   |CommonPlayMovementDefinition
+  |CommonPlayMovementGrant
   |CommonPlayMovementStand
   |CommonPlayConditionChange
   |CommonPlayEffectRemove
@@ -274,6 +282,7 @@ const TEMP_HP_GRANT_KEYS=new Set(["kind","amount","target","choice"]);
 const LIFE_STABILIZE_KEYS=new Set(["kind","target"]);
 const ROLL_MODIFY_KEYS=new Set(["kind","mode","value","dice"]);
 const MOVEMENT_RELOCATE_KEYS=new Set(["kind","mode","movementType","target","distance","costMultiplier","doesNotProvokeOpportunityAttacks","destinationFact"]);
+const MOVEMENT_GRANT_KEYS=new Set(["kind","target","distance","maximumDistance","doesNotProvokeOpportunityAttacks"]);
 const MOVEMENT_STAND_KEYS=new Set(["kind","target"]);
 const FACT_QUERY_KEYS=new Set(["id","fact","subject","authority","visibility","unknownPolicy"]);
 const DAMAGE_DICE=/^([0-9]+)d([0-9]+)([+-][0-9]+)?$/;
@@ -523,6 +532,18 @@ function parseOperation(value:unknown,label:string):CommonPlayOperation {
     if(lifetime.kind!=="until-duration"||lifetime.onEnd!=="destroy") throw new DomainEvaluationError(`${label}.lifetime must destroy at duration end`);
     if(operation.instancePolicy!=="stack"&&operation.instancePolicy!=="replace"&&operation.instancePolicy!=="unique-by-source"&&operation.instancePolicy!=="profile-policy") throw new DomainEvaluationError(`${label}.instancePolicy is unsupported`);
     return {kind:"property.modify",property:nonEmptyString(operation.property,`${label}.property`),operation:mode,value:numericExpression(operation.value,`${label}.value`),target:operation.target,owner:"effect",source:"definition",duration:{kind:"elapsed",amount,unit:duration.unit},lifetime:{kind:"until-duration",onEnd:"destroy"},instancePolicy:operation.instancePolicy};
+  }
+  if(operation.kind==="movement.grant") {
+    supportedKeys(operation,MOVEMENT_GRANT_KEYS,label);
+    if(operation.target!=="actor"&&operation.target!=="self") throw new DomainEvaluationError(`${label}.target must be actor or self`);
+    if(operation.doesNotProvokeOpportunityAttacks!==undefined&&typeof operation.doesNotProvokeOpportunityAttacks!=="boolean") throw new DomainEvaluationError(`${label}.doesNotProvokeOpportunityAttacks must be boolean`);
+    return {
+      kind:"movement.grant",
+      target:operation.target,
+      distance:numericExpression(operation.distance,`${label}.distance`),
+      ...(operation.maximumDistance===undefined?{}:{maximumDistance:numericExpression(operation.maximumDistance,`${label}.maximumDistance`)}),
+      ...(operation.doesNotProvokeOpportunityAttacks===undefined?{}:{doesNotProvokeOpportunityAttacks:operation.doesNotProvokeOpportunityAttacks===true}),
+    };
   }
   if(operation.kind==="movement.stand") {
     supportedKeys(operation,MOVEMENT_STAND_KEYS,label);
@@ -1128,6 +1149,27 @@ export function compileCommonPlayEntryPointOperations(
       continue;
     }
 
+    if(operation.kind==="movement.grant") {
+      const properties=input.movementProperties??{};
+      const resolveReference=(property:string)=>{
+        const value=properties[property];
+        if(!Number.isFinite(value)) throw new DomainEvaluationError(`movement.grant property is unavailable: ${property}`);
+        return Number(value);
+      };
+      const distance=evaluateExpression(operation.distance as ExpressionNode,resolveReference);
+      const maximumDistance=evaluateExpression((operation.maximumDistance??operation.distance) as ExpressionNode,resolveReference);
+      if(!Number.isFinite(distance)||distance<0) throw new DomainEvaluationError("movement.grant distance must be a non-negative finite number");
+      if(!Number.isFinite(maximumDistance)||maximumDistance<0) throw new DomainEvaluationError("movement.grant maximumDistance must be a non-negative finite number");
+      operations.push({
+        id:operationId,
+        kind:"free-move",
+        actorId:input.actorId,
+        distanceFeet:distance,
+        maximumDistanceFeet:maximumDistance,
+        ...(operation.doesNotProvokeOpportunityAttacks===true?{doesNotProvokeOpportunityAttacks:true}:{}),
+      });
+      continue;
+    }
     if(operation.kind==="movement.stand") {
       const actor=state.combatants[input.actorId];
       if(!actor) throw new DomainEvaluationError(`combatant not found: ${input.actorId}`);

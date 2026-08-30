@@ -980,6 +980,9 @@
           "$ref": "#/$defs/contentGrant"
         },
         {
+          "$ref": "#/$defs/movementGrant"
+        },
+        {
           "$ref": "#/$defs/movementOperation"
         },
         {
@@ -2142,6 +2145,38 @@
             "actor",
             "self"
           ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "movementGrant": {
+      "type": "object",
+      "required": [
+        "kind",
+        "target",
+        "distance"
+      ],
+      "properties": {
+        "kind": {
+          "const": "movement.grant"
+        },
+        "target": {
+          "enum": [
+            "actor",
+            "self"
+          ]
+        },
+        "distance": {
+          "$ref": "#/$defs/expression"
+        },
+        "maximumDistance": {
+          "$ref": "#/$defs/expression"
+        },
+        "doesNotProvokeOpportunityAttacks": {
+          "type": "boolean"
+        },
+        "when": {
+          "$ref": "#/$defs/predicate"
         }
       },
       "additionalProperties": false
