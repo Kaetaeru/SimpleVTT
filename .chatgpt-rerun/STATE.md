@@ -1,7 +1,7 @@
 # Rerun State
 
 - run_id: `b7f27a61-29d8-4ba2-9f93-8e66722d5f41`
-- sequence: `7`
+- sequence: `8`
 - task_id: `v1-common-play-c8-rerun`
 - dispatch status to publish: `continue`
 - repository: `Kaetaeru/SimpleVTT`
@@ -189,6 +189,15 @@ Family A (`expression-property`) remains `INCOMPLETE`. The persisted schema alre
 
 Family B (`turn-action-economy-timing`) remains `INCOMPLETE`. Action/Bonus Action/Reaction, movement budget, extra Action/Attack, once-per-turn/round/resolution frequency, begin/end-turn clocks, and structural off-turn stored invocation already have generic implementation and production evidence. The remaining required triggered-window/timing-dispatch semantics are not a second economy problem: they depend on the generic semantic-event vocabulary/order still unresolved in Family P, while initiative-count special timing is separately blocked in Family AC. A B-specific dispatcher would duplicate turn ownership and violate the one-language/one-owner architecture.
 
+## Family C reconciliation — deterministic post-roll advanced, portable dice follow-ups remain
+
+Family C (`d20-test-lifecycle`) remains `INCOMPLETE`, but two named/structural gaps were closed without a second roll engine:
+
+- `6d03412dcecc7186a2b0ee41da438f498c5333a0`: Cutting Words moved from its named side engine into declarative Common Play; the named adapter was deleted. Focused production evidence was 14/14 plus `tsc --noEmit`.
+- `6f6ed2e071b50a1b95d90a265aac541485bdf4b4`: the existing Common Play post-roll reaction path now lowers deterministic `replace`, `minimum`, `target-add`, and `add-flat` into the existing d20 Resolver. Unknown installed identity/rename, atomic Reaction/resource payment, and Undo are proven. Focused verification was 42/42, `tsc --noEmit`, and `vite build`.
+- The remaining Family C production seam is now precise: `d20FollowUpRuntimeAdapter.ts` is a generic executor, but `productionPlayRuntimeAdapter.ts` still injects Tactical Mind, Indomitable, Dark One's Own Luck, and Peerless Skill `runtimeD20FollowUps` behind named class/subclass/feature checks. Those add-die/reroll follow-ups therefore do not yet prove unknown portable content authoring.
+- Coverage totals remain `IMPLEMENTED=4`, `INCOMPLETE=32`, `PROVEN_UNNEEDED=0`; `gateNBlockingNamedFallbacks` remains empty and overall verdict remains `V1 INCOMPLETE`.
+
 ## Next Exact Action
 
-Move to Family C (`d20-roll-outcome`) and audit the remaining post-roll/roll-modification production seams, especially the retained Cutting Words legacy adapter, against the existing generic roll.modify/interceptor/follow-up machinery. Reuse the current d20 Resolver and interaction authority; do not introduce a named Bard path or a second roll engine. If one bounded structural migration can remove a gate-blocking named fallback and prove arbitrary identity plus connected/Undo, implement that slice.
+Continue Family C by moving post-roll `add-die` and `reroll` authoring for the remaining representative follow-ups out of named `productionPlayRuntimeAdapter.ts` identity checks and into the existing portable Common Play reaction/Resolver path. Reuse the current d20 Resolver, interaction authority, resource payment, persistence, and connected event transport; do not add a feature-specific executor or second roll engine. Prove an arbitrary/renamed installed definition in production, then add connected duplicate/reconnect/Undo evidence before considering Family C final.
