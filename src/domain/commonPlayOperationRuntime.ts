@@ -146,6 +146,12 @@ type CommonPlayHealingApply={
   target?:CommonPlayHpTarget;
 };
 
+type CommonPlayMaximumHpChange={
+  kind:"hp.maximum.change";
+  amount:CommonPlayExpression;
+  target?:CommonPlayHpTarget;
+};
+
 type CommonPlayTemporaryHpGrant={
   kind:"temp-hp.grant";
   amount:LiteralNumberExpression;
@@ -202,6 +208,7 @@ export type CommonPlayOperation=
   |CommonPlayEconomyModify
   |CommonPlayDamageApply
   |CommonPlayHealingApply
+  |CommonPlayMaximumHpChange
   |CommonPlayTemporaryHpGrant
   |CommonPlayLifeStabilize
   |CommonPlayLifeDeathSave
@@ -295,6 +302,7 @@ const RECHARGE_RANGE_KEYS=new Set(["minimum","maximum"]);
 const ECONOMY_MODIFY_KEYS=new Set(["kind","bucket","amount"]);
 const DAMAGE_APPLY_KEYS=new Set(["kind","amount","damageType","multiplier","reduction","target","when"]);
 const HEALING_APPLY_KEYS=new Set(["kind","amount","target"]);
+const MAXIMUM_HP_CHANGE_KEYS=new Set(["kind","amount","target"]);
 const CONDITION_CHANGE_KEYS=new Set(["kind","condition","target","when"]);
 const EFFECT_REMOVE_KEYS=new Set(["kind","selector","when"]);
 const EFFECT_SUPPRESS_KEYS=new Set(["kind","selector","suppressed","reason","pauseDuration","when"]);
@@ -734,6 +742,14 @@ function parseOperation(value:unknown,label:string):CommonPlayOperation {
       ...(when?{when}:{}),
     };
   }
+  if(operation.kind==="hp.maximum.change") {
+    supportedKeys(operation,MAXIMUM_HP_CHANGE_KEYS,label);
+    return {
+      kind:"hp.maximum.change",
+      amount:numericExpression(operation.amount,`${label}.amount`),
+      ...(operation.target===undefined?{}:{target:hpTarget(operation.target,`${label}.target`)}),
+    };
+  }
   if(operation.kind==="healing.apply") {
     supportedKeys(operation,HEALING_APPLY_KEYS,label);
     if(typeof operation.amount==="string") {
@@ -816,7 +832,7 @@ export function parseCommonPlayOperationDefinition(value:unknown,label="Common P
     };
   });
 for(const [index,entryPoint] of entryPoints.entries()) {
-  if((entryPoint.targeting?.max??1)>1&&entryPoint.operations.some((operation)=>(operation.kind==="damage.apply"||operation.kind==="healing.apply"||operation.kind==="temp-hp.grant"||operation.kind==="life.stabilize")&&operation.target==="target")) {
+  if((entryPoint.targeting?.max??1)>1&&entryPoint.operations.some((operation)=>(operation.kind==="damage.apply"||operation.kind==="healing.apply"||operation.kind==="hp.maximum.change"||operation.kind==="temp-hp.grant"||operation.kind==="life.stabilize")&&operation.target==="target")) {
     throw new DomainEvaluationError(`${label}.entryPoints[${index}] multi-target selection requires an explicit per-target effect contract`);
   }
 }
@@ -1252,6 +1268,18 @@ export function compileCommonPlayEntryPointOperations(
           value:operation.reduction.value,
         }]}),
         creatureKind,
+      });
+      continue;
+    }
+
+    if(operation.kind==="hp.maximum.change") {
+      const amount=actorExpressionInteger(operation.amount,input,"hp.maximum.change amount");
+      if(amount===0) throw new DomainEvaluationError("hp.maximum.change amount must resolve to a non-zero integer");
+      operations.push({
+        id:operationId,
+        kind:"maximum-hp",
+        targetId:hpOperationTarget(operation.target,input),
+        amount,
       });
       continue;
     }

@@ -981,6 +981,9 @@
           "$ref": "#/$defs/healingApply"
         },
         {
+          "$ref": "#/$defs/maximumHpChange"
+        },
+        {
           "$ref": "#/$defs/tempHpGrant"
         },
         {
@@ -1276,6 +1279,29 @@
         },
         "when": {
           "$ref": "#/$defs/predicate"
+        }
+      },
+      "additionalProperties": false
+    },
+    "maximumHpChange": {
+      "type": "object",
+      "required": [
+        "kind",
+        "amount"
+      ],
+      "properties": {
+        "kind": {
+          "const": "hp.maximum.change"
+        },
+        "amount": {
+          "$ref": "#/$defs/expression"
+        },
+        "target": {
+          "enum": [
+            "actor",
+            "self",
+            "target"
+          ]
         }
       },
       "additionalProperties": false

@@ -23,6 +23,7 @@ import type { ResolutionOperation } from "./resolutionTypes";
 type DamageOp = Extract<ResolutionOperation, { kind:"damage" }>;
 type CompoundDamageOp = Extract<ResolutionOperation, { kind:"compound-damage" }>;
 type HealingOp = Extract<ResolutionOperation, { kind:"healing" }>;
+type MaximumHpOp = Extract<ResolutionOperation, { kind:"maximum-hp" }>;
 type TemporaryHpOp = Extract<ResolutionOperation, { kind:"temporary-hp" }>;
 type DamageLifecycleOp = DamageOp | CompoundDamageOp;
 type DeathSaveOp=Extract<ResolutionOperation,{kind:"death-save"}>;
@@ -270,6 +271,23 @@ export function executeCompoundDamage(ctx: ResolutionExecutionContext, operation
     damage,
     `${operation.targetId} takes ${damage.finalDamage} compound damage (${detail})`,
   );
+}
+
+export function executeMaximumHpChange(ctx:ResolutionExecutionContext,operation:MaximumHpOp):OperationExecution {
+  const target=requireCombatant(ctx.state,operation.targetId);
+  const beforeHp={...target.life.hp};
+  const delta=valueFromResult(ctx.results,operation.amount);
+  if(!Number.isInteger(delta)||delta===0) throw new DomainEvaluationError("maximum HP change must resolve to a non-zero integer");
+  const maximum=beforeHp.maximum+delta;
+  if(maximum<1) throw new DomainEvaluationError("maximum HP must remain at least 1");
+  target.life.hp={...beforeHp,maximum,current:Math.min(beforeHp.current,maximum)};
+  const provenance=[{source:ctx.pending.sourceId,status:"applied" as const,reason:`Maximum HP ${beforeHp.maximum} -> ${maximum}`}];
+  const result={delta,nextHp:{...target.life.hp},provenance};
+  const changes=hpStateChanges(operation.targetId,beforeHp,target.life.hp,provenance);
+  return {
+    result,
+    event:makeEvent(ctx.pending,operation,`${operation.targetId} maximum HP ${beforeHp.maximum} -> ${maximum}`,result,provenance,changes,operation.targetId),
+  };
 }
 
 export function executeHealing(ctx: ResolutionExecutionContext, operation: HealingOp): OperationExecution {

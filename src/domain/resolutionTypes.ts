@@ -175,6 +175,11 @@ export type ResolutionOperation =
       amount: NumericOperand;
     })
   | (OperationBase & {
+      kind: "maximum-hp";
+      targetId: string;
+      amount: NumericOperand;
+    })
+  | (OperationBase & {
       kind: "temporary-hp";
       targetId: string;
       amount: NumericOperand;

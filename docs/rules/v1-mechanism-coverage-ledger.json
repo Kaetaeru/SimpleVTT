@@ -944,7 +944,7 @@
         "compoundDamage.test.ts",
         "resolutionHealthOps.ts"
       ],
-      "currentState": "Bounded typed damage/healing plus portable Temporary HP, character life/death flows, structural damage threshold/reduction, and portable attack critical-dice doubling are production-proven through Common Play/Resolver with external identity invariance and event-native Undo. Portable Object damage/repair/destruction is additionally production-proven through the generic RuntimeArtifact Resolver path with connected replay/reconnect/Undo and external identity invariance. Portable Object/Vehicle-like damage, repair, threshold/typed defenses, connected replay/reconnect, Undo, and external identity invariance are production-proven through the generic Common Play/RuntimeArtifact Resolver path.  Maximum-HP runtime overlays preserve the authoritative source maximum across Character persistence/restart and inverse write-back. Named feature/spell HP execution remains cataloged legacy migration debt where it bypasses portable Common Play; it is not a supported portable execution fallback or second HP engine.",
+      "currentState": "Family L is complete on the generic damage/life authority. Typed/compound damage, defenses, critical dice, Temporary HP, healing, max-HP runtime overlays, 0-HP/death-save/stabilization/instant-death flows, and Object/Vehicle damage execute through Common Play/Resolver or the generic RuntimeArtifact path with authoritative StateChanges. Unknown installed max-HP content now preserves source-owned base maximum separately from durable runtime maximum through restart, connected replay/reconnect, and event-native Undo. Remaining named feature/spell HP adapters are migration debt only and are not a supported portable fallback or second HP engine.",
       "requiredSemantics": [
         "typed/compound damage",
         "resistance",
@@ -976,7 +976,9 @@
         "persistenceContracts.ts separates source build maxHp from optional runtime durable maxHp overlay",
         "characterLibraryPersistence.ts preserves sourceMaxHp while materializing runtime maximum HP overrides across restart",
         "resolutionCharacterDurableProjection.ts applies inverse-ready HpStateChange.maximum with drift and current-HP invariant checks",
-        "persistenceContracts.ts, characterLibraryPersistence.ts, and resolutionCharacterDurableProjection.ts preserve source max HP separately from a durable runtime maximum-HP overlay and inverse write-back"
+        "persistenceContracts.ts, characterLibraryPersistence.ts, and resolutionCharacterDurableProjection.ts preserve source max HP separately from a durable runtime maximum-HP overlay and inverse write-back",
+        "commonPlayOperationRuntime.ts structurally parses hp.maximum.change and lowers signed expression deltas to the shared Resolver maximum-hp operation without content identity dispatch",
+        "resolutionHealthOps.ts executes maximum-hp changes against HpState, clamps current HP when required, and emits inverse-ready durable HpStateChanges; existing Character persistence keeps sourceMaxHp separate from runtime maxHp overlays"
       ],
       "productionEvidence": [
         "4752de7dffc560684cb9d5ad04b3475e64de8673 feat(c9): lower portable Temporary HP",
@@ -991,7 +993,9 @@
         "connectedObjectLinkArtifactLifecycleProduction.test.ts proves unknown external object damage threshold/resistance, damage, repair, destruction, Host/Client replay, fresh reconnect, duplicate handling, and event-native Undo through the generic artifact Resolver path",
         "c9FamilyLArtifactDamageProduction71304.test.ts proves an unknown installed RuleModule can spawn Object and Vehicle-like object artifacts, apply structural threshold/typed defenses/damage/repair, and Undo through the generic Common Play artifact Resolver path",
         "c9FamilyLMaxHpPersistence.test.ts proves maximum-HP increase and reduction source/runtime persistence, restart reconstruction, current-HP clamp ordering, and inverse write-back",
-        "678be8d5756deb4583e450d4f303facf94b1680b feat(c9): persist maximum hp runtime overlays; c9FamilyLMaxHpPersistence.test.ts proves forward/inverse maximum-HP write-back without mutating the source maximum"
+        "678be8d5756deb4583e450d4f303facf94b1680b feat(c9): persist maximum hp runtime overlays; c9FamilyLMaxHpPersistence.test.ts proves forward/inverse maximum-HP write-back without mutating the source maximum",
+        "tests/ui/c9FamilyLMaximumHpProduction71304.test.ts unknown installed hp.maximum.change executes positive and negative maximum-HP deltas through production Common Play/Resolver with durable source/runtime separation, restart, and event-native Undo",
+        "C9 Family L Portable Max HP 71304 run 33318925207 passed unknown/renamed production, persistence/restart, connected replay/reconnect/Undo, adjacent Family L regressions, coverage checker, legacy boundary, and tsc --noEmit before ledger finalization"
       ],
       "identityInvarianceEvidence": [
         "c9FamilyLTemporaryHpProduction.test.ts renamed external module/content/mechanic preserves Temporary HP semantics",
@@ -1003,17 +1007,20 @@
         "c9FamilyLCriticalDiceProduction71304.test.ts repeats natural-20 critical dice doubling after complete external module/content/mechanic identity rename",
         "connectedObjectLinkArtifactLifecycleProduction.test.ts repeats object damage/repair/destruction semantics after complete external module/content/mechanic identity rename",
         "c9FamilyLArtifactDamageProduction71304.test.ts repeats Object/Vehicle-like artifact damage semantics after complete external module/content/mechanic identity rename",
-        "c9FamilyLMaxHpPersistence.test.ts proves maximum-HP runtime semantics are invariant to content identity because durable projection consumes only structural HpStateChange fields"
+        "c9FamilyLMaxHpPersistence.test.ts proves maximum-HP runtime semantics are invariant to content identity because durable projection consumes only structural HpStateChange fields",
+        "c9FamilyLMaximumHpProduction71304.test.ts repeats the complete maximum-HP production/persistence/Undo flow after unrelated external module/content/mechanic identity rename"
       ],
       "connectedEvidenceIfRelevant": [
         "c9FamilyLTemporaryHpProduction.test.ts Host/Client authoritative replay, event-native Undo, and fresh reconnect converge Temporary HP",
         "c9FamilyLTemporaryHpProduction.test.ts replays portable Temporary HP grant and Undo through Host-authoritative connected resolution events",
-        "connectedObjectLinkArtifactLifecycleProduction.test.ts proves the RuntimeArtifact state-change family survives Host/Client replay, fresh reconnect, duplicate handling, and event-native Undo"
+        "connectedObjectLinkArtifactLifecycleProduction.test.ts proves the RuntimeArtifact state-change family survives Host/Client replay, fresh reconnect, duplicate handling, and event-native Undo",
+        "c9FamilyLMaximumHpProduction71304.test.ts Host-authoritative maximum-HP StateChanges converge on Client replay, Undo, and fresh reconnect without content identity routing"
       ],
       "persistenceEvidenceIfRelevant": [
         "c9FamilyLTemporaryHpProduction.test.ts reconstructs the post-Undo Temporary HP state on a fresh connected replica from the Host event ledger",
         "c9FamilyLMaxHpPersistence.test.ts proves runtime maximum HP survives Character library materialization without mutating source maxHp and normalizes after inverse write-back",
-        "c9FamilyLMaxHpPersistence.test.ts proves a maximum-HP runtime overlay survives Character library materialization/restart and disappears after inverse write-back while the source maximum remains stable"
+        "c9FamilyLMaxHpPersistence.test.ts proves a maximum-HP runtime overlay survives Character library materialization/restart and disappears after inverse write-back while the source maximum remains stable",
+        "c9FamilyLMaximumHpProduction71304.test.ts preserves source.build.maxHp while durable runtime.maxHp survives fresh adapter restart and disappears again after event-native Undo"
       ],
       "remainingNamedSeams": [],
       "connectedRelevant": true,
