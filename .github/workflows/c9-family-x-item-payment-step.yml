@@ -29,7 +29,16 @@ jobs:
           text=p.read_text()
           start=text.index('\nm1 = Path(".github/workflows/m1-common-play-resource-economy.yml")')
           end=text.index('\n\nPath("tests/ui/installedCommonPlayItemPaymentProduction.test.ts")',start)
-          p.write_text(text[:start]+text[end:])
+          text=text[:start]+text[end:]
+          text=text.replace(
+            'const ITEM_PAYMENT_SELECTOR_KEYS=new Set(["from","where","min","max"]);',
+            'const ITEM_PAYMENT_SELECTOR_KEYS=new Set(["from","where","min","max","definitionId"]);',
+          )
+          text=text.replace(
+            '  if(selector.min!==1||selector.max!==1) throw new DomainEvaluationError(`${label} must select exactly one item stack with min=1 and max=1`);',
+            '  if(typeof selector.definitionId==="string") return {from:"items",definitionId:nonEmptyString(selector.definitionId,`${label}.definitionId`)};\n  if(selector.min!==1||selector.max!==1) throw new DomainEvaluationError(`${label} must select exactly one item stack with min=1 and max=1`);',
+          )
+          p.write_text(text)
           PY
           python .github/scripts/c9-family-x-item-payment-step.py
       - name: Install dependencies
