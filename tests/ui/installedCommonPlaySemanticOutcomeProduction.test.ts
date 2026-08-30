@@ -27,7 +27,13 @@ function payload(prefix:string) {
           entryPoints:[
             {id:"attack",invocation:"manual",targeting:{from:"targets",min:1,max:1},test:{kind:"attack-roll",roller:"actor",dc:{value:10}},operations:[]},
             {id:"save",invocation:"manual",test:{kind:"saving-throw",roller:"actor",dc:{value:14}},operations:[]},
+            {id:"effect",invocation:"manual",operations:[{kind:"effect.apply",template:"semantic-ward",target:"actor"}]},
           ],
+          artifactTemplates:[{
+            id:"semantic-ward",artifactKind:"effect",duration:{kind:"elapsed",amount:{value:1},unit:"hours"},
+            rules:[{id:"semantic-retaliate",event:"damage.taken",frequency:"once",operations:[{kind:"damage.apply",amount:{value:1},damageType:"force",target:"event.actor"}]}],
+            lifetime:{kind:"until-event",event:"damage.taken",onEnd:"destroy"},instancePolicy:"stack",
+          }],
         }}],
       }],
     }),
@@ -68,11 +74,19 @@ async function run(prefix:string) {
   assert.ok(save,JSON.stringify(history));
   assert.equal(save.actorId,"char.aelar");
   assert.equal(save.targetId,"char.aelar");
-  return [attack.kind,save.kind];
+
+  snapshot=await adapter.resolveAction(action("effect"),["char.aelar"]);
+  assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
+  history=runtimeResolutionEventHistory(adapter);
+  const applied=history?.events.find((event)=>event.kind==="state.applied");
+  assert.ok(applied,JSON.stringify(history));
+  assert.equal(applied.actorId,"char.aelar");
+  assert.equal(applied.targetId,"char.aelar");
+  return [attack.kind,save.kind,applied.kind];
 }
 
-test("unknown installed Common Play emits attack and save semantic outcome events through production commit",async()=>{
-  assert.deepEqual(await run("unknown-semantic-a"),["attack.hit","save.failure"]);
+test("unknown installed Common Play emits attack, save, and state-applied semantic events through production commit",async()=>{
+  assert.deepEqual(await run("unknown-semantic-a"),["attack.hit","save.failure","state.applied"]);
 });
 
 test("production semantic outcome events do not depend on module, content, or mechanic identity",async()=>{
