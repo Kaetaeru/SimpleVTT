@@ -10,6 +10,20 @@ Product integration target: `work/v1-composite`
 
 Finish C9 Gate N from the current evidence state, without reopening already validated work. Produce one exact HEAD SHA that satisfies every Gate N acceptance condition, then prepare that exact SHA for integration to `work/v1-composite`.
 
+## Current checkpoint — local Gate N candidate complete
+
+- Local candidate before this documentation update: `489c8dfb8ba300bae76ef3d4ffc85480e80aa1a1` (tree `899cc171366bbc788f2410a34f2154b24784740a`).
+- Branch: `agent/codex-c9-gate-n-finalization`; worktree clean; 30 commits ahead of the last fetched remote.
+- Ledger: 36 total, 36 `IMPLEMENTED`, 0 `INCOMPLETE`, no Gate-N-blocking named fallback.
+- Completed after the historical checkpoint below: Families AE, AF, AG, AH, AI, and aggregate Family AJ.
+- Validation on the candidate: `npm run build` PASS; focused Family N 12/12 PASS; Family AJ aggregate 44/44 PASS; `npm run test:v1-coverage` PASS; Gate N classifier PASS; legacy boundary PASS; `git diff --check` PASS.
+- Removed all 46 temporary `.github/workflows/c9-*` one-shot workflows.
+- Publication is blocked only by local Windows Git credentials (`SEC_E_NO_CREDENTIALS`). `gh` is not installed, so queued/running remote Actions could not be inspected from this environment.
+
+### Next Exact Action
+
+Authenticate Git, push `agent/codex-c9-gate-n-finalization`, verify normal read-only CI and that no branch-writing workflow is queued/running for the exact pushed SHA, then integrate that exact SHA into `work/v1-composite`. Do not reopen or repeat Families A-AJ.
+
 ## Preflight — do this before editing
 
 1. Confirm the checked-out branch is `agent/codex-c9-gate-n-finalization`.
@@ -142,7 +156,7 @@ When work stops before Gate N is finished, update this document with:
 - the first unresolved blocker;
 - one `Next Exact Action` that another Codex run can execute without repeating completed work.
 
-## Current checkpoint — 2026-08-31, Family AD complete
+## Historical checkpoint — 2026-08-31, Family AD complete
 
 - Validated implementation HEAD before this handoff-only update: `d061e4a055820a561756289e99cc51c8173dfbb5` (tree `b8302ccf2869243fa1cf97deeef279051a6ff95f`).
 - Branch: `agent/codex-c9-gate-n-finalization`; the implementation HEAD was twenty commits ahead of the previously fetched remote.

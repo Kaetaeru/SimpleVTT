@@ -17,7 +17,7 @@ Do not move active work back to the upstream C9 branch merely because it has new
 
 ## Current objective
 
-Finish **C9 Gate N finalization** without repeating already proven mechanism-family work.
+Publish and integrate the completed **C9 Gate N local candidate** without repeating mechanism-family work.
 
 The reusable execution model remains:
 
@@ -38,9 +38,17 @@ Identity such as spell/feat/class/item IDs is for lookup, provenance, and presen
 
 ## Immediate blocker
 
-At the frozen baseline, `C9 Family N Source Cleanup 71304` run `33319298002` proved the focused Family N lifecycle tests but failed at the repository-wide `npm run build`. Because the build failed, its ledger reconciliation and self-removal/publish step did **not** land. Family N therefore remains `INCOMPLETE` in the checked-in ledger.
+All 36 mechanism families are `IMPLEMENTED` in the checked-in ledger and the local exact-SHA acceptance is green. The remaining blocker is external publication: this environment cannot push because Windows Git credentials are unavailable (`SEC_E_NO_CREDENTIALS`), and `gh` is not installed to inspect queued/running Actions.
 
-Start by reproducing and fixing that exact build failure on this branch. Do not mark Family N `IMPLEMENTED` until the focused lifecycle proof, full build, coverage classification, legacy execution boundary, and ledger evidence all pass together.
+Do not reopen a mechanism family. Authenticate Git, push the exact current candidate branch, verify normal read-only CI and absence of a branch-writing job, then integrate that exact verified SHA into `work/v1-composite`.
+
+## Local Gate N candidate
+
+- Candidate before this documentation update: `489c8dfb8ba300bae76ef3d4ffc85480e80aa1a1` (tree `899cc171366bbc788f2410a34f2154b24784740a`).
+- Ledger: 36 `IMPLEMENTED`, 0 `INCOMPLETE`, 0 Gate-N-blocking named fallbacks.
+- `npm run build`, focused Family N 12/12, Family AJ aggregate 44/44, coverage contract, Gate N classifier, legacy boundary, and `git diff --check`: PASS.
+- All 46 temporary `.github/workflows/c9-*` one-shot workflows were removed.
+- Push attempt: blocked only by missing local Git credentials; remote CI state therefore remains unverified.
 
 ## Gate N completion rule
 
@@ -61,7 +69,7 @@ Gate N is complete only when all of the following are true on **one exact branch
 
 ## Workflow discipline
 
-Do **not** add another self-publishing GitHub Actions loop to finish this work. Existing `c9-*` one-shot workflows are historical evidence or cleanup candidates unless the current task specifically requires their read-only checks. Prefer local/Codex edits and normal CI. Before declaring final Gate N green, remove or disable remaining temporary workflows that can write/push to the active branch and confirm no write job is queued or running.
+Do **not** add another self-publishing GitHub Actions loop. The accumulated `c9-*` one-shot workflows have been removed; use normal read-only CI only and do not recreate branch-writing automation.
 
 ## Known cleanup
 
