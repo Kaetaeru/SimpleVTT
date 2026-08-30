@@ -36,6 +36,8 @@ jobs:
               raise SystemExit(f'expected one stale selector fixture, got {text.count(old)}')
           path.write_text(text.replace(old,new,1),encoding='utf-8')
           PY
+      - name: Generate content catalogs
+        run: npm run generate:content
       - name: Verify targeting import and production slice
         run: >-
           npx tsx --test
