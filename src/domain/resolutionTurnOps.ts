@@ -15,6 +15,7 @@ import type { ResolutionOperation } from "./resolutionTypes";
 type BeginTurnOp = Extract<ResolutionOperation, { kind:"begin-turn" }>;
 type EndTurnOp = Extract<ResolutionOperation, { kind:"end-turn" }>;
 type AdvanceTimeOp = Extract<ResolutionOperation, { kind:"advance-time" }>;
+type SetInitiativeCountOp = Extract<ResolutionOperation, { kind:"set-initiative-count" }>;
 
 function expireRuntimeEffects(ctx:ResolutionExecutionContext) {
   const generic=expireEffectsAtClock(ctx.state.effects,ctx.state.clock);
@@ -133,6 +134,19 @@ export function executeEndTurn(ctx:ResolutionExecutionContext, operation:EndTurn
   return {
     result,
     event:makeEvent(ctx.pending, operation, `turn ${operation.actorId} ends`, result, provenance, changes, operation.actorId),
+  };
+}
+
+export function executeSetInitiativeCount(ctx:ResolutionExecutionContext, operation:SetInitiativeCountOp):OperationExecution {
+  if(!Number.isInteger(operation.count)||operation.count<0) throw new DomainEvaluationError("initiative count must be a non-negative integer");
+  const clockBefore=structuredClone(ctx.state.clock);
+  ctx.state.clock={...ctx.state.clock,initiativeCount:operation.count};
+  const provenance:ProvenanceRecord[]=[{source:"initiative:count",status:"applied",reason:`initiative count advanced to ${operation.count}`}];
+  const changes:RuntimeStateChange[]=[turnClockStateChange(clockBefore,ctx.state.clock,provenance)];
+  const result={initiativeCount:operation.count};
+  return {
+    result,
+    event:makeEvent(ctx.pending,operation,`initiative count advanced to ${operation.count}`,result,provenance,changes),
   };
 }
 

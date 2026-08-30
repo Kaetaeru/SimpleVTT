@@ -62,6 +62,27 @@ test("special timing compiles owner-authorized off-turn cost and payload into th
   assert.throws(()=>compileCommonPlaySpecialAction(runtime,{id:"x",ownerActorId:"dragon",timing:{kind:"after-turn",actor:"other"},options:[{id:"x",cost:0,operations:[]}]},{resolutionId:"x",requesterActorId:"hero",optionId:"x",event:{kind:"after-turn",actorId:"hero"}}),/owner/);
 });
 
+test("initiative-count timing is sourced from the authoritative Resolver clock",()=>{
+  const runtime=state();
+  const definition={id:"external.lair",ownerActorId:"dragon",timing:{kind:"initiative-count" as const,count:20},options:[{id:"pulse",cost:0,operations:[]}]};
+  assert.throws(()=>compileCommonPlaySpecialAction(runtime,definition,{resolutionId:"forged",requesterActorId:"dragon",optionId:"pulse",event:{kind:"initiative-count",initiativeCount:20}}),/authoritative runtime clock/);
+  const advanced=resolvePendingResolution(profile,runtime,{id:"initiative-20",actorId:"dragon",sourceId:"session.initiative",expectedRevision:0,operations:[{id:"count",kind:"set-initiative-count",count:20}]});
+  assert.equal(advanced.status,"committed");
+  if(advanced.status!=="committed")return;
+  assert.equal(advanced.state.clock.initiativeCount,20);
+  const clockChange=advanced.events[0].stateChanges.find((change)=>change.kind==="turn-clock");
+  assert.equal(clockChange?.kind,"turn-clock");
+  if(clockChange?.kind==="turn-clock") {
+    assert.equal(clockChange.before.initiativeCount,undefined);
+    assert.equal(clockChange.after.initiativeCount,20);
+  }
+  const pending=compileCommonPlaySpecialAction(advanced.state,definition,{resolutionId:"lair-20",requesterActorId:"dragon",optionId:"pulse",event:{kind:"initiative-count",initiativeCount:20}});
+  assert.equal(resolvePendingResolution(profile,advanced.state,pending).status,"committed");
+  assert.throws(()=>compileCommonPlaySpecialAction(advanced.state,definition,{resolutionId:"wrong-count",requesterActorId:"dragon",optionId:"pulse",event:{kind:"initiative-count",initiativeCount:19}}),/authoritative runtime clock/);
+  const invalid=resolvePendingResolution(profile,runtime,{id:"initiative-invalid",actorId:"dragon",sourceId:"session.initiative",expectedRevision:0,operations:[{id:"count",kind:"set-initiative-count",count:-1}]});
+  assert.equal(invalid.status,"rejected");
+});
+
 test("portable special timing authoring binds owner at runtime and validates option entry points",()=>{
   const parsed=parseCommonPlayDefinition({
     schemaVersion:"0.2-draft",id:"external.special-authoring",

@@ -106,6 +106,7 @@ export function compileCommonPlaySpecialAction(
 ):PendingResolution {
   if(!definition.id||!definition.ownerActorId||!request.resolutionId)throw new DomainEvaluationError("special action identity is required");
   if(request.requesterActorId!==definition.ownerActorId)throw new DomainEvaluationError("only the special action owner can invoke it");
+  if(request.event.kind==="initiative-count"&&state.clock.initiativeCount!==request.event.initiativeCount)throw new DomainEvaluationError("initiative-count event must match the authoritative runtime clock");
   if(!eligible(definition,request.event))throw new DomainEvaluationError("special action is outside its eligible timing window");
   const option=definition.options.find((entry)=>entry.id===request.optionId);
   if(!option)throw new DomainEvaluationError(`special action option not found: ${request.optionId}`);

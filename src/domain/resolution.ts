@@ -29,7 +29,7 @@ import {
   executeUpdateEffect,
 } from "./resolutionEffectOps";
 import { executeDamageArtifact, executeRelocateArtifact, executeRemoveArtifact, executeRepairArtifact, executeSetArtifactController, executeSetZoneMembership, executeSpawnArtifact, executeUpdateArtifact } from "./resolutionArtifactOps";
-import { executeAdvanceTime, executeBeginTurn, executeEndTurn } from "./resolutionTurnOps";
+import { executeAdvanceTime, executeBeginTurn, executeEndTurn, executeSetInitiativeCount } from "./resolutionTurnOps";
 import { executeLongRest, executeShortRest } from "./resolutionRestOps";
 import type {
   PendingResolution,
@@ -78,6 +78,7 @@ function executeOperation(
     case "reaction": return executeReaction(ctx, operation);
     case "begin-turn": return executeBeginTurn(ctx, operation);
     case "end-turn": return executeEndTurn(ctx, operation);
+    case "set-initiative-count": return executeSetInitiativeCount(ctx, operation);
     case "advance-time": return executeAdvanceTime(ctx, operation);
     case "short-rest": return executeShortRest(ctx, operation);
     case "long-rest": return executeLongRest(ctx, operation);

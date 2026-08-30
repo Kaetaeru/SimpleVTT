@@ -281,6 +281,10 @@ export type ResolutionOperation =
       round: number;
     })
   | (OperationBase & {
+      kind: "set-initiative-count";
+      count: number;
+    })
+  | (OperationBase & {
       kind: "advance-time";
       elapsedSeconds: number;
     })

@@ -8,6 +8,7 @@ export type TurnActivityCategory = "movement" | "action" | "bonus-action";
 export interface RuntimeClock {
   round: number;
   elapsedSeconds: number;
+  initiativeCount?: number;
   activeActorId?: string;
   phase?: TurnBoundary | "action";
 }
