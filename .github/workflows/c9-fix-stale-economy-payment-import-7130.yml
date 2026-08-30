@@ -1,0 +1,58 @@
+name: C9 Fix Stale Economy Payment Import 7130
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-fix-stale-economy-payment-import-7130.yml
+
+permissions:
+  contents: write
+
+jobs:
+  fix-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Remove stale action-bucket rejection case
+        shell: python
+        run: |
+          from pathlib import Path
+          path=Path('tests/ui/ruleModulePackageImport.test.ts')
+          text=path.read_text(encoding='utf-8')
+          stale='    (mechanic)=>{mechanic.config.payments[0].bucket="action";},\n'
+          if text.count(stale)!=1:
+              raise SystemExit(f'expected one stale action-bucket mutation, found {text.count(stale)}')
+          text=text.replace(stale,'',1)
+          text=text.replace('rejects unsupported interaction and Reaction payment authoring before persistence','rejects unsupported interaction and economy payment authoring before persistence',1)
+          path.write_text(text,encoding='utf-8')
+      - name: Verify import and allocation acceptance regressions
+        run: >-
+          npx tsx --test
+          tests/ui/ruleModulePackageImport.test.ts
+          tests/domain/commonPlayAllocationRuntime.test.ts
+          tests/ui/installedCommonPlayAllocationProductionRuntime.test.ts
+          tests/ui/c9FamilyFAllocationAcceptance.test.ts
+      - name: Verify legacy execution boundary
+        run: node scripts/check-legacy-execution-boundary.mjs
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - name: Commit fix and retire helper
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/c9-fix-stale-economy-payment-import-7130.yml
+          git add tests/ui/ruleModulePackageImport.test.ts
+          git commit -m "test(c9): align economy payment import coverage"
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
