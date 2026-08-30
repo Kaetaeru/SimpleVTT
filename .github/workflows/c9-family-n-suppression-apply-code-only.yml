@@ -6,6 +6,10 @@ on:
       - agent/c9-gate-n-coverage-reconciliation
     paths:
       - .github/workflows/c9-family-n-suppression-apply-code-only.yml
+      - tests/ui/c9FamilyNEffectDurationProduction.test.ts
+      - src/domain/commonPlayOperationRuntime.ts
+      - src/domain/resolutionEffectOps.ts
+      - src/domain/effects.ts
 
 jobs:
   verify:
