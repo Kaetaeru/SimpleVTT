@@ -35,15 +35,21 @@ jobs:
           runtime=Path('src/domain/commonPlayOperationRuntime.ts')
           text=runtime.read_text(encoding='utf-8')
 
+          def replace_once(old,new,label):
+              global text
+              if old not in text:
+                  raise SystemExit(f'{label} anchor missing')
+              text=text.replace(old,new,1)
+
           if 'type CommonPlayEffectRemove=' not in text:
-              anchor='''type CommonPlayConditionChange={
+              old='''type CommonPlayConditionChange={
             kind:"condition.apply"|"condition.remove";
             condition:ConditionId;
             target?:CommonPlayConditionTarget;
             when?:CommonPlayTestOutcomePredicate;
           };
           type CommonPlayMovementStand={kind:"movement.stand";target:"actor"|"self"};'''.replace('          ','')
-              replacement='''type CommonPlayConditionChange={
+              new='''type CommonPlayConditionChange={
             kind:"condition.apply"|"condition.remove";
             condition:ConditionId;
             target?:CommonPlayConditionTarget;
@@ -55,29 +61,20 @@ jobs:
             when?:CommonPlayTestOutcomePredicate;
           };
           type CommonPlayMovementStand={kind:"movement.stand";target:"actor"|"self"};'''.replace('          ','')
-              if anchor not in text: raise SystemExit('effect.remove type anchor missing')
-              text=text.replace(anchor,replacement,1)
+              replace_once(old,new,'type')
 
           if '|CommonPlayEffectRemove' not in text:
-              anchor='''  |CommonPlayMovementStand
-            |CommonPlayConditionChange
-            |CommonPlayRollModify;'''.replace('            ','  ')
-              replacement='''  |CommonPlayMovementStand
-            |CommonPlayConditionChange
-            |CommonPlayEffectRemove
-            |CommonPlayRollModify;'''.replace('            ','  ')
-              if anchor not in text: raise SystemExit('effect.remove union anchor missing')
-              text=text.replace(anchor,replacement,1)
+              old='  |CommonPlayMovementStand\n  |CommonPlayConditionChange\n  |CommonPlayRollModify;'
+              new='  |CommonPlayMovementStand\n  |CommonPlayConditionChange\n  |CommonPlayEffectRemove\n  |CommonPlayRollModify;'
+              replace_once(old,new,'union')
 
-          key_anchor='const CONDITION_CHANGE_KEYS=new Set(["kind","condition","target","when"]);'
           if 'const EFFECT_REMOVE_KEYS=' not in text:
-              if key_anchor not in text: raise SystemExit('effect.remove key anchor missing')
-              text=text.replace(key_anchor,key_anchor+'\nconst EFFECT_REMOVE_KEYS=new Set(["kind","selector","when"]);',1)
+              old='const CONDITION_CHANGE_KEYS=new Set(["kind","condition","target","when"]);'
+              replace_once(old,old+'\nconst EFFECT_REMOVE_KEYS=new Set(["kind","selector","when"]);','keys')
 
-          parser_anchor='''  if(operation.kind==="condition.apply"||operation.kind==="condition.remove") {
-            supportedKeys(operation,CONDITION_CHANGE_KEYS,label);'''.replace('            ','    ')
-          if 'operation.kind==="effect.remove"' not in text:
-              parser='''  if(operation.kind==="effect.remove") {
+          if 'if(operation.kind==="effect.remove") {' not in text:
+              old='  if(operation.kind==="condition.apply"||operation.kind==="condition.remove") {\n    supportedKeys(operation,CONDITION_CHANGE_KEYS,label);'
+              new='''  if(operation.kind==="effect.remove") {
             supportedKeys(operation,EFFECT_REMOVE_KEYS,label);
             const selector=parseCommonPlaySelector(operation.selector,`${label}.selector`);
             if(selector.from!=="effects") throw new DomainEvaluationError(`${label}.selector.from must be effects for portable Common Play effect.remove`);
@@ -85,21 +82,17 @@ jobs:
             const when=testOutcomePredicate(operation.when,`${label}.when`);
             return {kind:"effect.remove",selector:{...selector,from:"effects"},...(when?{when}:{})};
           }
-          '''.replace('          ','')
-              if parser_anchor not in text: raise SystemExit('effect.remove parser anchor missing')
-              text=text.replace(parser_anchor,parser+parser_anchor,1)
+          '''.replace('          ','')+old
+              replace_once(old,new,'parser')
 
           old='(operation.kind==="condition.apply"||operation.kind==="condition.remove")&&operation.when'
           new='(operation.kind==="condition.apply"||operation.kind==="condition.remove"||operation.kind==="effect.remove")&&operation.when'
           if new not in text:
-              if old not in text: raise SystemExit('effect.remove conditional validation anchor missing')
-              text=text.replace(old,new,1)
+              replace_once(old,new,'conditional-validation')
 
-          compiler_anchor='''    if(operation.kind==="condition.apply"||operation.kind==="condition.remove") {
-            const targetId=conditionOperationTarget(operation.target,input);'''.replace('            ','      ')
-          compiler_marker='Common Play effect.remove selector rejected:'
-          if compiler_marker not in text:
-              compiler='''    if(operation.kind==="effect.remove") {
+          if 'Common Play effect.remove selector rejected:' not in text:
+              old='    if(operation.kind==="condition.apply"||operation.kind==="condition.remove") {\n      const targetId=conditionOperationTarget(operation.target,input);'
+              block='''    if(operation.kind==="effect.remove") {
             const when=operation.when?{operationId:`${input.resolutionId}:test`,field:"outcome" as const,equals:operation.when.right.value}:undefined;
             const candidates:CommonPlaySelectorCandidate[]=state.effects.filter(effectIsActive).map((effect)=>({
               id:effect.id,
@@ -121,21 +114,17 @@ jobs:
           }
 
           '''.replace('          ','')
-              if compiler_anchor not in text: raise SystemExit('effect.remove compiler anchor missing')
-              text=text.replace(compiler_anchor,compiler+compiler_anchor,1)
+              replace_once(old,block+old,'compiler')
 
           runtime.write_text(text,encoding='utf-8')
 
           test=Path('tests/ui/c9FamilyHSearchDiscoveryProduction.test.ts')
           text=test.read_text(encoding='utf-8')
-          old='''          {
-            kind: "condition.remove",
+          if 'kind: "effect.remove"' not in text:
+              old='''kind: "condition.remove",
             condition: "invisible",
-            target: "target",
-            when: { op: "eq", left: { ref: "test.outcome" }, right: { value: "success" } },
-          },'''
-          new='''          {
-            kind: "effect.remove",
+            target: "target",'''
+              new='''kind: "effect.remove",
             selector: {
               from: "effects",
               where: {
@@ -148,11 +137,8 @@ jobs:
               min: 1,
               max: 1,
               selection: "automatic",
-            },
-            when: { op: "eq", left: { ref: "test.outcome" }, right: { value: "success" } },
-          },'''
-          if new not in text:
-              if old not in text: raise SystemExit('Family H Search effect.remove test anchor missing')
+            },'''
+              if old not in text: raise SystemExit('Family H Search operation anchor missing')
               text=text.replace(old,new,1)
           test.write_text(text,encoding='utf-8')
           PY
