@@ -16,7 +16,7 @@ import { MockAdapter } from "../../src/app/mockAdapter";
 import { resolveRuntimeProfileProperty } from "../../src/app/realResolutionService";
 import type { EffectInstance } from "../../src/domain/effects";
 import { tauriSessionTransport } from "../../src/app/tauriSessionTransport";
-import { snapshotAdapterTurnRuntimeState } from "../../src/app/turnRuntimeSessionRegistry";
+import { MemoryTurnRuntimeStateStore, setTurnRuntimeStateStoreForTests, snapshotAdapterTurnRuntimeState } from "../../src/app/turnRuntimeSessionRegistry";
 
 const wireShape=(value:unknown)=>JSON.parse(JSON.stringify(value));
 
@@ -34,8 +34,8 @@ function moduleJson(prefix:string) {
   return {moduleId,contentId,mechanicId,json:JSON.stringify({schemaVersion:"0.1-draft",moduleId,moduleVersion:"1",rulesProfile:{id:"dnd.srd-5.2.1",version:"0.1-draft"},defaultLocale:"en",source:{document:"Unknown property module",version:"1",license:"CC0",srdDerived:false},dependencies:[],conflicts:[],capabilities:[],content:[{id:contentId,category:"option",presentation:{defaultLocale:"en",originalName:"Unknown Property Movement",locales:{en:{name:"Unknown Property Movement"}}},mechanics:[{kind:"common-play",config}]}]})};
 }
 
-async function install(adapter:MockAdapter,prefix:string) {
-  setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
+async function install(adapter:MockAdapter,prefix:string,store=new MemoryInstalledContentStore()) {
+  setInstalledContentStoreForTests(adapter,store);
   const pack=moduleJson(prefix);
   const preview=await adapter.previewContentImport(pack.json);
   assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
@@ -90,6 +90,40 @@ test("unknown Common Play property modifier projects a non-movement profile prop
   await adapter.undoLastResolution();
   const undone=await adapter.getSnapshot();
   assert.equal(undone.scene.entities.find((entity)=>entity.id==="char.aelar")!.ac,baseAc);
+});
+
+test("source-bound property modifier survives a fresh local adapter restart",async()=>{
+  const prefix="external-property-local-restart";
+  const installedStore=new MemoryInstalledContentStore();
+  const runtimeStore=new MemoryTurnRuntimeStateStore();
+  const first=new MockAdapter();
+  setTurnRuntimeStateStoreForTests(first,runtimeStore);
+  const {action}=await install(first,prefix,installedStore);
+  await first.resolveAction(action("slow"),["char.aelar"]);
+  const committed=await first.getSnapshot();
+  assert.equal(snapshotAdapterTurnRuntimeState(first,committed.scene)?.effects.length,1);
+
+  const restarted=new MockAdapter();
+  setInstalledContentStoreForTests(restarted,installedStore);
+  setTurnRuntimeStateStoreForTests(restarted,runtimeStore);
+  await restarted.startInitiative();
+  await restarted.setCurrentActor("char.aelar");
+  const restored=await restarted.getSnapshot();
+  const restoredState=snapshotAdapterTurnRuntimeState(restarted,restored.scene)!;
+  assert.deepEqual(restoredState.effects.at(-1)?.propertyModifier,{property:"movement.walk",operation:"set",value:{value:5},source:"definition",instancePolicy:"stack"});
+  const beforeMove=restored.scene.economyByActor["char.aelar"]!.movement;
+  await restarted.resolveAction(action("move"),["char.aelar"]);
+  const moved=await restarted.getSnapshot();
+  assert.equal(beforeMove-moved.scene.economyByActor["char.aelar"]!.movement,5,JSON.stringify(moved.resolution));
+  assert.equal(moved.resolution?.stage,"complete");
+
+  await restarted.endInitiative();
+  const cleared=new MockAdapter();
+  setInstalledContentStoreForTests(cleared,installedStore);
+  setTurnRuntimeStateStoreForTests(cleared,runtimeStore);
+  await cleared.startInitiative();
+  const clearedSnapshot=await cleared.getSnapshot();
+  assert.equal(snapshotAdapterTurnRuntimeState(cleared,clearedSnapshot.scene)?.effects.length,0);
 });
 
 test("renaming the external module preserves property-modified production movement",async()=>{
