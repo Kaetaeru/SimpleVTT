@@ -1,0 +1,58 @@
+name: C9 Family I Ledger Reconcile 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-i-ledger-reconcile-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile-and-clean:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Reconcile verified Family I evidence
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
+          ledger=json.loads(path.read_text())
+          row=next(row for row in ledger['rows'] if row['family']=='I')
+          row['currentState']='Canonical movement.relocate parses through the generic operations lowerer. Unknown installed Common Play production-executes walk, climb, swim, fly, crawl, jump, Difficult Terrain/rules-derived movement cost, drag/carry cost composition, push, pull, teleport, explicit no-provoke movement, zero-speed rejection, portable alternate-speed grants, Undo, connected replay/reconnect, and external identity rename invariance. Rules-derived movement cost, drag/carry multiplier, and alternate-speed bounds are production-proven through generic RulesProfile properties. Family I remains incomplete only for convergence of remaining named movement-grant execution seams.'
+          implementation='commonPlayMovementRuntime.ts structurally composes movement.cost.multiplier and movement.drag-carry.multiplier while preserving alternate-speed bounds through movement.<type> profile properties'
+          production='3944dec61960f3842e784dceafc29700b25e391f test(c9): verify drag carry movement property; C9 Family I Drag Carry Proof 71304 run 33315183958 passed focused domain/production movement and Prone tests, legacy execution boundary, V1 coverage checker, and tsc --noEmit'
+          identity='c9FamilyIMovementProduction.test.ts preserves rules-derived Difficult Terrain and movement.drag-carry.multiplier semantics after unrelated external module/content/mechanic identity rename'
+          for field,value in [('implementationEvidence',implementation),('productionEvidence',production),('identityInvarianceEvidence',identity)]:
+              if value not in row[field]: row[field].append(value)
+          row['remainingNamedSeams']=['named movement grants']
+          path.write_text(json.dumps(ledger,ensure_ascii=False,indent=2)+'\n')
+          PY
+          node scripts/check-v1-mechanism-coverage.mjs
+      - name: Publish ledger reconciliation and remove verifier
+        run: |
+          set -euo pipefail
+          branch=agent/c9-gate-n-coverage-reconciliation
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm .github/workflows/c9-family-i-ledger-reconcile-71304.yml
+          git add docs/rules/v1-mechanism-coverage-ledger.json .github/workflows/c9-family-i-ledger-reconcile-71304.yml
+          git commit -m "docs(c9): reconcile Family I movement evidence"
+          for attempt in $(seq 1 10); do
+            if git push origin HEAD:"$branch"; then exit 0; fi
+            git fetch origin "$branch"
+            git rebase "origin/$branch"
+            sleep 1
+          done
+          exit 1
