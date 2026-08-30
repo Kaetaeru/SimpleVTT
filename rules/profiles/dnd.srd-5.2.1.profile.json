@@ -18,6 +18,9 @@
     "id": "dnd.rounding.default-floor",
     "default": "floor"
   },
+  "propertyModifierPolicy": {
+    "defaultInstancePolicy": "unique-by-source"
+  },
   "properties": {
     "ability.str.score": {"type": "integer", "storage": "stored"},
     "ability.str.modifier": {"type": "integer", "storage": "derived", "formula": {"op": "floor", "args": [{"op": "divide", "args": [{"op": "subtract", "args": [{"ref": "ability.str.score"}, {"value": 10}]}, {"value": 2}]}]}},

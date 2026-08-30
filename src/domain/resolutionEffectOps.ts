@@ -50,20 +50,25 @@ function endActorConcentration(ctx: ResolutionExecutionContext, actorId:string, 
   return { current, ended };
 }
 
-function displacedPropertyModifierEffects(effects:EffectInstance[],effect:EffectInstance):EffectInstance[] {
+function displacedPropertyModifierEffects(
+  effects:EffectInstance[],
+  effect:EffectInstance,
+  profile:ResolutionExecutionContext["profile"],
+):EffectInstance[] {
   const modifier=effect.propertyModifier;
-  if(!modifier||modifier.instancePolicy==="stack") return [];
-  if(modifier.instancePolicy==="profile-policy") {
-    throw new DomainEvaluationError("property modifier profile-policy requires an explicit RulesProfile stacking policy");
-  }
+  if(!modifier) return [];
+  const policy=modifier.instancePolicy==="profile-policy"
+    ? profile.propertyModifierPolicy?.defaultInstancePolicy
+    : modifier.instancePolicy;
+  if(!policy) throw new DomainEvaluationError("property modifier profile-policy requires an explicit RulesProfile stacking policy");
+  if(policy==="stack") return [];
   return effects.filter((existing)=>{
     const current=existing.propertyModifier;
     if(existing.targetId!==effect.targetId||!current||current.property!==modifier.property) return false;
-    if(modifier.instancePolicy==="replace") return true;
+    if(policy==="replace") return true;
     return existing.sourceId===effect.sourceId;
   });
 }
-
 export function executeApplyEffect(ctx:ResolutionExecutionContext, operation:ApplyEffectOp):OperationExecution {
   const target = requireCombatant(ctx.state, operation.effect.targetId);
   const effect = createEffect(operation.effect, ctx.state.clock);
@@ -91,7 +96,7 @@ export function executeApplyEffect(ctx:ResolutionExecutionContext, operation:App
     }
   }
 
-  const displacedEffects=displacedPropertyModifierEffects(ctx.state.effects,effect);
+  const displacedEffects=displacedPropertyModifierEffects(ctx.state.effects,effect,ctx.profile);
   if(displacedEffects.length) {
     const displacedIds=new Set(displacedEffects.map((entry)=>entry.id));
     ctx.state.effects=ctx.state.effects.filter((entry)=>!displacedIds.has(entry.id));

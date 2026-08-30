@@ -35,6 +35,7 @@ export interface EconomyGrantBucketDefinition {
 export interface RulesProfileLike {
   profileId: string;
   roundingPolicy?: { id: string; default?: "floor"|"ceil"|"round" };
+  propertyModifierPolicy?: { defaultInstancePolicy: "stack"|"replace"|"unique-by-source" };
   properties: Record<string, { storage?: string; formula?: ExpressionNode }>;
   d20Test?: {
     advantageDisadvantage?: {
