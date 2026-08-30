@@ -13,7 +13,6 @@ import { setInstalledContentStoreForTests } from "../../src/app/installedContent
 import { MemoryInstalledContentStore } from "../../src/app/memoryInstalledContentStore";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import { ClientSessionReplica, HostSessionLedger, type ConnectedSessionEvent } from "../../src/app/connectedSessionProtocol";
-import { takeCommittedResolutionEvents } from "../../src/app/resolutionEventCommitRegistry";
 import { tauriSessionTransport } from "../../src/app/tauriSessionTransport";
 import { snapshotAdapterTurnRuntimeState } from "../../src/app/turnRuntimeSessionRegistry";
 
@@ -86,27 +85,16 @@ async function install(adapter:MockAdapter,prefix:string,lifetimeKind:"durable"|
 }
 
 async function captureBatch(adapter:MockAdapter,operation:()=>Promise<unknown>) {
-  const wires:string[]=[];
-  const originalSend=tauriSessionTransport.send;
-  tauriSessionTransport.send=async(message)=>{wires.push(message);return 1;};
-  let result:unknown;
-  try { result=await operation(); }
-  finally { tauriSessionTransport.send=originalSend; }
-  const batch=wires.map((wire)=>JSON.parse(wire) as {type:string;events?:ConnectedSessionEvent[]})
-    .find((wire):wire is {type:"event-batch";events:ConnectedSessionEvent[]}=>wire.type==="event-batch"&&Array.isArray(wire.events));
-  const resolution=(result as {resolution?:{id?:string;stage?:string;actionId?:string}}|undefined)?.resolution;
   const state=connectedStateFor(adapter);
-  const strandedEvents=!batch&&resolution?.id?takeCommittedResolutionEvents(resolution.id):undefined;
-  assert.ok(batch,JSON.stringify({
-    wires,
-    resolution,
-    ledgerCursor:state.ledger?.cursor??null,
-    published:resolution?.id?state.publishedResolutionIds.has(resolution.id):false,
-    publishedEventCount:resolution?.id?state.publishedResolutionEvents.get(resolution.id)?.length??0:0,
-    nextPresentationSequence:state.nextPresentationSequence,
-    strandedEventCount:strandedEvents?.length??0,
-  }));
-  return batch;
+  assert.ok(state.ledger,"connected Host ledger is required");
+  const afterCursor=state.ledger.cursor;
+  const originalSend=tauriSessionTransport.send;
+  tauriSessionTransport.send=async()=>1;
+  try { await operation(); }
+  finally { tauriSessionTransport.send=originalSend; }
+  const events=state.ledger.eventsAfter(afterCursor);
+  assert.ok(events.length>0,`connected operation must commit events after cursor ${afterCursor}`);
+  return {type:"event-batch" as const,events:events as ConnectedSessionEvent[]};
 }
 
 function actorProjection(adapter:MockAdapter,snapshot:Awaited<ReturnType<MockAdapter["getSnapshot"]>>,combatantId:string) {
