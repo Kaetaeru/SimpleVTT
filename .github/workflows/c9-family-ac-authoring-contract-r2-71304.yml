@@ -1,0 +1,67 @@
+name: C9 Family AC Authoring Contract R2 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-ac-authoring-contract-r2-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  authoring-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Sync branch
+        run: git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+      - name: Reapply verified authoring patch
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import textwrap
+          source=Path('.github/workflows/c9-family-ac-authoring-contract-71304.yml').read_text(encoding='utf-8')
+          marker="          python3 - <<'PY'\n"
+          start=source.index(marker)+len(marker)
+          end=source.index("          PY\n",start)
+          Path('/tmp/ac_patch.py').write_text(textwrap.dedent(source[start:end]),encoding='utf-8')
+          PY
+          python3 /tmp/ac_patch.py
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Generate content catalogs
+        run: npm run generate:content
+      - name: Verify Family AC authoring slice
+        shell: bash
+        run: |
+          npx tsx --test tests/domain/commonPlayC6Runtime.test.ts
+          npx tsx --test --test-name-pattern="registered Common Play resource, d20, HP, targeting, and interaction mechanics persist" tests/ui/ruleModulePackageImport.test.ts
+          node -e "JSON.parse(require('node:fs').readFileSync('schemas/common-play-contract.schema.json','utf8')); console.log('schema json ok')"
+          node scripts/check-legacy-execution-boundary.mjs
+          npx tsc --noEmit
+      - name: Publish authoring contract and retire workflows
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add schemas/common-play-contract.schema.json src/domain/commonPlaySpecialTimingRuntime.ts src/domain/commonPlayDefinitionRuntime.ts tests/domain/commonPlayC6Runtime.test.ts tests/ui/ruleModulePackageImport.test.ts
+          git rm .github/workflows/c9-family-ac-authoring-contract-71304.yml .github/workflows/c9-family-ac-authoring-contract-r2-71304.yml
+          git commit -m "feat(c9): persist portable special timing definitions"
+          for attempt in 1 2 3 4 5; do
+            git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+            if git push origin HEAD:agent/c9-gate-n-coverage-reconciliation; then
+              exit 0
+            fi
+            sleep 1
+          done
+          exit 1
