@@ -2,12 +2,18 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import "../../src/app/offlineRuntimeAdapters";
 import "../../src/app/installedContentRuntimeAdapter";
+import "../../src/app/connectedSessionRuntimeAdapter";
+import "../../src/app/connectedActionRoutingAdapter";
 import type { SceneVm } from "../../src/app/contracts";
+import { applyConnectedClientEvents, connectedManifest } from "../../src/app/connectedSessionRuntimeAdapter";
+import { connectedStateFor } from "../../src/app/connectedSessionState";
 import { catalogQualifiedId } from "../../src/app/contentCatalogIdentity";
 import { installedCommonPlayActionId } from "../../src/app/installedCommonPlayActionReference";
 import { setInstalledContentStoreForTests } from "../../src/app/installedContentRuntimeAdapter";
 import { MemoryInstalledContentStore } from "../../src/app/memoryInstalledContentStore";
 import { MockAdapter } from "../../src/app/mockAdapter";
+import { ClientSessionReplica, HostSessionLedger, type ConnectedSessionEvent } from "../../src/app/connectedSessionProtocol";
+import { tauriSessionTransport } from "../../src/app/tauriSessionTransport";
 import { commitAdapterTurnRuntimeState, snapshotAdapterTurnRuntimeState } from "../../src/app/turnRuntimeSessionRegistry";
 
 const TARGET_ID="combatant.goblin-a";
@@ -38,8 +44,7 @@ function packagePayload(prefix:string) {
   };
 }
 
-async function exercise(prefix:string) {
-  const adapter=new MockAdapter();
+async function install(adapter:MockAdapter,prefix:string) {
   const pack=packagePayload(prefix);
   setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
   const preview=await adapter.previewContentImport(pack.json);
@@ -47,9 +52,18 @@ async function exercise(prefix:string) {
   await adapter.activateContentImport();
   await adapter.startInitiative();
   await adapter.setCurrentActor("char.aelar");
-  const action=(entryPointId:string)=>installedCommonPlayActionId({
+  return (entryPointId:string)=>installedCommonPlayActionId({
     catalogId:catalogQualifiedId(pack.contentId,pack.moduleId,"1"),mechanicId:pack.mechanicId,entryPointId,
   });
+}
+
+function hasCondition(adapter:MockAdapter,snapshot:Awaited<ReturnType<MockAdapter["getSnapshot"]>>,conditionId:string) {
+  return snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)?.effects.some((effect)=>effect.targetId===TARGET_ID&&effect.conditionId===conditionId)??false;
+}
+
+async function exercise(prefix:string) {
+  const adapter=new MockAdapter();
+  const action=await install(adapter,prefix);
   const scene=(adapter as unknown as {scene:SceneVm}).scene;
 
   const seed=snapshotAdapterTurnRuntimeState(adapter,scene)!;
@@ -60,7 +74,7 @@ async function exercise(prefix:string) {
   let snapshot=await adapter.resolveAction(action("poison"),[TARGET_ID]);
   assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
   assert.match(snapshot.resolution?.detail.join("\n")??"",/poisoned suppressed by immunity/);
-  assert.equal(snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)?.effects.some((effect)=>effect.targetId===TARGET_ID&&effect.conditionId==="poisoned"),false);
+  assert.equal(hasCondition(adapter,snapshot,"poisoned"),false);
 
   const explicit=snapshotAdapterTurnRuntimeState(adapter,scene)!;
   const clearExplicit=structuredClone(explicit);
@@ -70,24 +84,61 @@ async function exercise(prefix:string) {
 
   snapshot=await adapter.resolveAction(action("petrify"),[TARGET_ID]);
   assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
-  assert.equal(snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)?.effects.some((effect)=>effect.targetId===TARGET_ID&&effect.conditionId==="petrified"),true);
+  assert.equal(hasCondition(adapter,snapshot,"petrified"),true);
 
   snapshot=await adapter.resolveAction(action("poison"),[TARGET_ID]);
   assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
   assert.match(snapshot.resolution?.detail.join("\n")??"",/poisoned suppressed by immunity/);
-  assert.equal(snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)?.effects.some((effect)=>effect.targetId===TARGET_ID&&effect.conditionId==="poisoned"),false);
+  assert.equal(hasCondition(adapter,snapshot,"poisoned"),false);
 
   snapshot=await adapter.resolveAction(action("clear-petrified"),[TARGET_ID]);
   assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
   snapshot=await adapter.resolveAction(action("poison"),[TARGET_ID]);
   assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
-  assert.equal(snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)?.effects.some((effect)=>effect.targetId===TARGET_ID&&effect.conditionId==="poisoned"),true);
+  assert.equal(hasCondition(adapter,snapshot,"poisoned"),true);
   await adapter.undoLastResolution();
   snapshot=await adapter.getSnapshot();
-  assert.equal(snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)?.effects.some((effect)=>effect.targetId===TARGET_ID&&effect.conditionId==="poisoned"),false);
+  assert.equal(hasCondition(adapter,snapshot,"poisoned"),false);
 }
 
 test("unknown installed Common Play condition application honors explicit and rules-derived immunity under identity rename",async()=>{
   await exercise("unknown-family-m-immunity");
   await exercise("renamed-family-m-immunity");
+});
+
+test("portable condition apply/remove converges through Host replay, Undo, and fresh reconnect",async()=>{
+  const prefix="external.connected-family-m",sessionId="session.c9-family-m-condition";
+  const host=new MockAdapter(),action=await install(host,prefix);
+  const hostState=connectedStateFor(host);
+  hostState.mode="host";hostState.sessionId=sessionId;hostState.ledger=new HostSessionLedger(sessionId,connectedManifest(host));
+  const originalSend=tauriSessionTransport.send;
+  const runHost=async(operation:()=>Promise<unknown>)=>{
+    const wires:string[]=[];tauriSessionTransport.send=async(message)=>{wires.push(message);return 1;};
+    try { await operation(); } finally { tauriSessionTransport.send=originalSend; }
+    const batch=wires.map((wire)=>JSON.parse(wire)).find((wire)=>wire.type==="event-batch") as {events:ConnectedSessionEvent[]}|undefined;
+    assert.ok(batch,JSON.stringify(wires));return batch!;
+  };
+
+  const client=new MockAdapter();await install(client,prefix);
+  const clientState=connectedStateFor(client);clientState.mode="client";clientState.sessionId=sessionId;clientState.replica=new ClientSessionReplica(sessionId);
+
+  const applyBatch=await runHost(()=>host.resolveAction(action("petrify"),[TARGET_ID]));
+  assert.equal((await applyConnectedClientEvents(client,applyBatch.events)).status,"applied");
+  assert.equal(hasCondition(host,await host.getSnapshot(),"petrified"),true);
+  assert.equal(hasCondition(client,await client.getSnapshot(),"petrified"),true);
+
+  const removeBatch=await runHost(()=>host.resolveAction(action("clear-petrified"),[TARGET_ID]));
+  assert.equal((await applyConnectedClientEvents(client,removeBatch.events)).status,"applied");
+  assert.equal(hasCondition(host,await host.getSnapshot(),"petrified"),false);
+  assert.equal(hasCondition(client,await client.getSnapshot(),"petrified"),false);
+
+  const undoBatch=await runHost(()=>host.undoLastResolution());
+  assert.equal((await applyConnectedClientEvents(client,undoBatch.events)).status,"applied");
+  assert.equal(hasCondition(host,await host.getSnapshot(),"petrified"),true);
+  assert.equal(hasCondition(client,await client.getSnapshot(),"petrified"),true);
+
+  const reconnect=new MockAdapter();await install(reconnect,prefix);
+  const reconnectState=connectedStateFor(reconnect);reconnectState.mode="client";reconnectState.sessionId=sessionId;reconnectState.replica=new ClientSessionReplica(sessionId);
+  assert.equal((await applyConnectedClientEvents(reconnect,hostState.ledger!.eventsAfter(0))).status,"applied");
+  assert.equal(hasCondition(reconnect,await reconnect.getSnapshot(),"petrified"),true);
 });
