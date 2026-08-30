@@ -22,6 +22,15 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run generate:content
+      - name: Capture baseline type diagnostics
+        shell: bash
+        run: |
+          set +e
+          npx tsc --noEmit > /tmp/tsc-before.log 2>&1
+          code=$?
+          set -e
+          cat /tmp/tsc-before.log
+          echo "$code" > /tmp/tsc-before.code
       - name: Bridge maintained concentration to the shared Resolver
         shell: bash
         run: |
@@ -58,9 +67,16 @@ jobs:
           test_path.write_text(tests)
           PY
       - name: Verify Family O bridge
+        shell: bash
         run: |
           npx tsx --test tests/domain/commonPlayEffectRuntime.test.ts tests/domain/concentrationDamageResult.test.ts
-          npx tsc --noEmit
+          set +e
+          npx tsc --noEmit > /tmp/tsc-after.log 2>&1
+          code=$?
+          set -e
+          cat /tmp/tsc-after.log
+          test "$code" = "$(cat /tmp/tsc-before.code)"
+          cmp /tmp/tsc-before.log /tmp/tsc-after.log
           node scripts/check-v1-mechanism-coverage.mjs
           node scripts/check-legacy-execution-boundary.mjs
       - name: Commit verified bridge
