@@ -1,4 +1,4 @@
-name: C9 Family C Publish Verified D20 Selectors
+name: C9 Family C Reconcile Structural D20 Slice
 
 on:
   push:
@@ -11,40 +11,131 @@ on:
 permissions:
   contents: write
 
+env:
+  PRODUCT_SHA: b537fdbd8bde102c7dadcd993c4c785c2d88e25b
+  VERIFY_RUN: "33290013900"
+
 jobs:
-  publish:
+  reconcile:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Apply already-verified migration
-        run: |
-          python3 .github/c9-family-c-d20-migrate.py
-          python3 .github/c9-family-c-save-guard.py
-
-      - name: Commit verified product slice
+      - name: Reconcile Family C ledger
         shell: bash
         run: |
           set -euo pipefail
+          python3 <<'PY'
+          import json, os
+          from pathlib import Path
+          path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
+          ledger=json.loads(path.read_text(encoding='utf-8'))
+          row=next(item for item in ledger['rows'] if item['family']=='C')
+          assert row['disposition']=='INCOMPLETE'
+          assert ledger['gateNBlockingNamedFallbacks']==[]
+          sha=os.environ['PRODUCT_SHA']
+          run=os.environ['VERIFY_RUN']
+          row['currentState']=(
+              "The generic d20 Resolver now has portable structural family/outcome selectors for ability checks, saving throws, and attack rolls. "
+              "Production Common Play can pause on success, failure, or either after-roll outcome; each saving-throw result is projected through the same "
+              "PendingResolution without a save-specific executor. Cutting Words declares success-only check/attack selection in content data. Unknown "
+              "installed add-die/reroll now has connected Host/Client duplicate, reconnect, event-native Undo, and reconnect-after-Undo evidence. Family C "
+              "remains INCOMPLETE because productionPlayRuntimeAdapter.ts still injects Tactical Mind, Indomitable, Dark One's Own Luck, and Peerless Skill "
+              "runtimeD20FollowUps by identity; Tactical Mind and Peerless Skill still require generic conditional pay-on-success before their named paths can be removed."
+          )
+          def add(field, *values):
+              bucket=row.setdefault(field, [])
+              for value in values:
+                  if value not in bucket:
+                      bucket.append(value)
+          add('implementationEvidence',
+              f'{sha[:8]} structural d20 families/outcomes selectors and saving-throw projection reuse generic PendingResolution',
+              'Cutting Words builtin Common Play data declares families ability-check/attack-roll and outcome success')
+          add('productionEvidence',
+              f'{sha[:8]} failed ability-check, failed saving-throw, and after-roll selector production acceptance',
+              f'C9 Family C Structural D20 Selectors run {run}: 26/26 focused tests, tsc --noEmit, vite build')
+          add('connectedEvidence',
+              f'{sha[:8]} unknown add-die/reroll Host/Client duplicate, reconnect, connected Undo, and reconnect-after-Undo')
+          add('persistenceEvidence',
+              f'{sha[:8]} connected add-die/reroll fresh replica reconstruction before and after event-native Undo')
+          row['remainingNamedSeams']=[
+              "productionPlayRuntimeAdapter.ts injects Tactical Mind, Indomitable, Dark One's Own Luck, and Peerless Skill runtimeD20FollowUps behind class/subclass/feature identity checks",
+              "Tactical Mind and Peerless Skill require a generic conditional pay-on-success contract before their named projection can be removed",
+              "Indomitable and Dark One's Own Luck can now be migrated onto the structural failed-save / after-roll Common Play selector path and need arbitrary-identity production proof before Family C is final"
+          ]
+          path.write_text(json.dumps(ledger, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
+          PY
+          node scripts/check-v1-mechanism-coverage.mjs
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add \
-            schemas/common-play-contract.schema.json \
-            src/domain/commonPlayRuntime.ts \
-            src/domain/commonPlayReactionDefinitionRuntime.ts \
-            src/app/commonPlayInterceptorProductionRuntimeAdapter.ts \
-            content/modules/dnd-srd-5.2.1.subclasses/module.json \
-            tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts
+          git add docs/rules/v1-mechanism-coverage-ledger.json
           git diff --cached --check
-          git commit -m "feat(common-play): add structural d20 outcome selectors"
+          git commit -m "docs(c9): reconcile structural d20 selector evidence"
           git push
 
-      - name: Remove temporary migration helpers
+      - name: Advance Rerun STATE checkpoint
         shell: bash
         run: |
           set -euo pipefail
-          git rm .github/c9-family-c-d20-migrate.py .github/c9-family-c-save-guard.py
-          git commit -m "ci(c9): remove structural d20 migration helpers"
+          python3 <<'PY'
+          import os
+          from pathlib import Path
+          path=Path('.chatgpt-rerun/STATE.md')
+          text=path.read_text(encoding='utf-8')
+          assert text.count('- sequence: `9`')==1
+          marker='## Family C reconciliation — portable dice execution proven, representative authoring remains'
+          assert text.count(marker)==1
+          text=text.replace('- sequence: `9`','- sequence: `10`',1)
+          prefix=text.split(marker,1)[0]
+          sha=os.environ['PRODUCT_SHA']
+          run=os.environ['VERIFY_RUN']
+          lines=[
+              '## Family C reconciliation — structural outcome timing and connected dice proven',
+              '',
+              'Family C (`d20-test-lifecycle`) remains `INCOMPLETE`, but its generic production timing and connected evidence advanced without a named executor:',
+              '',
+              f'- `{sha}`: Common Play d20 interceptors can declaratively select `ability-check | saving-throw | attack-roll` and `success | failure`. Existing definitions retain the prior successful check/attack default when selectors are absent.',
+              '- Production maps failed checks and each authoritative saving-throw result into the same generic d20 PendingResolution. A failed save can be rerolled and the selected `saveResults` entry is updated before the normal damage stage. No save-specific rule engine was added.',
+              '- Cutting Words now declares `families=[ability-check, attack-roll]` and `outcomes=[success]` in builtin content instead of relying on production success-only filtering.',
+              f'- C9 Family C Structural D20 Selectors run `{run}` passed 26/26 focused Family C tests, `tsc --noEmit`, and `vite build`. Acceptance covers failed ability checks, failed saves, after-roll success/failure selection, and unknown installed add-die/reroll through Host/Client duplicate replay, fresh reconnect, event-native Undo, and reconnect after Undo.',
+              '- Earlier deterministic post-roll and local rename/Undo evidence remains retained and was not repeated except where the affected production selector surface required regression coverage.',
+              '- Coverage totals remain `IMPLEMENTED=4`, `INCOMPLETE=32`, `PROVEN_UNNEEDED=0`; `gateNBlockingNamedFallbacks` remains empty and overall verdict remains `V1 INCOMPLETE`.',
+              '',
+              '## Next Exact Action',
+              '',
+              "Continue Family C by migrating the now-unblocked built-in representatives Indomitable (failed saving throw) and Dark One's Own Luck (after-roll ability check) from named `runtimeD20FollowUps` authoring into builtin portable Common Play definitions. Preserve their existing resource/economy semantics, prove arbitrary identity/rename through production, and delete only the named injection made obsolete by that migration. Do not migrate Tactical Mind or Peerless Skill until a generic conditional pay-on-success contract exists.",
+              ''
+          ]
+          path.write_text(prefix+'\n'.join(lines), encoding='utf-8')
+          PY
+          git add .chatgpt-rerun/STATE.md
+          git diff --cached --check
+          git commit -m "docs(rerun): checkpoint structural d20 selectors"
           git push
 
-# Exact product diff was verified in run 33290013900: 26/26 focused tests, tsc --noEmit, and vite build.
+      - name: Publish control last and remove diagnostic workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          import json
+          from pathlib import Path
+          path=Path('.chatgpt-rerun/control.json')
+          control=json.loads(path.read_text(encoding='utf-8'))
+          assert control['sequence']==9
+          assert control['status']=='continue'
+          control['sequence']=10
+          control['status']='continue'
+          control['reason']=(
+              "C9 remains active at IMPLEMENTED=4, INCOMPLETE=32, PROVEN_UNNEEDED=0. Family C now has structural family/outcome d20 timing, "
+              "failed-check/save production, Cutting Words success selection in data, and connected add-die/reroll duplicate/reconnect/Undo proof. "
+              "Next migrate Indomitable and Dark One's Own Luck off named runtimeD20FollowUps; Tactical Mind and Peerless Skill remain blocked on conditional pay-on-success."
+          )
+          control['updated_at']='2026-08-30'
+          path.write_text(json.dumps(control, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
+          PY
+          git rm .github/workflows/c9-family-c-d20-diagnostic.yml
+          git add .chatgpt-rerun/control.json
+          git diff --cached --check
+          git commit -m "docs(rerun): continue Family C representative migration"
+          git push
