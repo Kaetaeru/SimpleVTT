@@ -30,11 +30,7 @@ const STORAGE_PREFIX="simplevtt.turn-runtime.v1:";
 
 function runtimeStorage() {
   try {
-    return (globalThis as unknown as {localStorage?:{
-      getItem(key:string):string|null;
-      setItem(key:string,value:string):void;
-      removeItem(key:string):void;
-    }}).localStorage;
+    return typeof window==="undefined"?undefined:window.localStorage;
   } catch {
     return undefined;
   }
