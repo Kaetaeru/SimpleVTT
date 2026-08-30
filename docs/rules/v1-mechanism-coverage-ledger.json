@@ -1185,7 +1185,7 @@
         "commonPlayInteractionProductionRuntime.test.ts",
         "ResolutionView.interrupt"
       ],
-      "currentState": "Portable boolean consent supports actor, target, actor-owner, target-owner, DM, and Host responders through the existing blocking Resolution interrupt. Character-owned prompts route only to the authoritative owning peer; DM/Host prompts remain host-local and reject remote Character responses. Unknown installed Common Play preserves decline-before-commit, revalidation, atomic commit, connected broadcast, and identity-independent responder semantics. Rich choice/multiple-option payloads and the remaining reconnect/revision-stale response matrix remain incomplete.",
+      "currentState": "Portable boolean consent supports actor, target, actor-owner, target-owner, DM, and Host responders through the existing blocking Resolution interrupt. Character-owned prompts route only to the authoritative owning peer; DM/Host prompts remain host-local and reject remote Character responses. Target-owner reconnect resumes the same pending prompt on the rebound owning peer, stale/disconnected responses are rejected, and authoritative revision revalidation prevents a late commit after Reaction becomes unavailable. Unknown installed Common Play preserves decline-before-commit, completed-prompt replay rejection, atomic commit, connected broadcast, and identity-independent responder semantics. Rich choice/multiple-option payloads remain incomplete.",
       "requiredSemantics": [
         "consent",
         "choice",
@@ -1205,7 +1205,8 @@
         "installedCommonPlayRuntimeAdapter.ts derives target and target-owner consent responderId from the single authoritative selected target; connectedActionRoutingAdapter routes and authorizes the interrupt by responder Character id",
         "commonPlayOperationRuntime.ts typed consent interaction supports actor|target|actor-owner|target-owner responders; installedCommonPlayRuntimeAdapter.ts resolves target-directed consent from the authoritative single selected target without content identity dispatch",
         "commonPlayOperationRuntime.ts and common-play-contract.schema.json represent dm|host alongside actor/target owner consent without content-name dispatch; installedCommonPlayRuntimeAdapter.ts projects authority:dm|authority:host responders through the existing blocking interrupt",
-        "commonPlayOperationRuntime.ts and common-play-contract.schema.json represent dm|host alongside actor/target owner consent without content-name dispatch; installedCommonPlayRuntimeAdapter.ts projects authority:dm|authority:host through the existing blocking interrupt"
+        "commonPlayOperationRuntime.ts and common-play-contract.schema.json represent dm|host alongside actor/target owner consent without content-name dispatch; installedCommonPlayRuntimeAdapter.ts projects authority:dm|authority:host through the existing blocking interrupt",
+        "connectedSessionRuntimeAdapter.ts resumes a pending Character-owned Resolution interrupt by authoritative responder Character id, independent of whether the portable responder was actor-owner or target-owner"
       ],
       "productionEvidence": [
         "c2c8824f7e0fc883463c285bb9572ded72a9e232 feat(c9): route actor-owner consent interactions",
@@ -1215,7 +1216,9 @@
         "6d03412dcecc7186a2b0ee41da438f498c5333a0 feat(common-play): migrate Cutting Words declaratively; bardCollegeLoreCuttingWordsRuntime.test.ts preserves Common Play provenance, reaction/resource payment, and Undo without the named follow-up adapter",
         "50376a0b5baf574a2c26e594c705436fe1363212 feat(c9): route portable target consent responder; c9FamilyQTargetOwnerInteractionProduction.test.ts verifies both target and target-owner production routing, unauthorized-peer rejection, atomic Reaction payment, downstream damage, and authoritative event broadcast",
         "c9FamilyQAuthorityInteractionProduction.test.ts unknown installed DM and Host consent remains host-local, rejects remote Character responses, and commits downstream damage only after local authority approval",
-        "c9FamilyQAuthorityInteractionProduction.test.ts proves unknown installed DM and Host consent stays host-authoritative, rejects remote Character responses, and commits downstream damage only after local authority approval"
+        "c9FamilyQAuthorityInteractionProduction.test.ts proves unknown installed DM and Host consent stays host-authoritative, rejects remote Character responses, and commits downstream damage only after local authority approval",
+        "49f3b55bea55a8e45947d1dd1f5070e9b3b4b85c feat(c9): route DM and Host consent authority; c9FamilyQAuthorityInteractionProduction.test.ts verifies unknown installed DM/Host authority consent through the generic interrupt path",
+        "c9FamilyQTargetOwnerInteractionProduction.test.ts verifies target-owner reconnect to a rebound owning peer plus stale prior-peer rejection and revision-stale rejection without downstream commit"
       ],
       "identityInvarianceEvidence": [
         "installedCommonPlayActorOwnerInteractionProduction.test.ts uses arbitrary previously-unknown module/content/mechanic identities and resolves the interaction structurally rather than by content name",
@@ -1229,12 +1232,13 @@
         "c9FamilyQTargetOwnerInteractionProduction.test.ts sends target and target-owner blocking prompts to the selected target responder peer, rejects a different peer as interrupt-not-authorized, and broadcasts the accepted authoritative event batch",
         "c9FamilyQTargetOwnerInteractionProduction.test.ts routes target and target-owner prompts only to the selected target Character peer and rejects the actor peer before authoritative commit",
         "c9FamilyQAuthorityInteractionProduction.test.ts proves no peer interrupt prompt is routed for authority responders, remote Character response is rejected, and accepted host-local approval broadcasts the authoritative event batch",
-        "c9FamilyQAuthorityInteractionProduction.test.ts proves no peer prompt is routed for authority responders, remote Character response is interrupt-not-authorized, and accepted host-local approval broadcasts the authoritative event batch"
+        "c9FamilyQAuthorityInteractionProduction.test.ts proves no peer prompt is routed for authority responders, remote Character response is interrupt-not-authorized, and accepted host-local approval broadcasts the authoritative event batch",
+        "c9FamilyQAuthorityInteractionProduction.test.ts proves authority responders remain host-local, reject remote Character responses, and broadcast the accepted authoritative event batch",
+        "c9FamilyQTargetOwnerInteractionProduction.test.ts reconnects target-owner to a rebound owning peer, rejects the stale prior peer, and rejects late approval after authoritative Reaction revision invalidation without downstream commit"
       ],
       "persistenceEvidenceIfRelevant": [],
       "remainingNamedSeams": [
-        "choice and multiple-option interaction payloads are not yet represented by the boolean consent contract",
-        "actor-owner and target-owner reconnect and revision-stale response evidence remain incomplete"
+        "choice and multiple-option interaction payloads are not yet represented by the boolean consent contract"
       ],
       "connectedRelevant": true,
       "persistenceRelevant": true
