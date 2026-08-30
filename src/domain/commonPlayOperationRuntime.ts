@@ -46,6 +46,8 @@ type CommonPlayResourceChange={
   amount:CommonPlayExpression;
   target?:string;
   createIfMissing?:CommonPlayResourceCreation;
+  maximumDelta?:LiteralNumberExpression;
+  temporaryCapacityUntilLongRest?:true;
 };
 
 type CommonPlayRechargeResource={
@@ -162,7 +164,7 @@ const INTERACTION_KEYS=new Set(["id","kind","responder","mode","input","revalida
 const INTERACTION_INPUT_KEYS=new Set(["type"]);
 const TARGETING_KEYS=new Set(["from","min","max"]);
 const D20_TEST_KEYS=new Set(["kind","roller","property","dc","perTarget"]);
-const RESOURCE_CHANGE_KEYS=new Set(["kind","resource","amount","target","createIfMissing"]);
+const RESOURCE_CHANGE_KEYS=new Set(["kind","resource","amount","target","createIfMissing","maximumDelta","temporaryCapacityUntilLongRest"]);
 const RESOURCE_CREATION_KEYS=new Set(["label","maximum","recovery"]);
 const RESOURCE_RECOVERY_KEYS=new Set(["shortRest","longRest","turnStart"]);
 const RESOURCE_RECHARGE_KEYS=new Set(["kind","resource","die","succeedsOn"]);
@@ -355,19 +357,30 @@ function parseOperation(value:unknown,label:string):CommonPlayOperation {
   if(operation.kind==="resource.change") {
     supportedKeys(operation,RESOURCE_CHANGE_KEYS,label);
     const amount=literalExpression(operation.amount,`${label}.amount`);
-    if(amount.value===0) throw new DomainEvaluationError("resource.change amount must be non-zero");
     const target=operation.target===undefined?undefined:nonEmptyString(operation.target,`${label}.target`);
     if(target!==undefined&&target!=="actor"&&target!=="self") {
       throw new DomainEvaluationError(`${label}.target must be actor or self for portable Common Play resource.change`);
     }
     const createIfMissing=operation.createIfMissing===undefined?undefined:parseResourceCreation(operation.createIfMissing,`${label}.createIfMissing`);
-    if(createIfMissing&&amount.value<0) throw new DomainEvaluationError(`${label}.createIfMissing is only valid for positive resource.change`);
+    const maximumDelta=operation.maximumDelta===undefined?undefined:nonNegativeLiteralExpression(operation.maximumDelta,`${label}.maximumDelta`);
+    if(maximumDelta?.value===0) throw new DomainEvaluationError(`${label}.maximumDelta must be a positive integer`);
+    if(operation.temporaryCapacityUntilLongRest!==undefined&&operation.temporaryCapacityUntilLongRest!==true) {
+      throw new DomainEvaluationError(`${label}.temporaryCapacityUntilLongRest must be true when present`);
+    }
+    if((maximumDelta===undefined)!==(operation.temporaryCapacityUntilLongRest===undefined)) {
+      throw new DomainEvaluationError(`${label}.maximumDelta and temporaryCapacityUntilLongRest must be declared together`);
+    }
+    if(createIfMissing&&maximumDelta) throw new DomainEvaluationError(`${label}.createIfMissing cannot be combined with temporary maximum capacity`);
+    if(amount.value<0&&(createIfMissing||maximumDelta)) throw new DomainEvaluationError(`${label} resource creation/capacity increase requires a non-negative amount`);
+    if(amount.value===0&&!maximumDelta) throw new DomainEvaluationError("resource.change requires a non-zero amount or temporary maximum capacity increase");
     return {
       kind:"resource.change",
       resource:nonEmptyString(operation.resource,`${label}.resource`),
       amount,
       ...(target===undefined?{}:{target}),
       ...(createIfMissing?{createIfMissing}:{}),
+      ...(maximumDelta?{maximumDelta}:{}),
+      ...(operation.temporaryCapacityUntilLongRest===true?{temporaryCapacityUntilLongRest:true as const}:{}),
     };
   }
   if(operation.kind==="economy.modify") {
@@ -635,6 +648,9 @@ export function compileCommonPlayEntryPointOperations(
             label:operation.createIfMissing.label,
             ...(operation.createIfMissing.recovery?{recovery:structuredClone(operation.createIfMissing.recovery)}:{}),
           },
+        }:operation.maximumDelta?{
+          maximumDelta:literalInteger(operation.maximumDelta,"resource.change maximumDelta"),
+          temporaryCapacityUntilLongRest:operation.temporaryCapacityUntilLongRest,
         }:{}),
       });
       continue;
