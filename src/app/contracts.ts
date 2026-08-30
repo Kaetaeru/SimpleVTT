@@ -318,6 +318,11 @@ export interface ActionVm {
   details: ActionDetailVm[];
   attacksPerAction?:number;
   movementBudgetGainFeet?:number;
+  runtimeGrantedMovement?:{
+    distanceFeet:number;
+    maximumDistanceFeet:number;
+    doesNotProvokeOpportunityAttacks?:boolean;
+  };
   runtimeSaveCondition?:{
     conditionId:ConditionId;
     label:string;

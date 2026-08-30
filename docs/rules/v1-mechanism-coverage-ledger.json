@@ -688,7 +688,7 @@
         "commonPlayMovementRuntime.test.ts",
         "resolutionMovementOps.ts"
       ],
-      "currentState": "Generic movement.relocate, RulesProfile-derived movement constraints, and unknown/renamed portable movement grants are production-proven, but Family I remains incomplete while monkOpenHandFleetStepRuntimeAdapter.ts is installed in canonical offline production and selects Fleet Step execution from named action/class/subclass/source identities.",
+      "currentState": "Family I movement execution is complete through generic Common Play/Resolver and structural runtime facts. Unknown external RuleModules cover movement types, Difficult Terrain, drag/carry, alternate-speed grants, forced movement, teleport, Prone stand, connected replay/reconnect, Undo, and rename invariance. Open Hand Fleet Step now retains only feature-specific trigger/projection gating in its named adapter; its granted movement, Focus payment, no-opportunity-attack flag, and jump Effect execute through generic structural action facts without Action-ID dispatch.",
       "requiredSemantics": [
         "walk",
         "climb",
@@ -708,7 +708,7 @@
         "zero speed"
       ],
       "transactionDomain": "Session Resolver movement with spatial/manual authority",
-      "disposition": "INCOMPLETE",
+      "disposition": "IMPLEMENTED",
       "implementationEvidence": [
         "commonPlayMovementRuntime.ts",
         "commonPlayOperationRuntime.ts movement.relocate lowering",
@@ -716,7 +716,9 @@
         "dnd.srd-5.2.1.profile.json registers movement.fly and movement.cost.multiplier; installedCommonPlayRuntimeAdapter.ts commonPlayActorProfileProperties resolves generic Resolver property modifiers and supplies them to commonPlayMovementRuntime.ts without content identity dispatch",
         "commonPlayMovementRuntime.ts structurally composes movement.cost.multiplier and movement.drag-carry.multiplier while preserving alternate-speed bounds through movement.<type> profile properties",
         "commonPlayMovementRuntime.ts composes generic movement.cost.multiplier and movement.drag-carry.multiplier with movement-type speed bounds without content identity dispatch",
-        "Common Play property.modify supplies portable movement.<type> grants to the shared effect-aware RulesProfile property resolver; commonPlayMovementRuntime.ts consumes those structural movement properties for relocation without content identity dispatch"
+        "Common Play property.modify supplies portable movement.<type> grants to the shared effect-aware RulesProfile property resolver; commonPlayMovementRuntime.ts consumes those structural movement properties for relocation without content identity dispatch",
+        "ActionVm.runtimeGrantedMovement is a structural granted-movement fact consumed by effectGrantActionRuntimeAdapter.ts through the shared Resolver free-move operation",
+        "monkOpenHandFleetStepRuntimeAdapter.ts no longer resolves Fleet Step movement; it only projects/gates actions carrying runtimeGrantedMovement, resourceCost, and runtimeEffectGrant facts"
       ],
       "productionEvidence": [
         "installedCommonPlayLoweredFamiliesProduction.test.ts mapless stored movement and Undo",
@@ -730,7 +732,8 @@
         "3944dec61960f3842e784dceafc29700b25e391f test(c9): verify drag carry movement property; C9 Family I Drag Carry Proof 71304 run 33315183958 passed focused domain/production movement and Prone tests, legacy execution boundary, V1 coverage checker, and tsc --noEmit",
         "1edcedfa5a2e8e300e7106e60436fd267c407a29 test(c9): prove drag carry movement authority; C9 Family I Drag Carry Proof 71304 run 33315183958 passed unknown and renamed external RuleModule movement-cost, drag/carry, alternate-speed, Undo, legacy-boundary, coverage, and typecheck verification",
         "C9 Family I Final Verifier 71304 run 33315323863 passed unknown portable movement grant, generic movement production, rules-derived movement cost, Prone standing, legacy execution boundary, V1 coverage checker, and tsc --noEmit at 0644025b00862da8f6cf79934a656eb906a7dcd2",
-        "803a0b503a1be302723d9cb2ebeac7413ce6b7b6 test(c9): prove drag carry movement authority; C9 Family I Drag Confirm 71304 run 33315316074 passed rules-derived movement/drag-carry production, rename invariance, coverage checker, legacy execution boundary, and tsc --noEmit"
+        "803a0b503a1be302723d9cb2ebeac7413ce6b7b6 test(c9): prove drag carry movement authority; C9 Family I Drag Confirm 71304 run 33315316074 passed rules-derived movement/drag-carry production, rename invariance, coverage checker, legacy execution boundary, and tsc --noEmit",
+        "C9 Family I Fleet Step Generic 71304 run 33315661180: named Fleet Step movement execution migrated to structural generic Resolver facts; canonical Fleet Step plus unknown/renamed external movement matrices, legacy-boundary, and TypeScript verification passed"
       ],
       "identityInvarianceEvidence": [
         "commonPlayMovementRuntime.test.ts external definition identity independence",
@@ -741,15 +744,14 @@
         "c9FamilyIMovementProduction.test.ts preserves rules-derived Difficult Terrain and movement.drag-carry.multiplier semantics after unrelated external module/content/mechanic identity rename",
         "c9FamilyIRulesDerivedMovementProduction.test.ts preserves Difficult Terrain, drag/carry multiplier, alternate-speed, and Undo semantics after complete external module/content/mechanic identity rename",
         "c9FamilyIMovementGrantProduction.test.ts proves arbitrary external and fully renamed module/content/mechanic identities grant movement.fly through property.modify and consume it through movement.relocate without named movement dispatch",
-        "c9FamilyIRulesDerivedMovementCostProduction.test.ts renamed external drag/carry property rule preserves production movement semantics"
+        "c9FamilyIRulesDerivedMovementCostProduction.test.ts renamed external drag/carry property rule preserves production movement semantics",
+        "c9FamilyIMovementProduction.test.ts and c9FamilyIMovementGrantProduction.test.ts preserve movement matrix and movement-grant semantics after complete external module/content/mechanic identity rename; runtimeGrantedMovement selection itself contains no Action-ID dispatch"
       ],
       "connectedEvidenceIfRelevant": [
         "installedCommonPlayLoweredFamiliesProduction.test.ts unknown stored movement converges through Host replay, duplicate handling, Undo, and reconnect"
       ],
       "persistenceEvidenceIfRelevant": [],
-      "remainingNamedSeams": [
-        "monkOpenHandFleetStepRuntimeAdapter.ts named Fleet Step action/class/subclass/source dispatch remains in canonical offline production composition"
-      ],
+      "remainingNamedSeams": [],
       "connectedRelevant": true,
       "persistenceRelevant": false
     },

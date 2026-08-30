@@ -98,6 +98,8 @@ Indomitable no longer owns a Fighter runtime or domain Resolver. SRD 5.2.1 p.48 
 
 `rogueCunningHideEventRuntimeAdapter.ts` and the duplicate Cunning Disengage execution branch are replaced by the identity-agnostic `sessionStatusEffectEventRuntimeAdapter.ts`. Authored no-roll or ability-check status actions now commit economy, Effect, connected replay, attack-ending cleanup, and Undo evidence through the same path. Completely unknown action IDs prove both production shapes. Rogue action projection remains legacy.
 
+Open Hand Fleet Step no longer owns movement/resource/effect execution in its named runtime adapter. Its feature-specific trigger and action projection remain content/presentation behavior, while projected actions carry structural `runtimeGrantedMovement`, `resourceCost`, and `runtimeEffectGrant` facts that the generic Resolver adapter commits. Unknown and fully renamed external movement modules separately prove identity-independent movement and movement-grant semantics.
+
 ## LEGACY_EXECUTION — progression / portable character materialization
 
 These are migration debt when known class/subclass/feat identities select feature-specific state mutation. They should converge on portable progression/content data and a generic progression resolver; they do **not** need to be forced through combat Common Play IR when progression is the correct authority.
