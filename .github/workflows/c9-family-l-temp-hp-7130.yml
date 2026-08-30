@@ -46,7 +46,7 @@ jobs:
 
           replace_once(
               'type CommonPlayRollModify={',
-              'type CommonPlayTemporaryHpGrant={\n  kind:"temp-hp.grant";\n  amount:LiteralNumberExpression;\n  target?:CommonPlayHpTarget;\n};\n\ntype CommonPlayRollModify={'
+              'type CommonPlayTemporaryHpGrant={\n  kind:"temp-hp.grant";\n  amount:LiteralNumberExpression;\n  target?:CommonPlayHpTarget;\n  choice?:"keep-existing"|"take-new";\n};\n\ntype CommonPlayRollModify={'
           )
           replace_once(
               '  |CommonPlayHealingApply\n  |CommonPlayMovementDefinition',
@@ -54,17 +54,20 @@ jobs:
           )
           replace_once(
               'const ROLL_MODIFY_KEYS=',
-              'const TEMP_HP_GRANT_KEYS=new Set(["kind","amount","target"]);\nconst ROLL_MODIFY_KEYS='
+              'const TEMP_HP_GRANT_KEYS=new Set(["kind","amount","target","choice"]);\nconst ROLL_MODIFY_KEYS='
           )
           parser_end='  throw new DomainEvaluationError(`unsupported Common Play operation: ${String(operation.kind)}`);'
           replace_once(
               parser_end,
               '  if(operation.kind==="temp-hp.grant") {\n'
               '    supportedKeys(operation,TEMP_HP_GRANT_KEYS,label);\n'
+              '    const choice=operation.choice;\n'
+              '    if(choice!==undefined&&choice!=="keep-existing"&&choice!=="take-new") throw new DomainEvaluationError(`${label}.choice must be keep-existing or take-new`);\n'
               '    return {\n'
               '      kind:"temp-hp.grant",\n'
               '      amount:nonNegativeLiteralExpression(operation.amount,`${label}.amount`),\n'
               '      ...(operation.target===undefined?{}:{target:hpTarget(operation.target,`${label}.target`)}),\n'
+              '      ...(choice===undefined?{}:{choice}),\n'
               '    };\n'
               '  }\n'
               + parser_end
@@ -83,12 +86,21 @@ jobs:
               '        targetId:hpOperationTarget(operation.target,input),\n'
               '        amount:literalInteger(operation.amount,"temp-hp.grant amount"),\n'
               '        source:`common-play:${supported.id}:${entryPoint.id}:operation:${index}`,\n'
+              '        ...(operation.choice===undefined?{}:{choice:operation.choice}),\n'
               '      });\n'
               '      continue;\n'
               '    }\n\n'
               + movement_anchor
           )
           source.write_text(text,encoding='utf-8')
+
+          schema=Path('schemas/common-play-contract.schema.json')
+          schema_text=schema.read_text(encoding='utf-8')
+          anchor='''        "target": {\n          "type": "string",\n          "minLength": 1\n        },\n        "when": {\n          "$ref": "#/$defs/predicate"\n        }\n      },\n      "additionalProperties": false\n    },\n    "resourceChange": {'''
+          replacement='''        "target": {\n          "type": "string",\n          "minLength": 1\n        },\n        "choice": {\n          "enum": [\n            "keep-existing",\n            "take-new"\n          ]\n        },\n        "when": {\n          "$ref": "#/$defs/predicate"\n        }\n      },\n      "additionalProperties": false\n    },\n    "resourceChange": {'''
+          if schema_text.count(anchor)!=1:
+              raise SystemExit(f'expected one tempHpGrant schema anchor, got {schema_text.count(anchor)}')
+          schema.write_text(schema_text.replace(anchor,replacement,1),encoding='utf-8')
 
           test_path=Path('tests/ui/c9FamilyLTemporaryHpProduction.test.ts')
           if test_path.exists():
@@ -119,7 +131,7 @@ jobs:
                 id:contentId,category:"option",
                 presentation:{defaultLocale:"en",originalName:"Portable Temporary HP",locales:{en:{name:"Portable Temporary HP"}}},
                 mechanics:[{kind:"common-play",config:{schemaVersion:"0.2-draft",id:mechanicId,entryPoints:[{
-                  id:"grant",invocation:"manual",operations:[{kind:"temp-hp.grant",amount:{value:7},target:"self"}],
+                  id:"grant",invocation:"manual",operations:[{kind:"temp-hp.grant",amount:{value:7},target:"self",choice:"take-new"}],
                 }]}}],
               }],
             })};
@@ -144,7 +156,7 @@ jobs:
             const adapter=new MockAdapter(),action=await install(adapter,prefix);
             let snapshot=await adapter.getSnapshot();
             const before=temporaryHp(snapshot)??0;
-            assert.equal(before,0);
+            assert.equal(before,5);
             snapshot=await adapter.resolveAction(action,[snapshot.activeCharacter.id]);
             assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
             assert.equal(temporaryHp(snapshot),7);
@@ -161,6 +173,7 @@ jobs:
             const prefix="external.connected-temp-hp",sessionId="session.c9-family-l-temp-hp";
             const host=new MockAdapter(),action=await install(host,prefix);
             const hostActorId=(await host.getSnapshot()).activeCharacter.id;
+            assert.equal(temporaryHp(await host.getSnapshot()),5);
             const hostState=connectedStateFor(host);
             hostState.mode="host";hostState.sessionId=sessionId;hostState.ledger=new HostSessionLedger(sessionId,connectedManifest(host));
             const originalSend=tauriSessionTransport.send;
@@ -176,20 +189,18 @@ jobs:
 
             const grantBatch=await runHost(()=>host.resolveAction(action,[hostActorId]));
             assert.equal((await applyConnectedClientEvents(client,grantBatch.events)).status,"applied");
-            let hostSnapshot=await host.getSnapshot(),clientSnapshot=await client.getSnapshot();
-            assert.equal(temporaryHp(hostSnapshot),7);
-            assert.equal(temporaryHp(clientSnapshot),7);
+            assert.equal(temporaryHp(await host.getSnapshot()),7);
+            assert.equal(temporaryHp(await client.getSnapshot()),7);
 
             const undoBatch=await runHost(()=>host.undoLastResolution());
             assert.equal((await applyConnectedClientEvents(client,undoBatch.events)).status,"applied");
-            hostSnapshot=await host.getSnapshot();clientSnapshot=await client.getSnapshot();
-            assert.equal(temporaryHp(hostSnapshot),0);
-            assert.equal(temporaryHp(clientSnapshot),0);
+            assert.equal(temporaryHp(await host.getSnapshot()),5);
+            assert.equal(temporaryHp(await client.getSnapshot()),5);
 
             const reconnect=new MockAdapter();await install(reconnect,prefix);
             const reconnectState=connectedStateFor(reconnect);reconnectState.mode="client";reconnectState.sessionId=sessionId;reconnectState.replica=new ClientSessionReplica(sessionId);
             assert.equal((await applyConnectedClientEvents(reconnect,hostState.ledger!.eventsAfter(0))).status,"applied");
-            assert.equal(temporaryHp(await reconnect.getSnapshot()),0);
+            assert.equal(temporaryHp(await reconnect.getSnapshot()),5);
           });
           ''').lstrip(),encoding='utf-8')
           PY
@@ -207,7 +218,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git rm .github/workflows/c9-family-l-temp-hp-7130.yml
-          git add src/domain/commonPlayOperationRuntime.ts tests/ui/c9FamilyLTemporaryHpProduction.test.ts
+          git add src/domain/commonPlayOperationRuntime.ts schemas/common-play-contract.schema.json tests/ui/c9FamilyLTemporaryHpProduction.test.ts
           git diff --cached --check
           git commit -m "feat(c9): lower portable Temporary HP"
           for attempt in $(seq 1 12); do
