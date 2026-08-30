@@ -80,7 +80,27 @@ function applyChange(
       else if (item.charges) item.charges.current=after;
       return;
     }
-    const resource=sheet.resources.find((entry)=>entry.id===change.resourceId) as DurableCharacterResource|undefined;
+    const resourceIndex=sheet.resources.findIndex((entry)=>entry.id===change.resourceId);
+    const resource=resourceIndex>=0 ? sheet.resources[resourceIndex] as DurableCharacterResource : undefined;
+    if (change.createdResource) {
+      if (direction==="forward") {
+        if (resource) return `Character write-back resource already exists: ${change.resourceId}`;
+        if (before!==0) return `Character write-back created resource requires zero prior value: ${change.resourceId}`;
+        sheet.resources.push({
+          id:change.resourceId,
+          label:change.createdResource.label,
+          current:after,
+          max:change.createdResource.maximum,
+          source:change.createdResource.source,
+          recovery:change.createdResource.recovery ? structuredClone(change.createdResource.recovery) : undefined,
+        });
+        return;
+      }
+      if (!resource) return `Character write-back resource is missing: ${change.resourceId}`;
+      if (resource.current!==before) return `Character write-back drift for ${change.targetId}/${label(change)}: expected ${before}, current ${resource.current}`;
+      sheet.resources.splice(resourceIndex,1);
+      return;
+    }
     if (!resource) return `Character write-back resource is missing: ${change.resourceId}`;
     if (resource.current!==before) return `Character write-back drift for ${change.targetId}/${label(change)}: expected ${before}, current ${resource.current}`;
     if (change.recoveryLockouts) {
