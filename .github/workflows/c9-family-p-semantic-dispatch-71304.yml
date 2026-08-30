@@ -21,40 +21,41 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
       - name: Sync branch
         run: git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
-      - name: Patch lifecycle semantic trigger dispatch
-        run: python .github/scripts/c9-family-p-semantic-dispatch.py
-      - name: Align recharge test with authoritative turn start
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          path=Path("tests/domain/commonPlaySemanticEventRuntime.test.ts")
-          text=path.read_text(encoding="utf-8")
-          old='assert.equal(activated.status,"committed"); if(activated.status!=="committed") return; state=activated.state;\n  const request:PendingResolution={'
-          new='assert.equal(activated.status,"committed"); if(activated.status!=="committed") return; state=activated.state;\n  state={...state,clock:{...state.clock,phase:"start",activeActorId:"hero"}};\n  const request:PendingResolution={'
-          if text.count(old)!=1:
-              raise SystemExit("recharge test clock anchor changed")
-          path.write_text(text.replace(old,new,1),encoding="utf-8")
-          PY
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        run: npm ci
       - name: Generate content catalogs
         run: npm run generate:content
-      - name: Verify Family P semantic dispatch
-        run: npx tsx --test tests/domain/commonPlaySemanticEventRuntime.test.ts
+      - name: Verify Family P lifecycle semantic dispatch
+        run: node --import tsx --test tests/domain/commonPlaySemanticEventRuntime.test.ts
       - name: Verify V1 coverage ledger
         run: node scripts/check-v1-mechanism-coverage.mjs
+      - name: Verify legacy execution boundary
+        run: node scripts/check-legacy-execution-boundary.mjs
       - name: Typecheck application
-        run: npx tsc --noEmit
-      - name: Commit verified Family P slice
+        run: npm exec tsc -- --noEmit
+      - name: Retire landed Family P verifier
+        shell: bash
         run: |
+          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git rm .github/workflows/c9-family-p-semantic-dispatch-71304.yml .github/scripts/c9-family-p-semantic-dispatch.py
-          git add src/domain/commonPlayEffectRuntime.ts src/domain/commonPlaySemanticEventRuntime.ts tests/domain/commonPlaySemanticEventRuntime.test.ts
-          git commit -m "feat(c9): dispatch lifecycle semantic triggers"
-          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
-          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
-
-# rerun-trigger: retry-2-71304a3e-1ef8-45c9-a336-082a4aff0c02
+          git commit -m "ci(c9): retire lifecycle semantic dispatcher verifier"
+          branch=agent/c9-gate-n-coverage-reconciliation
+          for attempt in 1 2 3 4 5; do
+            git fetch origin "$branch"
+            if git rebase "origin/$branch"; then
+              npm run generate:content >/dev/null
+              node --import tsx --test tests/domain/commonPlaySemanticEventRuntime.test.ts
+              node scripts/check-v1-mechanism-coverage.mjs
+              node scripts/check-legacy-execution-boundary.mjs
+              npm exec tsc -- --noEmit
+              if git push origin HEAD:"$branch"; then exit 0; fi
+            fi
+            git rebase --abort || true
+            echo "publish raced with another C9 writer; retry $attempt/5"
+          done
+          exit 1
