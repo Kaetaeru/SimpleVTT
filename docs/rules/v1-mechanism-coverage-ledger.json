@@ -198,13 +198,15 @@
         "fighterTacticalMindFollowUpRuntime.test.ts",
         "connectedProjectedCharacterDarkOnesOwnLuckResolution.test.ts",
         "connectedProjectedCharacterPeerlessSkillResolution.test.ts",
-        "fighterIndomitableFollowUpRuntime.test.ts"
+        "fighterIndomitableFollowUpRuntime.test.ts",
+        "b537fdbd unknown add-die/reroll Host/Client duplicate, reconnect, connected Undo, and reconnect-after-Undo"
       ],
       "persistenceEvidenceIfRelevant": [
         "fighterTacticalMindFollowUpRuntime.test.ts",
         "connectedProjectedCharacterDarkOnesOwnLuckResolution.test.ts",
         "connectedProjectedCharacterPeerlessSkillResolution.test.ts",
-        "fighterIndomitableFollowUpRuntime.test.ts"
+        "fighterIndomitableFollowUpRuntime.test.ts",
+        "b537fdbd connected add-die/reroll fresh replica reconstruction before and after event-native Undo"
       ],
       "remainingNamedSeams": [
         "productionPlayRuntimeAdapter.ts injects Tactical Mind, Indomitable, Dark One's Own Luck, and Peerless Skill runtimeD20FollowUps behind class/subclass/feature identity checks",
@@ -212,13 +214,7 @@
         "Indomitable and Dark One's Own Luck can now be migrated onto the structural failed-save / after-roll Common Play selector path and need arbitrary-identity production proof before Family C is final"
       ],
       "connectedRelevant": true,
-      "persistenceRelevant": true,
-      "connectedEvidence": [
-        "b537fdbd unknown add-die/reroll Host/Client duplicate, reconnect, connected Undo, and reconnect-after-Undo"
-      ],
-      "persistenceEvidence": [
-        "b537fdbd connected add-die/reroll fresh replica reconstruction before and after event-native Undo"
-      ]
+      "persistenceRelevant": true
     },
     {
       "id": "payment-resource",
