@@ -3,7 +3,7 @@ import test from "node:test";
 import "../../src/app/offlineRuntimeAdapters";
 import "../../src/app/installedContentRuntimeAdapter";
 import { catalogQualifiedId } from "../../src/app/contentCatalogIdentity";
-import { installedCommonPlayActionId } from "../../src/app/installedCommonPlayActionReference";
+import { installedCommonPlayActionId, storedInvocationCommonPlayActionId } from "../../src/app/installedCommonPlayActionReference";
 import { setInstalledContentStoreForTests } from "../../src/app/installedContentRuntimeAdapter";
 import { MemoryInstalledContentStore } from "../../src/app/memoryInstalledContentStore";
 import { MockAdapter } from "../../src/app/mockAdapter";
@@ -96,4 +96,37 @@ test("Ready concentration selection is structural and rename invariant",async()=
   assert.deepEqual(await run("external-ready-feature","feat"),{
     active:false,sourceMatches:false,triggerEndsHeld:false,actionAvailable:false,artifactCount:1,
   });
+});
+
+test("readied spell trigger ends held concentration and Undo restores the held invocation",async()=>{
+  const run=async(prefix:string)=>{
+    const adapter=new MockAdapter();
+    const {actionId}=await install(adapter,prefix);
+    await adapter.configureReadyAction({actorId:"char.aelar",actionId,trigger:"declared trigger"});
+    const captured=heldShape(adapter);
+    const scene=(adapter as unknown as {scene:Parameters<typeof snapshotAdapterTurnRuntimeState>[1]}).scene;
+    const state=snapshotAdapterTurnRuntimeState(adapter,scene)!;
+    const artifact=state.artifacts.find((candidate)=>candidate.artifactKind==="stored-invocation");
+    assert.ok(artifact?.storedInvocation);
+
+    await adapter.resolveAction(storedInvocationCommonPlayActionId(artifact.id,actionId),["char.aelar"]);
+    const triggered=heldShape(adapter);
+    assert.equal(triggered.active,false);
+    assert.equal(triggered.artifactCount,0);
+
+    await adapter.undoLastResolution();
+    const undone=heldShape(adapter);
+    assert.equal(undone.active,true);
+    assert.equal(undone.sourceMatches,true);
+    assert.equal(undone.triggerEndsHeld,true);
+    assert.equal(undone.artifactCount,1);
+
+    return {
+      captured:{active:captured.active,sourceMatches:captured.sourceMatches,triggerEndsHeld:captured.triggerEndsHeld,artifactCount:captured.artifactCount},
+      triggered:{active:triggered.active,artifactCount:triggered.artifactCount},
+      undone:{active:undone.active,sourceMatches:undone.sourceMatches,triggerEndsHeld:undone.triggerEndsHeld,artifactCount:undone.artifactCount},
+    };
+  };
+
+  assert.deepEqual(await run("external-ready-trigger-alpha"),await run("renamed-ready-trigger-omega"));
 });
