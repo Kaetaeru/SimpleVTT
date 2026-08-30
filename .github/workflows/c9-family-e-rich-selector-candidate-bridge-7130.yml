@@ -1,4 +1,5 @@
 name: C9 Family E Rich Selector Candidate Bridge 7130
+# Retry after replacing now-supported interaction/economy values in rejection coverage.
 
 on:
   push:
@@ -92,6 +93,14 @@ jobs:
               addition='''test("unknown installed Common Play rich predicate filters authoritative scene properties without identity dispatch",async()=>{\n  const adapter=new MockAdapter();\n  const payload=JSON.parse(targetingPackagePayload()) as any;\n  payload.content[0].mechanics[0].config.entryPoints[0].targeting={\n    from:"targets",where:{op:"contains",left:{ref:"status"},right:{value:"중독됨"}},min:1,max:1,\n  };\n  setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());\n  const preview=await adapter.previewContentImport(JSON.stringify(payload));\n  assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));\n  await adapter.activateContentImport();\n  const actionId=installedCommonPlayActionId({\n    catalogId:catalogQualifiedId(TARGETING_IDENTITY.contentId,TARGETING_IDENTITY.moduleId,"1"),\n    mechanicId:TARGETING_IDENTITY.mechanicId,entryPointId:TARGETING_IDENTITY.entryPointId,\n  });\n  injureSceneEntity(adapter,"combatant.goblin-a",10);\n  injureSceneEntity(adapter,"combatant.goblin-b",10);\n  await adapter.startInitiative();\n  await adapter.setCurrentActor("char.aelar");\n  let snapshot=await adapter.getSnapshot();\n  const ineligibleBefore=snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-b")!.hp;\n  await adapter.resolveAction(actionId,["combatant.goblin-b"]);\n  snapshot=await adapter.getSnapshot();\n  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-b")!.hp,ineligibleBefore);\n\n  const eligibleBefore=snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")!.hp;\n  await adapter.resolveAction(actionId,["combatant.goblin-a"]);\n  snapshot=await adapter.getSnapshot();\n  assert.equal(snapshot.resolution?.stage,"complete");\n  assert.deepEqual(snapshot.resolution?.targetIds,["combatant.goblin-a"]);\n  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")!.hp,eligibleBefore+5);\n});\n\n'''
               text=text.replace(marker,addition+marker,1)
           production.write_text(text,encoding='utf-8')
+
+          package_test='tests/ui/ruleModulePackageImport.test.ts'
+          replace_once(package_test,
+              '    (mechanic)=>{mechanic.config.entryPoints[0].interaction.revalidate="if-revision-changed";},\n',
+              '    (mechanic)=>{mechanic.config.entryPoints[0].interaction.revalidate="never";},\n')
+          replace_once(package_test,
+              '    (mechanic)=>{mechanic.config.payments[0].bucket="action";},\n',
+              '    (mechanic)=>{mechanic.config.payments[0].bucket="free-action";},\n')
           PY
       - name: Generate content catalogs
         run: npm run generate:content
@@ -112,7 +121,7 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/domain/commonPlayOperationRuntime.ts src/domain/commonPlayDefinitionRuntime.ts src/app/installedCommonPlayRuntimeAdapter.ts tests/ui/installedCommonPlayProductionRuntime.test.ts
+          git add src/domain/commonPlayOperationRuntime.ts src/domain/commonPlayDefinitionRuntime.ts src/app/installedCommonPlayRuntimeAdapter.ts tests/ui/installedCommonPlayProductionRuntime.test.ts tests/ui/ruleModulePackageImport.test.ts
           if ! git diff --cached --quiet; then git commit -m "feat(c9): project rich selector candidate facts"; fi
           git fetch origin agent/c9-gate-n-coverage-reconciliation
           git rebase origin/agent/c9-gate-n-coverage-reconciliation
