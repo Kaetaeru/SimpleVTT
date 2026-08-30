@@ -1167,7 +1167,7 @@
         "commonPlayInteractionProductionRuntime.test.ts",
         "ResolutionView.interrupt"
       ],
-      "currentState": "Portable boolean consent now supports actor, actor-owner, and target-owner responders through the existing blocking Resolution interrupt. Unknown installed Common Play routes the owner-directed prompt over the connected session path, preserves connected decline-before-commit and completed-prompt replay rejection semantics, revalidates before acceptance, and commits Reaction payment plus downstream effects atomically. Rich choice/multiple-option and the remaining target/DM/Host responder and reconnect/stale-replay matrix remain incomplete.",
+      "currentState": "Portable boolean consent now supports actor, target, actor-owner, and target-owner responders through the existing blocking Resolution interrupt. Unknown installed Common Play routes the owner-directed prompt over the connected session path, preserves connected decline-before-commit and completed-prompt replay rejection semantics, revalidates before acceptance, and commits Reaction payment plus downstream effects atomically. Rich choice/multiple-option and the remaining DM/Host responder and reconnect/stale-replay matrix remain incomplete.",
       "requiredSemantics": [
         "consent",
         "choice",
@@ -1182,15 +1182,15 @@
       "transactionDomain": "Existing resolution interrupt plus connected session authority",
       "disposition": "INCOMPLETE",
       "implementationEvidence": [
-        "commonPlayOperationRuntime.ts typed consent interaction supports actor|actor-owner responders, always|if-revision-changed revalidation, and reject stale policy",
+        "commonPlayOperationRuntime.ts typed consent interaction supports actor|target|actor-owner|target-owner responders, always|if-revision-changed revalidation, and reject stale policy",
         "installedCommonPlayRuntimeAdapter.ts uses the existing Resolution interrupt and revalidates the installed action before atomic acceptance commit",
-        "installedCommonPlayRuntimeAdapter.ts derives target-owner consent responderId from the single authoritative selected target; connectedActionRoutingAdapter routes and authorizes the interrupt by responder Character id"
+        "installedCommonPlayRuntimeAdapter.ts derives target and target-owner consent responderId from the single authoritative selected target; connectedActionRoutingAdapter routes and authorizes the interrupt by responder Character id"
       ],
       "productionEvidence": [
         "c2c8824f7e0fc883463c285bb9572ded72a9e232 feat(c9): route actor-owner consent interactions",
         "commonPlayInteractionProductionRuntime.test.ts actor consent, decline/payment safety, target validation, and unsupported-shape boundaries",
         "installedCommonPlayActorOwnerInteractionProduction.test.ts unknown installed actor-owner prompt routing and atomic accepted commit",
-        "c9FamilyQTargetOwnerInteractionProduction.test.ts unknown installed target-owner consent routes only to the selected target owner peer, rejects the actor peer, and commits downstream damage plus Reaction payment atomically after approval",
+        "c9FamilyQTargetOwnerInteractionProduction.test.ts unknown installed target and target-owner consent each route only to the selected target responder peer, reject the actor peer, and commit downstream damage plus Reaction payment atomically after approval",
         "6d03412dcecc7186a2b0ee41da438f498c5333a0 feat(common-play): migrate Cutting Words declaratively; bardCollegeLoreCuttingWordsRuntime.test.ts preserves Common Play provenance, reaction/resource payment, and Undo without the named follow-up adapter"
       ],
       "identityInvarianceEvidence": [
@@ -1200,12 +1200,12 @@
       "connectedEvidenceIfRelevant": [
         "installedCommonPlayActorOwnerInteractionProduction.test.ts Host directs the blocking prompt to the owning peer and broadcasts the accepted authoritative event batch",
         "installedCommonPlayActorOwnerInteractionProduction.test.ts owning-peer decline is side-effect free and completed-prompt replay is rejected without a second commit",
-        "c9FamilyQTargetOwnerInteractionProduction.test.ts sends the blocking prompt to the selected target owner peer, rejects a different peer as interrupt-not-authorized, and broadcasts the accepted authoritative event batch"
+        "c9FamilyQTargetOwnerInteractionProduction.test.ts sends target and target-owner blocking prompts to the selected target responder peer, rejects a different peer as interrupt-not-authorized, and broadcasts the accepted authoritative event batch"
       ],
       "persistenceEvidenceIfRelevant": [],
       "remainingNamedSeams": [
         "choice and multiple-option interaction payloads are not yet represented by the boolean consent contract",
-        "target, DM, and Host responder routing is not yet represented",
+        "DM and Host responder routing is not yet represented",
         "actor-owner and target-owner reconnect and revision-stale response evidence remain incomplete"
       ],
       "connectedRelevant": true,
