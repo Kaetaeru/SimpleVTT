@@ -62,6 +62,8 @@ import "./productionSpellRuntimeAdapter";
 import "./productionDiceRuntimeAdapter";
 import "./standardActionReactionAdapter";
 import "./installedCommonPlayRuntimeAdapter";
+// Rich selector predicates gate the same installed Common Play execution path; they do not execute effects.
+import "./installedCommonPlaySelectorGuardAdapter";
 // Production Common Play commits retain semantic ResolutionEvents instead of snapshot Undo.
 // Install the shared inverse bridge after those commits so Undo reuses the same event stream.
 import "./runtimeResolutionUndoAdapter";
