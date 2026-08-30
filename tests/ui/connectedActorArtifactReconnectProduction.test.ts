@@ -13,6 +13,7 @@ import { setInstalledContentStoreForTests } from "../../src/app/installedContent
 import { MemoryInstalledContentStore } from "../../src/app/memoryInstalledContentStore";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import { ClientSessionReplica, HostSessionLedger, type ConnectedSessionEvent } from "../../src/app/connectedSessionProtocol";
+import { takeCommittedResolutionEvents } from "../../src/app/resolutionEventCommitRegistry";
 import { tauriSessionTransport } from "../../src/app/tauriSessionTransport";
 import { snapshotAdapterTurnRuntimeState } from "../../src/app/turnRuntimeSessionRegistry";
 
@@ -94,7 +95,8 @@ async function captureBatch(operation:()=>Promise<unknown>) {
   const batch=wires.map((wire)=>JSON.parse(wire) as {type:string;events?:ConnectedSessionEvent[]})
     .find((wire):wire is {type:"event-batch";events:ConnectedSessionEvent[]}=>wire.type==="event-batch"&&Array.isArray(wire.events));
   const resolution=(result as {resolution?:{id?:string;stage?:string;actionId?:string}}|undefined)?.resolution;
-  assert.ok(batch,JSON.stringify({wires,resolution}));
+  const strandedEvents=!batch&&resolution?.id?takeCommittedResolutionEvents(resolution.id):undefined;
+  assert.ok(batch,JSON.stringify({wires,resolution,strandedEventCount:strandedEvents?.length??0}));
   return batch;
 }
 
