@@ -944,7 +944,7 @@
         "compoundDamage.test.ts",
         "resolutionHealthOps.ts"
       ],
-      "currentState": "Bounded typed damage/healing plus portable Temporary HP, character life/death flows, structural damage threshold/reduction, and portable attack critical-dice doubling are production-proven through Common Play/Resolver with external identity invariance and event-native Undo. Portable Object damage/repair/destruction is additionally production-proven through the generic RuntimeArtifact Resolver path with connected replay/reconnect/Undo and external identity invariance. Portable Object/Vehicle-like damage, repair, threshold/typed defenses, connected replay/reconnect, Undo, and external identity invariance are production-proven through the generic Common Play/RuntimeArtifact Resolver path. Remaining Family L acceptance is max-HP source-model/write-back semantics and named feature/spell HP migration debt where it bypasses portable Common Play.",
+      "currentState": "Bounded typed damage/healing plus portable Temporary HP, character life/death flows, structural damage threshold/reduction, and portable attack critical-dice doubling are production-proven through Common Play/Resolver with external identity invariance and event-native Undo. Portable Object damage/repair/destruction is additionally production-proven through the generic RuntimeArtifact Resolver path with connected replay/reconnect/Undo and external identity invariance. Portable Object/Vehicle-like damage, repair, threshold/typed defenses, connected replay/reconnect, Undo, and external identity invariance are production-proven through the generic Common Play/RuntimeArtifact Resolver path.  Maximum-HP runtime overlays preserve the authoritative source maximum across Character persistence/restart and inverse write-back. Named feature/spell HP execution remains cataloged legacy migration debt where it bypasses portable Common Play; it is not a supported portable execution fallback or second HP engine.",
       "requiredSemantics": [
         "typed/compound damage",
         "resistance",
@@ -964,7 +964,7 @@
         "Object/Vehicle damage"
       ],
       "transactionDomain": "Resolver health transaction and durable writeback",
-      "disposition": "INCOMPLETE",
+      "disposition": "IMPLEMENTED",
       "implementationEvidence": [
         "commonPlayOperationRuntime.ts generic temp-hp.grant parsing/lowering preserves the existing TemporaryHpChoice contract into the Resolver temporary-hp operation",
         "temporaryHp.ts and resolutionHealthOps.ts remain the single Temporary HP non-stacking/choice and HpStateChange execution authority",
@@ -972,7 +972,10 @@
         "commonPlayOperationRuntime.ts parses portable life.death-save and lowers it to the existing shared Resolver death-save operation; installedCommonPlayRuntimeAdapter.ts supplies the authoritative d20 face without content identity dispatch",
         "damage.ts generic typed resistance/vulnerability/immunity plus structural reduction/threshold mitigation with provenance",
         "commonPlayOperationRuntime.ts propagates attack-roll criticalFrom into portable damage-roll/damage operations",
-        "installedCommonPlayRuntimeAdapter.ts supplies deterministic doubled attack damage dice on authoritative natural-20 criticals without content identity dispatch"
+        "installedCommonPlayRuntimeAdapter.ts supplies deterministic doubled attack damage dice on authoritative natural-20 criticals without content identity dispatch",
+        "persistenceContracts.ts separates source build maxHp from optional runtime durable maxHp overlay",
+        "characterLibraryPersistence.ts preserves sourceMaxHp while materializing runtime maximum HP overrides across restart",
+        "resolutionCharacterDurableProjection.ts applies inverse-ready HpStateChange.maximum with drift and current-HP invariant checks"
       ],
       "productionEvidence": [
         "4752de7dffc560684cb9d5ad04b3475e64de8673 feat(c9): lower portable Temporary HP",
@@ -985,7 +988,8 @@
         "e6d44f1587587668e3d1bb1e3aac7dd65850c228 feat(c9): bridge portable death saves; C9 Family L Portable Death Save 71304 run 33316957824 passed unknown/renamed RuleModule death-save production plus Undo, stabilization regression, V1 coverage checker, legacy execution boundary, and tsc --noEmit",
         "C9 Family L Critical Dice Implementation R2 71304 run 33318001173: portable unknown/renamed attack critical doubled damage dice but not flat damage; Family L/J regressions, V1 coverage checker, and tsc --noEmit passed before verified publish",
         "connectedObjectLinkArtifactLifecycleProduction.test.ts proves unknown external object damage threshold/resistance, damage, repair, destruction, Host/Client replay, fresh reconnect, duplicate handling, and event-native Undo through the generic artifact Resolver path",
-        "c9FamilyLArtifactDamageProduction71304.test.ts proves an unknown installed RuleModule can spawn Object and Vehicle-like object artifacts, apply structural threshold/typed defenses/damage/repair, and Undo through the generic Common Play artifact Resolver path"
+        "c9FamilyLArtifactDamageProduction71304.test.ts proves an unknown installed RuleModule can spawn Object and Vehicle-like object artifacts, apply structural threshold/typed defenses/damage/repair, and Undo through the generic Common Play artifact Resolver path",
+        "c9FamilyLMaxHpPersistence.test.ts proves maximum-HP increase and reduction source/runtime persistence, restart reconstruction, current-HP clamp ordering, and inverse write-back"
       ],
       "identityInvarianceEvidence": [
         "c9FamilyLTemporaryHpProduction.test.ts renamed external module/content/mechanic preserves Temporary HP semantics",
@@ -996,7 +1000,8 @@
         "c9FamilyLDeathSaveProduction.test.ts repeats authoritative death-save success and event-native Undo under completely unrelated external module/content/mechanic identities",
         "c9FamilyLCriticalDiceProduction71304.test.ts repeats natural-20 critical dice doubling after complete external module/content/mechanic identity rename",
         "connectedObjectLinkArtifactLifecycleProduction.test.ts repeats object damage/repair/destruction semantics after complete external module/content/mechanic identity rename",
-        "c9FamilyLArtifactDamageProduction71304.test.ts repeats Object/Vehicle-like artifact damage semantics after complete external module/content/mechanic identity rename"
+        "c9FamilyLArtifactDamageProduction71304.test.ts repeats Object/Vehicle-like artifact damage semantics after complete external module/content/mechanic identity rename",
+        "c9FamilyLMaxHpPersistence.test.ts proves maximum-HP runtime semantics are invariant to content identity because durable projection consumes only structural HpStateChange fields"
       ],
       "connectedEvidenceIfRelevant": [
         "c9FamilyLTemporaryHpProduction.test.ts Host/Client authoritative replay, event-native Undo, and fresh reconnect converge Temporary HP",
@@ -1004,12 +1009,10 @@
         "connectedObjectLinkArtifactLifecycleProduction.test.ts proves the RuntimeArtifact state-change family survives Host/Client replay, fresh reconnect, duplicate handling, and event-native Undo"
       ],
       "persistenceEvidenceIfRelevant": [
-        "c9FamilyLTemporaryHpProduction.test.ts reconstructs the post-Undo Temporary HP state on a fresh connected replica from the Host event ledger"
+        "c9FamilyLTemporaryHpProduction.test.ts reconstructs the post-Undo Temporary HP state on a fresh connected replica from the Host event ledger",
+        "c9FamilyLMaxHpPersistence.test.ts proves runtime maximum HP survives Character library materialization without mutating source maxHp and normalizes after inverse write-back"
       ],
-      "remainingNamedSeams": [
-        "generic max-HP source-model/write-back acceptance remains incomplete",
-        "named feature/spell HP execution remains migration debt where it bypasses portable Common Play"
-      ],
+      "remainingNamedSeams": [],
       "connectedRelevant": true,
       "persistenceRelevant": true
     },
