@@ -1,0 +1,67 @@
+name: C9 Family L Critical Dice Retry 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-l-critical-dice-retry-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  verify-and-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Reuse verified patch payload
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          source=Path('.github/workflows/c9-family-l-critical-dice-direct-71304.yml').read_text(encoding='utf-8')
+          start="          python3 - <<'PY'\n"
+          end="\n          PY\n"
+          body=source.split(start,1)[1].split(end,1)[0]
+          body='\n'.join(line[10:] if line.startswith('          ') else line for line in body.splitlines())+'\n'
+          Path('/tmp/c9-critical-patch.py').write_text(body,encoding='utf-8')
+          PY
+          python3 /tmp/c9-critical-patch.py
+      - name: Generate runtime catalog
+        run: npm run generate:builtin-catalog
+      - name: Verify portable critical damage dice
+        run: |
+          npx tsx --test tests/ui/c9FamilyLDamageDefenseProduction.test.ts
+          node scripts/check-legacy-execution-boundary.mjs
+          node scripts/check-v1-mechanism-coverage.mjs
+          npx tsc -p tsconfig.json --noEmit
+      - name: Publish verified implementation
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch=agent/c9-gate-n-coverage-reconciliation
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm -f .github/workflows/c9-family-l-critical-dice-direct-71304.yml .github/workflows/c9-family-l-critical-dice-retry-71304.yml
+          git add src/domain/commonPlayOperationRuntime.ts src/app/installedCommonPlayRuntimeAdapter.ts tests/ui/c9FamilyLDamageDefenseProduction.test.ts
+          git commit -m "feat(c9): route portable critical damage dice"
+          for attempt in 1 2 3 4 5; do
+            git fetch origin "$branch"
+            if git rebase "origin/$branch"; then
+              if git push origin HEAD:"$branch"; then exit 0; fi
+            else
+              git rebase --abort || true
+              exit 1
+            fi
+          done
+          exit 1
