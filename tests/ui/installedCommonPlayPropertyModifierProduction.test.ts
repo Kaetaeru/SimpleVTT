@@ -28,6 +28,8 @@ function moduleJson(prefix:string) {
     {id:"slow",invocation:"manual",operations:[{kind:"property.modify",property:"movement.walk",operation:"set",value:{value:5},target:"actor",owner:"effect",source:"definition",duration:{kind:"elapsed",amount:{value:1},unit:"minutes"},lifetime:{kind:"until-duration",onEnd:"destroy"},instancePolicy:"stack"}]},
     {id:"guard",invocation:"manual",operations:[{kind:"property.modify",property:"defense.ac",operation:"add",value:{value:2},target:"actor",owner:"effect",source:"definition",duration:{kind:"elapsed",amount:{value:1},unit:"minutes"},lifetime:{kind:"until-duration",onEnd:"destroy"},instancePolicy:"stack"}]},
     {id:"move",invocation:"manual",operations:[{kind:"movement.relocate",mode:"move",movementType:"walk",target:"actor",distance:{ref:"movement.walk"},destinationFact:{id:"property-move-destination",fact:"spatial.legal-destination",subject:"actor",authority:"actor-owner",visibility:"actor-and-dm",unknownPolicy:"request-authority"}}]},
+    {id:"strength",invocation:"manual",operations:[{kind:"property.modify",property:"ability.str.score",operation:"set",value:{value:14},target:"actor",owner:"effect",source:"definition",duration:{kind:"elapsed",amount:{value:1},unit:"minutes"},lifetime:{kind:"until-duration",onEnd:"destroy"},instancePolicy:"stack"}]},
+    {id:"move-strength",invocation:"manual",operations:[{kind:"movement.relocate",mode:"move",movementType:"walk",target:"actor",distance:{ref:"ability.str.modifier"},destinationFact:{id:"property-strength-move-destination",fact:"spatial.legal-destination",subject:"actor",authority:"actor-owner",visibility:"actor-and-dm",unknownPolicy:"request-authority"}}]},
   ]};
   return {moduleId,contentId,mechanicId,json:JSON.stringify({schemaVersion:"0.1-draft",moduleId,moduleVersion:"1",rulesProfile:{id:"dnd.srd-5.2.1",version:"0.1-draft"},defaultLocale:"en",source:{document:"Unknown property module",version:"1",license:"CC0",srdDerived:false},dependencies:[],conflicts:[],capabilities:[],content:[{id:contentId,category:"option",presentation:{defaultLocale:"en",originalName:"Unknown Property Movement",locales:{en:{name:"Unknown Property Movement"}}},mechanics:[{kind:"common-play",config}]}]})};
 }
@@ -61,7 +63,7 @@ async function run(prefix:string) {
 test("production property owner composes profile-derived values with active Effect modifiers",()=>{
   const effect:EffectInstance={
     id:"effect.external.str-modifier",sourceId:"external.unseen.property-owner",targetId:"char.aelar",kind:"modifier",tags:[],expiry:{kind:"permanent"},
-    propertyModifier:{property:"ability.str.modifier",operation:"add",value:{value:1},source:"definition",instancePolicy:"stack"},
+    propertyModifier:{property:"ability.str.score",operation:"add",value:{value:2},source:"definition",instancePolicy:"stack"},
   };
   const resolved=resolveRuntimeProfileProperty([effect],"char.aelar","ability.str.modifier",{"ability.str.score":14});
   assert.equal(resolved.value,3);
@@ -144,4 +146,17 @@ test("source-bound non-movement property modifier converges through connected re
   assert.equal(hostSnapshot.scene.entities.find((entity)=>entity.id==="char.aelar")!.ac,baseAc);
   assert.equal(clientSnapshot.scene.entities.find((entity)=>entity.id==="char.aelar")!.ac,baseAc);
   assert.equal(reconnectSnapshot.scene.entities.find((entity)=>entity.id==="char.aelar")!.ac,baseAc);
+});
+
+
+test("unknown Common Play consumes an effect-modified derived profile property",async()=>{
+  const adapter=new MockAdapter();
+  const {action}=await install(adapter,"external-property-derived");
+  const before=await adapter.getSnapshot();
+  const initialRemaining=before.scene.economyByActor["char.aelar"]!.movement;
+  await adapter.resolveAction(action("strength"),["char.aelar"]);
+  await adapter.resolveAction(action("move-strength"),["char.aelar"]);
+  const after=await adapter.getSnapshot();
+  assert.equal(initialRemaining-after.scene.economyByActor["char.aelar"]!.movement,2,JSON.stringify(after.resolution));
+  assert.equal(after.resolution?.stage,"complete");
 });

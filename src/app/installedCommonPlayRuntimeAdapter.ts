@@ -619,6 +619,44 @@ function rollFaces(internal:AdapterState,actionId:string,count:number,sides:numb
   });
 }
 
+function commonPlayActorProfileProperties(
+  internal:AdapterState,
+  state:RulesRuntimeState,
+  actorId:string,
+):Record<string,number>|undefined {
+  const actorState=state.combatants[actorId];
+  if(!actorState) return undefined;
+  if(internal.activeCharacter.id!==actorId) {
+    return {
+      "movement.walk":resolveRuntimeProfileProperty(
+        state.effects,actorId,"movement.walk",{"movement.walk":actorState.baseSpeed},
+      ).value,
+    };
+  }
+  const character=internal.activeCharacter;
+  const inputs:Record<string,number>={
+    "ability.str.score":character.abilities.str,
+    "ability.dex.score":character.abilities.dex,
+    "ability.con.score":character.abilities.con,
+    "ability.int.score":character.abilities.int,
+    "ability.wis.score":character.abilities.wis,
+    "ability.cha.score":character.abilities.cha,
+    "progression.character.level":character.level,
+    "proficiency.bonus":character.proficiencyBonus,
+    "defense.ac":character.ac,
+    "movement.walk":actorState.baseSpeed,
+    "hp.current":actorState.life.hp.current,
+    "hp.maximum":actorState.life.hp.maximum,
+    "hp.temporary":actorState.life.hp.temporary,
+  };
+  const projected={...inputs};
+  for(const [property,definition] of Object.entries(SIMPLEVTT_APP_RULES_PROFILE.properties)) {
+    if(!Number.isFinite(inputs[property])&&!definition.formula) continue;
+    projected[property]=resolveRuntimeProfileProperty(state.effects,actorId,property,inputs).value;
+  }
+  return projected;
+}
+
 function operationExecutionInput(
   internal:AdapterState,
   actionId:string,
@@ -631,12 +669,7 @@ function operationExecutionInput(
   if(action.lowered.kind!=="operations") throw new Error("stored invocation payload requires an operations lowerer");
   const {actor,actorEntity,selectedTargetId,selectedTargets,state}=prepared;
   const entryPoint=action.lowered.definition.entryPoints.find((candidate)=>candidate.id===action.entryPointId)!;
-  const actorState=state.combatants[actor.id];
-  const movementProperties=actorState?{
-    "movement.walk":resolveRuntimeProfileProperty(
-      state.effects,actor.id,"movement.walk",{"movement.walk":actorState.baseSpeed},
-    ).value,
-  }:undefined;
+  const movementProperties=commonPlayActorProfileProperties(internal,state,actor.id);
   const d20Faces=entryPoint.test?[internal.d20(actionId,0),internal.d20(actionId,1)]:undefined;
   const movementFactAnswers=Object.fromEntries(entryPoint.operations.flatMap((operation,index)=>{
     if(operation.kind!=="movement.relocate"||!operation.destinationFact) return [];
