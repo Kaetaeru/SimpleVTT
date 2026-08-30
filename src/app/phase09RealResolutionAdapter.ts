@@ -37,6 +37,7 @@ interface Phase09ResolutionAdapterState {
   eligible(action:ActionVm):string[];
   capture():void;
   d20(actionId:string,index?:number):number;
+  damageDice(action:ActionVm,critical?:boolean):number[];
   commit(action:ActionVm):void;
   syncChar():void;
   resolution:ResolutionView|null;
@@ -408,6 +409,36 @@ MockAdapter.prototype.advanceResolution = async function advanceResolutionWithRe
     resolution.calculatedOutcome = `${resolved.restored} HP 회복`;
     if (!resolution.adjudicated) resolution.finalOutcome = "회복 적용";
     internal.commit(action);
+    return internal.getSnapshot();
+  }
+
+  if (action.resolutionKind === "attack" && resolution.stage === "roll-animation") {
+    const target=internal.entity(resolution.targetIds[0]);
+    const canReact=Boolean(resolution.attackOutcome==="명중"&&target?.reactions.length&&internal.scene.economyByActor[target.id]?.reaction);
+    if (canReact&&target) {
+      const option=target.reactions[0];
+      resolution.interrupt={id:option.id,responderId:target.id,responderName:target.name,trigger:option.trigger,optionName:option.name,cost:option.cost,effect:option.effect,source:option.source};
+      resolution.stage="interrupt";
+      resolution.canAdvance=false;
+      resolution.nextLabel=undefined;
+    } else {
+      resolution.stage="attack-result";
+      resolution.canAdvance=true;
+      resolution.nextLabel=resolution.attackOutcome==="명중"?"피해 굴림":"판정 적용";
+    }
+    return internal.getSnapshot();
+  }
+
+  if (action.resolutionKind === "attack" && resolution.stage === "attack-result") {
+    if (resolution.attackOutcome === "빗나감") {
+      internal.commit(action);
+      return internal.getSnapshot();
+    }
+    resolution.stage="damage-animation";
+    resolution.rollKind="damage";
+    resolution.authoritativeDice=internal.damageDice(action,resolution.critical);
+    resolution.canAdvance=true;
+    resolution.nextLabel="피해 적용";
     return internal.getSnapshot();
   }
 
