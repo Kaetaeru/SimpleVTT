@@ -1,5 +1,4 @@
 name: C9 Family E Rich Predicate Boundary 7130
-# Re-run on the current branch after targeting and interaction regression expectations were reconciled.
 
 on:
   push:
@@ -89,25 +88,15 @@ jobs:
               if text.count(marker)!=1: raise SystemExit('production relation test marker mismatch')
               addition='''test("unknown installed Common Play rich predicate filters authoritative scene properties without identity dispatch",async()=>{\n  const adapter=new MockAdapter();\n  const payload=JSON.parse(targetingPackagePayload()) as any;\n  payload.content[0].mechanics[0].config.entryPoints[0].targeting={\n    from:"targets",where:{op:"contains",left:{ref:"status"},right:{value:"중독됨"}},min:1,max:1,\n  };\n  setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());\n  const preview=await adapter.previewContentImport(JSON.stringify(payload));\n  assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));\n  await adapter.activateContentImport();\n  const actionId=installedCommonPlayActionId({catalogId:catalogQualifiedId(TARGETING_IDENTITY.contentId,TARGETING_IDENTITY.moduleId,"1"),mechanicId:TARGETING_IDENTITY.mechanicId,entryPointId:TARGETING_IDENTITY.entryPointId});\n  injureSceneEntity(adapter,"combatant.goblin-a",10);\n  injureSceneEntity(adapter,"combatant.goblin-b",10);\n  await adapter.startInitiative();\n  await adapter.setCurrentActor("char.aelar");\n  let snapshot=await adapter.getSnapshot();\n  const ineligibleBefore=snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-b")!.hp;\n  await adapter.resolveAction(actionId,["combatant.goblin-b"]);\n  snapshot=await adapter.getSnapshot();\n  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-b")!.hp,ineligibleBefore);\n  const eligibleBefore=snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")!.hp;\n  await adapter.resolveAction(actionId,["combatant.goblin-a"]);\n  snapshot=await adapter.getSnapshot();\n  assert.equal(snapshot.resolution?.stage,"complete");\n  assert.deepEqual(snapshot.resolution?.targetIds,["combatant.goblin-a"]);\n  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")!.hp,eligibleBefore+5);\n});\n\n'''
               p.write_text(text.replace(marker,addition+marker,1),encoding='utf-8')
-
-          package_test=Path('tests/ui/ruleModulePackageImport.test.ts')
-          text=package_test.read_text(encoding='utf-8')
-          for stale in [
-              '    (mechanic)=>{mechanic.config.entryPoints[0].interaction.revalidate="if-revision-changed";},\n',
-              '    (mechanic)=>{mechanic.config.payments[0].bucket="action";},\n',
-          ]:
-              text=text.replace(stale,'',1)
-          package_test.write_text(text,encoding='utf-8')
           PY
       - name: Generate content catalogs
         run: npm run generate:content
-      - name: Verify selector boundary and production slice
+      - name: Verify Family E selector boundary and production slice
         run: >-
           npx tsx --test
           tests/domain/commonPlaySelectorRuntime.test.ts
           tests/domain/commonPlayTargetingRuntime.test.ts
           tests/ui/installedCommonPlayProductionRuntime.test.ts
-          tests/ui/ruleModulePackageImport.test.ts
       - name: Verify boundaries and types
         run: |
           node scripts/check-legacy-execution-boundary.mjs
@@ -118,7 +107,7 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/domain/commonPlayDefinitionRuntime.ts src/domain/commonPlayOperationRuntime.ts src/app/installedCommonPlayRuntimeAdapter.ts tests/ui/installedCommonPlayProductionRuntime.test.ts tests/ui/ruleModulePackageImport.test.ts
+          git add src/domain/commonPlayDefinitionRuntime.ts src/domain/commonPlayOperationRuntime.ts src/app/installedCommonPlayRuntimeAdapter.ts tests/ui/installedCommonPlayProductionRuntime.test.ts
           if ! git diff --cached --quiet; then git commit -m "feat(c9): bridge rich target predicates"; fi
           git fetch origin agent/c9-gate-n-coverage-reconciliation
           git rebase origin/agent/c9-gate-n-coverage-reconciliation
