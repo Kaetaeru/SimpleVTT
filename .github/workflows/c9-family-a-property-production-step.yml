@@ -84,12 +84,6 @@ jobs:
           )
           replace_once(
               runtime,
-              'type CommonPlayExpression=LiteralNumberExpression|Record<string,unknown>;',
-              'type CommonPlayExpression=ExpressionNode;',
-              'runtime expression type',
-          )
-          replace_once(
-              runtime,
               '    if(operation.kind==="property.modify") throw new DomainEvaluationError("property.modify production lowering is not implemented; Effect-owned property modifiers must not fall through to another execution engine");',
               '''    if(operation.kind==="property.modify") {
               const targetId=operation.target==="actor"?input.actorId:input.targetId;
@@ -111,7 +105,7 @@ jobs:
                   propertyModifier:{
                     property:operation.property,
                     operation:operation.operation,
-                    value:structuredClone(operation.value),
+                    value:structuredClone(operation.value) as ExpressionNode,
                     source:"definition",
                     instancePolicy:operation.instancePolicy,
                   },
@@ -165,6 +159,7 @@ jobs:
           ''')
       - run: npx tsx --test tests/domain/commonPlayPropertyContractRuntime.test.ts tests/domain/commonPlayDefinitionRuntime.test.ts tests/domain/effectsRuntime.test.ts
       - run: npm run test:common-play-definition
+      - run: npm run generate:content
       - run: npx tsc --noEmit
       - name: Commit verified Family A slice
         run: |
