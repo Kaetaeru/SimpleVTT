@@ -11,6 +11,7 @@ import {
   commitAdapterTurnRuntimeState,
   snapshotAdapterTurnRuntimeState,
 } from "./turnRuntimeSessionRegistry";
+import { projectAdapterTurnRuntime } from "./phase09RealTurnRuntimeAdapter";
 import { persistCharacterResolutionEvents } from "./resolutionCharacterWriteBackPort";
 
 interface AdapterState {
@@ -89,6 +90,7 @@ MockAdapter.prototype.undoLastResolution=async function undoRuntimeResolution():
   internal.scene=projected.scene;
   internal.activeCharacter.resources=durableResources;
   internal.activeCharacter.items=durableItems;
+  if (projected.runtimeState) projectAdapterTurnRuntime(this);
   internal.resolution=null;
   internal.activity=internal.activity.map((entry)=>entry.id===history.resolutionId?{...entry,reversed:true}:entry);
   internal.activity.unshift({
