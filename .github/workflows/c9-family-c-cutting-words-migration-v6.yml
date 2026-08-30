@@ -1,0 +1,61 @@
+name: C9 Family C Cutting Words Migration V6
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-c-cutting-words-migration-v6.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply validated migration with identity typing fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+          workflow=Path('.github/workflows/c9-family-c-cutting-words-migration-v4.yml').read_text()
+          marker='      - name: Apply migration and timing boundary\n        shell: bash\n        run: |\n'
+          body=workflow.split(marker,1)[1].split('\n      - name: Verify complete migration slice',1)[0]
+          Path('/tmp/apply_v4.sh').write_text('\n'.join(line[10:] if line.startswith('          ') else line for line in body.splitlines())+'\n')
+          PY
+          bash /tmp/apply_v4.sh
+          python3 <<'PY'
+          from pathlib import Path
+          path=Path('src/app/commonPlayInterceptorProductionRuntimeAdapter.ts')
+          text=path.read_text()
+          old='builtinEntries.set(catalogQualifiedId(entry.contentId,entry.sourceId,entry.version),entry);'
+          if old not in text: raise SystemExit('builtin map key changed')
+          text=text.replace(old,'builtinEntries.set(entry.id,entry);',1)
+          old_name='optionName:entry.nameKo||entry.nameEn||entry.contentId,'
+          if old_name not in text: raise SystemExit('candidate option name changed')
+          text=text.replace(old_name,'optionName:entry.nameKo||entry.nameEn||entry.contentId||qualifiedId,',1)
+          path.write_text(text)
+          PY
+      - name: Verify final Family C migration slice
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          npm run generate:content
+          npx tsx --test tests/domain/commonPlayReactionResourceDieRuntime.test.ts tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts tests/ui/bardCollegeLoreCuttingWordsRuntime.test.ts
+          npx tsc --noEmit
+      - name: Commit verified migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add content/modules/dnd-srd-5.2.1.subclasses/module.json src/app/characterSessionProjection.ts src/domain/commonPlaySpatialFactRuntime.ts src/app/commonPlayInterceptorProductionRuntimeAdapter.ts src/app/offlineRuntimeAdapters.ts tests/ui/bardCollegeLoreCuttingWordsRuntime.test.ts
+          git add -u src/app/bardCollegeLoreCuttingWordsFollowUpRuntimeAdapter.ts
+          git diff --cached --check
+          git commit -m "feat(common-play): migrate Cutting Words declaratively"
+          git push
