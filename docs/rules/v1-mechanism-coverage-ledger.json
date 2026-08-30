@@ -865,8 +865,7 @@
       ],
       "remainingNamedSeams": [],
       "connectedRelevant": true,
-      "persistenceRelevant": true,
-      "remainingNamedSeamCount": 0
+      "persistenceRelevant": true
     },
     {
       "id": "weapon-mastery",
