@@ -1,0 +1,183 @@
+name: C9 Family Q Authority Responders 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-q-authority-responders-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  implement-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Patch Common Play authority responders
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path=Path('src/domain/commonPlayOperationRuntime.ts')
+          text=path.read_text(encoding='utf-8')
+          old='responder:"actor"|"target"|"actor-owner"|"target-owner";'
+          new='responder:"actor"|"target"|"actor-owner"|"target-owner"|"dm"|"host";'
+          if text.count(old)!=1:
+              raise SystemExit(f'consent responder type anchor count={text.count(old)}')
+          text=text.replace(old,new,1)
+          old='if(interaction.responder!=="actor"&&interaction.responder!=="target"&&interaction.responder!=="actor-owner"&&interaction.responder!=="target-owner") throw new DomainEvaluationError(`${label}.responder must be actor, target, actor-owner, or target-owner for portable Common Play interaction`);'
+          new='if(interaction.responder!=="actor"&&interaction.responder!=="target"&&interaction.responder!=="actor-owner"&&interaction.responder!=="target-owner"&&interaction.responder!=="dm"&&interaction.responder!=="host") throw new DomainEvaluationError(`${label}.responder must be actor, target, actor-owner, target-owner, dm, or host for portable Common Play interaction`);'
+          if text.count(old)!=1:
+              raise SystemExit(f'consent parser anchor count={text.count(old)}')
+          path.write_text(text.replace(old,new,1),encoding='utf-8')
+
+          path=Path('src/app/installedCommonPlayRuntimeAdapter.ts')
+          text=path.read_text(encoding='utf-8')
+          old='''  const actionName=prepared.projectedAction?.name||action.nameKo||action.nameEn;\n  const selectedTargetResponder=interaction.responder==="target"||interaction.responder==="target-owner";\n  const interactionResponder=selectedTargetResponder\n    ?prepared.selectedTargets.length===1?prepared.selectedTargets[0]:undefined\n    :prepared.actorEntity;\n  if(!interactionResponder) {\n    return failAction(prepared.internal,prepared.actor.id,actionId,actionName,targetIds,resolutionId,`${interaction.responder} interaction requires exactly one selected target`);\n  }\n'''
+          new='''  const actionName=prepared.projectedAction?.name||action.nameKo||action.nameEn;\n  const authorityResponder=interaction.responder==="dm"||interaction.responder==="host";\n  const authoritySnapshot=authorityResponder?await previousGetSnapshot.call(this):undefined;\n  if(interaction.responder==="dm"&&authoritySnapshot?.role!=="dm") {\n    return failAction(prepared.internal,prepared.actor.id,actionId,actionName,targetIds,resolutionId,"dm interaction requires local DM authority");\n  }\n  if(interaction.responder==="host"&&authoritySnapshot?.session.role!=="host") {\n    return failAction(prepared.internal,prepared.actor.id,actionId,actionName,targetIds,resolutionId,"host interaction requires connected Host authority");\n  }\n  const selectedTargetResponder=interaction.responder==="target"||interaction.responder==="target-owner";\n  const interactionResponder=authorityResponder\n    ?{id:`authority.${interaction.responder}`,name:interaction.responder==="dm"?"DM":"Host"}\n    :selectedTargetResponder\n      ?prepared.selectedTargets.length===1?prepared.selectedTargets[0]:undefined\n      :prepared.actorEntity;\n  if(!interactionResponder) {\n    return failAction(prepared.internal,prepared.actor.id,actionId,actionName,targetIds,resolutionId,`${interaction.responder} interaction requires exactly one selected target`);\n  }\n'''
+          if text.count(old)!=1:
+              raise SystemExit(f'interaction prompt anchor count={text.count(old)}')
+          text=text.replace(old,new,1)
+          old='''  if(!entryPoint?.interaction||entryPoint.interaction.id!==interrupt.id) return previousRespondToInterrupt.call(this,accept);\n  const projected=Object.values(internal.scene.actionsByActor).flat().find((candidate)=>candidate.id===resolution.actionId&&candidate.actorId===resolution.actorId);\n'''
+          new='''  if(!entryPoint?.interaction||entryPoint.interaction.id!==interrupt.id) return previousRespondToInterrupt.call(this,accept);\n  const authorityResponder=entryPoint.interaction.responder==="dm"||entryPoint.interaction.responder==="host";\n  const authoritySnapshot=authorityResponder?await previousGetSnapshot.call(this):undefined;\n  if(entryPoint.interaction.responder==="dm"&&authoritySnapshot?.role!=="dm") return finishInteraction(internal,resolution,"Common Play 상호작용 DM 권한 재검증 실패");\n  if(entryPoint.interaction.responder==="host"&&authoritySnapshot?.session.role!=="host") return finishInteraction(internal,resolution,"Common Play 상호작용 Host 권한 재검증 실패");\n  const projected=Object.values(internal.scene.actionsByActor).flat().find((candidate)=>candidate.id===resolution.actionId&&candidate.actorId===resolution.actorId);\n'''
+          if text.count(old)!=1:
+              raise SystemExit(f'interaction response anchor count={text.count(old)}')
+          path.write_text(text.replace(old,new,1),encoding='utf-8')
+          PY
+      - name: Add authority responder regression
+        run: |
+          cat > tests/ui/c9FamilyQAuthorityResponderProduction.test.ts <<'TS'
+          import assert from "node:assert/strict";
+          import test from "node:test";
+          import "../../src/app/offlineRuntimeAdapters";
+          import "../../src/app/connectedSessionRuntimeAdapter";
+          import "../../src/app/connectedActionRoutingAdapter";
+          import { catalogQualifiedId } from "../../src/app/contentCatalogIdentity";
+          import { connectedManifest } from "../../src/app/connectedSessionRuntimeAdapter";
+          import { connectedStateFor } from "../../src/app/connectedSessionState";
+          import { installedCommonPlayActionId } from "../../src/app/installedCommonPlayActionReference";
+          import { setInstalledContentStoreForTests } from "../../src/app/installedContentRuntimeAdapter";
+          import { MemoryInstalledContentStore } from "../../src/app/memoryInstalledContentStore";
+          import { MockAdapter } from "../../src/app/mockAdapter";
+          import { HostSessionLedger } from "../../src/app/connectedSessionProtocol";
+          import { tauriSessionTransport } from "../../src/app/tauriSessionTransport";
+          import { routeConnectedInterruptResponse } from "../../src/app/connectedInterruptResponsePort";
+
+          type AuthorityResponder="dm"|"host";
+          const MODULE_ID="homebrew.authority-responder";
+          const CONTENT_ID="option.authority-responder";
+          const MECHANIC_ID="external.unknown.authority-responder";
+          const ENTRY_POINT_ID="ask-authority";
+
+          function payload(responder:AuthorityResponder){return JSON.stringify({
+            schemaVersion:"0.1-draft",moduleId:`${MODULE_ID}.${responder}`,moduleVersion:"1",
+            rulesProfile:{id:"dnd.srd-5.2.1",version:"0.1-draft"},defaultLocale:"en",
+            source:{document:"Authority Responder Probe",version:"1",license:"CC0",srdDerived:false},dependencies:[],conflicts:[],capabilities:[],
+            content:[{id:`${CONTENT_ID}.${responder}`,category:"option",presentation:{defaultLocale:"en",originalName:`${responder} Authority Consent`,locales:{en:{name:`${responder} Authority Consent`,description:"Portable local authority consent probe"}}},mechanics:[{kind:"common-play",config:{
+              schemaVersion:"0.2-draft",id:`${MECHANIC_ID}.${responder}`,
+              payments:[{kind:"economy",bucket:"reaction",amount:{value:1},consumeAt:"commit",refundOnCancel:true}],
+              entryPoints:[{id:ENTRY_POINT_ID,invocation:"manual",interaction:{id:`authority-consent.${responder}`,kind:"consent",responder,mode:"blocking",input:{type:"boolean"},revalidate:"if-revision-changed",stalePolicy:"reject"},operations:[{kind:"damage.apply",amount:{value:1},damageType:"force",target:"actor"}]}],
+            }}]}]
+          });}
+
+          async function install(adapter:MockAdapter,responder:AuthorityResponder){
+            setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
+            const preview=await adapter.previewContentImport(payload(responder));
+            assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
+            await adapter.activateContentImport();
+            return installedCommonPlayActionId({catalogId:catalogQualifiedId(`${CONTENT_ID}.${responder}`,`${MODULE_ID}.${responder}`,"1"),mechanicId:`${MECHANIC_ID}.${responder}`,entryPointId:ENTRY_POINT_ID});
+          }
+
+          async function connectedAuthorityHost(responder:AuthorityResponder){
+            const adapter=new MockAdapter();
+            await adapter.startProductionLocalPlay("dm");
+            const actionId=await install(adapter,responder);
+            const internal=adapter as unknown as {activeCharacter:{id:string};scene:{economyByActor:Record<string,{reaction:boolean}>};session:{role:"offline"|"host"|"client"};role:"player"|"dm"};
+            const actorId=internal.activeCharacter.id;
+            await adapter.startInitiative();await adapter.setCurrentActor(actorId);
+            internal.session.role="host";
+            const sessionId=`session.authority.${responder}`;
+            const state=connectedStateFor(adapter);state.mode="host";state.sessionId=sessionId;state.ledger=new HostSessionLedger(sessionId,connectedManifest(adapter));
+            const actorManifest=structuredClone(connectedManifest(adapter));
+            state.peerManifests.set("peer.actor",actorManifest);
+            return {adapter,actionId,internal,actorId,sessionId};
+          }
+
+          for(const responder of ["dm","host"] as const) test(`${responder} responder remains local authority and remote Character peers cannot approve it`,async()=>{
+            const {adapter,actionId,internal,actorId,sessionId}=await connectedAuthorityHost(responder);
+            const direct:Array<{peer:string;message:string}>=[],broadcasts:string[]=[];
+            const oldSend=tauriSessionTransport.send,oldSendTo=tauriSessionTransport.sendTo;
+            tauriSessionTransport.send=async(message)=>{broadcasts.push(message);return 1;};
+            tauriSessionTransport.sendTo=async(peer,message)=>{direct.push({peer,message});return 1;};
+            try{
+              const before=await adapter.getSnapshot();
+              const tempHpBefore=before.activeCharacter.tempHp;
+              assert.equal(before.scene.economyByActor[actorId]?.reaction,true);
+              let snapshot=await adapter.resolveAction(actionId,[actorId]);
+              assert.equal(snapshot.resolution?.stage,"interrupt",JSON.stringify(snapshot.resolution));
+              assert.equal(snapshot.resolution?.interrupt?.responderId,`authority.${responder}`);
+              assert.equal(snapshot.resolution?.interrupt?.responderName,responder==="dm"?"DM":"Host");
+              assert.ok(!direct.map((entry)=>JSON.parse(entry.message)).some((wire)=>wire.type==="resolution-interrupt-prompt"),JSON.stringify(direct));
+
+              const resolutionId=snapshot.resolution!.id,promptId=snapshot.resolution!.interrupt!.id;
+              const directBefore=direct.length;
+              assert.equal(await routeConnectedInterruptResponse(adapter,{peer:"peer.actor",message:""},{sessionId,resolutionId,promptId,accept:true}),true);
+              const errors=direct.slice(directBefore).map((entry)=>JSON.parse(entry.message)).filter((wire)=>wire.type==="error");
+              assert.equal(errors.at(-1)?.code,"interrupt-not-authorized",JSON.stringify(errors));
+              snapshot=await adapter.getSnapshot();
+              assert.equal(snapshot.resolution?.stage,"interrupt");
+              assert.equal(snapshot.activeCharacter.tempHp,tempHpBefore);
+
+              snapshot=await adapter.respondToInterrupt(true);
+              assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
+              assert.equal(snapshot.activeCharacter.tempHp,tempHpBefore-1);
+              assert.equal(snapshot.scene.economyByActor[actorId]?.reaction,false);
+              assert.ok(broadcasts.map((wire)=>JSON.parse(wire)).some((wire)=>wire.type==="event-batch"),JSON.stringify(broadcasts));
+            }finally{tauriSessionTransport.send=oldSend;tauriSessionTransport.sendTo=oldSendTo;}
+          });
+
+          for(const responder of ["dm","host"] as const) test(`${responder} approval revalidates local authority before commit`,async()=>{
+            const {adapter,actionId,internal,actorId}=await connectedAuthorityHost(responder);
+            let snapshot=await adapter.resolveAction(actionId,[actorId]);
+            assert.equal(snapshot.resolution?.stage,"interrupt",JSON.stringify(snapshot.resolution));
+            const tempHpBefore=snapshot.activeCharacter.tempHp;
+            if(responder==="dm") internal.role="player";
+            else internal.session.role="client";
+            snapshot=await adapter.respondToInterrupt(true);
+            assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
+            assert.match(snapshot.resolution?.finalOutcome??"",/권한 재검증 실패/);
+            assert.equal(snapshot.activeCharacter.tempHp,tempHpBefore);
+            assert.equal(snapshot.scene.economyByActor[actorId]?.reaction,true);
+          });
+          TS
+      - run: npm install --no-audit --no-fund
+      - run: npm run generate:content
+      - name: Verify authority responder production
+        run: npx tsx --test tests/ui/c9FamilyQAuthorityResponderProduction.test.ts tests/ui/c9FamilyQTargetOwnerInteractionProduction.test.ts tests/ui/installedCommonPlayActorOwnerInteractionProduction.test.ts tests/domain/commonPlayOperationRuntime.test.ts
+      - name: Verify coverage and types
+        run: |
+          node scripts/check-v1-mechanism-coverage.mjs
+          node scripts/check-legacy-execution-boundary.mjs
+          npx tsc --noEmit
+      - name: Commit implementation
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/domain/commonPlayOperationRuntime.ts src/app/installedCommonPlayRuntimeAdapter.ts tests/ui/c9FamilyQAuthorityResponderProduction.test.ts
+          git rm .github/workflows/c9-family-q-authority-responders-71304.yml
+          git commit -m "feat(c9): route DM and Host interaction responders"
+          for attempt in 1 2 3 4 5; do
+            if git push origin HEAD:agent/c9-gate-n-coverage-reconciliation; then exit 0; fi
+            git fetch origin agent/c9-gate-n-coverage-reconciliation
+            git rebase origin/agent/c9-gate-n-coverage-reconciliation || exit 1
+            sleep 1
+          done
+          exit 1
