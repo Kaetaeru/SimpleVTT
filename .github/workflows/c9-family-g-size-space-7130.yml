@@ -1,0 +1,78 @@
+name: C9 Family G Size Space 7130
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-g-size-space-7130.yml
+
+permissions:
+  contents: write
+
+jobs:
+  verify-and-land:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Add standard size and space authority facts
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch=agent/c9-gate-n-coverage-reconciliation
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in $(seq 1 5); do
+            git fetch origin "$branch"
+            git reset --hard "origin/$branch"
+            python - <<'PY'
+          import json
+          from pathlib import Path
+
+          runtime=Path("src/domain/commonPlaySpatialFactRuntime.ts")
+          text=runtime.read_text()
+          anchor='  "spatial.within-reach":{valueType:"boolean"},\n'
+          addition='  "spatial.size-category":{valueType:"string"},\n  "spatial.space-feet":{valueType:"number"},\n'
+          if addition not in text:
+              assert anchor in text
+              text=text.replace(anchor,anchor+addition,1)
+              runtime.write_text(text)
+
+          test=Path("tests/domain/c9FamilyGSizeSpaceFacts.test.ts")
+          test.write_text('''import assert from "node:assert/strict";\nimport test from "node:test";\n\nimport {\n  COMMON_PLAY_STANDARD_FACTS,\n  answerCommonPlayFactRequest,\n  resolveCommonPlayFactQuery,\n  type CommonPlayFactProvider,\n  type CommonPlayFactQuery,\n} from "../../src/domain/commonPlaySpatialFactRuntime";\n\nconst provider:CommonPlayFactProvider={\n  id:"provider.c9-family-g-size-space",\n  resolve(query){\n    if(query.fact==="spatial.size-category") return {status:"answered",value:"large"};\n    if(query.fact==="spatial.space-feet") return {status:"answered",value:10};\n    return {status:"unknown"};\n  },\n};\n\ntest("Family G size and occupied-space facts are provider-authoritative and identity invariant",async()=>{\n  const observed=[];\n  for(const resolutionId of ["external.size-space.alpha","renamed.size-space.omega"]){\n    const size=await resolveCommonPlayFactQuery({\n      registry:COMMON_PLAY_STANDARD_FACTS,\n      query:{id:"size",fact:"spatial.size-category",subject:"actor.external",authority:"host",visibility:"public",unknownPolicy:"block"},\n      resolutionId,expectedRevision:4,provider,\n    });\n    const space=await resolveCommonPlayFactQuery({\n      registry:COMMON_PLAY_STANDARD_FACTS,\n      query:{id:"space",fact:"spatial.space-feet",subject:"actor.external",authority:"host",visibility:"public",unknownPolicy:"block"},\n      resolutionId,expectedRevision:4,provider,\n    });\n    assert.equal(size.status,"resolved");\n    assert.equal(space.status,"resolved");\n    if(size.status!=="resolved"||space.status!=="resolved") continue;\n    assert.equal(size.answer.value,"large");\n    assert.equal(space.answer.value,10);\n    assert.deepEqual(size.answer.provenance,{kind:"provider",providerId:provider.id});\n    assert.deepEqual(space.answer.provenance,{kind:"provider",providerId:provider.id});\n    observed.push([size.answer.value,space.answer.value]);\n  }\n  assert.deepEqual(observed[1],observed[0]);\n});\n\ntest("Family G occupied-space fact supports explicit manual authority without geometry fabrication",async()=>{\n  const query:CommonPlayFactQuery={\n    id:"space-manual",fact:"spatial.space-feet",subject:"actor.external",authority:"dm",visibility:"public",unknownPolicy:"request-authority",\n  };\n  const awaiting=await resolveCommonPlayFactQuery({registry:COMMON_PLAY_STANDARD_FACTS,query,resolutionId:"external.space.manual",expectedRevision:9});\n  assert.equal(awaiting.status,"awaiting-authority");\n  if(awaiting.status!=="awaiting-authority") return;\n  assert.equal(awaiting.request.inputType,"number");\n  const answered=answerCommonPlayFactRequest(awaiting.request,{\n    requestId:awaiting.request.id,idempotencyKey:awaiting.request.idempotencyKey,expectedRevision:9,responderId:"dm.host",value:15,\n  },9);\n  assert.equal(answered.status,"resolved");\n  if(answered.status!=="resolved") return;\n  assert.equal(answered.answer.value,15);\n  assert.deepEqual(answered.answer.provenance,{kind:"authority",responderId:"dm.host"});\n});\n''')
+
+          ledger=Path("docs/rules/v1-mechanism-coverage-ledger.json")
+          data=json.loads(ledger.read_text())
+          row=next(row for row in data["rows"] if row["family"]=="G" and row["id"]=="spatial-geometry")
+          assert row["disposition"]=="INCOMPLETE"
+          row["currentState"]=(
+              "Family G uses authoritative provider/manual spatial facts rather than Core geometry fabrication. The standard fact registry now covers distance, adjacency, reach, size category, occupied space, line-of-effect, Total Cover, area membership, legal destination, and placement; the typed selector contract carries line/cone/cube/sphere/cylinder/emanation shape, origin, dimensions, and range. Connected owner-authority spatial requests resume on reconnect, reject stale peers, and deduplicate retries. Family G remains incomplete only until durable adapter/process-restart persistence for in-flight spatial decisions is proven."
+          )
+          evidence="c9FamilyGSizeSpaceFacts.test.ts proves provider-authoritative size-category/space-feet values, external identity invariance, and explicit DM manual authority without Core geometry fabrication"
+          if evidence not in row["productionEvidence"]: row["productionEvidence"].append(evidence)
+          identity="c9FamilyGSizeSpaceFacts.test.ts proves size/space semantics are unchanged under unrelated external resolution identities"
+          if identity not in row["identityInvarianceEvidence"]: row["identityInvarianceEvidence"].append(identity)
+          row["implementationEvidence"]=[entry for entry in row["implementationEvidence"] if not entry.startswith("commonPlaySpatialFactRuntime.ts COMMON_PLAY_STANDARD_FACTS defines provider/manual authority for spatial.distance-feet")]
+          row["implementationEvidence"].insert(0,"commonPlaySpatialFactRuntime.ts COMMON_PLAY_STANDARD_FACTS defines provider/manual authority for distance, adjacency, reach, size category, occupied space, line-of-effect, Total Cover, area membership, legal destination, and placement with normalized answers")
+          row["remainingNamedSeams"]=["durable adapter/process-restart persistence for in-flight spatial decisions remains absent; connected reconnect/retry routing is already covered"]
+          ledger.write_text(json.dumps(data,indent=2,ensure_ascii=False)+"\n")
+          PY
+            node --import tsx --test tests/domain/commonPlaySpatialFactRuntime.test.ts tests/domain/c9FamilyGStandardSpatialFacts.test.ts tests/domain/c9FamilyGSizeSpaceFacts.test.ts
+            node scripts/check-v1-mechanism-coverage.mjs
+            npm exec tsc -- --noEmit
+            git rm .github/workflows/c9-family-g-size-space-7130.yml
+            git add src/domain/commonPlaySpatialFactRuntime.ts tests/domain/c9FamilyGSizeSpaceFacts.test.ts docs/rules/v1-mechanism-coverage-ledger.json
+            git commit -m "feat(c9): standardize spatial size and space authority"
+            if git push origin HEAD:"$branch"; then
+              exit 0
+            fi
+          done
+          exit 1
