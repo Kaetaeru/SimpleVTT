@@ -1,0 +1,68 @@
+name: C9 Family Q Host DM Interaction 71304
+
+# execute against the latest reconciled C9 head
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-q-host-dm-71304.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch-test-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Generate repository content required by production adapters
+        run: npm run generate:content
+      - name: Apply Family Q authority consent bridge
+        run: python3 .github/scripts/c9-family-q-authority-consent-71304.py
+      - name: Reconcile existing owner reconnect and stale evidence
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
+          ledger=json.loads(path.read_text(encoding='utf-8'))
+          row=next(entry for entry in ledger['rows'] if entry.get('family')=='Q')
+          row['currentState']=(
+            'Portable boolean consent supports actor, target, actor-owner, target-owner, DM, and Host responders through the existing blocking Resolution interrupt. '
+            'Character-owned prompts route only to the authoritative owning peer; DM/Host prompts remain host-local and reject remote Character responses. '
+            'Target-owner reconnect resumes the same pending prompt on the rebound owning peer, stale/disconnected responses are rejected, and authoritative revision revalidation prevents a late commit after Reaction becomes unavailable. '
+            'Unknown installed Common Play preserves decline-before-commit, atomic commit, connected broadcast, and identity-independent responder semantics. Rich choice/multiple-option payloads remain incomplete.'
+          )
+          evidence='c9FamilyQTargetOwnerInteractionProduction.test.ts reconnects target-owner to a rebound owning peer, rejects the stale prior peer, and rejects late approval after authoritative Reaction revision invalidation without downstream commit'
+          if evidence not in row['connectedEvidenceIfRelevant']:
+            row['connectedEvidenceIfRelevant'].append(evidence)
+          row['remainingNamedSeams']=['choice and multiple-option interaction payloads are not yet represented by the boolean consent contract']
+          path.write_text(json.dumps(ledger,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          PY
+      - name: Verify Family Q authority responders
+        run: |
+          node --import tsx --test tests/ui/c9FamilyQAuthorityInteractionProduction.test.ts tests/ui/c9FamilyQTargetOwnerInteractionProduction.test.ts tests/ui/phase09CommonPlayResourcePersistence.test.ts
+          node scripts/check-v1-mechanism-coverage.mjs
+          node scripts/check-legacy-execution-boundary.mjs
+          npx tsc --noEmit
+      - name: Commit verified Family Q slice and retire staging files
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/domain/commonPlayOperationRuntime.ts schemas/common-play-contract.schema.json src/app/installedCommonPlayRuntimeAdapter.ts tests/ui/c9FamilyQAuthorityInteractionProduction.test.ts docs/rules/v1-mechanism-coverage-ledger.json
+          git rm .github/scripts/c9-family-q-authority-consent-71304.py .github/workflows/c9-family-q-host-dm-71304.yml
+          git commit -m "feat(c9): route authority consent responders"
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
