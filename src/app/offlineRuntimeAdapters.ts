@@ -62,6 +62,7 @@ import "./productionSpellRuntimeAdapter";
 import "./productionDiceRuntimeAdapter";
 import "./standardActionReactionAdapter";
 import "./installedCommonPlayRuntimeAdapter";
+import "./commonPlayFormProjectionAdapter";
 // Production Common Play commits retain semantic ResolutionEvents instead of snapshot Undo.
 // Install the shared inverse bridge after those commits so Undo reuses the same event stream.
 import "./runtimeResolutionUndoAdapter";
