@@ -1,0 +1,71 @@
+name: C9 Family C Cutting Words Migration V2
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-c-cutting-words-migration-v2.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply corrected declarative migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+          workflow=Path('.github/workflows/c9-family-c-cutting-words-migration.yml').read_text()
+          body=workflow.split("          python3 <<'PY'\n",1)[1].split("\n          PY\n",1)[0]
+          Path('/tmp/cutting_words_migrate.py').write_text('\n'.join(line[10:] if line.startswith('          ') else line for line in body.splitlines())+'\n')
+          PY
+          python3 /tmp/cutting_words_migrate.py
+          python3 <<'PY'
+          from pathlib import Path
+
+          path=Path('src/app/commonPlayInterceptorProductionRuntimeAdapter.ts')
+          text=path.read_text()
+          anchor='import { catalogQualifiedId } from "./contentCatalogIdentity";\n'
+          if anchor not in text: raise SystemExit('catalog identity import anchor missing')
+          text=text.replace(anchor,anchor+'import { requiredSessionInstalledContent } from "./installedContentRuntimeAdapter";\n',1)
+          old='''  const entries=new Map(internal.catalog\n    .filter((entry)=>(entry.mechanics??[]).some((mechanic)=>mechanic.kind==="common-play"))\n    .map((entry)=>[entry.id,entry]));\n  if(!entries.size)return [];'''
+          new='''  const installed=await requiredSessionInstalledContent(adapter,[]);\n  const installedEntries=new Map(installed.map((entry)=>[catalogQualifiedId(entry.contentId,entry.sourceId,entry.version),entry]));\n  const builtinEntries=new Map<string,CatalogEntry>();\n  for(const entry of internal.catalog){\n    if(entry.scope!=="builtin"||!(entry.mechanics??[]).some((mechanic)=>mechanic.kind==="common-play")||!entry.contentId||!entry.sourceId)continue;\n    builtinEntries.set(catalogQualifiedId(entry.contentId,entry.sourceId,entry.version),entry);\n  }\n  if(!installedEntries.size&&!builtinEntries.size)return [];'''
+          if old not in text: raise SystemExit('naive discovery block missing')
+          text=text.replace(old,new,1)
+          lookup='      const entry=entries.get(qualifiedId);'
+          if lookup not in text: raise SystemExit('candidate lookup missing')
+          text=text.replace(lookup,'      const entry=installedEntries.get(qualifiedId) ?? builtinEntries.get(qualifiedId);',1)
+          path.write_text(text)
+
+          test=Path('tests/ui/bardCollegeLoreCuttingWordsRuntime.test.ts')
+          body=test.read_text()
+          leftover='assert.notEqual(snapshot.resolution?.interrupt?.id,INTERRUPT_ID);'
+          if leftover not in body: raise SystemExit('level-2 legacy assertion missing')
+          test.write_text(body.replace(leftover,'assert.notEqual(snapshot.resolution?.stage,"interrupt");',1))
+          PY
+      - name: Verify corrected production path
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          npm run generate:content
+          npx tsx --test tests/domain/commonPlayReactionResourceDieRuntime.test.ts tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts tests/ui/bardCollegeLoreCuttingWordsRuntime.test.ts
+          npx tsc --noEmit
+      - name: Commit verified migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add content/modules/dnd-srd-5.2.1.subclasses/module.json src/app/characterSessionProjection.ts src/domain/commonPlaySpatialFactRuntime.ts src/app/commonPlayInterceptorProductionRuntimeAdapter.ts src/app/offlineRuntimeAdapters.ts tests/ui/bardCollegeLoreCuttingWordsRuntime.test.ts
+          git add -u src/app/bardCollegeLoreCuttingWordsFollowUpRuntimeAdapter.ts
+          git diff --cached --check
+          git commit -m "feat(common-play): migrate Cutting Words declaratively"
+          git push
