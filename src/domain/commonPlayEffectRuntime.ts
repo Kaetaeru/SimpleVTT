@@ -17,7 +17,7 @@ type LiteralNumberExpression={value:number};
 type EffectTarget="actor";
 type EventDamageTarget="event.actor"|"event.target";
 type AutomaticDamageEvent="damage.taken"|"damage.dealt";
-export type CommonPlayAutomaticEffectEvent=AutomaticDamageEvent|"attack.hit"|"attack.miss"|"save.success"|"save.failure";
+export type CommonPlayAutomaticEffectEvent=AutomaticDamageEvent|"attack.hit"|"attack.miss"|"save.success"|"save.failure"|"state.applied"|"rest.short.complete"|"rest.long.complete"|"resource.recharge.success"|"resource.recharge.failure";
 type AutomaticDamageFrequency=Exclude<CommonPlayFrequency,"unlimited">;
 
 interface CommonPlayEffectApplyOperation {
@@ -147,7 +147,7 @@ function validateRule(rule:CommonPlayAutomaticDamageRule,templateId:string,ruleI
   const label=`artifact ${templateId} rule ${ruleIndex+1}`;
   assertOnlyKeys(rule,["id","event","frequency","operations"],label);
   if (!rule.id) throw new Error(`${label} id is required`);
-  if (!["damage.taken","damage.dealt","attack.hit","attack.miss","save.success","save.failure"].includes(rule.event)) throw new Error(`${label} event is unsupported in this runtime slice`);
+  if (!["damage.taken","damage.dealt","attack.hit","attack.miss","save.success","save.failure","state.applied","rest.short.complete","rest.long.complete","resource.recharge.success","resource.recharge.failure"].includes(rule.event)) throw new Error(`${label} event is unsupported in this runtime slice`);
   if (!["once","once-per-turn","once-per-round","once-per-resolution"].includes(ruleFrequency(rule))) {
     throw new Error(`${label} frequency is unsupported in this runtime slice`);
   }

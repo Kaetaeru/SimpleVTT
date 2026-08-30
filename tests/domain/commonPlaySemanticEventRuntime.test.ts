@@ -172,3 +172,38 @@ test("Common Play emits canonical state.applied and effect.expired lifecycle sem
   };
   assert.deepEqual(summarize("external.first.lifecycle-source"),summarize("renamed.unseen.lifecycle-source"));
 });
+
+
+test("Common Play dispatches state, rest, and recharge semantic effect rules in the same resolution",()=>{
+  const definition:CommonPlayPersistentEffectDefinition={
+    schemaVersion:"0.2-draft",id:"external.unknown.lifecycle-trigger-ward",
+    entryPoints:[{id:"activate",invocation:"manual",operations:[{kind:"effect.apply",template:"ward",target:"actor"}]}],
+    artifactTemplates:[{id:"ward",artifactKind:"effect",duration:{kind:"durable"},rules:[
+      {id:"state-rule",event:"state.applied",frequency:"once-per-resolution",operations:[{kind:"damage.apply",amount:{value:1},damageType:"force",target:"event.target"}]},
+      {id:"rest-rule",event:"rest.short.complete",frequency:"once-per-resolution",operations:[{kind:"damage.apply",amount:{value:2},damageType:"psychic",target:"event.actor"}]},
+      {id:"recharge-rule",event:"resource.recharge.success",frequency:"once-per-resolution",operations:[{kind:"damage.apply",amount:{value:4},damageType:"radiant",target:"event.actor"}]},
+    ],lifetime:{kind:"until-duration",onEnd:"destroy"}}],
+  };
+  let state=runtimeState();
+  const activated=resolveCommonPlayEffectActivation(TEST_PROFILE,state,definition,{resolutionId:"lifecycle-trigger-ward",actorId:"hero",entryPointId:"activate"});
+  assert.equal(activated.status,"committed"); if(activated.status!=="committed") return; state=activated.state;
+  state={...state,clock:{...state.clock,phase:"start",activeActorId:"hero"}};
+  const request:PendingResolution={
+    id:"semantic-lifecycle-trigger-dispatch",actorId:"hero",sourceId:"external.unseen.lifecycle-source",expectedRevision:state.revision,
+    operations:[
+      {id:"apply-state",kind:"apply-effect",effect:{id:"foreign-state",sourceId:"external.foreign-state",sourceActorId:"hero",targetId:"hero",kind:"marker",duration:{kind:"permanent"}}},
+      {id:"short-rest",kind:"short-rest",targetId:"hero",spends:[]},
+      {id:"recharge",kind:"recharge-resource",actorId:"hero",resourceId:"short-resource",timing:"turn-start",die:{sides:6,faces:[6]},succeedsOn:{minimum:5}},
+    ],
+  };
+  const expanded=appendCommonPlaySemanticOutcomeTriggers(state,[definition],request,{hero:"character",goblin:"monster"});
+  const resolved=appendCommonPlaySemanticOutcomeEvents(expanded,resolvePendingResolution(TEST_PROFILE,state,expanded));
+  assert.equal(resolved.status,"committed"); if(resolved.status!=="committed") return;
+  assert.equal(resolved.state.combatants.hero.life.hp.current,13);
+  assert.equal(resolved.events.some((event)=>event.kind==="state.applied"),true);
+  assert.equal(resolved.events.some((event)=>event.kind==="rest.short.complete"),true);
+  assert.equal(resolved.events.some((event)=>event.kind==="resource.recharge.success"),true);
+  assert.equal(Object.keys(resolved.results).some((id)=>id.includes("automatic:state.applied")),true);
+  assert.equal(Object.keys(resolved.results).some((id)=>id.includes("automatic:rest.short.complete")),true);
+  assert.equal(Object.keys(resolved.results).some((id)=>id.includes("automatic:resource.recharge.success")),true);
+});

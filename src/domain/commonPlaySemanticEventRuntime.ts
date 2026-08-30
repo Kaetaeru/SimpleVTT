@@ -68,6 +68,69 @@ export function appendCommonPlaySemanticOutcomeTriggers(
       }
     }
   }
+  for(const [semanticIndex,operation] of pending.operations.entries()) {
+    const contexts:Array<{
+      event:CommonPlayAutomaticEffectEvent;
+      subjectId:string;
+      actorId:string;
+      targetId?:string;
+      when?:ResolutionOperation["when"];
+    }>=[];
+    if(operation.kind==="apply-effect") {
+      contexts.push({
+        event:"state.applied",
+        subjectId:operation.effect.targetId,
+        actorId:operation.effect.sourceActorId??pending.actorId,
+        targetId:operation.effect.targetId,
+        when:operation.when,
+      });
+    } else if(operation.kind==="short-rest"||operation.kind==="long-rest") {
+      contexts.push({
+        event:operation.kind==="short-rest"?"rest.short.complete":"rest.long.complete",
+        subjectId:operation.targetId,
+        actorId:operation.targetId,
+        targetId:operation.targetId,
+        when:operation.when,
+      });
+    } else if(operation.kind==="recharge-resource") {
+      const actorId=operation.actorId??pending.actorId;
+      contexts.push(
+        {event:"resource.recharge.success",subjectId:actorId,actorId,targetId:actorId,when:{operationId:operation.id,field:"success",equals:true}},
+        {event:"resource.recharge.failure",subjectId:actorId,actorId,targetId:actorId,when:{operationId:operation.id,field:"success",equals:false}},
+      );
+    }
+    for(const context of contexts) {
+      if(!creatureKinds[context.subjectId]) continue;
+      for(const [definitionIndex,definition] of definitions.entries()) {
+        for(const [effectIndex,effect] of state.effects.filter((candidate)=>candidate.targetId===context.subjectId&&candidate.sourceId===definition.id&&candidate.metadata?.[EFFECT_METADATA_DEFINITION]===definition.id).entries()) {
+          const templateId=effect.metadata?.[EFFECT_METADATA_TEMPLATE];
+          if(typeof templateId!=="string") continue;
+          const template=definition.artifactTemplates.find((candidate)=>candidate.id===templateId);
+          if(!template) continue;
+          for(const [ruleIndex,rule] of template.rules.filter((candidate)=>candidate.event===context.event).entries()) {
+            const frequency=resolveCommonPlayFrequency({ruleId:rule.id,subjectId:context.subjectId,frequency:rule.frequency??"once",resolutionId:pending.id,clock:state.clock,markers:effect.metadata??{}});
+            if(!frequency.eligible) continue;
+            for(const [operationIndex,triggered] of rule.operations.entries()) {
+              const targetId=triggered.target==="event.target"?context.targetId:context.actorId;
+              if(!targetId) continue;
+              const targetCreatureKind=creatureKinds[targetId];
+              if(!targetCreatureKind) continue;
+              operations.push({
+                id:`${pending.id}:automatic:${context.event}:${definitionIndex}:${effectIndex}:${semanticIndex}:${ruleIndex}:${operationIndex}`,
+                kind:"damage",targetId,damageType:triggered.damageType,amount:triggered.amount.value,creatureKind:targetCreatureKind,
+                ...(context.when?{when:context.when}:{}),
+              });
+            }
+            if(template.lifetime.kind==="until-duration"&&Object.keys(frequency.metadataPatch).length) operations.push({
+              id:`${pending.id}:automatic:${context.event}:${definitionIndex}:${effectIndex}:${semanticIndex}:${ruleIndex}:frequency`,
+              kind:"update-effect",effectId:effect.id,metadataPatch:frequency.metadataPatch,
+              ...(context.when?{when:context.when}:{}),
+            });
+          }
+        }
+      }
+    }
+  }
   return operations.length===pending.operations.length?pending:{...pending,operations};
 }
 
