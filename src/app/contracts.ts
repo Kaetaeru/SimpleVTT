@@ -75,9 +75,10 @@ export interface ItemInstanceVm {
   charges?: { current: number; max: number };
   spellcastingComponent?:"focus"|"component-pouch";
   unitCostGp?:number;
-  passiveEffects: string[];
-  grantedActionIds: string[];
-  provenance: string[];
+    passiveEffects: string[];
+    grantedActionIds: string[];
+    spellDefinitionIds?:string[];
+    provenance: string[];
 }
 
 export interface SessionCharacterInventoryVm {

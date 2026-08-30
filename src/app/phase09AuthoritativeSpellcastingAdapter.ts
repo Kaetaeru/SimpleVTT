@@ -149,7 +149,7 @@ function applyAuthoritativeHud(
   for (const actions of Object.values(snapshot.scene.actionsByActor)) {
     for (const action of actions) {
       const metadata=action.spellCast;
-      if (!metadata || !isExecutableSpellRuntimeSupport(metadata.runtimeSupport) || metadata.baseLevel===0 || metadata.castSource==="ritual") continue;
+      if (!metadata || !isExecutableSpellRuntimeSupport(metadata.runtimeSupport) || metadata.baseLevel===0 || metadata.castSource==="ritual" || metadata.castSource==="item" || metadata.castSource==="feature") continue;
       const hud=snapshot.scene.spellcastingByActor?.[action.actorId];
       if (!hud) continue;
       const hasSlot=hud.slots.some((slot)=>slot.level>=metadata.baseLevel&&slot.current>0);

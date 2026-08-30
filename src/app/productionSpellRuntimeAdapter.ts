@@ -13,7 +13,7 @@ import type { RulesRuntimeState } from "../domain/combatState";
 import { resolveRuntimeTargetingFact } from "./realRuntimeAttackFactProvider";
 import { isExecutableSpellRuntimeSupport } from "./spellcastingRuntimeContracts";
 import { allocationEntriesFromTargetSequence, resolveCommonPlayAllocation } from "../domain/commonPlayAllocationRuntime";
-import { prepareCharacterSpellComponents, spellMaterialRuntimeContext, stripSpellMaterialRuntimeResources } from "./spellComponentInventoryRuntime";
+import { prepareCharacterSpellComponents, spellPaymentRuntimeContext, stripSpellPaymentRuntimeResources } from "./spellComponentInventoryRuntime";
 import { activeCastingProcess, advanceCastingProcess, beginCastingProcess, cancelCastingProcessOperations } from "../domain/commonPlayCastingProcessRuntime";
 import { resolvePendingResolution } from "../domain/resolution";
 import { commitProductionRuntimeResolution } from "./runtimeResolutionCommit";
@@ -239,8 +239,9 @@ MockAdapter.prototype.resolveAction=async function resolveProductionSpell(action
   }
 
   const ritual=metadata.castSource==="ritual";
+  const slotless=ritual||metadata.castSource==="item"||metadata.castSource==="feature";
   const selected=selectedCombatSpellSlot(sourceAction.actorId,metadata.baseLevel||1);
-  const slotLevel=metadata.baseLevel===0||ritual ? undefined : Math.max(metadata.baseLevel,selected);
+  const slotLevel=metadata.baseLevel===0||slotless ? undefined : Math.max(metadata.baseLevel,selected);
   const turnId=internal.sessionMode==="initiative"?currentTurnId(runtime):undefined;
   const projectileCount=definition.primary.kind==="automatic-projectiles"?definition.primary.baseProjectiles+Math.max(0,(slotLevel??definition.baseLevel)-definition.baseLevel)*(definition.primary.projectilesPerSlotAboveBase??0):0;
   const allocation=projectileCount?resolveCommonPlayAllocation({
@@ -269,7 +270,7 @@ MockAdapter.prototype.resolveAction=async function resolveProductionSpell(action
 
   let componentPreparation;
   try {
-    componentPreparation=definition.components?prepareCharacterSpellComponents({
+    componentPreparation=definition.components&&metadata.castSource!=="item"?prepareCharacterSpellComponents({
       character:internal.activeCharacter,requirements:definition.components,
       status:internal.scene.entities.find((entry)=>entry.id===sourceAction.actorId)?.status??[],targetCount:Math.max(1,uniqueTargetIds.length),
     }):undefined;
@@ -313,11 +314,11 @@ MockAdapter.prototype.resolveAction=async function resolveProductionSpell(action
       const projectileAllocations=allocation?.status==="resolved"?allocation.allocations.map((entry)=>({targetId:entry.targetId,count:entry.units})):undefined;
       const request={...requestBase,dice:dice.request,projectileAllocations};
       try {
-        const materials=spellMaterialRuntimeContext({state:runtime,character:internal.activeCharacter,actorId:sourceAction.actorId,consumed:componentPreparation?.resolution.consumed??[]});
+        const materials=spellPaymentRuntimeContext({state:runtime,character:internal.activeCharacter,actorId:sourceAction.actorId,consumed:componentPreparation?.resolution.consumed??[],itemCost:sourceAction.itemCost});
         const compilation=compileSpellCast(definition,materials.state,request);
         compilation.pending.operations=[...cancelCastingProcessOperations(casting.effect,sourceAction.actorId,"casting completed"),...materials.operations,...compilation.pending.operations];
         result=resolveCompiledSpellCast(SIMPLEVTT_APP_RULES_PROFILE,materials.state,request,compilation);
-        if(result.status==="committed")stripSpellMaterialRuntimeResources(result.state,sourceAction.actorId,materials.resourceIds);
+        if(result.status==="committed")stripSpellPaymentRuntimeResources(result.state,sourceAction.actorId,materials.resourceIds);
       } catch(error) {
         result={status:"rejected",state:runtime,spellId:metadata.spellId,slotLevel,error:error instanceof Error?error.message:String(error),events:[],results:{}};
       }
@@ -327,12 +328,12 @@ MockAdapter.prototype.resolveAction=async function resolveProductionSpell(action
     authoritativeDice=dice.authoritative;
     const projectileAllocations=allocation?.status==="resolved"?allocation.allocations.map((entry)=>({targetId:entry.targetId,count:entry.units})):undefined;
     try {
-      const materials=spellMaterialRuntimeContext({state:runtime,character:internal.activeCharacter,actorId:sourceAction.actorId,consumed:componentPreparation?.resolution.consumed??[]});
+      const materials=spellPaymentRuntimeContext({state:runtime,character:internal.activeCharacter,actorId:sourceAction.actorId,consumed:componentPreparation?.resolution.consumed??[],itemCost:sourceAction.itemCost});
       const request={...requestBase,dice:dice.request,projectileAllocations};
       const compilation=compileSpellCast(definition,materials.state,request);
       compilation.pending.operations=[...materials.operations,...compilation.pending.operations];
       result=resolveCompiledSpellCast(SIMPLEVTT_APP_RULES_PROFILE,materials.state,request,compilation);
-      if(result.status==="committed")stripSpellMaterialRuntimeResources(result.state,sourceAction.actorId,materials.resourceIds);
+      if(result.status==="committed")stripSpellPaymentRuntimeResources(result.state,sourceAction.actorId,materials.resourceIds);
     } catch(error) {
       result={status:"rejected",state:runtime,spellId:metadata.spellId,slotLevel,error:error instanceof Error?error.message:String(error),events:[],results:{}};
     }

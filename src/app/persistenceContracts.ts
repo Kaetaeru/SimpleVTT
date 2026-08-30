@@ -79,6 +79,7 @@ export interface CharacterItemSourceReferenceV1 {
   unitCostGp?:number;
   passiveEffects?:string[];
   grantedActionIds?:string[];
+  spellDefinitionIds?:string[];
   provenance:string[];
 }
 

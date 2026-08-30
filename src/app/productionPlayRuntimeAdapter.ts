@@ -516,8 +516,26 @@ function spellActions(character:ExtendedCharacter):ActionVm[] {
   });
 }
 
+function itemSpellActions(character:ExtendedCharacter):ActionVm[] {
+  return character.items.flatMap((item)=>(item.spellDefinitionIds??[]).flatMap((spellId)=>{
+    const base=spellActions({...character,cantrips:[],preparedSpells:[spellId],spellbookSpells:[],pactTomeRitualSpellIds:[]})
+      .find((action)=>action.spellCast?.spellId===spellId&&action.spellCast.castSource!=="ritual");
+    if(!base)return [];
+    const itemCost= item.charges?{itemId:item.id,charges:1}:item.kind==="consumable"?{itemId:item.id,quantity:1}:undefined;
+    const available=base.available&&(!item.charges||item.charges.current>0)&&(item.kind!=="consumable"||item.quantity>0);
+    return [{
+      ...structuredClone(base),id:`action.item-spell.${item.id}.${spellId}`,name:`${item.name} · ${base.name}`,
+      summary:`아이템 시전 · ${base.summary}`,available,
+      disabledReason:available?undefined:item.charges&&item.charges.current<1?"충전이 없습니다.":item.kind==="consumable"&&item.quantity<1?"수량이 없습니다.":base.disabledReason,
+      ...(itemCost?{itemCost}:{}),spellCast:{...base.spellCast!,castSource:"item"},
+      details:[detail("시전 아이템",item.name),...base.details,...item.provenance.map((source)=>detail("아이템 출처",source))],
+    } satisfies ActionVm];
+  }));
+}
+
 export function deriveProductionCharacterActions(character:CharacterSheet):ActionVm[] {
-  const merged=[...attackActions(character),...featureActions(character),...skillActions(character),...itemActions(character),...spellActions(character as ExtendedCharacter)];
+  const extended=character as ExtendedCharacter;
+  const merged=[...attackActions(character),...featureActions(character),...skillActions(character),...itemActions(character),...spellActions(extended),...itemSpellActions(extended)];
   const byId=new Map<string,ActionVm>();
   for (const action of merged) byId.set(action.id,action);
   return [...byId.values()];

@@ -293,3 +293,39 @@ test("consumed spell material commits through durable ResolutionEvent write-back
   setCharacterLibraryStoreForTests(afterUndoRestart,store);
   assert.equal((await afterUndoRestart.getSnapshot()).activeCharacter.items.find((item)=>item.id==="material-stack")?.quantity,2);
 });
+
+test("item-granted spell spends its structural charge through durable write-back and Undo",async()=>{
+  const store=new MemoryCharacterLibraryStore();
+  const spellId="dnd.srd521.spell.magic-missile";
+  const sheet={
+    ...persistedSpellcaster(),id:"char.item-spell-caster",name:"Item Spell Caster",
+    cantrips:[FIRE_BOLT],preparedSpells:[],spellSlotMaximums:{1:1},
+    items:[
+      {id:"external-wand",definitionId:"external.renamed.wand",name:"Completely Renamed Implement",kind:"magic" as const,quantity:1,equipped:false,charges:{current:2,max:2},spellDefinitionIds:[spellId],passiveEffects:[],grantedActionIds:[],provenance:["external fixture"]},
+      {id:"external-scroll",definitionId:"external.renamed.scroll",name:"Completely Renamed Scroll",kind:"consumable" as const,quantity:2,equipped:false,spellDefinitionIds:[spellId],passiveEffects:[],grantedActionIds:[],provenance:["external fixture"]},
+    ],
+  };
+  await seedSheet(store,sheet);
+  const player=new MockAdapter();setCharacterLibraryStoreForTests(player,store);await player.startProductionLocalPlay("player");
+  let snapshot=await player.getSnapshot();
+  const action=(snapshot.scene.actionsByActor[sheet.id]??[]).find((entry)=>entry.itemCost?.itemId==="external-wand");
+  assert.ok(action);
+  const targets=snapshot.scene.entities.filter((entry)=>entry.side==="enemy").slice(0,2);
+  snapshot=await player.resolveAction(action.id,[targets[0].id,targets[0].id,targets[1].id]);
+  assert.equal(snapshot.activeCharacter.items.find((item)=>item.id==="external-wand")?.charges?.current,1);
+  assert.deepEqual(slot(snapshot,1,sheet.id),{level:1,current:1,max:1},"item casting must not spend a Character spell slot");
+  const restarted=new MockAdapter();setCharacterLibraryStoreForTests(restarted,store);
+  assert.equal((await restarted.getSnapshot()).activeCharacter.items.find((item)=>item.id==="external-wand")?.charges?.current,1);
+
+  snapshot=await player.undoLastResolution();
+  assert.equal(snapshot.activeCharacter.items.find((item)=>item.id==="external-wand")?.charges?.current,2);
+  const afterUndo=new MockAdapter();setCharacterLibraryStoreForTests(afterUndo,store);
+  assert.equal((await afterUndo.getSnapshot()).activeCharacter.items.find((item)=>item.id==="external-wand")?.charges?.current,2);
+
+  const scrollAction=(snapshot.scene.actionsByActor[sheet.id]??[]).find((entry)=>entry.itemCost?.itemId==="external-scroll");
+  assert.ok(scrollAction);
+  snapshot=await player.resolveAction(scrollAction.id,[targets[0].id,targets[0].id,targets[1].id]);
+  assert.equal(snapshot.activeCharacter.items.find((item)=>item.id==="external-scroll")?.quantity,1);
+  snapshot=await player.undoLastResolution();
+  assert.equal(snapshot.activeCharacter.items.find((item)=>item.id==="external-scroll")?.quantity,2);
+});

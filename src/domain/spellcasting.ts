@@ -272,7 +272,9 @@ function validateAccess(definition: SpellMechanicDefinition, request: SpellCastR
     );
   }
   let consumedMaterials:Array<{materialId:string;quantity:number}>=[];
-  if(definition.components){
+  if(request.source==="item") {
+    consumedMaterials=[];
+  } else if(definition.components){
     if(request.componentContext)consumedMaterials=resolveSpellComponents(definition.components,request.componentContext).consumed;
     else if(!request.componentsSatisfied)throw new DomainEvaluationError("typed spell component context is required");
   }else if(!request.componentsSatisfied)throw new DomainEvaluationError("spell components are not satisfied");

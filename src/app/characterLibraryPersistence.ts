@@ -85,6 +85,7 @@ function itemSourceReference(item:ItemInstanceVm):CharacterItemSourceReferenceV1
     unitCostGp:item.unitCostGp,
     passiveEffects:cp(item.passiveEffects),
     grantedActionIds:cp(item.grantedActionIds),
+    spellDefinitionIds:cp(item.spellDefinitionIds??[]),
     provenance:cp(item.provenance),
   };
 }
@@ -342,6 +343,7 @@ function materializeItems(record:CharacterLibraryRecordV1):ItemInstanceVm[] {
       unitCostGp:reference.unitCostGp ?? legacy?.unitCostGp,
       passiveEffects:cp(reference.passiveEffects ?? legacy?.passiveEffects ?? []),
       grantedActionIds:cp(reference.grantedActionIds ?? legacy?.grantedActionIds ?? []),
+      spellDefinitionIds:cp(reference.spellDefinitionIds ?? legacy?.spellDefinitionIds ?? []),
       provenance:cp(reference.provenance),
     };
   });

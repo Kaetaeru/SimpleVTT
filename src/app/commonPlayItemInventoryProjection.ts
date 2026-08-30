@@ -20,6 +20,7 @@ function commonItem(item:ItemInstanceVm,ownerId:string):CommonPlayItemInstance {
       ...structuredClone(item.attunementPolicy),
     }}:{}),
     grantedEntryPointIds:[...item.grantedActionIds],
+    spellDefinitionIds:[...(item.spellDefinitionIds??[])],
   };
 }
 

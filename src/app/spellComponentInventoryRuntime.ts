@@ -1,11 +1,12 @@
 import type { SpellComponentContext, SpellComponentRequirements, SpellComponentResolution } from "../domain/commonPlaySpellcastingMeta";
 import { resolveSpellComponents } from "../domain/commonPlaySpellcastingMeta";
-import type { CharacterSheet } from "./contracts";
+import type { ActionVm, CharacterSheet } from "./contracts";
 import { applyCommonPlayItemOperations } from "./commonPlayItemInventoryProjection";
 import type { RulesRuntimeState } from "../domain/combatState";
 import type { ResolutionOperation } from "../domain/resolutionTypes";
 
 const itemQuantityResourceId=(itemId:string)=>`phase09:item:${itemId}:quantity`;
+const itemChargeResourceId=(itemId:string)=>`phase09:item:${itemId}:charges`;
 
 function occupiedHands(character:CharacterSheet) {
   return character.items.filter((item)=>item.wielded).reduce((count,item)=>count+(item.wieldSlot==="two-hand"?2:1),0);
@@ -41,15 +42,30 @@ export function consumeCharacterSpellMaterials(character:CharacterSheet,consumed
   return {character:{...structuredClone(character),items:result.items,runtimeRevision:result.revision},changes:result.changes};
 }
 
-export function spellMaterialRuntimeContext(input:{
-  state:RulesRuntimeState;character:CharacterSheet;actorId:string;consumed:SpellComponentResolution["consumed"];
+export function spellPaymentRuntimeContext(input:{
+  state:RulesRuntimeState;character:CharacterSheet;actorId:string;consumed:SpellComponentResolution["consumed"];itemCost?:ActionVm["itemCost"];
 }) {
-  if(!input.consumed.length)return {state:input.state,operations:[] as ResolutionOperation[],resourceIds:[] as string[]};
+  if(!input.consumed.length&&!input.itemCost)return {state:input.state,operations:[] as ResolutionOperation[],resourceIds:[] as string[]};
   const state=structuredClone(input.state);
   const combatant=state.combatants[input.actorId];
   if(!combatant)throw new Error(`spell material actor is missing: ${input.actorId}`);
   const operations:ResolutionOperation[]=[];
   const resourceIds:string[]=[];
+  if(input.itemCost) {
+    const item=input.character.items.find((candidate)=>candidate.id===input.itemCost!.itemId);
+    if(!item)throw new Error(`spell item is missing: ${input.itemCost.itemId}`);
+    for(const payment of [
+      input.itemCost.quantity?{resourceId:itemQuantityResourceId(item.id),label:`${item.name} quantity`,current:item.quantity,maximum:item.quantity,amount:input.itemCost.quantity}:undefined,
+      input.itemCost.charges?{resourceId:itemChargeResourceId(item.id),label:`${item.name} charges`,current:item.charges?.current,maximum:item.charges?.max,amount:input.itemCost.charges}:undefined,
+    ]) {
+      if(!payment)continue;
+      if(payment.current===undefined||payment.maximum===undefined)throw new Error(`spell item payment pool is missing: ${item.id}`);
+      combatant.resources=combatant.resources.filter((resource)=>resource.id!==payment.resourceId);
+      combatant.resources.push({id:payment.resourceId,label:payment.label,current:payment.current,maximum:payment.maximum});
+      operations.push({id:`spell-item:${item.id}:${payment.resourceId}`,kind:"spend-resource",actorId:input.actorId,resourceId:payment.resourceId,amount:payment.amount});
+      resourceIds.push(payment.resourceId);
+    }
+  }
   for(const {materialId,quantity} of input.consumed) {
     const matches=input.character.items.filter((item)=>item.definitionId===materialId);
     if(matches.length!==1)throw new Error(`spell material selector must resolve exactly one stack: ${materialId}`);
@@ -63,7 +79,7 @@ export function spellMaterialRuntimeContext(input:{
   return {state,operations,resourceIds};
 }
 
-export function stripSpellMaterialRuntimeResources(state:RulesRuntimeState,actorId:string,resourceIds:string[]) {
+export function stripSpellPaymentRuntimeResources(state:RulesRuntimeState,actorId:string,resourceIds:string[]) {
   const combatant=state.combatants[actorId];
   if(combatant&&resourceIds.length)combatant.resources=combatant.resources.filter((resource)=>!resourceIds.includes(resource.id));
 }
