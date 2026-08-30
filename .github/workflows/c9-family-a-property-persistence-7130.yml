@@ -1,0 +1,23 @@
+name: C9 Family A Property Persistence
+on:
+  push:
+    branches: [agent/c9-gate-n-coverage-reconciliation]
+    paths:
+      - tests/ui/installedCommonPlayPropertyModifierProduction.test.ts
+      - tests/domain/commonPlayPropertyContractRuntime.test.ts
+      - src/domain/effects.ts
+      - src/domain/commonPlayOperationRuntime.ts
+      - src/app/installedCommonPlayRuntimeAdapter.ts
+      - .github/workflows/c9-family-a-property-persistence-7130.yml
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: npm run generate:content
+      - run: npx tsx --test tests/domain/commonPlayPropertyContractRuntime.test.ts tests/ui/installedCommonPlayPropertyModifierProduction.test.ts
+      - run: npx tsc --noEmit
