@@ -1,0 +1,20 @@
+name: C9 Family A Property Consumer Inspect 7130
+on:
+  push:
+    branches: [agent/c9-gate-n-coverage-reconciliation]
+    paths: [.github/workflows/c9-family-a-property-consumer-inspect-7130.yml]
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+      - name: Locate property resolution and modifier consumers
+        run: |
+          echo '=== resolveProfileProperty ==='
+          grep -R -n --exclude-dir=node_modules --exclude-dir=.git 'resolveProfileProperty' src tests || true
+          echo '=== propertyModifier ==='
+          grep -R -n --exclude-dir=node_modules --exclude-dir=.git 'propertyModifier' src tests || true
+          echo '=== profile property evaluation imports ==='
+          grep -R -n --exclude-dir=node_modules --exclude-dir=.git 'profileEngine' src tests || true
