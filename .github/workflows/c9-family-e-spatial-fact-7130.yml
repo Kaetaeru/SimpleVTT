@@ -1,5 +1,4 @@
 name: C9 Family E Spatial Facts 7130
-# connector staging branch reset to latest C9 head before this rerun
 
 on:
   push:
@@ -8,45 +7,29 @@ on:
     paths:
       - .github/workflows/c9-family-e-spatial-fact-7130.yml
 
-permissions:
-  contents: write
-
 jobs:
-  verify-publish:
+  verify:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: agent/c9-family-e-spatial-stage-7130
+          ref: agent/c9-gate-n-coverage-reconciliation
           fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Stage Family E spatial slice
-        shell: bash
+      - run: npm run generate:content
+      - name: Verify landed Family E spatial selector
+        run: >-
+          node --import tsx --test
+          tests/ui/c9FamilyESpatialSelectorProduction.test.ts
+          tests/ui/c9FamilyEConditionSelectorProduction.test.ts
+          tests/ui/c9FamilyETagSelectorProduction.test.ts
+          tests/ui/commonPlayRichSelectorProduction.test.ts
+      - name: Verify repository boundaries
         run: |
-          set -euo pipefail
-          npm run generate:content
-          python3 .github/scripts/c9-family-e-spatial-fact-7130.py
-      - name: Verify Family E spatial fact slice
-        shell: bash
-        run: |
-          set -euo pipefail
-          node --import tsx --test tests/ui/c9FamilyESpatialFactProduction.test.ts tests/ui/c9FamilyEConditionSelectorProduction.test.ts tests/ui/c9FamilyETagSelectorProduction.test.ts tests/ui/commonPlayRichSelectorProduction.test.ts
           node scripts/check-v1-mechanism-coverage.mjs
           node scripts/check-legacy-execution-boundary.mjs
           npm exec tsc -- --noEmit
-      - name: Publish verified proof to connector-created staging branch
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/app/installedCommonPlayRuntimeAdapter.ts tests/ui/c9FamilyESpatialFactProduction.test.ts docs/rules/v1-mechanism-coverage-ledger.json
-          git diff --cached --check
-          if ! git diff --cached --quiet; then
-            git commit -m "test(c9): prove Family E spatial selector facts"
-          fi
-          git push origin HEAD:agent/c9-family-e-spatial-stage-7130
