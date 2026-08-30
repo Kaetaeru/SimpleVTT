@@ -1,0 +1,148 @@
+from pathlib import Path
+import json
+
+source = Path("src/app/installedCommonPlayRuntimeAdapter.ts")
+text = source.read_text(encoding="utf-8")
+import_line = 'import { authoritativeCommonPlaySpatialRelation } from "./realSpatialRuntimeService";\n'
+import_anchor = 'import { allocationEntriesFromTargetSequence, resolveCommonPlayAllocation } from "../domain/commonPlayAllocationRuntime";\n'
+if import_line not in text:
+    if import_anchor not in text:
+        raise SystemExit("Family E spatial import anchor not found")
+    text = text.replace(import_anchor, import_anchor + import_line, 1)
+
+old = '''function commonPlaySelectorCandidate(actor:SceneVm["entities"][number],target:SceneVm["entities"][number]):CommonPlaySelectorCandidate {\n  const targeting=commonPlayTargetFact(actor,target);\n  return {\n    id:target.id,\n    targeting,\n    properties:{\n      relation:targeting.relation,\n      name:target.name,\n      side:target.side,\n      kind:target.kind,\n      hp:target.hp,\n      maxHp:target.maxHp,\n      tempHp:target.tempHp,\n      ac:target.ac,\n      initiative:target.initiative,\n      status:[...target.status],\n      resistances:[...target.resistances],\n      immunities:[...target.immunities],\n      vulnerabilities:[...target.vulnerabilities],\n    },\n  };\n}\n'''
+new = '''function commonPlaySelectorCandidate(scene:SceneVm,actor:SceneVm["entities"][number],target:SceneVm["entities"][number]):CommonPlaySelectorCandidate {\n  const spatial=authoritativeCommonPlaySpatialRelation(scene,actor.id,target.id);\n  const targeting:TargetingFactInput={\n    ...commonPlayTargetFact(actor,target),\n    ...(spatial?{distanceFeet:spatial.distanceFeet,visible:spatial.visible,cover:spatial.cover}:{}),\n  };\n  return {\n    id:target.id,\n    targeting,\n    properties:{\n      relation:targeting.relation,\n      name:target.name,\n      side:target.side,\n      kind:target.kind,\n      hp:target.hp,\n      maxHp:target.maxHp,\n      tempHp:target.tempHp,\n      ac:target.ac,\n      initiative:target.initiative,\n      status:[...target.status],\n      resistances:[...target.resistances],\n      immunities:[...target.immunities],\n      vulnerabilities:[...target.vulnerabilities],\n      ...(spatial?{distanceFeet:spatial.distanceFeet,visible:spatial.visible,cover:spatial.cover}:{}),\n    },\n  };\n}\n'''
+if new not in text:
+    if old not in text:
+        raise SystemExit("Family E selector candidate anchor not found or changed")
+    text = text.replace(old, new, 1)
+
+old_call = '.map((target)=>commonPlaySelectorCandidate(actorEntity,target));'
+new_call = '.map((target)=>commonPlaySelectorCandidate(internal.scene,actorEntity,target));'
+if new_call not in text:
+    if old_call not in text:
+        raise SystemExit("Family E selector call-site anchor not found or changed")
+    text = text.replace(old_call, new_call, 1)
+
+old_runtime = 'targetingCandidates:entryPoint.targeting?internal.scene.entities.filter((target)=>state.combatants[target.id]).map((target)=>commonPlaySelectorCandidate(actorEntity,target)):undefined,'
+new_runtime = 'targetingCandidates:entryPoint.targeting?internal.scene.entities.filter((target)=>state.combatants[target.id]).map((target)=>commonPlaySelectorCandidate(internal.scene,actorEntity,target)):undefined,'
+if new_runtime not in text:
+    if old_runtime not in text:
+        raise SystemExit("Family E operation selector call-site anchor not found or changed")
+    text = text.replace(old_runtime, new_runtime, 1)
+source.write_text(text, encoding="utf-8")
+
+test_path = Path("tests/ui/c9FamilyESpatialFactProduction.test.ts")
+test_path.write_text(r'''import assert from "node:assert/strict";
+import test from "node:test";
+import "../../src/app/offlineRuntimeAdapters";
+import "../../src/app/connectedSessionRuntimeAdapter";
+import "../../src/app/connectedActionRoutingAdapter";
+import "../../src/app/installedContentRuntimeAdapter";
+import type { SceneVm } from "../../src/app/contracts";
+import { catalogQualifiedId } from "../../src/app/contentCatalogIdentity";
+import { installedCommonPlayActionId } from "../../src/app/installedCommonPlayActionReference";
+import { setInstalledContentStoreForTests } from "../../src/app/installedContentRuntimeAdapter";
+import { MemoryInstalledContentStore } from "../../src/app/memoryInstalledContentStore";
+import { MockAdapter } from "../../src/app/mockAdapter";
+import { setSpatialRelation } from "../../src/app/spatialRuntimeContracts";
+
+type Identity={moduleId:string;contentId:string;mechanicId:string;entryPointId:string;displayName:string};
+const ORIGINAL:Identity={moduleId:"homebrew.family-e-spatial",contentId:"option.family-e-spatial",mechanicId:"external.unknown.family-e-spatial",entryPointId:"spatial-target",displayName:"Spatial Target"};
+const RENAMED:Identity={moduleId:"homebrew.renamed-family-e-spatial",contentId:"option.renamed-family-e-spatial",mechanicId:"external.renamed.family-e-spatial",entryPointId:"renamed-spatial-target",displayName:"Renamed Spatial Target"};
+
+function payload(identity:Identity) {
+  return JSON.stringify({
+    schemaVersion:"0.1-draft",moduleId:identity.moduleId,moduleVersion:"1",
+    rulesProfile:{id:"dnd.srd-5.2.1",version:"0.1-draft"},defaultLocale:"en",
+    source:{document:"Family E Spatial Fact Probe",version:"1",license:"CC0",srdDerived:false},
+    dependencies:[],conflicts:[],capabilities:[],
+    content:[{
+      id:identity.contentId,category:"option",
+      presentation:{defaultLocale:"en",originalName:identity.displayName,locales:{en:{name:identity.displayName}}},
+      mechanics:[{kind:"common-play",config:{
+        schemaVersion:"0.2-draft",id:identity.mechanicId,
+        entryPoints:[{id:identity.entryPointId,invocation:"manual",targeting:{
+          from:"targets",min:1,max:1,
+          where:{op:"all",args:[
+            {op:"eq",left:{ref:"relation"},right:{value:"enemy"}},
+            {op:"lte",left:{ref:"distanceFeet"},right:{value:30}},
+            {op:"eq",left:{ref:"visible"},right:{value:true}},
+            {op:"ne",left:{ref:"cover"},right:{value:"total"}},
+          ]},
+        },operations:[]}],
+      }}],
+    }],
+  });
+}
+
+function trustedSpatial(scene:SceneVm,targetId:string,distanceFeet:number,visible:boolean,cover:"none"|"half"|"three-quarters"|"total") {
+  setSpatialRelation(scene,{
+    sourceId:"char.aelar",targetId,distanceFeet,visible,cover,targetCanSeeAttacker:true,
+    provenance:"module:c9-family-e-spatial-probe",
+  });
+}
+
+async function execute(identity:Identity) {
+  const adapter=new MockAdapter();
+  setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
+  const scene=(adapter as unknown as {scene:SceneVm}).scene;
+  trustedSpatial(scene,"combatant.goblin-a",20,true,"half");
+  trustedSpatial(scene,"combatant.goblin-b",20,false,"none");
+  trustedSpatial(scene,"combatant.training-guardian",40,true,"none");
+  setSpatialRelation(scene,{
+    sourceId:"char.aelar",targetId:"combatant.wolf",distanceFeet:10,visible:true,cover:"none",targetCanSeeAttacker:true,
+    provenance:"test:untrusted-spatial-fact",
+  });
+
+  const preview=await adapter.previewContentImport(payload(identity));
+  assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
+  await adapter.activateContentImport();
+  await adapter.startInitiative();
+  await adapter.setCurrentActor("char.aelar");
+  const actionId=installedCommonPlayActionId({
+    catalogId:catalogQualifiedId(identity.contentId,identity.moduleId,"1"),
+    mechanicId:identity.mechanicId,entryPointId:identity.entryPointId,
+  });
+
+  for(const rejectedId of ["combatant.goblin-b","combatant.training-guardian","combatant.wolf"]) {
+    await adapter.resolveAction(actionId,[rejectedId]);
+    const rejected=await adapter.getSnapshot();
+    assert.equal(rejected.resolution?.actionId,actionId);
+    assert.equal(rejected.resolution?.finalOutcome,"적용 거부");
+  }
+
+  const renamedTarget=scene.entities.find((entity)=>entity.id==="combatant.goblin-a");
+  assert.ok(renamedTarget);
+  renamedTarget.name=`renamed-target-${identity.moduleId}`;
+  await adapter.resolveAction(actionId,["combatant.goblin-a"]);
+  const snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.resolution?.stage,"complete");
+  assert.equal(snapshot.resolution?.actionId,actionId);
+  assert.deepEqual(snapshot.resolution?.targetIds,["combatant.goblin-a"]);
+  return snapshot.resolution?.targetIds;
+}
+
+test("unknown installed Common Play selector consumes only trusted spatial distance visibility and cover facts and survives identity rename",async()=>{
+  const original=await execute(ORIGINAL);
+  const renamed=await execute(RENAMED);
+  assert.deepEqual(renamed,original);
+});
+''', encoding="utf-8")
+
+ledger_path = Path("docs/rules/v1-mechanism-coverage-ledger.json")
+data = json.loads(ledger_path.read_text(encoding="utf-8"))
+family = next(entry for entry in data["rows"] if entry.get("family") == "E")
+phrase = "authoritative provider-backed distance/visibility/cover facts feed generic selectors"
+if phrase not in family["currentState"]:
+    family["currentState"] = family["currentState"].rstrip(".") + "; " + phrase + "."
+evidence = "installedCommonPlayRuntimeAdapter.ts consumes authoritativeCommonPlaySpatialRelation and exposes only trusted provider-backed distanceFeet/visible/cover facts to the shared selector kernel"
+if evidence not in family["implementationEvidence"]:
+    family["implementationEvidence"].append(evidence)
+prod = "c9FamilyESpatialFactProduction.test.ts proves an unknown installed selector accepts trusted in-range visible non-total-cover facts while rejecting invisible, out-of-range, and untrusted spatial facts through the production Common Play path"
+if prod not in family["productionEvidence"]:
+    family["productionEvidence"].append(prod)
+identity = "c9FamilyESpatialFactProduction.test.ts preserves the same provider-backed spatial selector result across arbitrary module/content/mechanic/entry/display and target-name renames"
+if identity not in family["identityInvarianceEvidence"]:
+    family["identityInvarianceEvidence"].append(identity)
+ledger_path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
