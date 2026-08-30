@@ -6,6 +6,8 @@ on:
       - agent/c9-gate-n-coverage-reconciliation
     paths:
       - .github/workflows/c9-family-e-selector-verify.yml
+      - src/domain/commonPlaySelectorRuntime.ts
+      - tests/domain/commonPlaySelectorRuntime.test.ts
 
 permissions:
   contents: write
