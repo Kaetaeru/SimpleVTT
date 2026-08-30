@@ -143,7 +143,7 @@
         "SRD 5.2.1 p.76: Dark One's Own Luck",
         "commonPlayD20Runtime.test.ts"
       ],
-      "currentState": "Generic production handles additional-die ability-check/save/attack decisions and failed-save rerolls with authored bonus; richer post-roll decisions remain incomplete",
+      "currentState": "The generic d20 Resolver supports checks/saves/attacks, proficiency-derived modifiers, advantage/disadvantage, flat/additional dice, DC/target modification, reroll, replace, minimum, outcome recalculation, and criticals. Production Common Play now proves declarative Cutting Words subtract-die plus arbitrary installed post-roll replace/minimum/target-add through the existing reaction transaction with atomic payment and Undo. Family C remains INCOMPLETE because post-roll add-die/reroll for Tactical Mind, Indomitable, Dark One's Own Luck, and Peerless Skill are still injected into runtimeD20FollowUps by named class/subclass/feature checks in productionPlayRuntimeAdapter.ts rather than authored by unknown portable content.",
       "requiredSemantics": [
         "checks",
         "saves",
@@ -165,17 +165,25 @@
       "transactionDomain": "Resolver PendingResolution",
       "disposition": "INCOMPLETE",
       "implementationEvidence": [
-        "d20FollowUpRuntimeAdapter.ts"
+        "d20FollowUpRuntimeAdapter.ts",
+        "commonPlayRuntime.ts generic post-roll reaction roll.modify lowering",
+        "commonPlayReactionDefinitionRuntime.ts structural deterministic post-roll lowering",
+        "commonPlayD20Runtime.test.ts generic reroll/replace/minimum/target-add/add-die semantics"
       ],
       "productionEvidence": [
         "fighterTacticalMindFollowUpRuntime.test.ts",
         "openAbilityCheckDcRuntime.test.ts",
         "warlockFiendDarkOnesOwnLuckRuntime.test.ts",
         "bardCollegeLorePeerlessSkillRuntime.test.ts",
-        "fighterIndomitableFollowUpRuntime.test.ts"
+        "fighterIndomitableFollowUpRuntime.test.ts",
+        "6d03412 declarative Cutting Words production migration",
+        "6f6ed2e arbitrary installed deterministic post-roll replace/minimum/target-add production",
+        "installedCommonPlayInterceptorProductionRuntime.test.ts"
       ],
       "identityInvarianceEvidence": [
-        "d20FollowUpRuntime.test.ts"
+        "d20FollowUpRuntime.test.ts",
+        "6f6ed2e unknown installed deterministic interceptor module/content/mechanic/interceptor/interaction/display rename invariance",
+        "installedCommonPlayInterceptorProductionRuntime.test.ts portable interceptor rename invariance"
       ],
       "connectedEvidenceIfRelevant": [
         "fighterTacticalMindFollowUpRuntime.test.ts",
@@ -190,7 +198,8 @@
         "fighterIndomitableFollowUpRuntime.test.ts"
       ],
       "remainingNamedSeams": [
-        "Cutting Words"
+        "productionPlayRuntimeAdapter.ts injects Tactical Mind, Indomitable, Dark One's Own Luck, and Peerless Skill runtimeD20FollowUps behind class/subclass/feature identity checks",
+        "unknown portable Common Play does not yet author post-roll add-die/reroll through the production reaction path"
       ],
       "connectedRelevant": true,
       "persistenceRelevant": true
