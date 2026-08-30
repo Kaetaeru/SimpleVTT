@@ -7,7 +7,10 @@ import {
   setCharacterLibraryStoreForTests,
 } from "../../src/app/characterLibraryRuntimeAdapter";
 import { installedCommonPlayActionId } from "../../src/app/installedCommonPlayActionReference";
-import { setInstalledContentStoreForTests } from "../../src/app/installedContentRuntimeAdapter";
+import {
+  getInstalledContentPersistenceStateForTests,
+  setInstalledContentStoreForTests,
+} from "../../src/app/installedContentRuntimeAdapter";
 import { MemoryCharacterLibraryStore } from "../../src/app/memoryCharacterLibraryStore";
 import { MemoryInstalledContentStore } from "../../src/app/memoryInstalledContentStore";
 import { MockAdapter } from "../../src/app/mockAdapter";
@@ -175,7 +178,12 @@ test("unknown installed Common Play materializes and removes its own durable res
 
   const preview=await adapter.previewContentImport(sourceOwnedPackagePayload());
   assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
-  await adapter.activateContentImport();
+  const activation=await adapter.activateContentImport();
+  assert.equal(activation.contentImport,null,JSON.stringify(activation.contentImport?.validation));
+  const installed=getInstalledContentPersistenceStateForTests(adapter)?.document?.entries.find((entry)=>entry.contentId===SOURCE_CONTENT_ID&&entry.sourceId===SOURCE_MODULE_ID);
+  assert.equal(installed?.mechanics?.[0]?.config.id,SOURCE_MECHANIC_ID,JSON.stringify(getInstalledContentPersistenceStateForTests(adapter)?.document));
+  assert.equal(installed?.mechanics?.[0]?.config.entryPoints?.length,2);
+
   await adapter.startInitiative();
   await adapter.setCurrentActor("char.aelar");
 
