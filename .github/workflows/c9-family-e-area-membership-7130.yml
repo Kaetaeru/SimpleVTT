@@ -184,8 +184,13 @@ jobs:
           rm .github/workflows/c9-family-e-area-membership-7130.yml
           git add src/app/installedCommonPlayRuntimeAdapter.ts tests/ui/commonPlayRichSelectorProduction.test.ts .github/workflows/c9-family-e-area-membership-7130.yml
           git commit -m "feat(c9): bridge provider-backed area membership"
-          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
-          npx tsx --test tests/ui/commonPlayRichSelectorProduction.test.ts tests/ui/c9FamilyESpatialFactProduction.test.ts
-          node scripts/check-legacy-execution-boundary.mjs
-          npx tsc --noEmit
-          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
+          for attempt in 1 2 3; do
+            git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+            npx tsx --test tests/ui/commonPlayRichSelectorProduction.test.ts tests/ui/c9FamilyESpatialFactProduction.test.ts
+            node scripts/check-legacy-execution-boundary.mjs
+            npx tsc --noEmit
+            if git push origin HEAD:agent/c9-gate-n-coverage-reconciliation; then
+              exit 0
+            fi
+          done
+          exit 1
