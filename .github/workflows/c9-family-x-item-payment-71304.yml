@@ -6,8 +6,10 @@ on:
       - agent/c9-gate-n-coverage-reconciliation
     paths:
       - tests/ui/c9FamilyXPortableItemPaymentProduction.test.ts
+      - tests/ui/c9FamilyXConnectedPortableItemPaymentProduction.test.ts
       - .github/workflows/c9-family-x-item-payment-71304.yml
       - src/app/installedCommonPlayRuntimeAdapter.ts
+      - src/app/connectedSessionRuntimeAdapter.ts
       - src/app/realEventApplyService.ts
       - src/app/resolutionCharacterDurableProjection.ts
       - src/domain/commonPlayOperationRuntime.ts
@@ -23,7 +25,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run generate:content
-      - run: node --import tsx --test tests/ui/c9FamilyXPortableItemPaymentProduction.test.ts
+      - run: node --import tsx --test tests/ui/c9FamilyXPortableItemPaymentProduction.test.ts tests/ui/c9FamilyXConnectedPortableItemPaymentProduction.test.ts
       - run: node scripts/check-v1-mechanism-coverage.mjs
       - run: npm exec tsc -- --noEmit
       - run: node scripts/check-legacy-execution-boundary.mjs
