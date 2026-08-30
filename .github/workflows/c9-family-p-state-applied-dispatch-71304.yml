@@ -2,16 +2,11 @@ name: C9 Family P State Applied Dispatch 71304
 
 on:
   push:
-    branches:
-      - agent/c9-gate-n-coverage-reconciliation
-    paths:
-      - .github/workflows/c9-family-p-state-applied-dispatch-71304.yml
-
-permissions:
-  contents: write
+    branches: [agent/c9-gate-n-coverage-reconciliation]
+    paths: [.github/workflows/c9-family-p-state-applied-dispatch-71304.yml]
 
 jobs:
-  integrate:
+  diagnose:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,30 +15,21 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Install dependencies
-        run: npm install --no-audit --no-fund
-      - name: Wire effect activation through existing semantic dispatcher
-        shell: bash
+      - run: npm install --no-audit --no-fund
+      - name: Patch production path for diagnosis
         run: |
           node <<'NODE'
           const fs=require('node:fs');
           const path='src/app/installedCommonPlayRuntimeAdapter.ts';
           let text=fs.readFileSync(path,'utf8');
-          function replaceOne(before,after){
-            if(!text.includes(before)) throw new Error(`expected adapter patch anchor missing: ${before.slice(0,80)}`);
-            text=text.replace(before,after);
-          }
-          replaceOne(
-            'import { appendCommonPlayDamageTakenTriggers, resolveCommonPlayEffectActivation, type CommonPlayPersistentEffectDefinition } from "../domain/commonPlayEffectRuntime";',
-            'import { appendCommonPlayDamageTakenTriggers, compileCommonPlayEffectActivation, type CommonPlayPersistentEffectDefinition } from "../domain/commonPlayEffectRuntime";'
-          );
-          replaceOne(
-            '  } else if(lowered.kind==="effect") {\n    committed=resolveCommonPlayEffectActivation(SIMPLEVTT_APP_RULES_PROFILE,state,lowered.definition,{resolutionId,actorId:actor.id,entryPointId:action.entryPointId,actionKind});\n  } else if(lowered.kind==="zone") {',
-            '  } else if(lowered.kind==="effect") {\n    const pending=compileCommonPlayEffectActivation(state,lowered.definition,{resolutionId,actorId:actor.id,entryPointId:action.entryPointId,actionKind});\n    const effectDefinitions=await installedPersistentEffectDefinitions(adapter);\n    const automaticPending=appendCommonPlaySemanticOutcomeTriggers(\n      state,effectDefinitions,pending,Object.fromEntries(internal.scene.entities.map((entity)=>[entity.id,entity.kind==="character"?"character":"monster"])),\n    );\n    committed=appendCommonPlaySemanticOutcomeEvents(\n      automaticPending,resolvePendingResolution(SIMPLEVTT_APP_RULES_PROFILE,state,automaticPending),\n    );\n  } else if(lowered.kind==="zone") {'
-          );
+          const beforeImport='import { appendCommonPlayDamageTakenTriggers, resolveCommonPlayEffectActivation, type CommonPlayPersistentEffectDefinition } from "../domain/commonPlayEffectRuntime";';
+          const afterImport='import { appendCommonPlayDamageTakenTriggers, compileCommonPlayEffectActivation, type CommonPlayPersistentEffectDefinition } from "../domain/commonPlayEffectRuntime";';
+          const before='  } else if(lowered.kind==="effect") {\n    committed=resolveCommonPlayEffectActivation(SIMPLEVTT_APP_RULES_PROFILE,state,lowered.definition,{resolutionId,actorId:actor.id,entryPointId:action.entryPointId,actionKind});\n  } else if(lowered.kind==="zone") {';
+          const after='  } else if(lowered.kind==="effect") {\n    const pending=compileCommonPlayEffectActivation(state,lowered.definition,{resolutionId,actorId:actor.id,entryPointId:action.entryPointId,actionKind});\n    const effectDefinitions=await installedPersistentEffectDefinitions(adapter);\n    const automaticPending=appendCommonPlaySemanticOutcomeTriggers(state,effectDefinitions,pending,Object.fromEntries(internal.scene.entities.map((entity)=>[entity.id,entity.kind==="character"?"character":"monster"])));\n    console.log("C9_STATE_APPLIED_DEBUG",JSON.stringify({effects:state.effects.map((effect)=>({id:effect.id,sourceId:effect.sourceId,targetId:effect.targetId,metadata:effect.metadata})),definitions:effectDefinitions.map((definition)=>definition.id),operations:automaticPending.operations.map((operation)=>({id:operation.id,kind:operation.kind,targetId:"targetId" in operation?operation.targetId:undefined,when:operation.when}))}));\n    committed=appendCommonPlaySemanticOutcomeEvents(automaticPending,resolvePendingResolution(SIMPLEVTT_APP_RULES_PROFILE,state,automaticPending));\n  } else if(lowered.kind==="zone") {';
+          if(!text.includes(beforeImport)||!text.includes(before)) throw new Error('production path anchors changed');
+          text=text.replace(beforeImport,afterImport).replace(before,after);
           fs.writeFileSync(path,text);
           NODE
-
           cat > tests/ui/c9FamilyPStateAppliedTriggerProduction.test.ts <<'TEST'
           import assert from "node:assert/strict";
           import test from "node:test";
@@ -53,73 +39,28 @@ jobs:
           import { setInstalledContentStoreForTests } from "../../src/app/installedContentRuntimeAdapter";
           import { MemoryInstalledContentStore } from "../../src/app/memoryInstalledContentStore";
           import { MockAdapter } from "../../src/app/mockAdapter";
+          import { snapshotAdapterTurnRuntimeState } from "../../src/app/turnRuntimeSessionRegistry";
 
-          function payload(suffix:string) {
-            const moduleId=`homebrew.state-applied-${suffix}`;
-            const contentId=`option.state-applied-${suffix}`;
-            const listenerId=`external.listener-${suffix}`;
-            const appliedId=`external.applied-${suffix}`;
-            return {moduleId,contentId,listenerId,appliedId,json:JSON.stringify({
-              schemaVersion:"0.1-draft",moduleId,moduleVersion:"1",
-              rulesProfile:{id:"dnd.srd-5.2.1",version:"0.1-draft"},defaultLocale:"en",
-              source:{document:"State Applied Probe",version:"1",license:"CC0",srdDerived:false},dependencies:[],conflicts:[],capabilities:[],
-              content:[{id:contentId,category:"option",presentation:{defaultLocale:"en",originalName:"State Applied Probe",locales:{en:{name:"State Applied Probe",description:"Portable semantic-event dispatcher probe"}}},mechanics:[
-                {kind:"common-play",config:{schemaVersion:"0.2-draft",id:listenerId,entryPoints:[{id:"activate-listener",invocation:"manual",operations:[{kind:"effect.apply",template:"listener",target:"actor"}]}],artifactTemplates:[{id:"listener",artifactKind:"effect",duration:{kind:"elapsed",amount:{value:1},unit:"hours"},rules:[{id:"on-state-applied",event:"state.applied",frequency:"once-per-resolution",operations:[{kind:"damage.apply",amount:{value:2},damageType:"force",target:"event.target"}]}],lifetime:{kind:"until-duration",onEnd:"destroy"}}]}},
-                {kind:"common-play",config:{schemaVersion:"0.2-draft",id:appliedId,entryPoints:[{id:"apply-marker",invocation:"manual",operations:[{kind:"effect.apply",template:"marker",target:"actor"}]}],artifactTemplates:[{id:"marker",artifactKind:"effect",duration:{kind:"elapsed",amount:{value:1},unit:"hours"},rules:[{id:"noop",event:"damage.taken",frequency:"once",operations:[{kind:"damage.apply",amount:{value:0},damageType:"force",target:"event.actor"}]}],lifetime:{kind:"until-duration",onEnd:"destroy"}}]}}
-              ]}]
-            })};
-          }
-
-          async function run(suffix:string) {
+          test("diagnose state.applied production dispatch",async()=>{
             const adapter=new MockAdapter();
             setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
-            const probe=payload(suffix);
-            const preview=await adapter.previewContentImport(probe.json);
-            assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
-            await adapter.activateContentImport();
-            const catalogId=catalogQualifiedId(probe.contentId,probe.moduleId,"1");
-            const listenerAction=installedCommonPlayActionId({catalogId,mechanicId:probe.listenerId,entryPointId:"activate-listener"});
-            const appliedAction=installedCommonPlayActionId({catalogId,mechanicId:probe.appliedId,entryPointId:"apply-marker"});
-            const actorId=(adapter as unknown as {activeCharacter:{id:string}}).activeCharacter.id;
-            await adapter.startInitiative();
-            await adapter.setCurrentActor(actorId);
-            const before=await adapter.getSnapshot();
-            const hpBefore=before.scene.entities.find((entity)=>entity.id===actorId)!.hp;
-
+            const moduleId="homebrew.state-applied-probe",contentId="option.state-applied-probe",listenerId="external.listener-probe",appliedId="external.applied-probe";
+            const payload=JSON.stringify({schemaVersion:"0.1-draft",moduleId,moduleVersion:"1",rulesProfile:{id:"dnd.srd-5.2.1",version:"0.1-draft"},defaultLocale:"en",source:{document:"State Applied Probe",version:"1",license:"CC0",srdDerived:false},dependencies:[],conflicts:[],capabilities:[],content:[{id:contentId,category:"option",presentation:{defaultLocale:"en",originalName:"State Applied Probe",locales:{en:{name:"State Applied Probe",description:"probe"}}},mechanics:[{kind:"common-play",config:{schemaVersion:"0.2-draft",id:listenerId,entryPoints:[{id:"activate-listener",invocation:"manual",operations:[{kind:"effect.apply",template:"listener",target:"actor"}]}],artifactTemplates:[{id:"listener",artifactKind:"effect",duration:{kind:"elapsed",amount:{value:1},unit:"hours"},rules:[{id:"on-state-applied",event:"state.applied",frequency:"once-per-resolution",operations:[{kind:"damage.apply",amount:{value:2},damageType:"force",target:"event.target"}]}],lifetime:{kind:"until-duration",onEnd:"destroy"}}]}},{kind:"common-play",config:{schemaVersion:"0.2-draft",id:appliedId,entryPoints:[{id:"apply-marker",invocation:"manual",operations:[{kind:"effect.apply",template:"marker",target:"actor"}]}],artifactTemplates:[{id:"marker",artifactKind:"effect",duration:{kind:"elapsed",amount:{value:1},unit:"hours"},rules:[{id:"noop",event:"damage.taken",frequency:"once",operations:[{kind:"damage.apply",amount:{value:0},damageType:"force",target:"event.actor"}]}],lifetime:{kind:"until-duration",onEnd:"destroy"}}]}}]}]});
+            const preview=await adapter.previewContentImport(payload); assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation)); await adapter.activateContentImport();
+            const catalogId=catalogQualifiedId(contentId,moduleId,"1");
+            const listenerAction=installedCommonPlayActionId({catalogId,mechanicId:listenerId,entryPointId:"activate-listener"});
+            const appliedAction=installedCommonPlayActionId({catalogId,mechanicId:appliedId,entryPointId:"apply-marker"});
+            const internal=adapter as unknown as {activeCharacter:{id:string};scene:any}; const actorId=internal.activeCharacter.id;
+            await adapter.startInitiative(); await adapter.setCurrentActor(actorId);
+            const before=await adapter.getSnapshot(),hpBefore=before.scene.entities.find((entity)=>entity.id===actorId)!.hp;
             await adapter.resolveAction(listenerAction,[actorId]);
-            let snapshot=await adapter.getSnapshot();
-            assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
-            assert.equal(snapshot.scene.entities.find((entity)=>entity.id===actorId)?.hp,hpBefore);
-
+            const runtime=snapshotAdapterTurnRuntimeState(adapter,internal.scene)!;
+            console.log("C9_LISTENER_STATE",JSON.stringify(runtime.effects));
+            assert.ok(runtime.effects.some((effect)=>effect.sourceId===listenerId),JSON.stringify(runtime.effects));
             await adapter.resolveAction(appliedAction,[actorId]);
-            snapshot=await adapter.getSnapshot();
-            assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
-            assert.equal(snapshot.scene.entities.find((entity)=>entity.id===actorId)?.hp,hpBefore-2);
-            assert.ok(snapshot.resolution?.detail.some((line)=>line.includes("state.applied")),JSON.stringify(snapshot.resolution));
-
-            await adapter.undoLastResolution();
-            snapshot=await adapter.getSnapshot();
-            assert.equal(snapshot.scene.entities.find((entity)=>entity.id===actorId)?.hp,hpBefore);
-            return hpBefore-(hpBefore-2);
-          }
-
-          test("unknown installed state.applied rule dispatches atomically through Common Play and remains rename invariant",async()=>{
-            assert.equal(await run("first"),2);
-            assert.equal(await run("renamed"),2);
+            const after=await adapter.getSnapshot();
+            assert.equal(after.scene.entities.find((entity)=>entity.id===actorId)?.hp,hpBefore-2,JSON.stringify(after.resolution));
           });
           TEST
-      - name: Verify Family P state-applied dispatch
-        run: npm run generate:content && npx tsx --test tests/domain/commonPlaySemanticEventRuntime.test.ts tests/ui/c9FamilyPStateAppliedTriggerProduction.test.ts
-      - name: Verify coverage and legacy boundaries
-        run: node scripts/check-v1-mechanism-coverage.mjs && node scripts/check-legacy-execution-boundary.mjs
-      - name: Typecheck
-        run: npx tsc --noEmit
-      - name: Commit verified change
-        shell: bash
-        run: |
-          git config user.name "ChatGPT C9 Runner"
-          git config user.email "actions@users.noreply.github.com"
-          git add src/app/installedCommonPlayRuntimeAdapter.ts tests/ui/c9FamilyPStateAppliedTriggerProduction.test.ts
-          git commit -m "feat(c9): dispatch state-applied rules from effect activation"
-          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
-          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
+      - name: Run diagnostic
+        run: npm run generate:content && npx tsx --test tests/ui/c9FamilyPStateAppliedTriggerProduction.test.ts
