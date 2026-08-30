@@ -52,6 +52,19 @@ function modulePayload(prefix:string) {
       }],
     })),
     {
+      id:"move-no-provoke",
+      invocation:"manual" as const,
+      operations:[{
+        kind:"movement.relocate" as const,
+        mode:"move" as const,
+        movementType:"walk" as const,
+        target:"actor",
+        distance:{value:5},
+        doesNotProvokeOpportunityAttacks:true,
+        destinationFact:destinationFact("destination-no-provoke"),
+      }],
+    },
+    {
       id:"move-full",
       invocation:"manual" as const,
       operations:[{
@@ -128,10 +141,19 @@ async function runMovementMatrix(prefix:string) {
     assert.equal(snapshot.scene.economyByActor["char.aelar"]?.movement,before,`${mode} must not spend regular movement`);
   }
 
-  return (await adapter.getSnapshot()).scene.economyByActor["char.aelar"]!.movement;
+  const beforeNoProvoke=(await adapter.getSnapshot()).scene.economyByActor["char.aelar"]!.movement;
+  await adapter.resolveAction(action("move-no-provoke"),["char.aelar"]);
+  let snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.resolution?.stage,"complete","no-provoke movement must commit through production Common Play");
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.movement,beforeNoProvoke-5);
+  await adapter.undoLastResolution();
+  snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.movement,beforeNoProvoke,"no-provoke movement Undo must restore movement budget");
+
+  return snapshot.scene.economyByActor["char.aelar"]!.movement;
 }
 
-test("unknown installed Common Play executes every movement type, cost multiplier, push, pull, and teleport through production Resolver",async()=>{
+test("unknown installed Common Play executes every movement type, cost multiplier, push, pull, teleport, and no-provoke move through production Resolver",async()=>{
   assert.equal(await runMovementMatrix("unknown-family-i"),30);
 });
 
