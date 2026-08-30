@@ -504,6 +504,31 @@ test("connected Common Play HP converges Host-authoritative damage and healing o
   assert.equal(clientSnapshot.resolution?.actionId,hostActions.damage,"connected damage presentation remains Host-authored while both HP event batches converge");
 });
 
+test("unknown installed Common Play preserves a bounded multi-target selection through production resolution",async()=>{
+  const adapter=new MockAdapter();
+  const payload=JSON.parse(targetingPackagePayload()) as {content:Array<{mechanics:Array<{config:{entryPoints:Array<{targeting:{from:string;min:number;max:number};operations:unknown[]}>}}>}>};
+  const entryPoint=payload.content[0].mechanics[0].config.entryPoints[0];
+  entryPoint.targeting={from:"targets",min:1,max:2};
+  entryPoint.operations=[];
+  setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
+  const preview=await adapter.previewContentImport(JSON.stringify(payload));
+  assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
+  await adapter.activateContentImport();
+  const actionId=installedCommonPlayActionId({
+    catalogId:catalogQualifiedId(TARGETING_IDENTITY.contentId,TARGETING_IDENTITY.moduleId,"1"),
+    mechanicId:TARGETING_IDENTITY.mechanicId,
+    entryPointId:TARGETING_IDENTITY.entryPointId,
+  });
+  await adapter.startInitiative();
+  await adapter.setCurrentActor("char.aelar");
+  await adapter.resolveAction(actionId,["combatant.goblin-a","combatant.goblin-b"]);
+  const snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.resolution?.stage,"complete");
+  assert.equal(snapshot.resolution?.actionId,actionId);
+  assert.deepEqual(snapshot.resolution?.targetIds,["combatant.goblin-a","combatant.goblin-b"]);
+  assert.ok(snapshot.resolution?.detail.some((line)=>/validated 2 target/.test(line)));
+});
+
 test("installed Common Play targeting validates one existing target before healing and supports Undo",async()=>{
   const adapter=new MockAdapter();
   const actionId=await installTargeting(adapter);

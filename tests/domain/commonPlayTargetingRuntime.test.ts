@@ -56,6 +56,43 @@ test("bounded Common Play selector accepts the acting actor as the pre-resolved 
   if(committed.status==="committed") assert.equal(committed.state.combatants.hero.life.hp.current,15);
 });
 
+test("bounded Common Play selector preserves authored multi-target limits without fabricating spatial facts",()=>{
+  const authored=structuredClone(AUTHORED);
+  authored.entryPoints[0].targeting={from:"targets",min:1,max:2};
+  authored.entryPoints[0].operations=[];
+  const definition=parseManualCommonPlayOperationDefinition(authored);
+  const state=runtimeState();
+  const selected=[target("goblin","enemy"),target("hero","self")];
+  const pending=compileCommonPlayEntryPointOperations(TEST_PROFILE,state,definition,{
+    resolutionId:"external-multi-targeting",
+    actorId:"hero",
+    entryPointId:"mend-other",
+    targetingTargets:selected,
+  });
+  assert.equal(pending.operations.length,1);
+  const targeting=pending.operations[0];
+  assert.equal(targeting.kind,"targeting");
+  if(targeting.kind!=="targeting") return;
+  assert.deepEqual(targeting.rule,{kind:"creature",minTargets:1,maxTargets:2,directTarget:false});
+  assert.deepEqual(targeting.targets,selected);
+
+  const committed=resolveCommonPlayEntryPointOperations(TEST_PROFILE,state,definition,{
+    resolutionId:"external-multi-targeting-commit",
+    actorId:"hero",
+    entryPointId:"mend-other",
+    targetingTargets:selected,
+  });
+  assert.equal(committed.status,"committed");
+  if(committed.status!=="committed") return;
+  assert.deepEqual((committed.results["external-multi-targeting-commit:targeting"] as {targets:Array<{targetId:string}>}).targets.map((entry)=>entry.targetId),["goblin","hero"]);
+});
+
+test("multi-target Common Play rejects a singular target effect until an explicit per-target contract exists",()=>{
+  const authored=structuredClone(AUTHORED);
+  authored.entryPoints[0].targeting={from:"targets",min:1,max:2};
+  assert.throws(()=>parseManualCommonPlayOperationDefinition(authored),/explicit per-target effect contract/);
+});
+
 test("unsupported Common Play selector shapes reject explicitly",()=>{
   const invalid:Array<[Record<string,unknown>,RegExp]>=[
     [{from:"actors",min:1,max:1},/from must be targets/],
@@ -63,8 +100,8 @@ test("unsupported Common Play selector shapes reject explicitly",()=>{
     [{from:"targets",where:{value:true},min:1,max:1},/unsupported fields: where/],
     [{from:"targets",orderBy:"distance",min:1,max:1},/unsupported fields: orderBy/],
     [{from:"targets",area:{kind:"instant"},min:1,max:1},/unsupported fields: area/],
-    [{from:"targets",min:0,max:1},/min and .max must both be 1/],
-    [{from:"targets",min:1,max:2},/min and .max must both be 1/],
+    [{from:"targets",min:0,max:1},/min must be a positive integer/],
+    [{from:"targets",min:2,max:1},/max must be an integer >= min/],
   ];
   for(const [selector,message] of invalid) {
     const definition=structuredClone(AUTHORED);

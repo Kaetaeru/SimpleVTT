@@ -184,7 +184,7 @@ function projectedArtifactAction(
     ?payment.bucket==="action"?"행동":payment.bucket==="bonus-action"?"추가 행동":"반응"
     :"없음";
   const targeted=action.lowered.kind==="save-damage"||targeting!==undefined||operations.some((operation)=>(operation.kind==="damage.apply"||operation.kind==="healing.apply")&&operation.target==="target");
-  const multi=action.lowered.kind==="save-damage";
+  const multi=action.lowered.kind==="save-damage"||Boolean(targeting&&(targeting.max??1)>1);
   const eligibleTargetIds=targeted
     ?scene.entities.filter((entity)=>state.combatants[entity.id]).map((entity)=>entity.id)
     :[actorId];
@@ -618,7 +618,7 @@ async function executeCommonPlayAction(
   const affectedTargetIds=operationEntryPoint?[...new Set(operationEntryPoint.operations
     .filter((operation)=>operation.kind==="damage.apply"||operation.kind==="healing.apply")
     .map((operation)=>hpTargetId(operation.target,actor.id,selectedTargetId)))]:lowered.kind==="save-damage"?[...selectedTargets.map((target)=>target.id)]:[];
-  const presentationTargetIds=affectedTargetIds.length?affectedTargetIds:[selectedTargetId];
+  const presentationTargetIds=affectedTargetIds.length?affectedTargetIds:operationEntryPoint?.targeting?selectedTargets.map((target)=>target.id):lowered.kind==="save-damage"?selectedTargets.map((target)=>target.id):[selectedTargetId];
   const presentationTargets=presentationTargetIds.map((id)=>internal.scene.entities.find((candidate)=>candidate.id===id)!);
   const outcome=hp?.outcome??(roll?roll.outcome:"규칙 효과 적용");
   return {status:"committed" as const,snapshot:await commitProductionRuntimeResolution(adapter,state,committed,{

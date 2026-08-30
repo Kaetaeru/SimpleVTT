@@ -21,8 +21,8 @@ type CommonPlayResourceCreation={
 
 export interface CommonPlayTargetingSelector {
   from:"targets";
-  min:1;
-  max:1;
+  min:number;
+  max:number;
 }
 
 export interface CommonPlayConsentInteraction {
@@ -264,8 +264,9 @@ function parseTargetingSelector(value:unknown,label:string):CommonPlayTargetingS
   const selector=object(value,label);
   supportedKeys(selector,TARGETING_KEYS,label);
   if(selector.from!=="targets") throw new DomainEvaluationError(`${label}.from must be targets for portable Common Play targeting`);
-  if(selector.min!==1||selector.max!==1) throw new DomainEvaluationError(`${label}.min and .max must both be 1 for portable Common Play targeting`);
-  return {from:"targets",min:1,max:1};
+  if(!Number.isInteger(selector.min)||Number(selector.min)<1) throw new DomainEvaluationError(`${label}.min must be a positive integer for portable Common Play targeting`);
+  if(!Number.isInteger(selector.max)||Number(selector.max)<Number(selector.min)) throw new DomainEvaluationError(`${label}.max must be an integer >= min for portable Common Play targeting`);
+  return {from:"targets",min:Number(selector.min),max:Number(selector.max)};
 }
 
 function parsePayment(value:unknown,label:string):CommonPlayPayment {
@@ -478,7 +479,12 @@ export function parseCommonPlayOperationDefinition(value:unknown,label="Common P
       operations:entry.operations.map((operation,operationIndex)=>parseOperation(operation,`${label}.entryPoints[${index}].operations[${operationIndex}]`)),
     };
   });
-  const reactionPaymentCount=payments?.filter((payment)=>payment.kind==="economy"&&payment.bucket==="reaction").length??0;
+for(const [index,entryPoint] of entryPoints.entries()) {
+  if((entryPoint.targeting?.max??1)>1&&entryPoint.operations.some((operation)=>(operation.kind==="damage.apply"||operation.kind==="healing.apply")&&operation.target==="target")) {
+    throw new DomainEvaluationError(`${label}.entryPoints[${index}] multi-target selection requires an explicit per-target effect contract`);
+  }
+}
+const reactionPaymentCount=payments?.filter((payment)=>payment.kind==="economy"&&payment.bucket==="reaction").length??0;
   const interactionCount=entryPoints.filter((entry)=>entry.interaction).length;
   if(interactionCount>0&&reactionPaymentCount!==1) {
     throw new DomainEvaluationError(`${label} portable consent interaction requires exactly one Reaction economy payment`);
@@ -555,14 +561,14 @@ export function compileCommonPlayEntryPointOperations(
   const materializedResourceIds=new Set(state.combatants[input.actorId]?.resources.map((resource)=>resource.id)??[]);
   if(entryPoint.targeting) {
     if(!input.targetingTargets) throw new DomainEvaluationError(`Common Play entry point ${entryPoint.id} requires pre-resolved targeting facts`);
-    if(input.targetingTargets.length===1&&input.targetId!==undefined&&input.targetId!==input.targetingTargets[0].id) {
+    if(input.targetId!==undefined&&!input.targetingTargets.some((target)=>target.id===input.targetId)) {
       throw new DomainEvaluationError("Common Play downstream target does not match the validated targeting selection");
     }
     operations.push({
       id:`${input.resolutionId}:targeting`,
       kind:"targeting",
       sourceId:input.actorId,
-      rule:{kind:"creature",minTargets:1,maxTargets:1,directTarget:false},
+      rule:{kind:"creature",minTargets:entryPoint.targeting.min,maxTargets:entryPoint.targeting.max,directTarget:false},
       targets:input.targetingTargets.map((target)=>({...target})),
     });
   }
