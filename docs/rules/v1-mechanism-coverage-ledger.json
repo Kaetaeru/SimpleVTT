@@ -1730,7 +1730,7 @@
         "inventory persistence adapters",
         "phase09RealAtomicItemAdapter.ts"
       ],
-      "currentState": "Durable inventory authority exists and unknown external Common Play item quantity and charge payments execute through the canonical Resolver item-as-resource event bridge with durable Character write-back, restart persistence, event-native Undo, and full external identity rename invariance. DM session create/grant/quantity/destroy/equipment cleanup plus Character equip and quick-use quantity/charge changes now share the existing generic inventory transaction through one projection boundary instead of directly mutating item state. Portable Common Play lifecycle lowering, recharge, item-owned action/effect/spellcasting, containers, and owner transfer remain incomplete; connected quantity-payment replay/retry/reconnect/Undo is proven.",
+      "currentState": "Durable inventory authority exists and unknown external Common Play item quantity and charge payments execute through the canonical Resolver item-as-resource event bridge with durable Character write-back, restart persistence, event-native Undo, and full external identity rename invariance. DM session create/grant/quantity/destroy/equipment cleanup plus Character equip and quick-use quantity/charge changes share the existing generic inventory transaction through one projection boundary instead of directly mutating item state. Owned arbitrary-ID items now project installed Common Play entry points into the production action catalog, so item actions/effects/spellcasting reuse the same generic composition. Portable Common Play lifecycle lowering, recharge, containers, and owner transfer remain incomplete; connected quantity-payment replay/retry/reconnect/Undo is proven.",
       "requiredSemantics": [
         "create/grant/copy",
         "quantity",
@@ -1763,11 +1763,13 @@
         "C9 Family X Portable Item Payment 71304 run 33317994606: Family X production test, V1 coverage checker, and tsc --noEmit all pass; the run later fails only on concurrent legacy-boundary baseline drift outside Family X",
         "7ce2aff851dc4e0a81eecd706a8cf50dd8f6b11b ci(c9): verify connected portable item payment; C9 Family X Portable Item Payment 71304 run 33318235057 passed production + connected item payment, coverage checker, typecheck, and legacy-boundary verification",
         "3dd0a13715b0a9218ba3e3462021c58cfe52069d feat(c9): support portable item charge payment; C9 Family X Item Charge Payment 71304 run 33318484203 passed quantity + charge production tests, V1 coverage checker, and tsc --noEmit",
-        "tests/ui/c9FamilyXPortableItemChargePaymentProduction.test.ts unknown installed Common Play spends charges through production resolveAction with durable write-back, fresh restart, and event-native Undo"
+        "tests/ui/c9FamilyXPortableItemChargePaymentProduction.test.ts unknown installed Common Play spends charges through production resolveAction with durable write-back, fresh restart, and event-native Undo",
+        "tests/ui/c9FamilyXPortableItemPaymentProduction.test.ts proves an owned arbitrary-ID item projects its installed Common Play entry point into the production action catalog and executes payment plus result atomically"
       ],
       "identityInvarianceEvidence": [
         "tests/ui/c9FamilyXPortableItemPaymentProduction.test.ts repeats the full consume/persist/restart/Undo proof after complete external module/content/mechanic identity rename",
-        "tests/ui/c9FamilyXPortableItemChargePaymentProduction.test.ts repeats the full charge spend/persist/restart/Undo proof after complete external module/content/mechanic identity rename"
+        "tests/ui/c9FamilyXPortableItemChargePaymentProduction.test.ts repeats the full charge spend/persist/restart/Undo proof after complete external module/content/mechanic identity rename",
+        "tests/ui/c9FamilyXPortableItemPaymentProduction.test.ts repeats owned-item Common Play action projection and execution after complete external module/content/mechanic identity rename"
       ],
       "connectedEvidenceIfRelevant": [
         "tests/ui/c9FamilyXConnectedPortableItemPaymentProduction.test.ts proves Host/Client authoritative item quantity replay, duplicate retry suppression, fresh reconnect, event-native Undo, and reconnect-after-Undo"
@@ -1780,7 +1782,6 @@
       "remainingNamedSeams": [
         "portable Common Play create/grant/copy, destroy/update, equip/unequip/wield, and recharge lowering beyond quantity/charge payment",
         "portable containers and owner transfer production composition",
-        "generic item-owned actions/effects/spellcasting activation",
         "named item/spell activation compatibility paths"
       ],
       "connectedRelevant": true,

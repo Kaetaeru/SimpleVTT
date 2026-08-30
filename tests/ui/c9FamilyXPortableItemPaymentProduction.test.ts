@@ -4,9 +4,10 @@ import "../../src/app/offlineRuntimeAdapters";
 import { catalogQualifiedId } from "../../src/app/contentCatalogIdentity";
 import {
   getCharacterLibraryPersistenceStateForTests,
+  mutateActiveCharacterDurably,
   setCharacterLibraryStoreForTests,
 } from "../../src/app/characterLibraryRuntimeAdapter";
-import { installedCommonPlayActionId } from "../../src/app/installedCommonPlayActionReference";
+import { installedCommonPlayActionId, parseRuntimeArtifactCommonPlayActionId } from "../../src/app/installedCommonPlayActionReference";
 import { setInstalledContentStoreForTests } from "../../src/app/installedContentRuntimeAdapter";
 import { MemoryCharacterLibraryStore } from "../../src/app/memoryCharacterLibraryStore";
 import { MemoryInstalledContentStore } from "../../src/app/memoryInstalledContentStore";
@@ -112,7 +113,17 @@ async function exercise(prefix:string) {
   assert.equal(before,2);
   assert.equal(resultResourceCurrent(snapshot,prefix),undefined);
 
-  await adapter.resolveAction(actionId(prefix),[characterId]);
+  const definitionActionId=actionId(prefix);
+  await mutateActiveCharacterDurably(adapter,(character)=>{
+    character.items.find((item)=>item.id===ITEM_INSTANCE_ID)!.grantedActionIds=[definitionActionId];
+  });
+  snapshot=await adapter.getSnapshot();
+  const ownedAction=snapshot.scene.actionsByActor[characterId]?.find((action)=>
+    parseRuntimeArtifactCommonPlayActionId(action.id)?.definitionActionId===definitionActionId,
+  );
+  assert.ok(ownedAction,"an owned portable item must project its Common Play entry point into the production action catalog");
+
+  await adapter.resolveAction(ownedAction.id,[characterId]);
 
   snapshot=await adapter.getSnapshot();
   assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));

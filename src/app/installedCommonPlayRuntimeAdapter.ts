@@ -283,6 +283,21 @@ async function projectRuntimeArtifactActions(adapter:MockAdapter,snapshot:AppSna
   for(const [actorId,actions] of Object.entries((adapter as unknown as AdapterState).scene.actionsByActor)) {
     (adapter as unknown as AdapterState).scene.actionsByActor[actorId]=actions.filter((action)=>!parseStoredInvocationCommonPlayActionId(action.id)&&!parseStoredInvocationCancelActionId(action.id)&&!parseZoneMembershipCommonPlayActionId(action.id));
   }
+  const ownerId=snapshot.activeCharacter.id;
+  const ownedActions=(await Promise.all(snapshot.activeCharacter.items
+    .filter((item)=>!item.attunementRequired||item.attuned)
+    .flatMap((item)=>item.grantedActionIds.map(async(actionId)=>{
+      const action=await commonPlayAction(adapter,actionId);
+      return action?projectedArtifactAction(adapter,actionId,ownerId,action,snapshot.scene,state):undefined;
+    })))).filter((action):action is ActionVm=>Boolean(action));
+  if(ownedActions.length) {
+    for(const scene of [snapshot.scene,(adapter as unknown as AdapterState).scene]) {
+      const actions=scene.actionsByActor[ownerId]??[];
+      const existing=new Set(actions.map((action)=>action.id));
+      actions.push(...cp(ownedActions.filter((action)=>!existing.has(action.id))));
+      scene.actionsByActor[ownerId]=actions;
+    }
+  }
   for(const artifact of state.artifacts??[]) {
     const actor=artifact.artifactKind==="actor"?artifact.actor:undefined;
     if(!actor||!snapshot.scene.entities.some((entity)=>entity.id===actor.combatantId)) continue;
