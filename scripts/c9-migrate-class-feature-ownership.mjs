@@ -30,6 +30,12 @@ replaceOnce('src/app/characterSessionProjection.ts',
 `    { label:"primary class",token:source.build.classLevels?.[0]?.classId ?? source.build.className,categories:["class"] },`);
 
 replaceOnce('src/app/characterSessionProjection.ts',
+`  if (source.build.subclassName?.trim()) refs.push({ label:"subclass",token:source.build.subclassName,categories:["subclass"] });`,
+`  for (const subclassId of Object.values(source.progression.subclassIds ?? {})) {
+    if (subclassId.trim()) refs.push({ label:"subclass",token:subclassId,categories:["subclass"] });
+  }`);
+
+replaceOnce('src/app/characterSessionProjection.ts',
 `function resolveKnownFeatureIdentities(source:CharacterSourceSnapshotV1,catalog:CatalogEntry[]) {`,
 `function resolveKnownClassFeatureIdentities(source:CharacterSourceSnapshotV1,catalog:CatalogEntry[]) {
   const resolvedCatalog=catalog as ResolvedCatalogEntry[];
