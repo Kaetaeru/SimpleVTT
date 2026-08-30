@@ -1,0 +1,72 @@
+name: C9 Family H Ledger Reconcile 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-h-ledger-reconcile-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Reconcile Family H ledger evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
+          data=json.loads(path.read_text(encoding='utf-8'))
+          family=next((entry for entry in data['families'] if entry.get('family')=='H'),None)
+          if family is None: raise SystemExit('Family H missing')
+          additions={
+            'implementationEvidence':'commonPlaySpatialFactRuntime.ts and commonPlayInterceptorProductionRuntimeAdapter.ts expose identity.creature-type through the existing authoritative resolveRuntimeCreatureType scene/combatant-definition resolver',
+            'productionEvidence':'388dd0f33644a7700e99e9e3a46984b888397617 feat(c9): expose live creature type fact; installedCommonPlayInterceptorProductionRuntime.test.ts gates unknown installed Common Play on live humanoid creature type while preserving fully renamed external identities',
+            'identityInvarianceEvidence':'installedCommonPlayInterceptorProductionRuntime.test.ts preserves identity.creature-type eligibility after module/content/mechanic/interceptor/interaction/display rename',
+          }
+          for key,value in additions.items():
+              values=family.setdefault(key,[])
+              if value not in values: values.append(value)
+          family['remainingNamedSeams']=[seam for seam in family.get('remainingNamedSeams',[]) if seam!='live sanctity facts']
+          if family.get('disposition')!='INCOMPLETE': raise SystemExit('Family H disposition unexpectedly changed')
+          if not family['remainingNamedSeams']: raise SystemExit('Family H unexpectedly has no remaining seam')
+          path.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          PY
+          node scripts/check-v1-mechanism-coverage.mjs
+      - name: Publish ledger reconciliation and retire verifier
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch=agent/c9-gate-n-coverage-reconciliation
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/c9-family-h-ledger-reconcile-71304.yml
+          git add docs/rules/v1-mechanism-coverage-ledger.json
+          git diff --cached --check
+          git commit -m "docs(c9): reconcile Family H creature type evidence"
+          for attempt in $(seq 1 40); do
+            git fetch origin "$branch"
+            if git rebase "origin/$branch"; then
+              python3 -c "import json; d=json.load(open('docs/rules/v1-mechanism-coverage-ledger.json',encoding='utf-8')); f=next(x for x in d['families'] if x['family']=='H'); assert 'live sanctity facts' not in f['remainingNamedSeams']; assert f['disposition']=='INCOMPLETE'"
+              node scripts/check-v1-mechanism-coverage.mjs
+              if git push origin HEAD:"$branch"; then exit 0; fi
+            fi
+            git rebase --abort || true
+            sleep 0.2
+          done
+          exit 1
