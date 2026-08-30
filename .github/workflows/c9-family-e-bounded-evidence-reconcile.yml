@@ -100,6 +100,13 @@ jobs:
             .github/workflows/c9-family-e-cardinality-reconcile.yml
           git add -A docs/rules .github/workflows
           git commit -m "docs(c9): reconcile bounded target evidence"
-          git fetch origin agent/c9-gate-n-coverage-reconciliation
-          git rebase origin/agent/c9-gate-n-coverage-reconciliation
-          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
+          pushed=0
+          for attempt in 1 2 3 4 5; do
+            git fetch origin agent/c9-gate-n-coverage-reconciliation
+            git rebase origin/agent/c9-gate-n-coverage-reconciliation
+            if git push origin HEAD:agent/c9-gate-n-coverage-reconciliation; then
+              pushed=1
+              break
+            fi
+          done
+          test "$pushed" -eq 1
