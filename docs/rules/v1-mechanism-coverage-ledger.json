@@ -27,7 +27,7 @@
         "common-play-contract.schema.json: expression/predicate/property.modify",
         "dnd.srd-5.2.1.profile.json: properties/proficiency/rounding"
       ],
-      "currentState": "The persisted property.modify contract lowers arbitrary external modifiers to typed Effect state and generic Resolver events. Production Common Play composes RulesProfile inputs with active Effect-owned modifiers without content-name or content-ID dispatch. Non-active runtime actors now expose canonical CombatantRuntimeState.baseProperties plus movement.walk through the same generic RulesProfile/effect resolver used by active actors, and production runtime materialization supplies properties such as defense.ac to that surface. Source-bound property modifiers retain connected replay/reconnect/retry/Undo and offline restart evidence. Family A remains incomplete because named progression/runtime stat materialization beyond the canonical runtime baseProperties surface remains outside a generic property owner.",
+      "currentState": "Generic property.modify lowers external modifiers to typed Effect state and the shared RulesProfile/effect resolver serves active Characters and non-active runtime actors from authoritative property inputs without content identity dispatch. Derived profile refs, source-bound modifiers, stack/replace/unique-by-source, RulesProfile-owned profile-policy, connected replay/reconnect/Undo, and offline restart persistence are proven. Progression-derived Character inputs remain authoritative source values owned by the separate ProgressionDraft -> Character revision transaction; named progression materialization debt is therefore tracked by Family AA rather than duplicated as a Family A execution seam.",
       "requiredSemantics": [
         "literals",
         "property refs",
@@ -43,7 +43,7 @@
         "conditional overlay"
       ],
       "transactionDomain": "RulesProfile evaluation and owning transaction",
-      "disposition": "INCOMPLETE",
+      "disposition": "IMPLEMENTED",
       "implementationEvidence": [
         "schemas/common-play-contract.schema.json expression/predicate/property.modify vocabulary with target/owner/source/duration/lifetime/instancePolicy",
         "profileEngine.ts evaluateExpression/evaluateSemanticExpression/evaluateSemanticPredicate/resolveProfileProperty",
@@ -60,7 +60,8 @@
         "CombatantRuntimeState.baseProperties plus installedCommonPlayRuntimeAdapter.ts commonPlayActorProfileProperties expose structural non-active runtime properties through resolveRuntimeProfileProperty without content identity dispatch",
         "installedCommonPlayRuntimeAdapter.ts projects non-active CombatantRuntimeState.baseProperties through the shared resolveRuntimeProfileProperty owner",
         "propertyModifierProfilePolicyRuntime.test.ts proves RulesProfile-owned profile-policy stacking without content identity dispatch",
-        "combatState.ts CombatantRuntimeState.baseProperties plus installedCommonPlayRuntimeAdapter.ts commonPlayActorProfileProperties expose non-active runtime profile inputs through the shared effect-aware property resolver"
+        "combatState.ts CombatantRuntimeState.baseProperties plus installedCommonPlayRuntimeAdapter.ts commonPlayActorProfileProperties expose non-active runtime profile inputs through the shared effect-aware property resolver",
+        "common-play-resolver-architecture-charter.md section 4 keeps progression in its ProgressionDraft -> Character revision authority while RulesProfile evaluation consumes authoritative property inputs; Family AA owns remaining named progression materialization"
       ],
       "productionEvidence": [
         "95f8b220a1aefc33374b033ef9ed325f53c86f97 feat(c9): lower property modifiers to typed effects",
@@ -96,9 +97,7 @@
         "installedCommonPlayPropertyModifierProduction.test.ts source-bound property modifier survives a fresh local adapter restart, remains consumable by Common Play, and is cleared when Initiative ends",
         "turnRuntimeSessionRegistry.ts scene-keyed offline RuntimeState persistence plus installedCommonPlayPropertyModifierProduction.test.ts fresh independent adapter restart, production consumption, and explicit initiative-end cleanup"
       ],
-      "remainingNamedSeams": [
-        "named progression/runtime stat materialization remains outside a generic property owner"
-      ],
+      "remainingNamedSeams": [],
       "connectedRelevant": false,
       "persistenceRelevant": true
     },
