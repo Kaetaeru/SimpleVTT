@@ -32,7 +32,7 @@ jobs:
           from pathlib import Path
           path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
           data=json.loads(path.read_text())
-          row=next(entry for entry in data['mechanismFamilies'] if entry['family']=='I')
+          row=next(entry for entry in data['rows'] if entry['family']=='I')
           row['currentState']='Portable movement is complete through the generic Common Play/Resolver path: unknown installed RuleModules execute walk/climb/swim/fly/crawl/jump, Difficult Terrain and drag/carry cost multipliers, Prone standing, forced movement, teleport, no-provoke movement, alternate-speed limits and grants, zero-speed rejection, connected replay/reconnect, Undo, and full external identity rename without relying on named movement grants.'
           row['disposition']='IMPLEMENTED'
           for value in [
