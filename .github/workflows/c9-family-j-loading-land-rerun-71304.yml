@@ -99,6 +99,8 @@ jobs:
           )
           ledger.write_text(text, encoding='utf-8')
           PY
+      - name: Generate content
+        run: npm run generate:content
       - name: Verify Family J Loading slice
         shell: bash
         run: |
