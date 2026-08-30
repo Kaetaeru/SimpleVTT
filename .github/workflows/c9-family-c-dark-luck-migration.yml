@@ -18,7 +18,9 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Apply bounded migration
-        run: python3 .github/c9-family-c-dark-luck-migrate.py
+        run: |
+          python3 .github/c9-family-c-dark-luck-migrate.py
+          python3 .github/c9-family-c-dark-luck-fix.py
 
       - name: Assert named Dark Luck follow-up is gone
         shell: bash
@@ -53,7 +55,8 @@ jobs:
             src/app/productionPlayRuntimeAdapter.ts \
             src/app/commonPlayInterceptorProductionRuntimeAdapter.ts \
             content/modules/dnd-srd-5.2.1.subclasses/module.json \
-            tests/ui/warlockFiendDarkOnesOwnLuckRuntime.test.ts
+            tests/ui/warlockFiendDarkOnesOwnLuckRuntime.test.ts \
+            tests/ui/connectedProjectedCharacterDarkOnesOwnLuckResolution.test.ts
           git diff --cached --check
           git commit -m "feat(common-play): migrate Dark One's Own Luck"
           git push
@@ -63,6 +66,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git rm .github/c9-family-c-dark-luck-migrate.py .github/workflows/c9-family-c-dark-luck-migration.yml
+          git rm .github/c9-family-c-dark-luck-migrate.py .github/c9-family-c-dark-luck-fix.py .github/workflows/c9-family-c-dark-luck-migration.yml
           git commit -m "ci(c9): remove Dark Luck migration helpers"
           git push
