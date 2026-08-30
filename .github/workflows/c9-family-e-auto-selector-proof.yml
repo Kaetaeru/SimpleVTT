@@ -1,0 +1,46 @@
+name: C9 Family E Automatic Selector Proof
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-e-auto-selector-proof.yml
+
+permissions:
+  contents: write
+
+jobs:
+  verify-and-land:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Add automatic selector production proof
+        shell: bash
+        run: |
+          TEST_B64='CnRlc3QoInVua25vd24gaW5zdGFsbGVkIENvbW1vbiBQbGF5IGF1dG9tYXRpYyBzZWxlY3RvciB1c2VzIEhvc3QgYXV0aG9yaXR5IG9yZGVyaW5nIHdpdGhvdXQgY2FsbGVyIHRhcmdldCBpZGVudGl0aWVzIixhc3luYygpPT57CiAgY29uc3QgYWRhcHRlcj1uZXcgTW9ja0FkYXB0ZXIoKTsKICBjb25zdCBwYXlsb2FkPUpTT04ucGFyc2UodGFyZ2V0aW5nUGFja2FnZVBheWxvYWQoKSkgYXMgYW55OwogIGNvbnN0IGVudHJ5UG9pbnQ9cGF5bG9hZC5jb250ZW50WzBdLm1lY2hhbmljc1swXS5jb25maWcuZW50cnlQb2ludHNbMF07CiAgZW50cnlQb2ludC50YXJnZXRpbmc9ewogICAgZnJvbToidGFyZ2V0cyIsCiAgICB3aGVyZTp7b3A6InJlbGF0aW9uLW1hdGNoZXMiLHJlZjoicmVsYXRpb24iLHZhbHVlOiJlbmVteSJ9LAogICAgbWluOjEsbWF4OjEsb3JkZXJCeToiaW5pdGlhdGl2ZSIsc2VsZWN0aW9uOiJhdXRvbWF0aWMiLAogIH07CiAgZW50cnlQb2ludC5vcGVyYXRpb25zPVt7a2luZDoiZGFtYWdlLmFwcGx5IixhbW91bnQ6e3ZhbHVlOjF9LGRhbWFnZVR5cGU6ImZvcmNlIix0YXJnZXQ6InRhcmdldCJ9XTsKICBzZXRJbnN0YWxsZWRDb250ZW50U3RvcmVGb3JUZXN0cyhhZGFwdGVyLG5ldyBNZW1vcnlJbnN0YWxsZWRDb250ZW50U3RvcmUoKSk7CiAgY29uc3QgcHJldmlldz1hd2FpdCBhZGFwdGVyLnByZXZpZXdDb250ZW50SW1wb3J0KEpTT04uc3RyaW5naWZ5KHBheWxvYWQpKTsKICBhc3NlcnQub2soIXByZXZpZXcuY29udGVudEltcG9ydD8udmFsaWRhdGlvbi5zb21lKChlbnRyeSk9PmVudHJ5LnNldmVyaXR5PT09ImJsb2NraW5nIiksSlNPTi5zdHJpbmdpZnkocHJldmlldy5jb250ZW50SW1wb3J0Py52YWxpZGF0aW9uKSk7CiAgYXdhaXQgYWRhcHRlci5hY3RpdmF0ZUNvbnRlbnRJbXBvcnQoKTsKICBjb25zdCBhY3Rpb25JZD1pbnN0YWxsZWRDb21tb25QbGF5QWN0aW9uSWQoewogICAgY2F0YWxvZ0lkOmNhdGFsb2dRdWFsaWZpZWRJZChUQVJHRVRJTkdfSURFTlRJVFkuY29udGVudElkLFRBUkdFVElOR19JREVOVElUWS5tb2R1bGVJZCwiMSIpLAogICAgbWVjaGFuaWNJZDpUQVJHRVRJTkdfSURFTlRJVFkubWVjaGFuaWNJZCwKICAgIGVudHJ5UG9pbnRJZDpUQVJHRVRJTkdfSURFTlRJVFkuZW50cnlQb2ludElkLAogIH0pOwogIGF3YWl0IGFkYXB0ZXIuc3RhcnRJbml0aWF0aXZlKCk7CiAgYXdhaXQgYWRhcHRlci5zZXRDdXJyZW50QWN0b3IoImNoYXIuYWVsYXIiKTsKICBsZXQgc25hcHNob3Q9YXdhaXQgYWRhcHRlci5nZXRTbmFwc2hvdCgpOwogIGNvbnN0IGV4cGVjdGVkPVsiY29tYmF0YW50LmdvYmxpbi1hIiwiY29tYmF0YW50LmdvYmxpbi1iIl0KICAgIC5tYXAoKGlkKT0+c25hcHNob3Quc2NlbmUuZW50aXRpZXMuZmluZCgoZW50aXR5KT0+ZW50aXR5LmlkPT09aWQpISkKICAgIC5zb3J0KChsZWZ0LHJpZ2h0KT0+bGVmdC5pbml0aWF0aXZlLXJpZ2h0LmluaXRpYXRpdmV8fGxlZnQuaWQubG9jYWxlQ29tcGFyZShyaWdodC5pZCkpWzBdITsKICBjb25zdCBocEJlZm9yZT1leHBlY3RlZC5ocDsKCiAgYXdhaXQgYWRhcHRlci5yZXNvbHZlQWN0aW9uKGFjdGlvbklkLFtdKTsKICBzbmFwc2hvdD1hd2FpdCBhZGFwdGVyLmdldFNuYXBzaG90KCk7CiAgYXNzZXJ0LmVxdWFsKHNuYXBzaG90LnJlc29sdXRpb24/LnN0YWdlLCJjb21wbGV0ZSIpOwogIGFzc2VydC5lcXVhbChzbmFwc2hvdC5yZXNvbHV0aW9uPy5hY3Rpb25JZCxhY3Rpb25JZCk7CiAgYXNzZXJ0LmRlZXBFcXVhbChzbmFwc2hvdC5yZXNvbHV0aW9uPy50YXJnZXRJZHMsW2V4cGVjdGVkLmlkXSk7CiAgYXNzZXJ0LmVxdWFsKHNuYXBzaG90LnNjZW5lLmVudGl0aWVzLmZpbmQoKGVudGl0eSk9PmVudGl0eS5pZD09PWV4cGVjdGVkLmlkKT8uaHAsaHBCZWZvcmUtMSk7CiAgY29uc3QgcmVzb2x1dGlvbklkPXNuYXBzaG90LnJlc29sdXRpb24/LmlkOwoKICBhd2FpdCBhZGFwdGVyLnJlc29sdmVBY3Rpb24oYWN0aW9uSWQsW2V4cGVjdGVkLmlkXSk7CiAgc25hcHNob3Q9YXdhaXQgYWRhcHRlci5nZXRTbmFwc2hvdCgpOwogIGFzc2VydC5lcXVhbChzbmFwc2hvdC5yZXNvbHV0aW9uPy5pZCxyZXNvbHV0aW9uSWQsImF1dG9tYXRpYyBzZWxlY3Rpb24gbXVzdCBub3QgYWNjZXB0IGNhbGxlci1zdXBwbGllZCB0YXJnZXQgaWRlbnRpdGllcyIpOwp9KTsKCg=='
+          python -c 'import base64; from pathlib import Path; p=Path("tests/ui/installedCommonPlayProductionRuntime.test.ts"); t=p.read_text(); marker="test(\"unknown installed Common Play rich predicate filters authoritative scene properties without identity dispatch\""; addition=base64.b64decode("'"$TEST_B64"'").decode(); p.write_text(t if "automatic selector uses Host authority ordering" in t else t.replace(marker,addition+marker,1))'
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Generate content catalogs
+        run: npm run generate:content
+      - name: Verify selector production proof
+        run: npx tsx --test tests/domain/commonPlaySelectorRuntime.test.ts tests/ui/installedCommonPlayProductionRuntime.test.ts
+      - name: Verify typecheck
+        run: npx tsc --noEmit
+      - name: Commit verified proof
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tests/ui/installedCommonPlayProductionRuntime.test.ts
+          git diff --cached --quiet && exit 0
+          git commit -m "test(c9): prove automatic selector host authority"
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
