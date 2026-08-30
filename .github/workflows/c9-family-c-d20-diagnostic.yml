@@ -16,13 +16,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Trace Cutting Words declarative content
+      - name: Trace scaling-die ownership
         shell: bash
         run: |
           set -euo pipefail
-          echo '=== all Cutting Words / College of Lore references ==='
-          grep -R -n -i -E 'cutting.words|college.of.lore|날카로운 말' . --exclude-dir=.git --exclude='package-lock.json' | head -n 320 || true
-          echo '=== installed content reaction projection ==='
-          sed -n '1,380p' src/app/commonPlayInterceptorProductionRuntimeAdapter.ts
-          echo '=== progression/catalog source candidates ==='
-          grep -R -n -E 'subclassFeatureIds|grantedEntryPoints|commonPlay|ruleModule|entryPoints' src/app src/domain scripts data content tests/fixtures 2>/dev/null | grep -E -i 'bard|lore|subclass|builtin|catalog' | head -n 320 || true
+          echo '=== bardic resource definition uses ==='
+          grep -R -n -E 'bardicInspirationResourceDefinition|BARDIC_INSPIRATION_RESOURCE_ID' src tests --exclude='package-lock.json' | head -n 320 || true
+          echo '=== CharacterResourceVm creation / projection ==='
+          grep -R -n -E 'CharacterResourceVm|resources\.push|resources:.*map|label:.*current:.*max:' src/app tests --exclude='package-lock.json' | head -n 320 || true
+          echo '=== reaction dice contract ==='
+          sed -n '105,180p' src/domain/commonPlayReactionDefinitionRuntime.ts
+          sed -n '350,390p' schemas/common-play-contract.schema.json
