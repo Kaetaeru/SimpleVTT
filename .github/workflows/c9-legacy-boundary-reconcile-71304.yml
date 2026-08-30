@@ -42,6 +42,7 @@ jobs:
           }
           fs.writeFileSync(path,JSON.stringify(baseline,null,2)+'\n');
           NODE
+      - run: npm run generate:content
       - name: Verify canonical boundary
         run: |
           node scripts/check-legacy-execution-boundary.mjs
