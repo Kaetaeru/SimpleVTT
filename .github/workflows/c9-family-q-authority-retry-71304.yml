@@ -44,6 +44,13 @@ jobs:
           new='if updated not in (0, 1):'
           if old in source:
               source=source.replace(old,new,1)
+          old_fixture='''    schemaVersion:"0.2-draft",id:identity.mechanicId,
+              entryPoints:'''
+          new_fixture='''    schemaVersion:"0.2-draft",id:identity.mechanicId,
+              payments:[{kind:"economy",bucket:"reaction",amount:{value:1},consumeAt:"commit",refundOnCancel:true}],
+              entryPoints:'''
+          if old_fixture in source:
+              source=source.replace(old_fixture,new_fixture,1)
           path.write_text(source,encoding='utf-8')
           PY
             python3 /tmp/c9-family-q-authority-consent-71304.py
