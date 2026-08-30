@@ -54,3 +54,5 @@ jobs:
           git commit -m "docs(c9): finalize Family N effect lifecycle evidence"
           git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
           git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
+
+# rerun on current branch baseline after stale compile blocker removal
