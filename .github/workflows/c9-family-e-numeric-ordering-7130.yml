@@ -23,6 +23,8 @@ jobs:
           node-version: 22
       - name: Install dependencies
         run: npm install --no-audit --no-fund
+      - name: Generate content catalogs
+        run: npm run generate:content
       - name: Preserve numeric selector ordering semantics
         shell: bash
         run: |
