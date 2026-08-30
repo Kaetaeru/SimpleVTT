@@ -1,5 +1,5 @@
 name: C9 Gate N Final Verifier 71304
-# rerun after concurrent Family M reconciliation
+# rerun after Family K outcome-conditioned damage
 
 on:
   push:
