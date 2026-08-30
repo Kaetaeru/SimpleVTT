@@ -1,0 +1,66 @@
+name: C9 Family L Max HP Ledger 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-l-max-hp-ledger-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run generate:content
+      - name: Verify max HP source/runtime overlay evidence
+        run: |
+          npx tsx --test tests/ui/c9FamilyLMaxHpPersistence.test.ts tests/ui/phase09CommonPlayResourcePersistence.test.ts
+          node scripts/check-v1-mechanism-coverage.mjs
+          node scripts/check-legacy-execution-boundary.mjs
+          npx tsc --noEmit
+      - name: Reconcile ledger and retire workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          BRANCH=agent/c9-gate-n-coverage-reconciliation
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in 1 2 3 4 5; do
+            git fetch origin "$BRANCH"
+            git reset --hard "origin/$BRANCH"
+            node <<'NODE'
+          const fs=require('node:fs');
+          const path='docs/rules/v1-mechanism-coverage-ledger.json';
+          const ledger=JSON.parse(fs.readFileSync(path,'utf8'));
+          const row=ledger.rows.find((entry)=>entry.family==='L'&&entry.id==='damage-life');
+          if(!row) throw new Error('Family L damage-life row not found');
+          const implementation='persistenceContracts.ts, characterLibraryPersistence.ts, and resolutionCharacterDurableProjection.ts preserve source max HP separately from a durable runtime maximum-HP overlay and inverse write-back';
+          const production='678be8d5756deb4583e450d4f303facf94b1680b feat(c9): persist maximum hp runtime overlays; c9FamilyLMaxHpPersistence.test.ts proves forward/inverse maximum-HP write-back without mutating the source maximum';
+          const persistence='c9FamilyLMaxHpPersistence.test.ts proves a maximum-HP runtime overlay survives Character library materialization/restart and disappears after inverse write-back while the source maximum remains stable';
+          if(!row.implementationEvidence.includes(implementation)) row.implementationEvidence.push(implementation);
+          if(!row.productionEvidence.includes(production)) row.productionEvidence.push(production);
+          if(!row.persistenceEvidenceIfRelevant.includes(persistence)) row.persistenceEvidenceIfRelevant.push(persistence);
+          row.remainingNamedSeams=row.remainingNamedSeams.filter((entry)=>entry!=='generic max-HP source-model/write-back acceptance remains incomplete');
+          row.currentState=row.currentState.replace('Remaining Family L acceptance is max-HP source-model/write-back semantics and named feature/spell HP migration debt where it bypasses portable Common Play.','Maximum-HP source/runtime overlay write-back and restart persistence are production-proven without mutating the source maximum. Remaining Family L acceptance is named feature/spell HP migration debt where it bypasses portable Common Play.');
+          fs.writeFileSync(path,JSON.stringify(ledger,null,2)+'\n');
+          NODE
+            if [ -f .github/workflows/c9-family-l-max-hp-ledger-71304.yml ]; then git rm .github/workflows/c9-family-l-max-hp-ledger-71304.yml; fi
+            git add docs/rules/v1-mechanism-coverage-ledger.json
+            git commit -m "docs(c9): connect maximum hp persistence evidence"
+            if git push origin "HEAD:$BRANCH"; then exit 0; fi
+          done
+          echo "Failed to publish Family L max HP ledger evidence after branch races" >&2
+          exit 1
