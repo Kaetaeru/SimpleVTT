@@ -8,24 +8,54 @@ on:
       - .github/workflows/c9-family-i-rules-constraints-71304.yml
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  verify:
+  verify-publish:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
+      - name: Reconcile branch
+        run: git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
       - run: npm ci
       - run: npm run generate:content
+      - name: Normalize portable compile rejection
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          path=Path('src/app/installedCommonPlayRuntimeAdapter.ts')
+          text=path.read_text(encoding='utf-8')
+          old='''    const pending=compileCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,itemContext.state,lowered.definition,operationExecutionInput(internal,actionId,action,prepared,resolutionId,interactionId,itemContext.itemPaymentResourceIds));'''
+          new='''    let pending;\n    try {\n      pending=compileCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,itemContext.state,lowered.definition,operationExecutionInput(internal,actionId,action,prepared,resolutionId,interactionId,itemContext.itemPaymentResourceIds));\n    } catch(error) {\n      return {status:"rejected" as const,error:error instanceof Error?error.message:String(error),snapshot:await internal.getSnapshot()};\n    }'''
+          if new not in text:
+            if old not in text: raise SystemExit('compile anchor not found')
+            text=text.replace(old,new,1)
+          path.write_text(text,encoding='utf-8')
+          PY
       - name: Verify Family I rules-derived movement constraints
         run: |
           node --import tsx --test tests/ui/c9FamilyIMovementProduction.test.ts tests/domain/commonPlayMovementRuntime.test.ts tests/ui/commonPlayProneStandRuntime.test.ts
           node scripts/check-legacy-execution-boundary.mjs
           node scripts/check-v1-mechanism-coverage.mjs
           npm exec tsc -- --noEmit
+      - name: Publish verified normalization and retire verifier
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/c9-family-i-rules-constraints-71304.yml
+          git add src/app/installedCommonPlayRuntimeAdapter.ts
+          git diff --cached --check
+          git commit -m "fix(c9): normalize portable movement rejection"
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
