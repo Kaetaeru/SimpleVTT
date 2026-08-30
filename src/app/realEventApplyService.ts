@@ -147,6 +147,7 @@ function applyAppChange(scene:SceneVm,resources:CharacterResourceVm[],items:Item
     }
     const resource=resources.find((entry)=>entry.id===change.resourceId)!;
     resource.current=change.after;
+    if (change.capacity) resource.max=change.capacity.after.maximum;
     return;
   }
   if (change.kind==="life") {
@@ -223,7 +224,14 @@ function applyRuntimeChange(runtimeState:RulesRuntimeState,change:RuntimeStateCh
   if (change.kind==="resource") {
     if (itemResource(change.resourceId)) return;
     const resource=combatant.resources.find((entry)=>entry.id===change.resourceId);
-    if (resource) resource.current=change.after;
+    if (resource) {
+      resource.current=change.after;
+      if (change.capacity) {
+        resource.maximum=change.capacity.after.maximum;
+        if (change.capacity.after.maximumAfterLongRest===null) delete resource.maximumAfterLongRest;
+        else resource.maximumAfterLongRest=change.capacity.after.maximumAfterLongRest;
+      }
+    }
     return;
   }
   if (change.kind==="life") combatant.life[change.field]=change.after;
@@ -267,6 +275,19 @@ function validate(
     }
     if (runtime.found && !deepEquals(runtime.value,change.before)) {
       return `event-native apply runtime drift for ${change.targetId}/${changeField(change)}`;
+    }
+    if (change.kind==="resource" && change.capacity && !itemResource(change.resourceId)) {
+      const appResource=probeResources.find((entry)=>entry.id===change.resourceId);
+      if (appResource && appResource.max!==change.capacity.before.maximum) {
+        return `event-native apply capacity drift for ${change.targetId}/${changeField(change)}`;
+      }
+      const runtimeResource=probeRuntime?.combatants[change.targetId]?.resources.find((entry)=>entry.id===change.resourceId);
+      if (runtimeResource && (
+        runtimeResource.maximum!==change.capacity.before.maximum ||
+        (runtimeResource.maximumAfterLongRest??null)!==change.capacity.before.maximumAfterLongRest
+      )) {
+        return `event-native apply runtime capacity drift for ${change.targetId}/${changeField(change)}`;
+      }
     }
     if (app.found) applyAppChange(probeScene,probeResources,probeItems,change);
     if (probeRuntime && runtime.found) applyRuntimeChange(probeRuntime,change);
