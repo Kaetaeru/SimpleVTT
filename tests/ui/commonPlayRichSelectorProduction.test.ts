@@ -9,12 +9,14 @@ import { installedCommonPlayActionId } from "../../src/app/installedCommonPlayAc
 import { setInstalledContentStoreForTests } from "../../src/app/installedContentRuntimeAdapter";
 import { MemoryInstalledContentStore } from "../../src/app/memoryInstalledContentStore";
 import { MockAdapter } from "../../src/app/mockAdapter";
+import type { SceneVm } from "../../src/app/contracts";
+import { setSpatialRelation } from "../../src/app/spatialRuntimeContracts";
 
 type Identity={moduleId:string;contentId:string;mechanicId:string;entryPointId:string;displayName:string};
 const ORIGINAL:Identity={moduleId:"homebrew.rich-selector-probe",contentId:"option.rich-selector-probe",mechanicId:"external.unknown.rich-selector-probe",entryPointId:"select-enemies",displayName:"Rich Selector Probe"};
 const RENAMED:Identity={moduleId:"homebrew.renamed-rich-selector",contentId:"option.previously-unseen.rich-selector",mechanicId:"external.previously-unseen.rich-selector",entryPointId:"renamed-selector",displayName:"Completely Renamed Rich Selector"};
 
-function payload(identity:Identity,area=false) {
+function payload(identity:Identity,area=false,distanceLimitFeet?:number) {
   return JSON.stringify({
     schemaVersion:"0.1-draft",moduleId:identity.moduleId,moduleVersion:"1",
     rulesProfile:{id:"dnd.srd-5.2.1",version:"0.1-draft"},defaultLocale:"en",
@@ -27,21 +29,22 @@ function payload(identity:Identity,area=false) {
         schemaVersion:"0.2-draft",id:identity.mechanicId,
         entryPoints:[{id:identity.entryPointId,invocation:"manual",targeting:area
           ?{from:"targets",min:1,max:3,area:{kind:"instant",shape:"cone",origin:"self",lengthFeet:15}}
-          :{from:"targets",min:1,max:2,where:{op:"eq",left:{ref:"relation"},right:{value:"enemy"}}},
+          :distanceLimitFeet!==undefined
+            ?{from:"targets",min:1,max:2,where:{op:"lte",left:{ref:"spatial.distance-feet"},right:{value:distanceLimitFeet}}}
+            :{from:"targets",min:1,max:2,where:{op:"eq",left:{ref:"relation"},right:{value:"enemy"}}},
           operations:[]}],
       }}],
     }],
   });
 }
 
-async function install(adapter:MockAdapter,identity:Identity,area=false) {
+async function install(adapter:MockAdapter,identity:Identity,area=false,distanceLimitFeet?:number) {
   setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
-  const preview=await adapter.previewContentImport(payload(identity,area));
+  const preview=await adapter.previewContentImport(payload(identity,area,distanceLimitFeet));
   assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
   await adapter.activateContentImport();
   return installedCommonPlayActionId({catalogId:catalogQualifiedId(identity.contentId,identity.moduleId,"1"),mechanicId:identity.mechanicId,entryPointId:identity.entryPointId});
 }
-
 
 function automaticPayload(identity:Identity) {
   const authored=JSON.parse(payload(identity));
@@ -97,6 +100,24 @@ test("unknown installed automatic selector uses host authority and authored orde
     return snapshot.resolution?.targetIds;
   }
   assert.deepEqual(await run(RENAMED),await run(ORIGINAL));
+});
+
+test("unknown installed rich selector consumes provider-backed authoritative spatial distance",async()=>{
+  const adapter=new MockAdapter();
+  const actionId=await install(adapter,ORIGINAL,false,30);
+  const internal=adapter as unknown as {scene:SceneVm};
+  setSpatialRelation(internal.scene,{sourceId:"char.aelar",targetId:"combatant.goblin-a",distanceFeet:20,visible:true,cover:"none",targetCanSeeAttacker:true,provenance:"module:test-spatial:selector"});
+  setSpatialRelation(internal.scene,{sourceId:"char.aelar",targetId:"combatant.goblin-b",distanceFeet:40,visible:true,cover:"none",targetCanSeeAttacker:true,provenance:"module:test-spatial:selector"});
+  await adapter.startInitiative();
+  await adapter.setCurrentActor("char.aelar");
+  await adapter.resolveAction(actionId,["combatant.goblin-b"]);
+  let snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.resolution?.actionId,actionId);
+  assert.equal(snapshot.resolution?.finalOutcome,"적용 거부");
+  await adapter.resolveAction(actionId,["combatant.goblin-a"]);
+  snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.resolution?.stage,"complete");
+  assert.deepEqual(snapshot.resolution?.targetIds,["combatant.goblin-a"]);
 });
 
 test("unknown installed area selector imports but refuses execution without provider-backed membership",async()=>{
