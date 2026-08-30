@@ -897,7 +897,7 @@
         "conditions.ts",
         "phase05Lifecycle.test.ts"
       ],
-      "currentState": "The shared Resolver condition Effect path enforces explicit combatant condition immunities, active tagged condition-immunity Effects, and rules-derived condition immunities before adding a condition Effect. Unknown installed Common Play condition.apply/remove now has production and full external identity-rename proof for explicit Poisoned immunity, Petrified-derived Poisoned immunity, successful application after immunity removal, and Undo. Exhaustive SRD condition semantics, Exhaustion levels/stacking, connected replay/reconnect persistence, and remaining named condition-specific adapters remain incomplete.",
+      "currentState": "The shared Resolver condition Effect path enforces explicit combatant condition immunities, active tagged condition-immunity Effects, and rules-derived condition immunities before adding a condition Effect. Unknown installed Common Play condition.apply/remove has production and external identity-rename proof for explicit Poisoned immunity, Petrified-derived Poisoned immunity, successful application after immunity removal, and Undo. Host-authoritative connected replay, duplicate suppression, Undo, immunity suppression, and fresh reconnect are now proven for an unknown portable condition path. Exhaustive SRD condition semantics, Exhaustion levels/stacking, explicit connected condition.remove invocation coverage, and remaining named condition-specific adapters remain incomplete.",
       "requiredSemantics": [
         "Blinded",
         "Charmed",
@@ -930,11 +930,15 @@
       "identityInvarianceEvidence": [
         "c9FamilyMConditionImmunityProduction.test.ts repeats the same immunity/apply/remove/Undo behavior under unrelated external module, content, and mechanic identities"
       ],
-      "connectedEvidenceIfRelevant": [],
-      "persistenceEvidenceIfRelevant": [],
+      "connectedEvidenceIfRelevant": [
+        "tests/ui/c9FamilyMConditionConnectedAcceptance.test.ts — unknown portable Poisoned condition application and immunity suppression replay through Host-authoritative event batches to Client replicas; duplicate replay is suppressed and Host Undo plus fresh reconnect converge without content-name or ID dispatch"
+      ],
+      "persistenceEvidenceIfRelevant": [
+        "tests/ui/c9FamilyMConditionConnectedAcceptance.test.ts — a fresh connected replica reconstructs post-apply and post-Undo condition state from the Host event ledger, proving reconnect persistence for the portable condition path"
+      ],
       "remainingNamedSeams": [
         "exhaustive production acceptance for all SRD condition semantics and Exhaustion stacking/levels remains incomplete",
-        "connected replay/reconnect persistence evidence for portable condition apply/remove/immunity remains incomplete",
+        "explicit connected condition.remove invocation coverage remains incomplete beyond event-native Undo removal",
         "named condition-specific adapters remain migration debt where they bypass portable Common Play/Resolver"
       ],
       "connectedRelevant": true,
