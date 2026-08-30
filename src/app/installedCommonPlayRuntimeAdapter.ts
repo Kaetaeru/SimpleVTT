@@ -24,6 +24,7 @@ import { appendCommonPlaySemanticOutcomeEvents, appendCommonPlaySemanticOutcomeT
 import { resolveCommonPlayZoneActivation, resolveCommonPlayZoneMembershipChange } from "../domain/commonPlayZoneRuntime";
 import { resolveCommonPlayArtifactActivation } from "../domain/commonPlayArtifactRuntime";
 import type { RulesRuntimeState } from "../domain/combatState";
+import type { ResolutionOperation } from "../domain/resolutionTypes";
 import type { D20TestResult } from "../domain/d20";
 import type { DamageResolution, HealingResolution } from "../domain/damage";
 import type { DamageRollResolution } from "../domain/damageRoll";
@@ -360,12 +361,21 @@ MockAdapter.prototype.configureReadyAction=async function configureInstalledComm
   const state=snapshotAdapterTurnRuntimeState(this,internal.scene);
   if(!state||state.clock.activeActorId!==command.actorId||!state.combatants[command.actorId]) return internal.getSnapshot();
   const resolutionId=`common-play-ready.${Date.now()}.${Math.floor(Math.random()*1000)}`;
+  const heldSpellConcentrationGroupId=action.category==="spell"?`${resolutionId}:held-spell`:undefined;
+  const captureOperations:ResolutionOperation[]=[
+    {id:`${resolutionId}:action`,kind:"use-economy",actorId:command.actorId,slot:"action",actionKind:action.category==="spell"?"magic":"other"},
+  ];
+  if(heldSpellConcentrationGroupId) captureOperations.push({
+    id:`${resolutionId}:hold-concentration`,kind:"start-concentration",actorId:command.actorId,
+    groupId:heldSpellConcentrationGroupId,sourceId:action.lowered.definition.id,
+  });
   const committed=resolveCommonPlayStoredInvocationCapture(SIMPLEVTT_APP_RULES_PROFILE,state,{
     resolutionId,actorId:command.actorId,definitionId:action.lowered.definition.id,entryPointId:action.entryPointId,
     definitionRevision:reference.catalogId,binding:"live",
     trigger:{op:"eq",left:{ref:"trigger.declared"},right:{value:true}},
     metadata:{triggerLabel:command.trigger.trim()||"DM이 선언한 트리거"},
-    captureOperations:[{id:`${resolutionId}:action`,kind:"use-economy",actorId:command.actorId,slot:"action",actionKind:"other"}],
+    ...(heldSpellConcentrationGroupId?{concentrationGroupId:heldSpellConcentrationGroupId,onTriggerConcentration:"end" as const}:{}),
+    captureOperations,
   });
   if(committed.status==="rejected") return failAction(internal,command.actorId,"action.standard.ready","준비",[command.actorId],resolutionId,committed.error);
   return commitProductionRuntimeResolution(this,state,committed,{
