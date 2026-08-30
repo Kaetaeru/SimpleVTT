@@ -1,5 +1,5 @@
 name: C9 Family Q Choice R4 71304
-# rerun-trigger: 71304-q-choice-r4-selection-forwarding
+# rerun-trigger: 71304-q-choice-r4-direct-target-semantics
 
 on:
   push:
@@ -34,6 +34,14 @@ jobs:
           end=workflow.index("\n          PY",start)
           code='\n'.join(line[10:] if line.startswith('          ') else line for line in workflow[start:end].splitlines())
           exec(compile(code,'q-choice-r3-patch','exec'),{'__name__':'__main__'})
+
+          domain_path=Path('src/domain/commonPlayOperationRuntime.ts')
+          domain_text=domain_path.read_text(encoding='utf-8')
+          choice_authority='''        selectedIds:[...input.interactionResponse.selectedIds],\n        selection:"manual",\n        authority,\n      });'''
+          choice_authority_mapless='''        selectedIds:[...input.interactionResponse.selectedIds],\n        selection:"manual",\n        authority,\n        directTarget:false,\n      });'''
+          if domain_text.count(choice_authority)!=1:
+              raise SystemExit(f'choice direct-target anchor changed: {domain_text.count(choice_authority)}')
+          domain_path.write_text(domain_text.replace(choice_authority,choice_authority_mapless,1),encoding='utf-8')
 
           adapter_path=Path('src/app/installedCommonPlayRuntimeAdapter.ts')
           adapter_text=adapter_path.read_text(encoding='utf-8')
