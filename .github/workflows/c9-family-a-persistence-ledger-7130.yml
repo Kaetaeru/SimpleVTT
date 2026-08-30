@@ -18,7 +18,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run generate:builtin-catalog
+      - run: npm run generate:content
       - name: Verify source-bound property replay reconnect and Undo
         run: npx tsx --test tests/ui/installedCommonPlayPropertyModifierProduction.test.ts
       - name: Reconcile verified Family A persistence evidence
