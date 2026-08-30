@@ -1,0 +1,67 @@
+name: C9 Family P State Applied Dispatch 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-p-state-applied-dispatch-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Apply minimal Family P state-applied dispatcher slice
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs=require('node:fs');
+          function replaceOne(path,before,after){
+            const text=fs.readFileSync(path,'utf8');
+            if(!text.includes(before)) throw new Error(`expected patch anchor missing in ${path}`);
+            const next=text.replace(before,after);
+            fs.writeFileSync(path,next);
+          }
+          replaceOne('src/domain/commonPlayEffectRuntime.ts','export type CommonPlayAutomaticEffectEvent=AutomaticDamageEvent|"attack.hit"|"attack.miss"|"save.success"|"save.failure";','export type CommonPlayAutomaticEffectEvent=AutomaticDamageEvent|"attack.hit"|"attack.miss"|"save.success"|"save.failure"|"state.applied";');
+          replaceOne('src/domain/commonPlayEffectRuntime.ts','if (!["damage.taken","damage.dealt","attack.hit","attack.miss","save.success","save.failure"].includes(rule.event)) throw new Error(`${label} event is unsupported in this runtime slice`);','if (!["damage.taken","damage.dealt","attack.hit","attack.miss","save.success","save.failure","state.applied"].includes(rule.event)) throw new Error(`${label} event is unsupported in this runtime slice`);');
+
+          const semanticPath='src/domain/commonPlaySemanticEventRuntime.ts';
+          let semantic=fs.readFileSync(semanticPath,'utf8');
+          const anchor='function lifecycleSemanticEvent(\n';
+          if(!semantic.includes(anchor)) throw new Error('semantic insertion anchor missing');
+          const helper=`export function appendCommonPlayStateAppliedTriggers(\n  state:RulesRuntimeState,\n  definitions:CommonPlayPersistentEffectDefinition[],\n  pending:PendingResolution,\n  creatureKinds:Record<string,"character"|"monster">,\n):PendingResolution {\n  const operations:ResolutionOperation[]=[...pending.operations];\n  for(const [applyIndex,apply] of pending.operations.entries()) {\n    if(apply.kind!=="apply-effect") continue;\n    const subjectId=apply.effect.targetId;\n    if(!creatureKinds[subjectId]) continue;\n    const when={operationId:apply.id,field:"applied",equals:true} as const;\n    for(const [definitionIndex,definition] of definitions.entries()) {\n      for(const [effectIndex,effect] of state.effects.filter((candidate)=>candidate.targetId===subjectId&&candidate.sourceId===definition.id&&candidate.metadata?.[EFFECT_METADATA_DEFINITION]===definition.id).entries()) {\n        const templateId=effect.metadata?.[EFFECT_METADATA_TEMPLATE];\n        if(typeof templateId!=="string") continue;\n        const template=definition.artifactTemplates.find((candidate)=>candidate.id===templateId);\n        if(!template) continue;\n        for(const [ruleIndex,rule] of template.rules.filter((candidate)=>candidate.event==="state.applied").entries()) {\n          const frequency=resolveCommonPlayFrequency({ruleId:rule.id,subjectId,frequency:rule.frequency??"once",resolutionId:pending.id,clock:state.clock,markers:effect.metadata??{}});\n          if(!frequency.eligible) continue;\n          for(const [operationIndex,operation] of rule.operations.entries()) {\n            const targetId=operation.target==="event.target"?subjectId:pending.actorId;\n            const targetCreatureKind=creatureKinds[targetId];\n            if(!targetCreatureKind) continue;\n            operations.push({id:\`${'${pending.id}'}:automatic:state.applied:${'${definitionIndex}'}:${'${effectIndex}'}:${'${applyIndex}'}:${'${ruleIndex}'}:${'${operationIndex}'}\`,kind:"damage",targetId,damageType:operation.damageType,amount:operation.amount.value,creatureKind:targetCreatureKind,when});\n          }\n          if(template.lifetime.kind==="until-duration"&&Object.keys(frequency.metadataPatch).length) operations.push({id:\`${'${pending.id}'}:automatic:state.applied:${'${definitionIndex}'}:${'${effectIndex}'}:${'${applyIndex}'}:${'${ruleIndex}'}:frequency\`,kind:"update-effect",effectId:effect.id,metadataPatch:frequency.metadataPatch,when});\n        }\n      }\n    }\n  }\n  return operations.length===pending.operations.length?pending:{...pending,operations};\n}\n\n`;
+          semantic=semantic.replace(anchor,helper+anchor);
+          fs.writeFileSync(semanticPath,semantic);
+
+          replaceOne('src/app/installedCommonPlayRuntimeAdapter.ts','import { appendCommonPlayDamageTakenTriggers, resolveCommonPlayEffectActivation, type CommonPlayPersistentEffectDefinition } from "../domain/commonPlayEffectRuntime";','import { appendCommonPlayDamageTakenTriggers, compileCommonPlayEffectActivation, type CommonPlayPersistentEffectDefinition } from "../domain/commonPlayEffectRuntime";');
+          replaceOne('src/app/installedCommonPlayRuntimeAdapter.ts','import { appendCommonPlaySemanticOutcomeEvents, appendCommonPlaySemanticOutcomeTriggers } from "../domain/commonPlaySemanticEventRuntime";','import { appendCommonPlaySemanticOutcomeEvents, appendCommonPlaySemanticOutcomeTriggers, appendCommonPlayStateAppliedTriggers } from "../domain/commonPlaySemanticEventRuntime";');
+          replaceOne('src/app/installedCommonPlayRuntimeAdapter.ts','  } else if(lowered.kind==="effect") {\n    committed=resolveCommonPlayEffectActivation(SIMPLEVTT_APP_RULES_PROFILE,state,lowered.definition,{resolutionId,actorId:actor.id,entryPointId:action.entryPointId,actionKind});\n  } else if(lowered.kind==="zone") {','  } else if(lowered.kind==="effect") {\n    const pending=compileCommonPlayEffectActivation(state,lowered.definition,{resolutionId,actorId:actor.id,entryPointId:action.entryPointId,actionKind});\n    const effectDefinitions=await installedPersistentEffectDefinitions(adapter);\n    const automaticPending=appendCommonPlayStateAppliedTriggers(state,effectDefinitions,pending,Object.fromEntries(internal.scene.entities.map((entity)=>[entity.id,entity.kind==="character"?"character":"monster"])));\n    committed=appendCommonPlaySemanticOutcomeEvents(automaticPending,resolvePendingResolution(SIMPLEVTT_APP_RULES_PROFILE,state,automaticPending));\n  } else if(lowered.kind==="zone") {');
+
+          fs.writeFileSync('tests/ui/c9FamilyPStateAppliedTriggerProduction.test.ts',`import assert from "node:assert/strict";\nimport test from "node:test";\nimport "../../src/app/offlineRuntimeAdapters";\nimport { catalogQualifiedId } from "../../src/app/contentCatalogIdentity";\nimport { installedCommonPlayActionId } from "../../src/app/installedCommonPlayActionReference";\nimport { setInstalledContentStoreForTests } from "../../src/app/installedContentRuntimeAdapter";\nimport { MemoryInstalledContentStore } from "../../src/app/memoryInstalledContentStore";\nimport { MockAdapter } from "../../src/app/mockAdapter";\n\nfunction payload(suffix:string){\n  const moduleId=\`homebrew.state-applied-${'${suffix}'}\`,contentId=\`option.state-applied-${'${suffix}'}\`,listenerId=\`external.listener-${'${suffix}'}\`,appliedId=\`external.applied-${'${suffix}'}\`;\n  return {moduleId,contentId,listenerId,appliedId,json:JSON.stringify({schemaVersion:"0.1-draft",moduleId,moduleVersion:"1",rulesProfile:{id:"dnd.srd-5.2.1",version:"0.1-draft"},defaultLocale:"en",source:{document:"State Applied Probe",version:"1",license:"CC0",srdDerived:false},dependencies:[],conflicts:[],capabilities:[],content:[{id:contentId,category:"option",presentation:{defaultLocale:"en",originalName:"State Applied Probe",locales:{en:{name:"State Applied Probe",description:"Portable semantic-event dispatcher probe"}}},mechanics:[{kind:"common-play",config:{schemaVersion:"0.2-draft",id:listenerId,entryPoints:[{id:"activate-listener",invocation:"manual",operations:[{kind:"effect.apply",template:"listener",target:"actor"}]}],artifactTemplates:[{id:"listener",artifactKind:"effect",duration:{kind:"elapsed",amount:{value:1},unit:"hours"},rules:[{id:"on-state-applied",event:"state.applied",frequency:"once-per-resolution",operations:[{kind:"damage.apply",amount:{value:2},damageType:"force",target:"event.target"}]}],lifetime:{kind:"until-duration",onEnd:"destroy"}}]}},{kind:"common-play",config:{schemaVersion:"0.2-draft",id:appliedId,entryPoints:[{id:"apply-marker",invocation:"manual",operations:[{kind:"effect.apply",template:"marker",target:"actor"}]}],artifactTemplates:[{id:"marker",artifactKind:"effect",duration:{kind:"elapsed",amount:{value:1},unit:"hours"},rules:[{id:"noop",event:"damage.taken",frequency:"once",operations:[{kind:"damage.apply",amount:{value:0},damageType:"force",target:"event.actor"}]}],lifetime:{kind:"until-duration",onEnd:"destroy"}}]}}]}]})};\n}\n\nasync function run(suffix:string){\n  const adapter=new MockAdapter();\n  setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());\n  const probe=payload(suffix),preview=await adapter.previewContentImport(probe.json);\n  assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));\n  await adapter.activateContentImport();\n  const catalogId=catalogQualifiedId(probe.contentId,probe.moduleId,"1");\n  const listenerAction=installedCommonPlayActionId({catalogId,mechanicId:probe.listenerId,entryPointId:"activate-listener"});\n  const appliedAction=installedCommonPlayActionId({catalogId,mechanicId:probe.appliedId,entryPointId:"apply-marker"});\n  const actorId=(adapter as unknown as {activeCharacter:{id:string}}).activeCharacter.id;\n  await adapter.startInitiative(); await adapter.setCurrentActor(actorId);\n  const before=await adapter.getSnapshot(),hpBefore=before.scene.entities.find((entity)=>entity.id===actorId)!.hp;\n  await adapter.resolveAction(listenerAction,[actorId]);\n  let snapshot=await adapter.getSnapshot();\n  assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));\n  assert.equal(snapshot.scene.entities.find((entity)=>entity.id===actorId)?.hp,hpBefore);\n  await adapter.resolveAction(appliedAction,[actorId]);\n  snapshot=await adapter.getSnapshot();\n  assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));\n  assert.equal(snapshot.scene.entities.find((entity)=>entity.id===actorId)?.hp,hpBefore-2);\n  assert.ok(snapshot.resolution?.detail.some((line)=>line.includes("state.applied")),JSON.stringify(snapshot.resolution));\n  await adapter.undoLastResolution();\n  snapshot=await adapter.getSnapshot();\n  assert.equal(snapshot.scene.entities.find((entity)=>entity.id===actorId)?.hp,hpBefore);\n  return hpBefore;\n}\n\ntest("unknown installed state.applied rule dispatches atomically through Common Play and remains rename invariant",async()=>{ assert.equal(await run("first"),await run("renamed")); });\n`);
+          NODE
+      - name: Verify Family P state-applied dispatch
+        run: npx tsx --test tests/domain/commonPlaySemanticEventRuntime.test.ts tests/ui/c9FamilyPStateAppliedTriggerProduction.test.ts
+      - name: Verify coverage and legacy boundaries
+        run: node scripts/check-v1-mechanism-coverage.mjs && node scripts/check-legacy-execution-boundary.mjs
+      - name: Generate content and typecheck
+        run: npm run generate:content && npx tsc --noEmit
+      - name: Commit verified change
+        shell: bash
+        run: |
+          git config user.name "ChatGPT C9 Runner"
+          git config user.email "actions@users.noreply.github.com"
+          git add src/domain/commonPlayEffectRuntime.ts src/domain/commonPlaySemanticEventRuntime.ts src/app/installedCommonPlayRuntimeAdapter.ts tests/ui/c9FamilyPStateAppliedTriggerProduction.test.ts
+          git commit -m "feat(c9): dispatch state-applied Common Play rules"
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
