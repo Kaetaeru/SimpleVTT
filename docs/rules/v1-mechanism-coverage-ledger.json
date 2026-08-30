@@ -1204,7 +1204,8 @@
         "installedCommonPlayRuntimeAdapter.ts uses the existing Resolution interrupt and revalidates the installed action before atomic acceptance commit",
         "installedCommonPlayRuntimeAdapter.ts derives target and target-owner consent responderId from the single authoritative selected target; connectedActionRoutingAdapter routes and authorizes the interrupt by responder Character id",
         "commonPlayOperationRuntime.ts typed consent interaction supports actor|target|actor-owner|target-owner responders; installedCommonPlayRuntimeAdapter.ts resolves target-directed consent from the authoritative single selected target without content identity dispatch",
-        "commonPlayOperationRuntime.ts and common-play-contract.schema.json represent dm|host alongside actor/target owner consent without content-name dispatch; installedCommonPlayRuntimeAdapter.ts projects authority:dm|authority:host responders through the existing blocking interrupt"
+        "commonPlayOperationRuntime.ts and common-play-contract.schema.json represent dm|host alongside actor/target owner consent without content-name dispatch; installedCommonPlayRuntimeAdapter.ts projects authority:dm|authority:host responders through the existing blocking interrupt",
+        "commonPlayOperationRuntime.ts and common-play-contract.schema.json represent dm|host alongside actor/target owner consent without content-name dispatch; installedCommonPlayRuntimeAdapter.ts projects authority:dm|authority:host through the existing blocking interrupt"
       ],
       "productionEvidence": [
         "c2c8824f7e0fc883463c285bb9572ded72a9e232 feat(c9): route actor-owner consent interactions",
@@ -1213,7 +1214,8 @@
         "c9FamilyQTargetOwnerInteractionProduction.test.ts unknown installed target and target-owner consent each route only to the selected target responder peer, reject the actor peer, and commit downstream damage plus Reaction payment atomically after approval",
         "6d03412dcecc7186a2b0ee41da438f498c5333a0 feat(common-play): migrate Cutting Words declaratively; bardCollegeLoreCuttingWordsRuntime.test.ts preserves Common Play provenance, reaction/resource payment, and Undo without the named follow-up adapter",
         "50376a0b5baf574a2c26e594c705436fe1363212 feat(c9): route portable target consent responder; c9FamilyQTargetOwnerInteractionProduction.test.ts verifies both target and target-owner production routing, unauthorized-peer rejection, atomic Reaction payment, downstream damage, and authoritative event broadcast",
-        "c9FamilyQAuthorityInteractionProduction.test.ts unknown installed DM and Host consent remains host-local, rejects remote Character responses, and commits downstream damage only after local authority approval"
+        "c9FamilyQAuthorityInteractionProduction.test.ts unknown installed DM and Host consent remains host-local, rejects remote Character responses, and commits downstream damage only after local authority approval",
+        "c9FamilyQAuthorityInteractionProduction.test.ts proves unknown installed DM and Host consent stays host-authoritative, rejects remote Character responses, and commits downstream damage only after local authority approval"
       ],
       "identityInvarianceEvidence": [
         "installedCommonPlayActorOwnerInteractionProduction.test.ts uses arbitrary previously-unknown module/content/mechanic identities and resolves the interaction structurally rather than by content name",
@@ -1226,7 +1228,8 @@
         "installedCommonPlayActorOwnerInteractionProduction.test.ts owning-peer decline is side-effect free and completed-prompt replay is rejected without a second commit",
         "c9FamilyQTargetOwnerInteractionProduction.test.ts sends target and target-owner blocking prompts to the selected target responder peer, rejects a different peer as interrupt-not-authorized, and broadcasts the accepted authoritative event batch",
         "c9FamilyQTargetOwnerInteractionProduction.test.ts routes target and target-owner prompts only to the selected target Character peer and rejects the actor peer before authoritative commit",
-        "c9FamilyQAuthorityInteractionProduction.test.ts proves no peer interrupt prompt is routed for authority responders, remote Character response is rejected, and accepted host-local approval broadcasts the authoritative event batch"
+        "c9FamilyQAuthorityInteractionProduction.test.ts proves no peer interrupt prompt is routed for authority responders, remote Character response is rejected, and accepted host-local approval broadcasts the authoritative event batch",
+        "c9FamilyQAuthorityInteractionProduction.test.ts proves no peer prompt is routed for authority responders, remote Character response is interrupt-not-authorized, and accepted host-local approval broadcasts the authoritative event batch"
       ],
       "persistenceEvidenceIfRelevant": [],
       "remainingNamedSeams": [
