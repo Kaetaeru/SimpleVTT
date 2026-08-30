@@ -8,6 +8,8 @@ on:
       - tests/ui/c9FamilyIMovementProduction.test.ts
       - src/domain/commonPlayMovementRuntime.ts
       - src/app/installedCommonPlayRuntimeAdapter.ts
+      - rules/profiles/dnd.srd-5.2.1.profile.json
+      - docs/rules/v1-mechanism-coverage-ledger.json
       - .github/workflows/c9-family-i-rules-movement-71304.yml
   workflow_dispatch:
 
@@ -17,6 +19,8 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -24,5 +28,6 @@ jobs:
       - run: npm ci
       - run: npm run generate:content
       - run: node --import tsx --test tests/ui/c9FamilyIMovementProduction.test.ts
+      - run: node scripts/check-v1-mechanism-coverage.mjs
       - run: node scripts/check-legacy-execution-boundary.mjs
       - run: npm exec tsc -- --noEmit
