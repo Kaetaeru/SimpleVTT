@@ -1,0 +1,28 @@
+name: C9 Family W Form Projection
+
+on:
+  push:
+    branches:
+      - "agent/c9-gate-n-coverage-reconciliation"
+    paths:
+      - "src/app/commonPlayFormProjectionAdapter.ts"
+      - "src/app/offlineRuntimeAdapters.ts"
+      - "tests/ui/commonPlayFormProjectionProduction.test.ts"
+      - ".github/workflows/c9-family-w-form-projection.yml"
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Generate content dependencies
+        run: npm run generate:content
+      - name: Verify generic form projection
+        run: npx tsx --test tests/ui/commonPlayFormProjectionProduction.test.ts
+      - name: Typecheck
+        run: npx tsc --noEmit
