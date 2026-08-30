@@ -323,7 +323,7 @@ test("installed Common Play rejects unsupported HP authoring before persistence"
 
 test("installed Common Play rejects unsupported targeting authoring before persistence",async()=>{
   const invalidSelectors=[
-    {from:"actors",min:1,max:1},
+    {from:"unsupported-source",min:1,max:1},
     {from:"targets",where:{value:true},min:1,max:1},
     {from:"targets",min:-1,max:1},
   ];
