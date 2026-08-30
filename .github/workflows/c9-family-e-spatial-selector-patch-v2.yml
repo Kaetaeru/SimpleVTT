@@ -17,6 +17,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -85,7 +86,7 @@ jobs:
         run: npx tsx --test tests/ui/commonPlayRichSelectorProduction.test.ts
       - name: Typecheck
         run: npx tsc --noEmit
-      - name: Commit verified patch and remove staging workflows
+      - name: Commit verified patch and publish without overwriting concurrent work
         run: |
           rm -f .github/workflows/c9-family-e-spatial-selector-patch.yml .github/workflows/c9-family-e-spatial-selector-patch-v2.yml
           git config user.name "github-actions[bot]"
@@ -93,4 +94,15 @@ jobs:
           git add -A src/app/installedCommonPlayRuntimeAdapter.ts tests/ui/commonPlayRichSelectorProduction.test.ts .github/workflows/c9-family-e-spatial-selector-patch.yml .github/workflows/c9-family-e-spatial-selector-patch-v2.yml
           git diff --cached --quiet && exit 0
           git commit -m "feat(c9): bridge authoritative spatial facts into selectors"
-          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
+          for attempt in 1 2 3 4 5; do
+            git fetch origin agent/c9-gate-n-coverage-reconciliation
+            if ! git rebase origin/agent/c9-gate-n-coverage-reconciliation; then
+              git rebase --abort || true
+              exit 1
+            fi
+            if git push origin HEAD:agent/c9-gate-n-coverage-reconciliation; then
+              exit 0
+            fi
+            sleep 2
+          done
+          exit 1
