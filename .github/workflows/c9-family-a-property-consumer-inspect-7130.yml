@@ -1,20 +1,75 @@
-name: C9 Family A Property Consumer Inspect 7130
+name: C9 Family A Property Reconcile 7130
 on:
   push:
     branches: [agent/c9-gate-n-coverage-reconciliation]
     paths: [.github/workflows/c9-family-a-property-consumer-inspect-7130.yml]
+permissions:
+  contents: write
 jobs:
-  inspect:
+  reconcile:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: agent/c9-gate-n-coverage-reconciliation
-      - name: Locate property resolution and modifier consumers
+          fetch-depth: 0
+      - name: Reconcile Family A evidence with current implementation
+        shell: python
         run: |
-          echo '=== resolveProfileProperty ==='
-          grep -R -n --exclude-dir=node_modules --exclude-dir=.git 'resolveProfileProperty' src tests || true
-          echo '=== propertyModifier ==='
-          grep -R -n --exclude-dir=node_modules --exclude-dir=.git 'propertyModifier' src tests || true
-          echo '=== profile property evaluation imports ==='
-          grep -R -n --exclude-dir=node_modules --exclude-dir=.git 'profileEngine' src tests || true
+          import json
+          from pathlib import Path
+
+          path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
+          ledger=json.loads(path.read_text())
+          row=next(row for row in ledger['rows'] if row['family']=='A')
+          if row['disposition']!='INCOMPLETE':
+              raise SystemExit(f"Family A disposition changed unexpectedly: {row['disposition']}")
+          row['currentState']=(
+              'The persisted property.modify contract now carries explicit target, Effect ownership, definition source, elapsed duration, destroy-on-end lifetime, and instance policy. '
+              'commonPlayOperationRuntime generically lowers arbitrary external property.modify definitions to the existing apply-effect ResolutionOperation with a typed propertyModifier payload, and Resolver commits that payload into EffectState without content-name or content-ID dispatch. '
+              'Production parity remains incomplete because no production property-resolution consumer reads EffectInstance.propertyModifier: resolveProfileProperty currently has no callers, instancePolicy is stored but not enforced during property evaluation, and persistence/reconnect evidence for source-bound property modifiers is still absent.'
+          )
+          row['implementationEvidence']=[
+              'schemas/common-play-contract.schema.json expression/predicate/property.modify vocabulary with target/owner/source/duration/lifetime/instancePolicy',
+              'profileEngine.ts evaluateExpression/evaluateSemanticExpression/evaluateSemanticPredicate/resolveProfileProperty',
+              'effects.ts typed EffectPropertyModifier payload owned by EffectInstance',
+              'commonPlayOperationRuntime.ts generic property.modify -> apply-effect lowering',
+          ]
+          row['productionEvidence']=[
+              '95f8b220a1aefc33374b033ef9ed325f53c86f97 feat(c9): lower property modifiers to typed effects',
+              'commonPlayPropertyContractRuntime.test.ts property.modify commits typed EffectState through Resolver',
+          ]
+          row['identityInvarianceEvidence']=[
+              'commonPlayPropertyContractRuntime.test.ts arbitrary external definition and renamed-definition structural equivalence',
+          ]
+          row['remainingNamedSeams']=[
+              'EffectInstance.propertyModifier is not consumed by a production property evaluation path',
+              'resolveProfileProperty has no production caller that supplies active Effect-owned modifiers',
+              'property modifier instancePolicy is stored but stacking/replacement semantics are not enforced during evaluation',
+              'source-bound property modifier persistence/reconnect evidence is absent',
+              'named progression/runtime stat materialization remains outside a generic property owner',
+          ]
+          path.write_text(json.dumps(ledger,indent=2,ensure_ascii=False)+'\n')
+      - name: Verify coverage ledger remains valid
+        run: |
+          node --test tests/contracts/v1MechanismCoverage.test.mjs
+          node scripts/check-v1-mechanism-coverage.mjs
+      - name: Commit reconciled evidence and remove completed staging
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/rules/v1-mechanism-coverage-ledger.json
+          git rm -f .github/workflows/c9-family-a-property-consumer-inspect-7130.yml
+          if [ -e .github/workflows/c9-family-a-property-production-recover-r2.yml ]; then
+            git rm -f .github/workflows/c9-family-a-property-production-recover-r2.yml
+          fi
+          git commit -m "docs(c9): reconcile Family A property evidence"
+          for attempt in 1 2 3 4 5; do
+            git fetch origin agent/c9-gate-n-coverage-reconciliation
+            git rebase origin/agent/c9-gate-n-coverage-reconciliation || { git rebase --abort || true; sleep 2; continue; }
+            if git push origin HEAD:agent/c9-gate-n-coverage-reconciliation; then
+              exit 0
+            fi
+            sleep 2
+          done
+          exit 1
