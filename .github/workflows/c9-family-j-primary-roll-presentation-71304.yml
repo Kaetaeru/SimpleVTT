@@ -1,0 +1,78 @@
+name: C9 Family J Primary Roll Presentation 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-j-primary-roll-presentation-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Reconcile latest branch
+        run: git pull --ff-only origin agent/c9-gate-n-coverage-reconciliation
+      - run: npm ci
+      - run: npm run generate:content
+      - name: Preserve d20 test as primary resolution presentation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          path=Path('src/app/installedCommonPlayRuntimeAdapter.ts')
+          text=path.read_text(encoding='utf-8')
+          old='''    rollKind:hp?.rollKind??(roll?(roll.family==="attack-roll"?"attack":roll.family==="saving-throw"?"save":"check"):undefined),
+    authoritativeDice:hp?.authoritativeDice??(roll?.rollState==="normal"?[roll.natural]:roll?.dice.faces),
+    rollTotal:hp?.rollTotal??roll?.total,'''
+          new='''    rollKind:roll?(roll.family==="attack-roll"?"attack":roll.family==="saving-throw"?"save":"check"):hp?.rollKind,
+    authoritativeDice:roll?(roll.rollState==="normal"?[roll.natural]:roll.dice.faces):hp?.authoritativeDice,
+    rollTotal:roll?.total??hp?.rollTotal,'''
+          if old in text:
+              text=text.replace(old,new,1)
+              path.write_text(text,encoding='utf-8')
+          elif new not in text:
+              raise SystemExit('Expected Common Play resolution presentation block not found')
+          PY
+      - name: Verify Family J attack presentation and regressions
+        run: |
+          npx tsx --test \
+            tests/ui/c9FamilyJRangeCoverProduction.test.ts \
+            tests/ui/c9FamilyJSpatialAttackProduction.test.ts \
+            tests/ui/c9FamilyJPortableControlProduction.test.ts \
+            tests/ui/c9FamilyJAttackPersistence.test.ts \
+            tests/ui/installedCommonPlayLoweredFamiliesProduction.test.ts
+          node scripts/check-v1-mechanism-coverage.mjs
+          node scripts/check-legacy-execution-boundary.mjs
+          npx tsc --noEmit
+      - name: Publish verified fix and retire workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch=agent/c9-gate-n-coverage-reconciliation
+          workflow=.github/workflows/c9-family-j-primary-roll-presentation-71304.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "4189828+github-actions[bot]@users.noreply.github.com"
+          git rm "$workflow"
+          git add src/app/installedCommonPlayRuntimeAdapter.ts
+          git commit -m "fix(c9): preserve primary d20 presentation"
+          for attempt in $(seq 1 8); do
+            if git push origin HEAD:"$branch"; then exit 0; fi
+            git fetch origin "$branch"
+            git rebase "origin/$branch"
+            sleep 1
+          done
+          exit 1
