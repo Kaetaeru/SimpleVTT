@@ -32,6 +32,10 @@ function packagePayload(prefix:string){
               kind:"property.modify",property:"movement.cost.multiplier",operation:"set",value:{value:2},target:"actor",owner:"effect",source:"definition",
               duration:{kind:"elapsed",amount:{value:1},unit:"hours"},lifetime:{kind:"until-duration",onEnd:"destroy"},instancePolicy:"unique-by-source",
             }]},
+            {id:"drag-carry",invocation:"manual",operations:[{
+              kind:"property.modify",property:"movement.drag-carry.multiplier",operation:"set",value:{value:2},target:"actor",owner:"effect",source:"definition",
+              duration:{kind:"elapsed",amount:{value:1},unit:"hours"},lifetime:{kind:"until-duration",onEnd:"destroy"},instancePolicy:"unique-by-source",
+            }]},
             {id:"ground-flight",invocation:"manual",operations:[{
               kind:"property.modify",property:"movement.fly",operation:"set",value:{value:0},target:"actor",owner:"effect",source:"definition",
               duration:{kind:"elapsed",amount:{value:1},unit:"hours"},lifetime:{kind:"until-duration",onEnd:"destroy"},instancePolicy:"unique-by-source",
@@ -83,6 +87,15 @@ async function exercise(prefix:string){
   snapshot=await adapter.getSnapshot();
   assert.equal(snapshot.scene.economyByActor["char.aelar"]?.movement,initial,"movement Undo must restore the exact budget while the rules effect remains active");
 
+  await adapter.resolveAction(action("drag-carry"),["char.aelar"]);
+  await adapter.resolveAction(action("walk"),["char.aelar"]);
+  snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.resolution?.stage,"complete");
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.movement,initial-20,"drag/carry cost must compose with active Difficult Terrain through generic movement properties");
+  await adapter.undoLastResolution();
+  snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.movement,initial,"drag/carry movement Undo must restore the exact budget while both rules effects remain active");
+
   await adapter.resolveAction(action("ground-flight"),["char.aelar"]);
   await adapter.resolveAction(action("fly"),["char.aelar"]);
   snapshot=await adapter.getSnapshot();
@@ -93,14 +106,14 @@ async function exercise(prefix:string){
   await adapter.resolveAction(action("fly"),["char.aelar"]);
   snapshot=await adapter.getSnapshot();
   assert.equal(snapshot.resolution?.stage,"complete");
-  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.movement,initial-10,"active terrain multiplier must combine with the rules-derived alternate fly speed");
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.movement,initial-20,"active terrain and drag/carry multipliers must combine with the rules-derived alternate fly speed");
   return snapshot.scene.economyByActor["char.aelar"]!.movement;
 }
 
-test("unknown external Common Play derives movement cost and alternate speed from generic RulesProfile modifiers",async()=>{
-  assert.equal(await exercise("unknown-family-i-rules-derived"),20);
+test("unknown external Common Play derives movement cost, drag/carry cost, and alternate speed from generic RulesProfile modifiers",async()=>{
+  assert.equal(await exercise("unknown-family-i-rules-derived"),10);
 });
 
 test("rules-derived movement remains invariant after external module/content/mechanic identity rename",async()=>{
-  assert.equal(await exercise("renamed-family-i-rules-derived"),20);
+  assert.equal(await exercise("renamed-family-i-rules-derived"),10);
 });
