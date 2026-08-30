@@ -1,5 +1,5 @@
 name: C9 Family E Reach Fact 71304
-# rerun-trigger: 2026-08-30
+# rerun-trigger: 2026-08-30-generated-content
 
 on:
   push:
@@ -23,6 +23,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Generate content catalogs
+        run: npm run generate:content
       - name: Add provider-owned reach fact to production selector projection
         shell: bash
         run: |
