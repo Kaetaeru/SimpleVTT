@@ -1,0 +1,80 @@
+name: C9 Family M Ledger Sync 71304
+
+on:
+  push:
+    branches:
+      - "agent/c9-gate-n-coverage-reconciliation"
+    paths:
+      - ".github/workflows/c9-family-m-ledger-sync-71304.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  sync-family-m:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - name: Reconcile latest branch before ledger edit
+        run: git pull --rebase origin "$GITHUB_REF_NAME"
+      - name: Record verified Family M condition evidence
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          path=Path("docs/rules/v1-mechanism-coverage-ledger.json")
+          data=json.loads(path.read_text())
+          family=next((entry for entry in data["rows"] if entry.get("family")=="M"),None)
+          if not family or family.get("id")!="conditions":
+              raise SystemExit("Family M conditions ledger entry not found")
+          if family.get("disposition")!="INCOMPLETE":
+              raise SystemExit(f"unexpected Family M disposition: {family.get('disposition')}")
+
+          family["currentState"]=(
+              "The shared Resolver condition Effect path enforces explicit combatant condition immunities, active tagged condition-immunity Effects, and rules-derived condition immunities before adding a condition Effect. "
+              "Unknown installed Common Play condition.apply/remove now has production and full external identity-rename proof for explicit Poisoned immunity, Petrified-derived Poisoned immunity, successful application after immunity removal, and Undo. "
+              "Exhaustive SRD condition semantics, Exhaustion levels/stacking, connected replay/reconnect persistence, and remaining named condition-specific adapters remain incomplete."
+          )
+
+          evidence={
+            "implementationEvidence":[
+              "resolutionEffectOps.ts executeApplyEffect enforces CombatantRuntimeState.conditionImmunities, active condition-immunity Effect tags, and conditions.ts rules-derived conditionImmunities(conditionEffectsFor(...)) before generic condition Effect insertion",
+              "commonPlayOperationRuntime.ts lowers portable condition.apply/remove structurally to the shared Resolver apply-effect/remove-effect operations without content name or ID dispatch"
+            ],
+            "productionEvidence":[
+              "67d7ce36dcbda0171b48a08bd9e139476bdc6245 test(c9): prove portable condition immunity; C9 Family M Condition Immunity 71304 run 33312483520 passed the unknown/renamed production proof, legacy execution boundary, coverage checker, and tsc --noEmit",
+              "c9FamilyMConditionImmunityProduction.test.ts proves explicit Poisoned immunity, Petrified-derived Poisoned immunity, condition removal, successful application after immunity clears, and event-native Undo through installed Common Play production actions"
+            ],
+            "identityInvarianceEvidence":[
+              "c9FamilyMConditionImmunityProduction.test.ts repeats the same immunity/apply/remove/Undo behavior under unrelated external module, content, and mechanic identities"
+            ]
+          }
+          for key,values in evidence.items():
+              for value in values:
+                  if value not in family[key]: family[key].append(value)
+
+          family["remainingNamedSeams"]=[
+              "exhaustive production acceptance for all SRD condition semantics and Exhaustion stacking/levels remains incomplete",
+              "connected replay/reconnect persistence evidence for portable condition apply/remove/immunity remains incomplete",
+              "named condition-specific adapters remain migration debt where they bypass portable Common Play/Resolver"
+          ]
+          path.write_text(json.dumps(data,ensure_ascii=False,indent=2)+"\n")
+          PY
+      - name: Verify coverage ledger
+        run: node scripts/check-v1-mechanism-coverage.mjs
+      - name: Commit verified Family M ledger evidence
+        shell: bash
+        run: |
+          rm .github/workflows/c9-family-m-ledger-sync-71304.yml
+          git add docs/rules/v1-mechanism-coverage-ledger.json .github/workflows/c9-family-m-ledger-sync-71304.yml
+          git commit -m "docs(c9): record Family M condition immunity evidence"
+          git pull --rebase origin "$GITHUB_REF_NAME"
+          git push origin HEAD:"$GITHUB_REF_NAME"
