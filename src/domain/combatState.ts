@@ -12,6 +12,7 @@ import { DomainEvaluationError } from "./profileEngine";
 export interface CombatantRuntimeState {
   id: string;
   baseSpeed: number;
+  baseProperties?: Record<string, number>;
   life: LifeState;
   economy: TurnEconomyState;
   resources: ResourcePool[];
