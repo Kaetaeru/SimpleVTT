@@ -1,0 +1,44 @@
+name: C9 Family L Death Save Verifier Fix 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-l-death-save-verifier-fix-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Sync branch
+        run: git pull --ff-only origin "$GITHUB_REF_NAME"
+      - name: Fix verifier syntax
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path=Path('.github/workflows/c9-family-l-death-save-portable-71304.yml')
+          text=path.read_text()
+          bad="          '''.replace(/^          /gm,''))"
+          good="          ''')"
+          if bad not in text:
+              raise SystemExit('portable death-save verifier syntax anchor not found')
+          path.write_text(text.replace(bad,good,1))
+          PY
+      - name: Commit fix and retire fixer
+        shell: bash
+        run: |
+          rm .github/workflows/c9-family-l-death-save-verifier-fix-71304.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/workflows/c9-family-l-death-save-portable-71304.yml .github/workflows/c9-family-l-death-save-verifier-fix-71304.yml
+          git commit -m "ci(c9): repair portable death-save verifier"
+          git pull --rebase origin "$GITHUB_REF_NAME"
+          git push origin HEAD:"$GITHUB_REF_NAME"
