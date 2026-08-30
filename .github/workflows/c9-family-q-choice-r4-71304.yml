@@ -34,6 +34,14 @@ jobs:
           code='\n'.join(line[10:] if line.startswith('          ') else line for line in workflow[start:end].splitlines())
           exec(compile(code,'q-choice-r3-patch','exec'),{'__name__':'__main__'})
 
+          adapter_path=Path('src/app/installedCommonPlayRuntimeAdapter.ts')
+          adapter_text=adapter_path.read_text(encoding='utf-8')
+          old_reject='return finishInteraction(internal,resolution,"Common Play choice 응답 검증 실패");'
+          traced_reject='return finishInteraction(internal,resolution,`Common Play choice 응답 검증 실패 · selected=${selection.join("|")} · options=${[...optionIds].join("|")}`);'
+          if adapter_text.count(old_reject)!=1:
+              raise SystemExit(f'Q response rejection anchor changed: {adapter_text.count(old_reject)}')
+          adapter_path.write_text(adapter_text.replace(old_reject,traced_reject,1),encoding='utf-8')
+
           test_path=Path('tests/ui/c9FamilyQChoiceInteractionProduction.test.ts')
           text=test_path.read_text(encoding='utf-8')
           damage='{kind:"damage.apply",amount:{value:1},damageType:"force",target:"actor"}'
