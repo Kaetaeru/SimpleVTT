@@ -199,6 +199,7 @@ jobs:
           EOF
       - name: Verify Family L max HP slice
         run: |
+          npm run generate:content
           npx tsx --test tests/ui/c9FamilyLMaxHpPersistence.test.ts tests/ui/phase09CommonPlayResourcePersistence.test.ts
           node scripts/check-v1-mechanism-coverage.mjs
           npx tsc --noEmit
@@ -221,10 +222,7 @@ jobs:
           if prod not in row['productionEvidence']: row['productionEvidence'].append(prod)
           persistence='c9FamilyLMaxHpPersistence.test.ts proves runtime maximum HP survives Character library materialization without mutating source maxHp and normalizes after inverse write-back'
           if persistence not in row['persistenceEvidenceIfRelevant']: row['persistenceEvidenceIfRelevant'].append(persistence)
-          row['remainingNamedSeams']=[
-            seam for seam in row['remainingNamedSeams']
-            if 'max-HP source-model/write-back' not in seam
-          ]
+          row['remainingNamedSeams']=[seam for seam in row['remainingNamedSeams'] if 'max-HP source-model/write-back' not in seam]
           path.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
           PY
           node scripts/check-v1-mechanism-coverage.mjs
