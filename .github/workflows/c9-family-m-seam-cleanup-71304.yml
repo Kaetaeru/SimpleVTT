@@ -1,0 +1,55 @@
+name: C9 Family M Seam Cleanup 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-m-seam-cleanup-71304.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Remove duplicate Family M seam and self-retire
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > /tmp/cleanup-family-m.mjs <<'NODE'
+          import fs from "node:fs";
+          const path="docs/rules/v1-mechanism-coverage-ledger.json";
+          const ledger=JSON.parse(fs.readFileSync(path,"utf8"));
+          const row=ledger.rows.find((entry)=>entry.family==="M"&&entry.id==="conditions");
+          if(!row) throw new Error("Family M conditions row missing");
+          row.remainingNamedSeams=(row.remainingNamedSeams??[]).filter((entry)=>entry!=="named condition-specific adapters remain migration debt where they bypass portable Common Play/Resolver");
+          const canonical="remaining named condition-specific adapters remain migration debt where they bypass portable Common Play/Resolver";
+          if(!row.remainingNamedSeams.includes(canonical)) row.remainingNamedSeams.push(canonical);
+          fs.writeFileSync(path,JSON.stringify(ledger,null,2)+"\n","utf8");
+          NODE
+          branch=agent/c9-gate-n-coverage-reconciliation
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in $(seq 1 10); do
+            git fetch origin "$branch"
+            git reset --hard "origin/$branch"
+            node /tmp/cleanup-family-m.mjs
+            rm -f .github/workflows/c9-family-m-seam-cleanup-71304.yml
+            git add docs/rules/v1-mechanism-coverage-ledger.json .github/workflows/c9-family-m-seam-cleanup-71304.yml
+            git diff --cached --check
+            node scripts/check-v1-mechanism-coverage.mjs
+            git commit -m "docs(c9): dedupe Family M remaining seam"
+            if git push origin HEAD:"$branch"; then exit 0; fi
+            sleep 1
+          done
+          exit 1
