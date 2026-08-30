@@ -2,15 +2,13 @@ name: C9 Portable Expression DC 71304
 
 on:
   push:
-    branches: [agent/c9-gate-n-coverage-reconciliation]
-    paths: [.github/workflows/c9-expression-dc-71304.yml]
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - ".github/workflows/c9-expression-dc-71304.yml"
 
 permissions:
   contents: write
-
-concurrency:
-  group: c9-expression-dc-71304
-  cancel-in-progress: false
 
 jobs:
   verify-and-publish:
@@ -25,13 +23,9 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - name: Reconcile latest branch
-        run: git pull --ff-only origin agent/c9-gate-n-coverage-reconciliation
       - run: npm ci
-      - name: Align persisted expression DC with runtime parser and evaluator
-        shell: bash
+      - name: Apply generic expression DC support
         run: |
-          set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
 
@@ -48,23 +42,23 @@ jobs:
                   text=text.replace(old,new,1)
 
           old='''    const conditionContext={
-      ...(conditionAbility?{ability:conditionAbility}:{}),
-      ...(selectedTargetFacts?.distanceFeet===undefined?{}:{distanceToTargetFeet:selectedTargetFacts.distanceFeet}),
-    };
-    operations.push({
-'''
+              ...(conditionAbility?{ability:conditionAbility}:{}),
+              ...(selectedTargetFacts?.distanceFeet===undefined?{}:{distanceToTargetFeet:selectedTargetFacts.distanceFeet}),
+            };
+            operations.push({
+          '''
           new='''    const conditionContext={
-      ...(conditionAbility?{ability:conditionAbility}:{}),
-      ...(selectedTargetFacts?.distanceFeet===undefined?{}:{distanceToTargetFeet:selectedTargetFacts.distanceFeet}),
-    };
-    const d20Target=evaluateExpression(entryPoint.test.dc as ExpressionNode,(property)=>{
-      const value=input.movementProperties?.[property];
-      if(!Number.isFinite(value)) throw new DomainEvaluationError(`Common Play d20 target property is unavailable: ${property}`);
-      return Number(value);
-    });
-    if(!Number.isFinite(d20Target)||!Number.isInteger(d20Target)) throw new DomainEvaluationError("Common Play d20 target must resolve to a finite integer");
-    operations.push({
-'''
+              ...(conditionAbility?{ability:conditionAbility}:{}),
+              ...(selectedTargetFacts?.distanceFeet===undefined?{}:{distanceToTargetFeet:selectedTargetFacts.distanceFeet}),
+            };
+            const d20Target=evaluateExpression(entryPoint.test.dc as ExpressionNode,(property)=>{
+              const value=input.movementProperties?.[property];
+              if(!Number.isFinite(value)) throw new DomainEvaluationError(`Common Play d20 target property is unavailable: ${property}`);
+              return Number(value);
+            });
+            if(!Number.isFinite(d20Target)||!Number.isInteger(d20Target)) throw new DomainEvaluationError("Common Play d20 target must resolve to a finite integer");
+            operations.push({
+          '''
           if new not in text:
               if text.count(old)!=1:
                   raise SystemExit(f'expected d20 evaluation anchor once, got {text.count(old)}')
@@ -111,7 +105,6 @@ test("portable d20 DC expressions evaluate authoritative actor profile propertie
   const d20=pending.operations.find((operation)=>operation.kind==="d20");
   assert.equal(d20?.kind,"d20");
   if(d20?.kind==="d20") assert.equal(d20.request.target,15);
-
   assert.throws(()=>compileCommonPlayEntryPointOperations(TEST_PROFILE,runtimeState(),lowering.definition,{
     ...input,movementProperties:{"proficiency.bonus":3},
   }),/Common Play d20 target property is unavailable: ability\.str\.modifier/);
@@ -125,22 +118,17 @@ test("portable d20 DC expressions evaluate authoritative actor profile propertie
           node scripts/check-legacy-execution-boundary.mjs
           node scripts/check-v1-mechanism-coverage.mjs
           npm exec tsc -- --noEmit
-      - name: Publish verified generic runtime change and retire workflow
-        shell: bash
+      - name: Publish verified change
         run: |
-          set -euo pipefail
           branch=agent/c9-gate-n-coverage-reconciliation
-          workflow=.github/workflows/c9-expression-dc-71304.yml
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git rm "$workflow"
           git add src/domain/commonPlayOperationRuntime.ts tests/domain/commonPlayDefinitionRuntime.test.ts
+          git rm .github/workflows/c9-expression-dc-71304.yml
           git commit -m "feat(c9): evaluate portable d20 expression dc"
-          for attempt in $(seq 1 5); do
+          for attempt in 1 2 3 4 5; do
             if git push origin HEAD:"$branch"; then exit 0; fi
             git fetch origin "$branch"
-            if git rebase "origin/$branch"; then continue; fi
-            git rebase --abort || true
-            exit 1
+            git rebase "origin/$branch" || exit 1
           done
           exit 1
