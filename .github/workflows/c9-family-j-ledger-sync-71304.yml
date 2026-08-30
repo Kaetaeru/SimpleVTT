@@ -27,7 +27,7 @@ jobs:
           from pathlib import Path
           path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
           data=json.loads(path.read_text())
-          family=next(entry for entry in data['families'] if entry['family']=='J')
+          family=next(entry for entry in data['rows'] if entry['family']=='J')
           family['currentState']=(
             'Unknown installed Common Play attack-roll plus target damage has production evidence through a projected arbitrary-ID Actor action with Action payment, damage commit, Host/Client convergence, and Undo. '
             'Projected Unarmed grapple/shove dispatches from a typed runtimeSaveCondition action payload rather than named action IDs, with arbitrary action-ID rename evidence. '
