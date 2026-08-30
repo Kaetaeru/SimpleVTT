@@ -3,11 +3,15 @@ name: M1 Common Play Targeting
 on:
   pull_request:
     paths:
+      - "schemas/common-play-contract.schema.json"
       - "src/domain/commonPlayOperationRuntime.ts"
+      - "src/domain/commonPlaySelectorRuntime.ts"
       - "src/domain/resolutionTypes.ts"
       - "src/domain/resolutionActionOps.ts"
       - "src/domain/targeting.ts"
       - "src/app/installedCommonPlayRuntimeAdapter.ts"
+      - "src/app/realSpatialRuntimeService.ts"
+      - "src/app/spatialRuntimeContracts.ts"
       - "tests/fixtures/play-contract/generic-targeting-action.json"
       - "tests/domain/commonPlayTargetingRuntime.test.ts"
       - "tests/domain/commonPlayHpRuntime.test.ts"
@@ -15,6 +19,9 @@ on:
       - "tests/domain/commonPlayResourceEconomyRuntime.test.ts"
       - "tests/ui/ruleModulePackageImport.test.ts"
       - "tests/ui/installedCommonPlayProductionRuntime.test.ts"
+      - "tests/ui/commonPlayRichSelectorProduction.test.ts"
+      - "tests/ui/c9FamilyESpatialSelectorProduction.test.ts"
+      - "tests/ui/c9FamilyETagSelectorProduction.test.ts"
       - "tests/ui/fighterActionSurgeRuntimeAdapter.test.ts"
       - ".github/workflows/m1-common-play-targeting.yml"
 
@@ -42,6 +49,9 @@ jobs:
           tests/domain/commonPlayResourceEconomyRuntime.test.ts
           tests/ui/ruleModulePackageImport.test.ts
           tests/ui/installedCommonPlayProductionRuntime.test.ts
+          tests/ui/commonPlayRichSelectorProduction.test.ts
+          tests/ui/c9FamilyESpatialSelectorProduction.test.ts
+          tests/ui/c9FamilyETagSelectorProduction.test.ts
           tests/ui/fighterActionSurgeRuntimeAdapter.test.ts
       - name: Typecheck application
         run: npx tsc --noEmit
