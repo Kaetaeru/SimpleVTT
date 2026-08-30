@@ -135,19 +135,22 @@ function lowerD20Interceptor(value:Obj,index:number,options:ReactionLoweringOpti
       const raw=object(candidate,`${label}.operations[${operationIndex}]`);
       if(raw.when!==undefined) throw new DomainEvaluationError(`${label}.operations[${operationIndex}].when is not connected to the reaction runtime yet`);
       if(raw.kind!=="roll.modify") throw new DomainEvaluationError(`${label}.operations[${operationIndex}] must be roll.modify`);
-      if(raw.mode==="subtract-die") {
+      if(raw.mode==="add-die"||raw.mode==="subtract-die"||raw.mode==="reroll") {
         const hasLiteral=typeof raw.dice==="string";
         const hasResource=typeof raw.diceResource==="string"&&raw.diceResource.length>0;
         if(hasLiteral===hasResource) throw new DomainEvaluationError(`${label}.operations[${operationIndex}] must declare exactly one of dice or diceResource`);
-        if(raw.value!==undefined) throw new DomainEvaluationError(`${label}.operations[${operationIndex}].value is not allowed for subtract-die`);
+        if(raw.value!==undefined) throw new DomainEvaluationError(`${label}.operations[${operationIndex}].value is not allowed for ${raw.mode}`);
         if(hasLiteral) {
-          if(!/^([0-9]+)d([0-9]+)([+-][0-9]+)?$/.test(raw.dice as string)) throw new DomainEvaluationError(`${label}.operations[${operationIndex}].dice must be a dice formula`);
-          return {kind:"roll.modify" as const,mode:"subtract-die" as const,dice:raw.dice as string};
+          const match=/^([0-9]+)d([0-9]+)([+-][0-9]+)?$/.exec(raw.dice as string);
+          if(!match) throw new DomainEvaluationError(`${label}.operations[${operationIndex}].dice must be a dice formula`);
+          if(raw.mode==="reroll"&&(Number(match[2])!==20||Number(match[3]??0)!==0)) throw new DomainEvaluationError(`${label}.operations[${operationIndex}] reroll requires Xd20 with no flat modifier`);
+          return {kind:"roll.modify" as const,mode:raw.mode,dice:raw.dice as string};
         }
         const resourceId=raw.diceResource as string;
         const sides=options.resolveResourceDie?.(resourceId);
         if(typeof sides!=="number"||!Number.isInteger(sides)||sides<2) throw new DomainEvaluationError(`${label}.operations[${operationIndex}].diceResource has no authoritative die size: ${resourceId}`);
-        return {kind:"roll.modify" as const,mode:"subtract-die" as const,dice:`1d${sides}`};
+        if(raw.mode==="reroll"&&sides!==20) throw new DomainEvaluationError(`${label}.operations[${operationIndex}] reroll diceResource must resolve to d20`);
+        return {kind:"roll.modify" as const,mode:raw.mode,dice:`1d${sides}`};
       }
       if(raw.mode!=="add-flat"&&raw.mode!=="target-add"&&raw.mode!=="replace"&&raw.mode!=="minimum") {
         throw new DomainEvaluationError(`${label}.operations[${operationIndex}].mode is not connected to the post-roll reaction runtime`);

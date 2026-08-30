@@ -100,7 +100,7 @@ function modifierAuthority(internal:AdapterState,pending:PendingPassiveReaction)
   const modifierDiceFaces:Record<number,number[]>={};
   let drawIndex=0;
   interceptor.operations.forEach((operation,index)=>{
-    if(operation.mode!=="subtract-die")return;
+    if(operation.mode!=="add-die"&&operation.mode!=="subtract-die"&&operation.mode!=="reroll")return;
     const formula=literalDice(operation.dice);
     const faces:number[]=[];
     for(let die=0;die<formula.count;die+=1){
@@ -362,6 +362,9 @@ function updateD20Presentation(resolution:ResolutionView,pending:PendingPassiveR
   if(delta!==0)resolution.rollModifierContributions=[...before,{source:`common-play:${pending.candidate.definition.id}`,value:delta}];
   else resolution.rollModifierContributions=before;
   resolution.rollTotal=result.total;
+  resolution.naturalD20=result.natural;
+  if(resolution.authoritativeDice.length)resolution.authoritativeDice[0]=result.natural;
+  else resolution.authoritativeDice=[result.natural];
   const rolled=authority?.modifierDiceFaces?Object.values(authority.modifierDiceFaces).flat():[];
   if(rolled.length)resolution.detail.push(`${pending.candidate.optionName}: ${rolled.join(", ")} · ${result.total}`);
   resolution.provenance.push(`common-play:${pending.candidate.definition.id} · generic post-roll interceptor`);

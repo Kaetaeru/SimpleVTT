@@ -211,6 +211,52 @@ test("unknown installed d20 interceptor executes replace, minimum, and target-ad
   assert.deepEqual(await execute(renamed),await execute(ORIGINAL));
 });
 
+test("unknown installed add-die executes in production with rename invariance and Undo",async()=>{
+  const operations=[{kind:"roll.modify",mode:"add-die",dice:"1d8"}];
+  const renamed:Identity={...ORIGINAL,moduleId:"external.add-die-renamed",contentId:"item.add-die-renamed",mechanicId:"mechanic.add-die-renamed",interceptorId:"interceptor.add-die-renamed",interactionId:"interaction.add-die-renamed",displayName:"Renamed Add Die"};
+  const execute=async(identity:Identity)=>{
+    const adapter=await prepare(identity,false,"d20",operations);
+    let snapshot=await adapter.getSnapshot();
+    const responderId=snapshot.activeCharacter.id;
+    const resourceBefore=secondWind(snapshot)!;
+    snapshot=await openAbilityCheckInterrupt(adapter);
+    await adapter.setQueuedD20(6);
+    snapshot=await adapter.respondToInterrupt(true);
+    const mechanical={outcome:snapshot.resolution?.checkOutcome,total:snapshot.resolution?.rollTotal,natural:snapshot.resolution?.naturalD20};
+    assert.deepEqual(mechanical,{outcome:"성공",total:21,natural:15});
+    assert.equal(secondWind(snapshot),resourceBefore-1);
+    assert.equal(snapshot.scene.economyByActor[responderId]?.reaction,false);
+    snapshot=await adapter.undoLastResolution();
+    assert.equal(secondWind(snapshot),resourceBefore);
+    assert.equal(snapshot.scene.economyByActor[responderId]?.reaction,true);
+    return mechanical;
+  };
+  assert.deepEqual(await execute(renamed),await execute(ORIGINAL));
+});
+
+test("unknown installed reroll executes in production with rename invariance and Undo",async()=>{
+  const operations=[{kind:"roll.modify",mode:"reroll",dice:"1d20"}];
+  const renamed:Identity={...ORIGINAL,moduleId:"external.reroll-renamed",contentId:"item.reroll-renamed",mechanicId:"mechanic.reroll-renamed",interceptorId:"interceptor.reroll-renamed",interactionId:"interaction.reroll-renamed",displayName:"Renamed Reroll"};
+  const execute=async(identity:Identity)=>{
+    const adapter=await prepare(identity,false,"d20",operations);
+    let snapshot=await adapter.getSnapshot();
+    const responderId=snapshot.activeCharacter.id;
+    const resourceBefore=secondWind(snapshot)!;
+    snapshot=await openAbilityCheckInterrupt(adapter);
+    await adapter.setQueuedD20(4);
+    snapshot=await adapter.respondToInterrupt(true);
+    const mechanical={outcome:snapshot.resolution?.checkOutcome,total:snapshot.resolution?.rollTotal,natural:snapshot.resolution?.naturalD20,die:snapshot.resolution?.authoritativeDice[0]};
+    assert.deepEqual(mechanical,{outcome:"실패",total:4,natural:4,die:4});
+    assert.equal(secondWind(snapshot),resourceBefore-1);
+    assert.equal(snapshot.scene.economyByActor[responderId]?.reaction,false);
+    snapshot=await adapter.undoLastResolution();
+    assert.equal(secondWind(snapshot),resourceBefore);
+    assert.equal(snapshot.scene.economyByActor[responderId]?.reaction,true);
+    return mechanical;
+  };
+  assert.deepEqual(await execute(renamed),await execute(ORIGINAL));
+});
+
 test("portable installed d20 interceptor can turn a successful production attack into a miss",async()=>{
   const adapter=await prepare();
   let snapshot=await adapter.setCurrentActor("combatant.goblin-a");

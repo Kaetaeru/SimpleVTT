@@ -34,7 +34,9 @@ export interface CommonPlayPropertyModifyOperation {
 }
 
 export type CommonPlayRollModifyOperation =
+  | { kind:"roll.modify"; mode:"add-die"; dice:string }
   | { kind:"roll.modify"; mode:"subtract-die"; dice:string }
+  | { kind:"roll.modify"; mode:"reroll"; dice:string }
   | { kind:"roll.modify"; mode:"add-flat"|"target-add"|"replace"|"minimum"; value:LiteralExpression };
 
 export interface CommonPlayInteractionDefinition {
@@ -228,14 +230,17 @@ function d20RollModifications(
 ):D20RollModification[] {
   return interceptor.operations.flatMap((operation,index):D20RollModification[]=>{
     const source=`common-play:${definition.id}:${interceptor.id}:operation:${index}`;
-    if(operation.mode==="subtract-die") {
-      const formula=parseDiceFormula(operation.dice,"d20.roll subtract-die");
+    if(operation.mode==="add-die"||operation.mode==="subtract-die"||operation.mode==="reroll") {
+      const formula=parseDiceFormula(operation.dice,`d20.roll ${operation.mode}`);
+      if(operation.mode==="reroll"&&(formula.sides!==20||formula.flat!==0)) throw new Error("d20.roll reroll requires Xd20 with no flat modifier");
       const faces=authority?.modifierDiceFaces?.[index];
       if(!faces||faces.length!==formula.count||faces.some((face)=>!Number.isInteger(face)||face<1||face>formula.sides)) {
         throw new Error(`d20.roll interceptor ${index} requires authoritative die face(s)`);
       }
-      const modifications:D20RollModification[]=[{source,mode:"subtract-die",dice:{id:`${source}:dice`,purpose:source,sides:formula.sides,faces:[...faces]}}];
-      if(formula.flat!==0) modifications.push({source:`${source}:flat`,mode:"add-flat",value:-formula.flat});
+      const dice={id:`${source}:dice`,purpose:source,sides:formula.sides,faces:[...faces]};
+      if(operation.mode==="reroll") return [{source,mode:"reroll",dice}];
+      const modifications:D20RollModification[]=[{source,mode:operation.mode,dice}];
+      if(formula.flat!==0) modifications.push({source:`${source}:flat`,mode:"add-flat",value:operation.mode==="subtract-die"?-formula.flat:formula.flat});
       return modifications;
     }
     const value=literalValue(operation.value,`d20.roll ${operation.mode} value`);

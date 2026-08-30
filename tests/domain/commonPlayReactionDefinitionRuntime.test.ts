@@ -96,6 +96,24 @@ test("portable reaction lowering is invariant to definition, interceptor, and in
   assert.deepEqual(mechanics(first),mechanics(renamed));
 });
 
+test("portable d20 interceptor lowers authoritative add-die and reroll modes structurally",()=>{
+  const definition=portableReaction();
+  definition.interceptors![0].operations=[
+    {kind:"roll.modify",mode:"add-die",dice:"1d8+1"},
+    {kind:"roll.modify",mode:"reroll",dice:"1d20"},
+  ];
+  const lowered=lowerCommonPlayReactionDefinition(definition)!;
+  assert.deepEqual(lowered.interceptors[0].operations,definition.interceptors![0].operations);
+
+  const invalid=portableReaction();
+  invalid.interceptors![0].operations=[{kind:"roll.modify",mode:"reroll",dice:"1d8"}];
+  assert.throws(()=>lowerCommonPlayReactionDefinition(invalid),/reroll requires Xd20/);
+
+  const damage=portableReaction();
+  Object.assign(damage.interceptors![0],{timing:"damage.rolled",slot:"primary.damage",operations:[{kind:"roll.modify",mode:"add-die",dice:"1d6"}]});
+  assert.throws(()=>lowerCommonPlayReactionDefinition(damage),/primary.damage supports subtract-die only/);
+});
+
 test("portable d20 interceptor lowers deterministic post-roll roll.modify modes structurally",()=>{
   const definition=portableReaction();
   definition.interceptors![0].operations=[
