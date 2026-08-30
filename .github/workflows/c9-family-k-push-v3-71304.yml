@@ -88,7 +88,9 @@ jobs:
             assert.equal(result.regularMovementSpent,0);
             assert.equal(result.movementMode,"push");
             assert.match(String(result.destinationRef),/^manual:/);
-            assert.equal((await exercise("external-family-k-push-miss",1)).length,0);
+            const miss=await exercise("external-family-k-push-miss",1);
+            assert.equal(miss.length,1);
+            assert.deepEqual(miss[0]?.result,{skipped:true});
           });
 
           test("Push-like conditional target movement is invariant to external module/content/mechanic identity",async()=>{
