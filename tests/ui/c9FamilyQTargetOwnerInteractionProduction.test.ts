@@ -89,3 +89,42 @@ for (const responder of ["target-owner","target"] as const) test(`${responder} c
     assert.ok(broadcasts.map((wire)=>JSON.parse(wire)).some((wire)=>wire.type==="event-batch"),JSON.stringify(broadcasts));
   }finally{tauriSessionTransport.send=oldSend;tauriSessionTransport.sendTo=oldSendTo;}
 });
+
+test("target-owner late approval is rejected after the authoritative revision consumes Reaction",async()=>{
+  const sessionId="session.target-owner-stale",host=new MockAdapter();
+  const actionId=await install(host,"target-owner");
+  const internal=host as unknown as {activeCharacter:{id:string};scene:{entities:Array<{id:string;name:string;hp:number}>;economyByActor:Record<string,{reaction:boolean}>}};
+  const actorId=internal.activeCharacter.id;
+  const target=internal.scene.entities.find((entity)=>entity.id!==actorId&&entity.hp>0);
+  assert.ok(target);
+  const targetId=target.id,targetHpBefore=target.hp;
+  await host.startInitiative();await host.setCurrentActor(actorId);
+
+  const state=connectedStateFor(host);state.mode="host";state.sessionId=sessionId;state.ledger=new HostSessionLedger(sessionId,connectedManifest(host));
+  const actorManifest=structuredClone(connectedManifest(host));
+  const targetManifest=structuredClone(actorManifest);
+  assert.ok(targetManifest.character);
+  targetManifest.character={...targetManifest.character,characterId:targetId};
+  state.peerManifests.set("peer.actor",actorManifest);
+  state.peerManifests.set("peer.target",targetManifest);
+
+  const direct:Array<{peer:string;message:string}>=[],broadcasts:string[]=[];
+  const oldSend=tauriSessionTransport.send,oldSendTo=tauriSessionTransport.sendTo;
+  tauriSessionTransport.send=async(message)=>{broadcasts.push(message);return 1;};
+  tauriSessionTransport.sendTo=async(peer,message)=>{direct.push({peer,message});return 1;};
+  try{
+    await host.resolveAction(actionId,[targetId]);
+    let snapshot=await host.getSnapshot();
+    assert.equal(snapshot.resolution?.stage,"interrupt",JSON.stringify(snapshot.resolution));
+    const resolutionId=snapshot.resolution!.id,promptId=snapshot.resolution!.interrupt!.id;
+    internal.scene.economyByActor[actorId]!.reaction=false;
+
+    assert.equal(await routeConnectedInterruptResponse(host,{peer:"peer.target",message:""},{sessionId,resolutionId,promptId,accept:true}),true);
+    snapshot=await host.getSnapshot();
+    assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
+    assert.match(snapshot.resolution?.finalOutcome??"",/Common Play 상호작용 (현재 권한 재검증 실패|적용 거부:)/);
+    assert.equal(snapshot.scene.entities.find((entity)=>entity.id===targetId)?.hp,targetHpBefore);
+    assert.equal(snapshot.scene.economyByActor[actorId]?.reaction,false);
+    assert.ok(!broadcasts.map((wire)=>JSON.parse(wire)).some((wire)=>wire.type==="event-batch"),JSON.stringify(broadcasts));
+  }finally{tauriSessionTransport.send=oldSend;tauriSessionTransport.sendTo=oldSendTo;}
+});
