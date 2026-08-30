@@ -616,7 +616,7 @@
         "commonPlayMovementRuntime.test.ts",
         "resolutionMovementOps.ts"
       ],
-      "currentState": "Canonical movement.relocate parses through the generic operations lowerer. Unknown installed Common Play now executes walk, climb, swim, fly, crawl, jump, cost multipliers, push, pull, and teleport through the production Resolver with Undo and external identity rename invariance; stored movement also has Host replay, duplicate handling, Undo, and reconnect. Family I remains incomplete for rules-derived movement constraints and named movement-grant convergence.",
+      "currentState": "Canonical movement.relocate parses through the generic operations lowerer. Unknown installed Common Play production-executes walk, climb, swim, fly, crawl, jump, cost multipliers, push, pull, teleport, explicit no-provoke movement, zero-speed rejection, Undo, connected replay/reconnect, and external identity rename invariance. Family I remains incomplete for rules-derived movement constraints and named movement-grant convergence.",
       "requiredSemantics": [
         "walk",
         "climb",
@@ -644,15 +644,15 @@
       "productionEvidence": [
         "installedCommonPlayLoweredFamiliesProduction.test.ts mapless stored movement and Undo",
         "c9FamilyIMovementProduction.test.ts unknown installed Common Play executes walk/climb/swim/fly/crawl/jump, movement cost multiplier, push/pull/teleport, Undo, and full external identity rename through the production Resolver; C9 Family I Movement Production 7130 run 33310610095",
-        "c9FamilyIMovementModeAcceptance.test.ts portable walk/climb/swim/fly/crawl/jump, push/pull/teleport, no-provoke, zero-speed rejection, Undo, and rename invariance",
         "c9FamilyIMovementProduction.test.ts unknown installed RuleModule production matrix for movement types, cost multiplier, forced movement, teleport, Undo, and full external identity rename",
-        "C9 Family I Movement Mode Matrix run 33310511648: production matrix, legacy execution boundary, and tsc --noEmit passed at d3b105c37a8cb2c3c715b1abddf62f3abb638fce"
+        "C9 Family I Movement Mode Matrix run 33310511648: production matrix, legacy execution boundary, and tsc --noEmit passed at d3b105c37a8cb2c3c715b1abddf62f3abb638fce",
+        "c9FamilyIMovementProduction.test.ts retained unknown installed Common Play proves walk/climb/swim/fly/crawl/jump, cost multiplier, push/pull/teleport, explicit no-provoke movement, zero-speed rejection, Undo, and full external identity rename"
       ],
       "identityInvarianceEvidence": [
         "commonPlayMovementRuntime.test.ts external definition identity independence",
         "c9FamilyIMovementProduction.test.ts full external module/content/mechanic rename preserves the production movement matrix",
-        "c9FamilyIMovementModeAcceptance.test.ts renamed external movement definition preserves production semantics",
-        "c9FamilyIMovementProduction.test.ts renaming module/content/mechanic identities preserves the full production movement matrix"
+        "c9FamilyIMovementProduction.test.ts renaming module/content/mechanic identities preserves the full production movement matrix",
+        "c9FamilyIMovementProduction.test.ts retained external identity rename preserves the production movement matrix including no-provoke routing"
       ],
       "connectedEvidenceIfRelevant": [
         "installedCommonPlayLoweredFamiliesProduction.test.ts unknown stored movement converges through Host replay, duplicate handling, Undo, and reconnect"
@@ -660,7 +660,7 @@
       "persistenceEvidenceIfRelevant": [],
       "remainingNamedSeams": [
         "named movement grants",
-        "rules-derived Difficult Terrain, Prone stand cost, drag/carry, zero-speed, alternate-speed, and related movement constraint authority remain incomplete"
+        "rules-derived Difficult Terrain, Prone stand cost, drag/carry, alternate-speed, and related movement constraint authority remain incomplete"
       ],
       "connectedRelevant": true,
       "persistenceRelevant": false
