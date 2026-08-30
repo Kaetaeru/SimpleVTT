@@ -43,12 +43,12 @@ jobs:
           const ledger=JSON.parse(fs.readFileSync(path,"utf8"));
           const family=ledger.rows.find((row)=>row.family==="E");
           if(!family) throw new Error("Family E ledger row missing");
-          family.currentState="Portable Common Play targeting preserves bounded selected target sets, evaluates generic predicates over authoritative production candidates, and routes authored automatic selection plus orderBy through the shared selector kernel with Host authority. Unknown installed selectors now consume trusted provider/theater-of-mind pairwise distance, reach-threshold, sight, and Total Cover facts through the same generic candidate path without content identity dispatch. Providerless spatial facts fail closed; provider-backed area membership and object/point selection remain incomplete.";
+          family.currentState="Portable Common Play targeting preserves bounded selected target sets, evaluates generic predicates over authoritative production candidates, and routes authored automatic selection plus orderBy through the shared selector kernel with Host authority. Unknown installed selectors consume trusted provider/theater-of-mind pairwise distance, sight, adjacency, and Total Cover facts through the same generic candidate path without content identity dispatch. Providerless spatial facts fail closed; reach provider facts, provider-backed area membership, and object/point selection remain incomplete.";
           const add=(field,value)=>{ if(!family[field].includes(value)) family[field].push(value); };
-          add("implementationEvidence","installedCommonPlayRuntimeAdapter.ts commonPlaySelectorCandidate consumes authoritativeCommonPlaySpatialRelation and exposes trusted spatial.distance-feet, sense.can-see, and spatial.total-cover selector properties without content identity dispatch");
-          add("productionEvidence","c9FamilyESpatialFactProduction.test.ts unknown installed Common Play accepts and rejects targets from authoritative distance/reach-threshold/sight/Total Cover facts and fails closed for untrusted provenance");
+          add("implementationEvidence","installedCommonPlayRuntimeAdapter.ts commonPlaySelectorCandidate consumes authoritativeCommonPlaySpatialRelation and exposes trusted spatial.distance-feet, spatial.adjacent, sense.can-see, and spatial.total-cover selector properties without content identity dispatch");
+          add("productionEvidence","c9FamilyESpatialFactProduction.test.ts unknown installed Common Play accepts and rejects targets from authoritative distance/sight/Total Cover facts and fails closed for untrusted provenance");
           add("identityInvarianceEvidence","c9FamilyESpatialFactProduction.test.ts completely renamed external module/content/mechanic/entry/display identities preserve spatial selector semantics");
-          family.remainingNamedSeams=["provider-backed area membership and object/point selection remain incomplete"];
+          family.remainingNamedSeams=["reach provider facts, provider-backed area membership, and object/point selection remain incomplete"];
           fs.writeFileSync(path,JSON.stringify(ledger,null,2)+"\n");
           NODE
           node scripts/check-v1-mechanism-coverage.mjs
