@@ -26,6 +26,7 @@ jobs:
         with:
           node-version: 22
       - run: npm ci
+      - run: npm run generate:builtin-catalog
       - name: Apply portable item charge payment
         run: |
           python3 - <<'PY'
