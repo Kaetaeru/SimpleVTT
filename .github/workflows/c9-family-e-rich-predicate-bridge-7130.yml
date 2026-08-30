@@ -1,6 +1,6 @@
 name: C9 Family E Rich Predicate Bridge 7130
 # Rerun V2 goal 71304a3e: execute the prepared verified slice.
-# Retry after aligning legacy targeting assertions with the shared selector contract.
+# Retry after aligning package-import rejection coverage with the shared selector contract.
 
 on:
   push:
@@ -53,7 +53,7 @@ jobs:
           replace_once(runtime,
               'const TARGETING_KEYS=new Set(["from","where","min","max"]);\nconst TARGETING_WHERE_KEYS=new Set(["op","ref","value"]);\n',
               '')
-          old='''function parseTargetingSelector(value:unknown,label:string):CommonPlayTargetingSelector {\n  const selector=object(value,label);\n  supportedKeys(selector,TARGETING_KEYS,label);\n  if(selector.from!=="targets") throw new DomainEvaluationError(`${label}.from must be targets for portable Common Play targeting`);\n  let where:CommonPlayTargetingSelector["where"];\n  if(selector.where!==undefined) {\n    const predicate=object(selector.where,`${label}.where`);\n    supportedKeys(predicate,TARGETING_WHERE_KEYS,`${label}.where`);\n    if(predicate.op!=="relation-matches"||predicate.ref!=="relation") throw new DomainEvaluationError(`${label}.where currently supports relation-matches on relation only`);\n    if(predicate.value!=="self"&&predicate.value!=="ally"&&predicate.value!=="enemy"&&predicate.value!=="neutral") throw new DomainEvaluationError(`${label}.where.value must be self, ally, enemy, or neutral`);\n    where={op:"relation-matches",ref:"relation",value:predicate.value};\n  }\n  if(!Number.isInteger(selector.min)||Number(selector.min)<0) throw new DomainEvaluationError(`${label}.min must be a non-negative integer for portable Common Play targeting`);\n  if(!Number.isInteger(selector.max)||Number(selector.max)<Number(selector.min)) throw new DomainEvaluationError(`${label}.max must be an integer >= min for portable Common Play targeting`);\n  return {from:"targets",min:Number(selector.min),max:Number(selector.max),...(where?{where}:{})};\n}\n'''
+          old='''function parseTargetingSelector(value:unknown,label:string):CommonPlayTargetingSelector {\n  const selector=object(value,label);\n  supportedKeys(selector,TARGETING_KEYS,label);\n  if(selector.from!=="targets") throw new DomainEvaluationError(`${label}.from must be targets for portable Common Play targeting`);\n  let where:CommonPlayTargetingSelector["where\"];\n  if(selector.where!==undefined) {\n    const predicate=object(selector.where,`${label}.where`);\n    supportedKeys(predicate,TARGETING_WHERE_KEYS,`${label}.where`);\n    if(predicate.op!=="relation-matches"||predicate.ref!=="relation") throw new DomainEvaluationError(`${label}.where currently supports relation-matches on relation only`);\n    if(predicate.value!=="self"&&predicate.value!=="ally"&&predicate.value!=="enemy"&&predicate.value!=="neutral") throw new DomainEvaluationError(`${label}.where.value must be self, ally, enemy, or neutral`);\n    where={op:"relation-matches",ref:"relation",value:predicate.value};\n  }\n  if(!Number.isInteger(selector.min)||Number(selector.min)<0) throw new DomainEvaluationError(`${label}.min must be a non-negative integer for portable Common Play targeting`);\n  if(!Number.isInteger(selector.max)||Number(selector.max)<Number(selector.min)) throw new DomainEvaluationError(`${label}.max must be an integer >= min for portable Common Play targeting`);\n  return {from:"targets",min:Number(selector.min),max:Number(selector.max),...(where?{where}:{})};\n}\n'''
           new='''function parseTargetingSelector(value:unknown,label:string):CommonPlayTargetingSelector {\n  const selector=parseCommonPlaySelector(value,label);\n  if(selector.from!=="targets") throw new DomainEvaluationError(`${label}.from must be targets for portable Common Play targeting`);\n  if(selector.min===undefined) throw new DomainEvaluationError(`${label}.min is required for portable Common Play targeting`);\n  if(selector.max===undefined) throw new DomainEvaluationError(`${label}.max is required for portable Common Play targeting`);\n  return selector as CommonPlayTargetingSelector;\n}\n'''
           replace_once(runtime,old,new)
           old='''    if(entryPoint.targeting.where) {\n      const rejected=input.targetingTargets.filter((target)=>target.relation!==entryPoint.targeting!.where!.value);\n      if(rejected.length) throw new DomainEvaluationError(`Common Play targeting relation filter rejected: ${rejected.map((target)=>target.id).join(", ")}`);\n    }\n    operations.push({'''
@@ -75,16 +75,15 @@ jobs:
 
           domain='tests/domain/commonPlayTargetingRuntime.test.ts'
           p=Path(domain); text=p.read_text(encoding='utf-8')
-          text=text.replace('/currently supports relation-matches/','/op is unsupported/',1)
-          text=text.replace('/relation filter rejected: hero/','/targeting selector rejected: manual selection contains an ineligible target/',1)
-          text=text.replace('/pre-resolved target/','/targeting selector rejected: selector requires 1-1 result/',1)
-          text=text.replace('    [{from:"targets",orderBy:"distance",min:1,max:1},/unsupported fields: orderBy/],\n','',1)
-          text=text.replace('/unsupported fields: area/','/shape is unsupported/',1)
-          text=text.replace('/max must be an integer >= min/','/max must be >= min/',1)
           marker='test("bounded Common Play selector preserves authored multi-target limits without fabricating spatial facts",()=>{'
           if text.count(marker)!=1: raise SystemExit('domain test insertion marker mismatch')
           addition='''test("portable Common Play rich predicate selector consumes authoritative candidate properties",()=>{\n  const authored=structuredClone(AUTHORED);\n  authored.entryPoints[0].targeting={from:"targets",where:{op:"contains",left:{ref:"status"},right:{value:"poisoned"}},min:1,max:1};\n  const definition=parseManualCommonPlayOperationDefinition(authored);\n  const state=runtimeState();\n  state.combatants.goblin.life.hp.current=5;\n  const facts=[target("goblin","enemy")];\n  const eligible=resolveCommonPlayEntryPointOperations(TEST_PROFILE,state,definition,{\n    resolutionId:"rich-predicate",actorId:"hero",entryPointId:"mend-other",targetId:"goblin",targetingTargets:facts,\n    targetingCandidates:[{id:"goblin",targeting:facts[0],properties:{relation:"enemy",status:["poisoned"]}}],\n  });\n  assert.equal(eligible.status,"committed");\n  if(eligible.status==="committed") assert.equal(eligible.state.combatants.goblin.life.hp.current,10);\n\n  const rejected=resolveCommonPlayEntryPointOperations(TEST_PROFILE,runtimeState(),definition,{\n    resolutionId:"rich-predicate-reject",actorId:"hero",entryPointId:"mend-other",targetId:"goblin",targetingTargets:facts,\n    targetingCandidates:[{id:"goblin",targeting:facts[0],properties:{relation:"enemy",status:[]}}],\n  });\n  assert.equal(rejected.status,"rejected");\n  if(rejected.status==="rejected") assert.match(rejected.error,/targeting selector rejected/);\n});\n\n'''
           p.write_text(text.replace(marker,addition+marker,1),encoding='utf-8')
+
+          package_test='tests/ui/ruleModulePackageImport.test.ts'
+          old='''  const invalidSelectors=[\n    {from:"unsupported-source",min:1,max:1},\n    {from:"targets",where:{value:true},min:1,max:1},\n    {from:"targets",min:-1,max:1},\n  ];'''
+          new='''  const invalidSelectors=[\n    {from:"targets",min:1,max:1,unsupportedField:true},\n  ];'''
+          replace_once(package_test,old,new)
 
           production='tests/ui/installedCommonPlayProductionRuntime.test.ts'
           p=Path(production); text=p.read_text(encoding='utf-8')
@@ -112,7 +111,7 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/domain/commonPlayOperationRuntime.ts src/app/installedCommonPlayRuntimeAdapter.ts tests/domain/commonPlayTargetingRuntime.test.ts tests/ui/installedCommonPlayProductionRuntime.test.ts
+          git add src/domain/commonPlayOperationRuntime.ts src/app/installedCommonPlayRuntimeAdapter.ts tests/domain/commonPlayTargetingRuntime.test.ts tests/ui/installedCommonPlayProductionRuntime.test.ts tests/ui/ruleModulePackageImport.test.ts
           git commit -m "feat(c9): bridge rich target predicates"
           git fetch origin agent/c9-gate-n-coverage-reconciliation
           git rebase origin/agent/c9-gate-n-coverage-reconciliation
