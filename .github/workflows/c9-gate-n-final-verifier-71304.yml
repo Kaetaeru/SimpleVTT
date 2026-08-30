@@ -1,0 +1,52 @@
+name: C9 Gate N Final Verifier 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-gate-n-final-verifier-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Reconcile and pin verified SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          git pull --ff-only origin agent/c9-gate-n-coverage-reconciliation
+          echo "VERIFIED_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+      - run: npm ci
+      - name: Verify Gate N ledger and execution boundary
+        run: |
+          node scripts/check-v1-mechanism-coverage.mjs --gate-n
+          node scripts/check-legacy-execution-boundary.mjs
+      - name: Verify complete repository build
+        run: npm run build
+      - name: Retire verifier only if verified SHA is still branch HEAD
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin agent/c9-gate-n-coverage-reconciliation
+          REMOTE_SHA=$(git rev-parse origin/agent/c9-gate-n-coverage-reconciliation)
+          if [ "$REMOTE_SHA" != "$VERIFIED_SHA" ]; then
+            echo "Branch advanced after verification: verified=$VERIFIED_SHA remote=$REMOTE_SHA" >&2
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/c9-gate-n-final-verifier-71304.yml
+          git commit -m "ci(c9): verify Gate N completion"
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
