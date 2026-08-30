@@ -10,7 +10,7 @@ import { turnRuntimeSessions } from "./turnRuntimeSessionRegistry";
 import { compileInstalledCommonPlayZoneTurnOperations, installedCommonPlayZoneDefinitions } from "./commonPlayZoneTurnComposition";
 import { collectInstalledCommonPlayActorTurnRuleCandidates, compileInstalledCommonPlayActorTurnRuleOperations, installedCommonPlayActorTurnRuleBindings, type InstalledCommonPlayActorTurnRuleBinding } from "./commonPlayActorTurnRuleComposition";
 import type { ResolutionEvent } from "../domain/resolutionTypes";
-import { beginCommonPlaySimultaneousOrdering, respondToCommonPlaySimultaneousOrdering, type CommonPlaySimultaneousOrderingResponse, type CommonPlaySimultaneousOrderingState } from "../domain/commonPlaySimultaneousOrderingRuntime";
+import { beginCommonPlaySimultaneousOrdering, respondToCommonPlaySimultaneousOrdering, type CommonPlaySimultaneousOrderingRequest, type CommonPlaySimultaneousOrderingResponse, type CommonPlaySimultaneousOrderingState } from "../domain/commonPlaySimultaneousOrderingRuntime";
 
 interface EffectAwareTurnAdapterState {
   sessionMode:SessionMode;
@@ -47,6 +47,16 @@ function simultaneousOrderingStates(adapter:MockAdapter) {
 export function peekAdapterTurnSimultaneousOrdering(adapter:MockAdapter) {
   const pending=[...(turnSimultaneousOrdering.get(adapter)?.values()??[])].find((state)=>state.status==="pending");
   return pending?structuredClone(pending):undefined;
+}
+
+export function installAdapterTurnSimultaneousOrderingRequest(adapter:MockAdapter,request:CommonPlaySimultaneousOrderingRequest) {
+  const state=beginCommonPlaySimultaneousOrdering(request);
+  simultaneousOrderingStates(adapter).set(request.id,state);
+  return structuredClone(state);
+}
+
+export function clearAdapterTurnSimultaneousOrdering(adapter:MockAdapter) {
+  turnSimultaneousOrdering.delete(adapter);
 }
 
 export function respondToAdapterTurnSimultaneousOrdering(adapter:MockAdapter,response:CommonPlaySimultaneousOrderingResponse) {

@@ -3,9 +3,11 @@ import test from "node:test";
 import "../../src/app/offlineRuntimeAdapters";
 import "../../src/app/connectedSessionRuntimeAdapter";
 import "../../src/app/connectedActionRoutingAdapter";
-import "../../src/app/connectedTurnRoutingAdapter";
+import { sendConnectedTurnSimultaneousOrderingResponse } from "../../src/app/connectedTurnRoutingAdapter";
 import "../../src/app/installedContentRuntimeAdapter";
-import { applyConnectedClientEvents, connectedManifest } from "../../src/app/connectedSessionRuntimeAdapter";
+import { applyConnectedClientEvents, applyConnectedTurnSimultaneousOrderingPrompt, connectedManifest, resumeConnectedTurnSimultaneousOrderingPromptForCharacter } from "../../src/app/connectedSessionRuntimeAdapter";
+import { decodeConnectedWireMessage } from "../../src/app/connectedSessionWire";
+import { routeConnectedTurnSimultaneousOrderingResponse } from "../../src/app/connectedTurnSimultaneousOrderingResponsePort";
 import { connectedStateFor } from "../../src/app/connectedSessionState";
 import { catalogQualifiedId } from "../../src/app/contentCatalogIdentity";
 import { installedCommonPlayActionId } from "../../src/app/installedCommonPlayActionReference";
@@ -413,4 +415,136 @@ test("production simultaneous turn rules pause before mutation and execute in th
   assert.deepEqual(renamed,original);
   assert.equal(original.resource,1,"spend-at-one then gain must end at one; natural gain-at-maximum then spend would end at zero");
   assert.equal(original.markers,2);
+});
+
+
+test("connected simultaneous turn ordering routes only to the owning peer, survives reconnect, rejects stale/replay responses, and converges through authoritative turn events",async()=>{
+  const prefix="unknown-connected-simultaneous",sessionId="session.common-play-simultaneous",ownerPeer="peer.owner",reconnectPeer="peer.owner.reconnect";
+  const source=simultaneousPackageJson(prefix);
+  const host=new MockAdapter();
+  const pack=await install(host,prefix,source);
+  const hostConnected=connectedStateFor(host);
+  hostConnected.mode="host";hostConnected.sessionId=sessionId;hostConnected.ledger=new HostSessionLedger(sessionId,connectedManifest(host));
+
+  const client=new MockAdapter();
+  await install(client,prefix,source);
+  const clientConnected=connectedStateFor(client);
+  clientConnected.mode="client";clientConnected.sessionId=sessionId;clientConnected.replica=new ClientSessionReplica(sessionId);
+  hostConnected.peerManifests.set(ownerPeer,structuredClone(connectedManifest(client)));
+
+  const broadcasts:string[]=[];
+  const targeted:{peer:string;message:string}[]=[];
+  const originalSend=tauriSessionTransport.send;
+  const originalSendTo=tauriSessionTransport.sendTo;
+  tauriSessionTransport.send=async(message)=>{broadcasts.push(message);return 1;};
+  tauriSessionTransport.sendTo=async(peer,message)=>{targeted.push({peer,message});return 1;};
+  try {
+    let broadcastIndex=0;
+    await host.resolveAction(pack.summonAction,["char.aelar"]);
+    while(broadcastIndex<broadcasts.length){
+      const decoded=decodeConnectedWireMessage(broadcasts[broadcastIndex++]);
+      assert.equal(decoded.status,"ok");
+      if(decoded.status==="ok"&&decoded.message.type==="event-batch") assert.notEqual((await applyConnectedClientEvents(client,decoded.message.events)).status,"rejected");
+    }
+
+    let promptWire:{peer:string;message:string}|undefined;
+    for(let guard=0;guard<20&&!promptWire;guard++){
+      const cursorBeforeTurn=hostConnected.ledger.cursor;
+      const targetedBefore=targeted.length;
+      await host.endTurn();
+      promptWire=targeted.slice(targetedBefore).find((entry)=>{
+        const decoded=decodeConnectedWireMessage(entry.message);
+        return decoded.status==="ok"&&decoded.message.type==="turn-simultaneous-ordering-prompt";
+      });
+      if(promptWire) assert.equal(hostConnected.ledger.cursor,cursorBeforeTurn,"pending ordering must not append a no-op authoritative turn event");
+      while(broadcastIndex<broadcasts.length){
+        const decoded=decodeConnectedWireMessage(broadcasts[broadcastIndex++]);
+        assert.equal(decoded.status,"ok");
+        if(decoded.status==="ok"&&decoded.message.type==="event-batch") assert.notEqual((await applyConnectedClientEvents(client,decoded.message.events)).status,"rejected");
+      }
+    }
+
+    assert.ok(promptWire,"Host must route the pending simultaneous-ordering prompt to the owning peer");
+    assert.equal(promptWire.peer,ownerPeer);
+    const decodedPrompt=decodeConnectedWireMessage(promptWire.message);
+    assert.equal(decodedPrompt.status,"ok");
+    if(decodedPrompt.status!=="ok"||decodedPrompt.message.type!=="turn-simultaneous-ordering-prompt") throw new Error("connected ordering prompt did not decode");
+    assert.equal((applyConnectedTurnSimultaneousOrderingPrompt(client,decodedPrompt.message)).status,"applied");
+    const clientPending=peekAdapterTurnSimultaneousOrdering(client);
+    assert.ok(clientPending&&clientPending.status==="pending");
+
+    const reconnect=new MockAdapter();
+    await install(reconnect,prefix,source);
+    const reconnectConnected=connectedStateFor(reconnect);
+    reconnectConnected.mode="client";reconnectConnected.sessionId=sessionId;reconnectConnected.replica=new ClientSessionReplica(sessionId);
+    assert.notEqual((await applyConnectedClientEvents(reconnect,hostConnected.ledger.eventsAfter(0))).status,"rejected");
+    hostConnected.peerManifests.delete(ownerPeer);
+    hostConnected.peerManifests.set(reconnectPeer,structuredClone(connectedManifest(reconnect)));
+    const beforeResumeTargets=targeted.length;
+    assert.equal((await resumeConnectedTurnSimultaneousOrderingPromptForCharacter(host,reconnectPeer,"char.aelar")).status,"sent");
+    const resumedRaw=targeted.slice(beforeResumeTargets).find((entry)=>entry.peer===reconnectPeer)?.message;
+    assert.ok(resumedRaw,"reconnect must resend the transient pending decision");
+    const resumed=decodeConnectedWireMessage(resumedRaw!);
+    assert.equal(resumed.status,"ok");
+    if(resumed.status!=="ok"||resumed.message.type!=="turn-simultaneous-ordering-prompt") throw new Error("resumed ordering prompt did not decode");
+    assert.equal((applyConnectedTurnSimultaneousOrderingPrompt(reconnect,resumed.message)).status,"applied");
+    const hostPending=peekAdapterTurnSimultaneousOrdering(host);
+    assert.ok(hostPending&&hostPending.status==="pending");
+    if(!hostPending||hostPending.status!=="pending") throw new Error("Host ordering disappeared before response");
+    const spend=hostPending.request.candidates.find((candidate)=>candidate.id.endsWith(":turn-spend"))?.id;
+    const gain=hostPending.request.candidates.find((candidate)=>candidate.id.endsWith(":turn-gain"))?.id;
+    assert.ok(spend&&gain);
+
+    const cursorBeforeStale=hostConnected.ledger.cursor;
+    assert.equal(await routeConnectedTurnSimultaneousOrderingResponse(host,{peer:reconnectPeer,message:"stale"},{
+      sessionId,
+      response:{decisionId:hostPending.request.id,revision:hostPending.request.revision+1,responderId:"char.aelar",orderedCandidateIds:[spend!,gain!]},
+    }),true);
+    assert.equal(hostConnected.ledger.cursor,cursorBeforeStale,"stale ordering response must not commit authoritative history");
+    assert.equal(peekAdapterTurnSimultaneousOrdering(host)?.status,"pending");
+
+    const outboundBefore=broadcasts.length;
+    assert.equal((await sendConnectedTurnSimultaneousOrderingResponse(reconnect,[spend!,gain!])).status,"sent");
+    const responseRaw=broadcasts.slice(outboundBefore).find((raw)=>{
+      const decoded=decodeConnectedWireMessage(raw);
+      return decoded.status==="ok"&&decoded.message.type==="turn-simultaneous-ordering-response";
+    });
+    assert.ok(responseRaw,"Client must send a typed simultaneous-ordering response");
+    const decodedResponse=decodeConnectedWireMessage(responseRaw!);
+    assert.equal(decodedResponse.status,"ok");
+    if(decodedResponse.status!=="ok"||decodedResponse.message.type!=="turn-simultaneous-ordering-response") throw new Error("connected ordering response did not decode");
+    const cursorBeforeCommit=hostConnected.ledger.cursor;
+    assert.equal(await routeConnectedTurnSimultaneousOrderingResponse(host,{peer:reconnectPeer,message:responseRaw!},{sessionId:decodedResponse.message.sessionId,response:decodedResponse.message.response}),true);
+    assert.ok(hostConnected.ledger.cursor>cursorBeforeCommit,"accepted ordering must commit the retried authoritative turn transition");
+    assert.equal(peekAdapterTurnSimultaneousOrdering(host),undefined);
+
+    const committedBatchRaw=broadcasts.slice(outboundBefore).find((raw)=>{
+      const decoded=decodeConnectedWireMessage(raw);
+      return decoded.status==="ok"&&decoded.message.type==="event-batch";
+    });
+    assert.ok(committedBatchRaw,"resolved ordering must publish the authoritative turn event batch");
+    const committedBatch=decodeConnectedWireMessage(committedBatchRaw!);
+    assert.equal(committedBatch.status,"ok");
+    if(committedBatch.status!=="ok"||committedBatch.message.type!=="event-batch") throw new Error("resolved ordering event batch did not decode");
+    assert.notEqual((await applyConnectedClientEvents(reconnect,committedBatch.message.events)).status,"rejected");
+    assert.notEqual((await applyConnectedClientEvents(client,committedBatch.message.events)).status,"rejected");
+    const hostState=actorState(host,await host.getSnapshot(),pack.summonId,pack.resourceId);
+    assert.equal(hostState.resource,1);
+    assert.deepEqual(actorState(reconnect,await reconnect.getSnapshot(),pack.summonId,pack.resourceId),hostState);
+    assert.deepEqual(actorState(client,await client.getSnapshot(),pack.summonId,pack.resourceId),hostState);
+
+    const postReplay=new MockAdapter();
+    await install(postReplay,prefix,source);
+    const postState=connectedStateFor(postReplay);
+    postState.mode="client";postState.sessionId=sessionId;postState.replica=new ClientSessionReplica(sessionId);
+    assert.notEqual((await applyConnectedClientEvents(postReplay,hostConnected.ledger.eventsAfter(0))).status,"rejected");
+    assert.deepEqual(actorState(postReplay,await postReplay.getSnapshot(),pack.summonId,pack.resourceId),hostState);
+
+    const cursorBeforeReplay=hostConnected.ledger.cursor;
+    assert.equal(await routeConnectedTurnSimultaneousOrderingResponse(host,{peer:reconnectPeer,message:responseRaw!},{sessionId:decodedResponse.message.sessionId,response:decodedResponse.message.response}),true);
+    assert.equal(hostConnected.ledger.cursor,cursorBeforeReplay,"replayed response after commit must not execute the turn twice");
+  } finally {
+    tauriSessionTransport.send=originalSend;
+    tauriSessionTransport.sendTo=originalSendTo;
+  }
 });

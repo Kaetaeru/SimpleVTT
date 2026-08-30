@@ -20,6 +20,8 @@ import { connectedStateFor, resetConnectedState } from "./connectedSessionState"
 import { routeConnectedActionRequest } from "./connectedActionRequestPort";
 import { routeConnectedInterruptResponse } from "./connectedInterruptResponsePort";
 import { routeConnectedConcentrationResponse } from "./connectedConcentrationResponsePort";
+import { routeConnectedTurnSimultaneousOrderingResponse } from "./connectedTurnSimultaneousOrderingResponsePort";
+import { clearAdapterTurnSimultaneousOrdering, installAdapterTurnSimultaneousOrderingRequest, peekAdapterTurnSimultaneousOrdering } from "./phase09EffectAwareTurnAdapter";
 import {
   applyConnectedCommonPlayAuthorityFactRequest,
   registerConnectedCommonPlayAuthorityFactTransport,
@@ -45,7 +47,7 @@ declare module "./contracts" {
   interface SessionParticipantVm { ready?:boolean; }
 }
 
-export const CONNECTED_CAPABILITIES=["resolution-event-v1","resolution-presentation-v1","interrupt-response-v1","concentration-response-v1","resolution-undo-v1","character-projection-v1","event-cursor-v1","ready-action-v1","manual-movement-reaction-v1","common-play-authority-fact-v1","ready-intent-v1","session-end-v1","scene-topology-v1"];
+export const CONNECTED_CAPABILITIES=["resolution-event-v1","resolution-presentation-v1","interrupt-response-v1","concentration-response-v1","resolution-undo-v1","character-projection-v1","event-cursor-v1","ready-action-v1","manual-movement-reaction-v1","common-play-authority-fact-v1","turn-simultaneous-ordering-v1","ready-intent-v1","session-end-v1","scene-topology-v1"];
 
 export interface ConnectedAdapterState {
   role:"player"|"dm";
@@ -195,6 +197,37 @@ export async function resumeConnectedInterruptPromptForCharacter(adapter:MockAda
   return {status:"sent" as const};
 }
 
+export async function publishConnectedTurnSimultaneousOrderingPrompt(
+  adapter:MockAdapter,
+  peerOverride?:string,
+  characterId?:string,
+) {
+  const state=connectedStateFor(adapter);
+  const ordering=peekAdapterTurnSimultaneousOrdering(adapter);
+  if(state.mode!=="host"||!state.ledger||!ordering||ordering.status!=="pending") return {status:"ignored" as const};
+  if(ordering.request.authority.kind!=="actor-controller") return {status:"local" as const};
+  const responderId=ordering.request.authority.responderId;
+  if(characterId&&characterId!==responderId) return {status:"ignored" as const};
+  const peer=peerOverride??[...state.peerManifests.entries()].find(([,manifest])=>manifest.character?.characterId===responderId)?.[0];
+  if(!peer) return {status:"unavailable" as const};
+  await sendConnectedWireTo(peer,{type:"turn-simultaneous-ordering-prompt",sessionId:state.ledger.sessionId,request:structuredClone(ordering.request)});
+  return {status:"sent" as const,peer,decisionId:ordering.request.id};
+}
+
+export async function resumeConnectedTurnSimultaneousOrderingPromptForCharacter(adapter:MockAdapter,peer:string,characterId:string) {
+  return publishConnectedTurnSimultaneousOrderingPrompt(adapter,peer,characterId);
+}
+
+export function applyConnectedTurnSimultaneousOrderingPrompt(adapter:MockAdapter,prompt:Extract<ConnectedWireMessage,{type:"turn-simultaneous-ordering-prompt"}>) {
+  const state=connectedStateFor(adapter);
+  const app=connectedInternal(adapter);
+  if(state.mode!=="client"||!state.sessionId||prompt.sessionId!==state.sessionId) return {status:"rejected" as const,error:"simultaneous-ordering prompt session does not match this Client"};
+  if(prompt.request.authority.kind!=="actor-controller"||prompt.request.authority.responderId!==app.activeCharacter.id) return {status:"rejected" as const,error:"simultaneous-ordering prompt does not belong to this Client Character"};
+  const installed=installAdapterTurnSimultaneousOrderingRequest(adapter,prompt.request);
+  if(installed.status!=="pending") return {status:"rejected" as const,error:"connected simultaneous-ordering prompt must contain multiple candidates"};
+  return {status:"applied" as const,decisionId:installed.request.id};
+}
+
 registerConnectedCommonPlayAuthorityFactTransport({
   sendTo:sendConnectedWireTo,
   send:broadcastConnectedWire,
@@ -322,6 +355,7 @@ async function applyConfirmedPayload(adapter:MockAdapter,payload:ConnectedEventP
     app.scene.round=payload.round;
     app.scene.currentActorId=payload.currentActorId;
     app.scene.economyByActor=structuredClone(payload.economyByActor);
+    clearAdapterTurnSimultaneousOrdering(adapter);
     app.activity.unshift({
       id:`connected:${event.eventId}`,
       time:"지금",
@@ -599,6 +633,7 @@ async function handleHostMessage(adapter:MockAdapter,message:SessionTransportMes
         if(characterId) {
         await resumeConnectedCommonPlayAuthorityFactRequestsForCharacter(adapter,characterId);
         await resumeConnectedInterruptPromptForCharacter(adapter,message.peer,characterId);
+        await resumeConnectedTurnSimultaneousOrderingPromptForCharacter(adapter,message.peer,characterId);
       }
         const cursorBeforeParticipant=ledger.cursor;
         const participantEvent=ledger.commitHostEvent({
@@ -707,6 +742,12 @@ async function handleHostMessage(adapter:MockAdapter,message:SessionTransportMes
     return;
   }
 
+  if(wire.type==="turn-simultaneous-ordering-response"){
+    const routed=await routeConnectedTurnSimultaneousOrderingResponse(adapter,message,{sessionId:wire.sessionId,response:wire.response});
+    if(!routed) await sendConnectedWireTo(message.peer,{type:"error",code:"simultaneous-ordering-route-unavailable",message:"connected simultaneous-ordering response router is unavailable",hostCursor:ledger.cursor});
+    return;
+  }
+
   if(wire.type==="resolution-interrupt-response"){
     const routed=await routeConnectedInterruptResponse(adapter,message,wire.response);
     if(!routed) await sendConnectedWireTo(message.peer,{type:"error",code:"interrupt-route-unavailable",message:"connected interrupt response router is unavailable",hostCursor:ledger.cursor});
@@ -803,6 +844,13 @@ async function handleClientMessage(adapter:MockAdapter,wire:ConnectedWireMessage
       app.session.compatibility="warning";
       app.session.compatibilityMessage=applied.reason;
     }
+    await publishConnectedSnapshot(adapter);
+    return;
+  }
+
+  if(wire.type==="turn-simultaneous-ordering-prompt"){
+    const applied=applyConnectedTurnSimultaneousOrderingPrompt(adapter,wire);
+    if(applied.status==="rejected"){app.session.compatibility="warning";app.session.compatibilityMessage=applied.error;}
     await publishConnectedSnapshot(adapter);
     return;
   }

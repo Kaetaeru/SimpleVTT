@@ -10,6 +10,7 @@ import type { ConnectedInterruptResponse } from "./connectedInterruptResponsePor
 import type { ConcentrationSaveVm } from "./concentrationSaveRuntimeContracts";
 import type { ConnectedConcentrationResponse } from "./connectedConcentrationResponsePort";
 import type { CommonPlayAuthorityFactRequest, CommonPlayAuthorityFactResponse } from "../domain/commonPlaySpatialFactRuntime";
+import type { CommonPlaySimultaneousOrderingRequest, CommonPlaySimultaneousOrderingResponse } from "../domain/commonPlaySimultaneousOrderingRuntime";
 import { isConnectedResolutionPresentation, type ConnectedResolutionPresentationV1 } from "./connectedResolutionPresentation";
 import {
   validateConnectedLongRestWireMessage,
@@ -44,6 +45,8 @@ export type ConnectedWireMessage =
   | { type:"resolution-concentration-response"; response:ConnectedConcentrationResponse }
   | { type:"common-play-fact-request"; sessionId:string; responderId:string; request:CommonPlayAuthorityFactRequest }
   | { type:"common-play-fact-response"; sessionId:string; response:CommonPlayAuthorityFactResponse }
+  | { type:"turn-simultaneous-ordering-prompt"; sessionId:string; request:CommonPlaySimultaneousOrderingRequest }
+  | { type:"turn-simultaneous-ordering-response"; sessionId:string; response:CommonPlaySimultaneousOrderingResponse }
   | { type:"session-ended"; sessionId:string; reason:string }
   | { type:"error"; code:string; message:string; hostCursor?:number }
   | ConnectedLongRestWireMessage;
@@ -57,6 +60,16 @@ const isRecord=(value:unknown):value is JsonRecord=>typeof value==="object"&&val
 const isString=(value:unknown):value is string=>typeof value==="string"&&value.length>0;
 const isCursor=(value:unknown):value is number=>Number.isInteger(value)&&Number(value)>=0;
 const isStringArray=(value:unknown):value is string[]=>Array.isArray(value)&&value.every((entry)=>typeof entry==="string");
+
+function isSimultaneousOrderingRequest(value:unknown):value is CommonPlaySimultaneousOrderingRequest {
+  if(!isRecord(value)||!isString(value.id)||!isCursor(value.revision)||!isString(value.timing)||!isRecord(value.authority)||!Array.isArray(value.candidates)) return false;
+  if(!["actor-controller","dm"].includes(String(value.authority.kind))||!isString(value.authority.responderId)) return false;
+  return value.candidates.length>1&&value.candidates.every((candidate)=>isRecord(candidate)&&isString(candidate.id));
+}
+
+function isSimultaneousOrderingResponse(value:unknown):value is CommonPlaySimultaneousOrderingResponse {
+  return isRecord(value)&&isString(value.decisionId)&&isCursor(value.revision)&&isString(value.responderId)&&isStringArray(value.orderedCandidateIds);
+}
 
 function isProjectionEnvelope(value:unknown):value is CharacterSessionProjectionV1 {
   if (!isRecord(value)) return false;
@@ -344,6 +357,14 @@ function validateMessage(value:unknown):ConnectedWireMessage|string {
   }
   if(value.type==="common-play-fact-response"){
     if(!isString(value.sessionId)||!isCommonPlayFactResponse(value.response))return "invalid Common Play fact response message";
+    return value as ConnectedWireMessage;
+  }
+  if(value.type==="turn-simultaneous-ordering-prompt"){
+    if(!isString(value.sessionId)||!isSimultaneousOrderingRequest(value.request))return "invalid turn simultaneous-ordering prompt message";
+    return value as ConnectedWireMessage;
+  }
+  if(value.type==="turn-simultaneous-ordering-response"){
+    if(!isString(value.sessionId)||!isSimultaneousOrderingResponse(value.response))return "invalid turn simultaneous-ordering response message";
     return value as ConnectedWireMessage;
   }
   if (value.type==="session-ended") {
