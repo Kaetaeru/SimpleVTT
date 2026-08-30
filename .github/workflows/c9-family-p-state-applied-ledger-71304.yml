@@ -68,5 +68,12 @@ jobs:
             git rm .github/workflows/c9-family-p-state-applied-dispatch-71304.yml
           fi
           git commit -m "docs(c9): reconcile state-applied trigger evidence"
-          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
-          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
+          for attempt in 1 2 3 4 5; do
+            git fetch origin agent/c9-gate-n-coverage-reconciliation
+            git rebase origin/agent/c9-gate-n-coverage-reconciliation
+            if git push origin HEAD:agent/c9-gate-n-coverage-reconciliation; then
+              exit 0
+            fi
+            sleep 1
+          done
+          exit 1
