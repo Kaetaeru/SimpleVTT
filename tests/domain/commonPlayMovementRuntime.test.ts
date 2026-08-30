@@ -28,6 +28,15 @@ const movement={
   },
 };
 
+const authorityAnswer={
+  queryId:"legal-destination",
+  fact:"spatial.legal-destination",
+  subject:"hero",
+  value:"point:b4",
+  resolutionId:"move",
+  provenance:{kind:"authority" as const,responderId:"dm"},
+};
+
 test("Gate E4 provider and manual destination answers compile to the same resolver movement operation", async()=>{
   const provider=await resolveCommonPlayFactQuery({
     registry,
@@ -84,14 +93,7 @@ test("generic movement lowers push, pull, and teleport to authoritative free mov
     const compiled=compileCommonPlayMovement({
       id:`move-${mode}`,
       definition:{...movement,mode},
-      answer:{
-        queryId:"legal-destination",
-        fact:"spatial.legal-destination",
-        subject:"hero",
-        value:"point:b4",
-        resolutionId:`move-${mode}`,
-        provenance:{kind:"authority",responderId:"dm"},
-      },
+      answer:{...authorityAnswer,resolutionId:`move-${mode}`},
     });
     assert.equal(compiled.status,"compiled");
     if(compiled.status==="compiled") {
@@ -106,14 +108,7 @@ test("Gate E4 rejects a destination answer that does not belong to the movement 
   const compiled=compileCommonPlayMovement({
     id:"move",
     definition:movement,
-    answer:{
-      queryId:"other-query",
-      fact:"spatial.legal-destination",
-      subject:"hero",
-      value:"point:b4",
-      resolutionId:"move",
-      provenance:{kind:"authority",responderId:"dm"},
-    },
+    answer:{...authorityAnswer,queryId:"other-query"},
   });
   assert.equal(compiled.status,"rejected");
   if(compiled.status==="rejected")assert.match(compiled.reason,/query/i);
@@ -124,15 +119,20 @@ test("generic movement reuses profile expressions for speed costs",()=>{
     id:"move",
     definition:{...movement,movementType:"crawl",distance:{ref:"runtime.speed"},costMultiplier:{value:2}},
     properties:{"runtime.speed":10},
-    answer:{
-      queryId:"legal-destination",
-      fact:"spatial.legal-destination",
-      subject:"hero",
-      value:"point:b4",
-      resolutionId:"move",
-      provenance:{kind:"authority",responderId:"dm"},
-    },
+    answer:authorityAnswer,
   });
   assert.equal(compiled.status,"compiled");
   if(compiled.status==="compiled")assert.deepEqual(compiled.operation,{id:"move",kind:"move",actorId:"hero",movementMode:"crawl",distanceFeet:20,distanceTraveledFeet:10,destinationRef:"point:b4",doesNotProvokeOpportunityAttacks:false});
+});
+
+test("generic movement preserves the explicit no-provoke flag",()=>{
+  const compiled=compileCommonPlayMovement({
+    id:"move-no-provoke",
+    definition:{...movement,distance:{value:5},doesNotProvokeOpportunityAttacks:true},
+    answer:authorityAnswer,
+  });
+  assert.equal(compiled.status,"compiled");
+  if(compiled.status!=="compiled")return;
+  assert.equal(compiled.operation.kind,"move");
+  assert.equal(compiled.operation.doesNotProvokeOpportunityAttacks,true);
 });
