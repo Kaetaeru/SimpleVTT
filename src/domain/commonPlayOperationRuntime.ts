@@ -8,6 +8,7 @@ import type { TargetingFactInput } from "./targeting";
 import type { ActionUseKind, TurnSlot } from "./turnEconomy";
 import { compileCommonPlayMovement, type CommonPlayMovementDefinition } from "./commonPlayMovementRuntime";
 import type { CommonPlayFactAnswer, CommonPlayFactQuery } from "./commonPlaySpatialFactRuntime";
+import { parseCommonPlaySelector, resolveCommonPlaySelector, type CommonPlaySelector } from "./commonPlaySelectorRuntime";
 
 type LiteralNumberExpression={value:number};
 type CommonPlayExpression=LiteralNumberExpression|Record<string,unknown>;
@@ -19,11 +20,10 @@ type CommonPlayResourceCreation={
   recovery?:ResourceRecovery;
 };
 
-export interface CommonPlayTargetingSelector {
+export interface CommonPlayTargetingSelector extends Omit<CommonPlaySelector,"from"|"min"|"max"|"orderBy"|"area"> {
   from:"targets";
   min:number;
   max:number;
-  where?:{op:"relation-matches";ref:"relation";value:TargetingFactInput["relation"]};
 }
 
 export interface CommonPlayAllocationDefinition {
@@ -187,7 +187,6 @@ const ENTRY_POINT_KEYS=new Set(["id","invocation","interaction","targeting","all
 const INTERACTION_KEYS=new Set(["id","kind","responder","mode","input","revalidate"]);
 const INTERACTION_INPUT_KEYS=new Set(["type"]);
 const TARGETING_KEYS=new Set(["from","where","min","max"]);
-const TARGETING_WHERE_KEYS=new Set(["op","ref","value"]);
 const ALLOCATION_KEYS=new Set(["units","targets","minimumPerTarget","maximumPerTarget","totalMustMatch"]);
 const D20_TEST_KEYS=new Set(["kind","roller","property","dc","perTarget"]);
 const PROPERTY_MODIFY_KEYS=new Set(["kind","property","operation","value","target","owner","source","duration","lifetime","instancePolicy"]);
@@ -305,18 +304,11 @@ function numericExpression(value:unknown,label:string):CommonPlayExpression {
 function parseTargetingSelector(value:unknown,label:string):CommonPlayTargetingSelector {
   const selector=object(value,label);
   supportedKeys(selector,TARGETING_KEYS,label);
-  if(selector.from!=="targets") throw new DomainEvaluationError(`${label}.from must be targets for portable Common Play targeting`);
-  let where:CommonPlayTargetingSelector["where"];
-  if(selector.where!==undefined) {
-    const predicate=object(selector.where,`${label}.where`);
-    supportedKeys(predicate,TARGETING_WHERE_KEYS,`${label}.where`);
-    if(predicate.op!=="relation-matches"||predicate.ref!=="relation") throw new DomainEvaluationError(`${label}.where currently supports relation-matches on relation only`);
-    if(predicate.value!=="self"&&predicate.value!=="ally"&&predicate.value!=="enemy"&&predicate.value!=="neutral") throw new DomainEvaluationError(`${label}.where.value must be self, ally, enemy, or neutral`);
-    where={op:"relation-matches",ref:"relation",value:predicate.value};
-  }
-  if(!Number.isInteger(selector.min)||Number(selector.min)<0) throw new DomainEvaluationError(`${label}.min must be a non-negative integer for portable Common Play targeting`);
-  if(!Number.isInteger(selector.max)||Number(selector.max)<Number(selector.min)) throw new DomainEvaluationError(`${label}.max must be an integer >= min for portable Common Play targeting`);
-  return {from:"targets",min:Number(selector.min),max:Number(selector.max),...(where?{where}:{})};
+  const parsed=parseCommonPlaySelector(selector,label);
+  if(parsed.from!=="targets") throw new DomainEvaluationError(`${label}.from must be targets for portable Common Play targeting`);
+  if(parsed.min===undefined||!Number.isInteger(parsed.min)||parsed.min<0) throw new DomainEvaluationError(`${label}.min must be a non-negative integer for portable Common Play targeting`);
+  if(parsed.max===undefined||!Number.isInteger(parsed.max)||parsed.max<parsed.min) throw new DomainEvaluationError(`${label}.max must be an integer >= min for portable Common Play targeting`);
+  return {from:"targets",min:parsed.min,max:parsed.max,...(parsed.where===undefined?{}:{where:parsed.where})};
 }
 
 function parseAllocation(value:unknown,label:string):CommonPlayAllocationDefinition {
@@ -630,6 +622,21 @@ function hpOperationTarget(target:CommonPlayHpTarget|undefined,input:CommonPlayO
   return input.targetId;
 }
 
+function targetingSelectorCandidate(target:TargetingFactInput) {
+  return {
+    id:target.id,
+    targeting:{...target},
+    properties:{
+      id:target.id,
+      kind:target.kind,
+      relation:target.relation,
+      ...(target.distanceFeet===undefined?{}:{distanceFeet:target.distanceFeet}),
+      ...(target.visible===undefined?{}:{visible:target.visible}),
+      ...(target.cover===undefined?{}:{cover:target.cover}),
+    },
+  };
+}
+
 export function compileCommonPlayEntryPointOperations(
   profile:RulesProfileLike,
   state:RulesRuntimeState,
@@ -652,10 +659,16 @@ export function compileCommonPlayEntryPointOperations(
     if(input.targetId!==undefined&&!input.targetingTargets.some((target)=>target.id===input.targetId)) {
       throw new DomainEvaluationError("Common Play downstream target does not match the validated targeting selection");
     }
-    if(entryPoint.targeting.where) {
-      const rejected=input.targetingTargets.filter((target)=>target.relation!==entryPoint.targeting!.where!.value);
-      if(rejected.length) throw new DomainEvaluationError(`Common Play targeting relation filter rejected: ${rejected.map((target)=>target.id).join(", ")}`);
-    }
+    const selectorResolution=resolveCommonPlaySelector({
+      sourceId:input.actorId,
+      selector:entryPoint.targeting,
+      candidates:input.targetingTargets.map(targetingSelectorCandidate),
+      selectedIds:input.targetingTargets.map((target)=>target.id),
+      selection:"manual",
+      authority:"actor-owner",
+      directTarget:false,
+    });
+    if(selectorResolution.status!=="resolved") throw new DomainEvaluationError(`Common Play targeting selector rejected: ${selectorResolution.reason}`);
     operations.push({
       id:`${input.resolutionId}:targeting`,
       kind:"targeting",

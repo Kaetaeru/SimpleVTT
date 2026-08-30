@@ -80,6 +80,38 @@ test("portable Common Play relation selector validates authoritative relation fa
   assert.equal(selfState.combatants.hero.life.hp.current,10);
 });
 
+test("portable Common Play nested selector predicate evaluates authoritative target facts generically",()=>{
+  const authored=structuredClone(AUTHORED);
+  authored.entryPoints[0].targeting={
+    from:"targets",
+    where:{op:"all",args:[
+      {op:"relation-matches",ref:"relation",value:"enemy"},
+      {op:"eq",left:{ref:"kind"},right:{value:"creature"}},
+      {op:"not",arg:{op:"eq",left:{ref:"id"},right:{value:"hero"}}},
+    ]},
+    min:1,max:1,
+  };
+  const definition=parseManualCommonPlayOperationDefinition(authored);
+  assert.deepEqual(definition.entryPoints[0].targeting,authored.entryPoints[0].targeting);
+
+  const enemyState=runtimeState();
+  enemyState.combatants.goblin.life.hp.current=5;
+  const enemy=resolveCommonPlayEntryPointOperations(TEST_PROFILE,enemyState,definition,{
+    resolutionId:"nested-enemy",actorId:"hero",entryPointId:"mend-other",targetId:"goblin",targetingTargets:[target("goblin","enemy")],
+  });
+  assert.equal(enemy.status,"committed");
+  if(enemy.status==="committed") assert.equal(enemy.state.combatants.goblin.life.hp.current,10);
+
+  const selfState=runtimeState();
+  selfState.combatants.hero.life.hp.current=10;
+  const self=resolveCommonPlayEntryPointOperations(TEST_PROFILE,selfState,definition,{
+    resolutionId:"nested-self",actorId:"hero",entryPointId:"mend-other",targetId:"hero",targetingTargets:[target("hero","self")],
+  });
+  assert.equal(self.status,"rejected");
+  if(self.status==="rejected") assert.match(self.error,/targeting selector rejected/);
+  assert.equal(selfState.combatants.hero.life.hp.current,10);
+});
+
 test("bounded Common Play selector preserves authored multi-target limits without fabricating spatial facts",()=>{
   const authored=structuredClone(AUTHORED);
   authored.entryPoints[0].targeting={from:"targets",min:1,max:2};
@@ -139,7 +171,7 @@ test("unsupported Common Play selector shapes reject explicitly",()=>{
     [{from:"actors",min:1,max:1},/from must be targets/],
     [{from:"artifacts",min:1,max:1},/from must be targets/],
     [{from:"targets",where:{value:true},min:1,max:1},/op is unsupported/],
-    [{from:"targets",area:{kind:"instant"},min:1,max:1},/shape is unsupported/],
+    [{from:"targets",area:{kind:"instant"},min:1,max:1},/unsupported fields: area/],
     [{from:"targets",min:-1,max:1},/min must be a non-negative integer/],
     [{from:"targets",min:2,max:1},/max must be >= min/],
   ];
