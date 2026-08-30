@@ -1,0 +1,76 @@
+name: C9 Family G Ledger Reconcile 7130
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-g-ledger-reconcile-7130.yml
+
+permissions:
+  contents: write
+
+jobs:
+  verify-and-reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Generate content catalogs
+        run: npm run generate:content
+      - name: Verify Family G spatial authority and reconnect evidence
+        run: >-
+          npx tsx --test
+          tests/domain/commonPlaySpatialFactRuntime.test.ts
+          tests/domain/c9FamilyGStandardSpatialFacts.test.ts
+          tests/ui/c9FamilyGConnectedSpatialFactRuntime.test.ts
+          tests/ui/connectedCommonPlayAuthorityFactRouting.test.ts
+          tests/ui/connectedCommonPlayAuthorityFactDispatch.test.ts
+      - name: Reconcile verified Family G evidence
+        run: |
+          node <<'NODE'
+          const fs=require('node:fs');
+          const path='docs/rules/v1-mechanism-coverage-ledger.json';
+          const ledger=JSON.parse(fs.readFileSync(path,'utf8'));
+          const row=ledger.rows.find((candidate)=>candidate.family==='G');
+          if(!row) throw new Error('Family G ledger row not found');
+          row.currentState='Provider/manual authority has production-verified standard distance, adjacency, reach, line-of-effect, Total Cover, area-membership, legal-destination, and placement facts with normalized authoritative answers and identity invariance. Connected target-owner spatial fact requests now survive owner peer reconnect, reject stale-peer responses, and deduplicate retry responses. Family G remains incomplete because engine-owned adjacency/reach/size-space and shape intersection/placement geometry is not yet converged, and in-flight spatial decisions are not durably persisted across adapter/process restart.';
+          const add=(field,value)=>{ if(!row[field].includes(value)) row[field].push(value); };
+          add('implementationEvidence','commonPlaySpatialFactRuntime.ts COMMON_PLAY_STANDARD_FACTS defines provider/manual authority for spatial.distance-feet, spatial.adjacent, spatial.within-reach, spatial.line-of-effect, spatial.total-cover, spatial.area-members, spatial.legal-destination, and spatial.placement with normalized answers');
+          add('productionEvidence','997bc175781a177496772dfba1d33aa61cfa6fae test(c9): prove standard spatial fact reconnect routing');
+          add('productionEvidence','c9FamilyGConnectedSpatialFactRuntime.test.ts proves target-owner within-reach requests resume on owner reconnect, reject stale-peer responses, and resolve duplicate retries exactly once');
+          add('connectedEvidenceIfRelevant','c9FamilyGConnectedSpatialFactRuntime.test.ts proves target-owner standard spatial fact requests resume on owner peer reconnect, stale-peer responses reject, and duplicate retry responses are idempotent');
+          row.remainingNamedSeams=[
+            'engine-owned adjacency/reach/size-space and line/cone/cube/sphere/cylinder/emanation intersection geometry remain incomplete',
+            'position/artifact placement geometry is not yet converged on the standard spatial fact authority path',
+            'durable persistence of in-flight spatial decisions across adapter/process restart remains absent; connected reconnect/retry routing is covered'
+          ];
+          fs.writeFileSync(path,JSON.stringify(ledger,null,2)+'\n');
+          NODE
+      - name: Verify architecture boundaries and ledger
+        run: |
+          node scripts/check-legacy-execution-boundary.mjs
+          node scripts/check-v1-mechanism-coverage.mjs
+          npx tsc --noEmit
+      - name: Commit reconciliation and retire verifier
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/rules/v1-mechanism-coverage-ledger.json
+          if ! git diff --cached --quiet; then
+            git commit -m "docs(c9): reconcile Family G reconnect evidence"
+          fi
+          git fetch origin agent/c9-gate-n-coverage-reconciliation
+          git rebase origin/agent/c9-gate-n-coverage-reconciliation
+          git rm .github/workflows/c9-family-g-ledger-reconcile-7130.yml
+          git commit -m "chore(c9): retire Family G ledger verifier"
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
