@@ -1115,7 +1115,8 @@
         "5866e340e38e01a4a6606a8c5e4488473079b985 test(c9): cover rest completion semantic vocabulary; exact verifier run 33310807820 passed semantic test, tsc --noEmit, and coverage checker",
         "c9FamilyPStateAppliedTriggerProduction.test.ts proves an unknown installed state.applied listener fires atomically from effect activation, supports Undo, and remains rename invariant; workflow run 33312760234 passed",
         "commonPlaySemanticEventRuntime.test.ts effect.expired lifecycle regression proves expiry-triggered operations execute in the authoritative lifecycle resolution; workflow run 33312731941 passed",
-        "C9 Family P Finalize 71304 verifies current semantic trigger production, legacy boundary, typecheck, and coverage before final disposition"
+        "C9 Family P Finalize 71304 verifies current semantic trigger production, legacy boundary, typecheck, and coverage before final disposition",
+        "6d03412dcecc7186a2b0ee41da438f498c5333a0 feat(common-play): migrate Cutting Words declaratively; bardCollegeLoreCuttingWordsRuntime.test.ts preserves Common Play provenance, reaction/resource payment, and Undo without the named follow-up adapter"
       ],
       "identityInvarianceEvidence": [
         "commonPlayEffectRuntime.test.ts renamed external definitions",
@@ -1186,7 +1187,8 @@
         "c2c8824f7e0fc883463c285bb9572ded72a9e232 feat(c9): route actor-owner consent interactions",
         "commonPlayInteractionProductionRuntime.test.ts actor consent, decline/payment safety, target validation, and unsupported-shape boundaries",
         "installedCommonPlayActorOwnerInteractionProduction.test.ts unknown installed actor-owner prompt routing and atomic accepted commit",
-        "c9FamilyQTargetOwnerInteractionProduction.test.ts unknown installed target-owner consent routes only to the selected target owner peer, rejects the actor peer, and commits downstream damage plus Reaction payment atomically after approval"
+        "c9FamilyQTargetOwnerInteractionProduction.test.ts unknown installed target-owner consent routes only to the selected target owner peer, rejects the actor peer, and commits downstream damage plus Reaction payment atomically after approval",
+        "6d03412dcecc7186a2b0ee41da438f498c5333a0 feat(common-play): migrate Cutting Words declaratively; bardCollegeLoreCuttingWordsRuntime.test.ts preserves Common Play provenance, reaction/resource payment, and Undo without the named follow-up adapter"
       ],
       "identityInvarianceEvidence": [
         "installedCommonPlayActorOwnerInteractionProduction.test.ts uses arbitrary previously-unknown module/content/mechanic identities and resolves the interaction structurally rather than by content name",
@@ -1201,8 +1203,7 @@
       "remainingNamedSeams": [
         "choice and multiple-option interaction payloads are not yet represented by the boolean consent contract",
         "target, DM, and Host responder routing is not yet represented",
-        "actor-owner and target-owner reconnect and revision-stale response evidence remain incomplete",
-        "named post-roll follow-up adapters remain migration debt outside the portable interaction path"
+        "actor-owner and target-owner reconnect and revision-stale response evidence remain incomplete"
       ],
       "connectedRelevant": true,
       "persistenceRelevant": true
