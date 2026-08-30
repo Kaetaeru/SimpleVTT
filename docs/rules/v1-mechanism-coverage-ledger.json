@@ -640,11 +640,16 @@
       ],
       "productionEvidence": [
         "installedCommonPlayLoweredFamiliesProduction.test.ts mapless stored movement and Undo",
-        "c9FamilyIMovementProduction.test.ts unknown installed Common Play executes walk/climb/swim/fly/crawl/jump, movement cost multiplier, push/pull/teleport, Undo, and full external identity rename through the production Resolver; C9 Family I Movement Production 7130 run 33310610095"
+        "c9FamilyIMovementProduction.test.ts unknown installed Common Play executes walk/climb/swim/fly/crawl/jump, movement cost multiplier, push/pull/teleport, Undo, and full external identity rename through the production Resolver; C9 Family I Movement Production 7130 run 33310610095",
+        "c9FamilyIMovementModeAcceptance.test.ts portable walk/climb/swim/fly/crawl/jump, push/pull/teleport, no-provoke, zero-speed rejection, Undo, and rename invariance",
+        "c9FamilyIMovementProduction.test.ts unknown installed RuleModule production matrix for movement types, cost multiplier, forced movement, teleport, Undo, and full external identity rename",
+        "C9 Family I Movement Mode Matrix run 33310511648: production matrix, legacy execution boundary, and tsc --noEmit passed at d3b105c37a8cb2c3c715b1abddf62f3abb638fce"
       ],
       "identityInvarianceEvidence": [
         "commonPlayMovementRuntime.test.ts external definition identity independence",
-        "c9FamilyIMovementProduction.test.ts full external module/content/mechanic rename preserves the production movement matrix"
+        "c9FamilyIMovementProduction.test.ts full external module/content/mechanic rename preserves the production movement matrix",
+        "c9FamilyIMovementModeAcceptance.test.ts renamed external movement definition preserves production semantics",
+        "c9FamilyIMovementProduction.test.ts renaming module/content/mechanic identities preserves the full production movement matrix"
       ],
       "connectedEvidenceIfRelevant": [
         "installedCommonPlayLoweredFamiliesProduction.test.ts unknown stored movement converges through Host replay, duplicate handling, Undo, and reconnect"
