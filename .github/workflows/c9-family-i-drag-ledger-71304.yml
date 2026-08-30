@@ -1,0 +1,77 @@
+name: C9 Family I Drag Ledger 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-i-drag-ledger-71304.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: c9-family-i-drag-ledger-71304
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npm run generate:content
+      - name: Reverify Family I production evidence
+        run: node --import tsx --test tests/ui/c9FamilyIRulesDerivedMovementCostProduction.test.ts tests/ui/c9FamilyIMovementProduction.test.ts
+      - run: node scripts/check-v1-mechanism-coverage.mjs
+      - run: node scripts/check-legacy-execution-boundary.mjs
+      - run: npm exec tsc -- --noEmit
+      - name: Reconcile verified ledger evidence and retire workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch=agent/c9-gate-n-coverage-reconciliation
+          workflow=.github/workflows/c9-family-i-drag-ledger-71304.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in $(seq 1 10); do
+            git fetch origin "$branch"
+            git reset --hard "origin/$branch"
+            python - <<'PY'
+          import json
+          from pathlib import Path
+          path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
+          data=json.loads(path.read_text(encoding='utf-8'))
+          row=next(item for item in data['rows'] if item['family']=='I')
+          row['currentState']=(
+              'Canonical movement.relocate parses through the generic operations lowerer. Unknown installed Common Play '
+              'production-executes walk, climb, swim, fly, crawl, jump, cost multipliers, push, pull, teleport, explicit '
+              'no-provoke movement, zero-speed rejection, Undo, connected replay/reconnect, and external identity rename '
+              'invariance. Rules-derived Difficult Terrain and drag/carry cost multipliers plus alternate-speed bounds are '
+              'production-proven through generic profile properties, and portable compile rejection is normalized into the '
+              'standard production resolution failure path. Family I remains incomplete only for named movement-grant convergence.'
+          )
+          production='803a0b503a1be302723d9cb2ebeac7413ce6b7b6 test(c9): prove drag carry movement authority; C9 Family I Drag Confirm 71304 run 33315316074 passed rules-derived movement/drag-carry production, rename invariance, coverage checker, legacy execution boundary, and tsc --noEmit'
+          identity='c9FamilyIRulesDerivedMovementCostProduction.test.ts renamed external drag/carry property rule preserves production movement semantics'
+          if production not in row['productionEvidence']:
+              row['productionEvidence'].append(production)
+          if identity not in row['identityInvarianceEvidence']:
+              row['identityInvarianceEvidence'].append(identity)
+          row['remainingNamedSeams']=['named movement grants']
+          path.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          PY
+            rm -f "$workflow"
+            git add docs/rules/v1-mechanism-coverage-ledger.json "$workflow"
+            if git diff --cached --quiet; then exit 0; fi
+            git commit -m "docs(c9): reconcile Family I drag carry evidence"
+            if git push origin HEAD:"$branch"; then exit 0; fi
+            sleep 1
+          done
+          exit 1
