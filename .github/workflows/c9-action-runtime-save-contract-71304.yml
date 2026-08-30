@@ -1,0 +1,76 @@
+name: C9 Runtime Save Action Contract 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-action-runtime-save-contract-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  verify-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Reconcile latest branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch=agent/c9-gate-n-coverage-reconciliation
+          git fetch origin "$branch"
+          git rebase "origin/$branch"
+      - name: Add typed runtime save-condition action payload
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          path=Path('src/app/contracts.ts')
+          text=path.read_text(encoding='utf-8')
+          old='''  attacksPerAction?:number;\n  movementBudgetGainFeet?:number;\n'''
+          new='''  attacksPerAction?:number;\n  runtimeSaveCondition?:{\n    conditionId:string;\n    label:string;\n    displayName:string;\n    saveAbilities:AbilityKey[];\n    duration:DurationSpec;\n    termination?:EffectTermination;\n  };\n  movementBudgetGainFeet?:number;\n'''
+          if new not in text:
+              if text.count(old)!=1:
+                  raise SystemExit(f'ActionVm contract anchor mismatch: {text.count(old)}')
+              text=text.replace(old,new,1)
+          path.write_text(text,encoding='utf-8')
+          PY
+      - name: Verify action payload contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --import tsx --test tests/ui/unarmedStrikeRuntime.test.ts
+          npm exec tsc -- --noEmit
+          node scripts/check-v1-mechanism-coverage.mjs
+          node scripts/check-legacy-execution-boundary.mjs
+      - name: Publish verified contract and retire verifier
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/c9-action-runtime-save-contract-71304.yml
+          git add src/app/contracts.ts
+          git diff --cached --check
+          git commit -m "fix(c9): type runtime save action payload"
+          branch=agent/c9-gate-n-coverage-reconciliation
+          for attempt in 1 2 3 4 5 6 7 8; do
+            git fetch origin "$branch"
+            if git rebase "origin/$branch"; then
+              if git push origin HEAD:"$branch"; then exit 0; fi
+            fi
+            git rebase --abort || true
+            sleep 1
+          done
+          exit 1
