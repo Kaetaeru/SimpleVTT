@@ -1,0 +1,72 @@
+name: C9 Family E Preserve Targeting Projection
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-e-preserve-targeting-projection.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Preserve authored targeting through operations lowering
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path=Path('src/domain/commonPlayDefinitionRuntime.ts')
+          text=path.read_text(encoding='utf-8')
+          old='  projected.targeting={from:"targets",min:Number(targeting.min),max:Number(targeting.max)};'
+          new='  projected.targeting=structuredClone(targeting);'
+          if new not in text:
+              if text.count(old)!=1:
+                  raise SystemExit(f'expected one targeting projection, got {text.count(old)}')
+              text=text.replace(old,new,1)
+              path.write_text(text,encoding='utf-8')
+          PY
+      - name: Generate content catalogs
+        run: npm run generate:content
+      - name: Verify installed relation selector and import validation
+        run: >-
+          npx tsx --test
+          tests/domain/commonPlayTargetingRuntime.test.ts
+          tests/ui/installedCommonPlayProductionRuntime.test.ts
+          tests/ui/ruleModulePackageImport.test.ts
+      - name: Verify coverage ledger structure
+        run: node scripts/check-v1-mechanism-coverage.mjs
+      - name: Verify legacy execution boundary
+        run: node scripts/check-legacy-execution-boundary.mjs
+      - name: Typecheck application
+        run: npx tsc --noEmit
+      - name: Commit verified lowering fix
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/c9-family-e-preserve-targeting-projection.yml
+          git add src/domain/commonPlayDefinitionRuntime.ts
+          git commit -m "fix(c9): preserve portable targeting predicates"
+          pushed=0
+          for attempt in 1 2 3 4 5; do
+            git fetch origin agent/c9-gate-n-coverage-reconciliation
+            git rebase origin/agent/c9-gate-n-coverage-reconciliation
+            if git push origin HEAD:agent/c9-gate-n-coverage-reconciliation; then
+              pushed=1
+              break
+            fi
+          done
+          test "$pushed" -eq 1
