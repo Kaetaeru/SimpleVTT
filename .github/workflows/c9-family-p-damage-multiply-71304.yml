@@ -25,139 +25,148 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Reconcile latest branch
-        run: |
-          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+        run: git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
       - name: Add structural primary.damage multiplier
         run: |
           python3 <<'PY'
           from pathlib import Path
           import json
 
-          runtime = Path('src/domain/commonPlayRuntime.ts')
-          text = runtime.read_text()
-          old = '| { kind:"roll.modify"; mode:"add-flat"|"target-add"|"replace"|"minimum"; value:LiteralExpression };'
-          new = '| { kind:"roll.modify"; mode:"add-flat"|"target-add"|"replace"|"minimum"|"multiply"; value:LiteralExpression };'
-          assert old in text
-          text = text.replace(old, new, 1)
+          def replace_one(path, old, new, label):
+            text=path.read_text()
+            count=text.count(old)
+            assert count==1, f"{label}: expected one match, got {count}"
+            path.write_text(text.replace(old,new,1))
 
-          old = '''function damageRollReduction(
-            definition:CommonPlayReactionDefinition,
-            interceptor:CommonPlayDamageRollInterceptor,
-            authority:CommonPlayInteractionAuthority|undefined,
-          ) {
-            return interceptor.operations.map((operation,index)=>{
-              if(operation.kind!=="roll.modify"||operation.mode!=="subtract-die")throw new Error("primary.damage interceptor supports subtract-die only in this bounded slice");
-              const formula=parseDiceFormula(operation.dice,"primary.damage subtract-die");
-              const faces=authority?.modifierDiceFaces?.[index];
-              if(!faces||faces.length!==formula.count||faces.some((face)=>!Number.isInteger(face)||face<1||face>formula.sides))throw new Error(`primary.damage interceptor ${index} requires authoritative die face(s)`);
-              return {
-                source:`common-play:${definition.id}:${interceptor.id}:operation:${index}`,
-                value:-(faces.reduce((sum,face)=>sum+face,0)+formula.flat),
-              };
-            });
-          }'''
-          new = '''function damageRollAdjustments(
-            definition:CommonPlayReactionDefinition,
-            interceptor:CommonPlayDamageRollInterceptor,
-            authority:CommonPlayInteractionAuthority|undefined,
-            baseTotal:number,
-          ) {
-            let runningTotal=baseTotal;
-            return interceptor.operations.map((operation,index)=>{
-              const source=`common-play:${definition.id}:${interceptor.id}:operation:${index}`;
-              let value:number;
-              if(operation.kind!=="roll.modify")throw new Error("primary.damage interceptor requires roll.modify operations");
-              if(operation.mode==="subtract-die") {
-                const formula=parseDiceFormula(operation.dice,"primary.damage subtract-die");
-                const faces=authority?.modifierDiceFaces?.[index];
-                if(!faces||faces.length!==formula.count||faces.some((face)=>!Number.isInteger(face)||face<1||face>formula.sides))throw new Error(`primary.damage interceptor ${index} requires authoritative die face(s)`);
-                value=-(faces.reduce((sum,face)=>sum+face,0)+formula.flat);
-              } else if(operation.mode==="multiply") {
-                const factor=literalValue(operation.value,"primary.damage multiply value");
-                if(factor<0)throw new Error("primary.damage multiply value must be non-negative");
-                value=Math.floor(runningTotal*factor)-runningTotal;
-              } else {
-                throw new Error("primary.damage interceptor supports subtract-die or multiply only in this bounded slice");
-              }
-              runningTotal+=value;
-              return {source,value};
-            });
-          }'''
-          assert old in text
-          text = text.replace(old, new, 1)
+          runtime=Path('src/domain/commonPlayRuntime.ts')
+          replace_one(
+            runtime,
+            '| { kind:"roll.modify"; mode:"add-flat"|"target-add"|"replace"|"minimum"; value:LiteralExpression };',
+            '| { kind:"roll.modify"; mode:"add-flat"|"target-add"|"replace"|"minimum"|"multiply"; value:LiteralExpression };',
+            'runtime roll.modify type',
+          )
+          replace_one(
+            runtime,
+            '''function damageRollReduction(
+  definition:CommonPlayReactionDefinition,
+  interceptor:CommonPlayDamageRollInterceptor,
+  authority:CommonPlayInteractionAuthority|undefined,
+) {
+  return interceptor.operations.map((operation,index)=>{
+    if(operation.kind!=="roll.modify"||operation.mode!=="subtract-die")throw new Error("primary.damage interceptor supports subtract-die only in this bounded slice");
+    const formula=parseDiceFormula(operation.dice,"primary.damage subtract-die");
+    const faces=authority?.modifierDiceFaces?.[index];
+    if(!faces||faces.length!==formula.count||faces.some((face)=>!Number.isInteger(face)||face<1||face>formula.sides))throw new Error(`primary.damage interceptor ${index} requires authoritative die face(s)`);
+    return {
+      source:`common-play:${definition.id}:${interceptor.id}:operation:${index}`,
+      value:-(faces.reduce((sum,face)=>sum+face,0)+formula.flat),
+    };
+  });
+}''',
+            '''function damageRollAdjustments(
+  definition:CommonPlayReactionDefinition,
+  interceptor:CommonPlayDamageRollInterceptor,
+  authority:CommonPlayInteractionAuthority|undefined,
+  baseTotal:number,
+) {
+  let runningTotal=baseTotal;
+  return interceptor.operations.map((operation,index)=>{
+    const source=`common-play:${definition.id}:${interceptor.id}:operation:${index}`;
+    let value:number;
+    if(operation.kind!=="roll.modify")throw new Error("primary.damage interceptor requires roll.modify operations");
+    if(operation.mode==="subtract-die") {
+      const formula=parseDiceFormula(operation.dice,"primary.damage subtract-die");
+      const faces=authority?.modifierDiceFaces?.[index];
+      if(!faces||faces.length!==formula.count||faces.some((face)=>!Number.isInteger(face)||face<1||face>formula.sides))throw new Error(`primary.damage interceptor ${index} requires authoritative die face(s)`);
+      value=-(faces.reduce((sum,face)=>sum+face,0)+formula.flat);
+    } else if(operation.mode==="multiply") {
+      const factor=literalValue(operation.value,"primary.damage multiply value");
+      if(factor<0)throw new Error("primary.damage multiply value must be non-negative");
+      value=Math.floor(runningTotal*factor)-runningTotal;
+    } else {
+      throw new Error("primary.damage interceptor supports subtract-die or multiply only in this bounded slice");
+    }
+    runningTotal+=value;
+    return {source,value};
+  });
+}''',
+            'runtime damage adjustments',
+          )
+          replace_one(
+            runtime,
+            '''  if(interceptor.slot==="primary.damage") {
+    const payments=paymentOperations(definition,sourceActorId,interceptor.id);
+    if(intercepted.kind!=="damage-roll")throw new Error("primary.damage interceptor target is not a damage roll");
+    const recalculated:ResolutionOperation={
+      ...intercepted,
+      request:{...intercepted.request,flat:[...(intercepted.request.flat??[]),...damageRollReduction(definition,interceptor,authority)]},
+    };
+    return {...pending,operations:[...pending.operations.slice(0,operationIndex),...payments,recalculated,...pending.operations.slice(operationIndex+1)]};
+  }''',
+            '''  if(interceptor.slot==="primary.damage") {
+    const payments=paymentOperations(definition,sourceActorId,interceptor.id);
+    if(intercepted.kind!=="damage-roll")throw new Error("primary.damage interceptor target is not a damage roll");
+    const preview=stagePendingResolution(profile,inputState,{...pending,operations:pending.operations.slice(0,operationIndex+1)});
+    if(preview.status==="rejected")throw new Error(preview.error??"primary.damage preview rejected");
+    const provisional=preview.results[intercepted.id] as DamageRollResolution|undefined;
+    if(!provisional||!Number.isFinite(provisional.total))throw new Error("primary.damage preview result is missing");
+    const recalculated:ResolutionOperation={
+      ...intercepted,
+      request:{...intercepted.request,flat:[...(intercepted.request.flat??[]),...damageRollAdjustments(definition,interceptor,authority,provisional.total)]},
+    };
+    return {...pending,operations:[...pending.operations.slice(0,operationIndex),...payments,recalculated,...pending.operations.slice(operationIndex+1)]};
+  }''',
+            'runtime accepted damage',
+          )
 
-          old = '''  if(interceptor.slot==="primary.damage") {
-            const payments=paymentOperations(definition,sourceActorId,interceptor.id);
-            if(intercepted.kind!=="damage-roll")throw new Error("primary.damage interceptor target is not a damage roll");
-            const recalculated:ResolutionOperation={
-              ...intercepted,
-              request:{...intercepted.request,flat:[...(intercepted.request.flat??[]),...damageRollReduction(definition,interceptor,authority)]},
-            };
-            return {...pending,operations:[...pending.operations.slice(0,operationIndex),...payments,recalculated,...pending.operations.slice(operationIndex+1)]};
-          }'''
-          new = '''  if(interceptor.slot==="primary.damage") {
-            const payments=paymentOperations(definition,sourceActorId,interceptor.id);
-            if(intercepted.kind!=="damage-roll")throw new Error("primary.damage interceptor target is not a damage roll");
-            const preview=stagePendingResolution(profile,inputState,{...pending,operations:pending.operations.slice(0,operationIndex+1)});
-            if(preview.status==="rejected")throw new Error(preview.error??"primary.damage preview rejected");
-            const provisional=preview.results[intercepted.id] as DamageRollResolution|undefined;
-            if(!provisional||!Number.isFinite(provisional.total))throw new Error("primary.damage preview result is missing");
-            const recalculated:ResolutionOperation={
-              ...intercepted,
-              request:{...intercepted.request,flat:[...(intercepted.request.flat??[]),...damageRollAdjustments(definition,interceptor,authority,provisional.total)]},
-            };
-            return {...pending,operations:[...pending.operations.slice(0,operationIndex),...payments,recalculated,...pending.operations.slice(operationIndex+1)]};
-          }'''
-          assert old in text
-          runtime.write_text(text.replace(old, new, 1))
+          lowering=Path('src/domain/commonPlayReactionDefinitionRuntime.ts')
+          replace_one(
+            lowering,
+            'function lowerD20Interceptor(value:Obj,index:number,options:ReactionLoweringOptions):CommonPlayD20RollInterceptor {',
+            'function lowerD20Interceptor(value:Obj,index:number,options:ReactionLoweringOptions,allowMultiply=false):CommonPlayD20RollInterceptor {',
+            'lowerer signature',
+          )
+          replace_one(
+            lowering,
+            'if(raw.mode!=="add-flat"&&raw.mode!=="target-add"&&raw.mode!=="replace"&&raw.mode!=="minimum") {',
+            'if(raw.mode!=="add-flat"&&raw.mode!=="target-add"&&raw.mode!=="replace"&&raw.mode!=="minimum"&&(!allowMultiply||raw.mode!=="multiply")) {',
+            'lowerer deterministic mode gate',
+          )
+          replace_one(
+            lowering,
+            '''      const value=resolvedNumber(raw.value,`${label}.operations[${operationIndex}].value`,options);
+      if(!Number.isInteger(value.value)) throw new DomainEvaluationError(`${label}.operations[${operationIndex}].value must be an integer`);
+      if((raw.mode==="replace"||raw.mode==="minimum")&&(value.value<1||value.value>20)) throw new DomainEvaluationError(`${label}.operations[${operationIndex}].value must be between 1 and 20 for ${raw.mode}`);
+      return {kind:"roll.modify" as const,mode:raw.mode,value};''',
+            '''      const value=resolvedNumber(raw.value,`${label}.operations[${operationIndex}].value`,options);
+      if(raw.mode==="multiply") {
+        if(value.value<0)throw new DomainEvaluationError(`${label}.operations[${operationIndex}].value must be non-negative for multiply`);
+        return {kind:"roll.modify" as const,mode:"multiply",value};
+      }
+      if(!Number.isInteger(value.value)) throw new DomainEvaluationError(`${label}.operations[${operationIndex}].value must be an integer`);
+      if((raw.mode==="replace"||raw.mode==="minimum")&&(value.value<1||value.value>20)) throw new DomainEvaluationError(`${label}.operations[${operationIndex}].value must be between 1 and 20 for ${raw.mode}`);
+      return {kind:"roll.modify" as const,mode:raw.mode,value};''',
+            'lowerer multiplier value',
+          )
+          replace_one(
+            lowering,
+            'const lowered=lowerD20Interceptor({...value,timing:"d20.outcome-determined",slot:"d20.roll"},index,options);',
+            'const lowered=lowerD20Interceptor({...value,timing:"d20.outcome-determined",slot:"d20.roll"},index,options,true);',
+            'damage lowerer allowance',
+          )
+          replace_one(
+            lowering,
+            'if(lowered.operations.some((operation)=>operation.mode!=="subtract-die")) throw new DomainEvaluationError(`${label} primary.damage supports subtract-die only`);',
+            'if(lowered.operations.some((operation)=>operation.mode!=="subtract-die"&&operation.mode!=="multiply")) throw new DomainEvaluationError(`${label} primary.damage supports subtract-die or multiply only`);',
+            'damage lowerer gate',
+          )
 
-          lowering = Path('src/domain/commonPlayReactionDefinitionRuntime.ts')
-          text = lowering.read_text()
-          old = 'function lowerD20Interceptor(value:Obj,index:number,options:ReactionLoweringOptions):CommonPlayD20RollInterceptor {'
-          new = 'function lowerD20Interceptor(value:Obj,index:number,options:ReactionLoweringOptions,allowMultiply=false):CommonPlayD20RollInterceptor {'
-          assert old in text
-          text = text.replace(old, new, 1)
-          old = 'if(raw.mode!=="add-flat"&&raw.mode!=="target-add"&&raw.mode!=="replace"&&raw.mode!=="minimum") {'
-          new = 'if(raw.mode!=="add-flat"&&raw.mode!=="target-add"&&raw.mode!=="replace"&&raw.mode!=="minimum"&&(!allowMultiply||raw.mode!=="multiply")) {'
-          assert old in text
-          text = text.replace(old, new, 1)
-          old = '''      const value=resolvedNumber(raw.value,`${label}.operations[${operationIndex}].value`,options);
-                if(!Number.isInteger(value.value)) throw new DomainEvaluationError(`${label}.operations[${operationIndex}].value must be an integer`);
-                if((raw.mode==="replace"||raw.mode==="minimum")&&(value.value<1||value.value>20)) throw new DomainEvaluationError(`${label}.operations[${operationIndex}].value must be between 1 and 20 for ${raw.mode}`);
-                return {kind:"roll.modify" as const,mode:raw.mode,value};'''
-          new = '''      const value=resolvedNumber(raw.value,`${label}.operations[${operationIndex}].value`,options);
-                if(raw.mode==="multiply") {
-                  if(value.value<0)throw new DomainEvaluationError(`${label}.operations[${operationIndex}].value must be non-negative for multiply`);
-                  return {kind:"roll.modify" as const,mode:"multiply",value};
-                }
-                if(!Number.isInteger(value.value)) throw new DomainEvaluationError(`${label}.operations[${operationIndex}].value must be an integer`);
-                if((raw.mode==="replace"||raw.mode==="minimum")&&(value.value<1||value.value>20)) throw new DomainEvaluationError(`${label}.operations[${operationIndex}].value must be between 1 and 20 for ${raw.mode}`);
-                return {kind:"roll.modify" as const,mode:raw.mode,value};'''
-          assert old in text
-          text = text.replace(old, new, 1)
-          old = 'const lowered=lowerD20Interceptor({...value,timing:"d20.outcome-determined",slot:"d20.roll"},index,options);'
-          new = 'const lowered=lowerD20Interceptor({...value,timing:"d20.outcome-determined",slot:"d20.roll"},index,options,true);'
-          assert old in text
-          text = text.replace(old, new, 1)
-          old = 'if(lowered.operations.some((operation)=>operation.mode!=="subtract-die")) throw new DomainEvaluationError(`${label} primary.damage supports subtract-die only`);'
-          new = 'if(lowered.operations.some((operation)=>operation.mode!=="subtract-die"&&operation.mode!=="multiply")) throw new DomainEvaluationError(`${label} primary.damage supports subtract-die or multiply only`);'
-          assert old in text
-          lowering.write_text(text.replace(old, new, 1))
-
-          schema_path = Path('schemas/common-play-contract.schema.json')
-          schema = json.loads(schema_path.read_text())
-          matches=[]
-          def walk(node):
-            if isinstance(node, dict):
-              enum=node.get('enum')
-              if isinstance(enum,list) and {'add-die','subtract-die','reroll','add-flat'}.issubset(enum):
-                matches.append(enum)
-              for value in node.values(): walk(value)
-            elif isinstance(node,list):
-              for value in node: walk(value)
-          walk(schema)
-          assert len(matches)==1, len(matches)
-          if 'multiply' not in matches[0]: matches[0].append('multiply')
+          schema_path=Path('schemas/common-play-contract.schema.json')
+          schema=json.loads(schema_path.read_text())
+          modes=schema['$defs']['rollModify']['properties']['mode']['enum']
+          assert 'subtract-die' in modes and 'add-flat' in modes
+          assert 'multiply' not in modes
+          modes.append('multiply')
           schema_path.write_text(json.dumps(schema,ensure_ascii=False,indent=2)+'\n')
           PY
       - name: Add identity-invariant damage multiplier regression
@@ -196,11 +205,7 @@ jobs:
               actorId:"goblin",
               sourceId:"external.unknown.damage",
               expectedRevision:0,
-              operations:[{
-                id:"damage-roll",
-                kind:"damage-roll",
-                request:{dice:[{source:"external.die",count:1,sides:6,faces:[6]}],flat:[{source:"external.flat",value:4}]},
-              }],
+              operations:[{id:"damage-roll",kind:"damage-roll",request:{dice:[{source:"external.die",count:1,sides:6,faces:[6]}],flat:[{source:"external.flat",value:4}]}}],
             };
           }
 
@@ -209,11 +214,7 @@ jobs:
             const started=startCommonPlayResolution(TEST_PROFILE,state,pending(),definition(id),"hero");
             assert.equal(started.status,"awaiting-input");
             if(started.status!=="awaiting-input")throw new Error("expected interaction");
-            return resumeCommonPlayInteraction(TEST_PROFILE,state,started,{
-              interactionId:started.interaction.id,
-              idempotencyKey:started.interaction.idempotencyKey,
-              value:true,
-            });
+            return resumeCommonPlayInteraction(TEST_PROFILE,state,started,{interactionId:started.interaction.id,idempotencyKey:started.interaction.idempotencyKey,value:true});
           }
 
           test("unknown Common Play primary.damage multiplier is structural and identity invariant",()=>{
