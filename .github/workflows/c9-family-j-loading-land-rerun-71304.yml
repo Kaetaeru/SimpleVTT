@@ -23,10 +23,10 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Patch structural Loading composition
+      - name: Prepare structural Loading patcher
         shell: bash
         run: |
-          python3 - <<'PY'
+          cat > /tmp/apply-loading.py <<'PY'
           from pathlib import Path
 
           def replace_once(text, old, new, label):
@@ -99,23 +99,34 @@ jobs:
           )
           ledger.write_text(text, encoding='utf-8')
           PY
-      - name: Generate content
-        run: npm run generate:content
-      - name: Verify Family J Loading slice
-        shell: bash
-        run: |
-          npx tsx --test tests/ui/c9FamilyJStructuralWeaponSource.test.ts tests/ui/c9FamilyJOpportunityAttackProduction.test.ts
-          node scripts/check-v1-mechanism-coverage.mjs
-          node scripts/check-legacy-execution-boundary.mjs
-          npx tsc --noEmit
-      - name: Commit verified slice
+      - name: Land verified slice with lease-safe retry
         shell: bash
         run: |
           set -euo pipefail
           branch=agent/c9-gate-n-coverage-reconciliation
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git rm .github/workflows/c9-family-j-loading-land-rerun-71304.yml
-          git add src/app/productionPlayRuntimeAdapter.ts tests/ui/c9FamilyJStructuralWeaponSource.test.ts docs/rules/v1-mechanism-coverage-ledger.json
-          git commit -m "feat(c9): apply structural loading constraint"
-          git push origin HEAD:$branch
+          for attempt in $(seq 1 40); do
+            git fetch origin "$branch" >/dev/null
+            current=$(git rev-parse "origin/$branch")
+            git reset --hard "$current" >/dev/null
+            python3 /tmp/apply-loading.py
+            npm run generate:content >/dev/null
+            npx tsx --test tests/ui/c9FamilyJStructuralWeaponSource.test.ts tests/ui/c9FamilyJOpportunityAttackProduction.test.ts >/dev/null
+            node scripts/check-v1-mechanism-coverage.mjs >/dev/null
+            node scripts/check-legacy-execution-boundary.mjs >/dev/null
+            npx tsc --noEmit >/dev/null
+            git rm -f .github/workflows/c9-family-j-loading-land-rerun-71304.yml >/dev/null 2>&1 || true
+            git add src/app/productionPlayRuntimeAdapter.ts tests/ui/c9FamilyJStructuralWeaponSource.test.ts docs/rules/v1-mechanism-coverage-ledger.json
+            if git diff --cached --quiet; then
+              echo "Loading slice already landed"
+              exit 0
+            fi
+            git commit -q -m "feat(c9): apply structural loading constraint"
+            if git push -q --force-with-lease=refs/heads/$branch:$current origin HEAD:$branch; then
+              echo "Landed on attempt $attempt"
+              exit 0
+            fi
+            sleep 0.25
+          done
+          exit 1
