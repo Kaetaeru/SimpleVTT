@@ -1,5 +1,5 @@
 name: C9 Gate N Final Verifier 71304
-# final verifier rerun after ledger reached zero INCOMPLETE families
+# final verifier rerun after runtime proof convergence
 
 on:
   push:
