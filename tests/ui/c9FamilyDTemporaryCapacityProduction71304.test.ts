@@ -11,6 +11,7 @@ import { setInstalledContentStoreForTests } from "../../src/app/installedContent
 import { MemoryCharacterLibraryStore } from "../../src/app/memoryCharacterLibraryStore";
 import { MemoryInstalledContentStore } from "../../src/app/memoryInstalledContentStore";
 import { MockAdapter } from "../../src/app/mockAdapter";
+import { runtimeResolutionEventHistory } from "../../src/app/runtimeResolutionEventHistory";
 import { FIGHTER_SECOND_WIND_RESOURCE_ID } from "../../src/domain/coreClassResources";
 
 const MODULE_ID="homebrew.family-d-capacity-probe";
@@ -101,6 +102,14 @@ test("unknown installed Common Play temporary resource capacity persists through
   await adapter.resolveAction(actionId,[characterId]);
 
   snapshot=await adapter.getSnapshot();
+  const capacityChange=runtimeResolutionEventHistory(adapter)?.events
+    .flatMap((event)=>event.stateChanges)
+    .find((change)=>change.kind==="resource"&&change.resourceId===FIGHTER_SECOND_WIND_RESOURCE_ID);
+  assert.ok(capacityChange?.kind==="resource");
+  assert.deepEqual(capacityChange.capacity,{
+    before:{maximum:baseMaximum,maximumAfterLongRest:null},
+    after:{maximum:baseMaximum+1,maximumAfterLongRest:baseMaximum},
+  });
   const expanded=snapshot.activeCharacter.resources.find((entry)=>entry.id===FIGHTER_SECOND_WIND_RESOURCE_ID);
   assert.equal(snapshot.resolution?.stage,"complete");
   assert.equal(expanded?.current,baseCurrent);
