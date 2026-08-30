@@ -23,6 +23,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm run generate:content
       - name: Verify Family P portable trigger authority
         shell: bash
         run: |
@@ -78,6 +79,7 @@ jobs:
           }
 
           verify_latest() {
+            npm run generate:content >/dev/null
             test ! -e src/app/bardCollegeLoreCuttingWordsFollowUpRuntimeAdapter.ts
             if grep -R --line-number --fixed-strings 'runtimeD20FollowUps' src/app src/domain; then return 1; fi
             node --import tsx --test \
