@@ -24,6 +24,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm run generate:builtin-catalog
       - name: Apply focused Family L patch
         run: python3 .github/c9-family-l-damage-mitigation-71304.py
       - name: Verify Family L damage mitigation
