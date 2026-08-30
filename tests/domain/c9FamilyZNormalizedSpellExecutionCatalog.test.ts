@@ -4,7 +4,7 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { NORMALIZED_SPELL_EXECUTION_COUNT, normalizedSpellDefinitionById } from "../../src/domain/spellExecutionCatalog";
 import { SPELL_EXECUTION_COVERAGE, spellMechanicById } from "../../src/domain/spellMechanics";
-import { resolveSpellComponents } from "../../src/domain/commonPlaySpellcastingMeta";
+import { advanceCastingActivity, resolveSpellComponents } from "../../src/domain/commonPlaySpellcastingMeta";
 
 test("all spell execution data is normalized before production runtime",()=>{
   assert.equal(NORMALIZED_SPELL_EXECUTION_COUNT,339);
@@ -49,4 +49,16 @@ test("component behavior is invariant under external material identity rename",(
     canSpeak:true,silenced:false,freeHands:0,hasFocus:false,hasComponentPouch:false,materials:{[id]:{quantity:1,unitCostGp:25}},
   });
   assert.deepEqual(resolve("external.material.alpha").consumed.map(({quantity})=>quantity),resolve("renamed.material.omega").consumed.map(({quantity})=>quantity));
+});
+
+test("normalized spell data declares long-cast and ritual process without runtime identity dispatch",()=>{
+  const alarm=normalizedSpellDefinitionById("dnd.srd521.spell.alarm")!;
+  assert.equal(alarm.castingDurationSeconds,60);
+  assert.equal(alarm.ritual,true);
+  const familiar=normalizedSpellDefinitionById("dnd.srd521.spell.find-familiar")!;
+  assert.equal(familiar.castingDurationSeconds,3600);
+  assert.equal(familiar.ritual,true);
+  assert.equal(normalizedSpellDefinitionById("dnd.srd521.spell.fire-bolt")?.castingDurationSeconds,undefined);
+  const activity={id:"cast",actorId:"actor",definitionId:"external.spell",kind:"long-cast" as const,requiredSeconds:60,elapsedSeconds:6,concentrationRequired:true as const,status:"active" as const};
+  assert.equal(advanceCastingActivity(activity,6,true,false).status,"interrupted");
 });

@@ -68,10 +68,10 @@ export interface CommonPlayCastingActivity {
   status:"active"|"completed"|"interrupted";
 }
 
-export function advanceCastingActivity(activity:CommonPlayCastingActivity,elapsedSeconds:number,concentrating:boolean):CommonPlayCastingActivity {
+export function advanceCastingActivity(activity:CommonPlayCastingActivity,elapsedSeconds:number,concentrating:boolean,continuesCasting=true):CommonPlayCastingActivity {
   if(activity.status!=="active")return structuredClone(activity);
   if(!Number.isFinite(elapsedSeconds)||elapsedSeconds<0)throw new DomainEvaluationError("casting activity elapsed time must be non-negative and finite");
-  if(!concentrating)return {...activity,status:"interrupted"};
+  if(!concentrating||!continuesCasting)return {...activity,status:"interrupted"};
   const elapsed=Math.min(activity.requiredSeconds,activity.elapsedSeconds+elapsedSeconds);
   return {...activity,elapsedSeconds:elapsed,status:elapsed>=activity.requiredSeconds?"completed":"active"};
 }

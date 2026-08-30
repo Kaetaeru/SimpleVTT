@@ -126,6 +126,8 @@ export interface SpellMechanicDefinition {
   unsupportedInteractions?: string[];
   executionScope?: string;
   components?:SpellComponentRequirements;
+  castingDurationSeconds?:number;
+  ritual?:boolean;
 }
 
 export interface SpellCasterContext {
