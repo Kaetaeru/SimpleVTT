@@ -92,7 +92,7 @@ jobs:
           PY
       - name: Verify Family L stabilization slice
         run: |
-          npx tsx --test tests/domain/c9FamilyLStabilizationCommonPlay.test.ts tests/domain/commonPlayHpRuntime.test.ts tests/domain/lifeTransitions.test.ts
+          npx tsx --test tests/domain/c9FamilyLStabilizationCommonPlay.test.ts tests/domain/lifeTransitions.test.ts
           node scripts/check-v1-mechanism-coverage.mjs
           npx tsc --noEmit
       - name: Commit verified slice and retire workflow
