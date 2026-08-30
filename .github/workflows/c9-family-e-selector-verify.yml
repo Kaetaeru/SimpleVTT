@@ -84,12 +84,12 @@ jobs:
 
           adapter = Path("src/app/installedCommonPlayRuntimeAdapter.ts")
           text = adapter.read_text()
-          old = 'const portableEntry=entryPoint as {targeting?:{min?:number;max?:number;where?:{op:string;ref:string;value:string}};operations:Array<{kind:string;target?:string}>};'
-          new = 'const portableEntry=entryPoint as {targeting?:{min?:number;max?:number;where?:{op:string;ref:string;value:string};area?:unknown};operations:Array<{kind:string;target?:string}>};'
-          if old in text:
-              text = text.replace(old, new, 1)
+          targeting_type = 'targeting?:{min?:number;max?:number;where?:{op:string;ref:string;value:string}};'
+          targeting_type_with_area = 'targeting?:{min?:number;max?:number;where?:{op:string;ref:string;value:string};area?:unknown};'
+          if targeting_type in text:
+              text = text.replace(targeting_type, targeting_type_with_area, 1)
           else:
-              assert new in text
+              assert targeting_type_with_area in text
           guard = '    if(targeting.area!==undefined) return undefined;\n'
           anchor = '    if(targetIds.length<(targeting.min??1)||targetIds.length>(targeting.max??targetIds.length)) return undefined;\n'
           if guard not in text:
