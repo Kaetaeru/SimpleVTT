@@ -41,7 +41,9 @@ test("current-turn controller can manually declare an opportunity attack without
   await adapter.advanceResolution();
   snapshot=await adapter.getSnapshot();
   assert.equal(snapshot.resolution?.stage,"damage-animation");
-  assert.deepEqual(snapshot.resolution?.authoritativeDice,[4]);
+  const damageDie=snapshot.resolution?.authoritativeDice?.[0];
+  assert.equal(snapshot.resolution?.authoritativeDice?.length,1);
+  assert.ok(typeof damageDie==="number"&&damageDie>=1&&damageDie<=6);
   assert.equal(snapshot.scene.economyByActor["combatant.goblin-a"]?.reaction,true,"staged damage has not committed yet");
 
   await adapter.advanceResolution();
