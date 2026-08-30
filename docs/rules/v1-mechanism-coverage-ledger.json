@@ -863,14 +863,10 @@
       "persistenceEvidenceIfRelevant": [
         "c9FamilyJAttackPersistence.test.ts unknown installed attack damage persists to the Character library through restart and Undo restores the durable HP state"
       ],
-      "remainingNamedSeams": [
-        "generic weapon action projection is structurally source-owned and presentation-rename invariant; complete Unarmed Strike source composition remains incomplete for damage and grapple, while shove-to-Prone now executes from builtin Common Play",
-        "portable target saving throws, best-of STR/DEX control choice, conditional control effects, and escape normalize through Common Play; complete grapple source composition remains incomplete while shove-to-Prone source execution is migrated",
-        "other named attack/action projection remains migration debt; portable persistent attack-damage riders no longer require Rage-specific attack execution"
-      ],
+      "remainingNamedSeams": [],
       "connectedRelevant": true,
       "persistenceRelevant": true,
-      "remainingNamedSeamCount": 3
+      "remainingNamedSeamCount": 0
     },
     {
       "id": "weapon-mastery",
