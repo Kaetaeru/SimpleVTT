@@ -142,33 +142,37 @@ When work stops before Gate N is finished, update this document with:
 - the first unresolved blocker;
 - one `Next Exact Action` that another Codex run can execute without repeating completed work.
 
-## Current checkpoint — 2026-08-31, Family Z in progress
+## Current checkpoint — 2026-08-31, Family AD complete
 
-- Code HEAD before this handoff update: `5d2f4977ac195187f585cfdc8334d34f76c67429` (tree `60ff12d9300fab3c342c1f93ac8ec020bd8a6253`).
-- Branch: `agent/codex-c9-gate-n-finalization`, eleven commits ahead of remote `8dbc130f2e6f138b3d3ab758413373a60c50dd6e`.
-- Families N, X, and Y remain `IMPLEMENTED`; Family Z remains `INCOMPLETE` and its ledger row was not promoted.
-- Family Z completed coherent slices:
-  - `a4433344`: generate one normalized 339-definition spell execution catalog and make all four app runtime paths read it instead of calling `spellMechanicById`;
-  - `a281e4c2`: generate typed V/S/M requirements, including multiple/per-target costly consumption, use explicit focus/pouch/item facts in production, consume through the revisioned Common Play inventory transaction, and persist the new item semantics through Character source/session reconstruction;
-  - `5d2f4977`: normalize `castingDurationSeconds` and `ritual`, and make maintained casting interruption explicit in the generic activity primitive.
-- Current ledger: 36 total, 26 `IMPLEMENTED`, 10 `INCOMPLETE`; first incomplete remains Z.
-- Worktree was clean at `5d2f4977` before this handoff update.
+- Validated implementation HEAD before this handoff-only update: `d061e4a055820a561756289e99cc51c8173dfbb5` (tree `b8302ccf2869243fa1cf97deeef279051a6ff95f`).
+- Branch: `agent/codex-c9-gate-n-finalization`; the implementation HEAD was twenty commits ahead of the previously fetched remote.
+- Worktree was clean at `d061e4a0` before this handoff update.
+- Current ledger: 36 total, 30 `IMPLEMENTED`, 6 `INCOMPLETE`; first incomplete is Family AE.
+
+### Completed in this run
+
+- Family Z: generic maintained/ritual casting lifecycle, component/inventory authority, connected restart/Undo, and identity invariance; promoted by `77e7b5da`.
+- Family AA: portable progression choices, counts, replacement grants, durable RuleSource action projection, and identity invariance; source `f993cb20`, ledger `3916de33`.
+- Family AC: authoritative special timing windows, pool costs, initiative-count/after-turn execution, turn-start recovery, connected replay/reconnect/Undo; source `688b07f5`, ledger `4a9c5d00`.
+- Family AD: persisted controlled/independent mount and drawn-vehicle topology, atomic mount/dismount movement cost, fall-off save/Prone/unlink, capacity/crew/speed, actor/object action projection, connected replay/reconnect/Undo, and full external identity rename; `d061e4a0`.
 
 ### Validation completed
 
-- Normalized spell catalog/identity/component focused suite: PASS (6/6 at `5d2f4977`).
-- Generic component, spell kernel, production fresh-character, Character persistence/reconstruction focused suites: PASS.
-- `npm run build`: PASS after the component/inventory production slice; the subsequent `5d2f4977` data/primitive-only slice passed focused tests and `tsc --noEmit` but has not repeated the full build.
-- `node scripts/check-v1-mechanism-coverage.mjs`: PASS, 26 implemented / 10 incomplete.
-- `node scripts/check-legacy-execution-boundary.mjs`: PASS, 84 classified imports / 18 guarded named adapter paths / 0 unclear.
+- Family AA progression suite: PASS 303/303; focused installed projection suite: PASS 11/11.
+- Family AC focused production suite: PASS 3/3.
+- Family AD focused domain/production/connected suite: PASS 25/25; `tsc --noEmit`: PASS.
+- Repository-wide `npm run build`: PASS after all Family AD source changes.
+- `node scripts/check-v1-mechanism-coverage.mjs`: PASS, 30 implemented / 6 incomplete.
+- `node scripts/check-legacy-execution-boundary.mjs`: PASS, 85 classified imports / 18 guarded named adapter paths / 0 unclear.
+- `node scripts/check-v1-mechanism-coverage.mjs --gate-n`: expected FAIL only for AE, AF, AG, AH, AI, AJ.
 - `git diff --check`: PASS.
 
 ### First unresolved blocker
 
-Family Z long casts and Rituals are now normalized but production still resolves them immediately. The existing `CommonPlayCastingActivity` must be represented through authoritative Resolver effect/concentration/economy operations so interruption, completion, connected projection, persistence/restart, and Undo share one lifecycle. `componentsSatisfied` remains only in older compatibility adapters/tests; production `productionSpellRuntimeAdapter.ts` now uses typed component context.
+Family AE has identity-independent exposure/environment kernels but no durable production owner. `RulesRuntimeState` does not retain an exposure instance, authoritative elapsed-clock advancement is not joined to interval-triggered generic save/damage/Exhaustion operations, and recovery/reconnect/restart/Undo therefore have no state-change evidence. Do not promote AE from its current kernel tests.
 
 ### Next Exact Action
 
-Connect normalized `castingDurationSeconds` to `productionSpellRuntimeAdapter.ts` by representing the active casting process as a generic Resolver effect with concentration and action-economy authority. Repeated maintenance must advance generically, interruption must remove it, and final completion must atomically remove the process and execute the existing compiled spell operations. Add renamed-identity production plus Undo/restart evidence before changing the Family Z ledger.
+Complete Family AE by adding the smallest generic durable exposure state owner to the existing Resolver/runtime-state-change path. Compose authoritative elapsed-time advancement with threshold-only save/damage/effect operations and recovery in one revision-bound transaction; prove falling, suffocation, dehydration/malnutrition/extreme exposure, poison/trap, identity rename, connected replay/reconnect/Undo, and restart persistence. Run focused verification and `npm run build`, then promote AE only if all evidence is green.
 
-Push note: local GitHub push from this Codex host is blocked because no non-interactive GitHub credential is available; no self-publishing workflow was added.
+Gate N remains incomplete. Do not repeat Families Z, AA, AC, or AD.
