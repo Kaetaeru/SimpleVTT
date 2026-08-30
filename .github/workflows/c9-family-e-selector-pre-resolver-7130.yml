@@ -1,0 +1,54 @@
+name: C9 Family E Selector Pre-Resolver 7130
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-e-selector-pre-resolver-7130.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply-verify-retire:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Apply staged selector pre-resolver transform
+        run: python3 .github/scripts/c9-family-e-selector-pre-resolver-7130.py
+      - name: Verify selector and package boundaries
+        run: >-
+          npx tsx --test
+          tests/domain/commonPlaySelectorRuntime.test.ts
+          tests/domain/commonPlayTargetingRuntime.test.ts
+          tests/ui/installedCommonPlayProductionRuntime.test.ts
+          tests/ui/ruleModulePackageImport.test.ts
+      - name: Verify legacy boundary and types
+        run: |
+          node scripts/check-legacy-execution-boundary.mjs
+          npx tsc --noEmit
+      - name: Commit verified transform and retire staging artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/domain/commonPlayOperationRuntime.ts src/app/installedCommonPlayRuntimeAdapter.ts
+          if ! git diff --cached --quiet; then
+            git commit -m "feat(c9): route production targeting through shared selector"
+          fi
+          git fetch origin agent/c9-gate-n-coverage-reconciliation
+          git rebase origin/agent/c9-gate-n-coverage-reconciliation
+          git rm .github/scripts/c9-family-e-selector-pre-resolver-7130.py
+          git rm .github/workflows/c9-family-e-selector-pre-resolver-7130.yml
+          git commit -m "chore(c9): retire selector pre-resolver staging"
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
