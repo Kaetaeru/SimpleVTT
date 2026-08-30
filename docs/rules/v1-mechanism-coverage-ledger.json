@@ -522,7 +522,7 @@
         "conditions.ts",
         "sessionStatusEffectEventRuntimeAdapter.ts"
       ],
-      "currentState": "Generic status and creature-type awareness paths are production-proven. The standard sensing fact vocabulary now carries can-see, can-hear, detected, light, obscurement, and Hidden through provider/manual authority, and sense.can-see is verified through connected owner routing/reconnect without content identity dispatch. Full sensing-relation composition across senses, lighting, obscurement, Hidden, and reveal/search behavior remains incomplete.",
+      "currentState": "Generic status and creature-type awareness paths are production-proven. Common Play now defines a standard sensing fact vocabulary for can-see, can-hear, detected, light, obscurement, and hidden, with provider provenance plus connected owner-authority request/response routing that is independent of content identity. Family H remains incomplete because the rules-derived sensing provider that composes lighting, obscurement, senses, Hidden, Hide/Search, and reveal semantics is not yet authoritative end to end.",
       "requiredSemantics": [
         "normal sight",
         "lighting",
@@ -543,31 +543,36 @@
       "implementationEvidence": [
         "sessionStatusEffectEventRuntimeAdapter.ts",
         "effectGrantActionRuntimeAdapter.ts",
-        "commonPlaySpatialFactRuntime.ts COMMON_PLAY_STANDARD_FACTS defines typed sense.can-see/can-hear/detected/light/obscurement/hidden provider/manual authority"
+        "commonPlaySpatialFactRuntime.ts COMMON_PLAY_STANDARD_FACTS defines typed sense.can-see/can-hear/detected/light/obscurement/hidden provider/manual authority",
+        "commonPlaySpatialFactRuntime.ts COMMON_PLAY_STANDARD_FACTS defines generic sense.can-see/sense.can-hear/sense.detected/sense.light/sense.obscurement/sense.hidden facts with normalized provider or authority provenance"
       ],
       "productionEvidence": [
         "connectedProjectedCharacterCunningHideResolution.test.ts",
         "connectedProjectedCharacterCunningDisengageResolution.test.ts",
         "paladinDivineSenseActionRuntime.test.ts",
         "9296b5dfff05127b04b29d8b28b581785f71e896 test(c9): prove standard sensing fact authority",
-        "C9 Family H Standard Sensing Facts run 33310103344: standard sensing provider facts, connected owner-authority routing/reconnect, legacy boundary, and tsc --noEmit passed"
+        "C9 Family H Standard Sensing Facts run 33310103344: standard sensing provider facts, connected owner-authority routing/reconnect, legacy boundary, and tsc --noEmit passed",
+        "9296b5dfff05127b04b29d8b28b581785f71e896 test(c9): prove standard sensing fact authority; commonPlaySpatialFactRuntime.test.ts validates all standard sensing fact types through the shared fact runtime"
       ],
       "identityInvarianceEvidence": [
         "sessionStatusEffectEventRuntime.test.ts",
         "effectGrantActionRuntime.test.ts",
-        "commonPlaySpatialFactRuntime.test.ts standard sensing facts return identical semantics for unrelated external resolution identities"
+        "commonPlaySpatialFactRuntime.test.ts standard sensing facts return identical semantics for unrelated external resolution identities",
+        "commonPlaySpatialFactRuntime.test.ts resolves the same standard sensing semantics under unrelated external resolution identities without content-name or content-ID dispatch"
       ],
       "connectedEvidenceIfRelevant": [
         "connectedProjectedCharacterCunningHideResolution.test.ts",
         "connectedProjectedCharacterCunningDisengageResolution.test.ts",
         "paladinDivineSenseActionRuntime.test.ts",
-        "connectedCommonPlayAuthorityFactRouting.test.ts and connectedCommonPlayAuthorityFactDispatch.test.ts use standard sense.can-see through owner-private request, stale/duplicate rejection, reconnect/rebind resume, and Host normalization"
+        "connectedCommonPlayAuthorityFactRouting.test.ts and connectedCommonPlayAuthorityFactDispatch.test.ts use standard sense.can-see through owner-private request, stale/duplicate rejection, reconnect/rebind resume, and Host normalization",
+        "connectedCommonPlayAuthorityFactRouting.test.ts and connectedCommonPlayAuthorityFactDispatch.test.ts route sense.can-see through owner authority, privacy, idempotency, and stale-revision handling"
       ],
       "persistenceEvidenceIfRelevant": [],
       "remainingNamedSeams": [
         "Rogue action projection",
         "full sensing relation composition across sense types, lighting, obscurement, Invisible/Hidden, detection/search, and reveal remains incomplete",
-        "live sanctity facts"
+        "live sanctity facts",
+        "rules-derived sensing provider composition for lighting, obscurement, special senses, Hidden, Hide/Search, detection, and reveal/end-Hidden remains incomplete"
       ],
       "connectedRelevant": true,
       "persistenceRelevant": false
