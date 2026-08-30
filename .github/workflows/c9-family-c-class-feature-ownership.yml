@@ -24,6 +24,27 @@ jobs:
       - run: npm ci
       - run: node scripts/c9-migrate-class-feature-ownership.mjs
       - run: npm run generate:content
+      - name: Diagnose live SessionProjection ownership
+        run: |
+          cat > /tmp/c9-class-feature-diagnostic.ts <<'TS'
+          import "./src/app/offlineRuntimeAdapters.ts";
+          import { MockAdapter } from "./src/app/mockAdapter.ts";
+          import { buildCharacterSessionProjectionV1 } from "./src/app/characterSessionProjection.ts";
+          const adapter=new MockAdapter();
+          const internal=adapter as unknown as {activeCharacter:any;catalog:any[]};
+          const tactical=internal.catalog.filter((entry)=>entry.contentId==="fighter.tactical-mind"||entry.id.includes("fighter.tactical-mind"));
+          console.log("TACTICAL_CATALOG",JSON.stringify(tactical,null,2));
+          console.log("AELAR_SOURCE",JSON.stringify({className:internal.activeCharacter.className,classLevels:internal.activeCharacter.classLevels,subclassName:internal.activeCharacter.subclassName,subclassIds:internal.activeCharacter.subclassIds},null,2));
+          try {
+            const projection=buildCharacterSessionProjectionV1(internal.activeCharacter,internal.catalog);
+            console.log("PROJECTION_IDENTITIES",JSON.stringify(projection.contentIdentities,null,2));
+          } catch(error) {
+            console.log("PROJECTION_ERROR",error instanceof Error?error.stack:String(error));
+          }
+          TS
+          cp /tmp/c9-class-feature-diagnostic.ts ./c9-class-feature-diagnostic.ts
+          npx tsx ./c9-class-feature-diagnostic.ts
+          rm ./c9-class-feature-diagnostic.ts
       - name: Verify Tactical Mind and projection ownership
         run: npx tsx --test tests/ui/fighterTacticalMindFollowUpRuntime.test.ts tests/ui/openAbilityCheckDcRuntime.test.ts
       - run: npx tsc --noEmit
