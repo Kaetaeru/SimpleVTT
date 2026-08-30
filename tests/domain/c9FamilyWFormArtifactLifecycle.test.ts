@@ -50,7 +50,7 @@ test("portable form artifact owns controller changes and removal through Resolve
   assert.equal(removed.status,"committed");
   if(removed.status!=="committed") return;
   assert.equal(removed.state.artifacts?.some((artifact)=>artifact.id===form.id),false);
-  assert.equal(removed.events.some((event)=>event.stateChanges.some((change)=>change.kind==="artifact"&&change.change==="removed"&&change.entityId===form.id)),true);
+  assert.equal(removed.events.some((event)=>event.stateChanges.some((change)=>change.kind==="artifact"&&change.operation==="removed"&&change.artifactId===form.id)),true);
 });
 
 test("portable form artifact lifecycle is invariant under external identity rename",()=>{
