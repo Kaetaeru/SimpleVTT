@@ -1,0 +1,40 @@
+name: C9 Family C Reconstruction Fallback Removal
+
+on:
+  push:
+    paths:
+      - '.github/workflows/c9-family-c-reconstruction-fallback-removal.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: node scripts/c9-remove-reconstruction-d20-fallbacks.mjs
+      - name: Verify no reconstructed named d20 fallback remains
+        run: '! grep -n "runtimeD20FollowUps" src/app/characterSessionProjectionReconstruction.ts'
+      - name: Verify portable Dark Luck and Peerless local/connected paths
+        run: npx tsx --test tests/ui/warlockFiendDarkOnesOwnLuckRuntime.test.ts tests/ui/bardCollegeLorePeerlessSkillRuntime.test.ts tests/ui/connectedProjectedCharacterDarkOnesOwnLuckResolution.test.ts tests/ui/connectedProjectedCharacterPeerlessSkillResolution.test.ts tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts
+      - run: node scripts/check-v1-mechanism-coverage.mjs
+      - run: npx tsc --noEmit
+      - run: npx vite build
+      - name: Commit verified product cleanup
+        run: |
+          rm -f scripts/c9-remove-reconstruction-d20-fallbacks.mjs .github/workflows/c9-family-c-reconstruction-fallback-removal.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'refactor(common-play): remove reconstructed d20 named fallbacks'
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
