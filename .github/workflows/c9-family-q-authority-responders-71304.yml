@@ -41,13 +41,19 @@ jobs:
 
           path=Path('src/app/installedCommonPlayRuntimeAdapter.ts')
           text=path.read_text(encoding='utf-8')
+          import_anchor='import { MockAdapter } from "./mockAdapter";\n'
+          import_line='import { connectedStateFor } from "./connectedSessionState";\n'
+          if import_line not in text:
+              if text.count(import_anchor)!=1:
+                  raise SystemExit(f'connected state import anchor count={text.count(import_anchor)}')
+              text=text.replace(import_anchor,import_anchor+import_line,1)
           old='''  const actionName=prepared.projectedAction?.name||action.nameKo||action.nameEn;\n  const selectedTargetResponder=interaction.responder==="target"||interaction.responder==="target-owner";\n  const interactionResponder=selectedTargetResponder\n    ?prepared.selectedTargets.length===1?prepared.selectedTargets[0]:undefined\n    :prepared.actorEntity;\n  if(!interactionResponder) {\n    return failAction(prepared.internal,prepared.actor.id,actionId,actionName,targetIds,resolutionId,`${interaction.responder} interaction requires exactly one selected target`);\n  }\n'''
-          new='''  const actionName=prepared.projectedAction?.name||action.nameKo||action.nameEn;\n  const authorityResponder=interaction.responder==="dm"||interaction.responder==="host";\n  const authoritySnapshot=authorityResponder?await previousGetSnapshot.call(this):undefined;\n  if(interaction.responder==="dm"&&authoritySnapshot?.role!=="dm") {\n    return failAction(prepared.internal,prepared.actor.id,actionId,actionName,targetIds,resolutionId,"dm interaction requires local DM authority");\n  }\n  if(interaction.responder==="host"&&authoritySnapshot?.session.role!=="host") {\n    return failAction(prepared.internal,prepared.actor.id,actionId,actionName,targetIds,resolutionId,"host interaction requires connected Host authority");\n  }\n  const selectedTargetResponder=interaction.responder==="target"||interaction.responder==="target-owner";\n  const interactionResponder=authorityResponder\n    ?{id:`authority.${interaction.responder}`,name:interaction.responder==="dm"?"DM":"Host"}\n    :selectedTargetResponder\n      ?prepared.selectedTargets.length===1?prepared.selectedTargets[0]:undefined\n      :prepared.actorEntity;\n  if(!interactionResponder) {\n    return failAction(prepared.internal,prepared.actor.id,actionId,actionName,targetIds,resolutionId,`${interaction.responder} interaction requires exactly one selected target`);\n  }\n'''
+          new='''  const actionName=prepared.projectedAction?.name||action.nameKo||action.nameEn;\n  const authorityResponder=interaction.responder==="dm"||interaction.responder==="host";\n  const authoritySnapshot=authorityResponder?await previousGetSnapshot.call(this):undefined;\n  if(interaction.responder==="dm"&&authoritySnapshot?.role!=="dm") {\n    return failAction(prepared.internal,prepared.actor.id,actionId,actionName,targetIds,resolutionId,"dm interaction requires local DM authority");\n  }\n  if(interaction.responder==="host"&&connectedStateFor(this).mode!=="host") {\n    return failAction(prepared.internal,prepared.actor.id,actionId,actionName,targetIds,resolutionId,"host interaction requires connected Host authority");\n  }\n  const selectedTargetResponder=interaction.responder==="target"||interaction.responder==="target-owner";\n  const interactionResponder=authorityResponder\n    ?{id:`authority.${interaction.responder}`,name:interaction.responder==="dm"?"DM":"Host"}\n    :selectedTargetResponder\n      ?prepared.selectedTargets.length===1?prepared.selectedTargets[0]:undefined\n      :prepared.actorEntity;\n  if(!interactionResponder) {\n    return failAction(prepared.internal,prepared.actor.id,actionId,actionName,targetIds,resolutionId,`${interaction.responder} interaction requires exactly one selected target`);\n  }\n'''
           if text.count(old)!=1:
               raise SystemExit(f'interaction prompt anchor count={text.count(old)}')
           text=text.replace(old,new,1)
           old='''  if(!entryPoint?.interaction||entryPoint.interaction.id!==interrupt.id) return previousRespondToInterrupt.call(this,accept);\n  const projected=Object.values(internal.scene.actionsByActor).flat().find((candidate)=>candidate.id===resolution.actionId&&candidate.actorId===resolution.actorId);\n'''
-          new='''  if(!entryPoint?.interaction||entryPoint.interaction.id!==interrupt.id) return previousRespondToInterrupt.call(this,accept);\n  const authorityResponder=entryPoint.interaction.responder==="dm"||entryPoint.interaction.responder==="host";\n  const authoritySnapshot=authorityResponder?await previousGetSnapshot.call(this):undefined;\n  if(entryPoint.interaction.responder==="dm"&&authoritySnapshot?.role!=="dm") return finishInteraction(internal,resolution,"Common Play 상호작용 DM 권한 재검증 실패");\n  if(entryPoint.interaction.responder==="host"&&authoritySnapshot?.session.role!=="host") return finishInteraction(internal,resolution,"Common Play 상호작용 Host 권한 재검증 실패");\n  const projected=Object.values(internal.scene.actionsByActor).flat().find((candidate)=>candidate.id===resolution.actionId&&candidate.actorId===resolution.actorId);\n'''
+          new='''  if(!entryPoint?.interaction||entryPoint.interaction.id!==interrupt.id) return previousRespondToInterrupt.call(this,accept);\n  const authorityResponder=entryPoint.interaction.responder==="dm"||entryPoint.interaction.responder==="host";\n  const authoritySnapshot=authorityResponder?await previousGetSnapshot.call(this):undefined;\n  if(entryPoint.interaction.responder==="dm"&&authoritySnapshot?.role!=="dm") return finishInteraction(internal,resolution,"Common Play 상호작용 DM 권한 재검증 실패");\n  if(entryPoint.interaction.responder==="host"&&connectedStateFor(this).mode!=="host") return finishInteraction(internal,resolution,"Common Play 상호작용 Host 권한 재검증 실패");\n  const projected=Object.values(internal.scene.actionsByActor).flat().find((candidate)=>candidate.id===resolution.actionId&&candidate.actorId===resolution.actorId);\n'''
           if text.count(old)!=1:
               raise SystemExit(f'interaction response anchor count={text.count(old)}')
           path.write_text(text.replace(old,new,1),encoding='utf-8')
@@ -100,19 +106,18 @@ jobs:
             const adapter=new MockAdapter();
             await adapter.startProductionLocalPlay("dm");
             const actionId=await install(adapter,responder);
-            const internal=adapter as unknown as {activeCharacter:{id:string};scene:{economyByActor:Record<string,{reaction:boolean}>};session:{role:"offline"|"host"|"client"};role:"player"|"dm"};
+            const internal=adapter as unknown as {activeCharacter:{id:string};scene:{economyByActor:Record<string,{reaction:boolean}>};role:"player"|"dm"};
             const actorId=internal.activeCharacter.id;
             await adapter.startInitiative();await adapter.setCurrentActor(actorId);
-            internal.session.role="host";
             const sessionId=`session.authority.${responder}`;
             const state=connectedStateFor(adapter);state.mode="host";state.sessionId=sessionId;state.ledger=new HostSessionLedger(sessionId,connectedManifest(adapter));
             const actorManifest=structuredClone(connectedManifest(adapter));
             state.peerManifests.set("peer.actor",actorManifest);
-            return {adapter,actionId,internal,actorId,sessionId};
+            return {adapter,actionId,internal,actorId,sessionId,state};
           }
 
           for(const responder of ["dm","host"] as const) test(`${responder} responder remains local authority and remote Character peers cannot approve it`,async()=>{
-            const {adapter,actionId,internal,actorId,sessionId}=await connectedAuthorityHost(responder);
+            const {adapter,actionId,actorId,sessionId}=await connectedAuthorityHost(responder);
             const direct:Array<{peer:string;message:string}>=[],broadcasts:string[]=[];
             const oldSend=tauriSessionTransport.send,oldSendTo=tauriSessionTransport.sendTo;
             tauriSessionTransport.send=async(message)=>{broadcasts.push(message);return 1;};
@@ -145,12 +150,12 @@ jobs:
           });
 
           for(const responder of ["dm","host"] as const) test(`${responder} approval revalidates local authority before commit`,async()=>{
-            const {adapter,actionId,internal,actorId}=await connectedAuthorityHost(responder);
+            const {adapter,actionId,internal,actorId,state}=await connectedAuthorityHost(responder);
             let snapshot=await adapter.resolveAction(actionId,[actorId]);
             assert.equal(snapshot.resolution?.stage,"interrupt",JSON.stringify(snapshot.resolution));
             const tempHpBefore=snapshot.activeCharacter.tempHp;
             if(responder==="dm") internal.role="player";
-            else internal.session.role="client";
+            else state.mode="client";
             snapshot=await adapter.respondToInterrupt(true);
             assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
             assert.match(snapshot.resolution?.finalOutcome??"",/권한 재검증 실패/);
