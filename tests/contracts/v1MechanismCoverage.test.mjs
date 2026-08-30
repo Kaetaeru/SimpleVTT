@@ -11,7 +11,7 @@ test("V1 ledger contains every mandatory mechanism family exactly once",()=>{
   assert.equal(result.summary.total,REQUIRED_FAMILIES.length);
 });
 
-test("Gate N accepts the current final ledger and rejects incomplete evidence, named fallbacks, and missing families",()=>{
+test("Gate N accepts the current final ledger and rejects incomplete evidence, unresolved seams, named fallbacks, and missing families",()=>{
   const complete=checkV1MechanismCoverage(ledger,{gateN:true});
   assert.equal(complete.ok,true,complete.errors.join("\n"));
   assert.equal(complete.summary.incomplete,0);
@@ -23,6 +23,10 @@ test("Gate N accepts the current final ledger and rejects incomplete evidence, n
   const missingEvidence=structuredClone(ledger);
   missingEvidence.rows[0].implementationEvidence=[];
   assert.ok(checkV1MechanismCoverage(missingEvidence,{gateN:true}).errors.some((error)=>error.includes("implementationEvidence")));
+
+  const unresolvedSeam=structuredClone(ledger);
+  unresolvedSeam.rows[0].remainingNamedSeams=["supported mechanic still has an unresolved production seam"];
+  assert.ok(checkV1MechanismCoverage(unresolvedSeam,{gateN:true}).errors.some((error)=>error.includes("remainingNamedSeams")));
 
   const namedFallback=structuredClone(ledger);
   namedFallback.gateNBlockingNamedFallbacks=["unknown supported mechanic -> named adapter"];
