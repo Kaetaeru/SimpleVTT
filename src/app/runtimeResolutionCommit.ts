@@ -4,6 +4,7 @@ import type { ResolutionCommit } from "../domain/resolutionTypes";
 import { MockAdapter } from "./mockAdapter";
 import { applyResolutionEvents } from "./realEventApplyService";
 import { projectResolutionEventsToActivity } from "./realActivityProjectionService";
+import { recordCommittedResolutionEvents } from "./resolutionEventCommitRegistry";
 import { recordRuntimeResolutionEvents } from "./runtimeResolutionEventHistory";
 import { commitAdapterTurnRuntimeState } from "./turnRuntimeSessionRegistry";
 import { persistCharacterResolutionEvents } from "./resolutionCharacterWriteBackPort";
@@ -105,5 +106,7 @@ export async function commitProductionRuntimeResolution(
   internal.lastBefore=null;
   recordRuntimeResolutionEvents(adapter,presentation.resolutionId,committed.events);
   internal.syncChar();
-  return internal.getSnapshot();
+  const snapshot=await internal.getSnapshot();
+  recordCommittedResolutionEvents(presentation.resolutionId,committed.events);
+  return snapshot;
 }
