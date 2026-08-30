@@ -93,8 +93,9 @@ test("unknown installed automatic selector uses host authority and authored orde
     const actionId=await installAutomatic(adapter,identity);
     await adapter.startInitiative();
     await adapter.setCurrentActor("char.aelar");
-    await adapter.resolveAction(actionId,["char.aelar"]);
+    await adapter.resolveAction(actionId,[]);
     const snapshot=await adapter.getSnapshot();
+    assert.equal(snapshot.resolution?.actionId,actionId,"automatic selector must produce a fresh action resolution without a manual target identity");
     assert.equal(snapshot.resolution?.stage,"complete");
     assert.deepEqual(snapshot.resolution?.targetIds,["combatant.wolf"],"lowest-HP eligible enemy is selected by the shared orderBy kernel");
     return snapshot.resolution?.targetIds;
