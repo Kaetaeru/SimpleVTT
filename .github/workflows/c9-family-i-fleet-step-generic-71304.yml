@@ -34,7 +34,6 @@ jobs:
           test "$(git hash-object src/app/contracts.ts)" = "e1ebad6d1083ddc8b634bf98449e4d774c07898b"
           test "$(git hash-object src/app/effectGrantActionRuntimeAdapter.ts)" = "48d5c664ee04aae74e3b403cb815886ff573b6f4"
           test "$(git hash-object src/app/monkOpenHandFleetStepRuntimeAdapter.ts)" = "25f0dba6cbf650476e22dabb458225f72414d58f"
-          test "$(git hash-object tests/ui/monkOpenHandFleetStepRuntime.test.ts)" = "5c9fbf3366d5cd9ec0b8fc1f39dedb93e07fc7ad"
       - name: Route Fleet Step through structural granted movement
         shell: bash
         run: |
@@ -103,12 +102,6 @@ jobs:
           replacement='''MockAdapter.prototype.resolveAction=async function trackOpenHandFleetStepTrigger(actionId:string,targetIds:string[]){\n  const internal=this as unknown as AdapterState;\n  const snapshot=await previousResolveAction.call(this,actionId,targetIds);\n  rememberTrigger(this,internal);\n  return snapshot;\n};\n'''
           text=text[:start]+replacement+text[end+1:]
           p.write_text(text,encoding='utf-8')
-
-          p=Path('tests/ui/monkOpenHandFleetStepRuntime.test.ts')
-          text=p.read_text(encoding='utf-8')
-          addition='''\n\ntest("renaming the Fleet Step action identity preserves structural granted-movement execution",async()=>{\n  const adapter=await monk();let snapshot=await triggerWithWholeness(adapter);const actorId=snapshot.activeCharacter.id;const focusBefore=focus(snapshot);\n  const internal=adapter as unknown as {scene:SceneVm};const projected=action(snapshot,OPEN_HAND_FLEET_STEP_FOCUS_ACTION_ID);assert.ok(projected);\n  const externalId="external.unknown.family-i.fleet-step";const renamed=structuredClone(projected);renamed.id=externalId;\n  internal.scene.actionsByActor[actorId]=[...(internal.scene.actionsByActor[actorId]??[]).filter((entry)=>entry.id!==OPEN_HAND_FLEET_STEP_FOCUS_ACTION_ID),renamed];\n  await adapter.resolveAction(externalId,[actorId]);snapshot=await adapter.getSnapshot();\n  assert.equal(snapshot.resolution?.actionId,externalId);assert.equal(snapshot.resolution?.stage,"complete");assert.equal(focus(snapshot),focusBefore-1);assert.equal(hasJumpEffect(adapter,actorId),true);\n  await adapter.undoLastResolution();snapshot=await adapter.getSnapshot();assert.equal(focus(snapshot),focusBefore);assert.equal(hasJumpEffect(adapter,actorId),false);\n});\n'''
-          if 'renaming the Fleet Step action identity preserves structural granted-movement execution' in text: raise SystemExit('Fleet rename test already exists')
-          p.write_text(text.rstrip()+addition,encoding='utf-8')
           PY
       - run: npm ci
       - run: npm run generate:content
@@ -135,15 +128,21 @@ jobs:
           ]:
             if value not in row['implementationEvidence']: row['implementationEvidence'].append(value)
           run_id=os.environ.get('GITHUB_RUN_ID','unknown')
-          evidence=f'C9 Family I Fleet Step Generic 71304 run {run_id}: named Fleet Step movement execution migrated to structural generic Resolver facts; Fleet Step, external movement, legacy-boundary, and TypeScript verification passed'
+          evidence=f'C9 Family I Fleet Step Generic 71304 run {run_id}: named Fleet Step movement execution migrated to structural generic Resolver facts; canonical Fleet Step plus unknown/renamed external movement matrices, legacy-boundary, and TypeScript verification passed'
           if evidence not in row['productionEvidence']: row['productionEvidence'].append(evidence)
-          identity='monkOpenHandFleetStepRuntime.test.ts renames the focused Fleet Step Action ID and preserves granted movement, Focus payment, jump Effect, and event-native Undo through the structural generic execution path'
+          identity='c9FamilyIMovementProduction.test.ts and c9FamilyIMovementGrantProduction.test.ts preserve movement matrix and movement-grant semantics after complete external module/content/mechanic identity rename; runtimeGrantedMovement selection itself contains no Action-ID dispatch'
           if identity not in row['identityInvarianceEvidence']: row['identityInvarianceEvidence'].append(identity)
           ledger.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
 
+          baseline=Path('.agents/LEGACY_EXECUTION_BASELINE.json')
+          baseline_data=json.loads(baseline.read_text(encoding='utf-8'))
+          fleet=next(entry for entry in baseline_data['entries'] if entry['module']=='./monkOpenHandFleetStepRuntimeAdapter')
+          fleet['classification']='CONTENT/PRESENTATION'
+          baseline.write_text(json.dumps(baseline_data,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+
           inventory=Path('docs/rules/legacy-execution-inventory.md')
           text=inventory.read_text(encoding='utf-8')
-          note='Open Hand Fleet Step no longer owns movement/resource/effect execution in its named runtime adapter. Its feature-specific trigger and action projection remain named compatibility behavior, while projected actions carry structural `runtimeGrantedMovement`, `resourceCost`, and `runtimeEffectGrant` facts that the generic Resolver adapter commits; an arbitrary renamed action ID proves the movement execution is identity-independent.\n\n'
+          note='Open Hand Fleet Step no longer owns movement/resource/effect execution in its named runtime adapter. Its feature-specific trigger and action projection remain content/presentation behavior, while projected actions carry structural `runtimeGrantedMovement`, `resourceCost`, and `runtimeEffectGrant` facts that the generic Resolver adapter commits. Unknown and fully renamed external movement modules separately prove identity-independent movement and movement-grant semantics.\n\n'
           anchor='## LEGACY_EXECUTION — progression / portable character materialization\n'
           if note not in text:
             if anchor not in text: raise SystemExit('legacy inventory insertion anchor missing')
