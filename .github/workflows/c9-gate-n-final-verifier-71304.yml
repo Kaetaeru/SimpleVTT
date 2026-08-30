@@ -1,5 +1,5 @@
 name: C9 Gate N Final Verifier 71304
-# final verifier rerun on current zero-INCOMPLETE ledger head
+# final verifier rerun after targeted C9 convergence
 
 on:
   push:
