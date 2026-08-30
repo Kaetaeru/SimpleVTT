@@ -35,6 +35,7 @@ jobs:
           for attempt in 1 2 3; do
             git fetch origin "$branch"
             git reset --hard "origin/$branch"
+            npm run generate:content
 
             python3 - <<'PY'
           import json
