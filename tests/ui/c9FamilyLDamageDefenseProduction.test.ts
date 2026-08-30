@@ -1,11 +1,17 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import "../../src/app/offlineRuntimeAdapters";
+import "../../src/app/connectedSessionRuntimeAdapter";
+import "../../src/app/connectedActionRoutingAdapter";
+import { applyConnectedClientEvents, connectedManifest } from "../../src/app/connectedSessionRuntimeAdapter";
+import { connectedStateFor } from "../../src/app/connectedSessionState";
 import { catalogQualifiedId } from "../../src/app/contentCatalogIdentity";
 import { installedCommonPlayActionId } from "../../src/app/installedCommonPlayActionReference";
 import { setInstalledContentStoreForTests } from "../../src/app/installedContentRuntimeAdapter";
 import { MemoryInstalledContentStore } from "../../src/app/memoryInstalledContentStore";
 import { MockAdapter } from "../../src/app/mockAdapter";
+import { ClientSessionReplica, HostSessionLedger, type ConnectedSessionEvent } from "../../src/app/connectedSessionProtocol";
+import { tauriSessionTransport } from "../../src/app/tauriSessionTransport";
 import { turnRuntimeSessions } from "../../src/app/turnRuntimeSessionRegistry";
 import type { DamageDefenseKind } from "../../src/domain/damage";
 
@@ -99,12 +105,88 @@ async function executeInstantDeath(prefix:string) {
   return {current:after.hp.current,dead:after.dead,unconscious:after.unconscious};
 }
 
+async function prepareConnectedDamageAdapter(adapter:MockAdapter,pack:ReturnType<typeof packagePayload>) {
+  setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
+  const preview=await adapter.previewContentImport(pack.json);
+  assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
+  await adapter.activateContentImport();
+  await adapter.startInitiative();
+  await adapter.setCurrentActor(CHARACTER_TARGET_ID);
+}
+
+async function executeConnectedDefense(prefix:string,kind:"resistance"|"vulnerability") {
+  const sessionId=`session.${prefix}`;
+  const pack=packagePayload(prefix);
+  const host=new MockAdapter();
+  await prepareConnectedDamageAdapter(host,pack);
+  const hostRuntime=turnRuntimeSessions.get(host);
+  assert.ok(hostRuntime,"host turn runtime must exist after initiative starts");
+  hostRuntime.state.combatants[TARGET_ID].damageDefenses=[{source:`${prefix}.runtime-defense`,kind,damageType:"fire"}];
+  const before=hp(await host.getSnapshot(),TARGET_ID);
+  const expectedDamage=kind==="resistance"?2:8;
+
+  const action=installedCommonPlayActionId({
+    catalogId:catalogQualifiedId(pack.contentId,pack.moduleId,"1"),
+    mechanicId:pack.mechanicId,
+    entryPointId:"apply",
+  });
+  const hostState=connectedStateFor(host);
+  hostState.mode="host";
+  hostState.sessionId=sessionId;
+  hostState.ledger=new HostSessionLedger(sessionId,connectedManifest(host));
+
+  const originalSend=tauriSessionTransport.send;
+  const runHost=async(operation:()=>Promise<unknown>)=>{
+    const wires:string[]=[];
+    tauriSessionTransport.send=async(message)=>{wires.push(message);return 1;};
+    try { await operation(); } finally { tauriSessionTransport.send=originalSend; }
+    const batch=wires.map((wire)=>JSON.parse(wire)).find((wire)=>wire.type==="event-batch") as {events:ConnectedSessionEvent[]}|undefined;
+    assert.ok(batch,JSON.stringify(wires));
+    return batch!;
+  };
+
+  const client=new MockAdapter();
+  await prepareConnectedDamageAdapter(client,pack);
+  const clientState=connectedStateFor(client);
+  clientState.mode="client";
+  clientState.sessionId=sessionId;
+  clientState.replica=new ClientSessionReplica(sessionId);
+
+  const damageBatch=await runHost(()=>host.resolveAction(action,[TARGET_ID]));
+  assert.equal((await host.getSnapshot()).resolution?.stage,"complete");
+  assert.equal((await applyConnectedClientEvents(client,damageBatch.events)).status,"applied");
+  assert.equal(before-hp(await host.getSnapshot(),TARGET_ID),expectedDamage);
+  assert.equal(before-hp(await client.getSnapshot(),TARGET_ID),expectedDamage);
+
+  const reconnect=new MockAdapter();
+  await prepareConnectedDamageAdapter(reconnect,pack);
+  const reconnectState=connectedStateFor(reconnect);
+  reconnectState.mode="client";
+  reconnectState.sessionId=sessionId;
+  reconnectState.replica=new ClientSessionReplica(sessionId);
+  assert.equal((await applyConnectedClientEvents(reconnect,hostState.ledger!.eventsAfter(0))).status,"applied");
+  assert.equal(before-hp(await reconnect.getSnapshot(),TARGET_ID),expectedDamage);
+
+  const undoBatch=await runHost(()=>host.undoLastResolution());
+  assert.equal((await applyConnectedClientEvents(client,undoBatch.events)).status,"applied");
+  assert.equal((await applyConnectedClientEvents(reconnect,undoBatch.events)).status,"applied");
+  assert.equal(hp(await host.getSnapshot(),TARGET_ID),before);
+  assert.equal(hp(await client.getSnapshot(),TARGET_ID),before);
+  assert.equal(hp(await reconnect.getSnapshot(),TARGET_ID),before);
+  return expectedDamage;
+}
+
 test("unknown installed damage.apply honors generic target damage defenses with rename invariance and Undo",async()=>{
   const expected:Record<DamageDefenseKind,number>={resistance:2,vulnerability:8,immunity:0};
   for(const kind of ["resistance","vulnerability","immunity"] as const) {
     assert.equal(await execute(`external.family-l-${kind}`,kind),expected[kind]);
     assert.equal(await execute(`completely.renamed-family-l-${kind}`,kind),expected[kind]);
   }
+});
+
+test("unknown installed resistance and vulnerability converge through Host replay, reconnect, and Undo",async()=>{
+  assert.equal(await executeConnectedDefense("external.family-l-connected-resistance","resistance"),2);
+  assert.equal(await executeConnectedDefense("external.family-l-connected-vulnerability","vulnerability"),8);
 });
 
 test("unknown installed damage.apply honors schema-declared multiplier with profile rounding, rename invariance, and Undo",async()=>{
