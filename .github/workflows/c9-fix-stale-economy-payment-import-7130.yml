@@ -23,6 +23,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm run generate:content
       - name: Remove stale action-bucket rejection case
         shell: python
         run: |
