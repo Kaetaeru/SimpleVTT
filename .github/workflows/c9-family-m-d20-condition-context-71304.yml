@@ -1,0 +1,48 @@
+name: C9 Family M D20 Condition Context 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - ".github/workflows/c9-family-m-d20-condition-context-71304.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+      - name: Apply Family M patch
+        run: python .github/scripts/c9-family-m-d20-condition-context-71304.py
+      - run: npm ci
+      - run: npm run generate:content
+      - name: Verify Family M domain condition context
+        run: npx tsx --test tests/domain/c9FamilyMCommonPlayConditionRuntime.test.ts
+      - name: Verify Family M connected lifecycle
+        run: npx tsx --test tests/ui/c9FamilyMConditionConnectedAcceptance.test.ts
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - name: Commit verified patch and remove one-shot files
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/c9-family-m-d20-condition-context-71304.yml
+          git rm .github/scripts/c9-family-m-d20-condition-context-71304.py
+          git add src/domain/commonPlayOperationRuntime.ts tests/domain/c9FamilyMCommonPlayConditionRuntime.test.ts
+          git commit -m "feat(c9): propagate portable d20 condition context"
+          for attempt in 1 2 3; do
+            git pull --rebase origin agent/c9-gate-n-coverage-reconciliation && git push origin HEAD:agent/c9-gate-n-coverage-reconciliation && exit 0
+            sleep 2
+          done
+          exit 1
