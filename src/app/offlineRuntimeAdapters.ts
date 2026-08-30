@@ -62,7 +62,6 @@ import "./productionSpellRuntimeAdapter";
 import "./productionDiceRuntimeAdapter";
 import "./standardActionReactionAdapter";
 import "./installedCommonPlayRuntimeAdapter";
-import "./commonPlayFormProjectionAdapter";
 // Production Common Play commits retain semantic ResolutionEvents instead of snapshot Undo.
 // Install the shared inverse bridge after those commits so Undo reuses the same event stream.
 import "./runtimeResolutionUndoAdapter";
@@ -101,6 +100,9 @@ import "./commonPlayInterceptorProductionRuntimeAdapter";
 // reference Character summary, keeps the reference demo melee-playable, and projects
 // runtime spatial legality into targetable attack options without changing mechanics authority.
 import "./productionAcceptanceRuntimeAdapter";
+// Generic form artifacts are presentation overlays derived from authoritative artifact state.
+// Keep this projection outermost so later compatibility/reference projections cannot erase it.
+import "./commonPlayFormProjectionAdapter";
 import "./campaignRuntimeAdapter";
 import "./campaignPartyStashCapabilityRuntimeAdapter";
 import "./campaignRationConversionRuntimeAdapter";
