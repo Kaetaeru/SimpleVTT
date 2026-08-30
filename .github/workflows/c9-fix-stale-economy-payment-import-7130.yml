@@ -1,4 +1,5 @@
 name: C9 Fix Stale Economy Payment Import 7130
+# Reconcile authoring cases now explicitly supported by the portable interaction/economy parser.
 
 on:
   push:
@@ -24,16 +25,20 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run generate:content
-      - name: Remove stale action-bucket rejection case
+      - name: Remove stale supported-authoring rejection cases
         shell: python
         run: |
           from pathlib import Path
           path=Path('tests/ui/ruleModulePackageImport.test.ts')
           text=path.read_text(encoding='utf-8')
-          stale='    (mechanic)=>{mechanic.config.payments[0].bucket="action";},\n'
-          if text.count(stale)!=1:
-              raise SystemExit(f'expected one stale action-bucket mutation, found {text.count(stale)}')
-          text=text.replace(stale,'',1)
+          stale_cases=[
+            '    (mechanic)=>{mechanic.config.entryPoints[0].interaction.revalidate="if-revision-changed";},\n',
+            '    (mechanic)=>{mechanic.config.payments[0].bucket="action";},\n',
+          ]
+          for stale in stale_cases:
+              if text.count(stale)!=1:
+                  raise SystemExit(f'expected one stale supported mutation, found {text.count(stale)}: {stale.strip()}')
+              text=text.replace(stale,'',1)
           text=text.replace('rejects unsupported interaction and Reaction payment authoring before persistence','rejects unsupported interaction and economy payment authoring before persistence',1)
           path.write_text(text,encoding='utf-8')
       - name: Verify import and allocation acceptance regressions
@@ -54,6 +59,6 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git rm .github/workflows/c9-fix-stale-economy-payment-import-7130.yml
           git add tests/ui/ruleModulePackageImport.test.ts
-          git commit -m "test(c9): align economy payment import coverage"
+          git commit -m "test(c9): align supported interaction economy import coverage"
           git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
           git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
