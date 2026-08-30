@@ -68,7 +68,7 @@ jobs:
             }
             return projected;
           }
-'''
+          '''
           desired='\n'.join(line[10:] if line.startswith('          ') else line for line in desired.splitlines())
           if "...(actorState.baseProperties??{})" not in current:
               if "if(internal.activeCharacter.id!==actorId)" not in current:
@@ -176,7 +176,7 @@ jobs:
           set -euo pipefail
           rm .github/workflows/c9-family-a-finalize-7130.yml
           git config user.name "github-actions[bot]"
-          git config user.email "4189822+github-actions[bot]@users.noreply.github.com"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add src/app/installedCommonPlayRuntimeAdapter.ts tests/ui/c9FamilyANonActiveProfileProperties.test.ts docs/rules/v1-mechanism-coverage-ledger.json .github/workflows/c9-family-a-finalize-7130.yml
           git commit -m "feat(c9): project non-active actor profile inputs"
           git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
