@@ -485,7 +485,7 @@
         "commonPlaySpatialFactRuntime.test.ts",
         "Gate E provider/manual authority"
       ],
-      "currentState": "Family G uses authoritative provider/manual spatial facts rather than Core geometry fabrication, as required by the architecture charter. The standard fact registry covers distance, adjacency, reach, size category, occupied space, line-of-effect, Total Cover, area membership, legal destination, and placement; the typed selector contract carries line/cone/cube/sphere/cylinder/emanation shape, origin, dimensions, and range. Connected owner-authority spatial requests resume on reconnect, reject stale peers, and deduplicate retries. Family G remains incomplete only until durable adapter/process-restart persistence for in-flight spatial decisions is proven.",
+      "currentState": "Family G uses authoritative provider/manual spatial facts rather than Core geometry fabrication, as required by the architecture charter. The standard fact registry covers distance, adjacency, reach, size category, occupied space, line-of-effect, Total Cover, area membership, legal destination, and placement; typed selector areas carry line/cone/cube/sphere/cylinder/emanation shape, origin, dimensions, and range. Connected owner-authority requests survive reconnect and durable adapter/process restart, reattach their live continuation, reject stale peers, and suppress duplicate completion.",
       "requiredSemantics": [
         "distance",
         "adjacency",
@@ -504,13 +504,14 @@
         "position/placement"
       ],
       "transactionDomain": "Authoritative spatial provider or explicit manual authority",
-      "disposition": "INCOMPLETE",
+      "disposition": "IMPLEMENTED",
       "implementationEvidence": [
         "commonPlaySpatialFactRuntime.ts COMMON_PLAY_STANDARD_FACTS defines provider/manual authority for distance, adjacency, reach, size category, occupied space, line-of-effect, Total Cover, area membership, legal destination, and placement with normalized answers",
         "commonPlaySelectorRuntime.ts typed CommonPlayInstantArea supports line/cone/cube/sphere/cylinder/emanation with self/point origin and provider-owned authoritative area membership",
         "connectedCommonPlayAuthorityFactRuntime.ts routes authoritative Common Play fact requests and answers through the connected session authority path",
         "common-play-resolver-architecture-charter.md section 6 requires spatial facts, target sets, and movement legality through provider or manual authority without Core geometry fabrication",
-        "commonPlayInterceptorProductionRuntimeAdapter.ts derives standard spatial.adjacent from authoritative module/theater-of-mind distance without content identity dispatch"
+        "commonPlayInterceptorProductionRuntimeAdapter.ts derives standard spatial.adjacent from authoritative module/theater-of-mind distance without content identity dispatch",
+        "connectedCommonPlayAuthorityFactRuntime.ts persists Host pending/completed/closed and Client pending/answered authority-fact routing state by session/mode and rehydrates it across adapter restart"
       ],
       "productionEvidence": [
         "c9FamilyGStandardSpatialFacts.test.ts proves provider-authoritative distance, line-of-effect, Total Cover, and normalized area membership without content identity dispatch",
@@ -519,7 +520,8 @@
         "c9FamilyGConnectedSpatialFactRuntime.test.ts proves target-owner within-reach requests resume on owner reconnect, reject stale-peer responses, and resolve duplicate retries exactly once",
         "C9 Family G Spatial Reconnect run 33310541111: commonPlaySpatialFactRuntime, connected authority routing/dispatch, legacy execution boundary, V1 coverage checker, and tsc --noEmit passed; spatial.area-members replay after owner rebind normalized membership and duplicate delivery resolved exactly once",
         "c9FamilyGAdjacencyProduction.test.ts proves unknown and fully renamed installed RuleModules accept 5ft adjacency and reject 10ft separation through production Common Play",
-        "c9FamilyGSizeSpaceFacts.test.ts proves provider-authoritative size-category/space-feet values, external identity invariance, and explicit DM manual authority without Core geometry fabrication"
+        "c9FamilyGSizeSpaceFacts.test.ts proves provider-authoritative size-category/space-feet values, external identity invariance, and explicit DM manual authority without Core geometry fabrication",
+        "C9 Family G Authority Persistence 71304 run 33311317527: restart persistence, connected authority routing, legacy execution boundary, coverage checker, and tsc --noEmit all passed at 5a05cb9a68f167f6dbe3c10f358d7be4285066c8"
       ],
       "identityInvarianceEvidence": [
         "c9FamilyGStandardSpatialFacts.test.ts proves the same authoritative spatial facts under unrelated external resolution identities",
@@ -529,12 +531,13 @@
       "connectedEvidenceIfRelevant": [
         "connectedCommonPlayAuthorityFactRouting.test.ts and connectedCommonPlayAuthorityFactDispatch.test.ts passed in Family G run 33309874336",
         "c9FamilyGConnectedSpatialFactRuntime.test.ts proves target-owner standard spatial fact requests resume on owner peer reconnect, stale-peer responses reject, and duplicate retry responses are idempotent",
-        "connectedCommonPlayAuthorityFactRouting.test.ts proves spatial.area-members pending authority requests resend to a rebound owner peer, answered Client responses replay, Host target membership normalization is deterministic, and duplicate replay is idempotent"
+        "connectedCommonPlayAuthorityFactRouting.test.ts proves spatial.area-members pending authority requests resend to a rebound owner peer, answered Client responses replay, Host target membership normalization is deterministic, and duplicate replay is idempotent",
+        "c9FamilyGAuthorityFactPersistence.test.ts proves restored Host pending state reattaches and resends, restored Client pending state deduplicates, and completed history suppresses retransmission after another restart"
       ],
-      "persistenceEvidenceIfRelevant": [],
-      "remainingNamedSeams": [
-        "durable adapter/process-restart persistence for in-flight spatial decisions remains absent; connected reconnect/retry routing is already covered"
+      "persistenceEvidenceIfRelevant": [
+        "c9FamilyGAuthorityFactPersistence.test.ts proves in-flight spatial.area-members authority state survives fresh Host and Client adapter construction and retains exactly-once completion"
       ],
+      "remainingNamedSeams": [],
       "connectedRelevant": true,
       "persistenceRelevant": true
     },
