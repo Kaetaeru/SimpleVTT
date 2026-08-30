@@ -75,7 +75,8 @@ export function compileCommonPlayMovement(input:CompileCommonPlayMovementInput):
   }
   const authoredMultiplier=numeric(definition.costMultiplier,input.properties,"movement cost multiplier");
   const rulesMultiplier=nonNegativeProperty(input.properties,"movement.cost.multiplier");
-  const multiplier=authoredMultiplier??rulesMultiplier??1;
+  const dragCarryMultiplier=nonNegativeProperty(input.properties,"movement.drag-carry.multiplier")??1;
+  const multiplier=(authoredMultiplier??rulesMultiplier??1)*dragCarryMultiplier;
   const cost=Math.ceil(distanceFeet*multiplier);
   return {
     status:"compiled",
