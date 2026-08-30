@@ -26,6 +26,8 @@ jobs:
         run: git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
       - name: Install dependencies
         run: npm ci
+      - name: Generate content dependencies
+        run: npm run generate:content
       - name: Verify persisted Family AC authoring contract
         run: |
           node --import tsx --input-type=module <<'NODE'
