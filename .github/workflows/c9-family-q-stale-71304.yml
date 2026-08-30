@@ -7,6 +7,7 @@ on:
     paths:
       - "tests/ui/installedCommonPlayActorOwnerInteractionProduction.test.ts"
       - "tests/ui/c9FamilyQTargetOwnerInteractionProduction.test.ts"
+      - "tests/ui/c9FamilyQTargetOwnerStaleInteractionProduction.test.ts"
       - "src/app/installedCommonPlayRuntimeAdapter.ts"
       - "src/app/connectedActionRoutingAdapter.ts"
       - "docs/rules/v1-mechanism-coverage-ledger.json"
@@ -26,7 +27,7 @@ jobs:
       - name: Generate content dependencies
         run: npm run generate:content
       - name: Verify Family Q owner interaction stale handling
-        run: npx tsx --test tests/ui/installedCommonPlayActorOwnerInteractionProduction.test.ts tests/ui/c9FamilyQTargetOwnerInteractionProduction.test.ts
+        run: npx tsx --test tests/ui/installedCommonPlayActorOwnerInteractionProduction.test.ts tests/ui/c9FamilyQTargetOwnerInteractionProduction.test.ts tests/ui/c9FamilyQTargetOwnerStaleInteractionProduction.test.ts
       - name: Typecheck
         run: npx tsc --noEmit
       - name: Verify Gate N coverage ledger
