@@ -1,0 +1,94 @@
+name: C9 Family H Standard Sensing Ledger 7130
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-h-ledger-standard-facts-7130.yml
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile-family-h:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Generate content catalogs
+        run: npm run generate:content
+      - name: Reconcile verified Family H standard sensing evidence
+        shell: python
+        run: |
+          import json
+          from pathlib import Path
+
+          path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
+          ledger=json.loads(path.read_text(encoding='utf-8'))
+          rows=[row for row in ledger['rows'] if row.get('family')=='H' and row.get('id')=='senses-visibility-hiding']
+          if len(rows)!=1:
+            raise SystemExit(f'expected one Family H senses-visibility-hiding row, got {len(rows)}')
+          row=rows[0]
+          if row.get('disposition')!='INCOMPLETE':
+            raise SystemExit(f'Family H disposition changed unexpectedly: {row.get("disposition")}')
+
+          row['currentState']=(
+            'Generic status and creature-type awareness paths are production-proven. '
+            'Common Play now defines a standard sensing fact vocabulary for can-see, can-hear, detected, light, obscurement, and hidden, '
+            'with provider provenance plus connected owner-authority request/response routing that is independent of content identity. '
+            'Family H remains incomplete because the rules-derived sensing provider that composes lighting, obscurement, senses, Hidden, Hide/Search, and reveal semantics is not yet authoritative end to end.'
+          )
+
+          def add(field,value):
+            if value not in row[field]:
+              row[field].append(value)
+
+          add('implementationEvidence','commonPlaySpatialFactRuntime.ts COMMON_PLAY_STANDARD_FACTS defines generic sense.can-see/sense.can-hear/sense.detected/sense.light/sense.obscurement/sense.hidden facts with normalized provider or authority provenance')
+          add('productionEvidence','9296b5dfff05127b04b29d8b28b581785f71e896 test(c9): prove standard sensing fact authority; commonPlaySpatialFactRuntime.test.ts validates all standard sensing fact types through the shared fact runtime')
+          add('identityInvarianceEvidence','commonPlaySpatialFactRuntime.test.ts resolves the same standard sensing semantics under unrelated external resolution identities without content-name or content-ID dispatch')
+          add('connectedEvidenceIfRelevant','connectedCommonPlayAuthorityFactRouting.test.ts and connectedCommonPlayAuthorityFactDispatch.test.ts route sense.can-see through owner authority, privacy, idempotency, and stale-revision handling')
+
+          row['remainingNamedSeams']=[entry for entry in row['remainingNamedSeams'] if entry!='authoritative sensing relation']
+          replacement='rules-derived sensing provider composition for lighting, obscurement, special senses, Hidden, Hide/Search, detection, and reveal/end-Hidden remains incomplete'
+          if replacement not in row['remainingNamedSeams']:
+            row['remainingNamedSeams'].append(replacement)
+
+          path.write_text(json.dumps(ledger,indent=2,ensure_ascii=False)+'\n',encoding='utf-8')
+      - name: Verify Family H evidence slice
+        run: >-
+          npx tsx --test
+          tests/domain/commonPlaySpatialFactRuntime.test.ts
+          tests/ui/connectedCommonPlayAuthorityFactRouting.test.ts
+          tests/ui/connectedCommonPlayAuthorityFactDispatch.test.ts
+      - name: Verify ledger, legacy boundary, and types
+        run: |
+          node scripts/check-v1-mechanism-coverage.mjs
+          node scripts/check-legacy-execution-boundary.mjs
+          npx tsc --noEmit
+      - name: Commit verified Family H ledger reconciliation
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/c9-family-h-ledger-standard-facts-7130.yml
+          git add docs/rules/v1-mechanism-coverage-ledger.json
+          git diff --cached --check
+          git commit -m "docs(c9): reconcile Family H sensing authority evidence"
+          for attempt in $(seq 1 10); do
+            git fetch origin agent/c9-gate-n-coverage-reconciliation
+            if git rebase origin/agent/c9-gate-n-coverage-reconciliation && git push origin HEAD:agent/c9-gate-n-coverage-reconciliation; then
+              exit 0
+            fi
+            git rebase --abort || true
+            sleep 2
+          done
+          exit 1
