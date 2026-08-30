@@ -1,5 +1,5 @@
 name: C9 Family Q Choice R5 71304
-# rerun-trigger: 71304-q-choice-r5-type-shapes
+# rerun-trigger: 71304-q-choice-r5-domain-boundary
 
 on:
   push:
@@ -37,16 +37,11 @@ jobs:
 
           adapter_path=Path('src/app/installedCommonPlayRuntimeAdapter.ts')
           adapter=adapter_path.read_text(encoding='utf-8')
-          loose='interactionResponse?:{interactionId:string;accepted?:true;selectedIds?:string[]},'
-          exact='interactionResponse?:{interactionId:string;accepted:true}|{interactionId:string;selectedIds:string[]},'
-          if adapter.count(loose)!=2:
-              raise SystemExit(f'Q interaction response signature anchor changed: {adapter.count(loose)}')
-          adapter=adapter.replace(loose,exact)
-          loose_local='let interactionResponse:{interactionId:string;accepted?:true;selectedIds?:string[]};'
-          exact_local='let interactionResponse:{interactionId:string;accepted:true}|{interactionId:string;selectedIds:string[]};'
-          if adapter.count(loose_local)!=1:
-              raise SystemExit(f'Q interaction response local anchor changed: {adapter.count(loose_local)}')
-          adapter=adapter.replace(loose_local,exact_local,1)
+          loose_spread='...(interactionResponse?{interactionResponse}:{}),'
+          exact_spread='...(interactionResponse?{interactionResponse:interactionResponse.selectedIds!==undefined?{interactionId:interactionResponse.interactionId,selectedIds:[...interactionResponse.selectedIds]}:{interactionId:interactionResponse.interactionId,accepted:true as const}}:{}),'
+          if adapter.count(loose_spread)!=1:
+              raise SystemExit(f'Q interaction response boundary anchor changed: {adapter.count(loose_spread)}')
+          adapter=adapter.replace(loose_spread,exact_spread,1)
           min_check='choiceCandidates!.length<interaction.input.selector.min'
           min_check_fixed='choiceCandidates!.length<(interaction.input.selector.min??0)'
           if adapter.count(min_check)!=1:
