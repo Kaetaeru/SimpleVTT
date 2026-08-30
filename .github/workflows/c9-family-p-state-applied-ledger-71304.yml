@@ -23,6 +23,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Generate content
+        run: npm run generate:content
       - name: Prepare Family P reconciliation patch
         shell: bash
         run: |
