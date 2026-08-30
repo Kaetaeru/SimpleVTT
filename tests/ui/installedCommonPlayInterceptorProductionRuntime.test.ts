@@ -37,6 +37,7 @@ function packagePayload(
   interceptorKind:"d20"|"damage"="d20",
   operations:Array<Record<string,unknown>>=[{kind:"roll.modify",mode:"subtract-die",dice:"1d8"}],
   selection?:{families?:Array<"ability-check"|"saving-throw"|"attack-roll">;outcomes?:Array<"success"|"failure">},
+  eligibilityExpectations:{light?:"bright"|"dim"|"darkness";obscurement?:"none"|"light"|"heavy"}={},
 ){
   return JSON.stringify({
     schemaVersion:"0.1-draft",
@@ -74,8 +75,8 @@ function packagePayload(
               when:{op:"all",args:[
                 {op:"lte",left:{ref:"trigger-distance"},right:{value:60}},
                 {op:"eq",left:{ref:"source-sees-trigger"},right:{value:true}},
-                {op:"eq",left:{ref:"trigger-light"},right:{value:"dim"}},
-                {op:"eq",left:{ref:"trigger-obscurement"},right:{value:"none"}},
+                {op:"eq",left:{ref:"trigger-light"},right:{value:eligibilityExpectations.light??"dim"}},
+                {op:"eq",left:{ref:"trigger-obscurement"},right:{value:eligibilityExpectations.obscurement??"none"}},
                 {op:"eq",left:{ref:"trigger-detected"},right:{value:true}},
                 {op:"eq",left:{ref:"trigger-hidden"},right:{value:true}},
               ]},
@@ -113,11 +114,12 @@ async function prepare(
   interceptorKind:"d20"|"damage"="d20",
   operations:Array<Record<string,unknown>>=[{kind:"roll.modify",mode:"subtract-die",dice:"1d8"}],
   selection?:{families?:Array<"ability-check"|"saving-throw"|"attack-roll">;outcomes?:Array<"success"|"failure">},
+  eligibilityExpectations:{light?:"bright"|"dim"|"darkness";obscurement?:"none"|"light"|"heavy"}={},
 ){
   const adapter=new MockAdapter();
   setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
   await adapter.startProductionLocalPlay("dm");
-  const preview=await adapter.previewContentImport(packagePayload(identity,withEligibility,interceptorKind,operations,selection));
+  const preview=await adapter.previewContentImport(packagePayload(identity,withEligibility,interceptorKind,operations,selection,eligibilityExpectations));
   assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
   await adapter.activateContentImport();
   const internal=adapter as unknown as {activeCharacter:CharacterSheet;scene:SceneVm};
@@ -383,6 +385,25 @@ test("portable production interceptor uses authoritative spatial, visibility, an
   seedHiddenRuntimeEffect(unavailable,OTHER_CHARACTER_ID);
   snapshot=await openAbilityCheckInterrupt(unavailable);
   assert.notEqual(snapshot.resolution?.stage,"interrupt","Hidden must not fabricate missing spatial or visibility authority");
+});
+
+test("portable production normal sight composes authoritative lighting and obscurement",async()=>{
+  const operations=[{kind:"roll.modify",mode:"subtract-die",dice:"1d8"}];
+  const scenarios=[
+    {label:"darkness",light:"darkness" as const,obscurement:"none" as const},
+    {label:"heavy obscurement",light:"dim" as const,obscurement:"heavy" as const},
+  ];
+  for(const scenario of scenarios){
+    const adapter=await prepare(ORIGINAL,true,"d20",operations,undefined,{light:scenario.light,obscurement:scenario.obscurement});
+    const internal=adapter as unknown as {activeCharacter:CharacterSheet;scene:SceneVm};
+    setSpatialRelation(internal.scene,{
+      sourceId:internal.activeCharacter.id,targetId:OTHER_CHARACTER_ID,distanceFeet:30,visible:true,cover:"none",targetCanSeeAttacker:true,
+      light:scenario.light,obscurement:scenario.obscurement,detected:true,provenance:`module:test-${scenario.label}:spatial`,
+    });
+    seedHiddenRuntimeEffect(adapter,OTHER_CHARACTER_ID);
+    const snapshot=await openAbilityCheckInterrupt(adapter);
+    assert.notEqual(snapshot.resolution?.stage,"interrupt",`normal sight must reject ${scenario.label} even when raw line of sight is true`);
+  }
 });
 
 test("portable damage-roll interceptor reduces authoritative production damage and Undo restores HP, resource, and Reaction",async()=>{

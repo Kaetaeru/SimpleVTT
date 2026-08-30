@@ -583,7 +583,7 @@
         "conditions.ts",
         "sessionStatusEffectEventRuntimeAdapter.ts"
       ],
-      "currentState": "Generic status and creature-type awareness paths are production-proven. Common Play defines standard sensing facts for can-see, can-hear, detected, light, obscurement, and hidden with identity-independent provider provenance and connected owner-authority routing. Resolver-owned session Hidden effects now feed sense.hidden, unknown external Hide-style status actions commit Hidden as authoritative Effect StateChanges, and endsOnAttack reveal removes that Effect through the same event path with event-native Undo. Family H remains incomplete for rules-derived composition of lighting, obscurement, special senses, detection/Search, and discovery semantics.",
+      "currentState": "Generic status and creature-type awareness paths are production-proven. Common Play defines standard sensing facts for can-see, can-hear, detected, light, obscurement, and hidden with identity-independent provider provenance and connected owner-authority routing. Resolver-owned session Hidden effects feed sense.hidden, unknown external Hide-style status actions commit Hidden as authoritative Effect StateChanges, and endsOnAttack reveal removes that Effect through the same event path with event-native Undo. Provider-authored line-of-sight, lighting, and obscurement now compose through the shared normal-sight sensing kernel before production answers sense.can-see. Family H remains incomplete for special senses, Invisible interactions, detection/Search, and discovery semantics.",
       "requiredSemantics": [
         "normal sight",
         "lighting",
@@ -606,7 +606,8 @@
         "effectGrantActionRuntimeAdapter.ts",
         "commonPlaySpatialFactRuntime.ts COMMON_PLAY_STANDARD_FACTS defines typed sense.can-see/can-hear/detected/light/obscurement/hidden provider/manual authority",
         "commonPlaySpatialFactRuntime.ts COMMON_PLAY_STANDARD_FACTS defines generic sense.can-see/sense.can-hear/sense.detected/sense.light/sense.obscurement/sense.hidden facts with normalized provider or authority provenance",
-        "commonPlayInterceptorProductionRuntimeAdapter.ts answers standard sense.hidden from authoritative Resolver EffectState hidden tags before spatial fallback"
+        "commonPlayInterceptorProductionRuntimeAdapter.ts answers standard sense.hidden from authoritative Resolver EffectState hidden tags before spatial fallback",
+        "commonPlayInterceptorProductionRuntimeAdapter.ts composes provider-authored line-of-sight/light/obscurement through resolveCommonPlaySenses normal-sight before answering sense.can-see"
       ],
       "productionEvidence": [
         "connectedProjectedCharacterCunningHideResolution.test.ts",
@@ -616,7 +617,8 @@
         "C9 Family H Standard Sensing Facts run 33310103344: standard sensing provider facts, connected owner-authority routing/reconnect, legacy boundary, and tsc --noEmit passed",
         "9296b5dfff05127b04b29d8b28b581785f71e896 test(c9): prove standard sensing fact authority; commonPlaySpatialFactRuntime.test.ts validates all standard sensing fact types through the shared fact runtime",
         "installedCommonPlayInterceptorProductionRuntime.test.ts gates an unknown installed interceptor on authoritative spatial visibility plus Resolver-owned Hidden state, with external identity rename invariance and fail-closed missing facts",
-        "sessionStatusEffectEventRuntime.test.ts proves unknown external Hidden apply -> attack reveal remove-effect -> event-native Undo restore through authoritative Resolver events"
+        "sessionStatusEffectEventRuntime.test.ts proves unknown external Hidden apply -> attack reveal remove-effect -> event-native Undo restore through authoritative Resolver events",
+        "installedCommonPlayInterceptorProductionRuntime.test.ts proves raw visible=true is insufficient for normal sight in authoritative darkness or heavy obscurement while preserving external Common Play fact routing"
       ],
       "identityInvarianceEvidence": [
         "sessionStatusEffectEventRuntime.test.ts",
@@ -634,7 +636,7 @@
       "persistenceEvidenceIfRelevant": [],
       "remainingNamedSeams": [
         "live sanctity facts",
-        "rules-derived sensing composition for lighting, obscurement, special senses, Invisible interactions, detection/Search, and discovery remains incomplete"
+        "rules-derived special senses, Invisible interactions, detection/Search, and discovery semantics remain incomplete"
       ],
       "connectedRelevant": true,
       "persistenceRelevant": false
