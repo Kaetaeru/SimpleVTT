@@ -27,7 +27,7 @@
         "common-play-contract.schema.json: expression/predicate/property.modify",
         "dnd.srd-5.2.1.profile.json: properties/proficiency/rounding"
       ],
-      "currentState": "The persisted property.modify contract lowers arbitrary external modifiers to typed Effect state and generic Resolver events. Production Common Play now composes the active Character RulesProfile inputs with active Effect-owned modifiers, including non-movement defense.ac and derived property refs such as ability.str.modifier from a modified ability.str.score, without content-name or content-ID dispatch. Source-bound property modifiers converge through connected replay/reconnect/retry/Undo and also survive an independent offline fresh-adapter restart through the persisted turn runtime store; ending Initiative clears that local runtime state. Family A remains incomplete because non-active runtime actors still do not expose the same generic profile-property input surface, named progression/runtime stat materialization remains outside the generic property owner, and RulesProfile now owns the structural profile-policy stacking decision. Source-bound Effect property modifiers now survive a fresh independent offline adapter restart through scene-keyed turn runtime persistence; explicit initiative end clears that local session state, while connected authority remains ledger-owned.",
+      "currentState": "The persisted property.modify contract lowers arbitrary external modifiers to typed Effect state and generic Resolver events. Production Common Play now composes the active Character RulesProfile inputs with active Effect-owned modifiers, including non-movement defense.ac and derived property refs such as ability.str.modifier from a modified ability.str.score, without content-name or content-ID dispatch. Source-bound property modifiers converge through connected replay/reconnect/retry/Undo and also survive an independent offline fresh-adapter restart through the persisted turn runtime store; ending Initiative clears that local runtime state. Family A remains incomplete because named progression/runtime stat materialization remains outside the generic property owner; non-active runtime actors now expose structural baseProperties through the same effect-aware profile-property resolver, and RulesProfile owns the structural profile-policy stacking decision. Source-bound Effect property modifiers now survive a fresh independent offline adapter restart through scene-keyed turn runtime persistence; explicit initiative end clears that local session state, while connected authority remains ledger-owned.",
       "requiredSemantics": [
         "literals",
         "property refs",
@@ -56,7 +56,8 @@
         "profileEngine.ts RulesProfileLike propertyModifierPolicy.defaultInstancePolicy plus rules-profile.schema.json portable stack/replace/unique-by-source policy vocabulary",
         "resolutionEffectOps.ts resolves property.modify instancePolicy profile-policy from ResolutionExecutionContext.profile without content identity dispatch",
         "dnd.srd-5.2.1.profile.json declares unique-by-source as the D&D profile property-modifier stacking policy",
-        "propertyModifierProfilePolicyRuntime.test.ts proves profile-policy replacement by structural source while distinct sources continue to coexist"
+        "propertyModifierProfilePolicyRuntime.test.ts proves profile-policy replacement by structural source while distinct sources continue to coexist",
+        "CombatantRuntimeState.baseProperties plus installedCommonPlayRuntimeAdapter.ts commonPlayActorProfileProperties expose structural non-active runtime properties through resolveRuntimeProfileProperty without content identity dispatch"
       ],
       "productionEvidence": [
         "95f8b220a1aefc33374b033ef9ed325f53c86f97 feat(c9): lower property modifiers to typed effects",
@@ -71,7 +72,8 @@
         "installedCommonPlayPropertyModifierProduction.test.ts proves non-movement defense.ac projection and an Effect-modified ability.str.score feeding derived ability.str.modifier through unknown Common Play",
         "C9 Family A Profile Property 7130 run 33311275824: generic profile-property production coverage and tsc --noEmit pass",
         "759fcf04d6a449b646b4f6645688aa8ecccb6dd7 feat(c9): resolve property modifier profile policy",
-        "C9 Family A Profile Policy 71304 run 33311552359: profile-policy runtime, existing property instance-policy/production regressions, tsc --noEmit, and V1 coverage checker pass"
+        "C9 Family A Profile Policy 71304 run 33311552359: profile-policy runtime, existing property instance-policy/production regressions, tsc --noEmit, and V1 coverage checker pass",
+        "b8d81fd205db55fb7cb2f6362ae4e9840f5c9a82 feat(c9): project non-active profile properties; installedCommonPlayPropertyModifierProduction.test.ts proves stored unknown Common Play reads non-active defense.ac and spends that exact movement distance"
       ],
       "identityInvarianceEvidence": [
         "commonPlayPropertyContractRuntime.test.ts arbitrary external definition and renamed-definition structural equivalence",
@@ -89,7 +91,6 @@
         "turnRuntimeSessionRegistry.ts scene-keyed offline RuntimeState persistence plus installedCommonPlayPropertyModifierProduction.test.ts fresh independent adapter restart, production consumption, and explicit initiative-end cleanup"
       ],
       "remainingNamedSeams": [
-        "Common Play profile-property input projection is generic for the active Character, but non-active runtime actors still expose only movement.walk rather than the same RulesProfile property surface",
         "named progression/runtime stat materialization remains outside a generic property owner"
       ],
       "connectedRelevant": false,
