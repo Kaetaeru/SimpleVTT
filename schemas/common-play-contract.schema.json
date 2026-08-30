@@ -1672,7 +1672,8 @@
             "teleport",
             "push",
             "pull",
-            "move"
+            "move",
+            "granted"
           ]
         },
         "movementType": {

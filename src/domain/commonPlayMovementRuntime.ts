@@ -2,7 +2,7 @@ import type { CommonPlayFactAnswer, CommonPlayFactQuery } from "./commonPlaySpat
 import type { ResolutionOperation } from "./resolutionTypes";
 import { evaluateExpression, type ExpressionNode } from "./profileEngine";
 
-type CommonPlayMovementMode="teleport"|"push"|"pull"|"move";
+type CommonPlayMovementMode="teleport"|"push"|"pull"|"move"|"granted";
 type CommonPlayMovementType="walk"|"climb"|"swim"|"fly"|"crawl"|"jump";
 
 export interface CommonPlayMovementDefinition {
@@ -64,7 +64,7 @@ export function compileCommonPlayMovement(input:CompileCommonPlayMovementInput):
     status:"compiled",destination:answer.value,
     operation:{
       id:input.id,kind:"free-move",actorId:definition.target,distanceFeet,maximumDistanceFeet:distanceFeet,
-      movementMode:definition.mode,destinationRef:answer.value,
+      ...(definition.mode==="granted"?{}:{movementMode:definition.mode}),destinationRef:answer.value,
       doesNotProvokeOpportunityAttacks:definition.mode==="teleport"||definition.doesNotProvokeOpportunityAttacks===true,
     },
   };

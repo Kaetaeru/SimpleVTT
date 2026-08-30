@@ -531,7 +531,7 @@ function parseOperation(value:unknown,label:string):CommonPlayOperation {
   }
   if(operation.kind==="movement.relocate") {
     supportedKeys(operation,MOVEMENT_RELOCATE_KEYS,label);
-    if(operation.mode!=="move"&&operation.mode!=="push"&&operation.mode!=="pull"&&operation.mode!=="teleport") throw new DomainEvaluationError(`${label}.mode is unsupported`);
+    if(operation.mode!=="move"&&operation.mode!=="push"&&operation.mode!=="pull"&&operation.mode!=="teleport"&&operation.mode!=="granted") throw new DomainEvaluationError(`${label}.mode is unsupported`);
     if(operation.movementType!==undefined&&!(["walk","climb","swim","fly","crawl","jump"] as unknown[]).includes(operation.movementType)) throw new DomainEvaluationError(`${label}.movementType is unsupported`);
     if(operation.target!=="actor"&&operation.target!=="self") throw new DomainEvaluationError(`${label}.target must be actor or self`);
     if(operation.doesNotProvokeOpportunityAttacks!==undefined&&typeof operation.doesNotProvokeOpportunityAttacks!=="boolean") throw new DomainEvaluationError(`${label}.doesNotProvokeOpportunityAttacks must be boolean`);
