@@ -1,0 +1,47 @@
+name: C9 Family AC Initiative Count Source 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-ac-initiative-count-source-71304.yml
+      - src/app/turnRuntimeInitiativeCountService.ts
+      - tests/domain/c9FamilyACInitiativeCountSource.test.ts
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Verify authoritative initiative-count source
+        run: |
+          node --import tsx --test tests/domain/c9FamilyACInitiativeCountSource.test.ts
+          node scripts/check-legacy-execution-boundary.mjs
+          npm exec tsc -- --noEmit
+      - name: Retire verifier
+        if: success()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          git rm .github/workflows/c9-family-ac-initiative-count-source-71304.yml
+          git commit -m "chore(c9): retire initiative count verifier"
+          for attempt in 1 2 3 4 5; do
+            if git push origin HEAD:agent/c9-gate-n-coverage-reconciliation; then exit 0; fi
+            git fetch origin agent/c9-gate-n-coverage-reconciliation
+            git rebase origin/agent/c9-gate-n-coverage-reconciliation || exit 1
+            sleep 1
+          done
+          exit 1
