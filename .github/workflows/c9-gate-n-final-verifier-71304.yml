@@ -1,5 +1,5 @@
 name: C9 Gate N Final Verifier 71304
-# final verifier rerun after Family L and zero-INCOMPLETE convergence
+# final verifier rerun from exact zero-INCOMPLETE converged head
 
 on:
   push:
