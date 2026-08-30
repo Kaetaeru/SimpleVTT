@@ -1,0 +1,63 @@
+name: C9 Family L Object Cross Evidence 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-l-object-cross-evidence-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Verify existing portable object damage production proof
+        run: npx tsx --test tests/ui/connectedObjectLinkArtifactLifecycleProduction.test.ts
+      - name: Connect verified object damage evidence to Family L and retire this workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          BRANCH=agent/c9-gate-n-coverage-reconciliation
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in 1 2 3; do
+            git fetch origin "$BRANCH"
+            git reset --hard "origin/$BRANCH"
+            node <<'NODE'
+          const fs=require('node:fs');
+          const path='docs/rules/v1-mechanism-coverage-ledger.json';
+          const ledger=JSON.parse(fs.readFileSync(path,'utf8'));
+          const row=ledger.rows.find((entry)=>entry.family==='L'&&entry.id==='damage-life');
+          if(!row) throw new Error('Family L damage-life row not found');
+          const production='connectedObjectLinkArtifactLifecycleProduction.test.ts proves unknown external object damage threshold/resistance, damage, repair, destruction, Host/Client replay, fresh reconnect, duplicate handling, and event-native Undo through the generic artifact Resolver path';
+          const identity='connectedObjectLinkArtifactLifecycleProduction.test.ts repeats object damage/repair/destruction semantics after complete external module/content/mechanic identity rename';
+          if(!row.productionEvidence.includes(production)) row.productionEvidence.push(production);
+          if(!row.identityInvarianceEvidence.includes(identity)) row.identityInvarianceEvidence.push(identity);
+          row.currentState=row.currentState.replace(
+            'Remaining Family L acceptance is max-HP source-model/write-back semantics, Object/Vehicle damage production coverage, and named feature/spell HP migration debt where it bypasses portable Common Play.',
+            'Portable Object damage/repair/destruction is additionally production-proven through the generic RuntimeArtifact Resolver path with connected replay/reconnect/Undo and external identity invariance. Remaining Family L acceptance is max-HP source-model/write-back semantics, Vehicle damage production coverage, and named feature/spell HP migration debt where it bypasses portable Common Play.'
+          );
+          row.remainingNamedSeams=row.remainingNamedSeams.map((entry)=>entry==='Object/Vehicle damage production acceptance remains incomplete'?'Vehicle damage production acceptance remains incomplete':entry);
+          fs.writeFileSync(path,JSON.stringify(ledger,null,2)+'\n');
+          NODE
+            git rm .github/workflows/c9-family-l-object-cross-evidence-71304.yml
+            git add docs/rules/v1-mechanism-coverage-ledger.json
+            git commit -m "docs(c9): connect portable object damage evidence"
+            if git push origin "HEAD:$BRANCH"; then
+              exit 0
+            fi
+          done
+          echo "Failed to publish Family L object evidence after branch races" >&2
+          exit 1
