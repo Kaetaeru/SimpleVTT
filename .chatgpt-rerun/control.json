@@ -1,9 +1,0 @@
-{
-  "version": 1,
-  "run_id": "b7f27a61-29d8-4ba2-9f93-8e66722d5f41",
-  "sequence": 11,
-  "status": "continue",
-  "reason": "C9 remains active at IMPLEMENTED=5, INCOMPLETE=31, PROVEN_UNNEEDED=0. Family C d20-test-lifecycle is final IMPLEMENTED: Tactical Mind and Indomitable are portable Common Play, reconstructed Dark Luck/Peerless fallbacks are removed, and the legacy ActionVm.runtimeD20FollowUps side engine is deleted after focused portable/connected regressions, TypeScript, and Vite passed. Next exact action is Family D payment-resource source-owned pool/recovery/durable write-back using repository-native resource and Character ownership.",
-  "task_id": "v1-common-play-c8-rerun",
-  "updated_at": "2026-08-30"
-}
