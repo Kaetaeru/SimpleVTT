@@ -98,13 +98,6 @@ jobs:
               raise SystemExit("capacity persistence test already exists")
           test_text += '''\n\ntest("temporary resource capacity overlay persists without mutating source maximum and reverses through Undo projection",async()=>{\n  const adapter=new MockAdapter();\n  const snapshot=await adapter.getSnapshot();\n  const sheet=structuredClone(snapshot.activeCharacter);\n  const resource=sheet.resources.find((entry)=>entry.id===FIGHTER_SECOND_WIND_RESOURCE_ID);\n  assert.ok(resource);\n  const baseMaximum=resource.max;\n  const event={\n    id:"family-d-capacity-persistence:event",\n    resolutionId:"family-d-capacity-persistence",\n    operationId:"family-d-capacity-persistence:resource",\n    kind:"resource-capacity-probe",\n    actorId:sheet.id,\n    targetId:sheet.id,\n    summary:"temporary capacity probe",\n    provenance:[],\n    stateChanges:[{\n      kind:"resource",\n      targetId:sheet.id,\n      resourceId:resource.id,\n      before:resource.current,\n      after:resource.current,\n      capacity:{\n        before:{maximum:baseMaximum,maximumAfterLongRest:null},\n        after:{maximum:baseMaximum+1,maximumAfterLongRest:baseMaximum},\n      },\n      provenance:[],\n      lifetime:"character-durable",\n      writeBack:"character",\n    }],\n    result:{},\n  } satisfies ResolutionEvent;\n\n  const forward=projectResolutionCharacterWriteBack(sheet,[event],"forward");\n  assert.equal(forward.status,"committed",forward.status==="rejected"?forward.error:undefined);\n  if (forward.status!=="committed") return;\n  const expanded=forward.sheet.resources.find((entry)=>entry.id===resource.id);\n  assert.equal(expanded?.max,baseMaximum+1);\n  assert.equal(expanded?.sourceMaximum,baseMaximum);\n  assert.equal(expanded?.maximumAfterLongRest,baseMaximum);\n\n  const record=buildCharacterLibraryRecordV1(forward.sheet);\n  assert.equal(record.source.resourceDefinitions?.find((entry)=>entry.id===resource.id)?.max,baseMaximum);\n  const durable=record.runtime.resources.find((entry)=>entry.id===resource.id);\n  assert.equal(durable?.maximum,baseMaximum+1);\n  assert.equal(durable?.maximumAfterLongRest,baseMaximum);\n\n  const restarted=materializeCharacterRecordV1(record);\n  const restoredResource=restarted.resources.find((entry)=>entry.id===resource.id);\n  assert.equal(restoredResource?.max,baseMaximum+1);\n  assert.equal(restoredResource?.sourceMaximum,baseMaximum);\n  assert.equal(restoredResource?.maximumAfterLongRest,baseMaximum);\n\n  const inverse=projectResolutionCharacterWriteBack(restarted,[event],"inverse");\n  assert.equal(inverse.status,"committed",inverse.status==="rejected"?inverse.error:undefined);\n  if (inverse.status!=="committed") return;\n  const normalized=inverse.sheet.resources.find((entry)=>entry.id===resource.id);\n  assert.equal(normalized?.max,baseMaximum);\n  assert.equal(normalized?.sourceMaximum,baseMaximum);\n  assert.equal(normalized?.maximumAfterLongRest,undefined);\n\n  const undoneRecord=buildCharacterLibraryRecordV1(inverse.sheet,record);\n  assert.equal(undoneRecord.sourceRevision,record.sourceRevision);\n  assert.equal(undoneRecord.source.resourceDefinitions?.find((entry)=>entry.id===resource.id)?.max,baseMaximum);\n  const undoneRuntime=undoneRecord.runtime.resources.find((entry)=>entry.id===resource.id);\n  assert.equal(undoneRuntime?.maximum,undefined);\n  assert.equal(undoneRuntime?.maximumAfterLongRest,undefined);\n});\n'''
           test_path.write_text(test_text)
-
-          exact(
-              ".github/workflows/m1-common-play-resource-economy.yml",
-              '      - "src/app/resolutionCharacterDurableProjection.ts"\n',
-              '      - "src/app/resolutionCharacterDurableProjection.ts"\n      - "src/app/characterLibraryPersistence.ts"\n      - "src/app/persistenceContracts.ts"\n      - "src/app/progressionContracts.ts"\n',
-              count=2,
-          )
           PY
       - name: Install dependencies
         run: npm install --no-audit --no-fund
@@ -114,12 +107,11 @@ jobs:
         run: npx tsx --test tests/domain/resourceRecoveryLockout.test.ts tests/ui/phase09CommonPlayResourcePersistence.test.ts
       - name: Typecheck
         run: npx tsc --noEmit
-      - name: Commit verified patch and remove patch workflow
+      - name: Commit verified source patch
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git rm .github/workflows/c9-resource-capacity-persistence-bot.yml
-          git add src/app/progressionContracts.ts src/app/characterLibraryPersistence.ts src/app/resolutionCharacterDurableProjection.ts tests/ui/phase09CommonPlayResourcePersistence.test.ts .github/workflows/m1-common-play-resource-economy.yml
+          git add src/app/progressionContracts.ts src/app/characterLibraryPersistence.ts src/app/resolutionCharacterDurableProjection.ts tests/ui/phase09CommonPlayResourcePersistence.test.ts
           git commit -m "feat(c9): persist temporary resource capacity"
           git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
