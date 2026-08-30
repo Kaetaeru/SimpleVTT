@@ -1,0 +1,49 @@
+name: C9 Family J Target AC Integration 71304
+
+on:
+  push:
+    branches: [agent/c9-j-target-ac-71304-r1]
+    paths: [.github/workflows/c9-j-target-ac-integrate-71304.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Cherry-pick verified slice onto live target, reverify, and push without force
+        shell: bash
+        run: |
+          set -euo pipefail
+          target=agent/c9-gate-n-coverage-reconciliation
+          patch=aaf87dff70e97ea2399f5cf769fd860134358e2e
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in $(seq 1 5); do
+            git fetch origin "$target"
+            git checkout -B c9-j-target-ac-integrate "origin/$target"
+            if ! git cherry-pick "$patch"; then
+              git cherry-pick --abort || true
+              exit 1
+            fi
+            npm run generate:content
+            node --import tsx --test tests/domain/c9FamilyJTargetDcExpression71304.test.ts
+            node --import tsx --test tests/ui/c9FamilyJTargetAcExpressionProduction71304.test.ts tests/ui/c9FamilyJRangeCoverProduction.test.ts tests/ui/c9FamilyJExtraAttackProduction71304.test.ts tests/ui/unarmedStrikeRuntime.test.ts
+            node scripts/check-legacy-execution-boundary.mjs
+            node scripts/check-v1-mechanism-coverage.mjs
+            npm exec tsc -- --noEmit
+            if git push origin HEAD:"$target"; then
+              exit 0
+            fi
+          done
+          exit 1
