@@ -1,0 +1,88 @@
+name: C9 Family E Area Import 7130 V2
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-e-area-import-7130-v2.yml
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Stage portable area selector import
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          runtime = Path("src/domain/commonPlayOperationRuntime.ts")
+          text = runtime.read_text()
+          text = text.replace(
+              'export interface CommonPlayTargetingSelector extends Omit<CommonPlaySelector,"from"|"min"|"max"|"orderBy"|"area"> {',
+              'export interface CommonPlayTargetingSelector extends Omit<CommonPlaySelector,"from"|"min"|"max"|"orderBy"> {',
+              1,
+          )
+          text = text.replace(
+              'const TARGETING_KEYS=new Set(["from","where","min","max"]);',
+              'const TARGETING_KEYS=new Set(["from","where","min","max","area"]);',
+              1,
+          )
+          text = text.replace(
+              'return {from:"targets",min:parsed.min,max:parsed.max,...(parsed.where===undefined?{}:{where:parsed.where})};',
+              'return {from:"targets",min:parsed.min,max:parsed.max,...(parsed.where===undefined?{}:{where:parsed.where}),...(parsed.area===undefined?{}:{area:parsed.area})};',
+              1,
+          )
+          assert '"orderBy"|"area"' not in text.split('export interface CommonPlayTargetingSelector',1)[1].split('}',1)[0]
+          assert 'const TARGETING_KEYS=new Set(["from","where","min","max","area"]);' in text
+          assert '...(parsed.area===undefined?{}:{area:parsed.area})' in text
+          runtime.write_text(text)
+
+          ui = Path("tests/ui/commonPlayRichSelectorProduction.test.ts")
+          text = ui.read_text()
+          old = '  assert.notEqual((await adapter.getSnapshot()).resolution?.actionId,actionId,"relation predicate must reject self before Resolver execution");'
+          new = '  const rejected=(await adapter.getSnapshot()).resolution;\n  assert.equal(rejected?.actionId,actionId);\n  assert.equal(rejected?.finalOutcome,"적용 거부","relation predicate must reject self before production commit");'
+          if old in text:
+              text = text.replace(old,new,1)
+          else:
+              assert new in text
+          old = '  assert.notEqual((await adapter.getSnapshot()).resolution?.actionId,actionId,"mapless production must not fabricate area membership");'
+          new = '  const rejected=(await adapter.getSnapshot()).resolution;\n  assert.equal(rejected?.actionId,actionId);\n  assert.equal(rejected?.finalOutcome,"적용 거부","mapless production must not fabricate area membership");'
+          if old in text:
+              text = text.replace(old,new,1)
+          else:
+              assert new in text
+          ui.write_text(text)
+          PY
+      - run: npm run generate:content
+      - name: Verify Family E selector slice
+        run: node --import tsx --test tests/domain/commonPlaySelectorRuntime.test.ts tests/domain/commonPlayTargetingRuntime.test.ts tests/domain/commonPlayMaplessTargeting.test.ts tests/ui/commonPlayRichSelectorProduction.test.ts tests/ui/installedCommonPlayProductionRuntime.test.ts
+      - name: Verify legacy execution boundary
+        run: node scripts/check-legacy-execution-boundary.mjs
+      - name: Typecheck
+        run: npm exec tsc -- --noEmit
+      - name: Commit verified Family E slice
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/c9-family-e-area-import-7130-v2.yml
+          git rm -f .github/workflows/c9-family-e-area-selector-7130.yml || true
+          git add src/domain/commonPlayOperationRuntime.ts tests/ui/commonPlayRichSelectorProduction.test.ts
+          git commit -m "feat(c9): accept portable area selectors fail-closed"
+          git fetch origin agent/c9-gate-n-coverage-reconciliation
+          git rebase origin/agent/c9-gate-n-coverage-reconciliation
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
