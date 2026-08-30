@@ -1,0 +1,90 @@
+name: C9 Family Q Persistence Ledger 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-q-persistence-ledger-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  verify-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Add direct Q persistence proof and reconcile ledger
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json
+
+          test=Path('tests/ui/c9FamilyQChoiceInteractionProduction.test.ts')
+          text=test.read_text(encoding='utf-8')
+          text=text.replace(
+            'import { connectedManifest } from "../../src/app/connectedSessionRuntimeAdapter";',
+            'import { applyConnectedClientEvents, connectedManifest } from "../../src/app/connectedSessionRuntimeAdapter";'
+          )
+          text=text.replace(
+            'import { HostSessionLedger } from "../../src/app/connectedSessionProtocol";',
+            'import { ClientSessionReplica, HostSessionLedger } from "../../src/app/connectedSessionProtocol";'
+          )
+          anchor='''    assert.ok(broadcasts.map((wire)=>JSON.parse(wire)).some((wire)=>wire.type==="event-batch"),JSON.stringify(broadcasts));\n    return {delta:(snapshot.scene.entities.find((entity)=>entity.id===actorId)?.hp??0)-hpBefore,selectedCount:selectedIds.length};'''
+          replacement='''    assert.ok(broadcasts.map((wire)=>JSON.parse(wire)).some((wire)=>wire.type==="event-batch"),JSON.stringify(broadcasts));\n\n    const reconnectSetup=await setup(prefix);\n    const reconnect=reconnectSetup.host,reconnectState=connectedStateFor(reconnect);\n    reconnectState.mode="client";reconnectState.sessionId=sessionId;reconnectState.replica=new ClientSessionReplica(sessionId);\n    assert.equal((await applyConnectedClientEvents(reconnect,connectedStateFor(host).ledger!.eventsAfter(0))).status,"applied");\n    const reconnectSnapshot=await reconnect.getSnapshot();\n    assert.equal(reconnectSnapshot.scene.entities.find((entity)=>entity.id===actorId)?.hp,snapshot.scene.entities.find((entity)=>entity.id===actorId)?.hp);\n    assert.equal(reconnectSnapshot.scene.economyByActor[actorId]?.reaction,false);\n\n    return {delta:(snapshot.scene.entities.find((entity)=>entity.id===actorId)?.hp??0)-hpBefore,selectedCount:selectedIds.length};'''
+          if 'const reconnectSetup=await setup(prefix);' not in text:
+            if text.count(anchor)!=1:
+              raise SystemExit(f'Q persistence insertion anchor changed: {text.count(anchor)}')
+            text=text.replace(anchor,replacement,1)
+          test.write_text(text,encoding='utf-8')
+
+          ledger_path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
+          ledger=json.loads(ledger_path.read_text(encoding='utf-8'))
+          row=next((candidate for candidate in ledger['rows'] if candidate.get('family')=='Q'),None)
+          if row is None:
+            raise SystemExit('Family Q ledger row missing')
+          row['currentState']='Portable consent and selector-backed multiple-option choice interactions execute through the existing blocking Resolution interrupt for actor, target, actor-owner, target-owner, DM, and Host authority. Choice options are projected structurally from the Common Play selector, connected responses carry selectedIds, accepted selections are revalidated without direct-target cover authority, payment plus downstream operations commit atomically, decline is side-effect free, stale/reconnect/replay authority is enforced, complete external identity rename preserves behavior, and accepted canonical event batches replay into a fresh connected replica.'
+          row['disposition']='IMPLEMENTED'
+          def add(field,value):
+            if value not in row[field]: row[field].append(value)
+          add('implementationEvidence','commonPlayOperationRuntime.ts typed choice interaction carries selector-backed selectedIds structurally; installedCommonPlayRuntimeAdapter.ts projects candidate options, revalidates selectedIds with directTarget:false, and commits accepted selections atomically without content-name dispatch')
+          add('implementationEvidence','contracts.ts, connectedSessionWire.ts, connectedInterruptResponsePort.ts, connectedActionRoutingAdapter.ts, and compatibility respondToInterrupt wrappers carry optional selectedIds through the existing connected interrupt path')
+          add('productionEvidence','3ff901ba622e841325eef46fc8a990fe8394ebb1 feat(c9): carry portable choice interactions through Resolver; c9FamilyQChoiceInteractionProduction.test.ts verifies unknown installed multiple-option actor-owner choice, atomic accepted commit, decline safety, and downstream payment/effect behavior')
+          add('productionEvidence','R11 current-source verification run 33317437826 passes all Family Q production/domain tests, representative Common Play contract scenarios, coverage checker, legacy execution boundary, TypeScript, and git diff --check without transient source patching')
+          add('identityInvarianceEvidence','c9FamilyQChoiceInteractionProduction.test.ts repeats the multiple-option choice acceptance after complete arbitrary external module/content/mechanic identity rename and preserves selected-count plus downstream outcome')
+          add('connectedEvidenceIfRelevant','c9FamilyQChoiceInteractionProduction.test.ts carries selectedIds from the authoritative actor-owner peer through routeConnectedInterruptResponse and broadcasts the accepted canonical event batch')
+          add('persistenceEvidenceIfRelevant','c9FamilyQChoiceInteractionProduction.test.ts replays the accepted choice HostSessionLedger events into a fresh ClientSessionReplica and verifies downstream HP plus Reaction convergence; existing actor-owner and target-owner tests cover pending-prompt reconnect and stale-peer rejection')
+          row['remainingNamedSeams']=[]
+          ledger_path.write_text(json.dumps(ledger,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          PY
+      - run: npm ci
+      - run: npm run generate:content
+      - name: Verify Family Q final evidence
+        run: |
+          node --import tsx --test tests/ui/c9FamilyQChoiceInteractionProduction.test.ts tests/ui/c9FamilyQTargetOwnerInteractionProduction.test.ts tests/ui/c9FamilyQAuthorityInteractionProduction.test.ts tests/ui/installedCommonPlayActorOwnerInteractionProduction.test.ts tests/domain/commonPlayOperationRuntime.test.ts
+          node scripts/check-v1-mechanism-coverage.mjs
+          node scripts/check-legacy-execution-boundary.mjs
+          npm exec tsc -- --noEmit
+          git diff --check
+      - name: Publish verified Q evidence and retire workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tests/ui/c9FamilyQChoiceInteractionProduction.test.ts docs/rules/v1-mechanism-coverage-ledger.json
+          git rm -f .github/workflows/c9-family-q-persistence-ledger-71304.yml
+          git commit -m "docs(c9): finalize Family Q choice coverage"
+          for attempt in 1 2 3 4 5; do
+            if git push origin HEAD:agent/c9-gate-n-coverage-reconciliation; then exit 0; fi
+            git fetch origin agent/c9-gate-n-coverage-reconciliation
+            git rebase origin/agent/c9-gate-n-coverage-reconciliation || exit 1
+            sleep 1
+          done
+          exit 1
