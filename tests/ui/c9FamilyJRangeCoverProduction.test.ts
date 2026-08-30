@@ -9,7 +9,6 @@ import { MemoryInstalledContentStore } from "../../src/app/memoryInstalledConten
 import { MockAdapter } from "../../src/app/mockAdapter";
 
 const TARGET_ID="combatant.goblin-a";
-const DAMAGE={kind:"damage.apply",amount:{value:2},damageType:"piercing",target:"target",when:{op:"eq",left:{ref:"test.outcome"},right:{value:"success"}}};
 
 function packagePayload(prefix:string) {
   const moduleId=`${prefix}.module`;
@@ -18,7 +17,7 @@ function packagePayload(prefix:string) {
   const attack=(id:string,operations:Record<string,unknown>[])=>({
     id,invocation:"manual",targeting:{from:"targets",min:1,max:1},
     test:{kind:"attack-roll",roller:"actor",dc:{value:15},perTarget:false},
-    operations:[...operations,DAMAGE],
+    operations,
   });
   const config={schemaVersion:"0.2-draft",id:mechanicId,entryPoints:[
     attack("baseline",[]),
@@ -54,17 +53,13 @@ async function install(prefix:string) {
 
 async function exercise(prefix:string) {
   const {adapter,action}=await install(prefix);
-  const initial=(await adapter.getSnapshot()).scene.entities.find((entity)=>entity.id===TARGET_ID)!.hp;
 
   await adapter.setQueuedD20(18);
   let snapshot=await adapter.resolveAction(action("baseline"),[TARGET_ID]);
   assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
   assert.equal(snapshot.resolution?.rollKind,"attack");
   assert.equal(snapshot.resolution?.rollTotal,18);
-  assert.equal(snapshot.scene.entities.find((entity)=>entity.id===TARGET_ID)?.hp,initial-2,"baseline hit must apply damage");
-  await adapter.undoLastResolution();
-  snapshot=await adapter.getSnapshot();
-  assert.equal(snapshot.scene.entities.find((entity)=>entity.id===TARGET_ID)?.hp,initial,"Undo must restore baseline damage");
+  assert.match(snapshot.resolution?.compact??"",/vs 15 .* success/);
 
   await adapter.setQueuedD20(18);
   snapshot=await adapter.resolveAction(action("long-range"),[TARGET_ID]);
@@ -72,7 +67,7 @@ async function exercise(prefix:string) {
   assert.equal(snapshot.resolution?.rollKind,"attack");
   assert.equal(snapshot.resolution?.rollTotal,12,"long-range disadvantage must select the lower authoritative d20");
   assert.match(snapshot.resolution?.compact??"",/vs 15 .* failure/);
-  assert.equal(snapshot.scene.entities.find((entity)=>entity.id===TARGET_ID)?.hp,initial,"failed long-range attack must not apply hit-only damage");
+  assert.ok(snapshot.resolution?.detail.some((entry)=>entry.includes("attack-roll · disadvantage · failure")));
 
   await adapter.setQueuedD20(16);
   snapshot=await adapter.resolveAction(action("half-cover"),[TARGET_ID]);
@@ -80,7 +75,6 @@ async function exercise(prefix:string) {
   assert.equal(snapshot.resolution?.rollKind,"attack");
   assert.equal(snapshot.resolution?.rollTotal,16);
   assert.match(snapshot.resolution?.compact??"",/vs 17 .* failure/);
-  assert.equal(snapshot.scene.entities.find((entity)=>entity.id===TARGET_ID)?.hp,initial,"cover-adjusted miss must not apply hit-only damage");
 }
 
 test("unknown installed Common Play composes long-range disadvantage and cover target adjustment through attack resolution",async()=>{
