@@ -24,6 +24,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm run generate:content
       - name: Add portable grapple escape production proof
         run: |
           cat > tests/ui/c9FamilyJEscapeProduction.test.ts <<'EOF'
