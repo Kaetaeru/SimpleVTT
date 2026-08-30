@@ -5,198 +5,29 @@ on:
     branches:
       - agent/c9-gate-n-coverage-reconciliation
     paths:
+      - src/domain/commonPlayDefinitionRuntime.ts
+      - src/domain/commonPlayArtifactRuntime.ts
+      - tests/ui/c9FamilyLArtifactDamageProduction71304.test.ts
       - .github/workflows/c9-family-l-artifact-damage-71304.yml
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  implement-and-verify:
+  verify:
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: agent/c9-gate-n-coverage-reconciliation
-          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-      - name: Reconcile latest branch
-        run: git pull --ff-only origin agent/c9-gate-n-coverage-reconciliation
       - run: npm ci
-      - name: Bridge schema-declared artifact operations to Resolver
-        shell: bash
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-
-          definition=Path('src/domain/commonPlayDefinitionRuntime.ts')
-          text=definition.read_text(encoding='utf-8')
-          old='''function referencedTemplates(entryPoint:CommonPlayEntryPointIR) {\n  return new Set(entryPoint.operations.flatMap((operation)=>typeof operation.template==="string"?[operation.template]:[]));\n}\n'''
-          new='''function referencedTemplates(entryPoint:CommonPlayEntryPointIR) {\n  return new Set(entryPoint.operations.flatMap((operation)=>[\n    ...(typeof operation.template==="string"?[operation.template]:[]),\n    ...(typeof operation.artifact==="string"?[operation.artifact]:[]),\n  ]));\n}\n'''
-          if old in text:
-              text=text.replace(old,new,1)
-          elif new not in text:
-              raise SystemExit('referencedTemplates anchor changed')
-
-          old='''  if(operationKinds.has("artifact.spawn")) {\n    if([...operationKinds].some((kind)=>kind!=="artifact.spawn")) throw new DomainEvaluationError(`Common Play entry point ${entryPointId} mixes incompatible artifact activation operations`);\n    const artifactKinds=new Set(templates.map((template)=>template.artifactKind));\n    if(artifactKinds.size===1&&artifactKinds.has("zone")) {'''
-          new='''  const artifactOperationKinds=new Set(["artifact.spawn","artifact.damage","artifact.repair","artifact.relocate","artifact.update","artifact.remove"]);\n  if([...operationKinds].some((kind)=>artifactOperationKinds.has(String(kind)))) {\n    if([...operationKinds].some((kind)=>!artifactOperationKinds.has(String(kind)))) throw new DomainEvaluationError(`Common Play entry point ${entryPointId} mixes incompatible artifact activation operations`);\n    const artifactKinds=new Set(templates.map((template)=>template.artifactKind));\n    if(artifactKinds.size===1&&artifactKinds.has("zone")) {\n      if([...operationKinds].some((kind)=>kind!=="artifact.spawn")) throw new DomainEvaluationError(`Common Play entry point ${entryPointId} zone activation supports only artifact.spawn`);'''
-          if old in text:
-              text=text.replace(old,new,1)
-          elif 'const artifactOperationKinds=new Set([' not in text:
-              raise SystemExit('artifact lowerer anchor changed')
-          definition.write_text(text,encoding='utf-8')
-
-          runtime=Path('src/domain/commonPlayArtifactRuntime.ts')
-          text=runtime.read_text(encoding='utf-8')
-          text=text.replace(
-              'import { DomainEvaluationError, type RulesProfileLike } from "./profileEngine";',
-              'import { DomainEvaluationError, evaluateExpression, type ExpressionNode, type RulesProfileLike } from "./profileEngine";',
-              1,
-          )
-          old='''type PortableArtifactKind="stored-invocation"|"object"|"link"|"actor"|"form";\ntype Obj=Record<string,unknown>;\n\nexport interface CommonPlayArtifactActivationDefinition {'''
-          new='''type PortableArtifactKind="stored-invocation"|"object"|"link"|"actor"|"form";\ntype Obj=Record<string,unknown>;\ntype CommonPlayArtifactOperation=\n  | {kind:"artifact.spawn";template:string}\n  | {kind:"artifact.damage";artifact:string;amount:ExpressionNode;damageType:string}\n  | {kind:"artifact.repair";artifact:string;amount:ExpressionNode}\n  | {kind:"artifact.relocate";artifact:string;placementRef:string}\n  | {kind:"artifact.update";artifact:string;metadataPatch:Record<string,string|number|boolean>}\n  | {kind:"artifact.remove";artifact:string};\n\nexport interface CommonPlayArtifactActivationDefinition {'''
-          if old in text:
-              text=text.replace(old,new,1)
-          elif 'type CommonPlayArtifactOperation=' not in text:
-              raise SystemExit('artifact operation type anchor changed')
-          text=text.replace(
-              '    operations:Array<{kind:"artifact.spawn";template:string}>;',
-              '    operations:CommonPlayArtifactOperation[];',
-              1,
-          )
-          marker='''function artifact(\n  state:RulesRuntimeState,'''
-          helpers='''function artifactOperationAmount(state:RulesRuntimeState,input:CommonPlayArtifactActivationInput,value:ExpressionNode,label:string) {\n  const actor=state.combatants[input.actorId];\n  const amount=evaluateExpression(value,(property)=>{\n    const resolved=actor?.baseProperties?.[property];\n    if(resolved===undefined) throw new DomainEvaluationError(`${label} cannot resolve numeric property: ${property}`);\n    return resolved;\n  });\n  if(!Number.isFinite(amount)||amount<0) throw new DomainEvaluationError(`${label} must resolve to a non-negative finite number`);\n  return amount;\n}\n\nfunction artifactOperationTarget(\n  state:RulesRuntimeState,\n  definition:CommonPlayArtifactActivationDefinition,\n  input:CommonPlayArtifactActivationInput,\n  artifactIds:Map<string,string>,\n  reference:string,\n) {\n  const spawned=artifactIds.get(reference);\n  if(spawned) return spawned;\n  const exact=(state.artifacts??[]).find((candidate)=>candidate.id===reference);\n  if(exact) return exact.id;\n  const sourced=(state.artifacts??[]).filter((candidate)=>candidate.sourceId===definition.id&&candidate.sourceActorId===input.actorId&&candidate.templateId===reference);\n  if(sourced.length!==1) throw new DomainEvaluationError(`artifact reference ${reference} must resolve to exactly one active artifact`);\n  return sourced[0].id;\n}\n\n'''
-          if helpers not in text:
-              if marker not in text: raise SystemExit('artifact helper anchor changed')
-              text=text.replace(marker,helpers+marker,1)
-
-          old='''  const templates=new Map(definition.artifactTemplates.map((template)=>[template.id,template]));\n  const artifactIds=new Map(entryPoint.operations.map((operation,index)=>[operation.template,`${input.resolutionId}:artifact:${index+1}:${operation.template}`]));\n  const operations:ResolutionOperation[]=[...compileCommonPlayPayments(parseCommonPlayPayments(definition.payments),input)];\n  entryPoint.operations.forEach((operation,index)=>{\n    if(operation.kind!=="artifact.spawn") throw new DomainEvaluationError(`entry point ${entryPoint.id} supports only artifact.spawn`);\n    const template=templates.get(operation.template);\n    if(!template) throw new DomainEvaluationError(`artifact template not found: ${operation.template}`);\n    if(!["stored-invocation","object","link","actor","form"].includes(template.artifactKind)) throw new DomainEvaluationError(`artifact ${template.id} kind is not handled by the generic artifact activation runtime`);\n    const lifetime=object(template.lifetime,`artifact ${template.id} lifetime`);\n    if(template.artifactKind==="actor"&&lifetime.kind==="until-source-recast") {\n      (state.artifacts??[])\n        .filter((existing)=>existing.artifactKind==="actor"&&existing.sourceId===definition.id&&existing.sourceActorId===input.actorId&&existing.templateId===template.id)\n        .forEach((existing,replacementIndex)=>operations.push({\n          id:`common-play-artifact-recast-remove-${index+1}-${replacementIndex+1}`,\n          kind:"remove-artifact",\n          artifactId:existing.id,\n        }));\n    }\n    operations.push({id:`common-play-artifact-spawn-${index+1}`,kind:"spawn-artifact",artifact:artifact(state,definition,template,input,artifactIds)});\n  });'''
-          new='''  const templates=new Map(definition.artifactTemplates.map((template)=>[template.id,template]));\n  const artifactIds=new Map<string,string>();\n  entryPoint.operations.forEach((operation,index)=>{\n    if(operation.kind==="artifact.spawn") artifactIds.set(operation.template,`${input.resolutionId}:artifact:${index+1}:${operation.template}`);\n  });\n  const operations:ResolutionOperation[]=[...compileCommonPlayPayments(parseCommonPlayPayments(definition.payments),input)];\n  entryPoint.operations.forEach((operation,index)=>{\n    if(operation.kind==="artifact.spawn") {\n      const template=templates.get(operation.template);\n      if(!template) throw new DomainEvaluationError(`artifact template not found: ${operation.template}`);\n      if(!["stored-invocation","object","link","actor","form"].includes(template.artifactKind)) throw new DomainEvaluationError(`artifact ${template.id} kind is not handled by the generic artifact activation runtime`);\n      const lifetime=object(template.lifetime,`artifact ${template.id} lifetime`);\n      if(template.artifactKind==="actor"&&lifetime.kind==="until-source-recast") {\n        (state.artifacts??[])\n          .filter((existing)=>existing.artifactKind==="actor"&&existing.sourceId===definition.id&&existing.sourceActorId===input.actorId&&existing.templateId===template.id)\n          .forEach((existing,replacementIndex)=>operations.push({\n            id:`common-play-artifact-recast-remove-${index+1}-${replacementIndex+1}`,\n            kind:"remove-artifact",\n            artifactId:existing.id,\n          }));\n      }\n      operations.push({id:`common-play-artifact-spawn-${index+1}`,kind:"spawn-artifact",artifact:artifact(state,definition,template,input,artifactIds)});\n      return;\n    }\n    const artifactId=artifactOperationTarget(state,definition,input,artifactIds,operation.artifact);\n    if(operation.kind==="artifact.damage") {\n      operations.push({id:`common-play-artifact-damage-${index+1}`,kind:"damage-artifact",artifactId,damageType:operation.damageType,amount:artifactOperationAmount(state,input,operation.amount,`artifact.damage ${operation.artifact}.amount`)});\n      return;\n    }\n    if(operation.kind==="artifact.repair") {\n      operations.push({id:`common-play-artifact-repair-${index+1}`,kind:"repair-artifact",artifactId,amount:artifactOperationAmount(state,input,operation.amount,`artifact.repair ${operation.artifact}.amount`)});\n      return;\n    }\n    if(operation.kind==="artifact.relocate") {\n      operations.push({id:`common-play-artifact-relocate-${index+1}`,kind:"relocate-artifact",artifactId,placementRef:operation.placementRef});\n      return;\n    }\n    if(operation.kind==="artifact.update") {\n      operations.push({id:`common-play-artifact-update-${index+1}`,kind:"update-artifact",artifactId,metadataPatch:structuredClone(operation.metadataPatch)});\n      return;\n    }\n    operations.push({id:`common-play-artifact-remove-${index+1}`,kind:"remove-artifact",artifactId});\n  });'''
-          if old in text:
-              text=text.replace(old,new,1)
-          elif 'const artifactIds=new Map<string,string>();' not in text:
-              raise SystemExit('artifact compiler anchor changed')
-          runtime.write_text(text,encoding='utf-8')
-
-          test=Path('tests/ui/c9FamilyLArtifactDamageProduction71304.test.ts')
-          test.write_text(r'''import assert from "node:assert/strict";
-import test from "node:test";
-import "../../src/app/offlineRuntimeAdapters";
-import { catalogQualifiedId } from "../../src/app/contentCatalogIdentity";
-import { installedCommonPlayActionId } from "../../src/app/installedCommonPlayActionReference";
-import { setInstalledContentStoreForTests } from "../../src/app/installedContentRuntimeAdapter";
-import { MemoryInstalledContentStore } from "../../src/app/memoryInstalledContentStore";
-import { MockAdapter } from "../../src/app/mockAdapter";
-import { turnRuntimeSessions } from "../../src/app/turnRuntimeSessionRegistry";
-
-const ACTOR_ID="char.aelar";
-
-function packagePayload(prefix:string) {
-  const moduleId=`${prefix}.module`,contentId=`${prefix}.option`,mechanicId=`${prefix}.artifacts`;
-  const durable={kind:"durable"};
-  return {moduleId,contentId,mechanicId,json:JSON.stringify({
-    schemaVersion:"0.1-draft",moduleId,moduleVersion:"1",
-    rulesProfile:{id:"dnd.srd-5.2.1",version:"0.1-draft"},defaultLocale:"en",
-    source:{document:"Portable Object Vehicle Damage Probe",version:"1",license:"CC0",srdDerived:false},
-    dependencies:[],conflicts:[],capabilities:[],content:[{
-      id:contentId,category:"option",
-      presentation:{defaultLocale:"en",originalName:"Portable Artifact Damage",locales:{en:{name:"Portable Artifact Damage"}}},
-      mechanics:[{kind:"common-play",config:{
-        schemaVersion:"0.2-draft",id:mechanicId,
-        entryPoints:[
-          {id:"create",invocation:"manual",operations:[{kind:"artifact.spawn",template:"wall"},{kind:"artifact.spawn",template:"vehicle"}]},
-          {id:"wall-threshold",invocation:"manual",operations:[{kind:"artifact.damage",artifact:"wall",amount:{value:8},damageType:"slashing"}]},
-          {id:"wall-force",invocation:"manual",operations:[{kind:"artifact.damage",artifact:"wall",amount:{value:7},damageType:"force"}]},
-          {id:"wall-repair",invocation:"manual",operations:[{kind:"artifact.repair",artifact:"wall",amount:{value:3}}]},
-          {id:"vehicle-hit",invocation:"manual",operations:[{kind:"artifact.damage",artifact:"vehicle",amount:{value:4},damageType:"lightning"}]},
-        ],
-        artifactTemplates:[
-          {id:"wall",artifactKind:"object",duration:durable,lifetime:{kind:"until-destroyed"},initialState:{size:"large",armorClass:15,hp:{current:20,maximum:20},damageThreshold:5,damageDefenses:[{source:"portable.stone",kind:"resistance",damageType:"slashing"}],repairable:true}},
-          {id:"vehicle",artifactKind:"object",duration:durable,lifetime:{kind:"until-destroyed"},initialState:{size:"huge",armorClass:13,hp:{current:30,maximum:30},damageThreshold:2,damageDefenses:[{source:"portable.conductive",kind:"vulnerability",damageType:"lightning"}],repairable:true}},
-        ],
-      }}],
-    }],
-  })};
-}
-
-async function action(adapter:MockAdapter,pack:ReturnType<typeof packagePayload>,entryPointId:string) {
-  return adapter.resolveAction(installedCommonPlayActionId({
-    catalogId:catalogQualifiedId(pack.contentId,pack.moduleId,"1"),
-    mechanicId:pack.mechanicId,entryPointId,
-  }),[]);
-}
-
-function objectState(adapter:MockAdapter,templateId:string) {
-  const runtime=turnRuntimeSessions.get(adapter);
-  assert.ok(runtime,"turn runtime must exist");
-  const artifact=runtime.state.artifacts?.find((candidate)=>candidate.sourceActorId===ACTOR_ID&&candidate.templateId===templateId);
-  assert.equal(artifact?.artifactKind,"object");
-  assert.ok(artifact?.object);
-  return artifact!.object!;
-}
-
-async function execute(prefix:string) {
-  const adapter=new MockAdapter();
-  const pack=packagePayload(prefix);
-  setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
-  const preview=await adapter.previewContentImport(pack.json);
-  assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
-  await adapter.activateContentImport();
-  await adapter.startInitiative();
-  await adapter.setCurrentActor(ACTOR_ID);
-
-  assert.equal((await action(adapter,pack,"create")).resolution?.stage,"complete");
-  assert.equal(objectState(adapter,"wall").hp.current,20);
-  assert.equal(objectState(adapter,"vehicle").hp.current,30);
-
-  assert.equal((await action(adapter,pack,"wall-threshold")).resolution?.stage,"complete");
-  assert.equal(objectState(adapter,"wall").hp.current,20,"slashing 8 -> resistance 4 -> threshold 5 blocks damage");
-
-  assert.equal((await action(adapter,pack,"wall-force")).resolution?.stage,"complete");
-  assert.equal(objectState(adapter,"wall").hp.current,13);
-  await adapter.undoLastResolution();
-  assert.equal(objectState(adapter,"wall").hp.current,20,"event-native Undo restores object HP");
-
-  assert.equal((await action(adapter,pack,"wall-repair")).resolution?.stage,"complete");
-  assert.equal(objectState(adapter,"wall").hp.current,20,"repair remains capped at max HP");
-
-  assert.equal((await action(adapter,pack,"vehicle-hit")).resolution?.stage,"complete");
-  assert.equal(objectState(adapter,"vehicle").hp.current,22,"lightning vulnerability doubles 4 to 8 before threshold");
-  await adapter.undoLastResolution();
-  assert.equal(objectState(adapter,"vehicle").hp.current,30,"event-native Undo restores vehicle-like object HP");
-  return {wall:objectState(adapter,"wall").hp.current,vehicle:objectState(adapter,"vehicle").hp.current};
-}
-
-test("unknown installed Common Play applies Object/Vehicle artifact threshold, defenses, repair, and Undo without identity dispatch",async()=>{
-  assert.deepEqual(await execute("external.family-l-artifact"),{wall:20,vehicle:30});
-  assert.deepEqual(await execute("completely.renamed-family-l-artifact"),{wall:20,vehicle:30});
-});
-''',encoding='utf-8')
-          PY
-      - name: Generate content dependencies
-        run: npm run generate:content
+      - run: npm run generate:content
       - name: Verify portable artifact damage
         run: |
           node --import tsx --test --test-concurrency=1 tests/domain/commonPlayArtifactActivationRuntime.test.ts tests/domain/commonPlayArtifactFamiliesRuntime.test.ts tests/ui/c9FamilyLArtifactDamageProduction71304.test.ts
           node scripts/check-v1-mechanism-coverage.mjs
           node scripts/check-legacy-execution-boundary.mjs
           npm exec tsc -- --noEmit
-      - name: Publish verified implementation and retire workflow
-        shell: bash
-        run: |
-          set -euo pipefail
-          branch=agent/c9-gate-n-coverage-reconciliation
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/domain/commonPlayDefinitionRuntime.ts src/domain/commonPlayArtifactRuntime.ts tests/ui/c9FamilyLArtifactDamageProduction71304.test.ts
-          git rm .github/workflows/c9-family-l-artifact-damage-71304.yml
-          git commit -m "feat(c9): bridge portable artifact damage"
-          for attempt in $(seq 1 10); do
-            if git pull --rebase origin "$branch" && git push origin HEAD:"$branch"; then exit 0; fi
-            git rebase --abort >/dev/null 2>&1 || true
-            sleep 1
-          done
-          exit 1
