@@ -51,13 +51,6 @@ jobs:
           elif new not in text:
               raise SystemExit('unexpected targeting parse projection')
           runtime.write_text(text,encoding='utf-8')
-
-          adapter=Path('src/app/installedCommonPlayRuntimeAdapter.ts')
-          app=adapter.read_text(encoding='utf-8')
-          duplicate='    if(targeting.where?.op==="relation-matches"&&targeting.where.ref==="relation"&&selectedTargets.some((target)=>commonPlayTargetFact(actorEntity,target!).relation!==targeting.where!.value)) return undefined;\n'
-          if duplicate in app:
-              app=app.replace(duplicate,'',1)
-          adapter.write_text(app,encoding='utf-8')
           PY
       - run: npm run generate:content
       - name: Verify Family E shared selector slice
@@ -80,7 +73,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git rm .github/workflows/c9-family-e-orderby-finalize-7130.yml
-          git add src/domain/commonPlayOperationRuntime.ts src/app/installedCommonPlayRuntimeAdapter.ts
+          git add src/domain/commonPlayOperationRuntime.ts
           git diff --cached --check
           git commit -m "feat(c9): preserve shared selector ordering"
           branch=agent/c9-gate-n-coverage-reconciliation
