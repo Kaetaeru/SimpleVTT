@@ -25,6 +25,8 @@ jobs:
         run: git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
       - name: Install dependencies
         run: npm install --no-audit --no-fund
+      - name: Generate builtin content
+        run: npm run generate:content
       - name: Verify Family E area provider
         run: npx tsx --test tests/ui/commonPlayRichSelectorProduction.test.ts tests/ui/c9FamilyESpatialSelectorProduction.test.ts
       - name: Verify legacy execution boundary
