@@ -266,6 +266,7 @@ export interface CommonPlayOperationExecutionInput {
     | {interactionId:string;selectedIds:string[]};
   itemPaymentResourceIds?:Record<number,string>;
   actionKind?:ActionUseKind;
+  attacksPerAction?:number;
 }
 
 type Obj=Record<string,unknown>;
@@ -876,11 +877,13 @@ export function compileCommonPlayPayments(
     .map((payment,index)=>({payment,index}))
     .sort((left,right)=>Number(right.payment.kind==="economy")-Number(left.payment.kind==="economy"))) {
     if(payment.kind==="economy") {
+      const actionKind=payment.actionKind??input.actionKind;
+      const attacksPerAction=payment.attacksPerAction??(actionKind==="attack"?input.attacksPerAction:undefined);
       operations.push({
         id:`${input.resolutionId}:payment:${index}`,kind:"use-economy",actorId:input.actorId,slot:payment.bucket,
         bonusActionGranted:payment.bucket==="bonus-action"||undefined,
-        actionKind:payment.actionKind??input.actionKind,
-        ...(payment.attacksPerAction===undefined?{}:{attacksPerAction:payment.attacksPerAction}),
+        actionKind,
+        ...(attacksPerAction===undefined?{}:{attacksPerAction}),
       });
       continue;
     }

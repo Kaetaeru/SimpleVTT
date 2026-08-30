@@ -629,9 +629,10 @@ function prepareCommonPlayAction(
   actorIdOverride?:string,
   allowOffTurn=false,
   allowUnprojectedRuntimeArtifact=false,
+  projectedActionOverride?:ActionVm,
 ):PreparedCommonPlayAction|undefined {
   const internal=adapter as unknown as AdapterState;
-  const projectedAction=Object.values(internal.scene.actionsByActor).flat().find((candidate)=>candidate.id===actionId);
+  const projectedAction=projectedActionOverride??Object.values(internal.scene.actionsByActor).flat().find((candidate)=>candidate.id===actionId);
   const actorId=actorIdOverride??projectedAction?.actorId??internal.activeCharacter.id;
   if(actorIdOverride&&projectedAction?.actorId!==actorIdOverride&&!allowUnprojectedRuntimeArtifact) return undefined;
   const actorEntity=internal.scene.entities.find((candidate)=>candidate.id===actorId);
@@ -854,7 +855,7 @@ function operationExecutionInput(
   itemPaymentResourceIds?:Record<number,string>,
 ):import("../domain/commonPlayOperationRuntime").CommonPlayOperationExecutionInput {
   if(action.lowered.kind!=="operations") throw new Error("stored invocation payload requires an operations lowerer");
-  const {actor,actorEntity,selectedTargetId,selectedTargets,selectedTargetFacts,targetingCandidates,state}=prepared;
+  const {actor,actorEntity,selectedTargetId,selectedTargets,selectedTargetFacts,targetingCandidates,state,projectedAction}=prepared;
   const entryPoint=action.lowered.definition.entryPoints.find((candidate)=>candidate.id===action.entryPointId)!;
   const movementProperties=commonPlayActorProfileProperties(internal,state,actor.id);
   const d20Faces=entryPoint.test?[internal.d20(actionId,0),internal.d20(actionId,1)]:undefined;
@@ -889,6 +890,7 @@ function operationExecutionInput(
     ...(entryPoint.test?{d20:{faces:d20Faces!,targetId:selectedTargetId,...(d20ModifierSelection??{})}}:{}),
     ...(itemPaymentResourceIds?{itemPaymentResourceIds}:{}),
     actionKind:entryPoint.test?.kind==="attack-roll"?"attack" as const:action.category==="spell"?"magic" as const:"other" as const,
+    ...(projectedAction?.attacksPerAction===undefined?{}:{attacksPerAction:projectedAction.attacksPerAction}),
     ...(interactionResponse?{interactionResponse:interactionResponse.accepted===true
       ?{interactionId:interactionResponse.interactionId,accepted:true as const}
       :{interactionId:interactionResponse.interactionId,selectedIds:[...(interactionResponse.selectedIds??[])]}}:{}),
@@ -1000,7 +1002,11 @@ async function executeCommonPlayAction(
   const presentationTargetIds=affectedTargetIds.length?affectedTargetIds:allocationTargetIds.length?allocationTargetIds:operationEntryPoint?.targeting?selectedTargetFacts.map((target)=>target.id):lowered.kind==="save-damage"?selectedTargets.map((target)=>target.id):[selectedTargetId];
   const presentationTargetNames=presentationTargetIds.map((id)=>internal.scene.entities.find((candidate)=>candidate.id===id)?.name??selectedTargetNames[id]??id);
   const allocationOutcome=allocationResult?`분배 ${allocationResult.total} · ${allocationResult.allocations.map((entry)=>`${entry.targetId} ${entry.units}`).join(", ")}`:undefined;
-  const outcome=hp?.outcome??(roll?roll.outcome:allocationOutcome??"규칙 효과 적용");
+  const structuralControl=projectedAction?.runtimeSaveCondition;
+  const rollOutcome=roll&&structuralControl&&roll.family==="saving-throw"
+    ?roll.outcome==="failure"?`${structuralControl.label} 적용`:`${structuralControl.label} 저항`
+    :roll?.outcome;
+  const outcome=hp?.outcome??rollOutcome??allocationOutcome??"규칙 효과 적용";
   return {status:"committed" as const,snapshot:await commitProductionRuntimeResolution(adapter,state,committed,{
     resolutionId,
     actionId,
@@ -1082,13 +1088,27 @@ MockAdapter.prototype.resolveAction=async function resolveCommonPlayProductionAc
   const storedInvocationReference=parseStoredInvocationCommonPlayActionId(actionId);
   if(storedInvocationReference) return executeStoredInvocationAction(this,actionId,targetIds,storedInvocationReference.artifactId,storedInvocationReference.definitionActionId);
   const runtimeArtifactReference=parseRuntimeArtifactCommonPlayActionId(actionId);
-  const definitionActionId=runtimeArtifactReference?.definitionActionId??actionId;
-  const action=await commonPlayAction(this,definitionActionId);
+  let definitionActionId=runtimeArtifactReference?.definitionActionId??actionId;
+  let action=await commonPlayAction(this,definitionActionId);
+  const internal=this as unknown as AdapterState;
+  let projectedActionOverride:ActionVm|undefined=Object.values(internal.scene.actionsByActor).flat().find((candidate)=>candidate.id===actionId);
+  if(!runtimeArtifactReference) {
+    const visibleSnapshot=await internal.getSnapshot();
+    const visibleProjectedAction=Object.values(visibleSnapshot.scene.actionsByActor).flat().find((candidate)=>candidate.id===actionId);
+    projectedActionOverride=visibleProjectedAction??projectedActionOverride;
+  }
+  if(!action&&!runtimeArtifactReference) {
+    const sourceActionId=projectedActionOverride?.runtimeCommonPlayActionId;
+    if(sourceActionId) {
+      definitionActionId=sourceActionId;
+      action=await commonPlayAction(this,definitionActionId);
+    }
+  }
   if (!action) return previousResolveAction.call(this,actionId,targetIds);
   const runtimeArtifactSnapshot=runtimeArtifactReference?await previousGetSnapshot.call(this):undefined;
   const runtimeArtifactState=runtimeArtifactReference?snapshotAdapterTurnRuntimeState(this,(this as unknown as AdapterState).scene):undefined;
   const allowUnprojectedRuntimeArtifact=Boolean(runtimeArtifactReference&&runtimeArtifactSnapshot&&authorizedUnprojectedFormAction(runtimeArtifactState,runtimeArtifactReference,runtimeArtifactSnapshot));
-  const prepared=prepareCommonPlayAction(this,actionId,targetIds,action,runtimeArtifactReference?.actorId,false,allowUnprojectedRuntimeArtifact);
+  const prepared=prepareCommonPlayAction(this,actionId,targetIds,action,runtimeArtifactReference?.actorId,false,allowUnprojectedRuntimeArtifact,projectedActionOverride);
   if(!prepared) return (this as unknown as AdapterState).getSnapshot();
   const resolutionId=`common-play.${Date.now()}.${Math.floor(Math.random()*1000)}`;
   const interaction=action.lowered.kind==="operations"

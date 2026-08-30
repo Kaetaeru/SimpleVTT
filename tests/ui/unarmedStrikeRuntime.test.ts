@@ -123,6 +123,35 @@ test("Unarmed damage grapple and shove execute from structural payloads after ac
   }
 });
 
+test("Unarmed shove follows a source-owned builtin Common Play reference after action identity rename", async () => {
+  const adapter=new MockAdapter();
+  await ready(adapter);
+  const originalGetSnapshot=adapter.getSnapshot.bind(adapter);
+  const baseline=await originalGetSnapshot();
+  const source=baseline.scene.actionsByActor["char.aelar"]?.find((entry)=>entry.id==="action.unarmed-strike.shove-prone");
+  assert.equal(source?.runtimeCommonPlayActionId,"action.unarmed-strike.shove-prone");
+  const renamedId="action.external.source-owned-shove";
+  adapter.getSnapshot=async()=>{
+    const snapshot=await originalGetSnapshot();
+    const action=snapshot.scene.actionsByActor["char.aelar"]?.find((entry)=>entry.id==="action.unarmed-strike.shove-prone");
+    if(action){action.id=renamedId;action.name="External Source-Owned Shove";}
+    return snapshot;
+  };
+  await adapter.setQueuedD20(1);
+  let snapshot=await adapter.resolveAction(renamedId,["combatant.goblin-b"]);
+  assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
+  assert.equal(snapshot.resolution?.actionId,renamedId);
+  assert.equal(snapshot.resolution?.finalOutcome,"넘어짐 적용");
+  assert.ok(snapshot.resolution?.provenance.some((entry)=>entry.includes("action.unarmed-strike.shove-prone")));
+  assert.ok(snapshot.scene.entities.find((entry)=>entry.id==="combatant.goblin-b")?.status.some((status)=>status.includes("넘어짐")));
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.action,false);
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.extraAttacks?.length,1);
+  await adapter.undoLastResolution();
+  snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.scene.entities.find((entry)=>entry.id==="combatant.goblin-b")?.status.some((status)=>status.includes("넘어짐")),false);
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.action,true);
+});
+
 test("Unarmed grapple and shove replace individual attacks inside Extra Attack", async () => {
   const adapter=new MockAdapter();
   await ready(adapter);

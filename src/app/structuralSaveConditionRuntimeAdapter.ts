@@ -38,7 +38,7 @@ MockAdapter.prototype.resolveAction=async function resolveStructuralSaveConditio
   const snapshot=await internal.getSnapshot();
   const action=actorAction(snapshot.scene,actionId);
   const control=action?.runtimeSaveCondition;
-  if (!control) return previousResolveAction.call(this,actionId,targetIds);
+  if (!control||action?.runtimeCommonPlayActionId) return previousResolveAction.call(this,actionId,targetIds);
   if (control.choose!=="highest") return snapshot;
   const targetId=targetIds[0];
   const target=internal.scene.entities.find((entry)=>entry.id===targetId);

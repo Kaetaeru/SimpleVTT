@@ -317,6 +317,7 @@ export interface ActionVm {
   saveHalf?: boolean;
   details: ActionDetailVm[];
   attacksPerAction?:number;
+  runtimeCommonPlayActionId?:string;
   movementBudgetGainFeet?:number;
   runtimeGrantedMovement?:{
     distanceFeet:number;

@@ -253,6 +253,7 @@ function featureActions(character:CharacterSheet):ActionVm[] {
   {
     id:"action.unarmed-strike.shove-prone",actorId:character.id,name:"맨손 타격 · 넘어뜨리기",category:"basic",target:"enemy",economy:"행동",resolutionKind:"saving-throw",
     summary:`근력/민첩 내성 DC ${unarmedSaveDc} · 실패 시 넘어짐`,available:true,eligibleTargetIds:[],saveDc:unarmedSaveDc,saveAbility:"근력 또는 민첩",attacksPerAction:unarmedAttacks,
+    runtimeCommonPlayActionId:"action.unarmed-strike.shove-prone",
     runtimeSaveCondition:{choose:"highest",conditionId:"prone",label:"넘어짐",displayName:"맨손 타격 · 넘어뜨리기",saveAbilities:["str","dex"],duration:{kind:"special",key:"stand-up"}},
     details:[detail("대상 내성","근력 또는 민첩 중 높은 값"),detail("DC",String(unarmedSaveDc)),detail("실패","넘어짐"),detail("공간 모듈","미연결 시 밀어내기 대신 넘어뜨리기만 자동 적용"),detail("출처","SRD 5.2.1 · Unarmed Strike")],
   },

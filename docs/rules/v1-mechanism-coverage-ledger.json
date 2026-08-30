@@ -769,7 +769,7 @@
         "structuralSaveConditionRuntimeAdapter.ts",
         "tests/ui/c9FamilyJUnarmedSourceComposition71304.test.ts"
       ],
-      "currentState": "Family J attack/control execution is complete through structural Common Play/Resolver authority. Unknown and renamed external attacks cover attack rolls, damage, control saves, range/cover, ammunition, Loading, Extra Attack, replace-one-attack, persistent attack riders, persistence, connected replay, and Undo. Built-in Unarmed Strike damage/grapple/shove now project complete source-owned structural runtimeAttack/runtimeSaveCondition payloads; the generic save-condition runtime consumes choose/save abilities/duration/termination without action-ID dispatch, and action identity plus presentation rename preserves execution. Remaining named attack/action adapters are legacy content migration/orchestration debt and are not supported portable execution fallbacks or a second attack engine. Complete Unarmed Strike source composition is production-proven through unknown installed Common Play and the built-in source projection now routes structural save-condition payloads through the generic structuralSaveConditionRuntimeAdapter plus shared Resolver rather than an Unarmed-specific execution import.",
+      "currentState": "Family J attack/control execution is complete through structural Common Play/Resolver authority. Unknown and renamed external attacks cover attack rolls, damage, control saves, range/cover, ammunition, Loading, Extra Attack, replace-one-attack, persistent attack riders, persistence, connected replay, and Undo. Built-in Unarmed Strike damage/grapple/shove now project complete source-owned structural runtimeAttack/runtimeSaveCondition payloads; the generic save-condition runtime consumes choose/save abilities/duration/termination without action-ID dispatch, and action identity plus presentation rename preserves execution. Remaining named attack/action adapters are legacy content migration/orchestration debt and are not supported portable execution fallbacks or a second attack engine. Complete Unarmed Strike source composition is production-proven through unknown installed Common Play and the built-in source projection now routes structural save-condition payloads through the generic structuralSaveConditionRuntimeAdapter plus shared Resolver rather than an Unarmed-specific execution import. Unarmed shove-to-Prone now resolves from source-owned builtin Common Play through a structural runtimeCommonPlayActionId reference, preserving Extra Attack payment, Undo, and action identity rename without a named execution branch.",
       "requiredSemantics": [
         "weapon attack",
         "Unarmed Strike",
@@ -805,7 +805,8 @@
         "commonPlayOperationRuntime.ts and installedCommonPlayRuntimeAdapter.ts compose a complete Unarmed-shaped external suite from structural attack-roll damage, best-of STR/DEX target saves, condition.apply, movement.relocate, attack economy, and event-native Undo without content identity dispatch",
         "structuralSaveConditionRuntimeAdapter.ts consumes source-owned runtimeSaveCondition choose/saveAbilities/duration/termination structurally without action-ID dispatch",
         "offlineRuntimeAdapters.ts routes source-owned runtimeSaveCondition actions through structuralSaveConditionRuntimeAdapter.ts; the adapter consumes structural choose/saveAbilities/condition/economy payloads and resolves through resolvePendingResolution without action/content identity dispatch",
-        "Common Play test.property choose:highest plus damage.apply, condition.apply, movement.relocate, and structural attack economy compose complete Unarmed Strike semantics through the shared Resolver"
+        "Common Play test.property choose:highest plus damage.apply, condition.apply, movement.relocate, and structural attack economy compose complete Unarmed Strike semantics through the shared Resolver",
+        "productionPlayRuntimeAdapter.ts projects a structural runtimeCommonPlayActionId for Unarmed shove-to-Prone; installedCommonPlayRuntimeAdapter.ts resolves that source reference generically and forwards projected attacksPerAction into attack-kind economy payment without action-ID dispatch"
       ],
       "productionEvidence": [
         "installedCommonPlayLoweredFamiliesProduction.test.ts#summoned Actor projects and executes its portable Common Play action with economy and Undo",
@@ -832,7 +833,8 @@
         "unarmedStrikeRuntime.test.ts proves Unarmed damage/grapple/shove execute after action identity and presentation rename from structural source payloads, including source-owned highest-save choice",
         "C9 Family J Finalize 71304 run 33318027220 at a7fbee00396fd57d8fdd4cd315c75087bb87cf82: focused Family J production/persistence regressions, legacy execution boundary, and tsc --noEmit passed before ledger finalization",
         "tests/ui/c9FamilyJUnarmedSourceComposition71304.test.ts proves unknown installed Unarmed damage, Grapple, Shove-to-Prone, Shove-to-Push, Extra Attack payment, event-native Undo, and source-owned spatial facts through Common Play/Resolver",
-        "49830ee9769243f3fb40a5ff3c13c9cfe32a585d makes built-in STR/DEX best-save selection source-owned via choose:highest; b69b15e69e1c778e856f9871114eb90364c858ed replaces the Unarmed-specific runtime import with the generic structural save-condition runtime"
+        "49830ee9769243f3fb40a5ff3c13c9cfe32a585d makes built-in STR/DEX best-save selection source-owned via choose:highest; b69b15e69e1c778e856f9871114eb90364c858ed replaces the Unarmed-specific runtime import with the generic structural save-condition runtime",
+        "unarmedStrikeRuntime.test.ts proves source-owned builtin Unarmed shove applies Prone, preserves Extra Attack economy, reverses through event-native Undo, and still executes after presentation action-ID rename"
       ],
       "identityInvarianceEvidence": [
         "installedCommonPlayLoweredFamiliesProduction.test.ts executes the summoned attack from arbitrary previously-unknown module/content/mechanic/action identities rather than a registered attack content ID",
@@ -852,7 +854,8 @@
         "c9FamilyJAttackDamageRiderProduction71304.test.ts repeats persistent attack.damage.flat rider application and event-native Undo after complete external module/content/mechanic identity rename",
         "tests/ui/c9FamilyJUnarmedSourceComposition71304.test.ts repeats the complete portable Unarmed-shaped damage/grapple/prone/push suite after renaming module, content, mechanic, and every entry-point identity",
         "unarmedStrikeRuntime.test.ts renames each Unarmed action ID and presentation while preserving damage/grapple/shove semantics through runtimeAttack/runtimeSaveCondition payloads",
-        "tests/ui/c9FamilyJUnarmedSourceComposition71304.test.ts repeats complete Unarmed damage/Grapple/Shove semantics after unrelated module/content/mechanic/entry-point identity rename; unarmedStrikeRuntime.test.ts independently preserves source projection behavior after action ID and presentation rename"
+        "tests/ui/c9FamilyJUnarmedSourceComposition71304.test.ts repeats complete Unarmed damage/Grapple/Shove semantics after unrelated module/content/mechanic/entry-point identity rename; unarmedStrikeRuntime.test.ts independently preserves source projection behavior after action ID and presentation rename",
+        "unarmedStrikeRuntime.test.ts renames the projected Unarmed shove action while retaining only its structural Common Play source reference; production execution still resolves the builtin source definition and applies Prone"
       ],
       "connectedEvidenceIfRelevant": [
         "installedCommonPlayLoweredFamiliesProduction.test.ts#summoned Actor action and Undo converge through Host-authoritative connected events"
@@ -860,9 +863,14 @@
       "persistenceEvidenceIfRelevant": [
         "c9FamilyJAttackPersistence.test.ts unknown installed attack damage persists to the Character library through restart and Undo restores the durable HP state"
       ],
-      "remainingNamedSeams": [],
+      "remainingNamedSeams": [
+        "generic weapon action projection is structurally source-owned and presentation-rename invariant; complete Unarmed Strike source composition remains incomplete for damage and grapple, while shove-to-Prone now executes from builtin Common Play",
+        "portable target saving throws, best-of STR/DEX control choice, conditional control effects, and escape normalize through Common Play; complete grapple source composition remains incomplete while shove-to-Prone source execution is migrated",
+        "other named attack/action projection remains migration debt; portable persistent attack-damage riders no longer require Rage-specific attack execution"
+      ],
       "connectedRelevant": true,
-      "persistenceRelevant": true
+      "persistenceRelevant": true,
+      "remainingNamedSeamCount": 3
     },
     {
       "id": "weapon-mastery",
