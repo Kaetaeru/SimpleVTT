@@ -1,0 +1,44 @@
+name: C9 Family Q Choice Kernel Fix 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-q-choice-kernel-fix-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch-staging:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - name: Align generated diagnostics with existing Common Play contract
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path=Path('.github/workflows/c9-family-q-choice-kernel-71304.yml')
+          text=path.read_text(encoding='utf-8')
+          text=text.replace('for portable consent interaction`);','for portable Common Play consent interaction`);')
+          text=text.replace('for portable choice interaction`);','for portable Common Play choice interaction`);')
+          path.write_text(text,encoding='utf-8')
+          PY
+      - name: Publish staging fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/workflows/c9-family-q-choice-kernel-71304.yml
+          git rm .github/workflows/c9-family-q-choice-kernel-fix-71304.yml
+          git commit -m "ci(c9): align choice interaction diagnostics"
+          for attempt in 1 2 3 4 5; do
+            if git push origin HEAD:agent/c9-gate-n-coverage-reconciliation; then exit 0; fi
+            git fetch origin agent/c9-gate-n-coverage-reconciliation
+            git rebase origin/agent/c9-gate-n-coverage-reconciliation || exit 1
+            sleep 1
+          done
+          exit 1
