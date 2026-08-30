@@ -1,0 +1,34 @@
+name: C9 Family J Range Cover 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - tests/ui/c9FamilyJRangeCoverProduction.test.ts
+      - src/domain/commonPlayOperationRuntime.ts
+      - src/app/installedCommonPlayRuntimeAdapter.ts
+      - .github/workflows/c9-family-j-range-cover-71304.yml
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Generate content dependencies
+        run: npm run generate:content
+      - name: Verify portable range and cover attack modifiers
+        run: npx tsx --test tests/ui/c9FamilyJRangeCoverProduction.test.ts
+      - name: Verify Common Play d20 regressions
+        run: npx tsx --test tests/domain/commonPlayD20Runtime.test.ts
+      - name: Verify V1 coverage structure
+        run: node scripts/check-v1-mechanism-coverage.mjs
+      - name: Verify legacy execution boundary
+        run: node scripts/check-legacy-execution-boundary.mjs
+      - name: Typecheck
+        run: npx tsc -p tsconfig.json --noEmit
