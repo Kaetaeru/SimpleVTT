@@ -6,6 +6,7 @@ import { resolvePendingResolution } from "./resolution";
 import type { PendingResolution, ResolutionCommit, ResolutionOperation } from "./resolutionTypes";
 import type { TargetingFactInput } from "./targeting";
 import { compileCommonPlayPayments, parseCommonPlayPayments, type CommonPlayPayment } from "./commonPlayOperationRuntime";
+import { appendCommonPlaySemanticOutcomeEvents } from "./commonPlaySemanticEventRuntime";
 import type { ActionUseKind } from "./turnEconomy";
 
 type LiteralNumberExpression = { value:number };
@@ -278,10 +279,10 @@ export function resolveCommonPlaySaveDamageEntryPoint(
   input:CommonPlaySaveDamageExecutionInput,
 ):ResolutionCommit {
   try {
-    return resolvePendingResolution(
-      profile,
-      inputState,
-      compileCommonPlaySaveDamageEntryPoint(profile,inputState,definition,input),
+    const pending=compileCommonPlaySaveDamageEntryPoint(profile,inputState,definition,input);
+    return appendCommonPlaySemanticOutcomeEvents(
+      pending,
+      resolvePendingResolution(profile,inputState,pending),
     );
   } catch (error) {
     return rejected(inputState,error instanceof Error?error.message:String(error));
