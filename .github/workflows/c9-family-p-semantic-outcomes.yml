@@ -1,0 +1,297 @@
+name: C9 Family P Semantic Outcomes
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-p-semantic-outcomes.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  implement:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Add Common Play semantic d20 outcome events
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+          import json
+
+          helper=Path('src/domain/commonPlaySemanticEventRuntime.ts')
+          helper.write_text('''import type { D20TestResult } from "./d20";
+import type { PendingResolution, ResolutionCommit, ResolutionEvent } from "./resolutionTypes";
+
+function semanticKind(result:D20TestResult) {
+  if(result.family==="attack-roll") return result.outcome==="success"?"attack.hit":"attack.miss";
+  if(result.family==="saving-throw") return result.outcome==="success"?"save.success":"save.failure";
+  return undefined;
+}
+
+export function appendCommonPlaySemanticOutcomeEvents(
+  pending:PendingResolution,
+  commit:ResolutionCommit,
+):ResolutionCommit {
+  if(commit.status==="rejected") return commit;
+  const existingIds=new Set(commit.events.map((event)=>event.id));
+  const semanticEvents:ResolutionEvent[]=[];
+  for(const operation of pending.operations) {
+    if(operation.kind!=="d20") continue;
+    const result=commit.results[operation.id] as D20TestResult|undefined;
+    if(!result||result.family!==operation.request.family) continue;
+    const kind=semanticKind(result);
+    if(!kind) continue;
+    const id=`${pending.id}:${operation.id}:semantic:${kind}`;
+    if(existingIds.has(id)) continue;
+    semanticEvents.push({
+      id,
+      resolutionId:pending.id,
+      operationId:operation.id,
+      kind,
+      actorId:operation.actorId??pending.actorId,
+      targetId:operation.targetId,
+      summary:`${kind} (${result.total} vs ${result.target})`,
+      provenance:[...result.provenance],
+      stateChanges:[],
+      result:structuredClone(result),
+    });
+  }
+  if(!semanticEvents.length) return commit;
+  return {
+    ...commit,
+    state:{
+      ...commit.state,
+      history:[...commit.state.history,...semanticEvents.map((event)=>({
+        id:event.id,
+        resolutionId:event.resolutionId,
+        operationId:event.operationId,
+        kind:event.kind,
+        actorId:event.actorId,
+        targetId:event.targetId,
+        summary:event.summary,
+      }))],
+    },
+    events:[...commit.events,...semanticEvents],
+  };
+}
+''')
+
+          adapter=Path('src/app/installedCommonPlayRuntimeAdapter.ts')
+          text=adapter.read_text()
+          old='import { appendCommonPlayDamageTakenTriggers, resolveCommonPlayEffectActivation, type CommonPlayPersistentEffectDefinition } from "../domain/commonPlayEffectRuntime";\n'
+          new=old+'import { appendCommonPlaySemanticOutcomeEvents } from "../domain/commonPlaySemanticEventRuntime";\n'
+          if old not in text: raise SystemExit('Common Play effect runtime import changed')
+          text=text.replace(old,new,1)
+          old='''    const pending=compileCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,state,lowered.definition,operationExecutionInput(internal,actionId,action,prepared,resolutionId,interactionId));
+    committed=resolvePendingResolution(SIMPLEVTT_APP_RULES_PROFILE,state,appendCommonPlayDamageTakenTriggers(
+      state,await installedPersistentEffectDefinitions(adapter),pending,actorEntity.kind==="character"?"character":"monster",
+    ));'''
+          new='''    const pending=compileCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,state,lowered.definition,operationExecutionInput(internal,actionId,action,prepared,resolutionId,interactionId));
+    const automaticPending=appendCommonPlayDamageTakenTriggers(
+      state,await installedPersistentEffectDefinitions(adapter),pending,actorEntity.kind==="character"?"character":"monster",
+    );
+    committed=appendCommonPlaySemanticOutcomeEvents(
+      automaticPending,
+      resolvePendingResolution(SIMPLEVTT_APP_RULES_PROFILE,state,automaticPending),
+    );'''
+          if old not in text: raise SystemExit('operations commit block changed')
+          adapter.write_text(text.replace(old,new,1))
+
+          domain_test=Path('tests/domain/commonPlaySemanticEventRuntime.test.ts')
+          domain_test.write_text('''import assert from "node:assert/strict";
+import test from "node:test";
+import { appendCommonPlaySemanticOutcomeEvents } from "../../src/domain/commonPlaySemanticEventRuntime";
+import { resolvePendingResolution } from "../../src/domain/resolution";
+import type { PendingResolution } from "../../src/domain/resolutionTypes";
+import { runtimeState, TEST_PROFILE } from "./rulesTestState";
+
+function pending(sourceId:string):PendingResolution {
+  return {
+    id:`semantic-${sourceId}`,
+    actorId:"hero",
+    sourceId,
+    expectedRevision:0,
+    operations:[
+      {
+        id:"attack-test",
+        kind:"d20",
+        targetId:"goblin",
+        request:{
+          family:"attack-roll",target:10,modifierContributions:[],targetSource:"external-ac",
+          dice:{id:"attack-d20",purpose:"external attack",sides:20,faces:[15]},
+        },
+      },
+      {
+        id:"save-test",
+        kind:"d20",
+        actorId:"goblin",
+        request:{
+          family:"saving-throw",target:14,modifierContributions:[],targetSource:"external-dc",
+          dice:{id:"save-d20",purpose:"external save",sides:20,faces:[4]},
+        },
+      },
+    ],
+  };
+}
+
+function execute(sourceId:string) {
+  const request=pending(sourceId);
+  const committed=resolvePendingResolution(TEST_PROFILE,runtimeState(),request);
+  assert.equal(committed.status,"committed");
+  return appendCommonPlaySemanticOutcomeEvents(request,committed);
+}
+
+test("Common Play derives authoritative attack and save outcome vocabulary from generic d20 results",()=>{
+  const committed=execute("external.unknown.semantic-source");
+  assert.equal(committed.status,"committed");
+  if(committed.status!=="committed") return;
+  const attack=committed.events.find((event)=>event.kind==="attack.hit");
+  const save=committed.events.find((event)=>event.kind==="save.failure");
+  assert.ok(attack);
+  assert.equal(attack.actorId,"hero");
+  assert.equal(attack.targetId,"goblin");
+  assert.ok(save);
+  assert.equal(save.actorId,"goblin","saving-throw semantic actor must be the actual roller, not the resolution source");
+  assert.equal(save.targetId,undefined);
+  assert.equal(committed.state.history.some((entry)=>entry.kind==="attack.hit"),true);
+  assert.equal(committed.state.history.some((entry)=>entry.kind==="save.failure"),true);
+  const replay=appendCommonPlaySemanticOutcomeEvents(pending("external.unknown.semantic-source"),committed);
+  assert.equal(replay.status,"committed");
+  if(replay.status!=="committed") return;
+  assert.equal(replay.events.filter((event)=>event.kind==="attack.hit").length,1,"semantic enrichment must be idempotent");
+});
+
+test("semantic outcome vocabulary is invariant under external source identity",()=>{
+  const summarize=(sourceId:string)=>{
+    const committed=execute(sourceId);
+    assert.equal(committed.status,"committed");
+    if(committed.status!=="committed") return [];
+    return committed.events.filter((event)=>event.kind.startsWith("attack.")||event.kind.startsWith("save.")).map((event)=>({
+      kind:event.kind,actorId:event.actorId,targetId:event.targetId,
+    }));
+  };
+  assert.deepEqual(summarize("external.first.identity"),summarize("renamed.completely.unseen.identity"));
+});
+''')
+
+          ui_test=Path('tests/ui/installedCommonPlaySemanticOutcomeProduction.test.ts')
+          ui_test.write_text('''import assert from "node:assert/strict";
+import test from "node:test";
+import "../../src/app/offlineRuntimeAdapters";
+import { catalogQualifiedId } from "../../src/app/contentCatalogIdentity";
+import { installedCommonPlayActionId } from "../../src/app/installedCommonPlayActionReference";
+import { setInstalledContentStoreForTests } from "../../src/app/installedContentRuntimeAdapter";
+import { MemoryInstalledContentStore } from "../../src/app/memoryInstalledContentStore";
+import { MockAdapter } from "../../src/app/mockAdapter";
+import { runtimeResolutionEventHistory } from "../../src/app/runtimeResolutionEventHistory";
+
+function payload(prefix:string) {
+  const moduleId=`${prefix}.module`;
+  const contentId=`${prefix}.option`;
+  const mechanicId=`${prefix}.mechanic`;
+  return {
+    moduleId,contentId,mechanicId,
+    json:JSON.stringify({
+      schemaVersion:"0.1-draft",moduleId,moduleVersion:"1",
+      rulesProfile:{id:"dnd.srd-5.2.1",version:"0.1-draft"},defaultLocale:"en",
+      source:{document:"Semantic Outcome Probe",version:"1",license:"CC0",srdDerived:false},
+      dependencies:[],conflicts:[],capabilities:[],
+      content:[{
+        id:contentId,category:"option",
+        presentation:{defaultLocale:"en",originalName:"Semantic Probe",locales:{en:{name:"Semantic Probe"}}},
+        mechanics:[{kind:"common-play",config:{
+          schemaVersion:"0.2-draft",id:mechanicId,
+          entryPoints:[
+            {id:"attack",invocation:"manual",targeting:{from:"targets",min:1,max:1},test:{kind:"attack-roll",roller:"actor",dc:{value:10}},operations:[]},
+            {id:"save",invocation:"manual",test:{kind:"saving-throw",roller:"actor",dc:{value:14}},operations:[]},
+          ],
+        }}],
+      }],
+    }),
+  };
+}
+
+async function prepare(prefix:string) {
+  const adapter=new MockAdapter();
+  setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
+  const pack=payload(prefix);
+  const preview=await adapter.previewContentImport(pack.json);
+  assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
+  await adapter.activateContentImport();
+  await adapter.startInitiative();
+  await adapter.setCurrentActor("char.aelar");
+  const action=(entryPointId:string)=>installedCommonPlayActionId({
+    catalogId:catalogQualifiedId(pack.contentId,pack.moduleId,"1"),mechanicId:pack.mechanicId,entryPointId,
+  });
+  return {adapter,action};
+}
+
+async function run(prefix:string) {
+  const {adapter,action}=await prepare(prefix);
+  await adapter.setQueuedD20(15);
+  let snapshot=await adapter.resolveAction(action("attack"),["combatant.goblin-a"]);
+  assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
+  let history=runtimeResolutionEventHistory(adapter);
+  const attack=history?.events.find((event)=>event.kind==="attack.hit");
+  assert.ok(attack,JSON.stringify(history));
+  assert.equal(attack.actorId,"char.aelar");
+  assert.equal(attack.targetId,"combatant.goblin-a");
+
+  await adapter.setQueuedD20(4);
+  snapshot=await adapter.resolveAction(action("save"),["char.aelar"]);
+  assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
+  history=runtimeResolutionEventHistory(adapter);
+  const save=history?.events.find((event)=>event.kind==="save.failure");
+  assert.ok(save,JSON.stringify(history));
+  assert.equal(save.actorId,"char.aelar");
+  assert.equal(save.targetId,"char.aelar");
+  return [attack.kind,save.kind];
+}
+
+test("unknown installed Common Play emits attack and save semantic outcome events through production commit",async()=>{
+  assert.deepEqual(await run("unknown-semantic-a"),["attack.hit","save.failure"]);
+});
+
+test("production semantic outcome events do not depend on module, content, or mechanic identity",async()=>{
+  assert.deepEqual(await run("renamed-semantic-b"),await run("unknown-semantic-a"));
+});
+''')
+
+          ledger_path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
+          ledger=json.loads(ledger_path.read_text())
+          row=next(entry for entry in ledger['rows'] if entry['family']=='P')
+          row['currentState']='Installed damage.taken|damage.dealt effect rules, actor-owned turn-start/end resource rules, Zone enter/leave/stay/start/end-turn rules, recurring once-per-turn/round frequency, canonical interactive interceptor timing points, and authoritative single-target Common Play attack.hit|attack.miss|save.success|save.failure outcome events have production evidence. State/rest/expiry/recharge, multi-target save-damage semantic outcomes, and automatic semantic-event dispatcher composition remain incomplete'
+          for field,value in [
+            ('implementationEvidence','commonPlaySemanticEventRuntime.ts authoritative attack.hit|attack.miss|save.success|save.failure outcome vocabulary'),
+            ('productionEvidence','installedCommonPlaySemanticOutcomeProduction.test.ts unknown installed attack/save semantic outcome events'),
+            ('identityInvarianceEvidence','installedCommonPlaySemanticOutcomeProduction.test.ts module/content/mechanic rename invariance'),
+          ]:
+            if value not in row[field]: row[field].append(value)
+          ledger_path.write_text(json.dumps(ledger,ensure_ascii=False,indent=2)+'\n')
+          PY
+      - name: Verify Family P semantic outcome slice
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          npm run generate:content
+          npx tsx --test tests/domain/commonPlaySemanticEventRuntime.test.ts tests/ui/installedCommonPlaySemanticOutcomeProduction.test.ts
+          npx tsc --noEmit
+          node scripts/check-v1-mechanism-coverage.mjs
+      - name: Commit verified Family P slice and remove staging workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/c9-family-p-semantic-outcomes.yml
+          git add src/domain/commonPlaySemanticEventRuntime.ts src/app/installedCommonPlayRuntimeAdapter.ts tests/domain/commonPlaySemanticEventRuntime.test.ts tests/ui/installedCommonPlaySemanticOutcomeProduction.test.ts docs/rules/v1-mechanism-coverage-ledger.json
+          git diff --cached --check
+          git commit -m "feat(c9): emit portable d20 outcome events"
+          git push
