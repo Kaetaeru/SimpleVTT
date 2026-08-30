@@ -41,7 +41,7 @@ replace_once(
       selectedIds:targetIds,
       selection:"manual",
       authority:"actor-owner",
-      directTarget:targeting.area===undefined,
+      directTarget:false,
     });
     if(selection.status!=="resolved") return undefined;
     if(projectedAction&&(!projectedAction.available||targetIds.some((id)=>!projectedAction.eligibleTargetIds.includes(id)))) return undefined;
