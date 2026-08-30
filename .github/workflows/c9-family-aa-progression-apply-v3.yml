@@ -1,0 +1,178 @@
+name: C9 Family AA Progression Apply V3
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-aa-progression-apply-v3.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Apply Family AA production projection
+        id: apply
+        continue-on-error: true
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          from textwrap import dedent
+
+          def replace_once(path, old, new):
+              p = Path(path)
+              text = p.read_text()
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"expected exactly one match in {path}, found {count}: {old!r}")
+              p.write_text(text.replace(old, new))
+
+          replace_once(
+              "src/app/installedContentContracts.ts",
+              "    mechanics?:InstalledCommonPlayMechanicV1[];\n    /** Read-only data-only Campaign provider projection from installed content. */",
+              "    mechanics?:InstalledCommonPlayMechanicV1[];\n    /** Validated, data-only progression grants projected by the production level-up runtime. */\n    progressionContributions?:InstalledProgressionContributionV1[];\n    /** Read-only data-only Campaign provider projection from installed content. */",
+          )
+          replace_once(
+              "src/app/contentCatalogIdentity.ts",
+              "    ...(entry.campaignProvider?{campaignProvider:cp(entry.campaignProvider)}:{}),",
+              "    ...(entry.progressionContributions?{progressionContributions:cp(entry.progressionContributions)}:{}),\n    ...(entry.campaignProvider?{campaignProvider:cp(entry.campaignProvider)}:{}),",
+          )
+          replace_once(
+              "src/app/progressionContracts.ts",
+              "    persistentFeatureOptionSources?: Record<string, string>;",
+              "    persistentFeatureOptionSources?: Record<string, string>;\n    /** Stable opaque grant identities contributed by installed RuleModules. */\n    installedProgressionGrantIds?: string[];",
+          )
+          replace_once(
+              "src/app/progressionRuntimeAdapter.ts",
+              "import type { ChoiceSelectionMap, ChoiceSelectionValue } from \"../domain/choiceDefinition\";",
+              "import type { ChoiceSelectionMap, ChoiceSelectionValue } from \"../domain/choiceDefinition\";\nimport { resolveCommonPlayProgressionContributions } from \"../domain/commonPlayProgressionContribution\";",
+          )
+          replace_once(
+              "src/app/progressionRuntimeAdapter.ts",
+              "function requestFor(state: AdapterState) {",
+              "function installedProgressionContributions(state: AdapterState) {\n  return state.catalog.flatMap((entry) => entry.progressionContributions ?? []);\n}\n\nfunction installedProgressionGrantLabel(state: AdapterState, grantId: string) {\n  return state.catalog.find((entry) => entry.contentId === grantId || entry.id === grantId)?.nameKo ?? grantId;\n}\n\nfunction requestFor(state: AdapterState) {",
+          )
+          replace_once(
+              "src/app/progressionRuntimeAdapter.ts",
+              "  applyProgressionCharacterState(internal.activeCharacter,result.state,{\n    scope:\"full\",\n    featureLabelById:(featureId)=>internal.catalog.find((entry)=>entry.id===featureId)?.nameKo,\n  });",
+              "  const contributions = installedProgressionContributions(internal);\n  const contributionResult = contributions.length\n    ? resolveCommonPlayProgressionContributions({\n        revision:stateBefore.revision,\n        trackLevels:Object.fromEntries(result.state.classTracks.map((track) => [track.classId, track.level])),\n        grants:[...(internal.activeCharacter.installedProgressionGrantIds ?? [])],\n      }, stateBefore.revision, contributions)\n    : null;\n  if (contributionResult?.status === \"rejected\") {\n    internal.levelUpDraft.validation = [...internal.levelUpDraft.validation, { severity:\"blocking\", message:`Installed progression contribution rejected: ${contributionResult.error}` }];\n    return internal.getSnapshot();\n  }\n  applyProgressionCharacterState(internal.activeCharacter,result.state,{\n    scope:\"full\",\n    featureLabelById:(featureId)=>internal.catalog.find((entry)=>entry.id===featureId)?.nameKo,\n  });\n  const addedInstalledGrantIds = contributionResult?.status === \"committed\" ? contributionResult.addedGrantIds : [];\n  if (contributionResult?.status === \"committed\") {\n    internal.activeCharacter.installedProgressionGrantIds = [...contributionResult.state.grants];\n    for (const grantId of addedInstalledGrantIds) {\n      const label = installedProgressionGrantLabel(internal, grantId);\n      if (!internal.activeCharacter.features.includes(label)) internal.activeCharacter.features.push(label);\n    }\n  }",
+          )
+          replace_once(
+              "src/app/progressionRuntimeAdapter.ts",
+              "    stateChanges:[\"Phase 08 Progression transaction → Character Revision\", `progressionRevision ${stateBefore.revision} → ${result.state.revision}`],",
+              "    stateChanges:[\n      \"Phase 08 Progression transaction → Character Revision\",\n      `progressionRevision ${stateBefore.revision} → ${result.state.revision}`,\n      ...(addedInstalledGrantIds.length ? [`installed progression grants: ${addedInstalledGrantIds.join(\", \")}`] : []),\n    ],",
+          )
+
+          Path("tests/ui/installedProgressionContributionRuntime.test.ts").write_text(dedent('''\
+          import assert from "node:assert/strict";
+          import test from "node:test";
+          import "../../src/app/progressionRuntimeAdapter";
+          import "../../src/app/installedContentRuntimeAdapter";
+          import { MockAdapter } from "../../src/app/mockAdapter";
+          import { MemoryInstalledContentStore } from "../../src/app/memoryInstalledContentStore";
+          import { setInstalledContentStoreForTests } from "../../src/app/installedContentRuntimeAdapter";
+          import type { Phase07AdapterCommands } from "../../src/app/progressionRuntimeAdapter";
+
+          const SOURCE_ID = "option.external.progression-source";
+          const GRANT_ID = "option.external.progression-grant";
+
+          function progressionPackage() {
+            return JSON.stringify({
+              schemaVersion:"0.1-draft",
+              moduleId:"homebrew.family-aa-progression",
+              moduleVersion:"1",
+              rulesProfile:{id:"dnd.srd-5.2.1",version:"0.1-draft"},
+              defaultLocale:"ko",
+              source:{document:"Family AA progression probe",version:"1",license:"CC0",srdDerived:false},
+              dependencies:[],conflicts:[],capabilities:[],
+              content:[
+                {
+                  id:SOURCE_ID,
+                  category:"option",
+                  presentation:{defaultLocale:"ko",originalName:"Renamed progression source",locales:{ko:{name:"이름이 바뀐 진행 원천",description:"stable IDs drive progression"}}},
+                  progressionContributions:[{track:"dnd.srd521.class.fighter",threshold:6,grants:[GRANT_ID]}],
+                },
+                {
+                  id:GRANT_ID,
+                  category:"option",
+                  presentation:{defaultLocale:"ko",originalName:"Renamed progression grant",locales:{ko:{name:"이름이 바뀐 외부 보상",description:"projected from opaque grant identity"}}},
+                },
+              ],
+            });
+          }
+
+          test("unknown installed RuleModule progression contribution executes through production level-up by stable IDs", async () => {
+            const adapter = new MockAdapter();
+            setInstalledContentStoreForTests(adapter, new MemoryInstalledContentStore());
+
+            let snapshot = await adapter.previewContentImport(progressionPackage());
+            assert.equal(snapshot.contentImport?.validation.some((entry) => entry.severity === "blocking"), false);
+            await adapter.activateContentImport();
+            snapshot = await adapter.getSnapshot();
+            assert.equal(snapshot.contentImport, null);
+            assert.ok(snapshot.catalog.some((entry) => entry.contentId === SOURCE_ID && entry.progressionContributions?.[0]?.grants.includes(GRANT_ID)));
+
+            await adapter.startLevelUp(snapshot.activeCharacter.id);
+            snapshot = await adapter.getSnapshot();
+            assert.equal(snapshot.progressionPlan?.targetClassLevel, 6);
+            const choice = snapshot.progressionPlan?.choices.find((entry) => entry.kind === "asi-or-feat");
+            assert.ok(choice);
+            const progression = adapter as unknown as Phase07AdapterCommands;
+            await progression.setProgressionChoice(choice!.id, { kind:"asi", mode:"plus-two", primary:"str" });
+            snapshot = await adapter.getSnapshot();
+            assert.equal(snapshot.progressionPlan?.blocking.length, 0);
+
+            await adapter.commitLevelUp();
+            snapshot = await adapter.getSnapshot();
+            assert.equal(snapshot.activeCharacter.level, 6);
+            assert.deepEqual(snapshot.activeCharacter.installedProgressionGrantIds, [GRANT_ID]);
+            assert.ok(snapshot.activeCharacter.features.includes("이름이 바뀐 외부 보상"));
+            assert.equal(snapshot.activeCharacter.features.filter((feature) => feature === "이름이 바뀐 외부 보상").length, 1);
+            assert.ok(snapshot.activity[0]?.stateChanges.includes(`installed progression grants: ${GRANT_ID}`));
+          });
+          '''))
+          PY
+      - name: Generate required catalogs
+        if: steps.apply.outcome == 'success'
+        run: npm run generate:content
+      - name: Verify Family AA progression path
+        id: verify
+        if: steps.apply.outcome == 'success'
+        continue-on-error: true
+        run: |
+          npx tsx --test tests/ui/installedProgressionContributionRuntime.test.ts tests/ui/progressionRuntimeAdapter.test.ts tests/ui/ruleModulePackageImport.test.ts
+          npx tsc --noEmit
+      - name: Commit verified change
+        if: steps.apply.outcome == 'success' && steps.verify.outcome == 'success'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/c9-family-aa-progression-apply.yml .github/workflows/c9-family-aa-progression-apply-v3.yml
+          git add src/app/installedContentContracts.ts src/app/contentCatalogIdentity.ts src/app/progressionContracts.ts src/app/progressionRuntimeAdapter.ts tests/ui/installedProgressionContributionRuntime.test.ts
+          git commit -m "feat(c9): execute installed progression contributions"
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
+      - name: Remove failed apply workflow
+        if: always() && (steps.apply.outcome != 'success' || steps.verify.outcome != 'success')
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -- src/app/installedContentContracts.ts src/app/contentCatalogIdentity.ts src/app/progressionContracts.ts src/app/progressionRuntimeAdapter.ts
+          rm -f tests/ui/installedProgressionContributionRuntime.test.ts
+          git rm .github/workflows/c9-family-aa-progression-apply-v3.yml
+          git commit -m "chore(c9): remove failed progression apply v3"
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
+          exit 1
