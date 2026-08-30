@@ -63,9 +63,9 @@ test("Common Play d20 lowers every existing generic test family and preserves fa
 
 test("portable Common Play d20 rejects unsupported or malformed authored payloads",()=>{
   for(const [patch,message] of [
-    [{roller:"target"},/roller must be actor/],
+    [{roller:"each-target"},/roller must be actor or target/],
+    [{roller:"target"},/property is required/],
     [{dc:{value:15.5}},/finite integer literal/],
-    [{property:"str"},/property-backed modifiers are not supported/],
   ] as const) {
     const invalid=structuredClone(AUTHORED);
     Object.assign(invalid.entryPoints[0].test,patch);
