@@ -66,6 +66,22 @@ function modulePayload(prefix:string) {
       }],
     },
     {
+      id:"apply-difficult-terrain",
+      invocation:"manual" as const,
+      operations:[{
+        kind:"property.modify" as const,
+        property:"movement.cost.multiplier",
+        operation:"set" as const,
+        value:{value:2},
+        target:"actor",
+        owner:"effect" as const,
+        source:"definition" as const,
+        duration:{kind:"elapsed" as const,amount:{value:1},unit:"minutes" as const},
+        lifetime:{kind:"until-duration" as const,onEnd:"destroy" as const},
+        instancePolicy:"stack" as const,
+      }],
+    },
+    {
       id:"move-full",
       invocation:"manual" as const,
       operations:[{
@@ -166,21 +182,35 @@ async function runMovementMatrix(prefix:string) {
   return snapshot.scene.economyByActor["char.aelar"]!.movement;
 }
 
+async function runRulesDerivedDifficultTerrain(prefix:string) {
+  const {adapter,action}=await install(prefix);
+  await adapter.resolveAction(action("apply-difficult-terrain"),["char.aelar"]);
+  let snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.resolution?.stage,"complete","portable difficult-terrain rule must commit through production Common Play");
+  const effect=turnRuntimeSessions.get(adapter)?.state.effects.find((candidate)=>candidate.propertyModifier?.property==="movement.cost.multiplier");
+  assert.deepEqual(effect?.propertyModifier,{property:"movement.cost.multiplier",operation:"set",value:{value:2},source:"definition",instancePolicy:"stack"});
+
+  const before=snapshot.scene.economyByActor["char.aelar"]!.movement;
+  await adapter.resolveAction(action("move-walk"),["char.aelar"]);
+  snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.resolution?.stage,"complete");
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.movement,before-10,"RulesProfile-derived difficult terrain must double movement budget cost");
+  await adapter.undoLastResolution();
+  snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.movement,before,"movement Undo must restore the exact budget while the rules effect remains active");
+  return before;
+}
+
 test("unknown installed Common Play executes every movement type, cost multiplier, push, pull, teleport, and no-provoke move through production Resolver",async()=>{
   assert.equal(await runMovementMatrix("unknown-family-i"),30);
 });
 
-test("rules-derived movement cost multiplier is authoritative for unknown installed Common Play",async()=>{
-  const {adapter,action}=await install("unknown-family-i-rules-cost");
-  seedMovementProperty(adapter,"movement.cost.multiplier",2);
-  const before=(await adapter.getSnapshot()).scene.economyByActor["char.aelar"]!.movement;
-  await adapter.resolveAction(action("move-walk"),["char.aelar"]);
-  let snapshot=await adapter.getSnapshot();
-  assert.equal(snapshot.resolution?.stage,"complete");
-  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.movement,before-10,"authoritative rules multiplier must double movement budget cost");
-  await adapter.undoLastResolution();
-  snapshot=await adapter.getSnapshot();
-  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.movement,before,"movement multiplier Undo must restore the exact budget");
+test("rules-derived Difficult Terrain cost is authoritative for unknown installed Common Play",async()=>{
+  assert.equal(await runRulesDerivedDifficultTerrain("unknown-family-i-rules-cost"),30);
+});
+
+test("renaming external Difficult Terrain identities preserves rules-derived movement cost",async()=>{
+  assert.equal(await runRulesDerivedDifficultTerrain("renamed-family-i-rules-cost"),30);
 });
 
 test("rules-derived alternate speed bounds unknown installed Common Play movement",async()=>{
