@@ -17,6 +17,8 @@ const provider:CommonPlayFactProvider={
       case "spatial.distance-feet": return {status:"answered",value:30};
       case "spatial.adjacent": return {status:"answered",value:true};
       case "spatial.within-reach": return {status:"answered",value:true};
+      case "spatial.size-category": return {status:"answered",value:"large"};
+      case "spatial.space-feet": return {status:"answered",value:10};
       case "spatial.line-of-effect": return {status:"answered",value:true};
       case "spatial.total-cover": return {status:"answered",value:false};
       case "spatial.area-members": return {status:"answered",value:["combatant.goblin-b","combatant.goblin-a","combatant.goblin-b"]};
@@ -67,6 +69,86 @@ test("Family G standard distance, adjacency, reach, line-of-effect, and cover fa
     outcomes.push(resolved.answers.map((answer)=>[answer.fact,answer.value]));
   }
   assert.deepEqual(outcomes[1],outcomes[0]);
+});
+
+test("Family G standard size and space facts normalize provider and manual authority without identity dispatch",async()=>{
+  const sizeQuery:CommonPlayFactQuery={
+    id:"size-category",
+    fact:"spatial.size-category",
+    subject:"combatant.external.unknown",
+    authority:"dm",
+    visibility:"public",
+    unknownPolicy:"request-authority",
+  };
+  const sizeProvider=await resolveCommonPlayFactQuery({
+    registry:COMMON_PLAY_STANDARD_FACTS,
+    query:sizeQuery,
+    resolutionId:"external.size.provider",
+    expectedRevision:17,
+    provider,
+  });
+  assert.equal(sizeProvider.status,"resolved");
+  if(sizeProvider.status!=="resolved") return;
+  assert.equal(sizeProvider.answer.value,"large");
+  assert.deepEqual(sizeProvider.answer.provenance,{kind:"provider",providerId:provider.id});
+
+  const sizeAwaiting=await resolveCommonPlayFactQuery({
+    registry:COMMON_PLAY_STANDARD_FACTS,
+    query:{...sizeQuery,id:"size-category-manual"},
+    resolutionId:"external.completely-renamed.size.manual",
+    expectedRevision:17,
+  });
+  assert.equal(sizeAwaiting.status,"awaiting-authority");
+  if(sizeAwaiting.status!=="awaiting-authority") return;
+  const sizeManual=answerCommonPlayFactRequest(sizeAwaiting.request,{
+    requestId:sizeAwaiting.request.id,
+    idempotencyKey:sizeAwaiting.request.idempotencyKey,
+    expectedRevision:17,
+    responderId:"dm.host",
+    value:"large",
+  },17);
+  assert.equal(sizeManual.status,"resolved");
+  if(sizeManual.status!=="resolved") return;
+  assert.equal(sizeManual.answer.value,sizeProvider.answer.value);
+
+  const spaceQuery:CommonPlayFactQuery={
+    id:"space-feet",
+    fact:"spatial.space-feet",
+    subject:"combatant.external.unknown",
+    authority:"dm",
+    visibility:"public",
+    unknownPolicy:"request-authority",
+  };
+  const spaceProvider=await resolveCommonPlayFactQuery({
+    registry:COMMON_PLAY_STANDARD_FACTS,
+    query:spaceQuery,
+    resolutionId:"external.space.provider",
+    expectedRevision:17,
+    provider,
+  });
+  assert.equal(spaceProvider.status,"resolved");
+  if(spaceProvider.status!=="resolved") return;
+  assert.equal(spaceProvider.answer.value,10);
+  assert.deepEqual(spaceProvider.answer.provenance,{kind:"provider",providerId:provider.id});
+
+  const spaceAwaiting=await resolveCommonPlayFactQuery({
+    registry:COMMON_PLAY_STANDARD_FACTS,
+    query:{...spaceQuery,id:"space-feet-manual"},
+    resolutionId:"external.completely-renamed.space.manual",
+    expectedRevision:17,
+  });
+  assert.equal(spaceAwaiting.status,"awaiting-authority");
+  if(spaceAwaiting.status!=="awaiting-authority") return;
+  const spaceManual=answerCommonPlayFactRequest(spaceAwaiting.request,{
+    requestId:spaceAwaiting.request.id,
+    idempotencyKey:spaceAwaiting.request.idempotencyKey,
+    expectedRevision:17,
+    responderId:"dm.host",
+    value:10,
+  },17);
+  assert.equal(spaceManual.status,"resolved");
+  if(spaceManual.status!=="resolved") return;
+  assert.equal(spaceManual.answer.value,spaceProvider.answer.value);
 });
 
 test("Family G standard area membership normalizes provider and manual authority to the same target set",async()=>{
