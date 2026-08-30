@@ -1,0 +1,28 @@
+name: C9 Family I Baseline 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-i-baseline-71304.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run generate:content
+      - run: node --import tsx --test tests/ui/c9FamilyIMovementProduction.test.ts
+      - run: node scripts/check-legacy-execution-boundary.mjs
+      - run: node scripts/check-v1-mechanism-coverage.mjs
+      - run: npm exec tsc -- --noEmit
