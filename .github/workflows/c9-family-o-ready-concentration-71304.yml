@@ -1,0 +1,28 @@
+name: C9 Family O Ready Concentration 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-o-ready-concentration-71304.yml
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run generate:content
+      - name: Verify Family O ready concentration and stored invocation
+        run: npx tsx --test tests/ui/c9FamilyOConcentrationProduction.test.ts tests/ui/installedCommonPlayLoweredFamiliesProduction.test.ts
+      - name: Verify legacy execution boundary
+        run: node scripts/check-legacy-execution-boundary.mjs
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - name: Verify diff whitespace
+        run: git diff --check
