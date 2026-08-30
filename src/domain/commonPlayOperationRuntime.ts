@@ -186,11 +186,12 @@ export type CommonPlayEconomyPayment={
 export type CommonPlayItemPayment={
   kind:"item";
   selector:{from:"items";definitionId:string};
-  quantity:LiteralNumberExpression;
-  consumed:true;
   consumeAt:"commit";
   refundOnCancel:true;
-};
+}&(
+  |{quantity:LiteralNumberExpression;consumed:true;charges?:never}
+  |{charges:LiteralNumberExpression;consumed:false;quantity?:never}
+);
 
 export type CommonPlayPayment=CommonPlayResourcePayment|CommonPlayEconomyPayment|CommonPlayItemPayment;
 
@@ -273,7 +274,7 @@ type Obj=Record<string,unknown>;
 const DEFINITION_KEYS=new Set(["$schema","schemaVersion","id","payments","entryPoints"]);
 const RESOURCE_PAYMENT_KEYS=new Set(["kind","resource","amount","consumeAt"]);
 const ECONOMY_PAYMENT_KEYS=new Set(["kind","bucket","amount","consumeAt","refundOnCancel","actionKind","attacksPerAction"]);
-const ITEM_PAYMENT_KEYS=new Set(["kind","selector","quantity","consumed","consumeAt","refundOnCancel"]);
+const ITEM_PAYMENT_KEYS=new Set(["kind","selector","quantity","charges","consumed","consumeAt","refundOnCancel"]);
 const ITEM_PAYMENT_SELECTOR_KEYS=new Set(["from","where","min","max","definitionId"]);
 const ITEM_PAYMENT_PREDICATE_KEYS=new Set(["op","left","right"]);
 const ENTRY_POINT_KEYS=new Set(["id","invocation","interaction","targeting","allocation","test","operations"]);
@@ -481,12 +482,19 @@ function parsePayment(value:unknown,label:string):CommonPlayPayment {
   if(payment.kind==="item") {
     supportedKeys(payment,ITEM_PAYMENT_KEYS,label);
     const selector=parseItemPaymentSelector(payment.selector,`${label}.selector`);
-    const quantity=literalExpression(payment.quantity,`${label}.quantity`);
-    if(quantity.value<=0) throw new DomainEvaluationError(`${label}.quantity must be a positive integer`);
-    if(payment.consumed!==true) throw new DomainEvaluationError(`${label}.consumed must be true for portable Common Play item payment`);
+    const quantity=payment.quantity===undefined?undefined:literalExpression(payment.quantity,`${label}.quantity`);
+    const charges=payment.charges===undefined?undefined:literalExpression(payment.charges,`${label}.charges`);
+    if((quantity===undefined)===(charges===undefined)) throw new DomainEvaluationError(`${label} requires exactly one of quantity or charges`);
+    const amount=quantity??charges!;
+    if(amount.value<=0) throw new DomainEvaluationError(`${label}.${quantity?"quantity":"charges"} must be a positive integer`);
     if(payment.consumeAt!=="commit") throw new DomainEvaluationError(`${label}.consumeAt must be commit for portable Common Play item payment`);
     if(payment.refundOnCancel!==undefined&&payment.refundOnCancel!==true) throw new DomainEvaluationError(`${label}.refundOnCancel must be true when present`);
-    return {kind:"item",selector,quantity,consumed:true,consumeAt:"commit",refundOnCancel:true};
+    if(quantity) {
+      if(payment.consumed!==true) throw new DomainEvaluationError(`${label}.consumed must be true for quantity item payment`);
+      return {kind:"item",selector,quantity,consumed:true,consumeAt:"commit",refundOnCancel:true};
+    }
+    if(payment.consumed!==false) throw new DomainEvaluationError(`${label}.consumed must be false for charge item payment`);
+    return {kind:"item",selector,charges:charges!,consumed:false,consumeAt:"commit",refundOnCancel:true};
   }
   if(payment.kind==="economy") {
     supportedKeys(payment,ECONOMY_PAYMENT_KEYS,label);
@@ -891,7 +899,10 @@ export function compileCommonPlayPayments(
     if(!resourceId) throw new DomainEvaluationError(`Common Play item payment ${index} requires one pre-resolved item stack`);
     operations.push({
       id:`${input.resolutionId}:payment:${index}`,kind:"spend-resource",actorId:input.actorId,resourceId,
-      amount:literalInteger(payment.kind==="resource"?payment.amount:payment.quantity,payment.kind==="resource"?"resource payment amount":"item payment quantity"),
+      amount:literalInteger(
+        payment.kind==="resource"?payment.amount:"charges" in payment?payment.charges:payment.quantity,
+        payment.kind==="resource"?"resource payment amount":"charges" in payment?"item payment charges":"item payment quantity",
+      ),
     });
   }
   return operations;

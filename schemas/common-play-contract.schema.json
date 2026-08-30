@@ -429,8 +429,6 @@
           "required": [
             "kind",
             "selector",
-            "quantity",
-            "consumed",
             "consumeAt"
           ],
           "properties": {
@@ -455,9 +453,46 @@
             "refundOnCancel": {
               "type": "boolean",
               "default": true
+            },
+            "charges": {
+              "$ref": "#/$defs/expression"
             }
           },
-          "additionalProperties": false
+          "additionalProperties": false,
+          "oneOf": [
+            {
+              "required": [
+                "quantity",
+                "consumed"
+              ],
+              "properties": {
+                "consumed": {
+                  "const": true
+                }
+              },
+              "not": {
+                "required": [
+                  "charges"
+                ]
+              }
+            },
+            {
+              "required": [
+                "charges",
+                "consumed"
+              ],
+              "properties": {
+                "consumed": {
+                  "const": false
+                }
+              },
+              "not": {
+                "required": [
+                  "quantity"
+                ]
+              }
+            }
+          ]
         },
         {
           "type": "object",

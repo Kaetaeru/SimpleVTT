@@ -393,6 +393,7 @@ function operationDefinition(action:CommonPlayProductionAction) {
 }
 
 const itemQuantityResourceId=(itemId:string)=>`phase09:item:${itemId}:quantity`;
+const itemChargeResourceId=(itemId:string)=>`phase09:item:${itemId}:charges`;
 
 function itemPaymentRuntimeContext(internal:AdapterState,state:RulesRuntimeState,definition:CommonPlayOperationDefinition) {
   const payments=definition.payments??[];
@@ -407,9 +408,13 @@ function itemPaymentRuntimeContext(internal:AdapterState,state:RulesRuntimeState
     const matches=internal.activeCharacter.items.filter((item)=>item.definitionId===payment.selector.definitionId);
     if(matches.length!==1) throw new Error(`Common Play item payment selector must resolve exactly one stack: ${payment.selector.definitionId}`);
     const item=matches[0];
-    const resourceId=itemQuantityResourceId(item.id);
+    const chargePayment="charges" in payment&&payment.charges!==undefined;
+    if(chargePayment&&!item.charges) throw new Error(`Common Play item charge payment requires charges: ${payment.selector.definitionId}`);
+    const resourceId=chargePayment?itemChargeResourceId(item.id):itemQuantityResourceId(item.id);
+    const current=chargePayment?item.charges!.current:item.quantity;
+    const maximum=chargePayment?item.charges!.max:item.quantity;
     combatant.resources=combatant.resources.filter((resource)=>resource.id!==resourceId);
-    combatant.resources.push({id:resourceId,label:`${item.name} quantity`,current:item.quantity,maximum:item.quantity});
+    combatant.resources.push({id:resourceId,label:`${item.name} ${chargePayment?"charges":"quantity"}`,current,maximum});
     itemPaymentResourceIds[index]=resourceId;
     ephemeralResourceIds.push(resourceId);
   }
