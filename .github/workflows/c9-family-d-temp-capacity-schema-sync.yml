@@ -52,10 +52,14 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Generate content catalogs
         run: npm run generate:content
-      - name: Verify Family D schema and resource regressions
+      - name: Verify temporary capacity package import
         run: >-
           npx tsx --test
+          --test-name-pattern="installed Common Play accepts portable temporary resource capacity before persistence"
           tests/ui/ruleModulePackageImport.test.ts
+      - name: Verify Family D resource regressions
+        run: >-
+          npx tsx --test
           tests/domain/commonPlayResourceEconomyRuntime.test.ts
           tests/ui/phase09CommonPlayResourcePersistence.test.ts
           tests/domain/resourceRecoveryLockout.test.ts
