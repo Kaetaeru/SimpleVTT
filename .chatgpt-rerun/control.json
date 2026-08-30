@@ -3,7 +3,7 @@
   "run_id": "b7f27a61-29d8-4ba2-9f93-8e66722d5f41",
   "sequence": 10,
   "status": "continue",
-  "reason": "C9 remains active at IMPLEMENTED=4, INCOMPLETE=32, PROVEN_UNNEEDED=0. Family C now has structural family/outcome d20 timing, failed-check/save production, Cutting Words success selection in data, and connected add-die/reroll duplicate/reconnect/Undo proof. Next migrate Indomitable and Dark One's Own Luck off named runtimeD20FollowUps; Tactical Mind and Peerless Skill remain blocked on conditional pay-on-success. Family C connected and persistence evidence is stored in the canonical ledger evidence fields. Rerun README branch binding and PLAN sequence are reconciled to the active C9 branch/sequence.",
+  "reason": "C9 remains active at IMPLEMENTED=4, INCOMPLETE=32, PROVEN_UNNEEDED=0. Dark One's Own Luck is now portable Common Play with named runtimeD20FollowUps removed; run 33290763482 passed 25/25 focused tests, typecheck, build, presentation rename invariance, connected exactly-once/reconnect/persistence/Undo. Family C remains INCOMPLETE: Tactical Mind and Peerless Skill need generic conditional pay-on-success, and Indomitable needs a generic authoritative actor/progression numeric source for its Fighter-level reroll bonus.",
   "task_id": "v1-common-play-c8-rerun",
   "updated_at": "2026-08-30"
 }
