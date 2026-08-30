@@ -104,7 +104,7 @@ jobs:
             return {
               hp:resolved.state.combatants.hero.life.hp.current,
               semantic:resolved.events.filter((event)=>event.kind==="effect.expired").map((event)=>({kind:event.kind,targetId:event.targetId})),
-              dispatched:Object.keys(resolved.results).filter((id)=>id.includes("automatic:effect.expired")).length,
+              dispatched:Object.keys(resolved.results).filter((id)=>id.includes("automatic:effect.expired")&&!id.includes(":frequency:")).length,
             };
           }
 
