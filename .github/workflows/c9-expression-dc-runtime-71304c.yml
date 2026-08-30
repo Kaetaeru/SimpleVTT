@@ -1,0 +1,139 @@
+name: C9 Portable Expression DC Runtime 71304C
+
+on:
+  push:
+    branches: [agent/c9-gate-n-coverage-reconciliation]
+    paths: [.github/workflows/c9-expression-dc-runtime-71304c.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  verify-and-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Align expression DC parser and runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          runtime=Path('src/domain/commonPlayOperationRuntime.ts')
+          text=runtime.read_text(encoding='utf-8')
+          for old,new in [
+              ('  dc:LiteralNumberExpression;','  dc:CommonPlayExpression;'),
+              ('dc:literalExpression(definition.dc,`${label}.dc`)','dc:numericExpression(definition.dc,`${label}.dc`)'),
+          ]:
+              if new not in text:
+                  if text.count(old)!=1:
+                      raise SystemExit(f'expected runtime anchor once: {old!r}, got {text.count(old)}')
+                  text=text.replace(old,new,1)
+          old='''    const conditionContext={
+            ...(conditionAbility?{ability:conditionAbility}:{}),
+            ...(selectedTargetFacts?.distanceFeet===undefined?{}:{distanceToTargetFeet:selectedTargetFacts.distanceFeet}),
+          };
+          operations.push({
+          '''
+          new='''    const conditionContext={
+            ...(conditionAbility?{ability:conditionAbility}:{}),
+            ...(selectedTargetFacts?.distanceFeet===undefined?{}:{distanceToTargetFeet:selectedTargetFacts.distanceFeet}),
+          };
+          const d20Target=evaluateExpression(entryPoint.test.dc as ExpressionNode,(property)=>{
+            const value=input.movementProperties?.[property];
+            if(!Number.isFinite(value)) throw new DomainEvaluationError(`Common Play d20 target property is unavailable: ${property}`);
+            return Number(value);
+          });
+          if(!Number.isFinite(d20Target)||!Number.isInteger(d20Target)) throw new DomainEvaluationError("Common Play d20 target must resolve to a finite integer");
+          operations.push({
+          '''
+          # Normalize only the Python literal's continuation indentation, preserving the four TS leading spaces.
+          old='\n'.join(line[8:] if line.startswith('        ') else line for line in old.splitlines())+'\n'
+          new='\n'.join(line[8:] if line.startswith('        ') else line for line in new.splitlines())+'\n'
+          if new not in text:
+              if text.count(old)!=1:
+                  raise SystemExit(f'expected d20 evaluation anchor once, got {text.count(old)}')
+              text=text.replace(old,new,1)
+          old_target='target:literalInteger(entryPoint.test.dc,"d20 target")+attackCoverTargetModifier,'
+          new_target='target:d20Target+attackCoverTargetModifier,'
+          if new_target not in text:
+              if text.count(old_target)!=1:
+                  raise SystemExit(f'expected d20 target anchor once, got {text.count(old_target)}')
+              text=text.replace(old_target,new_target,1)
+          runtime.write_text(text,encoding='utf-8')
+          PY
+          cat > tests/domain/c9ExpressionDcRuntime71304.test.ts <<'EOF'
+          import assert from "node:assert/strict";
+          import test from "node:test";
+          import { lowerAllCommonPlayEntryPoints, parseCommonPlayDefinition } from "../../src/domain/commonPlayDefinitionRuntime";
+          import { compileCommonPlayEntryPointOperations } from "../../src/domain/commonPlayOperationRuntime";
+          import { runtimeState, TEST_PROFILE } from "./rulesTestState";
+
+          test("portable d20 DC expressions evaluate authoritative actor profile properties",()=>{
+            const definition=parseCommonPlayDefinition({
+              schemaVersion:"0.2-draft",id:"external.expression-dc",
+              entryPoints:[{
+                id:"control",invocation:"manual",
+                targeting:{from:"targets",min:1,max:1},
+                test:{
+                  kind:"saving-throw",roller:"target",
+                  property:{choose:"highest",from:["save.str.modifier","save.dex.modifier"]},
+                  dc:{op:"add",args:[{value:8},{ref:"proficiency.bonus"},{ref:"ability.str.modifier"}]},
+                },
+                operations:[],
+              }],
+            });
+            const lowering=lowerAllCommonPlayEntryPoints(definition)[0];
+            assert.equal(lowering.kind,"operations");
+            if(lowering.kind!=="operations") return;
+            const input={
+              resolutionId:"expression-dc",actorId:"hero",entryPointId:"control",targetId:"goblin",
+              targetingTargets:[{id:"goblin",kind:"creature" as const,relation:"enemy" as const}],
+              d20:{faces:[10],modifierContributions:[{source:"target-save",value:2}]},
+              movementProperties:{"proficiency.bonus":3,"ability.str.modifier":4},
+            };
+            const pending=compileCommonPlayEntryPointOperations(TEST_PROFILE,runtimeState(),lowering.definition,input);
+            const d20=pending.operations.find((operation)=>operation.kind==="d20");
+            assert.equal(d20?.kind,"d20");
+            if(d20?.kind==="d20") assert.equal(d20.request.target,15);
+            assert.throws(()=>compileCommonPlayEntryPointOperations(TEST_PROFILE,runtimeState(),lowering.definition,{
+              ...input,movementProperties:{"proficiency.bonus":3},
+            }),/Common Play d20 target property is unavailable: ability\.str\.modifier/);
+          });
+          EOF
+      - name: Verify expression DC parity
+        run: |
+          node --import tsx --test tests/domain/c9ExpressionDcRuntime71304.test.ts tests/domain/commonPlayDefinitionRuntime.test.ts tests/domain/commonPlayD20Runtime.test.ts
+          node --import tsx --test tests/ui/c9FamilyJPortableControlProduction.test.ts
+          node scripts/check-legacy-execution-boundary.mjs
+          node scripts/check-v1-mechanism-coverage.mjs
+          npm exec tsc -- --noEmit
+      - name: Publish only the verified patch onto the live branch tip
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch=agent/c9-gate-n-coverage-reconciliation
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/domain/commonPlayOperationRuntime.ts tests/domain/c9ExpressionDcRuntime71304.test.ts
+          git commit -m "feat(c9): evaluate portable d20 expression dc"
+          git format-patch -1 --stdout > /tmp/expression-dc.patch
+          for attempt in $(seq 1 8); do
+            git fetch origin "$branch"
+            git checkout -B c9-expression-dc-publish "origin/$branch"
+            if ! git am /tmp/expression-dc.patch; then
+              git am --abort || true
+              exit 1
+            fi
+            if git push origin HEAD:"$branch"; then exit 0; fi
+          done
+          exit 1
