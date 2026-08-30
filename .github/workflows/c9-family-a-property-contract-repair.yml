@@ -22,7 +22,7 @@ jobs:
         with:
           node-version: 22
       - run: npm install --no-audit --no-fund
-      - name: Apply repaired Family A contract slice
+      - name: Apply current Family A contract slice
         shell: python
         run: |
           from pathlib import Path
@@ -34,11 +34,6 @@ jobs:
           start = workflow.index(start_marker) + len(start_marker)
           end = workflow.index(end_marker, start)
           code = textwrap.dedent(workflow[start:end])
-          stale = '    if(operation.kind==="roll.modify") continue;\n  if(operation.kind==="resource.recharge") {'
-          current = '    if(operation.kind==="roll.modify") continue;\n    if(operation.kind==="resource.recharge") {'
-          if stale not in code:
-              raise SystemExit('Family A stale lowering anchor not found')
-          code = code.replace(stale, current, 1)
           exec(compile(code, 'family-a-property-contract-step', 'exec'), {})
       - run: npx tsx --test tests/domain/commonPlayPropertyContractRuntime.test.ts tests/domain/commonPlayDefinitionRuntime.test.ts
       - run: npm run test:common-play-definition
