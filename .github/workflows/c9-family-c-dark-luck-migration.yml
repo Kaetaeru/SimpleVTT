@@ -22,6 +22,7 @@ jobs:
           python3 .github/c9-family-c-dark-luck-migrate.py
           python3 .github/c9-family-c-dark-luck-fix.py
           python3 .github/c9-family-c-dark-luck-timing.py
+          python3 .github/c9-family-c-dark-luck-test-timing.py
 
       - name: Assert named Dark Luck follow-up is gone
         shell: bash
@@ -57,7 +58,8 @@ jobs:
             src/app/commonPlayInterceptorProductionRuntimeAdapter.ts \
             content/modules/dnd-srd-5.2.1.subclasses/module.json \
             tests/ui/warlockFiendDarkOnesOwnLuckRuntime.test.ts \
-            tests/ui/connectedProjectedCharacterDarkOnesOwnLuckResolution.test.ts
+            tests/ui/connectedProjectedCharacterDarkOnesOwnLuckResolution.test.ts \
+            tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts
           git diff --cached --check
           git commit -m "feat(common-play): migrate Dark One's Own Luck"
           git push
@@ -67,6 +69,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git rm .github/c9-family-c-dark-luck-migrate.py .github/c9-family-c-dark-luck-fix.py .github/c9-family-c-dark-luck-timing.py .github/workflows/c9-family-c-dark-luck-migration.yml
+          git rm .github/c9-family-c-dark-luck-migrate.py .github/c9-family-c-dark-luck-fix.py .github/c9-family-c-dark-luck-timing.py .github/c9-family-c-dark-luck-test-timing.py .github/workflows/c9-family-c-dark-luck-migration.yml
           git commit -m "ci(c9): remove Dark Luck migration helpers"
           git push
