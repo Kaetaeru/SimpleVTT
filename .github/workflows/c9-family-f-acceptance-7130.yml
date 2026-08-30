@@ -1,0 +1,43 @@
+name: C9 Family F Allocation Acceptance 7130
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - tests/ui/c9FamilyFAllocationAcceptance.test.ts
+      - tests/ui/installedCommonPlayAllocationProductionRuntime.test.ts
+      - tests/domain/commonPlayAllocationRuntime.test.ts
+      - src/domain/commonPlayAllocationRuntime.ts
+      - src/domain/commonPlayOperationRuntime.ts
+      - src/app/installedCommonPlayRuntimeAdapter.ts
+      - docs/rules/v1-mechanism-coverage-ledger.json
+      - .github/workflows/c9-family-f-acceptance-7130.yml
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Generate content catalogs
+        run: npm run generate:content
+      - name: Verify Family F allocation slice
+        run: >-
+          npx tsx --test
+          tests/domain/commonPlayAllocationRuntime.test.ts
+          tests/ui/installedCommonPlayAllocationProductionRuntime.test.ts
+          tests/ui/c9FamilyFAllocationAcceptance.test.ts
+          tests/ui/ruleModulePackageImport.test.ts
+      - name: Verify legacy execution boundary
+        run: node scripts/check-legacy-execution-boundary.mjs
+      - name: Verify coverage ledger structure
+        run: node scripts/check-v1-mechanism-coverage.mjs
+      - name: Typecheck application
+        run: npx tsc --noEmit
