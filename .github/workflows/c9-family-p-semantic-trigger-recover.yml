@@ -1,0 +1,265 @@
+name: C9 Family P Semantic Trigger Recover
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-p-semantic-trigger-recover.yml
+
+permissions:
+  contents: write
+
+jobs:
+  implement:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Compose semantic outcome triggers
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+
+          effect=Path('src/domain/commonPlayEffectRuntime.ts')
+          text=effect.read_text()
+          text=text.replace(
+            'type AutomaticDamageEvent="damage.taken"|"damage.dealt";\n',
+            'type AutomaticDamageEvent="damage.taken"|"damage.dealt";\nexport type CommonPlayAutomaticEffectEvent=AutomaticDamageEvent|"attack.hit"|"attack.miss"|"save.success"|"save.failure";\n'
+          )
+          text=text.replace(
+            '  event:AutomaticDamageEvent;\n  frequency?:AutomaticDamageFrequency;',
+            '  event:CommonPlayAutomaticEffectEvent;\n  frequency?:AutomaticDamageFrequency;'
+          )
+          text=text.replace(
+            '  if (rule.event!=="damage.taken"&&rule.event!=="damage.dealt") throw new Error(`${label} supports only damage.taken or damage.dealt`);',
+            '  if (!["damage.taken","damage.dealt","attack.hit","attack.miss","save.success","save.failure"].includes(rule.event)) throw new Error(`${label} event is unsupported in this runtime slice`);'
+          )
+          if 'CommonPlayAutomaticEffectEvent' not in text or '"attack.hit","attack.miss","save.success","save.failure"' not in text:
+            raise SystemExit('effect runtime semantic-event patch did not apply')
+          effect.write_text(text)
+
+          adapter=Path('src/app/installedCommonPlayRuntimeAdapter.ts')
+          text=adapter.read_text()
+          text=text.replace(
+            'import { appendCommonPlaySemanticOutcomeEvents } from "../domain/commonPlaySemanticEventRuntime";',
+            'import { appendCommonPlaySemanticOutcomeEvents, appendCommonPlaySemanticOutcomeTriggers } from "../domain/commonPlaySemanticEventRuntime";'
+          )
+          old='''    const pending=compileCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,state,lowered.definition,operationExecutionInput(internal,actionId,action,prepared,resolutionId,interactionId));
+    const automaticPending=appendCommonPlayDamageTakenTriggers(
+      state,await installedPersistentEffectDefinitions(adapter),pending,actorEntity.kind==="character"?"character":"monster",
+    );
+    committed=appendCommonPlaySemanticOutcomeEvents(
+      automaticPending,
+      resolvePendingResolution(SIMPLEVTT_APP_RULES_PROFILE,state,automaticPending),
+    );'''
+          new='''    const pending=compileCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,state,lowered.definition,operationExecutionInput(internal,actionId,action,prepared,resolutionId,interactionId));
+    const effectDefinitions=await installedPersistentEffectDefinitions(adapter);
+    const damagePending=appendCommonPlayDamageTakenTriggers(
+      state,effectDefinitions,pending,actorEntity.kind==="character"?"character":"monster",
+    );
+    const automaticPending=appendCommonPlaySemanticOutcomeTriggers(
+      state,effectDefinitions,damagePending,Object.fromEntries(internal.scene.entities.map((entity)=>[entity.id,entity.kind==="character"?"character":"monster"])),
+    );
+    committed=appendCommonPlaySemanticOutcomeEvents(
+      automaticPending,
+      resolvePendingResolution(SIMPLEVTT_APP_RULES_PROFILE,state,automaticPending),
+    );'''
+          if old not in text:
+            raise SystemExit('installed adapter anchor not found')
+          adapter.write_text(text.replace(old,new))
+          PY
+
+          cat > src/domain/commonPlaySemanticEventRuntime.ts <<'TS'
+          import type { RulesRuntimeState } from "./combatState";
+          import type { D20TestResult } from "./d20";
+          import type { CommonPlayAutomaticEffectEvent, CommonPlayPersistentEffectDefinition } from "./commonPlayEffectRuntime";
+          import { resolveCommonPlayFrequency } from "./commonPlayFrequencyRuntime";
+          import type { PendingResolution, ResolutionCommit, ResolutionEvent, ResolutionOperation } from "./resolutionTypes";
+
+          const EFFECT_METADATA_DEFINITION="commonPlayDefinitionId";
+          const EFFECT_METADATA_TEMPLATE="commonPlayTemplateId";
+
+          function semanticKind(result:D20TestResult):CommonPlayAutomaticEffectEvent|undefined {
+            if(result.family==="attack-roll") return result.outcome==="success"?"attack.hit":"attack.miss";
+            if(result.family==="saving-throw") return result.outcome==="success"?"save.success":"save.failure";
+            return undefined;
+          }
+
+          function semanticContexts(operation:Extract<PendingResolution["operations"][number],{kind:"d20"}>) {
+            if(operation.request.family==="attack-roll") return [
+              {event:"attack.hit" as const,outcome:"success" as const},
+              {event:"attack.miss" as const,outcome:"failure" as const},
+            ];
+            if(operation.request.family==="saving-throw") return [
+              {event:"save.success" as const,outcome:"success" as const},
+              {event:"save.failure" as const,outcome:"failure" as const},
+            ];
+            return [];
+          }
+
+          export function appendCommonPlaySemanticOutcomeTriggers(
+            state:RulesRuntimeState,
+            definitions:CommonPlayPersistentEffectDefinition[],
+            pending:PendingResolution,
+            creatureKinds:Record<string,"character"|"monster">,
+          ):PendingResolution {
+            const operations:ResolutionOperation[]=[...pending.operations];
+            for(const [d20Index,d20] of pending.operations.entries()) {
+              if(d20.kind!=="d20") continue;
+              const subjectId=d20.actorId??pending.actorId;
+              const creatureKind=creatureKinds[subjectId];
+              if(!creatureKind) continue;
+              for(const context of semanticContexts(d20)) {
+                const when={operationId:d20.id,field:"outcome",equals:context.outcome} as const;
+                for(const [definitionIndex,definition] of definitions.entries()) {
+                  for(const [effectIndex,effect] of state.effects.filter((candidate)=>
+                    candidate.targetId===subjectId
+                    && candidate.sourceId===definition.id
+                    && candidate.metadata?.[EFFECT_METADATA_DEFINITION]===definition.id
+                  ).entries()) {
+                    const templateId=effect.metadata?.[EFFECT_METADATA_TEMPLATE];
+                    if(typeof templateId!=="string") continue;
+                    const template=definition.artifactTemplates.find((candidate)=>candidate.id===templateId);
+                    if(!template) continue;
+                    for(const [ruleIndex,rule] of template.rules.filter((candidate)=>candidate.event===context.event).entries()) {
+                      const frequency=resolveCommonPlayFrequency({
+                        ruleId:rule.id,subjectId,frequency:rule.frequency??"once",resolutionId:pending.id,
+                        clock:state.clock,markers:effect.metadata??{},
+                      });
+                      if(!frequency.eligible) continue;
+                      for(const [operationIndex,operation] of rule.operations.entries()) operations.push({
+                        id:`${pending.id}:automatic:${context.event}:${definitionIndex}:${effectIndex}:${d20Index}:${ruleIndex}:${operationIndex}`,
+                        kind:"damage",targetId:subjectId,damageType:operation.damageType,amount:operation.amount.value,creatureKind,when,
+                      });
+                      if(template.lifetime.kind==="until-duration"&&Object.keys(frequency.metadataPatch).length) operations.push({
+                        id:`${pending.id}:automatic:${context.event}:${definitionIndex}:${effectIndex}:${d20Index}:${ruleIndex}:frequency`,
+                        kind:"update-effect",effectId:effect.id,metadataPatch:frequency.metadataPatch,when,
+                      });
+                    }
+                  }
+                }
+              }
+            }
+            return operations.length===pending.operations.length?pending:{...pending,operations};
+          }
+
+          export function appendCommonPlaySemanticOutcomeEvents(
+            pending:PendingResolution,
+            commit:ResolutionCommit,
+          ):ResolutionCommit {
+            if(commit.status==="rejected") return commit;
+            const existingIds=new Set(commit.events.map((event)=>event.id));
+            const semanticEvents:ResolutionEvent[]=[];
+            for(const operation of pending.operations) {
+              if(operation.kind!=="d20") continue;
+              const result=commit.results[operation.id] as D20TestResult|undefined;
+              if(!result||result.family!==operation.request.family) continue;
+              const kind=semanticKind(result);
+              if(!kind) continue;
+              const id=`${pending.id}:${operation.id}:semantic:${kind}`;
+              if(existingIds.has(id)) continue;
+              semanticEvents.push({
+                id,resolutionId:pending.id,operationId:operation.id,kind,
+                actorId:operation.actorId??pending.actorId,targetId:operation.targetId,
+                summary:`${kind} (${result.total} vs ${result.target})`,provenance:[...result.provenance],stateChanges:[],result:structuredClone(result),
+              });
+            }
+            if(!semanticEvents.length) return commit;
+            return {
+              ...commit,
+              state:{...commit.state,history:[...commit.state.history,...semanticEvents.map((event)=>({
+                id:event.id,resolutionId:event.resolutionId,operationId:event.operationId,kind:event.kind,
+                actorId:event.actorId,targetId:event.targetId,summary:event.summary,
+              }))]},
+              events:[...commit.events,...semanticEvents],
+            };
+          }
+          TS
+
+          cat > tests/domain/commonPlaySemanticTriggerRuntime.test.ts <<'TS'
+          import assert from "node:assert/strict";
+          import test from "node:test";
+          import { resolveCommonPlayEffectActivation, type CommonPlayPersistentEffectDefinition } from "../../src/domain/commonPlayEffectRuntime";
+          import { appendCommonPlaySemanticOutcomeEvents, appendCommonPlaySemanticOutcomeTriggers } from "../../src/domain/commonPlaySemanticEventRuntime";
+          import { resolvePendingResolution } from "../../src/domain/resolution";
+          import type { PendingResolution, ResolutionCommit } from "../../src/domain/resolutionTypes";
+          import { runtimeState, TEST_PROFILE } from "./rulesTestState";
+
+          const DEFINITION:CommonPlayPersistentEffectDefinition={
+            schemaVersion:"0.2-draft",id:"external.unknown.semantic-ward",
+            entryPoints:[{id:"activate",invocation:"manual",operations:[{kind:"effect.apply",template:"semantic-ward",target:"actor"}]}],
+            artifactTemplates:[{
+              id:"semantic-ward",artifactKind:"effect",duration:{kind:"elapsed",amount:{value:1},unit:"hours"},
+              rules:[
+                {id:"on-hit",event:"attack.hit",frequency:"once-per-resolution",operations:[{kind:"damage.apply",amount:{value:2},damageType:"force",target:"event.actor"}]},
+                {id:"on-save-failure",event:"save.failure",frequency:"once-per-resolution",operations:[{kind:"damage.apply",amount:{value:3},damageType:"psychic",target:"event.actor"}]},
+              ],
+              lifetime:{kind:"until-duration",onEnd:"destroy"},
+            }],
+          };
+
+          function committed(value:ResolutionCommit,label:string) {
+            assert.equal(value.status,"committed",label);
+            if(value.status!=="committed") throw new Error(`${label}: ${value.error}`);
+            return value;
+          }
+
+          test("semantic attack/save outcomes dispatch persistent-effect rules through the same pending resolution",()=>{
+            let state=runtimeState();
+            state=committed(resolveCommonPlayEffectActivation(TEST_PROFILE,state,DEFINITION,{resolutionId:"ward-hero",actorId:"hero",entryPointId:"activate"}),"hero ward").state;
+            state=committed(resolveCommonPlayEffectActivation(TEST_PROFILE,state,DEFINITION,{resolutionId:"ward-goblin",actorId:"goblin",entryPointId:"activate"}),"goblin ward").state;
+            const pending:PendingResolution={
+              id:"semantic-trigger-probe",actorId:"hero",sourceId:"external.renamable.source",expectedRevision:state.revision,
+              operations:[
+                {id:"attack",kind:"d20",targetId:"goblin",request:{family:"attack-roll",target:10,modifierContributions:[],targetSource:"external-ac",dice:{id:"attack-d20",purpose:"attack",sides:20,faces:[15]}}},
+                {id:"save",kind:"d20",actorId:"goblin",request:{family:"saving-throw",target:14,modifierContributions:[],targetSource:"external-dc",dice:{id:"save-d20",purpose:"save",sides:20,faces:[4]}}},
+              ],
+            };
+            const expanded=appendCommonPlaySemanticOutcomeTriggers(state,[DEFINITION],pending,{hero:"character",goblin:"monster"});
+            const resolved=appendCommonPlaySemanticOutcomeEvents(expanded,resolvePendingResolution(TEST_PROFILE,state,expanded));
+            assert.equal(resolved.status,"committed");
+            if(resolved.status!=="committed") return;
+            assert.equal(resolved.state.combatants.hero.life.hp.current,18);
+            assert.equal(resolved.state.combatants.goblin.life.hp.current,12);
+            assert.equal(resolved.events.some((event)=>event.kind==="attack.hit"),true);
+            assert.equal(resolved.events.some((event)=>event.kind==="save.failure"),true);
+            assert.equal(Object.keys(resolved.results).some((id)=>id.includes("automatic:attack.hit")),true);
+            assert.equal(Object.keys(resolved.results).some((id)=>id.includes("automatic:save.failure")),true);
+          });
+          TS
+      - name: Verify focused semantic trigger slice
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          npm run generate:content
+          npx tsx --test tests/domain/commonPlaySemanticEventRuntime.test.ts tests/domain/commonPlaySemanticTriggerRuntime.test.ts tests/domain/commonPlayEffectRuntime.test.ts
+          npx tsc --noEmit
+      - name: Commit verified slice
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/c9-family-p-semantic-trigger-recover.yml
+          git add src/domain/commonPlayEffectRuntime.ts src/domain/commonPlaySemanticEventRuntime.ts src/app/installedCommonPlayRuntimeAdapter.ts tests/domain/commonPlaySemanticTriggerRuntime.test.ts
+          git diff --cached --check
+          git commit -m "feat(c9): dispatch semantic d20 effect triggers"
+          for attempt in $(seq 1 12); do
+            git fetch origin agent/c9-gate-n-coverage-reconciliation
+            if git rebase origin/agent/c9-gate-n-coverage-reconciliation && git push origin HEAD:agent/c9-gate-n-coverage-reconciliation; then
+              exit 0
+            fi
+            git rebase --abort || true
+            sleep 2
+          done
+          exit 1
