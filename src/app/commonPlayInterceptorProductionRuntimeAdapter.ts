@@ -100,6 +100,7 @@ function modifierAuthority(internal:AdapterState,pending:PendingPassiveReaction)
   const modifierDiceFaces:Record<number,number[]>={};
   let drawIndex=0;
   interceptor.operations.forEach((operation,index)=>{
+    if(operation.mode!=="subtract-die")return;
     const formula=literalDice(operation.dice);
     const faces:number[]=[];
     for(let die=0;die<formula.count;die+=1){
@@ -365,11 +366,13 @@ function updateD20Presentation(resolution:ResolutionView,pending:PendingPassiveR
   if(rolled.length)resolution.detail.push(`${pending.candidate.optionName}: ${rolled.join(", ")} · ${result.total}`);
   resolution.provenance.push(`common-play:${pending.candidate.definition.id} · generic post-roll interceptor`);
   if(result.family==="ability-check"){
+    resolution.checkTarget=result.target;
     resolution.checkOutcome=result.outcome==="success"?"성공":"실패";
     resolution.compact=`${result.total} vs DC ${result.target} · ${resolution.checkOutcome}`;
     resolution.calculatedOutcome=resolution.compact;
     resolution.finalOutcome=resolution.checkOutcome;
   }else{
+    resolution.targetAc=result.target;
     resolution.attackTotal=result.total;
     resolution.attackOutcome=result.outcome==="success"?"명중":"빗나감";
     resolution.critical=result.critical;

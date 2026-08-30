@@ -27,7 +27,7 @@ const ORIGINAL:Identity={
   displayName:"Portable Reaction Charm",
 };
 
-function packagePayload(identity=ORIGINAL,withEligibility=false,interceptorKind:"d20"|"damage"="d20"){
+function packagePayload(identity=ORIGINAL,withEligibility=false,interceptorKind:"d20"|"damage"="d20",operations:Array<Record<string,unknown>>=[{kind:"roll.modify",mode:"subtract-die",dice:"1d8"}]){
   return JSON.stringify({
     schemaVersion:"0.1-draft",
     moduleId:identity.moduleId,
@@ -65,7 +65,7 @@ function packagePayload(identity=ORIGINAL,withEligibility=false,interceptorKind:
             interaction:{id:identity.interactionId,kind:"choice",responder:"actor-owner",mode:"blocking",input:{type:"boolean"},revalidate:"if-revision-changed",stalePolicy:"reject"},
             operation:"recalculate",
             slot:interceptorKind==="damage"?"primary.damage":"d20.roll",
-            operations:[{kind:"roll.modify",mode:"subtract-die",dice:"1d8"}],
+            operations,
           }],
         },
       }],
@@ -80,11 +80,11 @@ function otherCharacterCheckAction():ActionVm{
   };
 }
 
-async function prepare(identity=ORIGINAL,withEligibility=false,interceptorKind:"d20"|"damage"="d20"){
+async function prepare(identity=ORIGINAL,withEligibility=false,interceptorKind:"d20"|"damage"="d20",operations:Array<Record<string,unknown>>=[{kind:"roll.modify",mode:"subtract-die",dice:"1d8"}]){
   const adapter=new MockAdapter();
   setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
   await adapter.startProductionLocalPlay("dm");
-  const preview=await adapter.previewContentImport(packagePayload(identity,withEligibility,interceptorKind));
+  const preview=await adapter.previewContentImport(packagePayload(identity,withEligibility,interceptorKind,operations));
   assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
   await adapter.activateContentImport();
   const internal=adapter as unknown as {activeCharacter:CharacterSheet;scene:SceneVm};
@@ -179,6 +179,34 @@ test("portable production discovery is invariant under module/content/definition
       resource:secondWind(snapshot),
       reaction:snapshot.scene.economyByActor[snapshot.activeCharacter.id]?.reaction,
     };
+  };
+  assert.deepEqual(await execute(renamed),await execute(ORIGINAL));
+});
+
+test("unknown installed d20 interceptor executes replace, minimum, and target-add in production and Undo restores atomic costs",async()=>{
+  const operations=[
+    {kind:"roll.modify",mode:"replace",value:{value:10}},
+    {kind:"roll.modify",mode:"minimum",value:{value:12}},
+    {kind:"roll.modify",mode:"target-add",value:{value:2}},
+  ];
+  const renamed:Identity={...ORIGINAL,moduleId:"external.deterministic-renamed",contentId:"item.deterministic-renamed",mechanicId:"mechanic.deterministic-renamed",interceptorId:"interceptor.deterministic-renamed",interactionId:"interaction.deterministic-renamed",displayName:"Renamed Deterministic Reaction"};
+  const execute=async(identity:Identity)=>{
+    const adapter=await prepare(identity,false,"d20",operations);
+    let snapshot=await adapter.getSnapshot();
+    const responderId=snapshot.activeCharacter.id;
+    const resourceBefore=secondWind(snapshot)!;
+    snapshot=await openAbilityCheckInterrupt(adapter);
+    assert.equal(snapshot.resolution?.stage,"interrupt",JSON.stringify(snapshot.resolution));
+    snapshot=await adapter.respondToInterrupt(true);
+    const mechanical={outcome:snapshot.resolution?.checkOutcome,total:snapshot.resolution?.rollTotal,target:snapshot.resolution?.checkTarget};
+    assert.deepEqual(mechanical,{outcome:"실패",total:12,target:15});
+    assert.equal(secondWind(snapshot),resourceBefore-1);
+    assert.equal(snapshot.scene.economyByActor[responderId]?.reaction,false);
+    assert.ok(snapshot.resolution?.provenance.some((entry)=>entry.includes("common-play:")));
+    snapshot=await adapter.undoLastResolution();
+    assert.equal(secondWind(snapshot),resourceBefore);
+    assert.equal(snapshot.scene.economyByActor[responderId]?.reaction,true);
+    return mechanical;
   };
   assert.deepEqual(await execute(renamed),await execute(ORIGINAL));
 });

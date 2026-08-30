@@ -68,6 +68,16 @@ const EXTERNAL_D20_REDUCTION:CommonPlayReactionDefinition={
   }],
 };
 
+const EXTERNAL_D20_REWRITE=structuredClone(EXTERNAL_D20_REDUCTION);
+EXTERNAL_D20_REWRITE.id="external.unknown.deterministic-roll-rewrite";
+EXTERNAL_D20_REWRITE.interceptors[0].id="rewrite-post-roll";
+EXTERNAL_D20_REWRITE.interceptors[0].interaction.id="use-roll-rewrite";
+EXTERNAL_D20_REWRITE.interceptors[0].operations=[
+  {kind:"roll.modify",mode:"replace",value:{value:10}},
+  {kind:"roll.modify",mode:"minimum",value:{value:12}},
+  {kind:"roll.modify",mode:"target-add",value:{value:3}},
+];
+
 const EXTERNAL_DAMAGE_REDUCTION:CommonPlayReactionDefinition={
   ...structuredClone(EXTERNAL_D20_REDUCTION),
   id:"external.unknown.damage-reduction",
@@ -251,6 +261,32 @@ test("generic d20.roll interceptor reduces a successful ability check with autho
   );
   assert.equal(accepted.state.combatants.hero.economy.reaction,false);
   assert.equal(accepted.state.combatants.hero.resources.find((pool)=>pool.id==="spell-slot-1")?.current,1);
+});
+
+test("generic d20.roll interceptor composes deterministic post-roll replacement, minimum, and target changes without dice authority",()=>{
+  const run=(definition:CommonPlayReactionDefinition)=>{
+    const state=runtimeState();
+    const awaiting=requireAwaiting(startCommonPlayResolution(TEST_PROFILE,state,abilityCheckPending(),definition,"hero"));
+    return resumeCommonPlayInteraction(TEST_PROFILE,state,awaiting,{
+      interactionId:awaiting.interaction.id,
+      idempotencyKey:awaiting.interaction.idempotencyKey,
+      value:true,
+    });
+  };
+  const original=run(EXTERNAL_D20_REWRITE);
+  const renamed=structuredClone(EXTERNAL_D20_REWRITE);
+  renamed.id="external.unknown.renamed-deterministic-rewrite";
+  renamed.interceptors[0].id="renamed-deterministic-interceptor";
+  renamed.interceptors[0].interaction.id="renamed-deterministic-choice";
+  const changed=run(renamed);
+  for(const committed of [original,changed]){
+    assert.equal(committed.status,"committed");
+    if(committed.status!=="committed")continue;
+    const result=committed.results.check as {natural:number;modifier:number;total:number;target:number;outcome:string};
+    assert.deepEqual({natural:result.natural,modifier:result.modifier,total:result.total,target:result.target,outcome:result.outcome},{natural:12,modifier:5,total:17,target:18,outcome:"failure"});
+    assert.equal(committed.state.combatants.hero.economy.reaction,false);
+    assert.equal(committed.state.combatants.hero.resources.find((pool)=>pool.id==="spell-slot-1")?.current,1);
+  }
 });
 
 test("generic d20.roll interceptor preserves attack natural-20 semantics",()=>{

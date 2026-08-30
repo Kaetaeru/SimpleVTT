@@ -134,20 +134,29 @@ function lowerD20Interceptor(value:Obj,index:number,options:ReactionLoweringOpti
     operations:operations.map((candidate,operationIndex)=>{
       const raw=object(candidate,`${label}.operations[${operationIndex}]`);
       if(raw.when!==undefined) throw new DomainEvaluationError(`${label}.operations[${operationIndex}].when is not connected to the reaction runtime yet`);
-      if(raw.kind!=="roll.modify"||raw.mode!=="subtract-die") {
-        throw new DomainEvaluationError(`${label}.operations[${operationIndex}] must be roll.modify subtract-die`);
+      if(raw.kind!=="roll.modify") throw new DomainEvaluationError(`${label}.operations[${operationIndex}] must be roll.modify`);
+      if(raw.mode==="subtract-die") {
+        const hasLiteral=typeof raw.dice==="string";
+        const hasResource=typeof raw.diceResource==="string"&&raw.diceResource.length>0;
+        if(hasLiteral===hasResource) throw new DomainEvaluationError(`${label}.operations[${operationIndex}] must declare exactly one of dice or diceResource`);
+        if(raw.value!==undefined) throw new DomainEvaluationError(`${label}.operations[${operationIndex}].value is not allowed for subtract-die`);
+        if(hasLiteral) {
+          if(!/^([0-9]+)d([0-9]+)([+-][0-9]+)?$/.test(raw.dice as string)) throw new DomainEvaluationError(`${label}.operations[${operationIndex}].dice must be a dice formula`);
+          return {kind:"roll.modify" as const,mode:"subtract-die" as const,dice:raw.dice as string};
+        }
+        const resourceId=raw.diceResource as string;
+        const sides=options.resolveResourceDie?.(resourceId);
+        if(typeof sides!=="number"||!Number.isInteger(sides)||sides<2) throw new DomainEvaluationError(`${label}.operations[${operationIndex}].diceResource has no authoritative die size: ${resourceId}`);
+        return {kind:"roll.modify" as const,mode:"subtract-die" as const,dice:`1d${sides}`};
       }
-      const hasLiteral=typeof raw.dice==="string";
-      const hasResource=typeof raw.diceResource==="string"&&raw.diceResource.length>0;
-      if(hasLiteral===hasResource) throw new DomainEvaluationError(`${label}.operations[${operationIndex}] must declare exactly one of dice or diceResource`);
-      if(hasLiteral) {
-        if(!/^([0-9]+)d([0-9]+)([+-][0-9]+)?$/.test(raw.dice as string)) throw new DomainEvaluationError(`${label}.operations[${operationIndex}].dice must be a dice formula`);
-        return {kind:"roll.modify" as const,mode:"subtract-die" as const,dice:raw.dice as string};
+      if(raw.mode!=="add-flat"&&raw.mode!=="target-add"&&raw.mode!=="replace"&&raw.mode!=="minimum") {
+        throw new DomainEvaluationError(`${label}.operations[${operationIndex}].mode is not connected to the post-roll reaction runtime`);
       }
-      const resourceId=raw.diceResource as string;
-      const sides=options.resolveResourceDie?.(resourceId);
-      if(typeof sides!=="number"||!Number.isInteger(sides)||sides<2) throw new DomainEvaluationError(`${label}.operations[${operationIndex}].diceResource has no authoritative die size: ${resourceId}`);
-      return {kind:"roll.modify" as const,mode:"subtract-die" as const,dice:`1d${sides}`};
+      if(raw.dice!==undefined||raw.diceResource!==undefined) throw new DomainEvaluationError(`${label}.operations[${operationIndex}] dice authority is not allowed for ${raw.mode}`);
+      const value=literalNumber(raw.value,`${label}.operations[${operationIndex}].value`);
+      if(!Number.isInteger(value.value)) throw new DomainEvaluationError(`${label}.operations[${operationIndex}].value must be an integer`);
+      if((raw.mode==="replace"||raw.mode==="minimum")&&(value.value<1||value.value>20)) throw new DomainEvaluationError(`${label}.operations[${operationIndex}].value must be between 1 and 20 for ${raw.mode}`);
+      return {kind:"roll.modify" as const,mode:raw.mode,value};
     }),
   };
 }
@@ -155,6 +164,7 @@ function lowerD20Interceptor(value:Obj,index:number,options:ReactionLoweringOpti
 function lowerDamageInterceptor(value:Obj,index:number,options:ReactionLoweringOptions):CommonPlayDamageRollInterceptor {
   const label=`Common Play reaction interceptor[${index}]`;
   const lowered=lowerD20Interceptor({...value,timing:"d20.outcome-determined",slot:"d20.roll"},index,options);
+  if(lowered.operations.some((operation)=>operation.mode!=="subtract-die")) throw new DomainEvaluationError(`${label} primary.damage supports subtract-die only`);
   return {...lowered,timing:"damage.rolled",slot:"primary.damage"};
 }
 

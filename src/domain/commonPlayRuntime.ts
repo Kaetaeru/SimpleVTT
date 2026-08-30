@@ -33,11 +33,9 @@ export interface CommonPlayPropertyModifyOperation {
   value:LiteralExpression;
 }
 
-export interface CommonPlayRollModifyOperation {
-  kind:"roll.modify";
-  mode:"subtract-die";
-  dice:string;
-}
+export type CommonPlayRollModifyOperation =
+  | { kind:"roll.modify"; mode:"subtract-die"; dice:string }
+  | { kind:"roll.modify"; mode:"add-flat"|"target-add"|"replace"|"minimum"; value:LiteralExpression };
 
 export interface CommonPlayInteractionDefinition {
   id:string;
@@ -228,17 +226,24 @@ function d20RollModifications(
   interceptor:CommonPlayD20RollInterceptor,
   authority:CommonPlayInteractionAuthority|undefined,
 ):D20RollModification[] {
-  return interceptor.operations.flatMap((operation,index)=>{
-    if(operation.kind!=="roll.modify"||operation.mode!=="subtract-die") throw new Error("d20.roll interceptor supports subtract-die only in this bounded slice");
-    const formula=parseDiceFormula(operation.dice,"d20.roll subtract-die");
-    const faces=authority?.modifierDiceFaces?.[index];
-    if(!faces||faces.length!==formula.count||faces.some((face)=>!Number.isInteger(face)||face<1||face>formula.sides)) {
-      throw new Error(`d20.roll interceptor ${index} requires authoritative die face(s)`);
-    }
+  return interceptor.operations.flatMap((operation,index):D20RollModification[]=>{
     const source=`common-play:${definition.id}:${interceptor.id}:operation:${index}`;
-    const modifications:D20RollModification[]=[{source,mode:"subtract-die",dice:{id:`${source}:dice`,purpose:source,sides:formula.sides,faces:[...faces]}}];
-    if(formula.flat!==0) modifications.push({source:`${source}:flat`,mode:"add-flat",value:-formula.flat});
-    return modifications;
+    if(operation.mode==="subtract-die") {
+      const formula=parseDiceFormula(operation.dice,"d20.roll subtract-die");
+      const faces=authority?.modifierDiceFaces?.[index];
+      if(!faces||faces.length!==formula.count||faces.some((face)=>!Number.isInteger(face)||face<1||face>formula.sides)) {
+        throw new Error(`d20.roll interceptor ${index} requires authoritative die face(s)`);
+      }
+      const modifications:D20RollModification[]=[{source,mode:"subtract-die",dice:{id:`${source}:dice`,purpose:source,sides:formula.sides,faces:[...faces]}}];
+      if(formula.flat!==0) modifications.push({source:`${source}:flat`,mode:"add-flat",value:-formula.flat});
+      return modifications;
+    }
+    const value=literalValue(operation.value,`d20.roll ${operation.mode} value`);
+    if(!Number.isInteger(value)) throw new Error(`d20.roll ${operation.mode} value must be an integer`);
+    if((operation.mode==="replace"||operation.mode==="minimum")&&(value<1||value>20)) {
+      throw new Error(`d20.roll ${operation.mode} value must be between 1 and 20`);
+    }
+    return [{source,mode:operation.mode,value}];
   });
 }
 
