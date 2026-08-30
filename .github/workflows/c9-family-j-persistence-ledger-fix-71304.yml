@@ -1,0 +1,57 @@
+name: C9 Family J Persistence Ledger Fix 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-j-persistence-ledger-fix-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  fix-ledger:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - name: Move Family J evidence to persistence slot
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          branch=agent/c9-gate-n-coverage-reconciliation
+          for attempt in $(seq 1 20); do
+            git fetch origin "$branch"
+            git reset --hard "origin/$branch"
+            python3 - <<'PY'
+          from pathlib import Path
+          path=Path("docs/rules/v1-mechanism-coverage-ledger.json")
+          text=path.read_text(encoding="utf-8")
+          start=text.index('"family": "J"')
+          end=text.index('"family": "K"',start)
+          segment=text[start:end]
+          entry="c9FamilyJAttackPersistence.test.ts unknown installed attack damage persists to the Character library through restart and Undo restores the durable HP state"
+          lines=[line for line in segment.splitlines() if entry not in line]
+          segment="\n".join(lines)+("\n" if segment.endswith("\n") else "")
+          empty='      "persistenceEvidenceIfRelevant": [],'
+          filled='      "persistenceEvidenceIfRelevant": [\n        "'+entry+'"\n      ],'
+          if filled not in segment:
+              if segment.count(empty)!=1:
+                  raise SystemExit(f"Family J persistence slot marker count={segment.count(empty)}")
+              segment=segment.replace(empty,filled,1)
+          text=text[:start]+segment+text[end:]
+          path.write_text(text,encoding="utf-8")
+          PY
+            git add docs/rules/v1-mechanism-coverage-ledger.json
+            git rm -f .github/workflows/c9-family-j-persistence-ledger-fix-71304.yml
+            git commit -m "docs(c9): place Family J persistence evidence correctly"
+            node scripts/check-v1-mechanism-coverage.mjs
+            if git push origin HEAD:"$branch"; then exit 0; fi
+            sleep 1
+          done
+          exit 1
