@@ -1,0 +1,40 @@
+name: C9 Family H Search Discovery 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-h-search-discovery-71304.yml
+      - tests/ui/c9FamilyHSearchDiscoveryProduction.test.ts
+      - src/domain/commonPlayOperationRuntime.ts
+      - src/domain/commonPlaySenseRuntime.ts
+      - src/app/commonPlayInterceptorProductionRuntimeAdapter.ts
+      - docs/rules/v1-mechanism-coverage-ledger.json
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Verify Family H Search and sensing
+        run: >-
+          npx tsx --test
+          tests/ui/c9FamilyHSearchDiscoveryProduction.test.ts
+          tests/domain/commonPlaySenseRuntime.test.ts
+          tests/ui/c9FamilyHTremorsenseProduction.test.ts
+          tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts
+      - name: Verify V1 coverage structure
+        run: node scripts/check-v1-mechanism-coverage.mjs
+      - name: Verify legacy execution boundary
+        run: node scripts/check-legacy-execution-boundary.mjs
+      - name: Typecheck
+        run: npx tsc -p tsconfig.json --noEmit
