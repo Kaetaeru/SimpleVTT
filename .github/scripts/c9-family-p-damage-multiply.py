@@ -140,6 +140,12 @@ assert "multiply" not in modes
 modes.append("multiply")
 schema_path.write_text(json.dumps(schema, ensure_ascii=False, indent=2) + "\n")
 
+contract_test = Path("tests/domain/commonPlayReactionDefinitionRuntime.test.ts")
+contract_text = contract_test.read_text()
+old_regex = "/primary.damage supports subtract-die only/"
+assert contract_text.count(old_regex) == 2
+contract_test.write_text(contract_text.replace(old_regex, "/primary.damage supports subtract-die or multiply only/"))
+
 Path("tests/domain/c9FamilyPDamageMultiplier.test.ts").write_text('''import assert from "node:assert/strict";
 import test from "node:test";
 import { parseCommonPlayDefinition } from "../../src/domain/commonPlayDefinitionRuntime";
