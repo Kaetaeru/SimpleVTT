@@ -1,0 +1,36 @@
+name: C9 Family N Effect Lifecycle
+
+on:
+  push:
+    paths:
+      - "src/domain/effects.ts"
+      - "src/domain/resolutionTurnOps.ts"
+      - "src/domain/commonPlayEffectRuntime.ts"
+      - "src/app/realTurnLifecycleService.ts"
+      - "src/app/phase09EffectAwareTurnAdapter.ts"
+      - "tests/domain/c9FamilyNEffectLifecycleAcceptance.test.ts"
+      - "tests/domain/commonPlayEffectSuppressionRuntime.test.ts"
+      - "tests/ui/c9FamilyNEffectDurationProduction.test.ts"
+      - ".github/workflows/c9-family-n-effect-lifecycle.yml"
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Generate content dependencies
+        run: npm run generate:content
+      - name: Verify generic effect lifecycle
+        run: >-
+          npx tsx --test
+          tests/domain/c9FamilyNEffectLifecycleAcceptance.test.ts
+          tests/domain/commonPlayEffectSuppressionRuntime.test.ts
+          tests/ui/c9FamilyNEffectDurationProduction.test.ts
+      - name: Typecheck and build
+        run: npm run build
