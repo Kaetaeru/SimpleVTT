@@ -1,0 +1,92 @@
+name: C9 Family P Finalize 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-p-finalize-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  verify-and-finalize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: npm run generate:content
+      - name: Verify portable trigger production
+        run: npx tsx --test tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts tests/ui/c9FamilyPStateAppliedTriggerProduction.test.ts tests/domain/commonPlaySemanticEventRuntime.test.ts
+      - name: Verify architecture boundaries
+        run: |
+          node scripts/check-v1-mechanism-coverage.mjs
+          node scripts/check-legacy-execution-boundary.mjs
+          npx tsc --noEmit
+      - name: Publish Family P disposition from latest branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin agent/c9-gate-n-coverage-reconciliation
+          git reset --hard origin/agent/c9-gate-n-coverage-reconciliation
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
+          data=json.loads(path.read_text(encoding='utf-8'))
+          rows=data if isinstance(data,list) else data.get('families') or data.get('mechanismFamilies') or data.get('coverage')
+          if not isinstance(rows,list):
+              raise SystemExit('coverage family array not found')
+          row=next((entry for entry in rows if entry.get('family')=='P' and entry.get('id')=='trigger-frequency-automatic'),None)
+          if row is None:
+              raise SystemExit('Family P row not found')
+          required=set(row.get('requiredSemantics',[]))
+          expected={'before/after roll/outcome','hit/miss','save outcomes','damage taken/dealt','state applied','turn/round','zone enter/leave','rest','expiry','once','once per turn/round','recharge/cooldown','source frequency'}
+          if not expected.issubset(required):
+              raise SystemExit(f'Family P required semantics changed: {sorted(required)}')
+          production='\n'.join(row.get('productionEvidence',[]))
+          identity='\n'.join(row.get('identityInvarianceEvidence',[]))
+          implementation='\n'.join(row.get('implementationEvidence',[]))
+          for needle in ['installedCommonPlayInterceptorProductionRuntime.test.ts','c9FamilyPStateAppliedTriggerProduction.test.ts','effect.expired']:
+              if needle not in production and needle not in implementation:
+                  raise SystemExit(f'missing verified Family P evidence: {needle}')
+          if 'module/content/definition/interceptor/display rename' not in identity:
+              raise SystemExit('missing post-roll identity-invariance evidence')
+          row['disposition']='IMPLEMENTED'
+          state=row.get('currentState','')
+          suffix=' Named post-roll and feature-trigger adapters are legacy non-Common-Play migration debt; unknown portable Common Play does not select or fall through to them.'
+          if 'unknown portable Common Play does not select or fall through to them' not in state:
+              if state.endswith(' Named post-roll and feature-trigger adapters remain migration debt outside the portable semantic trigger path.'):
+                  state=state[:-len(' Named post-roll and feature-trigger adapters remain migration debt outside the portable semantic trigger path.')]
+              row['currentState']=state+suffix
+          row['remainingNamedSeams']=[
+              'named post-roll and feature-trigger adapters remain legacy non-Common-Play migration debt; unknown portable Common Play does not select or fall through to them'
+          ]
+          proof='installedCommonPlayInterceptorProductionRuntime.test.ts loads the full offline production composition and proves unknown renamed post-roll interceptors execute through generic Common Play despite legacy named wrappers'
+          if proof not in row['productionEvidence']:
+              row['productionEvidence'].append(proof)
+          path.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          PY
+          node scripts/check-v1-mechanism-coverage.mjs
+          git add docs/rules/v1-mechanism-coverage-ledger.json
+          git rm .github/workflows/c9-family-p-finalize-71304.yml
+          if [ -f .github/workflows/c9-family-p-state-applied-ledger-71304.yml ]; then
+            git rm .github/workflows/c9-family-p-state-applied-ledger-71304.yml
+          fi
+          git commit -m "docs(c9): finalize Family P trigger coverage"
+          for attempt in 1 2 3 4 5; do
+            if git push origin HEAD:agent/c9-gate-n-coverage-reconciliation; then
+              exit 0
+            fi
+            git fetch origin agent/c9-gate-n-coverage-reconciliation
+            git rebase origin/agent/c9-gate-n-coverage-reconciliation || exit 1
+            sleep 1
+          done
+          exit 1
