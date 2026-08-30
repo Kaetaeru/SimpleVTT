@@ -23,7 +23,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Stage area selector import boundary
+      - name: Stage generic selector production boundary
         shell: bash
         run: |
           python - <<'PY'
@@ -37,14 +37,12 @@ jobs:
               text = text.replace(old_interface, new_interface, 1)
           else:
               assert new_interface in text
-
           old_keys = 'const TARGETING_KEYS=new Set(["from","where","min","max"]);'
           new_keys = 'const TARGETING_KEYS=new Set(["from","where","min","max","area"]);'
           if old_keys in text:
               text = text.replace(old_keys, new_keys, 1)
           else:
               assert new_keys in text
-
           old_return = 'return {from:"targets",min:parsed.min,max:parsed.max,...(parsed.where===undefined?{}:{where:parsed.where})};'
           new_return = 'return {from:"targets",min:parsed.min,max:parsed.max,...(parsed.where===undefined?{}:{where:parsed.where}),...(parsed.area===undefined?{}:{area:parsed.area})};'
           if old_return in text:
@@ -55,39 +53,76 @@ jobs:
 
           adapter = Path("src/app/installedCommonPlayRuntimeAdapter.ts")
           text = adapter.read_text()
+          selector_import = 'import { resolveCommonPlaySelector, type CommonPlaySelector, type CommonPlaySelectorCandidate } from "../domain/commonPlaySelectorRuntime";\n'
+          import_anchor = 'import { allocationEntriesFromTargetSequence, resolveCommonPlayAllocation } from "../domain/commonPlayAllocationRuntime";\n'
+          if selector_import not in text:
+              assert import_anchor in text
+              text = text.replace(import_anchor, import_anchor + selector_import, 1)
+
           old_targeting = 'targeting?:{min?:number;max?:number;where?:{op:string;ref:string;value:string}};'
-          new_targeting = 'targeting?:{min?:number;max?:number;where?:{op:string;ref:string;value:string};area?:unknown};'
+          old_area_targeting = 'targeting?:{min?:number;max?:number;where?:{op:string;ref:string;value:string};area?:unknown};'
           if old_targeting in text:
-              text = text.replace(old_targeting, new_targeting, 1)
+              text = text.replace(old_targeting, 'targeting?:CommonPlaySelector;', 1)
+          elif old_area_targeting in text:
+              text = text.replace(old_area_targeting, 'targeting?:CommonPlaySelector;', 1)
           else:
-              assert new_targeting in text
-          anchor = '    if(targetIds.length<(targeting.min??1)||targetIds.length>(targeting.max??targetIds.length)) return undefined;\n'
-          guard = '    if(targeting.area!==undefined) return undefined;\n'
-          if guard not in text:
-              assert anchor in text
-              text = text.replace(anchor, anchor + guard, 1)
+              assert 'targeting?:CommonPlaySelector;' in text
+
+          helper_marker = '''function commonPlayTargetFact(actor:SceneVm["entities"][number],target:SceneVm["entities"][number]):TargetingFactInput {
+  return {
+    id:target.id,
+    kind:"creature",
+    relation:target.id===actor.id?"self":target.side===actor.side?"ally":"enemy",
+  };
+}
+'''
+          helper = helper_marker + '''
+function commonPlaySelectorCandidate(actor:SceneVm["entities"][number],target:SceneVm["entities"][number]):CommonPlaySelectorCandidate {
+  const targeting=commonPlayTargetFact(actor,target);
+  return {
+    id:target.id,
+    targeting,
+    properties:{id:target.id,kind:target.kind,relation:targeting.relation,name:target.name,side:target.side,hp:target.hp},
+  };
+}
+'''
+          if 'function commonPlaySelectorCandidate(' not in text:
+              assert helper_marker in text
+              text = text.replace(helper_marker, helper, 1)
+
+          old_block = '''  if(hasTargeting) {
+    const targeting=portableEntry.targeting!;
+    if(targetIds.length<(targeting.min??1)||targetIds.length>(targeting.max??targetIds.length)) return undefined;
+    if(targeting.where?.op==="relation-matches"&&targeting.where.ref==="relation"&&selectedTargets.some((target)=>commonPlayTargetFact(actorEntity,target!).relation!==targeting.where!.value)) return undefined;
+    if(projectedAction&&(!projectedAction.available||targetIds.some((id)=>!projectedAction.eligibleTargetIds.includes(id)))) return undefined;
+  } else if(hasAllocation) {'''
+          new_block = '''  if(hasTargeting) {
+    const targeting=portableEntry.targeting!;
+    const candidates=internal.scene.entities
+      .filter((target)=>Boolean(state!.combatants[target.id]))
+      .map((target)=>commonPlaySelectorCandidate(actorEntity,target));
+    const selection=resolveCommonPlaySelector({
+      sourceId:actor.id,
+      selector:targeting,
+      candidates,
+      selectedIds:targetIds,
+      selection:"manual",
+      authority:"actor-owner",
+      directTarget:targeting.area===undefined,
+    });
+    if(selection.status!=="resolved") return undefined;
+    if(projectedAction&&(!projectedAction.available||targetIds.some((id)=>!projectedAction.eligibleTargetIds.includes(id)))) return undefined;
+  } else if(hasAllocation) {'''
+          if old_block in text:
+              text = text.replace(old_block, new_block, 1)
+          else:
+              assert 'const selection=resolveCommonPlaySelector({' in text
           adapter.write_text(text)
 
           domain_test = Path("tests/domain/commonPlayTargetingRuntime.test.ts")
           lines = domain_test.read_text().splitlines()
           lines = [line for line in lines if not ('from:"targets",area:{kind:"instant"}' in line and 'unsupported fields: area' in line)]
           domain_test.write_text("\n".join(lines) + "\n")
-
-          ui_test = Path("tests/ui/commonPlayRichSelectorProduction.test.ts")
-          text = ui_test.read_text()
-          old = '  assert.notEqual((await adapter.getSnapshot()).resolution?.actionId,actionId,"relation predicate must reject self before Resolver execution");'
-          new = '  const rejected=(await adapter.getSnapshot()).resolution;\n  assert.equal(rejected?.actionId,actionId);\n  assert.equal(rejected?.finalOutcome,"적용 거부","relation predicate must reject self before Resolver execution");'
-          if old in text:
-              text = text.replace(old, new, 1)
-          else:
-              assert new in text
-          old = '  assert.notEqual((await adapter.getSnapshot()).resolution?.actionId,actionId,"mapless production must not fabricate area membership");'
-          new = '  const rejected=(await adapter.getSnapshot()).resolution;\n  assert.equal(rejected?.actionId,actionId);\n  assert.equal(rejected?.finalOutcome,"적용 거부","mapless production must not fabricate area membership");'
-          if old in text:
-              text = text.replace(old, new, 1)
-          else:
-              assert new in text
-          ui_test.write_text(text)
           PY
       - run: npm run generate:content
       - name: Verify Family E selector regressions
@@ -96,17 +131,17 @@ jobs:
         run: node scripts/check-legacy-execution-boundary.mjs
       - name: Typecheck
         run: npm exec tsc -- --noEmit
-      - name: Commit verified area selector boundary
+      - name: Commit verified selector boundary
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git rm .github/workflows/c9-family-e-area-selector-7130.yml
-          git add src/domain/commonPlayOperationRuntime.ts src/app/installedCommonPlayRuntimeAdapter.ts tests/domain/commonPlayTargetingRuntime.test.ts tests/ui/commonPlayRichSelectorProduction.test.ts
+          git add src/domain/commonPlayOperationRuntime.ts src/app/installedCommonPlayRuntimeAdapter.ts tests/domain/commonPlayTargetingRuntime.test.ts
           if git diff --cached --quiet; then
             exit 0
           fi
-          git commit -m "feat(c9): gate area selectors on spatial authority"
+          git commit -m "feat(c9): gate portable selectors before resolver"
           git fetch origin agent/c9-gate-n-coverage-reconciliation
           git rebase origin/agent/c9-gate-n-coverage-reconciliation
           git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
