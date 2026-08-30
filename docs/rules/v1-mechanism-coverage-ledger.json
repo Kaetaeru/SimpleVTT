@@ -27,7 +27,7 @@
         "common-play-contract.schema.json: expression/predicate/property.modify",
         "dnd.srd-5.2.1.profile.json: properties/proficiency/rounding"
       ],
-      "currentState": "The persisted contract exposes generic expressions, predicates, RulesProfile formulas, and property.modify, while profileEngine evaluates expressions/predicates/derived properties with provenance. Production parity is incomplete: commonPlayOperationRuntime does not lower property.modify, ResolutionOperation has no typed property contribution/mutation, and Effect state has no typed property modifier payload. The property.modify schema itself does not identify target, lifetime, source ownership, or owning transaction, so adding a runtime mutation now would invent stat ownership rather than reuse an existing contract.",
+      "currentState": "The persisted property.modify contract now carries explicit target, Effect ownership, definition source, elapsed duration, destroy-on-end lifetime, and instance policy. commonPlayOperationRuntime generically lowers arbitrary external property.modify definitions to the existing apply-effect ResolutionOperation with a typed propertyModifier payload, and Resolver commits that payload into EffectState without content-name or content-ID dispatch. Production parity remains incomplete because no production property-resolution consumer reads EffectInstance.propertyModifier: resolveProfileProperty currently has no callers, instancePolicy is stored but not enforced during property evaluation, and persistence/reconnect evidence for source-bound property modifiers is still absent.",
       "requiredSemantics": [
         "literals",
         "property refs",
@@ -45,17 +45,25 @@
       "transactionDomain": "RulesProfile evaluation and owning transaction",
       "disposition": "INCOMPLETE",
       "implementationEvidence": [
-        "schemas/common-play-contract.schema.json expression/predicate/property.modify vocabulary",
-        "profileEngine.ts evaluateExpression/evaluateSemanticExpression/evaluateSemanticPredicate/resolveProfileProperty"
+        "schemas/common-play-contract.schema.json expression/predicate/property.modify vocabulary with target/owner/source/duration/lifetime/instancePolicy",
+        "profileEngine.ts evaluateExpression/evaluateSemanticExpression/evaluateSemanticPredicate/resolveProfileProperty",
+        "effects.ts typed EffectPropertyModifier payload owned by EffectInstance",
+        "commonPlayOperationRuntime.ts generic property.modify -> apply-effect lowering"
       ],
-      "productionEvidence": [],
-      "identityInvarianceEvidence": [],
+      "productionEvidence": [
+        "95f8b220a1aefc33374b033ef9ed325f53c86f97 feat(c9): lower property modifiers to typed effects",
+        "commonPlayPropertyContractRuntime.test.ts property.modify commits typed EffectState through Resolver"
+      ],
+      "identityInvarianceEvidence": [
+        "commonPlayPropertyContractRuntime.test.ts arbitrary external definition and renamed-definition structural equivalence"
+      ],
       "connectedEvidenceIfRelevant": [],
       "persistenceEvidenceIfRelevant": [],
       "remainingNamedSeams": [
-        "property.modify has no portable production lowerer or typed ResolutionOperation owner",
-        "property.modify target/lifetime/source ownership is undefined in the persisted contract",
-        "runtime Effect state has no typed property contribution payload",
+        "EffectInstance.propertyModifier is not consumed by a production property evaluation path",
+        "resolveProfileProperty has no production caller that supplies active Effect-owned modifiers",
+        "property modifier instancePolicy is stored but stacking/replacement semantics are not enforced during evaluation",
+        "source-bound property modifier persistence/reconnect evidence is absent",
         "named progression/runtime stat materialization remains outside a generic property owner"
       ],
       "connectedRelevant": false,
