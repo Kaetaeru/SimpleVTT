@@ -23,19 +23,45 @@ jobs:
           node-version: 22
       - name: Install dependencies
         run: npm install --no-audit --no-fund
-      - name: Reconcile and verify against latest branch
+      - name: Verify portable attack evidence once
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch='agent/c9-gate-n-coverage-reconciliation'
+          git fetch origin "$branch"
+          git reset --hard "origin/$branch"
+          npm run generate:content
+          npx tsx --test --test-name-pattern='summoned Actor' tests/ui/installedCommonPlayLoweredFamiliesProduction.test.ts
+          node scripts/check-legacy-execution-boundary.mjs
+          npx tsc --noEmit
+          git rev-parse HEAD > /tmp/c9-family-j-validated-sha
+      - name: Publish reconciliation without repeating validation on unrelated branch races
         shell: bash
         run: |
           set -euo pipefail
           branch='agent/c9-gate-n-coverage-reconciliation'
           self='.github/workflows/c9-family-j-attack-reconcile-71304-1.yml'
+          validated="$(cat /tmp/c9-family-j-validated-sha)"
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
 
-          for attempt in 1 2 3; do
+          for attempt in $(seq 1 30); do
             git fetch origin "$branch"
-            git reset --hard "origin/$branch"
-            npm run generate:content
+            latest="$(git rev-parse "origin/$branch")"
+            if [ "$latest" != "$validated" ]; then
+              relevant="$(git diff --name-only "$validated" "$latest" -- \
+                src/domain/commonPlayOperationRuntime.ts \
+                src/app/installedCommonPlayRuntimeAdapter.ts \
+                src/app/runtimeResolutionCommit.ts \
+                src/app/connectedSessionRuntimeAdapter.ts \
+                tests/ui/installedCommonPlayLoweredFamiliesProduction.test.ts || true)"
+              if [ -n "$relevant" ]; then
+                echo "Family J owner changed after validation; refusing stale evidence publish:" >&2
+                echo "$relevant" >&2
+                exit 2
+              fi
+            fi
+            git reset --hard "$latest"
 
             python3 - <<'PY'
           import json
@@ -67,17 +93,13 @@ jobs:
           path.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
           PY
 
-            npx tsx --test --test-name-pattern='summoned Actor' tests/ui/installedCommonPlayLoweredFamiliesProduction.test.ts
-            node scripts/check-legacy-execution-boundary.mjs
-            npx tsc --noEmit
-
-            git rm "$self"
+            if [ -f "$self" ]; then git rm "$self"; fi
             git add docs/rules/v1-mechanism-coverage-ledger.json
             git commit -m 'docs(c9): reconcile portable attack evidence'
             if git push origin "HEAD:$branch"; then
               exit 0
             fi
-            echo "push raced with another C9 writer; retrying from latest branch ($attempt/3)"
+            echo "publish raced with another C9 writer; retrying latest branch ($attempt/30)"
           done
-          echo 'failed to publish Family J reconciliation after three branch races' >&2
+          echo 'failed to publish Family J reconciliation after thirty branch races' >&2
           exit 1
