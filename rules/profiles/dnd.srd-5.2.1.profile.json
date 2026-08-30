@@ -39,6 +39,7 @@
     "defense.ac": {"type": "integer", "storage": "derived"},
     "initiative": {"type": "integer", "storage": "derived"},
     "movement.walk": {"type": "integer", "storage": "derived", "minimum": 0},
+    "movement.fly": {"type": "integer", "storage": "derived", "minimum": 0, "formula": {"value": 0}},
     "movement.cost.multiplier": {"type": "number", "storage": "derived", "minimum": 0, "formula": {"value": 1}},
     "hp.current": {"type": "integer", "storage": "stored", "minimum": 0},
     "hp.maximum": {"type": "integer", "storage": "derived", "minimum": 0},
