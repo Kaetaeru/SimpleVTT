@@ -48,58 +48,39 @@ jobs:
 
           ledger = Path('docs/rules/v1-mechanism-coverage-ledger.json')
           text = ledger.read_text(encoding='utf-8')
-          old = '''      "currentState": "No explicit generic ordering authority proof",
-          "requiredSemantics": [
-            "timing window",
-            "eligible effects",
-            "ordering authority",
-            "player/DM choice",
-            "deterministic ordered execution",
-            "Host authority",
-            "reconnect/replay"
-          ],
-          "transactionDomain": "Typed pending decision plus session authority",
-          "disposition": "INCOMPLETE",
-          "implementationEvidence": [],
-          "productionEvidence": [],
-          "identityInvarianceEvidence": [],
-          "connectedEvidenceIfRelevant": [],
-          "persistenceEvidenceIfRelevant": [],
-          "remainingNamedSeams": [],'''
-          new = '''      "currentState": "A generic typed simultaneous-ordering decision kernel now validates eligible candidate sets, actor-controller/DM authority, stale revisions, exact permutations, deterministic ordered projection, and idempotent exact replay. Production timing-window collection, Host-connected decision transport/reconnect, and unknown RuleModule execution remain incomplete.",
-          "requiredSemantics": [
-            "timing window",
-            "eligible effects",
-            "ordering authority",
-            "player/DM choice",
-            "deterministic ordered execution",
-            "Host authority",
-            "reconnect/replay"
-          ],
-          "transactionDomain": "Typed pending decision plus session authority",
-          "disposition": "INCOMPLETE",
-          "implementationEvidence": [
-            "commonPlaySimultaneousOrderingRuntime.ts generic pending/resolved ordering state with actor-controller|dm authority, revision/responder validation, exact candidate permutation, deterministic projection, and idempotent exact replay",
-            "commonPlaySimultaneousOrderingRuntime.test.ts covers automatic zero/one-candidate resolution, authority/stale rejection, invalid permutations, deterministic ordering, replay, and conflicting replay rejection"
-          ],
-          "productionEvidence": [],
-          "identityInvarianceEvidence": [
-            "commonPlaySimultaneousOrderingRuntime.test.ts repeats the same relative mechanical ordering under unrelated renamed external candidate identities"
-          ],
-          "connectedEvidenceIfRelevant": [],
-          "persistenceEvidenceIfRelevant": [],
-          "remainingNamedSeams": [
-            "production Common Play timing-window collection and Host-connected decision transport/reconnect/replay are not yet wired to the ordering kernel"
-          ],'''
-          if old in text:
-              text = text.replace(old, new, 1)
+          start = text.index('      "id": "simultaneous-ordering"')
+          end = text.index('      "id": "stored-invocation-ready"', start)
+          block = text[start:end]
+          evidence = 'commonPlaySimultaneousOrderingRuntime.ts generic pending/resolved ordering state'
+          if evidence not in block:
+              baseline = '"currentState": "No explicit generic ordering authority proof"'
+              if baseline not in block:
+                  raise SystemExit('ledger: Family R changed concurrently; refusing to overwrite it')
+              block = block.replace(
+                  baseline,
+                  '"currentState": "A generic typed simultaneous-ordering decision kernel now validates eligible candidate sets, actor-controller/DM authority, stale revisions, exact permutations, deterministic ordered projection, and idempotent exact replay. Production timing-window collection, Host-connected decision transport/reconnect, and unknown RuleModule execution remain incomplete."',
+                  1,
+              )
+              block = block.replace(
+                  '"implementationEvidence": []',
+                  '"implementationEvidence": [\n        "commonPlaySimultaneousOrderingRuntime.ts generic pending/resolved ordering state with actor-controller|dm authority, revision/responder validation, exact candidate permutation, deterministic projection, and idempotent exact replay",\n        "commonPlaySimultaneousOrderingRuntime.test.ts covers automatic zero/one-candidate resolution, authority/stale rejection, invalid permutations, deterministic ordering, replay, and conflicting replay rejection"\n      ]',
+                  1,
+              )
+              block = block.replace(
+                  '"identityInvarianceEvidence": []',
+                  '"identityInvarianceEvidence": [\n        "commonPlaySimultaneousOrderingRuntime.test.ts repeats the same relative mechanical ordering under unrelated renamed external candidate identities"\n      ]',
+                  1,
+              )
+              block = block.replace(
+                  '"remainingNamedSeams": []',
+                  '"remainingNamedSeams": [\n        "production Common Play timing-window collection and Host-connected decision transport/reconnect/replay are not yet wired to the ordering kernel"\n      ]',
+                  1,
+              )
+              text = text[:start] + block + text[end:]
               ledger.write_text(text, encoding='utf-8')
-          elif 'commonPlaySimultaneousOrderingRuntime.ts generic pending/resolved ordering state' not in text:
-              raise SystemExit('ledger: Family R baseline changed without expected ordering evidence')
           PY
-            rm -f .github/workflows/c9-family-r-ordering-kernel-71304.yml
-            rm -f .github/workflows/c9-family-r-ordering-evidence-71304.yml
-            git add .github/workflows/rules-domain.yml docs/rules/v1-mechanism-coverage-ledger.json .github/workflows/c9-family-r-ordering-kernel-71304.yml .github/workflows/c9-family-r-ordering-evidence-71304.yml
+            git rm -f --ignore-unmatch .github/workflows/c9-family-r-ordering-kernel-71304.yml .github/workflows/c9-family-r-ordering-evidence-71304.yml
+            git add -A .github/workflows/rules-domain.yml docs/rules/v1-mechanism-coverage-ledger.json
             if git diff --cached --quiet; then exit 0; fi
             git commit -m "chore(c9): record simultaneous ordering kernel evidence"
             npm run generate:content >/dev/null
