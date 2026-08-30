@@ -1,0 +1,94 @@
+name: C9 Family B Finalize 71304
+
+on:
+  push:
+    branches:
+      - "agent/c9-gate-n-coverage-reconciliation"
+    paths:
+      - ".github/workflows/c9-family-b-finalize-71304.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: "agent/c9-gate-n-coverage-reconciliation"
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Sync branch
+        run: git pull --rebase origin "$GITHUB_REF_NAME"
+      - name: Reconcile Family B authority
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          path=Path("docs/rules/v1-mechanism-coverage-ledger.json")
+          ledger=json.loads(path.read_text(encoding="utf-8"))
+          row=next(item for item in ledger["rows"] if item["family"]=="B")
+          p=next(item for item in ledger["rows"] if item["family"]=="P")
+          if p["disposition"]!="IMPLEMENTED":
+              raise SystemExit(f"Family P must be IMPLEMENTED before B finalization, got {p['disposition']}")
+          if row["disposition"] not in {"INCOMPLETE","IMPLEMENTED"}:
+              raise SystemExit(f"unexpected Family B disposition {row['disposition']}")
+
+          row["currentState"]=(
+              "Generic turn economy owns Action, Bonus Action, Reaction, movement budget, extra Action, and extra Attack state; "
+              "generic frequency owns once/turn, once/round, and once/resolution tokens; the authoritative turn lifecycle emits "
+              "begin/end turn and turn-clock events; stored invocation proves identity-independent off-turn execution. Family P is "
+              "IMPLEMENTED and supplies the shared semantic triggered-window vocabulary through the same Resolver transaction, so "
+              "Family B does not need or permit a second timing dispatcher. Special initiative-count decisions remain owned by Family AC "
+              "and are not duplicated as ordinary turn/action-economy semantics in B."
+          )
+          row["disposition"]="IMPLEMENTED"
+          for evidence in [
+              "commonPlaySemanticEventRuntime.ts plus implemented Family P provide the shared semantic triggered-window vocabulary consumed by turn/economy resolutions without a B-specific dispatcher",
+          ]:
+              if evidence not in row["implementationEvidence"]:
+                  row["implementationEvidence"].append(evidence)
+          for evidence in [
+              "connectedActorTurnRuleProduction.test.ts unknown installed actor-owned turn-start/end rules execute through authoritative connected turn transactions",
+              "installedCommonPlaySemanticOutcomeProduction.test.ts unknown installed semantic outcome triggers execute through the shared production Common Play/Resolver path",
+          ]:
+              if evidence not in row["productionEvidence"]:
+                  row["productionEvidence"].append(evidence)
+          for evidence in [
+              "connectedActorTurnRuleProduction.test.ts arbitrary installed actor-rule identities preserve turn-trigger semantics",
+              "installedCommonPlaySemanticOutcomeProduction.test.ts arbitrary module/content/mechanic renames preserve semantic triggered-window behavior",
+          ]:
+              if evidence not in row["identityInvarianceEvidence"]:
+                  row["identityInvarianceEvidence"].append(evidence)
+          row["remainingNamedSeams"]=[]
+          path.write_text(json.dumps(ledger,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
+          PY
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Generate content
+        run: npm run generate:content
+      - name: Verify Family B turn and trigger semantics
+        run: |
+          npx tsx --test \
+            tests/domain/commonPlayFrequencyRuntime.test.ts \
+            tests/ui/connectedTurnResolutionEventTransport.test.ts \
+            tests/ui/connectedActorTurnRuleProduction.test.ts \
+            tests/ui/installedCommonPlaySemanticOutcomeProduction.test.ts
+      - name: Verify TypeScript
+        run: npx tsc --noEmit
+      - name: Verify mechanism ledger
+        run: node scripts/check-v1-mechanism-coverage.mjs
+      - name: Publish Family B finalization and retire verifier
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm .github/workflows/c9-family-b-finalize-71304.yml
+          git add docs/rules/v1-mechanism-coverage-ledger.json .github/workflows/c9-family-b-finalize-71304.yml
+          git commit -m "docs(c9): finalize Family B turn timing coverage"
+          git pull --rebase origin "$GITHUB_REF_NAME"
+          git push origin HEAD:"$GITHUB_REF_NAME"
