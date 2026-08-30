@@ -65,22 +65,43 @@ export function appendCommonPlaySemanticOutcomeEvents(
   const existingIds=new Set(commit.events.map((event)=>event.id));
   const semanticEvents:ResolutionEvent[]=[];
   for(const operation of pending.operations) {
-    if(operation.kind!=="d20") continue;
-    const result=commit.results[operation.id] as D20TestResult|undefined;
-    if(!result||result.family!==operation.request.family) continue;
-    const kind=semanticKind(result);
-    if(!kind) continue;
+    if(operation.kind==="d20") {
+      const result=commit.results[operation.id] as D20TestResult|undefined;
+      if(!result||result.family!==operation.request.family) continue;
+      const kind=semanticKind(result);
+      if(!kind) continue;
+      const id=`${pending.id}:${operation.id}:semantic:${kind}`;
+      if(existingIds.has(id)) continue;
+      semanticEvents.push({
+        id,
+        resolutionId:pending.id,
+        operationId:operation.id,
+        kind,
+        actorId:operation.actorId??pending.actorId,
+        targetId:operation.targetId,
+        summary:`${kind} (${result.total} vs ${result.target})`,
+        provenance:[...result.provenance],
+        stateChanges:[],
+        result:structuredClone(result),
+      });
+      continue;
+    }
+    if(operation.kind!=="recharge-resource") continue;
+    const result=commit.results[operation.id] as {success?:unknown;face?:unknown;before?:unknown;after?:unknown}|undefined;
+    if(!result||typeof result.success!=="boolean"||typeof result.face!=="number") continue;
+    const kind=result.success?"resource.recharge.success":"resource.recharge.failure";
     const id=`${pending.id}:${operation.id}:semantic:${kind}`;
     if(existingIds.has(id)) continue;
+    const authoritativeEvent=commit.events.find((event)=>event.operationId===operation.id);
     semanticEvents.push({
       id,
       resolutionId:pending.id,
       operationId:operation.id,
       kind,
       actorId:operation.actorId??pending.actorId,
-      targetId:operation.targetId,
-      summary:`${kind} (${result.total} vs ${result.target})`,
-      provenance:[...result.provenance],
+      targetId:operation.actorId??pending.actorId,
+      summary:`${kind} (d${operation.die.sides}=${result.face})`,
+      provenance:authoritativeEvent?[...authoritativeEvent.provenance]:[],
       stateChanges:[],
       result:structuredClone(result),
     });
