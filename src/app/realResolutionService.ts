@@ -2,8 +2,9 @@ import dndSrdRulesProfile from "../../rules/profiles/dnd.srd-5.2.1.profile.json"
 import type { ActionVm, ResolutionView } from "./contracts";
 import { resolveD20Test, type ModifierContribution } from "../domain/d20";
 import { resolveOpenD20Roll } from "../domain/openD20";
-import { resolveProfileProperty, type RollStateContribution, type RulesProfileLike } from "../domain/profileEngine";
-import { resolveEffectModifiedProperty, type EffectInstance } from "../domain/effects";
+import { type RollStateContribution, type RulesProfileLike } from "../domain/profileEngine";
+import type { EffectInstance } from "../domain/effects";
+import { resolveEffectModifiedProfileProperty } from "../domain/effectProfilePropertyResolver";
 import type { ResolutionEvent } from "../domain/resolutionTypes";
 
 export const SIMPLEVTT_APP_RULES_PROFILE:RulesProfileLike = {
@@ -20,15 +21,9 @@ export function resolveRuntimeProfileProperty(
   property:string,
   inputProperties:Record<string,number>,
 ) {
-  const base=resolveProfileProperty(SIMPLEVTT_APP_RULES_PROFILE,property,inputProperties);
-  const modified=resolveEffectModifiedProperty(
-    effects,targetId,property,{...inputProperties,[property]:base.value},
+  return resolveEffectModifiedProfileProperty(
+    SIMPLEVTT_APP_RULES_PROFILE,effects,targetId,property,inputProperties,
   );
-  return {
-    property,
-    value:modified.value,
-    provenance:[...base.provenance,...modified.provenance],
-  };
 }
 
 export interface OpenAbilityCheckResolutionRequest {
