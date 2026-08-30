@@ -13,6 +13,8 @@ export const COMMON_PLAY_STANDARD_FACTS:CommonPlayFactRegistry={
   "spatial.distance-feet":{valueType:"number"},
   "spatial.adjacent":{valueType:"boolean"},
   "spatial.within-reach":{valueType:"boolean"},
+  "spatial.size-category":{valueType:"string"},
+  "spatial.space-feet":{valueType:"number"},
   "spatial.line-of-effect":{valueType:"boolean"},
   "spatial.total-cover":{valueType:"boolean"},
   "spatial.area-members":{valueType:"targets"},
