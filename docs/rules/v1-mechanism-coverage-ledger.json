@@ -464,7 +464,7 @@
         "commonPlaySpatialFactRuntime.test.ts",
         "Gate E provider/manual authority"
       ],
-      "currentState": "Provider/manual fact kernel exists; geometry and production breadth incomplete",
+      "currentState": "Provider/manual authority now has production-verified standard distance, line-of-effect, Total Cover, and area-membership facts with normalized authoritative answers, identity invariance, and connected authority routing. Family G remains incomplete for engine-owned geometry breadth (adjacency/reach/size and shape intersection/placement) and durable reconnect/retry evidence for spatial decisions.",
       "requiredSemantics": [
         "distance",
         "adjacency",
@@ -484,12 +484,26 @@
       ],
       "transactionDomain": "Authoritative spatial provider or explicit manual authority",
       "disposition": "INCOMPLETE",
-      "implementationEvidence": [],
-      "productionEvidence": [],
-      "identityInvarianceEvidence": [],
-      "connectedEvidenceIfRelevant": [],
+      "implementationEvidence": [
+        "commonPlaySpatialFactRuntime.ts COMMON_PLAY_STANDARD_FACTS defines provider/manual authority for spatial.distance-feet, spatial.line-of-effect, spatial.total-cover, and spatial.area-members with normalized answers",
+        "connectedCommonPlayAuthorityFactRuntime.ts routes authoritative Common Play fact requests and answers through the connected session authority path"
+      ],
+      "productionEvidence": [
+        "c9FamilyGStandardSpatialFacts.test.ts proves provider-authoritative distance, line-of-effect, Total Cover, and normalized area membership without content identity dispatch",
+        "C9 Family G Standard Spatial Facts run 33309874336: Family G targeted tests, legacy execution boundary, and tsc --noEmit all passed; only the verifier self-retirement step failed"
+      ],
+      "identityInvarianceEvidence": [
+        "c9FamilyGStandardSpatialFacts.test.ts proves the same authoritative spatial facts under unrelated external resolution identities"
+      ],
+      "connectedEvidenceIfRelevant": [
+        "connectedCommonPlayAuthorityFactRouting.test.ts and connectedCommonPlayAuthorityFactDispatch.test.ts passed in Family G run 33309874336"
+      ],
       "persistenceEvidenceIfRelevant": [],
-      "remainingNamedSeams": [],
+      "remainingNamedSeams": [
+        "engine-owned adjacency/reach/size-space and line/cone/cube/sphere/cylinder/emanation intersection geometry remain incomplete",
+        "position/artifact placement geometry is not yet converged on the standard spatial fact authority path",
+        "durable reconnect/retry persistence evidence for spatial decisions remains absent"
+      ],
       "connectedRelevant": true,
       "persistenceRelevant": true
     },
