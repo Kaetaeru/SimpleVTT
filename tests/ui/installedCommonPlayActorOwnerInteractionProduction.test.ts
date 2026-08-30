@@ -53,3 +53,26 @@ test("actor-owner decline from the owning peer is side-effect free and replay is
     assert.equal(afterReplay.scene.economyByActor[internal.activeCharacter.id]?.reaction,true);
   }finally{tauriSessionTransport.send=oldSend;tauriSessionTransport.sendTo=oldSendTo;}
 });
+
+
+test("actor-owner late approval is rejected after the authoritative revision consumes Reaction",async()=>{
+  const sessionId="session.actor-owner-stale",host=new MockAdapter();const actionId=await install(host);
+  const internal=host as unknown as {activeCharacter:{id:string;hp:number;maxHp:number};scene:{entities:Array<{id:string;hp:number}>;economyByActor:Record<string,{reaction:boolean}>}};internal.activeCharacter.hp=Math.max(0,internal.activeCharacter.maxHp-10);internal.scene.entities.find((entity)=>entity.id===internal.activeCharacter.id)!.hp=internal.activeCharacter.hp;
+  await host.startInitiative();await host.setCurrentActor(internal.activeCharacter.id);const before=await host.getSnapshot();
+  const hostState=connectedStateFor(host);hostState.mode="host";hostState.sessionId=sessionId;hostState.ledger=new HostSessionLedger(sessionId,connectedManifest(host));hostState.peerManifests.set("peer.owner",connectedManifest(host));
+  const direct:Array<{peer:string;message:string}>=[],broadcasts:string[]=[];const oldSend=tauriSessionTransport.send,oldSendTo=tauriSessionTransport.sendTo;tauriSessionTransport.send=async(message)=>{broadcasts.push(message);return 1;};tauriSessionTransport.sendTo=async(peer,message)=>{direct.push({peer,message});return 1;};
+  try{
+    await host.resolveAction(actionId,[internal.activeCharacter.id]);let snapshot=await host.getSnapshot();
+    assert.equal(snapshot.resolution?.stage,"interrupt",JSON.stringify(snapshot.resolution));
+    const resolutionId=snapshot.resolution!.id,promptId=snapshot.resolution!.interrupt!.id;
+    internal.scene.economyByActor[internal.activeCharacter.id]!.reaction=false;
+    const response={sessionId,resolutionId,promptId,accept:true};
+    assert.equal(await routeConnectedInterruptResponse(host,{peer:"peer.owner",message:""},response),true);
+    snapshot=await host.getSnapshot();
+    assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
+    assert.match(snapshot.resolution?.finalOutcome??"",/Common Play 상호작용 (현재 권한 재검증 실패|적용 거부:)/);
+    assert.equal(snapshot.activeCharacter.hp,before.activeCharacter.hp);
+    assert.equal(snapshot.scene.economyByActor[internal.activeCharacter.id]?.reaction,false);
+    assert.ok(!broadcasts.map((wire)=>JSON.parse(wire)).some((wire)=>wire.type==="event-batch"),JSON.stringify(broadcasts));
+  }finally{tauriSessionTransport.send=oldSend;tauriSessionTransport.sendTo=oldSendTo;}
+});
