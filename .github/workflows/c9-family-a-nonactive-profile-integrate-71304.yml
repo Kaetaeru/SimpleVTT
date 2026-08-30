@@ -1,0 +1,58 @@
+name: C9 Family A Non-Active Profile Integrate 71304
+
+"on":
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-a-nonactive-profile-integrate-71304.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: c9-family-a-nonactive-profile-integrate-71304
+  cancel-in-progress: false
+
+jobs:
+  verify-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run generate:content
+      - name: Apply narrow Family A patch
+        run: python3 .github/c9-family-a-nonactive-profile-integrate-71304.py
+      - name: Verify Family A slice
+        run: |
+          npx tsx --test tests/ui/c9FamilyANonActiveProfileProperties.test.ts tests/ui/installedCommonPlayPropertyModifierProduction.test.ts
+          node scripts/check-v1-mechanism-coverage.mjs
+          npx tsc --noEmit
+      - name: Publish verified slice
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/c9-family-a-nonactive-profile-integrate-71304.py
+          git rm .github/workflows/c9-family-a-nonactive-profile-integrate-71304.yml
+          git add src/app/installedCommonPlayRuntimeAdapter.ts tests/ui/c9FamilyANonActiveProfileProperties.test.ts
+          git diff --cached --check
+          git commit -m "feat(c9): complete non-active profile property projection"
+          branch=agent/c9-gate-n-coverage-reconciliation
+          for attempt in $(seq 1 12); do
+            git fetch origin "$branch"
+            if git rebase "origin/$branch"; then
+              if git push origin HEAD:"$branch"; then exit 0; fi
+            fi
+            git rebase --abort || true
+            sleep 1
+          done
+          exit 1
