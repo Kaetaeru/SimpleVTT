@@ -1,5 +1,5 @@
 name: C9 Gate N Final Verifier 71304
-# rerun after Family K outcome-conditioned damage
+# rerun after current Gate N ledger convergence
 
 on:
   push:
