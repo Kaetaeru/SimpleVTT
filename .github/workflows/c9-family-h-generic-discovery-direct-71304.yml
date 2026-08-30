@@ -25,18 +25,18 @@ jobs:
       - name: Reconcile branch
         run: git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
       - run: npm ci
+      - run: npm run generate:content
       - name: Apply generic Family H discovery patch
         shell: bash
         run: |
           python3 - <<'PYRUN'
           from pathlib import Path
-          import textwrap
 
           source=Path('.github/workflows/c9-family-h-generic-discovery-71304-r2.yml').read_text(encoding='utf-8')
           marker="          python3 - <<'PY'\n"
           start=source.index(marker)+len(marker)
           end=source.index("\n          PY",start)
-          script=textwrap.dedent(source[start:end])
+          script="\n".join(line[10:] if line.startswith("          ") else line for line in source[start:end].splitlines())
           compile(script,'c9-family-h-generic-discovery-71304-r2.yml','exec')
           exec(script,{'__name__':'__main__'})
           PYRUN
