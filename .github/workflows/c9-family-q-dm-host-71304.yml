@@ -1,0 +1,225 @@
+name: C9 Family Q DM Host Responders 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-q-dm-host-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  verify-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Reconcile, verify, and publish Family Q DM/Host responders
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch=agent/c9-gate-n-coverage-reconciliation
+          for attempt in 1 2 3 4 5 6; do
+            echo "publish attempt ${attempt}"
+            git fetch origin "$branch"
+            git reset --hard "origin/$branch"
+
+            python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          operation = Path('src/domain/commonPlayOperationRuntime.ts')
+          text = operation.read_text()
+          old = '  responder:"actor"|"target"|"actor-owner"|"target-owner";\n'
+          new = '  responder:"actor"|"target"|"actor-owner"|"target-owner"|"dm"|"host";\n'
+          if old in text:
+              text = text.replace(old, new, 1)
+          elif new not in text:
+              raise SystemExit('CommonPlayConsentInteraction responder union anchor missing')
+          old = '  if(interaction.responder!=="actor"&&interaction.responder!=="target"&&interaction.responder!=="actor-owner"&&interaction.responder!=="target-owner") throw new DomainEvaluationError(`${label}.responder must be actor, target, actor-owner, or target-owner for portable Common Play interaction`);\n'
+          new = '  if(interaction.responder!=="actor"&&interaction.responder!=="target"&&interaction.responder!=="actor-owner"&&interaction.responder!=="target-owner"&&interaction.responder!=="dm"&&interaction.responder!=="host") throw new DomainEvaluationError(`${label}.responder must be actor, target, actor-owner, target-owner, dm, or host for portable Common Play interaction`);\n'
+          if old in text:
+              text = text.replace(old, new, 1)
+          elif new not in text:
+              raise SystemExit('parseConsentInteraction responder anchor missing')
+          operation.write_text(text)
+
+          adapter = Path('src/app/installedCommonPlayRuntimeAdapter.ts')
+          text = adapter.read_text()
+          old = '''  const actionName=prepared.projectedAction?.name||action.nameKo||action.nameEn;\n  const selectedTargetResponder=interaction.responder==="target"||interaction.responder==="target-owner";\n  const interactionResponder=selectedTargetResponder\n    ?prepared.selectedTargets.length===1?prepared.selectedTargets[0]:undefined\n    :prepared.actorEntity;\n  if(!interactionResponder) {\n'''
+          new = '''  const actionName=prepared.projectedAction?.name||action.nameKo||action.nameEn;\n  const selectedTargetResponder=interaction.responder==="target"||interaction.responder==="target-owner";\n  const localAuthorityResponder=interaction.responder==="dm"||interaction.responder==="host";\n  const interactionResponder=localAuthorityResponder\n    ?{id:interaction.responder,name:interaction.responder==="dm"?"DM":"Host"}\n    :selectedTargetResponder\n      ?prepared.selectedTargets.length===1?prepared.selectedTargets[0]:undefined\n      :prepared.actorEntity;\n  if(!interactionResponder) {\n'''
+          if old in text:
+              text = text.replace(old, new, 1)
+          elif 'const localAuthorityResponder=interaction.responder==="dm"||interaction.responder==="host";' not in text:
+              raise SystemExit('production interaction responder anchor missing')
+          adapter.write_text(text)
+
+          test = Path('tests/ui/c9FamilyQHostDmInteractionProduction.test.ts')
+          test.write_text(r'''import assert from "node:assert/strict";
+          import test from "node:test";
+          import "../../src/app/offlineRuntimeAdapters";
+          import "../../src/app/connectedSessionRuntimeAdapter";
+          import "../../src/app/connectedActionRoutingAdapter";
+          import { catalogQualifiedId } from "../../src/app/contentCatalogIdentity";
+          import { connectedManifest } from "../../src/app/connectedSessionRuntimeAdapter";
+          import { connectedStateFor } from "../../src/app/connectedSessionState";
+          import { installedCommonPlayActionId } from "../../src/app/installedCommonPlayActionReference";
+          import { setInstalledContentStoreForTests } from "../../src/app/installedContentRuntimeAdapter";
+          import { MemoryInstalledContentStore } from "../../src/app/memoryInstalledContentStore";
+          import { MockAdapter } from "../../src/app/mockAdapter";
+          import { HostSessionLedger } from "../../src/app/connectedSessionProtocol";
+          import { tauriSessionTransport } from "../../src/app/tauriSessionTransport";
+          import { routeConnectedInterruptResponse } from "../../src/app/connectedInterruptResponsePort";
+
+          const MODULE_ID="homebrew.q-local-authority-consent";
+          const CONTENT_ID="option.q-local-authority-consent";
+          const MECHANIC_ID="external.q-local-authority-consent";
+          const ENTRY_POINT_ID="approve";
+
+          function payload(responder:"dm"|"host") { return JSON.stringify({
+            schemaVersion:"0.1-draft",moduleId:MODULE_ID,moduleVersion:"1",
+            rulesProfile:{id:"dnd.srd-5.2.1",version:"0.1-draft"},defaultLocale:"en",
+            source:{document:"Local Authority Consent Probe",version:"1",license:"CC0",srdDerived:false},dependencies:[],conflicts:[],capabilities:[],
+            content:[{id:CONTENT_ID,category:"option",presentation:{defaultLocale:"en",originalName:"Local Authority Consent",locales:{en:{name:"Local Authority Consent",description:"Portable DM/Host consent probe"}}},mechanics:[{kind:"common-play",config:{
+              schemaVersion:"0.2-draft",id:MECHANIC_ID,
+              payments:[{kind:"economy",bucket:"reaction",amount:{value:1},consumeAt:"commit",refundOnCancel:true}],
+              entryPoints:[{id:ENTRY_POINT_ID,invocation:"manual",interaction:{id:`${responder}-consent`,kind:"consent",responder,mode:"blocking",input:{type:"boolean"},revalidate:"if-revision-changed",stalePolicy:"reject"},operations:[{kind:"healing.apply",amount:{value:1},target:"self"}]}],
+            }}]}]
+          }); }
+
+          async function install(adapter:MockAdapter,responder:"dm"|"host") {
+            setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
+            const preview=await adapter.previewContentImport(payload(responder));
+            assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
+            await adapter.activateContentImport();
+            return installedCommonPlayActionId({catalogId:catalogQualifiedId(CONTENT_ID,MODULE_ID,"1"),mechanicId:MECHANIC_ID,entryPointId:ENTRY_POINT_ID});
+          }
+
+          for(const responder of ["dm","host"] as const) test(`${responder} consent stays on local authority and rejects Character peer approval`,async()=>{
+            const sessionId=`session.q-${responder}-consent`;
+            const host=new MockAdapter();
+            const actionId=await install(host,responder);
+            const internal=host as unknown as {activeCharacter:{id:string;hp:number;maxHp:number};scene:{entities:Array<{id:string;hp:number}>}};
+            internal.activeCharacter.hp=Math.max(0,internal.activeCharacter.maxHp-5);
+            internal.scene.entities.find((entity)=>entity.id===internal.activeCharacter.id)!.hp=internal.activeCharacter.hp;
+            await host.startInitiative();
+            await host.setCurrentActor(internal.activeCharacter.id);
+            const before=await host.getSnapshot();
+
+            const state=connectedStateFor(host);
+            state.mode="host";
+            state.sessionId=sessionId;
+            state.ledger=new HostSessionLedger(sessionId,connectedManifest(host));
+            state.peerManifests.set("peer.character",connectedManifest(host));
+
+            const direct:Array<{peer:string;message:string}>=[];
+            const broadcasts:string[]=[];
+            const oldSend=tauriSessionTransport.send,oldSendTo=tauriSessionTransport.sendTo;
+            tauriSessionTransport.send=async(message)=>{broadcasts.push(message);return 1;};
+            tauriSessionTransport.sendTo=async(peer,message)=>{direct.push({peer,message});return 1;};
+            try {
+              await host.resolveAction(actionId,[internal.activeCharacter.id]);
+              let snapshot=await host.getSnapshot();
+              assert.equal(snapshot.resolution?.stage,"interrupt",JSON.stringify(snapshot.resolution));
+              assert.equal(snapshot.resolution?.interrupt?.responderId,responder);
+              assert.equal(snapshot.resolution?.interrupt?.responderName,responder==="dm"?"DM":"Host");
+              assert.equal(snapshot.activeCharacter.hp,before.activeCharacter.hp);
+              assert.equal(snapshot.scene.economyByActor[internal.activeCharacter.id]?.reaction,true);
+              assert.equal(direct.map((entry)=>JSON.parse(entry.message)).filter((wire)=>wire.type==="resolution-interrupt-prompt").length,0,JSON.stringify(direct));
+
+              const resolutionId=snapshot.resolution!.id,promptId=snapshot.resolution!.interrupt!.id;
+              const beforeUnauthorized=direct.length;
+              assert.equal(await routeConnectedInterruptResponse(host,{peer:"peer.character",message:""},{sessionId,resolutionId,promptId,accept:true}),true);
+              const errors=direct.slice(beforeUnauthorized).map((entry)=>JSON.parse(entry.message)).filter((wire)=>wire.type==="error");
+              assert.equal(errors.at(-1)?.code,"interrupt-not-authorized",JSON.stringify(errors));
+              snapshot=await host.getSnapshot();
+              assert.equal(snapshot.resolution?.stage,"interrupt");
+              assert.equal(snapshot.activeCharacter.hp,before.activeCharacter.hp);
+
+              await host.respondToInterrupt(true);
+              snapshot=await host.getSnapshot();
+              assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
+              assert.equal(snapshot.activeCharacter.hp,before.activeCharacter.hp+1);
+              assert.equal(snapshot.scene.economyByActor[internal.activeCharacter.id]?.reaction,false);
+              assert.ok(broadcasts.map((wire)=>JSON.parse(wire)).some((wire)=>wire.type==="event-batch"),JSON.stringify(broadcasts));
+            } finally {
+              tauriSessionTransport.send=oldSend;
+              tauriSessionTransport.sendTo=oldSendTo;
+            }
+          });
+          ''')
+
+          ledger_path = Path('docs/rules/v1-mechanism-coverage-ledger.json')
+          ledger = json.loads(ledger_path.read_text())
+          row = next((entry for entry in ledger['rows'] if entry.get('family') == 'Q'), None)
+          if not row or row.get('id') != 'interaction-reaction':
+              raise SystemExit('Family Q ledger row not found')
+          row['currentState'] = (
+              'Portable boolean consent supports actor, target, actor-owner, target-owner, DM, and Host responders through the existing blocking Resolution interrupt. '
+              'Character-owner prompts route over the connected session path, rebind and resend after owner reconnect, reject stale old-peer responses, and revalidate before acceptance. '
+              'DM/Host consent remains on the local authoritative host, rejects Character-peer approval, and commits payment plus downstream effects atomically through the same event path. '
+              'Rich choice/multiple-option payloads and durable restart persistence for an in-flight blocking interaction remain incomplete.'
+          )
+          evidence = {
+              'implementationEvidence': [
+                  'commonPlayOperationRuntime.ts accepts schema-authorized dm|host consent responders without content identity dispatch; installedCommonPlayRuntimeAdapter.ts maps them onto the existing local blocking interrupt rather than a second interaction engine',
+                  'connectedSessionRuntimeAdapter.ts rebinds pending Character-owner interrupt prompts to the newly accepted peer after reconnect while connectedActionRoutingAdapter keeps response authorization structural by responderId',
+              ],
+              'productionEvidence': [
+                  'c9FamilyQHostDmInteractionProduction.test.ts imports unknown Common Play with dm and host responders, keeps prompts on local authority, rejects Character-peer approval, and atomically commits Reaction payment plus healing after local approval',
+                  '4f007c12506a3e33c4cf983410205b559130d526 feat(c9): resume owner consent after reconnect; Family Q verifier passed target-owner/actor-owner interaction regressions, typecheck, and coverage before publishing the bot commit',
+              ],
+              'connectedEvidenceIfRelevant': [
+                  'c9FamilyQTargetOwnerInteractionProduction.test.ts rebinds a pending target-owner prompt to a reconnected peer, rejects the stale old peer, and accepts the rebound owner exactly once',
+                  'c9FamilyQHostDmInteractionProduction.test.ts proves DM/Host prompts are not sent to Character peers and connected peer approval is rejected before local Host authority commits the canonical event batch',
+              ],
+          }
+          for key, values in evidence.items():
+              for value in values:
+                  if value not in row[key]:
+                      row[key].append(value)
+          obsolete = {
+              'DM and Host responder routing is not yet represented',
+              'actor-owner and target-owner reconnect and revision-stale response evidence remain incomplete',
+          }
+          row['remainingNamedSeams'] = [entry for entry in row.get('remainingNamedSeams', []) if entry not in obsolete]
+          required = [
+              'choice and multiple-option interaction payloads are not yet represented by the boolean consent contract',
+              'durable restart persistence for an in-flight blocking interaction remains incomplete',
+          ]
+          for entry in required:
+              if entry not in row['remainingNamedSeams']:
+                  row['remainingNamedSeams'].append(entry)
+          ledger_path.write_text(json.dumps(ledger,ensure_ascii=False,indent=2)+'\n')
+          PY
+
+            npm run generate:content
+            node --import tsx --test \
+              tests/ui/c9FamilyQHostDmInteractionProduction.test.ts \
+              tests/ui/c9FamilyQTargetOwnerInteractionProduction.test.ts \
+              tests/ui/installedCommonPlayActorOwnerInteractionProduction.test.ts
+            npx tsc --noEmit
+            node scripts/check-v1-mechanism-coverage.mjs
+            node scripts/check-legacy-execution-boundary.mjs
+
+            git rm .github/workflows/c9-family-q-dm-host-71304.yml
+            git add src/domain/commonPlayOperationRuntime.ts src/app/installedCommonPlayRuntimeAdapter.ts tests/ui/c9FamilyQHostDmInteractionProduction.test.ts docs/rules/v1-mechanism-coverage-ledger.json
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -m "feat(c9): route DM and Host consent responders"
+            if git push origin HEAD:"$branch"; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "failed to publish Family Q DM/Host responder slice after retries" >&2
+          exit 1
