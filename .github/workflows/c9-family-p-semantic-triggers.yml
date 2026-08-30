@@ -1,6 +1,6 @@
 name: C9 Family P Semantic Triggers
 
-on:
+"on":
   push:
     branches:
       - agent/c9-gate-n-coverage-reconciliation
@@ -22,250 +22,23 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - name: Connect semantic d20 outcomes to persistent-effect rules
+      - name: Apply semantic trigger patch
+        env:
+          PATCH_B64: >-
+            ZnJvbSBwYXRobGliIGltcG9ydCBQYXRoCgplZmZlY3Q9UGF0aCgnc3JjL2RvbWFpbi9jb21tb25QbGF5RWZmZWN0UnVudGltZS50cycpCnRleHQ9ZWZmZWN0LnJlYWRfdGV4dCgpCm9sZD0ndHlwZSBBdXRvbWF0aWNEYW1hZ2VFdmVudD0iZGFtYWdlLnRha2VuInwiZGFtYWdlLmRlYWx0IjtcbicKbmV3PW9sZCsnZXhwb3J0IHR5cGUgQ29tbW9uUGxheUF1dG9tYXRpY0VmZmVjdEV2ZW50PUF1dG9tYXRpY0RhbWFnZUV2ZW50fCJhdHRhY2suaGl0InwiYXR0YWNrLm1pc3MifCJzYXZlLnN1Y2Nlc3MifCJzYXZlLmZhaWx1cmUiO1xuJwppZiAnQ29tbW9uUGxheUF1dG9tYXRpY0VmZmVjdEV2ZW50JyBub3QgaW4gdGV4dDoKICAgIGlmIG9sZCBub3QgaW4gdGV4dDogcmFpc2UgU3lzdGVtRXhpdCgnZWZmZWN0IGV2ZW50IHR5cGUgYW5jaG9yIG1pc3NpbmcnKQogICAgdGV4dD10ZXh0LnJlcGxhY2Uob2xkLG5ldywxKQp0ZXh0PXRleHQucmVwbGFjZSgnICBldmVudDpBdXRvbWF0aWNEYW1hZ2VFdmVudDtcbiAgZnJlcXVlbmN5PzpBdXRvbWF0aWNEYW1hZ2VGcmVxdWVuY3k7JywnICBldmVudDpDb21tb25QbGF5QXV0b21hdGljRWZmZWN0RXZlbnQ7XG4gIGZyZXF1ZW5jeT86QXV0b21hdGljRGFtYWdlRnJlcXVlbmN5OycsMSkKb2xkX2NoZWNrPScgIGlmIChydWxlLmV2ZW50IT09ImRhbWFnZS50YWtlbiImJnJ1bGUuZXZlbnQhPT0iZGFtYWdlLmRlYWx0IikgdGhyb3cgbmV3IEVycm9yKGAke2xhYmVsfSBzdXBwb3J0cyBvbmx5IGRhbWFnZS50YWtlbiBvciBkYW1hZ2UuZGVhbHRgKTsnCm5ld19jaGVjaz0nICBpZiAoIVsiZGFtYWdlLnRha2VuIiwiZGFtYWdlLmRlYWx0IiwiYXR0YWNrLmhpdCIsImF0dGFjay5taXNzIiwic2F2ZS5zdWNjZXNzIiwic2F2ZS5mYWlsdXJlIl0uaW5jbHVkZXMocnVsZS5ldmVudCkpIHRocm93IG5ldyBFcnJvcihgJHtsYWJlbH0gZXZlbnQgaXMgdW5zdXBwb3J0ZWQgaW4gdGhpcyBydW50aW1lIHNsaWNlYCk7JwppZiBvbGRfY2hlY2sgaW4gdGV4dDogdGV4dD10ZXh0LnJlcGxhY2Uob2xkX2NoZWNrLG5ld19jaGVjaywxKQppZiBuZXdfY2hlY2sgbm90IGluIHRleHQ6IHJhaXNlIFN5c3RlbUV4aXQoJ2VmZmVjdCB2YWxpZGF0aW9uIGFuY2hvciBtaXNzaW5nJykKZWZmZWN0LndyaXRlX3RleHQodGV4dCkKCnNlbWFudGljPVBhdGgoJ3NyYy9kb21haW4vY29tbW9uUGxheVNlbWFudGljRXZlbnRSdW50aW1lLnRzJykKdGV4dD1zZW1hbnRpYy5yZWFkX3RleHQoKQp0ZXh0PXRleHQucmVwbGFjZSgnaW1wb3J0IHR5cGUgeyBEMjBUZXN0UmVzdWx0IH0gZnJvbSAiLi9kMjAiOycsJ2ltcG9ydCB0eXBlIHsgUnVsZXNSdW50aW1lU3RhdGUgfSBmcm9tICIuL2NvbWJhdFN0YXRlIjtcbmltcG9ydCB0eXBlIHsgRDIwVGVzdFJlc3VsdCB9IGZyb20gIi4vZDIwIjsnKQp0ZXh0PXRleHQucmVwbGFjZSgnaW1wb3J0IHR5cGUgeyBQZW5kaW5nUmVzb2x1dGlvbiwgUmVzb2x1dGlvbkNvbW1pdCwgUmVzb2x1dGlvbkV2ZW50IH0gZnJvbSAiLi9yZXNvbHV0aW9uVHlwZXMiOycsJ2ltcG9ydCB0eXBlIHsgQ29tbW9uUGxheUF1dG9tYXRpY0VmZmVjdEV2ZW50LCBDb21tb25QbGF5UGVyc2lzdGVudEVmZmVjdERlZmluaXRpb24gfSBmcm9tICIuL2NvbW1vblBsYXlFZmZlY3RSdW50aW1lIjtcbmltcG9ydCB7IHJlc29sdmVDb21tb25QbGF5RnJlcXVlbmN5IH0gZnJvbSAiLi9jb21tb25QbGF5RnJlcXVlbmN5UnVudGltZSI7XG5pbXBvcnQgdHlwZSB7IFBlbmRpbmdSZXNvbHV0aW9uLCBSZXNvbHV0aW9uQ29tbWl0LCBSZXNvbHV0aW9uRXZlbnQsIFJlc29sdXRpb25PcGVyYXRpb24gfSBmcm9tICIuL3Jlc29sdXRpb25UeXBlcyI7JykKdGV4dD10ZXh0LnJlcGxhY2UoJ2Z1bmN0aW9uIHNlbWFudGljS2luZChyZXN1bHQ6RDIwVGVzdFJlc3VsdCkgeycsJ2Z1bmN0aW9uIHNlbWFudGljS2luZChyZXN1bHQ6RDIwVGVzdFJlc3VsdCk6Q29tbW9uUGxheUF1dG9tYXRpY0VmZmVjdEV2ZW50fHVuZGVmaW5lZCB7JywxKQppZiAnYXBwZW5kQ29tbW9uUGxheVNlbWFudGljT3V0Y29tZVRyaWdnZXJzJyBub3QgaW4gdGV4dDoKICAgIGFuY2hvcj0nZXhwb3J0IGZ1bmN0aW9uIGFwcGVuZENvbW1vblBsYXlTZW1hbnRpY091dGNvbWVFdmVudHMoJwogICAgaWYgYW5jaG9yIG5vdCBpbiB0ZXh0OiByYWlzZSBTeXN0ZW1FeGl0KCdzZW1hbnRpYyBldmVudCBleHBvcnQgYW5jaG9yIG1pc3NpbmcnKQogICAgYWRkaXRpb249cicnJ2NvbnN0IEVGRkVDVF9NRVRBREFUQV9ERUZJTklUSU9OPSJjb21tb25QbGF5RGVmaW5pdGlvbklkIjsKY29uc3QgRUZGRUNUX01FVEFEQVRBX1RFTVBMQVRFPSJjb21tb25QbGF5VGVtcGxhdGVJZCI7CgpmdW5jdGlvbiBzZW1hbnRpY0NvbnRleHRzKG9wZXJhdGlvbjpFeHRyYWN0PFBlbmRpbmdSZXNvbHV0aW9uWyJvcGVyYXRpb25zIl1bbnVtYmVyXSx7a2luZDoiZDIwIn0+KSB7CiAgaWYob3BlcmF0aW9uLnJlcXVlc3QuZmFtaWx5PT09ImF0dGFjay1yb2xsIikgcmV0dXJuIFt7ZXZlbnQ6ImF0dGFjay5oaXQiIGFzIGNvbnN0LG91dGNvbWU6InN1Y2Nlc3MiIGFzIGNvbnN0fSx7ZXZlbnQ6ImF0dGFjay5taXNzIiBhcyBjb25zdCxvdXRjb21lOiJmYWlsdXJlIiBhcyBjb25zdH1dOwogIGlmKG9wZXJhdGlvbi5yZXF1ZXN0LmZhbWlseT09PSJzYXZpbmctdGhyb3ciKSByZXR1cm4gW3tldmVudDoic2F2ZS5zdWNjZXNzIiBhcyBjb25zdCxvdXRjb21lOiJzdWNjZXNzIiBhcyBjb25zdH0se2V2ZW50OiJzYXZlLmZhaWx1cmUiIGFzIGNvbnN0LG91dGNvbWU6ImZhaWx1cmUiIGFzIGNvbnN0fV07CiAgcmV0dXJuIFtdOwp9CgpleHBvcnQgZnVuY3Rpb24gYXBwZW5kQ29tbW9uUGxheVNlbWFudGljT3V0Y29tZVRyaWdnZXJzKAogIHN0YXRlOlJ1bGVzUnVudGltZVN0YXRlLAogIGRlZmluaXRpb25zOkNvbW1vblBsYXlQZXJzaXN0ZW50RWZmZWN0RGVmaW5pdGlvbltdLAogIHBlbmRpbmc6UGVuZGluZ1Jlc29sdXRpb24sCiAgY3JlYXR1cmVLaW5kczpSZWNvcmQ8c3RyaW5nLCJjaGFyYWN0ZXIifCJtb25zdGVyIj4sCik6UGVuZGluZ1Jlc29sdXRpb24gewogIGNvbnN0IG9wZXJhdGlvbnM6UmVzb2x1dGlvbk9wZXJhdGlvbltdPVsuLi5wZW5kaW5nLm9wZXJhdGlvbnNdOwogIGZvcihjb25zdCBbZDIwSW5kZXgsZDIwXSBvZiBwZW5kaW5nLm9wZXJhdGlvbnMuZW50cmllcygpKSB7CiAgICBpZihkMjAua2luZCE9PSJkMjAiKSBjb250aW51ZTsKICAgIGNvbnN0IHN1YmplY3RJZD1kMjAuYWN0b3JJZD8/cGVuZGluZy5hY3RvcklkOwogICAgY29uc3QgY3JlYXR1cmVLaW5kPWNyZWF0dXJlS2luZHNbc3ViamVjdElkXTsKICAgIGlmKCFjcmVhdHVyZUtpbmQpIGNvbnRpbnVlOwogICAgZm9yKGNvbnN0IGNvbnRleHQgb2Ygc2VtYW50aWNDb250ZXh0cyhkMjApKSB7CiAgICAgIGNvbnN0IHdoZW49e29wZXJhdGlvbklkOmQyMC5pZCxmaWVsZDoib3V0Y29tZSIsZXF1YWxzOmNvbnRleHQub3V0Y29tZX0gYXMgY29uc3Q7CiAgICAgIGZvcihjb25zdCBbZGVmaW5pdGlvbkluZGV4LGRlZmluaXRpb25dIG9mIGRlZmluaXRpb25zLmVudHJpZXMoKSkgewogICAgICAgIGZvcihjb25zdCBbZWZmZWN0SW5kZXgsZWZmZWN0XSBvZiBzdGF0ZS5lZmZlY3RzLmZpbHRlcigoY2FuZGlkYXRlKT0+Y2FuZGlkYXRlLnRhcmdldElkPT09c3ViamVjdElkJiZjYW5kaWRhdGUuc291cmNlSWQ9PT1kZWZpbml0aW9uLmlkJiZjYW5kaWRhdGUubWV0YWRhdGE/LltFRkZFQ1RfTUVUQURBVEFfREVGSU5JVElPTl09PT1kZWZpbml0aW9uLmlkKS5lbnRyaWVzKCkpIHsKICAgICAgICAgIGNvbnN0IHRlbXBsYXRlSWQ9ZWZmZWN0Lm1ldGFkYXRhPy5bRUZGRUNUX01FVEFEQVRBX1RFTVBMQVRFXTsKICAgICAgICAgIGlmKHR5cGVvZiB0ZW1wbGF0ZUlkIT09InN0cmluZyIpIGNvbnRpbnVlOwogICAgICAgICAgY29uc3QgdGVtcGxhdGU9ZGVmaW5pdGlvbi5hcnRpZmFjdFRlbXBsYXRlcy5maW5kKChjYW5kaWRhdGUpPT5jYW5kaWRhdGUuaWQ9PT10ZW1wbGF0ZUlkKTsKICAgICAgICAgIGlmKCF0ZW1wbGF0ZSkgY29udGludWU7CiAgICAgICAgICBmb3IoY29uc3QgW3J1bGVJbmRleCxydWxlXSBvZiB0ZW1wbGF0ZS5ydWxlcy5maWx0ZXIoKGNhbmRpZGF0ZSk9PmNhbmRpZGF0ZS5ldmVudD09PWNvbnRleHQuZXZlbnQpLmVudHJpZXMoKSkgewogICAgICAgICAgICBjb25zdCBmcmVxdWVuY3k9cmVzb2x2ZUNvbW1vblBsYXlGcmVxdWVuY3koe3J1bGVJZDpydWxlLmlkLHN1YmplY3RJZCxmcmVxdWVuY3k6cnVsZS5mcmVxdWVuY3k/PyJvbmNlIixyZXNvbHV0aW9uSWQ6cGVuZGluZy5pZCxjbG9jazpzdGF0ZS5jbG9jayxtYXJrZXJzOmVmZmVjdC5tZXRhZGF0YT8/e319KTsKICAgICAgICAgICAgaWYoIWZyZXF1ZW5jeS5lbGlnaWJsZSkgY29udGludWU7CiAgICAgICAgICAgIGZvcihjb25zdCBbb3BlcmF0aW9uSW5kZXgsb3BlcmF0aW9uXSBvZiBydWxlLm9wZXJhdGlvbnMuZW50cmllcygpKSBvcGVyYXRpb25zLnB1c2goewogICAgICAgICAgICAgIGlkOmAke3BlbmRpbmcuaWR9OmF1dG9tYXRpYzoke2NvbnRleHQuZXZlbnR9OiR7ZGVmaW5pdGlvbkluZGV4fToke2VmZmVjdEluZGV4fToke2QyMEluZGV4fToke3J1bGVJbmRleH06JHtvcGVyYXRpb25JbmRleH1gLAogICAgICAgICAgICAgIGtpbmQ6ImRhbWFnZSIsdGFyZ2V0SWQ6c3ViamVjdElkLGRhbWFnZVR5cGU6b3BlcmF0aW9uLmRhbWFnZVR5cGUsYW1vdW50Om9wZXJhdGlvbi5hbW91bnQudmFsdWUsY3JlYXR1cmVLaW5kLHdoZW4sCiAgICAgICAgICAgIH0pOwogICAgICAgICAgICBpZih0ZW1wbGF0ZS5saWZldGltZS5raW5kPT09InVudGlsLWR1cmF0aW9uIiYmT2JqZWN0LmtleXMoZnJlcXVlbmN5Lm1ldGFkYXRhUGF0Y2gpLmxlbmd0aCkgb3BlcmF0aW9ucy5wdXNoKHsKICAgICAgICAgICAgICBpZDpgJHtwZW5kaW5nLmlkfTphdXRvbWF0aWM6JHtjb250ZXh0LmV2ZW50fToke2RlZmluaXRpb25JbmRleH06JHtlZmZlY3RJbmRleH06JHtkMjBJbmRleH06JHtydWxlSW5kZXh9OmZyZXF1ZW5jeWAsa2luZDoidXBkYXRlLWVmZmVjdCIsZWZmZWN0SWQ6ZWZmZWN0LmlkLG1ldGFkYXRhUGF0Y2g6ZnJlcXVlbmN5Lm1ldGFkYXRhUGF0Y2gsd2hlbiwKICAgICAgICAgICAgfSk7CiAgICAgICAgICB9CiAgICAgICAgfQogICAgICB9CiAgICB9CiAgfQogIHJldHVybiBvcGVyYXRpb25zLmxlbmd0aD09PXBlbmRpbmcub3BlcmF0aW9ucy5sZW5ndGg/cGVuZGluZzp7Li4ucGVuZGluZyxvcGVyYXRpb25zfTsKfQoKJycnCiAgICB0ZXh0PXRleHQucmVwbGFjZShhbmNob3IsYWRkaXRpb24rYW5jaG9yLDEpCnNlbWFudGljLndyaXRlX3RleHQodGV4dCkKCmFkYXB0ZXI9UGF0aCgnc3JjL2FwcC9pbnN0YWxsZWRDb21tb25QbGF5UnVudGltZUFkYXB0ZXIudHMnKQp0ZXh0PWFkYXB0ZXIucmVhZF90ZXh0KCkKdGV4dD10ZXh0LnJlcGxhY2UoJ2ltcG9ydCB7IGFwcGVuZENvbW1vblBsYXlTZW1hbnRpY091dGNvbWVFdmVudHMgfSBmcm9tICIuLi9kb21haW4vY29tbW9uUGxheVNlbWFudGljRXZlbnRSdW50aW1lIjsnLCdpbXBvcnQgeyBhcHBlbmRDb21tb25QbGF5U2VtYW50aWNPdXRjb21lRXZlbnRzLCBhcHBlbmRDb21tb25QbGF5U2VtYW50aWNPdXRjb21lVHJpZ2dlcnMgfSBmcm9tICIuLi9kb21haW4vY29tbW9uUGxheVNlbWFudGljRXZlbnRSdW50aW1lIjsnLDEpCm9sZD0nJycgICAgY29uc3QgcGVuZGluZz1jb21waWxlQ29tbW9uUGxheUVudHJ5UG9pbnRPcGVyYXRpb25zKFNJTVBMRVZUVF9BUFBfUlVMRVNfUFJPRklMRSxzdGF0ZSxsb3dlcmVkLmRlZmluaXRpb24sb3BlcmF0aW9uRXhlY3V0aW9uSW5wdXQoaW50ZXJuYWwsYWN0aW9uSWQsYWN0aW9uLHByZXBhcmVkLHJlc29sdXRpb25JZCxpbnRlcmFjdGlvbklkKSk7CiAgICBjb25zdCBhdXRvbWF0aWNQZW5kaW5nPWFwcGVuZENvbW1vblBsYXlEYW1hZ2VUYWtlblRyaWdnZXJzKAogICAgICBzdGF0ZSxhd2FpdCBpbnN0YWxsZWRQZXJzaXN0ZW50RWZmZWN0RGVmaW5pdGlvbnMoYWRhcHRlcikscGVuZGluZyxhY3RvckVudGl0eS5raW5kPT09ImNoYXJhY3RlciI/ImNoYXJhY3RlciI6Im1vbnN0ZXIiLAogICAgKTsKICAgIGNvbW1pdHRlZD1hcHBlbmRDb21tb25QbGF5U2VtYW50aWNPdXRjb21lRXZlbnRzKAogICAgICBhdXRvbWF0aWNQZW5kaW5nLAogICAgICByZXNvbHZlUGVuZGluZ1Jlc29sdXRpb24oU0lNUExFVlRUX0FQUF9SVUxFU19QUk9GSUxFLHN0YXRlLGF1dG9tYXRpY1BlbmRpbmcpLAogICAgKTsnJycKbmV3PScnJyAgICBjb25zdCBwZW5kaW5nPWNvbXBpbGVDb21tb25QbGF5RW50cnlQb2ludE9wZXJhdGlvbnMoU0lNUExFVlRUX0FQUF9SVUxFU19QUk9GSUxFLHN0YXRlLGxvd2VyZWQuZGVmaW5pdGlvbixvcGVyYXRpb25FeGVjdXRpb25JbnB1dChpbnRlcm5hbCxhY3Rpb25JZCxhY3Rpb24scHJlcGFyZWQscmVzb2x1dGlvbklkLGludGVyYWN0aW9uSWQpKTsKICAgIGNvbnN0IGVmZmVjdERlZmluaXRpb25zPWF3YWl0IGluc3RhbGxlZFBlcnNpc3RlbnRFZmZlY3REZWZpbml0aW9ucyhhZGFwdGVyKTsKICAgIGNvbnN0IGRhbWFnZVBlbmRpbmc9YXBwZW5kQ29tbW9uUGxheURhbWFnZVRha2VuVHJpZ2dlcnMoCiAgICAgIHN0YXRlLGVmZmVjdERlZmluaXRpb25zLHBlbmRpbmcsYWN0b3JFbnRpdHkua2luZD09PSJjaGFyYWN0ZXIiPyJjaGFyYWN0ZXIiOiJtb25zdGVyIiwKICAgICk7CiAgICBjb25zdCBhdXRvbWF0aWNQZW5kaW5nPWFwcGVuZENvbW1vblBsYXlTZW1hbnRpY091dGNvbWVUcmlnZ2VycygKICAgICAgc3RhdGUsZWZmZWN0RGVmaW5pdGlvbnMsZGFtYWdlUGVuZGluZyxPYmplY3QuZnJvbUVudHJpZXMoaW50ZXJuYWwuc2NlbmUuZW50aXRpZXMubWFwKChlbnRpdHkpPT5bZW50aXR5LmlkLGVudGl0eS5raW5kPT09ImNoYXJhY3RlciI/ImNoYXJhY3RlciI6Im1vbnN0ZXIiXSkpLAogICAgKTsKICAgIGNvbW1pdHRlZD1hcHBlbmRDb21tb25QbGF5U2VtYW50aWNPdXRjb21lRXZlbnRzKAogICAgICBhdXRvbWF0aWNQZW5kaW5nLAogICAgICByZXNvbHZlUGVuZGluZ1Jlc29sdXRpb24oU0lNUExFVlRUX0FQUF9SVUxFU19QUk9GSUxFLHN0YXRlLGF1dG9tYXRpY1BlbmRpbmcpLAogICAgKTsnJycKaWYgb2xkIGluIHRleHQ6IHRleHQ9dGV4dC5yZXBsYWNlKG9sZCxuZXcsMSkKaWYgbmV3IG5vdCBpbiB0ZXh0OiByYWlzZSBTeXN0ZW1FeGl0KCdpbnN0YWxsZWQgYWRhcHRlciBhbmNob3IgbWlzc2luZycpCmFkYXB0ZXIud3JpdGVfdGV4dCh0ZXh0KQoKdGVzdD1QYXRoKCd0ZXN0cy9kb21haW4vY29tbW9uUGxheVNlbWFudGljRXZlbnRSdW50aW1lLnRlc3QudHMnKQp0ZXh0PXRlc3QucmVhZF90ZXh0KCkKdGV4dD10ZXh0LnJlcGxhY2UoJ2ltcG9ydCB7IGFwcGVuZENvbW1vblBsYXlTZW1hbnRpY091dGNvbWVFdmVudHMgfSBmcm9tICIuLi8uLi9zcmMvZG9tYWluL2NvbW1vblBsYXlTZW1hbnRpY0V2ZW50UnVudGltZSI7JywnaW1wb3J0IHsgcmVzb2x2ZUNvbW1vblBsYXlFZmZlY3RBY3RpdmF0aW9uLCB0eXBlIENvbW1vblBsYXlQZXJzaXN0ZW50RWZmZWN0RGVmaW5pdGlvbiB9IGZyb20gIi4uLy4uL3NyYy9kb21haW4vY29tbW9uUGxheUVmZmVjdFJ1bnRpbWUiO1xuaW1wb3J0IHsgYXBwZW5kQ29tbW9uUGxheVNlbWFudGljT3V0Y29tZUV2ZW50cywgYXBwZW5kQ29tbW9uUGxheVNlbWFudGljT3V0Y29tZVRyaWdnZXJzIH0gZnJvbSAiLi4vLi4vc3JjL2RvbWFpbi9jb21tb25QbGF5U2VtYW50aWNFdmVudFJ1bnRpbWUiOycsMSkKaWYgJ3NlbWFudGljIG91dGNvbWVzIGRpc3BhdGNoIGFjdGl2ZSBwZXJzaXN0ZW50LWVmZmVjdCBydWxlcyBpbiB0aGUgc2FtZSByZXNvbHV0aW9uJyBub3QgaW4gdGV4dDoKICAgIHRleHQgKz0gcicnJwoKdGVzdCgic2VtYW50aWMgb3V0Y29tZXMgZGlzcGF0Y2ggYWN0aXZlIHBlcnNpc3RlbnQtZWZmZWN0IHJ1bGVzIGluIHRoZSBzYW1lIHJlc29sdXRpb24iLCgpPT57CiAgY29uc3QgZGVmaW5pdGlvbjpDb21tb25QbGF5UGVyc2lzdGVudEVmZmVjdERlZmluaXRpb249ewogICAgc2NoZW1hVmVyc2lvbjoiMC4yLWRyYWZ0IixpZDoiZXh0ZXJuYWwudW5rbm93bi5zZW1hbnRpYy13YXJkIiwKICAgIGVudHJ5UG9pbnRzOlt7aWQ6ImFjdGl2YXRlIixpbnZvY2F0aW9uOiJtYW51YWwiLG9wZXJhdGlvbnM6W3traW5kOiJlZmZlY3QuYXBwbHkiLHRlbXBsYXRlOiJ3YXJkIix0YXJnZXQ6ImFjdG9yIn1dfV0sCiAgICBhcnRpZmFjdFRlbXBsYXRlczpbe2lkOiJ3YXJkIixhcnRpZmFjdEtpbmQ6ImVmZmVjdCIsZHVyYXRpb246e2tpbmQ6ImVsYXBzZWQiLGFtb3VudDp7dmFsdWU6MX0sdW5pdDoiaG91cnMifSxydWxlczpbCiAgICAgIHtpZDoib24taGl0IixldmVudDoiYXR0YWNrLmhpdCIsZnJlcXVlbmN5OiJvbmNlLXBlci1yZXNvbHV0aW9uIixvcGVyYXRpb25zOlt7a2luZDoiZGFtYWdlLmFwcGx5IixhbW91bnQ6e3ZhbHVlOjJ9LGRhbWFnZVR5cGU6ImZvcmNlIix0YXJnZXQ6ImV2ZW50LmFjdG9yIn1dfSwKICAgICAge2lkOiJvbi1zYXZlLWZhaWx1cmUiLGV2ZW50OiJzYXZlLmZhaWx1cmUiLGZyZXF1ZW5jeToib25jZS1wZXItcmVzb2x1dGlvbiIsb3BlcmF0aW9uczpbe2tpbmQ6ImRhbWFnZS5hcHBseSIsYW1vdW50Ont2YWx1ZTozfSxkYW1hZ2VUeXBlOiJwc3ljaGljIix0YXJnZXQ6ImV2ZW50LmFjdG9yIn1dfSwKICAgIF0sbGlmZXRpbWU6e2tpbmQ6InVudGlsLWR1cmF0aW9uIixvbkVuZDoiZGVzdHJveSJ9fV0sCiAgfTsKICBsZXQgc3RhdGU9cnVudGltZVN0YXRlKCk7CiAgY29uc3QgaGVyb1dhcmQ9cmVzb2x2ZUNvbW1vblBsYXlFZmZlY3RBY3RpdmF0aW9uKFRFU1RfUFJPRklMRSxzdGF0ZSxkZWZpbml0aW9uLHtyZXNvbHV0aW9uSWQ6Imhlcm8td2FyZCIsYWN0b3JJZDoiaGVybyIsZW50cnlQb2ludElkOiJhY3RpdmF0ZSJ9KTsKICBhc3NlcnQuZXF1YWwoaGVyb1dhcmQuc3RhdHVzLCJjb21taXR0ZWQiKTsgaWYoaGVyb1dhcmQuc3RhdHVzIT09ImNvbW1pdHRlZCIpIHJldHVybjsgc3RhdGU9aGVyb1dhcmQuc3RhdGU7CiAgY29uc3QgZ29ibGluV2FyZD1yZXNvbHZlQ29tbW9uUGxheUVmZmVjdEFjdGl2YXRpb24oVEVTVF9QUk9GSUxFLHN0YXRlLGRlZmluaXRpb24se3Jlc29sdXRpb25JZDoiZ29ibGluLXdhcmQiLGFjdG9ySWQ6ImdvYmxpbiIsZW50cnlQb2ludElkOiJhY3RpdmF0ZSJ9KTsKICBhc3NlcnQuZXF1YWwoZ29ibGluV2FyZC5zdGF0dXMsImNvbW1pdHRlZCIpOyBpZihnb2JsaW5XYXJkLnN0YXR1cyE9PSJjb21taXR0ZWQiKSByZXR1cm47IHN0YXRlPWdvYmxpbldhcmQuc3RhdGU7CiAgY29uc3QgcmVxdWVzdD1wZW5kaW5nKCJleHRlcm5hbC5yZW5hbWFibGUuc2VtYW50aWMtc291cmNlIik7CiAgcmVxdWVzdC5leHBlY3RlZFJldmlzaW9uPXN0YXRlLnJldmlzaW9uOwogIGNvbnN0IGV4cGFuZGVkPWFwcGVuZENvbW1vblBsYXlTZW1hbnRpY091dGNvbWVUcmlnZ2VycyhzdGF0ZSxbZGVmaW5pdGlvbl0scmVxdWVzdCx7aGVybzoiY2hhcmFjdGVyIixnb2JsaW46Im1vbnN0ZXIifSk7CiAgY29uc3QgcmVzb2x2ZWQ9YXBwZW5kQ29tbW9uUGxheVNlbWFudGljT3V0Y29tZUV2ZW50cyhleHBhbmRlZCxyZXNvbHZlUGVuZGluZ1Jlc29sdXRpb24oVEVTVF9QUk9GSUxFLHN0YXRlLGV4cGFuZGVkKSk7CiAgYXNzZXJ0LmVxdWFsKHJlc29sdmVkLnN0YXR1cywiY29tbWl0dGVkIik7IGlmKHJlc29sdmVkLnN0YXR1cyE9PSJjb21taXR0ZWQiKSByZXR1cm47CiAgYXNzZXJ0LmVxdWFsKHJlc29sdmVkLnN0YXRlLmNvbWJhdGFudHMuaGVyby5saWZlLmhwLmN1cnJlbnQsMTgpOwogIGFzc2VydC5lcXVhbChyZXNvbHZlZC5zdGF0ZS5jb21iYXRhbnRzLmdvYmxpbi5saWZlLmhwLmN1cnJlbnQsMTIpOwogIGFzc2VydC5lcXVhbChPYmplY3Qua2V5cyhyZXNvbHZlZC5yZXN1bHRzKS5zb21lKChpZCk9PmlkLmluY2x1ZGVzKCJhdXRvbWF0aWM6YXR0YWNrLmhpdCIpKSx0cnVlKTsKICBhc3NlcnQuZXF1YWwoT2JqZWN0LmtleXMocmVzb2x2ZWQucmVzdWx0cykuc29tZSgoaWQpPT5pZC5pbmNsdWRlcygiYXV0b21hdGljOnNhdmUuZmFpbHVyZSIpKSx0cnVlKTsKfSk7CicnJwp0ZXN0LndyaXRlX3RleHQodGV4dCkK
         shell: bash
         run: |
           set -euo pipefail
-          python - <<'PY'
-          from pathlib import Path
-
-          effect = Path('src/domain/commonPlayEffectRuntime.ts')
-          text = effect.read_text()
-          text = text.replace(
-              'type AutomaticDamageEvent="damage.taken"|"damage.dealt";\n',
-              'type AutomaticDamageEvent="damage.taken"|"damage.dealt";\nexport type CommonPlayAutomaticEffectEvent=AutomaticDamageEvent|"attack.hit"|"attack.miss"|"save.success"|"save.failure";\n'
-          )
-          text = text.replace('  event:AutomaticDamageEvent;\n  frequency?:AutomaticDamageFrequency;', '  event:CommonPlayAutomaticEffectEvent;\n  frequency?:AutomaticDamageFrequency;')
-          text = text.replace(
-              '  if (rule.event!=="damage.taken"&&rule.event!=="damage.dealt") throw new Error(`${label} supports only damage.taken or damage.dealt`);',
-              '  if (!["damage.taken","damage.dealt","attack.hit","attack.miss","save.success","save.failure"].includes(rule.event)) throw new Error(`${label} event is unsupported in this runtime slice`);'
-          )
-          if 'CommonPlayAutomaticEffectEvent' not in text or '"attack.hit","attack.miss","save.success","save.failure"' not in text:
-              raise SystemExit('effect runtime semantic-event patch did not apply')
-          effect.write_text(text)
-
-          adapter = Path('src/app/installedCommonPlayRuntimeAdapter.ts')
-          text = adapter.read_text()
-          text = text.replace(
-              'import { appendCommonPlaySemanticOutcomeEvents } from "../domain/commonPlaySemanticEventRuntime";',
-              'import { appendCommonPlaySemanticOutcomeEvents, appendCommonPlaySemanticOutcomeTriggers } from "../domain/commonPlaySemanticEventRuntime";'
-          )
-          old = '''    const pending=compileCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,state,lowered.definition,operationExecutionInput(internal,actionId,action,prepared,resolutionId,interactionId));
-    const automaticPending=appendCommonPlayDamageTakenTriggers(
-      state,await installedPersistentEffectDefinitions(adapter),pending,actorEntity.kind==="character"?"character":"monster",
-    );
-    committed=appendCommonPlaySemanticOutcomeEvents(
-      automaticPending,
-      resolvePendingResolution(SIMPLEVTT_APP_RULES_PROFILE,state,automaticPending),
-    );'''
-          new = '''    const pending=compileCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,state,lowered.definition,operationExecutionInput(internal,actionId,action,prepared,resolutionId,interactionId));
-    const effectDefinitions=await installedPersistentEffectDefinitions(adapter);
-    const damagePending=appendCommonPlayDamageTakenTriggers(
-      state,effectDefinitions,pending,actorEntity.kind==="character"?"character":"monster",
-    );
-    const automaticPending=appendCommonPlaySemanticOutcomeTriggers(
-      state,effectDefinitions,damagePending,Object.fromEntries(internal.scene.entities.map((entity)=>[entity.id,entity.kind==="character"?"character":"monster"])),
-    );
-    committed=appendCommonPlaySemanticOutcomeEvents(
-      automaticPending,
-      resolvePendingResolution(SIMPLEVTT_APP_RULES_PROFILE,state,automaticPending),
-    );'''
-          if old not in text:
-              raise SystemExit('installed adapter anchor not found')
-          text = text.replace(old, new)
-          adapter.write_text(text)
-          PY
-
-          cat > src/domain/commonPlaySemanticEventRuntime.ts <<'TS'
-          import type { RulesRuntimeState } from "./combatState";
-          import type { D20TestResult } from "./d20";
-          import type { CommonPlayAutomaticEffectEvent, CommonPlayPersistentEffectDefinition } from "./commonPlayEffectRuntime";
-          import { resolveCommonPlayFrequency } from "./commonPlayFrequencyRuntime";
-          import type { PendingResolution, ResolutionCommit, ResolutionEvent, ResolutionOperation } from "./resolutionTypes";
-
-          const EFFECT_METADATA_DEFINITION="commonPlayDefinitionId";
-          const EFFECT_METADATA_TEMPLATE="commonPlayTemplateId";
-
-          function semanticKind(result:D20TestResult):CommonPlayAutomaticEffectEvent|undefined {
-            if(result.family==="attack-roll") return result.outcome==="success"?"attack.hit":"attack.miss";
-            if(result.family==="saving-throw") return result.outcome==="success"?"save.success":"save.failure";
-            return undefined;
-          }
-
-          function semanticContexts(operation:Extract<PendingResolution["operations"][number],{kind:"d20"}>) {
-            if(operation.request.family==="attack-roll") return [
-              {event:"attack.hit" as const,outcome:"success" as const},
-              {event:"attack.miss" as const,outcome:"failure" as const},
-            ];
-            if(operation.request.family==="saving-throw") return [
-              {event:"save.success" as const,outcome:"success" as const},
-              {event:"save.failure" as const,outcome:"failure" as const},
-            ];
-            return [];
-          }
-
-          export function appendCommonPlaySemanticOutcomeTriggers(
-            state:RulesRuntimeState,
-            definitions:CommonPlayPersistentEffectDefinition[],
-            pending:PendingResolution,
-            creatureKinds:Record<string,"character"|"monster">,
-          ):PendingResolution {
-            const operations:ResolutionOperation[]=[...pending.operations];
-            for(const [d20Index,d20] of pending.operations.entries()) {
-              if(d20.kind!=="d20") continue;
-              const subjectId=d20.actorId??pending.actorId;
-              const creatureKind=creatureKinds[subjectId];
-              if(!creatureKind) continue;
-              for(const context of semanticContexts(d20)) {
-                const when={operationId:d20.id,field:"outcome",equals:context.outcome} as const;
-                for(const [definitionIndex,definition] of definitions.entries()) {
-                  for(const [effectIndex,effect] of state.effects.filter((candidate)=>
-                    candidate.targetId===subjectId
-                    && candidate.sourceId===definition.id
-                    && candidate.metadata?.[EFFECT_METADATA_DEFINITION]===definition.id
-                  ).entries()) {
-                    const templateId=effect.metadata?.[EFFECT_METADATA_TEMPLATE];
-                    if(typeof templateId!=="string") continue;
-                    const template=definition.artifactTemplates.find((candidate)=>candidate.id===templateId);
-                    if(!template) continue;
-                    for(const [ruleIndex,rule] of template.rules.filter((candidate)=>candidate.event===context.event).entries()) {
-                      const frequency=resolveCommonPlayFrequency({
-                        ruleId:rule.id,subjectId,frequency:rule.frequency??"once",resolutionId:pending.id,
-                        clock:state.clock,markers:effect.metadata??{},
-                      });
-                      if(!frequency.eligible) continue;
-                      for(const [operationIndex,operation] of rule.operations.entries()) operations.push({
-                        id:`${pending.id}:automatic:${context.event}:${definitionIndex}:${effectIndex}:${d20Index}:${ruleIndex}:${operationIndex}`,
-                        kind:"damage",targetId:subjectId,damageType:operation.damageType,amount:operation.amount.value,creatureKind,when,
-                      });
-                      if(template.lifetime.kind==="until-duration"&&Object.keys(frequency.metadataPatch).length) operations.push({
-                        id:`${pending.id}:automatic:${context.event}:${definitionIndex}:${effectIndex}:${d20Index}:${ruleIndex}:frequency`,
-                        kind:"update-effect",effectId:effect.id,metadataPatch:frequency.metadataPatch,when,
-                      });
-                    }
-                  }
-                }
-              }
-            }
-            return operations.length===pending.operations.length?pending:{...pending,operations};
-          }
-
-          export function appendCommonPlaySemanticOutcomeEvents(
-            pending:PendingResolution,
-            commit:ResolutionCommit,
-          ):ResolutionCommit {
-            if(commit.status==="rejected") return commit;
-            const existingIds=new Set(commit.events.map((event)=>event.id));
-            const semanticEvents:ResolutionEvent[]=[];
-            for(const operation of pending.operations) {
-              if(operation.kind!=="d20") continue;
-              const result=commit.results[operation.id] as D20TestResult|undefined;
-              if(!result||result.family!==operation.request.family) continue;
-              const kind=semanticKind(result);
-              if(!kind) continue;
-              const id=`${pending.id}:${operation.id}:semantic:${kind}`;
-              if(existingIds.has(id)) continue;
-              semanticEvents.push({
-                id,
-                resolutionId:pending.id,
-                operationId:operation.id,
-                kind,
-                actorId:operation.actorId??pending.actorId,
-                targetId:operation.targetId,
-                summary:`${kind} (${result.total} vs ${result.target})`,
-                provenance:[...result.provenance],
-                stateChanges:[],
-                result:structuredClone(result),
-              });
-            }
-            if(!semanticEvents.length) return commit;
-            return {
-              ...commit,
-              state:{
-                ...commit.state,
-                history:[...commit.state.history,...semanticEvents.map((event)=>({
-                  id:event.id,
-                  resolutionId:event.resolutionId,
-                  operationId:event.operationId,
-                  kind:event.kind,
-                  actorId:event.actorId,
-                  targetId:event.targetId,
-                  summary:event.summary,
-                }))],
-              },
-              events:[...commit.events,...semanticEvents],
-            };
-          }
-          TS
-
-          cat > tests/domain/commonPlaySemanticTriggerRuntime.test.ts <<'TS'
-          import assert from "node:assert/strict";
-          import test from "node:test";
-          import { resolveCommonPlayEffectActivation, type CommonPlayPersistentEffectDefinition } from "../../src/domain/commonPlayEffectRuntime";
-          import { appendCommonPlaySemanticOutcomeEvents, appendCommonPlaySemanticOutcomeTriggers } from "../../src/domain/commonPlaySemanticEventRuntime";
-          import { resolvePendingResolution } from "../../src/domain/resolution";
-          import type { PendingResolution, ResolutionCommit } from "../../src/domain/resolutionTypes";
-          import { runtimeState, TEST_PROFILE } from "./rulesTestState";
-
-          const DEFINITION:CommonPlayPersistentEffectDefinition={
-            schemaVersion:"0.2-draft",id:"external.unknown.semantic-ward",
-            entryPoints:[{id:"activate",invocation:"manual",operations:[{kind:"effect.apply",template:"semantic-ward",target:"actor"}]}],
-            artifactTemplates:[{
-              id:"semantic-ward",artifactKind:"effect",
-              duration:{kind:"elapsed",amount:{value:1},unit:"hours"},
-              rules:[
-                {id:"on-hit",event:"attack.hit",frequency:"once-per-resolution",operations:[{kind:"damage.apply",amount:{value:2},damageType:"force",target:"event.actor"}]},
-                {id:"on-save-failure",event:"save.failure",frequency:"once-per-resolution",operations:[{kind:"damage.apply",amount:{value:3},damageType:"psychic",target:"event.actor"}]},
-              ],
-              lifetime:{kind:"until-duration",onEnd:"destroy"},
-            }],
-          };
-
-          function committed(value:ResolutionCommit,label:string) {
-            assert.equal(value.status,"committed",label);
-            if(value.status!=="committed") throw new Error(`${label}: ${value.error}`);
-            return value;
-          }
-
-          test("semantic attack/save outcomes dispatch persistent-effect rules through the same pending resolution",()=>{
-            let state=runtimeState();
-            state=committed(resolveCommonPlayEffectActivation(TEST_PROFILE,state,DEFINITION,{resolutionId:"ward-hero",actorId:"hero",entryPointId:"activate"}),"hero ward").state;
-            state=committed(resolveCommonPlayEffectActivation(TEST_PROFILE,state,DEFINITION,{resolutionId:"ward-goblin",actorId:"goblin",entryPointId:"activate"}),"goblin ward").state;
-            const pending:PendingResolution={
-              id:"semantic-trigger-probe",actorId:"hero",sourceId:"external.renamable.source",expectedRevision:state.revision,
-              operations:[
-                {id:"attack",kind:"d20",targetId:"goblin",request:{family:"attack-roll",target:10,modifierContributions:[],targetSource:"external-ac",dice:{id:"attack-d20",purpose:"attack",sides:20,faces:[15]}}},
-                {id:"save",kind:"d20",actorId:"goblin",request:{family:"saving-throw",target:14,modifierContributions:[],targetSource:"external-dc",dice:{id:"save-d20",purpose:"save",sides:20,faces:[4]}}},
-              ],
-            };
-            const expanded=appendCommonPlaySemanticOutcomeTriggers(state,[DEFINITION],pending,{hero:"character",goblin:"monster"});
-            const resolved=appendCommonPlaySemanticOutcomeEvents(expanded,resolvePendingResolution(TEST_PROFILE,state,expanded));
-            assert.equal(resolved.status,"committed");
-            if(resolved.status!=="committed") return;
-            assert.equal(resolved.state.combatants.hero.life.hp.current,18);
-            assert.equal(resolved.state.combatants.goblin.life.hp.current,12);
-            assert.equal(resolved.events.some((event)=>event.kind==="attack.hit"),true);
-            assert.equal(resolved.events.some((event)=>event.kind==="save.failure"),true);
-            assert.equal(Object.keys(resolved.results).some((id)=>id.includes("automatic:attack.hit")),true);
-            assert.equal(Object.keys(resolved.results).some((id)=>id.includes("automatic:save.failure")),true);
-          });
-          TS
-
+          printf '%s' "$PATCH_B64" | base64 -d > /tmp/c9-family-p-semantic-triggers.py
+          python /tmp/c9-family-p-semantic-triggers.py
           npm ci
           npm run generate:content
-          npx tsx --test tests/domain/commonPlaySemanticEventRuntime.test.ts tests/domain/commonPlaySemanticTriggerRuntime.test.ts tests/domain/commonPlayEffectRuntime.test.ts
+          npx tsx --test tests/domain/commonPlaySemanticEventRuntime.test.ts tests/domain/commonPlayEffectRuntime.test.ts
           npx tsc --noEmit
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/domain/commonPlayEffectRuntime.ts src/domain/commonPlaySemanticEventRuntime.ts src/app/installedCommonPlayRuntimeAdapter.ts tests/domain/commonPlaySemanticTriggerRuntime.test.ts
-          git commit -m "feat(c9): dispatch semantic d20 effect triggers"
-          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
-      - name: Remove staging workflow after success
-        if: success()
-        shell: bash
-        run: |
-          set -euo pipefail
-          git pull --ff-only origin agent/c9-gate-n-coverage-reconciliation
+          git add src/domain/commonPlayEffectRuntime.ts src/domain/commonPlaySemanticEventRuntime.ts src/app/installedCommonPlayRuntimeAdapter.ts tests/domain/commonPlaySemanticEventRuntime.test.ts
           git rm .github/workflows/c9-family-p-semantic-triggers.yml
-          git commit -m "ci(c9): retire Family P semantic trigger staging"
+          git commit -m "feat(c9): dispatch semantic d20 effect triggers"
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
           git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
