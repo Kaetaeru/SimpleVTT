@@ -1,6 +1,7 @@
 name: C9 Family Q Host DM Interaction 71304
 
 # execute against the latest reconciled C9 head
+# retry after aligning the authority-consent probe with the Reaction payment contract
 on:
   push:
     branches:
