@@ -3,13 +3,20 @@ import type { CombatantRuntimeState } from "./combatState";
 import type { EffectInstance, RuntimeClock } from "./effects";
 import type { LifeState } from "./life";
 import type { ProvenanceRecord } from "./profileEngine";
-import type { ResourceRecoveryLockouts } from "./resources";
+import type { ResourceRecovery, ResourceRecoveryLockouts } from "./resources";
 import type { RuntimeArtifactInstance, ZoneMembershipState } from "./runtimeArtifact";
 import type { StateChange } from "./stateChange";
 
 export interface ResourceRecoveryLockoutStateChange {
   before:ResourceRecoveryLockouts|null;
   after:ResourceRecoveryLockouts|null;
+}
+
+export interface ResourceCreationStateChange {
+  label:string;
+  maximum:number;
+  recovery?:ResourceRecovery;
+  source:string;
 }
 
 export interface ResourceStateChange {
@@ -19,6 +26,7 @@ export interface ResourceStateChange {
   before:number;
   after:number;
   recoveryLockouts?:ResourceRecoveryLockoutStateChange;
+  createdResource?:ResourceCreationStateChange;
   provenance:ProvenanceRecord[];
   lifetime:"character-durable";
   writeBack:"character";
@@ -148,6 +156,7 @@ export function resourceStateChange(
   after:number,
   provenance:ProvenanceRecord[],
   recoveryLockouts?:ResourceRecoveryLockoutStateChange,
+  createdResource?:ResourceCreationStateChange,
 ): ResourceStateChange {
   return {
     kind:"resource",
@@ -156,6 +165,7 @@ export function resourceStateChange(
     before,
     after,
     ...(recoveryLockouts ? { recoveryLockouts:structuredClone(recoveryLockouts) } : {}),
+    ...(createdResource ? { createdResource:structuredClone(createdResource) } : {}),
     provenance,
     lifetime:"character-durable",
     writeBack:"character",
