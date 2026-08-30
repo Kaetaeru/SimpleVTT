@@ -9,6 +9,8 @@ const RESOURCE_ID="resource.external.recharge-semantic";
 
 function execute(sourceId:string,face:number) {
   const state=runtimeState();
+  state.clock.activeActorId="hero";
+  state.clock.phase="start";
   state.combatants.hero.resources.push({
     id:RESOURCE_ID,
     label:"External Recharge Semantic",
