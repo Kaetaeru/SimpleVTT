@@ -179,6 +179,22 @@ export async function broadcastConnectedWire(message:ConnectedWireMessage) {
   await tauriSessionTransport.send(encodeConnectedWireMessage(message));
 }
 
+export async function resumeConnectedInterruptPromptForCharacter(adapter:MockAdapter,peer:string,characterId:string) {
+  const state=connectedStateFor(adapter);
+  const app=connectedInternal(adapter);
+  const resolution=app.resolution;
+  const interrupt=resolution?.stage==="interrupt"?resolution.interrupt:undefined;
+  if(state.mode!=="host"||!state.ledger||!resolution||!interrupt||interrupt.responderId!==characterId) return {status:"ignored" as const};
+  await sendConnectedWireTo(peer,{
+    type:"resolution-interrupt-prompt",
+    sessionId:state.ledger.sessionId,
+    resolutionId:resolution.id,
+    presentationSequence:state.nextPresentationSequence,
+    interrupt:structuredClone(interrupt),
+  });
+  return {status:"sent" as const};
+}
+
 registerConnectedCommonPlayAuthorityFactTransport({
   sendTo:sendConnectedWireTo,
   send:broadcastConnectedWire,
@@ -580,7 +596,10 @@ async function handleHostMessage(adapter:MockAdapter,message:SessionTransportMes
         }
         state.peerManifests.set(message.peer,structuredClone(wire.manifest));
         state.peerParticipants.set(message.peer,wire.participantId);
-        if(characterId) await resumeConnectedCommonPlayAuthorityFactRequestsForCharacter(adapter,characterId);
+        if(characterId) {
+        await resumeConnectedCommonPlayAuthorityFactRequestsForCharacter(adapter,characterId);
+        await resumeConnectedInterruptPromptForCharacter(adapter,message.peer,characterId);
+      }
         const cursorBeforeParticipant=ledger.cursor;
         const participantEvent=ledger.commitHostEvent({
           actorId:wire.participantId,

@@ -4,7 +4,7 @@ import "../../src/app/offlineRuntimeAdapters";
 import "../../src/app/connectedSessionRuntimeAdapter";
 import "../../src/app/connectedActionRoutingAdapter";
 import { catalogQualifiedId } from "../../src/app/contentCatalogIdentity";
-import { connectedManifest } from "../../src/app/connectedSessionRuntimeAdapter";
+import { connectedManifest, resumeConnectedInterruptPromptForCharacter } from "../../src/app/connectedSessionRuntimeAdapter";
 import { connectedStateFor } from "../../src/app/connectedSessionState";
 import { installedCommonPlayActionId } from "../../src/app/installedCommonPlayActionReference";
 import { setInstalledContentStoreForTests } from "../../src/app/installedContentRuntimeAdapter";
@@ -81,8 +81,29 @@ for (const responder of ["target-owner","target"] as const) test(`${responder} c
     assert.equal(snapshot.resolution?.stage,"interrupt");
     assert.equal(snapshot.scene.entities.find((entity)=>entity.id===targetId)?.hp,targetHpBefore);
 
-    assert.equal(await routeConnectedInterruptResponse(host,{peer:"peer.target",message:""},{sessionId,resolutionId,promptId,accept:true}),true);
-    snapshot=await host.getSnapshot();
+    if(responder==="target-owner") {
+        state.peerManifests.delete("peer.target");
+        const reboundPeer="peer.target.reconnected";
+        state.peerManifests.set(reboundPeer,targetManifest);
+        const directBeforeReconnect=direct.length;
+        assert.deepEqual(await resumeConnectedInterruptPromptForCharacter(host,reboundPeer,targetId),{status:"sent"});
+        const resumed=direct.slice(directBeforeReconnect).map((entry)=>({peer:entry.peer,wire:JSON.parse(entry.message)})).find((entry)=>entry.wire.type==="resolution-interrupt-prompt");
+        assert.equal(resumed?.peer,reboundPeer,JSON.stringify(direct.slice(directBeforeReconnect)));
+        assert.equal(resumed?.wire.resolutionId,resolutionId);
+        assert.equal(resumed?.wire.interrupt.id,promptId);
+
+        const directBeforeStale=direct.length;
+        assert.equal(await routeConnectedInterruptResponse(host,{peer:"peer.target",message:""},{sessionId,resolutionId,promptId,accept:true}),true);
+        const stale=direct.slice(directBeforeStale).map((entry)=>JSON.parse(entry.message)).filter((wire)=>wire.type==="error");
+        assert.equal(stale.at(-1)?.code,"interrupt-not-pending",JSON.stringify(stale));
+        snapshot=await host.getSnapshot();
+        assert.equal(snapshot.resolution?.stage,"interrupt");
+        assert.equal(snapshot.scene.entities.find((entity)=>entity.id===targetId)?.hp,targetHpBefore);
+        assert.equal(await routeConnectedInterruptResponse(host,{peer:reboundPeer,message:""},{sessionId,resolutionId,promptId,accept:true}),true);
+      } else {
+        assert.equal(await routeConnectedInterruptResponse(host,{peer:"peer.target",message:""},{sessionId,resolutionId,promptId,accept:true}),true);
+      }
+      snapshot=await host.getSnapshot();
     assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
     assert.equal(snapshot.scene.entities.find((entity)=>entity.id===targetId)?.hp,targetHpBefore-1);
     assert.equal(snapshot.scene.economyByActor[actorId]?.reaction,false);
