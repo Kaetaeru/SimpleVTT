@@ -272,9 +272,13 @@ function isActionRequest(value:unknown):value is ConnectedActionRequest {
 }
 
 function isInterrupt(value:unknown):value is InterruptView {
+  if(!isRecord(value)) return false;
+  const choice=value.choice;
+  const validChoice=choice===undefined||(isRecord(choice)&&isCursor(choice.min)&&isCursor(choice.max)&&Number(choice.max)>=Number(choice.min)
+    &&Array.isArray(choice.options)&&choice.options.every((option)=>isRecord(option)&&isString(option.id)&&isString(option.name)));
   return isRecord(value)&&isString(value.id)&&isString(value.responderId)&&isString(value.responderName)
-    &&isString(value.trigger)&&isString(value.optionName)&&isString(value.cost)&&isString(value.effect)&&isString(value.source)
-    &&Object.keys(value).every((key)=>["id","responderId","responderName","trigger","optionName","cost","effect","source"].includes(key));
+    &&isString(value.trigger)&&isString(value.optionName)&&isString(value.cost)&&isString(value.effect)&&isString(value.source)&&validChoice
+    &&Object.keys(value).every((key)=>["id","responderId","responderName","trigger","optionName","cost","effect","source","choice"].includes(key));
 }
 
 function isCommonPlayFactRequest(value:unknown):value is CommonPlayAuthorityFactRequest {
@@ -338,7 +342,7 @@ function validateMessage(value:unknown):ConnectedWireMessage|string {
   }
   if(value.type==="resolution-interrupt-response"){
     const response=value.response;
-    if(!isRecord(response)||!isString(response.sessionId)||!isString(response.resolutionId)||!isString(response.promptId)||typeof response.accept!=="boolean") return "invalid resolution-interrupt-response message";
+    if(!isRecord(response)||!isString(response.sessionId)||!isString(response.resolutionId)||!isString(response.promptId)||typeof response.accept!=="boolean"||(response.selectedIds!==undefined&&!isStringArray(response.selectedIds))) return "invalid resolution-interrupt-response message";
     return value as ConnectedWireMessage;
   }
   if(value.type==="resolution-concentration-prompt"){

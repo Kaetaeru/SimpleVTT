@@ -23,8 +23,8 @@ MockAdapter.prototype.advanceResolution=async function advanceWithConsumableD20B
   return this.getSnapshot();
 };
 
-MockAdapter.prototype.respondToInterrupt=async function respondToConsumableD20BonusEffect(accept:boolean){
-  const internal=this as unknown as AdapterState;const resolution=internal.resolution;const interrupt=resolution?.interrupt;if(!resolution||interrupt?.id!==CONSUMABLE_D20_BONUS_INTERRUPT_ID)return previousRespondToInterrupt.call(this,accept);
+MockAdapter.prototype.respondToInterrupt=async function respondToConsumableD20BonusEffect(accept:boolean,selectedIds?:string[]){
+  const internal=this as unknown as AdapterState;const resolution=internal.resolution;const interrupt=resolution?.interrupt;if(!resolution||interrupt?.id!==CONSUMABLE_D20_BONUS_INTERRUPT_ID)return previousRespondToInterrupt.call(this,accept,selectedIds);
   if(!accept){resolution.detail.push(`${interrupt.responderName} ${interrupt.optionName} 사용 안 함`);resolution.interrupt=undefined;resolution.stage="attack-result";resolution.canAdvance=true;resolution.nextLabel="판정 적용";return this.getSnapshot();}
   const state=snapshotAdapterTurnRuntimeState(this,internal.scene);const effect=state&&consumableD20BonusEffectFor(state,resolution.actorId,"attack-roll");const sides=Number(effect?.metadata?.dieSides);const naturalFace=resolution.authoritativeDice[0];if(!state||!effect||!Number.isInteger(sides)||sides<2||sides>20||naturalFace===undefined||resolution.attackTotal===undefined||resolution.targetAc===undefined)return this.getSnapshot();
   const face=rollDie(this,sides);const committed=resolveConsumeD20BonusEffect(SIMPLEVTT_APP_RULES_PROFILE,state,{id:`${resolution.id}:d20-bonus`,actorId:resolution.actorId,expectedRevision:state.revision,family:"attack-roll",naturalFace,failedTotal:resolution.attackTotal,target:resolution.targetAc,dieFace:face,effectId:effect.id});if(committed.status==="rejected"||!committed.test)return this.getSnapshot();

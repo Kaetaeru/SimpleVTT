@@ -412,6 +412,7 @@ export interface InterruptView {
   cost: string;
   effect: string;
   source: string;
+  choice?: { min:number; max:number; options:Array<{id:string;name:string}> };
 }
 
 export type ResolutionStage =
@@ -639,7 +640,7 @@ export interface SimpleVttAdapter {
   endTurn(): Promise<AppSnapshot>;
   resolveAction(actionId: string, targetIds: string[]): Promise<AppSnapshot>;
   advanceResolution(): Promise<AppSnapshot>;
-  respondToInterrupt(accept: boolean): Promise<AppSnapshot>;
+  respondToInterrupt(accept: boolean, selectedIds?: string[]): Promise<AppSnapshot>;
   dismissResolution(): Promise<AppSnapshot>;
   applyDmAdjudication(command: DmAdjudicationCommand): Promise<AppSnapshot>;
   undoLastResolution(): Promise<AppSnapshot>;

@@ -639,12 +639,12 @@ MockAdapter.prototype.advanceResolution=async function advanceWithPortableCommon
   return advanced;
 };
 
-MockAdapter.prototype.respondToInterrupt=async function respondToPortableCommonPlayInterceptor(accept:boolean) {
+MockAdapter.prototype.respondToInterrupt=async function respondToPortableCommonPlayInterceptor(accept:boolean,selectedIds?:string[]) {
   const internal=this as unknown as AdapterState;
   const resolution=internal.resolution;
   const pending=pendingByAdapter.get(this);
   if(!resolution||!pending||pending.resolutionId!==resolution.id||resolution.interrupt?.id!==pending.awaiting.interaction.id){
-    return previousRespondToInterrupt.call(this,accept);
+    return previousRespondToInterrupt.call(this,accept,selectedIds);
   }
   pendingByAdapter.delete(this);
   reactionState(this,resolution.id).handled.add(pending.candidate.key);

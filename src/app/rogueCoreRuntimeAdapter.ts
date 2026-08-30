@@ -166,12 +166,12 @@ function projectUncannyDodgeActivity(internal:AdapterState,resolution:Resolution
   if(detail&&activity&&!activity.detail.includes(detail))activity.detail.push(detail);
 }
 
-MockAdapter.prototype.respondToInterrupt=async function respondToRogueUncannyDodge(accept:boolean){
+MockAdapter.prototype.respondToInterrupt=async function respondToRogueUncannyDodge(accept:boolean,selectedIds?:string[]){
   const internal=this as unknown as AdapterState;
   const resolution=internal.resolution;
   const accepted=Boolean(accept&&resolution?.interrupt?.id===UNCANNY_DODGE_REACTION_ID);
   const resolutionId=accepted?resolution!.id:undefined;
-  const snapshot=await previousRespondToInterrupt.call(this,accept);
+  const snapshot=await previousRespondToInterrupt.call(this,accept,selectedIds);
   if(resolutionId) {
     uncannyResolutionIds.set(this,resolutionId);
     queueAtomicAttackDamageMultiplier(resolutionId,0.5,"기묘한 회피");

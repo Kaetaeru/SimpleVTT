@@ -845,7 +845,8 @@ function operationExecutionInput(
   action:CommonPlayProductionAction,
   prepared:PreparedCommonPlayAction,
   resolutionId:string,
-  interactionId?:string,
+  interactionResponse?:{interactionId:string;accepted?:true;selectedIds?:string[]},
+  interactionCandidates?:CommonPlaySelectorCandidate[],
   itemPaymentResourceIds?:Record<number,string>,
 ):import("../domain/commonPlayOperationRuntime").CommonPlayOperationExecutionInput {
   if(action.lowered.kind!=="operations") throw new Error("stored invocation payload requires an operations lowerer");
@@ -884,7 +885,10 @@ function operationExecutionInput(
     ...(entryPoint.test?{d20:{faces:d20Faces!,targetId:selectedTargetId,...(d20ModifierSelection??{})}}:{}),
     ...(itemPaymentResourceIds?{itemPaymentResourceIds}:{}),
     actionKind:entryPoint.test?.kind==="attack-roll"?"attack" as const:action.category==="spell"?"magic" as const:"other" as const,
-    ...(interactionId?{interactionResponse:{interactionId,accepted:true as const}}:{}),
+    ...(interactionResponse?{interactionResponse:interactionResponse.accepted===true
+      ?{interactionId:interactionResponse.interactionId,accepted:true as const}
+      :{interactionId:interactionResponse.interactionId,selectedIds:[...(interactionResponse.selectedIds??[])]}}:{}),
+    ...(interactionCandidates?{interactionCandidates}:{}),
   };
 }
 
@@ -894,7 +898,7 @@ async function executeCommonPlayAction(
   action:CommonPlayProductionAction,
   prepared:PreparedCommonPlayAction,
   resolutionId:string,
-  interactionId?:string,
+  interactionResponse?:{interactionId:string;accepted?:true;selectedIds?:string[]},
 ) {
   const {internal,state,actor,actorEntity,selectedTargetId,selectedTargets,selectedTargetFacts,selectedTargetNames,projectedAction}=prepared;
   const lowered=action.lowered;
@@ -926,9 +930,12 @@ async function executeCommonPlayAction(
       allocationResult=allocation;
     }
     const itemContext=itemPaymentRuntimeContext(internal,state,lowered.definition);
+    const interactionCandidates=entryPoint.interaction?.kind==="choice"
+      ?commonPlayTargetCandidates(adapter,internal.scene,itemContext.state,actorEntity,entryPoint.interaction.input.selector)
+      :undefined;
     let pending;
     try {
-      pending=compileCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,itemContext.state,lowered.definition,operationExecutionInput(internal,actionId,action,prepared,resolutionId,interactionId,itemContext.itemPaymentResourceIds));
+      pending=compileCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,itemContext.state,lowered.definition,operationExecutionInput(internal,actionId,action,prepared,resolutionId,interactionResponse,interactionCandidates,itemContext.itemPaymentResourceIds));
     } catch(error) {
       return {status:"rejected" as const,error:error instanceof Error?error.message:String(error),snapshot:await internal.getSnapshot()};
     }
@@ -998,7 +1005,7 @@ async function executeCommonPlayAction(
     targetIds:presentationTargetIds,
     targetNames:presentationTargetNames,
     compact:hp?.outcome??(roll?`d20 ${roll.natural} ${roll.modifier>=0?"+":"-"} ${Math.abs(roll.modifier)} = ${roll.total} vs ${roll.target} · ${roll.outcome}`:allocationOutcome??"Common Play 규칙 적용"),
-    detail:[`${lowered.definition.id} · ${action.entryPointId}`,...(allocationOutcome?[allocationOutcome]:[]),...(roll?[`${roll.family} · ${roll.rollState} · ${roll.outcome}`]:[]),...committed.events.map((event)=>event.summary)],
+    detail:[`${lowered.definition.id} · ${action.entryPointId}`,...(interactionResponse?.selectedIds?.length?[`선택 · ${interactionResponse.selectedIds.join(", ")}`]:[]),...(allocationOutcome?[allocationOutcome]:[]),...(roll?[`${roll.family} · ${roll.rollState} · ${roll.outcome}`]:[]),...committed.events.map((event)=>event.summary)],
     provenance:[`${action.source} · ${action.contentId}`],
     calculatedOutcome:outcome,
     finalOutcome:outcome,
@@ -1108,6 +1115,12 @@ MockAdapter.prototype.resolveAction=async function resolveCommonPlayProductionAc
   if(!interactionResponder) {
     return failAction(prepared.internal,prepared.actor.id,actionId,actionName,targetIds,resolutionId,`${interaction.responder} interaction requires exactly one selected target`);
   }
+  const choiceCandidates=interaction.kind==="choice"
+    ?commonPlayTargetCandidates(this,prepared.internal.scene,prepared.state,prepared.actorEntity,interaction.input.selector)
+    :undefined;
+  if(interaction.kind==="choice"&&choiceCandidates!.length<(interaction.input.selector.min??0)) {
+    return failAction(prepared.internal,prepared.actor.id,actionId,actionName,targetIds,resolutionId,"choice interaction has too few authoritative options");
+  }
   prepared.internal.resolution={
     id:resolutionId,
     actorId:prepared.actor.id,
@@ -1133,15 +1146,19 @@ MockAdapter.prototype.resolveAction=async function resolveCommonPlayProductionAc
       trigger:`${actionName} 사용 선언`,
       optionName:actionName,
       cost:"반응 1",
-      effect:"승인 시 선언된 Common Play 효과를 적용합니다.",
+      effect:interaction.kind==="choice"?"선택 확정 시 선언된 Common Play 효과를 적용합니다.":"승인 시 선언된 Common Play 효과를 적용합니다.",
       source:action.source,
+      ...(interaction.kind==="choice"?{choice:{
+        min:interaction.input.selector.min??0,max:interaction.input.selector.max??choiceCandidates!.length,
+        options:choiceCandidates!.map((candidate)=>({id:candidate.id,name:typeof candidate.properties.name==="string"?candidate.properties.name:candidate.id})),
+      }}:{}),
     },
     canAdvance:false,
   };
   return prepared.internal.getSnapshot();
 };
 
-MockAdapter.prototype.respondToInterrupt=async function respondToCommonPlayInteraction(accept:boolean) {
+MockAdapter.prototype.respondToInterrupt=async function respondToCommonPlayInteraction(accept:boolean,selectedIds?:string[]) {
   const internal=this as unknown as AdapterState;
   const resolution=internal.resolution;
   const interrupt=resolution?.interrupt;
@@ -1171,10 +1188,24 @@ MockAdapter.prototype.respondToInterrupt=async function respondToCommonPlayInter
     return finishInteraction(internal,resolution,"Common Play 상호작용 재검증 실패");
   }
   if(!accept) return finishInteraction(internal,resolution,"Common Play 상호작용 거절");
+  let interactionResponse:{interactionId:string;accepted?:true;selectedIds?:string[]};
+  if(entryPoint.interaction.kind==="consent") {
+    if(selectedIds!==undefined) return finishInteraction(internal,resolution,"Common Play consent 응답에 선택 payload를 사용할 수 없습니다.");
+    interactionResponse={interactionId:interrupt.id,accepted:true};
+  } else {
+    const choice=interrupt.choice;
+    const selection=selectedIds??[];
+    const unique=[...new Set(selection)];
+    const optionIds=new Set(choice?.options.map((option)=>option.id)??[]);
+    if(!choice||unique.length!==selection.length||selection.length<choice.min||selection.length>choice.max||selection.some((id)=>!optionIds.has(id))) {
+      return finishInteraction(internal,resolution,"Common Play choice 응답 검증 실패");
+    }
+    interactionResponse={interactionId:interrupt.id,selectedIds:[...selection]};
+  }
 
   const prepared=prepareCommonPlayAction(this,resolution.actionId,resolution.targetIds,action,runtimeArtifactReference?.actorId,false,allowUnprojectedRuntimeArtifact);
   if(!prepared) return finishInteraction(internal,resolution,"Common Play 상호작용 현재 권한 재검증 실패");
-  const result=await executeCommonPlayAction(this,resolution.actionId,action,prepared,resolution.id,interrupt.id);
+  const result=await executeCommonPlayAction(this,resolution.actionId,action,prepared,resolution.id,interactionResponse);
   if(result.status==="rejected") return finishInteraction(internal,resolution,`Common Play 상호작용 적용 거부: ${result.error}`);
   return result.snapshot;
 };

@@ -243,6 +243,7 @@ export interface CommonPlayOperationExecutionInput {
   targetId?:string;
   targetingTargets?:TargetingFactInput[];
   targetingCandidates?:CommonPlaySelectorCandidate[];
+  interactionCandidates?:CommonPlaySelectorCandidate[];
   creatureKinds?:Record<string,"character"|"monster">;
   damageDiceFaces?:Record<number,number[]>;
   deathSaveDiceFaces?:Record<number,number[]>;
@@ -893,10 +894,11 @@ export function compileCommonPlayEntryPointOperations(
       const choiceResolution=resolveCommonPlaySelector({
         sourceId:input.actorId,
         selector:entryPoint.interaction.input.selector,
-        candidates:input.targetingCandidates??[],
+        candidates:input.interactionCandidates??input.targetingCandidates??[],
         selectedIds:[...input.interactionResponse.selectedIds],
         selection:"manual",
         authority,
+        directTarget:false,
       });
       if(choiceResolution.status!=="resolved") throw new DomainEvaluationError(`Common Play choice selector rejected: ${choiceResolution.reason}`);
     }

@@ -220,7 +220,7 @@ registerConnectedInterruptResponseHandler(async(adapter,transportMessage,respons
   if(!characterId||!interrupt||app.resolution?.id!==response.resolutionId){await reject("interrupt-not-pending","no matching authoritative interrupt is pending");return;}
   if(interrupt.responderId!==characterId||interrupt.id!==response.promptId){await reject("interrupt-not-authorized","interrupt response does not belong to this peer Character");return;}
   if(state.interruptTimeout)clearTimeout(state.interruptTimeout);state.interruptTimeout=null;state.interruptTimeoutResolutionId=null;
-  await adapter.respondToInterrupt(response.accept);
+  await adapter.respondToInterrupt(response.accept,response.selectedIds);
 });
 
 registerConnectedConcentrationResponseHandler(async(adapter,transportMessage,response)=>{
@@ -387,7 +387,7 @@ MockAdapter.prototype.advanceResolution=async function advanceConnectedResolutio
   return publishCommittedResolution(this,next,readyClearedActorId);
 };
 
-MockAdapter.prototype.respondToInterrupt=async function respondConnectedInterrupt(accept:boolean) {
+MockAdapter.prototype.respondToInterrupt=async function respondConnectedInterrupt(accept:boolean,selectedIds?:string[]) {
   const state=connectedStateFor(this);
   if (state.mode==="client") {
     const app=connectedInternal(this);
@@ -395,14 +395,14 @@ MockAdapter.prototype.respondToInterrupt=async function respondConnectedInterrup
     if(!state.sessionId||!interrupt||!app.resolution)return app.getSnapshot();
     await tauriSessionTransport.send(JSON.stringify({
       type:"resolution-interrupt-response",
-      response:{sessionId:state.sessionId,resolutionId:app.resolution.id,promptId:interrupt.id,accept},
+      response:{sessionId:state.sessionId,resolutionId:app.resolution.id,promptId:interrupt.id,accept,...(selectedIds?{selectedIds:[...selectedIds]}:{})},
     }));
     state.privateInterruptsByResolution.delete(app.resolution.id);
     app.resolution.interrupt=undefined;
     app.resolution.compact="Host 반응 판정 대기";
     return app.getSnapshot();
   }
-  const next=await previousRespondToInterrupt.call(this,accept);
+  const next=await previousRespondToInterrupt.call(this,accept,selectedIds);
   await publishConnectedResolutionPresentation(this,next);
   return publishCommittedResolution(this,next);
 };
