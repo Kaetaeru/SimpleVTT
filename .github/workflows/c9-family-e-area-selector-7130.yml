@@ -68,10 +68,26 @@ jobs:
               text = text.replace(anchor, anchor + guard, 1)
           adapter.write_text(text)
 
-          test_file = Path("tests/domain/commonPlayTargetingRuntime.test.ts")
-          lines = test_file.read_text().splitlines()
+          domain_test = Path("tests/domain/commonPlayTargetingRuntime.test.ts")
+          lines = domain_test.read_text().splitlines()
           lines = [line for line in lines if not ('from:"targets",area:{kind:"instant"}' in line and 'unsupported fields: area' in line)]
-          test_file.write_text("\n".join(lines) + "\n")
+          domain_test.write_text("\n".join(lines) + "\n")
+
+          ui_test = Path("tests/ui/commonPlayRichSelectorProduction.test.ts")
+          text = ui_test.read_text()
+          old = '  assert.notEqual((await adapter.getSnapshot()).resolution?.actionId,actionId,"relation predicate must reject self before Resolver execution");'
+          new = '  const rejected=(await adapter.getSnapshot()).resolution;\n  assert.equal(rejected?.actionId,actionId);\n  assert.equal(rejected?.finalOutcome,"적용 거부","relation predicate must reject self before Resolver execution");'
+          if old in text:
+              text = text.replace(old, new, 1)
+          else:
+              assert new in text
+          old = '  assert.notEqual((await adapter.getSnapshot()).resolution?.actionId,actionId,"mapless production must not fabricate area membership");'
+          new = '  const rejected=(await adapter.getSnapshot()).resolution;\n  assert.equal(rejected?.actionId,actionId);\n  assert.equal(rejected?.finalOutcome,"적용 거부","mapless production must not fabricate area membership");'
+          if old in text:
+              text = text.replace(old, new, 1)
+          else:
+              assert new in text
+          ui_test.write_text(text)
           PY
       - run: npm run generate:content
       - name: Verify Family E selector regressions
@@ -86,7 +102,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git rm .github/workflows/c9-family-e-area-selector-7130.yml
-          git add src/domain/commonPlayOperationRuntime.ts src/app/installedCommonPlayRuntimeAdapter.ts tests/domain/commonPlayTargetingRuntime.test.ts
+          git add src/domain/commonPlayOperationRuntime.ts src/app/installedCommonPlayRuntimeAdapter.ts tests/domain/commonPlayTargetingRuntime.test.ts tests/ui/commonPlayRichSelectorProduction.test.ts
           if git diff --cached --quiet; then
             exit 0
           fi
