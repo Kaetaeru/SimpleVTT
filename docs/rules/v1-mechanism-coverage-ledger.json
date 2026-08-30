@@ -375,7 +375,8 @@
         "commonPlayOperationRuntime.ts parses bounded from:targets min/max and lowers them to generic TargetingRule cardinality without fabricating spatial facts",
         "commonPlayTargetingRuntime.test.ts proves bounded multi-target cardinality plus authoritative relation selector validation without identity dispatch",
         "commonPlayOperationRuntime.ts routes portable target predicates through commonPlaySelectorRuntime using authoritative CommonPlaySelectorCandidate facts supplied by installedCommonPlayRuntimeAdapter.ts without content identity dispatch",
-        "installedCommonPlayRuntimeAdapter.ts supplies authoritative Scene status[] candidate properties consumed generically by has-tag predicates"
+        "installedCommonPlayRuntimeAdapter.ts supplies authoritative Scene status[] candidate properties consumed generically by has-tag predicates",
+        "commonPlayOperationRuntime.ts accepts schema-defined area selectors and routes entry-point targeting through resolveCommonPlaySelector with provider-owned/fail-closed area membership"
       ],
       "productionEvidence": [
         "commonPlayTargetingRuntime.test.ts portable relation filter accepts authoritative enemy facts, rejects self facts atomically, and preserves bounded multi-target semantics",
@@ -388,7 +389,9 @@
         "C9 Family E Acceptance Evidence run 33309642186: restart/rename relation acceptance and tsc --noEmit passed",
         "C9 Family E Rich Selector Candidate Bridge 7130 run 33310268977: rich selector production/import regression, legacy execution boundary, and tsc --noEmit all passed; verifier retired after success",
         "c9FamilyETagSelectorProduction.test.ts unknown installed has-tag selector accepts authoritative Scene status, rejects untagged targets, and preserves behavior after complete identity rename",
-        "C9 Family E Tag Selector 7130 run 33310596897: tag-selector production regressions, coverage checker, legacy execution boundary, and tsc --noEmit all passed; verifier retired after success"
+        "C9 Family E Tag Selector 7130 run 33310596897: tag-selector production regressions, coverage checker, legacy execution boundary, and tsc --noEmit all passed; verifier retired after success",
+        "0b20e8cae1b04d34b407dcee0e0d24d69b6b90f0 feat(c9): route production targeting through shared selector; portable targeting accepts schema-defined area declarations without fabricating geometry",
+        "C9 Family E Area Selector staged verification run 33310249528: 36/36 focused selector/import/production tests, legacy execution boundary, and tsc --noEmit passed for the area bridge later landed as 0b20e8cae1b04d34b407dcee0e0d24d69b6b90f0"
       ],
       "identityInvarianceEvidence": [
         "installedCommonPlayProductionRuntime.test.ts targeting remains invariant under external identity and display rename",
