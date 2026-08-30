@@ -546,7 +546,7 @@
         "conditions.ts",
         "sessionStatusEffectEventRuntimeAdapter.ts"
       ],
-      "currentState": "Generic status and creature-type awareness paths are production-proven. Common Play now defines a standard sensing fact vocabulary for can-see, can-hear, detected, light, obscurement, and hidden, with provider provenance plus connected owner-authority request/response routing that is independent of content identity. Family H remains incomplete because the rules-derived sensing provider that composes lighting, obscurement, senses, Hidden, Hide/Search, and reveal semantics is not yet authoritative end to end.",
+      "currentState": "Generic status and creature-type awareness paths are production-proven. Common Play defines standard sensing facts for can-see, can-hear, detected, light, obscurement, and hidden with identity-independent provider provenance and connected owner-authority routing. Resolver-owned session Hidden effects now feed sense.hidden, unknown external Hide-style status actions commit Hidden as authoritative Effect StateChanges, and endsOnAttack reveal removes that Effect through the same event path with event-native Undo. Family H remains incomplete for rules-derived composition of lighting, obscurement, special senses, detection/Search, and discovery semantics.",
       "requiredSemantics": [
         "normal sight",
         "lighting",
@@ -578,7 +578,8 @@
         "9296b5dfff05127b04b29d8b28b581785f71e896 test(c9): prove standard sensing fact authority",
         "C9 Family H Standard Sensing Facts run 33310103344: standard sensing provider facts, connected owner-authority routing/reconnect, legacy boundary, and tsc --noEmit passed",
         "9296b5dfff05127b04b29d8b28b581785f71e896 test(c9): prove standard sensing fact authority; commonPlaySpatialFactRuntime.test.ts validates all standard sensing fact types through the shared fact runtime",
-        "installedCommonPlayInterceptorProductionRuntime.test.ts gates an unknown installed interceptor on authoritative spatial visibility plus Resolver-owned Hidden state, with external identity rename invariance and fail-closed missing facts"
+        "installedCommonPlayInterceptorProductionRuntime.test.ts gates an unknown installed interceptor on authoritative spatial visibility plus Resolver-owned Hidden state, with external identity rename invariance and fail-closed missing facts",
+        "sessionStatusEffectEventRuntime.test.ts proves unknown external Hidden apply -> attack reveal remove-effect -> event-native Undo restore through authoritative Resolver events"
       ],
       "identityInvarianceEvidence": [
         "sessionStatusEffectEventRuntime.test.ts",
@@ -595,10 +596,8 @@
       ],
       "persistenceEvidenceIfRelevant": [],
       "remainingNamedSeams": [
-        "Rogue action projection",
-        "full sensing relation composition across sense types, lighting, obscurement, Invisible/Hidden, detection/search, and reveal remains incomplete",
         "live sanctity facts",
-        "rules-derived sensing provider composition for lighting, obscurement, special senses, Hidden, Hide/Search, detection, and reveal/end-Hidden remains incomplete"
+        "rules-derived sensing composition for lighting, obscurement, special senses, Invisible interactions, detection/Search, and discovery remains incomplete"
       ],
       "connectedRelevant": true,
       "persistenceRelevant": false
