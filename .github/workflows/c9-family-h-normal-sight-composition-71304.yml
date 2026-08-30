@@ -72,6 +72,8 @@ jobs:
           test.write_text(text)
           PY
       - run: npm install --no-audit --no-fund
+      - name: Generate content
+        run: npm run generate:content
       - name: Verify sensing kernel and production composition
         run: npx tsx --test tests/domain/commonPlaySenseRuntime.test.ts tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts
       - name: Verify TypeScript
