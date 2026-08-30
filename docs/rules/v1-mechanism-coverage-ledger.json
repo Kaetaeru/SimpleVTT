@@ -987,7 +987,7 @@
         "concentration.ts",
         "concentrationDamageResult.test.ts"
       ],
-      "currentState": "Generic concentration behavior exists; production composition/reconnect proof incomplete",
+      "currentState": "Generic concentration kernel plus portable maintained-effect lowering now compose through the shared Resolver. Unknown installed RuleModule activation, Host/client replay, duplicate handling, Undo, fresh reconnect, and rename invariance are proven. Readied/long-cast concentration setup remains incomplete.",
       "requiredSemantics": [
         "single source",
         "replacement",
@@ -1001,13 +1001,27 @@
       ],
       "transactionDomain": "Resolver maintained effect lifecycle",
       "disposition": "INCOMPLETE",
-      "implementationEvidence": [],
-      "productionEvidence": [],
-      "identityInvarianceEvidence": [],
-      "connectedEvidenceIfRelevant": [],
-      "persistenceEvidenceIfRelevant": [],
+      "implementationEvidence": [
+        "commonPlayEffectRuntime.ts maintained concentration lowering through shared start-concentration + apply-effect operations",
+        "concentration.ts generic single-source replacement and damage save/DC behavior",
+        "resolutionEffectOps.ts concentration replacement, incap/death end, and dependent-effect cleanup"
+      ],
+      "productionEvidence": [
+        "c9FamilyOConcentrationProduction.test.ts unknown installed maintained concentration production activation and Undo",
+        "concentrationDamageResult.test.ts reversible damage-save concentration cleanup"
+      ],
+      "identityInvarianceEvidence": [
+        "commonPlayEffectRuntime.test.ts arbitrary renamed portable concentration definitions",
+        "c9FamilyOConcentrationProduction.test.ts renamed unknown installed identities preserve production semantics"
+      ],
+      "connectedEvidenceIfRelevant": [
+        "c9FamilyOConcentrationProduction.test.ts Host/client event replay, duplicate handling, and Undo convergence"
+      ],
+      "persistenceEvidenceIfRelevant": [
+        "c9FamilyOConcentrationProduction.test.ts fresh replica reconnect from authoritative Host ledger after Undo"
+      ],
       "remainingNamedSeams": [
-        "spell-specific concentration routing"
+        "readied/long-cast concentration setup still originates from spell/stored-invocation-specific setup outside portable maintained-effect activation"
       ],
       "connectedRelevant": true,
       "persistenceRelevant": true
