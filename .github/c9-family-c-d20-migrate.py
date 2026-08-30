@@ -1,0 +1,665 @@
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+
+def replace_once(path: str, old: str, new: str) -> None:
+    file = Path(path)
+    text = file.read_text(encoding="utf-8")
+    count = text.count(old)
+    if count != 1:
+        raise SystemExit(f"{path}: expected exactly one replacement, found {count}")
+    file.write_text(text.replace(old, new, 1), encoding="utf-8")
+
+
+# Portable Common Play schema: d20 interceptors may select structural test families/outcomes.
+replace_once(
+    "schemas/common-play-contract.schema.json",
+    '''        "operation": { "enum": ["append", "replace", "prevent", "modify", "redirect", "recalculate"] },
+        "slot": { "enum": ["declaration", "targets", "d20.roll", "attack.roll", "attack.outcome", "primary.damage", "secondary.damage", "effects", "movement", "stateChanges"] },
+        "operations": { "type": "array", "items": { "$ref": "#/$defs/operation" } }
+''',
+    '''        "operation": { "enum": ["append", "replace", "prevent", "modify", "redirect", "recalculate"] },
+        "slot": { "enum": ["declaration", "targets", "d20.roll", "attack.roll", "attack.outcome", "primary.damage", "secondary.damage", "effects", "movement", "stateChanges"] },
+        "families": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "enum": ["ability-check", "saving-throw", "attack-roll"] }
+        },
+        "outcomes": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "enum": ["success", "failure"] }
+        },
+        "operations": { "type": "array", "items": { "$ref": "#/$defs/operation" } }
+''',
+)
+
+# Structural lowering only; no content identity dispatch.
+replace_once(
+    "src/domain/commonPlayReactionDefinitionRuntime.ts",
+    'const UNKNOWN_POLICIES=new Set(["block","request-authority","treat-false","unsupported"]);\n',
+    'const UNKNOWN_POLICIES=new Set(["block","request-authority","treat-false","unsupported"]);\n'
+    'const D20_FAMILIES=new Set(["ability-check","saving-throw","attack-roll"]);\n'
+    'const D20_OUTCOMES=new Set(["success","failure"]);\n',
+)
+replace_once(
+    "src/domain/commonPlayReactionDefinitionRuntime.ts",
+    '''function lowerD20Interceptor(value:Obj,index:number,options:ReactionLoweringOptions):CommonPlayD20RollInterceptor {
+  const label=`Common Play reaction interceptor[${index}]`;
+  const eligibilityDefinition=eligibility(value,label);
+  if(value.timing!=="d20.outcome-determined"||value.operation!=="recalculate"||value.slot!=="d20.roll") {
+''',
+    '''function selectorValues(value:unknown,label:string,allowed:Set<string>) {
+  if(value===undefined)return undefined;
+  if(!Array.isArray(value)||!value.length||value.some((entry)=>typeof entry!=="string"||!allowed.has(entry))) {
+    throw new DomainEvaluationError(`${label} contains unsupported values`);
+  }
+  if(new Set(value).size!==value.length)throw new DomainEvaluationError(`${label} contains duplicate values`);
+  return value as string[];
+}
+
+function lowerD20Interceptor(value:Obj,index:number,options:ReactionLoweringOptions):CommonPlayD20RollInterceptor {
+  const label=`Common Play reaction interceptor[${index}]`;
+  const eligibilityDefinition=eligibility(value,label);
+  const families=selectorValues(value.families,`${label}.families`,D20_FAMILIES);
+  const outcomes=selectorValues(value.outcomes,`${label}.outcomes`,D20_OUTCOMES);
+  if(value.timing!=="d20.outcome-determined"||value.operation!=="recalculate"||value.slot!=="d20.roll") {
+''',
+)
+replace_once(
+    "src/domain/commonPlayReactionDefinitionRuntime.ts",
+    '''    operation:"recalculate",
+    slot:"d20.roll",
+    ...(eligibilityDefinition?{eligibility:eligibilityDefinition}:{}),
+    operations:operations.map((candidate,operationIndex)=>{
+''',
+    '''    operation:"recalculate",
+    slot:"d20.roll",
+    ...(families?{families:families as CommonPlayD20RollInterceptor["families"]}:{}),
+    ...(outcomes?{outcomes:outcomes as CommonPlayD20RollInterceptor["outcomes"]}:{}),
+    ...(eligibilityDefinition?{eligibility:eligibilityDefinition}:{}),
+    operations:operations.map((candidate,operationIndex)=>{
+''',
+)
+replace_once(
+    "src/domain/commonPlayReactionDefinitionRuntime.ts",
+    '''function lowerDamageInterceptor(value:Obj,index:number,options:ReactionLoweringOptions):CommonPlayDamageRollInterceptor {
+  const label=`Common Play reaction interceptor[${index}]`;
+  const lowered=lowerD20Interceptor({...value,timing:"d20.outcome-determined",slot:"d20.roll"},index,options);
+''',
+    '''function lowerDamageInterceptor(value:Obj,index:number,options:ReactionLoweringOptions):CommonPlayDamageRollInterceptor {
+  const label=`Common Play reaction interceptor[${index}]`;
+  if(value.families!==undefined||value.outcomes!==undefined)throw new DomainEvaluationError(`${label} d20 selectors require slot d20.roll`);
+  const lowered=lowerD20Interceptor({...value,timing:"d20.outcome-determined",slot:"d20.roll"},index,options);
+''',
+)
+replace_once(
+    "src/domain/commonPlayReactionDefinitionRuntime.ts",
+    '''function lowerAttackOutcomeInterceptor(value:Obj,index:number):CommonPlayAttackOutcomeInterceptor {
+  const label=`Common Play reaction interceptor[${index}]`;
+  const eligibilityDefinition=eligibility(value,label);
+''',
+    '''function lowerAttackOutcomeInterceptor(value:Obj,index:number):CommonPlayAttackOutcomeInterceptor {
+  const label=`Common Play reaction interceptor[${index}]`;
+  if(value.families!==undefined||value.outcomes!==undefined)throw new DomainEvaluationError(`${label} d20 selectors require slot d20.roll`);
+  const eligibilityDefinition=eligibility(value,label);
+''',
+)
+
+# Generic d20 runtime chooses by authored semantics. Selector omission preserves the old success-only check/attack behavior.
+replace_once(
+    "src/domain/commonPlayRuntime.ts",
+    '''export interface CommonPlayD20RollInterceptor {
+  id:string;
+  timing:"d20.outcome-determined";
+  interaction:CommonPlayInteractionDefinition;
+  operation:"recalculate";
+  slot:"d20.roll";
+  operations:CommonPlayRollModifyOperation[];
+  eligibility?:CommonPlayInterceptorEligibility;
+}
+''',
+    '''export interface CommonPlayD20RollInterceptor {
+  id:string;
+  timing:"d20.outcome-determined";
+  interaction:CommonPlayInteractionDefinition;
+  operation:"recalculate";
+  slot:"d20.roll";
+  families?:Array<"ability-check"|"saving-throw"|"attack-roll">;
+  outcomes?:Array<"success"|"failure">;
+  operations:CommonPlayRollModifyOperation[];
+  eligibility?:CommonPlayInterceptorEligibility;
+}
+''',
+)
+replace_once(
+    "src/domain/commonPlayRuntime.ts",
+    '''function findSuccessfulD20Operation(profile:RulesProfileLike,state:RulesRuntimeState,pending:PendingResolution) {
+  for(const [index,operation] of pending.operations.entries()) {
+    if(operation.kind!=="d20"||(operation.request.family!=="ability-check"&&operation.request.family!=="attack-roll")) continue;
+    const preview=stagePendingResolution(profile,state,{...pending,operations:pending.operations.slice(0,index+1)});
+    if(preview.status==="rejected") return {error:preview.error??"d20 preview rejected"};
+    const result=preview.results[operation.id] as D20TestResult|undefined;
+    if(result?.outcome==="success") return {index,operation,result};
+  }
+  return undefined;
+}
+''',
+    '''function findMatchingD20Operation(
+  profile:RulesProfileLike,
+  state:RulesRuntimeState,
+  pending:PendingResolution,
+  interceptor:CommonPlayD20RollInterceptor,
+) {
+  const families=interceptor.families??["ability-check","attack-roll"];
+  const outcomes=interceptor.outcomes??["success"];
+  for(const [index,operation] of pending.operations.entries()) {
+    if(operation.kind!=="d20"||!families.includes(operation.request.family))continue;
+    const preview=stagePendingResolution(profile,state,{...pending,operations:pending.operations.slice(0,index+1)});
+    if(preview.status==="rejected")return {error:preview.error??"d20 preview rejected"};
+    const result=preview.results[operation.id] as D20TestResult|undefined;
+    if(result&&outcomes.includes(result.outcome))return {index,operation,result};
+  }
+  return undefined;
+}
+''',
+)
+replace_once(
+    "src/domain/commonPlayRuntime.ts",
+    '    const d20=findSuccessfulD20Operation(profile,inputState,pending);\n',
+    '    const d20=findMatchingD20Operation(profile,inputState,pending,interceptor);\n',
+)
+
+# Production boundary: map authoritative check/attack/save results to the same PendingResolution.
+replace_once(
+    "src/app/commonPlayInterceptorProductionRuntimeAdapter.ts",
+    '''function d20Contributions(resolution:ResolutionView):ModifierContribution[] {
+  if(resolution.rollModifierContributions?.length)return resolution.rollModifierContributions.map((entry)=>({...entry}));
+  const natural=resolution.naturalD20??resolution.authoritativeDice[0];
+  const total=resolution.rollTotal;
+  if(natural===undefined||total===undefined)return [];
+  return [{source:`production-resolution:${resolution.actionId}:base-modifier`,value:total-natural}];
+}
+
+function pendingD20(resolution:ResolutionView,state:RulesRuntimeState):{pending:PendingResolution;operationId:string}|undefined {
+  const natural=resolution.naturalD20??resolution.authoritativeDice[0];
+  if(natural===undefined||!Number.isInteger(natural)||natural<1||natural>20)return undefined;
+  const common={
+    modifierContributions:d20Contributions(resolution),
+    dice:{id:`${resolution.id}:common-play:d20`,purpose:resolution.actionName,sides:20,faces:[natural]},
+  };
+  if(resolution.rollKind==="check"&&resolution.checkOutcome==="성공"&&Number.isFinite(resolution.checkTarget)){
+    const operationId=`op.${resolution.actionId}.ability-check`;
+    return {operationId,pending:{
+      id:`${resolution.id}:common-play-interceptor`,actorId:resolution.actorId,sourceId:resolution.actionId,
+      expectedRevision:state.revision,
+      operations:[{id:operationId,kind:"d20",actorId:resolution.actorId,request:{family:"ability-check",target:resolution.checkTarget!,...common}}],
+    }};
+  }
+  if(resolution.rollKind==="attack"&&resolution.stage==="attack-result"&&resolution.attackOutcome==="명중"&&Number.isFinite(resolution.targetAc)){
+    const operationId=`op.${resolution.actionId}.attack-roll`;
+    return {operationId,pending:{
+      id:`${resolution.id}:common-play-interceptor`,actorId:resolution.actorId,sourceId:resolution.actionId,
+      expectedRevision:state.revision,
+      operations:[{id:operationId,kind:"d20",actorId:resolution.actorId,targetId:resolution.targetIds[0],request:{
+        family:"attack-roll",target:resolution.targetAc!,targetSource:`target:${resolution.targetIds[0]}:ac`,...common,
+        criticalThreshold:resolution.critical?natural:undefined,
+      }}],
+    }};
+  }
+  return undefined;
+}
+''',
+    '''function d20Contributions(resolution:ResolutionView):ModifierContribution[] {
+  if(resolution.rollModifierContributions?.length)return resolution.rollModifierContributions.map((entry)=>({...entry}));
+  const natural=resolution.naturalD20??resolution.authoritativeDice[0];
+  const total=resolution.rollTotal;
+  if(natural===undefined||total===undefined)return [];
+  return [{source:`production-resolution:${resolution.actionId}:base-modifier`,value:total-natural}];
+}
+
+function saveContributions(save:ResolutionView["saveResults"][number]):ModifierContribution[] {
+  if(save.modifierContributions?.length)return save.modifierContributions.map((entry)=>({...entry}));
+  return [{source:`production-save:${save.targetId}:base-modifier`,value:save.total-save.d20}];
+}
+
+function validD20(value:number|undefined):value is number {
+  return value!==undefined&&Number.isInteger(value)&&value>=1&&value<=20;
+}
+
+function pendingD20s(resolution:ResolutionView,state:RulesRuntimeState):Array<{pending:PendingResolution;operationId:string}> {
+  const projections:Array<{pending:PendingResolution;operationId:string}>=[];
+  const natural=resolution.naturalD20??resolution.authoritativeDice[0];
+  if(resolution.rollKind==="check"&&resolution.checkOutcome&&Number.isFinite(resolution.checkTarget)&&validD20(natural)){
+    const operationId=`op.${resolution.actionId}.ability-check`;
+    projections.push({operationId,pending:{
+      id:`${resolution.id}:common-play-interceptor`,actorId:resolution.actorId,sourceId:resolution.actionId,
+      expectedRevision:state.revision,
+      operations:[{id:operationId,kind:"d20",actorId:resolution.actorId,request:{
+        family:"ability-check",target:resolution.checkTarget!,modifierContributions:d20Contributions(resolution),
+        dice:{id:`${resolution.id}:common-play:d20`,purpose:resolution.actionName,sides:20,faces:[natural]},
+      }}],
+    }});
+  }
+  if(resolution.rollKind==="attack"&&resolution.stage==="attack-result"&&resolution.attackOutcome&&Number.isFinite(resolution.targetAc)&&validD20(natural)){
+    const operationId=`op.${resolution.actionId}.attack-roll`;
+    projections.push({operationId,pending:{
+      id:`${resolution.id}:common-play-interceptor`,actorId:resolution.actorId,sourceId:resolution.actionId,
+      expectedRevision:state.revision,
+      operations:[{id:operationId,kind:"d20",actorId:resolution.actorId,targetId:resolution.targetIds[0],request:{
+        family:"attack-roll",target:resolution.targetAc!,targetSource:`target:${resolution.targetIds[0]}:ac`,
+        modifierContributions:d20Contributions(resolution),
+        dice:{id:`${resolution.id}:common-play:d20`,purpose:resolution.actionName,sides:20,faces:[natural]},
+        criticalThreshold:resolution.critical?natural:undefined,
+      }}],
+    }});
+  }
+  if(resolution.rollKind==="save"&&resolution.stage==="save-result"){
+    resolution.saveResults.forEach((save,index)=>{
+      if(!validD20(save.d20)||!Number.isFinite(save.dc))return;
+      const operationId=`op.${resolution.actionId}.saving-throw.${index}`;
+      projections.push({operationId,pending:{
+        id:`${resolution.id}:common-play-interceptor:${save.targetId}`,actorId:resolution.actorId,sourceId:resolution.actionId,
+        expectedRevision:state.revision,
+        operations:[{id:operationId,kind:"d20",actorId:save.targetId,request:{
+          family:"saving-throw",target:save.dc,modifierContributions:saveContributions(save),
+          dice:{id:`${resolution.id}:common-play:save:${save.targetId}`,purpose:`${resolution.actionName}:${save.targetName}`,sides:20,faces:[save.d20]},
+        }}],
+      }});
+    });
+  }
+  return projections;
+}
+''',
+)
+replace_once(
+    "src/app/commonPlayInterceptorProductionRuntimeAdapter.ts",
+    '  const intercepted=pending.operations.find((operation)=>operation.kind==="d20"&&(operation.request.family==="ability-check"||operation.request.family==="attack-roll"));\n',
+    '  const intercepted=pending.operations.find((operation)=>operation.kind==="d20"&&(operation.request.family==="ability-check"||operation.request.family==="saving-throw"||operation.request.family==="attack-roll"));\n',
+)
+replace_once(
+    "src/app/commonPlayInterceptorProductionRuntimeAdapter.ts",
+    '''  for(const candidate of await passiveReactionCandidates(adapter)){
+    if(state.handled.has(candidate.key)||!runtime.combatants[candidate.sourceActorId])continue;
+    const interceptor=candidate.definition.interceptors[0];
+    const damage=interceptor?.slot==="primary.damage";
+    const projected=damage?pendingDamage(adapter,resolution,runtime):pendingD20(resolution,runtime);
+    if(!projected)continue;
+    const seeded=seededReactionState(runtime,candidate);
+    if(!await interceptorEligible(internal,candidate,projected.pending)){
+      state.handled.add(candidate.key);
+      continue;
+    }
+    const started=startCommonPlayResolution(SIMPLEVTT_APP_RULES_PROFILE,seeded,projected.pending,candidate.definition,candidate.sourceActorId);
+    if(started.status!=="awaiting-input"){
+      state.handled.add(candidate.key);
+      continue;
+    }
+    pendingByAdapter.set(adapter,{resolutionId:resolution.id,operationId:projected.operationId,kind:damage?"damage":"d20",originalTotal:"originalTotal" in projected?projected.originalTotal:undefined,candidate,awaiting:started});
+    if(damage)resolution.rollKind="damage";
+    resolution.interrupt={
+      id:started.interaction.id,
+      responderId:candidate.sourceActorId,
+      responderName:candidate.sourceActorName,
+      trigger:damage
+        ? `${resolution.actionName} 피해 굴림 ${"originalTotal" in projected?projected.originalTotal:"—"}`
+        : resolution.rollKind==="attack"
+        ? `${resolution.actionName} ${resolution.attackTotal} vs AC ${resolution.targetAc}`
+        : `${resolution.actionName} ${resolution.rollTotal} vs DC ${resolution.checkTarget}`,
+      optionName:candidate.optionName,
+      cost:interactionCost(candidate.definition),
+      effect:damage?"피해 굴림을 Common Play 인터셉터로 재계산합니다.":"성공한 d20 결과를 Common Play 인터셉터로 재계산합니다.",
+      source:candidate.source,
+    };
+    resolution.stage="interrupt";
+    resolution.canAdvance=false;
+    resolution.nextLabel=undefined;
+    return true;
+  }
+''',
+    '''  for(const candidate of await passiveReactionCandidates(adapter)){
+    if(state.handled.has(candidate.key)||!runtime.combatants[candidate.sourceActorId])continue;
+    const interceptor=candidate.definition.interceptors[0];
+    const damage=interceptor?.slot==="primary.damage";
+    const damageProjection=damage?pendingDamage(adapter,resolution,runtime):undefined;
+    const projections=damageProjection?[damageProjection]:pendingD20s(resolution,runtime);
+    if(!projections.length)continue;
+    for(const projected of projections){
+      const seeded=seededReactionState(runtime,candidate);
+      if(!await interceptorEligible(internal,candidate,projected.pending))continue;
+      const started=startCommonPlayResolution(SIMPLEVTT_APP_RULES_PROFILE,seeded,projected.pending,candidate.definition,candidate.sourceActorId);
+      if(started.status!=="awaiting-input")continue;
+      pendingByAdapter.set(adapter,{resolutionId:resolution.id,operationId:projected.operationId,kind:damage?"damage":"d20",originalTotal:"originalTotal" in projected?projected.originalTotal:undefined,candidate,awaiting:started});
+      if(damage)resolution.rollKind="damage";
+      const intercepted=projected.pending.operations.find((operation)=>operation.id===projected.operationId&&operation.kind==="d20");
+      const save=resolution.rollKind==="save"&&intercepted?.kind==="d20"?resolution.saveResults.find((entry)=>entry.targetId===intercepted.actorId):undefined;
+      resolution.interrupt={
+        id:started.interaction.id,
+        responderId:candidate.sourceActorId,
+        responderName:candidate.sourceActorName,
+        trigger:damage
+          ? `${resolution.actionName} 피해 굴림 ${"originalTotal" in projected?projected.originalTotal:"—"}`
+          : save
+          ? `${resolution.actionName} · ${save.targetName} ${save.total} vs DC ${save.dc}`
+          : resolution.rollKind==="attack"
+          ? `${resolution.actionName} ${resolution.attackTotal} vs AC ${resolution.targetAc}`
+          : `${resolution.actionName} ${resolution.rollTotal} vs DC ${resolution.checkTarget}`,
+        optionName:candidate.optionName,
+        cost:interactionCost(candidate.definition),
+        effect:damage?"피해 굴림을 Common Play 인터셉터로 재계산합니다.":"d20 결과를 Common Play 인터셉터로 재계산합니다.",
+        source:candidate.source,
+      };
+      resolution.stage="interrupt";
+      resolution.canAdvance=false;
+      resolution.nextLabel=undefined;
+      return true;
+    }
+    state.handled.add(candidate.key);
+  }
+''',
+)
+replace_once(
+    "src/app/commonPlayInterceptorProductionRuntimeAdapter.ts",
+    '''function updateD20Presentation(resolution:ResolutionView,pending:PendingPassiveReaction,result:D20TestResult,authority?:CommonPlayInteractionAuthority) {
+  const before=d20Contributions(resolution);
+''',
+    '''function updateD20Presentation(resolution:ResolutionView,pending:PendingPassiveReaction,result:D20TestResult,authority?:CommonPlayInteractionAuthority) {
+  const rolled=authority?.modifierDiceFaces?Object.values(authority.modifierDiceFaces).flat():[];
+  if(result.family==="saving-throw"){
+    const operation=pending.awaiting.context.pending.operations.find((entry)=>entry.id===pending.operationId&&entry.kind==="d20");
+    if(!operation||operation.kind!=="d20")throw new Error("Common Play saving-throw interceptor operation is missing");
+    const saveIndex=resolution.saveResults.findIndex((entry)=>entry.targetId===operation.actorId);
+    if(saveIndex<0)throw new Error(`Common Play saving-throw target is missing: ${operation.actorId}`);
+    const save=resolution.saveResults[saveIndex];
+    const before=saveContributions(save);
+    const beforeModifier=before.reduce((sum,entry)=>sum+entry.value,0);
+    const delta=result.modifier-beforeModifier;
+    save.modifierContributions=delta!==0?[...before,{source:`common-play:${pending.candidate.definition.id}`,value:delta}]:before;
+    save.d20=result.natural;
+    save.total=result.total;
+    save.dc=result.target;
+    save.outcome=result.outcome==="success"?"성공":"실패";
+    if(saveIndex<resolution.authoritativeDice.length)resolution.authoritativeDice[saveIndex]=result.natural;
+    if(rolled.length)resolution.detail.push(`${pending.candidate.optionName}: ${save.targetName} · ${rolled.join(", ")} · ${result.total}`);
+    resolution.provenance.push(`common-play:${pending.candidate.definition.id} · generic post-roll interceptor`);
+    resolution.compact=resolution.saveResults.map((entry)=>`${entry.targetName} ${entry.outcome}`).join(" / ");
+    resolution.calculatedOutcome="내성 결과";
+    resolution.finalOutcome=resolution.compact;
+    return;
+  }
+  const before=d20Contributions(resolution);
+''',
+)
+replace_once(
+    "src/app/commonPlayInterceptorProductionRuntimeAdapter.ts",
+    '  const rolled=authority?.modifierDiceFaces?Object.values(authority.modifierDiceFaces).flat():[];\n  if(rolled.length)resolution.detail.push(`${pending.candidate.optionName}: ${rolled.join(", ")} · ${result.total}`);\n',
+    '  if(rolled.length)resolution.detail.push(`${pending.candidate.optionName}: ${rolled.join(", ")} · ${result.total}`);\n',
+)
+replace_once(
+    "src/app/commonPlayInterceptorProductionRuntimeAdapter.ts",
+    '''function restoreInterruptedStage(resolution:ResolutionView) {
+  resolution.interrupt=undefined;
+  if(resolution.rollKind==="check"){
+    resolution.stage="roll-animation";
+    resolution.canAdvance=true;
+    resolution.nextLabel="판정 적용";
+  }else{
+    const damage=resolution.rollKind==="damage";
+    resolution.rollKind="attack";
+    resolution.stage="attack-result";
+    resolution.canAdvance=true;
+    resolution.nextLabel=resolution.attackOutcome==="명중"?(damage?"피해 적용":"판정 적용"):"완료";
+  }
+}
+''',
+    '''function restoreInterruptedStage(resolution:ResolutionView) {
+  resolution.interrupt=undefined;
+  if(resolution.rollKind==="check"){
+    resolution.stage="roll-animation";
+    resolution.canAdvance=true;
+    resolution.nextLabel="판정 적용";
+  }else if(resolution.rollKind==="save"){
+    resolution.stage="save-result";
+    resolution.canAdvance=true;
+    resolution.nextLabel="내성 결과 적용";
+  }else{
+    const damage=resolution.rollKind==="damage";
+    resolution.rollKind="attack";
+    resolution.stage="attack-result";
+    resolution.canAdvance=true;
+    resolution.nextLabel=resolution.attackOutcome==="명중"?(damage?"피해 적용":"판정 적용"):"완료";
+  }
+}
+''',
+)
+
+# Cutting Words keeps its existing behavior, but success-only check/attack selection is now authored in data.
+module_path = Path("content/modules/dnd-srd-5.2.1.subclasses/module.json")
+module = json.loads(module_path.read_text(encoding="utf-8"))
+feature = next(entry for entry in module["content"] if entry["id"] == "dnd.srd521.feature.bard.college-of-lore.cutting-words")
+mechanic = next(entry for entry in feature["mechanics"] if entry["kind"] == "common-play")
+d20_interceptor = next(entry for entry in mechanic["config"]["interceptors"] if entry["slot"] == "d20.roll")
+d20_interceptor["families"] = ["ability-check", "attack-roll"]
+d20_interceptor["outcomes"] = ["success"]
+module_path.write_text(json.dumps(module, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf-8")
+
+# Extend the existing unknown-installed production harness.
+replace_once(
+    "tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts",
+    'const OTHER_CHARACTER_ID="char.portable-interceptor-target";\nconst OTHER_CHARACTER_CHECK_ID="action.portable-interceptor-target.check";\n',
+    'const OTHER_CHARACTER_ID="char.portable-interceptor-target";\nconst OTHER_CHARACTER_CHECK_ID="action.portable-interceptor-target.check";\nconst OTHER_CHARACTER_SAVE_ID="action.portable-interceptor-target.save";\n',
+)
+replace_once(
+    "tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts",
+    'function packagePayload(identity=ORIGINAL,withEligibility=false,interceptorKind:"d20"|"damage"="d20",operations:Array<Record<string,unknown>>=[{kind:"roll.modify",mode:"subtract-die",dice:"1d8"}]){\n',
+    '''function packagePayload(
+  identity=ORIGINAL,
+  withEligibility=false,
+  interceptorKind:"d20"|"damage"="d20",
+  operations:Array<Record<string,unknown>>=[{kind:"roll.modify",mode:"subtract-die",dice:"1d8"}],
+  selection?:{families?:Array<"ability-check"|"saving-throw"|"attack-roll">;outcomes?:Array<"success"|"failure">},
+){
+''',
+)
+replace_once(
+    "tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts",
+    '            interaction:{id:identity.interactionId,kind:"choice",responder:"actor-owner",mode:"blocking",input:{type:"boolean"},revalidate:"if-revision-changed",stalePolicy:"reject"},\n',
+    '            ...(selection??{}),\n            interaction:{id:identity.interactionId,kind:"choice",responder:"actor-owner",mode:"blocking",input:{type:"boolean"},revalidate:"if-revision-changed",stalePolicy:"reject"},\n',
+)
+replace_once(
+    "tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts",
+    '''function otherCharacterCheckAction():ActionVm{
+  return {
+    id:OTHER_CHARACTER_CHECK_ID,actorId:OTHER_CHARACTER_ID,name:"Portable Target Check",category:"basic",target:"none",economy:"없음",
+    resolutionKind:"ability-check",summary:"Strength +0",available:true,eligibleTargetIds:[],checkBonus:0,details:[{label:"판정",value:"근력"}],
+  };
+}
+
+async function prepare(identity=ORIGINAL,withEligibility=false,interceptorKind:"d20"|"damage"="d20",operations:Array<Record<string,unknown>>=[{kind:"roll.modify",mode:"subtract-die",dice:"1d8"}]){
+''',
+    '''function otherCharacterCheckAction():ActionVm{
+  return {
+    id:OTHER_CHARACTER_CHECK_ID,actorId:OTHER_CHARACTER_ID,name:"Portable Target Check",category:"basic",target:"none",economy:"없음",
+    resolutionKind:"ability-check",summary:"Strength +0",available:true,eligibleTargetIds:[],checkBonus:0,details:[{label:"판정",value:"근력"}],
+  };
+}
+
+function otherCharacterSaveAction():ActionVm{
+  return {
+    id:OTHER_CHARACTER_SAVE_ID,actorId:OTHER_CHARACTER_ID,name:"Portable Target Save",category:"magic",target:"any",economy:"없음",
+    resolutionKind:"saving-throw",summary:"Wisdom save DC 14",available:true,eligibleTargetIds:[],saveDc:14,saveAbility:"지혜",
+    damage:[{type:"force",dice:"1d6",flat:0,average:3}],details:[{label:"내성",value:"지혜 DC 14"}],
+  };
+}
+
+async function prepare(
+  identity=ORIGINAL,
+  withEligibility=false,
+  interceptorKind:"d20"|"damage"="d20",
+  operations:Array<Record<string,unknown>>=[{kind:"roll.modify",mode:"subtract-die",dice:"1d8"}],
+  selection?:{families?:Array<"ability-check"|"saving-throw"|"attack-roll">;outcomes?:Array<"success"|"failure">},
+){
+''',
+)
+replace_once(
+    "tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts",
+    '  const preview=await adapter.previewContentImport(packagePayload(identity,withEligibility,interceptorKind,operations));\n',
+    '  const preview=await adapter.previewContentImport(packagePayload(identity,withEligibility,interceptorKind,operations,selection));\n',
+)
+replace_once(
+    "tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts",
+    '  internal.scene.actionsByActor[OTHER_CHARACTER_ID]=[otherCharacterCheckAction()];\n',
+    '  internal.scene.actionsByActor[OTHER_CHARACTER_ID]=[otherCharacterCheckAction(),otherCharacterSaveAction()];\n',
+)
+replace_once(
+    "tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts",
+    '''async function openAbilityCheckInterrupt(adapter:MockAdapter){
+  await adapter.setCurrentActor(OTHER_CHARACTER_ID);
+  await adapter.setQueuedD20(15);
+  let snapshot=await adapter.resolveAction(OTHER_CHARACTER_CHECK_ID,[]);
+  assert.equal(snapshot.resolution?.stage,"roll-animation",JSON.stringify(snapshot.resolution));
+  snapshot=await adapter.advanceResolution();
+  assert.equal(snapshot.resolution?.stage,"effect-preview",JSON.stringify(snapshot.resolution));
+  const total=snapshot.resolution?.rollTotal;
+  assert.equal(typeof total,"number");
+  snapshot=await adapter.applyDmAdjudication({type:"ability-check-dc",scope:"resolution",value:total!-2});
+  return snapshot;
+}
+''',
+    '''async function openAbilityCheckInterrupt(adapter:MockAdapter,outcome:"success"|"failure"="success"){
+  await adapter.setCurrentActor(OTHER_CHARACTER_ID);
+  await adapter.setQueuedD20(15);
+  let snapshot=await adapter.resolveAction(OTHER_CHARACTER_CHECK_ID,[]);
+  assert.equal(snapshot.resolution?.stage,"roll-animation",JSON.stringify(snapshot.resolution));
+  snapshot=await adapter.advanceResolution();
+  assert.equal(snapshot.resolution?.stage,"effect-preview",JSON.stringify(snapshot.resolution));
+  const total=snapshot.resolution?.rollTotal;
+  assert.equal(typeof total,"number");
+  snapshot=await adapter.applyDmAdjudication({type:"ability-check-dc",scope:"resolution",value:outcome==="success"?total!-2:total!+2});
+  return snapshot;
+}
+
+async function openSavingThrowInterrupt(adapter:MockAdapter){
+  const owner=(await adapter.getSnapshot()).activeCharacter.id;
+  await adapter.setCurrentActor(OTHER_CHARACTER_ID);
+  await adapter.setQueuedD20(8);
+  let snapshot=await adapter.resolveAction(OTHER_CHARACTER_SAVE_ID,[owner]);
+  assert.equal(snapshot.resolution?.stage,"save-animation",JSON.stringify(snapshot.resolution));
+  snapshot=await adapter.advanceResolution();
+  assert.equal(snapshot.resolution?.stage,"save-result",JSON.stringify(snapshot.resolution));
+  assert.equal(snapshot.resolution?.saveResults[0]?.outcome,"실패");
+  snapshot=await adapter.advanceResolution();
+  return snapshot;
+}
+''',
+)
+
+Path("tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts").write_text(
+    Path("tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts").read_text(encoding="utf-8")
+    + r'''
+
+test("portable structural selector opens on a failed ability check and can recover it with add-die",async()=>{
+  const selection={families:["ability-check"] as Array<"ability-check">,outcomes:["failure"] as Array<"failure">};
+  const adapter=await prepare(ORIGINAL,false,"d20",[{kind:"roll.modify",mode:"add-die",dice:"1d8"}],selection);
+  let snapshot=await openAbilityCheckInterrupt(adapter,"failure");
+  assert.equal(snapshot.resolution?.stage,"interrupt",JSON.stringify(snapshot.resolution));
+  assert.equal(snapshot.resolution?.checkOutcome,"실패");
+  await adapter.setQueuedD20(8);
+  snapshot=await adapter.respondToInterrupt(true);
+  assert.equal(snapshot.resolution?.checkOutcome,"성공",JSON.stringify(snapshot.resolution));
+  assert.equal(snapshot.resolution?.rollTotal,23);
+});
+
+test("portable structural selector opens on a failed saving throw and rerolls the selected save only",async()=>{
+  const selection={families:["saving-throw"] as Array<"saving-throw">,outcomes:["failure"] as Array<"failure">};
+  const adapter=await prepare(ORIGINAL,false,"d20",[{kind:"roll.modify",mode:"reroll",dice:"1d20"}],selection);
+  let snapshot=await openSavingThrowInterrupt(adapter);
+  assert.equal(snapshot.resolution?.stage,"interrupt",JSON.stringify(snapshot.resolution));
+  const resourceBefore=secondWind(snapshot)!;
+  await adapter.setQueuedD20(18);
+  snapshot=await adapter.respondToInterrupt(true);
+  assert.equal(snapshot.resolution?.stage,"save-result",JSON.stringify(snapshot.resolution));
+  assert.deepEqual(
+    {d20:snapshot.resolution?.saveResults[0]?.d20,total:snapshot.resolution?.saveResults[0]?.total,outcome:snapshot.resolution?.saveResults[0]?.outcome},
+    {d20:18,total:20,outcome:"성공"},
+  );
+  assert.equal(snapshot.resolution?.authoritativeDice[0],18);
+  assert.equal(secondWind(snapshot),resourceBefore-1);
+});
+
+test("portable after-roll selector accepts either ability-check outcome",async()=>{
+  const selection={families:["ability-check"] as Array<"ability-check">,outcomes:["success","failure"] as Array<"success"|"failure">};
+  for(const outcome of ["success","failure"] as const){
+    const adapter=await prepare(ORIGINAL,false,"d20",[{kind:"roll.modify",mode:"add-flat",value:{value:1}}],selection);
+    const snapshot=await openAbilityCheckInterrupt(adapter,outcome);
+    assert.equal(snapshot.resolution?.stage,"interrupt",`${outcome}: ${JSON.stringify(snapshot.resolution)}`);
+  }
+});
+
+async function connectedPortableDiceCase(mode:"add-die"|"reroll"){
+  const operations=mode==="add-die"
+    ? [{kind:"roll.modify",mode:"add-die",dice:"1d8"}]
+    : [{kind:"roll.modify",mode:"reroll",dice:"1d20"}];
+  const identity:Identity={...ORIGINAL,moduleId:`external.connected-${mode}`,contentId:`item.connected-${mode}`,mechanicId:`mechanic.connected-${mode}`,interceptorId:`interceptor.connected-${mode}`,interactionId:`interaction.connected-${mode}`,displayName:`Connected ${mode}`};
+  const sessionId=`session.connected-${mode}`;
+  const host=await prepare(identity,false,"d20",operations);
+  const hostState=connectedStateFor(host);
+  hostState.mode="host";hostState.sessionId=sessionId;hostState.ledger=new HostSessionLedger(sessionId,connectedManifest(host));
+  const wires:string[]=[];
+  const send=tauriSessionTransport.send;
+  let forwardWireCount=0;
+  let hostForward:Awaited<ReturnType<MockAdapter["getSnapshot"]>>;
+  let hostUndo:Awaited<ReturnType<MockAdapter["getSnapshot"]>>;
+  tauriSessionTransport.send=async(message)=>{wires.push(message);return 1;};
+  try{
+    await openAbilityCheckInterrupt(host);
+    await host.setQueuedD20(mode==="add-die"?6:4);
+    hostForward=await host.respondToInterrupt(true);
+    forwardWireCount=wires.length;
+    hostUndo=await host.undoLastResolution();
+  }finally{tauriSessionTransport.send=send;}
+  const parse=(items:string[])=>items.map((wire)=>JSON.parse(wire)).filter((wire)=>wire.type==="event-batch") as Array<{events:ConnectedSessionEvent[]}>;
+  const forward=parse(wires.slice(0,forwardWireCount));
+  const inverse=parse(wires.slice(forwardWireCount));
+  assert.ok(forward.length,`${mode}: no forward event batches`);
+  assert.ok(inverse.length,`${mode}: no Undo event batches`);
+  const kinds=forward.flatMap((batch)=>batch.events).flatMap((event)=>event.payload.kind==="resolution"?event.payload.resolutionEvents.map((entry)=>entry.kind):[]);
+  assert.ok(kinds.includes("d20"),`${mode}: ${JSON.stringify(kinds)}`);
+  assert.ok(kinds.includes("use-economy"),`${mode}: ${JSON.stringify(kinds)}`);
+  assert.ok(kinds.includes("spend-resource"),`${mode}: ${JSON.stringify(kinds)}`);
+
+  const client=await prepare(identity,false,"d20",operations);
+  await client.setCurrentActor(OTHER_CHARACTER_ID);
+  const clientState=connectedStateFor(client);
+  clientState.mode="client";clientState.sessionId=sessionId;clientState.replica=new ClientSessionReplica(sessionId);
+  for(const batch of forward)assert.equal((await applyConnectedClientEvents(client,batch.events)).status,"applied");
+  assert.equal((await applyConnectedClientEvents(client,forward.at(-1)!.events)).status,"duplicate");
+  let clientSnapshot=await client.getSnapshot();
+  assert.equal(secondWind(clientSnapshot),secondWind(hostForward!));
+  assert.equal(clientSnapshot.scene.economyByActor[clientSnapshot.activeCharacter.id]?.reaction,false);
+  for(const batch of inverse)assert.equal((await applyConnectedClientEvents(client,batch.events)).status,"applied");
+  clientSnapshot=await client.getSnapshot();
+  assert.equal(secondWind(clientSnapshot),secondWind(hostUndo!));
+  assert.equal(clientSnapshot.scene.economyByActor[clientSnapshot.activeCharacter.id]?.reaction,true);
+
+  const reconnect=await prepare(identity,false,"d20",operations);
+  await reconnect.setCurrentActor(OTHER_CHARACTER_ID);
+  const reconnectState=connectedStateFor(reconnect);
+  reconnectState.mode="client";reconnectState.sessionId=sessionId;reconnectState.replica=new ClientSessionReplica(sessionId);
+  for(const batch of [...forward,...inverse])assert.equal((await applyConnectedClientEvents(reconnect,batch.events)).status,"applied");
+  const reconnectSnapshot=await reconnect.getSnapshot();
+  assert.equal(secondWind(reconnectSnapshot),secondWind(hostUndo!));
+  assert.equal(reconnectSnapshot.scene.economyByActor[reconnectSnapshot.activeCharacter.id]?.reaction,true);
+}
+
+test("unknown portable add-die and reroll converge through connected duplicate, reconnect, and Undo",async()=>{
+  await connectedPortableDiceCase("add-die");
+  await connectedPortableDiceCase("reroll");
+});
+''',
+    encoding="utf-8",
+)
