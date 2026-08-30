@@ -1,0 +1,80 @@
+name: C9 Family A Derived Property Consumer
+
+on:
+  push:
+    paths:
+      - '.github/workflows/c9-family-a-derived-property-consumer-7130.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Connect canonical profile properties to Common Play
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          adapter_path=Path('src/app/installedCommonPlayRuntimeAdapter.ts')
+          adapter=adapter_path.read_text()
+          marker='function operationExecutionInput(\n'
+          helper='''function commonPlayActorProfileProperties(\n  internal:AdapterState,\n  state:RulesRuntimeState,\n  actorId:string,\n):Record<string,number>|undefined {\n  const actorState=state.combatants[actorId];\n  if(!actorState) return undefined;\n  if(internal.activeCharacter.id!==actorId) {\n    return {\n      "movement.walk":resolveRuntimeProfileProperty(\n        state.effects,actorId,"movement.walk",{"movement.walk":actorState.baseSpeed},\n      ).value,\n    };\n  }\n  const character=internal.activeCharacter;\n  const inputs:Record<string,number>={\n    "ability.str.score":character.abilities.str,\n    "ability.dex.score":character.abilities.dex,\n    "ability.con.score":character.abilities.con,\n    "ability.int.score":character.abilities.int,\n    "ability.wis.score":character.abilities.wis,\n    "ability.cha.score":character.abilities.cha,\n    "progression.character.level":character.level,\n    "proficiency.bonus":character.proficiencyBonus,\n    "defense.ac":character.ac,\n    "movement.walk":actorState.baseSpeed,\n    "hp.current":actorState.life.hp.current,\n    "hp.maximum":actorState.life.hp.maximum,\n    "hp.temporary":actorState.life.hp.temporary,\n  };\n  const projected={...inputs};\n  for(const [property,definition] of Object.entries(SIMPLEVTT_APP_RULES_PROFILE.properties)) {\n    if(!Number.isFinite(inputs[property])&&!definition.formula) continue;\n    projected[property]=resolveRuntimeProfileProperty(state.effects,actorId,property,inputs).value;\n  }\n  return projected;\n}\n\n'''
+          if 'function commonPlayActorProfileProperties(' not in adapter:
+            if marker not in adapter: raise SystemExit('operationExecutionInput marker missing')
+            adapter=adapter.replace(marker,helper+marker,1)
+          old='''  const actorState=state.combatants[actor.id];\n  const movementProperties=actorState?{\n    "movement.walk":resolveRuntimeProfileProperty(\n      state.effects,actor.id,"movement.walk",{"movement.walk":actorState.baseSpeed},\n    ).value,\n  }:undefined;\n'''
+          new='  const movementProperties=commonPlayActorProfileProperties(internal,state,actor.id);\n'
+          if old in adapter:
+            adapter=adapter.replace(old,new,1)
+          elif new not in adapter:
+            raise SystemExit('movement property target changed')
+          adapter_path.write_text(adapter)
+
+          test_path=Path('tests/ui/installedCommonPlayPropertyModifierProduction.test.ts')
+          test=test_path.read_text()
+          old_modifier='propertyModifier:{property:"ability.str.modifier",operation:"add",value:{value:1},source:"definition",instancePolicy:"stack"},'
+          new_modifier='propertyModifier:{property:"ability.str.score",operation:"add",value:{value:2},source:"definition",instancePolicy:"stack"},'
+          if old_modifier in test:
+            test=test.replace(old_modifier,new_modifier,1)
+          elif new_modifier not in test:
+            raise SystemExit('derived dependency resolver target changed')
+          move_entry='{id:"move",invocation:"manual",operations:[{kind:"movement.relocate",mode:"move",movementType:"walk",target:"actor",distance:{ref:"movement.walk"},destinationFact:{id:"property-move-destination",fact:"spatial.legal-destination",subject:"actor",authority:"actor-owner",visibility:"actor-and-dm",unknownPolicy:"request-authority"}}]},'
+          if 'id:"move-strength"' not in test:
+            extra=move_entry+'\n    {id:"strength",invocation:"manual",operations:[{kind:"property.modify",property:"ability.str.score",operation:"set",value:{value:14},target:"actor",owner:"effect",source:"definition",duration:{kind:"elapsed",amount:{value:1},unit:"minutes"},lifetime:{kind:"until-duration",onEnd:"destroy"},instancePolicy:"stack"}]},\n    {id:"move-strength",invocation:"manual",operations:[{kind:"movement.relocate",mode:"move",movementType:"walk",target:"actor",distance:{ref:"ability.str.modifier"},destinationFact:{id:"property-strength-move-destination",fact:"spatial.legal-destination",subject:"actor",authority:"actor-owner",visibility:"actor-and-dm",unknownPolicy:"request-authority"}}]},'
+            if move_entry not in test: raise SystemExit('movement entrypoint target changed')
+            test=test.replace(move_entry,extra,1)
+          if 'unknown Common Play consumes an effect-modified derived profile property' not in test:
+            test += '''\n\ntest("unknown Common Play consumes an effect-modified derived profile property",async()=>{\n  const adapter=new MockAdapter();\n  const {action}=await install(adapter,"external-property-derived");\n  const before=await adapter.getSnapshot();\n  const initialRemaining=before.scene.economyByActor["char.aelar"]!.movement;\n  await adapter.resolveAction(action("strength"),["char.aelar"]);\n  await adapter.resolveAction(action("move-strength"),["char.aelar"]);\n  const after=await adapter.getSnapshot();\n  assert.equal(initialRemaining-after.scene.economyByActor["char.aelar"]!.movement,2,JSON.stringify(after.resolution));\n  assert.equal(after.resolution?.stage,"complete");\n});\n'''
+          test_path.write_text(test)
+          PY
+      - name: Verify Family A derived property consumer
+        run: |
+          npx tsx --test tests/domain/commonPlayPropertyContractRuntime.test.ts
+          npx tsx --test tests/ui/installedCommonPlayPropertyModifierProduction.test.ts
+          npx tsc --noEmit
+          node scripts/check-v1-mechanism-coverage.mjs
+      - name: Commit verified changes
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -f .github/workflows/c9-family-a-profile-effect-dependency-7130.yml
+          rm -f .github/workflows/c9-family-a-profile-effect-dependency-fix-7130.yml
+          rm -f .github/workflows/c9-family-a-derived-property-consumer-7130.yml
+          git add src/app/installedCommonPlayRuntimeAdapter.ts tests/ui/installedCommonPlayPropertyModifierProduction.test.ts .github/workflows/c9-family-a-profile-effect-dependency-7130.yml .github/workflows/c9-family-a-profile-effect-dependency-fix-7130.yml .github/workflows/c9-family-a-derived-property-consumer-7130.yml
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "feat(c9): project derived profile properties to Common Play"
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
