@@ -23,6 +23,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: node scripts/c9-remove-reconstruction-d20-fallbacks.mjs
+      - run: npm run generate:content
       - name: Verify no reconstructed named d20 fallback remains
         run: '! grep -n "runtimeD20FollowUps" src/app/characterSessionProjectionReconstruction.ts'
       - name: Verify portable Dark Luck and Peerless local/connected paths
