@@ -24,135 +24,23 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Generate content dependencies
-        run: npm run generate:content
-      - name: Patch host and DM portable consent responders
-        shell: bash
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-
-          p=Path('src/domain/commonPlayOperationRuntime.ts')
-          s=p.read_text()
-          old='  responder:"actor"|"target"|"actor-owner"|"target-owner";'
-          new='  responder:"actor"|"target"|"actor-owner"|"target-owner"|"dm"|"host";'
-          assert old in s
-          s=s.replace(old,new,1)
-          old='  if(interaction.responder!=="actor"&&interaction.responder!=="target"&&interaction.responder!=="actor-owner"&&interaction.responder!=="target-owner") throw new DomainEvaluationError(`${label}.responder must be actor, target, actor-owner, or target-owner for portable Common Play interaction`);'
-          new='  if(interaction.responder!=="actor"&&interaction.responder!=="target"&&interaction.responder!=="actor-owner"&&interaction.responder!=="target-owner"&&interaction.responder!=="dm"&&interaction.responder!=="host") throw new DomainEvaluationError(`${label}.responder must be actor, target, actor-owner, target-owner, dm, or host for portable Common Play interaction`);'
-          assert old in s
-          s=s.replace(old,new,1)
-          p.write_text(s)
-
-          p=Path('src/app/installedCommonPlayRuntimeAdapter.ts')
-          s=p.read_text()
-          old='''  const selectedTargetResponder=interaction.responder==="target"||interaction.responder==="target-owner";\n  const interactionResponder=selectedTargetResponder\n    ?prepared.selectedTargets.length===1?prepared.selectedTargets[0]:undefined\n    :prepared.actorEntity;'''
-          new='''  const selectedTargetResponder=interaction.responder==="target"||interaction.responder==="target-owner";\n  const authorityResponder=interaction.responder==="host"\n    ?{id:"authority.host",name:"Host"}\n    :interaction.responder==="dm"?{id:"authority.dm",name:"DM"}:undefined;\n  const interactionResponder=authorityResponder??(selectedTargetResponder\n    ?prepared.selectedTargets.length===1?prepared.selectedTargets[0]:undefined\n    :prepared.actorEntity);'''
-          assert old in s
-          s=s.replace(old,new,1)
-          p.write_text(s)
-          PY
-      - name: Add Family Q host and DM regression
-        shell: bash
-        run: |
-          cat > tests/ui/c9FamilyQHostDmInteractionProduction.test.ts <<'EOF'
-          import assert from "node:assert/strict";
-          import test from "node:test";
-          import "../../src/app/offlineRuntimeAdapters";
-          import "../../src/app/connectedSessionRuntimeAdapter";
-          import "../../src/app/connectedActionRoutingAdapter";
-          import { catalogQualifiedId } from "../../src/app/contentCatalogIdentity";
-          import { connectedManifest } from "../../src/app/connectedSessionRuntimeAdapter";
-          import { connectedStateFor } from "../../src/app/connectedSessionState";
-          import { installedCommonPlayActionId } from "../../src/app/installedCommonPlayActionReference";
-          import { setInstalledContentStoreForTests } from "../../src/app/installedContentRuntimeAdapter";
-          import { MemoryInstalledContentStore } from "../../src/app/memoryInstalledContentStore";
-          import { MockAdapter } from "../../src/app/mockAdapter";
-          import { HostSessionLedger } from "../../src/app/connectedSessionProtocol";
-          import { tauriSessionTransport } from "../../src/app/tauriSessionTransport";
-          import { routeConnectedInterruptResponse } from "../../src/app/connectedInterruptResponsePort";
-
-          function payload(responder:"host"|"dm") {
-            const moduleId=`homebrew.${responder}-consent`;
-            const contentId=`option.${responder}-consent`;
-            const mechanicId=`external.unknown.${responder}-consent`;
-            return {moduleId,contentId,mechanicId,json:JSON.stringify({
-              schemaVersion:"0.1-draft",moduleId,moduleVersion:"1",
-              rulesProfile:{id:"dnd.srd-5.2.1",version:"0.1-draft"},defaultLocale:"en",
-              source:{document:`${responder} Consent Probe`,version:"1",license:"CC0",srdDerived:false},dependencies:[],conflicts:[],capabilities:[],
-              content:[{id:contentId,category:"option",presentation:{defaultLocale:"en",originalName:`${responder} Consent`,locales:{en:{name:`${responder} Consent`,description:"Portable authority consent probe"}}},mechanics:[{kind:"common-play",config:{
-                schemaVersion:"0.2-draft",id:mechanicId,
-                payments:[{kind:"economy",bucket:"reaction",amount:{value:1},consumeAt:"commit",refundOnCancel:true}],
-                entryPoints:[{id:"ask",invocation:"manual",interaction:{id:`${responder}-consent`,kind:"consent",responder,mode:"blocking",input:{type:"boolean"},revalidate:"if-revision-changed",stalePolicy:"reject"},targeting:{from:"targets",min:1,max:1},operations:[{kind:"damage.apply",amount:{value:1},damageType:"force",target:"target"}]}],
-              }}]}]
-            })};
-          }
-
-          async function install(adapter:MockAdapter,responder:"host"|"dm") {
-            const definition=payload(responder);
-            setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
-            const preview=await adapter.previewContentImport(definition.json);
-            assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
-            await adapter.activateContentImport();
-            return installedCommonPlayActionId({catalogId:catalogQualifiedId(definition.contentId,definition.moduleId,"1"),mechanicId:definition.mechanicId,entryPointId:"ask"});
-          }
-
-          for (const responder of ["host","dm"] as const) test(`${responder} consent stays with host authority and rejects Character peer responses`,async()=>{
-            const sessionId=`session.${responder}-consent`,host=new MockAdapter();
-            const actionId=await install(host,responder);
-            const internal=host as unknown as {activeCharacter:{id:string};scene:{entities:Array<{id:string;name:string;hp:number}>}};
-            const actorId=internal.activeCharacter.id;
-            const target=internal.scene.entities.find((entity)=>entity.id!==actorId&&entity.hp>0);
-            assert.ok(target);
-            const targetHpBefore=target.hp;
-            await host.startInitiative();await host.setCurrentActor(actorId);
-
-            const state=connectedStateFor(host);state.mode="host";state.sessionId=sessionId;state.ledger=new HostSessionLedger(sessionId,connectedManifest(host));
-            state.peerManifests.set("peer.actor",structuredClone(connectedManifest(host)));
-            const direct:Array<{peer:string;message:string}>=[],broadcasts:string[]=[];
-            const oldSend=tauriSessionTransport.send,oldSendTo=tauriSessionTransport.sendTo;
-            tauriSessionTransport.send=async(message)=>{broadcasts.push(message);return 1;};
-            tauriSessionTransport.sendTo=async(peer,message)=>{direct.push({peer,message});return 1;};
-            try {
-              await host.resolveAction(actionId,[target.id]);
-              let snapshot=await host.getSnapshot();
-              assert.equal(snapshot.resolution?.stage,"interrupt",JSON.stringify(snapshot.resolution));
-              assert.equal(snapshot.resolution?.interrupt?.responderId,`authority.${responder}`);
-              assert.equal(snapshot.resolution?.interrupt?.responderName,responder==="host"?"Host":"DM");
-              assert.equal(direct.map((entry)=>JSON.parse(entry.message)).filter((wire)=>wire.type==="resolution-interrupt-prompt").length,0,JSON.stringify(direct));
-              assert.equal(snapshot.scene.entities.find((entity)=>entity.id===target.id)?.hp,targetHpBefore);
-              assert.equal(snapshot.scene.economyByActor[actorId]?.reaction,true);
-
-              const resolutionId=snapshot.resolution!.id,promptId=snapshot.resolution!.interrupt!.id;
-              const beforeUnauthorized=direct.length;
-              assert.equal(await routeConnectedInterruptResponse(host,{peer:"peer.actor",message:""},{sessionId,resolutionId,promptId,accept:true}),true);
-              const errors=direct.slice(beforeUnauthorized).map((entry)=>JSON.parse(entry.message)).filter((wire)=>wire.type==="error");
-              assert.equal(errors.at(-1)?.code,"interrupt-not-authorized",JSON.stringify(errors));
-              snapshot=await host.getSnapshot();
-              assert.equal(snapshot.resolution?.stage,"interrupt");
-              assert.equal(snapshot.scene.entities.find((entity)=>entity.id===target.id)?.hp,targetHpBefore);
-
-              await host.respondToInterrupt(true);
-              snapshot=await host.getSnapshot();
-              assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
-              assert.equal(snapshot.scene.entities.find((entity)=>entity.id===target.id)?.hp,targetHpBefore-1);
-              assert.equal(snapshot.scene.economyByActor[actorId]?.reaction,false);
-              assert.ok(broadcasts.map((wire)=>JSON.parse(wire)).some((wire)=>wire.type==="event-batch"),JSON.stringify(broadcasts));
-            } finally { tauriSessionTransport.send=oldSend;tauriSessionTransport.sendTo=oldSendTo; }
-          });
-          EOF
+      - name: Generate builtin catalog required by production adapters
+        run: npm run generate:builtin-catalog
+      - name: Apply Family Q authority consent bridge
+        run: python3 .github/scripts/c9-family-q-authority-consent-71304.py
       - name: Verify Family Q authority responders
         run: |
-          node --import tsx --test tests/ui/c9FamilyQHostDmInteractionProduction.test.ts
+          node --import tsx --test tests/ui/c9FamilyQAuthorityInteractionProduction.test.ts tests/ui/phase09CommonPlayResourcePersistence.test.ts
           node scripts/check-v1-mechanism-coverage.mjs
           node scripts/check-legacy-execution-boundary.mjs
           npx tsc --noEmit
-      - name: Commit verified Family Q slice
+      - name: Commit verified Family Q slice and retire staging files
         shell: bash
         run: |
-          rm .github/workflows/c9-family-q-host-dm-71304.yml
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/domain/commonPlayOperationRuntime.ts src/app/installedCommonPlayRuntimeAdapter.ts tests/ui/c9FamilyQHostDmInteractionProduction.test.ts .github/workflows/c9-family-q-host-dm-71304.yml
-          git commit -m "feat(c9): route host dm consent interactions"
+          git add src/domain/commonPlayOperationRuntime.ts schemas/common-play-contract.schema.json src/app/installedCommonPlayRuntimeAdapter.ts tests/ui/c9FamilyQAuthorityInteractionProduction.test.ts docs/rules/v1-mechanism-coverage-ledger.json
+          git rm .github/scripts/c9-family-q-authority-consent-71304.py .github/workflows/c9-family-q-host-dm-71304.yml
+          git commit -m "feat(c9): route authority consent responders"
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
           git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
