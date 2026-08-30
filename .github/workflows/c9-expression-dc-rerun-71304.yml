@@ -52,24 +52,26 @@ jobs:
                   raise SystemExit(f'expected d20 parser anchor once, got {text.count(old)}')
               text=text.replace(old,new,1)
 
-          old='''    const conditionContext={
-      ...(conditionAbility?{ability:conditionAbility}:{}),
-      ...(selectedTargetFacts?.distanceFeet===undefined?{}:{distanceToTargetFeet:selectedTargetFacts.distanceFeet}),
-    };
-    operations.push({
-'''
-          new='''    const conditionContext={
-      ...(conditionAbility?{ability:conditionAbility}:{}),
-      ...(selectedTargetFacts?.distanceFeet===undefined?{}:{distanceToTargetFeet:selectedTargetFacts.distanceFeet}),
-    };
-    const d20Target=evaluateExpression(entryPoint.test.dc as ExpressionNode,(property)=>{
-      const value=input.movementProperties?.[property];
-      if(!Number.isFinite(value)) throw new DomainEvaluationError(`Common Play d20 target property is unavailable: ${property}`);
-      return Number(value);
-    });
-    if(!Number.isFinite(d20Target)||!Number.isInteger(d20Target)) throw new DomainEvaluationError("Common Play d20 target must resolve to a finite integer");
-    operations.push({
-'''
+          old=(
+              '    const conditionContext={\n'
+              '      ...(conditionAbility?{ability:conditionAbility}:{}),\n'
+              '      ...(selectedTargetFacts?.distanceFeet===undefined?{}:{distanceToTargetFeet:selectedTargetFacts.distanceFeet}),\n'
+              '    };\n'
+              '    operations.push({\n'
+          )
+          new=(
+              '    const conditionContext={\n'
+              '      ...(conditionAbility?{ability:conditionAbility}:{}),\n'
+              '      ...(selectedTargetFacts?.distanceFeet===undefined?{}:{distanceToTargetFeet:selectedTargetFacts.distanceFeet}),\n'
+              '    };\n'
+              '    const d20Target=evaluateExpression(entryPoint.test.dc as ExpressionNode,(property)=>{\n'
+              '      const value=input.movementProperties?.[property];\n'
+              '      if(!Number.isFinite(value)) throw new DomainEvaluationError(`Common Play d20 target property is unavailable: ${property}`);\n'
+              '      return Number(value);\n'
+              '    });\n'
+              '    if(!Number.isFinite(d20Target)||!Number.isInteger(d20Target)) throw new DomainEvaluationError("Common Play d20 target must resolve to a finite integer");\n'
+              '    operations.push({\n'
+          )
           if 'const d20Target=evaluateExpression(entryPoint.test.dc as ExpressionNode' not in text:
               if text.count(old)!=1:
                   raise SystemExit(f'expected d20 evaluation anchor once, got {text.count(old)}')
@@ -87,7 +89,7 @@ jobs:
 
           if ! grep -q 'portable d20 DC expressions evaluate authoritative actor profile properties' tests/domain/commonPlayDefinitionRuntime.test.ts; then
             cat >> tests/domain/commonPlayDefinitionRuntime.test.ts <<'TEST'
-
+          
           test("portable d20 DC expressions evaluate authoritative actor profile properties",()=>{
             const definition=parseCommonPlayDefinition({
               schemaVersion:"0.2-draft",id:"external.expression-dc",
