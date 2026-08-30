@@ -1,5 +1,4 @@
 name: C9 Family Q Ledger Reconcile 71304
-# retry after DM authority fixture alignment
 
 on:
   push:
@@ -30,11 +29,27 @@ jobs:
         run: |
           set -euo pipefail
           branch=agent/c9-gate-n-coverage-reconciliation
+          verified_sha=""
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          for attempt in $(seq 1 8); do
+          for attempt in $(seq 1 20); do
             git fetch origin "$branch"
             git reset --hard "origin/$branch"
+            current_sha=$(git rev-parse HEAD)
+            rerun=true
+            if [ -n "$verified_sha" ] && git diff --quiet "$verified_sha..$current_sha" -- \
+              src/domain/commonPlayOperationRuntime.ts \
+              schemas/common-play-contract.schema.json \
+              src/app/installedCommonPlayRuntimeAdapter.ts \
+              src/app/connectedSessionRuntimeAdapter.ts \
+              src/app/connectedActionRoutingAdapter.ts \
+              src/app/connectedInterruptResponsePort.ts \
+              tests/ui/c9FamilyQAuthorityInteractionProduction.test.ts \
+              tests/ui/c9FamilyQAuthorityResponderProduction.test.ts \
+              tests/ui/c9FamilyQTargetOwnerInteractionProduction.test.ts \
+              tests/ui/installedCommonPlayActorOwnerInteractionProduction.test.ts; then
+              rerun=false
+            fi
             npm run generate:content >/dev/null
             python3 - <<'PY'
           import json
@@ -73,10 +88,13 @@ jobs:
           row['remainingNamedSeams']=['choice and multiple-option interaction payloads are not yet represented by the boolean consent contract']
           path.write_text(json.dumps(ledger,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
           PY
-            node --import tsx --test tests/ui/c9FamilyQAuthorityInteractionProduction.test.ts tests/ui/c9FamilyQTargetOwnerInteractionProduction.test.ts tests/ui/installedCommonPlayActorOwnerInteractionProduction.test.ts
+            if [ "$rerun" = true ]; then
+              node --import tsx --test tests/ui/c9FamilyQAuthorityInteractionProduction.test.ts tests/ui/c9FamilyQAuthorityResponderProduction.test.ts tests/ui/c9FamilyQTargetOwnerInteractionProduction.test.ts tests/ui/installedCommonPlayActorOwnerInteractionProduction.test.ts
+              npm exec tsc -- --noEmit
+              verified_sha="$current_sha"
+            fi
             node scripts/check-v1-mechanism-coverage.mjs
             node scripts/check-legacy-execution-boundary.mjs
-            npm exec tsc -- --noEmit
             rm -f .github/workflows/c9-family-q-host-dm-71304.yml
             git add docs/rules/v1-mechanism-coverage-ledger.json .github/workflows/c9-family-q-host-dm-71304.yml
             git diff --cached --check
