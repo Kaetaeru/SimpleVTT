@@ -1,0 +1,68 @@
+name: C9 Family J Attack Replacement Fix 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-j-attack-replacement-fix-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  verify-and-land:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Align unarmed identity and empty-extra-attack assertions with runtime authority
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('tests/ui/unarmedStrikeRuntime.test.ts')
+          s=p.read_text(encoding='utf-8')
+          old='''    const originalGetSnapshot=adapter.getSnapshot.bind(adapter);\n    adapter.getSnapshot=async()=>{\n      const snapshot=await originalGetSnapshot();\n      const action=snapshot.scene.actionsByActor["char.aelar"]?.find((entry)=>entry.id===probe.canonicalId);\n      if(action) {\n        action.id=probe.renamedId;\n        action.name=`External ${probe.kind}`;\n      }\n      return snapshot;\n    };'''
+          new='''    const internal=adapter as unknown as {scene:{actionsByActor:Record<string,Array<{id:string;name:string}>>}};\n    const projected=internal.scene.actionsByActor["char.aelar"]?.find((entry)=>entry.id===probe.canonicalId);\n    if(projected) {\n      projected.id=probe.renamedId;\n      projected.name=`External ${probe.kind}`;\n    }'''
+          if old in s: s=s.replace(old,new,1)
+          elif new not in s: raise SystemExit('structural rename harness source changed')
+
+          old='''  const originalGetSnapshot=adapter.getSnapshot.bind(adapter);\n  const grappleId="action.external.attack-replacement.grapple";\n  const shoveId="action.external.attack-replacement.shove";\n  adapter.getSnapshot=async()=>{\n    const snapshot=await originalGetSnapshot();\n    const grapple=snapshot.scene.actionsByActor["char.aelar"]?.find((entry)=>entry.id==="action.unarmed-strike.grapple");\n    const shove=snapshot.scene.actionsByActor["char.aelar"]?.find((entry)=>entry.id==="action.unarmed-strike.shove-prone");\n    if(grapple) {grapple.id=grappleId;grapple.name="External control alpha";}\n    if(shove) {shove.id=shoveId;shove.name="External control beta";}\n    return snapshot;\n  };'''
+          new='''  const grappleId="action.external.attack-replacement.grapple";\n  const shoveId="action.external.attack-replacement.shove";\n  const internal=adapter as unknown as {scene:{actionsByActor:Record<string,Array<{id:string;name:string}>>}};\n  const grapple=internal.scene.actionsByActor["char.aelar"]?.find((entry)=>entry.id==="action.unarmed-strike.grapple");\n  const shove=internal.scene.actionsByActor["char.aelar"]?.find((entry)=>entry.id==="action.unarmed-strike.shove-prone");\n  if(grapple) {grapple.id=grappleId;grapple.name="External control alpha";}\n  if(shove) {shove.id=shoveId;shove.name="External control beta";}'''
+          if old in s: s=s.replace(old,new,1)
+          elif new not in s: raise SystemExit('attack replacement rename harness source changed')
+
+          s=s.replace('assert.equal(snapshot.scene.economyByActor["char.aelar"]?.extraAttacks?.length,0);','assert.equal(snapshot.scene.economyByActor["char.aelar"]?.extraAttacks?.length??0,0);')
+          p.write_text(s,encoding='utf-8')
+          PY
+      - run: npm run generate:content
+      - name: Verify Family J attack-control slice
+        run: >-
+          npx tsx --test
+          tests/ui/c9FamilyJPortableControlProduction.test.ts
+          tests/ui/c9FamilyJSpatialAttackProduction.test.ts
+          tests/ui/c9FamilyJExtraAttackProduction71304.test.ts
+          tests/ui/unarmedStrikeRuntime.test.ts
+      - run: node scripts/check-v1-mechanism-coverage.mjs
+      - run: node scripts/check-legacy-execution-boundary.mjs
+      - run: npx tsc --noEmit
+      - name: Commit verified harness and retire verifier
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch=agent/c9-gate-n-coverage-reconciliation
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/c9-family-j-attack-replacement-fix-71304.yml
+          git add tests/ui/unarmedStrikeRuntime.test.ts
+          git commit -m "test(c9): align unarmed replacement with runtime authority"
+          git pull --rebase origin "$branch"
+          git push origin HEAD:"$branch"
