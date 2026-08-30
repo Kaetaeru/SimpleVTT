@@ -35,14 +35,14 @@ replaceOnce('src/app/characterSessionProjection.ts',
     : [{classId:source.build.className,level:source.build.level}];
   for (const track of tracks) {
     const classMatches=resolvedCatalog.filter((entry)=>entry.category==="class"&&matchesToken(entry,track.classId));
-    if (classMatches.length===0) throw new Error(`missing canonical class progression source: ${track.classId}`);
-    if (classMatches.length>1) throw new Error(`ambiguous canonical class progression source: ${track.classId}`);
+    if (classMatches.length===0) throw new Error("missing canonical class progression source: "+track.classId);
+    if (classMatches.length>1) throw new Error("ambiguous canonical class progression source: "+track.classId);
     const grants=(classMatches[0].progressionContributions ?? [])
       .filter((contribution)=>Number.isInteger(contribution.threshold)&&contribution.threshold>0&&contribution.threshold<=track.level)
       .flatMap((contribution)=>contribution.grants);
     for (const featureId of grants) {
       const matches=resolvedCatalog.filter((entry)=>(entry.category==="option"||entry.category==="feat")&&matchesToken(entry,featureId));
-      if (matches.length>1) throw new Error(`ambiguous canonical content for class feature: ${featureId}`);
+      if (matches.length>1) throw new Error("ambiguous canonical content for class feature: "+featureId);
       if (matches.length===0) continue;
       const identity=entryIdentity(matches[0]);
       identities.set(identity.qualifiedId,identity);
