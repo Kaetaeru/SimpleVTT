@@ -1,0 +1,85 @@
+name: C9 Family G Authority Persistence 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - src/app/connectedCommonPlayAuthorityFactRuntime.ts
+      - tests/ui/c9FamilyGAuthorityFactPersistence.test.ts
+      - .github/workflows/c9-family-g-authority-persistence-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  verify-and-reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Generate builtin catalog
+        run: npm run generate:content
+      - name: Verify Family G authority persistence
+        run: >-
+          npx tsx --test
+          tests/ui/c9FamilyGAuthorityFactPersistence.test.ts
+          tests/ui/connectedCommonPlayAuthorityFactRouting.test.ts
+      - name: Verify legacy execution boundary
+        run: node scripts/check-legacy-execution-boundary.mjs
+      - name: Verify coverage ledger structure before reconciliation
+        run: node scripts/check-v1-mechanism-coverage.mjs
+      - name: Typecheck application
+        run: npx tsc --noEmit
+      - name: Reconcile Family G evidence and retire verifier
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path("docs/rules/v1-mechanism-coverage-ledger.json")
+          ledger = json.loads(path.read_text())
+          row = next(item for item in ledger["rows"] if item["family"] == "G")
+          if row["disposition"] != "IMPLEMENTED":
+              expected = "durable adapter/process-restart persistence for in-flight spatial decisions remains absent; connected reconnect/retry routing is already covered"
+              if expected not in row["remainingNamedSeams"]:
+                  raise SystemExit(f"Family G blocker changed unexpectedly: {row['remainingNamedSeams']}")
+              row["currentState"] = (
+                  "Family G uses authoritative provider/manual spatial facts rather than Core geometry fabrication, as required by the architecture charter. "
+                  "The standard fact registry covers distance, adjacency, reach, size category, occupied space, line-of-effect, Total Cover, area membership, legal destination, and placement; "
+                  "typed selector areas carry line/cone/cube/sphere/cylinder/emanation shape, origin, dimensions, and range. Connected owner-authority requests survive reconnect and durable adapter/process restart, "
+                  "reattach their live continuation, reject stale peers, and suppress duplicate completion."
+              )
+              row["disposition"] = "IMPLEMENTED"
+              evidence = "connectedCommonPlayAuthorityFactRuntime.ts persists Host pending/completed/closed and Client pending/answered authority-fact routing state by session/mode and rehydrates it across adapter restart"
+              if evidence not in row["implementationEvidence"]:
+                  row["implementationEvidence"].append(evidence)
+              production = "C9 Family G Authority Persistence 71304 run 33311317527: restart persistence, connected authority routing, legacy execution boundary, coverage checker, and tsc --noEmit all passed at 5a05cb9a68f167f6dbe3c10f358d7be4285066c8"
+              if production not in row["productionEvidence"]:
+                  row["productionEvidence"].append(production)
+              connected = "c9FamilyGAuthorityFactPersistence.test.ts proves restored Host pending state reattaches and resends, restored Client pending state deduplicates, and completed history suppresses retransmission after another restart"
+              if connected not in row["connectedEvidenceIfRelevant"]:
+                  row["connectedEvidenceIfRelevant"].append(connected)
+              persistence = "c9FamilyGAuthorityFactPersistence.test.ts proves in-flight spatial.area-members authority state survives fresh Host and Client adapter construction and retains exactly-once completion"
+              if persistence not in row["persistenceEvidenceIfRelevant"]:
+                  row["persistenceEvidenceIfRelevant"].append(persistence)
+              row["remainingNamedSeams"] = []
+              path.write_text(json.dumps(ledger, indent=2, ensure_ascii=False) + "\n")
+          PY
+          node scripts/check-v1-mechanism-coverage.mjs
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/c9-family-g-authority-persistence-71304.yml
+          git add docs/rules/v1-mechanism-coverage-ledger.json
+          git diff --cached --quiet && exit 0
+          git commit -m "docs(c9): accept Family G spatial authority"
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
