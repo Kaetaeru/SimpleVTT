@@ -1,0 +1,107 @@
+name: C9 Family A Nonactive Profile
+
+on:
+  push:
+    branches:
+      - "agent/c9-gate-n-coverage-reconciliation"
+    paths:
+      - ".github/workflows/c9-family-a-nonactive-profile-7130.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+      - name: Patch generic non-active profile projection and acceptance test
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          source = Path("src/app/installedCommonPlayRuntimeAdapter.ts")
+          text = source.read_text()
+          old = '''  if(internal.activeCharacter.id!==actorId) {
+            return {
+              "movement.walk":resolveRuntimeProfileProperty(
+                state.effects,actorId,"movement.walk",{"movement.walk":actorState.baseSpeed},
+              ).value,
+            };
+          }
+          '''
+          new = '''  if(internal.activeCharacter.id!==actorId) {
+            const inputs:Record<string,number>={...(actorState.baseProperties??{})};
+            inputs["movement.walk"]??=actorState.baseSpeed;
+            const projected={...inputs};
+            for(const property of Object.keys(inputs).sort((left,right)=>left.localeCompare(right))) {
+              projected[property]=resolveRuntimeProfileProperty(state.effects,actorId,property,inputs).value;
+            }
+            return projected;
+          }
+          '''
+          if old not in text:
+              raise SystemExit("non-active profile projection seam changed")
+          source.write_text(text.replace(old, new, 1))
+
+          test = Path("tests/ui/installedCommonPlayPropertyModifierProduction.test.ts")
+          text = test.read_text()
+          old_import = 'import { installedCommonPlayActionId } from "../../src/app/installedCommonPlayActionReference";'
+          new_import = 'import { installedCommonPlayActionId, parseStoredInvocationCommonPlayActionId } from "../../src/app/installedCommonPlayActionReference";'
+          if old_import not in text:
+              raise SystemExit("property production test import seam changed")
+          text = text.replace(old_import, new_import, 1)
+
+          anchor = '    {id:"move",invocation:"manual",operations:[{kind:"movement.relocate",mode:"move",movementType:"walk",target:"actor",distance:{ref:"movement.walk"},destinationFact:{id:"property-move-destination",fact:"spatial.legal-destination",subject:"actor",authority:"actor-owner",visibility:"actor-and-dm",unknownPolicy:"request-authority"}}]},\n'
+          addition = anchor + '    {id:"move-defense",invocation:"manual",operations:[{kind:"movement.relocate",mode:"move",movementType:"walk",target:"actor",distance:{ref:"defense.ac"},destinationFact:{id:"property-defense-move-destination",fact:"spatial.legal-destination",subject:"actor",authority:"actor-owner",visibility:"actor-and-dm",unknownPolicy:"request-authority"}}]},\n'
+          if anchor not in text:
+              raise SystemExit("property production test entry-point seam changed")
+          text = text.replace(anchor, addition, 1)
+
+          marker = 'test("unknown Common Play property modifier projects a non-movement profile property and Undo restores its base",async()=>{\n'
+          inserted = '''test("non-active runtime actor exposes generic profile properties to stored unknown Common Play",async()=>{
+            const actorId="combatant.goblin-a";
+            const adapter=new MockAdapter();
+            const {action}=await install(adapter,"external-property-non-active");
+            await adapter.setCurrentActor(actorId);
+            const before=await adapter.getSnapshot();
+            const baseAc=before.scene.entities.find((entity)=>entity.id===actorId)!.ac;
+            const beforeMovement=before.scene.economyByActor[actorId]!.movement;
+            await adapter.configureReadyAction({actorId,actionId:action("move-defense"),trigger:"manual profile-property trigger"});
+            const ready=await adapter.getSnapshot();
+            const trigger=ready.scene.actionsByActor[actorId]?.find((candidate)=>parseStoredInvocationCommonPlayActionId(candidate.id));
+            assert.ok(trigger,JSON.stringify(ready.scene.actionsByActor[actorId]));
+            await adapter.resolveAction(trigger.id,[actorId]);
+            const after=await adapter.getSnapshot();
+            assert.equal(after.resolution?.stage,"complete",JSON.stringify(after.resolution));
+            assert.equal(beforeMovement-after.scene.economyByActor[actorId]!.movement,baseAc);
+          });
+
+          ''' + marker
+          if marker not in text:
+              raise SystemExit("property production test insertion seam changed")
+          test.write_text(text.replace(marker, inserted, 1))
+          PY
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Generate content catalogs
+        run: npm run generate:content
+      - name: Verify Family A production property projection
+        run: npx tsx --test tests/ui/installedCommonPlayPropertyModifierProduction.test.ts
+      - name: Typecheck application
+        run: npx tsc --noEmit
+      - name: Verify coverage ledger contract
+        run: node scripts/check-v1-mechanism-coverage.mjs
+      - name: Commit verified change and remove temporary workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/app/installedCommonPlayRuntimeAdapter.ts tests/ui/installedCommonPlayPropertyModifierProduction.test.ts
+          git rm .github/workflows/c9-family-a-nonactive-profile-7130.yml
+          git commit -m "feat(c9): project non-active profile properties"
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
