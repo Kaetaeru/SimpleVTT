@@ -1,0 +1,115 @@
+name: C9 Family I Prone Stand Integrate R3 7130
+
+on:
+  push:
+    branches: [agent/c9-gate-n-coverage-reconciliation]
+    paths: [.github/workflows/c9-family-i-prone-stand-integrate-r3-7130.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Prepare verified Family I patch
+        shell: bash
+        run: |
+          cat > /tmp/apply-prone-stand.py <<'PY'
+          from pathlib import Path
+          import json
+
+          def replace_once(path, old, new):
+              p=Path(path); text=p.read_text(encoding="utf-8")
+              if text.count(old)!=1:
+                  raise SystemExit(f"{path}: expected one marker, found {text.count(old)}: {old[:100]!r}")
+              p.write_text(text.replace(old,new,1),encoding="utf-8")
+
+          p="src/domain/commonPlayOperationRuntime.ts"
+          text=Path(p).read_text(encoding="utf-8")
+          if 'kind:"movement.stand"' not in text:
+              replace_once(p,'import type { RulesRuntimeState } from "./combatState";','import { conditionEffectsFor, type RulesRuntimeState } from "./combatState";')
+              replace_once(p,'import { compileCommonPlayMovement, type CommonPlayMovementDefinition } from "./commonPlayMovementRuntime";','import { compileCommonPlayMovement, type CommonPlayMovementDefinition } from "./commonPlayMovementRuntime";\nimport { proneStandingCost } from "./conditions";\nimport { effectIsActive } from "./effects";')
+              replace_once(p,'type CommonPlayHpTarget="actor"|"self"|"target";','type CommonPlayHpTarget="actor"|"self"|"target";\ntype CommonPlayMovementStand={kind:"movement.stand";target:"actor"|"self"};')
+              replace_once(p,'  |CommonPlayMovementDefinition\n  |CommonPlayRollModify;','  |CommonPlayMovementDefinition\n  |CommonPlayMovementStand\n  |CommonPlayRollModify;')
+              replace_once(p,'const MOVEMENT_RELOCATE_KEYS=new Set(["kind","mode","movementType","target","distance","costMultiplier","doesNotProvokeOpportunityAttacks","destinationFact"]);','const MOVEMENT_RELOCATE_KEYS=new Set(["kind","mode","movementType","target","distance","costMultiplier","doesNotProvokeOpportunityAttacks","destinationFact"]);\nconst MOVEMENT_STAND_KEYS=new Set(["kind","target"]);')
+              parse_marker='''\n  if(operation.kind==="movement.relocate") {\n'''
+              parse_block='''\n  if(operation.kind==="movement.stand") {\n    supportedKeys(operation,MOVEMENT_STAND_KEYS,label);\n    if(operation.target!=="actor"&&operation.target!=="self") throw new DomainEvaluationError(`${label}.target must be actor or self`);\n    return {kind:"movement.stand",target:operation.target};\n  }\n'''
+              replace_once(p,parse_marker,parse_block+parse_marker)
+              compile_marker='''\n    if(operation.kind==="movement.relocate") {\n'''
+              compile_block='''\n    if(operation.kind==="movement.stand") {\n      const actor=state.combatants[input.actorId];\n      if(!actor) throw new DomainEvaluationError(`combatant not found: ${input.actorId}`);\n      const proneEffects=state.effects.filter((effect)=>effectIsActive(effect)&&effect.targetId===input.actorId&&effect.kind==="condition"&&effect.conditionId==="prone");\n      if(!proneEffects.length) throw new DomainEvaluationError("movement.stand requires an active explicit Prone condition");\n      const cost=proneStandingCost(actor.economy.movementMaximum,conditionEffectsFor(state,input.actorId));\n      if(cost<=0) throw new DomainEvaluationError("movement.stand requires positive movement speed");\n      operations.push({id:operationId,kind:"move",actorId:input.actorId,distanceFeet:cost,distanceTraveledFeet:0,movementActivity:"stand"});\n      proneEffects.forEach((effect,proneIndex)=>operations.push({id:`${operationId}:remove-prone:${proneIndex}`,kind:"remove-effect",effectId:effect.id}));\n      continue;\n    }\n'''
+              replace_once(p,compile_marker,compile_block+compile_marker)
+
+          p="src/domain/resolutionTypes.ts"
+          text=Path(p).read_text(encoding="utf-8")
+          if 'movementActivity?:"relocate"|"stand";' not in text:
+              replace_once(p,'      distanceTraveledFeet?:number;\n      destinationRef?:string;','      distanceTraveledFeet?:number;\n      movementActivity?:"relocate"|"stand";\n      destinationRef?:string;')
+
+          p="src/domain/resolutionActionOps.ts"
+          text=Path(p).read_text(encoding="utf-8")
+          if 'stands from Prone' not in text:
+              replace_once(p,'      reason:`${actorId} moves ${operation.distanceFeet} ft`,','      reason:operation.movementActivity==="stand" ? `${actorId} spends ${operation.distanceFeet} ft of movement to stand` : `${actorId} moves ${operation.distanceFeet} ft`,')
+              replace_once(p,'    ...(operation.distanceTraveledFeet===undefined?{}:{movementCostFeet:operation.distanceFeet}),\n    ...(operation.movementMode?{movementMode:operation.movementMode}:{}),','    ...(operation.distanceTraveledFeet===undefined?{}:{movementCostFeet:operation.distanceFeet}),\n    ...(operation.movementActivity?{movementActivity:operation.movementActivity}:{}),\n    ...(operation.movementMode?{movementMode:operation.movementMode}:{}),')
+              replace_once(p,'    event:makeEvent(ctx.pending, operation, `${actorId} moves ${operation.distanceFeet} ft`, result, provenance, changes, actorId),','    event:makeEvent(ctx.pending, operation, operation.movementActivity==="stand" ? `${actorId} stands from Prone` : `${actorId} moves ${operation.distanceFeet} ft`, result, provenance, changes, actorId),')
+
+          schema_path=Path("schemas/common-play-contract.schema.json")
+          schema=json.loads(schema_path.read_text(encoding="utf-8")); defs=schema["$defs"]
+          ref={"$ref":"#/$defs/movementStand"}; refs=defs["operation"]["oneOf"]
+          if ref not in refs: refs.insert(refs.index({"$ref":"#/$defs/movementOperation"})+1,ref)
+          defs["movementStand"]={"type":"object","required":["kind","target"],"properties":{"kind":{"const":"movement.stand"},"target":{"enum":["actor","self"]}},"additionalProperties":False}
+          schema_path.write_text(json.dumps(schema,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
+
+          test_path=Path("tests/domain/commonPlayProneStandRuntime.test.ts")
+          if not test_path.exists():
+              test_path.write_text('''import assert from "node:assert/strict";\nimport test from "node:test";\nimport { parseManualCommonPlayOperationDefinition, resolveCommonPlayEntryPointOperations } from "../../src/domain/commonPlayOperationRuntime";\nimport { runtimeState, TEST_PROFILE } from "./rulesTestState";\n\nfunction stateWithProne() {\n  const state=runtimeState();\n  state.clock.activeActorId="hero"; state.clock.phase="action";\n  state.combatants.hero.economy.movement=30; state.combatants.hero.economy.movementMaximum=30;\n  state.effects.push({id:"effect.external.prone",sourceId:"external.unknown.prone-source",targetId:"hero",kind:"condition",conditionId:"prone",tags:[],expiry:{kind:"permanent"}});\n  return state;\n}\nfunction definition(id="external.unknown.family-i-stand") {\n  return parseManualCommonPlayOperationDefinition({schemaVersion:"0.2-draft",id,entryPoints:[{id:"stand",invocation:"manual",operations:[{kind:"movement.stand",target:"actor"}]}]});\n}\n\ntest("portable movement.stand spends half movement and removes Prone atomically",()=>{\n  const committed=resolveCommonPlayEntryPointOperations(TEST_PROFILE,stateWithProne(),definition(),{resolutionId:"stand-resolution",actorId:"hero",entryPointId:"stand"});\n  assert.equal(committed.status,"committed"); if(committed.status!=="committed") return;\n  assert.equal(committed.state.combatants.hero.economy.movement,15);\n  assert.equal(committed.state.effects.some((effect)=>effect.conditionId==="prone"&&effect.targetId==="hero"),false);\n  assert.equal(committed.events.length,2);\n  assert.match(committed.events[0].summary,/stands from Prone/);\n  assert.ok(committed.events[0].stateChanges.some((change)=>change.kind==="economy"&&change.field==="movement"));\n  assert.ok(committed.events[1].stateChanges.some((change)=>change.kind==="effect"&&change.effectId==="effect.external.prone"&&change.after===undefined));\n});\n\ntest("portable movement.stand rejects insufficient movement atomically",()=>{\n  const state=stateWithProne(); state.combatants.hero.economy.movement=10;\n  const rejected=resolveCommonPlayEntryPointOperations(TEST_PROFILE,state,definition(),{resolutionId:"stand-insufficient",actorId:"hero",entryPointId:"stand"});\n  assert.equal(rejected.status,"rejected"); assert.equal(state.combatants.hero.economy.movement,10); assert.equal(state.effects.some((effect)=>effect.conditionId==="prone"),true);\n});\n\ntest("portable movement.stand is invariant under external definition rename",()=>{\n  const a=resolveCommonPlayEntryPointOperations(TEST_PROFILE,stateWithProne(),definition("external.first.stand"),{resolutionId:"stand-a",actorId:"hero",entryPointId:"stand"});\n  const b=resolveCommonPlayEntryPointOperations(TEST_PROFILE,stateWithProne(),definition("renamed.unrelated.stand"),{resolutionId:"stand-b",actorId:"hero",entryPointId:"stand"});\n  assert.equal(a.status,"committed"); assert.equal(b.status,"committed"); if(a.status!=="committed"||b.status!=="committed") return;\n  assert.equal(a.state.combatants.hero.economy.movement,b.state.combatants.hero.economy.movement);\n  assert.equal(a.state.effects.some((effect)=>effect.conditionId==="prone"),false); assert.equal(b.state.effects.some((effect)=>effect.conditionId==="prone"),false);\n});\n''',encoding="utf-8")
+
+          p="tests/ui/c9FamilyIMovementProduction.test.ts"
+          text=Path(p).read_text(encoding="utf-8")
+          if 'turnRuntimeSessions' not in text:
+              replace_once(p,'import { MockAdapter } from "../../src/app/mockAdapter";','import { MockAdapter } from "../../src/app/mockAdapter";\nimport { ensureAdapterTurnRuntimeState, turnRuntimeSessions } from "../../src/app/turnRuntimeSessionRegistry";')
+              text=Path(p).read_text(encoding="utf-8")
+          if 'id:"stand"' not in text:
+              tail='''    {\n      id:"move-full",\n      invocation:"manual" as const,\n      operations:[{\n        kind:"movement.relocate" as const,\n        mode:"move" as const,\n        movementType:"walk" as const,\n        target:"actor",\n        distance:{ref:"movement.walk"},\n        destinationFact:destinationFact("destination-full"),\n      }],\n    },\n  ];'''
+              replacement=tail[:-5]+'''    {\n      id:"stand",\n      invocation:"manual" as const,\n      operations:[{kind:"movement.stand" as const,target:"actor" as const}],\n    },\n  ];'''
+              replace_once(p,tail,replacement)
+              helper='''\nasync function seedProne(adapter:MockAdapter) {\n  const snapshot=await adapter.getSnapshot(); ensureAdapterTurnRuntimeState(adapter,snapshot.scene);\n  const session=turnRuntimeSessions.get(adapter); assert.ok(session,"turn runtime session must exist");\n  session.state.effects.push({id:"effect.external.prone",sourceId:"external.unknown.prone-source",targetId:"char.aelar",kind:"condition",conditionId:"prone",tags:[],expiry:{kind:"permanent"}});\n}\nasync function runPortableStand(prefix:string) {\n  const {adapter,action}=await install(prefix); await seedProne(adapter);\n  const before=(await adapter.getSnapshot()).scene.economyByActor["char.aelar"]!.movement;\n  await adapter.resolveAction(action("stand"),["char.aelar"]); let snapshot=await adapter.getSnapshot();\n  assert.equal(snapshot.resolution?.stage,"complete"); assert.equal(snapshot.scene.economyByActor["char.aelar"]?.movement,before-15);\n  assert.equal(turnRuntimeSessions.get(adapter)?.state.effects.some((effect)=>effect.conditionId==="prone"&&effect.targetId==="char.aelar"),false);\n  await adapter.undoLastResolution(); snapshot=await adapter.getSnapshot();\n  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.movement,before);\n  assert.equal(turnRuntimeSessions.get(adapter)?.state.effects.some((effect)=>effect.conditionId==="prone"&&effect.targetId==="char.aelar"),true);\n  return before;\n}\n'''
+              replace_once(p,'\nasync function runMovementMatrix(prefix:string) {',helper+'\nasync function runMovementMatrix(prefix:string) {')
+              tests='''\ntest("unknown installed Common Play stands from Prone through production Resolver and Undo",async()=>{ assert.equal(await runPortableStand("unknown-family-i-stand"),30); });\ntest("renaming external movement.stand identities preserves production semantics",async()=>{ assert.equal(await runPortableStand("renamed-family-i-stand"),30); });\n'''
+              replace_once(p,'\ntest("renaming every external Family I identity preserves the production movement matrix",async()=>{',tests+'\ntest("renaming every external Family I identity preserves the production movement matrix",async()=>{')
+          PY
+      - name: Integrate on latest branch with bounded retries
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch=agent/c9-gate-n-coverage-reconciliation
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in $(seq 1 6); do
+            git fetch origin "$branch"
+            git reset --hard "origin/$branch"
+            python3 /tmp/apply-prone-stand.py
+            npm run generate:content >/dev/null
+            npx tsx --test tests/domain/commonPlayMovementRuntime.test.ts tests/domain/commonPlayProneStandRuntime.test.ts tests/ui/c9FamilyIMovementProduction.test.ts
+            node scripts/check-legacy-execution-boundary.mjs
+            node scripts/check-v1-mechanism-coverage.mjs
+            npx tsc --noEmit
+            git add schemas/common-play-contract.schema.json src/domain/commonPlayOperationRuntime.ts src/domain/resolutionTypes.ts src/domain/resolutionActionOps.ts tests/domain/commonPlayProneStandRuntime.test.ts tests/ui/c9FamilyIMovementProduction.test.ts
+            if git diff --cached --quiet; then
+              exit 0
+            fi
+            git commit -m "feat(c9): route prone standing through Common Play"
+            if git push origin HEAD:"$branch"; then
+              exit 0
+            fi
+            sleep 1
+          done
+          exit 1
