@@ -189,6 +189,7 @@ export interface SpellCastCompilation {
   slotLevel?: number;
   slotted: boolean;
   concentrationGroupId?: string;
+  consumedMaterials:Array<{materialId:string;quantity:number}>;
 }
 
 export type SpellCastResolution =
@@ -199,6 +200,7 @@ export type SpellCastResolution =
       slotLevel?: number;
       events: ResolutionEvent[];
       results: Record<string, unknown>;
+      consumedMaterials?:Array<{materialId:string;quantity:number}>;
     }
   | {
       status: "rejected";
@@ -266,9 +268,10 @@ function validateAccess(definition: SpellMechanicDefinition, request: SpellCastR
         : "spell mechanics are not executable",
     );
   }
+  let consumedMaterials:Array<{materialId:string;quantity:number}>=[];
   if(definition.components){
-    if(!request.componentContext)throw new DomainEvaluationError("typed spell component context is required");
-    resolveSpellComponents(definition.components,request.componentContext);
+    if(request.componentContext)consumedMaterials=resolveSpellComponents(definition.components,request.componentContext).consumed;
+    else if(!request.componentsSatisfied)throw new DomainEvaluationError("typed spell component context is required");
   }else if(!request.componentsSatisfied)throw new DomainEvaluationError("spell components are not satisfied");
   if (!Number.isInteger(definition.baseLevel) || definition.baseLevel < 0 || definition.baseLevel > 9) {
     throw new DomainEvaluationError("invalid spell base level");
@@ -279,7 +282,7 @@ function validateAccess(definition: SpellMechanicDefinition, request: SpellCastR
       throw new DomainEvaluationError("cantrip is not available to the caster");
     }
     if (request.slotLevel !== undefined) throw new DomainEvaluationError("cantrips do not expend spell slots");
-    return { slotted: false as const, slotResourceId: undefined, featureResourceId: undefined };
+    return { slotted: false as const, slotResourceId: undefined, featureResourceId: undefined,consumedMaterials };
   }
 
   if (request.source === "prepared" && !request.caster.preparedSpellIds.includes(definition.spellId)) {
@@ -290,7 +293,7 @@ function validateAccess(definition: SpellMechanicDefinition, request: SpellCastR
   }
   if (request.source === "item") {
     if (request.slotLevel !== undefined) throw new DomainEvaluationError("slotless item casting cannot specify a slot level");
-    return { slotted: false as const, slotResourceId: undefined, featureResourceId: undefined };
+    return { slotted: false as const, slotResourceId: undefined, featureResourceId: undefined,consumedMaterials };
   }
   if (request.source === "feature") {
     if (!(request.caster.featureSpellIds ?? []).includes(definition.spellId)) {
@@ -301,6 +304,7 @@ function validateAccess(definition: SpellMechanicDefinition, request: SpellCastR
       slotted:false as const,
       slotResourceId:undefined,
       featureResourceId:request.caster.featureResourceIds?.[definition.spellId],
+      consumedMaterials,
     };
   }
 
@@ -313,7 +317,7 @@ function validateAccess(definition: SpellMechanicDefinition, request: SpellCastR
   if (request.useActionEconomy && !request.turnId) {
     throw new DomainEvaluationError("turn-bound slotted casting requires turnId for the one-slot-per-turn rule");
   }
-  return { slotted: true as const, slotResourceId, featureResourceId: undefined };
+  return { slotted: true as const, slotResourceId, featureResourceId: undefined,consumedMaterials };
 }
 
 function economyOperation(definition: SpellMechanicDefinition, request: SpellCastRequest): ResolutionOperation | undefined {
@@ -767,6 +771,7 @@ export function compileSpellCast(
     slotLevel: request.slotLevel,
     slotted: access.slotted,
     concentrationGroupId,
+    consumedMaterials:access.consumedMaterials,
   };
 }
 
@@ -814,6 +819,7 @@ export function resolveSpellCast(
       slotLevel: request.slotLevel,
       events: commit.events,
       results: commit.results,
+      consumedMaterials:compilation.consumedMaterials,
     };
   } catch (error) {
     return reject(inputState, request, error);

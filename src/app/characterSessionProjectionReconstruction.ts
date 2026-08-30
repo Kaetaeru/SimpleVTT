@@ -108,6 +108,8 @@ function reconstructItems(projection:CharacterSessionProjectionV1):ItemInstanceV
       attuned:runtime.attuned,
       ...(source.attunementPolicy?{attunementPolicy:clone(source.attunementPolicy)}:{}),
       charges:maxCharges!==undefined ? { current:runtime.charges?.current ?? maxCharges,max:maxCharges } : undefined,
+      spellcastingComponent:source.spellcastingComponent,
+      unitCostGp:source.unitCostGp,
       passiveEffects:canonical ? [] : clone(source.passiveEffects ?? []),
       grantedActionIds:[],
       provenance:canonical

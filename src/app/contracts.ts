@@ -73,6 +73,8 @@ export interface ItemInstanceVm {
     loss?: { onDeath?:boolean; maximumDistanceFeet?:number; durationSeconds?:number };
   };
   charges?: { current: number; max: number };
+  spellcastingComponent?:"focus"|"component-pouch";
+  unitCostGp?:number;
   passiveEffects: string[];
   grantedActionIds: string[];
   provenance: string[];

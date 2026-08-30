@@ -4,11 +4,14 @@ export interface SpellMaterialRequirement {
   id?:string;
   costGp?:number;
   consumed?:boolean;
+  perTarget?:boolean;
 }
 
 export interface SpellComponentRequirements {
   verbal?:boolean;
   somatic?:boolean;
+  materials?:SpellMaterialRequirement[];
+  /** @deprecated Use materials for normalized definitions. */
   material?:SpellMaterialRequirement;
 }
 
@@ -18,6 +21,7 @@ export interface SpellComponentContext {
   freeHands:number;
   hasFocus:boolean;
   hasComponentPouch:boolean;
+  targetCount?:number;
   materials:Record<string,{quantity:number;unitCostGp?:number}>;
 }
 
@@ -30,21 +34,26 @@ export interface SpellComponentResolution {
 export function resolveSpellComponents(requirements:SpellComponentRequirements,context:SpellComponentContext):SpellComponentResolution {
   if(!Number.isInteger(context.freeHands)||context.freeHands<0)throw new DomainEvaluationError("spell component freeHands must be a non-negative integer");
   if(requirements.verbal&&(context.silenced||!context.canSpeak))throw new DomainEvaluationError("verbal spell component is unavailable");
-  const material=requirements.material;
-  const heldFocusOrMaterial=material!==undefined&&(context.hasFocus||context.hasComponentPouch||Boolean(material.id&&context.materials[material.id]?.quantity));
+  const materials=requirements.materials??(requirements.material?[requirements.material]:[]);
+  const heldFocusOrMaterial=materials.length>0&&(context.hasFocus||context.hasComponentPouch||materials.some((material)=>Boolean(material.id&&context.materials[material.id]?.quantity)));
   if(requirements.somatic&&context.freeHands<1&&!heldFocusOrMaterial)throw new DomainEvaluationError("somatic spell component requires a free hand or the held material component");
-  if(!material)return {satisfied:true,consumed:[]};
-  if(material.costGp!==undefined&&(!Number.isFinite(material.costGp)||material.costGp<0))throw new DomainEvaluationError("material component cost must be non-negative and finite");
-  const owned=material.id?context.materials[material.id]:undefined;
-  const costly=(material.costGp??0)>0;
-  if(costly||material.consumed){
-    if(!material.id||!owned||owned.quantity<1||(owned.unitCostGp??0)<(material.costGp??0))throw new DomainEvaluationError("specific costly or consumed material component is unavailable");
-    return {satisfied:true,consumed:material.consumed?[{materialId:material.id,quantity:1}]:[]};
+  const consumed:Array<{materialId:string;quantity:number}>=[];
+  for(const material of materials){
+    if(material.costGp!==undefined&&(!Number.isFinite(material.costGp)||material.costGp<0))throw new DomainEvaluationError("material component cost must be non-negative and finite");
+    const owned=material.id?context.materials[material.id]:undefined;
+    const quantity=material.perTarget?context.targetCount??0:1;
+    if(!Number.isInteger(quantity)||quantity<1)throw new DomainEvaluationError("per-target material component requires a positive target count");
+    const costly=(material.costGp??0)>0;
+    if(costly||material.consumed){
+      if(!material.id||!owned||owned.quantity<quantity||(owned.unitCostGp??0)<(material.costGp??0))throw new DomainEvaluationError("specific costly or consumed material component is unavailable");
+      if(material.consumed)consumed.push({materialId:material.id,quantity});
+      continue;
+    }
+    if(owned?.quantity&&owned.quantity>=quantity)continue;
+    if(context.hasFocus||context.hasComponentPouch)continue;
+    throw new DomainEvaluationError("material spell component, focus, or component pouch is unavailable");
   }
-  if(owned?.quantity)return {satisfied:true,consumed:[]};
-  if(context.hasFocus)return {satisfied:true,consumed:[],usedSubstitute:"focus"};
-  if(context.hasComponentPouch)return {satisfied:true,consumed:[],usedSubstitute:"component-pouch"};
-  throw new DomainEvaluationError("material spell component, focus, or component pouch is unavailable");
+  return {satisfied:true,consumed,...(materials.length&&!materials.some((material)=>material.id&&context.materials[material.id]?.quantity)?{usedSubstitute:context.hasFocus?"focus":"component-pouch"}: {})};
 }
 
 export type CastingActivityKind="long-cast"|"ritual";

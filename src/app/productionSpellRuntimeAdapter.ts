@@ -15,12 +15,15 @@ import type { RulesRuntimeState } from "../domain/combatState";
 import { resolveRuntimeTargetingFact } from "./realRuntimeAttackFactProvider";
 import { isExecutableSpellRuntimeSupport } from "./spellcastingRuntimeContracts";
 import { allocationEntriesFromTargetSequence, resolveCommonPlayAllocation } from "../domain/commonPlayAllocationRuntime";
+import { consumeCharacterSpellMaterials, prepareCharacterSpellComponents } from "./spellComponentInventoryRuntime";
 
 type Internal={
   scene:AppSnapshot["scene"];
   sessionMode:AppSnapshot["sessionMode"];
   resolution:ResolutionView|null;
   activity:AppSnapshot["activity"];
+  activeCharacter:AppSnapshot["activeCharacter"];
+  characters:AppSnapshot["characters"];
   lastBefore?:unknown;
   lastResolutionId?:string|null;
   getSnapshot():Promise<AppSnapshot>;
@@ -263,6 +266,18 @@ MockAdapter.prototype.resolveAction=async function resolveProductionSpell(action
 
   const dice=spellDice(this,actionId,definition,slotLevel,caster.characterLevel,uniqueTargetIds);
   const projectileAllocations=allocation?.status==="resolved"?allocation.allocations.map((entry)=>({targetId:entry.targetId,count:entry.units})):undefined;
+  let componentPreparation;
+  try {
+    componentPreparation=definition.components?prepareCharacterSpellComponents({
+      character:internal.activeCharacter,requirements:definition.components,
+      status:internal.scene.entities.find((entry)=>entry.id===sourceAction.actorId)?.status??[],targetCount:Math.max(1,uniqueTargetIds.length),
+    }):undefined;
+  } catch(error) {
+    internal.resolution=resolutionFromCast(sourceAction.name,actionId,sourceAction.actorId,targetIds,slotLevel,{
+      status:"rejected",state:runtime,spellId:metadata.spellId,slotLevel,error:error instanceof Error?error.message:String(error),events:[],results:{},
+    },dice.authoritative);
+    return this.getSnapshot();
+  }
   const result=resolveSpellCast(SIMPLEVTT_APP_RULES_PROFILE,definition,runtime,{
     id:`production-spell-cast.${metadata.spellId}.${Date.now()}`,
     actorId:sourceAction.actorId,
@@ -270,7 +285,7 @@ MockAdapter.prototype.resolveAction=async function resolveProductionSpell(action
     source:metadata.castSource,
     expectedRevision:runtime.revision,
     caster,targets,slotLevel,
-    componentsSatisfied:true,
+    componentContext:componentPreparation?.context,
     useActionEconomy:internal.sessionMode==="initiative",
     turnId,
     dice:dice.request,
@@ -278,6 +293,15 @@ MockAdapter.prototype.resolveAction=async function resolveProductionSpell(action
   });
   internal.resolution=resolutionFromCast(sourceAction.name,actionId,sourceAction.actorId,targetIds,slotLevel,result,dice.authoritative);
   if (result.status==="rejected") return this.getSnapshot();
+
+  let inventory;
+  try { inventory=consumeCharacterSpellMaterials(internal.activeCharacter,componentPreparation?.resolution.consumed??[]); }
+  catch(error) {
+    internal.resolution=resolutionFromCast(sourceAction.name,actionId,sourceAction.actorId,targetIds,slotLevel,{
+      status:"rejected",state:runtime,spellId:metadata.spellId,slotLevel,error:error instanceof Error?error.message:String(error),events:[],results:{},
+    },dice.authoritative);
+    return this.getSnapshot();
+  }
 
   if (!commitAdapterTurnRuntimeState(this,internal.scene,runtime.revision,result.state)) {
     internal.resolution=resolutionFromCast(sourceAction.name,actionId,sourceAction.actorId,targetIds,slotLevel,{
@@ -288,14 +312,19 @@ MockAdapter.prototype.resolveAction=async function resolveProductionSpell(action
   }
 
   const events=eventHistory(runtime,result,sourceAction.actorId,turnId,slotLevel);
+  internal.activeCharacter=inventory.character;
+  internal.characters=internal.characters.map((character)=>character.id===inventory.character.id?{...character,...inventory.character}:character);
   const actorName=internal.scene.entities.find((entry)=>entry.id===sourceAction.actorId)?.name??sourceAction.actorId;
-  internal.activity.unshift(projectRuntimeEventsToActivity({
+  internal.resolution.stateChanges.push(...inventory.changes);
+  const activity=projectRuntimeEventsToActivity({
     id:internal.resolution.id,
     actorName,
     title:`${sourceAction.name} 시전`,
     summary:internal.resolution.compact,
     events,
-  }));
+  });
+  activity.stateChanges.push(...inventory.changes);
+  internal.activity.unshift(activity);
   recordRuntimeResolutionEvents(this,internal.resolution.id,events);
   internal.lastBefore=null;
   internal.lastResolutionId=internal.resolution.id;

@@ -195,6 +195,7 @@ test("catalog utility spells commit immediately instead of entering an approval 
     cantrips:["dnd.srd521.spell.dancing-lights"],
     preparedSpells:["dnd.srd521.spell.alarm"],
     spellSlotMaximums:{1:1},
+    items:[{id:"utility-pouch",definitionId:"dnd.srd521.item.gear.component-pouch",name:"Component Pouch",kind:"equipment" as const,quantity:1,equipped:true,spellcastingComponent:"component-pouch" as const,unitCostGp:25,passiveEffects:[],grantedActionIds:[],provenance:["SRD 5.2.1"]}],
   };
   await seedSheet(store,sheet);
   const player=new MockAdapter();

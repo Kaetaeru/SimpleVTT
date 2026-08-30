@@ -75,6 +75,8 @@ export interface CharacterItemSourceReferenceV1 {
     loss?:{onDeath?:boolean;maximumDistanceFeet?:number;durationSeconds?:number};
   };
   chargeMaximum?:number;
+  spellcastingComponent?:"focus"|"component-pouch";
+  unitCostGp?:number;
   passiveEffects?:string[];
   grantedActionIds?:string[];
   provenance:string[];
