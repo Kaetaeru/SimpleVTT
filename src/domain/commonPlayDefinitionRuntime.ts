@@ -171,6 +171,17 @@ function referencedRuleTemplates(templates:Obj[]) {
   return referenced;
 }
 
+function operationEntryPointProjection(entryPoint:CommonPlayEntryPointIR) {
+  const projected=structuredClone(entryPoint);
+  if(projected.targeting===undefined) return projected;
+  const targeting=object(projected.targeting,`Common Play entry point ${entryPoint.id}.targeting`);
+  if(targeting.from!=="targets") throw new DomainEvaluationError(`Common Play entry point ${entryPoint.id}.targeting.from must be targets for portable operations`);
+  if(!Number.isInteger(targeting.min)||Number(targeting.min)<0) throw new DomainEvaluationError(`Common Play entry point ${entryPoint.id}.targeting.min must be a non-negative integer`);
+  if(!Number.isInteger(targeting.max)||Number(targeting.max)<Number(targeting.min)) throw new DomainEvaluationError(`Common Play entry point ${entryPoint.id}.targeting.max must be an integer >= min`);
+  projected.targeting={from:"targets",min:Number(targeting.min),max:Number(targeting.max)};
+  return projected;
+}
+
 /** Selects a lowerer from authored structure, never content identity or display text. */
 export function lowerCommonPlay(
   definition:CommonPlayDefinitionIR,
@@ -218,7 +229,7 @@ export function lowerCommonPlay(
       definition:{...base(definition),entryPoints:[structuredClone(entryPoint)]} as CommonPlaySaveDamageDefinition,
     };
   }
-  const projected={...base(definition),entryPoints:[structuredClone(entryPoint)]};
+  const projected={...base(definition),entryPoints:[operationEntryPointProjection(entryPoint)]};
   return {kind:"operations",entryPointId,definition:parseCommonPlayOperationDefinition(projected)};
 }
 
