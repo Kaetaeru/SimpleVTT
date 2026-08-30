@@ -1,0 +1,311 @@
+name: C9 Family N Suppression Patch 71304
+
+on:
+  push:
+    paths:
+      - ".github/workflows/c9-family-n-suppression-patch-71304.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Patch portable effect suppression
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          import json
+
+          runtime_path=Path("src/domain/commonPlayOperationRuntime.ts")
+          runtime=runtime_path.read_text()
+
+          def replace_once(text,old,new,label):
+              if new in text:
+                  return text
+              if old not in text:
+                  raise SystemExit(f"missing patch anchor: {label}")
+              return text.replace(old,new,1)
+
+          runtime=replace_once(runtime,
+          '''type CommonPlayEffectRemove={
+            kind:"effect.remove";
+            selector:CommonPlaySelector&{from:"effects"};
+            when?:CommonPlayTestOutcomePredicate;
+          };
+          type CommonPlayMovementStand''',
+          '''type CommonPlayEffectRemove={
+            kind:"effect.remove";
+            selector:CommonPlaySelector&{from:"effects"};
+            when?:CommonPlayTestOutcomePredicate;
+          };
+          type CommonPlayEffectSuppress={
+            kind:"effect.suppress";
+            selector:CommonPlaySelector&{from:"effects"};
+            suppressed:boolean;
+            reason?:string;
+            pauseDuration?:boolean;
+            when?:CommonPlayTestOutcomePredicate;
+          };
+          type CommonPlayMovementStand''',"effect suppression type")
+
+          runtime=replace_once(runtime,
+          '''  |CommonPlayConditionChange
+            |CommonPlayEffectRemove
+            |CommonPlayRollModify;''',
+          '''  |CommonPlayConditionChange
+            |CommonPlayEffectRemove
+            |CommonPlayEffectSuppress
+            |CommonPlayRollModify;''',"operation union")
+
+          runtime=replace_once(runtime,
+          '''const EFFECT_REMOVE_KEYS=new Set(["kind","selector","when"]);
+          const TEMP_HP_GRANT_KEYS''',
+          '''const EFFECT_REMOVE_KEYS=new Set(["kind","selector","when"]);
+          const EFFECT_SUPPRESS_KEYS=new Set(["kind","selector","suppressed","reason","pauseDuration","when"]);
+          const TEMP_HP_GRANT_KEYS''',"suppression keys")
+
+          parser_anchor='''  if(operation.kind==="condition.apply"||operation.kind==="condition.remove") {'''
+          parser_block='''  if(operation.kind==="effect.suppress") {
+            supportedKeys(operation,EFFECT_SUPPRESS_KEYS,label);
+            const selector=parseCommonPlaySelector(operation.selector,`${label}.selector`);
+            if(selector.from!=="effects") throw new DomainEvaluationError(`${label}.selector.from must be effects for portable Common Play effect.suppress`);
+            if(selector.selection==="manual") throw new DomainEvaluationError(`${label}.selector.selection must be automatic when changing effect suppression`);
+            if(typeof operation.suppressed!=="boolean") throw new DomainEvaluationError(`${label}.suppressed must be boolean`);
+            const reason=operation.reason===undefined?undefined:nonEmptyString(operation.reason,`${label}.reason`);
+            if(operation.pauseDuration!==undefined&&typeof operation.pauseDuration!=="boolean") throw new DomainEvaluationError(`${label}.pauseDuration must be boolean when present`);
+            if(operation.suppressed===false&&(reason!==undefined||operation.pauseDuration!==undefined)) throw new DomainEvaluationError(`${label} unsuppression must not declare reason or pauseDuration`);
+            const when=testOutcomePredicate(operation.when,`${label}.when`);
+            return {
+              kind:"effect.suppress",selector:{...selector,from:"effects"},suppressed:operation.suppressed,
+              ...(reason===undefined?{}:{reason}),
+              ...(operation.pauseDuration===undefined?{}:{pauseDuration:operation.pauseDuration}),
+              ...(when?{when}:{}),
+            };
+          }
+'''
+          if 'if(operation.kind==="effect.suppress") {' not in runtime:
+              if parser_anchor not in runtime: raise SystemExit("missing parser insertion anchor")
+              runtime=runtime.replace(parser_anchor,parser_block+parser_anchor,1)
+
+          compile_anchor='''    if(operation.kind==="condition.apply"||operation.kind==="condition.remove") {'''
+          compile_block='''    if(operation.kind==="effect.suppress") {
+              const when=operation.when?{operationId:`${input.resolutionId}:test`,field:"outcome" as const,equals:operation.when.right.value}:undefined;
+              const candidates=state.effects.map((effect)=>({
+                id:effect.id,
+                properties:{
+                  tags:[...effect.tags],
+                  targetId:effect.targetId,
+                  sourceId:effect.sourceId,
+                  kind:effect.kind,
+                  suppressed:!effectIsActive(effect),
+                  "target.selected":input.targetId!==undefined&&effect.targetId===input.targetId,
+                  "target.actor":effect.targetId===input.actorId,
+                  ...(effect.sourceActorId?{sourceActorId:effect.sourceActorId}:{}),
+                  ...(effect.conditionId?{conditionId:effect.conditionId}:{}),
+                },
+              }));
+              const selected=resolveCommonPlaySelector({sourceId:input.actorId,selector:operation.selector,candidates,selection:"automatic",authority:"host"});
+              if(selected.status!=="resolved") throw new DomainEvaluationError(`Common Play effect.suppress selector rejected: ${selected.reason}`);
+              selected.targetIds.forEach((effectId,suppressionIndex)=>operations.push({
+                id:`${operationId}:suppression:${suppressionIndex}`,kind:"set-effect-suppression",effectId,suppressed:operation.suppressed,
+                ...(operation.reason===undefined?{}:{reason:operation.reason}),
+                ...(operation.pauseDuration===undefined?{}:{pauseDuration:operation.pauseDuration}),
+                ...(when?{when}:{}),
+              }));
+              continue;
+            }
+'''
+          if 'Common Play effect.suppress selector rejected' not in runtime:
+              if compile_anchor not in runtime: raise SystemExit("missing compile insertion anchor")
+              runtime=runtime.replace(compile_anchor,compile_block+compile_anchor,1)
+
+          runtime=runtime.replace(
+          '''(operation.kind==="condition.apply"||operation.kind==="condition.remove"||operation.kind==="effect.remove"||operation.kind==="damage.apply")&&operation.when''',
+          '''(operation.kind==="condition.apply"||operation.kind==="condition.remove"||operation.kind==="effect.remove"||operation.kind==="effect.suppress"||operation.kind==="damage.apply")&&operation.when''')
+          runtime_path.write_text(runtime)
+
+          schema_path=Path("schemas/common-play-contract.schema.json")
+          schema=json.loads(schema_path.read_text())
+          defs=schema["$defs"]
+          operation=defs["operation"]["oneOf"]
+          suppress_ref={"$ref":"#/$defs/effectSuppress"}
+          if suppress_ref not in operation:
+              remove_index=operation.index({"$ref":"#/$defs/effectRemove"})
+              operation.insert(remove_index+1,suppress_ref)
+          defs["effectSuppress"]={
+              "type":"object",
+              "required":["kind","selector","suppressed"],
+              "properties":{
+                  "kind":{"const":"effect.suppress"},
+                  "selector":{"$ref":"#/$defs/selector"},
+                  "suppressed":{"type":"boolean"},
+                  "reason":{"type":"string","minLength":1},
+                  "pauseDuration":{"type":"boolean"},
+                  "when":{"$ref":"#/$defs/predicate"},
+              },
+              "additionalProperties":False,
+          }
+          schema_path.write_text(json.dumps(schema,indent=2,ensure_ascii=False)+"\n")
+
+          test_path=Path("tests/ui/c9FamilyNEffectDurationProduction.test.ts")
+          test_text=test_path.read_text()
+          marker='''test("renamed external identity preserves production elapsed expiry and Undo",async()=>{
+            await exerciseElapsedBoundaryExpiry("renamed-family-n-expiry");
+          });
+          '''
+          addition=r'''
+
+          function suppressionPackage(prefix:string) {
+            const moduleId=`${prefix}.module`;
+            const contentId=`${prefix}.content`;
+            const effectMechanicId=`${prefix}.timed-effect`;
+            const controlMechanicId=`${prefix}.suppression-control`;
+            const effectConfig={
+              schemaVersion:"0.2-draft",id:effectMechanicId,
+              entryPoints:[{id:"activate",invocation:"manual",operations:[{kind:"effect.apply",template:"probe",target:"actor"}]}],
+              artifactTemplates:[{
+                id:"probe",artifactKind:"effect",duration:{kind:"elapsed",amount:{value:6},unit:"seconds"},
+                rules:[{id:"noop",event:"damage.taken",frequency:"once-per-resolution",operations:[{kind:"damage.apply",amount:{value:0},damageType:"force",target:"event.actor"}]}],
+                lifetime:{kind:"until-duration",onEnd:"destroy"},instancePolicy:"stack",
+              }],
+            };
+            const selector={
+              from:"effects",min:1,max:1,selection:"automatic",
+              where:{op:"eq",left:{ref:"sourceId"},right:{value:effectMechanicId}},
+            };
+            const controlConfig={
+              schemaVersion:"0.2-draft",id:controlMechanicId,
+              entryPoints:[
+                {id:"suppress",invocation:"manual",operations:[{kind:"effect.suppress",selector,suppressed:true,reason:"portable source paused",pauseDuration:true}]},
+                {id:"resume",invocation:"manual",operations:[{kind:"effect.suppress",selector,suppressed:false}]},
+              ],
+            };
+            return {moduleId,contentId,effectMechanicId,controlMechanicId,json:JSON.stringify({
+              schemaVersion:"0.1-draft",moduleId,moduleVersion:"1",
+              rulesProfile:{id:"dnd.srd-5.2.1",version:"0.1-draft"},defaultLocale:"en",
+              source:{document:"Family N suppression probe",version:"1",license:"CC0",srdDerived:false},
+              dependencies:[],conflicts:[],capabilities:[],
+              content:[{id:contentId,category:"option",presentation:{defaultLocale:"en",originalName:"Suppression Probe",locales:{en:{name:"Suppression Probe"}}},mechanics:[
+                {kind:"common-play",config:effectConfig},{kind:"common-play",config:controlConfig},
+              ]}],
+            })};
+          }
+
+          function actionFor(pack:ReturnType<typeof suppressionPackage>,mechanicId:string,entryPointId:string) {
+            return installedCommonPlayActionId({catalogId:catalogQualifiedId(pack.contentId,pack.moduleId,"1"),mechanicId,entryPointId});
+          }
+
+          async function advanceOneRound(adapter:MockAdapter,initialElapsed:number) {
+            let snapshot=await adapter.getSnapshot();
+            let runtime=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)!;
+            const maxTurns=snapshot.scene.entities.length+1;
+            for(let turn=0;turn<maxTurns&&runtime.clock.elapsedSeconds===initialElapsed;turn+=1) {
+              await adapter.endTurn();
+              snapshot=await adapter.getSnapshot();
+              runtime=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)!;
+            }
+            assert.equal(runtime.clock.elapsedSeconds,initialElapsed+6);
+            return {snapshot,runtime};
+          }
+
+          async function exercisePortableSuppression(prefix:string) {
+            const adapter=new MockAdapter();
+            const pack=suppressionPackage(prefix);
+            setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
+            const preview=await adapter.previewContentImport(pack.json);
+            assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
+            await adapter.activateContentImport();
+            await adapter.startInitiative();
+            await adapter.setCurrentActor("char.aelar");
+
+            let snapshot=await adapter.getSnapshot();
+            let runtime=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)!;
+            const initialElapsed=runtime.clock.elapsedSeconds;
+            snapshot=await adapter.resolveAction(actionFor(pack,pack.effectMechanicId,"activate"),["char.aelar"]);
+            assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
+            runtime=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)!;
+            let effect=runtime.effects.find((entry)=>entry.sourceId===pack.effectMechanicId);
+            assert.ok(effect);
+            assert.deepEqual(effect.expiry,{kind:"time",elapsedSeconds:initialElapsed+6});
+
+            snapshot=await adapter.resolveAction(actionFor(pack,pack.controlMechanicId,"suppress"),["char.aelar"]);
+            assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
+            runtime=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)!;
+            effect=runtime.effects.find((entry)=>entry.sourceId===pack.effectMechanicId);
+            assert.deepEqual(effect?.suppression,{reason:"portable source paused",pauseDuration:true,remainingSeconds:6});
+
+            await adapter.undoLastResolution();
+            snapshot=await adapter.getSnapshot();
+            runtime=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)!;
+            effect=runtime.effects.find((entry)=>entry.sourceId===pack.effectMechanicId);
+            assert.equal(effect?.suppression,undefined);
+            assert.deepEqual(effect?.expiry,{kind:"time",elapsedSeconds:initialElapsed+6});
+
+            snapshot=await adapter.resolveAction(actionFor(pack,pack.controlMechanicId,"suppress"),["char.aelar"]);
+            assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
+            ({snapshot,runtime}=await advanceOneRound(adapter,initialElapsed));
+            effect=runtime.effects.find((entry)=>entry.sourceId===pack.effectMechanicId);
+            assert.ok(effect,"paused portable effect must survive its original expiry boundary");
+            assert.equal(effect.suppression?.remainingSeconds,6);
+
+            snapshot=await adapter.resolveAction(actionFor(pack,pack.controlMechanicId,"resume"),["char.aelar"]);
+            assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
+            runtime=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)!;
+            effect=runtime.effects.find((entry)=>entry.sourceId===pack.effectMechanicId);
+            assert.equal(effect?.suppression,undefined);
+            assert.deepEqual(effect?.expiry,{kind:"time",elapsedSeconds:initialElapsed+12});
+
+            await adapter.undoLastResolution();
+            snapshot=await adapter.getSnapshot();
+            runtime=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)!;
+            effect=runtime.effects.find((entry)=>entry.sourceId===pack.effectMechanicId);
+            assert.equal(effect?.suppression?.pauseDuration,true,"event-native Undo must restore the paused portable effect");
+
+            snapshot=await adapter.resolveAction(actionFor(pack,pack.controlMechanicId,"resume"),["char.aelar"]);
+            assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
+            ({snapshot,runtime}=await advanceOneRound(adapter,initialElapsed+6));
+            assert.equal(runtime.effects.some((entry)=>entry.sourceId===pack.effectMechanicId),false,"resumed portable effect must expire after its preserved remaining duration");
+          }
+
+          test("unknown installed Common Play suppresses, pauses, resumes, expires, and undoes a portable effect",async()=>{
+            await exercisePortableSuppression("unknown-family-n-suppression");
+          });
+
+          test("renamed external identities preserve portable effect suppression and pause-resume semantics",async()=>{
+            await exercisePortableSuppression("renamed-family-n-suppression");
+          });
+          '''
+          if "unknown installed Common Play suppresses, pauses, resumes" not in test_text:
+              if marker not in test_text: raise SystemExit("missing test append anchor")
+              test_text=test_text.replace(marker,marker+addition,1)
+              test_path.write_text(test_text)
+
+          workflow_path=Path(".github/workflows/c9-family-n-effect-lifecycle.yml")
+          workflow=workflow_path.read_text()
+          if 'src/domain/commonPlayOperationRuntime.ts' not in workflow:
+              workflow=workflow.replace('      - "src/domain/commonPlayEffectRuntime.ts"\n','      - "src/domain/commonPlayEffectRuntime.ts"\n      - "src/domain/commonPlayOperationRuntime.ts"\n      - "schemas/common-play-contract.schema.json"\n',1)
+          workflow_path.write_text(workflow)
+
+          Path(".github/workflows/c9-family-n-suppression-patch-71304.yml").unlink()
+          PY
+          git add src/domain/commonPlayOperationRuntime.ts schemas/common-play-contract.schema.json tests/ui/c9FamilyNEffectDurationProduction.test.ts .github/workflows/c9-family-n-effect-lifecycle.yml .github/workflows/c9-family-n-suppression-patch-71304.yml
+          if git diff --cached --quiet; then
+            echo "No patch required"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "feat(c9): expose portable effect suppression"
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
