@@ -1,0 +1,92 @@
+name: C9 Family E Area Ledger 7130
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-e-area-ledger-7130.yml
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Record verified Family E area evidence
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
+          text=path.read_text(encoding='utf-8')
+          start=text.index('    {\n      "id": "targeting-selectors",')
+          end=text.index('    {\n      "id": "allocation",',start)
+          segment=text[start:end]
+
+          old_state='      "currentState": "Portable Common Play targeting preserves bounded selected target sets and authoritative relation-filter validation through the generic Resolver/production path; richer spatial/area/ordering/object/point selector composition remains incomplete.",'
+          new_state='      "currentState": "Portable Common Play targeting preserves bounded selected target sets, generic predicates, authoritative relation facts, and schema-defined area selector declarations through the shared selector/Resolver path; mapless production rejects area execution without authoritative membership instead of fabricating geometry. Provider-backed area membership, ordering/automatic selection, object/point selection, and complete range/reach/sight/cover/tag composition remain incomplete.",'
+          if old_state in segment:
+              segment=segment.replace(old_state,new_state,1)
+          elif new_state not in segment:
+              raise SystemExit('Family E currentState marker changed')
+
+          impl_anchor='        "commonPlayTargetingRuntime.test.ts proves bounded multi-target cardinality plus authoritative relation selector validation without identity dispatch"'
+          impl_line='        "commonPlayOperationRuntime.ts accepts schema-defined area selectors and routes entry-point targeting through resolveCommonPlaySelector with authoritative targetingCandidates/TargetingFactInput"'
+          if impl_line not in segment:
+              if impl_anchor not in segment: raise SystemExit('Family E implementation evidence anchor missing')
+              segment=segment.replace(impl_anchor,impl_anchor+',\n'+impl_line,1)
+
+          prod_anchor='        "C9 Family E Acceptance Evidence run 33309642186: restart/rename relation acceptance and tsc --noEmit passed"'
+          prod_lines=[
+            '        "0b20e8cae1b04d34b407dcee0e0d24d69b6b90f0 feat(c9): route production targeting through shared selector; operation targeting now accepts schema-defined area declarations"',
+            '        "C9 Family E Area Selector staged verification run 33310249528: 36/36 focused selector/import/production tests, legacy execution boundary, and tsc --noEmit passed before the equivalent three-line area bridge landed as 0b20e8cae1b04d34b407dcee0e0d24d69b6b90f0"',
+          ]
+          for line in prod_lines:
+              if line in segment: continue
+              if prod_anchor not in segment: raise SystemExit('Family E production evidence anchor missing')
+              segment=segment.replace(prod_anchor,prod_anchor+',\n'+line,1)
+              prod_anchor=line
+
+          old_seam='        "rich range/reach/sight/cover/tag/area/ordering/object/point/manual-vs-automatic selector semantics remain incomplete"'
+          new_seam='        "provider-backed area membership, ordering/automatic selection, object/point selectors, and complete range/reach/sight/cover/tag composition remain incomplete"'
+          if old_seam in segment:
+              segment=segment.replace(old_seam,new_seam,1)
+          elif new_seam not in segment:
+              raise SystemExit('Family E remaining seam marker changed')
+
+          path.write_text(text[:start]+segment+text[end:],encoding='utf-8')
+          PY
+      - name: Verify coverage ledger
+        run: node scripts/check-v1-mechanism-coverage.mjs
+      - name: Commit ledger reconciliation
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/c9-family-e-area-ledger-7130.yml
+          git add docs/rules/v1-mechanism-coverage-ledger.json
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "docs(c9): record Family E area evidence"
+          for attempt in 1 2 3 4 5; do
+            git fetch origin agent/c9-gate-n-coverage-reconciliation
+            git rebase origin/agent/c9-gate-n-coverage-reconciliation
+            if git push origin HEAD:agent/c9-gate-n-coverage-reconciliation; then
+              exit 0
+            fi
+            sleep 2
+          done
+          exit 1
