@@ -41,10 +41,24 @@ function invertStateChange(change:RuntimeStateChange):RuntimeStateChange {
   inverted.before=structuredClone((change as ReversibleStateChange).after);
   inverted.after=structuredClone((change as ReversibleStateChange).before);
   if (inverted.operation) inverted.operation=inverseOperation(inverted.operation);
+  if (inverted.kind==="resource") {
+    if (inverted.recoveryLockouts) {
+      inverted.recoveryLockouts={
+        before:structuredClone(inverted.recoveryLockouts.after),
+        after:structuredClone(inverted.recoveryLockouts.before),
+      };
+    }
+    if (inverted.capacity) {
+      inverted.capacity={
+        before:structuredClone(inverted.capacity.after),
+        after:structuredClone(inverted.capacity.before),
+      };
+    }
+  }
   return inverted;
 }
 
-function invertResolutionEvents(events:ResolutionEvent[]):ResolutionEvent[] {
+export function invertRuntimeResolutionEvents(events:ResolutionEvent[]):ResolutionEvent[] {
   return [...events].reverse().map((event)=>({
     ...structuredClone(event),
     stateChanges:[...event.stateChanges].reverse().map(invertStateChange),
@@ -59,7 +73,7 @@ MockAdapter.prototype.undoLastResolution=async function undoRuntimeResolution():
 
   const internal=this as unknown as AdapterState;
   const runtimeState=snapshotAdapterTurnRuntimeState(this,internal.scene);
-  const inverseEvents=invertResolutionEvents(history.events);
+  const inverseEvents=invertRuntimeResolutionEvents(history.events);
   const projected=applyResolutionEvents(
     internal.scene,
     inverseEvents,
