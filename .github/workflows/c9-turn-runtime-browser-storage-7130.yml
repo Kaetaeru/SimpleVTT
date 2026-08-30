@@ -1,0 +1,74 @@
+name: C9 Turn Runtime Browser Storage 7130
+
+on:
+  push:
+    paths:
+      - '.github/workflows/c9-turn-runtime-browser-storage-7130.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run generate:content
+      - name: Keep platform runtime persistence browser-only
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path=Path('src/app/turnRuntimeSessionRegistry.ts')
+          text=path.read_text()
+          old='''function runtimeStorage() {
+  try {
+    return (globalThis as unknown as {localStorage?:{
+      getItem(key:string):string|null;
+      setItem(key:string,value:string):void;
+      removeItem(key:string):void;
+    }}).localStorage;
+  } catch {
+    return undefined;
+  }
+}
+'''
+          new='''function runtimeStorage() {
+  try {
+    return typeof window==="undefined"?undefined:window.localStorage;
+  } catch {
+    return undefined;
+  }
+}
+'''
+          if old in text:
+            text=text.replace(old,new,1)
+          elif new not in text:
+            raise SystemExit('runtimeStorage target changed')
+          path.write_text(text)
+          PY
+      - name: Verify persistence isolation and restart behavior
+        run: |
+          npx tsx --test tests/ui/connectedActorArtifactReconnectProduction.test.ts
+          npx tsx --test tests/ui/installedCommonPlayPropertyModifierProduction.test.ts
+          npx tsc --noEmit
+          node scripts/check-v1-mechanism-coverage.mjs
+      - name: Commit verified fix
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -f .github/workflows/c9-turn-runtime-browser-storage-7130.yml
+          git add src/app/turnRuntimeSessionRegistry.ts .github/workflows/c9-turn-runtime-browser-storage-7130.yml
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "fix(c9): scope local runtime persistence to browser"
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
