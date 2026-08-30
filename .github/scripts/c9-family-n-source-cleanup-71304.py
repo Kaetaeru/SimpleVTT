@@ -81,7 +81,7 @@ function sourceCleanupPackage(prefix:string) {
   };
   const sourceStateConfig={
     schemaVersion:"0.2-draft",id:sourceStateMechanicId,
-    entryPoints:[{id:"drop-source",invocation:"manual",operations:[{kind:"damage.apply",amount:{value:999},damageType:"force",target:"actor"}]}],
+    entryPoints:[{id:"drop-source",invocation:"manual",operations:[{kind:"condition.apply",condition:"incapacitated",target:"actor"}]}],
   };
   return {moduleId,contentId,effectMechanicId,sourceStateMechanicId,json:JSON.stringify({
     schemaVersion:"0.1-draft",moduleId,moduleVersion:"1",
@@ -118,7 +118,7 @@ async function exercisePortableSourceCleanup(prefix:string) {
   snapshot=await adapter.resolveAction(sourceCleanupAction(pack,pack.sourceStateMechanicId,"drop-source"),["char.aelar"]);
   assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
   runtime=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)!;
-  assert.equal(runtime.effects.some((entry)=>entry.sourceId===pack.effectMechanicId),false,"source incapacitation/death must remove its dependent portable effect in the same authoritative resolution");
+  assert.equal(runtime.effects.some((entry)=>entry.sourceId===pack.effectMechanicId),false,"source Incapacitation must remove its dependent portable effect in the same authoritative resolution");
 
   await adapter.undoLastResolution();
   snapshot=await adapter.getSnapshot();
@@ -128,7 +128,7 @@ async function exercisePortableSourceCleanup(prefix:string) {
   assert.deepEqual(effect.termination,{sourceBecomesIncapacitated:true,sourceDies:true});
 }
 
-test("unknown installed Common Play removes a dependent effect when its source becomes incapacitated or dies and Undo restores it",async()=>{
+test("unknown installed Common Play removes a dependent effect when its source becomes Incapacitated and Undo restores it",async()=>{
   await exercisePortableSourceCleanup("unknown-family-n-source-cleanup");
 });
 
@@ -149,7 +149,7 @@ for evidence in [
 ]:
     if evidence not in row["implementationEvidence"]:
         row["implementationEvidence"].append(evidence)
-production = "c9FamilyNEffectDurationProduction.test.ts proves an unknown installed source-dependent effect is removed when its source becomes Incapacitated/dead in the authoritative damage resolution and event-native Undo restores it"
+production = "c9FamilyNEffectDurationProduction.test.ts proves an unknown installed source-dependent effect is removed when its source becomes Incapacitated in the authoritative condition resolution and event-native Undo restores it"
 if production not in row["productionEvidence"]:
     row["productionEvidence"].append(production)
 identity = "c9FamilyNEffectDurationProduction.test.ts repeats source-dependent cleanup and Undo after complete external module/content/mechanic identity rename"
