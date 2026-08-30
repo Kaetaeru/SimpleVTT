@@ -1,0 +1,91 @@
+name: C9 Family A Non-Active Actor Properties 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - ".github/workflows/c9-family-a-nonactive-properties-71304.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - name: Reconcile latest branch
+        run: git pull --ff-only origin agent/c9-gate-n-coverage-reconciliation
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Patch non-active actor profile property projection
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          artifact=Path('src/domain/resolutionArtifactOps.ts')
+          text=artifact.read_text()
+          old='''function actorCombatant(artifact:ReturnType<typeof createRuntimeArtifact>) {\n  const actor=artifact.actor!;\n  const maximum=Number(actor.properties["hp.maximum"]);\n  const speed=Number(actor.properties["movement.walk"]);\n  return {\n    id:actor.combatantId,\n    baseSpeed:speed,\n    life:{'''
+          new='''function actorCombatant(artifact:ReturnType<typeof createRuntimeArtifact>) {\n  const actor=artifact.actor!;\n  const maximum=Number(actor.properties["hp.maximum"]);\n  const speed=Number(actor.properties["movement.walk"]);\n  const baseProperties:Record<string,number>={};\n  for(const [property,value] of Object.entries(actor.properties)) {\n    if(typeof value==="number"&&Number.isFinite(value)) baseProperties[property]=value;\n  }\n  return {\n    id:actor.combatantId,\n    baseSpeed:speed,\n    baseProperties,\n    life:{'''
+          if old not in text:
+              raise SystemExit('resolutionArtifactOps actorCombatant anchor changed')
+          artifact.write_text(text.replace(old,new,1))
+
+          runtime=Path('src/app/installedCommonPlayRuntimeAdapter.ts')
+          text=runtime.read_text()
+          old='''  if(internal.activeCharacter.id!==actorId) {\n    return {\n      "movement.walk":resolveRuntimeProfileProperty(\n        state.effects,actorId,"movement.walk",{"movement.walk":actorState.baseSpeed},\n      ).value,\n    };\n  }\n  const character=internal.activeCharacter;\n  const inputs:Record<string,number>={\n    "ability.str.score":character.abilities.str,\n    "ability.dex.score":character.abilities.dex,\n    "ability.con.score":character.abilities.con,\n    "ability.int.score":character.abilities.int,\n    "ability.wis.score":character.abilities.wis,\n    "ability.cha.score":character.abilities.cha,\n    "progression.character.level":character.level,\n    "proficiency.bonus":character.proficiencyBonus,\n    "defense.ac":character.ac,\n    "movement.walk":actorState.baseSpeed,\n    "hp.current":actorState.life.hp.current,\n    "hp.maximum":actorState.life.hp.maximum,\n    "hp.temporary":actorState.life.hp.temporary,\n  };\n  const projected={...inputs};\n  for(const [property,definition] of Object.entries(SIMPLEVTT_APP_RULES_PROFILE.properties)) {\n    if(!Number.isFinite(inputs[property])&&!definition.formula) continue;\n    projected[property]=resolveRuntimeProfileProperty(state.effects,actorId,property,inputs).value;\n  }\n  return projected;'''
+          new='''  const character=internal.activeCharacter.id===actorId?internal.activeCharacter:undefined;\n  const inputs:Record<string,number>={\n    ...(character?{\n      "ability.str.score":character.abilities.str,\n      "ability.dex.score":character.abilities.dex,\n      "ability.con.score":character.abilities.con,\n      "ability.int.score":character.abilities.int,\n      "ability.wis.score":character.abilities.wis,\n      "ability.cha.score":character.abilities.cha,\n      "progression.character.level":character.level,\n      "proficiency.bonus":character.proficiencyBonus,\n      "defense.ac":character.ac,\n    }:actorState.baseProperties??{}),\n    "movement.walk":actorState.baseSpeed,\n    "hp.current":actorState.life.hp.current,\n    "hp.maximum":actorState.life.hp.maximum,\n    "hp.temporary":actorState.life.hp.temporary,\n  };\n  const projected={...inputs};\n  for(const [property,definition] of Object.entries(SIMPLEVTT_APP_RULES_PROFILE.properties)) {\n    if(!Number.isFinite(inputs[property])&&!definition.formula) continue;\n    try {\n      projected[property]=resolveRuntimeProfileProperty(state.effects,actorId,property,inputs).value;\n    } catch(error) {\n      if(!character&&error instanceof Error&&error.message.startsWith("unresolved property reference: ")) continue;\n      throw error;\n    }\n  }\n  return projected;'''
+          if old not in text:
+              raise SystemExit('installedCommonPlayRuntimeAdapter profile-property anchor changed')
+          runtime.write_text(text.replace(old,new,1))
+
+          test=Path('tests/ui/installedCommonPlayLoweredFamiliesProduction.test.ts')
+          text=test.read_text()
+          old='''  const actorAction=installedCommonPlayActionId({catalogId:catalogQualifiedId(`${prefix}.actor-action`,`${prefix}.module`,"1"),mechanicId:`${prefix}.actor-action`,entryPointId:"bite"});\n  return {schemaVersion:"0.2-draft",id:`${prefix}.artifacts`,entryPoints:[{id:"create-artifacts",invocation:"manual",operations:[\n'''
+          new='''  const actorAction=installedCommonPlayActionId({catalogId:catalogQualifiedId(`${prefix}.actor-action`,`${prefix}.module`,"1"),mechanicId:`${prefix}.actor-action`,entryPointId:"bite"});\n  const actorPropertyAction=installedCommonPlayActionId({catalogId:catalogQualifiedId(`${prefix}.actor-action`,`${prefix}.module`,"1"),mechanicId:`${prefix}.actor-action`,entryPointId:"stride"});\n  return {schemaVersion:"0.2-draft",id:`${prefix}.artifacts`,entryPoints:[{id:"create-artifacts",invocation:"manual",operations:[\n'''
+          if old not in text:
+              raise SystemExit('artifact actor action anchor changed')
+          text=text.replace(old,new,1)
+          old='''    {id:"summon",artifactKind:"actor",duration,lifetime,initialState:{combatantId:`${prefix}.summoned`,statDefinitionId:`${prefix}.stat`,ownerId:"actor",controllerId:"actor",side:"ally",initiative:"shared",properties:{"presentation.name":"Unknown Summon","defense.ac":13,"hp.maximum":10,"movement.walk":30},actionDefinitionIds:[actorAction],resources:[]}},'''
+          new='''    {id:"summon",artifactKind:"actor",duration,lifetime,initialState:{combatantId:`${prefix}.summoned`,statDefinitionId:`${prefix}.stat`,ownerId:"actor",controllerId:"actor",side:"ally",initiative:"shared",properties:{"presentation.name":"Unknown Summon","defense.ac":13,"hp.maximum":10,"movement.walk":30,"ability.str.score":14},actionDefinitionIds:[actorAction,actorPropertyAction],resources:[]}},'''
+          if old not in text:
+              raise SystemExit('summon artifact anchor changed')
+          text=text.replace(old,new,1)
+          old='''function actorActionConfig(prefix:string) {\n  return {schemaVersion:"0.2-draft",id:`${prefix}.actor-action`,payments:[{kind:"economy",bucket:"action",amount:{value:1},consumeAt:"commit",refundOnCancel:true}],entryPoints:[\n    {id:"bite",invocation:"manual",targeting:{from:"targets",min:1,max:1},test:{kind:"attack-roll",roller:"actor",dc:{value:10}},operations:[{kind:"damage.apply",amount:"1d4+1",damageType:"piercing",target:"target"}]},\n  ]};\n}'''
+          new='''function actorActionConfig(prefix:string) {\n  return {schemaVersion:"0.2-draft",id:`${prefix}.actor-action`,payments:[{kind:"economy",bucket:"action",amount:{value:1},consumeAt:"commit",refundOnCancel:true}],entryPoints:[\n    {id:"bite",invocation:"manual",targeting:{from:"targets",min:1,max:1},test:{kind:"attack-roll",roller:"actor",dc:{value:10}},operations:[{kind:"damage.apply",amount:"1d4+1",damageType:"piercing",target:"target"}]},\n    {id:"stride",invocation:"manual",operations:[{kind:"movement.relocate",mode:"move",movementType:"walk",target:"actor",distance:{ref:"ability.str.modifier"},destinationFact:{id:"summoned-stride-destination",fact:"spatial.legal-destination",subject:"actor",authority:"actor-owner",visibility:"actor-and-dm",unknownPolicy:"request-authority"}}]},\n  ]};\n}'''
+          if old not in text:
+              raise SystemExit('actorActionConfig anchor changed')
+          text=text.replace(old,new,1)
+          anchor='''test("summoned Actor action and Undo converge through Host-authoritative connected events",async()=>{'''
+          addition='''test("summoned Actor resolves derived profile refs from source-owned properties without identity dispatch",async()=>{\n  const run=async(prefix:string)=>{\n    const adapter=new MockAdapter();\n    const {action}=await install(adapter,prefix);\n    await adapter.resolveAction(action(3,"create-artifacts"),["char.aelar"]);\n    const actorId=`${prefix}.summoned`;\n    await adapter.setCurrentActor(actorId);\n    let snapshot=await adapter.getSnapshot();\n    const stride=snapshot.scene.actionsByActor[actorId]?.find((entry)=>entry.summary.endsWith(" · stride"));\n    assert.ok(stride,JSON.stringify(snapshot.scene.actionsByActor[actorId]));\n    const before=snapshot.scene.economyByActor[actorId]!.movement;\n    await adapter.resolveAction(stride.id,[actorId]);\n    snapshot=await adapter.getSnapshot();\n    assert.equal(before-snapshot.scene.economyByActor[actorId]!.movement,2,JSON.stringify(snapshot.resolution));\n    assert.equal(snapshot.resolution?.stage,"complete");\n    return before-snapshot.scene.economyByActor[actorId]!.movement;\n  };\n  assert.equal(await run("unknown-summoned-profile-a"),2);\n  assert.equal(await run("renamed-summoned-profile-b"),2);\n});\n\n'''
+          if anchor not in text:
+              raise SystemExit('summoned connected test anchor changed')
+          test.write_text(text.replace(anchor,addition+anchor,1))
+          PY
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - name: Verify unknown non-active actor property production
+        run: npx tsx --test tests/ui/installedCommonPlayLoweredFamiliesProduction.test.ts
+      - name: Verify TypeScript
+        run: npx tsc --noEmit
+      - name: Verify C9 coverage structure
+        run: node scripts/check-v1-mechanism-coverage.mjs
+      - name: Commit verified patch and retire temporary workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm .github/workflows/c9-family-a-nonactive-properties-71304.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/domain/resolutionArtifactOps.ts src/app/installedCommonPlayRuntimeAdapter.ts tests/ui/installedCommonPlayLoweredFamiliesProduction.test.ts .github/workflows/c9-family-a-nonactive-properties-71304.yml
+          git commit -m "feat(c9): project non-active actor profile properties"
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
