@@ -1,0 +1,74 @@
+name: C9 Family E Relation Selector Retry
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-e-relation-selector-retry.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Reuse relation selector patch
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          source=Path('.github/workflows/c9-family-e-relation-selector.yml').read_text(encoding='utf-8')
+          marker="          python3 - <<'PY'\n"
+          start=source.index(marker)+len(marker)
+          end=source.index("\n          PY\n",start)
+          block=source[start:end]
+          script='\n'.join(line[10:] if line.startswith('          ') else line for line in block.splitlines())+'\n'
+          Path('/tmp/c9-relation-selector.py').write_text(script,encoding='utf-8')
+          PY
+          python3 /tmp/c9-relation-selector.py
+      - name: Normalize operation compilation rejection
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path=Path('src/app/installedCommonPlayRuntimeAdapter.ts')
+          text=path.read_text(encoding='utf-8')
+          old='''    const pending=compileCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,state,lowered.definition,operationExecutionInput(internal,actionId,action,prepared,resolutionId,interactionId));\n    const automaticPending=appendCommonPlayDamageTakenTriggers(\n      state,await installedPersistentEffectDefinitions(adapter),pending,actorEntity.kind==="character"?"character":"monster",\n    );\n    committed=appendCommonPlaySemanticOutcomeEvents(\n      automaticPending,\n      resolvePendingResolution(SIMPLEVTT_APP_RULES_PROFILE,state,automaticPending),\n    );'''
+          new='''    try {\n      const pending=compileCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,state,lowered.definition,operationExecutionInput(internal,actionId,action,prepared,resolutionId,interactionId));\n      const automaticPending=appendCommonPlayDamageTakenTriggers(\n        state,await installedPersistentEffectDefinitions(adapter),pending,actorEntity.kind==="character"?"character":"monster",\n      );\n      committed=appendCommonPlaySemanticOutcomeEvents(\n        automaticPending,\n        resolvePendingResolution(SIMPLEVTT_APP_RULES_PROFILE,state,automaticPending),\n      );\n    } catch(error) {\n      return {status:"rejected" as const,error:error instanceof Error?error.message:String(error),snapshot:await internal.getSnapshot()};\n    }'''
+          count=text.count(old)
+          if count!=1: raise SystemExit(f'expected one operation compilation block, got {count}')
+          path.write_text(text.replace(old,new,1),encoding='utf-8')
+          PY
+      - name: Generate content catalogs
+        run: npm run generate:content
+      - name: Verify relation selector slice
+        run: >-
+          npx tsx --test
+          tests/domain/commonPlayTargetingRuntime.test.ts
+          tests/ui/installedCommonPlayProductionRuntime.test.ts
+      - name: Verify legacy execution boundary
+        run: node scripts/check-legacy-execution-boundary.mjs
+      - name: Typecheck application
+        run: npx tsc --noEmit
+      - name: Commit verified change and remove helpers
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm -f .github/workflows/c9-family-e-relation-selector.yml .github/workflows/c9-family-e-relation-selector-retry.yml
+          git add src/domain/commonPlayOperationRuntime.ts src/app/installedCommonPlayRuntimeAdapter.ts tests/domain/commonPlayTargetingRuntime.test.ts tests/ui/installedCommonPlayProductionRuntime.test.ts
+          git commit -m "feat(c9): validate portable relation selectors"
+          git fetch origin agent/c9-gate-n-coverage-reconciliation
+          git rebase origin/agent/c9-gate-n-coverage-reconciliation
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
