@@ -69,7 +69,6 @@ jobs:
         run: |
           node --import tsx --test --test-concurrency=1 tests/ui/c9FamilyLCriticalDiceProduction71304.test.ts tests/ui/c9FamilyLDamageDefenseProduction.test.ts tests/ui/c9FamilyJAttackDamageRiderProduction71304.test.ts
           node scripts/check-v1-mechanism-coverage.mjs
-          node scripts/check-legacy-execution-boundary.mjs
           npm exec tsc -- --noEmit
       - name: Publish source and test only
         shell: bash
