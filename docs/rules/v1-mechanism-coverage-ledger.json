@@ -522,7 +522,7 @@
         "conditions.ts",
         "sessionStatusEffectEventRuntimeAdapter.ts"
       ],
-      "currentState": "Generic status and creature-type awareness paths are production-proven; authoritative full sensing relation model remains incomplete",
+      "currentState": "Generic status and creature-type awareness paths are production-proven. The standard sensing fact vocabulary now carries can-see, can-hear, detected, light, obscurement, and Hidden through provider/manual authority, and sense.can-see is verified through connected owner routing/reconnect without content identity dispatch. Full sensing-relation composition across senses, lighting, obscurement, Hidden, and reveal/search behavior remains incomplete.",
       "requiredSemantics": [
         "normal sight",
         "lighting",
@@ -542,26 +542,31 @@
       "disposition": "INCOMPLETE",
       "implementationEvidence": [
         "sessionStatusEffectEventRuntimeAdapter.ts",
-        "effectGrantActionRuntimeAdapter.ts"
+        "effectGrantActionRuntimeAdapter.ts",
+        "commonPlaySpatialFactRuntime.ts COMMON_PLAY_STANDARD_FACTS defines typed sense.can-see/can-hear/detected/light/obscurement/hidden provider/manual authority"
       ],
       "productionEvidence": [
         "connectedProjectedCharacterCunningHideResolution.test.ts",
         "connectedProjectedCharacterCunningDisengageResolution.test.ts",
-        "paladinDivineSenseActionRuntime.test.ts"
+        "paladinDivineSenseActionRuntime.test.ts",
+        "9296b5dfff05127b04b29d8b28b581785f71e896 test(c9): prove standard sensing fact authority",
+        "C9 Family H Standard Sensing Facts run 33310103344: standard sensing provider facts, connected owner-authority routing/reconnect, legacy boundary, and tsc --noEmit passed"
       ],
       "identityInvarianceEvidence": [
         "sessionStatusEffectEventRuntime.test.ts",
-        "effectGrantActionRuntime.test.ts"
+        "effectGrantActionRuntime.test.ts",
+        "commonPlaySpatialFactRuntime.test.ts standard sensing facts return identical semantics for unrelated external resolution identities"
       ],
       "connectedEvidenceIfRelevant": [
         "connectedProjectedCharacterCunningHideResolution.test.ts",
         "connectedProjectedCharacterCunningDisengageResolution.test.ts",
-        "paladinDivineSenseActionRuntime.test.ts"
+        "paladinDivineSenseActionRuntime.test.ts",
+        "connectedCommonPlayAuthorityFactRouting.test.ts and connectedCommonPlayAuthorityFactDispatch.test.ts use standard sense.can-see through owner-private request, stale/duplicate rejection, reconnect/rebind resume, and Host normalization"
       ],
       "persistenceEvidenceIfRelevant": [],
       "remainingNamedSeams": [
         "Rogue action projection",
-        "authoritative sensing relation",
+        "full sensing relation composition across sense types, lighting, obscurement, Invisible/Hidden, detection/search, and reveal remains incomplete",
         "live sanctity facts"
       ],
       "connectedRelevant": true,
