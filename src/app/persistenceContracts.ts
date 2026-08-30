@@ -4,6 +4,7 @@ import type { AbilityScores, CharacterSheet } from "./contracts";
 import type { ProgressionClassTrack } from "../domain/progression";
 import type { DruidWildShapeForm } from "../domain/druidWildShape";
 import type { CharacterCreationAuthoringSourceV1 } from "./characterCreationAuthoringSource";
+import type { SemanticPredicate } from "../domain/profileEngine";
 
 export const CHARACTER_LIBRARY_SCHEMA_ID = "simplevtt.character-library" as const;
 export const CHARACTER_LIBRARY_SCHEMA_VERSION = 1 as const;
@@ -68,6 +69,11 @@ export interface CharacterItemSourceReferenceV1 {
   nameEn?:string;
   kind?:"equipment"|"consumable"|"magic";
   attunementRequired?:boolean;
+  attunementPolicy?:{
+    prerequisite?:SemanticPredicate;
+    cursed?:boolean;
+    loss?:{onDeath?:boolean;maximumDistanceFeet?:number;durationSeconds?:number};
+  };
   chargeMaximum?:number;
   passiveEffects?:string[];
   grantedActionIds?:string[];

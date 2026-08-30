@@ -52,7 +52,7 @@ function InventoryItem({item,actions,pending,onEquip,onAttune}:{
       <section className="character-inventory-provenance"><small>출처 / 근거</small>{item.provenance.map((source)=><span key={source}>{source}</span>)}</section>
       <div className="character-inventory-operations">
         {item.kind!=="consumable"&&<button type="button" disabled={pending} onClick={()=>void onEquip()}>{pending?"…":item.equipped?"장착 해제":"장착"}</button>}
-        {item.attunementRequired&&<button type="button" disabled={pending} onClick={()=>void onAttune()}>{pending?"…":item.attuned?"조율 해제":"조율"}</button>}
+        {item.attunementRequired&&<button type="button" disabled={pending} onClick={()=>void onAttune()}>{pending?"…":item.attuned?"조율 해제":"짧은 휴식으로 조율"}</button>}
         {granted.length>0&&<span>실제 사용과 수량·충전 소비는 세션 Item 행동에서 한 번에 처리됩니다.</span>}
       </div>
     </div>}

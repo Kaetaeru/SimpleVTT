@@ -1799,7 +1799,7 @@
         "dnd.srd-5.2.1.profile.json: item activation-attunement capability",
         "inventory item state"
       ],
-      "currentState": "Activation state exists; rule-complete lifecycle/process missing",
+      "currentState": "Magic-item attunement now uses the shared Common Play inventory authority from the production Character UI. Attunement is a durable Short Rest action with prerequisite, capacity, exclusive-owner, cursed-unattunement, benefit activation, and rule-driven loss semantics; item charge/recharge/destruction remain on the same generic inventory revision transaction. Source policy and runtime state survive Character restart and Host reconstruction without item-instance identity dispatch.",
       "requiredSemantics": [
         "attune/unattune",
         "Short Rest process",
@@ -1813,15 +1813,28 @@
         "destruction/consumption"
       ],
       "transactionDomain": "Durable Character/item transaction and rest activity",
-      "disposition": "INCOMPLETE",
-      "implementationEvidence": [],
-      "productionEvidence": [],
-      "identityInvarianceEvidence": [],
-      "connectedEvidenceIfRelevant": [],
-      "persistenceEvidenceIfRelevant": [],
-      "remainingNamedSeams": [
-        "named item activation"
+      "disposition": "IMPLEMENTED",
+      "implementationEvidence": [
+        "commonPlayInventoryRuntime.ts owns revision-safe attune/unattune, completed-Short-Rest requirement, semantic prerequisites, capacity, exclusive owner, cursed release, benefit activation, transfer cleanup, rule-driven loss, charges/recharge, and destruction",
+        "commonPlayItemInventoryProjection.ts maps production ItemInstanceVm state and durable attunement policy into the generic inventory authority and maps the committed result back without item definition dispatch",
+        "characterLibraryPersistence.ts and CharacterSessionProjectionV1 preserve attunement source policy separately from durable attuned runtime state"
       ],
+      "productionEvidence": [
+        "tests/ui/c9FamilyYAttunementProduction.test.ts proves the app projection rejects missing Short Rest, failed prerequisite, over-capacity, and cursed unattunement, then applies rule-driven loss",
+        "tests/ui/c9FamilyYAttunementProduction.test.ts proves the production Character inventory action performs completed-Short-Rest attunement through MockAdapter and exposes the process in Activity/UI",
+        "tests/domain/commonPlayInventoryRuntime.test.ts proves exclusive owner, benefit activation, transfer cleanup, charge/recharge, destruction, and atomic inventory rollback"
+      ],
+      "identityInvarianceEvidence": [
+        "tests/ui/c9FamilyYAttunementProduction.test.ts repeats semantic projection and production Short Rest/persistence/Host reconstruction with unrelated renamed item instance identities"
+      ],
+      "connectedEvidenceIfRelevant": [
+        "tests/ui/c9FamilyYAttunementProduction.test.ts proves the validated Character SessionProjection reconstructs the attuned item and policy into the Host-owned connected inventory UI"
+      ],
+      "persistenceEvidenceIfRelevant": [
+        "tests/ui/c9FamilyYAttunementProduction.test.ts proves attuned runtime state and rule policy survive a fresh MemoryCharacterLibraryStore adapter restart",
+        "tests/ui/characterLibraryPersistence.test.ts proves source/runtime item generations reconstruct independently and reject stale/corrupt writes"
+      ],
+      "remainingNamedSeams": [],
       "connectedRelevant": true,
       "persistenceRelevant": true
     },

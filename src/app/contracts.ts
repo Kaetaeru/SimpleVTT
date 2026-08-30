@@ -3,7 +3,7 @@ import type { ExtraActionGrant, ExtraAttackGrant } from "../domain/turnEconomy";
 import type { DurationSpec, EffectTermination } from "../domain/effects";
 import type { ConditionId } from "../domain/conditions";
 import type { ModifierContribution } from "../domain/d20";
-import type { RollStateContribution } from "../domain/profileEngine";
+import type { RollStateContribution, SemanticPredicate } from "../domain/profileEngine";
 
 export type AppRole = "player" | "dm";
 export type SessionMode = "freeform" | "initiative";
@@ -67,6 +67,11 @@ export interface ItemInstanceVm {
   wieldSlot?: "main-hand" | "off-hand" | "two-hand";
   attunementRequired?: boolean;
   attuned?: boolean;
+  attunementPolicy?: {
+    prerequisite?: SemanticPredicate;
+    cursed?: boolean;
+    loss?: { onDeath?:boolean; maximumDistanceFeet?:number; durationSeconds?:number };
+  };
   charges?: { current: number; max: number };
   passiveEffects: string[];
   grantedActionIds: string[];
