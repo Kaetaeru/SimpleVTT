@@ -49,7 +49,7 @@ export interface CommonPlayAllocationDefinition {
 export interface CommonPlayConsentInteraction {
   id:string;
   kind:"consent";
-  responder:"actor"|"target"|"actor-owner"|"target-owner";
+  responder:"actor"|"target"|"actor-owner"|"target-owner"|"dm"|"host";
   mode:"blocking";
   input:{type:"boolean"};
   revalidate:"always"|"if-revision-changed";
@@ -457,7 +457,7 @@ function parseConsentInteraction(value:unknown,label:string):CommonPlayConsentIn
   const interaction=object(value,label);
   supportedKeys(interaction,INTERACTION_KEYS,label);
   if(interaction.kind!=="consent") throw new DomainEvaluationError(`${label}.kind must be consent for portable Common Play interaction`);
-  if(interaction.responder!=="actor"&&interaction.responder!=="target"&&interaction.responder!=="actor-owner"&&interaction.responder!=="target-owner") throw new DomainEvaluationError(`${label}.responder must be actor, target, actor-owner, or target-owner for portable Common Play interaction`);
+  if(interaction.responder!=="actor"&&interaction.responder!=="target"&&interaction.responder!=="actor-owner"&&interaction.responder!=="target-owner"&&interaction.responder!=="dm"&&interaction.responder!=="host") throw new DomainEvaluationError(`${label}.responder must be actor, target, actor-owner, target-owner, dm, or host for portable Common Play interaction`);
   if(interaction.mode!=="blocking") throw new DomainEvaluationError(`${label}.mode must be blocking for portable Common Play interaction`);
   const input=object(interaction.input,`${label}.input`);
   supportedKeys(input,INTERACTION_INPUT_KEYS,`${label}.input`);

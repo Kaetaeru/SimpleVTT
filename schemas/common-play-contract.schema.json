@@ -1703,28 +1703,56 @@
       "oneOf": [
         {
           "type": "object",
-          "required": ["kind", "actor"],
+          "required": [
+            "kind",
+            "actor"
+          ],
           "properties": {
-            "kind": {"enum": ["turn-start", "turn-end"]},
-            "actor": {"enum": ["owner", "other"]}
+            "kind": {
+              "enum": [
+                "turn-start",
+                "turn-end"
+              ]
+            },
+            "actor": {
+              "enum": [
+                "owner",
+                "other"
+              ]
+            }
           },
           "additionalProperties": false
         },
         {
           "type": "object",
-          "required": ["kind", "actor"],
+          "required": [
+            "kind",
+            "actor"
+          ],
           "properties": {
-            "kind": {"const": "after-turn"},
-            "actor": {"const": "other"}
+            "kind": {
+              "const": "after-turn"
+            },
+            "actor": {
+              "const": "other"
+            }
           },
           "additionalProperties": false
         },
         {
           "type": "object",
-          "required": ["kind", "count"],
+          "required": [
+            "kind",
+            "count"
+          ],
           "properties": {
-            "kind": {"const": "initiative-count"},
-            "count": {"type": "integer", "minimum": 0}
+            "kind": {
+              "const": "initiative-count"
+            },
+            "count": {
+              "type": "integer",
+              "minimum": 0
+            }
           },
           "additionalProperties": false
         }
@@ -1732,25 +1760,48 @@
     },
     "specialActionOption": {
       "type": "object",
-      "required": ["id", "cost", "entryPointId"],
+      "required": [
+        "id",
+        "cost",
+        "entryPointId"
+      ],
       "properties": {
-        "id": {"$ref": "#/$defs/stableId"},
-        "cost": {"type": "integer", "minimum": 0},
-        "entryPointId": {"$ref": "#/$defs/stableId"}
+        "id": {
+          "$ref": "#/$defs/stableId"
+        },
+        "cost": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "entryPointId": {
+          "$ref": "#/$defs/stableId"
+        }
       },
       "additionalProperties": false
     },
     "specialAction": {
       "type": "object",
-      "required": ["id", "timing", "options"],
+      "required": [
+        "id",
+        "timing",
+        "options"
+      ],
       "properties": {
-        "id": {"$ref": "#/$defs/stableId"},
-        "timing": {"$ref": "#/$defs/specialTimingWindow"},
-        "poolResourceId": {"$ref": "#/$defs/stableId"},
+        "id": {
+          "$ref": "#/$defs/stableId"
+        },
+        "timing": {
+          "$ref": "#/$defs/specialTimingWindow"
+        },
+        "poolResourceId": {
+          "$ref": "#/$defs/stableId"
+        },
         "options": {
           "type": "array",
           "minItems": 1,
-          "items": {"$ref": "#/$defs/specialActionOption"}
+          "items": {
+            "$ref": "#/$defs/specialActionOption"
+          }
         }
       },
       "additionalProperties": false

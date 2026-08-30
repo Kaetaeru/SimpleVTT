@@ -1026,9 +1026,12 @@ MockAdapter.prototype.resolveAction=async function resolveCommonPlayProductionAc
 
   const actionName=prepared.projectedAction?.name||action.nameKo||action.nameEn;
   const selectedTargetResponder=interaction.responder==="target"||interaction.responder==="target-owner";
-  const interactionResponder=selectedTargetResponder
-    ?prepared.selectedTargets.length===1?prepared.selectedTargets[0]:undefined
-    :prepared.actorEntity;
+  const authorityResponder=interaction.responder==="dm"||interaction.responder==="host";
+  const interactionResponder=authorityResponder
+    ?{id:`authority:${interaction.responder}`,name:interaction.responder==="dm"?"DM":"Host"}
+    :selectedTargetResponder
+      ?prepared.selectedTargets.length===1?prepared.selectedTargets[0]:undefined
+      :prepared.actorEntity;
   if(!interactionResponder) {
     return failAction(prepared.internal,prepared.actor.id,actionId,actionName,targetIds,resolutionId,`${interaction.responder} interaction requires exactly one selected target`);
   }
