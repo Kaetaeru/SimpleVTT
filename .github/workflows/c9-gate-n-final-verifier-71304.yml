@@ -1,5 +1,5 @@
 name: C9 Gate N Final Verifier 71304
-# final verifier rerun after latest concurrent family reconciliation
+# final verifier rerun after ledger reached zero INCOMPLETE families
 
 on:
   push:
