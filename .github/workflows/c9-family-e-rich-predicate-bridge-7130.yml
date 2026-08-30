@@ -23,15 +23,25 @@ jobs:
           node-version: 22
       - name: Install dependencies
         run: npm install --no-audit --no-fund
-      - name: Validate authored rich selectors and add production proof
+      - name: Bridge authoritative rich selector candidates into production
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
 
-          definition=Path('src/domain/commonPlayDefinitionRuntime.ts')
-          text=definition.read_text(encoding='utf-8')
+          def replace_once(path, old, new):
+              p=Path(path)
+              text=p.read_text(encoding='utf-8')
+              if new in text:
+                  return
+              count=text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{path}: expected one match, got {count}: {old[:120]!r}')
+              p.write_text(text.replace(old,new,1),encoding='utf-8')
+
+          definition='src/domain/commonPlayDefinitionRuntime.ts'
+          p=Path(definition); text=p.read_text(encoding='utf-8')
           selector_import='import { parseCommonPlaySelector } from "./commonPlaySelectorRuntime";\n'
           if selector_import not in text:
               marker='import { DomainEvaluationError } from "./profileEngine";\n'
@@ -42,17 +52,42 @@ jobs:
               marker='    if(!Array.isArray(entry.operations)) throw new DomainEvaluationError(`${label}.entryPoints[${index}].operations must be an array`);\n'
               if text.count(marker)!=1: raise SystemExit('entry point validation marker mismatch')
               text=text.replace(marker,marker+validation,1)
-          definition.write_text(text,encoding='utf-8')
+          p.write_text(text,encoding='utf-8')
 
-          production=Path('tests/ui/installedCommonPlayProductionRuntime.test.ts')
-          text=production.read_text(encoding='utf-8')
+          runtime='src/domain/commonPlayOperationRuntime.ts'
+          replace_once(runtime,
+              'import { parseCommonPlaySelector, resolveCommonPlaySelector, type CommonPlaySelector } from "./commonPlaySelectorRuntime";\n',
+              'import { parseCommonPlaySelector, resolveCommonPlaySelector, type CommonPlaySelector, type CommonPlaySelectorCandidate } from "./commonPlaySelectorRuntime";\n')
+          replace_once(runtime,
+              '  targetingTargets?:TargetingFactInput[];\n',
+              '  targetingTargets?:TargetingFactInput[];\n  targetingCandidates?:CommonPlaySelectorCandidate[];\n')
+          replace_once(runtime,
+              '      candidates:input.targetingTargets.map(targetingSelectorCandidate),\n',
+              '      candidates:input.targetingCandidates??input.targetingTargets.map(targetingSelectorCandidate),\n')
+
+          adapter='src/app/installedCommonPlayRuntimeAdapter.ts'
+          replace_once(adapter,
+              'import { allocationEntriesFromTargetSequence, resolveCommonPlayAllocation } from "../domain/commonPlayAllocationRuntime";\n',
+              'import { allocationEntriesFromTargetSequence, resolveCommonPlayAllocation } from "../domain/commonPlayAllocationRuntime";\nimport type { CommonPlaySelectorCandidate } from "../domain/commonPlaySelectorRuntime";\n')
+          p=Path(adapter); text=p.read_text(encoding='utf-8')
+          helper='''function commonPlaySelectorCandidate(actor:SceneVm["entities"][number],target:SceneVm["entities"][number]):CommonPlaySelectorCandidate {\n  const targeting=commonPlayTargetFact(actor,target);\n  return {\n    id:target.id,\n    targeting,\n    properties:{\n      relation:targeting.relation,\n      name:target.name, side:target.side, kind:target.kind,\n      hp:target.hp, maxHp:target.maxHp, tempHp:target.tempHp, ac:target.ac, initiative:target.initiative,\n      status:[...target.status], resistances:[...target.resistances], immunities:[...target.immunities], vulnerabilities:[...target.vulnerabilities],\n    },\n  };\n}\n\n'''
+          if 'function commonPlaySelectorCandidate(' not in text:
+              marker='function damageDiceFaces(\n'
+              if text.count(marker)!=1: raise SystemExit('adapter helper insertion marker mismatch')
+              text=text.replace(marker,helper+marker,1)
+              p.write_text(text,encoding='utf-8')
+          replace_once(adapter,
+              '    targetingTargets:entryPoint.targeting?selectedTargets.map((target)=>commonPlayTargetFact(actorEntity,target)):undefined,\n',
+              '    targetingTargets:entryPoint.targeting?selectedTargets.map((target)=>commonPlayTargetFact(actorEntity,target)):undefined,\n    targetingCandidates:entryPoint.targeting?internal.scene.entities.filter((target)=>prepared.state.combatants[target.id]).map((target)=>commonPlaySelectorCandidate(actorEntity,target)):undefined,\n')
+
+          production='tests/ui/installedCommonPlayProductionRuntime.test.ts'
+          p=Path(production); text=p.read_text(encoding='utf-8')
           title='test("unknown installed Common Play rich predicate filters authoritative scene properties without identity dispatch",async()=>{'
           if title not in text:
               marker='test("unknown installed Common Play relation selector rejects an ineligible target before production commit",async()=>{'
               if text.count(marker)!=1: raise SystemExit('production relation test marker mismatch')
-              addition='''test("unknown installed Common Play rich predicate filters authoritative scene properties without identity dispatch",async()=>{\n  const adapter=new MockAdapter();\n  const payload=JSON.parse(targetingPackagePayload()) as any;\n  payload.content[0].mechanics[0].config.entryPoints[0].targeting={\n    from:"targets",where:{op:"contains",left:{ref:"status"},right:{value:"중독됨"}},min:1,max:1,\n  };\n  setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());\n  const preview=await adapter.previewContentImport(JSON.stringify(payload));\n  assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));\n  await adapter.activateContentImport();\n  const actionId=installedCommonPlayActionId({\n    catalogId:catalogQualifiedId(TARGETING_IDENTITY.contentId,TARGETING_IDENTITY.moduleId,"1"),\n    mechanicId:TARGETING_IDENTITY.mechanicId,entryPointId:TARGETING_IDENTITY.entryPointId,\n  });\n  injureSceneEntity(adapter,"combatant.goblin-a",10);\n  injureSceneEntity(adapter,"combatant.goblin-b",10);\n  await adapter.startInitiative();\n  await adapter.setCurrentActor("char.aelar");\n  let snapshot=await adapter.getSnapshot();\n  const ineligibleBefore=snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-b")!.hp;\n  await adapter.resolveAction(actionId,["combatant.goblin-b"]);\n  snapshot=await adapter.getSnapshot();\n  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-b")!.hp,ineligibleBefore);\n\n  const eligibleBefore=snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")!.hp;\n  await adapter.resolveAction(actionId,["combatant.goblin-a"]);\n  snapshot=await adapter.getSnapshot();\n  assert.equal(snapshot.resolution?.stage,"complete");\n  assert.deepEqual(snapshot.resolution?.targetIds,["combatant.goblin-a"]);\n  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")!.hp,eligibleBefore+5);\n});\n\n'''
-              text=text.replace(marker,addition+marker,1)
-          production.write_text(text,encoding='utf-8')
+              addition='''test("unknown installed Common Play rich predicate filters authoritative scene properties without identity dispatch",async()=>{\n  const adapter=new MockAdapter();\n  const payload=JSON.parse(targetingPackagePayload()) as any;\n  payload.content[0].mechanics[0].config.entryPoints[0].targeting={\n    from:"targets",where:{op:"contains",left:{ref:"status"},right:{value:"중독됨"}},min:1,max:1,\n  };\n  setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());\n  const preview=await adapter.previewContentImport(JSON.stringify(payload));\n  assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));\n  await adapter.activateContentImport();\n  const actionId=installedCommonPlayActionId({catalogId:catalogQualifiedId(TARGETING_IDENTITY.contentId,TARGETING_IDENTITY.moduleId,"1"),mechanicId:TARGETING_IDENTITY.mechanicId,entryPointId:TARGETING_IDENTITY.entryPointId});\n  injureSceneEntity(adapter,"combatant.goblin-a",10);\n  injureSceneEntity(adapter,"combatant.goblin-b",10);\n  await adapter.startInitiative();\n  await adapter.setCurrentActor("char.aelar");\n  let snapshot=await adapter.getSnapshot();\n  const ineligibleBefore=snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-b")!.hp;\n  await adapter.resolveAction(actionId,["combatant.goblin-b"]);\n  snapshot=await adapter.getSnapshot();\n  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-b")!.hp,ineligibleBefore);\n  const eligibleBefore=snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")!.hp;\n  await adapter.resolveAction(actionId,["combatant.goblin-a"]);\n  snapshot=await adapter.getSnapshot();\n  assert.equal(snapshot.resolution?.stage,"complete");\n  assert.deepEqual(snapshot.resolution?.targetIds,["combatant.goblin-a"]);\n  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")!.hp,eligibleBefore+5);\n});\n\n'''
+              p.write_text(text.replace(marker,addition+marker,1),encoding='utf-8')
           PY
       - name: Generate content catalogs
         run: npm run generate:content
@@ -73,13 +108,11 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/domain/commonPlayDefinitionRuntime.ts tests/ui/installedCommonPlayProductionRuntime.test.ts
-          if ! git diff --cached --quiet; then git commit -m "feat(c9): validate rich target predicates"; fi
+          git add src/domain/commonPlayDefinitionRuntime.ts src/domain/commonPlayOperationRuntime.ts src/app/installedCommonPlayRuntimeAdapter.ts tests/ui/installedCommonPlayProductionRuntime.test.ts
+          if ! git diff --cached --quiet; then git commit -m "feat(c9): bridge rich target predicates"; fi
           git fetch origin agent/c9-gate-n-coverage-reconciliation
           git rebase origin/agent/c9-gate-n-coverage-reconciliation
-          for path in \
-            .github/workflows/c9-family-e-rich-predicate-bridge-7130.yml \
-            .github/workflows/c9-family-e-rich-predicate-bridge-r2-7130.yml; do
+          for path in .github/workflows/c9-family-e-rich-predicate-bridge-7130.yml .github/workflows/c9-family-e-rich-predicate-bridge-r2-7130.yml; do
             if git ls-files --error-unmatch "$path" >/dev/null 2>&1; then git rm "$path"; fi
           done
           if ! git diff --cached --quiet; then git commit -m "chore(c9): remove consumed rich selector verifiers"; fi
