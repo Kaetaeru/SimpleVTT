@@ -1,5 +1,5 @@
 name: C9 Gate N Final Verifier 71304
-# final verifier rerun after targeted C9 convergence
+# final verifier rerun after latest targeted C9 convergence
 
 on:
   push:
