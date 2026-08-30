@@ -27,6 +27,8 @@ jobs:
         run: python3 .github/c9-ac-initiative-clock-patch.py
       - name: Verify targeted Common Play runtime
         run: npx tsx --test tests/domain/commonPlayC6Runtime.test.ts
+      - name: Generate content dependencies
+        run: npm run generate:content
       - name: Typecheck
         run: npx tsc -p tsconfig.json --noEmit
       - name: Commit verified slice
