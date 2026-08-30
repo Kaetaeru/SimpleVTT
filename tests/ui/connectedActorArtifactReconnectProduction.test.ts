@@ -85,7 +85,7 @@ async function install(adapter:MockAdapter,prefix:string,lifetimeKind:"durable"|
   return pack;
 }
 
-async function captureBatch(operation:()=>Promise<unknown>) {
+async function captureBatch(adapter:MockAdapter,operation:()=>Promise<unknown>) {
   const wires:string[]=[];
   const originalSend=tauriSessionTransport.send;
   tauriSessionTransport.send=async(message)=>{wires.push(message);return 1;};
@@ -95,8 +95,17 @@ async function captureBatch(operation:()=>Promise<unknown>) {
   const batch=wires.map((wire)=>JSON.parse(wire) as {type:string;events?:ConnectedSessionEvent[]})
     .find((wire):wire is {type:"event-batch";events:ConnectedSessionEvent[]}=>wire.type==="event-batch"&&Array.isArray(wire.events));
   const resolution=(result as {resolution?:{id?:string;stage?:string;actionId?:string}}|undefined)?.resolution;
+  const state=connectedStateFor(adapter);
   const strandedEvents=!batch&&resolution?.id?takeCommittedResolutionEvents(resolution.id):undefined;
-  assert.ok(batch,JSON.stringify({wires,resolution,strandedEventCount:strandedEvents?.length??0}));
+  assert.ok(batch,JSON.stringify({
+    wires,
+    resolution,
+    ledgerCursor:state.ledger?.cursor??null,
+    published:resolution?.id?state.publishedResolutionIds.has(resolution.id):false,
+    publishedEventCount:resolution?.id?state.publishedResolutionEvents.get(resolution.id)?.length??0:0,
+    nextPresentationSequence:state.nextPresentationSequence,
+    strandedEventCount:strandedEvents?.length??0,
+  }));
   return batch;
 }
 
@@ -135,7 +144,7 @@ test("actor artifact reconstructs on fresh connected replay and stays removed af
   const hostConnected=connectedStateFor(host);
   hostConnected.mode="host";hostConnected.sessionId=sessionId;hostConnected.ledger=new HostSessionLedger(sessionId,connectedManifest(host));
 
-  const spawnBatch=await captureBatch(()=>host.resolveAction(pack.summonAction,["char.aelar"]));
+  const spawnBatch=await captureBatch(host,()=>host.resolveAction(pack.summonAction,["char.aelar"]));
   const hostAfterSpawn=await host.getSnapshot();
   const expected=actorProjection(host,hostAfterSpawn,pack.combatantId);
   assert.ok(expected.artifact&&expected.entity&&expected.actions?.length,JSON.stringify(expected));
@@ -149,7 +158,7 @@ test("actor artifact reconstructs on fresh connected replay and stays removed af
   const reconnected=actorProjection(reconnect,await reconnect.getSnapshot(),pack.combatantId);
   assert.deepEqual(reconnected,expected);
 
-  const undoBatch=await captureBatch(()=>host.undoLastResolution());
+  const undoBatch=await captureBatch(host,()=>host.undoLastResolution());
   assert.equal((await applyConnectedClientEvents(reconnect,undoBatch.events)).status,"applied");
   const afterUndo=actorProjection(reconnect,await reconnect.getSnapshot(),pack.combatantId);
   assert.equal(afterUndo.artifact,undefined);
@@ -179,12 +188,12 @@ test("until-source-recast actor replacement converges through connected replay, 
   const clientState=connectedStateFor(client);
   clientState.mode="client";clientState.sessionId=sessionId;clientState.replica=new ClientSessionReplica(sessionId);
 
-  const firstBatch=await captureBatch(()=>host.resolveAction(pack.summonAction,["char.aelar"]));
+  const firstBatch=await captureBatch(host,()=>host.resolveAction(pack.summonAction,["char.aelar"]));
   assert.equal((await applyConnectedClientEvents(client,firstBatch.events)).status,"applied");
   const first=actorProjection(host,await host.getSnapshot(),pack.combatantId);
   assert.ok(first.artifact&&first.entity&&first.actions?.length,JSON.stringify(first));
 
-  const replacementBatch=await captureBatch(()=>host.resolveAction(pack.summonAction,["char.aelar"]));
+  const replacementBatch=await captureBatch(host,()=>host.resolveAction(pack.summonAction,["char.aelar"]));
   assert.equal((await applyConnectedClientEvents(client,replacementBatch.events)).status,"applied");
   const hostReplacement=actorProjection(host,await host.getSnapshot(),pack.combatantId);
   const clientReplacement=actorProjection(client,await client.getSnapshot(),pack.combatantId);
@@ -199,7 +208,7 @@ test("until-source-recast actor replacement converges through connected replay, 
   assert.equal((await applyConnectedClientEvents(reconnect,hostConnected.ledger.eventsAfter(0))).status,"applied");
   assert.deepEqual(actorProjection(reconnect,await reconnect.getSnapshot(),pack.combatantId),hostReplacement);
 
-  const undoBatch=await captureBatch(()=>host.undoLastResolution());
+  const undoBatch=await captureBatch(host,()=>host.undoLastResolution());
   assert.equal((await applyConnectedClientEvents(client,undoBatch.events)).status,"applied");
   const restoredHost=actorProjection(host,await host.getSnapshot(),pack.combatantId);
   const restoredClient=actorProjection(client,await client.getSnapshot(),pack.combatantId);
