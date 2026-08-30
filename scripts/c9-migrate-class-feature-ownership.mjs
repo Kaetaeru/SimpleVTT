@@ -71,6 +71,98 @@ replaceOnce('src/app/characterSessionProjection.ts',
     ...resolveKnownFeatureIdentities(source,catalog),`);
 
 replaceOnce('src/app/commonPlayInterceptorProductionRuntimeAdapter.ts',
+`import type { PendingResolution, ResolutionEvent } from "../domain/resolutionTypes";`,
+`import type { PendingResolution, ResolutionEvent, ResolutionOperation } from "../domain/resolutionTypes";`);
+
+replaceOnce('src/app/commonPlayInterceptorProductionRuntimeAdapter.ts',
+`type PendingPassiveReaction={
+  resolutionId:string;
+  operationId:string;
+  kind:"d20"|"damage";
+  originalTotal?:number;`,
+`type PendingPassiveReaction={
+  resolutionId:string;
+  operationId:string;
+  kind:"d20"|"damage";
+  originalTotal?:number;
+  resumeCheckAfterResponse:boolean;`);
+
+replaceOnce('src/app/commonPlayInterceptorProductionRuntimeAdapter.ts',
+`function pendingD20s(resolution:ResolutionView,state:RulesRuntimeState):Array<{pending:PendingResolution;operationId:string}> {
+  const projections:Array<{pending:PendingResolution;operationId:string}>=[];
+  const natural=resolution.naturalD20??resolution.authoritativeDice[0];
+  if(resolution.rollKind==="check"&&resolution.checkOutcome&&Number.isFinite(resolution.checkTarget)&&validD20(natural)){
+    const operationId=\`op.${resolution.actionId}.ability-check\`;
+    projections.push({operationId,pending:{
+      id:\`${resolution.id}:common-play-interceptor\`,actorId:resolution.actorId,sourceId:resolution.actionId,
+      expectedRevision:state.revision,
+      operations:[{id:operationId,kind:"d20",actorId:resolution.actorId,request:{
+        family:"ability-check",target:resolution.checkTarget!,modifierContributions:d20Contributions(resolution),
+        dice:{id:\`${resolution.id}:common-play:d20\`,purpose:resolution.actionName,sides:20,faces:[natural]},
+      }}],
+    }});
+  }`,
+`function checkSuccessOperations(scene:SceneVm,resolution:ResolutionView,operationId:string):ResolutionOperation[] {
+  if(resolution.rollKind!=="check"||resolution.checkOutcome!=="실패")return [];
+  const origin=Object.values(scene.actionsByActor).flat().find((entry)=>entry.id===resolution.actionId);
+  const targetId=resolution.targetIds[0];
+  if(!origin||!targetId)return [];
+  return (origin.checkSuccessOperations??[]).flatMap((operation,index):ResolutionOperation[]=>{
+    if(operation.kind==="stabilize"&&operation.target==="first-target")return [{
+      id:\`${operationId}.success.${index}\`,
+      kind:"stabilize",
+      targetId,
+      when:{operationId,field:"outcome",equals:"success"},
+    }];
+    return [];
+  });
+}
+
+function pendingD20s(resolution:ResolutionView,state:RulesRuntimeState,scene:SceneVm):Array<{pending:PendingResolution;operationId:string}> {
+  const projections:Array<{pending:PendingResolution;operationId:string}>=[];
+  const natural=resolution.naturalD20??resolution.authoritativeDice[0];
+  if(resolution.rollKind==="check"&&resolution.checkOutcome&&Number.isFinite(resolution.checkTarget)&&validD20(natural)){
+    const operationId=\`op.${resolution.actionId}.ability-check\`;
+    const d20Operation:ResolutionOperation={id:operationId,kind:"d20",actorId:resolution.actorId,request:{
+      family:"ability-check",target:resolution.checkTarget!,modifierContributions:d20Contributions(resolution),
+      dice:{id:\`${resolution.id}:common-play:d20\`,purpose:resolution.actionName,sides:20,faces:[natural]},
+    }};
+    projections.push({operationId,pending:{
+      id:\`${resolution.id}:common-play-interceptor\`,actorId:resolution.actorId,sourceId:resolution.actionId,
+      expectedRevision:state.revision,
+      operations:[d20Operation,...checkSuccessOperations(scene,resolution,operationId)],
+    }});
+  }`);
+
+replaceOnce('src/app/commonPlayInterceptorProductionRuntimeAdapter.ts',
+`    const projections=damageProjection?[damageProjection]:pendingD20s(resolution,runtime);`,
+`    const projections=damageProjection?[damageProjection]:pendingD20s(resolution,runtime,internal.scene);`);
+
+replaceOnce('src/app/commonPlayInterceptorProductionRuntimeAdapter.ts',
+`      pendingByAdapter.set(adapter,{resolutionId:resolution.id,operationId:projected.operationId,kind:damage?"damage":"d20",originalTotal:"originalTotal" in projected?projected.originalTotal:undefined,candidate,awaiting:started});`,
+`      pendingByAdapter.set(adapter,{resolutionId:resolution.id,operationId:projected.operationId,kind:damage?"damage":"d20",originalTotal:"originalTotal" in projected?projected.originalTotal:undefined,resumeCheckAfterResponse:resolution.rollKind==="check"&&resolution.stage!=="complete",candidate,awaiting:started});`);
+
+replaceOnce('src/app/commonPlayInterceptorProductionRuntimeAdapter.ts',
+`function restoreInterruptedStage(resolution:ResolutionView) {
+  resolution.interrupt=undefined;
+  if(resolution.rollKind==="check"){
+    resolution.stage="roll-animation";
+    resolution.canAdvance=true;
+    resolution.nextLabel="판정 적용";`,
+`function restoreInterruptedStage(resolution:ResolutionView,pending:PendingPassiveReaction) {
+  resolution.interrupt=undefined;
+  if(resolution.rollKind==="check"){
+    if(!pending.resumeCheckAfterResponse){
+      resolution.stage="complete";
+      resolution.canAdvance=false;
+      resolution.nextLabel=undefined;
+      return;
+    }
+    resolution.stage="roll-animation";
+    resolution.canAdvance=true;
+    resolution.nextLabel="판정 적용";`);
+
+replaceOnce('src/app/commonPlayInterceptorProductionRuntimeAdapter.ts',
 `const previousAdvanceResolution=MockAdapter.prototype.advanceResolution;
 const previousRespondToInterrupt=MockAdapter.prototype.respondToInterrupt;`,
 `const previousResolveAction=MockAdapter.prototype.resolveAction;
@@ -87,6 +179,20 @@ replaceOnce('src/app/commonPlayInterceptorProductionRuntimeAdapter.ts',
 
 MockAdapter.prototype.advanceResolution=async function advanceWithPortableCommonPlayInterceptors() {`);
 
+{
+  const path='src/app/commonPlayInterceptorProductionRuntimeAdapter.ts';
+  const text=fs.readFileSync(path,'utf8');
+  const next=text.replaceAll('restoreInterruptedStage(resolution);','restoreInterruptedStage(resolution,pending);');
+  if(next===text)throw new Error(`${path}: interrupt restore call anchors missing`);
+  fs.writeFileSync(path,next);
+}
+
+replaceOnce('src/app/commonPlayInterceptorProductionRuntimeAdapter.ts',
+`  if(await offerPassiveReaction(this))return internal.getSnapshot();
+  if(resolution.rollKind==="check")return previousAdvanceResolution.call(this);`,
+`  if(await offerPassiveReaction(this))return internal.getSnapshot();
+  if(resolution.rollKind==="check"&&pending.resumeCheckAfterResponse)return previousAdvanceResolution.call(this);`);
+
 for(const path of ['src/app/productionPlayRuntimeAdapter.ts','src/app/characterSessionProjectionReconstruction.ts']){
   const text=fs.readFileSync(path,'utf8');
   const next=text.replace(/^\s*runtimeD20FollowUps:fighterLevel>=2\?\[.*\]:undefined,\r?\n/m,'');
@@ -100,8 +206,9 @@ replaceOnce('src/app/mockAdapter.ts',
 
 for(const path of ['tests/ui/fighterTacticalMindFollowUpRuntime.test.ts','tests/ui/openAbilityCheckDcRuntime.test.ts']){
   const text=fs.readFileSync(path,'utf8');
-  if(!text.includes('"follow-up.d20-modification"')) throw new Error(`${path}: legacy Tactical Mind interrupt assertion missing`);
-  fs.writeFileSync(path,text.replace('"follow-up.d20-modification"','"use-tactical-mind"'));
+  const needle='snapshot.resolution?.interrupt?.id,"follow-up.d20-modification"';
+  if(!text.includes(needle)) throw new Error(`${path}: legacy Tactical Mind interrupt assertion missing`);
+  fs.writeFileSync(path,text.replace(needle,'snapshot.resolution?.interrupt?.optionName,"전술적 정신"'));
 }
 
 const modulePath='content/modules/dnd-srd-5.2.1.classes/module.json';
