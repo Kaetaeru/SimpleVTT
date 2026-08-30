@@ -10,8 +10,9 @@ import { turnRuntimeSessions } from "../../src/app/turnRuntimeSessionRegistry";
 import type { DamageDefenseKind } from "../../src/domain/damage";
 
 const TARGET_ID="combatant.goblin-a";
+const CHARACTER_TARGET_ID="char.mira";
 
-function packagePayload(prefix:string,multiplier?:number) {
+function packagePayload(prefix:string,multiplier?:number,amount=4) {
   const moduleId=`${prefix}.module`,contentId=`${prefix}.option`,mechanicId=`${prefix}.damage`;
   return {moduleId,contentId,mechanicId,json:JSON.stringify({
     schemaVersion:"0.1-draft",moduleId,moduleVersion:"1",
@@ -22,7 +23,7 @@ function packagePayload(prefix:string,multiplier?:number) {
       presentation:{defaultLocale:"en",originalName:"Portable Damage Probe",locales:{en:{name:"Portable Damage Probe"}}},
       mechanics:[{kind:"common-play",config:{schemaVersion:"0.2-draft",id:mechanicId,entryPoints:[{
         id:"apply",invocation:"manual",targeting:{from:"targets",min:1,max:1},
-        operations:[{kind:"damage.apply",amount:{value:4},damageType:"fire",...(multiplier===undefined?{}:{multiplier}),target:"target"}],
+        operations:[{kind:"damage.apply",amount:{value:amount},damageType:"fire",...(multiplier===undefined?{}:{multiplier}),target:"target"}],
       }]}}],
     }],
   })};
@@ -63,6 +64,40 @@ async function execute(prefix:string,kind?:DamageDefenseKind,multiplier?:number)
   return before-after;
 }
 
+async function executeInstantDeath(prefix:string) {
+  const adapter=new MockAdapter();
+  const pack=packagePayload(prefix,undefined,60);
+  setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
+  const preview=await adapter.previewContentImport(pack.json);
+  assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
+  await adapter.activateContentImport();
+  await adapter.startInitiative();
+  await adapter.setCurrentActor("char.aelar");
+
+  const runtime=turnRuntimeSessions.get(adapter);
+  assert.ok(runtime,"turn runtime must exist after initiative starts");
+  const before=structuredClone(runtime.state.combatants[CHARACTER_TARGET_ID].life);
+  assert.equal(before.hp.current,24);
+  assert.equal(before.hp.maximum,31);
+
+  const action=installedCommonPlayActionId({
+    catalogId:catalogQualifiedId(pack.contentId,pack.moduleId,"1"),
+    mechanicId:pack.mechanicId,
+    entryPointId:"apply",
+  });
+  const snapshot=await adapter.resolveAction(action,[CHARACTER_TARGET_ID]);
+  assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
+
+  const after=turnRuntimeSessions.get(adapter)!.state.combatants[CHARACTER_TARGET_ID].life;
+  assert.equal(after.hp.current,0);
+  assert.equal(after.dead,true,"36 overflow damage must meet the 31 max-HP instant-death threshold");
+  assert.equal(after.unconscious,false,"instant death must not leave the character merely unconscious");
+
+  await adapter.undoLastResolution();
+  assert.deepEqual(turnRuntimeSessions.get(adapter)!.state.combatants[CHARACTER_TARGET_ID].life,before,"Undo must restore the complete pre-damage life state");
+  return {current:after.hp.current,dead:after.dead,unconscious:after.unconscious};
+}
+
 test("unknown installed damage.apply honors generic target damage defenses with rename invariance and Undo",async()=>{
   const expected:Record<DamageDefenseKind,number>={resistance:2,vulnerability:8,immunity:0};
   for(const kind of ["resistance","vulnerability","immunity"] as const) {
@@ -74,4 +109,11 @@ test("unknown installed damage.apply honors generic target damage defenses with 
 test("unknown installed damage.apply honors schema-declared multiplier with profile rounding, rename invariance, and Undo",async()=>{
   assert.equal(await execute("external.family-l-multiplier",undefined,0.6),2);
   assert.equal(await execute("completely.renamed-family-l-multiplier",undefined,0.6),2);
+});
+
+test("unknown installed damage.apply enforces character instant-death overkill with rename invariance and Undo",async()=>{
+  assert.deepEqual(
+    await executeInstantDeath("external.family-l-instant-death"),
+    await executeInstantDeath("completely.renamed-family-l-instant-death"),
+  );
 });
