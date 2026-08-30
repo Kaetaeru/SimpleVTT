@@ -688,7 +688,7 @@
         "commonPlayMovementRuntime.test.ts",
         "resolutionMovementOps.ts"
       ],
-      "currentState": "Canonical movement.relocate parses through the generic operations lowerer. Unknown installed Common Play production-executes walk, climb, swim, fly, crawl, jump, cost multipliers, push, pull, teleport, explicit no-provoke movement, zero-speed rejection, Undo, connected replay/reconnect, and external identity rename invariance. Rules-derived movement cost multipliers and alternate-speed bounds are production-proven through generic profile properties, and portable compile rejection is normalized into the standard production resolution failure path. Family I remains incomplete for rules-derived Difficult Terrain/drag-carry authority and named movement-grant convergence. Generic RulesProfile property modifiers now derive movement cost multipliers and alternate fly speed into authoritative production movement input. Family I remains incomplete for drag/carry authority, remaining movement constraints, and named movement-grant convergence.",
+      "currentState": "Canonical movement.relocate parses through the generic operations lowerer. Unknown installed Common Play production-executes walk, climb, swim, fly, crawl, jump, cost multipliers, push, pull, teleport, explicit no-provoke movement, zero-speed rejection, Undo, connected replay/reconnect, and external identity rename invariance. Rules-derived movement cost multipliers and alternate-speed bounds are production-proven through generic profile properties, and portable compile rejection is normalized into the standard production resolution failure path. Family I remains incomplete for rules-derived Difficult Terrain/drag-carry authority and named movement-grant convergence.",
       "requiredSemantics": [
         "walk",
         "climb",
@@ -738,8 +738,7 @@
       "persistenceEvidenceIfRelevant": [],
       "remainingNamedSeams": [
         "named movement grants",
-        "rules-derived Difficult Terrain and drag/carry movement constraint authority remain incomplete",
-        "rules-derived drag/carry and remaining movement constraint authority remain incomplete"
+        "rules-derived Difficult Terrain and drag/carry movement constraint authority remain incomplete"
       ],
       "connectedRelevant": true,
       "persistenceRelevant": false
