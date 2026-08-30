@@ -53,6 +53,40 @@ jobs:
           elif text.count(healed)<2:
               raise SystemExit(f'rename-invariance healing result anchor changed: neutral={neutral_count}, healed={text.count(healed)}')
           path.write_text(text,encoding='utf-8')
+
+          # Keep the wire validator narrowed before reading choice fields.
+          path=Path('src/app/connectedSessionWire.ts')
+          text=path.read_text(encoding='utf-8')
+          old='''  const choice=value.choice;\n  const validChoice=choice===undefined||(isRecord(choice)&&isCursor(choice.min)&&isCursor(choice.max)&&Number(choice.max)>=Number(choice.min)\n    &&Array.isArray(choice.options)&&choice.options.every((option)=>isRecord(option)&&isString(option.id)&&isString(option.name)));\n  return isRecord(value)&&isString(value.id)&&isString(value.responderId)&&isString(value.responderName)\n'''
+          new='''  if(!isRecord(value)) return false;\n  const choice=value.choice;\n  const validChoice=choice===undefined||(isRecord(choice)&&isCursor(choice.min)&&isCursor(choice.max)&&Number(choice.max)>=Number(choice.min)\n    &&Array.isArray(choice.options)&&choice.options.every((option)=>isRecord(option)&&isString(option.id)&&isString(option.name)));\n  return isString(value.id)&&isString(value.responderId)&&isString(value.responderName)\n'''
+          if new not in text:
+              if text.count(old)!=1:
+                  raise SystemExit(f'connected choice validator anchor changed: {text.count(old)}')
+              text=text.replace(old,new,1)
+          path.write_text(text,encoding='utf-8')
+
+          # Match the domain interaction-response union instead of an ambiguous optional payload.
+          path=Path('src/app/installedCommonPlayRuntimeAdapter.ts')
+          text=path.read_text(encoding='utf-8')
+          loose='{interactionId:string;accepted?:true;selectedIds?:string[]}'
+          strict='{interactionId:string;accepted:true}|{interactionId:string;selectedIds:string[]}'
+          if loose in text:
+              text=text.replace(loose,strict)
+          elif strict not in text:
+              raise SystemExit('interaction response type anchor changed')
+          old='''  const choiceCandidates=interaction.kind==="choice"\n    ?commonPlayTargetCandidates(this,prepared.internal.scene,prepared.state,prepared.actorEntity,interaction.input.selector)\n    :undefined;\n  if(interaction.kind==="choice"&&choiceCandidates!.length<interaction.input.selector.min) {\n'''
+          new='''  const choiceCandidates=interaction.kind==="choice"\n    ?commonPlayTargetCandidates(this,prepared.internal.scene,prepared.state,prepared.actorEntity,interaction.input.selector)\n    :undefined;\n  const choiceMin=interaction.kind==="choice"?(interaction.input.selector.min??0):0;\n  const choiceMax=interaction.kind==="choice"?(interaction.input.selector.max??choiceCandidates?.length??0):0;\n  if(interaction.kind==="choice"&&choiceCandidates!.length<choiceMin) {\n'''
+          if new not in text:
+              if text.count(old)!=1:
+                  raise SystemExit(f'choice bound anchor changed: {text.count(old)}')
+              text=text.replace(old,new,1)
+          old='min:interaction.input.selector.min,max:interaction.input.selector.max,'
+          new='min:choiceMin,max:choiceMax,'
+          if new not in text:
+              if text.count(old)!=1:
+                  raise SystemExit(f'choice view bound anchor changed: {text.count(old)}')
+              text=text.replace(old,new,1)
+          path.write_text(text,encoding='utf-8')
           PY
       - run: npm ci
       - run: npm run generate:content
