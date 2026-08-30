@@ -1,0 +1,70 @@
+name: C9 Family J Structural Save Ledger 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-j-structural-save-ledger-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - name: Reconcile Family J structural save evidence
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          path=Path("docs/rules/v1-mechanism-coverage-ledger.json")
+          data=json.loads(path.read_text())
+          family=next(entry for entry in data["rows"] if entry["family"]=="J")
+
+          family["sourceEvidence"]=[
+            "structuralSaveConditionRuntimeAdapter.ts" if value=="unarmedControlRuntimeAdapter.ts" else value
+            for value in family.get("sourceEvidence",[])
+          ]
+
+          old=("productionPlayRuntimeAdapter.ts projects typed runtimeSaveCondition payloads for Unarmed grapple/shove; "
+               "unarmedControlRuntimeAdapter.ts consumes the payload without action-ID dispatch")
+          new=("productionPlayRuntimeAdapter.ts projects typed runtimeSaveCondition payloads for the reference Unarmed grapple/shove actions; "
+               "structuralSaveConditionRuntimeAdapter.ts executes any projected runtimeSaveCondition structurally without action-ID or content-ID dispatch")
+          family["implementationEvidence"]=[new if value==old else value for value in family.get("implementationEvidence",[])]
+
+          evidence=("a734e10154169513acbcca7e5b2e5f8e051d4a4c refactor(c9): remove named unarmed control executor; "
+                    "UI run 33317878889 Verify C9 Family J portable control passed the portable control, spatial attack, Extra Attack, "
+                    "complete source-owned Unarmed composition, and existing Unarmed rename/connected regressions")
+          if evidence not in family.setdefault("productionEvidence",[]):
+            family["productionEvidence"].append(evidence)
+
+          path.write_text(json.dumps(data,ensure_ascii=False,indent=2)+"\n")
+          PY
+      - name: Verify V1 coverage structure
+        run: node scripts/check-v1-mechanism-coverage.mjs
+      - name: Publish ledger reconciliation
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/c9-family-j-structural-save-ledger-71304.yml
+          git add docs/rules/v1-mechanism-coverage-ledger.json
+          git commit -m "docs(c9): reconcile structural save-condition evidence"
+          for attempt in 1 2 3 4 5 6 7 8; do
+            git fetch origin agent/c9-gate-n-coverage-reconciliation
+            git rebase origin/agent/c9-gate-n-coverage-reconciliation
+            if git push origin HEAD:agent/c9-gate-n-coverage-reconciliation; then
+              exit 0
+            fi
+            sleep 2
+          done
+          exit 1
