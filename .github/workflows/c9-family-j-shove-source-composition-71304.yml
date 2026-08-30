@@ -1,0 +1,194 @@
+name: C9 Family J Shove Source Composition 71304
+
+on:
+  push:
+    branches: [agent/c9-gate-n-coverage-reconciliation]
+    paths: [.github/workflows/c9-family-j-shove-source-composition-71304.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  verify-and-land:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Apply generic source-owned shove slice
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import json
+
+          def replace_once(path, old, new):
+              p=Path(path)
+              text=p.read_text(encoding='utf-8')
+              if old not in text:
+                  raise SystemExit(f'missing patch anchor in {path}: {old[:100]!r}')
+              if text.count(old)!=1:
+                  raise SystemExit(f'non-unique patch anchor in {path}: {old[:100]!r}')
+              p.write_text(text.replace(old,new,1),encoding='utf-8')
+
+          replace_once(
+              'src/app/contracts.ts',
+              '  attacksPerAction?:number;\n  movementBudgetGainFeet?:number;',
+              '  attacksPerAction?:number;\n  runtimeCommonPlayActionId?:string;\n  movementBudgetGainFeet?:number;',
+          )
+
+          replace_once(
+              'src/domain/commonPlayOperationRuntime.ts',
+              '  itemPaymentResourceIds?:Record<number,string>;\n  actionKind?:ActionUseKind;\n}',
+              '  itemPaymentResourceIds?:Record<number,string>;\n  actionKind?:ActionUseKind;\n  attacksPerAction?:number;\n}',
+          )
+          replace_once(
+              'src/domain/commonPlayOperationRuntime.ts',
+              '    if(payment.kind==="economy") {\n      operations.push({\n        id:`${input.resolutionId}:payment:${index}`,kind:"use-economy",actorId:input.actorId,slot:payment.bucket,\n        bonusActionGranted:payment.bucket==="bonus-action"||undefined,\n        actionKind:payment.actionKind??input.actionKind,\n        ...(payment.attacksPerAction===undefined?{}:{attacksPerAction:payment.attacksPerAction}),\n      });',
+              '    if(payment.kind==="economy") {\n      const actionKind=payment.actionKind??input.actionKind;\n      const attacksPerAction=payment.attacksPerAction??(actionKind==="attack"?input.attacksPerAction:undefined);\n      operations.push({\n        id:`${input.resolutionId}:payment:${index}`,kind:"use-economy",actorId:input.actorId,slot:payment.bucket,\n        bonusActionGranted:payment.bucket==="bonus-action"||undefined,\n        actionKind,\n        ...(attacksPerAction===undefined?{}:{attacksPerAction}),\n      });',
+          )
+
+          replace_once(
+              'src/app/installedCommonPlayRuntimeAdapter.ts',
+              '  allowOffTurn=false,\n  allowUnprojectedRuntimeArtifact=false,\n):PreparedCommonPlayAction|undefined {\n  const internal=adapter as unknown as AdapterState;\n  const projectedAction=Object.values(internal.scene.actionsByActor).flat().find((candidate)=>candidate.id===actionId);',
+              '  allowOffTurn=false,\n  allowUnprojectedRuntimeArtifact=false,\n  projectedActionOverride?:ActionVm,\n):PreparedCommonPlayAction|undefined {\n  const internal=adapter as unknown as AdapterState;\n  const projectedAction=projectedActionOverride??Object.values(internal.scene.actionsByActor).flat().find((candidate)=>candidate.id===actionId);',
+          )
+          replace_once(
+              'src/app/installedCommonPlayRuntimeAdapter.ts',
+              '  const {actor,actorEntity,selectedTargetId,selectedTargets,selectedTargetFacts,targetingCandidates,state}=prepared;',
+              '  const {actor,actorEntity,selectedTargetId,selectedTargets,selectedTargetFacts,targetingCandidates,state,projectedAction}=prepared;',
+          )
+          replace_once(
+              'src/app/installedCommonPlayRuntimeAdapter.ts',
+              '    actionKind:entryPoint.test?.kind==="attack-roll"?"attack" as const:action.category==="spell"?"magic" as const:"other" as const,\n    ...(interactionResponse?{interactionResponse:interactionResponse.accepted===true',
+              '    actionKind:entryPoint.test?.kind==="attack-roll"?"attack" as const:action.category==="spell"?"magic" as const:"other" as const,\n    ...(projectedAction?.attacksPerAction===undefined?{}:{attacksPerAction:projectedAction.attacksPerAction}),\n    ...(interactionResponse?{interactionResponse:interactionResponse.accepted===true',
+          )
+          replace_once(
+              'src/app/installedCommonPlayRuntimeAdapter.ts',
+              '  const outcome=hp?.outcome??(roll?roll.outcome:allocationOutcome??"규칙 효과 적용");',
+              '  const structuralControl=projectedAction?.runtimeSaveCondition;\n  const rollOutcome=roll&&structuralControl&&roll.family==="saving-throw"\n    ?roll.outcome==="failure"?`${structuralControl.label} 적용`:`${structuralControl.label} 저항`\n    :roll?.outcome;\n  const outcome=hp?.outcome??rollOutcome??allocationOutcome??"규칙 효과 적용";',
+          )
+          replace_once(
+              'src/app/installedCommonPlayRuntimeAdapter.ts',
+              '  const runtimeArtifactReference=parseRuntimeArtifactCommonPlayActionId(actionId);\n  const definitionActionId=runtimeArtifactReference?.definitionActionId??actionId;\n  const action=await commonPlayAction(this,definitionActionId);\n  if (!action) return previousResolveAction.call(this,actionId,targetIds);',
+              '  const runtimeArtifactReference=parseRuntimeArtifactCommonPlayActionId(actionId);\n  let definitionActionId=runtimeArtifactReference?.definitionActionId??actionId;\n  let action=await commonPlayAction(this,definitionActionId);\n  let projectedActionOverride:ActionVm|undefined;\n  if(!action&&!runtimeArtifactReference) {\n    const internal=this as unknown as AdapterState;\n    projectedActionOverride=Object.values(internal.scene.actionsByActor).flat().find((candidate)=>candidate.id===actionId);\n    if(!projectedActionOverride) {\n      const visibleSnapshot=await internal.getSnapshot();\n      projectedActionOverride=Object.values(visibleSnapshot.scene.actionsByActor).flat().find((candidate)=>candidate.id===actionId);\n    }\n    const sourceActionId=projectedActionOverride?.runtimeCommonPlayActionId;\n    if(sourceActionId) {\n      definitionActionId=sourceActionId;\n      action=await commonPlayAction(this,definitionActionId);\n    }\n  }\n  if (!action) return previousResolveAction.call(this,actionId,targetIds);',
+          )
+          replace_once(
+              'src/app/installedCommonPlayRuntimeAdapter.ts',
+              '  const prepared=prepareCommonPlayAction(this,actionId,targetIds,action,runtimeArtifactReference?.actorId,false,allowUnprojectedRuntimeArtifact);',
+              '  const prepared=prepareCommonPlayAction(this,actionId,targetIds,action,runtimeArtifactReference?.actorId,false,allowUnprojectedRuntimeArtifact,projectedActionOverride);',
+          )
+
+          replace_once(
+              'src/app/structuralSaveConditionRuntimeAdapter.ts',
+              '  const control=action?.runtimeSaveCondition;\n  if (!control) return previousResolveAction.call(this,actionId,targetIds);',
+              '  const control=action?.runtimeSaveCondition;\n  if (!control||action?.runtimeCommonPlayActionId) return previousResolveAction.call(this,actionId,targetIds);',
+          )
+
+          replace_once(
+              'src/app/productionPlayRuntimeAdapter.ts',
+              '    summary:`근력/민첩 내성 DC ${unarmedSaveDc} · 실패 시 넘어짐`,available:true,eligibleTargetIds:[],saveDc:unarmedSaveDc,saveAbility:"근력 또는 민첩",attacksPerAction:unarmedAttacks,\n    runtimeSaveCondition:{choose:"highest",conditionId:"prone",label:"넘어짐",displayName:"맨손 타격 · 넘어뜨리기",saveAbilities:["str","dex"],duration:{kind:"special",key:"stand-up"}},',
+              '    summary:`근력/민첩 내성 DC ${unarmedSaveDc} · 실패 시 넘어짐`,available:true,eligibleTargetIds:[],saveDc:unarmedSaveDc,saveAbility:"근력 또는 민첩",attacksPerAction:unarmedAttacks,\n    runtimeCommonPlayActionId:"action.unarmed-strike.shove-prone",\n    runtimeSaveCondition:{choose:"highest",conditionId:"prone",label:"넘어짐",displayName:"맨손 타격 · 넘어뜨리기",saveAbilities:["str","dex"],duration:{kind:"special",key:"stand-up"}},',
+          )
+
+          core_path=Path('content/modules/dnd-srd-5.2.1.core/module.json')
+          core=json.loads(core_path.read_text(encoding='utf-8'))
+          core['content']=[entry for entry in core.get('content',[]) if entry.get('id')!='action.unarmed-strike.shove-prone']
+          core['content'].append({
+              'id':'action.unarmed-strike.shove-prone',
+              'category':'option',
+              'presentation':{
+                  'originalName':'Unarmed Strike · Shove (Prone)',
+                  'defaultLocale':'ko-KR',
+                  'locales':{'ko-KR':{'name':'맨손 타격 · 넘어뜨리기','summary':'대상이 근력 또는 민첩 내성에 실패하면 넘어짐 상태가 된다.'}},
+              },
+              'tags':['combat-action','unarmed-strike','common-play','srd-5.2.1'],
+              'mechanics':[{
+                  'kind':'common-play',
+                  'config':{
+                      '$schema':'https://simplevtt.local/schemas/common-play-contract.schema.json',
+                      'schemaVersion':'0.2-draft',
+                      'id':'combat.unarmed-strike.shove-prone',
+                      'payments':[{'kind':'economy','bucket':'action','amount':{'value':1},'consumeAt':'commit','refundOnCancel':True,'actionKind':'attack'}],
+                      'entryPoints':[{
+                          'id':'use','invocation':'manual',
+                          'targeting':{'from':'targets','min':1,'max':1},
+                          'test':{
+                              'kind':'saving-throw','roller':'target',
+                              'property':{'choose':'highest','from':['save.str.modifier','save.dex.modifier']},
+                              'dc':{'op':'add','args':[{'value':8},{'ref':'proficiency.bonus'},{'ref':'ability.str.modifier'}]},
+                              'perTarget':False,
+                          },
+                          'operations':[{
+                              'kind':'condition.apply','condition':'prone','target':'target',
+                              'when':{'op':'eq','left':{'ref':'test.outcome'},'right':{'value':'failure'}},
+                          }],
+                      }],
+                  },
+              }],
+          })
+          core_path.write_text(json.dumps(core,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+
+          test_path=Path('tests/ui/unarmedStrikeRuntime.test.ts')
+          test_text=test_path.read_text(encoding='utf-8')
+          anchor='test("Unarmed grapple and shove replace individual attacks inside Extra Attack", async () => {'
+          if anchor not in test_text:
+              raise SystemExit('unarmed test insertion anchor missing')
+          proof='''test("Unarmed shove follows a source-owned builtin Common Play reference after action identity rename", async () => {\n  const adapter=new MockAdapter();\n  await ready(adapter);\n  const originalGetSnapshot=adapter.getSnapshot.bind(adapter);\n  const baseline=await originalGetSnapshot();\n  const source=baseline.scene.actionsByActor["char.aelar"]?.find((entry)=>entry.id==="action.unarmed-strike.shove-prone");\n  assert.equal(source?.runtimeCommonPlayActionId,"action.unarmed-strike.shove-prone");\n  const renamedId="action.external.source-owned-shove";\n  adapter.getSnapshot=async()=>{\n    const snapshot=await originalGetSnapshot();\n    const action=snapshot.scene.actionsByActor["char.aelar"]?.find((entry)=>entry.id==="action.unarmed-strike.shove-prone");\n    if(action){action.id=renamedId;action.name="External Source-Owned Shove";}\n    return snapshot;\n  };\n  await adapter.setQueuedD20(1);\n  let snapshot=await adapter.resolveAction(renamedId,["combatant.goblin-b"]);\n  assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));\n  assert.equal(snapshot.resolution?.actionId,renamedId);\n  assert.equal(snapshot.resolution?.finalOutcome,"넘어짐 적용");\n  assert.ok(snapshot.resolution?.provenance.some((entry)=>entry.includes("action.unarmed-strike.shove-prone")));\n  assert.ok(snapshot.scene.entities.find((entry)=>entry.id==="combatant.goblin-b")?.status.some((status)=>status.includes("넘어짐")));\n  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.action,false);\n  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.extraAttacks?.length,1);\n  await adapter.undoLastResolution();\n  snapshot=await adapter.getSnapshot();\n  assert.equal(snapshot.scene.entities.find((entry)=>entry.id==="combatant.goblin-b")?.status.some((status)=>status.includes("넘어짐")),false);\n  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.action,true);\n});\n\n'''
+          test_path.write_text(test_text.replace(anchor,proof+anchor,1),encoding='utf-8')
+
+          ledger_path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
+          ledger=json.loads(ledger_path.read_text(encoding='utf-8'))
+          family=next(entry for entry in ledger['families'] if entry.get('family')=='J')
+          sentence='Unarmed shove-to-Prone now resolves from source-owned builtin Common Play through a structural runtimeCommonPlayActionId reference, preserving Extra Attack payment, Undo, and action identity rename without a named execution branch.'
+          if sentence not in family['currentState']:
+              family['currentState']=family['currentState'].rstrip()+(' ' if family['currentState'] else '')+sentence
+          impl='productionPlayRuntimeAdapter.ts projects a structural runtimeCommonPlayActionId for Unarmed shove-to-Prone; installedCommonPlayRuntimeAdapter.ts resolves that source reference generically and forwards projected attacksPerAction into attack-kind economy payment without action-ID dispatch'
+          if impl not in family['implementationEvidence']:
+              family['implementationEvidence'].append(impl)
+          prod='unarmedStrikeRuntime.test.ts proves source-owned builtin Unarmed shove applies Prone, preserves Extra Attack economy, reverses through event-native Undo, and still executes after presentation action-ID rename'
+          if prod not in family['productionEvidence']:
+              family['productionEvidence'].append(prod)
+          identity='unarmedStrikeRuntime.test.ts renames the projected Unarmed shove action while retaining only its structural Common Play source reference; production execution still resolves the builtin source definition and applies Prone'
+          if identity not in family['identityInvarianceEvidence']:
+              family['identityInvarianceEvidence'].append(identity)
+          family['remainingNamedSeams']=[
+              'generic weapon action projection is structurally source-owned and presentation-rename invariant; complete Unarmed Strike source composition remains incomplete for damage and grapple, while shove-to-Prone now executes from builtin Common Play',
+              'portable target saving throws, best-of STR/DEX control choice, conditional control effects, and escape normalize through Common Play; complete grapple source composition remains incomplete while shove-to-Prone source execution is migrated',
+              'other named attack/action projection remains migration debt; portable persistent attack-damage riders no longer require Rage-specific attack execution',
+          ]
+          family['remainingNamedSeamCount']=len(family['remainingNamedSeams'])
+          ledger_path.write_text(json.dumps(ledger,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          PY
+      - name: Verify source-owned shove slice
+        shell: bash
+        run: |
+          npm run generate:content
+          npx tsx --test tests/ui/unarmedStrikeRuntime.test.ts tests/ui/c9FamilyJPortableControlProduction.test.ts tests/ui/c9FamilyJAttackReplacementProduction71304R2.test.ts
+          node scripts/check-v1-mechanism-coverage.mjs
+          node scripts/check-legacy-execution-boundary.mjs
+          npx tsc --noEmit
+      - name: Land verified slice and retire workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch=agent/c9-gate-n-coverage-reconciliation
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/c9-family-j-shove-source-composition-71304.yml
+          git add src/app/contracts.ts src/domain/commonPlayOperationRuntime.ts src/app/installedCommonPlayRuntimeAdapter.ts src/app/structuralSaveConditionRuntimeAdapter.ts src/app/productionPlayRuntimeAdapter.ts content/modules/dnd-srd-5.2.1.core/module.json tests/ui/unarmedStrikeRuntime.test.ts docs/rules/v1-mechanism-coverage-ledger.json
+          git commit -m "feat(c9): source unarmed shove from Common Play"
+          for attempt in 1 2 3 4 5; do
+            if git push origin HEAD:"$branch"; then exit 0; fi
+            git fetch origin "$branch"
+            git rebase "origin/$branch" || exit 1
+            sleep 1
+          done
+          exit 1
