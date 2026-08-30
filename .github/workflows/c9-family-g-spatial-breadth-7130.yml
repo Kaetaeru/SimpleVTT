@@ -26,6 +26,7 @@ jobs:
           npx tsx --test
           tests/domain/commonPlaySpatialFactRuntime.test.ts
           tests/domain/c9FamilyGStandardSpatialFacts.test.ts
+          tests/ui/c9FamilyGConnectedSpatialFactRuntime.test.ts
           tests/ui/connectedCommonPlayAuthorityFactRouting.test.ts
           tests/ui/connectedCommonPlayAuthorityFactDispatch.test.ts
       - name: Verify architecture boundaries
