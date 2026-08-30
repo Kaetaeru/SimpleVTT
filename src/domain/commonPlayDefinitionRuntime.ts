@@ -249,7 +249,12 @@ export function lowerCommonPlay(
     };
   }
   const projected={...base(definition),entryPoints:[operationEntryPointProjection(entryPoint)]};
-  return {kind:"operations",entryPointId,definition:parseCommonPlayOperationDefinition(projected)};
+  const {castProcess,...operationProjected}=projected;
+  const parsed=parseCommonPlayOperationDefinition(operationProjected);
+  return {
+    kind:"operations",entryPointId,
+    definition:{...parsed,...(castProcess?{castProcess:structuredClone(castProcess)}:{})} as CommonPlayOperationDefinition,
+  };
 }
 
 export function lowerAllCommonPlayEntryPoints(definition:CommonPlayDefinitionIR) {
