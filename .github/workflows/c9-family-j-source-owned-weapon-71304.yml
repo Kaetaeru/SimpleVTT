@@ -1,0 +1,30 @@
+name: C9 Family J Source-Owned Weapon 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-j-source-owned-weapon-71304.yml
+      - tests/ui/c9FamilyJSourceOwnedWeaponProjection.test.ts
+      - src/app/characterCreationWeaponAttackAdapter.ts
+      - src/app/productionPlayRuntimeAdapter.ts
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Verify Family J source-owned weapon projection
+        run: npx tsx --test tests/ui/c9FamilyJSourceOwnedWeaponProjection.test.ts
+      - name: Verify TypeScript
+        run: npx tsc --noEmit
+      - name: Verify legacy execution boundary
+        run: node scripts/check-legacy-execution-boundary.mjs
