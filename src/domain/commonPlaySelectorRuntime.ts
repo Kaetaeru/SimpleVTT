@@ -34,6 +34,8 @@ export interface CommonPlaySelectorInput {
   selectedIds?:string[];
   selection:"manual"|"automatic";
   authority:"actor-owner"|"dm"|"host"|"provider";
+  /** Set false only when the owning production path is explicitly mapless and has no cover authority. */
+  directTarget?:boolean;
 }
 export type CommonPlaySelectorResolution=
   | {status:"resolved";targetIds:string[];authority:CommonPlaySelectorInput["authority"];targeting?:TargetingResolution}
@@ -75,7 +77,7 @@ export function resolveCommonPlaySelector(input:CommonPlaySelectorInput):CommonP
     if(input.selector.from!=="targets") return {status:"resolved",targetIds:selected.map((candidate)=>candidate.id),authority:input.authority};
     if(selected.some((candidate)=>!candidate.targeting)) throw new DomainEvaluationError("target selector requires typed targeting facts");
     const targeting=resolveTargeting(input.sourceId,{
-      kind:"any",minTargets:min,maxTargets:max,directTarget:!input.selector.area,
+      kind:"any",minTargets:min,maxTargets:max,directTarget:input.directTarget??!input.selector.area,
     },selected.map((candidate)=>candidate.targeting!));
     if(!targeting.valid) throw new DomainEvaluationError(targeting.rejected.flatMap((entry)=>entry.reasons).join("; ")||"invalid target selection");
     return {status:"resolved",targetIds:selected.map((candidate)=>candidate.id),authority:input.authority,targeting};
