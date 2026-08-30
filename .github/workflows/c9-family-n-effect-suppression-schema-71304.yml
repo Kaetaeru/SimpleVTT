@@ -61,6 +61,7 @@ jobs:
           assert.ok(schema.$defs.operation.oneOf.some((entry)=>entry.$ref==="#/$defs/effectSuppress"));
           NODE
           npm run test:common-play-definition
+          npm run generate:content
           npm exec tsc -- --noEmit
           node scripts/check-v1-mechanism-coverage.mjs
           node scripts/check-legacy-execution-boundary.mjs
