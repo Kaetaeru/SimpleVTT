@@ -63,6 +63,11 @@ function isRuntimeAtomicAttack(action:ActionVm|undefined,manual?:PendingManualMo
     && !action!.resourceCost;
 }
 
+async function actionForResolution(internal:RuntimeAttackAdapterState,actionId:string) {
+  return internal.action(actionId)
+    ?? Object.values((await internal.getSnapshot()).scene.actionsByActor).flat().find((action)=>action.id===actionId);
+}
+
 function reject(adapter:MockAdapter,internal:RuntimeAttackAdapterState,error:string,restoreBefore=true) {
   const resolution = internal.resolution;
   clearPendingManualMovementReaction(adapter);
@@ -238,7 +243,7 @@ function finalize(adapter:MockAdapter,internal:RuntimeAttackAdapterState,transac
 MockAdapter.prototype.advanceResolution = async function advanceResolutionWithRuntimeAttackFacts() {
   const internal = this as unknown as RuntimeAttackAdapterState;
   const resolution = internal.resolution;
-  const action = resolution ? internal.action(resolution.actionId) : undefined;
+  const action = resolution ? await actionForResolution(internal,resolution.actionId) : undefined;
   const manual = manualFor(this,action,resolution);
   if (!resolution || !isRuntimeAtomicAttack(action,manual) || resolution.adjudicated) return previousAdvance.call(this);
 

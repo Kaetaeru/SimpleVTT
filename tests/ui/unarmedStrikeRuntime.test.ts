@@ -79,7 +79,7 @@ test("Unarmed control runtime follows payload semantics after action ID rename",
   assert.ok(snapshot.scene.entities.find((entry)=>entry.id==="combatant.goblin-a")?.status.some((status)=>status.includes("붙잡힘")));
 });
 
-test("Unarmed damage grapple and shove execute from structural payloads after presentation rename", async () => {
+test("Unarmed damage grapple and shove execute from structural payloads after action identity and presentation rename", async () => {
   const cases=[
     {canonicalId:"action.unarmed-strike.damage",renamedId:"action.external.unarmed.damage",targetId:"combatant.goblin-a",kind:"damage" as const},
     {canonicalId:"action.unarmed-strike.grapple",renamedId:"action.external.unarmed.control-a",targetId:"combatant.goblin-a",kind:"grapple" as const},
@@ -104,14 +104,14 @@ test("Unarmed damage grapple and shove execute from structural payloads after pr
     adapter.getSnapshot=async()=>{
       const snapshot=await originalGetSnapshot();
       const action=snapshot.scene.actionsByActor["char.aelar"]?.find((entry)=>entry.id===probe.canonicalId);
-      if(action) action.name=`External ${probe.kind}`;
+      if(action) { action.id=probe.renamedId; action.name=`External ${probe.kind}`; }
       return snapshot;
     };
 
     await adapter.setQueuedD20(probe.kind==="damage"?20:1);
-    await adapter.resolveAction(probe.canonicalId,[probe.targetId]);
+    await adapter.resolveAction(probe.renamedId,[probe.targetId]);
     const snapshot=probe.kind==="damage"?await finish(adapter):await adapter.getSnapshot();
-    assert.equal(snapshot.resolution?.actionId,probe.canonicalId);
+    assert.equal(snapshot.resolution?.actionId,probe.renamedId);
     if(probe.kind==="damage") {
       assert.equal(snapshot.scene.entities.find((entry)=>entry.id===probe.targetId)?.hp,beforeHp!-(source.damage?.[0].flat??0));
     } else if(probe.kind==="grapple") {
