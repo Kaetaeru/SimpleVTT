@@ -33,6 +33,9 @@ function actorCombatant(artifact:ReturnType<typeof createRuntimeArtifact>) {
   for(const [property,value] of Object.entries(actor.properties)) {
     if(typeof value==="number"&&Number.isFinite(value)) baseProperties[property]=value;
   }
+  baseProperties["hp.current"]=Number(actor.properties["hp.current"]??maximum);
+  baseProperties["hp.maximum"]=maximum;
+  baseProperties["hp.temporary"]=Number(actor.properties["hp.temporary"]??0);
   return {
     id:actor.combatantId,
     baseSpeed:speed,
