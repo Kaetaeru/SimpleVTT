@@ -7,6 +7,12 @@ on:
       - agent/c9-gate-n-coverage-reconciliation
     paths:
       - .github/workflows/c9-family-j-spatial-attack-71304.yml
+      - tests/ui/c9FamilyJSpatialAttackProduction.test.ts
+      - tests/ui/c9FamilyJRangeCoverProduction.test.ts
+      - tests/ui/c9FamilyJOpportunityAttackProduction.test.ts
+      - src/app/installedCommonPlayRuntimeAdapter.ts
+      - src/domain/commonPlaySelectorRuntime.ts
+      - src/app/spatialRuntimeContracts.ts
 
 jobs:
   verify:
