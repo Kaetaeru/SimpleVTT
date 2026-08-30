@@ -25,6 +25,17 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run generate:content
+      - name: Refuse completion while named Fleet Step execution remains
+        run: |
+          set -euo pipefail
+          if [ -f src/app/monkOpenHandFleetStepRuntimeAdapter.ts ]; then
+            echo "Family I cannot be IMPLEMENTED while monkOpenHandFleetStepRuntimeAdapter.ts remains a named execution path." >&2
+            exit 1
+          fi
+          if grep -Eq 'monkOpenHandFleetStepRuntimeAdapter\.ts.*LEGACY_EXECUTION' docs/rules/legacy-execution-inventory.md; then
+            echo "Family I cannot be IMPLEMENTED while the canonical legacy inventory classifies Fleet Step as LEGACY_EXECUTION." >&2
+            exit 1
+          fi
       - name: Reconcile Family I ledger evidence
         run: |
           python3 - <<'PY'
