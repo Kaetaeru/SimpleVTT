@@ -94,7 +94,7 @@ function portableCommonPlayTargetingMechanic() {
       entryPoints:[{
         id:"mend-other",
         invocation:"manual",
-        targeting:{from:"targets",min:1,max:1},
+        targeting:{from:"targets",where:{op:"relation-matches",ref:"relation",value:"enemy"},min:1,max:1},
         operations:[{kind:"healing.apply",amount:{value:5},target:"target"}],
       }],
     },
