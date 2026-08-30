@@ -54,6 +54,12 @@ jobs:
               text=text.replace(expected,neutral)
           elif neutral not in text:
               raise SystemExit('Q rename-invariance delta anchor changed')
+          reaction='assert.equal(snapshot.scene.economyByActor[actorId]?.reaction,false);'
+          reaction_diag='assert.equal(snapshot.scene.economyByActor[actorId]?.reaction,false,JSON.stringify(snapshot.resolution));'
+          if reaction in text:
+              text=text.replace(reaction,reaction_diag,1)
+          elif reaction_diag not in text:
+              raise SystemExit('Q reaction assertion anchor changed')
           test_path.write_text(text,encoding='utf-8')
           PY
       - run: npm ci
