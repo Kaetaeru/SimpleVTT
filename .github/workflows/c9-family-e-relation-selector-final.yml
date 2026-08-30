@@ -1,0 +1,102 @@
+name: C9 Family E Relation Selector Final
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-e-relation-selector-final.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Apply current relation selector slice
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path, old, new):
+              p=Path(path)
+              text=p.read_text(encoding='utf-8')
+              count=text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{path}: expected exactly one match, got {count}: {old!r}')
+              p.write_text(text.replace(old,new,1),encoding='utf-8')
+
+          runtime='src/domain/commonPlayOperationRuntime.ts'
+          replace_once(runtime,
+              'import { DomainEvaluationError, type RollStateContribution, type RulesProfileLike } from "./profileEngine";',
+              'import { DomainEvaluationError, evaluateSemanticPredicate, type RollStateContribution, type RulesProfileLike } from "./profileEngine";')
+          replace_once(runtime,
+              'export interface CommonPlayTargetingSelector {\n  from:"targets";\n  min:number;\n  max:number;\n}',
+              'export interface CommonPlayTargetingSelector {\n  from:"targets";\n  min:number;\n  max:number;\n  where?:{op:"relation-matches";ref:"relation";value:TargetingFactInput["relation"]};\n}')
+          replace_once(runtime,
+              'const TARGETING_KEYS=new Set(["from","min","max"]);',
+              'const TARGETING_KEYS=new Set(["from","where","min","max"]);\nconst TARGETING_WHERE_KEYS=new Set(["op","ref","value"]);')
+          replace_once(runtime,
+              '''  if(selector.from!=="targets") throw new DomainEvaluationError(`${label}.from must be targets for portable Common Play targeting`);\n  if(!Number.isInteger(selector.min)||Number(selector.min)<0) throw new DomainEvaluationError(`${label}.min must be a non-negative integer for portable Common Play targeting`);\n  if(!Number.isInteger(selector.max)||Number(selector.max)<Number(selector.min)) throw new DomainEvaluationError(`${label}.max must be an integer >= min for portable Common Play targeting`);\n  return {from:"targets",min:Number(selector.min),max:Number(selector.max)};''',
+              '''  if(selector.from!=="targets") throw new DomainEvaluationError(`${label}.from must be targets for portable Common Play targeting`);\n  let where:CommonPlayTargetingSelector["where"];\n  if(selector.where!==undefined) {\n    const predicate=object(selector.where,`${label}.where`);\n    supportedKeys(predicate,TARGETING_WHERE_KEYS,`${label}.where`);\n    if(predicate.op!=="relation-matches"||predicate.ref!=="relation") throw new DomainEvaluationError(`${label}.where currently supports relation-matches on relation only`);\n    if(predicate.value!=="self"&&predicate.value!=="ally"&&predicate.value!=="enemy"&&predicate.value!=="neutral") throw new DomainEvaluationError(`${label}.where.value must be self, ally, enemy, or neutral`);\n    where={op:"relation-matches",ref:"relation",value:predicate.value};\n  }\n  if(!Number.isInteger(selector.min)||Number(selector.min)<0) throw new DomainEvaluationError(`${label}.min must be a non-negative integer for portable Common Play targeting`);\n  if(!Number.isInteger(selector.max)||Number(selector.max)<Number(selector.min)) throw new DomainEvaluationError(`${label}.max must be an integer >= min for portable Common Play targeting`);\n  return {from:"targets",min:Number(selector.min),max:Number(selector.max),...(where?{where}:{})};''')
+          replace_once(runtime,
+              '''    if(input.targetId!==undefined&&!input.targetingTargets.some((target)=>target.id===input.targetId)) {\n      throw new DomainEvaluationError("Common Play downstream target does not match the validated targeting selection");\n    }\n    operations.push({''',
+              '''    if(input.targetId!==undefined&&!input.targetingTargets.some((target)=>target.id===input.targetId)) {\n      throw new DomainEvaluationError("Common Play downstream target does not match the validated targeting selection");\n    }\n    if(entryPoint.targeting.where) {\n      const rejected=input.targetingTargets.filter((target)=>!evaluateSemanticPredicate(\n        entryPoint.targeting!.where!,\n        (ref)=>ref==="id"?target.id:ref==="relation"?target.relation:undefined,\n      ));\n      if(rejected.length) throw new DomainEvaluationError(`Common Play targeting relation filter rejected: ${rejected.map((target)=>target.id).join(", ")}`);\n    }\n    operations.push({''')
+
+          adapter='src/app/installedCommonPlayRuntimeAdapter.ts'
+          replace_once(adapter,
+              '''    const pending=compileCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,state,lowered.definition,operationExecutionInput(internal,actionId,action,prepared,resolutionId,interactionId));\n    const effectDefinitions=await installedPersistentEffectDefinitions(adapter);\n    const damagePending=appendCommonPlayDamageTakenTriggers(\n      state,effectDefinitions,pending,actorEntity.kind==="character"?"character":"monster",\n    );\n    const automaticPending=appendCommonPlaySemanticOutcomeTriggers(\n      state,effectDefinitions,damagePending,Object.fromEntries(internal.scene.entities.map((entity)=>[entity.id,entity.kind==="character"?"character":"monster"])),\n    );\n    committed=appendCommonPlaySemanticOutcomeEvents(\n      automaticPending,\n      resolvePendingResolution(SIMPLEVTT_APP_RULES_PROFILE,state,automaticPending),\n    );''',
+              '''    try {\n      const pending=compileCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,state,lowered.definition,operationExecutionInput(internal,actionId,action,prepared,resolutionId,interactionId));\n      const effectDefinitions=await installedPersistentEffectDefinitions(adapter);\n      const damagePending=appendCommonPlayDamageTakenTriggers(\n        state,effectDefinitions,pending,actorEntity.kind==="character"?"character":"monster",\n      );\n      const automaticPending=appendCommonPlaySemanticOutcomeTriggers(\n        state,effectDefinitions,damagePending,Object.fromEntries(internal.scene.entities.map((entity)=>[entity.id,entity.kind==="character"?"character":"monster"])),\n      );\n      committed=appendCommonPlaySemanticOutcomeEvents(\n        automaticPending,\n        resolvePendingResolution(SIMPLEVTT_APP_RULES_PROFILE,state,automaticPending),\n      );\n    } catch(error) {\n      return {status:"rejected" as const,error:error instanceof Error?error.message:String(error),snapshot:await internal.getSnapshot()};\n    }''')
+
+          domain=Path('tests/domain/commonPlayTargetingRuntime.test.ts')
+          text=domain.read_text(encoding='utf-8')
+          old='''    [{from:"targets",where:{value:true},min:1,max:1},/unsupported fields: where/],'''
+          new='''    [{from:"targets",where:{value:true},min:1,max:1},/currently supports relation-matches/],'''
+          if text.count(old)!=1: raise SystemExit('domain unsupported where assertion mismatch')
+          text=text.replace(old,new,1)
+          marker='test("bounded Common Play selector preserves authored multi-target limits without fabricating spatial facts",()=>{'
+          if text.count(marker)!=1: raise SystemExit('domain insertion marker mismatch')
+          addition='''test("portable Common Play relation selector validates authoritative relation facts without identity dispatch",()=>{\n  const authored=structuredClone(AUTHORED);\n  authored.entryPoints[0].targeting={from:"targets",where:{op:"relation-matches",ref:"relation",value:"enemy"},min:1,max:1};\n  const definition=parseManualCommonPlayOperationDefinition(authored);\n  assert.deepEqual(definition.entryPoints[0].targeting,authored.entryPoints[0].targeting);\n\n  const enemyState=runtimeState();\n  enemyState.combatants.goblin.life.hp.current=5;\n  const enemy=resolveCommonPlayEntryPointOperations(TEST_PROFILE,enemyState,definition,{\n    resolutionId:"relation-enemy",actorId:"hero",entryPointId:"mend-other",targetId:"goblin",targetingTargets:[target("goblin","enemy")],\n  });\n  assert.equal(enemy.status,"committed");\n  if(enemy.status==="committed") assert.equal(enemy.state.combatants.goblin.life.hp.current,10);\n\n  const selfState=runtimeState();\n  selfState.combatants.hero.life.hp.current=10;\n  const self=resolveCommonPlayEntryPointOperations(TEST_PROFILE,selfState,definition,{\n    resolutionId:"relation-self",actorId:"hero",entryPointId:"mend-other",targetId:"hero",targetingTargets:[target("hero","self")],\n  });\n  assert.equal(self.status,"rejected");\n  if(self.status==="rejected") assert.match(self.error,/relation filter rejected: hero/);\n  assert.equal(selfState.combatants.hero.life.hp.current,10);\n});\n\n'''
+          domain.write_text(text.replace(marker,addition+marker,1),encoding='utf-8')
+
+          production=Path('tests/ui/installedCommonPlayProductionRuntime.test.ts')
+          text=production.read_text(encoding='utf-8')
+          marker='test("installed Common Play targeting validates one existing target before healing and supports Undo",async()=>{'
+          if text.count(marker)!=1: raise SystemExit('production insertion marker mismatch')
+          addition='''test("unknown installed Common Play relation selector rejects an ineligible target before production commit",async()=>{\n  const adapter=new MockAdapter();\n  const payload=JSON.parse(targetingPackagePayload()) as any;\n  payload.content[0].mechanics[0].config.entryPoints[0].targeting={from:"targets",where:{op:"relation-matches",ref:"relation",value:"enemy"},min:1,max:1};\n  setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());\n  const preview=await adapter.previewContentImport(JSON.stringify(payload));\n  assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));\n  await adapter.activateContentImport();\n  const actionId=installedCommonPlayActionId({\n    catalogId:catalogQualifiedId(TARGETING_IDENTITY.contentId,TARGETING_IDENTITY.moduleId,"1"),\n    mechanicId:TARGETING_IDENTITY.mechanicId,entryPointId:TARGETING_IDENTITY.entryPointId,\n  });\n  injureSceneEntity(adapter,"combatant.goblin-a",10);\n  await adapter.startInitiative();\n  await adapter.setCurrentActor("char.aelar");\n  const actorBefore=(await adapter.getSnapshot()).activeCharacter.hp;\n  await adapter.resolveAction(actionId,["char.aelar"]);\n  let snapshot=await adapter.getSnapshot();\n  assert.equal(snapshot.activeCharacter.hp,actorBefore);\n  assert.equal(snapshot.resolution?.finalOutcome,"적용 거부");\n  assert.match(snapshot.resolution?.compact??"",/relation filter rejected/);\n\n  const goblinBefore=snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")!.hp;\n  await adapter.resolveAction(actionId,["combatant.goblin-a"]);\n  snapshot=await adapter.getSnapshot();\n  assert.equal(snapshot.resolution?.stage,"complete");\n  assert.equal(snapshot.resolution?.actionId,actionId);\n  assert.deepEqual(snapshot.resolution?.targetIds,["combatant.goblin-a"]);\n  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")!.hp,goblinBefore+5);\n});\n\n'''
+          production.write_text(text.replace(marker,addition+marker,1),encoding='utf-8')
+          PY
+      - name: Generate content catalogs
+        run: npm run generate:content
+      - name: Verify relation selector and import paths
+        run: >-
+          npx tsx --test
+          tests/domain/commonPlayTargetingRuntime.test.ts
+          tests/ui/installedCommonPlayProductionRuntime.test.ts
+          tests/ui/ruleModulePackageImport.test.ts
+      - name: Verify legacy execution boundary
+        run: node scripts/check-legacy-execution-boundary.mjs
+      - name: Typecheck application
+        run: npx tsc --noEmit
+      - name: Commit verified slice and remove failed helpers
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm -f .github/workflows/c9-family-e-relation-selector.yml .github/workflows/c9-family-e-relation-selector-retry.yml .github/workflows/c9-family-e-relation-selector-final.yml || true
+          git add src/domain/commonPlayOperationRuntime.ts src/app/installedCommonPlayRuntimeAdapter.ts tests/domain/commonPlayTargetingRuntime.test.ts tests/ui/installedCommonPlayProductionRuntime.test.ts .github/workflows
+          git commit -m "feat(c9): validate portable relation selectors"
+          git fetch origin agent/c9-gate-n-coverage-reconciliation
+          git rebase origin/agent/c9-gate-n-coverage-reconciliation
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
