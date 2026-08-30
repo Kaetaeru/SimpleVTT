@@ -51,6 +51,18 @@ function modulePayload(prefix:string) {
         destinationFact:destinationFact(`destination-${mode}`),
       }],
     })),
+    {
+      id:"move-full",
+      invocation:"manual" as const,
+      operations:[{
+        kind:"movement.relocate" as const,
+        mode:"move" as const,
+        movementType:"walk" as const,
+        target:"actor",
+        distance:{ref:"movement.walk"},
+        destinationFact:destinationFact("destination-full"),
+      }],
+    },
   ];
   const config={schemaVersion:"0.2-draft",id:mechanicId,entryPoints};
   return {
@@ -121,6 +133,22 @@ async function runMovementMatrix(prefix:string) {
 
 test("unknown installed Common Play executes every movement type, cost multiplier, push, pull, and teleport through production Resolver",async()=>{
   assert.equal(await runMovementMatrix("unknown-family-i"),30);
+});
+
+test("portable movement rejects another regular move after movement reaches zero",async()=>{
+  const {adapter,action}=await install("unknown-family-i-zero-speed");
+  const before=(await adapter.getSnapshot()).scene.economyByActor["char.aelar"]!.movement;
+  assert.ok(before>0);
+
+  await adapter.resolveAction(action("move-full"),["char.aelar"]);
+  let snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.resolution?.stage,"complete");
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.movement,0);
+
+  await adapter.resolveAction(action("move-full"),["char.aelar"]);
+  snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.movement,0);
+  assert.match(snapshot.resolution?.detail.join("\n")??"",/movement exceeds remaining speed/);
 });
 
 test("renaming every external Family I identity preserves the production movement matrix",async()=>{
