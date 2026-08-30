@@ -9,6 +9,8 @@ import { MockAdapter } from "../../src/app/mockAdapter";
 import { turnRuntimeSessions } from "../../src/app/turnRuntimeSessionRegistry";
 import type { DamageDefenseKind } from "../../src/domain/damage";
 
+const TARGET_ID="combatant.goblin-a";
+
 function packagePayload(prefix:string) {
   const moduleId=`${prefix}.module`,contentId=`${prefix}.option`,mechanicId=`${prefix}.damage`;
   return {moduleId,contentId,mechanicId,json:JSON.stringify({
@@ -19,7 +21,8 @@ function packagePayload(prefix:string) {
       id:contentId,category:"option",
       presentation:{defaultLocale:"en",originalName:"Portable Damage Probe",locales:{en:{name:"Portable Damage Probe"}}},
       mechanics:[{kind:"common-play",config:{schemaVersion:"0.2-draft",id:mechanicId,entryPoints:[{
-        id:"apply",invocation:"manual",operations:[{kind:"damage.apply",amount:{value:8},damageType:"fire",target:"self"}],
+        id:"apply",invocation:"manual",targeting:{from:"targets",min:1,max:1},
+        operations:[{kind:"damage.apply",amount:{value:8},damageType:"fire",target:"target"}],
       }]}}],
     }],
   })};
@@ -43,7 +46,7 @@ async function execute(prefix:string,kind:DamageDefenseKind) {
 
   const runtime=turnRuntimeSessions.get(adapter);
   assert.ok(runtime,"turn runtime must exist after initiative starts");
-  runtime.state.combatants["char.aelar"].damageDefenses=[{source:`${prefix}.runtime-defense`,kind,damageType:"fire"}];
+  runtime.state.combatants[TARGET_ID].damageDefenses=[{source:`${prefix}.runtime-defense`,kind,damageType:"fire"}];
 
   const action=installedCommonPlayActionId({
     catalogId:catalogQualifiedId(pack.contentId,pack.moduleId,"1"),
@@ -51,12 +54,12 @@ async function execute(prefix:string,kind:DamageDefenseKind) {
     entryPointId:"apply",
   });
   let snapshot=await adapter.getSnapshot();
-  const before=hp(snapshot,"char.aelar");
-  snapshot=await adapter.resolveAction(action,["char.aelar"]);
+  const before=hp(snapshot,TARGET_ID);
+  snapshot=await adapter.resolveAction(action,[TARGET_ID]);
   assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
-  const after=hp(snapshot,"char.aelar");
+  const after=hp(snapshot,TARGET_ID);
   await adapter.undoLastResolution();
-  assert.equal(hp(await adapter.getSnapshot(),"char.aelar"),before,"Undo must restore HP");
+  assert.equal(hp(await adapter.getSnapshot(),TARGET_ID),before,"Undo must restore HP");
   return before-after;
 }
 
