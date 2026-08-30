@@ -61,6 +61,18 @@ export interface CommonPlayConsentInteraction {
   stalePolicy?:"reject";
 }
 
+export interface CommonPlayChoiceInteraction {
+  id:string;
+  kind:"choice";
+  responder:"actor"|"target"|"actor-owner"|"target-owner"|"dm"|"host";
+  mode:"blocking";
+  input:{type:"choice";selector:CommonPlaySelector};
+  revalidate:"always"|"if-revision-changed";
+  stalePolicy?:"reject";
+}
+
+export type CommonPlayInteraction=CommonPlayConsentInteraction|CommonPlayChoiceInteraction;
+
 export interface CommonPlayDamageDiceFormula {
   count:number;
   sides:number;
@@ -194,7 +206,7 @@ export interface CommonPlayOperationDefinition {
   entryPoints:Array<{
     id:string;
     invocation:"manual"|"triggered"|"automatic"|"granted";
-    interaction?:CommonPlayConsentInteraction;
+    interaction?:CommonPlayInteraction;
     targeting?:CommonPlayTargetingSelector;
     allocation?:CommonPlayAllocationDefinition;
     test?:CommonPlayD20TestDefinition;
@@ -222,10 +234,9 @@ export interface CommonPlayOperationExecutionInput {
   rechargeDiceFaces?:Record<number,number[]>;
   movementFactAnswers?:Record<number,CommonPlayFactAnswer>;
   movementProperties?:Record<string,number>;
-  interactionResponse?:{
-    interactionId:string;
-    accepted:true;
-  };
+  interactionResponse?:
+    | {interactionId:string;accepted:true}
+    | {interactionId:string;selectedIds:string[]};
   itemPaymentResourceIds?:Record<number,string>;
   actionKind?:ActionUseKind;
 }
@@ -239,7 +250,7 @@ const ITEM_PAYMENT_SELECTOR_KEYS=new Set(["from","where","min","max","definition
 const ITEM_PAYMENT_PREDICATE_KEYS=new Set(["op","left","right"]);
 const ENTRY_POINT_KEYS=new Set(["id","invocation","interaction","targeting","allocation","test","operations"]);
 const INTERACTION_KEYS=new Set(["id","kind","responder","mode","input","revalidate","stalePolicy"]);
-const INTERACTION_INPUT_KEYS=new Set(["type"]);
+const INTERACTION_INPUT_KEYS=new Set(["type","selector"]);
 const TARGETING_KEYS=new Set(["from","where","min","max","area","orderBy","selection"]);
 const ALLOCATION_KEYS=new Set(["units","targets","minimumPerTarget","maximumPerTarget","totalMustMatch"]);
 const D20_TEST_KEYS=new Set(["kind","roller","property","dc","perTarget"]);
@@ -464,21 +475,30 @@ export function parseCommonPlayPayments(value:unknown,label="Common Play definit
   return value.map((payment,index)=>parsePayment(payment,`${label}[${index}]`));
 }
 
-function parseConsentInteraction(value:unknown,label:string):CommonPlayConsentInteraction {
+function parseCommonPlayInteraction(value:unknown,label:string):CommonPlayInteraction {
   const interaction=object(value,label);
   supportedKeys(interaction,INTERACTION_KEYS,label);
-  if(interaction.kind!=="consent") throw new DomainEvaluationError(`${label}.kind must be consent for portable Common Play interaction`);
+  if(interaction.kind!=="consent"&&interaction.kind!=="choice") throw new DomainEvaluationError(`${label}.kind must be consent or choice for portable Common Play interaction`);
   if(interaction.responder!=="actor"&&interaction.responder!=="target"&&interaction.responder!=="actor-owner"&&interaction.responder!=="target-owner"&&interaction.responder!=="dm"&&interaction.responder!=="host") throw new DomainEvaluationError(`${label}.responder must be actor, target, actor-owner, target-owner, dm, or host for portable Common Play interaction`);
   if(interaction.mode!=="blocking") throw new DomainEvaluationError(`${label}.mode must be blocking for portable Common Play interaction`);
   const input=object(interaction.input,`${label}.input`);
   supportedKeys(input,INTERACTION_INPUT_KEYS,`${label}.input`);
-  if(input.type!=="boolean") throw new DomainEvaluationError(`${label}.input.type must be boolean for portable Common Play interaction`);
   if(interaction.revalidate!=="always"&&interaction.revalidate!=="if-revision-changed") throw new DomainEvaluationError(`${label}.revalidate must be always or if-revision-changed for portable Common Play interaction`);
   if(interaction.stalePolicy!==undefined&&interaction.stalePolicy!=="reject") throw new DomainEvaluationError(`${label}.stalePolicy must be reject for portable Common Play interaction`);
-  return {
-    id:nonEmptyString(interaction.id,`${label}.id`),kind:"consent",responder:interaction.responder,mode:"blocking",input:{type:"boolean"},revalidate:interaction.revalidate,
+  const responder=interaction.responder as CommonPlayConsentInteraction["responder"];
+  const revalidate=interaction.revalidate as CommonPlayConsentInteraction["revalidate"];
+  const shared={
+    id:nonEmptyString(interaction.id,`${label}.id`),responder,mode:"blocking" as const,revalidate,
     ...(interaction.stalePolicy?{stalePolicy:"reject" as const}:{}),
   };
+  if(interaction.kind==="consent") {
+    if(input.type!=="boolean"||input.selector!==undefined) throw new DomainEvaluationError(`${label}.input must be boolean without selector for portable consent interaction`);
+    return {...shared,kind:"consent",input:{type:"boolean"}};
+  }
+  if(input.type!=="choice"||input.selector===undefined) throw new DomainEvaluationError(`${label}.input requires type=choice and selector for portable choice interaction`);
+  const selector=parseCommonPlaySelector(input.selector,`${label}.input.selector`);
+  if(selector.selection==="automatic") throw new DomainEvaluationError(`${label}.input.selector.selection must be manual when present for portable choice interaction`);
+  return {...shared,kind:"choice",input:{type:"choice",selector}};
 }
 
 function parseOperation(value:unknown,label:string):CommonPlayOperation {
@@ -698,7 +718,7 @@ export function parseCommonPlayOperationDefinition(value:unknown,label="Common P
     return {
       id:nonEmptyString(entry.id,`${label}.entryPoints[${index}].id`),
       invocation,
-      ...(entry.interaction===undefined?{}:{interaction:parseConsentInteraction(entry.interaction,`${label}.entryPoints[${index}].interaction`)}),
+      ...(entry.interaction===undefined?{}:{interaction:parseCommonPlayInteraction(entry.interaction,`${label}.entryPoints[${index}].interaction`)}),
       ...(entry.targeting===undefined?{}:{targeting:parseTargetingSelector(entry.targeting,`${label}.entryPoints[${index}].targeting`)}),
       ...(entry.allocation===undefined?{}:{allocation:parseAllocation(entry.allocation,`${label}.entryPoints[${index}].allocation`)}),
       ...(entry.test===undefined?{}:{test:parseD20Test(entry.test,`${label}.entryPoints[${index}].test`)}),
@@ -811,9 +831,24 @@ export function compileCommonPlayEntryPointOperations(
   const entryPoint=supported.entryPoints.find((entry)=>entry.id===input.entryPointId);
   if(!entryPoint) throw new DomainEvaluationError(`Common Play entry point not found: ${input.entryPointId}`);
   if(entryPoint.interaction) {
-    if(!input.interactionResponse) throw new DomainEvaluationError(`Common Play entry point ${entryPoint.id} requires accepted interaction authorization`);
+    if(!input.interactionResponse) throw new DomainEvaluationError(`Common Play entry point ${entryPoint.id} requires interaction authorization`);
     if(input.interactionResponse.interactionId!==entryPoint.interaction.id) throw new DomainEvaluationError("Common Play interaction authorization identity mismatch");
-    if(input.interactionResponse.accepted!==true) throw new DomainEvaluationError("Common Play interaction authorization must be accepted");
+    if(entryPoint.interaction.kind==="consent") {
+      if(!("accepted" in input.interactionResponse)||input.interactionResponse.accepted!==true) throw new DomainEvaluationError("Common Play consent interaction authorization must be accepted");
+    } else {
+      if(!("selectedIds" in input.interactionResponse)) throw new DomainEvaluationError("Common Play choice interaction requires selected identities");
+      const responder=entryPoint.interaction.responder;
+      const authority=responder==="dm"?"dm":responder==="host"?"host":responder==="target"||responder==="target-owner"?"target-owner":"actor-owner";
+      const choiceResolution=resolveCommonPlaySelector({
+        sourceId:input.actorId,
+        selector:entryPoint.interaction.input.selector,
+        candidates:input.targetingCandidates??[],
+        selectedIds:[...input.interactionResponse.selectedIds],
+        selection:"manual",
+        authority,
+      });
+      if(choiceResolution.status!=="resolved") throw new DomainEvaluationError(`Common Play choice selector rejected: ${choiceResolution.reason}`);
+    }
   }
 
   const operations:ResolutionOperation[]=[];

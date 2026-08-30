@@ -58,7 +58,7 @@ test("interaction compiler cannot be bypassed without matching accepted authoriz
   const parsed=definition();
   assert.throws(
     ()=>compileCommonPlayEntryPointOperations(TEST_PROFILE,state,parsed,{...input(),interactionResponse:undefined}),
-    /requires accepted interaction authorization/,
+    /requires interaction authorization/,
   );
   assert.throws(
     ()=>compileCommonPlayEntryPointOperations(TEST_PROFILE,state,parsed,input("wrong-interaction")),
@@ -130,25 +130,19 @@ test("unsupported interaction and economy payment shapes fail explicitly",()=>{
     entryPoints:Array<{interaction:Record<string,unknown>}>;
   };
   const interactionCases:Array<[string,unknown]>= [
-    ["kind","choice"],
     ["kind","adjudication"],
-    ["responder","target"],
-    ["responder","target-owner"],
-    ["responder","dm"],
-    ["responder","host"],
     ["mode","notice"],
     ["mode","input"],
     ["input",{type:"number"}],
     ["input",{type:"text"}],
     ["input",{type:"targets"}],
-    ["input",{type:"choice",selector:{from:"targets",min:1,max:1}}],
     ["stalePolicy","restart"],
     ["idempotencyKey","external-key"],
   ];
   for(const [field,value] of interactionCases) {
     const candidate=structuredClone(base);
     candidate.entryPoints[0].interaction[field]=value;
-    assert.throws(()=>parseManualCommonPlayOperationDefinition(candidate),/portable Common Play interaction|unsupported fields/);
+    assert.throws(()=>parseManualCommonPlayOperationDefinition(candidate),/portable (?:Common Play )?(?:consent |choice )?interaction|unsupported fields/);
   }
   const paymentCases:Array<Partial<Record<string,unknown>>>= [
     {bucket:"free-action"},

@@ -34,7 +34,7 @@ export interface CommonPlaySelectorInput {
   candidates:CommonPlaySelectorCandidate[];
   selectedIds?:string[];
   selection:"manual"|"automatic";
-  authority:"actor-owner"|"dm"|"host"|"provider";
+  authority:"actor-owner"|"target-owner"|"dm"|"host"|"provider";
   /** Set false only when the owning production path is explicitly mapless and has no cover authority. */
   directTarget?:boolean;
 }
