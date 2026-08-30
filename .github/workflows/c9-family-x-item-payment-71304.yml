@@ -25,5 +25,5 @@ jobs:
       - run: npm run generate:content
       - run: node --import tsx --test tests/ui/c9FamilyXPortableItemPaymentProduction.test.ts
       - run: node scripts/check-v1-mechanism-coverage.mjs
-      - run: node scripts/check-legacy-execution-boundary.mjs
       - run: npm exec tsc -- --noEmit
+      - run: node scripts/check-legacy-execution-boundary.mjs
