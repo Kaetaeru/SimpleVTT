@@ -1,0 +1,46 @@
+name: C9 Family A Derived Property Consumer Fix 7130
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-a-derived-property-consumer-fix-7130.yml
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - name: Preserve derived property dependency chain
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          path=Path('.github/workflows/c9-family-a-derived-property-consumer-7130.yml')
+          text=path.read_text(encoding='utf-8')
+          old='state.effects,actorId,property,inputs).value;'
+          new='state.effects,actorId,property,projected).value;'
+          if new not in text:
+            if text.count(old)!=1:
+              raise SystemExit(f'derived property dependency marker mismatch: {text.count(old)}')
+            text=text.replace(old,new,1)
+          path.write_text(text,encoding='utf-8')
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/workflows/c9-family-a-derived-property-consumer-7130.yml
+          git rm -f .github/workflows/c9-family-a-derived-property-consumer-fix-7130.yml
+          git diff --cached --check
+          git commit -m "ci(c9): preserve derived property dependency chain"
+          branch=agent/c9-gate-n-coverage-reconciliation
+          git fetch origin "$branch"
+          git rebase "origin/$branch"
+          git push origin HEAD:"$branch"
