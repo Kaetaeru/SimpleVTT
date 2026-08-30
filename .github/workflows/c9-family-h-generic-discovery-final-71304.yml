@@ -25,6 +25,7 @@ jobs:
       - name: Reconcile branch
         run: git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
       - run: npm ci
+      - run: npm run generate:content
       - name: Apply generic discovery patch
         run: python3 .github/scripts/c9-family-h-generic-discovery-final-71304.py
       - name: Verify generic Family H discovery
