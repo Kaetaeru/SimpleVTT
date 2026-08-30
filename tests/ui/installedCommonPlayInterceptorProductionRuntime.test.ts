@@ -66,6 +66,7 @@ function packagePayload(
             ...(withEligibility?{
               factQueries:[
                 {id:"trigger-distance",fact:"spatial.distance-feet",subject:"intercepted.actor",authority:"dm",visibility:"dm",unknownPolicy:"block"},
+                {id:"trigger-creature-type",fact:"identity.creature-type",subject:"intercepted.actor",authority:"dm",visibility:"dm",unknownPolicy:"block"},
                 {id:"source-sees-trigger",fact:"sense.can-see",subject:"intercepted.actor",authority:"dm",visibility:"dm",unknownPolicy:"treat-false"},
                 {id:"trigger-light",fact:"sense.light",subject:"intercepted.actor",authority:"dm",visibility:"dm",unknownPolicy:"block"},
                 {id:"trigger-obscurement",fact:"sense.obscurement",subject:"intercepted.actor",authority:"dm",visibility:"dm",unknownPolicy:"block"},
@@ -74,6 +75,7 @@ function packagePayload(
               ],
               when:{op:"all",args:[
                 {op:"lte",left:{ref:"trigger-distance"},right:{value:60}},
+                {op:"eq",left:{ref:"trigger-creature-type"},right:{value:"humanoid"}},
                 {op:"eq",left:{ref:"source-sees-trigger"},right:{value:true}},
                 {op:"eq",left:{ref:"trigger-light"},right:{value:eligibilityExpectations.light??"dim"}},
                 {op:"eq",left:{ref:"trigger-obscurement"},right:{value:eligibilityExpectations.obscurement??"none"}},

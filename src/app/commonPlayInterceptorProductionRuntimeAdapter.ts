@@ -1,5 +1,5 @@
 import "./installedContentContracts";
-import type { AppSnapshot, CatalogEntry, CharacterSheet, ResolutionView, SceneVm, SessionMode } from "./contracts";
+import type { AppSnapshot, CatalogEntry, CharacterSheet, CombatantDefinitionVm, ResolutionView, SceneVm, SessionMode } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
 import { buildCharacterSessionProjectionV1 } from "./characterSessionProjection";
 import {
@@ -34,6 +34,7 @@ import {
   type CommonPlayFactProvider,
 } from "../domain/commonPlaySpatialFactRuntime";
 import { authoritativeCommonPlaySpatialRelation } from "./realSpatialRuntimeService";
+import { resolveRuntimeCreatureType } from "./realRuntimeStatProvider";
 import { resolveCommonPlaySenses } from "../domain/commonPlaySenseRuntime";
 import { previewRuntimeAtomicAttackDamage } from "./phase09RealRuntimeAttackAdapter";
 import { queueAtomicAttackDamageReduction } from "./realAttackTransactionService";
@@ -43,6 +44,7 @@ interface AdapterState {
   scene:SceneVm;
   activeCharacter:CharacterSheet;
   catalog:CatalogEntry[];
+  combatantDefinitions:CombatantDefinitionVm[];
   resolution:ResolutionView|null;
   d20(actionId:string,index?:number):number;
   syncChar():void;
@@ -343,6 +345,11 @@ function interceptorFactProvider(internal:AdapterState,candidate:PassiveReaction
       const subjectId=factSubjectId(candidate,pending,query.subject);
       if(!subjectId)return {status:"unsupported",reason:`unsupported interceptor fact subject: ${query.subject??"intercepted.actor"}`};
       if(query.fact==="identity.same-entity")return {status:"answered",value:subjectId===candidate.sourceActorId};
+      if(query.fact==="identity.creature-type"){
+        const entity=internal.scene.entities.find((entry)=>entry.id===subjectId);
+        const creatureType=entity?resolveRuntimeCreatureType(entity,internal.combatantDefinitions):undefined;
+        return creatureType?{status:"answered",value:creatureType}:{status:"unknown"};
+      }
       if(query.fact==="sense.hidden")return {status:"answered",value:runtime.effects.some((effect)=>effect.targetId===subjectId&&effect.tags.includes("hidden"))};
       const relation=authoritativeCommonPlaySpatialRelation(internal.scene,candidate.sourceActorId,subjectId);
       if(!relation)return {status:"unknown"};
