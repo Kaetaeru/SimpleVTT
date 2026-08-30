@@ -1,0 +1,82 @@
+name: C9 Family I Stale Seam Reconcile 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-i-stale-seam-reconcile-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Reconcile latest branch
+        run: git pull --ff-only origin agent/c9-gate-n-coverage-reconciliation
+      - run: npm ci
+      - name: Verify Family I movement evidence
+        run: >-
+          npx tsx --test
+          tests/ui/c9FamilyIMovementGrantProduction.test.ts
+          tests/ui/c9FamilyIRulesDerivedMovementCostProduction.test.ts
+          tests/ui/c9FamilyIMovementProduction.test.ts
+      - name: Remove stale Family I named seam
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path('docs/rules/v1-mechanism-coverage-ledger.json')
+          data = json.loads(path.read_text(encoding='utf-8'))
+          row = next(entry for entry in data['rows'] if entry.get('family') == 'I')
+          if row.get('disposition') != 'IMPLEMENTED':
+              raise SystemExit('Family I must already be IMPLEMENTED before stale-seam reconciliation')
+          evidence = '\n'.join(row.get('productionEvidence', []))
+          if 'c9FamilyIMovementGrantProduction.test.ts' not in evidence:
+              raise SystemExit('Family I portable movement-grant evidence is missing')
+          row['remainingNamedSeams'] = [
+              seam for seam in row.get('remainingNamedSeams', [])
+              if seam != 'named movement grants'
+          ]
+          path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          PY
+      - name: Verify coverage contract and types
+        run: |
+          node scripts/check-v1-mechanism-coverage.mjs
+          node scripts/check-legacy-execution-boundary.mjs
+          npx tsc --noEmit
+      - name: Publish reconciliation and retire workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch=agent/c9-gate-n-coverage-reconciliation
+          workflow=.github/workflows/c9-family-i-stale-seam-reconcile-71304.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm "$workflow"
+          git add docs/rules/v1-mechanism-coverage-ledger.json
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "docs(c9): clear stale Family I movement seam"
+          for attempt in $(seq 1 8); do
+            if git push origin HEAD:"$branch"; then exit 0; fi
+            git fetch origin "$branch"
+            git rebase "origin/$branch"
+            sleep 1
+          done
+          exit 1
