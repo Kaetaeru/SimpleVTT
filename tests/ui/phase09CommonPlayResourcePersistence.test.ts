@@ -9,11 +9,13 @@ import {
 import { installedCommonPlayActionId } from "../../src/app/installedCommonPlayActionReference";
 import {
   getInstalledContentPersistenceStateForTests,
+  requiredSessionInstalledContent,
   setInstalledContentStoreForTests,
 } from "../../src/app/installedContentRuntimeAdapter";
 import { MemoryCharacterLibraryStore } from "../../src/app/memoryCharacterLibraryStore";
 import { MemoryInstalledContentStore } from "../../src/app/memoryInstalledContentStore";
 import { MockAdapter } from "../../src/app/mockAdapter";
+import { snapshotAdapterTurnRuntimeState } from "../../src/app/turnRuntimeSessionRegistry";
 import { FIGHTER_SECOND_WIND_RESOURCE_ID } from "../../src/domain/coreClassResources";
 
 const MODULE_ID="homebrew.family-d-persistence-probe";
@@ -183,6 +185,10 @@ test("unknown installed Common Play materializes and removes its own durable res
   const installed=getInstalledContentPersistenceStateForTests(adapter)?.document?.entries.find((entry)=>entry.contentId===SOURCE_CONTENT_ID&&entry.sourceId===SOURCE_MODULE_ID);
   assert.equal(installed?.mechanics?.[0]?.config.id,SOURCE_MECHANIC_ID,JSON.stringify(getInstalledContentPersistenceStateForTests(adapter)?.document));
   assert.equal(installed?.mechanics?.[0]?.config.entryPoints?.length,2);
+  const sessionEntries=await requiredSessionInstalledContent(adapter,[]);
+  const sessionEntry=sessionEntries.find((entry)=>catalogQualifiedId(entry.contentId,entry.sourceId,entry.version)===catalogQualifiedId(SOURCE_CONTENT_ID,SOURCE_MODULE_ID,"1"));
+  assert.equal(sessionEntry?.mechanics?.[0]?.config.id,SOURCE_MECHANIC_ID);
+  assert.ok(sessionEntry?.mechanics?.[0]?.config.entryPoints?.some((entry)=>entry.id===MATERIALIZE_ENTRY_POINT_ID));
 
   await adapter.startInitiative();
   await adapter.setCurrentActor("char.aelar");
@@ -190,6 +196,9 @@ test("unknown installed Common Play materializes and removes its own durable res
   let snapshot=await adapter.getSnapshot();
   const characterId=snapshot.activeCharacter.id;
   assert.equal(snapshot.activeCharacter.resources.some((entry)=>entry.id===SOURCE_RESOURCE_ID),false);
+  const runtime=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene);
+  assert.equal(runtime?.clock.activeActorId,characterId);
+  assert.ok(runtime?.combatants[characterId]);
 
   const catalogId=catalogQualifiedId(SOURCE_CONTENT_ID,SOURCE_MODULE_ID,"1");
   const materializeActionId=installedCommonPlayActionId({
