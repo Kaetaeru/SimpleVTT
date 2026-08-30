@@ -135,3 +135,29 @@ test("unknown portable condition apply/remove survives connected replay, duplica
   assert.equal((await applyConnectedClientEvents(reconnectAfterUndo,hostConnected.ledger!.eventsAfter(0))).status,"applied");
   assert.equal((await poisonedEffects(reconnectAfterUndo)).length,1,"reconnect after Undo must restore the authoritative condition state");
 });
+
+test("renamed portable condition identity preserves connected apply and reconnect semantics",async()=>{
+  const prefix="renamed-family-m-connected";
+  const sessionId="session.renamed-family-m-connected";
+  const host=new MockAdapter();
+  const actions=await install(host,prefix);
+  const hostConnected=connectedStateFor(host);
+  hostConnected.mode="host";
+  hostConnected.sessionId=sessionId;
+  hostConnected.ledger=new HostSessionLedger(sessionId,connectedManifest(host));
+
+  const client=new MockAdapter();
+  await install(client,prefix);
+  connectClient(client,sessionId);
+
+  const applyBatch=await captureHostBatch(()=>host.resolveAction(actions.poison,[TARGET_ID]));
+  assert.equal((await applyConnectedClientEvents(client,applyBatch.events)).status,"applied");
+  assert.equal((await poisonedEffects(host)).length,1);
+  assert.equal((await poisonedEffects(client)).length,1);
+
+  const reconnect=new MockAdapter();
+  await install(reconnect,prefix);
+  connectClient(reconnect,sessionId);
+  assert.equal((await applyConnectedClientEvents(reconnect,hostConnected.ledger!.eventsAfter(0))).status,"applied");
+  assert.equal((await poisonedEffects(reconnect)).length,1,"renamed identity reconnect must reconstruct the portable condition");
+});
