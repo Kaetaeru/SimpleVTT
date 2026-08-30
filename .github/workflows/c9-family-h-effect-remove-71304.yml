@@ -1,0 +1,164 @@
+name: C9 Family H Effect Remove 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-h-effect-remove-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  verify-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Reconcile branch
+        run: git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+      - run: npm ci
+      - run: npm run generate:content
+      - name: Add generic Common Play effect removal
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          runtime=Path('src/domain/commonPlayOperationRuntime.ts')
+          text=runtime.read_text(encoding='utf-8')
+
+          def replace_once(old,new,label):
+              global text
+              if old not in text:
+                  raise SystemExit(f'{label} anchor missing')
+              text=text.replace(old,new,1)
+
+          if 'type CommonPlayEffectRemove=' not in text:
+              old='''type CommonPlayConditionChange={
+            kind:"condition.apply"|"condition.remove";
+            condition:ConditionId;
+            target?:CommonPlayConditionTarget;
+            when?:CommonPlayTestOutcomePredicate;
+          };
+          type CommonPlayMovementStand={kind:"movement.stand";target:"actor"|"self"};'''.replace('          ','')
+              new='''type CommonPlayConditionChange={
+            kind:"condition.apply"|"condition.remove";
+            condition:ConditionId;
+            target?:CommonPlayConditionTarget;
+            when?:CommonPlayTestOutcomePredicate;
+          };
+          type CommonPlayEffectRemove={
+            kind:"effect.remove";
+            selector:CommonPlaySelector&{from:"effects"};
+            when?:CommonPlayTestOutcomePredicate;
+          };
+          type CommonPlayMovementStand={kind:"movement.stand";target:"actor"|"self"};'''.replace('          ','')
+              replace_once(old,new,'type')
+
+          if '|CommonPlayEffectRemove' not in text:
+              replace_once(
+                  '  |CommonPlayMovementStand\n  |CommonPlayConditionChange\n  |CommonPlayRollModify;',
+                  '  |CommonPlayMovementStand\n  |CommonPlayConditionChange\n  |CommonPlayEffectRemove\n  |CommonPlayRollModify;',
+                  'union',
+              )
+
+          if 'const EFFECT_REMOVE_KEYS=' not in text:
+              old='const CONDITION_CHANGE_KEYS=new Set(["kind","condition","target","when"]);'
+              replace_once(old,old+'\nconst EFFECT_REMOVE_KEYS=new Set(["kind","selector","when"]);','keys')
+
+          if 'if(operation.kind==="effect.remove") {' not in text:
+              old='  if(operation.kind==="condition.apply"||operation.kind==="condition.remove") {\n    supportedKeys(operation,CONDITION_CHANGE_KEYS,label);'
+              new='''  if(operation.kind==="effect.remove") {
+            supportedKeys(operation,EFFECT_REMOVE_KEYS,label);
+            const selector=parseCommonPlaySelector(operation.selector,`${label}.selector`);
+            if(selector.from!=="effects") throw new DomainEvaluationError(`${label}.selector.from must be effects for portable Common Play effect.remove`);
+            if(selector.selection==="manual") throw new DomainEvaluationError(`${label}.selector.selection must be automatic when removing effects`);
+            const when=testOutcomePredicate(operation.when,`${label}.when`);
+            return {kind:"effect.remove",selector:{...selector,from:"effects"},...(when?{when}:{})};
+          }
+          '''.replace('          ','')+old
+              replace_once(old,new,'parser')
+
+          old='(operation.kind==="condition.apply"||operation.kind==="condition.remove")&&operation.when'
+          new='(operation.kind==="condition.apply"||operation.kind==="condition.remove"||operation.kind==="effect.remove")&&operation.when'
+          if new not in text:
+              replace_once(old,new,'conditional-validation')
+
+          if 'Common Play effect.remove selector rejected:' not in text:
+              old='    if(operation.kind==="condition.apply"||operation.kind==="condition.remove") {\n      const targetId=conditionOperationTarget(operation.target,input);'
+              block='''    if(operation.kind==="effect.remove") {
+            const when=operation.when?{operationId:`${input.resolutionId}:test`,field:"outcome" as const,equals:operation.when.right.value}:undefined;
+            const candidates:CommonPlaySelectorCandidate[]=state.effects.filter(effectIsActive).map((effect)=>({
+              id:effect.id,
+              properties:{
+                tags:[...effect.tags],
+                targetId:effect.targetId,
+                sourceId:effect.sourceId,
+                kind:effect.kind,
+                "target.selected":input.targetId!==undefined&&effect.targetId===input.targetId,
+                "target.actor":effect.targetId===input.actorId,
+                ...(effect.sourceActorId?{sourceActorId:effect.sourceActorId}:{}),
+                ...(effect.conditionId?{conditionId:effect.conditionId}:{}),
+              },
+            }));
+            const selected=resolveCommonPlaySelector({sourceId:input.actorId,selector:operation.selector,candidates,selection:"automatic",authority:"host"});
+            if(selected.status!=="resolved") throw new DomainEvaluationError(`Common Play effect.remove selector rejected: ${selected.reason}`);
+            selected.targetIds.forEach((effectId,removeIndex)=>operations.push({id:`${operationId}:remove:${removeIndex}`,kind:"remove-effect",effectId,...(when?{when}:{})}));
+            continue;
+          }
+
+          '''.replace('          ','')
+              replace_once(old,block+old,'compiler')
+
+          runtime.write_text(text,encoding='utf-8')
+
+          test=Path('tests/ui/c9FamilyHSearchDiscoveryProduction.test.ts')
+          text=test.read_text(encoding='utf-8')
+          if 'kind: "effect.remove"' not in text:
+              pattern=r'kind:\s*"condition\.remove",\s*condition:\s*"invisible",\s*target:\s*"target",'
+              replacement='''kind: "effect.remove",
+            selector: {
+              from: "effects",
+              where: {
+                op: "all",
+                args: [
+                  { op: "eq", left: { ref: "conditionId" }, right: { value: "invisible" } },
+                  { op: "eq", left: { ref: "target.selected" }, right: { value: true } },
+                ],
+              },
+              min: 1,
+              max: 1,
+              selection: "automatic",
+            },'''
+              text,count=re.subn(pattern,replacement,text,count=1)
+              if count!=1: raise SystemExit(f'Family H Search operation regex matched {count} times')
+          test.write_text(text,encoding='utf-8')
+          PY
+      - name: Verify generic effect removal
+        run: |
+          node --import tsx --test tests/ui/c9FamilyHSearchDiscoveryProduction.test.ts
+          node scripts/check-legacy-execution-boundary.mjs
+          node scripts/check-v1-mechanism-coverage.mjs
+          npm exec tsc -- --noEmit
+      - name: Publish verified patch and retire verifier
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/c9-family-h-effect-remove-71304.yml
+          git add src/domain/commonPlayOperationRuntime.ts tests/ui/c9FamilyHSearchDiscoveryProduction.test.ts
+          git diff --cached --check
+          git commit -m "feat(c9): lower structural effect removal"
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
