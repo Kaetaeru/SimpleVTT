@@ -146,7 +146,7 @@ jobs:
 
           ledger_path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
           ledger=json.loads(ledger_path.read_text(encoding='utf-8'))
-          family=next(entry for entry in ledger['families'] if entry.get('family')=='J')
+          family=next(entry for entry in ledger['rows'] if entry.get('family')=='J')
           sentence='Unarmed shove-to-Prone now resolves from source-owned builtin Common Play through a structural runtimeCommonPlayActionId reference, preserving Extra Attack payment, Undo, and action identity rename without a named execution branch.'
           if sentence not in family['currentState']:
               family['currentState']=family['currentState'].rstrip()+(' ' if family['currentState'] else '')+sentence
@@ -175,14 +175,13 @@ jobs:
           node scripts/check-v1-mechanism-coverage.mjs
           node scripts/check-legacy-execution-boundary.mjs
           npx tsc --noEmit
-      - name: Land verified slice and retire workflow
+      - name: Land verified slice
         shell: bash
         run: |
           set -euo pipefail
           branch=agent/c9-gate-n-coverage-reconciliation
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git rm .github/workflows/c9-family-j-shove-source-composition-71304.yml
           git add src/app/contracts.ts src/domain/commonPlayOperationRuntime.ts src/app/installedCommonPlayRuntimeAdapter.ts src/app/structuralSaveConditionRuntimeAdapter.ts src/app/productionPlayRuntimeAdapter.ts content/modules/dnd-srd-5.2.1.core/module.json tests/ui/unarmedStrikeRuntime.test.ts docs/rules/v1-mechanism-coverage-ledger.json
           git commit -m "feat(c9): source unarmed shove from Common Play"
           for attempt in 1 2 3 4 5; do
