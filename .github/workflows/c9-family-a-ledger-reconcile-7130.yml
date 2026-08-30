@@ -1,0 +1,75 @@
+name: C9 Family A Ledger Reconcile 7130
+
+on:
+  push:
+    paths:
+      - '.github/workflows/c9-family-a-ledger-reconcile-7130.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  verify-and-reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run generate:content
+      - name: Verify current Family A production evidence
+        run: |
+          npx tsx --test tests/domain/commonPlayPropertyContractRuntime.test.ts
+          npx tsx --test tests/ui/installedCommonPlayPropertyModifierProduction.test.ts
+          npx tsc --noEmit
+          node scripts/check-v1-mechanism-coverage.mjs
+      - name: Reconcile Family A ledger
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
+          data=json.loads(path.read_text())
+          row=next(row for row in data['rows'] if row['family']=='A')
+          row['currentState']=(
+            'The persisted property.modify contract carries explicit target, Effect ownership, definition source, elapsed duration, destroy-on-end lifetime, and instance policy. '
+            'commonPlayOperationRuntime generically lowers arbitrary external property.modify definitions to the existing apply-effect ResolutionOperation with a typed propertyModifier payload, and Resolver commits that payload into EffectState. '
+            'Production property resolution now composes canonical CharacterSheet/turn-runtime inputs, RulesProfile formulas, and active Effect-owned modifiers recursively, including derived dependency chains, and unknown external Common Play consumes those resolved property refs without content-name or content-ID dispatch. '
+            'Generic Effect application enforces stack, replace, and unique-by-source instance policies with reversible Effect StateChanges; profile-policy rejects explicitly until RulesProfile supplies a stacking policy. '
+            'Source-bound property modifiers converge through connected event replay, fresh connected replicas, retry suppression, event-native Undo, and an independent local adapter restart through the persisted turn-runtime store. '
+            'Family A remains incomplete because property materialization outside the currently projected canonical CharacterSheet/turn-runtime vocabulary is not yet unified under a generic property owner, and profile-policy remains unsupported until RulesProfile defines the stacking policy.'
+          )
+          def add(key,value):
+            if value not in row[key]: row[key].append(value)
+          add('implementationEvidence','effectProfilePropertyResolver.ts resolveEffectModifiedProfileProperty recursively composes RulesProfile formulas and active Effect modifiers across property dependencies with cycle detection')
+          add('implementationEvidence','installedCommonPlayRuntimeAdapter.ts commonPlayActorProfileProperties projects canonical CharacterSheet/RulesRuntimeState values and profile formulas into generic Common Play expression refs')
+          add('productionEvidence','0154c374a054a56984991df759508c21a4e95149 feat(c9): project derived profile properties to Common Play; installedCommonPlayPropertyModifierProduction.test.ts proves unknown external Common Play consumes an effect-modified derived ability.str.modifier ref')
+          add('productionEvidence','C9 Family A Ledger Reconcile 7130 targeted run: property contract, production projection/restart/connected/Undo evidence, tsc --noEmit, and V1 coverage checker pass before ledger mutation')
+          add('persistenceEvidenceIfRelevant','turnRuntimeSessionRegistry.ts TurnRuntimeStateStore persists local authoritative RulesRuntimeState and restores it into a fresh adapter runtime')
+          add('persistenceEvidenceIfRelevant','installedCommonPlayPropertyModifierProduction.test.ts source-bound property modifier survives a fresh local adapter restart and still drives production movement')
+          stale={
+            'EffectInstance.propertyModifier production projection currently covers movement.walk rather than the full generic property vocabulary',
+            'resolveProfileProperty still has no production caller that composes active Effect-owned modifiers across generic property refs',
+            'connected event replay is not durable local persistence: turnRuntimeSessionRegistry keeps structured turn runtime in an adapter-scoped WeakMap and realTurnRuntimeService rebuilds scene runtime with effects: [], so source-bound property modifiers do not survive an independent local runtime restart without authoritative ledger replay',
+          }
+          row['remainingNamedSeams']=[entry for entry in row['remainingNamedSeams'] if entry not in stale]
+          path.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n')
+          PY
+          node scripts/check-v1-mechanism-coverage.mjs
+      - name: Commit verified ledger
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm .github/workflows/c9-family-a-ledger-reconcile-7130.yml
+          git add docs/rules/v1-mechanism-coverage-ledger.json .github/workflows/c9-family-a-ledger-reconcile-7130.yml
+          git diff --cached --check
+          git commit -m "docs(c9): reconcile Family A generic property evidence"
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
