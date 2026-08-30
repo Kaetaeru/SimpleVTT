@@ -16,6 +16,7 @@ export interface BardicInspirationResourceDefinition {
   resourceId:string;
   label:string;
   maximum:number;
+  dieSides:number;
   recovery:ResourceRecovery;
   source:string;
 }
@@ -45,6 +46,7 @@ export function bardicInspirationResourceDefinition(bardLevel:number,charismaMod
     resourceId:BARDIC_INSPIRATION_RESOURCE_ID,
     label:"바드의 영감",
     maximum:bardicInspirationMaximum(charismaModifier),
+    dieSides:bardicInspirationDieSides(bardLevel),
     recovery:bardLevel >= 5 ? { shortRest:"all", longRest:"all" } : { longRest:"all" },
     source:`바드 ${bardLevel}레벨 · 바드의 영감${bardLevel >= 5 ? " / 영감의 샘" : ""} · SRD 5.2.1`,
   };

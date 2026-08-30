@@ -372,6 +372,7 @@
         "mode": { "enum": ["advantage", "disadvantage", "add-die", "subtract-die", "add-flat", "target-add", "reroll", "replace", "minimum"] },
         "value": { "$ref": "#/$defs/expression" },
         "dice": { "type": "string", "pattern": "^[0-9]+d[0-9]+([+-][0-9]+)?$" },
+        "diceResource": { "type": "string", "minLength": 1 },
         "when": { "$ref": "#/$defs/predicate" }
       },
       "additionalProperties": false

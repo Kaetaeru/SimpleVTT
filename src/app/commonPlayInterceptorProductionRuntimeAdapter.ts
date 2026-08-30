@@ -157,7 +157,7 @@ async function passiveReactionCandidates(adapter:MockAdapter):Promise<PassiveRea
       for(const [mechanicIndex,mechanic] of (entry.mechanics??[]).entries()){
         if(mechanic.kind!=="common-play")continue;
         const canonical=parseCommonPlayDefinition(mechanic.config,`Installed passive Common Play ${qualifiedId} mechanic ${mechanicIndex}`);
-        const definition=lowerCommonPlayReactionDefinition(canonical);
+        const definition=lowerCommonPlayReactionDefinition(canonical,{resolveResourceDie:(resourceId)=>owner.sheet.resources.find((resource)=>resource.id===resourceId)?.dieSides});
         if(!definition)continue;
         for(const interceptor of definition.interceptors){
           const responder=interceptor.interaction.responder;

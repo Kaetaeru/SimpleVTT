@@ -18,6 +18,7 @@ export function ensureBardicInspirationResource(sheet:CharacterSheet) {
       label:definition.label,
       current:definition.maximum,
       max:definition.maximum,
+      dieSides:definition.dieSides,
       source:definition.source,
       recovery:{ ...definition.recovery },
     });
@@ -26,6 +27,7 @@ export function ensureBardicInspirationResource(sheet:CharacterSheet) {
   existing.label = definition.label;
   existing.current = Math.min(existing.current,definition.maximum);
   existing.max = definition.maximum;
+  existing.dieSides = definition.dieSides;
   existing.source = definition.source;
   existing.recovery = { ...definition.recovery };
   return sheet;

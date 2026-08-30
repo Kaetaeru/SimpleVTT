@@ -4,6 +4,7 @@ import type { ProgressionClassTrack, ProgressionPlan } from "../domain/progressi
 
 declare module "./contracts" {
   interface CharacterResourceVm {
+    dieSides?:number;
     recovery?: {
       shortRest?: number | "all";
       longRest?: number | "all";

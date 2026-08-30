@@ -10,6 +10,7 @@ import type { CommonPlayFactQuery } from "./commonPlaySpatialFactRuntime";
 import { DomainEvaluationError, type SemanticPredicate } from "./profileEngine";
 
 type Obj=Record<string,unknown>;
+type ReactionLoweringOptions={ resolveResourceDie?:(resourceId:string)=>number|undefined };
 const STABLE_ID=/^[a-z0-9][a-z0-9._-]*$/;
 const RESPONDERS=new Set(["actor","target","actor-owner","target-owner","dm","host"]);
 const VISIBILITIES=new Set(["public","actor","dm","actor-and-dm","authority-only"]);
@@ -115,7 +116,7 @@ function payment(value:Obj,index:number):CommonPlayReactionDefinition["payments"
   throw new DomainEvaluationError(`${label}.kind is unsupported by the reaction runtime`);
 }
 
-function lowerD20Interceptor(value:Obj,index:number):CommonPlayD20RollInterceptor {
+function lowerD20Interceptor(value:Obj,index:number,options:ReactionLoweringOptions):CommonPlayD20RollInterceptor {
   const label=`Common Play reaction interceptor[${index}]`;
   const eligibilityDefinition=eligibility(value,label);
   if(value.timing!=="d20.outcome-determined"||value.operation!=="recalculate"||value.slot!=="d20.roll") {
@@ -133,17 +134,27 @@ function lowerD20Interceptor(value:Obj,index:number):CommonPlayD20RollIntercepto
     operations:operations.map((candidate,operationIndex)=>{
       const raw=object(candidate,`${label}.operations[${operationIndex}]`);
       if(raw.when!==undefined) throw new DomainEvaluationError(`${label}.operations[${operationIndex}].when is not connected to the reaction runtime yet`);
-      if(raw.kind!=="roll.modify"||raw.mode!=="subtract-die"||typeof raw.dice!=="string"||!/^([0-9]+)d([0-9]+)([+-][0-9]+)?$/.test(raw.dice)) {
-        throw new DomainEvaluationError(`${label}.operations[${operationIndex}] must be roll.modify subtract-die with a dice formula`);
+      if(raw.kind!=="roll.modify"||raw.mode!=="subtract-die") {
+        throw new DomainEvaluationError(`${label}.operations[${operationIndex}] must be roll.modify subtract-die`);
       }
-      return {kind:"roll.modify" as const,mode:"subtract-die" as const,dice:raw.dice};
+      const hasLiteral=typeof raw.dice==="string";
+      const hasResource=typeof raw.diceResource==="string"&&raw.diceResource.length>0;
+      if(hasLiteral===hasResource) throw new DomainEvaluationError(`${label}.operations[${operationIndex}] must declare exactly one of dice or diceResource`);
+      if(hasLiteral) {
+        if(!/^([0-9]+)d([0-9]+)([+-][0-9]+)?$/.test(raw.dice as string)) throw new DomainEvaluationError(`${label}.operations[${operationIndex}].dice must be a dice formula`);
+        return {kind:"roll.modify" as const,mode:"subtract-die" as const,dice:raw.dice as string};
+      }
+      const resourceId=raw.diceResource as string;
+      const sides=options.resolveResourceDie?.(resourceId);
+      if(typeof sides!=="number"||!Number.isInteger(sides)||sides<2) throw new DomainEvaluationError(`${label}.operations[${operationIndex}].diceResource has no authoritative die size: ${resourceId}`);
+      return {kind:"roll.modify" as const,mode:"subtract-die" as const,dice:`1d${sides}`};
     }),
   };
 }
 
-function lowerDamageInterceptor(value:Obj,index:number):CommonPlayDamageRollInterceptor {
+function lowerDamageInterceptor(value:Obj,index:number,options:ReactionLoweringOptions):CommonPlayDamageRollInterceptor {
   const label=`Common Play reaction interceptor[${index}]`;
-  const lowered=lowerD20Interceptor({...value,timing:"d20.outcome-determined",slot:"d20.roll"},index);
+  const lowered=lowerD20Interceptor({...value,timing:"d20.outcome-determined",slot:"d20.roll"},index,options);
   return {...lowered,timing:"damage.rolled",slot:"primary.damage"};
 }
 
@@ -190,7 +201,7 @@ function supportedInterceptor(value:Obj) {
  * If a definition declares another interceptor shape, fail explicitly instead of silently
  * routing supported portable content into a named compatibility path.
  */
-export function lowerCommonPlayReactionDefinition(definition:CommonPlayDefinitionIR):CommonPlayReactionDefinition|undefined {
+export function lowerCommonPlayReactionDefinition(definition:CommonPlayDefinitionIR,options:ReactionLoweringOptions={}):CommonPlayReactionDefinition|undefined {
   const rawInterceptors=definition.interceptors??[];
   if(!rawInterceptors.length) return undefined;
   const unsupportedIndex=rawInterceptors.findIndex((candidate)=>!supportedInterceptor(candidate));
@@ -205,9 +216,9 @@ export function lowerCommonPlayReactionDefinition(definition:CommonPlayDefinitio
     payments:(definition.payments??[]).map((candidate,index)=>payment(candidate,index)),
     interceptors:rawInterceptors.map((candidate,index)=>
       candidate.slot==="d20.roll"
-        ? lowerD20Interceptor(candidate,index)
+        ? lowerD20Interceptor(candidate,index,options)
         : candidate.slot==="primary.damage"
-          ? lowerDamageInterceptor(candidate,index)
+          ? lowerDamageInterceptor(candidate,index,options)
           : lowerAttackOutcomeInterceptor(candidate,index)
     ),
   };

@@ -90,6 +90,7 @@ function resourceSourceDefinition(resource:CharacterResourceVm) {
     id:resource.id,
     label:resource.label,
     max:resource.max,
+    dieSides:resource.dieSides,
     source:resource.source,
     recovery:resource.recovery ? cp(resource.recovery) : undefined,
   };
@@ -288,6 +289,7 @@ function materializeResources(record:CharacterLibraryRecordV1):CharacterResource
       label:definition.label,
       current:Math.min(runtime?.current ?? definition.max,definition.max),
       max:definition.max,
+      dieSides:definition.dieSides,
       source:definition.source,
       recovery:definition.recovery ? cp(definition.recovery) : undefined,
       recoveryLockouts:runtime?.recoveryLockouts ? cp(runtime.recoveryLockouts) : undefined,

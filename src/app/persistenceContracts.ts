@@ -76,6 +76,7 @@ export interface CharacterResourceSourceDefinitionV1 {
   id:string;
   label:string;
   max:number;
+  dieSides?:number;
   source:string;
   recovery?: {
     shortRest?:number|"all";
