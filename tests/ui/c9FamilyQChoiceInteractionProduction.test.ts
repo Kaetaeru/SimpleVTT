@@ -4,13 +4,13 @@ import "../../src/app/offlineRuntimeAdapters";
 import "../../src/app/connectedSessionRuntimeAdapter";
 import "../../src/app/connectedActionRoutingAdapter";
 import { catalogQualifiedId } from "../../src/app/contentCatalogIdentity";
-import { connectedManifest } from "../../src/app/connectedSessionRuntimeAdapter";
+import { applyConnectedClientEvents, connectedManifest } from "../../src/app/connectedSessionRuntimeAdapter";
 import { connectedStateFor } from "../../src/app/connectedSessionState";
 import { installedCommonPlayActionId } from "../../src/app/installedCommonPlayActionReference";
 import { setInstalledContentStoreForTests } from "../../src/app/installedContentRuntimeAdapter";
 import { MemoryInstalledContentStore } from "../../src/app/memoryInstalledContentStore";
 import { MockAdapter } from "../../src/app/mockAdapter";
-import { HostSessionLedger } from "../../src/app/connectedSessionProtocol";
+import { ClientSessionReplica, HostSessionLedger } from "../../src/app/connectedSessionProtocol";
 import { tauriSessionTransport } from "../../src/app/tauriSessionTransport";
 import { routeConnectedInterruptResponse } from "../../src/app/connectedInterruptResponsePort";
 
@@ -64,6 +64,15 @@ async function accepted(prefix:string){
     assert.equal(snapshot.scene.economyByActor[actorId]?.reaction,false);
     assert.ok(snapshot.resolution?.detail.some((line)=>line.includes(selectedIds.join(", "))),JSON.stringify(snapshot.resolution?.detail));
     assert.ok(broadcasts.map((wire)=>JSON.parse(wire)).some((wire)=>wire.type==="event-batch"),JSON.stringify(broadcasts));
+
+    const reconnectSetup=await setup(prefix);
+    const reconnect=reconnectSetup.host,reconnectState=connectedStateFor(reconnect);
+    reconnectState.mode="client";reconnectState.sessionId=sessionId;reconnectState.replica=new ClientSessionReplica(sessionId);
+    assert.equal((await applyConnectedClientEvents(reconnect,connectedStateFor(host).ledger!.eventsAfter(0))).status,"applied");
+    const reconnectSnapshot=await reconnect.getSnapshot();
+    assert.equal(reconnectSnapshot.scene.entities.find((entity)=>entity.id===actorId)?.hp,snapshot.scene.entities.find((entity)=>entity.id===actorId)?.hp);
+    assert.equal(reconnectSnapshot.scene.economyByActor[actorId]?.reaction,false);
+
     return {delta:(snapshot.scene.entities.find((entity)=>entity.id===actorId)?.hp??0)-hpBefore,selectedCount:selectedIds.length};
   }finally{tauriSessionTransport.send=oldSend;tauriSessionTransport.sendTo=oldSendTo;}
 }

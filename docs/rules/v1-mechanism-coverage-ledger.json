@@ -1278,7 +1278,7 @@
         "commonPlayInteractionProductionRuntime.test.ts",
         "ResolutionView.interrupt"
       ],
-      "currentState": "Portable boolean consent supports actor, target, actor-owner, target-owner, DM, and Host responders through the existing blocking Resolution interrupt. Character-owned prompts route only to the authoritative owning peer; DM/Host prompts remain host-local and reject remote Character responses. Target-owner reconnect resumes the same pending prompt on the rebound owning peer, stale/disconnected responses are rejected, and authoritative revision revalidation prevents a late commit after Reaction becomes unavailable. Unknown installed Common Play preserves decline-before-commit, completed-prompt replay rejection, atomic commit, connected broadcast, and identity-independent responder semantics. Rich choice/multiple-option payloads remain incomplete.",
+      "currentState": "Portable consent and selector-backed multiple-option choice interactions execute through the existing blocking Resolution interrupt for actor, target, actor-owner, target-owner, DM, and Host authority. Choice options are projected structurally from the Common Play selector, connected responses carry selectedIds, accepted selections are revalidated without direct-target cover authority, payment plus downstream operations commit atomically, decline is side-effect free, stale/reconnect/replay authority is enforced, complete external identity rename preserves behavior, and accepted canonical event batches replay into a fresh connected replica.",
       "requiredSemantics": [
         "consent",
         "choice",
@@ -1291,7 +1291,7 @@
         "atomic downstream"
       ],
       "transactionDomain": "Existing resolution interrupt plus connected session authority",
-      "disposition": "INCOMPLETE",
+      "disposition": "IMPLEMENTED",
       "implementationEvidence": [
         "commonPlayOperationRuntime.ts typed consent interaction supports actor|target|actor-owner|target-owner responders, always|if-revision-changed revalidation, and reject stale policy",
         "installedCommonPlayRuntimeAdapter.ts uses the existing Resolution interrupt and revalidates the installed action before atomic acceptance commit",
@@ -1299,7 +1299,9 @@
         "commonPlayOperationRuntime.ts typed consent interaction supports actor|target|actor-owner|target-owner responders; installedCommonPlayRuntimeAdapter.ts resolves target-directed consent from the authoritative single selected target without content identity dispatch",
         "commonPlayOperationRuntime.ts and common-play-contract.schema.json represent dm|host alongside actor/target owner consent without content-name dispatch; installedCommonPlayRuntimeAdapter.ts projects authority:dm|authority:host responders through the existing blocking interrupt",
         "commonPlayOperationRuntime.ts and common-play-contract.schema.json represent dm|host alongside actor/target owner consent without content-name dispatch; installedCommonPlayRuntimeAdapter.ts projects authority:dm|authority:host through the existing blocking interrupt",
-        "connectedSessionRuntimeAdapter.ts resumes a pending Character-owned Resolution interrupt by authoritative responder Character id, independent of whether the portable responder was actor-owner or target-owner"
+        "connectedSessionRuntimeAdapter.ts resumes a pending Character-owned Resolution interrupt by authoritative responder Character id, independent of whether the portable responder was actor-owner or target-owner",
+        "commonPlayOperationRuntime.ts typed choice interaction carries selector-backed selectedIds structurally; installedCommonPlayRuntimeAdapter.ts projects candidate options, revalidates selectedIds with directTarget:false, and commits accepted selections atomically without content-name dispatch",
+        "contracts.ts, connectedSessionWire.ts, connectedInterruptResponsePort.ts, connectedActionRoutingAdapter.ts, and compatibility respondToInterrupt wrappers carry optional selectedIds through the existing connected interrupt path"
       ],
       "productionEvidence": [
         "c2c8824f7e0fc883463c285bb9572ded72a9e232 feat(c9): route actor-owner consent interactions",
@@ -1311,13 +1313,16 @@
         "c9FamilyQAuthorityInteractionProduction.test.ts unknown installed DM and Host consent remains host-local, rejects remote Character responses, and commits downstream damage only after local authority approval",
         "c9FamilyQAuthorityInteractionProduction.test.ts proves unknown installed DM and Host consent stays host-authoritative, rejects remote Character responses, and commits downstream damage only after local authority approval",
         "49f3b55bea55a8e45947d1dd1f5070e9b3b4b85c feat(c9): route DM and Host consent authority; c9FamilyQAuthorityInteractionProduction.test.ts verifies unknown installed DM/Host authority consent through the generic interrupt path",
-        "c9FamilyQTargetOwnerInteractionProduction.test.ts verifies target-owner reconnect to a rebound owning peer plus stale prior-peer rejection and revision-stale rejection without downstream commit"
+        "c9FamilyQTargetOwnerInteractionProduction.test.ts verifies target-owner reconnect to a rebound owning peer plus stale prior-peer rejection and revision-stale rejection without downstream commit",
+        "3ff901ba622e841325eef46fc8a990fe8394ebb1 feat(c9): carry portable choice interactions through Resolver; c9FamilyQChoiceInteractionProduction.test.ts verifies unknown installed multiple-option actor-owner choice, atomic accepted commit, decline safety, and downstream payment/effect behavior",
+        "R11 current-source verification run 33317437826 passes all Family Q production/domain tests, representative Common Play contract scenarios, coverage checker, legacy execution boundary, TypeScript, and git diff --check without transient source patching"
       ],
       "identityInvarianceEvidence": [
         "installedCommonPlayActorOwnerInteractionProduction.test.ts uses arbitrary previously-unknown module/content/mechanic identities and resolves the interaction structurally rather than by content name",
         "c9FamilyQTargetOwnerInteractionProduction.test.ts uses arbitrary previously-unknown module/content/mechanic/entry identities for target-owner and target responders; routing depends on the selected target rather than content identity",
         "c9FamilyQTargetOwnerInteractionProduction.test.ts exercises target and target-owner responder semantics through the same arbitrary previously-unknown external module/content/mechanic identities",
-        "c9FamilyQAuthorityInteractionProduction.test.ts repeats DM/Host responder semantics after complete external module/content/mechanic/entry identity rename"
+        "c9FamilyQAuthorityInteractionProduction.test.ts repeats DM/Host responder semantics after complete external module/content/mechanic/entry identity rename",
+        "c9FamilyQChoiceInteractionProduction.test.ts repeats the multiple-option choice acceptance after complete arbitrary external module/content/mechanic identity rename and preserves selected-count plus downstream outcome"
       ],
       "connectedEvidenceIfRelevant": [
         "installedCommonPlayActorOwnerInteractionProduction.test.ts Host directs the blocking prompt to the owning peer and broadcasts the accepted authoritative event batch",
@@ -1327,12 +1332,13 @@
         "c9FamilyQAuthorityInteractionProduction.test.ts proves no peer interrupt prompt is routed for authority responders, remote Character response is rejected, and accepted host-local approval broadcasts the authoritative event batch",
         "c9FamilyQAuthorityInteractionProduction.test.ts proves no peer prompt is routed for authority responders, remote Character response is interrupt-not-authorized, and accepted host-local approval broadcasts the authoritative event batch",
         "c9FamilyQAuthorityInteractionProduction.test.ts proves authority responders remain host-local, reject remote Character responses, and broadcast the accepted authoritative event batch",
-        "c9FamilyQTargetOwnerInteractionProduction.test.ts reconnects target-owner to a rebound owning peer, rejects the stale prior peer, and rejects late approval after authoritative Reaction revision invalidation without downstream commit"
+        "c9FamilyQTargetOwnerInteractionProduction.test.ts reconnects target-owner to a rebound owning peer, rejects the stale prior peer, and rejects late approval after authoritative Reaction revision invalidation without downstream commit",
+        "c9FamilyQChoiceInteractionProduction.test.ts carries selectedIds from the authoritative actor-owner peer through routeConnectedInterruptResponse and broadcasts the accepted canonical event batch"
       ],
-      "persistenceEvidenceIfRelevant": [],
-      "remainingNamedSeams": [
-        "choice and multiple-option interaction payloads are not yet represented by the boolean consent contract"
+      "persistenceEvidenceIfRelevant": [
+        "c9FamilyQChoiceInteractionProduction.test.ts replays the accepted choice HostSessionLedger events into a fresh ClientSessionReplica and verifies downstream HP plus Reaction convergence; existing actor-owner and target-owner tests cover pending-prompt reconnect and stale-peer rejection"
       ],
+      "remainingNamedSeams": [],
       "connectedRelevant": true,
       "persistenceRelevant": true
     },
