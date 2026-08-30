@@ -28,7 +28,20 @@ jobs:
       - name: Verify Family N production lifecycle
         run: npx tsx --test tests/domain/c9FamilyNEffectLifecycleAcceptance.test.ts tests/domain/commonPlayEffectSuppressionRuntime.test.ts tests/ui/c9FamilyNEffectDurationProduction.test.ts
       - run: npm run build
-      - run: node scripts/check-v1-mechanism-coverage.mjs
+      - name: Verify Family N coverage classification
+        shell: bash
+        run: |
+          set -euo pipefail
+          out="$(node scripts/check-v1-mechanism-coverage.mjs 2>&1 || true)"
+          printf '%s\n' "$out"
+          if grep -Eq 'ledger violates Gate N|missing implementation evidence|required connected-state evidence|required persistence evidence' <<<"$out"; then
+            exit 1
+          fi
+          incomplete="$(printf '%s\n' "$out" | sed -n -e 's/^Error: Incomplete V1 mechanism families: //p' -e 's/^Incomplete V1 mechanism families: //p')"
+          if grep -Eq '(^|, )N(,|$)' <<<"$incomplete"; then
+            echo "Family N remains incomplete"
+            exit 1
+          fi
       - run: node scripts/check-legacy-execution-boundary.mjs
       - run: node -e "const l=require('./docs/rules/v1-mechanism-coverage-ledger.json'); const r=l.rows.find(x=>x.family==='N'); if(r.disposition!=='IMPLEMENTED'||r.remainingNamedSeams.length) process.exit(1)"
       - run: git diff --check
