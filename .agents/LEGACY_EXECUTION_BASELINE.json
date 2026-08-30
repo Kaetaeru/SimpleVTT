@@ -82,6 +82,7 @@
     { "module": "./abilityCheckDcRuntimeAdapter", "classification": "GENERIC_ENGINE" },
     { "module": "./commonPlayInterceptorProductionRuntimeAdapter", "classification": "GENERIC_ENGINE" },
     { "module": "./productionAcceptanceRuntimeAdapter", "classification": "CONTENT/PRESENTATION" },
+    { "module": "./commonPlayFormProjectionAdapter", "classification": "CONTENT/PRESENTATION" },
     { "module": "./campaignRuntimeAdapter", "classification": "GENERIC_ENGINE" },
     { "module": "./campaignPartyStashCapabilityRuntimeAdapter", "classification": "GENERIC_ENGINE" },
     { "module": "./campaignRationConversionRuntimeAdapter", "classification": "GENERIC_ENGINE" }
