@@ -28,6 +28,7 @@ import type { TargetingFactInput } from "../domain/targeting";
 import { resolveCommonPlayStoredInvocationCancel, resolveCommonPlayStoredInvocationCapture, resolveCommonPlayStoredInvocationTrigger } from "../domain/commonPlayStoredInvocationRuntime";
 import type { ReadyActionConfiguration } from "./standardActionReadyState";
 import { resolvePendingResolution } from "../domain/resolution";
+import { allocationEntriesFromTargetSequence, resolveCommonPlayAllocation } from "../domain/commonPlayAllocationRuntime";
 
 interface AdapterState {
   sessionMode:SessionMode;
@@ -178,14 +179,17 @@ function projectedArtifactAction(
 ):ActionVm {
   const entryPoint=action.lowered.definition.entryPoints.find((candidate)=>candidate.id===action.entryPointId)!;
   const operations=entryPoint.operations as Array<{kind:string;target?:string}>;
-  const targeting=(entryPoint as {targeting?:{min?:number;max?:number}}).targeting;
+  const portableEntry=entryPoint as {targeting?:{min?:number;max?:number};allocation?:{targets:{min?:number;max?:number}}};
+  const targeting=portableEntry.targeting;
+  const allocation=portableEntry.allocation;
+  const targetSelector=targeting??allocation?.targets;
   const payments=(action.lowered.definition as {payments?:CommonPlayOperationDefinition["payments"]}).payments;
   const payment=payments?.find((candidate)=>candidate.kind==="economy");
   const economy=payment?.kind==="economy"
     ?payment.bucket==="action"?"행동":payment.bucket==="bonus-action"?"추가 행동":"반응"
     :"없음";
-  const targeted=action.lowered.kind==="save-damage"||targeting!==undefined||operations.some((operation)=>(operation.kind==="damage.apply"||operation.kind==="healing.apply")&&operation.target==="target");
-  const multi=action.lowered.kind==="save-damage"||Boolean(targeting&&(targeting.max??1)>1);
+  const targeted=action.lowered.kind==="save-damage"||targetSelector!==undefined||operations.some((operation)=>(operation.kind==="damage.apply"||operation.kind==="healing.apply")&&operation.target==="target");
+  const multi=action.lowered.kind==="save-damage"||Boolean(targetSelector&&(targetSelector.max??1)>1);
   const eligibleTargetIds=targeted
     ?scene.entities.filter((entity)=>state.combatants[entity.id]).map((entity)=>entity.id)
     :[actorId];
@@ -206,7 +210,7 @@ function projectedArtifactAction(
     available:active&&slotAvailable&&resourcesAvailable,
     disabledReason:active?(slotAvailable?(resourcesAvailable?undefined:"자원 부족"): `${economy} 사용 불가`):"현재 턴 아님",
     eligibleTargetIds,
-    ...(multi?{maxTargets:targeting?.max??eligibleTargetIds.length}:{}),
+    ...(multi?{maxTargets:targetSelector?.max??eligibleTargetIds.length}:{}),
     details:[{label:"출처",value:`${action.source} · ${action.contentId}`}],
   };
 }
@@ -452,19 +456,31 @@ function prepareCommonPlayAction(
 
   const entryPoint=action.lowered.definition.entryPoints.find((candidate)=>candidate.id===action.entryPointId);
   if(!entryPoint) return undefined;
-  const portableEntry=entryPoint as {targeting?:{min?:number;max?:number;where?:{op:string;ref:string;value:string}};operations:Array<{kind:string;target?:string}>};
+  const portableEntry=entryPoint as {
+    targeting?:{min?:number;max?:number;where?:{op:string;ref:string;value:string}};
+    allocation?:{targets:{min?:number;max?:number;where?:{op:string;ref:string;value:string}}};
+    operations:Array<{kind:string;target?:string}>;
+  };
   const hasTargeting=portableEntry.targeting!==undefined;
-  if(!hasTargeting&&targetIds.length!==1) return undefined;
+  const hasAllocation=portableEntry.allocation!==undefined;
+  if(!hasTargeting&&!hasAllocation&&targetIds.length!==1) return undefined;
+  if(hasAllocation&&!targetIds.length) return undefined;
   const selectedTargetId=targetIds[0];
   if(!actorEntity||!state.combatants[actor.id]) return undefined;
   const selectedTargets=targetIds.map((id)=>internal.scene.entities.find((candidate)=>candidate.id===id));
   if(selectedTargets.some((target,index)=>!target||!state!.combatants[targetIds[index]])) return undefined;
+  const uniqueSelectedTargets=[...new Map(selectedTargets.map((target)=>[target!.id,target!] as const)).values()];
   const needsSelectedTarget=action.lowered.kind==="operations"&&portableEntry.operations.some((operation)=>(operation.kind==="damage.apply"||operation.kind==="healing.apply")&&operation.target==="target");
   if(hasTargeting) {
     const targeting=portableEntry.targeting!;
     if(targetIds.length<(targeting.min??1)||targetIds.length>(targeting.max??targetIds.length)) return undefined;
     if(targeting.where?.op==="relation-matches"&&targeting.where.ref==="relation"&&selectedTargets.some((target)=>commonPlayTargetFact(actorEntity,target!).relation!==targeting.where!.value)) return undefined;
     if(projectedAction&&(!projectedAction.available||targetIds.some((id)=>!projectedAction.eligibleTargetIds.includes(id)))) return undefined;
+  } else if(hasAllocation) {
+    const selector=portableEntry.allocation!.targets;
+    if(uniqueSelectedTargets.length<(selector.min??0)||uniqueSelectedTargets.length>(selector.max??uniqueSelectedTargets.length)) return undefined;
+    if(selector.where?.op==="relation-matches"&&selector.where.ref==="relation"&&uniqueSelectedTargets.some((target)=>commonPlayTargetFact(actorEntity,target).relation!==selector.where!.value)) return undefined;
+    if(projectedAction&&(!projectedAction.available||uniqueSelectedTargets.some((target)=>!projectedAction.eligibleTargetIds.includes(target.id)))) return undefined;
   } else if(needsSelectedTarget) {
     if(!selectedTargets[0]||projectedAction&&(!projectedAction.available||!projectedAction.eligibleTargetIds.includes(selectedTargetId))) return undefined;
   } else if(selectedTargetId!==actor.id) return undefined;
@@ -587,9 +603,30 @@ async function executeCommonPlayAction(
   const actionKind=action.category==="spell"?"magic" as const:"other" as const;
   let committed;
   let operationEntryPoint:CommonPlayOperationDefinition["entryPoints"][number]|undefined;
+  let allocationResult:Extract<ReturnType<typeof resolveCommonPlayAllocation>,{status:"resolved"}>|undefined;
   if(lowered.kind==="operations") {
     const entryPoint=lowered.definition.entryPoints.find((candidate)=>candidate.id===action.entryPointId)!;
     operationEntryPoint=entryPoint;
+    if(entryPoint.allocation) {
+      const candidateTargetIds=[...new Set(selectedTargets.map((target)=>target.id))];
+      const allocation=resolveCommonPlayAllocation({
+        id:`${resolutionId}:allocation`,
+        idempotencyKey:`${actionId}:${state.revision}:${entryPoint.id}:allocation`,
+        expectedRevision:state.revision,
+        authority:internal.sessionMode==="initiative"?"actor-owner":"dm",
+        responderId:actor.id,
+        plan:{
+          units:entryPoint.allocation.units,
+          ...(entryPoint.allocation.minimumPerTarget===undefined?{}:{minimumPerTarget:entryPoint.allocation.minimumPerTarget}),
+          ...(entryPoint.allocation.maximumPerTarget===undefined?{}:{maximumPerTarget:entryPoint.allocation.maximumPerTarget}),
+          totalMustMatch:entryPoint.allocation.totalMustMatch,
+        },
+        candidateTargetIds,
+        allocations:allocationEntriesFromTargetSequence(selectedTargets.map((target)=>target.id)),
+      },state.revision);
+      if(allocation.status!=="resolved") return {status:"rejected" as const,error:allocation.reason,snapshot:await internal.getSnapshot()};
+      allocationResult=allocation;
+    }
     const pending=compileCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,state,lowered.definition,operationExecutionInput(internal,actionId,action,prepared,resolutionId,interactionId));
     const effectDefinitions=await installedPersistentEffectDefinitions(adapter);
     const damagePending=appendCommonPlayDamageTakenTriggers(
@@ -636,9 +673,11 @@ async function executeCommonPlayAction(
   const affectedTargetIds=operationEntryPoint?[...new Set(operationEntryPoint.operations
     .filter((operation)=>operation.kind==="damage.apply"||operation.kind==="healing.apply")
     .map((operation)=>hpTargetId(operation.target,actor.id,selectedTargetId)))]:lowered.kind==="save-damage"?[...selectedTargets.map((target)=>target.id)]:[];
-  const presentationTargetIds=affectedTargetIds.length?affectedTargetIds:operationEntryPoint?.targeting?selectedTargets.map((target)=>target.id):lowered.kind==="save-damage"?selectedTargets.map((target)=>target.id):[selectedTargetId];
+  const allocationTargetIds=allocationResult?.allocations.map((entry)=>entry.targetId)??[];
+  const presentationTargetIds=affectedTargetIds.length?affectedTargetIds:allocationTargetIds.length?allocationTargetIds:operationEntryPoint?.targeting?selectedTargets.map((target)=>target.id):lowered.kind==="save-damage"?selectedTargets.map((target)=>target.id):[selectedTargetId];
   const presentationTargets=presentationTargetIds.map((id)=>internal.scene.entities.find((candidate)=>candidate.id===id)!);
-  const outcome=hp?.outcome??(roll?roll.outcome:"규칙 효과 적용");
+  const allocationOutcome=allocationResult?`분배 ${allocationResult.total} · ${allocationResult.allocations.map((entry)=>`${entry.targetId} ${entry.units}`).join(", ")}`:undefined;
+  const outcome=hp?.outcome??(roll?roll.outcome:allocationOutcome??"규칙 효과 적용");
   return {status:"committed" as const,snapshot:await commitProductionRuntimeResolution(adapter,state,committed,{
     resolutionId,
     actionId,
@@ -646,8 +685,8 @@ async function executeCommonPlayAction(
     actorId:actor.id,
     targetIds:presentationTargetIds,
     targetNames:presentationTargets.map((target)=>target.name),
-    compact:hp?.outcome??(roll?`d20 ${roll.natural} ${roll.modifier>=0?"+":"-"} ${Math.abs(roll.modifier)} = ${roll.total} vs ${roll.target} · ${roll.outcome}`:"Common Play 규칙 적용"),
-    detail:[`${lowered.definition.id} · ${action.entryPointId}`,...(roll?[`${roll.family} · ${roll.rollState} · ${roll.outcome}`]:[]),...committed.events.map((event)=>event.summary)],
+    compact:hp?.outcome??(roll?`d20 ${roll.natural} ${roll.modifier>=0?"+":"-"} ${Math.abs(roll.modifier)} = ${roll.total} vs ${roll.target} · ${roll.outcome}`:allocationOutcome??"Common Play 규칙 적용"),
+    detail:[`${lowered.definition.id} · ${action.entryPointId}`,...(allocationOutcome?[allocationOutcome]:[]),...(roll?[`${roll.family} · ${roll.rollState} · ${roll.outcome}`]:[]),...committed.events.map((event)=>event.summary)],
     provenance:[`${action.source} · ${action.contentId}`],
     calculatedOutcome:outcome,
     finalOutcome:outcome,

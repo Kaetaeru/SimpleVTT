@@ -26,6 +26,14 @@ export interface CommonPlayTargetingSelector {
   where?:{op:"relation-matches";ref:"relation";value:TargetingFactInput["relation"]};
 }
 
+export interface CommonPlayAllocationDefinition {
+  units:LiteralNumberExpression;
+  targets:CommonPlayTargetingSelector;
+  minimumPerTarget?:number;
+  maximumPerTarget?:number;
+  totalMustMatch:boolean;
+}
+
 export interface CommonPlayConsentInteraction {
   id:string;
   kind:"consent";
@@ -140,6 +148,7 @@ export interface CommonPlayOperationDefinition {
     invocation:"manual"|"triggered"|"automatic"|"granted";
     interaction?:CommonPlayConsentInteraction;
     targeting?:CommonPlayTargetingSelector;
+    allocation?:CommonPlayAllocationDefinition;
     test?:CommonPlayD20TestDefinition;
     operations:CommonPlayOperation[];
   }>;
@@ -174,11 +183,12 @@ type Obj=Record<string,unknown>;
 const DEFINITION_KEYS=new Set(["$schema","schemaVersion","id","payments","entryPoints"]);
 const RESOURCE_PAYMENT_KEYS=new Set(["kind","resource","amount","consumeAt"]);
 const ECONOMY_PAYMENT_KEYS=new Set(["kind","bucket","amount","consumeAt","refundOnCancel"]);
-const ENTRY_POINT_KEYS=new Set(["id","invocation","interaction","targeting","test","operations"]);
+const ENTRY_POINT_KEYS=new Set(["id","invocation","interaction","targeting","allocation","test","operations"]);
 const INTERACTION_KEYS=new Set(["id","kind","responder","mode","input","revalidate"]);
 const INTERACTION_INPUT_KEYS=new Set(["type"]);
 const TARGETING_KEYS=new Set(["from","where","min","max"]);
 const TARGETING_WHERE_KEYS=new Set(["op","ref","value"]);
+const ALLOCATION_KEYS=new Set(["units","targets","minimumPerTarget","maximumPerTarget","totalMustMatch"]);
 const D20_TEST_KEYS=new Set(["kind","roller","property","dc","perTarget"]);
 const PROPERTY_MODIFY_KEYS=new Set(["kind","property","operation","value","target","owner","source","duration","lifetime","instancePolicy"]);
 const PROPERTY_DURATION_KEYS=new Set(["kind","amount","unit"]);
@@ -307,6 +317,24 @@ function parseTargetingSelector(value:unknown,label:string):CommonPlayTargetingS
   if(!Number.isInteger(selector.min)||Number(selector.min)<0) throw new DomainEvaluationError(`${label}.min must be a non-negative integer for portable Common Play targeting`);
   if(!Number.isInteger(selector.max)||Number(selector.max)<Number(selector.min)) throw new DomainEvaluationError(`${label}.max must be an integer >= min for portable Common Play targeting`);
   return {from:"targets",min:Number(selector.min),max:Number(selector.max),...(where?{where}:{})};
+}
+
+function parseAllocation(value:unknown,label:string):CommonPlayAllocationDefinition {
+  const allocation=object(value,label);
+  supportedKeys(allocation,ALLOCATION_KEYS,label);
+  const minimum=allocation.minimumPerTarget;
+  const maximum=allocation.maximumPerTarget;
+  if(minimum!==undefined&&(!Number.isInteger(minimum)||Number(minimum)<0)) throw new DomainEvaluationError(`${label}.minimumPerTarget must be a non-negative integer`);
+  if(maximum!==undefined&&(!Number.isInteger(maximum)||Number(maximum)<1)) throw new DomainEvaluationError(`${label}.maximumPerTarget must be a positive integer`);
+  if(minimum!==undefined&&maximum!==undefined&&Number(maximum)<Math.max(1,Number(minimum))) throw new DomainEvaluationError(`${label} per-target bounds are invalid`);
+  if(typeof allocation.totalMustMatch!=="boolean") throw new DomainEvaluationError(`${label}.totalMustMatch must be boolean`);
+  return {
+    units:nonNegativeLiteralExpression(allocation.units,`${label}.units`),
+    targets:parseTargetingSelector(allocation.targets,`${label}.targets`),
+    ...(minimum===undefined?{}:{minimumPerTarget:Number(minimum)}),
+    ...(maximum===undefined?{}:{maximumPerTarget:Number(maximum)}),
+    totalMustMatch:allocation.totalMustMatch,
+  };
 }
 
 function parsePayment(value:unknown,label:string):CommonPlayPayment {
@@ -534,6 +562,7 @@ export function parseCommonPlayOperationDefinition(value:unknown,label="Common P
       invocation,
       ...(entry.interaction===undefined?{}:{interaction:parseConsentInteraction(entry.interaction,`${label}.entryPoints[${index}].interaction`)}),
       ...(entry.targeting===undefined?{}:{targeting:parseTargetingSelector(entry.targeting,`${label}.entryPoints[${index}].targeting`)}),
+      ...(entry.allocation===undefined?{}:{allocation:parseAllocation(entry.allocation,`${label}.entryPoints[${index}].allocation`)}),
       ...(entry.test===undefined?{}:{test:parseD20Test(entry.test,`${label}.entryPoints[${index}].test`)}),
       operations:entry.operations.map((operation,operationIndex)=>parseOperation(operation,`${label}.entryPoints[${index}].operations[${operationIndex}]`)),
     };
