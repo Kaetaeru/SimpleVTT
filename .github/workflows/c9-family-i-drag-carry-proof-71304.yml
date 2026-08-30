@@ -1,0 +1,49 @@
+name: C9 Family I Drag Carry Proof 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-i-drag-carry-proof-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  verify-and-clean:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run generate:content
+      - name: Verify Family I drag carry production authority
+        run: |
+          node --import tsx --test tests/domain/commonPlayMovementRuntime.test.ts tests/ui/c9FamilyIMovementProduction.test.ts tests/ui/commonPlayProneStandRuntime.test.ts
+          node scripts/check-legacy-execution-boundary.mjs
+          node scripts/check-v1-mechanism-coverage.mjs
+          npm exec tsc -- --noEmit
+      - name: Remove temporary verifier
+        run: |
+          set -euo pipefail
+          branch=agent/c9-gate-n-coverage-reconciliation
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm .github/workflows/c9-family-i-drag-carry-proof-71304.yml
+          git add .github/workflows/c9-family-i-drag-carry-proof-71304.yml
+          git commit -m "chore(c9): remove Family I drag carry verifier"
+          for attempt in $(seq 1 10); do
+            if git push origin HEAD:"$branch"; then exit 0; fi
+            git fetch origin "$branch"
+            git rebase "origin/$branch"
+            sleep 1
+          done
+          exit 1
