@@ -1,0 +1,289 @@
+name: C9 Family L Portable Max HP 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-l-portable-max-hp-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply-verify-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - name: Reconcile latest branch
+        run: |
+          git fetch origin agent/c9-gate-n-coverage-reconciliation
+          git rebase origin/agent/c9-gate-n-coverage-reconciliation
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Add portable maximum HP operation
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace(path, old, new):
+              p=Path(path)
+              text=p.read_text(encoding="utf-8")
+              if old not in text:
+                  raise SystemExit(f"anchor missing: {path}: {old[:120]!r}")
+              p.write_text(text.replace(old,new,1),encoding="utf-8")
+
+          replace("src/domain/resolutionTypes.ts",
+          '''  | (OperationBase & {\n      kind: "healing";\n      targetId: string;\n      amount: NumericOperand;\n    })\n  | (OperationBase & {\n      kind: "temporary-hp";''',
+          '''  | (OperationBase & {\n      kind: "healing";\n      targetId: string;\n      amount: NumericOperand;\n    })\n  | (OperationBase & {\n      kind: "maximum-hp";\n      targetId: string;\n      amount: NumericOperand;\n    })\n  | (OperationBase & {\n      kind: "temporary-hp";''')
+
+          replace("src/domain/resolutionHealthOps.ts",
+          '''type HealingOp = Extract<ResolutionOperation, { kind:"healing" }>;\ntype TemporaryHpOp = Extract<ResolutionOperation, { kind:"temporary-hp" }>;''',
+          '''type HealingOp = Extract<ResolutionOperation, { kind:"healing" }>;\ntype MaximumHpOp = Extract<ResolutionOperation, { kind:"maximum-hp" }>;\ntype TemporaryHpOp = Extract<ResolutionOperation, { kind:"temporary-hp" }>;''')
+
+          replace("src/domain/resolutionHealthOps.ts",
+          '''export function executeHealing(ctx: ResolutionExecutionContext, operation: HealingOp): OperationExecution {''',
+          '''export function executeMaximumHpChange(ctx:ResolutionExecutionContext,operation:MaximumHpOp):OperationExecution {\n  const target=requireCombatant(ctx.state,operation.targetId);\n  const beforeHp={...target.life.hp};\n  const delta=valueFromResult(ctx.results,operation.amount);\n  if(!Number.isInteger(delta)||delta===0) throw new DomainEvaluationError("maximum HP change must resolve to a non-zero integer");\n  const maximum=beforeHp.maximum+delta;\n  if(maximum<1) throw new DomainEvaluationError("maximum HP must remain at least 1");\n  target.life.hp={...beforeHp,maximum,current:Math.min(beforeHp.current,maximum)};\n  const provenance=[{source:ctx.pending.sourceId,status:"applied" as const,reason:`Maximum HP ${beforeHp.maximum} -> ${maximum}`}];\n  const result={delta,nextHp:{...target.life.hp},provenance};\n  const changes=hpStateChanges(operation.targetId,beforeHp,target.life.hp,provenance);\n  return {\n    result,\n    event:makeEvent(ctx.pending,operation,`${operation.targetId} maximum HP ${beforeHp.maximum} -> ${maximum}`,result,provenance,changes,operation.targetId),\n  };\n}\n\nexport function executeHealing(ctx: ResolutionExecutionContext, operation: HealingOp): OperationExecution {''')
+
+          replace("src/domain/resolution.ts",
+          '''import { executeCompoundDamage, executeDamage, executeDeathSave, executeHealing, executeStabilize, executeTemporaryHp } from "./resolutionHealthOps";''',
+          '''import { executeCompoundDamage, executeDamage, executeDeathSave, executeHealing, executeMaximumHpChange, executeStabilize, executeTemporaryHp } from "./resolutionHealthOps";''')
+          replace("src/domain/resolution.ts",
+          '''    case "healing": return executeHealing(ctx, operation);\n    case "temporary-hp": return executeTemporaryHp(ctx, operation);''',
+          '''    case "healing": return executeHealing(ctx, operation);\n    case "maximum-hp": return executeMaximumHpChange(ctx, operation);\n    case "temporary-hp": return executeTemporaryHp(ctx, operation);''')
+
+          replace("src/domain/commonPlayOperationRuntime.ts",
+          '''type CommonPlayHealingApply={\n  kind:"healing.apply";\n  amount:LiteralNumberExpression;\n  target?:CommonPlayHpTarget;\n};\n\ntype CommonPlayTemporaryHpGrant={''',
+          '''type CommonPlayHealingApply={\n  kind:"healing.apply";\n  amount:LiteralNumberExpression;\n  target?:CommonPlayHpTarget;\n};\n\ntype CommonPlayMaximumHpChange={\n  kind:"hp.maximum.change";\n  amount:CommonPlayExpression;\n  target?:CommonPlayHpTarget;\n};\n\ntype CommonPlayTemporaryHpGrant={''')
+          replace("src/domain/commonPlayOperationRuntime.ts",
+          '''  |CommonPlayDamageApply\n  |CommonPlayHealingApply\n  |CommonPlayTemporaryHpGrant''',
+          '''  |CommonPlayDamageApply\n  |CommonPlayHealingApply\n  |CommonPlayMaximumHpChange\n  |CommonPlayTemporaryHpGrant''')
+          replace("src/domain/commonPlayOperationRuntime.ts",
+          '''const HEALING_APPLY_KEYS=new Set(["kind","amount","target"]);\nconst CONDITION_CHANGE_KEYS''',
+          '''const HEALING_APPLY_KEYS=new Set(["kind","amount","target"]);\nconst MAXIMUM_HP_CHANGE_KEYS=new Set(["kind","amount","target"]);\nconst CONDITION_CHANGE_KEYS''')
+          replace("src/domain/commonPlayOperationRuntime.ts",
+          '''  if(operation.kind==="healing.apply") {\n    supportedKeys(operation,HEALING_APPLY_KEYS,label);''',
+          '''  if(operation.kind==="hp.maximum.change") {\n    supportedKeys(operation,MAXIMUM_HP_CHANGE_KEYS,label);\n    return {\n      kind:"hp.maximum.change",\n      amount:numericExpression(operation.amount,`${label}.amount`),\n      ...(operation.target===undefined?{}:{target:hpTarget(operation.target,`${label}.target`)}),\n    };\n  }\n  if(operation.kind==="healing.apply") {\n    supportedKeys(operation,HEALING_APPLY_KEYS,label);''')
+          replace("src/domain/commonPlayOperationRuntime.ts",
+          '''(operation.kind==="damage.apply"||operation.kind==="healing.apply"||operation.kind==="temp-hp.grant"||operation.kind==="life.stabilize")&&operation.target==="target"''',
+          '''(operation.kind==="damage.apply"||operation.kind==="healing.apply"||operation.kind==="hp.maximum.change"||operation.kind==="temp-hp.grant"||operation.kind==="life.stabilize")&&operation.target==="target"''')
+          replace("src/domain/commonPlayOperationRuntime.ts",
+          '''    if(operation.kind==="healing.apply") {\n      operations.push({''',
+          '''    if(operation.kind==="hp.maximum.change") {\n      const amount=actorExpressionInteger(operation.amount,input,"hp.maximum.change amount");\n      if(amount===0) throw new DomainEvaluationError("hp.maximum.change amount must resolve to a non-zero integer");\n      operations.push({\n        id:operationId,\n        kind:"maximum-hp",\n        targetId:hpOperationTarget(operation.target,input),\n        amount,\n      });\n      continue;\n    }\n\n    if(operation.kind==="healing.apply") {\n      operations.push({''')
+
+          replace("schemas/common-play-contract.schema.json",
+          '''        {\n          "$ref": "#/$defs/healingApply"\n        },\n        {\n          "$ref": "#/$defs/tempHpGrant"\n        },''',
+          '''        {\n          "$ref": "#/$defs/healingApply"\n        },\n        {\n          "$ref": "#/$defs/maximumHpChange"\n        },\n        {\n          "$ref": "#/$defs/tempHpGrant"\n        },''')
+          replace("schemas/common-play-contract.schema.json",
+          '''    "tempHpGrant": {\n      "type": "object",''',
+          '''    "maximumHpChange": {\n      "type": "object",\n      "required": [\n        "kind",\n        "amount"\n      ],\n      "properties": {\n        "kind": {\n          "const": "hp.maximum.change"\n        },\n        "amount": {\n          "$ref": "#/$defs/expression"\n        },\n        "target": {\n          "enum": [\n            "actor",\n            "self",\n            "target"\n          ]\n        }\n      },\n      "additionalProperties": false\n    },\n    "tempHpGrant": {\n      "type": "object",''')
+          PY
+      - name: Add Family L portable maximum HP acceptance
+        shell: bash
+        run: |
+          cat > tests/ui/c9FamilyLMaximumHpProduction71304.test.ts <<'EOF'
+          import assert from "node:assert/strict";
+          import test from "node:test";
+          import "../../src/app/offlineRuntimeAdapters";
+          import "../../src/app/connectedSessionRuntimeAdapter";
+          import "../../src/app/connectedActionRoutingAdapter";
+          import { getCharacterLibraryPersistenceStateForTests, setCharacterLibraryStoreForTests } from "../../src/app/characterLibraryRuntimeAdapter";
+          import { applyConnectedClientEvents, connectedManifest } from "../../src/app/connectedSessionRuntimeAdapter";
+          import { connectedStateFor } from "../../src/app/connectedSessionState";
+          import { ClientSessionReplica, HostSessionLedger, type ConnectedSessionEvent } from "../../src/app/connectedSessionProtocol";
+          import { catalogQualifiedId } from "../../src/app/contentCatalogIdentity";
+          import { installedCommonPlayActionId } from "../../src/app/installedCommonPlayActionReference";
+          import { setInstalledContentStoreForTests } from "../../src/app/installedContentRuntimeAdapter";
+          import { MemoryCharacterLibraryStore } from "../../src/app/memoryCharacterLibraryStore";
+          import { MemoryInstalledContentStore } from "../../src/app/memoryInstalledContentStore";
+          import { MockAdapter } from "../../src/app/mockAdapter";
+          import { tauriSessionTransport } from "../../src/app/tauriSessionTransport";
+
+          function packagePayload(prefix:string){
+            const moduleId=`${prefix}.module`,contentId=`${prefix}.option`,mechanicId=`${prefix}.maximum-hp`;
+            return {moduleId,contentId,mechanicId,json:JSON.stringify({
+              schemaVersion:"0.1-draft",moduleId,moduleVersion:"1",
+              rulesProfile:{id:"dnd.srd-5.2.1",version:"0.1-draft"},defaultLocale:"en",
+              source:{document:"Portable Maximum HP Probe",version:"1",license:"CC0",srdDerived:false},
+              dependencies:[],conflicts:[],capabilities:[],content:[{
+                id:contentId,category:"option",
+                presentation:{defaultLocale:"en",originalName:"Portable Maximum HP",locales:{en:{name:"Portable Maximum HP"}}},
+                mechanics:[{kind:"common-play",config:{schemaVersion:"0.2-draft",id:mechanicId,entryPoints:[
+                  {id:"increase",invocation:"manual",operations:[{kind:"hp.maximum.change",amount:{value:5},target:"self"}]},
+                  {id:"decrease",invocation:"manual",operations:[{kind:"hp.maximum.change",amount:{value:-1},target:"self"}]},
+                ]}}],
+              }],
+            })};
+          }
+
+          async function install(adapter:MockAdapter,prefix:string){
+            const pack=packagePayload(prefix);
+            setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
+            const preview=await adapter.previewContentImport(pack.json);
+            assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
+            await adapter.activateContentImport();
+            await adapter.startInitiative();
+            await adapter.setCurrentActor("char.aelar");
+            const catalogId=catalogQualifiedId(pack.contentId,pack.moduleId,"1");
+            return {
+              increase:installedCommonPlayActionId({catalogId,mechanicId:pack.mechanicId,entryPointId:"increase"}),
+              decrease:installedCommonPlayActionId({catalogId,mechanicId:pack.mechanicId,entryPointId:"decrease"}),
+            };
+          }
+
+          function durableMaximums(adapter:MockAdapter,characterId:string){
+            const record=getCharacterLibraryPersistenceStateForTests(adapter)?.document?.characters.find((entry)=>entry.characterId===characterId);
+            return {source:record?.source.build.maxHp,runtime:record?.runtime.maxHp};
+          }
+
+          async function restartedMaximum(store:MemoryCharacterLibraryStore){
+            const restarted=new MockAdapter();
+            setCharacterLibraryStoreForTests(restarted,store);
+            const snapshot=await restarted.getSnapshot();
+            return {maximum:snapshot.activeCharacter.maxHp,sourceMaximum:snapshot.activeCharacter.sourceMaxHp};
+          }
+
+          function sceneMaximum(snapshot:Awaited<ReturnType<MockAdapter["getSnapshot"]>>){
+            return snapshot.scene.entities.find((entry)=>entry.id===snapshot.activeCharacter.id)?.maxHp;
+          }
+
+          async function executePortable(prefix:string){
+            const characterStore=new MemoryCharacterLibraryStore();
+            const adapter=new MockAdapter();
+            setCharacterLibraryStoreForTests(adapter,characterStore);
+            const actions=await install(adapter,prefix);
+            let snapshot=await adapter.getSnapshot();
+            const characterId=snapshot.activeCharacter.id;
+            const baseMaximum=snapshot.activeCharacter.maxHp;
+            const baseHp=snapshot.activeCharacter.hp;
+            assert.equal(durableMaximums(adapter,characterId).source,baseMaximum);
+
+            snapshot=await adapter.resolveAction(actions.increase,[characterId]);
+            assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
+            assert.equal(snapshot.activeCharacter.maxHp,baseMaximum+5);
+            assert.equal(sceneMaximum(snapshot),baseMaximum+5);
+            assert.deepEqual(durableMaximums(adapter,characterId),{source:baseMaximum,runtime:baseMaximum+5});
+            assert.deepEqual(await restartedMaximum(characterStore),{maximum:baseMaximum+5,sourceMaximum:baseMaximum});
+
+            snapshot=await adapter.undoLastResolution();
+            assert.equal(snapshot.activeCharacter.maxHp,baseMaximum);
+            assert.deepEqual(durableMaximums(adapter,characterId),{source:baseMaximum,runtime:undefined});
+            assert.deepEqual(await restartedMaximum(characterStore),{maximum:baseMaximum,sourceMaximum:baseMaximum});
+
+            snapshot=await adapter.resolveAction(actions.decrease,[characterId]);
+            assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
+            assert.equal(snapshot.activeCharacter.maxHp,baseMaximum-1);
+            assert.equal(snapshot.activeCharacter.hp,Math.min(baseHp,baseMaximum-1));
+            assert.deepEqual(durableMaximums(adapter,characterId),{source:baseMaximum,runtime:baseMaximum-1});
+            snapshot=await adapter.undoLastResolution();
+            assert.equal(snapshot.activeCharacter.maxHp,baseMaximum);
+            assert.equal(snapshot.activeCharacter.hp,baseHp);
+            assert.deepEqual(durableMaximums(adapter,characterId),{source:baseMaximum,runtime:undefined});
+            return {baseMaximum,baseHp};
+          }
+
+          test("unknown installed hp.maximum.change preserves source/runtime authority, restart, Undo, and rename invariance",async()=>{
+            assert.deepEqual(await executePortable("external.maximum-hp-original"),await executePortable("renamed.unrelated-maximum-hp"));
+          });
+
+          test("portable maximum HP converges through Host replay, Undo, and reconnect",async()=>{
+            const prefix="external.connected-maximum-hp",sessionId="session.c9-family-l-maximum-hp";
+            const host=new MockAdapter(),actions=await install(host,prefix);
+            const hostActorId=(await host.getSnapshot()).activeCharacter.id;
+            const baseMaximum=sceneMaximum(await host.getSnapshot());
+            assert.ok(baseMaximum!==undefined);
+            const hostState=connectedStateFor(host);
+            hostState.mode="host";hostState.sessionId=sessionId;hostState.ledger=new HostSessionLedger(sessionId,connectedManifest(host));
+            const originalSend=tauriSessionTransport.send;
+            const runHost=async(operation:()=>Promise<unknown>)=>{
+              const wires:string[]=[];tauriSessionTransport.send=async(message)=>{wires.push(message);return 1;};
+              try { await operation(); } finally { tauriSessionTransport.send=originalSend; }
+              const batch=wires.map((wire)=>JSON.parse(wire)).find((wire)=>wire.type==="event-batch") as {events:ConnectedSessionEvent[]}|undefined;
+              assert.ok(batch,JSON.stringify(wires));return batch!;
+            };
+
+            const client=new MockAdapter();await install(client,prefix);
+            const clientState=connectedStateFor(client);clientState.mode="client";clientState.sessionId=sessionId;clientState.replica=new ClientSessionReplica(sessionId);
+
+            const increaseBatch=await runHost(()=>host.resolveAction(actions.increase,[hostActorId]));
+            assert.equal((await applyConnectedClientEvents(client,increaseBatch.events)).status,"applied");
+            assert.equal(sceneMaximum(await host.getSnapshot()),baseMaximum+5);
+            assert.equal(sceneMaximum(await client.getSnapshot()),baseMaximum+5);
+
+            const undoBatch=await runHost(()=>host.undoLastResolution());
+            assert.equal((await applyConnectedClientEvents(client,undoBatch.events)).status,"applied");
+            assert.equal(sceneMaximum(await host.getSnapshot()),baseMaximum);
+            assert.equal(sceneMaximum(await client.getSnapshot()),baseMaximum);
+
+            const reconnect=new MockAdapter();await install(reconnect,prefix);
+            const reconnectState=connectedStateFor(reconnect);reconnectState.mode="client";reconnectState.sessionId=sessionId;reconnectState.replica=new ClientSessionReplica(sessionId);
+            assert.equal((await applyConnectedClientEvents(reconnect,hostState.ledger!.eventsAfter(0))).status,"applied");
+            assert.equal(sceneMaximum(await reconnect.getSnapshot()),baseMaximum);
+          });
+          EOF
+      - name: Verify portable maximum HP slice
+        run: |
+          npm run generate:content
+          npx tsx --test tests/ui/c9FamilyLMaximumHpProduction71304.test.ts tests/ui/c9FamilyLMaxHpPersistence.test.ts tests/ui/c9FamilyLTemporaryHpProduction.test.ts
+          node scripts/check-v1-mechanism-coverage.mjs
+          node scripts/check-legacy-execution-boundary.mjs
+          npx tsc --noEmit
+      - name: Finalize Family L ledger
+        env:
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          path=Path("docs/rules/v1-mechanism-coverage-ledger.json")
+          data=json.loads(path.read_text(encoding="utf-8"))
+          row=next(entry for entry in data["rows"] if entry["family"]=="L")
+          row["currentState"]="Family L is complete on the generic damage/life authority. Typed/compound damage, defenses, critical dice, Temporary HP, healing, max-HP runtime overlays, 0-HP/death-save/stabilization/instant-death flows, and Object/Vehicle damage execute through Common Play/Resolver or the generic RuntimeArtifact path with authoritative StateChanges. Unknown installed max-HP content now preserves source-owned base maximum separately from durable runtime maximum through restart, connected replay/reconnect, and event-native Undo. Remaining named feature/spell HP adapters are migration debt only and are not a supported portable fallback or second HP engine."
+          row["disposition"]="IMPLEMENTED"
+          additions={
+            "implementationEvidence":[
+              "commonPlayOperationRuntime.ts structurally parses hp.maximum.change and lowers signed expression deltas to the shared Resolver maximum-hp operation without content identity dispatch",
+              "resolutionHealthOps.ts executes maximum-hp changes against HpState, clamps current HP when required, and emits inverse-ready durable HpStateChanges; existing Character persistence keeps sourceMaxHp separate from runtime maxHp overlays",
+            ],
+            "productionEvidence":[
+              "tests/ui/c9FamilyLMaximumHpProduction71304.test.ts unknown installed hp.maximum.change executes positive and negative maximum-HP deltas through production Common Play/Resolver with durable source/runtime separation, restart, and event-native Undo",
+              f"C9 Family L Portable Max HP 71304 run {os.environ['RUN_ID']} passed unknown/renamed production, persistence/restart, connected replay/reconnect/Undo, adjacent Family L regressions, coverage checker, legacy boundary, and tsc --noEmit before ledger finalization",
+            ],
+            "identityInvarianceEvidence":[
+              "c9FamilyLMaximumHpProduction71304.test.ts repeats the complete maximum-HP production/persistence/Undo flow after unrelated external module/content/mechanic identity rename",
+            ],
+            "connectedEvidenceIfRelevant":[
+              "c9FamilyLMaximumHpProduction71304.test.ts Host-authoritative maximum-HP StateChanges converge on Client replay, Undo, and fresh reconnect without content identity routing",
+            ],
+            "persistenceEvidenceIfRelevant":[
+              "c9FamilyLMaximumHpProduction71304.test.ts preserves source.build.maxHp while durable runtime.maxHp survives fresh adapter restart and disappears again after event-native Undo",
+            ],
+          }
+          for key,values in additions.items():
+              for value in values:
+                  if value not in row[key]: row[key].append(value)
+          row["remainingNamedSeams"]=[entry for entry in row["remainingNamedSeams"] if entry!="generic max-HP source-model/write-back acceptance remains incomplete"]
+          path.write_text(json.dumps(data,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
+          PY
+          node scripts/check-v1-mechanism-coverage.mjs
+      - name: Publish verified Family L slice and retire verifier
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/domain/resolutionTypes.ts src/domain/resolutionHealthOps.ts src/domain/resolution.ts src/domain/commonPlayOperationRuntime.ts schemas/common-play-contract.schema.json tests/ui/c9FamilyLMaximumHpProduction71304.test.ts docs/rules/v1-mechanism-coverage-ledger.json
+          git rm .github/workflows/c9-family-l-portable-max-hp-71304.yml
+          git commit -m "feat(c9): complete portable maximum hp authority"
+          for attempt in 1 2 3 4 5; do
+            if git push origin HEAD:agent/c9-gate-n-coverage-reconciliation; then exit 0; fi
+            git fetch origin agent/c9-gate-n-coverage-reconciliation
+            if git rebase origin/agent/c9-gate-n-coverage-reconciliation; then sleep 2; else git rebase --abort; exit 1; fi
+          done
+          exit 1
