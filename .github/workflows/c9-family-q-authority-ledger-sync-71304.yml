@@ -1,0 +1,91 @@
+name: C9 Family Q Authority Ledger Sync 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-q-authority-ledger-sync-71304.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  verify-sync-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Reconcile verified Family Q authority evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch=agent/c9-gate-n-coverage-reconciliation
+          workflow=.github/workflows/c9-family-q-authority-ledger-sync-71304.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in $(seq 1 8); do
+            git fetch origin "$branch"
+            git reset --hard "origin/$branch"
+            npm run generate:content >/dev/null
+            python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          path=Path("docs/rules/v1-mechanism-coverage-ledger.json")
+          ledger=json.loads(path.read_text(encoding="utf-8"))
+          row=next(entry for entry in ledger["rows"] if entry.get("family")=="Q")
+
+          old_state=(
+              "Portable boolean consent now supports actor, target, actor-owner, and target-owner responders through the existing blocking Resolution interrupt. "
+              "Unknown installed Common Play routes the owner-directed prompt over the connected session path, preserves connected decline-before-commit and completed-prompt replay rejection semantics, "
+              "revalidates before acceptance, and commits Reaction payment plus downstream effects atomically. Rich choice/multiple-option and the remaining DM/Host responder and reconnect/stale-replay matrix remain incomplete."
+          )
+          new_state=(
+              "Portable boolean consent supports actor, target, actor-owner, target-owner, DM, and Host responders through the existing blocking Resolution interrupt. "
+              "Character-owned prompts route to the authoritative owning peer; DM/Host prompts remain host-local and reject remote Character responses. Unknown installed Common Play preserves decline-before-commit, "
+              "revalidation, atomic Reaction payment plus downstream commit, connected broadcast, and identity-independent responder semantics. Rich choice/multiple-option and the remaining owner reconnect/stale-replay matrix remain incomplete."
+          )
+          if row.get("currentState")==old_state:
+              row["currentState"]=new_state
+          elif "DM/Host prompts remain host-local" not in row.get("currentState",""):
+              row["currentState"]=row.get("currentState","")+" DM/Host consent responders execute host-locally through authority:dm/authority:host and reject remote Character responses."
+
+          additions={
+              "implementationEvidence":"commonPlayOperationRuntime.ts and common-play-contract.schema.json represent dm|host alongside actor/target owner consent without content-name dispatch; installedCommonPlayRuntimeAdapter.ts projects authority:dm|authority:host through the existing blocking interrupt",
+              "productionEvidence":"c9FamilyQAuthorityInteractionProduction.test.ts proves unknown installed DM and Host consent stays host-authoritative, rejects remote Character responses, and commits downstream damage only after local authority approval",
+              "identityInvarianceEvidence":"c9FamilyQAuthorityInteractionProduction.test.ts repeats DM/Host responder semantics after complete external module/content/mechanic/entry identity rename",
+              "connectedEvidenceIfRelevant":"c9FamilyQAuthorityInteractionProduction.test.ts proves no peer prompt is routed for authority responders, remote Character response is interrupt-not-authorized, and accepted host-local approval broadcasts the authoritative event batch",
+          }
+          for key,value in additions.items():
+              if value not in row[key]:
+                  row[key].append(value)
+
+          row["remainingNamedSeams"]=[
+              seam for seam in row["remainingNamedSeams"]
+              if seam != "DM and Host responder routing is not yet represented"
+          ]
+          path.write_text(json.dumps(ledger,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
+          PY
+            rm "$workflow"
+            node --import tsx --test tests/ui/c9FamilyQTargetOwnerInteractionProduction.test.ts tests/ui/c9FamilyQAuthorityInteractionProduction.test.ts
+            node scripts/check-v1-mechanism-coverage.mjs
+            node scripts/check-legacy-execution-boundary.mjs
+            npm exec tsc -- --noEmit
+            git add docs/rules/v1-mechanism-coverage-ledger.json "$workflow"
+            git diff --cached --check
+            git commit -m "docs(c9): reconcile Family Q authority evidence"
+            if git push origin HEAD:"$branch"; then
+              exit 0
+            fi
+            sleep 1
+          done
+          exit 1
