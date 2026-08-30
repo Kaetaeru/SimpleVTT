@@ -7,6 +7,7 @@ import type { CommonPlaySaveDamageDefinition } from "./commonPlayEntryPointRunti
 import type { CommonPlayPersistentEffectDefinition } from "./commonPlayEffectRuntime";
 import type { CommonPlayZoneDefinition } from "./commonPlayZoneRuntime";
 import type { CommonPlayArtifactActivationDefinition } from "./commonPlayArtifactRuntime";
+import { parseCommonPlaySpecialActionAuthoring, type CommonPlaySpecialActionAuthoringDefinition } from "./commonPlaySpecialTimingRuntime";
 
 type Obj=Record<string,unknown>;
 
@@ -29,6 +30,7 @@ export interface CommonPlayDefinitionIR extends Obj {
   artifactTemplates?:Obj[];
   rules?:Obj[];
   interceptors?:Obj[];
+  specialActions?:CommonPlaySpecialActionAuthoringDefinition[];
 }
 
 export type LoweredCommonPlayEntryPoint=
@@ -40,7 +42,7 @@ export type LoweredCommonPlayEntryPoint=
 
 const TOP_LEVEL_KEYS=new Set([
   "$schema","schemaVersion","id","requiresCapabilities","castProcess","payments","bindings",
-  "entryPoints","artifactTemplates","rules","interceptors",
+  "entryPoints","artifactTemplates","rules","interceptors","specialActions",
 ]);
 const INVOCATIONS=new Set(["manual","triggered","automatic","granted"]);
 const STABLE_ID=/^[a-z0-9][a-z0-9._-]*$/;
@@ -93,6 +95,7 @@ export function parseCommonPlayDefinition(value:unknown,label="Common Play defin
   const artifactTemplates=objectArray(raw.artifactTemplates,`${label}.artifactTemplates`);
   const rules=objectArray(raw.rules,`${label}.rules`);
   const interceptors=objectArray(raw.interceptors,`${label}.interceptors`);
+  const specialActions=objectArray(raw.specialActions,`${label}.specialActions`)?.map((action,index)=>parseCommonPlaySpecialActionAuthoring(action,`${label}.specialActions[${index}]`));
   const entryPointObjects=objectArray(raw.entryPoints,`${label}.entryPoints`);
   const entryPoints=entryPointObjects?.map((entry,index)=>{
     const invocation=entry.invocation;
@@ -112,6 +115,15 @@ export function parseCommonPlayDefinition(value:unknown,label="Common Play defin
   uniqueIds(artifactTemplates,label+".artifactTemplates");
   uniqueIds(rules,label+".rules");
   uniqueIds(interceptors,label+".interceptors");
+  const specialActionIds=new Set<string>();
+  const entryPointIds=new Set((entryPoints??[]).map((entryPoint)=>entryPoint.id));
+  for(const [index,action] of (specialActions??[]).entries()) {
+    if(specialActionIds.has(action.id)) throw new DomainEvaluationError(`${label}.specialActions contains duplicate id: ${action.id}`);
+    specialActionIds.add(action.id);
+    for(const option of action.options) if(!entryPointIds.has(option.entryPointId)) {
+      throw new DomainEvaluationError(`${label}.specialActions[${index}] option ${option.id} references missing entry point: ${option.entryPointId}`);
+    }
+  }
   return {
     ...structuredClone(raw),
     schemaVersion:"0.2-draft",
@@ -123,6 +135,7 @@ export function parseCommonPlayDefinition(value:unknown,label="Common Play defin
     ...(artifactTemplates?{artifactTemplates}:{}),
     ...(rules?{rules}:{}),
     ...(interceptors?{interceptors}:{}),
+    ...(specialActions?{specialActions}:{}),
   };
 }
 

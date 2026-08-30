@@ -4,6 +4,7 @@ import { resolvePendingResolution } from "../../src/domain/resolution";
 import { resolveSpellComponents, advanceCastingActivity } from "../../src/domain/commonPlaySpellcastingMeta";
 import { resolveCommonPlayProgressionContributions } from "../../src/domain/commonPlayProgressionContribution";
 import { compileCommonPlaySpecialAction } from "../../src/domain/commonPlaySpecialTimingRuntime";
+import { parseCommonPlayDefinition } from "../../src/domain/commonPlayDefinitionRuntime";
 import { advanceCommonPlayProject } from "../../src/domain/commonPlayProjectRuntime";
 import { advanceCommonPlayExposure, recoverCommonPlayExposure } from "../../src/domain/commonPlayExposureRuntime";
 import { mountFallOffOutcome, validateCommonPlayMount } from "../../src/domain/commonPlayMountRuntime";
@@ -59,6 +60,29 @@ test("special timing compiles owner-authorized off-turn cost and payload into th
   assert.equal(result.status,"committed");
   assert.equal(result.status==="committed"?result.state.combatants.dragon.resources[1].current:-1,1);
   assert.throws(()=>compileCommonPlaySpecialAction(runtime,{id:"x",ownerActorId:"dragon",timing:{kind:"after-turn",actor:"other"},options:[{id:"x",cost:0,operations:[]}]},{resolutionId:"x",requesterActorId:"hero",optionId:"x",event:{kind:"after-turn",actorId:"hero"}}),/owner/);
+});
+
+test("portable special timing authoring binds owner at runtime and validates option entry points",()=>{
+  const parsed=parseCommonPlayDefinition({
+    schemaVersion:"0.2-draft",id:"external.special-authoring",
+    entryPoints:[
+      {id:"tail",invocation:"triggered",operations:[]},
+      {id:"wing",invocation:"triggered",operations:[]},
+    ],
+    specialActions:[
+      {id:"legendary-window",timing:{kind:"after-turn",actor:"other"},poolResourceId:"legendary",options:[
+        {id:"tail-option",cost:2,entryPointId:"tail"},
+        {id:"wing-option",cost:1,entryPointId:"wing"},
+      ]},
+      {id:"lair-window",timing:{kind:"initiative-count",count:20},options:[{id:"lair-option",cost:0,entryPointId:"wing"}]},
+    ],
+  });
+  assert.deepEqual(parsed.specialActions?.map((action)=>action.timing),[{kind:"after-turn",actor:"other"},{kind:"initiative-count",count:20}]);
+  assert.equal("ownerActorId" in (parsed.specialActions?.[0]??{}),false,"portable content must not persist a session actor identity");
+  assert.throws(()=>parseCommonPlayDefinition({
+    schemaVersion:"0.2-draft",id:"external.invalid-special",entryPoints:[{id:"known",invocation:"triggered",operations:[]}],
+    specialActions:[{id:"bad",timing:{kind:"after-turn",actor:"other"},options:[{id:"missing",cost:0,entryPointId:"unknown"}]}],
+  }),/references missing entry point/);
 });
 
 test("durable projects and exposure counters are revision-safe and threshold based",()=>{

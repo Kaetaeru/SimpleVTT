@@ -101,6 +101,29 @@ function portableCommonPlayTargetingMechanic() {
   };
 }
 
+function portableCommonPlaySpecialTimingMechanic() {
+  return {
+    kind:"common-play",
+    config:{
+      schemaVersion:"0.2-draft",
+      id:"external.unknown.special-timing-action",
+      entryPoints:[
+        {id:"tail",invocation:"triggered",operations:[{kind:"damage.apply",amount:{value:4},damageType:"force",target:"target"}]},
+        {id:"wing",invocation:"triggered",operations:[{kind:"damage.apply",amount:{value:2},damageType:"bludgeoning",target:"target"}]},
+      ],
+      specialActions:[{
+        id:"legendary-window",
+        timing:{kind:"after-turn",actor:"other"},
+        poolResourceId:"resource.external.legendary",
+        options:[
+          {id:"tail-option",cost:2,entryPointId:"tail"},
+          {id:"wing-option",cost:1,entryPointId:"wing"},
+        ],
+      }],
+    },
+  };
+}
+
 function portableCommonPlayInteractionMechanic() {
   return {
     kind:"common-play",
@@ -163,7 +186,7 @@ test("registered Common Play resource, d20, HP, targeting, and interaction mecha
   const host=new MockAdapter();
   setInstalledContentStoreForTests(host,hostStore);
   const raw=JSON.parse(packagePayload()) as {content:Array<Record<string,unknown>>};
-  const mechanics=[portableCommonPlayMechanic(),portableCommonPlayD20Mechanic(),portableCommonPlayHpMechanic(),portableCommonPlayTargetingMechanic(),portableCommonPlayInteractionMechanic()];
+  const mechanics=[portableCommonPlayMechanic(),portableCommonPlayD20Mechanic(),portableCommonPlayHpMechanic(),portableCommonPlayTargetingMechanic(),portableCommonPlayInteractionMechanic(),portableCommonPlaySpecialTimingMechanic()];
   raw.content[0].mechanics=mechanics;
 
   const preview=await host.previewContentImport(JSON.stringify(raw));
