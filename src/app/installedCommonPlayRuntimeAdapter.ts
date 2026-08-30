@@ -26,7 +26,7 @@ import type { D20TestResult } from "../domain/d20";
 import type { DamageResolution, HealingResolution } from "../domain/damage";
 import type { DamageRollResolution } from "../domain/damageRoll";
 import type { TargetingFactInput } from "../domain/targeting";
-import { resolveCommonPlaySelector, type CommonPlaySelector, type CommonPlaySelectorCandidate } from "../domain/commonPlaySelectorRuntime";
+import { resolveCommonPlaySelector, type CommonPlayInstantArea, type CommonPlaySelector, type CommonPlaySelectorCandidate } from "../domain/commonPlaySelectorRuntime";
 import { resolveCommonPlayStoredInvocationCancel, resolveCommonPlayStoredInvocationCapture, resolveCommonPlayStoredInvocationTrigger } from "../domain/commonPlayStoredInvocationRuntime";
 import type { ReadyActionConfiguration } from "./standardActionReadyState";
 import { resolvePendingResolution } from "../domain/resolution";
@@ -57,6 +57,24 @@ const previousGetSnapshot=MockAdapter.prototype.getSnapshot;
 const previousConfigureReadyAction=MockAdapter.prototype.configureReadyAction;
 const builtinCatalogOverrides=new WeakMap<MockAdapter,CatalogEntry[]>();
 const cp=<T,>(value:T):T=>structuredClone(value);
+
+export interface AuthoritativeCommonPlayAreaMembershipProvider {
+  areaMember(input:{sourceId:string;targetId:string;area:CommonPlayInstantArea}):boolean|undefined;
+}
+
+const commonPlayAreaMembershipProviders=new WeakMap<MockAdapter,AuthoritativeCommonPlayAreaMembershipProvider>();
+
+export function registerAuthoritativeCommonPlayAreaMembershipProvider(
+  adapter:MockAdapter,
+  provider:AuthoritativeCommonPlayAreaMembershipProvider,
+) {
+  commonPlayAreaMembershipProviders.set(adapter,provider);
+}
+
+export function unregisterAuthoritativeCommonPlayAreaMembershipProvider(adapter:MockAdapter) {
+  commonPlayAreaMembershipProviders.delete(adapter);
+}
+
 
 export function setBuiltinCommonPlayCatalogForTests(adapter:MockAdapter,catalog:CatalogEntry[]|null) {
   if (catalog) builtinCatalogOverrides.set(adapter,cp(catalog));
@@ -395,7 +413,13 @@ function commonPlayTargetFact(actor:SceneVm["entities"][number],target:SceneVm["
   };
 }
 
-function commonPlaySelectorCandidate(scene:SceneVm,actor:SceneVm["entities"][number],target:SceneVm["entities"][number]):CommonPlaySelectorCandidate {
+function commonPlaySelectorCandidate(
+  adapter:MockAdapter,
+  scene:SceneVm,
+  actor:SceneVm["entities"][number],
+  target:SceneVm["entities"][number],
+  area?:CommonPlayInstantArea,
+):CommonPlaySelectorCandidate {
   const baseTargeting=commonPlayTargetFact(actor,target);
   const spatial=authoritativeCommonPlaySpatialRelation(scene,actor.id,target.id);
   const targeting:TargetingFactInput=spatial?{
@@ -404,9 +428,13 @@ function commonPlaySelectorCandidate(scene:SceneVm,actor:SceneVm["entities"][num
     visible:spatial.visible,
     cover:spatial.cover,
   }:baseTargeting;
+  const areaMember=area?.origin==="self"
+    ? commonPlayAreaMembershipProviders.get(adapter)?.areaMember({sourceId:actor.id,targetId:target.id,area:structuredClone(area)})
+    : undefined;
   return {
     id:target.id,
     targeting,
+    ...(area?{areaMember}:{}),
     properties:{
       relation:targeting.relation,
       name:target.name,
@@ -547,7 +575,7 @@ function prepareCommonPlayAction(
     if(selectionMode==="automatic"&&targetIds.length&&!(targetIds.length===1&&targetIds[0]===actor.id)) return undefined;
     const candidates=internal.scene.entities
       .filter((target)=>Boolean(state!.combatants[target.id]))
-      .map((target)=>commonPlaySelectorCandidate(internal.scene,actorEntity,target));
+      .map((target)=>commonPlaySelectorCandidate(adapter,internal.scene,actorEntity,target,targeting.area));
     const selection=resolveCommonPlaySelector({
       sourceId:actor.id,
       selector:targeting,
@@ -708,7 +736,7 @@ function operationExecutionInput(
   return {
     resolutionId,actorId:actor.id,entryPointId:action.entryPointId,targetId:selectedTargetId,
     targetingTargets:entryPoint.targeting?selectedTargets.map((target)=>commonPlayTargetFact(actorEntity,target)):undefined,
-    targetingCandidates:entryPoint.targeting?internal.scene.entities.filter((target)=>state.combatants[target.id]).map((target)=>commonPlaySelectorCandidate(internal.scene,actorEntity,target)):undefined,
+    targetingCandidates:entryPoint.targeting?internal.scene.entities.filter((target)=>state.combatants[target.id]).map((target)=>commonPlaySelectorCandidate(internal as unknown as MockAdapter,internal.scene,actorEntity,target,entryPoint.targeting?.area)):undefined,
     creatureKinds:Object.fromEntries([
       [actor.id,actorEntity.kind==="character"?"character":"monster"],
       ...selectedTargets.map((target)=>[target.id,target.kind==="character"?"character":"monster"] as const),

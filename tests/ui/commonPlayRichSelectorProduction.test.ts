@@ -9,6 +9,7 @@ import { installedCommonPlayActionId } from "../../src/app/installedCommonPlayAc
 import { setInstalledContentStoreForTests } from "../../src/app/installedContentRuntimeAdapter";
 import { MemoryInstalledContentStore } from "../../src/app/memoryInstalledContentStore";
 import { MockAdapter } from "../../src/app/mockAdapter";
+import { registerAuthoritativeCommonPlayAreaMembershipProvider } from "../../src/app/installedCommonPlayRuntimeAdapter";
 import type { SceneVm } from "../../src/app/contracts";
 import { setSpatialRelation } from "../../src/app/spatialRuntimeContracts";
 
@@ -169,4 +170,31 @@ test("unknown installed area selector imports but refuses execution without prov
   const snapshot=await adapter.getSnapshot();
   assert.equal(snapshot.resolution?.actionId,actionId);
   assert.equal(snapshot.resolution?.finalOutcome,"적용 거부");
+});
+
+test("unknown installed self-origin area selector consumes provider-backed membership and remains identity invariant",async()=>{
+  async function run(identity:Identity) {
+    const adapter=new MockAdapter();
+    const actionId=await install(adapter,identity,true);
+    registerAuthoritativeCommonPlayAreaMembershipProvider(adapter,{
+      areaMember:({sourceId,targetId,area})=>{
+        assert.equal(sourceId,"char.aelar");
+        assert.equal(area.origin,"self");
+        assert.equal(area.shape,"cone");
+        return targetId==="combatant.goblin-a";
+      },
+    });
+    await adapter.startInitiative();
+    await adapter.setCurrentActor("char.aelar");
+    await adapter.resolveAction(actionId,["combatant.goblin-b"]);
+    let snapshot=await adapter.getSnapshot();
+    assert.equal(snapshot.resolution?.actionId,actionId);
+    assert.equal(snapshot.resolution?.finalOutcome,"적용 거부");
+    await adapter.resolveAction(actionId,["combatant.goblin-a"]);
+    snapshot=await adapter.getSnapshot();
+    assert.equal(snapshot.resolution?.stage,"complete");
+    assert.deepEqual(snapshot.resolution?.targetIds,["combatant.goblin-a"]);
+    return snapshot.resolution?.targetIds;
+  }
+  assert.deepEqual(await run(RENAMED),await run(ORIGINAL));
 });
