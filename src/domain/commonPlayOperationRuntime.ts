@@ -120,7 +120,16 @@ export type CommonPlayEconomyPayment={
   refundOnCancel:true;
 };
 
-export type CommonPlayPayment=CommonPlayResourcePayment|CommonPlayEconomyPayment;
+export type CommonPlayItemPayment={
+  kind:"item";
+  selector:{from:"items";definitionId:string};
+  quantity:LiteralNumberExpression;
+  consumed:true;
+  consumeAt:"commit";
+  refundOnCancel:true;
+};
+
+export type CommonPlayPayment=CommonPlayResourcePayment|CommonPlayEconomyPayment|CommonPlayItemPayment;
 
 export type CommonPlayOperation=
   |CommonPlayPropertyModifier
@@ -176,6 +185,7 @@ export interface CommonPlayOperationExecutionInput {
     interactionId:string;
     accepted:true;
   };
+  itemPaymentResourceIds?:Record<number,string>;
   actionKind?:ActionUseKind;
 }
 
@@ -183,6 +193,9 @@ type Obj=Record<string,unknown>;
 const DEFINITION_KEYS=new Set(["$schema","schemaVersion","id","payments","entryPoints"]);
 const RESOURCE_PAYMENT_KEYS=new Set(["kind","resource","amount","consumeAt"]);
 const ECONOMY_PAYMENT_KEYS=new Set(["kind","bucket","amount","consumeAt","refundOnCancel"]);
+const ITEM_PAYMENT_KEYS=new Set(["kind","selector","quantity","consumed","consumeAt","refundOnCancel"]);
+const ITEM_PAYMENT_SELECTOR_KEYS=new Set(["from","where","min","max","definitionId"]);
+const ITEM_PAYMENT_PREDICATE_KEYS=new Set(["op","left","right"]);
 const ENTRY_POINT_KEYS=new Set(["id","invocation","interaction","targeting","allocation","test","operations"]);
 const INTERACTION_KEYS=new Set(["id","kind","responder","mode","input","revalidate"]);
 const INTERACTION_INPUT_KEYS=new Set(["type"]);
@@ -329,6 +342,26 @@ function parseAllocation(value:unknown,label:string):CommonPlayAllocationDefinit
   };
 }
 
+function parseItemPaymentSelector(value:unknown,label:string):CommonPlayItemPayment["selector"] {
+  const selector=object(value,label);
+  supportedKeys(selector,ITEM_PAYMENT_SELECTOR_KEYS,label);
+  if(selector.from!=="items") throw new DomainEvaluationError(`${label}.from must be items for portable Common Play item payment`);
+  if(typeof selector.definitionId==="string") return {from:"items",definitionId:nonEmptyString(selector.definitionId,`${label}.definitionId`)};
+  if(selector.min!==1||selector.max!==1) throw new DomainEvaluationError(`${label} must select exactly one item stack with min=1 and max=1`);
+  const where=object(selector.where,`${label}.where`);
+  supportedKeys(where,ITEM_PAYMENT_PREDICATE_KEYS,`${label}.where`);
+  if(where.op!=="eq") throw new DomainEvaluationError(`${label}.where must use eq for portable Common Play item payment`);
+  const left=object(where.left,`${label}.where.left`);
+  const right=object(where.right,`${label}.where.right`);
+  const leftIsDefinition=Object.keys(left).length===1&&left.ref==="item.definitionId";
+  const rightIsDefinition=Object.keys(right).length===1&&right.ref==="item.definitionId";
+  const leftValue=Object.keys(left).length===1&&typeof left.value==="string"?left.value:undefined;
+  const rightValue=Object.keys(right).length===1&&typeof right.value==="string"?right.value:undefined;
+  const definitionId=leftIsDefinition?rightValue:rightIsDefinition?leftValue:undefined;
+  if(!definitionId) throw new DomainEvaluationError(`${label}.where must compare item.definitionId to one literal string`);
+  return {from:"items",definitionId:nonEmptyString(definitionId,`${label}.where.definitionId`)};
+}
+
 function parsePayment(value:unknown,label:string):CommonPlayPayment {
   const payment=object(value,label);
   if(payment.kind==="resource") {
@@ -338,6 +371,16 @@ function parsePayment(value:unknown,label:string):CommonPlayPayment {
     const amount=literalExpression(payment.amount,`${label}.amount`);
     if(amount.value<=0) throw new DomainEvaluationError("Common Play resource payment amount must be a positive integer");
     return {kind:"resource",resource,amount,consumeAt:"commit"};
+  }
+  if(payment.kind==="item") {
+    supportedKeys(payment,ITEM_PAYMENT_KEYS,label);
+    const selector=parseItemPaymentSelector(payment.selector,`${label}.selector`);
+    const quantity=literalExpression(payment.quantity,`${label}.quantity`);
+    if(quantity.value<=0) throw new DomainEvaluationError(`${label}.quantity must be a positive integer`);
+    if(payment.consumed!==true) throw new DomainEvaluationError(`${label}.consumed must be true for portable Common Play item payment`);
+    if(payment.consumeAt!=="commit") throw new DomainEvaluationError(`${label}.consumeAt must be commit for portable Common Play item payment`);
+    if(payment.refundOnCancel!==undefined&&payment.refundOnCancel!==true) throw new DomainEvaluationError(`${label}.refundOnCancel must be true when present`);
+    return {kind:"item",selector,quantity,consumed:true,consumeAt:"commit",refundOnCancel:true};
   }
   if(payment.kind==="economy") {
     supportedKeys(payment,ECONOMY_PAYMENT_KEYS,label);
@@ -597,23 +640,25 @@ export function compileCommonPlayPayments(
   payments:CommonPlayPayment[]|undefined,
   input:CommonPlayOperationExecutionInput,
 ):ResolutionOperation[] {
-  return (payments??[])
+  const operations:ResolutionOperation[]=[];
+  for(const {payment,index} of (payments??[])
     .map((payment,index)=>({payment,index}))
-    .sort((left,right)=>Number(right.payment.kind==="economy")-Number(left.payment.kind==="economy"))
-    .map(({payment,index})=>payment.kind==="economy"?{
-      id:`${input.resolutionId}:payment:${index}`,
-      kind:"use-economy" as const,
-      actorId:input.actorId,
-      slot:payment.bucket,
-      bonusActionGranted:payment.bucket==="bonus-action"||undefined,
-      actionKind:input.actionKind,
-    }:{
-      id:`${input.resolutionId}:payment:${index}`,
-      kind:"spend-resource" as const,
-      actorId:input.actorId,
-      resourceId:payment.resource,
-      amount:literalInteger(payment.amount,"resource payment amount"),
+    .sort((left,right)=>Number(right.payment.kind==="economy")-Number(left.payment.kind==="economy"))) {
+    if(payment.kind==="economy") {
+      operations.push({
+        id:`${input.resolutionId}:payment:${index}`,kind:"use-economy",actorId:input.actorId,slot:payment.bucket,
+        bonusActionGranted:payment.bucket==="bonus-action"||undefined,actionKind:input.actionKind,
+      });
+      continue;
+    }
+    const resourceId=payment.kind==="resource"?payment.resource:input.itemPaymentResourceIds?.[index];
+    if(!resourceId) throw new DomainEvaluationError(`Common Play item payment ${index} requires one pre-resolved item stack`);
+    operations.push({
+      id:`${input.resolutionId}:payment:${index}`,kind:"spend-resource",actorId:input.actorId,resourceId,
+      amount:literalInteger(payment.kind==="resource"?payment.amount:payment.quantity,payment.kind==="resource"?"resource payment amount":"item payment quantity"),
     });
+  }
+  return operations;
 }
 
 function hpOperationTarget(target:CommonPlayHpTarget|undefined,input:CommonPlayOperationExecutionInput) {

@@ -325,6 +325,35 @@ function operationDefinition(action:CommonPlayProductionAction) {
   return action.lowered.kind==="operations"?action.lowered.definition:undefined;
 }
 
+const itemQuantityResourceId=(itemId:string)=>`phase09:item:${itemId}:quantity`;
+
+function itemPaymentRuntimeContext(internal:AdapterState,state:RulesRuntimeState,definition:CommonPlayOperationDefinition) {
+  const payments=definition.payments??[];
+  if(!payments.some((payment)=>payment.kind==="item")) return {state,itemPaymentResourceIds:undefined as Record<number,string>|undefined,ephemeralResourceIds:[] as string[]};
+  const next=structuredClone(state);
+  const combatant=next.combatants[internal.activeCharacter.id];
+  if(!combatant) throw new Error(`Common Play item payment actor is missing: ${internal.activeCharacter.id}`);
+  const itemPaymentResourceIds:Record<number,string>={};
+  const ephemeralResourceIds:string[]=[];
+  for(const [index,payment] of payments.entries()) {
+    if(payment.kind!=="item") continue;
+    const matches=internal.activeCharacter.items.filter((item)=>item.definitionId===payment.selector.definitionId);
+    if(matches.length!==1) throw new Error(`Common Play item payment selector must resolve exactly one stack: ${payment.selector.definitionId}`);
+    const item=matches[0];
+    const resourceId=itemQuantityResourceId(item.id);
+    combatant.resources=combatant.resources.filter((resource)=>resource.id!==resourceId);
+    combatant.resources.push({id:resourceId,label:`${item.name} quantity`,current:item.quantity,maximum:item.quantity});
+    itemPaymentResourceIds[index]=resourceId;
+    ephemeralResourceIds.push(resourceId);
+  }
+  return {state:next,itemPaymentResourceIds,ephemeralResourceIds};
+}
+
+function stripItemPaymentRuntimeResources(state:RulesRuntimeState,actorId:string,resourceIds:string[]) {
+  const combatant=state.combatants[actorId];
+  if(combatant&&resourceIds.length) combatant.resources=combatant.resources.filter((resource)=>!resourceIds.includes(resource.id));
+}
+
 function seedReferencedResources(
   adapter:MockAdapter,
   internal:AdapterState,
@@ -563,6 +592,7 @@ function operationExecutionInput(
   prepared:PreparedCommonPlayAction,
   resolutionId:string,
   interactionId?:string,
+  itemPaymentResourceIds?:Record<number,string>,
 ):import("../domain/commonPlayOperationRuntime").CommonPlayOperationExecutionInput {
   if(action.lowered.kind!=="operations") throw new Error("stored invocation payload requires an operations lowerer");
   const {actor,actorEntity,selectedTargetId,selectedTargets,state}=prepared;
@@ -593,6 +623,7 @@ function operationExecutionInput(
     ...(movementProperties?{movementProperties}:{}),
     ...(Object.keys(movementFactAnswers).length?{movementFactAnswers}:{}),
     ...(entryPoint.test?{d20:{faces:d20Faces!,targetId:selectedTargetId}}:{}),
+    ...(itemPaymentResourceIds?{itemPaymentResourceIds}:{}),
     actionKind:entryPoint.test?.kind==="attack-roll"?"attack" as const:action.category==="spell"?"magic" as const:"other" as const,
     ...(interactionId?{interactionResponse:{interactionId,accepted:true as const}}:{}),
   };
@@ -635,18 +666,20 @@ async function executeCommonPlayAction(
       if(allocation.status!=="resolved") return {status:"rejected" as const,error:allocation.reason,snapshot:await internal.getSnapshot()};
       allocationResult=allocation;
     }
-    const pending=compileCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,state,lowered.definition,operationExecutionInput(internal,actionId,action,prepared,resolutionId,interactionId));
+    const itemContext=itemPaymentRuntimeContext(internal,state,lowered.definition);
+    const pending=compileCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,itemContext.state,lowered.definition,operationExecutionInput(internal,actionId,action,prepared,resolutionId,interactionId,itemContext.itemPaymentResourceIds));
     const effectDefinitions=await installedPersistentEffectDefinitions(adapter);
     const damagePending=appendCommonPlayDamageTakenTriggers(
-      state,effectDefinitions,pending,actorEntity.kind==="character"?"character":"monster",
+      itemContext.state,effectDefinitions,pending,actorEntity.kind==="character"?"character":"monster",
     );
     const automaticPending=appendCommonPlaySemanticOutcomeTriggers(
-      state,effectDefinitions,damagePending,Object.fromEntries(internal.scene.entities.map((entity)=>[entity.id,entity.kind==="character"?"character":"monster"])),
+      itemContext.state,effectDefinitions,damagePending,Object.fromEntries(internal.scene.entities.map((entity)=>[entity.id,entity.kind==="character"?"character":"monster"])),
     );
     committed=appendCommonPlaySemanticOutcomeEvents(
       automaticPending,
-      resolvePendingResolution(SIMPLEVTT_APP_RULES_PROFILE,state,automaticPending),
+      resolvePendingResolution(SIMPLEVTT_APP_RULES_PROFILE,itemContext.state,automaticPending),
     );
+    if(committed.status==="committed") stripItemPaymentRuntimeResources(committed.state,actor.id,itemContext.ephemeralResourceIds);
   } else if(lowered.kind==="save-damage") {
     const entryPoint=lowered.definition.entryPoints.find((candidate)=>candidate.id===action.entryPointId)!;
     const damage=parseCommonPlayDamageDiceFormula(entryPoint.operations[0].amount);
