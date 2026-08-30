@@ -1,4 +1,5 @@
 name: C9 Family E Rich Selector Candidate Bridge 7130
+# Current-head verification retry after shared rules test-state convergence.
 
 on:
   push:
