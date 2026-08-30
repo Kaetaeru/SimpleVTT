@@ -134,3 +134,41 @@ test("Common Play emits idempotent rest completion semantic events independent o
   };
   assert.deepEqual(summarize("external.first.rest-source"),summarize("renamed.unseen.rest-source"));
 });
+
+test("Common Play emits canonical state.applied and effect.expired lifecycle semantics",()=>{
+  const summarize=(sourceId:string)=>{
+    const request:PendingResolution={
+      id:`semantic-lifecycle-${sourceId}`,
+      actorId:"hero",
+      sourceId,
+      expectedRevision:0,
+      operations:[
+        {id:"apply",kind:"apply-effect",effect:{
+          id:`effect-${sourceId}`,sourceId,targetId:"hero",kind:"marker",duration:{kind:"seconds",amount:1},
+        }},
+        {id:"advance",kind:"advance-time",elapsedSeconds:1},
+      ],
+    };
+    const committed=resolvePendingResolution(TEST_PROFILE,runtimeState(),request);
+    assert.equal(committed.status,"committed");
+    const enriched=appendCommonPlaySemanticOutcomeEvents(request,committed);
+    assert.equal(enriched.status,"committed");
+    if(enriched.status!=="committed") return [];
+    const lifecycle=enriched.events.filter((event)=>event.kind==="state.applied"||event.kind==="effect.expired").map((event)=>({
+      kind:event.kind,actorId:event.actorId,targetId:event.targetId,
+    }));
+    assert.deepEqual(lifecycle,[
+      {kind:"state.applied",actorId:"hero",targetId:"hero"},
+      {kind:"effect.expired",actorId:"hero",targetId:"hero"},
+    ]);
+    assert.equal(enriched.state.history.some((entry)=>entry.kind==="state.applied"),true);
+    assert.equal(enriched.state.history.some((entry)=>entry.kind==="effect.expired"),true);
+    const replay=appendCommonPlaySemanticOutcomeEvents(request,enriched);
+    assert.equal(replay.status,"committed");
+    if(replay.status!=="committed") return [];
+    assert.equal(replay.events.filter((event)=>event.kind==="state.applied").length,1,"state.applied enrichment must be idempotent");
+    assert.equal(replay.events.filter((event)=>event.kind==="effect.expired").length,1,"effect.expired enrichment must be idempotent");
+    return lifecycle;
+  };
+  assert.deepEqual(summarize("external.first.lifecycle-source"),summarize("renamed.unseen.lifecycle-source"));
+});
