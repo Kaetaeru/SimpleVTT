@@ -1,0 +1,105 @@
+name: C9 Family Q Choice R3 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-q-choice-r3-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  implement-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Complete current choice bridge
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import textwrap
+
+          # Current domain kernel already parses/revalidates choice. Keep interaction
+          # candidates separate from ordinary entry-point targeting candidates.
+          path=Path('src/domain/commonPlayOperationRuntime.ts')
+          text=path.read_text(encoding='utf-8')
+          if 'interactionCandidates?:CommonPlaySelectorCandidate[];' not in text:
+              anchor='  targetingCandidates?:CommonPlaySelectorCandidate[];\n'
+              if text.count(anchor)!=1:
+                  raise SystemExit(f'domain targeting candidate anchor changed: {text.count(anchor)}')
+              text=text.replace(anchor,anchor+'  interactionCandidates?:CommonPlaySelectorCandidate[];\n',1)
+          old='candidates:input.targetingCandidates??[],\n        selectedIds:[...input.interactionResponse.selectedIds],'
+          new='candidates:input.interactionCandidates??input.targetingCandidates??[],\n        selectedIds:[...input.interactionResponse.selectedIds],'
+          if old in text:
+              text=text.replace(old,new,1)
+          elif new not in text:
+              raise SystemExit('domain choice candidate anchor changed')
+          path.write_text(text,encoding='utf-8')
+
+          # Reuse only the already-authored app/connected/test half of the R1 patch.
+          r1=Path('.github/workflows/c9-family-q-choice-71304.yml').read_text(encoding='utf-8')
+          marker='          # App contract: optional choice payload; boolean callers remain source-compatible.\n'
+          start=r1.index(marker)
+          end=r1.index("\n          PY",start)
+          app_code=textwrap.dedent(r1[start:end])
+
+          def replace_once(file_path,old_text,new_text):
+              p=Path(file_path)
+              source=p.read_text(encoding='utf-8')
+              count=source.count(old_text)
+              if count!=1:
+                  raise SystemExit(f'{file_path}: expected one anchor, found {count}: {old_text[:80]!r}')
+              p.write_text(source.replace(old_text,new_text,1),encoding='utf-8')
+
+          if 'choice?: { min:number; max:number; options:Array<{id:string;name:string}> };' not in Path('src/app/contracts.ts').read_text(encoding='utf-8'):
+              exec(compile(app_code,'q-choice-app-patch','exec'),{'Path':Path,'replace_once':replace_once})
+          elif not Path('tests/ui/c9FamilyQChoiceInteractionProduction.test.ts').exists():
+              raise SystemExit('choice app bridge already exists without its production proof')
+
+          # Make healing observable and isolate the decline test from desktop transport.
+          test_path=Path('tests/ui/c9FamilyQChoiceInteractionProduction.test.ts')
+          test_text=test_path.read_text(encoding='utf-8')
+          hp='const hpBefore=internal.scene.entities.find((entity)=>entity.id===actorId)!.hp;'
+          if hp in test_text:
+              if test_text.count(hp)!=2:
+                  raise SystemExit(f'expected two hp fixture anchors, found {test_text.count(hp)}')
+              test_text=test_text.replace(hp,'const actorEntity=internal.scene.entities.find((entity)=>entity.id===actorId)!;actorEntity.hp=Math.max(0,actorEntity.hp-1);const hpBefore=actorEntity.hp;')
+          old='''test("portable choice decline leaves Reaction and downstream effect untouched",async()=>{\n  const {host,actionId,actorId,internal}=await setup("family-q-choice-decline");\n  const actorEntity=internal.scene.entities.find((entity)=>entity.id===actorId)!;actorEntity.hp=Math.max(0,actorEntity.hp-1);const hpBefore=actorEntity.hp;\n  await host.resolveAction(actionId,[actorId]);\n  let snapshot=await host.getSnapshot();assert.equal(snapshot.resolution?.stage,"interrupt");\n  await host.respondToInterrupt(false);\n  snapshot=await host.getSnapshot();\n  assert.equal(snapshot.resolution?.stage,"complete");\n  assert.equal(snapshot.scene.entities.find((entity)=>entity.id===actorId)?.hp,hpBefore);\n  assert.equal(snapshot.scene.economyByActor[actorId]?.reaction,true);\n});'''
+          new='''test("portable choice decline leaves Reaction and downstream effect untouched",async()=>{\n  const {host,actionId,actorId,internal}=await setup("family-q-choice-decline");\n  const actorEntity=internal.scene.entities.find((entity)=>entity.id===actorId)!;actorEntity.hp=Math.max(0,actorEntity.hp-1);const hpBefore=actorEntity.hp;\n  const oldSend=tauriSessionTransport.send,oldSendTo=tauriSessionTransport.sendTo;\n  tauriSessionTransport.send=async()=>1;tauriSessionTransport.sendTo=async()=>1;\n  try{\n    await host.resolveAction(actionId,[actorId]);\n    let snapshot=await host.getSnapshot();assert.equal(snapshot.resolution?.stage,"interrupt");\n    await host.respondToInterrupt(false);\n    snapshot=await host.getSnapshot();\n    assert.equal(snapshot.resolution?.stage,"complete");\n    assert.equal(snapshot.scene.entities.find((entity)=>entity.id===actorId)?.hp,hpBefore);\n    assert.equal(snapshot.scene.economyByActor[actorId]?.reaction,true);\n  }finally{tauriSessionTransport.send=oldSend;tauriSessionTransport.sendTo=oldSendTo;}\n});'''
+          if old in test_text:
+              test_text=test_text.replace(old,new,1)
+          elif 'const oldSend=tauriSessionTransport.send,oldSendTo=tauriSessionTransport.sendTo;' not in test_text:
+              raise SystemExit('decline fixture anchor changed')
+          test_path.write_text(test_text,encoding='utf-8')
+          PY
+      - run: npm ci
+      - run: npm run generate:content
+      - name: Verify Family Q choice vertical slice
+        run: |
+          node --import tsx --test tests/ui/c9FamilyQChoiceInteractionProduction.test.ts tests/ui/c9FamilyQTargetOwnerInteractionProduction.test.ts tests/ui/c9FamilyQAuthorityInteractionProduction.test.ts tests/ui/installedCommonPlayActorOwnerInteractionProduction.test.ts tests/domain/commonPlayOperationRuntime.test.ts
+          node scripts/check-v1-mechanism-coverage.mjs
+          node scripts/check-legacy-execution-boundary.mjs
+          npm exec tsc -- --noEmit
+      - name: Publish verified source and retire staging
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/domain/commonPlayOperationRuntime.ts src/app/contracts.ts src/app/mockAdapter.ts src/app/installedCommonPlayRuntimeAdapter.ts src/app/connectedInterruptResponsePort.ts src/app/connectedActionRoutingAdapter.ts src/app/connectedSessionWire.ts tests/ui/c9FamilyQChoiceInteractionProduction.test.ts
+          git rm -f --ignore-unmatch .github/workflows/c9-family-q-choice-71304.yml .github/workflows/c9-family-q-choice-r2-71304.yml .github/workflows/c9-family-q-choice-r3-71304.yml .github/workflows/c9-family-q-choice-kernel-71304.yml .github/workflows/c9-family-q-choice-kernel-fix-71304.yml
+          git commit -m "feat(c9): carry portable choice interactions through Resolver"
+          for attempt in 1 2 3 4 5; do
+            if git push origin HEAD:agent/c9-gate-n-coverage-reconciliation; then exit 0; fi
+            git fetch origin agent/c9-gate-n-coverage-reconciliation
+            git rebase origin/agent/c9-gate-n-coverage-reconciliation || exit 1
+            sleep 1
+          done
+          exit 1
