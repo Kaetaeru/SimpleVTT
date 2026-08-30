@@ -34,13 +34,18 @@ jobs:
           end=workflow.index("\n          PY",start)
           patch_code=textwrap.dedent(workflow[start:end])
 
-          old='''          old_compile=''' + "'''" + '''    const itemContext=itemPaymentRuntimeContext(internal,state,lowered.definition);\\n    const pending=compileCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,itemContext.state,lowered.definition,operationExecutionInput(internal,actionId,action,prepared,resolutionId,interactionId,itemContext.itemPaymentResourceIds));\\n''' + "'''" + '''\n          new_compile=''' + "'''" + '''    const itemContext=itemPaymentRuntimeContext(internal,state,lowered.definition);\\n    const interactionCandidates=entryPoint.interaction?.kind===\\"choice\\"\\n      ?commonPlayTargetCandidates(adapter,internal.scene,itemContext.state,actorEntity,entryPoint.interaction.input.selector)\\n      :undefined;\\n    const pending=compileCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,itemContext.state,lowered.definition,operationExecutionInput(internal,actionId,action,prepared,resolutionId,interactionResponse,interactionCandidates,itemContext.itemPaymentResourceIds));\\n''' + "'''" + '''\n          if text.count(old_compile)!=1: raise SystemExit('production compile anchor changed')\n          text=text.replace(old_compile,new_compile,1)'''
+          old_line='    const pending=compileCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,itemContext.state,lowered.definition,operationExecutionInput(internal,actionId,action,prepared,resolutionId,interactionId,itemContext.itemPaymentResourceIds));'
+          new_line='    let pending;\n    try {\n      pending=compileCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,itemContext.state,lowered.definition,operationExecutionInput(internal,actionId,action,prepared,resolutionId,interactionId,itemContext.itemPaymentResourceIds));'
+          if patch_code.count(old_line)!=1:
+              raise SystemExit(f'R1 old compile line count={patch_code.count(old_line)}')
+          patch_code=patch_code.replace(old_line,new_line,1)
 
-          new='''          old_compile=''' + "'''" + '''    const itemContext=itemPaymentRuntimeContext(internal,state,lowered.definition);\\n    let pending;\\n    try {\\n      pending=compileCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,itemContext.state,lowered.definition,operationExecutionInput(internal,actionId,action,prepared,resolutionId,interactionId,itemContext.itemPaymentResourceIds));\\n''' + "'''" + '''\n          new_compile=''' + "'''" + '''    const itemContext=itemPaymentRuntimeContext(internal,state,lowered.definition);\\n    const interactionCandidates=entryPoint.interaction?.kind===\\"choice\\"\\n      ?commonPlayTargetCandidates(adapter,internal.scene,itemContext.state,actorEntity,entryPoint.interaction.input.selector)\\n      :undefined;\\n    let pending;\\n    try {\\n      pending=compileCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,itemContext.state,lowered.definition,operationExecutionInput(internal,actionId,action,prepared,resolutionId,interactionResponse,interactionCandidates,itemContext.itemPaymentResourceIds));\\n''' + "'''" + '''\n          if text.count(old_compile)!=1: raise SystemExit('production compile anchor changed')\n          text=text.replace(old_compile,new_compile,1)'''
+          old_line='    const pending=compileCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,itemContext.state,lowered.definition,operationExecutionInput(internal,actionId,action,prepared,resolutionId,interactionResponse,interactionCandidates,itemContext.itemPaymentResourceIds));'
+          new_line='    let pending;\n    try {\n      pending=compileCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,itemContext.state,lowered.definition,operationExecutionInput(internal,actionId,action,prepared,resolutionId,interactionResponse,interactionCandidates,itemContext.itemPaymentResourceIds));'
+          if patch_code.count(old_line)!=1:
+              raise SystemExit(f'R1 new compile line count={patch_code.count(old_line)}')
+          patch_code=patch_code.replace(old_line,new_line,1)
 
-          if old not in patch_code:
-              raise SystemExit('R1 compile-patch script anchor changed')
-          patch_code=patch_code.replace(old,new,1)
           exec(compile(patch_code,'q-choice-r3-patch','exec'),{})
 
           path=Path('src/domain/commonPlayOperationRuntime.ts')
