@@ -55,6 +55,14 @@ jobs:
               if test_text.count(old_assert)!=1:
                   raise SystemExit(f'accepted healing assertion anchor changed: {test_text.count(old_assert)}')
               test_text=test_text.replace(old_assert,new_assert,1)
+          old_summary='{delta:0,selectedCount:2}'
+          new_summary='{delta:1,selectedCount:2}'
+          if old_summary in test_text:
+              if test_text.count(old_summary)!=2:
+                  raise SystemExit(f'choice summary expectation count changed: {test_text.count(old_summary)}')
+              test_text=test_text.replace(old_summary,new_summary)
+          elif test_text.count(new_summary)<2:
+              raise SystemExit('choice summary expectation anchors changed')
           test_path.write_text(test_text,encoding='utf-8')
           PY
       - run: npm ci
