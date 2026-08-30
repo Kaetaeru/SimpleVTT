@@ -120,7 +120,7 @@ jobs:
             };
             const resolved=resolveRuntimeProfileProperty([effect],"char.aelar","ability.str.modifier",{"ability.str.score":14});
             assert.equal(resolved.value,3);
-            assert.ok(resolved.provenance.some((entry)=>entry.source.includes("property:ability.str.modifier")));
+            assert.ok(resolved.provenance.some((entry)=>entry.source.startsWith("profile:dnd.srd-5.2.1/")));
             assert.ok(resolved.provenance.some((entry)=>entry.source==="effect:effect.external.str-modifier"));
           });
 
