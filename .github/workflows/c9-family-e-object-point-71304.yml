@@ -25,21 +25,8 @@ jobs:
       - name: Reconcile branch
         run: git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
       - run: npm ci
-      - name: Recover and apply staged object-point patch
-        shell: bash
-        run: |
-          set -euo pipefail
-          git show "${GITHUB_SHA}^:.github/workflows/c9-family-e-object-point-71304.yml" > /tmp/c9-object-point-staged.yml
-          python3 - <<'PY'
-          from pathlib import Path
-
-          source = Path('/tmp/c9-object-point-staged.yml').read_text(encoding='utf-8').splitlines()
-          start = next(i for i, line in enumerate(source) if line.strip() == "python3 - <<'PY'") + 1
-          end = next(i for i in range(start, len(source)) if source[i].strip() == 'PY')
-          body = [line[10:] if line.startswith('          ') else line for line in source[start:end]]
-          Path('/tmp/c9-object-point-patch.py').write_text('\n'.join(body) + '\n', encoding='utf-8')
-          PY
-          python3 /tmp/c9-object-point-patch.py
+      - name: Bridge authoritative object and point candidates
+        run: python3 .github/scripts/c9-family-e-object-point-71304.py
       - run: npm run generate:content
       - name: Verify Family E completion slice
         run: |
@@ -47,22 +34,31 @@ jobs:
           node scripts/check-v1-mechanism-coverage.mjs
           node scripts/check-legacy-execution-boundary.mjs
           npm exec tsc -- --noEmit
-      - name: Publish verified Family E completion and retire workflow
+      - name: Publish verified Family E completion and retire verifier
         shell: bash
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git rm .github/workflows/c9-family-e-object-point-71304.yml
+          git rm .github/workflows/c9-family-e-object-point-71304.yml .github/scripts/c9-family-e-object-point-71304.py
           git add src/app/installedCommonPlayRuntimeAdapter.ts tests/ui/commonPlayRichSelectorProduction.test.ts docs/rules/v1-mechanism-coverage-ledger.json
           git diff --cached --check
           git commit -m "feat(c9): complete Family E target selectors"
           branch=agent/c9-gate-n-coverage-reconciliation
-          git fetch origin "$branch"
-          git rebase "origin/$branch"
-          npm run generate:content >/dev/null
-          node --import tsx --test tests/ui/commonPlayRichSelectorProduction.test.ts tests/ui/c9FamilyESpatialFactProduction.test.ts tests/ui/c9FamilyEConditionSelectorProduction.test.ts tests/ui/c9FamilyETagSelectorProduction.test.ts
-          node scripts/check-v1-mechanism-coverage.mjs
-          node scripts/check-legacy-execution-boundary.mjs
-          npm exec tsc -- --noEmit
-          git push origin HEAD:"$branch"
+          for attempt in 1 2 3 4 5; do
+            git fetch origin "$branch"
+            if git rebase "origin/$branch"; then
+              npm run generate:content >/dev/null
+              node --import tsx --test tests/ui/commonPlayRichSelectorProduction.test.ts tests/ui/c9FamilyESpatialFactProduction.test.ts tests/ui/c9FamilyEConditionSelectorProduction.test.ts tests/ui/c9FamilyETagSelectorProduction.test.ts
+              node scripts/check-v1-mechanism-coverage.mjs
+              node scripts/check-legacy-execution-boundary.mjs
+              npm exec tsc -- --noEmit
+              if git push origin HEAD:"$branch"; then
+                exit 0
+              fi
+            fi
+            git rebase --abort || true
+            echo "Family E publish raced; retry ${attempt}/5"
+            sleep 2
+          done
+          exit 1
