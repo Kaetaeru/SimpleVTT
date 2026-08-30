@@ -205,3 +205,54 @@ test("unknown installed damage.apply enforces character instant-death overkill w
     await executeInstantDeath("completely.renamed-family-l-instant-death"),
   );
 });
+
+function mitigationPackage(prefix:string,property:"damage.reduction"|"damage.threshold",value:number) {
+  const moduleId=`${prefix}.module`,contentId=`${prefix}.option`,mechanicId=`${prefix}.damage`;
+  return {moduleId,contentId,mechanicId,json:JSON.stringify({
+    schemaVersion:"0.1-draft",moduleId,moduleVersion:"1",
+    rulesProfile:{id:"dnd.srd-5.2.1",version:"0.1-draft"},defaultLocale:"en",
+    source:{document:"Portable Damage Mitigation Probe",version:"1",license:"CC0",srdDerived:false},
+    dependencies:[],conflicts:[],capabilities:[],content:[{
+      id:contentId,category:"option",
+      presentation:{defaultLocale:"en",originalName:"Portable Mitigation",locales:{en:{name:"Portable Mitigation"}}},
+      mechanics:[{kind:"common-play",config:{schemaVersion:"0.2-draft",id:mechanicId,entryPoints:[
+        {id:"mitigate",invocation:"manual",targeting:{from:"targets",min:1,max:1},operations:[{
+          kind:"property.modify",property,operation:"add",value:{value},target:"target",owner:"effect",source:"definition",
+          duration:{kind:"elapsed",amount:{value:1},unit:"hours"},lifetime:{kind:"until-duration",onEnd:"destroy"},instancePolicy:"stack",
+        }]},
+        {id:"hit",invocation:"manual",targeting:{from:"targets",min:1,max:1},operations:[{kind:"damage.apply",amount:{value:4},damageType:"fire",target:"target"}]},
+      ]}}],
+    }],
+  })};
+}
+
+async function executePortableMitigation(prefix:string,property:"damage.reduction"|"damage.threshold",value:number) {
+  const adapter=new MockAdapter();
+  const pack=mitigationPackage(prefix,property,value);
+  setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
+  const preview=await adapter.previewContentImport(pack.json);
+  assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
+  await adapter.activateContentImport();
+  await adapter.startInitiative();
+  await adapter.setCurrentActor("char.aelar");
+  const action=(entryPointId:string)=>installedCommonPlayActionId({
+    catalogId:catalogQualifiedId(pack.contentId,pack.moduleId,"1"),mechanicId:pack.mechanicId,entryPointId,
+  });
+  let snapshot=await adapter.resolveAction(action("mitigate"),[TARGET_ID]);
+  assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
+  const before=hp(snapshot,TARGET_ID);
+  snapshot=await adapter.resolveAction(action("hit"),[TARGET_ID]);
+  assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
+  const dealt=before-hp(snapshot,TARGET_ID);
+  await adapter.undoLastResolution();
+  assert.equal(hp(await adapter.getSnapshot(),TARGET_ID),before,"event-native Undo must restore mitigated damage");
+  return dealt;
+}
+
+test("unknown installed damage.apply consumes portable structural damage reduction and threshold with rename invariance and Undo",async()=>{
+  assert.equal(await executePortableMitigation("external.family-l-reduction","damage.reduction",3),1);
+  assert.equal(await executePortableMitigation("completely.renamed-family-l-reduction","damage.reduction",3),1);
+  assert.equal(await executePortableMitigation("external.family-l-threshold","damage.threshold",5),0);
+  assert.equal(await executePortableMitigation("completely.renamed-family-l-threshold","damage.threshold",5),0);
+  assert.equal(await executePortableMitigation("external.family-l-threshold-equal","damage.threshold",4),4,"meeting the threshold must preserve full damage");
+});
