@@ -81,13 +81,20 @@ jobs:
 
           test_path=Path('tests/ui/c9FamilyQChoiceInteractionProduction.test.ts')
           test_text=test_path.read_text(encoding='utf-8')
-          hp='const hpBefore=internal.scene.entities.find((entity)=>entity.id===actorId)!.hp;'
-          if hp in test_text:
-              if test_text.count(hp)!=2:
-                  raise SystemExit(f'expected two hp fixture anchors, found {test_text.count(hp)}')
-              test_text=test_text.replace(hp,'const actorEntity=internal.scene.entities.find((entity)=>entity.id===actorId)!;actorEntity.hp=Math.max(0,actorEntity.hp-1);const hpBefore=actorEntity.hp;')
-          decline_old='''test("portable choice decline leaves Reaction and downstream effect untouched",async()=>{\n  const {host,actionId,actorId,internal}=await setup("family-q-choice-decline");\n  const actorEntity=internal.scene.entities.find((entity)=>entity.id===actorId)!;actorEntity.hp=Math.max(0,actorEntity.hp-1);const hpBefore=actorEntity.hp;\n  await host.resolveAction(actionId,[actorId]);\n  let snapshot=await host.getSnapshot();assert.equal(snapshot.resolution?.stage,"interrupt");\n  await host.respondToInterrupt(false);\n  snapshot=await host.getSnapshot();\n  assert.equal(snapshot.resolution?.stage,"complete");\n  assert.equal(snapshot.scene.entities.find((entity)=>entity.id===actorId)?.hp,hpBefore);\n  assert.equal(snapshot.scene.economyByActor[actorId]?.reaction,true);\n});'''
-          decline_new='''test("portable choice decline leaves Reaction and downstream effect untouched",async()=>{\n  const {host,actionId,actorId,internal}=await setup("family-q-choice-decline");\n  const actorEntity=internal.scene.entities.find((entity)=>entity.id===actorId)!;actorEntity.hp=Math.max(0,actorEntity.hp-1);const hpBefore=actorEntity.hp;\n  const oldSend=tauriSessionTransport.send,oldSendTo=tauriSessionTransport.sendTo;\n  tauriSessionTransport.send=async()=>1;tauriSessionTransport.sendTo=async()=>1;\n  try{\n    await host.resolveAction(actionId,[actorId]);\n    let snapshot=await host.getSnapshot();assert.equal(snapshot.resolution?.stage,"interrupt");\n    await host.respondToInterrupt(false);\n    snapshot=await host.getSnapshot();\n    assert.equal(snapshot.resolution?.stage,"complete");\n    assert.equal(snapshot.scene.entities.find((entity)=>entity.id===actorId)?.hp,hpBefore);\n    assert.equal(snapshot.scene.economyByActor[actorId]?.reaction,true);\n  }finally{tauriSessionTransport.send=oldSend;tauriSessionTransport.sendTo=oldSendTo;}\n});'''
+          healing='{kind:"healing.apply",amount:{value:1},target:"actor"}'
+          damage='{kind:"damage.apply",amount:{value:1},damageType:"force",target:"actor"}'
+          if healing in test_text:
+              test_text=test_text.replace(healing,damage,1)
+          elif damage not in test_text:
+              raise SystemExit('choice effect fixture anchor changed')
+          expected_heal='assert.equal(snapshot.scene.entities.find((entity)=>entity.id===actorId)?.hp,hpBefore+1);'
+          expected_damage='assert.equal(snapshot.scene.entities.find((entity)=>entity.id===actorId)?.hp,hpBefore-1);'
+          if expected_heal in test_text:
+              test_text=test_text.replace(expected_heal,expected_damage,1)
+          elif expected_damage not in test_text:
+              raise SystemExit('choice effect assertion anchor changed')
+          decline_old='''test("portable choice decline leaves Reaction and downstream effect untouched",async()=>{\n  const {host,actionId,actorId,internal}=await setup("family-q-choice-decline");\n  const hpBefore=internal.scene.entities.find((entity)=>entity.id===actorId)!.hp;\n  await host.resolveAction(actionId,[actorId]);\n  let snapshot=await host.getSnapshot();assert.equal(snapshot.resolution?.stage,"interrupt");\n  await host.respondToInterrupt(false);\n  snapshot=await host.getSnapshot();\n  assert.equal(snapshot.resolution?.stage,"complete");\n  assert.equal(snapshot.scene.entities.find((entity)=>entity.id===actorId)?.hp,hpBefore);\n  assert.equal(snapshot.scene.economyByActor[actorId]?.reaction,true);\n});'''
+          decline_new='''test("portable choice decline leaves Reaction and downstream effect untouched",async()=>{\n  const {host,actionId,actorId,internal}=await setup("family-q-choice-decline");\n  const hpBefore=internal.scene.entities.find((entity)=>entity.id===actorId)!.hp;\n  const oldSend=tauriSessionTransport.send,oldSendTo=tauriSessionTransport.sendTo;\n  tauriSessionTransport.send=async()=>1;tauriSessionTransport.sendTo=async()=>1;\n  try{\n    await host.resolveAction(actionId,[actorId]);\n    let snapshot=await host.getSnapshot();assert.equal(snapshot.resolution?.stage,"interrupt");\n    await host.respondToInterrupt(false);\n    snapshot=await host.getSnapshot();\n    assert.equal(snapshot.resolution?.stage,"complete");\n    assert.equal(snapshot.scene.entities.find((entity)=>entity.id===actorId)?.hp,hpBefore);\n    assert.equal(snapshot.scene.economyByActor[actorId]?.reaction,true);\n  }finally{tauriSessionTransport.send=oldSend;tauriSessionTransport.sendTo=oldSendTo;}\n});'''
           if decline_old in test_text:
               test_text=test_text.replace(decline_old,decline_new,1)
           elif 'const oldSend=tauriSessionTransport.send,oldSendTo=tauriSessionTransport.sendTo;' not in test_text:
