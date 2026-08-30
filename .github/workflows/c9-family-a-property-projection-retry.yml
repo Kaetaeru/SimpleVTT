@@ -28,13 +28,47 @@ jobs:
           end=text.index('      - run: npx tsx --test',run)
           code='\n'.join(line[10:] if line.startswith('          ') else line for line in text[run:end].splitlines())
           exec(compile(code,'property-projection-stage','exec'))
+      - name: Allow numeric property expressions for movement distance
+        shell: python
+        run: |
+          import json
+          from pathlib import Path
+
+          path=Path('src/domain/commonPlayOperationRuntime.ts')
+          source=path.read_text()
+          old='''      distance:nonNegativeLiteralExpression(operation.distance,`${label}.distance`),
+                ...(operation.costMultiplier===undefined?{}:{costMultiplier:nonNegativeLiteralExpression(operation.costMultiplier,`${label}.costMultiplier`)}),'''
+          new='''      distance:numericExpression(operation.distance,`${label}.distance`) as ExpressionNode,
+                ...(operation.costMultiplier===undefined?{}:{costMultiplier:numericExpression(operation.costMultiplier,`${label}.costMultiplier`) as ExpressionNode}),'''
+          if source.count(old)!=1:
+            raise SystemExit(f'movement expression parser anchor count={source.count(old)}')
+          path.write_text(source.replace(old,new,1))
+
+          schema_path=Path('schemas/common-play-contract.schema.json')
+          schema=json.loads(schema_path.read_text())
+          found=0
+          def visit(value):
+            global found
+            if isinstance(value,dict):
+              properties=value.get('properties')
+              if isinstance(properties,dict) and isinstance(properties.get('kind'),dict) and properties['kind'].get('const')=='movement.relocate':
+                properties['distance']={'$ref':'#/$defs/expression'}
+                if 'costMultiplier' in properties:
+                  properties['costMultiplier']={'$ref':'#/$defs/expression'}
+                found+=1
+              for child in value.values(): visit(child)
+            elif isinstance(value,list):
+              for child in value: visit(child)
+          visit(schema)
+          if found!=1: raise SystemExit(f'expected one movement.relocate schema, got {found}')
+          schema_path.write_text(json.dumps(schema,indent=2,ensure_ascii=False)+'\n')
       - run: npx tsx --test tests/domain/effectsRuntime.test.ts tests/domain/commonPlayPropertyContractRuntime.test.ts tests/ui/installedCommonPlayPropertyModifierProduction.test.ts tests/ui/installedCommonPlayLoweredFamiliesProduction.test.ts
       - run: npx tsc --noEmit
       - name: Commit verified Family A projection slice
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/domain/effects.ts src/app/installedCommonPlayRuntimeAdapter.ts tests/ui/installedCommonPlayPropertyModifierProduction.test.ts
+          git add src/domain/effects.ts src/domain/commonPlayOperationRuntime.ts src/app/installedCommonPlayRuntimeAdapter.ts schemas/common-play-contract.schema.json tests/ui/installedCommonPlayPropertyModifierProduction.test.ts
           git rm .github/workflows/c9-family-a-property-projection-step.yml .github/workflows/c9-family-a-property-projection-retry.yml
           git commit -m "feat(c9): project property effects into movement"
           for attempt in 1 2 3 4 5; do
