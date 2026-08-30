@@ -35,15 +35,15 @@ domain_test.write_text("\n".join(lines) + "\n", encoding="utf-8")
 ui_test = Path("tests/ui/commonPlayRichSelectorProduction.test.ts")
 text = ui_test.read_text(encoding="utf-8")
 old = '  assert.notEqual((await adapter.getSnapshot()).resolution?.actionId,actionId,"relation predicate must reject self before Resolver execution");'
-new = '  const rejected=(await adapter.getSnapshot()).resolution;\n  assert.equal(rejected?.actionId,actionId);\n  assert.equal(rejected?.finalOutcome,"적용 거부","relation predicate must reject self before production commit");'
+current = '  let snapshot=await adapter.getSnapshot();\n  assert.equal(snapshot.resolution?.actionId,actionId);\n  assert.equal(snapshot.resolution?.finalOutcome,"적용 거부");'
 if old in text:
-    text = text.replace(old, new, 1)
-elif new not in text:
+    text = text.replace(old, current, 1)
+elif current not in text:
     raise SystemExit("relation rejection assertion marker missing")
 old = '  assert.notEqual((await adapter.getSnapshot()).resolution?.actionId,actionId,"mapless production must not fabricate area membership");'
-new = '  const rejected=(await adapter.getSnapshot()).resolution;\n  assert.equal(rejected?.actionId,actionId);\n  assert.equal(rejected?.finalOutcome,"적용 거부","mapless production must not fabricate area membership");'
+current = '  const snapshot=await adapter.getSnapshot();\n  assert.equal(snapshot.resolution?.actionId,actionId);\n  assert.equal(snapshot.resolution?.finalOutcome,"적용 거부");'
 if old in text:
-    text = text.replace(old, new, 1)
-elif new not in text:
+    text = text.replace(old, current, 1)
+elif current not in text:
     raise SystemExit("area rejection assertion marker missing")
 ui_test.write_text(text, encoding="utf-8")
