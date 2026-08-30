@@ -8,7 +8,7 @@ import type { TargetingFactInput } from "./targeting";
 import type { ActionUseKind, TurnSlot } from "./turnEconomy";
 import { compileCommonPlayMovement, type CommonPlayMovementDefinition } from "./commonPlayMovementRuntime";
 import { effectiveSpeed, proneStandingCost } from "./conditions";
-import { effectIsActive } from "./effects";
+import { effectIsActive, resolveEffectModifiedProperty } from "./effects";
 import type { CommonPlayFactAnswer, CommonPlayFactQuery } from "./commonPlaySpatialFactRuntime";
 import { parseCommonPlaySelector, resolveCommonPlaySelector, type CommonPlaySelector, type CommonPlaySelectorCandidate } from "./commonPlaySelectorRuntime";
 import { SRD_521_CONDITIONS, type ConditionId } from "./conditions";
@@ -989,6 +989,12 @@ export function compileCommonPlayEntryPointOperations(
       },
     });
   }
+  const firstAttackHitDamageIndex=entryPoint.test?.kind==="attack-roll"
+    ? entryPoint.operations.findIndex((candidate)=>candidate.kind==="damage.apply"&&(candidate.when===undefined||candidate.when.right.value==="success"))
+    : -1;
+  const attackDamageFlat=firstAttackHitDamageIndex>=0
+    ? resolveEffectModifiedProperty(state.effects,input.actorId,"attack.damage.flat",{"attack.damage.flat":0}).value
+    : 0;
   for(const [index,operation] of entryPoint.operations.entries()) {
     const operationId=`${input.resolutionId}:operation:${index}`;
     if(operation.kind==="roll.modify") continue;
@@ -1107,6 +1113,7 @@ export function compileCommonPlayEntryPointOperations(
       const multiplier=operation.multiplier;
       const rounding=multiplier===undefined?undefined:profile.roundingPolicy?.default;
       if(multiplier!==undefined&&!rounding) throw new DomainEvaluationError("damage.apply multiplier requires a RulesProfile rounding policy");
+      const propertyDamageFlat=index===firstAttackHitDamageIndex?attackDamageFlat:0;
       let amount:number|{operationId:string;field:"total";multiplier?:number;rounding?:"floor"|"ceil"|"round"};
       if(typeof operation.amount==="string") {
         const formula=parseCommonPlayDamageDiceFormula(operation.amount);
@@ -1124,15 +1131,15 @@ export function compileCommonPlayEntryPointOperations(
               count:formula.count,
               faces:[...faces],
             }],
-            ...(formula.flat===0?{}:{flat:[{
-              source:`common-play:${supported.id}:${entryPoint.id}:operation:${index}:flat`,
-              value:formula.flat,
-            }]}),
+            ...(formula.flat===0&&propertyDamageFlat===0?{}:{flat:[
+              ...(formula.flat===0?[]:[{source:`common-play:${supported.id}:${entryPoint.id}:operation:${index}:flat`,value:formula.flat}]),
+              ...(propertyDamageFlat===0?[]:[{source:"property:attack.damage.flat",value:propertyDamageFlat}]),
+            ]}),
           },
         });
         amount={operationId:rollId,field:"total",...(multiplier===undefined?{}:{multiplier,rounding})};
       } else {
-        const literal=literalInteger(operation.amount,"damage.apply amount");
+        const literal=literalInteger(operation.amount,"damage.apply amount")+propertyDamageFlat;
         if(multiplier===undefined) amount=literal;
         else {
           const scaled=literal*multiplier;
