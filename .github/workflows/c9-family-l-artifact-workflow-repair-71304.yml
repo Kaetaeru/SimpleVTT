@@ -1,0 +1,67 @@
+name: C9 Family L Artifact Workflow Repair 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-l-artifact-workflow-repair-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - name: Repair embedded TypeScript indentation
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path=Path('.github/workflows/c9-family-l-artifact-damage-71304.yml')
+          lines=path.read_text(encoding='utf-8').splitlines()
+          out=[]
+          inside=False
+          repaired=False
+          for line in lines:
+              if "test.write_text(r'''import assert" in line:
+                  inside=True
+                  out.append(line)
+                  continue
+              if inside:
+                  if line == "''',encoding='utf-8')":
+                      out.append('          '+line)
+                      inside=False
+                      repaired=True
+                  else:
+                      out.append('          '+line)
+                  continue
+              out.append(line)
+          if inside:
+              raise SystemExit('unterminated embedded TypeScript block')
+          if not repaired:
+              raise SystemExit('embedded TypeScript block was not found')
+          path.write_text('\n'.join(out)+'\n',encoding='utf-8')
+          PY
+      - name: Publish repaired verifier and retire repair workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch=agent/c9-gate-n-coverage-reconciliation
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/workflows/c9-family-l-artifact-damage-71304.yml
+          git rm .github/workflows/c9-family-l-artifact-workflow-repair-71304.yml
+          git commit -m "ci(c9): repair artifact damage verifier"
+          for attempt in $(seq 1 10); do
+            if git pull --rebase origin "$branch" && git push origin HEAD:"$branch"; then exit 0; fi
+            git rebase --abort >/dev/null 2>&1 || true
+            sleep 1
+          done
+          exit 1
