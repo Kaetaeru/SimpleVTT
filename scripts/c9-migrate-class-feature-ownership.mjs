@@ -92,13 +92,13 @@ replaceOnce('src/app/commonPlayInterceptorProductionRuntimeAdapter.ts',
   const projections:Array<{pending:PendingResolution;operationId:string}>=[];
   const natural=resolution.naturalD20??resolution.authoritativeDice[0];
   if(resolution.rollKind==="check"&&resolution.checkOutcome&&Number.isFinite(resolution.checkTarget)&&validD20(natural)){
-    const operationId=\`op.${resolution.actionId}.ability-check\`;
+    const operationId=\`op.\${resolution.actionId}.ability-check\`;
     projections.push({operationId,pending:{
-      id:\`${resolution.id}:common-play-interceptor\`,actorId:resolution.actorId,sourceId:resolution.actionId,
+      id:\`\${resolution.id}:common-play-interceptor\`,actorId:resolution.actorId,sourceId:resolution.actionId,
       expectedRevision:state.revision,
       operations:[{id:operationId,kind:"d20",actorId:resolution.actorId,request:{
         family:"ability-check",target:resolution.checkTarget!,modifierContributions:d20Contributions(resolution),
-        dice:{id:\`${resolution.id}:common-play:d20\`,purpose:resolution.actionName,sides:20,faces:[natural]},
+        dice:{id:\`\${resolution.id}:common-play:d20\`,purpose:resolution.actionName,sides:20,faces:[natural]},
       }}],
     }});
   }`,
@@ -109,7 +109,7 @@ replaceOnce('src/app/commonPlayInterceptorProductionRuntimeAdapter.ts',
   if(!origin||!targetId)return [];
   return (origin.checkSuccessOperations??[]).flatMap((operation,index):ResolutionOperation[]=>{
     if(operation.kind==="stabilize"&&operation.target==="first-target")return [{
-      id:\`${operationId}.success.${index}\`,
+      id:\`\${operationId}.success.\${index}\`,
       kind:"stabilize",
       targetId,
       when:{operationId,field:"outcome",equals:"success"},
@@ -122,13 +122,13 @@ function pendingD20s(resolution:ResolutionView,state:RulesRuntimeState,scene:Sce
   const projections:Array<{pending:PendingResolution;operationId:string}>=[];
   const natural=resolution.naturalD20??resolution.authoritativeDice[0];
   if(resolution.rollKind==="check"&&resolution.checkOutcome&&Number.isFinite(resolution.checkTarget)&&validD20(natural)){
-    const operationId=\`op.${resolution.actionId}.ability-check\`;
+    const operationId=\`op.\${resolution.actionId}.ability-check\`;
     const d20Operation:ResolutionOperation={id:operationId,kind:"d20",actorId:resolution.actorId,request:{
       family:"ability-check",target:resolution.checkTarget!,modifierContributions:d20Contributions(resolution),
-      dice:{id:\`${resolution.id}:common-play:d20\`,purpose:resolution.actionName,sides:20,faces:[natural]},
+      dice:{id:\`\${resolution.id}:common-play:d20\`,purpose:resolution.actionName,sides:20,faces:[natural]},
     }};
     projections.push({operationId,pending:{
-      id:\`${resolution.id}:common-play-interceptor\`,actorId:resolution.actorId,sourceId:resolution.actionId,
+      id:\`\${resolution.id}:common-play-interceptor\`,actorId:resolution.actorId,sourceId:resolution.actionId,
       expectedRevision:state.revision,
       operations:[d20Operation,...checkSuccessOperations(scene,resolution,operationId)],
     }});
