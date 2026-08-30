@@ -62,6 +62,46 @@ export function appendCommonPlaySemanticOutcomeTriggers(
   return operations.length===pending.operations.length?pending:{...pending,operations};
 }
 
+function lifecycleSemanticEvent(
+  pending:PendingResolution,
+  operation:PendingResolution["operations"][number],
+  authoritativeEvent:ResolutionEvent|undefined,
+):ResolutionEvent|undefined {
+  if(!authoritativeEvent) return undefined;
+  if(operation.kind==="apply-effect") {
+    const applied=authoritativeEvent.stateChanges.filter((change)=>change.kind==="effect"&&change.operation==="added");
+    if(!applied.length) return undefined;
+    return {
+      id:`${pending.id}:${operation.id}:semantic:state.applied`,
+      resolutionId:pending.id,
+      operationId:operation.id,
+      kind:"state.applied",
+      actorId:authoritativeEvent.actorId,
+      targetId:authoritativeEvent.targetId,
+      summary:`state.applied (${applied.map((change)=>change.effectId).join(", ")})`,
+      provenance:[...authoritativeEvent.provenance],
+      stateChanges:[],
+      result:structuredClone(applied),
+    };
+  }
+  const lifecycleBoundary=operation.kind==="advance-time"||operation.kind==="begin-turn"||operation.kind==="end-turn"||operation.kind==="short-rest"||operation.kind==="long-rest";
+  if(!lifecycleBoundary) return undefined;
+  const expired=authoritativeEvent.stateChanges.filter((change)=>change.kind==="effect"&&change.operation==="removed");
+  if(!expired.length) return undefined;
+  return {
+    id:`${pending.id}:${operation.id}:semantic:effect.expired`,
+    resolutionId:pending.id,
+    operationId:operation.id,
+    kind:"effect.expired",
+    actorId:authoritativeEvent.actorId,
+    targetId:authoritativeEvent.targetId??expired[0].targetId,
+    summary:`effect.expired (${expired.map((change)=>change.effectId).join(", ")})`,
+    provenance:[...authoritativeEvent.provenance],
+    stateChanges:[],
+    result:structuredClone(expired),
+  };
+}
+
 export function appendCommonPlaySemanticOutcomeEvents(
   pending:PendingResolution,
   commit:ResolutionCommit,
@@ -70,6 +110,8 @@ export function appendCommonPlaySemanticOutcomeEvents(
   const existingIds=new Set(commit.events.map((event)=>event.id));
   const semanticEvents:ResolutionEvent[]=[];
   for(const operation of pending.operations) {
+    const lifecycle=lifecycleSemanticEvent(pending,operation,commit.events.find((event)=>event.operationId===operation.id));
+    if(lifecycle&&!existingIds.has(lifecycle.id)) semanticEvents.push(lifecycle);
     if(operation.kind==="d20") {
       const result=commit.results[operation.id] as D20TestResult|undefined;
       if(!result||result.family!==operation.request.family) continue;
