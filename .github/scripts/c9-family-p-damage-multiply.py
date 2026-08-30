@@ -19,6 +19,15 @@ replace_one(
 )
 replace_one(
     runtime,
+    '''    const value=literalValue(operation.value,`d20.roll ${operation.mode} value`);
+    if(!Number.isInteger(value)) throw new Error(`d20.roll ${operation.mode} value must be an integer`);''',
+    '''    if(operation.mode==="multiply")throw new Error("d20.roll multiply is not supported");
+    const value=literalValue(operation.value,`d20.roll ${operation.mode} value`);
+    if(!Number.isInteger(value)) throw new Error(`d20.roll ${operation.mode} value must be an integer`);''',
+    "d20 multiply exclusion",
+)
+replace_one(
+    runtime,
     '''function damageRollReduction(
   definition:CommonPlayReactionDefinition,
   interceptor:CommonPlayDamageRollInterceptor,
@@ -204,3 +213,5 @@ test("unknown Common Play primary.damage multiplier is structural and identity i
   }
 });
 ''')
+
+subprocess.run(["npm", "run", "generate:content"], check=True)
