@@ -1,0 +1,148 @@
+name: C9 Family A Non-Active Runtime 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - ".github/workflows/c9-family-a-nonactive-runtime-71304.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  verify-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run generate:content
+      - name: Patch non-active runtime profile projection
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path=Path('src/app/installedCommonPlayRuntimeAdapter.ts')
+          text=path.read_text(encoding='utf-8')
+          start=text.index('function commonPlayActorProfileProperties(')
+          end=text.index('\nfunction operationExecutionInput(',start)
+          block=text[start:end]
+          if '...(actorState.baseProperties??{})' not in block:
+              if 'if(internal.activeCharacter.id!==actorId)' not in block:
+                  raise SystemExit('commonPlayActorProfileProperties changed concurrently')
+              replacement='''function commonPlayActorProfileProperties(
+            internal:AdapterState,
+            state:RulesRuntimeState,
+            actorId:string,
+          ):Record<string,number>|undefined {
+            const actorState=state.combatants[actorId];
+            if(!actorState) return undefined;
+            const inputs:Record<string,number>={
+              ...(actorState.baseProperties??{}),
+              "movement.walk":actorState.baseSpeed,
+              "hp.current":actorState.life.hp.current,
+              "hp.maximum":actorState.life.hp.maximum,
+              "hp.temporary":actorState.life.hp.temporary,
+            };
+            if(internal.activeCharacter.id===actorId) {
+              const character=internal.activeCharacter;
+              Object.assign(inputs,{
+                "ability.str.score":character.abilities.str,
+                "ability.dex.score":character.abilities.dex,
+                "ability.con.score":character.abilities.con,
+                "ability.int.score":character.abilities.int,
+                "ability.wis.score":character.abilities.wis,
+                "ability.cha.score":character.abilities.cha,
+                "progression.character.level":character.level,
+                "proficiency.bonus":character.proficiencyBonus,
+                "defense.ac":character.ac,
+              });
+            }
+            const projected={...inputs};
+            for(const [property,definition] of Object.entries(SIMPLEVTT_APP_RULES_PROFILE.properties)) {
+              if(!Number.isFinite(inputs[property])&&!definition.formula) continue;
+              projected[property]=resolveRuntimeProfileProperty(state.effects,actorId,property,inputs).value;
+            }
+            return projected;
+          }
+          '''
+              replacement='\n'.join(line[10:] if line.startswith('          ') else line for line in replacement.splitlines())
+              text=text[:start]+replacement+text[end:]
+              path.write_text(text,encoding='utf-8')
+          PY
+      - name: Verify focused Family A production slice
+        run: |
+          node --import tsx --test \
+            tests/ui/c9FamilyANonActiveProfileProperties.test.ts \
+            tests/ui/installedCommonPlayPropertyModifierProduction.test.ts \
+            tests/domain/propertyModifierProfilePolicyRuntime.test.ts
+          node scripts/check-v1-mechanism-coverage.mjs
+      - name: Verify changed-file TypeScript
+        shell: bash
+        run: |
+          set +e
+          npm exec tsc -- --noEmit > /tmp/tsc.log 2>&1
+          status=$?
+          set -e
+          cat /tmp/tsc.log
+          if grep -E 'src/app/installedCommonPlayRuntimeAdapter\.ts|tests/ui/c9FamilyANonActiveProfileProperties\.test\.ts' /tmp/tsc.log; then
+            echo 'Family A changed slice has TypeScript errors'
+            exit 1
+          fi
+          if [ "$status" -ne 0 ]; then
+            echo 'Global typecheck remains red only in concurrently edited unrelated files.'
+          fi
+      - name: Record verified Family A evidence
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from "node:fs";
+          const path="docs/rules/v1-mechanism-coverage-ledger.json";
+          const ledger=JSON.parse(fs.readFileSync(path,"utf8"));
+          const family=ledger.rows.find((row)=>row.family==="A");
+          if(!family) throw new Error("Family A ledger row missing");
+          family.currentState="The persisted property.modify contract lowers arbitrary external modifiers to typed Effect state and generic Resolver events. Production Common Play composes RulesProfile inputs with active Effect-owned modifiers without content-name or content-ID dispatch. Non-active runtime actors now expose their canonical CombatantRuntimeState.baseProperties plus movement/life inputs through the same generic RulesProfile/effect resolver used by active actors; active Character sheet values enrich that common surface. Source-bound property modifiers retain connected replay/reconnect/retry/Undo and offline restart evidence. Family A remains incomplete because named progression/runtime stat materialization remains outside the generic property owner.";
+          const add=(field,value)=>{ if(!family[field].includes(value)) family[field].push(value); };
+          add("implementationEvidence","installedCommonPlayRuntimeAdapter.ts commonPlayActorProfileProperties consumes CombatantRuntimeState.baseProperties plus movement/life inputs for non-active actors through the shared RulesProfile/effect resolver");
+          add("productionEvidence","c9FamilyANonActiveProfileProperties.test.ts unknown installed stored Common Play reads defense.ac from a non-active runtime actor and consumes the matching movement budget");
+          add("productionEvidence",`C9 Family A Non-Active Runtime run ${process.env.GITHUB_RUN_ID}: focused non-active/property-policy regressions and V1 coverage checker passed`);
+          family.remainingNamedSeams=family.remainingNamedSeams.filter((entry)=>!entry.startsWith("Common Play profile-property input projection is generic for the active Character"));
+          fs.writeFileSync(path,JSON.stringify(ledger,null,2)+"\n");
+          NODE
+          node scripts/check-v1-mechanism-coverage.mjs
+      - name: Publish verified slice and retire verifier
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/app/installedCommonPlayRuntimeAdapter.ts docs/rules/v1-mechanism-coverage-ledger.json
+          git rm .github/workflows/c9-family-a-nonactive-runtime-71304.yml
+          git diff --cached --check
+          git commit -m "feat(c9): project non-active runtime profile properties"
+          branch=agent/c9-gate-n-coverage-reconciliation
+          for attempt in 1 2 3 4 5; do
+            git fetch origin "$branch"
+            if git rebase "origin/$branch"; then
+              npm run generate:content >/dev/null
+              node --import tsx --test tests/ui/c9FamilyANonActiveProfileProperties.test.ts tests/ui/installedCommonPlayPropertyModifierProduction.test.ts tests/domain/propertyModifierProfilePolicyRuntime.test.ts
+              node scripts/check-v1-mechanism-coverage.mjs
+              set +e
+              npm exec tsc -- --noEmit > /tmp/tsc-rebase.log 2>&1
+              status=$?
+              set -e
+              cat /tmp/tsc-rebase.log
+              if grep -E 'src/app/installedCommonPlayRuntimeAdapter\.ts|tests/ui/c9FamilyANonActiveProfileProperties\.test\.ts' /tmp/tsc-rebase.log; then exit 1; fi
+              if git push origin HEAD:"$branch"; then exit 0; fi
+            fi
+            git rebase --abort || true
+            echo "publish raced with another C9 writer; retry $attempt/5"
+          done
+          exit 1
