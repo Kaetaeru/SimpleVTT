@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { activeCastingProcess, advanceCastingProcess, beginCastingProcess, cancelCastingProcessOperations } from "../../src/domain/commonPlayCastingProcessRuntime";
+import { normalizedSpellDefinitionById } from "../../src/domain/spellExecutionCatalog";
 import { resolvePendingResolution } from "../../src/domain/resolution";
+import { compileInterruptedSpellCast, type SpellCasterContext } from "../../src/domain/spellcasting";
 import { runtimeState, TEST_PROFILE } from "./rulesTestState";
 
 function run(definitionId:string,kind:"long-cast"|"ritual"="long-cast") {
@@ -53,4 +55,35 @@ test("generic incapacitation termination interrupts maintained casting and its c
   if(interrupted.status!=="committed")return;
   assert.equal(activeCastingProcess(interrupted.state,"hero"),undefined);
   assert.equal(interrupted.state.concentration.hero,undefined);
+});
+
+test("a different maintained cast replaces the old process atomically",()=>{
+  const state=runtimeState();
+  const first=resolvePendingResolution(TEST_PROFILE,state,beginCastingProcess({state,id:"cast.first",actorId:"hero",definitionId:"external.first",kind:"long-cast",requiredSeconds:60,useActionEconomy:false}));
+  assert.equal(first.status,"committed");
+  if(first.status!=="committed")return;
+  const replacement=resolvePendingResolution(TEST_PROFILE,first.state,beginCastingProcess({state:first.state,id:"cast.second",actorId:"hero",definitionId:"external.second",kind:"ritual",requiredSeconds:600,useActionEconomy:false,replaceActive:true}));
+  assert.equal(replacement.status,"committed");
+  if(replacement.status!=="committed")return;
+  assert.equal(activeCastingProcess(replacement.state,"hero","external.first"),undefined);
+  assert.equal(activeCastingProcess(replacement.state,"hero","external.second","ritual")?.activity.status,"active");
+  assert.equal(replacement.state.concentration.hero?.sourceId,"external.second");
+});
+
+test("interrupted casting spends its economy but preserves its slot under renamed external identity",()=>{
+  const template=normalizedSpellDefinitionById("dnd.srd521.spell.counterspell");
+  assert.ok(template);
+  const caster:SpellCasterContext={characterLevel:5,spellAttackModifier:5,spellSaveDc:14,spellcastingAbilityModifier:3,preparedSpellIds:[],alwaysPreparedSpellIds:[],cantripSpellIds:[],slotResourceIds:{3:"spell-slot-1"}};
+  const execute=(spellId:string)=>{
+    const state=runtimeState();
+    const definition={...structuredClone(template),spellId};
+    const result=resolvePendingResolution(TEST_PROFILE,state,compileInterruptedSpellCast(definition,{
+      id:`interrupt:${spellId}`,actorId:"hero",spellId,source:"prepared",expectedRevision:state.revision,caster,targets:[],slotLevel:3,useActionEconomy:true,
+    }));
+    assert.equal(result.status,"committed");
+    if(result.status!=="committed")throw new Error(result.error);
+    return {reaction:result.state.combatants.hero.economy.reaction,slot:result.state.combatants.hero.resources[0].current};
+  };
+  assert.deepEqual(execute("external.spell.counter-alpha"),execute("renamed.module.interrupt-omega"));
+  assert.deepEqual(execute("external.spell.counter-alpha"),{reaction:false,slot:2});
 });

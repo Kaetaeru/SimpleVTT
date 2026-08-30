@@ -3,6 +3,8 @@ import "./spellcastingRuntimeContracts";
 import type { AbilityKey, ActionVm, AppSnapshot, CharacterSheet } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
 import { multiclassSpellSlots } from "../domain/progressionCatalog";
+import { projectedCharacterById, projectedCharacterIds } from "./characterSessionProjectionRegistry";
+import { projectProductionCharacterActions } from "./productionCharacterActionProjectionPort";
 
 const FIRE_BOLT="dnd.srd521.spell.fire-bolt";
 const MAGIC_MISSILE="dnd.srd521.spell.magic-missile";
@@ -128,7 +130,7 @@ function projectSpellcaster(snapshot:AppSnapshot,character:SpellCharacter) {
   };
 
   const existing=snapshot.scene.actionsByActor[character.id]??[];
-  const projected=productionSpellActions(character);
+  const projected=projectProductionCharacterActions(character,productionSpellActions(character));
   const projectedIds=new Set(projected.map((action)=>action.id));
   snapshot.scene.actionsByActor[character.id]=[
     ...existing.filter((action)=>!projectedIds.has(action.id)),
@@ -141,5 +143,11 @@ MockAdapter.prototype.getSnapshot=async function getSnapshotWithProductionSpellc
   const snapshot=await previousGetSnapshot.call(this);
   const internal=this as unknown as State;
   const character=(snapshot.activeCharacter?.id?snapshot.activeCharacter:internal.activeCharacter) as SpellCharacter;
-  return projectSpellcaster(snapshot,character);
+  projectSpellcaster(snapshot,character);
+  for(const characterId of projectedCharacterIds(this)) {
+    if(characterId===character.id||!snapshot.scene.entities.some((entity)=>entity.id===characterId))continue;
+    const projected=projectedCharacterById(this,characterId)?.sheet;
+    if(projected)projectSpellcaster(snapshot,projected);
+  }
+  return snapshot;
 };

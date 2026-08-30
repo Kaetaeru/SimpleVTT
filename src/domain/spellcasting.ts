@@ -128,6 +128,11 @@ export interface SpellMechanicDefinition {
   components?:SpellComponentRequirements;
   castingDurationSeconds?:number;
   ritual?:boolean;
+  castingInterruption?:{
+    trigger:"visible-component-spell-cast";
+    outcome:"cancel-on-failed-save";
+    interruptedSlot:"preserve";
+  };
 }
 
 export interface SpellCasterContext {
@@ -811,6 +816,18 @@ export function resolveSpellCast(
   } catch (error) {
     return reject(inputState, request, error);
   }
+}
+
+export function compileInterruptedSpellCast(
+  definition:SpellMechanicDefinition,
+  request:SpellCastRequest,
+  cleanupOperations:ResolutionOperation[]=[]
+):PendingResolution {
+  const economy=economyOperation(definition,request);
+  return {
+    id:`${request.id}:interrupted`,actorId:request.actorId,sourceId:request.spellId,expectedRevision:request.expectedRevision,
+    operations:[...cleanupOperations,...(economy?[economy]:[])],
+  };
 }
 
 export function resolveCompiledSpellCast(

@@ -467,6 +467,7 @@ function spellActions(character:ExtendedCharacter):ActionVm[] {
     const level=spell?.level??(cantrips.has(spellId)?0:1);
     const mechanic=normalizedSpellDefinitionById(spellId);
     const executable=Boolean(mechanic&&isExecutableSpellRuntimeSupport(mechanic.runtimeSupport));
+    const triggerOnly=Boolean(mechanic?.castingInterruption);
     const reason="이 주문은 세션 자동 판정에 아직 연결되지 않았습니다.";
     const primary=mechanic?.primary;
     const formula=primary&&(primary.kind==="attack-damage"||primary.kind==="save-damage"||primary.kind==="healing"||primary.kind==="temporary-hp")?primary.dice:primary?.kind==="multi-attack-damage"?primary.dicePerAttack:primary?.kind==="power-word-kill"?primary.fallbackDamage:undefined;
@@ -493,7 +494,7 @@ function spellActions(character:ExtendedCharacter):ActionVm[] {
       actorId:character.id,name:spell?.name??spellId.replace(/^dnd\.srd521\.spell\./,"").replaceAll("-"," "),category:"magic",target,
       economy:mechanic?.castingEconomy==="bonus-action"?"추가 행동":mechanic?.castingEconomy==="reaction"?"반응":"행동",resolutionKind,
       summary:executable?(spell?.summary??`${level===0?"소마법":`${level}레벨 주문`} · 자동 판정 지원`):(spell?`${spellLevelLabel(spell)} · ${spell.castingTime} · ${spell.range}`:`${level===0?"소마법":`${level}레벨 주문`} · 자동 판정 미지원`),
-      available:executable,disabledReason:executable?undefined:(mechanic?.unsupportedInteractions?.join(" ")||reason),eligibleTargetIds:[],maxTargets:many?maxTargets:undefined,
+      available:executable&&!triggerOnly,disabledReason:triggerOnly?"유효한 주문 시전 트리거에서 반응으로 사용합니다.":executable?undefined:(mechanic?.unsupportedInteractions?.join(" ")||reason),eligibleTargetIds:[],maxTargets:many?maxTargets:undefined,
       allocation:projectileUnits?{units:projectileUnits,minimumPerTarget:1,maximumPerTarget:projectileUnits,totalMustMatch:true}:undefined,
       attackBonus:primary?.kind==="attack-damage"||primary?.kind==="multi-attack-damage"?character.proficiencyBonus+spellMod:undefined,
       saveDc:primary?.kind==="save-damage"||primary?.kind==="save-compound-damage"||primary?.kind==="save-effect"?dc:undefined,

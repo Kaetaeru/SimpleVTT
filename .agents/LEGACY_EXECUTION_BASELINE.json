@@ -165,7 +165,7 @@
     },
     {
       "module": "./phase09AuthoritativeSpellcastingAdapter",
-      "classification": "LEGACY_EXECUTION"
+      "classification": "GENERIC_ENGINE"
     },
     {
       "module": "./characterLibraryRuntimeAdapter",
@@ -197,7 +197,7 @@
     },
     {
       "module": "./productionSpellRuntimeAdapter",
-      "classification": "LEGACY_EXECUTION"
+      "classification": "GENERIC_ENGINE"
     },
     {
       "module": "./productionDiceRuntimeAdapter",

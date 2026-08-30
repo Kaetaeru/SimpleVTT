@@ -28,6 +28,14 @@ test("production adapters do not select algorithms through the legacy spell auth
   }
 });
 
+test("runtime spell dice are selected by normalized mechanic shape rather than spell identity",async()=>{
+  for(const file of ["spellRuntimeDice.ts","productionSpellRuntimeAdapter.ts","phase09AuthoritativeSpellcastingAdapter.ts"]){
+    const path=fileURLToPath(new URL(`../../src/app/${file}`,import.meta.url));
+    const source=await readFile(path,"utf8");
+    assert.doesNotMatch(source,/spellId\s*===\s*["']dnd\.srd521\.spell\./);
+  }
+});
+
 test("normalized costly and per-target components use the generic component resolver",()=>{
   const revivify=normalizedSpellDefinitionById("dnd.srd521.spell.revivify")!;
   assert.deepEqual(revivify.components,{verbal:true,somatic:true,materials:[{

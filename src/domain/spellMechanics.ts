@@ -215,6 +215,9 @@ function catalogMechanic(spell:CatalogSpell):SpellMechanicDefinition {
     trackedEffects:trackedEffects.length?trackedEffects:undefined,
     removesConditions:parsedRemovedConditions(spell),
     executionScope:fullyAdjudicated?"Catalog-derived roll, health, save, condition, and authoritative cast lifecycle.":"Authoritative target, action/slot, concentration, duration, and tracked spell effect lifecycle; spell-specific world interactions are retained in the effect summary.",
+    ...(/주문은 아무 효과 없이 사라지고/.test(spell.summary)&&/슬롯은 소모되지/.test(spell.summary)&&/주문을 시전하는 크리처/.test(spell.castingTime)
+      ?{castingInterruption:{trigger:"visible-component-spell-cast" as const,outcome:"cancel-on-failed-save" as const,interruptedSlot:"preserve" as const}}
+      :{}),
   };
 }
 

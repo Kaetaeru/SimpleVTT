@@ -1852,7 +1852,7 @@
         "spellcastingRuntimeAdapter.ts",
         "productionSpellRuntimeAdapter.ts"
       ],
-      "currentState": "Typed component and maintained-casting primitives exist; one authoritative runtime now serves freeform and initiative, but spell identity lookup and durable material payment remain incomplete",
+      "currentState": "All 339 SRD spells are normalized into typed execution definitions before runtime. The production spell path composes preparation/source access, cantrip and slot/upcast rules, one-slot-per-turn economy, authoritative target save facts, typed V/S/M inventory payment, concentration/duration, maintained and Ritual casting, item/scroll casting, and structural visible-cast interruption through the shared Resolver. Counter interaction is atomic across both casters, routes to the connected owner, preserves the interrupted slot, rejects duplicate responses, and shares event-native Undo. Character inventory payments and active casting state survive the relevant durable reconstruction/reconnect paths without spell/action identity selecting an algorithm.",
       "requiredSemantics": [
         "access/preparation/source",
         "cantrip/level/slot/upcast",
@@ -1868,23 +1868,34 @@
         "counter interaction"
       ],
       "transactionDomain": "Resolver plus Character spell/resource writeback",
-      "disposition": "INCOMPLETE",
+      "disposition": "IMPLEMENTED",
       "implementationEvidence": [
-        "commonPlaySpellcastingMeta.ts",
-        "commonPlayC6Runtime.test.ts"
+        "spellExecutionCatalog.ts supplies independent normalized SpellMechanicDefinition data for all 339 SRD spells without production spellMechanicById dispatch",
+        "spellcasting.ts compiles access, slot/upcast, action economy, typed components, targets, effects, and interrupted-cast economy into generic Resolver operations; spellRuntimeDice.ts supplies definition-shape-driven deterministic dice to both authoritative runtime paths",
+        "commonPlaySpellcastingMeta.ts and commonPlayCastingProcessRuntime.ts own typed component payment plus maintained long-cast/Ritual activity as concentration-bound Resolver effects",
+        "spellComponentInventoryRuntime.ts joins consumed materials and item charges to revisioned Character inventory transactions"
       ],
-      "productionEvidence": [],
-      "identityInvarianceEvidence": [],
-      "connectedEvidenceIfRelevant": [],
-      "persistenceEvidenceIfRelevant": [],
-      "remainingNamedSeams": [
-        "spellcastingRuntimeAdapter",
-        "productionSpellRuntimeAdapter",
-        "phase09AuthoritativeSpellcastingAdapter",
-        "spellMechanicById",
-        "componentsSatisfied compatibility input",
-        "material consumption inventory join"
+      "productionEvidence": [
+        "tests/ui/productionFreshCharacterSpells.test.ts proves persisted Character cantrip/slotted casting, catalog utility spells, maintained casting completion, restart, durable material payment, item spell charges, and Undo",
+        "tests/ui/c9FamilyZSpellInterruptionProduction.test.ts proves structural visible-component Counterspell, authoritative Constitution save, remote responder projection, atomic slot/economy changes, duplicate rejection, connected event publication, and Undo",
+        "tests/ui/c9FamilyZSpellComponentInventoryRuntime.test.ts proves explicit inventory component authority and durable consumption",
+        "tests/domain/spellcastingKernel.test.ts proves targeting, attack/save/damage/heal, slot/upcast, one-slot-per-turn, Ritual, rejection atomicity, and active-effect spell restrictions"
       ],
+      "identityInvarianceEvidence": [
+        "tests/domain/c9FamilyZNormalizedSpellExecutionCatalog.test.ts proves production adapters consume normalized data and generic component behavior survives arbitrary material identity rename",
+        "tests/domain/c9FamilyZCastingProcessRuntime.test.ts proves maintained, Ritual, replacement, and interrupted-cast semantics under arbitrary external spell identity rename",
+        "tests/ui/c9FamilyZPortableSpellProduction.test.ts executes equivalent unknown external spell packages after complete module/content/mechanic identity rename"
+      ],
+      "connectedEvidenceIfRelevant": [
+        "tests/ui/c9FamilyZSpellcastingConnected.test.ts proves maintained-cast event replay, duplicate handling, Undo, and fresh reconnect convergence",
+        "tests/ui/c9FamilyZSpellInterruptionProduction.test.ts routes the private Counterspell prompt to the owning peer, rejects a replayed remote response, publishes one atomic event batch, and undoes both casters"
+      ],
+      "persistenceEvidenceIfRelevant": [
+        "tests/ui/productionFreshCharacterSpells.test.ts proves maintained casting survives a fresh local runtime restart and material/item costs survive Character durable write-back plus Undo",
+        "tests/ui/c9FamilyZSpellcastingConnected.test.ts proves authoritative spell lifecycle history reconstructs on a fresh connected replica",
+        "tests/ui/characterLibraryPersistence.test.ts and tests/ui/characterSessionProjectionMount.test.ts cover typed spell inventory/source reconstruction used by production casting"
+      ],
+      "remainingNamedSeams": [],
       "connectedRelevant": true,
       "persistenceRelevant": true
     },

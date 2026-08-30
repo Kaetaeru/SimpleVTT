@@ -13,10 +13,10 @@ function activityFromEffect(effect:EffectInstance):CommonPlayCastingActivity|und
   return {id:effect.id,actorId:effect.targetId,definitionId:metadata.definitionId,kind:metadata.kind as CastingActivityKind,requiredSeconds:metadata.requiredSeconds,elapsedSeconds:metadata.elapsedSeconds,concentrationRequired:true,status:"active"};
 }
 
-export function activeCastingProcess(state:RulesRuntimeState,actorId:string,definitionId?:string) {
+export function activeCastingProcess(state:RulesRuntimeState,actorId:string,definitionId?:string,kind?:CastingActivityKind) {
   for(const effect of state.effects) {
     const activity=activityFromEffect(effect);
-    if(activity&&activity.actorId===actorId&&(!definitionId||activity.definitionId===definitionId))return {effect,activity};
+    if(activity&&activity.actorId===actorId&&(!definitionId||activity.definitionId===definitionId)&&(!kind||activity.kind===kind))return {effect,activity};
   }
   return undefined;
 }
@@ -26,12 +26,14 @@ function economy(id:string,actorId:string,useActionEconomy:boolean):ResolutionOp
 }
 
 export function beginCastingProcess(input:{
-  state:RulesRuntimeState;id:string;actorId:string;definitionId:string;kind:CastingActivityKind;requiredSeconds:number;useActionEconomy:boolean;
+  state:RulesRuntimeState;id:string;actorId:string;definitionId:string;kind:CastingActivityKind;requiredSeconds:number;useActionEconomy:boolean;replaceActive?:boolean;
 }):PendingResolution {
-  if(activeCastingProcess(input.state,input.actorId))throw new DomainEvaluationError("actor already has an active casting process");
+  const active=activeCastingProcess(input.state,input.actorId);
+  if(active&&!input.replaceActive)throw new DomainEvaluationError("actor already has an active casting process");
   if(!Number.isFinite(input.requiredSeconds)||input.requiredSeconds<=0)throw new DomainEvaluationError("casting process duration must be positive");
   const groupId=`${input.id}:concentration`;
   return {id:input.id,actorId:input.actorId,sourceId:input.definitionId,expectedRevision:input.state.revision,operations:[
+    ...(active?cancelCastingProcessOperations(active.effect,input.actorId,"casting replaced"):[]),
     ...economy(input.id,input.actorId,input.useActionEconomy),
     {id:`${input.id}:concentration`,kind:"start-concentration",actorId:input.actorId,groupId,sourceId:input.definitionId},
     {id:`${input.id}:effect`,kind:"apply-effect",effect:{
