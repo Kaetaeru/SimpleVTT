@@ -1,0 +1,109 @@
+name: C9 Family H Sensing Authority 71304
+
+on:
+  push:
+    branches:
+      - "agent/c9-gate-n-coverage-reconciliation"
+    paths:
+      - ".github/workflows/c9-family-h-sensing-authority-71304.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch-test-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Reconcile latest branch
+        run: git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+      - name: Patch authoritative sensing facts
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path, old, new):
+              p=Path(path)
+              text=p.read_text()
+              count=text.count(old)
+              if count != 1:
+                  raise SystemExit(f"{path}: expected one match, found {count}")
+              p.write_text(text.replace(old,new,1))
+
+          replace_once(
+              "src/app/spatialRuntimeContracts.ts",
+              'export type RuntimeCover = "none"|"half"|"three-quarters"|"total";\n\nexport interface SpatialRelationVm {',
+              'export type RuntimeCover = "none"|"half"|"three-quarters"|"total";\nexport type RuntimeLight = "bright"|"dim"|"darkness";\nexport type RuntimeObscurement = "none"|"light"|"heavy";\n\nexport interface SpatialRelationVm {'
+          )
+          replace_once(
+              "src/app/spatialRuntimeContracts.ts",
+              '  targetCanSeeAttacker:boolean;\n  provenance:string;',
+              '  targetCanSeeAttacker:boolean;\n  light?:RuntimeLight;\n  obscurement?:RuntimeObscurement;\n  detected?:boolean;\n  provenance:string;'
+          )
+          replace_once(
+              "src/app/movementRuntimeContracts.ts",
+              'import type { RuntimeCover } from "./spatialRuntimeContracts";',
+              'import type { RuntimeCover, RuntimeLight, RuntimeObscurement } from "./spatialRuntimeContracts";'
+          )
+          replace_once(
+              "src/app/movementRuntimeContracts.ts",
+              '  targetCanSeeAttacker:boolean;\n}',
+              '  targetCanSeeAttacker:boolean;\n  light?:RuntimeLight;\n  obscurement?:RuntimeObscurement;\n  detected?:boolean;\n}'
+          )
+          replace_once(
+              "src/app/commonPlayInterceptorProductionRuntimeAdapter.ts",
+              '      if(query.fact==="sense.can-see")return {status:"answered",value:relation.visible};\n      return {status:"unknown"};',
+              '      if(query.fact==="sense.can-see")return {status:"answered",value:relation.visible};\n      if(query.fact==="sense.light"&&relation.light!==undefined)return {status:"answered",value:relation.light};\n      if(query.fact==="sense.obscurement"&&relation.obscurement!==undefined)return {status:"answered",value:relation.obscurement};\n      if(query.fact==="sense.detected"&&relation.detected!==undefined)return {status:"answered",value:relation.detected};\n      return {status:"unknown"};'
+          )
+          replace_once(
+              "tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts",
+              '                {id:"source-sees-trigger",fact:"sense.can-see",subject:"intercepted.actor",authority:"dm",visibility:"dm",unknownPolicy:"treat-false"},\n                {id:"trigger-hidden",fact:"sense.hidden",subject:"intercepted.actor",authority:"dm",visibility:"dm",unknownPolicy:"block"},',
+              '                {id:"source-sees-trigger",fact:"sense.can-see",subject:"intercepted.actor",authority:"dm",visibility:"dm",unknownPolicy:"treat-false"},\n                {id:"trigger-light",fact:"sense.light",subject:"intercepted.actor",authority:"dm",visibility:"dm",unknownPolicy:"block"},\n                {id:"trigger-obscurement",fact:"sense.obscurement",subject:"intercepted.actor",authority:"dm",visibility:"dm",unknownPolicy:"block"},\n                {id:"trigger-detected",fact:"sense.detected",subject:"intercepted.actor",authority:"dm",visibility:"dm",unknownPolicy:"block"},\n                {id:"trigger-hidden",fact:"sense.hidden",subject:"intercepted.actor",authority:"dm",visibility:"dm",unknownPolicy:"block"},'
+          )
+          replace_once(
+              "tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts",
+              '                {op:"eq",left:{ref:"source-sees-trigger"},right:{value:true}},\n                {op:"eq",left:{ref:"trigger-hidden"},right:{value:true}},',
+              '                {op:"eq",left:{ref:"source-sees-trigger"},right:{value:true}},\n                {op:"eq",left:{ref:"trigger-light"},right:{value:"dim"}},\n                {op:"eq",left:{ref:"trigger-obscurement"},right:{value:"none"}},\n                {op:"eq",left:{ref:"trigger-detected"},right:{value:true}},\n                {op:"eq",left:{ref:"trigger-hidden"},right:{value:true}},'
+          )
+          replace_once(
+              "tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts",
+              '    const relation={sourceId:internal.activeCharacter.id,targetId:OTHER_CHARACTER_ID,distanceFeet:30,visible:true,cover:"none" as const,targetCanSeeAttacker:true};',
+              '    const relation={sourceId:internal.activeCharacter.id,targetId:OTHER_CHARACTER_ID,distanceFeet:30,visible:true,cover:"none" as const,targetCanSeeAttacker:true,light:"dim" as const,obscurement:"none" as const,detected:true};'
+          )
+          replace_once(
+              "tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts",
+              '    sourceId:visibleInternal.activeCharacter.id,targetId:OTHER_CHARACTER_ID,distanceFeet:30,visible:true,cover:"none",targetCanSeeAttacker:true,provenance:"module:test-map:spatial",',
+              '    sourceId:visibleInternal.activeCharacter.id,targetId:OTHER_CHARACTER_ID,distanceFeet:30,visible:true,cover:"none",targetCanSeeAttacker:true,light:"dim",obscurement:"none",detected:true,provenance:"module:test-map:spatial",'
+          )
+          replace_once(
+              "tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts",
+              '  let snapshot=await openAbilityCheckInterrupt(visibleButNotHidden);\n  assert.notEqual(snapshot.resolution?.stage,"interrupt","authoritative visible target must still fail a required Hidden fact when no Hidden effect exists");\n\n  const unavailable=await prepare(ORIGINAL,true);',
+              '  let snapshot=await openAbilityCheckInterrupt(visibleButNotHidden);\n  assert.notEqual(snapshot.resolution?.stage,"interrupt","authoritative visible target must still fail a required Hidden fact when no Hidden effect exists");\n\n  const notDetected=await prepare(ORIGINAL,true);\n  const notDetectedInternal=notDetected as unknown as {activeCharacter:CharacterSheet;scene:SceneVm};\n  setSpatialRelation(notDetectedInternal.scene,{\n    sourceId:notDetectedInternal.activeCharacter.id,targetId:OTHER_CHARACTER_ID,distanceFeet:30,visible:true,cover:"none",targetCanSeeAttacker:true,light:"dim",obscurement:"none",detected:false,provenance:"module:test-map:spatial",\n  });\n  seedHiddenRuntimeEffect(notDetected,OTHER_CHARACTER_ID);\n  snapshot=await openAbilityCheckInterrupt(notDetected);\n  assert.notEqual(snapshot.resolution?.stage,"interrupt","authoritative detection false must fail a required sense.detected fact");\n\n  const unavailable=await prepare(ORIGINAL,true);'
+          )
+          PY
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Generate content dependencies
+        run: npm run generate:content
+      - name: Verify Family H production sensing composition
+        run: npx tsx --test tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts tests/domain/commonPlaySpatialFactRuntime.test.ts
+      - name: Verify legacy execution boundary
+        run: node scripts/check-legacy-execution-boundary.mjs
+      - name: Verify coverage checker
+        run: npm run test:v1-coverage
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - name: Commit verified sensing authority change and retire verifier
+        run: |
+          rm .github/workflows/c9-family-h-sensing-authority-71304.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/app/spatialRuntimeContracts.ts src/app/movementRuntimeContracts.ts src/app/commonPlayInterceptorProductionRuntimeAdapter.ts tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts .github/workflows/c9-family-h-sensing-authority-71304.yml
+          git commit -m "feat(c9): expose authoritative sensing relation facts"
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
