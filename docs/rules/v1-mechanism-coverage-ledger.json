@@ -1776,7 +1776,7 @@
         "RulesProfile timing/economy",
         "reactionWindow.ts"
       ],
-      "currentState": "Kernel compilation validates owner-authorized turn/after-turn/initiative-count timing, option selection, cost, and generic Resolver payloads, but the persisted Common Play contract has no special-timing/initiative-count authoring vocabulary and authoritative RuntimeClock has no initiative-count datum. No production session dispatcher can therefore schedule portable legendary/lair timing without inventing authority/order policy.",
+      "currentState": "Kernel compilation validates owner-authorized turn/after-turn/initiative-count timing, option selection, cost, and generic Resolver payloads. Common Play now also persists owner-neutral specialActions authoring for turn-start/turn-end/after-turn/initiative-count timing, reusable entry-point options, optional resource pools, and per-option cost; session actor identity is intentionally bound only at runtime. Authoritative RuntimeClock still lacks initiative-count progression and production still lacks a generic session dispatcher/replay-reconnect path for portable special actions, so the family remains incomplete.",
       "requiredSemantics": [
         "off-turn pools",
         "refresh",
@@ -1793,14 +1793,16 @@
       "disposition": "INCOMPLETE",
       "implementationEvidence": [
         "commonPlaySpecialTimingRuntime.ts owner/timing/option/cost compiler",
-        "commonPlayC6Runtime.test.ts owner-authorized after-turn cost/payload kernel proof"
+        "commonPlayC6Runtime.test.ts owner-authorized after-turn cost/payload kernel proof",
+        "3a101b51ab99bbb3f4e5acffd9501fb7eabc7e36: portable specialActions authoring schema/parser with runtime-bound ownership and entryPointId option references"
       ],
       "productionEvidence": [],
       "identityInvarianceEvidence": [],
       "connectedEvidenceIfRelevant": [],
-      "persistenceEvidenceIfRelevant": [],
+      "persistenceEvidenceIfRelevant": [
+        "C9 Family AC Authoring Contract R2 run 33313341650 job 99262204177: installed Common Play persistence/rehydration/session-sync regression passed with portable special timing mechanic"
+      ],
       "remainingNamedSeams": [
-        "persisted portable special-action timing/option contract",
         "authoritative initiative-count event source and refresh/order semantics",
         "session timing dispatcher plus connected off-turn interaction/replay/reconnect"
       ],
