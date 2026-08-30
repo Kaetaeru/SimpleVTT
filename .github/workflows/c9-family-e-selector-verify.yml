@@ -25,16 +25,116 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Stage provider-gated area selector wiring
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          runtime = Path("src/domain/commonPlayOperationRuntime.ts")
+          text = runtime.read_text()
+          anchor = 'import type { CommonPlayFactAnswer, CommonPlayFactQuery } from "./commonPlaySpatialFactRuntime";\n'
+          addition = 'import { parseCommonPlaySelector, type CommonPlayInstantArea } from "./commonPlaySelectorRuntime";\n'
+          if addition not in text:
+              assert anchor in text
+              text = text.replace(anchor, anchor + addition, 1)
+          old = '''export interface CommonPlayTargetingSelector {
+            from:"targets";
+            min:number;
+            max:number;
+            where?:{op:"relation-matches";ref:"relation";value:TargetingFactInput["relation"]};
+          }'''
+          new = '''export interface CommonPlayTargetingSelector {
+            from:"targets";
+            min:number;
+            max:number;
+            where?:{op:"relation-matches";ref:"relation";value:TargetingFactInput["relation"]};
+            area?:CommonPlayInstantArea;
+          }'''
+          if old in text:
+              text = text.replace(old, new, 1)
+          else:
+              assert 'area?:CommonPlayInstantArea;' in text
+          text = text.replace('const TARGETING_KEYS=new Set(["from","where","min","max"]);\nconst TARGETING_WHERE_KEYS=new Set(["op","ref","value"]);\n', '', 1)
+          start = text.index('function parseTargetingSelector(value:unknown,label:string):CommonPlayTargetingSelector {')
+          end = text.index('\nfunction parsePayment(', start)
+          replacement = '''function parseTargetingSelector(value:unknown,label:string):CommonPlayTargetingSelector {
+            const selector=parseCommonPlaySelector(value,label);
+            if(selector.from!=="targets") throw new DomainEvaluationError(`${label}.from must be targets for portable Common Play targeting`);
+            if(selector.orderBy!==undefined) throw new DomainEvaluationError(`${label}.orderBy requires a production ordering authority before it can execute`);
+            let where:CommonPlayTargetingSelector["where"];
+            if(selector.where!==undefined) {
+              const predicate=selector.where as {op?:string;ref?:string;value?:unknown};
+              if(predicate.op!=="relation-matches"||predicate.ref!=="relation") throw new DomainEvaluationError(`${label}.where currently supports relation-matches on relation only`);
+              if(predicate.value!=="self"&&predicate.value!=="ally"&&predicate.value!=="enemy"&&predicate.value!=="neutral") throw new DomainEvaluationError(`${label}.where.value must be self, ally, enemy, or neutral`);
+              where={op:"relation-matches",ref:"relation",value:predicate.value};
+            }
+            if(!Number.isInteger(selector.min)||Number(selector.min)<0) throw new DomainEvaluationError(`${label}.min must be a non-negative integer for portable Common Play targeting`);
+            if(!Number.isInteger(selector.max)||Number(selector.max)<Number(selector.min)) throw new DomainEvaluationError(`${label}.max must be an integer >= min for portable Common Play targeting`);
+            return {from:"targets",min:Number(selector.min),max:Number(selector.max),...(where?{where}:{}),...(selector.area?{area:selector.area}:{})};
+          }
+          '''
+          text = text[:start] + replacement + text[end:]
+          area_guard = '    if(entryPoint.targeting.area) throw new DomainEvaluationError("Common Play area targeting requires provider-backed area membership");\n'
+          relation_anchor = '    if(entryPoint.targeting.where) {\n'
+          if area_guard not in text:
+              assert relation_anchor in text
+              text = text.replace(relation_anchor, area_guard + relation_anchor, 1)
+          runtime.write_text(text)
+
+          adapter = Path("src/app/installedCommonPlayRuntimeAdapter.ts")
+          text = adapter.read_text()
+          old = 'const portableEntry=entryPoint as {targeting?:{min?:number;max?:number;where?:{op:string;ref:string;value:string}};operations:Array<{kind:string;target?:string}>};'
+          new = 'const portableEntry=entryPoint as {targeting?:{min?:number;max?:number;where?:{op:string;ref:string;value:string};area?:unknown};operations:Array<{kind:string;target?:string}>};'
+          if old in text:
+              text = text.replace(old, new, 1)
+          else:
+              assert new in text
+          guard = '    if(targeting.area!==undefined) return undefined;\n'
+          anchor = '    if(targetIds.length<(targeting.min??1)||targetIds.length>(targeting.max??targetIds.length)) return undefined;\n'
+          if guard not in text:
+              assert anchor in text
+              text = text.replace(anchor, anchor + guard, 1)
+          adapter.write_text(text)
+
+          test_file = Path("tests/domain/commonPlayTargetingRuntime.test.ts")
+          text = test_file.read_text()
+          invalid = '    [{from:"targets",area:{kind:"instant"},min:1,max:1},/unsupported fields: area/],\n'
+          text = text.replace(invalid, '', 1)
+          marker = 'test("bounded Common Play selector preserves authored multi-target limits without fabricating spatial facts",()=>{'
+          added = '''test("portable Common Play area selector imports but requires provider-backed membership before execution",()=>{
+            const authored=structuredClone(AUTHORED);
+            authored.entryPoints[0].targeting={from:"targets",min:1,max:2,area:{kind:"instant",shape:"cone",origin:"self",lengthFeet:15}};
+            authored.entryPoints[0].operations=[];
+            const definition=parseManualCommonPlayOperationDefinition(authored);
+            assert.deepEqual(definition.entryPoints[0].targeting,authored.entryPoints[0].targeting);
+            assert.throws(()=>compileCommonPlayEntryPointOperations(TEST_PROFILE,runtimeState(),definition,{
+              resolutionId:"external-area-targeting",actorId:"hero",entryPointId:"mend-other",
+              targetingTargets:[target("goblin","enemy")],
+            }),/provider-backed area membership/);
+          });
+
+          '''
+          if added not in text:
+              assert marker in text
+              text = text.replace(marker, added + marker, 1)
+          test_file.write_text(text)
+          PY
       - run: npm run generate:content
       - name: Verify Family E selector regressions
-        run: node --import tsx --test tests/domain/commonPlaySelectorRuntime.test.ts tests/domain/commonPlayMaplessTargeting.test.ts tests/ui/commonPlayRichSelectorProduction.test.ts tests/ui/installedCommonPlayProductionRuntime.test.ts
+        run: node --import tsx --test tests/domain/commonPlaySelectorRuntime.test.ts tests/domain/commonPlayTargetingRuntime.test.ts tests/domain/commonPlayMaplessTargeting.test.ts tests/ui/commonPlayRichSelectorProduction.test.ts tests/ui/installedCommonPlayProductionRuntime.test.ts
+      - name: Verify legacy execution boundary
+        run: node scripts/check-legacy-execution-inventory.mjs
       - name: Typecheck
         run: npm exec tsc -- --noEmit
-      - name: Retire verifier
+      - name: Commit verified area selector wiring and retire verifier
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git rm .github/workflows/c9-family-e-selector-verify.yml
-          git commit -m "chore(c9): retire Family E selector verifier"
+          git add src/domain/commonPlayOperationRuntime.ts src/app/installedCommonPlayRuntimeAdapter.ts tests/domain/commonPlayTargetingRuntime.test.ts src/domain/commonPlaySelectorRuntime.ts tests/domain/commonPlaySelectorRuntime.test.ts
+          git commit -m "feat(c9): gate portable area selectors on spatial authority"
+          git fetch origin agent/c9-gate-n-coverage-reconciliation
+          git rebase origin/agent/c9-gate-n-coverage-reconciliation
           git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
