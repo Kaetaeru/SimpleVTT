@@ -31,7 +31,7 @@ jobs:
 
           path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
           data=json.loads(path.read_text(encoding='utf-8'))
-          family=next(entry for entry in data['families'] if entry['family']=='E')
+          family=next(entry for entry in data['rows'] if entry['family']=='E')
           if family['id']!='targeting-selectors':
               raise SystemExit('Family E identity mismatch')
           family['currentState']='Pre-resolved self/selected-target bounds and portable relation filters are PRODUCTION through Common Play/Resolver; richer predicate/order/range/reach/sight/cover/tag/area and automatic selector authority remain incomplete.'
