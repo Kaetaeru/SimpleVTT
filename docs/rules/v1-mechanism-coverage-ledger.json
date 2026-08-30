@@ -474,7 +474,7 @@
         "commonPlaySpatialFactRuntime.test.ts",
         "Gate E provider/manual authority"
       ],
-      "currentState": "Provider/manual authority now has production-verified standard distance, line-of-effect, Total Cover, and area-membership facts with normalized authoritative answers, identity invariance, and connected authority routing. Family G remains incomplete for engine-owned geometry breadth (adjacency/reach/size and shape intersection/placement) and durable reconnect/retry evidence for spatial decisions.",
+      "currentState": "Provider/manual authority has production-verified standard distance, adjacency, reach, line-of-effect, Total Cover, area-membership, legal-destination, and placement facts with normalized authoritative answers and identity invariance. Connected target-owner spatial fact requests now survive owner peer reconnect, reject stale-peer responses, and deduplicate retry responses. Family G remains incomplete because engine-owned adjacency/reach/size-space and shape intersection/placement geometry is not yet converged, and in-flight spatial decisions are not durably persisted across adapter/process restart.",
       "requiredSemantics": [
         "distance",
         "adjacency",
@@ -496,23 +496,27 @@
       "disposition": "INCOMPLETE",
       "implementationEvidence": [
         "commonPlaySpatialFactRuntime.ts COMMON_PLAY_STANDARD_FACTS defines provider/manual authority for spatial.distance-feet, spatial.line-of-effect, spatial.total-cover, and spatial.area-members with normalized answers",
-        "connectedCommonPlayAuthorityFactRuntime.ts routes authoritative Common Play fact requests and answers through the connected session authority path"
+        "connectedCommonPlayAuthorityFactRuntime.ts routes authoritative Common Play fact requests and answers through the connected session authority path",
+        "commonPlaySpatialFactRuntime.ts COMMON_PLAY_STANDARD_FACTS defines provider/manual authority for spatial.distance-feet, spatial.adjacent, spatial.within-reach, spatial.line-of-effect, spatial.total-cover, spatial.area-members, spatial.legal-destination, and spatial.placement with normalized answers"
       ],
       "productionEvidence": [
         "c9FamilyGStandardSpatialFacts.test.ts proves provider-authoritative distance, line-of-effect, Total Cover, and normalized area membership without content identity dispatch",
-        "C9 Family G Standard Spatial Facts run 33309874336: Family G targeted tests, legacy execution boundary, and tsc --noEmit all passed; only the verifier self-retirement step failed"
+        "C9 Family G Standard Spatial Facts run 33309874336: Family G targeted tests, legacy execution boundary, and tsc --noEmit all passed; only the verifier self-retirement step failed",
+        "997bc175781a177496772dfba1d33aa61cfa6fae test(c9): prove standard spatial fact reconnect routing",
+        "c9FamilyGConnectedSpatialFactRuntime.test.ts proves target-owner within-reach requests resume on owner reconnect, reject stale-peer responses, and resolve duplicate retries exactly once"
       ],
       "identityInvarianceEvidence": [
         "c9FamilyGStandardSpatialFacts.test.ts proves the same authoritative spatial facts under unrelated external resolution identities"
       ],
       "connectedEvidenceIfRelevant": [
-        "connectedCommonPlayAuthorityFactRouting.test.ts and connectedCommonPlayAuthorityFactDispatch.test.ts passed in Family G run 33309874336"
+        "connectedCommonPlayAuthorityFactRouting.test.ts and connectedCommonPlayAuthorityFactDispatch.test.ts passed in Family G run 33309874336",
+        "c9FamilyGConnectedSpatialFactRuntime.test.ts proves target-owner standard spatial fact requests resume on owner peer reconnect, stale-peer responses reject, and duplicate retry responses are idempotent"
       ],
       "persistenceEvidenceIfRelevant": [],
       "remainingNamedSeams": [
         "engine-owned adjacency/reach/size-space and line/cone/cube/sphere/cylinder/emanation intersection geometry remain incomplete",
         "position/artifact placement geometry is not yet converged on the standard spatial fact authority path",
-        "durable reconnect/retry persistence evidence for spatial decisions remains absent"
+        "durable persistence of in-flight spatial decisions across adapter/process restart remains absent; connected reconnect/retry routing is covered"
       ],
       "connectedRelevant": true,
       "persistenceRelevant": true
