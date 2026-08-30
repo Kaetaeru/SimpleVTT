@@ -52,7 +52,7 @@ test("unknown stored Common Play reads a non-active runtime actor profile proper
   const before=await adapter.getSnapshot();
   const baseAc=before.scene.entities.find((entity)=>entity.id===actorId)!.ac;
   const beforeMovement=before.scene.economyByActor[actorId]!.movement;
-  const trigger=(before.scene.actionsByActor[actorId]??[]).find((action)=>action.name.startsWith("발동 ·"));
+  const trigger=(before.scene.actionsByActor[actorId]??[]).find((action)=>action.id.startsWith("stored-invocation-common-play:"));
   assert.ok(trigger,JSON.stringify(before.scene.actionsByActor[actorId]));
   await adapter.resolveAction(trigger.id,[actorId]);
   const after=await adapter.getSnapshot();
