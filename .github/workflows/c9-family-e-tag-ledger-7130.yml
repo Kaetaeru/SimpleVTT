@@ -1,0 +1,85 @@
+name: C9 Family E Tag Ledger 7130
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-e-tag-ledger-7130.yml
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Reconcile verified tag-selector evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import json
+          p=Path('docs/rules/v1-mechanism-coverage-ledger.json')
+          text=p.read_text(encoding='utf-8')
+          replacements=[
+            (
+              '        "commonPlayOperationRuntime.ts routes portable target predicates through commonPlaySelectorRuntime using authoritative CommonPlaySelectorCandidate facts supplied by installedCommonPlayRuntimeAdapter.ts without content identity dispatch"\n',
+              '        "commonPlayOperationRuntime.ts routes portable target predicates through commonPlaySelectorRuntime using authoritative CommonPlaySelectorCandidate facts supplied by installedCommonPlayRuntimeAdapter.ts without content identity dispatch",\n        "installedCommonPlayRuntimeAdapter.ts supplies authoritative Scene status[] candidate properties consumed generically by has-tag predicates"\n'
+            ),
+            (
+              '        "C9 Family E Rich Selector Candidate Bridge 7130 run 33310268977: rich selector production/import regression, legacy execution boundary, and tsc --noEmit all passed; verifier retired after success"\n',
+              '        "C9 Family E Rich Selector Candidate Bridge 7130 run 33310268977: rich selector production/import regression, legacy execution boundary, and tsc --noEmit all passed; verifier retired after success",\n        "c9FamilyETagSelectorProduction.test.ts unknown installed has-tag selector accepts authoritative Scene status, rejects untagged targets, and preserves behavior after complete identity rename",\n        "C9 Family E Tag Selector 7130 run 33310596897: tag-selector production regressions, coverage checker, legacy execution boundary, and tsc --noEmit all passed; verifier retired after success"\n'
+            ),
+            (
+              '        "commonPlayRichSelectorProduction.test.ts exercises previously-unknown and completely renamed external module/content/mechanic/entry identities through the same rich-selector production path"\n',
+              '        "commonPlayRichSelectorProduction.test.ts exercises previously-unknown and completely renamed external module/content/mechanic/entry identities through the same rich-selector production path",\n        "c9FamilyETagSelectorProduction.test.ts completely renamed external module/content/mechanic/entry/display identities preserve has-tag selector semantics"\n'
+            ),
+            (
+              '        "range/reach/sight/cover/tag spatial facts, provider-backed area membership, ordering/object/point selection, and automatic-vs-manual production selector authority remain incomplete"\n',
+              '        "range/reach/sight/cover spatial facts, provider-backed area membership, ordering/object/point selection, and automatic-vs-manual production selector authority remain incomplete"\n'
+            ),
+          ]
+          for old,new in replacements:
+            if new in text:
+              continue
+            if text.count(old)!=1:
+              raise SystemExit(f'expected one ledger target, found {text.count(old)} for {old[:80]!r}')
+            text=text.replace(old,new,1)
+          json.loads(text)
+          p.write_text(text,encoding='utf-8')
+          PY
+      - name: Verify ledger boundaries
+        run: |
+          node scripts/check-v1-mechanism-coverage.mjs
+          node scripts/check-legacy-execution-boundary.mjs
+      - name: Publish and retire verifier
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/c9-family-e-tag-ledger-7130.yml
+          git add docs/rules/v1-mechanism-coverage-ledger.json
+          git diff --cached --check
+          git commit -m "docs(c9): record portable tag selector evidence"
+          branch=agent/c9-gate-n-coverage-reconciliation
+          for attempt in $(seq 1 8); do
+            git fetch origin "$branch"
+            if git rebase "origin/$branch"; then
+              node scripts/check-v1-mechanism-coverage.mjs
+              node scripts/check-legacy-execution-boundary.mjs
+              if git push origin HEAD:"$branch"; then exit 0; fi
+            fi
+            git rebase --abort || true
+            sleep 2
+          done
+          exit 1
