@@ -1226,7 +1226,7 @@
         "RulesProfile timing points",
         "session event batches"
       ],
-      "currentState": "No explicit generic ordering authority proof",
+      "currentState": "A generic typed simultaneous-ordering decision kernel validates eligible candidate sets, actor-controller/DM authority, stale revisions, exact permutations, deterministic ordered projection, and idempotent exact replay. Production timing-window collection, Host-connected decision transport/reconnect, and unknown RuleModule execution remain incomplete.",
       "requiredSemantics": [
         "timing window",
         "eligible effects",
@@ -1238,12 +1238,19 @@
       ],
       "transactionDomain": "Typed pending decision plus session authority",
       "disposition": "INCOMPLETE",
-      "implementationEvidence": [],
+      "implementationEvidence": [
+        "commonPlaySimultaneousOrderingRuntime.ts generic pending/resolved ordering state with actor-controller|dm authority, revision/responder validation, exact candidate permutation, deterministic projection, and idempotent exact replay",
+        "commonPlaySimultaneousOrderingRuntime.test.ts covers automatic zero/one-candidate resolution, authority/stale rejection, invalid permutations, deterministic ordering, replay, and conflicting replay rejection"
+      ],
       "productionEvidence": [],
-      "identityInvarianceEvidence": [],
+      "identityInvarianceEvidence": [
+        "commonPlaySimultaneousOrderingRuntime.test.ts repeats the same relative mechanical ordering under unrelated renamed external candidate identities"
+      ],
       "connectedEvidenceIfRelevant": [],
       "persistenceEvidenceIfRelevant": [],
-      "remainingNamedSeams": [],
+      "remainingNamedSeams": [
+        "production Common Play timing-window collection and Host-connected decision transport/reconnect/replay are not yet wired to the ordering kernel"
+      ],
       "connectedRelevant": true,
       "persistenceRelevant": true
     },
