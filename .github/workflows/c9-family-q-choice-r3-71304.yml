@@ -1,0 +1,76 @@
+name: C9 Family Q Choice R3 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-q-choice-r3-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  implement-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Apply current-aware portable choice patch
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import textwrap
+
+          workflow=Path('.github/workflows/c9-family-q-choice-71304.yml').read_text(encoding='utf-8')
+          marker='      - name: Add structural choice payload to existing interrupt path\n'
+          start=workflow.index("          python - <<'PY'\n",workflow.index(marker))+len("          python - <<'PY'\n")
+          end=workflow.index("\n          PY",start)
+          patch_code=textwrap.dedent(workflow[start:end])
+
+          old='''          old_compile=''' + "'''" + '''    const itemContext=itemPaymentRuntimeContext(internal,state,lowered.definition);\\n    const pending=compileCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,itemContext.state,lowered.definition,operationExecutionInput(internal,actionId,action,prepared,resolutionId,interactionId,itemContext.itemPaymentResourceIds));\\n''' + "'''" + '''\n          new_compile=''' + "'''" + '''    const itemContext=itemPaymentRuntimeContext(internal,state,lowered.definition);\\n    const interactionCandidates=entryPoint.interaction?.kind===\\"choice\\"\\n      ?commonPlayTargetCandidates(adapter,internal.scene,itemContext.state,actorEntity,entryPoint.interaction.input.selector)\\n      :undefined;\\n    const pending=compileCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,itemContext.state,lowered.definition,operationExecutionInput(internal,actionId,action,prepared,resolutionId,interactionResponse,interactionCandidates,itemContext.itemPaymentResourceIds));\\n''' + "'''" + '''\n          if text.count(old_compile)!=1: raise SystemExit('production compile anchor changed')\n          text=text.replace(old_compile,new_compile,1)'''
+
+          new='''          old_compile=''' + "'''" + '''    const itemContext=itemPaymentRuntimeContext(internal,state,lowered.definition);\\n    let pending;\\n    try {\\n      pending=compileCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,itemContext.state,lowered.definition,operationExecutionInput(internal,actionId,action,prepared,resolutionId,interactionId,itemContext.itemPaymentResourceIds));\\n''' + "'''" + '''\n          new_compile=''' + "'''" + '''    const itemContext=itemPaymentRuntimeContext(internal,state,lowered.definition);\\n    const interactionCandidates=entryPoint.interaction?.kind===\\"choice\\"\\n      ?commonPlayTargetCandidates(adapter,internal.scene,itemContext.state,actorEntity,entryPoint.interaction.input.selector)\\n      :undefined;\\n    let pending;\\n    try {\\n      pending=compileCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,itemContext.state,lowered.definition,operationExecutionInput(internal,actionId,action,prepared,resolutionId,interactionResponse,interactionCandidates,itemContext.itemPaymentResourceIds));\\n''' + "'''" + '''\n          if text.count(old_compile)!=1: raise SystemExit('production compile anchor changed')\n          text=text.replace(old_compile,new_compile,1)'''
+
+          if old not in patch_code:
+              raise SystemExit('R1 compile-patch script anchor changed')
+          patch_code=patch_code.replace(old,new,1)
+          exec(compile(patch_code,'q-choice-r3-patch','exec'),{})
+
+          path=Path('src/domain/commonPlayOperationRuntime.ts')
+          text=path.read_text(encoding='utf-8')
+          count=text.count('parseConsentInteraction(')
+          if count==1:
+              text=text.replace('parseConsentInteraction(','parseInteraction(',1)
+          elif count!=0:
+              raise SystemExit(f'unexpected stale parser call count after patched R1: {count}')
+          path.write_text(text,encoding='utf-8')
+          PY
+      - run: npm ci
+      - run: npm run generate:content
+      - name: Verify Family Q choice vertical slice
+        run: |
+          node --import tsx --test tests/ui/c9FamilyQChoiceInteractionProduction.test.ts tests/ui/c9FamilyQTargetOwnerInteractionProduction.test.ts tests/ui/c9FamilyQAuthorityInteractionProduction.test.ts tests/ui/installedCommonPlayActorOwnerInteractionProduction.test.ts tests/domain/commonPlayOperationRuntime.test.ts
+          node scripts/check-v1-mechanism-coverage.mjs
+          node scripts/check-legacy-execution-boundary.mjs
+          npm exec tsc -- --noEmit
+      - name: Publish verified source and remove staging workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/domain/commonPlayOperationRuntime.ts src/app/contracts.ts src/app/mockAdapter.ts src/app/installedCommonPlayRuntimeAdapter.ts src/app/connectedInterruptResponsePort.ts src/app/connectedActionRoutingAdapter.ts src/app/connectedSessionWire.ts tests/ui/c9FamilyQChoiceInteractionProduction.test.ts
+          git rm .github/workflows/c9-family-q-choice-r3-71304.yml
+          git commit -m "feat(c9): carry portable choice interactions through Resolver"
+          for attempt in 1 2 3 4 5; do
+            if git push origin HEAD:agent/c9-gate-n-coverage-reconciliation; then exit 0; fi
+            git fetch origin agent/c9-gate-n-coverage-reconciliation
+            git rebase origin/agent/c9-gate-n-coverage-reconciliation || exit 1
+            sleep 1
+          done
+          exit 1
