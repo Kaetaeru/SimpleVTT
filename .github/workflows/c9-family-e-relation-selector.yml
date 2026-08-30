@@ -60,6 +60,11 @@ jobs:
           new='''    if(input.targetId!==undefined&&!input.targetingTargets.some((target)=>target.id===input.targetId)) {\n      throw new DomainEvaluationError("Common Play downstream target does not match the validated targeting selection");\n    }\n    if(entryPoint.targeting.where) {\n      const rejected=input.targetingTargets.filter((target)=>!evaluateSemanticPredicate(entryPoint.targeting!.where!,\n        (ref)=>ref==="id"?target.id:ref==="relation"?target.relation:undefined));\n      if(rejected.length) throw new DomainEvaluationError(`Common Play targeting relation filter rejected: ${rejected.map((target)=>target.id).join(", ")}`);\n    }\n    operations.push({'''
           replace_once(runtime,old,new)
 
+          adapter='src/app/installedCommonPlayRuntimeAdapter.ts'
+          old='''    const pending=compileCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,state,lowered.definition,operationExecutionInput(internal,actionId,action,prepared,resolutionId,interactionId));\n    const automaticPending=appendCommonPlayDamageTakenTriggers('''
+          new='''    let pending;\n    try {\n      pending=compileCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,state,lowered.definition,operationExecutionInput(internal,actionId,action,prepared,resolutionId,interactionId));\n    } catch(error) {\n      return {status:"rejected" as const,error:error instanceof Error?error.message:String(error),snapshot:await internal.getSnapshot()};\n    }\n    const automaticPending=appendCommonPlayDamageTakenTriggers('''
+          replace_once(adapter,old,new)
+
           domain=Path('tests/domain/commonPlayTargetingRuntime.test.ts')
           text=domain.read_text(encoding='utf-8')
           old='''    [{from:"targets",where:{value:true},min:1,max:1},/unsupported fields: where/],'''
@@ -95,7 +100,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git rm .github/workflows/c9-family-e-relation-selector.yml
-          git add src/domain/commonPlayOperationRuntime.ts tests/domain/commonPlayTargetingRuntime.test.ts tests/ui/installedCommonPlayProductionRuntime.test.ts
+          git add src/domain/commonPlayOperationRuntime.ts src/app/installedCommonPlayRuntimeAdapter.ts tests/domain/commonPlayTargetingRuntime.test.ts tests/ui/installedCommonPlayProductionRuntime.test.ts
           git commit -m "feat(c9): validate portable relation selectors"
           git fetch origin agent/c9-gate-n-coverage-reconciliation
           git rebase origin/agent/c9-gate-n-coverage-reconciliation
