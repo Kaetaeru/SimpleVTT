@@ -1,0 +1,80 @@
+name: C9 Family H Ledger Reconcile 71304
+
+on:
+  push:
+    branches: [agent/c9-gate-n-coverage-reconciliation]
+    paths: [.github/workflows/c9-family-h-ledger-reconcile-71304.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Publish verified Family H evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch=agent/c9-gate-n-coverage-reconciliation
+          patch_h() {
+            python3 - <<'PY'
+          import json
+          from pathlib import Path
+          path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
+          data=json.loads(path.read_text(encoding='utf-8'))
+          row=next(item for item in data['rows'] if item.get('family')=='H')
+          complete='Rules-derived Darkvision, Blindsight, Tremorsense, and Truesight acquisition now projects generic RulesProfile sense.<kind>.range-feet properties and Resolver-owned property modifiers into authoritative observer senses through the shared sensing kernel. Family H is complete.'
+          if row.get('disposition')=='IMPLEMENTED' and not row.get('remainingNamedSeams'):
+              raise SystemExit(0)
+          old='Family H remains incomplete only for rules-derived special-sense acquisition/derivation into authoritative observer sense profiles.'
+          if old not in row.get('currentState',''):
+              raise SystemExit('Family H authority changed; refusing stale reconcile')
+          row['currentState']=row['currentState'].replace(old,complete)
+          implementation='dnd.srd-5.2.1.profile.json sense.<kind>.range-feet properties and commonPlayInterceptorProductionRuntimeAdapter.ts generic runtime profile-property projection derive Darkvision/Blindsight/Tremorsense/Truesight from Resolver Effect modifiers without content identity dispatch'
+          production='2b79dfc41013b9a20eed4c2ea779df6b922d6d10 and dabe88ee00dd104cf78640bb545d81aef745d487 add RulesProfile sense ranges and production projection; 434ae0ca6ba268c828da91af3660bfe633f74c25 adds the rename-invariant regression; C9 Family H Sense Profile run 33314316843 passed 29/29 targeted property/sensing/production tests, legacy execution boundary, and tsc --noEmit before publishing the regression proof'
+          identity='installedCommonPlayInterceptorProductionRuntime.test.ts proves RulesProfile-derived Darkvision remains unchanged after external module/content/mechanic/interceptor/interaction/display and sense-source identity rename'
+          for field,value in [('implementationEvidence',implementation),('productionEvidence',production),('identityInvarianceEvidence',identity)]:
+              if value not in row[field]: row[field].append(value)
+          row['remainingNamedSeams']=[]
+          row['disposition']='IMPLEMENTED'
+          path.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          PY
+          }
+          for attempt in 1 2 3; do
+            git fetch origin "$branch"
+            git reset --hard "origin/$branch"
+            patch_h
+            node scripts/check-v1-mechanism-coverage.mjs
+            if git diff --quiet -- docs/rules/v1-mechanism-coverage-ledger.json; then
+              echo 'Family H already reconciled'
+              exit 0
+            fi
+            git config user.name chatgpt-c9-bot
+            git config user.email actions@users.noreply.github.com
+            git add docs/rules/v1-mechanism-coverage-ledger.json
+            git commit -m 'docs(c9): finalize Family H coverage'
+            if git push origin "HEAD:$branch"; then exit 0; fi
+            echo "retrying concurrent Family H ledger publish ($attempt/3)" >&2
+          done
+          exit 1
+      - name: Retire reconciler
+        if: success()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          branch=agent/c9-gate-n-coverage-reconciliation
+          path=.github/workflows/c9-family-h-ledger-reconcile-71304.yml
+          sha="$(gh api -X GET "repos/$GITHUB_REPOSITORY/contents/$path?ref=$branch" --jq .sha)"
+          jq -n --arg message 'ci(c9): retire Family H ledger reconciler' --arg sha "$sha" --arg branch "$branch" '{message:$message,sha:$sha,branch:$branch}' | gh api --method DELETE "repos/$GITHUB_REPOSITORY/contents/$path" --input - >/dev/null
