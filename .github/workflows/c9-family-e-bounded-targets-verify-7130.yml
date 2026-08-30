@@ -1,0 +1,35 @@
+name: C9 Family E Bounded Targets Verify 7130
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-e-bounded-targets-verify-7130.yml
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Generate content catalogs
+        run: npm run generate:content
+      - name: Verify Family E bounded target slice
+        run: >-
+          npx tsx --test
+          tests/domain/commonPlayTargetingRuntime.test.ts
+          tests/ui/installedCommonPlayProductionRuntime.test.ts
+      - name: Verify legacy execution boundary
+        run: npm run check:legacy-execution-boundary
+      - name: Typecheck application
+        run: npx tsc --noEmit
