@@ -1,0 +1,71 @@
+name: C9 Family F Allocation Recovery
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-f-allocation-recover-7130.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply-verify-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Reconcile latest branch
+        shell: bash
+        run: |
+          git fetch origin agent/c9-gate-n-coverage-reconciliation
+          git reset --hard origin/agent/c9-gate-n-coverage-reconciliation
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Extract and apply staged allocation patch
+        shell: bash
+        run: |
+          python3 - <<'PYEXTRACT'
+          from pathlib import Path
+          source=Path('.github/workflows/c9-family-f-allocation-production-7130.yml').read_text(encoding='utf-8')
+          marker="          python3 - <<'PY'\n"
+          start=source.index(marker)+len(marker)
+          end=source.index("\n          PY",start)
+          lines=[]
+          for line in source[start:end].splitlines():
+              lines.append(line[10:] if line.startswith('          ') else line)
+          Path('/tmp/c9-family-f-allocation.py').write_text('\n'.join(lines)+'\n',encoding='utf-8')
+          PYEXTRACT
+          python3 /tmp/c9-family-f-allocation.py
+      - name: Generate content catalogs
+        run: npm run generate:content
+      - name: Verify allocation production slice
+        run: >-
+          npx tsx --test
+          tests/domain/commonPlayAllocationRuntime.test.ts
+          tests/ui/installedCommonPlayAllocationProductionRuntime.test.ts
+          tests/ui/ruleModulePackageImport.test.ts
+      - name: Verify legacy execution boundary
+        run: node scripts/check-legacy-execution-boundary.mjs
+      - name: Typecheck application
+        run: npx tsc --noEmit
+      - name: Commit verified allocation bridge
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm -f .github/workflows/c9-family-f-allocation-production-7130.yml .github/workflows/c9-family-f-allocation-recover-7130.yml
+          git add src/domain/commonPlayOperationRuntime.ts src/app/installedCommonPlayRuntimeAdapter.ts tests/ui/installedCommonPlayAllocationProductionRuntime.test.ts .github/workflows
+          git commit -m "feat(c9): bridge portable allocation production"
+          git fetch origin agent/c9-gate-n-coverage-reconciliation
+          git rebase origin/agent/c9-gate-n-coverage-reconciliation
+          npx tsx --test tests/domain/commonPlayAllocationRuntime.test.ts tests/ui/installedCommonPlayAllocationProductionRuntime.test.ts tests/ui/ruleModulePackageImport.test.ts
+          node scripts/check-legacy-execution-boundary.mjs
+          npx tsc --noEmit
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
