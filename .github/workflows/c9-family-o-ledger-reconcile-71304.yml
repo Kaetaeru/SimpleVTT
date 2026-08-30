@@ -1,0 +1,90 @@
+name: C9 Family O Ledger Reconcile 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-o-ledger-reconcile-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - name: Reconcile Family O evidence on latest branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git pull --ff-only origin agent/c9-gate-n-coverage-reconciliation
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
+          data=json.loads(path.read_text(encoding='utf-8'))
+          rows=data.get('rows',[])
+          row=next((item for item in rows if item.get('family')=='O' and item.get('id')=='concentration'),None)
+          if row is None:
+              raise SystemExit('Family O concentration row not found')
+
+          row['currentState']=(
+              'Generic concentration kernel, portable maintained-effect lowering, and structural stored-invocation deferred-spell capture compose through the shared Resolver. '
+              'Unknown installed RuleModule activation, damage-save/end cleanup, held Ready/deferred-casting concentration setup, Host/client replay, duplicate handling, Undo, fresh reconnect, and rename invariance are proven without content-name or content-ID dispatch. '
+              'Full spellcasting cadence, slot/component/material, Ritual, and interruption policy remain Family Z spellcasting-meta responsibilities rather than a second concentration engine.'
+          )
+          row['disposition']='IMPLEMENTED'
+
+          def add(key,value):
+              items=row.setdefault(key,[])
+              if value not in items:
+                  items.append(value)
+
+          add('implementationEvidence','commonPlayArtifactRuntime.ts structurally lowers a stored-invocation artifact with concentrationGroupId into start-concentration plus spawn-artifact in the same Resolver transaction')
+          add('productionEvidence','tests/domain/c9FamilyODeferredConcentration.test.ts proves arbitrary-ID deferred spell capture starts held concentration through generic artifact lowering and commits the stored invocation atomically')
+          add('productionEvidence','C9 Family O Deferred Concentration 71304 run 33318301155 passed deferred concentration regression, existing stored-invocation/concentration production regressions, TypeScript, and verifier self-retirement')
+          add('identityInvarianceEvidence','tests/domain/c9FamilyODeferredConcentration.test.ts repeats deferred-spell concentration setup after complete external module/definition/group identity rename with identical structural behavior')
+          row['remainingNamedSeams']=[]
+
+          path.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          PY
+
+          python3 - <<'PY'
+          import json
+          data=json.load(open('docs/rules/v1-mechanism-coverage-ledger.json',encoding='utf-8'))
+          row=next(item for item in data['rows'] if item['family']=='O' and item['id']=='concentration')
+          assert row['disposition']=='IMPLEMENTED'
+          assert row['remainingNamedSeams']==[]
+          assert any('c9FamilyODeferredConcentration.test.ts' in item for item in row['productionEvidence'])
+          assert any('complete external module/definition/group identity rename' in item for item in row['identityInvarianceEvidence'])
+          print('Family O ledger evidence reconciled')
+          PY
+
+          set +e
+          node scripts/check-v1-mechanism-coverage.mjs --gate-n > /tmp/gate-n.log 2>&1
+          gate_status=$?
+          set -e
+          cat /tmp/gate-n.log
+          if grep -q 'O:concentration' /tmp/gate-n.log; then
+            echo 'Family O remains a Gate N blocker after reconciliation' >&2
+            exit 1
+          fi
+          if [ "$gate_status" -eq 0 ]; then
+            echo 'Gate N checker is fully green'
+          else
+            echo 'Gate N still has other families to reconcile; Family O is no longer listed'
+          fi
+          git diff --check
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/c9-family-o-ledger-reconcile-71304.yml
+          git add docs/rules/v1-mechanism-coverage-ledger.json
+          git commit -m "docs(c9): complete concentration coverage evidence"
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
