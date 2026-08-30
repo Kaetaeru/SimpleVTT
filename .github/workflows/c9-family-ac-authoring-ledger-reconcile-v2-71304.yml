@@ -52,7 +52,8 @@ jobs:
           assert.throws(()=>parseCommonPlayDefinition({...authored,specialActions:[{id:"legendary",timing:{kind:"after-turn",actor:"other"},options:[{id:"tail",cost:0,entryPointId:"missing"}]}]}),/missing entry point/);
 
           const schema=JSON.parse(readFileSync("schemas/common-play-contract.schema.json","utf8"));
-          assert.equal(schema.properties.specialActions.$ref,"#/$defs/specialActionAuthoringList");
+          assert.equal(schema.properties.specialActions.type,"array");
+          assert.equal(schema.properties.specialActions.items.$ref,"#/$defs/specialAction");
           NODE
           node --import tsx --test tests/domain/commonPlayC6Runtime.test.ts tests/domain/commonPlayDefinitionRuntime.test.ts
           npx tsc --noEmit
