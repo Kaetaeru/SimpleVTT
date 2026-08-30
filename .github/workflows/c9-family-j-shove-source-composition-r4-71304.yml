@@ -1,0 +1,106 @@
+name: C9 Family J Shove Source Composition R4 71304
+
+on:
+  push:
+    branches: [agent/c9-gate-n-coverage-reconciliation]
+    paths: [.github/workflows/c9-family-j-shove-source-composition-r4-71304.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  verify-and-land:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Apply staged source slice and canonical-ID fix
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          workflow=Path('.github/workflows/c9-family-j-shove-source-composition-71304.yml')
+          lines=workflow.read_text(encoding='utf-8').splitlines()
+          start=next(i for i,line in enumerate(lines) if line.strip()=="python3 - <<'PY'")
+          end=next(i for i in range(start+1,len(lines)) if lines[i].strip()=='PY')
+          script='\n'.join(line[10:] if line.startswith('          ') else line for line in lines[start+1:end])
+          exec(compile(script,str(workflow),'exec'),{})
+
+          path=Path('src/app/installedCommonPlayRuntimeAdapter.ts')
+          text=path.read_text(encoding='utf-8')
+          old='\n'.join([
+              '  const runtimeArtifactReference=parseRuntimeArtifactCommonPlayActionId(actionId);',
+              '  let definitionActionId=runtimeArtifactReference?.definitionActionId??actionId;',
+              '  let action=await commonPlayAction(this,definitionActionId);',
+              '  let projectedActionOverride:ActionVm|undefined;',
+              '  if(!action&&!runtimeArtifactReference) {',
+              '    const internal=this as unknown as AdapterState;',
+              '    projectedActionOverride=Object.values(internal.scene.actionsByActor).flat().find((candidate)=>candidate.id===actionId);',
+              '    if(!projectedActionOverride) {',
+              '      const visibleSnapshot=await internal.getSnapshot();',
+              '      projectedActionOverride=Object.values(visibleSnapshot.scene.actionsByActor).flat().find((candidate)=>candidate.id===actionId);',
+              '    }',
+              '    const sourceActionId=projectedActionOverride?.runtimeCommonPlayActionId;',
+              '    if(sourceActionId) {',
+              '      definitionActionId=sourceActionId;',
+              '      action=await commonPlayAction(this,definitionActionId);',
+              '    }',
+              '  }',
+              '  if (!action) return previousResolveAction.call(this,actionId,targetIds);',
+          ])
+          new='\n'.join([
+              '  const runtimeArtifactReference=parseRuntimeArtifactCommonPlayActionId(actionId);',
+              '  let definitionActionId=runtimeArtifactReference?.definitionActionId??actionId;',
+              '  let action=await commonPlayAction(this,definitionActionId);',
+              '  const internal=this as unknown as AdapterState;',
+              '  let projectedActionOverride:ActionVm|undefined=Object.values(internal.scene.actionsByActor).flat().find((candidate)=>candidate.id===actionId);',
+              '  if(!projectedActionOverride&&!runtimeArtifactReference) {',
+              '    const visibleSnapshot=await internal.getSnapshot();',
+              '    projectedActionOverride=Object.values(visibleSnapshot.scene.actionsByActor).flat().find((candidate)=>candidate.id===actionId);',
+              '  }',
+              '  if(!action&&!runtimeArtifactReference) {',
+              '    const sourceActionId=projectedActionOverride?.runtimeCommonPlayActionId;',
+              '    if(sourceActionId) {',
+              '      definitionActionId=sourceActionId;',
+              '      action=await commonPlayAction(this,definitionActionId);',
+              '    }',
+              '  }',
+              '  if (!action) return previousResolveAction.call(this,actionId,targetIds);',
+          ])
+          if text.count(old)!=1:
+              raise SystemExit(f'expected one canonical-path patch target, found {text.count(old)}')
+          path.write_text(text.replace(old,new,1),encoding='utf-8')
+          PY
+      - name: Verify source-owned shove slice
+        shell: bash
+        run: |
+          npm run generate:content
+          npx tsx --test tests/ui/unarmedStrikeRuntime.test.ts tests/ui/c9FamilyJPortableControlProduction.test.ts tests/ui/c9FamilyJAttackReplacementProduction71304R2.test.ts
+          node scripts/check-v1-mechanism-coverage.mjs
+          node scripts/check-legacy-execution-boundary.mjs
+          npx tsc --noEmit
+      - name: Land verified source slice
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch=agent/c9-gate-n-coverage-reconciliation
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/app/contracts.ts src/domain/commonPlayOperationRuntime.ts src/app/installedCommonPlayRuntimeAdapter.ts src/app/structuralSaveConditionRuntimeAdapter.ts src/app/productionPlayRuntimeAdapter.ts content/modules/dnd-srd-5.2.1.core/module.json tests/ui/unarmedStrikeRuntime.test.ts docs/rules/v1-mechanism-coverage-ledger.json
+          git commit -m "feat(c9): source unarmed shove from Common Play"
+          for attempt in 1 2 3 4 5; do
+            if git push origin HEAD:"$branch"; then exit 0; fi
+            git fetch origin "$branch"
+            git rebase "origin/$branch" || exit 1
+            sleep 1
+          done
+          exit 1
