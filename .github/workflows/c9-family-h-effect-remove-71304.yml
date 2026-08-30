@@ -143,6 +143,7 @@ jobs:
               if count!=1: raise SystemExit(f'Family H Search operation regex matched {count} times')
           test.write_text(text,encoding='utf-8')
           PY
+      - run: npm run generate:content
       - name: Verify generic effect removal
         run: |
           node --import tsx --test tests/ui/c9FamilyHSearchDiscoveryProduction.test.ts
