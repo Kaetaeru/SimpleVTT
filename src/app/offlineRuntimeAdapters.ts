@@ -77,7 +77,6 @@ import "./stabilizeRuntimeAdapter";
 import "./unarmedControlRuntimeAdapter";
 import "./effectGrantActionRuntimeAdapter";
 import "./consumableD20BonusEffectFollowUpRuntimeAdapter";
-import "./d20FollowUpRuntimeAdapter";
 import "./clericDivineSparkActionRuntimeAdapter";
 import "./clericTurnUndeadActionRuntimeAdapter";
 import "./paladinLayOnHandsActionRuntimeAdapter";

@@ -343,16 +343,6 @@ export interface ActionVm {
       radiusFeet?:number;
     };
   };
-  runtimeD20FollowUps?:Array<{
-    sourceId:string;
-    families:Array<"ability-check"|"saving-throw"|"attack-roll">;
-    trigger:"failure"|"after-roll";
-    modification:
-      | {mode:"add-die";diceSides:number}
-      | {mode:"reroll";bonus:number};
-    payment:{resourceId:string;amount:number;consumeWhen:"accept"|"success"};
-    presentation:{optionName:string;cost:string;effect:string;source:string};
-  }>;
   checkSuccessOperations?:Array<{kind:"stabilize";target:"first-target"}>;
   checkOutcomeLabels?:{success:string;failure:string};
 }
