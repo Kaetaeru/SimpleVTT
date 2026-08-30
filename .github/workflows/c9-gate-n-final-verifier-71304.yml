@@ -1,5 +1,5 @@
 name: C9 Gate N Final Verifier 71304
-# final rerun after portable Extra Attack production publish
+# final rerun against current zero-INCOMPLETE ledger
 
 on:
   push:
