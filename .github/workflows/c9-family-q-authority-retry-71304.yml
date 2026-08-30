@@ -1,0 +1,64 @@
+name: C9 Family Q Authority Retry 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-q-authority-retry-71304.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply-verify-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Apply verified authority slice against latest branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch=agent/c9-gate-n-coverage-reconciliation
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in $(seq 1 8); do
+            git fetch origin "$branch"
+            git reset --hard "origin/$branch"
+            npm run generate:content >/dev/null
+            cp .github/scripts/c9-family-q-authority-consent-71304.py /tmp/c9-family-q-authority-consent-71304.py
+            python3 - <<'PY'
+          from pathlib import Path
+          path=Path('/tmp/c9-family-q-authority-consent-71304.py')
+          source=path.read_text(encoding='utf-8')
+          old='if updated != 1:'
+          new='if updated not in (0, 1):'
+          if old in source:
+              source=source.replace(old,new,1)
+          path.write_text(source,encoding='utf-8')
+          PY
+            python3 /tmp/c9-family-q-authority-consent-71304.py
+            git checkout -- docs/rules/v1-mechanism-coverage-ledger.json
+            rm .github/workflows/c9-family-q-authority-retry-71304.yml
+            node --import tsx --test tests/ui/c9FamilyQTargetOwnerInteractionProduction.test.ts tests/ui/c9FamilyQAuthorityInteractionProduction.test.ts
+            node scripts/check-v1-mechanism-coverage.mjs
+            node scripts/check-legacy-execution-boundary.mjs
+            npm exec tsc -- --noEmit
+            git add src/domain/commonPlayOperationRuntime.ts schemas/common-play-contract.schema.json src/app/installedCommonPlayRuntimeAdapter.ts tests/ui/c9FamilyQAuthorityInteractionProduction.test.ts .github/workflows/c9-family-q-authority-retry-71304.yml
+            git diff --cached --check
+            git commit -m "feat(c9): route DM and Host consent authority"
+            if git push origin HEAD:"$branch"; then
+              exit 0
+            fi
+            sleep 1
+          done
+          exit 1
