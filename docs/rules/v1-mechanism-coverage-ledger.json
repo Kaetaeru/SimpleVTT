@@ -143,7 +143,7 @@
         "SRD 5.2.1 p.76: Dark One's Own Luck",
         "commonPlayD20Runtime.test.ts"
       ],
-      "currentState": "The generic d20 Resolver supports checks/saves/attacks, proficiency-derived modifiers, advantage/disadvantage, flat/additional dice, DC/target modification, reroll, replace, minimum, outcome recalculation, and criticals. Production Common Play now proves declarative Cutting Words subtract-die plus arbitrary installed post-roll replace/minimum/target-add through the existing reaction transaction with atomic payment and Undo. Family C remains INCOMPLETE because post-roll add-die/reroll for Tactical Mind, Indomitable, Dark One's Own Luck, and Peerless Skill are still injected into runtimeD20FollowUps by named class/subclass/feature checks in productionPlayRuntimeAdapter.ts rather than authored by unknown portable content.",
+      "currentState": "The generic d20 Resolver supports checks/saves/attacks and the full roll-modification kernel. Production Common Play now proves declarative Cutting Words, deterministic replace/minimum/target-add, and arbitrary installed authoritative add-die/reroll through the same d20 PendingResolution with identity rename invariance, atomic accepted payment, and Undo. Family C remains INCOMPLETE because the built-in Tactical Mind, Indomitable, Dark One's Own Luck, and Peerless Skill projections are still injected by named productionPlayRuntimeAdapter.ts checks; generic Common Play production timing does not yet structurally select failed/save/after-roll families for those representatives, Tactical Mind and Peerless Skill still require conditional pay-on-success semantics, and portable add-die/reroll still need connected duplicate/reconnect evidence.",
       "requiredSemantics": [
         "checks",
         "saves",
@@ -168,7 +168,9 @@
         "d20FollowUpRuntimeAdapter.ts",
         "commonPlayRuntime.ts generic post-roll reaction roll.modify lowering",
         "commonPlayReactionDefinitionRuntime.ts structural deterministic post-roll lowering",
-        "commonPlayD20Runtime.test.ts generic reroll/replace/minimum/target-add/add-die semantics"
+        "commonPlayD20Runtime.test.ts generic reroll/replace/minimum/target-add/add-die semantics",
+        "1342c99 Common Play post-roll add-die/reroll lowering reuses the generic d20 Resolver and authoritative dice",
+        "commonPlayReactionDefinitionRuntime.ts portable literal/resource dice lowering for add-die/reroll"
       ],
       "productionEvidence": [
         "fighterTacticalMindFollowUpRuntime.test.ts",
@@ -178,12 +180,15 @@
         "fighterIndomitableFollowUpRuntime.test.ts",
         "6d03412 declarative Cutting Words production migration",
         "6f6ed2e arbitrary installed deterministic post-roll replace/minimum/target-add production",
-        "installedCommonPlayInterceptorProductionRuntime.test.ts"
+        "installedCommonPlayInterceptorProductionRuntime.test.ts",
+        "1342c99 unknown installed add-die/reroll production with authoritative dice and Undo",
+        "C9 Family C Portable Dice Modifiers run 33289183121: 37/37 focused tests, tsc --noEmit, vite build"
       ],
       "identityInvarianceEvidence": [
         "d20FollowUpRuntime.test.ts",
         "6f6ed2e unknown installed deterministic interceptor module/content/mechanic/interceptor/interaction/display rename invariance",
-        "installedCommonPlayInterceptorProductionRuntime.test.ts portable interceptor rename invariance"
+        "installedCommonPlayInterceptorProductionRuntime.test.ts portable interceptor rename invariance",
+        "1342c99 unknown installed add-die/reroll module/content/mechanic/interceptor/interaction/display rename invariance"
       ],
       "connectedEvidenceIfRelevant": [
         "fighterTacticalMindFollowUpRuntime.test.ts",
@@ -199,7 +204,9 @@
       ],
       "remainingNamedSeams": [
         "productionPlayRuntimeAdapter.ts injects Tactical Mind, Indomitable, Dark One's Own Luck, and Peerless Skill runtimeD20FollowUps behind class/subclass/feature identity checks",
-        "unknown portable Common Play does not yet author post-roll add-die/reroll through the production reaction path"
+        "generic Common Play production d20 timing still lacks structural family/outcome/save selection for failed, saving-throw, and after-roll representative triggers",
+        "Tactical Mind and Peerless Skill require a generic conditional pay-on-success contract before their named projection can be removed",
+        "portable add-die/reroll still need connected duplicate/reconnect evidence before Family C can be final"
       ],
       "connectedRelevant": true,
       "persistenceRelevant": true
