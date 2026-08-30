@@ -1,0 +1,77 @@
+name: C9 Family N Expiry Reconcile 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-n-expiry-reconcile-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run generate:content
+      - name: Verify portable effect boundary expiry
+        run: |
+          node --import tsx --test tests/ui/c9FamilyNEffectDurationProduction.test.ts
+          node scripts/check-legacy-execution-boundary.mjs
+          node scripts/check-v1-mechanism-coverage.mjs
+          npm exec tsc -- --noEmit
+      - name: Reconcile verified Family N evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch=agent/c9-gate-n-coverage-reconciliation
+          workflow=.github/workflows/c9-family-n-expiry-reconcile-71304.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in 1 2 3 4 5; do
+            git fetch origin "$branch"
+            git reset --hard "origin/$branch"
+            node --import tsx --test tests/ui/c9FamilyNEffectDurationProduction.test.ts
+            python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          path=Path("docs/rules/v1-mechanism-coverage-ledger.json")
+          data=json.loads(path.read_text(encoding="utf-8"))
+          row=next(entry for entry in data["rows"] if entry["family"]=="N")
+
+          old="Duration-boundary expiry execution, suppression/pause-resume, source/dependent cleanup, and remaining named effect adapters remain incomplete."
+          new="Duration-boundary expiry execution is production-proven through the authoritative clock lifecycle with event-native Undo; suppression/pause-resume, source/dependent cleanup, and remaining named effect adapters remain incomplete."
+          row["currentState"]=row["currentState"].replace(old,new)
+
+          production="9efd66506b3a0e5098d7c8c62a171716df786349 test(c9): prove portable effect boundary expiry; c9FamilyNEffectDurationProduction.test.ts proves unknown installed elapsed effects expire at the production round clock boundary and event-native Undo restores the removed effect"
+          identity="c9FamilyNEffectDurationProduction.test.ts repeats production elapsed boundary expiry and Undo under unrelated renamed external module/content/mechanic identities"
+          if production not in row["productionEvidence"]: row["productionEvidence"].append(production)
+          if identity not in row["identityInvarianceEvidence"]: row["identityInvarianceEvidence"].append(identity)
+
+          updated=[]
+          for seam in row["remainingNamedSeams"]:
+              seam=seam.replace("duration-boundary expiry execution, suppression/pause-resume, and source/dependent-cleanup acceptance remains incomplete","suppression/pause-resume and source/dependent-cleanup acceptance remains incomplete")
+              updated.append(seam)
+          row["remainingNamedSeams"]=updated
+          path.write_text(json.dumps(data,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
+          PY
+            rm -f "$workflow"
+            git add docs/rules/v1-mechanism-coverage-ledger.json "$workflow"
+            git diff --cached --check
+            git commit -m "docs(c9): reconcile portable effect expiry evidence"
+            if git push origin HEAD:"$branch"; then exit 0; fi
+            sleep 1
+          done
+          exit 1
