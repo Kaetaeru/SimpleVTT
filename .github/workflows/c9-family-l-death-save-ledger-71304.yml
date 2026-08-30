@@ -41,8 +41,8 @@ jobs:
               text=text.replace(old,new,1)
 
           replace_once(
-              'Bounded typed damage/healing plus portable Temporary HP are production-proven; portable character instant-death overkill is production-proven with identity rename and Undo; remaining life/object semantics are incomplete Portable stabilization at 0 HP is production-proven with event-native Undo and external identity rename.',
-              'Bounded typed damage/healing plus portable Temporary HP are production-proven; portable character instant-death overkill, stabilization at 0 HP, and death saving throws are production-proven with event-native Undo and external identity rename; remaining damage-at-zero, advanced damage-defense/max-HP, and object/vehicle semantics are incomplete.',
+              'Bounded typed damage/healing plus portable Temporary HP are production-proven; portable character instant-death overkill is production-proven with identity rename and Undo; remaining life/object semantics are incomplete Portable stabilization at 0 HP is production-proven with event-native Undo and external identity rename. Portable damage-at-zero is production-proven for unknown and fully renamed external RuleModules, including durable death-save failure write-back and event-native Undo.',
+              'Bounded typed damage/healing plus portable Temporary HP are production-proven; portable character instant-death overkill, stabilization at 0 HP, damage-at-zero, and death saving throws are production-proven with event-native Undo and external identity rename. Damage-at-zero includes durable death-save failure write-back; remaining advanced damage-defense/max-HP and object/vehicle semantics are incomplete.',
               'Family L current state',
           )
           replace_once(
@@ -51,18 +51,18 @@ jobs:
               'Family L implementation evidence',
           )
           replace_once(
-              '        "325ddee91c87855c35816f5f16fc8134bb709209 test(c9): prove portable stabilization; C9 Family L Stabilize 71304 run 33315607390 passed unknown/renamed RuleModule 0-HP stabilization, event-native Undo, existing Family L regressions, V1 coverage checker, legacy execution boundary, and tsc --noEmit"',
-              '        "325ddee91c87855c35816f5f16fc8134bb709209 test(c9): prove portable stabilization; C9 Family L Stabilize 71304 run 33315607390 passed unknown/renamed RuleModule 0-HP stabilization, event-native Undo, existing Family L regressions, V1 coverage checker, legacy execution boundary, and tsc --noEmit",\n        "e6d44f1587587668e3d1bb1e3aac7dd65850c228 feat(c9): bridge portable death saves; C9 Family L Portable Death Save 71304 run 33316957824 passed unknown/renamed RuleModule death-save production plus Undo, stabilization regression, V1 coverage checker, legacy execution boundary, and tsc --noEmit"',
+              '        "325ddee91c87855c35816f5f16fc8134bb709209 test(c9): prove portable stabilization; C9 Family L Stabilize 71304 run 33315607390 passed unknown/renamed RuleModule 0-HP stabilization, event-native Undo, existing Family L regressions, V1 coverage checker, legacy execution boundary, and tsc --noEmit",\n        "c9FamilyLDamageAtZeroProduction71304.test.ts proves unknown installed Common Play damage at 0 HP records the SRD death-save failure through production Resolver, durable character write-back, and event-native Undo"',
+              '        "325ddee91c87855c35816f5f16fc8134bb709209 test(c9): prove portable stabilization; C9 Family L Stabilize 71304 run 33315607390 passed unknown/renamed RuleModule 0-HP stabilization, event-native Undo, existing Family L regressions, V1 coverage checker, legacy execution boundary, and tsc --noEmit",\n        "c9FamilyLDamageAtZeroProduction71304.test.ts proves unknown installed Common Play damage at 0 HP records the SRD death-save failure through production Resolver, durable character write-back, and event-native Undo",\n        "e6d44f1587587668e3d1bb1e3aac7dd65850c228 feat(c9): bridge portable death saves; C9 Family L Portable Death Save 71304 run 33316957824 passed unknown/renamed RuleModule death-save production plus Undo, stabilization regression, V1 coverage checker, legacy execution boundary, and tsc --noEmit"',
               'Family L production evidence',
           )
           replace_once(
-              '        "c9FamilyLStabilizeProduction.test.ts repeats 0-HP stabilization and Undo under completely unrelated external module/content/mechanic identities"',
-              '        "c9FamilyLStabilizeProduction.test.ts repeats 0-HP stabilization and Undo under completely unrelated external module/content/mechanic identities",\n        "c9FamilyLDeathSaveProduction.test.ts repeats authoritative death-save success and event-native Undo under completely unrelated external module/content/mechanic identities"',
+              '        "c9FamilyLStabilizeProduction.test.ts repeats 0-HP stabilization and Undo under completely unrelated external module/content/mechanic identities",\n        "c9FamilyLDamageAtZeroProduction71304.test.ts repeats the damage-at-zero failure and Undo flow under unrelated external module/content/mechanic identities"',
+              '        "c9FamilyLStabilizeProduction.test.ts repeats 0-HP stabilization and Undo under completely unrelated external module/content/mechanic identities",\n        "c9FamilyLDamageAtZeroProduction71304.test.ts repeats the damage-at-zero failure and Undo flow under unrelated external module/content/mechanic identities",\n        "c9FamilyLDeathSaveProduction.test.ts repeats authoritative death-save success and event-native Undo under completely unrelated external module/content/mechanic identities"',
               'Family L identity evidence',
           )
           replace_once(
-              '        "0 HP/unconscious and stabilization are production-proven; damage-at-zero and death-save production acceptance remain incomplete",',
-              '        "0 HP/unconscious, stabilization, and death-save production acceptance are proven; damage-at-zero production acceptance remains incomplete",',
+              '        "0 HP/unconscious and stabilization are production-proven; death-save production acceptance remains incomplete",',
+              '        "0 HP/unconscious, stabilization, damage-at-zero, and death-save production acceptance are proven",',
               'Family L remaining death-save seam',
           )
           path.write_text(text,encoding='utf-8')
