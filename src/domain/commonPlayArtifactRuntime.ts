@@ -144,7 +144,15 @@ export function compileCommonPlayArtifactActivation(
           artifactId:existing.id,
         }));
     }
-    operations.push({id:`common-play-artifact-spawn-${index+1}`,kind:"spawn-artifact",artifact:artifact(state,definition,template,input,artifactIds)});
+    const spawned=artifact(state,definition,template,input,artifactIds);
+    if(spawned.artifactKind==="stored-invocation"&&spawned.storedInvocation?.concentrationGroupId) operations.push({
+      id:`common-play-artifact-held-concentration-${index+1}`,
+      kind:"start-concentration",
+      actorId:spawned.storedInvocation.ownerActorId,
+      groupId:spawned.storedInvocation.concentrationGroupId,
+      sourceId:spawned.storedInvocation.definitionId,
+    });
+    operations.push({id:`common-play-artifact-spawn-${index+1}`,kind:"spawn-artifact",artifact:spawned});
   });
   return {id:input.resolutionId,actorId:input.actorId,sourceId:definition.id,expectedRevision:state.revision,operations};
 }
