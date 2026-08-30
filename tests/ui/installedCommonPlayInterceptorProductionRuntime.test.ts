@@ -38,7 +38,7 @@ function packagePayload(
   interceptorKind:"d20"|"damage"="d20",
   operations:Array<Record<string,unknown>>=[{kind:"roll.modify",mode:"subtract-die",dice:"1d8"}],
   selection?:{families?:Array<"ability-check"|"saving-throw"|"attack-roll">;outcomes?:Array<"success"|"failure">},
-  eligibilityExpectations:{light?:"bright"|"dim"|"darkness";obscurement?:"none"|"light"|"heavy"}={},
+  eligibilityExpectations:{light?:"bright"|"dim"|"darkness";obscurement?:"none"|"light"|"heavy";canSee?:boolean}={},
 ){
   return JSON.stringify({
     schemaVersion:"0.1-draft",
@@ -77,7 +77,7 @@ function packagePayload(
               when:{op:"all",args:[
                 {op:"lte",left:{ref:"trigger-distance"},right:{value:60}},
                 {op:"eq",left:{ref:"trigger-creature-type"},right:{value:"humanoid"}},
-                {op:"eq",left:{ref:"source-sees-trigger"},right:{value:true}},
+                {op:"eq",left:{ref:"source-sees-trigger"},right:{value:eligibilityExpectations.canSee??true}},
                 {op:"eq",left:{ref:"trigger-light"},right:{value:eligibilityExpectations.light??"dim"}},
                 {op:"eq",left:{ref:"trigger-obscurement"},right:{value:eligibilityExpectations.obscurement??"none"}},
                 {op:"eq",left:{ref:"trigger-detected"},right:{value:true}},
@@ -117,7 +117,7 @@ async function prepare(
   interceptorKind:"d20"|"damage"="d20",
   operations:Array<Record<string,unknown>>=[{kind:"roll.modify",mode:"subtract-die",dice:"1d8"}],
   selection?:{families?:Array<"ability-check"|"saving-throw"|"attack-roll">;outcomes?:Array<"success"|"failure">},
-  eligibilityExpectations:{light?:"bright"|"dim"|"darkness";obscurement?:"none"|"light"|"heavy"}={},
+  eligibilityExpectations:{light?:"bright"|"dim"|"darkness";obscurement?:"none"|"light"|"heavy";canSee?:boolean}={},
 ){
   const adapter=new MockAdapter();
   setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
@@ -657,13 +657,13 @@ test("portable production normal sight respects Resolver-owned Invisible conditi
 });
 
 
-function seedRulesProfileSense(adapter:MockAdapter,sourceId:string,rangeFeet:number){
+function seedRulesProfileSense(adapter:MockAdapter,sourceId:string,property:string,rangeFeet:number){
   const internal=adapter as unknown as {activeCharacter:CharacterSheet;scene:SceneVm};
   const state=snapshotAdapterTurnRuntimeState(adapter,internal.scene);
   assert.ok(state,"TurnRuntime state must exist before sense profile seeding");
   const definition=parseCommonPlayOperationDefinition({
     schemaVersion:"0.2-draft",id:sourceId,entryPoints:[{id:"activate",invocation:"manual",operations:[{
-      kind:"property.modify",property:"sense.darkvision.range-feet",operation:"set",value:{value:rangeFeet},target:"actor",owner:"effect",source:"definition",
+      kind:"property.modify",property,operation:"set",value:{value:rangeFeet},target:"actor",owner:"effect",source:"definition",
       duration:{kind:"elapsed",amount:{value:1},unit:"hours"},lifetime:{kind:"until-duration",onEnd:"destroy"},instancePolicy:"unique-by-source",
     }]}],
   });
@@ -685,11 +685,38 @@ test("portable production derives Darkvision from a generic RulesProfile modifie
       sourceId:internal.activeCharacter.id,targetId:OTHER_CHARACTER_ID,distanceFeet:30,visible:true,cover:"none",targetCanSeeAttacker:true,
       light:"darkness",obscurement:"none",provenance:"module:test-rules-profile-sense",
     });
-    seedRulesProfileSense(adapter,`${identity.moduleId}.darkvision`,60);
+    seedRulesProfileSense(adapter,`${identity.moduleId}.darkvision`,"sense.darkvision.range-feet",60);
     seedHiddenRuntimeEffect(adapter,OTHER_CHARACTER_ID);
     let snapshot=await openAbilityCheckInterrupt(adapter);
     assert.equal(snapshot.resolution?.stage,"interrupt",JSON.stringify(snapshot.resolution));
     snapshot=await adapter.respondToInterrupt(false);
     assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
+  }
+});
+
+
+test("portable production derives remaining RulesProfile special senses from generic property modifiers",async()=>{
+  const renamed:Identity={...ORIGINAL,moduleId:"external.profile-sense-matrix-renamed",contentId:"item.profile-sense-matrix-renamed",mechanicId:"mechanic.profile-sense-matrix-renamed",interceptorId:"interceptor.profile-sense-matrix-renamed",interactionId:"interaction.profile-sense-matrix-renamed",displayName:"Renamed Profile Sense Matrix"};
+  const scenarios=[
+    {label:"blindsight",property:"sense.blindsight.range-feet",light:"dim" as const,obscurement:"heavy" as const,visible:true,targetInvisible:true,sharedGroundContact:false,canSee:true},
+    {label:"tremorsense",property:"sense.tremorsense.range-feet",light:"dim" as const,obscurement:"none" as const,visible:false,targetInvisible:true,sharedGroundContact:true,canSee:false},
+    {label:"truesight",property:"sense.truesight.range-feet",light:"darkness" as const,obscurement:"none" as const,visible:true,targetInvisible:true,sharedGroundContact:false,canSee:true},
+  ];
+  for(const identity of [ORIGINAL,renamed]){
+    for(const scenario of scenarios){
+      const adapter=await prepare(identity,true,"d20",[{kind:"roll.modify",mode:"subtract-die",dice:"1d8"}],undefined,{light:scenario.light,obscurement:scenario.obscurement,canSee:scenario.canSee});
+      const internal=adapter as unknown as {activeCharacter:CharacterSheet;scene:SceneVm};
+      setSpatialRelation(internal.scene,{
+        sourceId:internal.activeCharacter.id,targetId:OTHER_CHARACTER_ID,distanceFeet:30,visible:scenario.visible,cover:"none",targetCanSeeAttacker:true,
+        light:scenario.light,obscurement:scenario.obscurement,targetInvisible:scenario.targetInvisible,sharedGroundContact:scenario.sharedGroundContact,
+        provenance:`module:test-generic-acquisition:${scenario.label}`,
+      });
+      seedRulesProfileSense(adapter,`${identity.moduleId}.${scenario.label}`,scenario.property,60);
+      seedHiddenRuntimeEffect(adapter,OTHER_CHARACTER_ID);
+      let snapshot=await openAbilityCheckInterrupt(adapter);
+      assert.equal(snapshot.resolution?.stage,"interrupt",`${scenario.label}: ${JSON.stringify(snapshot.resolution)}`);
+      snapshot=await adapter.respondToInterrupt(false);
+      assert.equal(snapshot.resolution?.stage,"complete",`${scenario.label}: ${JSON.stringify(snapshot.resolution)}`);
+    }
   }
 });
