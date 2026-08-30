@@ -191,7 +191,9 @@ export function resolveCommonPlaySelector(input:CommonPlaySelectorInput):CommonP
         return {status:"unsupported",reason:"area membership requires a spatial provider or explicit authority answer"};
       }
     }
-    let candidates=input.candidates.filter((candidate)=>!input.selector.area||candidate.areaMember===true)
+    const selectedIds=input.selection==="manual"?new Set(input.selectedIds??[]):undefined;
+    let candidates=input.candidates.filter((candidate)=>selectedIds===undefined||selectedIds.has(candidate.id))
+      .filter((candidate)=>!input.selector.area||candidate.areaMember===true)
       .filter((candidate)=>!input.selector.where||evaluateSemanticPredicate(input.selector.where,(ref)=>ref==="id"?candidate.id:candidate.properties[ref]));
     if(input.selector.orderBy) {
       const property=input.selector.orderBy;
