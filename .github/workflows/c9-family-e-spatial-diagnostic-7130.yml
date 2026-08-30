@@ -1,0 +1,50 @@
+name: C9 Family E Spatial Diagnostic 7130
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-e-spatial-diagnostic-7130.yml
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Patch diagnostic workspace only
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          guard=Path('src/app/installedCommonPlaySelectorGuardAdapter.ts')
+          text=guard.read_text(encoding='utf-8')
+          if 'authoritativeCommonPlaySpatialRelation' not in text:
+            text=text.replace('import { snapshotAdapterTurnRuntimeState } from "./turnRuntimeSessionRegistry";\n','import { snapshotAdapterTurnRuntimeState } from "./turnRuntimeSessionRegistry";\nimport { authoritativeCommonPlaySpatialRelation } from "./realSpatialRuntimeService";\n',1)
+            old='''function candidate(actor:SceneVm["entities"][number],target:SceneVm["entities"][number]):CommonPlaySelectorCandidate {\n  const relation=target.id===actor.id?"self":target.side===actor.side?"ally":"enemy";\n  return {\n    id:target.id,\n    targeting:{id:target.id,kind:"creature",relation},\n    properties:{\n      relation,\n      name:target.name,\n      side:target.side,\n      kind:target.kind,\n      hp:target.hp,\n      maxHp:target.maxHp,\n      tempHp:target.tempHp,\n      ac:target.ac,\n      initiative:target.initiative,\n      status:[...target.status],\n      resistances:[...target.resistances],\n      immunities:[...target.immunities],\n      vulnerabilities:[...target.vulnerabilities],\n    },\n  };\n}\n'''
+            new='''function candidate(scene:SceneVm,actor:SceneVm["entities"][number],target:SceneVm["entities"][number]):CommonPlaySelectorCandidate {\n  const relation=target.id===actor.id?"self":target.side===actor.side?"ally":"enemy";\n  const spatial=authoritativeCommonPlaySpatialRelation(scene,actor.id,target.id);\n  return {\n    id:target.id,\n    targeting:spatial?{id:target.id,kind:"creature",relation,distanceFeet:spatial.distanceFeet,visible:spatial.visible,cover:spatial.cover}:{id:target.id,kind:"creature",relation},\n    properties:{relation,name:target.name,side:target.side,kind:target.kind,hp:target.hp,maxHp:target.maxHp,tempHp:target.tempHp,ac:target.ac,initiative:target.initiative,status:[...target.status],resistances:[...target.resistances],immunities:[...target.immunities],vulnerabilities:[...target.vulnerabilities],...(spatial?{"spatial.distance-feet":spatial.distanceFeet,"spatial.adjacent":spatial.distanceFeet<=5,"spatial.total-cover":spatial.cover==="total","sense.can-see":spatial.visible}:{})},\n  };\n}\n'''
+            if old not in text: raise SystemExit('guard candidate marker missing')
+            text=text.replace(old,new,1).replace('map((entity)=>candidate(actor,entity))','map((entity)=>candidate(internal.scene,actor,entity))',1)
+            guard.write_text(text,encoding='utf-8')
+          test=Path('tests/ui/commonPlayRichSelectorProduction.test.ts')
+          text=test.read_text(encoding='utf-8')
+          text=text.replace('?{from:"targets",min:1,max:2,where:{op:"lte",left:{ref:"spatial.distance-feet"},right:{value:distanceLimitFeet}}}', '?{from:"targets",min:1,max:2,where:{op:"all",args:[{op:"lte",left:{ref:"spatial.distance-feet"},right:{value:distanceLimitFeet}},{op:"eq",left:{ref:"sense.can-see"},right:{value:true}},{op:"eq",left:{ref:"spatial.total-cover"},right:{value:false}}]}}',1)
+          start=text.index('test("unknown installed rich selector consumes provider-backed authoritative spatial distance"')
+          end=text.index('\ntest("unknown installed area selector',start)
+          replacement='''test("diagnose provider-backed spatial selector",async()=>{\n  const adapter=new MockAdapter();\n  const actionId=await install(adapter,ORIGINAL,false,30);\n  const internal=adapter as unknown as {scene:SceneVm};\n  setSpatialRelation(internal.scene,{sourceId:"char.aelar",targetId:"combatant.goblin-a",distanceFeet:20,visible:true,cover:"none",targetCanSeeAttacker:true,provenance:"module:test-spatial:selector"});\n  setSpatialRelation(internal.scene,{sourceId:"char.aelar",targetId:"combatant.goblin-b",distanceFeet:20,visible:false,cover:"total",targetCanSeeAttacker:true,provenance:"module:test-spatial:selector"});\n  await adapter.startInitiative();\n  await adapter.setCurrentActor("char.aelar");\n  await adapter.resolveAction(actionId,["combatant.goblin-b"]);\n  console.log("INVALID",JSON.stringify((await adapter.getSnapshot()).resolution));\n  await adapter.resolveAction(actionId,["combatant.goblin-a"]);\n  const snapshot=await adapter.getSnapshot();\n  console.log("VALID",JSON.stringify(snapshot.resolution));\n  assert.notEqual(snapshot.resolution?.finalOutcome,"적용 거부",JSON.stringify(snapshot.resolution));\n});\n'''
+          text=text[:start]+replacement+text[end:]
+          test.write_text(text,encoding='utf-8')
+          PY
+      - run: npm run generate:content
+      - run: node --import tsx --test tests/ui/commonPlayRichSelectorProduction.test.ts
