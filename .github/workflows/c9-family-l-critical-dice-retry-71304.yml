@@ -37,8 +37,8 @@ jobs:
           Path('/tmp/c9-critical-patch.py').write_text(body,encoding='utf-8')
           PY
           python3 /tmp/c9-critical-patch.py
-      - name: Generate runtime catalog
-        run: npm run generate:builtin-catalog
+      - name: Generate runtime content
+        run: npm run generate:content
       - name: Verify portable critical damage dice
         run: |
           npx tsx --test tests/ui/c9FamilyLDamageDefenseProduction.test.ts
