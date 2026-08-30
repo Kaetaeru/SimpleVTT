@@ -63,6 +63,7 @@ async function run(identity:Identity,responder:Responder){
     assert.equal(snapshot.resolution?.interrupt?.responderName,responder==="dm"?"DM":"Host");
     assert.ok(!direct.map((entry)=>JSON.parse(entry.message)).some((wire)=>wire.type==="resolution-interrupt-prompt"),JSON.stringify(direct));
     assert.equal(snapshot.scene.entities.find((entity)=>entity.id===target.id)?.hp,targetHpBefore);
+    assert.equal(snapshot.scene.economyByActor[actorId]?.reaction,true);
 
     const resolutionId=snapshot.resolution!.id,promptId=snapshot.resolution!.interrupt!.id;
     const beforeUnauthorized=direct.length;
@@ -71,11 +72,13 @@ async function run(identity:Identity,responder:Responder){
     assert.equal(errors.at(-1)?.code,"interrupt-not-authorized",JSON.stringify(errors));
     snapshot=await host.getSnapshot();
     assert.equal(snapshot.resolution?.stage,"interrupt");
+    assert.equal(snapshot.scene.economyByActor[actorId]?.reaction,true);
 
     await host.respondToInterrupt(true);
     snapshot=await host.getSnapshot();
     assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
     assert.equal(snapshot.scene.entities.find((entity)=>entity.id===target.id)?.hp,targetHpBefore-1);
+    assert.equal(snapshot.scene.economyByActor[actorId]?.reaction,false);
     assert.ok(broadcasts.map((wire)=>JSON.parse(wire)).some((wire)=>wire.type==="event-batch"),JSON.stringify(broadcasts));
     return {responderId:`authority:${responder}`,hpDelta:-1};
   }finally{tauriSessionTransport.send=oldSend;tauriSessionTransport.sendTo=oldSendTo;}
