@@ -49,7 +49,7 @@ jobs:
           const connected='connectedObjectLinkArtifactLifecycleProduction.test.ts proves the RuntimeArtifact state-change family survives Host/Client replay, fresh reconnect, duplicate handling, and event-native Undo';
           const identity='c9FamilyLArtifactDamageProduction71304.test.ts repeats Object/Vehicle-like artifact damage semantics after complete external module/content/mechanic identity rename';
           if(!row.productionEvidence.includes(production)) row.productionEvidence.push(production);
-          if(!row.connectedEvidence.includes(connected)) row.connectedEvidence.push(connected);
+          if(!row.connectedEvidenceIfRelevant.includes(connected)) row.connectedEvidenceIfRelevant.push(connected);
           if(!row.identityInvarianceEvidence.includes(identity)) row.identityInvarianceEvidence.push(identity);
           row.currentState=row.currentState.replace(
             /Remaining Family L acceptance is max-HP source-model\/write-back semantics, (?:Object\/Vehicle|Vehicle) damage production coverage, and named feature\/spell HP migration debt where it bypasses portable Common Play\./,
