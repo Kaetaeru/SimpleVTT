@@ -6,6 +6,8 @@ on:
       - "src/domain/effects.ts"
       - "src/domain/resolutionTurnOps.ts"
       - "src/domain/commonPlayEffectRuntime.ts"
+      - "src/domain/commonPlayOperationRuntime.ts"
+      - "schemas/common-play-contract.schema.json"
       - "src/app/realTurnLifecycleService.ts"
       - "src/app/phase09EffectAwareTurnAdapter.ts"
       - "tests/domain/c9FamilyNEffectLifecycleAcceptance.test.ts"
