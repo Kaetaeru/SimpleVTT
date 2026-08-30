@@ -1,0 +1,70 @@
+name: C9 Family I Named Seam Reconcile 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-i-named-seam-reconcile-71304.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: c9-family-i-named-seam-reconcile-71304
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Reconcile Family I against canonical production composition
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch=agent/c9-gate-n-coverage-reconciliation
+          workflow=.github/workflows/c9-family-i-named-seam-reconcile-71304.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in $(seq 1 10); do
+            git fetch origin "$branch"
+            git reset --hard "origin/$branch"
+            node <<'NODE'
+          const fs=require('node:fs');
+          const ledgerPath='docs/rules/v1-mechanism-coverage-ledger.json';
+          const adapterPath='src/app/monkOpenHandFleetStepRuntimeAdapter.ts';
+          const composition=fs.readFileSync('src/app/offlineRuntimeAdapters.ts','utf8');
+          const inventory=fs.readFileSync('docs/rules/legacy-execution-inventory.md','utf8');
+          const adapterPresent=fs.existsSync(adapterPath);
+          const adapterInstalled=composition.includes('import "./monkOpenHandFleetStepRuntimeAdapter";');
+          const inventoryClassifies=inventory.includes('monkOpenHandFleetStepRuntimeAdapter.ts');
+          if(adapterPresent!==adapterInstalled) throw new Error('Fleet Step adapter presence/composition mismatch');
+          if(adapterPresent&&!inventoryClassifies) throw new Error('Fleet Step named runtime is installed but missing from legacy inventory');
+          const ledger=JSON.parse(fs.readFileSync(ledgerPath,'utf8'));
+          const row=ledger.rows.find((candidate)=>candidate.family==='I');
+          if(!row) throw new Error('Family I ledger row missing');
+          if(adapterPresent&&adapterInstalled){
+            row.currentState='Generic movement.relocate, RulesProfile-derived movement constraints, and unknown/renamed portable movement grants are production-proven, but Family I remains incomplete while monkOpenHandFleetStepRuntimeAdapter.ts is installed in canonical offline production and selects Fleet Step execution from named action/class/subclass/source identities.';
+            row.disposition='INCOMPLETE';
+            row.remainingNamedSeams=['monkOpenHandFleetStepRuntimeAdapter.ts named Fleet Step action/class/subclass/source dispatch remains in canonical offline production composition'];
+          }
+          fs.writeFileSync(ledgerPath,JSON.stringify(ledger,null,2)+'\n');
+          NODE
+            node scripts/check-v1-mechanism-coverage.mjs
+            node scripts/check-legacy-execution-boundary.mjs
+            rm -f "$workflow"
+            git add docs/rules/v1-mechanism-coverage-ledger.json "$workflow"
+            if git diff --cached --quiet; then exit 0; fi
+            git commit -m "docs(c9): reconcile Family I named movement seam"
+            if git push origin HEAD:"$branch"; then exit 0; fi
+            sleep 1
+          done
+          exit 1
