@@ -24,6 +24,8 @@ jobs:
       - name: Apply structural Family N termination extension
         run: python .github/scripts/c9-family-n-source-cleanup-71304.py
       - run: npm ci
+      - name: Generate content prerequisites
+        run: npm run generate:content
       - name: Verify Family N portable lifecycle
         run: >-
           npx tsx --test
