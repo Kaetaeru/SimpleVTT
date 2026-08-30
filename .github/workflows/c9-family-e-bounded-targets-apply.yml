@@ -82,14 +82,25 @@ jobs:
               raise SystemExit('production insertion marker mismatch')
           addition='''test("unknown installed Common Play preserves a bounded multi-target selection through production resolution",async()=>{\n  const adapter=new MockAdapter();\n  const payload=JSON.parse(targetingPackagePayload()) as {content:Array<{mechanics:Array<{config:{entryPoints:Array<{targeting:{from:string;min:number;max:number};operations:unknown[]}>}}>}>};\n  const entryPoint=payload.content[0].mechanics[0].config.entryPoints[0];\n  entryPoint.targeting={from:"targets",min:1,max:2};\n  entryPoint.operations=[];\n  setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());\n  const preview=await adapter.previewContentImport(JSON.stringify(payload));\n  assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));\n  await adapter.activateContentImport();\n  const actionId=installedCommonPlayActionId({\n    catalogId:catalogQualifiedId(TARGETING_IDENTITY.contentId,TARGETING_IDENTITY.moduleId,"1"),\n    mechanicId:TARGETING_IDENTITY.mechanicId,entryPointId:TARGETING_IDENTITY.entryPointId,\n  });\n  await adapter.startInitiative();\n  await adapter.setCurrentActor("char.aelar");\n  await adapter.resolveAction(actionId,["combatant.goblin-a","combatant.goblin-b"]);\n  const snapshot=await adapter.getSnapshot();\n  assert.equal(snapshot.resolution?.stage,"complete");\n  assert.equal(snapshot.resolution?.actionId,actionId);\n  assert.deepEqual(snapshot.resolution?.targetIds,["combatant.goblin-a","combatant.goblin-b"]);\n});\n\n'''
           production.write_text(text.replace(marker,addition+marker,1),encoding='utf-8')
+
+          import_test=Path('tests/ui/ruleModulePackageImport.test.ts')
+          text=import_test.read_text(encoding='utf-8')
+          old='''  const invalidSelectors=[\n    {from:"actors",min:1,max:1},\n    {from:"targets",where:{value:true},min:1,max:1},\n    {from:"targets",min:0,max:1},\n    {from:"targets",min:1,max:2},\n  ];'''
+          new='''  const invalidSelectors=[\n    {from:"actors",min:1,max:1},\n    {from:"targets",where:{value:true},min:1,max:1},\n    {from:"targets",min:0,max:1},\n    {from:"targets",min:2,max:1},\n  ];'''
+          if text.count(old)!=1:
+              raise SystemExit('targeting import fixture changed')
+          import_test.write_text(text.replace(old,new,1),encoding='utf-8')
           PY
       - name: Generate content catalogs
         run: npm run generate:content
-      - name: Verify Family E bounded target slice
+      - name: Verify Family E domain and production slice
         run: >-
           npx tsx --test
           tests/domain/commonPlayTargetingRuntime.test.ts
           tests/ui/installedCommonPlayProductionRuntime.test.ts
+      - name: Verify Family E import validation slice
+        run: >-
+          npx tsx --test --test-name-pattern=targeting
           tests/ui/ruleModulePackageImport.test.ts
       - name: Verify legacy execution boundary
         run: node scripts/check-legacy-execution-boundary.mjs
@@ -101,7 +112,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git rm .github/workflows/c9-family-e-bounded-targets-apply.yml
-          git add src/domain/commonPlayOperationRuntime.ts src/app/installedCommonPlayRuntimeAdapter.ts tests/domain/commonPlayTargetingRuntime.test.ts tests/ui/installedCommonPlayProductionRuntime.test.ts
+          git add src/domain/commonPlayOperationRuntime.ts src/app/installedCommonPlayRuntimeAdapter.ts tests/domain/commonPlayTargetingRuntime.test.ts tests/ui/installedCommonPlayProductionRuntime.test.ts tests/ui/ruleModulePackageImport.test.ts
           git commit -m "feat(c9): support bounded multi-target selectors"
           git fetch origin agent/c9-gate-n-coverage-reconciliation
           git rebase origin/agent/c9-gate-n-coverage-reconciliation
