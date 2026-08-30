@@ -834,7 +834,7 @@
         "progressionPhase08WeaponMasteryAdapter.ts",
         "weapon rule catalog"
       ],
-      "currentState": "Named/progression semantics exist; generic trigger/effect composition proof missing",
+      "currentState": "Generic Common Play now supports attack-outcome-conditioned damage through the shared Resolver, proving a Graze-like miss rider without weapon/content identity dispatch. Family K remains incomplete for the remaining mastery compositions and named progression-to-runtime convergence.",
       "requiredSemantics": [
         "Cleave",
         "Graze",
@@ -852,9 +852,15 @@
       ],
       "transactionDomain": "Progression grant plus Resolver combat semantics",
       "disposition": "INCOMPLETE",
-      "implementationEvidence": [],
-      "productionEvidence": [],
-      "identityInvarianceEvidence": [],
+      "implementationEvidence": [
+        "commonPlayOperationRuntime.ts damage.apply.when reuses the generic test.outcome ResolutionOperation predicate already used by portable condition/effect operations"
+      ],
+      "productionEvidence": [
+        "c9FamilyKGrazeConditionalDamageProduction.test.ts unknown installed Common Play applies a Graze-like miss-only damage rider, skips it on hit, and reverses through Undo"
+      ],
+      "identityInvarianceEvidence": [
+        "c9FamilyKGrazeConditionalDamageProduction.test.ts repeats the Graze-like miss rider after complete external module/content/mechanic identity rename"
+      ],
       "connectedEvidenceIfRelevant": [],
       "persistenceEvidenceIfRelevant": [],
       "remainingNamedSeams": [
