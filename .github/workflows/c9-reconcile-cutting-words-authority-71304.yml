@@ -47,7 +47,7 @@ jobs:
 
           ledger_path=Path("docs/rules/v1-mechanism-coverage-ledger.json")
           ledger=json.loads(ledger_path.read_text(encoding="utf-8"))
-          rows=ledger["mechanismFamilies"]
+          rows=ledger["rows"]
           p=next(row for row in rows if row["family"]=="P")
           p["currentState"]=p["currentState"].replace(
               "Named post-roll and feature-trigger adapters remain migration debt outside the portable semantic trigger path.",
