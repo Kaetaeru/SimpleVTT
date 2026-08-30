@@ -1,0 +1,70 @@
+name: C9 Family E Spatial Ledger Sync 71304
+
+on:
+  push:
+    branches:
+      - "agent/c9-gate-n-coverage-reconciliation"
+    paths:
+      - ".github/workflows/c9-family-e-spatial-ledger-sync-71304.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  sync-ledger:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - name: Record verified Family E spatial selector evidence
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          path=Path("docs/rules/v1-mechanism-coverage-ledger.json")
+          data=json.loads(path.read_text())
+          family=next((entry for entry in data["families"] if entry.get("family")=="E"),None)
+          if not family or family.get("id")!="targeting-selectors":
+              raise SystemExit("Family E targeting-selectors ledger entry not found")
+          if family.get("disposition")!="INCOMPLETE":
+              raise SystemExit(f"unexpected Family E disposition: {family.get('disposition')}")
+
+          family["currentState"]=(
+              "Portable Common Play targeting preserves bounded selected target sets, evaluates generic predicates over authoritative production candidates, "
+              "and routes authored automatic selection plus orderBy through the shared selector kernel with Host authority. Production candidates now consume "
+              "authoritative Common Play spatial relations for distance, visibility, adjacency, and Total Cover without fabricating geometry; providerless area "
+              "membership fails closed. Reach provider facts, provider-backed area membership, and object/point selection remain incomplete."
+          )
+
+          implementation=(
+              "installedCommonPlayRuntimeAdapter.ts projects authoritativeCommonPlaySpatialRelation distance/visibility/Total Cover into canonical portable selector "
+              "candidate facts and TargetingFactInput without content identity dispatch or Core geometry fabrication"
+          )
+          production=(
+              "c9FamilyESpatialSelectorProduction.test.ts proves unknown installed and fully renamed RuleModules reject out-of-range, unseen, and Total Cover targets "
+              "and accept an authoritative in-range visible non-Total-Cover target through production Common Play; run 33311649433 passed all 11 targeted selector tests, "
+              "legacy execution boundary, and coverage checker before unrelated concurrent type errors outside the Family E slice"
+          )
+          identity=(
+              "c9FamilyESpatialSelectorProduction.test.ts preserves authoritative range/sight/Total Cover selector semantics after complete external module/content/mechanic/entry/display rename"
+          )
+          for key,value in (("implementationEvidence",implementation),("productionEvidence",production),("identityInvarianceEvidence",identity)):
+              if value not in family[key]: family[key].append(value)
+          family["remainingNamedSeams"]=[
+              "reach provider facts, provider-backed area membership, and object/point selection remain incomplete"
+          ]
+          path.write_text(json.dumps(data,ensure_ascii=False,indent=2)+"\n")
+          PY
+          node scripts/check-v1-mechanism-coverage.mjs
+          rm .github/workflows/c9-family-e-spatial-ledger-sync-71304.yml
+          git add docs/rules/v1-mechanism-coverage-ledger.json .github/workflows/c9-family-e-spatial-ledger-sync-71304.yml
+          git commit -m "docs(c9): record Family E spatial selector evidence"
+          git pull --rebase origin "$GITHUB_REF_NAME"
+          git push origin HEAD:"$GITHUB_REF_NAME"
