@@ -1157,7 +1157,7 @@
         "common-play-contract.schema.json: actor artifactKind",
         "session topology projection"
       ],
-      "currentState": "Portable actor spawn creates typed combatant state and projects Scene identity/HP/AC/initiative/controller plus definition-driven actions; scoped action execution, economy, Host/Client convergence, and Undo are production-proven; death/replacement and restart persistence remain incomplete",
+      "currentState": "Portable actor artifacts now cover typed combatant spawn/projection, source/owner/controller and initiative semantics, definition-driven scoped actions, source-owned granted despawn, elapsed lifetime cleanup, until-source-recast replacement, Host/Client replay, duplicate handling, fresh reconnect, event-native Undo, and external identity rename through the generic artifact Resolver path.",
       "requiredSemantics": [
         "spawn",
         "stat/actions/resources projection",
@@ -1172,28 +1172,40 @@
         "Undo"
       ],
       "transactionDomain": "Session actor artifact authority",
-      "disposition": "INCOMPLETE",
+      "disposition": "IMPLEMENTED",
       "implementationEvidence": [
-        "resolutionArtifactOps.ts actor combatant lifecycle",
+        "commonPlayArtifactRuntime.ts actor spawn, lifetime, and until-source-recast replacement lowering",
+        "commonPlayArtifactLifecycleRuntime.ts source-owned actor granted artifact.remove lowering",
+        "resolutionArtifactOps.ts typed actor combatant spawn/remove lifecycle",
         "runtimeStateChange.ts combatant StateChange",
-        "installedCommonPlayRuntimeAdapter.ts scoped actor action projection and execution"
+        "installedCommonPlayRuntimeAdapter.ts scoped actor action projection and execution",
+        "installedCommonPlayArtifactLifecycleAdapter.ts source-owned actor lifecycle action projection and dispatch"
       ],
       "productionEvidence": [
-        "realTurnRuntimeService.ts actor Scene projection",
-        "installedCommonPlayLoweredFamiliesProduction.test.ts summoned action execution and Undo"
+        "installedCommonPlayLoweredFamiliesProduction.test.ts summoned action execution and Undo",
+        "connectedActorArtifactLifetimeProduction.test.ts elapsed actor despawn with connected replay, reconnect, duplicate replay, and Undo",
+        "connectedActorArtifactReconnectProduction.test.ts fresh replay and until-source-recast replacement with reconnect and Undo",
+        "connectedActorArtifactLifecycleProduction.test.ts source-owned granted despawn, resummon, reconnect, and Undo"
       ],
       "identityInvarianceEvidence": [
         "commonPlayArtifactActivationRuntime.test.ts",
-        "installedCommonPlayLoweredFamiliesProduction.test.ts renamed module run"
+        "installedCommonPlayLoweredFamiliesProduction.test.ts renamed module run",
+        "connectedActorArtifactLifetimeProduction.test.ts elapsed lifecycle rename invariance",
+        "connectedActorArtifactReconnectProduction.test.ts replacement rename invariance",
+        "connectedActorArtifactLifecycleProduction.test.ts source-owned despawn/resummon rename invariance"
       ],
       "connectedEvidenceIfRelevant": [
-        "installedCommonPlayLoweredFamiliesProduction.test.ts actor/action event transport, projection convergence, execution, and Undo"
+        "installedCommonPlayLoweredFamiliesProduction.test.ts actor/action event transport, projection convergence, execution, and Undo",
+        "connectedActorArtifactLifetimeProduction.test.ts Host/Client despawn convergence, duplicate replay, reconnect, and Undo",
+        "connectedActorArtifactReconnectProduction.test.ts Host/Client spawn/replacement convergence, reconnect, and Undo",
+        "connectedActorArtifactLifecycleProduction.test.ts Host/Client source-owned despawn convergence and Undo"
       ],
-      "persistenceEvidenceIfRelevant": [],
-      "remainingNamedSeams": [
-        "full summoned actor death/despawn/replacement policy",
-        "restart/reconnect persistence proof"
+      "persistenceEvidenceIfRelevant": [
+        "connectedActorArtifactReconnectProduction.test.ts fresh connected replay reconstructs spawn/replacement and replayed Undo state",
+        "connectedActorArtifactLifetimeProduction.test.ts fresh reconnect preserves elapsed despawn and restored Undo state",
+        "connectedActorArtifactLifecycleProduction.test.ts fresh reconnect preserves source-owned spawn/despawn/Undo state"
       ],
+      "remainingNamedSeams": [],
       "connectedRelevant": true,
       "persistenceRelevant": true
     },
