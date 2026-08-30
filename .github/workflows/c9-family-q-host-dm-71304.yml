@@ -25,8 +25,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - name: Generate builtin catalog required by production adapters
-        run: npm run generate:builtin-catalog
+      - name: Generate repository content required by production adapters
+        run: npm run generate:content
       - name: Apply Family Q authority consent bridge
         run: python3 .github/scripts/c9-family-q-authority-consent-71304.py
       - name: Verify Family Q authority responders
