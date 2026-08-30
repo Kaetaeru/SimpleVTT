@@ -22,7 +22,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - name: Apply projected action fallback
+      - name: Apply projected attack identity bridge
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -30,38 +30,34 @@ jobs:
           path=Path('src/app/phase09RealResolutionAdapter.ts')
           text=path.read_text(encoding='utf-8')
           anchor='''function migratedResolutionAction(action:ActionVm) {\n  return action.resolutionKind === "ability-check"\n    || action.resolutionKind === "attack"\n    || action.resolutionKind === "healing";\n}\n'''
-          helper='''function migratedResolutionAction(action:ActionVm) {\n  return action.resolutionKind === "ability-check"\n    || action.resolutionKind === "attack"\n    || action.resolutionKind === "healing";\n}\n\nfunction projectedAction(scene:AppSnapshot["scene"],actionId:string) {\n  return Object.values(scene.actionsByActor).flat().find((action)=>action.id===actionId);\n}\n\nasync function resolutionAction(adapter:MockAdapter,internal:Phase09ResolutionAdapterState,actionId:string) {\n  return internal.action(actionId) ?? projectedAction((await internal.getSnapshot()).scene,actionId);\n}\n'''
+          helper='''function migratedResolutionAction(action:ActionVm) {\n  return action.resolutionKind === "ability-check"\n    || action.resolutionKind === "attack"\n    || action.resolutionKind === "healing";\n}\n\nfunction projectedAction(scene:AppSnapshot["scene"],actionId:string) {\n  return Object.values(scene.actionsByActor).flat().find((action)=>action.id===actionId);\n}\n'''
           if helper not in text:
               if text.count(anchor)!=1:
-                  raise SystemExit(f'phase09 resolution helper anchor changed: {text.count(anchor)}')
+                  raise SystemExit(f'phase09 projected action anchor changed: {text.count(anchor)}')
               text=text.replace(anchor,helper,1)
-          old='''  const action = internal.action(actionId);\n  if (!action || !migratedResolutionAction(action)) {'''
-          new='''  const action = await resolutionAction(this,internal,actionId);\n  if (!action || !migratedResolutionAction(action)) {'''
+
+          anchor='''const phase09Prototype = MockAdapter.prototype as unknown as { commit(action:ActionVm):void };\nconst oldCommit = phase09Prototype.commit;\n'''
+          bridge='''const phase09Prototype = MockAdapter.prototype as unknown as { commit(action:ActionVm):void; action(id:string):ActionVm|undefined };\nconst oldCommit = phase09Prototype.commit;\nconst oldAction = phase09Prototype.action;\nconst projectedResolutionActions = new WeakMap<MockAdapter,ActionVm>();\n\nphase09Prototype.action = function actionWithProjectedResolution(actionId:string) {\n  const projected=projectedResolutionActions.get(this as unknown as MockAdapter);\n  return projected?.id===actionId ? projected : oldAction.call(this,actionId);\n};\n\nasync function resolutionAction(adapter:MockAdapter,internal:Phase09ResolutionAdapterState,actionId:string) {\n  const direct=internal.action(actionId);\n  if (direct) return direct;\n  const projected=projectedAction((await internal.getSnapshot()).scene,actionId);\n  if (projected) projectedResolutionActions.set(adapter,structuredClone(projected));\n  return projected;\n}\n'''
+          if bridge not in text:
+              if text.count(anchor)!=1:
+                  raise SystemExit(f'phase09 action bridge anchor changed: {text.count(anchor)}')
+              text=text.replace(anchor,bridge,1)
+
+          old='''MockAdapter.prototype.resolveAction = async function resolveActionWithRealRules(actionId:string,targetIds:string[]) {\n  const internal = this as unknown as Phase09ResolutionAdapterState;\n  const action = internal.action(actionId);'''
+          new='''MockAdapter.prototype.resolveAction = async function resolveActionWithRealRules(actionId:string,targetIds:string[]) {\n  const internal = this as unknown as Phase09ResolutionAdapterState;\n  projectedResolutionActions.delete(this);\n  const action = await resolutionAction(this,internal,actionId);'''
           if new not in text:
               if text.count(old)!=1:
                   raise SystemExit(f'phase09 resolve action anchor changed: {text.count(old)}')
               text=text.replace(old,new,1)
-          old='''  const action = internal.action(resolution.actionId);\n  if (!action) return oldAdvanceResolution.call(this);'''
-          new='''  const action = await resolutionAction(this,internal,resolution.actionId);\n  if (!action) return oldAdvanceResolution.call(this);'''
-          if new not in text:
-              if text.count(old)!=1:
-                  raise SystemExit(f'phase09 advance action anchor changed: {text.count(old)}')
-              text=text.replace(old,new,1)
           path.write_text(text,encoding='utf-8')
 
-          path=Path('src/app/phase09RealRuntimeAttackAdapter.ts')
+          path=Path('src/app/realTurnRuntimeService.ts')
           text=path.read_text(encoding='utf-8')
-          anchor='''function isRuntimeAtomicAttack(action:ActionVm|undefined,manual?:PendingManualMovementReaction) {\n  return Boolean(action)\n    && action!.resolutionKind === "attack"\n    && (Boolean(manual) || Boolean(action!.runtimeAttack))\n    && !action!.itemCost\n    && !action!.resourceCost;\n}\n'''
-          helper='''function isRuntimeAtomicAttack(action:ActionVm|undefined,manual?:PendingManualMovementReaction) {\n  return Boolean(action)\n    && action!.resolutionKind === "attack"\n    && (Boolean(manual) || Boolean(action!.runtimeAttack))\n    && !action!.itemCost\n    && !action!.resourceCost;\n}\n\nfunction projectedAction(scene:AppSnapshot["scene"],actionId:string) {\n  return Object.values(scene.actionsByActor).flat().find((action)=>action.id===actionId);\n}\n\nasync function runtimeAttackAction(adapter:MockAdapter,internal:RuntimeAttackAdapterState,actionId:string) {\n  return internal.action(actionId) ?? projectedAction((await internal.getSnapshot()).scene,actionId);\n}\n'''
-          if helper not in text:
-              if text.count(anchor)!=1:
-                  raise SystemExit(f'runtime attack helper anchor changed: {text.count(anchor)}')
-              text=text.replace(anchor,helper,1)
-          old='''MockAdapter.prototype.advanceResolution = async function advanceResolutionWithRuntimeAttackFacts() {\n  const internal = this as unknown as RuntimeAttackAdapterState;\n  const resolution = internal.resolution;\n  const action = resolution ? internal.action(resolution.actionId) : undefined;'''
-          new='''MockAdapter.prototype.advanceResolution = async function advanceResolutionWithRuntimeAttackFacts() {\n  const internal = this as unknown as RuntimeAttackAdapterState;\n  const resolution = internal.resolution;\n  const action = resolution ? await runtimeAttackAction(this,internal,resolution.actionId) : undefined;'''
+          old='''  const projected:EconomyVm = {\n    action:economy.action,\n    bonusAction:economy.bonusAction,\n    reaction:economy.reaction,\n    movement:economy.movement,\n    movementMax:economy.movementMaximum,\n  };\n  if (economy.extraActions?.length) projected.extraActions=structuredClone(economy.extraActions);\n  if (economy.extraAttacks?.length) projected.extraAttacks=structuredClone(economy.extraAttacks);\n  return projected;'''
+          new='''  return {\n    action:economy.action,\n    bonusAction:economy.bonusAction,\n    reaction:economy.reaction,\n    movement:economy.movement,\n    movementMax:economy.movementMaximum,\n    extraActions:structuredClone(economy.extraActions ?? []),\n    extraAttacks:structuredClone(economy.extraAttacks ?? []),\n  };'''
           if new not in text:
               if text.count(old)!=1:
-                  raise SystemExit(f'runtime attack advance anchor changed: {text.count(old)}')
+                  raise SystemExit(f'scene economy projection anchor changed: {text.count(old)}')
               text=text.replace(old,new,1)
           path.write_text(text,encoding='utf-8')
           PY
@@ -69,7 +65,7 @@ jobs:
       - run: npm run generate:content
       - name: Verify Family J projected attack path
         run: |
-          npx tsx --test tests/ui/unarmedStrikeRuntime.test.ts tests/ui/c9FamilyJExtraAttackProduction71304.test.ts tests/ui/c9FamilyJSpatialAttackProduction.test.ts
+          npx tsx --test tests/ui/unarmedStrikeRuntime.test.ts tests/ui/c9FamilyJExtraAttackProduction71304.test.ts tests/ui/c9FamilyJSpatialAttackProduction.test.ts tests/ui/phase09RealTurnRuntime.test.ts
           node scripts/check-v1-mechanism-coverage.mjs
           node scripts/check-legacy-execution-boundary.mjs
           npm exec tsc -- --noEmit
@@ -77,9 +73,9 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/app/phase09RealResolutionAdapter.ts src/app/phase09RealRuntimeAttackAdapter.ts
+          git add src/app/phase09RealResolutionAdapter.ts src/app/realTurnRuntimeService.ts
           git rm -f .github/workflows/c9-family-j-projected-attack-rerun-71304.yml
-          git commit -m "fix(c9): resolve projected attacks by structural payload"
+          git commit -m "fix(c9): retain projected attack payload through resolution"
           for attempt in 1 2 3 4 5; do
             if git push origin HEAD:agent/c9-gate-n-coverage-reconciliation; then exit 0; fi
             git fetch origin agent/c9-gate-n-coverage-reconciliation
