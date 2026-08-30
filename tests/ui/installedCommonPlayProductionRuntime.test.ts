@@ -546,11 +546,14 @@ test("unknown installed Common Play relation selector rejects an ineligible targ
   await adapter.setCurrentActor("char.aelar");
   const selfBefore=(await adapter.getSnapshot()).activeCharacter.hp;
   await adapter.resolveAction(actionId,["char.aelar"]);
-  assert.equal((await adapter.getSnapshot()).activeCharacter.hp,selfBefore,"self must be filtered before production commit");
+  let snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.activeCharacter.hp,selfBefore,"self must be rejected before production commit");
+  assert.equal(snapshot.resolution?.finalOutcome,"적용 거부");
+  assert.match(snapshot.resolution?.compact??"",/ineligible target/);
 
-  const enemyBefore=(await adapter.getSnapshot()).scene.entities.find((entity)=>entity.id==="combatant.goblin-a")!.hp;
+  const enemyBefore=snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")!.hp;
   await adapter.resolveAction(actionId,["combatant.goblin-a"]);
-  const snapshot=await adapter.getSnapshot();
+  snapshot=await adapter.getSnapshot();
   assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")!.hp,enemyBefore+5);
   assert.equal(snapshot.resolution?.stage,"complete");
   assert.equal(snapshot.resolution?.actionId,actionId);

@@ -1,4 +1,4 @@
-import type { AppSnapshot, SceneVm } from "./contracts";
+import type { AppSnapshot, ResolutionView, SceneVm } from "./contracts";
 import { catalogQualifiedId } from "./contentCatalogIdentity";
 import { requiredSessionInstalledContent } from "./installedContentRuntimeAdapter";
 import { parseInstalledCommonPlayActionId, parseRuntimeArtifactCommonPlayActionId } from "./installedCommonPlayActionReference";
@@ -9,6 +9,7 @@ import { resolveCommonPlaySelector, type CommonPlaySelector, type CommonPlaySele
 interface AdapterState {
   scene:SceneVm;
   activeCharacter:{id:string};
+  resolution:ResolutionView|null;
   getSnapshot():Promise<AppSnapshot>;
 }
 
@@ -73,6 +74,16 @@ MockAdapter.prototype.resolveAction=async function resolveInstalledCommonPlayRic
     authority:"host",
     directTarget:false,
   });
-  if(selection.status!=="resolved") return internal.getSnapshot();
+  if(selection.status!=="resolved") {
+    const resolutionId=`common-play-selector-rejected.${Date.now()}.${Math.floor(Math.random()*1000)}`;
+    const actionName=internal.scene.actionsByActor[actorId]?.find((candidate)=>candidate.id===actionId)?.name??"Common Play";
+    internal.resolution={
+      id:resolutionId,actorId,targetIds:[...targetIds],actionId,actionName,rollKind:"effect",stage:"complete",
+      authoritativeDice:[],saveResults:[],damageComponents:[],compact:`Common Play selector rejected: ${selection.reason}`,
+      detail:[selection.reason],provenance:["Common Play selector"],calculatedOutcome:"적용 거부",finalOutcome:"적용 거부",
+      stateChanges:[],adjudicated:false,canAdvance:false,
+    };
+    return internal.getSnapshot();
+  }
   return previousResolveAction.call(this,actionId,targetIds);
 };
