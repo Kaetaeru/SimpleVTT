@@ -47,7 +47,7 @@ replacement = '''export function commonPlayActorProfileProperties(
   for(const [property,definition] of Object.entries(SIMPLEVTT_APP_RULES_PROFILE.properties)) {
     if(!Number.isFinite(inputs[property])&&!definition.formula) continue;
     try {
-      projected[property]=resolveRuntimeProfileProperty(state.effects,actorId,property,projected).value;
+      projected[property]=resolveRuntimeProfileProperty(state.effects,actorId,property,inputs).value;
     } catch(error) {
       if(character.id===actorId) throw error;
     }
