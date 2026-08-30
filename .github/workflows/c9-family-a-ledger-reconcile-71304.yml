@@ -1,0 +1,67 @@
+name: C9 Family A Ledger Reconcile 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-a-ledger-reconcile-71304.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: c9-family-a-ledger-reconcile-71304
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Reconcile already-verified Family A persistence evidence
+        shell: bash
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          for attempt in $(seq 1 30); do
+            git fetch origin agent/c9-gate-n-coverage-reconciliation
+            git reset --hard origin/agent/c9-gate-n-coverage-reconciliation
+            python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
+          data=json.loads(path.read_text())
+          row=next(row for row in data['rows'] if row['family']=='A')
+          evidence='turnRuntimeSessionRegistry.ts scene-keyed offline RuntimeState persistence plus installedCommonPlayPropertyModifierProduction.test.ts fresh independent adapter restart, production consumption, and explicit initiative-end cleanup'
+          if evidence not in row['persistenceEvidenceIfRelevant']:
+              row['persistenceEvidenceIfRelevant'].append(evidence)
+          prefix='connected event replay is not durable local persistence:'
+          row['remainingNamedSeams']=[entry for entry in row['remainingNamedSeams'] if not entry.startswith(prefix)]
+          sentence='Source-bound Effect property modifiers now survive a fresh independent offline adapter restart through scene-keyed turn runtime persistence; explicit initiative end clears that local session state, while connected authority remains ledger-owned.'
+          if sentence not in row['currentState']:
+              row['currentState']+=' '+sentence
+          path.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n')
+          PY
+            rm -f .github/workflows/c9-family-a-local-persistence-71304.yml
+            rm -f .github/workflows/c9-family-a-ledger-reconcile-71304.yml
+            node scripts/check-v1-mechanism-coverage.mjs
+            git add docs/rules/v1-mechanism-coverage-ledger.json .github/workflows/c9-family-a-local-persistence-71304.yml .github/workflows/c9-family-a-ledger-reconcile-71304.yml
+            if git diff --cached --quiet; then
+              exit 0
+            fi
+            git commit -m "docs(c9): record Family A local restart persistence"
+            if git push origin HEAD:agent/c9-gate-n-coverage-reconciliation; then
+              exit 0
+            fi
+            sleep 1
+          done
+          exit 1
