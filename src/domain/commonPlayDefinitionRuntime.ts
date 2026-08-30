@@ -178,7 +178,7 @@ function operationEntryPointProjection(entryPoint:CommonPlayEntryPointIR) {
   if(targeting.from!=="targets") throw new DomainEvaluationError(`Common Play entry point ${entryPoint.id}.targeting.from must be targets for portable operations`);
   if(!Number.isInteger(targeting.min)||Number(targeting.min)<0) throw new DomainEvaluationError(`Common Play entry point ${entryPoint.id}.targeting.min must be a non-negative integer`);
   if(!Number.isInteger(targeting.max)||Number(targeting.max)<Number(targeting.min)) throw new DomainEvaluationError(`Common Play entry point ${entryPoint.id}.targeting.max must be an integer >= min`);
-  projected.targeting=structuredClone(targeting);
+  projected.targeting={from:"targets",min:Number(targeting.min),max:Number(targeting.max)};
   return projected;
 }
 
