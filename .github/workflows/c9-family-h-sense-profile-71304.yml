@@ -1,0 +1,99 @@
+name: C9 Family H Sense Profile 71304
+
+on:
+  push:
+    branches: [agent/c9-gate-n-coverage-reconciliation]
+    paths: [.github/workflows/c9-family-h-sense-profile-71304.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  verify-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+      - run: npm ci
+      - run: npm run generate:content
+      - name: Patch Family H sense profile slice
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          profile=Path('rules/profiles/dnd.srd-5.2.1.profile.json')
+          text=profile.read_text(encoding='utf-8')
+          if '"sense.darkvision.range-feet"' not in text:
+              anchor='    "hp.temporary": {"type": "integer", "storage": "stored", "minimum": 0}\n'
+              replacement='''    "hp.temporary": {"type": "integer", "storage": "stored", "minimum": 0},\n    "sense.darkvision.range-feet": {"type": "integer", "storage": "stored", "minimum": 0},\n    "sense.blindsight.range-feet": {"type": "integer", "storage": "stored", "minimum": 0},\n    "sense.tremorsense.range-feet": {"type": "integer", "storage": "stored", "minimum": 0},\n    "sense.truesight.range-feet": {"type": "integer", "storage": "stored", "minimum": 0}\n'''
+              if anchor not in text: raise SystemExit('RulesProfile property anchor not found')
+              profile.write_text(text.replace(anchor,replacement,1),encoding='utf-8')
+
+          source=Path('src/app/commonPlayInterceptorProductionRuntimeAdapter.ts')
+          text=source.read_text(encoding='utf-8')
+          text=text.replace('import { SIMPLEVTT_APP_RULES_PROFILE } from "./realResolutionService";','import { resolveRuntimeProfileProperty, SIMPLEVTT_APP_RULES_PROFILE } from "./realResolutionService";',1)
+          text=text.replace('import { resolveCommonPlaySenses } from "../domain/commonPlaySenseRuntime";','import { resolveCommonPlaySenses, type CommonPlaySense } from "../domain/commonPlaySenseRuntime";',1)
+          if 'const RULES_PROFILE_SENSE_PROPERTIES=' not in text:
+              anchor='function composedRelationSenses(relation:NonNullable<ReturnType<typeof authoritativeCommonPlaySpatialRelation>>,resolverTargetInvisible=false) {'
+              replacement='''const RULES_PROFILE_SENSE_PROPERTIES=[\n  {property:"sense.darkvision.range-feet",kind:"darkvision"},\n  {property:"sense.blindsight.range-feet",kind:"blindsight"},\n  {property:"sense.tremorsense.range-feet",kind:"tremorsense"},\n  {property:"sense.truesight.range-feet",kind:"truesight"},\n] as const satisfies ReadonlyArray<{property:string;kind:CommonPlaySense["kind"]}>;\n\nfunction rulesProfileObserverSenses(candidate:PassiveReactionCandidate,runtime:RulesRuntimeState):CommonPlaySense[] {\n  const actor=runtime.combatants[candidate.sourceActorId];\n  if(!actor)return [];\n  const sheet=candidate.sheet;\n  const inputs:Record<string,number>={\n    ...(actor.baseProperties??{}),\n    "movement.walk":actor.baseSpeed,\n    "hp.current":actor.life.hp.current,\n    "hp.maximum":actor.life.hp.maximum,\n    "hp.temporary":actor.life.hp.temporary,\n    "ability.str.score":sheet.abilities.str,\n    "ability.dex.score":sheet.abilities.dex,\n    "ability.con.score":sheet.abilities.con,\n    "ability.int.score":sheet.abilities.int,\n    "ability.wis.score":sheet.abilities.wis,\n    "ability.cha.score":sheet.abilities.cha,\n    "progression.character.level":sheet.level,\n    "proficiency.bonus":sheet.proficiencyBonus,\n    "defense.ac":sheet.ac,\n  };\n  for(const entry of RULES_PROFILE_SENSE_PROPERTIES) if(!Number.isFinite(inputs[entry.property])) inputs[entry.property]=0;\n  return RULES_PROFILE_SENSE_PROPERTIES.flatMap((entry)=>{\n    try {\n      const rangeFeet=resolveRuntimeProfileProperty(runtime.effects,candidate.sourceActorId,entry.property,inputs).value;\n      return Number.isFinite(rangeFeet)&&rangeFeet>0?[{kind:entry.kind,rangeFeet}]:[];\n    } catch { return []; }\n  });\n}\n\nfunction mergedObserverSenses(provider:CommonPlaySense[],profile:CommonPlaySense[]):CommonPlaySense[] {\n  const merged=new Map<CommonPlaySense["kind"],CommonPlaySense>();\n  for(const sense of [...provider,...profile]) {\n    const current=merged.get(sense.kind);\n    if(!current) { merged.set(sense.kind,{...sense}); continue; }\n    if(current.rangeFeet===undefined||sense.rangeFeet===undefined) merged.set(sense.kind,{kind:sense.kind});\n    else if(sense.rangeFeet>current.rangeFeet) merged.set(sense.kind,{kind:sense.kind,rangeFeet:sense.rangeFeet});\n  }\n  return [...merged.values()];\n}\n\nfunction composedRelationSenses(relation:NonNullable<ReturnType<typeof authoritativeCommonPlaySpatialRelation>>,candidate:PassiveReactionCandidate,runtime:RulesRuntimeState,resolverTargetInvisible=false) {'''
+              if anchor not in text: raise SystemExit('sensing composition anchor not found')
+              text=text.replace(anchor,replacement,1)
+              old='return resolveCommonPlaySenses(relation.observerSenses??[{kind:"normal-sight"}],{'
+              if old not in text: raise SystemExit('observer senses anchor not found')
+              text=text.replace(old,'return resolveCommonPlaySenses(mergedObserverSenses(relation.observerSenses??[{kind:"normal-sight"}],rulesProfileObserverSenses(candidate,runtime)),{',1)
+              text=text.replace('composedRelationSenses(relation,resolverTargetInvisible)','composedRelationSenses(relation,candidate,runtime,resolverTargetInvisible)')
+          source.write_text(text,encoding='utf-8')
+
+          test_path=Path('tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts')
+          text=test_path.read_text(encoding='utf-8')
+          import_anchor='import { resolvePendingResolution } from "../../src/domain/resolution";\n'
+          if 'compileCommonPlayEntryPointOperations' not in text:
+              if import_anchor not in text: raise SystemExit('test import anchor not found')
+              text=text.replace(import_anchor,import_anchor+'import { compileCommonPlayEntryPointOperations, parseCommonPlayOperationDefinition } from "../../src/domain/commonPlayOperationRuntime";\n',1)
+          if 'portable production derives Darkvision from a generic RulesProfile modifier' not in text:
+              text += '''\n\nfunction seedRulesProfileSense(adapter:MockAdapter,sourceId:string,rangeFeet:number){\n  const internal=adapter as unknown as {activeCharacter:CharacterSheet;scene:SceneVm};\n  const state=snapshotAdapterTurnRuntimeState(adapter,internal.scene);\n  assert.ok(state,"TurnRuntime state must exist before sense profile seeding");\n  const definition=parseCommonPlayOperationDefinition({\n    schemaVersion:"0.2-draft",id:sourceId,entryPoints:[{id:"activate",invocation:"manual",operations:[{\n      kind:"property.modify",property:"sense.darkvision.range-feet",operation:"set",value:{value:rangeFeet},target:"actor",owner:"effect",source:"definition",\n      duration:{kind:"elapsed",amount:{value:1},unit:"hours"},lifetime:{kind:"until-duration",onEnd:"destroy"},instancePolicy:"unique-by-source",\n    }]}],\n  });\n  const pending=compileCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,state!,definition,{resolutionId:`sense-profile.${sourceId}`,actorId:internal.activeCharacter.id,entryPointId:"activate"});\n  const committed=resolvePendingResolution(SIMPLEVTT_APP_RULES_PROFILE,state!,pending);\n  assert.notEqual(committed.status,"rejected");\n  if(committed.status==="rejected")return;\n  assert.equal(commitAdapterTurnRuntimeState(adapter,internal.scene,state!.revision,committed.state),true);\n}\n\ntest("portable production derives Darkvision from a generic RulesProfile modifier",async()=>{\n  const renamed:Identity={...ORIGINAL,moduleId:"external.profile-sense-renamed",contentId:"item.profile-sense-renamed",mechanicId:"mechanic.profile-sense-renamed",interceptorId:"interceptor.profile-sense-renamed",interactionId:"interaction.profile-sense-renamed",displayName:"Renamed Profile Sense"};\n  for(const identity of [ORIGINAL,renamed]){\n    const adapter=await prepare(identity,true,"d20",[{kind:"roll.modify",mode:"subtract-die",dice:"1d8"}],undefined,{light:"darkness",obscurement:"none"});\n    const internal=adapter as unknown as {activeCharacter:CharacterSheet;scene:SceneVm};\n    setSpatialRelation(internal.scene,{sourceId:internal.activeCharacter.id,targetId:OTHER_CHARACTER_ID,distanceFeet:30,visible:true,cover:"none",targetCanSeeAttacker:true,light:"darkness",obscurement:"none",provenance:"module:test-rules-profile-sense"});\n    seedRulesProfileSense(adapter,`${identity.moduleId}.darkvision`,60);\n    seedHiddenRuntimeEffect(adapter,OTHER_CHARACTER_ID);\n    let snapshot=await openAbilityCheckInterrupt(adapter);\n    assert.equal(snapshot.resolution?.stage,"interrupt",JSON.stringify(snapshot.resolution));\n    snapshot=await adapter.respondToInterrupt(false);\n    assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));\n  }\n});\n'''
+          test_path.write_text(text,encoding='utf-8')
+          PY
+      - name: Verify Family H slice
+        run: |
+          node --import tsx --test tests/domain/commonPlaySenseRuntime.test.ts tests/domain/commonPlayPropertyContractRuntime.test.ts tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts
+          node scripts/check-legacy-execution-boundary.mjs
+          npm exec tsc -- --noEmit
+      - name: Publish verified files
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          branch=agent/c9-gate-n-coverage-reconciliation
+          publish_checked() {
+            path="$1"; message="$2"
+            base_sha="$(git rev-parse HEAD:"$path")"
+            remote_sha="$(gh api -X GET "repos/$GITHUB_REPOSITORY/contents/$path?ref=$branch" --jq .sha)"
+            [[ "$remote_sha" == "$base_sha" ]] || { echo "concurrent change: $path" >&2; exit 1; }
+            content="$(base64 -w0 < "$path")"
+            jq -n --arg message "$message" --arg content "$content" --arg sha "$remote_sha" --arg branch "$branch" '{message:$message,content:$content,sha:$sha,branch:$branch}' | gh api --method PUT "repos/$GITHUB_REPOSITORY/contents/$path" --input - >/dev/null
+          }
+          publish_checked rules/profiles/dnd.srd-5.2.1.profile.json "feat(c9): define rules profile sense ranges"
+          publish_checked src/app/commonPlayInterceptorProductionRuntimeAdapter.ts "feat(c9): project rules profile senses into production facts"
+          publish_checked tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts "test(c9): prove rules-derived sense profile production"
+      - name: Retire verifier
+        if: success()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          branch=agent/c9-gate-n-coverage-reconciliation
+          path=.github/workflows/c9-family-h-sense-profile-71304.yml
+          sha="$(gh api -X GET "repos/$GITHUB_REPOSITORY/contents/$path?ref=$branch" --jq .sha)"
+          jq -n --arg message "ci(c9): retire Family H sense profile verifier" --arg sha "$sha" --arg branch "$branch" '{message:$message,sha:$sha,branch:$branch}' | gh api --method DELETE "repos/$GITHUB_REPOSITORY/contents/$path" --input - >/dev/null
