@@ -1,5 +1,5 @@
 name: C9 Family E Spatial Facts 7130
-# connector staging branch is pre-created before this rerun
+# connector staging branch reset to latest C9 head before this rerun
 
 on:
   push:
