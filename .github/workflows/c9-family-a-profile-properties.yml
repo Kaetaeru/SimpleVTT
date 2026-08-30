@@ -22,6 +22,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Generate content dependencies
+        run: npm run generate:content
       - name: Verify generic profile property ownership
         run: >-
           npx tsx --test
