@@ -52,12 +52,20 @@ jobs:
           PY
             node scripts/check-v1-mechanism-coverage.mjs
             sha=$(git ls-tree HEAD "$path" | awk '{print $3}')
-            content=$(base64 -w0 "$path")
+            python - "$path" "$sha" "$branch" <<'PY'
+          import base64,json,sys
+          path,sha,branch=sys.argv[1:]
+          payload={
+              "message":"docs(c9): record spatial size and space evidence",
+              "content":base64.b64encode(open(path,"rb").read()).decode("ascii"),
+              "sha":sha,
+              "branch":branch,
+          }
+          with open("/tmp/c9-family-g-ledger-payload.json","w",encoding="utf-8") as handle:
+              json.dump(payload,handle)
+          PY
             if gh api --method PUT "repos/${GITHUB_REPOSITORY}/contents/${path}" \
-              -f message='docs(c9): record spatial size and space evidence' \
-              -f content="$content" \
-              -f sha="$sha" \
-              -f branch="$branch" >/tmp/c9-family-g-ledger.json; then
+              --input /tmp/c9-family-g-ledger-payload.json >/tmp/c9-family-g-ledger.json; then
               cat /tmp/c9-family-g-ledger.json
               exit 0
             fi
