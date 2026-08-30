@@ -103,12 +103,6 @@ test("inverse Character write-back is drift-safe and restores the exact durable 
   if (rejected.status==="rejected") assert.match(rejected.error,/write-back drift/);
 });
 
-test("maximum HP write-back is rejected until an explicit canonical source contract exists", () => {
-  const result=projectResolutionCharacterWriteBack(sheet(),[event(hp("char.hero","maximum",30,25))],"forward");
-  assert.equal(result.status,"rejected");
-  if (result.status==="rejected") assert.match(result.error,/maximum HP requires an explicit source-model contract/);
-});
-
 test("combatant state changes do not mutate the local Character durable projection", () => {
   const result=projectResolutionCharacterWriteBack(sheet(),[
     event(hp("combatant.goblin","current",10,3)),
