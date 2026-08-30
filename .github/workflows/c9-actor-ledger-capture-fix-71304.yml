@@ -1,0 +1,63 @@
+name: C9 Actor Ledger Capture Fix 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-actor-ledger-capture-fix-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run generate:content
+      - name: Replace transport monkeypatch with authoritative ledger capture
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('tests/ui/connectedActorArtifactReconnectProduction.test.ts')
+          s=p.read_text()
+          s=s.replace('import { takeCommittedResolutionEvents } from "../../src/app/resolutionEventCommitRegistry";\n','')
+          s=s.replace('import { tauriSessionTransport } from "../../src/app/tauriSessionTransport";\n','')
+          start=s.index('async function captureBatch(operation:()=>Promise<unknown>) {')
+          end=s.index('\n\nfunction actorProjection',start)
+          helper='''async function captureBatch(adapter:MockAdapter,operation:()=>Promise<unknown>) {\n  const state=connectedStateFor(adapter);\n  const ledger=state.ledger;\n  assert.ok(ledger,"connected Host ledger is required before capturing a committed batch");\n  const cursor=ledger.cursor;\n  const result=await operation();\n  const events=ledger.eventsAfter(cursor);\n  const resolution=(result as {resolution?:{id?:string;stage?:string;actionId?:string}}|undefined)?.resolution;\n  assert.ok(events.length,JSON.stringify({resolution,cursor,hostCursor:ledger.cursor}));\n  return {type:"event-batch" as const,events};\n}'''
+          s=s[:start]+helper+s[end:]
+          s=s.replace('captureBatch(()=>host.', 'captureBatch(host,()=>host.')
+          p.write_text(s)
+          PY
+      - name: Verify actor artifact connected coverage
+        run: node --import tsx --test tests/ui/connectedActorArtifactReconnectProduction.test.ts tests/ui/connectedActorArtifactLifetimeProduction.test.ts
+      - name: Verify TypeScript
+        run: npm exec tsc -- --noEmit
+      - name: Commit verified test fix and retire workflow
+        run: |
+          set -euo pipefail
+          branch=agent/c9-gate-n-coverage-reconciliation
+          workflow=.github/workflows/c9-actor-ledger-capture-fix-71304.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -f "$workflow"
+          git add tests/ui/connectedActorArtifactReconnectProduction.test.ts "$workflow"
+          git commit -m "test(c9): capture actor artifact batches from host ledger"
+          for attempt in $(seq 1 10); do
+            git fetch origin "$branch"
+            if ! git rebase "origin/$branch"; then git rebase --abort || true; exit 1; fi
+            if git push origin HEAD:"$branch"; then exit 0; fi
+            sleep 1
+          done
+          exit 1
