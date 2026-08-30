@@ -59,7 +59,31 @@ replaceOne(
 );
 const targetingTest="tests/domain/commonPlayTargetingRuntime.test.ts";
 let targetingText=fs.readFileSync(targetingTest,"utf8");
-const insertion='''\ntest("Common Play relation selector filters pre-resolved targets through the generic selector runtime",()=>{\n  const authored=structuredClone(AUTHORED);\n  authored.entryPoints[0].targeting={from:"targets",min:1,max:2,where:{op:"relation-matches",ref:"relation",value:"enemy"}};\n  authored.entryPoints[0].operations=[];\n  const definition=parseManualCommonPlayOperationDefinition(authored);\n  const state=runtimeState();\n  state.combatants.orc=structuredClone(state.combatants.goblin);\n  state.combatants.orc.id="orc";\n  const committed=resolveCommonPlayEntryPointOperations(TEST_PROFILE,state,definition,{\n    resolutionId:"relation-targeting",actorId:"hero",entryPointId:"mend-other",\n    targetingTargets:[target("goblin","enemy"),target("orc","enemy")],\n  });\n  assert.equal(committed.status,"committed");\n  if(committed.status==="committed") {\n    assert.deepEqual((committed.results["relation-targeting:targeting"] as {targets:Array<{targetId:string}>}).targets.map((entry)=>entry.targetId),["goblin","orc"]);\n  }\n  const rejected=resolveCommonPlayEntryPointOperations(TEST_PROFILE,runtimeState(),definition,{\n    resolutionId:"relation-targeting-reject",actorId:"hero",entryPointId:"mend-other",\n    targetingTargets:[target("hero","self")],\n  });\n  assert.equal(rejected.status,"rejected");\n  if(rejected.status==="rejected") assert.match(rejected.error,/ineligible target/);\n});\n''';
+const insertion=`
+test("Common Play relation selector filters pre-resolved targets through the generic selector runtime",()=>{
+  const authored=structuredClone(AUTHORED);
+  authored.entryPoints[0].targeting={from:"targets",min:1,max:2,where:{op:"relation-matches",ref:"relation",value:"enemy"}};
+  authored.entryPoints[0].operations=[];
+  const definition=parseManualCommonPlayOperationDefinition(authored);
+  const state=runtimeState();
+  state.combatants.orc=structuredClone(state.combatants.goblin);
+  state.combatants.orc.id="orc";
+  const committed=resolveCommonPlayEntryPointOperations(TEST_PROFILE,state,definition,{
+    resolutionId:"relation-targeting",actorId:"hero",entryPointId:"mend-other",
+    targetingTargets:[target("goblin","enemy"),target("orc","enemy")],
+  });
+  assert.equal(committed.status,"committed");
+  if(committed.status==="committed") {
+    assert.deepEqual((committed.results["relation-targeting:targeting"] as {targets:Array<{targetId:string}>}).targets.map((entry)=>entry.targetId),["goblin","orc"]);
+  }
+  const rejected=resolveCommonPlayEntryPointOperations(TEST_PROFILE,runtimeState(),definition,{
+    resolutionId:"relation-targeting-reject",actorId:"hero",entryPointId:"mend-other",
+    targetingTargets:[target("hero","self")],
+  });
+  assert.equal(rejected.status,"rejected");
+  if(rejected.status==="rejected") assert.match(rejected.error,/ineligible target/);
+});
+`;
 if(!targetingText.includes('test("Common Play relation selector filters pre-resolved targets through the generic selector runtime"')) {
   const anchor='\ntest("invalid targeting is atomic and cannot reach downstream HP mutation",()=>{';
   if(!targetingText.includes(anchor)) throw new Error("targeting test insertion anchor missing");
