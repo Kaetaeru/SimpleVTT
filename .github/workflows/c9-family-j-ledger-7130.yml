@@ -1,0 +1,60 @@
+name: C9 Family J Ledger 7130
+
+on:
+  push:
+    branches:
+      - agent/c9-j-finalize-7130
+    paths:
+      - .github/workflows/c9-family-j-ledger-7130.yml
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Publish Family J evidence without overwriting concurrent ledger work
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch=agent/c9-gate-n-coverage-reconciliation
+          git config user.name "ChatGPT C9 Family J"
+          git config user.email "actions@users.noreply.github.com"
+          for attempt in 1 2 3 4 5; do
+            git fetch origin "$branch"
+            git reset --hard "origin/$branch"
+            node --input-type=module <<'NODE'
+          import fs from "node:fs";
+          const path="docs/rules/v1-mechanism-coverage-ledger.json";
+          const ledger=JSON.parse(fs.readFileSync(path,"utf8"));
+          const family=ledger.rows.find((row)=>row.family==="J");
+          if(!family) throw new Error("Family J ledger row missing");
+          family.currentState="Unknown installed Common Play attack-roll plus target damage has production evidence through a projected arbitrary-ID Actor action with Action payment, damage commit, Host/Client convergence, and Undo. Projected Unarmed grapple/shove now dispatches from a typed runtimeSaveCondition action payload rather than named action IDs, with arbitrary action-ID rename evidence. Family J remains incomplete for portable Common Play control composition plus full weapon/Unarmed Strike, Opportunity Attack, reach/range/cover, Extra Attack/replacement, and ammunition/loading composition.";
+          const add=(field,value)=>{ if(!family[field].includes(value)) family[field].push(value); };
+          add("implementationEvidence","productionPlayRuntimeAdapter.ts projects typed runtimeSaveCondition payloads for Unarmed grapple/shove; unarmedControlRuntimeAdapter.ts consumes the payload without action-ID dispatch");
+          add("productionEvidence","unarmedStrikeRuntime.test.ts executes projected grapple after replacing its action ID with an unrelated external ID");
+          add("identityInvarianceEvidence","unarmedStrikeRuntime.test.ts runtimeSaveCondition rename probe preserves save/condition semantics under an unrelated action ID");
+          family.remainingNamedSeams=[
+            "full generic weapon and Unarmed Strike action projection is not yet proven across source-owned equipment/stat definitions",
+            "projected grapple/shove is action-ID independent but remains outside portable Common Play import/normalization and escape control composition",
+            "Opportunity Attack portable acceptance remains incomplete beyond existing projection-driven integration",
+            "reach, long range, cover, multiattack/Extra Attack/replacement, and ammunition/loading constraints remain incomplete",
+            "Rage attack rider and other named attack/action projection remain migration debt"
+          ];
+          fs.writeFileSync(path,JSON.stringify(ledger,null,2)+"\n");
+          NODE
+            node scripts/check-v1-mechanism-coverage.mjs
+            git add docs/rules/v1-mechanism-coverage-ledger.json
+            git commit -m "docs(c9): record Family J action payload proof"
+            if git push origin HEAD:"$branch"; then exit 0; fi
+            sleep 2
+          done
+          exit 1
