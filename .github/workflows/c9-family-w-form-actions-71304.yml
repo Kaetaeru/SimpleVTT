@@ -1,0 +1,183 @@
+name: C9 Family W Form Actions 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-w-form-actions-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  wire-form-actions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run generate:content
+      - name: Patch generic form action projection
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          runtime = Path('src/app/installedCommonPlayRuntimeAdapter.ts')
+          text = runtime.read_text(encoding='utf-8')
+
+          old = '!parseStoredInvocationCommonPlayActionId(action.id)&&!parseStoredInvocationCancelActionId(action.id)&&!parseZoneMembershipCommonPlayActionId(action.id)'
+          new = '!parseRuntimeArtifactCommonPlayActionId(action.id)&&!parseStoredInvocationCommonPlayActionId(action.id)&&!parseStoredInvocationCancelActionId(action.id)&&!parseZoneMembershipCommonPlayActionId(action.id)'
+          count = text.count(old)
+          if count != 2:
+              raise SystemExit(f'expected two artifact action cleanup filters, found {count}')
+          text = text.replace(old, new)
+
+          anchor = '''  for(const artifact of state.artifacts??[]) {\n    const stored=artifact.artifactKind==="stored-invocation"?artifact.storedInvocation:undefined;\n'''
+          insert = '''  for(const artifact of state.artifacts??[]) {\n    const form=artifact.artifactKind==="form"?artifact.form:undefined;\n    if(!form||form.actionPolicy==="retain"||!state.combatants[form.targetActorId]) continue;\n    const controllerId=form.controllerId??form.targetActorId;\n    if(snapshot.role!=="dm"&&controllerId!==snapshot.activeCharacter.id) {\n      if(form.actionPolicy==="replace") delete snapshot.scene.actionsByActor[form.targetActorId];\n      continue;\n    }\n    const actions=(await Promise.all(form.actionDefinitionIds.map(async(actionId)=>{\n      const action=await commonPlayAction(adapter,actionId);\n      return action?projectedArtifactAction(adapter,actionId,form.targetActorId,action,snapshot.scene,state):undefined;\n    }))).filter((action):action is ActionVm=>Boolean(action));\n    for(const scene of [snapshot.scene,(adapter as unknown as AdapterState).scene]) {\n      const current=scene.actionsByActor[form.targetActorId]??[];\n      if(form.actionPolicy==="replace") scene.actionsByActor[form.targetActorId]=cp(actions);\n      else {\n        const ids=new Set(current.map((action)=>action.id));\n        scene.actionsByActor[form.targetActorId]=[...current,...cp(actions.filter((action)=>!ids.has(action.id)))];\n      }\n    }\n  }\n'''
+          if insert not in text:
+              if text.count(anchor) != 1:
+                  raise SystemExit(f'form action projection anchor count: {text.count(anchor)}')
+              text = text.replace(anchor, insert + anchor, 1)
+          runtime.write_text(text, encoding='utf-8')
+
+          test_file = Path('tests/ui/commonPlayFormActionProjectionProduction.test.ts')
+          test_file.write_text(r'''import assert from "node:assert/strict";
+import test from "node:test";
+import "../../src/app/offlineRuntimeAdapters";
+import { catalogQualifiedId } from "../../src/app/contentCatalogIdentity";
+import { installedCommonPlayActionId, runtimeArtifactCommonPlayActionId } from "../../src/app/installedCommonPlayActionReference";
+import { setInstalledContentStoreForTests } from "../../src/app/installedContentRuntimeAdapter";
+import { MemoryInstalledContentStore } from "../../src/app/memoryInstalledContentStore";
+import { MockAdapter } from "../../src/app/mockAdapter";
+import { snapshotAdapterTurnRuntimeState } from "../../src/app/turnRuntimeSessionRegistry";
+
+type ActionPolicy="retain"|"grant"|"replace";
+const ACTOR_ID="char.aelar";
+
+function packagePayload(prefix:string,actionPolicy:ActionPolicy) {
+  const moduleId=`${prefix}.module`;
+  const formContentId=`${prefix}.form-content`;
+  const formMechanicId=`${prefix}.form-mechanic`;
+  const actionContentId=`${prefix}.form-action-content`;
+  const actionMechanicId=`${prefix}.form-action-mechanic`;
+  const definitionActionId=installedCommonPlayActionId({
+    catalogId:catalogQualifiedId(actionContentId,moduleId,"1"),mechanicId:actionMechanicId,entryPointId:"form-strike",
+  });
+  const transformActionId=installedCommonPlayActionId({
+    catalogId:catalogQualifiedId(formContentId,moduleId,"1"),mechanicId:formMechanicId,entryPointId:"transform",
+  });
+  return {
+    definitionActionId,
+    projectedActionId:runtimeArtifactCommonPlayActionId(ACTOR_ID,definitionActionId),
+    transformActionId,
+    json:JSON.stringify({
+      schemaVersion:"0.1-draft",moduleId,moduleVersion:"1",
+      rulesProfile:{id:"dnd.srd-5.2.1",version:"0.1-draft"},defaultLocale:"en",
+      source:{document:"Unknown form action-policy probe",version:"1",license:"CC0",srdDerived:false},dependencies:[],conflicts:[],capabilities:[],
+      content:[
+        {id:formContentId,category:"option",presentation:{defaultLocale:"en",originalName:"Unknown Form",locales:{en:{name:"Unknown Form"}}},mechanics:[{kind:"common-play",config:{
+          schemaVersion:"0.2-draft",id:formMechanicId,
+          entryPoints:[{id:"transform",invocation:"manual",operations:[{kind:"artifact.spawn",template:"form"}]}],
+          artifactTemplates:[{id:"form",artifactKind:"form",duration:{kind:"durable"},lifetime:{kind:"durable"},initialState:{
+            targetActorId:"actor",propertyOverlay:{},retainedProperties:[],replacementProperties:[],hpPolicy:"retain",actionPolicy,spellcasting:"retain",actionDefinitionIds:[definitionActionId],resources:[],
+          }}],
+        }}]},
+        {id:actionContentId,category:"option",presentation:{defaultLocale:"en",originalName:"Unknown Form Strike",locales:{en:{name:"Unknown Form Strike"}}},mechanics:[{kind:"common-play",config:{
+          schemaVersion:"0.2-draft",id:actionMechanicId,
+          entryPoints:[{id:"form-strike",invocation:"manual",operations:[{kind:"damage.apply",amount:{value:1},damageType:"force",target:"self"}]}],
+        }}]},
+      ],
+    }),
+  };
+}
+
+async function prepare(prefix:string,actionPolicy:ActionPolicy) {
+  const adapter=new MockAdapter();
+  const pack=packagePayload(prefix,actionPolicy);
+  setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
+  const preview=await adapter.previewContentImport(pack.json);
+  assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
+  await adapter.activateContentImport();
+  await adapter.startInitiative();
+  await adapter.setCurrentActor(ACTOR_ID);
+  return {adapter,pack};
+}
+
+async function projectionShape(prefix:string,actionPolicy:ActionPolicy) {
+  const {adapter,pack}=await prepare(prefix,actionPolicy);
+  const before=await adapter.getSnapshot();
+  const beforeIds=(before.scene.actionsByActor[ACTOR_ID]??[]).map((action)=>action.id);
+  await adapter.resolveAction(pack.transformActionId,[ACTOR_ID]);
+  let snapshot=await adapter.getSnapshot();
+  const afterIds=(snapshot.scene.actionsByActor[ACTOR_ID]??[]).map((action)=>action.id);
+  const repeatedIds=((await adapter.getSnapshot()).scene.actionsByActor[ACTOR_ID]??[]).map((action)=>action.id);
+  assert.equal(repeatedIds.filter((id)=>id===pack.projectedActionId).length,actionPolicy==="retain"?0:1,"projection must be idempotent across snapshots");
+  if(actionPolicy==="retain") assert.deepEqual(afterIds,beforeIds);
+  if(actionPolicy==="grant") {
+    assert.ok(beforeIds.every((id)=>afterIds.includes(id)));
+    assert.equal(afterIds.filter((id)=>id===pack.projectedActionId).length,1);
+  }
+  if(actionPolicy==="replace") assert.deepEqual(afterIds,[pack.projectedActionId]);
+
+  let damage=0;
+  if(actionPolicy!=="retain") {
+    const hpBefore=snapshot.activeCharacter.hp;
+    await adapter.resolveAction(pack.projectedActionId,[ACTOR_ID]);
+    snapshot=await adapter.getSnapshot();
+    damage=hpBefore-snapshot.activeCharacter.hp;
+    assert.equal(damage,1,JSON.stringify(snapshot.resolution));
+    assert.equal(snapshot.resolution?.stage,"complete");
+    await adapter.undoLastResolution();
+    snapshot=await adapter.getSnapshot();
+    assert.equal(snapshot.activeCharacter.hp,hpBefore);
+    assert.equal(snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)?.artifacts?.some((artifact)=>artifact.artifactKind==="form"),true);
+  }
+  return {policy:actionPolicy,basePreserved:actionPolicy!=="replace",projected:afterIds.includes(pack.projectedActionId),damage};
+}
+
+for(const policy of ["retain","grant","replace"] as const) test(`unknown Common Play form ${policy} action policy projects through the generic action route`,async()=>{
+  await projectionShape(`unknown-form-actions-${policy}`,policy);
+});
+
+test("form action policy semantics are invariant under complete external identity rename",async()=>{
+  for(const policy of ["retain","grant","replace"] as const) {
+    assert.deepEqual(await projectionShape(`unknown-form-actions-a-${policy}`,policy),await projectionShape(`renamed-external-form-b-${policy}`,policy));
+  }
+});
+
+test("undoing form creation restores the original action projection",async()=>{
+  const {adapter,pack}=await prepare("unknown-form-actions-undo","replace");
+  const before=await adapter.getSnapshot();
+  const beforeIds=(before.scene.actionsByActor[ACTOR_ID]??[]).map((action)=>action.id);
+  await adapter.resolveAction(pack.transformActionId,[ACTOR_ID]);
+  let snapshot=await adapter.getSnapshot();
+  assert.deepEqual((snapshot.scene.actionsByActor[ACTOR_ID]??[]).map((action)=>action.id),[pack.projectedActionId]);
+  await adapter.undoLastResolution();
+  snapshot=await adapter.getSnapshot();
+  assert.deepEqual((snapshot.scene.actionsByActor[ACTOR_ID]??[]).map((action)=>action.id),beforeIds);
+  assert.equal(snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)?.artifacts?.some((artifact)=>artifact.artifactKind==="form"),false);
+});
+''', encoding='utf-8')
+          PY
+      - name: Verify Family W form action slice
+        run: |
+          node --import tsx --test tests/ui/commonPlayFormProjectionProduction.test.ts tests/ui/commonPlayFormActionProjectionProduction.test.ts
+          npx tsc --noEmit
+          node scripts/check-v1-mechanism-coverage.mjs
+          node scripts/check-legacy-execution-boundary.mjs
+      - name: Commit verified slice and retire staging workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/app/installedCommonPlayRuntimeAdapter.ts tests/ui/commonPlayFormActionProjectionProduction.test.ts
+          git rm .github/workflows/c9-family-w-form-actions-71304.yml
+          git commit -m "feat(c9): project portable form action policies"
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
