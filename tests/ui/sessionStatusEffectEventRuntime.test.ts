@@ -3,6 +3,7 @@ import test from "node:test";
 import "../../src/app/phase09RealResolutionAdapter";
 import "../../src/app/phase09RealTurnRuntimeAdapter";
 import "../../src/app/abilityCheckResolutionEventAdapter";
+import "../../src/app/runtimeResolutionUndoAdapter";
 import "../../src/app/sessionStatusEffectEventRuntimeAdapter";
 import "../../src/app/abilityCheckDcRuntimeAdapter";
 import type { ActionVm, SceneVm } from "../../src/app/contracts";
