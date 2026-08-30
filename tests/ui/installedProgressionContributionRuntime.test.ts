@@ -1,14 +1,34 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import "../../src/app/progressionRuntimeAdapter";
+import "../../src/app/characterLibraryRuntimeAdapter";
 import "../../src/app/installedContentRuntimeAdapter";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import { MemoryInstalledContentStore } from "../../src/app/memoryInstalledContentStore";
 import { setInstalledContentStoreForTests } from "../../src/app/installedContentRuntimeAdapter";
 import type { Phase07AdapterCommands } from "../../src/app/progressionRuntimeAdapter";
+import { setCharacterLibraryStoreForTests } from "../../src/app/characterLibraryRuntimeAdapter";
+import type { CharacterLibraryStore, CharacterLibraryStoredGeneration } from "../../src/app/persistenceContracts";
 
 const SOURCE_ID = "option.external.progression-source";
 const GRANT_ID = "option.external.progression-grant";
+
+class DurableMemoryCharacterLibraryStore implements CharacterLibraryStore {
+  readonly durability = "durable" as const;
+  private generations = new Map<number,string>();
+
+  async readGenerations():Promise<CharacterLibraryStoredGeneration[]> {
+    return [...this.generations.entries()]
+      .map(([generation,payload]) => ({ generation,payload }))
+      .sort((a,b) => b.generation-a.generation);
+  }
+
+  async writeGeneration(expectedGeneration:number,nextGeneration:number,payload:string):Promise<void> {
+    const current = Math.max(0,...this.generations.keys());
+    assert.equal(current,expectedGeneration);
+    assert.equal(nextGeneration,expectedGeneration+1);
+    this.generations.set(nextGeneration,payload);
+  }
+}
 
 function progressionPackage() {
   return JSON.stringify({
@@ -36,7 +56,9 @@ function progressionPackage() {
 }
 
 test("unknown installed RuleModule progression contribution executes through production level-up by stable IDs", async () => {
+  const characterStore = new DurableMemoryCharacterLibraryStore();
   const adapter = new MockAdapter();
+  setCharacterLibraryStoreForTests(adapter, characterStore);
   setInstalledContentStoreForTests(adapter, new MemoryInstalledContentStore());
 
   let snapshot = await adapter.previewContentImport(progressionPackage());
@@ -63,4 +85,11 @@ test("unknown installed RuleModule progression contribution executes through pro
   assert.ok(snapshot.activeCharacter.features.includes("이름이 바뀐 외부 보상"));
   assert.equal(snapshot.activeCharacter.features.filter((feature) => feature === "이름이 바뀐 외부 보상").length, 1);
   assert.ok(snapshot.activity[0]?.stateChanges.includes(`installed progression grants: ${GRANT_ID}`));
+
+  const restarted = new MockAdapter();
+  setCharacterLibraryStoreForTests(restarted, characterStore);
+  const restartedSnapshot = await restarted.getSnapshot();
+  assert.equal(restartedSnapshot.activeCharacter.level, 6);
+  assert.deepEqual(restartedSnapshot.activeCharacter.installedProgressionGrantIds, [GRANT_ID]);
+  assert.ok(restartedSnapshot.activeCharacter.features.includes("이름이 바뀐 외부 보상"));
 });

@@ -40,6 +40,8 @@ export interface CharacterProgressionSelectionsV1 {
   mysticArcanumSources?:Record<number,string>;
   persistentFeatureOptionIds?:string[];
   persistentFeatureOptionSources?:Record<string,string>;
+  /** Stable opaque progression grant identities from installed RuleModules. */
+  installedProgressionGrantIds?:string[];
   epicBoonFeatIds?:string[];
   epicBoonFeatSources?:Record<string,string>;
   weaponMasteryIds?:string[];

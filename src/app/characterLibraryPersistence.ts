@@ -51,6 +51,7 @@ function progressionSelections(sheet:CharacterSheet):CharacterProgressionSelecti
     mysticArcanumSources:sheet.mysticArcanumSources,
     persistentFeatureOptionIds:sheet.persistentFeatureOptionIds,
     persistentFeatureOptionSources:sheet.persistentFeatureOptionSources,
+    installedProgressionGrantIds:sheet.installedProgressionGrantIds,
     epicBoonFeatIds:sheet.epicBoonFeatIds,
     epicBoonFeatSources:sheet.epicBoonFeatSources,
     weaponMasteryIds:sheet.weaponMasteryIds,
@@ -238,6 +239,7 @@ function applyProgressionSource(sheet:CharacterSheet,progression:CharacterProgre
   sheet.mysticArcanumSources=progression.mysticArcanumSources ? cp(progression.mysticArcanumSources) : undefined;
   sheet.persistentFeatureOptionIds=progression.persistentFeatureOptionIds ? cp(progression.persistentFeatureOptionIds) : undefined;
   sheet.persistentFeatureOptionSources=progression.persistentFeatureOptionSources ? cp(progression.persistentFeatureOptionSources) : undefined;
+  sheet.installedProgressionGrantIds=progression.installedProgressionGrantIds ? cp(progression.installedProgressionGrantIds) : undefined;
   sheet.epicBoonFeatIds=progression.epicBoonFeatIds ? cp(progression.epicBoonFeatIds) : undefined;
   sheet.epicBoonFeatSources=progression.epicBoonFeatSources ? cp(progression.epicBoonFeatSources) : undefined;
   sheet.weaponMasteryIds=progression.weaponMasteryIds ? cp(progression.weaponMasteryIds) : undefined;
