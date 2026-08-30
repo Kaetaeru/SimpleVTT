@@ -1,4 +1,5 @@
 name: C9 Family A Non-Active Profile Integrate 71304
+# retry: derived-effect-inputs
 
 "on":
   push:
