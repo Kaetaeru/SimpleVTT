@@ -8,6 +8,7 @@ on:
       - "src/app/commonPlayFormProjectionAdapter.ts"
       - "src/app/offlineRuntimeAdapters.ts"
       - "tests/ui/commonPlayFormProjectionProduction.test.ts"
+      - "tests/ui/connectedFormArtifactProjectionProduction.test.ts"
       - ".github/workflows/c9-family-w-form-projection.yml"
 
 jobs:
@@ -23,6 +24,9 @@ jobs:
       - name: Generate content dependencies
         run: npm run generate:content
       - name: Verify generic form projection
-        run: npx tsx --test tests/ui/commonPlayFormProjectionProduction.test.ts
+        run: >-
+          npx tsx --test
+          tests/ui/commonPlayFormProjectionProduction.test.ts
+          tests/ui/connectedFormArtifactProjectionProduction.test.ts
       - name: Typecheck
         run: npx tsc --noEmit
