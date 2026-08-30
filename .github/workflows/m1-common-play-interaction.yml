@@ -29,6 +29,9 @@ on:
       - "tests/ui/ruleModulePackageImport.test.ts"
       - "tests/ui/installedCommonPlayProductionRuntime.test.ts"
       - "tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts"
+      - "tests/ui/installedCommonPlayActorOwnerInteractionProduction.test.ts"
+      - "tests/ui/c9FamilyQTargetOwnerInteractionProduction.test.ts"
+      - "tests/ui/c9FamilyQTargetOwnerStaleInteractionProduction.test.ts"
       - "tests/ui/sessionStatusEffectEventRuntime.test.ts"
       - "tests/ui/phase09RealAttackTransactionService.test.ts"
       - "tests/ui/fighterActionSurgeRuntimeAdapter.test.ts"
@@ -62,6 +65,9 @@ jobs:
           tests/ui/ruleModulePackageImport.test.ts
           tests/ui/installedCommonPlayProductionRuntime.test.ts
           tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts
+          tests/ui/installedCommonPlayActorOwnerInteractionProduction.test.ts
+          tests/ui/c9FamilyQTargetOwnerInteractionProduction.test.ts
+          tests/ui/c9FamilyQTargetOwnerStaleInteractionProduction.test.ts
           tests/ui/sessionStatusEffectEventRuntime.test.ts
           tests/ui/phase09RealAttackTransactionService.test.ts
           tests/ui/fighterActionSurgeRuntimeAdapter.test.ts
