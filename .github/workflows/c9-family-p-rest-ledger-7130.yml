@@ -1,0 +1,53 @@
+name: C9 Family P Rest Ledger 7130
+on:
+  push:
+    branches: [agent/c9-gate-n-coverage-reconciliation]
+    paths: [.github/workflows/c9-family-p-rest-ledger-7130.yml]
+permissions:
+  contents: write
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - name: Record verified rest semantic evidence
+        shell: python
+        run: |
+          import json
+          from pathlib import Path
+
+          path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
+          data=json.loads(path.read_text())
+          row=next(item for item in data['rows'] if item['family']=='P')
+
+          old='State/rest/expiry/recharge and automatic semantic-event dispatcher composition remain incomplete'
+          new='Rest completion and recharge outcome semantic events are authoritative; state/expiry and automatic semantic-event trigger dispatcher composition remain incomplete'
+          if old in row['currentState']:
+              row['currentState']=row['currentState'].replace(old,new)
+
+          evidence={
+            'implementationEvidence':'commonPlaySemanticEventRuntime.ts derives authoritative rest.short.complete/rest.long.complete events from canonical short-rest/long-rest Resolver results',
+            'productionEvidence':'5866e340e38e01a4a6606a8c5e4488473079b985 test(c9): cover rest completion semantic vocabulary; exact verifier run 33310807820 passed semantic test, tsc --noEmit, and coverage checker',
+            'identityInvarianceEvidence':'commonPlaySemanticEventRuntime.test.ts rest completion vocabulary remains invariant under external source identity and semantic enrichment is idempotent',
+          }
+          for key,value in evidence.items():
+              if value not in row[key]: row[key].append(value)
+
+          path.write_text(json.dumps(data,indent=2)+"\n")
+      - name: Commit ledger evidence and retire verifier
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/rules/v1-mechanism-coverage-ledger.json
+          git rm .github/workflows/c9-family-p-rest-ledger-7130.yml
+          git commit -m "docs(c9): record rest semantic event evidence"
+          for attempt in 1 2 3; do
+            git fetch origin agent/c9-gate-n-coverage-reconciliation
+            git rebase origin/agent/c9-gate-n-coverage-reconciliation || { git rebase --abort || true; exit 1; }
+            if git push origin HEAD:agent/c9-gate-n-coverage-reconciliation; then exit 0; fi
+            sleep 2
+          done
+          exit 1
