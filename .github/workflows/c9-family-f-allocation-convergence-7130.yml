@@ -1,0 +1,36 @@
+name: C9 Family F Allocation Convergence
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-f-allocation-convergence-7130.yml
+      - tests/ui/installedCommonPlayAllocationProductionRuntime.test.ts
+      - src/domain/commonPlayAllocationRuntime.ts
+      - src/domain/commonPlayOperationRuntime.ts
+      - src/app/installedCommonPlayRuntimeAdapter.ts
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run generate:content
+      - name: Verify allocation production and convergence
+        run: >-
+          node --import tsx --test
+          tests/domain/commonPlayAllocationRuntime.test.ts
+          tests/ui/installedCommonPlayAllocationProductionRuntime.test.ts
+          tests/ui/ruleModulePackageImport.test.ts
+      - name: Verify legacy execution boundary
+        run: node scripts/check-legacy-execution-boundary.mjs
+      - name: Typecheck
+        run: npm exec tsc -- --noEmit
