@@ -843,7 +843,7 @@
         "progressionPhase08WeaponMasteryAdapter.ts",
         "weapon rule catalog"
       ],
-      "currentState": "Generic Common Play now supports attack-outcome-conditioned damage through the shared Resolver, proving a Graze-like miss rider without weapon/content identity dispatch. Family K remains incomplete for the remaining mastery compositions and named progression-to-runtime convergence.",
+      "currentState": "All eight 2024 Weapon Mastery shapes are composition-tested from generic Resolver operations. Unknown installed RuleModules prove Graze-like outcome damage and Slow-like source-bound property state through production, complete external identity rename, local runtime restart, connected replay, duplicate replay, reconnect, and Undo. progressionPhase08WeaponMasteryAdapter persists selected weapon IDs and sources for progression but does not dispatch mastery execution by mastery name or content ID.",
       "requiredSemantics": [
         "Cleave",
         "Graze",
@@ -860,21 +860,32 @@
         "extra attack/economy"
       ],
       "transactionDomain": "Progression grant plus Resolver combat semantics",
-      "disposition": "INCOMPLETE",
+      "disposition": "IMPLEMENTED",
       "implementationEvidence": [
-        "commonPlayOperationRuntime.ts damage.apply.when reuses the generic test.outcome ResolutionOperation predicate already used by portable condition/effect operations"
+        "commonPlayWeaponMasteryComposition.test.ts composes Cleave, Graze, Nick, Push, Sap, Slow, Topple, and Vex from generic ResolutionOperation primitives, including once-per-turn Cleave, Nick extra-attack economy, forced Push movement, save-gated Topple, and consumed Sap/Vex effects",
+        "commonPlayOperationRuntime.ts exposes identity-agnostic Common Play attack outcome damage and property modification primitives used by installed external mastery-shaped definitions",
+        "progressionPhase08WeaponMasteryAdapter.ts persists generic selected weaponMasteryIds and weaponMasterySources only; it contains no mastery-name/content-ID execution dispatch"
       ],
       "productionEvidence": [
-        "c9FamilyKGrazeConditionalDamageProduction.test.ts unknown installed Common Play applies a Graze-like miss-only damage rider, skips it on hit, and reverses through Undo"
+        "commonPlayWeaponMasteryComposition.test.ts verifies all eight 2024 mastery semantic shapes through the shared Resolver operation model without mastery-name dispatch",
+        "c9FamilyKGrazeConditionalDamageProduction.test.ts unknown installed Common Play applies a Graze-like miss-only damage rider, skips it on hit, and reverses through Undo",
+        "c9FamilyKOutcomeDamageProduction.test.ts proves the Graze-like rider emits authoritative damage/HP state changes and reverses through event-native Undo",
+        "c9FamilyKConnectedMasteryShapes.test.ts proves one unknown installed RuleModule composes distinct Graze-like immediate damage and Slow-like durable movement-property mastery shapes through production runtime",
+        "C9 Family K Portable Mastery run 33316242377 passed full eight-mastery composition, all retained Family K production proofs, connected/restart acceptance, progression persistence, and TypeScript production build at bf9bb51644e09cd6f6214aa9e8d4a9e214c3d72f"
       ],
       "identityInvarianceEvidence": [
-        "c9FamilyKGrazeConditionalDamageProduction.test.ts repeats the Graze-like miss rider after complete external module/content/mechanic identity rename"
+        "c9FamilyKGrazeConditionalDamageProduction.test.ts repeats the Graze-like miss rider after complete external module/content/mechanic identity rename",
+        "c9FamilyKOutcomeDamageProduction.test.ts preserves authoritative outcome-conditioned damage after complete external identity rename",
+        "c9FamilyKConnectedMasteryShapes.test.ts repeats both Graze-like and Slow-like mastery shapes after completely unrelated module/content/mechanic identity rename"
       ],
-      "connectedEvidenceIfRelevant": [],
-      "persistenceEvidenceIfRelevant": [],
-      "remainingNamedSeams": [
-        "progressionPhase08WeaponMasteryAdapter"
+      "connectedEvidenceIfRelevant": [
+        "c9FamilyKConnectedMasteryShapes.test.ts Host-authoritative Graze-like damage and Slow-like state converge through client replay, duplicate suppression, reconnect replay, and Undo without mastery-name routing"
       ],
+      "persistenceEvidenceIfRelevant": [
+        "c9FamilyKConnectedMasteryShapes.test.ts Slow-like source-bound mastery state survives a fresh adapter through MemoryTurnRuntimeStateStore and reconnect replay after Undo does not resurrect it",
+        "progressionPhase08WeaponMasteryRuntime.test.ts commits selected weaponMasteryIds and weaponMasterySources into the authoritative Character progression revision"
+      ],
+      "remainingNamedSeams": [],
       "connectedRelevant": true,
       "persistenceRelevant": true
     },
