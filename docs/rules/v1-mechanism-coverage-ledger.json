@@ -659,7 +659,7 @@
         "realAttackTransactionService.ts",
         "unarmedControlRuntimeAdapter.ts"
       ],
-      "currentState": "Generic attack/control pieces exist; portable Common Play convergence incomplete",
+      "currentState": "Unknown installed Common Play attack-roll plus target damage now has production evidence through a projected arbitrary-ID Actor action with Action payment, damage commit, Host/Client convergence, and Undo. Family J remains incomplete for full weapon/Unarmed Strike, Opportunity Attack, grapple/shove/escape, reach/range/cover, Extra Attack/replacement, and ammunition/loading composition.",
       "requiredSemantics": [
         "weapon attack",
         "Unarmed Strike",
@@ -677,14 +677,24 @@
       ],
       "transactionDomain": "Resolver attack transaction",
       "disposition": "INCOMPLETE",
-      "implementationEvidence": [],
-      "productionEvidence": [],
-      "identityInvarianceEvidence": [],
-      "connectedEvidenceIfRelevant": [],
+      "implementationEvidence": [
+        "commonPlayOperationRuntime.ts structurally composes attack-roll d20 tests with target damage.apply through the shared Resolver operation path"
+      ],
+      "productionEvidence": [
+        "installedCommonPlayLoweredFamiliesProduction.test.ts#summoned Actor projects and executes its portable Common Play action with economy and Undo"
+      ],
+      "identityInvarianceEvidence": [
+        "installedCommonPlayLoweredFamiliesProduction.test.ts executes the summoned attack from arbitrary previously-unknown module/content/mechanic/action identities rather than a registered attack content ID"
+      ],
+      "connectedEvidenceIfRelevant": [
+        "installedCommonPlayLoweredFamiliesProduction.test.ts#summoned Actor action and Undo converge through Host-authoritative connected events"
+      ],
       "persistenceEvidenceIfRelevant": [],
       "remainingNamedSeams": [
-        "Rage attack rider",
-        "named attack/action projection"
+        "full generic weapon and Unarmed Strike action projection is not yet proven across source-owned equipment/stat definitions",
+        "Opportunity Attack and grapple/shove/escape control composition remain outside the portable Common Play attack acceptance",
+        "reach, long range, cover, multiattack/Extra Attack/replacement, and ammunition/loading constraints remain incomplete",
+        "Rage attack rider and other named attack/action projection remain migration debt"
       ],
       "connectedRelevant": true,
       "persistenceRelevant": true
