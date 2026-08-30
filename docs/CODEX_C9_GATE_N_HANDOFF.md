@@ -142,31 +142,33 @@ When work stops before Gate N is finished, update this document with:
 - the first unresolved blocker;
 - one `Next Exact Action` that another Codex run can execute without repeating completed work.
 
-## Current checkpoint — 2026-08-31
+## Current checkpoint — 2026-08-31, Family Z in progress
 
-- Verified code/ledger HEAD before this handoff commit: `857b8c1e795513e73789f5b6bae397a07809646b` (tree `8330d05f88a006a6bbb9fcfc8f924cb99330d862`).
-- Branch: `agent/codex-c9-gate-n-finalization` (local branch is seven commits ahead of remote `8dbc130f2e6f138b3d3ab758413373a60c50dd6e`).
-- Families N, X, and Y are `IMPLEMENTED` on this lineage.
-- Family Y production Character UI now routes completed-Short-Rest attunement through `resolveCommonPlayAttunement`; prerequisite, maximum, exclusive owner, benefit activation, cursed release, rule-driven loss, charges/destruction, source policy, durable runtime, restart, and Host reconstruction evidence pass under renamed item instance identities.
-- Current ledger: 36 total, 26 `IMPLEMENTED`, 10 `INCOMPLETE`.
-- Current first incomplete family: Z `spellcasting-meta`.
-- Worktree was clean at `857b8c1e` before this documentation update.
+- Code HEAD before this handoff update: `5d2f4977ac195187f585cfdc8334d34f76c67429` (tree `60ff12d9300fab3c342c1f93ac8ec020bd8a6253`).
+- Branch: `agent/codex-c9-gate-n-finalization`, eleven commits ahead of remote `8dbc130f2e6f138b3d3ab758413373a60c50dd6e`.
+- Families N, X, and Y remain `IMPLEMENTED`; Family Z remains `INCOMPLETE` and its ledger row was not promoted.
+- Family Z completed coherent slices:
+  - `a4433344`: generate one normalized 339-definition spell execution catalog and make all four app runtime paths read it instead of calling `spellMechanicById`;
+  - `a281e4c2`: generate typed V/S/M requirements, including multiple/per-target costly consumption, use explicit focus/pouch/item facts in production, consume through the revisioned Common Play inventory transaction, and persist the new item semantics through Character source/session reconstruction;
+  - `5d2f4977`: normalize `castingDurationSeconds` and `ritual`, and make maintained casting interruption explicit in the generic activity primitive.
+- Current ledger: 36 total, 26 `IMPLEMENTED`, 10 `INCOMPLETE`; first incomplete remains Z.
+- Worktree was clean at `5d2f4977` before this handoff update.
 
-### Validation completed on the checkpoint
+### Validation completed
 
-- Family Y focused domain/production/connected/persistence suite: PASS (18/18).
-- `npm run build`: PASS on `857b8c1e` (content generation, typecheck, repository build suites, Vite production build).
+- Normalized spell catalog/identity/component focused suite: PASS (6/6 at `5d2f4977`).
+- Generic component, spell kernel, production fresh-character, Character persistence/reconstruction focused suites: PASS.
+- `npm run build`: PASS after the component/inventory production slice; the subsequent `5d2f4977` data/primitive-only slice passed focused tests and `tsc --noEmit` but has not repeated the full build.
 - `node scripts/check-v1-mechanism-coverage.mjs`: PASS, 26 implemented / 10 incomplete.
 - `node scripts/check-legacy-execution-boundary.mjs`: PASS, 84 classified imports / 18 guarded named adapter paths / 0 unclear.
 - `git diff --check`: PASS.
-- `node scripts/check-v1-mechanism-coverage.mjs --gate-n`: expected FAIL only for Z, AA, AC, AD, AE, AF, AG, AH, AI, AJ.
 
 ### First unresolved blocker
 
-Family Z has typed component and casting-activity domain primitives, but production `productionSpellRuntimeAdapter.ts` still supplies `componentsSatisfied:true`, uses `spellMechanicById` as its legacy definition source, and does not join consumed material inventory into the authoritative spell transaction. The older `phase09AuthoritativeSpellcastingAdapter.ts` and `spellcastingRuntimeAdapter.ts` remain compatibility layers; do not add another spell router.
+Family Z long casts and Rituals are now normalized but production still resolves them immediately. The existing `CommonPlayCastingActivity` must be represented through authoritative Resolver effect/concentration/economy operations so interruption, completion, connected projection, persistence/restart, and Undo share one lifecycle. `componentsSatisfied` remains only in older compatibility adapters/tests; production `productionSpellRuntimeAdapter.ts` now uses typed component context.
 
 ### Next Exact Action
 
-Consolidate Family Z at the existing `productionSpellRuntimeAdapter.ts` boundary: feed typed `SpellComponentContext` into `resolveSpellCast` from structural Character/inventory facts, make consumed material payment part of the same authoritative durable transaction, and add one unknown/renamed declarative spell-meta production regression covering rejection, consumption, restart, connected replay/retry/reconnect, and Undo. Do not preserve the `componentsSatisfied` compatibility input or add spell/action-ID dispatch.
+Connect normalized `castingDurationSeconds` to `productionSpellRuntimeAdapter.ts` by representing the active casting process as a generic Resolver effect with concentration and action-economy authority. Repeated maintenance must advance generically, interruption must remove it, and final completion must atomically remove the process and execute the existing compiled spell operations. Add renamed-identity production plus Undo/restart evidence before changing the Family Z ledger.
 
-Push note: local GitHub push from this Codex host is blocked because no non-interactive GitHub credential is available; `git -c http.sslBackend=openssl push origin agent/codex-c9-gate-n-finalization` reaches GitHub but cannot read a username. No self-publishing workflow was added.
+Push note: local GitHub push from this Codex host is blocked because no non-interactive GitHub credential is available; no self-publishing workflow was added.
