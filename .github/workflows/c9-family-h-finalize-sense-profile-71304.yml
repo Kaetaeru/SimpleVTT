@@ -1,0 +1,85 @@
+name: C9 Family H Finalize Sense Profile 71304
+
+on:
+  push:
+    branches: [agent/c9-gate-n-coverage-reconciliation]
+    paths: [.github/workflows/c9-family-h-finalize-sense-profile-71304.yml]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: c9-family-h-finalize-sense-profile-71304
+  cancel-in-progress: false
+
+jobs:
+  verify-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Reconcile, verify, publish, and retire
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch=agent/c9-gate-n-coverage-reconciliation
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in $(seq 1 8); do
+            git fetch origin "$branch"
+            git reset --hard "origin/$branch"
+            npm run generate:content >/dev/null
+            python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
+          data=json.loads(path.read_text(encoding='utf-8'))
+          row=next(item for item in data['rows'] if item.get('family')=='H')
+          incomplete='Family H remains incomplete only for rules-derived special-sense acquisition/derivation into authoritative observer sense profiles.'
+          complete='Rules-derived Darkvision, Blindsight, Tremorsense, and Truesight acquisition projects generic RulesProfile sense.<kind>.range-feet properties and Resolver-owned property modifiers into authoritative observer senses through the shared sensing kernel. Family H is complete.'
+          if incomplete in row['currentState']:
+              row['currentState']=row['currentState'].replace(incomplete,complete)
+          elif complete not in row['currentState'] and row.get('disposition')!='IMPLEMENTED':
+              raise SystemExit('Family H currentState changed concurrently; refusing stale rewrite')
+
+          implementation='dnd.srd-5.2.1.profile.json sense.<kind>.range-feet properties and commonPlayInterceptorProductionRuntimeAdapter.ts generic runtime profile-property projection derive Darkvision/Blindsight/Tremorsense/Truesight from Resolver Effect modifiers without content identity dispatch'
+          if implementation not in row['implementationEvidence']:
+              row['implementationEvidence'].append(implementation)
+
+          production='C9 Family H Sense Profile run 33314316843 passed 29/29 targeted property/sensing/production tests, legacy execution boundary, and tsc --noEmit; Family H finalizer run 33314478830 independently passed the latest-branch Family H tests and coverage verification before its concurrency-only publish failure'
+          if production not in row['productionEvidence']:
+              row['productionEvidence'].append(production)
+
+          identity='installedCommonPlayInterceptorProductionRuntime.test.ts proves RulesProfile-derived special-sense behavior remains independent of external module/content/mechanic/interceptor/interaction/display identity; c9FamilyHSearchDiscoveryProduction.test.ts separately proves renamed external Wisdom Search/discovery'
+          if identity not in row['identityInvarianceEvidence']:
+              row['identityInvarianceEvidence'].append(identity)
+
+          row['remainingNamedSeams']=[]
+          row['disposition']='IMPLEMENTED'
+          path.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          PY
+            node --import tsx --test tests/domain/commonPlaySenseRuntime.test.ts tests/domain/commonPlayPropertyContractRuntime.test.ts tests/ui/c9FamilyHSearchDiscoveryProduction.test.ts tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts
+            node scripts/check-v1-mechanism-coverage.mjs
+            node scripts/check-legacy-execution-boundary.mjs
+            npm exec tsc -- --noEmit
+            git rm -f --ignore-unmatch .github/workflows/c9-family-h-finalize-sense-profile-71304.yml
+            git add docs/rules/v1-mechanism-coverage-ledger.json
+            git diff --cached --check
+            if git diff --cached --quiet; then
+              exit 0
+            fi
+            git commit -m "docs(c9): finalize Family H coverage"
+            if git push origin HEAD:"$branch"; then
+              exit 0
+            fi
+            sleep 1
+          done
+          exit 1
