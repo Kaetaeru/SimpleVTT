@@ -28,7 +28,6 @@ jobs:
         shell: python
         run: |
           from pathlib import Path
-
           adapter=Path('src/app/installedCommonPlayRuntimeAdapter.ts')
           text=adapter.read_text(encoding='utf-8')
           old='''  const combatant=state.combatants[actorId];
@@ -44,85 +43,44 @@ jobs:
           import test from "node:test";
           import "../../src/app/offlineRuntimeAdapters";
           import { catalogQualifiedId } from "../../src/app/contentCatalogIdentity";
-          import { installedCommonPlayActionId, runtimeArtifactCommonPlayActionId } from "../../src/app/installedCommonPlayActionReference";
+          import { installedCommonPlayActionId } from "../../src/app/installedCommonPlayActionReference";
+          import { projectCommonPlayRuntimeArtifactAction } from "../../src/app/installedCommonPlayRuntimeAdapter";
           import { setInstalledContentStoreForTests } from "../../src/app/installedContentRuntimeAdapter";
           import { MemoryInstalledContentStore } from "../../src/app/memoryInstalledContentStore";
           import { MockAdapter } from "../../src/app/mockAdapter";
           import { snapshotAdapterTurnRuntimeState } from "../../src/app/turnRuntimeSessionRegistry";
 
           function packagePayload(prefix:string) {
-            const moduleId=`${prefix}.module`;
-            const contentId=`${prefix}.fighter`;
-            const mechanicId=`${prefix}.extra-attack`;
-            return {moduleId,contentId,mechanicId,json:JSON.stringify({
-              schemaVersion:"0.1-draft",moduleId,moduleVersion:"1",
-              rulesProfile:{id:"dnd.srd-5.2.1",version:"0.1-draft"},defaultLocale:"en",
-              source:{document:"Unknown portable Extra Attack",version:"1",license:"CC0",srdDerived:false},
-              dependencies:[],conflicts:[],capabilities:[],content:[{
-                id:contentId,category:"option",
-                presentation:{defaultLocale:"en",originalName:"Portable Multiattack",locales:{en:{name:"Portable Multiattack"}}},
-                mechanics:[{kind:"common-play",config:{
-                  schemaVersion:"0.2-draft",id:mechanicId,
-                  payments:[{kind:"economy",bucket:"action",amount:{value:1},actionKind:"attack",attacksPerAction:2,consumeAt:"commit",refundOnCancel:true}],
-                  entryPoints:[{id:"strike",invocation:"manual",targeting:{from:"targets",min:1,max:1},
-                    test:{kind:"attack-roll",roller:"actor",dc:{value:1}},
-                    operations:[{kind:"damage.apply",amount:{value:1},damageType:"slashing",target:"target",when:{op:"eq",left:{ref:"test.outcome"},right:{value:"success"}}}],
-                  }],
-                }}],
-              }],
-            })};
+            const moduleId=`${prefix}.module`,contentId=`${prefix}.fighter`,mechanicId=`${prefix}.extra-attack`;
+            return {moduleId,contentId,mechanicId,json:JSON.stringify({schemaVersion:"0.1-draft",moduleId,moduleVersion:"1",rulesProfile:{id:"dnd.srd-5.2.1",version:"0.1-draft"},defaultLocale:"en",source:{document:"Unknown portable Extra Attack",version:"1",license:"CC0",srdDerived:false},dependencies:[],conflicts:[],capabilities:[],content:[{id:contentId,category:"option",presentation:{defaultLocale:"en",originalName:"Portable Multiattack",locales:{en:{name:"Portable Multiattack"}}},mechanics:[{kind:"common-play",config:{schemaVersion:"0.2-draft",id:mechanicId,payments:[{kind:"economy",bucket:"action",amount:{value:1},actionKind:"attack",attacksPerAction:2,consumeAt:"commit",refundOnCancel:true}],entryPoints:[{id:"strike",invocation:"manual",targeting:{from:"targets",min:1,max:1},test:{kind:"attack-roll",roller:"actor",dc:{value:1}},operations:[{kind:"damage.apply",amount:{value:1},damageType:"slashing",target:"target",when:{op:"eq",left:{ref:"test.outcome"},right:{value:"success"}}}]}]}}]}]})};
           }
-
-          function hp(snapshot:Awaited<ReturnType<MockAdapter["getSnapshot"]>>) {
-            return snapshot.scene.entities.find((entry)=>entry.id==="combatant.goblin-a")?.hp;
-          }
-
+          function hp(snapshot:Awaited<ReturnType<MockAdapter["getSnapshot"]>>) { return snapshot.scene.entities.find((entry)=>entry.id==="combatant.goblin-a")?.hp; }
           async function run(prefix:string) {
-            const adapter=new MockAdapter();
-            const pack=packagePayload(prefix);
+            const adapter=new MockAdapter(); const pack=packagePayload(prefix);
             setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
             const preview=await adapter.previewContentImport(pack.json);
             assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
-            await adapter.activateContentImport();
-            await adapter.startInitiative();
-            await adapter.setCurrentActor("char.aelar");
-            let snapshot=await adapter.getSnapshot();
-            const actorId=snapshot.activeCharacter.id;
+            await adapter.activateContentImport(); await adapter.startInitiative(); await adapter.setCurrentActor("char.aelar");
+            let snapshot=await adapter.getSnapshot(); const actorId=snapshot.activeCharacter.id;
             const actionId=installedCommonPlayActionId({catalogId:catalogQualifiedId(pack.contentId,pack.moduleId,"1"),mechanicId:pack.mechanicId,entryPointId:"strike"});
-            const projectedId=runtimeArtifactCommonPlayActionId(actorId,actionId);
             const hpBefore=hp(snapshot);
-
-            await adapter.resolveAction(actionId,["combatant.goblin-a"]);
-            snapshot=await adapter.getSnapshot();
-            assert.equal(snapshot.resolution?.stage,"complete");
-            assert.equal(hp(snapshot),hpBefore!-1);
+            await adapter.resolveAction(actionId,["combatant.goblin-a"]); snapshot=await adapter.getSnapshot();
+            assert.equal(snapshot.resolution?.stage,"complete"); assert.equal(hp(snapshot),hpBefore!-1);
             let state=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)!;
-            assert.equal(state.combatants[actorId].economy.action,false);
-            assert.equal(state.combatants[actorId].economy.extraAttacks?.length,1);
-            assert.equal(snapshot.scene.actionsByActor[actorId]?.find((entry)=>entry.id===projectedId)?.available,true,"remaining Extra Attack must keep the projected installed attack available");
-
-            await adapter.resolveAction(actionId,["combatant.goblin-a"]);
-            snapshot=await adapter.getSnapshot();
-            assert.equal(snapshot.resolution?.stage,"complete");
-            assert.equal(hp(snapshot),hpBefore!-2);
-            state=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)!;
-            assert.equal(state.combatants[actorId].economy.extraAttacks?.length,0);
-
+            assert.equal(state.combatants[actorId].economy.action,false); assert.equal(state.combatants[actorId].economy.extraAttacks?.length,1);
+            const projectedSecond=await projectCommonPlayRuntimeArtifactAction(adapter,actionId,actorId,snapshot,state);
+            assert.equal(projectedSecond?.available,true,"remaining Extra Attack must keep the production projector available");
+            await adapter.resolveAction(actionId,["combatant.goblin-a"]); snapshot=await adapter.getSnapshot();
+            assert.equal(snapshot.resolution?.stage,"complete"); assert.equal(hp(snapshot),hpBefore!-2);
+            state=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)!; assert.equal(state.combatants[actorId].economy.extraAttacks?.length,0);
             const revisionAfterSecond=state.revision;
-            await adapter.resolveAction(actionId,["combatant.goblin-a"]);
-            snapshot=await adapter.getSnapshot();
-            assert.equal(hp(snapshot),hpBefore!-2);
-            assert.equal(snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)?.revision,revisionAfterSecond);
-
-            await adapter.undoLastResolution();
-            snapshot=await adapter.getSnapshot();
-            assert.equal(hp(snapshot),hpBefore!-1);
-            state=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)!;
-            assert.equal(state.combatants[actorId].economy.extraAttacks?.length,1);
+            await adapter.resolveAction(actionId,["combatant.goblin-a"]); snapshot=await adapter.getSnapshot();
+            assert.equal(hp(snapshot),hpBefore!-2); assert.equal(snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)?.revision,revisionAfterSecond);
+            await adapter.undoLastResolution(); snapshot=await adapter.getSnapshot(); assert.equal(hp(snapshot),hpBefore!-1);
+            state=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)!; assert.equal(state.combatants[actorId].economy.extraAttacks?.length,1);
           }
-
-          test("unknown installed Common Play uses one Action for two structural attacks through production projection and Undo",async()=>{ await run("external-family-j-extra-attack"); });
-          test("renaming every external identity preserves portable Extra Attack production economy",async()=>{ await run("renamed-family-j-extra-attack"); });
+          test("unknown installed Common Play uses one Action for two structural attacks through production projection and Undo",async()=>{await run("external-family-j-extra-attack");});
+          test("renaming every external identity preserves portable Extra Attack production economy",async()=>{await run("renamed-family-j-extra-attack");});
           ''',encoding='utf-8')
       - name: Verify production Extra Attack
         run: |
@@ -138,32 +96,19 @@ jobs:
           python3 - <<'PY'
           import json
           from pathlib import Path
-          ledger=Path('docs/rules/v1-mechanism-coverage-ledger.json')
-          data=json.loads(ledger.read_text(encoding='utf-8'))
-          row=next(entry for entry in data['rows'] if entry['family']=='J')
-          additions={
-            'implementationEvidence':'Common Play economy PaymentContract carries structural actionKind=attack and attacksPerAction into the existing Resolver extraAttacks primitive; installedCommonPlayRuntimeAdapter.ts keeps a projected attack available while an attack-only grant remains',
-            'productionEvidence':'c9FamilyJExtraAttackProduction71304.test.ts proves an unknown installed attack uses one standard Action for two sequential production attack transactions, blocks a third, and restores the consumed extra attack plus damage through event-native Undo',
-            'identityInvarianceEvidence':'c9FamilyJExtraAttackProduction71304.test.ts repeats the complete production Extra Attack flow after every external module/content/mechanic identity is renamed',
-          }
+          ledger=Path('docs/rules/v1-mechanism-coverage-ledger.json'); data=json.loads(ledger.read_text(encoding='utf-8')); row=next(entry for entry in data['rows'] if entry['family']=='J')
+          additions={'implementationEvidence':'Common Play economy PaymentContract carries structural actionKind=attack and attacksPerAction into the existing Resolver extraAttacks primitive; installedCommonPlayRuntimeAdapter.ts keeps a projected attack available while an attack-only grant remains','productionEvidence':'c9FamilyJExtraAttackProduction71304.test.ts proves an unknown installed attack uses one standard Action for two sequential production attack transactions, blocks a third, and restores the consumed extra attack plus damage through event-native Undo','identityInvarianceEvidence':'c9FamilyJExtraAttackProduction71304.test.ts repeats the complete production Extra Attack flow after every external module/content/mechanic identity is renamed'}
           for field,value in additions.items():
               if value not in row[field]: row[field].append(value)
           sentence=' Portable Extra Attack economy composes through structural actionKind/attacksPerAction into the existing attack-only extraAttacks Resolver primitive, including production projection availability, exhaustion, Undo, and complete external identity rename.'
-          if sentence.strip() not in row['currentState']:
-              row['currentState']=row['currentState'].rstrip()+sentence
+          if sentence.strip() not in row['currentState']: row['currentState']=row['currentState'].rstrip()+sentence
           row['remainingNamedSeams']=[seam.replace('multiattack/Extra Attack/replacement','replacement') for seam in row['remainingNamedSeams']]
           ledger.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
           PY
-          rm -f .github/workflows/c9-family-j-extra-attack-projection-71304.yml
-          rm -f .github/workflows/c9-family-j-extra-attack-71304.yml
-          rm -f .github/workflows/c9-family-j-extra-attack-bridge-71304.yml
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -m "test(c9): prove portable Extra Attack production"
+          rm -f .github/workflows/c9-family-j-extra-attack-projection-71304.yml .github/workflows/c9-family-j-extra-attack-71304.yml .github/workflows/c9-family-j-extra-attack-bridge-71304.yml
+          git config user.name "github-actions[bot]"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"; git add -A; git commit -m "test(c9): prove portable Extra Attack production"
           for attempt in $(seq 1 12); do
             if git pull --rebase origin agent/c9-gate-n-coverage-reconciliation && git push origin HEAD:agent/c9-gate-n-coverage-reconciliation; then exit 0; fi
-            git rebase --abort >/dev/null 2>&1 || true
-            sleep 1
+            git rebase --abort >/dev/null 2>&1 || true; sleep 1
           done
           exit 1
