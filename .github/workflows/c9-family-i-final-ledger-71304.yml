@@ -1,0 +1,58 @@
+name: C9 Family I Final Ledger 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-i-final-ledger-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile-and-clean:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Publish verified Family I final state
+        run: |
+          set -euo pipefail
+          branch=agent/c9-gate-n-coverage-reconciliation
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in $(seq 1 12); do
+            git fetch origin "$branch"
+            git reset --hard "origin/$branch"
+            python3 - <<'PY'
+          import json
+          from pathlib import Path
+          path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
+          ledger=json.loads(path.read_text())
+          row=next(row for row in ledger['rows'] if row['family']=='I')
+          evidence='C9 Family I Final Verifier 71304 run 33315323863 passed unknown portable movement grant, generic movement production, rules-derived movement cost, Prone standing, legacy execution boundary, V1 coverage checker, and tsc --noEmit at 0644025b00862da8f6cf79934a656eb906a7dcd2'
+          identity='c9FamilyIMovementGrantProduction.test.ts proves arbitrary external and fully renamed module/content/mechanic identities grant movement.fly through property.modify and consume it through movement.relocate without named movement dispatch'
+          implementation='Common Play property.modify supplies portable movement.<type> grants to the shared effect-aware RulesProfile property resolver; commonPlayMovementRuntime.ts consumes those structural movement properties for relocation without content identity dispatch'
+          for field,value in [('implementationEvidence',implementation),('productionEvidence',evidence),('identityInvarianceEvidence',identity)]:
+              if value not in row[field]: row[field].append(value)
+          row['currentState']='Generic movement.relocate and movement.stand cover walk, climb, swim, fly, crawl, jump, push, pull, teleport, no-provoke movement, zero-speed rejection, rules-derived cost composition, drag/carry, and Prone standing. Portable property.modify supplies identity-independent alternate-speed grants such as movement.fly, and unknown installed Common Play proves grant -> production movement -> Undo plus full identity rename invariance. Family I has no remaining Gate N movement execution seam.'
+          row['remainingNamedSeams']=[]
+          row['disposition']='IMPLEMENTED'
+          path.write_text(json.dumps(ledger,ensure_ascii=False,indent=2)+'\n')
+          PY
+            rm -f .github/workflows/c9-family-i-final-ledger-71304.yml
+            node scripts/check-v1-mechanism-coverage.mjs
+            git add docs/rules/v1-mechanism-coverage-ledger.json .github/workflows/c9-family-i-final-ledger-71304.yml
+            if git diff --cached --quiet; then exit 0; fi
+            git commit -m "docs(c9): close Family I movement coverage"
+            if git push origin HEAD:"$branch"; then exit 0; fi
+            sleep 1
+          done
+          exit 1
