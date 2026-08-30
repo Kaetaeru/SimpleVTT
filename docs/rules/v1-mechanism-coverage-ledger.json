@@ -688,7 +688,7 @@
         "commonPlayMovementRuntime.test.ts",
         "resolutionMovementOps.ts"
       ],
-      "currentState": "Family I is complete through canonical movement.relocate and generic RulesProfile-derived movement constraints. Unknown installed and fully renamed external Common Play production-executes walk, climb, swim, fly, crawl, jump, Difficult-Terrain-style and drag/carry cost multiplication, alternate-speed bounds and portable movement grants, stand from Prone, push/pull/teleport, explicit no-provoke movement, zero-speed rejection, connected replay/reconnect, and event-native Undo without content identity dispatch.",
+      "currentState": "Generic movement.relocate, RulesProfile-derived movement constraints, and unknown/renamed portable movement grants are production-proven, but Family I remains incomplete while monkOpenHandFleetStepRuntimeAdapter.ts is installed in canonical offline production and selects Fleet Step execution from named action/class/subclass/source identities.",
       "requiredSemantics": [
         "walk",
         "climb",
@@ -708,7 +708,7 @@
         "zero speed"
       ],
       "transactionDomain": "Session Resolver movement with spatial/manual authority",
-      "disposition": "IMPLEMENTED",
+      "disposition": "INCOMPLETE",
       "implementationEvidence": [
         "commonPlayMovementRuntime.ts",
         "commonPlayOperationRuntime.ts movement.relocate lowering",
@@ -747,7 +747,9 @@
         "installedCommonPlayLoweredFamiliesProduction.test.ts unknown stored movement converges through Host replay, duplicate handling, Undo, and reconnect"
       ],
       "persistenceEvidenceIfRelevant": [],
-      "remainingNamedSeams": [],
+      "remainingNamedSeams": [
+        "monkOpenHandFleetStepRuntimeAdapter.ts named Fleet Step action/class/subclass/source dispatch remains in canonical offline production composition"
+      ],
       "connectedRelevant": true,
       "persistenceRelevant": false
     },
