@@ -1,5 +1,6 @@
 from pathlib import Path
 import json
+import subprocess
 
 
 def replace_one(path: Path, old: str, new: str, label: str) -> None:
@@ -145,6 +146,7 @@ contract_text = contract_test.read_text()
 old_regex = "/primary.damage supports subtract-die only/"
 assert contract_text.count(old_regex) == 2
 contract_test.write_text(contract_text.replace(old_regex, "/primary.damage supports subtract-die or multiply only/"))
+subprocess.run(["git", "add", str(contract_test)], check=True)
 
 Path("tests/domain/c9FamilyPDamageMultiplier.test.ts").write_text('''import assert from "node:assert/strict";
 import test from "node:test";
