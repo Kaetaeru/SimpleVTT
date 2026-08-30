@@ -176,10 +176,13 @@ export type CommonPlayOperation=
   |CommonPlayEffectRemove
   |CommonPlayRollModify;
 
+type CommonPlayD20ModifierProperty=string|{choose:"highest";from:string[]};
+type CommonPlayD20Ability="str"|"dex"|"con"|"int"|"wis"|"cha";
+
 export interface CommonPlayD20TestDefinition {
   kind:D20TestFamily;
   roller:"actor"|"target";
-  property?:string;
+  property?:CommonPlayD20ModifierProperty;
   dc:LiteralNumberExpression;
   perTarget?:false;
 }
@@ -206,6 +209,7 @@ export interface CommonPlayOperationExecutionInput {
   d20?:{
     faces:number[];
     targetId?:string;
+    ability?:CommonPlayD20Ability;
     modifierContributions?:ModifierContribution[];
     rollStateContributions?:RollStateContribution[];
     modifierDiceFaces?:Record<number,number[]>;
@@ -653,12 +657,24 @@ function parseOperation(value:unknown,label:string):CommonPlayOperation {
   throw new DomainEvaluationError(`unsupported Common Play operation: ${String(operation.kind)}`);
 }
 
+function parseD20ModifierProperty(value:unknown,label:string):CommonPlayD20ModifierProperty|undefined {
+  if(value===undefined) return undefined;
+  if(typeof value==="string") return nonEmptyString(value,label);
+  const choice=object(value,label);
+  supportedKeys(choice,new Set(["choose","from"]),label);
+  if(choice.choose!=="highest") throw new DomainEvaluationError(`${label}.choose must be highest`);
+  if(!Array.isArray(choice.from)||choice.from.length<2) throw new DomainEvaluationError(`${label}.from requires at least two property candidates`);
+  const from=choice.from.map((candidate,index)=>nonEmptyString(candidate,`${label}.from[${index}]`));
+  if(new Set(from).size!==from.length) throw new DomainEvaluationError(`${label}.from must not contain duplicate property candidates`);
+  return {choose:"highest",from};
+}
+
 function parseD20Test(value:unknown,label:string):CommonPlayD20TestDefinition {
   const definition=object(value,label);
   supportedKeys(definition,D20_TEST_KEYS,label);
   if(definition.kind!=="ability-check"&&definition.kind!=="saving-throw"&&definition.kind!=="attack-roll") throw new DomainEvaluationError(`${label}.kind is unsupported`);
   if(definition.roller!=="actor"&&definition.roller!=="target") throw new DomainEvaluationError(`${label}.roller must be actor or target for portable Common Play d20`);
-  const property=definition.property===undefined?undefined:nonEmptyString(definition.property,`${label}.property`);
+  const property=parseD20ModifierProperty(definition.property,`${label}.property`);
   if(definition.roller==="target"&&!property) throw new DomainEvaluationError(`${label}.property is required for a target-rolled portable Common Play d20 test`);
   if(definition.perTarget!==undefined&&definition.perTarget!==false) throw new DomainEvaluationError(`${label}.perTarget must be false for a single portable Common Play d20 test`);
   return {kind:definition.kind,roller:definition.roller,...(property?{property}:{}),dc:literalExpression(definition.dc,`${label}.dc`),...(definition.perTarget===false?{perTarget:false}:{})};
@@ -727,9 +743,10 @@ function literalInteger(expression:CommonPlayExpression|undefined,label:string) 
   return value;
 }
 
-function commonPlayD20Ability(property:string|undefined):"str"|"dex"|"con"|"int"|"wis"|"cha"|undefined {
-  const match=property?.match(/^(?:save|ability)\.(str|dex|con|int|wis|cha)\.(?:modifier|score)$/);
-  return match?.[1] as "str"|"dex"|"con"|"int"|"wis"|"cha"|undefined;
+function commonPlayD20Ability(property:CommonPlayD20ModifierProperty|undefined):CommonPlayD20Ability|undefined {
+  if(typeof property!=="string") return undefined;
+  const match=property.match(/^(?:save|ability)\.(str|dex|con|int|wis|cha)\.(?:modifier|score)$/);
+  return match?.[1] as CommonPlayD20Ability|undefined;
 }
 
 export function compileCommonPlayPayments(
@@ -850,7 +867,7 @@ export function compileCommonPlayEntryPointOperations(
       if(formula.flat!==0) result.push({source:`${source}:flat`,mode:"add-flat",value:operation.mode==="subtract-die"?-formula.flat:formula.flat});
       return result;
     });
-    const conditionAbility=commonPlayD20Ability(entryPoint.test.property);
+    const conditionAbility=input.d20.ability??commonPlayD20Ability(entryPoint.test.property);
     const selectedTargetFacts=input.targetId
       ? input.targetingTargets?.find((target)=>target.id===input.targetId)
       : undefined;

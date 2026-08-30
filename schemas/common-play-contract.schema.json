@@ -878,8 +878,34 @@
           ]
         },
         "property": {
-          "type": "string",
-          "minLength": 1
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1
+            },
+            {
+              "type": "object",
+              "required": [
+                "choose",
+                "from"
+              ],
+              "properties": {
+                "choose": {
+                  "const": "highest"
+                },
+                "from": {
+                  "type": "array",
+                  "minItems": 2,
+                  "uniqueItems": true,
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
         },
         "dc": {
           "$ref": "#/$defs/expression"
