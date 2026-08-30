@@ -1,4 +1,4 @@
-import type { ActionVm, ActivityEntry, AppRole, AppSnapshot, CharacterSheet, CombatantDefinitionVm, ResolutionView, SceneEntity, SceneVm, SessionMode } from "./contracts";
+import type { AbilityKey, ActionVm, ActivityEntry, AppRole, AppSnapshot, CharacterSheet, CombatantDefinitionVm, ResolutionView, SceneEntity, SceneVm, SessionMode } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
 import { applyResolutionEvents } from "./realEventApplyService";
 import { projectResolutionEventsToActivity } from "./realActivityProjectionService";
@@ -11,11 +11,6 @@ import { resolvePendingResolution } from "../domain/resolution";
 import type { D20TestResult } from "../domain/d20";
 import { projectedCharacterById } from "./characterSessionProjectionRegistry";
 
-const CONTROL={
-  "action.unarmed-strike.grapple":{conditionId:"grappled" as const,label:"붙잡힘",displayName:"맨손 타격 · 붙잡기"},
-  "action.unarmed-strike.shove-prone":{conditionId:"prone" as const,label:"넘어짐",displayName:"맨손 타격 · 넘어뜨리기"},
-};
-type ControlActionId=keyof typeof CONTROL;
 type DicePrototype={d20(actionId:string,index?:number):number};
 interface AdapterState {
   role:AppRole;sessionMode:SessionMode;scene:SceneVm;activeCharacter:CharacterSheet;combatantDefinitions:CombatantDefinitionVm[];
@@ -30,20 +25,20 @@ function actorAction(scene:SceneVm,actionId:string) {
   }
 }
 
-function saveFact(adapter:MockAdapter,internal:AdapterState,target:SceneEntity) {
+function saveFact(adapter:MockAdapter,internal:AdapterState,target:SceneEntity,abilities:AbilityKey[]) {
   const sheet=target.id===internal.activeCharacter.id?internal.activeCharacter:projectedCharacterById(adapter,target.id)?.sheet;
   const active=sheet??internal.activeCharacter;
-  const strength=resolveRuntimeSaveModifier(target,active,"str",internal.combatantDefinitions);
-  const dexterity=resolveRuntimeSaveModifier(target,active,"dex",internal.combatantDefinitions);
-  return strength.modifier>=dexterity.modifier?strength:dexterity;
+  const candidates=abilities.map((ability)=>resolveRuntimeSaveModifier(target,active,ability,internal.combatantDefinitions));
+  if (!candidates.length) throw new Error("runtimeSaveCondition requires at least one save ability");
+  return candidates.reduce((best,candidate)=>candidate.modifier>best.modifier?candidate:best);
 }
 
 MockAdapter.prototype.resolveAction=async function resolveUnarmedControl(actionId:string,targetIds:string[]) {
-  const control=CONTROL[actionId as ControlActionId];
-  if (!control) return previousResolveAction.call(this,actionId,targetIds);
   const internal=this as unknown as AdapterState;
   const snapshot=await internal.getSnapshot();
   const action=actorAction(snapshot.scene,actionId);
+  const control=action?.runtimeSaveCondition;
+  if (!control) return previousResolveAction.call(this,actionId,targetIds);
   const targetId=targetIds[0];
   const target=internal.scene.entities.find((entry)=>entry.id===targetId);
   if (!action?.available||targetIds.length!==1||!action.eligibleTargetIds.includes(targetId)||!target||target.runtimeLife?.dead) return snapshot;
@@ -51,7 +46,7 @@ MockAdapter.prototype.resolveAction=async function resolveUnarmedControl(actionI
   const state=snapshotAdapterTurnRuntimeState(this,internal.scene);
   if (!state?.combatants[action.actorId]||!state.combatants[targetId]) return snapshot;
   let save;
-  try { save=saveFact(this,internal,target); }
+  try { save=saveFact(this,internal,target,control.saveAbilities); }
   catch { return snapshot; }
   const resolutionId=`unarmed-control.${Date.now()}.${Math.floor(Math.random()*1000)}`;
   const rollId=`${resolutionId}:save`;
@@ -63,8 +58,8 @@ MockAdapter.prototype.resolveAction=async function resolveUnarmedControl(actionI
       {id:rollId,kind:"d20",actorId:targetId,targetId:action.actorId,request:{family:"saving-throw",target:action.saveDc??8,targetSource:`${actionId}:save-dc`,modifierContributions:[{source:save.source,value:save.modifier}],dice:{id:`${resolutionId}:d20`,purpose:`${control.displayName} save`,sides:20,faces}},condition:{ability:save.ability}},
       {id:`${resolutionId}:effect`,kind:"apply-effect",when:{operationId:rollId,field:"outcome",equals:"failure"},effect:{
         id:`effect.${resolutionId}`,sourceId:actionId,sourceActorId:action.actorId,targetId,kind:"condition",conditionId:control.conditionId,
-        duration:{kind:"special",key:control.conditionId==="grappled"?`escape:${action.actorId}`:"stand-up"},
-        termination:control.conditionId==="grappled"?{sourceBecomesIncapacitated:true,sourceDies:true}:undefined,
+        duration:control.duration,
+        termination:control.termination,
         metadata:{displayName:control.displayName},
       }},
     ],

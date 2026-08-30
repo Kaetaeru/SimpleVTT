@@ -1,6 +1,7 @@
 import type { CampaignDmLibraryEntry, CampaignMealCommand, CampaignPartyStashItemTemplate, CampaignRecordV1, CampaignSessionSnapshot, CampaignSessionSystemsProjection } from "./campaignPersistenceContracts";
 import type { ExtraActionGrant, ExtraAttackGrant } from "../domain/turnEconomy";
 import type { DurationSpec, EffectTermination } from "../domain/effects";
+import type { ConditionId } from "../domain/conditions";
 import type { ModifierContribution } from "../domain/d20";
 import type { RollStateContribution } from "../domain/profileEngine";
 
@@ -317,6 +318,14 @@ export interface ActionVm {
   details: ActionDetailVm[];
   attacksPerAction?:number;
   movementBudgetGainFeet?:number;
+  runtimeSaveCondition?:{
+    conditionId:ConditionId;
+    label:string;
+    displayName:string;
+    saveAbilities:AbilityKey[];
+    duration:DurationSpec;
+    termination?:EffectTermination;
+  };
   sessionStatusEffect?:{
     status:string;
     target:"actor"|"first-target";
