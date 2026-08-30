@@ -22,6 +22,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm run generate:content
       - name: Align connected Undo with authoritative runtime history
         run: |
           python - <<'PY'
