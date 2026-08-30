@@ -1,0 +1,28 @@
+name: C9 Family M Connected Conditions 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - "tests/ui/c9FamilyMConditionConnectedAcceptance.test.ts"
+      - "src/app/connectedSessionRuntimeAdapter.ts"
+      - "src/app/connectedActionRoutingAdapter.ts"
+      - "src/domain/commonPlayOperationRuntime.ts"
+      - ".github/workflows/c9-family-m-connected-71304.yml"
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run generate:content
+      - name: Verify connected portable condition lifecycle
+        run: npx tsx --test tests/ui/c9FamilyMConditionConnectedAcceptance.test.ts
+      - name: Typecheck
+        run: npx tsc --noEmit
