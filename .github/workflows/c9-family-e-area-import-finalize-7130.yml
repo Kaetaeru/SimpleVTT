@@ -97,3 +97,5 @@ jobs:
             fi
           done
           exit 1
+
+# retrigger: canonical targeting fixture restored
