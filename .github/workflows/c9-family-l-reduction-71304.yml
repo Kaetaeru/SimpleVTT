@@ -146,5 +146,12 @@ jobs:
           git rm .github/workflows/c9-family-l-reduction-71304.yml
           git add src/domain/resolutionTypes.ts src/domain/resolutionHealthOps.ts src/domain/commonPlayOperationRuntime.ts schemas/common-play-contract.schema.json tests/ui/c9FamilyLDamageDefenseProduction.test.ts
           git commit -m "feat(c9): expose portable damage reduction"
-          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
-          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
+          for attempt in 1 2 3 4 5 6 7 8; do
+            git fetch origin agent/c9-gate-n-coverage-reconciliation
+            git rebase origin/agent/c9-gate-n-coverage-reconciliation
+            if git push origin HEAD:agent/c9-gate-n-coverage-reconciliation; then
+              exit 0
+            fi
+            sleep 2
+          done
+          exit 1
