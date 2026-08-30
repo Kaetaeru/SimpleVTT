@@ -28,8 +28,6 @@ jobs:
           from pathlib import Path
           import textwrap
 
-          # Current domain kernel already parses/revalidates choice. Keep interaction
-          # candidates separate from ordinary entry-point targeting candidates.
           path=Path('src/domain/commonPlayOperationRuntime.ts')
           text=path.read_text(encoding='utf-8')
           if 'interactionCandidates?:CommonPlaySelectorCandidate[];' not in text:
@@ -45,7 +43,6 @@ jobs:
               raise SystemExit('domain choice candidate anchor changed')
           path.write_text(text,encoding='utf-8')
 
-          # Reuse only the already-authored app/connected/test half of the R1 patch.
           r1=Path('.github/workflows/c9-family-q-choice-71304.yml').read_text(encoding='utf-8')
           marker='          # App contract: optional choice payload; boolean callers remain source-compatible.\n'
           start=r1.index(marker)
@@ -60,12 +57,28 @@ jobs:
                   raise SystemExit(f'{file_path}: expected one anchor, found {count}: {old_text[:80]!r}')
               p.write_text(source.replace(old_text,new_text,1),encoding='utf-8')
 
+          adapter_path=Path('src/app/installedCommonPlayRuntimeAdapter.ts')
+          current_compile='''    const itemContext=itemPaymentRuntimeContext(internal,state,lowered.definition);\n    let pending;\n    try {\n      pending=compileCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,itemContext.state,lowered.definition,operationExecutionInput(internal,actionId,action,prepared,resolutionId,interactionId,itemContext.itemPaymentResourceIds));\n    } catch(error) {\n      return {status:"rejected" as const,error:error instanceof Error?error.message:String(error),snapshot:await internal.getSnapshot()};\n    }\n'''
+          legacy_compile='''    const itemContext=itemPaymentRuntimeContext(internal,state,lowered.definition);\n    const pending=compileCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,itemContext.state,lowered.definition,operationExecutionInput(internal,actionId,action,prepared,resolutionId,interactionId,itemContext.itemPaymentResourceIds));\n'''
+          adapter_text=adapter_path.read_text(encoding='utf-8')
+          if current_compile in adapter_text:
+              adapter_path.write_text(adapter_text.replace(current_compile,legacy_compile,1),encoding='utf-8')
+          elif legacy_compile not in adapter_text and 'interactionResponse' not in adapter_text:
+              raise SystemExit('current production compile guard anchor changed')
+
           if 'choice?: { min:number; max:number; options:Array<{id:string;name:string}> };' not in Path('src/app/contracts.ts').read_text(encoding='utf-8'):
               exec(compile(app_code,'q-choice-app-patch','exec'),{'Path':Path,'replace_once':replace_once})
           elif not Path('tests/ui/c9FamilyQChoiceInteractionProduction.test.ts').exists():
               raise SystemExit('choice app bridge already exists without its production proof')
 
-          # Make healing observable and isolate the decline test from desktop transport.
+          patched_compile='''    const itemContext=itemPaymentRuntimeContext(internal,state,lowered.definition);\n    const interactionCandidates=entryPoint.interaction?.kind==="choice"\n      ?commonPlayTargetCandidates(adapter,internal.scene,itemContext.state,actorEntity,entryPoint.interaction.input.selector)\n      :undefined;\n    const pending=compileCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,itemContext.state,lowered.definition,operationExecutionInput(internal,actionId,action,prepared,resolutionId,interactionResponse,interactionCandidates,itemContext.itemPaymentResourceIds));\n'''
+          guarded_compile='''    const itemContext=itemPaymentRuntimeContext(internal,state,lowered.definition);\n    const interactionCandidates=entryPoint.interaction?.kind==="choice"\n      ?commonPlayTargetCandidates(adapter,internal.scene,itemContext.state,actorEntity,entryPoint.interaction.input.selector)\n      :undefined;\n    let pending;\n    try {\n      pending=compileCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,itemContext.state,lowered.definition,operationExecutionInput(internal,actionId,action,prepared,resolutionId,interactionResponse,interactionCandidates,itemContext.itemPaymentResourceIds));\n    } catch(error) {\n      return {status:"rejected" as const,error:error instanceof Error?error.message:String(error),snapshot:await internal.getSnapshot()};\n    }\n'''
+          adapter_text=adapter_path.read_text(encoding='utf-8')
+          if patched_compile in adapter_text:
+              adapter_path.write_text(adapter_text.replace(patched_compile,guarded_compile,1),encoding='utf-8')
+          elif guarded_compile not in adapter_text:
+              raise SystemExit('patched production compile guard anchor changed')
+
           test_path=Path('tests/ui/c9FamilyQChoiceInteractionProduction.test.ts')
           test_text=test_path.read_text(encoding='utf-8')
           hp='const hpBefore=internal.scene.entities.find((entity)=>entity.id===actorId)!.hp;'
@@ -73,10 +86,10 @@ jobs:
               if test_text.count(hp)!=2:
                   raise SystemExit(f'expected two hp fixture anchors, found {test_text.count(hp)}')
               test_text=test_text.replace(hp,'const actorEntity=internal.scene.entities.find((entity)=>entity.id===actorId)!;actorEntity.hp=Math.max(0,actorEntity.hp-1);const hpBefore=actorEntity.hp;')
-          old='''test("portable choice decline leaves Reaction and downstream effect untouched",async()=>{\n  const {host,actionId,actorId,internal}=await setup("family-q-choice-decline");\n  const actorEntity=internal.scene.entities.find((entity)=>entity.id===actorId)!;actorEntity.hp=Math.max(0,actorEntity.hp-1);const hpBefore=actorEntity.hp;\n  await host.resolveAction(actionId,[actorId]);\n  let snapshot=await host.getSnapshot();assert.equal(snapshot.resolution?.stage,"interrupt");\n  await host.respondToInterrupt(false);\n  snapshot=await host.getSnapshot();\n  assert.equal(snapshot.resolution?.stage,"complete");\n  assert.equal(snapshot.scene.entities.find((entity)=>entity.id===actorId)?.hp,hpBefore);\n  assert.equal(snapshot.scene.economyByActor[actorId]?.reaction,true);\n});'''
-          new='''test("portable choice decline leaves Reaction and downstream effect untouched",async()=>{\n  const {host,actionId,actorId,internal}=await setup("family-q-choice-decline");\n  const actorEntity=internal.scene.entities.find((entity)=>entity.id===actorId)!;actorEntity.hp=Math.max(0,actorEntity.hp-1);const hpBefore=actorEntity.hp;\n  const oldSend=tauriSessionTransport.send,oldSendTo=tauriSessionTransport.sendTo;\n  tauriSessionTransport.send=async()=>1;tauriSessionTransport.sendTo=async()=>1;\n  try{\n    await host.resolveAction(actionId,[actorId]);\n    let snapshot=await host.getSnapshot();assert.equal(snapshot.resolution?.stage,"interrupt");\n    await host.respondToInterrupt(false);\n    snapshot=await host.getSnapshot();\n    assert.equal(snapshot.resolution?.stage,"complete");\n    assert.equal(snapshot.scene.entities.find((entity)=>entity.id===actorId)?.hp,hpBefore);\n    assert.equal(snapshot.scene.economyByActor[actorId]?.reaction,true);\n  }finally{tauriSessionTransport.send=oldSend;tauriSessionTransport.sendTo=oldSendTo;}\n});'''
-          if old in test_text:
-              test_text=test_text.replace(old,new,1)
+          decline_old='''test("portable choice decline leaves Reaction and downstream effect untouched",async()=>{\n  const {host,actionId,actorId,internal}=await setup("family-q-choice-decline");\n  const actorEntity=internal.scene.entities.find((entity)=>entity.id===actorId)!;actorEntity.hp=Math.max(0,actorEntity.hp-1);const hpBefore=actorEntity.hp;\n  await host.resolveAction(actionId,[actorId]);\n  let snapshot=await host.getSnapshot();assert.equal(snapshot.resolution?.stage,"interrupt");\n  await host.respondToInterrupt(false);\n  snapshot=await host.getSnapshot();\n  assert.equal(snapshot.resolution?.stage,"complete");\n  assert.equal(snapshot.scene.entities.find((entity)=>entity.id===actorId)?.hp,hpBefore);\n  assert.equal(snapshot.scene.economyByActor[actorId]?.reaction,true);\n});'''
+          decline_new='''test("portable choice decline leaves Reaction and downstream effect untouched",async()=>{\n  const {host,actionId,actorId,internal}=await setup("family-q-choice-decline");\n  const actorEntity=internal.scene.entities.find((entity)=>entity.id===actorId)!;actorEntity.hp=Math.max(0,actorEntity.hp-1);const hpBefore=actorEntity.hp;\n  const oldSend=tauriSessionTransport.send,oldSendTo=tauriSessionTransport.sendTo;\n  tauriSessionTransport.send=async()=>1;tauriSessionTransport.sendTo=async()=>1;\n  try{\n    await host.resolveAction(actionId,[actorId]);\n    let snapshot=await host.getSnapshot();assert.equal(snapshot.resolution?.stage,"interrupt");\n    await host.respondToInterrupt(false);\n    snapshot=await host.getSnapshot();\n    assert.equal(snapshot.resolution?.stage,"complete");\n    assert.equal(snapshot.scene.entities.find((entity)=>entity.id===actorId)?.hp,hpBefore);\n    assert.equal(snapshot.scene.economyByActor[actorId]?.reaction,true);\n  }finally{tauriSessionTransport.send=oldSend;tauriSessionTransport.sendTo=oldSendTo;}\n});'''
+          if decline_old in test_text:
+              test_text=test_text.replace(decline_old,decline_new,1)
           elif 'const oldSend=tauriSessionTransport.send,oldSendTo=tauriSessionTransport.sendTo;' not in test_text:
               raise SystemExit('decline fixture anchor changed')
           test_path.write_text(test_text,encoding='utf-8')
