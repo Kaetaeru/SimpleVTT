@@ -26,6 +26,7 @@ jobs:
       - name: Reconcile latest branch state
         run: git pull --ff-only origin agent/c9-gate-n-coverage-reconciliation
       - run: npm ci
+      - run: npm run generate:content
       - name: Verify existing portable grapple escape production proof
         run: node --import tsx --test tests/ui/c9FamilyJPortableControlProduction.test.ts
       - name: Reconcile Family J ledger evidence
