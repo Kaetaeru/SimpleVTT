@@ -68,6 +68,16 @@ export function executeSpawnArtifact(ctx:ResolutionExecutionContext,operation:Sp
   if(artifact.artifactKind==="link") for(const endpointId of artifact.link!.endpointIds) {
     if(!ctx.state.combatants[endpointId]&&!artifacts(ctx).some((entry)=>entry.id===endpointId)) throw new DomainEvaluationError(`link endpoint not found: ${endpointId}`);
   }
+  if(artifact.link?.relation==="mount"){
+    const mountArtifact=artifacts(ctx).find((entry)=>entry.id===artifact.link!.endpointIds[1]&&entry.actor)?.actor;
+    const mount=artifact.link.mount!;
+    if(!mountArtifact)throw new DomainEvaluationError("mount link endpoint must reference an actor artifact");
+    if(mountArtifact.controllerId!==mount.controllerId||mount.mode==="controlled"&&mountArtifact.initiative!=="shared"||mount.mode==="independent"&&mountArtifact.initiative!=="independent"||mount.controlledActionIds.some((id)=>!mountArtifact.actionDefinitionIds.includes(id)))throw new DomainEvaluationError("mount actor controller, initiative, or controlled actions do not match the relationship");
+  }
+  if(artifact.link?.relation==="drawn-vehicle"){
+    const vehicleArtifact=artifacts(ctx).find((entry)=>entry.id===artifact.link!.endpointIds[1]);
+    if(vehicleArtifact?.artifactKind!=="object")throw new DomainEvaluationError("drawn-vehicle link endpoint must reference an object artifact");
+  }
   const membership:ZoneMembershipState|undefined=artifact.artifactKind==="zone"?{
     artifactId:artifact.id,authority:operation.zoneMembershipAuthority!,memberIds:[],
   }:undefined;

@@ -2,6 +2,7 @@ import { DomainEvaluationError, type ProvenanceRecord, type SemanticPredicate } 
 import type { RuntimeClock } from "./effects";
 import type { DamageDefenseContribution } from "./damage";
 import type { ResourceRecovery } from "./resources";
+import { validateCommonPlayMount, validateCommonPlayVehicle, type CommonPlayMountRelationship, type CommonPlayVehicleRelationship } from "./commonPlayMountRuntime";
 
 interface ArtifactResource {id:string;current:number;maximum:number;recovery?:ResourceRecovery}
 
@@ -42,10 +43,12 @@ export interface ObjectArtifactData {
 
 export interface LinkArtifactData {
   endpointIds:[string,string];
-  relation:"barrier"|"wall"|"portal"|"tether"|"rope";
+  relation:"barrier"|"wall"|"portal"|"tether"|"rope"|"mount"|"drawn-vehicle";
   blocksMovement?:boolean;
   blocksLineOfEffect?:boolean;
   maximumLengthFeet?:number;
+  mount?:Omit<CommonPlayMountRelationship,"riderId"|"mountId">;
+  vehicle?:Omit<CommonPlayVehicleRelationship,"draftActorId"|"vehicleId">;
 }
 
 export interface ActorArtifactData {
@@ -136,6 +139,13 @@ export function createRuntimeArtifact(request:RuntimeArtifactSpawnRequest):Runti
     const link=request.link;
     if(!link||link.endpointIds.length!==2||link.endpointIds.some((id)=>!id)||link.endpointIds[0]===link.endpointIds[1]) throw new DomainEvaluationError("link artifact requires two distinct endpoints");
     if(link.maximumLengthFeet!==undefined&&(!Number.isFinite(link.maximumLengthFeet)||link.maximumLengthFeet<0)) throw new DomainEvaluationError("link maximum length must be non-negative and finite");
+    if(link.relation==="mount"){
+      if(!link.mount||link.vehicle)throw new DomainEvaluationError("mount link requires mount relationship data only");
+      validateCommonPlayMount({riderId:link.endpointIds[0],mountId:link.endpointIds[1],...link.mount});
+    }else if(link.relation==="drawn-vehicle"){
+      if(!link.vehicle||link.mount)throw new DomainEvaluationError("drawn-vehicle link requires vehicle relationship data only");
+      validateCommonPlayVehicle({draftActorId:link.endpointIds[0],vehicleId:link.endpointIds[1],...link.vehicle});
+    }else if(link.mount||link.vehicle)throw new DomainEvaluationError("mount/vehicle relationship data requires its matching link relation");
   } else if(request.link) throw new DomainEvaluationError("only link artifacts can contain link data");
   if(request.artifactKind==="actor") {
     const actor=request.actor;

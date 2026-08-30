@@ -38,6 +38,12 @@ type CommonPlayEffectSuppress={
   when?:CommonPlayTestOutcomePredicate;
 };
 type CommonPlayMovementStand={kind:"movement.stand";target:"actor"|"self"};
+type CommonPlayMovementSpend={
+  kind:"movement.spend";
+  target:"actor"|"self";
+  amount:CommonPlayExpression;
+  activity:"mount"|"dismount";
+};
 type CommonPlayMovementGrant={
   kind:"movement.grant";
   target:"actor"|"self";
@@ -215,6 +221,7 @@ export type CommonPlayOperation=
   |CommonPlayMovementDefinition
   |CommonPlayMovementGrant
   |CommonPlayMovementStand
+  |CommonPlayMovementSpend
   |CommonPlayConditionChange
   |CommonPlayEffectRemove
   |CommonPlayEffectSuppress
@@ -313,6 +320,7 @@ const ROLL_MODIFY_KEYS=new Set(["kind","mode","value","dice"]);
 const MOVEMENT_RELOCATE_KEYS=new Set(["kind","mode","movementType","target","distance","costMultiplier","doesNotProvokeOpportunityAttacks","destinationFact","when"]);
 const MOVEMENT_GRANT_KEYS=new Set(["kind","target","distance","maximumDistance","doesNotProvokeOpportunityAttacks"]);
 const MOVEMENT_STAND_KEYS=new Set(["kind","target"]);
+const MOVEMENT_SPEND_KEYS=new Set(["kind","target","amount","activity"]);
 const FACT_QUERY_KEYS=new Set(["id","fact","subject","authority","visibility","unknownPolicy"]);
 const DAMAGE_DICE=/^([0-9]+)d([0-9]+)([+-][0-9]+)?$/;
 
@@ -594,6 +602,12 @@ function parseOperation(value:unknown,label:string):CommonPlayOperation {
     supportedKeys(operation,MOVEMENT_STAND_KEYS,label);
     if(operation.target!=="actor"&&operation.target!=="self") throw new DomainEvaluationError(`${label}.target must be actor or self`);
     return {kind:"movement.stand",target:operation.target};
+  }
+  if(operation.kind==="movement.spend") {
+    supportedKeys(operation,MOVEMENT_SPEND_KEYS,label);
+    if(operation.target!=="actor"&&operation.target!=="self") throw new DomainEvaluationError(`${label}.target must be actor or self`);
+    if(operation.activity!=="mount"&&operation.activity!=="dismount") throw new DomainEvaluationError(`${label}.activity must be mount or dismount`);
+    return {kind:"movement.spend",target:operation.target,amount:numericExpression(operation.amount,`${label}.amount`),activity:operation.activity};
   }
   if(operation.kind==="movement.relocate") {
     supportedKeys(operation,MOVEMENT_RELOCATE_KEYS,label);
@@ -1354,6 +1368,17 @@ export function compileCommonPlayEntryPointOperations(
       if(cost<=0) throw new DomainEvaluationError("movement.stand requires positive effective speed");
       operations.push({id:operationId,kind:"move",actorId:input.actorId,distanceFeet:cost,distanceTraveledFeet:0,movementActivity:"stand"});
       proneEffects.forEach((effect,proneIndex)=>operations.push({id:`${operationId}:remove-prone:${proneIndex}`,kind:"remove-effect",effectId:effect.id}));
+      continue;
+    }
+    if(operation.kind==="movement.spend") {
+      const properties=input.movementProperties??{};
+      const cost=evaluateExpression(operation.amount as ExpressionNode,(property)=>{
+        const value=properties[property];
+        if(!Number.isFinite(value)) throw new DomainEvaluationError(`movement.spend property is unavailable: ${property}`);
+        return Number(value);
+      });
+      if(!Number.isFinite(cost)||cost<0) throw new DomainEvaluationError("movement.spend amount must be a non-negative finite number");
+      operations.push({id:operationId,kind:"move",actorId:input.actorId,distanceFeet:cost,distanceTraveledFeet:0,movementActivity:operation.activity});
       continue;
     }
     if(operation.kind==="movement.relocate") {

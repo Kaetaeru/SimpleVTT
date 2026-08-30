@@ -22,7 +22,7 @@ import { compileCommonPlaySaveDamageEntryPoint } from "../domain/commonPlayEntry
 import { appendCommonPlayDamageTakenTriggers, compileCommonPlayEffectActivation, type CommonPlayPersistentEffectDefinition } from "../domain/commonPlayEffectRuntime";
 import { appendCommonPlaySemanticOutcomeEvents, appendCommonPlaySemanticOutcomeTriggers } from "../domain/commonPlaySemanticEventRuntime";
 import { resolveCommonPlayZoneActivation, resolveCommonPlayZoneMembershipChange } from "../domain/commonPlayZoneRuntime";
-import { resolveCommonPlayArtifactActivation } from "../domain/commonPlayArtifactRuntime";
+import { compileCommonPlayArtifactActivation, resolveCommonPlayArtifactActivation } from "../domain/commonPlayArtifactRuntime";
 import type { RulesRuntimeState } from "../domain/combatState";
 import type { ResolutionOperation } from "../domain/resolutionTypes";
 import type { D20TestResult } from "../domain/d20";
@@ -458,7 +458,7 @@ MockAdapter.prototype.configureReadyAction=async function configureInstalledComm
 };
 
 function operationDefinition(action:CommonPlayProductionAction) {
-  return action.lowered.kind==="operations"?action.lowered.definition:undefined;
+  return action.lowered.kind==="operations"||action.lowered.kind==="composite"?action.lowered.definition:undefined;
 }
 
 const itemQuantityResourceId=(itemId:string)=>`phase09:item:${itemId}:quantity`;
@@ -738,7 +738,7 @@ function prepareCommonPlayAction(
   let selectedTargetNames=Object.fromEntries(selectedTargets.map((target)=>[target.id,target.name]));
   let targetingCandidates:CommonPlaySelectorCandidate[]|undefined;
   let uniqueSelectedTargets=[...new Map(selectedTargets.map((target)=>[target.id,target] as const)).values()];
-  const needsSelectedTarget=action.lowered.kind==="operations"&&portableEntry.operations.some((operation)=>(operation.kind==="damage.apply"||operation.kind==="healing.apply")&&operation.target==="target");
+  const needsSelectedTarget=(action.lowered.kind==="operations"||action.lowered.kind==="composite")&&portableEntry.operations.some((operation)=>(operation.kind==="damage.apply"||operation.kind==="healing.apply")&&operation.target==="target");
   if(hasTargeting) {
     const targeting=portableEntry.targeting!;
     const selectionMode=targeting.selection??"manual";
@@ -928,7 +928,7 @@ function operationExecutionInput(
   interactionCandidates?:CommonPlaySelectorCandidate[],
   itemPaymentResourceIds?:Record<number,string>,
 ):import("../domain/commonPlayOperationRuntime").CommonPlayOperationExecutionInput {
-  if(action.lowered.kind!=="operations") throw new Error("stored invocation payload requires an operations lowerer");
+  if(action.lowered.kind!=="operations"&&action.lowered.kind!=="composite") throw new Error("operation execution input requires an operations lowerer");
   const {actor,actorEntity,selectedTargetId,selectedTargets,selectedTargetFacts,targetingCandidates,state,projectedAction}=prepared;
   const entryPoint=action.lowered.definition.entryPoints.find((candidate)=>candidate.id===action.entryPointId)!;
   const movementProperties=commonPlayActorProfileProperties(internal,state,actor.id);
@@ -986,7 +986,7 @@ async function executeCommonPlayAction(
   let committed;
   let operationEntryPoint:CommonPlayOperationDefinition["entryPoints"][number]|undefined;
   let allocationResult:Extract<ReturnType<typeof resolveCommonPlayAllocation>,{status:"resolved"}>|undefined;
-  if(lowered.kind==="operations") {
+  if(lowered.kind==="operations"||lowered.kind==="composite") {
     const entryPoint=lowered.definition.entryPoints.find((candidate)=>candidate.id===action.entryPointId)!;
     operationEntryPoint=entryPoint;
     if(entryPoint.allocation) {
@@ -1016,6 +1016,10 @@ async function executeCommonPlayAction(
     let pending;
     try {
       pending=compileCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,itemContext.state,lowered.definition,operationExecutionInput(internal,actionId,action,prepared,resolutionId,interactionResponse,interactionCandidates,itemContext.itemPaymentResourceIds));
+      if(lowered.kind==="composite") {
+        const artifactPending=compileCommonPlayArtifactActivation(itemContext.state,lowered.artifactDefinition,{resolutionId,actorId:actor.id,entryPointId:action.entryPointId,actionKind});
+        pending={...pending,operations:[...pending.operations,...artifactPending.operations]};
+      }
     } catch(error) {
       return {status:"rejected" as const,error:error instanceof Error?error.message:String(error),snapshot:await internal.getSnapshot()};
     }

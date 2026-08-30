@@ -2075,7 +2075,7 @@
         "session actor/object topology",
         "movement and d20 kernels"
       ],
-      "currentState": "Kernel validation defines rider/mount/controller identity, size relation, controlled versus independent mode, movement cost, controlled action IDs, and fall-off/Prone outcome. Existing actor/object/link artifacts separately provide controller/initiative and vehicle-like HP/AC/threshold/repair pieces, but the persisted Common Play contract does not define a mount/vehicle relationship and live TurnRuntime has no authoritative rider-mount topology owner. Mount/dismount cost, controlled initiative/action substitution, fall-off save dispatch, capacity, drawn vehicle, crew/speed, reconnect, and persistence composition remain undefined.",
+      "currentState": "Family AD is complete through portable Common Play composition. Durable actor/object/link artifacts own rider, mount, controller, controlled versus independent initiative, actions, drawn-vehicle capacity, crew, speed, HP, AC, damage threshold, and repair state. The structural composite lowerer joins existing movement, d20/condition, and artifact compilers into one Resolver transaction, so mount/dismount movement cost and failed fall-off save/Prone plus unlink are atomic. Unknown and fully renamed external content proves production projection, connected replay, duplicate delivery, reconnect persistence, and Undo without content identity dispatch.",
       "requiredSemantics": [
         "rider/mount link",
         "size",
@@ -2090,21 +2090,33 @@
         "repair"
       ],
       "transactionDomain": "Session Actor/Object/Link plus movement and project owners",
-      "disposition": "INCOMPLETE",
+      "disposition": "IMPLEMENTED",
       "implementationEvidence": [
         "commonPlayMountRuntime.ts relationship validation and fall-off outcome",
         "runtimeArtifact.ts actor/object/link controller, initiative, HP/AC/threshold, repair primitives",
-        "commonPlayC6Runtime.test.ts controlled mount validation/fall-off kernel proof"
+        "commonPlayC6Runtime.test.ts controlled mount validation/fall-off kernel proof",
+        "commonPlayDefinitionRuntime.ts structurally lowers mixed portable operation/artifact entry points without content identity dispatch",
+        "commonPlayOperationRuntime.ts movement.spend composes mount/dismount cost through the existing movement owner",
+        "commonPlayArtifactRuntime.ts and resolutionArtifactOps.ts persist validated mount and drawn-vehicle topology"
       ],
-      "productionEvidence": [],
-      "identityInvarianceEvidence": [],
-      "connectedEvidenceIfRelevant": [],
-      "persistenceEvidenceIfRelevant": [],
-      "remainingNamedSeams": [
-        "persisted portable mount/vehicle relationship and source ownership contract is missing",
-        "live rider-mount topology plus controlled/independent initiative/action and mount/dismount/fall-off authority are undefined",
-        "vehicle capacity, drawn-vehicle crew/speed, and connected persistence composition are undefined"
+      "productionEvidence": [
+        "c9FamilyADMountVehicleProduction.test.ts installs unknown Common Play content and proves atomic mount/dismount movement cost, controlled and independent initiative/action projection, fall-off save/Prone/unlink, drawn-vehicle capacity/crew/speed, and Undo",
+        "connectedObjectLinkArtifactLifecycleProduction.test.ts proves portable object HP/AC/damage threshold/repair and link lifecycle through production",
+        "repository-wide npm run build passed after the Family AD source changes"
       ],
+      "identityInvarianceEvidence": [
+        "c9FamilyADMountVehicleProduction.test.ts repeats controlled, independent, movement, fall-off, vehicle, and Undo behavior after complete external module/content/mechanic identity rename",
+        "commonPlayArtifactFamiliesRuntime.test.ts rejects dangling or mismatched topology structurally"
+      ],
+      "connectedEvidenceIfRelevant": [
+        "c9FamilyADMountVehicleProduction.test.ts proves Host event replay, Client duplicate delivery, fresh reconnect replay, and event-native Undo",
+        "connectedActorArtifactReconnectProduction.test.ts and connectedObjectLinkArtifactLifecycleProduction.test.ts retain actor/object/link convergence"
+      ],
+      "persistenceEvidenceIfRelevant": [
+        "c9FamilyADMountVehicleProduction.test.ts reconstructs mount and vehicle artifacts on a fresh Client replica from the Host ledger",
+        "runtime artifact state changes persist complete mount and drawn-vehicle relationship data and reverse it through Undo"
+      ],
+      "remainingNamedSeams": [],
       "connectedRelevant": true,
       "persistenceRelevant": true
     },

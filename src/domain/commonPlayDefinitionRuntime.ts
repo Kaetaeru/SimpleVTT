@@ -35,6 +35,7 @@ export interface CommonPlayDefinitionIR extends Obj {
 
 export type LoweredCommonPlayEntryPoint=
   | {kind:"operations";definition:CommonPlayOperationDefinition;entryPointId:string}
+  | {kind:"composite";definition:CommonPlayOperationDefinition;artifactDefinition:CommonPlayArtifactActivationDefinition;entryPointId:string}
   | {kind:"save-damage";definition:CommonPlaySaveDamageDefinition;entryPointId:string}
   | {kind:"effect";definition:CommonPlayPersistentEffectDefinition;entryPointId:string}
   | {kind:"zone";definition:CommonPlayZoneDefinition;entryPointId:string}
@@ -219,8 +220,24 @@ export function lowerCommonPlay(
   }
   const artifactOperationKinds=new Set(["artifact.spawn","artifact.damage","artifact.repair","artifact.relocate","artifact.update","artifact.remove"]);
   if([...operationKinds].some((kind)=>artifactOperationKinds.has(String(kind)))) {
-    if([...operationKinds].some((kind)=>!artifactOperationKinds.has(String(kind)))) throw new DomainEvaluationError(`Common Play entry point ${entryPointId} mixes incompatible artifact activation operations`);
+    const artifactOperations=entryPoint.operations.filter((operation)=>artifactOperationKinds.has(String(operation.kind)));
+    const portableOperations=entryPoint.operations.filter((operation)=>!artifactOperationKinds.has(String(operation.kind)));
     const artifactKinds=new Set(templates.map((template)=>template.artifactKind));
+    if(portableOperations.length) {
+      if(![...artifactKinds].every((kind)=>kind==="stored-invocation"||kind==="object"||kind==="link"||kind==="actor"||kind==="form")) {
+        throw new DomainEvaluationError(`Common Play entry point ${entryPointId} references an unsupported composite artifact family`);
+      }
+      const projected={...base(definition),entryPoints:[operationEntryPointProjection({...entryPoint,operations:portableOperations})]};
+      const {castProcess,...operationProjected}=projected;
+      const parsed=parseCommonPlayOperationDefinition(operationProjected);
+      const {payments:ignoredPayments,...artifactBase}=base(definition);
+      void ignoredPayments;
+      return {
+        kind:"composite",entryPointId,
+        definition:{...parsed,...(castProcess?{castProcess:structuredClone(castProcess)}:{})} as CommonPlayOperationDefinition,
+        artifactDefinition:{...artifactBase,entryPoints:[{id:entryPoint.id,invocation:entryPoint.invocation,operations:structuredClone(artifactOperations)}],artifactTemplates:structuredClone(templates)} as unknown as CommonPlayArtifactActivationDefinition,
+      };
+    }
     if(artifactKinds.size===1&&artifactKinds.has("zone")) {
       if([...operationKinds].some((kind)=>kind!=="artifact.spawn")) throw new DomainEvaluationError(`Common Play entry point ${entryPointId} zone activation supports only artifact.spawn`);
       const ruleReferenced=referencedRuleTemplates(templates);

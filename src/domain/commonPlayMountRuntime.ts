@@ -26,3 +26,24 @@ export function validateCommonPlayMount(relationship:CommonPlayMountRelationship
 export function mountFallOffOutcome(saveSucceeded:boolean) {
   return saveSucceeded?{fallsOff:false,prone:false}:{fallsOff:true,prone:true};
 }
+
+export interface CommonPlayVehicleRelationship {
+  draftActorId:string;
+  vehicleId:string;
+  capacityPounds:number;
+  minimumCrew:number;
+  crewIds:string[];
+  speedFeet:number;
+}
+
+export function validateCommonPlayVehicle(relationship:CommonPlayVehicleRelationship){
+  if(!relationship.draftActorId||!relationship.vehicleId||relationship.draftActorId===relationship.vehicleId)throw new DomainEvaluationError("drawn vehicle requires distinct draft actor and vehicle identities");
+  if(!Number.isFinite(relationship.capacityPounds)||relationship.capacityPounds<0||!Number.isInteger(relationship.minimumCrew)||relationship.minimumCrew<0||!Number.isFinite(relationship.speedFeet)||relationship.speedFeet<0)throw new DomainEvaluationError("drawn vehicle capacity, crew, and speed must be non-negative");
+  if(relationship.crewIds.some((id)=>!id)||new Set(relationship.crewIds).size!==relationship.crewIds.length)throw new DomainEvaluationError("drawn vehicle crew identities must be non-empty and unique");
+  return structuredClone(relationship);
+}
+
+export function commonPlayVehicleSpeed(relationship:CommonPlayVehicleRelationship){
+  validateCommonPlayVehicle(relationship);
+  return relationship.crewIds.length>=relationship.minimumCrew?relationship.speedFeet:0;
+}

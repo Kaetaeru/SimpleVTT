@@ -199,6 +199,8 @@ export function executeMove(ctx:ResolutionExecutionContext, operation:MoveOp):Op
       status:"applied",
       reason:operation.movementActivity==="stand"
         ? `${actorId} spends ${operation.distanceFeet} ft of movement to stand`
+        : operation.movementActivity
+          ? `${actorId} spends ${operation.distanceFeet} ft of movement to ${operation.movementActivity}`
         : `${actorId} moves ${operation.distanceFeet} ft`,
     },
   ];
@@ -216,6 +218,8 @@ export function executeMove(ctx:ResolutionExecutionContext, operation:MoveOp):Op
     result,
     event:makeEvent(ctx.pending, operation, operation.movementActivity==="stand"
       ? `${actorId} stands from Prone`
+      : operation.movementActivity
+        ? `${actorId} spends movement to ${operation.movementActivity}`
       : `${actorId} moves ${operation.distanceFeet} ft`, result, provenance, changes, actorId),
   };
 }

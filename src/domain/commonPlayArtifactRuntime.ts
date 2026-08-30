@@ -139,7 +139,14 @@ function artifact(
   if(template.artifactKind==="link") {
     const endpointIds=initial.endpointIds;
     if(!Array.isArray(endpointIds)||endpointIds.length!==2) throw new DomainEvaluationError(`artifact ${template.id} link endpointIds must contain two bindings`);
-    return {...common,link:{...initial,endpointIds:endpointIds.map((id,index)=>boundId(id,input.actorId,artifactIds,`artifact ${template.id} endpointIds[${index}]`))} as RuntimeArtifactSpawnRequest["link"]};
+    const mount=initial.mount&&typeof initial.mount==="object"&&!Array.isArray(initial.mount)?initial.mount as Record<string,unknown>:undefined;
+    const vehicle=initial.vehicle&&typeof initial.vehicle==="object"&&!Array.isArray(initial.vehicle)?initial.vehicle as Record<string,unknown>:undefined;
+    return {...common,link:{
+      ...initial,
+      endpointIds:endpointIds.map((id,index)=>boundId(id,input.actorId,artifactIds,`artifact ${template.id} endpointIds[${index}]`)),
+      ...(mount?{mount:{...mount,controllerId:boundId(mount.controllerId,input.actorId,artifactIds,`artifact ${template.id} mount.controllerId`)}}:{}),
+      ...(vehicle&&Array.isArray(vehicle.crewIds)?{vehicle:{...vehicle,crewIds:vehicle.crewIds.map((id,index)=>boundId(id,input.actorId,artifactIds,`artifact ${template.id} vehicle.crewIds[${index}]`))}}:{}),
+    } as RuntimeArtifactSpawnRequest["link"]};
   }
   if(template.artifactKind==="actor") return {...common,actor:{
     ...initial,
