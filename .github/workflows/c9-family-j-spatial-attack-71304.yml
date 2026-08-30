@@ -1,5 +1,5 @@
 name: C9 Family J Spatial Attack 71304
-# verify current Family J spatial/range/cover proof at branch head
+# verify current Family J spatial/range/cover plus opportunity identity proof at branch head
 
 on:
   push:
