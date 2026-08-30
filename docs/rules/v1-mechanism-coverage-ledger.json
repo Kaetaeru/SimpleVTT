@@ -1783,7 +1783,7 @@
         "RulesProfile timing/economy",
         "reactionWindow.ts"
       ],
-      "currentState": "Kernel compilation validates owner-authorized turn/after-turn/initiative-count timing, option selection, cost, and generic Resolver payloads. Common Play now also persists owner-neutral specialActions authoring for turn-start/turn-end/after-turn/initiative-count timing, reusable entry-point options, optional resource pools, and per-option cost; session actor identity is intentionally bound only at runtime. Authoritative RuntimeClock still lacks initiative-count progression and production still lacks a generic session dispatcher/replay-reconnect path for portable special actions, so the family remains incomplete.",
+      "currentState": "Common Play persists owner-neutral specialActions authoring for turn-start/turn-end/after-turn/initiative-count timing, reusable entry-point options, optional resource pools, and per-option cost while runtime actor ownership remains session-bound. The generic special-action kernel validates concrete owner/timing/cost/option execution. RuntimeClock still lacks authoritative initiative-count progression and production still lacks the generic session dispatcher plus connected replay/reconnect path required to schedule these portable definitions, so Family AC remains INCOMPLETE.",
       "requiredSemantics": [
         "off-turn pools",
         "refresh",
@@ -1801,7 +1801,8 @@
       "implementationEvidence": [
         "commonPlaySpecialTimingRuntime.ts owner/timing/option/cost compiler",
         "commonPlayC6Runtime.test.ts owner-authorized after-turn cost/payload kernel proof",
-        "3a101b51ab99bbb3f4e5acffd9501fb7eabc7e36: portable specialActions authoring schema/parser with runtime-bound ownership and entryPointId option references"
+        "3a101b51ab99bbb3f4e5acffd9501fb7eabc7e36: portable specialActions authoring schema/parser with runtime-bound ownership and entryPointId option references",
+        "3a101b51ab99bbb3f4e5acffd9501fb7eabc7e36 feat(c9): persist portable special timing definitions; commonPlaySpecialTimingRuntime.ts + commonPlayDefinitionRuntime.ts + common-play-contract.schema.json retain owner-neutral specialActions timing/pool/cost/multiple-option authoring by portable entryPointId reference"
       ],
       "productionEvidence": [],
       "identityInvarianceEvidence": [],
