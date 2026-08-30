@@ -1,0 +1,77 @@
+name: C9 Family A Ledger Reconcile 7130
+
+on:
+  push:
+    paths:
+      - '.github/workflows/c9-family-a-ledger-reconcile-7130.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: npm run generate:content
+      - name: Reconcile verified Family A evidence
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
+          ledger=json.loads(path.read_text())
+          row=next(entry for entry in ledger['rows'] if entry['family']=='A')
+          row['currentState']=(
+            'The persisted property.modify contract lowers arbitrary external modifiers to typed Effect state and generic Resolver events. '
+            'Production Common Play now composes the active Character RulesProfile inputs with active Effect-owned modifiers, including non-movement defense.ac and derived property refs such as ability.str.modifier from a modified ability.str.score, without content-name or content-ID dispatch. '
+            'Source-bound property modifiers converge through connected replay/reconnect/retry/Undo and also survive an independent offline fresh-adapter restart through the persisted turn runtime store; ending Initiative clears that local runtime state. '
+            'Family A remains incomplete because non-active runtime actors still do not expose the same generic profile-property input surface, named progression/runtime stat materialization remains outside the generic property owner, and profile-policy stacking remains explicitly unsupported until RulesProfile defines that policy.'
+          )
+
+          def add(field,value):
+            if value not in row[field]: row[field].append(value)
+
+          add('implementationEvidence','turnRuntimeSessionRegistry.ts TurnRuntimeStateStore persists and restores offline RulesRuntimeState, including Effect-owned property modifiers')
+          add('productionEvidence','0154c374a054a56984991df759508c21a4e95149 feat(c9): project derived profile properties to Common Play')
+          add('productionEvidence','installedCommonPlayPropertyModifierProduction.test.ts proves non-movement defense.ac projection and an Effect-modified ability.str.score feeding derived ability.str.modifier through unknown Common Play')
+          add('productionEvidence','C9 Family A Profile Property 7130 run 33311275824: generic profile-property production coverage and tsc --noEmit pass')
+          add('persistenceEvidenceIfRelevant','ca24b21f06ca045be4e56c544449d6fa8d84c3da feat(c9): persist offline turn runtime state')
+          add('persistenceEvidenceIfRelevant','installedCommonPlayPropertyModifierProduction.test.ts source-bound property modifier survives a fresh local adapter restart, remains consumable by Common Play, and is cleared when Initiative ends')
+
+          closed={
+            'EffectInstance.propertyModifier production projection currently covers movement.walk rather than the full generic property vocabulary',
+            'resolveProfileProperty still has no production caller that composes active Effect-owned modifiers across generic property refs',
+            'connected event replay is not durable local persistence: turnRuntimeSessionRegistry keeps structured turn runtime in an adapter-scoped WeakMap and realTurnRuntimeService rebuilds scene runtime with effects: [], so source-bound property modifiers do not survive an independent local runtime restart without authoritative ledger replay',
+          }
+          remaining=[entry for entry in row['remainingNamedSeams'] if entry not in closed]
+          non_active='Common Play profile-property input projection is generic for the active Character, but non-active runtime actors still expose only movement.walk rather than the same RulesProfile property surface'
+          if non_active not in remaining: remaining.insert(0,non_active)
+          row['remainingNamedSeams']=remaining
+          path.write_text(json.dumps(ledger,ensure_ascii=False,indent=2)+'\n')
+          PY
+      - name: Verify reconciled Family A evidence
+        run: |
+          npx tsx --test tests/ui/installedCommonPlayPropertyModifierProduction.test.ts
+          npx tsc --noEmit
+          node scripts/check-v1-mechanism-coverage.mjs
+      - name: Commit verified ledger reconciliation
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -f .github/workflows/c9-family-a-ledger-reconcile-7130.yml
+          git add docs/rules/v1-mechanism-coverage-ledger.json .github/workflows/c9-family-a-ledger-reconcile-7130.yml
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "docs(c9): reconcile Family A verified evidence"
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
