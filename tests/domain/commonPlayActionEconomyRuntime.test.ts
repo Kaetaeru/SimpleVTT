@@ -78,6 +78,46 @@ function resolveGeneric(
   });
 }
 
+function portableAttackDefinition(id:string):CommonPlayOperationDefinition {
+  return {
+    schemaVersion:"0.2-draft",
+    id,
+    payments:[{
+      kind:"economy",
+      bucket:"action",
+      amount:{value:1},
+      actionKind:"attack",
+      attacksPerAction:2,
+      consumeAt:"commit",
+      refundOnCancel:true,
+    }],
+    entryPoints:[{
+      id:"attack",
+      invocation:"manual",
+      operations:[],
+    }],
+  };
+}
+
+function portableAttackState() {
+  const state=runtimeState();
+  state.clock.activeActorId="hero";
+  state.clock.phase="action";
+  return state;
+}
+
+function resolvePortableAttack(
+  state:ReturnType<typeof runtimeState>,
+  definition:CommonPlayOperationDefinition,
+  resolutionId:string,
+) {
+  return resolveCommonPlayEntryPointOperations(TEST_PROFILE,state,definition,{
+    resolutionId,
+    actorId:"hero",
+    entryPointId:"attack",
+  });
+}
+
 test("unknown external Common Play action economy content spends resources atomically and grants a profile-defined restricted action", () => {
   const state=genericState();
   const result=resolveGeneric(state);
@@ -194,4 +234,52 @@ test("profile policy rejects an active-turn-only extra action outside the actor'
   assert.equal(result.status,"rejected");
   assert.equal(result.state,state);
   assert.match(result.status==="rejected"?result.error:"",/active turn|actor.*turn/i);
+});
+
+test("portable Common Play attack payment spends one Action then its Extra Attack grant", () => {
+  const definition=portableAttackDefinition("external.family-j.extra-attack");
+  const first=resolvePortableAttack(portableAttackState(),definition,"resolution.family-j.extra-attack.first");
+  assert.equal(first.status,"committed");
+  if(first.status!=="committed") return;
+  assert.equal(first.state.combatants.hero.economy.action,false);
+  assert.equal(first.state.combatants.hero.economy.extraAttacks?.length,1);
+
+  const second=resolvePortableAttack(first.state,definition,"resolution.family-j.extra-attack.second");
+  assert.equal(second.status,"committed");
+  if(second.status!=="committed") return;
+  assert.equal(second.state.combatants.hero.economy.action,false);
+  assert.equal(second.state.combatants.hero.economy.extraAttacks?.length,0);
+
+  const third=resolvePortableAttack(second.state,definition,"resolution.family-j.extra-attack.third");
+  assert.equal(third.status,"rejected");
+});
+
+test("portable Extra Attack payment is invariant under unrelated external definition identity", () => {
+  const first=resolvePortableAttack(portableAttackState(),portableAttackDefinition("external.family-j.alpha"),"resolution.family-j.alpha");
+  const renamed=resolvePortableAttack(portableAttackState(),portableAttackDefinition("unrelated.portable.attack.beta"),"resolution.family-j.beta");
+  assert.equal(first.status,"committed");
+  assert.equal(renamed.status,"committed");
+  if(first.status!=="committed"||renamed.status!=="committed") return;
+  assert.deepEqual(
+    {
+      action:first.state.combatants.hero.economy.action,
+      extraAttacks:first.state.combatants.hero.economy.extraAttacks?.length,
+    },
+    {
+      action:renamed.state.combatants.hero.economy.action,
+      extraAttacks:renamed.state.combatants.hero.economy.extraAttacks?.length,
+    },
+  );
+});
+
+test("portable attacksPerAction metadata is rejected outside an Attack Action payment", () => {
+  const definition=portableAttackDefinition("external.family-j.invalid-extra-attack");
+  const payment=definition.payments?.[0];
+  if(!payment||payment.kind!=="economy") throw new Error("economy payment fixture missing");
+  payment.bucket="reaction";
+
+  assert.throws(
+    () => resolvePortableAttack(portableAttackState(),definition,"resolution.family-j.invalid-extra-attack"),
+    /attacksPerAction requires bucket=action and actionKind=attack/,
+  );
 });
