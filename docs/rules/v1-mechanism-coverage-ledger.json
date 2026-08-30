@@ -1900,7 +1900,7 @@
         "RulesProfile timing/economy",
         "reactionWindow.ts"
       ],
-      "currentState": "Common Play persists owner-neutral specialActions authoring for turn-start/turn-end/after-turn/initiative-count timing, reusable entry-point options, optional resource pools, and per-option cost while runtime actor ownership remains session-bound. The generic special-action kernel validates concrete owner/timing/cost/option execution. RuntimeClock still lacks authoritative initiative-count progression and production still lacks the generic session dispatcher plus connected replay/reconnect path required to schedule these portable definitions, so Family AC remains INCOMPLETE.",
+      "currentState": "Common Play persists owner-neutral specialActions authoring for turn-start/turn-end/after-turn/initiative-count timing, reusable entry-point options, optional resource pools, and per-option cost while runtime actor ownership remains session-bound. The generic special-action kernel validates concrete owner/timing/cost/option execution. RuntimeClock still lacks authoritative initiative-count progression and production still lacks the generic session dispatcher plus connected replay/reconnect path required to schedule these portable definitions, so Family AC remains INCOMPLETE. The session owner now has an authoritative initiative-count event source through turnRuntimeInitiativeCountService.ts; special-action refresh/order dispatch and connected off-turn interaction remain incomplete.",
       "requiredSemantics": [
         "off-turn pools",
         "refresh",
@@ -1919,7 +1919,9 @@
         "commonPlaySpecialTimingRuntime.ts owner/timing/option/cost compiler",
         "commonPlayC6Runtime.test.ts owner-authorized after-turn cost/payload kernel proof",
         "3a101b51ab99bbb3f4e5acffd9501fb7eabc7e36: portable specialActions authoring schema/parser with runtime-bound ownership and entryPointId option references",
-        "3a101b51ab99bbb3f4e5acffd9501fb7eabc7e36 feat(c9): persist portable special timing definitions; commonPlaySpecialTimingRuntime.ts + commonPlayDefinitionRuntime.ts + common-play-contract.schema.json retain owner-neutral specialActions timing/pool/cost/multiple-option authoring by portable entryPointId reference"
+        "3a101b51ab99bbb3f4e5acffd9501fb7eabc7e36 feat(c9): persist portable special timing definitions; commonPlaySpecialTimingRuntime.ts + commonPlayDefinitionRuntime.ts + common-play-contract.schema.json retain owner-neutral specialActions timing/pool/cost/multiple-option authoring by portable entryPointId reference",
+        "turnRuntimeInitiativeCountService.ts exposes a session-owned set-initiative-count command through the shared Resolver and returns authoritative ResolutionEvents",
+        "tests/domain/c9FamilyACInitiativeCountSource.test.ts proves valid initiative-count changes emit one authoritative turn-clock event and invalid counts do not mutate session state"
       ],
       "productionEvidence": [],
       "identityInvarianceEvidence": [],
@@ -1928,7 +1930,7 @@
         "C9 Family AC Authoring Contract R2 run 33313341650 job 99262204177: installed Common Play persistence/rehydration/session-sync regression passed with portable special timing mechanic"
       ],
       "remainingNamedSeams": [
-        "authoritative initiative-count event source and refresh/order semantics",
+        "special-action pool refresh/order semantics at authoritative timing windows",
         "session timing dispatcher plus connected off-turn interaction/replay/reconnect"
       ],
       "connectedRelevant": true,
