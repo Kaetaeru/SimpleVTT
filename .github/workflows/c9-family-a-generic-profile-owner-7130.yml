@@ -1,10 +1,15 @@
 name: C9 Family A Generic Profile Owner 7130
+
 on:
   push:
-    branches: [agent/c9-gate-n-coverage-reconciliation]
-    paths: [.github/workflows/c9-family-a-generic-profile-owner-7130.yml]
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-a-generic-profile-owner-7130.yml
+
 permissions:
   contents: write
+
 jobs:
   reconcile:
     runs-on: ubuntu-latest
@@ -16,11 +21,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install --no-audit --no-fund
+          cache: npm
+      - run: npm ci
       - run: npm run generate:content
       - name: Wire generic production profile property owner
-        shell: python
+        shell: bash
         run: |
+          python - <<'PY'
           from pathlib import Path
 
           def replace_once(path, old, new, label):
@@ -48,27 +55,27 @@ jobs:
               service,
               '''};
 
-export interface OpenAbilityCheckResolutionRequest {''',
+          export interface OpenAbilityCheckResolutionRequest {''',
               '''};
 
-export function resolveRuntimeProfileProperty(
-  effects:EffectInstance[],
-  targetId:string,
-  property:string,
-  inputProperties:Record<string,number>,
-) {
-  const base=resolveProfileProperty(SIMPLEVTT_APP_RULES_PROFILE,property,inputProperties);
-  const modified=resolveEffectModifiedProperty(
-    effects,targetId,property,{...inputProperties,[property]:base.value},
-  );
-  return {
-    property,
-    value:modified.value,
-    provenance:[...base.provenance,...modified.provenance],
-  };
-}
+          export function resolveRuntimeProfileProperty(
+            effects:EffectInstance[],
+            targetId:string,
+            property:string,
+            inputProperties:Record<string,number>,
+          ) {
+            const base=resolveProfileProperty(SIMPLEVTT_APP_RULES_PROFILE,property,inputProperties);
+            const modified=resolveEffectModifiedProperty(
+              effects,targetId,property,{...inputProperties,[property]:base.value},
+            );
+            return {
+              property,
+              value:modified.value,
+              provenance:[...base.provenance,...modified.provenance],
+            };
+          }
 
-export interface OpenAbilityCheckResolutionRequest {''',
+          export interface OpenAbilityCheckResolutionRequest {''',
               'runtime profile property resolver',
           )
 
@@ -88,11 +95,11 @@ export interface OpenAbilityCheckResolutionRequest {''',
           replace_once(
               adapter,
               '''    "movement.walk":resolveEffectModifiedProperty(
-      state.effects,actor.id,"movement.walk",{"movement.walk":actorState.baseSpeed},
-    ).value,''',
+                state.effects,actor.id,"movement.walk",{"movement.walk":actorState.baseSpeed},
+              ).value,''',
               '''    "movement.walk":resolveRuntimeProfileProperty(
-      state.effects,actor.id,"movement.walk",{"movement.walk":actorState.baseSpeed},
-    ).value,''',
+                state.effects,actor.id,"movement.walk",{"movement.walk":actorState.baseSpeed},
+              ).value,''',
               'movement production property caller',
           )
 
@@ -107,33 +114,48 @@ export interface OpenAbilityCheckResolutionRequest {''',
               test_path,
               '''test("unknown Common Play property modifier projects through Effect state into production movement",async()=>{''',
               '''test("production property owner composes profile-derived values with active Effect modifiers",()=>{
-  const effect:EffectInstance={
-    id:"effect.external.str-modifier",sourceId:"external.unseen.property-owner",targetId:"char.aelar",kind:"modifier",tags:[],expiry:{kind:"permanent"},
-    propertyModifier:{property:"ability.str.modifier",operation:"add",value:{value:1},source:"definition",instancePolicy:"stack"},
-  };
-  const resolved=resolveRuntimeProfileProperty([effect],"char.aelar","ability.str.modifier",{"ability.str.score":14});
-  assert.equal(resolved.value,3);
-  assert.ok(resolved.provenance.some((entry)=>entry.source.includes("property:ability.str.modifier")));
-  assert.ok(resolved.provenance.some((entry)=>entry.source==="effect:effect.external.str-modifier"));
-});
+            const effect:EffectInstance={
+              id:"effect.external.str-modifier",sourceId:"external.unseen.property-owner",targetId:"char.aelar",kind:"modifier",tags:[],expiry:{kind:"permanent"},
+              propertyModifier:{property:"ability.str.modifier",operation:"add",value:{value:1},source:"definition",instancePolicy:"stack"},
+            };
+            const resolved=resolveRuntimeProfileProperty([effect],"char.aelar","ability.str.modifier",{"ability.str.score":14});
+            assert.equal(resolved.value,3);
+            assert.ok(resolved.provenance.some((entry)=>entry.source.includes("property:ability.str.modifier")));
+            assert.ok(resolved.provenance.some((entry)=>entry.source==="effect:effect.external.str-modifier"));
+          });
 
-test("unknown Common Play property modifier projects through Effect state into production movement",async()=>{''',
+          test("unknown Common Play property modifier projects through Effect state into production movement",async()=>{''',
               'generic profile property regression',
           )
-      - run: npx tsx --test tests/domain/commonPlayPropertyContractRuntime.test.ts tests/ui/installedCommonPlayPropertyModifierProduction.test.ts
-      - run: npx tsc --noEmit
-      - run: node scripts/check-v1-mechanism-coverage.mjs
-      - name: Commit verified Family A production property owner
+          PY
+      - name: Verify Family A profile property slice
+        run: >-
+          node --import tsx --test
+          tests/domain/commonPlayPropertyContractRuntime.test.ts
+          tests/ui/installedCommonPlayPropertyModifierProduction.test.ts
+      - name: Verify boundaries and types
         run: |
+          node scripts/check-v1-mechanism-coverage.mjs
+          npm exec tsc -- --noEmit
+      - name: Commit verified Family A production property owner
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch=agent/c9-gate-n-coverage-reconciliation
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add src/app/realResolutionService.ts src/app/installedCommonPlayRuntimeAdapter.ts tests/ui/installedCommonPlayPropertyModifierProduction.test.ts
           git rm .github/workflows/c9-family-a-generic-profile-owner-7130.yml
           git commit -m "feat(c9): compose profile properties with runtime effects"
           for attempt in 1 2 3 4 5; do
-            git fetch origin agent/c9-gate-n-coverage-reconciliation
-            git rebase origin/agent/c9-gate-n-coverage-reconciliation || { git rebase --abort || true; sleep 2; continue; }
-            if git push origin HEAD:agent/c9-gate-n-coverage-reconciliation; then exit 0; fi
-            sleep 2
+            git fetch origin "$branch"
+            if ! git rebase "origin/$branch"; then
+              git rebase --abort || true
+              exit 1
+            fi
+            if git push origin HEAD:"$branch"; then
+              exit 0
+            fi
+            sleep 1
           done
           exit 1
