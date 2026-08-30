@@ -1,4 +1,4 @@
-name: C9 Diagnose Family J Spatial
+name: C9 Diagnose Family J Spatial Candidate
 
 on:
   push:
@@ -18,16 +18,22 @@ jobs:
           node-version: 22
       - run: npm install --no-audit --no-fund
       - run: npm run generate:content
-      - name: Expose spatial rejection detail
+      - name: Expose selector candidate spatial state
         shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          p=Path('tests/ui/c9FamilyJSpatialAttackProduction.test.ts')
+          p=Path('src/app/installedCommonPlayRuntimeAdapter.ts')
           s=p.read_text()
-          old='assert.equal(snapshot.resolution?.rollKind,"attack");'
-          new='assert.equal(snapshot.resolution?.rollKind,"attack",JSON.stringify(snapshot.resolution));'
-          if s.count(old)!=1: raise SystemExit(f'expected assertion once, found {s.count(old)}')
+          old='  const spatial=authoritativeCommonPlaySpatialRelation(scene,actor.id,target.id);'
+          new=old+'\n  console.error("C9_SPATIAL_CANDIDATE",actor.id,target.id,Object.keys(scene.spatialByPair??{}),spatial);'
+          if s.count(old)!=1: raise SystemExit(f'expected candidate spatial line once, found {s.count(old)}')
           p.write_text(s.replace(old,new))
+          t=Path('tests/ui/c9FamilyJSpatialAttackProduction.test.ts')
+          ts=t.read_text()
+          old_assert='assert.equal(snapshot.resolution?.rollKind,"attack");'
+          new_assert='assert.equal(snapshot.resolution?.rollKind,"attack",JSON.stringify(snapshot.resolution));'
+          if ts.count(old_assert)!=1: raise SystemExit(f'expected assertion once, found {ts.count(old_assert)}')
+          t.write_text(ts.replace(old_assert,new_assert))
           PY
           npx tsx --test tests/ui/c9FamilyJSpatialAttackProduction.test.ts
