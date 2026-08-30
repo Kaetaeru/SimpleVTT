@@ -1,0 +1,42 @@
+name: C9 Family E Automatic Selector Diagnostic 7130
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-e-automatic-selector-diagnostic-7130.yml
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Apply current automatic selector patch and diagnostic assertion
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from textwrap import dedent
+          workflow=Path('.github/workflows/c9-family-e-automatic-selector-runner-7130.yml').read_text()
+          start="          python - <<'PY'\n"
+          end="\n          PY\n"
+          script=dedent(workflow.split(start,1)[1].split(end,1)[0])
+          exec(compile(script,'automatic-selector-runner','exec'),{'__name__':'__main__'})
+          path=Path('tests/ui/commonPlayRichSelectorProduction.test.ts')
+          text=path.read_text()
+          old='''    assert.equal(snapshot.resolution?.stage,"complete");\n    assert.deepEqual(snapshot.resolution?.targetIds,["combatant.wolf"],"lowest-HP eligible enemy is selected by the shared orderBy kernel");\n'''
+          new='''    assert.equal(snapshot.resolution?.stage,"complete");\n    assert.notEqual(snapshot.resolution?.finalOutcome,"적용 거부",JSON.stringify(snapshot.resolution));\n    assert.deepEqual(snapshot.resolution?.targetIds,["combatant.wolf"],"lowest-HP eligible enemy is selected by the shared orderBy kernel");\n'''
+          if old not in text: raise SystemExit('diagnostic assertion marker missing')
+          path.write_text(text.replace(old,new,1))
+          PY
+      - run: npm ci
+      - run: npm run generate:content
+      - name: Run automatic selector diagnostic
+        run: node --import tsx --test --test-name-pattern="automatic selector" tests/ui/commonPlayRichSelectorProduction.test.ts
