@@ -2018,7 +2018,7 @@
         "RulesProfile timing/economy",
         "reactionWindow.ts"
       ],
-      "currentState": "Common Play persists owner-neutral specialActions authoring for turn-start/turn-end/after-turn/initiative-count timing, reusable entry-point options, optional resource pools, and per-option cost while runtime actor ownership remains session-bound. The generic special-action kernel validates concrete owner/timing/cost/option execution. RuntimeClock still lacks authoritative initiative-count progression and production still lacks the generic session dispatcher plus connected replay/reconnect path required to schedule these portable definitions, so Family AC remains INCOMPLETE. The session owner now has an authoritative initiative-count event source through turnRuntimeInitiativeCountService.ts; special-action refresh/order dispatch and connected off-turn interaction remain incomplete.",
+      "currentState": "Common Play persists owner-neutral specialActions authoring and binds ownership to the runtime actor artifact. The authoritative RuntimeClock exposes turn-start, turn-end, after-turn, and initiative-count windows; production projects every eligible option, atomically spends its declared pool cost with payload operations, and uses ordinary turn-start resource recovery. Connected ResolutionEvents provide replay rejection, reconnect reconstruction, and Undo.",
       "requiredSemantics": [
         "off-turn pools",
         "refresh",
@@ -2032,25 +2032,34 @@
         "replay/reconnect"
       ],
       "transactionDomain": "Session timing/economy and interaction authority",
-      "disposition": "INCOMPLETE",
+      "disposition": "IMPLEMENTED",
       "implementationEvidence": [
         "commonPlaySpecialTimingRuntime.ts owner/timing/option/cost compiler",
         "commonPlayC6Runtime.test.ts owner-authorized after-turn cost/payload kernel proof",
         "3a101b51ab99bbb3f4e5acffd9501fb7eabc7e36: portable specialActions authoring schema/parser with runtime-bound ownership and entryPointId option references",
         "3a101b51ab99bbb3f4e5acffd9501fb7eabc7e36 feat(c9): persist portable special timing definitions; commonPlaySpecialTimingRuntime.ts + commonPlayDefinitionRuntime.ts + common-play-contract.schema.json retain owner-neutral specialActions timing/pool/cost/multiple-option authoring by portable entryPointId reference",
         "turnRuntimeInitiativeCountService.ts exposes a session-owned set-initiative-count command through the shared Resolver and returns authoritative ResolutionEvents",
-        "tests/domain/c9FamilyACInitiativeCountSource.test.ts proves valid initiative-count changes emit one authoritative turn-clock event and invalid counts do not mutate session state"
+        "tests/domain/c9FamilyACInitiativeCountSource.test.ts proves valid initiative-count changes emit one authoritative turn-clock event and invalid counts do not mutate session state",
+        "RuntimeClock.specialWindows plus resolutionTurnOps.ts authoritative turn/initiative window projection",
+        "installedCommonPlayRuntimeAdapter.ts special option projection and compileCommonPlaySpecialAction production execution",
+        "RuntimeArtifact resource recovery metadata uses the existing generic turn-start recovery owner"
       ],
-      "productionEvidence": [],
-      "identityInvarianceEvidence": [],
-      "connectedEvidenceIfRelevant": [],
+      "productionEvidence": [
+        "688b07f5 feat(c9): connect portable special timing",
+        "c9FamilyACSpecialTimingProduction.test.ts proves off-turn option selection, atomic pool cost/payload, owner turn-start refresh, and initiative-count execution",
+        "repository-wide npm run build green after the Family AC source change"
+      ],
+      "identityInvarianceEvidence": [
+        "c9FamilyACSpecialTimingProduction.test.ts executes equivalent external.legendary and fully-renamed.offturn packages"
+      ],
+      "connectedEvidenceIfRelevant": [
+        "c9FamilyACSpecialTimingProduction.test.ts proves Host/Client convergence, duplicate replay rejection, fresh reconnect reconstruction, and event-native Undo"
+      ],
       "persistenceEvidenceIfRelevant": [
-        "C9 Family AC Authoring Contract R2 run 33313341650 job 99262204177: installed Common Play persistence/rehydration/session-sync regression passed with portable special timing mechanic"
+        "C9 Family AC Authoring Contract R2 run 33313341650 job 99262204177: installed Common Play persistence/rehydration/session-sync regression passed with portable special timing mechanic",
+        "connected Host ledger replay/reconnect preserves RuntimeClock windows, actor resource pool, and installed specialActions"
       ],
-      "remainingNamedSeams": [
-        "special-action pool refresh/order semantics at authoritative timing windows",
-        "session timing dispatcher plus connected off-turn interaction/replay/reconnect"
-      ],
+      "remainingNamedSeams": [],
       "connectedRelevant": true,
       "persistenceRelevant": true
     },
