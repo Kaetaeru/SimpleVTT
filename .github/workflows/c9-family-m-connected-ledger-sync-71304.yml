@@ -1,0 +1,88 @@
+name: C9 Family M Connected Ledger Sync 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - ".github/workflows/c9-family-m-connected-ledger-sync-71304.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - name: Reconcile latest branch
+        run: git pull --rebase origin "$GITHUB_REF_NAME"
+      - name: Record verified Family M connected evidence
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          path=Path("docs/rules/v1-mechanism-coverage-ledger.json")
+          data=json.loads(path.read_text())
+          family=next((entry for entry in data["rows"] if entry.get("family")=="M"),None)
+          if not family or family.get("id")!="conditions":
+              raise SystemExit("Family M conditions ledger entry not found")
+
+          family["currentState"]=(
+              "The shared Resolver condition Effect path enforces explicit combatant condition immunities, active tagged condition-immunity Effects, and rules-derived condition immunities before adding a condition Effect. "
+              "Unknown installed Common Play condition.apply/remove has production and external identity-rename proof for explicit Poisoned immunity, Petrified-derived Poisoned immunity, successful application after immunity removal, and Undo. "
+              "Host-authoritative connected apply/remove replay, duplicate suppression, Undo, fresh reconnect, and renamed external identity convergence are proven for portable conditions. "
+              "Exhaustive SRD condition semantics, Exhaustion levels/stacking, and remaining named condition-specific adapters remain incomplete."
+          )
+
+          evidence={
+            "productionEvidence":[
+              "443afa3586ed166ccfeeb330ddc86700bd7a7a78 test(c9): prove connected condition rename invariance; C9 Family M Connected Conditions 71304 run 33312970618 passed connected portable condition lifecycle and tsc --noEmit"
+            ],
+            "identityInvarianceEvidence":[
+              "c9FamilyMConditionConnectedAcceptance.test.ts repeats connected apply and fresh reconnect under an unrelated external module/content/mechanic identity"
+            ],
+            "connectedEvidenceIfRelevant":[
+              "c9FamilyMConditionConnectedAcceptance.test.ts explicitly proves portable condition.apply and condition.remove Host-to-Client convergence, duplicate suppression, fresh reconnect, event-native Undo, reconnect-after-Undo, and renamed external identity convergence"
+            ],
+            "persistenceEvidenceIfRelevant":[
+              "C9 Family M Connected Conditions 71304 run 33312970618 proves fresh replicas reconstruct authoritative condition state after apply, explicit remove, and Undo from the Host event ledger"
+            ],
+          }
+          for key,values in evidence.items():
+              for value in values:
+                  if value not in family[key]:
+                      family[key].append(value)
+
+          family["remainingNamedSeams"]=[
+              seam for seam in family.get("remainingNamedSeams",[])
+              if "explicit connected condition.remove" not in seam
+          ]
+          required=[
+              "exhaustive production acceptance for all SRD condition semantics and Exhaustion stacking/levels remains incomplete",
+              "named condition-specific adapters remain migration debt where they bypass portable Common Play/Resolver",
+          ]
+          for seam in required:
+              if seam not in family["remainingNamedSeams"]:
+                  family["remainingNamedSeams"].append(seam)
+
+          path.write_text(json.dumps(data,ensure_ascii=False,indent=2)+"\n")
+          PY
+      - name: Verify coverage ledger
+        run: node scripts/check-v1-mechanism-coverage.mjs
+      - name: Commit verified Family M evidence
+        shell: bash
+        run: |
+          rm .github/workflows/c9-family-m-connected-ledger-sync-71304.yml
+          git add docs/rules/v1-mechanism-coverage-ledger.json .github/workflows/c9-family-m-connected-ledger-sync-71304.yml
+          git commit -m "docs(c9): record Family M connected condition evidence"
+          git pull --rebase origin "$GITHUB_REF_NAME"
+          git push origin HEAD:"$GITHUB_REF_NAME"
