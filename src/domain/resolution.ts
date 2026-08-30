@@ -1,5 +1,4 @@
 import { cloneRuntimeState, type RulesRuntimeState } from "./combatState";
-import type { D20TestResult } from "./d20";
 import { DomainEvaluationError, type RulesProfileLike } from "./profileEngine";
 import {
   makeEvent,
@@ -85,31 +84,6 @@ function executeOperation(
   }
 }
 
-function semanticD20OutcomeEvent(
-  pending:PendingResolution,
-  operation:Extract<ResolutionOperation,{kind:"d20"}>,
-  result:D20TestResult,
-):ResolutionEvent|undefined {
-  const kind=result.family==="attack-roll"
-    ?(result.outcome==="success"?"attack.hit":"attack.miss")
-    :result.family==="saving-throw"
-      ?(result.outcome==="success"?"save.success":"save.failure")
-      :undefined;
-  if(!kind) return undefined;
-  return {
-    id:`${pending.id}:${operation.id}:semantic:${kind}`,
-    resolutionId:pending.id,
-    operationId:operation.id,
-    kind,
-    actorId:operation.actorId??pending.actorId,
-    targetId:operation.targetId,
-    summary:`${kind} (${result.total} vs ${result.target})`,
-    provenance:[...result.provenance],
-    stateChanges:[],
-    result:structuredClone(result),
-  };
-}
-
 export type StagedResolution =
   | {
       status: "staged";
@@ -171,10 +145,6 @@ export function stagePendingResolution(
       const execution = executeOperation(ctx, operation);
       ctx.results.set(operation.id, execution.result);
       events.push(execution.event);
-      if(operation.kind==="d20") {
-        const semantic=semanticD20OutcomeEvent(pending,operation,execution.result as D20TestResult);
-        if(semantic) events.push(semantic);
-      }
     }
   } catch (error) {
     return {
