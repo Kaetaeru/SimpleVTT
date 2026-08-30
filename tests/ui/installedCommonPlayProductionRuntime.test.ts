@@ -529,6 +529,32 @@ test("unknown installed Common Play preserves a bounded multi-target selection t
   assert.ok(snapshot.resolution?.detail.some((line)=>/validated 2 target/.test(line)));
 });
 
+test("unknown installed Common Play rich predicate filters authoritative scene properties without identity dispatch",async()=>{
+  const adapter=new MockAdapter();
+  const payload=JSON.parse(targetingPackagePayload()) as any;
+  payload.content[0].mechanics[0].config.entryPoints[0].targeting={from:"targets",where:{op:"contains",left:{ref:"status"},right:{value:"중독됨"}},min:1,max:1};
+  setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
+  const preview=await adapter.previewContentImport(JSON.stringify(payload));
+  assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
+  await adapter.activateContentImport();
+  const actionId=installedCommonPlayActionId({catalogId:catalogQualifiedId(TARGETING_IDENTITY.contentId,TARGETING_IDENTITY.moduleId,"1"),mechanicId:TARGETING_IDENTITY.mechanicId,entryPointId:TARGETING_IDENTITY.entryPointId});
+  injureSceneEntity(adapter,"combatant.goblin-a",10);
+  injureSceneEntity(adapter,"combatant.goblin-b",10);
+  await adapter.startInitiative();
+  await adapter.setCurrentActor("char.aelar");
+  let snapshot=await adapter.getSnapshot();
+  const ineligibleBefore=snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-b")!.hp;
+  await adapter.resolveAction(actionId,["combatant.goblin-b"]);
+  snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-b")!.hp,ineligibleBefore);
+  const eligibleBefore=snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")!.hp;
+  await adapter.resolveAction(actionId,["combatant.goblin-a"]);
+  snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.resolution?.stage,"complete");
+  assert.deepEqual(snapshot.resolution?.targetIds,["combatant.goblin-a"]);
+  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")!.hp,eligibleBefore+5);
+});
+
 test("unknown installed Common Play relation selector rejects an ineligible target before production commit",async()=>{
   const adapter=new MockAdapter();
   const payload=JSON.parse(targetingPackagePayload()) as any;

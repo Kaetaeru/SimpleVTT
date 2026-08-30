@@ -25,6 +25,7 @@ import type { D20TestResult } from "../domain/d20";
 import type { DamageResolution, HealingResolution } from "../domain/damage";
 import type { DamageRollResolution } from "../domain/damageRoll";
 import type { TargetingFactInput } from "../domain/targeting";
+import type { CommonPlaySelectorCandidate } from "../domain/commonPlaySelectorRuntime";
 import { resolveCommonPlayStoredInvocationCancel, resolveCommonPlayStoredInvocationCapture, resolveCommonPlayStoredInvocationTrigger } from "../domain/commonPlayStoredInvocationRuntime";
 import type { ReadyActionConfiguration } from "./standardActionReadyState";
 import { resolvePendingResolution } from "../domain/resolution";
@@ -393,6 +394,29 @@ function commonPlayTargetFact(actor:SceneVm["entities"][number],target:SceneVm["
   };
 }
 
+function commonPlaySelectorCandidate(actor:SceneVm["entities"][number],target:SceneVm["entities"][number]):CommonPlaySelectorCandidate {
+  const targeting=commonPlayTargetFact(actor,target);
+  return {
+    id:target.id,
+    targeting,
+    properties:{
+      relation:targeting.relation,
+      name:target.name,
+      side:target.side,
+      kind:target.kind,
+      hp:target.hp,
+      maxHp:target.maxHp,
+      tempHp:target.tempHp,
+      ac:target.ac,
+      initiative:target.initiative,
+      status:[...target.status],
+      resistances:[...target.resistances],
+      immunities:[...target.immunities],
+      vulnerabilities:[...target.vulnerabilities],
+    },
+  };
+}
+
 function damageDiceFaces(
   internal:AdapterState,
   actionId:string,
@@ -615,6 +639,7 @@ function operationExecutionInput(
   return {
     resolutionId,actorId:actor.id,entryPointId:action.entryPointId,targetId:selectedTargetId,
     targetingTargets:entryPoint.targeting?selectedTargets.map((target)=>commonPlayTargetFact(actorEntity,target)):undefined,
+    targetingCandidates:entryPoint.targeting?internal.scene.entities.filter((target)=>state.combatants[target.id]).map((target)=>commonPlaySelectorCandidate(actorEntity,target)):undefined,
     creatureKinds:Object.fromEntries([
       [actor.id,actorEntity.kind==="character"?"character":"monster"],
       ...selectedTargets.map((target)=>[target.id,target.kind==="character"?"character":"monster"] as const),

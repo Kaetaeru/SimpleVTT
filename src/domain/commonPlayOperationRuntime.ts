@@ -8,7 +8,7 @@ import type { TargetingFactInput } from "./targeting";
 import type { ActionUseKind, TurnSlot } from "./turnEconomy";
 import { compileCommonPlayMovement, type CommonPlayMovementDefinition } from "./commonPlayMovementRuntime";
 import type { CommonPlayFactAnswer, CommonPlayFactQuery } from "./commonPlaySpatialFactRuntime";
-import { parseCommonPlaySelector, resolveCommonPlaySelector, type CommonPlaySelector } from "./commonPlaySelectorRuntime";
+import { parseCommonPlaySelector, resolveCommonPlaySelector, type CommonPlaySelector, type CommonPlaySelectorCandidate } from "./commonPlaySelectorRuntime";
 
 type LiteralNumberExpression={value:number};
 type CommonPlayExpression=LiteralNumberExpression|Record<string,unknown>;
@@ -177,6 +177,7 @@ export interface CommonPlayOperationExecutionInput {
   };
   targetId?:string;
   targetingTargets?:TargetingFactInput[];
+  targetingCandidates?:CommonPlaySelectorCandidate[];
   creatureKinds?:Record<string,"character"|"monster">;
   damageDiceFaces?:Record<number,number[]>;
   rechargeDiceFaces?:Record<number,number[]>;
@@ -705,7 +706,7 @@ export function compileCommonPlayEntryPointOperations(
     const selectorResolution=resolveCommonPlaySelector({
       sourceId:input.actorId,
       selector:entryPoint.targeting,
-      candidates:input.targetingTargets.map(targetingSelectorCandidate),
+      candidates:input.targetingCandidates??input.targetingTargets.map(targetingSelectorCandidate),
       selectedIds:input.targetingTargets.map((target)=>target.id),
       selection:"manual",
       authority:"actor-owner",
