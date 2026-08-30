@@ -1256,7 +1256,7 @@
         "RulesProfile timing points",
         "session event batches"
       ],
-      "currentState": "A generic typed simultaneous-ordering decision kernel validates eligible candidate sets, actor-controller/DM authority, stale revisions, exact permutations, deterministic ordered projection, and idempotent exact replay. Production timing-window collection, Host-connected decision transport/reconnect, and unknown RuleModule execution remain incomplete.",
+      "currentState": "A generic typed simultaneous-ordering decision kernel validates eligible candidate sets, actor-controller/DM authority, stale revisions, exact permutations, deterministic ordered projection, and idempotent exact replay. Production installed Common Play turn-start/turn-end timing windows now collect eligible unknown external RuleModule candidates before mutation, pause for actor-controller ordering when multiple candidates are eligible, and retry the same lifecycle boundary through the existing Resolver in the authorized order without consuming frequency or authoritative dice while pending. Host-connected ordering-decision transport/reconnect/replay remains incomplete.",
       "requiredSemantics": [
         "timing window",
         "eligible effects",
@@ -1272,14 +1272,17 @@
         "commonPlaySimultaneousOrderingRuntime.ts generic pending/resolved ordering state with actor-controller|dm authority, revision/responder validation, exact candidate permutation, deterministic projection, and idempotent exact replay",
         "commonPlaySimultaneousOrderingRuntime.test.ts covers automatic zero/one-candidate resolution, authority/stale rejection, invalid permutations, deterministic ordering, replay, and conflicting replay rejection"
       ],
-      "productionEvidence": [],
+      "productionEvidence": [
+        "3487314c2d12105b689c94a087ea59e2395d26a9 feat(c9): collect production simultaneous turn ordering; connectedActorTurnRuleProduction.test.ts proves an unknown installed module with two same-boundary turn rules pauses before mutation and executes the actor-authorized order through the existing Resolver"
+      ],
       "identityInvarianceEvidence": [
-        "commonPlaySimultaneousOrderingRuntime.test.ts repeats the same relative mechanical ordering under unrelated renamed external candidate identities"
+        "commonPlaySimultaneousOrderingRuntime.test.ts repeats the same relative mechanical ordering under unrelated renamed external candidate identities",
+        "connectedActorTurnRuleProduction.test.ts repeats the production simultaneous turn-rule ordering proof after complete external module/content/mechanic identity rename"
       ],
       "connectedEvidenceIfRelevant": [],
       "persistenceEvidenceIfRelevant": [],
       "remainingNamedSeams": [
-        "production Common Play timing-window collection and Host-connected decision transport/reconnect/replay are not yet wired to the ordering kernel"
+        "Host-connected simultaneous-ordering decision transport, reconnect, stale response handling, and replay are not yet wired to the production ordering kernel"
       ],
       "connectedRelevant": true,
       "persistenceRelevant": true
