@@ -1,0 +1,59 @@
+name: C9 Actor Publish Diagnostic 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-actor-publish-diagnostic-71304.yml
+
+permissions:
+  contents: write
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npm run generate:content
+      - name: Instrument connected publish boundary
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('src/app/connectedActionRoutingAdapter.ts')
+          s=p.read_text()
+          s=s.replace('  const state=connectedStateFor(adapter);\n  if (state.mode!=="host"||!state.ledger) return snapshot ?? connectedInternal(adapter).getSnapshot();', '  const state=connectedStateFor(adapter);\n  console.log("C9DIAG publish-entry",JSON.stringify({mode:state.mode,ledger:Boolean(state.ledger),published:[...state.publishedResolutionIds]}));\n  if (state.mode!=="host"||!state.ledger) return snapshot ?? connectedInternal(adapter).getSnapshot();',1)
+          s=s.replace('  const events=takeCommittedResolutionEvents(resolution.id);\n  const presentation=buildConnectedResolutionPresentation', '  const events=takeCommittedResolutionEvents(resolution.id);\n  console.log("C9DIAG events",resolution.id,events?.length??0);\n  const presentation=buildConnectedResolutionPresentation',1)
+          s=s.replace('  if (!presentation) return current;\n  state.presentationTimelineByResolution.set', '  console.log("C9DIAG presentation",resolution.id,Boolean(presentation));\n  if (!presentation) return current;\n  state.presentationTimelineByResolution.set',1)
+          s=s.replace('  await broadcastConnectedWire({\n    type:"event-batch",\n    sessionId:state.ledger.sessionId,\n    afterCursor:event.sequence-1,\n    events:outbound,\n  });', '  console.log("C9DIAG broadcast-before",resolution.id,event.sequence,outbound.length);\n  await broadcastConnectedWire({\n    type:"event-batch",\n    sessionId:state.ledger.sessionId,\n    afterCursor:event.sequence-1,\n    events:outbound,\n  });\n  console.log("C9DIAG broadcast-after",resolution.id);',1)
+          p.write_text(s)
+          PY
+      - name: Run one failing actor reconnect case
+        run: node --import tsx --test --test-name-pattern="actor artifact reconstructs" tests/ui/connectedActorArtifactReconnectProduction.test.ts
+      - name: Retire diagnostic workflow
+        if: always()
+        run: |
+          set -euo pipefail
+          branch=agent/c9-gate-n-coverage-reconciliation
+          path=.github/workflows/c9-actor-publish-diagnostic-71304.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for attempt in $(seq 1 10); do
+            git fetch origin "$branch"
+            git reset --hard "origin/$branch"
+            rm -f "$path"
+            git add -A "$path"
+            if git diff --cached --quiet; then exit 0; fi
+            git commit -m "ci(c9): retire actor publish diagnostic"
+            if git push origin HEAD:"$branch"; then exit 0; fi
+            sleep 1
+          done
+          exit 1
