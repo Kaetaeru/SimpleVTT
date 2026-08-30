@@ -1,0 +1,80 @@
+name: C9 Family G Ledger Evidence 7130
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-g-ledger-evidence-7130.yml
+
+permissions:
+  contents: write
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Record verified Family G standard spatial fact evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
+          ledger=json.loads(path.read_text(encoding='utf-8'))
+          row=next(entry for entry in ledger['rows'] if entry['family']=='G')
+
+          row['currentState']='Provider/manual authority now has production-verified standard distance, line-of-effect, Total Cover, and area-membership facts with normalized authoritative answers, identity invariance, and connected authority routing. Family G remains incomplete for engine-owned geometry breadth (adjacency/reach/size and shape intersection/placement) and durable reconnect/retry evidence for spatial decisions.'
+
+          additions={
+            'implementationEvidence':[
+              'commonPlaySpatialFactRuntime.ts COMMON_PLAY_STANDARD_FACTS defines provider/manual authority for spatial.distance-feet, spatial.line-of-effect, spatial.total-cover, and spatial.area-members with normalized answers',
+              'connectedCommonPlayAuthorityFactRuntime.ts routes authoritative Common Play fact requests and answers through the connected session authority path',
+            ],
+            'productionEvidence':[
+              'c9FamilyGStandardSpatialFacts.test.ts proves provider-authoritative distance, line-of-effect, Total Cover, and normalized area membership without content identity dispatch',
+              'C9 Family G Standard Spatial Facts run 33309874336: Family G targeted tests, legacy execution boundary, and tsc --noEmit all passed; only the verifier self-retirement step failed',
+            ],
+            'identityInvarianceEvidence':[
+              'c9FamilyGStandardSpatialFacts.test.ts proves the same authoritative spatial facts under unrelated external resolution identities',
+            ],
+            'connectedEvidenceIfRelevant':[
+              'connectedCommonPlayAuthorityFactRouting.test.ts and connectedCommonPlayAuthorityFactDispatch.test.ts passed in Family G run 33309874336',
+            ],
+          }
+          for key,values in additions.items():
+            existing=row.setdefault(key,[])
+            for value in values:
+              if value not in existing:
+                existing.append(value)
+
+          row['remainingNamedSeams']=[
+            'engine-owned adjacency/reach/size-space and line/cone/cube/sphere/cylinder/emanation intersection geometry remain incomplete',
+            'position/artifact placement geometry is not yet converged on the standard spatial fact authority path',
+            'durable reconnect/retry persistence evidence for spatial decisions remains absent',
+          ]
+
+          path.write_text(json.dumps(ledger,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          PY
+      - name: Verify coverage ledger
+        run: node scripts/check-v1-mechanism-coverage.mjs
+      - name: Commit verified ledger evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/rules/v1-mechanism-coverage-ledger.json
+          git diff --cached --check
+          git commit -m "docs(c9): record verified Family G spatial facts"
+          git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
