@@ -19,6 +19,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Generate content catalogs
+        run: npm run generate:content
       - name: Verify portable effect suppression and pause-resume
         run: npx tsx --test tests/ui/c9FamilyNEffectDurationProduction.test.ts
       - name: Typecheck
