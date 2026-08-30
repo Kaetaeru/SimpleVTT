@@ -678,7 +678,7 @@
         "realAttackTransactionService.ts",
         "unarmedControlRuntimeAdapter.ts"
       ],
-      "currentState": "Unknown installed Common Play attack-roll plus target damage now has production evidence through a projected arbitrary-ID Actor action with Action payment, damage commit, Host/Client convergence, and Undo. Family J remains incomplete for full weapon/Unarmed Strike, Opportunity Attack, grapple/shove/escape, reach/range/cover, Extra Attack/replacement, and ammunition/loading composition.",
+      "currentState": "Unknown installed Common Play attack-roll plus target damage has production evidence through a projected arbitrary-ID Actor action with Action payment, damage commit, Host/Client convergence, and Undo. Projected Unarmed grapple/shove now dispatches from a typed runtimeSaveCondition action payload rather than named action IDs, with arbitrary action-ID rename evidence. Family J remains incomplete for portable Common Play control composition plus full weapon/Unarmed Strike, Opportunity Attack, reach/range/cover, Extra Attack/replacement, and ammunition/loading composition.",
       "requiredSemantics": [
         "weapon attack",
         "Unarmed Strike",
@@ -697,13 +697,16 @@
       "transactionDomain": "Resolver attack transaction",
       "disposition": "INCOMPLETE",
       "implementationEvidence": [
-        "commonPlayOperationRuntime.ts structurally composes attack-roll d20 tests with target damage.apply through the shared Resolver operation path"
+        "commonPlayOperationRuntime.ts structurally composes attack-roll d20 tests with target damage.apply through the shared Resolver operation path",
+        "productionPlayRuntimeAdapter.ts projects typed runtimeSaveCondition payloads for Unarmed grapple/shove; unarmedControlRuntimeAdapter.ts consumes the payload without action-ID dispatch"
       ],
       "productionEvidence": [
-        "installedCommonPlayLoweredFamiliesProduction.test.ts#summoned Actor projects and executes its portable Common Play action with economy and Undo"
+        "installedCommonPlayLoweredFamiliesProduction.test.ts#summoned Actor projects and executes its portable Common Play action with economy and Undo",
+        "unarmedStrikeRuntime.test.ts executes projected grapple after replacing its action ID with an unrelated external ID"
       ],
       "identityInvarianceEvidence": [
-        "installedCommonPlayLoweredFamiliesProduction.test.ts executes the summoned attack from arbitrary previously-unknown module/content/mechanic/action identities rather than a registered attack content ID"
+        "installedCommonPlayLoweredFamiliesProduction.test.ts executes the summoned attack from arbitrary previously-unknown module/content/mechanic/action identities rather than a registered attack content ID",
+        "unarmedStrikeRuntime.test.ts runtimeSaveCondition rename probe preserves save/condition semantics under an unrelated action ID"
       ],
       "connectedEvidenceIfRelevant": [
         "installedCommonPlayLoweredFamiliesProduction.test.ts#summoned Actor action and Undo converge through Host-authoritative connected events"
@@ -713,7 +716,8 @@
       ],
       "remainingNamedSeams": [
         "full generic weapon and Unarmed Strike action projection is not yet proven across source-owned equipment/stat definitions",
-        "Opportunity Attack and grapple/shove/escape control composition remain outside the portable Common Play attack acceptance",
+        "projected grapple/shove is action-ID independent but remains outside portable Common Play import/normalization and escape control composition",
+        "Opportunity Attack portable acceptance remains incomplete beyond existing projection-driven integration",
         "reach, long range, cover, multiattack/Extra Attack/replacement, and ammunition/loading constraints remain incomplete",
         "Rage attack rider and other named attack/action projection remain migration debt"
       ],

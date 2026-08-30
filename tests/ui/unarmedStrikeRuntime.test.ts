@@ -62,6 +62,23 @@ test("Unarmed shove applies public Prone without a spatial-module distance gate"
   assert.equal(snapshot.resolution?.finalOutcome,"넘어짐 적용");
 });
 
+test("Unarmed control runtime follows payload semantics after action ID rename", async () => {
+  const adapter=new MockAdapter();
+  await ready(adapter);
+  const originalGetSnapshot=adapter.getSnapshot.bind(adapter);
+  adapter.getSnapshot=async()=>{
+    const snapshot=await originalGetSnapshot();
+    const action=snapshot.scene.actionsByActor["char.aelar"]?.find((entry)=>entry.id==="action.unarmed-strike.grapple");
+    if(action) action.id="action.external.renamed-control-probe";
+    return snapshot;
+  };
+  await adapter.setQueuedD20(1);
+  await adapter.resolveAction("action.external.renamed-control-probe",["combatant.goblin-a"]);
+  const snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.resolution?.actionId,"action.external.renamed-control-probe");
+  assert.ok(snapshot.scene.entities.find((entry)=>entry.id==="combatant.goblin-a")?.status.some((status)=>status.includes("붙잡힘")));
+});
+
 test("connected unarmed condition converges once on every client", async () => {
   const sessionId="session.unarmed-condition";
   const host=new MockAdapter();
