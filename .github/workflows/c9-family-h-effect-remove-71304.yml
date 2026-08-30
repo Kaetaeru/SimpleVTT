@@ -31,6 +31,7 @@ jobs:
           set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
+          import re
 
           runtime=Path('src/domain/commonPlayOperationRuntime.ts')
           text=runtime.read_text(encoding='utf-8')
@@ -64,9 +65,11 @@ jobs:
               replace_once(old,new,'type')
 
           if '|CommonPlayEffectRemove' not in text:
-              old='  |CommonPlayMovementStand\n  |CommonPlayConditionChange\n  |CommonPlayRollModify;'
-              new='  |CommonPlayMovementStand\n  |CommonPlayConditionChange\n  |CommonPlayEffectRemove\n  |CommonPlayRollModify;'
-              replace_once(old,new,'union')
+              replace_once(
+                  '  |CommonPlayMovementStand\n  |CommonPlayConditionChange\n  |CommonPlayRollModify;',
+                  '  |CommonPlayMovementStand\n  |CommonPlayConditionChange\n  |CommonPlayEffectRemove\n  |CommonPlayRollModify;',
+                  'union',
+              )
 
           if 'const EFFECT_REMOVE_KEYS=' not in text:
               old='const CONDITION_CHANGE_KEYS=new Set(["kind","condition","target","when"]);'
@@ -121,10 +124,8 @@ jobs:
           test=Path('tests/ui/c9FamilyHSearchDiscoveryProduction.test.ts')
           text=test.read_text(encoding='utf-8')
           if 'kind: "effect.remove"' not in text:
-              old='''kind: "condition.remove",
-            condition: "invisible",
-            target: "target",'''
-              new='''kind: "effect.remove",
+              pattern=r'kind:\s*"condition\.remove",\s*condition:\s*"invisible",\s*target:\s*"target",'
+              replacement='''kind: "effect.remove",
             selector: {
               from: "effects",
               where: {
@@ -138,8 +139,8 @@ jobs:
               max: 1,
               selection: "automatic",
             },'''
-              if old not in text: raise SystemExit('Family H Search operation anchor missing')
-              text=text.replace(old,new,1)
+              text,count=re.subn(pattern,replacement,text,count=1)
+              if count!=1: raise SystemExit(f'Family H Search operation regex matched {count} times')
           test.write_text(text,encoding='utf-8')
           PY
       - name: Verify generic effect removal
