@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import "../../src/app/offlineRuntimeAdapters";
 import { MockAdapter } from "../../src/app/mockAdapter";
+import { runtimeResolutionEventHistory } from "../../src/app/runtimeResolutionEventHistory";
 import type { AppSnapshot, CharacterSheet } from "../../src/app/contracts";
 import { MONK_FOCUS_RESOURCE_ID, MONK_OPEN_HAND_CLASS_ID } from "../../src/domain/monkOpenHand";
 
@@ -65,6 +66,11 @@ test("base Step of the Wind uses generic movement budget execution and event-nat
   assert.equal(snapshot.scene.economyByActor[actorId]?.movement,(before?.movement??0)+snapshot.activeCharacter.speed);
   assert.equal(snapshot.scene.economyByActor[actorId]?.bonusAction,false);
   assert.equal(snapshot.activeCharacter.resources.find((entry)=>entry.id===MONK_FOCUS_RESOURCE_ID)?.current,focusBefore);
+  const history=runtimeResolutionEventHistory(adapter);
+  assert.ok(history);
+  assert.equal(history?.events.length,1);
+  assert.equal(history?.events[0]?.kind,"movement-budget");
+  assert.equal(history?.events[0]?.stateChanges.some((entry)=>entry.kind==="economy"),true);
 
   await adapter.undoLastResolution();
   snapshot=await adapter.getSnapshot();
@@ -72,7 +78,8 @@ test("base Step of the Wind uses generic movement budget execution and event-nat
   assert.equal(snapshot.scene.economyByActor[actorId]?.movement,before?.movement);
   assert.equal(snapshot.scene.economyByActor[actorId]?.bonusAction,before?.bonusAction);
   assert.equal(snapshot.activeCharacter.resources.find((entry)=>entry.id===MONK_FOCUS_RESOURCE_ID)?.current,focusBefore);
-  assert.equal(snapshot.activity.at(-1)?.title,"Resolution 되돌림");
+  assert.equal(runtimeResolutionEventHistory(adapter),undefined);
+  assert.equal(snapshot.activity[0]?.title,"Resolution 되돌림");
 });
 
 test("Flurry spends one Focus plus Bonus Action and grants two Unarmed Strike attacks without spending the standard Action",async()=>{
