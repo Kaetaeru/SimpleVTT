@@ -121,6 +121,14 @@ async function install(prefix:string) {
   return {adapter,action};
 }
 
+function seedMovementProperty(adapter:MockAdapter,property:string,value:number) {
+  const session=turnRuntimeSessions.get(adapter);
+  assert.ok(session,"turn runtime session must exist");
+  const actor=session.state.combatants["char.aelar"];
+  assert.ok(actor,"active movement actor must exist");
+  actor.baseProperties={...(actor.baseProperties??{}),[property]:value};
+}
+
 async function seedProne(adapter:MockAdapter){const snapshot=await adapter.getSnapshot();ensureAdapterTurnRuntimeState(adapter,snapshot.scene);const session=turnRuntimeSessions.get(adapter);assert.ok(session,"turn runtime session must exist");session.state.effects.push({id:"effect.external.prone",sourceId:"external.unknown.prone-source",targetId:"char.aelar",kind:"condition",conditionId:"prone",tags:[],expiry:{kind:"permanent"}});}
 async function runPortableStand(prefix:string){const {adapter,action}=await install(prefix);await seedProne(adapter);const before=(await adapter.getSnapshot()).scene.economyByActor["char.aelar"]!.movement;await adapter.resolveAction(action("stand"),["char.aelar"]);let snapshot=await adapter.getSnapshot();assert.equal(snapshot.resolution?.stage,"complete","portable stand must commit through production Common Play");assert.equal(snapshot.scene.economyByActor["char.aelar"]?.movement,before-15);assert.equal(turnRuntimeSessions.get(adapter)?.state.effects.some((effect)=>effect.conditionId==="prone"&&effect.targetId==="char.aelar"),false);await adapter.undoLastResolution();snapshot=await adapter.getSnapshot();assert.equal(snapshot.scene.economyByActor["char.aelar"]?.movement,before,"stand Undo must restore movement budget");assert.equal(turnRuntimeSessions.get(adapter)?.state.effects.some((effect)=>effect.conditionId==="prone"&&effect.targetId==="char.aelar"),true,"stand Undo must restore Prone");return before;}
 
@@ -160,6 +168,35 @@ async function runMovementMatrix(prefix:string) {
 
 test("unknown installed Common Play executes every movement type, cost multiplier, push, pull, teleport, and no-provoke move through production Resolver",async()=>{
   assert.equal(await runMovementMatrix("unknown-family-i"),30);
+});
+
+test("rules-derived movement cost multiplier is authoritative for unknown installed Common Play",async()=>{
+  const {adapter,action}=await install("unknown-family-i-rules-cost");
+  seedMovementProperty(adapter,"movement.cost.multiplier",2);
+  const before=(await adapter.getSnapshot()).scene.economyByActor["char.aelar"]!.movement;
+  await adapter.resolveAction(action("move-walk"),["char.aelar"]);
+  let snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.resolution?.stage,"complete");
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.movement,before-10,"authoritative rules multiplier must double movement budget cost");
+  await adapter.undoLastResolution();
+  snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.movement,before,"movement multiplier Undo must restore the exact budget");
+});
+
+test("rules-derived alternate speed bounds unknown installed Common Play movement",async()=>{
+  const {adapter,action}=await install("unknown-family-i-alternate-speed");
+  seedMovementProperty(adapter,"movement.fly",0);
+  const before=(await adapter.getSnapshot()).scene.economyByActor["char.aelar"]!.movement;
+  await adapter.resolveAction(action("move-fly"),["char.aelar"]);
+  let snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.movement,before);
+  assert.match(snapshot.resolution?.detail.join("\n")??"",/movement exceeds fly speed/);
+
+  seedMovementProperty(adapter,"movement.fly",10);
+  await adapter.resolveAction(action("move-fly"),["char.aelar"]);
+  snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.resolution?.stage,"complete");
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.movement,before-5,"authoritative alternate speed must permit bounded fly movement");
 });
 
 test("portable movement rejects another regular move after movement reaches zero",async()=>{
