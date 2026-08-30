@@ -22,6 +22,7 @@ on:
       - "src/app/installedContentContracts.ts"
       - "src/app/installedContentRuntimeAdapter.ts"
       - "src/app/offlineRuntimeAdapters.ts"
+      - "src/app/realEventApplyService.ts"
       - "src/app/resolutionCharacterDurableProjection.ts"
       - "src/app/characterLibraryPersistence.ts"
       - "src/app/persistenceContracts.ts"
@@ -33,6 +34,7 @@ on:
       - "tests/domain/resourceRecoveryLockout.test.ts"
       - "tests/ui/installedCommonPlayProductionRuntime.test.ts"
       - "tests/ui/phase09CommonPlayResourcePersistence.test.ts"
+      - "tests/ui/realEventResourceCapacityProjection.test.ts"
       - "tests/ui/fighterActionSurgeRuntimeAdapter.test.ts"
       - ".agents/LEGACY_EXECUTION_BASELINE.json"
       - ".github/workflows/m1-common-play-resource-economy.yml"
@@ -59,6 +61,7 @@ on:
       - "src/app/installedContentContracts.ts"
       - "src/app/installedContentRuntimeAdapter.ts"
       - "src/app/offlineRuntimeAdapters.ts"
+      - "src/app/realEventApplyService.ts"
       - "src/app/resolutionCharacterDurableProjection.ts"
       - "src/app/characterLibraryPersistence.ts"
       - "src/app/persistenceContracts.ts"
@@ -70,6 +73,7 @@ on:
       - "tests/domain/resourceRecoveryLockout.test.ts"
       - "tests/ui/installedCommonPlayProductionRuntime.test.ts"
       - "tests/ui/phase09CommonPlayResourcePersistence.test.ts"
+      - "tests/ui/realEventResourceCapacityProjection.test.ts"
       - "tests/ui/fighterActionSurgeRuntimeAdapter.test.ts"
       - ".agents/LEGACY_EXECUTION_BASELINE.json"
       - ".github/workflows/m1-common-play-resource-economy.yml"
@@ -90,7 +94,7 @@ jobs:
       - name: Generate content catalogs
         run: npm run generate:content
       - name: Verify M1 resource/economy migration harness
-        run: npx tsx --test tests/domain/commonPlayResourceEconomyRuntime.test.ts tests/domain/resourceRecoveryLockout.test.ts tests/ui/installedCommonPlayProductionRuntime.test.ts tests/ui/phase09CommonPlayResourcePersistence.test.ts tests/ui/fighterActionSurgeRuntimeAdapter.test.ts
+        run: npx tsx --test tests/domain/commonPlayResourceEconomyRuntime.test.ts tests/domain/resourceRecoveryLockout.test.ts tests/ui/installedCommonPlayProductionRuntime.test.ts tests/ui/phase09CommonPlayResourcePersistence.test.ts tests/ui/realEventResourceCapacityProjection.test.ts tests/ui/fighterActionSurgeRuntimeAdapter.test.ts
       - name: Verify legacy execution boundary shrink
         run: node scripts/check-legacy-execution-boundary.mjs
       - name: Typecheck application
