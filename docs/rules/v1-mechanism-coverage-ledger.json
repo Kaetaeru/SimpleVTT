@@ -1063,7 +1063,7 @@
         "commonPlayEffectRuntime.ts",
         "commonPlayZoneRuntime.ts"
       ],
-      "currentState": "Installed damage.taken|damage.dealt effect rules, actor-owned turn-start/end resource rules, Zone enter/leave/stay/start/end-turn rules, recurring once-per-turn/round frequency, canonical interactive interceptor timing points, and authoritative single-target Common Play attack.hit|attack.miss|save.success|save.failure outcome events have production evidence. Rest completion and recharge outcome semantic events are authoritative; state/expiry and automatic semantic-event trigger dispatcher composition remain incomplete; multi-target save-damage semantic outcomes now have production and rename-invariance evidence",
+      "currentState": "Installed damage.taken|damage.dealt effect rules, actor-owned turn-start/end resource rules, Zone enter/leave/stay/start/end-turn rules, recurring once-per-turn/round frequency, canonical interactive interceptor timing points, authoritative Common Play attack.hit|attack.miss|save.success|save.failure outcomes, rest/recharge semantic events, state.applied dispatch, and effect.expired lifecycle dispatch now have generic production evidence. Named post-roll and feature-trigger adapters remain migration debt outside the portable semantic trigger path.",
       "requiredSemantics": [
         "before/after roll/outcome",
         "hit/miss",
@@ -1088,7 +1088,9 @@
         "commonPlayActorTurnRuleComposition.ts actor-owned turn-start/end composition",
         "commonPlayRuntime.ts canonical attack.outcome-determined, d20.outcome-determined, and damage.rolled interceptor timings",
         "commonPlaySemanticEventRuntime.ts authoritative attack.hit|attack.miss|save.success|save.failure outcome vocabulary",
-        "commonPlaySemanticEventRuntime.ts derives authoritative rest.short.complete/rest.long.complete events from canonical short-rest/long-rest Resolver results"
+        "commonPlaySemanticEventRuntime.ts derives authoritative rest.short.complete/rest.long.complete events from canonical short-rest/long-rest Resolver results",
+        "commonPlaySemanticEventRuntime.ts composes state.applied and effect.expired automatic rules into the same pending Resolver transaction",
+        "installedCommonPlayRuntimeAdapter.ts routes installed effect activation through the shared semantic-event trigger dispatcher before authoritative commit"
       ],
       "productionEvidence": [
         "installedCommonPlayLoweredFamiliesProduction.test.ts atomic automatic damage trigger and Zone membership trigger",
@@ -1098,7 +1100,9 @@
         "installedCommonPlayInterceptorProductionRuntime.test.ts d20.outcome-determined and damage.rolled interactive production",
         "installedCommonPlaySemanticOutcomeProduction.test.ts unknown installed attack/save semantic outcome events",
         "installedCommonPlayLoweredFamiliesProduction.test.ts unknown external multi-target save emits per-target save.success/save.failure semantic history through the production adapter",
-        "5866e340e38e01a4a6606a8c5e4488473079b985 test(c9): cover rest completion semantic vocabulary; exact verifier run 33310807820 passed semantic test, tsc --noEmit, and coverage checker"
+        "5866e340e38e01a4a6606a8c5e4488473079b985 test(c9): cover rest completion semantic vocabulary; exact verifier run 33310807820 passed semantic test, tsc --noEmit, and coverage checker",
+        "c9FamilyPStateAppliedTriggerProduction.test.ts proves an unknown installed state.applied listener fires atomically from effect activation, supports Undo, and remains rename invariant; workflow run 33312760234 passed",
+        "commonPlaySemanticEventRuntime.test.ts effect.expired lifecycle regression proves expiry-triggered operations execute in the authoritative lifecycle resolution; workflow run 33312731941 passed"
       ],
       "identityInvarianceEvidence": [
         "commonPlayEffectRuntime.test.ts renamed external definitions",
@@ -1110,7 +1114,9 @@
         "installedCommonPlayInterceptorProductionRuntime.test.ts module/content/definition/interceptor/display rename",
         "installedCommonPlaySemanticOutcomeProduction.test.ts module/content/mechanic rename invariance",
         "installedCommonPlayLoweredFamiliesProduction.test.ts renamed external module/content/mechanic preserves multi-target semantic save outcomes",
-        "commonPlaySemanticEventRuntime.test.ts rest completion vocabulary remains invariant under external source identity and semantic enrichment is idempotent"
+        "commonPlaySemanticEventRuntime.test.ts rest completion vocabulary remains invariant under external source identity and semantic enrichment is idempotent",
+        "c9FamilyPStateAppliedTriggerProduction.test.ts repeats the installed listener/marker scenario under renamed unknown module/content/mechanic identities",
+        "commonPlaySemanticEventRuntime.test.ts repeats effect.expired dispatch under renamed external definition identity"
       ],
       "connectedEvidenceIfRelevant": [
         "installedCommonPlayLoweredFamiliesProduction.test.ts automatic effect and Zone membership Host/Client replay plus Undo",
@@ -1126,7 +1132,6 @@
         "connectedActorTurnRuleProduction.test.ts ordered reconnect replay of actor turn lifecycle"
       ],
       "remainingNamedSeams": [
-        "remaining event-family dispatcher composition",
         "named post-roll and feature trigger adapters"
       ],
       "connectedRelevant": true,
