@@ -88,6 +88,8 @@ export interface CharacterResourceSourceDefinitionV1 {
 export interface CharacterResourceRuntimeStateV1 {
   id:string;
   current:number;
+  maximum?:number;
+  maximumAfterLongRest?:number;
   recoveryLockouts?: {
     shortRest?:number;
     longRest?:number;
