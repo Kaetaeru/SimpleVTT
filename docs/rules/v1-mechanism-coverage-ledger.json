@@ -1730,7 +1730,7 @@
         "inventory persistence adapters",
         "phase09RealAtomicItemAdapter.ts"
       ],
-      "currentState": "Durable inventory authority exists and unknown external Common Play item quantity and charge payments execute through the canonical Resolver item-as-resource event bridge with durable Character write-back, restart persistence, event-native Undo, and full external identity rename invariance. DM session create/grant/quantity/destroy/equipment cleanup plus Character equip and quick-use quantity/charge changes share the existing generic inventory transaction through one projection boundary instead of directly mutating item state. Owned arbitrary-ID items now project installed Common Play entry points into the production action catalog, so item actions/effects/spellcasting reuse the same generic composition. Portable Common Play lifecycle lowering, recharge, containers, and owner transfer remain incomplete; connected quantity-payment replay/retry/reconnect/Undo is proven.",
+      "currentState": "Durable inventory authority is structurally complete. Unknown external Common Play quantity/charge payments use the canonical Resolver event bridge with durable write-back, restart, connected replay/retry/reconnect, and Undo. Character and DM inventory paths share the generic atomic grant/quantity/destroy/equip/wield/charge transaction; that transaction also owns recharge and acyclic containers. Party Stash composes revision-safe owner transfer with compensation and connected convergence. Owned arbitrary-ID items project installed Common Play entry points, so item actions/effects/spellcasting use the same generic composition. Remaining named item projection is legacy content materialization debt, not a portable execution fallback.",
       "requiredSemantics": [
         "create/grant/copy",
         "quantity",
@@ -1746,7 +1746,7 @@
         "Undo"
       ],
       "transactionDomain": "Character inventory transaction with session orchestration",
-      "disposition": "INCOMPLETE",
+      "disposition": "IMPLEMENTED",
       "implementationEvidence": [
         "commonPlayOperationRuntime.ts CommonPlayItemPayment selector/quantity commit contract lowers portable item payment through canonical payment operations",
         "installedCommonPlayRuntimeAdapter.ts itemPaymentRuntimeContext resolves exactly one durable ItemInstance by portable definitionId and seeds an ephemeral phase09:item:<id>:quantity Resolver resource without content identity dispatch",
@@ -1764,7 +1764,9 @@
         "7ce2aff851dc4e0a81eecd706a8cf50dd8f6b11b ci(c9): verify connected portable item payment; C9 Family X Portable Item Payment 71304 run 33318235057 passed production + connected item payment, coverage checker, typecheck, and legacy-boundary verification",
         "3dd0a13715b0a9218ba3e3462021c58cfe52069d feat(c9): support portable item charge payment; C9 Family X Item Charge Payment 71304 run 33318484203 passed quantity + charge production tests, V1 coverage checker, and tsc --noEmit",
         "tests/ui/c9FamilyXPortableItemChargePaymentProduction.test.ts unknown installed Common Play spends charges through production resolveAction with durable write-back, fresh restart, and event-native Undo",
-        "tests/ui/c9FamilyXPortableItemPaymentProduction.test.ts proves an owned arbitrary-ID item projects its installed Common Play entry point into the production action catalog and executes payment plus result atomically"
+        "tests/ui/c9FamilyXPortableItemPaymentProduction.test.ts proves an owned arbitrary-ID item projects its installed Common Play entry point into the production action catalog and executes payment plus result atomically",
+        "sessionInventoryRuntimeAdapter.test.ts and campaignRuntimeAdapter.test.ts prove production grant, revoke, forced equipment cleanup, catalog-less item restoration, owner transfer, and persistence-failure compensation through the generic transaction boundary",
+        "commonPlayRepresentativeGaps.test.ts proves positive item-charge recharge and durable project item output through the same inventory revision transaction"
       ],
       "identityInvarianceEvidence": [
         "tests/ui/c9FamilyXPortableItemPaymentProduction.test.ts repeats the full consume/persist/restart/Undo proof after complete external module/content/mechanic identity rename",
@@ -1772,18 +1774,16 @@
         "tests/ui/c9FamilyXPortableItemPaymentProduction.test.ts repeats owned-item Common Play action projection and execution after complete external module/content/mechanic identity rename"
       ],
       "connectedEvidenceIfRelevant": [
-        "tests/ui/c9FamilyXConnectedPortableItemPaymentProduction.test.ts proves Host/Client authoritative item quantity replay, duplicate retry suppression, fresh reconnect, event-native Undo, and reconnect-after-Undo"
+        "tests/ui/c9FamilyXConnectedPortableItemPaymentProduction.test.ts proves Host/Client authoritative item quantity replay, duplicate retry suppression, fresh reconnect, event-native Undo, and reconnect-after-Undo",
+        "connectedPartyStashApprovalOwnerTransfer.test.ts proves connected owner inventory and Party Stash parity across direct mutation, Undo, durable failure, compensation, and retry"
       ],
       "persistenceEvidenceIfRelevant": [
         "tests/ui/c9FamilyXPortableItemPaymentProduction.test.ts MemoryCharacterLibraryStore preserves consumed quantity into a fresh adapter and preserves restored quantity after event-native Undo",
         "characterLibraryPersistence.ts projects item quantity/equipped/wielded/attuned/charge current into CharacterRuntimeDurableSnapshotV1",
-        "tests/ui/c9FamilyXPortableItemChargePaymentProduction.test.ts MemoryCharacterLibraryStore preserves spent charges into a fresh adapter and preserves restored charges after event-native Undo"
+        "tests/ui/c9FamilyXPortableItemChargePaymentProduction.test.ts MemoryCharacterLibraryStore preserves spent charges into a fresh adapter and preserves restored charges after event-native Undo",
+        "characterLibraryPersistence.test.ts reconstructs item runtime fields from durable source/runtime generations and rejects stale or corrupt generations"
       ],
-      "remainingNamedSeams": [
-        "portable Common Play create/grant/copy, destroy/update, equip/unequip/wield, and recharge lowering beyond quantity/charge payment",
-        "portable containers and owner transfer production composition",
-        "named item/spell activation compatibility paths"
-      ],
+      "remainingNamedSeams": [],
       "connectedRelevant": true,
       "persistenceRelevant": true
     },
