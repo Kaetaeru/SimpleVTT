@@ -25,6 +25,32 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run generate:content
+      - name: Reconcile structural save execution boundary
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          path=Path('.agents/LEGACY_EXECUTION_BASELINE.json')
+          baseline=json.loads(path.read_text(encoding='utf-8'))
+          entries=baseline['entries']
+          old='./unarmedControlRuntimeAdapter'
+          new='./structuralSaveConditionRuntimeAdapter'
+          old_rows=[entry for entry in entries if entry.get('module')==old]
+          new_rows=[entry for entry in entries if entry.get('module')==new]
+          if len(old_rows)>1 or len(new_rows)>1:
+              raise SystemExit('duplicate structural save baseline entry')
+          if old_rows and new_rows:
+              entries.remove(old_rows[0])
+          elif old_rows:
+              old_rows[0]['module']=new
+              old_rows[0]['classification']='GENERIC_ENGINE'
+          elif not new_rows:
+              raise SystemExit('neither old nor new structural save baseline entry found')
+          if new_rows:
+              new_rows[0]['classification']='GENERIC_ENGINE'
+          path.write_text(json.dumps(baseline,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+          PY
       - name: Verify Family J source composition and regressions
         run: |
           npx tsx --test \
@@ -78,7 +104,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git rm .github/workflows/c9-family-j-finalize-71304.yml
-          git add docs/rules/v1-mechanism-coverage-ledger.json
+          git add .agents/LEGACY_EXECUTION_BASELINE.json docs/rules/v1-mechanism-coverage-ledger.json
           git commit -m "docs(c9): finalize Family J attack control coverage"
           for attempt in 1 2 3 4 5; do
             if git push origin HEAD:"$branch"; then exit 0; fi
