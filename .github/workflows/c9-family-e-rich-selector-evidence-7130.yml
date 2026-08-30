@@ -29,7 +29,7 @@ jobs:
           from pathlib import Path
           path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
           data=json.loads(path.read_text(encoding='utf-8'))
-          family=next(item for item in data['families'] if item['family']=='E')
+          family=next(item for item in data['rows'] if item['family']=='E')
           family['currentState']='Portable Common Play targeting preserves bounded selected target sets and evaluates generic predicates over authoritative production candidates through the shared selector kernel; providerless area membership fails closed, while full spatial provider integration, ordering/object/point selection, and automatic-vs-manual production authority remain incomplete.'
           implementation='commonPlayOperationRuntime.ts routes portable target predicates through commonPlaySelectorRuntime using authoritative CommonPlaySelectorCandidate facts supplied by installedCommonPlayRuntimeAdapter.ts without content identity dispatch'
           production='C9 Family E Rich Selector Candidate Bridge 7130 run 33310268977: rich selector production/import regression, legacy execution boundary, and tsc --noEmit all passed; verifier retired after success'
