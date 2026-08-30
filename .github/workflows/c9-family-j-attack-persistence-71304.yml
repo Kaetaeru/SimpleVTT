@@ -5,6 +5,7 @@ on:
     branches:
       - agent/c9-gate-n-coverage-reconciliation
     paths:
+      - tests/ui/c9FamilyJAttackPersistence.test.ts
       - .github/workflows/c9-family-j-attack-persistence-71304.yml
 
 permissions:
