@@ -1,0 +1,48 @@
+name: C9 Family Q Choice Diagnostic 71304
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-q-choice-diagnostic-71304.yml
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Apply R2 choice patch and expose outcome
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import textwrap
+          workflow=Path('.github/workflows/c9-family-q-choice-r2-71304.yml').read_text(encoding='utf-8')
+          marker='      - name: Reuse choice patch and repair remaining parser call\n'
+          start=workflow.index("          python - <<'PY'\n",workflow.index(marker))+len("          python - <<'PY'\n")
+          end=workflow.index("\n          PY",start)
+          exec(compile(textwrap.dedent(workflow[start:end]),'q-choice-r2-patch','exec'),{})
+          path=Path('tests/ui/c9FamilyQChoiceInteractionProduction.test.ts')
+          text=path.read_text(encoding='utf-8')
+          old='assert.equal(snapshot.scene.entities.find((entity)=>entity.id===actorId)?.hp,hpBefore+1);'
+          new='assert.equal(snapshot.scene.entities.find((entity)=>entity.id===actorId)?.hp,hpBefore+1,JSON.stringify(snapshot.resolution));'
+          if text.count(old)!=1: raise SystemExit('accepted HP assertion anchor changed')
+          text=text.replace(old,new,1)
+          old='const {host,actionId,actorId,internal}=await setup("family-q-choice-decline");\n  const hpBefore='
+          new='const {host,actionId,actorId,internal}=await setup("family-q-choice-decline");\n  connectedStateFor(host).mode="offline";\n  const hpBefore='
+          if text.count(old)!=1: raise SystemExit('decline setup anchor changed')
+          path.write_text(text.replace(old,new,1),encoding='utf-8')
+          PY
+      - run: npm ci
+      - run: npm run generate:content
+      - run: node --import tsx --test tests/ui/c9FamilyQChoiceInteractionProduction.test.ts
