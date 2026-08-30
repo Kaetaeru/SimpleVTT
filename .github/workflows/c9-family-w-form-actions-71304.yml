@@ -7,6 +7,7 @@ on:
     paths:
       - .github/workflows/c9-family-w-form-actions-71304.yml
       - .github/scripts/c9-family-w-form-actions-71304.py
+      - .github/scripts/c9-family-w-form-action-execution-71304.py
 
 permissions:
   contents: write
@@ -26,7 +27,9 @@ jobs:
       - run: npm ci
       - run: npm run generate:content
       - name: Patch generic form action projection
-        run: python .github/scripts/c9-family-w-form-actions-71304.py
+        run: |
+          python .github/scripts/c9-family-w-form-actions-71304.py
+          python .github/scripts/c9-family-w-form-action-execution-71304.py
       - name: Verify Family W form action slice
         run: |
           node --import tsx --test tests/ui/commonPlayFormProjectionProduction.test.ts tests/ui/commonPlayFormActionProjectionProduction.test.ts
@@ -38,7 +41,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add src/app/installedCommonPlayRuntimeAdapter.ts src/app/commonPlayFormProjectionAdapter.ts tests/ui/commonPlayFormActionProjectionProduction.test.ts
-          git rm .github/workflows/c9-family-w-form-actions-71304.yml .github/scripts/c9-family-w-form-actions-71304.py
+          git rm .github/workflows/c9-family-w-form-actions-71304.yml .github/scripts/c9-family-w-form-actions-71304.py .github/scripts/c9-family-w-form-action-execution-71304.py
           git commit -m "feat(c9): project portable form action policies"
           git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
           git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
