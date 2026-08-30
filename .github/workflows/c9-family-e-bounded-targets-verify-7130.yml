@@ -8,7 +8,7 @@ on:
       - .github/workflows/c9-family-e-bounded-targets-verify-7130.yml
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   verify:
@@ -17,6 +17,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: agent/c9-gate-n-coverage-reconciliation
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -30,6 +31,22 @@ jobs:
           tests/domain/commonPlayTargetingRuntime.test.ts
           tests/ui/installedCommonPlayProductionRuntime.test.ts
       - name: Verify legacy execution boundary
-        run: npm run check:legacy-execution-boundary
+        run: node scripts/check-legacy-execution-boundary.mjs
       - name: Typecheck application
         run: npx tsc --noEmit
+      - name: Remove temporary Family E verification helpers
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm -f --ignore-unmatch \
+            .github/workflows/c9-family-e-bounded-targets-apply.yml \
+            .github/workflows/c9-family-e-bounded-targets-verify-7130.yml
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m "chore(c9): retire bounded target verification helpers"
+          git fetch origin agent/c9-gate-n-coverage-reconciliation
+          git rebase origin/agent/c9-gate-n-coverage-reconciliation
+          git push origin HEAD:agent/c9-gate-n-coverage-reconciliation
