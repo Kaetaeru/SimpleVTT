@@ -96,7 +96,7 @@ for(const path of ['src/app/productionPlayRuntimeAdapter.ts','src/app/characterS
 
 replaceOnce('src/app/mockAdapter.ts',
 `  id:"char.aelar", name:"Aelar", className:"전사", subclassName:"챔피언", level:5, species:"인간", background:"병사",`,
-`  id:"char.aelar", name:"Aelar", className:"전사", subclassName:"챔피언", level:5, classLevels:[{classId:"dnd.srd521.class.fighter",level:5}], species:"인간", background:"병사",`);
+`  id:"char.aelar", name:"Aelar", className:"전사", subclassName:"챔피언", level:5, classLevels:[{classId:"dnd.srd521.class.fighter",level:5}], species:"인간", background:"군인",`);
 
 for(const path of ['tests/ui/fighterTacticalMindFollowUpRuntime.test.ts','tests/ui/openAbilityCheckDcRuntime.test.ts']){
   const text=fs.readFileSync(path,'utf8');
