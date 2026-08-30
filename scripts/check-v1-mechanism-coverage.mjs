@@ -49,7 +49,7 @@ export function checkV1MechanismCoverage(ledger,{gateN=false}={}){
       if(row.connectedRelevant===true&&row.connectedEvidenceIfRelevant.length===0) errors.push(`${label}.connectedEvidenceIfRelevant is required for Gate N`);
       if(row.persistenceRelevant===true&&row.persistenceEvidenceIfRelevant.length===0) errors.push(`${label}.persistenceEvidenceIfRelevant is required for Gate N`);
     }
-    if(gateN&&!FINAL_DISPOSITIONS.has(row.disposition)) errors.push(`${label} is not Gate-N complete: ${row.disposition}`);
+    if(gateN&&!FINAL_DISPOSITIONS.has(row.disposition)) errors.push(`${label} (${row.family ?? "?"}:${row.id ?? "?"}) is not Gate-N complete: ${row.disposition}`);
   }
   for(const family of REQUIRED_FAMILIES) if(!seenFamilies.has(family)) errors.push(`missing required family: ${family}`);
   for(const family of seenFamilies) if(!REQUIRED_FAMILIES.includes(family)) errors.push(`unexpected family: ${family}`);
