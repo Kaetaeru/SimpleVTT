@@ -153,11 +153,17 @@ jobs:
           git diff --cached --check
           git commit -m "test(c9): prove Family E condition selector production"
           branch=agent/c9-gate-n-coverage-reconciliation
-          git fetch origin "$branch"
-          git rebase "origin/$branch"
-          npm run generate:content
-          node --import tsx --test tests/ui/c9FamilyEConditionSelectorProduction.test.ts tests/ui/c9FamilyETagSelectorProduction.test.ts tests/ui/commonPlayRichSelectorProduction.test.ts
-          node scripts/check-v1-mechanism-coverage.mjs
-          node scripts/check-legacy-execution-boundary.mjs
-          npm exec tsc -- --noEmit
-          git push origin HEAD:"$branch"
+          for attempt in 1 2 3; do
+            git fetch origin "$branch"
+            git rebase "origin/$branch"
+            npm run generate:content
+            node --import tsx --test tests/ui/c9FamilyEConditionSelectorProduction.test.ts tests/ui/c9FamilyETagSelectorProduction.test.ts tests/ui/commonPlayRichSelectorProduction.test.ts
+            node scripts/check-v1-mechanism-coverage.mjs
+            node scripts/check-legacy-execution-boundary.mjs
+            npm exec tsc -- --noEmit
+            if git push origin HEAD:"$branch"; then
+              exit 0
+            fi
+          done
+          echo "publish failed after 3 verified fast-forward retries" >&2
+          exit 1
