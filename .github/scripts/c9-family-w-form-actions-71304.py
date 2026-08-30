@@ -2,44 +2,111 @@ from pathlib import Path
 
 runtime = Path("src/app/installedCommonPlayRuntimeAdapter.ts")
 text = runtime.read_text(encoding="utf-8")
-
-old = "!parseStoredInvocationCommonPlayActionId(action.id)&&!parseStoredInvocationCancelActionId(action.id)&&!parseZoneMembershipCommonPlayActionId(action.id)"
-new = "!parseRuntimeArtifactCommonPlayActionId(action.id)&&!parseStoredInvocationCommonPlayActionId(action.id)&&!parseStoredInvocationCancelActionId(action.id)&&!parseZoneMembershipCommonPlayActionId(action.id)"
-count = text.count(old)
-if count != 2:
-    raise SystemExit(f"expected two artifact action cleanup filters, found {count}")
-text = text.replace(old, new)
-
-anchor = '''  for(const artifact of state.artifacts??[]) {
-    const stored=artifact.artifactKind==="stored-invocation"?artifact.storedInvocation:undefined;
+anchor = '''async function projectRuntimeArtifactActions(adapter:MockAdapter,snapshot:AppSnapshot) {
 '''
-insert = '''  for(const artifact of state.artifacts??[]) {
-    const form=artifact.artifactKind==="form"?artifact.form:undefined;
-    if(!form||form.actionPolicy==="retain"||!state.combatants[form.targetActorId]) continue;
-    const controllerId=form.controllerId??form.targetActorId;
-    if(snapshot.role!=="dm"&&controllerId!==snapshot.activeCharacter.id) {
-      if(form.actionPolicy==="replace") delete snapshot.scene.actionsByActor[form.targetActorId];
-      continue;
+helper = '''export async function projectCommonPlayRuntimeArtifactAction(
+  adapter:MockAdapter,
+  actionId:string,
+  actorId:string,
+  snapshot:AppSnapshot,
+  state:RulesRuntimeState,
+) {
+  const action=await commonPlayAction(adapter,actionId);
+  return action?projectedArtifactAction(adapter,actionId,actorId,action,snapshot.scene,state):undefined;
+}
+
+'''
+if helper not in text:
+    if text.count(anchor) != 1:
+        raise SystemExit(f"runtime action helper anchor count: {text.count(anchor)}")
+    text = text.replace(anchor, helper + anchor, 1)
+runtime.write_text(text, encoding="utf-8")
+
+projection = Path("src/app/commonPlayFormProjectionAdapter.ts")
+projection.write_text('''import type { RulesRuntimeState } from "../domain/combatState";
+import type { FormArtifactData } from "../domain/runtimeArtifact";
+import type { ActionVm, AppSnapshot } from "./contracts";
+import { projectCommonPlayRuntimeArtifactAction } from "./installedCommonPlayRuntimeAdapter";
+import { MockAdapter } from "./mockAdapter";
+import { snapshotAdapterTurnRuntimeState } from "./turnRuntimeSessionRegistry";
+
+const previousGetSnapshot=MockAdapter.prototype.getSnapshot;
+
+function replacement(form:FormArtifactData,key:string) {
+  if(!form.replacementProperties.includes(key)||form.retainedProperties.includes(key)) return undefined;
+  return form.propertyOverlay[key];
+}
+
+function finiteNumber(value:unknown) {
+  return typeof value==="number"&&Number.isFinite(value)?value:undefined;
+}
+
+function applyFormProjection(snapshot:AppSnapshot,form:FormArtifactData) {
+  const entity=snapshot.scene.entities.find((candidate)=>candidate.id===form.targetActorId);
+  const character=snapshot.activeCharacter.id===form.targetActorId?snapshot.activeCharacter:undefined;
+  if(!entity&&!character)return;
+
+  const armorClass=finiteNumber(replacement(form,"defense.ac"));
+  if(armorClass!==undefined) {
+    if(entity)entity.ac=armorClass;
+    if(character)character.ac=armorClass;
+  }
+
+  const walkSpeed=finiteNumber(replacement(form,"movement.walk"));
+  if(walkSpeed!==undefined&&character)character.speed=walkSpeed;
+
+  if(form.hpPolicy==="retain")return;
+  const maximum=finiteNumber(replacement(form,"hp.maximum"));
+  const current=finiteNumber(replacement(form,"hp.current"));
+  const temporary=finiteNumber(replacement(form,"hp.temporary"));
+
+  if(form.hpPolicy==="replace") {
+    if(maximum!==undefined) {
+      if(entity)entity.maxHp=maximum;
+      if(character)character.maxHp=maximum;
     }
-    const actions=(await Promise.all(form.actionDefinitionIds.map(async(actionId)=>{
-      const action=await commonPlayAction(adapter,actionId);
-      return action?projectedArtifactAction(adapter,actionId,form.targetActorId,action,snapshot.scene,state):undefined;
-    }))).filter((action):action is ActionVm=>Boolean(action));
-    for(const scene of [snapshot.scene,(adapter as unknown as AdapterState).scene]) {
-      const current=scene.actionsByActor[form.targetActorId]??[];
-      if(form.actionPolicy==="replace") scene.actionsByActor[form.targetActorId]=cp(actions);
-      else {
-        const ids=new Set(current.map((action)=>action.id));
-        scene.actionsByActor[form.targetActorId]=[...current,...cp(actions.filter((action)=>!ids.has(action.id)))];
-      }
+    if(current!==undefined) {
+      if(entity)entity.hp=current;
+      if(character)character.hp=current;
     }
   }
-'''
-if insert not in text:
-    if text.count(anchor) != 1:
-        raise SystemExit(f"form action projection anchor count: {text.count(anchor)}")
-    text = text.replace(anchor, insert + anchor, 1)
-runtime.write_text(text, encoding="utf-8")
+  if(temporary!==undefined) {
+    if(entity)entity.tempHp=temporary;
+    if(character)character.tempHp=temporary;
+  }
+}
+
+async function applyFormActionProjection(adapter:MockAdapter,snapshot:AppSnapshot,state:RulesRuntimeState,form:FormArtifactData) {
+  if(form.actionPolicy==="retain"||!state.combatants[form.targetActorId])return;
+  const controllerId=form.controllerId??form.targetActorId;
+  if(snapshot.role!=="dm"&&controllerId!==snapshot.activeCharacter.id) {
+    if(form.actionPolicy==="replace") delete snapshot.scene.actionsByActor[form.targetActorId];
+    return;
+  }
+  const projected=(await Promise.all(form.actionDefinitionIds.map((actionId)=>
+    projectCommonPlayRuntimeArtifactAction(adapter,actionId,form.targetActorId,snapshot,state)
+  ))).filter((action):action is ActionVm=>Boolean(action));
+  if(form.actionPolicy==="replace") {
+    snapshot.scene.actionsByActor[form.targetActorId]=projected;
+    return;
+  }
+  const current=snapshot.scene.actionsByActor[form.targetActorId]??[];
+  const existing=new Set(current.map((action)=>action.id));
+  snapshot.scene.actionsByActor[form.targetActorId]=[...current,...projected.filter((action)=>!existing.has(action.id))];
+}
+
+MockAdapter.prototype.getSnapshot=async function getSnapshotWithCommonPlayFormProjection(){
+  const snapshot=await previousGetSnapshot.call(this);
+  const state=snapshotAdapterTurnRuntimeState(this,snapshot.scene);
+  if(!state)return snapshot;
+  for(const artifact of state.artifacts??[]) {
+    if(artifact.artifactKind!=="form"||!artifact.form)continue;
+    applyFormProjection(snapshot,artifact.form);
+    await applyFormActionProjection(this,snapshot,state,artifact.form);
+  }
+  return snapshot;
+};
+''', encoding="utf-8")
 
 test_file = Path("tests/ui/commonPlayFormActionProjectionProduction.test.ts")
 test_file.write_text(r'''import assert from "node:assert/strict";
@@ -68,9 +135,7 @@ function packagePayload(prefix:string,actionPolicy:ActionPolicy) {
     catalogId:catalogQualifiedId(formContentId,moduleId,"1"),mechanicId:formMechanicId,entryPointId:"transform",
   });
   return {
-    definitionActionId,
-    projectedActionId:runtimeArtifactCommonPlayActionId(ACTOR_ID,definitionActionId),
-    transformActionId,
+    projectedActionId:runtimeArtifactCommonPlayActionId(ACTOR_ID,definitionActionId),transformActionId,
     json:JSON.stringify({
       schemaVersion:"0.1-draft",moduleId,moduleVersion:"1",
       rulesProfile:{id:"dnd.srd-5.2.1",version:"0.1-draft"},defaultLocale:"en",
@@ -122,15 +187,15 @@ async function projectionShape(prefix:string,actionPolicy:ActionPolicy) {
 
   let damage=0;
   if(actionPolicy!=="retain") {
-    const hpBefore=snapshot.activeCharacter.hp;
+    const effectiveHpBefore=snapshot.activeCharacter.hp+snapshot.activeCharacter.tempHp;
     await adapter.resolveAction(pack.projectedActionId,[ACTOR_ID]);
     snapshot=await adapter.getSnapshot();
-    damage=hpBefore-snapshot.activeCharacter.hp;
+    damage=effectiveHpBefore-(snapshot.activeCharacter.hp+snapshot.activeCharacter.tempHp);
     assert.equal(damage,1,JSON.stringify(snapshot.resolution));
     assert.equal(snapshot.resolution?.stage,"complete");
     await adapter.undoLastResolution();
     snapshot=await adapter.getSnapshot();
-    assert.equal(snapshot.activeCharacter.hp,hpBefore);
+    assert.equal(snapshot.activeCharacter.hp+snapshot.activeCharacter.tempHp,effectiveHpBefore);
     assert.equal(snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)?.artifacts?.some((artifact)=>artifact.artifactKind==="form"),true);
   }
   return {policy:actionPolicy,basePreserved:actionPolicy!=="replace",projected:afterIds.includes(pack.projectedActionId),damage};
