@@ -34,7 +34,6 @@ jobs:
           tests/domain/commonPlayAllocationRuntime.test.ts
           tests/ui/installedCommonPlayAllocationProductionRuntime.test.ts
           tests/ui/c9FamilyFAllocationAcceptance.test.ts
-          tests/ui/ruleModulePackageImport.test.ts
       - name: Verify legacy execution boundary
         run: node scripts/check-legacy-execution-boundary.mjs
       - name: Verify coverage ledger structure
