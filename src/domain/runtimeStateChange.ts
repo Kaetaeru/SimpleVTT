@@ -12,6 +12,16 @@ export interface ResourceRecoveryLockoutStateChange {
   after:ResourceRecoveryLockouts|null;
 }
 
+export interface ResourceCapacityState {
+  maximum:number;
+  maximumAfterLongRest:number|null;
+}
+
+export interface ResourceCapacityStateChange {
+  before:ResourceCapacityState;
+  after:ResourceCapacityState;
+}
+
 export interface ResourceCreationStateChange {
   label:string;
   maximum:number;
@@ -27,6 +37,7 @@ export interface ResourceStateChange {
   after:number;
   recoveryLockouts?:ResourceRecoveryLockoutStateChange;
   createdResource?:ResourceCreationStateChange;
+  capacity?:ResourceCapacityStateChange;
   provenance:ProvenanceRecord[];
   lifetime:"character-durable";
   writeBack:"character";
@@ -157,6 +168,7 @@ export function resourceStateChange(
   provenance:ProvenanceRecord[],
   recoveryLockouts?:ResourceRecoveryLockoutStateChange,
   createdResource?:ResourceCreationStateChange,
+  capacity?:ResourceCapacityStateChange,
 ): ResourceStateChange {
   return {
     kind:"resource",
@@ -166,6 +178,7 @@ export function resourceStateChange(
     after,
     ...(recoveryLockouts ? { recoveryLockouts:structuredClone(recoveryLockouts) } : {}),
     ...(createdResource ? { createdResource:structuredClone(createdResource) } : {}),
+    ...(capacity ? { capacity:structuredClone(capacity) } : {}),
     provenance,
     lifetime:"character-durable",
     writeBack:"character",
