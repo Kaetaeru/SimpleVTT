@@ -1,0 +1,156 @@
+name: C9 Family C Cutting Words Migration
+
+on:
+  push:
+    branches:
+      - agent/c9-gate-n-coverage-reconciliation
+    paths:
+      - .github/workflows/c9-family-c-cutting-words-migration.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply declarative Cutting Words migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          import json
+          from pathlib import Path
+
+          def replace_once(path, old, new):
+              p=Path(path)
+              text=p.read_text()
+              count=text.count(old)
+              if count != 1:
+                  raise SystemExit(f"{path}: expected one match, found {count}: {old[:100]!r}")
+              p.write_text(text.replace(old,new,1))
+
+          # Character-owned subclass features participate in the same qualified content identity model as items.
+          projection=Path("src/app/characterSessionProjection.ts")
+          text=projection.read_text()
+          marker='''function resolveProjectionIdentities(source:CharacterSourceSnapshotV1,catalog:CatalogEntry[]) {\n  const identities=new Map<string,CharacterProjectionContentIdentityV1>();\n  for(const identity of [...resolveRequiredIdentities(source,catalog),...resolveKnownItemIdentities(source,catalog)]) identities.set(identity.qualifiedId,identity);\n  return [...identities.values()].sort((left,right)=>left.qualifiedId.localeCompare(right.qualifiedId,"en"));\n}'''
+          replacement='''function resolveKnownFeatureIdentities(source:CharacterSourceSnapshotV1,catalog:CatalogEntry[]) {\n  const resolvedCatalog=catalog as ResolvedCatalogEntry[];\n  const identities=new Map<string,CharacterProjectionContentIdentityV1>();\n  for (const featureId of source.progression.subclassFeatureIds ?? []) {\n    if (!featureId.trim()) continue;\n    const matches=resolvedCatalog.filter((entry)=>(entry.category==="option"||entry.category==="feat")&&matchesToken(entry,featureId));\n    if (matches.length>1) throw new Error(`ambiguous canonical content for subclass feature: ${featureId}`);\n    if (matches.length===0) continue;\n    const identity=entryIdentity(matches[0]);\n    identities.set(identity.qualifiedId,identity);\n  }\n  return [...identities.values()].sort((left,right)=>left.qualifiedId.localeCompare(right.qualifiedId,"en"));\n}\n\nfunction resolveProjectionIdentities(source:CharacterSourceSnapshotV1,catalog:CatalogEntry[]) {\n  const identities=new Map<string,CharacterProjectionContentIdentityV1>();\n  for(const identity of [\n    ...resolveRequiredIdentities(source,catalog),\n    ...resolveKnownItemIdentities(source,catalog),\n    ...resolveKnownFeatureIdentities(source,catalog),\n  ]) identities.set(identity.qualifiedId,identity);\n  return [...identities.values()].sort((left,right)=>left.qualifiedId.localeCompare(right.qualifiedId,"en"));\n}'''
+          if marker not in text: raise SystemExit("projection identity block changed")
+          projection.write_text(text.replace(marker,replacement,1))
+
+          # Generic identity fact: content can say "another creature" without a named feature branch.
+          replace_once(
+              "src/domain/commonPlaySpatialFactRuntime.ts",
+              'export const COMMON_PLAY_STANDARD_FACTS:CommonPlayFactRegistry={\n  "spatial.distance-feet":{valueType:"number"},',
+              'export const COMMON_PLAY_STANDARD_FACTS:CommonPlayFactRegistry={\n  "identity.same-entity":{valueType:"boolean"},\n  "spatial.distance-feet":{valueType:"number"},',
+          )
+
+          # Passive Common Play discovery uses the already-composed builtin+installed catalog.
+          replace_once(
+              "src/app/commonPlayInterceptorProductionRuntimeAdapter.ts",
+              'import { requiredSessionInstalledContent } from "./installedContentRuntimeAdapter";\n',
+              '',
+          )
+          replace_once(
+              "src/app/commonPlayInterceptorProductionRuntimeAdapter.ts",
+              '  const installed=await requiredSessionInstalledContent(adapter,[]);\n  if(!installed.length)return [];\n  const entries=new Map(installed.map((entry)=>[catalogQualifiedId(entry.contentId,entry.sourceId,entry.version),entry]));',
+              '  const entries=new Map(internal.catalog\n    .filter((entry)=>(entry.mechanics??[]).some((mechanic)=>mechanic.kind==="common-play"))\n    .map((entry)=>[entry.id,entry]));\n  if(!entries.size)return [];',
+          )
+          replace_once(
+              "src/app/commonPlayInterceptorProductionRuntimeAdapter.ts",
+              '      const subjectId=factSubjectId(candidate,pending,query.subject);\n      if(!subjectId)return {status:"unsupported",reason:`unsupported interceptor fact subject: ${query.subject??"intercepted.actor"}`};\n      const relation=authoritativeCommonPlaySpatialRelation(internal.scene,candidate.sourceActorId,subjectId);',
+              '      const subjectId=factSubjectId(candidate,pending,query.subject);\n      if(!subjectId)return {status:"unsupported",reason:`unsupported interceptor fact subject: ${query.subject??"intercepted.actor"}`};\n      if(query.fact==="identity.same-entity")return {status:"answered",value:subjectId===candidate.sourceActorId};\n      const relation=authoritativeCommonPlaySpatialRelation(internal.scene,candidate.sourceActorId,subjectId);',
+          )
+
+          # Builtin data for the feature itself. Execution remains generic Common Play.
+          module_path=Path("content/modules/dnd-srd-5.2.1.subclasses/module.json")
+          module=json.loads(module_path.read_text())
+          feature_id="dnd.srd521.feature.bard.college-of-lore.cutting-words"
+          if any(entry.get("id")==feature_id for entry in module["content"]):
+              raise SystemExit("Cutting Words content already exists")
+          resource_id="resource:bard.bardic-inspiration"
+          common_queries=[
+              {"id":"same-trigger","fact":"identity.same-entity","subject":"intercepted.actor","authority":"host","visibility":"public","unknownPolicy":"block"},
+              {"id":"trigger-distance","fact":"spatial.distance-feet","subject":"intercepted.actor","authority":"host","visibility":"public","unknownPolicy":"block"},
+              {"id":"source-sees-trigger","fact":"sense.can-see","subject":"intercepted.actor","authority":"host","visibility":"public","unknownPolicy":"treat-false"},
+          ]
+          when={"op":"all","args":[
+              {"op":"eq","left":{"ref":"same-trigger"},"right":{"value":False}},
+              {"op":"lte","left":{"ref":"trigger-distance"},"right":{"value":60}},
+              {"op":"eq","left":{"ref":"source-sees-trigger"},"right":{"value":True}},
+          ]}
+          interaction=lambda ident:{"id":ident,"kind":"choice","responder":"actor-owner","mode":"blocking","input":{"type":"boolean"},"revalidate":"if-revision-changed","stalePolicy":"reject"}
+          module["content"].append({
+              "id":feature_id,
+              "category":"option",
+              "presentation":{"originalName":"Cutting Words","defaultLocale":"ko-KR","locales":{"ko-KR":{"name":"날카로운 말","summary":"반응행동과 바드의 영감을 사용해 다른 생명체의 성공한 d20 굴림 또는 피해 굴림을 낮춘다."}}},
+              "relationships":[{"kind":"parent","target":"dnd.srd521.subclass.bard.college-of-lore"}],
+              "mechanics":[{"kind":"common-play","config":{
+                  "$schema":"https://simplevtt.local/schemas/common-play-contract.schema.json",
+                  "schemaVersion":"0.2-draft",
+                  "id":feature_id,
+                  "payments":[
+                      {"kind":"economy","bucket":"reaction","amount":{"value":1},"consumeAt":"commit"},
+                      {"kind":"resource","resource":resource_id,"amount":{"value":1},"consumeAt":"commit"},
+                  ],
+                  "interceptors":[
+                      {"id":"cutting-words-d20","timing":"d20.outcome-determined","factQueries":common_queries,"when":when,"interaction":interaction("use-cutting-words-d20"),"operation":"recalculate","slot":"d20.roll","operations":[{"kind":"roll.modify","mode":"subtract-die","diceResource":resource_id}]},
+                      {"id":"cutting-words-damage","timing":"damage.rolled","factQueries":common_queries,"when":when,"interaction":interaction("use-cutting-words-damage"),"operation":"recalculate","slot":"primary.damage","operations":[{"kind":"roll.modify","mode":"subtract-die","diceResource":resource_id}]},
+                  ],
+              }}],
+          })
+          module_path.write_text(json.dumps(module,ensure_ascii=False,separators=(",",":"))+"\n")
+
+          # The named production side-engine is no longer registered.
+          replace_once(
+              "src/app/offlineRuntimeAdapters.ts",
+              'import "./bardCollegeLoreCuttingWordsFollowUpRuntimeAdapter";\n',
+              '',
+          )
+
+          # Golden production behavior now runs through feature ownership + generic Common Play.
+          test_path=Path("tests/ui/bardCollegeLoreCuttingWordsRuntime.test.ts")
+          test=test_path.read_text()
+          test=test.replace(
+              'import { BARD_LORE_CLASS_ID } from "../../src/domain/bardLoreProgression";',
+              'import { BARD_LORE_CLASS_ID, BARD_LORE_CUTTING_WORDS_FEATURE_ID } from "../../src/domain/bardLoreProgression";\nimport { setSpatialRelation } from "../../src/app/spatialRuntimeContracts";',1)
+          test=test.replace('const INTERRUPT_ID="follow-up.bard.college-of-lore.cutting-words";','const CUTTING_WORDS_NAME="날카로운 말";',1)
+          test=test.replace(
+              '    subclassIds:{[BARD_LORE_CLASS_ID]:BARD_COLLEGE_LORE_SUBCLASS_ID},\n    resources:[',
+              '    subclassIds:{[BARD_LORE_CLASS_ID]:BARD_COLLEGE_LORE_SUBCLASS_ID},\n    subclassFeatureIds:level>=3?[BARD_LORE_CUTTING_WORDS_FEATURE_ID]:[],\n    resources:[',1)
+          old_begin='''async function beginGoblinTurn(adapter:MockAdapter){\n  await adapter.startInitiative();\n  await adapter.setCurrentActor(GOBLIN_ID);\n  return adapter.getSnapshot();\n}'''
+          new_begin='''async function beginGoblinTurn(adapter:MockAdapter){\n  const internal=adapter as unknown as {activeCharacter:CharacterSheet;scene:SceneVm};\n  setSpatialRelation(internal.scene,{sourceId:internal.activeCharacter.id,targetId:GOBLIN_ID,distanceFeet:30,visible:true,cover:"none",targetCanSeeAttacker:true,provenance:"module:test-map:spatial"});\n  await adapter.startInitiative();\n  await adapter.setCurrentActor(GOBLIN_ID);\n  return adapter.getSnapshot();\n}'''
+          if old_begin not in test: raise SystemExit("beginGoblinTurn changed")
+          test=test.replace(old_begin,new_begin,1)
+          test=test.replace('if(snapshot.resolution?.interrupt?.id===INTERRUPT_ID)return snapshot;','if(snapshot.resolution?.stage==="interrupt")return snapshot;',1)
+          ability_marker='''  internal.scene.actionsByActor[OTHER_CHARACTER_ID]=[otherCharacterCheckAction()];\n  await adapter.startInitiative();'''
+          ability_repl='''  internal.scene.actionsByActor[OTHER_CHARACTER_ID]=[otherCharacterCheckAction()];\n  setSpatialRelation(internal.scene,{sourceId:internal.activeCharacter.id,targetId:OTHER_CHARACTER_ID,distanceFeet:30,visible:true,cover:"none",targetCanSeeAttacker:true,provenance:"module:test-map:spatial"});\n  await adapter.startInitiative();'''
+          if ability_marker not in test: raise SystemExit("ability relation insertion point changed")
+          test=test.replace(ability_marker,ability_repl,1)
+          test=test.replace('assert.equal(snapshot.resolution?.interrupt?.id,INTERRUPT_ID,JSON.stringify(snapshot.resolution));','assert.equal(snapshot.resolution?.stage,"interrupt",JSON.stringify(snapshot.resolution));\n  assert.equal(snapshot.resolution?.interrupt?.optionName,CUTTING_WORDS_NAME);')
+          test=test.replace('assert.equal(snapshot.activity.some((entry)=>entry.detail.some((detail)=>detail.includes("도발의 말"))),true);','assert.equal(snapshot.resolution?.provenance.some((entry)=>entry.includes("common-play:")),true);')
+          test_path.write_text(test)
+
+          Path("src/app/bardCollegeLoreCuttingWordsFollowUpRuntimeAdapter.ts").unlink()
+          PY
+      - name: Verify declarative production path
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci
+          npm run generate:content
+          npx tsx --test tests/domain/commonPlayReactionResourceDieRuntime.test.ts tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts tests/ui/bardCollegeLoreCuttingWordsRuntime.test.ts
+          npx tsc --noEmit
+      - name: Commit verified migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add content/modules/dnd-srd-5.2.1.subclasses/module.json src/app/characterSessionProjection.ts src/domain/commonPlaySpatialFactRuntime.ts src/app/commonPlayInterceptorProductionRuntimeAdapter.ts src/app/offlineRuntimeAdapters.ts tests/ui/bardCollegeLoreCuttingWordsRuntime.test.ts
+          git add -u src/app/bardCollegeLoreCuttingWordsFollowUpRuntimeAdapter.ts
+          git diff --cached --check
+          git commit -m "feat(common-play): migrate Cutting Words declaratively"
+          git push
