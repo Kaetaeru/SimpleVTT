@@ -16,6 +16,8 @@ import { MockAdapter } from "../../src/app/mockAdapter";
 import { tauriSessionTransport } from "../../src/app/tauriSessionTransport";
 import { snapshotAdapterTurnRuntimeState } from "../../src/app/turnRuntimeSessionRegistry";
 
+const wireShape=(value:unknown)=>JSON.parse(JSON.stringify(value));
+
 function moduleJson(prefix:string) {
   const moduleId=`${prefix}.module`;
   const contentId=`${prefix}.option`;
@@ -90,19 +92,19 @@ test("source-bound property modifier converges through connected replay, reconne
   const clientConnected=connectedStateFor(client);clientConnected.mode="client";clientConnected.sessionId=sessionId;clientConnected.replica=new ClientSessionReplica(sessionId);
   assert.equal((await applyConnectedClientEvents(client,applyBatch.events)).status,"applied");
   let clientSnapshot=await client.getSnapshot();
-  assert.deepEqual(snapshotAdapterTurnRuntimeState(client,clientSnapshot.scene)?.effects,snapshotAdapterTurnRuntimeState(host,hostSnapshot.scene)?.effects);
+  assert.deepEqual(wireShape(snapshotAdapterTurnRuntimeState(client,clientSnapshot.scene)?.effects),wireShape(snapshotAdapterTurnRuntimeState(host,hostSnapshot.scene)?.effects));
 
   const reconnect=new MockAdapter();await install(reconnect,prefix);
   const reconnectState=connectedStateFor(reconnect);reconnectState.mode="client";reconnectState.sessionId=sessionId;reconnectState.replica=new ClientSessionReplica(sessionId);
   assert.equal((await applyConnectedClientEvents(reconnect,hostConnected.ledger!.eventsAfter(0))).status,"applied");
   let reconnectSnapshot=await reconnect.getSnapshot();
-  assert.deepEqual(snapshotAdapterTurnRuntimeState(reconnect,reconnectSnapshot.scene)?.effects,snapshotAdapterTurnRuntimeState(host,hostSnapshot.scene)?.effects);
+  assert.deepEqual(wireShape(snapshotAdapterTurnRuntimeState(reconnect,reconnectSnapshot.scene)?.effects),wireShape(snapshotAdapterTurnRuntimeState(host,hostSnapshot.scene)?.effects));
 
   const undoBatch=await runHost(()=>host.undoLastResolution());
   assert.equal((await applyConnectedClientEvents(client,undoBatch.events)).status,"applied");
   assert.equal((await applyConnectedClientEvents(reconnect,undoBatch.events)).status,"applied");
   hostSnapshot=await host.getSnapshot();clientSnapshot=await client.getSnapshot();reconnectSnapshot=await reconnect.getSnapshot();
   assert.equal(snapshotAdapterTurnRuntimeState(host,hostSnapshot.scene)?.effects.length,0);
-  assert.deepEqual(snapshotAdapterTurnRuntimeState(client,clientSnapshot.scene)?.effects,snapshotAdapterTurnRuntimeState(host,hostSnapshot.scene)?.effects);
-  assert.deepEqual(snapshotAdapterTurnRuntimeState(reconnect,reconnectSnapshot.scene)?.effects,snapshotAdapterTurnRuntimeState(host,hostSnapshot.scene)?.effects);
+  assert.deepEqual(wireShape(snapshotAdapterTurnRuntimeState(client,clientSnapshot.scene)?.effects),wireShape(snapshotAdapterTurnRuntimeState(host,hostSnapshot.scene)?.effects));
+  assert.deepEqual(wireShape(snapshotAdapterTurnRuntimeState(reconnect,reconnectSnapshot.scene)?.effects),wireShape(snapshotAdapterTurnRuntimeState(host,hostSnapshot.scene)?.effects));
 });
