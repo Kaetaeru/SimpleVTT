@@ -780,7 +780,7 @@
         "compoundDamage.test.ts",
         "resolutionHealthOps.ts"
       ],
-      "currentState": "Bounded damage/healing is PRODUCTION. Unknown installed temp-hp.grant now lowers structurally through the existing Resolver Temporary HP operation, preserves the domain keep-existing/take-new non-stacking choice, and has external identity rename, Host/Client replay, event-native Undo, and reconnect evidence. Family L remains incomplete for the remaining full damage/life/object semantic matrix.",
+      "currentState": "Bounded typed damage/healing plus portable Temporary HP are production-proven; complete life/object semantics remain incomplete",
       "requiredSemantics": [
         "typed/compound damage",
         "resistance",
@@ -803,20 +803,26 @@
       "disposition": "INCOMPLETE",
       "implementationEvidence": [
         "commonPlayOperationRuntime.ts generic temp-hp.grant parsing/lowering preserves the existing TemporaryHpChoice contract into the Resolver temporary-hp operation",
-        "temporaryHp.ts and resolutionHealthOps.ts remain the single Temporary HP non-stacking/choice and HpStateChange execution authority"
+        "temporaryHp.ts and resolutionHealthOps.ts remain the single Temporary HP non-stacking/choice and HpStateChange execution authority",
+        "commonPlayOperationRuntime.ts parses temp-hp.grant from the Common Play contract and lowers it directly to the shared Resolver temporary-hp operation, including explicit Temporary HP choice semantics"
       ],
       "productionEvidence": [
         "4752de7dffc560684cb9d5ad04b3475e64de8673 feat(c9): lower portable Temporary HP",
         "c9FamilyLTemporaryHpProduction.test.ts unknown installed temp-hp.grant production execution and Undo",
-        "C9 Family L Portable Temporary HP 7130 run 33311003691: focused production test, coverage checker, legacy execution boundary, and tsc --noEmit passed"
+        "C9 Family L Portable Temporary HP 7130 run 33311003691: focused production test, coverage checker, legacy execution boundary, and tsc --noEmit passed",
+        "c9FamilyLTemporaryHpProduction.test.ts executes an unknown installed temp-hp.grant through production Common Play, Resolver Temporary HP state change, and one-step Undo"
       ],
       "identityInvarianceEvidence": [
-        "c9FamilyLTemporaryHpProduction.test.ts renamed external module/content/mechanic preserves Temporary HP semantics"
+        "c9FamilyLTemporaryHpProduction.test.ts renamed external module/content/mechanic preserves Temporary HP semantics",
+        "c9FamilyLTemporaryHpProduction.test.ts preserves Temporary HP behavior across unrelated external module/content/mechanic identities"
       ],
       "connectedEvidenceIfRelevant": [
-        "c9FamilyLTemporaryHpProduction.test.ts Host/Client authoritative replay, event-native Undo, and fresh reconnect converge Temporary HP"
+        "c9FamilyLTemporaryHpProduction.test.ts Host/Client authoritative replay, event-native Undo, and fresh reconnect converge Temporary HP",
+        "c9FamilyLTemporaryHpProduction.test.ts replays portable Temporary HP grant and Undo through Host-authoritative connected resolution events"
       ],
-      "persistenceEvidenceIfRelevant": [],
+      "persistenceEvidenceIfRelevant": [
+        "c9FamilyLTemporaryHpProduction.test.ts reconstructs the post-Undo Temporary HP state on a fresh connected replica from the Host event ledger"
+      ],
       "remainingNamedSeams": [
         "complete generic threshold/reduction/critical-dice and max-HP acceptance remains incomplete",
         "complete 0 HP, unconscious/death, death-save, stabilization, instant-death production acceptance remains incomplete",
