@@ -16,6 +16,7 @@ import { tauriSessionTransport } from "../../src/app/tauriSessionTransport";
 import { commitAdapterTurnRuntimeState, snapshotAdapterTurnRuntimeState } from "../../src/app/turnRuntimeSessionRegistry";
 import { SIMPLEVTT_APP_RULES_PROFILE } from "../../src/app/realResolutionService";
 import { resolvePendingResolution } from "../../src/domain/resolution";
+import { compileCommonPlayEntryPointOperations, parseCommonPlayOperationDefinition } from "../../src/domain/commonPlayOperationRuntime";
 
 const OTHER_CHARACTER_ID="char.portable-interceptor-target";
 const OTHER_CHARACTER_CHECK_ID="action.portable-interceptor-target.check";
@@ -653,4 +654,42 @@ test("portable production normal sight respects Resolver-owned Invisible conditi
   assert.equal(commitAdapterTurnRuntimeState(adapter,internal.scene,state!.revision,committed.state),true);
   const snapshot=await openAbilityCheckInterrupt(adapter);
   assert.notEqual(snapshot.resolution?.stage,"interrupt","normal sight must not see a target with an active Resolver-owned Invisible condition");
+});
+
+
+function seedRulesProfileSense(adapter:MockAdapter,sourceId:string,rangeFeet:number){
+  const internal=adapter as unknown as {activeCharacter:CharacterSheet;scene:SceneVm};
+  const state=snapshotAdapterTurnRuntimeState(adapter,internal.scene);
+  assert.ok(state,"TurnRuntime state must exist before sense profile seeding");
+  const definition=parseCommonPlayOperationDefinition({
+    schemaVersion:"0.2-draft",id:sourceId,entryPoints:[{id:"activate",invocation:"manual",operations:[{
+      kind:"property.modify",property:"sense.darkvision.range-feet",operation:"set",value:{value:rangeFeet},target:"actor",owner:"effect",source:"definition",
+      duration:{kind:"elapsed",amount:{value:1},unit:"hours"},lifetime:{kind:"until-duration",onEnd:"destroy"},instancePolicy:"unique-by-source",
+    }]}],
+  });
+  const pending=compileCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,state!,definition,{
+    resolutionId:`sense-profile.${sourceId}`,actorId:internal.activeCharacter.id,entryPointId:"activate",
+  });
+  const committed=resolvePendingResolution(SIMPLEVTT_APP_RULES_PROFILE,state!,pending);
+  assert.notEqual(committed.status,"rejected");
+  if(committed.status==="rejected")return;
+  assert.equal(commitAdapterTurnRuntimeState(adapter,internal.scene,state!.revision,committed.state),true);
+}
+
+test("portable production derives Darkvision from a generic RulesProfile modifier",async()=>{
+  const renamed:Identity={...ORIGINAL,moduleId:"external.profile-sense-renamed",contentId:"item.profile-sense-renamed",mechanicId:"mechanic.profile-sense-renamed",interceptorId:"interceptor.profile-sense-renamed",interactionId:"interaction.profile-sense-renamed",displayName:"Renamed Profile Sense"};
+  for(const identity of [ORIGINAL,renamed]){
+    const adapter=await prepare(identity,true,"d20",[{kind:"roll.modify",mode:"subtract-die",dice:"1d8"}],undefined,{light:"darkness",obscurement:"none"});
+    const internal=adapter as unknown as {activeCharacter:CharacterSheet;scene:SceneVm};
+    setSpatialRelation(internal.scene,{
+      sourceId:internal.activeCharacter.id,targetId:OTHER_CHARACTER_ID,distanceFeet:30,visible:true,cover:"none",targetCanSeeAttacker:true,
+      light:"darkness",obscurement:"none",provenance:"module:test-rules-profile-sense",
+    });
+    seedRulesProfileSense(adapter,`${identity.moduleId}.darkvision`,60);
+    seedHiddenRuntimeEffect(adapter,OTHER_CHARACTER_ID);
+    let snapshot=await openAbilityCheckInterrupt(adapter);
+    assert.equal(snapshot.resolution?.stage,"interrupt",JSON.stringify(snapshot.resolution));
+    snapshot=await adapter.respondToInterrupt(false);
+    assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
+  }
 });
