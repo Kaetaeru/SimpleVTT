@@ -11,7 +11,7 @@ import type { DamageDefenseKind } from "../../src/domain/damage";
 
 const TARGET_ID="combatant.goblin-a";
 
-function packagePayload(prefix:string) {
+function packagePayload(prefix:string,multiplier?:number) {
   const moduleId=`${prefix}.module`,contentId=`${prefix}.option`,mechanicId=`${prefix}.damage`;
   return {moduleId,contentId,mechanicId,json:JSON.stringify({
     schemaVersion:"0.1-draft",moduleId,moduleVersion:"1",
@@ -22,7 +22,7 @@ function packagePayload(prefix:string) {
       presentation:{defaultLocale:"en",originalName:"Portable Damage Probe",locales:{en:{name:"Portable Damage Probe"}}},
       mechanics:[{kind:"common-play",config:{schemaVersion:"0.2-draft",id:mechanicId,entryPoints:[{
         id:"apply",invocation:"manual",targeting:{from:"targets",min:1,max:1},
-        operations:[{kind:"damage.apply",amount:{value:8},damageType:"fire",target:"target"}],
+        operations:[{kind:"damage.apply",amount:{value:4},damageType:"fire",...(multiplier===undefined?{}:{multiplier}),target:"target"}],
       }]}}],
     }],
   })};
@@ -34,9 +34,9 @@ function hp(snapshot:Awaited<ReturnType<MockAdapter["getSnapshot"]>>,actorId:str
   return value as number;
 }
 
-async function execute(prefix:string,kind:DamageDefenseKind) {
+async function execute(prefix:string,kind?:DamageDefenseKind,multiplier?:number) {
   const adapter=new MockAdapter();
-  const pack=packagePayload(prefix);
+  const pack=packagePayload(prefix,multiplier);
   setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
   const preview=await adapter.previewContentImport(pack.json);
   assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
@@ -46,7 +46,7 @@ async function execute(prefix:string,kind:DamageDefenseKind) {
 
   const runtime=turnRuntimeSessions.get(adapter);
   assert.ok(runtime,"turn runtime must exist after initiative starts");
-  runtime.state.combatants[TARGET_ID].damageDefenses=[{source:`${prefix}.runtime-defense`,kind,damageType:"fire"}];
+  runtime.state.combatants[TARGET_ID].damageDefenses=kind?[{source:`${prefix}.runtime-defense`,kind,damageType:"fire"}]:[];
 
   const action=installedCommonPlayActionId({
     catalogId:catalogQualifiedId(pack.contentId,pack.moduleId,"1"),
@@ -64,9 +64,14 @@ async function execute(prefix:string,kind:DamageDefenseKind) {
 }
 
 test("unknown installed damage.apply honors generic target damage defenses with rename invariance and Undo",async()=>{
-  const expected:Record<DamageDefenseKind,number>={resistance:4,vulnerability:16,immunity:0};
+  const expected:Record<DamageDefenseKind,number>={resistance:2,vulnerability:8,immunity:0};
   for(const kind of ["resistance","vulnerability","immunity"] as const) {
     assert.equal(await execute(`external.family-l-${kind}`,kind),expected[kind]);
     assert.equal(await execute(`completely.renamed-family-l-${kind}`,kind),expected[kind]);
   }
+});
+
+test("unknown installed damage.apply honors schema-declared multiplier with profile rounding, rename invariance, and Undo",async()=>{
+  assert.equal(await execute("external.family-l-multiplier",undefined,0.6),2);
+  assert.equal(await execute("completely.renamed-family-l-multiplier",undefined,0.6),2);
 });

@@ -119,6 +119,7 @@ type CommonPlayDamageApply={
   kind:"damage.apply";
   amount:LiteralNumberExpression|string;
   damageType:string;
+  multiplier?:number;
   target?:CommonPlayHpTarget;
 };
 
@@ -264,7 +265,7 @@ const RESOURCE_RECHARGE_KEYS=new Set(["kind","resource","die","succeedsOn"]);
 const RECHARGE_DIE_KEYS=new Set(["sides"]);
 const RECHARGE_RANGE_KEYS=new Set(["minimum","maximum"]);
 const ECONOMY_MODIFY_KEYS=new Set(["kind","bucket","amount"]);
-const DAMAGE_APPLY_KEYS=new Set(["kind","amount","damageType","target"]);
+const DAMAGE_APPLY_KEYS=new Set(["kind","amount","damageType","multiplier","target"]);
 const HEALING_APPLY_KEYS=new Set(["kind","amount","target"]);
 const CONDITION_CHANGE_KEYS=new Set(["kind","condition","target","when"]);
 const EFFECT_REMOVE_KEYS=new Set(["kind","selector","when"]);
@@ -641,10 +642,13 @@ function parseOperation(value:unknown,label:string):CommonPlayOperation {
       parseCommonPlayDamageDiceFormula(operation.amount,`${label}.amount`);
       amount=operation.amount.trim();
     } else amount=nonNegativeLiteralExpression(operation.amount,`${label}.amount`);
+    const multiplier=operation.multiplier;
+    if(multiplier!==undefined&&(typeof multiplier!=="number"||!Number.isFinite(multiplier)||multiplier<0)) throw new DomainEvaluationError(`${label}.multiplier must be a finite non-negative number`);
     return {
       kind:"damage.apply",
       amount,
       damageType:nonEmptyString(operation.damageType,`${label}.damageType`),
+      ...(multiplier===undefined?{}:{multiplier}),
       ...(operation.target===undefined?{}:{target:hpTarget(operation.target,`${label}.target`)}),
     };
   }
@@ -1046,7 +1050,10 @@ export function compileCommonPlayEntryPointOperations(
       const targetId=hpOperationTarget(operation.target,input);
       const creatureKind=input.creatureKinds?.[targetId];
       if(!creatureKind) throw new DomainEvaluationError(`Common Play damage target is not a classified runtime combatant: ${targetId}`);
-      let amount:number|{operationId:string;field:"total"};
+      const multiplier=operation.multiplier;
+      const rounding=multiplier===undefined?undefined:profile.roundingPolicy?.default;
+      if(multiplier!==undefined&&!rounding) throw new DomainEvaluationError("damage.apply multiplier requires a RulesProfile rounding policy");
+      let amount:number|{operationId:string;field:"total";multiplier?:number;rounding?:"floor"|"ceil"|"round"};
       if(typeof operation.amount==="string") {
         const formula=parseCommonPlayDamageDiceFormula(operation.amount);
         const rollId=`${operationId}:roll`;
@@ -1068,8 +1075,15 @@ export function compileCommonPlayEntryPointOperations(
             }]}),
           },
         });
-        amount={operationId:rollId,field:"total"};
-      } else amount=literalInteger(operation.amount,"damage.apply amount");
+        amount={operationId:rollId,field:"total",...(multiplier===undefined?{}:{multiplier,rounding})};
+      } else {
+        const literal=literalInteger(operation.amount,"damage.apply amount");
+        if(multiplier===undefined) amount=literal;
+        else {
+          const scaled=literal*multiplier;
+          amount=rounding==="ceil"?Math.ceil(scaled):rounding==="round"?Math.round(scaled):Math.floor(scaled);
+        }
+      }
       operations.push({
         id:operationId,
         kind:"damage",
