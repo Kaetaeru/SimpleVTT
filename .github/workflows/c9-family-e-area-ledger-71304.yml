@@ -21,6 +21,16 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Sync branch
+        run: git pull --rebase origin agent/c9-gate-n-coverage-reconciliation
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Verify Family E area provider
+        run: npx tsx --test tests/ui/commonPlayRichSelectorProduction.test.ts tests/ui/c9FamilyESpatialSelectorProduction.test.ts
+      - name: Verify legacy execution boundary
+        run: node scripts/check-legacy-execution-boundary.mjs
+      - name: Typecheck
+        run: npx tsc --noEmit
       - name: Reconcile verified Family E area evidence and publish
         shell: bash
         run: |
@@ -29,28 +39,23 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
           apply_patch() {
-            python - <<'PY'
-          import json
-          from pathlib import Path
-
-          path=Path('docs/rules/v1-mechanism-coverage-ledger.json')
-          data=json.loads(path.read_text(encoding='utf-8'))
-          row=next(item for item in data['mechanismFamilies'] if item['family']=='E')
-          row['currentState']=(
-            'Portable Common Play targeting preserves bounded selected target sets, evaluates generic predicates over authoritative production candidates, '
-            'and routes authored automatic selection plus orderBy through the shared selector kernel with Host authority. Production candidates consume '
-            'authoritative Common Play spatial relations for distance, visibility, adjacency, Total Cover, and provider-authored reach without fabricating '
-            'geometry. Provider-backed self-origin area membership now executes through the generic production selector path and providerless area membership '
-            'continues to fail closed; object/point selection remains incomplete.'
-          )
-          implementation='installedCommonPlayRuntimeAdapter.ts bridges provider-authored self-origin area membership into generic CommonPlaySelectorCandidate.areaMember without content identity dispatch or Core geometry fabrication'
-          production='commonPlayRichSelectorProduction.test.ts proves unknown and fully renamed installed RuleModules consume provider-backed self-origin cone membership, reject non-members, accept members, and preserve identity invariance through production resolveAction'
-          identity='commonPlayRichSelectorProduction.test.ts preserves provider-backed self-origin area membership semantics after complete external module/content/mechanic/entry/display rename'
-          for key,value in [('implementationEvidence',implementation),('productionEvidence',production),('identityInvarianceEvidence',identity)]:
-            if value not in row[key]: row[key].append(value)
-          row['remainingNamedSeams']=['object/point selection remains incomplete']
-          path.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
-          PY
+            node <<'NODE'
+          const fs=require('node:fs');
+          const path='docs/rules/v1-mechanism-coverage-ledger.json';
+          const data=JSON.parse(fs.readFileSync(path,'utf8'));
+          const row=data.rows.find((item)=>item.family==='E');
+          if(!row) throw new Error('Family E ledger row missing');
+          if(row.disposition!=='INCOMPLETE') throw new Error(`Family E disposition changed: ${row.disposition}`);
+          row.currentState='Portable Common Play targeting preserves bounded selected target sets, evaluates generic predicates over authoritative production candidates, and routes authored automatic selection plus orderBy through the shared selector kernel with Host authority. Production candidates consume authoritative Common Play spatial relations for distance, visibility, adjacency, Total Cover, provider-authored reach, and provider-backed self-origin area membership without fabricating geometry. Providerless area membership continues to fail closed; object/point selection remains incomplete, and point-origin areas remain blocked on the same point authority contract.';
+          const implementation='installedCommonPlayRuntimeAdapter.ts bridges provider-authored self-origin area membership into generic CommonPlaySelectorCandidate.areaMember without content identity dispatch or Core geometry fabrication';
+          const production='7d3f4ba6c05a8300828b77d59c4b9727356a8334 feat(c9): bridge provider-backed area membership; commonPlayRichSelectorProduction.test.ts proves unknown and fully renamed installed RuleModules reject non-members, accept provider members, and execute through production resolveAction';
+          const identity='commonPlayRichSelectorProduction.test.ts preserves provider-backed self-origin area membership semantics after complete external module/content/mechanic/entry/display rename';
+          for(const [key,value] of [['implementationEvidence',implementation],['productionEvidence',production],['identityInvarianceEvidence',identity]]) {
+            if(!row[key].includes(value)) row[key].push(value);
+          }
+          row.remainingNamedSeams=['object/point selection remains incomplete; point-origin area selection remains blocked on the same point authority contract'];
+          fs.writeFileSync(path,JSON.stringify(data,null,2)+'\n');
+          NODE
           }
 
           for attempt in $(seq 1 20); do
