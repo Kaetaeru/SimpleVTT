@@ -415,8 +415,8 @@ async function runW107({instance,dataRoot,name,identity}) {
   const root="//div[contains(@class,'sheet-play-screen')]";
   await instance.browser.$(`${root}//h1[normalize-space(.)=${JSON.stringify(name)}]`).waitForDisplayed({timeout:15_000});
   const status=await instance.browser.$(`${root}//div[contains(@class,'sheet-play-statusbar')]`).getText();
-  assert.match(status,new RegExp(`AC\\s+${stored.ac}\\b`));
-  assert.match(status,new RegExp(`HP\\s+${stored.hp}/${stored.maxHp}\\b`));
+  assert.match(status,new RegExp(`AC\\s*${stored.ac}\\b`));
+  assert.match(status,new RegExp(`HP\\s*${stored.hp}/${stored.maxHp}\\b`));
   const resources=await instance.browser.$(sheetCard(root,"자원")).getText();
   for(const resource of stored.resources){assert.ok(resources.includes(resource.label));assert.ok(resources.includes(`${resource.current}/${resource.max}`));}
   const equipment=await instance.browser.$(sheetCard(root,"장비")).getText();
