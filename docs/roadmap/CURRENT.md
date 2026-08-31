@@ -1,90 +1,52 @@
 # Current roadmap
 
-This page routes to the one active execution plan. It does not duplicate that checklist.
+Updated: 2026-08-31 Asia/Seoul
+
+This page routes to the **one active V1 execution plan**. It does not duplicate that plan.
 
 ## Active plan
 
-[`../rules/resolver-execution-checklist-v2.md`](../rules/resolver-execution-checklist-v2.md)
+[`V1_MASTER_ROADMAP.md`](V1_MASTER_ROADMAP.md)
 
-The older `resolver-execution-checklist.md` is historical and archived.
-
-## Current boundary
-
-Resource/Economy maturity:
+## Fixed V1 numbers
 
 ```text
-SPEC -> KERNEL -> PORTABLE -> PRODUCTION -> [MIGRATED] -> ACCEPTED
+10 workstreams: W0-W9
+72 release gates
+100 weighted points
+120 multiplayer scenarios: MP-A01-MP-J08
+18 legacy V1 release gates
+13 required MP work issues: MP-01-MP-13
 ```
 
-Tests/Rolls/Outcomes maturity:
+Initial repository audit classification:
 
 ```text
-SPEC -> KERNEL -> PORTABLE -> [PRODUCTION] -> MIGRATED -> ACCEPTED
+47/72 REUSE_LOCKED
+14/72 VERIFY_ONLY
+11/72 BUILD
+61/72 existing implementation reused = 84.7%
 ```
 
-Damage/Healing/HP maturity:
+These numbers classify the work; they are not completion credit. Completion credit comes only from `docs/roadmap/V1_EVIDENCE_LEDGER.json` after exact-SHA evidence is recorded.
+
+## Current stage
 
 ```text
-SPEC -> KERNEL -> PORTABLE -> [PRODUCTION] -> MIGRATED -> ACCEPTED
+Wave 0
+Next Gate: W0-01
+Official ledger score: 0.0/100.0 until evidence migration
+Roadmap audit baseline: a38b0f07ac012bc9e600a28b2630a365d1bd098b
 ```
 
-Targeting/Selectors/Allocation maturity:
+C9 Gate N is integrated into `work/v1-composite` and is no longer an active selection queue. The Resolver execution checklist and older Phase/V0.9/V1 checklists remain architecture and historical evidence only.
 
-```text
-SPEC -> KERNEL -> PORTABLE -> [PRODUCTION] -> MIGRATED -> ACCEPTED
-```
+## Execution rules
 
-Interactions/Reactions/Interceptors maturity:
-
-```text
-SPEC -> KERNEL -> PORTABLE -> [PRODUCTION] -> MIGRATED -> ACCEPTED
-```
-
-PR #168 established `PRODUCTION` for arbitrary installed, data-only Common Play Resource/Economy mechanics through the real production/session authority.
-
-PR #171, `rules: migrate built-in Action Surge to generic Common Play`, is integrated as merge commit `24d507e809a33b9b5ec7a5bf7fefcf2c3d17ec8f` from validated candidate `8c9978a8d3a30bf08ab492cc8d805c2d77d63094`. It completed the bounded `PRODUCTION -> MIGRATED` boundary by proving built-in Action Surge through the same generic path and removing its named production seam.
-
-PR #172, `rules: add generic Common Play d20 production bridge`, is integrated as merge commit `ff523a4b8b83f29b781720dcd174f0245e7c16ca` from validated candidate `350224dc10fe747ff52e8a8f2c428208edb9af2e`. It established Tests/Rolls/Outcomes `PRODUCTION` for authored actor ability checks, saving throws, and attack rolls by reusing the existing generic Resolver `d20` semantics through validation, persistence/rehydration, production authority, connected result presentation, and rename invariance.
-
-PR #173, `rules: add generic Common Play damage and healing production bridge`, is integrated as merge commit `284fcc9068292d90698d3d3ada5f128db72a77a7` from validated candidate `949d90f48fbd44cf101c47f7702c14208011a237`. It established Damage/Healing/HP `PRODUCTION` for authored literal/dice damage and literal healing through existing generic Resolver HP operations, one pre-resolved runtime target, authoritative HP writeback/Undo, connected convergence, and rename invariance.
-
-PR #174, `rules: add bounded Common Play targeting production bridge`, is integrated as merge commit `4624a63dd8ea4a81f0716187e5ceb57a9a469497` from validated candidate `27ae09ebdc53431e57264934f58a59c70e4b023b`. It established bounded Targeting/Selectors/Allocation `PRODUCTION` for canonical `entryPoint.targeting` using only the exact `{ from:"targets", min:1, max:1 }` caller-selected target validator subset through persistence, existing generic Resolver targeting, authoritative execution, Undo, connected convergence, and rename invariance.
-
-PR #175, `rules: add bounded Common Play interaction reaction production bridge`, is integrated as merge commit `0e567d738c94000f059d351a21ef37637c28809e` from validated candidate `9b6c5cb564150ebf0e80eb01bd716ca77fc3ebbf`. It established bounded Interactions/Reactions/Interceptors `PRODUCTION` for manual actor boolean consent through the existing interrupt presentation and a commit-time Reaction payment lowered to generic `use-economy`, with authoritative revalidation, atomic downstream execution, Undo, connected convergence, and rename invariance.
-
-The Resource/Economy migration evidence includes two-resource atomic spend, the RulesProfile-owned non-Magic extra Action restriction, authoritative Character/session writeback, Undo, connected convergence, ID/name-only rename invariance, preservation of arbitrary installed Common Play production coverage, and legacy boundary shrinkage.
-
-The Tests/Rolls/Outcomes production bridge deliberately does not claim migration: Tactical Mind, Indomitable, Cutting Words, Peerless Skill, Dark One's Own Luck, other named post-roll seams, property-backed modifier/DC, and target/every-target authoring remain outside the absorbed boundary.
-
-The Damage/Healing/HP production bridge deliberately does not claim migration: temporary HP, compound damage, authored defenses/resistance/immunity/vulnerability, concentration checks, critical authoring, property-backed amounts, healing dice, richer selectors/allocation, spell execution, and named HP seams remain outside the absorbed boundary.
-
-The Targeting/Selectors/Allocation production bridge deliberately does not claim migration: selector predicates/filters/ordering/areas, automatic target discovery, multi-target, point/object targets, allocation, harmful targeting semantics, and range/sight/cover/spatial facts remain outside the absorbed boundary. Gate G is not automatically `IMPLEMENTED` by this bounded bridge.
-
-The Interactions/Reactions/Interceptors production bridge deliberately does not claim migration: `roll.modify`, reroll, interceptors, triggered dispatch, non-actor/remote responders, reconnect continuation, multiple options, and named post-roll adapters remain outside the absorbed boundary. The connected proof uses Host as responder and does not establish remote consent transport or pending-interaction recovery.
-
-`MIGRATED` or `PRODUCTION` does not automatically imply `ACCEPTED`; remaining universal acceptance obligations must be proven explicitly before that status is claimed.
-
-The active task is to select the next smallest coherent Phase 2 mechanism-family slice from the capability maturity board and current legacy inventory. Selection must be mechanism-first, not a named class/spell/feat queue.
-
-## What not to do
-
-- Do not add a content-name/id algorithm switch.
-- Do not add another evaluator, state store, network transport, or fallback execution engine.
-- Do not repeat Gate A-E, M0, PR #159, PR #168, PR #171, PR #172, PR #173, PR #174, or PR #175 validation without new affected-surface evidence.
-- Do not revive the rejected broader Action Surge parity experiment.
-- Do not treat Resource/Economy as `ACCEPTED` solely because its named Action Surge production seam is gone.
-- Do not treat Tests/Rolls/Outcomes as `MIGRATED` or `ACCEPTED` solely because generic d20 production is established.
-- Do not treat Damage/Healing/HP as `MIGRATED` or `ACCEPTED` solely because generic HP production is established.
-- Do not treat Targeting/Selectors/Allocation as `MIGRATED` or `ACCEPTED` solely because the bounded single-target production validator is established.
-- Do not treat Interactions/Reactions/Interceptors as `MIGRATED` or `ACCEPTED` solely because bounded actor consent + Reaction production is established.
-- Do not infer that Gate G allocation or richer selector semantics are implemented from PR #174.
-- Do not infer that roll modification, reroll, interceptor dispatch, remote responders, or reconnect recovery are implemented from PR #175.
-- Do not speculatively activate Gates F-M; use the canonical probe/disposition rules.
-- Do not select work from archived Phase/V0.9/V1 agent checklists.
-- Do not route product integration to `main`.
-
-## Next selection
-
-Use `resolver-execution-checklist-v2.md` plus `legacy-execution-inventory.md` to choose the smallest coherent mechanism family that can retire real legacy execution while strengthening the portable generic language. Freeze that slice's behavior oracle and acceptance contract before handing repository-dependent implementation to Codex.
-
-Gates F-M are capability questions, not permission to implement speculative machinery. Each must be `IMPLEMENTED` or deterministically `PROVEN_UNNEEDED` before final external RuleModule acceptance; V1 no longer permits `EXPLICITLY_OUT_OF_SCOPE` for a D&D mechanism.
+1. Read the master roadmap and live `work/v1-composite` HEAD before selecting work.
+2. Start at the first non-`PASS` unblocked Gate; do not select work from an archived checklist.
+3. Fill the eight-field Evidence Card before changing product code.
+4. A `REUSE_LOCKED` or `VERIFY_ONLY` Gate cannot trigger product changes without a reproducible failure on the current exact HEAD.
+5. Reuse the existing Tauri shell, stores, Resolver, transport, presentation pipeline, Party Stash, Long Rest, DM Library, and E2E harness.
+6. Do not add branch-writing automation as the normal implementation loop.
+7. V1 closes only at `72/72`, `100.0/100.0`, `120/120`, and one matching Windows artifact.
