@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
 import { createServer, Socket } from "node:net";
-import { mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
@@ -16,6 +16,7 @@ const runId = new Date().toISOString().replace(/[:.]/g, "-");
 const runRoot = path.join(root, ".live-dev", "tauri-e2e", runId);
 const artifactRoot = path.join(runRoot, "artifacts");
 const smokeOnly = process.argv.includes("--smoke");
+const w1Only = process.argv.includes("--w1");
 const keepOpen = process.argv.includes("--keep-open");
 
 const children = [];
@@ -177,6 +178,117 @@ async function saveEvidence(instance, suffix) {
   await writeFile(path.join(artifactRoot, `${instance.label.replace(/\s+/g, "-").toLowerCase()}-${suffix}.txt`), bodyText, "utf8");
 }
 
+async function stopInstance(instance) {
+  try { await instance.browser.deleteSession(); } catch { /* best effort */ }
+  if (instance.child.pid && instance.child.exitCode === null) {
+    spawnSync("taskkill.exe", ["/PID", String(instance.child.pid), "/T", "/F"], { stdio: "ignore", windowsHide: true });
+  }
+}
+
+async function completeVisibleCharacterChoices(browser) {
+  for (let attempt = 0; attempt < 120; attempt += 1) {
+    const result = await browser.execute(() => {
+      const sections = [...document.querySelectorAll(".focused-create-stage .create-v09-section")];
+      for (const section of sections) {
+        if (section.querySelector(".create-status-pill")?.textContent?.trim() !== "선택 필요") continue;
+        const candidates = section.querySelectorAll(
+          ".dynamic-choice-grid .create-option-card, .equipment-options .create-option-card, .spell-choice-grid button, .proficiency-grid button",
+        );
+        const target = [...candidates].find((item) => {
+          const button = item;
+          return !button.disabled && button.getAttribute("aria-disabled") !== "true" && !button.classList.contains("selected");
+        });
+        if (target instanceof HTMLElement) {
+          target.scrollIntoView({ block:"center" });
+          target.click();
+          return { clicked:true, section:section.id };
+        }
+      }
+      const unresolved = sections.filter((section) => section.querySelector(".create-status-pill")?.textContent?.trim() === "선택 필요").map((section) => section.id);
+      return { clicked:false, unresolved };
+    });
+    if (!result.clicked) return result.unresolved;
+    await browser.pause(100);
+  }
+  throw new Error("Character choice completion exceeded 120 UI clicks");
+}
+
+async function chooseCharacterSource(browser, tab, name) {
+  await click(browser, `//nav[contains(@class,'focused-create-tabs')]//button[.//span[normalize-space(.)=${JSON.stringify(tab)}]]`, `${tab} 탭`);
+  await click(browser, `//button[contains(@class,'create-option-card')][.//strong[normalize-space(.)=${JSON.stringify(name)}]]`, `${tab} ${name}`);
+  const unresolved = await completeVisibleCharacterChoices(browser);
+  assert.deepEqual(unresolved, [], `${tab} UI choices remain unresolved: ${unresolved.join(", ")}`);
+}
+
+async function createW1Character(instance, name) {
+  await click(instance.browser, navButton("캐릭터"), "캐릭터 메뉴");
+  await click(instance.browser, exactButton("새 캐릭터"), "새 캐릭터");
+  await replaceValue(instance.browser, labelControl("캐릭터 이름"), name, "캐릭터 이름");
+  await chooseCharacterSource(instance.browser, "종족", "인간");
+  await chooseCharacterSource(instance.browser, "클래스", "파이터");
+  await chooseCharacterSource(instance.browser, "배경", "군인");
+  await click(instance.browser, `//nav[contains(@class,'focused-create-tabs')]//button[.//span[normalize-space(.)='능력치']]`, "능력치 탭");
+  await click(instance.browser, `//section[@id='abilities']//button[contains(normalize-space(.),'파이터 추천 배치')]`, "파이터 추천 배치");
+  await click(instance.browser, `//nav[contains(@class,'focused-create-tabs')]//button[.//span[normalize-space(.)='기술']]`, "기술 탭");
+  const unresolved = await completeVisibleCharacterChoices(instance.browser);
+  assert.deepEqual(unresolved, [], `Character UI choices remain unresolved: ${unresolved.join(", ")}`);
+  await click(instance.browser, `//nav[contains(@class,'focused-create-tabs')]//button[.//span[normalize-space(.)='검토']]`, "검토 탭");
+  await waitForText(instance.browser, "필수 선택 완료");
+  await click(instance.browser, exactButton("모험 시작"), "Character 저장");
+  await waitForText(instance.browser, name, 30_000);
+}
+
+async function latestCharacterDocument(dataRoot) {
+  const directory = path.join(dataRoot, "character-library");
+  const files = (await readdir(directory)).filter((name) => /^character-library\.\d+\.json$/.test(name));
+  assert.ok(files.length > 0, "Character library did not write a durable generation");
+  files.sort((left, right) => Number(right.match(/\d+/)?.[0]) - Number(left.match(/\d+/)?.[0]));
+  return JSON.parse(await readFile(path.join(directory, files[0]), "utf8"));
+}
+
+function storedCharacterIdentity(document, name) {
+  const record = document.characters.find((candidate) => candidate.source?.name === name);
+  assert.ok(record, `Durable Character was not found: ${name}`);
+  const sheet = record.materializedCache?.sheet;
+  assert.ok(sheet, `Durable Character sheet was not materialized: ${name}`);
+  return {
+    id:record.characterId,
+    name:sheet.name,
+    className:sheet.className,
+    species:sheet.species,
+    background:sheet.background,
+  };
+}
+
+async function runW105() {
+  const dataRoot = path.join(runRoot, "w1", "data");
+  const name = `W1 재시작 파이터 ${runId.slice(-6)}`;
+  const first = await launchInstance("W1 Create", dataRoot, await reservePort());
+  await createW1Character(first, name);
+  await saveEvidence(first, "w1-05-created");
+  const before = storedCharacterIdentity(await latestCharacterDocument(dataRoot), name);
+  await stopInstance(first);
+
+  const restarted = await launchInstance("W1 Restart", dataRoot, await reservePort());
+  await click(restarted.browser, navButton("캐릭터"), "재시작 후 캐릭터 메뉴");
+  await waitForText(restarted.browser, name, 30_000);
+  const card = `//button[contains(@class,'character-card')][.//h2[normalize-space(.)=${JSON.stringify(name)}]]`;
+  await restarted.browser.$(card).waitForDisplayed({ timeout:15_000 });
+  const after = storedCharacterIdentity(await latestCharacterDocument(dataRoot), name);
+  assert.deepEqual(after, before, "Character identity changed across real Tauri restart");
+  await saveEvidence(restarted, "w1-05-restarted");
+  await writeFile(path.join(artifactRoot, "w1-05.json"), JSON.stringify({
+    gate:"W1-05",
+    status:"PASS",
+    verificationSha:process.env.GITHUB_SHA ?? "local",
+    windowsTauri:true,
+    dataRoot,
+    before,
+    after,
+  }, null, 2), "utf8");
+  log(`W1-05 생성·저장·프로세스 종료·동일 data root 재시작 검증 통과 · ${before.id}`);
+}
+
 async function createHostCampaign(host) {
   await click(host.browser, navButton("캠페인"), "캠페인 메뉴");
   const body = await host.browser.$("body").getText();
@@ -270,6 +382,12 @@ async function runScenario() {
   await rm(runRoot, { recursive: true, force: true });
   await mkdir(artifactRoot, { recursive: true });
   await ensureVite();
+
+  if (w1Only) {
+    await runW105();
+    log(`W1 실제 Tauri 증거: ${artifactRoot}`);
+    return;
+  }
 
   const hostDriverPort = await reservePort();
   const clientDriverPort = await reservePort();

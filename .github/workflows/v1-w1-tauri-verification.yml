@@ -14,7 +14,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  tauri-smoke:
+  tauri-w1:
     runs-on: windows-latest
     timeout-minutes: 30
     steps:
@@ -26,9 +26,9 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
-      - name: Run existing Windows Tauri WebDriver smoke
+      - name: Verify W1-05 in Windows Tauri
         shell: pwsh
-        run: npm run test:e2e:tauri -- --smoke
+        run: npm run test:e2e:tauri -- --w1
       - name: Upload Tauri evidence
         if: always()
         uses: actions/upload-artifact@v4
