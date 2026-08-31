@@ -1,4 +1,4 @@
-import type { CharacterSheet, CharacterSummary, SceneVm } from "./contracts";
+import type { ActionVm, CharacterSheet, CharacterSummary, SceneVm } from "./contracts";
 import type { MockAdapter } from "./mockAdapter";
 import type { CharacterSessionProjectionReconstruction } from "./characterSessionProjectionReconstruction";
 import type { CharacterSessionProjectionV1 } from "./characterSessionProjection";
@@ -38,8 +38,28 @@ function reorderActionsByActor(actions:SceneVm["actionsByActor"],preferredOrder:
   return next;
 }
 
-function projectedActions(reconstruction:Extract<CharacterSessionProjectionReconstruction,{status:"accepted"}>) {
-  return projectProductionCharacterActions(reconstruction.sheet,reconstruction.actions);
+function eligibleTargetIds(scene:SceneVm,action:ActionVm) {
+  if (action.target==="none") return [];
+  if (action.target==="self") return [action.actorId];
+  const actor=scene.entities.find((entity)=>entity.id===action.actorId);
+  if (!actor) return [];
+  if (action.target==="enemy"||action.target==="multi-enemy") {
+    return scene.entities.filter((entity)=>entity.side!==actor.side).map((entity)=>entity.id);
+  }
+  if (action.target==="ally") {
+    return scene.entities.filter((entity)=>entity.side===actor.side).map((entity)=>entity.id);
+  }
+  return scene.entities.map((entity)=>entity.id);
+}
+
+function projectedActions(
+  reconstruction:Extract<CharacterSessionProjectionReconstruction,{status:"accepted"}>,
+  scene:SceneVm,
+) {
+  return projectProductionCharacterActions(reconstruction.sheet,reconstruction.actions).map((action)=>({
+    ...action,
+    eligibleTargetIds:eligibleTargetIds(scene,action),
+  }));
 }
 
 function canonical(value:unknown):unknown {
@@ -107,7 +127,7 @@ export function mountReconstructedCharacterSessionProjection(
     sheet:structuredClone(reconstruction.sheet),
   });
   app.scene.entities=[...app.scene.entities.filter((entity)=>entity.id!==characterId),structuredClone(reconstruction.entity)];
-  app.scene.actionsByActor={...app.scene.actionsByActor,[characterId]:projectedActions(reconstruction)};
+  app.scene.actionsByActor={...app.scene.actionsByActor,[characterId]:projectedActions(reconstruction,app.scene)};
   app.scene.economyByActor={...app.scene.economyByActor,[characterId]:structuredClone(reconstruction.economy)};
   return {status:"accepted" as const,characterId};
 }
@@ -168,7 +188,7 @@ export function refreshReconstructedCharacterSessionProjection(
     distance:currentEntity.distance,
   };
   app.scene.entities=app.scene.entities.map((entity)=>entity.id===mounted.characterId?refreshed:entity);
-  app.scene.actionsByActor={...app.scene.actionsByActor,[mounted.characterId]:projectedActions(reconstruction)};
+  app.scene.actionsByActor={...app.scene.actionsByActor,[mounted.characterId]:projectedActions(reconstruction,app.scene)};
   if(!app.scene.economyByActor[mounted.characterId]){
     app.scene.economyByActor={...app.scene.economyByActor,[mounted.characterId]:structuredClone(reconstruction.economy)};
   }
