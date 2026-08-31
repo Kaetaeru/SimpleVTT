@@ -347,6 +347,7 @@ async function runW106({ instance,dataRoot,name,identity }) {
   await click(instance.browser, exactButton("가져와서 검토"), "Character JSON 검토");
   await instance.browser.$("//section[@id='review']").waitForDisplayed({ timeout:15_000 });
   await finishW1FighterDraft(instance,importedName);
+  await click(instance.browser,navButton("캐릭터"),"가져오기 저장 후 캐릭터 메뉴");
 
   let document=await latestCharacterDocument(dataRoot);
   const original=storedCharacterIdentity(document,name);
