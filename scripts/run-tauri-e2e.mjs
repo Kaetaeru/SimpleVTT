@@ -233,6 +233,11 @@ async function createW1Character(instance, name) {
   await chooseCharacterSource(instance.browser, "종족", "인간");
   await chooseCharacterSource(instance.browser, "클래스", "파이터");
   await chooseCharacterSource(instance.browser, "배경", "군인");
+  for (const tab of ["종족", "클래스"]) {
+    await click(instance.browser, `//nav[contains(@class,'focused-create-tabs')]//button[.//span[normalize-space(.)=${JSON.stringify(tab)}]]`, `${tab} 재검토`);
+    const unresolved = await completeVisibleCharacterChoices(instance.browser);
+    assert.deepEqual(unresolved, [], `${tab} dependent UI choices remain unresolved: ${unresolved.join(", ")}`);
+  }
   await click(instance.browser, `//nav[contains(@class,'focused-create-tabs')]//button[.//span[normalize-space(.)='능력치']]`, "능력치 탭");
   await click(instance.browser, `//section[@id='abilities']//button[contains(normalize-space(.),'파이터 추천 배치')]`, "파이터 추천 배치");
   await click(instance.browser, `//nav[contains(@class,'focused-create-tabs')]//button[.//span[normalize-space(.)='기술']]`, "기술 탭");
