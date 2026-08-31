@@ -453,6 +453,62 @@ async function runW107({instance,dataRoot,name,identity}) {
   return {instance,dataRoot,name,identity,stored};
 }
 
+function levelUpTab(label) {
+  return `//nav[@aria-label='레벨업 단계']//button[.//span[normalize-space(.)=${JSON.stringify(label)}]]`;
+}
+
+async function runW108({instance,dataRoot,name,identity,stored:before}) {
+  await click(instance.browser,"//nav[@aria-label='캐릭터 관리 섹션']//button[normalize-space(.)='개요 / 시트']","레벨 업 전 Full Sheet");
+  await click(instance.browser,exactButton("레벨 업"),"대표 Character 레벨 업 진입");
+  await instance.browser.$("//div[contains(@class,'levelup-v10')]").waitForDisplayed({timeout:15_000});
+  await click(instance.browser,levelUpTab("HP"),"레벨 업 HP choice");
+  const fixed="//div[contains(@class,'levelup-segmented')]//button[contains(normalize-space(.),'고정값')]";
+  await click(instance.browser,fixed,"고정 HP choice");
+  await instance.browser.waitUntil(async()=>(await instance.browser.$(fixed).getAttribute("class")??"").includes("active"),{timeout:15_000,timeoutMsg:"fixed HP choice did not commit"});
+  await click(instance.browser,levelUpTab("검토"),"레벨 업 검토");
+  await waitForText(instance.browser,"Blocking 없음",15_000);
+  const commit="//footer[contains(@class,'levelup-v10-footer')]//button[contains(@class,'primary') and normalize-space(.)='레벨 업']";
+  await instance.browser.$(commit).waitForEnabled({timeout:15_000});
+  await saveEvidence(instance,"w1-08-review");
+  await click(instance.browser,commit,"레벨 업 commit");
+
+  const root="//div[contains(@class,'sheet-play-screen')]";
+  await instance.browser.$(`${root}//h1[normalize-space(.)=${JSON.stringify(name)}]`).waitForDisplayed({timeout:30_000});
+  const after=storedCharacterSheet(await latestCharacterDocument(dataRoot),name);
+  assert.equal(after.id,identity.id,"level-up changed Character identity");
+  assert.equal(after.level,before.level+1,"level-up did not persist the next level");
+  assert.ok(after.maxHp>before.maxHp,"fixed HP choice did not increase maximum HP");
+  const gainedFeatures=after.features.filter((feature)=>!before.features.includes(feature));
+  assert.ok(gainedFeatures.some((feature)=>feature.includes("행동 폭증")),`Fighter level 2 feature missing: ${gainedFeatures.join(", ")}`);
+  const gainedResources=visibleStoredResources(after.resources).filter((resource)=>!visibleStoredResources(before.resources).some((candidate)=>candidate.id===resource.id));
+  assert.ok(gainedResources.some((resource)=>resource.label==="액션 서지"),`Fighter level 2 action resource missing: ${gainedResources.map((resource)=>resource.label).join(", ")}`);
+  const features=await instance.browser.$(sheetCard(root,"기능")).getText();
+  for(const feature of gainedFeatures)assert.ok(features.includes(feature),`level-up feature is not rendered: ${feature}`);
+  const resources=await instance.browser.$(sheetCard(root,"자원")).getText();
+  assert.ok(resources.includes("액션 서지"),"level-up action resource is not rendered");
+  await saveEvidence(instance,"w1-08-committed");
+  await stopInstance(instance);
+
+  const restarted=await launchInstance("W1 Level Up Restart",dataRoot,await reservePort());
+  await click(restarted.browser,navButton("캐릭터"),"레벨 업 재시작 후 캐릭터 메뉴");
+  await click(restarted.browser,`${characterArticle(name)}//button[contains(@class,'character-card')]`,"레벨 업 Character 다시 열기");
+  await restarted.browser.$(`${root}//h1[normalize-space(.)=${JSON.stringify(name)}]`).waitForDisplayed({timeout:15_000});
+  const persisted=storedCharacterSheet(await latestCharacterDocument(dataRoot),name);
+  assert.equal(persisted.id,after.id);
+  assert.equal(persisted.level,after.level);
+  assert.equal(persisted.maxHp,after.maxHp);
+  for(const feature of gainedFeatures)assert.ok(persisted.features.includes(feature));
+  assert.ok((await restarted.browser.$(sheetCard(root,"자원")).getText()).includes("액션 서지"));
+  await saveEvidence(restarted,"w1-08-restarted");
+  await writeFile(path.join(artifactRoot,"w1-08.json"),JSON.stringify({
+    gate:"W1-08",status:"PASS",verificationSha,windowsTauri:true,characterId:after.id,
+    choice:{hpMethod:"fixed",maxHpBefore:before.maxHp,maxHpAfter:after.maxHp},
+    progression:{levelBefore:before.level,levelAfter:after.level,gainedFeatures,gainedResources:gainedResources.map((resource)=>({id:resource.id,label:resource.label,current:resource.current,max:resource.max}))},
+    restart:{level:persisted.level,maxHp:persisted.maxHp,features:persisted.features},
+  },null,2),"utf8");
+  log(`W1-08 level-up choice·validation·commit·새 feature/action·동일 data root 재시작 검증 통과 · ${after.id}`);
+}
+
 async function createHostCampaign(host) {
   await click(host.browser, navButton("캠페인"), "캠페인 메뉴");
   const body = await host.browser.$("body").getText();
@@ -550,7 +606,8 @@ async function runScenario() {
   if (w1Only) {
     const w105=await runW105();
     const w106=await runW106(w105);
-    await runW107(w106);
+    const w107=await runW107(w106);
+    await runW108(w107);
     log(`W1 실제 Tauri 증거: ${artifactRoot}`);
     return;
   }

@@ -59,6 +59,8 @@ test("Tauri UI E2E launcher drives isolated Host and Client windows through real
   assert.match(runner,/source provenance must remain record-local/);
   assert.match(runner,/W1-07 durable Character와 Full Sheet/);
   assert.match(runner,/Full Sheet inventory missing/);
+  assert.match(runner,/W1-08 level-up choice·validation·commit·새 feature\/action/);
+  assert.match(runner,/level-up changed Character identity/);
   assert.match(runner,/takeScreenshot/);
   assert.match(wrapper,/npmExe run generate:content/);
   assert.match(wrapper,/arguments \+= '--w1'/);
