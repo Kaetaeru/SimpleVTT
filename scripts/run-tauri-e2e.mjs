@@ -215,7 +215,12 @@ async function completeVisibleCharacterChoices(browser) {
 
 async function chooseCharacterSource(browser, tab, name) {
   await click(browser, `//nav[contains(@class,'focused-create-tabs')]//button[.//span[normalize-space(.)=${JSON.stringify(tab)}]]`, `${tab} 탭`);
-  await click(browser, `//button[contains(@class,'create-option-card')][.//strong[normalize-space(.)=${JSON.stringify(name)}]]`, `${tab} ${name}`);
+  const option = `//button[contains(@class,'create-option-card')][.//strong[normalize-space(.)=${JSON.stringify(name)}]]`;
+  await click(browser, option, `${tab} ${name}`);
+  await browser.waitUntil(async () => (await browser.$(option).getAttribute("class")).includes("selected"), {
+    timeout:15_000,
+    timeoutMsg:`${tab} ${name} selection did not commit`,
+  });
   const unresolved = await completeVisibleCharacterChoices(browser);
   assert.deepEqual(unresolved, [], `${tab} UI choices remain unresolved: ${unresolved.join(", ")}`);
 }
