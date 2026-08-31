@@ -136,9 +136,10 @@ async function sendWithInstalledContentParity(message:string) {
 
 async function sendToWithPresentationRestore(peer:string,message:string) {
   const result=await parityBaseSendTo(peer,message);
-  const decoded=decodeConnectedWireMessage(message);
-  if (decoded.status==="ok"&&decoded.message.type==="hello-ack"&&decoded.message.compatibility.status==="compatible") {
-    await restoreConnectedPresentationForPeer(peer,decoded.message.sessionId);
+  const raw=parseRaw(message);
+  const compatibility=compatibilityRecord(raw?.compatibility);
+  if (raw?.type==="hello-ack"&&typeof raw.sessionId==="string"&&raw.sessionId&&compatibility?.status==="compatible") {
+    await restoreConnectedPresentationForPeer(peer,raw.sessionId);
   }
   return result;
 }
