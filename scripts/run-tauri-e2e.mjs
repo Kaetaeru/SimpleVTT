@@ -340,6 +340,7 @@ async function runW106({ instance,dataRoot,name,identity }) {
   await click(instance.browser, `${characterArticle(name)}//button[normalize-space(.)='복제']`, "Character 복제");
   await finishW1FighterDraft(instance,duplicateName);
 
+  await click(instance.browser,navButton("캐릭터"),"복제 저장 후 캐릭터 메뉴");
   await click(instance.browser, `//button[contains(@class,'character-card') and contains(@class,'utility')][.//h3[normalize-space(.)='JSON 가져오기']]`, "Character JSON 가져오기");
   const payload=JSON.stringify({name:importedName,className:"파이터",species:"인간",background:"군인",level:1});
   await replaceValue(instance.browser, "//section[contains(@class,'focused-import')]//textarea", payload, "Character JSON");
