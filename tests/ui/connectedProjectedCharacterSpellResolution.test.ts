@@ -133,9 +133,8 @@ test("host-unknown projected spellcaster resolves freeform Fire Bolt through Hos
   const initiativeBaseline=await host.getSnapshot();
   const fireBolt=(initiativeBaseline.scene.actionsByActor[remote.id]??[]).find((action)=>action.id==="action.fire-bolt");
   assert.equal(fireBolt?.target,"enemy");
-  const target=initiativeBaseline.scene.entities.find((entity)=>entity.side==="enemy");
-  assert.ok(target,"remote Fire Bolt requires a Host Scene enemy within 120 feet");
-  assert.ok(fireBolt?.eligibleTargetIds.includes(target.id));
+  const target=initiativeBaseline.scene.entities.find((entity)=>entity.side==="enemy"&&fireBolt?.eligibleTargetIds.includes(entity.id));
+  assert.ok(target,"remote Fire Bolt requires a canonically eligible Host Scene enemy within 120 feet");
   const targetHpBefore=target.hp;
 
   const state=connectedStateFor(host);
