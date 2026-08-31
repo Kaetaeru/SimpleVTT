@@ -45,8 +45,9 @@ Initial audit classification:
 
 ```text
 W0: 6/6 PASS
-Official ledger score: 5.0/100.0
-Remaining gates: 66/72
+W1: 1/8 PASS
+Official ledger score: 6.3/100.0
+Remaining gates: 65/72
 FAIL: 0
 BLOCKED: 0
 ```
@@ -66,17 +67,21 @@ The score is evidence status, not a percentage estimate of how much product code
 ## Current stage
 
 ```text
-Wave 0 — COMPLETE
-Next exact Gate: W1-01
+Wave 1
+W0 — COMPLETE
+W1 — 1/8 PASS
+Next exact Gate: W1-02
 ```
 
 W0 established the 72-gate ledger, mandatory Evidence Card, 120-scenario multiplayer Epic, MP-13, historical/archive routing, and removal of the obsolete Phase14 self-publishing workflow.
 
+W1-01 is closed with focused production-route evidence on canonical SHA `9113736b5dbc565cb40d0646b0f27abdbdc6eb59`: first-run Home reaches the existing Character Library and Guided Create entrypoints without introducing a second Character system.
+
 ### Next execution sequence
 
-1. Start `W1-01` by reconciling its existing production entrypoint and focused evidence; do not rebuild Character systems.
-2. Migrate reusable evidence for W1/W2 and other `REUSE_LOCKED` gates when the current path is unchanged and provenance is explicit.
-3. Run the required Tauri journeys for `VERIFY_ONLY` gates.
+1. Reconcile `W1-02` against the existing Guided Create path and its focused evidence; do not rebuild Character systems.
+2. Continue W1 `REUSE_LOCKED` gates in order, preserving the same Character draft/creator/validation engines.
+3. Run the required Tauri journeys for W1 `VERIFY_ONLY` gates (`W1-05` through `W1-08`).
 4. Convert a gate to repair work only after a reproducible current-HEAD failure or real production reachability/contract gap is demonstrated.
 5. For Common Play, follow [`design/ui-ux/COMMON-PLAY-FUNCTION-FIRST.md`](design/ui-ux/COMMON-PLAY-FUNCTION-FIRST.md): functional reachability first, broad UI redesign later.
 
