@@ -58,10 +58,15 @@ test("Second Wind persists HP/resource once, reloads, and Undo persists the inve
   const initial=await adapter.getSnapshot();
   assert.equal(initial.activeCharacter.runtimeRevision,1);
   assert.equal(initial.persistence?.storageRevision,0);
+  const secondWindAction=initial.scene.actionsByActor["char.aelar"]?.find((entry)=>entry.id==="action.second-wind");
+  assert.ok(secondWindAction?.resourceCost,"Second Wind must declare its authoritative resource cost");
+  const secondWindResourceId=secondWindAction.resourceCost.resourceId;
+  const secondWindBefore=initial.activeCharacter.resources.find((entry)=>entry.id===secondWindResourceId)?.current;
+  assert.ok(secondWindBefore!==undefined&&secondWindBefore>=1,"Second Wind must start with at least one use");
 
   let snapshot=await applySecondWind(adapter);
   assert.equal(snapshot.activeCharacter.hp,42);
-  assert.equal(snapshot.activeCharacter.resources.find((entry)=>entry.id==="resource.second-wind")?.current,0);
+  assert.equal(snapshot.activeCharacter.resources.find((entry)=>entry.id===secondWindResourceId)?.current,secondWindBefore-1);
   assert.equal(snapshot.activeCharacter.runtimeRevision,2);
   assert.equal(snapshot.persistence?.storageRevision,1);
   assert.equal(getCharacterLibraryPersistenceStateForTests(adapter)?.document?.characters.find((entry)=>entry.characterId==="char.aelar")?.runtimeRevision,2);
@@ -69,20 +74,20 @@ test("Second Wind persists HP/resource once, reloads, and Undo persists the inve
   const reader=adapterWithStore(store);
   const restored=await reader.getSnapshot();
   assert.equal(restored.activeCharacter.hp,42);
-  assert.equal(restored.activeCharacter.resources.find((entry)=>entry.id==="resource.second-wind")?.current,0);
+  assert.equal(restored.activeCharacter.resources.find((entry)=>entry.id===secondWindResourceId)?.current,secondWindBefore-1);
   assert.equal(restored.activeCharacter.runtimeRevision,2);
 
   await adapter.undoLastResolution();
   snapshot=await adapter.getSnapshot();
   assert.equal(snapshot.activeCharacter.hp,31);
-  assert.equal(snapshot.activeCharacter.resources.find((entry)=>entry.id==="resource.second-wind")?.current,1);
+  assert.equal(snapshot.activeCharacter.resources.find((entry)=>entry.id===secondWindResourceId)?.current,secondWindBefore);
   assert.equal(snapshot.activeCharacter.runtimeRevision,3);
   assert.equal(snapshot.persistence?.storageRevision,2);
 
   const rereader=adapterWithStore(store);
   const restoredUndo=await rereader.getSnapshot();
   assert.equal(restoredUndo.activeCharacter.hp,31);
-  assert.equal(restoredUndo.activeCharacter.resources.find((entry)=>entry.id==="resource.second-wind")?.current,1);
+  assert.equal(restoredUndo.activeCharacter.resources.find((entry)=>entry.id===secondWindResourceId)?.current,secondWindBefore);
   assert.equal(restoredUndo.activeCharacter.runtimeRevision,3);
 });
 
@@ -158,13 +163,18 @@ test("Character-target HP/life ResolutionEvents persist and inverse without seri
 test("Character storage failure rejects confirmed Second Wind before Scene/resource/history apply", async () => {
   const store=new MemoryCharacterLibraryStore();
   const adapter=adapterWithStore(store);
-  await adapter.getSnapshot();
+  const initial=await adapter.getSnapshot();
+  const secondWindAction=initial.scene.actionsByActor["char.aelar"]?.find((entry)=>entry.id==="action.second-wind");
+  assert.ok(secondWindAction?.resourceCost,"Second Wind must declare its authoritative resource cost");
+  const secondWindResourceId=secondWindAction.resourceCost.resourceId;
+  const secondWindBefore=initial.activeCharacter.resources.find((entry)=>entry.id===secondWindResourceId)?.current;
+  assert.ok(secondWindBefore!==undefined&&secondWindBefore>=1,"Second Wind must start with at least one use");
   await adapter.resolveAction("action.second-wind",["char.aelar"]);
   await adapter.advanceResolution();
   store.failNextWrite("resolution disk full");
   const failed=await adapter.advanceResolution();
   assert.equal(failed.activeCharacter.hp,31);
-  assert.equal(failed.activeCharacter.resources.find((entry)=>entry.id==="resource.second-wind")?.current,1);
+  assert.equal(failed.activeCharacter.resources.find((entry)=>entry.id===secondWindResourceId)?.current,secondWindBefore);
   assert.equal(failed.scene.entities.find((entry)=>entry.id==="char.aelar")?.hp,31);
   assert.equal(failed.scene.economyByActor["char.aelar"]?.bonusAction,true);
   assert.equal(failed.persistence?.status,"error");
