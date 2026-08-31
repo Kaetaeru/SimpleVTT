@@ -126,6 +126,30 @@ jobs:
           tests/ui/visualDiceProjection.test.ts
           tests/ui/visualDiceStructure.test.ts
           tests/ui/movementReactionStructure.test.ts
+      - name: Verify W2 SRD product lifecycle
+        run: >-
+          npx tsx --test
+          tests/domain/commonPlayInventoryRuntime.test.ts
+          tests/domain/commonPlayWeaponMasteryComposition.test.ts
+          tests/domain/spellExecutionCoverage.test.ts
+          tests/contracts/v1MechanismCoverage.test.mjs
+          tests/ui/productionFreshCharacterSkills.test.ts
+          tests/ui/productionFreshCharacterInventory.test.ts
+          tests/ui/productionFreshCharacterSpells.test.ts
+          tests/ui/phase09RealItemCostService.test.ts
+          tests/ui/phase09RealItemCostAdapter.test.ts
+          tests/ui/spellPresentationCatalog.test.ts
+          tests/ui/characterCreationCompleteGate.test.ts
+          tests/ui/progressionChoiceScheduleRegression.test.ts
+          tests/domain/progressionPhase08CatalogPendingAudit.test.ts
+          tests/ui/progressionPhase08CatalogCoverage.test.ts
+          tests/ui/characterLibraryRuntimeAdapter.test.ts
+          tests/ui/progressionPersistentFeatureRuntime.test.ts
+          tests/ui/characterLongRestProjection.test.ts
+      - name: Verify W2 Common Play coverage boundaries
+        run: |
+          node scripts/check-v1-mechanism-coverage.mjs --gate-n
+          node scripts/check-legacy-execution-boundary.mjs
       - name: Typecheck and build
         shell: bash
         run: |
