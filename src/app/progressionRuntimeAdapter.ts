@@ -9,7 +9,8 @@ import {
 } from "./progressionCharacterApplicationService";
 import { SPELL_PRESENTATIONS } from "./spellPresentation";
 import { MockAdapter } from "./mockAdapter";
-import type { ChoiceSelectionMap, ChoiceSelectionValue } from "../domain/choiceDefinition";
+import { validateChoiceDefinitions, type ChoiceSelectionMap, type ChoiceSelectionValue } from "../domain/choiceDefinition";
+import { resolveCommonPlayProgressionContributions } from "../domain/commonPlayProgressionContribution";
 import { classById, classByName } from "../domain/progressionCatalog";
 import { buildProgressionPlan, resolveProgression, type ProgressionPlan } from "../domain/progression";
 import { SORCERER_ID } from "../domain/sorcererProgressionChoices";
@@ -177,6 +178,29 @@ function targetClassId(sheet: CharacterSheet, draft: LevelUpDraft) {
   return draft.targetClassId ?? sheet.classLevels?.[0]?.classId ?? primaryClass(sheet)?.id ?? "dnd.srd521.class.fighter";
 }
 
+function installedProgressionContributions(state: Pick<AdapterState,"catalog">) {
+  return state.catalog.flatMap((entry) => entry.progressionContributions ?? []);
+}
+
+function installedProgressionGrantLabel(state: AdapterState, grantId: string) {
+  return state.catalog.find((entry) => entry.contentId === grantId || entry.id === grantId)?.nameKo ?? grantId;
+}
+
+export function installedProgressionChoices(state:Pick<AdapterState,"activeCharacter"|"catalog">,plan:ProgressionPlan) {
+  const levels=new Map(state.activeCharacter.classLevels?.map((track)=>[track.classId,track.level])??[]);
+  levels.set(plan.targetClassId,plan.targetClassLevel);
+  return installedProgressionContributions(state)
+    .filter((contribution)=>(levels.get(contribution.track)??0)>=contribution.threshold)
+    .flatMap((contribution)=>(contribution.choices??[]).map((choice)=>({
+      ...choice,
+      description:choice.description??"",
+      kind:"feature-option" as const,
+      status:"ready" as const,
+      source:contribution.track,
+      options:choice.options.map(({grants:_,replaces:__,...option})=>option),
+    })));
+}
+
 function requestFor(state: AdapterState) {
   const draft = state.levelUpDraft;
   if (!draft) throw new Error("level-up draft missing");
@@ -199,10 +223,16 @@ function requestFor(state: AdapterState) {
 
 function planFor(state: AdapterState): ProgressionPlan | null {
   if (!state.levelUpDraft) return null;
-  return buildProgressionPlan(
+  const plan=buildProgressionPlan(
     projectProgressionCharacterState(ensureProgressionMetadata(state.activeCharacter)),
     requestFor(state),
   );
+  const choices=installedProgressionChoices(state,plan);
+  if(choices.length){
+    plan.choices.push(...choices);
+    plan.blocking.push(...validateChoiceDefinitions(choices,state.levelUpDraft.progressionSelections??{}).filter((issue)=>issue.severity==="blocking").map((issue)=>issue.message));
+  }
+  return plan;
 }
 
 function syncLegacyDraft(draft: LevelUpDraft, plan: ProgressionPlan) {
@@ -343,10 +373,32 @@ MockAdapter.prototype.commitLevelUp = async function commitLevelUpPhase07() {
     internal.levelUpDraft.validation = [...internal.levelUpDraft.validation, { severity:"blocking", message:"Character Revision 저장에 실패했습니다. 원본은 변경되지 않았습니다." }];
     return internal.getSnapshot();
   }
+  const contributions = installedProgressionContributions(internal);
+  const contributionResult = contributions.length
+    ? resolveCommonPlayProgressionContributions({
+        revision:stateBefore.revision,
+        trackLevels:Object.fromEntries(result.state.classTracks.map((track) => [track.classId, track.level])),
+        grants:[...(internal.activeCharacter.installedProgressionGrantIds ?? [])],
+      }, stateBefore.revision, contributions, request.selections)
+    : null;
+  if (contributionResult?.status === "rejected") {
+    internal.levelUpDraft.validation = [...internal.levelUpDraft.validation, { severity:"blocking", message:`Installed progression contribution rejected: ${contributionResult.error}` }];
+    return internal.getSnapshot();
+  }
   applyProgressionCharacterState(internal.activeCharacter,result.state,{
     scope:"full",
     featureLabelById:(featureId)=>internal.catalog.find((entry)=>entry.id===featureId)?.nameKo,
   });
+  const addedInstalledGrantIds = contributionResult?.status === "committed" ? contributionResult.addedGrantIds : [];
+  if (contributionResult?.status === "committed") {
+    internal.activeCharacter.installedProgressionGrantIds = [...contributionResult.state.grants];
+    const removedLabels=new Set(contributionResult.removedGrantIds.map((grantId)=>installedProgressionGrantLabel(internal,grantId)));
+    internal.activeCharacter.features=internal.activeCharacter.features.filter((feature)=>!removedLabels.has(feature));
+    for (const grantId of addedInstalledGrantIds) {
+      const label = installedProgressionGrantLabel(internal, grantId);
+      if (!internal.activeCharacter.features.includes(label)) internal.activeCharacter.features.push(label);
+    }
+  }
   ensureSignatureSpellResources(internal.activeCharacter);
   ensureSorceryPointResource(internal.activeCharacter);
   syncCommittedSheetToScene(internal);
@@ -359,7 +411,11 @@ MockAdapter.prototype.commitLevelUp = async function commitLevelUpPhase07() {
     title:`레벨 업 ${result.plan.fromTotalLevel} → ${result.plan.toTotalLevel}`,
     summary:`${result.plan.targetClassName} ${result.plan.targetClassLevel}레벨 · HP ${before.maxHp} → ${internal.activeCharacter.maxHp}`,
     detail:result.plan.diffs.map((diff) => `${diff.label}: ${diff.before} → ${diff.after} (${diff.source})`),
-    stateChanges:["Phase 08 Progression transaction → Character Revision", `progressionRevision ${stateBefore.revision} → ${result.state.revision}`],
+    stateChanges:[
+      "Phase 08 Progression transaction → Character Revision",
+      `progressionRevision ${stateBefore.revision} → ${result.state.revision}`,
+      ...(addedInstalledGrantIds.length ? [`installed progression grants: ${addedInstalledGrantIds.join(", ")}`] : []),
+    ],
   });
   internal.levelUpDraft = null;
   return internal.getSnapshot();

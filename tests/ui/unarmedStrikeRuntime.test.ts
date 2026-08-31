@@ -62,6 +62,133 @@ test("Unarmed shove applies public Prone without a spatial-module distance gate"
   assert.equal(snapshot.resolution?.finalOutcome,"넘어짐 적용");
 });
 
+test("Unarmed control runtime follows payload semantics after action ID rename", async () => {
+  const adapter=new MockAdapter();
+  await ready(adapter);
+  const originalGetSnapshot=adapter.getSnapshot.bind(adapter);
+  adapter.getSnapshot=async()=>{
+    const snapshot=await originalGetSnapshot();
+    const action=snapshot.scene.actionsByActor["char.aelar"]?.find((entry)=>entry.id==="action.unarmed-strike.grapple");
+    if(action) action.id="action.external.renamed-control-probe";
+    return snapshot;
+  };
+  await adapter.setQueuedD20(1);
+  await adapter.resolveAction("action.external.renamed-control-probe",["combatant.goblin-a"]);
+  const snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.resolution?.actionId,"action.external.renamed-control-probe");
+  assert.ok(snapshot.scene.entities.find((entry)=>entry.id==="combatant.goblin-a")?.status.some((status)=>status.includes("붙잡힘")));
+});
+
+test("Unarmed damage grapple and shove execute from structural payloads after action identity and presentation rename", async () => {
+  const cases=[
+    {canonicalId:"action.unarmed-strike.damage",renamedId:"action.external.unarmed.damage",targetId:"combatant.goblin-a",kind:"damage" as const},
+    {canonicalId:"action.unarmed-strike.grapple",renamedId:"action.external.unarmed.control-a",targetId:"combatant.goblin-a",kind:"grapple" as const},
+    {canonicalId:"action.unarmed-strike.shove-prone",renamedId:"action.external.unarmed.control-b",targetId:"combatant.goblin-b",kind:"shove" as const},
+  ];
+
+  for(const probe of cases) {
+    const adapter=new MockAdapter();
+    await ready(adapter);
+    const baseline=await adapter.getSnapshot();
+    const source=baseline.scene.actionsByActor["char.aelar"]?.find((entry)=>entry.id===probe.canonicalId);
+    assert.ok(source);
+    if(probe.kind==="damage") {
+      assert.equal(source.runtimeAttack?.sourceKind,"unarmed");
+      assert.equal(source.damage?.[0].dice,"0d2");
+    } else {
+      assert.equal(source.runtimeSaveCondition?.choose,"highest");
+      assert.deepEqual(source.runtimeSaveCondition?.saveAbilities,["str","dex"]);
+    }
+
+    const beforeHp=baseline.scene.entities.find((entry)=>entry.id===probe.targetId)?.hp;
+    const originalGetSnapshot=adapter.getSnapshot.bind(adapter);
+    adapter.getSnapshot=async()=>{
+      const snapshot=await originalGetSnapshot();
+      const action=snapshot.scene.actionsByActor["char.aelar"]?.find((entry)=>entry.id===probe.canonicalId);
+      if(action) { action.id=probe.renamedId; action.name=`External ${probe.kind}`; }
+      return snapshot;
+    };
+
+    await adapter.setQueuedD20(probe.kind==="damage"?20:1);
+    await adapter.resolveAction(probe.renamedId,[probe.targetId]);
+    const snapshot=probe.kind==="damage"?await finish(adapter):await adapter.getSnapshot();
+    assert.equal(snapshot.resolution?.actionId,probe.renamedId);
+    if(probe.kind==="damage") {
+      assert.equal(snapshot.scene.entities.find((entry)=>entry.id===probe.targetId)?.hp,beforeHp!-(source.damage?.[0].flat??0));
+    } else if(probe.kind==="grapple") {
+      assert.ok(snapshot.scene.entities.find((entry)=>entry.id===probe.targetId)?.status.some((status)=>status.includes("붙잡힘")));
+    } else {
+      assert.ok(snapshot.scene.entities.find((entry)=>entry.id===probe.targetId)?.status.some((status)=>status.includes("넘어짐")));
+    }
+  }
+});
+
+test("Unarmed shove follows a source-owned builtin Common Play reference after action identity rename", async () => {
+  const adapter=new MockAdapter();
+  await ready(adapter);
+  const originalGetSnapshot=adapter.getSnapshot.bind(adapter);
+  const baseline=await originalGetSnapshot();
+  const source=baseline.scene.actionsByActor["char.aelar"]?.find((entry)=>entry.id==="action.unarmed-strike.shove-prone");
+  assert.equal(source?.runtimeCommonPlayActionId,"action.unarmed-strike.shove-prone");
+  const renamedId="action.external.source-owned-shove";
+  adapter.getSnapshot=async()=>{
+    const snapshot=await originalGetSnapshot();
+    const action=snapshot.scene.actionsByActor["char.aelar"]?.find((entry)=>entry.id==="action.unarmed-strike.shove-prone");
+    if(action){action.id=renamedId;action.name="External Source-Owned Shove";}
+    return snapshot;
+  };
+  await adapter.setQueuedD20(1);
+  let snapshot=await adapter.resolveAction(renamedId,["combatant.goblin-b"]);
+  assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
+  assert.equal(snapshot.resolution?.actionId,renamedId);
+  assert.equal(snapshot.resolution?.finalOutcome,"넘어짐 적용");
+  assert.ok(snapshot.resolution?.provenance.some((entry)=>entry.includes("action.unarmed-strike.shove-prone")));
+  assert.ok(snapshot.scene.entities.find((entry)=>entry.id==="combatant.goblin-b")?.status.some((status)=>status.includes("넘어짐")));
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.action,false);
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.extraAttacks?.length,1);
+  await adapter.undoLastResolution();
+  snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.scene.entities.find((entry)=>entry.id==="combatant.goblin-b")?.status.some((status)=>status.includes("넘어짐")),false);
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.action,true);
+});
+
+test("Unarmed grapple and shove replace individual attacks inside Extra Attack", async () => {
+  const adapter=new MockAdapter();
+  await ready(adapter);
+  const grappleId="action.unarmed-strike.grapple";
+  const shoveId="action.unarmed-strike.shove-prone";
+
+  await adapter.setQueuedD20(1);
+  await adapter.resolveAction(grappleId,["combatant.goblin-a"]);
+  let snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.resolution?.actionId,grappleId);
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.action,false);
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.extraAttacks?.length,1);
+  assert.ok(snapshot.scene.entities.find((entry)=>entry.id==="combatant.goblin-a")?.status.some((status)=>status.includes("붙잡힘")));
+
+  await adapter.setQueuedD20(1);
+  await adapter.resolveAction(shoveId,["combatant.goblin-b"]);
+  snapshot=await adapter.getSnapshot();
+  const secondResolutionId=snapshot.resolution?.id;
+  assert.equal(snapshot.resolution?.actionId,shoveId);
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.action,false);
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.extraAttacks?.length??0,0);
+  assert.ok(snapshot.scene.entities.find((entry)=>entry.id==="combatant.goblin-b")?.status.some((status)=>status.includes("넘어짐")));
+
+  await adapter.setQueuedD20(1);
+  await adapter.resolveAction(grappleId,["combatant.goblin-b"]);
+  snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.resolution?.id,secondResolutionId);
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.extraAttacks?.length??0,0);
+  assert.equal(snapshot.scene.entities.find((entry)=>entry.id==="combatant.goblin-b")?.status.some((status)=>status.includes("붙잡힘")),false);
+
+  await adapter.undoLastResolution();
+  snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.action,false);
+  assert.equal(snapshot.scene.economyByActor["char.aelar"]?.extraAttacks?.length,1);
+  assert.equal(snapshot.scene.entities.find((entry)=>entry.id==="combatant.goblin-b")?.status.some((status)=>status.includes("넘어짐")),false);
+});
+
 test("connected unarmed condition converges once on every client", async () => {
   const sessionId="session.unarmed-condition";
   const host=new MockAdapter();

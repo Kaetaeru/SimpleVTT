@@ -6,7 +6,7 @@ import {
   type ConditionId,
 } from "./conditions";
 import { conditionEffectsFor, requireCombatant } from "./combatState";
-import { createEffect, terminateEffectsForCreatureState, type EffectInstance } from "./effects";
+import { createEffect, effectIsActive, suppressEffect, terminateEffectsForCreatureState, unsuppressEffect, type EffectInstance } from "./effects";
 import { endConcentration, startConcentration } from "./concentration";
 import {
   concentrationStateChange,
@@ -21,6 +21,7 @@ import type { ResolutionOperation } from "./resolutionTypes";
 
 type ApplyEffectOp = Extract<ResolutionOperation, { kind:"apply-effect" }>;
 type UpdateEffectOp = Extract<ResolutionOperation, { kind:"update-effect" }>;
+type SetEffectSuppressionOp=Extract<ResolutionOperation,{kind:"set-effect-suppression"}>;
 type RemoveEffectOp = Extract<ResolutionOperation, { kind:"remove-effect" }>;
 type StartConcentrationOp = Extract<ResolutionOperation, { kind:"start-concentration" }>;
 type EndConcentrationOp = Extract<ResolutionOperation, { kind:"end-concentration" }>;
@@ -30,6 +31,7 @@ const CONDITION_IMMUNITY_TAG_PREFIX = "condition-immunity:";
 function taggedConditionImmunities(effects:EffectInstance[],targetId:string):ConditionId[] {
   const immunities = new Set<ConditionId>();
   for (const effect of effects) {
+    if(!effectIsActive(effect)) continue;
     if (effect.targetId !== targetId) continue;
     for (const tag of effect.tags) {
       if (!tag.startsWith(CONDITION_IMMUNITY_TAG_PREFIX)) continue;
@@ -48,6 +50,25 @@ function endActorConcentration(ctx: ResolutionExecutionContext, actorId:string, 
   return { current, ended };
 }
 
+function displacedPropertyModifierEffects(
+  effects:EffectInstance[],
+  effect:EffectInstance,
+  profile:ResolutionExecutionContext["profile"],
+):EffectInstance[] {
+  const modifier=effect.propertyModifier;
+  if(!modifier) return [];
+  const policy=modifier.instancePolicy==="profile-policy"
+    ? profile.propertyModifierPolicy?.defaultInstancePolicy
+    : modifier.instancePolicy;
+  if(!policy) throw new DomainEvaluationError("property modifier profile-policy requires an explicit RulesProfile stacking policy");
+  if(policy==="stack") return [];
+  return effects.filter((existing)=>{
+    const current=existing.propertyModifier;
+    if(existing.targetId!==effect.targetId||!current||current.property!==modifier.property) return false;
+    if(policy==="replace") return true;
+    return existing.sourceId===effect.sourceId;
+  });
+}
 export function executeApplyEffect(ctx:ResolutionExecutionContext, operation:ApplyEffectOp):OperationExecution {
   const target = requireCombatant(ctx.state, operation.effect.targetId);
   const effect = createEffect(operation.effect, ctx.state.clock);
@@ -75,6 +96,11 @@ export function executeApplyEffect(ctx:ResolutionExecutionContext, operation:App
     }
   }
 
+  const displacedEffects=displacedPropertyModifierEffects(ctx.state.effects,effect,ctx.profile);
+  if(displacedEffects.length) {
+    const displacedIds=new Set(displacedEffects.map((entry)=>entry.id));
+    ctx.state.effects=ctx.state.effects.filter((entry)=>!displacedIds.has(entry.id));
+  }
   const beforeLife = structuredClone(target.life);
   ctx.state.effects.push(effect);
   const provenance:ProvenanceRecord[] = [{
@@ -82,7 +108,15 @@ export function executeApplyEffect(ctx:ResolutionExecutionContext, operation:App
     status:"applied",
     reason:`effect ${effect.id} applied to ${effect.targetId}`,
   }];
-  const changes:RuntimeStateChange[] = [effectStateChange(effect.targetId, effect.id, "added", provenance, undefined, effect)];
+  displacedEffects.forEach((entry)=>provenance.push({
+    source:entry.sourceId,
+    status:"applied",
+    reason:`property modifier effect ${entry.id} displaced by ${effect.id}`,
+  }));
+  const changes:RuntimeStateChange[] = [
+    ...displacedEffects.map((entry)=>effectStateChange(entry.targetId,entry.id,"removed",provenance,entry,undefined)),
+    effectStateChange(effect.targetId, effect.id, "added", provenance, undefined, effect),
+  ];
   const activeConditions = conditionEffectsFor(ctx.state, target.id);
 
   if (effect.conditionId === "exhaustion" && exhaustionIsFatal(activeConditions) && !target.life.dead) {
@@ -161,6 +195,25 @@ export function executeUpdateEffect(ctx:ResolutionExecutionContext, operation:Up
       [effectStateChange(before.targetId,before.id,"updated",provenance,before,after)],
       before.targetId,
     ),
+  };
+}
+
+export function executeSetEffectSuppression(ctx:ResolutionExecutionContext,operation:SetEffectSuppressionOp):OperationExecution {
+  const index=ctx.state.effects.findIndex((entry)=>entry.id===operation.effectId);
+  if(index<0) throw new DomainEvaluationError(`effect not found: ${operation.effectId}`);
+  const before=ctx.state.effects[index];
+  const after=operation.suppressed
+    ? suppressEffect(before,ctx.state.clock,operation.reason??ctx.pending.sourceId,operation.pauseDuration===true)
+    : unsuppressEffect(before,ctx.state.clock);
+  ctx.state.effects[index]=after;
+  const provenance:ProvenanceRecord[]=[{
+    source:ctx.pending.sourceId,status:"applied",reason:`effect ${before.id} ${operation.suppressed?"suppressed":"unsuppressed"}`,
+  }];
+  return {
+    result:{suppressed:operation.suppressed,effect:after},
+    event:makeEvent(ctx.pending,operation,`effect ${before.id} ${operation.suppressed?"suppressed":"unsuppressed"}`,
+      {suppressed:operation.suppressed,effect:after},provenance,
+      [effectStateChange(before.targetId,before.id,"updated",provenance,before,after)],before.targetId),
   };
 }
 

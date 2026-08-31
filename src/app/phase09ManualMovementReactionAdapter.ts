@@ -125,6 +125,7 @@ MockAdapter.prototype.declareManualMovementReaction=async function declareManual
       source:`manual:movement-reaction:${trigger.id}`,
       baseTargetAc:provoker.ac,
       targetingFact:{
+        authority:"authoritative",
         distanceFeet:command.distanceFeet,
         visible:command.visibleAtTrigger,
         cover:command.coverAtTrigger,

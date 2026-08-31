@@ -140,7 +140,7 @@ test("manual membership persists and drives per-rule turn-start behavior without
   if (entered.status!=="committed") return;
   assert.equal(entered.state.combatants.goblin.life.hp.current,13);
   assert.deepEqual(entered.state.zoneMemberships?.[0].memberIds,["goblin"]);
-  assert.equal(entered.state.artifacts?.[0].metadata?.["commonPlayRuleOncePerTurn:entered:goblin"],"1:goblin");
+  assert.equal(entered.state.artifacts?.[0].metadata?.["commonPlay.frequency:entered:goblin"],"turn:1:goblin");
 
   const duplicateEnter=resolveCommonPlayZoneMembershipChange(TEST_PROFILE,entered.state,DEFINITION,{
     id:"manual-enter-duplicate",
@@ -164,7 +164,7 @@ test("manual membership persists and drives per-rule turn-start behavior without
   assert.equal(turnStart.status,"committed");
   if (turnStart.status!=="committed") return;
   assert.equal(turnStart.state.combatants.goblin.life.hp.current,10);
-  assert.equal(turnStart.state.artifacts?.[0].metadata?.["commonPlayRuleOncePerTurn:turn-start:goblin"],"1:goblin");
+  assert.equal(turnStart.state.artifacts?.[0].metadata?.["commonPlay.frequency:turn-start:goblin"],"turn:1:goblin");
 
   const replay=resolveCommonPlayZoneTurnEvent(TEST_PROFILE,turnStart.state,DEFINITION,{
     id:"membership-turn-start-replay",
@@ -393,7 +393,7 @@ test("Common Play zone runtime rejects unsupported authority, target, frequency,
   assert.match(targetResult.error,/target must be event\.subject/);
 
   const invalidFrequency=structuredClone(DEFINITION);
-  (invalidFrequency.artifactTemplates[0].rules[0] as {frequency:string}).frequency="once-per-round";
+  (invalidFrequency.artifactTemplates[0].rules[0] as {frequency:string}).frequency="profile-policy";
   const frequencyResult=resolveCommonPlayZoneActivation(TEST_PROFILE,runtimeState(),invalidFrequency,{
     resolutionId:"invalid-zone-frequency",
     actorId:"hero",
@@ -402,7 +402,7 @@ test("Common Play zone runtime rejects unsupported authority, target, frequency,
   });
   assert.equal(frequencyResult.status,"rejected");
   if (frequencyResult.status!=="rejected") return;
-  assert.match(frequencyResult.error,/only once-per-turn frequency/);
+  assert.match(frequencyResult.error,/frequency is unsupported/);
 
   const unsupportedAuthority=resolveCommonPlayZoneActivation(TEST_PROFILE,runtimeState(),DEFINITION,{
     resolutionId:"invalid-zone-authority",

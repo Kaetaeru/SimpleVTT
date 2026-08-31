@@ -38,8 +38,8 @@ const histories=new WeakMap<MockAdapter,HealingEventHistory>();
 const previousAdvance=MockAdapter.prototype.advanceResolution;
 const previousUndo=MockAdapter.prototype.undoLastResolution;
 
-function isSecondWind(action:ActionVm|undefined) {
-  return action?.id==="action.second-wind" && action.resolutionKind==="healing" && action.target==="self";
+function isAtomicSelfHealing(action:ActionVm|undefined) {
+  return action?.resolutionKind==="healing"&&action.target==="self"&&Boolean(action.healing)&&!action.itemCost&&!action.spellCast;
 }
 
 function reject(internal:AtomicHealingAdapterState,error:string) {
@@ -54,17 +54,17 @@ function reject(internal:AtomicHealingAdapterState,error:string) {
   internal.before=null;
 }
 
-MockAdapter.prototype.advanceResolution=async function advanceResolutionWithAtomicSecondWind() {
+MockAdapter.prototype.advanceResolution=async function advanceResolutionWithAtomicSelfHealing() {
   const internal=this as unknown as AtomicHealingAdapterState;
   const resolution=internal.resolution;
   const action=resolution ? internal.action(resolution.actionId) : undefined;
-  if (!resolution || !isSecondWind(action) || resolution.adjudicated || resolution.stage!=="effect-preview") {
+  if (!resolution || !isAtomicSelfHealing(action) || resolution.adjudicated || resolution.stage!=="effect-preview") {
     return previousAdvance.call(this);
   }
   const actor=internal.entity(action!.actorId);
   const economy=internal.scene.economyByActor[action!.actorId];
   if (!actor || !economy) {
-    reject(internal,"Second Wind actor/economy runtime state is missing");
+    reject(internal,"atomic self-healing actor/economy runtime state is missing");
     return internal.getSnapshot();
   }
   const transaction=resolveAtomicSelfHealing({
@@ -114,7 +114,7 @@ MockAdapter.prototype.advanceResolution=async function advanceResolutionWithAtom
   return internal.getSnapshot();
 };
 
-MockAdapter.prototype.undoLastResolution=async function undoAtomicSecondWindFromEvents() {
+MockAdapter.prototype.undoLastResolution=async function undoAtomicSelfHealingFromEvents() {
   const internal=this as unknown as AtomicHealingAdapterState;
   const history=histories.get(this);
   if (!history || internal.lastResolutionId!==history.resolutionId) return previousUndo.call(this);
@@ -139,7 +139,7 @@ MockAdapter.prototype.undoLastResolution=async function undoAtomicSecondWindFrom
   internal.syncChar();
   internal.activity=internal.activity.map((entry)=>entry.id===history.resolutionId ? { ...entry,reversed:true } : entry);
   internal.activity.unshift({
-    id:`phase09.second-wind-undo.${Date.now()}.${Math.floor(Math.random()*1000)}`,
+    id:`phase09.self-healing-undo.${Date.now()}.${Math.floor(Math.random()*1000)}`,
     time:"지금",actor:"시스템",title:"Resolution 되돌림",summary:history.resolutionId,
     detail:[`ResolutionEvent ${history.events.length}개 역순 적용`,`Before snapshot 미사용`,`HP + economy + resource inverse`],
     stateChanges:undone.stateChanges,correction:true,undoOf:history.resolutionId,

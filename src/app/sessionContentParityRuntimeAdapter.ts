@@ -11,6 +11,7 @@ import { connectedInternal, connectedManifest, publishConnectedSnapshot } from "
 import { connectedStateFor } from "./connectedSessionState";
 import { buildCharacterSessionProjectionV1 } from "./characterSessionProjection";
 import { decodeConnectedWireMessage, encodeConnectedWireMessage, type ConnectedWireMessage } from "./connectedSessionWire";
+import { restoreConnectedPresentationForPeer } from "./connectedPresentationRestorePort";
 import { tauriSessionTransport, type SessionTransportMessage } from "./tauriSessionTransport";
 
 type ParityStatus="unknown"|"checking"|"syncing"|"ready"|"error";
@@ -131,6 +132,16 @@ async function sendWithInstalledContentParity(message:string) {
     return sendHelloWithInventory(adapter,decoded.message);
   }
   return parityBaseSend(message);
+}
+
+async function sendToWithPresentationRestore(peer:string,message:string) {
+  const result=await parityBaseSendTo(peer,message);
+  const raw=parseRaw(message);
+  const compatibility=compatibilityRecord(raw?.compatibility);
+  if (raw?.type==="hello-ack"&&typeof raw.sessionId==="string"&&raw.sessionId&&compatibility?.status==="compatible") {
+    await restoreConnectedPresentationForPeer(peer,raw.sessionId);
+  }
+  return result;
 }
 
 async function hostParityPreflight(adapter:MockAdapter,message:SessionTransportMessage,raw:RawRecord) {
@@ -267,6 +278,7 @@ function ensureSessionContentParityTransportDecorators() {
   parityBaseSend=tauriSessionTransport.send.bind(tauriSessionTransport);
   parityBaseOnMessage=tauriSessionTransport.onMessage.bind(tauriSessionTransport);
   tauriSessionTransport.send=sendWithInstalledContentParity;
+  tauriSessionTransport.sendTo=sendToWithPresentationRestore;
   tauriSessionTransport.onMessage=onMessageWithInstalledContentParity;
 }
 

@@ -114,6 +114,7 @@ export function resolvedCatalogEntryFromInstalled(entry:InstalledCatalogEntryV1)
     description:entry.description,
     relationships:cp(entry.relationships),
     capabilities:cp(entry.capabilities),
+    ...(entry.progressionContributions?{progressionContributions:cp(entry.progressionContributions)}:{}),
     ...(entry.campaignProvider?{campaignProvider:cp(entry.campaignProvider)}:{}),
   };
 }

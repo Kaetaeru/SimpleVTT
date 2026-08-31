@@ -1,0 +1,47 @@
+name: M1 Common Play HP
+
+on:
+  pull_request:
+    paths:
+      - "schemas/common-play-contract.schema.json"
+      - "src/domain/commonPlayOperationRuntime.ts"
+      - "src/domain/damage.ts"
+      - "src/domain/damageRoll.ts"
+      - "src/domain/resolutionHealthOps.ts"
+      - "src/app/installedCommonPlayRuntimeAdapter.ts"
+      - "src/app/runtimeResolutionCommit.ts"
+      - "tests/fixtures/play-contract/generic-hp-action.json"
+      - "tests/domain/commonPlayHpRuntime.test.ts"
+      - "tests/domain/commonPlayD20Runtime.test.ts"
+      - "tests/domain/commonPlayResourceEconomyRuntime.test.ts"
+      - "tests/ui/ruleModulePackageImport.test.ts"
+      - "tests/ui/installedCommonPlayProductionRuntime.test.ts"
+      - "tests/ui/fighterActionSurgeRuntimeAdapter.test.ts"
+      - ".github/workflows/m1-common-play-hp.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  hp-production:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Generate content catalogs
+        run: npm run generate:content
+      - name: Verify Common Play HP production bridge and established regressions
+        run: >-
+          npx tsx --test
+          tests/domain/commonPlayHpRuntime.test.ts
+          tests/domain/commonPlayD20Runtime.test.ts
+          tests/domain/commonPlayResourceEconomyRuntime.test.ts
+          tests/ui/ruleModulePackageImport.test.ts
+          tests/ui/installedCommonPlayProductionRuntime.test.ts
+          tests/ui/fighterActionSurgeRuntimeAdapter.test.ts
+      - name: Typecheck application
+        run: npx tsc --noEmit

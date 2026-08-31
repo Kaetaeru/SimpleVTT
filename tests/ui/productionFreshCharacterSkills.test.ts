@@ -6,6 +6,7 @@ import { MemoryCharacterLibraryStore } from "../../src/app/memoryCharacterLibrar
 import { setCharacterLibraryStoreForTests } from "../../src/app/characterLibraryRuntimeAdapter";
 import { classIdFromName, classMeta } from "../../src/app/characterCreationV10Data";
 import type { AbilityKey, ActionVm, CharacterCreationSection, CharacterSheet } from "../../src/app/contracts";
+import type { RuntimeCover } from "../../src/domain/types";
 
 const SKILLS:Array<{id:string;name:string;ability:AbilityKey}>=[
   {id:"action.skill.athletics",name:"운동",ability:"str"},
@@ -27,6 +28,16 @@ const SKILLS:Array<{id:string;name:string;ability:AbilityKey}>=[
   {id:"action.skill.performance",name:"공연",ability:"cha"},
   {id:"action.skill.persuasion",name:"설득",ability:"cha"},
 ];
+
+type SpatialRelationAdapter = {
+  setTheaterOfMindSpatialRelation(input:{
+    sourceId:string;
+    targetId:string;
+    distanceFeet:number;
+    cover?:RuntimeCover;
+    requestId?:string;
+  }):Promise<unknown>;
+};
 
 async function fillCurrentCreationDraft(adapter:MockAdapter) {
   for (let pass=0;pass<40;pass++) {
@@ -183,7 +194,18 @@ test("fresh non-fixture Character resolves proficient and untrained skills with 
 
 test("fresh non-fixture Character commits a canonical weapon attack and a non-weapon Dash action",async()=>{
   const {adapter,freeform,characterId}=await freshFreeformFighter();
-  const actions=freeform.scene.actionsByActor[characterId]??[];
+  const relationTarget=freeform.scene.entities.find((entity)=>entity.side!=="ally"&&!entity.reactions.length);
+  assert.ok(relationTarget,"fresh Fighter attack requires an enemy theater-of-mind target");
+  const spatial=adapter as MockAdapter&SpatialRelationAdapter;
+  await spatial.setTheaterOfMindSpatialRelation({
+    sourceId:characterId,
+    targetId:relationTarget.id,
+    distanceFeet:5,
+    cover:"none",
+    requestId:"test:fresh-fighter:spatial",
+  });
+  const positioned=await adapter.getSnapshot();
+  const actions=positioned.scene.actionsByActor[characterId]??[];
   const attack=actions
     .filter((action)=>action.resolutionKind==="attack"&&action.runtimeAttack)
     .sort((a,b)=>(b.runtimeAttack?.rangeFeet??0)-(a.runtimeAttack?.rangeFeet??0))[0];
@@ -191,15 +213,10 @@ test("fresh non-fixture Character commits a canonical weapon attack and a non-we
   assert.equal(attack.actorId,characterId);
   assert.ok(attack.runtimeAttack?.damageSource.includes(`character:${characterId}:attack:`));
 
-  const range=attack.runtimeAttack?.rangeFeet??0;
-  const target=freeform.scene.entities.find((entity)=>{
-    if (entity.side==="ally"||entity.reactions.length) return false;
-    const distance=Number.parseInt(entity.distance??"");
-    return Number.isFinite(distance)&&distance<=range;
-  });
-  assert.ok(target,`fresh Fighter attack requires an enemy within ${range} feet`);
+  const target=positioned.scene.entities.find((entity)=>entity.id===relationTarget.id);
+  assert.ok(target,"authored spatial target must remain in the scene");
   const targetHp=target.hp;
-  const economy=structuredClone(freeform.scene.economyByActor[characterId]);
+  const economy=structuredClone(positioned.scene.economyByActor[characterId]);
 
   await adapter.setQueuedD20(20);
   let attackState=await adapter.resolveAction(attack.id,[target.id]);

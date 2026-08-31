@@ -6,10 +6,11 @@ import {
   conditionTargetingRestriction,
   frightenedMovementRestriction,
 } from "./conditions";
-import { applyRageEffectUpdate, barbarianRageD20ExtensionUpdate } from "./barbarianRageLifecycle";
+import { applyExtendableEffectUpdate, extendEffectFromHostileD20 } from "./extendableEffectLifecycle";
 import { effectStateChange } from "./runtimeStateChange";
 import { conditionEffectsFor, requireCombatant, type RulesRuntimeState } from "./combatState";
 import { selectEffectTurnActivity } from "./effects";
+import { effectIsActive } from "./effects";
 import { findResource, spendResource } from "./resources";
 import { openReactorWindow, resolveReactionChoice } from "./reaction";
 import { resolveTargeting } from "./targeting";
@@ -34,7 +35,7 @@ type ReactionOp = Extract<ResolutionOperation, { kind:"reaction" }>;
 const TEMPORARILY_UNAVAILABLE_TARGET_TAG = "runtime:temporarily-unavailable-target";
 
 function temporarilyUnavailable(state:RulesRuntimeState,actorId:string) {
-  return state.effects.some((effect) => effect.targetId === actorId && effect.tags.includes(TEMPORARILY_UNAVAILABLE_TARGET_TAG));
+  return state.effects.some((effect) => effectIsActive(effect)&&effect.targetId === actorId && effect.tags.includes(TEMPORARILY_UNAVAILABLE_TARGET_TAG));
 }
 
 function requireAvailableInScene(state:RulesRuntimeState,actorId:string,label:string) {
@@ -46,6 +47,9 @@ function requireAvailableInScene(state:RulesRuntimeState,actorId:string,label:st
 export function executeTargeting(ctx: ResolutionExecutionContext, operation: TargetingOp): OperationExecution {
   const sourceId = operation.sourceId ?? ctx.pending.actorId;
   requireAvailableInScene(ctx.state,sourceId,"targeting source");
+  for (const target of operation.targets) {
+    if (target.kind === "creature") requireCombatant(ctx.state,target.id);
+  }
   const unavailableTarget = operation.targets.find((target) => temporarilyUnavailable(ctx.state,target.id));
   if (unavailableTarget) throw new DomainEvaluationError(`target is temporarily unavailable in the current scene: ${unavailableTarget.id}`);
   const restriction = operation.harmful
@@ -193,14 +197,30 @@ export function executeMove(ctx:ResolutionExecutionContext, operation:MoveOp):Op
     {
       source:ctx.pending.sourceId,
       status:"applied",
-      reason:`${actorId} moves ${operation.distanceFeet} ft`,
+      reason:operation.movementActivity==="stand"
+        ? `${actorId} spends ${operation.distanceFeet} ft of movement to stand`
+        : operation.movementActivity
+          ? `${actorId} spends ${operation.distanceFeet} ft of movement to ${operation.movementActivity}`
+        : `${actorId} moves ${operation.distanceFeet} ft`,
     },
   ];
   const changes = economyStateChanges(actorId, before, actor.economy, provenance);
-  const result = { distanceFeet:operation.distanceFeet, remaining:actor.economy.movement };
+  const result = {
+    distanceFeet:operation.distanceTraveledFeet??operation.distanceFeet,
+    remaining:actor.economy.movement,
+    ...(operation.distanceTraveledFeet===undefined?{}:{movementCostFeet:operation.distanceFeet}),
+    ...(operation.movementActivity?{movementActivity:operation.movementActivity}:{}),
+    ...(operation.movementMode?{movementMode:operation.movementMode}:{}),
+    ...(operation.destinationRef?{destinationRef:operation.destinationRef}:{}),
+    ...(operation.doesNotProvokeOpportunityAttacks===undefined?{}:{doesNotProvokeOpportunityAttacks:operation.doesNotProvokeOpportunityAttacks}),
+  };
   return {
     result,
-    event:makeEvent(ctx.pending, operation, `${actorId} moves ${operation.distanceFeet} ft`, result, provenance, changes, actorId),
+    event:makeEvent(ctx.pending, operation, operation.movementActivity==="stand"
+      ? `${actorId} stands from Prone`
+      : operation.movementActivity
+        ? `${actorId} spends movement to ${operation.movementActivity}`
+      : `${actorId} moves ${operation.distanceFeet} ft`, result, provenance, changes, actorId),
   };
 }
 
@@ -235,14 +255,17 @@ export function executeD20(ctx: ResolutionExecutionContext, operation: D20Op): O
     actorConditions:conditionEffectsFor(ctx.state, actorId),
     targetConditions:operation.targetId ? conditionEffectsFor(ctx.state, operation.targetId) : [],
   });
-  const spellModifiers=ctx.state.effects.filter((effect)=>{
+  const d20Modifiers=ctx.state.effects.filter((effect)=>{
+    if(!effectIsActive(effect)) return false;
     if (effect.kind!=="modifier"||effect.metadata?.d20Family!==operation.request.family) return false;
     const ability=effect.metadata.d20Ability;
     if (typeof ability==="string"&&ability!==operation.condition?.ability) return false;
+    const targetId=effect.metadata.d20TargetId;
+    if(typeof targetId==="string"&&targetId!==operation.targetId)return false;
     const scope=effect.metadata.d20Scope;
     return scope==="target"?Boolean(operation.targetId&&effect.targetId===operation.targetId):effect.targetId===actorId;
   });
-  const spellRollStates=spellModifiers.flatMap((effect)=>effect.metadata?.d20RollState==="advantage"||effect.metadata?.d20RollState==="disadvantage"
+  const effectRollStates=d20Modifiers.flatMap((effect)=>effect.metadata?.d20RollState==="advantage"||effect.metadata?.d20RollState==="disadvantage"
     ? [{source:effect.sourceId,state:effect.metadata.d20RollState as "advantage"|"disadvantage"}]
     : []);
   let target = operation.request.target;
@@ -258,7 +281,7 @@ export function executeD20(ctx: ResolutionExecutionContext, operation: D20Op): O
     ...operation.request,
     target,
     modifierContributions:modifiers,
-    rollStateContributions:[...(operation.request.rollStateContributions ?? []), ...adjustments.rollStateContributions, ...spellRollStates],
+    rollStateContributions:[...(operation.request.rollStateContributions ?? []), ...adjustments.rollStateContributions, ...effectRollStates],
   });
   if (adjustments.autoFailure) {
     resolved = {
@@ -275,15 +298,15 @@ export function executeD20(ctx: ResolutionExecutionContext, operation: D20Op): O
       provenance:[...resolved.provenance, { source:"condition:auto-critical", status:"applied", reason:"condition makes a hit within 5 feet a Critical Hit" }],
     };
   }
-  const consumed=spellModifiers.filter((effect)=>effect.metadata?.consumeOnUse===true);
+  const consumed=d20Modifiers.filter((effect)=>effect.metadata?.consumeOnUse===true);
   const consumedProvenance=consumed.map((effect)=>({source:effect.sourceId,status:"applied" as const,reason:`effect ${effect.id} consumed by ${operation.request.family}`}));
   if (consumed.length) ctx.state.effects=ctx.state.effects.filter((effect)=>!consumed.some((entry)=>entry.id===effect.id));
   if (consumedProvenance.length) resolved={...resolved,provenance:[...resolved.provenance,...consumedProvenance]};
-  const rageUpdate=barbarianRageD20ExtensionUpdate(ctx.state.effects,ctx.state.clock,ctx.pending,operation);
-  const rageProvenance:ProvenanceRecord[]=rageUpdate?[{source:rageUpdate.before.sourceId,status:"applied",reason:rageUpdate.reason}]:[];
-  if(rageUpdate){
-    ctx.state.effects=applyRageEffectUpdate(ctx.state.effects,rageUpdate);
-    resolved={...resolved,provenance:[...resolved.provenance,...rageProvenance]};
+  const extension=extendEffectFromHostileD20(ctx.state.effects,ctx.state.clock,ctx.pending,operation);
+  const extensionProvenance:ProvenanceRecord[]=extension?[{source:extension.before.sourceId,status:"applied",reason:extension.reason}]:[];
+  if(extension){
+    ctx.state.effects=applyExtendableEffectUpdate(ctx.state.effects,extension);
+    resolved={...resolved,provenance:[...resolved.provenance,...extensionProvenance]};
   }
   return {
     result:resolved,
@@ -295,7 +318,7 @@ export function executeD20(ctx: ResolutionExecutionContext, operation: D20Op): O
       resolved.provenance,
       [
         ...consumed.map((effect)=>effectStateChange(effect.targetId,effect.id,"removed",consumedProvenance,effect,undefined)),
-        ...(rageUpdate?[effectStateChange(rageUpdate.before.targetId,rageUpdate.before.id,"updated",rageProvenance,rageUpdate.before,rageUpdate.after)]:[]),
+        ...(extension?[effectStateChange(extension.before.targetId,extension.before.id,"updated",extensionProvenance,extension.before,extension.after)]:[]),
       ],
       operation.targetId,
     ),

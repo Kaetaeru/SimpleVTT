@@ -1,11 +1,11 @@
-import { resolveCompoundDamage, resolveDamage, resolveHealing, type DamageDefenseContribution, type DamageResolution } from "./damage";
+import { resolveCompoundDamage, resolveDamage, resolveHealing, type DamageDefenseContribution, type DamageReductionContribution, type DamageResolution, type DamageThresholdContribution } from "./damage";
 import { type D20TestResult } from "./d20";
 import { resolveDeathSavingThrow, resolveZeroHpAfterDamage, type LifeState } from "./life";
 import { applyHealingToLife, stabilizeAtZero } from "./lifeTransitions";
 import { activeConditionIds, conditionD20Adjustments, conditionDamageDefenses } from "./conditions";
 import { conditionEffectsFor, requireCombatant } from "./combatState";
 import { concentrationBreakReason, endConcentration, resolveConcentrationDamageCheck, type ConcentrationCheckResolution } from "./concentration";
-import { terminateEffectsForCreatureState, terminateEffectsForDamage } from "./effects";
+import { resolveEffectModifiedProperty, terminateEffectsForCreatureState, terminateEffectsForDamage } from "./effects";
 import { resolveTemporaryHpGain } from "./temporaryHp";
 import { hpStateChanges } from "./stateChange";
 import {
@@ -23,6 +23,7 @@ import type { ResolutionOperation } from "./resolutionTypes";
 type DamageOp = Extract<ResolutionOperation, { kind:"damage" }>;
 type CompoundDamageOp = Extract<ResolutionOperation, { kind:"compound-damage" }>;
 type HealingOp = Extract<ResolutionOperation, { kind:"healing" }>;
+type MaximumHpOp = Extract<ResolutionOperation, { kind:"maximum-hp" }>;
 type TemporaryHpOp = Extract<ResolutionOperation, { kind:"temporary-hp" }>;
 type DamageLifecycleOp = DamageOp | CompoundDamageOp;
 type DeathSaveOp=Extract<ResolutionOperation,{kind:"death-save"}>;
@@ -58,6 +59,29 @@ function effectDamageDefenses(ctx:ResolutionExecutionContext,targetId:string):Da
     }
   }
   return defenses;
+}
+
+function structuralDamageMitigation(ctx:ResolutionExecutionContext,targetId:string) {
+  const target=requireCombatant(ctx.state,targetId);
+  const inputs={...(target.baseProperties ?? {})};
+  const resolve=(property:string)=>resolveEffectModifiedProperty(
+    ctx.state.effects,
+    targetId,
+    property,
+    {...inputs,[property]:inputs[property] ?? 0},
+  );
+  const reduction=resolve("damage.reduction");
+  const threshold=resolve("damage.threshold");
+  for (const entry of [reduction,threshold]) {
+    if(!Number.isInteger(entry.value)||entry.value<0) throw new DomainEvaluationError(`${entry.property} must resolve to a non-negative integer`);
+  }
+  const reductions:DamageReductionContribution[]=reduction.value>0
+    ? [{source:"property:damage.reduction",amount:reduction.value}]
+    : [];
+  const thresholds:DamageThresholdContribution[]=threshold.value>0
+    ? [{source:"property:damage.threshold",threshold:threshold.value}]
+    : [];
+  return {reductions,thresholds,provenance:[...reduction.provenance,...threshold.provenance]};
 }
 
 function endActorConcentration(ctx: ResolutionExecutionContext, actorId: string, reason: string) {
@@ -203,7 +227,9 @@ export function executeDamage(ctx: ResolutionExecutionContext, operation: Damage
     ...effectDamageDefenses(ctx,operation.targetId),
     ...(operation.defenses ?? []),
   ];
-  const damage = resolveDamage({ damageType:operation.damageType, amount, hp:beforeHp, defenses });
+  const mitigation=structuralDamageMitigation(ctx,operation.targetId);
+  const damage = resolveDamage({ damageType:operation.damageType, amount, hp:beforeHp, adjustments:operation.adjustments, defenses, reductions:mitigation.reductions, thresholds:mitigation.thresholds });
+  damage.provenance.unshift(...mitigation.provenance);
   return finalizeDamage(
     ctx,
     operation,
@@ -222,14 +248,19 @@ export function executeCompoundDamage(ctx: ResolutionExecutionContext, operation
     ...conditionDamageDefenses(conditionEffectsFor(ctx.state, operation.targetId)),
     ...effectDamageDefenses(ctx,operation.targetId),
   ];
+  const mitigation=structuralDamageMitigation(ctx,operation.targetId);
   const damage = resolveCompoundDamage({
     hp:beforeHp,
     components:operation.components.map((component) => ({
       damageType:component.damageType,
       amount:valueFromResult(ctx.results, component.amount),
+      adjustments:component.adjustments,
       defenses:[...commonDefenses, ...(component.defenses ?? [])],
     })),
+    reductions:mitigation.reductions,
+    thresholds:mitigation.thresholds,
   });
+  damage.provenance.unshift(...mitigation.provenance);
   const detail = damage.components
     .map((component) => `${component.finalDamage} ${component.damageType}`)
     .join(" + ");
@@ -240,6 +271,23 @@ export function executeCompoundDamage(ctx: ResolutionExecutionContext, operation
     damage,
     `${operation.targetId} takes ${damage.finalDamage} compound damage (${detail})`,
   );
+}
+
+export function executeMaximumHpChange(ctx:ResolutionExecutionContext,operation:MaximumHpOp):OperationExecution {
+  const target=requireCombatant(ctx.state,operation.targetId);
+  const beforeHp={...target.life.hp};
+  const delta=valueFromResult(ctx.results,operation.amount);
+  if(!Number.isInteger(delta)||delta===0) throw new DomainEvaluationError("maximum HP change must resolve to a non-zero integer");
+  const maximum=beforeHp.maximum+delta;
+  if(maximum<1) throw new DomainEvaluationError("maximum HP must remain at least 1");
+  target.life.hp={...beforeHp,maximum,current:Math.min(beforeHp.current,maximum)};
+  const provenance=[{source:ctx.pending.sourceId,status:"applied" as const,reason:`Maximum HP ${beforeHp.maximum} -> ${maximum}`}];
+  const result={delta,nextHp:{...target.life.hp},provenance};
+  const changes=hpStateChanges(operation.targetId,beforeHp,target.life.hp,provenance);
+  return {
+    result,
+    event:makeEvent(ctx.pending,operation,`${operation.targetId} maximum HP ${beforeHp.maximum} -> ${maximum}`,result,provenance,changes,operation.targetId),
+  };
 }
 
 export function executeHealing(ctx: ResolutionExecutionContext, operation: HealingOp): OperationExecution {

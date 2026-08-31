@@ -67,6 +67,35 @@ test("same qualified identity with different payload is an explicit conflict and
   assert.equal(repository.snapshot()?.entries[0].description,"local content");
 });
 
+test("installed content rejects unsupported portable mechanics before writing a generation", async () => {
+  const store=new MemoryInstalledContentStore();
+  const repository=new InstalledContentRepository(store);
+  await repository.hydrate();
+  const invalid=entry({
+    mechanics:[{
+      kind:"common-play",
+      config:{
+        schemaVersion:"0.2-draft",
+        id:"external.invalid.session-mechanic",
+        entryPoints:[{
+          id:"activate",
+          invocation:"manual",
+          operations:[{
+            kind:"resource.change",
+            resource:"resource.external.primary",
+            amount:{value:-1},
+            target:"combatant.someone-else",
+          }],
+        }],
+      },
+    }],
+  });
+
+  await assert.rejects(()=>repository.install(invalid),/target must be actor or self/);
+  assert.equal((await store.readGenerations()).length,0);
+  assert.equal(repository.snapshot()?.entries.length,0);
+});
+
 test("stale installed-content writers cannot overwrite a newer physical generation", async () => {
   const store=new MemoryInstalledContentStore();
   const first=new InstalledContentRepository(store);

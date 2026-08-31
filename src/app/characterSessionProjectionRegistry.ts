@@ -1,6 +1,7 @@
 import type { CharacterSheet } from "./contracts";
 import type { MockAdapter } from "./mockAdapter";
 import type { CharacterSessionProjectionV1 } from "./characterSessionProjection";
+import type { RulesRuntimeState } from "../domain/combatState";
 
 export interface MountedCharacterSessionProjection {
   peerId:string;
@@ -107,6 +108,25 @@ export function replaceProjectedCharacterSheet(adapter:MockAdapter,sheet:Charact
     sheet:structuredClone(sheet),
   });
   return true;
+}
+
+export function synchronizeProjectedCharacterResources(adapter:MockAdapter,runtime:RulesRuntimeState) {
+  for (const characterId of projectedCharacterIds(adapter)) {
+    const mounted=projectedCharacterById(adapter,characterId);
+    const runtimeResources=runtime.combatants[characterId]?.resources;
+    if (!mounted||!runtimeResources) continue;
+    const currentById=new Map(runtimeResources.map((resource)=>[resource.id,resource.current]));
+    const sheet=structuredClone(mounted.sheet);
+    let changed=false;
+    for (const resource of sheet.resources) {
+      const current=currentById.get(resource.id);
+      if (current!==undefined&&current!==resource.current) {
+        resource.current=current;
+        changed=true;
+      }
+    }
+    if (changed) replaceProjectedCharacterSheet(adapter,sheet);
+  }
 }
 
 export function projectedCharacterIds(adapter:MockAdapter) {

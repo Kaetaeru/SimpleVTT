@@ -1,26 +1,27 @@
-# SimpleVTT canonical development root
+# SimpleVTT canonical development routing
 
-This file is the repository-level routing authority for humans and coding agents.
+This file defines branch roles. It does not replace the current-work pointer in [`docs/CURRENT.md`](docs/CURRENT.md).
 
 ```yaml
-canonical_branch: work/v1-composite
-canonical_worktree_hint: work/SimpleVTT-v1
-canonical_purpose: V1 implementation, build, preview, test, and release preparation
-historical_branches:
+product_integration_target: work/v1-composite
+active_working_branch: agent/codex-c9-gate-n-finalization
+frozen_handoff_baseline: 5fadeced4304aa8ae51267c699a1abe053eb5152
+upstream_reconciliation_lineage: agent/c9-gate-n-coverage-reconciliation
+historical_or_reference_branches:
   - main
   - work/v1-latest
-last_declared_checkpoint: 266a6d5
-declared_at: 2026-08-23 Asia/Seoul
+  - agent/resolver-foundation-convergence
 ```
 
-Rules:
+## Rules
 
-1. Start all new V1 product work from `work/v1-composite`.
-2. Run the local preview and production build from the worktree checked out to `work/v1-composite`.
-3. Do not identify `main`, `work/v1-latest`, or a newer commit timestamp alone as the latest playable V1.
-4. Before changing code, verify `git branch --show-current` returns `work/v1-composite`.
-5. `main` is a landing/reference branch until the V1 composite history is deliberately promoted; this declaration does not imply that its older code is canonical.
+1. `work/v1-composite` remains the V1 product integration target. Do not route V1 product completion to `main` unless the owner explicitly changes the integration model.
+2. `agent/codex-c9-gate-n-finalization` is the active working branch for C9 Gate N completion. It was cut from the exact baseline above so final verification can converge on stable SHAs.
+3. `agent/c9-gate-n-coverage-reconciliation` is upstream history/evidence for this handoff, not the branch Codex should chase if it keeps moving independently.
+4. Before editing, read `docs/CURRENT.md` and `docs/CODEX_C9_GATE_N_HANDOFF.md`, then reconcile them with live GitHub state and the Gate N ledger.
+5. Do not repeat families already proven complete merely because an older PR or handoff describes them as open. Current ledger and source evidence win.
+6. Do not use a self-publishing workflow that commits or pushes back to the active branch as the normal implementation loop. Final acceptance requires one exact verified HEAD after write-capable temporary automation is quiescent.
+7. `main`, `work/v1-latest`, and `agent/resolver-foundation-convergence` are historical/landing/reference branches until deliberately promoted.
+8. Historical files under `docs/archive/`, old PR bodies, and old ChatGPT Rerun state are evidence only, never current routing authority.
 
-The checkpoint above records when this declaration was introduced. The branch head can advance beyond it; use `git log -1 --oneline work/v1-composite` to find the latest canonical commit.
-
-For the exact active implementation slice, completed work, remaining checklist, and validation commands, read `.agents/V1_CURRENT_HANDOFF.md` before editing code.
+The `.chatgpt-rerun/` control set is not present on this current lineage. Do not recreate or follow it unless the owner explicitly re-enables that coordination mechanism. Product architecture, current status, and Codex handoff live under `docs/`.

@@ -51,6 +51,7 @@ function progressionSelections(sheet:CharacterSheet):CharacterProgressionSelecti
     mysticArcanumSources:sheet.mysticArcanumSources,
     persistentFeatureOptionIds:sheet.persistentFeatureOptionIds,
     persistentFeatureOptionSources:sheet.persistentFeatureOptionSources,
+    installedProgressionGrantIds:sheet.installedProgressionGrantIds,
     epicBoonFeatIds:sheet.epicBoonFeatIds,
     epicBoonFeatSources:sheet.epicBoonFeatSources,
     weaponMasteryIds:sheet.weaponMasteryIds,
@@ -78,9 +79,16 @@ function itemSourceReference(item:ItemInstanceVm):CharacterItemSourceReferenceV1
     nameEn:item.nameEn,
     kind:item.kind,
     attunementRequired:item.attunementRequired,
+    attunementPolicy:item.attunementPolicy ? cp(item.attunementPolicy) : undefined,
     chargeMaximum:item.charges?.max,
+    spellcastingComponent:item.spellcastingComponent,
+    unitCostGp:item.unitCostGp,
+    weightPounds:item.weightPounds,
+    containerCapacityPounds:item.containerCapacityPounds,
+    containerId:item.containerId,
     passiveEffects:cp(item.passiveEffects),
     grantedActionIds:cp(item.grantedActionIds),
+    ...(item.spellDefinitionIds?{spellDefinitionIds:cp(item.spellDefinitionIds)}:{}),
     provenance:cp(item.provenance),
   };
 }
@@ -89,7 +97,8 @@ function resourceSourceDefinition(resource:CharacterResourceVm) {
   return {
     id:resource.id,
     label:resource.label,
-    max:resource.max,
+    max:resource.sourceMaximum ?? resource.max,
+    dieSides:resource.dieSides,
     source:resource.source,
     recovery:resource.recovery ? cp(resource.recovery) : undefined,
   };
@@ -108,9 +117,12 @@ function itemRuntimeState(item:ItemInstanceVm):CharacterItemRuntimeStateV1 {
 }
 
 function resourceRuntimeState(resource:CharacterResourceVm):CharacterResourceRuntimeStateV1 {
+  const sourceMaximum=resource.sourceMaximum ?? resource.max;
   return {
     id:resource.id,
     current:resource.current,
+    maximum:resource.max===sourceMaximum ? undefined : resource.max,
+    maximumAfterLongRest:resource.maximumAfterLongRest,
     recoveryLockouts:resource.recoveryLockouts ? cp(resource.recoveryLockouts) : undefined,
   };
 }
@@ -129,6 +141,7 @@ export function projectCharacterSourceV1(sheet:CharacterSheet):CharacterSourceSn
       level:sheet.level,
       species:sheet.species,
       background:sheet.background,
+      maxHp:sheet.sourceMaxHp ?? sheet.maxHp,
       abilities:cp(sheet.abilities),
       skills:cp(sheet.skills),
       classLevels:sheet.classLevels ? cp(sheet.classLevels) : undefined,
@@ -156,8 +169,10 @@ export function projectCharacterSourceV1(sheet:CharacterSheet):CharacterSourceSn
 }
 
 export function projectCharacterRuntimeDurableV1(sheet:CharacterSheet):CharacterRuntimeDurableSnapshotV1 {
+  const sourceMaxHp=sheet.sourceMaxHp ?? sheet.maxHp;
   return {
     hp:sheet.hp,
+    maxHp:sheet.maxHp===sourceMaxHp ? undefined : sheet.maxHp,
     tempHp:sheet.tempHp,
     lifeFlags:sheet.durableLifeFlags ? cp(sheet.durableLifeFlags) : undefined,
     resources:sheet.resources.map(resourceRuntimeState),
@@ -169,11 +184,14 @@ export function projectCharacterRuntimeDurableV1(sheet:CharacterSheet):Character
 function comparableRuntime(runtime:CharacterRuntimeDurableSnapshotV1):CharacterRuntimeDurableSnapshotV1 {
   return {
     hp:runtime.hp,
+    maxHp:runtime.maxHp,
     tempHp:runtime.tempHp,
     lifeFlags:runtime.lifeFlags ? cp(runtime.lifeFlags) : undefined,
     resources:runtime.resources.map((resource) => ({
       id:resource.id,
       current:resource.current,
+      maximum:resource.maximum,
+      maximumAfterLongRest:resource.maximumAfterLongRest,
       recoveryLockouts:resource.recoveryLockouts ? cp(resource.recoveryLockouts) : undefined,
     })),
     items:runtime.items.map((item) => ({
@@ -232,6 +250,7 @@ function applyProgressionSource(sheet:CharacterSheet,progression:CharacterProgre
   sheet.mysticArcanumSources=progression.mysticArcanumSources ? cp(progression.mysticArcanumSources) : undefined;
   sheet.persistentFeatureOptionIds=progression.persistentFeatureOptionIds ? cp(progression.persistentFeatureOptionIds) : undefined;
   sheet.persistentFeatureOptionSources=progression.persistentFeatureOptionSources ? cp(progression.persistentFeatureOptionSources) : undefined;
+  sheet.installedProgressionGrantIds=progression.installedProgressionGrantIds ? cp(progression.installedProgressionGrantIds) : undefined;
   sheet.epicBoonFeatIds=progression.epicBoonFeatIds ? cp(progression.epicBoonFeatIds) : undefined;
   sheet.epicBoonFeatSources=progression.epicBoonFeatSources ? cp(progression.epicBoonFeatSources) : undefined;
   sheet.weaponMasteryIds=progression.weaponMasteryIds ? cp(progression.weaponMasteryIds) : undefined;
@@ -258,6 +277,9 @@ function applySourceSnapshot(sheet:CharacterSheet,source:CharacterSourceSnapshot
   sheet.level=source.build.level;
   sheet.species=source.build.species;
   sheet.background=source.build.background;
+  const sourceMaxHp=source.build.maxHp ?? sheet.sourceMaxHp ?? sheet.maxHp;
+  sheet.sourceMaxHp=sourceMaxHp;
+  sheet.maxHp=sourceMaxHp;
   sheet.abilities=cp(source.build.abilities);
   sheet.skills=cp(source.build.skills);
   sheet.classLevels=source.build.classLevels ? cp(source.build.classLevels) : undefined;
@@ -283,11 +305,15 @@ function materializeResources(record:CharacterLibraryRecordV1):CharacterResource
   const runtimeById=new Map(record.runtime.resources.map((resource)=>[resource.id,resource]));
   return definitions.map((definition)=>{
     const runtime=runtimeById.get(definition.id);
+    const maximum=runtime?.maximum ?? definition.max;
     return {
       id:definition.id,
       label:definition.label,
-      current:Math.min(runtime?.current ?? definition.max,definition.max),
-      max:definition.max,
+      current:Math.min(runtime?.current ?? maximum,maximum),
+      max:maximum,
+      sourceMaximum:definition.max,
+      maximumAfterLongRest:runtime?.maximumAfterLongRest,
+      dieSides:definition.dieSides,
       source:definition.source,
       recovery:definition.recovery ? cp(definition.recovery) : undefined,
       recoveryLockouts:runtime?.recoveryLockouts ? cp(runtime.recoveryLockouts) : undefined,
@@ -313,10 +339,17 @@ function materializeItems(record:CharacterLibraryRecordV1):ItemInstanceVm[] {
       wielded:runtime?.wielded ?? legacy?.wielded,
       wieldSlot:runtime?.wieldSlot ?? legacy?.wieldSlot,
       attunementRequired:reference.attunementRequired ?? legacy?.attunementRequired,
+      ...(reference.attunementPolicy||legacy?.attunementPolicy?{attunementPolicy:cp(reference.attunementPolicy??legacy!.attunementPolicy!)}:{}),
       attuned:runtime?.attuned ?? legacy?.attuned,
       charges:maximum !== undefined ? { current:Math.min(current ?? maximum,maximum),max:maximum } : undefined,
+      ...(reference.spellcastingComponent??legacy?.spellcastingComponent?{spellcastingComponent:reference.spellcastingComponent??legacy?.spellcastingComponent}:{}),
+      ...(reference.unitCostGp!==undefined||legacy?.unitCostGp!==undefined?{unitCostGp:reference.unitCostGp??legacy?.unitCostGp}:{}),
+      ...(reference.weightPounds!==undefined||legacy?.weightPounds!==undefined?{weightPounds:reference.weightPounds??legacy?.weightPounds}:{}),
+      ...(reference.containerCapacityPounds!==undefined||legacy?.containerCapacityPounds!==undefined?{containerCapacityPounds:reference.containerCapacityPounds??legacy?.containerCapacityPounds}:{}),
+      ...(reference.containerId??legacy?.containerId?{containerId:reference.containerId??legacy?.containerId}:{}),
       passiveEffects:cp(reference.passiveEffects ?? legacy?.passiveEffects ?? []),
       grantedActionIds:cp(reference.grantedActionIds ?? legacy?.grantedActionIds ?? []),
+      ...(reference.spellDefinitionIds||legacy?.spellDefinitionIds?{spellDefinitionIds:cp(reference.spellDefinitionIds??legacy!.spellDefinitionIds!)}:{}),
       provenance:cp(reference.provenance),
     };
   });
@@ -325,7 +358,10 @@ function materializeItems(record:CharacterLibraryRecordV1):ItemInstanceVm[] {
 export function materializeCharacterRecordV1(record:CharacterLibraryRecordV1):CharacterSheet {
   const sheet = cp(record.materializedCache.sheet);
   applySourceSnapshot(sheet,record.source);
-  sheet.hp = record.runtime.hp;
+  const sourceMaxHp=record.source.build.maxHp ?? sheet.sourceMaxHp ?? sheet.maxHp;
+  sheet.sourceMaxHp=sourceMaxHp;
+  sheet.maxHp=record.runtime.maxHp ?? sourceMaxHp;
+  sheet.hp = Math.min(record.runtime.hp,sheet.maxHp);
   sheet.tempHp = record.runtime.tempHp;
   sheet.resources = materializeResources(record);
   sheet.items = materializeItems(record);

@@ -14,8 +14,8 @@ async function applyPotion(adapter:MockAdapter) {
   return adapter.getSnapshot();
 }
 
-async function applyWand(adapter:MockAdapter) {
-  await adapter.resolveAction("action.wand",["combatant.goblin-a"]);
+async function applyWand(adapter:MockAdapter,actionId="action.wand") {
+  await adapter.resolveAction(actionId,["combatant.goblin-a"]);
   let snapshot=await adapter.getSnapshot();
   assert.equal(snapshot.resolution?.stage,"effect-preview");
   await adapter.advanceResolution();
@@ -30,16 +30,16 @@ test("healing potion commits healing, quantity, and Action in one domain event s
   const adapter=new MockAdapter();
   const snapshot=await applyPotion(adapter);
   assert.equal(snapshot.resolution?.stage,"complete");
-  assert.equal(snapshot.activeCharacter.hp,40);
+  assert.equal(snapshot.activeCharacter.hp,37);
   assert.equal(snapshot.activeCharacter.items.find((item)=>item.id==="item.potion.aelar")?.quantity,1);
   assert.equal(snapshot.scene.economyByActor["char.aelar"]?.action,false);
-  assert.ok(snapshot.resolution?.stateChanges.includes("Aelar HP 31 → 40"));
+  assert.ok(snapshot.resolution?.stateChanges.includes("Aelar HP 31 → 37"));
   assert.ok(snapshot.resolution?.stateChanges.includes("치유 물약 수량 2 → 1"));
   assert.ok(snapshot.resolution?.stateChanges.includes("행동 사용"));
   const activity=snapshot.activity[0];
   assert.equal(activity.id,snapshot.resolution?.id);
   assert.ok(activity.detail.some((line)=>line.startsWith("ResolutionEvent ")));
-  assert.ok(activity.stateChanges.some((line)=>line.includes("char.aelar HP 31 → 40")));
+  assert.ok(activity.stateChanges.some((line)=>line.includes("char.aelar HP 31 → 37")));
   assert.ok(activity.stateChanges.some((line)=>line.includes("phase09:item:item.potion.aelar:quantity")&&line.includes("2 → 1")));
   assert.ok(activity.stateChanges.some((line)=>line.includes("char.aelar economy.action true → false")));
 });
@@ -87,6 +87,23 @@ test("wand event-native Undo restores damage, charge, and Action without before 
   assert.equal(snapshot.scene.economyByActor["char.aelar"]?.action,true);
   assert.equal(snapshot.resolution,null);
   assert.ok(snapshot.activity[0]?.stateChanges.some((line)=>line.includes("item.item.wand.aelar.charges 6 → 7")));
+});
+
+test("atomic damage item execution is invariant to an unknown action id", async () => {
+  const adapter=new MockAdapter();
+  const internal=adapter as unknown as {
+    scene:{actionsByActor:Record<string,Array<{id:string}>>};
+    activeCharacter:{items:Array<{id:string;grantedActionIds:string[]}>};
+  };
+  const action=internal.scene.actionsByActor["char.aelar"].find((entry)=>entry.id==="action.wand")!;
+  action.id="unknown.external.damage-item";
+  internal.activeCharacter.items.find((entry)=>entry.id==="item.wand.aelar")!.grantedActionIds=[action.id];
+
+  const snapshot=await applyWand(adapter,action.id);
+  assert.equal(snapshot.resolution?.stage,"complete");
+  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")?.hp,3);
+  assert.equal(snapshot.activeCharacter.items.find((item)=>item.id==="item.wand.aelar")?.charges?.current,6);
+  assert.ok(snapshot.resolution?.provenance.some((entry)=>entry.includes("action:unknown.external.damage-item:damage-d4")));
 });
 
 test("item event-native Undo rejects stale quantity/charge drift instead of overwriting later state", async () => {

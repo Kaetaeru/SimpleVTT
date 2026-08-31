@@ -66,6 +66,7 @@ export type ConnectedEventPayload =
       round:number;
       currentActorId:string;
       economyByActor:Record<string,EconomyVm>;
+      resolutionEvents?:ResolutionEvent[];
       stateChanges:string[];
       provenance:string[];
     }

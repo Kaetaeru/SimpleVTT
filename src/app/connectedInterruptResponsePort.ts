@@ -6,6 +6,7 @@ export interface ConnectedInterruptResponse {
   resolutionId:string;
   promptId:string;
   accept:boolean;
+  selectedIds?:string[];
 }
 
 export type ConnectedInterruptResponseHandler=(

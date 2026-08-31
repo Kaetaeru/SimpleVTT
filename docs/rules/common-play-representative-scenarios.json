@@ -1,0 +1,33 @@
+{
+  "schemaVersion":"1",
+  "scenarios":[
+    {"id":"post-roll-reaction-resource-roll-modification","evidence":"tests/domain/commonPlayD20Runtime.test.ts","pattern":"generic roll.modify operations"},
+    {"id":"multi-target-save-shared-roll-per-target-damage","evidence":"tests/domain/commonPlaySaveDamageRuntime.test.ts","pattern":"multi-target save damage"},
+    {"id":"magic-missile-style-allocation","evidence":"tests/domain/commonPlayAllocationRuntime.test.ts","pattern":"generic allocation preserves"},
+    {"id":"persistent-effect-trigger-cleanup","evidence":"tests/domain/commonPlayEffectRuntime.test.ts","pattern":"automatically retaliates"},
+    {"id":"zone-enter-leave-once-per-turn","evidence":"tests/domain/commonPlayZoneRuntime.test.ts","pattern":"once-per-turn"},
+    {"id":"aoe-cover","evidence":"tests/domain/commonPlayMaplessTargeting.test.ts","pattern":"authoritative spatial facts"},
+    {"id":"forced-movement","evidence":"tests/domain/commonPlayMovementRuntime.test.ts","pattern":"push, pull"},
+    {"id":"teleport-without-opportunity-attack","evidence":"tests/domain/commonPlayMovementRuntime.test.ts","pattern":"teleport"},
+    {"id":"grapple-drag","evidence":"tests/domain/commonPlayRepresentativeGaps.test.ts","pattern":"grapple drag"},
+    {"id":"hidden-blindsight","evidence":"tests/domain/commonPlaySenseRuntime.test.ts","pattern":"blindsight"},
+    {"id":"concentration-damage-break","evidence":"tests/domain/compoundDamage.test.ts","pattern":"Concentration check"},
+    {"id":"simultaneous-start-turn-ordering","evidence":"tests/domain/commonPlayOrderingRuntime.test.ts","pattern":"explicit authoritative exact order"},
+    {"id":"ready-attack","evidence":"tests/domain/commonPlayStoredInvocationRuntime.test.ts","pattern":"captures now"},
+    {"id":"ready-spell","evidence":"tests/domain/commonPlayRepresentativeGaps.test.ts","pattern":"Ready spell"},
+    {"id":"object-damage-threshold","evidence":"tests/domain/commonPlayArtifactFamiliesRuntime.test.ts","pattern":"threshold"},
+    {"id":"vehicle-repair","evidence":"tests/domain/commonPlayRepresentativeGaps.test.ts","pattern":"vehicle repair"},
+    {"id":"summoned-controlled-actor","evidence":"tests/domain/commonPlayArtifactFamiliesRuntime.test.ts","pattern":"actor, form, and link"},
+    {"id":"wild-shape-like-form-overlay","evidence":"tests/domain/commonPlayArtifactFamiliesRuntime.test.ts","pattern":"actor, form, and link"},
+    {"id":"possession-controller-change","evidence":"tests/domain/commonPlayArtifactFamiliesRuntime.test.ts","pattern":"controller"},
+    {"id":"item-attunement","evidence":"tests/domain/commonPlayInventoryRuntime.test.ts","pattern":"attunement requires"},
+    {"id":"item-charges-recharge","evidence":"tests/domain/commonPlayRepresentativeGaps.test.ts","pattern":"item charges recharge"},
+    {"id":"monster-recharge","evidence":"tests/domain/commonPlayC6Runtime.test.ts","pattern":"Recharge 5-6"},
+    {"id":"legendary-off-turn-pool","evidence":"tests/domain/commonPlayC6Runtime.test.ts","pattern":"special timing"},
+    {"id":"crafting-multi-day-project","evidence":"tests/domain/commonPlayC6Runtime.test.ts","pattern":"durable projects"},
+    {"id":"spell-scroll-crafting","evidence":"tests/domain/commonPlayRepresentativeGaps.test.ts","pattern":"spell scroll crafting"},
+    {"id":"dehydration-exposure","evidence":"tests/domain/commonPlayRepresentativeGaps.test.ts","pattern":"dehydration exposure"},
+    {"id":"underwater-combat","evidence":"tests/domain/commonPlayC6Runtime.test.ts","pattern":"mount and environment"},
+    {"id":"all-eight-weapon-masteries","evidence":"tests/domain/commonPlayWeaponMasteryComposition.test.ts","pattern":"Vex composes"}
+  ]
+}

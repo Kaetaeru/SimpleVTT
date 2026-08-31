@@ -1,1 +1,146 @@
-{"$schema":"https://simplevtt.local/schemas/rule-module.schema.json","schemaVersion":"0.1-draft","moduleId":"dnd.srd-5.2.1.core","moduleVersion":"0.1-draft","rulesProfile":{"id":"dnd.srd-5.2.1","version":"0.1-draft"},"defaultLocale":"ko-KR","source":{"document":"System Reference Document","version":"5.2.1","license":"CC-BY-4.0","srdDerived":true,"urls":["https://www.dndbeyond.com/srd"],"attributionNotice":"This module contains material derived from the System Reference Document 5.2.1 by Wizards of the Coast LLC, licensed under CC BY 4.0. The final distributable notice must preserve the required attribution."},"localizationSource":{"defaultLocale":"ko-KR","repository":"Kaetaeru/D-D-2024-","srdPathRoot":"10-RULEBOOKS/srd-5.2.1/","glossaryPathRoot":"90-WORKBENCH/docs/","distributionBoundary":"srd-only"},"dependencies":[],"conflicts":[],"capabilities":["dnd.ability-modifier.v1","dnd.proficiency.v1","dnd.d20-test.v1","dnd.advantage-disadvantage.v1","dnd.ac-formula-candidate.v1","dnd.initiative.v1","dnd.economy.action-bonus-reaction.v1","dnd.damage.typed.v1","dnd.damage.critical.v1","dnd.damage.resistance-vulnerability-immunity.v1","dnd.hp.basic.v1","dnd.temp-hp.v1","dnd.rest.short-long.v1","dnd.progression.multitrack.v1","dnd.item.activation-attunement.v1","dnd.content.cross-module-contribution.v1"],"extensionPoints":[],"content":[]}
+{
+  "$schema": "https://simplevtt.local/schemas/rule-module.schema.json",
+  "schemaVersion": "0.1-draft",
+  "moduleId": "dnd.srd-5.2.1.core",
+  "moduleVersion": "0.1-draft",
+  "rulesProfile": {
+    "id": "dnd.srd-5.2.1",
+    "version": "0.1-draft"
+  },
+  "defaultLocale": "ko-KR",
+  "source": {
+    "document": "System Reference Document",
+    "version": "5.2.1",
+    "license": "CC-BY-4.0",
+    "srdDerived": true,
+    "urls": [
+      "https://www.dndbeyond.com/srd"
+    ],
+    "attributionNotice": "This module contains material derived from the System Reference Document 5.2.1 by Wizards of the Coast LLC, licensed under CC BY 4.0. The final distributable notice must preserve the required attribution."
+  },
+  "localizationSource": {
+    "defaultLocale": "ko-KR",
+    "repository": "Kaetaeru/D-D-2024-",
+    "srdPathRoot": "10-RULEBOOKS/srd-5.2.1/",
+    "glossaryPathRoot": "90-WORKBENCH/docs/",
+    "distributionBoundary": "srd-only"
+  },
+  "dependencies": [],
+  "conflicts": [],
+  "capabilities": [
+    "dnd.ability-modifier.v1",
+    "dnd.proficiency.v1",
+    "dnd.d20-test.v1",
+    "dnd.advantage-disadvantage.v1",
+    "dnd.ac-formula-candidate.v1",
+    "dnd.initiative.v1",
+    "dnd.economy.action-bonus-reaction.v1",
+    "dnd.damage.typed.v1",
+    "dnd.damage.critical.v1",
+    "dnd.damage.resistance-vulnerability-immunity.v1",
+    "dnd.hp.basic.v1",
+    "dnd.temp-hp.v1",
+    "dnd.rest.short-long.v1",
+    "dnd.progression.multitrack.v1",
+    "dnd.item.activation-attunement.v1",
+    "dnd.content.cross-module-contribution.v1"
+  ],
+  "extensionPoints": [],
+  "content": [
+    {
+      "id": "action.unarmed-strike.shove-prone",
+      "category": "option",
+      "presentation": {
+        "originalName": "Unarmed Strike · Shove (Prone)",
+        "defaultLocale": "ko-KR",
+        "locales": {
+          "ko-KR": {
+            "name": "맨손 타격 · 넘어뜨리기",
+            "summary": "대상이 근력 또는 민첩 내성에 실패하면 넘어짐 상태가 된다."
+          }
+        }
+      },
+      "tags": [
+        "combat-action",
+        "unarmed-strike",
+        "common-play",
+        "srd-5.2.1"
+      ],
+      "mechanics": [
+        {
+          "kind": "common-play",
+          "config": {
+            "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+            "schemaVersion": "0.2-draft",
+            "id": "combat.unarmed-strike.shove-prone",
+            "payments": [
+              {
+                "kind": "economy",
+                "bucket": "action",
+                "amount": {
+                  "value": 1
+                },
+                "consumeAt": "commit",
+                "refundOnCancel": true,
+                "actionKind": "attack"
+              }
+            ],
+            "entryPoints": [
+              {
+                "id": "use",
+                "invocation": "manual",
+                "targeting": {
+                  "from": "targets",
+                  "min": 1,
+                  "max": 1
+                },
+                "test": {
+                  "kind": "saving-throw",
+                  "roller": "target",
+                  "property": {
+                    "choose": "highest",
+                    "from": [
+                      "save.str.modifier",
+                      "save.dex.modifier"
+                    ]
+                  },
+                  "dc": {
+                    "op": "add",
+                    "args": [
+                      {
+                        "value": 8
+                      },
+                      {
+                        "ref": "proficiency.bonus"
+                      },
+                      {
+                        "ref": "ability.str.modifier"
+                      }
+                    ]
+                  },
+                  "perTarget": false
+                },
+                "operations": [
+                  {
+                    "kind": "condition.apply",
+                    "condition": "prone",
+                    "target": "target",
+                    "when": {
+                      "op": "eq",
+                      "left": {
+                        "ref": "test.outcome"
+                      },
+                      "right": {
+                        "value": "failure"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

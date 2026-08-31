@@ -5,9 +5,10 @@ import { turnRuntimeSessions } from "./turnRuntimeSessionRegistry";
 import { recordRuntimeResolutionEvents } from "./runtimeResolutionEventHistory";
 import {
   clearReadyActionConfiguration,
+  isReadyPreparationAction,
+  isReadyTriggerAction,
   readyActionConfigurationFor,
   readyActionConfigurationsFor,
-  READY_MOVEMENT_ACTION_ID,
   setReadyActionConfiguration,
   type ReadyActionConfiguration,
 } from "./standardActionReadyState";
@@ -23,7 +24,7 @@ type ReadyReactionState={
   resolution:ResolutionView|null;
 };
 
-const READY_TRIGGER_ID="action.standard.ready.trigger";
+const READY_TRIGGER_ID="runtime.ready.trigger";
 const previousResolveAction=MockAdapter.prototype.resolveAction;
 const previousAdvanceResolution=MockAdapter.prototype.advanceResolution;
 const previousGetSnapshot=MockAdapter.prototype.getSnapshot;
@@ -68,7 +69,7 @@ function readyReactionAvailable(internal:ReadyReactionState,actorId:string) {
 }
 
 function readyTriggerAction(config:ReadyActionConfiguration,prepared:ActionVm|undefined,available:boolean):ActionVm {
-  const movement=config.actionId===READY_MOVEMENT_ACTION_ID;
+  const movement=config.movement===true;
   const preparedName=movement?"이동":prepared?.name??"준비 행동";
   return {
     id:READY_TRIGGER_ID,
@@ -80,8 +81,10 @@ function readyTriggerAction(config:ReadyActionConfiguration,prepared:ActionVm|un
     resolutionKind:"no-roll",
     summary:`${config.trigger} → ${preparedName}`,
     available,
+    readyActionRole:"trigger",
     disabledReason:available?undefined:"반응을 사용할 수 없습니다.",
     eligibleTargetIds:movement?[config.actorId]:[...(prepared?.eligibleTargetIds??[])],
+    sessionStatusEffect:{status:"준비 행동",target:"actor",operation:"remove",successOutcome:movement?"준비한 이동을 반응으로 선언":"준비한 행동을 반응으로 발동"},
     details:[
       {label:"트리거",value:config.trigger,source:"Ready configuration"},
       {label:"준비 행동",value:preparedName,source:"Ready configuration"},
@@ -90,11 +93,11 @@ function readyTriggerAction(config:ReadyActionConfiguration,prepared:ActionVm|un
 }
 
 function withoutReadyTrigger(actions:ActionVm[]) {
-  return actions.filter((action)=>action.id!==READY_TRIGGER_ID);
+  return actions.filter((action)=>!isReadyTriggerAction(action));
 }
 
 function upsertReadyTrigger(actions:ActionVm[],trigger:ActionVm) {
-  const existing=actions.findIndex((action)=>action.id===READY_TRIGGER_ID);
+  const existing=actions.findIndex(isReadyTriggerAction);
   if (existing>=0) actions[existing]=trigger;
   else actions.push(trigger);
 }
@@ -111,10 +114,10 @@ function projectReadyTriggers(adapter:MockAdapter,internal:ReadyReactionState,sn
     const actor=snapshot.scene.entities.find((entity)=>entity.id===config.actorId);
     if (!actor?.status.includes("준비 행동")) continue;
     const runtimeActions=internal.scene.actionsByActor[config.actorId]??[];
-    const prepared=config.actionId===READY_MOVEMENT_ACTION_ID
+    const prepared=config.movement
       ? undefined
-      : runtimeActions.find((action)=>action.id===config.actionId&&action.id!==READY_TRIGGER_ID);
-    if (config.actionId!==READY_MOVEMENT_ACTION_ID&&!prepared) continue;
+      : runtimeActions.find((action)=>action.id===config.actionId&&!isReadyTriggerAction(action));
+    if (!config.movement&&!prepared) continue;
     const projected=readyTriggerAction(config,prepared,readyReactionAvailable(internal,config.actorId));
     upsertReadyTrigger(runtimeActions,projected);
     internal.scene.actionsByActor[config.actorId]=runtimeActions;
@@ -128,10 +131,11 @@ function projectReadyTriggers(adapter:MockAdapter,internal:ReadyReactionState,sn
 MockAdapter.prototype.configureReadyAction=async function configureReadyAction(command:ReadyActionConfiguration) {
   const internal=this as unknown as ReadyReactionState;
   const prepared=actorAction(internal,command.actorId,command.actionId);
-  const movement=command.actionId===READY_MOVEMENT_ACTION_ID;
-  if ((!movement&&(!prepared||prepared.actorId!==command.actorId||prepared.id.startsWith("action.standard.ready")))||!internal.entity(command.actorId)) return internal.getSnapshot();
-  setReadyActionConfiguration(this,{...command,trigger:command.trigger.trim()||"DM이 선언한 트리거"});
-  return withActorActionPriority(internal,command.actorId,()=>this.resolveAction("action.standard.ready",[command.actorId]));
+  const movement=command.movement===true;
+  const ready=internal.scene.actionsByActor[command.actorId]?.find(isReadyPreparationAction);
+  if ((!movement&&(!prepared||prepared.actorId!==command.actorId||isReadyPreparationAction(prepared)||isReadyTriggerAction(prepared)))||!ready||!internal.entity(command.actorId)) return internal.getSnapshot();
+  setReadyActionConfiguration(this,{...command,movement,trigger:command.trigger.trim()||"DM이 선언한 트리거"});
+  return withActorActionPriority(internal,command.actorId,()=>this.resolveAction(ready.id,[command.actorId]));
 };
 
 MockAdapter.prototype.getSnapshot=async function getSnapshotWithReadyReactionAvailability() {
@@ -142,12 +146,12 @@ MockAdapter.prototype.getSnapshot=async function getSnapshotWithReadyReactionAva
 };
 
 MockAdapter.prototype.resolveAction=async function resolveReadyActionAsReaction(actionId:string,targetIds:string[]) {
-  if (actionId!==READY_TRIGGER_ID) return previousResolveAction.call(this,actionId,targetIds);
   const internal=this as unknown as ReadyReactionState;
+  if (!isReadyTriggerAction(Object.values(internal.scene.actionsByActor).flat().find((action)=>action.id===actionId))) return previousResolveAction.call(this,actionId,targetIds);
   const config=contextualReadyConfiguration(this,internal);
   if (!config) return internal.getSnapshot();
-  const trigger=actorAction(internal,config.actorId,READY_TRIGGER_ID);
-  const prepared=config.actionId===READY_MOVEMENT_ACTION_ID
+  const trigger=internal.scene.actionsByActor[config.actorId]?.find(isReadyTriggerAction);
+  const prepared=config.movement
     ? trigger
     : actorAction(internal,config.actorId,config.actionId);
   if (!trigger||!prepared||!readyReactionAvailable(internal,config.actorId)) return internal.getSnapshot();
@@ -163,7 +167,7 @@ MockAdapter.prototype.resolveAction=async function resolveReadyActionAsReaction(
       await withActorActionPriority(internal,config.actorId,()=>previousResolveAction.call(
         this,
         prepared.id,
-        config.actionId===READY_MOVEMENT_ACTION_ID?[config.actorId]:targetIds,
+        config.movement?[config.actorId]:targetIds,
       ));
     }
     finally { prepared.economy=previousEconomy; }
@@ -178,8 +182,8 @@ MockAdapter.prototype.advanceResolution=async function advancePreparedActionAsRe
   const internal=this as unknown as ReadyReactionState;
   const pending=pendingReadyResolution.get(this);
   if (!pending||internal.resolution?.id!==pending.resolutionId) return previousAdvanceResolution.call(this);
-  const prepared=pending.config.actionId===READY_MOVEMENT_ACTION_ID
-    ? actorAction(internal,pending.config.actorId,READY_TRIGGER_ID)
+  const prepared=pending.config.movement
+    ? internal.scene.actionsByActor[pending.config.actorId]?.find(isReadyTriggerAction)
     : actorAction(internal,pending.config.actorId,pending.config.actionId);
   if (!prepared) return previousAdvanceResolution.call(this);
   const previousEconomy=prepared.economy;
@@ -188,7 +192,7 @@ MockAdapter.prototype.advanceResolution=async function advancePreparedActionAsRe
   if (!pending.started&&actor?.status.includes("준비 행동")) {
     actor.status=actor.status.filter((status)=>status!=="준비 행동");
     internal.resolution.stateChanges.push(`${actor.name} 상태 제거: 준비 행동 · ${pending.config.trigger} 발생`);
-    if (pending.config.actionId===READY_MOVEMENT_ACTION_ID) {
+    if (pending.config.movement) {
       internal.resolution.stateChanges.push(`${actor.name} 이동 실행 선언 · 전투맵 모듈 미연결 시 위치 변화 없음`);
       internal.resolution.finalOutcome="준비한 이동을 반응으로 선언";
       internal.resolution.compact=internal.resolution.finalOutcome;

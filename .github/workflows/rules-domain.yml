@@ -48,6 +48,9 @@ on:
       - "package.json"
       - ".github/workflows/rules-domain.yml"
 
+permissions:
+  contents: read
+
 jobs:
   rules-domain:
     runs-on: ubuntu-latest
@@ -69,9 +72,19 @@ jobs:
           tests/domain/effectTurnActivity.test.ts
           tests/domain/resolutionAtomic.test.ts
           tests/domain/commonPlayReactionRuntime.test.ts
+          tests/domain/commonPlaySimultaneousOrderingRuntime.test.ts
+          tests/domain/commonPlayActionEconomyRuntime.test.ts
+          tests/domain/commonPlayResourceEconomyRuntime.test.ts
+          tests/domain/c9FamilyOCastProcessLowering.test.ts
           tests/domain/commonPlaySaveDamageRuntime.test.ts
           tests/domain/commonPlayEffectRuntime.test.ts
+          tests/domain/c9FamilyPEffectExpiredTrigger.test.ts
+          tests/domain/c9FamilyNEffectLifecycleAcceptance.test.ts
           tests/domain/commonPlayZoneRuntime.test.ts
+          tests/domain/commonPlayZoneUnsupportedOperation.test.ts
+          tests/domain/commonPlaySensingFactRuntime.test.ts
+          tests/domain/c9FamilyGStandardSpatialFacts.test.ts
+          tests/domain/c9FamilyMConditions.test.ts
           tests/domain/concentrationDamageResult.test.ts
           tests/domain/resourceRecoveryLockout.test.ts
           tests/domain/compoundDamage.test.ts
@@ -164,3 +177,11 @@ jobs:
         run: npm run test:progression
       - name: Typecheck application
         run: npx tsc --noEmit
+      - name: Verify C9 Gate N coverage
+        run: node scripts/check-v1-mechanism-coverage.mjs --gate-n
+      - name: Audit legacy execution boundary
+        run: node scripts/check-legacy-execution-boundary.mjs
+      - name: Build application
+        run: npm run build
+      - name: Check diff cleanliness
+        run: git diff --check

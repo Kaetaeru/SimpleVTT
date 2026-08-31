@@ -1,0 +1,218 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import "../../src/app/offlineRuntimeAdapters";
+import "../../src/app/connectedSessionRuntimeAdapter";
+import "../../src/app/connectedActionRoutingAdapter";
+import "../../src/app/connectedTurnRoutingAdapter";
+import "../../src/app/installedContentRuntimeAdapter";
+import { applyConnectedClientEvents, connectedManifest } from "../../src/app/connectedSessionRuntimeAdapter";
+import { connectedStateFor } from "../../src/app/connectedSessionState";
+import { catalogQualifiedId } from "../../src/app/contentCatalogIdentity";
+import { installedCommonPlayActionId } from "../../src/app/installedCommonPlayActionReference";
+import { setInstalledContentStoreForTests } from "../../src/app/installedContentRuntimeAdapter";
+import { MemoryInstalledContentStore } from "../../src/app/memoryInstalledContentStore";
+import { MockAdapter } from "../../src/app/mockAdapter";
+import { ClientSessionReplica, HostSessionLedger, type ConnectedSessionEvent } from "../../src/app/connectedSessionProtocol";
+import { tauriSessionTransport } from "../../src/app/tauriSessionTransport";
+import { snapshotAdapterTurnRuntimeState } from "../../src/app/turnRuntimeSessionRegistry";
+
+function packagePayload(prefix:string,lifetimeKind:"durable"|"until-source-recast"="durable") {
+  const moduleId=`${prefix}.module`;
+  const actorActionMechanicId=`${prefix}.actor-action`;
+  const actorActionContentId=`${prefix}.actor-action-content`;
+  const actorActionId=installedCommonPlayActionId({
+    catalogId:catalogQualifiedId(actorActionContentId,moduleId,"1"),
+    mechanicId:actorActionMechanicId,
+    entryPointId:"poke",
+  });
+  const artifactMechanicId=`${prefix}.artifacts`;
+  const artifactContentId=`${prefix}.artifact-content`;
+  const content=[
+    {
+      id:artifactContentId,category:"option",name:"Unknown Summon Source",
+      config:{
+        schemaVersion:"0.2-draft",id:artifactMechanicId,
+        entryPoints:[{id:"summon",invocation:"manual",operations:[{kind:"artifact.spawn",template:"summon"}]}],
+        artifactTemplates:[{
+          id:"summon",artifactKind:"actor",duration:{kind:"durable"},lifetime:{kind:lifetimeKind},
+          initialState:{
+            combatantId:`${prefix}.summoned`,statDefinitionId:`${prefix}.stat`,ownerId:"actor",controllerId:"actor",
+            side:"ally",initiative:"shared",
+            properties:{"presentation.name":"Unknown Summon","defense.ac":13,"hp.maximum":10,"movement.walk":30},
+            actionDefinitionIds:[actorActionId],resources:[],
+          },
+        }],
+      },
+    },
+    {
+      id:actorActionContentId,category:"option",name:"Unknown Summon Poke",
+      config:{
+        schemaVersion:"0.2-draft",id:actorActionMechanicId,
+        entryPoints:[{id:"poke",invocation:"manual",targeting:{from:"targets",min:1,max:1},operations:[
+          {kind:"damage.apply",amount:{value:1},damageType:"force",target:"target"},
+        ]}],
+      },
+    },
+  ];
+  return {
+    json:JSON.stringify({
+      schemaVersion:"0.1-draft",moduleId,moduleVersion:"1",
+      rulesProfile:{id:"dnd.srd-5.2.1",version:"0.1-draft"},defaultLocale:"en",
+      source:{document:"Unknown actor artifact reconnect proof",version:"1",license:"CC0",srdDerived:false},
+      dependencies:[],conflicts:[],capabilities:[],
+      content:content.map((entry)=>({
+        id:entry.id,category:entry.category,
+        presentation:{defaultLocale:"en",originalName:entry.name,locales:{en:{name:entry.name}}},
+        mechanics:[{kind:"common-play",config:entry.config}],
+      })),
+    }),
+    summonAction:installedCommonPlayActionId({
+      catalogId:catalogQualifiedId(artifactContentId,moduleId,"1"),mechanicId:artifactMechanicId,entryPointId:"summon",
+    }),
+    combatantId:`${prefix}.summoned`,
+  };
+}
+
+async function install(adapter:MockAdapter,prefix:string,lifetimeKind:"durable"|"until-source-recast"="durable") {
+  const pack=packagePayload(prefix,lifetimeKind);
+  setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
+  const preview=await adapter.previewContentImport(pack.json);
+  assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
+  await adapter.activateContentImport();
+  await adapter.startInitiative();
+  await adapter.setCurrentActor("char.aelar");
+  return pack;
+}
+
+async function captureBatch(adapter:MockAdapter,operation:()=>Promise<unknown>) {
+  const state=connectedStateFor(adapter);
+  assert.ok(state.ledger,"connected Host ledger is required");
+  const afterCursor=state.ledger.cursor;
+  const originalSend=tauriSessionTransport.send;
+  tauriSessionTransport.send=async()=>1;
+  try { await operation(); }
+  finally { tauriSessionTransport.send=originalSend; }
+  const events=state.ledger.eventsAfter(afterCursor);
+  assert.ok(events.length>0,`connected operation must commit events after cursor ${afterCursor}`);
+  return {type:"event-batch" as const,events:events as ConnectedSessionEvent[]};
+}
+
+function actorProjection(adapter:MockAdapter,snapshot:Awaited<ReturnType<MockAdapter["getSnapshot"]>>,combatantId:string) {
+  const runtime=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene);
+  return {
+    artifact:runtime?.artifacts?.find((artifact)=>artifact.actor?.combatantId===combatantId),
+    entity:snapshot.scene.entities.find((entity)=>entity.id===combatantId),
+    actions:snapshot.scene.actionsByActor[combatantId],
+  };
+}
+
+async function replacementOutcome(prefix:string) {
+  const adapter=new MockAdapter();
+  const pack=await install(adapter,prefix,"until-source-recast");
+  await adapter.resolveAction(pack.summonAction,["char.aelar"]);
+  const first=actorProjection(adapter,await adapter.getSnapshot(),pack.combatantId);
+  assert.ok(first.artifact);
+  await adapter.resolveAction(pack.summonAction,["char.aelar"]);
+  const snapshot=await adapter.getSnapshot();
+  const current=actorProjection(adapter,snapshot,pack.combatantId);
+  const runtime=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene);
+  return {
+    replaced:first.artifact.id!==current.artifact?.id,
+    actorArtifacts:runtime?.artifacts?.filter((artifact)=>artifact.actor?.combatantId===pack.combatantId).length??0,
+    combatants:snapshot.scene.entities.filter((entity)=>entity.id===pack.combatantId).length,
+    armorClass:current.entity?.ac,
+    actions:current.actions?.length??0,
+  };
+}
+
+test("actor artifact reconstructs on fresh connected replay and stays removed after replaying Undo",async()=>{
+  const prefix="unknown-actor-reconnect",sessionId="session.actor-artifact-reconnect";
+  const host=new MockAdapter();
+  const pack=await install(host,prefix);
+  const hostConnected=connectedStateFor(host);
+  hostConnected.mode="host";hostConnected.sessionId=sessionId;hostConnected.ledger=new HostSessionLedger(sessionId,connectedManifest(host));
+
+  const spawnBatch=await captureBatch(host,()=>host.resolveAction(pack.summonAction,["char.aelar"]));
+  const hostAfterSpawn=await host.getSnapshot();
+  const expected=actorProjection(host,hostAfterSpawn,pack.combatantId);
+  assert.ok(expected.artifact&&expected.entity&&expected.actions?.length,JSON.stringify(expected));
+
+  const reconnect=new MockAdapter();
+  await install(reconnect,prefix);
+  const reconnectState=connectedStateFor(reconnect);
+  reconnectState.mode="client";reconnectState.sessionId=sessionId;reconnectState.replica=new ClientSessionReplica(sessionId);
+  assert.equal((await applyConnectedClientEvents(reconnect,hostConnected.ledger.eventsAfter(0))).status,"applied");
+  assert.equal((await applyConnectedClientEvents(reconnect,spawnBatch.events)).status,"duplicate");
+  const reconnected=actorProjection(reconnect,await reconnect.getSnapshot(),pack.combatantId);
+  assert.deepEqual(reconnected,expected);
+
+  const undoBatch=await captureBatch(host,()=>host.undoLastResolution());
+  assert.equal((await applyConnectedClientEvents(reconnect,undoBatch.events)).status,"applied");
+  const afterUndo=actorProjection(reconnect,await reconnect.getSnapshot(),pack.combatantId);
+  assert.equal(afterUndo.artifact,undefined);
+  assert.equal(afterUndo.entity,undefined);
+  assert.equal(afterUndo.actions,undefined);
+
+  const restarted=new MockAdapter();
+  await install(restarted,prefix);
+  const restartedState=connectedStateFor(restarted);
+  restartedState.mode="client";restartedState.sessionId=sessionId;restartedState.replica=new ClientSessionReplica(sessionId);
+  assert.equal((await applyConnectedClientEvents(restarted,hostConnected.ledger.eventsAfter(0))).status,"applied");
+  const reconstructedAfterUndo=actorProjection(restarted,await restarted.getSnapshot(),pack.combatantId);
+  assert.equal(reconstructedAfterUndo.artifact,undefined);
+  assert.equal(reconstructedAfterUndo.entity,undefined);
+  assert.equal(reconstructedAfterUndo.actions,undefined);
+});
+
+test("until-source-recast actor replacement converges through connected replay, reconnect, and Undo",async()=>{
+  const prefix="unknown-actor-recast",sessionId="session.actor-artifact-recast";
+  const host=new MockAdapter();
+  const pack=await install(host,prefix,"until-source-recast");
+  const hostConnected=connectedStateFor(host);
+  hostConnected.mode="host";hostConnected.sessionId=sessionId;hostConnected.ledger=new HostSessionLedger(sessionId,connectedManifest(host));
+
+  const client=new MockAdapter();
+  await install(client,prefix,"until-source-recast");
+  const clientState=connectedStateFor(client);
+  clientState.mode="client";clientState.sessionId=sessionId;clientState.replica=new ClientSessionReplica(sessionId);
+
+  const firstBatch=await captureBatch(host,()=>host.resolveAction(pack.summonAction,["char.aelar"]));
+  assert.equal((await applyConnectedClientEvents(client,firstBatch.events)).status,"applied");
+  const first=actorProjection(host,await host.getSnapshot(),pack.combatantId);
+  assert.ok(first.artifact&&first.entity&&first.actions?.length,JSON.stringify(first));
+
+  const replacementBatch=await captureBatch(host,()=>host.resolveAction(pack.summonAction,["char.aelar"]));
+  assert.equal((await applyConnectedClientEvents(client,replacementBatch.events)).status,"applied");
+  const hostReplacement=actorProjection(host,await host.getSnapshot(),pack.combatantId);
+  const clientReplacement=actorProjection(client,await client.getSnapshot(),pack.combatantId);
+  assert.ok(hostReplacement.artifact&&hostReplacement.artifact.id!==first.artifact.id,JSON.stringify(hostReplacement));
+  assert.deepEqual(clientReplacement,hostReplacement);
+  assert.equal((await applyConnectedClientEvents(client,replacementBatch.events)).status,"duplicate");
+
+  const reconnect=new MockAdapter();
+  await install(reconnect,prefix,"until-source-recast");
+  const reconnectState=connectedStateFor(reconnect);
+  reconnectState.mode="client";reconnectState.sessionId=sessionId;reconnectState.replica=new ClientSessionReplica(sessionId);
+  assert.equal((await applyConnectedClientEvents(reconnect,hostConnected.ledger.eventsAfter(0))).status,"applied");
+  assert.deepEqual(actorProjection(reconnect,await reconnect.getSnapshot(),pack.combatantId),hostReplacement);
+
+  const undoBatch=await captureBatch(host,()=>host.undoLastResolution());
+  assert.equal((await applyConnectedClientEvents(client,undoBatch.events)).status,"applied");
+  const restoredHost=actorProjection(host,await host.getSnapshot(),pack.combatantId);
+  const restoredClient=actorProjection(client,await client.getSnapshot(),pack.combatantId);
+  assert.equal(restoredHost.artifact?.id,first.artifact.id);
+  assert.deepEqual(restoredClient,restoredHost);
+
+  const reconnectAfterUndo=new MockAdapter();
+  await install(reconnectAfterUndo,prefix,"until-source-recast");
+  const reconnectAfterUndoState=connectedStateFor(reconnectAfterUndo);
+  reconnectAfterUndoState.mode="client";reconnectAfterUndoState.sessionId=sessionId;reconnectAfterUndoState.replica=new ClientSessionReplica(sessionId);
+  assert.equal((await applyConnectedClientEvents(reconnectAfterUndo,hostConnected.ledger.eventsAfter(0))).status,"applied");
+  assert.deepEqual(actorProjection(reconnectAfterUndo,await reconnectAfterUndo.getSnapshot(),pack.combatantId),restoredHost);
+});
+
+test("until-source-recast actor replacement is identity invariant",async()=>{
+  const expected={replaced:true,actorArtifacts:1,combatants:1,armorClass:13,actions:1};
+  assert.deepEqual(await replacementOutcome("unknown-actor-recast-a"),expected);
+  assert.deepEqual(await replacementOutcome("fully-renamed-actor-recast-b"),expected);
+});

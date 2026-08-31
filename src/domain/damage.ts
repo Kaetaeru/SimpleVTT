@@ -15,6 +15,16 @@ export interface DamageAdjustment {
   value: number;
 }
 
+export interface DamageReductionContribution {
+  source: string;
+  amount: number;
+}
+
+export interface DamageThresholdContribution {
+  source: string;
+  threshold: number;
+}
+
 export interface DamageDefenseContribution {
   source: string;
   kind: DamageDefenseKind;
@@ -26,6 +36,8 @@ export interface DamageComponentRequest {
   amount: number;
   adjustments?: DamageAdjustment[];
   defenses?: DamageDefenseContribution[];
+  reductions?: DamageReductionContribution[];
+  thresholds?: DamageThresholdContribution[];
 }
 
 export interface DamageRequest extends DamageComponentRequest {
@@ -35,6 +47,8 @@ export interface DamageRequest extends DamageComponentRequest {
 export interface CompoundDamageRequest {
   hp: HpState;
   components: DamageComponentRequest[];
+  reductions?: DamageReductionContribution[];
+  thresholds?: DamageThresholdContribution[];
 }
 
 export interface DamageAmountResolution {
@@ -78,6 +92,44 @@ function validateHp(hp: HpState) {
 
 function appliesToType(contribution: DamageDefenseContribution, damageType: string) {
   return contribution.damageType === damageType || contribution.damageType === "*";
+}
+
+function applyFinalDamageMitigation(
+  amount:number,
+  reductions:DamageReductionContribution[]|undefined,
+  thresholds:DamageThresholdContribution[]|undefined,
+  provenance:ProvenanceRecord[],
+) {
+  let adjusted=amount;
+  for (const reduction of reductions ?? []) {
+    requireNonNegativeInteger(reduction.amount, `damage reduction from ${reduction.source}`);
+    const before=adjusted;
+    adjusted=Math.max(0,adjusted-reduction.amount);
+    provenance.push({
+      source:reduction.source,
+      status:before!==adjusted ? "applied" : "suppressed",
+      reason:before!==adjusted
+        ? `Damage reduction ${before} -> ${adjusted}`
+        : `Damage reduction ${reduction.amount} had no remaining damage to reduce`,
+    });
+  }
+  for (const threshold of thresholds ?? []) {
+    requireNonNegativeInteger(threshold.threshold, `damage threshold from ${threshold.source}`);
+    const before=adjusted;
+    if (adjusted>0 && adjusted<threshold.threshold) {
+      adjusted=0;
+      provenance.push({source:threshold.source,status:"applied",reason:`Damage ${before} is below threshold ${threshold.threshold}; damage becomes 0`});
+    } else {
+      provenance.push({
+        source:threshold.source,
+        status:"suppressed",
+        reason:adjusted===0
+          ? `Damage threshold ${threshold.threshold} had no remaining damage to test`
+          : `Damage ${adjusted} meets threshold ${threshold.threshold}`,
+      });
+    }
+  }
+  return adjusted;
 }
 
 export function resolveDamageAmount(request: DamageComponentRequest): DamageAmountResolution {
@@ -144,6 +196,7 @@ export function resolveDamageAmount(request: DamageComponentRequest): DamageAmou
     }));
   }
 
+  adjusted=applyFinalDamageMitigation(adjusted,request.reductions,request.thresholds,provenance);
   requireNonNegativeInteger(adjusted, "final damage");
   return {
     damageType:request.damageType,
@@ -204,11 +257,12 @@ export function resolveCompoundDamage(request: CompoundDamageRequest): CompoundD
   if (request.components.length === 0) throw new DomainEvaluationError("compound damage requires at least one component");
   const components = request.components.map((component) => resolveDamageAmount(component));
   const raw = components.reduce((sum, component) => sum + component.raw, 0);
-  const finalDamage = components.reduce((sum, component) => sum + component.finalDamage, 0);
+  let finalDamage = components.reduce((sum, component) => sum + component.finalDamage, 0);
   const provenance = components.flatMap((component) => component.provenance.map((entry) => ({
     ...entry,
     reason:`${component.damageType}: ${entry.reason}`,
   })));
+  finalDamage=applyFinalDamageMitigation(finalDamage,request.reductions,request.thresholds,provenance);
   const hp = applyDamageToHp(request.hp, finalDamage, provenance);
   return {
     damageType:"compound",

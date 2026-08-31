@@ -5,9 +5,10 @@ import type { ActionVm, AppSnapshot, CharacterSheet, SceneVm } from "../../src/a
 import { MockAdapter } from "../../src/app/mockAdapter";
 import { BARDIC_INSPIRATION_RESOURCE_ID } from "../../src/domain/bardicInspiration";
 import { BARD_COLLEGE_LORE_SUBCLASS_ID } from "../../src/domain/bardCollegeLore";
-import { BARD_LORE_CLASS_ID } from "../../src/domain/bardLoreProgression";
+import { BARD_LORE_CLASS_ID, BARD_LORE_CUTTING_WORDS_FEATURE_ID } from "../../src/domain/bardLoreProgression";
+import { setSpatialRelation } from "../../src/app/spatialRuntimeContracts";
 
-const INTERRUPT_ID="follow-up.bard.college-of-lore.cutting-words";
+const CUTTING_WORDS_NAME="날카로운 말";
 const GOBLIN_ID="combatant.goblin-a";
 const OTHER_CHARACTER_ID="char.cutting-words-target";
 const OTHER_CHARACTER_CHECK_ID="action.cutting-words-target.ability.str";
@@ -26,6 +27,7 @@ async function prepareLoreBard(adapter:MockAdapter,level=5){
     abilities:{...internal.activeCharacter.abilities,cha:18},
     classLevels:[{classId:BARD_LORE_CLASS_ID,className:"바드",level,subclassName:"전승 학파"}],
     subclassIds:{[BARD_LORE_CLASS_ID]:BARD_COLLEGE_LORE_SUBCLASS_ID},
+    subclassFeatureIds:level>=3?[BARD_LORE_CUTTING_WORDS_FEATURE_ID]:[],
     resources:[
       ...internal.activeCharacter.resources.filter((entry)=>entry.id!==BARDIC_INSPIRATION_RESOURCE_ID),
       {id:BARDIC_INSPIRATION_RESOURCE_ID,label:"바드의 영감",current:4,max:4,source:"바드 클래스 기능",recovery:{shortRest:"all",longRest:"all"}},
@@ -40,6 +42,8 @@ function inspirationUses(snapshot:AppSnapshot){
 }
 
 async function beginGoblinTurn(adapter:MockAdapter){
+  const internal=adapter as unknown as {activeCharacter:CharacterSheet;scene:SceneVm};
+  setSpatialRelation(internal.scene,{sourceId:internal.activeCharacter.id,targetId:GOBLIN_ID,distanceFeet:30,visible:true,cover:"none",targetCanSeeAttacker:true,provenance:"module:test-map:spatial"});
   await adapter.startInitiative();
   await adapter.setCurrentActor(GOBLIN_ID);
   return adapter.getSnapshot();
@@ -48,7 +52,7 @@ async function beginGoblinTurn(adapter:MockAdapter){
 async function waitForInterrupt(adapter:MockAdapter,maximum=6){
   for(let step=0;step<maximum;step++){
     const snapshot=await adapter.getSnapshot();
-    if(snapshot.resolution?.interrupt?.id===INTERRUPT_ID)return snapshot;
+    if(snapshot.resolution?.stage==="interrupt")return snapshot;
     if(snapshot.resolution?.stage==="complete")return snapshot;
     await adapter.advanceResolution();
   }
@@ -103,6 +107,7 @@ test("Cutting Words reduces another creature's successful ability check and Undo
     reactions:[],
   });
   internal.scene.actionsByActor[OTHER_CHARACTER_ID]=[otherCharacterCheckAction()];
+  setSpatialRelation(internal.scene,{sourceId:internal.activeCharacter.id,targetId:OTHER_CHARACTER_ID,distanceFeet:30,visible:true,cover:"none",targetCanSeeAttacker:true,provenance:"module:test-map:spatial"});
   await adapter.startInitiative();
   snapshot=await adapter.setCurrentActor(OTHER_CHARACTER_ID);
   await adapter.setQueuedD20(15);
@@ -114,14 +119,15 @@ test("Cutting Words reduces another creature's successful ability check and Undo
   const total=snapshot.resolution?.rollTotal;
   assert.equal(typeof total,"number");
   snapshot=await adapter.applyDmAdjudication({type:"ability-check-dc",scope:"resolution",value:total!-2});
-  assert.equal(snapshot.resolution?.interrupt?.id,INTERRUPT_ID,JSON.stringify(snapshot.resolution));
+  assert.equal(snapshot.resolution?.stage,"interrupt",JSON.stringify(snapshot.resolution));
+  assert.equal(snapshot.resolution?.interrupt?.optionName,CUTTING_WORDS_NAME);
 
   await adapter.setQueuedD20(6);
   snapshot=await adapter.respondToInterrupt(true);
   assert.equal(snapshot.resolution?.checkOutcome,"실패",JSON.stringify(snapshot.resolution));
   assert.equal(inspirationUses(snapshot),usesBefore!-1);
   assert.equal(snapshot.scene.economyByActor[snapshot.activeCharacter.id]?.reaction,false);
-  assert.equal(snapshot.activity.some((entry)=>entry.detail.some((detail)=>detail.includes("도발의 말"))),true);
+  assert.equal(snapshot.resolution?.provenance.some((entry)=>entry.includes("common-play:")),true);
 
   snapshot=await adapter.undoLastResolution();
   assert.equal(inspirationUses(snapshot),usesBefore);
@@ -139,7 +145,8 @@ test("Cutting Words can turn another creature's successful attack into a miss an
   await adapter.setQueuedD20(18);
   await adapter.resolveAction("action.scimitar",[bardId]);
   snapshot=await waitForInterrupt(adapter);
-  assert.equal(snapshot.resolution?.interrupt?.id,INTERRUPT_ID,JSON.stringify(snapshot.resolution));
+  assert.equal(snapshot.resolution?.stage,"interrupt",JSON.stringify(snapshot.resolution));
+  assert.equal(snapshot.resolution?.interrupt?.optionName,CUTTING_WORDS_NAME);
 
   await adapter.setQueuedD20(8);
   await adapter.respondToInterrupt(true);
@@ -148,7 +155,7 @@ test("Cutting Words can turn another creature's successful attack into a miss an
   assert.equal(snapshot.scene.entities.find((entry)=>entry.id===bardId)?.hp,hpBefore);
   assert.equal(inspirationUses(snapshot),usesBefore!-1);
   assert.equal(snapshot.scene.economyByActor[bardId]?.reaction,false);
-  assert.equal(snapshot.activity.some((entry)=>entry.detail.some((detail)=>detail.includes("도발의 말"))),true);
+  assert.equal(snapshot.resolution?.provenance.some((entry)=>entry.includes("common-play:")),true);
 
   snapshot=await adapter.undoLastResolution();
   assert.equal(inspirationUses(snapshot),usesBefore);
@@ -166,12 +173,14 @@ test("Cutting Words reduces the staged damage roll before authoritative attack c
   await adapter.setQueuedD20(18);
   await adapter.resolveAction("action.scimitar",[bardId]);
   snapshot=await waitForInterrupt(adapter);
-  assert.equal(snapshot.resolution?.interrupt?.id,INTERRUPT_ID,JSON.stringify(snapshot.resolution));
+  assert.equal(snapshot.resolution?.stage,"interrupt",JSON.stringify(snapshot.resolution));
+  assert.equal(snapshot.resolution?.interrupt?.optionName,CUTTING_WORDS_NAME);
   snapshot=await adapter.respondToInterrupt(false);
   assert.equal(snapshot.resolution?.stage,"attack-result",JSON.stringify(snapshot.resolution));
 
   snapshot=await adapter.advanceResolution();
-  assert.equal(snapshot.resolution?.interrupt?.id,INTERRUPT_ID,JSON.stringify(snapshot.resolution));
+  assert.equal(snapshot.resolution?.stage,"interrupt",JSON.stringify(snapshot.resolution));
+  assert.equal(snapshot.resolution?.interrupt?.optionName,CUTTING_WORDS_NAME);
   assert.equal(snapshot.resolution?.rollKind,"damage");
   await adapter.setQueuedD20(4);
   snapshot=await adapter.respondToInterrupt(true);
@@ -180,7 +189,7 @@ test("Cutting Words reduces the staged damage roll before authoritative attack c
   assert.equal(snapshot.scene.entities.find((entry)=>entry.id===bardId)?.hp,hpBefore-1,JSON.stringify(snapshot.resolution));
   assert.equal(inspirationUses(snapshot),usesBefore!-1);
   assert.equal(snapshot.scene.economyByActor[bardId]?.reaction,false);
-  assert.equal(snapshot.activity.some((entry)=>entry.detail.some((detail)=>detail.includes("도발의 말"))),true);
+  assert.equal(snapshot.resolution?.provenance.some((entry)=>entry.includes("common-play:")),true);
 
   snapshot=await adapter.undoLastResolution();
   assert.equal(snapshot.scene.entities.find((entry)=>entry.id===bardId)?.hp,hpBefore);
@@ -197,7 +206,7 @@ test("Cutting Words is not offered below College of Lore level 3",async()=>{
   await adapter.resolveAction("action.scimitar",[bardId]);
   for(let step=0;step<3;step++){
     snapshot=await adapter.getSnapshot();
-    assert.notEqual(snapshot.resolution?.interrupt?.id,INTERRUPT_ID);
+    assert.notEqual(snapshot.resolution?.stage,"interrupt");
     if(snapshot.resolution?.stage==="complete")break;
     await adapter.advanceResolution();
   }

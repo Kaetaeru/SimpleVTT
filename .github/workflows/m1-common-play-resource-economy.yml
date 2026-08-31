@@ -1,0 +1,107 @@
+name: M1 Common Play Resource Economy
+
+on:
+  pull_request:
+    paths:
+      - "content/modules/dnd-srd-5.2.1.class-feature-common-play/module.json"
+      - "scripts/generate-builtin-catalog.mjs"
+      - "schemas/common-play-contract.schema.json"
+      - "schemas/rules-profile.schema.json"
+      - "rules/profiles/dnd.srd-5.2.1.profile.json"
+      - "src/domain/profileEngine.ts"
+      - "src/domain/commonPlayOperationRuntime.ts"
+      - "src/domain/resources.ts"
+      - "src/domain/resolutionResourceOps.ts"
+      - "src/domain/resolutionRestOps.ts"
+      - "src/domain/resolutionTurnOps.ts"
+      - "src/domain/runtimeStateChange.ts"
+      - "src/app/builtinCatalogRuntimeAdapter.ts"
+      - "src/app/fighterActionSurgeRuntimeAdapter.ts"
+      - "src/app/installedCommonPlayActionReference.ts"
+      - "src/app/installedCommonPlayRuntimeAdapter.ts"
+      - "src/app/installedContentContracts.ts"
+      - "src/app/installedContentRuntimeAdapter.ts"
+      - "src/app/offlineRuntimeAdapters.ts"
+      - "src/app/realEventApplyService.ts"
+      - "src/app/resolutionCharacterDurableProjection.ts"
+      - "src/app/characterLibraryPersistence.ts"
+      - "src/app/characterLibraryRuntimeAdapter.ts"
+      - "src/app/persistenceContracts.ts"
+      - "src/app/progressionContracts.ts"
+      - "src/app/runtimeResolutionCommit.ts"
+      - "src/app/runtimeResolutionUndoAdapter.ts"
+      - "tests/fixtures/play-contract/resource-economy-action.json"
+      - "tests/domain/commonPlayResourceEconomyRuntime.test.ts"
+      - "tests/domain/resourceRecoveryLockout.test.ts"
+      - "tests/ui/installedCommonPlayProductionRuntime.test.ts"
+      - "tests/ui/phase09CommonPlayResourcePersistence.test.ts"
+      - "tests/ui/c9FamilyDTemporaryCapacityProduction71304.test.ts"
+      - "tests/ui/c9FamilyXPortableItemPaymentPersistence.test.ts"
+      - "tests/ui/realEventResourceCapacityProjection.test.ts"
+      - "tests/ui/fighterActionSurgeRuntimeAdapter.test.ts"
+      - ".agents/LEGACY_EXECUTION_BASELINE.json"
+      - ".github/workflows/m1-common-play-resource-economy.yml"
+  push:
+    branches:
+      - "agent/**"
+    paths:
+      - "content/modules/dnd-srd-5.2.1.class-feature-common-play/module.json"
+      - "scripts/generate-builtin-catalog.mjs"
+      - "schemas/common-play-contract.schema.json"
+      - "schemas/rules-profile.schema.json"
+      - "rules/profiles/dnd.srd-5.2.1.profile.json"
+      - "src/domain/profileEngine.ts"
+      - "src/domain/commonPlayOperationRuntime.ts"
+      - "src/domain/resources.ts"
+      - "src/domain/resolutionResourceOps.ts"
+      - "src/domain/resolutionRestOps.ts"
+      - "src/domain/resolutionTurnOps.ts"
+      - "src/domain/runtimeStateChange.ts"
+      - "src/app/builtinCatalogRuntimeAdapter.ts"
+      - "src/app/fighterActionSurgeRuntimeAdapter.ts"
+      - "src/app/installedCommonPlayActionReference.ts"
+      - "src/app/installedCommonPlayRuntimeAdapter.ts"
+      - "src/app/installedContentContracts.ts"
+      - "src/app/installedContentRuntimeAdapter.ts"
+      - "src/app/offlineRuntimeAdapters.ts"
+      - "src/app/realEventApplyService.ts"
+      - "src/app/resolutionCharacterDurableProjection.ts"
+      - "src/app/characterLibraryPersistence.ts"
+      - "src/app/characterLibraryRuntimeAdapter.ts"
+      - "src/app/persistenceContracts.ts"
+      - "src/app/progressionContracts.ts"
+      - "src/app/runtimeResolutionCommit.ts"
+      - "src/app/runtimeResolutionUndoAdapter.ts"
+      - "tests/fixtures/play-contract/resource-economy-action.json"
+      - "tests/domain/commonPlayResourceEconomyRuntime.test.ts"
+      - "tests/domain/resourceRecoveryLockout.test.ts"
+      - "tests/ui/installedCommonPlayProductionRuntime.test.ts"
+      - "tests/ui/phase09CommonPlayResourcePersistence.test.ts"
+      - "tests/ui/c9FamilyDTemporaryCapacityProduction71304.test.ts"
+      - "tests/ui/c9FamilyXPortableItemPaymentPersistence.test.ts"
+      - "tests/ui/realEventResourceCapacityProjection.test.ts"
+      - "tests/ui/fighterActionSurgeRuntimeAdapter.test.ts"
+      - ".agents/LEGACY_EXECUTION_BASELINE.json"
+      - ".github/workflows/m1-common-play-resource-economy.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  resource-economy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Generate content catalogs
+        run: npm run generate:content
+      - name: Verify M1 resource/economy migration harness
+        run: npx tsx --test tests/domain/commonPlayResourceEconomyRuntime.test.ts tests/domain/resourceRecoveryLockout.test.ts tests/ui/installedCommonPlayProductionRuntime.test.ts tests/ui/phase09CommonPlayResourcePersistence.test.ts tests/ui/c9FamilyDTemporaryCapacityProduction71304.test.ts tests/ui/c9FamilyXPortableItemPaymentPersistence.test.ts tests/ui/realEventResourceCapacityProjection.test.ts tests/ui/fighterActionSurgeRuntimeAdapter.test.ts
+      - name: Verify legacy execution boundary shrink
+        run: node scripts/check-legacy-execution-boundary.mjs
+      - name: Typecheck application
+        run: npx tsc --noEmit

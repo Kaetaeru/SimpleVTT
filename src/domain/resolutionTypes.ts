@@ -1,17 +1,17 @@
 import type { D20TestRequest } from "./d20";
-import type { DamageDefenseContribution } from "./damage";
+import type { DamageAdjustment, DamageDefenseContribution } from "./damage";
 import type { DamageRollRequest } from "./damageRoll";
 import type { AbilityKey } from "./conditions";
 import type { ConcentrationCheckRequest } from "./concentration";
 import type { EffectApplyRequest } from "./effects";
 import type { HitDieSpend } from "./rest";
 import type { ReactorOption } from "./reaction";
-import type { TargetFacts, TargetingRule } from "./targeting";
+import type { TargetingFactInput, TargetingRule } from "./targeting";
 import type { ActionUseKind, TurnSlot } from "./turnEconomy";
 import type { ProvenanceRecord } from "./profileEngine";
 import type { RulesRuntimeState } from "./combatState";
 import type { RuntimeArtifactSpawnRequest, ZoneMembershipAuthority } from "./runtimeArtifact";
-import type { RuntimeStateChange } from "./runtimeStateChange";
+import type { RuntimeInventoryItem, RuntimeStateChange } from "./runtimeStateChange";
 import type { TemporaryHpChoice } from "./temporaryHp";
 import type { ResourceRecovery } from "./resources";
 
@@ -41,7 +41,7 @@ export type ResolutionOperation =
       kind: "targeting";
       sourceId?: string;
       rule: TargetingRule;
-      targets: TargetFacts[];
+      targets: TargetingFactInput[];
       harmful?: boolean;
     })
   | (OperationBase & {
@@ -66,7 +66,12 @@ export type ResolutionOperation =
   | (OperationBase & {
       kind: "move";
       actorId?: string;
+      movementMode?:"walk"|"climb"|"swim"|"fly"|"crawl"|"jump";
       distanceFeet: number;
+      distanceTraveledFeet?:number;
+      movementActivity?:"relocate"|"stand"|"mount"|"dismount";
+      destinationRef?:string;
+      doesNotProvokeOpportunityAttacks?:boolean;
       destinationMovesCloserToVisibleFrighteningSource?: boolean;
       visibleSourceIds?: string[];
     })
@@ -75,6 +80,8 @@ export type ResolutionOperation =
       actorId?:string;
       distanceFeet:number;
       maximumDistanceFeet:number;
+      movementMode?:"teleport"|"push"|"pull"|"forced";
+      destinationRef?:string;
       doesNotProvokeOpportunityAttacks?:boolean;
       destinationMovesCloserToVisibleFrighteningSource?:boolean;
       visibleSourceIds?:string[];
@@ -103,6 +110,14 @@ export type ResolutionOperation =
       resourceId:string;
       trigger:"shortRest"|"longRest";
       rests:number;
+    })
+  | (OperationBase & {
+      kind:"recharge-resource";
+      actorId?:string;
+      resourceId:string;
+      timing:"turn-start";
+      die:{sides:number;faces:number[]};
+      succeedsOn:{minimum:number;maximum?:number};
     })
   | (OperationBase & {
       kind: "d20";
@@ -135,6 +150,7 @@ export type ResolutionOperation =
       targetId: string;
       damageType: string;
       amount: NumericOperand;
+      adjustments?: DamageAdjustment[];
       defenses?: DamageDefenseContribution[];
       creatureKind: "character" | "monster";
       criticalFrom?: string;
@@ -146,6 +162,7 @@ export type ResolutionOperation =
       components: Array<{
         damageType: string;
         amount: NumericOperand;
+        adjustments?: DamageAdjustment[];
         defenses?: DamageDefenseContribution[];
       }>;
       creatureKind: "character" | "monster";
@@ -154,6 +171,11 @@ export type ResolutionOperation =
     })
   | (OperationBase & {
       kind: "healing";
+      targetId: string;
+      amount: NumericOperand;
+    })
+  | (OperationBase & {
+      kind: "maximum-hp";
       targetId: string;
       amount: NumericOperand;
     })
@@ -185,13 +207,20 @@ export type ResolutionOperation =
       metadataPatch: Record<string,string|number|boolean>;
     })
   | (OperationBase & {
+      kind:"set-effect-suppression";
+      effectId:string;
+      suppressed:boolean;
+      reason?:string;
+      pauseDuration?:boolean;
+    })
+  | (OperationBase & {
       kind: "remove-effect";
       effectId: string;
     })
   | (OperationBase & {
       kind:"spawn-artifact";
       artifact:RuntimeArtifactSpawnRequest;
-      zoneMembershipAuthority:ZoneMembershipAuthority;
+      zoneMembershipAuthority?:ZoneMembershipAuthority;
     })
   | (OperationBase & {
       kind:"update-artifact";
@@ -199,8 +228,60 @@ export type ResolutionOperation =
       metadataPatch:Record<string,string|number|boolean>;
     })
   | (OperationBase & {
+      kind:"damage-artifact";
+      artifactId:string;
+      damageType:string;
+      amount:number;
+    })
+  | (OperationBase & {
+      kind:"repair-artifact";
+      artifactId:string;
+      amount:number;
+    })
+  | (OperationBase & {
+      kind:"relocate-artifact";
+      artifactId:string;
+      placementRef:string;
+    })
+  | (OperationBase & {
+      kind:"set-artifact-controller";
+      artifactId:string;
+      controllerId:string;
+    })
+  | (OperationBase & {
       kind:"remove-artifact";
       artifactId:string;
+    })
+  | (OperationBase & {
+      kind:"advance-exposure";
+      artifactId:string;
+      seconds:number;
+    })
+  | (OperationBase & {
+      kind:"recover-exposure";
+      artifactId:string;
+    })
+  | (OperationBase & {
+      kind:"advance-project";
+      artifactId:string;
+      expectedRevision:number;
+      ownerId:string;
+      contributorId?:string;
+      work:number;
+      payments?:Record<string,number>;
+      toolProficiencyIds?:string[];
+      preparedSpellDefinitionIds?:string[];
+    })
+  | (OperationBase & {
+      kind:"cancel-project";
+      artifactId:string;
+      expectedRevision:number;
+      ownerId:string;
+    })
+  | (OperationBase & {
+      kind:"grant-inventory-item";
+      targetId:string;
+      item:RuntimeInventoryItem;
     })
   | (OperationBase & {
       kind:"set-zone-membership";
@@ -236,6 +317,10 @@ export type ResolutionOperation =
       kind: "end-turn";
       actorId: string;
       round: number;
+    })
+  | (OperationBase & {
+      kind: "set-initiative-count";
+      count: number;
     })
   | (OperationBase & {
       kind: "advance-time";

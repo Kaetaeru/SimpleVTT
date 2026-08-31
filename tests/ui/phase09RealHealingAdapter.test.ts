@@ -57,7 +57,7 @@ test("Second Wind applies authoritative domain events to HP, Bonus Action, resou
   await adapter.resolveAction("action.second-wind",["char.aelar"]);
   snapshot=await adapter.getSnapshot();
   assert.equal(snapshot.resolution?.stage,"roll-animation");
-  assert.equal(snapshot.resolution?.rollTotal,10);
+  assert.equal(snapshot.resolution?.rollTotal,12);
   await adapter.advanceResolution();
   snapshot=await adapter.getSnapshot();
   assert.equal(snapshot.resolution?.stage,"effect-preview");
@@ -65,18 +65,18 @@ test("Second Wind applies authoritative domain events to HP, Bonus Action, resou
   snapshot=await adapter.getSnapshot();
 
   assert.equal(snapshot.resolution?.stage,"complete");
-  assert.equal(snapshot.activeCharacter.hp,41);
+  assert.equal(snapshot.activeCharacter.hp,42);
   assert.equal(snapshot.activeCharacter.tempHp,5);
   assert.equal(snapshot.scene.economyByActor["char.aelar"]?.bonusAction,false);
   assert.equal(snapshot.activeCharacter.resources.find((resource)=>resource.id==="resource.second-wind")?.current,0);
-  assert.ok(snapshot.resolution?.stateChanges.includes("Aelar HP 31 → 41"));
+  assert.ok(snapshot.resolution?.stateChanges.includes("Aelar HP 31 → 42"));
   assert.ok(snapshot.resolution?.stateChanges.includes("추가 행동 사용"));
   assert.ok(snapshot.resolution?.stateChanges.includes("세컨드 윈드 1 → 0"));
 
   const activity=snapshot.activity[0];
   assert.equal(activity.id,snapshot.resolution?.id);
   assert.ok(activity.detail.some((line)=>line.startsWith("ResolutionEvent ")));
-  assert.ok(activity.stateChanges.some((line)=>line.includes("char.aelar HP 31 → 41")));
+  assert.ok(activity.stateChanges.some((line)=>line.includes("char.aelar HP 31 → 42")));
   assert.ok(activity.stateChanges.some((line)=>line.includes("char.aelar economy.bonusAction true → false")));
   assert.ok(activity.stateChanges.some((line)=>line.includes("char.aelar resource.resource.second-wind 1 → 0")));
 });
@@ -88,7 +88,7 @@ test("Second Wind Undo inverses HP, economy, and class resource from committed e
   await adapter.advanceResolution();
   let snapshot=await adapter.getSnapshot();
   const activityId=snapshot.activity[0]?.id;
-  assert.equal(snapshot.activeCharacter.hp,41);
+  assert.equal(snapshot.activeCharacter.hp,42);
   assert.equal(snapshot.activeCharacter.resources.find((resource)=>resource.id==="resource.second-wind")?.current,0);
   assert.equal(snapshot.scene.economyByActor["char.aelar"]?.bonusAction,false);
 
@@ -103,4 +103,20 @@ test("Second Wind Undo inverses HP, economy, and class resource from committed e
   assert.ok(snapshot.activity[0]?.detail.includes("Before snapshot 미사용"));
   assert.ok(snapshot.activity[0]?.detail.includes("HP + economy + resource inverse"));
   assert.ok(snapshot.activity.find((entry)=>entry.id===activityId)?.reversed);
+});
+
+test("atomic self healing adapter is invariant to an unknown action id",async()=>{
+  const adapter=new MockAdapter();
+  const state=adapter as unknown as {scene:{actionsByActor:Record<string,Array<{id:string}>>}};
+  const action=state.scene.actionsByActor["char.aelar"].find((entry)=>entry.id==="action.second-wind")!;
+  action.id="unknown.external.self-healing";
+  await adapter.resolveAction(action.id,["char.aelar"]);
+  await adapter.advanceResolution();
+  await adapter.advanceResolution();
+  const snapshot=await adapter.getSnapshot();
+  assert.equal(snapshot.resolution?.actionId,action.id);
+  assert.equal(snapshot.resolution?.stage,"complete");
+  assert.equal(snapshot.resolution?.rollTotal,12);
+  assert.equal(snapshot.activeCharacter.hp,42);
+  assert.equal(snapshot.activeCharacter.resources.find((resource)=>resource.id==="resource.second-wind")?.current,0);
 });

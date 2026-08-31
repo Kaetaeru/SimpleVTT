@@ -44,6 +44,7 @@ function deepEquals(left:unknown,right:unknown):boolean {
 }
 
 function appCurrentValue(scene:SceneVm,resources:CharacterResourceVm[],items:ItemInstanceVm[],change:RuntimeStateChange):ReadValue {
+  if(change.kind==="inventory-item") return found(items.find((entry)=>entry.id===change.itemId));
   if (change.kind==="hp") {
     const entity=scene.entities.find((entry)=>entry.id===change.targetId);
     if (!entity) return missing();
@@ -89,6 +90,8 @@ function runtimeCurrentValue(runtimeState:RulesRuntimeState,change:RuntimeStateC
   if (change.kind==="zone-membership") return found(runtimeState.zoneMemberships?.find((membership)=>membership.artifactId===change.artifactId));
   if (change.kind==="concentration") return found(runtimeState.concentration[change.targetId]);
   if (change.kind==="spellcasting-turn") return found(runtimeState.spellcastingTurn);
+  if (change.kind==="turn-clock") return found(runtimeState.clock);
+  if (change.kind==="combatant") return found(runtimeState.combatants[change.targetId]);
   const combatant=runtimeState.combatants[change.targetId];
   if (!combatant) return missing();
   if (change.kind==="hp") {
@@ -115,6 +118,12 @@ function runtimeCurrentValue(runtimeState:RulesRuntimeState,change:RuntimeStateC
 }
 
 function applyAppChange(scene:SceneVm,resources:CharacterResourceVm[],items:ItemInstanceVm[],change:RuntimeStateChange) {
+  if(change.kind==="inventory-item") {
+    const index=items.findIndex((entry)=>entry.id===change.itemId);
+    if(change.after) {if(index>=0)items[index]=structuredClone(change.after);else items.push(structuredClone(change.after));}
+    else if(index>=0)items.splice(index,1);
+    return;
+  }
   if (change.kind==="hp") {
     const entity=scene.entities.find((entry)=>entry.id===change.targetId)!;
     if (change.field==="current") entity.hp=change.after;
@@ -145,6 +154,7 @@ function applyAppChange(scene:SceneVm,resources:CharacterResourceVm[],items:Item
     }
     const resource=resources.find((entry)=>entry.id===change.resourceId)!;
     resource.current=change.after;
+    if (change.capacity) resource.max=change.capacity.after.maximum;
     return;
   }
   if (change.kind==="life") {
@@ -192,6 +202,15 @@ function applyRuntimeChange(runtimeState:RulesRuntimeState,change:RuntimeStateCh
     runtimeState.spellcastingTurn=change.after ? structuredClone(change.after) : undefined;
     return;
   }
+  if (change.kind==="turn-clock") {
+    runtimeState.clock=structuredClone(change.after);
+    return;
+  }
+  if (change.kind==="combatant") {
+    if (change.after) runtimeState.combatants[change.targetId]=structuredClone(change.after);
+    else delete runtimeState.combatants[change.targetId];
+    return;
+  }
   const combatant=runtimeState.combatants[change.targetId];
   if (!combatant) return;
   if (change.kind==="hp") {
@@ -212,7 +231,14 @@ function applyRuntimeChange(runtimeState:RulesRuntimeState,change:RuntimeStateCh
   if (change.kind==="resource") {
     if (itemResource(change.resourceId)) return;
     const resource=combatant.resources.find((entry)=>entry.id===change.resourceId);
-    if (resource) resource.current=change.after;
+    if (resource) {
+      resource.current=change.after;
+      if (change.capacity) {
+        resource.maximum=change.capacity.after.maximum;
+        if (change.capacity.after.maximumAfterLongRest===null) delete resource.maximumAfterLongRest;
+        else resource.maximumAfterLongRest=change.capacity.after.maximumAfterLongRest;
+      }
+    }
     return;
   }
   if (change.kind==="life") combatant.life[change.field]=change.after;
@@ -220,16 +246,19 @@ function applyRuntimeChange(runtimeState:RulesRuntimeState,change:RuntimeStateCh
 }
 
 function runtimeOnly(change:RuntimeStateChange) {
-  return change.kind==="effect" || change.kind==="artifact" || change.kind==="zone-membership" || change.kind==="concentration" || change.kind==="spellcasting-turn";
+  return change.kind==="effect" || change.kind==="artifact" || change.kind==="zone-membership" || change.kind==="concentration" || change.kind==="spellcasting-turn" || change.kind==="turn-clock" || change.kind==="combatant";
 }
 
 function changeField(change:RuntimeStateChange) {
+  if(change.kind==="inventory-item") return `inventory-item.${change.itemId}`;
   if (change.kind==="resource") return `resource.${change.resourceId}`;
   if (change.kind==="effect") return `effect.${change.effectId}`;
   if (change.kind==="artifact") return `artifact.${change.artifactId}`;
   if (change.kind==="zone-membership") return `zone-membership.${change.artifactId}`;
   if (change.kind==="concentration") return "concentration";
   if (change.kind==="spellcasting-turn") return "spellcasting-turn";
+  if (change.kind==="turn-clock") return "turn-clock";
+  if (change.kind==="combatant") return "combatant";
   return `${change.kind}.${change.field}`;
 }
 
@@ -253,7 +282,20 @@ function validate(
       return `event-native apply drift for ${change.targetId}/${changeField(change)}: expected ${String(change.before)}, current ${String(app.value)}`;
     }
     if (runtime.found && !deepEquals(runtime.value,change.before)) {
-      return `event-native apply runtime drift for ${change.targetId}/${changeField(change)}`;
+      return `event-native apply runtime drift for ${change.targetId}/${changeField(change)}: expected ${JSON.stringify(change.before)}, current ${JSON.stringify(runtime.value)}`;
+    }
+    if (change.kind==="resource" && change.capacity && !itemResource(change.resourceId)) {
+      const appResource=probeResources.find((entry)=>entry.id===change.resourceId);
+      if (appResource && appResource.max!==change.capacity.before.maximum) {
+        return `event-native apply capacity drift for ${change.targetId}/${changeField(change)}`;
+      }
+      const runtimeResource=probeRuntime?.combatants[change.targetId]?.resources.find((entry)=>entry.id===change.resourceId);
+      if (runtimeResource && (
+        runtimeResource.maximum!==change.capacity.before.maximum ||
+        (runtimeResource.maximumAfterLongRest??null)!==change.capacity.before.maximumAfterLongRest
+      )) {
+        return `event-native apply runtime capacity drift for ${change.targetId}/${changeField(change)}`;
+      }
     }
     if (app.found) applyAppChange(probeScene,probeResources,probeItems,change);
     if (probeRuntime && runtime.found) applyRuntimeChange(probeRuntime,change);
@@ -265,7 +307,12 @@ function spellcastingTurnLabel(state:Extract<RuntimeStateChange,{kind:"spellcast
   return state ? `${state.turnId} [${state.slottedCasterIds.join(", ") || "—"}]` : "—";
 }
 
+function clockLabel(state:Extract<RuntimeStateChange,{kind:"turn-clock"}>["after"]) {
+  return `round ${state.round} · ${state.activeActorId??"—"} · ${state.phase??"—"} · ${state.elapsedSeconds}s`;
+}
+
 function applyLabel(change:RuntimeStateChange) {
+  if(change.kind==="inventory-item") return `${change.targetId} inventory-item.${change.itemId} ${change.operation}`;
   if (change.kind==="hp") {
     const field=change.field==="current" ? "HP" : change.field==="maximum" ? "최대 HP" : "임시 HP";
     return `${change.targetId} ${field} ${change.before} → ${change.after}`;
@@ -292,6 +339,8 @@ function applyLabel(change:RuntimeStateChange) {
     const after=change.after ? change.after.groupId : "없음";
     return `${change.targetId} concentration ${before} → ${after}`;
   }
+  if (change.kind==="combatant") return `${change.targetId} combatant ${change.operation}`;
+  if (change.kind==="turn-clock") return `${change.targetId} ${clockLabel(change.before)} → ${clockLabel(change.after)}`;
   return `${change.targetId} spellcasting-turn ${spellcastingTurnLabel(change.before)} → ${spellcastingTurnLabel(change.after)}`;
 }
 

@@ -1,4 +1,4 @@
-import { DomainEvaluationError, type ProvenanceRecord } from "./profileEngine";
+import { DomainEvaluationError, evaluateExpression, type ExpressionNode, type PropertyResolution, type ProvenanceRecord } from "./profileEngine";
 import type { ConditionId } from "./conditions";
 
 export type TurnBoundary = "start" | "end";
@@ -8,8 +8,13 @@ export type TurnActivityCategory = "movement" | "action" | "bonus-action";
 export interface RuntimeClock {
   round: number;
   elapsedSeconds: number;
+  initiativeCount?: number;
   activeActorId?: string;
   phase?: TurnBoundary | "action";
+  specialWindows?:Array<
+    |{kind:"turn-start"|"turn-end"|"after-turn";actorId:string}
+    |{kind:"initiative-count";initiativeCount:number}
+  >;
 }
 
 export type DurationSpec =
@@ -48,6 +53,14 @@ export interface EffectTurnActivityRestriction {
   selectedCategory?: TurnActivityCategory;
 }
 
+export interface EffectPropertyModifier {
+  property:string;
+  operation:"add"|"subtract"|"set"|"min"|"max"|"multiply";
+  value:ExpressionNode;
+  source:"definition";
+  instancePolicy:"stack"|"replace"|"unique-by-source"|"profile-policy";
+}
+
 export interface EffectInstance {
   id: string;
   sourceId: string;
@@ -55,12 +68,18 @@ export interface EffectInstance {
   targetId: string;
   kind: EffectKind;
   conditionId?: ConditionId;
+  propertyModifier?: EffectPropertyModifier;
   tags: string[];
   expiry: EffectExpiry;
   termination?: EffectTermination;
   turnActivity?: EffectTurnActivityRestriction;
   concentrationGroupId?: string;
   metadata?: Record<string, string | number | boolean>;
+  suppression?:{
+    reason:string;
+    pauseDuration:boolean;
+    remainingSeconds?:number;
+  };
 }
 
 export interface EffectApplyRequest {
@@ -70,6 +89,7 @@ export interface EffectApplyRequest {
   targetId: string;
   kind: EffectKind;
   conditionId?: ConditionId;
+  propertyModifier?: EffectPropertyModifier;
   tags?: string[];
   duration: DurationSpec;
   termination?: EffectTermination;
@@ -124,6 +144,7 @@ function validateTurnActivity(restriction: EffectTurnActivityRestriction | undef
 export function createEffect(request: EffectApplyRequest, clock: RuntimeClock): EffectInstance {
   if (!request.id || !request.sourceId || !request.targetId) throw new DomainEvaluationError("effect id, sourceId, and targetId are required");
   if (request.kind === "condition" && !request.conditionId) throw new DomainEvaluationError("condition effect requires conditionId");
+  if (request.propertyModifier && request.kind !== "modifier") throw new DomainEvaluationError("property modifier payload requires modifier effect kind");
   if (request.duration.kind === "concentration" && !request.concentrationGroupId) throw new DomainEvaluationError("concentration effect requires concentrationGroupId");
   validateTurnActivity(request.turnActivity);
   return {
@@ -133,6 +154,7 @@ export function createEffect(request: EffectApplyRequest, clock: RuntimeClock): 
     targetId:request.targetId,
     kind:request.kind,
     conditionId:request.conditionId,
+    propertyModifier:request.propertyModifier ? structuredClone(request.propertyModifier) : undefined,
     tags:[...(request.tags ?? [])],
     expiry:materializeDuration(request.duration, clock),
     termination:request.termination ? { ...request.termination } : undefined,
@@ -145,6 +167,70 @@ export function createEffect(request: EffectApplyRequest, clock: RuntimeClock): 
   };
 }
 
+export function effectIsActive(effect:EffectInstance) {
+  return effect.suppression===undefined;
+}
+
+export function resolveEffectModifiedProperty(
+  effects:EffectInstance[],
+  targetId:string,
+  property:string,
+  inputProperties:Record<string,number>,
+):PropertyResolution {
+  const base=inputProperties[property];
+  if(!Number.isFinite(base)) throw new DomainEvaluationError(`unresolved property reference: ${property}`);
+  let value=base;
+  const provenance:ProvenanceRecord[]=[];
+  for(const effect of effects) {
+    const modifier=effect.propertyModifier;
+    if(effect.targetId!==targetId||!modifier||modifier.property!==property) continue;
+    if(!effectIsActive(effect)) {
+      provenance.push({source:`effect:${effect.id}`,status:"suppressed",reason:effect.suppression?.reason??"effect suppressed"});
+      continue;
+    }
+    const operand=evaluateExpression(modifier.value,(reference)=>{
+      if(reference===property) return value;
+      const referenced=inputProperties[reference];
+      if(!Number.isFinite(referenced)) throw new DomainEvaluationError(`unresolved property reference: ${reference}`);
+      return referenced;
+    });
+    const before=value;
+    switch(modifier.operation) {
+      case "add": value+=operand; break;
+      case "subtract": value-=operand; break;
+      case "set": value=operand; break;
+      case "min": value=Math.min(value,operand); break;
+      case "max": value=Math.max(value,operand); break;
+      case "multiply": value*=operand; break;
+    }
+    if(!Number.isFinite(value)) throw new DomainEvaluationError(`property modifier produced a non-finite ${property}`);
+    provenance.push({source:`effect:${effect.id}`,status:"applied",reason:`${modifier.operation} ${operand}: ${before} -> ${value}`});
+  }
+  return {property,value,provenance};
+}
+
+export function suppressEffect(effect:EffectInstance,clock:RuntimeClock,reason:string,pauseDuration=false):EffectInstance {
+  if(!reason) throw new DomainEvaluationError("effect suppression reason is required");
+  if(effect.suppression) return structuredClone(effect);
+  if(pauseDuration&&effect.expiry.kind!=="time") throw new DomainEvaluationError("duration pause currently requires a time-based effect");
+  return {
+    ...structuredClone(effect),
+    suppression:{
+      reason,pauseDuration,
+      ...(pauseDuration&&effect.expiry.kind==="time"?{remainingSeconds:Math.max(0,effect.expiry.elapsedSeconds-clock.elapsedSeconds)}:{}),
+    },
+  };
+}
+
+export function unsuppressEffect(effect:EffectInstance,clock:RuntimeClock):EffectInstance {
+  if(!effect.suppression) return structuredClone(effect);
+  const remaining=effect.suppression.remainingSeconds;
+  const next=structuredClone(effect);
+  delete next.suppression;
+  if(remaining!==undefined) next.expiry={kind:"time",elapsedSeconds:clock.elapsedSeconds+remaining};
+  return next;
+}
+
 export function selectEffectTurnActivity(
   effects: EffectInstance[],
   actorId: string,
@@ -152,6 +238,7 @@ export function selectEffectTurnActivity(
 ): { effects:EffectInstance[]; provenance:ProvenanceRecord[] } {
   const provenance: ProvenanceRecord[] = [];
   const next = effects.map((effect) => {
+    if(!effectIsActive(effect)) return effect;
     if (effect.targetId !== actorId || !effect.turnActivity) return effect;
     validateTurnActivity(effect.turnActivity);
     if (!effect.turnActivity.chooseOneOf.includes(category)) {
@@ -252,6 +339,7 @@ export function expireEffectsAtClock(effects: EffectInstance[], clock: RuntimeCl
   const expired: EffectInstance[] = [];
   const active: EffectInstance[] = [];
   for (const effect of effects) {
+    if(effect.suppression?.pauseDuration) { active.push(effect); continue; }
     const shouldExpire = effect.expiry.kind === "instant"
       || (effect.expiry.kind === "time" && clock.elapsedSeconds >= effect.expiry.elapsedSeconds)
       || (effect.expiry.kind === "turn-boundary" && boundaryReached(effect.expiry, clock));

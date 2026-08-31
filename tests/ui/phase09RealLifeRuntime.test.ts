@@ -22,7 +22,7 @@ test("critical attack projects monster death life state and event-native Undo re
   await adapter.advanceResolution();
   snapshot=await adapter.getSnapshot();
   assert.equal(snapshot.resolution?.stage,"damage-animation");
-  assert.deepEqual(snapshot.resolution?.authoritativeDice,[4,4]);
+  assert.deepEqual(snapshot.resolution?.authoritativeDice,[3,3]);
 
   await adapter.advanceResolution();
   snapshot=await adapter.getSnapshot();

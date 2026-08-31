@@ -13,6 +13,8 @@ import { mutateActiveCharacterDurably } from "./characterLibraryRuntimeAdapter";
 import {
   installSessionCharacterInventoryProjectionWriter,
 } from "./sessionInventoryProjectionPort";
+import type { CommonPlayInventoryOperation } from "../domain/commonPlayInventoryRuntime";
+import { applyCommonPlayItemOperations } from "./commonPlayItemInventoryProjection";
 
 export { refreshSessionCharacterInventoryProjection } from "./sessionInventoryProjectionPort";
 
@@ -133,8 +135,19 @@ function materializeItem(entry:CatalogEntry,actorId:string):ItemInstanceVm {
   };
 }
 
+function applyItemOperations(
+  inventory:SessionCharacterInventoryVm,
+  operations:CommonPlayInventoryOperation[],
+  templates:ItemInstanceVm[]=[],
+) {
+  const result=applyCommonPlayItemOperations({ownerId:inventory.characterId,revision:inventory.revision,items:inventory.items,operations,templates});
+  inventory.items=result.items;
+  inventory.revision=result.revision;
+  return result.changes;
+}
+
 function applyCommand(inventory:SessionCharacterInventoryVm,command:DmInventoryAdjustmentCommand,catalog:CatalogEntry[]) {
-  const changes:string[]=[];
+  let changes:string[]=[];
   if (command.operation==="grant-item") {
     if (!Number.isInteger(command.quantity)||command.quantity<1) throw new Error("지급 수량은 1 이상이어야 합니다.");
     const entry=catalog.find((candidate)=>candidate.id===command.catalogEntryId&&candidate.category==="item");
@@ -142,22 +155,27 @@ function applyCommand(inventory:SessionCharacterInventoryVm,command:DmInventoryA
     const template=materializeItem(entry,inventory.characterId);
     const existing=inventory.items.find((item)=>compatibleDefinitionId(item.definitionId)===compatibleDefinitionId(template.definitionId)&&!item.charges&&!item.attunementRequired);
     if (existing) {
-      const before=existing.quantity;
-      existing.quantity+=command.quantity;
-      changes.push(`${existing.name} ${before} → ${existing.quantity}`);
+      changes=applyItemOperations(inventory,[{kind:"quantity",itemId:existing.id,delta:command.quantity}]);
     } else {
       template.quantity=command.quantity;
-      inventory.items.push(template);
-      changes.push(`${template.name} 0 → ${command.quantity}`);
+      changes=applyItemOperations(inventory,[{kind:"grant",item:{
+        id:template.id,definitionId:template.definitionId,quantity:template.quantity,stackable:true,equipped:false,wielded:false,
+      }}],[template]);
     }
   } else if(command.operation==="grant-item-template"){
     if(!Number.isInteger(command.quantity)||command.quantity<1)throw new Error("지급 수량은 1 이상이어야 합니다.");
     const source=command.itemTemplate;
     const existing=inventory.items.find((item)=>compatibleDefinitionId(item.definitionId)===compatibleDefinitionId(source.definitionId)&&!item.charges&&!item.attunementRequired);
-    if(existing){const before=existing.quantity;existing.quantity+=command.quantity;changes.push(`${existing.name} ${before} → ${existing.quantity}`);}
+    if(existing) changes=applyItemOperations(inventory,[{kind:"quantity",itemId:existing.id,delta:command.quantity}]);
     else{
-      inventory.items.push({id:`item.session.${inventory.characterId}.${Date.now()}.${Math.floor(Math.random()*10000)}`,...cp(source),quantity:command.quantity,equipped:false,wielded:false,attuned:false});
-      changes.push(`${source.name} 0 → ${command.quantity}`);
+      const template={id:`item.session.${inventory.characterId}.${Date.now()}.${Math.floor(Math.random()*10000)}`,...cp(source),quantity:command.quantity,equipped:false,wielded:false,attuned:false};
+      changes=applyItemOperations(inventory,[{kind:"grant",item:{
+        id:template.id,definitionId:template.definitionId,quantity:template.quantity,
+        stackable:!template.charges&&!template.attunementRequired,equipped:false,wielded:false,
+        ...(template.charges?{charges:{current:template.charges.current,maximum:template.charges.max}}:{}),
+        ...(template.attunementRequired?{attunement:{required:true}}:{}),
+        grantedEntryPointIds:[...template.grantedActionIds],
+      }}],[template]);
     }
   } else if (command.operation==="revoke-item") {
     if (!Number.isInteger(command.quantity)||command.quantity<1) throw new Error("회수 수량은 1 이상이어야 합니다.");
@@ -165,19 +183,20 @@ function applyCommand(inventory:SessionCharacterInventoryVm,command:DmInventoryA
     if (!item) throw new Error("플레이어 인벤토리에서 아이템을 찾지 못했습니다.");
     if (item.quantity<command.quantity) throw new Error("보유 수량보다 많이 회수할 수 없습니다.");
     if ((item.equipped||item.wielded||item.attuned)&&!command.forceUnequip) throw new Error("장착 또는 조율된 아이템은 해제 후 회수해 주세요.");
-    const before=item.quantity;
-    if (command.forceUnequip) { item.equipped=false;item.wielded=false;item.attuned=false;delete item.wieldSlot; }
-    item.quantity-=command.quantity;
-    if (item.quantity===0) inventory.items=inventory.items.filter((candidate)=>candidate.id!==item.id);
-    changes.push(`${item.name} ${before} → ${item.quantity}`);
+    const operations:CommonPlayInventoryOperation[]=[];
+    if(command.forceUnequip&&item.equipped) operations.push({kind:"equip",itemId:item.id,equipped:false});
+    operations.push(command.quantity===item.quantity
+      ?{kind:"destroy",itemId:item.id,force:command.forceUnequip===true}
+      :{kind:"quantity",itemId:item.id,delta:-command.quantity});
+    changes=applyItemOperations(inventory,operations);
   } else {
     if (!Number.isInteger(command.amount)||command.amount<1) throw new Error("재화 수량은 1 GP 이상이어야 합니다.");
     if (command.operation==="revoke-currency"&&inventory.goldGp<command.amount) throw new Error("보유 GP보다 많이 회수할 수 없습니다.");
     const before=inventory.goldGp;
     inventory.goldGp+=command.operation==="grant-currency" ? command.amount : -command.amount;
     changes.push(`GP ${before} → ${inventory.goldGp}`);
+    inventory.revision+=1;
   }
-  inventory.revision+=1;
   return changes;
 }
 

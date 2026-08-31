@@ -23,6 +23,7 @@ import "./progressionPhase08SorcererDraconicAdapter";
 import "./progressionPhase08WizardEvocationAdapter";
 import "./progressionPhase08MonkOpenHandAdapter";
 import "./progressionPhase08RogueThiefAdapter";
+import "./installedProgressionChoiceProjectionAdapter";
 import "./phase09RealResolutionAdapter";
 import "./phase09RealItemCostAdapter";
 import "./phase09RealNoRollDamageAdapter";
@@ -47,7 +48,7 @@ import "./classFeatureSpellRuntimeAdapter";
 // its underlying snapshot function, so the existing authoritative HUD/slot bridge can
 // seed TurnRuntime resources without any fixture-only caster registry.
 import "./productionSpellcasterProjectionAdapter";
-import "./phase09SpellcastingRuntimeRouter";
+import "./phase09AuthoritativeSpellcastingAdapter";
 import "./characterLibraryRuntimeAdapter";
 import "./characterSessionProjectionPersistenceGuard";
 import "./authoringDraftRuntimeAdapter";
@@ -59,10 +60,16 @@ import "./productionPlayRuntimeAdapter";
 import "./sessionInventoryRuntimeAdapter";
 import "./theaterOfMindSpatialAdapter";
 import "./productionSpellRuntimeAdapter";
-import "./productionWeaponRuntimeFactAdapter";
 import "./productionDiceRuntimeAdapter";
 import "./standardActionReactionAdapter";
-import "./fighterActionSurgeRuntimeAdapter";
+import "./installedCommonPlayRuntimeAdapter";
+// Rich selector predicates gate the same installed Common Play execution path; they do not execute effects.
+import "./installedCommonPlaySelectorGuardAdapter";
+// Production Common Play commits retain semantic ResolutionEvents instead of snapshot Undo.
+// Install the shared inverse bridge after those commits so Undo reuses the same event stream.
+import "./runtimeResolutionUndoAdapter";
+import "./installedCommonPlayArtifactLifecycleAdapter";
+import "./spatialZoneMembershipRuntimeAdapter";
 import "./barbarianRageRuntimeAdapter";
 import "./barbarianBerserkerIntimidatingPresenceRuntimeAdapter";
 import "./druidWildShapeRuntimeAdapter";
@@ -73,18 +80,12 @@ import "./monkOpenHandQuiveringPalmRuntimeAdapter";
 import "./rogueCoreRuntimeAdapter";
 import "./deathSaveRuntimeAdapter";
 import "./stabilizeRuntimeAdapter";
-import "./unarmedControlRuntimeAdapter";
-import "./bardicInspirationActionRuntimeAdapter";
-import "./bardicInspirationFollowUpRuntimeAdapter";
-import "./fighterTacticalMindFollowUpRuntimeAdapter";
-import "./fighterIndomitableFollowUpRuntimeAdapter";
-import "./warlockFiendDarkOnesOwnLuckFollowUpRuntimeAdapter";
-import "./bardCollegeLorePeerlessSkillFollowUpRuntimeAdapter";
-import "./bardCollegeLoreCuttingWordsFollowUpRuntimeAdapter";
+import "./structuralSaveConditionRuntimeAdapter";
+import "./effectGrantActionRuntimeAdapter";
+import "./consumableD20BonusEffectFollowUpRuntimeAdapter";
 import "./clericDivineSparkActionRuntimeAdapter";
 import "./clericTurnUndeadActionRuntimeAdapter";
 import "./paladinLayOnHandsActionRuntimeAdapter";
-import "./paladinDivineSenseActionRuntimeAdapter";
 import "./paladinAbjureFoesActionRuntimeAdapter";
 import "./paladinDevotionHolyNimbusRuntimeAdapter";
 import "./paladinDevotionSmiteOfProtectionRuntimeAdapter";
@@ -93,12 +94,18 @@ import "./paladinDevotionSmiteOfProtectionRuntimeAdapter";
 import "./abilityCheckResolutionEventAdapter";
 // Cunning Hide must stay outside the generic ability-check recorder so it can compose
 // the canonical check event with its session economy/effect changes instead of replacing it.
-import "./rogueCunningHideEventRuntimeAdapter";
+import "./sessionStatusEffectEventRuntimeAdapter";
 import "./abilityCheckDcRuntimeAdapter";
+// Portable passive Common Play interceptors must observe the fully adjudicated d20
+// presentation, then lower into the existing Gate A reaction kernel before final commit.
+import "./commonPlayInterceptorProductionRuntimeAdapter";
 // Human-acceptance projection stays outermost: it materializes the remaining legacy
 // reference Character summary, keeps the reference demo melee-playable, and projects
 // runtime spatial legality into targetable attack options without changing mechanics authority.
 import "./productionAcceptanceRuntimeAdapter";
+// Generic form artifacts are presentation overlays derived from authoritative artifact state.
+// Keep this projection outermost so later compatibility/reference projections cannot erase it.
+import "./commonPlayFormProjectionAdapter";
 import "./campaignRuntimeAdapter";
 import "./campaignPartyStashCapabilityRuntimeAdapter";
 import "./campaignRationConversionRuntimeAdapter";

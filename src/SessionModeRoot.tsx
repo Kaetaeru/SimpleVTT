@@ -237,6 +237,12 @@ export function SessionModeRoot({ onOpenProduct }: { onOpenProduct(): void }) {
     if (!targetingAction||targetingPending||!targetingAction.eligibleTargetIds.includes(entityId)) return;
     if ((targetingAction.maxTargets??1)<=1) { void runTargeting([entityId]); return; }
     const max=Math.max(1,targetingAction.maxTargets??targetingAction.eligibleTargetIds.length);
+    if(targetingAction.allocation) {
+      setSelectedTargetIds((current)=>current.length>=targetingAction.allocation!.units
+        ? (()=>{const index=current.lastIndexOf(entityId);return index<0?current:current.filter((_,entryIndex)=>entryIndex!==index);})()
+        : [...current,entityId]);
+      return;
+    }
     setSelectedTargetIds((current)=>current.includes(entityId)?current.filter((id)=>id!==entityId):current.length>=max?current:[...current,entityId]);
   };
   const connectionLabel = snapshot.connectionState === "connected"

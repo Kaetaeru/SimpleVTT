@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import "../../src/app/phase09SpellcastingRuntimeRouter";
+import "../../src/app/phase09AuthoritativeSpellcastingAdapter";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import { snapshotAdapterTurnRuntimeState } from "../../src/app/turnRuntimeSessionRegistry";
 
@@ -106,7 +106,7 @@ test("authoritative Thunderwave targets every enemy when no spatial module is in
   assert.equal(spellSlotCurrent(adapter,1),3);
 });
 
-test("no-session Healing Word preserves the existing legacy spell bridge and two-step safe Undo", async () => {
+test("freeform Healing Word uses the authoritative runtime and event-native Undo", async () => {
   const adapter=new MockAdapter();
   let snapshot=await adapter.getSnapshot();
   assert.equal(snapshot.scene.spellcastingByActor?.["char.mira"]?.slots.find((slot)=>slot.level===1)?.current,4);
@@ -115,12 +115,6 @@ test("no-session Healing Word preserves the existing legacy spell bridge and two
   snapshot=await adapter.getSnapshot();
   assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="char.aelar")?.hp,42);
   assert.equal(snapshot.scene.spellcastingByActor?.["char.mira"]?.slots.find((slot)=>slot.level===1)?.current,3);
-
-  await adapter.undoLastResolution();
-  snapshot=await adapter.getSnapshot();
-  assert.match(snapshot.resolution?.id ?? "",/^undo-preview\./,"legacy fallback preserves the existing confirmation preview");
-  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="char.aelar")?.hp,42,"preview does not mutate Scene state");
-  assert.equal(snapshot.scene.spellcastingByActor?.["char.mira"]?.slots.find((slot)=>slot.level===1)?.current,3,"preview does not mutate legacy spell-slot state");
 
   await adapter.undoLastResolution();
   snapshot=await adapter.getSnapshot();

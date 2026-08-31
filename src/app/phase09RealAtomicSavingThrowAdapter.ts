@@ -16,13 +16,8 @@ import { projectResolutionEventsToActivity } from "./realActivityProjectionServi
 import { undoResolutionEvents } from "./realEventUndoService";
 import { resolveRuntimeSaveModifier } from "./realRuntimeStatProvider";
 import { persistCharacterResolutionEvents } from "./resolutionCharacterWriteBackPort";
-import { projectedCharacterById } from "./characterSessionProjectionRegistry";
+import { projectedCharacterById, synchronizeProjectedCharacterResources } from "./characterSessionProjectionRegistry";
 import { consumeAdapterInterruptEvents } from "./phase09RealTurnRuntimeAdapter";
-import {
-  clearFighterIndomitableResolution,
-  fighterIndomitableModifierBonus,
-  synchronizeFighterIndomitableProjectedResources,
-} from "./fighterIndomitableRuntimeState";
 import { commitAdapterTurnRuntimeState, snapshotAdapterTurnRuntimeState } from "./turnRuntimeSessionRegistry";
 import type { ResolutionEvent } from "../domain/resolutionTypes";
 
@@ -119,14 +114,13 @@ MockAdapter.prototype.advanceResolution=async function advanceResolutionWithAtom
         action!.saveAbility ?? "내성",
         internal.combatantDefinitions,
       );
-      const indomitableBonus=fighterIndomitableModifierBonus(this,resolution.id,preview.targetId);
       return {
         entity,
         economy,
-        modifier:stat.modifier+indomitableBonus,
-        modifierSource:indomitableBonus
-          ? `${stat.source}+feature:fighter.indomitable`
-          : stat.source,
+        modifier:preview.total-preview.d20,
+        modifierSource:preview.total-preview.d20===stat.modifier
+          ? stat.source
+          : `resolution:${resolution.id}:authoritative-save-preview`,
         d20:preview.d20,
         expectedTotal:preview.total,
         expectedOutcome:preview.outcome,
@@ -200,7 +194,6 @@ MockAdapter.prototype.advanceResolution=async function advanceResolutionWithAtom
     targetNames:resolution.targetIds.map((id)=>internal.entity(id)?.name ?? id),
   }));
   histories.set(this,{ resolutionId:resolution.id,events });
-  clearFighterIndomitableResolution(this,resolution.id);
   internal.lastBefore=null;
   internal.lastResolutionId=resolution.id;
   internal.before=null;
@@ -243,7 +236,7 @@ MockAdapter.prototype.undoLastResolution=async function undoAtomicSavingThrowFro
   internal.activeCharacter.resources=undone.resources.map((resource)=>structuredClone(resource));
   internal.activeCharacter.items=undone.items.map((item)=>structuredClone(item));
   internal.syncChar();
-  synchronizeFighterIndomitableProjectedResources(this);
+  if (undone.runtimeState) synchronizeProjectedCharacterResources(this,undone.runtimeState);
   internal.activity=internal.activity.map((entry)=>entry.id===history.resolutionId ? { ...entry,reversed:true } : entry);
   internal.activity.unshift({
     id:`phase09.saving-throw-undo.${Date.now()}.${Math.floor(Math.random()*1000)}`,

@@ -21,7 +21,7 @@ import {
   speciesDefinition,
 } from "./characterCreationV10Data";
 import { proficiencyBonusForTotalLevel } from "../domain/progressionCatalog";
-import { FIGHTER_ACTION_SURGE_RESOURCE_ID, FIGHTER_ACTION_SURGE_TURN_RESOURCE_ID } from "../domain/coreClassResources";
+import { FIGHTER_ACTION_SURGE_RESOURCE_ID, FIGHTER_ACTION_SURGE_TURN_RESOURCE_ID, FIGHTER_SECOND_WIND_RESOURCE_ID } from "../domain/coreClassResources";
 import {
   parseCharacterSessionProjectionV1,
   type CharacterProjectionContentIdentityV1,
@@ -106,7 +106,10 @@ function reconstructItems(projection:CharacterSessionProjectionV1):ItemInstanceV
       wieldSlot:runtime.wieldSlot,
       attunementRequired:source.attunementRequired === true,
       attuned:runtime.attuned,
+      ...(source.attunementPolicy?{attunementPolicy:clone(source.attunementPolicy)}:{}),
       charges:maxCharges!==undefined ? { current:runtime.charges?.current ?? maxCharges,max:maxCharges } : undefined,
+      spellcastingComponent:source.spellcastingComponent,
+      unitCostGp:source.unitCostGp,
       passiveEffects:canonical ? [] : clone(source.passiveEffects ?? []),
       grantedActionIds:[],
       provenance:canonical
@@ -312,6 +315,7 @@ function actionsFor(projection:CharacterSessionProjectionV1,sheet:CharacterSheet
     summary:"이 턴 동안 기회공격을 유발하지 않음",
     available:true,
     eligibleTargetIds:targetSelf,
+    sessionStatusEffect:{status:"이탈",target:"actor",successOutcome:"이탈 적용",expiresAtActorTurnBoundary:"end",runtimeTags:["disengage","no-opportunity-attacks"]},
     details:[
       {label:"대상",value:"자신"},
       {label:"효과",value:"이 턴 동안 기회공격을 유발하지 않음",source:"SRD 5.2.1 · Rogue · Cunning Action"},
@@ -333,6 +337,7 @@ function actionsFor(projection:CharacterSessionProjectionV1,sheet:CharacterSheet
       available:true,
       eligibleTargetIds:[],
       checkBonus:stealth,
+      sessionStatusEffect:{status:"숨음",target:"actor",minimumRoll:15,successOutcome:"숨기 성공",failureOutcome:"숨기 실패",durationKey:"hidden-until-attack-or-discovery",endsOnAttack:true},
       details:[
         {label:"판정",value:"민첩(은신)"},
         {label:"보너스",value:signed},
@@ -344,7 +349,7 @@ function actionsFor(projection:CharacterSessionProjectionV1,sheet:CharacterSheet
 
   const fighterLevel=classLevel(projection,"dnd.srd521.class.fighter");
   if (fighterLevel>=1) {
-    const secondWind=sheet.resources.find((resource)=>resource.id==="resource.second-wind" || resource.id.includes("second-wind"));
+    const secondWind=sheet.resources.find((resource)=>resource.id===FIGHTER_SECOND_WIND_RESOURCE_ID)??sheet.resources.find((resource)=>resource.id==="resource.second-wind" || resource.id.includes("second-wind"));
     if (!secondWind) throw new Error("Fighter SessionProjection is missing canonical Second Wind resource state");
     actions.push({
       id:"action.second-wind",

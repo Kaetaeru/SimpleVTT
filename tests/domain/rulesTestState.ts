@@ -5,7 +5,15 @@ import { beginTurn } from "../../src/domain/turnEconomy";
 export const TEST_PROFILE: RulesProfileLike = {
   profileId:"dnd.srd-5.2.1",
   roundingPolicy:{ id:"dnd.rounding.default-floor", default:"floor" },
-  properties:{},
+  properties:{
+    "inventory.carrying.pounds-per-strength":{formula:{value:15}},
+    "inventory.carrying.size-multiplier.tiny":{formula:{value:0.5}},
+    "inventory.carrying.size-multiplier.small":{formula:{value:1}},
+    "inventory.carrying.size-multiplier.medium":{formula:{value:1}},
+    "inventory.carrying.size-multiplier.large":{formula:{value:2}},
+    "inventory.carrying.size-multiplier.huge":{formula:{value:4}},
+    "inventory.carrying.size-multiplier.gargantuan":{formula:{value:8}},
+  },
   d20Test:{ advantageDisadvantage:{ sameSideStacks:false, opposingCancel:true } },
 };
 

@@ -1,0 +1,44 @@
+name: M1 Common Play d20
+
+on:
+  pull_request:
+    paths:
+      - "schemas/common-play-contract.schema.json"
+      - "src/domain/commonPlayOperationRuntime.ts"
+      - "src/domain/d20.ts"
+      - "src/domain/resolution.ts"
+      - "src/app/installedCommonPlayRuntimeAdapter.ts"
+      - "src/app/runtimeResolutionCommit.ts"
+      - "tests/fixtures/play-contract/generic-d20-action.json"
+      - "tests/domain/commonPlayD20Runtime.test.ts"
+      - "tests/domain/commonPlayResourceEconomyRuntime.test.ts"
+      - "tests/ui/ruleModulePackageImport.test.ts"
+      - "tests/ui/installedCommonPlayProductionRuntime.test.ts"
+      - "tests/ui/fighterActionSurgeRuntimeAdapter.test.ts"
+      - ".github/workflows/m1-common-play-d20.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  d20-production:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Generate content catalogs
+        run: npm run generate:content
+      - name: Verify Common Play d20 production bridge and Resource Economy regression
+        run: >-
+          npx tsx --test
+          tests/domain/commonPlayD20Runtime.test.ts
+          tests/domain/commonPlayResourceEconomyRuntime.test.ts
+          tests/ui/ruleModulePackageImport.test.ts
+          tests/ui/installedCommonPlayProductionRuntime.test.ts
+          tests/ui/fighterActionSurgeRuntimeAdapter.test.ts
+      - name: Typecheck application
+        run: npx tsc --noEmit

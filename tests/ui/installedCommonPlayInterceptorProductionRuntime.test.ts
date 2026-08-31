@@ -1,0 +1,722 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import "../../src/app/offlineRuntimeAdapters";
+import "../../src/app/connectedSessionRuntimeAdapter";
+import "../../src/app/connectedActionRoutingAdapter";
+import type { ActionVm, CharacterSheet, SceneVm } from "../../src/app/contracts";
+import { setInstalledContentStoreForTests } from "../../src/app/installedContentRuntimeAdapter";
+import { MemoryInstalledContentStore } from "../../src/app/memoryInstalledContentStore";
+import { MockAdapter } from "../../src/app/mockAdapter";
+import { FIGHTER_SECOND_WIND_RESOURCE_ID } from "../../src/domain/coreClassResources";
+import { setSpatialRelation } from "../../src/app/spatialRuntimeContracts";
+import { applyConnectedClientEvents, connectedManifest } from "../../src/app/connectedSessionRuntimeAdapter";
+import { connectedStateFor } from "../../src/app/connectedSessionState";
+import { ClientSessionReplica, HostSessionLedger, type ConnectedSessionEvent } from "../../src/app/connectedSessionProtocol";
+import { tauriSessionTransport } from "../../src/app/tauriSessionTransport";
+import { commitAdapterTurnRuntimeState, snapshotAdapterTurnRuntimeState } from "../../src/app/turnRuntimeSessionRegistry";
+import { SIMPLEVTT_APP_RULES_PROFILE } from "../../src/app/realResolutionService";
+import { resolvePendingResolution } from "../../src/domain/resolution";
+import { compileCommonPlayEntryPointOperations, parseCommonPlayOperationDefinition } from "../../src/domain/commonPlayOperationRuntime";
+
+const OTHER_CHARACTER_ID="char.portable-interceptor-target";
+const OTHER_CHARACTER_CHECK_ID="action.portable-interceptor-target.check";
+const OTHER_CHARACTER_SAVE_ID="action.portable-interceptor-target.save";
+
+type Identity={moduleId:string;contentId:string;mechanicId:string;interceptorId:string;interactionId:string;displayName:string};
+const ORIGINAL:Identity={
+  moduleId:"homebrew.portable-interceptor",
+  contentId:"item.portable-interceptor-charm",
+  mechanicId:"external.portable-interceptor",
+  interceptorId:"reduce-successful-d20",
+  interactionId:"choose-portable-reaction",
+  displayName:"Portable Reaction Charm",
+};
+
+function packagePayload(
+  identity=ORIGINAL,
+  withEligibility=false,
+  interceptorKind:"d20"|"damage"="d20",
+  operations:Array<Record<string,unknown>>=[{kind:"roll.modify",mode:"subtract-die",dice:"1d8"}],
+  selection?:{families?:Array<"ability-check"|"saving-throw"|"attack-roll">;outcomes?:Array<"success"|"failure">},
+  eligibilityExpectations:{light?:"bright"|"dim"|"darkness";obscurement?:"none"|"light"|"heavy";canSee?:boolean}={},
+){
+  return JSON.stringify({
+    schemaVersion:"0.1-draft",
+    moduleId:identity.moduleId,
+    moduleVersion:"1",
+    rulesProfile:{id:"dnd.srd-5.2.1",version:"0.1-draft"},
+    defaultLocale:"en",
+    source:{document:"Portable Interceptor Probe",version:"1",license:"CC0",srdDerived:false},
+    dependencies:[],conflicts:[],capabilities:[],
+    content:[{
+      id:identity.contentId,
+      category:"item",
+      presentation:{defaultLocale:"en",originalName:identity.displayName,locales:{en:{name:identity.displayName,description:"Unknown external passive Common Play interceptor"}}},
+      mechanics:[{
+        kind:"common-play",
+        config:{
+          schemaVersion:"0.2-draft",
+          id:identity.mechanicId,
+          payments:[
+            {kind:"economy",bucket:"reaction",amount:{value:1},consumeAt:"commit"},
+            {kind:"resource",resource:FIGHTER_SECOND_WIND_RESOURCE_ID,amount:{value:1},consumeAt:"commit"},
+          ],
+          interceptors:[{
+            id:identity.interceptorId,
+            timing:interceptorKind==="damage"?"damage.rolled":"d20.outcome-determined",
+            ...(withEligibility?{
+              factQueries:[
+                {id:"trigger-distance",fact:"spatial.distance-feet",subject:"intercepted.actor",authority:"dm",visibility:"dm",unknownPolicy:"block"},
+                {id:"trigger-creature-type",fact:"identity.creature-type",subject:"intercepted.actor",authority:"dm",visibility:"dm",unknownPolicy:"block"},
+                {id:"source-sees-trigger",fact:"sense.can-see",subject:"intercepted.actor",authority:"dm",visibility:"dm",unknownPolicy:"treat-false"},
+                {id:"trigger-light",fact:"sense.light",subject:"intercepted.actor",authority:"dm",visibility:"dm",unknownPolicy:"block"},
+                {id:"trigger-obscurement",fact:"sense.obscurement",subject:"intercepted.actor",authority:"dm",visibility:"dm",unknownPolicy:"block"},
+                {id:"trigger-detected",fact:"sense.detected",subject:"intercepted.actor",authority:"dm",visibility:"dm",unknownPolicy:"block"},
+                {id:"trigger-hidden",fact:"sense.hidden",subject:"intercepted.actor",authority:"dm",visibility:"dm",unknownPolicy:"block"},
+              ],
+              when:{op:"all",args:[
+                {op:"lte",left:{ref:"trigger-distance"},right:{value:60}},
+                {op:"eq",left:{ref:"trigger-creature-type"},right:{value:"humanoid"}},
+                {op:"eq",left:{ref:"source-sees-trigger"},right:{value:eligibilityExpectations.canSee??true}},
+                {op:"eq",left:{ref:"trigger-light"},right:{value:eligibilityExpectations.light??"dim"}},
+                {op:"eq",left:{ref:"trigger-obscurement"},right:{value:eligibilityExpectations.obscurement??"none"}},
+                {op:"eq",left:{ref:"trigger-detected"},right:{value:true}},
+                {op:"eq",left:{ref:"trigger-hidden"},right:{value:true}},
+              ]},
+            }:{}),
+            ...(selection??{}),
+            interaction:{id:identity.interactionId,kind:"choice",responder:"actor-owner",mode:"blocking",input:{type:"boolean"},revalidate:"if-revision-changed",stalePolicy:"reject"},
+            operation:"recalculate",
+            slot:interceptorKind==="damage"?"primary.damage":"d20.roll",
+            operations,
+          }],
+        },
+      }],
+    }],
+  });
+}
+
+function otherCharacterCheckAction():ActionVm{
+  return {
+    id:OTHER_CHARACTER_CHECK_ID,actorId:OTHER_CHARACTER_ID,name:"Portable Target Check",category:"basic",target:"none",economy:"없음",
+    resolutionKind:"ability-check",summary:"Strength +0",available:true,eligibleTargetIds:[],checkBonus:0,details:[{label:"판정",value:"근력"}],
+  };
+}
+
+function otherCharacterSaveAction():ActionVm{
+  return {
+    id:OTHER_CHARACTER_SAVE_ID,actorId:OTHER_CHARACTER_ID,name:"Portable Target Save",category:"magic",target:"any",economy:"없음",
+    resolutionKind:"saving-throw",summary:"Wisdom save DC 14",available:true,eligibleTargetIds:[],saveDc:14,saveAbility:"지혜",
+    damage:[{type:"force",dice:"1d6",flat:0,average:3}],details:[{label:"내성",value:"지혜 DC 14"}],
+  };
+}
+
+async function prepare(
+  identity=ORIGINAL,
+  withEligibility=false,
+  interceptorKind:"d20"|"damage"="d20",
+  operations:Array<Record<string,unknown>>=[{kind:"roll.modify",mode:"subtract-die",dice:"1d8"}],
+  selection?:{families?:Array<"ability-check"|"saving-throw"|"attack-roll">;outcomes?:Array<"success"|"failure">},
+  eligibilityExpectations:{light?:"bright"|"dim"|"darkness";obscurement?:"none"|"light"|"heavy";canSee?:boolean}={},
+){
+  const adapter=new MockAdapter();
+  setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
+  await adapter.startProductionLocalPlay("dm");
+  const preview=await adapter.previewContentImport(packagePayload(identity,withEligibility,interceptorKind,operations,selection,eligibilityExpectations));
+  assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
+  await adapter.activateContentImport();
+  const internal=adapter as unknown as {activeCharacter:CharacterSheet;scene:SceneVm};
+  internal.activeCharacter.items.push({
+    id:`owned.${identity.contentId}`,
+    definitionId:identity.contentId,
+    name:identity.displayName,
+    nameEn:identity.displayName,
+    kind:"magic",quantity:1,equipped:true,passiveEffects:[],grantedActionIds:[],provenance:[identity.moduleId],
+  });
+  internal.scene.entities.push({
+    id:OTHER_CHARACTER_ID,name:"Portable Interceptor Target",side:"ally",kind:"character",hp:20,maxHp:20,tempHp:0,ac:12,initiative:18,
+    status:[],resistances:[],immunities:[],vulnerabilities:[],reactions:[],
+  });
+  internal.scene.actionsByActor[OTHER_CHARACTER_ID]=[otherCharacterCheckAction(),otherCharacterSaveAction()];
+  await adapter.startInitiative();
+  return adapter;
+}
+
+async function openAbilityCheckInterrupt(adapter:MockAdapter,outcome:"success"|"failure"="success"){
+  await adapter.setCurrentActor(OTHER_CHARACTER_ID);
+  await adapter.setQueuedD20(15);
+  let snapshot=await adapter.resolveAction(OTHER_CHARACTER_CHECK_ID,[]);
+  assert.equal(snapshot.resolution?.stage,"roll-animation",JSON.stringify(snapshot.resolution));
+  snapshot=await adapter.advanceResolution();
+  assert.equal(snapshot.resolution?.stage,"effect-preview",JSON.stringify(snapshot.resolution));
+  const total=snapshot.resolution?.rollTotal;
+  assert.equal(typeof total,"number");
+  snapshot=await adapter.applyDmAdjudication({type:"ability-check-dc",scope:"resolution",value:outcome==="success"?total!-2:total!+2});
+  return snapshot;
+}
+
+async function openSavingThrowInterrupt(adapter:MockAdapter){
+  const owner=(await adapter.getSnapshot()).activeCharacter.id;
+  await adapter.setCurrentActor(OTHER_CHARACTER_ID);
+  await adapter.setQueuedD20(8);
+  let snapshot=await adapter.resolveAction(OTHER_CHARACTER_SAVE_ID,[owner]);
+  assert.equal(snapshot.resolution?.stage,"save-animation",JSON.stringify(snapshot.resolution));
+  snapshot=await adapter.advanceResolution();
+  assert.equal(snapshot.resolution?.stage,"interrupt",JSON.stringify(snapshot.resolution));
+  assert.equal(snapshot.resolution?.saveResults[0]?.outcome,"실패");
+  return snapshot;
+}
+
+function secondWind(snapshot:Awaited<ReturnType<MockAdapter["getSnapshot"]>>){
+  return snapshot.activeCharacter.resources.find((entry)=>entry.id===FIGHTER_SECOND_WIND_RESOURCE_ID)?.current;
+}
+
+function seedHiddenRuntimeEffect(adapter:MockAdapter,targetId:string){
+  const internal=adapter as unknown as {activeCharacter:CharacterSheet;scene:SceneVm};
+  const state=snapshotAdapterTurnRuntimeState(adapter,internal.scene);
+  assert.ok(state,"TurnRuntime state must exist before Hidden fact seeding");
+  const committed=resolvePendingResolution(SIMPLEVTT_APP_RULES_PROFILE,state!,{
+    id:`resolution.hidden-fact.${targetId}`,
+    actorId:internal.activeCharacter.id,
+    sourceId:"external.hidden-fact-probe",
+    expectedRevision:state!.revision,
+    operations:[{
+      id:"op.hidden-fact",
+      kind:"apply-effect",
+      effect:{
+        id:`effect.hidden-fact.${targetId}`,
+        sourceId:"external.hidden-fact-probe",
+        sourceActorId:internal.activeCharacter.id,
+        targetId,
+        kind:"marker",
+        tags:["hidden"],
+        duration:{kind:"special",key:"test.hidden-fact"},
+      },
+    }],
+  });
+  assert.notEqual(committed.status,"rejected");
+  if(committed.status==="rejected")return;
+  assert.equal(commitAdapterTurnRuntimeState(adapter,internal.scene,state!.revision,committed.state),true);
+}
+
+test("owned unknown installed interceptor passively opens after a successful ability check and pays atomically on accept",async()=>{
+  const adapter=await prepare();
+  let snapshot=await adapter.getSnapshot();
+  const resourceBefore=secondWind(snapshot);
+  assert.ok(resourceBefore!==undefined&&resourceBefore>0);
+  const responderId=snapshot.activeCharacter.id;
+
+  snapshot=await openAbilityCheckInterrupt(adapter);
+  assert.equal(snapshot.resolution?.stage,"interrupt",JSON.stringify(snapshot.resolution));
+  assert.equal(snapshot.resolution?.interrupt?.responderId,responderId);
+  assert.match(snapshot.resolution?.interrupt?.optionName??"",/Portable Reaction Charm/);
+  assert.equal(secondWind(snapshot),resourceBefore,"preview must not spend the resource");
+  assert.equal(snapshot.scene.economyByActor[responderId]?.reaction,true,"preview must not spend Reaction");
+
+  await adapter.setQueuedD20(6);
+  snapshot=await adapter.respondToInterrupt(true);
+  assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
+  assert.equal(snapshot.resolution?.checkOutcome,"실패",JSON.stringify(snapshot.resolution));
+  assert.equal(snapshot.resolution?.rollTotal,9);
+  assert.equal(secondWind(snapshot),resourceBefore-1);
+  assert.equal(snapshot.scene.economyByActor[responderId]?.reaction,false);
+  assert.ok(snapshot.resolution?.provenance.some((entry)=>entry.includes("common-play:")));
+});
+
+test("declining a portable installed interceptor spends neither Reaction nor resource",async()=>{
+  const adapter=await prepare();
+  let snapshot=await adapter.getSnapshot();
+  const responderId=snapshot.activeCharacter.id;
+  const resourceBefore=secondWind(snapshot);
+  snapshot=await openAbilityCheckInterrupt(adapter);
+  assert.equal(snapshot.resolution?.stage,"interrupt");
+  snapshot=await adapter.respondToInterrupt(false);
+  assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
+  assert.equal(snapshot.resolution?.checkOutcome,"성공");
+  assert.equal(secondWind(snapshot),resourceBefore);
+  assert.equal(snapshot.scene.economyByActor[responderId]?.reaction,true);
+});
+
+test("portable production discovery is invariant under module/content/definition/interceptor/display rename",async()=>{
+  const renamed:Identity={
+    moduleId:"homebrew.completely-renamed-passive",
+    contentId:"item.previously-unseen-renamed-passive",
+    mechanicId:"external.previously-unseen-renamed-passive",
+    interceptorId:"renamed-post-roll-interceptor",
+    interactionId:"renamed-owner-choice",
+    displayName:"Completely Renamed Passive",
+  };
+  const execute=async(identity:Identity)=>{
+    const adapter=await prepare(identity);
+    await openAbilityCheckInterrupt(adapter);
+    await adapter.setQueuedD20(4);
+    const snapshot=await adapter.respondToInterrupt(true);
+    return {
+      outcome:snapshot.resolution?.checkOutcome,
+      total:snapshot.resolution?.rollTotal,
+      resource:secondWind(snapshot),
+      reaction:snapshot.scene.economyByActor[snapshot.activeCharacter.id]?.reaction,
+    };
+  };
+  assert.deepEqual(await execute(renamed),await execute(ORIGINAL));
+});
+
+test("unknown installed d20 interceptor executes replace, minimum, and target-add in production and Undo restores atomic costs",async()=>{
+  const operations=[
+    {kind:"roll.modify",mode:"replace",value:{value:10}},
+    {kind:"roll.modify",mode:"minimum",value:{value:12}},
+    {kind:"roll.modify",mode:"target-add",value:{value:2}},
+  ];
+  const renamed:Identity={...ORIGINAL,moduleId:"external.deterministic-renamed",contentId:"item.deterministic-renamed",mechanicId:"mechanic.deterministic-renamed",interceptorId:"interceptor.deterministic-renamed",interactionId:"interaction.deterministic-renamed",displayName:"Renamed Deterministic Reaction"};
+  const execute=async(identity:Identity)=>{
+    const adapter=await prepare(identity,false,"d20",operations);
+    let snapshot=await adapter.getSnapshot();
+    const responderId=snapshot.activeCharacter.id;
+    const resourceBefore=secondWind(snapshot)!;
+    snapshot=await openAbilityCheckInterrupt(adapter);
+    assert.equal(snapshot.resolution?.stage,"interrupt",JSON.stringify(snapshot.resolution));
+    snapshot=await adapter.respondToInterrupt(true);
+    const mechanical={outcome:snapshot.resolution?.checkOutcome,total:snapshot.resolution?.rollTotal,target:snapshot.resolution?.checkTarget};
+    assert.deepEqual(mechanical,{outcome:"실패",total:12,target:15});
+    assert.equal(secondWind(snapshot),resourceBefore-1);
+    assert.equal(snapshot.scene.economyByActor[responderId]?.reaction,false);
+    assert.ok(snapshot.resolution?.provenance.some((entry)=>entry.includes("common-play:")));
+    snapshot=await adapter.undoLastResolution();
+    assert.equal(secondWind(snapshot),resourceBefore);
+    assert.equal(snapshot.scene.economyByActor[responderId]?.reaction,true);
+    return mechanical;
+  };
+  assert.deepEqual(await execute(renamed),await execute(ORIGINAL));
+});
+
+test("unknown installed add-die executes in production with rename invariance and Undo",async()=>{
+  const operations=[{kind:"roll.modify",mode:"add-die",dice:"1d8"}];
+  const renamed:Identity={...ORIGINAL,moduleId:"external.add-die-renamed",contentId:"item.add-die-renamed",mechanicId:"mechanic.add-die-renamed",interceptorId:"interceptor.add-die-renamed",interactionId:"interaction.add-die-renamed",displayName:"Renamed Add Die"};
+  const execute=async(identity:Identity)=>{
+    const adapter=await prepare(identity,false,"d20",operations);
+    let snapshot=await adapter.getSnapshot();
+    const responderId=snapshot.activeCharacter.id;
+    const resourceBefore=secondWind(snapshot)!;
+    snapshot=await openAbilityCheckInterrupt(adapter);
+    await adapter.setQueuedD20(6);
+    snapshot=await adapter.respondToInterrupt(true);
+    const mechanical={outcome:snapshot.resolution?.checkOutcome,total:snapshot.resolution?.rollTotal,natural:snapshot.resolution?.naturalD20};
+    assert.deepEqual(mechanical,{outcome:"성공",total:21,natural:15});
+    assert.equal(secondWind(snapshot),resourceBefore-1);
+    assert.equal(snapshot.scene.economyByActor[responderId]?.reaction,false);
+    snapshot=await adapter.undoLastResolution();
+    assert.equal(secondWind(snapshot),resourceBefore);
+    assert.equal(snapshot.scene.economyByActor[responderId]?.reaction,true);
+    return mechanical;
+  };
+  assert.deepEqual(await execute(renamed),await execute(ORIGINAL));
+});
+
+test("unknown installed reroll executes in production with rename invariance and Undo",async()=>{
+  const operations=[{kind:"roll.modify",mode:"reroll",dice:"1d20"}];
+  const renamed:Identity={...ORIGINAL,moduleId:"external.reroll-renamed",contentId:"item.reroll-renamed",mechanicId:"mechanic.reroll-renamed",interceptorId:"interceptor.reroll-renamed",interactionId:"interaction.reroll-renamed",displayName:"Renamed Reroll"};
+  const execute=async(identity:Identity)=>{
+    const adapter=await prepare(identity,false,"d20",operations);
+    let snapshot=await adapter.getSnapshot();
+    const responderId=snapshot.activeCharacter.id;
+    const resourceBefore=secondWind(snapshot)!;
+    snapshot=await openAbilityCheckInterrupt(adapter);
+    await adapter.setQueuedD20(4);
+    snapshot=await adapter.respondToInterrupt(true);
+    const mechanical={outcome:snapshot.resolution?.checkOutcome,total:snapshot.resolution?.rollTotal,natural:snapshot.resolution?.naturalD20,die:snapshot.resolution?.authoritativeDice[0]};
+    assert.deepEqual(mechanical,{outcome:"실패",total:4,natural:4,die:4});
+    assert.equal(secondWind(snapshot),resourceBefore-1);
+    assert.equal(snapshot.scene.economyByActor[responderId]?.reaction,false);
+    snapshot=await adapter.undoLastResolution();
+    assert.equal(secondWind(snapshot),resourceBefore);
+    assert.equal(snapshot.scene.economyByActor[responderId]?.reaction,true);
+    return mechanical;
+  };
+  assert.deepEqual(await execute(renamed),await execute(ORIGINAL));
+});
+
+test("portable installed d20 interceptor can turn a successful production attack into a miss",async()=>{
+  const adapter=await prepare();
+  let snapshot=await adapter.setCurrentActor("combatant.goblin-a");
+  const responderId=snapshot.activeCharacter.id;
+  const resourceBefore=secondWind(snapshot);
+  const hpBefore=snapshot.scene.entities.find((entry)=>entry.id===responderId)?.hp;
+  await adapter.setQueuedD20(18);
+  snapshot=await adapter.resolveAction("action.scimitar",[responderId]);
+  for(let step=0;step<4&&snapshot.resolution?.stage!=="interrupt";step++)snapshot=await adapter.advanceResolution();
+  assert.equal(snapshot.resolution?.stage,"interrupt",JSON.stringify(snapshot.resolution));
+  await adapter.setQueuedD20(8);
+  snapshot=await adapter.respondToInterrupt(true);
+  assert.equal(snapshot.resolution?.attackOutcome,"빗나감",JSON.stringify(snapshot.resolution));
+  while(snapshot.resolution?.stage!=="complete")snapshot=await adapter.advanceResolution();
+  assert.equal(snapshot.scene.entities.find((entry)=>entry.id===responderId)?.hp,hpBefore);
+  assert.equal(secondWind(snapshot),resourceBefore!-1);
+  assert.equal(snapshot.scene.economyByActor[responderId]?.reaction,false);
+});
+
+test("portable production interceptor uses authoritative spatial, visibility, and Hidden facts",async()=>{
+  const renamed:Identity={...ORIGINAL,moduleId:"external.renamed-facts",contentId:"item.renamed-facts",mechanicId:"mechanic.renamed-facts",interceptorId:"interceptor.renamed-facts",interactionId:"interaction.renamed-facts",displayName:"Renamed Fact Reaction"};
+  for(const [index,identity] of [ORIGINAL,renamed].entries()){
+    const adapter=await prepare(identity,true);
+    const internal=adapter as unknown as {activeCharacter:CharacterSheet;scene:SceneVm};
+    const relation={sourceId:internal.activeCharacter.id,targetId:OTHER_CHARACTER_ID,distanceFeet:30,visible:true,cover:"none" as const,targetCanSeeAttacker:true,light:"dim" as const,obscurement:"none" as const,detected:true};
+    setSpatialRelation(internal.scene,{...relation,provenance:index===0?"module:test-map:spatial":"module:test-map-renamed:spatial"});
+    seedHiddenRuntimeEffect(adapter,OTHER_CHARACTER_ID);
+    const snapshot=await openAbilityCheckInterrupt(adapter);
+    assert.equal(snapshot.resolution?.stage,"interrupt",JSON.stringify(snapshot.resolution));
+    await adapter.respondToInterrupt(false);
+  }
+
+  const visibleButNotHidden=await prepare(ORIGINAL,true);
+  const visibleInternal=visibleButNotHidden as unknown as {activeCharacter:CharacterSheet;scene:SceneVm};
+  setSpatialRelation(visibleInternal.scene,{
+    sourceId:visibleInternal.activeCharacter.id,targetId:OTHER_CHARACTER_ID,distanceFeet:30,visible:true,cover:"none",targetCanSeeAttacker:true,light:"dim",obscurement:"none",detected:true,provenance:"module:test-map:spatial",
+  });
+  let snapshot=await openAbilityCheckInterrupt(visibleButNotHidden);
+  assert.notEqual(snapshot.resolution?.stage,"interrupt","authoritative visible target must still fail a required Hidden fact when no Hidden effect exists");
+
+  const notDetected=await prepare(ORIGINAL,true);
+  const notDetectedInternal=notDetected as unknown as {activeCharacter:CharacterSheet;scene:SceneVm};
+  setSpatialRelation(notDetectedInternal.scene,{
+    sourceId:notDetectedInternal.activeCharacter.id,targetId:OTHER_CHARACTER_ID,distanceFeet:30,visible:true,cover:"none",targetCanSeeAttacker:true,light:"dim",obscurement:"none",detected:false,provenance:"module:test-map:spatial",
+  });
+  seedHiddenRuntimeEffect(notDetected,OTHER_CHARACTER_ID);
+  snapshot=await openAbilityCheckInterrupt(notDetected);
+  assert.notEqual(snapshot.resolution?.stage,"interrupt","authoritative detection false must fail a required sense.detected fact");
+
+  const unavailable=await prepare(ORIGINAL,true);
+  seedHiddenRuntimeEffect(unavailable,OTHER_CHARACTER_ID);
+  snapshot=await openAbilityCheckInterrupt(unavailable);
+  assert.notEqual(snapshot.resolution?.stage,"interrupt","Hidden must not fabricate missing spatial or visibility authority");
+});
+
+test("portable production normal sight composes authoritative lighting and obscurement",async()=>{
+  const operations=[{kind:"roll.modify",mode:"subtract-die",dice:"1d8"}];
+  const scenarios=[
+    {label:"darkness",light:"darkness" as const,obscurement:"none" as const},
+    {label:"heavy obscurement",light:"dim" as const,obscurement:"heavy" as const},
+  ];
+  for(const scenario of scenarios){
+    const adapter=await prepare(ORIGINAL,true,"d20",operations,undefined,{light:scenario.light,obscurement:scenario.obscurement});
+    const internal=adapter as unknown as {activeCharacter:CharacterSheet;scene:SceneVm};
+    setSpatialRelation(internal.scene,{
+      sourceId:internal.activeCharacter.id,targetId:OTHER_CHARACTER_ID,distanceFeet:30,visible:true,cover:"none",targetCanSeeAttacker:true,
+      light:scenario.light,obscurement:scenario.obscurement,detected:true,provenance:`module:test-${scenario.label}:spatial`,
+    });
+    seedHiddenRuntimeEffect(adapter,OTHER_CHARACTER_ID);
+    const snapshot=await openAbilityCheckInterrupt(adapter);
+    assert.notEqual(snapshot.resolution?.stage,"interrupt",`normal sight must reject ${scenario.label} even when raw line of sight is true`);
+  }
+});
+
+test("portable damage-roll interceptor reduces authoritative production damage and Undo restores HP, resource, and Reaction",async()=>{
+  const adapter=await prepare(ORIGINAL,false,"damage");
+  let snapshot=await adapter.setCurrentActor("combatant.goblin-a");
+  const responderId=snapshot.activeCharacter.id;
+  const targetBefore=snapshot.scene.entities.find((entry)=>entry.id===responderId)!;
+  const hpBefore=targetBefore.hp;
+  const tempHpBefore=targetBefore.tempHp;
+  const resourceBefore=secondWind(snapshot)!;
+  await adapter.setQueuedD20(18);
+  snapshot=await adapter.resolveAction("action.scimitar",[responderId]);
+  for(let step=0;step<4&&snapshot.resolution?.stage!=="interrupt";step++)snapshot=await adapter.advanceResolution();
+  assert.equal(snapshot.resolution?.stage,"interrupt",JSON.stringify(snapshot.resolution));
+  assert.equal(snapshot.resolution?.rollKind,"damage");
+  await adapter.setQueuedD20(4);
+  snapshot=await adapter.respondToInterrupt(true);
+  assert.equal(secondWind(snapshot),resourceBefore-1);
+  assert.equal(snapshot.scene.economyByActor[responderId]?.reaction,false);
+  snapshot=await adapter.respondToInterrupt(true);
+  assert.equal(secondWind(snapshot),resourceBefore-1,"duplicate response must not spend twice");
+  while(snapshot.resolution?.stage!=="complete")snapshot=await adapter.advanceResolution();
+  const damaged=snapshot.scene.entities.find((entry)=>entry.id===responderId)!;
+  assert.equal(damaged.hp+damaged.tempHp,hpBefore+tempHpBefore-1,JSON.stringify(snapshot.resolution));
+
+  snapshot=await adapter.undoLastResolution();
+  assert.equal(snapshot.scene.entities.find((entry)=>entry.id===responderId)?.hp,hpBefore);
+  assert.equal(snapshot.scene.entities.find((entry)=>entry.id===responderId)?.tempHp,tempHpBefore);
+  assert.equal(secondWind(snapshot),resourceBefore);
+  assert.equal(snapshot.scene.economyByActor[responderId]?.reaction,true);
+});
+
+test("portable damage-roll decline and unavailable payment do not partially mutate reaction costs",async()=>{
+  const adapter=await prepare(ORIGINAL,false,"damage");
+  let snapshot=await adapter.setCurrentActor("combatant.goblin-a");
+  const responderId=snapshot.activeCharacter.id;
+  const resourceBefore=secondWind(snapshot)!;
+  await adapter.setQueuedD20(18);
+  snapshot=await adapter.resolveAction("action.scimitar",[responderId]);
+  for(let step=0;step<4&&snapshot.resolution?.stage!=="interrupt";step++)snapshot=await adapter.advanceResolution();
+  assert.equal(snapshot.resolution?.stage,"interrupt");
+  snapshot=await adapter.respondToInterrupt(false);
+  assert.equal(secondWind(snapshot),resourceBefore);
+  assert.equal(snapshot.scene.economyByActor[responderId]?.reaction,true);
+
+  const unavailable=await prepare(ORIGINAL,false,"damage");
+  const internal=unavailable as unknown as {activeCharacter:CharacterSheet};
+  internal.activeCharacter.resources.find((entry)=>entry.id===FIGHTER_SECOND_WIND_RESOURCE_ID)!.current=0;
+  snapshot=await unavailable.setCurrentActor("combatant.goblin-a");
+  await unavailable.setQueuedD20(18);
+  snapshot=await unavailable.resolveAction("action.scimitar",[snapshot.activeCharacter.id]);
+  for(let step=0;step<4&&snapshot.resolution?.stage!=="complete";step++)snapshot=await unavailable.advanceResolution();
+  assert.notEqual(snapshot.resolution?.stage,"interrupt");
+  assert.equal(secondWind(snapshot),0);
+  assert.equal(snapshot.scene.economyByActor[snapshot.activeCharacter.id]?.reaction,true);
+});
+
+test("portable damage-roll events converge exactly once from Host to Client",async()=>{
+  const sessionId="session.portable-damage-interceptor";
+  const renamed:Identity={...ORIGINAL,moduleId:"external.damage-module-renamed",contentId:"item.damage-content-renamed",mechanicId:"mechanic.damage-renamed",interceptorId:"interceptor.damage-renamed",interactionId:"interaction.damage-renamed",displayName:"Renamed Damage Reaction"};
+  const host=await prepare(renamed,false,"damage");
+  let hostSnapshot=await host.setCurrentActor("combatant.goblin-a");
+  const responderId=hostSnapshot.activeCharacter.id;
+  const hostState=connectedStateFor(host);
+  hostState.mode="host";hostState.sessionId=sessionId;hostState.ledger=new HostSessionLedger(sessionId,connectedManifest(host));
+  const wires:string[]=[];
+  const send=tauriSessionTransport.send;
+  tauriSessionTransport.send=async(message)=>{wires.push(message);return 1;};
+  try{
+    await host.setQueuedD20(18);
+    hostSnapshot=await host.resolveAction("action.scimitar",[responderId]);
+    for(let step=0;step<4&&hostSnapshot.resolution?.stage!=="interrupt";step++)hostSnapshot=await host.advanceResolution();
+    await host.setQueuedD20(4);
+    hostSnapshot=await host.respondToInterrupt(true);
+    while(hostSnapshot.resolution?.stage!=="complete")hostSnapshot=await host.advanceResolution();
+  }finally{tauriSessionTransport.send=send;}
+  const batches=wires.map((wire)=>JSON.parse(wire)).filter((wire)=>wire.type==="event-batch") as Array<{events:ConnectedSessionEvent[]}>;
+  assert.ok(batches.length,JSON.stringify(wires));
+  const kinds=batches.flatMap((batch)=>batch.events).flatMap((event)=>event.payload.kind==="resolution"?event.payload.resolutionEvents.map((entry)=>entry.kind):[]);
+  assert.ok(kinds.includes("use-economy"),JSON.stringify(kinds));
+  assert.ok(kinds.includes("spend-resource"),JSON.stringify(kinds));
+  assert.ok(kinds.includes("damage-roll"),JSON.stringify(kinds));
+
+  const client=await prepare(renamed,false,"damage");
+  await client.setCurrentActor("combatant.goblin-a");
+  const clientState=connectedStateFor(client);
+  clientState.mode="client";clientState.sessionId=sessionId;clientState.replica=new ClientSessionReplica(sessionId);
+  for(const batch of batches)assert.equal((await applyConnectedClientEvents(client,batch.events)).status,"applied");
+  const duplicate=await applyConnectedClientEvents(client,batches.at(-1)!.events);
+  assert.equal(duplicate.status,"duplicate");
+  const clientSnapshot=await client.getSnapshot();
+  const hostTarget=hostSnapshot.scene.entities.find((entry)=>entry.id===responderId)!;
+  const clientTarget=clientSnapshot.scene.entities.find((entry)=>entry.id===responderId)!;
+  assert.deepEqual({hp:clientTarget.hp,tempHp:clientTarget.tempHp},{hp:hostTarget.hp,tempHp:hostTarget.tempHp});
+  assert.equal(secondWind(clientSnapshot),secondWind(hostSnapshot));
+  assert.equal(clientSnapshot.scene.economyByActor[responderId]?.reaction,false);
+});
+
+
+test("portable structural selector opens on a failed ability check and can recover it with add-die",async()=>{
+  const selection={families:["ability-check"] as Array<"ability-check">,outcomes:["failure"] as Array<"failure">};
+  const adapter=await prepare(ORIGINAL,false,"d20",[{kind:"roll.modify",mode:"add-die",dice:"1d8"}],selection);
+  let snapshot=await openAbilityCheckInterrupt(adapter,"failure");
+  assert.equal(snapshot.resolution?.stage,"interrupt",JSON.stringify(snapshot.resolution));
+  assert.equal(snapshot.resolution?.checkOutcome,"실패");
+  await adapter.setQueuedD20(8);
+  snapshot=await adapter.respondToInterrupt(true);
+  assert.equal(snapshot.resolution?.checkOutcome,"성공",JSON.stringify(snapshot.resolution));
+  assert.equal(snapshot.resolution?.rollTotal,23);
+});
+
+test("portable structural selector opens on a failed saving throw and rerolls the selected save only",async()=>{
+  const selection={families:["saving-throw"] as Array<"saving-throw">,outcomes:["failure"] as Array<"failure">};
+  const adapter=await prepare(ORIGINAL,false,"d20",[{kind:"roll.modify",mode:"reroll",dice:"1d20"}],selection);
+  let snapshot=await openSavingThrowInterrupt(adapter);
+  assert.equal(snapshot.resolution?.stage,"interrupt",JSON.stringify(snapshot.resolution));
+  const resourceBefore=secondWind(snapshot)!;
+  await adapter.setQueuedD20(18);
+  snapshot=await adapter.respondToInterrupt(true);
+  assert.equal(snapshot.resolution?.stage,"save-result",JSON.stringify(snapshot.resolution));
+  assert.deepEqual(
+    {d20:snapshot.resolution?.saveResults[0]?.d20,total:snapshot.resolution?.saveResults[0]?.total,outcome:snapshot.resolution?.saveResults[0]?.outcome},
+    {d20:18,total:19,outcome:"성공"},
+  );
+  assert.equal(snapshot.resolution?.authoritativeDice[0],18);
+  assert.equal(secondWind(snapshot),resourceBefore-1);
+});
+
+test("portable after-roll selector accepts either ability-check outcome",async()=>{
+  const selection={families:["ability-check"] as Array<"ability-check">,outcomes:["success","failure"] as Array<"success"|"failure">};
+  for(const outcome of ["success","failure"] as const){
+    const adapter=await prepare(ORIGINAL,false,"d20",[{kind:"roll.modify",mode:"add-flat",value:{value:1}}],selection);
+    const snapshot=await openAbilityCheckInterrupt(adapter,outcome);
+    assert.equal(snapshot.resolution?.stage,"interrupt",`${outcome}: ${JSON.stringify(snapshot.resolution)}`);
+  }
+});
+
+async function connectedPortableDiceCase(mode:"add-die"|"reroll"){
+  const operations=mode==="add-die"
+    ? [{kind:"roll.modify",mode:"add-die",dice:"1d8"}]
+    : [{kind:"roll.modify",mode:"reroll",dice:"1d20"}];
+  const identity:Identity={...ORIGINAL,moduleId:`external.connected-${mode}`,contentId:`item.connected-${mode}`,mechanicId:`mechanic.connected-${mode}`,interceptorId:`interceptor.connected-${mode}`,interactionId:`interaction.connected-${mode}`,displayName:`Connected ${mode}`};
+  const sessionId=`session.connected-${mode}`;
+  const host=await prepare(identity,false,"d20",operations);
+  const hostState=connectedStateFor(host);
+  hostState.mode="host";hostState.sessionId=sessionId;hostState.ledger=new HostSessionLedger(sessionId,connectedManifest(host));
+  const wires:string[]=[];
+  const send=tauriSessionTransport.send;
+  let forwardWireCount=0;
+  let hostForward:Awaited<ReturnType<MockAdapter["getSnapshot"]>>;
+  let hostUndo:Awaited<ReturnType<MockAdapter["getSnapshot"]>>;
+  tauriSessionTransport.send=async(message)=>{wires.push(message);return 1;};
+  try{
+    await openAbilityCheckInterrupt(host);
+    await host.setQueuedD20(mode==="add-die"?6:4);
+    hostForward=await host.respondToInterrupt(true);
+    forwardWireCount=wires.length;
+    hostUndo=await host.undoLastResolution();
+  }finally{tauriSessionTransport.send=send;}
+  const parse=(items:string[])=>items.map((wire)=>JSON.parse(wire)).filter((wire)=>wire.type==="event-batch") as Array<{events:ConnectedSessionEvent[]}>;
+  const forward=parse(wires.slice(0,forwardWireCount));
+  const inverse=parse(wires.slice(forwardWireCount));
+  assert.ok(forward.length,`${mode}: no forward event batches`);
+  assert.ok(inverse.length,`${mode}: no Undo event batches`);
+  const kinds=forward.flatMap((batch)=>batch.events).flatMap((event)=>event.payload.kind==="resolution"?event.payload.resolutionEvents.map((entry)=>entry.kind):[]);
+  assert.ok(kinds.includes("d20"),`${mode}: ${JSON.stringify(kinds)}`);
+  assert.ok(kinds.includes("use-economy"),`${mode}: ${JSON.stringify(kinds)}`);
+  assert.ok(kinds.includes("spend-resource"),`${mode}: ${JSON.stringify(kinds)}`);
+
+  const client=await prepare(identity,false,"d20",operations);
+  await client.setCurrentActor(OTHER_CHARACTER_ID);
+  const clientState=connectedStateFor(client);
+  clientState.mode="client";clientState.sessionId=sessionId;clientState.replica=new ClientSessionReplica(sessionId);
+  for(const batch of forward)assert.equal((await applyConnectedClientEvents(client,batch.events)).status,"applied");
+  assert.equal((await applyConnectedClientEvents(client,forward.at(-1)!.events)).status,"duplicate");
+  let clientSnapshot=await client.getSnapshot();
+  assert.equal(secondWind(clientSnapshot),secondWind(hostForward!));
+  assert.equal(clientSnapshot.scene.economyByActor[clientSnapshot.activeCharacter.id]?.reaction,false);
+  for(const batch of inverse)assert.equal((await applyConnectedClientEvents(client,batch.events)).status,"applied");
+  clientSnapshot=await client.getSnapshot();
+  assert.equal(secondWind(clientSnapshot),secondWind(hostUndo!));
+  assert.equal(clientSnapshot.scene.economyByActor[clientSnapshot.activeCharacter.id]?.reaction,true);
+
+  const reconnect=await prepare(identity,false,"d20",operations);
+  await reconnect.setCurrentActor(OTHER_CHARACTER_ID);
+  const reconnectState=connectedStateFor(reconnect);
+  reconnectState.mode="client";reconnectState.sessionId=sessionId;reconnectState.replica=new ClientSessionReplica(sessionId);
+  for(const batch of [...forward,...inverse])assert.equal((await applyConnectedClientEvents(reconnect,batch.events)).status,"applied");
+  const reconnectSnapshot=await reconnect.getSnapshot();
+  assert.equal(secondWind(reconnectSnapshot),secondWind(hostUndo!));
+  assert.equal(reconnectSnapshot.scene.economyByActor[reconnectSnapshot.activeCharacter.id]?.reaction,true);
+}
+
+test("unknown portable add-die and reroll converge through connected duplicate, reconnect, and Undo",async()=>{
+  await connectedPortableDiceCase("add-die");
+  await connectedPortableDiceCase("reroll");
+});
+
+
+test("portable production special sight composes provider-authored senses under external identity rename",async()=>{
+  const renamed:Identity={...ORIGINAL,moduleId:"external.special-sight-renamed",contentId:"item.special-sight-renamed",mechanicId:"mechanic.special-sight-renamed",interceptorId:"interceptor.special-sight-renamed",interactionId:"interaction.special-sight-renamed",displayName:"Renamed Special Sight"};
+  const scenarios=[
+    {label:"darkvision in darkness",light:"darkness" as const,obscurement:"none" as const,targetInvisible:false,sense:{kind:"darkvision" as const,rangeFeet:60}},
+    {label:"blindsight through heavy obscurement and invisibility",light:"dim" as const,obscurement:"heavy" as const,targetInvisible:true,sense:{kind:"blindsight" as const,rangeFeet:60}},
+    {label:"truesight through darkness and invisibility",light:"darkness" as const,obscurement:"none" as const,targetInvisible:true,sense:{kind:"truesight" as const,rangeFeet:120}},
+  ];
+  for(const identity of [ORIGINAL,renamed]){
+    for(const scenario of scenarios){
+      const adapter=await prepare(identity,true,"d20",[{kind:"roll.modify",mode:"subtract-die",dice:"1d8"}],undefined,{light:scenario.light,obscurement:scenario.obscurement});
+      const internal=adapter as unknown as {activeCharacter:CharacterSheet;scene:SceneVm};
+      setSpatialRelation(internal.scene,{
+        sourceId:internal.activeCharacter.id,targetId:OTHER_CHARACTER_ID,distanceFeet:30,visible:true,cover:"none",targetCanSeeAttacker:true,
+        light:scenario.light,obscurement:scenario.obscurement,detected:true,targetInvisible:scenario.targetInvisible,observerSenses:[scenario.sense],
+        provenance:`module:test-special-sight:${scenario.sense.kind}`,
+      });
+      seedHiddenRuntimeEffect(adapter,OTHER_CHARACTER_ID);
+      let snapshot=await openAbilityCheckInterrupt(adapter);
+      assert.equal(snapshot.resolution?.stage,"interrupt",`${scenario.label}: ${JSON.stringify(snapshot.resolution)}`);
+      snapshot=await adapter.respondToInterrupt(false);
+      assert.equal(snapshot.resolution?.stage,"complete",`${scenario.label}: ${JSON.stringify(snapshot.resolution)}`);
+    }
+  }
+});
+
+
+test("portable production normal sight respects Resolver-owned Invisible condition",async()=>{
+  const adapter=await prepare(ORIGINAL,true);
+  const internal=adapter as unknown as {activeCharacter:CharacterSheet;scene:SceneVm};
+  setSpatialRelation(internal.scene,{
+    sourceId:internal.activeCharacter.id,targetId:OTHER_CHARACTER_ID,distanceFeet:30,visible:true,cover:"none",targetCanSeeAttacker:true,
+    light:"dim",obscurement:"none",detected:true,provenance:"module:test-invisible:spatial",
+  });
+  seedHiddenRuntimeEffect(adapter,OTHER_CHARACTER_ID);
+  const state=snapshotAdapterTurnRuntimeState(adapter,internal.scene);
+  assert.ok(state,"TurnRuntime state must exist before Invisible condition seeding");
+  const committed=resolvePendingResolution(SIMPLEVTT_APP_RULES_PROFILE,state!,{
+    id:"resolution.invisible-fact",actorId:internal.activeCharacter.id,sourceId:"external.invisible-fact-probe",expectedRevision:state!.revision,
+    operations:[{
+      id:"op.invisible-fact",kind:"apply-effect",
+      effect:{id:"effect.invisible-fact",sourceId:"external.invisible-fact-probe",sourceActorId:internal.activeCharacter.id,targetId:OTHER_CHARACTER_ID,kind:"condition",conditionId:"invisible",tags:["condition:invisible"],duration:{kind:"special",key:"test.invisible-fact"}},
+    }],
+  });
+  assert.notEqual(committed.status,"rejected");
+  if(committed.status==="rejected")return;
+  assert.equal(commitAdapterTurnRuntimeState(adapter,internal.scene,state!.revision,committed.state),true);
+  const snapshot=await openAbilityCheckInterrupt(adapter);
+  assert.notEqual(snapshot.resolution?.stage,"interrupt","normal sight must not see a target with an active Resolver-owned Invisible condition");
+});
+
+
+function seedRulesProfileSense(adapter:MockAdapter,sourceId:string,property:string,rangeFeet:number){
+  const internal=adapter as unknown as {activeCharacter:CharacterSheet;scene:SceneVm};
+  const state=snapshotAdapterTurnRuntimeState(adapter,internal.scene);
+  assert.ok(state,"TurnRuntime state must exist before sense profile seeding");
+  const definition=parseCommonPlayOperationDefinition({
+    schemaVersion:"0.2-draft",id:sourceId,entryPoints:[{id:"activate",invocation:"manual",operations:[{
+      kind:"property.modify",property,operation:"set",value:{value:rangeFeet},target:"actor",owner:"effect",source:"definition",
+      duration:{kind:"elapsed",amount:{value:1},unit:"hours"},lifetime:{kind:"until-duration",onEnd:"destroy"},instancePolicy:"unique-by-source",
+    }]}],
+  });
+  const pending=compileCommonPlayEntryPointOperations(SIMPLEVTT_APP_RULES_PROFILE,state!,definition,{
+    resolutionId:`sense-profile.${sourceId}`,actorId:internal.activeCharacter.id,entryPointId:"activate",
+  });
+  const committed=resolvePendingResolution(SIMPLEVTT_APP_RULES_PROFILE,state!,pending);
+  assert.notEqual(committed.status,"rejected");
+  if(committed.status==="rejected")return;
+  assert.equal(commitAdapterTurnRuntimeState(adapter,internal.scene,state!.revision,committed.state),true);
+}
+
+test("portable production derives Darkvision from a generic RulesProfile modifier",async()=>{
+  const renamed:Identity={...ORIGINAL,moduleId:"external.profile-sense-renamed",contentId:"item.profile-sense-renamed",mechanicId:"mechanic.profile-sense-renamed",interceptorId:"interceptor.profile-sense-renamed",interactionId:"interaction.profile-sense-renamed",displayName:"Renamed Profile Sense"};
+  for(const identity of [ORIGINAL,renamed]){
+    const adapter=await prepare(identity,true,"d20",[{kind:"roll.modify",mode:"subtract-die",dice:"1d8"}],undefined,{light:"darkness",obscurement:"none"});
+    const internal=adapter as unknown as {activeCharacter:CharacterSheet;scene:SceneVm};
+    setSpatialRelation(internal.scene,{
+      sourceId:internal.activeCharacter.id,targetId:OTHER_CHARACTER_ID,distanceFeet:30,visible:true,cover:"none",targetCanSeeAttacker:true,
+      light:"darkness",obscurement:"none",provenance:"module:test-rules-profile-sense",
+    });
+    seedRulesProfileSense(adapter,`${identity.moduleId}.darkvision`,"sense.darkvision.range-feet",60);
+    seedHiddenRuntimeEffect(adapter,OTHER_CHARACTER_ID);
+    let snapshot=await openAbilityCheckInterrupt(adapter);
+    assert.equal(snapshot.resolution?.stage,"interrupt",JSON.stringify(snapshot.resolution));
+    snapshot=await adapter.respondToInterrupt(false);
+    assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
+  }
+});
+
+
+test("portable production derives remaining RulesProfile special senses from generic property modifiers",async()=>{
+  const renamed:Identity={...ORIGINAL,moduleId:"external.profile-sense-matrix-renamed",contentId:"item.profile-sense-matrix-renamed",mechanicId:"mechanic.profile-sense-matrix-renamed",interceptorId:"interceptor.profile-sense-matrix-renamed",interactionId:"interaction.profile-sense-matrix-renamed",displayName:"Renamed Profile Sense Matrix"};
+  const scenarios=[
+    {label:"blindsight",property:"sense.blindsight.range-feet",light:"dim" as const,obscurement:"heavy" as const,visible:true,targetInvisible:true,sharedGroundContact:false,canSee:true},
+    {label:"tremorsense",property:"sense.tremorsense.range-feet",light:"dim" as const,obscurement:"none" as const,visible:false,targetInvisible:true,sharedGroundContact:true,canSee:false},
+    {label:"truesight",property:"sense.truesight.range-feet",light:"darkness" as const,obscurement:"none" as const,visible:true,targetInvisible:true,sharedGroundContact:false,canSee:true},
+  ];
+  for(const identity of [ORIGINAL,renamed]){
+    for(const scenario of scenarios){
+      const adapter=await prepare(identity,true,"d20",[{kind:"roll.modify",mode:"subtract-die",dice:"1d8"}],undefined,{light:scenario.light,obscurement:scenario.obscurement,canSee:scenario.canSee});
+      const internal=adapter as unknown as {activeCharacter:CharacterSheet;scene:SceneVm};
+      setSpatialRelation(internal.scene,{
+        sourceId:internal.activeCharacter.id,targetId:OTHER_CHARACTER_ID,distanceFeet:30,visible:scenario.visible,cover:"none",targetCanSeeAttacker:true,
+        light:scenario.light,obscurement:scenario.obscurement,targetInvisible:scenario.targetInvisible,sharedGroundContact:scenario.sharedGroundContact,
+        provenance:`module:test-generic-acquisition:${scenario.label}`,
+      });
+      seedRulesProfileSense(adapter,`${identity.moduleId}.${scenario.label}`,scenario.property,60);
+      seedHiddenRuntimeEffect(adapter,OTHER_CHARACTER_ID);
+      let snapshot=await openAbilityCheckInterrupt(adapter);
+      assert.equal(snapshot.resolution?.stage,"interrupt",`${scenario.label}: ${JSON.stringify(snapshot.resolution)}`);
+      snapshot=await adapter.respondToInterrupt(false);
+      assert.equal(snapshot.resolution?.stage,"complete",`${scenario.label}: ${JSON.stringify(snapshot.resolution)}`);
+    }
+  }
+});

@@ -1,12 +1,12 @@
 import { beginTurn } from "./turnEconomy";
 import { conditionActionAvailability, effectiveSpeed } from "./conditions";
 import { conditionEffectsFor, requireCombatant } from "./combatState";
-import { expireEffectsAtClock, resetEffectTurnActivity } from "./effects";
-import { expireBarbarianRageAtClock } from "./barbarianRageLifecycle";
+import { effectIsActive, expireEffectsAtClock, resetEffectTurnActivity } from "./effects";
+import { expireExtendableEffectsAtClock } from "./extendableEffectLifecycle";
 import { recoverResources } from "./resources";
 import { expireRuntimeArtifactsAtClock } from "./runtimeArtifact";
 import { economyStateChanges } from "./stateChange";
-import { artifactStateChange, effectStateChange, zoneMembershipStateChange, type RuntimeStateChange } from "./runtimeStateChange";
+import { artifactStateChange, combatantStateChange, effectStateChange, resourceStateChange, turnClockStateChange, zoneMembershipStateChange, type RuntimeStateChange } from "./runtimeStateChange";
 import { DomainEvaluationError, type ProvenanceRecord } from "./profileEngine";
 import type { OperationExecution, ResolutionExecutionContext } from "./resolutionContext";
 import { makeEvent } from "./resolutionContext";
@@ -15,31 +15,61 @@ import type { ResolutionOperation } from "./resolutionTypes";
 type BeginTurnOp = Extract<ResolutionOperation, { kind:"begin-turn" }>;
 type EndTurnOp = Extract<ResolutionOperation, { kind:"end-turn" }>;
 type AdvanceTimeOp = Extract<ResolutionOperation, { kind:"advance-time" }>;
+type SetInitiativeCountOp = Extract<ResolutionOperation, { kind:"set-initiative-count" }>;
 
 function expireRuntimeEffects(ctx:ResolutionExecutionContext) {
   const generic=expireEffectsAtClock(ctx.state.effects,ctx.state.clock);
-  const rage=expireBarbarianRageAtClock(generic.active,ctx.state.clock);
+  const extendable=expireExtendableEffectsAtClock(generic.active,ctx.state.clock);
   return {
-    active:rage.active,
-    expired:[...generic.expired,...rage.expired],
-    provenance:[...generic.provenance,...rage.provenance],
+    active:extendable.active,
+    expired:[...generic.expired,...extendable.expired],
+    provenance:[...generic.provenance,...extendable.provenance],
   };
+}
+
+function expireArtifacts(ctx:ResolutionExecutionContext) {
+  const expiry=expireRuntimeArtifactsAtClock(ctx.state.artifacts??[],ctx.state.clock);
+  ctx.state.artifacts=expiry.active;
+  const expiredIds=new Set(expiry.expired.map((artifact)=>artifact.id));
+  const memberships=(ctx.state.zoneMemberships??[]).filter((membership)=>expiredIds.has(membership.artifactId));
+  ctx.state.zoneMemberships=(ctx.state.zoneMemberships??[]).filter((membership)=>!expiredIds.has(membership.artifactId));
+  const changes:RuntimeStateChange[]=[];
+  for(const artifact of expiry.expired) {
+    changes.push(artifactStateChange(artifact.id,artifact.id,"removed",expiry.provenance,artifact,undefined));
+    if(artifact.actor) {
+      const combatant=ctx.state.combatants[artifact.actor.combatantId];
+      if(combatant) {
+        changes.push(combatantStateChange(combatant.id,"removed",expiry.provenance,combatant,undefined));
+        delete ctx.state.combatants[combatant.id];
+      }
+    }
+  }
+  for(const membership of memberships) changes.push(zoneMembershipStateChange(membership.artifactId,"removed",expiry.provenance,membership,undefined));
+  return {expiry,changes};
 }
 
 export function executeBeginTurn(ctx:ResolutionExecutionContext, operation:BeginTurnOp):OperationExecution {
   const actor = requireCombatant(ctx.state, operation.actorId);
+  const clockBefore=structuredClone(ctx.state.clock);
+  const previousActorId=ctx.state.clock.activeActorId;
   ctx.state.clock = {
     ...ctx.state.clock,
     round:operation.round,
     activeActorId:operation.actorId,
     phase:"start",
+    specialWindows:[
+      {kind:"turn-start",actorId:operation.actorId},
+      ...(previousActorId?[{kind:"turn-end" as const,actorId:previousActorId},{kind:"after-turn" as const,actorId:previousActorId}]:[]),
+    ],
   };
+  const artifactExpiry=expireArtifacts(ctx);
   ctx.state.turnFeatureUsage = { actorId:operation.actorId, featureIds:[] };
   const expiry = expireRuntimeEffects(ctx);
   ctx.state.effects = resetEffectTurnActivity(expiry.active, operation.actorId);
 
   const conditions = conditionEffectsFor(ctx.state, operation.actorId);
-  const speed = effectiveSpeed(actor.baseSpeed, conditions);
+  const speedDelta=ctx.state.effects.reduce((sum,effect)=>effectIsActive(effect)&&effect.targetId===operation.actorId&&effect.kind==="modifier"&&typeof effect.metadata?.speedDelta==="number"?sum+effect.metadata.speedDelta:sum,0);
+  const speed = Math.max(0,effectiveSpeed(actor.baseSpeed, conditions)+speedDelta);
   const availability = conditionActionAvailability(conditions);
   const before = actor.economy;
   const fresh = beginTurn(speed);
@@ -50,21 +80,31 @@ export function executeBeginTurn(ctx:ResolutionExecutionContext, operation:Begin
     reaction:availability.reaction,
   };
 
+  const resourcesBefore=actor.resources.map((resource)=>structuredClone(resource));
   const recovered = recoverResources(actor.resources, "turnStart");
   actor.resources = recovered.next;
   const provenance:ProvenanceRecord[] = [
+    ...artifactExpiry.expiry.provenance,
     ...expiry.provenance,
     ...recovered.provenance,
     { source:"turn:start", status:"applied", reason:`turn started for ${operation.actorId}` },
   ];
-  const changes:RuntimeStateChange[] = economyStateChanges(operation.actorId, before, actor.economy, provenance);
+  const changes:RuntimeStateChange[] = [turnClockStateChange(clockBefore,ctx.state.clock,provenance),...economyStateChanges(operation.actorId, before, actor.economy, provenance)];
+  for(const resourceBefore of resourcesBefore) {
+    const resourceAfter=actor.resources.find((resource)=>resource.id===resourceBefore.id);
+    if(resourceAfter&&resourceAfter.current!==resourceBefore.current) {
+      changes.push(resourceStateChange(operation.actorId,resourceBefore.id,resourceBefore.current,resourceAfter.current,provenance));
+    }
+  }
+  changes.push(...artifactExpiry.changes);
   expiry.expired.forEach((effect) => {
     changes.push(effectStateChange(effect.targetId, effect.id, "removed", expiry.provenance, effect, undefined));
   });
   const result = {
     round:operation.round,
     actorId:operation.actorId,
-    expiredEffectIds:expiry.expired.map((effect) => effect.id),
+    expiredEffectIds:expiry.expired.map((effect)=>effect.id),
+    expiredArtifactIds:artifactExpiry.expiry.expired.map((artifact)=>artifact.id),
   };
   return {
     result,
@@ -74,25 +114,44 @@ export function executeBeginTurn(ctx:ResolutionExecutionContext, operation:Begin
 
 export function executeEndTurn(ctx:ResolutionExecutionContext, operation:EndTurnOp):OperationExecution {
   requireCombatant(ctx.state, operation.actorId);
+  const clockBefore=structuredClone(ctx.state.clock);
   ctx.state.clock = {
     ...ctx.state.clock,
     round:operation.round,
     activeActorId:operation.actorId,
     phase:"end",
   };
+  const artifactExpiry=expireArtifacts(ctx);
   const expiry = expireRuntimeEffects(ctx);
   ctx.state.effects = expiry.active;
-  const changes = expiry.expired.map((effect) =>
-    effectStateChange(effect.targetId, effect.id, "removed", expiry.provenance, effect, undefined),
-  );
+  const provenance=[...expiry.provenance,...artifactExpiry.expiry.provenance,{source:"turn:end",status:"applied" as const,reason:`turn ended for ${operation.actorId}`}];
+  const changes:RuntimeStateChange[] = [
+    turnClockStateChange(clockBefore,ctx.state.clock,provenance),
+    ...expiry.expired.map((effect) => effectStateChange(effect.targetId, effect.id, "removed", expiry.provenance, effect, undefined)),
+  ];
+  changes.push(...artifactExpiry.changes);
   const result = {
     round:operation.round,
     actorId:operation.actorId,
-    expiredEffectIds:expiry.expired.map((effect) => effect.id),
+    expiredEffectIds:expiry.expired.map((effect)=>effect.id),
+    expiredArtifactIds:artifactExpiry.expiry.expired.map((artifact)=>artifact.id),
   };
   return {
     result,
-    event:makeEvent(ctx.pending, operation, `turn ${operation.actorId} ends`, result, expiry.provenance, changes, operation.actorId),
+    event:makeEvent(ctx.pending, operation, `turn ${operation.actorId} ends`, result, provenance, changes, operation.actorId),
+  };
+}
+
+export function executeSetInitiativeCount(ctx:ResolutionExecutionContext, operation:SetInitiativeCountOp):OperationExecution {
+  if(!Number.isInteger(operation.count)||operation.count<0) throw new DomainEvaluationError("initiative count must be a non-negative integer");
+  const clockBefore=structuredClone(ctx.state.clock);
+  ctx.state.clock={...ctx.state.clock,initiativeCount:operation.count,specialWindows:[{kind:"initiative-count",initiativeCount:operation.count}]};
+  const provenance:ProvenanceRecord[]=[{source:"initiative:count",status:"applied",reason:`initiative count advanced to ${operation.count}`}];
+  const changes:RuntimeStateChange[]=[turnClockStateChange(clockBefore,ctx.state.clock,provenance)];
+  const result={initiativeCount:operation.count};
+  return {
+    result,
+    event:makeEvent(ctx.pending,operation,`initiative count advanced to ${operation.count}`,result,provenance,changes),
   };
 }
 
@@ -100,41 +159,21 @@ export function executeAdvanceTime(ctx:ResolutionExecutionContext, operation:Adv
   if (!Number.isFinite(operation.elapsedSeconds) || operation.elapsedSeconds < ctx.state.clock.elapsedSeconds) {
     throw new DomainEvaluationError("elapsed time cannot move backwards");
   }
+  const clockBefore=structuredClone(ctx.state.clock);
   ctx.state.clock = { ...ctx.state.clock, elapsedSeconds:operation.elapsedSeconds };
   const effectExpiry = expireRuntimeEffects(ctx);
   ctx.state.effects = effectExpiry.active;
-  const artifactExpiry=expireRuntimeArtifactsAtClock(ctx.state.artifacts??[],ctx.state.clock);
-  ctx.state.artifacts=artifactExpiry.active;
-  const expiredArtifactIds=new Set(artifactExpiry.expired.map((artifact)=>artifact.id));
-  const expiredMemberships=(ctx.state.zoneMemberships??[]).filter((membership)=>expiredArtifactIds.has(membership.artifactId));
-  ctx.state.zoneMemberships=(ctx.state.zoneMemberships??[]).filter((membership)=>!expiredArtifactIds.has(membership.artifactId));
-  const provenance=[...effectExpiry.provenance,...artifactExpiry.provenance];
-  const changes:RuntimeStateChange[] = effectExpiry.expired.map((effect) =>
-    effectStateChange(effect.targetId, effect.id, "removed", effectExpiry.provenance, effect, undefined),
-  );
-  artifactExpiry.expired.forEach((artifact)=>{
-    changes.push(artifactStateChange(
-      artifact.id,
-      artifact.id,
-      "removed",
-      artifactExpiry.provenance,
-      artifact,
-      undefined,
-    ));
-  });
-  expiredMemberships.forEach((membership)=>{
-    changes.push(zoneMembershipStateChange(
-      membership.artifactId,
-      "removed",
-      artifactExpiry.provenance,
-      membership,
-      undefined,
-    ));
-  });
+  const artifacts=expireArtifacts(ctx);
+  const provenance=[...effectExpiry.provenance,...artifacts.expiry.provenance,{source:"time:advance",status:"applied" as const,reason:`elapsed time advanced to ${operation.elapsedSeconds}s`}];
+  const changes:RuntimeStateChange[] = [
+    turnClockStateChange(clockBefore,ctx.state.clock,provenance),
+    ...effectExpiry.expired.map((effect) => effectStateChange(effect.targetId, effect.id, "removed", effectExpiry.provenance, effect, undefined)),
+  ];
+  changes.push(...artifacts.changes);
   const result = {
     elapsedSeconds:operation.elapsedSeconds,
-    expiredEffectIds:effectExpiry.expired.map((effect) => effect.id),
-    expiredArtifactIds:artifactExpiry.expired.map((artifact)=>artifact.id),
+    expiredEffectIds:effectExpiry.expired.map((effect)=>effect.id),
+    expiredArtifactIds:artifacts.expiry.expired.map((artifact)=>artifact.id),
   };
   return {
     result,

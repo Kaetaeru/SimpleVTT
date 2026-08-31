@@ -1,5 +1,9 @@
 import type { CampaignDmLibraryEntry, CampaignMealCommand, CampaignPartyStashItemTemplate, CampaignRecordV1, CampaignSessionSnapshot, CampaignSessionSystemsProjection } from "./campaignPersistenceContracts";
 import type { ExtraActionGrant, ExtraAttackGrant } from "../domain/turnEconomy";
+import type { DurationSpec, EffectTermination } from "../domain/effects";
+import type { ConditionId } from "../domain/conditions";
+import type { ModifierContribution } from "../domain/d20";
+import type { RollStateContribution, SemanticPredicate } from "../domain/profileEngine";
 
 export type AppRole = "player" | "dm";
 export type SessionMode = "freeform" | "initiative";
@@ -63,10 +67,21 @@ export interface ItemInstanceVm {
   wieldSlot?: "main-hand" | "off-hand" | "two-hand";
   attunementRequired?: boolean;
   attuned?: boolean;
+  attunementPolicy?: {
+    prerequisite?: SemanticPredicate;
+    cursed?: boolean;
+    loss?: { onDeath?:boolean; maximumDistanceFeet?:number; durationSeconds?:number };
+  };
   charges?: { current: number; max: number };
-  passiveEffects: string[];
-  grantedActionIds: string[];
-  provenance: string[];
+  spellcastingComponent?:"focus"|"component-pouch";
+  unitCostGp?:number;
+  weightPounds?:number;
+  containerCapacityPounds?:number;
+  containerId?:string;
+    passiveEffects: string[];
+    grantedActionIds: string[];
+    spellDefinitionIds?:string[];
+    provenance: string[];
 }
 
 export interface SessionCharacterInventoryVm {
@@ -270,6 +285,8 @@ export interface SceneEntity {
   immunities: string[];
   vulnerabilities: string[];
   reactions: ReactionOptionVm[];
+  runtimeArtifactId?:string;
+  controllerId?:string;
 }
 
 export interface ActionDetailVm {
@@ -299,6 +316,7 @@ export interface ActionVm {
   eligibleTargetIds: string[];
   eligibleTargetReasons?: Record<string,string>;
   maxTargets?: number;
+  allocation?: {units:number;minimumPerTarget:number;maximumPerTarget:number;totalMustMatch:true};
   attackBonus?: number;
   checkBonus?: number;
   saveDc?: number;
@@ -310,6 +328,51 @@ export interface ActionVm {
   saveHalf?: boolean;
   details: ActionDetailVm[];
   attacksPerAction?:number;
+  runtimeCommonPlayActionId?:string;
+  movementBudgetGainFeet?:number;
+  runtimeGrantedMovement?:{
+    distanceFeet:number;
+    maximumDistanceFeet:number;
+    doesNotProvokeOpportunityAttacks?:boolean;
+  };
+  runtimeSaveCondition?:{
+    conditionId:ConditionId;
+    label:string;
+    displayName:string;
+    choose:"highest";
+    saveAbilities:AbilityKey[];
+    duration:DurationSpec;
+    termination?:EffectTermination;
+  };
+  sessionStatusEffect?:{
+    status:string;
+    target:"actor"|"first-target";
+    operation?:"add"|"remove";
+    minimumRoll?:number;
+    successOutcome:string;
+    failureOutcome?:string;
+    durationKey?:string;
+    endsOnAttack?:boolean;
+    expiresAtActorTurnBoundary?:"start"|"end";
+    runtimeTags?:string[];
+  };
+  completionOutcome?:string;
+  completionStateChange?:string;
+  readyActionRole?:"prepare"|"trigger";
+  runtimeEffectGrant?:{
+    excludeActor?:boolean;
+    exclusiveTag?:string;
+    tags:string[];
+    duration:DurationSpec;
+    termination?:EffectTermination;
+    metadata?:Record<string,string|number|boolean>;
+    awarenessQuery?:{
+      creatureTypes:string[];
+      radiusFeet?:number;
+    };
+  };
+  checkSuccessOperations?:Array<{kind:"stabilize";target:"first-target"}>;
+  checkOutcomeLabels?:{success:string;failure:string};
 }
 
 export interface EconomyVm {
@@ -350,6 +413,8 @@ export interface SaveResultVm {
   dc: number;
   outcome: "성공" | "실패";
   finalDamage?: number;
+  modifierContributions?:ModifierContribution[];
+  rollStateContributions?:RollStateContribution[];
 }
 
 export interface InterruptView {
@@ -361,6 +426,7 @@ export interface InterruptView {
   cost: string;
   effect: string;
   source: string;
+  choice?: { min:number; max:number; options:Array<{id:string;name:string}> };
 }
 
 export type ResolutionStage =
@@ -382,6 +448,8 @@ export interface ResolutionView {
   rollKind: "attack" | "check" | "save" | "damage" | "healing" | "effect";
   stage: ResolutionStage;
   authoritativeDice: number[];
+  naturalD20?:number;
+  rollModifierContributions?: Array<{source:string;value:number}>;
   rollTotal?: number;
   checkTarget?:number;
   checkOutcome?:"성공"|"실패";
@@ -586,7 +654,7 @@ export interface SimpleVttAdapter {
   endTurn(): Promise<AppSnapshot>;
   resolveAction(actionId: string, targetIds: string[]): Promise<AppSnapshot>;
   advanceResolution(): Promise<AppSnapshot>;
-  respondToInterrupt(accept: boolean): Promise<AppSnapshot>;
+  respondToInterrupt(accept: boolean, selectedIds?: string[]): Promise<AppSnapshot>;
   dismissResolution(): Promise<AppSnapshot>;
   applyDmAdjudication(command: DmAdjudicationCommand): Promise<AppSnapshot>;
   undoLastResolution(): Promise<AppSnapshot>;

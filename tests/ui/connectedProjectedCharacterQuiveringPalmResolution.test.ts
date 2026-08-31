@@ -64,7 +64,7 @@ function prepareOwningClient(client:MockAdapter,sheet:CharacterSheet,projection:
   if(reconstructed.status!=="accepted")throw new Error(reconstructed.error);
   const state=client as unknown as MutableAdapterState;
   state.activeCharacter=structuredClone(sheet);state.characters=[structuredClone(sheet)];
-  state.scene.entities=[...state.scene.entities.filter((entity)=>entity.id!==sheet.id&&entity.kind!=="character"),structuredClone(reconstructed.entity)];
+  state.scene.entities=[...state.scene.entities.filter((entity)=>entity.id!==sheet.id),structuredClone(reconstructed.entity)];
   state.scene.actionsByActor={...state.scene.actionsByActor,[sheet.id]:structuredClone(reconstructed.actions)};
   state.scene.economyByActor={...state.scene.economyByActor,[sheet.id]:structuredClone(reconstructed.economy)};
   state.scene.selectedActorId=sheet.id;state.scene.currentActorId=sheet.id;
@@ -192,7 +192,8 @@ test("host-unknown Open Hand Quivering Palm seed/detonation converges exactly on
     }
     assert.equal(snapshot.scene.currentActorId,remote.id,"initiative must return to the remote Monk before detonation");assert.equal(snapshot.scene.economyByActor[remote.id]?.action,true,"next Monk turn must restore Action before detonation");
     const nextTurnEvents=batches(broadcasts).slice(nextTurnBatchStart).flatMap((batch)=>batch.events??[]);assert.ok(nextTurnEvents.length>0);
-    assert.equal((await applyConnectedClientEvents(client,nextTurnEvents)).status,"applied");clientAfter=await client.getSnapshot();assert.equal(clientAfter.scene.currentActorId,remote.id);assert.equal(clientAfter.scene.economyByActor[remote.id]?.action,true);assert.deepEqual(markers(client,remote.id),[TARGET_B]);
+    const nextTurnApplied=await applyConnectedClientEvents(client,nextTurnEvents);
+    assert.equal(nextTurnApplied.status,"applied",nextTurnApplied.status==="rejected"?nextTurnApplied.error:undefined);clientAfter=await client.getSnapshot();assert.equal(clientAfter.scene.currentActorId,remote.id);assert.equal(clientAfter.scene.economyByActor[remote.id]?.action,true);assert.deepEqual(markers(client,remote.id),[TARGET_B]);
 
     const hpBeforeDetonate=hp(snapshot.scene,TARGET_B);
     const detonateCursor=state.ledger.cursor;

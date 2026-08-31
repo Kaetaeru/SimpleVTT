@@ -1,11 +1,14 @@
+import { lowerAllCommonPlayEntryPoints, parseCommonPlayDefinition, validateCommonPlayCapabilities } from "../domain/commonPlayDefinitionRuntime";
 import type { CatalogEntry, ContentImportPreview, ValidationMessage } from "./contracts";
 import { parseInstalledCampaignProviderProfile } from "./campaignProviderProfiles";
 import type {
   InstalledCatalogEntryV1,
+  InstalledCommonPlayMechanicV1,
   InstalledContentRelationshipV1,
   InstalledModuleExtensionPointV1,
   InstalledModuleManifestV1,
   InstalledModuleRefV1,
+  InstalledProgressionContributionV1,
 } from "./installedContentContracts";
 
 const CATEGORIES=new Set<InstalledCatalogEntryV1["category"]>(["class","subclass","species","background","feat","spell","item","condition","combatant","option"]);
@@ -54,6 +57,59 @@ function semanticRelationships(value:unknown,label:string):InstalledContentRelat
       targetVersion:typeof relation.targetVersion==="string" ? relation.targetVersion : undefined,
       extensionPoint:typeof relation.extensionPoint==="string" ? relation.extensionPoint : undefined,
     };
+  });
+}
+function portableMechanics(value:unknown,label:string,availableCapabilities:Iterable<string>):InstalledCommonPlayMechanicV1[] {
+  if (value===undefined) return [];
+  if (!Array.isArray(value)) throw new Error(`${label} must be an array`);
+  return value.map((item,index)=>{
+    const mechanicLabel=`${label}[${index}]`;
+    const mechanic=object(item,mechanicLabel);
+    const unsupported=Object.keys(mechanic).filter((key)=>key!=="kind"&&key!=="config");
+    if (unsupported.length) throw new Error(`${mechanicLabel} contains unsupported fields: ${unsupported.join(", ")}`);
+    if (mechanic.kind!=="common-play") {
+      throw new Error(`${label} cannot be activated by the generic Catalog: unsupported mechanic kind ${String(mechanic.kind)}`);
+    }
+    try {
+      const config=parseCommonPlayDefinition(mechanic.config,`${mechanicLabel}.config`);
+      validateCommonPlayCapabilities(config,availableCapabilities);
+      lowerAllCommonPlayEntryPoints(config);
+      return {kind:"common-play",config};
+    } catch(error) {
+      throw new Error(`${mechanicLabel} contains unsupported Common Play mechanics: ${error instanceof Error?error.message:String(error)}`);
+    }
+  });
+}
+
+function progressionContributions(value:unknown,label:string):InstalledProgressionContributionV1[] {
+  if(value===undefined)return [];
+  if(!Array.isArray(value))throw new Error(`${label} must be an array`);
+  return value.map((item,index)=>{
+    const contribution=object(item,`${label}[${index}]`);
+    const threshold=contribution.threshold;
+    if(!Number.isInteger(threshold)||Number(threshold)<0)throw new Error(`${label}[${index}].threshold must be a non-negative integer`);
+    const grants=strings(contribution.grants,`${label}[${index}].grants`);
+    if(!grants.length||new Set(grants).size!==grants.length)throw new Error(`${label}[${index}].grants must be non-empty and unique`);
+    const choices=contribution.choices===undefined?[]:(()=>{
+      if(!Array.isArray(contribution.choices))throw new Error(`${label}[${index}].choices must be an array`);
+      return contribution.choices.map((item,choiceIndex)=>{
+        const choiceLabel=`${label}[${index}].choices[${choiceIndex}]`,choice=object(item,choiceLabel);
+        const count=choice.count;
+        if(!Number.isInteger(count)||Number(count)<1)throw new Error(`${choiceLabel}.count must be a positive integer`);
+        if(typeof choice.required!=="boolean")throw new Error(`${choiceLabel}.required must be a boolean`);
+        if(!Array.isArray(choice.options)||choice.options.length<Number(count))throw new Error(`${choiceLabel}.options must contain at least count entries`);
+        const options=choice.options.map((rawOption,optionIndex)=>{
+          const optionLabel=`${choiceLabel}.options[${optionIndex}]`,option=object(rawOption,optionLabel);
+          const optionGrants=strings(option.grants,`${optionLabel}.grants`);
+          if(!optionGrants.length||new Set(optionGrants).size!==optionGrants.length)throw new Error(`${optionLabel}.grants must be non-empty and unique`);
+          const replaces=option.replaces===undefined?[]:strings(option.replaces,`${optionLabel}.replaces`);
+          return {id:string(option.id,`${optionLabel}.id`),label:string(option.label,`${optionLabel}.label`),...(typeof option.description==="string"?{description:option.description}:{}),grants:optionGrants,...(replaces.length?{replaces}: {})};
+        });
+        if(new Set(options.map((option)=>option.id)).size!==options.length)throw new Error(`${choiceLabel}.option ids must be unique`);
+        return {id:string(choice.id,`${choiceLabel}.id`),label:string(choice.label,`${choiceLabel}.label`),...(typeof choice.description==="string"?{description:choice.description}:{}),count:Number(count),required:choice.required,options};
+      });
+    })();
+    return {track:string(contribution.track,`${label}[${index}].track`),threshold:Number(threshold),grants,...(choices.length?{choices}: {})};
   });
 }
 
@@ -135,8 +191,8 @@ export function parseRuleModulePackage(payload:string):ParsedRuleModulePackage {
     const category=categoryRaw as InstalledCatalogEntryV1["category"];
     const present=presentation(value.presentation,defaultLocale,`content[${index}]`);
     const relations=semanticRelationships(value.relationships,`content[${index}].relationships`);
-    if (Array.isArray(value.mechanics) && value.mechanics.length) throw new Error(`content[${index}].mechanics cannot be activated by the generic Catalog yet`);
-    if (Array.isArray(value.progressionContributions) && value.progressionContributions.length) throw new Error(`content[${index}].progressionContributions cannot be activated by the generic Catalog yet`);
+    const mechanics=portableMechanics(value.mechanics,`content[${index}].mechanics`,module.capabilities);
+    const contributions=progressionContributions(value.progressionContributions,`content[${index}].progressionContributions`);
     const campaignProvider=value.campaignProvider===undefined?undefined:parseInstalledCampaignProviderProfile(value.campaignProvider);
     return {
       contentId,category,nameKo:present.nameKo,nameEn:present.nameEn,
@@ -146,6 +202,8 @@ export function parseRuleModulePackage(payload:string):ParsedRuleModulePackage {
       semanticRelationships:relations,
       extensionPoints:extensionPoints(value.extensionPoints,`content[${index}].extensionPoints`),
       module:cp(module),
+      ...(mechanics.length?{mechanics}:{}),
+      ...(contributions.length?{progressionContributions:contributions}:{}),
       ...(campaignProvider?{campaignProvider}:{}),
     } satisfies InstalledCatalogEntryV1;
   });

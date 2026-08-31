@@ -84,7 +84,7 @@ test("builtin encounter Goblin shortbow materializes from its Definition and exe
   const activity=snapshot.activity[0];
   assert.equal(activity.id,snapshot.resolution?.id);
   assert.ok(activity.detail.some((line)=>line.includes("runtime:combatant-definition:combatant.goblin:action:shortbow:damage")));
-  assert.ok(activity.detail.some((line)=>line.includes("unconstrained:no-authoritative-module-fact")));
+  assert.ok(activity.detail.some((line)=>line.includes("runtime:manual-targeting:combatant.goblin-a->char.aelar:unconstrained")));
   assert.ok(activity.stateChanges.some((line)=>line.includes("char.aelar 임시 HP 5 → 0")));
   assert.ok(activity.stateChanges.some((line)=>line.includes("combatant.goblin-a economy.action true → false")));
 
@@ -152,5 +152,5 @@ test("Combatant runtime attack without a spatial-module fact is unconstrained an
   snapshot=await commitAttack(adapter);
   assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="char.mira")?.hp,19);
   assert.equal(snapshot.scene.economyByActor[scout.id]?.action,false);
-  assert.ok(snapshot.resolution?.provenance.some((entry)=>entry.includes("unconstrained:no-authoritative-module-fact")));
+  assert.ok(snapshot.resolution?.provenance.some((entry)=>entry.includes(`runtime:manual-targeting:${scout.id}->char.mira:unconstrained`)));
 });

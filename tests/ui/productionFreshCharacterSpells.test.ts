@@ -6,6 +6,8 @@ import { MemoryCharacterLibraryStore } from "../../src/app/memoryCharacterLibrar
 import { CharacterLibraryRepository } from "../../src/app/characterLibraryPersistence";
 import { setCharacterLibraryStoreForTests } from "../../src/app/characterLibraryRuntimeAdapter";
 import type { CharacterSheet } from "../../src/app/contracts";
+import { MemoryTurnRuntimeStateStore, setTurnRuntimeStateStoreForTests, snapshotAdapterTurnRuntimeState } from "../../src/app/turnRuntimeSessionRegistry";
+import { activeCastingProcess } from "../../src/domain/commonPlayCastingProcessRuntime";
 
 const CHARACTER_ID="char.phase14-spell-sorcerer";
 const FIRE_BOLT="dnd.srd521.spell.fire-bolt";
@@ -141,15 +143,16 @@ test("persisted non-fixture Sorcerer casts executable cantrip and slotted spell 
   const liveScene=(player as unknown as {scene:typeof snapshot.scene}).scene;
   for(const target of missileTargets) liveScene.entities.find((entry)=>entry.id===target.id)!.distance="999피트";
   const missileHp=new Map(missileTargets.map((target)=>[target.id,target.hp+target.tempHp]));
-  const slotted=await player.resolveAction(magicMissile.id,missileTargets.map((target)=>target.id));
+  const authoredMissileAllocation=[missileTargets[0].id,missileTargets[0].id,missileTargets[1].id];
+  const slotted=await player.resolveAction(magicMissile.id,authoredMissileAllocation);
   const slottedResolutionId=slotted.resolution?.id;
   assert.ok(slottedResolutionId);
   assert.equal(slotted.resolution?.stage,"complete");
   assert.equal(slotted.resolution?.actorId,CHARACTER_ID);
   assert.equal(slotted.resolution?.actionId,magicMissile.id);
-  assert.ok(slotted.resolution?.provenance.some((entry)=>entry.includes(MAGIC_MISSILE)));
-  assert.deepEqual(slotted.resolution?.targetIds,missileTargets.map((target)=>target.id));
-  assert.ok(missileTargets.every((target)=>{const entity=slotted.scene.entities.find((entry)=>entry.id===target.id);return Boolean(entity&&entity.hp+entity.tempHp<(missileHp.get(target.id)??0));}),"Magic Missile must distribute projectiles across every selected target without a spatial module");
+  assert.ok(slotted.resolution?.provenance.some((entry)=>entry.includes(MAGIC_MISSILE)),JSON.stringify(slotted.resolution));
+  assert.deepEqual(slotted.resolution?.targetIds,authoredMissileAllocation);
+  assert.ok(missileTargets.every((target)=>{const entity=slotted.scene.entities.find((entry)=>entry.id===target.id);return Boolean(entity&&entity.hp+entity.tempHp<(missileHp.get(target.id)??0));}),"Magic Missile must preserve the player-authored projectile allocation without a spatial module");
   assert.deepEqual(slot(slotted,1),{level:1,current:1,max:2},"slotted cast must spend exactly one authoritative slot");
   assert.equal(slotted.scene.spellcastingByActor?.[CHARACTER_ID]?.slottedSpellCastThisTurn,true);
   const slottedActivity=slotted.activity.find((entry)=>entry.id===slottedResolutionId);
@@ -185,7 +188,7 @@ test("persisted non-fixture Sorcerer casts executable cantrip and slotted spell 
   assert.equal(restored.persistence?.storageRevision,1,"Character source remains durable while session-only slot state is not serialized");
 });
 
-test("catalog utility spells commit immediately instead of entering an approval placeholder",async()=>{
+test("catalog utility spells execute through immediate and maintained production lifecycles",async()=>{
   const store=new MemoryCharacterLibraryStore();
   const sheet={
     ...persistedSpellcaster(),
@@ -194,6 +197,7 @@ test("catalog utility spells commit immediately instead of entering an approval 
     cantrips:["dnd.srd521.spell.dancing-lights"],
     preparedSpells:["dnd.srd521.spell.alarm"],
     spellSlotMaximums:{1:1},
+    items:[{id:"utility-pouch",definitionId:"dnd.srd521.item.gear.component-pouch",name:"Component Pouch",kind:"equipment" as const,quantity:1,equipped:true,spellcastingComponent:"component-pouch" as const,unitCostGp:25,passiveEffects:[],grantedActionIds:[],provenance:["SRD 5.2.1"]}],
   };
   await seedSheet(store,sheet);
   const player=new MockAdapter();
@@ -203,7 +207,8 @@ test("catalog utility spells commit immediately instead of entering an approval 
   let snapshot=await player.getSnapshot();
   const actions=snapshot.scene.actionsByActor[sheet.id]??[];
   const lights=actions.find((entry)=>entry.spellCast?.spellId==="dnd.srd521.spell.dancing-lights");
-  const alarm=actions.find((entry)=>entry.spellCast?.spellId==="dnd.srd521.spell.alarm");
+  const alarm=actions.find((entry)=>entry.spellCast?.spellId==="dnd.srd521.spell.alarm"&&entry.spellCast.castSource!=="ritual");
+  const alarmRitual=actions.find((entry)=>entry.spellCast?.spellId==="dnd.srd521.spell.alarm"&&entry.spellCast.castSource==="ritual");
   assert.equal(lights?.target,"none");
   assert.equal(lights?.available,true);
   assert.equal(lights?.spellCast?.runtimeSupport,"tracked-executable");
@@ -217,5 +222,110 @@ test("catalog utility spells commit immediately instead of entering an approval 
   assert.equal(snapshot.resolution?.stage,"complete");
   assert.notEqual(snapshot.resolution?.finalOutcome,"적용 예정");
   assert.doesNotMatch(snapshot.resolution?.compact??"",/시전 거부/);
+  assert.deepEqual(slot(snapshot,1,sheet.id),{level:1,current:1,max:1},"long cast must not spend its slot when the maintained process begins");
+  assert.ok(snapshot.resolution?.stateChanges.some((entry)=>entry.includes("effect")));
+  for(let step=0;step<9;step+=1)snapshot=await player.resolveAction(alarm!.id,[]);
+  assert.deepEqual(slot(snapshot,1,sheet.id),{level:1,current:1,max:1},"slot remains unspent until casting completes");
+  snapshot=await player.resolveAction(alarm!.id,[]);
   assert.deepEqual(slot(snapshot,1,sheet.id),{level:1,current:0,max:1});
+  assert.ok(alarmRitual,"Ritual-tagged prepared spell must expose a separate ritual action");
+  snapshot=await player.resolveAction(alarmRitual.id,[]);
+  assert.doesNotMatch(snapshot.resolution?.compact??"",/시전 거부/);
+  assert.deepEqual(slot(snapshot,1,sheet.id),{level:1,current:0,max:1},"ritual process must not require or spend a slot");
+  assert.ok(snapshot.resolution?.stateChanges.some((entry)=>entry.includes("effect")));
+  assert.equal(activeCastingProcess(snapshotAdapterTurnRuntimeState(player,snapshot.scene)!,sheet.id,"dnd.srd521.spell.alarm")?.activity.kind,"ritual");
+  snapshot=await player.undoLastResolution();
+  assert.equal(activeCastingProcess(snapshotAdapterTurnRuntimeState(player,snapshot.scene)!,sheet.id),undefined,"event-native Undo must remove the maintained ritual process");
+});
+
+test("maintained casting process survives a fresh local runtime restart",async()=>{
+  const characterStore=new MemoryCharacterLibraryStore(),runtimeStore=new MemoryTurnRuntimeStateStore();
+  const spellId="dnd.srd521.spell.alarm";
+  const sheet={
+    ...persistedSpellcaster(),id:"char.casting-restart",name:"Casting Restart",
+    cantrips:[],preparedSpells:[spellId],spellSlotMaximums:{1:1},
+    items:[{id:"restart-pouch",definitionId:"external.pouch",name:"Renamed Pouch",kind:"equipment" as const,quantity:1,equipped:true,spellcastingComponent:"component-pouch" as const,passiveEffects:[],grantedActionIds:[],provenance:["external fixture"]}],
+  };
+  await seedSheet(characterStore,sheet);
+  const first=new MockAdapter();
+  setCharacterLibraryStoreForTests(first,characterStore);setTurnRuntimeStateStoreForTests(first,runtimeStore);
+  await first.startProductionLocalPlay("player");
+  let snapshot=await first.getSnapshot();
+  const spell=(snapshot.scene.actionsByActor[sheet.id]??[]).find((entry)=>entry.spellCast?.spellId===spellId&&entry.spellCast.castSource!=="ritual");
+  assert.ok(spell);
+  snapshot=await first.resolveAction(spell.id,[]);
+  assert.equal(activeCastingProcess(snapshotAdapterTurnRuntimeState(first,snapshot.scene)!,sheet.id,spellId)?.activity.status,"active",JSON.stringify(snapshot.resolution));
+
+  const restarted=new MockAdapter();
+  setCharacterLibraryStoreForTests(restarted,characterStore);setTurnRuntimeStateStoreForTests(restarted,runtimeStore);
+  await restarted.startProductionLocalPlay("player");
+  snapshot=await restarted.getSnapshot();
+  assert.equal(activeCastingProcess(snapshotAdapterTurnRuntimeState(restarted,snapshot.scene)!,sheet.id,spellId)?.activity.status,"active");
+});
+
+test("consumed spell material commits through durable ResolutionEvent write-back and Undo",async()=>{
+  const store=new MemoryCharacterLibraryStore();
+  const spellId="dnd.srd521.spell.arcane-lock";
+  const materialId=`${spellId}.material.1`;
+  const sheet={
+    ...persistedSpellcaster(),id:"char.material-caster",name:"Material Caster",
+    cantrips:[],preparedSpells:[spellId],spellSlotMaximums:{2:1},
+    items:[{id:"material-stack",definitionId:materialId,name:"Renamed gold dust",kind:"consumable" as const,quantity:2,equipped:false,unitCostGp:25,passiveEffects:[],grantedActionIds:[],provenance:["external fixture"]}],
+  };
+  await seedSheet(store,sheet);
+  const player=new MockAdapter();
+  setCharacterLibraryStoreForTests(player,store);
+  await player.startProductionLocalPlay("player");
+  await player.setSessionMode("freeform");
+  let snapshot=await player.getSnapshot();
+  const spell=(snapshot.scene.actionsByActor[sheet.id]??[]).find((entry)=>entry.spellCast?.spellId===spellId);
+  assert.ok(spell);
+
+  snapshot=await player.resolveAction(spell.id,[]);
+  assert.equal(snapshot.activeCharacter.items.find((item)=>item.id==="material-stack")?.quantity,1);
+  const restarted=new MockAdapter();
+  setCharacterLibraryStoreForTests(restarted,store);
+  assert.equal((await restarted.getSnapshot()).activeCharacter.items.find((item)=>item.id==="material-stack")?.quantity,1);
+
+  snapshot=await player.undoLastResolution();
+  assert.equal(snapshot.activeCharacter.items.find((item)=>item.id==="material-stack")?.quantity,2);
+  const afterUndoRestart=new MockAdapter();
+  setCharacterLibraryStoreForTests(afterUndoRestart,store);
+  assert.equal((await afterUndoRestart.getSnapshot()).activeCharacter.items.find((item)=>item.id==="material-stack")?.quantity,2);
+});
+
+test("item-granted spell spends its structural charge through durable write-back and Undo",async()=>{
+  const store=new MemoryCharacterLibraryStore();
+  const spellId="dnd.srd521.spell.magic-missile";
+  const sheet={
+    ...persistedSpellcaster(),id:"char.item-spell-caster",name:"Item Spell Caster",
+    cantrips:[FIRE_BOLT],preparedSpells:[],spellSlotMaximums:{1:1},
+    items:[
+      {id:"external-wand",definitionId:"external.renamed.wand",name:"Completely Renamed Implement",kind:"magic" as const,quantity:1,equipped:false,charges:{current:2,max:2},spellDefinitionIds:[spellId],passiveEffects:[],grantedActionIds:[],provenance:["external fixture"]},
+      {id:"external-scroll",definitionId:"external.renamed.scroll",name:"Completely Renamed Scroll",kind:"consumable" as const,quantity:2,equipped:false,spellDefinitionIds:[spellId],passiveEffects:[],grantedActionIds:[],provenance:["external fixture"]},
+    ],
+  };
+  await seedSheet(store,sheet);
+  const player=new MockAdapter();setCharacterLibraryStoreForTests(player,store);await player.startProductionLocalPlay("player");
+  let snapshot=await player.getSnapshot();
+  const action=(snapshot.scene.actionsByActor[sheet.id]??[]).find((entry)=>entry.itemCost?.itemId==="external-wand");
+  assert.ok(action);
+  const targets=snapshot.scene.entities.filter((entry)=>entry.side==="enemy").slice(0,2);
+  snapshot=await player.resolveAction(action.id,[targets[0].id,targets[0].id,targets[1].id]);
+  assert.equal(snapshot.activeCharacter.items.find((item)=>item.id==="external-wand")?.charges?.current,1);
+  assert.deepEqual(slot(snapshot,1,sheet.id),{level:1,current:1,max:1},"item casting must not spend a Character spell slot");
+  const restarted=new MockAdapter();setCharacterLibraryStoreForTests(restarted,store);
+  assert.equal((await restarted.getSnapshot()).activeCharacter.items.find((item)=>item.id==="external-wand")?.charges?.current,1);
+
+  snapshot=await player.undoLastResolution();
+  assert.equal(snapshot.activeCharacter.items.find((item)=>item.id==="external-wand")?.charges?.current,2);
+  const afterUndo=new MockAdapter();setCharacterLibraryStoreForTests(afterUndo,store);
+  assert.equal((await afterUndo.getSnapshot()).activeCharacter.items.find((item)=>item.id==="external-wand")?.charges?.current,2);
+
+  const scrollAction=(snapshot.scene.actionsByActor[sheet.id]??[]).find((entry)=>entry.itemCost?.itemId==="external-scroll");
+  assert.ok(scrollAction);
+  snapshot=await player.resolveAction(scrollAction.id,[targets[0].id,targets[0].id,targets[1].id]);
+  assert.equal(snapshot.activeCharacter.items.find((item)=>item.id==="external-scroll")?.quantity,1);
+  snapshot=await player.undoLastResolution();
+  assert.equal(snapshot.activeCharacter.items.find((item)=>item.id==="external-scroll")?.quantity,2);
 });

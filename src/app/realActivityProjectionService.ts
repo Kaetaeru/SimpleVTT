@@ -23,11 +23,15 @@ function stateChangeLabel(change:RuntimeStateChange) {
   if (change.kind === "resource") {
     return `${change.targetId} resource.${change.resourceId} ${change.before} → ${change.after}`;
   }
+  if(change.kind==="inventory-item") return `${change.targetId} inventory-item.${change.itemId} ${change.operation}`;
   if (change.kind === "effect") {
     return `${change.targetId} effect.${change.effectId} ${change.operation}`;
   }
   if (change.kind === "artifact") {
     return `${change.targetId} artifact.${change.artifactId} ${change.operation}`;
+  }
+  if (change.kind === "combatant") {
+    return `${change.targetId} combatant ${change.operation}`;
   }
   if (change.kind === "zone-membership") {
     return `${change.targetId} zone-membership.${change.artifactId} ${change.operation}`;
@@ -38,6 +42,7 @@ function stateChangeLabel(change:RuntimeStateChange) {
   if (change.kind === "spellcasting-turn") {
     return `${change.targetId} spellcasting-turn ${spellcastingTurnLabel(change.before)} → ${spellcastingTurnLabel(change.after)}`;
   }
+  if (change.kind==="turn-clock") return `${change.targetId} turn-clock ${JSON.stringify(change.before)} → ${JSON.stringify(change.after)}`;
   if (change.kind==="death-save") return `${change.targetId} death-save.${change.field} ${change.before} → ${change.after}`;
   return `${change.targetId} life.${change.field} ${String(change.before)} → ${String(change.after)}`;
 }

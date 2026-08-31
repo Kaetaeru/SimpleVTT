@@ -6,6 +6,8 @@ import { HANDOUT_IMAGE_MAX_BYTES, isLocalImageAssetV1, parseLocalImageDataUrl, P
 const portrait=readFileSync(new URL("../../src/CharacterPortraitBridge.tsx",import.meta.url),"utf8");
 const handout=readFileSync(new URL("../../src/SessionImageHandoutBridge.tsx",import.meta.url),"utf8");
 const runtime=readFileSync(new URL("../../src/app/sessionImageHandoutRuntimeAdapter.ts",import.meta.url),"utf8");
+const parity=readFileSync(new URL("../../src/app/sessionContentParityRuntimeAdapter.ts",import.meta.url),"utf8");
+const restorePort=readFileSync(new URL("../../src/app/connectedPresentationRestorePort.ts",import.meta.url),"utf8");
 const main=readFileSync(new URL("../../src/main.tsx",import.meta.url),"utf8");
 const actorBoards=readFileSync(new URL("../../src/SessionActorBoards.tsx",import.meta.url),"utf8");
 const mainFocus=readFileSync(new URL("../../src/SessionMainFocus.tsx",import.meta.url),"utf8");
@@ -32,8 +34,11 @@ test("host Session portrait surfaces resolve remote owner projections without co
 test("DM handout is contextual presentation state with explicit reveal withdraw dismiss reopen and no mechanics path",()=>{
   for(const pattern of [/이미지 보여주기/,/공유 철회/,/플레이어에게 공개/,/이미지 다시 열기/,/dismissSessionImageHandout/,/reopenSessionImageHandout/]) assert.match(handout,pattern);
   assert.match(runtime,/presentation-handout/);
-  assert.match(runtime,/compatibility\?\.status==="compatible"|compatibility\.status==="compatible"/);
-  assert.match(runtime,/sendToWithHandoutRestore/);
+  assert.match(parity,/compatibility\?\.status==="compatible"|compatibility\.status==="compatible"/);
+  assert.match(parity,/sendToWithPresentationRestore/);
+  assert.match(parity,/restoreConnectedPresentationForPeer/);
+  assert.match(runtime,/installConnectedPresentationRestoreHandler\(restoreCurrentPresentation\)/);
+  assert.match(restorePort,/ConnectedPresentationRestoreHandler/);
   assert.doesNotMatch(`${runtime}\n${handout}`,/ResolutionEvent|undoLastResolution|tactical grid|fog of war|public URL|cloud hosting/i);
   const handoutImport=main.indexOf("sessionImageHandoutRuntimeAdapter");
   const parityImport=main.indexOf("sessionContentParityRuntimeAdapter");

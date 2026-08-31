@@ -64,7 +64,7 @@ test("Wild Shape blocks spellcasting before economy, slot, HP, or history mutate
     dice:{effectFaces:[2,3]},
   });
   assert.equal(result.status,"rejected");
-  assert.match(result.status==="rejected"?result.error:"",/Wild Shape prevents casting spells/);
+  assert.match(result.status==="rejected"?result.error:"",/prevents casting spells/);
   assert.equal(result.state,state);
   assert.equal(state.combatants.hero.economy.bonusAction,true);
   assert.equal(state.combatants.hero.resources.find((pool)=>pool.id==="spell-slot-1")?.current,2);

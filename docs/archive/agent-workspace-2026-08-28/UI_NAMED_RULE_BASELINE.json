@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "policy": "Existing explicitly inventoried UI rule debt is frozen. New findings or additional occurrences fail CI. Migrate baseline entries to application/domain services rather than increasing counts.",
+  "entries": [
+    {
+      "file": "src/CharacterSheetV10.tsx",
+      "rule": "ability-modifier-arithmetic",
+      "count": 1,
+      "classification": "presentation-debt",
+      "disposition": "migrate-later",
+      "reason": "Sheet still derives displayed ability/save/spellcasting numbers locally."
+    },
+    {
+      "file": "src/CharacterSheetV10.tsx",
+      "rule": "spellcasting-ability-mapping",
+      "count": 1,
+      "classification": "presentation-debt",
+      "disposition": "migrate-later",
+      "reason": "Class-to-spellcasting-ability mapping remains local presentation debt."
+    },
+    {
+      "file": "src/CharacterSheetV10.tsx",
+      "rule": "spellcasting-modifier-arithmetic",
+      "count": 3,
+      "classification": "presentation-debt",
+      "disposition": "migrate-later",
+      "reason": "Existing sheet spell save DC/attack display arithmetic has three textual occurrences (one DC expression and the attack expression repeated in the summary). New occurrences are forbidden."
+    },
+    {
+      "file": "src/CombatSpellHud.tsx",
+      "rule": "spell-slot-level-arithmetic",
+      "count": 1,
+      "classification": "presentation-debt",
+      "disposition": "migrate-later",
+      "reason": "Combat spell HUD still computes the selected slot level locally; new occurrences are forbidden."
+    }
+  ]
+}

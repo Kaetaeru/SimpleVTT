@@ -1,5 +1,6 @@
 import { MockAdapter } from "./mockAdapter";
 import { connectedStateFor } from "./connectedSessionState";
+import { installConnectedPresentationRestoreHandler } from "./connectedPresentationRestorePort";
 import { HANDOUT_IMAGE_MAX_BYTES, isLocalImageAssetV1, type LocalImageAssetV1 } from "./localImageAsset";
 import {
   applyRemoteSessionImageHandout,
@@ -26,7 +27,6 @@ type Raw=Record<string,unknown>;
 
 let activeHostAdapter:MockAdapter|null=null;
 let registeringClientAdapter:MockAdapter|null=null;
-const baseSendTo=tauriSessionTransport.sendTo.bind(tauriSessionTransport);
 const baseOnMessage=tauriSessionTransport.onMessage.bind(tauriSessionTransport);
 
 function object(value:unknown):Raw|undefined {
@@ -58,32 +58,19 @@ function decodeLastRollEnvelope(raw:string):{status:"other"}|{status:"rejected";
   return {status:"ok",message:{type:"presentation-last-roll-dismiss",sessionId:record.sessionId,revision:Number(record.revision),resolutionId:record.resolutionId}};
 }
 
-function compatibleHelloAck(raw:string) {
-  try {
-    const value=object(JSON.parse(raw));
-    const compatibility=object(value?.compatibility);
-    return value?.type==="hello-ack"&&typeof value.sessionId==="string"&&compatibility?.status==="compatible"
-      ? String(value.sessionId)
-      : null;
-  } catch { return null; }
-}
-
-async function sendToWithHandoutRestore(peer:string,message:string) {
-  const result=await baseSendTo(peer,message);
+async function restoreCurrentPresentation(peer:string,sessionId:string) {
   const host=activeHostAdapter;
-  const sessionId=compatibleHelloAck(message);
-  if (!host||!sessionId) return result;
+  if (!host) return;
   const handout=getSessionImageHandoutState(host);
   if (handout.sessionId===sessionId&&handout.revision>=1) {
     const envelope:HandoutEnvelope={type:"presentation-handout",sessionId,revision:handout.revision,asset:handout.asset};
-    await baseSendTo(peer,JSON.stringify(envelope));
+    await tauriSessionTransport.sendTo(peer,JSON.stringify(envelope));
   }
   const lastRoll=getSessionLastRollPresentationState(host);
   if(lastRoll.sessionId===sessionId&&lastRoll.revision>=1&&lastRoll.dismissedResolutionId){
     const envelope:LastRollEnvelope={type:"presentation-last-roll-dismiss",sessionId,revision:lastRoll.revision,resolutionId:lastRoll.dismissedResolutionId};
-    await baseSendTo(peer,JSON.stringify(envelope));
+    await tauriSessionTransport.sendTo(peer,JSON.stringify(envelope));
   }
-  return result;
 }
 
 async function onMessageWithHandout(handler:(message:SessionTransportMessage)=>void) {
@@ -110,7 +97,7 @@ async function onMessageWithHandout(handler:(message:SessionTransportMessage)=>v
   });
 }
 
-tauriSessionTransport.sendTo=sendToWithHandoutRestore;
+installConnectedPresentationRestoreHandler(restoreCurrentPresentation);
 tauriSessionTransport.onMessage=onMessageWithHandout;
 
 const previousHostSession=MockAdapter.prototype.hostSession;

@@ -1,7 +1,7 @@
 import "./phase09RealItemCostAdapter";
 import type { ActionVm, AppSnapshot, ResolutionView, SceneEntity } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
-import { phase09ReferenceNoRollDamageFact } from "./phase09ReferenceEffectFacts";
+import { noRollDamageFactFromFaces, rollNoRollDamageFact } from "./phase09ReferenceEffectFacts";
 import { resolveNoRollDamageResolution } from "./realNoRollDamageService";
 
 interface Phase09NoRollDamageState {
@@ -9,6 +9,7 @@ interface Phase09NoRollDamageState {
   entity(id:string):SceneEntity|undefined;
   commit(action:ActionVm):void;
   resolution:ResolutionView|null;
+  d20(actionId:string,index?:number):number;
   getSnapshot():Promise<AppSnapshot>;
 }
 
@@ -32,7 +33,9 @@ MockAdapter.prototype.advanceResolution = async function advanceResolutionWithRe
     resolved = resolveNoRollDamageResolution({
       action,
       target,
-      damageFact:phase09ReferenceNoRollDamageFact(action.id),
+      damageFact:resolution.stage==="effect-preview"
+        ?rollNoRollDamageFact(action,(index)=>internal.d20(action.id,index))
+        :noRollDamageFactFromFaces(action,resolution.authoritativeDice),
     });
   } catch {
     return previousAdvance.call(this);

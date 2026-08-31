@@ -22,7 +22,7 @@ import {
   type ProjectionResolutionContext,
 } from "./characterSessionProjectionMount";
 import { projectedCharacterById, projectedCharacterForPeer } from "./characterSessionProjectionRegistry";
-import { clearReadyActionConfiguration, readyActionConfigurationFor, setReadyActionConfiguration } from "./standardActionReadyState";
+import { clearReadyActionConfiguration, isReadyPreparationAction, isReadyTriggerAction, readyActionConfigurationFor, setReadyActionConfiguration } from "./standardActionReadyState";
 import type { ResolutionEvent } from "../domain/resolutionTypes";
 import type { ManualMovementReactionCommand } from "./manualMovementReactionContracts";
 
@@ -37,6 +37,10 @@ const projectionContexts=new WeakMap<MockAdapter,ProjectionResolutionContext>();
 
 function requestId() {
   return `request.${Date.now().toString(36)}.${Math.floor(Math.random()*1_000_000).toString(36)}`;
+}
+
+function actionFor(adapter:MockAdapter,actorId:string,actionId:string) {
+  return connectedInternal(adapter).scene.actionsByActor[actorId]?.find((action)=>action.id===actionId);
 }
 
 function restoreProjectedContext(adapter:MockAdapter) {
@@ -61,8 +65,8 @@ async function publishCommittedResolution(adapter:MockAdapter,snapshot?:AppSnaps
   if (!presentation) return current;
   state.presentationTimelineByResolution.set(resolution.id,presentation.timeline.map((entry)=>({...entry})));
   const readyConfig=readyActionConfigurationFor(adapter,resolution.actorId);
-  const readyArmed=resolution.actionId==="action.standard.ready"&&readyConfig;
-  const readyCleared=readyClearedActorId===resolution.actorId||pending?.request.actionId==="action.standard.ready.trigger";
+  const readyArmed=isReadyPreparationAction(actionFor(adapter,resolution.actorId,resolution.actionId))&&readyConfig;
+  const readyCleared=readyClearedActorId===resolution.actorId||pending?.readyActionRole==="trigger";
   if (!events?.length&&(readyArmed||readyCleared)) {
     const actorId=resolution.actorId;
     const economy=current.scene.economyByActor[actorId];
@@ -145,8 +149,10 @@ function inverseResolutionEvents(events:ResolutionEvent[],undoId:string):Resolut
     ...structuredClone(event),id:`${undoId}:event:${eventIndex+1}`,resolutionId:undoId,operationId:`undo:${event.operationId}`,summary:`Undo · ${event.summary}`,
     provenance:[...event.provenance,{source:`undo:${event.resolutionId}`,status:"applied",reason:"Host-authoritative compensating event"}],
     stateChanges:[...event.stateChanges].reverse().map((change)=>{
+      if(change.kind==="inventory-item")return {...structuredClone(change),operation:change.operation==="added"?"removed":change.operation==="removed"?"added":"updated",before:structuredClone(change.after),after:structuredClone(change.before)};
       if(change.kind==="effect")return {...structuredClone(change),operation:change.operation==="added"?"removed":change.operation==="removed"?"added":"updated",before:structuredClone(change.after),after:structuredClone(change.before)};
       if(change.kind==="artifact")return {...structuredClone(change),operation:change.operation==="added"?"removed":change.operation==="removed"?"added":"updated",before:structuredClone(change.after),after:structuredClone(change.before)};
+      if(change.kind==="combatant")return {...structuredClone(change),operation:change.operation==="added"?"removed":change.operation==="removed"?"added":"updated",before:structuredClone(change.after),after:structuredClone(change.before)};
       if(change.kind==="zone-membership")return {...structuredClone(change),operation:change.operation==="added"?"removed":change.operation==="removed"?"added":"updated",before:structuredClone(change.after),after:structuredClone(change.before)};
       if(change.kind==="concentration")return {...structuredClone(change),before:structuredClone(change.after),after:structuredClone(change.before)};
       if(change.kind==="spellcasting-turn")return {...structuredClone(change),before:structuredClone(change.after),after:structuredClone(change.before)};
@@ -156,7 +162,9 @@ function inverseResolutionEvents(events:ResolutionEvent[],undoId:string):Resolut
       if(change.kind==="economy")return {...structuredClone(change),before:change.after,after:change.before};
       if(change.kind==="resource")return {...structuredClone(change),before:change.after,after:change.before,recoveryLockouts:change.recoveryLockouts?{before:structuredClone(change.recoveryLockouts.after),after:structuredClone(change.recoveryLockouts.before)}:undefined};
       if(change.kind==="death-save")return {...structuredClone(change),before:change.after,after:change.before};
-      return {...structuredClone(change),before:change.after,after:change.before};
+      if(change.kind==="turn-clock")return {...structuredClone(change),before:structuredClone(change.after),after:structuredClone(change.before)};
+      if(change.kind==="life")return {...structuredClone(change),before:change.after,after:change.before};
+      return change;
     }),result:{undoOf:event.id},
   }));
 }
@@ -217,7 +225,7 @@ registerConnectedInterruptResponseHandler(async(adapter,transportMessage,respons
   if(!characterId||!interrupt||app.resolution?.id!==response.resolutionId){await reject("interrupt-not-pending","no matching authoritative interrupt is pending");return;}
   if(interrupt.responderId!==characterId||interrupt.id!==response.promptId){await reject("interrupt-not-authorized","interrupt response does not belong to this peer Character");return;}
   if(state.interruptTimeout)clearTimeout(state.interruptTimeout);state.interruptTimeout=null;state.interruptTimeoutResolutionId=null;
-  await adapter.respondToInterrupt(response.accept);
+  await adapter.respondToInterrupt(response.accept,response.selectedIds);
 });
 
 registerConnectedConcentrationResponseHandler(async(adapter,transportMessage,response)=>{
@@ -285,7 +293,7 @@ registerConnectedActionRequestHandler(async (adapter,transportMessage,request) =
   }
 
   if (request.readyConfiguration) {
-    if (request.actionId!=="action.standard.ready"||request.readyConfiguration.actorId!==request.actorId) {
+    if (!isReadyPreparationAction(actionFor(adapter,request.actorId,request.actionId))||request.readyConfiguration.actorId!==request.actorId) {
       ledger.cancelReservedActionRequest(request.requestId);
       restoreProjectedContext(adapter);
       await sendConnectedWireTo(transportMessage.peer,{type:"error",code:"ready-config-rejected",message:"Ready configuration must match the requested Ready actor",hostCursor:ledger.cursor});
@@ -307,7 +315,7 @@ registerConnectedActionRequestHandler(async (adapter,transportMessage,request) =
       :await previousResolveAction.call(adapter,request.actionId,request.targetIds);
     const resolution=next.resolution;
     const expectedActorId=request.manualMovementReaction?.reactorId??request.actorId;
-    const expectedActionId=request.manualMovementReaction?.attackActionId??(request.actionId==="action.standard.ready.trigger"
+    const expectedActionId=request.manualMovementReaction?.attackActionId??(isReadyTriggerAction(actionFor(adapter,request.actorId,request.actionId))
       ? readyActionConfigurationFor(adapter,request.actorId)?.actionId
       : request.actionId);
     if (!resolution||resolution.actorId!==expectedActorId||resolution.actionId!==expectedActionId) {
@@ -317,7 +325,7 @@ registerConnectedActionRequestHandler(async (adapter,transportMessage,request) =
       await sendConnectedWireTo(transportMessage.peer,{type:"error",code:"action-rejected",message:"host production resolution path rejected the requested actor/action/targets",hostCursor:ledger.cursor});
       return;
     }
-    state.pendingRemoteAction={peer:transportMessage.peer,request:structuredClone(request),resolutionId:resolution.id};
+    state.pendingRemoteAction={peer:transportMessage.peer,request:structuredClone(request),resolutionId:resolution.id,readyActionRole:actionFor(adapter,request.actorId,request.actionId)?.readyActionRole};
     await publishConnectedSnapshot(adapter);
     await publishConnectedResolutionPresentation(adapter,next);
     await publishCommittedResolution(adapter,next);
@@ -341,7 +349,7 @@ MockAdapter.prototype.resolveAction=async function resolveConnectedAction(action
     }
     const character=connectedManifest(this).character;
     if (!character) return app.getSnapshot();
-    const readyConfiguration=actionId==="action.standard.ready"?readyActionConfigurationFor(this,character.characterId):undefined;
+    const readyConfiguration=isReadyPreparationAction(actionFor(this,character.characterId,actionId))?readyActionConfigurationFor(this,character.characterId):undefined;
     await tauriSessionTransport.send(JSON.stringify({
       type:"action-request",
       request:{
@@ -384,7 +392,7 @@ MockAdapter.prototype.advanceResolution=async function advanceConnectedResolutio
   return publishCommittedResolution(this,next,readyClearedActorId);
 };
 
-MockAdapter.prototype.respondToInterrupt=async function respondConnectedInterrupt(accept:boolean) {
+MockAdapter.prototype.respondToInterrupt=async function respondConnectedInterrupt(accept:boolean,selectedIds?:string[]) {
   const state=connectedStateFor(this);
   if (state.mode==="client") {
     const app=connectedInternal(this);
@@ -392,14 +400,14 @@ MockAdapter.prototype.respondToInterrupt=async function respondConnectedInterrup
     if(!state.sessionId||!interrupt||!app.resolution)return app.getSnapshot();
     await tauriSessionTransport.send(JSON.stringify({
       type:"resolution-interrupt-response",
-      response:{sessionId:state.sessionId,resolutionId:app.resolution.id,promptId:interrupt.id,accept},
+      response:{sessionId:state.sessionId,resolutionId:app.resolution.id,promptId:interrupt.id,accept,...(selectedIds?{selectedIds:[...selectedIds]}:{})},
     }));
     state.privateInterruptsByResolution.delete(app.resolution.id);
     app.resolution.interrupt=undefined;
     app.resolution.compact="Host 반응 판정 대기";
     return app.getSnapshot();
   }
-  const next=await previousRespondToInterrupt.call(this,accept);
+  const next=await previousRespondToInterrupt.call(this,accept,selectedIds);
   await publishConnectedResolutionPresentation(this,next);
   return publishCommittedResolution(this,next);
 };

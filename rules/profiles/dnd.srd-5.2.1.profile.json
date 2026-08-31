@@ -18,6 +18,9 @@
     "id": "dnd.rounding.default-floor",
     "default": "floor"
   },
+  "propertyModifierPolicy": {
+    "defaultInstancePolicy": "unique-by-source"
+  },
   "properties": {
     "ability.str.score": {"type": "integer", "storage": "stored"},
     "ability.str.modifier": {"type": "integer", "storage": "derived", "formula": {"op": "floor", "args": [{"op": "divide", "args": [{"op": "subtract", "args": [{"ref": "ability.str.score"}, {"value": 10}]}, {"value": 2}]}]}},
@@ -36,9 +39,23 @@
     "defense.ac": {"type": "integer", "storage": "derived"},
     "initiative": {"type": "integer", "storage": "derived"},
     "movement.walk": {"type": "integer", "storage": "derived", "minimum": 0},
+    "movement.fly": {"type": "integer", "storage": "derived", "minimum": 0, "formula": {"value": 0}},
+    "movement.cost.multiplier": {"type": "number", "storage": "derived", "minimum": 0, "formula": {"value": 1}},
+    "movement.drag-carry.multiplier": {"type": "number", "storage": "derived", "minimum": 0, "formula": {"value": 1}},
     "hp.current": {"type": "integer", "storage": "stored", "minimum": 0},
     "hp.maximum": {"type": "integer", "storage": "derived", "minimum": 0},
-    "hp.temporary": {"type": "integer", "storage": "stored", "minimum": 0}
+    "hp.temporary": {"type": "integer", "storage": "stored", "minimum": 0},
+    "sense.darkvision.range-feet": {"type": "integer", "storage": "stored", "minimum": 0},
+    "sense.blindsight.range-feet": {"type": "integer", "storage": "stored", "minimum": 0},
+    "sense.tremorsense.range-feet": {"type": "integer", "storage": "stored", "minimum": 0},
+    "sense.truesight.range-feet": {"type": "integer", "storage": "stored", "minimum": 0},
+    "inventory.carrying.pounds-per-strength": {"type": "number", "storage": "derived", "minimum": 0, "formula": {"value": 15}},
+    "inventory.carrying.size-multiplier.tiny": {"type": "number", "storage": "derived", "minimum": 0, "formula": {"value": 0.5}},
+    "inventory.carrying.size-multiplier.small": {"type": "number", "storage": "derived", "minimum": 0, "formula": {"value": 1}},
+    "inventory.carrying.size-multiplier.medium": {"type": "number", "storage": "derived", "minimum": 0, "formula": {"value": 1}},
+    "inventory.carrying.size-multiplier.large": {"type": "number", "storage": "derived", "minimum": 0, "formula": {"value": 2}},
+    "inventory.carrying.size-multiplier.huge": {"type": "number", "storage": "derived", "minimum": 0, "formula": {"value": 4}},
+    "inventory.carrying.size-multiplier.gargantuan": {"type": "number", "storage": "derived", "minimum": 0, "formula": {"value": 8}}
   },
   "proficiency": {
     "characterLevelThresholds": [
@@ -79,6 +96,9 @@
       "bonus-action": {"kind": "count", "capacity": 1, "resetTiming": "turn.started", "resetOwner": "actor", "availability": "granted-option-required"},
       "reaction": {"kind": "count", "capacity": 1, "resetTiming": "turn.started", "resetOwner": "owner", "availability": "trigger-required"},
       "movement": {"kind": "budget", "capacityRef": "movement.walk", "resetTiming": "turn.started", "resetOwner": "actor", "availability": "always"}
+    },
+    "grantBuckets": {
+      "action.extra.non-magic": {"kind": "extra-action", "allowsMagicAction": false, "activeTurnOnly": true}
     },
     "freeformPolicy": {
       "turnLimitedSpendPersistence": "none",

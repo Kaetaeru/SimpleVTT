@@ -54,6 +54,7 @@ function itemInstances(draft: CharacterCreateDraft): ItemInstanceVm[] {
     const armor = itemMechanic(item.entry, "armor-definition") as { ac?: { base?: number } } | undefined;
     const shield = itemMechanic(item.entry, "shield-definition") as { acBonus?: number } | undefined;
     const weapon = itemMechanic(item.entry, "weapon-definition") as { damage?: string; damageType?: string } | undefined;
+    const focus = itemMechanic(item.entry, "focus-definition") as { priceGp?:number;tradition?:string } | undefined;
     const effects = [
       armor?.ac?.base !== undefined ? `기본 AC ${armor.ac.base}` : "",
       shield?.acBonus !== undefined ? `AC +${shield.acBonus}` : "",
@@ -72,6 +73,8 @@ function itemInstances(draft: CharacterCreateDraft): ItemInstanceVm[] {
       equipped,
       wielded:item.entry.category === "weapon" || item.entry.category === "shield",
       wieldSlot,
+      spellcastingComponent:focus ? (focus.tradition==="material"?"component-pouch":"focus") : undefined,
+      unitCostGp:focus?.priceGp,
       passiveEffects:effects,
       grantedActionIds:[],
       provenance:["SRD 5.2.1 · Character Creation", item.id, ...(item.variant ? [`variant:${item.variant}`] : [])],

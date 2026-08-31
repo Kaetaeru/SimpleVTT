@@ -6,7 +6,7 @@ import {
   type OperationExecution,
   type ResolutionExecutionContext,
 } from "./resolutionContext";
-import { executeCompoundDamage, executeDamage, executeDeathSave, executeHealing, executeStabilize, executeTemporaryHp } from "./resolutionHealthOps";
+import { executeCompoundDamage, executeDamage, executeDeathSave, executeHealing, executeMaximumHpChange, executeStabilize, executeTemporaryHp } from "./resolutionHealthOps";
 import {
   executeD20,
   executeDamageRoll,
@@ -19,16 +19,17 @@ import {
   executeTurnFeature,
 } from "./resolutionActionOps";
 import { executeFreeMove } from "./resolutionMovementOps";
-import { executeGainResource, executeSetResourceRecoveryLockout } from "./resolutionResourceOps";
+import { executeGainResource, executeRechargeResource, executeSetResourceRecoveryLockout } from "./resolutionResourceOps";
 import {
   executeApplyEffect,
   executeEndConcentration,
   executeRemoveEffect,
+  executeSetEffectSuppression,
   executeStartConcentration,
   executeUpdateEffect,
 } from "./resolutionEffectOps";
-import { executeRemoveArtifact, executeSetZoneMembership, executeSpawnArtifact, executeUpdateArtifact } from "./resolutionArtifactOps";
-import { executeAdvanceTime, executeBeginTurn, executeEndTurn } from "./resolutionTurnOps";
+import { executeAdvanceExposure, executeAdvanceProject, executeCancelProject, executeDamageArtifact, executeGrantInventoryItem, executeRecoverExposure, executeRelocateArtifact, executeRemoveArtifact, executeRepairArtifact, executeSetArtifactController, executeSetZoneMembership, executeSpawnArtifact, executeUpdateArtifact } from "./resolutionArtifactOps";
+import { executeAdvanceTime, executeBeginTurn, executeEndTurn, executeSetInitiativeCount } from "./resolutionTurnOps";
 import { executeLongRest, executeShortRest } from "./resolutionRestOps";
 import type {
   PendingResolution,
@@ -51,26 +52,39 @@ function executeOperation(
     case "spend-resource": return executeResource(ctx, operation);
     case "gain-resource": return executeGainResource(ctx, operation);
     case "set-resource-recovery-lockout": return executeSetResourceRecoveryLockout(ctx, operation);
+    case "recharge-resource": return executeRechargeResource(ctx,operation);
     case "d20": return executeD20(ctx, operation);
     case "damage-roll": return executeDamageRoll(ctx, operation);
     case "damage": return executeDamage(ctx, operation);
     case "compound-damage": return executeCompoundDamage(ctx, operation);
     case "healing": return executeHealing(ctx, operation);
+    case "maximum-hp": return executeMaximumHpChange(ctx, operation);
     case "temporary-hp": return executeTemporaryHp(ctx, operation);
     case "death-save": return executeDeathSave(ctx,operation);
     case "stabilize": return executeStabilize(ctx,operation);
     case "apply-effect": return executeApplyEffect(ctx, operation);
     case "update-effect": return executeUpdateEffect(ctx, operation);
+    case "set-effect-suppression": return executeSetEffectSuppression(ctx,operation);
     case "remove-effect": return executeRemoveEffect(ctx, operation);
     case "spawn-artifact": return executeSpawnArtifact(ctx,operation);
     case "update-artifact": return executeUpdateArtifact(ctx,operation);
+    case "damage-artifact": return executeDamageArtifact(ctx,operation);
+    case "repair-artifact": return executeRepairArtifact(ctx,operation);
+    case "relocate-artifact": return executeRelocateArtifact(ctx,operation);
+    case "set-artifact-controller": return executeSetArtifactController(ctx,operation);
     case "remove-artifact": return executeRemoveArtifact(ctx,operation);
+    case "advance-exposure": return executeAdvanceExposure(ctx,operation);
+    case "recover-exposure": return executeRecoverExposure(ctx,operation);
+    case "advance-project": return executeAdvanceProject(ctx,operation);
+    case "cancel-project": return executeCancelProject(ctx,operation);
+    case "grant-inventory-item": return executeGrantInventoryItem(ctx,operation);
     case "set-zone-membership": return executeSetZoneMembership(ctx,operation);
     case "start-concentration": return executeStartConcentration(ctx, operation);
     case "end-concentration": return executeEndConcentration(ctx, operation);
     case "reaction": return executeReaction(ctx, operation);
     case "begin-turn": return executeBeginTurn(ctx, operation);
     case "end-turn": return executeEndTurn(ctx, operation);
+    case "set-initiative-count": return executeSetInitiativeCount(ctx, operation);
     case "advance-time": return executeAdvanceTime(ctx, operation);
     case "short-rest": return executeShortRest(ctx, operation);
     case "long-rest": return executeLongRest(ctx, operation);

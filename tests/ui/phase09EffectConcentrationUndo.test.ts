@@ -143,3 +143,30 @@ test("event-native runtime Undo rejects effect drift and requires runtime state 
   assert.equal(undone.status,"rejected");
   if (undone.status==="rejected") assert.match(undone.error,/effect\.focus-effect/);
 });
+
+test("turn clock changes are event-native and Undo restores the exact clock snapshot", () => {
+  const state=runtimeState();
+  const before=structuredClone(state.clock);
+  const pending:PendingResolution={
+    id:"turn-clock-undo",
+    actorId:"hero",
+    sourceId:"test:clock",
+    expectedRevision:state.revision,
+    operations:[{ id:"advance-clock",kind:"advance-time",elapsedSeconds:30 }],
+  };
+
+  const committed=resolvePendingResolution(TEST_PROFILE,state,pending);
+  assert.equal(committed.status,"committed");
+  if (committed.status!=="committed") return;
+  assert.equal(committed.state.clock.elapsedSeconds,30);
+  const change=committed.events[0].stateChanges.find((entry)=>entry.kind==="turn-clock");
+  assert.ok(change && change.kind==="turn-clock");
+  assert.deepEqual(change.before,before);
+  assert.deepEqual(change.after,committed.state.clock);
+
+  const undone=undoResolutionEvents(runtimeOnlyScene,committed.events,[],[],committed.state);
+  assert.equal(undone.status,"committed");
+  if (undone.status!=="committed") return;
+  assert.deepEqual(undone.runtimeState?.clock,before);
+  assert.equal(undone.runtimeState?.revision,committed.state.revision+1);
+});

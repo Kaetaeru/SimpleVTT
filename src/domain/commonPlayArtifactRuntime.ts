@@ -1,0 +1,245 @@
+import type { RulesRuntimeState } from "./combatState";
+import { DomainEvaluationError, evaluateExpression, type ExpressionNode, type RulesProfileLike } from "./profileEngine";
+import { resolvePendingResolution } from "./resolution";
+import type { PendingResolution, ResolutionCommit, ResolutionOperation } from "./resolutionTypes";
+import type { RuntimeArtifactExpiry, RuntimeArtifactSpawnRequest, StoredInvocationArtifactData } from "./runtimeArtifact";
+import { compileCommonPlayPayments, parseCommonPlayPayments, type CommonPlayPayment } from "./commonPlayOperationRuntime";
+import type { ActionUseKind } from "./turnEconomy";
+
+type PortableArtifactKind="stored-invocation"|"object"|"link"|"actor"|"form"|"exposure"|"environment"|"project";
+type Obj=Record<string,unknown>;
+type CommonPlayArtifactOperation=
+  | {kind:"artifact.spawn";template:string}
+  | {kind:"artifact.damage";artifact:string;amount:ExpressionNode;damageType:string}
+  | {kind:"artifact.repair";artifact:string;amount:ExpressionNode}
+  | {kind:"artifact.relocate";artifact:string;placementRef:string}
+  | {kind:"artifact.update";artifact:string;metadataPatch:Record<string,string|number|boolean>}
+  | {kind:"artifact.remove";artifact:string};
+
+export interface CommonPlayArtifactActivationDefinition {
+  $schema?:string;
+  schemaVersion:"0.2-draft";
+  id:string;
+  payments?:CommonPlayPayment[];
+  entryPoints:Array<{
+    id:string;
+    invocation:"manual"|"triggered"|"automatic"|"granted";
+    operations:CommonPlayArtifactOperation[];
+  }>;
+  artifactTemplates:Array<{
+    id:string;
+    artifactKind:PortableArtifactKind;
+    duration:Obj;
+    lifetime:Obj;
+    initialState:Obj;
+  }>;
+}
+
+export interface CommonPlayArtifactActivationInput {
+  resolutionId:string;
+  actorId:string;
+  entryPointId:string;
+  placementRefs?:Record<string,string>;
+  actionKind?:ActionUseKind;
+}
+
+function object(value:unknown,label:string):Obj {
+  if(!value||typeof value!=="object"||Array.isArray(value)) throw new DomainEvaluationError(`${label} must be an object`);
+  return value as Obj;
+}
+
+function seconds(value:unknown,label:string) {
+  const duration=object(value,label);
+  if(duration.kind==="durable"||duration.kind==="manual"||duration.kind==="instant") return undefined;
+  if(duration.kind!=="elapsed") throw new DomainEvaluationError(`${label}.kind is not connected to runtime artifact expiry`);
+  const amount=object(duration.amount,`${label}.amount`).value;
+  if(typeof amount!=="number"||!Number.isFinite(amount)||amount<0) throw new DomainEvaluationError(`${label}.amount.value must be non-negative`);
+  const multiplier=duration.unit==="seconds"?1:duration.unit==="minutes"?60:duration.unit==="hours"?3600:duration.unit==="days"?86400:undefined;
+  if(!multiplier) throw new DomainEvaluationError(`${label}.unit is unsupported`);
+  return amount*multiplier;
+}
+
+function expiry(state:RulesRuntimeState,template:CommonPlayArtifactActivationDefinition["artifactTemplates"][number],actorId:string):RuntimeArtifactExpiry {
+  if(template.artifactKind==="stored-invocation") return {kind:"turn-boundary",actorId,round:state.clock.round+1,boundary:"start"};
+  const elapsed=seconds(template.duration,`artifact ${template.id} duration`);
+  if(elapsed!==undefined) return {kind:"time",elapsedSeconds:state.clock.elapsedSeconds+elapsed};
+  const lifetime=object(template.lifetime,`artifact ${template.id} lifetime`);
+  if(!["durable","world-persistent","until-destroyed","with-parent","until-source-recast"].includes(String(lifetime.kind))) {
+    throw new DomainEvaluationError(`artifact ${template.id} lifetime is not connected to generic artifact activation`);
+  }
+  return {kind:"permanent"};
+}
+
+function boundId(value:unknown,actorId:string,artifacts:Map<string,string>,label:string) {
+  if(typeof value!=="string"||!value) throw new DomainEvaluationError(`${label} must be a non-empty string`);
+  if(value==="actor") return actorId;
+  if(value.startsWith("artifact:")) {
+    const id=artifacts.get(value.slice("artifact:".length));
+    if(!id) throw new DomainEvaluationError(`${label} references an artifact template that is not spawned by this entry point`);
+    return id;
+  }
+  return value;
+}
+
+function artifactOperationAmount(state:RulesRuntimeState,input:CommonPlayArtifactActivationInput,value:ExpressionNode,label:string) {
+  const actor=state.combatants[input.actorId];
+  const amount=evaluateExpression(value,(property)=>{
+    const resolved=actor?.baseProperties?.[property];
+    if(resolved===undefined) throw new DomainEvaluationError(`${label} cannot resolve numeric property: ${property}`);
+    return resolved;
+  });
+  if(!Number.isFinite(amount)||amount<0) throw new DomainEvaluationError(`${label} must resolve to a non-negative finite number`);
+  return amount;
+}
+
+function artifactOperationTarget(
+  state:RulesRuntimeState,
+  definition:CommonPlayArtifactActivationDefinition,
+  input:CommonPlayArtifactActivationInput,
+  artifactIds:Map<string,string>,
+  reference:string,
+) {
+  const spawned=artifactIds.get(reference);
+  if(spawned) return spawned;
+  const exact=(state.artifacts??[]).find((candidate)=>candidate.id===reference);
+  if(exact) return exact.id;
+  const sourced=(state.artifacts??[]).filter((candidate)=>candidate.sourceId===definition.id&&candidate.sourceActorId===input.actorId&&candidate.templateId===reference);
+  if(sourced.length!==1) throw new DomainEvaluationError(`artifact reference ${reference} must resolve to exactly one active artifact`);
+  return sourced[0].id;
+}
+
+function artifact(
+  state:RulesRuntimeState,
+  definition:CommonPlayArtifactActivationDefinition,
+  template:CommonPlayArtifactActivationDefinition["artifactTemplates"][number],
+  input:CommonPlayArtifactActivationInput,
+  artifactIds:Map<string,string>,
+):RuntimeArtifactSpawnRequest {
+  const initial=structuredClone(object(template.initialState,`artifact ${template.id} initialState`));
+  const common={
+    id:artifactIds.get(template.id)!,sourceId:definition.id,sourceActorId:input.actorId,templateId:template.id,
+    artifactKind:template.artifactKind,expiry:expiry(state,template,input.actorId),
+    ...(input.placementRefs?.[template.id]?{placementRef:input.placementRefs[template.id]}:{}),
+  };
+  if(template.artifactKind==="stored-invocation") {
+    const definitionId=initial.definitionId,entryPointId=initial.entryPointId,definitionRevision=initial.definitionRevision,binding=initial.binding;
+    if(typeof definitionId!=="string"||typeof entryPointId!=="string"||typeof definitionRevision!=="string"||(binding!=="snapshot"&&binding!=="live")) {
+      throw new DomainEvaluationError(`artifact ${template.id} stored invocation identity is invalid`);
+    }
+    if(initial.trigger===undefined) throw new DomainEvaluationError(`artifact ${template.id} stored invocation trigger is required`);
+    return {...common,storedInvocation:{
+      ownerActorId:boundId(initial.ownerActorId??"actor",input.actorId,artifactIds,`artifact ${template.id} ownerActorId`),
+      definitionId,entryPointId,definitionRevision,binding,
+      trigger:structuredClone(initial.trigger) as StoredInvocationArtifactData["trigger"],
+      ...(typeof initial.concentrationGroupId==="string"?{concentrationGroupId:initial.concentrationGroupId}:{}),
+      ...(initial.onTriggerConcentration==="retain"||initial.onTriggerConcentration==="end"?{onTriggerConcentration:initial.onTriggerConcentration}:{}),
+    }};
+  }
+  if(template.artifactKind==="object") return {...common,object:initial as unknown as RuntimeArtifactSpawnRequest["object"]};
+  if(template.artifactKind==="link") {
+    const endpointIds=initial.endpointIds;
+    if(!Array.isArray(endpointIds)||endpointIds.length!==2) throw new DomainEvaluationError(`artifact ${template.id} link endpointIds must contain two bindings`);
+    const mount=initial.mount&&typeof initial.mount==="object"&&!Array.isArray(initial.mount)?initial.mount as Record<string,unknown>:undefined;
+    const vehicle=initial.vehicle&&typeof initial.vehicle==="object"&&!Array.isArray(initial.vehicle)?initial.vehicle as Record<string,unknown>:undefined;
+    return {...common,link:{
+      ...initial,
+      endpointIds:endpointIds.map((id,index)=>boundId(id,input.actorId,artifactIds,`artifact ${template.id} endpointIds[${index}]`)),
+      ...(mount?{mount:{...mount,controllerId:boundId(mount.controllerId,input.actorId,artifactIds,`artifact ${template.id} mount.controllerId`)}}:{}),
+      ...(vehicle&&Array.isArray(vehicle.crewIds)?{vehicle:{...vehicle,crewIds:vehicle.crewIds.map((id,index)=>boundId(id,input.actorId,artifactIds,`artifact ${template.id} vehicle.crewIds[${index}]`))}}:{}),
+    } as RuntimeArtifactSpawnRequest["link"]};
+  }
+  if(template.artifactKind==="actor") return {...common,actor:{
+    ...initial,
+    ownerId:boundId(initial.ownerId,input.actorId,artifactIds,`artifact ${template.id} ownerId`),
+    controllerId:boundId(initial.controllerId,input.actorId,artifactIds,`artifact ${template.id} controllerId`),
+  } as RuntimeArtifactSpawnRequest["actor"]};
+  if(template.artifactKind==="exposure") return {...common,exposure:{
+    ...initial,
+    id:common.id,
+    subjectId:boundId(initial.subjectId??"actor",input.actorId,artifactIds,`artifact ${template.id} subjectId`),
+    definitionId:typeof initial.definitionId==="string"?initial.definitionId:definition.id,
+  } as RuntimeArtifactSpawnRequest["exposure"]};
+  if(template.artifactKind==="environment") return {...common,environment:{...initial,id:typeof initial.id==="string"?initial.id:definition.id} as unknown as RuntimeArtifactSpawnRequest["environment"]};
+  if(template.artifactKind==="project") return {...common,project:{
+    ...initial,
+    id:common.id,
+    ownerId:boundId(initial.ownerId??"actor",input.actorId,artifactIds,`artifact ${template.id} ownerId`),
+    definitionId:typeof initial.definitionId==="string"?initial.definitionId:definition.id,
+  } as RuntimeArtifactSpawnRequest["project"]};
+  return {...common,form:{
+    ...initial,
+    targetActorId:boundId(initial.targetActorId,input.actorId,artifactIds,`artifact ${template.id} targetActorId`),
+    ...(initial.controllerId===undefined?{}:{controllerId:boundId(initial.controllerId,input.actorId,artifactIds,`artifact ${template.id} controllerId`)}),
+  } as RuntimeArtifactSpawnRequest["form"]};
+}
+
+export function compileCommonPlayArtifactActivation(
+  state:RulesRuntimeState,
+  definition:CommonPlayArtifactActivationDefinition,
+  input:CommonPlayArtifactActivationInput,
+):PendingResolution {
+  const entryPoint=definition.entryPoints.find((candidate)=>candidate.id===input.entryPointId);
+  if(!entryPoint||entryPoint.invocation!=="manual"||!entryPoint.operations.length) throw new DomainEvaluationError("artifact activation requires a non-empty manual entry point");
+  const templates=new Map(definition.artifactTemplates.map((template)=>[template.id,template]));
+  const artifactIds=new Map<string,string>();
+  entryPoint.operations.forEach((operation,index)=>{
+    if(operation.kind==="artifact.spawn") artifactIds.set(operation.template,`${input.resolutionId}:artifact:${index+1}:${operation.template}`);
+  });
+  const operations:ResolutionOperation[]=[...compileCommonPlayPayments(parseCommonPlayPayments(definition.payments),input)];
+  entryPoint.operations.forEach((operation,index)=>{
+    if(operation.kind==="artifact.spawn") {
+      const template=templates.get(operation.template);
+      if(!template) throw new DomainEvaluationError(`artifact template not found: ${operation.template}`);
+      if(!["stored-invocation","object","link","actor","form","exposure","environment","project"].includes(template.artifactKind)) throw new DomainEvaluationError(`artifact ${template.id} kind is not handled by the generic artifact activation runtime`);
+      const lifetime=object(template.lifetime,`artifact ${template.id} lifetime`);
+      if(template.artifactKind==="actor"&&lifetime.kind==="until-source-recast") {
+        (state.artifacts??[])
+          .filter((existing)=>existing.artifactKind==="actor"&&existing.sourceId===definition.id&&existing.sourceActorId===input.actorId&&existing.templateId===template.id)
+          .forEach((existing,replacementIndex)=>operations.push({
+            id:`common-play-artifact-recast-remove-${index+1}-${replacementIndex+1}`,
+            kind:"remove-artifact",
+            artifactId:existing.id,
+          }));
+      }
+      const spawned=artifact(state,definition,template,input,artifactIds);
+      if(spawned.artifactKind==="stored-invocation"&&spawned.storedInvocation?.concentrationGroupId) operations.push({
+        id:`common-play-artifact-held-concentration-${index+1}`,
+        kind:"start-concentration",
+        actorId:spawned.storedInvocation.ownerActorId,
+        groupId:spawned.storedInvocation.concentrationGroupId,
+        sourceId:spawned.storedInvocation.definitionId,
+      });
+      operations.push({id:`common-play-artifact-spawn-${index+1}`,kind:"spawn-artifact",artifact:spawned});
+      return;
+    }
+    const artifactId=artifactOperationTarget(state,definition,input,artifactIds,operation.artifact);
+    if(operation.kind==="artifact.damage") {
+      operations.push({id:`common-play-artifact-damage-${index+1}`,kind:"damage-artifact",artifactId,damageType:operation.damageType,amount:artifactOperationAmount(state,input,operation.amount,`artifact.damage ${operation.artifact}.amount`)});
+      return;
+    }
+    if(operation.kind==="artifact.repair") {
+      operations.push({id:`common-play-artifact-repair-${index+1}`,kind:"repair-artifact",artifactId,amount:artifactOperationAmount(state,input,operation.amount,`artifact.repair ${operation.artifact}.amount`)});
+      return;
+    }
+    if(operation.kind==="artifact.relocate") {
+      operations.push({id:`common-play-artifact-relocate-${index+1}`,kind:"relocate-artifact",artifactId,placementRef:operation.placementRef});
+      return;
+    }
+    if(operation.kind==="artifact.update") {
+      operations.push({id:`common-play-artifact-update-${index+1}`,kind:"update-artifact",artifactId,metadataPatch:structuredClone(operation.metadataPatch)});
+      return;
+    }
+    operations.push({id:`common-play-artifact-remove-${index+1}`,kind:"remove-artifact",artifactId});
+  });
+  return {id:input.resolutionId,actorId:input.actorId,sourceId:definition.id,expectedRevision:state.revision,operations};
+}
+
+export function resolveCommonPlayArtifactActivation(
+  profile:RulesProfileLike,
+  state:RulesRuntimeState,
+  definition:CommonPlayArtifactActivationDefinition,
+  input:CommonPlayArtifactActivationInput,
+):ResolutionCommit {
+  try { return resolvePendingResolution(profile,state,compileCommonPlayArtifactActivation(state,definition,input)); }
+  catch(error) { return {status:"rejected",state,events:[],results:{},error:error instanceof Error?error.message:String(error)}; }
+}

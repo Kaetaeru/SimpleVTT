@@ -16,21 +16,11 @@ import {
   restoreFreeformSpellSlot,
   type FreeformSpellSlotChange,
 } from "./spellcastingRuntimeAdapter";
-import {
-  phase09ReferenceAttackFact,
-  phase09ReferenceHealingFact,
-  phase09ReferenceSaveModifier,
-  phase09ReferenceTargetingFact,
-} from "./phase09ReferenceRulesFacts";
-import {
-  resolveAtomicAttackTransaction,
-  type AtomicAttackTransactionResult,
-} from "./realAttackTransactionService";
+import { rollHealingFact } from "./phase09ReferenceRulesFacts";
 import { resolveActionCostTransaction } from "./realActionCostService";
 import { resolveSceneDamage, resolveSceneHealing } from "./realHealthService";
 import { resolveHealingRollResolution } from "./realHealingRollService";
 import { resolveAttackRollResolution, resolveOpenAbilityCheckResolution } from "./realResolutionService";
-import { resolveSavingThrowResolution } from "./realSavingThrowService";
 import { recordRuntimeResolutionEvents } from "./runtimeResolutionEventHistory";
 import type { ResolutionEvent } from "../domain/resolutionTypes";
 
@@ -47,6 +37,7 @@ interface Phase09ResolutionAdapterState {
   eligible(action:ActionVm):string[];
   capture():void;
   d20(actionId:string,index?:number):number;
+  damageDice(action:ActionVm,critical?:boolean):number[];
   commit(action:ActionVm):void;
   syncChar():void;
   resolution:ResolutionView|null;
@@ -66,17 +57,10 @@ interface FreeformSpellSlotHistory {
   change:FreeformSpellSlotChange;
 }
 
-const pendingAtomicAttacks = new WeakMap<MockAdapter,Extract<AtomicAttackTransactionResult,{ status:"committed" }>>();
 const freeformSpellSlotHistories = new WeakMap<MockAdapter,FreeformSpellSlotHistory>();
-const REAL_HEALING_ACTION_IDS = new Set(["action.second-wind","action.healing-word","action.healing-potion"]);
 const HELPED_STATUS = "도움 받음";
 const HIDDEN_STATUS = "숨음";
 const DODGING_STATUS = "회피";
-const READY_STATUS = "준비 행동";
-
-function isDexteritySave(action:ActionVm) {
-  return ["dex","dexterity","민첩"].includes(String(action.saveAbility??"").toLowerCase());
-}
 
 function removeStatus(entity:SceneEntity|undefined,status:string) {
   if (!entity?.status.includes(status)) return false;
@@ -91,50 +75,14 @@ function resolutionId() {
 function migratedResolutionAction(action:ActionVm) {
   return action.resolutionKind === "ability-check"
     || action.resolutionKind === "attack"
-    || action.resolutionKind === "saving-throw"
-    || (action.resolutionKind === "healing" && REAL_HEALING_ACTION_IDS.has(action.id));
+    || action.resolutionKind === "healing";
 }
 
-function atomicAttackAction(action:ActionVm) {
-  return action.id === "action.shortbow" && action.resolutionKind === "attack" && !action.itemCost && !action.resourceCost;
-}
-
-function finalizeWithoutAdditionalCosts(internal:Phase09ResolutionAdapterState) {
-  const resolution = internal.resolution;
-  if (!resolution) return;
-  resolution.stage = "complete";
-  resolution.canAdvance = false;
-  resolution.nextLabel = undefined;
-  internal.syncChar();
-  internal.activity.unshift({
-    id:resolution.id,
-    time:"지금",
-    actor:internal.entity(resolution.actorId)?.name ?? resolution.actorId,
-    title:`${resolution.actionName} → ${resolution.targetIds.map((id) => internal.entity(id)?.name ?? id).join(", ") || "—"}`,
-    summary:resolution.compact,
-    detail:[...resolution.detail,...resolution.provenance.map((entry) => `출처: ${entry}`)],
-    stateChanges:structuredClone(resolution.stateChanges),
-  });
-  internal.lastBefore = internal.before ? structuredClone(internal.before) : null;
-  internal.lastResolutionId = resolution.id;
-  internal.before = null;
-}
-
-function rejectAtomicAttack(internal:Phase09ResolutionAdapterState,error:string) {
-  const resolution = internal.resolution;
-  if (!resolution) return;
-  if (internal.before) {
-    internal.scene = structuredClone(internal.before.scene);
-    internal.activeCharacter = structuredClone(internal.before.activeCharacter);
-    internal.characters = structuredClone(internal.before.characters);
-  }
-  resolution.stateChanges = [];
-  resolution.detail.push(`공격 transaction 거부: ${error}`);
-  resolution.finalOutcome = `적용 거부: ${error}`;
-  resolution.stage = "complete";
-  resolution.canAdvance = false;
-  resolution.nextLabel = undefined;
-  internal.before = null;
+async function projectedAction(internal:Phase09ResolutionAdapterState,actionId:string) {
+  const canonical=internal.action(actionId);
+  if (canonical) return canonical;
+  const snapshot=await internal.getSnapshot();
+  return Object.values(snapshot.scene.actionsByActor).flat().find((action)=>action.id===actionId);
 }
 
 function rejectCost(internal:Phase09ResolutionAdapterState,error:string) {
@@ -152,64 +100,6 @@ function rejectCost(internal:Phase09ResolutionAdapterState,error:string) {
   resolution.canAdvance=false;
   resolution.nextLabel=undefined;
   internal.before=null;
-}
-
-function buildAtomicAttack(
-  internal:Phase09ResolutionAdapterState,
-  action:ActionVm,
-  resolution:ResolutionView,
-):AtomicAttackTransactionResult {
-  const actor = internal.entity(action.actorId);
-  const target = internal.entity(resolution.targetIds[0]);
-  const actorEconomy = internal.scene.economyByActor[action.actorId];
-  const targetEconomy = target ? internal.scene.economyByActor[target.id] : undefined;
-  const attackD20Face = resolution.authoritativeDice[0];
-  if (!actor || !target || !actorEconomy || !targetEconomy || attackD20Face === undefined || resolution.attackTotal === undefined || resolution.targetAc === undefined || !resolution.attackOutcome) {
-    return { status:"rejected", error:"atomic attack projection is missing authoritative actor/target/roll state" };
-  }
-  try {
-    return resolveAtomicAttackTransaction({
-      resolutionId:`${resolution.id}:atomic`,
-      action,
-      actor,
-      target,
-      actorEconomy,
-      targetEconomy,
-      initiativeMode:internal.sessionMode === "initiative",
-      attackD20Face,
-      effectiveTargetAc:resolution.targetAc,
-      attackFact:phase09ReferenceAttackFact(action.id),
-      targetingFact:phase09ReferenceTargetingFact(target.id),
-      expectedPreview:{
-        total:resolution.attackTotal,
-        outcome:resolution.attackOutcome,
-        critical:resolution.critical === true,
-      },
-    });
-  } catch (error) {
-    return { status:"rejected", error:error instanceof Error ? error.message : String(error) };
-  }
-}
-
-function applyAtomicAttack(
-  internal:Phase09ResolutionAdapterState,
-  resolution:ResolutionView,
-  transaction:Extract<AtomicAttackTransactionResult,{ status:"committed" }>,
-) {
-  const target = internal.entity(resolution.targetIds[0]);
-  if (!target) return false;
-  target.hp = transaction.targetHp;
-  target.tempHp = transaction.targetTempHp;
-  internal.scene.economyByActor[resolution.actorId] = { ...transaction.actorEconomy };
-  resolution.stateChanges.push(...transaction.stateChanges);
-  resolution.provenance.push(...transaction.provenance);
-  resolution.damageComponents = transaction.damageComponent ? [transaction.damageComponent] : [];
-  if (transaction.damageComponent) {
-    resolution.compact = `${resolution.attackTotal} vs AC ${resolution.targetAc} — ${resolution.attackOutcome}${resolution.critical ? " · 치명타" : ""} · ${transaction.damageComponent.adjusted} ${transaction.damageComponent.type} 피해`;
-  }
-  resolution.calculatedOutcome = resolution.compact;
-  if (!resolution.adjudicated) resolution.finalOutcome = resolution.compact;
-  return true;
 }
 
 const oldResolveAction = MockAdapter.prototype.resolveAction;
@@ -283,7 +173,7 @@ phase09Prototype.commit = function commitWithRealCosts(action:ActionVm) {
 
 MockAdapter.prototype.resolveAction = async function resolveActionWithRealRules(actionId:string,targetIds:string[]) {
   const internal = this as unknown as Phase09ResolutionAdapterState;
-  const action = internal.action(actionId);
+  const action = await projectedAction(internal,actionId);
   if (!action || !migratedResolutionAction(action)) {
     return oldResolveAction.call(this,actionId,targetIds);
   }
@@ -332,44 +222,13 @@ MockAdapter.prototype.resolveAction = async function resolveActionWithRealRules(
     return internal.getSnapshot();
   }
 
-  if (action.resolutionKind === "saving-throw") {
-    const targets = targetIds.map((id) => {
-      const target = internal.entity(id);
-      if (!target) return undefined;
-      const fact = phase09ReferenceSaveModifier(id,action.saveAbility ?? "내성");
-      return {
-        id,
-        name:target.name,
-        modifier:fact.modifier,
-        modifierSource:fact.source,
-        rollStateContributions:isDexteritySave(action)&&target.status.includes(DODGING_STATUS)
-          ? [{ source:`condition:${DODGING_STATUS}:dexterity-save`,state:"advantage" as const }]
-          : undefined,
-      };
-    });
-    if (targets.some((target) => target === undefined)) return internal.getSnapshot();
-    internal.capture();
-    const primaryFaces=targetIds.map((_,index) => internal.d20(action.id,index));
-    const typedTargets=targets as Array<{id:string; rollStateContributions?:unknown[]}>;
-    internal.resolution = resolveSavingThrowResolution({
-      resolutionId:resolutionId(),
-      action,
-      targets:targets as Array<{ id:string; name:string; modifier:number; modifierSource:string }>,
-      diceFaces:primaryFaces,
-      diceFacesByTarget:Object.fromEntries(typedTargets.flatMap((target,index)=>target.rollStateContributions?.length
-        ? [[target.id,[primaryFaces[index],internal.d20(`${action.id}:dodge-save`,index)]]]
-        : [])),
-    });
-    return internal.getSnapshot();
-  }
-
   if (action.resolutionKind === "healing") {
     internal.capture();
     internal.resolution = resolveHealingRollResolution({
       resolutionId:resolutionId(),
       action,
       targetIds,
-      healingFact:phase09ReferenceHealingFact(action.id),
+      healingFact:rollHealingFact(action,(index)=>internal.d20(action.id,index)),
     });
     return internal.getSnapshot();
   }
@@ -403,23 +262,55 @@ MockAdapter.prototype.advanceResolution = async function advanceResolutionWithRe
   const internal = this as unknown as Phase09ResolutionAdapterState;
   const resolution = internal.resolution;
   if (!resolution) return oldAdvanceResolution.call(this);
-  const action = internal.action(resolution.actionId);
+  const action = await projectedAction(internal,resolution.actionId);
   if (!action) return oldAdvanceResolution.call(this);
 
-  if(resolution.stage==="effect-preview"&&action.id==="action.dash"){
+  const projectedOnly=internal.action(resolution.actionId)===undefined;
+  if (projectedOnly&&resolution.stage==="roll-animation"&&resolution.rollKind==="attack") {
+    const target=internal.entity(resolution.targetIds[0]);
+    const canReact=Boolean(resolution.attackOutcome==="명중"&&target?.reactions.length&&internal.scene.economyByActor[target.id]?.reaction);
+    if (canReact&&target) {
+      const option=target.reactions[0];
+      resolution.interrupt={id:option.id,responderId:target.id,responderName:target.name,trigger:option.trigger,optionName:option.name,cost:option.cost,effect:option.effect,source:option.source};
+      resolution.stage="interrupt";
+      resolution.canAdvance=false;
+      resolution.nextLabel=undefined;
+    } else {
+      resolution.stage="attack-result";
+      resolution.canAdvance=true;
+      resolution.nextLabel=resolution.attackOutcome==="명중"?"피해 굴림":"판정 적용";
+    }
+    return internal.getSnapshot();
+  }
+  if (projectedOnly&&resolution.stage==="attack-result"&&action.resolutionKind==="attack") {
+    if (resolution.attackOutcome==="빗나감") {
+      internal.commit(action);
+      return internal.getSnapshot();
+    }
+    const base=action.damage?.[0]?.average??0;
+    resolution.stage="damage-animation";
+    resolution.rollKind="damage";
+    resolution.authoritativeDice=resolution.critical?[Math.ceil(base/2),Math.floor(base/2)]:[base];
+    resolution.canAdvance=true;
+    resolution.nextLabel="피해 적용";
+    return internal.getSnapshot();
+  }
+
+  if(resolution.stage==="effect-preview"&&Number.isFinite(action.movementBudgetGainFeet)&&(action.movementBudgetGainFeet??0)>0){
     const before=structuredClone(internal.scene.economyByActor[action.actorId]);
     const next=await oldAdvanceResolution.call(this);
     const after=internal.scene.economyByActor[action.actorId];
     const completed=internal.resolution;
     if(before&&after&&completed?.stage==="complete"){
-      const provenance=[{source:"action.dash",status:"applied" as const,reason:"Host-authoritative Dash economy projection"}];
-      const fields:Array<{field:"action"|"movement"|"movementMaximum";before:boolean|number;after:boolean|number}>=[
+      const provenance=[{source:action.id,status:"applied" as const,reason:"Host-authoritative movement budget projection"}];
+      const fields:Array<{field:"action"|"bonusAction"|"movement"|"movementMaximum";before:boolean|number;after:boolean|number}>=[
         {field:"action",before:before.action,after:after.action},
+        {field:"bonusAction",before:before.bonusAction,after:after.bonusAction},
         {field:"movement",before:before.movement,after:after.movement},
         {field:"movementMaximum",before:before.movementMax,after:after.movementMax},
       ];
       const event:ResolutionEvent={
-        id:`${completed.id}:dash`,resolutionId:completed.id,operationId:"dash:economy",kind:"dash",actorId:action.actorId,targetId:action.actorId,
+        id:`${completed.id}:movement-budget`,resolutionId:completed.id,operationId:"movement-budget:economy",kind:"movement-budget",actorId:action.actorId,targetId:action.actorId,
         summary:completed.finalOutcome,provenance,
         stateChanges:fields.filter((entry)=>entry.before!==entry.after).map((entry)=>({kind:"economy" as const,targetId:action.actorId,field:entry.field,before:entry.before,after:entry.after,provenance,lifetime:"session-runtime" as const,writeBack:"session" as const})),
         result:{movement:after.movement,movementMaximum:after.movementMax},
@@ -429,70 +320,35 @@ MockAdapter.prototype.advanceResolution = async function advanceResolutionWithRe
     return next;
   }
 
-  if (resolution.stage==="roll-animation"&&resolution.rollKind==="check"&&action.id==="action.standard.hide.stealth") {
-    const actor=internal.entity(action.actorId);
-    const succeeded=(resolution.rollTotal??0)>=15;
-    if(succeeded&&actor&&!actor.status.includes(HIDDEN_STATUS)) {
-      actor.status.push(HIDDEN_STATUS);
-      resolution.stateChanges.push(`${actor.name} 상태 추가: ${HIDDEN_STATUS} · DC 15 충족`);
-    } else if(!succeeded&&removeStatus(actor,HIDDEN_STATUS)) {
-      resolution.stateChanges.push(`${actor?.name??action.actorId} 상태 제거: ${HIDDEN_STATUS} · 숨기 실패`);
+  const statusEffect=action.sessionStatusEffect;
+  if (resolution.stage==="roll-animation"&&resolution.rollKind==="check"&&statusEffect?.minimumRoll!==undefined) {
+    const target=internal.entity(statusEffect.target==="actor"?action.actorId:resolution.targetIds[0]);
+    const succeeded=(resolution.rollTotal??0)>=statusEffect.minimumRoll;
+    if(succeeded&&target&&!target.status.includes(statusEffect.status)) {
+      target.status.push(statusEffect.status);
+      resolution.stateChanges.push(`${target.name} 상태 추가: ${statusEffect.status} · DC ${statusEffect.minimumRoll} 충족`);
+    } else if(!succeeded&&removeStatus(target,statusEffect.status)) {
+      resolution.stateChanges.push(`${target?.name??action.actorId} 상태 제거: ${statusEffect.status} · ${statusEffect.failureOutcome??"판정 실패"}`);
     }
-    resolution.finalOutcome=`${resolution.rollTotal} · 숨기 ${succeeded ? "성공" : "실패"}`;
+    resolution.finalOutcome=`${resolution.rollTotal} · ${succeeded?statusEffect.successOutcome:statusEffect.failureOutcome??"실패"}`;
     resolution.compact=resolution.finalOutcome;
   }
 
-  if (resolution.stage==="effect-preview"&&action.resolutionKind==="no-roll"&&action.id.startsWith("action.standard.")) {
+  if (resolution.stage==="effect-preview"&&action.resolutionKind==="no-roll"&&(statusEffect||action.completionOutcome)) {
     const actor=internal.entity(action.actorId);
-    const target=internal.entity(resolution.targetIds[0]??action.actorId);
-    const applyStatus=(entity:SceneEntity|undefined,status:string)=>{if(entity&&!entity.status.includes(status)){entity.status.push(status);resolution.stateChanges.push(`${entity.name} 상태 추가: ${status}`);}};
-    if(action.id==="action.standard.disengage"){applyStatus(actor,"이탈");resolution.finalOutcome="이번 턴 기회 공격을 유발하지 않음";}
-    else if(action.id==="action.standard.dodge"){applyStatus(actor,"회피");resolution.finalOutcome="다음 턴 시작까지 회피";}
-    else if(action.id==="action.standard.help"){applyStatus(target,"도움 받음");resolution.finalOutcome=`${target?.name??"아군"} 지원`;}
-    else if(action.id==="action.standard.ready"){applyStatus(actor,READY_STATUS);resolution.finalOutcome="트리거와 반응 행동 준비";}
-    else if(action.id==="action.standard.ready.trigger"){
-      if(removeStatus(actor,READY_STATUS)) resolution.stateChanges.push(`${actor?.name??action.actorId} 상태 제거: ${READY_STATUS} · 반응 발동`);
-      resolution.finalOutcome=action.summary.includes("→ 이동")?"준비한 이동을 반응으로 선언":"준비한 행동을 반응으로 발동";
+    const target=statusEffect?.target==="first-target"?internal.entity(resolution.targetIds[0]):actor;
+    if(statusEffect&&target) {
+      if(statusEffect.operation==="remove") {
+        if(removeStatus(target,statusEffect.status)) resolution.stateChanges.push(`${target.name} 상태 제거: ${statusEffect.status}`);
+      } else if(!target.status.includes(statusEffect.status)) {
+        target.status.push(statusEffect.status);
+        resolution.stateChanges.push(`${target.name} 상태 추가: ${statusEffect.status}`);
+      }
     }
-    else if(action.id==="action.standard.utilize"){resolution.stateChanges.push(`${actor?.name??action.actorId} 비마법 물체 사용 선언`);resolution.finalOutcome="물체 사용";}
+    if(action.completionStateChange) resolution.stateChanges.push(action.completionStateChange);
+    resolution.finalOutcome=statusEffect?.successOutcome??action.completionOutcome??resolution.finalOutcome;
     resolution.compact=resolution.finalOutcome;
     internal.commit(action);
-    return internal.getSnapshot();
-  }
-
-  if (atomicAttackAction(action) && !resolution.adjudicated && resolution.stage === "attack-result") {
-    const transaction = buildAtomicAttack(internal,action,resolution);
-    if (transaction.status === "rejected") {
-      pendingAtomicAttacks.delete(this);
-      rejectAtomicAttack(internal,transaction.error);
-      return internal.getSnapshot();
-    }
-    if (resolution.attackOutcome === "빗나감") {
-      applyAtomicAttack(internal,resolution,transaction);
-      finalizeWithoutAdditionalCosts(internal);
-      return internal.getSnapshot();
-    }
-    pendingAtomicAttacks.set(this,transaction);
-    resolution.stage = "damage-animation";
-    resolution.rollKind = "damage";
-    resolution.authoritativeDice = [...transaction.damageFaces];
-    resolution.canAdvance = true;
-    resolution.nextLabel = "피해 적용";
-    return internal.getSnapshot();
-  }
-
-  if (atomicAttackAction(action) && !resolution.adjudicated && resolution.stage === "damage-animation") {
-    const transaction = pendingAtomicAttacks.get(this);
-    pendingAtomicAttacks.delete(this);
-    if (!transaction) {
-      rejectAtomicAttack(internal,"missing staged atomic attack transaction");
-      return internal.getSnapshot();
-    }
-    if (!applyAtomicAttack(internal,resolution,transaction)) {
-      rejectAtomicAttack(internal,"atomic attack target disappeared before projection");
-      return internal.getSnapshot();
-    }
-    finalizeWithoutAdditionalCosts(internal);
     return internal.getSnapshot();
   }
 
@@ -553,6 +409,36 @@ MockAdapter.prototype.advanceResolution = async function advanceResolutionWithRe
     resolution.calculatedOutcome = `${resolved.restored} HP 회복`;
     if (!resolution.adjudicated) resolution.finalOutcome = "회복 적용";
     internal.commit(action);
+    return internal.getSnapshot();
+  }
+
+  if (action.resolutionKind === "attack" && resolution.stage === "roll-animation") {
+    const target=internal.entity(resolution.targetIds[0]);
+    const canReact=Boolean(resolution.attackOutcome==="명중"&&target?.reactions.length&&internal.scene.economyByActor[target.id]?.reaction);
+    if (canReact&&target) {
+      const option=target.reactions[0];
+      resolution.interrupt={id:option.id,responderId:target.id,responderName:target.name,trigger:option.trigger,optionName:option.name,cost:option.cost,effect:option.effect,source:option.source};
+      resolution.stage="interrupt";
+      resolution.canAdvance=false;
+      resolution.nextLabel=undefined;
+    } else {
+      resolution.stage="attack-result";
+      resolution.canAdvance=true;
+      resolution.nextLabel=resolution.attackOutcome==="명중"?"피해 굴림":"판정 적용";
+    }
+    return internal.getSnapshot();
+  }
+
+  if (action.resolutionKind === "attack" && resolution.stage === "attack-result") {
+    if (resolution.attackOutcome === "빗나감") {
+      internal.commit(action);
+      return internal.getSnapshot();
+    }
+    resolution.stage="damage-animation";
+    resolution.rollKind="damage";
+    resolution.authoritativeDice=internal.damageDice(action,resolution.critical);
+    resolution.canAdvance=true;
+    resolution.nextLabel="피해 적용";
     return internal.getSnapshot();
   }
 

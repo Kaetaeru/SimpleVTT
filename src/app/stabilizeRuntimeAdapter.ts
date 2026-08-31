@@ -47,6 +47,7 @@ function syncActions(internal:AdapterState,scene:SceneVm) {
       disabledReason:available?undefined:targetIds.length?"행동을 이미 사용했습니다.":"HP 0의 불안정한 대상이 없습니다.",
       eligibleTargetIds:[...targetIds],eligibleTargetReasons:Object.fromEntries(scene.entities.filter((entry)=>!targetIds.includes(entry.id)).map((entry)=>[entry.id,"HP 0의 불안정한 대상만 안정화할 수 있습니다."])),
       checkBonus:medicine?.checkBonus??0,maxTargets:1,
+      checkSuccessOperations:[{kind:"stabilize",target:"first-target"}],checkOutcomeLabels:{success:"안정화 성공",failure:"안정화 실패"},
       details:[{label:"판정",value:`의학 ${medicine?.summary??"+0"}`},{label:"DC",value:"10"},{label:"성공",value:"죽음 내성굴림을 멈추고 안정화"},{label:"출처",value:"SRD 5.2.1 · Stabilize"}],
     };
     scene.actionsByActor[actorId]=[...without,action];
@@ -57,6 +58,7 @@ MockAdapter.prototype.getSnapshot=async function getSnapshotWithStabilizeAction(
   const internal=this as unknown as AdapterState;
   syncActions(internal,internal.scene);
   const snapshot=await previousGetSnapshot.call(this);
+  syncActions(internal,internal.scene);
   syncActions(internal,snapshot.scene);
   return snapshot;
 };
@@ -97,7 +99,7 @@ MockAdapter.prototype.resolveAction=async function resolveStabilize(actionId:str
   const outcome=roll.outcome==="success"?"안정화 성공":"안정화 실패";
   const resolution:ResolutionView={
     id:resolutionId,actorId:action.actorId,targetIds:[targetId],actionId:ACTION_ID,actionName:"안정화",rollKind:"check",stage:"complete",
-    authoritativeDice:[...roll.dice.faces],rollTotal:roll.total,checkTarget:10,checkOutcome:roll.outcome==="success"?"성공":"실패",saveResults:[],damageComponents:[],compact:`의학 ${roll.total} vs DC 10 · ${outcome}`,
+    authoritativeDice:[...roll.dice.faces],naturalD20:roll.natural,rollTotal:roll.total,checkTarget:10,checkOutcome:roll.outcome==="success"?"성공":"실패",saveResults:[],damageComponents:[],compact:`의학 ${roll.total} vs DC 10 · ${outcome}`,
     detail:[`d20 ${roll.natural} + ${roll.modifier} = ${roll.total}`],provenance:["SRD 5.2.1 · Stabilize"],calculatedOutcome:outcome,finalOutcome:outcome,
     stateChanges:projected.stateChanges,adjudicated:false,canAdvance:false,
   };

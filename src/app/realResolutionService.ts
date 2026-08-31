@@ -1,14 +1,31 @@
+import dndSrdRulesProfile from "../../rules/profiles/dnd.srd-5.2.1.profile.json";
 import type { ActionVm, ResolutionView } from "./contracts";
 import { resolveD20Test, type ModifierContribution } from "../domain/d20";
 import { resolveOpenD20Roll } from "../domain/openD20";
-import type { RollStateContribution, RulesProfileLike } from "../domain/profileEngine";
+import { type RollStateContribution, type RulesProfileLike } from "../domain/profileEngine";
+import type { EffectInstance } from "../domain/effects";
+import { resolveEffectModifiedProfileProperty } from "../domain/effectProfilePropertyResolver";
 import type { ResolutionEvent } from "../domain/resolutionTypes";
 
 export const SIMPLEVTT_APP_RULES_PROFILE:RulesProfileLike = {
   profileId:"dnd.srd-5.2.1",
-  properties:{},
+  roundingPolicy:dndSrdRulesProfile.roundingPolicy as RulesProfileLike["roundingPolicy"],
+  propertyModifierPolicy:dndSrdRulesProfile.propertyModifierPolicy as RulesProfileLike["propertyModifierPolicy"],
+  properties:dndSrdRulesProfile.properties as RulesProfileLike["properties"],
   d20Test:{ advantageDisadvantage:{ sameSideStacks:false, opposingCancel:true } },
+  economy:dndSrdRulesProfile.economy as RulesProfileLike["economy"],
 };
+
+export function resolveRuntimeProfileProperty(
+  effects:EffectInstance[],
+  targetId:string,
+  property:string,
+  inputProperties:Record<string,number>,
+) {
+  return resolveEffectModifiedProfileProperty(
+    SIMPLEVTT_APP_RULES_PROFILE,effects,targetId,property,inputProperties,
+  );
+}
 
 export interface OpenAbilityCheckResolutionRequest {
   resolutionId:string;
@@ -74,6 +91,7 @@ export function resolveOpenAbilityCheckResolution(
     rollKind:"check",
     stage:"roll-animation",
     authoritativeDice:[...roll.dice.faces],
+    naturalD20:roll.natural,
     rollTotal:roll.total,
     saveResults:[],
     damageComponents:[],
@@ -144,6 +162,7 @@ export function resolveAttackRollResolution(
     stage:"roll-animation",
     // Attack transaction consumers use index 0 as the selected natural face.
     authoritativeDice,
+    naturalD20:roll.natural,
     rollTotal:roll.total,
     attackTotal:roll.total,
     targetAc:request.target.ac,

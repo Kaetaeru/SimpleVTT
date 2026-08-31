@@ -93,6 +93,12 @@ test("Common Play compiles an unknown multi-target save damage entry point into 
   const targeting=resolved.results["common-play-targets"] as {targets:Array<{targetId:string}>};
   assert.deepEqual(targeting.targets.map((target)=>target.targetId),["goblin","orc"]);
   assert.equal(resolved.events.every((event)=>event.resolutionId===input.resolutionId),true);
+  const failedSave=resolved.events.find((event)=>event.kind==="save.failure"&&event.actorId==="goblin");
+  const successfulSave=resolved.events.find((event)=>event.kind==="save.success"&&event.actorId==="orc");
+  assert.ok(failedSave,"each-target failed save must emit an authoritative semantic event");
+  assert.ok(successfulSave,"each-target successful save must emit an authoritative semantic event");
+  assert.equal(resolved.state.history.some((entry)=>entry.kind==="save.failure"&&entry.actorId==="goblin"),true);
+  assert.equal(resolved.state.history.some((entry)=>entry.kind==="save.success"&&entry.actorId==="orc"),true);
   assert.equal(resolved.state.history.every((entry)=>entry.resolutionId===input.resolutionId),true);
 });
 
@@ -159,4 +165,8 @@ test("Common Play save damage behavior is independent of the external content id
   if (resolved.status!=="committed") return;
   assert.equal(resolved.state.combatants.goblin.life.hp.current,12);
   assert.equal(resolved.state.combatants.orc.life.hp.current,26);
+  assert.deepEqual(
+    resolved.events.filter((event)=>event.kind.startsWith("save.")).map((event)=>({kind:event.kind,actorId:event.actorId})),
+    [{kind:"save.failure",actorId:"goblin"},{kind:"save.success",actorId:"orc"}],
+  );
 });

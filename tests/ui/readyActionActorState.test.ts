@@ -6,6 +6,7 @@ import { resetConnectedSessionTransientState } from "../../src/app/connectedSess
 import { MockAdapter } from "../../src/app/mockAdapter";
 import {
   clearReadyActionConfiguration,
+  isReadyTriggerAction,
   readyActionConfigurationFor,
   readyActionConfigurationsFor,
   setReadyActionConfiguration,
@@ -45,8 +46,8 @@ test("multiple actors keep independent Ready configurations and projected trigge
   assert.equal(readyActionConfigurationFor(adapter,aelarId)?.trigger,"문이 열리면");
   assert.equal(readyActionConfigurationFor(adapter,goblinId)?.trigger,"Aelar가 주문을 쓰면");
   assert.equal(readyActionConfigurationsFor(adapter).length,2);
-  assert.match(snapshot.scene.actionsByActor[aelarId]?.find((action)=>action.id==="action.standard.ready.trigger")?.summary??"",/문이 열리면/);
-  assert.match(snapshot.scene.actionsByActor[goblinId]?.find((action)=>action.id==="action.standard.ready.trigger")?.summary??"",/Aelar가 주문을 쓰면/);
+  assert.match(snapshot.scene.actionsByActor[aelarId]?.find(isReadyTriggerAction)?.summary??"",/문이 열리면/);
+  assert.match(snapshot.scene.actionsByActor[goblinId]?.find(isReadyTriggerAction)?.summary??"",/Aelar가 주문을 쓰면/);
 
   clearReadyActionConfiguration(adapter,aelarId);
   snapshot=await adapter.getSnapshot();
@@ -54,8 +55,8 @@ test("multiple actors keep independent Ready configurations and projected trigge
   assert.equal(readyActionConfigurationFor(adapter,goblinId)?.trigger,"Aelar가 주문을 쓰면");
   assert.equal(snapshot.scene.entities.find((entry)=>entry.id===aelarId)?.status.includes("준비 행동"),false);
   assert.equal(snapshot.scene.entities.find((entry)=>entry.id===goblinId)?.status.includes("준비 행동"),true);
-  assert.equal(snapshot.scene.actionsByActor[aelarId]?.some((action)=>action.id==="action.standard.ready.trigger"),false);
-  assert.equal(snapshot.scene.actionsByActor[goblinId]?.some((action)=>action.id==="action.standard.ready.trigger"),true);
+  assert.equal(snapshot.scene.actionsByActor[aelarId]?.some(isReadyTriggerAction),false);
+  assert.equal(snapshot.scene.actionsByActor[goblinId]?.some(isReadyTriggerAction),true);
 });
 
 test("connected session transient reset clears every actor Ready configuration and visible status",async()=>{

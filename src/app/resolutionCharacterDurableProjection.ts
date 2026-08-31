@@ -2,7 +2,7 @@ import type { CharacterSheet } from "./contracts";
 import type { CharacterDurableLifeFlagsV1 } from "./persistenceContracts";
 import type { ResolutionEvent } from "../domain/resolutionTypes";
 import type { ResourceRecoveryLockouts } from "../domain/resources";
-import type { DeathSaveStateChange, LifeFlagStateChange, ResourceStateChange, RuntimeStateChange } from "../domain/runtimeStateChange";
+import type { DeathSaveStateChange, InventoryItemStateChange, LifeFlagStateChange, ResourceStateChange, RuntimeStateChange } from "../domain/runtimeStateChange";
 import type { HpStateChange } from "../domain/stateChange";
 
 export type CharacterWriteBackDirection = "forward" | "inverse";
@@ -10,8 +10,21 @@ export type CharacterWriteBackProjection =
   | { status:"committed"; changed:boolean; sheet:CharacterSheet }
   | { status:"rejected"; error:string };
 
-type CharacterDurableStateChange=HpStateChange|ResourceStateChange|LifeFlagStateChange|DeathSaveStateChange;
-type DurableCharacterResource=CharacterSheet["resources"][number]&{recoveryLockouts?:ResourceRecoveryLockouts};
+type CharacterDurableStateChange=HpStateChange|ResourceStateChange|LifeFlagStateChange|DeathSaveStateChange|InventoryItemStateChange;
+type DurableCharacterResource=CharacterSheet["resources"][number]&{
+  recoveryLockouts?:ResourceRecoveryLockouts;
+  sourceMaximum?:number;
+  maximumAfterLongRest?:number;
+};
+
+function deepEquals(left:unknown,right:unknown):boolean {
+  if(Object.is(left,right))return true;
+  if(typeof left!=="object"||left===null||typeof right!=="object"||right===null)return false;
+  if(Array.isArray(left)||Array.isArray(right))return Array.isArray(left)&&Array.isArray(right)&&left.length===right.length&&left.every((entry,index)=>deepEquals(entry,right[index]));
+  const leftRecord=left as Record<string,unknown>,rightRecord=right as Record<string,unknown>;
+  const leftKeys=Object.keys(leftRecord).filter((key)=>leftRecord[key]!==undefined).sort(),rightKeys=Object.keys(rightRecord).filter((key)=>rightRecord[key]!==undefined).sort();
+  return leftKeys.length===rightKeys.length&&leftKeys.every((key,index)=>key===rightKeys[index]&&deepEquals(leftRecord[key],rightRecord[key]));
+}
 
 const ITEM_PREFIX="phase09:item:";
 
@@ -27,10 +40,11 @@ function isCharacterDurableChange(change:RuntimeStateChange):change is Character
   // Current spell-slot counts are authoritative TurnRuntime session state. Character persistence
   // stores their maxima/source facts, not a parallel spell-slot-N resource current value.
   if (change.kind==="resource"&&/^spell-slot-\d+$/.test(change.resourceId)) return false;
-  return change.writeBack==="character" && (change.kind==="hp" || change.kind==="resource" || change.kind==="life" || change.kind==="death-save");
+  return change.writeBack==="character" && (change.kind==="hp" || change.kind==="resource" || change.kind==="life" || change.kind==="death-save" || change.kind==="inventory-item");
 }
 
 function label(change:CharacterDurableStateChange) {
+  if(change.kind==="inventory-item") return `inventory-item.${change.itemId}`;
   if (change.kind==="hp") return `hp.${change.field}`;
   if (change.kind==="resource") return `resource.${change.resourceId}`;
   if (change.kind==="death-save") return `death-save.${change.field}`;
@@ -55,10 +69,27 @@ function applyChange(
   direction:CharacterWriteBackDirection,
   fallbackLife?:CharacterDurableLifeFlagsV1,
 ):string|undefined {
+  if(change.kind==="inventory-item") {
+    const expected=direction==="forward"?change.before:change.after;
+    const next=direction==="forward"?change.after:change.before;
+    const index=sheet.items.findIndex((entry)=>entry.id===change.itemId);
+    const current=index>=0?sheet.items[index]:undefined;
+    if(!deepEquals(current,expected))return `Character write-back drift for ${change.targetId}/${label(change)}`;
+    if(next){if(index>=0)sheet.items[index]=structuredClone(next);else sheet.items.push(structuredClone(next));}
+    else if(index>=0)sheet.items.splice(index,1);
+    return;
+  }
   if (change.kind==="hp") {
-    if (change.field==="maximum") return "Character write-back for maximum HP requires an explicit source-model contract";
     const before=direction==="forward" ? change.before : change.after;
     const after=direction==="forward" ? change.after : change.before;
+    if (change.field==="maximum") {
+      if (sheet.maxHp!==before) return `Character write-back drift for ${change.targetId}/${label(change)}: expected ${before}, current ${sheet.maxHp}`;
+      if (!Number.isInteger(after)||after<1) return `Character write-back invalid maximum HP for ${change.targetId}: ${after}`;
+      if (sheet.hp>after) return `Character write-back maximum HP ${after} is below current HP ${sheet.hp} for ${change.targetId}`;
+      if (sheet.sourceMaxHp===undefined) sheet.sourceMaxHp=before;
+      sheet.maxHp=after;
+      return;
+    }
     const current=change.field==="current" ? sheet.hp : sheet.tempHp;
     if (current!==before) return `Character write-back drift for ${change.targetId}/${label(change)}: expected ${before}, current ${current}`;
     if (change.field==="current") sheet.hp=after;
@@ -71,6 +102,7 @@ function applyChange(
     const pseudo=itemResource(change.resourceId);
     if (pseudo) {
       if (change.recoveryLockouts) return `Character write-back item resource cannot carry recovery lockouts: ${change.resourceId}`;
+      if (change.capacity) return `Character write-back item resource cannot carry capacity changes: ${change.resourceId}`;
       const item=sheet.items.find((entry)=>entry.id===pseudo.itemId);
       if (!item) return `Character write-back item is missing: ${pseudo.itemId}`;
       const current=pseudo.field==="quantity" ? item.quantity : item.charges?.current;
@@ -80,7 +112,27 @@ function applyChange(
       else if (item.charges) item.charges.current=after;
       return;
     }
-    const resource=sheet.resources.find((entry)=>entry.id===change.resourceId) as DurableCharacterResource|undefined;
+    const resourceIndex=sheet.resources.findIndex((entry)=>entry.id===change.resourceId);
+    const resource=resourceIndex>=0 ? sheet.resources[resourceIndex] as DurableCharacterResource : undefined;
+    if (change.createdResource) {
+      if (direction==="forward") {
+        if (resource) return `Character write-back resource already exists: ${change.resourceId}`;
+        if (before!==0) return `Character write-back created resource requires zero prior value: ${change.resourceId}`;
+        sheet.resources.push({
+          id:change.resourceId,
+          label:change.createdResource.label,
+          current:after,
+          max:change.createdResource.maximum,
+          source:change.createdResource.source,
+          recovery:change.createdResource.recovery ? structuredClone(change.createdResource.recovery) : undefined,
+        });
+        return;
+      }
+      if (!resource) return `Character write-back resource is missing: ${change.resourceId}`;
+      if (resource.current!==before) return `Character write-back drift for ${change.targetId}/${label(change)}: expected ${before}, current ${resource.current}`;
+      sheet.resources.splice(resourceIndex,1);
+      return;
+    }
     if (!resource) return `Character write-back resource is missing: ${change.resourceId}`;
     if (resource.current!==before) return `Character write-back drift for ${change.targetId}/${label(change)}: expected ${before}, current ${resource.current}`;
     if (change.recoveryLockouts) {
@@ -92,6 +144,21 @@ function applyChange(
       }
       if (next) resource.recoveryLockouts=structuredClone(next);
       else delete resource.recoveryLockouts;
+    }
+    if (change.capacity) {
+      const expected=direction==="forward" ? change.capacity.before : change.capacity.after;
+      const next=direction==="forward" ? change.capacity.after : change.capacity.before;
+      const currentMarker=resource.maximumAfterLongRest ?? null;
+      if (resource.max!==expected.maximum || currentMarker!==expected.maximumAfterLongRest) {
+        return `Character write-back drift for ${change.targetId}/${label(change)}.capacity`;
+      }
+      if (next.maximum<0 || after>next.maximum) {
+        return `Character write-back invalid capacity for ${change.targetId}/${label(change)}: maximum ${next.maximum}, current ${after}`;
+      }
+      if (resource.sourceMaximum===undefined) resource.sourceMaximum=resource.max;
+      resource.max=next.maximum;
+      if (next.maximumAfterLongRest===null) delete resource.maximumAfterLongRest;
+      else resource.maximumAfterLongRest=next.maximumAfterLongRest;
     }
     resource.current=after;
     return;

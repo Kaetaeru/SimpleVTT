@@ -34,7 +34,13 @@
           "kind": "property.modify",
           "property": "defense.ac",
           "operation": "add",
-          "value": { "value": 5 }
+          "value": { "value": 5 },
+          "target": "actor",
+          "owner": "effect",
+          "source": "definition",
+          "duration": { "kind": "elapsed", "amount": { "value": 1 }, "unit": "seconds" },
+          "lifetime": { "kind": "until-duration", "onEnd": "destroy" },
+          "instancePolicy": "unique-by-source"
         }
       ]
     }

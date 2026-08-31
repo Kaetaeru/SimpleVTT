@@ -3,7 +3,13 @@ import test from "node:test";
 import "../../src/app/installedContentRuntimeAdapter";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import { MemoryInstalledContentStore } from "../../src/app/memoryInstalledContentStore";
-import { setInstalledContentStoreForTests } from "../../src/app/installedContentRuntimeAdapter";
+import { decodeInstalledContent, InstalledContentRepository } from "../../src/app/installedContentPersistence";
+import {
+  getInstalledContentPersistenceStateForTests,
+  installSessionInstalledContent,
+  requiredSessionInstalledContent,
+  setInstalledContentStoreForTests,
+} from "../../src/app/installedContentRuntimeAdapter";
 
 function packagePayload(overrides:Record<string,unknown>={}) {
   return JSON.stringify({
@@ -28,6 +34,111 @@ function packagePayload(overrides:Record<string,unknown>={}) {
     ],
     ...overrides,
   });
+}
+
+function portableCommonPlayMechanic() {
+  return {
+    kind:"common-play",
+    config:{
+      schemaVersion:"0.2-draft",
+      id:"external.unknown.resource-economy-action",
+      payments:[
+        {kind:"resource",resource:"resource.external.primary",amount:{value:1},consumeAt:"commit"},
+        {kind:"resource",resource:"resource.external.same-turn",amount:{value:1},consumeAt:"commit"},
+      ],
+      entryPoints:[{
+        id:"activate",
+        invocation:"manual",
+        operations:[{kind:"economy.modify",bucket:"action.extra.non-magic",amount:{value:1}}],
+      }],
+    },
+  };
+}
+
+function portableCommonPlayD20Mechanic() {
+  return {
+    kind:"common-play",
+    config:{
+      schemaVersion:"0.2-draft",
+      id:"external.unknown.generic-d20-action",
+      entryPoints:[{
+        id:"attempt",
+        invocation:"manual",
+        test:{kind:"ability-check",roller:"actor",dc:{value:15}},
+        operations:[],
+      }],
+    },
+  };
+}
+
+function portableCommonPlayHpMechanic() {
+  return {
+    kind:"common-play",
+    config:{
+      schemaVersion:"0.2-draft",
+      id:"external.unknown.generic-hp-action",
+      entryPoints:[
+        {id:"harm",invocation:"manual",operations:[{kind:"damage.apply",amount:"1d6+2",damageType:"force",target:"target"}]},
+        {id:"mend",invocation:"manual",operations:[{kind:"healing.apply",amount:{value:5},target:"self"}]},
+      ],
+    },
+  };
+}
+
+function portableCommonPlayTargetingMechanic() {
+  return {
+    kind:"common-play",
+    config:{
+      schemaVersion:"0.2-draft",
+      id:"external.unknown.generic-targeting-action",
+      entryPoints:[{
+        id:"mend-other",
+        invocation:"manual",
+        targeting:{from:"targets",where:{op:"relation-matches",ref:"relation",value:"enemy"},min:1,max:1},
+        operations:[{kind:"healing.apply",amount:{value:5},target:"target"}],
+      }],
+    },
+  };
+}
+
+function portableCommonPlaySpecialTimingMechanic() {
+  return {
+    kind:"common-play",
+    config:{
+      schemaVersion:"0.2-draft",
+      id:"external.unknown.special-timing-action",
+      entryPoints:[
+        {id:"tail",invocation:"triggered",operations:[{kind:"damage.apply",amount:{value:4},damageType:"force",target:"target"}]},
+        {id:"wing",invocation:"triggered",operations:[{kind:"damage.apply",amount:{value:2},damageType:"bludgeoning",target:"target"}]},
+      ],
+      specialActions:[{
+        id:"legendary-window",
+        timing:{kind:"after-turn",actor:"other"},
+        poolResourceId:"resource.external.legendary",
+        options:[
+          {id:"tail-option",cost:2,entryPointId:"tail"},
+          {id:"wing-option",cost:1,entryPointId:"wing"},
+        ],
+      }],
+    },
+  };
+}
+
+function portableCommonPlayInteractionMechanic() {
+  return {
+    kind:"common-play",
+    config:{
+      schemaVersion:"0.2-draft",
+      id:"external.unknown.generic-interaction-action",
+      payments:[{kind:"economy",bucket:"reaction",amount:{value:1},consumeAt:"commit",refundOnCancel:true}],
+      entryPoints:[{
+        id:"reactive-mend",
+        invocation:"manual",
+        interaction:{id:"confirm-reaction",kind:"consent",responder:"actor",mode:"blocking",input:{type:"boolean"},revalidate:"always"},
+        operations:[{kind:"healing.apply",amount:{value:5},target:"self"}],
+      }],
+    },
+  };
 }
 
 test("multi-entry RuleModule preview writes nothing and activation commits one generation", async () => {
@@ -68,6 +179,215 @@ test("package member validation is visible per entry and blocks the whole packag
   assert.ok(child?.validation.some((entry)=>entry.severity==="blocking" && /relationship.target.missing/.test(entry.message)));
   await adapter.activateContentImport();
   assert.equal((await store.readGenerations()).length,0);
+});
+
+test("registered Common Play resource, d20, HP, targeting, and interaction mechanics persist, rehydrate, and survive installed-content session sync", async () => {
+  const hostStore=new MemoryInstalledContentStore();
+  const host=new MockAdapter();
+  setInstalledContentStoreForTests(host,hostStore);
+  const raw=JSON.parse(packagePayload()) as {content:Array<Record<string,unknown>>};
+  const mechanics=[portableCommonPlayMechanic(),portableCommonPlayD20Mechanic(),portableCommonPlayHpMechanic(),portableCommonPlayTargetingMechanic(),portableCommonPlayInteractionMechanic(),portableCommonPlaySpecialTimingMechanic()];
+  raw.content[0].mechanics=mechanics;
+
+  const preview=await host.previewContentImport(JSON.stringify(raw));
+  assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
+  await host.activateContentImport();
+
+  const installed=getInstalledContentPersistenceStateForTests(host)?.document?.entries.find((entry)=>entry.contentId==="option.atomic-parent");
+  assert.deepEqual(installed?.mechanics,mechanics);
+
+  const rehydratedHost=new MockAdapter();
+  setInstalledContentStoreForTests(rehydratedHost,hostStore);
+  await rehydratedHost.getSnapshot();
+  const rehydrated=getInstalledContentPersistenceStateForTests(rehydratedHost)?.document?.entries.find((entry)=>entry.contentId==="option.atomic-parent");
+  assert.deepEqual(rehydrated?.mechanics,mechanics);
+
+  const sessionEntries=await requiredSessionInstalledContent(rehydratedHost,[]);
+  const sessionEntry=sessionEntries.find((entry)=>entry.contentId==="option.atomic-parent");
+  assert.deepEqual(sessionEntry?.mechanics,mechanics);
+
+  const peerStore=new MemoryInstalledContentStore();
+  const peer=new MockAdapter();
+  setInstalledContentStoreForTests(peer,peerStore);
+  await peer.getSnapshot();
+  await installSessionInstalledContent(peer,sessionEntries);
+  const peerInstalled=getInstalledContentPersistenceStateForTests(peer)?.document?.entries.find((entry)=>entry.contentId==="option.atomic-parent");
+  assert.deepEqual(peerInstalled?.mechanics,mechanics);
+});
+
+test("rehydration preserves canonical non-manual Common Play mechanics", async () => {
+  const store=new MemoryInstalledContentStore();
+  const adapter=new MockAdapter();
+  setInstalledContentStoreForTests(adapter,store);
+  const raw=JSON.parse(packagePayload()) as {content:Array<Record<string,unknown>>};
+  raw.content[0].mechanics=[portableCommonPlayMechanic()];
+  const preview=await adapter.previewContentImport(JSON.stringify(raw));
+  assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
+  await adapter.activateContentImport();
+
+  const generation=(await store.readGenerations())[0];
+  if (!generation?.payload) throw new Error("expected persisted installed-content generation");
+  const persisted=JSON.parse(generation.payload) as {
+    entries:Array<{mechanics?:Array<{config:{entryPoints:Array<{invocation:string}>}}>}>
+  };
+  const mechanic=persisted.entries.find((entry)=>entry.mechanics?.length)?.mechanics?.[0];
+  assert.ok(mechanic);
+  mechanic.config.entryPoints[0].invocation="triggered";
+  const corruptedPayload=JSON.stringify(persisted);
+
+  const decoded=decodeInstalledContent(corruptedPayload);
+  assert.equal(decoded.entries.find((entry)=>entry.mechanics?.length)?.mechanics?.[0].config.entryPoints?.[0].invocation,"triggered");
+  const restoredStore=new MemoryInstalledContentStore([{generation:generation.generation,payload:corruptedPayload}]);
+  const repository=new InstalledContentRepository(restoredStore);
+  const hydration=await repository.hydrate();
+  assert.equal(hydration.document.entries.find((entry)=>entry.mechanics?.length)?.mechanics?.[0].config.entryPoints?.[0].invocation,"triggered");
+});
+
+test("installed Common Play accepts portable temporary resource capacity before persistence", async () => {
+  const store=new MemoryInstalledContentStore();
+  const adapter=new MockAdapter();
+  setInstalledContentStoreForTests(adapter,store);
+  const raw=JSON.parse(packagePayload()) as {content:Array<Record<string,unknown>>};
+  const mechanic=portableCommonPlayMechanic() as unknown as {config:{entryPoints:Array<{operations:Array<Record<string,unknown>>}>}};
+  mechanic.config.entryPoints[0].operations=[{
+    kind:"resource.change",
+    resource:"resource.external.primary",
+    amount:{value:0},
+    maximumDelta:{value:2},
+    temporaryCapacityUntilLongRest:true,
+  }];
+  raw.content[0].mechanics=[mechanic];
+
+  const preview=await adapter.previewContentImport(JSON.stringify(raw));
+  assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
+  await adapter.activateContentImport();
+  const generation=(await store.readGenerations())[0];
+  if(!generation?.payload) throw new Error("expected installed-content generation");
+  const operation=decodeInstalledContent(generation.payload).entries.find((entry)=>entry.contentId==="option.atomic-parent")?.mechanics?.[0].config.entryPoints?.[0].operations?.[0];
+  assert.deepEqual(operation,{
+    kind:"resource.change",
+    resource:"resource.external.primary",
+    amount:{value:0},
+    maximumDelta:{value:2},
+    temporaryCapacityUntilLongRest:true,
+  });
+});
+
+test("portable Common Play resource targets are rejected before unsupported mechanics can be persisted", async () => {
+  const store=new MemoryInstalledContentStore();
+  const adapter=new MockAdapter();
+  setInstalledContentStoreForTests(adapter,store);
+  const raw=JSON.parse(packagePayload()) as {content:Array<Record<string,unknown>>};
+  const mechanic=portableCommonPlayMechanic() as unknown as {
+    config:{entryPoints:Array<{operations:Array<Record<string,unknown>>}>};
+  };
+  mechanic.config.entryPoints[0].operations=[{
+    kind:"resource.change",
+    resource:"resource.external.primary",
+    amount:{value:-1},
+    target:"combatant.someone-else",
+  }];
+  raw.content[0].mechanics=[mechanic];
+
+  const preview=await adapter.previewContentImport(JSON.stringify(raw));
+  assert.ok(preview.contentImport?.validation.some((entry)=>entry.severity==="blocking" && /target must be actor or self/.test(entry.message)),JSON.stringify(preview.contentImport?.validation));
+  await adapter.activateContentImport();
+  assert.equal((await store.readGenerations()).length,0);
+});
+
+test("installed Common Play preserves non-manual entry points for trigger orchestration", async () => {
+  const store=new MemoryInstalledContentStore();
+  const adapter=new MockAdapter();
+  setInstalledContentStoreForTests(adapter,store);
+  const raw=JSON.parse(packagePayload()) as {content:Array<Record<string,unknown>>};
+  const mechanic=portableCommonPlayMechanic() as unknown as {
+    config:{entryPoints:Array<{invocation:string}>};
+  };
+  mechanic.config.entryPoints[0].invocation="triggered";
+  raw.content[0].mechanics=[mechanic];
+
+  const preview=await adapter.previewContentImport(JSON.stringify(raw));
+  assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
+  await adapter.activateContentImport();
+  const generations=await store.readGenerations();
+  assert.equal(generations.length,1);
+  assert.equal(decodeInstalledContent(generations[0].payload!).entries.find((entry)=>entry.mechanics?.length)?.mechanics?.[0].config.entryPoints?.[0].invocation,"triggered");
+});
+
+test("installed Common Play rejects unsupported d20 authoring before persistence",async()=>{
+  const store=new MemoryInstalledContentStore();
+  const adapter=new MockAdapter();
+  setInstalledContentStoreForTests(adapter,store);
+  const raw=JSON.parse(packagePayload()) as {content:Array<Record<string,unknown>>};
+  const mechanic=portableCommonPlayD20Mechanic() as unknown as {config:{entryPoints:Array<{test:{roller:string}}>}};
+  mechanic.config.entryPoints[0].test.roller="target";
+  raw.content[0].mechanics=[mechanic];
+
+  const preview=await adapter.previewContentImport(JSON.stringify(raw));
+  assert.ok(preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"&&/property is required for a target-rolled portable Common Play d20 test/.test(entry.message)),JSON.stringify(preview.contentImport?.validation));
+  await adapter.activateContentImport();
+  assert.equal((await store.readGenerations()).length,0);
+});
+
+test("installed Common Play rejects unsupported HP authoring before persistence",async()=>{
+  const store=new MemoryInstalledContentStore();
+  const adapter=new MockAdapter();
+  setInstalledContentStoreForTests(adapter,store);
+  const raw=JSON.parse(packagePayload()) as {content:Array<Record<string,unknown>>};
+  const mechanic=portableCommonPlayHpMechanic() as unknown as {config:{entryPoints:Array<{operations:Array<Record<string,unknown>>}>}};
+  mechanic.config.entryPoints[1].operations[0].amount="1d8";
+  raw.content[0].mechanics=[mechanic];
+
+  const preview=await adapter.previewContentImport(JSON.stringify(raw));
+  assert.ok(preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"&&/healing dice are not supported/.test(entry.message)),JSON.stringify(preview.contentImport?.validation));
+  await adapter.activateContentImport();
+  assert.equal((await store.readGenerations()).length,0);
+});
+
+test("installed Common Play rejects unsupported targeting authoring before persistence",async()=>{
+  const invalidSelectors=[
+    {from:"unsupported-source",min:1,max:1},
+    {from:"targets",where:{op:"unknown",ref:"relation"},min:1,max:1},
+    {from:"targets",min:-1,max:1},
+  ];
+  for(const selector of invalidSelectors) {
+    const store=new MemoryInstalledContentStore();
+    const adapter=new MockAdapter();
+    setInstalledContentStoreForTests(adapter,store);
+    const raw=JSON.parse(packagePayload()) as {content:Array<Record<string,unknown>>};
+    const mechanic=portableCommonPlayTargetingMechanic() as unknown as {config:{entryPoints:Array<{targeting:Record<string,unknown>}>}};
+    mechanic.config.entryPoints[0].targeting=selector;
+    raw.content[0].mechanics=[mechanic];
+
+    const preview=await adapter.previewContentImport(JSON.stringify(raw));
+    assert.ok(preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"&&/targeting|unsupported fields|multi-target selection/.test(entry.message)),JSON.stringify(preview.contentImport?.validation));
+    await adapter.activateContentImport();
+    assert.equal((await store.readGenerations()).length,0);
+  }
+});
+
+test("installed Common Play rejects unsupported interaction and economy payment authoring before persistence",async()=>{
+  const mutations:Array<(mechanic:ReturnType<typeof portableCommonPlayInteractionMechanic>)=>void>=[
+    (mechanic)=>{mechanic.config.entryPoints[0].interaction.kind="choice";},
+    (mechanic)=>{mechanic.config.entryPoints[0].interaction.mode="notice";},
+    (mechanic)=>{mechanic.config.entryPoints[0].interaction.input.type="text";},
+    (mechanic)=>{mechanic.config.payments[0].amount.value=2;},
+    (mechanic)=>{mechanic.config.payments[0].consumeAt="stage";},
+    (mechanic)=>{mechanic.config.payments[0].refundOnCancel=false;},
+  ];
+  for(const mutate of mutations) {
+    const store=new MemoryInstalledContentStore();
+    const adapter=new MockAdapter();
+    setInstalledContentStoreForTests(adapter,store);
+    const raw=JSON.parse(packagePayload()) as {content:Array<Record<string,unknown>>};
+    const mechanic=portableCommonPlayInteractionMechanic();
+    mutate(mechanic);
+    raw.content[0].mechanics=[mechanic];
+    const preview=await adapter.previewContentImport(JSON.stringify(raw));
+    assert.ok(preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"&&/portable Common Play|portable consent interaction|portable choice interaction/.test(entry.message)),JSON.stringify(preview.contentImport?.validation));
+    await adapter.activateContentImport();
+    assert.equal((await store.readGenerations()).length,0);
+  }
 });
 
 test("unsupported generic-catalog member data blocks package import instead of silently dropping mechanics", async () => {

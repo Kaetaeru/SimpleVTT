@@ -1,14 +1,70 @@
 import type { ConcentrationState } from "./concentration";
-import type { EffectInstance } from "./effects";
+import type { CombatantRuntimeState } from "./combatState";
+import type { EffectInstance, RuntimeClock } from "./effects";
 import type { LifeState } from "./life";
 import type { ProvenanceRecord } from "./profileEngine";
-import type { ResourceRecoveryLockouts } from "./resources";
+import type { ResourceRecovery, ResourceRecoveryLockouts } from "./resources";
 import type { RuntimeArtifactInstance, ZoneMembershipState } from "./runtimeArtifact";
 import type { StateChange } from "./stateChange";
+import type { SemanticPredicate } from "./profileEngine";
+
+export interface RuntimeInventoryItem {
+  id:string;
+  definitionId:string;
+  name:string;
+  nameEn?:string;
+  kind:"equipment"|"consumable"|"magic";
+  quantity:number;
+  equipped:boolean;
+  wielded?:boolean;
+  wieldSlot?:"main-hand"|"off-hand"|"two-hand";
+  attunementRequired?:boolean;
+  attuned?:boolean;
+  attunementPolicy?:{prerequisite?:SemanticPredicate;cursed?:boolean;loss?:{onDeath?:boolean;maximumDistanceFeet?:number;durationSeconds?:number}};
+  charges?:{current:number;max:number};
+  spellcastingComponent?:"focus"|"component-pouch";
+  unitCostGp?:number;
+  weightPounds?:number;
+  containerCapacityPounds?:number;
+  containerId?:string;
+  passiveEffects:string[];
+  grantedActionIds:string[];
+  spellDefinitionIds?:string[];
+  provenance:string[];
+}
+
+export interface InventoryItemStateChange {
+  kind:"inventory-item";
+  targetId:string;
+  itemId:string;
+  operation:"added"|"updated"|"removed";
+  before?:RuntimeInventoryItem;
+  after?:RuntimeInventoryItem;
+  provenance:ProvenanceRecord[];
+  lifetime:"character-durable";
+  writeBack:"character";
+}
 
 export interface ResourceRecoveryLockoutStateChange {
   before:ResourceRecoveryLockouts|null;
   after:ResourceRecoveryLockouts|null;
+}
+
+export interface ResourceCapacityState {
+  maximum:number;
+  maximumAfterLongRest:number|null;
+}
+
+export interface ResourceCapacityStateChange {
+  before:ResourceCapacityState;
+  after:ResourceCapacityState;
+}
+
+export interface ResourceCreationStateChange {
+  label:string;
+  maximum:number;
+  recovery?:ResourceRecovery;
+  source:string;
 }
 
 export interface ResourceStateChange {
@@ -18,6 +74,8 @@ export interface ResourceStateChange {
   before:number;
   after:number;
   recoveryLockouts?:ResourceRecoveryLockoutStateChange;
+  createdResource?:ResourceCreationStateChange;
+  capacity?:ResourceCapacityStateChange;
   provenance:ProvenanceRecord[];
   lifetime:"character-durable";
   writeBack:"character";
@@ -84,6 +142,27 @@ export interface SpellcastingTurnStateChange {
   writeBack:"session";
 }
 
+export interface TurnClockStateChange {
+  kind:"turn-clock";
+  targetId:"session:turn-clock";
+  before:RuntimeClock;
+  after:RuntimeClock;
+  provenance:ProvenanceRecord[];
+  lifetime:"session-runtime";
+  writeBack:"session";
+}
+
+export interface CombatantStateChange {
+  kind:"combatant";
+  targetId:string;
+  operation:"added"|"updated"|"removed";
+  before?:CombatantRuntimeState;
+  after?:CombatantRuntimeState;
+  provenance:ProvenanceRecord[];
+  lifetime:"session-runtime";
+  writeBack:"session";
+}
+
 export interface LifeFlagStateChange {
   kind:"life";
   targetId:string;
@@ -114,8 +193,11 @@ export type RuntimeStateChange =
   | ZoneMembershipStateChange
   | ConcentrationStateChange
   | SpellcastingTurnStateChange
+  | TurnClockStateChange
+  | CombatantStateChange
   | LifeFlagStateChange
-  | DeathSaveStateChange;
+  | DeathSaveStateChange
+  | InventoryItemStateChange;
 
 export function resourceStateChange(
   targetId:string,
@@ -124,6 +206,8 @@ export function resourceStateChange(
   after:number,
   provenance:ProvenanceRecord[],
   recoveryLockouts?:ResourceRecoveryLockoutStateChange,
+  createdResource?:ResourceCreationStateChange,
+  capacity?:ResourceCapacityStateChange,
 ): ResourceStateChange {
   return {
     kind:"resource",
@@ -132,6 +216,8 @@ export function resourceStateChange(
     before,
     after,
     ...(recoveryLockouts ? { recoveryLockouts:structuredClone(recoveryLockouts) } : {}),
+    ...(createdResource ? { createdResource:structuredClone(createdResource) } : {}),
+    ...(capacity ? { capacity:structuredClone(capacity) } : {}),
     provenance,
     lifetime:"character-durable",
     writeBack:"character",
@@ -234,6 +320,41 @@ export function spellcastingTurnStateChange(
   };
 }
 
+export function turnClockStateChange(
+  before:RuntimeClock,
+  after:RuntimeClock,
+  provenance:ProvenanceRecord[],
+):TurnClockStateChange {
+  return {
+    kind:"turn-clock",
+    targetId:"session:turn-clock",
+    before:structuredClone(before),
+    after:structuredClone(after),
+    provenance,
+    lifetime:"session-runtime",
+    writeBack:"session",
+  };
+}
+
+export function combatantStateChange(
+  targetId:string,
+  operation:"added"|"updated"|"removed",
+  provenance:ProvenanceRecord[],
+  before?:CombatantRuntimeState,
+  after?:CombatantRuntimeState,
+):CombatantStateChange {
+  return {
+    kind:"combatant",
+    targetId,
+    operation,
+    before:before ? structuredClone(before) : undefined,
+    after:after ? structuredClone(after) : undefined,
+    provenance,
+    lifetime:"session-runtime",
+    writeBack:"session",
+  };
+}
+
 export function lifeFlagStateChanges(
   targetId:string,
   before:LifeState,
@@ -259,4 +380,15 @@ export function deathSaveStateChanges(targetId:string,before:LifeState,after:Lif
   return (["successes","failures"] as const)
     .filter((field)=>before.deathSaves[field]!==after.deathSaves[field])
     .map((field)=>({kind:"death-save",targetId,field,before:before.deathSaves[field],after:after.deathSaves[field],provenance,lifetime:"character-durable",writeBack:"character"}));
+}
+
+export function inventoryItemStateChange(
+  targetId:string,
+  itemId:string,
+  operation:"added"|"updated"|"removed",
+  provenance:ProvenanceRecord[],
+  before?:RuntimeInventoryItem,
+  after?:RuntimeInventoryItem,
+):InventoryItemStateChange {
+  return {kind:"inventory-item",targetId,itemId,operation,before:before?structuredClone(before):undefined,after:after?structuredClone(after):undefined,provenance,lifetime:"character-durable",writeBack:"character"};
 }

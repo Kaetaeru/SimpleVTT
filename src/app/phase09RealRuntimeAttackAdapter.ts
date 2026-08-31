@@ -8,7 +8,7 @@ import { commitAdapterTurnRuntimeState, snapshotAdapterTurnRuntimeState } from "
 import { peekAtomicAttackDamageMultiplier, queueAtomicAttackDamageMultiplier, resolveAtomicAttackTransaction, type AtomicAttackTransactionResult } from "./realAttackTransactionService";
 import { projectResolutionEventsToActivity } from "./realActivityProjectionService";
 import { undoResolutionEvents } from "./realEventUndoService";
-import { phase09DeterministicAttackFaces, resolveRuntimeAttackFact, resolveRuntimeTargetingFact } from "./realRuntimeAttackFactProvider";
+import { phase09DeterministicAttackFaces, resolveRuntimeAttackFact, resolveRuntimeAttackTargetingFact } from "./realRuntimeAttackFactProvider";
 import { clearPendingManualMovementReaction, manualMovementReactionFor, type PendingManualMovementReaction } from "./manualMovementReactionRuntime";
 import { runtimeResolutionEventHistories } from "./runtimeResolutionEventHistory";
 import { persistCharacterResolutionEvents } from "./resolutionCharacterWriteBackPort";
@@ -58,9 +58,14 @@ function manualFor(adapter:MockAdapter,action:ActionVm|undefined,resolution:Reso
 function isRuntimeAtomicAttack(action:ActionVm|undefined,manual?:PendingManualMovementReaction) {
   return Boolean(action)
     && action!.resolutionKind === "attack"
-    && (Boolean(manual) || action!.id === "action.shortbow" || Boolean(action!.runtimeAttack))
+    && (Boolean(manual) || Boolean(action!.runtimeAttack))
     && !action!.itemCost
     && !action!.resourceCost;
+}
+
+async function actionForResolution(internal:RuntimeAttackAdapterState,actionId:string) {
+  return internal.action(actionId)
+    ?? Object.values((await internal.getSnapshot()).scene.actionsByActor).flat().find((action)=>action.id===actionId);
 }
 
 function reject(adapter:MockAdapter,internal:RuntimeAttackAdapterState,error:string,restoreBefore=true) {
@@ -100,7 +105,7 @@ function build(
   }
   try {
     const attackFact = resolveRuntimeAttackFact(action,phase09DeterministicAttackFaces(action));
-    const targetingFact = manual?.targetingFact ?? resolveRuntimeTargetingFact(internal.scene,action.actorId,target.id);
+    const targetingFact = manual?.targetingFact ?? resolveRuntimeAttackTargetingFact(internal.scene,action.actorId,target.id);
     const runtimeState=internal.sessionMode === "initiative"
       ? snapshotAdapterTurnRuntimeState(adapter,internal.scene)
       : undefined;
@@ -119,6 +124,7 @@ function build(
         source:manual.source,
       } : undefined,
       attackD20Face,
+      attackModifierContributions:resolution.rollModifierContributions,
       effectiveTargetAc,
       attackFact,
       targetingFact,
@@ -237,7 +243,7 @@ function finalize(adapter:MockAdapter,internal:RuntimeAttackAdapterState,transac
 MockAdapter.prototype.advanceResolution = async function advanceResolutionWithRuntimeAttackFacts() {
   const internal = this as unknown as RuntimeAttackAdapterState;
   const resolution = internal.resolution;
-  const action = resolution ? internal.action(resolution.actionId) : undefined;
+  const action = resolution ? await actionForResolution(internal,resolution.actionId) : undefined;
   const manual = manualFor(this,action,resolution);
   if (!resolution || !isRuntimeAtomicAttack(action,manual) || resolution.adjudicated) return previousAdvance.call(this);
 

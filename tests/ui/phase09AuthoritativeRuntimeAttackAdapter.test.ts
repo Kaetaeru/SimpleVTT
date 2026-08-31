@@ -52,15 +52,15 @@ test("initiative attack uses authoritative runtime effects and commits the stage
 
   let snapshot=await stageShortbowHit(adapter);
   assert.equal(snapshot.resolution?.stage,"damage-animation");
-  assert.deepEqual(snapshot.resolution?.authoritativeDice,[4]);
+  assert.deepEqual(snapshot.resolution?.authoritativeDice,[3]);
   assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")?.hp,12,"staged transaction is not committed before damage apply");
 
   await adapter.advanceResolution();
   snapshot=await adapter.getSnapshot();
   assert.equal(snapshot.resolution?.stage,"complete");
-  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")?.hp,9,"runtime-only resistance halves six damage");
+  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")?.hp,10,"runtime-only resistance halves five damage, rounding down");
   assert.equal(snapshot.scene.economyByActor["char.aelar"]?.action,false);
-  assert.equal(snapshot.resolution?.damageComponents[0]?.adjusted,3);
+  assert.equal(snapshot.resolution?.damageComponents[0]?.adjusted,2);
   const runtime=snapshotAdapterTurnRuntimeState(adapter,internalScene(adapter));
   assert.ok(runtime?.effects.some((effect)=>effect.id==="runtime-piercing-resistance"));
 });
@@ -133,7 +133,7 @@ test("initiative event-native Undo restores Scene and authoritative runtime thro
   let snapshot=await stageShortbowHit(adapter);
   await adapter.advanceResolution();
   snapshot=await adapter.getSnapshot();
-  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")?.hp,6);
+  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")?.hp,7);
   assert.equal(snapshot.scene.economyByActor["char.aelar"]?.action,false);
   const afterAttack=snapshotAdapterTurnRuntimeState(adapter,internalScene(adapter));
   assert.ok(afterAttack);

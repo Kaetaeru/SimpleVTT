@@ -8,15 +8,16 @@ import { MockAdapter } from "./mockAdapter";
 import { projectRuntimeEventsToActivity } from "./realActivityProjectionService";
 import { recordRuntimeResolutionEvents } from "./runtimeResolutionEventHistory";
 import { selectedCombatSpellSlot } from "./spellcastingRuntimeSelection";
-import { commitAdapterTurnRuntimeState, snapshotAdapterTurnRuntimeState } from "./turnRuntimeSessionRegistry";
+import { commitAdapterTurnRuntimeState, ensureAdapterTurnRuntimeState, snapshotAdapterTurnRuntimeState } from "./turnRuntimeSessionRegistry";
 import { SIMPLEVTT_APP_RULES_PROFILE } from "./realResolutionService";
 import type { RulesRuntimeState } from "../domain/combatState";
 import { spellcastingTurnStateChange, type SpellcastingTurnSnapshot } from "../domain/runtimeStateChange";
 import type { SpellCasterContext, SpellCastResolution, SpellCastTarget } from "../domain/spellcasting";
 import { resolveSpellCast } from "../domain/spellcasting";
-import { spellMechanicById } from "../domain/spellMechanics";
+import { normalizedSpellDefinitionById } from "../domain/spellExecutionCatalog";
 import type { ResolutionEvent } from "../domain/resolutionTypes";
 import { resolveRuntimeTargetingFact } from "./realRuntimeAttackFactProvider";
+import { spellRuntimeDice } from "./spellRuntimeDice";
 
 const NO_SLOT="사용 가능한 주문 슬롯이 없습니다.";
 const SLOT_ALREADY_USED="이번 턴에는 이미 주문 슬롯을 소비해 주문을 시전했습니다.";
@@ -149,7 +150,7 @@ function applyAuthoritativeHud(
   for (const actions of Object.values(snapshot.scene.actionsByActor)) {
     for (const action of actions) {
       const metadata=action.spellCast;
-      if (!metadata || !isExecutableSpellRuntimeSupport(metadata.runtimeSupport) || metadata.baseLevel===0) continue;
+      if (!metadata || !isExecutableSpellRuntimeSupport(metadata.runtimeSupport) || metadata.baseLevel===0 || metadata.castSource==="ritual" || metadata.castSource==="item" || metadata.castSource==="feature") continue;
       const hud=snapshot.scene.spellcastingByActor?.[action.actorId];
       if (!hud) continue;
       const hasSlot=hud.slots.some((slot)=>slot.level>=metadata.baseLevel&&slot.current>0);
@@ -167,21 +168,6 @@ function applyAuthoritativeHud(
     }
   }
   return snapshot;
-}
-
-function facesForHealingWord(slotLevel:number) {
-  const count=2+Math.max(0,slotLevel-1)*2;
-  const pattern=[3,4,2,3,4,2,3,4,2,3,4,2,3,4,2,3];
-  return pattern.slice(0,count);
-}
-
-type DiceAdapter={d20(actionId:string,index?:number):number};
-function thunderwaveDice(adapter:MockAdapter,targetIds:string[],slotLevel:number) {
-  const roll=(index:number,sides:number)=>(((adapter as unknown as DiceAdapter).d20("action.thunderwave",index)-1)%sides)+1;
-  const count=2+Math.max(0,slotLevel-1);
-  const effectFaces=Array.from({length:count},(_,index)=>roll(index,8));
-  const saves=Object.fromEntries(targetIds.map((targetId,index)=>[targetId,{id:`thunderwave:save:${targetId}`,purpose:"Thunderwave Constitution save",sides:20 as const,faces:[(adapter as unknown as DiceAdapter).d20("action.thunderwave",count+index)]}]));
-  return {faces:[...effectFaces,...Object.values(saves).flatMap((save)=>save.faces)],request:{effectFaces,saves}};
 }
 
 function resolutionFromCast(
@@ -257,21 +243,21 @@ MockAdapter.prototype.resolveAction=async function resolveActionThroughAuthorita
   const baseline=await previousGetSnapshot.call(this);
   const sourceAction=Object.values(baseline.scene.actionsByActor).flat().find((entry)=>entry.id===actionId);
   const metadata=sourceAction?.spellCast;
-  const existingRuntime=snapshotAdapterTurnRuntimeState(this,internal.scene);
-  if (!sourceAction || !metadata || !isExecutableSpellRuntimeSupport(metadata.runtimeSupport) || !existingRuntime) {
+  if (!sourceAction || !metadata || !isExecutableSpellRuntimeSupport(metadata.runtimeSupport)) {
     return previousResolveAction.call(this,actionId,targetIds);
   }
+  const existingRuntime=snapshotAdapterTurnRuntimeState(this,internal.scene)??ensureAdapterTurnRuntimeState(this,internal.scene);
   const runtime=seedAuthoritativeSlots(this,internal,baseline,sourceAction.actorId);
   const hud=baseline.scene.spellcastingByActor?.[sourceAction.actorId];
   const caster=hud ? casterFromHud(baseline,sourceAction.actorId,hud) : undefined;
-  const definition=spellMechanicById(metadata.spellId);
+  const definition=normalizedSpellDefinitionById(metadata.spellId);
   if (!runtime||!caster||!definition) return previousResolveAction.call(this,actionId,targetIds);
 
   const selected=selectedCombatSpellSlot(sourceAction.actorId,metadata.baseLevel||1);
   const slotLevel=metadata.baseLevel===0 ? undefined : Math.max(metadata.baseLevel,selected);
   const castId=`spell-cast.${metadata.spellId}.${Date.now()}`;
-  const thunderwave=metadata.spellId==="dnd.srd521.spell.thunderwave"?thunderwaveDice(this,targetIds,slotLevel??1):null;
-  const faces=thunderwave?.faces??(metadata.spellId==="dnd.srd521.spell.healing-word" ? facesForHealingWord(slotLevel ?? 1) : []);
+  const dice=spellRuntimeDice(this,actionId,definition,slotLevel,caster.characterLevel,targetIds);
+  const faces=dice.authoritative;
   let targets:SpellCastTarget[];
   try {
     targets=targetIds.map((targetId)=>targetFacts(internal,sourceAction.actorId,targetId));
@@ -283,7 +269,7 @@ MockAdapter.prototype.resolveAction=async function resolveActionThroughAuthorita
     return this.getSnapshot();
   }
 
-  const turnId=currentTurnId(runtime);
+  const turnId=internal.sessionMode==="initiative"?currentTurnId(runtime):undefined;
   const result=resolveSpellCast(SIMPLEVTT_APP_RULES_PROFILE,definition,runtime,{
     id:castId,
     actorId:sourceAction.actorId,
@@ -292,9 +278,9 @@ MockAdapter.prototype.resolveAction=async function resolveActionThroughAuthorita
     expectedRevision:runtime.revision,
     caster,targets,slotLevel,
     componentsSatisfied:true,
-    useActionEconomy:true,
+    useActionEconomy:internal.sessionMode==="initiative",
     turnId,
-    dice:thunderwave?.request??{ effectFaces:faces },
+    dice:dice.request,
   });
   internal.resolution=resolutionFromCast(sourceAction.name,actionId,sourceAction.actorId,targetIds,slotLevel,result,faces);
   if (result.status==="rejected") return this.getSnapshot();

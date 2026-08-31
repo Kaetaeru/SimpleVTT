@@ -5,16 +5,20 @@ import { isEphemeralSessionProjectionCharacter } from "./characterSessionProject
 import { readyActionConfigurationFor, READY_MOVEMENT_ACTION_ID } from "./standardActionReadyState";
 import { installProductionCharacterActionProjector } from "./productionCharacterActionProjectionPort";
 import { spellLevelLabel, spellPresentationById } from "./spellPresentation";
-import { spellMechanicById } from "../domain/spellMechanics";
+import { normalizedSpellDefinitionById } from "../domain/spellExecutionCatalog";
 import { spellMultiAttackCount } from "../domain/spellcasting";
 import { isExecutableSpellRuntimeSupport } from "./spellcastingRuntimeContracts";
 import { selectedCombatSpellSlot } from "./spellcastingRuntimeSelection";
-import { CLERIC_CHANNEL_DIVINITY_RESOURCE_ID, CLERIC_ID, FIGHTER_ACTION_SURGE_RESOURCE_ID, FIGHTER_ACTION_SURGE_TURN_RESOURCE_ID, FIGHTER_ID, PALADIN_CHANNEL_DIVINITY_RESOURCE_ID, PALADIN_ID, PALADIN_LAY_ON_HANDS_RESOURCE_ID } from "../domain/coreClassResources";
+import { CLERIC_CHANNEL_DIVINITY_RESOURCE_ID, CLERIC_ID, FIGHTER_ACTION_SURGE_RESOURCE_ID, FIGHTER_ACTION_SURGE_TURN_RESOURCE_ID, FIGHTER_ID, FIGHTER_SECOND_WIND_RESOURCE_ID, PALADIN_CHANNEL_DIVINITY_RESOURCE_ID, PALADIN_ID, PALADIN_LAY_ON_HANDS_RESOURCE_ID } from "../domain/coreClassResources";
 import { BARDIC_INSPIRATION_RESOURCE_ID, BARD_ID, bardicInspirationDieSides } from "../domain/bardicInspiration";
 import { clericDivineSparkDiceCount } from "../domain/clericDivineSpark";
 import { searUndeadDiceCount } from "../domain/clericTurnUndead";
 import { LAY_ON_HANDS_ACTION_ID } from "./paladinLayOnHandsRuntimeContracts";
 import { abjureFoesMaximumTargets } from "../domain/paladinAbjureFoes";
+import { BARBARIAN_CLASS_ID, BARBARIAN_RAGE_RESOURCE_ID } from "../domain/barbarianBerserker";
+import { itemEntryById, itemMechanic } from "./characterCreationV10Data";
+import { ensureAdapterTurnRuntimeState, turnRuntimeSessions } from "./turnRuntimeSessionRegistry";
+import { addTurnRuntimeCombatant } from "./realTurnRuntimeService";
 
 const ABILITY_LABEL:Record<AbilityKey,string>={str:"근력",dex:"민첩",con:"건강",int:"지능",wis:"지혜",cha:"매력"};
 const ABILITIES:AbilityKey[]=["str","dex","con","int","wis","cha"];
@@ -43,6 +47,7 @@ type ExtendedCharacter=CharacterSheet&{
   preparedSpells?:string[];
   cantrips?:string[];
   spellbookSpells?:string[];
+  pactTomeRitualSpellIds?:string[];
 };
 
 type Internal={
@@ -93,8 +98,26 @@ function parseDamage(raw:string) {
   return { dice:`${count}d${sides}`,count,sides,flat,type,average:Math.floor(count*(sides+1)/2)+flat };
 }
 
-function attackRange(name:string) {
-  return /bow|crossbow|활|석궁|sling|슬링/i.test(name)?80:5;
+type WeaponDefinition={mode?:"melee"|"ranged";properties?:string[]};
+type ArmorDefinition={training?:"light"|"medium"|"heavy"};
+
+function weaponRuntimeFact(character:CharacterSheet,attack:CharacterSheet["attacks"][number]) {
+  const item=character.items.find((candidate)=>candidate.grantedActionIds.includes(attack.id));
+  const entry=item&&itemEntryById(item.definitionId);
+  const definition=entry?.category==="weapon"?itemMechanic(entry,"weapon-definition") as WeaponDefinition|undefined:undefined;
+  if(!definition)return {rangeFeet:5,loading:false};
+  const rangeFeet=(definition.properties??[]).map((property)=>property.match(/^(?:ammunition|thrown):(\d+)(?:\/\d+)?$/i)?.[1]).find(Boolean);
+  const strength=mod(character.abilities.str);const dexterity=mod(character.abilities.dex);
+  const ability:AbilityKey|undefined=definition.mode==="ranged"?"dex":!definition.properties?.includes("finesse")?"str":strength===dexterity?undefined:strength>dexterity?"str":"dex";
+  return {rangeFeet:rangeFeet?Number(rangeFeet):5,...(ability?{ability}:{}),loading:definition.properties?.includes("loading")??false};
+}
+
+function wearingHeavyArmor(character:CharacterSheet) {
+  return character.items.some((item)=>{
+    if(!item.equipped)return false;
+    const entry=itemEntryById(item.definitionId);
+    return entry?.category==="armor"&&(itemMechanic(entry,"armor-definition") as ArmorDefinition|undefined)?.training==="heavy";
+  });
 }
 
 function weaponAttacksPerAction(character:CharacterSheet) {
@@ -109,9 +132,11 @@ function weaponAttacksPerAction(character:CharacterSheet) {
 }
 
 function attackActions(character:CharacterSheet):ActionVm[] {
-  const attacksPerAction=weaponAttacksPerAction(character);
+  const baseAttacksPerAction=weaponAttacksPerAction(character);
   return character.attacks.map((attack,index)=>{
     const damage=parseDamage(attack.damage);
+    const runtimeFact=weaponRuntimeFact(character,attack);
+    const attacksPerAction=runtimeFact.loading?1:baseAttacksPerAction;
     const id=attack.id?.startsWith("action.")?attack.id:`action.character-attack.${index}`;
     return {
       id,
@@ -129,7 +154,8 @@ function attackActions(character:CharacterSheet):ActionVm[] {
       attacksPerAction,
       runtimeAttack:{
         sourceKind:"weapon",
-        rangeFeet:attackRange(attack.name),
+        rangeFeet:runtimeFact.rangeFeet,
+        ...(runtimeFact.ability?{ability:runtimeFact.ability}:{}),
         diceSides:damage.sides,
         diceCount:damage.count,
         damageSource:`character:${character.id}:attack:${attack.name}`,
@@ -194,8 +220,8 @@ function skillActions(character:CharacterSheet):ActionVm[] {
 }
 
 function featureActions(character:CharacterSheet):ActionVm[] {
-  const standardEffect=(id:string,name:string,target:ActionVm["target"],summary:string,details:ActionVm["details"]):ActionVm=>({id:`action.standard.${id}`,actorId:character.id,name,category:"basic",target,economy:"행동",resolutionKind:"no-roll",summary,available:true,eligibleTargetIds:[],details});
-  const standardCheck=(group:string,id:string,name:string,skill:string,ability:AbilityKey):ActionVm=>({id:`action.standard.${group}.${id}`,actorId:character.id,name,category:"basic",target:"none",economy:"행동",resolutionKind:"ability-check",summary:`${ABILITY_LABEL[ability]}(${skill}) ${signed(skillBonus(character,skill,ability))}`,available:true,eligibleTargetIds:[],checkBonus:skillBonus(character,skill,ability),details:[detail("기본 행동",group),detail("판정",`${ABILITY_LABEL[ability]}(${skill})`),detail("비용","행동 1"),detail("출처","SRD 5.2.1 · Action")]});
+  const standardEffect=(id:string,name:string,target:ActionVm["target"],summary:string,details:ActionVm["details"],execution:Pick<ActionVm,"sessionStatusEffect"|"completionOutcome"|"completionStateChange"|"readyActionRole">={}):ActionVm=>({id:`action.standard.${id}`,actorId:character.id,name,category:"basic",target,economy:"행동",resolutionKind:"no-roll",summary,available:true,eligibleTargetIds:[],details,...execution});
+  const standardCheck=(group:string,id:string,name:string,skill:string,ability:AbilityKey,sessionStatusEffect?:ActionVm["sessionStatusEffect"]):ActionVm=>({id:`action.standard.${group}.${id}`,actorId:character.id,name,category:"basic",target:"none",economy:"행동",resolutionKind:"ability-check",summary:`${ABILITY_LABEL[ability]}(${skill}) ${signed(skillBonus(character,skill,ability))}`,available:true,eligibleTargetIds:[],checkBonus:skillBonus(character,skill,ability),sessionStatusEffect,details:[detail("기본 행동",group),detail("판정",`${ABILITY_LABEL[ability]}(${skill})`),detail("비용","행동 1"),detail("출처","SRD 5.2.1 · Action")]});
   const strength=mod(character.abilities.str);
   const unarmedDamage=Math.max(0,1+strength);
   const unarmedSaveDc=8+character.proficiencyBonus+strength;
@@ -211,6 +237,7 @@ function featureActions(character:CharacterSheet):ActionVm[] {
     summary:`이동 가능량 +${character.speed}피트`,
     available:true,
     eligibleTargetIds:[],
+    movementBudgetGainFeet:character.speed,
     details:[detail("효과",`이동 가능량 +${character.speed}피트`),detail("비용","행동 1")],
   },
   {
@@ -223,24 +250,28 @@ function featureActions(character:CharacterSheet):ActionVm[] {
   {
     id:"action.unarmed-strike.grapple",actorId:character.id,name:"맨손 타격 · 붙잡기",category:"basic",target:"enemy",economy:"행동",resolutionKind:"saving-throw",
     summary:`근력/민첩 내성 DC ${unarmedSaveDc} · 실패 시 붙잡힘`,available:true,eligibleTargetIds:[],saveDc:unarmedSaveDc,saveAbility:"근력 또는 민첩",attacksPerAction:unarmedAttacks,
+    runtimeSaveCondition:{choose:"highest",conditionId:"grappled",label:"붙잡힘",displayName:"맨손 타격 · 붙잡기",saveAbilities:["str","dex"],duration:{kind:"special",key:`escape:${character.id}`},termination:{sourceBecomesIncapacitated:true,sourceDies:true}},
     details:[detail("대상 내성","근력 또는 민첩 중 높은 값"),detail("DC",String(unarmedSaveDc)),detail("실패","붙잡힘"),detail("출처","SRD 5.2.1 · Unarmed Strike")],
   },
   {
     id:"action.unarmed-strike.shove-prone",actorId:character.id,name:"맨손 타격 · 넘어뜨리기",category:"basic",target:"enemy",economy:"행동",resolutionKind:"saving-throw",
     summary:`근력/민첩 내성 DC ${unarmedSaveDc} · 실패 시 넘어짐`,available:true,eligibleTargetIds:[],saveDc:unarmedSaveDc,saveAbility:"근력 또는 민첩",attacksPerAction:unarmedAttacks,
+    runtimeCommonPlayActionId:"action.unarmed-strike.shove-prone",
+    runtimeSaveCondition:{choose:"highest",conditionId:"prone",label:"넘어짐",displayName:"맨손 타격 · 넘어뜨리기",saveAbilities:["str","dex"],duration:{kind:"special",key:"stand-up"}},
     details:[detail("대상 내성","근력 또는 민첩 중 높은 값"),detail("DC",String(unarmedSaveDc)),detail("실패","넘어짐"),detail("공간 모듈","미연결 시 밀어내기 대신 넘어뜨리기만 자동 적용"),detail("출처","SRD 5.2.1 · Unarmed Strike")],
   },
-  standardEffect("disengage","이탈","self","이번 턴 이동이 기회 공격을 유발하지 않습니다.",[detail("효과","이번 턴 기회 공격 유발 안 함"),detail("비용","행동 1"),detail("출처","SRD 5.2.1 · Disengage")]),
-  standardEffect("dodge","회피","self","다음 턴 시작까지 자신을 향한 공격에 불리, 민첩 내성에 유리.",[detail("효과","공격에 불리 · 민첩 내성에 유리"),detail("종료","자신의 다음 턴 시작"),detail("비용","행동 1"),detail("출처","SRD 5.2.1 · Dodge")]),
-  standardEffect("help","도움","ally","아군의 다음 판정 또는 공격을 돕습니다.",[detail("대상","아군 1명"),detail("효과","다음 적격 판정 또는 공격에 유리"),detail("비용","행동 1"),detail("출처","SRD 5.2.1 · Help")]),
-  standardCheck("hide","stealth","숨기","은신","dex"),
+  standardEffect("disengage","이탈","self","이번 턴 이동이 기회 공격을 유발하지 않습니다.",[detail("효과","이번 턴 기회 공격 유발 안 함"),detail("비용","행동 1"),detail("출처","SRD 5.2.1 · Disengage")],{sessionStatusEffect:{status:"이탈",target:"actor",successOutcome:"이번 턴 기회 공격을 유발하지 않음"}}),
+  standardEffect("dodge","회피","self","다음 턴 시작까지 자신을 향한 공격에 불리, 민첩 내성에 유리.",[detail("효과","공격에 불리 · 민첩 내성에 유리"),detail("종료","자신의 다음 턴 시작"),detail("비용","행동 1"),detail("출처","SRD 5.2.1 · Dodge")],{sessionStatusEffect:{status:"회피",target:"actor",successOutcome:"다음 턴 시작까지 회피"}}),
+  standardEffect("help","도움","ally","아군의 다음 판정 또는 공격을 돕습니다.",[detail("대상","아군 1명"),detail("효과","다음 적격 판정 또는 공격에 유리"),detail("비용","행동 1"),detail("출처","SRD 5.2.1 · Help")],{sessionStatusEffect:{status:"도움 받음",target:"first-target",successOutcome:"지원"}}),
+  standardCheck("hide","stealth","숨기","은신","dex",{status:"숨음",target:"actor",minimumRoll:15,successOutcome:"숨기 성공",failureOutcome:"숨기 실패",durationKey:"hidden-until-attack-or-discovery",endsOnAttack:true}),
   ...([{"id":"animal-handling","skill":"동물 조련","ability":"wis"},{"id":"deception","skill":"기만","ability":"cha"},{"id":"intimidation","skill":"위협","ability":"cha"},{"id":"performance","skill":"공연","ability":"cha"},{"id":"persuasion","skill":"설득","ability":"cha"}] as const).map((entry)=>standardCheck("influence",entry.id,`영향 주기 · ${entry.skill}`,entry.skill,entry.ability)),
-  standardEffect("ready","준비","self","선언한 트리거에 반응해 행동하거나 이동합니다.",[detail("선언","감지 가능한 트리거와 반응 행동/이동"),detail("비용","행동 1 · 발동 시 반응 1"),detail("출처","SRD 5.2.1 · Ready")]),
+  standardEffect("ready","준비","self","선언한 트리거에 반응해 행동하거나 이동합니다.",[detail("선언","감지 가능한 트리거와 반응 행동/이동"),detail("비용","행동 1 · 발동 시 반응 1"),detail("출처","SRD 5.2.1 · Ready")],{readyActionRole:"prepare",sessionStatusEffect:{status:"준비 행동",target:"actor",successOutcome:"트리거와 반응 행동 준비"}}),
   ...([{"id":"insight","skill":"통찰"},{"id":"medicine","skill":"의학"},{"id":"perception","skill":"지각"},{"id":"survival","skill":"생존"}] as const).map((entry)=>standardCheck("search",entry.id,`탐색 · ${entry.skill}`,entry.skill,"wis")),
   ...([{"id":"arcana","skill":"비전"},{"id":"history","skill":"역사"},{"id":"investigation","skill":"조사"},{"id":"nature","skill":"자연"},{"id":"religion","skill":"종교"}] as const).map((entry)=>standardCheck("study",entry.id,`연구 · ${entry.skill}`,entry.skill,"int")),
-  standardEffect("utilize","물체 사용","self","비마법 물체를 사용합니다.",[detail("효과","비마법 물체 사용"),detail("비용","행동 1"),detail("출처","SRD 5.2.1 · Utilize")]),
+  standardEffect("utilize","물체 사용","self","비마법 물체를 사용합니다.",[detail("효과","비마법 물체 사용"),detail("비용","행동 1"),detail("출처","SRD 5.2.1 · Utilize")],{completionOutcome:"물체 사용",completionStateChange:`${character.name} 비마법 물체 사용 선언`}),
   ];
-  const secondWind=character.resources.find((resource)=>/second-wind/i.test(resource.id)||/세컨드 윈드|재기의 바람/.test(resource.label));
+  const fighterLevel=character.classLevels?.find((entry)=>entry.classId===FIGHTER_ID)?.level ?? 0;
+  const secondWind=character.resources.find((resource)=>resource.id===FIGHTER_SECOND_WIND_RESOURCE_ID)??character.resources.find((resource)=>/second-wind/i.test(resource.id)||/세컨드 윈드|재기의 바람/.test(resource.label));
   if (secondWind) {
     actions.push({
       id:"action.second-wind",
@@ -259,7 +290,6 @@ function featureActions(character:CharacterSheet):ActionVm[] {
       details:[detail("대상","자신"),detail("회복",`1d10 + ${character.level}`),detail("자원",`${secondWind.label} 1회`,secondWind.source)],
     });
   }
-  const fighterLevel=character.classLevels?.find((entry)=>entry.classId===FIGHTER_ID)?.level ?? 0;
   const actionSurge=character.resources.find((resource)=>resource.id===FIGHTER_ACTION_SURGE_RESOURCE_ID);
   const actionSurgeGate=character.resources.find((resource)=>resource.id===FIGHTER_ACTION_SURGE_TURN_RESOURCE_ID);
   if (fighterLevel>=2&&actionSurge&&actionSurgeGate) {
@@ -279,12 +309,20 @@ function featureActions(character:CharacterSheet):ActionVm[] {
       details:[detail("효과","이번 턴 비마법 행동 1회 추가"),detail("비용",`${actionSurge.label} 1회`,actionSurge.source),detail("제한","턴당 1회 · Magic Action 불가","SRD 5.2.1 · Fighter Action Surge")],
     });
   }
+  const barbarianLevel=character.classLevels?.find((entry)=>entry.classId===BARBARIAN_CLASS_ID)?.level??0;
+  const rage=character.resources.find((resource)=>resource.id===BARBARIAN_RAGE_RESOURCE_ID);
+  if(barbarianLevel&&rage){const heavy=wearingHeavyArmor(character);actions.push({
+    id:"action.barbarian.rage",actorId:character.id,name:"격노",category:"basic",target:"self",economy:"추가 행동",resolutionKind:"no-roll",
+    summary:`격노 시작 · ${rage.current}/${rage.max}`,available:rage.current>0&&!heavy,disabledReason:rage.current<=0?"격노 사용 횟수가 없습니다.":heavy?"중갑을 착용 중에는 격노를 시작할 수 없습니다.":undefined,eligibleTargetIds:[character.id],
+    resourceCost:{resourceId:rage.id,amount:1},details:[detail("효과","근력 판정/내성 이점 · 타격/관통/참격 저항 · 근력 공격 피해 보너스"),detail("비용","추가 행동 1 · 격노 1회"),detail("제한","중갑 착용 중 시작 불가"),detail("출처","SRD 5.2.1 · Barbarian Rage")],
+  });}
   const bardLevel=character.classLevels?.find((entry)=>entry.classId===BARD_ID)?.level??0;
   const inspiration=character.resources.find((resource)=>resource.id===BARDIC_INSPIRATION_RESOURCE_ID);
   if(bardLevel&&inspiration)actions.push({
     id:"action.bard.bardic-inspiration",actorId:character.id,name:"바드의 영감",category:"basic",target:"ally",economy:"추가 행동",resolutionKind:"no-roll",
     summary:`d${bardicInspirationDieSides(bardLevel)} 지급 · ${inspiration.current}/${inspiration.max}`,available:inspiration.current>0,
     disabledReason:inspiration.current?undefined:"바드의 영감 사용 횟수가 없습니다.",eligibleTargetIds:[],resourceCost:{resourceId:inspiration.id,amount:1},
+    runtimeEffectGrant:{excludeActor:true,exclusiveTag:"bardic-inspiration",tags:["bardic-inspiration"],duration:{kind:"hours",amount:1},metadata:{dieSides:bardicInspirationDieSides(bardLevel),displayName:"바드의 영감",publicLabel:`바드의 영감 · d${bardicInspirationDieSides(bardLevel)}`,d20FollowUp:"failed-test-add-die",d20Families:"ability-check,saving-throw,attack-roll",consumeOnUse:true}},
     details:[detail("대상","자신이 아닌 아군 1명"),detail("효과",`d${bardicInspirationDieSides(bardLevel)} 영감 주사위 · 1시간`),detail("비용","추가 행동 1 · 바드의 영감 1회"),detail("출처","SRD 5.2.1 · Bardic Inspiration")],
   });
   const clericLevel=character.classLevels?.find((entry)=>entry.classId===CLERIC_ID)?.level??0;
@@ -317,12 +355,12 @@ function featureActions(character:CharacterSheet):ActionVm[] {
     actions.push({id:LAY_ON_HANDS_ACTION_ID,actorId:character.id,name:"치유의 손길",category:"basic",target:"any",economy:"추가 행동",resolutionKind:"healing",summary:`HP/상태 회복 · ${layOnHands.current}/${layOnHands.max}`,available:layOnHands.current>0,disabledReason:layOnHands.current?undefined:"치유의 손길 풀이 없습니다.",eligibleTargetIds:[],resourceCost:{resourceId:layOnHands.id,amount:1},layOnHands:{maximumSpend:layOnHands.current,conditionOptions:options},details:[detail("대상","접촉한 생물 1명"),detail("회복","선택한 풀 1점당 HP 1"),detail("상태 제거","상태마다 풀 5점"),detail("비용","추가 행동 1"),detail("출처","SRD 5.2.1 · Paladin Lay On Hands")]});
   }
   const paladinChannel=character.resources.find((resource)=>resource.id===PALADIN_CHANNEL_DIVINITY_RESOURCE_ID);
-  if(paladinLevel>=3&&paladinChannel)actions.push({id:"action.paladin.divine-sense",actorId:character.id,name:"성스러운 감지",category:"basic",target:"self",economy:"추가 행동",resolutionKind:"no-roll",summary:`60피트 내 천상체·악마·언데드 감지 · ${paladinChannel.current}/${paladinChannel.max}`,available:paladinChannel.current>0,disabledReason:paladinChannel.current?undefined:"채널 디비니티 사용 횟수가 없습니다.",eligibleTargetIds:[character.id],resourceCost:{resourceId:paladinChannel.id,amount:1},details:[detail("범위","60피트"),detail("감지","천상체·악마·언데드 및 성역/부정한 장소"),detail("지속","10분 또는 행동불능"),detail("비용","추가 행동 1 · 채널 디비니티 1회"),detail("출처","SRD 5.2.1 · Paladin Divine Sense")]});
+  if(paladinLevel>=3&&paladinChannel)actions.push({id:"action.paladin.divine-sense",actorId:character.id,name:"성스러운 감지",category:"basic",target:"self",economy:"추가 행동",resolutionKind:"no-roll",summary:`60피트 내 천상체·악마·언데드 감지 · ${paladinChannel.current}/${paladinChannel.max}`,available:paladinChannel.current>0,disabledReason:paladinChannel.current?undefined:"채널 디비니티 사용 횟수가 없습니다.",eligibleTargetIds:[character.id],resourceCost:{resourceId:paladinChannel.id,amount:1},runtimeEffectGrant:{tags:["divine-sense"],duration:{kind:"minutes",amount:10},termination:{targetBecomesIncapacitated:true,targetDies:true},metadata:{publicLabel:"성스러운 감지",radiusFeet:60},awarenessQuery:{creatureTypes:["celestial","fiend","undead"],radiusFeet:60}},details:[detail("범위","60피트"),detail("감지","천상체·악마·언데드 및 성역/부정한 장소"),detail("지속","10분 또는 행동불능"),detail("비용","추가 행동 1 · 채널 디비니티 1회"),detail("출처","SRD 5.2.1 · Paladin Divine Sense")]});
   if(paladinLevel>=9&&paladinChannel){const charisma=mod(character.abilities.cha);const dc=8+character.proficiencyBonus+charisma;const maximum=abjureFoesMaximumTargets(charisma);actions.push({id:"action.paladin.abjure-foes",actorId:character.id,name:"적 질책",category:"basic",target:"any",economy:"행동",resolutionKind:"saving-throw",summary:`최대 ${maximum}명 · 지혜 내성 DC ${dc} · 실패 시 공포 · ${paladinChannel.current}/${paladinChannel.max}`,available:paladinChannel.current>0,disabledReason:paladinChannel.current?undefined:"채널 디비니티 사용 횟수가 없습니다.",eligibleTargetIds:[],maxTargets:maximum,saveDc:dc,saveAbility:"지혜",resourceCost:{resourceId:paladinChannel.id,amount:1},details:[detail("대상",`60피트 내 최대 ${maximum}명`),detail("실패","1분간 공포 · 피해를 받으면 종료"),detail("행동 제한","이동·행동·추가 행동 중 하나만 사용"),detail("비용","행동 1 · 채널 디비니티 1회"),detail("출처","SRD 5.2.1 · Paladin Abjure Foes")]});}
   return actions;
 }
 
-function readyTriggerAction(character:CharacterSheet,prepared:ActionVm,trigger:string):ActionVm {
+function readyTriggerAction(character:CharacterSheet,prepared:ActionVm,trigger:string,movement=false):ActionVm {
   return {
     id:"action.standard.ready.trigger",
     actorId:character.id,
@@ -333,8 +371,10 @@ function readyTriggerAction(character:CharacterSheet,prepared:ActionVm,trigger:s
     resolutionKind:"no-roll",
     summary:`${trigger} → ${prepared.name}`,
     available:true,
+    readyActionRole:"trigger",
     eligibleTargetIds:[...prepared.eligibleTargetIds],
     maxTargets:prepared.maxTargets,
+    sessionStatusEffect:{status:"준비 행동",target:"actor",operation:"remove",successOutcome:movement?"준비한 이동을 반응으로 선언":"준비한 행동을 반응으로 발동"},
     details:[
       detail("트리거",trigger),
       detail("예약 행동",prepared.name),
@@ -411,24 +451,34 @@ function spellTokens(character:ExtendedCharacter) {
 }
 
 function spellActions(character:ExtendedCharacter):ActionVm[] {
-  const tokens=spellTokens(character);
+  const regularIds=new Set(spellTokens(character));
+  const ritualIds=new Set([
+    ...(character.preparedSpells??[]).map((token)=>String(token).replace(/^always:/,"")),
+    ...(character.spellbookSpells??[]),
+    ...(character.pactTomeRitualSpellIds??[]),
+  ].filter((spellId)=>spellPresentationById(spellId)?.ritual));
+  const tokens=[...new Set([...regularIds,...ritualIds])];
   if (!tokens.length) return [];
   const mental=(Object.entries({int:character.abilities.int,wis:character.abilities.wis,cha:character.abilities.cha}) as Array<["int"|"wis"|"cha",number]>).sort((a,b)=>b[1]-a[1])[0];
   const spellMod=mod(mental[1]);
   const dc=8+character.proficiencyBonus+spellMod;
   const cantrips=new Set((character.cantrips??[]).map((token)=>String(token).replace(/^always:/,"")));
-  return [...new Set(tokens)].map((spellId)=>{
+  return tokens.flatMap((spellId)=>{
     const spell=spellPresentationById(spellId);
     const level=spell?.level??(cantrips.has(spellId)?0:1);
-    const mechanic=spellMechanicById(spellId);
+    const mechanic=normalizedSpellDefinitionById(spellId);
     const executable=Boolean(mechanic&&isExecutableSpellRuntimeSupport(mechanic.runtimeSupport));
+    const triggerOnly=Boolean(mechanic?.castingInterruption);
     const reason="이 주문은 세션 자동 판정에 아직 연결되지 않았습니다.";
     const primary=mechanic?.primary;
     const formula=primary&&(primary.kind==="attack-damage"||primary.kind==="save-damage"||primary.kind==="healing"||primary.kind==="temporary-hp")?primary.dice:primary?.kind==="multi-attack-damage"?primary.dicePerAttack:primary?.kind==="power-word-kill"?primary.fallbackDamage:undefined;
     const dice=formula?`${formula.count}d${formula.sides}`:undefined;
     const harmful=primary?.kind==="attack-damage"||primary?.kind==="multi-attack-damage"||primary?.kind==="save-damage"||primary?.kind==="save-compound-damage"||primary?.kind==="save-effect"||primary?.kind==="power-word-kill"||primary?.kind==="automatic-projectiles";
     const multiAttackTargets=mechanic&&primary?.kind==="multi-attack-damage"?spellMultiAttackCount(mechanic,character.level,level===0?undefined:Math.max(level,selectedCombatSpellSlot(character.id,level))):0;
-    const maxTargets=multiAttackTargets||mechanic?.targeting.maxTargets;
+    const projectileUnits=mechanic&&primary?.kind==="automatic-projectiles"
+      ? primary.baseProjectiles+Math.max(0,Math.max(level,selectedCombatSpellSlot(character.id,level))-mechanic.baseLevel)*(primary.projectilesPerSlotAboveBase??0)
+      : 0;
+    const maxTargets=projectileUnits||multiAttackTargets||mechanic?.targeting.maxTargets;
     const many=(maxTargets??1)>1;
     const selfOnly=mechanic?.targeting.allowedRelations?.length===1&&mechanic.targeting.allowedRelations[0]==="self";
     const target:ActionVm["target"]=(mechanic?.targeting.maxTargets??0)===0?"none":selfOnly?"self":primary?.kind==="healing"||primary?.kind==="full-healing"||primary?.kind==="temporary-hp"?"ally":harmful?(many?"multi-enemy":"enemy"):"any";
@@ -440,12 +490,13 @@ function spellActions(character:ExtendedCharacter):ActionVm[] {
       : primary?.kind==="automatic-projectiles"
         ? [{type:primary.damageType,dice:`${primary.baseProjectiles}d${primary.projectileDice.sides}`,flat:primary.baseProjectiles*primary.projectileDice.flat,average:Math.floor(primary.baseProjectiles*(primary.projectileDice.sides+1)/2)+primary.baseProjectiles*primary.projectileDice.flat}]
         : undefined;
-    return {
+    const base={
       id:spellId==="dnd.srd521.spell.fire-bolt"?"action.fire-bolt":spellId==="dnd.srd521.spell.magic-missile"?"action.magic-missile":`action.spell.${spellId.replace(/^dnd\.srd521\.spell\./,"")}`,
       actorId:character.id,name:spell?.name??spellId.replace(/^dnd\.srd521\.spell\./,"").replaceAll("-"," "),category:"magic",target,
       economy:mechanic?.castingEconomy==="bonus-action"?"추가 행동":mechanic?.castingEconomy==="reaction"?"반응":"행동",resolutionKind,
       summary:executable?(spell?.summary??`${level===0?"소마법":`${level}레벨 주문`} · 자동 판정 지원`):(spell?`${spellLevelLabel(spell)} · ${spell.castingTime} · ${spell.range}`:`${level===0?"소마법":`${level}레벨 주문`} · 자동 판정 미지원`),
-      available:executable,disabledReason:executable?undefined:(mechanic?.unsupportedInteractions?.join(" ")||reason),eligibleTargetIds:[],maxTargets:many?maxTargets:undefined,
+      available:executable&&!triggerOnly,disabledReason:triggerOnly?"유효한 주문 시전 트리거에서 반응으로 사용합니다.":executable?undefined:(mechanic?.unsupportedInteractions?.join(" ")||reason),eligibleTargetIds:[],maxTargets:many?maxTargets:undefined,
+      allocation:projectileUnits?{units:projectileUnits,minimumPerTarget:1,maximumPerTarget:projectileUnits,totalMustMatch:true}:undefined,
       attackBonus:primary?.kind==="attack-damage"||primary?.kind==="multi-attack-damage"?character.proficiencyBonus+spellMod:undefined,
       saveDc:primary?.kind==="save-damage"||primary?.kind==="save-compound-damage"||primary?.kind==="save-effect"?dc:undefined,
       saveAbility:primary?.kind==="save-damage"||primary?.kind==="save-compound-damage"||primary?.kind==="save-effect"?ABILITY_LABEL[primary.saveAbility]:undefined,
@@ -455,11 +506,38 @@ function spellActions(character:ExtendedCharacter):ActionVm[] {
       spellCast:{spellId,runtimeSupport:executable?(mechanic!.runtimeSupport==="tracked-executable"?"tracked-executable":"combat-executable"):"partial",baseLevel:level,castSource:(character.preparedSpells??[]).includes(`always:${spellId}`)?"always-prepared":"prepared",disabledMechanicReason:executable?undefined:(mechanic?.unsupportedInteractions?.join(" ")||reason)},
       details:spell?[detail("시전 시간",spell.castingTime),detail("사거리",spell.range),detail("지속시간",spell.duration),detail("효과",spell.summary),detail("출처","SRD 5.2.1")]:[detail("주문",spellId),detail("상태",reason)],
     } satisfies ActionVm;
+    const actions:ActionVm[]=[];
+    if(regularIds.has(spellId))actions.push(base);
+    if(ritualIds.has(spellId)&&mechanic?.ritual&&executable)actions.push({
+      ...structuredClone(base),id:`${base.id}.ritual`,name:`${base.name} (의식)`,economy:"행동",
+      summary:`의식 · 슬롯 미사용 · ${base.summary}`,
+      spellCast:{...base.spellCast!,castSource:"ritual"},
+      details:[detail("의식 시전","기본 시전 시간 + 10분 · 슬롯 미사용"),...base.details],
+    });
+    return actions;
   });
 }
 
+function itemSpellActions(character:ExtendedCharacter):ActionVm[] {
+  return character.items.flatMap((item)=>(item.spellDefinitionIds??[]).flatMap((spellId)=>{
+    const base=spellActions({...character,cantrips:[],preparedSpells:[spellId],spellbookSpells:[],pactTomeRitualSpellIds:[]})
+      .find((action)=>action.spellCast?.spellId===spellId&&action.spellCast.castSource!=="ritual");
+    if(!base)return [];
+    const itemCost= item.charges?{itemId:item.id,charges:1}:item.kind==="consumable"?{itemId:item.id,quantity:1}:undefined;
+    const available=base.available&&(!item.charges||item.charges.current>0)&&(item.kind!=="consumable"||item.quantity>0);
+    return [{
+      ...structuredClone(base),id:`action.item-spell.${item.id}.${spellId}`,name:`${item.name} · ${base.name}`,
+      summary:`아이템 시전 · ${base.summary}`,available,
+      disabledReason:available?undefined:item.charges&&item.charges.current<1?"충전이 없습니다.":item.kind==="consumable"&&item.quantity<1?"수량이 없습니다.":base.disabledReason,
+      ...(itemCost?{itemCost}:{}),spellCast:{...base.spellCast!,castSource:"item"},
+      details:[detail("시전 아이템",item.name),...base.details,...item.provenance.map((source)=>detail("아이템 출처",source))],
+    } satisfies ActionVm];
+  }));
+}
+
 export function deriveProductionCharacterActions(character:CharacterSheet):ActionVm[] {
-  const merged=[...attackActions(character),...featureActions(character),...skillActions(character),...itemActions(character),...spellActions(character as ExtendedCharacter)];
+  const extended=character as ExtendedCharacter;
+  const merged=[...attackActions(character),...featureActions(character),...skillActions(character),...itemActions(character),...spellActions(extended),...itemSpellActions(extended)];
   const byId=new Map<string,ActionVm>();
   for (const action of merged) byId.set(action.id,action);
   return [...byId.values()];
@@ -518,14 +596,16 @@ function reconcile(adapter:MockAdapter) {
     const previous=internal.scene.entities[index];
     internal.scene.entities[index]={...previous,...projected,status:[...previous.status],reactions:[...previous.reactions],resistances:[...previous.resistances],immunities:[...previous.immunities],vulnerabilities:[...previous.vulnerabilities]};
   } else internal.scene.entities.unshift(projected);
+  const turnRuntime=turnRuntimeSessions.get(adapter);
+  if(turnRuntime)addTurnRuntimeCombatant(turnRuntime,internal.scene,character.id);
 
   const actions=deriveProductionCharacterActions(character);
   const ready=readyActionConfigurationFor(adapter);
   const prepared=ready?.actorId===character.id
-    ? ready.actionId===READY_MOVEMENT_ACTION_ID?preparedMovementAction(character):actions.find((action)=>action.id===ready.actionId)
+    ? ready.movement?preparedMovementAction(character):actions.find((action)=>action.id===ready.actionId)
     : undefined;
   if (prepared&&internal.scene.entities.find((entity)=>entity.id===character.id)?.status.includes("준비 행동")) {
-    actions.push(readyTriggerAction(character,prepared,ready!.trigger));
+    actions.push(readyTriggerAction(character,prepared,ready!.trigger,ready!.movement===true));
   }
   internal.scene.actionsByActor[character.id]=actions;
   internal.scene.economyByActor[character.id]??={action:true,bonusAction:true,reaction:true,movement:character.speed,movementMax:character.speed};
@@ -572,6 +652,7 @@ MockAdapter.prototype.startProductionLocalPlay=async function startProductionLoc
   internal.session.participants=[{id:`local:${internal.activeCharacter.id}`,name:role==="dm"?"Local DM":"Local Player",characterName:internal.activeCharacter.name,state:"connected"}];
   internal.connectionState="connected";
   reconcile(this);
+  ensureAdapterTurnRuntimeState(this,internal.scene);
   return internal.getSnapshot();
 };
 

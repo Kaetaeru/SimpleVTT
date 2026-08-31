@@ -5,8 +5,8 @@ import type { Phase09AttackFact, Phase09TargetingFact } from "./phase09Reference
 import { SIMPLEVTT_APP_RULES_PROFILE } from "./realResolutionService";
 import { recordCommittedResolutionEvents } from "./resolutionEventCommitRegistry";
 import { compileAttack, resolveAttack } from "../domain/attack";
-import { BARBARIAN_RAGE_TAG } from "../domain/barbarianRage";
 import { cloneRuntimeState, type RulesRuntimeState } from "../domain/combatState";
+import { effectIsActive } from "../domain/effects";
 import type { ConcentrationCheckRequest } from "../domain/concentration";
 import type { D20TestResult } from "../domain/d20";
 import type { CompoundDamageResolution, DamageDefenseContribution } from "../domain/damage";
@@ -41,9 +41,10 @@ export interface AtomicAttackTransactionRequest {
   damageReduction?:number;
   damageReductionSource?:string;
   attackD20Face:number;
+  attackModifierContributions?:Array<{source:string;value:number}>;
   effectiveTargetAc:number;
   attackFact:Phase09AttackFact;
-  targetingFact:Phase09TargetingFact & { provenance?:string[] };
+  targetingFact:(Phase09TargetingFact & { authority?:"authoritative";provenance?:string[] })|{authority:"manual-unconstrained";provenance:string[]};
   expectedPreview?:AtomicAttackPreviewExpectation;
   runtimeState?:RulesRuntimeState;
   concentrationCheck?:Omit<ConcentrationCheckRequest,"damage">;
@@ -182,15 +183,17 @@ function transactionInput(request:AtomicAttackTransactionRequest):RulesRuntimeSt
   return input;
 }
 
-function rageDamageFlat(state:RulesRuntimeState,actorId:string,attackFact:Phase09AttackFact) {
-  if (attackFact.ability!=="str") return [];
-  if (attackFact.sourceKind!=="weapon"&&attackFact.sourceKind!=="unarmed") return [];
-  const rage=state.effects.find((effect) => effect.targetId===actorId && effect.tags.includes(BARBARIAN_RAGE_TAG));
-  if (!rage) return [];
-  const value=rage.metadata?.rageDamageBonus;
-  return typeof value==="number" && value>0
-    ? [{ source:`effect:${rage.id}:rage-damage`,value }]
-    : [];
+function effectAttackDamageFlat(state:RulesRuntimeState,actorId:string,attackFact:Phase09AttackFact) {
+  return state.effects.flatMap((effect)=>{
+    if(effect.targetId!==actorId||!effectIsActive(effect))return [];
+    const value=effect.metadata?.attackDamageFlat;
+    const ability=effect.metadata?.attackDamageAbility;
+    const sourceKinds=effect.metadata?.attackDamageSourceKinds;
+    if(typeof value!=="number"||!Number.isFinite(value)||value<=0)return [];
+    if(typeof ability==="string"&&ability!==attackFact.ability)return [];
+    if(typeof sourceKinds==="string"&&!sourceKinds.split(",").map((entry)=>entry.trim()).includes(attackFact.sourceKind))return [];
+    return [{source:`effect:${effect.id}:attack-damage-flat`,value}];
+  });
 }
 
 function damageReductionFlat(request:AtomicAttackTransactionRequest) {
@@ -252,23 +255,37 @@ function projectLife(state:RulesRuntimeState,targetId:string):RuntimeLifeVm {
 function attackRequest(request:AtomicAttackTransactionRequest,input:RulesRuntimeState) {
   const damageSpec=request.action.damage![0];
   const cost=economyCost(request.action,request.initiativeMode);
+  const targeting=request.targetingFact;
+  const manualUnconstrained=targeting.authority==="manual-unconstrained";
+  if(manualUnconstrained&&["distanceFeet","visible","cover","targetCanSeeAttacker"].some((key)=>Object.hasOwn(targeting,key))) {
+    throw new Error("manual-unconstrained attack target cannot contain fabricated spatial or sensory facts");
+  }
+  const target=manualUnconstrained?{
+    id:request.target.id,
+    kind:"creature" as const,
+    relation:attackRelation(request.actor,request.target),
+    ac:request.effectiveTargetAc,
+    creatureKind:request.target.kind === "character" ? "character" as const : "monster" as const,
+    spatialAuthority:"manual-unconstrained" as const,
+  }:{
+    id:request.target.id,
+    kind:"creature" as const,
+    relation:attackRelation(request.actor,request.target),
+    distanceFeet:targeting.distanceFeet,
+    visible:targeting.visible,
+    cover:targeting.cover,
+    ac:request.effectiveTargetAc,
+    creatureKind:request.target.kind === "character" ? "character" as const : "monster" as const,
+    targetCanSeeAttacker:targeting.targetCanSeeAttacker,
+    spatialAuthority:"authoritative" as const,
+  };
   return {
     id:request.resolutionId,
     actorId:request.actor.id,
     expectedRevision:input.revision,
     sourceId:request.action.id,
     sourceKind:request.attackFact.sourceKind,
-    target:{
-      id:request.target.id,
-      kind:"creature" as const,
-      relation:attackRelation(request.actor,request.target),
-      distanceFeet:request.targetingFact.distanceFeet,
-      visible:request.targetingFact.visible,
-      cover:request.targetingFact.cover,
-      ac:request.effectiveTargetAc,
-      creatureKind:request.target.kind === "character" ? "character" as const : "monster" as const,
-      targetCanSeeAttacker:request.targetingFact.targetCanSeeAttacker,
-    },
+    target,
     rangeFeet:request.attackFact.rangeFeet,
     attackDice:{
       id:`${request.resolutionId}:attack-d20`,
@@ -276,10 +293,9 @@ function attackRequest(request:AtomicAttackTransactionRequest,input:RulesRuntime
       sides:20,
       faces:[request.attackD20Face],
     },
-    attackModifierContributions:[{
-      source:`action:${request.action.id}:attack-bonus`,
-      value:request.action.attackBonus ?? 0,
-    }],
+    attackModifierContributions:request.attackModifierContributions ?? [
+      {source:`action:${request.action.id}:attack-bonus`,value:request.action.attackBonus??0},
+    ],
     requiresSight:true,
     baseDamage:{
       sourceId:request.action.id,
@@ -287,7 +303,7 @@ function attackRequest(request:AtomicAttackTransactionRequest,input:RulesRuntime
       dice:request.attackFact.damageDice,
       flat:[
         ...request.attackFact.flatDamage,
-        ...rageDamageFlat(input,request.actor.id,request.attackFact),
+        ...effectAttackDamageFlat(input,request.actor.id,request.attackFact),
         ...damageReductionFlat(request),
       ],
     },
@@ -379,7 +395,12 @@ export function resolveAtomicAttackTransaction(request:AtomicAttackTransactionRe
     return { status:"rejected",error:error instanceof Error ? error.message : String(error) };
   }
   const runtimeInputRevision=request.runtimeState ? input.revision : undefined;
-  const transaction = resolveAttackTransaction(request,input);
+  let transaction:ReturnType<typeof resolveAttackTransaction>;
+  try {
+    transaction=resolveAttackTransaction(request,input);
+  } catch(error) {
+    return {status:"rejected",error:error instanceof Error?error.message:String(error)};
+  }
   if (transaction.status === "rejected") return { status:"rejected", error:transaction.error };
 
   const attack = transaction.results[`${request.resolutionId}:attack`] as D20TestResult;

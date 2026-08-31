@@ -128,6 +128,14 @@ const moduleEntries = records.map(({module,entry,category,presentation}) => {
       targetName:allNames.get(relationship.target)?.nameKo ?? relationship.target,
     })),
     capabilities:[...new Set(module.capabilities ?? [])].sort((a,b) => a.localeCompare(b,"en")),
+    progressionContributions:(entry.progressionContributions ?? []).map((contribution) => ({
+      track:String(contribution.track),
+      threshold:Number(contribution.threshold),
+      grants:[...(contribution.grants ?? [])].map(String),
+    })),
+    mechanics:(entry.mechanics ?? [])
+      .filter((mechanic) => mechanic?.kind === "common-play")
+      .map((mechanic) => ({kind:"common-play",config:mechanic.config})),
   };
 });
 
@@ -144,6 +152,7 @@ const spellEntries = spellPresentation.spells.map((spell) => ({
   description:spell.summary,
   relationships:[],
   capabilities:[],
+  mechanics:[],
 }));
 
 const entries = [...moduleEntries,...spellEntries].sort((a,b) => {

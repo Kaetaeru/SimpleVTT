@@ -2,13 +2,26 @@ import { requireCombatant } from "./combatState";
 import { DomainEvaluationError, type ProvenanceRecord } from "./profileEngine";
 import type { OperationExecution, ResolutionExecutionContext } from "./resolutionContext";
 import { makeEvent } from "./resolutionContext";
-import { artifactStateChange, zoneMembershipStateChange, type RuntimeStateChange } from "./runtimeStateChange";
+import { artifactStateChange, combatantStateChange, inventoryItemStateChange, zoneMembershipStateChange, type RuntimeStateChange } from "./runtimeStateChange";
 import { createRuntimeArtifact, type ZoneMembershipState } from "./runtimeArtifact";
 import type { ResolutionOperation } from "./resolutionTypes";
+import { resolveDamage, resolveHealing } from "./damage";
+import { beginTurn } from "./turnEconomy";
+import { advanceCommonPlayExposure, recoverCommonPlayExposure } from "./commonPlayExposureRuntime";
+import { advanceCommonPlayProject, cancelCommonPlayProject } from "./commonPlayProjectRuntime";
 
 type SpawnArtifactOp=Extract<ResolutionOperation,{kind:"spawn-artifact"}>;
 type UpdateArtifactOp=Extract<ResolutionOperation,{kind:"update-artifact"}>;
+type DamageArtifactOp=Extract<ResolutionOperation,{kind:"damage-artifact"}>;
+type RepairArtifactOp=Extract<ResolutionOperation,{kind:"repair-artifact"}>;
+type RelocateArtifactOp=Extract<ResolutionOperation,{kind:"relocate-artifact"}>;
+type SetArtifactControllerOp=Extract<ResolutionOperation,{kind:"set-artifact-controller"}>;
 type RemoveArtifactOp=Extract<ResolutionOperation,{kind:"remove-artifact"}>;
+type AdvanceExposureOp=Extract<ResolutionOperation,{kind:"advance-exposure"}>;
+type RecoverExposureOp=Extract<ResolutionOperation,{kind:"recover-exposure"}>;
+type AdvanceProjectOp=Extract<ResolutionOperation,{kind:"advance-project"}>;
+type CancelProjectOp=Extract<ResolutionOperation,{kind:"cancel-project"}>;
+type GrantInventoryItemOp=Extract<ResolutionOperation,{kind:"grant-inventory-item"}>;
 type SetZoneMembershipOp=Extract<ResolutionOperation,{kind:"set-zone-membership"}>;
 
 function artifacts(ctx:ResolutionExecutionContext) {
@@ -19,6 +32,31 @@ function zoneMemberships(ctx:ResolutionExecutionContext) {
   return ctx.state.zoneMemberships ?? (ctx.state.zoneMemberships=[]);
 }
 
+function actorCombatant(artifact:ReturnType<typeof createRuntimeArtifact>) {
+  const actor=artifact.actor!;
+  const maximum=Number(actor.properties["hp.maximum"]);
+  const speed=Number(actor.properties["movement.walk"]);
+  const baseProperties:Record<string,number>={};
+  for(const [property,value] of Object.entries(actor.properties)) {
+    if(typeof value==="number"&&Number.isFinite(value)) baseProperties[property]=value;
+  }
+  baseProperties["hp.current"]=Number(actor.properties["hp.current"]??maximum);
+  baseProperties["hp.maximum"]=maximum;
+  baseProperties["hp.temporary"]=Number(actor.properties["hp.temporary"]??0);
+  return {
+    id:actor.combatantId,
+    baseSpeed:speed,
+    baseProperties,
+    life:{
+      hp:{current:Number(actor.properties["hp.current"]??maximum),maximum,temporary:Number(actor.properties["hp.temporary"]??0)},
+      deathSaves:{successes:0,failures:0},stable:false,unconscious:false,dead:false,
+    },
+    economy:beginTurn(speed),
+    resources:actor.resources.map((resource)=>({id:resource.id,label:resource.id,current:resource.current,maximum:resource.maximum,...(resource.recovery?{recovery:structuredClone(resource.recovery)}:{})})),
+    hitDice:[],
+  };
+}
+
 export function executeSpawnArtifact(ctx:ResolutionExecutionContext,operation:SpawnArtifactOp):OperationExecution {
   if (artifacts(ctx).some((artifact)=>artifact.id===operation.artifact.id)) {
     throw new DomainEvaluationError(`runtime artifact already exists: ${operation.artifact.id}`);
@@ -26,31 +64,107 @@ export function executeSpawnArtifact(ctx:ResolutionExecutionContext,operation:Sp
   if (zoneMemberships(ctx).some((membership)=>membership.artifactId===operation.artifact.id)) {
     throw new DomainEvaluationError(`zone membership already exists: ${operation.artifact.id}`);
   }
-  if (operation.zoneMembershipAuthority!=="manual"&&operation.zoneMembershipAuthority!=="spatial") {
-    throw new DomainEvaluationError(`unsupported zone membership authority: ${operation.zoneMembershipAuthority}`);
-  }
   const artifact=createRuntimeArtifact(operation.artifact);
-  const membership:ZoneMembershipState={
-    artifactId:artifact.id,
-    authority:operation.zoneMembershipAuthority,
-    memberIds:[],
-  };
+  if(artifact.artifactKind==="zone"&&operation.zoneMembershipAuthority!=="manual"&&operation.zoneMembershipAuthority!=="spatial") throw new DomainEvaluationError(`unsupported zone membership authority: ${operation.zoneMembershipAuthority}`);
+  if(artifact.artifactKind!=="zone"&&operation.zoneMembershipAuthority!==undefined) throw new DomainEvaluationError("zone membership authority applies only to zone artifacts");
+  if(artifact.artifactKind==="form") requireCombatant(ctx.state,artifact.form!.targetActorId);
+  if(artifact.artifactKind==="exposure") requireCombatant(ctx.state,artifact.exposure!.subjectId);
+  if(artifact.artifactKind==="environment"&&artifacts(ctx).some((entry)=>entry.artifactKind==="environment"))throw new DomainEvaluationError("only one session environment can be active");
+  if(artifact.artifactKind==="actor") {
+    requireCombatant(ctx.state,artifact.actor!.ownerId);
+    if(ctx.state.combatants[artifact.actor!.combatantId]||(ctx.state.artifacts??[]).some((entry)=>entry.actor?.combatantId===artifact.actor!.combatantId)) throw new DomainEvaluationError(`actor artifact combatant identity already exists: ${artifact.actor!.combatantId}`);
+  }
+  if(artifact.artifactKind==="link") for(const endpointId of artifact.link!.endpointIds) {
+    if(!ctx.state.combatants[endpointId]&&!artifacts(ctx).some((entry)=>entry.id===endpointId)) throw new DomainEvaluationError(`link endpoint not found: ${endpointId}`);
+  }
+  if(artifact.link?.relation==="mount"){
+    const mountArtifact=artifacts(ctx).find((entry)=>entry.id===artifact.link!.endpointIds[1]&&entry.actor)?.actor;
+    const mount=artifact.link.mount!;
+    if(!mountArtifact)throw new DomainEvaluationError("mount link endpoint must reference an actor artifact");
+    if(mountArtifact.controllerId!==mount.controllerId||mount.mode==="controlled"&&mountArtifact.initiative!=="shared"||mount.mode==="independent"&&mountArtifact.initiative!=="independent"||mount.controlledActionIds.some((id)=>!mountArtifact.actionDefinitionIds.includes(id)))throw new DomainEvaluationError("mount actor controller, initiative, or controlled actions do not match the relationship");
+  }
+  if(artifact.link?.relation==="drawn-vehicle"){
+    const vehicleArtifact=artifacts(ctx).find((entry)=>entry.id===artifact.link!.endpointIds[1]);
+    if(vehicleArtifact?.artifactKind!=="object")throw new DomainEvaluationError("drawn-vehicle link endpoint must reference an object artifact");
+  }
+  const membership:ZoneMembershipState|undefined=artifact.artifactKind==="zone"?{
+    artifactId:artifact.id,authority:operation.zoneMembershipAuthority!,memberIds:[],
+  }:undefined;
   ctx.state.artifacts!.push(artifact);
-  ctx.state.zoneMemberships!.push(membership);
+  const spawnedCombatant=artifact.artifactKind==="actor"?actorCombatant(artifact):undefined;
+  if(spawnedCombatant) ctx.state.combatants[spawnedCombatant.id]=spawnedCombatant;
+  if(membership) ctx.state.zoneMemberships!.push(membership);
   const provenance:ProvenanceRecord[]=[{
     source:artifact.sourceId,
     status:"applied",
-    reason:`runtime ${artifact.artifactKind} artifact ${artifact.id} spawned with ${membership.authority} membership authority`,
+    reason:membership
+      ? `runtime ${artifact.artifactKind} artifact ${artifact.id} spawned with ${membership.authority} membership authority`
+      : `runtime ${artifact.artifactKind} artifact ${artifact.id} spawned`,
   }];
   const stateChanges:RuntimeStateChange[]=[
     artifactStateChange(artifact.id,artifact.id,"added",provenance,undefined,artifact),
-    zoneMembershipStateChange(artifact.id,"added",provenance,undefined,membership),
   ];
-  const result={spawned:true,artifact:structuredClone(artifact),membership:structuredClone(membership)};
+  if(spawnedCombatant) stateChanges.push(combatantStateChange(spawnedCombatant.id,"added",provenance,undefined,spawnedCombatant));
+  if(membership) stateChanges.push(zoneMembershipStateChange(artifact.id,"added",provenance,undefined,membership));
+  const result={spawned:true,artifact:structuredClone(artifact),...(membership?{membership:structuredClone(membership)}:{})};
   return {
     result,
     event:makeEvent(ctx.pending,operation,`runtime artifact ${artifact.id} spawned`,result,provenance,stateChanges),
   };
+}
+
+export function executeDamageArtifact(ctx:ResolutionExecutionContext,operation:DamageArtifactOp):OperationExecution {
+  const artifact=artifacts(ctx).find((candidate)=>candidate.id===operation.artifactId&&candidate.artifactKind==="object");
+  if(!artifact?.object) throw new DomainEvaluationError(`active object artifact not found: ${operation.artifactId}`);
+  const before=structuredClone(artifact);
+  let damage=resolveDamage({
+    hp:{current:artifact.object.hp.current,maximum:artifact.object.hp.maximum,temporary:0},
+    amount:operation.amount,damageType:operation.damageType,defenses:artifact.object.damageDefenses,
+  });
+  if(damage.finalDamage<(artifact.object.damageThreshold??0)) damage={
+    ...damage,finalDamage:0,hpDamage:0,nextHp:{current:artifact.object.hp.current,maximum:artifact.object.hp.maximum,temporary:0},
+    provenance:[...damage.provenance,{source:`artifact:${artifact.id}:damage-threshold`,status:"applied",reason:`damage ${damage.finalDamage} is below threshold ${artifact.object.damageThreshold}`}],
+  };
+  artifact.object.hp={current:damage.nextHp.current,maximum:damage.nextHp.maximum};
+  const destroyed=artifact.object.hp.current===0&&artifact.object.destroyOnZero!==false;
+  if(destroyed) ctx.state.artifacts=artifacts(ctx).filter((entry)=>entry.id!==artifact.id);
+  const after=destroyed?undefined:structuredClone(artifact);
+  const changes:RuntimeStateChange[]=[artifactStateChange(artifact.id,artifact.id,destroyed?"removed":"updated",damage.provenance,before,after)];
+  const result={...damage,destroyed,artifact:after};
+  return {result,event:makeEvent(ctx.pending,operation,`object artifact ${artifact.id} takes ${damage.finalDamage} damage`,result,damage.provenance,changes,artifact.id)};
+}
+
+export function executeRepairArtifact(ctx:ResolutionExecutionContext,operation:RepairArtifactOp):OperationExecution {
+  const artifact=artifacts(ctx).find((candidate)=>candidate.id===operation.artifactId&&candidate.artifactKind==="object");
+  if(!artifact?.object) throw new DomainEvaluationError(`active object artifact not found: ${operation.artifactId}`);
+  if(artifact.object.repairable!==true) throw new DomainEvaluationError(`object artifact is not repairable: ${artifact.id}`);
+  const before=structuredClone(artifact);
+  const healing=resolveHealing({current:artifact.object.hp.current,maximum:artifact.object.hp.maximum,temporary:0},operation.amount);
+  artifact.object.hp={current:healing.nextHp.current,maximum:healing.nextHp.maximum};
+  const after=structuredClone(artifact);
+  return {result:{...healing,artifact:after},event:makeEvent(ctx.pending,operation,`object artifact ${artifact.id} repaired ${healing.restored}`,
+    {...healing,artifact:after},healing.provenance,[artifactStateChange(artifact.id,artifact.id,"updated",healing.provenance,before,after)],artifact.id)};
+}
+
+export function executeRelocateArtifact(ctx:ResolutionExecutionContext,operation:RelocateArtifactOp):OperationExecution {
+  if(!operation.placementRef) throw new DomainEvaluationError("artifact relocation requires an authoritative placement reference");
+  const artifact=artifacts(ctx).find((candidate)=>candidate.id===operation.artifactId);
+  if(!artifact) throw new DomainEvaluationError(`runtime artifact not found: ${operation.artifactId}`);
+  const before=structuredClone(artifact);artifact.placementRef=operation.placementRef;const after=structuredClone(artifact);
+  const provenance:ProvenanceRecord[]=[{source:ctx.pending.sourceId,status:"applied",reason:`artifact ${artifact.id} relocated to authoritative placement ${operation.placementRef}`}];
+  return {result:{relocated:true,artifact:after},event:makeEvent(ctx.pending,operation,`artifact ${artifact.id} relocated`,{relocated:true,artifact:after},provenance,[artifactStateChange(artifact.id,artifact.id,"updated",provenance,before,after)],artifact.id)};
+}
+
+export function executeSetArtifactController(ctx:ResolutionExecutionContext,operation:SetArtifactControllerOp):OperationExecution {
+  if(!operation.controllerId) throw new DomainEvaluationError("artifact controller identity is required");
+  const artifact=artifacts(ctx).find((candidate)=>candidate.id===operation.artifactId&&(candidate.artifactKind==="actor"||candidate.artifactKind==="form"));
+  if(!artifact) throw new DomainEvaluationError(`controllable artifact not found: ${operation.artifactId}`);
+  const before=structuredClone(artifact);
+  if(artifact.actor) artifact.actor.controllerId=operation.controllerId;
+  else artifact.form!.controllerId=operation.controllerId;
+  const after=structuredClone(artifact);
+  const provenance:ProvenanceRecord[]=[{source:ctx.pending.sourceId,status:"applied",reason:`artifact ${artifact.id} controller changed to ${operation.controllerId}`}];
+  return {result:{controllerId:operation.controllerId,artifact:after},event:makeEvent(ctx.pending,operation,`artifact ${artifact.id} controller changed`,{controllerId:operation.controllerId,artifact:after},provenance,[artifactStateChange(artifact.id,artifact.id,"updated",provenance,before,after)],artifact.id)};
 }
 
 export function executeUpdateArtifact(ctx:ResolutionExecutionContext,operation:UpdateArtifactOp):OperationExecution {
@@ -72,18 +186,74 @@ export function executeUpdateArtifact(ctx:ResolutionExecutionContext,operation:U
   };
 }
 
+function exposureArtifact(ctx:ResolutionExecutionContext,artifactId:string) {
+  const artifact=artifacts(ctx).find((candidate)=>candidate.id===artifactId&&candidate.artifactKind==="exposure");
+  if(!artifact?.exposure)throw new DomainEvaluationError(`active exposure artifact not found: ${artifactId}`);
+  return artifact;
+}
+
+export function executeAdvanceExposure(ctx:ResolutionExecutionContext,operation:AdvanceExposureOp):OperationExecution {
+  const artifact=exposureArtifact(ctx,operation.artifactId),before=structuredClone(artifact);
+  const advanced=advanceCommonPlayExposure(artifact.exposure!,artifact.exposure!.revision,operation.seconds);
+  artifact.exposure=advanced.exposure;
+  const after=structuredClone(artifact),provenance:ProvenanceRecord[]=[{source:artifact.sourceId,status:"applied",reason:`exposure ${artifact.id} advanced ${operation.seconds}s; ${advanced.newlyTriggeredIntervals.length} interval(s) triggered`}];
+  return {result:{...advanced,newlyTriggeredCount:advanced.newlyTriggeredIntervals.length},event:makeEvent(ctx.pending,operation,`exposure ${artifact.id} advanced`,advanced,provenance,[artifactStateChange(artifact.id,artifact.id,"updated",provenance,before,after)],artifact.exposure.subjectId)};
+}
+
+export function executeRecoverExposure(ctx:ResolutionExecutionContext,operation:RecoverExposureOp):OperationExecution {
+  const artifact=exposureArtifact(ctx,operation.artifactId),before=structuredClone(artifact);
+  artifact.exposure=recoverCommonPlayExposure(artifact.exposure!,artifact.exposure!.revision);
+  const after=structuredClone(artifact),provenance:ProvenanceRecord[]=[{source:artifact.sourceId,status:"applied",reason:`exposure ${artifact.id} recovered`}];
+  return {result:{recovered:true,exposure:structuredClone(artifact.exposure)},event:makeEvent(ctx.pending,operation,`exposure ${artifact.id} recovered`,artifact.exposure,provenance,[artifactStateChange(artifact.id,artifact.id,"updated",provenance,before,after)],artifact.exposure.subjectId)};
+}
+
+function projectArtifact(ctx:ResolutionExecutionContext,artifactId:string) {
+  const artifact=artifacts(ctx).find((candidate)=>candidate.id===artifactId&&candidate.artifactKind==="project");
+  if(!artifact?.project)throw new DomainEvaluationError(`active project artifact not found: ${artifactId}`);
+  return artifact;
+}
+
+export function executeAdvanceProject(ctx:ResolutionExecutionContext,operation:AdvanceProjectOp):OperationExecution {
+  const artifact=projectArtifact(ctx,operation.artifactId),before=structuredClone(artifact);
+  const advanced=advanceCommonPlayProject(artifact.project!,operation);
+  if(advanced.status==="rejected")throw new DomainEvaluationError(advanced.error);
+  artifact.project=advanced.project;
+  const after=structuredClone(artifact),provenance:ProvenanceRecord[]=[{source:artifact.sourceId,status:"applied",reason:`project ${artifact.id} advanced to ${advanced.project.completedWork}/${advanced.project.requiredWork}`}];
+  return {result:{project:structuredClone(advanced.project),completed:advanced.project.status==="completed"},event:makeEvent(ctx.pending,operation,`project ${artifact.id} advanced`,advanced.project,provenance,[artifactStateChange(artifact.id,artifact.id,"updated",provenance,before,after)],artifact.project.ownerId)};
+}
+
+export function executeCancelProject(ctx:ResolutionExecutionContext,operation:CancelProjectOp):OperationExecution {
+  const artifact=projectArtifact(ctx,operation.artifactId),before=structuredClone(artifact);
+  const cancelled=cancelCommonPlayProject(artifact.project!,operation);
+  if(cancelled.status==="rejected")throw new DomainEvaluationError(cancelled.error);
+  artifact.project=cancelled.project;
+  const after=structuredClone(artifact),provenance:ProvenanceRecord[]=[{source:artifact.sourceId,status:"applied",reason:`project ${artifact.id} cancelled`}];
+  return {result:{project:structuredClone(cancelled.project)},event:makeEvent(ctx.pending,operation,`project ${artifact.id} cancelled`,cancelled.project,provenance,[artifactStateChange(artifact.id,artifact.id,"updated",provenance,before,after)],artifact.project.ownerId)};
+}
+
+export function executeGrantInventoryItem(ctx:ResolutionExecutionContext,operation:GrantInventoryItemOp):OperationExecution {
+  requireCombatant(ctx.state,operation.targetId);
+  const item=structuredClone(operation.item);
+  if(!item.id||!item.definitionId||!item.name||!Number.isInteger(item.quantity)||item.quantity<1||item.equipped||item.wielded||!Array.isArray(item.passiveEffects)||!Array.isArray(item.grantedActionIds)||!Array.isArray(item.provenance))throw new DomainEvaluationError("granted inventory item is invalid or active before ownership");
+  const provenance:ProvenanceRecord[]=[{source:ctx.pending.sourceId,status:"applied",reason:`inventory item ${item.id} granted`}];
+  return {result:{item},event:makeEvent(ctx.pending,operation,`inventory item ${item.id} granted`,item,provenance,[inventoryItemStateChange(operation.targetId,item.id,"added",provenance,undefined,item)],operation.targetId)};
+}
+
 export function executeRemoveArtifact(ctx:ResolutionExecutionContext,operation:RemoveArtifactOp):OperationExecution {
   const artifact=artifacts(ctx).find((candidate)=>candidate.id===operation.artifactId);
   if (!artifact) throw new DomainEvaluationError(`runtime artifact not found: ${operation.artifactId}`);
   const membership=zoneMemberships(ctx).find((candidate)=>candidate.artifactId===operation.artifactId);
   ctx.state.artifacts=artifacts(ctx).filter((candidate)=>candidate.id!==operation.artifactId);
   ctx.state.zoneMemberships=zoneMemberships(ctx).filter((candidate)=>candidate.artifactId!==operation.artifactId);
+  const combatant=artifact.actor?structuredClone(ctx.state.combatants[artifact.actor.combatantId]):undefined;
+  if(artifact.actor) delete ctx.state.combatants[artifact.actor.combatantId];
   const provenance:ProvenanceRecord[]=[{
     source:artifact.sourceId,
     status:"applied",
     reason:`runtime artifact ${artifact.id} removed`,
   }];
   const stateChanges:RuntimeStateChange[]=[artifactStateChange(artifact.id,artifact.id,"removed",provenance,artifact,undefined)];
+  if(combatant) stateChanges.push(combatantStateChange(combatant.id,"removed",provenance,combatant,undefined));
   if (membership) stateChanges.push(zoneMembershipStateChange(artifact.id,"removed",provenance,membership,undefined));
   const result={removed:true,artifact:structuredClone(artifact),membership:membership?structuredClone(membership):undefined};
   return {

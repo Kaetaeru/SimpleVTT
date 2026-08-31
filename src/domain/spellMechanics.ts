@@ -3,7 +3,7 @@ import rawCatalog from "../generated/spellPresentationCatalog.generated.json";
 import type { AbilityKey, ConditionId } from "./conditions";
 import type { DurationSpec } from "./effects";
 
-type CatalogSpell={id:string;level:number;castingTime:string;range:string;duration:string;summary:string;description:string};
+type CatalogSpell={id:string;level:number;ritual:boolean;castingTime:string;range:string;components:string;duration:string;summary:string;description:string};
 const CATALOG=(rawCatalog as {spells:CatalogSpell[]}).spells;
 const CATALOG_BY_ID=new Map(CATALOG.map((spell)=>[spell.id,spell]));
 const ABILITY_BY_KO:Record<string,AbilityKey>={"근력":"str","민첩":"dex","건강":"con","지능":"int","지혜":"wis","매력":"cha"};
@@ -49,6 +49,33 @@ function rangeFeet(range:string) {
   if (/^자신$/.test(range)) return 0;
   const match=range.match(/(\d+)\s*피트/);
   return match?Number(match[1]):undefined;
+}
+
+function catalogComponents(spell:CatalogSpell):SpellMechanicDefinition["components"] {
+  const verbal=/(?:^|, )V(?:,|$)/.test(spell.components);
+  const somatic=/(?:^|, )S(?:,|$)/.test(spell.components);
+  if(!/(?:^|, )M(?: |\(|,|$)/.test(spell.components))return {verbal,somatic};
+  const text=spell.components.match(/M \((.*)\)$/)?.[1]??"";
+  const costs=[...text.matchAll(/([\d,]+)\s*GP/g)];
+  const perTarget=/각 대상마다/.test(text);
+  const allConsumed=/모두 주문이 소모/.test(text);
+  const materials=costs.length?costs.map((match,index)=>{
+    const end=costs[index+1]?.index??text.length;
+    const clause=text.slice(match.index,end);
+    return {
+      id:`${spell.id}.material.${index+1}`,
+      costGp:Number(match[1].replaceAll(",","")),
+      consumed:allConsumed||/주문이 소모/.test(clause),
+      ...(perTarget?{perTarget:true}:{}),
+    };
+  }):[/주문이 소모/.test(text)?{id:`${spell.id}.material.1`,consumed:true,...(perTarget?{perTarget:true}:{})}:{}];
+  return {verbal,somatic,materials};
+}
+
+function castingDurationSeconds(castingTime:string) {
+  const match=castingTime.match(/(\d+)\s*(분|시간)/);
+  if(!match||/행동\(/.test(castingTime))return undefined;
+  return Number(match[1])*(match[2]==="시간"?3600:60);
 }
 
 function catalogTargeting(spell:CatalogSpell,primary:SpellMechanicDefinition["primary"]) {
@@ -188,6 +215,9 @@ function catalogMechanic(spell:CatalogSpell):SpellMechanicDefinition {
     trackedEffects:trackedEffects.length?trackedEffects:undefined,
     removesConditions:parsedRemovedConditions(spell),
     executionScope:fullyAdjudicated?"Catalog-derived roll, health, save, condition, and authoritative cast lifecycle.":"Authoritative target, action/slot, concentration, duration, and tracked spell effect lifecycle; spell-specific world interactions are retained in the effect summary.",
+    ...(/주문은 아무 효과 없이 사라지고/.test(spell.summary)&&/슬롯은 소모되지/.test(spell.summary)&&/주문을 시전하는 크리처/.test(spell.castingTime)
+      ?{castingInterruption:{trigger:"visible-component-spell-cast" as const,outcome:"cancel-on-failed-save" as const,interruptedSlot:"preserve" as const}}
+      :{}),
   };
 }
 
@@ -401,7 +431,12 @@ export const SRD_521_SPELL_MECHANICS: Record<string, SpellMechanicDefinition> = 
 };
 
 export function spellMechanicById(spellId: string) {
-  return SRD_521_SPELL_MECHANICS[spellId]??(CATALOG_BY_ID.has(spellId)?catalogMechanic(CATALOG_BY_ID.get(spellId)!):undefined);
+  const spell=CATALOG_BY_ID.get(spellId);
+  const definition=SRD_521_SPELL_MECHANICS[spellId]??(spell?catalogMechanic(spell):undefined);
+  return definition&&spell?{
+    ...definition,components:catalogComponents(spell),ritual:spell.ritual,
+    ...(castingDurationSeconds(spell.castingTime)?{castingDurationSeconds:castingDurationSeconds(spell.castingTime)}:{}),
+  }:definition;
 }
 
 export const SPELL_EXECUTION_COVERAGE={

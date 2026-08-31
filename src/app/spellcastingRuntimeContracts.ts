@@ -8,7 +8,7 @@ export interface SpellActionRuntimeVm {
   spellId: string;
   runtimeSupport: CombatSpellRuntimeSupport;
   baseLevel: number;
-  castSource: "prepared" | "always-prepared" | "item" | "feature";
+  castSource: "prepared" | "always-prepared" | "item" | "feature" | "ritual";
   disabledMechanicReason?: string;
 }
 
@@ -25,6 +25,7 @@ export interface SpellcastingHudVm {
   cantripSpellIds: string[];
   preparedSpellIds: string[];
   alwaysPreparedSpellIds: string[];
+  ritualSpellIds?:string[];
   slots: SpellSlotHudVm[];
   slottedSpellCastThisTurn: boolean;
 }

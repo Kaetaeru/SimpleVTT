@@ -45,7 +45,15 @@ test("DM handout reveal is presentation-only and the current reveal is restored 
     const hostTemplate=await host.getSnapshot();
     const clientTemplate=await client.getSnapshot();
     const hostCharacter={...structuredClone(hostTemplate.activeCharacter),id:"char.handout.host",name:"Handout Host",saveState:"saved" as const};
-    const clientCharacter={...structuredClone(clientTemplate.activeCharacter),id:"char.handout.client",name:"Handout Client",saveState:"saved" as const};
+    const clientCharacter={
+      ...structuredClone(clientTemplate.activeCharacter),
+      id:"char.handout.client",
+      name:"Handout Client",
+      saveState:"saved" as const,
+      equipment:[],
+      items:[],
+      attacks:[],
+    };
     const hostApp=connectedInternal(host);
     hostApp.activeCharacter=structuredClone(hostCharacter);
     hostApp.characters=[...hostApp.characters.filter((entry)=>entry.id!==hostCharacter.id&&entry.id!==clientCharacter.id),structuredClone(hostCharacter),structuredClone(clientCharacter)];
@@ -62,8 +70,11 @@ test("DM handout reveal is presentation-only and the current reveal is restored 
     await flush();
     const firstAck=transport.sentTo().find((entry)=>entry.peer==="peer.client"&&entry.value.type==="hello-ack");
     assert.ok(firstAck);
+    assert.equal((firstAck.value.compatibility as {status?:string}).status,"compatible");
     transport.emit(1,"host",firstAck.raw);
     await flush();
+    const reconnectHello=transport.sent().filter((entry)=>entry.value.type==="hello").at(-1);
+    assert.ok(reconnectHello,"content parity must leave a current hello that can be used for reconnect");
 
     const ledgerCursorBefore=connectedStateFor(host).ledger?.cursor;
     const asset=parseLocalImageDataUrl("data:image/webp;base64,UklGRg==","clue.webp",HANDOUT_IMAGE_MAX_BYTES);
@@ -77,9 +88,10 @@ test("DM handout reveal is presentation-only and the current reveal is restored 
     handout.dismissSessionImageHandout(client);
     assert.equal(handout.getSessionImageHandoutState(client).dismissed,true);
 
-    transport.emit(0,"peer.client",firstHello.raw);
+    const reconnectPeer="peer.client.reconnect";
+    transport.emit(0,reconnectPeer,reconnectHello.raw);
     await flush();
-    const restored=transport.sentTo().filter((entry)=>entry.peer==="peer.client"&&entry.value.type==="presentation-handout").at(-1);
+    const restored=transport.sentTo().filter((entry)=>entry.peer===reconnectPeer&&entry.value.type==="presentation-handout").at(-1);
     assert.ok(restored,"compatible reconnect hello-ack must be followed by the active Host presentation");
     transport.emit(1,"host",restored.raw);
     await flush();
@@ -101,9 +113,10 @@ test("DM handout reveal is presentation-only and the current reveal is restored 
     await flush();
     assert.equal(handout.getSessionLastRollPresentationState(client).dismissedResolutionId,"resolution.last-roll.1");
 
-    transport.emit(0,"peer.client",firstHello.raw);
+    const lastRollReconnectPeer="peer.client.reconnect-last-roll";
+    transport.emit(0,lastRollReconnectPeer,reconnectHello.raw);
     await flush();
-    const restoredDismissal=transport.sentTo().filter((entry)=>entry.peer==="peer.client"&&entry.value.type==="presentation-last-roll-dismiss").at(-1);
+    const restoredDismissal=transport.sentTo().filter((entry)=>entry.peer===lastRollReconnectPeer&&entry.value.type==="presentation-last-roll-dismiss").at(-1);
     assert.ok(restoredDismissal,"reconnecting Clients must keep the current Last Roll hidden until a new resolution arrives");
   } finally { transport.restore(); }
 });

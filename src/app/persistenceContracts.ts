@@ -4,6 +4,7 @@ import type { AbilityScores, CharacterSheet } from "./contracts";
 import type { ProgressionClassTrack } from "../domain/progression";
 import type { DruidWildShapeForm } from "../domain/druidWildShape";
 import type { CharacterCreationAuthoringSourceV1 } from "./characterCreationAuthoringSource";
+import type { SemanticPredicate } from "../domain/profileEngine";
 
 export const CHARACTER_LIBRARY_SCHEMA_ID = "simplevtt.character-library" as const;
 export const CHARACTER_LIBRARY_SCHEMA_VERSION = 1 as const;
@@ -40,6 +41,8 @@ export interface CharacterProgressionSelectionsV1 {
   mysticArcanumSources?:Record<number,string>;
   persistentFeatureOptionIds?:string[];
   persistentFeatureOptionSources?:Record<string,string>;
+  /** Stable opaque progression grant identities from installed RuleModules. */
+  installedProgressionGrantIds?:string[];
   epicBoonFeatIds?:string[];
   epicBoonFeatSources?:Record<string,string>;
   weaponMasteryIds?:string[];
@@ -66,9 +69,20 @@ export interface CharacterItemSourceReferenceV1 {
   nameEn?:string;
   kind?:"equipment"|"consumable"|"magic";
   attunementRequired?:boolean;
+  attunementPolicy?:{
+    prerequisite?:SemanticPredicate;
+    cursed?:boolean;
+    loss?:{onDeath?:boolean;maximumDistanceFeet?:number;durationSeconds?:number};
+  };
   chargeMaximum?:number;
+  spellcastingComponent?:"focus"|"component-pouch";
+  unitCostGp?:number;
+  weightPounds?:number;
+  containerCapacityPounds?:number;
+  containerId?:string;
   passiveEffects?:string[];
   grantedActionIds?:string[];
+  spellDefinitionIds?:string[];
   provenance:string[];
 }
 
@@ -76,6 +90,7 @@ export interface CharacterResourceSourceDefinitionV1 {
   id:string;
   label:string;
   max:number;
+  dieSides?:number;
   source:string;
   recovery?: {
     shortRest?:number|"all";
@@ -87,6 +102,8 @@ export interface CharacterResourceSourceDefinitionV1 {
 export interface CharacterResourceRuntimeStateV1 {
   id:string;
   current:number;
+  maximum?:number;
+  maximumAfterLongRest?:number;
   recoveryLockouts?: {
     shortRest?:number;
     longRest?:number;
@@ -121,6 +138,7 @@ export interface CharacterSourceSnapshotV1 {
     languages?:string[];
     toolProficiencies?:string[];
     creationSelections:Record<string,string[]>;
+    maxHp?:number;
     notes?:string;
   };
   creationAuthoring?:CharacterCreationAuthoringSourceV1;
@@ -138,6 +156,7 @@ export interface CharacterSourceSnapshotV1 {
 
 export interface CharacterRuntimeDurableSnapshotV1 {
   hp:number;
+  maxHp?:number;
   tempHp:number;
   lifeFlags?:CharacterDurableLifeFlagsV1;
   resources:CharacterResourceRuntimeStateV1[];
@@ -186,6 +205,7 @@ declare module "./contracts" {
     rulesProfileVersion?:string;
     sourceRevision?:number;
     runtimeRevision?:number;
+    sourceMaxHp?:number;
     durableLifeFlags?:CharacterDurableLifeFlagsV1;
   }
 }

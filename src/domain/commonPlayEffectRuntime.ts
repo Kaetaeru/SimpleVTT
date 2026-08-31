@@ -8,10 +8,17 @@ import type {
   ResolutionEvent,
   ResolutionOperation,
 } from "./resolutionTypes";
+import { compileCommonPlayPayments, parseCommonPlayPayments, type CommonPlayPayment } from "./commonPlayOperationRuntime";
+import { resolveCommonPlayFrequency, type CommonPlayFrequency } from "./commonPlayFrequencyRuntime";
+import { appendCommonPlaySemanticOutcomeEvents } from "./commonPlaySemanticEventRuntime";
+import type { ActionUseKind } from "./turnEconomy";
 
 type LiteralNumberExpression={value:number};
 type EffectTarget="actor";
-type EventDamageTarget="event.actor";
+type EventDamageTarget="event.actor"|"event.target";
+type AutomaticDamageEvent="damage.taken"|"damage.dealt";
+export type CommonPlayAutomaticEffectEvent=AutomaticDamageEvent|"attack.hit"|"attack.miss"|"save.success"|"save.failure"|"state.applied"|"effect.expired"|"rest.short.complete"|"rest.long.complete"|"resource.recharge.success"|"resource.recharge.failure";
+type AutomaticDamageFrequency=Exclude<CommonPlayFrequency,"unlimited">;
 
 interface CommonPlayEffectApplyOperation {
   kind:"effect.apply";
@@ -26,15 +33,17 @@ interface CommonPlayTriggeredDamageOperation {
   target:EventDamageTarget;
 }
 
-interface CommonPlayDamageTakenRule {
+interface CommonPlayAutomaticDamageRule {
   id:string;
-  event:"damage.taken";
-  frequency?:"once";
+  event:CommonPlayAutomaticEffectEvent;
+  frequency?:AutomaticDamageFrequency;
   operations:CommonPlayTriggeredDamageOperation[];
 }
 
 type CommonPlayEffectDuration=
   | {kind:"durable"}
+  | {kind:"maintained";policy:"concentration"}
+  | {kind:"until-timing";timing:string}
   | {
       kind:"elapsed";
       amount:LiteralNumberExpression;
@@ -42,16 +51,16 @@ type CommonPlayEffectDuration=
       decrementAt?:string;
     };
 
-interface CommonPlayEffectArtifactTemplate {
+type CommonPlayEffectLifetime=
+  | {kind:"until-event";event:AutomaticDamageEvent;onEnd:"destroy"}
+  | {kind:"until-duration";onEnd:"destroy"};
+
+export interface CommonPlayEffectArtifactTemplate {
   id:string;
   artifactKind:"effect";
   duration:CommonPlayEffectDuration;
-  rules:CommonPlayDamageTakenRule[];
-  lifetime:{
-    kind:"until-event";
-    event:"damage.taken";
-    onEnd:"destroy";
-  };
+  rules:CommonPlayAutomaticDamageRule[];
+  lifetime:CommonPlayEffectLifetime;
   instancePolicy?:"stack";
 }
 
@@ -59,6 +68,7 @@ export interface CommonPlayPersistentEffectDefinition {
   $schema?:string;
   schemaVersion:"0.2-draft";
   id:string;
+  payments?:CommonPlayPayment[];
   entryPoints:Array<{
     id:string;
     invocation:"manual"|"triggered"|"automatic"|"granted";
@@ -71,6 +81,7 @@ export interface CommonPlayEffectActivationInput {
   resolutionId:string;
   actorId:string;
   entryPointId:string;
+  actionKind?:ActionUseKind;
 }
 
 export interface CommonPlayEffectEventInput {
@@ -86,7 +97,7 @@ export interface CommonPlayEffectEventNoMatch {
 
 export type CommonPlayEffectEventResult=ResolutionCommit|CommonPlayEffectEventNoMatch;
 
-const DEFINITION_KEYS=["$schema","schemaVersion","id","entryPoints","artifactTemplates"] as const;
+const DEFINITION_KEYS=["$schema","schemaVersion","id","payments","entryPoints","artifactTemplates"] as const;
 const EFFECT_METADATA_DEFINITION="commonPlayDefinitionId";
 const EFFECT_METADATA_TEMPLATE="commonPlayTemplateId";
 
@@ -111,6 +122,17 @@ function runtimeDuration(duration:CommonPlayEffectDuration,label:string):Duratio
     assertOnlyKeys(duration,["kind"],label);
     return {kind:"permanent"};
   }
+  if (duration.kind==="maintained") {
+    assertOnlyKeys(duration,["kind","policy"],label);
+    if (duration.policy!=="concentration") throw new Error(`${label} maintained policy must be concentration`);
+    return {kind:"concentration"};
+  }
+  if (duration.kind==="until-timing") {
+    assertOnlyKeys(duration,["kind","timing"],label);
+    if (duration.timing==="rest.short.complete") return {kind:"until-rest",rest:"short"};
+    if (duration.timing==="rest.long.complete") return {kind:"until-rest",rest:"long"};
+    throw new Error(`${label} until-timing supports rest.short.complete or rest.long.complete in this runtime slice`);
+  }
   assertOnlyKeys(duration,["kind","amount","unit","decrementAt"],label);
   if (duration.decrementAt!==undefined) {
     throw new Error(`${label} decrementAt is not supported by this event-effect runtime slice`);
@@ -124,13 +146,17 @@ function runtimeDuration(duration:CommonPlayEffectDuration,label:string):Duratio
   throw new Error(`${label} unit is not supported by this event-effect runtime slice`);
 }
 
-function validateRule(rule:CommonPlayDamageTakenRule,templateId:string,ruleIndex:number) {
+function ruleFrequency(rule:CommonPlayAutomaticDamageRule):AutomaticDamageFrequency {
+  return rule.frequency??"once";
+}
+
+function validateRule(rule:CommonPlayAutomaticDamageRule,templateId:string,ruleIndex:number) {
   const label=`artifact ${templateId} rule ${ruleIndex+1}`;
   assertOnlyKeys(rule,["id","event","frequency","operations"],label);
   if (!rule.id) throw new Error(`${label} id is required`);
-  if (rule.event!=="damage.taken") throw new Error(`${label} supports only damage.taken`);
-  if (rule.frequency!==undefined&&rule.frequency!=="once") {
-    throw new Error(`${label} supports only once frequency in this runtime slice`);
+  if (!["damage.taken","damage.dealt","attack.hit","attack.miss","save.success","save.failure","state.applied","effect.expired","rest.short.complete","rest.long.complete","resource.recharge.success","resource.recharge.failure"].includes(rule.event)) throw new Error(`${label} event is unsupported in this runtime slice`);
+  if (!["once","once-per-turn","once-per-round","once-per-resolution"].includes(ruleFrequency(rule))) {
+    throw new Error(`${label} frequency is unsupported in this runtime slice`);
   }
   if (!rule.operations.length) throw new Error(`${label} requires at least one operation`);
   rule.operations.forEach((operation,index)=>{
@@ -140,8 +166,11 @@ function validateRule(rule:CommonPlayDamageTakenRule,templateId:string,ruleIndex
     const amount=literalNumber(operation.amount,`${operationLabel} amount`);
     if (!Number.isInteger(amount)||amount<0) throw new Error(`${operationLabel} amount must be a non-negative integer`);
     if (!operation.damageType) throw new Error(`${operationLabel} damageType is required`);
-    if (operation.target!=="event.actor") {
-      throw new Error(`${operationLabel} target must be event.actor in this runtime slice`);
+    if (operation.target!=="event.actor"&&operation.target!=="event.target") {
+      throw new Error(`${operationLabel} target must be event.actor or event.target in this runtime slice`);
+    }
+    if ((rule.event==="damage.taken"||rule.event==="damage.dealt")&&operation.target==="event.target") {
+      throw new Error(`${operationLabel} target must be event.actor for damage.taken/damage.dealt in this runtime slice`);
     }
   });
 }
@@ -154,13 +183,29 @@ function validateTemplate(template:CommonPlayEffectArtifactTemplate,index:number
   runtimeDuration(template.duration,`${label} duration`);
   if (!Array.isArray(template.rules)||!template.rules.length) throw new Error(`${label} requires at least one rule`);
   template.rules.forEach((rule,ruleIndex)=>validateRule(rule,template.id,ruleIndex));
-  assertOnlyKeys(template.lifetime,["kind","event","onEnd"],`${label} lifetime`);
-  if (template.lifetime.kind!=="until-event"||template.lifetime.event!=="damage.taken"||template.lifetime.onEnd!=="destroy") {
-    throw new Error(`${label} lifetime must destroy on damage.taken in this runtime slice`);
+  const lifetime=template.lifetime;
+  if(lifetime.kind==="until-event") {
+    assertOnlyKeys(lifetime,["kind","event","onEnd"],`${label} lifetime`);
+    if ((lifetime.event!=="damage.taken"&&lifetime.event!=="damage.dealt")||lifetime.onEnd!=="destroy") {
+      throw new Error(`${label} until-event lifetime must destroy on damage.taken or damage.dealt`);
+    }
+    if(template.rules.some((rule)=>rule.event!==lifetime.event||ruleFrequency(rule)!=="once")) {
+      throw new Error(`${label} until-event lifetime requires matching once-frequency rules`);
+    }
+  } else {
+    assertOnlyKeys(lifetime,["kind","onEnd"],`${label} lifetime`);
+    if(lifetime.kind!=="until-duration"||lifetime.onEnd!=="destroy") {
+      throw new Error(`${label} recurring rules require until-duration destroy lifetime`);
+    }
   }
   if (template.instancePolicy!==undefined&&template.instancePolicy!=="stack") {
     throw new Error(`${label} supports only stack instancePolicy in this runtime slice`);
   }
+}
+
+export function validateCommonPlayEffectTemplate(template:CommonPlayEffectArtifactTemplate,index=0) {
+  validateTemplate(template,index);
+  return template;
 }
 
 function validateDefinition(definition:CommonPlayPersistentEffectDefinition) {
@@ -185,28 +230,45 @@ function templateById(definition:CommonPlayPersistentEffectDefinition,id:string)
   return template;
 }
 
+export function compileCommonPlayEffectApplyOperation(
+  definitionId:string,
+  template:CommonPlayEffectArtifactTemplate,
+  input:{operationId:string;effectId:string;sourceActorId:string;targetId:string;concentrationGroupId?:string},
+):Extract<ResolutionOperation,{kind:"apply-effect"}> {
+  validateTemplate(template,0);
+  return {
+    id:input.operationId,
+    kind:"apply-effect",
+    effect:{
+      id:input.effectId,
+      sourceId:definitionId,
+      sourceActorId:input.sourceActorId,
+      targetId:input.targetId,
+      kind:"marker",
+      ...(input.concentrationGroupId?{concentrationGroupId:input.concentrationGroupId}:{}),
+      duration:runtimeDuration(template.duration,`artifact ${template.id} duration`),
+      metadata:{
+        [EFFECT_METADATA_DEFINITION]:definitionId,
+        [EFFECT_METADATA_TEMPLATE]:template.id,
+      },
+    },
+  };
+}
+
 function effectForTemplate(
   definition:CommonPlayPersistentEffectDefinition,
   template:CommonPlayEffectArtifactTemplate,
   input:CommonPlayEffectActivationInput,
   operationIndex:number,
+  concentrationGroupId?:string,
 ):Extract<ResolutionOperation,{kind:"apply-effect"}> {
-  return {
-    id:`common-play-effect-apply-${operationIndex+1}`,
-    kind:"apply-effect",
-    effect:{
-      id:`${input.resolutionId}:artifact:${operationIndex+1}:${template.id}`,
-      sourceId:definition.id,
-      sourceActorId:input.actorId,
-      targetId:input.actorId,
-      kind:"marker",
-      duration:runtimeDuration(template.duration,`artifact ${template.id} duration`),
-      metadata:{
-        [EFFECT_METADATA_DEFINITION]:definition.id,
-        [EFFECT_METADATA_TEMPLATE]:template.id,
-      },
-    },
-  };
+  return compileCommonPlayEffectApplyOperation(definition.id,template,{
+    operationId:`common-play-effect-apply-${operationIndex+1}`,
+    effectId:`${input.resolutionId}:artifact:${operationIndex+1}:${template.id}`,
+    sourceActorId:input.actorId,
+    targetId:input.actorId,
+    concentrationGroupId,
+  });
 }
 
 export function compileCommonPlayEffectActivation(
@@ -222,15 +284,28 @@ export function compileCommonPlayEffectActivation(
   if (entryPoint.invocation!=="manual") throw new Error("effect activation runtime requires a manual entry point");
   if (!entryPoint.operations.length) throw new Error("effect activation entry point requires at least one operation");
 
-  const operations=entryPoint.operations.map((operation,index)=>{
+  const activationOperations:ResolutionOperation[]=[];
+  entryPoint.operations.forEach((operation,index)=>{
     const label=`entry point ${entryPoint.id} operation ${index+1}`;
     assertOnlyKeys(operation,["kind","template","target"],label);
     if (operation.kind!=="effect.apply") throw new Error(`${label} supports only effect.apply`);
     if (operation.target!==undefined&&operation.target!=="actor") {
       throw new Error(`${label} target must be actor in this runtime slice`);
     }
-    return effectForTemplate(definition,templateById(definition,operation.template),input,index);
+    const template=templateById(definition,operation.template);
+    const concentrationGroupId=template.duration.kind==="maintained"
+      ? `${input.resolutionId}:concentration:${index+1}:${template.id}`
+      : undefined;
+    if(concentrationGroupId) activationOperations.push({
+      id:`common-play-concentration-start-${index+1}`,
+      kind:"start-concentration",
+      actorId:input.actorId,
+      groupId:concentrationGroupId,
+      sourceId:definition.id,
+    });
+    activationOperations.push(effectForTemplate(definition,template,input,index,concentrationGroupId));
   });
+  const operations:ResolutionOperation[]=[...compileCommonPlayPayments(parseCommonPlayPayments(definition.payments),input),...activationOperations];
 
   return {
     id:input.resolutionId,
@@ -248,13 +323,14 @@ export function resolveCommonPlayEffectActivation(
   input:CommonPlayEffectActivationInput,
 ):ResolutionCommit {
   try {
-    return resolvePendingResolution(profile,inputState,compileCommonPlayEffectActivation(inputState,definition,input));
+    const pending=compileCommonPlayEffectActivation(inputState,definition,input);
+    return appendCommonPlaySemanticOutcomeEvents(pending,resolvePendingResolution(profile,inputState,pending));
   } catch (error) {
     return rejected(inputState,error instanceof Error?error.message:String(error));
   }
 }
 
-function semanticDamageTaken(event:ResolutionEvent) {
+function semanticPositiveDamage(event:ResolutionEvent) {
   if (event.kind!=="damage"&&event.kind!=="compound-damage") return false;
   if (!event.targetId) throw new Error("authoritative damage event requires targetId");
   if (!event.actorId) throw new Error("authoritative damage event requires actorId");
@@ -279,10 +355,30 @@ function matchingEffects(
   );
 }
 
+function frequencyResolution(
+  state:RulesRuntimeState,
+  rule:CommonPlayAutomaticDamageRule,
+  effect:EffectInstance,
+  subjectId:string,
+  resolutionId:string,
+) {
+  return resolveCommonPlayFrequency({
+    ruleId:rule.id,
+    subjectId,
+    frequency:ruleFrequency(rule),
+    resolutionId,
+    clock:state.clock,
+    markers:effect.metadata??{},
+  });
+}
+
 function triggerOperations(
+  state:RulesRuntimeState,
   definition:CommonPlayPersistentEffectDefinition,
   effects:EffectInstance[],
   event:ResolutionEvent,
+  eventKind:AutomaticDamageEvent,
+  subjectId:string,
   actorCreatureKind:CommonPlayEffectEventInput["actorCreatureKind"],
 ):ResolutionOperation[] {
   const operations:ResolutionOperation[]=[];
@@ -291,8 +387,13 @@ function triggerOperations(
     if (typeof templateId!=="string") throw new Error(`effect ${effect.id} is missing its Common Play template binding`);
     const template=templateById(definition,templateId);
     validateTemplate(template,effectIndex);
-    template.rules.forEach((rule,ruleIndex)=>{
-      if (rule.event!=="damage.taken") return;
+    const rules=template.rules.filter((rule)=>rule.event===eventKind);
+    if(!rules.length) return;
+    let fired=false;
+    rules.forEach((rule,ruleIndex)=>{
+      const frequency=frequencyResolution(state,rule,effect,subjectId,event.resolutionId);
+      if(!frequency.eligible) return;
+      fired=true;
       rule.operations.forEach((operation,operationIndex)=>{
         const amount=literalNumber(operation.amount,`artifact ${template.id} rule ${rule.id} damage amount`);
         operations.push({
@@ -304,14 +405,76 @@ function triggerOperations(
           creatureKind:actorCreatureKind,
         });
       });
+      if(template.lifetime.kind==="until-duration"&&Object.keys(frequency.metadataPatch).length) operations.push({
+        id:`common-play-effect-${effectIndex+1}-rule-${ruleIndex+1}-frequency`,
+        kind:"update-effect",
+        effectId:effect.id,
+        metadataPatch:frequency.metadataPatch,
+      });
     });
-    operations.push({
+    if(fired&&template.lifetime.kind==="until-event") operations.push({
       id:`common-play-effect-${effectIndex+1}-remove`,
       kind:"remove-effect",
       effectId:effect.id,
     });
   });
   return operations;
+}
+
+export function appendCommonPlayDamageTakenTriggers(
+  inputState:RulesRuntimeState,
+  definitions:CommonPlayPersistentEffectDefinition[],
+  pending:PendingResolution,
+  actorCreatureKind:"character"|"monster",
+):PendingResolution {
+  const operations=[...pending.operations];
+  const handled=new Set<string>();
+  for(const [damageIndex,damage] of pending.operations.entries()) {
+    if(damage.kind!=="damage"||damage.when) continue;
+    const when={operationId:damage.id,field:"finalDamage",greaterThan:0} as const;
+    const contexts:Array<{event:AutomaticDamageEvent;subjectId:string}>=[
+      {event:"damage.taken",subjectId:damage.targetId},
+      {event:"damage.dealt",subjectId:pending.actorId},
+    ];
+    for(const context of contexts) {
+      for(const [definitionIndex,definition] of definitions.entries()) {
+        validateDefinition(definition);
+        for(const [effectIndex,effect] of matchingEffects(inputState,definition,context.subjectId).entries()) {
+          const key=`${context.event}:${effect.id}`;
+          if(handled.has(key)) continue;
+          const templateId=effect.metadata?.[EFFECT_METADATA_TEMPLATE];
+          if(typeof templateId!=="string") throw new Error(`effect ${effect.id} is missing its Common Play template binding`);
+          const template=templateById(definition,templateId);
+          validateTemplate(template,effectIndex);
+          const rules=template.rules.filter((rule)=>rule.event===context.event);
+          if(!rules.length) continue;
+          let fired=false;
+          for(const [ruleIndex,rule] of rules.entries()) {
+            const frequency=frequencyResolution(inputState,rule,effect,context.subjectId,pending.id);
+            if(!frequency.eligible) continue;
+            fired=true;
+            for(const [operationIndex,operation] of rule.operations.entries()) operations.push({
+              id:`${pending.id}:automatic:${context.event}:${definitionIndex}:${effectIndex}:${damageIndex}:${ruleIndex}:${operationIndex}`,
+              kind:"damage",targetId:pending.actorId,damageType:operation.damageType,
+              amount:literalNumber(operation.amount,`artifact ${template.id} rule ${rule.id} damage amount`),
+              creatureKind:actorCreatureKind,when,
+            });
+            if(template.lifetime.kind==="until-duration"&&Object.keys(frequency.metadataPatch).length) operations.push({
+              id:`${pending.id}:automatic:${context.event}:${definitionIndex}:${effectIndex}:${damageIndex}:${ruleIndex}:frequency`,
+              kind:"update-effect",effectId:effect.id,metadataPatch:frequency.metadataPatch,when,
+            });
+          }
+          if(!fired) continue;
+          handled.add(key);
+          if(template.lifetime.kind==="until-event") operations.push({
+            id:`${pending.id}:automatic:${context.event}:${definitionIndex}:${effectIndex}:${damageIndex}:remove`,
+            kind:"remove-effect",effectId:effect.id,when,
+          });
+        }
+      }
+    }
+  }
+  return operations.length===pending.operations.length?pending:{...pending,operations};
 }
 
 export function resolveCommonPlayEffectEvent(
@@ -322,18 +485,28 @@ export function resolveCommonPlayEffectEvent(
 ):CommonPlayEffectEventResult {
   try {
     validateDefinition(definition);
-    const fires=semanticDamageTaken(input.event);
+    const fires=semanticPositiveDamage(input.event);
     if (!fires) {
-      return {status:"no-match",state:inputState,reason:"event does not represent positive damage taken"};
+      return {status:"no-match",state:inputState,reason:"event does not represent positive damage"};
     }
-    const targetId=input.event.targetId!;
-    const effects=matchingEffects(inputState,definition,targetId);
-    if (!effects.length) return {status:"no-match",state:inputState,reason:"no active Common Play effect matches the event target"};
-    const operations=triggerOperations(definition,effects,input.event,input.actorCreatureKind);
-    if (!operations.length) return {status:"no-match",state:inputState,reason:"matching effects have no executable operations"};
+    const candidates:Array<{event:AutomaticDamageEvent;subjectId:string}>=[
+      {event:"damage.taken",subjectId:input.event.targetId!},
+      {event:"damage.dealt",subjectId:input.event.actorId!},
+    ];
+    const operations:ResolutionOperation[]=[];
+    let actorId:string|undefined;
+    for(const candidate of candidates) {
+      const effects=matchingEffects(inputState,definition,candidate.subjectId);
+      const triggered=triggerOperations(inputState,definition,effects,input.event,candidate.event,candidate.subjectId,input.actorCreatureKind);
+      if(triggered.length) {
+        actorId??=candidate.subjectId;
+        operations.push(...triggered);
+      }
+    }
+    if (!operations.length) return {status:"no-match",state:inputState,reason:"no active Common Play effect matches the damage event"};
     return resolvePendingResolution(profile,inputState,{
       id:`${input.event.id}:${definition.id}:automatic-effects`,
-      actorId:targetId,
+      actorId:actorId!,
       sourceId:definition.id,
       expectedRevision:inputState.revision,
       operations,

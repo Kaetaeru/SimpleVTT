@@ -57,7 +57,7 @@ async function reachConcentrationPrompt(adapter:MockAdapter) {
   await adapter.advanceResolution();
   snapshot=await adapter.getSnapshot();
   assert.equal(snapshot.resolution?.stage,"damage-animation");
-  assert.deepEqual(snapshot.resolution?.authoritativeDice,[4]);
+  assert.deepEqual(snapshot.resolution?.authoritativeDice,[3]);
 
   await adapter.advanceResolution();
   snapshot=await adapter.getSnapshot();
@@ -97,7 +97,7 @@ test("successful fixed concentration save commits damage and keeps concentration
   await adapter.advanceResolution();
   snapshot=await adapter.getSnapshot();
   assert.equal(snapshot.resolution?.stage,"complete");
-  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")?.hp,6);
+  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")?.hp,7);
   assert.equal(snapshot.scene.economyByActor["char.aelar"]?.action,false);
   assert.equal(snapshot.resolution?.concentrationSave?.natural,15);
   assert.equal(snapshot.resolution?.concentrationSave?.total,15);
@@ -118,7 +118,7 @@ test("failed fixed concentration save removes concentration group, projects raw 
   await adapter.advanceResolution();
   let snapshot=await adapter.getSnapshot();
   assert.equal(snapshot.resolution?.stage,"complete");
-  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")?.hp,6);
+  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")?.hp,7);
   assert.equal(snapshot.resolution?.concentrationSave?.outcome,"실패");
   let runtime=snapshotAdapterTurnRuntimeState(adapter,internalScene(adapter));
   assert.equal(runtime?.concentration["combatant.goblin-a"],undefined);

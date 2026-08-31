@@ -144,3 +144,88 @@ test("invalid recovery lockout operations reject atomically", () => {
   assert.equal(missing.status,"rejected");
   assert.equal(missing.state,state);
 });
+
+test("turn-start recovery emits the durable resource delta used by connected projection and Undo", () => {
+  const state=runtimeState();
+  state.combatants.hero.resources.push({
+    id:"feature:turn-start",
+    label:"Turn Start Feature",
+    current:0,
+    maximum:2,
+    recovery:{ turnStart:1 },
+  });
+
+  const committed=resolvePendingResolution(TEST_PROFILE,state,{
+    id:"turn-start.resource-recovery",
+    actorId:"hero",
+    sourceId:"feature:turn-start",
+    expectedRevision:0,
+    operations:[{
+      id:"turn-start.resource-recovery:begin",
+      kind:"begin-turn",
+      actorId:"hero",
+      round:1,
+    }],
+  });
+  assert.equal(committed.status,"committed");
+  if (committed.status!=="committed") return;
+
+  assert.equal(committed.state.combatants.hero.resources.find((entry)=>entry.id==="feature:turn-start")?.current,1);
+  const change=committed.events[0].stateChanges.find((entry)=>entry.kind==="resource"&&entry.resourceId==="feature:turn-start");
+  assert.ok(change&&change.kind==="resource","turn-start resource recovery must be represented in the authoritative event stream");
+  if (change?.kind==="resource") {
+    assert.equal(change.before,0);
+    assert.equal(change.after,1);
+    assert.equal(change.writeBack,"character");
+    assert.equal(change.lifetime,"character-durable");
+  }
+});
+
+test("temporary resource maximum emits authoritative capacity changes and Long Rest normalization", () => {
+  const state=stateWithFeature(1);
+  const expanded=resolvePendingResolution(TEST_PROFILE,state,{
+    id:"temporary-capacity.expand",
+    actorId:"hero",
+    sourceId:"feature:temporary-capacity",
+    expectedRevision:0,
+    operations:[{
+      id:"temporary-capacity.expand:resource",
+      kind:"gain-resource",
+      resourceId:"feature:locked",
+      amount:1,
+      maximumDelta:1,
+      temporaryCapacityUntilLongRest:true,
+    }],
+  });
+  assert.equal(expanded.status,"committed");
+  if (expanded.status!=="committed") return;
+
+  let pool=expanded.state.combatants.hero.resources.find((entry)=>entry.id==="feature:locked");
+  assert.equal(pool?.current,2);
+  assert.equal(pool?.maximum,2);
+  assert.equal(pool?.maximumAfterLongRest,1);
+  const expansion=expanded.events[0].stateChanges.find((entry)=>entry.kind==="resource"&&entry.resourceId==="feature:locked");
+  assert.ok(expansion&&expansion.kind==="resource");
+  if (expansion?.kind==="resource") {
+    assert.deepEqual(expansion.capacity,{
+      before:{maximum:1,maximumAfterLongRest:null},
+      after:{maximum:2,maximumAfterLongRest:1},
+    });
+  }
+
+  const rested=longRest(expanded.state,1,"temporary-capacity.long-rest");
+  assert.equal(rested.status,"committed");
+  if (rested.status!=="committed") return;
+  pool=rested.state.combatants.hero.resources.find((entry)=>entry.id==="feature:locked");
+  assert.equal(pool?.current,1);
+  assert.equal(pool?.maximum,1);
+  assert.equal(pool?.maximumAfterLongRest,undefined);
+  const normalization=rested.events[0].stateChanges.find((entry)=>entry.kind==="resource"&&entry.resourceId==="feature:locked");
+  assert.ok(normalization&&normalization.kind==="resource");
+  if (normalization?.kind==="resource") {
+    assert.deepEqual(normalization.capacity,{
+      before:{maximum:2,maximumAfterLongRest:1},
+      after:{maximum:1,maximumAfterLongRest:null},
+    });
+  }
+});

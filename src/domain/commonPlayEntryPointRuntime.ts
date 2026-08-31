@@ -4,7 +4,10 @@ import type { RulesRuntimeState } from "./combatState";
 import type { RulesProfileLike } from "./profileEngine";
 import { resolvePendingResolution } from "./resolution";
 import type { PendingResolution, ResolutionCommit, ResolutionOperation } from "./resolutionTypes";
-import type { TargetFacts } from "./targeting";
+import type { TargetingFactInput } from "./targeting";
+import { compileCommonPlayPayments, parseCommonPlayPayments, type CommonPlayPayment } from "./commonPlayOperationRuntime";
+import { appendCommonPlaySemanticOutcomeEvents } from "./commonPlaySemanticEventRuntime";
+import type { ActionUseKind } from "./turnEconomy";
 
 type LiteralNumberExpression = { value:number };
 type SaveOutcome = "success"|"failure";
@@ -16,6 +19,7 @@ export interface CommonPlaySaveDamageDefinition {
   $schema?:string;
   schemaVersion:"0.2-draft";
   id:string;
+  payments?:CommonPlayPayment[];
   entryPoints:Array<{
     id:string;
     invocation:"manual"|"triggered"|"automatic"|"granted";
@@ -42,7 +46,7 @@ export interface CommonPlaySaveDamageDefinition {
 }
 
 export interface CommonPlaySaveDamageTargetInput {
-  facts:TargetFacts;
+  facts:TargetingFactInput;
   creatureKind:"character"|"monster";
   save:{
     faces:number[];
@@ -56,6 +60,7 @@ export interface CommonPlaySaveDamageExecutionInput {
   entryPointId:string;
   targets:CommonPlaySaveDamageTargetInput[];
   damageFaces:number[];
+  actionKind?:ActionUseKind;
 }
 
 interface ParsedDamageFormula {
@@ -119,7 +124,7 @@ function saveOutcomeFromPredicate(predicate:SaveOutcomePredicate|undefined,label
 }
 
 function requireEntryPoint(definition:CommonPlaySaveDamageDefinition,entryPointId:string) {
-  assertOnlyKeys(definition,["$schema","schemaVersion","id","entryPoints"],"Common Play definition");
+  assertOnlyKeys(definition,["$schema","schemaVersion","id","payments","entryPoints"],"Common Play definition");
   if (definition.schemaVersion!=="0.2-draft") throw new Error(`unsupported Common Play schema version: ${definition.schemaVersion}`);
   if (!definition.id) throw new Error("Common Play definition id is required");
   const entryPoint=definition.entryPoints.find((entry)=>entry.id===entryPointId);
@@ -155,7 +160,7 @@ function requireEntryPoint(definition:CommonPlaySaveDamageDefinition,entryPointI
   if (damages.some((damage)=>damage.amount!==sharedFormula)) {
     throw new Error("save-damage runtime slice requires damage.apply operations to share one dice formula");
   }
-  return { entryPoint, damages, sharedFormula };
+  return { entryPoint, damages, sharedFormula, payments:parseCommonPlayPayments(definition.payments) };
 }
 
 function numericDamageOperand(
@@ -182,7 +187,7 @@ export function compileCommonPlaySaveDamageEntryPoint(
   input:CommonPlaySaveDamageExecutionInput,
 ):PendingResolution {
   if (!input.resolutionId||!input.actorId) throw new Error("resolutionId and actorId are required");
-  const { entryPoint, damages, sharedFormula }=requireEntryPoint(definition,input.entryPointId);
+  const { entryPoint, damages, sharedFormula, payments }=requireEntryPoint(definition,input.entryPointId);
   const dc=literalNumber(entryPoint.test.dc,"saving throw DC");
   const formula=parseDamageFormula(sharedFormula);
   const minTargets=entryPoint.targeting.min??1;
@@ -190,6 +195,7 @@ export function compileCommonPlaySaveDamageEntryPoint(
   const damageRollOperationId="common-play-shared-damage-roll";
 
   const operations:ResolutionOperation[]=[
+    ...compileCommonPlayPayments(payments,input),
     {
       id:"common-play-targets",
       kind:"targeting",
@@ -273,10 +279,10 @@ export function resolveCommonPlaySaveDamageEntryPoint(
   input:CommonPlaySaveDamageExecutionInput,
 ):ResolutionCommit {
   try {
-    return resolvePendingResolution(
-      profile,
-      inputState,
-      compileCommonPlaySaveDamageEntryPoint(profile,inputState,definition,input),
+    const pending=compileCommonPlaySaveDamageEntryPoint(profile,inputState,definition,input);
+    return appendCommonPlaySemanticOutcomeEvents(
+      pending,
+      resolvePendingResolution(profile,inputState,pending),
     );
   } catch (error) {
     return rejected(inputState,error instanceof Error?error.message:String(error));

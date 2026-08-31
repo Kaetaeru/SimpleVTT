@@ -1,5 +1,5 @@
 import type { AppSnapshot } from "./contracts";
-import type { RuntimeCover } from "./spatialRuntimeContracts";
+import type { RuntimeCover, RuntimeLight, RuntimeObscurement } from "./spatialRuntimeContracts";
 
 /**
  * Core policy: SimpleVTT does not provide or own a movement/map system.
@@ -23,6 +23,11 @@ export interface MovementSpatialUpdate {
   visible:boolean;
   cover:RuntimeCover;
   targetCanSeeAttacker:boolean;
+  /** Optional reach fact supplied by the owning spatial module. */
+  withinReach?:boolean;
+  light?:RuntimeLight;
+  obscurement?:RuntimeObscurement;
+  detected?:boolean;
 }
 
 /**

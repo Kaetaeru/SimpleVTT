@@ -1,0 +1,260 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import "../../src/app/offlineRuntimeAdapters";
+import "../../src/app/connectedSessionRuntimeAdapter";
+import "../../src/app/connectedActionRoutingAdapter";
+import "../../src/app/connectedTurnRoutingAdapter";
+import "../../src/app/installedContentRuntimeAdapter";
+import { applyConnectedClientEvents, connectedManifest } from "../../src/app/connectedSessionRuntimeAdapter";
+import { connectedStateFor } from "../../src/app/connectedSessionState";
+import { catalogQualifiedId } from "../../src/app/contentCatalogIdentity";
+import { installedCommonPlayActionId } from "../../src/app/installedCommonPlayActionReference";
+import { setInstalledContentStoreForTests } from "../../src/app/installedContentRuntimeAdapter";
+import { MemoryInstalledContentStore } from "../../src/app/memoryInstalledContentStore";
+import { MockAdapter } from "../../src/app/mockAdapter";
+import { ClientSessionReplica, HostSessionLedger, type ConnectedSessionEvent } from "../../src/app/connectedSessionProtocol";
+import { tauriSessionTransport } from "../../src/app/tauriSessionTransport";
+import { snapshotAdapterTurnRuntimeState } from "../../src/app/turnRuntimeSessionRegistry";
+
+function concentrationConfig(prefix:string) {
+  return {
+    schemaVersion:"0.2-draft",
+    id:`${prefix}.concentration`,
+    entryPoints:[{
+      id:"activate",
+      invocation:"manual",
+      operations:[{kind:"effect.apply",template:"focus",target:"actor"}],
+    }],
+    artifactTemplates:[{
+      id:"focus",
+      artifactKind:"effect",
+      duration:{kind:"maintained",policy:"concentration"},
+      rules:[{
+        id:"retaliate",
+        event:"damage.taken",
+        frequency:"once",
+        operations:[{kind:"damage.apply",amount:{value:1},damageType:"force",target:"event.actor"}],
+      }],
+      lifetime:{kind:"until-event",event:"damage.taken",onEnd:"destroy"},
+      instancePolicy:"stack",
+    }],
+  };
+}
+
+function readyPayloadConfig(prefix:string) {
+  return {
+    schemaVersion:"0.2-draft",
+    id:`${prefix}.ready-payload`,
+    entryPoints:[{
+      id:"release",
+      invocation:"manual",
+      operations:[{kind:"damage.apply",amount:{value:1},damageType:"force",target:"self"}],
+    }],
+  };
+}
+
+function readyConcentrationConfig(prefix:string) {
+  return {
+    schemaVersion:"0.2-draft",
+    id:`${prefix}.ready-concentration`,
+    entryPoints:[{
+      id:"prepare",
+      invocation:"manual",
+      operations:[{kind:"artifact.spawn",template:"ready"}],
+    }],
+    artifactTemplates:[{
+      id:"ready",
+      artifactKind:"stored-invocation",
+      duration:{kind:"durable"},
+      lifetime:{kind:"until-trigger"},
+      initialState:{
+        ownerActorId:"actor",
+        definitionId:`${prefix}.ready-payload`,
+        entryPointId:"release",
+        definitionRevision:"1",
+        binding:"live",
+        trigger:true,
+        concentrationGroupId:"held-spell",
+        onTriggerConcentration:"end",
+      },
+    }],
+  };
+}
+
+async function install(adapter:MockAdapter,prefix:string) {
+  const moduleId=`${prefix}.module`;
+  const contentId=`${prefix}.content`;
+  const config=concentrationConfig(prefix);
+  const json=JSON.stringify({
+    schemaVersion:"0.1-draft",
+    moduleId,
+    moduleVersion:"1",
+    rulesProfile:{id:"dnd.srd-5.2.1",version:"0.1-draft"},
+    defaultLocale:"en",
+    source:{document:"Unknown concentration module",version:"1",license:"CC0",srdDerived:false},
+    dependencies:[],conflicts:[],capabilities:[],
+    content:[{
+      id:contentId,
+      category:"spell",
+      presentation:{defaultLocale:"en",originalName:"Unknown Focus",locales:{en:{name:"Unknown Focus"}}},
+      mechanics:[{kind:"common-play",config}],
+    }],
+  });
+  setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
+  const preview=await adapter.previewContentImport(json);
+  assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
+  await adapter.activateContentImport();
+  await adapter.startInitiative();
+  await adapter.setCurrentActor("char.aelar");
+  return {
+    action:installedCommonPlayActionId({
+      catalogId:catalogQualifiedId(contentId,moduleId,"1"),
+      mechanicId:config.id,
+      entryPointId:"activate",
+    }),
+    mechanicId:config.id,
+  };
+}
+
+async function installReadyConcentration(adapter:MockAdapter,prefix:string) {
+  const moduleId=`${prefix}.module`;
+  const payloadContentId=`${prefix}.ready-payload-content`;
+  const captureContentId=`${prefix}.ready-capture-content`;
+  const payloadConfig=readyPayloadConfig(prefix);
+  const captureConfig=readyConcentrationConfig(prefix);
+  const json=JSON.stringify({
+    schemaVersion:"0.1-draft",
+    moduleId,
+    moduleVersion:"1",
+    rulesProfile:{id:"dnd.srd-5.2.1",version:"0.1-draft"},
+    defaultLocale:"en",
+    source:{document:"Unknown ready concentration module",version:"1",license:"CC0",srdDerived:false},
+    dependencies:[],conflicts:[],capabilities:[],
+    content:[
+      {
+        id:payloadContentId,
+        category:"spell",
+        presentation:{defaultLocale:"en",originalName:"Unknown Held Spell",locales:{en:{name:"Unknown Held Spell"}}},
+        mechanics:[{kind:"common-play",config:payloadConfig}],
+      },
+      {
+        id:captureContentId,
+        category:"option",
+        presentation:{defaultLocale:"en",originalName:"Unknown Ready Spell",locales:{en:{name:"Unknown Ready Spell"}}},
+        mechanics:[{kind:"common-play",config:captureConfig}],
+      },
+    ],
+  });
+  setInstalledContentStoreForTests(adapter,new MemoryInstalledContentStore());
+  const preview=await adapter.previewContentImport(json);
+  assert.ok(!preview.contentImport?.validation.some((entry)=>entry.severity==="blocking"),JSON.stringify(preview.contentImport?.validation));
+  await adapter.activateContentImport();
+  await adapter.startInitiative();
+  await adapter.setCurrentActor("char.aelar");
+  return {
+    action:installedCommonPlayActionId({
+      catalogId:catalogQualifiedId(captureContentId,moduleId,"1"),
+      mechanicId:captureConfig.id,
+      entryPointId:"prepare",
+    }),
+    sourceId:payloadConfig.id,
+  };
+}
+
+function concentrationShape(adapter:MockAdapter,snapshot:Awaited<ReturnType<MockAdapter["getSnapshot"]>>) {
+  const runtime=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)!;
+  const concentration=runtime.concentration["char.aelar"];
+  const effect=runtime.effects.find((candidate)=>candidate.sourceId===concentration?.sourceId);
+  return {
+    active:Boolean(concentration),
+    sourceId:concentration?.sourceId,
+    bound:Boolean(concentration&&effect?.concentrationGroupId===concentration.groupId),
+    effectCount:runtime.effects.filter((candidate)=>candidate.concentrationGroupId===concentration?.groupId).length,
+  };
+}
+
+async function captureHostBatch(operation:()=>Promise<unknown>) {
+  const wires:string[]=[];
+  const originalSend=tauriSessionTransport.send;
+  tauriSessionTransport.send=async(message)=>{wires.push(message);return 1;};
+  try { await operation(); } finally { tauriSessionTransport.send=originalSend; }
+  const batch=wires.map((wire)=>JSON.parse(wire)).find((wire)=>wire.type==="event-batch") as {events:ConnectedSessionEvent[]}|undefined;
+  assert.ok(batch,JSON.stringify(wires));
+  return batch;
+}
+
+test("unknown installed maintained concentration converges through Host replay, Undo, and fresh reconnect",async()=>{
+  const prefix="unknown-family-o",sessionId="session.family-o-concentration";
+  const host=new MockAdapter();
+  const {action,mechanicId}=await install(host,prefix);
+  const hostConnected=connectedStateFor(host);
+  hostConnected.mode="host";
+  hostConnected.sessionId=sessionId;
+  hostConnected.ledger=new HostSessionLedger(sessionId,connectedManifest(host));
+
+  const activationBatch=await captureHostBatch(()=>host.resolveAction(action,["char.aelar"]));
+  let hostSnapshot=await host.getSnapshot();
+  assert.deepEqual(concentrationShape(host,hostSnapshot),{active:true,sourceId:mechanicId,bound:true,effectCount:1});
+
+  const client=new MockAdapter();
+  await install(client,prefix);
+  const clientConnected=connectedStateFor(client);
+  clientConnected.mode="client";
+  clientConnected.sessionId=sessionId;
+  clientConnected.replica=new ClientSessionReplica(sessionId);
+  assert.equal((await applyConnectedClientEvents(client,activationBatch.events)).status,"applied");
+  assert.equal((await applyConnectedClientEvents(client,activationBatch.events)).status,"duplicate");
+  let clientSnapshot=await client.getSnapshot();
+  assert.deepEqual(concentrationShape(client,clientSnapshot),concentrationShape(host,hostSnapshot));
+
+  const undoBatch=await captureHostBatch(()=>host.undoLastResolution());
+  assert.equal((await applyConnectedClientEvents(client,undoBatch.events)).status,"applied");
+  hostSnapshot=await host.getSnapshot();
+  clientSnapshot=await client.getSnapshot();
+  assert.equal(concentrationShape(host,hostSnapshot).active,false);
+  assert.deepEqual(concentrationShape(client,clientSnapshot),concentrationShape(host,hostSnapshot));
+
+  const reconnect=new MockAdapter();
+  await install(reconnect,prefix);
+  const reconnectConnected=connectedStateFor(reconnect);
+  reconnectConnected.mode="client";
+  reconnectConnected.sessionId=sessionId;
+  reconnectConnected.replica=new ClientSessionReplica(sessionId);
+  assert.equal((await applyConnectedClientEvents(reconnect,hostConnected.ledger!.eventsAfter(0))).status,"applied");
+  const reconnectSnapshot=await reconnect.getSnapshot();
+  assert.deepEqual(concentrationShape(reconnect,reconnectSnapshot),concentrationShape(host,hostSnapshot));
+});
+
+test("unknown installed readied spell starts held concentration through the generic stored-invocation transaction",async()=>{
+  const run=async(prefix:string)=>{
+    const adapter=new MockAdapter();
+    const {action,sourceId}=await installReadyConcentration(adapter,prefix);
+    await adapter.resolveAction(action,["char.aelar"]);
+    let snapshot=await adapter.getSnapshot();
+    assert.equal(snapshot.resolution?.stage,"complete");
+    let runtime=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)!;
+    assert.equal(runtime.concentration["char.aelar"]?.groupId,"held-spell");
+    assert.equal(runtime.concentration["char.aelar"]?.sourceId,sourceId);
+    assert.equal(runtime.artifacts?.filter((artifact)=>artifact.artifactKind==="stored-invocation").length,1);
+
+    await adapter.undoLastResolution();
+    snapshot=await adapter.getSnapshot();
+    runtime=snapshotAdapterTurnRuntimeState(adapter,snapshot.scene)!;
+    assert.equal(runtime.concentration["char.aelar"],undefined);
+    assert.equal(runtime.artifacts?.some((artifact)=>artifact.artifactKind==="stored-invocation"),false);
+    return {started:true,undoRestored:true};
+  };
+
+  assert.deepEqual(await run("unknown-family-o-ready"),await run("completely-renamed-family-o-ready"));
+});
+
+test("renaming unknown installed concentration identities preserves production semantics",async()=>{
+  const run=async(prefix:string)=>{
+    const adapter=new MockAdapter();
+    const {action}=await install(adapter,prefix);
+    await adapter.resolveAction(action,["char.aelar"]);
+    const shape=concentrationShape(adapter,await adapter.getSnapshot());
+    return {active:shape.active,bound:shape.bound,effectCount:shape.effectCount};
+  };
+  assert.deepEqual(await run("external-family-o-a"),await run("completely-renamed-family-o-b"));
+});

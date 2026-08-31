@@ -1,0 +1,30 @@
+{
+  "$schema": "../../../schemas/common-play-contract.schema.json",
+  "schemaVersion": "0.2-draft",
+  "id": "external.unknown.generic-hp-action",
+  "entryPoints": [
+    {
+      "id": "harm",
+      "invocation": "manual",
+      "operations": [
+        {
+          "kind": "damage.apply",
+          "amount": "1d6+2",
+          "damageType": "force",
+          "target": "target"
+        }
+      ]
+    },
+    {
+      "id": "mend",
+      "invocation": "manual",
+      "operations": [
+        {
+          "kind": "healing.apply",
+          "amount": { "value": 5 },
+          "target": "self"
+        }
+      ]
+    }
+  ]
+}

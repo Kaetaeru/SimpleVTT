@@ -1,3 +1,4 @@
+import type { CommonPlayDefinitionIR } from "../domain/commonPlayDefinitionRuntime";
 import type { CatalogEntry } from "./contracts";
 
 export const INSTALLED_CONTENT_SCHEMA_ID = "simplevtt.installed-content" as const;
@@ -28,6 +29,33 @@ export interface InstalledContentRelationshipV1 {
   target:string;
   targetVersion?:string;
   extensionPoint?:string;
+}
+
+export interface InstalledCommonPlayMechanicV1 {
+  kind:"common-play";
+  config:CommonPlayDefinitionIR;
+}
+
+export interface InstalledProgressionContributionV1 {
+  track:string;
+  threshold:number;
+  grants:string[];
+  choices?:InstalledProgressionChoiceV1[];
+}
+
+export interface InstalledProgressionChoiceV1 {
+  id:string;
+  label:string;
+  description?:string;
+  count:number;
+  required:boolean;
+  options:Array<{
+    id:string;
+    label:string;
+    description?:string;
+    grants:string[];
+    replaces?:string[];
+  }>;
 }
 
 export interface InstalledCampaignCalendarProfileV1 {
@@ -73,6 +101,10 @@ export interface InstalledCatalogEntryV1 {
   semanticRelationships?:InstalledContentRelationshipV1[];
   extensionPoints?:InstalledModuleExtensionPointV1[];
   module?:InstalledModuleManifestV1;
+  /** Validated, data-only Common Play executable definitions. */
+  mechanics?:InstalledCommonPlayMechanicV1[];
+  /** Generic grants activated when the named progression track reaches its threshold. */
+  progressionContributions?:InstalledProgressionContributionV1[];
   /** Data-only optional Campaign capability profile. Never executable code. */
   campaignProvider?:InstalledCampaignProviderProfileV1;
 }
@@ -102,6 +134,10 @@ declare module "./contracts" {
     contentId?:string;
     /** Stable module/source identity; distinct from display source. */
     sourceId?:string;
+    /** Validated, data-only Common Play executable definitions carried by built-in or installed content. */
+    mechanics?:InstalledCommonPlayMechanicV1[];
+    /** Validated, data-only progression grants projected by the production level-up runtime. */
+    progressionContributions?:InstalledProgressionContributionV1[];
     /** Read-only data-only Campaign provider projection from installed content. */
     campaignProvider?:InstalledCampaignProviderProfileV1;
   }

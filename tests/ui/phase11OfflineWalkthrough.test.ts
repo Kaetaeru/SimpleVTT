@@ -188,7 +188,7 @@ test("production offline fresh Character spends Initiative Action on its derived
 
   assert.equal(snapshot.resolution?.stage,"complete");
   assert.doesNotMatch(snapshot.resolution?.finalOutcome ?? "",/적용 거부|missing pairwise spatial runtime fact/i);
-  assert.ok(snapshot.resolution?.provenance.some((line)=>line.includes(`runtime:spatial:${characterId}->${target.id}:unconstrained:no-authoritative-module-fact`)),"targeting provenance must identify the live Character pair and optional-spatial fallback");
+  assert.ok(snapshot.resolution?.provenance.some((line)=>line.includes(`runtime:manual-targeting:${characterId}->${target.id}:unconstrained`)),"targeting provenance must identify the live Character pair and explicit mapless targeting authority");
   assert.equal(snapshot.resolution?.provenance.some((line)=>line.includes(`runtime:spatial:${characterId}->${target.id}:distance:`)),false,"default play must not fabricate authoritative distance provenance when no spatial module is installed");
   assert.equal(snapshot.scene.economyByActor[characterId]?.action,false,"committed Initiative attack must spend the live actor Action");
   assert.ok(snapshot.activity.some((entry) => entry.id === resolutionId));

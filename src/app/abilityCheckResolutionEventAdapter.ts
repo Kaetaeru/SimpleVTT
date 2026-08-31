@@ -1,5 +1,6 @@
 import type { ActionVm, AppSnapshot, ResolutionView } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
+import { consumeAdapterInterruptEvents } from "./phase09RealTurnRuntimeAdapter";
 import { resolveOpenAbilityCheckResolutionEvent } from "./realResolutionService";
 import { recordRuntimeResolutionEvents } from "./runtimeResolutionEventHistory";
 
@@ -24,10 +25,9 @@ MockAdapter.prototype.advanceResolution=async function advanceAbilityCheckWithCa
     resolutionId:resolution.id,
     action,
     diceFaces:[...resolution.authoritativeDice],
-    modifierContributions:[{
-      source:`action:${action.id}:check-bonus`,
-      value:action.checkBonus ?? 0,
-    }],
+    modifierContributions:resolution.rollModifierContributions?.length
+      ? resolution.rollModifierContributions.map((entry)=>({...entry}))
+      : [{source:`action:${action.id}:check-bonus`,value:action.checkBonus ?? 0}],
     rollStateContributions:helped
       ? [{ source:"action:standard.help",state:"advantage" }]
       : undefined,
@@ -35,7 +35,8 @@ MockAdapter.prototype.advanceResolution=async function advanceAbilityCheckWithCa
   });
   const completed=await previousAdvanceResolution.call(this);
   if (completed.resolution?.id===resolution.id && (completed.resolution.stage==="complete"||completed.resolution.stage==="interrupt")) {
-    recordRuntimeResolutionEvents(this,resolution.id,[event]);
+    const interruptEvents=consumeAdapterInterruptEvents(this,resolution.id);
+    recordRuntimeResolutionEvents(this,resolution.id,[...interruptEvents,event]);
   }
   return completed;
 };

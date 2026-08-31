@@ -4,6 +4,7 @@ import type { ProgressionClassTrack, ProgressionPlan } from "../domain/progressi
 
 declare module "./contracts" {
   interface CharacterResourceVm {
+    dieSides?:number;
     recovery?: {
       shortRest?: number | "all";
       longRest?: number | "all";
@@ -13,6 +14,8 @@ declare module "./contracts" {
       shortRest?: number;
       longRest?: number;
     };
+    sourceMaximum?: number;
+    maximumAfterLongRest?: number;
   }
 
   interface CharacterSheet {
@@ -37,6 +40,8 @@ declare module "./contracts" {
     mysticArcanumSources?: Record<number, string>;
     persistentFeatureOptionIds?: string[];
     persistentFeatureOptionSources?: Record<string, string>;
+    /** Stable opaque grant identities contributed by installed RuleModules. */
+    installedProgressionGrantIds?: string[];
     epicBoonFeatIds?:string[];
     epicBoonFeatSources?:Record<string,string>;
     weaponMasteryIds?:string[];

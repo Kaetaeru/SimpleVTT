@@ -9,6 +9,8 @@ import type { InterruptView } from "./contracts";
 import type { ConnectedInterruptResponse } from "./connectedInterruptResponsePort";
 import type { ConcentrationSaveVm } from "./concentrationSaveRuntimeContracts";
 import type { ConnectedConcentrationResponse } from "./connectedConcentrationResponsePort";
+import type { CommonPlayAuthorityFactRequest, CommonPlayAuthorityFactResponse } from "../domain/commonPlaySpatialFactRuntime";
+import type { CommonPlaySimultaneousOrderingRequest, CommonPlaySimultaneousOrderingResponse } from "../domain/commonPlaySimultaneousOrderingRuntime";
 import { isConnectedResolutionPresentation, type ConnectedResolutionPresentationV1 } from "./connectedResolutionPresentation";
 import {
   validateConnectedLongRestWireMessage,
@@ -41,6 +43,10 @@ export type ConnectedWireMessage =
   | { type:"resolution-interrupt-response"; response:ConnectedInterruptResponse }
   | { type:"resolution-concentration-prompt"; sessionId:string; resolutionId:string; presentationSequence:number; save:ConcentrationSaveVm }
   | { type:"resolution-concentration-response"; response:ConnectedConcentrationResponse }
+  | { type:"common-play-fact-request"; sessionId:string; responderId:string; request:CommonPlayAuthorityFactRequest }
+  | { type:"common-play-fact-response"; sessionId:string; response:CommonPlayAuthorityFactResponse }
+  | { type:"turn-simultaneous-ordering-prompt"; sessionId:string; request:CommonPlaySimultaneousOrderingRequest }
+  | { type:"turn-simultaneous-ordering-response"; sessionId:string; response:CommonPlaySimultaneousOrderingResponse }
   | { type:"session-ended"; sessionId:string; reason:string }
   | { type:"error"; code:string; message:string; hostCursor?:number }
   | ConnectedLongRestWireMessage;
@@ -54,6 +60,16 @@ const isRecord=(value:unknown):value is JsonRecord=>typeof value==="object"&&val
 const isString=(value:unknown):value is string=>typeof value==="string"&&value.length>0;
 const isCursor=(value:unknown):value is number=>Number.isInteger(value)&&Number(value)>=0;
 const isStringArray=(value:unknown):value is string[]=>Array.isArray(value)&&value.every((entry)=>typeof entry==="string");
+
+function isSimultaneousOrderingRequest(value:unknown):value is CommonPlaySimultaneousOrderingRequest {
+  if(!isRecord(value)||!isString(value.id)||!isCursor(value.revision)||!isString(value.timing)||!isRecord(value.authority)||!Array.isArray(value.candidates)) return false;
+  if(!["actor-controller","dm"].includes(String(value.authority.kind))||!isString(value.authority.responderId)) return false;
+  return value.candidates.length>1&&value.candidates.every((candidate)=>isRecord(candidate)&&isString(candidate.id));
+}
+
+function isSimultaneousOrderingResponse(value:unknown):value is CommonPlaySimultaneousOrderingResponse {
+  return isRecord(value)&&isString(value.decisionId)&&isCursor(value.revision)&&isString(value.responderId)&&isStringArray(value.orderedCandidateIds);
+}
 
 function isProjectionEnvelope(value:unknown):value is CharacterSessionProjectionV1 {
   if (!isRecord(value)) return false;
@@ -137,6 +153,19 @@ function isRecoveryLockoutChange(value:unknown) {
     &&isRecoveryLockouts(value.after);
 }
 
+function isRuntimeCombatant(value:unknown) {
+  if(!isRecord(value)||!isString(value.id)||typeof value.baseSpeed!=="number"||!isRecord(value.life)||!isRecord(value.economy)) return false;
+  const hp=isRecord(value.life.hp)?value.life.hp:undefined;
+  const saves=isRecord(value.life.deathSaves)?value.life.deathSaves:undefined;
+  return Boolean(hp&&saves
+    &&typeof hp.current==="number"&&typeof hp.maximum==="number"&&typeof hp.temporary==="number"
+    &&typeof saves.successes==="number"&&typeof saves.failures==="number"
+    &&typeof value.life.stable==="boolean"&&typeof value.life.unconscious==="boolean"&&typeof value.life.dead==="boolean"
+    &&typeof value.economy.action==="boolean"&&typeof value.economy.bonusAction==="boolean"&&typeof value.economy.reaction==="boolean"
+    &&typeof value.economy.movement==="number"&&typeof value.economy.movementMaximum==="number"
+    &&Array.isArray(value.resources)&&Array.isArray(value.hitDice));
+}
+
 function isCorrectionChange(value:unknown) {
   if (!isRecord(value)||!isString(value.kind)||!isString(value.targetId)) return false;
   if (value.kind==="hp") return typeof value.before==="number"&&typeof value.after==="number";
@@ -175,9 +204,17 @@ function isRuntimeStateChange(value:unknown) {
     &&typeof value.before==="number"
     &&typeof value.after==="number"
     &&(value.recoveryLockouts===undefined||isRecoveryLockoutChange(value.recoveryLockouts));
+  if(value.kind==="inventory-item") return isString(value.itemId)&&["added","updated","removed"].includes(String(value.operation))
+    &&(value.before===undefined||isRecord(value.before)&&isString(value.before.id)&&isString(value.before.definitionId))
+    &&(value.after===undefined||isRecord(value.after)&&isString(value.after.id)&&isString(value.after.definitionId));
   if (value.kind==="life") return ["stable","unconscious","dead"].includes(String(value.field))&&typeof value.before==="boolean"&&typeof value.after==="boolean";
   if (value.kind==="death-save") return ["successes","failures"].includes(String(value.field))&&typeof value.before==="number"&&typeof value.after==="number";
   if (value.kind==="effect") return isString(value.effectId)&&["added","updated","removed"].includes(String(value.operation));
+  if (value.kind==="artifact") return isString(value.artifactId)&&["added","updated","removed"].includes(String(value.operation));
+  if (value.kind==="combatant") return ["added","updated","removed"].includes(String(value.operation))
+    &&(value.before===undefined||isRuntimeCombatant(value.before))
+    &&(value.after===undefined||isRuntimeCombatant(value.after));
+  if (value.kind==="zone-membership") return isString(value.artifactId)&&["added","updated","removed"].includes(String(value.operation));
   if (value.kind==="concentration"||value.kind==="spellcasting-turn") return true;
   return false;
 }
@@ -215,8 +252,8 @@ function isConnectedEvent(value:unknown):value is ConnectedSessionEvent {
   } else if (payload.kind==="ready-action") {
     if (!isString(payload.actorId)||!isEconomy(payload.economy)||!['armed','cleared'].includes(String(payload.transition))) return false;
     const config=payload.configuration;
-    if (payload.transition==="armed"&&(!isRecord(config)||!isString(config.actorId)||!isString(config.actionId)||!isString(config.trigger))) return false;
-    if (config!==undefined&&(!isRecord(config)||!isString(config.actorId)||!isString(config.actionId)||!isString(config.trigger))) return false;
+    if (payload.transition==="armed"&&(!isRecord(config)||!isString(config.actorId)||!isString(config.actionId)||!isString(config.trigger)||(config.movement!==undefined&&typeof config.movement!=="boolean"))) return false;
+    if (config!==undefined&&(!isRecord(config)||!isString(config.actorId)||!isString(config.actionId)||!isString(config.trigger)||(config.movement!==undefined&&typeof config.movement!=="boolean"))) return false;
   } else return false;
   return (value.requestId===undefined||isString(value.requestId))&&(value.actorId===undefined||isString(value.actorId));
 }
@@ -224,7 +261,7 @@ function isConnectedEvent(value:unknown):value is ConnectedSessionEvent {
 function isActionRequest(value:unknown):value is ConnectedActionRequest {
   if (!isRecord(value)) return false;
   const ready=value.readyConfiguration;
-  const validReady=ready===undefined||(isRecord(ready)&&isString(ready.actorId)&&isString(ready.actionId)&&isString(ready.trigger));
+  const validReady=ready===undefined||(isRecord(ready)&&isString(ready.actorId)&&isString(ready.actionId)&&isString(ready.trigger)&&(ready.movement===undefined||typeof ready.movement==="boolean"));
   const manual=value.manualMovementReaction;
   const validManual=manual===undefined||(isRecord(manual)
     &&["opportunity-attack","other-reaction-attack"].includes(String(manual.kind))
@@ -238,9 +275,37 @@ function isActionRequest(value:unknown):value is ConnectedActionRequest {
 }
 
 function isInterrupt(value:unknown):value is InterruptView {
+  if(!isRecord(value)) return false;
+  const choice=value.choice;
+  const validChoice=choice===undefined||(isRecord(choice)&&isCursor(choice.min)&&isCursor(choice.max)&&Number(choice.max)>=Number(choice.min)
+    &&Array.isArray(choice.options)&&choice.options.every((option)=>isRecord(option)&&isString(option.id)&&isString(option.name)));
   return isRecord(value)&&isString(value.id)&&isString(value.responderId)&&isString(value.responderName)
-    &&isString(value.trigger)&&isString(value.optionName)&&isString(value.cost)&&isString(value.effect)&&isString(value.source)
-    &&Object.keys(value).every((key)=>["id","responderId","responderName","trigger","optionName","cost","effect","source"].includes(key));
+    &&isString(value.trigger)&&isString(value.optionName)&&isString(value.cost)&&isString(value.effect)&&isString(value.source)&&validChoice
+    &&Object.keys(value).every((key)=>["id","responderId","responderName","trigger","optionName","cost","effect","source","choice"].includes(key));
+}
+
+function isCommonPlayFactRequest(value:unknown):value is CommonPlayAuthorityFactRequest {
+  if(!isRecord(value))return false;
+  return isString(value.id)
+    &&isString(value.queryId)
+    &&isString(value.fact)
+    &&(value.subject===undefined||isString(value.subject))
+    &&["host","actor-owner","target-owner","dm"].includes(String(value.authority))
+    &&["public","actor","dm","actor-and-dm","authority-only"].includes(String(value.visibility))
+    &&["boolean","number","text","targets"].includes(String(value.inputType))
+    &&["boolean","number","string","targets","destination"].includes(String(value.valueType))
+    &&isCursor(value.expectedRevision)
+    &&isString(value.resolutionId)
+    &&isString(value.idempotencyKey);
+}
+
+function isCommonPlayFactResponse(value:unknown):value is CommonPlayAuthorityFactResponse {
+  if(!isRecord(value)||!isString(value.requestId)||!isString(value.idempotencyKey)||!isCursor(value.expectedRevision)||!isString(value.responderId))return false;
+  const answer=value.value;
+  return typeof answer==="boolean"
+    ||(typeof answer==="number"&&Number.isFinite(answer))
+    ||isString(answer)
+    ||(Array.isArray(answer)&&answer.every((entry)=>isString(entry)));
 }
 
 function validateMessage(value:unknown):ConnectedWireMessage|string {
@@ -280,7 +345,7 @@ function validateMessage(value:unknown):ConnectedWireMessage|string {
   }
   if(value.type==="resolution-interrupt-response"){
     const response=value.response;
-    if(!isRecord(response)||!isString(response.sessionId)||!isString(response.resolutionId)||!isString(response.promptId)||typeof response.accept!=="boolean") return "invalid resolution-interrupt-response message";
+    if(!isRecord(response)||!isString(response.sessionId)||!isString(response.resolutionId)||!isString(response.promptId)||typeof response.accept!=="boolean"||(response.selectedIds!==undefined&&!isStringArray(response.selectedIds))) return "invalid resolution-interrupt-response message";
     return value as ConnectedWireMessage;
   }
   if(value.type==="resolution-concentration-prompt"){
@@ -291,6 +356,22 @@ function validateMessage(value:unknown):ConnectedWireMessage|string {
   if(value.type==="resolution-concentration-response"){
     const response=value.response;
     if(!isRecord(response)||!isString(response.sessionId)||!isString(response.resolutionId)||!Number.isInteger(response.face)||Number(response.face)<1||Number(response.face)>20)return "invalid resolution-concentration-response message";
+    return value as ConnectedWireMessage;
+  }
+  if(value.type==="common-play-fact-request"){
+    if(!isString(value.sessionId)||!isString(value.responderId)||!isCommonPlayFactRequest(value.request))return "invalid Common Play fact request message";
+    return value as ConnectedWireMessage;
+  }
+  if(value.type==="common-play-fact-response"){
+    if(!isString(value.sessionId)||!isCommonPlayFactResponse(value.response))return "invalid Common Play fact response message";
+    return value as ConnectedWireMessage;
+  }
+  if(value.type==="turn-simultaneous-ordering-prompt"){
+    if(!isString(value.sessionId)||!isSimultaneousOrderingRequest(value.request))return "invalid turn simultaneous-ordering prompt message";
+    return value as ConnectedWireMessage;
+  }
+  if(value.type==="turn-simultaneous-ordering-response"){
+    if(!isString(value.sessionId)||!isSimultaneousOrderingResponse(value.response))return "invalid turn simultaneous-ordering response message";
     return value as ConnectedWireMessage;
   }
   if (value.type==="session-ended") {
