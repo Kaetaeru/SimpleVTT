@@ -19,7 +19,7 @@ V1은 아래 숫자가 모두 충족될 때만 완료다.
 | Workstream | 10개 | `W0`~`W9` |
 | Release Gate | 72개 | 모든 Gate가 `PASS` |
 | 완료 점수 | 100점 | 가중 점수 100.0/100.0 |
-| Multiplayer scenario | 120개 | `MP-A01`~`MP-J08`의 모든 적용 가능한 AUTO/WIN Gate 통과 |
+| Multiplayer scenario | 120개 | `A10 + B8 + C30 + D13 + E14 + F10 + G9 + H12 + I6 + J8 = 120`; 모든 적용 가능한 AUTO/WIN Gate 통과 |
 | 기존 V1 release gate | 18개 | `V1-00`, `01`, `10`~`13`, `20`~`21`, `30`~`32`, `40`~`42`, `50`, `60`, `70`, `80` |
 | Multiplayer work issue | 13개 필요 | 현재 12개 존재; `MP-13` issue를 추가한 뒤 `MP-01`~`MP-13` 모두 종료 |
 
@@ -82,11 +82,11 @@ V1은 아래 숫자가 모두 충족될 때만 완료다.
 | `W2` | SRD 5.2.1 product lifecycle | 8 | 15점 | 4 | 4 | 0 |
 | `W3` | Complete local play | 8 | 10점 | 7 | 1 | 0 |
 | `W4` | Campaign·DM 준비 | 8 | 10점 | 7 | 1 | 0 |
-| `W5` | Multiplayer authority·presentation | 10 | 15점 | 9 | 0 | 1 |
+| `W5` | Multiplayer authority·presentation | 10 | 15점 | 10 | 0 | 0 |
 | `W6` | Inventory·Stash·Rest·DM tools | 8 | 10점 | 7 | 1 | 0 |
 | `W7` | Recovery·privacy·accessibility | 8 | 10점 | 7 | 1 | 0 |
 | `W8` | Automated H+P1+P2 acceptance | 4 | 5점 | 1 | 1 | 2 |
-| `W9` | Windows release·next-session closure | 4 | 10점 | 1 | 0 | 3 |
+| `W9` | Windows release·next-session closure | 4 | 10점 | 0 | 0 | 4 |
 | **합계** |  | **72** | **100점** | **47** | **14** | **11** |
 
 ## 3. 72개 Release Gate
@@ -109,13 +109,13 @@ V1은 아래 숫자가 모두 충족될 때만 완료다.
 | ID | Gate | 초기 분류 | 연결 |
 | --- | --- | --- | --- |
 | `W1-01` | First run에서 Character Library와 생성 진입점에 도달한다. | R | V1-20 |
-| `W1-02` | Guided Create가 Species·Background·Class·Ability·proficiency·equipment·spell choice를 처리한다. | R | V1-20 |
+| `W1-02` | Guided Create가 Species·Background·Class·Ability·proficiency·equipment와 해당되는 spell choice를 처리한다. | R | V1-20 |
 | `W1-03` | Quick Create가 Guided와 동일 draft를 공유하고 전환 시 선택을 잃지 않는다. | R | V1-20 |
 | `W1-04` | Review·validation·commit이 불완전/불법 Character를 저장하지 않는다. | R | V1-20 |
 | `W1-05` | 실제 Tauri에서 생성 → 저장 → 앱 종료 → 재실행 → 동일 Character 로드를 증명한다. | V | J1, V1-20 |
 | `W1-06` | 실제 UI에서 import·duplicate·delete와 ID/provenance 분리를 증명한다. | V | V1-20 |
 | `W1-07` | Full Sheet에서 HP·AC·resource·inventory·spells·features·actions가 저장본과 일치한다. | V | V1-20, V1-21 |
-| `W1-08` | 실제 Tauri에서 level-up → 새 choice → commit → 새 action → restart 유지까지 증명한다. | V | V1-21, MP-E05 |
+| `W1-08` | 실제 Tauri에서 대표 level-up → 새 choice → commit → 새 feature/action → restart 유지까지 증명한다. | V | V1-21, MP-E05 |
 
 **W1 Exit:** 새 사용자가 외부 fixture 없이 플레이 가능한 Character를 만들고 다시 열 수 있다.
 
@@ -127,10 +127,10 @@ V1은 아래 숫자가 모두 충족될 때만 완료다.
 | `W2-02` | weapon·armor·equipment·item catalog와 item capability를 고정한다. | R | SRD profile |
 | `W2-03` | 339 spell의 presentation과 authoritative executable definition을 고정한다. | R | SRD profile |
 | `W2-04` | class feature·feat·progression과 36 Common Play mechanism family를 기존 generic path로 고정한다. | R | C9 Gate N |
-| `W2-05` | 모든 shipped content가 Character creation에서 합법적으로 획득 가능한지 검사한다. | V | V1-20 |
+| `W2-05` | 모든 Level-1 eligible shipped content가 Character creation에서 합법적으로 획득 가능한지 검사한다. | V | V1-20 |
 | `W2-06` | 모든 progression content가 올바른 level/choice schedule에서 획득 가능한지 검사한다. | V | V1-21 |
 | `W2-07` | 획득 content가 Sheet·Action·resource recovery·persistence로 연결되는지 검사한다. | V | V1-21 |
-| `W2-08` | 대표 archetype lifecycle matrix를 Tauri에서 검증한다: martial, prepared caster, spontaneous caster, pact caster, shapeshifter, healer. | V | J1, J3 |
+| `W2-08` | 대표 archetype lifecycle matrix를 Tauri에서 검증한다: martial, prepared caster, spontaneous caster, pact caster, shapeshifter, healer. | V | Journey J1, Journey J3 |
 
 **W2 Exit:** “데이터가 존재한다”가 아니라 “획득·표시·사용·회복·저장된다”가 증명된다.
 
@@ -145,7 +145,7 @@ V1은 아래 숫자가 모두 충족될 때만 완료다.
 | `W3-05` | reaction·interrupt·concentration·Ready lifecycle이 production path를 사용한다. | R | V1-21, MP-D |
 | `W3-06` | duration·condition·Short Rest·Long Rest·resource recovery가 저장 상태와 일치한다. | R | V1-21 |
 | `W3-07` | correction/Undo가 역사 삭제가 아닌 compensating event로 동작한다. | R | V1-21 |
-| `W3-08` | 실제 Tauri에서 complete local session → rest → 종료 → restart를 한 번에 통과한다. | V | J3, J6 |
+| `W3-08` | 실제 Tauri에서 complete local session → rest → 종료 → restart를 한 번에 통과한다. | V | Journey J3, Journey J6 |
 
 **W3 Exit:** 네트워크 없이도 한 세션을 시작부터 종료·재실행까지 플레이할 수 있다.
 
@@ -160,7 +160,7 @@ V1은 아래 숫자가 모두 충족될 때만 완료다.
 | `W4-05` | Party Stash와 shared/approval/DM-managed policy를 고정한다. | R | V1-13, MP-E |
 | `W4-06` | DM Library organization·import·private notes·provenance를 고정한다. | R | V1-13, MP-G |
 | `W4-07` | NPC/PC preset/custom Actor materialization·handout·spatial fallback을 고정한다. | R | V1-40, MP-G |
-| `W4-08` | 실제 Tauri에서 Campaign 준비 → Session 시작/종료 → Campaign reopen을 증명한다. | V | J2, J5, J6 |
+| `W4-08` | 실제 Tauri에서 Campaign 준비 → Session 시작/종료 → Campaign reopen을 증명한다. | V | Journey J2, Journey J5, Journey J6 |
 
 **W4 Exit:** DM이 외부 debug fixture 없이 다음 세션을 준비하고 다시 열 수 있다.
 
@@ -177,9 +177,9 @@ V1은 아래 숫자가 모두 충족될 때만 완료다.
 | `W5-07` | H/P1/P2 attack·check·save·spell·item·feature action matrix를 고정한다. | R | MP-03, MP-C01~C24 |
 | `W5-08` | Initiative·reaction·concentration·Ready·correction fan-out을 고정한다. | R | MP-04, MP-D |
 | `W5-09` | J01~J08의 UI-facing Actor·action·inventory·Activity parity 자동 증거를 고정한다. | R | MP-13, MP-J |
-| `W5-10` | 실제 Tauri 3창에서 같은 action·dice·result·VFX·Activity가 렌더링되는 종합 증거를 만든다. | B | MP-03, MP-12, MP-13 |
+| `W5-10` | MP-01~MP-04의 기존 production-adapter 3-peer action·presentation·turn·Undo 자동 증거를 exact HEAD의 단일 scenario map으로 고정한다. | R | MP-01~MP-04 |
 
-**W5 Exit:** 단순 state convergence가 아니라 허용된 모든 화면에서 같은 공개 결과가 보인다.
+**W5 Exit:** Host authority와 shared presentation의 자동 증거가 한 경로로 고정된다. 실제 3창 rendered parity는 W9에서만 최종 수락한다.
 
 ### W6 — Inventory, Party Stash, rest, and DM live tools — 8 Gate / 10점
 
@@ -192,7 +192,7 @@ V1은 아래 숫자가 모두 충족될 때만 완료다.
 | `W6-05` | capability 기반 item-to-rations conversion을 고정한다. | R | MP-E14 |
 | `W6-06` | Character+Campaign distributed Long Rest와 owner/Host recovery를 고정한다. | R | MP-F07~F09 |
 | `W6-07` | connected DM Library materialization·handout·spatial capability를 고정한다. | R | MP-G |
-| `W6-08` | 실제 Tauri H/P1/P2에서 지급·회수·Stash·Long Rest·handout flow를 증명한다. | V | J5, MP-E~G |
+| `W6-08` | 기존 Tauri H+P1 경로에서 지급·회수·Stash·Long Rest·handout 대표 flow를 검증한다. P2 observer parity의 최종 수락은 W9-02에서만 수행한다. | V | Journey J5, MP-E~G |
 
 **W6 Exit:** DM live operation과 양쪽 durable owner transaction이 실제 앱에서 연결된다.
 
@@ -207,7 +207,7 @@ V1은 아래 숫자가 모두 충족될 때만 완료다.
 | `W7-05` | DM-only/hidden/private payload·Activity·handout metadata가 누출되지 않는다. | R | MP-B05~B07, MP-09 |
 | `W7-06` | protocol/rules/content/spatial capability mismatch가 명시적으로 차단된다. | R | MP-A05, MP-G08~G09 |
 | `W7-07` | keyboard·screen reader·narrow desktop·Reduced Motion·correlated diagnostics를 고정한다. | R | MP-10, MP-I |
-| `W7-08` | 실제 Windows에서 disconnect/restart/failure/privacy/accessibility 종합 sweep를 수행한다. | V | MP-08~10, MP-12 |
+| `W7-08` | focused Tauri/Windows 경로에서 disconnect·restart·failure·privacy·accessibility 대표 case를 검증하고, 3/4창 comprehensive case는 W9-02에만 배치한다. | V | MP-08~10 |
 
 **W7 Exit:** 실패·재접속·권한 차이에서도 중복·손실·정보 누출 없이 복구된다.
 
@@ -226,9 +226,9 @@ V1은 아래 숫자가 모두 충족될 때만 완료다.
 
 | ID | Gate | 초기 분류 | 연결 |
 | --- | --- | --- | --- |
-| `W9-01` | 동일 SHA에서 production Windows `SimpleVTT.exe`와 digest를 생성한다. | R | V1-70, V1-80 |
+| `W9-01` | 기존 release build 경로를 사용해 동일 SHA의 production Windows `SimpleVTT.exe`와 digest를 생성한다. | B | V1-70, V1-80 |
 | `W9-02` | 모든 적용 가능한 WIN scenario를 H/P1/P2, 필요 시 P3에서 실행하고 캡처한다. | B | MP-12, MP-13 |
-| `W9-03` | Zero-to-Next-Session golden journey를 통과한다: first run → Character → Campaign → full Session → restart → Session 2 action. | B | J1~J9 |
+| `W9-03` | Zero-to-Next-Session golden journey를 통과한다: first run → Character → Campaign → full Session → restart → Session 2 action. | B | legacy Journey J1~J9 |
 | `W9-04` | exact-SHA evidence bundle·issue closure·clean tree·canonical update 후 V1을 선언한다. | B | V1-80, #110 |
 
 **W9 Exit:** 동일 production artifact에서 첫 실행부터 다음 세션까지 끊김 없이 재현된다.
