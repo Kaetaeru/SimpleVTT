@@ -45,7 +45,15 @@ test("DM handout reveal is presentation-only and the current reveal is restored 
     const hostTemplate=await host.getSnapshot();
     const clientTemplate=await client.getSnapshot();
     const hostCharacter={...structuredClone(hostTemplate.activeCharacter),id:"char.handout.host",name:"Handout Host",saveState:"saved" as const};
-    const clientCharacter={...structuredClone(clientTemplate.activeCharacter),id:"char.handout.client",name:"Handout Client",saveState:"saved" as const};
+    const clientCharacter={
+      ...structuredClone(clientTemplate.activeCharacter),
+      id:"char.handout.client",
+      name:"Handout Client",
+      saveState:"saved" as const,
+      equipment:[],
+      items:[],
+      attacks:[],
+    };
     const hostApp=connectedInternal(host);
     hostApp.activeCharacter=structuredClone(hostCharacter);
     hostApp.characters=[...hostApp.characters.filter((entry)=>entry.id!==hostCharacter.id&&entry.id!==clientCharacter.id),structuredClone(hostCharacter),structuredClone(clientCharacter)];
@@ -62,6 +70,7 @@ test("DM handout reveal is presentation-only and the current reveal is restored 
     await flush();
     const firstAck=transport.sentTo().find((entry)=>entry.peer==="peer.client"&&entry.value.type==="hello-ack");
     assert.ok(firstAck);
+    assert.equal((firstAck.value.compatibility as {status?:string}).status,"compatible");
     transport.emit(1,"host",firstAck.raw);
     await flush();
     const reconnectHello=transport.sent().filter((entry)=>entry.value.type==="hello").at(-1);

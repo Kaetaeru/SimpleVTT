@@ -35,7 +35,7 @@ import { syncConnectedCampaignRoster } from "./connectedCampaignRosterPort";
 import { projectedCharacterById, rebindCharacterSessionProjectionPeer } from "./characterSessionProjectionRegistry";
 import { unmountReconstructedCharacterSessionProjection } from "./characterSessionProjectionMount";
 import { clearReadyActionConfiguration, setReadyActionConfiguration } from "./standardActionReadyState";
-import { commitAdapterTurnRuntimeState, ensureAdapterTurnRuntimeState } from "./turnRuntimeSessionRegistry";
+import { commitAdapterTurnRuntimeState, ensureAdapterTurnRuntimeState, synchronizeConnectedClientTurnProjection } from "./turnRuntimeSessionRegistry";
 import type { ResolutionEvent } from "../domain/resolutionTypes";
 import {
   actionFromConnectedPresentation,
@@ -355,6 +355,9 @@ async function applyConfirmedPayload(adapter:MockAdapter,payload:ConnectedEventP
     app.scene.round=payload.round;
     app.scene.currentActorId=payload.currentActorId;
     app.scene.economyByActor=structuredClone(payload.economyByActor);
+    if(!resolutionEvents.some((event)=>event.stateChanges.some((change)=>change.kind==="turn-clock"))) {
+      synchronizeConnectedClientTurnProjection(adapter,app.scene,payload.sessionMode);
+    }
     clearAdapterTurnSimultaneousOrdering(adapter);
     app.activity.unshift({
       id:`connected:${event.eventId}`,

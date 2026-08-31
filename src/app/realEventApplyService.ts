@@ -282,7 +282,7 @@ function validate(
       return `event-native apply drift for ${change.targetId}/${changeField(change)}: expected ${String(change.before)}, current ${String(app.value)}`;
     }
     if (runtime.found && !deepEquals(runtime.value,change.before)) {
-      return `event-native apply runtime drift for ${change.targetId}/${changeField(change)}`;
+      return `event-native apply runtime drift for ${change.targetId}/${changeField(change)}: expected ${JSON.stringify(change.before)}, current ${JSON.stringify(runtime.value)}`;
     }
     if (change.kind==="resource" && change.capacity && !itemResource(change.resourceId)) {
       const appResource=probeResources.find((entry)=>entry.id===change.resourceId);

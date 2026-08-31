@@ -135,7 +135,11 @@ export function addTurnRuntimeCombatant(session:TurnRuntimeSession,scene:SceneVm
   return true;
 }
 
-export function projectTurnRuntimeToScene(session:TurnRuntimeSession,scene:SceneVm) {
+export function projectTurnRuntimeToScene(
+  session:TurnRuntimeSession,
+  scene:SceneVm,
+  options:{preserveUnknownActiveActor?:boolean}={},
+) {
   const actorArtifacts=(session.state.artifacts??[]).filter((artifact)=>artifact.artifactKind==="actor"&&artifact.actor);
   const artifactIds=new Set(actorArtifacts.map((artifact)=>artifact.id));
   for(const entity of scene.entities.filter((candidate)=>candidate.runtimeArtifactId&&!artifactIds.has(candidate.runtimeArtifactId))) {
@@ -170,7 +174,7 @@ export function projectTurnRuntimeToScene(session:TurnRuntimeSession,scene:Scene
   }
   const nonInitiativeActors=new Set(actorArtifacts.filter((artifact)=>artifact.actor!.initiative==="none").map((artifact)=>artifact.actor!.combatantId));
   session.initiativeOrder=initiativeOrder({...scene,entities:scene.entities.filter((entity)=>!nonInitiativeActors.has(entity.id))});
-  if(!session.initiativeOrder.includes(session.state.clock.activeActorId??"")) session.state.clock.activeActorId=session.initiativeOrder[0];
+  if(!options.preserveUnknownActiveActor&&!session.initiativeOrder.includes(session.state.clock.activeActorId??"")) session.state.clock.activeActorId=session.initiativeOrder[0];
   session.activeIndex=Math.max(0,session.initiativeOrder.indexOf(session.state.clock.activeActorId??""));
   scene.round=session.state.clock.round;
   if (session.state.clock.activeActorId) scene.currentActorId=session.state.clock.activeActorId;

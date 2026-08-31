@@ -7,7 +7,7 @@ import {
 } from "./realTurnRuntimeService";
 import { resolveRuntimeProfileProperty } from "./realResolutionService";
 import { connectedStateFor } from "./connectedSessionState";
-import type { CharacterSheet, SceneVm } from "./contracts";
+import type { CharacterSheet, SceneVm, SessionMode } from "./contracts";
 import { cloneRuntimeState, type RulesRuntimeState } from "../domain/combatState";
 
 const sessions=new WeakMap<MockAdapter,TurnRuntimeSession>();
@@ -149,17 +149,6 @@ function restore(adapter:MockAdapter,session:TurnRuntimeSession) {
   return session;
 }
 
-function synchronizeConnectedClientClockProjection(adapter:MockAdapter,session:TurnRuntimeSession,scene:SceneVm) {
-  if(connectedStateFor(adapter).mode!=="client"||scene.round<1||!scene.currentActorId) return;
-  const activeIndex=session.initiativeOrder.indexOf(scene.currentActorId);
-  if(activeIndex<0) return;
-  if(session.state.clock.round===scene.round&&session.state.clock.activeActorId===scene.currentActorId) return;
-  const state=cloneRuntimeState(session.state);
-  state.clock={...state.clock,round:scene.round,activeActorId:scene.currentActorId};
-  session.state=state;
-  session.activeIndex=activeIndex;
-}
-
 export function setTurnRuntimeStateStoreForTests(adapter:MockAdapter,store:TurnRuntimeStateStore) {
   injectedStores.set(adapter,store);
 }
@@ -184,14 +173,35 @@ export function ensureAdapterTurnRuntimeState(adapter:MockAdapter,scene:SceneVm)
   return snapshotAdapterTurnRuntimeState(adapter,scene)!;
 }
 
+export function synchronizeConnectedClientTurnProjection(adapter:MockAdapter,scene:SceneVm,mode:SessionMode) {
+  if(connectedStateFor(adapter).mode!=="client") return;
+  if(mode==="freeform") { turnRuntimeSessions.delete(adapter); return; }
+  let session=sessions.get(adapter);
+  if(!session) {
+    session=createTurnRuntimeSession(scene);
+    turnRuntimeSessions.set(adapter,session);
+  }
+  const activeIndex=session.initiativeOrder.indexOf(scene.currentActorId);
+  if(activeIndex<0) return;
+  const state=cloneRuntimeState(session.state);
+  state.clock={
+    ...state.clock,
+    round:scene.round,
+    activeActorId:scene.currentActorId,
+    specialWindows:[{kind:"turn-start",actorId:scene.currentActorId}],
+  };
+  session.state=state;
+  session.activeIndex=activeIndex;
+  synchronizeTurnRuntimeFromScene(session,scene);
+}
+
 export function snapshotAdapterTurnRuntimeState(adapter:MockAdapter,scene:SceneVm):RulesRuntimeState|undefined {
   const session=sessions.get(adapter);
   if (!session) return undefined;
-  synchronizeConnectedClientClockProjection(adapter,session,scene);
   ensureProfilePropertyBases(adapter,session,scene);
   synchronizeTurnRuntimeFromScene(session,scene);
   ensureProfilePropertyBases(adapter,session,scene);
-  projectTurnRuntimeToScene(session,scene);
+  projectTurnRuntimeToScene(session,scene,{preserveUnknownActiveActor:connectedStateFor(adapter).mode==="client"});
   projectRuntimeProfileProperties(adapter,session,scene);
   persist(adapter,session,scene);
   return cloneRuntimeState(session.state);
@@ -208,7 +218,7 @@ export function commitAdapterTurnRuntimeState(
   if (session.state.revision!==expectedRevision) return false;
   if (nextState.revision!==expectedRevision+1) return false;
   session.state=cloneRuntimeState(nextState);
-  projectTurnRuntimeToScene(session,scene);
+  projectTurnRuntimeToScene(session,scene,{preserveUnknownActiveActor:connectedStateFor(adapter).mode==="client"});
   projectRuntimeProfileProperties(adapter,session,scene);
   persist(adapter,session,scene);
   return true;
