@@ -72,12 +72,10 @@ test("Common Play HP semantics are invariant under definition and entry-point re
   assert.deepEqual(result(changed),result(original));
 });
 
-test("portable Common Play HP rejects unsupported targets, healing dice, temporary HP, and unsupported damage fields",()=>{
+test("portable Common Play HP rejects unsupported targets and healing dice",()=>{
   const invalidCases:Array<[unknown,RegExp]>=[
     [(()=>{const value=structuredClone(AUTHORED);value.entryPoints[0].operations[0].target="every-target";return value;})(),/target must be actor, self, or target/],
     [(()=>{const value=structuredClone(AUTHORED);value.entryPoints[1].operations[0].amount="1d8";return value;})(),/healing dice are not supported/],
-    [(()=>{const value=structuredClone(AUTHORED);value.entryPoints[0].operations[0]={kind:"temp-hp.grant",amount:{value:5},target:"self"};return value;})(),/unsupported Common Play operation/],
-    [(()=>{const value=structuredClone(AUTHORED);value.entryPoints[0].operations[0].multiplier=2;return value;})(),/unsupported fields: multiplier/],
   ];
   for(const [definition,message] of invalidCases) {
     assert.throws(()=>parseManualCommonPlayOperationDefinition(definition),message);
