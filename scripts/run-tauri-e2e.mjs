@@ -18,6 +18,7 @@ const artifactRoot = path.join(runRoot, "artifacts");
 const smokeOnly = process.argv.includes("--smoke");
 const w1Only = process.argv.includes("--w1");
 const keepOpen = process.argv.includes("--keep-open");
+const verificationSha = process.env.W1_VERIFICATION_SHA ?? process.env.GITHUB_SHA ?? "local";
 
 const children = [];
 const browsers = [];
@@ -321,7 +322,7 @@ async function runW105() {
   await writeFile(path.join(artifactRoot, "w1-05.json"), JSON.stringify({
     gate:"W1-05",
     status:"PASS",
-    verificationSha:process.env.GITHUB_SHA ?? "local",
+    verificationSha,
     windowsTauri:true,
     dataRoot,
     before,
@@ -384,11 +385,62 @@ async function runW106({ instance,dataRoot,name,identity }) {
   assert.equal(after.characters.some((record)=>record.characterId===duplicate.id),false);
   await saveEvidence(restarted,"w1-06-restarted");
   await writeFile(path.join(artifactRoot,"w1-06.json"),JSON.stringify({
-    gate:"W1-06",status:"PASS",verificationSha:process.env.GITHUB_SHA??"local",windowsTauri:true,
+    gate:"W1-06",status:"PASS",verificationSha,windowsTauri:true,
     original,duplicate,imported,deletedId:duplicate.id,remainingIds:after.characters.map((record)=>record.characterId),
   },null,2),"utf8");
   log(`W1-06 import·duplicate·delete·identity/provenance·재시작 검증 통과 · ${original.id}`);
   return { instance:restarted,dataRoot,name,identity:original };
+}
+
+function storedCharacterSheet(document,name) {
+  const record=document.characters.find((candidate)=>candidate.source?.name===name);
+  assert.ok(record?.materializedCache?.sheet,`Durable Character sheet was not found: ${name}`);
+  return record.materializedCache.sheet;
+}
+
+function sheetCard(root,heading) {
+  return `${root}//article[contains(@class,'sheet-play-card')][.//h2[normalize-space(.)=${JSON.stringify(heading)}]]`;
+}
+
+async function runW107({instance,dataRoot,name,identity}) {
+  const stored=storedCharacterSheet(await latestCharacterDocument(dataRoot),name);
+  assert.equal(stored.id,identity.id);
+  assert.ok(stored.resources.length>0,"representative W1 Character must persist at least one resource");
+  assert.ok(stored.items.length>0,"representative W1 Character must persist inventory");
+  assert.ok(stored.features.length>0,"representative W1 Character must persist features");
+  assert.ok(stored.attacks.length>0,"representative W1 Character must persist actions");
+  assert.equal((stored.cantrips?.length??0)+(stored.preparedSpells?.length??0)+(stored.spellbookSpells?.length??0),0,"representative Fighter spell expectation changed");
+
+  await click(instance.browser,`${characterArticle(name)}//button[contains(@class,'character-card')]`,"저장된 Character Full Sheet");
+  const root="//div[contains(@class,'sheet-play-screen')]";
+  await instance.browser.$(`${root}//h1[normalize-space(.)=${JSON.stringify(name)}]`).waitForDisplayed({timeout:15_000});
+  const status=await instance.browser.$(`${root}//div[contains(@class,'sheet-play-statusbar')]`).getText();
+  assert.match(status,new RegExp(`AC\\s+${stored.ac}\\b`));
+  assert.match(status,new RegExp(`HP\\s+${stored.hp}/${stored.maxHp}\\b`));
+  const resources=await instance.browser.$(sheetCard(root,"자원")).getText();
+  for(const resource of stored.resources){assert.ok(resources.includes(resource.label));assert.ok(resources.includes(`${resource.current}/${resource.max}`));}
+  const equipment=await instance.browser.$(sheetCard(root,"장비")).getText();
+  for(const item of stored.equipment)assert.ok(equipment.includes(item),`Full Sheet equipment missing: ${item}`);
+  const features=await instance.browser.$(sheetCard(root,"기능")).getText();
+  for(const feature of stored.features)assert.ok(features.includes(feature),`Full Sheet feature missing: ${feature}`);
+  const attacks=await instance.browser.$(sheetCard(root,"공격 & 피해")).getText();
+  for(const attack of stored.attacks){assert.ok(attacks.includes(attack.name));assert.ok(attacks.includes(attack.damage));}
+  assert.match(await instance.browser.$(sheetCard(root,"주문")).getText(),/주문 없음/);
+  await saveEvidence(instance,"w1-07-full-sheet");
+
+  await click(instance.browser,"//nav[@aria-label='캐릭터 관리 섹션']//button[normalize-space(.)='인벤토리']","Full Sheet 인벤토리");
+  const inventory=`//section[@aria-label=${JSON.stringify(`${name} 인벤토리`)}]`;
+  await instance.browser.$(inventory).waitForDisplayed({timeout:15_000});
+  const inventoryText=await instance.browser.$(inventory).getText();
+  for(const item of stored.items)assert.ok(inventoryText.includes(item.name),`Full Sheet inventory missing: ${item.name}`);
+  assert.ok(inventoryText.includes(String(stored.goldGp??0)),"Full Sheet gold does not match durable Character");
+  await saveEvidence(instance,"w1-07-inventory");
+  await writeFile(path.join(artifactRoot,"w1-07.json"),JSON.stringify({
+    gate:"W1-07",status:"PASS",verificationSha,windowsTauri:true,characterId:stored.id,
+    expected:{hp:stored.hp,maxHp:stored.maxHp,ac:stored.ac,resources:stored.resources,equipment:stored.equipment,items:stored.items.map((item)=>({id:item.id,name:item.name,quantity:item.quantity})),spells:[],features:stored.features,actions:stored.attacks},
+  },null,2),"utf8");
+  log(`W1-07 durable Character와 Full Sheet HP·AC·resource·inventory·spells·features·actions 일치 검증 통과 · ${stored.id}`);
+  return {instance,dataRoot,name,identity,stored};
 }
 
 async function createHostCampaign(host) {
@@ -487,7 +539,8 @@ async function runScenario() {
 
   if (w1Only) {
     const w105=await runW105();
-    await runW106(w105);
+    const w106=await runW106(w105);
+    await runW107(w106);
     log(`W1 실제 Tauri 증거: ${artifactRoot}`);
     return;
   }

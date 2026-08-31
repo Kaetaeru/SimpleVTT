@@ -17,6 +17,8 @@ jobs:
   tauri-w1:
     runs-on: windows-latest
     timeout-minutes: 30
+    env:
+      W1_VERIFICATION_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -26,14 +28,15 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
-      - name: Verify W1-05 in Windows Tauri
+      - name: Verify W1 in Windows Tauri
         shell: pwsh
         run: npm run test:e2e:tauri -- --w1
       - name: Upload Tauri evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: SimpleVTT-W1-Tauri-${{ github.sha }}
+          name: SimpleVTT-W1-Tauri-${{ env.W1_VERIFICATION_SHA }}
           path: .live-dev/tauri-e2e/**/artifacts/**
           if-no-files-found: warn
           retention-days: 14
+
