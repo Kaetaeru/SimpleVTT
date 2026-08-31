@@ -192,7 +192,8 @@ test("host-unknown Open Hand Quivering Palm seed/detonation converges exactly on
     }
     assert.equal(snapshot.scene.currentActorId,remote.id,"initiative must return to the remote Monk before detonation");assert.equal(snapshot.scene.economyByActor[remote.id]?.action,true,"next Monk turn must restore Action before detonation");
     const nextTurnEvents=batches(broadcasts).slice(nextTurnBatchStart).flatMap((batch)=>batch.events??[]);assert.ok(nextTurnEvents.length>0);
-    assert.equal((await applyConnectedClientEvents(client,nextTurnEvents)).status,"applied");clientAfter=await client.getSnapshot();assert.equal(clientAfter.scene.currentActorId,remote.id);assert.equal(clientAfter.scene.economyByActor[remote.id]?.action,true);assert.deepEqual(markers(client,remote.id),[TARGET_B]);
+    const nextTurnApplied=await applyConnectedClientEvents(client,nextTurnEvents);
+    assert.equal(nextTurnApplied.status,"applied",nextTurnApplied.status==="rejected"?nextTurnApplied.error:undefined);clientAfter=await client.getSnapshot();assert.equal(clientAfter.scene.currentActorId,remote.id);assert.equal(clientAfter.scene.economyByActor[remote.id]?.action,true);assert.deepEqual(markers(client,remote.id),[TARGET_B]);
 
     const hpBeforeDetonate=hp(snapshot.scene,TARGET_B);
     const detonateCursor=state.ledger.cursor;
