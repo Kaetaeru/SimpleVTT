@@ -253,6 +253,7 @@ async function createW1Character(instance, name) {
   await click(instance.browser, `//nav[contains(@class,'focused-create-tabs')]//button[.//span[normalize-space(.)='능력치']]`, "능력치 탭");
   await click(instance.browser, `//section[@id='abilities']//button[contains(normalize-space(.),'파이터 추천 배치')]`, "파이터 추천 배치");
   await click(instance.browser, `//nav[contains(@class,'focused-create-tabs')]//button[.//span[normalize-space(.)='기술']]`, "기술 탭");
+  await instance.browser.$("//section[@id='proficiencies']").waitForDisplayed({ timeout:15_000 });
   const unresolved = await completeVisibleCharacterChoices(instance.browser);
   assert.deepEqual(unresolved, [], `Character UI choices remain unresolved: ${unresolved.join(", ")}`);
   await click(instance.browser, `//nav[contains(@class,'focused-create-tabs')]//button[.//span[normalize-space(.)='검토']]`, "검토 탭");
