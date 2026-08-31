@@ -39,9 +39,10 @@ These numbers classify the work; they are not completion credit. Completion cred
 
 ```text
 W0: COMPLETE — 6/6 PASS
-Official ledger score: 5.0/100.0
-PASS: 6/72
-PENDING: 66/72
+W1: 1/8 PASS
+Official ledger score: 6.3/100.0
+PASS: 7/72
+PENDING: 65/72
 FAIL: 0
 BLOCKED: 0
 ```
@@ -50,10 +51,10 @@ BLOCKED: 0
 
 ```text
 Wave 1
-Next Gate: W1-01
+Next Gate: W1-02
 ```
 
-`W1-01` is a `REUSE_LOCKED` Gate. Reconcile the existing First Run → Character Library / Create entrypoint and focused evidence first. **Do not reimplement Character creation to close it.**
+`W1-02` is a `REUSE_LOCKED` Gate. Reconcile the existing Guided Create path for Species, Background, Class, Ability, proficiency, equipment, and applicable spell choices. **Do not reimplement Character creation without a reproduced current-HEAD failure.**
 
 Common Play follows the active function-first direction in `../design/ui-ux/COMMON-PLAY-FUNCTION-FIRST.md`: make the real behavior reachable and observable in Tauri before any broad shell/session visual redesign.
 
