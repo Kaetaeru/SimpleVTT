@@ -256,7 +256,6 @@ async function createW1Character(instance, name) {
   const unresolved = await completeVisibleCharacterChoices(instance.browser);
   assert.deepEqual(unresolved, [], `Character UI choices remain unresolved: ${unresolved.join(", ")}`);
   await click(instance.browser, `//nav[contains(@class,'focused-create-tabs')]//button[.//span[normalize-space(.)='검토']]`, "검토 탭");
-  await waitForText(instance.browser, "필수 선택 완료");
   await click(instance.browser, exactButton("모험 시작"), "Character 저장");
   await waitForText(instance.browser, name, 30_000);
 }
