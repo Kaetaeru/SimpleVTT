@@ -172,6 +172,26 @@ test("Guided and Quick continue to share one autosaved choice graph", async () =
   assert.equal(first.createDraft?.id, quick.createDraft?.id);
   assert.equal(quick.createDraft?.id, again.createDraft?.id);
   assert.equal(again.createDraft?.name, "Persistent Complete Draft");
+  assert.equal(again.createDraft?.species, "드워프");
+});
+
+test("incomplete Guided draft cannot commit and remains available for correction", async () => {
+  const adapter = new MockAdapter();
+  await adapter.createCharacterDraft("guided");
+  await adapter.updateCharacterDraft({ type:"set-name", value:"Blocked Draft" });
+  const before = await adapter.getSnapshot();
+  assert.ok(before.createDraft);
+  assert.ok((before.creationPlan?.summary.blockingCount ?? 0) > 0);
+  const activeBefore = before.activeCharacter.id;
+  const libraryBefore = before.characters.map((character) => character.id);
+
+  await adapter.finalizeCharacterDraft();
+  const after = await adapter.getSnapshot();
+  assert.ok(after.createDraft, "blocking validation must preserve the draft instead of committing it");
+  assert.equal(after.createDraft?.id, before.createDraft.id);
+  assert.equal(after.activeCharacter.id, activeBefore);
+  assert.deepEqual(after.characters.map((character) => character.id), libraryBefore);
+  assert.ok((after.creationPlan?.summary.blockingCount ?? 0) > 0);
 });
 
 
