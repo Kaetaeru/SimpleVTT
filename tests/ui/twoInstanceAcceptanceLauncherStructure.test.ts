@@ -54,6 +54,7 @@ test("Tauri UI E2E launcher drives isolated Host and Client windows through real
   assert.match(runner,/await stopInstance\(first\)/);
   assert.match(runner,/latestCharacterDocument/);
   assert.match(runner,/Identity UI choices remain unresolved/);
+  assert.match(runner,/Character choice did not commit/);
   assert.match(runner,/takeScreenshot/);
   assert.match(wrapper,/npmExe run generate:content/);
   assert.match(wrapper,/arguments \+= '--w1'/);
@@ -61,3 +62,4 @@ test("Tauri UI E2E launcher drives isolated Host and Client windows through real
   assert.match(wrapper,/--features tauri-e2e/);
   assert.match(cmd,/run-tauri-e2e\.ps1/);
 });
+

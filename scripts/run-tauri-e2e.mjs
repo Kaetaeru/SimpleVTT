@@ -202,16 +202,25 @@ async function completeVisibleCharacterChoices(browser) {
           return !button.disabled && button.getAttribute("aria-disabled") !== "true" && !button.classList.contains("selected");
         });
         if (target instanceof HTMLElement) {
+          const selectedBefore = [...candidates].filter((item) => item.classList.contains("selected")).length;
           target.scrollIntoView({ block:"center" });
           target.click();
-          return { clicked:true, section:section.id };
+          return { clicked:true, section:section.id, selectedBefore };
         }
       }
       const unresolved = sections.filter((section) => section.querySelector(".create-status-pill")?.textContent?.trim() === "선택 필요").map((section) => section.id);
       return { clicked:false, unresolved };
     });
     if (!result.clicked) return result.unresolved;
-    await browser.pause(100);
+    await browser.waitUntil(async () => browser.execute(({ sectionId, selectedBefore }) => {
+      const section = document.getElementById(sectionId);
+      if (!section) return false;
+      const selectedNow = section.querySelectorAll(".create-option-card.selected, .spell-choice-grid button.selected, .proficiency-grid button.selected").length;
+      return selectedNow > selectedBefore || section.querySelector(".create-status-pill")?.textContent?.trim() !== "선택 필요";
+    }, { sectionId:result.section, selectedBefore:result.selectedBefore }), {
+      timeout:15_000,
+      timeoutMsg:`Character choice did not commit in ${result.section}`,
+    });
   }
   throw new Error("Character choice completion exceeded 120 UI clicks");
 }
@@ -467,3 +476,4 @@ try {
   await cleanup();
 }
 process.exitCode = exitCode;
+
