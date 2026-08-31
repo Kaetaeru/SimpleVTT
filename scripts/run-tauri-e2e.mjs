@@ -256,6 +256,14 @@ async function createW1Character(instance, name) {
   const unresolved = await completeVisibleCharacterChoices(instance.browser);
   assert.deepEqual(unresolved, [], `Character UI choices remain unresolved: ${unresolved.join(", ")}`);
   await click(instance.browser, `//nav[contains(@class,'focused-create-tabs')]//button[.//span[normalize-space(.)='검토']]`, "검토 탭");
+  const save = await instance.browser.$(exactButton("모험 시작"));
+  if (!await save.isEnabled()) {
+    const diagnostics = await instance.browser.execute(() => ({
+      tabs:[...document.querySelectorAll(".focused-create-tabs button")].map((button) => button.textContent?.trim()),
+      validation:[...document.querySelectorAll(".validation.blocking")].map((item) => item.textContent?.trim()),
+    }));
+    throw new Error(`Character 저장 is disabled: ${JSON.stringify(diagnostics)}`);
+  }
   await click(instance.browser, exactButton("모험 시작"), "Character 저장");
   await waitForText(instance.browser, name, 30_000);
 }
