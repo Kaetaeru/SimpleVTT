@@ -1,27 +1,45 @@
 # SimpleVTT canonical development routing
 
-This file defines branch roles. It does not replace the current-work pointer in [`docs/CURRENT.md`](docs/CURRENT.md).
+This file defines branch and document authority. It does not duplicate the execution plan.
 
 ```yaml
 product_integration_target: work/v1-composite
-active_working_branch: agent/codex-c9-gate-n-finalization
-frozen_handoff_baseline: 5fadeced4304aa8ae51267c699a1abe053eb5152
-upstream_reconciliation_lineage: agent/c9-gate-n-coverage-reconciliation
+current_status_pointer: docs/CURRENT.md
+current_execution_plan: docs/roadmap/V1_MASTER_ROADMAP.md
+current_roadmap_pointer: docs/roadmap/CURRENT.md
+roadmap_audit_baseline: a38b0f07ac012bc9e600a28b2630a365d1bd098b
+working_branch_policy: one scoped agent/* branch from the latest live integration HEAD per Gate or coherent repair
+permanent_global_active_branch: null
 historical_or_reference_branches:
   - main
   - work/v1-latest
+  - agent/codex-c9-gate-n-finalization
+  - agent/c9-gate-n-coverage-reconciliation
   - agent/resolver-foundation-convergence
 ```
 
+## Authority order
+
+When sources conflict, use this order:
+
+1. live GitHub state of `work/v1-composite`;
+2. `docs/CURRENT.md`;
+3. `docs/roadmap/V1_MASTER_ROADMAP.md`;
+4. `docs/roadmap/V1_EVIDENCE_LEDGER.json` after it is created;
+5. canonical product and scenario contracts under `docs/design/` and `docs/rules/`;
+6. historical files under `docs/archive/`, old PR/issue text, and retired handoffs.
+
 ## Rules
 
-1. `work/v1-composite` remains the V1 product integration target. Do not route V1 product completion to `main` unless the owner explicitly changes the integration model.
-2. `agent/codex-c9-gate-n-finalization` is the active working branch for C9 Gate N completion. It was cut from the exact baseline above so final verification can converge on stable SHAs.
-3. `agent/c9-gate-n-coverage-reconciliation` is upstream history/evidence for this handoff, not the branch Codex should chase if it keeps moving independently.
-4. Before editing, read `docs/CURRENT.md` and `docs/CODEX_C9_GATE_N_HANDOFF.md`, then reconcile them with live GitHub state and the Gate N ledger.
-5. Do not repeat families already proven complete merely because an older PR or handoff describes them as open. Current ledger and source evidence win.
-6. Do not use a self-publishing workflow that commits or pushes back to the active branch as the normal implementation loop. Final acceptance requires one exact verified HEAD after write-capable temporary automation is quiescent.
-7. `main`, `work/v1-latest`, and `agent/resolver-foundation-convergence` are historical/landing/reference branches until deliberately promoted.
-8. Historical files under `docs/archive/`, old PR bodies, and old ChatGPT Rerun state are evidence only, never current routing authority.
+1. `work/v1-composite` remains the V1 product integration target. Do not route V1 completion to `main` unless the owner explicitly changes the integration model.
+2. Before editing, read the live integration HEAD, `docs/CURRENT.md`, and the V1 master roadmap.
+3. Create a scoped working branch from the latest integration HEAD. Do not reuse an old branch merely because it contains related work.
+4. Select the first unblocked non-`PASS` roadmap Gate. Do not select `NEXT` from C9, Phase, V0.9, archived V1, or old Rerun documents.
+5. A `REUSE_LOCKED` or `VERIFY_ONLY` Gate cannot trigger product-code changes without a reproducible failure on the current exact HEAD.
+6. Fill the eight-field Evidence Card before changing product code and prefer the smallest repair to the existing owner path.
+7. Do not add a second shell, store, Resolver, network transport, authority path, presentation pipeline, Party Stash transaction system, Long Rest coordinator, DM Library, or E2E framework.
+8. Do not use a self-publishing workflow that commits or pushes to the integration or active working branch as the normal implementation loop.
+9. C9 Gate N is complete and integrated. Its branches, handoffs, and mechanism ledger remain evidence, not current routing authority.
+10. V1 completion requires all numeric closure conditions in the master roadmap on one exact SHA and one matching Windows artifact.
 
-The `.chatgpt-rerun/` control set is not present on this current lineage. Do not recreate or follow it unless the owner explicitly re-enables that coordination mechanism. Product architecture, current status, and Codex handoff live under `docs/`.
+The `.chatgpt-rerun/` control set is not present on this lineage. Do not recreate or follow it unless the owner explicitly re-enables that coordination mechanism.
