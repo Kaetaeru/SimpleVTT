@@ -77,9 +77,10 @@ test("DM handout reveal is presentation-only and the current reveal is restored 
     handout.dismissSessionImageHandout(client);
     assert.equal(handout.getSessionImageHandoutState(client).dismissed,true);
 
-    transport.emit(0,"peer.client",firstHello.raw);
+    const reconnectPeer="peer.client.reconnect";
+    transport.emit(0,reconnectPeer,firstHello.raw);
     await flush();
-    const restored=transport.sentTo().filter((entry)=>entry.peer==="peer.client"&&entry.value.type==="presentation-handout").at(-1);
+    const restored=transport.sentTo().filter((entry)=>entry.peer===reconnectPeer&&entry.value.type==="presentation-handout").at(-1);
     assert.ok(restored,"compatible reconnect hello-ack must be followed by the active Host presentation");
     transport.emit(1,"host",restored.raw);
     await flush();
@@ -101,9 +102,10 @@ test("DM handout reveal is presentation-only and the current reveal is restored 
     await flush();
     assert.equal(handout.getSessionLastRollPresentationState(client).dismissedResolutionId,"resolution.last-roll.1");
 
-    transport.emit(0,"peer.client",firstHello.raw);
+    const lastRollReconnectPeer="peer.client.reconnect-last-roll";
+    transport.emit(0,lastRollReconnectPeer,firstHello.raw);
     await flush();
-    const restoredDismissal=transport.sentTo().filter((entry)=>entry.peer==="peer.client"&&entry.value.type==="presentation-last-roll-dismiss").at(-1);
+    const restoredDismissal=transport.sentTo().filter((entry)=>entry.peer===lastRollReconnectPeer&&entry.value.type==="presentation-last-roll-dismiss").at(-1);
     assert.ok(restoredDismissal,"reconnecting Clients must keep the current Last Roll hidden until a new resolution arrives");
   } finally { transport.restore(); }
 });
