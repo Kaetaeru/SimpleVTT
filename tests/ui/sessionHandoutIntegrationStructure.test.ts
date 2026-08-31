@@ -6,6 +6,8 @@ const root = readFileSync(new URL("../../src/SessionModeRoot.tsx", import.meta.u
 const dmTools = readFileSync(new URL("../../src/SessionDmTools.tsx", import.meta.url), "utf8");
 const handout = readFileSync(new URL("../../src/SessionImageHandoutBridge.tsx", import.meta.url), "utf8");
 const runtime = readFileSync(new URL("../../src/app/sessionImageHandoutRuntimeAdapter.ts", import.meta.url), "utf8");
+const parityRuntime = readFileSync(new URL("../../src/app/sessionContentParityRuntimeAdapter.ts", import.meta.url), "utf8");
+const restorePort = readFileSync(new URL("../../src/app/connectedPresentationRestorePort.ts", import.meta.url), "utf8");
 const main = readFileSync(new URL("../../src/main.tsx", import.meta.url), "utf8");
 const css = readFileSync(new URL("../../src/session-image-handout.css", import.meta.url), "utf8");
 
@@ -32,11 +34,14 @@ test("Session Handout presentation reuses the existing handout runtime and does 
     /subscribeSessionImageHandout\(mockAdapter, setHandout\)/,
   ]) assert.match(handout, pattern);
   assert.match(runtime, /presentation-handout/);
-  assert.match(runtime, /sendToWithHandoutRestore/);
+  assert.match(runtime, /installConnectedPresentationRestoreHandler\(restoreCurrentPresentation\)/);
+  assert.match(parityRuntime, /sendToWithPresentationRestore/);
+  assert.match(parityRuntime, /restoreConnectedPresentationForPeer/);
+  assert.match(restorePort, /ConnectedPresentationRestoreHandler/);
   assert.doesNotMatch(handout, /tauriSessionTransport|ResolutionEvent|undoLastResolution|localStorage|sessionStorage/);
   const handoutImport = main.indexOf("sessionImageHandoutRuntimeAdapter");
   const parityImport = main.indexOf("sessionContentParityRuntimeAdapter");
-  assert.ok(handoutImport >= 0 && parityImport > handoutImport, "handout transport decorator must remain installed before content parity");
+  assert.ok(handoutImport >= 0 && parityImport > handoutImport, "handout restore handler must remain installed before content parity transport");
 });
 
 test("Freeform handout is a non-blocking center background with contextual player dismissal", () => {
@@ -57,7 +62,8 @@ test("Handout file validation and reconnect-restored state remain the existing b
   assert.match(handout, /accept=\{LOCAL_IMAGE_ACCEPT\}/);
   assert.match(handout, /readLocalImageFile\(file, HANDOUT_IMAGE_MAX_BYTES\)/);
   assert.match(runtime, /HANDOUT_IMAGE_MAX_BYTES/);
-  assert.match(runtime, /compatibleHelloAck/);
+  assert.match(runtime, /restoreCurrentPresentation/);
+  assert.match(parityRuntime, /decoded\.message\.type==="hello-ack"&&decoded\.message\.compatibility\.status==="compatible"/);
   assert.match(runtime, /applyRemoteSessionImageHandout/);
   assert.doesNotMatch(`${runtime}\n${handout}`, /tactical grid|fog of war|public URL|cloud hosting/i);
 });
