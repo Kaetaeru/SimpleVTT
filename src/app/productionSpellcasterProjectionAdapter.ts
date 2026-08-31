@@ -97,6 +97,16 @@ function productionSpellActions(character:SpellCharacter):ActionVm[] {
   return actions;
 }
 
+function actionTargetIds(snapshot:AppSnapshot,action:ActionVm) {
+  if(action.target==="none")return [];
+  if(action.target==="self")return [action.actorId];
+  const actor=snapshot.scene.entities.find((entity)=>entity.id===action.actorId);
+  if(!actor)return [];
+  if(action.target==="enemy"||action.target==="multi-enemy")return snapshot.scene.entities.filter((entity)=>entity.side!==actor.side).map((entity)=>entity.id);
+  if(action.target==="ally")return snapshot.scene.entities.filter((entity)=>entity.side===actor.side).map((entity)=>entity.id);
+  return snapshot.scene.entities.map((entity)=>entity.id);
+}
+
 function projectSpellcaster(snapshot:AppSnapshot,character:SpellCharacter) {
   const cantrips=(character.cantrips??[]).map(normalizedSpellId);
   const preparedRaw=character.preparedSpells??[];
@@ -130,7 +140,10 @@ function projectSpellcaster(snapshot:AppSnapshot,character:SpellCharacter) {
   };
 
   const existing=snapshot.scene.actionsByActor[character.id]??[];
-  const projected=projectProductionCharacterActions(character,productionSpellActions(character));
+  const projected=projectProductionCharacterActions(character,productionSpellActions(character)).map((action)=>({
+    ...action,
+    eligibleTargetIds:actionTargetIds(snapshot,action),
+  }));
   const projectedIds=new Set(projected.map((action)=>action.id));
   snapshot.scene.actionsByActor[character.id]=[
     ...existing.filter((action)=>!projectedIds.has(action.id)),
