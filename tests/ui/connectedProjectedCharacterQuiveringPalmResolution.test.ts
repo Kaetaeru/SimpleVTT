@@ -64,7 +64,7 @@ function prepareOwningClient(client:MockAdapter,sheet:CharacterSheet,projection:
   if(reconstructed.status!=="accepted")throw new Error(reconstructed.error);
   const state=client as unknown as MutableAdapterState;
   state.activeCharacter=structuredClone(sheet);state.characters=[structuredClone(sheet)];
-  state.scene.entities=[...state.scene.entities.filter((entity)=>entity.id!==sheet.id&&entity.kind!=="character"),structuredClone(reconstructed.entity)];
+  state.scene.entities=[...state.scene.entities.filter((entity)=>entity.id!==sheet.id),structuredClone(reconstructed.entity)];
   state.scene.actionsByActor={...state.scene.actionsByActor,[sheet.id]:structuredClone(reconstructed.actions)};
   state.scene.economyByActor={...state.scene.economyByActor,[sheet.id]:structuredClone(reconstructed.economy)};
   state.scene.selectedActorId=sheet.id;state.scene.currentActorId=sheet.id;
