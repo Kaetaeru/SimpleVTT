@@ -1,6 +1,6 @@
 # Current — SimpleVTT
 
-Updated: 2026-08-31 Asia/Seoul
+Updated: 2026-09-01 Asia/Seoul
 
 This is the human/agent entry point for **what is current now**. Live GitHub state plus this page and the active master roadmap win over older handoffs, checklists, PR bodies, archived files, and remembered status.
 
@@ -45,9 +45,9 @@ Initial audit classification:
 
 ```text
 W0: 6/6 PASS
-W1: 4/8 PASS
-Official ledger score: 10.0/100.0
-Remaining gates: 62/72
+W1: 8/8 PASS — COMPLETE
+Official ledger score: 15.0/100.0
+Remaining gates: 58/72
 FAIL: 0
 BLOCKED: 0
 ```
@@ -69,19 +69,23 @@ The score is evidence status, not a percentage estimate of how much product code
 ```text
 Wave 1
 W0 — COMPLETE
-W1 — 4/8 PASS
-Next exact Gate: W1-05
+W1 — COMPLETE (8/8 PASS)
+Next exact Gate: W2-01
 ```
 
 W1-01 is closed with focused production-route evidence on canonical SHA `9113736b5dbc565cb40d0646b0f27abdbdc6eb59`.
 
 W1-02 through W1-04 are closed on canonical SHA `42305b1d2a66a976b08844509a63b5999166938a`. Existing Guided Create covers the full level-1 choice graph, Guided and Quick preserve one shared draft, and incomplete drafts remain blocked from commit. GitHub Actions UI run `33387465586` passed; no product runtime code was changed for these reuse gates.
 
+W1-05 through W1-08 passed on product SHA `c0900157560ac51a745eac687eb4fff7f2580086` (tree `75f8fc64799a98c22e980dbd102a822555d8c846`) in Windows Tauri run `33409861843`, job `99546422908`, artifact `9764936861`, digest `sha256:85eda3890fdbc6d28ee0e5155617082642a4e22c1e851a5c73783be59af00b23`. The Actions synthetic merge SHA `8c68cf20d7f2287e2f0581b6725f6a20785d5dab` had the same tree.
+
+W1-06 was the only Gate with a reproduced product gap: the real Character Library lacked complete durable duplicate/delete reachability and independent identity. Commit `736df4da679edb1b098363cdbabb174f46505841` minimally reused the existing repository/runtime and added UUID-backed identity plus duplicate/delete UI. W1-05, W1-07, and W1-08 changed only the existing E2E harness.
+
 ### Next execution sequence
 
-1. Run `W1-05` through the existing Windows Tauri/WebDriver harness: create → save → exit → relaunch → same Character load.
-2. Continue the actual-UI Tauri gates in order: import/duplicate/delete (`W1-06`), full-sheet persisted projection (`W1-07`), representative level-up and restart persistence (`W1-08`).
-3. Convert a gate to repair work only after a reproducible current-HEAD failure or a real production reachability/contract gap is demonstrated.
+1. Start `W2-01` by reconciling existing 12 class, 9 species, 4 background, and Level-1 catalog evidence on the current integration-derived SHA.
+2. Keep `W2-01` as `REUSE_LOCKED`; modify product code only after a reproducible current-HEAD failure or reachability/contract gap.
+3. Continue W2 in ledger order after exact evidence is recorded.
 4. For Common Play, follow [`design/ui-ux/COMMON-PLAY-FUNCTION-FIRST.md`](design/ui-ux/COMMON-PLAY-FUNCTION-FIRST.md): functional reachability first, broad UI redesign later.
 
 ## Non-negotiable execution rules
