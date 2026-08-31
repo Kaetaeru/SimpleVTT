@@ -519,8 +519,29 @@ export class CharacterLibraryRepository {
     return this.result(false);
   }
 
+  async remove(characterId:string, activeCharacterId:string|null):Promise<CharacterLibraryHydration> {
+    if (!this.document) throw new Error("character library repository must hydrate before remove");
+    const characters=this.document.characters.filter((record)=>record.characterId!==characterId);
+    if (characters.length===this.document.characters.length) throw new Error(`Character was not found: ${characterId}`);
+    if (!characters.length) throw new Error("the last Character cannot be deleted");
+    const ids=new Set(characters.map((record)=>record.characterId));
+    const nextGeneration=this.physicalGeneration+1;
+    const next:CharacterLibraryDocumentV1={
+      ...this.document,
+      storageRevision:nextGeneration,
+      activeCharacterId:activeCharacterId&&ids.has(activeCharacterId)?activeCharacterId:characters[0].characterId,
+      characters,
+    };
+    await this.store.writeGeneration(this.physicalGeneration,nextGeneration,encodeCharacterLibraryV1(next));
+    this.document=next;
+    this.physicalGeneration=nextGeneration;
+    this.loadedGeneration=nextGeneration;
+    return this.result(false);
+  }
+
   snapshot() {
     if (!this.document) return null;
     return cp(this.document);
   }
 }
+

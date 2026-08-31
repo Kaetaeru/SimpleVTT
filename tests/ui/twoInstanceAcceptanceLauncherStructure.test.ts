@@ -53,8 +53,10 @@ test("Tauri UI E2E launcher drives isolated Host and Client windows through real
   assert.match(runner,/Character identity changed across real Tauri restart/);
   assert.match(runner,/await stopInstance\(first\)/);
   assert.match(runner,/latestCharacterDocument/);
-  assert.match(runner,/Identity UI choices remain unresolved/);
+  assert.match(runner,/dependent UI choices remain unresolved/);
   assert.match(runner,/Character choice did not commit/);
+  assert.match(runner,/new, duplicate, and import must own distinct Character IDs/);
+  assert.match(runner,/source provenance must remain record-local/);
   assert.match(runner,/takeScreenshot/);
   assert.match(wrapper,/npmExe run generate:content/);
   assert.match(wrapper,/arguments \+= '--w1'/);

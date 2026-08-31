@@ -237,26 +237,29 @@ async function chooseCharacterSource(browser, tab, name) {
   assert.deepEqual(unresolved, [], `${tab} UI choices remain unresolved: ${unresolved.join(", ")}`);
 }
 
-async function createW1Character(instance, name) {
-  await click(instance.browser, navButton("캐릭터"), "캐릭터 메뉴");
-  await click(instance.browser, exactButton("새 캐릭터"), "새 캐릭터");
+async function openCharacterTab(browser, label, sectionId) {
+  await click(browser, `//nav[contains(@class,'focused-create-tabs')]//button[.//span[normalize-space(.)=${JSON.stringify(label)}]]`, `${label} 탭`);
+  await browser.$(`//section[@id=${JSON.stringify(sectionId)}]`).waitForDisplayed({ timeout:15_000 });
+}
+
+async function finishW1FighterDraft(instance, name, selectSources = false) {
   await replaceValue(instance.browser, labelControl("캐릭터 이름"), name, "캐릭터 이름");
-  assert.deepEqual(await completeVisibleCharacterChoices(instance.browser), [], "Identity UI choices remain unresolved");
-  await chooseCharacterSource(instance.browser, "종족", "인간");
-  await chooseCharacterSource(instance.browser, "클래스", "파이터");
-  await chooseCharacterSource(instance.browser, "배경", "군인");
-  for (const tab of ["종족", "클래스"]) {
-    await click(instance.browser, `//nav[contains(@class,'focused-create-tabs')]//button[.//span[normalize-space(.)=${JSON.stringify(tab)}]]`, `${tab} 재검토`);
+  if (selectSources) {
+    await chooseCharacterSource(instance.browser, "종족", "인간");
+    await chooseCharacterSource(instance.browser, "클래스", "파이터");
+    await chooseCharacterSource(instance.browser, "배경", "군인");
+  }
+  for (const [tab,sectionId] of [["정체성","identity"],["종족","species"],["클래스","class"],["배경","background"]]) {
+    await openCharacterTab(instance.browser, tab, sectionId);
     const unresolved = await completeVisibleCharacterChoices(instance.browser);
     assert.deepEqual(unresolved, [], `${tab} dependent UI choices remain unresolved: ${unresolved.join(", ")}`);
   }
-  await click(instance.browser, `//nav[contains(@class,'focused-create-tabs')]//button[.//span[normalize-space(.)='능력치']]`, "능력치 탭");
+  await openCharacterTab(instance.browser, "능력치", "abilities");
   await click(instance.browser, `//section[@id='abilities']//button[contains(normalize-space(.),'파이터 추천 배치')]`, "파이터 추천 배치");
-  await click(instance.browser, `//nav[contains(@class,'focused-create-tabs')]//button[.//span[normalize-space(.)='기술']]`, "기술 탭");
-  await instance.browser.$("//section[@id='proficiencies']").waitForDisplayed({ timeout:15_000 });
+  await openCharacterTab(instance.browser, "기술", "proficiencies");
   const unresolved = await completeVisibleCharacterChoices(instance.browser);
   assert.deepEqual(unresolved, [], `Character UI choices remain unresolved: ${unresolved.join(", ")}`);
-  await click(instance.browser, `//nav[contains(@class,'focused-create-tabs')]//button[.//span[normalize-space(.)='검토']]`, "검토 탭");
+  await openCharacterTab(instance.browser, "검토", "review");
   const save = await instance.browser.$(exactButton("모험 시작"));
   if (!await save.isEnabled()) {
     const diagnostics = await instance.browser.execute(() => ({
@@ -267,6 +270,12 @@ async function createW1Character(instance, name) {
   }
   await click(instance.browser, exactButton("모험 시작"), "Character 저장");
   await waitForText(instance.browser, name, 30_000);
+}
+
+async function createW1Character(instance, name) {
+  await click(instance.browser, navButton("캐릭터"), "캐릭터 메뉴");
+  await click(instance.browser, exactButton("새 캐릭터"), "새 캐릭터");
+  await finishW1FighterDraft(instance,name,true);
 }
 
 async function latestCharacterDocument(dataRoot) {
@@ -318,6 +327,65 @@ async function runW105() {
     after,
   }, null, 2), "utf8");
   log(`W1-05 생성·저장·프로세스 종료·동일 data root 재시작 검증 통과 · ${before.id}`);
+  return { instance:restarted,dataRoot,name,identity:after };
+}
+
+function characterArticle(name) {
+  return `//article[contains(@class,'character-card-entry')][.//h2[normalize-space(.)=${JSON.stringify(name)}]]`;
+}
+
+async function runW106({ instance,dataRoot,name,identity }) {
+  const duplicateName=`${name} 복제`;
+  const importedName=`${name} 가져오기`;
+  await click(instance.browser, `${characterArticle(name)}//button[normalize-space(.)='복제']`, "Character 복제");
+  await finishW1FighterDraft(instance,duplicateName);
+
+  await click(instance.browser, `//button[contains(@class,'character-card') and contains(@class,'utility')][.//h3[normalize-space(.)='JSON 가져오기']]`, "Character JSON 가져오기");
+  const payload=JSON.stringify({name:importedName,className:"파이터",species:"인간",background:"군인",level:1});
+  await replaceValue(instance.browser, "//section[contains(@class,'focused-import')]//textarea", payload, "Character JSON");
+  await click(instance.browser, exactButton("가져와서 검토"), "Character JSON 검토");
+  await instance.browser.$("//section[@id='review']").waitForDisplayed({ timeout:15_000 });
+  await finishW1FighterDraft(instance,importedName);
+
+  let document=await latestCharacterDocument(dataRoot);
+  const original=storedCharacterIdentity(document,name);
+  const duplicate=storedCharacterIdentity(document,duplicateName);
+  const imported=storedCharacterIdentity(document,importedName);
+  assert.equal(original.id,identity.id);
+  assert.equal(new Set([original.id,duplicate.id,imported.id]).size,3,"new, duplicate, and import must own distinct Character IDs");
+  for (const entry of [original,duplicate,imported]) {
+    const record=document.characters.find((candidate)=>candidate.characterId===entry.id);
+    assert.equal(record?.source.characterId,entry.id,"Character source provenance must remain record-local");
+    assert.equal(record?.materializedCache?.sheet?.id,entry.id,"materialized Character identity must remain record-local");
+  }
+
+  const remove=`${characterArticle(duplicateName)}//button[normalize-space(.)='삭제']`;
+  await instance.browser.$(remove).click();
+  await instance.browser.acceptAlert();
+  await instance.browser.waitUntil(async()=>!await instance.browser.$(characterArticle(duplicateName)).isExisting(),{
+    timeout:15_000,timeoutMsg:"deleted Character remained visible",
+  });
+  document=await latestCharacterDocument(dataRoot);
+  assert.equal(document.characters.some((record)=>record.characterId===duplicate.id),false);
+  await saveEvidence(instance,"w1-06-lifecycle");
+  await stopInstance(instance);
+
+  const restarted=await launchInstance("W1 Library Restart",dataRoot,await reservePort());
+  await click(restarted.browser,navButton("캐릭터"),"W1-06 재시작 후 캐릭터 메뉴");
+  await waitForText(restarted.browser,name,30_000);
+  await waitForText(restarted.browser,importedName,30_000);
+  assert.equal(await restarted.browser.$(characterArticle(duplicateName)).isExisting(),false);
+  const after=await latestCharacterDocument(dataRoot);
+  assert.ok(after.characters.some((record)=>record.characterId===original.id));
+  assert.ok(after.characters.some((record)=>record.characterId===imported.id));
+  assert.equal(after.characters.some((record)=>record.characterId===duplicate.id),false);
+  await saveEvidence(restarted,"w1-06-restarted");
+  await writeFile(path.join(artifactRoot,"w1-06.json"),JSON.stringify({
+    gate:"W1-06",status:"PASS",verificationSha:process.env.GITHUB_SHA??"local",windowsTauri:true,
+    original,duplicate,imported,deletedId:duplicate.id,remainingIds:after.characters.map((record)=>record.characterId),
+  },null,2),"utf8");
+  log(`W1-06 import·duplicate·delete·identity/provenance·재시작 검증 통과 · ${original.id}`);
+  return { instance:restarted,dataRoot,name,identity:original };
 }
 
 async function createHostCampaign(host) {
@@ -415,7 +483,8 @@ async function runScenario() {
   await ensureVite();
 
   if (w1Only) {
-    await runW105();
+    const w105=await runW105();
+    await runW106(w105);
     log(`W1 실제 Tauri 증거: ${artifactRoot}`);
     return;
   }

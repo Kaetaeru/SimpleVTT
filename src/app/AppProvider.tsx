@@ -28,6 +28,7 @@ import "./campaignRuntimeAdapter";
 import { mockAdapter } from "./mockAdapter";
 import { subscribeExternalAdapterSnapshot } from "./adapterSnapshotEvents";
 import { setSessionDebugPreviewRole } from "./sessionDebugPreviewRole";
+import { deleteCharacterDurably } from "./characterLibraryRuntimeAdapter";
 
 export interface UiDebugState {
   selectedActionId: string | null;
@@ -43,6 +44,8 @@ interface AppContextValue {
   setUiDebug(patch: Partial<UiDebugState>): void;
   refresh(): Promise<void>;
   createCharacterDraft(mode?: CharacterCreateDraft["mode"]): Promise<void>;
+  duplicateCharacterDraft(characterId:string):Promise<void>;
+  deleteCharacter(characterId:string):Promise<void>;
   editCharacterDraft(characterId: string): Promise<void>;
   updateCharacterDraft(command: CharacterDraftCommand): Promise<void>;
   finalizeCharacterDraft(): Promise<void>;
@@ -198,6 +201,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setUiDebug,
     refresh,
     createCharacterDraft: async (mode) => apply(() => mockAdapter.createCharacterDraft(mode)),
+    duplicateCharacterDraft: async (characterId) => apply(async () => {
+      await mockAdapter.selectProductionCharacter(characterId);
+      return mockAdapter.createCharacterDraft("duplicate");
+    }),
+    deleteCharacter: async (characterId) => apply(() => deleteCharacterDurably(mockAdapter,characterId)),
     editCharacterDraft: async (characterId) => apply(() => mockAdapter.editCharacterDraft(characterId)),
     updateCharacterDraft,
     finalizeCharacterDraft: async () => apply(() => mockAdapter.finalizeCharacterDraft()),
@@ -501,3 +509,4 @@ export function SessionDebugPreviewProvider({ children, role, mode, onExit }: {
 }
 
 export type { AdjudicationScope };
+

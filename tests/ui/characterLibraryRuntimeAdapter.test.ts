@@ -4,6 +4,7 @@ import { MockAdapter } from "../../src/app/mockAdapter";
 import { decodeCharacterLibraryV1 } from "../../src/app/characterLibraryPersistence";
 import { MemoryCharacterLibraryStore } from "../../src/app/memoryCharacterLibraryStore";
 import {
+  deleteCharacterDurably,
   getCharacterLibraryPersistenceStateForTests,
   setCharacterLibraryStoreForTests,
 } from "../../src/app/characterLibraryRuntimeAdapter";
@@ -171,6 +172,30 @@ test("a production Character creation commit persists the new active Character a
   assert.equal(restored.persistence?.storageRevision,1);
 });
 
+test("same-name Characters keep independent durable identities and deleting one survives restart", async () => {
+  const store=new MemoryCharacterLibraryStore();
+  const writer=new MockAdapter();
+  setCharacterLibraryStoreForTests(writer,store);
+  await writer.getSnapshot();
+  await prepareFighterCreation(writer,"Independent Fighter");
+  const first=(await writer.finalizeCharacterDraft()).activeCharacter;
+  await prepareFighterCreation(writer,"Independent Fighter");
+  const second=(await writer.finalizeCharacterDraft()).activeCharacter;
+  assert.notEqual(second.id,first.id);
+  assert.equal((await latestDocument(store)).characters.filter((record)=>record.source.name==="Independent Fighter").length,2);
+
+  await deleteCharacterDurably(writer,first.id);
+  const remaining=await latestDocument(store);
+  assert.equal(remaining.characters.some((record)=>record.characterId===first.id),false);
+  assert.equal(remaining.characters.some((record)=>record.characterId===second.id),true);
+
+  const reader=new MockAdapter();
+  setCharacterLibraryStoreForTests(reader,store);
+  const restored=await reader.getSnapshot();
+  assert.equal(restored.characters.some((character)=>character.id===first.id),false);
+  assert.equal(restored.characters.some((character)=>character.id===second.id),true);
+});
+
 test("a failed Character creation save keeps the editable draft and previous active Character", async () => {
   const store = new MemoryCharacterLibraryStore();
   const adapter = new MockAdapter();
@@ -221,3 +246,4 @@ test("the production Fighter 5 to 6 level-up persists source revision and reload
   assert.equal(restored.activeCharacter.sourceRevision,2);
   assert.equal(restored.activeCharacter.runtimeRevision,2);
 });
+
