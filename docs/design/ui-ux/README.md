@@ -12,8 +12,11 @@ Repository-wide 통합 기획
 -> unified Core Systems UX plan + Korean-first extensibility contract
 -> Korean Core Systems demo BUILT
 -> OWNER CORE SYSTEMS DIRECTION ACCEPTED
--> NEXT: runtime/domain contracts materialization without hard-coding future systems
+-> OWNER REQUEST: Common Play 기반 시각 레퍼런스 재구성
+-> NEXT VISUAL WORK: COMMON-PLAY-VISUAL-REFERENCE-PLAN.md
 ```
+
+현재 시각 작업은 런타임 구현 승인이 아니다. 새 그림은 Owner가 승인하기 전까지 `DRAFT`이며, 기존 product/domain 계약을 덮어쓰지 않는다.
 
 ---
 
@@ -26,6 +29,39 @@ Repository-wide 통합 기획
 5. Owner-accepted visual references;
 6. `contracts/` implementation contracts;
 7. current Work Order / scoped authorization / implementation / Human QA.
+
+## Current visual work handoff
+
+새 Common Play 시각 레퍼런스를 만들거나 검수하는 AI는 먼저 아래 파일을 읽는다.
+
+```text
+COMMON-PLAY-VISUAL-REFERENCE-PLAN.md
+```
+
+이 handoff는 작업량을 다음 두 그룹으로 고정한다.
+
+```text
+BASE 5개
+- Home / Global Shell
+- Player Freeform
+- Player Initiative
+- DM Freeform
+- DM Initiative
+
+REF bundle 10개
+- Action Interaction
+- Dynamic Choice
+- Targeting + Allocation
+- Pending Resolution + Reaction + Consent
+- DM Common Play Adjudication
+- Authoritative Dice + Immediate Result
+- Explainability / Provenance
+- Persistent Mechanics
+- Session Utility Surfaces
+- System Feedback / Recovery
+```
+
+`BASE`는 평상시 화면에 존재하는 구조이고, `REF`는 특정 Common Play 상태에서 BASE 위에 나타나는 일시적/맥락적 UI다. 모든 REF를 상시 패널로 만들지 않는다.
 
 Existing Connected Play visual reference:
 
@@ -61,9 +97,7 @@ ITEM-CURRENCY-TRANSFER-FOUNDATION.md
 
 Core rule:
 
-> Accepted prototype가 실제 장면을 이미 정의한 경우, prose contract의 큰 구조만 만족하는 시각적으로 다른 화면을 대체안으로 만들지 않는다.
-
-The Core Systems extension extends the accepted Play scene; it does not replace it.
+> Accepted prototype가 실제 장면을 이미 정의한 경우, prose contract의 큰 구조만 만족하는 시각적으로 다른 화면을 임의로 런타임 기준으로 대체하지 않는다. 현재 Common Play visual rebase는 Owner가 새 후보를 검수·승인하기 위한 별도 작업이며, 승인 전에는 기존 runtime authority를 바꾸지 않는다.
 
 ---
 
@@ -72,8 +106,12 @@ The Core Systems extension extends the accepted Play scene; it does not replace 
 | Item | Status |
 | --- | --- |
 | Core spatial model | **MAPLESS** |
-| Existing Integrated Reference | **OWNER ACCEPTED** |
+| Existing Integrated Reference | **OWNER ACCEPTED / CURRENT HISTORICAL VISUAL BASELINE** |
 | Accepted candidate ref | `4c12084bef603866b9b69f1bfd8f363146920184` |
+| Common Play visual rebase | **OWNER REQUESTED / 15 REFERENCES NOT DRAWN** |
+| Common Play BASE set | **5/5 NOT_DRAWN** |
+| Common Play REF bundle set | **10/10 NOT_DRAWN** |
+| Common Play visual runtime authority | **NOT GRANTED — OWNER REVIEW REQUIRED** |
 | WO-UI-001 | **CLOSED / ACCEPTED** |
 | WO-UI-002 | **CLOSED / ACCEPTED** |
 | WO-UI-003 | **CLOSED / ACCEPTED** |
@@ -94,7 +132,7 @@ The Core Systems extension extends the accepted Play scene; it does not replace 
 
 # Accepted Connected Play scene
 
-Primary accepted reference scenarios remain:
+Primary accepted reference scenarios remain historical/current visual evidence until the new Common Play candidates receive Owner approval:
 
 ```text
 PROTO-SCN-08 — DM Freeform mapless
@@ -323,15 +361,19 @@ UI must not manufacture these semantics locally.
 
 ---
 
-# Current next gate
+# Current next visual gate
 
 ```text
-Core Systems product/UX direction OWNER ACCEPTED
--> materialize missing domain/architecture contracts
--> define scoped runtime slice(s)
--> explicit runtime authorization
--> implementation + tests
--> Human QA
+COMMON-PLAY-VISUAL-REFERENCE-PLAN.md
+-> BASE-01 Home + Global Product Shell
+-> BASE-02 Player Freeform
+-> BASE-03 Player Initiative
+-> BASE-04 DM Freeform
+-> BASE-05 DM Initiative
+-> REF-01 ~ REF-10
+-> Owner review / revise
+-> APPROVED_LAYOUT / APPROVED_VISUAL
+-> FROZEN_REFERENCE only when explicitly approved
 ```
 
-Do not infer runtime authorization merely from prototype/product acceptance.
+Runtime/domain work remains separately governed by the V1 master roadmap and architecture contracts. Do not infer runtime authorization from visual reference generation or approval alone.

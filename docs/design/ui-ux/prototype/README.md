@@ -1,6 +1,24 @@
 # SimpleVTT UI Reference Prototype
 
-Status: **INTEGRATED REFERENCE OWNER ACCEPTED — runtime preparation handoff complete**
+Status: **EXISTING INTEGRATED REFERENCE OWNER ACCEPTED / COMMON PLAY VISUAL REBASE REQUESTED**
+
+The previously accepted integrated reference remains valid historical/implementation evidence until a new Common Play visual reference is explicitly approved and frozen by the Owner.
+
+The current visual-design handoff is:
+
+```text
+../COMMON-PLAY-VISUAL-REFERENCE-PLAN.md
+```
+
+That handoff defines:
+
+```text
+5 BASE references
++ 10 REF bundles
+= 15 target visual references
+```
+
+New generated images are `DRAFT` by default. They do not supersede the accepted reference, alter runtime authority, or authorize production UI implementation until Owner approval is recorded.
 
 Historical candidates remain ineligible:
 
@@ -9,7 +27,7 @@ app/index.html      -> REJECTED / HISTORICAL
 app/final-spec.html -> INVALIDATED / HISTORICAL
 ```
 
-Accepted reference:
+Existing accepted reference:
 
 ```text
 app/integrated-reference.html
@@ -29,25 +47,61 @@ Static verification:
 INTEGRATED-REFERENCE-VERIFICATION.md
 ```
 
-The accepted prototype is now the visual/interaction reference for runtime-preparation contracts. It does not authorize production `src/` implementation and does not Freeze Product Decisions by itself.
+The accepted prototype remains the current runtime-preparation visual/interaction evidence until the new Common Play rebase reaches `FROZEN_REFERENCE`. It does not authorize production `src/` implementation and does not Freeze Product Decisions by itself.
 
 ---
 
-# Mandatory baseline
+# Mandatory baseline for new visual work
 
-Broad UI work reads:
+Any request to generate or revise the new Common Play UI references reads:
 
 ```text
+../COMMON-PLAY-VISUAL-REFERENCE-PLAN.md
 ../INTEGRATED-PRODUCT-UX-PLAN.md
 ```
 
-before interpreting prototype detail.
+then the exact applicable Domain/Architecture/Common Play contract for the requested item.
 
 Domain/Architecture contracts and `../decisions.md` remain higher authority for their respective domains.
 
+Do not reverse the order and reconstruct product intent from the old prototype or current code.
+
 ---
 
-# Accepted prototype invariants
+# Current Common Play visual set
+
+## BASE — always-visible compositions
+
+```text
+BASE-01 Home + Global Product Shell
+BASE-02 Player Session / Freeform
+BASE-03 Player Session / Initiative
+BASE-04 DM Session / Freeform
+BASE-05 DM Session / Initiative
+```
+
+## REF — contextual/transient bundles
+
+```text
+REF-01 Action Interaction
+REF-02 Dynamic Choice
+REF-03 Targeting + Multi-target + Allocation
+REF-04 Pending Resolution + Reaction + Consent
+REF-05 DM Common Play Adjudication
+REF-06 Authoritative Dice + Immediate Result
+REF-07 Explainability / Provenance
+REF-08 Persistent Mechanics
+REF-09 Session Utility Surfaces
+REF-10 System Feedback / Recovery
+```
+
+All currently begin at `NOT_DRAWN`.
+
+The BASE set must be established before transient REF layouts are finalized, because every REF needs a real spatial home in the persistent Play composition.
+
+---
+
+# Existing accepted prototype invariants that remain product constraints
 
 ## First launch
 
@@ -120,7 +174,7 @@ Advanced spatial UI is a contextual Actor-pair fact editor, not a coordinate edi
 
 # Runtime-preparation handoff
 
-Accepted prototype requirements have been materialized into:
+Existing accepted prototype requirements were materialized into:
 
 ```text
 ../contracts/README.md
@@ -130,9 +184,9 @@ Accepted prototype requirements have been materialized into:
 ../contracts/IMPLEMENTATION-TRACEABILITY.md
 ```
 
-Implementation agents should use those contracts rather than reverse-engineering prototype HTML/CSS/fixtures.
+These remain implementation evidence. If the Owner approves a materially different Common Play visual reference, affected contracts must be reconciled before runtime implementation uses the new design.
 
-Prototype fixture objects are review data, not production schemas.
+Implementation agents should not reverse-engineer prototype fixtures as production schemas.
 
 ---
 
@@ -147,7 +201,7 @@ GAP-HANDOUT-NETWORK-CONTRACT
 GAP-DM-ONLY-DELIVERY-PROTOCOL
 ```
 
-The accepted UI may demonstrate these with fixtures, but production implementation requires the owning Domain/Architecture contract.
+Visual references may demonstrate these with explicit fixtures, but production implementation requires the owning Domain/Architecture contract.
 
 ---
 
@@ -155,17 +209,13 @@ The accepted UI may demonstrate these with fixtures, but production implementati
 
 ```text
 Integrated Product / UI / UX Plan          DONE
-Prototype specification reconciliation    DONE
-Integrated Reference build                 DONE
-Static verification                        PASS
-Owner visual/interaction review             PASS
-Prototype Owner Acceptance                  PASS
-Surface Contract                            DONE
-Component Contract                          DONE
-Interaction/State/Layer/Motion Contract     DONE
-Implementation Traceability                 DONE
-Runtime Preparation                         IN PROGRESS / NOT READY
-Runtime src Implementation                  NOT AUTHORIZED
+Existing Integrated Reference               OWNER ACCEPTED
+Common Play Visual Rebase Plan              CREATED
+BASE-01~05                                  NOT_DRAWN
+REF-01~10                                   NOT_DRAWN
+New Owner visual review                      PENDING
+New Common Play FROZEN_REFERENCE             NOT SET
+Runtime src Implementation                   NOT AUTHORIZED BY VISUAL WORK
 ```
 
-The next step is to choose a bounded runtime implementation slice, resolve only its blocking technical gaps, reconcile touched legacy code/tests, identify exact Product Decision dependencies, obtain scoped Freeze authorization where needed, and then write a separate runtime Work Order.
+Next visual action is `BASE-01` unless the Owner explicitly chooses another item.
