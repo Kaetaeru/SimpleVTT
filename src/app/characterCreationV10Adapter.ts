@@ -116,7 +116,7 @@ function sheet(draft: CharacterCreateDraft): CharacterSheet {
   const attacks = weapon ? [{ id:"action.starter", name:itemDisplayName(weapon), bonus:weaponAttackBonus(weapon, draft), damage:weaponDef?.damage ? `${weaponDef.damage} ${weaponDef.damageType ?? ""}`.trim() : "시작 무기 피해" }] : [];
   const resources = classId === "dnd.srd521.class.fighter" ? [{ id:"resource.second-wind", label:"재기의 바람", current:2, max:2, source:"SRD Fighter level 1" }] : [];
   return {
-    id:`char.${draft.name.trim().toLowerCase().replace(/\s+/g, "-") || "new"}`,
+    id:`char.${crypto.randomUUID()}`,
     name:draft.name.trim() || "이름 없음",
     className:draft.className,
     level:draft.level,
@@ -273,3 +273,4 @@ MockAdapter.prototype.finalizeCharacterDraft = async function () {
   state.createDraft = null;
   return state.getSnapshot();
 };
+

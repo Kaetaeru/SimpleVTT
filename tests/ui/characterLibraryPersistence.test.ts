@@ -197,6 +197,17 @@ test("stale Character library writers cannot overwrite a newer generation", asyn
   await assert.rejects(() => stale.commit([sheet()],"char.test"),/stale Character library generation/);
 });
 
+test("Character removal commits one generation and preserves a valid active identity", async () => {
+  const store=new MemoryCharacterLibraryStore();
+  const repository=new CharacterLibraryRepository(store);
+  await repository.hydrate([sheet("char.first"),sheet("char.second")],"char.first");
+  const removed=await repository.remove("char.first",null);
+  assert.deepEqual(removed.sheets.map((entry)=>entry.id),["char.second"]);
+  assert.equal(removed.activeCharacterId,"char.second");
+  assert.equal(removed.document.storageRevision,1);
+  await assert.rejects(()=>repository.remove("char.second",null),/last Character/);
+});
+
 test("a corrupt newest generation recovers from the previous valid commit without overwriting it", async () => {
   const store = new MemoryCharacterLibraryStore();
   const writer = new CharacterLibraryRepository(store);
@@ -266,3 +277,4 @@ test("an unrelated schema id is an explicit blocker rather than an older-generat
   const repository = new CharacterLibraryRepository(store);
   await assert.rejects(() => repository.hydrate([sheet()],"char.test"),CharacterLibrarySchemaError);
 });
+

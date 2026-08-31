@@ -50,8 +50,22 @@ test("Tauri UI E2E launcher drives isolated Host and Client windows through real
   assert.match(runner,/10 GP 보관/);
   assert.match(runner,/Host owner inventory after Player stash deposit/);
   assert.match(runner,/Party Stash must not duplicate the deposit/);
+  assert.match(runner,/Character identity changed across real Tauri restart/);
+  assert.match(runner,/await stopInstance\(first\)/);
+  assert.match(runner,/latestCharacterDocument/);
+  assert.match(runner,/dependent UI choices remain unresolved/);
+  assert.match(runner,/Character choice did not commit/);
+  assert.match(runner,/new, duplicate, and import must own distinct Character IDs/);
+  assert.match(runner,/source provenance must remain record-local/);
+  assert.match(runner,/W1-07 durable Character와 Full Sheet/);
+  assert.match(runner,/Full Sheet inventory missing/);
+  assert.match(runner,/W1-08 level-up choice·validation·commit·새 feature\/action/);
+  assert.match(runner,/level-up changed Character identity/);
   assert.match(runner,/takeScreenshot/);
+  assert.match(wrapper,/npmExe run generate:content/);
+  assert.match(wrapper,/arguments \+= '--w1'/);
   assert.match(wrapper,/CARGO_TARGET_DIR/);
   assert.match(wrapper,/--features tauri-e2e/);
   assert.match(cmd,/run-tauri-e2e\.ps1/);
 });
+

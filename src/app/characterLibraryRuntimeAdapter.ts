@@ -391,6 +391,26 @@ export async function updateActiveCharacterPortrait(adapter:MockAdapter,portrait
   }
 }
 
+export async function deleteCharacterDurably(adapter:MockAdapter,characterId:string) {
+  await ensureHydrated(adapter);
+  const state=stateOf(adapter);
+  const context=contextFor(adapter);
+  const before=capture(state);
+  const fallback=collectPersistableSheets(state).find((sheet)=>sheet.id!==characterId)?.id??null;
+  try {
+    const hydration=await context.repository.remove(characterId,state.activeCharacter.id===characterId?fallback:state.activeCharacter.id);
+    state.characters=state.characters.filter((character)=>character.id!==characterId);
+    applyHydration(state,hydration.sheets,hydration.activeCharacterId);
+    context.vm={durability:context.repository.durability,status:"ready",storageRevision:hydration.document.storageRevision};
+    return adapter.getSnapshot();
+  } catch(error) {
+    restore(state,before);
+    const message=error instanceof Error?error.message:String(error);
+    context.vm={durability:context.repository.durability,status:"error",storageRevision:context.repository.snapshot()?.storageRevision??0,message};
+    throw error;
+  }
+}
+
 export function setCharacterLibraryStoreForTests(adapter:MockAdapter,store:CharacterLibraryStore) {
   injectedStores.set(adapter,store);
   contexts.delete(adapter);
@@ -414,3 +434,4 @@ export async function mutateActiveCharacterDurably(
     return adapter.getSnapshot();
   });
 }
+

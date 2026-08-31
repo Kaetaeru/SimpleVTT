@@ -3,6 +3,7 @@ param(
   [string]$Root,
   [switch]$SkipBuild,
   [switch]$Smoke,
+  [switch]$W1,
   [switch]$KeepOpen
 )
 
@@ -42,6 +43,7 @@ function Find-VsDevCmd {
 }
 
 $nodeExe = Resolve-Tool (Join-Path $rootPath '.live-dev\runtime\node\node.exe') 'node.exe'
+$npmExe = Resolve-Tool (Join-Path $rootPath '.live-dev\runtime\node\npm.cmd') 'npm.cmd'
 $cargoExe = Resolve-Tool (Join-Path $rootPath '.live-dev\runtime\rust\cargo\bin\cargo.exe') 'cargo.exe'
 $webdriverPackage = Join-Path $rootPath 'node_modules\webdriverio\package.json'
 if (-not (Test-Path -LiteralPath $webdriverPackage)) {
@@ -53,6 +55,10 @@ if ($cargoExe.StartsWith((Join-Path $rootPath '.live-dev\runtime\rust'),[System.
   $env:RUSTUP_HOME = Join-Path $rootPath '.live-dev\runtime\rust\rustup'
 }
 $env:CARGO_TARGET_DIR = $targetPath
+
+Write-Host '[TAURI E2E] Generating required content catalogs...'
+& $npmExe run generate:content
+if ($LASTEXITCODE -ne 0) { throw "Content generation failed with exit code $LASTEXITCODE." }
 
 if (-not $SkipBuild) {
   $vsDevCmd = Find-VsDevCmd
@@ -69,6 +75,7 @@ if (-not (Test-Path -LiteralPath $binaryPath)) {
 
 $arguments = @((Join-Path $rootPath 'scripts\run-tauri-e2e.mjs'))
 if ($Smoke) { $arguments += '--smoke' }
+if ($W1) { $arguments += '--w1' }
 if ($KeepOpen) { $arguments += '--keep-open' }
 
 Write-Host '[TAURI E2E] Starting two isolated windows and driving the real UI...'

@@ -1,6 +1,6 @@
 # Current roadmap
 
-Updated: 2026-08-31 Asia/Seoul
+Updated: 2026-09-01 Asia/Seoul
 
 This page routes to the **one active V1 execution plan**. It does not duplicate that plan.
 
@@ -39,10 +39,10 @@ These numbers classify the work; they are not completion credit. Completion cred
 
 ```text
 W0: COMPLETE — 6/6 PASS
-W1: 4/8 PASS
-Official ledger score: 10.0/100.0
-PASS: 10/72
-PENDING: 62/72
+W1: COMPLETE — 8/8 PASS
+Official ledger score: 15.0/100.0
+PASS: 14/72
+PENDING: 58/72
 FAIL: 0
 BLOCKED: 0
 ```
@@ -51,12 +51,12 @@ BLOCKED: 0
 
 ```text
 Wave 1
-Next Gate: W1-05
+Next Gate: W2-01
 ```
 
-`W1-05` is a `VERIFY_ONLY` Gate. Use the existing Windows Tauri/WebDriver harness to prove the real create → save → app exit → relaunch → same Character load journey. **Do not change product persistence or Character runtime unless the current Tauri journey reproduces a failure or reachability gap.**
+`W1` is complete. W1-05 through W1-08 passed the real Windows Tauri/WebDriver journey on product SHA `c0900157560ac51a745eac687eb4fff7f2580086` (tree `75f8fc64799a98c22e980dbd102a822555d8c846`), Actions run `33409861843`, job `99546422908`, artifact `9764936861`, digest `sha256:85eda3890fdbc6d28ee0e5155617082642a4e22c1e851a5c73783be59af00b23`. The next exact Gate is `W2-01`; it is `REUSE_LOCKED`, so existing SRD catalog evidence must be reconciled before any product change.
 
-W1-02 through W1-04 reused the existing Character Creator. Exact canonical verification SHA `42305b1d2a66a976b08844509a63b5999166938a` passed GitHub Actions UI run `33387465586`; no product runtime code was changed.
+W1-02 through W1-04 reused the existing Character Creator. Exact canonical verification SHA `42305b1d2a66a976b08844509a63b5999166938a` passed GitHub Actions UI run `33387465586`; no product runtime code was changed. W1-06 alone exposed a real production gap and minimally added distinct UUID identity plus durable duplicate/delete through the existing Character Library owner path; W1-05, W1-07, and W1-08 required no product-code change.
 
 Common Play follows the active function-first direction in `../design/ui-ux/COMMON-PLAY-FUNCTION-FIRST.md`: make the real behavior reachable and observable in Tauri before any broad shell/session visual redesign.
 
