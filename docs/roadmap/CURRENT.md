@@ -39,10 +39,10 @@ These numbers classify the work; they are not completion credit. Completion cred
 
 ```text
 W0: COMPLETE — 6/6 PASS
-W1: 1/8 PASS
-Official ledger score: 6.3/100.0
-PASS: 7/72
-PENDING: 65/72
+W1: 4/8 PASS
+Official ledger score: 10.0/100.0
+PASS: 10/72
+PENDING: 62/72
 FAIL: 0
 BLOCKED: 0
 ```
@@ -51,10 +51,12 @@ BLOCKED: 0
 
 ```text
 Wave 1
-Next Gate: W1-02
+Next Gate: W1-05
 ```
 
-`W1-02` is a `REUSE_LOCKED` Gate. Reconcile the existing Guided Create path for Species, Background, Class, Ability, proficiency, equipment, and applicable spell choices. **Do not reimplement Character creation without a reproduced current-HEAD failure.**
+`W1-05` is a `VERIFY_ONLY` Gate. Use the existing Windows Tauri/WebDriver harness to prove the real create → save → app exit → relaunch → same Character load journey. **Do not change product persistence or Character runtime unless the current Tauri journey reproduces a failure or reachability gap.**
+
+W1-02 through W1-04 reused the existing Character Creator. Exact canonical verification SHA `42305b1d2a66a976b08844509a63b5999166938a` passed GitHub Actions UI run `33387465586`; no product runtime code was changed.
 
 Common Play follows the active function-first direction in `../design/ui-ux/COMMON-PLAY-FUNCTION-FIRST.md`: make the real behavior reachable and observable in Tauri before any broad shell/session visual redesign.
 
