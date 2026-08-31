@@ -50,6 +50,18 @@ test("Tutorial persists presentation and completion but does not duplicate Chara
   assert.match(sheet, /layout === "simplevtt"[\s\S]*SimpleVttCharacterSheetPlayScreen[\s\S]*OfficialCharacterSheetPlayScreen/);
 });
 
+test("W1-01 fresh Home reaches Character Library and Guided Create through production routes", () => {
+  assert.match(app, /useState<AppRoute>\("home"\)/);
+  assert.match(app, /route === "home" && <V1HomeScreen/);
+  assert.match(app, /onCharacters=\{\(\) => setRoute\("characters"\)\}/);
+  assert.match(app, /onCreateCharacter=\{\(\) => setRoute\("create"\)\}/);
+  assert.match(app, /route === "characters" && <CharacterLibraryScreen/);
+  assert.match(app, /route === "create" && <CharacterCreateScreenV10/);
+  assert.match(home, /await createCharacterDraft\("guided"\);[\s\S]*onCreateCharacter\(\)/);
+  assert.match(home, /className="primary" onClick=\{startCharacter\}>새 캐릭터 만들기<\/button>/);
+  assert.match(home, /<button onClick=\{onCharacters\}>내 캐릭터 열기<\/button>/);
+});
+
 test("Home no longer owns a competing onboarding lifecycle", () => {
   assert.doesNotMatch(home, /GUIDE_KEY|simplevtt\.v1\.guide\.dismissed|v1-onboarding|guideOpen|dismissGuide/);
   assert.match(home, /처음 사용 안내는 설정에서 언제든 다시 열 수 있습니다/);
