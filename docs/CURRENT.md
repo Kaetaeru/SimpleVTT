@@ -46,8 +46,9 @@ Initial audit classification:
 ```text
 W0: 6/6 PASS
 W1: 8/8 PASS — COMPLETE
-Official ledger score: 15.0/100.0
-Remaining gates: 58/72
+W2: 1/8 PASS
+Official ledger score: 16.9/100.0
+Remaining gates: 57/72
 FAIL: 0
 BLOCKED: 0
 ```
@@ -70,8 +71,11 @@ The score is evidence status, not a percentage estimate of how much product code
 Wave 1
 W0 — COMPLETE
 W1 — COMPLETE (8/8 PASS)
-Next exact Gate: W2-01
+W2 — 1/8 PASS
+Next exact Gate: W2-02
 ```
+
+W2-01 is closed with inherited exact-SHA evidence from GitHub Actions UI run `33387465586` at canonical verification SHA `42305b1d2a66a976b08844509a63b5999166938a`. `tests/ui/characterCreationCompleteGate.test.ts` explicitly asserts 12 classes / 9 species / 4 backgrounds and completes every shipped SRD class to a legal saved Level-1 character. Comparing `42305b1d2a66a976b08844509a63b5999166938a..c6257b6637603cd35abc7f6c79ab706b36aaa7fb` shows the catalog definition, character-creation index, and focused test unchanged, so this evidence is inherited under the canonical Evidence Card rule. No product code changed for W2-01.
 
 W1-01 is closed with focused production-route evidence on canonical SHA `9113736b5dbc565cb40d0646b0f27abdbdc6eb59`.
 
@@ -83,8 +87,8 @@ W1-06 was the only Gate with a reproduced product gap: the real Character Librar
 
 ### Next execution sequence
 
-1. Start `W2-01` by reconciling existing 12 class, 9 species, 4 background, and Level-1 catalog evidence on the current integration-derived SHA.
-2. Keep `W2-01` as `REUSE_LOCKED`; modify product code only after a reproducible current-HEAD failure or reachability/contract gap.
+1. Start `W2-02` by reconciling the existing weapon, armor, equipment, item catalog, and item capability evidence on the current integration-derived SHA.
+2. Keep `W2-02` as `REUSE_LOCKED`; modify product code only after a reproducible current-HEAD failure or reachability/contract gap.
 3. Continue W2 in ledger order after exact evidence is recorded.
 4. For Common Play, follow [`design/ui-ux/COMMON-PLAY-FUNCTION-FIRST.md`](design/ui-ux/COMMON-PLAY-FUNCTION-FIRST.md): functional reachability first, broad UI redesign later.
 

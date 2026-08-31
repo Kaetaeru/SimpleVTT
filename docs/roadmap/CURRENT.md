@@ -40,9 +40,10 @@ These numbers classify the work; they are not completion credit. Completion cred
 ```text
 W0: COMPLETE — 6/6 PASS
 W1: COMPLETE — 8/8 PASS
-Official ledger score: 15.0/100.0
-PASS: 14/72
-PENDING: 58/72
+W2: IN PROGRESS — 1/8 PASS
+Official ledger score: 16.9/100.0
+PASS: 15/72
+PENDING: 57/72
 FAIL: 0
 BLOCKED: 0
 ```
@@ -51,10 +52,12 @@ BLOCKED: 0
 
 ```text
 Wave 1
-Next Gate: W2-01
+Next Gate: W2-02
 ```
 
-`W1` is complete. W1-05 through W1-08 passed the real Windows Tauri/WebDriver journey on product SHA `c0900157560ac51a745eac687eb4fff7f2580086` (tree `75f8fc64799a98c22e980dbd102a822555d8c846`), Actions run `33409861843`, job `99546422908`, artifact `9764936861`, digest `sha256:85eda3890fdbc6d28ee0e5155617082642a4e22c1e851a5c73783be59af00b23`. The next exact Gate is `W2-01`; it is `REUSE_LOCKED`, so existing SRD catalog evidence must be reconciled before any product change.
+`W2-01` is PASS by inherited exact-SHA evidence. GitHub Actions UI run `33387465586` passed at canonical verification SHA `42305b1d2a66a976b08844509a63b5999166938a`; `tests/ui/characterCreationCompleteGate.test.ts` explicitly locks the shipped catalog at 12 classes / 9 species / 4 backgrounds and proves all 12 classes can reach a legal saved Level-1 commit. Comparing that SHA through integration HEAD `c6257b6637603cd35abc7f6c79ab706b36aaa7fb` shows no changes to `src/app/characterCreationV10Data.ts`, `content/indexes/dnd-srd-5.2.1.character-creation.json`, or the focused catalog test, so the Evidence Card inheritance rule applies. No product code changed for W2-01. The next exact Gate is `W2-02`.
+
+`W1` is complete. W1-05 through W1-08 passed the real Windows Tauri/WebDriver journey on product SHA `c0900157560ac51a745eac687eb4fff7f2580086` (tree `75f8fc64799a98c22e980dbd102a822555d8c846`), Actions run `33409861843`, job `99546422908`, artifact `9764936861`, digest `sha256:85eda3890fdbc6d28ee0e5155617082642a4e22c1e851a5c73783be59af00b23`.
 
 W1-02 through W1-04 reused the existing Character Creator. Exact canonical verification SHA `42305b1d2a66a976b08844509a63b5999166938a` passed GitHub Actions UI run `33387465586`; no product runtime code was changed. W1-06 alone exposed a real production gap and minimally added distinct UUID identity plus durable duplicate/delete through the existing Character Library owner path; W1-05, W1-07, and W1-08 required no product-code change.
 
