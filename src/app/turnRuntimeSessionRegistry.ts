@@ -149,6 +149,17 @@ function restore(adapter:MockAdapter,session:TurnRuntimeSession) {
   return session;
 }
 
+function synchronizeConnectedClientClockProjection(adapter:MockAdapter,session:TurnRuntimeSession,scene:SceneVm) {
+  if(connectedStateFor(adapter).mode!=="client"||scene.round<1||!scene.currentActorId) return;
+  const activeIndex=session.initiativeOrder.indexOf(scene.currentActorId);
+  if(activeIndex<0) return;
+  if(session.state.clock.round===scene.round&&session.state.clock.activeActorId===scene.currentActorId) return;
+  const state=cloneRuntimeState(session.state);
+  state.clock={...state.clock,round:scene.round,activeActorId:scene.currentActorId};
+  session.state=state;
+  session.activeIndex=activeIndex;
+}
+
 export function setTurnRuntimeStateStoreForTests(adapter:MockAdapter,store:TurnRuntimeStateStore) {
   injectedStores.set(adapter,store);
 }
@@ -176,6 +187,7 @@ export function ensureAdapterTurnRuntimeState(adapter:MockAdapter,scene:SceneVm)
 export function snapshotAdapterTurnRuntimeState(adapter:MockAdapter,scene:SceneVm):RulesRuntimeState|undefined {
   const session=sessions.get(adapter);
   if (!session) return undefined;
+  synchronizeConnectedClientClockProjection(adapter,session,scene);
   ensureProfilePropertyBases(adapter,session,scene);
   synchronizeTurnRuntimeFromScene(session,scene);
   ensureProfilePropertyBases(adapter,session,scene);
