@@ -63,7 +63,8 @@ test("Handout file validation and reconnect-restored state remain the existing b
   assert.match(handout, /readLocalImageFile\(file, HANDOUT_IMAGE_MAX_BYTES\)/);
   assert.match(runtime, /HANDOUT_IMAGE_MAX_BYTES/);
   assert.match(runtime, /restoreCurrentPresentation/);
-  assert.match(parityRuntime, /decoded\.message\.type==="hello-ack"&&decoded\.message\.compatibility\.status==="compatible"/);
+  assert.match(parityRuntime, /raw\?\.type==="hello-ack"/);
+  assert.match(parityRuntime, /compatibility\?\.status==="compatible"/);
   assert.match(runtime, /applyRemoteSessionImageHandout/);
   assert.doesNotMatch(`${runtime}\n${handout}`, /tactical grid|fog of war|public URL|cloud hosting/i);
 });
