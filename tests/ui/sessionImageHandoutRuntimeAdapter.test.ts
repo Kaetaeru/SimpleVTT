@@ -64,6 +64,8 @@ test("DM handout reveal is presentation-only and the current reveal is restored 
     assert.ok(firstAck);
     transport.emit(1,"host",firstAck.raw);
     await flush();
+    const reconnectHello=transport.sent().filter((entry)=>entry.value.type==="hello").at(-1);
+    assert.ok(reconnectHello,"content parity must leave a current hello that can be used for reconnect");
 
     const ledgerCursorBefore=connectedStateFor(host).ledger?.cursor;
     const asset=parseLocalImageDataUrl("data:image/webp;base64,UklGRg==","clue.webp",HANDOUT_IMAGE_MAX_BYTES);
@@ -78,7 +80,7 @@ test("DM handout reveal is presentation-only and the current reveal is restored 
     assert.equal(handout.getSessionImageHandoutState(client).dismissed,true);
 
     const reconnectPeer="peer.client.reconnect";
-    transport.emit(0,reconnectPeer,firstHello.raw);
+    transport.emit(0,reconnectPeer,reconnectHello.raw);
     await flush();
     const restored=transport.sentTo().filter((entry)=>entry.peer===reconnectPeer&&entry.value.type==="presentation-handout").at(-1);
     assert.ok(restored,"compatible reconnect hello-ack must be followed by the active Host presentation");
@@ -103,7 +105,7 @@ test("DM handout reveal is presentation-only and the current reveal is restored 
     assert.equal(handout.getSessionLastRollPresentationState(client).dismissedResolutionId,"resolution.last-roll.1");
 
     const lastRollReconnectPeer="peer.client.reconnect-last-roll";
-    transport.emit(0,lastRollReconnectPeer,firstHello.raw);
+    transport.emit(0,lastRollReconnectPeer,reconnectHello.raw);
     await flush();
     const restoredDismissal=transport.sentTo().filter((entry)=>entry.peer===lastRollReconnectPeer&&entry.value.type==="presentation-last-roll-dismiss").at(-1);
     assert.ok(restoredDismissal,"reconnecting Clients must keep the current Last Roll hidden until a new resolution arrives");
