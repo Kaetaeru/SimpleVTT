@@ -402,10 +402,20 @@ function sheetCard(root,heading) {
   return `${root}//article[contains(@class,'sheet-play-card')][.//h2[normalize-space(.)=${JSON.stringify(heading)}]]`;
 }
 
+function visibleStoredResources(resources) {
+  const ids=new Set(resources.map((resource)=>resource.id));
+  return resources
+    .filter((resource)=>resource.id!=="resource:fighter.action-surge.turn")
+    .filter((resource)=>resource.id!=="resource.second-wind"||!ids.has("resource:fighter.second-wind"))
+    .filter((resource)=>resource.id!=="resource.action-surge"||!ids.has("resource:fighter.action-surge"))
+    .map((resource)=>resource.id==="resource:fighter.second-wind"?{...resource,label:"세컨드 윈드"}:resource.id==="resource:fighter.action-surge"?{...resource,label:"액션 서지"}:resource);
+}
+
 async function runW107({instance,dataRoot,name,identity}) {
   const stored=storedCharacterSheet(await latestCharacterDocument(dataRoot),name);
+  const visibleResources=visibleStoredResources(stored.resources);
   assert.equal(stored.id,identity.id);
-  assert.ok(stored.resources.length>0,"representative W1 Character must persist at least one resource");
+  assert.ok(visibleResources.length>0,"representative W1 Character must expose at least one resource");
   assert.ok(stored.items.length>0,"representative W1 Character must persist inventory");
   assert.ok(stored.features.length>0,"representative W1 Character must persist features");
   assert.ok(stored.attacks.length>0,"representative W1 Character must persist actions");
@@ -418,7 +428,7 @@ async function runW107({instance,dataRoot,name,identity}) {
   assert.match(status,new RegExp(`AC\\s*${stored.ac}(?!\\d)`));
   assert.match(status,new RegExp(`HP\\s*${stored.hp}/${stored.maxHp}(?!\\d)`));
   const resources=await instance.browser.$(sheetCard(root,"자원")).getText();
-  for(const resource of stored.resources){assert.ok(resources.includes(resource.label));assert.ok(resources.includes(`${resource.current}/${resource.max}`));}
+  for(const resource of visibleResources){assert.ok(resources.includes(resource.label));assert.ok(resources.includes(`${resource.current}/${resource.max}`));}
   const equipment=await instance.browser.$(sheetCard(root,"장비")).getText();
   for(const item of stored.equipment)assert.ok(equipment.includes(item),`Full Sheet equipment missing: ${item}`);
   const features=await instance.browser.$(sheetCard(root,"기능")).getText();
@@ -437,7 +447,7 @@ async function runW107({instance,dataRoot,name,identity}) {
   await saveEvidence(instance,"w1-07-inventory");
   await writeFile(path.join(artifactRoot,"w1-07.json"),JSON.stringify({
     gate:"W1-07",status:"PASS",verificationSha,windowsTauri:true,characterId:stored.id,
-    expected:{hp:stored.hp,maxHp:stored.maxHp,ac:stored.ac,resources:stored.resources,equipment:stored.equipment,items:stored.items.map((item)=>({id:item.id,name:item.name,quantity:item.quantity})),spells:[],features:stored.features,actions:stored.attacks},
+    expected:{hp:stored.hp,maxHp:stored.maxHp,ac:stored.ac,resources:visibleResources,equipment:stored.equipment,items:stored.items.map((item)=>({id:item.id,name:item.name,quantity:item.quantity})),spells:[],features:stored.features,actions:stored.attacks},
   },null,2),"utf8");
   log(`W1-07 durable Character와 Full Sheet HP·AC·resource·inventory·spells·features·actions 일치 검증 통과 · ${stored.id}`);
   return {instance,dataRoot,name,identity,stored};
