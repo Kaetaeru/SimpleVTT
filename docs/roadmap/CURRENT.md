@@ -8,6 +8,11 @@ This page routes to the **one active V1 execution plan**. It does not duplicate 
 
 [`V1_MASTER_ROADMAP.md`](V1_MASTER_ROADMAP.md)
 
+Evidence tracking:
+
+- [`V1_EVIDENCE_LEDGER.json`](V1_EVIDENCE_LEDGER.json)
+- [`EVIDENCE_CARD.md`](EVIDENCE_CARD.md)
+
 ## Fixed V1 numbers
 
 ```text
@@ -28,25 +33,39 @@ Initial repository audit classification:
 61/72 existing implementation reused = 84.7%
 ```
 
-These numbers classify the work; they are not completion credit. Completion credit comes only from `docs/roadmap/V1_EVIDENCE_LEDGER.json` after exact-SHA evidence is recorded.
+These numbers classify the work; they are not completion credit. Completion credit comes only from the evidence ledger.
+
+## Current evidence state
+
+```text
+W0: COMPLETE — 6/6 PASS
+Official ledger score: 5.0/100.0
+PASS: 6/72
+PENDING: 66/72
+FAIL: 0
+BLOCKED: 0
+```
 
 ## Current stage
 
 ```text
-Wave 0
-Next Gate: W0-01
-Official ledger score: 0.0/100.0 until evidence migration
-Roadmap audit baseline: a38b0f07ac012bc9e600a28b2630a365d1bd098b
+Wave 1
+Next Gate: W1-01
 ```
 
-C9 Gate N is integrated into `work/v1-composite` and is no longer an active selection queue. The Resolver execution checklist and older Phase/V0.9/V1 checklists remain architecture and historical evidence only.
+`W1-01` is a `REUSE_LOCKED` Gate. Reconcile the existing First Run → Character Library / Create entrypoint and focused evidence first. **Do not reimplement Character creation to close it.**
+
+Common Play follows the active function-first direction in `../design/ui-ux/COMMON-PLAY-FUNCTION-FIRST.md`: make the real behavior reachable and observable in Tauri before any broad shell/session visual redesign.
+
+C9 Gate N is integrated into `work/v1-composite` and is no longer an active selection queue. Resolver execution checklists and older Phase/V0.9/V1 handoffs are architecture or historical evidence only.
 
 ## Execution rules
 
-1. Read the master roadmap and live `work/v1-composite` HEAD before selecting work.
+1. Read the master roadmap, evidence ledger, and live `work/v1-composite` HEAD before selecting work.
 2. Start at the first non-`PASS` unblocked Gate; do not select work from an archived checklist.
-3. Fill the eight-field Evidence Card before changing product code.
-4. A `REUSE_LOCKED` or `VERIFY_ONLY` Gate cannot trigger product changes without a reproducible failure on the current exact HEAD.
+3. Fill `EVIDENCE_CARD.md` before changing product code.
+4. A `REUSE_LOCKED` or `VERIFY_ONLY` Gate cannot trigger product changes without a reproducible current-HEAD failure or explicit production reachability/contract gap.
 5. Reuse the existing Tauri shell, stores, Resolver, transport, presentation pipeline, Party Stash, Long Rest, DM Library, and E2E harness.
-6. Do not add branch-writing automation as the normal implementation loop.
-7. V1 closes only at `72/72`, `100.0/100.0`, `120/120`, and one matching Windows artifact.
+6. Do not add branch-writing/self-publishing automation as the normal implementation loop.
+7. Structural or protocol-only evidence cannot close rendered Windows behavior.
+8. V1 closes only at `72/72`, `100.0/100.0`, `120/120`, all required legacy/MP issue closure, and one matching Windows artifact plus digest.
