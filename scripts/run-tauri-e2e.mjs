@@ -250,7 +250,7 @@ async function finishW1FighterDraft(instance, name, selectSources = false) {
     await chooseCharacterSource(instance.browser, "클래스", "파이터");
     await chooseCharacterSource(instance.browser, "배경", "군인");
   }
-  for (const [tab,sectionId] of [["종족","species"],["클래스","class"],["배경","background"]]) {
+  for (const [tab,sectionId] of [["정체성","identity"],["종족","species"],["클래스","class"],["배경","background"]]) {
     await openCharacterTab(instance.browser, tab, sectionId);
     const unresolved = await completeVisibleCharacterChoices(instance.browser);
     assert.deepEqual(unresolved, [], `${tab} dependent UI choices remain unresolved: ${unresolved.join(", ")}`);
