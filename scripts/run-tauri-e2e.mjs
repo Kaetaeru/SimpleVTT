@@ -229,6 +229,7 @@ async function createW1Character(instance, name) {
   await click(instance.browser, navButton("캐릭터"), "캐릭터 메뉴");
   await click(instance.browser, exactButton("새 캐릭터"), "새 캐릭터");
   await replaceValue(instance.browser, labelControl("캐릭터 이름"), name, "캐릭터 이름");
+  assert.deepEqual(await completeVisibleCharacterChoices(instance.browser), [], "Identity UI choices remain unresolved");
   await chooseCharacterSource(instance.browser, "종족", "인간");
   await chooseCharacterSource(instance.browser, "클래스", "파이터");
   await chooseCharacterSource(instance.browser, "배경", "군인");
