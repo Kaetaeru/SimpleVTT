@@ -45,9 +45,9 @@ Initial audit classification:
 
 ```text
 W0: 6/6 PASS
-W1: 1/8 PASS
-Official ledger score: 6.3/100.0
-Remaining gates: 65/72
+W1: 4/8 PASS
+Official ledger score: 10.0/100.0
+Remaining gates: 62/72
 FAIL: 0
 BLOCKED: 0
 ```
@@ -69,21 +69,20 @@ The score is evidence status, not a percentage estimate of how much product code
 ```text
 Wave 1
 W0 — COMPLETE
-W1 — 1/8 PASS
-Next exact Gate: W1-02
+W1 — 4/8 PASS
+Next exact Gate: W1-05
 ```
 
-W0 established the 72-gate ledger, mandatory Evidence Card, 120-scenario multiplayer Epic, MP-13, historical/archive routing, and removal of the obsolete Phase14 self-publishing workflow.
+W1-01 is closed with focused production-route evidence on canonical SHA `9113736b5dbc565cb40d0646b0f27abdbdc6eb59`.
 
-W1-01 is closed with focused production-route evidence on canonical SHA `9113736b5dbc565cb40d0646b0f27abdbdc6eb59`: first-run Home reaches the existing Character Library and Guided Create entrypoints without introducing a second Character system.
+W1-02 through W1-04 are closed on canonical SHA `42305b1d2a66a976b08844509a63b5999166938a`. Existing Guided Create covers the full level-1 choice graph, Guided and Quick preserve one shared draft, and incomplete drafts remain blocked from commit. GitHub Actions UI run `33387465586` passed; no product runtime code was changed for these reuse gates.
 
 ### Next execution sequence
 
-1. Reconcile `W1-02` against the existing Guided Create path and its focused evidence; do not rebuild Character systems.
-2. Continue W1 `REUSE_LOCKED` gates in order, preserving the same Character draft/creator/validation engines.
-3. Run the required Tauri journeys for W1 `VERIFY_ONLY` gates (`W1-05` through `W1-08`).
-4. Convert a gate to repair work only after a reproducible current-HEAD failure or real production reachability/contract gap is demonstrated.
-5. For Common Play, follow [`design/ui-ux/COMMON-PLAY-FUNCTION-FIRST.md`](design/ui-ux/COMMON-PLAY-FUNCTION-FIRST.md): functional reachability first, broad UI redesign later.
+1. Run `W1-05` through the existing Windows Tauri/WebDriver harness: create → save → exit → relaunch → same Character load.
+2. Continue the actual-UI Tauri gates in order: import/duplicate/delete (`W1-06`), full-sheet persisted projection (`W1-07`), representative level-up and restart persistence (`W1-08`).
+3. Convert a gate to repair work only after a reproducible current-HEAD failure or a real production reachability/contract gap is demonstrated.
+4. For Common Play, follow [`design/ui-ux/COMMON-PLAY-FUNCTION-FIRST.md`](design/ui-ux/COMMON-PLAY-FUNCTION-FIRST.md): functional reachability first, broad UI redesign later.
 
 ## Non-negotiable execution rules
 
