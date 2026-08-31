@@ -86,8 +86,11 @@ async function ensureVite() {
   viteStarted = true;
   spawnTracked(process.execPath, [viteEntry, "--host", "0.0.0.0", "--port", "1420", "--strictPort"]);
   await waitForPort(1420, "Vite", 45_000);
-  const response = await fetch("http://127.0.0.1:1420/");
-  assert.equal(response.ok, true, `Vite warm-up failed with HTTP ${response.status}`);
+  let response;
+  for (let attempt = 0; attempt < 50 && !response?.ok; attempt += 1) {
+    try { response = await fetch("http://127.0.0.1:1420/"); } catch { await new Promise((resolve) => setTimeout(resolve, 100)); }
+  }
+  assert.ok(response?.ok, "Vite warm-up did not become HTTP-ready");
   await response.text();
   log("격리된 Vite 서버를 시작했습니다.");
 }
