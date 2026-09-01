@@ -157,7 +157,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const next = await mockAdapter.getSnapshot();
     publishIfLatest(sequence, next);
   }, [publishIfLatest]);
-
   const updateCharacterDraft = useCallback(async (command: CharacterDraftCommand) => {
     if (!isOptimisticTextCommand(command)) {
       await apply(() => mockAdapter.updateCharacterDraft(command));
@@ -275,7 +274,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     consumeCampaignLevelUpCredit: async (campaignId,rosterMemberId,level) => apply(() => mockAdapter.consumeCampaignLevelUpCredit(campaignId,rosterMemberId,level)),
     hostSession: async () => apply(() => mockAdapter.hostSession()),
     joinSession: async (address) => apply(() => mockAdapter.joinSession(address)),
-    stopSession: async () => apply(() => mockAdapter.stopSession()),
+    stopSession: async () => {
+      await apply(() => mockAdapter.stopSession());
+      await refresh();
+    },
     setSessionReady: async (ready) => apply(() => mockAdapter.setSessionReady(ready)),
     startPreparedSession: async (mode) => apply(() => mockAdapter.startPreparedSession(mode)),
     debug: {
@@ -509,4 +511,3 @@ export function SessionDebugPreviewProvider({ children, role, mode, onExit }: {
 }
 
 export type { AdjudicationScope };
-
