@@ -337,7 +337,14 @@ async function spawnPcPreset(host, presetName) {
   await entry.waitForDisplayed({ timeout: 15_000, timeoutMsg: `${presetName} was not visible in the Session DM Library` });
   const stage = await host.browser.$("//section[@aria-label='Mapless Play Context']");
   await stage.waitForDisplayed({ timeout: 15_000 });
-  await entry.dragAndDrop(stage);
+  await host.browser.action("pointer", { parameters: { pointerType: "mouse" } })
+    .move({ duration: 0, origin: entry, x: 0, y: 0 })
+    .down({ button: 0 })
+    .pause(100)
+    .move({ duration: 350, origin: stage, x: 0, y: 0 })
+    .pause(100)
+    .up({ button: 0 })
+    .perform();
   await host.browser.waitUntil(async () => {
     const feedback = await host.browser.$("//div[contains(@class,'session-dm-library-drop-feedback')]");
     return await feedback.isExisting() && (await feedback.getText()).includes(presetName) && (await feedback.getText()).includes("Actor를 소환했습니다");
