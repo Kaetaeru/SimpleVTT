@@ -47,9 +47,9 @@ Initial audit classification:
 W0: 6/6 PASS
 W1: 8/8 PASS — COMPLETE
 W2: 8/8 PASS — COMPLETE
-W3: 6/8 PASS — IN PROGRESS
-Official ledger score: 37.5/100.0
-Remaining gates: 44/72
+W3: 7/8 PASS — IN PROGRESS
+Official ledger score: 38.8/100.0
+Remaining gates: 43/72
 FAIL: 0
 BLOCKED: 0
 ```
@@ -73,9 +73,11 @@ Wave 2
 W0 — COMPLETE
 W1 — COMPLETE (8/8 PASS)
 W2 — COMPLETE (8/8 PASS)
-W3 — IN PROGRESS (6/8 PASS)
-Next exact Gate: W3-07
+W3 — IN PROGRESS (7/8 PASS)
+Next exact Gate: W3-08
 ```
+
+W3-07 is closed with inherited exact-SHA event-native Undo evidence. Product SHA `1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff` passed GitHub Actions UI run `33498144567`, job `99824979798`. The production Phase 09 attack adapter reverses committed `ResolutionEvent`s, preserves the original Activity as `reversed`, prepends a correction Activity with `undoOf` linkage, and rejects stale Undo after authoritative drift instead of deleting history. PR #218 records the focused evidence; no product runtime code was changed.
 
 W3-06 is closed with inherited exact-SHA condition/duration/rest/resource-recovery evidence. Rules Domain run `33342898384`, job `99341612326`, at source/check SHA `6095fe8adbe52b047ef5f6fee3413975bf02c3e0` verified lifecycle, condition, Short/Long Rest, and recovery owners; trusted product SHA `1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff` passed UI run `33498144567`, job `99824979798`, covering production artifact lifetime/lifecycle and Character Long Rest projection. Current canonical product/tests inherit those verified paths unchanged. The focused evidence is recorded in `roadmap/evidence/W3-06.md` and correction PR #210; no product runtime changed.
 
@@ -101,9 +103,9 @@ W1-06 was the only Gate with a reproduced product gap: the real Character Librar
 
 ### Next execution sequence
 
-1. Start `W3-07`, the first non-`PASS` W3 Gate, and reuse existing exact-SHA evidence before considering any product change.
-2. Continue through the first non-`PASS` W3 Gate; do not reopen W2 or W3-01 through W3-06 and do not modify a `REUSE_LOCKED` path without a reproduced failure.
-3. Reserve rendered Windows/Tauri session→rest→process restart evidence for `W3-08`.
+1. Start `W3-08`, the first non-`PASS` W3 Gate, and perform the repository-required rendered Windows/Tauri verification.
+2. Do not reopen W2 or W3-01 through W3-07; reuse their recorded exact-SHA evidence.
+3. `W3-08` owns the complete rendered Windows/Tauri session → combat → spell/item use → rest → process restart → persistence verification and recorded artifact/digest.
 4. For Common Play, follow [`design/ui-ux/COMMON-PLAY-FUNCTION-FIRST.md`](design/ui-ux/COMMON-PLAY-FUNCTION-FIRST.md): functional reachability first, broad UI redesign later.
 
 ## Non-negotiable execution rules
