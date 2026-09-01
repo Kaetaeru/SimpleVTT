@@ -41,10 +41,10 @@ These numbers classify the work; they are not completion credit. Completion cred
 W0: COMPLETE — 6/6 PASS
 W1: COMPLETE — 8/8 PASS
 W2: COMPLETE — 8/8 PASS
-W3: IN PROGRESS — 7/8 PASS
-Official ledger score: 38.8/100.0
-PASS: 29/72
-PENDING: 43/72
+W3: COMPLETE — 8/8 PASS
+Official ledger score: 40.0/100.0
+PASS: 30/72
+PENDING: 42/72
 FAIL: 0
 BLOCKED: 0
 ```
@@ -52,11 +52,12 @@ BLOCKED: 0
 ## Current stage
 
 ```text
-Wave 2
-Next Gate: W3-08
+Next Gate: W4-01
 ```
 
-`W3-07` is PASS by inherited exact-SHA event-native Undo evidence. Product SHA `1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff` passed GitHub Actions UI run `33498144567`, job `99824979798`. The production Phase 09 attack adapter reverses committed `ResolutionEvent`s, preserves the original Activity as `reversed`, prepends a correction Activity with `undoOf` linkage, and rejects stale Undo after authoritative drift instead of deleting history. PR #218 records the focused evidence with no product runtime change. The next exact Gate is `W3-08`.
+`W3-08` is PASS on exact Windows verification SHA `53ec501555222b60d9e856b231f4f64395f75b76`. GitHub Actions V1 Tauri Verification run `33569954938`, job `100061523302`, passed the complete local journey: Character -> Campaign DM-owned PC preset -> local Host -> production DM Library drop -> weapon attack + damage spell -> Long Rest (+8h) -> UI session end -> process exit -> same-data-root restart, with Campaign time `480` minutes and session history `1회`. Artifact `9824674856` (`SimpleVTT-W3-Tauri-53ec501555222b60d9e856b231f4f64395f75b76`) has digest `sha256:d51dd1d962be4533b31551f900dae26655d3a4e2b05aa8131ffa98122bb18034`. Canonical merge `5bef709f010543859e84c98ef7db8f14e5c06469` shares tree `0e6baadda2570b169c35c6b7436ff4e0042dfff0` with the verified head. W3 is complete; the next exact Gate is `W4-01`.
+
+`W3-07` is PASS by inherited exact-SHA event-native Undo evidence. Product SHA `1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff` passed GitHub Actions UI run `33498144567`, job `99824979798`. The production Phase 09 attack adapter reverses committed `ResolutionEvent`s, preserves the original Activity as `reversed`, prepends a correction Activity with `undoOf` linkage, and rejects stale Undo after authoritative drift instead of deleting history. PR #218 records the focused evidence with no product runtime change.
 
 `W3-06` is PASS by inherited exact-SHA condition/duration/rest/resource-recovery evidence. Rules Domain run `33342898384`, job `99341612326`, at source/check SHA `6095fe8adbe52b047ef5f6fee3413975bf02c3e0` verified the lifecycle, condition, Short/Long Rest, and recovery owners; trusted product SHA `1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff` passed UI run `33498144567`, job `99824979798`, covering production artifact lifetime/lifecycle and Character Long Rest projection. Current canonical product/tests inherit those verified paths unchanged. The focused evidence is recorded in `evidence/W3-06.md` and correction PR #210; no product runtime changed.
 
