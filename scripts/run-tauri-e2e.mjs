@@ -538,7 +538,7 @@ function assertW2ArchetypeSheet(profile, sheet) {
   assert.ok(sheet.features.length > 0,`${profile.label}: durable features are empty`);
   if (profile.caster) {
     assert.ok(w2SpellIds(sheet).length > 0,`${profile.label}: no acquired spell reached the durable sheet`);
-    assert.ok(Object.values(sheet.spellSlotMaximums ?? {}).some((value) => value > 0),`${profile.label}: no spell-slot capacity reached the durable sheet`);
+    assert.ok(Object.values(sheet.spellSlotMaximums ?? {}).some((value) => value > 0) || (sheet.pactMagicSlotMaximum ?? 0) > 0,`${profile.label}: no spell-slot capacity reached the durable sheet`);
   } else {
     assert.ok(sheet.attacks.length > 0,`${profile.label}: no weapon action reached the durable sheet`);
   }

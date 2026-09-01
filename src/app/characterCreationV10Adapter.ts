@@ -22,6 +22,8 @@ import {
   toggleCreationChoiceSelection,
 } from "./characterCreationChoiceDefinition";
 import { buildCreationPlanV10, normalizeCreationV10, recommendedAbilitiesV10 } from "./characterCreationV10Plan";
+import { multiclassSpellSlots } from "../domain/progressionCatalog";
+import { pactMagicProgression, WARLOCK_ID } from "../domain/warlockProgressionChoices";
 
 type State = {
   createDraft: CharacterCreateDraft | null;
@@ -101,6 +103,8 @@ function originFeatName(id: string) {
 
 function sheet(draft: CharacterCreateDraft): CharacterSheet {
   const classId = classIdFromName(draft.className);
+  const classLevels = [{ classId, className:draft.className, level:draft.level }];
+  const pactMagic = pactMagicProgression(classId === WARLOCK_ID ? draft.level : 0);
   const meta = classMeta(classId);
   const abilities = draft.finalAbilities ?? finalAbilities(draft);
   const loadout = classAndBackgroundLoadout(draft);
@@ -143,6 +147,10 @@ function sheet(draft: CharacterCreateDraft): CharacterSheet {
     cantrips:finalCantrips(draft),
     preparedSpells:finalPreparedSpells(draft),
     spellbookSpells:finalSpellbook(draft),
+    classLevels,
+    spellSlotMaximums:multiclassSpellSlots(classLevels).slots,
+    pactMagicSlotLevel:pactMagic.slotLevel,
+    pactMagicSlotMaximum:pactMagic.slotMaximum,
     masteryWeapons:finalMasteryWeapons(draft),
     goldGp:loadout.gp,
     creationSelections:cp(draft.choiceSelections ?? {}),

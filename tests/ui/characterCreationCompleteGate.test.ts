@@ -4,6 +4,8 @@ import "../../src/app/characterCreationV10Adapter";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import { BACKGROUNDS, CLASSES, SPECIES, classIdFromName, classMeta, spellId } from "../../src/app/characterCreationV10Data";
 import type { CharacterCreationSection } from "../../src/app/contracts";
+import { multiclassSpellSlots } from "../../src/domain/progressionCatalog";
+import { pactMagicProgression, WARLOCK_ID } from "../../src/domain/warlockProgressionChoices";
 
 async function setSource(adapter: MockAdapter, type:"set-species"|"set-background"|"set-class", value:string) {
   await adapter.updateCharacterDraft({ type, value });
@@ -101,6 +103,12 @@ test("all twelve SRD classes can reach a fully resolved level-1 commit", async (
   for (const klass of CLASSES) {
     const sheet = await completeClass(klass.name);
     const semantic = classMeta(klass.id).semantics;
+    const classLevels = [{ classId:klass.id, className:klass.name, level:1 }];
+    const pactMagic = pactMagicProgression(klass.id === WARLOCK_ID ? 1 : 0);
+    assert.deepEqual(sheet.classLevels, classLevels);
+    assert.deepEqual(sheet.spellSlotMaximums, multiclassSpellSlots(classLevels).slots);
+    assert.equal(sheet.pactMagicSlotLevel, pactMagic.slotLevel);
+    assert.equal(sheet.pactMagicSlotMaximum, pactMagic.slotMaximum);
     assert.ok(sheet.skills.length >= semantic.skills.count + 2, `${klass.name}: class + Criminal background skills should be represented`);
     if (semantic.choices.some((choice) => choice.kind === "weapon-mastery")) assert.equal(sheet.masteryWeapons?.length, semantic.choices.find((choice) => choice.kind === "weapon-mastery")?.count);
     if (semantic.spells?.cantrips) { const bonus = semantic.spells.bonusCantripChoice && sheet.creationSelections?.[semantic.spells.bonusCantripChoice.choiceId]?.includes(semantic.spells.bonusCantripChoice.value) ? 1 : 0; assert.equal(sheet.cantrips?.length, semantic.spells.cantrips + bonus); }
