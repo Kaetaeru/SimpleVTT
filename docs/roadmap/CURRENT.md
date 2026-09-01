@@ -1,6 +1,6 @@
 # Current roadmap
 
-Updated: 2026-09-01 Asia/Seoul
+Updated: 2026-09-02 Asia/Seoul
 
 This page routes to the **one active V1 execution plan**. It does not duplicate that plan.
 
@@ -41,10 +41,10 @@ These numbers classify the work; they are not completion credit. Completion cred
 W0: COMPLETE — 6/6 PASS
 W1: COMPLETE — 8/8 PASS
 W2: COMPLETE — 8/8 PASS
-W3: IN PROGRESS — 5/8 PASS
-Official ledger score: 36.3/100.0
-PASS: 27/72
-PENDING: 45/72
+W3: IN PROGRESS — 6/8 PASS
+Official ledger score: 37.5/100.0
+PASS: 28/72
+PENDING: 44/72
 FAIL: 0
 BLOCKED: 0
 ```
@@ -53,10 +53,12 @@ BLOCKED: 0
 
 ```text
 Wave 2
-Next Gate: W3-06
+Next Gate: W3-07
 ```
 
-`W3-05` is PASS by inherited exact-SHA reaction/interruption/concentration/Ready production-path evidence. Product SHA `1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff` passed GitHub Actions UI run `33498144567`, job `99824979798`; the workflow explicitly ran 11 focused production-facing tests across `c9FamilyOReadyConcentrationProduction`, `phase09ManualMovementReactionAdapter`, and `phase09ConcentrationSaveWorkflow`. Existing runtime covers authoritative reaction spend/rollback, structural Ready stored invocations, deferred concentration lifecycle, concentration saves, stale-input rejection, Activity, and Undo without partial mutation. PR #205 records the focused evidence with no product runtime change. The next exact Gate is `W3-06`.
+`W3-06` is PASS by inherited exact-SHA condition/duration/rest/resource-recovery evidence. Rules Domain source/check SHA `6095fe8adbe52b047ef5f6fee3413975bf02c3e0` passed run `33342898384`, job `99341612326`, covering lifecycle, condition, effect-expiry, resource-recovery, and Long Rest preparation domain tests. Trusted product SHA `1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff` passed UI run `33498144567`, job `99824979798`, covering production artifact lifetime/lifecycle and Character Long Rest projection plus the production build. Relevant product/test paths are unchanged across the evidence inheritance chain. PR #207 records the focused evidence and PR #210 corrects its CI attribution; no product runtime change was required. Rendered complete-session Windows/Tauri evidence remains owned by `W3-08`. The next exact Gate is `W3-07`.
+
+`W3-05` is PASS by inherited exact-SHA reaction/interruption/concentration/Ready production-path evidence. Product SHA `1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff` passed GitHub Actions UI run `33498144567`, job `99824979798`; the workflow explicitly ran 11 focused production-facing tests across `c9FamilyOReadyConcentrationProduction`, `phase09ManualMovementReactionAdapter`, and `phase09ConcentrationSaveWorkflow`. Existing runtime covers authoritative reaction spend/rollback, structural Ready stored invocations, deferred concentration lifecycle, concentration saves, stale-input rejection, Activity, and Undo without partial mutation. PR #205 records the focused evidence with no product runtime change.
 
 `W3-04` is PASS by inherited exact-SHA shared-action transaction evidence. Product SHA `1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff` passed GitHub Actions UI run `33498144567`, job `99824979798`, and `npm run build` succeeded. Existing spell, feature, item, action-economy, inventory, spell-execution, and Common Play artifact coverage proves that cost, target, effect, Activity, resource spend, and item decrement share reusable atomic transaction behavior, reject invalid actions without partial mutation, and avoid double-spend. PR #203 records the focused evidence with no product runtime change.
 
