@@ -47,9 +47,9 @@ Initial audit classification:
 W0: 6/6 PASS
 W1: 8/8 PASS — COMPLETE
 W2: 8/8 PASS — COMPLETE
-W3: 7/8 PASS — IN PROGRESS
-Official ledger score: 38.8/100.0
-Remaining gates: 43/72
+W3: 8/8 PASS — COMPLETE
+Official ledger score: 40.0/100.0
+Remaining gates: 42/72
 FAIL: 0
 BLOCKED: 0
 ```
@@ -69,13 +69,14 @@ The score is evidence status, not a percentage estimate of how much product code
 ## Current stage
 
 ```text
-Wave 2
 W0 — COMPLETE
 W1 — COMPLETE (8/8 PASS)
 W2 — COMPLETE (8/8 PASS)
-W3 — IN PROGRESS (7/8 PASS)
-Next exact Gate: W3-08
+W3 — COMPLETE (8/8 PASS)
+Next exact Gate: W4-01
 ```
+
+W3-08 is closed on exact Windows verification SHA `53ec501555222b60d9e856b231f4f64395f75b76`. GitHub Actions V1 Tauri Verification run `33569954938`, job `100061523302`, passed the complete local lifecycle through the real Windows Tauri product: Character creation, Campaign DM-owned PC preset save, local Host session, production DM Library materialization, weapon attack, damage spell, Long Rest with +8h Campaign time, UI session end, process exit, same-data-root restart, Campaign time `480` minutes, and one completed session-history entry. Artifact `9824674856` (`SimpleVTT-W3-Tauri-53ec501555222b60d9e856b231f4f64395f75b76`) has digest `sha256:d51dd1d962be4533b31551f900dae26655d3a4e2b05aa8131ffa98122bb18034`. Canonical merge `5bef709f010543859e84c98ef7db8f14e5c06469` shares tree `0e6baadda2570b169c35c6b7436ff4e0042dfff0` with the verified head. The first non-PASS Gate is now W4-01.
 
 W3-07 is closed with inherited exact-SHA event-native Undo evidence. Product SHA `1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff` passed GitHub Actions UI run `33498144567`, job `99824979798`. The production Phase 09 attack adapter reverses committed `ResolutionEvent`s, preserves the original Activity as `reversed`, prepends a correction Activity with `undoOf` linkage, and rejects stale Undo after authoritative drift instead of deleting history. PR #218 records the focused evidence; no product runtime code was changed.
 
@@ -103,9 +104,9 @@ W1-06 was the only Gate with a reproduced product gap: the real Character Librar
 
 ### Next execution sequence
 
-1. Start `W3-08`, the first non-`PASS` W3 Gate, and perform the repository-required rendered Windows/Tauri verification.
-2. Do not reopen W2 or W3-01 through W3-07; reuse their recorded exact-SHA evidence.
-3. `W3-08` owns the complete rendered Windows/Tauri session → combat → spell/item use → rest → process restart → persistence verification and recorded artifact/digest.
+1. Start `W4-01`, the first non-`PASS` Gate in the ledger.
+2. Do not reopen W1-W3; reuse their recorded exact-SHA evidence unless a new current-HEAD regression is reproduced.
+3. For `W4-01`, verify the existing Campaign create/read/update/archive/restore/duplicate/delete and namespace isolation paths before authorizing any product-code change.
 4. For Common Play, follow [`design/ui-ux/COMMON-PLAY-FUNCTION-FIRST.md`](design/ui-ux/COMMON-PLAY-FUNCTION-FIRST.md): functional reachability first, broad UI redesign later.
 
 ## Non-negotiable execution rules
@@ -117,16 +118,3 @@ W1-06 was the only Gate with a reproduced product gap: the real Character Librar
 5. Structural or protocol-only evidence cannot close rendered Windows behavior.
 6. Do not restore branch-writing/self-publishing automation as the normal implementation loop.
 7. V1 is complete only at `72/72`, `100.0/100.0`, `120/120`, `18/18`, `13/13`, and one matching Windows artifact plus digest.
-
-## Source of truth
-
-- Branch and document routing: [`CANONICAL_ROOT.md`](../CANONICAL_ROOT.md)
-- Active V1 plan: [`roadmap/V1_MASTER_ROADMAP.md`](roadmap/V1_MASTER_ROADMAP.md)
-- Evidence ledger: [`roadmap/V1_EVIDENCE_LEDGER.json`](roadmap/V1_EVIDENCE_LEDGER.json)
-- Evidence Card: [`roadmap/EVIDENCE_CARD.md`](roadmap/EVIDENCE_CARD.md)
-- Current roadmap pointer: [`roadmap/CURRENT.md`](roadmap/CURRENT.md)
-- Common Play function-first UI direction: [`design/ui-ux/COMMON-PLAY-FUNCTION-FIRST.md`](design/ui-ux/COMMON-PLAY-FUNCTION-FIRST.md)
-- Multiplayer acceptance inventory: [`design/multiplayer-v1-scenario-catalog.md`](design/multiplayer-v1-scenario-catalog.md)
-- Mechanism-family completion evidence: [`rules/v1-mechanism-coverage-ledger.json`](rules/v1-mechanism-coverage-ledger.json)
-
-C9 Gate N is integrated and retained as evidence. It is not a current `NEXT` pointer.
