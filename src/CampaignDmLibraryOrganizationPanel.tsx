@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useSimpleVtt } from "./app/AppProvider";
+import type { ActionVm } from "./app/contracts";
 import type { CampaignDmLibraryEntry, CampaignRecordV1 } from "./app/campaignPersistenceContracts";
 import "./app/campaignDmLibraryOrganizationContracts";
 import "./app/campaignDmLibraryOrganizationRuntimeAdapter";
@@ -20,6 +21,7 @@ export function CampaignDmLibraryOrganizationPanel({campaign}:{campaign:Campaign
   const [presetAc,setPresetAc]=useState("12");
   const [presetHp,setPresetHp]=useState("10");
   const [presetActions,setPresetActions]=useState("기본 공격");
+  const [presetActionSnapshots,setPresetActionSnapshots]=useState<ActionVm[]>([]);
   const [presetTags,setPresetTags]=useState("");
   const [presetFolder,setPresetFolder]=useState("");
   const [busy,setBusy]=useState(false);
@@ -42,10 +44,17 @@ export function CampaignDmLibraryOrganizationPanel({campaign}:{campaign:Campaign
     if(presetFolder===folderId)setPresetFolder("");
   });
   const moveEntry=(entry:CampaignDmLibraryEntry,folderId:string)=>perform(()=>api.upsertCampaignDmLibraryEntry(campaign.campaignId,{...entry,folderId:folderId||undefined}));
-  const resetPreset=()=>{setEditingPresetId(null);setPresetName("");setPresetLevel("1");setPresetAc("12");setPresetHp("10");setPresetActions("기본 공격");setPresetTags("");setPresetFolder("");};
+  const resetPreset=()=>{setEditingPresetId(null);setPresetName("");setPresetLevel("1");setPresetAc("12");setPresetHp("10");setPresetActions("기본 공격");setPresetActionSnapshots([]);setPresetTags("");setPresetFolder("");};
   const editPreset=(entry:CampaignDmLibraryEntry)=>{
     if(entry.kind!=="pc-preset"||!entry.pcPreset)return;
-    setEditingPresetId(entry.entryId);setPresetName(entry.label);setPresetLevel(String(entry.pcPreset.level));setPresetAc(String(entry.pcPreset.ac));setPresetHp(String(entry.pcPreset.maxHp));setPresetActions(entry.pcPreset.actions.join(", "));setPresetTags((entry.tags??[]).join(", "));setPresetFolder(entry.folderId??"");
+    setEditingPresetId(entry.entryId);setPresetName(entry.label);setPresetLevel(String(entry.pcPreset.level));setPresetAc(String(entry.pcPreset.ac));setPresetHp(String(entry.pcPreset.maxHp));setPresetActions(entry.pcPreset.actions.join(", "));setPresetActionSnapshots(entry.pcPreset.actionSnapshots?.map((action)=>structuredClone(action))??[]);setPresetTags((entry.tags??[]).join(", "));setPresetFolder(entry.folderId??"");
+  };
+  const loadActiveCharacterPreset=()=>{
+    const character=api.snapshot?.activeCharacter;
+    if(!character){setError("현재 Character를 불러올 수 없습니다.");return;}
+    const actions=api.snapshot?.scene.actionsByActor[character.id]??[];
+    if(!actions.length){setError("현재 Character에 저장할 실행 행동이 없습니다.");return;}
+    setEditingPresetId(null);setPresetName(character.name);setPresetLevel(String(character.level));setPresetAc(String(character.ac));setPresetHp(String(character.maxHp));setPresetActions(actions.map((action)=>action.name).join(", "));setPresetActionSnapshots(actions.map((action)=>structuredClone(action)));setPresetTags("");setPresetFolder("");setError(null);
   };
   const savePreset=()=>perform(async()=>{
     const name=presetName.trim();if(!name)throw new Error("PC preset 이름을 입력하세요.");
@@ -57,7 +66,7 @@ export function CampaignDmLibraryOrganizationPanel({campaign}:{campaign:Campaign
     const definitionId=previous?.definitionId??`local.${campaign.campaignId}.pc-preset.${entryId}`;
     await api.upsertCampaignDmLibraryEntry(campaign.campaignId,{
       entryId,kind:"pc-preset",label:name,definitionId,folderId:presetFolder||undefined,favorite:previous?.favorite??false,tags:csv(presetTags),
-      pcPreset:{definitionId,name,level,ac,maxHp,actions:csv(presetActions),statusImmunities:previous?.pcPreset?.statusImmunities??[],source:previous?.pcPreset?.source??`Campaign DM Library · ${campaign.name}`,version:previous?.pcPreset?.version??"1"},
+      pcPreset:{definitionId,name,level,ac,maxHp,actions:csv(presetActions),actionSnapshots:presetActionSnapshots.length?presetActionSnapshots.map((action)=>structuredClone(action)):undefined,statusImmunities:previous?.pcPreset?.statusImmunities??[],source:previous?.pcPreset?.source??`Campaign DM Library · ${campaign.name}`,version:previous?.pcPreset?.version??"1"},
     });
     resetPreset();
   });
@@ -79,12 +88,13 @@ export function CampaignDmLibraryOrganizationPanel({campaign}:{campaign:Campaign
     {visibleEntries.length>0&&<div className="campaign-option-list">{visibleEntries.map((entry)=><label key={entry.entryId}><span><strong>{entry.label}</strong><small>{entry.kind} · {entry.folderId?folders.find((folder)=>folder.folderId===entry.folderId)?.label??"알 수 없는 폴더":"최상위"}</small></span><select aria-label={`${entry.label} 폴더`} value={entry.folderId??""} disabled={busy} onChange={(event)=>void moveEntry(entry,event.target.value)}><option value="">최상위</option>{folders.map((folder)=><option key={folder.folderId} value={folder.folderId}>{folder.label}</option>)}</select></label>)}</div>}
 
     <div className="campaign-identity-lock"><span>PC PRESET</span><strong>{editingPresetId?"PC preset 수정":"DM 제어 Actor를 빠르게 준비"}</strong><small>Actor +1은 현재 Session/Scene에 Combatant를 materialize하며 Character Library에는 저장하지 않습니다.</small></div>
+    <button type="button" disabled={busy||!api.snapshot?.activeCharacter} onClick={loadActiveCharacterPreset}>현재 Character 불러오기</button>
     <label><span>이름</span><input value={presetName} disabled={busy} onChange={(event)=>setPresetName(event.target.value)} placeholder="예: 호위 기사"/></label>
     <label><span>폴더</span><select value={presetFolder} disabled={busy} onChange={(event)=>setPresetFolder(event.target.value)}><option value="">최상위</option>{folders.map((folder)=><option key={folder.folderId} value={folder.folderId}>{folder.label}</option>)}</select></label>
     <label><span>레벨</span><input type="number" min="1" max="20" value={presetLevel} disabled={busy} onChange={(event)=>setPresetLevel(event.target.value)}/></label>
     <label><span>AC</span><input type="number" min="0" value={presetAc} disabled={busy} onChange={(event)=>setPresetAc(event.target.value)}/></label>
     <label><span>최대 HP</span><input type="number" min="1" value={presetHp} disabled={busy} onChange={(event)=>setPresetHp(event.target.value)}/></label>
-    <label><span>행동</span><input value={presetActions} disabled={busy} onChange={(event)=>setPresetActions(event.target.value)} placeholder="쉼표로 구분"/></label>
+    <label><span>행동</span><input value={presetActions} disabled={busy} onChange={(event)=>{setPresetActions(event.target.value);setPresetActionSnapshots([]);}} placeholder="쉼표로 구분"/></label>
     <label><span>태그</span><input value={presetTags} disabled={busy} onChange={(event)=>setPresetTags(event.target.value)} placeholder="쉼표로 구분"/></label>
     <button type="button" className="primary" disabled={busy||!presetName.trim()} onClick={()=>void savePreset()}>{busy?"저장 중…":editingPresetId?"PC preset 수정 저장":"PC preset 저장"}</button>
     {editingPresetId&&<button type="button" disabled={busy} onClick={resetPreset}>수정 취소</button>}

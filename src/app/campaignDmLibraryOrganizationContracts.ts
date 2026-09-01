@@ -1,3 +1,5 @@
+import type { ActionVm } from "./contracts";
+
 export interface CampaignDmLibraryFolder {
   folderId:string;
   label:string;
@@ -11,6 +13,7 @@ export interface CampaignPcActorPreset {
   ac:number;
   maxHp:number;
   actions:string[];
+  actionSnapshots?:ActionVm[];
   statusImmunities:string[];
   source:string;
   version:string;

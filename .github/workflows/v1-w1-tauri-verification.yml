@@ -8,6 +8,7 @@ on:
       - "src/**"
       - "src-tauri/**"
       - "scripts/run-tauri-e2e.*"
+      - "tests/ui/appProviderStopSessionRefresh.test.ts"
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/v1-w1-tauri-verification.yml"
@@ -40,3 +41,31 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
+  tauri-w3:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    env:
+      V1_VERIFICATION_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Verify stop-session race regression
+        shell: pwsh
+        run: npx tsx --test tests/ui/appProviderStopSessionRefresh.test.ts
+      - name: Verify W3 complete local session in Windows Tauri
+        shell: pwsh
+        run: npm run test:e2e:tauri -- --w3
+      - name: Upload Tauri evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: SimpleVTT-W3-Tauri-${{ env.V1_VERIFICATION_SHA }}
+          path: .live-dev/tauri-e2e/**/artifacts/**
+          if-no-files-found: warn
+          retention-days: 14

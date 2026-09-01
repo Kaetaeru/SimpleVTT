@@ -5,6 +5,7 @@ param(
   [switch]$Smoke,
   [switch]$W1,
   [switch]$W2,
+  [switch]$W3,
   [switch]$KeepOpen
 )
 
@@ -74,12 +75,13 @@ if (-not (Test-Path -LiteralPath $binaryPath)) {
   throw "Tauri E2E binary was not found at $binaryPath. Remove -SkipBuild and retry."
 }
 
-$arguments = @((Join-Path $rootPath 'scripts\run-tauri-e2e.mjs'))
+$runnerScript = if ($W3) { 'scripts\run-tauri-e2e-w3.mjs' } else { 'scripts\run-tauri-e2e.mjs' }
+$arguments = @((Join-Path $rootPath $runnerScript))
 if ($Smoke) { $arguments += '--smoke' }
 if ($W1) { $arguments += '--w1' }
 if ($W2) { $arguments += '--w2' }
 if ($KeepOpen) { $arguments += '--keep-open' }
 
-Write-Host '[TAURI E2E] Starting two isolated windows and driving the real UI...'
+Write-Host '[TAURI E2E] Starting isolated windows and driving the real UI...'
 & $nodeExe @arguments
 exit $LASTEXITCODE
