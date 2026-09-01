@@ -337,14 +337,54 @@ async function spawnPcPreset(host, presetName) {
   await entry.waitForDisplayed({ timeout: 15_000, timeoutMsg: `${presetName} was not visible in the Session DM Library` });
   const stage = await host.browser.$("//section[@aria-label='Mapless Play Context']");
   await stage.waitForDisplayed({ timeout: 15_000 });
-  await host.browser.action("pointer", { parameters: { pointerType: "mouse" } })
-    .move({ duration: 0, origin: entry, x: 0, y: 0 })
-    .down({ button: 0 })
-    .pause(100)
-    .move({ duration: 350, origin: stage, x: 0, y: 0 })
-    .pause(100)
-    .up({ button: 0 })
-    .perform();
+  const dropDiagnostic = await host.browser.execute((expectedName) => {
+    const entryElement = [...document.querySelectorAll("aside[aria-label='DM 라이브러리'] article[data-library-kind='pc-preset']")]
+      .find((element) => element.querySelector("strong")?.textContent?.trim() === expectedName);
+    const stageElement = document.querySelector("section[aria-label='Mapless Play Context']");
+    const playCore = document.querySelector(".session-reference-play-core");
+    if (!(entryElement instanceof HTMLElement) || !(stageElement instanceof HTMLElement) || !(playCore instanceof HTMLElement)) {
+      throw new Error("W3 PC preset synthetic pointer bridge could not resolve the production drag surfaces");
+    }
+    const entryRect = entryElement.getBoundingClientRect();
+    const stageRect = stageElement.getBoundingClientRect();
+    const candidates = [
+      [stageRect.left + stageRect.width * 0.5, stageRect.top + stageRect.height * 0.5],
+      [stageRect.left + stageRect.width * 0.25, stageRect.top + stageRect.height * 0.5],
+      [stageRect.left + stageRect.width * 0.75, stageRect.top + stageRect.height * 0.5],
+    ];
+    const dropPoint = candidates.find(([x,y]) => {
+      const target = document.elementFromPoint(x,y);
+      return Boolean(target && playCore.contains(target) && !entryElement.contains(target));
+    });
+    if (!dropPoint) throw new Error("W3 PC preset synthetic pointer bridge could not find an uncovered production play drop point");
+    const [dropX,dropY] = dropPoint;
+    const startX = entryRect.left + entryRect.width * 0.5;
+    const startY = entryRect.top + entryRect.height * 0.5;
+    const trace = [];
+    const tracePointer = (event) => trace.push({type:event.type,clientX:event.clientX,clientY:event.clientY,target:event.target instanceof Element?event.target.tagName:null});
+    for (const type of ["pointerdown","pointermove","pointerup"]) document.addEventListener(type,tracePointer,true);
+    Object.defineProperties(entryElement,{
+      setPointerCapture:{configurable:true,value:()=>undefined},
+      hasPointerCapture:{configurable:true,value:()=>false},
+      releasePointerCapture:{configurable:true,value:()=>undefined},
+    });
+    const dispatch = (type,x,y,buttons) => entryElement.dispatchEvent(new PointerEvent(type,{
+      bubbles:true,cancelable:true,composed:true,pointerId:1,pointerType:"mouse",isPrimary:true,button:0,buttons,clientX:x,clientY:y,
+    }));
+    try{
+      dispatch("pointerdown",startX,startY,1);
+      dispatch("pointermove",dropX,dropY,1);
+      dispatch("pointerup",dropX,dropY,0);
+    }finally{
+      delete entryElement.setPointerCapture;
+      delete entryElement.hasPointerCapture;
+      delete entryElement.releasePointerCapture;
+      for (const type of ["pointerdown","pointermove","pointerup"]) document.removeEventListener(type,tracePointer,true);
+    }
+    const hit=document.elementFromPoint(dropX,dropY);
+    return {inputBridge:"Tauri DOM PointerEvent sequence",start:{x:startX,y:startY},drop:{x:dropX,y:dropY,hit:hit instanceof Element?`${hit.tagName}.${hit.className}`:null},trace};
+  }, presetName);
+  await writeFile(path.join(artifactRoot,"w3-08-drop-diagnostic.json"),JSON.stringify({gate:"W3-08",verificationSha,presetName,...dropDiagnostic},null,2),"utf8");
   await host.browser.waitUntil(async () => {
     const feedback = await host.browser.$("//div[contains(@class,'session-dm-library-drop-feedback')]");
     return await feedback.isExisting() && (await feedback.getText()).includes(presetName) && (await feedback.getText()).includes("Actor를 소환했습니다");
