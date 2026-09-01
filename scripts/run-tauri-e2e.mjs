@@ -201,11 +201,12 @@ async function completeVisibleCharacterChoices(browser, preferredLabels = []) {
         );
         const available = [...candidates].filter((item) => {
           const button = item;
-          return !button.disabled && button.getAttribute("aria-disabled") !== "true" && !button.classList.contains("selected");
+          const selected = button.classList.contains("selected") || Boolean(button.querySelector(".selected"));
+          return !button.disabled && button.getAttribute("aria-disabled") !== "true" && !selected;
         });
         const target = available.find((item) => preferred.some((label) => item.textContent?.includes(label))) ?? available[0];
         if (target instanceof HTMLElement) {
-          const selectedBefore = [...candidates].filter((item) => item.classList.contains("selected")).length;
+          const selectedBefore = [...candidates].filter((item) => item.classList.contains("selected") || item.querySelector(".selected")).length;
           const textBefore = section.textContent;
           target.scrollIntoView({ block:"center" });
           target.click();
@@ -219,7 +220,7 @@ async function completeVisibleCharacterChoices(browser, preferredLabels = []) {
     await browser.waitUntil(async () => browser.execute(({ sectionId, selectedBefore, textBefore }) => {
       const section = document.getElementById(sectionId);
       if (!section) return false;
-      const selectedNow = section.querySelectorAll(".create-option-card.selected, .spell-choice-grid button.selected, .proficiency-grid button.selected").length;
+      const selectedNow = section.querySelectorAll(".create-option-card.selected, .spell-choice-grid .spell-tile.selected, .proficiency-grid button.selected").length;
       return selectedNow > selectedBefore || section.textContent !== textBefore || section.querySelector(".create-status-pill")?.textContent?.trim() !== "선택 필요";
     }, { sectionId:result.section, selectedBefore:result.selectedBefore, textBefore:result.textBefore }), {
       timeout:15_000,
