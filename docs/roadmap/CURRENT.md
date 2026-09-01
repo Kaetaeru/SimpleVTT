@@ -41,10 +41,10 @@ These numbers classify the work; they are not completion credit. Completion cred
 W0: COMPLETE — 6/6 PASS
 W1: COMPLETE — 8/8 PASS
 W2: COMPLETE — 8/8 PASS
-W3: IN PROGRESS — 3/8 PASS
-Official ledger score: 33.8/100.0
-PASS: 25/72
-PENDING: 47/72
+W3: IN PROGRESS — 4/8 PASS
+Official ledger score: 35.0/100.0
+PASS: 26/72
+PENDING: 46/72
 FAIL: 0
 BLOCKED: 0
 ```
@@ -53,10 +53,12 @@ BLOCKED: 0
 
 ```text
 Wave 2
-Next Gate: W3-04
+Next Gate: W3-05
 ```
 
-`W3-03` is PASS by inherited exact-SHA atomic-combat evidence. Product SHA `1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff` passed GitHub Actions UI run `33498144567`, job `99824979798`: the combined W3 invocation passed 54/54 tests, including 23 Gate-owned attack/damage/healing tests, and `npm run build` succeeded. Existing Resolver-backed transactions handle hit/miss/critical, atomic damage + HP + economy writeback, rejection without partial mutation, runtime damage/concentration effects, event-native Activity/Undo, and atomic self-healing with economy/resource spend. PR #202 records the focused evidence with no product runtime change. The next exact Gate is `W3-04`.
+`W3-04` is PASS by inherited exact-SHA shared-action transaction evidence. Product SHA `1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff` passed GitHub Actions UI run `33498144567`, job `99824979798`, and `npm run build` succeeded. Existing spell, feature, item, action-economy, inventory, spell-execution, and Common Play artifact coverage proves that cost, target, effect, Activity, resource spend, and item decrement share reusable atomic transaction behavior, reject invalid actions without partial mutation, and avoid double-spend. PR #203 records the focused evidence with no product runtime change. The next exact Gate is `W3-05`.
+
+`W3-03` is PASS by inherited exact-SHA atomic-combat evidence. Product SHA `1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff` passed GitHub Actions UI run `33498144567`, job `99824979798`: the combined W3 invocation passed 54/54 tests, including 23 Gate-owned attack/damage/healing tests, and `npm run build` succeeded. Existing Resolver-backed transactions handle hit/miss/critical, atomic damage + HP + economy writeback, rejection without partial mutation, runtime damage/concentration effects, event-native Activity/Undo, and atomic self-healing with economy/resource spend. PR #202 records the focused evidence with no product runtime change.
 
 `W3-02` is PASS by inherited exact-SHA turn-lifecycle evidence. Product SHA `1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff` passed GitHub Actions UI run `33498144567`, job `99824979798`: the existing Phase 09 runtime orders initiative, initializes and preserves Action/Bonus Action/Reaction/movement economy, advances end-turn/begin-turn through the generic Resolver, increments rounds on wrap, refreshes the next turn from base economy, reconciles committed actions and Undo, admits new Combatants without restarting initiative, and returns to Freeform when initiative ends. Production `ProductionPlayScreen` exposes the real start/end initiative and end-turn commands. PR #201 records the focused evidence with no product runtime change.
 
