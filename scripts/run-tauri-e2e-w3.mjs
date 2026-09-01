@@ -231,7 +231,7 @@ async function completeVisibleCharacterChoices(browser, preferredLabels = []) {
   throw new Error("Character choice completion exceeded 120 UI clicks");
 }
 
-async function chooseCharacterSource(browser, tab, name) {
+async function chooseCharacterSource(browser, tab, name, preferredLabels = []) {
   await click(browser, `//nav[contains(@class,'focused-create-tabs')]//button[.//span[normalize-space(.)=${JSON.stringify(tab)}]]`, `${tab} 탭`);
   const option = `//button[contains(@class,'create-option-card')][.//strong[normalize-space(.)=${JSON.stringify(name)}]]`;
   await click(browser, option, `${tab} ${name}`);
@@ -239,7 +239,7 @@ async function chooseCharacterSource(browser, tab, name) {
     timeout: 15_000,
     timeoutMsg: `${tab} ${name} selection did not commit`,
   });
-  const unresolved = await completeVisibleCharacterChoices(browser);
+  const unresolved = await completeVisibleCharacterChoices(browser, preferredLabels);
   assert.deepEqual(unresolved, [], `${tab} UI choices remain unresolved: ${unresolved.join(", ")}`);
 }
 
@@ -248,23 +248,23 @@ async function openCharacterTab(browser, label, sectionId) {
   await browser.$(`//section[@id=${JSON.stringify(sectionId)}]`).waitForDisplayed({ timeout: 15_000 });
 }
 
-async function createPlayableCharacter(instance, name) {
+async function createPlayableCharacter(instance, name, { className = "소서러", speciesName = "인간", backgroundName = "군인", preferredLabels = [] } = {}) {
   await click(instance.browser, navButton("캐릭터"), "캐릭터 메뉴");
   await click(instance.browser, exactButton("새 캐릭터"), "새 캐릭터");
   await openCharacterTab(instance.browser, "정체성", "identity");
   await replaceValue(instance.browser, labelControl("캐릭터 이름"), name, "캐릭터 이름");
-  await chooseCharacterSource(instance.browser, "종족", "인간");
-  await chooseCharacterSource(instance.browser, "클래스", "파이터");
-  await chooseCharacterSource(instance.browser, "배경", "군인");
+  await chooseCharacterSource(instance.browser, "종족", speciesName, preferredLabels);
+  await chooseCharacterSource(instance.browser, "클래스", className, preferredLabels);
+  await chooseCharacterSource(instance.browser, "배경", backgroundName, preferredLabels);
   for (const [tab, sectionId] of [["정체성", "identity"], ["종족", "species"], ["클래스", "class"], ["배경", "background"]]) {
     await openCharacterTab(instance.browser, tab, sectionId);
-    const unresolved = await completeVisibleCharacterChoices(instance.browser);
+    const unresolved = await completeVisibleCharacterChoices(instance.browser, preferredLabels);
     assert.deepEqual(unresolved, [], `${tab} dependent UI choices remain unresolved: ${unresolved.join(", ")}`);
   }
   await openCharacterTab(instance.browser, "능력치", "abilities");
-  await click(instance.browser, "//section[@id='abilities']//button[contains(normalize-space(.),'파이터 추천 배치')]", "파이터 추천 배치");
+  await click(instance.browser, `//section[@id='abilities']//button[contains(normalize-space(.),${JSON.stringify(`${className} 추천 배치`)})]`, `${className} 추천 배치`);
   await openCharacterTab(instance.browser, "기술", "proficiencies");
-  const unresolved = await completeVisibleCharacterChoices(instance.browser);
+  const unresolved = await completeVisibleCharacterChoices(instance.browser, preferredLabels);
   assert.deepEqual(unresolved, [], `Character UI choices remain unresolved: ${unresolved.join(", ")}`);
   await openCharacterTab(instance.browser, "검토", "review");
   const save = await instance.browser.$(exactButton("모험 시작"));
@@ -310,6 +310,131 @@ async function openHostSession(host, sessionPort) {
   await portInputs[0].setValue(String(sessionPort));
   await click(host.browser, `${direct}//button[normalize-space(.)='세션 열기']`, "Direct Host 세션 열기");
   await waitForText(host.browser, "호스트 · DM", 30_000);
+}
+
+async function addCombatant(host) {
+  await click(host.browser, exactButton("인카운터"), "인카운터 도구");
+  const pane = "//aside[@aria-label='DM Encounter 도구']";
+  await host.browser.$(pane).waitForDisplayed({ timeout: 15_000 });
+  const definition = await host.browser.$(`${pane}//div[contains(@class,'session-dm-definition-grid') and not(contains(@class,'campaign-library'))]//button[1]`);
+  await definition.waitForDisplayed({ timeout: 15_000, timeoutMsg: "No production Combatant definition was available" });
+  await definition.waitForEnabled({ timeout: 15_000 });
+  const enemyName = await definition.$("strong").getText();
+  await definition.click();
+  const enemyCard = `//section[@aria-label='상대 Actor Board']//button[contains(@class,'session-actor-card') and contains(@aria-label,${JSON.stringify(enemyName)})]`;
+  await host.browser.$(enemyCard).waitForDisplayed({ timeout: 20_000, timeoutMsg: `${enemyName} did not materialize on the enemy Actor board` });
+  await click(host.browser, `${pane}//button[@aria-label='Encounter 닫기']`, "Encounter 닫기");
+  return { enemyName, enemyCard };
+}
+
+async function selectHostCharacter(host, characterName) {
+  const characterCard = `//section[@aria-label='아군 Actor Board']//button[contains(@class,'session-actor-card') and contains(@aria-label,${JSON.stringify(characterName)})]`;
+  await host.browser.$(characterCard).waitForDisplayed({ timeout: 15_000, timeoutMsg: `${characterName} did not appear on the allied Actor board` });
+  const pressed = await host.browser.$(characterCard).getAttribute("aria-pressed");
+  if (pressed !== "true") await click(host.browser, characterCard, `${characterName} Actor 선택`);
+  await host.browser.waitUntil(async () => {
+    const controlled = await host.browser.$("//div[contains(@class,'session-controlled-actor')]").getAttribute("aria-label");
+    return controlled?.includes(characterName);
+  }, { timeout: 15_000, timeoutMsg: `${characterName} did not become the controlled Host Actor` });
+}
+
+async function drainResolution(host, actionName) {
+  const layer = "//section[contains(@class,'session-resolution-layer')]";
+  await host.browser.waitUntil(async () => {
+    const existing = await host.browser.$(layer).isExisting();
+    const animation = await host.browser.$("//*[contains(@class,'visual-dice') or contains(@class,'physics-dice')]").isExisting();
+    return existing || animation;
+  }, { timeout: 15_000, timeoutMsg: `${actionName} did not enter the production resolution presentation` });
+
+  for (let attempt = 0; attempt < 80; attempt += 1) {
+    const resolution = await host.browser.$(layer);
+    if (!await resolution.isExisting()) {
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      continue;
+    }
+    const close = await host.browser.$(`${layer}//button[normalize-space(.)='닫기']`);
+    if (await close.isExisting() && await close.isDisplayed() && await close.isEnabled()) {
+      await close.click();
+      await host.browser.waitUntil(async () => !await host.browser.$(layer).isExisting(), {
+        timeout: 15_000,
+        timeoutMsg: `${actionName} resolution did not close`,
+      });
+      return;
+    }
+    const interruptSkip = await host.browser.$(`${layer}//button[normalize-space(.)='넘기기']`);
+    if (await interruptSkip.isExisting() && await interruptSkip.isDisplayed() && await interruptSkip.isEnabled()) {
+      await interruptSkip.click();
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      continue;
+    }
+    const next = await host.browser.$(`${layer}//button[contains(@class,'session-resolution-next')]`);
+    if (await next.isExisting() && await next.isDisplayed() && await next.isEnabled()) {
+      await next.click();
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      continue;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  throw new Error(`${actionName} resolution did not reach completion`);
+}
+
+async function executeTargetedAction(host, actionSelector, targetSelector, description) {
+  const action = await host.browser.$(actionSelector);
+  await action.waitForDisplayed({ timeout: 15_000, timeoutMsg: `${description} was not visible` });
+  const unavailable = (await action.getAttribute("class") ?? "").includes("unavailable") || await action.getAttribute("aria-disabled") === "true";
+  assert.equal(unavailable, false, `${description} was unavailable`);
+  const actionLabel = await action.getAttribute("aria-label");
+  const actionName = actionLabel?.split(" · ")[0]?.trim() || description;
+  await action.click();
+
+  const targetingContext = "//span[contains(@class,'session-command-context-label') and contains(normalize-space(.),'액터를 클릭하세요')]";
+  await host.browser.waitUntil(async () => {
+    const targeting = await host.browser.$(targetingContext).isExisting();
+    const resolution = await host.browser.$("//section[contains(@class,'session-resolution-layer')]").isExisting();
+    const animation = await host.browser.$("//*[contains(@class,'visual-dice') or contains(@class,'physics-dice')]").isExisting();
+    return targeting || resolution || animation;
+  }, { timeout: 15_000, timeoutMsg: `${description} did not begin targeting or resolution` });
+
+  if (await host.browser.$(targetingContext).isExisting()) {
+    const target = await host.browser.$(targetSelector);
+    await target.waitForDisplayed({ timeout: 15_000, timeoutMsg: `${description} target was not visible` });
+    const targetClass = await target.getAttribute("class") ?? "";
+    assert.ok(targetClass.includes("valid-target"), `${description} target was not eligible`);
+    await target.click();
+    const execute = await host.browser.$("//button[contains(@class,'primary') and starts-with(normalize-space(.),'실행 ·')]");
+    if (await execute.isExisting()) {
+      await execute.waitForEnabled({ timeout: 15_000 });
+      await execute.click();
+    }
+  }
+
+  await drainResolution(host, actionName);
+  return actionName;
+}
+
+async function assertActivity(host, actionName) {
+  await click(host.browser, exactButton("기록"), "세션 기록");
+  const pane = "//aside[@aria-label='최근 세션 활동']";
+  await host.browser.$(pane).waitForDisplayed({ timeout: 15_000 });
+  await host.browser.waitUntil(async () => (await host.browser.$(pane).getText()).includes(actionName), {
+    timeout: 15_000,
+    timeoutMsg: `Activity did not record ${actionName}`,
+  });
+  await click(host.browser, `${pane}//button[@aria-label='활동 닫기']`, "활동 닫기");
+}
+
+async function performCombatAndSpell(host, characterName) {
+  const { enemyName, enemyCard } = await addCombatant(host);
+  await selectHostCharacter(host, characterName);
+
+  const weaponSelector = "//section[@data-category='action']//button[contains(@class,'session-hotbar-slot') and not(contains(@class,'unavailable'))][.//*[@data-action-icon='weapon-attack' or starts-with(@data-action-icon,'weapon-')]][1]";
+  const weaponAction = await executeTargetedAction(host, weaponSelector, enemyCard, "장착 무기 공격");
+  await assertActivity(host, weaponAction);
+
+  const damageSpellSelector = "//section[@data-category='class']//button[contains(@class,'session-hotbar-slot') and not(contains(@class,'unavailable'))][.//*[@data-action-icon='acid' or @data-action-icon='cold' or @data-action-icon='fire' or @data-action-icon='force' or @data-action-icon='lightning' or @data-action-icon='necrotic' or @data-action-icon='poison' or @data-action-icon='psychic' or @data-action-icon='radiant' or @data-action-icon='thunder']][1]";
+  const spellAction = await executeTargetedAction(host, damageSpellSelector, enemyCard, "damage-type spell");
+  await assertActivity(host, spellAction);
+  return { enemyName, weaponAction, spellAction };
 }
 
 async function performLongRest(host) {
@@ -381,7 +506,7 @@ async function runW308() {
 
   const hostDataRoot = path.join(runRoot, "w3", "host-data");
   const campaignName = `W3 Local Session ${runId.slice(-6)}`;
-  const characterName = `W3 Local Fighter ${runId.slice(-6)}`;
+  const characterName = `W3 Local Sorcerer ${runId.slice(-6)}`;
   const host = await launchInstance("W3 Local Host", hostDataRoot, await reservePort());
   const sessionPort = await reservePort();
 
@@ -391,6 +516,8 @@ async function runW308() {
   await openHostSession(host, sessionPort);
   await saveEvidence(host, "w3-08-live-host");
 
+  const combat = await performCombatAndSpell(host, characterName);
+  await saveEvidence(host, "w3-08-combat-spell-complete");
   const rest = await performLongRest(host);
   await saveEvidence(host, "w3-08-rest-complete");
 
@@ -407,12 +534,13 @@ async function runW308() {
     status: "PASS",
     verificationSha,
     windowsTauri: true,
-    lifecycle: "actual Tauri Character -> local Host session -> DM Long Rest (+8h) -> UI session end -> process exit -> same Host data root restart -> Campaign continuity",
+    lifecycle: "actual Tauri Character -> local Host session -> Combatant + weapon attack + damage spell -> DM Long Rest (+8h) -> UI session end -> process exit -> same Host data root restart -> Campaign continuity",
     endpoint: "127.0.0.1",
     characterName,
     campaignName,
     initialAbsoluteMinute,
     expectedRestartAbsoluteMinute: initialAbsoluteMinute + 480,
+    combat,
     rest,
     restart,
   }, null, 2), "utf8");
