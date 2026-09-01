@@ -41,10 +41,10 @@ These numbers classify the work; they are not completion credit. Completion cred
 W0: COMPLETE — 6/6 PASS
 W1: COMPLETE — 8/8 PASS
 W2: COMPLETE — 8/8 PASS
-W3: IN PROGRESS — 1/8 PASS
-Official ledger score: 31.3/100.0
-PASS: 23/72
-PENDING: 49/72
+W3: IN PROGRESS — 2/8 PASS
+Official ledger score: 32.5/100.0
+PASS: 24/72
+PENDING: 48/72
 FAIL: 0
 BLOCKED: 0
 ```
@@ -53,10 +53,12 @@ BLOCKED: 0
 
 ```text
 Wave 2
-Next Gate: W3-02
+Next Gate: W3-03
 ```
 
-`W3-01` is PASS by inherited exact-SHA production-authority evidence. Product SHA `1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff` passed GitHub Actions UI run `33498144567`, job `99824979798`: production Freeform skill actions use authoritative d20 faces and Activity, ability checks delegate to the existing real resolution service, saving throws use runtime stat sources and the canonical d20 resolver, and portable Common Play d20 definitions lower through the existing generic Resolver with rename-invariant/rejection coverage. PR #199 added `evidence/W3-01.md` only and merged as `ca6b42c47409ff7096f31aeab12624336225ab8f`; no product runtime code changed. The next exact Gate is `W3-02`.
+`W3-02` is PASS by inherited exact-SHA turn-lifecycle evidence. Product SHA `1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff` passed GitHub Actions UI run `33498144567`, job `99824979798`: the existing Phase 09 runtime orders initiative, initializes and preserves Action/Bonus Action/Reaction/movement economy, advances end-turn/begin-turn through the generic Resolver, increments rounds on wrap, refreshes the next turn from base economy, reconciles committed actions and Undo, admits new Combatants without restarting initiative, and returns to Freeform when initiative ends. Production `ProductionPlayScreen` exposes the real start/end initiative and end-turn commands. PR #201 records the focused evidence with no product runtime change. The next exact Gate is `W3-03`.
+
+`W3-01` is PASS by inherited exact-SHA production-authority evidence. Product SHA `1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff` passed GitHub Actions UI run `33498144567`, job `99824979798`: production Freeform skill actions use authoritative d20 faces and Activity, ability checks delegate to the existing real resolution service, saving throws use runtime stat sources and the canonical d20 resolver, and portable Common Play d20 definitions lower through the existing generic Resolver with rename-invariant/rejection coverage. PR #199 added `evidence/W3-01.md` only and merged as `ca6b42c47409ff7096f31aeab12624336225ab8f`; no product runtime code changed.
 
 `W2` is complete. W2-08 passed on product SHA `699c923dc50dac5ecd266ced58568d3b647850b6` (tree `449bf34d36c7975addcc2196b87a9a026d525730`) in Windows Tauri run `33470259003`, job `99738402317`, artifact `9786387605`, digest `sha256:3077663cb94c2a444046d94808c76a677c7d92de61a0576f61d5f57b8cd1172d`. Six archetypes were created through production UI, persisted, process-restarted on the same data root, and verified in rendered Full Sheet. The run reproduced and repaired one owner-path gap: Guided Create now materializes initial class tracks and standard/pact spell capacity through the existing progression calculators. W2-01 remains inherited evidence; W2-02 through W2-07 remain verified at `ef2cdf69748195bd63c0bd7eff747420811842bf`.
 
