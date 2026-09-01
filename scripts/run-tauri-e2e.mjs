@@ -206,21 +206,22 @@ async function completeVisibleCharacterChoices(browser, preferredLabels = []) {
         const target = available.find((item) => preferred.some((label) => item.textContent?.includes(label))) ?? available[0];
         if (target instanceof HTMLElement) {
           const selectedBefore = [...candidates].filter((item) => item.classList.contains("selected")).length;
+          const textBefore = section.textContent;
           target.scrollIntoView({ block:"center" });
           target.click();
-          return { clicked:true, section:section.id, selectedBefore };
+          return { clicked:true, section:section.id, selectedBefore, textBefore };
         }
       }
       const unresolved = sections.filter((section) => section.querySelector(".create-status-pill")?.textContent?.trim() === "선택 필요").map((section) => section.id);
       return { clicked:false, unresolved };
     }, preferredLabels);
     if (!result.clicked) return result.unresolved;
-    await browser.waitUntil(async () => browser.execute(({ sectionId, selectedBefore }) => {
+    await browser.waitUntil(async () => browser.execute(({ sectionId, selectedBefore, textBefore }) => {
       const section = document.getElementById(sectionId);
       if (!section) return false;
       const selectedNow = section.querySelectorAll(".create-option-card.selected, .spell-choice-grid button.selected, .proficiency-grid button.selected").length;
-      return selectedNow > selectedBefore || section.querySelector(".create-status-pill")?.textContent?.trim() !== "선택 필요";
-    }, { sectionId:result.section, selectedBefore:result.selectedBefore }), {
+      return selectedNow > selectedBefore || section.textContent !== textBefore || section.querySelector(".create-status-pill")?.textContent?.trim() !== "선택 필요";
+    }, { sectionId:result.section, selectedBefore:result.selectedBefore, textBefore:result.textBefore }), {
       timeout:15_000,
       timeoutMsg:`Character choice did not commit in ${result.section}`,
     });
