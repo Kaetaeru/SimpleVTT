@@ -602,7 +602,7 @@ async function endSessionFromUi(host) {
     timeout: 20_000,
     timeoutMsg: "Host remained on the live session surface after ending the session",
   });
-  await waitForText(host.browser, "세션 시작");
+  await waitForText(host.browser, "TABLETOP, YOUR WAY");
 }
 
 async function verifyRestartedCampaign(host, campaignName, expectedAbsoluteMinute) {
