@@ -41,10 +41,10 @@ These numbers classify the work; they are not completion credit. Completion cred
 W0: COMPLETE — 6/6 PASS
 W1: COMPLETE — 8/8 PASS
 W2: COMPLETE — 8/8 PASS
-W3: IN PROGRESS — 6/8 PASS
-Official ledger score: 37.5/100.0
-PASS: 28/72
-PENDING: 44/72
+W3: IN PROGRESS — 7/8 PASS
+Official ledger score: 38.8/100.0
+PASS: 29/72
+PENDING: 43/72
 FAIL: 0
 BLOCKED: 0
 ```
@@ -53,10 +53,12 @@ BLOCKED: 0
 
 ```text
 Wave 2
-Next Gate: W3-07
+Next Gate: W3-08
 ```
 
-`W3-06` is PASS by inherited exact-SHA condition/duration/rest/resource-recovery evidence. Rules Domain run `33342898384`, job `99341612326`, at source/check SHA `6095fe8adbe52b047ef5f6fee3413975bf02c3e0` verified the lifecycle, condition, Short/Long Rest, and recovery owners; trusted product SHA `1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff` passed UI run `33498144567`, job `99824979798`, covering production artifact lifetime/lifecycle and Character Long Rest projection. Current canonical product/tests inherit those verified paths unchanged. The focused evidence is recorded in `evidence/W3-06.md` and correction PR #210; no product runtime changed. The next exact Gate is `W3-07`.
+`W3-07` is PASS by inherited exact-SHA correction/Undo evidence. Product SHA `1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff` passed GitHub Actions UI run `33498144567`, job `99824979798`. `tests/ui/phase09RealAtomicAttackAdapter.test.ts` proves event-native Undo restores committed HP/economy while retaining the original Activity entry marked `reversed`, and rejects Undo after intervening authoritative state drift rather than deleting or rewriting history. Compare to canonical pre-closure HEAD `d7b3167ec4f6db786606fb44c019bad960fe984d` changes only documentation/evidence files, so the verified product/runtime test path is inherited unchanged. Focused evidence is recorded in `evidence/W3-07.md` and PR #218; no product runtime changed. The next exact Gate is `W3-08`.
+
+`W3-06` is PASS by inherited exact-SHA condition/duration/rest/resource-recovery evidence. Rules Domain run `33342898384`, job `99341612326`, at source/check SHA `6095fe8adbe52b047ef5f6fee3413975bf02c3e0` verified the lifecycle, condition, Short/Long Rest, and recovery owners; trusted product SHA `1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff` passed UI run `33498144567`, job `99824979798`, covering production artifact lifetime/lifecycle and Character Long Rest projection. Current canonical product/tests inherit those verified paths unchanged. The focused evidence is recorded in `evidence/W3-06.md` and correction PR #210; no product runtime changed.
 
 `W3-05` is PASS by inherited exact-SHA reaction/interruption/concentration/Ready production-path evidence. Product SHA `1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff` passed GitHub Actions UI run `33498144567`, job `99824979798`; the workflow explicitly ran 11 focused production-facing tests across `c9FamilyOReadyConcentrationProduction`, `phase09ManualMovementReactionAdapter`, and `phase09ConcentrationSaveWorkflow`. Existing runtime covers authoritative reaction spend/rollback, structural Ready stored invocations, deferred concentration lifecycle, concentration saves, stale-input rejection, Activity, and Undo without partial mutation. PR #205 records the focused evidence with no product runtime change.
 
