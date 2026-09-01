@@ -1,6 +1,6 @@
 # Current — SimpleVTT
 
-Updated: 2026-09-01 Asia/Seoul
+Updated: 2026-09-02 Asia/Seoul
 
 This is the human/agent entry point for **what is current now**. Live GitHub state plus this page and the active master roadmap win over older handoffs, checklists, PR bodies, archived files, and remembered status.
 
@@ -47,9 +47,9 @@ Initial audit classification:
 W0: 6/6 PASS
 W1: 8/8 PASS — COMPLETE
 W2: 8/8 PASS — COMPLETE
-W3: 5/8 PASS — IN PROGRESS
-Official ledger score: 36.3/100.0
-Remaining gates: 45/72
+W3: 6/8 PASS — IN PROGRESS
+Official ledger score: 37.5/100.0
+Remaining gates: 44/72
 FAIL: 0
 BLOCKED: 0
 ```
@@ -73,9 +73,11 @@ Wave 2
 W0 — COMPLETE
 W1 — COMPLETE (8/8 PASS)
 W2 — COMPLETE (8/8 PASS)
-W3 — IN PROGRESS (5/8 PASS)
-Next exact Gate: W3-06
+W3 — IN PROGRESS (6/8 PASS)
+Next exact Gate: W3-07
 ```
+
+W3-06 is closed with inherited exact-SHA condition/duration/rest/resource-recovery evidence. Rules Domain run `33342898384`, job `99341612326`, at source/check SHA `6095fe8adbe52b047ef5f6fee3413975bf02c3e0` verified the lifecycle, condition, Short/Long Rest, and recovery owners; trusted product SHA `1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff` passed UI run `33498144567`, job `99824979798`, covering production artifact lifetime/lifecycle and Character Long Rest projection. Current canonical product/tests inherit those verified paths unchanged. The focused evidence is recorded in `roadmap/evidence/W3-06.md` and correction PR #210; no product runtime changed.
 
 W3-05 is closed with inherited exact-SHA reaction/interruption/concentration/Ready production-path evidence. Product SHA `1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff` passed GitHub Actions UI run `33498144567`, job `99824979798`; the workflow explicitly ran 11 focused production-facing tests across `c9FamilyOReadyConcentrationProduction`, `phase09ManualMovementReactionAdapter`, and `phase09ConcentrationSaveWorkflow`. Existing runtime covers authoritative reaction spend/rollback, structural Ready stored invocations, deferred concentration lifecycle, concentration saves, stale-input rejection, Activity, and Undo without partial mutation. PR #205 records the focused evidence; no product runtime code was changed.
 
@@ -99,8 +101,8 @@ W1-06 was the only Gate with a reproduced product gap: the real Character Librar
 
 ### Next execution sequence
 
-1. Start `W3-06`, the first non-`PASS` W3 Gate, and reuse existing exact-SHA evidence before considering any product change.
-2. Continue through the first non-`PASS` W3 Gate; do not reopen W2 or W3-01 through W3-05 and do not modify a `REUSE_LOCKED` path without a reproduced failure.
+1. Start `W3-07`, the first non-`PASS` W3 Gate, and reuse existing exact-SHA evidence before considering any product change.
+2. Continue through the first non-`PASS` W3 Gate; do not reopen W2 or W3-01 through W3-06 and do not modify a `REUSE_LOCKED` path without a reproduced failure.
 3. Reserve rendered Windows/Tauri session→rest→process restart evidence for `W3-08`.
 4. For Common Play, follow [`design/ui-ux/COMMON-PLAY-FUNCTION-FIRST.md`](design/ui-ux/COMMON-PLAY-FUNCTION-FIRST.md): functional reachability first, broad UI redesign later.
 
