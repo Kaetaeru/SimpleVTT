@@ -331,7 +331,41 @@ async function selectHostCharacter(host, characterName) {
   const characterCard = `//section[@aria-label='아군 Actor Board']//button[contains(@class,'session-actor-card') and contains(@aria-label,${JSON.stringify(characterName)})]`;
   const card = await host.browser.$(characterCard);
   await card.waitForDisplayed({ timeout: 15_000, timeoutMsg: `${characterName} did not appear on the allied Actor board` });
-  if (await card.getAttribute("aria-pressed") !== "true") await click(host.browser, characterCard, `${characterName} Actor 선택`);
+  const pressedBefore = await card.getAttribute("aria-pressed");
+  const clicked = pressedBefore !== "true";
+  if (clicked) await click(host.browser, characterCard, `${characterName} Actor 선택`);
+  const diagnostic = await host.browser.execute((expectedName) => {
+    const alliedCard = [...document.querySelectorAll("section[aria-label='아군 Actor Board'] button.session-actor-card")]
+      .find((element) => element.getAttribute("aria-label")?.includes(expectedName)) ?? null;
+    const controlledCard = document.querySelector(".session-actor-card.controlled");
+    const currentTurnCard = document.querySelector(".session-actor-card.current-turn");
+    const hotbarActor = document.querySelector(".session-controlled-actor");
+    const cardState = (element) => element instanceof HTMLElement ? {
+      actorId: element.dataset.actorId ?? null,
+      ariaPressed: element.getAttribute("aria-pressed"),
+      className: element.className,
+      ariaLabel: element.getAttribute("aria-label"),
+    } : null;
+    return {
+      alliedCard: cardState(alliedCard),
+      controlledCard: cardState(controlledCard),
+      currentTurnCard: cardState(currentTurnCard),
+      hotbarActor: hotbarActor instanceof HTMLElement ? {
+        ariaLabel: hotbarActor.getAttribute("aria-label"),
+        title: hotbarActor.getAttribute("title"),
+        actorName: hotbarActor.querySelector(".session-controlled-info strong")?.textContent?.trim() ?? null,
+      } : null,
+    };
+  }, characterName);
+  await writeFile(path.join(artifactRoot, "w3-08-selection-diagnostic.json"), JSON.stringify({
+    gate: "W3-08",
+    verificationSha,
+    characterName,
+    pressedBefore,
+    clicked,
+    ...diagnostic,
+  }, null, 2), "utf8");
+  log(`W3-08 Actor 선택 진단 · ${JSON.stringify(diagnostic)}`);
   await host.browser.waitUntil(async () => {
     const current = await host.browser.$(characterCard);
     return await current.getAttribute("aria-pressed") === "true"
