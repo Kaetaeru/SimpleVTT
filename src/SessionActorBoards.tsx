@@ -17,7 +17,7 @@ function hpPercent(entity:SceneEntity) { return entity.maxHp<=0?0:Math.max(0,Mat
 export function SessionActorBoard({position,role,targetingAction,selectedTargetIds,targetingPending,onTarget}:{
   position:BoardPosition; role:SessionRole; targetingAction:ActionVm|null; selectedTargetIds:string[]; targetingPending:boolean; onTarget(entityId:string):void;
 }) {
-  const {snapshot,selectDmActor,refresh,declareManualMovementReaction}=useSimpleVtt();
+  const {snapshot,selectDmActor,declareManualMovementReaction}=useSimpleVtt();
   const [pendingActorId,setPendingActorId]=useState<string|null>(null);
   if (!snapshot) return null;
   const wantedSide=position==="upper"?"enemy":"ally";
@@ -28,7 +28,7 @@ export function SessionActorBoard({position,role,targetingAction,selectedTargetI
   const selectActor=async(entity:SceneEntity)=>{
     if (targetingAction) { onTarget(entity.id); return; }
     if (role!=="dm"||pendingActorId||snapshot.resolution||entity.id===snapshot.scene.selectedActorId) return;
-    setPendingActorId(entity.id); try { await selectDmActor(entity.id); await refresh(); } finally { setPendingActorId(null); }
+    setPendingActorId(entity.id); try { await selectDmActor(entity.id); } finally { setPendingActorId(null); }
   };
   return <section className={`session-actor-board session-actor-board-${position}`} aria-label={boardLabel} data-board-position={position} data-targeting={Boolean(targetingAction)}>
     <div className="session-actor-board-label" aria-hidden="true"><span>{position==="upper"?"OPPOSING":"ALLIED"}</span><strong>{actors.length}</strong></div>
