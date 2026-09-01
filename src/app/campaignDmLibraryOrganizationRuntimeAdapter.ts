@@ -1,6 +1,6 @@
 import "./campaignRuntimeAdapter";
 import "./campaignDmLibraryOrganizationContracts";
-import type { AppSnapshot, CombatantDefinitionVm } from "./contracts";
+import type { ActionVm, AppSnapshot, CombatantDefinitionVm } from "./contracts";
 import { CampaignApplicationService } from "./campaignApplicationService";
 import type { CampaignDmLibraryEntry } from "./campaignPersistenceContracts";
 import type { CampaignDmLibraryFolder, CampaignPcActorPreset } from "./campaignDmLibraryOrganizationContracts";
@@ -14,12 +14,20 @@ type OrganizationPayload=
 type UpdateContext=Parameters<CampaignApplicationService["updateCampaign"]>[0];
 type UpdatePayload=UpdateContext["payload"]&{[ORGANIZATION_PAYLOAD]?:OrganizationPayload};
 
+type PcPresetRuntimeScene={
+  selectedActorId:string;
+  entities:Array<{id:string;side:"ally"|"enemy"}>;
+  actionsByActor:Record<string,ActionVm[]>;
+};
+
 function uniqueText(values:string[]){return [...new Set(values.map((value)=>value.trim()).filter(Boolean))];}
 function assertPreset(preset:CampaignPcActorPreset,definitionId:string){
   if(!preset||preset.definitionId!==definitionId||!preset.name.trim())throw new Error("PC preset definition id and name are required");
   if(!Number.isInteger(preset.level)||preset.level<1||preset.level>20)throw new Error("PC preset level must be between 1 and 20");
   if(!Number.isInteger(preset.ac)||preset.ac<0||!Number.isInteger(preset.maxHp)||preset.maxHp<1)throw new Error("PC preset AC and HP are invalid");
+  if(preset.actionSnapshots&&!Array.isArray(preset.actionSnapshots))throw new Error("PC preset action snapshots are invalid");
   preset.actions=uniqueText(preset.actions??[]);
+  preset.actionSnapshots=preset.actionSnapshots?.map((action)=>structuredClone(action));
   preset.statusImmunities=uniqueText(preset.statusImmunities??[]);
   preset.source=preset.source.trim();
   preset.version=preset.version.trim();
@@ -97,7 +105,21 @@ MockAdapter.prototype.instantiateCampaignDmLibraryPcPreset=async function instan
   const materialized:CombatantDefinitionVm={id:preset.definitionId,name:preset.name,nameEn:preset.nameEn,ac:preset.ac,maxHp:preset.maxHp,source:preset.source,version:preset.version,actions:[...preset.actions],statusImmunities:[...preset.statusImmunities]};
   const index=definitions.findIndex((candidate)=>candidate.id===materialized.id);
   if(index>=0)definitions[index]=materialized;else definitions.push(materialized);
+  const existingActorIds=new Set(snapshot.scene.entities.map((entity)=>entity.id));
   await this.instantiateCombatant(materialized.id);
+  const runtimeScene=(this as unknown as {scene:PcPresetRuntimeScene}).scene;
+  const spawned=runtimeScene.entities.find((entity)=>!existingActorIds.has(entity.id));
+  if(!spawned)throw new Error("PC preset Actor materialization did not create an Actor");
+  spawned.side="ally";
+  if(preset.actionSnapshots?.length){
+    runtimeScene.actionsByActor[spawned.id]=preset.actionSnapshots.map((action,index)=>({
+      ...structuredClone(action),
+      id:`${action.id}.pc-preset.${spawned.id}.${index}`,
+      actorId:spawned.id,
+      eligibleTargetIds:[],
+    }));
+  }
+  runtimeScene.selectedActorId=spawned.id;
   await this.updateCampaign(campaignId,organizationPayload({kind:"touch-entry",entryId}));
   return this.getSnapshot();
 };
