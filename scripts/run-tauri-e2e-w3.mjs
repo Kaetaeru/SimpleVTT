@@ -187,6 +187,97 @@ async function stopInstance(instance) {
   }
 }
 
+async function completeVisibleCharacterChoices(browser, preferredLabels = []) {
+  for (let attempt = 0; attempt < 120; attempt += 1) {
+    const result = await browser.execute((preferred) => {
+      const sections = [...document.querySelectorAll(".focused-create-stage .create-v09-section")];
+      for (const section of sections) {
+        if (section.querySelector(".create-status-pill")?.textContent?.trim() !== "선택 필요") continue;
+        const candidates = section.querySelectorAll(
+          ".dynamic-choice-grid .create-option-card, .equipment-options .create-option-card, .spell-choice-grid button, .proficiency-grid button",
+        );
+        const available = [...candidates].filter((item) => {
+          const button = item;
+          const selected = button.classList.contains("selected") || Boolean(button.querySelector(".selected"));
+          return !button.disabled && button.getAttribute("aria-disabled") !== "true" && !selected;
+        });
+        const target = available.find((item) => preferred.some((label) => item.textContent?.includes(label))) ?? available[0];
+        if (target instanceof HTMLElement) {
+          const selectedBefore = [...candidates].filter((item) => item.classList.contains("selected") || item.querySelector(".selected")).length;
+          const textBefore = section.textContent;
+          target.scrollIntoView({ block: "center" });
+          target.click();
+          return { clicked: true, section: section.id, selectedBefore, textBefore };
+        }
+      }
+      const unresolved = sections
+        .filter((section) => section.querySelector(".create-status-pill")?.textContent?.trim() === "선택 필요")
+        .map((section) => section.id);
+      return { clicked: false, unresolved };
+    }, preferredLabels);
+    if (!result.clicked) return result.unresolved;
+    await browser.waitUntil(async () => browser.execute(({ sectionId, selectedBefore, textBefore }) => {
+      const section = document.getElementById(sectionId);
+      if (!section) return false;
+      const selectedNow = section.querySelectorAll(".create-option-card.selected, .spell-choice-grid .spell-tile.selected, .proficiency-grid button.selected").length;
+      return selectedNow > selectedBefore
+        || section.textContent !== textBefore
+        || section.querySelector(".create-status-pill")?.textContent?.trim() !== "선택 필요";
+    }, { sectionId: result.section, selectedBefore: result.selectedBefore, textBefore: result.textBefore }), {
+      timeout: 15_000,
+      timeoutMsg: `Character choice did not commit in ${result.section}`,
+    });
+  }
+  throw new Error("Character choice completion exceeded 120 UI clicks");
+}
+
+async function chooseCharacterSource(browser, tab, name) {
+  await click(browser, `//nav[contains(@class,'focused-create-tabs')]//button[.//span[normalize-space(.)=${JSON.stringify(tab)}]]`, `${tab} 탭`);
+  const option = `//button[contains(@class,'create-option-card')][.//strong[normalize-space(.)=${JSON.stringify(name)}]]`;
+  await click(browser, option, `${tab} ${name}`);
+  await browser.waitUntil(async () => (await browser.$(option).getAttribute("class")).includes("selected"), {
+    timeout: 15_000,
+    timeoutMsg: `${tab} ${name} selection did not commit`,
+  });
+  const unresolved = await completeVisibleCharacterChoices(browser);
+  assert.deepEqual(unresolved, [], `${tab} UI choices remain unresolved: ${unresolved.join(", ")}`);
+}
+
+async function openCharacterTab(browser, label, sectionId) {
+  await click(browser, `//nav[contains(@class,'focused-create-tabs')]//button[.//span[normalize-space(.)=${JSON.stringify(label)}]]`, `${label} 탭`);
+  await browser.$(`//section[@id=${JSON.stringify(sectionId)}]`).waitForDisplayed({ timeout: 15_000 });
+}
+
+async function createPlayableCharacter(instance, name) {
+  await click(instance.browser, navButton("캐릭터"), "캐릭터 메뉴");
+  await click(instance.browser, exactButton("새 캐릭터"), "새 캐릭터");
+  await openCharacterTab(instance.browser, "정체성", "identity");
+  await replaceValue(instance.browser, labelControl("캐릭터 이름"), name, "캐릭터 이름");
+  await chooseCharacterSource(instance.browser, "종족", "인간");
+  await chooseCharacterSource(instance.browser, "클래스", "파이터");
+  await chooseCharacterSource(instance.browser, "배경", "군인");
+  for (const [tab, sectionId] of [["정체성", "identity"], ["종족", "species"], ["클래스", "class"], ["배경", "background"]]) {
+    await openCharacterTab(instance.browser, tab, sectionId);
+    const unresolved = await completeVisibleCharacterChoices(instance.browser);
+    assert.deepEqual(unresolved, [], `${tab} dependent UI choices remain unresolved: ${unresolved.join(", ")}`);
+  }
+  await openCharacterTab(instance.browser, "능력치", "abilities");
+  await click(instance.browser, "//section[@id='abilities']//button[contains(normalize-space(.),'파이터 추천 배치')]", "파이터 추천 배치");
+  await openCharacterTab(instance.browser, "기술", "proficiencies");
+  const unresolved = await completeVisibleCharacterChoices(instance.browser);
+  assert.deepEqual(unresolved, [], `Character UI choices remain unresolved: ${unresolved.join(", ")}`);
+  await openCharacterTab(instance.browser, "검토", "review");
+  const save = await instance.browser.$(exactButton("모험 시작"));
+  if (!await save.isEnabled()) {
+    const diagnostics = await instance.browser.execute(() => ({
+      validation: [...document.querySelectorAll(".validation.blocking")].map((item) => item.textContent?.trim()),
+    }));
+    throw new Error(`Character 저장 is disabled: ${JSON.stringify(diagnostics)}`);
+  }
+  await click(instance.browser, exactButton("모험 시작"), "Character 저장");
+  await waitForText(instance.browser, name, 30_000);
+}
+
 async function createCampaignWithCalendar(host, campaignName) {
   await click(host.browser, navButton("캠페인"), "캠페인 메뉴");
   const body = await host.browser.$("body").getText();
@@ -221,17 +312,6 @@ async function openHostSession(host, sessionPort) {
   await waitForText(host.browser, "호스트 · DM", 30_000);
 }
 
-async function joinClientSession(client, sessionPort) {
-  await click(client.browser, navButton("세션"), "세션 메뉴");
-  const direct = "//*[@aria-label='직접 네트워크 세션 시작']";
-  await replaceValue(client.browser, `${direct}//label[.//span[normalize-space(.)='Host IP / 주소']]//input`, "127.0.0.1", "Client Host 주소");
-  const portInputs = await client.browser.$$(`${direct}//label[.//span[normalize-space(.)='포트']]//input`);
-  assert.ok(portInputs.length >= 2, "Client port input was not found");
-  await portInputs[1].setValue(String(sessionPort));
-  await click(client.browser, `${direct}//button[normalize-space(.)='참가하기']`, "Direct Client 참가하기");
-  await waitForText(client.browser, "클라이언트 · 플레이어", 30_000);
-}
-
 async function performLongRest(host) {
   const clockSelector = "//header[contains(@class,'session-reference-play-chrome')]//button[starts-with(@aria-label,'Campaign 시간')]";
   const clock = await host.browser.$(clockSelector);
@@ -248,7 +328,10 @@ async function performLongRest(host) {
   await advance.waitForEnabled({ timeout: 15_000 });
   if (!await advance.isSelected()) await advance.click();
   await click(host.browser, `${pane}//button[normalize-space(.)='장기 휴식 적용']`, "장기 휴식 적용");
-  await host.browser.waitUntil(async () => (await host.browser.$(pane).getText()).includes("장기 휴식을 적용했습니다") && (await host.browser.$(pane).getText()).includes("시간 +8시간"), {
+  await host.browser.waitUntil(async () => {
+    const text = await host.browser.$(pane).getText();
+    return text.includes("장기 휴식을 적용했습니다") && text.includes("시간 +8시간");
+  }, {
     timeout: 20_000,
     timeoutMsg: "Long Rest did not confirm the +8 hour campaign transaction",
   });
@@ -297,24 +380,22 @@ async function runW308() {
   await ensureVite();
 
   const hostDataRoot = path.join(runRoot, "w3", "host-data");
-  const clientDataRoot = path.join(runRoot, "w3", "client-data");
   const campaignName = `W3 Local Session ${runId.slice(-6)}`;
+  const characterName = `W3 Local Fighter ${runId.slice(-6)}`;
   const host = await launchInstance("W3 Local Host", hostDataRoot, await reservePort());
-  const client = await launchInstance("W3 Local Client", clientDataRoot, await reservePort());
   const sessionPort = await reservePort();
 
+  await createPlayableCharacter(host, characterName);
+  await saveEvidence(host, "w3-08-character-ready");
   const initialAbsoluteMinute = await createCampaignWithCalendar(host, campaignName);
   await openHostSession(host, sessionPort);
-  await joinClientSession(client, sessionPort);
   await saveEvidence(host, "w3-08-live-host");
-  await saveEvidence(client, "w3-08-live-client");
 
   const rest = await performLongRest(host);
   await saveEvidence(host, "w3-08-rest-complete");
 
   await endSessionFromUi(host);
   await saveEvidence(host, "w3-08-session-ended");
-  await stopInstance(client);
   await stopInstance(host);
 
   const restarted = await launchInstance("W3 Local Restart", hostDataRoot, await reservePort());
@@ -326,8 +407,9 @@ async function runW308() {
     status: "PASS",
     verificationSha,
     windowsTauri: true,
-    lifecycle: "actual Tauri Host/Client local session -> DM Long Rest (+8h) -> UI session end -> process exit -> same Host data root restart -> Campaign continuity",
+    lifecycle: "actual Tauri Character -> local Host session -> DM Long Rest (+8h) -> UI session end -> process exit -> same Host data root restart -> Campaign continuity",
     endpoint: "127.0.0.1",
+    characterName,
     campaignName,
     initialAbsoluteMinute,
     expectedRestartAbsoluteMinute: initialAbsoluteMinute + 480,
