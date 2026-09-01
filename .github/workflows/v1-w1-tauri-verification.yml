@@ -8,6 +8,7 @@ on:
       - "src/**"
       - "src-tauri/**"
       - "scripts/run-tauri-e2e.*"
+      - "tests/ui/appProviderStopSessionRefresh.test.ts"
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/v1-w1-tauri-verification.yml"
@@ -54,6 +55,9 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
+      - name: Verify stop-session race regression
+        shell: pwsh
+        run: npx tsx --test tests/ui/appProviderStopSessionRefresh.test.ts
       - name: Verify W3 complete local session in Windows Tauri
         shell: pwsh
         run: npm run test:e2e:tauri -- --w3
