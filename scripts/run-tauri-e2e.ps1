@@ -4,6 +4,7 @@ param(
   [switch]$SkipBuild,
   [switch]$Smoke,
   [switch]$W1,
+  [switch]$W2,
   [switch]$KeepOpen
 )
 
@@ -76,6 +77,7 @@ if (-not (Test-Path -LiteralPath $binaryPath)) {
 $arguments = @((Join-Path $rootPath 'scripts\run-tauri-e2e.mjs'))
 if ($Smoke) { $arguments += '--smoke' }
 if ($W1) { $arguments += '--w1' }
+if ($W2) { $arguments += '--w2' }
 if ($KeepOpen) { $arguments += '--keep-open' }
 
 Write-Host '[TAURI E2E] Starting two isolated windows and driving the real UI...'

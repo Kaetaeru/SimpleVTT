@@ -17,8 +17,9 @@ const runRoot = path.join(root, ".live-dev", "tauri-e2e", runId);
 const artifactRoot = path.join(runRoot, "artifacts");
 const smokeOnly = process.argv.includes("--smoke");
 const w1Only = process.argv.includes("--w1");
+const w2Only = process.argv.includes("--w2");
 const keepOpen = process.argv.includes("--keep-open");
-const verificationSha = process.env.W1_VERIFICATION_SHA ?? process.env.GITHUB_SHA ?? "local";
+const verificationSha = process.env.V1_VERIFICATION_SHA ?? process.env.W1_VERIFICATION_SHA ?? process.env.GITHUB_SHA ?? "local";
 
 const children = [];
 const browsers = [];
@@ -189,36 +190,39 @@ async function stopInstance(instance) {
   }
 }
 
-async function completeVisibleCharacterChoices(browser) {
+async function completeVisibleCharacterChoices(browser, preferredLabels = []) {
   for (let attempt = 0; attempt < 120; attempt += 1) {
-    const result = await browser.execute(() => {
+    const result = await browser.execute((preferred) => {
       const sections = [...document.querySelectorAll(".focused-create-stage .create-v09-section")];
       for (const section of sections) {
         if (section.querySelector(".create-status-pill")?.textContent?.trim() !== "선택 필요") continue;
         const candidates = section.querySelectorAll(
           ".dynamic-choice-grid .create-option-card, .equipment-options .create-option-card, .spell-choice-grid button, .proficiency-grid button",
         );
-        const target = [...candidates].find((item) => {
+        const available = [...candidates].filter((item) => {
           const button = item;
-          return !button.disabled && button.getAttribute("aria-disabled") !== "true" && !button.classList.contains("selected");
+          const selected = button.classList.contains("selected") || Boolean(button.querySelector(".selected"));
+          return !button.disabled && button.getAttribute("aria-disabled") !== "true" && !selected;
         });
+        const target = available.find((item) => preferred.some((label) => item.textContent?.includes(label))) ?? available[0];
         if (target instanceof HTMLElement) {
-          const selectedBefore = [...candidates].filter((item) => item.classList.contains("selected")).length;
+          const selectedBefore = [...candidates].filter((item) => item.classList.contains("selected") || item.querySelector(".selected")).length;
+          const textBefore = section.textContent;
           target.scrollIntoView({ block:"center" });
           target.click();
-          return { clicked:true, section:section.id, selectedBefore };
+          return { clicked:true, section:section.id, selectedBefore, textBefore };
         }
       }
       const unresolved = sections.filter((section) => section.querySelector(".create-status-pill")?.textContent?.trim() === "선택 필요").map((section) => section.id);
       return { clicked:false, unresolved };
-    });
+    }, preferredLabels);
     if (!result.clicked) return result.unresolved;
-    await browser.waitUntil(async () => browser.execute(({ sectionId, selectedBefore }) => {
+    await browser.waitUntil(async () => browser.execute(({ sectionId, selectedBefore, textBefore }) => {
       const section = document.getElementById(sectionId);
       if (!section) return false;
-      const selectedNow = section.querySelectorAll(".create-option-card.selected, .spell-choice-grid button.selected, .proficiency-grid button.selected").length;
-      return selectedNow > selectedBefore || section.querySelector(".create-status-pill")?.textContent?.trim() !== "선택 필요";
-    }, { sectionId:result.section, selectedBefore:result.selectedBefore }), {
+      const selectedNow = section.querySelectorAll(".create-option-card.selected, .spell-choice-grid .spell-tile.selected, .proficiency-grid button.selected").length;
+      return selectedNow > selectedBefore || section.textContent !== textBefore || section.querySelector(".create-status-pill")?.textContent?.trim() !== "선택 필요";
+    }, { sectionId:result.section, selectedBefore:result.selectedBefore, textBefore:result.textBefore }), {
       timeout:15_000,
       timeoutMsg:`Character choice did not commit in ${result.section}`,
     });
@@ -226,7 +230,7 @@ async function completeVisibleCharacterChoices(browser) {
   throw new Error("Character choice completion exceeded 120 UI clicks");
 }
 
-async function chooseCharacterSource(browser, tab, name) {
+async function chooseCharacterSource(browser, tab, name, preferredLabels = []) {
   await click(browser, `//nav[contains(@class,'focused-create-tabs')]//button[.//span[normalize-space(.)=${JSON.stringify(tab)}]]`, `${tab} 탭`);
   const option = `//button[contains(@class,'create-option-card')][.//strong[normalize-space(.)=${JSON.stringify(name)}]]`;
   await click(browser, option, `${tab} ${name}`);
@@ -234,7 +238,7 @@ async function chooseCharacterSource(browser, tab, name) {
     timeout:15_000,
     timeoutMsg:`${tab} ${name} selection did not commit`,
   });
-  const unresolved = await completeVisibleCharacterChoices(browser);
+  const unresolved = await completeVisibleCharacterChoices(browser, preferredLabels);
   assert.deepEqual(unresolved, [], `${tab} UI choices remain unresolved: ${unresolved.join(", ")}`);
 }
 
@@ -243,23 +247,24 @@ async function openCharacterTab(browser, label, sectionId) {
   await browser.$(`//section[@id=${JSON.stringify(sectionId)}]`).waitForDisplayed({ timeout:15_000 });
 }
 
-async function finishW1FighterDraft(instance, name, selectSources = false) {
+async function finishW1FighterDraft(instance, name, selectSources = false, source = {}) {
+  const { speciesName = "인간", className = "파이터", backgroundName = "군인", preferredLabels = [] } = source;
   await openCharacterTab(instance.browser, "정체성", "identity");
   await replaceValue(instance.browser, labelControl("캐릭터 이름"), name, "캐릭터 이름");
   if (selectSources) {
-    await chooseCharacterSource(instance.browser, "종족", "인간");
-    await chooseCharacterSource(instance.browser, "클래스", "파이터");
-    await chooseCharacterSource(instance.browser, "배경", "군인");
+    await chooseCharacterSource(instance.browser, "종족", speciesName, preferredLabels);
+    await chooseCharacterSource(instance.browser, "클래스", className, preferredLabels);
+    await chooseCharacterSource(instance.browser, "배경", backgroundName, preferredLabels);
   }
   for (const [tab,sectionId] of [["정체성","identity"],["종족","species"],["클래스","class"],["배경","background"]]) {
     await openCharacterTab(instance.browser, tab, sectionId);
-    const unresolved = await completeVisibleCharacterChoices(instance.browser);
+    const unresolved = await completeVisibleCharacterChoices(instance.browser, preferredLabels);
     assert.deepEqual(unresolved, [], `${tab} dependent UI choices remain unresolved: ${unresolved.join(", ")}`);
   }
   await openCharacterTab(instance.browser, "능력치", "abilities");
-  await click(instance.browser, `//section[@id='abilities']//button[contains(normalize-space(.),'파이터 추천 배치')]`, "파이터 추천 배치");
+  await click(instance.browser, `//section[@id='abilities']//button[contains(normalize-space(.),${JSON.stringify(`${className} 추천 배치`)})]`, `${className} 추천 배치`);
   await openCharacterTab(instance.browser, "기술", "proficiencies");
-  const unresolved = await completeVisibleCharacterChoices(instance.browser);
+  const unresolved = await completeVisibleCharacterChoices(instance.browser, preferredLabels);
   assert.deepEqual(unresolved, [], `Character UI choices remain unresolved: ${unresolved.join(", ")}`);
   await openCharacterTab(instance.browser, "검토", "review");
   const save = await instance.browser.$(exactButton("모험 시작"));
@@ -509,6 +514,144 @@ async function runW108({instance,dataRoot,name,identity,stored:before}) {
   log(`W1-08 level-up choice·validation·commit·새 feature/action·동일 data root 재시작 검증 통과 · ${after.id}`);
 }
 
+
+const W2_ARCHETYPES = [
+  { key:"martial", label:"martial", className:"파이터" },
+  { key:"prepared-caster", label:"prepared caster", className:"위저드", caster:true },
+  { key:"spontaneous-caster", label:"spontaneous caster", className:"소서러", caster:true },
+  { key:"pact-caster", label:"pact caster", className:"워락", caster:true },
+  { key:"shapeshifter", label:"shapeshifter", className:"드루이드", caster:true, levelTwo:true },
+  { key:"healer", label:"healer", className:"클레릭", caster:true, preferredLabels:["상처 치료"], requiredSpell:"dnd.srd521.spell.cure-wounds" },
+];
+
+function w2SpellIds(sheet) {
+  return [...new Set([
+    ...(sheet.cantrips ?? []),
+    ...(sheet.preparedSpells ?? []).map((id) => id.replace(/^always:/,"")),
+    ...(sheet.spellbookSpells ?? []),
+  ])];
+}
+
+function assertW2ArchetypeSheet(profile, sheet) {
+  assert.equal(sheet.className,profile.className,`${profile.label}: durable class changed`);
+  assert.ok(sheet.items.length > 0,`${profile.label}: durable inventory is empty`);
+  assert.ok(sheet.features.length > 0,`${profile.label}: durable features are empty`);
+  if (profile.caster) {
+    assert.ok(w2SpellIds(sheet).length > 0,`${profile.label}: no acquired spell reached the durable sheet`);
+    assert.ok(Object.values(sheet.spellSlotMaximums ?? {}).some((value) => value > 0) || (sheet.pactMagicSlotMaximum ?? 0) > 0,`${profile.label}: no spell-slot capacity reached the durable sheet`);
+  } else {
+    assert.ok(sheet.attacks.length > 0,`${profile.label}: no weapon action reached the durable sheet`);
+  }
+  if (profile.requiredSpell) assert.ok(w2SpellIds(sheet).includes(profile.requiredSpell),`${profile.label}: required healing spell is missing`);
+  if (profile.levelTwo) {
+    assert.equal(sheet.level,2,`${profile.label}: level-up did not persist`);
+    assert.ok(sheet.resources.some((resource) => resource.label === "야생 변신" && resource.max > 0),`${profile.label}: Wild Shape resource is missing`);
+  }
+}
+
+async function createW2Archetype(instance, profile, name) {
+  await click(instance.browser,navButton("캐릭터"),`${profile.label} 캐릭터 메뉴`);
+  await click(instance.browser,exactButton("새 캐릭터"),`${profile.label} 새 캐릭터`);
+  await finishW1FighterDraft(instance,name,true,profile);
+}
+
+async function levelW2Shapeshifter(instance, dataRoot, name) {
+  await click(instance.browser,navButton("캐릭터"),"shapeshifter 캐릭터 메뉴");
+  await click(instance.browser,`${characterArticle(name)}//button[contains(@class,'character-card')]`,"shapeshifter Full Sheet");
+  const root="//div[contains(@class,'sheet-play-screen')]";
+  await instance.browser.$(`${root}//h1[normalize-space(.)=${JSON.stringify(name)}]`).waitForDisplayed({timeout:15_000});
+  const before=storedCharacterSheet(await latestCharacterDocument(dataRoot),name);
+  await click(instance.browser,exactButton("레벨 업"),"shapeshifter 레벨 업");
+  await instance.browser.$("//div[contains(@class,'levelup-v10')]").waitForDisplayed({timeout:15_000});
+  await click(instance.browser,levelUpTab("HP"),"shapeshifter HP choice");
+  const fixed="//div[contains(@class,'levelup-segmented')]//button[contains(normalize-space(.),'고정값')]";
+  await click(instance.browser,fixed,"shapeshifter fixed HP");
+  await instance.browser.waitUntil(async()=>(await instance.browser.$(fixed).getAttribute("class")??"").includes("active"),{timeout:15_000,timeoutMsg:"shapeshifter fixed HP did not commit"});
+  await click(instance.browser,levelUpTab("선택"),"shapeshifter progression choices");
+  const unresolved=await completeVisibleCharacterChoices(instance.browser);
+  assert.deepEqual(unresolved,[],`shapeshifter choices remain unresolved: ${unresolved.join(", ")}`);
+  await click(instance.browser,levelUpTab("검토"),"shapeshifter level-up review");
+  await waitForText(instance.browser,"Blocking 없음",15_000);
+  const commit="//footer[contains(@class,'levelup-v10-footer')]//button[contains(@class,'primary') and normalize-space(.)='레벨 업']";
+  await instance.browser.$(commit).waitForEnabled({timeout:15_000});
+  await click(instance.browser,commit,"shapeshifter level-up commit");
+  await instance.browser.$(`${root}//h1[normalize-space(.)=${JSON.stringify(name)}]`).waitForDisplayed({timeout:30_000});
+  const after=storedCharacterSheet(await latestCharacterDocument(dataRoot),name);
+  assert.equal(after.id,before.id);
+  assert.equal(after.level,2);
+  assert.ok(after.maxHp>before.maxHp);
+}
+
+async function verifyW2RenderedSheet(instance, profile, name, expected) {
+  await click(instance.browser,navButton("캐릭터"),`${profile.label} restart 캐릭터 메뉴`);
+  await click(instance.browser,`${characterArticle(name)}//button[contains(@class,'character-card')]`,`${profile.label} restart Full Sheet`);
+  const root="//div[contains(@class,'sheet-play-screen')]";
+  await instance.browser.$(`${root}//h1[normalize-space(.)=${JSON.stringify(name)}]`).waitForDisplayed({timeout:15_000});
+  const stored=storedCharacterSheet(await latestCharacterDocument(instance.dataRoot),name);
+  assert.equal(stored.id,expected.id,`${profile.label}: Character ID changed after restart`);
+  assert.equal(stored.level,expected.level,`${profile.label}: level changed after restart`);
+  assert.deepEqual(w2SpellIds(stored),expected.spells,`${profile.label}: spells changed after restart`);
+  assert.deepEqual(stored.features,expected.features,`${profile.label}: features changed after restart`);
+  assertW2ArchetypeSheet(profile,stored);
+
+  const status=await instance.browser.$(`${root}//div[contains(@class,'sheet-play-statusbar')]`).getText();
+  assert.match(status,new RegExp(`AC\\s*${stored.ac}(?!\\d)`));
+  assert.match(status,new RegExp(`HP\\s*${stored.hp}/${stored.maxHp}(?!\\d)`));
+  const features=await instance.browser.$(sheetCard(root,"기능")).getText();
+  for(const feature of stored.features) assert.ok(features.includes(feature),`${profile.label}: rendered feature missing: ${feature}`);
+  if (profile.caster) {
+    const spells=await instance.browser.$(sheetCard(root,"주문")).getText();
+    assert.doesNotMatch(spells,/주문 없음/,`${profile.label}: rendered spell card is empty`);
+    if (profile.requiredSpell) assert.ok(spells.includes("상처 치료"),`${profile.label}: rendered healing spell is missing`);
+  } else {
+    const attacks=await instance.browser.$(sheetCard(root,"공격 & 피해")).getText();
+    for(const attack of stored.attacks) assert.ok(attacks.includes(attack.name),`${profile.label}: rendered action missing: ${attack.name}`);
+  }
+  if (profile.levelTwo) {
+    const resources=await instance.browser.$(sheetCard(root,"자원")).getText();
+    assert.ok(resources.includes("야생 변신"),`${profile.label}: rendered Wild Shape resource is missing`);
+  }
+  await saveEvidence(instance,`w2-08-${profile.key}-restarted`);
+  return stored;
+}
+
+async function runW208() {
+  const dataRoot=path.join(runRoot,"w2","data");
+  const created=await launchInstance("W2 Matrix Create",dataRoot,await reservePort());
+  const expected=[];
+  for(const profile of W2_ARCHETYPES) {
+    const name=`W2 ${profile.label} ${runId.slice(-6)}`;
+    await createW2Archetype(created,profile,name);
+    if (profile.levelTwo) await levelW2Shapeshifter(created,dataRoot,name);
+    const sheet=storedCharacterSheet(await latestCharacterDocument(dataRoot),name);
+    assertW2ArchetypeSheet(profile,sheet);
+    expected.push({
+      key:profile.key,name,id:sheet.id,className:sheet.className,level:sheet.level,
+      species:sheet.species,background:sheet.background,spells:w2SpellIds(sheet),
+      features:[...sheet.features],resources:sheet.resources.map((resource)=>({id:resource.id,label:resource.label,current:resource.current,max:resource.max,recovery:resource.recovery})),
+      items:sheet.items.map((item)=>({id:item.id,name:item.name,quantity:item.quantity})),
+      actions:sheet.attacks.map((attack)=>({name:attack.name,damage:attack.damage})),
+    });
+    await saveEvidence(created,`w2-08-${profile.key}-created`);
+  }
+  await stopInstance(created);
+
+  const restarted=await launchInstance("W2 Matrix Restart",dataRoot,await reservePort());
+  const verified=[];
+  for(const profile of W2_ARCHETYPES) {
+    const before=expected.find((entry)=>entry.key===profile.key);
+    assert.ok(before);
+    const after=await verifyW2RenderedSheet(restarted,profile,before.name,before);
+    verified.push({key:profile.key,id:after.id,className:after.className,level:after.level,spells:w2SpellIds(after),features:after.features});
+  }
+  await writeFile(path.join(artifactRoot,"w2-08.json"),JSON.stringify({
+    gate:"W2-08",status:"PASS",verificationSha,windowsTauri:true,dataRoot,
+    lifecycle:"production UI create -> acquire -> durable sheet -> process exit -> same data root restart -> rendered Full Sheet",
+    expected,verified,
+  },null,2),"utf8");
+  log(`W2-08 six-archetype Windows Tauri lifecycle matrix 통과 · ${artifactRoot}`);
+}
+
 async function createHostCampaign(host) {
   await click(host.browser, navButton("캠페인"), "캠페인 메뉴");
   const body = await host.browser.$("body").getText();
@@ -609,6 +752,10 @@ async function runScenario() {
     const w107=await runW107(w106);
     await runW108(w107);
     log(`W1 실제 Tauri 증거: ${artifactRoot}`);
+    return;
+  }
+  if (w2Only) {
+    await runW208();
     return;
   }
 
