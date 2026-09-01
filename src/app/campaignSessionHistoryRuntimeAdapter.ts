@@ -1,7 +1,6 @@
 import { clearCampaignSessionSnapshot } from "./campaignRuntimeAdapter";
 import { MockAdapter } from "./mockAdapter";
 import { formatCampaignCalendarDateTime, projectCampaignCalendar } from "./campaignCalendar";
-import { publishExternalAdapterSnapshot } from "./adapterSnapshotEvents";
 
 function campaignTimeLabel(providerId:string,absoluteMinute:number,era?:string){return formatCampaignCalendarDateTime(providerId,projectCampaignCalendar(providerId,absoluteMinute,era));}
 
@@ -11,16 +10,9 @@ MockAdapter.prototype.stopSession=async function stopSessionWithCampaignSummary(
   const captured=before.campaignSessionSnapshot;
   const wasHost=before.session.role==="host";
   const result=await previousStopSession.call(this);
-  if(!captured||!wasHost||result.session.role!=="offline"){
-    publishExternalAdapterSnapshot(result);
-    return result;
-  }
+  if(!captured||!wasHost||result.session.role!=="offline") return result;
   const campaign=(result.campaigns??[]).find((item)=>item.campaignId===captured.campaignId);
-  if(!campaign){
-    clearCampaignSessionSnapshot(this);
-    publishExternalAdapterSnapshot(result);
-    return result;
-  }
+  if(!campaign){clearCampaignSessionSnapshot(this);return result;}
   const participantLabels=before.session.participants.map((participant)=>participant.characterName??participant.name).filter(Boolean);
   const summarized=await this.appendCampaignSessionSummary(captured.campaignId,{
     sessionId:captured.sessionId,
@@ -34,7 +26,5 @@ MockAdapter.prototype.stopSession=async function stopSessionWithCampaignSummary(
     stashTransactionCount:Math.max(0,campaign.partyStash.revision-captured.stashRevisionAtStart),
   });
   clearCampaignSessionSnapshot(this);
-  const finalSnapshot={...summarized,campaignSessionSnapshot:null};
-  publishExternalAdapterSnapshot(finalSnapshot);
-  return finalSnapshot;
+  return {...summarized,campaignSessionSnapshot:null};
 };
