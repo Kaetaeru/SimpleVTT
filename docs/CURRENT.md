@@ -46,9 +46,9 @@ Initial audit classification:
 ```text
 W0: 6/6 PASS
 W1: 8/8 PASS — COMPLETE
-W2: 1/8 PASS
-Official ledger score: 16.9/100.0
-Remaining gates: 57/72
+W2: 7/8 PASS
+Official ledger score: 28.1/100.0
+Remaining gates: 51/72
 FAIL: 0
 BLOCKED: 0
 ```
@@ -71,11 +71,11 @@ The score is evidence status, not a percentage estimate of how much product code
 Wave 1
 W0 — COMPLETE
 W1 — COMPLETE (8/8 PASS)
-W2 — 1/8 PASS
-Next exact Gate: W2-02
+W2 — 7/8 PASS
+Next exact Gate: W2-08
 ```
 
-W2-01 is closed with inherited exact-SHA evidence from GitHub Actions UI run `33387465586` at canonical verification SHA `42305b1d2a66a976b08844509a63b5999166938a`. `tests/ui/characterCreationCompleteGate.test.ts` explicitly asserts 12 classes / 9 species / 4 backgrounds and completes every shipped SRD class to a legal saved Level-1 character. Comparing `42305b1d2a66a976b08844509a63b5999166938a..c6257b6637603cd35abc7f6c79ab706b36aaa7fb` shows the catalog definition, character-creation index, and focused test unchanged, so this evidence is inherited under the canonical Evidence Card rule. No product code changed for W2-01.
+W2-01 remains closed by inherited exact-SHA catalog evidence. W2-02 through W2-07 passed on verification SHA `ef2cdf69748195bd63c0bd7eff747420811842bf` in GitHub Actions UI run `33439392457`, job `99643608987`: 89 focused W2 tests passed, 36/36 Common Play mechanism families were Gate-N-ready, the legacy execution boundary passed, and the full production build passed. This SHA changes only the existing UI workflow from integration parent `60586e1871abea954d80f68cfb062b9ad1071b68`; no product code changed. W2-08 is the remaining rendered Windows/Tauri archetype matrix.
 
 W1-01 is closed with focused production-route evidence on canonical SHA `9113736b5dbc565cb40d0646b0f27abdbdc6eb59`.
 
@@ -87,9 +87,9 @@ W1-06 was the only Gate with a reproduced product gap: the real Character Librar
 
 ### Next execution sequence
 
-1. Start `W2-02` by reconciling the existing weapon, armor, equipment, item catalog, and item capability evidence on the current integration-derived SHA.
-2. Keep `W2-02` as `REUSE_LOCKED`; modify product code only after a reproducible current-HEAD failure or reachability/contract gap.
-3. Continue W2 in ledger order after exact evidence is recorded.
+1. Start `W2-08` with the existing Windows Tauri/WebDriver harness and one isolated durable data root.
+2. Exercise the six required archetypes: martial, prepared caster, spontaneous caster, pact caster, shapeshifter, and healer.
+3. Modify product code only after a reproducible Tauri failure or reachability/contract gap.
 4. For Common Play, follow [`design/ui-ux/COMMON-PLAY-FUNCTION-FIRST.md`](design/ui-ux/COMMON-PLAY-FUNCTION-FIRST.md): functional reachability first, broad UI redesign later.
 
 ## Non-negotiable execution rules

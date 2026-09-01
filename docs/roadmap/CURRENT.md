@@ -40,10 +40,10 @@ These numbers classify the work; they are not completion credit. Completion cred
 ```text
 W0: COMPLETE — 6/6 PASS
 W1: COMPLETE — 8/8 PASS
-W2: IN PROGRESS — 1/8 PASS
-Official ledger score: 16.9/100.0
-PASS: 15/72
-PENDING: 57/72
+W2: IN PROGRESS — 7/8 PASS
+Official ledger score: 28.1/100.0
+PASS: 21/72
+PENDING: 51/72
 FAIL: 0
 BLOCKED: 0
 ```
@@ -52,10 +52,10 @@ BLOCKED: 0
 
 ```text
 Wave 1
-Next Gate: W2-02
+Next Gate: W2-08
 ```
 
-`W2-01` is PASS by inherited exact-SHA evidence. GitHub Actions UI run `33387465586` passed at canonical verification SHA `42305b1d2a66a976b08844509a63b5999166938a`; `tests/ui/characterCreationCompleteGate.test.ts` explicitly locks the shipped catalog at 12 classes / 9 species / 4 backgrounds and proves all 12 classes can reach a legal saved Level-1 commit. Comparing that SHA through integration HEAD `c6257b6637603cd35abc7f6c79ab706b36aaa7fb` shows no changes to `src/app/characterCreationV10Data.ts`, `content/indexes/dnd-srd-5.2.1.character-creation.json`, or the focused catalog test, so the Evidence Card inheritance rule applies. No product code changed for W2-01. The next exact Gate is `W2-02`.
+`W2-01` remains PASS by inherited exact-SHA catalog evidence. `W2-02` through `W2-07` passed on verification SHA `ef2cdf69748195bd63c0bd7eff747420811842bf` in GitHub Actions UI run `33439392457`, job `99643608987`: 89 focused lifecycle tests passed, the 339-spell presentation/execution catalogs were fixed, all 36 Common Play mechanism families were Gate-N-ready, the legacy execution boundary passed, and the full production build passed. The verification commit changes only the existing workflow from integration parent `60586e1871abea954d80f68cfb062b9ad1071b68`; product code is unchanged. The next exact Gate is `W2-08`, which requires rendered Windows/Tauri evidence for six representative archetypes.
 
 `W1` is complete. W1-05 through W1-08 passed the real Windows Tauri/WebDriver journey on product SHA `c0900157560ac51a745eac687eb4fff7f2580086` (tree `75f8fc64799a98c22e980dbd102a822555d8c846`), Actions run `33409861843`, job `99546422908`, artifact `9764936861`, digest `sha256:85eda3890fdbc6d28ee0e5155617082642a4e22c1e851a5c73783be59af00b23`.
 
