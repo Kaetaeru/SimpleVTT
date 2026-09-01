@@ -185,9 +185,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     return subscribeExternalAdapterSnapshot((next) => {
-      setSnapshot(next);
+      const sequence = ++operationSequenceRef.current;
+      publishIfLatest(sequence, next);
     });
-  }, []);
+  }, [publishIfLatest]);
 
   useEffect(() => {
     refresh().finally(() => setLoading(false));
@@ -508,3 +509,4 @@ export function SessionDebugPreviewProvider({ children, role, mode, onExit }: {
 }
 
 export type { AdjudicationScope };
+
