@@ -278,13 +278,29 @@ async function createPlayableCharacter(instance, name, { className = "소서러"
   await waitForText(instance.browser, name, 30_000);
 }
 
-async function createCampaignWithCalendar(host, campaignName) {
+async function saveCurrentCharacterPcPreset(host, characterName) {
+  const panel = "//section[@aria-label='DM 라이브러리 PC preset과 폴더']";
+  await host.browser.$(panel).waitForDisplayed({ timeout: 15_000, timeoutMsg: "Campaign PC preset organizer was not visible" });
+  await click(host.browser, `${panel}//button[normalize-space(.)='현재 Character 불러오기']`, "현재 Character PC preset 불러오기");
+  const actionInput = await host.browser.$(`${panel}//label[.//span[normalize-space(.)='행동']]//input`);
+  const loadedActions = await actionInput.getValue();
+  assert.ok(loadedActions.trim().length > 0 && loadedActions !== "기본 공격", `Current Character actions were not projected into the PC preset form: ${loadedActions}`);
+  const presetName = `${characterName} DM`;
+  await replaceValue(host.browser, `${panel}//label[.//span[normalize-space(.)='이름']]//input`, presetName, "PC preset 이름");
+  await click(host.browser, `${panel}//button[normalize-space(.)='PC preset 저장']`, "PC preset 저장");
+  const saved = `${panel}//div[contains(@class,'campaign-option-list')]//strong[normalize-space(.)=${JSON.stringify(presetName)}]`;
+  await host.browser.$(saved).waitForDisplayed({ timeout: 20_000, timeoutMsg: `${presetName} PC preset was not saved` });
+  return presetName;
+}
+
+async function createCampaignWithCalendar(host, campaignName, characterName) {
   await click(host.browser, navButton("캠페인"), "캠페인 메뉴");
   const body = await host.browser.$("body").getText();
   await click(host.browser, exactButton(body.includes("아직 캠페인이 없습니다.") ? "새 캠페인 만들기" : "새 캠페인"));
   await replaceValue(host.browser, labelControl("캠페인 이름"), campaignName, "캠페인 이름");
   await click(host.browser, exactButton("캠페인 만들기"), "캠페인 만들기 제출");
   await waitForText(host.browser, campaignName);
+  const presetName = await saveCurrentCharacterPcPreset(host, characterName);
   const calendarCard = "//article[.//h3[normalize-space(.)='달력']]";
   const initialMinuteText = await host.browser.$(`${calendarCard}//p`).getText();
   const initialMinuteMatch = initialMinuteText.match(/현재 절대 시간\s+(\d+)분/);
@@ -298,7 +314,7 @@ async function createCampaignWithCalendar(host, campaignName) {
   assert.equal(await calendar.isSelected(), true, "Campaign calendar was not enabled for W3-08");
   await click(host.browser, `${setup}//button[normalize-space(.)='준비 화면으로']`, "준비 화면으로");
   await waitForText(host.browser, "캠페인에서 세션 만들기");
-  return initialAbsoluteMinute;
+  return { initialAbsoluteMinute, presetName };
 }
 
 async function openHostSession(host, sessionPort) {
@@ -310,6 +326,29 @@ async function openHostSession(host, sessionPort) {
   await portInputs[0].setValue(String(sessionPort));
   await click(host.browser, `${direct}//button[normalize-space(.)='세션 열기']`, "Direct Host 세션 열기");
   await waitForText(host.browser, "호스트 · DM", 30_000);
+}
+
+async function spawnPcPreset(host, presetName) {
+  await click(host.browser, exactButton("라이브러리"), "DM 라이브러리");
+  const pane = "//aside[@aria-label='DM 라이브러리']";
+  await host.browser.$(pane).waitForDisplayed({ timeout: 15_000 });
+  const entrySelector = `${pane}//article[@data-library-kind='pc-preset'][.//strong[normalize-space(.)=${JSON.stringify(presetName)}]]`;
+  const entry = await host.browser.$(entrySelector);
+  await entry.waitForDisplayed({ timeout: 15_000, timeoutMsg: `${presetName} was not visible in the Session DM Library` });
+  const stage = await host.browser.$("//section[@aria-label='Mapless Play Context']");
+  await stage.waitForDisplayed({ timeout: 15_000 });
+  await entry.dragAndDrop(stage);
+  await host.browser.waitUntil(async () => {
+    const feedback = await host.browser.$("//div[contains(@class,'session-dm-library-drop-feedback')]");
+    return await feedback.isExisting() && (await feedback.getText()).includes(presetName) && (await feedback.getText()).includes("Actor를 소환했습니다");
+  }, { timeout: 20_000, timeoutMsg: `${presetName} PC preset drop did not materialize an Actor` });
+  await click(host.browser, `${pane}//button[@aria-label='DM 라이브러리 닫기']`, "DM 라이브러리 닫기");
+  const card = `//section[@aria-label='아군 Actor Board']//button[contains(@class,'session-actor-card') and contains(@aria-label,${JSON.stringify(presetName)})]`;
+  await host.browser.$(card).waitForDisplayed({ timeout: 20_000, timeoutMsg: `${presetName} did not appear on the allied Actor board` });
+  await host.browser.waitUntil(async () => {
+    const actor = await host.browser.$(card);
+    return await actor.getAttribute("aria-pressed") === "true" && (await actor.getAttribute("class") ?? "").split(/\s+/).includes("controlled");
+  }, { timeout: 15_000, timeoutMsg: `${presetName} was not selected after PC preset materialization` });
 }
 
 async function addCombatant(host) {
@@ -547,11 +586,14 @@ async function runW308() {
 
   await createPlayableCharacter(host, characterName);
   await saveEvidence(host, "w3-08-character-ready");
-  const initialAbsoluteMinute = await createCampaignWithCalendar(host, campaignName);
+  const { initialAbsoluteMinute, presetName } = await createCampaignWithCalendar(host, campaignName, characterName);
+  await saveEvidence(host, "w3-08-preset-saved");
   await openHostSession(host, sessionPort);
   await saveEvidence(host, "w3-08-live-host");
+  await spawnPcPreset(host, presetName);
+  await saveEvidence(host, "w3-08-preset-spawned");
 
-  const combat = await performCombatAndSpell(host, characterName);
+  const combat = await performCombatAndSpell(host, presetName);
   await saveEvidence(host, "w3-08-combat-spell-complete");
   const rest = await performLongRest(host);
   await saveEvidence(host, "w3-08-rest-complete");
@@ -569,9 +611,10 @@ async function runW308() {
     status: "PASS",
     verificationSha,
     windowsTauri: true,
-    lifecycle: "actual Tauri Character -> local Host session -> Combatant + weapon attack + damage spell -> DM Long Rest (+8h) -> UI session end -> process exit -> same Host data root restart -> Campaign continuity",
+    lifecycle: "actual Tauri Character -> Campaign PC preset save -> local Host session -> DM Library preset drop -> Combatant + weapon attack + damage spell -> DM Long Rest (+8h) -> UI session end -> process exit -> same Host data root restart -> Campaign continuity",
     endpoint: "127.0.0.1",
     characterName,
+    presetName,
     campaignName,
     initialAbsoluteMinute,
     expectedRestartAbsoluteMinute: initialAbsoluteMinute + 480,
