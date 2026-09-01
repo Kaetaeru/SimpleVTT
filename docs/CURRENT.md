@@ -47,9 +47,9 @@ Initial audit classification:
 W0: 6/6 PASS
 W1: 8/8 PASS — COMPLETE
 W2: 8/8 PASS — COMPLETE
-W3: 1/8 PASS — IN PROGRESS
-Official ledger score: 31.3/100.0
-Remaining gates: 49/72
+W3: 2/8 PASS — IN PROGRESS
+Official ledger score: 32.5/100.0
+Remaining gates: 48/72
 FAIL: 0
 BLOCKED: 0
 ```
@@ -73,9 +73,11 @@ Wave 2
 W0 — COMPLETE
 W1 — COMPLETE (8/8 PASS)
 W2 — COMPLETE (8/8 PASS)
-W3 — IN PROGRESS (1/8 PASS)
-Next exact Gate: W3-02
+W3 — IN PROGRESS (2/8 PASS)
+Next exact Gate: W3-03
 ```
+
+W3-02 is closed with inherited exact-SHA turn-lifecycle evidence. Product SHA `1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff` passed GitHub Actions UI run `33498144567`, job `99824979798`: the existing Phase 09 runtime orders initiative, initializes Action/Bonus Action/Reaction/movement economy, preserves spent economy across snapshots and manual selection, advances turn boundaries through the generic Resolver, wraps rounds with base-economy refresh, reconciles committed actions and compensating Undo, admits new Combatants without restarting initiative, and releases back to Freeform when initiative ends. Production `ProductionPlayScreen` exposes the authoritative start initiative, end turn, and end initiative commands. PR #201 records the focused evidence; no product runtime code was changed.
 
 W3-01 is closed with inherited exact-SHA production-authority evidence. Product SHA `1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff` passed GitHub Actions UI run `33498144567`, job `99824979798`: production Freeform skill actions use authoritative d20 faces and commit Activity, ability checks delegate to the existing real resolution service, saving throws use runtime Character/Combatant stats and the canonical d20 resolver, and portable Common Play d20 definitions lower through the existing generic Resolver with rename-invariant and explicit rejection coverage. PR #199 added the W3-01 evidence card only and merged as `ca6b42c47409ff7096f31aeab12624336225ab8f`; no product runtime code was changed.
 
@@ -91,8 +93,8 @@ W1-06 was the only Gate with a reproduced product gap: the real Character Librar
 
 ### Next execution sequence
 
-1. Start `W3-02` by verifying the existing initiative, round, turn, and economy lifecycle on the current integration-derived SHA.
-2. Continue through the first non-`PASS` W3 Gate; do not reopen W2 or W3-01 and do not modify a `REUSE_LOCKED` path without a reproduced failure.
+1. Start `W3-03` by verifying the existing attack, miss, critical, damage, healing, and atomic HP writeback path on the current integration-derived SHA.
+2. Continue through the first non-`PASS` W3 Gate; do not reopen W2, W3-01, or W3-02 and do not modify a `REUSE_LOCKED` path without a reproduced failure.
 3. Reserve rendered Windows/Tauri session→rest→process restart evidence for `W3-08`.
 4. For Common Play, follow [`design/ui-ux/COMMON-PLAY-FUNCTION-FIRST.md`](design/ui-ux/COMMON-PLAY-FUNCTION-FIRST.md): functional reachability first, broad UI redesign later.
 
