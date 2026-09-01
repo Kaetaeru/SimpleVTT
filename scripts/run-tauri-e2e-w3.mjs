@@ -329,12 +329,13 @@ async function addCombatant(host) {
 
 async function selectHostCharacter(host, characterName) {
   const characterCard = `//section[@aria-label='아군 Actor Board']//button[contains(@class,'session-actor-card') and contains(@aria-label,${JSON.stringify(characterName)})]`;
-  await host.browser.$(characterCard).waitForDisplayed({ timeout: 15_000, timeoutMsg: `${characterName} did not appear on the allied Actor board` });
-  const pressed = await host.browser.$(characterCard).getAttribute("aria-pressed");
-  if (pressed !== "true") await click(host.browser, characterCard, `${characterName} Actor 선택`);
+  const card = await host.browser.$(characterCard);
+  await card.waitForDisplayed({ timeout: 15_000, timeoutMsg: `${characterName} did not appear on the allied Actor board` });
+  if (await card.getAttribute("aria-pressed") !== "true") await click(host.browser, characterCard, `${characterName} Actor 선택`);
   await host.browser.waitUntil(async () => {
-    const controlled = await host.browser.$("//div[contains(@class,'session-controlled-actor')]").getAttribute("aria-label");
-    return controlled?.includes(characterName);
+    const current = await host.browser.$(characterCard);
+    return await current.getAttribute("aria-pressed") === "true"
+      && (await current.getAttribute("class") ?? "").split(/\s+/).includes("controlled");
   }, { timeout: 15_000, timeoutMsg: `${characterName} did not become the controlled Host Actor` });
 }
 
