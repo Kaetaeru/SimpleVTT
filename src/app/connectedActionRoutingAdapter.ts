@@ -431,10 +431,10 @@ MockAdapter.prototype.respondToInterrupt=async function respondConnectedInterrup
 
 MockAdapter.prototype.dismissResolution=async function dismissConnectedResolution() {
   const state=connectedStateFor(this);
+  const app=connectedInternal(this);
   if (state.mode==="client") {
     const advanced=advanceConnectedResolutionPresentation(this);
     if(advanced.status==="empty"){
-      const app=connectedInternal(this);
       app.resolution=null;
       app.resolutionPresentation=null;
     }
