@@ -16,6 +16,7 @@ on:
       - "tests/ui/connectedThreePeerRemoteConsumableItem.test.ts"
       - "tests/ui/connectedThreePeerRemoteSpellPresentation.test.ts"
       - "tests/ui/connectedThreePeerRemoteSlottedMultiTargetSpell.test.ts"
+      - "tests/ui/connectedThreePeerRemoteSavingThrowSpell.test.ts"
       - "tests/ui/connectedThreePeerRemoteRejectionExactlyOnce.test.ts"
       - "tests/ui/connectedThreePeerRemoteConcurrentIntent.test.ts"
       - "tests/ui/connectedThreePeerDuplicateEventBatch.test.ts"
@@ -39,6 +40,7 @@ on:
       - "tests/ui/connectedThreePeerRemoteConsumableItem.test.ts"
       - "tests/ui/connectedThreePeerRemoteSpellPresentation.test.ts"
       - "tests/ui/connectedThreePeerRemoteSlottedMultiTargetSpell.test.ts"
+      - "tests/ui/connectedThreePeerRemoteSavingThrowSpell.test.ts"
       - "tests/ui/connectedThreePeerRemoteRejectionExactlyOnce.test.ts"
       - "tests/ui/connectedThreePeerRemoteConcurrentIntent.test.ts"
       - "tests/ui/connectedThreePeerDuplicateEventBatch.test.ts"
@@ -71,6 +73,7 @@ jobs:
             tests/ui/connectedThreePeerRemoteConsumableItem.test.ts \
             tests/ui/connectedThreePeerRemoteSpellPresentation.test.ts \
             tests/ui/connectedThreePeerRemoteSlottedMultiTargetSpell.test.ts \
+            tests/ui/connectedThreePeerRemoteSavingThrowSpell.test.ts \
             tests/ui/connectedThreePeerRemoteRejectionExactlyOnce.test.ts \
             tests/ui/connectedThreePeerRemoteConcurrentIntent.test.ts \
             tests/ui/connectedThreePeerDuplicateEventBatch.test.ts \
