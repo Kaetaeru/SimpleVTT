@@ -83,6 +83,7 @@ declare module "./mockAdapter" {
     upsertCampaignDmLibraryFolder(campaignId:string,folder:CampaignDmLibraryFolder):Promise<AppSnapshot>;
     removeCampaignDmLibraryFolder(campaignId:string,folderId:string):Promise<AppSnapshot>;
     instantiateCampaignDmLibraryPcPreset(campaignId:string,entryId:string):Promise<AppSnapshot>;
+    instantiateCampaignDmLibraryNpcDefinition(campaignId:string,entryId:string):Promise<AppSnapshot>;
   }
 }
 
@@ -119,6 +120,37 @@ MockAdapter.prototype.instantiateCampaignDmLibraryPcPreset=async function instan
       eligibleTargetIds:[],
     }));
   }
+  runtimeScene.selectedActorId=spawned.id;
+  await this.updateCampaign(campaignId,organizationPayload({kind:"touch-entry",entryId}));
+  return this.getSnapshot();
+};
+MockAdapter.prototype.instantiateCampaignDmLibraryNpcDefinition=async function instantiateCampaignDmLibraryNpcDefinitionRuntime(campaignId,entryId){
+  const snapshot=await this.getSnapshot();
+  if(snapshot.session.role==="client")throw new Error("NPC Actor 생성은 DM Campaign 권위에서만 실행할 수 있습니다.");
+  const campaign=snapshot.campaigns?.find((candidate)=>candidate.campaignId===campaignId);
+  if(!campaign)throw new Error(`Campaign not found: ${campaignId}`);
+  const entry=campaign.dmLibrary.entries.find((candidate)=>candidate.entryId===entryId&&candidate.kind==="npc-definition");
+  if(!entry?.definitionId||!entry.npcDefinition)throw new Error("NPC definition not found");
+  const source=structuredClone(entry.npcDefinition);
+  const materialized:CombatantDefinitionVm={
+    id:source.definitionId,
+    name:source.name,
+    nameEn:source.nameEn,
+    ac:source.ac,
+    maxHp:source.maxHp,
+    source:source.source,
+    version:source.version,
+    actions:[...source.actions],
+    statusImmunities:[...source.statusImmunities],
+  };
+  const definitions=(this as unknown as {combatantDefinitions:CombatantDefinitionVm[]}).combatantDefinitions;
+  const index=definitions.findIndex((candidate)=>candidate.id===materialized.id);
+  if(index>=0)definitions[index]=materialized;else definitions.push(materialized);
+  const existingActorIds=new Set(snapshot.scene.entities.map((entity)=>entity.id));
+  await this.instantiateCombatant(materialized.id);
+  const runtimeScene=(this as unknown as {scene:PcPresetRuntimeScene}).scene;
+  const spawned=runtimeScene.entities.find((entity)=>!existingActorIds.has(entity.id));
+  if(!spawned)throw new Error("NPC Actor materialization did not create an Actor");
   runtimeScene.selectedActorId=spawned.id;
   await this.updateCampaign(campaignId,organizationPayload({kind:"touch-entry",entryId}));
   return this.getSnapshot();
