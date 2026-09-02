@@ -135,19 +135,15 @@ test("connected Session keeps handouts/private notes safe and rules lookup pinne
     const pinnedEntryId=pinnedSourceEntry.id;
     const pinnedBefore=await host.lookupSessionContent(pinnedEntryId);
     assert.deepEqual(pinnedBefore,pinnedSourceEntry,"Host lookup must start from the composed Session content snapshot");
-    const changedContent=JSON.stringify({
-      id:pinnedEntryId,
-      category:pinnedSourceEntry.category,
-      nameKo:"G07 변경 콘텐츠",
-      nameEn:"G07 Changed Content",
-      source:"G07 post-start mutation",
-      version:"99",
-      description:"G07 ambient catalog changed after Session start",
-    });
+    for(const app of [hostApp,clientApp,client2App]){
+      const ambient=app.catalog.find((entry)=>entry.id===pinnedEntryId);
+      assert.ok(ambient,"all connected peers must have the selected ambient content entry");
+      ambient.nameKo="G07 변경 콘텐츠";
+      ambient.nameEn="G07 Changed Content";
+      ambient.description="G07 ambient catalog changed after Session start";
+    }
     for(const adapter of [host,client,client2]){
-      await adapter.previewContentImport(changedContent);
-      await adapter.activateContentImport();
-      assert.equal((await adapter.getSnapshot()).catalog.find((entry)=>entry.id===pinnedEntryId)?.nameEn,"G07 Changed Content","ambient catalog fixture must change after Session start");
+      assert.equal((await adapter.getSnapshot()).catalog.find((entry)=>entry.id===pinnedEntryId)?.nameEn,"G07 Changed Content","ambient catalog fixture must drift after Session start");
     }
     const sentBeforeLookup=transport.sent().length;
     const sentToBeforeLookup=transport.sentTo().length;
