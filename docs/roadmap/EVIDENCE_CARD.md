@@ -1,19 +1,19 @@
 # V1 Evidence Card
 
-Status: **W3-08 PASS — EXACT-SHA WINDOWS TAURI COMPLETE LOCAL SESSION VERIFIED**
+Status: **W4-01 PASS — CAMPAIGN LIFECYCLE AND NAMESPACE ISOLATION REUSED**
 
 Use one card per Release Gate or coherent repair. The purpose is to stop duplicate implementation and force current-HEAD evidence before modifying an existing system.
 
 ```text
-Gate ID: W3-08
-Acceptance criterion: Actual Windows Tauri complete local session -> rest -> session end -> process exit -> same-data-root restart in one journey; W3 exits only when one full local session can be played start-to-finish and restarted without requiring network.
-Production entrypoint: ProductRoot -> Character -> Campaign -> local Host Session -> DM Library PC preset -> Combat/Spell -> Long Rest -> Session end -> same-data-root restart
-Existing implementation files: src/SessionActorBoards.tsx; src/app/AppProvider.tsx; src/SessionDmLibraryPane.tsx; src/CampaignDmLibraryOrganizationPanel.tsx; src/app/campaignDmLibraryOrganizationContracts.ts; src/app/campaignDmLibraryOrganizationRuntimeAdapter.ts; src/app/campaignPersistenceContracts.ts
-Existing automated tests: tests/ui/appProviderStopSessionRefresh.test.ts; tests/ui/campaignDmLibraryPcPresetRuntime.test.ts; scripts/run-tauri-e2e-w3.mjs
-Existing Tauri/Windows evidence: verification SHA 53ec501555222b60d9e856b231f4f64395f75b76; GitHub Actions V1 Tauri Verification run 33569954938; W3 job 100061523302 = success; artifact 9824674856 SimpleVTT-W3-Tauri-53ec501555222b60d9e856b231f4f64395f75b76; digest sha256:d51dd1d962be4533b31551f900dae26655d3a4e2b05aa8131ffa98122bb18034. Canonical merge 5bef709f010543859e84c98ef7db8f14e5c06469 shares tree 0e6baadda2570b169c35c6b7436ff4e0042dfff0 with the verified head.
-Exact observed result: PASS. The real Windows Tauri journey creates a Character, saves a Campaign DM-owned PC preset, starts a local Host session on 127.0.0.1, materializes and controls the preset through the production DM Library drop path, executes a weapon attack and a damage spell, applies Long Rest with +8h Campaign time, ends the session through production UI, exits the process, restarts on the same Host data root, and verifies Campaign absolute time 480 minutes plus one completed session-history entry. w3-08.json records status PASS; drop and Actor-selection diagnostics plus rendered screenshots/text are included in the artifact.
-Repair history: Current-HEAD failures were reproduced before product changes. The final path preserves multiplayer ownership by using the existing DM-owned PC preset path rather than making a Player-owned Character Host-controlled. The Tauri harness was then corrected to drive the production pointer lifecycle and to recognize the actual Home surface after session stop.
-Smallest required change: None. W3-08 is closed. Do not reopen or reimplement this Gate unless a new current-HEAD regression is reproduced; proceed to W4-01.
+Gate ID: W4-01
+Acceptance criterion: Campaign create/read/update/archive/restore/duplicate/delete and namespace isolation are fixed on the existing production path.
+Production entrypoint: ProductRoot -> Campaign -> Campaign application/runtime adapter -> durable Campaign library
+Existing implementation files: src/app/campaignPersistence.ts; src/app/campaignApplicationService.ts; src/app/campaignRuntimeAdapter.ts; src/CampaignScreen.tsx
+Existing automated tests: tests/ui/campaignPersistence.test.ts; tests/ui/campaignRuntimeAdapter.test.ts; tests/ui/campaignProductUiStructure.test.ts; tests/ui/campaignStartupRecoveryStructure.test.ts; tests/ui/campaignLifecycleRuntime.test.ts; tests/ui/campaignLifecycleUiStructure.test.ts
+Existing exact-SHA evidence: product SHA 5bef709f010543859e84c98ef7db8f14e5c06469; GitHub Actions UI run 33570546168; job 100063331529 = success; step "Verify Campaign lifecycle and declarative providers" = success.
+Exact observed result: PASS. campaignPersistence.test.ts exercises durable create/read/update/archive/restore/duplicate/delete and reload, including idempotent mutation requests and stale-revision rejection. campaignLifecycleRuntime.test.ts proves duplication receives independent campaign.copy.stash and campaign.copy.dm-library namespaces and deletion removes only the target Campaign. campaignPersistence.ts derives Campaign-owned Party Stash, DM Library, and content-loadout identifiers from campaignId.
+Inheritance check: GitHub compare 5bef709f010543859e84c98ef7db8f14e5c06469...b917e20b27d6c80a3bcc5783c20c9b0fd0042894 changes only docs/CURRENT.md, docs/roadmap/CURRENT.md, docs/roadmap/EVIDENCE_CARD.md, and docs/roadmap/V1_EVIDENCE_LEDGER.json. The verified Campaign implementation, tests, and UI workflow are unchanged on canonical HEAD.
+Smallest required change: None. W4-01 is closed as REUSE_LOCKED. Do not modify the Campaign lifecycle owner for this Gate without a new current-HEAD failure; proceed to W4-02.
 ```
 
 ## Change gate
