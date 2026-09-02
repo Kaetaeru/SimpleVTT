@@ -1,19 +1,19 @@
 # V1 Evidence Card
 
-Status: **W4-05 PASS — PARTY STASH POLICY MODES REUSED**
+Status: **W4-06 PASS — DM LIBRARY ORGANIZATION / IMPORT / PRIVATE NOTE / PROVENANCE REUSED**
 
 Use one card per Release Gate or coherent repair. The purpose is to stop duplicate implementation and force current-HEAD evidence before modifying an existing system.
 
 ```text
-Gate ID: W4-05
-Acceptance criterion: Party Stash shared / approval / DM-managed modes are fixed on the existing production path.
-Production entrypoint: CampaignSystemsPanel/AppProvider -> campaignPartyStashPolicyRuntimeAdapter -> CampaignApplicationService -> existing Party Stash transfer owner
-Existing implementation files: src/app/campaignPersistenceContracts.ts; src/app/campaignPartyStashPolicyRuntimeAdapter.ts; src/app/campaignRuntimeAdapter.ts; src/CampaignSystemsPanel.tsx
-Existing automated tests: tests/ui/campaignSystems.test.ts; GitHub Actions UI step "Verify Party Stash sequential transfer routing"
-Existing exact-SHA evidence: product SHA 5bef709f010543859e84c98ef7db8f14e5c06469; GitHub Actions UI run 33570546168 / job 100063331529 = success; step "Verify Party Stash sequential transfer routing" = success.
-Exact observed result: PASS. campaignPersistenceContracts defines exactly shared, dm-approval, and dm-managed policies and new Campaigns default to shared. campaignPartyStashPolicyRuntimeAdapter keeps deposits on the existing transfer path, allows shared withdrawals, queues non-DM withdrawals under dm-approval until explicit DM approve/reject, rejects non-DM withdrawals under dm-managed, and allows DM withdrawals in both restricted policies. CampaignSystemsPanel exposes the three policy choices and the pending approve/reject controls through the production Campaign UI. campaignSystems.test.ts fixes durable Party Stash wallet/item transfer, request idempotency, failed-transfer isolation, and Campaign-owned stash namespace behavior; the trusted UI workflow separately passed its Party Stash sequential-transfer routing step.
-Inheritance check: GitHub Actions UI run 33570546168 verified the Party Stash owner at product SHA 5bef709f010543859e84c98ef7db8f14e5c06469. GitHub compare 5bef709f010543859e84c98ef7db8f14e5c06469...cf712116381ff8493c8eeebfad7ed8ada95b78ee changes only docs/CURRENT.md, docs/roadmap/CURRENT.md, docs/roadmap/EVIDENCE_CARD.md, and docs/roadmap/V1_EVIDENCE_LEDGER.json; the W4-05 production/runtime/tests are inherited unchanged.
-Smallest required change: None. W4-05 is closed as REUSE_LOCKED. No current-HEAD failure authorizes product-code modification; proceed to W4-06.
+Gate ID: W4-06
+Acceptance criterion: DM Library organization, JSON import, Host-private notes, and provenance are fixed on the existing Campaign-owned production path.
+Production entrypoint: CampaignSystemsPanel -> CampaignDmLibraryOrganizationPanel -> campaignDmLibraryOrganizationRuntimeAdapter / campaignDmLibraryImport -> Campaign persistence owners
+Existing implementation files: src/CampaignSystemsPanel.tsx; src/CampaignDmLibraryOrganizationPanel.tsx; src/app/campaignDmLibraryOrganizationContracts.ts; src/app/campaignDmLibraryOrganizationRuntimeAdapter.ts; src/app/campaignDmLibraryImport.ts; src/app/campaignPersistenceContracts.ts
+Existing automated tests: tests/ui/campaignDmLibraryOrganizationRuntime.test.ts; tests/ui/campaignDmLibraryOrganizationStructure.test.ts; tests/ui/campaignDmLibraryImport.test.ts; tests/ui/campaignDmLibraryNoteStructure.test.ts; tests/ui/campaignDmLibraryStructure.test.ts; tests/ui/campaignDmLibraryDeleteProvenance.test.ts
+Existing exact-SHA evidence: product SHA 5bef709f010543859e84c98ef7db8f14e5c06469; GitHub Actions UI run 33570546168 / job 100063331529 = success; Run UI tests = success; docs/roadmap/evidence/W4-06.md records the focused acceptance mapping.
+Exact observed result: PASS. Organization tests cover private-note validation/persistence/update/organization/delete plus folder create/rename/delete and persisted folder/favorite placement. Import tests preserve feature-rich custom/magic item runtime fields and provenance, import arrays/NPC definitions, and reject invalid charge/attunement contracts. Note structure tests verify Campaign Session projection exposes neither dmLibrary nor noteText and production structure keeps the Library Host-only. Delete/provenance tests verify Character grants become independent copies that retain provenance after the source Library definition is deleted.
+Inheritance check: GitHub Actions UI run 33570546168 verified the DM Library owner at product SHA 5bef709f010543859e84c98ef7db8f14e5c06469. GitHub compare 5bef709f010543859e84c98ef7db8f14e5c06469...083ce354fc2c1fcfd1e1346f976f920a30ccd2c1 changes only docs/CURRENT.md, docs/roadmap/CURRENT.md, docs/roadmap/EVIDENCE_CARD.md, docs/roadmap/V1_EVIDENCE_LEDGER.json, and docs/roadmap/evidence/W4-06.md; the W4-06 production/runtime/tests are inherited unchanged.
+Smallest required change: None. W4-06 is closed as REUSE_LOCKED. No current-HEAD failure authorizes product-code modification; proceed to W4-07.
 ```
 
 ## Change gate
