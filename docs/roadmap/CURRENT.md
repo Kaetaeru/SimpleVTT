@@ -43,10 +43,10 @@ W1: COMPLETE — 8/8 PASS
 W2: COMPLETE — 8/8 PASS
 W3: COMPLETE — 8/8 PASS
 W4: COMPLETE — 8/8 PASS
-W5: 2/10 PASS
-Official ledger score: 53.0/100.0
-PASS: 40/72
-PENDING: 32/72
+W5: 3/10 PASS
+Official ledger score: 54.5/100.0
+PASS: 41/72
+PENDING: 31/72
 FAIL: 0
 BLOCKED: 0
 ```
@@ -54,8 +54,10 @@ BLOCKED: 0
 ## Current stage
 
 ```text
-Next Gate: W5-03
+Next Gate: W5-04
 ```
+
+`W5-03` is PASS by inherited exact-SHA Host single-mutation-path evidence. Product verification SHA `2ac28651312f1fdbe82edb74fd13f342a8f910f7` passed GitHub Actions UI run `33636100212`, job `100267245818`, including connected topology/Session-layer/live lifecycle verification and the frontend build. `connectedSessionRuntimeAdapter` dispatches `action-request` through the Host message path and `connectedActionRequestPort`; unavailable routing returns an error instead of applying state. `HostSessionLedger` rejects wrong-session or stale-cursor requests, requires reservation before commit, rejects history drift and unreserved commits, and de-duplicates request IDs. `ClientSessionReplica` advances only on same-session gap-free Host event sequences and rejects conflicting or gapped history before cursor advance. GitHub compare `2ac28651312f1fdbe82edb74fd13f342a8f910f7...0ee6f493fc765ac7a617eda485392957b1874c6e` changes only canonical evidence/current documents plus evidence records W4-07/W5-01/W5-02/W5-03, so product/runtime/tests are inherited unchanged. PR #259 added the focused `evidence/W5-03.md` record only. No product/runtime defect was reproduced and no product code changed for W5-03. The next exact Gate is `W5-04`.
 
 `W5-02` is PASS by inherited exact-SHA trusted persisted-Character owner-projection evidence. Product verification SHA `2ac28651312f1fdbe82edb74fd13f342a8f910f7` passed GitHub Actions UI run `33636100212`, job `100267245818`, including the production local-character-switch/connected ownership path. `characterSessionProjection.test.ts` fixes the trust boundary: source/runtime revisions and exact canonical content identities are bounded, AC/presented attacks are not source authority, client presentation drift cannot alter trusted payloads, injected mechanics are rejected, and impossible runtime HP is rejected. `productionParticipantLifecycle.test.ts` rejects invalid SessionProjection before participant/peer/ledger/projection/Scene ghost state; `productionLocalCharacterSwitch.test.ts` preserves remote ephemeral projection ownership while switching the local canonical Character, temporarily activates projected resolution context, and restores the previous Host/local context without overwriting projection-owned actions/economy. The same product SHA passed V1 Tauri Verification run `33636100197`, job `100267245684` (`tauri-w4-07-spatial`), with artifact `9849024415` (`SimpleVTT-W4-07-G01-G09-2ac28651312f1fdbe82edb74fd13f342a8f910f7`), digest `sha256:b044f73320cd10bf2446695677ca2098c7c162d01190feed7ecc599078c656a0`. GitHub compare `2ac28651312f1fdbe82edb74fd13f342a8f910f7...761f1d08601f3f4192ec9bc1339d09b64858eafe` changes only canonical evidence/current documents and evidence records W4-07/W5-01/W5-02, so the product/runtime/tests are inherited unchanged. PR #257 added the focused `evidence/W5-02.md` record only. No product/runtime defect was reproduced and no product code changed for W5-02. The next exact Gate is `W5-03`.
 
