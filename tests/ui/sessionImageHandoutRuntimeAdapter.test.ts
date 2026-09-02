@@ -27,11 +27,14 @@ function fakeTransport() {
 
 async function flush() { await new Promise<void>((resolve)=>setImmediate(resolve)); await new Promise<void>((resolve)=>setImmediate(resolve)); await new Promise<void>((resolve)=>setImmediate(resolve)); }
 
-test("DM handout reveal is presentation-only, fans out to P1/P2, and restores safely on reconnect",async()=>{
+test("DM handout reveal is presentation-only, fans out to P1/P2, restores safely on reconnect, and keeps DM Library notes private",async()=>{
   const transport=fakeTransport();
   try {
     await import("../../src/app/offlineRuntimeAdapters");
     const { MockAdapter }=await import("../../src/app/mockAdapter");
+    const { MemoryCampaignLibraryStore }=await import("../../src/app/memoryCampaignLibraryStore");
+    const { setCampaignLibraryStoreForTests }=await import("../../src/app/campaignRuntimeAdapter");
+    await import("../../src/app/campaignDmLibraryOrganizationRuntimeAdapter");
     const { connectedInternal }=await import("../../src/app/connectedSessionRuntimeAdapter");
     const { connectedStateFor }=await import("../../src/app/connectedSessionState");
     await import("../../src/app/connectedParticipantIdempotencyAdapter");
@@ -43,7 +46,31 @@ test("DM handout reveal is presentation-only, fans out to P1/P2, and restores sa
     const host=new MockAdapter();
     const client=new MockAdapter();
     const client2=new MockAdapter();
+    setCampaignLibraryStoreForTests(host,new MemoryCampaignLibraryStore());
+    setCampaignLibraryStoreForTests(client,new MemoryCampaignLibraryStore());
+    setCampaignLibraryStoreForTests(client2,new MemoryCampaignLibraryStore());
+
+    const privateFolderId="folder.g06-private";
+    const privateFolderLabel="G06 Hidden Vault";
+    const privateEntryId="dm-note.g06-secret";
+    const privateEntryLabel="G06 Hidden Note";
+    const privateNoteText="G06-NOTE-TEXT-SENTINEL";
+    const privateTag="G06-PRIVATE-TAG";
+    await host.createCampaign({campaignId:"campaign.handout.g06",name:"Handout Campaign"});
+    await host.upsertCampaignDmLibraryFolder("campaign.handout.g06",{folderId:privateFolderId,label:privateFolderLabel});
+    await host.upsertCampaignDmLibraryEntry("campaign.handout.g06",{
+      entryId:privateEntryId,
+      kind:"note",
+      label:privateEntryLabel,
+      folderId:privateFolderId,
+      favorite:true,
+      tags:[privateTag],
+      noteText:privateNoteText,
+    });
+
     const hostTemplate=await host.getSnapshot();
+    const privateCampaign=hostTemplate.campaigns?.find((campaign)=>campaign.campaignId==="campaign.handout.g06");
+    assert.equal(privateCampaign?.dmLibrary.entries.find((entry)=>entry.entryId===privateEntryId)?.noteText,privateNoteText,"privacy fixture must exist in the Host-only Campaign store");
     const clientTemplate=await client.getSnapshot();
     const client2Template=await client2.getSnapshot();
     const hostCharacter={...structuredClone(hostTemplate.activeCharacter),id:"char.handout.host",name:"Handout Host",saveState:"saved" as const};
@@ -160,5 +187,16 @@ test("DM handout reveal is presentation-only, fans out to P1/P2, and restores sa
     await flush();
     const restoredDismissal=transport.sentTo().filter((entry)=>entry.peer===lastRollReconnectPeer&&entry.value.type==="presentation-last-roll-dismiss").at(-1);
     assert.ok(restoredDismissal,"reconnecting Clients must keep the current Last Roll hidden until a new resolution arrives");
+
+    const wire=[...transport.sent().map((entry)=>entry.raw),...transport.sentTo().map((entry)=>entry.raw)].join("\n");
+    const playerProjection=JSON.stringify([await client.getSnapshot(),await client2.getSnapshot()]);
+    for(const privateValue of [privateFolderId,privateFolderLabel,privateEntryId,privateEntryLabel,privateNoteText,privateTag]){
+      assert.equal(wire.includes(privateValue),false,`connected wire must not expose private DM Library value: ${privateValue}`);
+      assert.equal(playerProjection.includes(privateValue),false,`Player projection must not expose private DM Library value: ${privateValue}`);
+    }
+    for(const privateShape of ["\"dmLibrary", "\"noteText\"", "\"recentEntryIds\""]){
+      assert.equal(wire.includes(privateShape),false,`connected wire must not expose private DM Library metadata shape: ${privateShape}`);
+      assert.equal(playerProjection.includes(privateShape),false,`Player projection must not expose private DM Library metadata shape: ${privateShape}`);
+    }
   } finally { transport.restore(); }
 });
