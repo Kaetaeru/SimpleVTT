@@ -111,15 +111,42 @@ async function joinClientSession(client,sessionPort){
   const buttons=await client.browser.$$(`${direct}//button[normalize-space(.)='참가하기']`);assert.equal(buttons.length,1);await buttons[0].click();await waitForText(client.browser,"클라이언트 · 플레이어",30_000);
 }
 
-async function selectDistinctP2Character(instance){
-  const result=await instance.browser.executeAsync((done)=>{
-    (async()=>{
-      const {mockAdapter}=await import("/src/app/mockAdapter.ts");
-      const snapshot=await mockAdapter.selectProductionCharacter("char.mira");
-      return {id:snapshot.activeCharacter.id,name:snapshot.activeCharacter.name};
-    })().then(done).catch((error)=>done({error:String(error?.stack??error)}));
-  });
-  assert.ok(!result.error,result.error);assert.equal(result.id,"char.mira");assert.equal(result.name,"Mira");return result;
+async function completeVisibleCharacterChoices(browser){
+  for(let attempt=0;attempt<120;attempt+=1){
+    const result=await browser.execute(()=>{
+      const sections=[...document.querySelectorAll(".focused-create-stage .create-v09-section")];
+      for(const section of sections){
+        if(section.querySelector(".create-status-pill")?.textContent?.trim()!=="선택 필요")continue;
+        const candidates=[...section.querySelectorAll(".dynamic-choice-grid .create-option-card, .equipment-options .create-option-card, .spell-choice-grid button, .proficiency-grid button")];
+        const target=candidates.find((item)=>!item.disabled&&item.getAttribute("aria-disabled")!=="true"&&!item.classList.contains("selected")&&!item.querySelector(".selected"));
+        if(target instanceof HTMLElement){const before=section.textContent;target.scrollIntoView({block:"center"});target.click();return{clicked:true,section:section.id,before};}
+      }
+      return{clicked:false,unresolved:sections.filter((section)=>section.querySelector(".create-status-pill")?.textContent?.trim()==="선택 필요").map((section)=>section.id)};
+    });
+    if(!result.clicked)return result.unresolved;
+    await browser.waitUntil(async()=>browser.execute(({sectionId,before})=>{const section=document.getElementById(sectionId);return Boolean(section&&section.textContent!==before);},{sectionId:result.section,before:result.before}),{timeout:15_000,timeoutMsg:`Character choice did not commit in ${result.section}`});
+  }
+  throw new Error("Character choice completion exceeded 120 UI clicks");
+}
+
+async function openCharacterTab(browser,label,sectionId){
+  await click(browser,`//nav[contains(@class,'focused-create-tabs')]//button[.//span[normalize-space(.)=${JSON.stringify(label)}]]`,`${label} 탭`);
+  await browser.$(`//section[@id=${JSON.stringify(sectionId)}]`).waitForDisplayed({timeout:15_000});
+}
+
+async function createDistinctP2Character(instance){
+  const name="W4 G09 Observer";
+  await click(instance.browser,navButton("캐릭터"),"P2 캐릭터 메뉴");
+  const duplicate="//article[contains(@class,'character-card-entry')][.//h2[normalize-space(.)='Aelar']]//button[normalize-space(.)='복제']";
+  await click(instance.browser,duplicate,"P2 Aelar 복제");
+  await openCharacterTab(instance.browser,"정체성","identity");await replaceValue(instance.browser,labelControl("캐릭터 이름"),name,"P2 캐릭터 이름");
+  for(const [tab,sectionId] of [["정체성","identity"],["종족","species"],["클래스","class"],["배경","background"]]){
+    await openCharacterTab(instance.browser,tab,sectionId);assert.deepEqual(await completeVisibleCharacterChoices(instance.browser),[],`${tab} dependent choices remain unresolved`);
+  }
+  await openCharacterTab(instance.browser,"능력치","abilities");await click(instance.browser,"//section[@id='abilities']//button[contains(normalize-space(.),'파이터 추천 배치')]","P2 파이터 추천 배치");
+  await openCharacterTab(instance.browser,"기술","proficiencies");assert.deepEqual(await completeVisibleCharacterChoices(instance.browser),[],"P2 proficiency choices remain unresolved");
+  await openCharacterTab(instance.browser,"검토","review");await click(instance.browser,exactButton("모험 시작"),"P2 Character 저장");await waitForText(instance.browser,name,30_000);
+  const snapshot=await runtimeSnapshot(instance);assert.notEqual(snapshot.activeCharacterId,"char.aelar");assert.equal(snapshot.activeCharacterName,name);return{id:snapshot.activeCharacterId,name};
 }
 
 async function runtimeSnapshot(instance){
@@ -169,7 +196,7 @@ async function runScenario(){
   const host=await launchInstance("W4-07 Host",path.join(runRoot,"host","data"),await reservePort());
   const p1=await launchInstance("W4-07 P1",path.join(runRoot,"p1","data"),await reservePort());
   const p2=await launchInstance("W4-07 P2",path.join(runRoot,"p2","data"),await reservePort());
-  const p2Character=await selectDistinctP2Character(p2);
+  const p2Character=await createDistinctP2Character(p2);
   await createHostCampaign(host);await openHostSession(host,sessionPort);await joinClientSession(p1,sessionPort);await joinClientSession(p2,sessionPort);
   await host.browser.waitUntil(async()=>{const snapshot=await runtimeSnapshot(host);return snapshot.participants.filter((entry)=>entry.state==="connected").length>=3;},{timeout:20_000,timeoutMsg:"H/P1/P2 participant topology did not converge"});
 
