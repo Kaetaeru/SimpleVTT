@@ -169,6 +169,15 @@ function prepareClient(adapter:MockAdapter,sessionId:string){
   state.replica=new ClientSessionReplica(sessionId);
 }
 
+async function drainClient(adapter:MockAdapter){
+  const stages:string[]=[];
+  while(true){
+    const snapshot=await adapter.getSnapshot();
+    if(snapshot.resolution)stages.push(snapshot.resolution.stage);
+    if(advanceConnectedResolutionPresentation(adapter).status==="empty")return stages;
+  }
+}
+
 test("MP-C07 core · remote P1 2d6 damage keeps die shape, group/type, flat arithmetic, total, and target HP identical for P1/P2",async()=>{
   const transport=installThreePeerHostTransport();
   const host=new MockAdapter();
@@ -249,6 +258,9 @@ test("MP-C07 core · remote P1 2d6 damage keeps die shape, group/type, flat arit
       assert.equal(actingApplied.status,observingApplied.status);
       assert.notEqual(actingApplied.status,"rejected");
     }
+    const actingStages=await drainClient(actingClient);
+    const observingStages=await drainClient(observingClient);
+    assert.deepEqual(actingStages,observingStages,"P1/P2 must drain the same ordered live multi-die presentation stages");
     const actingEvents=await applyConnectedClientEvents(actingClient,batches[0].events);
     const observingEvents=await applyConnectedClientEvents(observingClient,batches[0].events);
     assert.equal(actingEvents.status,"applied");
