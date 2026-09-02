@@ -27,7 +27,7 @@ test("Gate E mapless area target set does not require fake distance visibility o
   assert.equal(result.rejected.length,0);
 });
 
-test("Gate E targeting rejects a missing spatial fact only when the rule actually requires it",()=>{
+test("Gate G mapless ranged targeting disables distance mechanics when no spatial fact exists",()=>{
   const missingRange=resolveTargeting("actor.hero",{
     kind:"creature",
     rangeFeet:60,
@@ -36,8 +36,8 @@ test("Gate E targeting rejects a missing spatial fact only when the rule actuall
     allowedRelations:["enemy"],
     directTarget:false,
   },[actorOnlyFacts()]);
-  assert.equal(missingRange.valid,false);
-  assert.match(missingRange.rejected[0].reasons.join(" "),/distance/i);
+  assert.equal(missingRange.valid,true);
+  assert.equal(missingRange.rejected.length,0);
 
   const missingSight=resolveTargeting("actor.hero",{
     kind:"creature",
@@ -61,7 +61,7 @@ test("Gate E targeting rejects a missing spatial fact only when the rule actuall
   assert.match(missingCover.rejected[0].reasons.join(" "),/cover/i);
 });
 
-test("Gate E authoritative spatial facts still enforce existing range sight and cover behavior",()=>{
+test("Gate G authoritative spatial facts still enforce existing range sight and cover behavior",()=>{
   const result=resolveTargeting("actor.hero",{
     kind:"creature",
     rangeFeet:60,
@@ -75,4 +75,16 @@ test("Gate E authoritative spatial facts still enforce existing range sight and 
   assert.equal(result.valid,true);
   assert.equal(result.targets[0].cover,"half");
   assert.equal(result.targets[0].acBonus,2);
+
+  const outOfRange=resolveTargeting("actor.hero",{
+    kind:"creature",
+    rangeFeet:60,
+    minTargets:1,
+    maxTargets:1,
+    allowedRelations:["enemy"],
+    directTarget:false,
+  },[actorOnlyFacts({distanceFeet:90})]);
+
+  assert.equal(outOfRange.valid,false);
+  assert.match(outOfRange.rejected[0].reasons.join(" "),/beyond range 60 ft/i);
 });
