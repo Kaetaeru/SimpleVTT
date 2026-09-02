@@ -9,6 +9,7 @@ on:
       - "src/app/connectedResolutionPresentation.ts"
       - "src/app/characterSessionProjectionMount.ts"
       - "tests/ui/connectedThreePeerRemoteAttackOwnership.test.ts"
+      - "tests/ui/connectedThreePeerRemoteRejectionExactlyOnce.test.ts"
       - ".github/workflows/w5-07-auto.yml"
   push:
     branches:
@@ -21,6 +22,7 @@ on:
       - "src/app/connectedResolutionPresentation.ts"
       - "src/app/characterSessionProjectionMount.ts"
       - "tests/ui/connectedThreePeerRemoteAttackOwnership.test.ts"
+      - "tests/ui/connectedThreePeerRemoteRejectionExactlyOnce.test.ts"
       - ".github/workflows/w5-07-auto.yml"
 
 jobs:
@@ -36,11 +38,14 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Generate content dependencies
         run: npm run generate:content
-      - name: Verify MP-C01/C03 remote attack ownership and spectator presentation
+      - name: Verify W5-07 three-peer action slices
         shell: bash
         run: |
           set +e
-          npx tsx --test tests/ui/connectedThreePeerRemoteAttackOwnership.test.ts > w5-07-auto.log 2>&1
+          npx tsx --test \
+            tests/ui/connectedThreePeerRemoteAttackOwnership.test.ts \
+            tests/ui/connectedThreePeerRemoteRejectionExactlyOnce.test.ts \
+            > w5-07-auto.log 2>&1
           status=$?
           cat w5-07-auto.log
           exit "$status"
