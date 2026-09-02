@@ -127,6 +127,26 @@ function eventHistory(
   return events;
 }
 
+function saveResultsFromCast(
+  result:Extract<SpellCastResolution,{status:"committed"}>,
+  targetIds:string[],
+  targetNames:string[],
+):ResolutionView["saveResults"] {
+  return targetIds.flatMap((targetId,index)=>{
+    const save=Object.entries(result.results)
+      .find(([key,value])=>key.endsWith(`:save:${targetId}`)&&(value as D20TestResult|undefined)?.family==="saving-throw")?.[1] as D20TestResult|undefined;
+    if(!save)return [];
+    return [{
+      targetId,
+      targetName:targetNames[index]??targetId,
+      d20:save.natural,
+      total:save.total,
+      dc:save.target,
+      outcome:save.outcome==="success"?"성공" as const:"실패" as const,
+    }];
+  });
+}
+
 function resolutionFromCast(
   actionName:string,
   actionId:string,
@@ -135,6 +155,7 @@ function resolutionFromCast(
   slotLevel:number|undefined,
   result:SpellCastResolution,
   authoritativeDice:number[],
+  targetNames:string[]=targetIds,
 ):ResolutionView {
   if (result.status==="rejected") {
     return {
@@ -149,11 +170,12 @@ function resolutionFromCast(
     };
   }
   const outcome=result.events.at(-1)?.summary??"주문 적용";
+  const saveResults=saveResultsFromCast(result,targetIds,targetNames);
   return {
     id:result.events[0]?.resolutionId??`production-spell.${Date.now()}`,
     actorId,targetIds,actionId,actionName,
-    rollKind:"effect",stage:"complete",authoritativeDice,
-    saveResults:[],damageComponents:[],
+    rollKind:saveResults.length?"save":"effect",stage:"complete",authoritativeDice,
+    saveResults,damageComponents:[],
     compact:`${actionName}${slotLevel?` · ${slotLevel}레벨 슬롯`:""} · ${outcome}`,
     detail:result.events.map((event)=>event.summary),
     provenance:[...new Set(result.events.flatMap((event)=>event.provenance.map((entry)=>entry.source)))],
@@ -270,7 +292,8 @@ async function finishInterruptedSpell(adapter:MockAdapter,pending:PendingSpellIn
       ?{status:"committed",state:committed.state,spellId:request.spellId,slotLevel:request.slotLevel,events:committed.events,results:committed.results,consumedMaterials:[]}
       :{status:"rejected",state:pending.workingState,spellId:request.spellId,slotLevel:request.slotLevel,error:committed.error,failedOperationId:committed.failedOperationId,events:[],results:{}};
   } else result=pending.resolveOriginal(pending.workingState);
-  internal.resolution=resolutionFromCast(pending.actionName,pending.actionId,pending.actorId,pending.targetIds,pending.slotLevel,result,pending.authoritativeDice);
+  const targetNames=pending.targetIds.map((id)=>internal.scene.entities.find((entry)=>entry.id===id)?.name??id);
+  internal.resolution=resolutionFromCast(pending.actionName,pending.actionId,pending.actorId,pending.targetIds,pending.slotLevel,result,pending.authoritativeDice,targetNames);
   if(result.status==="rejected")return internal.getSnapshot();
   const originalEvents=eventHistory(pending.workingState,result,pending.actorId,pending.turnId,countered?undefined:pending.slotLevel);
   const events=[...pending.events,...originalEvents];
@@ -283,7 +306,7 @@ async function finishInterruptedSpell(adapter:MockAdapter,pending:PendingSpellIn
   }
   return commitProductionRuntimeResolution(adapter,pending.inputState,{status:"committed",state:committedState,events,results:result.results},{
     resolutionId:internal.resolution!.id,actionId:pending.actionId,actionName:pending.actionName,actorId:pending.actorId,targetIds:pending.targetIds,
-    targetNames:pending.targetIds.map((id)=>internal.scene.entities.find((entry)=>entry.id===id)?.name??id),compact:internal.resolution!.compact,
+    targetNames,compact:internal.resolution!.compact,
     detail:internal.resolution!.detail,provenance:internal.resolution!.provenance,calculatedOutcome:internal.resolution!.calculatedOutcome,
     finalOutcome:internal.resolution!.finalOutcome,rollKind:internal.resolution!.rollKind,authoritativeDice:pending.authoritativeDice,
   });
@@ -443,7 +466,8 @@ MockAdapter.prototype.resolveAction=async function resolveProductionSpell(action
     result=resolveOriginal(runtime);
     counterable=true;
   }
-  internal.resolution=resolutionFromCast(sourceAction.name,actionId,sourceAction.actorId,targetIds,slotLevel,result,authoritativeDice);
+  const targetNames=targetIds.map((id)=>internal.scene.entities.find((entry)=>entry.id===id)?.name??id);
+  internal.resolution=resolutionFromCast(sourceAction.name,actionId,sourceAction.actorId,targetIds,slotLevel,result,authoritativeDice,targetNames);
   if (result.status==="rejected") return this.getSnapshot();
   if(counterable&&resolveOriginal&&interruptionRequest){
     const candidates=interruptionCandidates(this,internal,snapshot,sourceAction,definition,runtime);
@@ -457,7 +481,7 @@ MockAdapter.prototype.resolveAction=async function resolveProductionSpell(action
   const events=eventHistory(runtime,result,sourceAction.actorId,turnId,slotLevel);
   return commitProductionRuntimeResolution(this,runtime,{status:"committed",state:result.state,events,results:result.results},{
     resolutionId:internal.resolution.id,actionId,actionName:sourceAction.name,actorId:sourceAction.actorId,targetIds,
-    targetNames:targetIds.map((id)=>internal.scene.entities.find((entry)=>entry.id===id)?.name??id),
+    targetNames,
     compact:internal.resolution.compact,detail:internal.resolution.detail,provenance:internal.resolution.provenance,
     calculatedOutcome:internal.resolution.calculatedOutcome,finalOutcome:internal.resolution.finalOutcome,
     rollKind:internal.resolution.rollKind,authoritativeDice,rollTotal:internal.resolution.rollTotal,
