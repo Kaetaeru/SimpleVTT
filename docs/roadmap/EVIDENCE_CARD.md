@@ -1,19 +1,19 @@
 # V1 Evidence Card
 
-Status: **W4-06 PASS — DM LIBRARY ORGANIZATION / IMPORT / PRIVATE NOTE / PROVENANCE REUSED**
+Status: **W4-07 PASS — ACTOR MATERIALIZATION / HANDOUT / SPATIAL FALLBACK REUSED**
 
 Use one card per Release Gate or coherent repair. The purpose is to stop duplicate implementation and force current-HEAD evidence before modifying an existing system.
 
 ```text
-Gate ID: W4-06
-Acceptance criterion: DM Library organization, JSON import, Host-private notes, and provenance are fixed on the existing Campaign-owned production path.
-Production entrypoint: CampaignSystemsPanel -> CampaignDmLibraryOrganizationPanel -> campaignDmLibraryOrganizationRuntimeAdapter / campaignDmLibraryImport -> Campaign persistence owners
-Existing implementation files: src/CampaignSystemsPanel.tsx; src/CampaignDmLibraryOrganizationPanel.tsx; src/app/campaignDmLibraryOrganizationContracts.ts; src/app/campaignDmLibraryOrganizationRuntimeAdapter.ts; src/app/campaignDmLibraryImport.ts; src/app/campaignPersistenceContracts.ts
-Existing automated tests: tests/ui/campaignDmLibraryOrganizationRuntime.test.ts; tests/ui/campaignDmLibraryOrganizationStructure.test.ts; tests/ui/campaignDmLibraryImport.test.ts; tests/ui/campaignDmLibraryNoteStructure.test.ts; tests/ui/campaignDmLibraryStructure.test.ts; tests/ui/campaignDmLibraryDeleteProvenance.test.ts
-Existing exact-SHA evidence: product SHA 5bef709f010543859e84c98ef7db8f14e5c06469; GitHub Actions UI run 33570546168 / job 100063331529 = success; Run UI tests = success; docs/roadmap/evidence/W4-06.md records the focused acceptance mapping.
-Exact observed result: PASS. Organization tests cover private-note validation/persistence/update/organization/delete plus folder create/rename/delete and persisted folder/favorite placement. Import tests preserve feature-rich custom/magic item runtime fields and provenance, import arrays/NPC definitions, and reject invalid charge/attunement contracts. Note structure tests verify Campaign Session projection exposes neither dmLibrary nor noteText and production structure keeps the Library Host-only. Delete/provenance tests verify Character grants become independent copies that retain provenance after the source Library definition is deleted.
-Inheritance check: GitHub Actions UI run 33570546168 verified the DM Library owner at product SHA 5bef709f010543859e84c98ef7db8f14e5c06469. GitHub compare 5bef709f010543859e84c98ef7db8f14e5c06469...083ce354fc2c1fcfd1e1346f976f920a30ccd2c1 changes only docs/CURRENT.md, docs/roadmap/CURRENT.md, docs/roadmap/EVIDENCE_CARD.md, docs/roadmap/V1_EVIDENCE_LEDGER.json, and docs/roadmap/evidence/W4-06.md; the W4-06 production/runtime/tests are inherited unchanged.
-Smallest required change: None. W4-06 is closed as REUSE_LOCKED. No current-HEAD failure authorizes product-code modification; proceed to W4-07.
+Gate ID: W4-07
+Acceptance criterion: NPC/PC preset/custom Actor materialization, handout reveal/withdraw/reconnect, pinned content lookup, and no-provider/compatible-provider spatial behavior are fixed on the existing Campaign DM Library -> live Session path.
+Production entrypoint: Campaign DM Library -> live Session Actor materialization / shared handout presentation -> Host-authoritative Session projection and spatial validation.
+Existing implementation files: Existing Campaign DM Library, Session materialization/presentation, and spatial-provider production owners verified by docs/roadmap/evidence/W4-07.md; no second owner is introduced.
+Existing automated tests: tests/ui/sessionImageHandoutRuntimeAdapter.test.ts plus the connected topology/continuity/Session-layer suite and the W4-07 Windows Tauri H+P1+P2 journeys.
+Existing exact-SHA evidence: product SHA 2ac28651312f1fdbe82edb74fd13f342a8f910f7; GitHub Actions UI run 33636100212 / job 100267245818 = success; V1 Tauri Verification run 33636100197 / job 100267245684 (tauri-w4-07-spatial) = success; artifact SimpleVTT-W4-07-G01-G09-2ac28651312f1fdbe82edb74fd13f342a8f910f7, artifact 9849024415, sha256:b044f73320cd10bf2446695677ca2098c7c162d01190feed7ecc599078c656a0.
+Exact observed result: PASS. Windows H+P1+P2 verified G01 NPC quick-add, G02 PC preset quick-add, G03 validated custom JSON materialization, G04 reveal/withdraw, G05 reconnect continuity, G06 DM-only privacy, G07 Session-pinned lookup, G08 mapless spatial fallback, and G09 compatible-provider Host validation.
+Inheritance check: PR #249 merged the verified tree into canonical work/v1-composite as 2ffc2004d795a350a4aa3676bcd7d4cb362f1ea1 with no file differences from verification SHA 2ac28651312f1fdbe82edb74fd13f342a8f910f7. PR #251 then added only docs/roadmap/evidence/W4-07.md and merged as add93e2d2a929ca97cc39bc29136ea766f858f39. No product/runtime defect was reproduced.
+Smallest required change: None. W4-07 is closed as REUSE_LOCKED. No current-HEAD failure authorizes product-code modification; proceed to W4-08.
 ```
 
 ## Change gate
