@@ -48,10 +48,10 @@ W0: 6/6 PASS
 W1: 8/8 PASS — COMPLETE
 W2: 8/8 PASS — COMPLETE
 W3: 8/8 PASS — COMPLETE
-W4: 4/8 PASS
-Official ledger score: 45.0/100.0
-PASS: 34/72
-Remaining gates: 38/72
+W4: 5/8 PASS
+Official ledger score: 46.3/100.0
+PASS: 35/72
+Remaining gates: 37/72
 FAIL: 0
 BLOCKED: 0
 ```
@@ -75,11 +75,13 @@ W0 — COMPLETE
 W1 — COMPLETE (8/8 PASS)
 W2 — COMPLETE (8/8 PASS)
 W3 — COMPLETE (8/8 PASS)
-W4 — 4/8 PASS
-Next exact Gate: W4-05
+W4 — 5/8 PASS
+Next exact Gate: W4-06
 ```
 
-W4-04 is closed by inherited exact-SHA Campaign calendar, rations, visibility, and declarative-provider evidence. Product SHA `5bef709f010543859e84c98ef7db8f14e5c06469` passed GitHub Actions UI run `33570546168`, job `100063331529`, including `Verify Campaign lifecycle and declarative providers`. `campaignRuntimeAdapter` owns calendar/ration provider IDs and versions, Session defaults, and immutable `rationsVisibleToPlayers` snapshotting; Client snapshots omit ration detail when that policy is false. `connectedCampaignSystemsRuntimeAdapter` enforces the same boundary on transport by redacting ration balances/requirements/shortage and roster ration-unit fields from the Player projection without mutating Host authority. Existing Campaign runtime, systems, and declarative-provider tests cover provider configuration, calendar/ration behavior, Session snapshot capture, provider version pinning/options, and Campaign UI/runtime ownership. The integration history from trusted product SHA `5bef709f010543859e84c98ef7db8f14e5c06469` through canonical `19ffc83e529e7e986f50377bfded69cb6ca33871` changes only evidence/current docs. No product code changed for W4-04. The first non-PASS Gate is now W4-05.
+W4-05 is closed by inherited exact-SHA Party Stash policy evidence. Product SHA `5bef709f010543859e84c98ef7db8f14e5c06469` passed GitHub Actions UI run `33570546168`, job `100063331529`, including `Verify Party Stash sequential transfer routing`. `campaignPersistenceContracts` fixes exactly `shared`, `dm-approval`, and `dm-managed`; `campaignPartyStashPolicyRuntimeAdapter` keeps deposits open, allows shared withdrawals, queues non-DM withdrawals for explicit DM approve/reject under approval mode, rejects non-DM withdrawals in DM-managed mode, and preserves the base transfer path for DM withdrawals. `CampaignSystemsPanel` exposes all three policies and pending approve/reject controls through the production Campaign UI. Existing `campaignSystems.test.ts` fixes durable Party Stash transfer/idempotency/failure isolation and Campaign namespace ownership. GitHub compare `5bef709f010543859e84c98ef7db8f14e5c06469...cf712116381ff8493c8eeebfad7ed8ada95b78ee` changes only the four evidence/current docs, so this production/runtime/test path is inherited unchanged. No product code changed for W4-05. The first non-PASS Gate is now W4-06.
+
+W4-04 is closed by inherited exact-SHA Campaign calendar, rations, visibility, and declarative-provider evidence. Product SHA `5bef709f010543859e84c98ef7db8f14e5c06469` passed GitHub Actions UI run `33570546168`, job `100063331529`, including `Verify Campaign lifecycle and declarative providers`. `campaignRuntimeAdapter` owns calendar/ration provider IDs and versions, Session defaults, and immutable `rationsVisibleToPlayers` snapshotting; Client snapshots omit ration detail when that policy is false. `connectedCampaignSystemsRuntimeAdapter` enforces the same boundary on transport by redacting ration balances/requirements/shortage and roster ration-unit fields from the Player projection without mutating Host authority. Existing Campaign runtime, systems, and declarative-provider tests cover provider configuration, calendar/ration behavior, Session snapshot capture, provider version pinning/options, and Campaign UI/runtime ownership. The integration history from trusted product SHA `5bef709f010543859e84c98ef7db8f14e5c06469` through canonical `19ffc83e529e7e986f50377bfded69cb6ca33871` changes only evidence/current docs. No product code changed for W4-04.
 
 W4-03 is closed by inherited exact-SHA Campaign roster, Session snapshot, history, and summary evidence. Product SHA `5bef709f010543859e84c98ef7db8f14e5c06469` passed GitHub Actions UI run `33570546168`, job `100063331529`, including `campaignRuntimeAdapter.test.ts`, which verifies Campaign-owned roster projection and immutable Session preparation snapshots. `campaignSystems.test.ts` verifies revisioned roster mutations plus `appendSessionSummary` persistence with bounded 50-entry history and `lastSessionId`. Production `main.tsx` composes `campaignSessionHistoryRuntimeAdapter`, which wraps successful Host stop, derives the completed Session summary from the captured Campaign snapshot and live participant/calendar/ration/stash state, persists it, and clears the Session snapshot. Windows Tauri run `33569954938`, job `100061523302`, at SHA `53ec501555222b60d9e856b231f4f64395f75b76` ended the Session through the rendered UI, exited, relaunched on the same data root, and showed one completed Campaign session-history entry. Artifact `9824674856` has digest `sha256:d51dd1d962be4533b31551f900dae26655d3a4e2b05aa8131ffa98122bb18034`. The Windows SHA and canonical product merge `5bef709f010543859e84c98ef7db8f14e5c06469` share tree `0e6baadda2570b169c35c6b7436ff4e0042dfff0`; the compare through canonical `fd14887dd286725d2ec71b48a70d121b6c63d8d6` changes only evidence/current docs. No product code changed for W4-03.
 
@@ -115,9 +117,9 @@ W1-06 was the only Gate with a reproduced product gap: the real Character Librar
 
 ### Next execution sequence
 
-1. Start `W4-05`, the first non-`PASS` Gate in the ledger.
-2. Do not reopen W1-W4-04; reuse their recorded exact-SHA evidence unless a new current-HEAD regression is reproduced.
-3. For `W4-05`, inspect only the repository-defined acceptance criterion and its existing production/test owner before authorizing any product-code change.
+1. Start `W4-06`, the first non-`PASS` Gate in the ledger.
+2. Do not reopen W1-W4-05; reuse their recorded exact-SHA evidence unless a new current-HEAD regression is reproduced.
+3. For `W4-06`, inspect only the repository-defined acceptance criterion and its existing production/test owner before authorizing any product-code change.
 4. For Common Play, follow [`design/ui-ux/COMMON-PLAY-FUNCTION-FIRST.md`](design/ui-ux/COMMON-PLAY-FUNCTION-FIRST.md): functional reachability first, broad UI redesign later.
 
 ## Non-negotiable execution rules
