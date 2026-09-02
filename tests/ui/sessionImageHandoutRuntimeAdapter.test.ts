@@ -27,7 +27,7 @@ function fakeTransport() {
 
 async function flush() { await new Promise<void>((resolve)=>setImmediate(resolve)); await new Promise<void>((resolve)=>setImmediate(resolve)); await new Promise<void>((resolve)=>setImmediate(resolve)); }
 
-test("DM handout reveal is presentation-only and the current reveal is restored after a compatible reconnect hello",async()=>{
+test("DM handout reveal is presentation-only, fans out to P1/P2, and restores safely on reconnect",async()=>{
   const transport=fakeTransport();
   try {
     await import("../../src/app/offlineRuntimeAdapters");
@@ -42,8 +42,10 @@ test("DM handout reveal is presentation-only and the current reveal is restored 
 
     const host=new MockAdapter();
     const client=new MockAdapter();
+    const client2=new MockAdapter();
     const hostTemplate=await host.getSnapshot();
     const clientTemplate=await client.getSnapshot();
+    const client2Template=await client2.getSnapshot();
     const hostCharacter={...structuredClone(hostTemplate.activeCharacter),id:"char.handout.host",name:"Handout Host",saveState:"saved" as const};
     const clientCharacter={
       ...structuredClone(clientTemplate.activeCharacter),
@@ -54,12 +56,24 @@ test("DM handout reveal is presentation-only and the current reveal is restored 
       items:[],
       attacks:[],
     };
+    const client2Character={
+      ...structuredClone(client2Template.activeCharacter),
+      id:"char.handout.client2",
+      name:"Handout Observer",
+      saveState:"saved" as const,
+      equipment:[],
+      items:[],
+      attacks:[],
+    };
     const hostApp=connectedInternal(host);
     hostApp.activeCharacter=structuredClone(hostCharacter);
-    hostApp.characters=[...hostApp.characters.filter((entry)=>entry.id!==hostCharacter.id&&entry.id!==clientCharacter.id),structuredClone(hostCharacter),structuredClone(clientCharacter)];
+    hostApp.characters=[...hostApp.characters.filter((entry)=>![hostCharacter.id,clientCharacter.id,client2Character.id].includes(entry.id)),structuredClone(hostCharacter),structuredClone(clientCharacter),structuredClone(client2Character)];
     const clientApp=connectedInternal(client);
     clientApp.activeCharacter=structuredClone(clientCharacter);
     clientApp.characters=[...clientApp.characters.filter((entry)=>entry.id!==clientCharacter.id),structuredClone(clientCharacter)];
+    const client2App=connectedInternal(client2);
+    client2App.activeCharacter=structuredClone(client2Character);
+    client2App.characters=[...client2App.characters.filter((entry)=>entry.id!==client2Character.id),structuredClone(client2Character)];
 
     await host.hostSession();
     await client.joinSession("127.0.0.1:3210");
@@ -76,15 +90,31 @@ test("DM handout reveal is presentation-only and the current reveal is restored 
     const reconnectHello=transport.sent().filter((entry)=>entry.value.type==="hello").at(-1);
     assert.ok(reconnectHello,"content parity must leave a current hello that can be used for reconnect");
 
+    await client2.joinSession("127.0.0.1:3210");
+    assert.equal(transport.count(),3,"H+P1+P2 must each retain the existing connected listener path");
+    const secondHello=transport.sent().filter((entry)=>entry.value.type==="hello").at(-1);
+    assert.ok(secondHello);
+    transport.emit(0,"peer.client2",secondHello.raw);
+    await flush();
+    const secondAck=transport.sentTo().find((entry)=>entry.peer==="peer.client2"&&entry.value.type==="hello-ack");
+    assert.ok(secondAck);
+    assert.equal((secondAck.value.compatibility as {status?:string}).status,"compatible");
+    transport.emit(2,"host",secondAck.raw);
+    await flush();
+
     const ledgerCursorBefore=connectedStateFor(host).ledger?.cursor;
     const asset=parseLocalImageDataUrl("data:image/webp;base64,UklGRg==","clue.webp",HANDOUT_IMAGE_MAX_BYTES);
+    assert.equal(transport.sent().filter((entry)=>entry.value.type==="presentation-handout").length,0,"local DM preview must not broadcast before explicit reveal");
     await handout.revealSessionImageHandout(host,asset);
     assert.equal(connectedStateFor(host).ledger?.cursor,ledgerCursorBefore,"presentation reveal must not create a ResolutionEvent/participant ledger event");
     const reveal=transport.sent().filter((entry)=>entry.value.type==="presentation-handout").at(-1);
     assert.ok(reveal);
+    assert.deepEqual(Object.keys(reveal.value).sort(),["asset","revision","sessionId","type"],"handout fan-out must stay on the presentation envelope without Library metadata");
     transport.emit(1,"host",reveal.raw);
+    transport.emit(2,"host",reveal.raw);
     await flush();
     assert.equal(handout.getSessionImageHandoutState(client).asset?.fileName,"clue.webp");
+    assert.equal(handout.getSessionImageHandoutState(client2).asset?.fileName,"clue.webp");
     handout.dismissSessionImageHandout(client);
     assert.equal(handout.getSessionImageHandoutState(client).dismissed,true);
 
@@ -103,8 +133,10 @@ test("DM handout reveal is presentation-only and the current reveal is restored 
     const withdrawn=transport.sent().filter((entry)=>entry.value.type==="presentation-handout").at(-1);
     assert.ok(withdrawn);
     transport.emit(1,"host",withdrawn.raw);
+    transport.emit(2,"host",withdrawn.raw);
     await flush();
     assert.equal(handout.getSessionImageHandoutState(client).asset,null);
+    assert.equal(handout.getSessionImageHandoutState(client2).asset,null);
 
     const withdrawnReconnectPeer="peer.client.reconnect-withdrawn";
     transport.emit(0,withdrawnReconnectPeer,reconnectHello.raw);
