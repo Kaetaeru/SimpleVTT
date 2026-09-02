@@ -12,6 +12,7 @@ import { connectedStateFor } from "../../src/app/connectedSessionState";
 import {
   CONNECTED_CAPABILITIES,
   applyConnectedResolutionPresentation,
+  connectedInternal,
   connectedManifest,
 } from "../../src/app/connectedSessionRuntimeAdapter";
 import { encodeConnectedWireMessage, type ConnectedWireMessage } from "../../src/app/connectedSessionWire";
@@ -160,6 +161,10 @@ test("MP-C06 core · remote P1 advantage keeps rolled, selected, and discarded d
     await connectPlayer(host,transport,"peer.mp-c06.p2","MP-C06 P2",p2);
     assert.equal(state.peerParticipants.size,2,"Host must retain P1 and P2 for advantage spectator parity");
 
+    const p1Entity=connectedInternal(host).scene.entities.find((entity)=>entity.id===p1.characterId);
+    assert.ok(p1Entity,"MP-C06 requires the mounted P1 Scene entity");
+    p1Entity.status.push("도움 받음");
+
     const before=await host.getSnapshot();
     const attack=before.scene.actionsByActor[p1.characterId]?.find((action)=>action.resolutionKind==="attack"&&(action.name.includes("롱소드")||action.name.toLowerCase().includes("longsword")));
     assert.ok(attack&&attack.attackBonus===7,"MP-C06 requires the projected +7 canonical longsword attack");
@@ -172,7 +177,7 @@ test("MP-C06 core · remote P1 advantage keeps rolled, selected, and discarded d
       type:"action-request",
       request:{
         sessionId:state.sessionId,
-        requestId:"mp-c06.remote-advantage",
+        requestId:"mp-c06.remote-native-advantage",
         actorId:p1.characterId,
         actionId:attack.id,
         targetIds:[targetId],
@@ -185,16 +190,13 @@ test("MP-C06 core · remote P1 advantage keeps rolled, selected, and discarded d
     await eventually(async()=>{
       const resolution=(await host.getSnapshot()).resolution;
       return resolution?.actorId===p1.characterId&&resolution.stage==="roll-animation";
-    },"MP-C06 remote attack must start on Host before advantage adjudication");
+    },"MP-C06 remote advantage attack must start on Host");
     const rolled=await host.getSnapshot();
-    assert.deepEqual(rolled.resolution?.authoritativeDice,[10]);
-    assert.equal(rolled.resolution?.attackTotal,17);
-
-    const adjudicated=await host.applyDmAdjudication({type:"advantage",scope:"resolution"});
-    assert.equal(adjudicated.resolution?.adjudicated,true);
-    assert.deepEqual(adjudicated.resolution?.authoritativeDice,[10,18]);
-    assert.equal(adjudicated.resolution?.attackTotal,25,"Host must select the higher advantage face for the +7 attack total");
-    assert.equal(adjudicated.resolution?.finalOutcome,"DM 유리점 적용");
+    assert.deepEqual(rolled.resolution?.authoritativeDice,[12,10],"native advantage must normalize the selected higher face first");
+    assert.equal(rolled.resolution?.naturalD20,12);
+    assert.equal(rolled.resolution?.attackTotal,19);
+    assert.equal(rolled.resolution?.attackOutcome,"명중");
+    assert.equal(rolled.scene.entities.find((entity)=>entity.id===p1.characterId)?.status.includes("도움 받음"),false,"Help advantage must be consumed by the attack declaration");
 
     const completed=await finishResolution(host,p1.characterId);
     assert.equal(completed.resolution?.stage,"complete");
@@ -206,10 +208,10 @@ test("MP-C06 core · remote P1 advantage keeps rolled, selected, and discarded d
     assert.equal(batches.length,1,"MP-C06 must commit exactly one shared terminal event batch");
     const advantagePresentation=live.find((message)=>message.presentation.dice.selection==="highest"&&message.presentation.dice.faces.length===2);
     assert.ok(advantagePresentation,"MP-C06 must publish one live advantage presentation with both rolled faces");
-    assert.deepEqual(advantagePresentation.presentation.dice.faces,[10,18]);
-    assert.deepEqual(advantagePresentation.presentation.dice.selectedIndices,[1]);
-    assert.deepEqual(advantagePresentation.presentation.dice.discardedIndices,[0]);
-    assert.equal(advantagePresentation.presentation.dice.total,25);
+    assert.deepEqual(advantagePresentation.presentation.dice.faces,[12,10]);
+    assert.deepEqual(advantagePresentation.presentation.dice.selectedIndices,[0]);
+    assert.deepEqual(advantagePresentation.presentation.dice.discardedIndices,[1]);
+    assert.equal(advantagePresentation.presentation.dice.total,19);
     assert.equal(advantagePresentation.presentation.dice.modifier,7);
     assert.equal(advantagePresentation.presentation.resolution.actorId,p1.characterId);
     assert.deepEqual(advantagePresentation.presentation.resolution.targetIds,[targetId]);
@@ -226,8 +228,8 @@ test("MP-C06 core · remote P1 advantage keeps rolled, selected, and discarded d
     const [acting,observing]=await Promise.all([actingClient.getSnapshot(),observingClient.getSnapshot()]);
     assert.deepEqual(acting.resolution,observing.resolution,"P1 and P2 must install the same advantage resolution state");
     assert.deepEqual(acting.resolutionPresentation,observing.resolutionPresentation,"P1 and P2 must install the same advantage presentation metadata");
-    assert.deepEqual(acting.resolution?.authoritativeDice,[10,18]);
-    assert.equal(acting.resolution?.attackTotal,25);
+    assert.deepEqual(acting.resolution?.authoritativeDice,[12,10]);
+    assert.equal(acting.resolution?.attackTotal,19);
 
     const terminal=batches[0].events.find((event)=>event.payload.kind==="resolution");
     assert.ok(terminal&&terminal.actorId===p1.characterId,"MP-C06 terminal event must remain owned by P1");
