@@ -7,6 +7,7 @@ param(
   [switch]$W2,
   [switch]$W3,
   [switch]$W407,
+  [switch]$W5,
   [switch]$KeepOpen
 )
 
@@ -76,7 +77,7 @@ if (-not (Test-Path -LiteralPath $binaryPath)) {
   throw "Tauri E2E binary was not found at $binaryPath. Remove -SkipBuild and retry."
 }
 
-$runnerScript = if ($W3) { 'scripts\run-tauri-e2e-w3.mjs' } elseif ($W407) { 'scripts\run-tauri-e2e-w4-07.mjs' } else { 'scripts\run-tauri-e2e.mjs' }
+$runnerScript = if ($W3) { 'scripts\run-tauri-e2e-w3.mjs' } elseif ($W407) { 'scripts\run-tauri-e2e-w4-07.mjs' } elseif ($W5) { 'scripts\run-tauri-e2e-w5-01.mjs' } else { 'scripts\run-tauri-e2e.mjs' }
 $arguments = @((Join-Path $rootPath $runnerScript))
 if ($Smoke) { $arguments += '--smoke' }
 if ($W1) { $arguments += '--w1' }
