@@ -292,6 +292,23 @@ registerConnectedActionRequestHandler(async (adapter,transportMessage,request) =
     projectionContexts.set(adapter,activated.context);
   }
 
+  if (!request.manualMovementReaction) {
+    const snapshot=await connectedInternal(adapter).getSnapshot();
+    const requestedAction=snapshot.scene.actionsByActor[request.actorId]?.find((action)=>action.id===request.actionId);
+    if (!requestedAction) {
+      ledger.cancelReservedActionRequest(request.requestId);
+      restoreProjectedContext(adapter);
+      await sendConnectedWireTo(transportMessage.peer,{type:"error",code:"action-unsupported",message:`Action ${request.actionId} is not available for ${request.actorId}`,hostCursor:ledger.cursor});
+      return;
+    }
+    if (!requestedAction.available) {
+      ledger.cancelReservedActionRequest(request.requestId);
+      restoreProjectedContext(adapter);
+      await sendConnectedWireTo(transportMessage.peer,{type:"error",code:"action-disabled",message:requestedAction.disabledReason??"Action is currently disabled",hostCursor:ledger.cursor});
+      return;
+    }
+  }
+
   if (request.readyConfiguration) {
     if (!isReadyPreparationAction(actionFor(adapter,request.actorId,request.actionId))||request.readyConfiguration.actorId!==request.actorId) {
       ledger.cancelReservedActionRequest(request.requestId);
@@ -414,14 +431,14 @@ MockAdapter.prototype.respondToInterrupt=async function respondConnectedInterrup
 
 MockAdapter.prototype.dismissResolution=async function dismissConnectedResolution() {
   const state=connectedStateFor(this);
+  const app=connectedInternal(this);
   if (state.mode==="client") {
     const advanced=advanceConnectedResolutionPresentation(this);
     if(advanced.status==="empty"){
-      const app=connectedInternal(this);
       app.resolution=null;
       app.resolutionPresentation=null;
     }
-    return connectedInternal(this).getSnapshot();
+    return app.getSnapshot();
   }
   const pending=state.pendingRemoteAction;
   if (pending&&state.ledger) {

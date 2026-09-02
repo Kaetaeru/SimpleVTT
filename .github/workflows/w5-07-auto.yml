@@ -11,6 +11,7 @@ on:
       - "tests/ui/connectedThreePeerRemoteAttackOwnership.test.ts"
       - "tests/ui/connectedThreePeerRemoteRejectionExactlyOnce.test.ts"
       - "tests/ui/connectedThreePeerDuplicateEventBatch.test.ts"
+      - "tests/ui/connectedThreePeerRemoteDisabledAction.test.ts"
       - ".github/workflows/w5-07-auto.yml"
   push:
     branches:
@@ -25,6 +26,7 @@ on:
       - "tests/ui/connectedThreePeerRemoteAttackOwnership.test.ts"
       - "tests/ui/connectedThreePeerRemoteRejectionExactlyOnce.test.ts"
       - "tests/ui/connectedThreePeerDuplicateEventBatch.test.ts"
+      - "tests/ui/connectedThreePeerRemoteDisabledAction.test.ts"
       - ".github/workflows/w5-07-auto.yml"
 
 jobs:
@@ -48,6 +50,7 @@ jobs:
             tests/ui/connectedThreePeerRemoteAttackOwnership.test.ts \
             tests/ui/connectedThreePeerRemoteRejectionExactlyOnce.test.ts \
             tests/ui/connectedThreePeerDuplicateEventBatch.test.ts \
+            tests/ui/connectedThreePeerRemoteDisabledAction.test.ts \
             > w5-07-auto.log 2>&1
           status=$?
           cat w5-07-auto.log
