@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { AppSnapshot, CombatantDefinitionVm } from "../../src/app/contracts";
+import type { CombatantDefinitionVm } from "../../src/app/contracts";
 import { MemoryCampaignLibraryStore } from "../../src/app/memoryCampaignLibraryStore";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import { setCampaignLibraryStoreForTests } from "../../src/app/campaignRuntimeAdapter";
@@ -73,15 +73,17 @@ test("PC preset validates authority, updates, materializes, and deletes through 
 
   const definitions:CombatantDefinitionVm[]=[];
   (adapter as unknown as {combatantDefinitions:CombatantDefinitionVm[]}).combatantDefinitions=definitions;
-  let instantiated:string|null=null;
-  adapter.instantiateCombatant=async(definitionId:string)=>{instantiated=definitionId;return adapter.getSnapshot() as Promise<AppSnapshot>;};
+  const existingActorIds=new Set(snapshot.scene.entities.map((entity)=>entity.id));
 
   await adapter.instantiateCampaignDmLibraryPcPreset(CAMPAIGN_ID,"dm-pc-preset.guard");
-  assert.equal(instantiated,"local.guard.preset");
-  assert.equal(definitions.find((definition)=>definition.id==="local.guard.preset")?.name,"정예 호위 기사");
-
   snapshot=await adapter.getSnapshot();
   campaign=snapshot.campaigns?.find((candidate)=>candidate.campaignId===CAMPAIGN_ID);
+  assert.equal(definitions.find((definition)=>definition.id==="local.guard.preset")?.name,"정예 호위 기사");
+  const spawned=snapshot.scene.entities.find((entity)=>!existingActorIds.has(entity.id));
+  assert.ok(spawned);
+  assert.match(spawned.id,/^local\.guard\.preset\.instance-/);
+  assert.equal(spawned.side,"ally");
+  assert.equal(snapshot.scene.selectedActorId,spawned.id);
   assert.equal(campaign?.dmLibrary.recentEntryIds[0],"dm-pc-preset.guard");
 
   await adapter.removeCampaignDmLibraryEntry(CAMPAIGN_ID,"dm-pc-preset.guard");
