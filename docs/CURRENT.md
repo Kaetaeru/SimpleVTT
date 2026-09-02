@@ -49,10 +49,10 @@ W1: 8/8 PASS — COMPLETE
 W2: 8/8 PASS — COMPLETE
 W3: 8/8 PASS — COMPLETE
 W4: 8/8 PASS — COMPLETE
-W5: 3/10 PASS
-Official ledger score: 54.5/100.0
-PASS: 41/72
-Remaining gates: 31/72
+W5: 4/10 PASS
+Official ledger score: 56.0/100.0
+PASS: 42/72
+Remaining gates: 30/72
 FAIL: 0
 BLOCKED: 0
 ```
@@ -77,9 +77,11 @@ W1 — COMPLETE (8/8 PASS)
 W2 — COMPLETE (8/8 PASS)
 W3 — COMPLETE (8/8 PASS)
 W4 — COMPLETE (8/8 PASS)
-W5 — 3/10 PASS
-Next exact Gate: W5-04
+W5 — 4/10 PASS
+Next exact Gate: W5-05
 ```
+
+W5-04 is closed by inherited exact-SHA Resolution Presentation Envelope evidence. Product verification SHA `2ac28651312f1fdbe82edb74fd13f342a8f910f7` passed GitHub Actions UI run `33636100212`, job `100267245818`, including connected topology/Session-layer/live lifecycle verification and the frontend build. `connectedResolutionPresentation` fixes a schema/versioned immutable presentation with resolution identity, actor/targets/action, structured authoritative faces plus selected/discarded indices and totals, outcome semantics, cumulative timeline, public redaction, and Activity linkage. `connectedActionRoutingAdapter` publishes live stages and carries the same presentation into ordered Host resolution history for catch-up without Client mechanics rerun; owner-only interrupt/concentration prompts are targeted separately from the public envelope. GitHub issue #111 records strict schema/identity validation, structured authoritative faces, cumulative timeline, Activity linkage, public redaction, terminal catch-up without reroll, shared `VisualDiceBridge` + `CombatVfxBridge`, and connected regression 187/187 plus build success. GitHub compare `2ac28651312f1fdbe82edb74fd13f342a8f910f7...1ca6e911087a09dced61cf6a4c7e60df29e64db0` changes only canonical evidence/current documents plus evidence records W4-07/W5-01/W5-02/W5-03/W5-04, so product/runtime/tests are inherited unchanged. PR #261 added the focused `roadmap/evidence/W5-04.md` record only. No product/runtime defect was reproduced and no product code changed for W5-04. The first non-PASS Gate is now W5-05.
 
 W5-03 is closed by inherited exact-SHA Host single-mutation-path evidence. Product verification SHA `2ac28651312f1fdbe82edb74fd13f342a8f910f7` passed GitHub Actions UI run `33636100212`, job `100267245818`, including connected topology/Session-layer/live lifecycle verification and the frontend build. `connectedSessionRuntimeAdapter` routes Client `action-request` traffic only through the Host message path and `connectedActionRequestPort`; unavailable routing returns an error instead of applying state. `HostSessionLedger` rejects wrong-session or stale-cursor requests, requires Host-side reservation before commit, rejects history drift and unreserved commit, and de-duplicates request IDs. `ClientSessionReplica` advances only on same-session gap-free Host event sequences and rejects conflicting or gapped history before cursor advance. GitHub compare `2ac28651312f1fdbe82edb74fd13f342a8f910f7...0ee6f493fc765ac7a617eda485392957b1874c6e` changes only canonical evidence/current documents plus evidence records W4-07/W5-01/W5-02/W5-03, so product/runtime/tests are inherited unchanged. PR #259 added the focused `roadmap/evidence/W5-03.md` record only. No product/runtime defect was reproduced and no product code changed for W5-03. The first non-PASS Gate is now W5-04.
 
@@ -131,9 +133,9 @@ W1-06 was the only Gate with a reproduced product gap: the real Character Librar
 
 ### Next execution sequence
 
-1. Start `W5-04`, the first non-`PASS` Gate in the ledger.
-2. Do not reopen W1-W5-03; reuse their recorded exact-SHA evidence unless a new current-HEAD regression is reproduced.
-3. For `W5-04`, inspect only the repository-defined acceptance criterion and its existing production/test owner before authorizing any product-code change.
+1. Start `W5-05`, the first non-`PASS` Gate in the ledger.
+2. Do not reopen W1-W5-04; reuse their recorded exact-SHA evidence unless a new current-HEAD regression is reproduced.
+3. For `W5-05`, inspect only the repository-defined acceptance criterion and its existing production/test owner before authorizing any product-code change.
 4. For Common Play, follow [`design/ui-ux/COMMON-PLAY-FUNCTION-FIRST.md`](design/ui-ux/COMMON-PLAY-FUNCTION-FIRST.md): functional reachability first, broad UI redesign later.
 
 ## Non-negotiable execution rules
