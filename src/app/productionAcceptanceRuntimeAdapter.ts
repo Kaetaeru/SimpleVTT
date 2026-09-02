@@ -13,6 +13,8 @@ interface InternalState {
   session:AppSnapshot["session"];
 }
 
+type EligibilityPrototype={eligible(action:ActionVm):string[]};
+
 function isSheet(value:CharacterSummary):value is CharacterSheet {
   const candidate=value as Partial<CharacterSheet>;
   return Boolean(
@@ -92,6 +94,19 @@ function projectReferenceAttackEligibility(snapshot:AppSnapshot) {
   }
   return snapshot;
 }
+
+const eligibilityPrototype=MockAdapter.prototype as unknown as EligibilityPrototype;
+const previousEligible=eligibilityPrototype.eligible;
+eligibilityPrototype.eligible=function eligibleWithCharacterAttackTargets(this:MockAdapter,action:ActionVm){
+  const baseline=previousEligible.call(this,action);
+  if((action.target!=="enemy"&&action.target!=="multi-enemy")||action.resolutionKind!=="attack")return baseline;
+  const scene=(this as unknown as InternalState).scene;
+  const actor=scene.entities.find((entity)=>entity.id===action.actorId);
+  if(!actor)return baseline;
+  return scene.entities
+    .filter((entity)=>entity.id!==actor.id&&(entity.side!==actor.side||entity.kind==="character"))
+    .map((entity)=>entity.id);
+};
 
 const previousSelectProductionCharacter=MockAdapter.prototype.selectProductionCharacter;
 MockAdapter.prototype.selectProductionCharacter=async function selectProductionCharacterWithReferenceMaterialization(characterId:string) {
