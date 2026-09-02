@@ -49,9 +49,10 @@ W1: 8/8 PASS — COMPLETE
 W2: 8/8 PASS — COMPLETE
 W3: 8/8 PASS — COMPLETE
 W4: 8/8 PASS — COMPLETE
-Official ledger score: 50.0/100.0
-PASS: 38/72
-Remaining gates: 34/72
+W5: 1/10 PASS
+Official ledger score: 51.5/100.0
+PASS: 39/72
+Remaining gates: 33/72
 FAIL: 0
 BLOCKED: 0
 ```
@@ -76,10 +77,13 @@ W1 — COMPLETE (8/8 PASS)
 W2 — COMPLETE (8/8 PASS)
 W3 — COMPLETE (8/8 PASS)
 W4 — COMPLETE (8/8 PASS)
-Next exact Gate: W5-01
+W5 — 1/10 PASS
+Next exact Gate: W5-02
 ```
 
-W4-08 is closed by exact-SHA Windows Tauri Campaign reopen evidence. Product verification SHA `2ac28651312f1fdbe82edb74fd13f342a8f910f7` passed V1 Tauri Verification run `33636100197`, job `100267245439` (`tauri-w3`). The existing production journey prepares a playable Character and Campaign through the real UI, saves a DM-owned PC preset, starts a local Host Session, performs play and Long Rest with +8h Campaign time, ends the Session through the production pane, exits the app process, relaunches on the same data root, reopens the Campaign, and asserts absolute time `480` minutes plus one completed session-history entry. The same job passed `tests/ui/appProviderStopSessionRefresh.test.ts` 2/2 before the Tauri journey. Artifact `9849024676` (`SimpleVTT-W3-Tauri-2ac28651312f1fdbe82edb74fd13f342a8f910f7`) has digest `sha256:40fd32b55ec3f6d92f47c29b6acff20d599e64b3b7f757ddf5c9b73e270860e3`. Actions synthetic merge `f05147605e4dce56a0552b69fa361f28d4c5cf60` has no file differences from verification head `2ac28651312f1fdbe82edb74fd13f342a8f910f7`, and the compare from that verification SHA through canonical `ceaf3ebf786ffa13d934d68c0fcebcc58cb00ae8` changes only canonical evidence/current documents plus the W4-07 evidence record. No product/runtime defect was reproduced and no product code changed for W4-08. W4 is complete; the first non-PASS Gate is now W5-01.
+W5-01 is closed by inherited exact-SHA connected topology and participant-lifecycle evidence. Product verification SHA `2ac28651312f1fdbe82edb74fd13f342a8f910f7` passed GitHub Actions UI run `33636100212`, job `100267245818`, including connected topology/continuity/Session-layer coverage plus the live lifecycle, late-join, and connection-safety suites. `productionParticipantLifecycle.test.ts` fixes valid live late join, incompatible/invalid rejection without ghost state, replacement reconnect, and ordered Host-authoritative catch-up; `productionClientReconnect.test.ts` fixes reconnect from the accepted replica cursor with exactly-once hello-ack catch-up. On the same exact product SHA, V1 Tauri Verification run `33636100197`, job `100267245684` (`tauri-w4-07-spatial`), passed the real Windows H+P1+P2 connected topology and replacement reconnect path. Artifact `9849024415` (`SimpleVTT-W4-07-G01-G09-2ac28651312f1fdbe82edb74fd13f342a8f910f7`) has digest `sha256:b044f73320cd10bf2446695677ca2098c7c162d01190feed7ecc599078c656a0`. GitHub compare from the verification SHA through canonical evidence base `8a4d279d0144abdabeb8c1402cf86c5f55defe64` changes only canonical evidence/current documents plus the W4-07 evidence record, and PR #255 adds only `roadmap/evidence/W5-01.md`, so the verified product/runtime/tests are inherited unchanged. No product/runtime defect was reproduced and no product code changed for W5-01. The first non-PASS Gate is now W5-02.
+
+W4-08 is closed by exact-SHA Windows Tauri Campaign reopen evidence. Product verification SHA `2ac28651312f1fdbe82edb74fd13f342a8f910f7` passed V1 Tauri Verification run `33636100197`, job `100267245439` (`tauri-w3`). The existing production journey prepares a playable Character and Campaign through the real UI, saves a DM-owned PC preset, starts a local Host Session, performs play and Long Rest with +8h Campaign time, ends the Session through the production pane, exits the app process, relaunches on the same data root, reopens the Campaign, and asserts absolute time `480` minutes plus one completed session-history entry. The same job passed `tests/ui/appProviderStopSessionRefresh.test.ts` 2/2 before the Tauri journey. Artifact `9849024676` (`SimpleVTT-W3-Tauri-2ac28651312f1fdbe82edb74fd13f342a8f910f7`) has digest `sha256:40fd32b55ec3f6d92f47c29b6acff20d599e64b3b7f757ddf5c9b73e270860e3`. Actions synthetic merge `f05147605e4dce56a0552b69fa361f28d4c5cf60` has no file differences from verification head `2ac28651312f1fdbe82edb74fd13f342a8f910f7`, and the compare from that verification SHA through canonical `ceaf3ebf786ffa13d934d68c0fcebcc58cb00ae8` changes only canonical evidence/current documents plus the W4-07 evidence record. No product/runtime defect was reproduced and no product code changed for W4-08. W4 is complete.
 
 W4-07 is closed by exact-SHA multiplayer DM-preparation evidence. Product verification SHA `2ac28651312f1fdbe82edb74fd13f342a8f910f7` passed GitHub Actions UI run `33636100212`, job `100267245818`, including connected topology/continuity/Session-layer coverage and the frontend build. V1 Tauri Verification run `33636100197`, job `100267245684` (`tauri-w4-07-spatial`), passed the real Windows H+P1+P2 acceptance for all `MP-G01` through `MP-G09`: NPC quick-add, PC preset quick-add, validated custom JSON materialization, handout reveal/withdraw, reconnect continuity, DM-only privacy, Session-pinned lookup, mapless spatial fallback, and compatible-provider Host validation. Artifact `9849024415` (`SimpleVTT-W4-07-G01-G09-2ac28651312f1fdbe82edb74fd13f342a8f910f7`) has digest `sha256:b044f73320cd10bf2446695677ca2098c7c162d01190feed7ecc599078c656a0`. PR #249 merged the verified tree as `2ffc2004d795a350a4aa3676bcd7d4cb362f1ea1` with no file differences from the verification SHA, and PR #251 added the focused `roadmap/evidence/W4-07.md` record only. No product/runtime defect was reproduced.
 
@@ -123,9 +127,9 @@ W1-06 was the only Gate with a reproduced product gap: the real Character Librar
 
 ### Next execution sequence
 
-1. Start `W5-01`, the first non-`PASS` Gate in the ledger.
-2. Do not reopen W1-W4; reuse their recorded exact-SHA evidence unless a new current-HEAD regression is reproduced.
-3. For `W5-01`, inspect only the repository-defined acceptance criterion and its existing production/test owner before authorizing any product-code change.
+1. Start `W5-02`, the first non-`PASS` Gate in the ledger.
+2. Do not reopen W1-W5-01; reuse their recorded exact-SHA evidence unless a new current-HEAD regression is reproduced.
+3. For `W5-02`, inspect only the repository-defined acceptance criterion and its existing production/test owner before authorizing any product-code change.
 4. For Common Play, follow [`design/ui-ux/COMMON-PLAY-FUNCTION-FIRST.md`](design/ui-ux/COMMON-PLAY-FUNCTION-FIRST.md): functional reachability first, broad UI redesign later.
 
 ## Non-negotiable execution rules
