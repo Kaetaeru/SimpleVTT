@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { AppSnapshot, CombatantDefinitionVm } from "../../src/app/contracts";
 import { MemoryCampaignLibraryStore } from "../../src/app/memoryCampaignLibraryStore";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import { setCampaignLibraryStoreForTests } from "../../src/app/campaignRuntimeAdapter";
@@ -58,7 +57,7 @@ test("DM Library folders support rename and deletion without deleting organized 
   assert.equal(preserved?.pcPreset?.definitionId,"local.guard.preset");
 });
 
-test("PC preset validates authority, updates, materializes, and deletes through Campaign-owned paths",async()=>{
+test("PC preset materializes fresh DM-controlled Actors without creating Player-owned Characters",async()=>{
   const adapter=new MockAdapter();
   setCampaignLibraryStoreForTests(adapter,new MemoryCampaignLibraryStore());
   await adapter.createCampaign({campaignId:CAMPAIGN_ID,name:"Library Organization"});
@@ -67,27 +66,42 @@ test("PC preset validates authority, updates, materializes, and deletes through 
   await adapter.upsertCampaignDmLibraryEntry(CAMPAIGN_ID,presetEntry());
   await adapter.upsertCampaignDmLibraryEntry(CAMPAIGN_ID,{...presetEntry(),label:"정예 호위 기사",pcPreset:{...presetEntry().pcPreset,name:"정예 호위 기사",level:4,maxHp:36}});
 
-  let snapshot=await adapter.getSnapshot();
-  let campaign=snapshot.campaigns?.find((candidate)=>candidate.campaignId===CAMPAIGN_ID);
-  assert.equal(campaign?.dmLibrary.entries.find((entry)=>entry.entryId==="dm-pc-preset.guard")?.pcPreset?.level,4);
+  const before=await adapter.getSnapshot();
+  const characterIdsBefore=before.characters.map((character)=>character.id);
+  const sourceBefore=structuredClone(before.campaigns?.find((campaign)=>campaign.campaignId===CAMPAIGN_ID)?.dmLibrary.entries.find((entry)=>entry.entryId==="dm-pc-preset.guard")?.pcPreset);
 
-  const definitions:CombatantDefinitionVm[]=[];
-  (adapter as unknown as {combatantDefinitions:CombatantDefinitionVm[]}).combatantDefinitions=definitions;
-  let instantiated:string|null=null;
-  adapter.instantiateCombatant=async(definitionId:string)=>{instantiated=definitionId;return adapter.getSnapshot() as Promise<AppSnapshot>;};
+  const first=await adapter.instantiateCampaignDmLibraryPcPreset(CAMPAIGN_ID,"dm-pc-preset.guard");
+  const firstActors=first.scene.entities.filter((entity)=>entity.id.startsWith("local.guard.preset.instance-"));
+  assert.equal(firstActors.length,1);
+  assert.equal(firstActors[0].kind,"combatant");
+  assert.equal(firstActors[0].side,"ally");
+  assert.equal(firstActors[0].hp,36);
+  assert.equal(firstActors[0].maxHp,36);
+  assert.equal(firstActors[0].tempHp,0);
+  assert.deepEqual(first.characters.map((character)=>character.id),characterIdsBefore);
+  assert.equal(first.characters.some((character)=>character.id===firstActors[0].id),false);
+  assert.ok(first.scene.actionsByActor[firstActors[0].id]?.every((action)=>action.actorId===firstActors[0].id));
 
-  await adapter.instantiateCampaignDmLibraryPcPreset(CAMPAIGN_ID,"dm-pc-preset.guard");
-  assert.equal(instantiated,"local.guard.preset");
-  assert.equal(definitions.find((definition)=>definition.id==="local.guard.preset")?.name,"정예 호위 기사");
+  const second=await adapter.instantiateCampaignDmLibraryPcPreset(CAMPAIGN_ID,"dm-pc-preset.guard");
+  const secondActors=second.scene.entities.filter((entity)=>entity.id.startsWith("local.guard.preset.instance-"));
+  assert.equal(secondActors.length,2);
+  assert.notEqual(secondActors[0].id,secondActors[1].id);
+  assert.ok(secondActors.every((entity)=>entity.side==="ally"&&entity.kind==="combatant"&&entity.hp===entity.maxHp));
+  assert.deepEqual(second.characters.map((character)=>character.id),characterIdsBefore);
 
-  snapshot=await adapter.getSnapshot();
-  campaign=snapshot.campaigns?.find((candidate)=>candidate.campaignId===CAMPAIGN_ID);
+  const campaign=second.campaigns?.find((candidate)=>candidate.campaignId===CAMPAIGN_ID);
+  const sourceAfter=campaign?.dmLibrary.entries.find((entry)=>entry.entryId==="dm-pc-preset.guard")?.pcPreset;
+  assert.deepEqual(sourceAfter,sourceBefore);
   assert.equal(campaign?.dmLibrary.recentEntryIds[0],"dm-pc-preset.guard");
 
+  await adapter.joinSession("127.0.0.1:3210");
+  await assert.rejects(()=>adapter.instantiateCampaignDmLibraryPcPreset(CAMPAIGN_ID,"dm-pc-preset.guard"),/DM Campaign/i);
+
+  await adapter.hostSession();
   await adapter.removeCampaignDmLibraryEntry(CAMPAIGN_ID,"dm-pc-preset.guard");
-  snapshot=await adapter.getSnapshot();
-  campaign=snapshot.campaigns?.find((candidate)=>candidate.campaignId===CAMPAIGN_ID);
-  assert.equal(campaign?.dmLibrary.entries.some((entry)=>entry.entryId==="dm-pc-preset.guard"),false);
+  const afterDelete=await adapter.getSnapshot();
+  const afterDeleteCampaign=afterDelete.campaigns?.find((candidate)=>candidate.campaignId===CAMPAIGN_ID);
+  assert.equal(afterDeleteCampaign?.dmLibrary.entries.some((entry)=>entry.entryId==="dm-pc-preset.guard"),false);
 });
 
 test("private DM notes validate, persist, update, organize, and delete through the shared Library transaction",async()=>{
