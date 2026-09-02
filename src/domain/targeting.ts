@@ -101,7 +101,6 @@ export function resolveTargeting(
   const rejected: TargetRejection[] = [];
   const targets: TargetResolutionEntry[] = [];
   const seen = new Set<string>();
-  const requiresDistance = rule.minimumRangeFeet !== undefined || rule.rangeFeet !== undefined;
   const requiresCover = rule.directTarget !== false;
 
   if (selected.length < rule.minTargets || selected.length > rule.maxTargets) {
@@ -118,10 +117,7 @@ export function resolveTargeting(
     if (seen.has(target.id)) reasons.push("duplicate target");
     seen.add(target.id);
 
-    if (requiresDistance) {
-      if (target.distanceFeet === undefined) reasons.push("authoritative distance is required");
-      else if (!Number.isFinite(target.distanceFeet) || target.distanceFeet < 0) reasons.push("invalid authoritative distance");
-    } else if (target.distanceFeet !== undefined && (!Number.isFinite(target.distanceFeet) || target.distanceFeet < 0)) {
+    if (target.distanceFeet !== undefined && (!Number.isFinite(target.distanceFeet) || target.distanceFeet < 0)) {
       reasons.push("invalid authoritative distance");
     }
 
