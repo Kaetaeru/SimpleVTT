@@ -82,6 +82,7 @@ test("MP-C20 core · a disabled remote action returns its explicit production re
     assert.ok(disabled?.disabledReason,"fixture requires a production-disabled projected attack with an explicit reason");
     const reason=disabled.disabledReason;
     const cursorBefore=state.ledger.cursor;
+    const broadcastBefore=transport.broadcasts().length;
     const resourceBefore=structuredClone(disabledSnapshot.activeCharacter.resources);
     const itemBefore=structuredClone(disabledSnapshot.activeCharacter.items);
 
@@ -93,7 +94,7 @@ test("MP-C20 core · a disabled remote action returns its explicit production re
     assert.equal(error.code,"action-disabled");
     assert.equal(error.message,reason);
     assert.equal(state.ledger.cursor,cursorBefore,"disabled action must not commit an event");
-    assert.equal(transport.broadcasts().length,0,"disabled action must not publish a roll or cinematic");
+    assert.equal(transport.broadcasts().length,broadcastBefore,"disabled action must not publish a roll or cinematic");
     assert.equal(state.pendingRemoteAction,null,"disabled action must not leave a pending resolution");
     const after=await host.getSnapshot();
     assert.equal(after.resolution,null,"disabled action must not start mechanics");
