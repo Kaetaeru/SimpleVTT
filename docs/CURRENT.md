@@ -48,10 +48,10 @@ W0: 6/6 PASS
 W1: 8/8 PASS — COMPLETE
 W2: 8/8 PASS — COMPLETE
 W3: 8/8 PASS — COMPLETE
-W4: 1/8 PASS
-Official ledger score: 41.3/100.0
-PASS: 31/72
-Remaining gates: 41/72
+W4: 2/8 PASS
+Official ledger score: 42.5/100.0
+PASS: 32/72
+Remaining gates: 40/72
 FAIL: 0
 BLOCKED: 0
 ```
@@ -75,11 +75,13 @@ W0 — COMPLETE
 W1 — COMPLETE (8/8 PASS)
 W2 — COMPLETE (8/8 PASS)
 W3 — COMPLETE (8/8 PASS)
-W4 — 1/8 PASS
-Next exact Gate: W4-02
+W4 — 2/8 PASS
+Next exact Gate: W4-03
 ```
 
-W4-01 is closed by inherited exact-SHA Campaign lifecycle evidence. Product SHA `5bef709f010543859e84c98ef7db8f14e5c06469` passed GitHub Actions UI run `33570546168`, job `100063331529`, including the `Verify Campaign lifecycle and declarative providers` step. Existing `campaignPersistence.test.ts` covers durable create/read/update/archive/restore/duplicate/delete and reload, while `campaignLifecycleRuntime.test.ts` proves duplicated Campaign-owned Party Stash and DM Library namespaces are independent and delete removes only the intended Campaign. `src/app/campaignPersistence.ts` derives Campaign-owned stash, DM Library, and content-loadout IDs from `campaignId`. The compare from the verified product SHA through canonical `b917e20b27d6c80a3bcc5783c20c9b0fd0042894` changes only the four W3 evidence/current docs, so the verified Campaign implementation/tests are inherited unchanged. No product code changed for W4-01. The first non-PASS Gate is now W4-02.
+W4-02 is closed by inherited exact-SHA Campaign dashboard/session-binding evidence. Product SHA `5bef709f010543859e84c98ef7db8f14e5c06469` passed GitHub Actions UI run `33570546168`, job `100063331529`, including the `Verify Campaign lifecycle and declarative providers` step. Existing `campaignProductUiStructure.test.ts` fixes Campaign as a first-class route and verifies Host requires a selected Campaign through the prepared snapshot path. `ProductionSessionWorkspaceBridge` disables offline/disconnected Host when no active Campaign exists, prepares `activeCampaign.campaignId`, and only then calls `app.hostSession()`. `campaignRuntimeAdapter` rejects a missing Campaign and binds Campaign identity/revision/content-loadout revision plus immutable Campaign settings into the AppSnapshot/Session. The lower production session lifecycle remains responsible only for transport/lifecycle rather than duplicating Campaign policy. The compare from the verified product SHA through canonical `c005f32e7e4f564d479771013192291d7992dff0` changes only evidence/current docs, so the verified W4-02 product/tests are inherited unchanged. No product code changed for W4-02. The first non-PASS Gate is now W4-03.
+
+W4-01 is closed by inherited exact-SHA Campaign lifecycle evidence. Product SHA `5bef709f010543859e84c98ef7db8f14e5c06469` passed GitHub Actions UI run `33570546168`, job `100063331529`, including the `Verify Campaign lifecycle and declarative providers` step. Existing `campaignPersistence.test.ts` covers durable create/read/update/archive/restore/duplicate/delete and reload, while `campaignLifecycleRuntime.test.ts` proves duplicated Campaign-owned Party Stash and DM Library namespaces are independent and delete removes only the intended Campaign. `src/app/campaignPersistence.ts` derives Campaign-owned stash, DM Library, and content-loadout IDs from `campaignId`. No product code changed for W4-01.
 
 W3-08 is closed on exact Windows verification SHA `53ec501555222b60d9e856b231f4f64395f75b76`. GitHub Actions V1 Tauri Verification run `33569954938`, job `100061523302`, passed the complete local lifecycle through the real Windows Tauri product: Character creation, Campaign DM-owned PC preset save, local Host session, production DM Library materialization, weapon attack, damage spell, Long Rest with +8h Campaign time, UI session end, process exit, same-data-root restart, Campaign time `480` minutes, and one completed session-history entry. Artifact `9824674856` (`SimpleVTT-W3-Tauri-53ec501555222b60d9e856b231f4f64395f75b76`) has digest `sha256:d51dd1d962be4533b31551f900dae26655d3a4e2b05aa8131ffa98122bb18034`. Canonical merge `5bef709f010543859e84c98ef7db8f14e5c06469` shares tree `0e6baadda2570b169c35c6b7436ff4e0042dfff0` with the verified head.
 
@@ -109,9 +111,9 @@ W1-06 was the only Gate with a reproduced product gap: the real Character Librar
 
 ### Next execution sequence
 
-1. Start `W4-02`, the first non-`PASS` Gate in the ledger.
-2. Do not reopen W1-W4-01; reuse their recorded exact-SHA evidence unless a new current-HEAD regression is reproduced.
-3. For `W4-02`, inspect only the repository-defined acceptance criterion and its existing production/test owner before authorizing any product-code change.
+1. Start `W4-03`, the first non-`PASS` Gate in the ledger.
+2. Do not reopen W1-W4-02; reuse their recorded exact-SHA evidence unless a new current-HEAD regression is reproduced.
+3. For `W4-03`, inspect only the repository-defined acceptance criterion and its existing production/test owner before authorizing any product-code change.
 4. For Common Play, follow [`design/ui-ux/COMMON-PLAY-FUNCTION-FIRST.md`](design/ui-ux/COMMON-PLAY-FUNCTION-FIRST.md): functional reachability first, broad UI redesign later.
 
 ## Non-negotiable execution rules

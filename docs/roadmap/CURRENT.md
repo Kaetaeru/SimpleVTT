@@ -42,10 +42,10 @@ W0: COMPLETE — 6/6 PASS
 W1: COMPLETE — 8/8 PASS
 W2: COMPLETE — 8/8 PASS
 W3: COMPLETE — 8/8 PASS
-W4: 1/8 PASS
-Official ledger score: 41.3/100.0
-PASS: 31/72
-PENDING: 41/72
+W4: 2/8 PASS
+Official ledger score: 42.5/100.0
+PASS: 32/72
+PENDING: 40/72
 FAIL: 0
 BLOCKED: 0
 ```
@@ -53,10 +53,12 @@ BLOCKED: 0
 ## Current stage
 
 ```text
-Next Gate: W4-02
+Next Gate: W4-03
 ```
 
-`W4-01` is PASS by inherited exact-SHA Campaign lifecycle evidence. Product SHA `5bef709f010543859e84c98ef7db8f14e5c06469` passed GitHub Actions UI run `33570546168`, job `100063331529`; step `Verify Campaign lifecycle and declarative providers` succeeded. Existing `campaignPersistence.test.ts` covers durable create/read/update/archive/restore/duplicate/delete and reload, while `campaignLifecycleRuntime.test.ts` verifies duplicated Campaign-owned Party Stash and DM Library namespaces are independent and delete removes only the target Campaign. `src/app/campaignPersistence.ts` derives Campaign-owned stash, DM Library, and content-loadout IDs from `campaignId`. The compare from that verified product SHA through canonical `b917e20b27d6c80a3bcc5783c20c9b0fd0042894` changes only the four W3 evidence/current docs, so the verified product/tests are inherited unchanged. No product code changed for W4-01; the next exact Gate is `W4-02`.
+`W4-02` is PASS by inherited exact-SHA Campaign dashboard/session-binding evidence. Product SHA `5bef709f010543859e84c98ef7db8f14e5c06469` passed GitHub Actions UI run `33570546168`, job `100063331529`; step `Verify Campaign lifecycle and declarative providers` succeeded and includes `campaignProductUiStructure.test.ts` plus `campaignRuntimeAdapter.test.ts`. The production `ProductionSessionWorkspaceBridge` disables offline/disconnected Host without an active Campaign, calls `prepareCampaignSessionSnapshot(activeCampaign.campaignId)`, and only then calls `app.hostSession()`. The Campaign runtime rejects a missing Campaign and binds Campaign identity/revision/content-loadout revision plus an immutable Campaign settings snapshot into AppSnapshot/Session. The compare from that product SHA through canonical `c005f32e7e4f564d479771013192291d7992dff0` changes only evidence/current docs, so the verified W4-02 implementation/tests are inherited unchanged. No product code changed for W4-02; the next exact Gate is `W4-03`.
+
+`W4-01` is PASS by inherited exact-SHA Campaign lifecycle evidence. Product SHA `5bef709f010543859e84c98ef7db8f14e5c06469` passed GitHub Actions UI run `33570546168`, job `100063331529`; step `Verify Campaign lifecycle and declarative providers` succeeded. Existing `campaignPersistence.test.ts` covers durable create/read/update/archive/restore/duplicate/delete and reload, while `campaignLifecycleRuntime.test.ts` verifies duplicated Campaign-owned Party Stash and DM Library namespaces are independent and delete removes only the target Campaign. `src/app/campaignPersistence.ts` derives Campaign-owned stash, DM Library, and content-loadout IDs from `campaignId`. No product code changed for W4-01.
 
 `W3-08` is PASS on exact Windows verification SHA `53ec501555222b60d9e856b231f4f64395f75b76`. GitHub Actions V1 Tauri Verification run `33569954938`, job `100061523302`, passed the complete local journey: Character -> Campaign DM-owned PC preset -> local Host -> production DM Library drop -> weapon attack + damage spell -> Long Rest (+8h) -> UI session end -> process exit -> same-data-root restart, with Campaign time `480` minutes and session history `1회`. Artifact `9824674856` (`SimpleVTT-W3-Tauri-53ec501555222b60d9e856b231f4f64395f75b76`) has digest `sha256:d51dd1d962be4533b31551f900dae26655d3a4e2b05aa8131ffa98122bb18034`. Canonical merge `5bef709f010543859e84c98ef7db8f14e5c06469` shares tree `0e6baadda2570b169c35c6b7436ff4e0042dfff0` with the verified head. W3 is complete.
 
