@@ -9,6 +9,7 @@ on:
       - "src-tauri/**"
       - "scripts/run-tauri-e2e.*"
       - "scripts/run-tauri-e2e-w4-07.mjs"
+      - "scripts/run-tauri-e2e-w4-07-handout.mjs"
       - "tests/ui/appProviderStopSessionRefresh.test.ts"
       - "package.json"
       - "package-lock.json"
@@ -88,11 +89,14 @@ jobs:
       - name: Verify W4-07 G01/G02/G03/G08/G09 in Windows Tauri H+P1+P2
         shell: pwsh
         run: npm run test:e2e:tauri -- --w407
+      - name: Verify W4-07 G04/G05/G06/G07 in Windows Tauri H+P1+P2
+        shell: pwsh
+        run: node scripts/run-tauri-e2e-w4-07-handout.mjs
       - name: Upload Tauri evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: SimpleVTT-W4-07-G01-G02-G03-G08-G09-${{ env.V1_VERIFICATION_SHA }}
+          name: SimpleVTT-W4-07-G01-G09-${{ env.V1_VERIFICATION_SHA }}
           path: .live-dev/tauri-e2e/**/artifacts/**
           if-no-files-found: warn
           retention-days: 14
