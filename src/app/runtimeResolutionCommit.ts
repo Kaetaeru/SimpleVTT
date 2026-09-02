@@ -36,6 +36,7 @@ export interface RuntimeResolutionPresentation {
   authoritativeDice?:number[];
   rollTotal?:number;
   attackTotal?:number;
+  saveResults?:ResolutionView["saveResults"];
   damageComponents?:DamageComponentView[];
 }
 
@@ -86,7 +87,7 @@ export async function commitProductionRuntimeResolution(
     authoritativeDice:[...(presentation.authoritativeDice??[])],
     rollTotal:presentation.rollTotal,
     attackTotal:presentation.attackTotal,
-    saveResults:[],
+    saveResults:structuredClone(presentation.saveResults??[]),
     damageComponents:structuredClone(presentation.damageComponents??[]),
     compact:presentation.compact,
     detail:presentation.detail,
