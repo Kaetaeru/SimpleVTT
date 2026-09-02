@@ -163,6 +163,10 @@ async function finishResolution(host:MockAdapter,actorId:string){
   for(let step=0;step<16;step+=1){
     const snapshot=await host.getSnapshot();
     if(snapshot.resolution?.stage==="complete")return snapshot;
+    if(snapshot.resolution?.rollKind==="check"&&snapshot.resolution.stage==="effect-preview"&&snapshot.resolution.checkTarget===undefined){
+      await host.applyDmAdjudication({type:"ability-check-dc",value:15,scope:"resolution"});
+      continue;
+    }
     assert.ok(snapshot.resolution?.canAdvance,`resolution ${snapshot.resolution?.id??"<missing>"} stopped before complete`);
     await host.advanceResolution();
   }
