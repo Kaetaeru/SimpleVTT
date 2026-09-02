@@ -48,10 +48,10 @@ W0: 6/6 PASS
 W1: 8/8 PASS — COMPLETE
 W2: 8/8 PASS — COMPLETE
 W3: 8/8 PASS — COMPLETE
-W4: 2/8 PASS
-Official ledger score: 42.5/100.0
-PASS: 32/72
-Remaining gates: 40/72
+W4: 3/8 PASS
+Official ledger score: 43.8/100.0
+PASS: 33/72
+Remaining gates: 39/72
 FAIL: 0
 BLOCKED: 0
 ```
@@ -75,11 +75,13 @@ W0 — COMPLETE
 W1 — COMPLETE (8/8 PASS)
 W2 — COMPLETE (8/8 PASS)
 W3 — COMPLETE (8/8 PASS)
-W4 — 2/8 PASS
-Next exact Gate: W4-03
+W4 — 3/8 PASS
+Next exact Gate: W4-04
 ```
 
-W4-02 is closed by inherited exact-SHA Campaign dashboard/session-binding evidence. Product SHA `5bef709f010543859e84c98ef7db8f14e5c06469` passed GitHub Actions UI run `33570546168`, job `100063331529`, including the `Verify Campaign lifecycle and declarative providers` step. Existing `campaignProductUiStructure.test.ts` fixes Campaign as a first-class route and verifies Host requires a selected Campaign through the prepared snapshot path. `ProductionSessionWorkspaceBridge` disables offline/disconnected Host when no active Campaign exists, prepares `activeCampaign.campaignId`, and only then calls `app.hostSession()`. `campaignRuntimeAdapter` rejects a missing Campaign and binds Campaign identity/revision/content-loadout revision plus immutable Campaign settings into the AppSnapshot/Session. The lower production session lifecycle remains responsible only for transport/lifecycle rather than duplicating Campaign policy. The compare from the verified product SHA through canonical `c005f32e7e4f564d479771013192291d7992dff0` changes only evidence/current docs, so the verified W4-02 product/tests are inherited unchanged. No product code changed for W4-02. The first non-PASS Gate is now W4-03.
+W4-03 is closed by inherited exact-SHA Campaign roster, Session snapshot, history, and summary evidence. Product SHA `5bef709f010543859e84c98ef7db8f14e5c06469` passed GitHub Actions UI run `33570546168`, job `100063331529`, including `campaignRuntimeAdapter.test.ts`, which verifies Campaign-owned roster projection and immutable Session preparation snapshots. `campaignSystems.test.ts` verifies revisioned roster mutations plus `appendSessionSummary` persistence with bounded 50-entry history and `lastSessionId`. Production `main.tsx` composes `campaignSessionHistoryRuntimeAdapter`, which wraps successful Host stop, derives the completed Session summary from the captured Campaign snapshot and live participant/calendar/ration/stash state, persists it, and clears the Session snapshot. Windows Tauri run `33569954938`, job `100061523302`, at SHA `53ec501555222b60d9e856b231f4f64395f75b76` ended the Session through the rendered UI, exited, relaunched on the same data root, and showed one completed Campaign session-history entry. Artifact `9824674856` has digest `sha256:d51dd1d962be4533b31551f900dae26655d3a4e2b05aa8131ffa98122bb18034`. The Windows SHA and canonical product merge `5bef709f010543859e84c98ef7db8f14e5c06469` share tree `0e6baadda2570b169c35c6b7436ff4e0042dfff0`; the compare through canonical `fd14887dd286725d2ec71b48a70d121b6c63d8d6` changes only evidence/current docs. No product code changed for W4-03. The first non-PASS Gate is now W4-04.
+
+W4-02 is closed by inherited exact-SHA Campaign dashboard/session-binding evidence. Product SHA `5bef709f010543859e84c98ef7db8f14e5c06469` passed GitHub Actions UI run `33570546168`, job `100063331529`, including the `Verify Campaign lifecycle and declarative providers` step. Existing `campaignProductUiStructure.test.ts` fixes Campaign as a first-class route and verifies Host requires a selected Campaign through the prepared snapshot path. `ProductionSessionWorkspaceBridge` disables offline/disconnected Host when no active Campaign exists, prepares `activeCampaign.campaignId`, and only then calls `app.hostSession()`. `campaignRuntimeAdapter` rejects a missing Campaign and binds Campaign identity/revision/content-loadout revision plus immutable Campaign settings into the AppSnapshot/Session. The lower production session lifecycle remains responsible only for transport/lifecycle rather than duplicating Campaign policy. The compare from the verified product SHA through canonical `c005f32e7e4f564d479771013192291d7992dff0` changes only evidence/current docs, so the verified W4-02 product/tests are inherited unchanged. No product code changed for W4-02.
 
 W4-01 is closed by inherited exact-SHA Campaign lifecycle evidence. Product SHA `5bef709f010543859e84c98ef7db8f14e5c06469` passed GitHub Actions UI run `33570546168`, job `100063331529`, including the `Verify Campaign lifecycle and declarative providers` step. Existing `campaignPersistence.test.ts` covers durable create/read/update/archive/restore/duplicate/delete and reload, while `campaignLifecycleRuntime.test.ts` proves duplicated Campaign-owned Party Stash and DM Library namespaces are independent and delete removes only the intended Campaign. `src/app/campaignPersistence.ts` derives Campaign-owned stash, DM Library, and content-loadout IDs from `campaignId`. No product code changed for W4-01.
 
@@ -111,9 +113,9 @@ W1-06 was the only Gate with a reproduced product gap: the real Character Librar
 
 ### Next execution sequence
 
-1. Start `W4-03`, the first non-`PASS` Gate in the ledger.
-2. Do not reopen W1-W4-02; reuse their recorded exact-SHA evidence unless a new current-HEAD regression is reproduced.
-3. For `W4-03`, inspect only the repository-defined acceptance criterion and its existing production/test owner before authorizing any product-code change.
+1. Start `W4-04`, the first non-`PASS` Gate in the ledger.
+2. Do not reopen W1-W4-03; reuse their recorded exact-SHA evidence unless a new current-HEAD regression is reproduced.
+3. For `W4-04`, inspect only the repository-defined acceptance criterion and its existing production/test owner before authorizing any product-code change.
 4. For Common Play, follow [`design/ui-ux/COMMON-PLAY-FUNCTION-FIRST.md`](design/ui-ux/COMMON-PLAY-FUNCTION-FIRST.md): functional reachability first, broad UI redesign later.
 
 ## Non-negotiable execution rules

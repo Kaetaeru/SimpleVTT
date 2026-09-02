@@ -42,10 +42,10 @@ W0: COMPLETE — 6/6 PASS
 W1: COMPLETE — 8/8 PASS
 W2: COMPLETE — 8/8 PASS
 W3: COMPLETE — 8/8 PASS
-W4: 2/8 PASS
-Official ledger score: 42.5/100.0
-PASS: 32/72
-PENDING: 40/72
+W4: 3/8 PASS
+Official ledger score: 43.8/100.0
+PASS: 33/72
+PENDING: 39/72
 FAIL: 0
 BLOCKED: 0
 ```
@@ -53,10 +53,12 @@ BLOCKED: 0
 ## Current stage
 
 ```text
-Next Gate: W4-03
+Next Gate: W4-04
 ```
 
-`W4-02` is PASS by inherited exact-SHA Campaign dashboard/session-binding evidence. Product SHA `5bef709f010543859e84c98ef7db8f14e5c06469` passed GitHub Actions UI run `33570546168`, job `100063331529`; step `Verify Campaign lifecycle and declarative providers` succeeded and includes `campaignProductUiStructure.test.ts` plus `campaignRuntimeAdapter.test.ts`. The production `ProductionSessionWorkspaceBridge` disables offline/disconnected Host without an active Campaign, calls `prepareCampaignSessionSnapshot(activeCampaign.campaignId)`, and only then calls `app.hostSession()`. The Campaign runtime rejects a missing Campaign and binds Campaign identity/revision/content-loadout revision plus an immutable Campaign settings snapshot into AppSnapshot/Session. The compare from that product SHA through canonical `c005f32e7e4f564d479771013192291d7992dff0` changes only evidence/current docs, so the verified W4-02 implementation/tests are inherited unchanged. No product code changed for W4-02; the next exact Gate is `W4-03`.
+`W4-03` is PASS by inherited exact-SHA Campaign continuity evidence. Product SHA `5bef709f010543859e84c98ef7db8f14e5c06469` passed GitHub Actions UI run `33570546168`, job `100063331529`, including `campaignRuntimeAdapter.test.ts`, which verifies Campaign-owned roster projection and immutable Session preparation snapshots. `campaignSystems.test.ts` verifies revisioned roster mutations plus `appendSessionSummary` persistence with bounded 50-entry history and `lastSessionId`. Production `main.tsx` composes `campaignSessionHistoryRuntimeAdapter`, which wraps successful Host stop, derives a summary from the captured Campaign Session snapshot and live participant/calendar/ration/stash state, persists it, then clears the snapshot. Windows Tauri run `33569954938`, job `100061523302`, at SHA `53ec501555222b60d9e856b231f4f64395f75b76` ended the Session through the rendered UI, exited, relaunched with the same data root, and observed Campaign session history `1회`; artifact `9824674856` has digest `sha256:d51dd1d962be4533b31551f900dae26655d3a4e2b05aa8131ffa98122bb18034`. That Windows SHA and product merge `5bef709f010543859e84c98ef7db8f14e5c06469` share tree `0e6baadda2570b169c35c6b7436ff4e0042dfff0`, and the compare through canonical `fd14887dd286725d2ec71b48a70d121b6c63d8d6` changes only evidence/current docs. No product code changed for W4-03; the next exact Gate is `W4-04`.
+
+`W4-02` is PASS by inherited exact-SHA Campaign dashboard/session-binding evidence. Product SHA `5bef709f010543859e84c98ef7db8f14e5c06469` passed GitHub Actions UI run `33570546168`, job `100063331529`; step `Verify Campaign lifecycle and declarative providers` succeeded and includes `campaignProductUiStructure.test.ts` plus `campaignRuntimeAdapter.test.ts`. The production `ProductionSessionWorkspaceBridge` disables offline/disconnected Host without an active Campaign, calls `prepareCampaignSessionSnapshot(activeCampaign.campaignId)`, and only then calls `app.hostSession()`. The Campaign runtime rejects a missing Campaign and binds Campaign identity/revision/content-loadout revision plus an immutable Campaign settings snapshot into AppSnapshot/Session. The compare from that product SHA through canonical `c005f32e7e4f564d479771013192291d7992dff0` changes only evidence/current docs, so the verified W4-02 implementation/tests are inherited unchanged. No product code changed for W4-02.
 
 `W4-01` is PASS by inherited exact-SHA Campaign lifecycle evidence. Product SHA `5bef709f010543859e84c98ef7db8f14e5c06469` passed GitHub Actions UI run `33570546168`, job `100063331529`; step `Verify Campaign lifecycle and declarative providers` succeeded. Existing `campaignPersistence.test.ts` covers durable create/read/update/archive/restore/duplicate/delete and reload, while `campaignLifecycleRuntime.test.ts` verifies duplicated Campaign-owned Party Stash and DM Library namespaces are independent and delete removes only the target Campaign. `src/app/campaignPersistence.ts` derives Campaign-owned stash, DM Library, and content-loadout IDs from `campaignId`. No product code changed for W4-01.
 
