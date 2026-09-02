@@ -152,13 +152,14 @@ async function runtimeSnapshot(instance){
   const result=await instance.browser.executeAsync((done)=>{
     import("/src/app/mockAdapter.ts").then(async({mockAdapter})=>{
       const snapshot=await mockAdapter.getSnapshot();
-      done({activeCharacterId:snapshot.activeCharacter.id,activeCharacterName:snapshot.activeCharacter.name,role:snapshot.session.role,connectionState:snapshot.connectionState,currentActorId:snapshot.scene.currentActorId,entities:snapshot.scene.entities.map((entry)=>({id:entry.id,name:entry.name,hp:entry.hp,maxHp:entry.maxHp,side:entry.side})),resolution:snapshot.resolution?{id:snapshot.resolution.id,stage:snapshot.resolution.stage,finalOutcome:snapshot.resolution.finalOutcome,provenance:snapshot.resolution.provenance,stateChanges:snapshot.resolution.stateChanges}:null,participants:snapshot.session.participants.map((entry)=>({id:entry.id,characterName:entry.characterName,state:entry.state})),compatibilityMessage:snapshot.session.compatibilityMessage});
+      done({activeCharacterId:snapshot.activeCharacter.id,activeCharacterName:snapshot.activeCharacter.name,role:snapshot.session.role,connectionState:snapshot.connectionState,currentActorId:snapshot.scene.currentActorId,entities:snapshot.scene.entities.map((entry)=>({id:entry.id,name:entry.name,kind:entry.kind,hp:entry.hp,maxHp:entry.maxHp,side:entry.side})),resolution:snapshot.resolution?{id:snapshot.resolution.id,stage:snapshot.resolution.stage,finalOutcome:snapshot.resolution.finalOutcome,provenance:snapshot.resolution.provenance,stateChanges:snapshot.resolution.stateChanges}:null,participants:snapshot.session.participants.map((entry)=>({id:entry.id,characterName:entry.characterName,state:entry.state})),compatibilityMessage:snapshot.session.compatibilityMessage});
     }).catch((error)=>done({error:String(error?.stack??error)}));
   });
   assert.ok(!result.error,result.error);return result;
 }
 
 function entityHp(snapshot,entityId){return snapshot.entities.find((entry)=>entry.id===entityId)?.hp??null;}
+function entityById(snapshot,entityId){return snapshot.entities.find((entry)=>entry.id===entityId)??null;}
 
 async function waitForEntity(instance,entityId){
   await instance.browser.waitUntil(async()=>{const snapshot=await runtimeSnapshot(instance);return snapshot.entities.some((entry)=>entry.id===entityId);},{timeout:20_000,interval:150,timeoutMsg:`${instance.label} did not receive entity ${entityId}`});
@@ -168,6 +169,47 @@ async function waitForEntity(instance,entityId){
 async function waitForEntityHp(instance,entityId,hp){
   await instance.browser.waitUntil(async()=>entityHp(await runtimeSnapshot(instance),entityId)===hp,{timeout:20_000,interval:150,timeoutMsg:`${instance.label} did not converge ${entityId} to HP ${hp}`});
   return runtimeSnapshot(instance);
+}
+
+async function snapshotLeakFlags(instance,needles){
+  const result=await instance.browser.executeAsync((values,done)=>{
+    import("/src/app/mockAdapter.ts").then(async({mockAdapter})=>{
+      const serialized=JSON.stringify(await mockAdapter.getSnapshot());done({flags:Object.fromEntries(values.map((value)=>[value,serialized.includes(value)]))});
+    }).catch((error)=>done({error:String(error?.stack??error)}));
+  },needles);
+  assert.ok(!result.error,result.error);return result.flags;
+}
+
+async function clientOwnsActor(instance,actorId){
+  const result=await instance.browser.executeAsync((id,done)=>{
+    import("/src/app/mockAdapter.ts").then(async({mockAdapter})=>{const snapshot=await mockAdapter.getSnapshot();done({owns:snapshot.characters.some((entry)=>entry.id===id),activeCharacterId:snapshot.activeCharacter.id});}).catch((error)=>done({error:String(error?.stack??error)}));
+  },actorId);
+  assert.ok(!result.error,result.error);return result;
+}
+
+async function materializeHostLibraryActors(host,p1,p2){
+  const privateNeedles=["W4-G01-PRIVATE-SOURCE","W4-G01-PRIVATE-TAG","W4-G02-PRIVATE-SOURCE","W4-G02-PRIVATE-TAG"];
+  const result=await host.browser.executeAsync((done)=>{
+    (async()=>{
+      const {mockAdapter}=await import("/src/app/mockAdapter.ts");
+      const initial=await mockAdapter.getSnapshot();const campaign=initial.campaigns?.find((entry)=>entry.name==="W4-07 Windows 검증 캠페인");if(!campaign)throw new Error("W4-07 Campaign was not found");
+      const npcEntry={entryId:"w4.g01.npc",kind:"npc-definition",label:"W4 공개 경비병",definitionId:"local.w4.g01.guard",favorite:true,tags:["W4-G01-PRIVATE-TAG"],npcDefinition:{definitionId:"local.w4.g01.guard",name:"W4 공개 경비병",nameEn:"W4 Public Guard",ac:16,maxHp:18,actions:["창"],statusImmunities:[],source:"W4-G01-PRIVATE-SOURCE",version:"1"}};
+      const pcEntry={entryId:"w4.g02.pc",kind:"pc-preset",label:"W4 호위 기사",definitionId:"local.w4.g02.guard",favorite:true,tags:["W4-G02-PRIVATE-TAG"],pcPreset:{definitionId:"local.w4.g02.guard",name:"W4 호위 기사",level:3,ac:17,maxHp:28,actions:["장검"],statusImmunities:[],source:"W4-G02-PRIVATE-SOURCE",version:"1"}};
+      await mockAdapter.upsertCampaignDmLibraryEntry(campaign.campaignId,npcEntry);await mockAdapter.upsertCampaignDmLibraryEntry(campaign.campaignId,pcEntry);
+      const before=await mockAdapter.getSnapshot();
+      let snapshot=await mockAdapter.instantiateCampaignDmLibraryNpcDefinition(campaign.campaignId,npcEntry.entryId);const npc=snapshot.scene.entities.find((entry)=>entry.id.startsWith("local.w4.g01.guard.instance-"));
+      snapshot=await mockAdapter.instantiateCampaignDmLibraryPcPreset(campaign.campaignId,pcEntry.entryId);const pc=snapshot.scene.entities.find((entry)=>entry.id.startsWith("local.w4.g02.guard.instance-"));
+      const finalCampaign=snapshot.campaigns?.find((entry)=>entry.campaignId===campaign.campaignId);const npcSource=finalCampaign?.dmLibrary.entries.find((entry)=>entry.entryId===npcEntry.entryId);const pcSource=finalCampaign?.dmLibrary.entries.find((entry)=>entry.entryId===pcEntry.entryId);
+      return {campaignId:campaign.campaignId,npcActor:npc?{id:npc.id,name:npc.name,kind:npc.kind,side:npc.side,hp:npc.hp,maxHp:npc.maxHp}:null,pcActor:pc?{id:pc.id,name:pc.name,kind:pc.kind,side:pc.side,hp:pc.hp,maxHp:pc.maxHp}:null,characterIdsBefore:before.characters.map((entry)=>entry.id),characterIdsAfter:snapshot.characters.map((entry)=>entry.id),npcSource:{source:npcSource?.npcDefinition?.source,tags:npcSource?.tags,favorite:npcSource?.favorite},pcSource:{source:pcSource?.pcPreset?.source,tags:pcSource?.tags,favorite:pcSource?.favorite}};
+    })().then(done).catch((error)=>done({error:String(error?.stack??error)}));
+  });
+  assert.ok(!result.error,result.error);assert.ok(result.npcActor,"G01 NPC did not materialize");assert.ok(result.pcActor,"G02 PC preset did not materialize");
+  assert.equal(result.npcActor.kind,"combatant");assert.equal(result.npcActor.side,"enemy");assert.equal(result.npcActor.hp,18);assert.equal(result.npcActor.maxHp,18);assert.equal(result.npcSource.source,"W4-G01-PRIVATE-SOURCE");assert.deepEqual(result.npcSource.tags,["W4-G01-PRIVATE-TAG"]);assert.equal(result.npcSource.favorite,true);
+  assert.equal(result.pcActor.kind,"combatant");assert.equal(result.pcActor.side,"ally");assert.equal(result.pcActor.hp,28);assert.equal(result.pcActor.maxHp,28);assert.equal(result.pcSource.source,"W4-G02-PRIVATE-SOURCE");assert.deepEqual(result.pcSource.tags,["W4-G02-PRIVATE-TAG"]);assert.equal(result.pcSource.favorite,true);assert.deepEqual(result.characterIdsAfter,result.characterIdsBefore,"G02 must not create a Player-owned Character");
+  const p1Npc=await waitForEntity(p1,result.npcActor.id);const p2Npc=await waitForEntity(p2,result.npcActor.id);const p1Pc=await waitForEntity(p1,result.pcActor.id);const p2Pc=await waitForEntity(p2,result.pcActor.id);
+  const p1Leaks=await snapshotLeakFlags(p1,privateNeedles);const p2Leaks=await snapshotLeakFlags(p2,privateNeedles);for(const value of privateNeedles){assert.equal(p1Leaks[value],false,`P1 leaked private DM Library metadata: ${value}`);assert.equal(p2Leaks[value],false,`P2 leaked private DM Library metadata: ${value}`);}
+  const p1Ownership=await clientOwnsActor(p1,result.pcActor.id);const p2Ownership=await clientOwnsActor(p2,result.pcActor.id);assert.equal(p1Ownership.owns,false,"P1 must not own G02 PC-preset Actor as a Character");assert.equal(p2Ownership.owns,false,"P2 must not own G02 PC-preset Actor as a Character");
+  return {...result,p1Npc:entityById(p1Npc,result.npcActor.id),p2Npc:entityById(p2Npc,result.npcActor.id),p1Pc:entityById(p1Pc,result.pcActor.id),p2Pc:entityById(p2Pc,result.pcActor.id),p1Leaks,p2Leaks,p1Ownership,p2Ownership};
 }
 
 async function materializeHostRangedNpc(host,p1,p2){
@@ -213,6 +255,8 @@ async function runScenario(){
   const p2Character=await createDistinctPlayerCharacter(p2,"W4 G09 Observer");
   await createHostCampaign(host);await openHostSession(host,sessionPort);await joinClientSession(p1,sessionPort);await joinClientSession(p2,sessionPort);
   await host.browser.waitUntil(async()=>{const snapshot=await runtimeSnapshot(host);return snapshot.participants.filter((entry)=>entry.state==="connected").length>=3;},{timeout:20_000,timeoutMsg:"H/P1/P2 participant topology did not converge"});
+
+  const library=await materializeHostLibraryActors(host,p1,p2);
   const npc=await materializeHostRangedNpc(host,p1,p2);
 
   const g08=await runHostRangedAttack(host,{actorId:npc.actorId,actionId:npc.actionId,targetId:p1Character.id,distanceFeet:null});
@@ -227,10 +271,10 @@ async function runScenario(){
   assert.equal(g09Accepted.fact.authority,"authoritative");assert.equal(g09Accepted.fact.distanceFeet,20);assert.ok(g09Accepted.fact.provenance.includes("module:w4-07-windows:spatial:20"));assert.equal(g09Accepted.resolution?.stage,"complete",JSON.stringify(g09Accepted));assert.ok(g09Accepted.afterHp<g09Accepted.beforeHp,"in-range provider fact must allow Host mechanics validation");
   const p1AfterG09=await waitForEntityHp(p1,p1Character.id,g09Accepted.afterHp);const p2AfterG09=await waitForEntityHp(p2,p1Character.id,g09Accepted.afterHp);
 
-  for(const instance of [host,p1,p2])await saveEvidence(instance,"g08-g09");
-  const evidence={gate:"W4-07",scope:["MP-G08","MP-G09"],status:"PASS",verificationSha,windowsTauri:true,topology:{host:"DM Host",p1:p1Character.id,p2:p2Character.id,participantCount:(await runtimeSnapshot(host)).participants.length,hostActor:npc},scenarios:{"MP-G08":{status:"PASS",authority:g08.fact.authority,beforeHp:g08.beforeHp,afterHp:g08.afterHp,p1Hp:entityHp(p1AfterG08,p1Character.id),p2Hp:entityHp(p2AfterG08,p1Character.id)},"MP-G09":{status:"PASS",rejected:{distanceFeet:g09Rejected.fact.distanceFeet,provenance:g09Rejected.fact.provenance,finalOutcome:g09Rejected.resolution?.finalOutcome??"host resolution rejected before commit",hp:g09Rejected.afterHp},accepted:{distanceFeet:g09Accepted.fact.distanceFeet,provenance:g09Accepted.fact.provenance,finalOutcome:g09Accepted.resolution?.finalOutcome,beforeHp:g09Accepted.beforeHp,afterHp:g09Accepted.afterHp,p1Hp:entityHp(p1AfterG09,p1Character.id),p2Hp:entityHp(p2AfterG09,p1Character.id)}}}};
-  await writeFile(path.join(artifactRoot,"w4-07-g08-g09.json"),JSON.stringify(evidence,null,2),"utf8");
-  log(`MP-G08/G09 Windows H+P1+P2 acceptance PASS · ${artifactRoot}`);
+  for(const instance of [host,p1,p2])await saveEvidence(instance,"g01-g02-g08-g09");
+  const evidence={gate:"W4-07",scope:["MP-G01","MP-G02","MP-G08","MP-G09"],status:"PASS",verificationSha,windowsTauri:true,topology:{host:"DM Host",p1:p1Character.id,p2:p2Character.id,participantCount:(await runtimeSnapshot(host)).participants.length,hostActor:npc},scenarios:{"MP-G01":{status:"PASS",hostActor:library.npcActor,p1Actor:library.p1Npc,p2Actor:library.p2Npc,privateMetadataLeak:{p1:library.p1Leaks,p2:library.p2Leaks}},"MP-G02":{status:"PASS",hostActor:library.pcActor,p1Actor:library.p1Pc,p2Actor:library.p2Pc,hostCharacterIdsUnchanged:library.characterIdsBefore.length===library.characterIdsAfter.length,p1OwnsActor:library.p1Ownership.owns,p2OwnsActor:library.p2Ownership.owns},"MP-G08":{status:"PASS",authority:g08.fact.authority,beforeHp:g08.beforeHp,afterHp:g08.afterHp,p1Hp:entityHp(p1AfterG08,p1Character.id),p2Hp:entityHp(p2AfterG08,p1Character.id)},"MP-G09":{status:"PASS",rejected:{distanceFeet:g09Rejected.fact.distanceFeet,provenance:g09Rejected.fact.provenance,finalOutcome:g09Rejected.resolution?.finalOutcome??"host resolution rejected before commit",hp:g09Rejected.afterHp},accepted:{distanceFeet:g09Accepted.fact.distanceFeet,provenance:g09Accepted.fact.provenance,finalOutcome:g09Accepted.resolution?.finalOutcome,beforeHp:g09Accepted.beforeHp,afterHp:g09Accepted.afterHp,p1Hp:entityHp(p1AfterG09,p1Character.id),p2Hp:entityHp(p2AfterG09,p1Character.id)}}}};
+  await writeFile(path.join(artifactRoot,"w4-07-g01-g02-g08-g09.json"),JSON.stringify(evidence,null,2),"utf8");
+  log(`MP-G01/G02/G08/G09 Windows H+P1+P2 acceptance PASS · ${artifactRoot}`);
 }
 
 async function cleanup(){
