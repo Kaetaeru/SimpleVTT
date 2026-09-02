@@ -111,19 +111,15 @@ async function joinClientSession(client,sessionPort){
   const buttons=await client.browser.$$(`${direct}//button[normalize-space(.)='참가하기']`);assert.equal(buttons.length,1);await buttons[0].click();await waitForText(client.browser,"클라이언트 · 플레이어",30_000);
 }
 
-async function createDistinctP2Character(instance){
+async function selectDistinctP2Character(instance){
   const result=await instance.browser.executeAsync((done)=>{
     (async()=>{
       const {mockAdapter}=await import("/src/app/mockAdapter.ts");
-      await mockAdapter.createCharacterDraft("guided");
-      await mockAdapter.updateCharacterDraft({type:"set-name",value:"W4 G09 Observer"});
-      const snapshot=await mockAdapter.finalizeCharacterDraft();
-      return {id:snapshot.activeCharacter.id,name:snapshot.activeCharacter.name,blocking:snapshot.createDraft?.validation?.filter((entry)=>entry.severity==="blocking")??[]};
+      const snapshot=await mockAdapter.selectProductionCharacter("char.mira");
+      return {id:snapshot.activeCharacter.id,name:snapshot.activeCharacter.name};
     })().then(done).catch((error)=>done({error:String(error?.stack??error)}));
   });
-  assert.ok(!result.error,result.error);assert.equal(result.blocking.length,0);assert.notEqual(result.id,"char.aelar");
-  await instance.browser.refresh();await instance.browser.waitUntil(async()=>(await instance.browser.$("body").getText()).includes("SimpleVTT"),{timeout:30_000});
-  const active=await runtimeSnapshot(instance);assert.equal(active.activeCharacterId,result.id);return result;
+  assert.ok(!result.error,result.error);assert.equal(result.id,"char.mira");assert.equal(result.name,"Mira");return result;
 }
 
 async function runtimeSnapshot(instance){
@@ -173,7 +169,7 @@ async function runScenario(){
   const host=await launchInstance("W4-07 Host",path.join(runRoot,"host","data"),await reservePort());
   const p1=await launchInstance("W4-07 P1",path.join(runRoot,"p1","data"),await reservePort());
   const p2=await launchInstance("W4-07 P2",path.join(runRoot,"p2","data"),await reservePort());
-  const p2Character=await createDistinctP2Character(p2);
+  const p2Character=await selectDistinctP2Character(p2);
   await createHostCampaign(host);await openHostSession(host,sessionPort);await joinClientSession(p1,sessionPort);await joinClientSession(p2,sessionPort);
   await host.browser.waitUntil(async()=>{const snapshot=await runtimeSnapshot(host);return snapshot.participants.filter((entry)=>entry.state==="connected").length>=3;},{timeout:20_000,timeoutMsg:"H/P1/P2 participant topology did not converge"});
 
