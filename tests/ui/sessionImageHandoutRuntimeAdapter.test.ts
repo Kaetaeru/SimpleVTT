@@ -129,15 +129,17 @@ test("connected Session keeps handouts/private notes safe and rules lookup pinne
     transport.emit(2,"host",secondAck.raw);
     await flush();
 
-    const pinnedEntryId="feat.alert";
+    const liveCatalog=(await host.getSnapshot()).catalog;
+    const pinnedSourceEntry=liveCatalog.find((entry)=>entry.category==="feat")??liveCatalog[0];
+    assert.ok(pinnedSourceEntry,"production Session must expose at least one rules/content entry to pin");
+    const pinnedEntryId=pinnedSourceEntry.id;
     const pinnedBefore=await host.lookupSessionContent(pinnedEntryId);
-    assert.ok(pinnedBefore,"Session start must pin rules/content that existed at start");
-    assert.equal(pinnedBefore.nameEn,"Alert");
+    assert.deepEqual(pinnedBefore,pinnedSourceEntry,"Host lookup must start from the composed Session content snapshot");
     const changedContent=JSON.stringify({
       id:pinnedEntryId,
-      category:"feat",
-      nameKo:"경계 변경본",
-      nameEn:"Alert Changed",
+      category:pinnedSourceEntry.category,
+      nameKo:"G07 변경 콘텐츠",
+      nameEn:"G07 Changed Content",
       source:"G07 post-start mutation",
       version:"99",
       description:"G07 ambient catalog changed after Session start",
@@ -145,14 +147,14 @@ test("connected Session keeps handouts/private notes safe and rules lookup pinne
     for(const adapter of [host,client,client2]){
       await adapter.previewContentImport(changedContent);
       await adapter.activateContentImport();
-      assert.equal((await adapter.getSnapshot()).catalog.find((entry)=>entry.id===pinnedEntryId)?.nameEn,"Alert Changed","ambient catalog fixture must change after Session start");
+      assert.equal((await adapter.getSnapshot()).catalog.find((entry)=>entry.id===pinnedEntryId)?.nameEn,"G07 Changed Content","ambient catalog fixture must change after Session start");
     }
     const sentBeforeLookup=transport.sent().length;
     const sentToBeforeLookup=transport.sentTo().length;
     const cursorBeforeLookup=connectedStateFor(host).ledger?.cursor;
     for(const adapter of [host,client,client2]){
       const lookup=await adapter.lookupSessionContent(pinnedEntryId);
-      assert.equal(lookup?.nameEn,"Alert","live rules lookup must read the pinned Session content snapshot");
+      assert.equal(lookup?.nameEn,pinnedSourceEntry.nameEn,"live rules lookup must read the pinned Session content snapshot");
       assert.notEqual(lookup?.description,"G07 ambient catalog changed after Session start");
     }
     assert.equal(transport.sent().length,sentBeforeLookup,"Session content lookup must not send a network message");
