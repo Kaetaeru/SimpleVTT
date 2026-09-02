@@ -334,11 +334,13 @@ test("MP-C09 core · remote P1 saving throw action resolves once on Host and fan
     const completed=await finishResolution(host,p1.characterId);
     assert.equal(completed.resolution?.stage,"complete");
     assert.equal(completed.resolution?.actionId,shove.id);
+    assert.equal(completed.resolution?.actorId,p1.characterId,"P1 is the requester/source of the saving-throw action");
+    assert.deepEqual(completed.resolution?.targetIds,[target.id],"the target is the saving-throw roller");
     assert.equal(completed.resolution?.rollKind,"save");
-    assert.equal(completed.resolution?.saveResults.length,1);
-    assert.equal(completed.resolution?.saveResults[0].targetId,target.id);
-    assert.equal(completed.resolution?.saveResults[0].d20,authoritativeD20);
-    assert.equal(completed.resolution?.saveResults[0].outcome,"실패");
+    assert.ok(completed.resolution?.authoritativeDice.includes(authoritativeD20),"Host resolution must retain the authoritative saving-throw die");
+    assert.equal(typeof completed.resolution?.rollTotal,"number");
+    assert.ok(completed.resolution?.compact.includes(`vs ${shove.saveDc}`),"public save result must expose the action DC");
+    assert.ok(completed.resolution?.finalOutcome.includes("넘어짐"),"failed save must report the prone outcome");
     assert.equal(completed.scene.entities.find((entity)=>entity.id===target.id)?.status.some((status)=>status.includes("넘어짐")),true,"failed Host-authoritative shove save must apply prone once");
     assert.equal(state.ledger.cursor,actionCursor+1,"remote saving-throw action must commit exactly one Host ledger event");
 
