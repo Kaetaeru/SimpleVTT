@@ -3,6 +3,8 @@ name: W5-07 AUTO Verification
 on:
   pull_request:
     paths:
+      - "src/app/offlineRuntimeAdapters.ts"
+      - "src/app/productionCharacterAttackTargetEligibilityAdapter.ts"
       - "src/app/connectedSessionRuntimeAdapter.ts"
       - "src/app/connectedActionRoutingAdapter.ts"
       - "src/app/connectedResolutionPresentation.ts"
@@ -14,6 +16,8 @@ on:
       - "work/v1-composite"
       - "agent/**"
     paths:
+      - "src/app/offlineRuntimeAdapters.ts"
+      - "src/app/productionCharacterAttackTargetEligibilityAdapter.ts"
       - "src/app/connectedSessionRuntimeAdapter.ts"
       - "src/app/connectedActionRoutingAdapter.ts"
       - "src/app/connectedResolutionPresentation.ts"
