@@ -1,20 +1,20 @@
 # V1 Evidence Card
 
-Status: **W5-05 CLOSED — ORDERED REMOTE PRESENTATION QUEUE PASS**
+Status: **W5-06 CLOSED — SHARED VISUAL DICE / COMBAT VFX PATH PASS**
 
 Use one card per Release Gate or coherent repair. The purpose is to stop duplicate implementation and force current-HEAD evidence before modifying an existing system.
 
 ```text
-Gate ID: W5-05
-Acceptance criterion: remote Resolution presentation preserves Host causal order with duplicate suppression, reconnect/catch-up continuity, and no Client reroll or duplicate presentation of an already accepted Host result.
-Production entrypoint: connectedActionRoutingAdapter Host live/catch-up publication -> connectedSessionRuntimeAdapter applyConnectedResolutionPresentation / enqueueOrInstallConnectedPresentation / applyConfirmedPayload -> ClientSessionReplica ordered event apply.
-Existing implementation files: src/app/connectedActionRoutingAdapter.ts; src/app/connectedSessionRuntimeAdapter.ts; src/app/connectedSessionProtocol.ts; src/app/connectedSessionState.ts.
-Existing automated tests: tests/ui/connectedResolutionPresentation.test.ts; tests/ui/productionClientReconnect.test.ts; connected Session/presentation regression coverage composed into GitHub Actions UI; GitHub issues #111 and #114 implementation checkpoints.
-Existing exact-SHA evidence: product verification SHA 2ac28651312f1fdbe82edb74fd13f342a8f910f7; GitHub Actions UI run 33636100212 / job 100267245818 = success; focused record docs/roadmap/evidence/W5-05.md merged by PR #263; GitHub compare 2ac28651312f1fdbe82edb74fd13f342a8f910f7...be061030081a3ba9f570a1a9a7696283d2512f36 is ahead-only and changes only canonical evidence/current docs plus evidence W4-07/W5-01/W5-02/W5-03/W5-04, while PR #263 adds only W5-05 focused evidence.
-Exact observed result: PASS. Live presentation accepts only strictly newer presentationSequence values; duplicate/non-monotonic live envelopes are ignored. Non-dice stages queue FIFO, while a newer authoritative dice signal replaces the active replay and clears stale queued stages. Terminal catch-up is carried in the committed Host resolution event and applied without invoking mechanics resolution. ClientSessionReplica rejects duplicate event IDs, conflicting history, and sequence gaps, and reconnect resumes from the accepted replica cursor so replayed catch-up is not applied twice.
-Inheritance check: GitHub compare 2ac28651312f1fdbe82edb74fd13f342a8f910f7...be061030081a3ba9f570a1a9a7696283d2512f36 changes only docs/CURRENT.md, docs/roadmap/CURRENT.md, docs/roadmap/EVIDENCE_CARD.md, docs/roadmap/V1_EVIDENCE_LEDGER.json, and evidence records W4-07/W5-01/W5-02/W5-03/W5-04. PR #263 adds only docs/roadmap/evidence/W5-05.md. No production source, connected runtime, presentation/reconnect tests, Tauri runner, or workflow implementation changed across the inherited path.
+Gate ID: W5-06
+Acceptance criterion: Local, Host, and remote authoritative Resolution presentation use the same shared visual-dice and combat-VFX projection owners; remote Clients reproduce Host-authored presentation metadata without rerunning mechanics.
+Production entrypoint: connectedActionRoutingAdapter / connectedResolutionPresentation -> shared buildVisualDiceRoll in src/app/diceVisuals.ts + buildCombatVfxProfile in src/app/combatVisuals.ts -> VisualDiceBridge + CombatVfxBridge.
+Existing implementation files: src/app/diceVisuals.ts; src/app/combatVisuals.ts; src/app/connectedResolutionPresentation.ts; src/app/connectedActionRoutingAdapter.ts; src/app/connectedSessionRuntimeAdapter.ts.
+Existing automated tests: tests/ui/connectedResolutionPresentation.test.ts; connected Session/presentation regression coverage composed into GitHub Actions UI.
+Existing exact-SHA evidence: product verification SHA 2ac28651312f1fdbe82edb74fd13f342a8f910f7; GitHub Actions UI run 33636100212 / job 100267245818 = success; focused record docs/roadmap/evidence/W5-06.md merged by PR #265; GitHub compare 2ac28651312f1fdbe82edb74fd13f342a8f910f7...58a10dc1bf42dff79dd3f8035ea02bd9967d8f43 is ahead-only and contains no src/ or tests/ changes.
+Exact observed result: PASS. The authoritative local path and remote Host-authored presentation both project through buildVisualDiceRoll and buildCombatVfxProfile; the focused regression proves equal local/remote dice and VFX projections and no Client mechanics rerun.
+Inheritance check: GitHub compare 2ac28651312f1fdbe82edb74fd13f342a8f910f7...58a10dc1bf42dff79dd3f8035ea02bd9967d8f43 contains only canonical evidence/current documents and prior evidence records before PR #265; PR #265 adds only docs/roadmap/evidence/W5-06.md. No production source, connected runtime, tests, Tauri runner, or workflow implementation changed across the inherited path.
 Exact observed failure: None.
-Smallest required change: None. Record W5-05 as PASS in the official ledger/current documents and proceed to W5-06. No product-code modification is authorized.
+Smallest required change: None. Record W5-06 as PASS in the official ledger/current documents and proceed to W5-07. No product-code modification is authorized.
 ```
 
 ## Change gate
