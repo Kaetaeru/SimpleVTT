@@ -11,6 +11,7 @@ on:
       - "tests/ui/connectedThreePeerRemoteAttackOwnership.test.ts"
       - "tests/ui/connectedThreePeerRemoteAttackOutcome.test.ts"
       - "tests/ui/connectedThreePeerRemoteAdvantage.test.ts"
+      - "tests/ui/connectedThreePeerRemoteMultiDieDamage.test.ts"
       - "tests/ui/connectedThreePeerRemoteSpellPresentation.test.ts"
       - "tests/ui/connectedThreePeerRemoteRejectionExactlyOnce.test.ts"
       - "tests/ui/connectedThreePeerRemoteConcurrentIntent.test.ts"
@@ -30,6 +31,7 @@ on:
       - "tests/ui/connectedThreePeerRemoteAttackOwnership.test.ts"
       - "tests/ui/connectedThreePeerRemoteAttackOutcome.test.ts"
       - "tests/ui/connectedThreePeerRemoteAdvantage.test.ts"
+      - "tests/ui/connectedThreePeerRemoteMultiDieDamage.test.ts"
       - "tests/ui/connectedThreePeerRemoteSpellPresentation.test.ts"
       - "tests/ui/connectedThreePeerRemoteRejectionExactlyOnce.test.ts"
       - "tests/ui/connectedThreePeerRemoteConcurrentIntent.test.ts"
@@ -58,6 +60,7 @@ jobs:
             tests/ui/connectedThreePeerRemoteAttackOwnership.test.ts \
             tests/ui/connectedThreePeerRemoteAttackOutcome.test.ts \
             tests/ui/connectedThreePeerRemoteAdvantage.test.ts \
+            tests/ui/connectedThreePeerRemoteMultiDieDamage.test.ts \
             tests/ui/connectedThreePeerRemoteSpellPresentation.test.ts \
             tests/ui/connectedThreePeerRemoteRejectionExactlyOnce.test.ts \
             tests/ui/connectedThreePeerRemoteConcurrentIntent.test.ts \
