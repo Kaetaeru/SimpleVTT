@@ -85,4 +85,10 @@ if ($KeepOpen) { $arguments += '--keep-open' }
 
 Write-Host '[TAURI E2E] Starting isolated windows and driving the real UI...'
 & $nodeExe @arguments
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+if ($W407) {
+  Write-Host '[TAURI E2E] Starting W4-07 handout reveal/reconnect journey on the same verified binary...'
+  & $nodeExe (Join-Path $rootPath 'scripts\run-tauri-e2e-w4-07-handout.mjs')
+}
 exit $LASTEXITCODE
