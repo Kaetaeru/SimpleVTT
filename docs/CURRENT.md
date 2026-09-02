@@ -49,10 +49,10 @@ W1: 8/8 PASS — COMPLETE
 W2: 8/8 PASS — COMPLETE
 W3: 8/8 PASS — COMPLETE
 W4: 8/8 PASS — COMPLETE
-W5: 6/10 PASS
-Official ledger score: 59.0/100.0
-PASS: 44/72
-Remaining gates: 28/72
+W5: 7/10 PASS
+Official ledger score: 60.5/100.0
+PASS: 45/72
+Remaining gates: 27/72
 FAIL: 0
 BLOCKED: 0
 ```
@@ -77,9 +77,11 @@ W1 — COMPLETE (8/8 PASS)
 W2 — COMPLETE (8/8 PASS)
 W3 — COMPLETE (8/8 PASS)
 W4 — COMPLETE (8/8 PASS)
-W5 — 6/10 PASS
-Next exact Gate: W5-07
+W5 — 7/10 PASS
+Next exact Gate: W5-08
 ```
+
+W5-07 is closed by exact-SHA H/P1/P2 action-matrix AUTO evidence. Product verification SHA `0a9aeb6417c83df5f5d601b3112744cb6bd5e39a` passed W5-07 AUTO Verification run `33691718281`, job `100451682886`, with 18/18 focused tests covering MP-C01 through MP-C24. `tests/ui/connectedThreePeerRemoteStandardCheckPicker.test.ts` fixes MP-C10 Influence/Search/Study by preserving the exact picker-selected skill actionId through Host authority and the public P1/P2 presentation. Artifact `9870276424` (`W5-07-AUTO-0a9aeb6417c83df5f5d601b3112744cb6bd5e39a`) has digest `sha256:b460f28a21ab72f18845891207f20681b39f9e65ef4bb2790d6753112ad26555`. The official ledger records W5-07 PASS; the first non-PASS Gate is now W5-08.
 
 W5-06 is closed by inherited exact-SHA shared VisualDice and CombatVfx projection evidence. Product verification SHA `2ac28651312f1fdbe82edb74fd13f342a8f910f7` passed GitHub Actions UI run `33636100212`, job `100267245818`, including connected/session presentation verification and the frontend build. `tests/ui/connectedResolutionPresentation.test.ts` reconstructs the remote action from the Host presentation envelope and requires `buildVisualDiceRoll(...)` and `buildCombatVfxProfile(...)` to produce outputs identical to the local projections. `src/app/diceVisuals.ts` and `src/app/combatVisuals.ts` remain the shared projection owners; connected presentation consumes Host-authored authoritative Resolution data instead of introducing a network-only renderer or mechanics path. GitHub compare `2ac28651312f1fdbe82edb74fd13f342a8f910f7...58a10dc1bf42dff79dd3f8035ea02bd9967d8f43` contains no `src/` or `tests/` changes, while PR #265 adds only `roadmap/evidence/W5-06.md`. No product/runtime defect was reproduced and no product code changed for W5-06. The first non-PASS Gate is now W5-07.
 
@@ -137,9 +139,9 @@ W1-06 was the only Gate with a reproduced product gap: the real Character Librar
 
 ### Next execution sequence
 
-1. Start `W5-07`, the first non-`PASS` Gate in the ledger.
-2. Do not reopen W1-W5-06; reuse their recorded exact-SHA evidence unless a new current-HEAD regression is reproduced.
-3. For `W5-07`, inspect only the repository-defined acceptance criterion and its existing production/test owner before authorizing any product-code change.
+1. Start `W5-08`, the first non-`PASS` Gate in the ledger.
+2. Do not reopen W1-W5-07; reuse their recorded exact-SHA evidence unless a new current-HEAD regression is reproduced.
+3. For `W5-08`, inspect only the repository-defined acceptance criterion and its existing production/test owner before authorizing any product-code change.
 4. For Common Play, follow [`design/ui-ux/COMMON-PLAY-FUNCTION-FIRST.md`](design/ui-ux/COMMON-PLAY-FUNCTION-FIRST.md): functional reachability first, broad UI redesign later.
 
 ## Non-negotiable execution rules

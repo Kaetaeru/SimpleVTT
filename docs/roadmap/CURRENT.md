@@ -43,10 +43,10 @@ W1: COMPLETE — 8/8 PASS
 W2: COMPLETE — 8/8 PASS
 W3: COMPLETE — 8/8 PASS
 W4: COMPLETE — 8/8 PASS
-W5: 6/10 PASS
-Official ledger score: 59.0/100.0
-PASS: 44/72
-PENDING: 28/72
+W5: 7/10 PASS
+Official ledger score: 60.5/100.0
+PASS: 45/72
+PENDING: 27/72
 FAIL: 0
 BLOCKED: 0
 ```
@@ -54,8 +54,10 @@ BLOCKED: 0
 ## Current stage
 
 ```text
-Next Gate: W5-07
+Next Gate: W5-08
 ```
+
+`W5-07` is PASS by exact-SHA H/P1/P2 action-matrix AUTO evidence. Product verification SHA `0a9aeb6417c83df5f5d601b3112744cb6bd5e39a` passed W5-07 AUTO Verification run `33691718281`, job `100451682886`, with 18/18 focused tests covering MP-C01 through MP-C24. `tests/ui/connectedThreePeerRemoteStandardCheckPicker.test.ts` fixes MP-C10 Influence/Search/Study by preserving the exact picker-selected skill actionId through Host authority and the public P1/P2 presentation. Artifact `9870276424` (`W5-07-AUTO-0a9aeb6417c83df5f5d601b3112744cb6bd5e39a`) has digest `sha256:b460f28a21ab72f18845891207f20681b39f9e65ef4bb2790d6753112ad26555`. The official ledger records W5-07 PASS; the next exact Gate is `W5-08`.
 
 `W5-06` is PASS by inherited exact-SHA shared VisualDice and CombatVfx projection evidence. Product verification SHA `2ac28651312f1fdbe82edb74fd13f342a8f910f7` passed GitHub Actions UI run `33636100212`, job `100267245818`, including connected/session presentation verification and the frontend build. `tests/ui/connectedResolutionPresentation.test.ts` reconstructs the remote action from the Host presentation envelope and requires `buildVisualDiceRoll(...)` and `buildCombatVfxProfile(...)` to produce outputs identical to the local projections. `src/app/diceVisuals.ts` and `src/app/combatVisuals.ts` remain the shared projection owners; the connected path carries Host-authored authoritative Resolution data instead of introducing network-only mechanics or rendering owners. GitHub compare `2ac28651312f1fdbe82edb74fd13f342a8f910f7...58a10dc1bf42dff79dd3f8035ea02bd9967d8f43` contains no `src/` or `tests/` changes, while PR #265 adds only `evidence/W5-06.md`. No product/runtime defect was reproduced and no product code changed for W5-06. The next exact Gate is `W5-07`.
 
