@@ -17,6 +17,7 @@ on:
       - "tests/domain/commonPlayMovementRuntime.test.ts"
       - "tests/ui/connectedCommonPlayAuthorityFactRouting.test.ts"
       - "tests/ui/connectedCommonPlayAuthorityFactDispatch.test.ts"
+      - "tests/ui/mpG09SpatialProviderAuthority.test.ts"
       - ".github/workflows/gate-e-spatial-fact.yml"
 
 jobs:
@@ -39,5 +40,6 @@ jobs:
           tests/domain/commonPlayMovementRuntime.test.ts
           tests/ui/connectedCommonPlayAuthorityFactRouting.test.ts
           tests/ui/connectedCommonPlayAuthorityFactDispatch.test.ts
+          tests/ui/mpG09SpatialProviderAuthority.test.ts
       - name: Typecheck application
         run: npx tsc --noEmit
