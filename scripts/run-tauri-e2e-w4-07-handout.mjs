@@ -53,7 +53,7 @@ async function run(){
   try{
     host=await launchInstance("Host",hostRoot);p1=await launchInstance("P1",p1Root);p2=await launchInstance("P2",p2Root);
     await createDistinctPlayerCharacter(p1,"G04 P1");await createDistinctPlayerCharacter(p2,"G04 P2");await createHostCampaign(host);await openHostSession(host,sessionPort);await joinClientSession(p1,sessionPort);await joinClientSession(p2,sessionPort);
-    await click(host.browser,exactButton("세션"),"Host 세션 도구");await host.browser.$("//*[@data-testid='session-dm-handout']").waitForDisplayed({timeout:15_000});
+    await click(host.browser,exactButton("세션"),"Host 세션 도구");await click(host.browser,exactButton("이미지 보여주기"),"Host Handout 도구");await host.browser.$("//*[@data-testid='session-dm-handout']").waitForDisplayed({timeout:15_000});
     const pngPath=path.join(runRoot,"g04-handout.png");await writeFile(pngPath,Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Z9xkAAAAASUVORK5CYII=","base64"));
     const fileInput=await host.browser.$("//*[@data-testid='session-dm-handout']//input[@type='file']");await fileInput.waitForExist({timeout:10_000});await fileInput.setValue(pngPath);await waitDisplayed(host,".session-handout-preview","Host private handout preview");
     assert.equal(await existsDisplayed(p1,".session-handout-viewer"),false,"G04 Host preview leaked to P1 before reveal");assert.equal(await existsDisplayed(p2,".session-handout-viewer"),false,"G04 Host preview leaked to P2 before reveal");await saveEvidence(host,"g04-private-preview");
