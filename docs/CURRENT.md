@@ -48,8 +48,10 @@ W0: 6/6 PASS
 W1: 8/8 PASS — COMPLETE
 W2: 8/8 PASS — COMPLETE
 W3: 8/8 PASS — COMPLETE
-Official ledger score: 40.0/100.0
-Remaining gates: 42/72
+W4: 1/8 PASS
+Official ledger score: 41.3/100.0
+PASS: 31/72
+Remaining gates: 41/72
 FAIL: 0
 BLOCKED: 0
 ```
@@ -73,16 +75,19 @@ W0 — COMPLETE
 W1 — COMPLETE (8/8 PASS)
 W2 — COMPLETE (8/8 PASS)
 W3 — COMPLETE (8/8 PASS)
-Next exact Gate: W4-01
+W4 — 1/8 PASS
+Next exact Gate: W4-02
 ```
 
-W3-08 is closed on exact Windows verification SHA `53ec501555222b60d9e856b231f4f64395f75b76`. GitHub Actions V1 Tauri Verification run `33569954938`, job `100061523302`, passed the complete local lifecycle through the real Windows Tauri product: Character creation, Campaign DM-owned PC preset save, local Host session, production DM Library materialization, weapon attack, damage spell, Long Rest with +8h Campaign time, UI session end, process exit, same-data-root restart, Campaign time `480` minutes, and one completed session-history entry. Artifact `9824674856` (`SimpleVTT-W3-Tauri-53ec501555222b60d9e856b231f4f64395f75b76`) has digest `sha256:d51dd1d962be4533b31551f900dae26655d3a4e2b05aa8131ffa98122bb18034`. Canonical merge `5bef709f010543859e84c98ef7db8f14e5c06469` shares tree `0e6baadda2570b169c35c6b7436ff4e0042dfff0` with the verified head. The first non-PASS Gate is now W4-01.
+W4-01 is closed by inherited exact-SHA Campaign lifecycle evidence. Product SHA `5bef709f010543859e84c98ef7db8f14e5c06469` passed GitHub Actions UI run `33570546168`, job `100063331529`, including the `Verify Campaign lifecycle and declarative providers` step. Existing `campaignPersistence.test.ts` covers durable create/read/update/archive/restore/duplicate/delete and reload, while `campaignLifecycleRuntime.test.ts` proves duplicated Campaign-owned Party Stash and DM Library namespaces are independent and delete removes only the intended Campaign. `src/app/campaignPersistence.ts` derives Campaign-owned stash, DM Library, and content-loadout IDs from `campaignId`. The compare from the verified product SHA through canonical `b917e20b27d6c80a3bcc5783c20c9b0fd0042894` changes only the four W3 evidence/current docs, so the verified Campaign implementation/tests are inherited unchanged. No product code changed for W4-01. The first non-PASS Gate is now W4-02.
+
+W3-08 is closed on exact Windows verification SHA `53ec501555222b60d9e856b231f4f64395f75b76`. GitHub Actions V1 Tauri Verification run `33569954938`, job `100061523302`, passed the complete local lifecycle through the real Windows Tauri product: Character creation, Campaign DM-owned PC preset save, local Host session, production DM Library materialization, weapon attack, damage spell, Long Rest with +8h Campaign time, UI session end, process exit, same-data-root restart, Campaign time `480` minutes, and one completed session-history entry. Artifact `9824674856` (`SimpleVTT-W3-Tauri-53ec501555222b60d9e856b231f4f64395f75b76`) has digest `sha256:d51dd1d962be4533b31551f900dae26655d3a4e2b05aa8131ffa98122bb18034`. Canonical merge `5bef709f010543859e84c98ef7db8f14e5c06469` shares tree `0e6baadda2570b169c35c6b7436ff4e0042dfff0` with the verified head.
 
 W3-07 is closed with inherited exact-SHA event-native Undo evidence. Product SHA `1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff` passed GitHub Actions UI run `33498144567`, job `99824979798`. The production Phase 09 attack adapter reverses committed `ResolutionEvent`s, preserves the original Activity as `reversed`, prepends a correction Activity with `undoOf` linkage, and rejects stale Undo after authoritative drift instead of deleting history. PR #218 records the focused evidence; no product runtime code was changed.
 
 W3-06 is closed with inherited exact-SHA condition/duration/rest/resource-recovery evidence. Rules Domain run `33342898384`, job `99341612326`, at source/check SHA `6095fe8adbe52b047ef5f6fee3413975bf02c3e0` verified lifecycle, condition, Short/Long Rest, and recovery owners; trusted product SHA `1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff` passed UI run `33498144567`, job `99824979798`, covering production artifact lifetime/lifecycle and Character Long Rest projection. Current canonical product/tests inherit those verified paths unchanged. The focused evidence is recorded in `roadmap/evidence/W3-06.md` and correction PR #210; no product runtime changed.
 
-W3-05 is closed with inherited exact-SHA reaction/interruption/concentration/Ready production-path evidence. Product SHA `1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff` passed GitHub Actions UI run `33498144567`, job `99824979798`; the workflow explicitly ran 11 focused production-facing tests across `c9FamilyOReadyConcentrationProduction`, `phase09ManualMovementReactionAdapter`, and `phase09ConcentrationSaveWorkflow`. Existing runtime covers authoritative reaction spend/rollback, structural Ready stored invocations, deferred concentration lifecycle, concentration saves, stale-input rejection, Activity, and Undo without partial mutation. PR #205 records the focused evidence; no product runtime code was changed.
+W3-05 is closed with inherited exact-SHA reaction/interruption/concentration/Ready production-path evidence. Product SHA `1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff` passed GitHub Actions UI run `33498144567`, job `99824979798`; the workflow explicitly ran 11 focused production-facing tests across `c9FamilyOReadyConcentrationProduction`, `phase09ManualMovementReactionAdapter`, and `phase09ConcentrationSaveWorkflow`. Existing runtime covers authoritative reaction spend/rollback, structural Ready stored invocations, deferred concentration lifecycle, concentration saves, stale-input rejection, Activity, and Undo without partial mutation. PR #205 records the focused evidence; no product runtime changed.
 
 W3-04 is closed with inherited exact-SHA shared-action transaction evidence. Product SHA `1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff` passed GitHub Actions UI run `33498144567`, job `99824979798`, and the production build succeeded. Existing spell, feature, item, action-economy, inventory, spell-execution, and Common Play artifact coverage proves the reusable transaction path commits cost, target, effect, Activity, resource spend, and item decrement atomically, rejects invalid actions without partial mutation, and avoids double-spend. PR #203 records the focused evidence; no product runtime code was changed.
 
@@ -104,9 +109,9 @@ W1-06 was the only Gate with a reproduced product gap: the real Character Librar
 
 ### Next execution sequence
 
-1. Start `W4-01`, the first non-`PASS` Gate in the ledger.
-2. Do not reopen W1-W3; reuse their recorded exact-SHA evidence unless a new current-HEAD regression is reproduced.
-3. For `W4-01`, verify the existing Campaign create/read/update/archive/restore/duplicate/delete and namespace isolation paths before authorizing any product-code change.
+1. Start `W4-02`, the first non-`PASS` Gate in the ledger.
+2. Do not reopen W1-W4-01; reuse their recorded exact-SHA evidence unless a new current-HEAD regression is reproduced.
+3. For `W4-02`, inspect only the repository-defined acceptance criterion and its existing production/test owner before authorizing any product-code change.
 4. For Common Play, follow [`design/ui-ux/COMMON-PLAY-FUNCTION-FIRST.md`](design/ui-ux/COMMON-PLAY-FUNCTION-FIRST.md): functional reachability first, broad UI redesign later.
 
 ## Non-negotiable execution rules
