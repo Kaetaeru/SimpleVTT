@@ -152,39 +152,53 @@ async function runtimeSnapshot(instance){
   const result=await instance.browser.executeAsync((done)=>{
     import("/src/app/mockAdapter.ts").then(async({mockAdapter})=>{
       const snapshot=await mockAdapter.getSnapshot();
-      const target=snapshot.scene.entities.find((entry)=>entry.id==="combatant.goblin-a");
-      done({activeCharacterId:snapshot.activeCharacter.id,activeCharacterName:snapshot.activeCharacter.name,role:snapshot.session.role,connectionState:snapshot.connectionState,targetHp:target?.hp??null,resolution:snapshot.resolution?{id:snapshot.resolution.id,stage:snapshot.resolution.stage,finalOutcome:snapshot.resolution.finalOutcome,provenance:snapshot.resolution.provenance}:null,participants:snapshot.session.participants.map((entry)=>({id:entry.id,characterName:entry.characterName,state:entry.state}))});
+      done({activeCharacterId:snapshot.activeCharacter.id,activeCharacterName:snapshot.activeCharacter.name,role:snapshot.session.role,connectionState:snapshot.connectionState,currentActorId:snapshot.scene.currentActorId,entities:snapshot.scene.entities.map((entry)=>({id:entry.id,name:entry.name,hp:entry.hp,maxHp:entry.maxHp,side:entry.side})),resolution:snapshot.resolution?{id:snapshot.resolution.id,stage:snapshot.resolution.stage,finalOutcome:snapshot.resolution.finalOutcome,provenance:snapshot.resolution.provenance,stateChanges:snapshot.resolution.stateChanges}:null,participants:snapshot.session.participants.map((entry)=>({id:entry.id,characterName:entry.characterName,state:entry.state})),compatibilityMessage:snapshot.session.compatibilityMessage});
     }).catch((error)=>done({error:String(error?.stack??error)}));
   });
   assert.ok(!result.error,result.error);return result;
 }
 
-async function waitForTargetHp(instance,hp){
-  await instance.browser.waitUntil(async()=>{const snapshot=await runtimeSnapshot(instance);return snapshot.targetHp===hp;},{timeout:20_000,interval:150,timeoutMsg:`${instance.label} did not converge to target HP ${hp}`});
+function entityHp(snapshot,entityId){return snapshot.entities.find((entry)=>entry.id===entityId)?.hp??null;}
+
+async function waitForEntity(instance,entityId){
+  await instance.browser.waitUntil(async()=>{const snapshot=await runtimeSnapshot(instance);return snapshot.entities.some((entry)=>entry.id===entityId);},{timeout:20_000,interval:150,timeoutMsg:`${instance.label} did not receive entity ${entityId}`});
   return runtimeSnapshot(instance);
 }
 
-async function runHostShortbow(host,distanceFeet){
-  const result=await host.browser.executeAsync((distance,done)=>{
+async function waitForEntityHp(instance,entityId,hp){
+  await instance.browser.waitUntil(async()=>entityHp(await runtimeSnapshot(instance),entityId)===hp,{timeout:20_000,interval:150,timeoutMsg:`${instance.label} did not converge ${entityId} to HP ${hp}`});
+  return runtimeSnapshot(instance);
+}
+
+async function materializeHostRangedNpc(host,p1,p2){
+  const result=await host.browser.executeAsync((done)=>{
+    import("/src/app/mockAdapter.ts").then(async({mockAdapter})=>{
+      const snapshot=await mockAdapter.instantiateCombatant("combatant.goblin");
+      const actor=snapshot.scene.entities.find((entry)=>entry.id.startsWith("combatant.goblin.instance-"));
+      const action=actor?snapshot.scene.actionsByActor[actor.id]?.find((entry)=>entry.resolutionKind==="attack"&&entry.runtimeAttack&&entry.runtimeAttack.rangeFeet>5):undefined;
+      done(actor&&action?{actorId:actor.id,actorName:actor.name,actionId:action.id,actionName:action.name,rangeFeet:action.runtimeAttack.rangeFeet,hp:actor.hp}:{error:"Host goblin ranged action was not materialized"});
+    }).catch((error)=>done({error:String(error?.stack??error)}));
+  });
+  assert.ok(!result.error,result.error);await waitForEntity(p1,result.actorId);await waitForEntity(p2,result.actorId);return result;
+}
+
+async function runHostRangedAttack(host,{actorId,actionId,targetId,distanceFeet}){
+  const result=await host.browser.executeAsync((input,done)=>{
     (async()=>{
       const [{mockAdapter},{connectedInternal},{setSpatialRelation,spatialPairKey},{resolveRuntimeAttackTargetingFact}]=await Promise.all([
-        import("/src/app/mockAdapter.ts"),
-        import("/src/app/connectedSessionRuntimeAdapter.ts"),
-        import("/src/app/spatialRuntimeContracts.ts"),
-        import("/src/app/realRuntimeAttackFactProvider.ts"),
+        import("/src/app/mockAdapter.ts"),import("/src/app/connectedSessionRuntimeAdapter.ts"),import("/src/app/spatialRuntimeContracts.ts"),import("/src/app/realRuntimeAttackFactProvider.ts"),
       ]);
-      const app=connectedInternal(mockAdapter);const sourceId="char.aelar";const targetId="combatant.goblin-a";const key=spatialPairKey(sourceId,targetId);
-      app.scene.spatialByPair??={};
-      if(distance===null) delete app.scene.spatialByPair[key];
-      else setSpatialRelation(app.scene,{sourceId,targetId,distanceFeet:distance,visible:true,cover:"none",targetCanSeeAttacker:true,withinReach:true,provenance:`module:w4-07-windows:spatial:${distance}`});
-      await mockAdapter.endInitiative();await mockAdapter.startInitiative();await mockAdapter.setCurrentActor(sourceId);await mockAdapter.setQueuedD20(11);
-      const fact=resolveRuntimeAttackTargetingFact(app.scene,sourceId,targetId);const before=(await mockAdapter.getSnapshot()).scene.entities.find((entry)=>entry.id===targetId)?.hp??null;
-      let snapshot=await mockAdapter.resolveAction("action.shortbow",[targetId]);
-      for(let step=0;step<8&&snapshot.resolution&&snapshot.resolution.stage!=="complete"&&snapshot.resolution.canAdvance;step+=1)snapshot=await mockAdapter.advanceResolution();
-      snapshot=await mockAdapter.getSnapshot();const after=snapshot.scene.entities.find((entry)=>entry.id===targetId)?.hp??null;
-      return {fact,beforeHp:before,afterHp:after,resolution:snapshot.resolution?{id:snapshot.resolution.id,stage:snapshot.resolution.stage,finalOutcome:snapshot.resolution.finalOutcome,provenance:snapshot.resolution.provenance,stateChanges:snapshot.resolution.stateChanges}:null};
+      const app=connectedInternal(mockAdapter);const key=spatialPairKey(input.actorId,input.targetId);app.scene.spatialByPair??={};
+      if(input.distanceFeet===null)delete app.scene.spatialByPair[key];
+      else setSpatialRelation(app.scene,{sourceId:input.actorId,targetId:input.targetId,distanceFeet:input.distanceFeet,visible:true,cover:"none",targetCanSeeAttacker:true,withinReach:true,provenance:`module:w4-07-windows:spatial:${input.distanceFeet}`});
+      await mockAdapter.endInitiative();await mockAdapter.startInitiative();await mockAdapter.setCurrentActor(input.actorId);await mockAdapter.setQueuedD20(19);
+      const fact=resolveRuntimeAttackTargetingFact(app.scene,input.actorId,input.targetId);const before=(await mockAdapter.getSnapshot()).scene.entities.find((entry)=>entry.id===input.targetId)?.hp??null;
+      let snapshot=await mockAdapter.resolveAction(input.actionId,[input.targetId]);
+      for(let step=0;step<10&&snapshot.resolution&&snapshot.resolution.stage!=="complete"&&snapshot.resolution.canAdvance;step+=1)snapshot=await mockAdapter.advanceResolution();
+      snapshot=await mockAdapter.getSnapshot();const after=snapshot.scene.entities.find((entry)=>entry.id===input.targetId)?.hp??null;
+      return {fact,beforeHp:before,afterHp:after,resolution:snapshot.resolution?{id:snapshot.resolution.id,stage:snapshot.resolution.stage,finalOutcome:snapshot.resolution.finalOutcome,provenance:snapshot.resolution.provenance,stateChanges:snapshot.resolution.stateChanges}:null,compatibilityMessage:snapshot.session.compatibilityMessage};
     })().then(done).catch((error)=>done({error:String(error?.stack??error)}));
-  },distanceFeet);
+  },{actorId,actionId,targetId,distanceFeet});
   assert.ok(!result.error,result.error);return result;
 }
 
@@ -199,21 +213,22 @@ async function runScenario(){
   const p2Character=await createDistinctPlayerCharacter(p2,"W4 G09 Observer");
   await createHostCampaign(host);await openHostSession(host,sessionPort);await joinClientSession(p1,sessionPort);await joinClientSession(p2,sessionPort);
   await host.browser.waitUntil(async()=>{const snapshot=await runtimeSnapshot(host);return snapshot.participants.filter((entry)=>entry.state==="connected").length>=3;},{timeout:20_000,timeoutMsg:"H/P1/P2 participant topology did not converge"});
+  const npc=await materializeHostRangedNpc(host,p1,p2);
 
-  const g08=await runHostShortbow(host,null);
-  assert.equal(g08.fact.authority,"manual-unconstrained");assert.equal("distanceFeet" in g08.fact,false,"G08 must not fabricate distance");assert.equal(g08.resolution?.stage,"complete");assert.ok(g08.afterHp<g08.beforeHp,"G08 ranged attack should not be falsely rejected without a provider");
-  const p1AfterG08=await waitForTargetHp(p1,g08.afterHp);const p2AfterG08=await waitForTargetHp(p2,g08.afterHp);
+  const g08=await runHostRangedAttack(host,{actorId:npc.actorId,actionId:npc.actionId,targetId:p1Character.id,distanceFeet:null});
+  assert.equal(g08.fact.authority,"manual-unconstrained");assert.equal("distanceFeet" in g08.fact,false,"G08 must not fabricate distance");assert.equal(g08.resolution?.stage,"complete",JSON.stringify(g08));assert.ok(g08.afterHp<g08.beforeHp,"G08 ranged attack should not be falsely rejected without a provider");
+  const p1AfterG08=await waitForEntityHp(p1,p1Character.id,g08.afterHp);const p2AfterG08=await waitForEntityHp(p2,p1Character.id,g08.afterHp);
 
-  const g09Rejected=await runHostShortbow(host,90);
-  assert.equal(g09Rejected.fact.authority,"authoritative");assert.equal(g09Rejected.fact.distanceFeet,90);assert.ok(g09Rejected.fact.provenance.includes("module:w4-07-windows:spatial:90"));assert.equal(g09Rejected.resolution?.finalOutcome,"적용 거부");assert.equal(g09Rejected.afterHp,g09Rejected.beforeHp,"out-of-range provider fact must not mutate HP");
-  assert.equal((await runtimeSnapshot(p1)).targetHp,g09Rejected.beforeHp);assert.equal((await runtimeSnapshot(p2)).targetHp,g09Rejected.beforeHp);
+  const g09Rejected=await runHostRangedAttack(host,{actorId:npc.actorId,actionId:npc.actionId,targetId:p1Character.id,distanceFeet:90});
+  assert.equal(g09Rejected.fact.authority,"authoritative");assert.equal(g09Rejected.fact.distanceFeet,90);assert.ok(g09Rejected.fact.provenance.includes("module:w4-07-windows:spatial:90"));assert.equal(g09Rejected.afterHp,g09Rejected.beforeHp,"out-of-range provider fact must not mutate HP");assert.ok(g09Rejected.resolution?.finalOutcome==="적용 거부"||!g09Rejected.resolution,`out-of-range provider fact was not rejected: ${JSON.stringify(g09Rejected)}`);
+  assert.equal(entityHp(await runtimeSnapshot(p1),p1Character.id),g09Rejected.beforeHp);assert.equal(entityHp(await runtimeSnapshot(p2),p1Character.id),g09Rejected.beforeHp);
 
-  const g09Accepted=await runHostShortbow(host,20);
-  assert.equal(g09Accepted.fact.authority,"authoritative");assert.equal(g09Accepted.fact.distanceFeet,20);assert.ok(g09Accepted.fact.provenance.includes("module:w4-07-windows:spatial:20"));assert.equal(g09Accepted.resolution?.stage,"complete");assert.ok(g09Accepted.afterHp<g09Accepted.beforeHp,"in-range provider fact must allow Host mechanics validation");
-  const p1AfterG09=await waitForTargetHp(p1,g09Accepted.afterHp);const p2AfterG09=await waitForTargetHp(p2,g09Accepted.afterHp);
+  const g09Accepted=await runHostRangedAttack(host,{actorId:npc.actorId,actionId:npc.actionId,targetId:p1Character.id,distanceFeet:20});
+  assert.equal(g09Accepted.fact.authority,"authoritative");assert.equal(g09Accepted.fact.distanceFeet,20);assert.ok(g09Accepted.fact.provenance.includes("module:w4-07-windows:spatial:20"));assert.equal(g09Accepted.resolution?.stage,"complete",JSON.stringify(g09Accepted));assert.ok(g09Accepted.afterHp<g09Accepted.beforeHp,"in-range provider fact must allow Host mechanics validation");
+  const p1AfterG09=await waitForEntityHp(p1,p1Character.id,g09Accepted.afterHp);const p2AfterG09=await waitForEntityHp(p2,p1Character.id,g09Accepted.afterHp);
 
   for(const instance of [host,p1,p2])await saveEvidence(instance,"g08-g09");
-  const evidence={gate:"W4-07",scope:["MP-G08","MP-G09"],status:"PASS",verificationSha,windowsTauri:true,topology:{host:"char.aelar",p1:p1Character.id,p2:p2Character.id,participantCount:(await runtimeSnapshot(host)).participants.length},scenarios:{"MP-G08":{status:"PASS",authority:g08.fact.authority,beforeHp:g08.beforeHp,afterHp:g08.afterHp,p1Hp:p1AfterG08.targetHp,p2Hp:p2AfterG08.targetHp},"MP-G09":{status:"PASS",rejected:{distanceFeet:g09Rejected.fact.distanceFeet,provenance:g09Rejected.fact.provenance,finalOutcome:g09Rejected.resolution?.finalOutcome,hp:g09Rejected.afterHp},accepted:{distanceFeet:g09Accepted.fact.distanceFeet,provenance:g09Accepted.fact.provenance,finalOutcome:g09Accepted.resolution?.finalOutcome,beforeHp:g09Accepted.beforeHp,afterHp:g09Accepted.afterHp,p1Hp:p1AfterG09.targetHp,p2Hp:p2AfterG09.targetHp}}}};
+  const evidence={gate:"W4-07",scope:["MP-G08","MP-G09"],status:"PASS",verificationSha,windowsTauri:true,topology:{host:"DM Host",p1:p1Character.id,p2:p2Character.id,participantCount:(await runtimeSnapshot(host)).participants.length,hostActor:npc},scenarios:{"MP-G08":{status:"PASS",authority:g08.fact.authority,beforeHp:g08.beforeHp,afterHp:g08.afterHp,p1Hp:entityHp(p1AfterG08,p1Character.id),p2Hp:entityHp(p2AfterG08,p1Character.id)},"MP-G09":{status:"PASS",rejected:{distanceFeet:g09Rejected.fact.distanceFeet,provenance:g09Rejected.fact.provenance,finalOutcome:g09Rejected.resolution?.finalOutcome??"host resolution rejected before commit",hp:g09Rejected.afterHp},accepted:{distanceFeet:g09Accepted.fact.distanceFeet,provenance:g09Accepted.fact.provenance,finalOutcome:g09Accepted.resolution?.finalOutcome,beforeHp:g09Accepted.beforeHp,afterHp:g09Accepted.afterHp,p1Hp:entityHp(p1AfterG09,p1Character.id),p2Hp:entityHp(p2AfterG09,p1Character.id)}}}};
   await writeFile(path.join(artifactRoot,"w4-07-g08-g09.json"),JSON.stringify(evidence,null,2),"utf8");
   log(`MP-G08/G09 Windows H+P1+P2 acceptance PASS · ${artifactRoot}`);
 }
