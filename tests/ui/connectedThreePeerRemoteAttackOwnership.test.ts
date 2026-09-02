@@ -3,6 +3,7 @@ import test from "node:test";
 import "../../src/app/offlineRuntimeAdapters";
 import "../../src/app/connectedSessionRuntimeAdapter";
 import "../../src/app/connectedActionRoutingAdapter";
+import "../../src/app/productionSessionLifecycleAdapter";
 import { buildCharacterSessionProjectionV1 } from "../../src/app/characterSessionProjection";
 import { materializeCreatedWeaponAttacks } from "../../src/app/characterCreationWeaponAttackAdapter";
 import { projectedCharacterById } from "../../src/app/characterSessionProjectionRegistry";
