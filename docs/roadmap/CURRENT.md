@@ -42,10 +42,10 @@ W0: COMPLETE — 6/6 PASS
 W1: COMPLETE — 8/8 PASS
 W2: COMPLETE — 8/8 PASS
 W3: COMPLETE — 8/8 PASS
-W4: 3/8 PASS
-Official ledger score: 43.8/100.0
-PASS: 33/72
-PENDING: 39/72
+W4: 4/8 PASS
+Official ledger score: 45.0/100.0
+PASS: 34/72
+PENDING: 38/72
 FAIL: 0
 BLOCKED: 0
 ```
@@ -53,10 +53,12 @@ BLOCKED: 0
 ## Current stage
 
 ```text
-Next Gate: W4-04
+Next Gate: W4-05
 ```
 
-`W4-03` is PASS by inherited exact-SHA Campaign continuity evidence. Product SHA `5bef709f010543859e84c98ef7db8f14e5c06469` passed GitHub Actions UI run `33570546168`, job `100063331529`, including `campaignRuntimeAdapter.test.ts`, which verifies Campaign-owned roster projection and immutable Session preparation snapshots. `campaignSystems.test.ts` verifies revisioned roster mutations plus `appendSessionSummary` persistence with bounded 50-entry history and `lastSessionId`. Production `main.tsx` composes `campaignSessionHistoryRuntimeAdapter`, which wraps successful Host stop, derives a summary from the captured Campaign Session snapshot and live participant/calendar/ration/stash state, persists it, then clears the snapshot. Windows Tauri run `33569954938`, job `100061523302`, at SHA `53ec501555222b60d9e856b231f4f64395f75b76` ended the Session through the rendered UI, exited, relaunched with the same data root, and observed Campaign session history `1회`; artifact `9824674856` has digest `sha256:d51dd1d962be4533b31551f900dae26655d3a4e2b05aa8131ffa98122bb18034`. That Windows SHA and product merge `5bef709f010543859e84c98ef7db8f14e5c06469` share tree `0e6baadda2570b169c35c6b7436ff4e0042dfff0`, and the compare through canonical `fd14887dd286725d2ec71b48a70d121b6c63d8d6` changes only evidence/current docs. No product code changed for W4-03; the next exact Gate is `W4-04`.
+`W4-04` is PASS by inherited exact-SHA Campaign systems evidence. Product SHA `5bef709f010543859e84c98ef7db8f14e5c06469` passed GitHub Actions UI run `33570546168`, job `100063331529`; step `Verify Campaign lifecycle and declarative providers` succeeded. `campaignRuntimeAdapter` fixes calendar/ration provider IDs and versions, Session defaults, and the immutable `rationsVisibleToPlayers` policy in the prepared Session snapshot; Client projection omits ration details when the captured policy is false. `connectedCampaignSystemsRuntimeAdapter` enforces the same privacy boundary on network projection by stripping ration balances/requirements/shortage and roster ration-unit fields before broadcast when `visibleToPlayers` is false, while the Host retains the authoritative Campaign state. Existing `campaignRuntimeAdapter.test.ts`, `campaignSystems.test.ts`, and declarative provider profile/runtime/UI tests cover provider configuration, calendar/ration state, Session snapshot capture, installed provider version pinning/options, and Campaign UI/runtime ownership. The integration history from product SHA `5bef709f010543859e84c98ef7db8f14e5c06469` through canonical `19ffc83e529e7e986f50377bfded69cb6ca33871` changes only the four evidence/current docs, so the W4-04 production/runtime/tests are inherited unchanged. No product code changed for W4-04; the next exact Gate is `W4-05`.
+
+`W4-03` is PASS by inherited exact-SHA Campaign continuity evidence. Product SHA `5bef709f010543859e84c98ef7db8f14e5c06469` passed GitHub Actions UI run `33570546168`, job `100063331529`, including `campaignRuntimeAdapter.test.ts`, which verifies Campaign-owned roster projection and immutable Session preparation snapshots. `campaignSystems.test.ts` verifies revisioned roster mutations plus `appendSessionSummary` persistence with bounded 50-entry history and `lastSessionId`. Production `main.tsx` composes `campaignSessionHistoryRuntimeAdapter`, which wraps successful Host stop, derives a summary from the captured Campaign Session snapshot and live participant/calendar/ration/stash state, persists it, then clears the snapshot. Windows Tauri run `33569954938`, job `100061523302`, at SHA `53ec501555222b60d9e856b231f4f64395f75b76` ended the Session through the rendered UI, exited, relaunched with the same data root, and observed Campaign session history `1회`; artifact `9824674856` has digest `sha256:d51dd1d962be4533b31551f900dae26655d3a4e2b05aa8131ffa98122bb18034`. That Windows SHA and product merge `5bef709f010543859e84c98ef7db8f14e5c06469` share tree `0e6baadda2570b169c35c6b7436ff4e0042dfff0`, and the compare through canonical `fd14887dd286725d2ec71b48a70d121b6c63d8d6` changes only evidence/current docs. No product code changed for W4-03.
 
 `W4-02` is PASS by inherited exact-SHA Campaign dashboard/session-binding evidence. Product SHA `5bef709f010543859e84c98ef7db8f14e5c06469` passed GitHub Actions UI run `33570546168`, job `100063331529`; step `Verify Campaign lifecycle and declarative providers` succeeded and includes `campaignProductUiStructure.test.ts` plus `campaignRuntimeAdapter.test.ts`. The production `ProductionSessionWorkspaceBridge` disables offline/disconnected Host without an active Campaign, calls `prepareCampaignSessionSnapshot(activeCampaign.campaignId)`, and only then calls `app.hostSession()`. The Campaign runtime rejects a missing Campaign and binds Campaign identity/revision/content-loadout revision plus an immutable Campaign settings snapshot into AppSnapshot/Session. The compare from that product SHA through canonical `c005f32e7e4f564d479771013192291d7992dff0` changes only evidence/current docs, so the verified W4-02 implementation/tests are inherited unchanged. No product code changed for W4-02.
 
