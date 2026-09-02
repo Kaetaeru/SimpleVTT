@@ -43,10 +43,10 @@ W1: COMPLETE — 8/8 PASS
 W2: COMPLETE — 8/8 PASS
 W3: COMPLETE — 8/8 PASS
 W4: COMPLETE — 8/8 PASS
-W5: 4/10 PASS
-Official ledger score: 56.0/100.0
-PASS: 42/72
-PENDING: 30/72
+W5: 5/10 PASS
+Official ledger score: 57.5/100.0
+PASS: 43/72
+PENDING: 29/72
 FAIL: 0
 BLOCKED: 0
 ```
@@ -54,8 +54,10 @@ BLOCKED: 0
 ## Current stage
 
 ```text
-Next Gate: W5-05
+Next Gate: W5-06
 ```
+
+`W5-05` is PASS by inherited exact-SHA ordered remote presentation queue evidence. Product verification SHA `2ac28651312f1fdbe82edb74fd13f342a8f910f7` passed GitHub Actions UI run `33636100212`, job `100267245818`, including connected topology/Session-layer/live lifecycle verification and the frontend build. `connectedSessionRuntimeAdapter` accepts only strictly newer live presentation sequences, queues non-dice stages FIFO, replaces stale replay when a newer authoritative dice signal arrives, and applies terminal `catchup` presentation only through committed Host event history. `ClientSessionReplica` rejects duplicate event IDs, conflicting history, and sequence gaps before cursor advance; `productionClientReconnect.test.ts` proves reconnect resumes from the accepted cursor and replayed catch-up does not apply twice. GitHub issues #111 and #114 record terminal catch-up without reroll, ordered remote queue behavior, connected regression 187/187, and build success. GitHub compare `2ac28651312f1fdbe82edb74fd13f342a8f910f7...be061030081a3ba9f570a1a9a7696283d2512f36` changes only canonical evidence/current documents plus evidence records W4-07/W5-01/W5-02/W5-03/W5-04, while PR #263 adds only `evidence/W5-05.md`; product/runtime/tests are inherited unchanged. No product/runtime defect was reproduced and no product code changed for W5-05. The next exact Gate is `W5-06`.
 
 `W5-04` is PASS by inherited exact-SHA Resolution Presentation Envelope evidence. Product verification SHA `2ac28651312f1fdbe82edb74fd13f342a8f910f7` passed GitHub Actions UI run `33636100212`, job `100267245818`, including connected topology/Session-layer/live lifecycle verification and the frontend build. `connectedResolutionPresentation` fixes a schema/versioned immutable presentation with resolution identity, actor/targets/action, structured authoritative faces plus selected/discarded indices and totals, outcome semantics, cumulative timeline, public redaction, and Activity linkage. `connectedActionRoutingAdapter` publishes live stages and carries the same presentation into ordered Host resolution history for catch-up without Client mechanics rerun; owner-only interrupt/concentration prompts are targeted separately from the public envelope. GitHub issue #111 records strict schema/identity validation, structured authoritative faces, cumulative timeline, Activity linkage, public redaction, terminal catch-up without reroll, shared `VisualDiceBridge` + `CombatVfxBridge`, and connected regression 187/187 plus build success. GitHub compare `2ac28651312f1fdbe82edb74fd13f342a8f910f7...1ca6e911087a09dced61cf6a4c7e60df29e64db0` changes only canonical evidence/current documents plus evidence records W4-07/W5-01/W5-02/W5-03/W5-04, so product/runtime/tests are inherited unchanged. PR #261 added the focused `evidence/W5-04.md` record only. No product/runtime defect was reproduced and no product code changed for W5-04. The next exact Gate is `W5-05`.
 

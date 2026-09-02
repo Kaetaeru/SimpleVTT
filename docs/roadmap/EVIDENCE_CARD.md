@@ -1,20 +1,20 @@
 # V1 Evidence Card
 
-Status: **W5-04 CLOSED — RESOLUTION PRESENTATION ENVELOPE PASS**
+Status: **W5-05 CLOSED — ORDERED REMOTE PRESENTATION QUEUE PASS**
 
 Use one card per Release Gate or coherent repair. The purpose is to stop duplicate implementation and force current-HEAD evidence before modifying an existing system.
 
 ```text
-Gate ID: W5-04
-Acceptance criterion: Host-authored immutable Resolution Presentation Envelope preserves deterministic resolution identity, structured authoritative dice including selected/discarded faces, outcome/timeline semantics, privacy/redaction, and Activity linkage across live and catch-up delivery; connected Clients render the Host result without rerunning mechanics.
-Production entrypoint: connectedActionRoutingAdapter publishConnectedResolutionPresentation/publishCommittedResolution -> connectedResolutionPresentation -> connectedSessionRuntimeAdapter wire fan-out / Client apply -> shared VisualDiceBridge + CombatVfxBridge.
-Existing implementation files: src/app/connectedResolutionPresentation.ts; src/app/connectedActionRoutingAdapter.ts; src/app/connectedSessionRuntimeAdapter.ts.
-Existing automated tests: connected Session/presentation regression coverage composed into GitHub Actions UI; GitHub issue #111 implementation checkpoint records connected regression 187/187 plus TypeScript and Vite production build success.
-Existing exact-SHA evidence: product verification SHA 2ac28651312f1fdbe82edb74fd13f342a8f910f7; GitHub Actions UI run 33636100212 / job 100267245818 = success; focused record docs/roadmap/evidence/W5-04.md merged by PR #261; GitHub compare 2ac28651312f1fdbe82edb74fd13f342a8f910f7...1ca6e911087a09dced61cf6a4c7e60df29e64db0 is ahead-only and changes only canonical evidence/current docs plus evidence W4-07/W5-01/W5-02/W5-03/W5-04.
-Exact observed result: PASS. connectedResolutionPresentation fixes schema/version identity, resolutionId and presentationSequence, authoritative faces with selected/discarded indices and totals, actor/target/action/outcome semantics, cumulative timeline, public redaction, and Activity linkage. connectedActionRoutingAdapter publishes live stages and commits the same presentation into ordered Host event history for catch-up without a Client mechanics rerun; private interrupt/concentration input remains in owner-targeted prompts rather than the public envelope. GitHub issue #111 records the same frozen boundary, including shared VisualDiceBridge + CombatVfxBridge rendering and terminal catch-up without reroll.
-Inheritance check: GitHub compare 2ac28651312f1fdbe82edb74fd13f342a8f910f7...1ca6e911087a09dced61cf6a4c7e60df29e64db0 changes only docs/CURRENT.md, docs/roadmap/CURRENT.md, docs/roadmap/EVIDENCE_CARD.md, docs/roadmap/V1_EVIDENCE_LEDGER.json, and evidence records W4-07/W5-01/W5-02/W5-03/W5-04. No production source, connected runtime, tests, Tauri runner, or workflow implementation changed across the inherited path.
+Gate ID: W5-05
+Acceptance criterion: remote Resolution presentation preserves Host causal order with duplicate suppression, reconnect/catch-up continuity, and no Client reroll or duplicate presentation of an already accepted Host result.
+Production entrypoint: connectedActionRoutingAdapter Host live/catch-up publication -> connectedSessionRuntimeAdapter applyConnectedResolutionPresentation / enqueueOrInstallConnectedPresentation / applyConfirmedPayload -> ClientSessionReplica ordered event apply.
+Existing implementation files: src/app/connectedActionRoutingAdapter.ts; src/app/connectedSessionRuntimeAdapter.ts; src/app/connectedSessionProtocol.ts; src/app/connectedSessionState.ts.
+Existing automated tests: tests/ui/connectedResolutionPresentation.test.ts; tests/ui/productionClientReconnect.test.ts; connected Session/presentation regression coverage composed into GitHub Actions UI; GitHub issues #111 and #114 implementation checkpoints.
+Existing exact-SHA evidence: product verification SHA 2ac28651312f1fdbe82edb74fd13f342a8f910f7; GitHub Actions UI run 33636100212 / job 100267245818 = success; focused record docs/roadmap/evidence/W5-05.md merged by PR #263; GitHub compare 2ac28651312f1fdbe82edb74fd13f342a8f910f7...be061030081a3ba9f570a1a9a7696283d2512f36 is ahead-only and changes only canonical evidence/current docs plus evidence W4-07/W5-01/W5-02/W5-03/W5-04, while PR #263 adds only W5-05 focused evidence.
+Exact observed result: PASS. Live presentation accepts only strictly newer presentationSequence values; duplicate/non-monotonic live envelopes are ignored. Non-dice stages queue FIFO, while a newer authoritative dice signal replaces the active replay and clears stale queued stages. Terminal catch-up is carried in the committed Host resolution event and applied without invoking mechanics resolution. ClientSessionReplica rejects duplicate event IDs, conflicting history, and sequence gaps, and reconnect resumes from the accepted replica cursor so replayed catch-up is not applied twice.
+Inheritance check: GitHub compare 2ac28651312f1fdbe82edb74fd13f342a8f910f7...be061030081a3ba9f570a1a9a7696283d2512f36 changes only docs/CURRENT.md, docs/roadmap/CURRENT.md, docs/roadmap/EVIDENCE_CARD.md, docs/roadmap/V1_EVIDENCE_LEDGER.json, and evidence records W4-07/W5-01/W5-02/W5-03/W5-04. PR #263 adds only docs/roadmap/evidence/W5-05.md. No production source, connected runtime, presentation/reconnect tests, Tauri runner, or workflow implementation changed across the inherited path.
 Exact observed failure: None.
-Smallest required change: None. Record W5-04 as PASS in the official ledger/current documents and proceed to W5-05. No product-code modification is authorized.
+Smallest required change: None. Record W5-05 as PASS in the official ledger/current documents and proceed to W5-06. No product-code modification is authorized.
 ```
 
 ## Change gate
