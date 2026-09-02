@@ -206,7 +206,7 @@ async function assertTwoRemotePresentationConsumers(messages:ConnectedWireMessag
   assert.deepEqual(observingStages,actingStages,"acting peer and P2 spectator must consume the same ordered public live presentation");
 }
 
-test("MP-C01/C03 core · remote P1 attacks resolve once on Host and fan out the same live presentation to P2",async()=>{
+async function runFreshRemoteAttackCase(kind:"npc"|"p2"){
   const transport=installThreePeerHostTransport();
   const host=new MockAdapter();
   let stopped=false;
@@ -221,44 +221,39 @@ test("MP-C01/C03 core · remote P1 attacks resolve once on Host and fan out the 
     await connectPlayer(host,transport,"peer.mp-c.p2","MP-C P2",p2);
     assert.equal(state.peerParticipants.size,2,"Host must retain both remote peers for spectator fan-out");
 
-    const hostWithPlayers=await host.getSnapshot();
-    const p1Attack=hostWithPlayers.scene.actionsByActor[p1.characterId]?.find((action)=>action.resolutionKind==="attack"&&(action.name.includes("롱소드")||action.name.toLowerCase().includes("longsword")));
+    const beforeSnapshot=await host.getSnapshot();
+    const p1Attack=beforeSnapshot.scene.actionsByActor[p1.characterId]?.find((action)=>action.resolutionKind==="attack"&&(action.name.includes("롱소드")||action.name.toLowerCase().includes("longsword")));
     assert.ok(p1Attack,"Host projection must expose P1 canonical longsword attack");
-    assert.ok(hostWithPlayers.scene.entities.some((entity)=>entity.id===p2.characterId),"P2 projection must exist as a legal remote target");
+    assert.ok(beforeSnapshot.scene.entities.some((entity)=>entity.id===p2.characterId),"P2 projection must exist as a legal remote target");
 
-    const runRemoteAttack=async(requestId:string,targetId:string)=>{
-      await host.setQueuedD20(19);
-      const broadcastStart=transport.broadcastCount();
-      transport.emitFrom("peer.mp-c.p1",{
-        type:"action-request",
-        request:{
-          sessionId:state.sessionId!,
-          requestId,
-          actorId:p1.characterId,
-          actionId:p1Attack.id,
-          targetIds:[targetId],
-          knownEventCursor:state.ledger!.cursor,
-          character:p1Character!,
-          capabilities:[...CONNECTED_CAPABILITIES],
-        },
-      });
-      const completed=await finishResolution(host,p1.characterId);
-      assert.equal(completed.resolution?.stage,"complete");
-      const messages=transport.broadcastsAfter(broadcastStart);
-      await assertTwoRemotePresentationConsumers(messages,p1.characterId,targetId);
-      return {completed,messages};
-    };
-
-    const goblinBefore=hostWithPlayers.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")?.hp;
-    const c01=await runRemoteAttack("mp-c01.remote-attack","combatant.goblin-a");
-    const goblinAfter=c01.completed.scene.entities.find((entity)=>entity.id==="combatant.goblin-a")?.hp;
-    assert.ok(typeof goblinBefore==="number"&&typeof goblinAfter==="number"&&goblinAfter<goblinBefore,"MP-C01 Host-authoritative remote attack must damage the NPC exactly through the canonical resolution");
-
-    await host.dismissResolution();
-    const p2Before=(await host.getSnapshot()).scene.entities.find((entity)=>entity.id===p2.characterId)?.hp;
-    const c03=await runRemoteAttack("mp-c03.remote-target-owner",p2.characterId);
-    const p2After=c03.completed.scene.entities.find((entity)=>entity.id===p2.characterId)?.hp;
-    assert.ok(typeof p2Before==="number"&&typeof p2After==="number"&&p2After<p2Before,"MP-C03 Host-authoritative remote attack must target the mounted P2 Character without substituting local ownership");
+    const targetId=kind==="npc"?"combatant.goblin-a":p2.characterId;
+    const hpBefore=beforeSnapshot.scene.entities.find((entity)=>entity.id===targetId)?.hp;
+    await host.setQueuedD20(19);
+    const broadcastStart=transport.broadcastCount();
+    transport.emitFrom("peer.mp-c.p1",{
+      type:"action-request",
+      request:{
+        sessionId:state.sessionId,
+        requestId:kind==="npc"?"mp-c01.remote-attack":"mp-c03.remote-target-owner",
+        actorId:p1.characterId,
+        actionId:p1Attack.id,
+        targetIds:[targetId],
+        knownEventCursor:state.ledger.cursor,
+        character:p1Character!,
+        capabilities:[...CONNECTED_CAPABILITIES],
+      },
+    });
+    const completed=await finishResolution(host,p1.characterId);
+    assert.equal(completed.resolution?.stage,"complete");
+    const messages=transport.broadcastsAfter(broadcastStart);
+    await assertTwoRemotePresentationConsumers(messages,p1.characterId,targetId);
+    const hpAfter=completed.scene.entities.find((entity)=>entity.id===targetId)?.hp;
+    assert.ok(
+      typeof hpBefore==="number"&&typeof hpAfter==="number"&&hpAfter<hpBefore,
+      kind==="npc"
+        ?"MP-C01 Host-authoritative remote attack must damage the NPC exactly through the canonical resolution"
+        :"MP-C03 Host-authoritative remote attack must target the mounted P2 Character without substituting local ownership",
+    );
 
     await host.stopSession();
     stopped=true;
@@ -266,4 +261,9 @@ test("MP-C01/C03 core · remote P1 attacks resolve once on Host and fan out the 
     if(!stopped)await host.stopSession().catch(()=>undefined);
     transport.restore();
   }
+}
+
+test("MP-C01/C03 core · remote P1 attacks resolve once on Host and fan out the same live presentation to P2",async()=>{
+  await runFreshRemoteAttackCase("npc");
+  await runFreshRemoteAttackCase("p2");
 });
