@@ -13,7 +13,6 @@ import { ClientSessionReplica, HostSessionLedger, type ConnectedSessionEvent } f
 import { connectedStateFor } from "../../src/app/connectedSessionState";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import { tauriSessionTransport } from "../../src/app/tauriSessionTransport";
-import { runRemoteSecondWindCase } from "./connectedThreePeerRemoteFeatureResourceCase";
 
 type PresentationWire={type:"resolution-presentation";sessionId:string;presentation:ConnectedResolutionPresentationV1};
 type EventBatchWire={type:"event-batch";sessionId:string;afterCursor:number;events:ConnectedSessionEvent[]};
@@ -117,4 +116,7 @@ test("MP-C24 core · duplicate terminal event batches do not reapply state, Acti
   }
 });
 
-test("MP-C17/C19 core · remote P1 Second Wind heals once, spends its feature resource once, and fans out the same live presentation to P2",runRemoteSecondWindCase);
+test("MP-C17/C19 core · remote P1 Second Wind heals once, spends its feature resource once, and fans out the same live presentation to P2",async()=>{
+  const {runRemoteSecondWindCase}=await import("./connectedThreePeerRemoteFeatureResourceCase");
+  await runRemoteSecondWindCase();
+});
