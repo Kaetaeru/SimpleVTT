@@ -284,3 +284,78 @@ test("MP-C12/C15 core · remote P1 Fire Bolt resolves once on Host and fans out 
     transport.restore();
   }
 });
+
+test("MP-C09 core · remote P1 saving throw action resolves once on Host and fans out the same save presentation to P2",async()=>{
+  const transport=installThreePeerHostTransport();
+  const host=new MockAdapter();
+  let stopped=false;
+  try{
+    await host.hostSession();
+    const state=connectedStateFor(host);
+    assert.ok(state.ledger&&state.sessionId,"Host session must establish one authoritative ledger");
+
+    const p1=await createSpellcasterFixture(host,"char.mp-c.save-p1","MP-C Save P1",707);
+    const p2=await createSpellcasterFixture(host,"char.mp-c.save-p2","MP-C Save P2",808);
+    const p1Character=await connectPlayer(host,transport,"peer.mp-c.save-p1","MP-C Save P1",p1);
+    await connectPlayer(host,transport,"peer.mp-c.save-p2","MP-C Save P2",p2);
+    assert.equal(state.peerParticipants.size,2,"Host must retain P1 and P2 for saving-throw spectator fan-out");
+
+    await host.setSessionMode("initiative");
+    await host.setCurrentActor(p1.characterId);
+    const before=await host.getSnapshot();
+    assert.equal(before.sessionMode,"initiative");
+    assert.equal(before.scene.currentActorId,p1.characterId,"P1 must be the authoritative current Actor for the Common Play save action");
+    const shove=before.scene.actionsByActor[p1.characterId]?.find((action)=>action.id==="action.unarmed-strike.shove-prone");
+    assert.ok(shove,"Host projection must expose P1 canonical shove-prone saving-throw action");
+    assert.equal(shove.resolutionKind,"saving-throw");
+    assert.equal(shove.target,"enemy");
+    assert.equal(shove.available,true,"P1 shove-prone must be available on its authoritative Initiative turn");
+    const target=before.scene.entities.find((entity)=>entity.side==="enemy"&&shove.eligibleTargetIds.includes(entity.id)&&!entity.status.some((status)=>status.includes("넘어짐")));
+    assert.ok(target,"remote saving throw requires a standing canonical eligible Host Scene enemy");
+
+    const authoritativeD20=1;
+    await host.setQueuedD20(authoritativeD20);
+    const actionCursor=state.ledger.cursor;
+    const broadcastStart=transport.broadcastCount();
+    transport.emitFrom("peer.mp-c.save-p1",{
+      type:"action-request",
+      request:{
+        sessionId:state.sessionId,
+        requestId:"mp-c09.remote-saving-throw",
+        actorId:p1.characterId,
+        actionId:shove.id,
+        targetIds:[target.id],
+        knownEventCursor:actionCursor,
+        character:p1Character!,
+        capabilities:[...CONNECTED_CAPABILITIES],
+      },
+    });
+
+    const completed=await finishResolution(host,p1.characterId);
+    assert.equal(completed.resolution?.stage,"complete");
+    assert.equal(completed.resolution?.actionId,shove.id);
+    assert.equal(completed.resolution?.actorId,p1.characterId,"P1 is the requester/source of the saving-throw action");
+    assert.deepEqual(completed.resolution?.targetIds,[target.id],"the target is the saving-throw roller");
+    assert.equal(completed.resolution?.rollKind,"save");
+    assert.ok(completed.resolution?.authoritativeDice.includes(authoritativeD20),"Host resolution must retain the authoritative saving-throw die");
+    assert.equal(typeof completed.resolution?.rollTotal,"number");
+    assert.ok(completed.resolution?.compact.includes(`vs ${shove.saveDc}`),"public save result must expose the action DC");
+    assert.ok(completed.resolution?.finalOutcome.includes("넘어짐"),"failed save must report the prone outcome");
+    assert.equal(completed.scene.entities.find((entity)=>entity.id===target.id)?.status.some((status)=>status.includes("넘어짐")),true,"failed Host-authoritative shove save must apply prone once");
+    assert.equal(state.ledger.cursor,actionCursor+1,"remote saving-throw action must commit exactly one Host ledger event");
+
+    const messages=transport.broadcastsAfter(broadcastStart);
+    const saveLive=messages.filter((message):message is Extract<ConnectedWireMessage,{type:"resolution-presentation"}>=>message.type==="resolution-presentation");
+    assert.ok(
+      saveLive.some((message)=>message.presentation.resolution.rollKind==="save"&&message.presentation.resolution.authoritativeDice.includes(authoritativeD20)),
+      "P1 and P2 live presentation must carry the Host-authoritative saving-throw die",
+    );
+    await assertTwoRemoteSpellConsumers(messages,p1.characterId,shove.id,target.id);
+
+    await host.stopSession();
+    stopped=true;
+  }finally{
+    if(!stopped)await host.stopSession().catch(()=>undefined);
+    transport.restore();
+  }
+});
