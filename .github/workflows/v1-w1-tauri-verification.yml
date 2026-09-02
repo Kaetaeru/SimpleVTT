@@ -85,14 +85,14 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
-      - name: Verify W4-07 G01/G02/G03/G08/G09 in Windows Tauri H+P1+P2
+      - name: Verify W4-07 G01/G02/G03/G04/G05/G08/G09 in Windows Tauri H+P1+P2
         shell: pwsh
         run: npm run test:e2e:tauri -- --w407
       - name: Upload Tauri evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: SimpleVTT-W4-07-G01-G02-G03-G08-G09-${{ env.V1_VERIFICATION_SHA }}
+          name: SimpleVTT-W4-07-G01-G02-G03-G04-G05-G08-G09-${{ env.V1_VERIFICATION_SHA }}
           path: .live-dev/tauri-e2e/**/artifacts/**
           if-no-files-found: warn
           retention-days: 14
