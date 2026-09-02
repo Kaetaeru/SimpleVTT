@@ -1,20 +1,20 @@
 # V1 Evidence Card
 
-Status: **W5-02 CLOSED — TRUSTED PERSISTED CHARACTER OWNER PROJECTION PASS**
+Status: **W5-03 CLOSED — HOST SINGLE MUTATION PATH PASS**
 
 Use one card per Release Gate or coherent repair. The purpose is to stop duplicate implementation and force current-HEAD evidence before modifying an existing system.
 
 ```text
-Gate ID: W5-02
-Acceptance criterion: A Host-unknown persisted Character mounts only as a trusted ephemeral owner projection; Host canonical content/source/runtime facts remain authoritative, client-derived presentation mechanics cannot become rules authority, projected-player resolution temporarily activates the owner context and restores Host/local context, and local Host control does not transfer remote Character ownership.
-Production entrypoint: connectedSessionRuntimeAdapter hello/projection path -> characterSessionProjection parse/build -> characterSessionProjectionRegistry / characterSessionProjectionMount -> production connected Session runtime.
-Existing implementation files: src/app/characterSessionProjection.ts; src/app/characterSessionProjectionRegistry.ts; src/app/characterSessionProjectionMount.ts; src/app/connectedSessionRuntimeAdapter.ts; src/app/productionPlayRuntimeAdapter.ts.
-Existing automated tests: tests/ui/characterSessionProjection.test.ts; tests/ui/productionLocalCharacterSwitch.test.ts; tests/ui/productionParticipantLifecycle.test.ts; Phase 14 connected ownership/projection verification already composed into GitHub Actions UI.
-Existing exact-SHA evidence: product verification SHA 2ac28651312f1fdbe82edb74fd13f342a8f910f7; GitHub Actions UI run 33636100212 / job 100267245818 = success; V1 Tauri Verification run 33636100197 / job 100267245684 (tauri-w4-07-spatial) = success; artifact SimpleVTT-W4-07-G01-G09-2ac28651312f1fdbe82edb74fd13f342a8f910f7, artifact 9849024415, sha256:b044f73320cd10bf2446695677ca2098c7c162d01190feed7ecc599078c656a0; focused record docs/roadmap/evidence/W5-02.md merged by PR #257.
-Exact observed result: PASS. Projection tests keep AC/presented attacks/client drift out of trusted source authority, reject injected mechanics and impossible HP, and require exact Host canonical identities. Production connected tests reject invalid SessionProjection before ghost state. The local-character-switch regression preserves remote ephemeral projection ownership, temporarily activates projected resolution context, and restores the prior local/Host context without overwriting projection-owned actions/economy.
-Inheritance check: GitHub compare 2ac28651312f1fdbe82edb74fd13f342a8f910f7...761f1d08601f3f4192ec9bc1339d09b64858eafe is ahead-only and changes only docs/CURRENT.md, docs/roadmap/CURRENT.md, docs/roadmap/EVIDENCE_CARD.md, docs/roadmap/V1_EVIDENCE_LEDGER.json, and evidence records W4-07/W5-01/W5-02. No production source, connected runtime, projection code, tests, Tauri runner, or workflow implementation changed across the inherited path.
+Gate ID: W5-03
+Acceptance criterion: Client intent -> Host validate/resolve/commit is the single connected mutation path; no Client state write can bypass Host validation/authority or directly append authoritative Session history.
+Production entrypoint: connectedSessionRuntimeAdapter role-dispatch / handleHostMessage -> connectedActionRequestPort -> registered Host ActionRequest handler -> HostSessionLedger -> Host event-batch -> ClientSessionReplica.
+Existing implementation files: src/app/connectedSessionRuntimeAdapter.ts; src/app/connectedActionRequestPort.ts; src/app/connectedSessionProtocol.ts; src/app/connectedSessionState.ts.
+Existing automated tests: connected topology/continuity/Session-layer and live lifecycle suites composed into GitHub Actions UI; HostSessionLedger and ClientSessionReplica contracts are exercised through production connected-session verification.
+Existing exact-SHA evidence: product verification SHA 2ac28651312f1fdbe82edb74fd13f342a8f910f7; GitHub Actions UI run 33636100212 / job 100267245818 = success; focused record docs/roadmap/evidence/W5-03.md merged by PR #259; GitHub compare 2ac28651312f1fdbe82edb74fd13f342a8f910f7...0ee6f493fc765ac7a617eda485392957b1874c6e is ahead-only and changes only canonical evidence/current docs plus evidence W4-07/W5-01/W5-02/W5-03.
+Exact observed result: PASS. Client action-request traffic is handled only on the Host message path and is routed through the registered ActionRequest handler; unavailable routing returns an error. HostSessionLedger rejects wrong-session or stale-cursor intent, reserves before commit, rejects history drift/unreserved commit, and de-duplicates request IDs. ClientSessionReplica advances only by same-session gap-free Host event sequences and rejects conflicting/gapped history before cursor advance.
+Inheritance check: GitHub compare 2ac28651312f1fdbe82edb74fd13f342a8f910f7...0ee6f493fc765ac7a617eda485392957b1874c6e changes only docs/CURRENT.md, docs/roadmap/CURRENT.md, docs/roadmap/EVIDENCE_CARD.md, docs/roadmap/V1_EVIDENCE_LEDGER.json, and evidence records W4-07/W5-01/W5-02/W5-03. No production source, connected runtime, tests, Tauri runner, or workflow implementation changed across the inherited path.
 Exact observed failure: None.
-Smallest required change: None. Record W5-02 as PASS in the official ledger/current documents and proceed to W5-03. No product-code modification is authorized.
+Smallest required change: None. Record W5-03 as PASS in the official ledger/current documents and proceed to W5-04. No product-code modification is authorized.
 ```
 
 ## Change gate
