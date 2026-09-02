@@ -169,29 +169,41 @@ async function assertTwoRemotePresentationConsumers(messages:ConnectedWireMessag
   assert.equal(terminal.payload.presentation.actor.id,actorId);
   assert.ok(terminal.payload.presentation.targets.some((target)=>target.id===targetId));
 
-  const consumers=[new MockAdapter(),new MockAdapter()];
-  const stageHistory:string[][]=[];
-  for(const consumer of consumers){
+  const actingClient=new MockAdapter();
+  const observingClient=new MockAdapter();
+  for(const consumer of [actingClient,observingClient]){
     const state=connectedStateFor(consumer);
     state.mode="client";
     state.sessionId=terminal.sessionId;
-    for(const message of live){
-      const applied=applyConnectedResolutionPresentation(consumer,message.presentation);
-      assert.notEqual(applied.status,"rejected");
-    }
-    const observed:string[]=[];
-    const initial=(await consumer.getSnapshot()).resolution?.stage;
-    if(initial)observed.push(initial);
-    for(let step=0;step<20;step+=1){
-      const advanced=advanceConnectedResolutionPresentation(consumer);
-      if(advanced.status==="empty")break;
-      const stage=(await consumer.getSnapshot()).resolution?.stage;
-      if(stage)observed.push(stage);
-    }
-    stageHistory.push(observed);
   }
-  assert.deepEqual(stageHistory[0],stageHistory[1],"acting peer and P2 spectator must consume the same ordered public live presentation");
-  assert.ok(stageHistory[0].length>=2,"remote consumers must observe more than the first live stage");
+  for(const message of live){
+    const actingApplied=applyConnectedResolutionPresentation(actingClient,message.presentation);
+    const observingApplied=applyConnectedResolutionPresentation(observingClient,message.presentation);
+    assert.equal(actingApplied.status,observingApplied.status);
+    assert.notEqual(actingApplied.status,"rejected");
+    const [acting,observing]=await Promise.all([actingClient.getSnapshot(),observingClient.getSnapshot()]);
+    assert.deepEqual(acting.resolution,observing.resolution);
+    assert.deepEqual(acting.resolutionPresentation,observing.resolutionPresentation);
+  }
+
+  const actingStages:string[]=[];
+  const observingStages:string[]=[];
+  while(true){
+    const [acting,observing]=await Promise.all([actingClient.getSnapshot(),observingClient.getSnapshot()]);
+    assert.ok(acting.resolution&&observing.resolution,"both remote consumers must retain a public live presentation");
+    actingStages.push(acting.resolution.stage);
+    observingStages.push(observing.resolution.stage);
+    const actingAdvance=advanceConnectedResolutionPresentation(actingClient);
+    const observingAdvance=advanceConnectedResolutionPresentation(observingClient);
+    assert.equal(actingAdvance.status,observingAdvance.status);
+    if(actingAdvance.status==="empty")break;
+  }
+  const latestDiceIndex=live.findLastIndex((message)=>
+    ["roll-animation","save-animation","damage-animation"].includes(message.presentation.resolution.stage)
+    &&message.presentation.resolution.authoritativeDice.length>0
+  );
+  assert.deepEqual(actingStages,live.slice(Math.max(0,latestDiceIndex)).map((message)=>message.presentation.resolution.stage));
+  assert.deepEqual(observingStages,actingStages,"acting peer and P2 spectator must consume the same ordered public live presentation");
 }
 
 test("MP-C01/C03 core · remote P1 attacks resolve once on Host and fan out the same live presentation to P2",async()=>{
