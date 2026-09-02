@@ -43,10 +43,10 @@ W1: COMPLETE — 8/8 PASS
 W2: COMPLETE — 8/8 PASS
 W3: COMPLETE — 8/8 PASS
 W4: COMPLETE — 8/8 PASS
-W5: 5/10 PASS
-Official ledger score: 57.5/100.0
-PASS: 43/72
-PENDING: 29/72
+W5: 6/10 PASS
+Official ledger score: 59.0/100.0
+PASS: 44/72
+PENDING: 28/72
 FAIL: 0
 BLOCKED: 0
 ```
@@ -54,8 +54,10 @@ BLOCKED: 0
 ## Current stage
 
 ```text
-Next Gate: W5-06
+Next Gate: W5-07
 ```
+
+`W5-06` is PASS by inherited exact-SHA shared VisualDice and CombatVfx projection evidence. Product verification SHA `2ac28651312f1fdbe82edb74fd13f342a8f910f7` passed GitHub Actions UI run `33636100212`, job `100267245818`, including connected/session presentation verification and the frontend build. `tests/ui/connectedResolutionPresentation.test.ts` reconstructs the remote action from the Host presentation envelope and requires `buildVisualDiceRoll(...)` and `buildCombatVfxProfile(...)` to produce outputs identical to the local projections. `src/app/diceVisuals.ts` and `src/app/combatVisuals.ts` remain the shared projection owners; the connected path carries Host-authored authoritative Resolution data instead of introducing network-only mechanics or rendering owners. GitHub compare `2ac28651312f1fdbe82edb74fd13f342a8f910f7...58a10dc1bf42dff79dd3f8035ea02bd9967d8f43` contains no `src/` or `tests/` changes, while PR #265 adds only `evidence/W5-06.md`. No product/runtime defect was reproduced and no product code changed for W5-06. The next exact Gate is `W5-07`.
 
 `W5-05` is PASS by inherited exact-SHA ordered remote presentation queue evidence. Product verification SHA `2ac28651312f1fdbe82edb74fd13f342a8f910f7` passed GitHub Actions UI run `33636100212`, job `100267245818`, including connected topology/Session-layer/live lifecycle verification and the frontend build. `connectedSessionRuntimeAdapter` accepts only strictly newer live presentation sequences, queues non-dice stages FIFO, replaces stale replay when a newer authoritative dice signal arrives, and applies terminal `catchup` presentation only through committed Host event history. `ClientSessionReplica` rejects duplicate event IDs, conflicting history, and sequence gaps before cursor advance; `productionClientReconnect.test.ts` proves reconnect resumes from the accepted cursor and replayed catch-up does not apply twice. GitHub issues #111 and #114 record terminal catch-up without reroll, ordered remote queue behavior, connected regression 187/187, and build success. GitHub compare `2ac28651312f1fdbe82edb74fd13f342a8f910f7...be061030081a3ba9f570a1a9a7696283d2512f36` changes only canonical evidence/current documents plus evidence records W4-07/W5-01/W5-02/W5-03/W5-04, while PR #263 adds only `evidence/W5-05.md`; product/runtime/tests are inherited unchanged. No product/runtime defect was reproduced and no product code changed for W5-05. The next exact Gate is `W5-06`.
 
@@ -83,7 +85,7 @@ Next Gate: W5-06
 
 `W4-01` is PASS by inherited exact-SHA Campaign lifecycle evidence. Product SHA `5bef709f010543859e84c98ef7db8f14e5c06469` passed GitHub Actions UI run `33570546168`, job `100063331529`; step `Verify Campaign lifecycle and declarative providers` succeeded. Existing `campaignPersistence.test.ts` covers durable create/read/update/archive/restore/duplicate/delete and reload, while `campaignLifecycleRuntime.test.ts` verifies duplicated Campaign-owned Party Stash and DM Library namespaces are independent and delete removes only the target Campaign. `src/app/campaignPersistence.ts` derives Campaign-owned stash, DM Library, and content-loadout IDs from `campaignId`. No product code changed for W4-01.
 
-`W3-08` is PASS on exact Windows verification SHA `53ec501555222b60d9e856b231f4f64395f75b76`. GitHub Actions V1 Tauri Verification run `33569954938`, job `100061523302`, passed the complete local journey: Character -> Campaign DM-owned PC preset -> local Host -> production DM Library drop -> weapon attack + damage spell -> Long Rest (+8h) -> UI session end -> process exit -> same-data-root restart, with Campaign time `480` minutes and session history `1회`. Artifact `9824674856` (`SimpleVTT-W3-Tauri-53ec501555222b60d9e856b231f4f64395f75b76`) has digest `sha256:d51dd1d962be4533b31551f900dae26655d3a4e2b05aa8131ffa98122bb18034`. Canonical merge `5bef709f010543859e84c98ef7db8f14e5c06469` shares tree `0e6baadda2570b169c35c6b7436ff4e0042dfff0` with the verified head. W3 is complete.
+`W3-08` is PASS on exact Windows verification SHA `53ec501555222b60d9e856b231f4f64395f75b76`. GitHub Actions V1 Tauri Verification run `33569954938`, job `100061523302`, passed the complete local journey: Character -> Campaign DM-owned PC preset -> local Host -> production DM Library drop -> Combatant + weapon attack + damage spell -> Long Rest (+8h) -> UI session end -> process exit -> same-data-root restart, with Campaign time `480` minutes and session history `1회`. Artifact `9824674856` (`SimpleVTT-W3-Tauri-53ec501555222b60d9e856b231f4f64395f75b76`) has digest `sha256:d51dd1d962be4533b31551f900dae26655d3a4e2b05aa8131ffa98122bb18034`. Canonical merge `5bef709f010543859e84c98ef7db8f14e5c06469` shares tree `0e6baadda2570b169c35c6b7436ff4e0042dfff0` with the verified head. W3 is complete.
 
 `W3-07` is PASS by inherited exact-SHA event-native Undo evidence. Product SHA `1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff` passed GitHub Actions UI run `33498144567`, job `99824979798`. The production Phase 09 attack adapter reverses committed `ResolutionEvent`s, preserves the original Activity as `reversed`, prepends a correction Activity with `undoOf` linkage, and rejects stale Undo after authoritative drift instead of deleting history. PR #218 records the focused evidence with no product runtime change.
 
