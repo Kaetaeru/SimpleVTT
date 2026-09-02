@@ -1,19 +1,19 @@
 # V1 Evidence Card
 
-Status: **W4-04 PASS — CAMPAIGN CALENDAR, RATIONS, VISIBILITY, AND DECLARATIVE PROVIDERS REUSED**
+Status: **W4-05 PASS — PARTY STASH POLICY MODES REUSED**
 
 Use one card per Release Gate or coherent repair. The purpose is to stop duplicate implementation and force current-HEAD evidence before modifying an existing system.
 
 ```text
-Gate ID: W4-04
-Acceptance criterion: Campaign calendar, rations, player visibility, and declarative provider settings are fixed on the existing production path.
-Production entrypoint: CampaignSystemsPanel/AppProvider -> campaignRuntimeAdapter -> CampaignApplicationService; connected Session projection -> connectedCampaignSystemsRuntimeAdapter
-Existing implementation files: src/app/campaignRuntimeAdapter.ts; src/app/connectedCampaignSystemsRuntimeAdapter.ts; src/app/campaignProviderProfiles.ts; src/CampaignSystemsPanel.tsx
-Existing automated tests: tests/ui/campaignRuntimeAdapter.test.ts; tests/ui/campaignSystems.test.ts; tests/ui/campaignDeclarativeProviderProfile.test.ts; tests/ui/campaignDeclarativeProviderRuntime.test.ts; tests/ui/campaignDeclarativeProviderUiStructure.test.ts
-Existing exact-SHA evidence: product SHA 5bef709f010543859e84c98ef7db8f14e5c06469; GitHub Actions UI run 33570546168 / job 100063331529 = success; step "Verify Campaign lifecycle and declarative providers" = success.
-Exact observed result: PASS. campaignRuntimeAdapter stores calendar/ration provider IDs and versions, applies Session defaults, and captures rationsVisibleToPlayers in the immutable Campaign Session snapshot. The same runtime projects ration balances/details to a Client only when the captured visibility policy allows it. connectedCampaignSystemsRuntimeAdapter adds a second transport boundary: safeProjection preserves the DM/Host authoritative Campaign projection but strips ration balance/dailyRequired/shortage and roster ration-unit fields before broadcasting when visibleToPlayers is false. campaignRuntimeAdapter.test.ts exercises Campaign session defaults, calendar/ration providers, calendar advancement, ration state, and Session snapshot capture. campaignDeclarativeProviderProfile/Runtime/UiStructure tests verify installed declarative calendar/ration profiles, exact provider version pinning/options, and provider-backed Campaign UI/runtime ownership.
-Inheritance check: GitHub Actions UI run 33570546168 verified the Campaign/declarative-provider owner at product SHA 5bef709f010543859e84c98ef7db8f14e5c06469. The integration history from that SHA through canonical 19ffc83e529e7e986f50377bfded69cb6ca33871 changes only docs/CURRENT.md, docs/roadmap/CURRENT.md, docs/roadmap/EVIDENCE_CARD.md, and docs/roadmap/V1_EVIDENCE_LEDGER.json; the W4-04 production/runtime/tests are inherited unchanged.
-Smallest required change: None. W4-04 is closed as REUSE_LOCKED. No current-HEAD failure authorizes product-code modification; proceed to W4-05.
+Gate ID: W4-05
+Acceptance criterion: Party Stash shared / approval / DM-managed modes are fixed on the existing production path.
+Production entrypoint: CampaignSystemsPanel/AppProvider -> campaignPartyStashPolicyRuntimeAdapter -> CampaignApplicationService -> existing Party Stash transfer owner
+Existing implementation files: src/app/campaignPersistenceContracts.ts; src/app/campaignPartyStashPolicyRuntimeAdapter.ts; src/app/campaignRuntimeAdapter.ts; src/CampaignSystemsPanel.tsx
+Existing automated tests: tests/ui/campaignSystems.test.ts; GitHub Actions UI step "Verify Party Stash sequential transfer routing"
+Existing exact-SHA evidence: product SHA 5bef709f010543859e84c98ef7db8f14e5c06469; GitHub Actions UI run 33570546168 / job 100063331529 = success; step "Verify Party Stash sequential transfer routing" = success.
+Exact observed result: PASS. campaignPersistenceContracts defines exactly shared, dm-approval, and dm-managed policies and new Campaigns default to shared. campaignPartyStashPolicyRuntimeAdapter keeps deposits on the existing transfer path, allows shared withdrawals, queues non-DM withdrawals under dm-approval until explicit DM approve/reject, rejects non-DM withdrawals under dm-managed, and allows DM withdrawals in both restricted policies. CampaignSystemsPanel exposes the three policy choices and the pending approve/reject controls through the production Campaign UI. campaignSystems.test.ts fixes durable Party Stash wallet/item transfer, request idempotency, failed-transfer isolation, and Campaign-owned stash namespace behavior; the trusted UI workflow separately passed its Party Stash sequential-transfer routing step.
+Inheritance check: GitHub Actions UI run 33570546168 verified the Party Stash owner at product SHA 5bef709f010543859e84c98ef7db8f14e5c06469. GitHub compare 5bef709f010543859e84c98ef7db8f14e5c06469...cf712116381ff8493c8eeebfad7ed8ada95b78ee changes only docs/CURRENT.md, docs/roadmap/CURRENT.md, docs/roadmap/EVIDENCE_CARD.md, and docs/roadmap/V1_EVIDENCE_LEDGER.json; the W4-05 production/runtime/tests are inherited unchanged.
+Smallest required change: None. W4-05 is closed as REUSE_LOCKED. No current-HEAD failure authorizes product-code modification; proceed to W4-06.
 ```
 
 ## Change gate
