@@ -10,6 +10,7 @@ on:
       - "scripts/run-tauri-e2e.*"
       - "scripts/run-tauri-e2e-w4-07.mjs"
       - "scripts/run-tauri-e2e-w4-07-handout.mjs"
+      - "scripts/run-tauri-e2e-w5-01.mjs"
       - "tests/ui/appProviderStopSessionRefresh.test.ts"
       - "package.json"
       - "package-lock.json"
@@ -97,6 +98,32 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: SimpleVTT-W4-07-G01-G09-${{ env.V1_VERIFICATION_SHA }}
+          path: .live-dev/tauri-e2e/**/artifacts/**
+          if-no-files-found: warn
+          retention-days: 14
+
+  tauri-w5-01-topology:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    env:
+      V1_VERIFICATION_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Verify W5-01 MP-A01 through MP-A10 in Windows Tauri H+P1+P2
+        shell: pwsh
+        run: npm run test:e2e:tauri -- --w5
+      - name: Upload Tauri evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: SimpleVTT-W5-01-A01-A10-${{ env.V1_VERIFICATION_SHA }}
           path: .live-dev/tauri-e2e/**/artifacts/**
           if-no-files-found: warn
           retention-days: 14
