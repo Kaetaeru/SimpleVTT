@@ -212,6 +212,34 @@ async function materializeHostLibraryActors(host,p1,p2){
   return {...result,p1Npc:entityById(p1Npc,result.npcActor.id),p2Npc:entityById(p2Npc,result.npcActor.id),p1Pc:entityById(p1Pc,result.pcActor.id),p2Pc:entityById(p2Pc,result.pcActor.id),p1Leaks,p2Leaks,p1Ownership,p2Ownership};
 }
 
+async function materializeHostCustomJson(host,p1,p2){
+  const result=await host.browser.executeAsync((done)=>{
+    (async()=>{
+      const [{mockAdapter},{parseCampaignDmLibraryJson}]=await Promise.all([import("/src/app/mockAdapter.ts"),import("/src/app/campaignDmLibraryImport.ts")]);
+      const initial=await mockAdapter.getSnapshot();const campaign=initial.campaigns?.find((entry)=>entry.name==="W4-07 Windows 검증 캠페인");if(!campaign)throw new Error("W4-07 Campaign was not found");
+      let sequence=0;const context={campaignId:campaign.campaignId,campaignName:campaign.name,createEntryId:()=>`w4.g03.generated.${++sequence}`};
+      const imageDataUrl="data:image/png;base64,AA==";
+      const entries=parseCampaignDmLibraryJson(JSON.stringify([
+        {kind:"custom-item",entryId:"w4.g03.item",label:"폭풍 왕관",definitionId:"local.w4.g03.storm-crown",favorite:true,tags:["W4-G03-ITEM"],itemTemplate:{name:"폭풍 왕관",nameEn:"Storm Crown",kind:"magic",attunementRequired:true,charges:{current:3,max:5},passiveEffects:["번개 저항"],grantedActionIds:["action.storm-bolt"],provenance:["W4-G03-PROVENANCE"]}},
+        {kind:"npc-definition",entryId:"w4.g03.npc",label:"달 사제",definitionId:"local.w4.g03.moon-priest",npcDefinition:{definitionId:"local.w4.g03.moon-priest",name:"달 사제",nameEn:"Moon Priest",ac:14,maxHp:27,actions:["월광 광선"],statusImmunities:["매혹"],source:"W4-G03-NPC-SOURCE",version:"2"}},
+        {kind:"image",entryId:"w4.g03.image",label:"비밀 지도",favorite:true,tags:["W4-G03-IMAGE"],imageAsset:{mimeType:"image/png",dataUrl:imageDataUrl,byteLength:1,fileName:"w4-secret-map.png"}},
+      ]),context);
+      for(const entry of entries)await mockAdapter.upsertCampaignDmLibraryEntry(campaign.campaignId,entry);
+      let snapshot=await mockAdapter.getSnapshot();const currentCampaign=snapshot.campaigns?.find((entry)=>entry.campaignId===campaign.campaignId);const item=currentCampaign?.dmLibrary.entries.find((entry)=>entry.entryId==="w4.g03.item");const npc=currentCampaign?.dmLibrary.entries.find((entry)=>entry.entryId==="w4.g03.npc");const image=currentCampaign?.dmLibrary.entries.find((entry)=>entry.entryId==="w4.g03.image");
+      snapshot=await mockAdapter.instantiateCampaignDmLibraryNpcDefinition(campaign.campaignId,"w4.g03.npc");const actor=snapshot.scene.entities.find((entry)=>entry.id.startsWith("local.w4.g03.moon-priest.instance-"));
+      const rejected={};
+      for(const [key,payload] of Object.entries({script:{kind:"custom-item",label:"실행 아이템",definitionId:"local.w4.g03.exec",itemTemplate:{name:"실행 아이템",kind:"magic",passiveEffects:[],grantedActionIds:[],provenance:[],script:"globalThis.pwned=true"}},onSpawn:{kind:"npc-definition",label:"실행 NPC",definitionId:"local.w4.g03.exec-npc",npcDefinition:{definitionId:"local.w4.g03.exec-npc",name:"실행 NPC",ac:10,maxHp:5,actions:[],statusImmunities:[],onSpawn:"eval(payload)"}},html:{kind:"image",label:"HTML",imageAsset:{dataUrl:"data:text/html;base64,PHNjcmlwdD4="}}})){
+        try{parseCampaignDmLibraryJson(JSON.stringify(payload),context);rejected[key]="NOT_REJECTED";}catch(error){rejected[key]=String(error instanceof Error?error.message:error);}
+      }
+      return {item:{attunementRequired:item?.itemTemplate?.attunementRequired,charges:item?.itemTemplate?.charges,grantedActionIds:item?.itemTemplate?.grantedActionIds,provenance:item?.itemTemplate?.provenance},npc:{source:npc?.npcDefinition?.source,version:npc?.npcDefinition?.version,maxHp:npc?.npcDefinition?.maxHp},image:image?.imageAsset,actor:actor?{id:actor.id,name:actor.name,kind:actor.kind,side:actor.side,hp:actor.hp,maxHp:actor.maxHp}:null,rejected};
+    })().then(done).catch((error)=>done({error:String(error?.stack??error)}));
+  });
+  assert.ok(!result.error,result.error);assert.deepEqual(result.item.charges,{current:3,max:5});assert.equal(result.item.attunementRequired,true);assert.deepEqual(result.item.grantedActionIds,["action.storm-bolt"]);assert.deepEqual(result.item.provenance,["W4-G03-PROVENANCE"]);
+  assert.equal(result.npc.source,"W4-G03-NPC-SOURCE");assert.equal(result.npc.version,"2");assert.equal(result.npc.maxHp,27);assert.deepEqual(result.image,{mimeType:"image/png",dataUrl:"data:image/png;base64,AA==",byteLength:1,fileName:"w4-secret-map.png"});
+  assert.ok(result.actor,"G03 NPC did not materialize");assert.equal(result.actor.maxHp,27);assert.equal(result.actor.hp,27);assert.equal(result.actor.side,"enemy");for(const value of Object.values(result.rejected)){assert.notEqual(value,"NOT_REJECTED","G03 unsafe JSON must reject");}
+  const p1Npc=await waitForEntity(p1,result.actor.id);const p2Npc=await waitForEntity(p2,result.actor.id);return {...result,p1Actor:entityById(p1Npc,result.actor.id),p2Actor:entityById(p2Npc,result.actor.id)};
+}
+
 async function materializeHostRangedNpc(host,p1,p2){
   const result=await host.browser.executeAsync((done)=>{
     import("/src/app/mockAdapter.ts").then(async({mockAdapter})=>{
@@ -257,6 +285,7 @@ async function runScenario(){
   await host.browser.waitUntil(async()=>{const snapshot=await runtimeSnapshot(host);return snapshot.participants.filter((entry)=>entry.state==="connected").length>=3;},{timeout:20_000,timeoutMsg:"H/P1/P2 participant topology did not converge"});
 
   const library=await materializeHostLibraryActors(host,p1,p2);
+  const customJson=await materializeHostCustomJson(host,p1,p2);
   const npc=await materializeHostRangedNpc(host,p1,p2);
 
   const g08=await runHostRangedAttack(host,{actorId:npc.actorId,actionId:npc.actionId,targetId:p1Character.id,distanceFeet:null});
@@ -271,10 +300,10 @@ async function runScenario(){
   assert.equal(g09Accepted.fact.authority,"authoritative");assert.equal(g09Accepted.fact.distanceFeet,20);assert.ok(g09Accepted.fact.provenance.includes("module:w4-07-windows:spatial:20"));assert.equal(g09Accepted.resolution?.stage,"complete",JSON.stringify(g09Accepted));assert.ok(g09Accepted.afterHp<g09Accepted.beforeHp,"in-range provider fact must allow Host mechanics validation");
   const p1AfterG09=await waitForEntityHp(p1,p1Character.id,g09Accepted.afterHp);const p2AfterG09=await waitForEntityHp(p2,p1Character.id,g09Accepted.afterHp);
 
-  for(const instance of [host,p1,p2])await saveEvidence(instance,"g01-g02-g08-g09");
-  const evidence={gate:"W4-07",scope:["MP-G01","MP-G02","MP-G08","MP-G09"],status:"PASS",verificationSha,windowsTauri:true,topology:{host:"DM Host",p1:p1Character.id,p2:p2Character.id,participantCount:(await runtimeSnapshot(host)).participants.length,hostActor:npc},scenarios:{"MP-G01":{status:"PASS",hostActor:library.npcActor,p1Actor:library.p1Npc,p2Actor:library.p2Npc,privateMetadataLeak:{p1:library.p1Leaks,p2:library.p2Leaks}},"MP-G02":{status:"PASS",hostActor:library.pcActor,p1Actor:library.p1Pc,p2Actor:library.p2Pc,hostCharacterIdsUnchanged:library.characterIdsBefore.length===library.characterIdsAfter.length,p1OwnsActor:library.p1Ownership.owns,p2OwnsActor:library.p2Ownership.owns},"MP-G08":{status:"PASS",authority:g08.fact.authority,beforeHp:g08.beforeHp,afterHp:g08.afterHp,p1Hp:entityHp(p1AfterG08,p1Character.id),p2Hp:entityHp(p2AfterG08,p1Character.id)},"MP-G09":{status:"PASS",rejected:{distanceFeet:g09Rejected.fact.distanceFeet,provenance:g09Rejected.fact.provenance,finalOutcome:g09Rejected.resolution?.finalOutcome??"host resolution rejected before commit",hp:g09Rejected.afterHp},accepted:{distanceFeet:g09Accepted.fact.distanceFeet,provenance:g09Accepted.fact.provenance,finalOutcome:g09Accepted.resolution?.finalOutcome,beforeHp:g09Accepted.beforeHp,afterHp:g09Accepted.afterHp,p1Hp:entityHp(p1AfterG09,p1Character.id),p2Hp:entityHp(p2AfterG09,p1Character.id)}}}};
-  await writeFile(path.join(artifactRoot,"w4-07-g01-g02-g08-g09.json"),JSON.stringify(evidence,null,2),"utf8");
-  log(`MP-G01/G02/G08/G09 Windows H+P1+P2 acceptance PASS · ${artifactRoot}`);
+  for(const instance of [host,p1,p2])await saveEvidence(instance,"g01-g03-g08-g09");
+  const evidence={gate:"W4-07",scope:["MP-G01","MP-G02","MP-G03","MP-G08","MP-G09"],status:"PASS",verificationSha,windowsTauri:true,topology:{host:"DM Host",p1:p1Character.id,p2:p2Character.id,participantCount:(await runtimeSnapshot(host)).participants.length,hostActor:npc},scenarios:{"MP-G01":{status:"PASS",hostActor:library.npcActor,p1Actor:library.p1Npc,p2Actor:library.p2Npc,privateMetadataLeak:{p1:library.p1Leaks,p2:library.p2Leaks}},"MP-G02":{status:"PASS",hostActor:library.pcActor,p1Actor:library.p1Pc,p2Actor:library.p2Pc,hostCharacterIdsUnchanged:library.characterIdsBefore.length===library.characterIdsAfter.length,p1OwnsActor:library.p1Ownership.owns,p2OwnsActor:library.p2Ownership.owns},"MP-G03":{status:"PASS",item:customJson.item,npc:customJson.npc,image:customJson.image,hostActor:customJson.actor,p1Actor:customJson.p1Actor,p2Actor:customJson.p2Actor,unsafeRejected:customJson.rejected},"MP-G08":{status:"PASS",authority:g08.fact.authority,beforeHp:g08.beforeHp,afterHp:g08.afterHp,p1Hp:entityHp(p1AfterG08,p1Character.id),p2Hp:entityHp(p2AfterG08,p1Character.id)},"MP-G09":{status:"PASS",rejected:{distanceFeet:g09Rejected.fact.distanceFeet,provenance:g09Rejected.fact.provenance,finalOutcome:g09Rejected.resolution?.finalOutcome??"host resolution rejected before commit",hp:g09Rejected.afterHp},accepted:{distanceFeet:g09Accepted.fact.distanceFeet,provenance:g09Accepted.fact.provenance,finalOutcome:g09Accepted.resolution?.finalOutcome,beforeHp:g09Accepted.beforeHp,afterHp:g09Accepted.afterHp,p1Hp:entityHp(p1AfterG09,p1Character.id),p2Hp:entityHp(p2AfterG09,p1Character.id)}}}};
+  await writeFile(path.join(artifactRoot,"w4-07-g01-g03-g08-g09.json"),JSON.stringify(evidence,null,2),"utf8");
+  log(`MP-G01/G02/G03/G08/G09 Windows H+P1+P2 acceptance PASS · ${artifactRoot}`);
 }
 
 async function cleanup(){
