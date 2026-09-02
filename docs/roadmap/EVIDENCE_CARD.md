@@ -1,19 +1,20 @@
 # V1 Evidence Card
 
-Status: **W4-07 PASS — ACTOR MATERIALIZATION / HANDOUT / SPATIAL FALLBACK REUSED**
+Status: **W4-08 CLOSED — EXACT-SHA WINDOWS CAMPAIGN REOPEN JOURNEY PASS**
 
 Use one card per Release Gate or coherent repair. The purpose is to stop duplicate implementation and force current-HEAD evidence before modifying an existing system.
 
 ```text
-Gate ID: W4-07
-Acceptance criterion: NPC/PC preset/custom Actor materialization, handout reveal/withdraw/reconnect, pinned content lookup, and no-provider/compatible-provider spatial behavior are fixed on the existing Campaign DM Library -> live Session path.
-Production entrypoint: Campaign DM Library -> live Session Actor materialization / shared handout presentation -> Host-authoritative Session projection and spatial validation.
-Existing implementation files: Existing Campaign DM Library, Session materialization/presentation, and spatial-provider production owners verified by docs/roadmap/evidence/W4-07.md; no second owner is introduced.
-Existing automated tests: tests/ui/sessionImageHandoutRuntimeAdapter.test.ts plus the connected topology/continuity/Session-layer suite and the W4-07 Windows Tauri H+P1+P2 journeys.
-Existing exact-SHA evidence: product SHA 2ac28651312f1fdbe82edb74fd13f342a8f910f7; GitHub Actions UI run 33636100212 / job 100267245818 = success; V1 Tauri Verification run 33636100197 / job 100267245684 (tauri-w4-07-spatial) = success; artifact SimpleVTT-W4-07-G01-G09-2ac28651312f1fdbe82edb74fd13f342a8f910f7, artifact 9849024415, sha256:b044f73320cd10bf2446695677ca2098c7c162d01190feed7ecc599078c656a0.
-Exact observed result: PASS. Windows H+P1+P2 verified G01 NPC quick-add, G02 PC preset quick-add, G03 validated custom JSON materialization, G04 reveal/withdraw, G05 reconnect continuity, G06 DM-only privacy, G07 Session-pinned lookup, G08 mapless spatial fallback, and G09 compatible-provider Host validation.
-Inheritance check: PR #249 merged the verified tree into canonical work/v1-composite as 2ffc2004d795a350a4aa3676bcd7d4cb362f1ea1 with no file differences from verification SHA 2ac28651312f1fdbe82edb74fd13f342a8f910f7. PR #251 then added only docs/roadmap/evidence/W4-07.md and merged as add93e2d2a929ca97cc39bc29136ea766f858f39. No product/runtime defect was reproduced.
-Smallest required change: None. W4-07 is closed as REUSE_LOCKED. No current-HEAD failure authorizes product-code modification; proceed to W4-08.
+Gate ID: W4-08
+Acceptance criterion: Actual Tauri Campaign preparation -> Session start/end -> process exit -> same-data-root Campaign reopen is proven through the production UI path.
+Production entrypoint: ProductRoot -> Campaign UI -> ProductionSessionWorkspaceBridge -> local Host Session -> production Session stop -> app process exit/restart -> Campaign dashboard reopen.
+Existing implementation files: scripts/run-tauri-e2e-w3.mjs; src/ProductionSessionWorkspaceBridge.tsx; src/app/campaignRuntimeAdapter.ts; src/app/campaignSessionHistoryRuntimeAdapter.ts; src/main.tsx.
+Existing automated tests: tests/ui/appProviderStopSessionRefresh.test.ts plus the existing Windows Tauri W3 complete-session harness invoked by npm run test:e2e:tauri -- --w3.
+Existing exact-SHA evidence: product verification SHA 2ac28651312f1fdbe82edb74fd13f342a8f910f7; GitHub Actions V1 Tauri Verification run 33636100197 / job 100267245439 (tauri-w3) = success; stop-session regression 2/2 PASS; artifact SimpleVTT-W3-Tauri-2ac28651312f1fdbe82edb74fd13f342a8f910f7, artifact 9849024676, sha256:40fd32b55ec3f6d92f47c29b6acff20d599e64b3b7f757ddf5c9b73e270860e3.
+Exact observed result: PASS. The real Windows Tauri journey prepares a Character/Campaign through production UI, materializes the DM-owned PC preset, starts a local Host Session, performs play and Long Rest (+8h), ends through the production Session pane, exits the process, relaunches on the same data root, reopens the Campaign, and asserts absolute time 480 minutes plus one completed session-history entry.
+Inheritance check: the Actions synthetic merge f05147605e4dce56a0552b69fa361f28d4c5cf60 has no file differences from verification head 2ac28651312f1fdbe82edb74fd13f342a8f910f7. GitHub compare 2ac28651312f1fdbe82edb74fd13f342a8f910f7...ceaf3ebf786ffa13d934d68c0fcebcc58cb00ae8 changes only canonical evidence/current documents plus the W4-07 evidence record, so the verified W4-08 product/runtime/harness path is inherited unchanged.
+Exact observed failure: None.
+Smallest required change: None. Record the exact-SHA Windows evidence, close W4-08 and W4, and proceed to W5-01. No product-code modification is authorized.
 ```
 
 ## Change gate
