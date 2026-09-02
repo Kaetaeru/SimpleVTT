@@ -309,6 +309,7 @@ async function finishInterruptedSpell(adapter:MockAdapter,pending:PendingSpellIn
     targetNames,compact:internal.resolution!.compact,
     detail:internal.resolution!.detail,provenance:internal.resolution!.provenance,calculatedOutcome:internal.resolution!.calculatedOutcome,
     finalOutcome:internal.resolution!.finalOutcome,rollKind:internal.resolution!.rollKind,authoritativeDice:pending.authoritativeDice,
+    saveResults:internal.resolution!.saveResults,
   });
 }
 
@@ -485,6 +486,7 @@ MockAdapter.prototype.resolveAction=async function resolveProductionSpell(action
     compact:internal.resolution.compact,detail:internal.resolution.detail,provenance:internal.resolution.provenance,
     calculatedOutcome:internal.resolution.calculatedOutcome,finalOutcome:internal.resolution.finalOutcome,
     rollKind:internal.resolution.rollKind,authoritativeDice,rollTotal:internal.resolution.rollTotal,
+    saveResults:internal.resolution.saveResults,
   });
 };
 
