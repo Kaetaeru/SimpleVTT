@@ -97,6 +97,7 @@ async function publishCommittedResolution(adapter:MockAdapter,snapshot?:AppSnaps
     }
     return current;
   }
+
   const candidate={
     actorId:resolution.actorId,
     payload:{
