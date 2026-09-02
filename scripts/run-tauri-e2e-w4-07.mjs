@@ -220,7 +220,7 @@ async function runScenario(){
   const p1AfterG08=await waitForEntityHp(p1,p1Character.id,g08.afterHp);const p2AfterG08=await waitForEntityHp(p2,p1Character.id,g08.afterHp);
 
   const g09Rejected=await runHostRangedAttack(host,{actorId:npc.actorId,actionId:npc.actionId,targetId:p1Character.id,distanceFeet:90});
-  assert.equal(g09Rejected.fact.authority,"authoritative");assert.equal(g09Rejected.fact.distanceFeet,90);assert.ok(g09Rejected.fact.provenance.includes("module:w4-07-windows:spatial:90"));assert.equal(g09Rejected.afterHp,g09Rejected.beforeHp,"out-of-range provider fact must not mutate HP");assert.ok(g09Rejected.resolution?.finalOutcome==="적용 거부"||!g09Rejected.resolution,`out-of-range provider fact was not rejected: ${JSON.stringify(g09Rejected)}`);
+  assert.equal(g09Rejected.fact.authority,"authoritative");assert.equal(g09Rejected.fact.distanceFeet,90);assert.ok(g09Rejected.fact.provenance.includes("module:w4-07-windows:spatial:90"));assert.equal(g09Rejected.afterHp,g09Rejected.beforeHp,"out-of-range provider fact must not mutate HP");assert.equal(g09Rejected.resolution?.stage,"complete",JSON.stringify(g09Rejected));assert.match(g09Rejected.resolution?.finalOutcome??"",/^적용 거부: beyond range 80 ft$/);assert.deepEqual(g09Rejected.resolution?.stateChanges??[],[]);
   assert.equal(entityHp(await runtimeSnapshot(p1),p1Character.id),g09Rejected.beforeHp);assert.equal(entityHp(await runtimeSnapshot(p2),p1Character.id),g09Rejected.beforeHp);
 
   const g09Accepted=await runHostRangedAttack(host,{actorId:npc.actorId,actionId:npc.actionId,targetId:p1Character.id,distanceFeet:20});
