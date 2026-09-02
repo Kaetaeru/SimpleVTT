@@ -1,20 +1,20 @@
 # V1 Evidence Card
 
-Status: **W4-08 CLOSED — EXACT-SHA WINDOWS CAMPAIGN REOPEN JOURNEY PASS**
+Status: **W5-01 CLOSED — EXACT-SHA CONNECTED TOPOLOGY / PARTICIPANT LIFECYCLE PASS**
 
 Use one card per Release Gate or coherent repair. The purpose is to stop duplicate implementation and force current-HEAD evidence before modifying an existing system.
 
 ```text
-Gate ID: W4-08
-Acceptance criterion: Actual Tauri Campaign preparation -> Session start/end -> process exit -> same-data-root Campaign reopen is proven through the production UI path.
-Production entrypoint: ProductRoot -> Campaign UI -> ProductionSessionWorkspaceBridge -> local Host Session -> production Session stop -> app process exit/restart -> Campaign dashboard reopen.
-Existing implementation files: scripts/run-tauri-e2e-w3.mjs; src/ProductionSessionWorkspaceBridge.tsx; src/app/campaignRuntimeAdapter.ts; src/app/campaignSessionHistoryRuntimeAdapter.ts; src/main.tsx.
-Existing automated tests: tests/ui/appProviderStopSessionRefresh.test.ts plus the existing Windows Tauri W3 complete-session harness invoked by npm run test:e2e:tauri -- --w3.
-Existing exact-SHA evidence: product verification SHA 2ac28651312f1fdbe82edb74fd13f342a8f910f7; GitHub Actions V1 Tauri Verification run 33636100197 / job 100267245439 (tauri-w3) = success; stop-session regression 2/2 PASS; artifact SimpleVTT-W3-Tauri-2ac28651312f1fdbe82edb74fd13f342a8f910f7, artifact 9849024676, sha256:40fd32b55ec3f6d92f47c29b6acff20d599e64b3b7f757ddf5c9b73e270860e3.
-Exact observed result: PASS. The real Windows Tauri journey prepares a Character/Campaign through production UI, materializes the DM-owned PC preset, starts a local Host Session, performs play and Long Rest (+8h), ends through the production Session pane, exits the process, relaunches on the same data root, reopens the Campaign, and asserts absolute time 480 minutes plus one completed session-history entry.
-Inheritance check: the Actions synthetic merge f05147605e4dce56a0552b69fa361f28d4c5cf60 has no file differences from verification head 2ac28651312f1fdbe82edb74fd13f342a8f910f7. GitHub compare 2ac28651312f1fdbe82edb74fd13f342a8f910f7...ceaf3ebf786ffa13d934d68c0fcebcc58cb00ae8 changes only canonical evidence/current documents plus the W4-07 evidence record, so the verified W4-08 product/runtime/harness path is inherited unchanged.
+Gate ID: W5-01
+Acceptance criterion: Existing production connected-session path fixes H/P1/P2 topology plus P3 late-join/reconnect lifecycle with Host authority, ordered catch-up, compatibility rejection, replacement-peer reconnect, and exactly-once replay.
+Production entrypoint: ProductionSessionWorkspaceBridge -> connectedSessionRuntimeAdapter / productionSessionLifecycleAdapter -> tauriSessionTransport -> Host/Player desktop instances.
+Existing implementation files: src/app/connectedSessionRuntimeAdapter.ts; src/app/productionSessionLifecycleAdapter.ts; src/app/connectedSessionState.ts; src/app/tauriSessionTransport.ts; scripts/run-tauri-e2e-handout.mjs.
+Existing automated tests: tests/ui/productionParticipantLifecycle.test.ts; tests/ui/productionClientReconnect.test.ts; Phase 12/14 connected lifecycle, participant lifecycle, reconnect, hello replay, Session end, wire/protocol, and shared-runtime suites already composed into GitHub Actions UI.
+Existing exact-SHA evidence: product verification SHA 2ac28651312f1fdbe82edb74fd13f342a8f910f7; GitHub Actions UI run 33636100212 / job 100267245818 = success; V1 Tauri Verification run 33636100197 / job 100267245684 (tauri-w4-07-spatial) = success; artifact SimpleVTT-W4-07-G01-G09-2ac28651312f1fdbe82edb74fd13f342a8f910f7, artifact 9849024415, sha256:b044f73320cd10bf2446695677ca2098c7c162d01190feed7ecc599078c656a0; focused record docs/roadmap/evidence/W5-01.md merged by PR #255.
+Exact observed result: PASS. Automated production regressions cover valid live late join, incompatible/invalid rejection without ghost state, participant replacement reconnect, ordered Host-authoritative catch-up, reconnect from accepted replica cursor, and exactly-once hello-ack replay. The same exact product SHA passed real Windows Tauri H+P1+P2 connected topology and replacement reconnect behavior.
+Inheritance check: GitHub compare 2ac28651312f1fdbe82edb74fd13f342a8f910f7...8a4d279d0144abdabeb8c1402cf86c5f55defe64 changes only canonical evidence/current documents plus the W4-07 evidence record. PR #255 adds only docs/roadmap/evidence/W5-01.md. No production source, connected transport/runtime, tests, or Tauri runner changed across the inherited path.
 Exact observed failure: None.
-Smallest required change: None. Record the exact-SHA Windows evidence, close W4-08 and W4, and proceed to W5-01. No product-code modification is authorized.
+Smallest required change: None. Record W5-01 as PASS in the official ledger/current documents and proceed to W5-02. No product-code modification is authorized.
 ```
 
 ## Change gate
