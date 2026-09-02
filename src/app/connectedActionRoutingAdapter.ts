@@ -273,7 +273,8 @@ registerConnectedActionRequestHandler(async (adapter,transportMessage,request) =
   }
 
   if (!request.manualMovementReaction) {
-    const requestedAction=actionFor(adapter,request.actorId,request.actionId);
+    const snapshot=await connectedInternal(adapter).getSnapshot();
+    const requestedAction=snapshot.scene.actionsByActor[request.actorId]?.find((action)=>action.id===request.actionId);
     if (!requestedAction) {
       await sendConnectedWireTo(transportMessage.peer,{type:"error",code:"action-unsupported",message:`Action ${request.actionId} is not available for ${request.actorId}`,hostCursor:ledger.cursor});
       return;
