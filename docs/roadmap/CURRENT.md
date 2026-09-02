@@ -42,10 +42,10 @@ W0: COMPLETE — 6/6 PASS
 W1: COMPLETE — 8/8 PASS
 W2: COMPLETE — 8/8 PASS
 W3: COMPLETE — 8/8 PASS
-W4: 5/8 PASS
-Official ledger score: 46.3/100.0
-PASS: 35/72
-PENDING: 37/72
+W4: 6/8 PASS
+Official ledger score: 47.5/100.0
+PASS: 36/72
+PENDING: 36/72
 FAIL: 0
 BLOCKED: 0
 ```
@@ -53,10 +53,12 @@ BLOCKED: 0
 ## Current stage
 
 ```text
-Next Gate: W4-06
+Next Gate: W4-07
 ```
 
-`W4-05` is PASS by inherited exact-SHA Party Stash policy evidence. Product SHA `5bef709f010543859e84c98ef7db8f14e5c06469` passed GitHub Actions UI run `33570546168`, job `100063331529`, including `Verify Party Stash sequential transfer routing`. `campaignPersistenceContracts` fixes exactly `shared`, `dm-approval`, and `dm-managed`; `campaignPartyStashPolicyRuntimeAdapter` keeps deposits open, allows shared withdrawals, queues non-DM withdrawals for explicit DM approve/reject under approval mode, rejects non-DM withdrawals in DM-managed mode, and preserves the base transfer path for DM withdrawals. `CampaignSystemsPanel` exposes all three policies and pending approve/reject controls through the production Campaign UI. Existing `campaignSystems.test.ts` fixes durable Party Stash transfer/idempotency/failure isolation and Campaign namespace ownership. GitHub compare `5bef709f010543859e84c98ef7db8f14e5c06469...cf712116381ff8493c8eeebfad7ed8ada95b78ee` changes only the four evidence/current docs, so this production/runtime/test path is inherited unchanged. No product code changed for W4-05; the next exact Gate is `W4-06`.
+`W4-06` is PASS by inherited exact-SHA Campaign DM Library evidence. Product SHA `5bef709f010543859e84c98ef7db8f14e5c06469` passed GitHub Actions UI run `33570546168`, job `100063331529`; `Run UI tests` succeeded. `campaignDmLibraryOrganizationRuntime.test.ts` and the organization structure test cover Campaign-owned private-note CRUD, folder create/rename/delete, and persisted folder/favorite placement. `campaignDmLibraryImport.test.ts` covers JSON import for feature-rich custom/magic items, arrays/NPC definitions, provenance preservation, and invalid charge/attunement rejection. Note/Library structure tests keep `dmLibrary` and `noteText` out of Session projection and the Library Host-only. `campaignDmLibraryDeleteProvenance.test.ts` proves a Character grant is an independent copy retaining provenance after the source Library definition is deleted. PR #230 records the focused acceptance mapping in `evidence/W4-06.md`. GitHub compare `5bef709f010543859e84c98ef7db8f14e5c06469...083ce354fc2c1fcfd1e1346f976f920a30ccd2c1` changes only the evidence/current docs plus the W4-06 evidence file, so the production/runtime/tests are inherited unchanged. No product code changed for W4-06; the next exact Gate is `W4-07`.
+
+`W4-05` is PASS by inherited exact-SHA Party Stash policy evidence. Product SHA `5bef709f010543859e84c98ef7db8f14e5c06469` passed GitHub Actions UI run `33570546168`, job `100063331529`, including `Verify Party Stash sequential transfer routing`. `campaignPersistenceContracts` fixes exactly `shared`, `dm-approval`, and `dm-managed`; `campaignPartyStashPolicyRuntimeAdapter` keeps deposits open, allows shared withdrawals, queues non-DM withdrawals for explicit DM approve/reject under approval mode, rejects non-DM withdrawals in DM-managed mode, and preserves the base transfer path for DM withdrawals. `CampaignSystemsPanel` exposes all three policies and pending approve/reject controls through the production Campaign UI. Existing `campaignSystems.test.ts` fixes durable Party Stash transfer/idempotency/failure isolation and Campaign namespace ownership. GitHub compare `5bef709f010543859e84c98ef7db8f14e5c06469...cf712116381ff8493c8eeebfad7ed8ada95b78ee` changes only the four evidence/current docs, so this production/runtime/test path is inherited unchanged. No product code changed for W4-05.
 
 `W4-04` is PASS by inherited exact-SHA Campaign systems evidence. Product SHA `5bef709f010543859e84c98ef7db8f14e5c06469` passed GitHub Actions UI run `33570546168`, job `100063331529`; step `Verify Campaign lifecycle and declarative providers` succeeded. `campaignRuntimeAdapter` fixes calendar/ration provider IDs and versions, Session defaults, and the immutable `rationsVisibleToPlayers` policy in the prepared Session snapshot; Client projection omits ration details when the captured policy is false. `connectedCampaignSystemsRuntimeAdapter` enforces the same privacy boundary on network projection by stripping ration balances/requirements/shortage and roster ration-unit fields before broadcast when `visibleToPlayers` is false, while the Host retains the authoritative Campaign state. Existing `campaignRuntimeAdapter.test.ts`, `campaignSystems.test.ts`, and declarative provider profile/runtime/UI tests cover provider configuration, calendar/ration state, Session snapshot capture, installed provider version pinning/options, and Campaign UI/runtime ownership. The integration history from product SHA `5bef709f010543859e84c98ef7db8f14e5c06469` through canonical `19ffc83e529e7e986f50377bfded69cb6ca33871` changes only the four evidence/current docs, so the W4-04 production/runtime/tests are inherited unchanged. No product code changed for W4-04.
 
