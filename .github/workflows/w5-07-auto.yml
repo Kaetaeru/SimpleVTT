@@ -6,6 +6,7 @@ on:
       - "src/app/connectedSessionRuntimeAdapter.ts"
       - "src/app/connectedActionRoutingAdapter.ts"
       - "src/app/connectedResolutionPresentation.ts"
+      - "src/app/characterSessionProjectionMount.ts"
       - "tests/ui/connectedThreePeerRemoteAttackOwnership.test.ts"
       - ".github/workflows/w5-07-auto.yml"
   push:
@@ -16,6 +17,7 @@ on:
       - "src/app/connectedSessionRuntimeAdapter.ts"
       - "src/app/connectedActionRoutingAdapter.ts"
       - "src/app/connectedResolutionPresentation.ts"
+      - "src/app/characterSessionProjectionMount.ts"
       - "tests/ui/connectedThreePeerRemoteAttackOwnership.test.ts"
       - ".github/workflows/w5-07-auto.yml"
 
