@@ -48,10 +48,10 @@ W0: 6/6 PASS
 W1: 8/8 PASS — COMPLETE
 W2: 8/8 PASS — COMPLETE
 W3: 8/8 PASS — COMPLETE
-W4: 7/8 PASS
-Official ledger score: 48.8/100.0
-PASS: 37/72
-Remaining gates: 35/72
+W4: 8/8 PASS — COMPLETE
+Official ledger score: 50.0/100.0
+PASS: 38/72
+Remaining gates: 34/72
 FAIL: 0
 BLOCKED: 0
 ```
@@ -75,11 +75,13 @@ W0 — COMPLETE
 W1 — COMPLETE (8/8 PASS)
 W2 — COMPLETE (8/8 PASS)
 W3 — COMPLETE (8/8 PASS)
-W4 — 7/8 PASS
-Next exact Gate: W4-08
+W4 — COMPLETE (8/8 PASS)
+Next exact Gate: W5-01
 ```
 
-W4-07 is closed by exact-SHA multiplayer DM-preparation evidence. Product verification SHA `2ac28651312f1fdbe82edb74fd13f342a8f910f7` passed GitHub Actions UI run `33636100212`, job `100267245818`, including connected topology/continuity/Session-layer coverage and the frontend build. V1 Tauri Verification run `33636100197`, job `100267245684` (`tauri-w4-07-spatial`), passed the real Windows H+P1+P2 acceptance for all `MP-G01` through `MP-G09`: NPC quick-add, PC preset quick-add, validated custom JSON materialization, handout reveal/withdraw, reconnect continuity, DM-only privacy, Session-pinned lookup, mapless spatial fallback, and compatible-provider Host validation. Artifact `9849024415` (`SimpleVTT-W4-07-G01-G09-2ac28651312f1fdbe82edb74fd13f342a8f910f7`) has digest `sha256:b044f73320cd10bf2446695677ca2098c7c162d01190feed7ecc599078c656a0`. PR #249 merged the verified tree as `2ffc2004d795a350a4aa3676bcd7d4cb362f1ea1` with no file differences from the verification SHA, and PR #251 added the focused `roadmap/evidence/W4-07.md` record only. No product/runtime defect was reproduced. The first non-PASS Gate is now W4-08.
+W4-08 is closed by exact-SHA Windows Tauri Campaign reopen evidence. Product verification SHA `2ac28651312f1fdbe82edb74fd13f342a8f910f7` passed V1 Tauri Verification run `33636100197`, job `100267245439` (`tauri-w3`). The existing production journey prepares a playable Character and Campaign through the real UI, saves a DM-owned PC preset, starts a local Host Session, performs play and Long Rest with +8h Campaign time, ends the Session through the production pane, exits the app process, relaunches on the same data root, reopens the Campaign, and asserts absolute time `480` minutes plus one completed session-history entry. The same job passed `tests/ui/appProviderStopSessionRefresh.test.ts` 2/2 before the Tauri journey. Artifact `9849024676` (`SimpleVTT-W3-Tauri-2ac28651312f1fdbe82edb74fd13f342a8f910f7`) has digest `sha256:40fd32b55ec3f6d92f47c29b6acff20d599e64b3b7f757ddf5c9b73e270860e3`. Actions synthetic merge `f05147605e4dce56a0552b69fa361f28d4c5cf60` has no file differences from verification head `2ac28651312f1fdbe82edb74fd13f342a8f910f7`, and the compare from that verification SHA through canonical `ceaf3ebf786ffa13d934d68c0fcebcc58cb00ae8` changes only canonical evidence/current documents plus the W4-07 evidence record. No product/runtime defect was reproduced and no product code changed for W4-08. W4 is complete; the first non-PASS Gate is now W5-01.
+
+W4-07 is closed by exact-SHA multiplayer DM-preparation evidence. Product verification SHA `2ac28651312f1fdbe82edb74fd13f342a8f910f7` passed GitHub Actions UI run `33636100212`, job `100267245818`, including connected topology/continuity/Session-layer coverage and the frontend build. V1 Tauri Verification run `33636100197`, job `100267245684` (`tauri-w4-07-spatial`), passed the real Windows H+P1+P2 acceptance for all `MP-G01` through `MP-G09`: NPC quick-add, PC preset quick-add, validated custom JSON materialization, handout reveal/withdraw, reconnect continuity, DM-only privacy, Session-pinned lookup, mapless spatial fallback, and compatible-provider Host validation. Artifact `9849024415` (`SimpleVTT-W4-07-G01-G09-2ac28651312f1fdbe82edb74fd13f342a8f910f7`) has digest `sha256:b044f73320cd10bf2446695677ca2098c7c162d01190feed7ecc599078c656a0`. PR #249 merged the verified tree as `2ffc2004d795a350a4aa3676bcd7d4cb362f1ea1` with no file differences from the verification SHA, and PR #251 added the focused `roadmap/evidence/W4-07.md` record only. No product/runtime defect was reproduced.
 
 W4-06 is closed by inherited exact-SHA Campaign DM Library organization/import/private-note/provenance evidence. Product SHA `5bef709f010543859e84c98ef7db8f14e5c06469` passed GitHub Actions UI run `33570546168`, job `100063331529`; `Run UI tests` succeeded. `campaignDmLibraryOrganizationRuntime.test.ts` and `campaignDmLibraryOrganizationStructure.test.ts` cover Campaign-owned private-note CRUD, folder create/rename/delete, and persisted folder/favorite placement. `campaignDmLibraryImport.test.ts` preserves feature-rich custom/magic item runtime fields and provenance, imports arrays/NPC definitions, and rejects invalid charge/attunement contracts. `campaignDmLibraryNoteStructure.test.ts` and `campaignDmLibraryStructure.test.ts` keep `dmLibrary` and `noteText` out of Session projection and the DM Library Host-only. `campaignDmLibraryDeleteProvenance.test.ts` proves Character grants are independent copies that retain provenance after source Library deletion. PR #230 records the focused acceptance mapping in `roadmap/evidence/W4-06.md`. GitHub compare `5bef709f010543859e84c98ef7db8f14e5c06469...083ce354fc2c1fcfd1e1346f976f920a30ccd2c1` changes only evidence/current docs plus the W4-06 evidence file, so the product/runtime/test path is inherited unchanged. No product code changed for W4-06.
 
@@ -121,9 +123,9 @@ W1-06 was the only Gate with a reproduced product gap: the real Character Librar
 
 ### Next execution sequence
 
-1. Start `W4-08`, the first non-`PASS` Gate in the ledger.
-2. Do not reopen W1-W4-07; reuse their recorded exact-SHA evidence unless a new current-HEAD regression is reproduced.
-3. For `W4-08`, inspect only the repository-defined acceptance criterion and its existing production/test owner before authorizing any product-code change.
+1. Start `W5-01`, the first non-`PASS` Gate in the ledger.
+2. Do not reopen W1-W4; reuse their recorded exact-SHA evidence unless a new current-HEAD regression is reproduced.
+3. For `W5-01`, inspect only the repository-defined acceptance criterion and its existing production/test owner before authorizing any product-code change.
 4. For Common Play, follow [`design/ui-ux/COMMON-PLAY-FUNCTION-FIRST.md`](design/ui-ux/COMMON-PLAY-FUNCTION-FIRST.md): functional reachability first, broad UI redesign later.
 
 ## Non-negotiable execution rules
