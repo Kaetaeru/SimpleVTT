@@ -12,11 +12,9 @@ import { connectedStateFor } from "../../src/app/connectedSessionState";
 import {
   CONNECTED_CAPABILITIES,
   advanceConnectedResolutionPresentation,
-  applyConnectedClientEvents,
   applyConnectedResolutionPresentation,
   connectedManifest,
 } from "../../src/app/connectedSessionRuntimeAdapter";
-import { ClientSessionReplica } from "../../src/app/connectedSessionProtocol";
 import { encodeConnectedWireMessage, type ConnectedWireMessage } from "../../src/app/connectedSessionWire";
 import {
   tauriSessionTransport,
@@ -180,7 +178,6 @@ function prepareClient(adapter:MockAdapter,sessionId:string){
   const state=connectedStateFor(adapter);
   state.mode="client";
   state.sessionId=sessionId;
-  state.replica=new ClientSessionReplica(sessionId);
 }
 
 async function consumeSamePublicResolution(
@@ -208,6 +205,9 @@ async function consumeSamePublicResolution(
   assert.deepEqual(terminal.payload.presentation.targets.map((target)=>target.id),targetIds,"terminal target order must match the Host-authoritative allocation");
 
   const stateChanges=terminal.payload.resolutionEvents.flatMap((event)=>event.stateChanges);
+  for(const targetId of targetIds){
+    assert.ok(stateChanges.some((change)=>change.targetId===targetId),`terminal Host event must contain the authoritative outcome for ${targetId}`);
+  }
   const slotChanges=stateChanges.filter((change)=>change.kind==="resource"&&change.targetId===actorId&&change.resourceId==="spell-slot-1");
   assert.equal(slotChanges.length,1,"one committed level-1 spell cast must debit exactly one authoritative slot resource");
   const slotChange=slotChanges[0];
@@ -227,23 +227,20 @@ async function consumeSamePublicResolution(
     assert.deepEqual(acting.resolution,observing.resolution);
     assert.deepEqual(acting.resolutionPresentation,observing.resolutionPresentation);
   }
-  while(advanceConnectedResolutionPresentation(actingClient).status!=="empty"){}
-  while(advanceConnectedResolutionPresentation(observingClient).status!=="empty"){}
 
-  const [actingBatch,observingBatch]=await Promise.all([
-    applyConnectedClientEvents(actingClient,batches[0].events),
-    applyConnectedClientEvents(observingClient,batches[0].events),
-  ]);
-  assert.equal(actingBatch.status,"applied");
-  assert.equal(observingBatch.status,"applied");
-  advanceConnectedResolutionPresentation(actingClient);
-  advanceConnectedResolutionPresentation(observingClient);
-  const [actingFinal,observingFinal]=await Promise.all([actingClient.getSnapshot(),observingClient.getSnapshot()]);
-  assert.deepEqual(
-    targetIds.map((id)=>actingFinal.scene.entities.find((entity)=>entity.id===id)?.hp),
-    targetIds.map((id)=>observingFinal.scene.entities.find((entity)=>entity.id===id)?.hp),
-    "P1 and P2 must apply identical terminal HP outcomes for every Host-selected Magic Missile target",
-  );
+  const actingStages:string[]=[];
+  const observingStages:string[]=[];
+  while(true){
+    const [acting,observing]=await Promise.all([actingClient.getSnapshot(),observingClient.getSnapshot()]);
+    assert.ok(acting.resolution&&observing.resolution,"both remote consumers must retain the shared live slotted-spell presentation");
+    actingStages.push(acting.resolution.stage);
+    observingStages.push(observing.resolution.stage);
+    const actingAdvance=advanceConnectedResolutionPresentation(actingClient);
+    const observingAdvance=advanceConnectedResolutionPresentation(observingClient);
+    assert.equal(actingAdvance.status,observingAdvance.status);
+    if(actingAdvance.status==="empty")break;
+  }
+  assert.deepEqual(observingStages,actingStages,"P1 and P2 must consume the same ordered public multi-target spell presentation");
 }
 
 test("MP-C14/C16 core · remote P1 Magic Missile keeps Host multi-target order and debits exactly one spell slot while P2 sees the same outcome",async()=>{
@@ -301,7 +298,7 @@ test("MP-C14/C16 core · remote P1 Magic Missile keeps Host multi-target order a
     for(const targetId of targetIds){
       const targetAfter=completed.scene.entities.find((entity)=>entity.id===targetId);
       assert.ok(targetAfter,`Magic Missile target ${targetId} must remain in the Host Scene`);
-      assert.ok(targetAfter.hp+targetAfter.tempHp<(durabilityBefore.get(targetId)??0),`Host-authoritative Magic Missile must damage ${targetId} exactly through the committed cast`);
+      assert.ok(targetAfter.hp+targetAfter.tempHp<(durabilityBefore.get(targetId)??0),`Host-authoritative Magic Missile must damage ${targetId} through the single committed cast`);
     }
     assert.equal(state.ledger.cursor,actionCursor+1,"remote slotted multi-target spell must commit exactly one Host ledger event");
     await consumeSamePublicResolution(transport.broadcastsAfter(broadcastStart),state.sessionId,p1.characterId,magicMissile.id,targetIds);
