@@ -25,6 +25,8 @@ jobs:
           node-version: 22
       - name: Install dependencies
         run: npm install --no-audit --no-fund
+      - name: Generate content dependencies
+        run: npm run generate:content
       - name: Verify W4-06 DM Library contracts
         run: >-
           npx tsx --test
