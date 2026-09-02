@@ -116,7 +116,7 @@ test("MP-C24 core · duplicate terminal event batches do not reapply state, Acti
   }
 });
 
-test("MP-C17/C19 core · remote P1 Second Wind heals once, spends its feature resource once, and fans out the same live presentation to P2",async()=>{
+test("MP-C17/C19 core · remote P1 Second Wind heals once, debits the owner feature resource once, and fans out the same live presentation to P2",async()=>{
   const {runRemoteSecondWindCase}=await import("./connectedThreePeerRemoteFeatureResourceCase");
   await runRemoteSecondWindCase();
 });
