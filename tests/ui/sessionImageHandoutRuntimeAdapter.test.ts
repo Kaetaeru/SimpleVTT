@@ -106,6 +106,16 @@ test("DM handout reveal is presentation-only and the current reveal is restored 
     await flush();
     assert.equal(handout.getSessionImageHandoutState(client).asset,null);
 
+    const withdrawnReconnectPeer="peer.client.reconnect-withdrawn";
+    transport.emit(0,withdrawnReconnectPeer,reconnectHello.raw);
+    await flush();
+    const restoredWithdrawal=transport.sentTo().filter((entry)=>entry.peer===withdrawnReconnectPeer&&entry.value.type==="presentation-handout").at(-1);
+    assert.ok(restoredWithdrawal,"reconnecting Clients must receive the current withdrawn handout state");
+    assert.equal(restoredWithdrawal.value.asset,null,"withdrawn handout restoration must not leak the previously revealed asset");
+    transport.emit(1,"host",restoredWithdrawal.raw);
+    await flush();
+    assert.equal(handout.getSessionImageHandoutState(client).asset,null);
+
     await handout.dismissSessionLastRoll(host,"resolution.last-roll.1");
     const dismissed=transport.sent().filter((entry)=>entry.value.type==="presentation-last-roll-dismiss").at(-1);
     assert.ok(dismissed);
