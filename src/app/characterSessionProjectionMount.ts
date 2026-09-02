@@ -10,8 +10,6 @@ import {
   unmountAllCharacterSessionProjections,
   unmountCharacterSessionProjectionForPeer,
 } from "./characterSessionProjectionRegistry";
-import { ensureAdapterTurnRuntimeState, turnRuntimeSessions } from "./turnRuntimeSessionRegistry";
-import { addTurnRuntimeCombatant } from "./realTurnRuntimeService";
 
 type ProjectionMountAdapterState = {
   activeCharacter:CharacterSheet;
@@ -225,9 +223,6 @@ export function activateProjectedCharacterResolutionContext(
     previousActionActorOrder,
   };
   app.activeCharacter=structuredClone(mounted.sheet);
-  ensureAdapterTurnRuntimeState(adapter,app.scene);
-  const turnRuntime=turnRuntimeSessions.get(adapter);
-  if (turnRuntime) addTurnRuntimeCombatant(turnRuntime,app.scene,mounted.characterId);
   app.scene.selectedActorId=mounted.characterId;
   app.scene.actionsByActor=reorderActionsByActor(app.scene.actionsByActor,[
     mounted.characterId,
