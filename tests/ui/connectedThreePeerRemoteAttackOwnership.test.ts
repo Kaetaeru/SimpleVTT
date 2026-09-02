@@ -87,18 +87,18 @@ async function eventually(predicate:()=>boolean|Promise<boolean>,message:string)
 
 async function createPlayerFixture(host:MockAdapter,characterId:string,name:string,revision:number):Promise<PlayerFixture>{
   const snapshot=await host.getSnapshot();
-  const classEntry=snapshot.catalog.find((entry)=>entry.scope==="builtin"&&entry.category==="class");
-  const speciesEntry=snapshot.catalog.find((entry)=>entry.scope==="builtin"&&entry.category==="species");
-  const backgroundEntry=snapshot.catalog.find((entry)=>entry.scope==="builtin"&&entry.category==="background");
-  assert.ok(classEntry?.contentId&&speciesEntry?.contentId&&backgroundEntry?.contentId,"three-peer fixture requires canonical Character build identities");
+  const fighter=snapshot.catalog.find((entry)=>entry.category==="class"&&/fighter/i.test(`${entry.id} ${entry.nameEn}`));
+  const human=snapshot.catalog.find((entry)=>entry.category==="species"&&/human/i.test(`${entry.id} ${entry.nameEn}`));
+  const soldier=snapshot.catalog.find((entry)=>entry.category==="background"&&/soldier/i.test(`${entry.id} ${entry.nameEn}`));
+  assert.ok(fighter?.contentId&&human?.contentId&&soldier?.contentId,"three-peer fixture requires canonical Fighter/Human/Soldier identities");
   const sheet=structuredClone(snapshot.activeCharacter);
   sheet.id=characterId;
   sheet.name=name;
-  sheet.className=classEntry.contentId;
-  sheet.subclassName="";
-  sheet.species=speciesEntry.contentId;
-  sheet.background=backgroundEntry.contentId;
-  sheet.classLevels=undefined;
+  sheet.className=fighter.nameKo;
+  sheet.subclassName=undefined;
+  sheet.species=human.nameKo;
+  sheet.background=soldier.nameKo;
+  sheet.classLevels=[{classId:fighter.contentId,level:sheet.level}];
   sheet.cantrips=[];
   sheet.preparedSpells=[];
   sheet.spellbookSpells=[];
@@ -210,7 +210,8 @@ test("MP-C01/C03 core · remote P1 attacks resolve once on Host and fan out the 
     assert.equal(state.peerParticipants.size,2,"Host must retain both remote peers for spectator fan-out");
 
     const hostWithPlayers=await host.getSnapshot();
-    assert.ok(hostWithPlayers.scene.actionsByActor[p1.characterId]?.some((action)=>action.id==="action.longsword"),"Host projection must expose P1 canonical longsword action");
+    const p1Attack=hostWithPlayers.scene.actionsByActor[p1.characterId]?.find((action)=>action.resolutionKind==="attack"&&(action.name.includes("롱소드")||action.name.toLowerCase().includes("longsword")));
+    assert.ok(p1Attack,"Host projection must expose P1 canonical longsword attack");
     assert.ok(hostWithPlayers.scene.entities.some((entity)=>entity.id===p2.characterId),"P2 projection must exist as a legal remote target");
 
     const runRemoteAttack=async(requestId:string,targetId:string)=>{
@@ -222,7 +223,7 @@ test("MP-C01/C03 core · remote P1 attacks resolve once on Host and fan out the 
           sessionId:state.sessionId!,
           requestId,
           actorId:p1.characterId,
-          actionId:"action.longsword",
+          actionId:p1Attack.id,
           targetIds:[targetId],
           knownEventCursor:state.ledger!.cursor,
           character:p1Character!,
