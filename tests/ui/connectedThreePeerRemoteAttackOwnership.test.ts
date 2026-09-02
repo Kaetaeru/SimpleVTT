@@ -150,6 +150,10 @@ async function finishResolution(host:MockAdapter,actorId:string){
   for(let step=0;step<12;step+=1){
     const snapshot=await host.getSnapshot();
     if(snapshot.resolution?.stage==="complete")return snapshot;
+    if(snapshot.resolution?.rollKind==="check"&&snapshot.resolution.stage==="effect-preview"&&snapshot.resolution.checkTarget===undefined){
+      await host.applyDmAdjudication({type:"ability-check-dc",value:15,scope:"resolution"});
+      continue;
+    }
     assert.ok(snapshot.resolution?.canAdvance,`resolution ${snapshot.resolution?.id??"<missing>"} stopped before complete`);
     await host.advanceResolution();
   }
@@ -204,6 +208,40 @@ async function assertTwoRemotePresentationConsumers(messages:ConnectedWireMessag
   );
   assert.deepEqual(actingStages,live.slice(Math.max(0,latestDiceIndex)).map((message)=>message.presentation.resolution.stage));
   assert.deepEqual(observingStages,actingStages,"acting peer and P2 spectator must consume the same ordered public live presentation");
+}
+
+async function assertTwoRemoteNoTargetCheckConsumers(messages:ConnectedWireMessage[],actorId:string,actionId:string,d20:number){
+  const live=messages.filter((message):message is Extract<ConnectedWireMessage,{type:"resolution-presentation"}>=>message.type==="resolution-presentation");
+  const batches=messages.filter((message):message is Extract<ConnectedWireMessage,{type:"event-batch"}>=>message.type==="event-batch");
+  assert.ok(live.length>=1,"remote ability check must publish a live presentation before terminal commit");
+  assert.equal(batches.length,1,"remote ability check must commit exactly one event batch");
+  assert.ok(live.every((message)=>message.presentation.actor.id===actorId));
+  assert.ok(live.every((message)=>message.presentation.targets.length===0),"no-target ability check must not invent a phantom target");
+  assert.ok(live.some((message)=>message.presentation.resolution.actionId===actionId&&message.presentation.resolution.authoritativeDice.includes(d20)),"live presentation must carry the Host-authoritative check die");
+  const terminal=batches[0].events.find((event)=>event.payload.kind==="resolution");
+  assert.ok(terminal&&terminal.actorId===actorId,"terminal ability-check event must belong to P1");
+  if(!terminal||terminal.payload.kind!=="resolution")throw new Error("missing terminal ability-check resolution event");
+  assert.equal(terminal.payload.presentation.actor.id,actorId);
+  assert.equal(terminal.payload.presentation.targets.length,0);
+  assert.equal(terminal.payload.presentation.resolution.actionId,actionId);
+  assert.ok(terminal.payload.presentation.resolution.authoritativeDice.includes(d20));
+
+  const actingClient=new MockAdapter();
+  const observingClient=new MockAdapter();
+  for(const consumer of [actingClient,observingClient]){
+    const state=connectedStateFor(consumer);
+    state.mode="client";
+    state.sessionId=terminal.sessionId;
+  }
+  for(const message of live){
+    const actingApplied=applyConnectedResolutionPresentation(actingClient,message.presentation);
+    const observingApplied=applyConnectedResolutionPresentation(observingClient,message.presentation);
+    assert.equal(actingApplied.status,observingApplied.status);
+    assert.notEqual(actingApplied.status,"rejected");
+    const [acting,observing]=await Promise.all([actingClient.getSnapshot(),observingClient.getSnapshot()]);
+    assert.deepEqual(acting.resolution,observing.resolution);
+    assert.deepEqual(acting.resolutionPresentation,observing.resolutionPresentation);
+  }
 }
 
 async function runFreshRemoteAttackCase(kind:"npc"|"p2"){
@@ -270,4 +308,61 @@ async function runFreshRemoteAttackCase(kind:"npc"|"p2"){
 test("MP-C01/C03 core · remote P1 attacks resolve once on Host and fan out the same live presentation to P2",async()=>{
   await runFreshRemoteAttackCase("npc");
   await runFreshRemoteAttackCase("p2");
+});
+
+test("MP-C08/C11 core · remote P1 no-target ability check resolves once on Host and fans out the same die to P2",async()=>{
+  const transport=installThreePeerHostTransport();
+  const host=new MockAdapter();
+  let stopped=false;
+  try{
+    await host.hostSession();
+    const state=connectedStateFor(host);
+    assert.ok(state.ledger&&state.sessionId,"Host session must establish one authoritative ledger");
+
+    const p1=await createPlayerFixture(host,"char.mp-c.check-p1","MP-C Check P1",303);
+    const p2=await createPlayerFixture(host,"char.mp-c.check-p2","MP-C Check P2",404);
+    const p1Character=await connectPlayer(host,transport,"peer.mp-c.check-p1","MP-C Check P1",p1);
+    await connectPlayer(host,transport,"peer.mp-c.check-p2","MP-C Check P2",p2);
+    assert.equal(state.peerParticipants.size,2,"Host must retain P1 and P2 for the shared check fan-out");
+
+    const beforeSnapshot=await host.getSnapshot();
+    const checkAction=beforeSnapshot.scene.actionsByActor[p1.characterId]?.find((action)=>action.id==="action.skill.athletics"&&action.resolutionKind==="ability-check");
+    assert.ok(checkAction,"Host projection must expose P1 Athletics as a no-target production ability check");
+    assert.equal(checkAction.target,"none");
+
+    const authoritativeD20=14;
+    await host.setQueuedD20(authoritativeD20);
+    const broadcastStart=transport.broadcastCount();
+    transport.emitFrom("peer.mp-c.check-p1",{
+      type:"action-request",
+      request:{
+        sessionId:state.sessionId,
+        requestId:"mp-c08.remote-no-target-check",
+        actorId:p1.characterId,
+        actionId:checkAction.id,
+        targetIds:[],
+        knownEventCursor:state.ledger.cursor,
+        character:p1Character!,
+        capabilities:[...CONNECTED_CAPABILITIES],
+      },
+    });
+
+    const completed=await finishResolution(host,p1.characterId);
+    assert.equal(completed.resolution?.stage,"complete");
+    assert.equal(completed.resolution?.actionId,checkAction.id);
+    assert.deepEqual(completed.resolution?.targetIds,[]);
+    assert.equal(completed.resolution?.naturalD20,authoritativeD20);
+    await assertTwoRemoteNoTargetCheckConsumers(
+      transport.broadcastsAfter(broadcastStart),
+      p1.characterId,
+      checkAction.id,
+      authoritativeD20,
+    );
+
+    await host.stopSession();
+    stopped=true;
+  }finally{
+    if(!stopped)await host.stopSession().catch(()=>undefined);
+    transport.restore();
+  }
 });
