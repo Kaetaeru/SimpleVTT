@@ -134,18 +134,17 @@ async function openCharacterTab(browser,label,sectionId){
   await browser.$(`//section[@id=${JSON.stringify(sectionId)}]`).waitForDisplayed({timeout:15_000});
 }
 
-async function createDistinctP2Character(instance){
-  const name="W4 G09 Observer";
-  await click(instance.browser,navButton("캐릭터"),"P2 캐릭터 메뉴");
+async function createDistinctPlayerCharacter(instance,name){
+  await click(instance.browser,navButton("캐릭터"),`${instance.label} 캐릭터 메뉴`);
   const duplicate="//article[contains(@class,'character-card-entry')][.//h2[normalize-space(.)='Aelar']]//button[normalize-space(.)='복제']";
-  await click(instance.browser,duplicate,"P2 Aelar 복제");
-  await openCharacterTab(instance.browser,"정체성","identity");await replaceValue(instance.browser,labelControl("캐릭터 이름"),name,"P2 캐릭터 이름");
+  await click(instance.browser,duplicate,`${instance.label} Aelar 복제`);
+  await openCharacterTab(instance.browser,"정체성","identity");await replaceValue(instance.browser,labelControl("캐릭터 이름"),name,`${instance.label} 캐릭터 이름`);
   for(const [tab,sectionId] of [["정체성","identity"],["종족","species"],["클래스","class"],["배경","background"]]){
-    await openCharacterTab(instance.browser,tab,sectionId);assert.deepEqual(await completeVisibleCharacterChoices(instance.browser),[],`${tab} dependent choices remain unresolved`);
+    await openCharacterTab(instance.browser,tab,sectionId);assert.deepEqual(await completeVisibleCharacterChoices(instance.browser),[],`${instance.label} ${tab} dependent choices remain unresolved`);
   }
-  await openCharacterTab(instance.browser,"능력치","abilities");await click(instance.browser,"//section[@id='abilities']//button[contains(normalize-space(.),'파이터 추천 배치')]","P2 파이터 추천 배치");
-  await openCharacterTab(instance.browser,"기술","proficiencies");assert.deepEqual(await completeVisibleCharacterChoices(instance.browser),[],"P2 proficiency choices remain unresolved");
-  await openCharacterTab(instance.browser,"검토","review");await click(instance.browser,exactButton("모험 시작"),"P2 Character 저장");await waitForText(instance.browser,name,30_000);
+  await openCharacterTab(instance.browser,"능력치","abilities");await click(instance.browser,"//section[@id='abilities']//button[contains(normalize-space(.),'파이터 추천 배치')]",`${instance.label} 파이터 추천 배치`);
+  await openCharacterTab(instance.browser,"기술","proficiencies");assert.deepEqual(await completeVisibleCharacterChoices(instance.browser),[],`${instance.label} proficiency choices remain unresolved`);
+  await openCharacterTab(instance.browser,"검토","review");await click(instance.browser,exactButton("모험 시작"),`${instance.label} Character 저장`);await waitForText(instance.browser,name,30_000);
   const snapshot=await runtimeSnapshot(instance);assert.notEqual(snapshot.activeCharacterId,"char.aelar");assert.equal(snapshot.activeCharacterName,name);return{id:snapshot.activeCharacterId,name};
 }
 
@@ -196,7 +195,8 @@ async function runScenario(){
   const host=await launchInstance("W4-07 Host",path.join(runRoot,"host","data"),await reservePort());
   const p1=await launchInstance("W4-07 P1",path.join(runRoot,"p1","data"),await reservePort());
   const p2=await launchInstance("W4-07 P2",path.join(runRoot,"p2","data"),await reservePort());
-  const p2Character=await createDistinctP2Character(p2);
+  const p1Character=await createDistinctPlayerCharacter(p1,"W4 G08 Player");
+  const p2Character=await createDistinctPlayerCharacter(p2,"W4 G09 Observer");
   await createHostCampaign(host);await openHostSession(host,sessionPort);await joinClientSession(p1,sessionPort);await joinClientSession(p2,sessionPort);
   await host.browser.waitUntil(async()=>{const snapshot=await runtimeSnapshot(host);return snapshot.participants.filter((entry)=>entry.state==="connected").length>=3;},{timeout:20_000,timeoutMsg:"H/P1/P2 participant topology did not converge"});
 
@@ -213,7 +213,7 @@ async function runScenario(){
   const p1AfterG09=await waitForTargetHp(p1,g09Accepted.afterHp);const p2AfterG09=await waitForTargetHp(p2,g09Accepted.afterHp);
 
   for(const instance of [host,p1,p2])await saveEvidence(instance,"g08-g09");
-  const evidence={gate:"W4-07",scope:["MP-G08","MP-G09"],status:"PASS",verificationSha,windowsTauri:true,topology:{host:"char.aelar",p1:p1AfterG09.activeCharacterId,p2:p2Character.id,participantCount:(await runtimeSnapshot(host)).participants.length},scenarios:{"MP-G08":{status:"PASS",authority:g08.fact.authority,beforeHp:g08.beforeHp,afterHp:g08.afterHp,p1Hp:p1AfterG08.targetHp,p2Hp:p2AfterG08.targetHp},"MP-G09":{status:"PASS",rejected:{distanceFeet:g09Rejected.fact.distanceFeet,provenance:g09Rejected.fact.provenance,finalOutcome:g09Rejected.resolution?.finalOutcome,hp:g09Rejected.afterHp},accepted:{distanceFeet:g09Accepted.fact.distanceFeet,provenance:g09Accepted.fact.provenance,finalOutcome:g09Accepted.resolution?.finalOutcome,beforeHp:g09Accepted.beforeHp,afterHp:g09Accepted.afterHp,p1Hp:p1AfterG09.targetHp,p2Hp:p2AfterG09.targetHp}}}};
+  const evidence={gate:"W4-07",scope:["MP-G08","MP-G09"],status:"PASS",verificationSha,windowsTauri:true,topology:{host:"char.aelar",p1:p1Character.id,p2:p2Character.id,participantCount:(await runtimeSnapshot(host)).participants.length},scenarios:{"MP-G08":{status:"PASS",authority:g08.fact.authority,beforeHp:g08.beforeHp,afterHp:g08.afterHp,p1Hp:p1AfterG08.targetHp,p2Hp:p2AfterG08.targetHp},"MP-G09":{status:"PASS",rejected:{distanceFeet:g09Rejected.fact.distanceFeet,provenance:g09Rejected.fact.provenance,finalOutcome:g09Rejected.resolution?.finalOutcome,hp:g09Rejected.afterHp},accepted:{distanceFeet:g09Accepted.fact.distanceFeet,provenance:g09Accepted.fact.provenance,finalOutcome:g09Accepted.resolution?.finalOutcome,beforeHp:g09Accepted.beforeHp,afterHp:g09Accepted.afterHp,p1Hp:p1AfterG09.targetHp,p2Hp:p2AfterG09.targetHp}}}};
   await writeFile(path.join(artifactRoot,"w4-07-g08-g09.json"),JSON.stringify(evidence,null,2),"utf8");
   log(`MP-G08/G09 Windows H+P1+P2 acceptance PASS · ${artifactRoot}`);
 }
