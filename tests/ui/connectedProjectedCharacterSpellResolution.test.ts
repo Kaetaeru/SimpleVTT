@@ -171,9 +171,13 @@ test("host-unknown projected spellcaster resolves freeform Fire Bolt through Hos
     assert.deepEqual(completed.characters,before.characters,"Host permanent Character library must remain unchanged");
     assert.ok((completed.scene.entities.find((entity)=>entity.id===target.id)?.hp??targetHpBefore)<targetHpBefore,"Host authoritative Fire Bolt must commit damage");
 
-    assert.equal(broadcasts.length,1,"remote spell commit must broadcast exactly one ordered event batch");
-    const batch=JSON.parse(broadcasts[0]) as {type:string;events:ConnectedSessionEvent[]};
-    assert.equal(batch.type,"event-batch");
+    const broadcastMessages=broadcasts.map((message)=>JSON.parse(message) as {type:string;events?:ConnectedSessionEvent[]});
+    const livePresentations=broadcastMessages.filter((message)=>message.type==="resolution-presentation");
+    const eventBatches=broadcastMessages.filter((message)=>message.type==="event-batch");
+    assert.equal(livePresentations.length,1,"remote spell commit must publish exactly one live presentation when the resolution completes synchronously");
+    assert.equal(eventBatches.length,1,"remote spell commit must broadcast exactly one ordered event batch");
+    const batch=eventBatches[0];
+    assert.ok(batch.events);
     assert.equal(batch.events.length,1);
     const hostEvent=batch.events[0];
     assert.equal(hostEvent.sequence,1);
@@ -184,6 +188,7 @@ test("host-unknown projected spellcaster resolves freeform Fire Bolt through Hos
     const changes=hostEvent.payload.resolutionEvents.flatMap((event)=>event.stateChanges);
     assert.ok(changes.some((change)=>change.kind==="hp"&&change.targetId===target.id&&change.before===targetHpBefore&&change.after<targetHpBefore));
     assert.equal(sentToPeer.length,0);
+    const broadcastCountAfterCommit=broadcasts.length;
 
     const clientStore=new MemoryCharacterLibraryStore();
     const client=new MockAdapter();
@@ -216,7 +221,7 @@ test("host-unknown projected spellcaster resolves freeform Fire Bolt through Hos
     assert.equal(getCharacterLibraryPersistenceStateForTests(client)?.storageRevision,persistenceBefore);
 
     assert.equal(await routeConnectedActionRequest(host,{peer:PEER,message:""},request),true);
-    assert.equal(broadcasts.length,1,"duplicate request must not create a second Host broadcast");
+    assert.equal(broadcasts.length,broadcastCountAfterCommit,"duplicate request must not create a second Host broadcast");
     assert.equal(sentToPeer.length,1,"duplicate request should return the committed event directly to the peer");
     const duplicate=JSON.parse(sentToPeer[0]) as {type:string;events:Array<{sequence:number}>};
     assert.equal(duplicate.type,"event-batch");

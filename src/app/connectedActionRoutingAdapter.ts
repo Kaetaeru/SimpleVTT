@@ -172,7 +172,8 @@ function inverseResolutionEvents(events:ResolutionEvent[],undoId:string):Resolut
 async function publishConnectedResolutionPresentation(adapter:MockAdapter,snapshot:AppSnapshot) {
   const state=connectedStateFor(adapter);
   const resolution=snapshot.resolution;
-  if (state.mode!=="host"||!state.ledger||!resolution||resolution.stage==="complete") return snapshot;
+  if (state.mode!=="host"||!state.ledger||!resolution) return snapshot;
+  if (resolution.stage==="complete"&&state.presentationTimelineByResolution.has(resolution.id)) return snapshot;
   const key=`${resolution.id}:${resolution.stage}:${resolution.authoritativeDice.join(",")}:${resolution.finalOutcome}`;
   if (state.lastPublishedPresentationKey===key) return snapshot;
   const presentation=buildConnectedResolutionPresentation(snapshot,state.nextPresentationSequence,"live",state.presentationTimelineByResolution.get(resolution.id));
