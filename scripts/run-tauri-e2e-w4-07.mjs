@@ -240,6 +240,49 @@ async function materializeHostCustomJson(host,p1,p2){
   const p1Npc=await waitForEntity(p1,result.actor.id);const p2Npc=await waitForEntity(p2,result.actor.id);return {...result,p1Actor:entityById(p1Npc,result.actor.id),p2Actor:entityById(p2Npc,result.actor.id)};
 }
 
+async function handoutState(instance){
+  const result=await instance.browser.executeAsync((done)=>{
+    Promise.all([import("/src/app/mockAdapter.ts"),import("/src/app/sessionImageHandoutRuntimeAdapter.ts")]).then(([{mockAdapter},handout])=>done({state:handout.getSessionImageHandoutState(mockAdapter)})).catch((error)=>done({error:String(error?.stack??error)}));
+  });
+  assert.ok(!result.error,result.error);return result.state;
+}
+
+async function waitForHandout(instance,fileName){
+  await instance.browser.waitUntil(async()=>{const state=await handoutState(instance);return fileName===null?state.asset===null:state.asset?.fileName===fileName;},{timeout:20_000,interval:150,timeoutMsg:`${instance.label} handout did not converge to ${fileName??"withdrawn"}`});
+  return handoutState(instance);
+}
+
+async function revealHostHandout(host,asset){
+  const result=await host.browser.executeAsync((input,done)=>{
+    Promise.all([import("/src/app/mockAdapter.ts"),import("/src/app/sessionImageHandoutRuntimeAdapter.ts")]).then(async([{mockAdapter},handout])=>{const state=await handout.revealSessionImageHandout(mockAdapter,input);done({state});}).catch((error)=>done({error:String(error?.stack??error)}));
+  },asset);
+  assert.ok(!result.error,result.error);return result.state;
+}
+
+async function withdrawHostHandout(host){
+  const result=await host.browser.executeAsync((done)=>{
+    Promise.all([import("/src/app/mockAdapter.ts"),import("/src/app/sessionImageHandoutRuntimeAdapter.ts")]).then(async([{mockAdapter},handout])=>{const state=await handout.withdrawSessionImageHandout(mockAdapter);done({state});}).catch((error)=>done({error:String(error?.stack??error)}));
+  });
+  assert.ok(!result.error,result.error);return result.state;
+}
+
+async function reconnectClientRuntime(client,sessionPort){
+  const result=await client.browser.executeAsync((port,done)=>{
+    import("/src/app/mockAdapter.ts").then(async({mockAdapter})=>{await mockAdapter.stopSession();await mockAdapter.joinSession(`127.0.0.1:${port}`);const snapshot=await mockAdapter.getSnapshot();done({role:snapshot.session.role,connectionState:snapshot.connectionState,activeCharacterId:snapshot.activeCharacter.id});}).catch((error)=>done({error:String(error?.stack??error)}));
+  },sessionPort);
+  assert.ok(!result.error,result.error);assert.equal(result.role,"client");return result;
+}
+
+async function runHandoutAcceptance(host,p1,p2,sessionPort,asset,p1CharacterId){
+  const beforeP1=await handoutState(p1);const beforeP2=await handoutState(p2);assert.equal(beforeP1.asset,null,"G04 Host-private image must not appear on P1 before explicit reveal");assert.equal(beforeP2.asset,null,"G04 Host-private image must not appear on P2 before explicit reveal");
+  const revealed=await revealHostHandout(host,asset);assert.equal(revealed.asset?.fileName,asset.fileName);const p1Reveal=await waitForHandout(p1,asset.fileName);const p2Reveal=await waitForHandout(p2,asset.fileName);assert.equal(p1Reveal.sessionId,revealed.sessionId);assert.equal(p2Reveal.sessionId,revealed.sessionId);
+  const activeReconnect=await reconnectClientRuntime(p1,sessionPort);assert.equal(activeReconnect.activeCharacterId,p1CharacterId,"G05 reconnect must preserve P1 Character");const p1Restored=await waitForHandout(p1,asset.fileName);assert.equal(p1Restored.dismissed,false,"G05 active reconnect must reopen current Host reveal");await waitForEntity(p1,p1CharacterId);
+  const withdrawn=await withdrawHostHandout(host);assert.equal(withdrawn.asset,null);const p1Withdrawn=await waitForHandout(p1,null);const p2Withdrawn=await waitForHandout(p2,null);
+  const withdrawnReconnect=await reconnectClientRuntime(p1,sessionPort);assert.equal(withdrawnReconnect.activeCharacterId,p1CharacterId,"G05 withdrawn reconnect must preserve P1 Character");const p1RestoredWithdrawal=await waitForHandout(p1,null);await waitForEntity(p1,p1CharacterId);
+  assert.ok(p1RestoredWithdrawal.revision>=withdrawn.revision,"G05 reconnect must restore the current withdrawn revision");
+  return {previewPrivate:true,reveal:{host:revealed,p1:p1Reveal,p2:p2Reveal},activeReconnect:{runtime:activeReconnect,state:p1Restored},withdraw:{host:withdrawn,p1:p1Withdrawn,p2:p2Withdrawn},withdrawnReconnect:{runtime:withdrawnReconnect,state:p1RestoredWithdrawal,oldAssetLeaked:p1RestoredWithdrawal.asset!==null}};
+}
+
 async function materializeHostRangedNpc(host,p1,p2){
   const result=await host.browser.executeAsync((done)=>{
     import("/src/app/mockAdapter.ts").then(async({mockAdapter})=>{
@@ -286,6 +329,7 @@ async function runScenario(){
 
   const library=await materializeHostLibraryActors(host,p1,p2);
   const customJson=await materializeHostCustomJson(host,p1,p2);
+  const handout=await runHandoutAcceptance(host,p1,p2,sessionPort,customJson.image,p1Character.id);
   const npc=await materializeHostRangedNpc(host,p1,p2);
 
   const g08=await runHostRangedAttack(host,{actorId:npc.actorId,actionId:npc.actionId,targetId:p1Character.id,distanceFeet:null});
@@ -300,10 +344,10 @@ async function runScenario(){
   assert.equal(g09Accepted.fact.authority,"authoritative");assert.equal(g09Accepted.fact.distanceFeet,20);assert.ok(g09Accepted.fact.provenance.includes("module:w4-07-windows:spatial:20"));assert.equal(g09Accepted.resolution?.stage,"complete",JSON.stringify(g09Accepted));assert.ok(g09Accepted.afterHp<g09Accepted.beforeHp,"in-range provider fact must allow Host mechanics validation");
   const p1AfterG09=await waitForEntityHp(p1,p1Character.id,g09Accepted.afterHp);const p2AfterG09=await waitForEntityHp(p2,p1Character.id,g09Accepted.afterHp);
 
-  for(const instance of [host,p1,p2])await saveEvidence(instance,"g01-g03-g08-g09");
-  const evidence={gate:"W4-07",scope:["MP-G01","MP-G02","MP-G03","MP-G08","MP-G09"],status:"PASS",verificationSha,windowsTauri:true,topology:{host:"DM Host",p1:p1Character.id,p2:p2Character.id,participantCount:(await runtimeSnapshot(host)).participants.length,hostActor:npc},scenarios:{"MP-G01":{status:"PASS",hostActor:library.npcActor,p1Actor:library.p1Npc,p2Actor:library.p2Npc,privateMetadataLeak:{p1:library.p1Leaks,p2:library.p2Leaks}},"MP-G02":{status:"PASS",hostActor:library.pcActor,p1Actor:library.p1Pc,p2Actor:library.p2Pc,hostCharacterIdsUnchanged:library.characterIdsBefore.length===library.characterIdsAfter.length,p1OwnsActor:library.p1Ownership.owns,p2OwnsActor:library.p2Ownership.owns},"MP-G03":{status:"PASS",item:customJson.item,npc:customJson.npc,image:customJson.image,hostActor:customJson.actor,p1Actor:customJson.p1Actor,p2Actor:customJson.p2Actor,unsafeRejected:customJson.rejected},"MP-G08":{status:"PASS",authority:g08.fact.authority,beforeHp:g08.beforeHp,afterHp:g08.afterHp,p1Hp:entityHp(p1AfterG08,p1Character.id),p2Hp:entityHp(p2AfterG08,p1Character.id)},"MP-G09":{status:"PASS",rejected:{distanceFeet:g09Rejected.fact.distanceFeet,provenance:g09Rejected.fact.provenance,finalOutcome:g09Rejected.resolution?.finalOutcome??"host resolution rejected before commit",hp:g09Rejected.afterHp},accepted:{distanceFeet:g09Accepted.fact.distanceFeet,provenance:g09Accepted.fact.provenance,finalOutcome:g09Accepted.resolution?.finalOutcome,beforeHp:g09Accepted.beforeHp,afterHp:g09Accepted.afterHp,p1Hp:entityHp(p1AfterG09,p1Character.id),p2Hp:entityHp(p2AfterG09,p1Character.id)}}}};
-  await writeFile(path.join(artifactRoot,"w4-07-g01-g03-g08-g09.json"),JSON.stringify(evidence,null,2),"utf8");
-  log(`MP-G01/G02/G03/G08/G09 Windows H+P1+P2 acceptance PASS · ${artifactRoot}`);
+  for(const instance of [host,p1,p2])await saveEvidence(instance,"g01-g05-g08-g09");
+  const evidence={gate:"W4-07",scope:["MP-G01","MP-G02","MP-G03","MP-G04","MP-G05","MP-G08","MP-G09"],status:"PASS",verificationSha,windowsTauri:true,topology:{host:"DM Host",p1:p1Character.id,p2:p2Character.id,participantCount:(await runtimeSnapshot(host)).participants.length,hostActor:npc},scenarios:{"MP-G01":{status:"PASS",hostActor:library.npcActor,p1Actor:library.p1Npc,p2Actor:library.p2Npc,privateMetadataLeak:{p1:library.p1Leaks,p2:library.p2Leaks}},"MP-G02":{status:"PASS",hostActor:library.pcActor,p1Actor:library.p1Pc,p2Actor:library.p2Pc,hostCharacterIdsUnchanged:library.characterIdsBefore.length===library.characterIdsAfter.length,p1OwnsActor:library.p1Ownership.owns,p2OwnsActor:library.p2Ownership.owns},"MP-G03":{status:"PASS",item:customJson.item,npc:customJson.npc,image:customJson.image,hostActor:customJson.actor,p1Actor:customJson.p1Actor,p2Actor:customJson.p2Actor,unsafeRejected:customJson.rejected},"MP-G04":{status:"PASS",previewPrivate:handout.previewPrivate,reveal:{host:handout.reveal.host,p1:handout.reveal.p1,p2:handout.reveal.p2},withdraw:{host:handout.withdraw.host,p1:handout.withdraw.p1,p2:handout.withdraw.p2},layer:"presentation-handout"},"MP-G05":{status:"PASS",activeReconnect:handout.activeReconnect,withdrawnReconnect:handout.withdrawnReconnect},"MP-G08":{status:"PASS",authority:g08.fact.authority,beforeHp:g08.beforeHp,afterHp:g08.afterHp,p1Hp:entityHp(p1AfterG08,p1Character.id),p2Hp:entityHp(p2AfterG08,p1Character.id)},"MP-G09":{status:"PASS",rejected:{distanceFeet:g09Rejected.fact.distanceFeet,provenance:g09Rejected.fact.provenance,finalOutcome:g09Rejected.resolution?.finalOutcome??"host resolution rejected before commit",hp:g09Rejected.afterHp},accepted:{distanceFeet:g09Accepted.fact.distanceFeet,provenance:g09Accepted.fact.provenance,finalOutcome:g09Accepted.resolution?.finalOutcome,beforeHp:g09Accepted.beforeHp,afterHp:g09Accepted.afterHp,p1Hp:entityHp(p1AfterG09,p1Character.id),p2Hp:entityHp(p2AfterG09,p1Character.id)}}}};
+  await writeFile(path.join(artifactRoot,"w4-07-g01-g05-g08-g09.json"),JSON.stringify(evidence,null,2),"utf8");
+  log(`MP-G01/G02/G03/G04/G05/G08/G09 Windows H+P1+P2 acceptance PASS · ${artifactRoot}`);
 }
 
 async function cleanup(){
