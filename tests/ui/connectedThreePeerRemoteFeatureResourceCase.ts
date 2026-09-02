@@ -4,6 +4,7 @@ import "../../src/app/connectedSessionRuntimeAdapter";
 import "../../src/app/connectedActionRoutingAdapter";
 import "../../src/app/productionSessionLifecycleAdapter";
 import { buildCharacterSessionProjectionV1 } from "../../src/app/characterSessionProjection";
+import { materializeCreatedWeaponAttacks } from "../../src/app/characterCreationWeaponAttackAdapter";
 import { projectedCharacterById } from "../../src/app/characterSessionProjectionRegistry";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import { connectedStateFor } from "../../src/app/connectedSessionState";
@@ -84,11 +85,29 @@ async function eventually(predicate:()=>boolean|Promise<boolean>,message:string)
 
 async function createFighterFixture(host:MockAdapter,characterId:string,name:string,revision:number):Promise<PlayerFixture>{
   const snapshot=await host.getSnapshot();
+  const fighter=snapshot.catalog.find((entry)=>entry.category==="class"&&/fighter/i.test(`${entry.id} ${entry.nameEn}`));
+  const human=snapshot.catalog.find((entry)=>entry.category==="species"&&/human/i.test(`${entry.id} ${entry.nameEn}`));
+  const soldier=snapshot.catalog.find((entry)=>entry.category==="background"&&/soldier/i.test(`${entry.id} ${entry.nameEn}`));
+  assert.ok(fighter?.contentId&&human?.contentId&&soldier?.contentId,"remote feature fixture requires canonical Fighter/Human/Soldier identities");
   const sheet=structuredClone(snapshot.activeCharacter);
   sheet.id=characterId;
   sheet.name=name;
+  sheet.className=fighter.nameKo;
+  sheet.subclassName=undefined;
+  sheet.species=human.nameKo;
+  sheet.background=soldier.nameKo;
+  sheet.classLevels=[{classId:fighter.contentId,level:sheet.level}];
+  sheet.cantrips=[];
+  sheet.preparedSpells=[];
+  sheet.spellbookSpells=[];
+  sheet.masteryWeapons=[];
   sheet.sourceRevision=revision;
   sheet.runtimeRevision=revision;
+  sheet.items=sheet.items.filter((item)=>item.definitionId==="dnd.srd521.item.weapon.longsword");
+  assert.equal(sheet.items.length,1,"remote feature fixture requires the canonical longsword item");
+  sheet.equipment=sheet.items.map((item)=>item.name);
+  sheet.attacks=materializeCreatedWeaponAttacks(sheet);
+  assert.ok(sheet.attacks.some((attack)=>attack.name.includes("롱소드")||attack.name.toLowerCase().includes("longsword")),"remote feature fixture requires a materialized longsword attack");
   return {characterId,sourceRevision:revision,runtimeRevision:revision,projection:buildCharacterSessionProjectionV1(sheet,snapshot.catalog)};
 }
 
