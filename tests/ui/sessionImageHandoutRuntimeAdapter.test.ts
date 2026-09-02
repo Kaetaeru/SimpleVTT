@@ -27,7 +27,7 @@ function fakeTransport() {
 
 async function flush() { await new Promise<void>((resolve)=>setImmediate(resolve)); await new Promise<void>((resolve)=>setImmediate(resolve)); await new Promise<void>((resolve)=>setImmediate(resolve)); }
 
-test("DM handout reveal is presentation-only, fans out to P1/P2, restores safely on reconnect, and keeps DM Library notes private",async()=>{
+test("connected Session keeps handouts/private notes safe and rules lookup pinned to Session content",async()=>{
   const transport=fakeTransport();
   try {
     await import("../../src/app/offlineRuntimeAdapters");
@@ -128,6 +128,36 @@ test("DM handout reveal is presentation-only, fans out to P1/P2, restores safely
     assert.equal((secondAck.value.compatibility as {status?:string}).status,"compatible");
     transport.emit(2,"host",secondAck.raw);
     await flush();
+
+    const pinnedEntryId="feat.alert";
+    const pinnedBefore=await host.lookupSessionContent(pinnedEntryId);
+    assert.ok(pinnedBefore,"Session start must pin rules/content that existed at start");
+    assert.equal(pinnedBefore.nameEn,"Alert");
+    const changedContent=JSON.stringify({
+      id:pinnedEntryId,
+      category:"feat",
+      nameKo:"경계 변경본",
+      nameEn:"Alert Changed",
+      source:"G07 post-start mutation",
+      version:"99",
+      description:"G07 ambient catalog changed after Session start",
+    });
+    for(const adapter of [host,client,client2]){
+      await adapter.previewContentImport(changedContent);
+      await adapter.activateContentImport();
+      assert.equal((await adapter.getSnapshot()).catalog.find((entry)=>entry.id===pinnedEntryId)?.nameEn,"Alert Changed","ambient catalog fixture must change after Session start");
+    }
+    const sentBeforeLookup=transport.sent().length;
+    const sentToBeforeLookup=transport.sentTo().length;
+    const cursorBeforeLookup=connectedStateFor(host).ledger?.cursor;
+    for(const adapter of [host,client,client2]){
+      const lookup=await adapter.lookupSessionContent(pinnedEntryId);
+      assert.equal(lookup?.nameEn,"Alert","live rules lookup must read the pinned Session content snapshot");
+      assert.notEqual(lookup?.description,"G07 ambient catalog changed after Session start");
+    }
+    assert.equal(transport.sent().length,sentBeforeLookup,"Session content lookup must not send a network message");
+    assert.equal(transport.sentTo().length,sentToBeforeLookup,"Session content lookup must not fan out a network message");
+    assert.equal(connectedStateFor(host).ledger?.cursor,cursorBeforeLookup,"Session content lookup must not create a mechanics/participant event");
 
     const ledgerCursorBefore=connectedStateFor(host).ledger?.cursor;
     const asset=parseLocalImageDataUrl("data:image/webp;base64,UklGRg==","clue.webp",HANDOUT_IMAGE_MAX_BYTES);
