@@ -272,6 +272,18 @@ registerConnectedActionRequestHandler(async (adapter,transportMessage,request) =
     return;
   }
 
+  if (!request.manualMovementReaction) {
+    const requestedAction=actionFor(adapter,request.actorId,request.actionId);
+    if (!requestedAction) {
+      await sendConnectedWireTo(transportMessage.peer,{type:"error",code:"action-unsupported",message:`Action ${request.actionId} is not available for ${request.actorId}`,hostCursor:ledger.cursor});
+      return;
+    }
+    if (!requestedAction.available) {
+      await sendConnectedWireTo(transportMessage.peer,{type:"error",code:"action-disabled",message:requestedAction.disabledReason??"Action is currently disabled",hostCursor:ledger.cursor});
+      return;
+    }
+  }
+
   const reserved=ledger.reserveActionRequest(request);
   if (reserved.status==="duplicate") {
     await sendConnectedWireTo(transportMessage.peer,{type:"event-batch",sessionId:ledger.sessionId,afterCursor:reserved.event.sequence-1,events:[reserved.event]});
