@@ -284,3 +284,71 @@ test("MP-C12/C15 core · remote P1 Fire Bolt resolves once on Host and fans out 
     transport.restore();
   }
 });
+
+test("MP-C09 core · remote P1 saving throw action resolves once on Host and fans out the same save presentation to P2",async()=>{
+  const transport=installThreePeerHostTransport();
+  const host=new MockAdapter();
+  let stopped=false;
+  try{
+    await host.hostSession();
+    const state=connectedStateFor(host);
+    assert.ok(state.ledger&&state.sessionId,"Host session must establish one authoritative ledger");
+
+    const p1=await createSpellcasterFixture(host,"char.mp-c.save-p1","MP-C Save P1",707);
+    const p2=await createSpellcasterFixture(host,"char.mp-c.save-p2","MP-C Save P2",808);
+    const p1Character=await connectPlayer(host,transport,"peer.mp-c.save-p1","MP-C Save P1",p1);
+    await connectPlayer(host,transport,"peer.mp-c.save-p2","MP-C Save P2",p2);
+    assert.equal(state.peerParticipants.size,2,"Host must retain P1 and P2 for saving-throw spectator fan-out");
+
+    const before=await host.getSnapshot();
+    const shove=before.scene.actionsByActor[p1.characterId]?.find((action)=>action.id==="action.unarmed-strike.shove-prone");
+    assert.ok(shove,"Host projection must expose P1 canonical shove-prone saving-throw action");
+    assert.equal(shove.resolutionKind,"saving-throw");
+    assert.equal(shove.target,"enemy");
+    const target=before.scene.entities.find((entity)=>entity.side==="enemy"&&shove.eligibleTargetIds.includes(entity.id));
+    assert.ok(target,"remote saving throw requires a canonical eligible Host Scene enemy");
+    assert.equal(target.status.includes("넘어짐"),false,"saving-throw target must begin standing for this slice");
+
+    const authoritativeD20=1;
+    await host.setQueuedD20(authoritativeD20);
+    const broadcastStart=transport.broadcastCount();
+    transport.emitFrom("peer.mp-c.save-p1",{
+      type:"action-request",
+      request:{
+        sessionId:state.sessionId,
+        requestId:"mp-c09.remote-saving-throw",
+        actorId:p1.characterId,
+        actionId:shove.id,
+        targetIds:[target.id],
+        knownEventCursor:state.ledger.cursor,
+        character:p1Character!,
+        capabilities:[...CONNECTED_CAPABILITIES],
+      },
+    });
+
+    const completed=await finishResolution(host,p1.characterId);
+    assert.equal(completed.resolution?.stage,"complete");
+    assert.equal(completed.resolution?.actionId,shove.id);
+    assert.equal(completed.resolution?.rollKind,"save");
+    assert.equal(completed.resolution?.saveResults.length,1);
+    assert.equal(completed.resolution?.saveResults[0].targetId,target.id);
+    assert.equal(completed.resolution?.saveResults[0].d20,authoritativeD20);
+    assert.equal(completed.resolution?.saveResults[0].outcome,"실패");
+    assert.equal(completed.scene.entities.find((entity)=>entity.id===target.id)?.status.includes("넘어짐"),true,"failed Host-authoritative shove save must apply prone once");
+    assert.equal(state.ledger.cursor,1,"remote saving-throw action must commit exactly one Host ledger event");
+
+    const messages=transport.broadcastsAfter(broadcastStart);
+    const saveLive=messages.filter((message):message is Extract<ConnectedWireMessage,{type:"resolution-presentation"}>=>message.type==="resolution-presentation");
+    assert.ok(
+      saveLive.some((message)=>message.presentation.resolution.stage==="save-animation"&&message.presentation.resolution.authoritativeDice.includes(authoritativeD20)),
+      "P1 and P2 live presentation must carry the Host-authoritative save die",
+    );
+    await assertTwoRemoteSpellConsumers(messages,p1.characterId,shove.id,target.id);
+
+    await host.stopSession();
+    stopped=true;
+  }finally{
+    if(!stopped)await host.stopSession().catch(()=>undefined);
+    transport.restore();
+  }
+});
