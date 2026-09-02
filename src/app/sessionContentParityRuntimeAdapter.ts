@@ -1,4 +1,5 @@
 import "./productionSessionLifecycleAdapter";
+import type { CatalogEntry } from "./contracts";
 import type { InstalledCatalogEntryV1 } from "./installedContentContracts";
 import {
   installSessionInstalledContent,
@@ -22,6 +23,7 @@ type RawRecord=Record<string,unknown>;
 
 const parityStates=new WeakMap<MockAdapter,ParityState>();
 const lastClientHello=new WeakMap<MockAdapter,HelloWire>();
+const pinnedSessionCatalogs=new WeakMap<MockAdapter,CatalogEntry[]>();
 let activeAdapter:MockAdapter|null=null;
 
 function parityFor(adapter:MockAdapter):ParityState {
@@ -36,6 +38,10 @@ function setParity(adapter:MockAdapter,status:ParityStatus,message:string) {
   const next={status,message};
   parityStates.set(adapter,next);
   return next;
+}
+
+function pinSessionCatalog(adapter:MockAdapter,catalog:CatalogEntry[]) {
+  pinnedSessionCatalogs.set(adapter,structuredClone(catalog));
 }
 
 function object(value:unknown):RawRecord|undefined {
@@ -232,6 +238,7 @@ async function clientParityPreflight(adapter:MockAdapter,message:SessionTranspor
 
   const complete=`콘텐츠 확인 → 필요한 콘텐츠 받기 → 검증 → 준비 완료 · ${compatibility.message}`;
   setParity(adapter,"ready",complete);
+  pinSessionCatalog(adapter,(await adapter.getSnapshot()).catalog);
   return {
     ...message,
     message:JSON.stringify({...raw,compatibility:{...compatibility,message:complete}}),
@@ -284,22 +291,38 @@ function ensureSessionContentParityTransportDecorators() {
 
 ensureSessionContentParityTransportDecorators();
 
+declare module "./mockAdapter" {
+  interface MockAdapter {
+    lookupSessionContent(entryId:string):Promise<CatalogEntry|null>;
+  }
+}
+
 const previousHostSession=MockAdapter.prototype.hostSession;
 const previousJoinSession=MockAdapter.prototype.joinSession;
 const previousStopSession=MockAdapter.prototype.stopSession;
 const previousSetSessionReady=MockAdapter.prototype.setSessionReady;
 
+MockAdapter.prototype.lookupSessionContent=async function lookupSessionContent(entryId:string) {
+  const catalog=pinnedSessionCatalogs.get(this);
+  if (!catalog) throw new Error("Session content snapshot is not available");
+  const entry=catalog.find((candidate)=>candidate.id===entryId);
+  return entry ? structuredClone(entry) : null;
+};
+
 MockAdapter.prototype.hostSession=async function hostSessionWithContentParity() {
   activeAdapter=this;
   ensureSessionContentParityTransportDecorators();
   setParity(this,"unknown","Host 콘텐츠 parity 대기");
-  return previousHostSession.call(this);
+  const result=await previousHostSession.call(this);
+  pinSessionCatalog(this,result.catalog);
+  return result;
 };
 
 MockAdapter.prototype.joinSession=async function joinSessionWithContentParity(address:string) {
   activeAdapter=this;
   ensureSessionContentParityTransportDecorators();
   lastClientHello.delete(this);
+  pinnedSessionCatalogs.delete(this);
   setParity(this,"unknown","콘텐츠 확인 대기");
   return previousJoinSession.call(this,address);
 };
@@ -307,6 +330,7 @@ MockAdapter.prototype.joinSession=async function joinSessionWithContentParity(ad
 MockAdapter.prototype.stopSession=async function stopSessionWithContentParity() {
   const result=await previousStopSession.call(this);
   lastClientHello.delete(this);
+  pinnedSessionCatalogs.delete(this);
   setParity(this,"unknown","콘텐츠 확인 대기");
   return result;
 };
