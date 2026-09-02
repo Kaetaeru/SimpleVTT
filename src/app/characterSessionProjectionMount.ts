@@ -44,7 +44,9 @@ function eligibleTargetIds(scene:SceneVm,action:ActionVm) {
   const actor=scene.entities.find((entity)=>entity.id===action.actorId);
   if (!actor) return [];
   if (action.target==="enemy"||action.target==="multi-enemy") {
-    return scene.entities.filter((entity)=>entity.side!==actor.side).map((entity)=>entity.id);
+    return scene.entities
+      .filter((entity)=>entity.id!==actor.id&&(entity.side!==actor.side||(action.resolutionKind==="attack"&&entity.kind==="character")))
+      .map((entity)=>entity.id);
   }
   if (action.target==="ally") {
     return scene.entities.filter((entity)=>entity.side===actor.side).map((entity)=>entity.id);
@@ -60,6 +62,16 @@ function projectedActions(
     ...action,
     eligibleTargetIds:eligibleTargetIds(scene,action),
   }));
+}
+
+function refreshProjectedActionEligibility(adapter:MockAdapter,scene:SceneVm) {
+  const actions={...scene.actionsByActor};
+  for (const characterId of projectedCharacterIds(adapter)) {
+    const projected=actions[characterId];
+    if (!projected) continue;
+    actions[characterId]=projected.map((action)=>({...action,eligibleTargetIds:eligibleTargetIds(scene,action)}));
+  }
+  scene.actionsByActor=actions;
 }
 
 function canonical(value:unknown):unknown {
@@ -128,6 +140,7 @@ export function mountReconstructedCharacterSessionProjection(
   });
   app.scene.entities=[...app.scene.entities.filter((entity)=>entity.id!==characterId),structuredClone(reconstruction.entity)];
   app.scene.actionsByActor={...app.scene.actionsByActor,[characterId]:projectedActions(reconstruction,app.scene)};
+  refreshProjectedActionEligibility(adapter,app.scene);
   app.scene.economyByActor={...app.scene.economyByActor,[characterId]:structuredClone(reconstruction.economy)};
   return {status:"accepted" as const,characterId};
 }
@@ -189,6 +202,7 @@ export function refreshReconstructedCharacterSessionProjection(
   };
   app.scene.entities=app.scene.entities.map((entity)=>entity.id===mounted.characterId?refreshed:entity);
   app.scene.actionsByActor={...app.scene.actionsByActor,[mounted.characterId]:projectedActions(reconstruction,app.scene)};
+  refreshProjectedActionEligibility(adapter,app.scene);
   if(!app.scene.economyByActor[mounted.characterId]){
     app.scene.economyByActor={...app.scene.economyByActor,[mounted.characterId]:structuredClone(reconstruction.economy)};
   }
@@ -242,6 +256,7 @@ export function unmountReconstructedCharacterSessionProjection(adapter:MockAdapt
   if (app.scene.currentActorId===characterId) app.scene.currentActorId=app.activeCharacter.id;
   if (app.scene.selectedActorId===characterId) app.scene.selectedActorId=app.scene.currentActorId;
   unmountCharacterSessionProjectionForPeer(adapter,peerId);
+  refreshProjectedActionEligibility(adapter,app.scene);
   return true;
 }
 
