@@ -1,0 +1,73 @@
+name: W5-08 AUTO Verification
+
+on:
+  pull_request:
+    paths:
+      - "src/app/phase09ManualMovementReactionAdapter.ts"
+      - "src/app/connectedTurnRoutingAdapter.ts"
+      - "src/app/connectedSessionRuntimeAdapter.ts"
+      - "src/app/connectedActionRoutingAdapter.ts"
+      - "src/app/connectedSessionProtocol.ts"
+      - "src/app/turnRuntimeSessionRegistry.ts"
+      - "src/app/phase09EffectAwareTurnAdapter.ts"
+      - "src/app/standardActionReadyState.ts"
+      - "src/app/resolutionEventUndo.ts"
+      - "tests/ui/phase09ManualMovementReactionAdapter.test.ts"
+      - "tests/ui/c9FamilyOReadyConcentrationProduction.test.ts"
+      - "tests/ui/connectedTurnProjection.test.ts"
+      - "tests/ui/connectedUndoCompensation.test.ts"
+      - ".github/workflows/w5-08-auto.yml"
+  push:
+    branches:
+      - "work/v1-composite"
+      - "agent/**"
+    paths:
+      - "src/app/phase09ManualMovementReactionAdapter.ts"
+      - "src/app/connectedTurnRoutingAdapter.ts"
+      - "src/app/connectedSessionRuntimeAdapter.ts"
+      - "src/app/connectedActionRoutingAdapter.ts"
+      - "src/app/connectedSessionProtocol.ts"
+      - "src/app/turnRuntimeSessionRegistry.ts"
+      - "src/app/phase09EffectAwareTurnAdapter.ts"
+      - "src/app/standardActionReadyState.ts"
+      - "src/app/resolutionEventUndo.ts"
+      - "tests/ui/phase09ManualMovementReactionAdapter.test.ts"
+      - "tests/ui/c9FamilyOReadyConcentrationProduction.test.ts"
+      - "tests/ui/connectedTurnProjection.test.ts"
+      - "tests/ui/connectedUndoCompensation.test.ts"
+      - ".github/workflows/w5-08-auto.yml"
+
+jobs:
+  family-d-fanout:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Generate content dependencies
+        run: npm run generate:content
+      - name: Verify W5-08 Family D fan-out
+        shell: bash
+        run: |
+          set +e
+          npx tsx --test \
+            tests/ui/phase09ManualMovementReactionAdapter.test.ts \
+            tests/ui/c9FamilyOReadyConcentrationProduction.test.ts \
+            tests/ui/connectedTurnProjection.test.ts \
+            tests/ui/connectedUndoCompensation.test.ts \
+            > w5-08-auto.log 2>&1
+          status=$?
+          cat w5-08-auto.log
+          exit "$status"
+      - name: Upload focused test log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: W5-08-AUTO-${{ github.sha }}
+          path: w5-08-auto.log
+          if-no-files-found: error
+          retention-days: 14
