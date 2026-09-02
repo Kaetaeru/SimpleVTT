@@ -31,4 +31,18 @@ jobs:
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
       - name: Verify MP-C01/C03 remote attack ownership and spectator presentation
-        run: npx tsx --test tests/ui/connectedThreePeerRemoteAttackOwnership.test.ts
+        shell: bash
+        run: |
+          set +e
+          npx tsx --test tests/ui/connectedThreePeerRemoteAttackOwnership.test.ts > w5-07-auto.log 2>&1
+          status=$?
+          cat w5-07-auto.log
+          exit "$status"
+      - name: Upload focused test log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: W5-07-AUTO-${{ github.sha }}
+          path: w5-07-auto.log
+          if-no-files-found: error
+          retention-days: 14
