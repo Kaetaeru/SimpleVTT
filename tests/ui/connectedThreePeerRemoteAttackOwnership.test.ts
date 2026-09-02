@@ -227,7 +227,9 @@ async function runFreshRemoteAttackCase(kind:"npc"|"p2"){
     assert.ok(beforeSnapshot.scene.entities.some((entity)=>entity.id===p2.characterId),"P2 projection must exist as a legal remote target");
 
     const targetId=kind==="npc"?"combatant.goblin-a":p2.characterId;
-    const hpBefore=beforeSnapshot.scene.entities.find((entity)=>entity.id===targetId)?.hp;
+    const targetBefore=beforeSnapshot.scene.entities.find((entity)=>entity.id===targetId);
+    assert.ok(targetBefore,`target ${targetId} must exist before the remote attack`);
+    const durabilityBefore=targetBefore.hp+targetBefore.tempHp;
     await host.setQueuedD20(19);
     const broadcastStart=transport.broadcastCount();
     transport.emitFrom("peer.mp-c.p1",{
@@ -247,12 +249,14 @@ async function runFreshRemoteAttackCase(kind:"npc"|"p2"){
     assert.equal(completed.resolution?.stage,"complete");
     const messages=transport.broadcastsAfter(broadcastStart);
     await assertTwoRemotePresentationConsumers(messages,p1.characterId,targetId);
-    const hpAfter=completed.scene.entities.find((entity)=>entity.id===targetId)?.hp;
+    const targetAfter=completed.scene.entities.find((entity)=>entity.id===targetId);
+    assert.ok(targetAfter,`target ${targetId} must remain in the Host Scene after the remote attack`);
+    const durabilityAfter=targetAfter.hp+targetAfter.tempHp;
     assert.ok(
-      typeof hpBefore==="number"&&typeof hpAfter==="number"&&hpAfter<hpBefore,
+      durabilityAfter<durabilityBefore,
       kind==="npc"
         ?"MP-C01 Host-authoritative remote attack must damage the NPC exactly through the canonical resolution"
-        :"MP-C03 Host-authoritative remote attack must target the mounted P2 Character without substituting local ownership",
+        :"MP-C03 Host-authoritative remote attack must damage the mounted P2 Character without substituting local ownership",
     );
 
     await host.stopSession();
