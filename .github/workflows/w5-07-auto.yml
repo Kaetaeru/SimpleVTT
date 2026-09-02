@@ -10,6 +10,7 @@ on:
       - "src/app/characterSessionProjectionMount.ts"
       - "tests/ui/connectedThreePeerRemoteAttackOwnership.test.ts"
       - "tests/ui/connectedThreePeerRemoteAttackOutcome.test.ts"
+      - "tests/ui/connectedThreePeerRemoteAdvantage.test.ts"
       - "tests/ui/connectedThreePeerRemoteSpellPresentation.test.ts"
       - "tests/ui/connectedThreePeerRemoteRejectionExactlyOnce.test.ts"
       - "tests/ui/connectedThreePeerRemoteConcurrentIntent.test.ts"
@@ -28,6 +29,7 @@ on:
       - "src/app/characterSessionProjectionMount.ts"
       - "tests/ui/connectedThreePeerRemoteAttackOwnership.test.ts"
       - "tests/ui/connectedThreePeerRemoteAttackOutcome.test.ts"
+      - "tests/ui/connectedThreePeerRemoteAdvantage.test.ts"
       - "tests/ui/connectedThreePeerRemoteSpellPresentation.test.ts"
       - "tests/ui/connectedThreePeerRemoteRejectionExactlyOnce.test.ts"
       - "tests/ui/connectedThreePeerRemoteConcurrentIntent.test.ts"
@@ -55,6 +57,7 @@ jobs:
           npx tsx --test \
             tests/ui/connectedThreePeerRemoteAttackOwnership.test.ts \
             tests/ui/connectedThreePeerRemoteAttackOutcome.test.ts \
+            tests/ui/connectedThreePeerRemoteAdvantage.test.ts \
             tests/ui/connectedThreePeerRemoteSpellPresentation.test.ts \
             tests/ui/connectedThreePeerRemoteRejectionExactlyOnce.test.ts \
             tests/ui/connectedThreePeerRemoteConcurrentIntent.test.ts \
