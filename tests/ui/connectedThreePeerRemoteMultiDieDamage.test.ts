@@ -203,6 +203,8 @@ test("MP-C07 core · remote P1 2d6 damage keeps die shape, group/type, flat arit
     assert.ok(targetBefore,"MP-C07 target must exist before the remote attack");
     await host.setQueuedD20(18);
     const cursorBefore=state.ledger.cursor;
+    const historyBeforeAction=state.ledger.eventsAfter(0);
+    assert.equal(historyBeforeAction.at(-1)?.sequence,cursorBefore,"synthetic P1/P2 replicas must receive the same pre-action Host history as real connected peers");
     const broadcastStart=transport.broadcastCount();
 
     transport.emitFrom("peer.mp-c07.p1",{
@@ -252,6 +254,12 @@ test("MP-C07 core · remote P1 2d6 damage keeps die shape, group/type, flat arit
     const observingClient=new MockAdapter();
     prepareClient(actingClient,state.sessionId);
     prepareClient(observingClient,state.sessionId);
+    const actingHistory=await applyConnectedClientEvents(actingClient,historyBeforeAction);
+    const observingHistory=await applyConnectedClientEvents(observingClient,historyBeforeAction);
+    assert.equal(actingHistory.status,"applied");
+    assert.equal(observingHistory.status,"applied");
+    assert.equal(connectedStateFor(actingClient).replica?.cursor,cursorBefore);
+    assert.equal(connectedStateFor(observingClient).replica?.cursor,cursorBefore);
     for(const message of live){
       const actingApplied=applyConnectedResolutionPresentation(actingClient,message.presentation);
       const observingApplied=applyConnectedResolutionPresentation(observingClient,message.presentation);
