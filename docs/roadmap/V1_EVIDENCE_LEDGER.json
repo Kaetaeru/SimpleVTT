@@ -1,1 +1,1615 @@
-{"schemaVersion":1,"statusVocabulary":["PENDING","PASS","FAIL","BLOCKED"],"integrationTarget":"work/v1-composite","roadmap":"docs/roadmap/V1_MASTER_ROADMAP.md","scenarioCatalog":"docs/design/multiplayer-v1-scenario-catalog.md","createdFromSha":"77b45028cbc4e04bb2cecc825a771269b64d1f2f","officialScore":77.5,"counts":{"gates":72,"reuseLocked":47,"verifyOnly":14,"build":11,"pass":58,"pending":14,"fail":0,"blocked":0},"rules":{"productCodeChangeRequiresEvidenceCard":true,"reuseOrVerifyGateRequiresReproducedFailureBeforeProductChange":true,"structuralEvidenceCannotCloseRenderedWindowsGate":true,"releaseRequiresOneExactShaAndMatchingWindowsArtifact":true},"gates":[{"id":"W0-01","workstream":"W0","classification":"VERIFY_ONLY","status":"PASS","lastVerifiedSha":"e9bb86f83c7c481e2c1a519c21544c88694b5d8a","evidence":{"commands":["Legacy Execution Boundary","Contract validation"],"testCount":null,"windowsArtifacts":[],"sources":["PR #190","GitHub Actions run 33382210303: Legacy Execution Boundary = success","GitHub Actions run 33382210277 / job 96451500787: Contract validation = success",".github/workflows/apply-phase14-player-experience-redesign.yml removed"]},"remainingGap":null},{"id":"W0-02","workstream":"W0","classification":"BUILD","status":"PASS","lastVerifiedSha":"e9bb86f83c7c481e2c1a519c21544c88694b5d8a","evidence":{"commands":[],"testCount":null,"windowsArtifacts":[],"sources":["docs/roadmap/V1_EVIDENCE_LEDGER.json: 72 gates, 47 R / 14 V / 11 B"]},"remainingGap":null},{"id":"W0-03","workstream":"W0","classification":"BUILD","status":"PASS","lastVerifiedSha":"e9bb86f83c7c481e2c1a519c21544c88694b5d8a","evidence":{"commands":[],"testCount":null,"windowsArtifacts":[],"sources":["docs/CURRENT.md","docs/roadmap/CURRENT.md","CANONICAL_ROOT.md"]},"remainingGap":null},{"id":"W0-04","workstream":"W0","classification":"BUILD","status":"PASS","lastVerifiedSha":"e9bb86f83c7c481e2c1a519c21544c88694b5d8a","evidence":{"commands":[],"testCount":null,"windowsArtifacts":[],"sources":["GitHub issue #110 synchronized to 120 scenarios","GitHub issue #189 created for MP-13","docs/design/multiplayer-v1-scenario-catalog.md"]},"remainingGap":null},{"id":"W0-05","workstream":"W0","classification":"BUILD","status":"PASS","lastVerifiedSha":"e9bb86f83c7c481e2c1a519c21544c88694b5d8a","evidence":{"commands":[],"testCount":null,"windowsArtifacts":[],"sources":["docs/archive/README.md","GitHub issue #185 closed","obsolete Phase14 self-publishing workflow removed"]},"remainingGap":null},{"id":"W0-06","workstream":"W0","classification":"BUILD","status":"PASS","lastVerifiedSha":"e9bb86f83c7c481e2c1a519c21544c88694b5d8a","evidence":{"commands":[],"testCount":null,"windowsArtifacts":[],"sources":["docs/roadmap/EVIDENCE_CARD.md"]},"remainingGap":null},{"id":"W1-01","workstream":"W1","classification":"REUSE_LOCKED","status":"PASS","lastVerifiedSha":"9113736b5dbc565cb40d0646b0f27abdbdc6eb59","evidence":{"commands":["GitHub Actions UI"],"testCount":null,"windowsArtifacts":[],"sources":["PR #191","docs/roadmap/evidence/W1-01.md","GitHub Actions run 33386706736: UI = success","tests/ui/firstRunTutorialStructure.test.ts: W1-01 fresh Home reaches Character Library and Guided Create through production routes"]},"remainingGap":null},{"id":"W1-02","workstream":"W1","classification":"REUSE_LOCKED","status":"PASS","lastVerifiedSha":"42305b1d2a66a976b08844509a63b5999166938a","evidence":{"commands":["GitHub Actions UI"],"testCount":null,"windowsArtifacts":[],"sources":["PR #193","GitHub Actions run 33387465586: UI = success","tests/ui/characterCreationCompleteGate.test.ts: all twelve SRD classes can reach a fully resolved level-1 commit"]},"remainingGap":null},{"id":"W1-03","workstream":"W1","classification":"REUSE_LOCKED","status":"PASS","lastVerifiedSha":"42305b1d2a66a976b08844509a63b5999166938a","evidence":{"commands":["GitHub Actions UI"],"testCount":null,"windowsArtifacts":[],"sources":["PR #193","GitHub Actions UI run 33387465586: UI = success","tests/ui/characterCreationCompleteGate.test.ts: Guided and Quick continue to share one autosaved choice graph"]},"remainingGap":null},{"id":"W1-04","workstream":"W1","classification":"REUSE_LOCKED","status":"PASS","lastVerifiedSha":"42305b1d2a66a976b08844509a63b5999166938a","evidence":{"commands":["GitHub Actions UI"],"testCount":null,"windowsArtifacts":[],"sources":["PR #193","GitHub Actions run 33387465586: UI = success","tests/ui/characterCreationCompleteGate.test.ts: incomplete Guided draft cannot commit and remains available for correction"]},"remainingGap":null},{"id":"W1-05","workstream":"W1","classification":"VERIFY_ONLY","status":"PASS","lastVerifiedSha":"c0900157560ac51a745eac687eb4fff7f2580086","evidence":{"commands":["npm run test:e2e:tauri -- --w1"],"testCount":null,"windowsArtifacts":["SimpleVTT-W1-Tauri-c0900157560ac51a745eac687eb4fff7f2580086 (artifact 9764936861, sha256:85eda3890fdbc6d28ee0e5155617082642a4e22c1e851a5c73783be59af00b23)"],"sources":["PR #195","GitHub Actions run 33409861843 / job 99546422908: V1 W1 Tauri Verification = success","Actions checkout 8c68cf20d7f2287e2f0581b6725f6a20785d5dab and branch HEAD c0900157560ac51a745eac687eb4fff7f2580086 share tree 75f8fc64799a98c22e980dbd102a822555d8c846","Actual Windows Tauri: create -> save -> process exit -> same data root relaunch -> same Character ID/name/class/species/background","w1-create-w1-05-created.{png,txt}, w1-restart-w1-05-restarted.{png,txt}, w1-05.json"]},"remainingGap":null},{"id":"W1-06","workstream":"W1","classification":"VERIFY_ONLY","status":"PASS","lastVerifiedSha":"c0900157560ac51a745eac687eb4fff7f2580086","evidence":{"commands":["npm run test:e2e:tauri -- --w1"],"testCount":null,"windowsArtifacts":["SimpleVTT-W1-Tauri-c0900157560ac51a745eac687eb4fff7f2580086 (artifact 9764936861, sha256:85eda3890fdbc6d28ee0e5155617082642a4e22c1e851a5c73783be59af00b23)"],"sources":["PR #195","GitHub Actions run 33409861843 / job 99546422908: V1 W1 Tauri Verification = success","Actions checkout 8c68cf20d7f2287e2f0581b6725f6a20785d5dab and branch HEAD c0900157560ac51a745eac687eb4fff7f2580086 share tree 75f8fc64799a98c22e980dbd102a822555d8c846","Actual Windows Tauri: import + duplicate + delete; distinct Character IDs and record-local provenance; deletion and survivors preserved after restart","w1-restart-w1-06-lifecycle.{png,txt}, w1-library-restart-w1-06-restarted.{png,txt}, w1-06.json"]},"remainingGap":null},{"id":"W1-07","workstream":"W1","classification":"VERIFY_ONLY","status":"PASS","lastVerifiedSha":"c0900157560ac51a745eac687eb4fff7f2580086","evidence":{"commands":["npm run test:e2e:tauri -- --w1"],"testCount":null,"windowsArtifacts":["SimpleVTT-W1-Tauri-c0900157560ac51a745eac687eb4fff7f2580086 (artifact 9764936861, sha256:85eda3890fdbc6d28ee0e5155617082642a4e22c1e851a5c73783be59af00b23)"],"sources":["PR #195","GitHub Actions run 33409861843 / job 99546422908: V1 W1 Tauri Verification = success","Actions checkout 8c68cf20d7f2287e2f0581b6725f6a20785d5dab and branch HEAD c0900157560ac51a745eac687eb4fff7f2580086 share tree 75f8fc64799a98c22e980dbd102a822555d8c846","Actual Windows Tauri: durable Character compared with rendered Full Sheet HP, AC, resources, inventory, spells, features, and actions","w1-library-restart-w1-07-full-sheet.{png,txt}, w1-library-restart-w1-07-inventory.{png,txt}, w1-07.json"]},"remainingGap":null},{"id":"W1-08","workstream":"W1","classification":"VERIFY_ONLY","status":"PASS","lastVerifiedSha":"c0900157560ac51a745eac687eb4fff7f2580086","evidence":{"commands":["npm run test:e2e:tauri -- --w1"],"testCount":null,"windowsArtifacts":["SimpleVTT-W1-Tauri-c0900157560ac51a745eac687eb4fff7f2580086 (artifact 9764936861, sha256:85eda3890fdbc6d28ee0e5155617082642a4e22c1e851a5c73783be59af00b23)"],"sources":["PR #195","GitHub Actions run 33409861843 / job 99546422908: V1 W1 Tauri Verification = success","Actions checkout 8c68cf20d7f2287e2f0581b6725f6a20785d5dab and branch HEAD c0900157560ac51a745eac687eb4fff7f2580086 share tree 75f8fc64799a98c22e980dbd102a822555d8c846","Actual Windows Tauri: Fighter level-up choice + validation + commit; Action Surge feature/action acquired and level/HP/feature/resource preserved after process restart","w1-library-restart-w1-08-review.{png,txt}, w1-library-restart-w1-08-committed.{png,txt}, w1-level-up-restart-w1-08-restarted.{png,txt}, w1-08.json"]},"remainingGap":null},{"id":"W2-01","workstream":"W2","classification":"REUSE_LOCKED","status":"PASS","lastVerifiedSha":"42305b1d2a66a976b08844509a63b5999166938a","evidence":{"commands":["GitHub Actions UI","GitHub compare 42305b1d2a66a976b08844509a63b5999166938a...c6257b6637603cd35abc7f6c79ab706b36aaa7fb"],"testCount":null,"windowsArtifacts":[],"sources":["docs/roadmap/evidence/W2-01.md","GitHub Actions run 33387465586: UI = success at 42305b1d2a66a976b08844509a63b5999166938a","tests/ui/characterCreationCompleteGate.test.ts: CLASSES=12, SPECIES=9, BACKGROUNDS=4","tests/ui/characterCreationCompleteGate.test.ts: all 12 shipped SRD classes reach a saved legal Level-1 commit","content/indexes/dnd-srd-5.2.1.character-creation.json","42305b1d2a66a976b08844509a63b5999166938a..c6257b6637603cd35abc7f6c79ab706b36aaa7fb changes do not include src/app/characterCreationV10Data.ts, content/indexes/dnd-srd-5.2.1.character-creation.json, or tests/ui/characterCreationCompleteGate.test.ts"]},"remainingGap":null},{"id":"W2-02","workstream":"W2","classification":"REUSE_LOCKED","status":"PASS","lastVerifiedSha":"ef2cdf69748195bd63c0bd7eff747420811842bf","evidence":{"commands":["GitHub Actions UI: Verify W2 SRD product lifecycle","npm run build"],"testCount":89,"windowsArtifacts":[],"sources":["GitHub Actions run 33439392457 / job 99643608987 at ef2cdf69748195bd63c0bd7eff747420811842bf: success","Generated canonical weapon rule metadata: 38 weapons; generic builtin catalog: 115 items","tests/domain/commonPlayInventoryRuntime.test.ts","tests/domain/commonPlayWeaponMasteryComposition.test.ts","tests/ui/productionFreshCharacterInventory.test.ts","tests/ui/phase09RealItemCostService.test.ts","tests/ui/phase09RealItemCostAdapter.test.ts"]},"remainingGap":null},{"id":"W2-03","workstream":"W2","classification":"REUSE_LOCKED","status":"PASS","lastVerifiedSha":"ef2cdf69748195bd63c0bd7eff747420811842bf","evidence":{"commands":["GitHub Actions UI: Verify W2 SRD product lifecycle","npm run build"],"testCount":89,"windowsArtifacts":[],"sources":["GitHub Actions run 33439392457 / job 99643608987 at ef2cdf69748195bd63c0bd7eff747420811842bf: success","Generated SRD spell presentation: 339 spells; normalized spell execution catalog: 339 definitions","tests/domain/spellExecutionCoverage.test.ts: all 339 catalog spells have an executable authoritative definition","tests/ui/spellPresentationCatalog.test.ts: exactly 339 complete unique presentations"]},"remainingGap":null},{"id":"W2-04","workstream":"W2","classification":"REUSE_LOCKED","status":"PASS","lastVerifiedSha":"ef2cdf69748195bd63c0bd7eff747420811842bf","evidence":{"commands":["npx tsx --test tests/contracts/v1MechanismCoverage.test.mjs","node scripts/check-v1-mechanism-coverage.mjs --gate-n","node scripts/check-legacy-execution-boundary.mjs","npm run build"],"testCount":89,"windowsArtifacts":[],"sources":["GitHub Actions run 33439392457 / job 99643608987 at ef2cdf69748195bd63c0bd7eff747420811842bf: success","V1 mechanism coverage OK: total=36 IMPLEMENTED=36 PROVEN_UNNEEDED=0 INCOMPLETE=0 Gate-N-ready","Legacy execution composition boundary OK: 85 classified imports; 18 named adapter paths guarded","tests/contracts/v1MechanismCoverage.test.mjs","tests/domain/commonPlayWeaponMasteryComposition.test.ts","tests/ui/progressionPhase08CatalogPendingAudit.test.ts"]},"remainingGap":null},{"id":"W2-05","workstream":"W2","classification":"VERIFY_ONLY","status":"PASS","lastVerifiedSha":"ef2cdf69748195bd63c0bd7eff747420811842bf","evidence":{"commands":["GitHub Actions UI: Verify creation ChoiceDefinition convergence","GitHub Actions UI: Verify W2 SRD product lifecycle","npm run build"],"testCount":89,"windowsArtifacts":[],"sources":["GitHub Actions run 33439392457 / job 99643608987 at ef2cdf69748195bd63c0bd7eff747420811842bf: success","tests/ui/characterCreationChoiceDefinition.test.ts: shared definitions preserve option IDs/sources, accept catalog selections, reject unknown selections","tests/ui/characterCreationCompleteGate.test.ts: all 12 classes commit with legal skills, equipment, spells, origin feat, mastery, languages, and nested choices","tests/ui/spellPresentationCatalog.test.ts: every class Level-1 spell-list entry resolves to the canonical catalog"]},"remainingGap":null},{"id":"W2-06","workstream":"W2","classification":"VERIFY_ONLY","status":"PASS","lastVerifiedSha":"ef2cdf69748195bd63c0bd7eff747420811842bf","evidence":{"commands":["GitHub Actions UI: Verify progression choice schedule regression","GitHub Actions UI: Verify W2 SRD product lifecycle","npm run build"],"testCount":89,"windowsArtifacts":[],"sources":["GitHub Actions run 33439392457 / job 99643608987 at ef2cdf69748195bd63c0bd7eff747420811842bf: success","tests/ui/progressionChoiceScheduleRegression.test.ts","tests/domain/progressionPhase08CatalogPendingAudit.test.ts: zero catalog-pending choices across all 12 classes and levels 2-20","tests/ui/progressionPhase08CatalogCoverage.test.ts","Generated SRD progression: 12 classes / 240 level rows"]},"remainingGap":null},{"id":"W2-07","workstream":"W2","classification":"VERIFY_ONLY","status":"PASS","lastVerifiedSha":"ef2cdf69748195bd63c0bd7eff747420811842bf","evidence":{"commands":["GitHub Actions UI: Verify W2 SRD product lifecycle","npm run build"],"testCount":89,"windowsArtifacts":[],"sources":["GitHub Actions run 33439392457 / job 99643608987 at ef2cdf69748195bd63c0bd7eff747420811842bf: success","tests/ui/productionFreshCharacterSkills.test.ts","tests/ui/productionFreshCharacterInventory.test.ts","tests/ui/productionFreshCharacterSpells.test.ts","tests/ui/characterLibraryRuntimeAdapter.test.ts","tests/ui/progressionPersistentFeatureRuntime.test.ts","tests/ui/characterLongRestProjection.test.ts"]},"remainingGap":null},{"id":"W2-08","workstream":"W2","classification":"VERIFY_ONLY","status":"PASS","lastVerifiedSha":"699c923dc50dac5ecd266ced58568d3b647850b6","evidence":{"commands":["npm run test:e2e:tauri -- --w2"],"testCount":null,"windowsArtifacts":["SimpleVTT-W2-Tauri-699c923dc50dac5ecd266ced58568d3b647850b6 (artifact 9786387605, sha256:3077663cb94c2a444046d94808c76a677c7d92de61a0576f61d5f57b8cd1172d)"],"sources":["PR #198","GitHub Actions run 33470259003 / job 99738402317: V1 Tauri Verification = success","Product verification SHA 699c923dc50dac5ecd266ced58568d3b647850b6, tree 449bf34d36c7975addcc2196b87a9a026d525730","Actual Windows Tauri: production UI created martial, prepared caster, spontaneous caster, pact caster, level-2 shapeshifter, and healer; process exit -> same data root relaunch -> durable identity/content and rendered Full Sheet","Current-HEAD repair reused multiclassSpellSlots and pactMagicProgression to materialize initial class/spell-capacity source facts","w2-08-{martial,prepared-caster,spontaneous-caster,pact-caster,shapeshifter,healer}-{created,restarted}.{png,txt}, w2-08.json"]},"remainingGap":null},{"id":"W3-01","workstream":"W3","classification":"REUSE_LOCKED","status":"PASS","lastVerifiedSha":"1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff","evidence":{"commands":["GitHub Actions UI","npm run build"],"testCount":30,"windowsArtifacts":[],"sources":["PR #199","docs/roadmap/evidence/W3-01.md","GitHub Actions run 33498144567 / job 99824979798 at 1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff: success","tests/ui/productionPlayIntentUx.test.ts","tests/ui/productionFreshCharacterSkills.test.ts","tests/ui/phase09RealResolutionService.test.ts","tests/ui/phase09RealSavingThrowAdapter.test.ts","tests/domain/commonPlayD20Runtime.test.ts","PR #199 merge ca6b42c47409ff7096f31aeab12624336225ab8f changes only docs/roadmap/evidence/W3-01.md; product runtime is inherited unchanged"]},"remainingGap":null},{"id":"W3-02","workstream":"W3","classification":"REUSE_LOCKED","status":"PASS","lastVerifiedSha":"1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff","evidence":{"commands":["GitHub Actions UI","GitHub Actions UI: Verify Campaign lifecycle and declarative providers"],"testCount":12,"windowsArtifacts":[],"sources":["PR #201","docs/roadmap/evidence/W3-02.md","GitHub Actions run 33498144567 / job 99824979798 at 1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff: success","tests/ui/phase09RealTurnRuntimeService.test.ts","tests/ui/phase09RealTurnRuntimeAdapter.test.ts","src/ProductionPlayScreen.tsx: production start/end initiative and end-turn reachability","src/app/realTurnRuntimeService.ts: domain initiative + begin-turn economy + Resolver end-turn/begin-turn operations","PR #199 and #200 merges ca6b42c47409ff7096f31aeab12624336225ab8f / 9c9ef85e4b00aff92e33c8c0a1429209687db016 are documentation-only after the verification SHA; turn runtime is inherited unchanged"]},"remainingGap":null},{"id":"W3-03","workstream":"W3","classification":"REUSE_LOCKED","status":"PASS","lastVerifiedSha":"1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff","evidence":{"commands":["GitHub Actions UI","npm run build"],"testCount":23,"windowsArtifacts":[],"sources":["PR #202","docs/roadmap/evidence/W3-03.md","GitHub Actions run 33498144567 / job 99824979798 at 1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff: 54/54 combined W3 tests PASS and build success","tests/ui/phase09RealAttackTransactionService.test.ts","tests/ui/phase09RealAtomicAttackAdapter.test.ts","tests/ui/phase09RealHealingAdapter.test.ts","src/app/realAttackTransactionService.ts + src/app/realAtomicHealingTransactionService.ts: atomic Resolver-backed HP/economy/resource writeback","PR #199, #200, and #201 changes after the verification SHA are documentation-only; attack/healing runtime authority is inherited unchanged"]},"remainingGap":null},{"id":"W3-04","workstream":"W3","classification":"REUSE_LOCKED","status":"PASS","lastVerifiedSha":"1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff","evidence":{"commands":["GitHub Actions UI","npm run build"],"testCount":null,"windowsArtifacts":[],"sources":["PR #203","docs/roadmap/evidence/W3-04.md","GitHub Actions run 33498144567 / job 99824979798 at 1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff: success","tests/ui/phase09RealSpellFeatureUseService.test.ts","tests/ui/phase09RealActivityCostRuleRuntime.test.ts","tests/ui/phase09RealItemActivationService.test.ts","tests/ui/phase09RealActionEconomyService.test.ts","tests/domain/commonPlayInventoryRuntime.test.ts","tests/domain/spellExecutionCoverage.test.ts","tests/ui/productionCommonPlayArtifacts.test.ts","PRs #199-#203 after the verification SHA are documentation/evidence-only; W3-04 runtime authority is inherited unchanged"]},"remainingGap":null},{"id":"W3-05","workstream":"W3","classification":"REUSE_LOCKED","status":"PASS","lastVerifiedSha":"1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff","evidence":{"commands":["GitHub Actions UI"],"testCount":11,"windowsArtifacts":[],"sources":["PR #205","docs/roadmap/evidence/W3-05.md","GitHub Actions run 33498144567 / job 99824979798 at 1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff: success","tests/ui/c9FamilyOReadyConcentrationProduction.test.ts","tests/ui/phase09ManualMovementReactionAdapter.test.ts","tests/ui/phase09ConcentrationSaveWorkflow.test.ts","Current canonical product runtime and tests inherit the verified exact-SHA implementation unchanged"]},"remainingGap":null},{"id":"W3-06","workstream":"W3","classification":"REUSE_LOCKED","status":"PASS","lastVerifiedSha":"1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff","evidence":{"commands":["GitHub Actions Rules Domain","GitHub Actions UI","npm run build"],"testCount":null,"windowsArtifacts":[],"sources":["PR #207","PR #210","docs/roadmap/evidence/W3-06.md","GitHub Actions Rules Domain run 33342898384 / job 99341612326 at 6095fe8adbe52b047ef5f6fee3413975bf02c3e0: success","GitHub Actions UI run 33498144567 / job 99824979798 at 1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff: success","tests/domain/phase05Lifecycle.test.ts","tests/domain/resourceRecoveryLockout.test.ts","tests/domain/wizardLongRestPreparation.test.ts","tests/ui/connectedActorArtifactLifetimeProduction.test.ts","tests/ui/connectedActorArtifactLifecycleProduction.test.ts","tests/ui/characterLongRestProjection.test.ts","Current canonical product runtime and listed tests inherit the verified exact-SHA implementation unchanged"]},"remainingGap":null},{"id":"W3-07","workstream":"W3","classification":"REUSE_LOCKED","status":"PASS","lastVerifiedSha":"1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff","evidence":{"commands":["GitHub Actions UI"],"testCount":null,"windowsArtifacts":[],"sources":["PR #218","docs/roadmap/evidence/W3-07.md","GitHub Actions run 33498144567 / job 99824979798 at 1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff: success","tests/ui/phase09RealAtomicAttackAdapter.test.ts","src/app/phase09RealRuntimeAttackAdapter.ts: inverse ResolutionEvent Undo retains the original Activity as reversed and prepends a correction/undoOf Activity","Current canonical product runtime and tests inherit the verified exact-SHA implementation unchanged"]},"remainingGap":null},{"id":"W3-08","workstream":"W3","classification":"VERIFY_ONLY","status":"PASS","lastVerifiedSha":"53ec501555222b60d9e856b231f4f64395f75b76","evidence":{"commands":["npm run test:e2e:tauri -- --w3","npx tsx --test tests/ui/appProviderStopSessionRefresh.test.ts"],"testCount":null,"windowsArtifacts":["SimpleVTT-W3-Tauri-53ec501555222b60d9e856b231f4f64395f75b76 (artifact 9824674856, sha256:d51dd1d962be4533b31551f900dae26655d3a4e2b05aa8131ffa98122bb18034)"],"sources":["PR #223","GitHub Actions run 33569954938 / job 100061523302: V1 W1 Tauri Verification tauri-w3 = success","Verification SHA 53ec501555222b60d9e856b231f4f64395f75b76; canonical merge 5bef709f010543859e84c98ef7db8f14e5c06469 shares tree 0e6baadda2570b169c35c6b7436ff4e0042dfff0","Actual Windows Tauri: Character -> Campaign PC preset -> local Host -> DM Library drop -> Combatant + weapon attack + damage spell -> Long Rest +8h -> UI session end -> process exit -> same-data-root restart -> Campaign time 480 min and session history 1","w3-08.json, w3-08-drop-diagnostic.json, w3-08-selection-diagnostic.json, rendered screenshots/text"]},"remainingGap":null},{"id":"W4-01","workstream":"W4","classification":"REUSE_LOCKED","status":"PASS","lastVerifiedSha":"5bef709f010543859e84c98ef7db8f14e5c06469","evidence":{"commands":["GitHub Actions UI: Verify Campaign lifecycle and declarative providers","npx tsx --test tests/ui/campaignPersistence.test.ts tests/ui/campaignRuntimeAdapter.test.ts tests/ui/campaignProductUiStructure.test.ts tests/ui/campaignStartupRecoveryStructure.test.ts tests/ui/campaignLifecycleRuntime.test.ts tests/ui/campaignLifecycleUiStructure.test.ts tests/ui/campaignDeclarativeProviderProfile.test.ts tests/ui/campaignDeclarativeProviderImport.test.ts tests/ui/campaignDeclarativeProviderRuntime.test.ts tests/ui/campaignDeclarativeProviderUiStructure.test.ts"],"testCount":null,"windowsArtifacts":[],"sources":["GitHub Actions run 33570546168 / job 100063331529 at 5bef709f010543859e84c98ef7db8f14e5c06469: UI = success; Verify Campaign lifecycle and declarative providers = success","tests/ui/campaignPersistence.test.ts: durable create/read/update/archive/restore/duplicate/delete plus idempotent request and stale-revision rejection","tests/ui/campaignLifecycleRuntime.test.ts: duplicate gets campaign.copy.stash and campaign.copy.dm-library namespaces and delete removes only the target Campaign","src/app/campaignPersistence.ts: Campaign-owned stash, DM Library, and content-loadout identifiers derive from campaignId","GitHub compare 5bef709f010543859e84c98ef7db8f14e5c06469...b917e20b27d6c80a3bcc5783c20c9b0fd0042894 changes only docs/CURRENT.md, docs/roadmap/CURRENT.md, docs/roadmap/EVIDENCE_CARD.md, and docs/roadmap/V1_EVIDENCE_LEDGER.json; verified product/tests are inherited unchanged"]},"remainingGap":null},{"id":"W4-02","workstream":"W4","classification":"REUSE_LOCKED","status":"PASS","lastVerifiedSha":"5bef709f010543859e84c98ef7db8f14e5c06469","evidence":{"commands":["GitHub Actions UI: Verify Campaign lifecycle and declarative providers"],"testCount":null,"windowsArtifacts":[],"sources":["GitHub Actions run 33570546168 / job 100063331529 at 5bef709f010543859e84c98ef7db8f14e5c06469: success; Verify Campaign lifecycle and declarative providers = success","tests/ui/campaignProductUiStructure.test.ts: Campaign is a first-class product route and Host start requires a selected Campaign through the prepared snapshot path","src/ProductionSessionWorkspaceBridge.tsx: offline/disconnected Host is disabled without an active Campaign; Host prepares that Campaign snapshot before app.hostSession()","src/app/campaignRuntimeAdapter.ts: prepareCampaignSessionSnapshot rejects a missing Campaign and binds campaignId, campaignRevision, contentLoadoutRevision, and immutable Campaign settings into AppSnapshot/Session","GitHub compare 5bef709f010543859e84c98ef7db8f14e5c06469...c005f32e7e4f564d479771013192291d7992dff0 changes only docs/CURRENT.md, docs/roadmap/CURRENT.md, docs/roadmap/EVIDENCE_CARD.md, and docs/roadmap/V1_EVIDENCE_LEDGER.json; verified W4-02 product/tests are inherited unchanged"]},"remainingGap":null},{"id":"W4-03","workstream":"W4","classification":"REUSE_LOCKED","status":"PASS","lastVerifiedSha":"5bef709f010543859e84c98ef7db8f14e5c06469","evidence":{"commands":["GitHub Actions UI: Verify Campaign lifecycle and declarative providers","npm run test:e2e:tauri -- --w3"],"testCount":null,"windowsArtifacts":["SimpleVTT-W3-Tauri-53ec501555222b60d9e856b231f4f64395f75b76 (artifact 9824674856, sha256:d51dd1d962be4533b31551f900dae26655d3a4e2b05aa8131ffa98122bb18034)"],"sources":["GitHub Actions run 33570546168 / job 100063331529 at 5bef709f010543859e84c98ef7db8f14e5c06469: success; campaignRuntimeAdapter.test.ts ran in Verify Campaign lifecycle and declarative providers","tests/ui/campaignRuntimeAdapter.test.ts: roster projection is Campaign-owned and Session preparation captures an immutable Campaign settings snapshot","tests/ui/campaignSystems.test.ts: revisioned roster mutations plus appendSessionSummary keep a bounded 50-entry history and lastSessionId","src/app/campaignSessionHistoryRuntimeAdapter.ts + src/main.tsx: production composition wraps Host stop, derives the completed Session summary from the captured Campaign snapshot, persists it through appendCampaignSessionSummary, then clears the snapshot","GitHub Actions run 33569954938 / job 100061523302 at 53ec501555222b60d9e856b231f4f64395f75b76: actual Windows Tauri UI session end -> process exit -> same-data-root restart -> Campaign session history 1","53ec501555222b60d9e856b231f4f64395f75b76 and canonical merge 5bef709f010543859e84c98ef7db8f14e5c06469 share tree 0e6baadda2570b169c35c6b7436ff4e0042dfff0; GitHub compare 5bef709f010543859e84c98ef7db8f14e5c06469...fd14887dd286725d2ec71b48a70d121b6c63d8d6 changes only the four evidence/current docs, so the W4-03 product/tests are inherited unchanged"]},"remainingGap":null},{"id":"W4-04","workstream":"W4","classification":"REUSE_LOCKED","status":"PASS","lastVerifiedSha":"5bef709f010543859e84c98ef7db8f14e5c06469","evidence":{"commands":["GitHub Actions UI: Verify Campaign lifecycle and declarative providers"],"testCount":null,"windowsArtifacts":[],"sources":["GitHub Actions run 33570546168 / job 100063331529 at 5bef709f010543859e84c98ef7db8f14e5c06469: success; Verify Campaign lifecycle and declarative providers = success","src/app/campaignRuntimeAdapter.ts: calendar/ration provider IDs and versions plus rationsVisibleToPlayers are Campaign-owned and captured into the immutable Session snapshot; Client projection omits ration details when visibility is false","src/app/connectedCampaignSystemsRuntimeAdapter.ts: safeProjection preserves Host authority but strips ration balance/requirements/shortage and roster ration-unit fields before Player broadcast when visibleToPlayers is false","tests/ui/campaignRuntimeAdapter.test.ts + tests/ui/campaignSystems.test.ts: Campaign calendar/ration configuration, state, and Session preparation ownership","tests/ui/campaignDeclarativeProviderProfile.test.ts + campaignDeclarativeProviderRuntime.test.ts + campaignDeclarativeProviderUiStructure.test.ts: installed declarative provider configuration, exact version/options, and Campaign UI/runtime ownership","GitHub integration history 5bef709f010543859e84c98ef7db8f14e5c06469...19ffc83e529e7e986f50377bfded69cb6ca33871 changes only docs/CURRENT.md, docs/roadmap/CURRENT.md, docs/roadmap/EVIDENCE_CARD.md, and docs/roadmap/V1_EVIDENCE_LEDGER.json; W4-04 product/runtime/tests are inherited unchanged"]},"remainingGap":null},{"id":"W4-05","workstream":"W4","classification":"REUSE_LOCKED","status":"PASS","lastVerifiedSha":"5bef709f010543859e84c98ef7db8f14e5c06469","evidence":{"commands":["GitHub Actions UI: Verify Party Stash sequential transfer routing"],"testCount":null,"windowsArtifacts":[],"sources":["GitHub Actions run 33570546168 / job 100063331529 at 5bef709f010543859e84c98ef7db8f14e5c06469: UI = success; Verify Party Stash sequential transfer routing = success","src/app/campaignPersistenceContracts.ts + src/app/campaignPartyStashPolicyRuntimeAdapter.ts: Party Stash supports exactly shared / dm-approval / dm-managed; deposits stay open, shared withdrawals pass, approval queues non-DM withdrawals for explicit DM approve/reject, dm-managed rejects non-DM withdrawals, and DM withdrawals use the base transfer path","src/CampaignSystemsPanel.tsx: production Campaign UI exposes all three policies and pending approval/reject controls","tests/ui/campaignSystems.test.ts: durable wallet/item transfer, idempotent requests, failure isolation, and Campaign-owned Party Stash namespace","GitHub compare 5bef709f010543859e84c98ef7db8f14e5c06469...cf712116381ff8493c8eeebfad7ed8ada95b78ee changes only docs/CURRENT.md, docs/roadmap/CURRENT.md, docs/roadmap/EVIDENCE_CARD.md, and docs/roadmap/V1_EVIDENCE_LEDGER.json; W4-05 product/runtime/tests are inherited unchanged"]},"remainingGap":null},{"id":"W4-06","workstream":"W4","classification":"REUSE_LOCKED","status":"PASS","lastVerifiedSha":"5bef709f010543859e84c98ef7db8f14e5c06469","evidence":{"commands":["GitHub Actions UI: Run UI tests","GitHub compare 5bef709f010543859e84c98ef7db8f14e5c06469...083ce354fc2c1fcfd1e1346f976f920a30ccd2c1"],"testCount":null,"windowsArtifacts":[],"sources":["PR #230","docs/roadmap/evidence/W4-06.md","GitHub Actions UI run 33570546168 / job 100063331529 at 5bef709f010543859e84c98ef7db8f14e5c06469: success; Run UI tests = success","tests/ui/campaignDmLibraryOrganizationRuntime.test.ts + tests/ui/campaignDmLibraryOrganizationStructure.test.ts: private-note CRUD/organization plus folder create/rename/delete and persisted folder/favorite placement","tests/ui/campaignDmLibraryImport.test.ts: JSON import preserves custom/magic item runtime fields and provenance, imports arrays/NPC definitions, and rejects invalid charge/attunement contracts","tests/ui/campaignDmLibraryNoteStructure.test.ts + tests/ui/campaignDmLibraryStructure.test.ts: notes remain Host-private and Session projection exposes neither dmLibrary nor noteText","tests/ui/campaignDmLibraryDeleteProvenance.test.ts: Character grants are independent copies retaining provenance after the source Library definition is deleted","GitHub compare 5bef709f010543859e84c98ef7db8f14e5c06469...083ce354fc2c1fcfd1e1346f976f920a30ccd2c1 changes only docs/CURRENT.md, docs/roadmap/CURRENT.md, docs/roadmap/EVIDENCE_CARD.md, docs/roadmap/V1_EVIDENCE_LEDGER.json, and docs/roadmap/evidence/W4-06.md; verified W4-06 product/runtime/tests are inherited unchanged"]},"remainingGap":null},{"id":"W4-07","workstream":"W4","classification":"REUSE_LOCKED","status":"PASS","lastVerifiedSha":"2ac28651312f1fdbe82edb74fd13f342a8f910f7","evidence":{"commands":["GitHub Actions UI","GitHub Actions V1 Tauri Verification: tauri-w4-07-spatial"],"testCount":null,"windowsArtifacts":["SimpleVTT-W4-07-G01-G09-2ac28651312f1fdbe82edb74fd13f342a8f910f7 (artifact 9849024415, sha256:b044f73320cd10bf2446695677ca2098c7c162d01190feed7ecc599078c656a0)"],"sources":["PR #251","docs/roadmap/evidence/W4-07.md","GitHub Actions UI run 33636100212 / job 100267245818 at 2ac28651312f1fdbe82edb74fd13f342a8f910f7: success; connected topology/continuity/Session-layer suite and frontend build passed","GitHub Actions V1 Tauri Verification run 33636100197 / job 100267245684 at 2ac28651312f1fdbe82edb74fd13f342a8f910f7: tauri-w4-07-spatial = success","Actual Windows Tauri H+P1+P2: MP-G01/G02/G03/G08/G09 PASS and MP-G04/G05/G06/G07 PASS","tests/ui/sessionImageHandoutRuntimeAdapter.test.ts: deterministic handout reveal/withdraw/reconnect/privacy/pinned-lookup coverage","PR #249 merged the verified tree as 2ffc2004d795a350a4aa3676bcd7d4cb362f1ea1 with no file differences from verification SHA 2ac28651312f1fdbe82edb74fd13f342a8f910f7; PR #251 added evidence only"]},"remainingGap":null},{"id":"W4-08","workstream":"W4","classification":"VERIFY_ONLY","status":"PASS","lastVerifiedSha":"2ac28651312f1fdbe82edb74fd13f342a8f910f7","evidence":{"commands":["GitHub Actions V1 Tauri Verification: tauri-w3","npm run test:e2e:tauri -- --w3","npx tsx --test tests/ui/appProviderStopSessionRefresh.test.ts"],"testCount":null,"windowsArtifacts":["SimpleVTT-W3-Tauri-2ac28651312f1fdbe82edb74fd13f342a8f910f7 (artifact 9849024676, sha256:40fd32b55ec3f6d92f47c29b6acff20d599e64b3b7f757ddf5c9b73e270860e3)"],"sources":["GitHub Actions V1 Tauri Verification run 33636100197 / job 100267245439 at 2ac28651312f1fdbe82edb74fd13f342a8f910f7: tauri-w3 = success","Actual Windows Tauri: production UI Campaign preparation -> local Host Session -> Long Rest +8h -> UI Session end -> process exit -> same-data-root restart -> Campaign reopen with absolute time 480 min and session history 1","tests/ui/appProviderStopSessionRefresh.test.ts: stop-session refresh/race regression 2/2 PASS on the same job","scripts/run-tauri-e2e-w3.mjs: restarted Campaign asserts +8h absolute-minute preservation and completed session history 1","Actions synthetic merge f05147605e4dce56a0552b69fa361f28d4c5cf60 has no file differences from verification head 2ac28651312f1fdbe82edb74fd13f342a8f910f7","GitHub compare 2ac28651312f1fdbe82edb74fd13f342a8f910f7...ceaf3ebf786ffa13d934d68c0fcebcc58cb00ae8 changes only canonical evidence/current docs plus the W4-07 evidence record; verified W4-08 product/runtime/harness is inherited unchanged"]},"remainingGap":null},{"id":"W5-01","workstream":"W5","classification":"REUSE_LOCKED","status":"PASS","lastVerifiedSha":"2ac28651312f1fdbe82edb74fd13f342a8f910f7","evidence":{"commands":["GitHub Actions UI","GitHub Actions V1 Tauri Verification: tauri-w4-07-spatial"],"testCount":null,"windowsArtifacts":["SimpleVTT-W4-07-G01-G09-2ac28651312f1fdbe82edb74fd13f342a8f910f7 (artifact 9849024415, sha256:b044f73320cd10bf2446695677ca2098c7c162d01190feed7ecc599078c656a0)"],"sources":["PR #255","docs/roadmap/evidence/W5-01.md","GitHub Actions UI run 33636100212 / job 100267245818 at 2ac28651312f1fdbe82edb74fd13f342a8f910f7: success; connected topology/Session-layer plus live lifecycle, late join, and connection safety suites passed","tests/ui/productionParticipantLifecycle.test.ts: valid live late join, incompatible/invalid rejection without ghost state, replacement reconnect, and ordered Host-authoritative catch-up","tests/ui/productionClientReconnect.test.ts: reconnect resumes from the accepted replica cursor and applies hello-ack catch-up exactly once","GitHub Actions V1 Tauri Verification run 33636100197 / job 100267245684 at 2ac28651312f1fdbe82edb74fd13f342a8f910f7: actual Windows Tauri H+P1+P2 connected topology and replacement reconnect path passed","GitHub compare 2ac28651312f1fdbe82edb74fd13f342a8f910f7...8a4d279d0144abdabeb8c1402cf86c5f55defe64 changes only canonical evidence/current docs plus docs/roadmap/evidence/W4-07.md; PR #255 adds only docs/roadmap/evidence/W5-01.md, so product/runtime/tests are inherited unchanged"]},"remainingGap":null},{"id":"W5-02","workstream":"W5","classification":"REUSE_LOCKED","status":"PASS","lastVerifiedSha":"2ac28651312f1fdbe82edb74fd13f342a8f910f7","evidence":{"commands":["GitHub Actions UI","GitHub Actions V1 Tauri Verification: tauri-w4-07-spatial","GitHub compare 2ac28651312f1fdbe82edb74fd13f342a8f910f7...761f1d08601f3f4192ec9bc1339d09b64858eafe"],"testCount":null,"windowsArtifacts":["SimpleVTT-W4-07-G01-G09-2ac28651312f1fdbe82edb74fd13f342a8f910f7 (artifact 9849024415, sha256:b044f73320cd10bf2446695677ca2098c7c162d01190feed7ecc599078c656a0)"],"sources":["PR #257","docs/roadmap/evidence/W5-02.md","GitHub Actions UI run 33636100212 / job 100267245818 at 2ac28651312f1fdbe82edb74fd13f342a8f910f7: success; production connected ownership/projection and local Character switch path passed","tests/ui/characterSessionProjection.test.ts: trusted source/runtime/content identity boundary rejects client-derived/injected mechanics and impossible HP","tests/ui/productionParticipantLifecycle.test.ts: invalid SessionProjection rejects before participant/peer/ledger/projection/Scene ghost state","tests/ui/productionLocalCharacterSwitch.test.ts: remote ephemeral projection survives local Character switch; projected resolution context activates temporarily and restores Host/local context without overwriting projection-owned state","GitHub Actions V1 Tauri Verification run 33636100197 / job 100267245684 at 2ac28651312f1fdbe82edb74fd13f342a8f910f7: actual Windows Tauri H+P1+P2 connected topology passed","GitHub compare 2ac28651312f1fdbe82edb74fd13f342a8f910f7...761f1d08601f3f4192ec9bc1339d09b64858eafe changes only canonical evidence/current docs plus evidence W4-07/W5-01/W5-02; product/runtime/tests are inherited unchanged"]},"remainingGap":null},{"id":"W5-03","workstream":"W5","classification":"REUSE_LOCKED","status":"PASS","lastVerifiedSha":"2ac28651312f1fdbe82edb74fd13f342a8f910f7","evidence":{"commands":["GitHub Actions UI","GitHub compare 2ac28651312f1fdbe82edb74fd13f342a8f910f7...0ee6f493fc765ac7a617eda485392957b1874c6e"],"testCount":null,"windowsArtifacts":[],"sources":["PR #259","docs/roadmap/evidence/W5-03.md","GitHub Actions UI run 33636100212 / job 100267245818 at 2ac28651312f1fdbe82edb74fd13f342a8f910f7: success; connected topology/Session-layer/live lifecycle verification and frontend build passed","src/app/connectedSessionRuntimeAdapter.ts + src/app/connectedActionRequestPort.ts: Client action-request traffic enters the Host-only message path and is routed through the registered connected ActionRequest handler; unavailable routing returns an error instead of applying state","src/app/connectedSessionProtocol.ts: HostSessionLedger rejects session/cursor/history drift, requires reservation before commit, and de-duplicates request IDs","src/app/connectedSessionProtocol.ts: ClientSessionReplica advances only on same-session gap-free Host events and rejects conflicting/gapped history before cursor advance","GitHub compare 2ac28651312f1fdbe82edb74fd13f342a8f910f7...0ee6f493fc765ac7a617eda485392957b1874c6e changes only canonical evidence/current docs plus evidence W4-07/W5-01/W5-02/W5-03; product/runtime/tests are inherited unchanged"]},"remainingGap":null},{"id":"W5-04","workstream":"W5","classification":"REUSE_LOCKED","status":"PASS","lastVerifiedSha":"2ac28651312f1fdbe82edb74fd13f342a8f910f7","evidence":{"commands":["GitHub Actions UI","GitHub compare 2ac28651312f1fdbe82edb74fd13f342a8f910f7...1ca6e911087a09dced61cf6a4c7e60df29e64db0"],"testCount":187,"windowsArtifacts":[],"sources":["PR #261","docs/roadmap/evidence/W5-04.md","GitHub Actions UI run 33636100212 / job 100267245818 at 2ac28651312f1fdbe82edb74fd13f342a8f910f7: success; connected topology/Session-layer/live lifecycle verification and frontend build passed","src/app/connectedResolutionPresentation.ts: schema/versioned envelope preserves resolution identity, structured authoritative faces plus selected/discarded indices, outcome/timeline semantics, public redaction, and Activity linkage","src/app/connectedActionRoutingAdapter.ts: Host publishes live presentation stages and carries the same presentation into committed ordered catch-up history without Client mechanics rerun; owner-only interrupt/concentration prompts stay out of the public presentation","GitHub issue #111 implementation checkpoint: strict schema/identity validation, structured authoritative faces, cumulative timeline, Activity linkage, public redaction, terminal catch-up without reroll, shared VisualDiceBridge + CombatVfxBridge; connected regression 187/187, and production build pass","GitHub compare 2ac28651312f1fdbe82edb74fd13f342a8f910f7...1ca6e911087a09dced61cf6a4c7e60df29e64db0 changes only canonical evidence/current docs plus evidence W4-07/W5-01/W5-02/W5-03/W5-04; product/runtime/tests are inherited unchanged"]},"remainingGap":null},{"id":"W5-05","workstream":"W5","classification":"REUSE_LOCKED","status":"PASS","lastVerifiedSha":"2ac28651312f1fdbe82edb74fd13f342a8f910f7","evidence":{"commands":["GitHub Actions UI","GitHub compare 2ac28651312f1fdbe82edb74fd13f342a8f910f7...be061030081a3ba9f570a1a9a7696283d2512f36"],"testCount":187,"windowsArtifacts":[],"sources":["PR #263","docs/roadmap/evidence/W5-05.md","GitHub Actions UI run 33636100212 / job 100267245818 at 2ac28651312f1fdbe82edb74fd13f342a8f910f7: success; connected/session presentation verification and frontend build passed","tests/ui/connectedResolutionPresentation.test.ts: duplicate/non-monotonic live presentation suppression, FIFO stage advance, and newer authoritative dice replacement of stale queued replay","tests/ui/productionClientReconnect.test.ts + src/app/connectedSessionProtocol.ts: reconnect resumes from accepted replica cursor and ClientSessionReplica applies Host history exactly once while rejecting duplicate IDs, gaps, and conflicts","src/app/connectedActionRoutingAdapter.ts + src/app/connectedSessionRuntimeAdapter.ts: terminal catch-up carries the already-built Host presentation inside committed resolution history and applies without Client mechanics rerun","GitHub issues #111 and #114 checkpoints: terminal catch-up without reroll, ordered remote queue behavior, connected regression 187/187, and production build pass","GitHub compare 2ac28651312f1fdbe82edb74fd13f342a8f910f7...be061030081a3ba9f570a1a9a7696283d2512f36 changes only canonical evidence/current docs plus evidence W4-07/W5-01/W5-02/W5-03/W5-04; PR #263 adds only W5-05 evidence, so product/runtime/tests are inherited unchanged"]},"remainingGap":null},{"id":"W5-06","workstream":"W5","classification":"REUSE_LOCKED","status":"PASS","lastVerifiedSha":"2ac28651312f1fdbe82edb74fd13f342a8f910f7","evidence":{"commands":["GitHub Actions UI","GitHub compare 2ac28651312f1fdbe82edb74fd13f342a8f910f7...58a10dc1bf42dff79dd3f8035ea02bd9967d8f43"],"testCount":null,"windowsArtifacts":[],"sources":["PR #265","docs/roadmap/evidence/W5-06.md","GitHub Actions UI run 33636100212 / job 100267245818 at 2ac28651312f1fdbe82edb74fd13f342a8f910f7: success; connected/session presentation verification and frontend build passed","tests/ui/connectedResolutionPresentation.test.ts: remote presentation metadata reconstructs the action and deep-equals local buildVisualDiceRoll and buildCombatVfxProfile projections","src/app/diceVisuals.ts + src/app/combatVisuals.ts: local, Host, and remote presentation consume the same authoritative ResolutionView/action projection owners","GitHub compare 2ac28651312f1fdbe82edb74fd13f342a8f910f7...58a10dc1bf42dff79dd3f8035ea02bd9967d8f43 contains no src/ or tests/ changes; PR #265 adds only docs/roadmap/evidence/W5-06.md, so product/runtime/tests are inherited unchanged"]},"remainingGap":null},{"id":"W5-07","workstream":"W5","classification":"REUSE_LOCKED","status":"PASS","lastVerifiedSha":"0a9aeb6417c83df5f5d601b3112744cb6bd5e39a","evidence":{"commands":["GitHub Actions W5-07 AUTO Verification"],"testCount":18,"windowsArtifacts":[],"sources":["docs/roadmap/evidence/W5-07.md","GitHub Actions run 33691718281 / job 100451682886 at 0a9aeb6417c83df5f5d601b3112744cb6bd5e39a: W5-07 AUTO Verification = success; 18/18 focused tests PASS","W5-07-AUTO-0a9aeb6417c83df5f5d601b3112744cb6bd5e39a (artifact 9870276424, sha256:b460f28a21ab72f18845891207f20681b39f9e65ef4bb2790d6753112ad26555)","tests/ui/connectedThreePeerRemoteStandardCheckPicker.test.ts: MP-C10 Influence/Search/Study preserves the exact picker-selected skill actionId through Host authority and the public P1/P2 presentation","W5-07 focused suite maps MP-C01 through MP-C24 with at least one core regression per scenario"]},"remainingGap":null},{"id":"W5-08","workstream":"W5","classification":"REUSE_LOCKED","status":"PASS","lastVerifiedSha":"faf5331ed72cd051213ab917e3c2f402fae03087","evidence":{"commands":["GitHub Actions W5-08 AUTO Verification"],"testCount":11,"windowsArtifacts":[],"sources":["docs/roadmap/evidence/W5-08.md","GitHub Actions run 33697343776 / job 100468976213 at faf5331ed72cd051213ab917e3c2f402fae03087: W5-08 AUTO Verification = success; 11/11 focused tests PASS","W5-08-AUTO-faf5331ed72cd051213ab917e3c2f402fae03087 (artifact 9872255696, sha256:59d2924fb515ef5763c608279d71b0d92e47cee5b6266114e70eb7e63bd8b2ce)","tests/ui/connectedTurnProjection.test.ts: ordered Host Initiative/turn projection, reconnect replay, and deterministic Ready clearing","tests/ui/phase09ManualMovementReactionAdapter.test.ts + tests/ui/c9FamilyOReadyConcentrationProduction.test.ts + tests/ui/connectedUndoCompensation.test.ts: reaction, concentration/Ready, and correction/Undo coverage"]},"remainingGap":null},{"id":"W5-09","workstream":"W5","classification":"REUSE_LOCKED","status":"PASS","lastVerifiedSha":"4c93082d0af77ae79da82db711b7934c8e2f8544","evidence":{"commands":["GitHub Actions W5-09 AUTO Verification"],"testCount":18,"windowsArtifacts":[],"sources":["docs/roadmap/evidence/W5-09.md","GitHub Actions run 33699407674 / job 100475234429 at 4c93082d0af77ae79da82db711b7934c8e2f8544: W5-09 AUTO Verification = success; 18/18 focused tests PASS","W5-09-AUTO-4c93082d0af77ae79da82db711b7934c8e2f8544 (artifact 9872956996, sha256:5f7f708086b1c7b3e941d6d37bcac01cbded9f0fa6edea565dcbad171164463f)","tests/ui/connectedPartyStashApprovalOwnerTransfer.test.ts + connectedSceneTopologyProjection.test.ts + connectedSceneTopologyHostMutation.test.ts + productionHostRemoteFixtureIdentityProjection.test.ts + connectedThreePeerActionMatrix.test.ts + connectedThreePeerPresentation.test.ts + connectedTurnProjection.test.ts + connectedUndoCompensation.test.ts: MP-J01-J08 UI-facing parity mapping","Initial canonical SHA 5f7bb4bdbc20da3ff437809e3d7f3f024e159f1d reproduced a 17/18 stale-test-fixture failure; test-only repair switched J07 projection construction to the production snapshot catalog and no src/ product/runtime file changed"]},"remainingGap":null},{"id":"W5-10","workstream":"W5","classification":"REUSE_LOCKED","status":"PASS","lastVerifiedSha":"786566303fbb6c8bac1dff6b392f65a866a1947c","evidence":{"commands":["GitHub Actions W5-10 AUTO Verification"],"testCount":45,"windowsArtifacts":[],"sources":["docs/roadmap/evidence/W5-10.md","GitHub Actions run 33700245046 / job 100477769745 at 786566303fbb6c8bac1dff6b392f65a866a1947c: W5-10 AUTO Verification = success; 45/45 focused tests PASS","W5-10-AUTO-786566303fbb6c8bac1dff6b392f65a866a1947c (artifact 9873251248, sha256:189a99528d2cf6556a7c5430f3073145c91c537e1b3c354fc44e089234d3b927)","connectedResolutionPresentation + productionClientReconnect + connectedThreePeerRemote* + connectedThreePeerActionMatrix + connectedThreePeerPresentation + phase09ManualMovementReactionAdapter + c9FamilyOReadyConcentrationProduction + connectedTurnProjection + connectedUndoCompensation: MP-01 through MP-04 exact-HEAD owner mapping"]},"remainingGap":null},{"id":"W6-01","workstream":"W6","classification":"REUSE_LOCKED","status":"PASS","lastVerifiedSha":"30606e6b056027a3e10ddbae70f38f428b2714b6","evidence":{"commands":["GitHub Actions W6-01 AUTO Verification"],"testCount":13,"windowsArtifacts":[],"sources":["docs/roadmap/evidence/W6-01.md","GitHub Actions run 33701452879 / job 100481432959 at 30606e6b056027a3e10ddbae70f38f428b2714b6: W6-01 AUTO Verification = success; 13/13 focused tests PASS","W6-01-AUTO-30606e6b056027a3e10ddbae70f38f428b2714b6 (artifact 9873659413, sha256:bb6031112dd14fedf00aa90485e7583332cdaefd1befe4f223d710e4939e2204)","sessionInventoryRuntimeAdapter + campaignDmLibraryGrantDurability + connectedCampaignOwnerInventoryWire + connectedCharacterInventoryProjectionRefresh + connectedCustomItemProjection: DM item/GP grant-revoke and owner projection refresh coverage"]},"remainingGap":null},{"id":"W6-02","workstream":"W6","classification":"REUSE_LOCKED","status":"PASS","lastVerifiedSha":"a72387016fec255674b8132b1f8b80b08d99da25","evidence":{"commands":["GitHub Actions W6-02 AUTO Verification","npm run build"],"testCount":13,"windowsArtifacts":[],"sources":["docs/roadmap/evidence/W6-02.md","PR #294 merged verified repair as b11f5267121c2c4dfb11176ef6ff12841f3c877b","GitHub Actions run 33703181522 / job 100486658419 at a72387016fec255674b8132b1f8b80b08d99da25: W6-02 AUTO Verification = success; 13/13 focused tests PASS; production build PASS","W6-02-AUTO-9a07c28309ffe781d4ed1e4cea33f7e8f0706577 (artifact 9874278799, sha256:abc109aca9d519e96aec8e03d442a2e071151c659e658a27b99207607f93fc0c; artifact name uses PR synthetic merge SHA, run head_sha is authoritative product SHA)","tests/ui/campaignSystems.test.ts + tests/ui/productionSessionAdvancementReachability.test.ts: exact multi-Character XP, no-reason grant, one level-up credit, credit consumption/roster level persistence, and Host/live production reachability"]},"remaingGap":null},{"id":"W6-03","workstream":"W6","classification":"REUSE_LOCKED","status":"PASS","lastVerifiedSha":"b1f54abefd7dffb2f865ccaccde31649b8080a01","evidence":{"commands":["GitHub Actions W6-03 AUTO Verification","npm run build"],"testCount":13,"windowsArtifacts":[],"sources":["docs/roadmap/evidence/W6-03.md","PR #297 merged W6-03 evidence as 888defd2be7f2f08c2f721abf57f72aaac5f8f12","GitHub Actions run 33705306657 / job 100493052616 at b1f54abefd7dffb2f865ccaccde31649b8080a01: W6-03 AUTO Verification = success; 13/13 focused tests PASS; production build PASS","W6-03-AUTO-b1f54abefd7dffb2f865ccaccde31649b8080a01 (artifact 9875022681, sha256:8f5ef938566269b624ae4eeb33c95603eee501c514f6353945e9767899058deb)","tests/ui/campaignSystems.test.ts + tests/ui/connectedPartyStashApprovalOwnerTransfer.test.ts: shared/approval/dm-managed Party Stash lifecycle and connected owner/failure-retry coverage"]},"remaingGap":null},{"id":"W6-04","workstream":"W6","classification":"REUSE_LOCKED","status":"PASS","lastVerifiedSha":"39bcd0356ca7b9a242684538253204ae17916eb1","evidence":{"commands":["GitHub Actions W6-04 AUTO Verification","npm run build"],"testCount":17,"windowsArtifacts":[],"sources":["docs/roadmap/evidence/W6-04.md","GitHub Actions run 33709116187 / job 100504620599 at 39bcd0356ca7b9a242684538253204ae17916eb1: W6-04 AUTO Verification = success; 17/17 focused tests PASS; production build PASS","W6-04-AUTO-39bcd0356ca7b9a242684538253204ae17916eb1 (artifact 9876316867, sha256:f200803affd1a791b49ea02d4aad3f5d6395d31636a8a18d6ab3a63c9f5512bd)","connectedDurableFailure + connectedOwnerInventoryRestart + connectedPartyStashHostRecovery + connectedPartyStashHostRecoveryStructure + connectedPartyStashApprovalOwnerTransfer: MP-E12/MP-E13 exact-HEAD persistence failure, idempotent retry, owner journal restart, and Host fallback recovery mapping","No current-HEAD product/runtime or test-implementation defect reproduced; only the focused W6-04 workflow was added"]},"remaingGap":null},{"id":"W6-05","workstream":"W6","classification":"REUSE_LOCKED","status":"PASS","lastVerifiedSha":"945188901c106b6114e3a7f89cb1671aab6ace27","evidence":{"commands":["GitHub Actions W6-05 AUTO Verification","npm run build"],"testCount":9,"windowsArtifacts":[],"sources":["docs/roadmap/evidence/W6-05.md","PR #301","GitHub Actions run 33711448138 / job 100511627712 at 945188901c106b6114e3a7f89cb1671aab6ace27: W6-05 AUTO Verification = success; 9/9 focused tests PASS; production build PASS","W6-05-AUTO-945188901c106b6114e3a7f89cb1671aab6ace27 (artifact 5808814072, sha256:26ce88561019490d1c8734cb838ebf6dd789c180e9e4af57974a2559439351dc)","campaignRationConversion + runtime + legacy-stash + production-structure focused owners: MP-E14 capability-driven eligibility, configured ration units, atomic stash debit/ration credit, stale-provider failure isolation, duplicate-request idempotency, and production Campaign reachability","No current-HEAD product/runtime or test-implementation defect reproduced; only the focused W6-05 workflow was added"]},"remaingGap":null},{"id":"W6-06","workstream":"W6","classification":"REUSE_LOCKED","status":"PASS","lastVerifiedSha":"cf531f34a2c2cf85174fabafdc9092022fb0c46b","evidence":{"commands":["GitHub Actions W6-06 AUTO Verification","npm run test:campaign-rest","npm run build"],"testCount":93,"windowsArtifacts":[],"sources":["docs/roadmap/evidence/W6-06.md","PR #302","GitHub Actions run 33712312082 / job 100514236959 at cf531f34a2c2cf85174fabafdc9092022fb0c46b: W6-06 AUTO Verification = success; 93/93 focused tests PASS; production build PASS","Actions checkout 96f9e6715e32b95d6644f67fb461204661ab107c and verification head cf531f34a2c2cf85174fabafdc9092022fb0c46b share tree b3607dd639fee00d42bc51f8ea88d5c6bf466cba","W6-06-AUTO-96f9e6715e32b95d6644f67fb461204661ab107c (artifact 9877347283, sha256:45d257223dcb90dfefc79ab33ed51bcd6fabff0737d9e7039833c7860b5f4eb0)","test:campaign-rest existing Long Rest owner suite: MP-F07 success + atomic optional Campaign effects; MP-F08 preflight/no-partial-generation rejection; MP-F09 owner/Host restart recovery and idempotent settlement","No current-HEAD product/runtime or test-implementation defect reproduced; only the focused W6-06 workflow and evidence records were added"]},"remaingGap":null},{"id":"W6-07","workstream":"W6","classification":"REUSE_LOCKED","status":"PASS","lastVerifiedSha":"63f6943b6c015ed24dfd405087d3d18b3d6415cd","evidence":{"commands":["GitHub Actions W6-07 AUTO Verification","npx tsx --test tests/ui/campaignDmLibraryImport.test.ts tests/ui/campaignDmLibraryGrantDurability.test.ts tests/ui/sessionImageHandoutRuntimeAdapter.test.ts tests/ui/connectedSceneTopologyProjection.test.ts tests/ui/connectedSceneTopologyHostMutation.test.ts tests/ui/productionHostRemoteFixtureIdentityProjection.test.ts","npm run build"],"testCount":9,"windowsArtifacts":[],"sources":["docs/roadmap/evidence/W6-07.md","PR #303","GitHub Actions run 33713348784 / job 100517304162 at 63f6943b6c015ed24dfd405087d3d18b3d6415cd: W6-07 AUTO Verification = success; 9/9 focused tests PASS; production build PASS","Actions checkout 888fe416e7653d49e93c71a6165304e3fd05a9ff and verification head 63f6943b6c015ed24dfd405087d3d18b3d6415cd share tree e7009e28b279b7d1a63f291bbffde5c0a33f7746","W6-07-AUTO-888fe416e7653d49e93c71a6165304e3fd05a9ff (artifact 9877676750, sha256:1c9bffe62e50a4bf24f0ed94b9fe16327f3ec7053043f60d89edc9030a3cd094)","Existing DM Library import/materialization/provenance, image handout reveal/withdraw/privacy/reconnect, connected Scene topology/Host mutation, and remote fixture projection owners map MP-G01 through MP-G09; historical W4-07 Windows H+P1+P2 rendered evidence remains authoritative","No current-HEAD product/runtime or test-implementation defect reproduced; only the focused W6-07 workflow and evidence/current records were added"]},"remaingGap":null},{"id":"W6-08","workstream":"W6","classification":"VERIFY_ONLY","status":"PASS","lastVerifiedSha":"36a9848a025f078f60b956e05f3432cbf5b14da4","evidence":{"commands":["npm run test:e2e:tauri -- --w608","npm run build"],"testCount":null,"windowsArtifacts":["SimpleVTT-W6-08-Tauri-36a9848a025f078f60b956e05f3432cbf5b14da4 (artifact 9878842089, sha256:b44dfe4f486409522630c632819665cee4eccdab72077857838876a33ac747b9)"],"sources":["docs/roadmap/evidence/W6-08.md","PR #304","GitHub Actions run 33716559390 / job 100526862083 at 36a9848a025f078f60b956e05f3432cbf5b14da4: W6-08 Tauri Verification = success; actual Windows Tauri H+P1 Journey J5 PASS; production build PASS","Actions pull-request checkout db4d81f521cf15774dcff13d3249186f0c19dde1 has zero changed files from verification head 36a9848a025f078f60b956e05f3432cbf5b14da4","Actual Windows Tauri: DM GP grant/revoke -> Player/Host owner projection, Party Stash deposit/convergence, image handout reveal/withdraw, distributed Character+Campaign Long Rest with enabled Campaign calendar +8h","Final P2 observer-parity acceptance is deliberately not claimed by W6-08 and remains W9-02","No current-HEAD product/runtime defect reproduced; all repairs made while obtaining W6-08 evidence were confined to the new test harness and no src/ file changed"]},"remainingGap":null},{"id":"W7-01","workstream":"W7","classification":"REUSE_LOCKED","status":"PASS","lastVerifiedSha":"de59dd9898dd4cf4525082f0aa623e4a86cbd74d","evidence":{"commands":["GitHub Actions W7-01 AUTO Verification","npx tsx --test tests/ui/productionParticipantLifecycle.test.ts tests/ui/productionClientReconnect.test.ts tests/ui/connectedResolutionPresentation.test.ts tests/ui/connectedDurableFailure.test.ts","npm run build"],"testCount":12,"windowsArtifacts":[],"sources":["docs/roadmap/evidence/W7-01.md","PR #305","GitHub Actions run 33718558967 / job 100532788018 at de59dd9898dd4cf4525082f0aa623e4a86cbd74d: W7-01 AUTO Verification = success; 12/12 focused tests PASS; production build PASS","Actions checkout c713e27a0989d8cd47761133e560afe4e93b77fc and verification head de59dd9898dd4cf4525082f0aa623e4a86cbd74d have zero changed files between them","W7-01-AUTO-c713e27a0989d8cd47761133e560afe4e93b77fc (artifact 9879408309, sha256:600d6153242eb621ed6eabb32f86df1ee028d6102902b02ba88bebc410269cd3)","productionParticipantLifecycle + productionClientReconnect + connectedResolutionPresentation + connectedDurableFailure: MP-H01 through MP-H03 no-ghost, duplicate catch-up/event suppression, no-reroll presentation replay, and durable retry idempotency","No current-HEAD product/runtime or test-implementation defect reproduced; only the scoped workflow and evidence/current records were added" ]},"remainingGap":null},{"id":"W7-02","workstream":"W7","classification":"REUSE_LOCKED","status":"PASS","lastVerifiedSha":"507459f208457e540beb19295dabb43e81f63b93","evidence":{"commands":["GitHub Actions W7-02 AUTO Verification","npx tsx --test tests/ui/productionClientReconnect.test.ts tests/ui/productionParticipantLifecycle.test.ts tests/ui/connectedResolutionPresentation.test.ts tests/ui/connectedTurnProjection.test.ts tests/ui/connectedDurableFailure.test.ts tests/ui/connectedOwnerInventoryRestart.test.ts tests/ui/connectedLongRestHostRestartRecovery.test.ts tests/ui/c9FamilyOReadyConcentrationProduction.test.ts tests/ui/phase09ManualMovementReactionAdapter.test.ts tests/ui/phase09ConcentrationSaveWorkflow.test.ts","npm run build"],"testCount":34,"windowsArtifacts":[],"sources":["docs/roadmap/evidence/W7-02.md","PR #306","GitHub Actions run 33720461403 / job 100538359322 at 507459f208457e540beb19295dabb43e81f63b93: W7-02 AUTO Verification = success; 34/34 focused tests PASS; production build PASS","Actions checkout f1ca8d203177bb43077259dfa957fb4b5c3109ce and verification head 507459f208457e540beb19295dabb43e81f63b93 have zero changed files between them","W7-02-AUTO-f1ca8d203177bb43077259dfa957fb4b5c3109ce (artifact 9880065564, sha256:a6e7e64721600ce77c746ae1d6a7e6a3724222a4926ff633caaeca180342bc13)","productionClientReconnect + productionParticipantLifecycle + connectedResolutionPresentation + connectedTurnProjection + durable/restart owners + Ready/Reaction/Concentration lifecycle: MP-H04 through MP-H08 focused recovery mapping","Legacy Execution Boundary run 33720461389 and Contract validation run 33720461383 succeeded on the verification head","No current-HEAD product/runtime or existing test-implementation defect reproduced; only the scoped workflow and evidence/current records were added"]},"remaingGap":null},{"id":"W7-03","workstream":"W7","classification":"REUSE_LOCKED","status":"PENDING","lastVerifiedSha":null,"evidence":{"commands":[],"testCount":null,"windowsArtifacts":[],"sources":[]},"remaingGap":null},{"id":"W7-04","workstream":"W7","classification":"REUSE_LOCKED","status":"PENDING","lastVerifiedSha":null,"evidence":{"commands":[],"testCount":null,"windowsArtifacts":[],"sources":[]},"remaingGap":null},{"id":"W7-05","workstream":"W7","classification":"REUSE_LOCKED","status":"PENDING","lastVerifiedSha":null,"evidence":{"commands":[],"testCount":null,"windowsArtifacts":[],"sources":[]},"remaingGap":null},{"id":"W7-06","workstream":"W7","classification":"REUSE_LOCKED","status":"PENDING","lastVerifiedSha":null,"evidence":{"commands":[],"testCount":null,"windowsArtifacts":[],"sources":[]},"remaingGap":null},{"id":"W7-07","workstream":"W7","classification":"REUSE_LOCKED","status":"PENDING","lastVerifiedSha":null,"evidence":{"commands":[],"testCount":null,"windowsArtifacts":[],"sources":[]},"remaingGap":null},{"id":"W7-08","workstream":"W7","classification":"VERIFY_ONLY","status":"PENDING","lastVerifiedSha":null,"evidence":{"commands":[],"testCount":null,"windowsArtifacts":[],"sources":[]},"remainingGap":null},{"id":"W8-01","workstream":"W8","classification":"REUSE_LOCKED","status":"PENDING","lastVerifiedSha":null,"evidence":{"commands":[],"testCount":null,"windowsArtifacts":[],"sources":[]},"remainingGap":null},{"id":"W8-02","workstream":"W8","classification":"BUILD","status":"PENDING","lastVerifiedSha":null,"evidence":{"commands":[],"testCount":null,"windowsArtifacts":[],"sources":[]},"remainingGap":null},{"id":"W8-03","workstream":"W8","classification":"BUILD","status":"PENDING","lastVerifiedSha":null,"evidence":{"commands":[],"testCount":null,"windowsArtifacts":[],"sources":[]},"remaingGap":null},{"id":"W8-04","workstream":"W8","classification":"VERIFY_ONLY","status":"PENDING","lastVerifiedSha":null,"evidence":{"commands":[],"testCount":null,"windowsArtifacts":[],"sources":[]},"remainingGap":null},{"id":"W9-01","workstream":"W9","classification":"BUILD","status":"PENDING","lastVerifiedSha":null,"evidence":{"commands":[],"testCount":null,"windowsArtifacts":[],"sources":[]},"remaingGap":null},{"id":"W9-02","workstream":"W9","classification":"BUILD","status":"PENDING","lastVerifiedSha":null,"evidence":{"commands":[],"testCount":null,"windowsArtifacts":[],"sources":[]},"remainingGap":null},{"id":"W9-03","workstream":"W9","classification":"BUILD","status":"PENDING","lastVerifiedSha":null,"evidence":{"commands":[],"testCount":null,"windowsArtifacts":[],"sources":[]},"remaingGap":null},{"id":"W9-04","workstream":"W9","classification":"BUILD","status":"PENDING","lastVerifiedSha":null,"evidence":{"commands":[],"testCount":null,"windowsArtifacts":[],"sources":[]},"remainingGap":null}]}
+{
+  "schemaVersion": 1,
+  "statusVocabulary": [
+    "PENDING",
+    "PASS",
+    "FAIL",
+    "BLOCKED"
+  ],
+  "integrationTarget": "work/v1-composite",
+  "roadmap": "docs/roadmap/V1_MASTER_ROADMAP.md",
+  "scenarioCatalog": "docs/design/multiplayer-v1-scenario-catalog.md",
+  "createdFromSha": "77b45028cbc4e04bb2cecc825a771269b64d1f2f",
+  "officialScore": 78.8,
+  "counts": {
+    "gates": 72,
+    "reuseLocked": 47,
+    "verifyOnly": 14,
+    "build": 11,
+    "pass": 59,
+    "pending": 13,
+    "fail": 0,
+    "blocked": 0
+  },
+  "rules": {
+    "productCodeChangeRequiresEvidenceCard": true,
+    "reuseOrVerifyGateRequiresReproducedFailureBeforeProductChange": true,
+    "structuralEvidenceCannotCloseRenderedWindowsGate": true,
+    "releaseRequiresOneExactShaAndMatchingWindowsArtifact": true
+  },
+  "gates": [
+    {
+      "id": "W0-01",
+      "workstream": "W0",
+      "classification": "VERIFY_ONLY",
+      "status": "PASS",
+      "lastVerifiedSha": "e9bb86f83c7c481e2c1a519c21544c88694b5d8a",
+      "evidence": {
+        "commands": [
+          "Legacy Execution Boundary",
+          "Contract validation"
+        ],
+        "testCount": null,
+        "windowsArtifacts": [],
+        "sources": [
+          "PR #190",
+          "GitHub Actions run 33382210303: Legacy Execution Boundary = success",
+          "GitHub Actions run 33382210277 / job 96451500787: Contract validation = success",
+          ".github/workflows/apply-phase14-player-experience-redesign.yml removed"
+        ]
+      },
+      "remainingGap": null
+    },
+    {
+      "id": "W0-02",
+      "workstream": "W0",
+      "classification": "BUILD",
+      "status": "PASS",
+      "lastVerifiedSha": "e9bb86f83c7c481e2c1a519c21544c88694b5d8a",
+      "evidence": {
+        "commands": [],
+        "testCount": null,
+        "windowsArtifacts": [],
+        "sources": [
+          "docs/roadmap/V1_EVIDENCE_LEDGER.json: 72 gates, 47 R / 14 V / 11 B"
+        ]
+      },
+      "remainingGap": null
+    },
+    {
+      "id": "W0-03",
+      "workstream": "W0",
+      "classification": "BUILD",
+      "status": "PASS",
+      "lastVerifiedSha": "e9bb86f83c7c481e2c1a519c21544c88694b5d8a",
+      "evidence": {
+        "commands": [],
+        "testCount": null,
+        "windowsArtifacts": [],
+        "sources": [
+          "docs/CURRENT.md",
+          "docs/roadmap/CURRENT.md",
+          "CANONICAL_ROOT.md"
+        ]
+      },
+      "remainingGap": null
+    },
+    {
+      "id": "W0-04",
+      "workstream": "W0",
+      "classification": "BUILD",
+      "status": "PASS",
+      "lastVerifiedSha": "e9bb86f83c7c481e2c1a519c21544c88694b5d8a",
+      "evidence": {
+        "commands": [],
+        "testCount": null,
+        "windowsArtifacts": [],
+        "sources": [
+          "GitHub issue #110 synchronized to 120 scenarios",
+          "GitHub issue #189 created for MP-13",
+          "docs/design/multiplayer-v1-scenario-catalog.md"
+        ]
+      },
+      "remainingGap": null
+    },
+    {
+      "id": "W0-05",
+      "workstream": "W0",
+      "classification": "BUILD",
+      "status": "PASS",
+      "lastVerifiedSha": "e9bb86f83c7c481e2c1a519c21544c88694b5d8a",
+      "evidence": {
+        "commands": [],
+        "testCount": null,
+        "windowsArtifacts": [],
+        "sources": [
+          "docs/archive/README.md",
+          "GitHub issue #185 closed",
+          "obsolete Phase14 self-publishing workflow removed"
+        ]
+      },
+      "remainingGap": null
+    },
+    {
+      "id": "W0-06",
+      "workstream": "W0",
+      "classification": "BUILD",
+      "status": "PASS",
+      "lastVerifiedSha": "e9bb86f83c7c481e2c1a519c21544c88694b5d8a",
+      "evidence": {
+        "commands": [],
+        "testCount": null,
+        "windowsArtifacts": [],
+        "sources": [
+          "docs/roadmap/EVIDENCE_CARD.md"
+        ]
+      },
+      "remainingGap": null
+    },
+    {
+      "id": "W1-01",
+      "workstream": "W1",
+      "classification": "REUSE_LOCKED",
+      "status": "PASS",
+      "lastVerifiedSha": "9113736b5dbc565cb40d0646b0f27abdbdc6eb59",
+      "evidence": {
+        "commands": [
+          "GitHub Actions UI"
+        ],
+        "testCount": null,
+        "windowsArtifacts": [],
+        "sources": [
+          "PR #191",
+          "docs/roadmap/evidence/W1-01.md",
+          "GitHub Actions run 33386706736: UI = success",
+          "tests/ui/firstRunTutorialStructure.test.ts: W1-01 fresh Home reaches Character Library and Guided Create through production routes"
+        ]
+      },
+      "remainingGap": null
+    },
+    {
+      "id": "W1-02",
+      "workstream": "W1",
+      "classification": "REUSE_LOCKED",
+      "status": "PASS",
+      "lastVerifiedSha": "42305b1d2a66a976b08844509a63b5999166938a",
+      "evidence": {
+        "commands": [
+          "GitHub Actions UI"
+        ],
+        "testCount": null,
+        "windowsArtifacts": [],
+        "sources": [
+          "PR #193",
+          "GitHub Actions run 33387465586: UI = success",
+          "tests/ui/characterCreationCompleteGate.test.ts: all twelve SRD classes can reach a fully resolved level-1 commit"
+        ]
+      },
+      "remainingGap": null
+    },
+    {
+      "id": "W1-03",
+      "workstream": "W1",
+      "classification": "REUSE_LOCKED",
+      "status": "PASS",
+      "lastVerifiedSha": "42305b1d2a66a976b08844509a63b5999166938a",
+      "evidence": {
+        "commands": [
+          "GitHub Actions UI"
+        ],
+        "testCount": null,
+        "windowsArtifacts": [],
+        "sources": [
+          "PR #193",
+          "GitHub Actions UI run 33387465586: UI = success",
+          "tests/ui/characterCreationCompleteGate.test.ts: Guided and Quick continue to share one autosaved choice graph"
+        ]
+      },
+      "remainingGap": null
+    },
+    {
+      "id": "W1-04",
+      "workstream": "W1",
+      "classification": "REUSE_LOCKED",
+      "status": "PASS",
+      "lastVerifiedSha": "42305b1d2a66a976b08844509a63b5999166938a",
+      "evidence": {
+        "commands": [
+          "GitHub Actions UI"
+        ],
+        "testCount": null,
+        "windowsArtifacts": [],
+        "sources": [
+          "PR #193",
+          "GitHub Actions run 33387465586: UI = success",
+          "tests/ui/characterCreationCompleteGate.test.ts: incomplete Guided draft cannot commit and remains available for correction"
+        ]
+      },
+      "remainingGap": null
+    },
+    {
+      "id": "W1-05",
+      "workstream": "W1",
+      "classification": "VERIFY_ONLY",
+      "status": "PASS",
+      "lastVerifiedSha": "c0900157560ac51a745eac687eb4fff7f2580086",
+      "evidence": {
+        "commands": [
+          "npm run test:e2e:tauri -- --w1"
+        ],
+        "testCount": null,
+        "windowsArtifacts": [
+          "SimpleVTT-W1-Tauri-c0900157560ac51a745eac687eb4fff7f2580086 (artifact 9764936861, sha256:85eda3890fdbc6d28ee0e5155617082642a4e22c1e851a5c73783be59af00b23)"
+        ],
+        "sources": [
+          "PR #195",
+          "GitHub Actions run 33409861843 / job 99546422908: V1 W1 Tauri Verification = success",
+          "Actions checkout 8c68cf20d7f2287e2f0581b6725f6a20785d5dab and branch HEAD c0900157560ac51a745eac687eb4fff7f2580086 share tree 75f8fc64799a98c22e980dbd102a822555d8c846",
+          "Actual Windows Tauri: create -> save -> process exit -> same data root relaunch -> same Character ID/name/class/species/background",
+          "w1-create-w1-05-created.{png,txt}, w1-restart-w1-05-restarted.{png,txt}, w1-05.json"
+        ]
+      },
+      "remainingGap": null
+    },
+    {
+      "id": "W1-06",
+      "workstream": "W1",
+      "classification": "VERIFY_ONLY",
+      "status": "PASS",
+      "lastVerifiedSha": "c0900157560ac51a745eac687eb4fff7f2580086",
+      "evidence": {
+        "commands": [
+          "npm run test:e2e:tauri -- --w1"
+        ],
+        "testCount": null,
+        "windowsArtifacts": [
+          "SimpleVTT-W1-Tauri-c0900157560ac51a745eac687eb4fff7f2580086 (artifact 9764936861, sha256:85eda3890fdbc6d28ee0e5155617082642a4e22c1e851a5c73783be59af00b23)"
+        ],
+        "sources": [
+          "PR #195",
+          "GitHub Actions run 33409861843 / job 99546422908: V1 W1 Tauri Verification = success",
+          "Actions checkout 8c68cf20d7f2287e2f0581b6725f6a20785d5dab and branch HEAD c0900157560ac51a745eac687eb4fff7f2580086 share tree 75f8fc64799a98c22e980dbd102a822555d8c846",
+          "Actual Windows Tauri: import + duplicate + delete; distinct Character IDs and record-local provenance; deletion and survivors preserved after restart",
+          "w1-restart-w1-06-lifecycle.{png,txt}, w1-library-restart-w1-06-restarted.{png,txt}, w1-06.json"
+        ]
+      },
+      "remainingGap": null
+    },
+    {
+      "id": "W1-07",
+      "workstream": "W1",
+      "classification": "VERIFY_ONLY",
+      "status": "PASS",
+      "lastVerifiedSha": "c0900157560ac51a745eac687eb4fff7f2580086",
+      "evidence": {
+        "commands": [
+          "npm run test:e2e:tauri -- --w1"
+        ],
+        "testCount": null,
+        "windowsArtifacts": [
+          "SimpleVTT-W1-Tauri-c0900157560ac51a745eac687eb4fff7f2580086 (artifact 9764936861, sha256:85eda3890fdbc6d28ee0e5155617082642a4e22c1e851a5c73783be59af00b23)"
+        ],
+        "sources": [
+          "PR #195",
+          "GitHub Actions run 33409861843 / job 99546422908: V1 W1 Tauri Verification = success",
+          "Actions checkout 8c68cf20d7f2287e2f0581b6725f6a20785d5dab and branch HEAD c0900157560ac51a745eac687eb4fff7f2580086 share tree 75f8fc64799a98c22e980dbd102a822555d8c846",
+          "Actual Windows Tauri: durable Character compared with rendered Full Sheet HP, AC, resources, inventory, spells, features, and actions",
+          "w1-library-restart-w1-07-full-sheet.{png,txt}, w1-library-restart-w1-07-inventory.{png,txt}, w1-07.json"
+        ]
+      },
+      "remainingGap": null
+    },
+    {
+      "id": "W1-08",
+      "workstream": "W1",
+      "classification": "VERIFY_ONLY",
+      "status": "PASS",
+      "lastVerifiedSha": "c0900157560ac51a745eac687eb4fff7f2580086",
+      "evidence": {
+        "commands": [
+          "npm run test:e2e:tauri -- --w1"
+        ],
+        "testCount": null,
+        "windowsArtifacts": [
+          "SimpleVTT-W1-Tauri-c0900157560ac51a745eac687eb4fff7f2580086 (artifact 9764936861, sha256:85eda3890fdbc6d28ee0e5155617082642a4e22c1e851a5c73783be59af00b23)"
+        ],
+        "sources": [
+          "PR #195",
+          "GitHub Actions run 33409861843 / job 99546422908: V1 W1 Tauri Verification = success",
+          "Actions checkout 8c68cf20d7f2287e2f0581b6725f6a20785d5dab and branch HEAD c0900157560ac51a745eac687eb4fff7f2580086 share tree 75f8fc64799a98c22e980dbd102a822555d8c846",
+          "Actual Windows Tauri: Fighter level-up choice + validation + commit; Action Surge feature/action acquired and level/HP/feature/resource preserved after process restart",
+          "w1-library-restart-w1-08-review.{png,txt}, w1-library-restart-w1-08-committed.{png,txt}, w1-level-up-restart-w1-08-restarted.{png,txt}, w1-08.json"
+        ]
+      },
+      "remainingGap": null
+    },
+    {
+      "id": "W2-01",
+      "workstream": "W2",
+      "classification": "REUSE_LOCKED",
+      "status": "PASS",
+      "lastVerifiedSha": "42305b1d2a66a976b08844509a63b5999166938a",
+      "evidence": {
+        "commands": [
+          "GitHub Actions UI",
+          "GitHub compare 42305b1d2a66a976b08844509a63b5999166938a...c6257b6637603cd35abc7f6c79ab706b36aaa7fb"
+        ],
+        "testCount": null,
+        "windowsArtifacts": [],
+        "sources": [
+          "docs/roadmap/evidence/W2-01.md",
+          "GitHub Actions run 33387465586: UI = success at 42305b1d2a66a976b08844509a63b5999166938a",
+          "tests/ui/characterCreationCompleteGate.test.ts: CLASSES=12, SPECIES=9, BACKGROUNDS=4",
+          "tests/ui/characterCreationCompleteGate.test.ts: all 12 shipped SRD classes reach a saved legal Level-1 commit",
+          "content/indexes/dnd-srd-5.2.1.character-creation.json",
+          "42305b1d2a66a976b08844509a63b5999166938a..c6257b6637603cd35abc7f6c79ab706b36aaa7fb changes do not include src/app/characterCreationV10Data.ts, content/indexes/dnd-srd-5.2.1.character-creation.json, or tests/ui/characterCreationCompleteGate.test.ts"
+        ]
+      },
+      "remainingGap": null
+    },
+    {
+      "id": "W2-02",
+      "workstream": "W2",
+      "classification": "REUSE_LOCKED",
+      "status": "PASS",
+      "lastVerifiedSha": "ef2cdf69748195bd63c0bd7eff747420811842bf",
+      "evidence": {
+        "commands": [
+          "GitHub Actions UI: Verify W2 SRD product lifecycle",
+          "npm run build"
+        ],
+        "testCount": 89,
+        "windowsArtifacts": [],
+        "sources": [
+          "GitHub Actions run 33439392457 / job 99643608987 at ef2cdf69748195bd63c0bd7eff747420811842bf: success",
+          "Generated canonical weapon rule metadata: 38 weapons; generic builtin catalog: 115 items",
+          "tests/domain/commonPlayInventoryRuntime.test.ts",
+          "tests/domain/commonPlayWeaponMasteryComposition.test.ts",
+          "tests/ui/productionFreshCharacterInventory.test.ts",
+          "tests/ui/phase09RealItemCostService.test.ts",
+          "tests/ui/phase09RealItemCostAdapter.test.ts"
+        ]
+      },
+      "remainingGap": null
+    },
+    {
+      "id": "W2-03",
+      "workstream": "W2",
+      "classification": "REUSE_LOCKED",
+      "status": "PASS",
+      "lastVerifiedSha": "ef2cdf69748195bd63c0bd7eff747420811842bf",
+      "evidence": {
+        "commands": [
+          "GitHub Actions UI: Verify W2 SRD product lifecycle",
+          "npm run build"
+        ],
+        "testCount": 89,
+        "windowsArtifacts": [],
+        "sources": [
+          "GitHub Actions run 33439392457 / job 99643608987 at ef2cdf69748195bd63c0bd7eff747420811842bf: success",
+          "Generated SRD spell presentation: 339 spells; normalized spell execution catalog: 339 definitions",
+          "tests/domain/spellExecutionCoverage.test.ts: all 339 catalog spells have an executable authoritative definition",
+          "tests/ui/spellPresentationCatalog.test.ts: exactly 339 complete unique presentations"
+        ]
+      },
+      "remainingGap": null
+    },
+    {
+      "id": "W2-04",
+      "workstream": "W2",
+      "classification": "REUSE_LOCKED",
+      "status": "PASS",
+      "lastVerifiedSha": "ef2cdf69748195bd63c0bd7eff747420811842bf",
+      "evidence": {
+        "commands": [
+          "npx tsx --test tests/contracts/v1MechanismCoverage.test.mjs",
+          "node scripts/check-v1-mechanism-coverage.mjs --gate-n",
+          "node scripts/check-legacy-execution-boundary.mjs",
+          "npm run build"
+        ],
+        "testCount": 89,
+        "windowsArtifacts": [],
+        "sources": [
+          "GitHub Actions run 33439392457 / job 99643608987 at ef2cdf69748195bd63c0bd7eff747420811842bf: success",
+          "V1 mechanism coverage OK: total=36 IMPLEMENTED=36 PROVEN_UNNEEDED=0 INCOMPLETE=0 Gate-N-ready",
+          "Legacy execution composition boundary OK: 85 classified imports; 18 named adapter paths guarded",
+          "tests/contracts/v1MechanismCoverage.test.mjs",
+          "tests/domain/commonPlayWeaponMasteryComposition.test.ts",
+          "tests/ui/progressionPhase08CatalogPendingAudit.test.ts"
+        ]
+      },
+      "remainingGap": null
+    },
+    {
+      "id": "W2-05",
+      "workstream": "W2",
+      "classification": "VERIFY_ONLY",
+      "status": "PASS",
+      "lastVerifiedSha": "ef2cdf69748195bd63c0bd7eff747420811842bf",
+      "evidence": {
+        "commands": [
+          "GitHub Actions UI: Verify creation ChoiceDefinition convergence",
+          "GitHub Actions UI: Verify W2 SRD product lifecycle",
+          "npm run build"
+        ],
+        "testCount": 89,
+        "windowsArtifacts": [],
+        "sources": [
+          "GitHub Actions run 33439392457 / job 99643608987 at ef2cdf69748195bd63c0bd7eff747420811842bf: success",
+          "tests/ui/characterCreationChoiceDefinition.test.ts: shared definitions preserve option IDs/sources, accept catalog selections, reject unknown selections",
+          "tests/ui/characterCreationCompleteGate.test.ts: all 12 classes commit with legal skills, equipment, spells, origin feat, mastery, languages, and nested choices",
+          "tests/ui/spellPresentationCatalog.test.ts: every class Level-1 spell-list entry resolves to the canonical catalog"
+        ]
+      },
+      "remainingGap": null
+    },
+    {
+      "id": "W2-06",
+      "workstream": "W2",
+      "classification": "VERIFY_ONLY",
+      "status": "PASS",
+      "lastVerifiedSha": "ef2cdf69748195bd63c0bd7eff747420811842bf",
+      "evidence": {
+        "commands": [
+          "GitHub Actions UI: Verify progression choice schedule regression",
+          "GitHub Actions UI: Verify W2 SRD product lifecycle",
+          "npm run build"
+        ],
+        "testCount": 89,
+        "windowsArtifacts": [],
+        "sources": [
+          "GitHub Actions run 33439392457 / job 99643608987 at ef2cdf69748195bd63c0bd7eff747420811842bf: success",
+          "tests/ui/progressionChoiceScheduleRegression.test.ts",
+          "tests/domain/phase08CatalogPendingAudit.test.ts: zero catalog-pending choices across all 12 classes and levels 2-20",
+          "tests/ui/progressionPhase08CatalogCoverage.test.ts",
+          "Generated SRD progression: 12 classes / 240 level rows"
+        ]
+      },
+      "remainingGap": null
+    },
+    {
+      "id": "W2-07",
+      "workstream": "W2",
+      "classification": "VERIFY_ONLY",
+      "status": "PASS",
+      "lastVerifiedSha": "ef2cdf69748195bd63c0bd7eff747420811842bf",
+      "evidence": {
+        "commands": [
+          "GitHub Actions UI: Verify W2 SRD product lifecycle",
+          "npm run build"
+        ],
+        "testCount": 89,
+        "windowsArtifacts": [],
+        "sources": [
+          "GitHub Actions run 33439392457 / job 99643608987 at ef2cdf69748195bd63c0bd7eff747420811842bf: success",
+          "tests/ui/productionFreshCharacterSkills.test.ts",
+          "tests/ui/productionFreshCharacterInventory.test.ts",
+          "tests/ui/productionFreshCharacterSpells.test.ts",
+          "tests/ui/characterLibraryRuntimeAdapter.test.ts",
+          "tests/ui/progressionPersistentFeatureRuntime.test.ts",
+          "tests/ui/characterLongRestProjection.test.ts"
+        ]
+      },
+      "remainingGap": null
+    },
+    {
+      "id": "W2-08",
+      "workstream": "W2",
+      "classification": "VERIFY_ONLY",
+      "status": "PASS",
+      "lastVerifiedSha": "699c923dc50dac5ecd266ced58568d3b647850b6",
+      "evidence": {
+        "commands": [
+          "npm run test:e2e:tauri -- --w2"
+        ],
+        "testCount": null,
+        "windowsArtifacts": [
+          "SimpleVTT-W2-Tauri-699c923dc50dac5ecd266ced58568d3b647850b6 (artifact 9786387605, sha256:3077663cb94c2a444046d94808c76a677c7d92de61a0576f61d5f57b8cd1172d)"
+        ],
+        "sources": [
+          "PR #198",
+          "GitHub Actions run 33470259003 / job 99738402317: V1 Tauri Verification = success",
+          "Product verification SHA 699c923dc50dac5ecd266ced58568d3b647850b6, tree 449bf34d36c7975addcc2196b87a9a026d525730",
+          "Actual Windows Tauri: production UI created martial, prepared caster, spontaneous caster, pact caster, level-2 shapeshifter, and healer; process exit -> same data root relaunch -> durable identity/content and rendered Full Sheet",
+          "Current-HEAD repair reused multiclassSpellSlots and pactMagicProgression to materialize initial class/spell-capacity source facts",
+          "w2-08-{martial,prepared-caster,spontaneous-caster,pact-caster,shapeshifter,healer}-{created,restarted}.{png,txt}, w2-08.json"
+        ]
+      },
+      "remainingGap": null
+    },
+    {
+      "id": "W3-01",
+      "workstream": "W3",
+      "classification": "REUSE_LOCKED",
+      "status": "PASS",
+      "lastVerifiedSha": "1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff",
+      "evidence": {
+        "commands": [
+          "GitHub Actions UI",
+          "npm run build"
+        ],
+        "testCount": 30,
+        "windowsArtifacts": [],
+        "sources": [
+          "PR #199",
+          "docs/roadmap/evidence/W3-01.md",
+          "GitHub Actions run 33498144567 / job 99824979798 at 1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff: success",
+          "tests/ui/productionPlayIntentUx.test.ts",
+          "tests/ui/productionFreshCharacterSkills.test.ts",
+          "tests/ui/phase09RealResolutionService.test.ts",
+          "tests/ui/phase09RealSavingThrowAdapter.test.ts",
+          "tests/domain/commonPlayD20Runtime.test.ts",
+          "PR #199 merge ca6b42c47409ff7096f31aeab12624336225ab8f changes only docs/roadmap/evidence/W3-01.md; product runtime is inherited unchanged"
+        ]
+      },
+      "remainingGap": null
+    },
+    {
+      "id": "W3-02",
+      "workstream": "W3",
+      "classification": "REUSE_LOCKED",
+      "status": "PASS",
+      "lastVerifiedSha": "1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff",
+      "evidence": {
+        "commands": [
+          "GitHub Actions UI",
+          "GitHub Actions UI: Verify Campaign lifecycle and declarative providers"
+        ],
+        "testCount": 12,
+        "windowsArtifacts": [],
+        "sources": [
+          "PR #201",
+          "docs/roadmap/evidence/W3-02.md",
+          "GitHub Actions run 33498144567 / job 99824979798 at 1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff: success",
+          "tests/ui/phase09RealTurnRuntimeService.test.ts",
+          "tests/ui/phase09RealTurnRuntimeAdapter.test.ts",
+          "src/ProductionPlayScreen.tsx: production start/end initiative and end-turn reachability",
+          "src/app/realTurnRuntimeService.ts: domain initiative + begin-turn economy + Resolver end-turn/begin-turn operations",
+          "PR #199 and #200 merges ca6b42c47409ff7096f31aeab12624336225ab8f / 9c9ef85e4b00aff92e33c8c0a1429209687db016 are documentation-only after the verification SHA; turn runtime is inherited unchanged"
+        ]
+      },
+      "remainingGap": null
+    },
+    {
+      "id": "W3-03",
+      "workstream": "W3",
+      "classification": "REUSE_LOCKED",
+      "status": "PASS",
+      "lastVerifiedSha": "1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff",
+      "evidence": {
+        "commands": [
+          "GitHub Actions UI",
+          "npm run build"
+        ],
+        "testCount": 23,
+        "windowsArtifacts": [],
+        "sources": [
+          "PR #202",
+          "docs/roadmap/evidence/W3-03.md",
+          "GitHub Actions run 33498144567 / job 99824979798 at 1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff: 54/54 combined W3 tests PASS and build success",
+          "tests/ui/phase09RealAttackTransactionService.test.ts",
+          "tests/ui/phase09RealAtomicAttackAdapter.test.ts",
+          "tests/ui/phase09RealHealingAdapter.test.ts",
+          "src/app/realAttackTransactionService.ts + src/app/realAtomicHealingTransactionService.ts: atomic Resolver-backed HP/economy/resource writeback",
+          "PR #199, #200, and #201 changes after the verification SHA are documentation-only; attack/healing runtime authority is inherited unchanged"
+        ]
+      },
+      "remainingGap": null
+    },
+    {
+      "id": "W3-04",
+      "workstream": "W3",
+      "classification": "REUSE_LOCKED",
+      "status": "PASS",
+      "lastVerifiedSha": "1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff",
+      "evidence": {
+        "commands": [
+          "GitHub Actions UI",
+          "npm run build"
+        ],
+        "testCount": null,
+        "windowsArtifacts": [],
+        "sources": [
+          "PR #203",
+          "docs/roadmap/evidence/W3-04.md",
+          "GitHub Actions run 33498144567 / job 99824979798 at 1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff: success",
+          "tests/ui/phase09RealSpellFeatureUseService.test.ts",
+          "tests/ui/phase09RealActivityCostRuleRuntime.test.ts",
+          "tests/ui/phase09RealItemActivationService.test.ts",
+          "tests/ui/phase09RealActionEconomyService.test.ts",
+          "tests/domain/commonPlayInventoryRuntime.test.ts",
+          "tests/domain/spellExecutionCoverage.test.ts",
+          "tests/ui/productionCommonPlayArtifacts.test.ts",
+          "PRs #199-#203 after the verification SHA are documentation/evidence-only; W3-04 runtime authority is inherited unchanged"
+        ]
+      },
+      "remainingGap": null
+    },
+    {
+      "id": "W3-05",
+      "workstream": "W3",
+      "classification": "REUSE_LOCKED",
+      "status": "PASS",
+      "lastVerifiedSha": "1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff",
+      "evidence": {
+        "commands": [
+          "GitHub Actions UI"
+        ],
+        "testCount": 11,
+        "windowsArtifacts": [],
+        "sources": [
+          "PR #205",
+          "docs/roadmap/evidence/W3-05.md",
+          "GitHub Actions run 33498144567 / job 99824979798 at 1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff: success",
+          "tests/ui/c9FamilyOReadyConcentrationProduction.test.ts",
+          "tests/ui/phase09ManualMovementReactionAdapter.test.ts",
+          "tests/ui/phase09ConcentrationSaveWorkflow.test.ts",
+          "Current canonical product runtime and tests inherit the verified exact-SHA implementation unchanged"
+        ]
+      },
+      "remainingGap": null
+    },
+    {
+      "id": "W3-06",
+      "workstream": "W3",
+      "classification": "REUSE_LOCKED",
+      "status": "PASS",
+      "lastVerifiedSha": "1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff",
+      "evidence": {
+        "commands": [
+          "GitHub Actions Rules Domain",
+          "GitHub Actions UI",
+          "npm run build"
+        ],
+        "testCount": null,
+        "windowsArtifacts": [],
+        "sources": [
+          "PR #207",
+          "PR #210",
+          "docs/roadmap/evidence/W3-06.md",
+          "GitHub Actions Rules Domain run 33342898384 / job 99341612326 at 6095fe8adbe52b047ef5f6fee3413975bf02c3e0: success",
+          "GitHub Actions UI run 33498144567 / job 99824979798 at 1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff: success",
+          "tests/domain/phase05Lifecycle.test.ts",
+          "tests/domain/resourceRecoveryLockout.test.ts",
+          "tests/domain/wizardLongRestPreparation.test.ts",
+          "tests/ui/connectedActorArtifactLifetimeProduction.test.ts",
+          "tests/ui/connectedActorArtifactLifecycleProduction.test.ts",
+          "tests/ui/characterLongRestProjection.test.ts",
+          "Current canonical product runtime and listed tests inherit the verified exact-SHA implementation unchanged"
+        ]
+      },
+      "remainingGap": null
+    },
+    {
+      "id": "W3-07",
+      "workstream": "W3",
+      "classification": "REUSE_LOCKED",
+      "status": "PASS",
+      "lastVerifiedSha": "1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff",
+      "evidence": {
+        "commands": [
+          "GitHub Actions UI"
+        ],
+        "testCount": null,
+        "windowsArtifacts": [],
+        "sources": [
+          "PR #218",
+          "docs/roadmap/evidence/W3-07.md",
+          "GitHub Actions run 33498144567 / job 99824979798 at 1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff: success",
+          "tests/ui/phase09RealAtomicAttackAdapter.test.ts",
+          "src/app/phase09RealRuntimeAttackAdapter.ts: inverse ResolutionEvent Undo retains the original Activity as reversed and prepends a correction/undoOf Activity",
+          "Current canonical product runtime and tests inherit the verified exact-SHA implementation unchanged"
+        ]
+      },
+      "remainingGap": null
+    },
+    {
+      "id": "W3-08",
+      "workstream": "W3",
+      "classification": "VERIFY_ONLY",
+      "status": "PASS",
+      "lastVerifiedSha": "53ec501555222b60d9e856b231f4f64395f75b76",
+      "evidence": {
+        "commands": [
+          "npm run test:e2e:tauri -- --w3",
+          "npx tsx --test tests/ui/appProviderStopSessionRefresh.test.ts"
+        ],
+        "testCount": null,
+        "windowsArtifacts": [
+          "SimpleVTT-W3-Tauri-53ec501555222b60d9e856b231f4f64395f75b76 (artifact 9824674856, sha256:d51dd1d962be4533b31551f900dae26655d3a4e2b05aa8131ffa98122bb18034)"
+        ],
+        "sources": [
+          "PR #223",
+          "GitHub Actions run 33569954938 / job 100061523302: V1 W1 Tauri Verification tauri-w3 = success",
+          "Verification SHA 53ec501555222b60d9e856b231f4f64395f75b76; canonical merge 5bef709f010543859e84c98ef7db8f14e5c06469 shares tree 0e6baadda2570b169c35c6b7436ff4e0042dfff0",
+          "Actual Windows Tauri: Character -> Campaign PC preset -> local Host -> DM Library drop -> Combatant + weapon attack + damage spell -> Long Rest +8h -> UI session end -> process exit -> same-data-root restart -> Campaign time 480 min and session history 1",
+          "w3-08.json, w3-08-drop-diagnostic.json, w3-08-selection-diagnostic.json, rendered screenshots/text"
+        ]
+      },
+      "remainingGap": null
+    },
+    {
+      "id": "W4-01",
+      "workstream": "W4",
+      "classification": "REUSE_LOCKED",
+      "status": "PASS",
+      "lastVerifiedSha": "5bef709f010543859e84c98ef7db8f14e5c06469",
+      "evidence": {
+        "commands": [
+          "GitHub Actions UI: Verify Campaign lifecycle and declarative providers",
+          "npx tsx --test tests/ui/campaignPersistence.test.ts tests/ui/campaignRuntimeAdapter.test.ts tests/ui/campaignProductUiStructure.test.ts tests/ui/campaignStartupRecoveryStructure.test.ts tests/ui/campaignLifecycleRuntime.test.ts tests/ui/campaignLifecycleUiStructure.test.ts tests/ui/campaignDeclarativeProviderProfile.test.ts tests/ui/campaignDeclarativeProviderImport.test.ts tests/ui/campaignDeclarativeProviderRuntime.test.ts tests/ui/campaignDeclarativeProviderUiStructure.test.ts"
+        ],
+        "testCount": null,
+        "windowsArtifacts": [],
+        "sources": [
+          "GitHub Actions run 33570546168 / job 100063331529 at 5bef709f010543859e84c98ef7db8f14e5c06469: UI = success; Verify Campaign lifecycle and declarative providers = success",
+          "tests/ui/campaignPersistence.test.ts: durable create/read/update/archive/restore/duplicate/delete plus idempotent request and stale-revision rejection",
+          "tests/ui/campaignLifecycleRuntime.test.ts: duplicate gets campaign.copy.stash and campaign.copy.dm-library namespaces and delete removes only the target Campaign",
+          "src/app/campaignPersistence.ts: Campaign-owned stash, DM Library, and content-loadout identifiers derive from campaignId",
+          "GitHub compare 5bef709f010543859e84c98ef7db8f14e5c06469...b917e20b27d6c80a3bcc5783c20c9b0fd0042894 changes only docs/CURRENT.md, docs/roadmap/CURRENT.md, docs/roadmap/EVIDENCE_CARD.md, and docs/roadmap/V1_EVIDENCE_LEDGER.json; verified product/tests are inherited unchanged"
+        ]
+      },
+      "remainingGap": null
+    },
+    {
+      "id": "W4-02",
+      "workstream": "W4",
+      "classification": "REUSE_LOCKED",
+      "status": "PASS",
+      "lastVerifiedSha": "5bef709f010543859e84c98ef7db8f14e5c06469",
+      "evidence": {
+        "commands": [
+          "GitHub Actions UI: Verify Campaign lifecycle and declarative providers"
+        ],
+        "testCount": null,
+        "windowsArtifacts": [],
+        "sources": [
+          "GitHub Actions run 33570546168 / job 100063331529 at 5bef709f010543859e84c98ef7db8f14e5c06469: success; Verify Campaign lifecycle and declarative providers = success",
+          "tests/ui/campaignProductUiStructure.test.ts: Campaign is a first-class product route and Host start requires a selected Campaign through the prepared snapshot path",
+          "src/ProductionSessionWorkspaceBridge.tsx: offline/disconnected Host is disabled without an active Campaign; Host prepares that Campaign snapshot before app.hostSession()",
+          "src/app/campaignRuntimeAdapter.ts: prepareCampaignSessionSnapshot rejects a missing Campaign and binds campaignId, campaignRevision, contentLoadoutRevision, and immutable Campaign settings into AppSnapshot/Session",
+          "GitHub compare 5bef709f010543859e84c98ef7db8f14e5c06469...c005f32e7e4f564d479771013192291d7992dff0 changes only docs/CURRENT.md, docs/roadmap/CURRENT.md, docs/roadmap/EVIDENCE_CARD.md, and docs/roadmap/V1_EVIDENCE_LEDGER.json; verified W4-02 product/tests are inherited unchanged"
+        ]
+      },
+      "remainingGap": null
+    },
+    {
+      "id": "W4-03",
+      "workstream": "W4",
+      "classification": "REUSE_LOCKED",
+      "status": "PASS",
+      "lastVerifiedSha": "5bef709f010543859e84c98ef7db8f14e5c06469",
+      "evidence": {
+        "commands": [
+          "GitHub Actions UI: Verify Campaign lifecycle and declarative providers",
+          "npm run test:e2e:tauri -- --w3"
+        ],
+        "testCount": null,
+        "windowsArtifacts": [
+          "SimpleVTT-W3-Tauri-53ec501555222b60d9e856b231f4f64395f75b76 (artifact 9824674856, sha256:d51dd1d962be4533b31551f900dae26655d3a4e2b05aa8131ffa98122bb18034)"
+        ],
+        "sources": [
+          "GitHub Actions run 33570546168 / job 100063331529 at 5bef709f010543859e84c98ef7db8f14e5c06469: success; campaignRuntimeAdapter.test.ts ran in Verify Campaign lifecycle and declarative providers",
+          "tests/ui/campaignRuntimeAdapter.test.ts: roster projection is Campaign-owned and Session preparation captures an immutable Campaign settings snapshot",
+          "tests/ui/campaignSystems.test.ts: revisioned roster mutations plus appendSessionSummary keep a bounded 50-entry history and lastSessionId",
+          "src/app/campaignSessionHistoryRuntimeAdapter.ts + src/main.tsx: production composition wraps Host stop, derives the completed Session summary from the captured Campaign snapshot, persists it through appendCampaignSessionSummary, then clears the snapshot",
+          "GitHub Actions run 33569954938 / job 100061523302 at 53ec501555222b60d9e856b231f4f64395f75b76: actual Windows Tauri UI session end -> process exit -> same-data-root restart -> Campaign session history 1",
+          "53ec501555222b60d9e856b231f4f64395f75b76 and canonical merge 5bef709f010543859e84c98ef7db8f14e5c06469 share tree 0e6baadda2570b169c35c6b7436ff4e0042dfff0; GitHub compare 5bef709f010543859e84c98ef7db8f14e5c06469...fd14887dd286725d2ec71b48a70d121b6c63d8d6 changes only the four evidence/current docs, so the W4-03 product/tests are inherited unchanged"
+        ]
+      },
+      "remainingGap": null
+    },
+    {
+      "id": "W4-04",
+      "workstream": "W4",
+      "classification": "REUSE_LOCKED",
+      "status": "PASS",
+      "lastVerifiedSha": "5bef709f010543859e84c98ef7db8f14e5c06469",
+      "evidence": {
+        "commands": [
+          "GitHub Actions UI: Verify Campaign lifecycle and declarative providers"
+        ],
+        "testCount": null,
+        "windowsArtifacts": [],
+        "sources": [
+          "GitHub Actions run 33570546168 / job 100063331529 at 5bef709f010543859e84c98ef7db8f14e5c06469: success; Verify Campaign lifecycle and declarative providers = success",
+          "src/app/campaignRuntimeAdapter.ts: calendar/ration provider IDs and versions plus rationsVisibleToPlayers are Campaign-owned and captured into the immutable Session snapshot; Client projection omits ration details when visibility is false",
+          "src/app/connectedCampaignSystemsRuntimeAdapter.ts: safeProjection preserves Host authority but strips ration balance/requirements/shortage and roster ration-unit fields before Player broadcast when visibleToPlayers is false",
+          "tests/ui/campaignRuntimeAdapter.test.ts + tests/ui/campaignSystems.test.ts: Campaign calendar/ration configuration, state, and Session preparation ownership",
+          "tests/ui/campaignDeclarativeProviderProfile.test.ts + campaignDeclarativeProviderRuntime.test.ts + campaignDeclarativeProviderUiStructure.test.ts: installed declarative provider configuration, exact version/options, and Campaign UI/runtime ownership",
+          "GitHub integration history 5bef709f010543859e84c98ef7db8f14e5c06469...19ffc83e529e7e986f50377bfded69cb6ca33871 changes only docs/CURRENT.md, docs/roadmap/CURRENT.md, docs/roadmap/EVIDENCE_CARD.md, and docs/roadmap/V1_EVIDENCE_LEDGER.json; W4-04 product/runtime/tests are inherited unchanged"
+        ]
+      },
+      "remainingGap": null
+    },
+    {
+      "id": "W4-05",
+      "workstream": "W4",
+      "classification": "REUSE_LOCKED",
+      "status": "PASS",
+      "lastVerifiedSha": "5bef709f010543859e84c98ef7db8f14e5c06469",
+      "evidence": {
+        "commands": [
+          "GitHub Actions UI: Verify Party Stash sequential transfer routing"
+        ],
+        "testCount": null,
+        "windowsArtifacts": [],
+        "sources": [
+          "GitHub Actions run 33570546168 / job 100063331529 at 5bef709f010543859e84c98ef7db8f14e5c06469: UI = success; Verify Party Stash sequential transfer routing = success",
+          "src/app/campaignPersistenceContracts.ts + src/app/campaignPartyStashPolicyRuntimeAdapter.ts: Party Stash supports exactly shared / dm-approval / dm-managed; deposits stay open, shared withdrawals pass, approval queues non-DM withdrawals for explicit DM approve/reject, dm-managed rejects non-DM withdrawals, and DM withdrawals use the base transfer path",
+          "src/CampaignSystemsPanel.tsx: production Campaign UI exposes all three policies and pending approval/reject controls",
+          "tests/ui/campaignSystems.test.ts: durable wallet/item transfer, idempotent requests, failure isolation, and Campaign-owned Party Stash namespace",
+          "GitHub compare 5bef709f010543859e84c98ef7db8f14e5c06469...cf712116381ff8493c8eeebfad7ed8ada95b78ee changes only docs/CURRENT.md, docs/roadmap/CURRENT.md, docs/roadmap/EVIDENCE_CARD.md, and docs/roadmap/V1_EVIDENCE_LEDGER.json; W4-05 product/runtime/tests are inherited unchanged"
+        ]
+      },
+      "remainingGap": null
+    },
+    {
+      "id": "W4-06",
+      "workstream": "W4",
+      "classification": "REUSE_LOCKED",
+      "status": "PASS",
+      "lastVerifiedSha": "5bef709f010543859e84c98ef7db8f14e5c06469",
+      "evidence": {
+        "commands": [
+          "GitHub Actions UI: Run UI tests",
+          "GitHub compare 5bef709f010543859e84c98ef7db8f14e5c06469...083ce354fc2c1fcfd1e1346f976f920a30ccd2c1"
+        ],
+        "testCount": null,
+        "windowsArtifacts": [],
+        "sources": [
+          "PR #230",
+          "docs/roadmap/evidence/W4-06.md",
+          "GitHub Actions UI run 33570546168 / job 100063331529 at 5bef709f010543859e84c98ef7db8f14e5c06469: success; Run UI tests = success",
+          "tests/ui/campaignDmLibraryOrganizationRuntime.test.ts + tests/ui/campaignDmLibraryOrganizationStructure.test.ts: private-note CRUD/organization plus folder create/rename/delete and persisted folder/favorite placement",
+          "tests/ui/campaignDmLibraryImport.test.ts: JSON import preserves custom/magic item runtime fields and provenance, imports arrays/NPC definitions, and rejects invalid charge/attunement contracts",
+          "tests/ui/campaignDmLibraryNoteStructure.test.ts + tests/ui/campaignDmLibraryStructure.test.ts: notes remain Host-private and Session projection exposes neither dmLibrary nor noteText",
+          "tests/ui/campaignDmLibraryDeleteProvenance.test.ts: Character grants are independent copies retaining provenance after the source Library definition is deleted",
+          "GitHub compare 5bef709f010543859e84c98ef7db8f14e5c06469...083ce354fc2c1fcfd1e1346f976f920a30ccd2c1 changes only docs/CURRENT.md, docs/roadmap/CURRENT.md, docs/roadmap/EVIDENCE_CARD.md, docs/roadmap/V1_EVIDENCE_LEDGER.json, and docs/roadmap/evidence/W4-06.md; verified W4-06 product/runtime/tests are inherited unchanged"
+        ]
+      },
+      "remainingGap": null
+    },
+    {
+      "id": "W4-07",
+      "workstream": "W4",
+      "classification": "REUSE_LOCKED",
+      "status": "PASS",
+      "lastVerifiedSha": "2ac28651312f1fdbe82edb74fd13f342a8f910f7",
+      "evidence": {
+        "commands": [
+          "GitHub Actions UI",
+          "GitHub Actions V1 Tauri Verification: tauri-w4-07-spatial"
+        ],
+        "testCount": null,
+        "windowsArtifacts": [
+          "SimpleVTT-W4-07-G01-G09-2ac28651312f1fdbe82edb74fd13f342a8f910f7 (artifact 9849024415, sha256:b044f73320cd10bf2446695677ca2098c7c162d01190feed7ecc599078c656a0)"
+        ],
+        "sources": [
+          "PR #251",
+          "docs/roadmap/evidence/W4-07.md",
+          "GitHub Actions UI run 33636100212 / job 100267245818 at 2ac28651312f1fdbe82edb74fd13f342a8f910f7: success; connected topology/continuity/Session-layer suite and frontend build passed",
+          "GitHub Actions V1 Tauri Verification run 33636100197 / job 100267245684 at 2ac28651312f1fdbe82edb74fd13f342a8f910f7: tauri-w4-07-spatial = success",
+          "Actual Windows Tauri H+P1+P2: MP-G01/G02/G03/G08/G09 PASS and MP-G04/G05/G06/G07 PASS",
+          "tests/ui/sessionImageHandoutRuntimeAdapter.test.ts: deterministic handout reveal/withdraw/reconnect/privacy/pinned-lookup coverage",
+          "PR #249 merged the verified tree as 2ffc2004d795a350a4aa3676bcd7d4cb362f1ea1 with no file differences from verification SHA 2ac28651312f1fdbe82edb74fd13f342a8f910f7; PR #251 added evidence only"
+        ]
+      },
+      "remainingGap": null
+    },
+    {
+      "id": "W4-08",
+      "workstream": "W4",
+      "classification": "VERIFY_ONLY",
+      "status": "PASS",
+      "lastVerifiedSha": "2ac28651312f1fdbe82edb74fd13f342a8f910f7",
+      "evidence": {
+        "commands": [
+          "GitHub Actions V1 Tauri Verification: tauri-w3",
+          "npm run test:e2e:tauri -- --w3",
+          "npx tsx --test tests/ui/appProviderStopSessionRefresh.test.ts"
+        ],
+        "testCount": null,
+        "windowsArtifacts": [
+          "SimpleVTT-W3-Tauri-2ac28651312f1fdbe82edb74fd13f342a8f910f7 (artifact 9849024676, sha256:40fd32b55ec3f6d92f47c29b6acff20d599e64b3b7f757ddf5c9b73e270860e3)"
+        ],
+        "sources": [
+          "GitHub Actions V1 Tauri Verification run 33636100197 / job 100267245439 at 2ac28651312f1fdbe82edb74fd13f342a8f910f7: tauri-w3 = success",
+          "Actual Windows Tauri: production UI Campaign preparation -> local Host Session -> Long Rest +8h -> UI Session end -> process exit -> same-data-root restart -> Campaign reopen with absolute time 480 min and session history 1",
+          "tests/ui/appProviderStopSessionRefresh.test.ts: stop-session refresh/race regression 2/2 PASS on the same job",
+          "scripts/run-tauri-e2e-w3.mjs: restarted Campaign asserts +8h absolute-minute preservation and completed session history 1",
+          "Actions synthetic merge f05147605e4dce56a0552b69fa361f28d4c5cf60 has no file differences from verification head 2ac28651312f1fdbe82edb74fd13f342a8f910f7",
+          "GitHub compare 2ac28651312f1fdbe82edb74fd13f342a8f910f7...ceaf3ebf786ffa13d934d68c0fcebcc58cb00ae8 changes only canonical evidence/current docs plus the W4-07 evidence record; verified W4-08 product/runtime/harness is inherited unchanged"
+        ]
+      },
+      "remainingGap": null
+    },
+    {
+      "id": "W5-01",
+      "workstream": "W5",
+      "classification": "REUSE_LOCKED",
+      "status": "PASS",
+      "lastVerifiedSha": "2ac28651312f1fdbe82edb74fd13f342a8f910f7",
+      "evidence": {
+        "commands": [
+          "GitHub Actions UI",
+          "GitHub Actions V1 Tauri Verification: tauri-w4-07-spatial"
+        ],
+        "testCount": null,
+        "windowsArtifacts": [
+          "SimpleVTT-W4-07-G01-G09-2ac28651312f1fdbe82edb74fd13f342a8f910f7 (artifact 9849024415, sha256:b044f73320cd10bf2446695677ca2098c7c162d01190feed7ecc599078c656a0)"
+        ],
+        "sources": [
+          "PR #255",
+          "docs/roadmap/evidence/W5-01.md",
+          "GitHub Actions UI run 33636100212 / job 100267245818 at 2ac28651312f1fdbe82edb74fd13f342a8f910f7: success; connected topology/Session-layer plus live lifecycle, late join, and connection safety suites passed",
+          "tests/ui/productionParticipantLifecycle.test.ts: valid live late join, incompatible/invalid rejection without ghost state, replacement reconnect, and ordered Host-authoritative catch-up",
+          "tests/ui/productionClientReconnect.test.ts: reconnect resumes from the accepted replica cursor and applies hello-ack catch-up exactly once",
+          "GitHub Actions V1 Tauri Verification run 33636100197 / job 100267245684 at 2ac28651312f1fdbe82edb74fd13f342a8f910f7: actual Windows Tauri H+P1+P2 connected topology and replacement reconnect path passed",
+          "GitHub compare 2ac28651312f1fdbe82edb74fd13f342a8f910f7...8a4d279d0144abdabeb8c1402cf86c5f55defe64 changes only canonical evidence/current docs plus docs/roadmap/evidence/W4-07.md; PR #255 adds only docs/roadmap/evidence/W5-01.md, so product/runtime/tests are inherited unchanged"
+        ]
+      },
+      "remainingGap": null
+    },
+    {
+      "id": "W5-02",
+      "workstream": "W5",
+      "classification": "REUSE_LOCKED",
+      "status": "PASS",
+      "lastVerifiedSha": "2ac28651312f1fdbe82edb74fd13f342a8f910f7",
+      "evidence": {
+        "commands": [
+          "GitHub Actions UI",
+          "GitHub Actions V1 Tauri Verification: tauri-w4-07-spatial",
+          "GitHub compare 2ac28651312f1fdbe82edb74fd13f342a8f910f7...761f1d08601f3f4192ec9bc1339d09b64858eafe"
+        ],
+        "testCount": null,
+        "windowsArtifacts": [
+          "SimpleVTT-W4-07-G01-G09-2ac28651312f1fdbe82edb74fd13f342a8f910f7 (artifact 9849024415, sha256:b044f73320cd10bf2446695677ca2098c7c162d01190feed7ecc599078c656a0)"
+        ],
+        "sources": [
+          "PR #257",
+          "docs/roadmap/evidence/W5-02.md",
+          "GitHub Actions UI run 33636100212 / job 100267245818 at 2ac28651312f1fdbe82edb74fd13f342a8f910f7: success; production connected ownership/projection and local Character switch path passed",
+          "tests/ui/characterSessionProjection.test.ts: trusted source/runtime/content identity boundary rejects client-derived/injected mechanics and impossible HP",
+          "tests/ui/productionParticipantLifecycle.test.ts: invalid SessionProjection rejects before participant/peer/ledger/projection/Scene ghost state",
+          "tests/ui/productionLocalCharacterSwitch.test.ts: remote ephemeral projection survives local Character switch; projected resolution context activates temporarily and restores Host/local context without overwriting projection-owned state",
+          "GitHub Actions V1 Tauri Verification run 33636100197 / job 100267245684 at 2ac28651312f1fdbe82edb74fd13f342a8f910f7: actual Windows Tauri H+P1+P2 connected topology passed",
+          "GitHub compare 2ac28651312f1fdbe82edb74fd13f342a8f910f7...761f1d08601f3f4192ec9bc1339d09b64858eafe changes only canonical evidence/current docs plus evidence W4-07/W5-01/W5-02; product/runtime/tests are inherited unchanged"
+        ]
+      },
+      "remainingGap": null
+    },
+    {
+      "id": "W5-03",
+      "workstream": "W5",
+      "classification": "REUSE_LOCKED",
+      "status": "PASS",
+      "lastVerifiedSha": "2ac28651312f1fdbe82edb74fd13f342a8f910f7",
+      "evidence": {
+        "commands": [
+          "GitHub Actions UI",
+          "GitHub compare 2ac28651312f1fdbe82edb74fd13f342a8f910f7...0ee6f493fc765ac7a617eda485392957b1874c6e"
+        ],
+        "testCount": null,
+        "windowsArtifacts": [],
+        "sources": [
+          "PR #259",
+          "docs/roadmap/evidence/W5-03.md",
+          "GitHub Actions UI run 33636100212 / job 100267245818 at 2ac28651312f1fdbe82edb74fd13f342a8f910f7: success; connected topology/Session-layer/live lifecycle verification and frontend build passed",
+          "src/app/connectedSessionRuntimeAdapter.ts + src/app/connectedActionRequestPort.ts: Client action-request traffic enters the Host-only message path and is routed through the registered connected ActionRequest handler; unavailable routing returns an error instead of applying state",
+          "src/app/connectedSessionProtocol.ts: HostSessionLedger rejects session/cursor/history drift, requires reservation before commit, and de-duplicates request IDs",
+          "src/app/connectedSessionProtocol.ts: ClientSessionReplica advances only on same-session gap-free Host events and rejects conflicting/gapped history before cursor advance",
+          "GitHub compare 2ac28651312f1fdbe82edb74fd13f342a8f910f7...0ee6f493fc765ac7a617eda485392957b1874c6e changes only canonical evidence/current docs plus evidence W4-07/W5-01/W5-02/W5-03; product/runtime/tests are inherited unchanged"
+        ]
+      },
+      "remainingGap": null
+    },
+    {
+      "id": "W5-04",
+      "workstream": "W5",
+      "classification": "REUSE_LOCKED",
+      "status": "PASS",
+      "lastVerifiedSha": "2ac28651312f1fdbe82edb74fd13f342a8f910f7",
+      "evidence": {
+        "commands": [
+          "GitHub Actions UI",
+          "GitHub compare 2ac28651312f1fdbe82edb74fd13f342a8f910f7...1ca6e911087a09dced61cf6a4c7e60df29e64db0"
+        ],
+        "testCount": 187,
+        "windowsArtifacts": [],
+        "sources": [
+          "PR #261",
+          "docs/roadmap/evidence/W5-04.md",
+          "GitHub Actions UI run 33636100212 / job 100267245818 at 2ac28651312f1fdbe82edb74fd13f342a8f910f7: success; connected topology/Session-layer/live lifecycle verification and frontend build passed",
+          "src/app/connectedResolutionPresentation.ts: schema/versioned envelope preserves resolution identity, structured authoritative faces plus selected/discarded indices, outcome/timeline semantics, public redaction, and Activity linkage",
+          "src/app/connectedActionRoutingAdapter.ts: Host publishes live presentation stages and carries the same presentation into committed ordered catch-up history without Client mechanics rerun; owner-only interrupt/concentration prompts stay out of the public presentation",
+          "GitHub issue #111 implementation checkpoint: strict schema/identity validation, structured authoritative faces, cumulative timeline, Activity linkage, public redaction, terminal catch-up without reroll, shared VisualDiceBridge + CombatVfxBridge; connected regression 187/187, and production build pass",
+          "GitHub compare 2ac28651312f1fdbe82edb74fd13f342a8f910f7...1ca6e911087a09dced61cf6a4c7e60df29e64db0 changes only canonical evidence/current docs plus evidence W4-07/W5-01/W5-02/W5-03/W5-04; product/runtime/tests are inherited unchanged"
+        ]
+      },
+      "remainingGap": null
+    },
+    {
+      "id": "W5-05",
+      "workstream": "W5",
+      "classification": "REUSE_LOCKED",
+      "status": "PASS",
+      "lastVerifiedSha": "2ac28651312f1fdbe82edb74fd13f342a8f910f7",
+      "evidence": {
+        "commands": [
+          "GitHub Actions UI",
+          "GitHub compare 2ac28651312f1fdbe82edb74fd13f342a8f910f7...be061030081a3ba9f570a1a9a7696283d2512f36"
+        ],
+        "testCount": 187,
+        "windowsArtifacts": [],
+        "sources": [
+          "PR #263",
+          "docs/roadmap/evidence/W5-05.md",
+          "GitHub Actions UI run 33636100212 / job 100267245818 at 2ac28651312f1fdbe82edb74fd13f342a8f910f7: success; connected/session presentation verification and frontend build passed",
+          "tests/ui/connectedResolutionPresentation.test.ts: duplicate/non-monotonic live presentation suppression, FIFO stage advance, and newer authoritative dice replacement of stale queued replay",
+          "tests/ui/productionClientReconnect.test.ts + src/app/connectedSessionProtocol.ts: reconnect resumes from accepted replica cursor and ClientSessionReplica applies Host history exactly once while rejecting duplicate IDs, gaps, and conflicts",
+          "src/app/connectedActionRoutingAdapter.ts + src/app/connectedSessionRuntimeAdapter.ts: terminal catch-up carries the already-built Host presentation inside committed resolution history and applies without Client mechanics rerun",
+          "GitHub issues #111 and #114 checkpoints: terminal catch-up without reroll, ordered remote queue behavior, connected regression 187/187, and production build pass",
+          "GitHub compare 2ac28651312f1fdbe82edb74fd13f342a8f910f7...be061030081a3ba9f570a1a9a7696283d2512f36 changes only canonical evidence/current docs plus evidence W4-07/W5-01/W5-02/W5-03/W5-04; PR #263 adds only W5-05 evidence, so product/runtime/tests are inherited unchanged"
+        ]
+      },
+      "remainingGap": null
+    },
+    {
+      "id": "W5-06",
+      "workstream": "W5",
+      "classification": "REUSE_LOCKED",
+      "status": "PASS",
+      "lastVerifiedSha": "2ac28651312f1fdbe82edb74fd13f342a8f910f7",
+      "evidence": {
+        "commands": [
+          "GitHub Actions UI",
+          "GitHub compare 2ac28651312f1fdbe82edb74fd13f342a8f910f7...58a10dc1bf42dff79dd3f8035ea02bd9967d8f43"
+        ],
+        "testCount": null,
+        "windowsArtifacts": [],
+        "sources": [
+          "PR #265",
+          "docs/roadmap/evidence/W5-06.md",
+          "GitHub Actions UI run 33636100212 / job 100267245818 at 2ac28651312f1fdbe82edb74fd13f342a8f910f7: success; connected/session presentation verification and frontend build passed",
+          "tests/ui/connectedResolutionPresentation.test.ts: remote presentation metadata reconstructs the action and deep-equals local buildVisualDiceRoll and buildCombatVfxProfile projections",
+          "src/app/diceVisuals.ts + src/app/combatVisuals.ts: local, Host, and remote presentation consume the same authoritative ResolutionView/action projection owners",
+          "GitHub compare 2ac28651312f1fdbe82edb74fd13f342a8f910f7...58a10dc1bf42dff79dd3f8035ea02bd9967d8f43 contains no src/ or tests/ changes; PR #265 adds only docs/roadmap/evidence/W5-06.md, so product/runtime/tests are inherited unchanged"
+        ]
+      },
+      "remainingGap": null
+    },
+    {
+      "id": "W5-07",
+      "workstream": "W5",
+      "classification": "REUSE_LOCKED",
+      "status": "PASS",
+      "lastVerifiedSha": "0a9aeb6417c83df5f5d601b3112744cb6bd5e39a",
+      "evidence": {
+        "commands": [
+          "GitHub Actions W5-07 AUTO Verification"
+        ],
+        "testCount": 18,
+        "windowsArtifacts": [],
+        "sources": [
+          "docs/roadmap/evidence/W5-07.md",
+          "GitHub Actions run 33691718281 / job 100451682886 at 0a9aeb6417c83df5f5d601b3112744cb6bd5e39a: W5-07 AUTO Verification = success; 18/18 focused tests PASS",
+          "W5-07-AUTO-0a9aeb6417c83df5f5d601b3112744cb6bd5e39a (artifact 9870276424, sha256:b460f28a21ab72f18845891207f20681b39f9e65ef4bb2790d6753112ad26555)",
+          "tests/ui/connectedThreePeerRemoteStandardCheckPicker.test.ts: MP-C10 Influence/Search/Study preserves the exact picker-selected skill actionId through Host authority and the public P1/P2 presentation",
+          "W5-07 focused suite maps MP-C01 through MP-C24 with at least one core regression per scenario"
+        ]
+      },
+      "remainingGap": null
+    },
+    {
+      "id": "W5-08",
+      "workstream": "W5",
+      "classification": "REUSE_LOCKED",
+      "status": "PASS",
+      "lastVerifiedSha": "faf5331ed72cd051213ab917e3c2f402fae03087",
+      "evidence": {
+        "commands": [
+          "GitHub Actions W5-08 AUTO Verification"
+        ],
+        "testCount": 11,
+        "windowsArtifacts": [],
+        "sources": [
+          "docs/roadmap/evidence/W5-08.md",
+          "GitHub Actions run 33697343776 / job 100468976213 at faf5331ed72cd051213ab917e3c2f402fae03087: W5-08 AUTO Verification = success; 11/11 focused tests PASS",
+          "W5-08-AUTO-faf5331ed72cd051213ab917e3c2f402fae03087 (artifact 9872255696, sha256:59d2924fb515ef5763c608279d71b0d92e47cee5b6266114e70eb7e63bd8b2ce)",
+          "tests/ui/connectedTurnProjection.test.ts: ordered Host Initiative/turn projection, reconnect replay, and deterministic Ready clearing",
+          "tests/ui/phase09ManualMovementReactionAdapter.test.ts + tests/ui/c9FamilyOReadyConcentrationProduction.test.ts + tests/ui/connectedUndoCompensation.test.ts: reaction, concentration/Ready, and correction/Undo coverage"
+        ]
+      },
+      "remainingGap": null
+    },
+    {
+      "id": "W5-09",
+      "workstream": "W5",
+      "classification": "REUSE_LOCKED",
+      "status": "PASS",
+      "lastVerifiedSha": "4c93082d0af77ae79da82db711b7934c8e2f8544",
+      "evidence": {
+        "commands": [
+          "GitHub Actions W5-09 AUTO Verification"
+        ],
+        "testCount": 18,
+        "windowsArtifacts": [],
+        "sources": [
+          "docs/roadmap/evidence/W5-09.md",
+          "GitHub Actions run 33699407674 / job 100475234429 at 4c93082d0af77ae79da82db711b7934c8e2f8544: W5-09 AUTO Verification = success; 18/18 focused tests PASS",
+          "W5-09-AUTO-4c93082d0af77ae79da82db711b7934c8e2f8544 (artifact 9872956996, sha256:5f7f708086b1c7b3e941d6d37bcac01cbded9f0fa6edea565dcbad171164463f)",
+          "tests/ui/connectedPartyStashApprovalOwnerTransfer.test.ts + connectedSceneTopologyProjection.test.ts + connectedSceneTopologyHostMutation.test.ts + productionHostRemoteFixtureIdentityProjection.test.ts + connectedThreePeerActionMatrix.test.ts + connectedThreePeerPresentation.test.ts + connectedTurnProjection.test.ts + connectedUndoCompensation.test.ts: MP-J01-J08 UI-facing parity mapping",
+          "Initial canonical SHA 5f7bb4bdbc20da3ff437809e3d7f3f024e159f1d reproduced a 17/18 stale-test-fixture failure; test-only repair switched J07 projection construction to the production snapshot catalog and no src/ product/runtime file changed"
+        ]
+      },
+      "remainingGap": null
+    },
+    {
+      "id": "W5-10",
+      "workstream": "W5",
+      "classification": "REUSE_LOCKED",
+      "status": "PASS",
+      "lastVerifiedSha": "786566303fbb6c8bac1dff6b392f65a866a1947c",
+      "evidence": {
+        "commands": [
+          "GitHub Actions W5-10 AUTO Verification"
+        ],
+        "testCount": 45,
+        "windowsArtifacts": [],
+        "sources": [
+          "docs/roadmap/evidence/W5-10.md",
+          "GitHub Actions run 33700245046 / job 100477769745 at 786566303fbb6c8bac1dff6b392f65a866a1947c: W5-10 AUTO Verification = success; 45/45 focused tests PASS",
+          "W5-10-AUTO-786566303fbb6c8bac1dff6b392f65a866a1947c (artifact 9873251248, sha256:189a99528d2cf6556a7c5430f3073145c91c537e1b3c354fc44e089234d3b927)",
+          "connectedResolutionPresentation + productionClientReconnect + connectedThreePeerRemote* + connectedThreePeerActionMatrix + connectedThreePeerPresentation + phase09ManualMovementReactionAdapter + c9FamilyOReadyConcentrationProduction + connectedTurnProjection + connectedUndoCompensation: MP-01 through MP-04 exact-HEAD owner mapping"
+        ]
+      },
+      "remainingGap": null
+    },
+    {
+      "id": "W6-01",
+      "workstream": "W6",
+      "classification": "REUSE_LOCKED",
+      "status": "PASS",
+      "lastVerifiedSha": "30606e6b056027a3e10ddbae70f38f428b2714b6",
+      "evidence": {
+        "commands": [
+          "GitHub Actions W6-01 AUTO Verification"
+        ],
+        "testCount": 13,
+        "windowsArtifacts": [],
+        "sources": [
+          "docs/roadmap/evidence/W6-01.md",
+          "GitHub Actions run 33701452879 / job 100481432959 at 30606e6b056027a3e10ddbae70f38f428b2714b6: W6-01 AUTO Verification = success; 13/13 focused tests PASS",
+          "W6-01-AUTO-30606e6b056027a3e10ddbae70f38f428b2714b6 (artifact 9873659413, sha256:bb6031112dd14fedf00aa90485e7583332cdaefd1befe4f223d710e4939e2204)",
+          "sessionInventoryRuntimeAdapter + campaignDmLibraryGrantDurability + connectedCampaignOwnerInventoryWire + connectedCharacterInventoryProjectionRefresh + connectedCustomItemProjection: DM item/GP grant-revoke and owner projection refresh coverage"
+        ]
+      },
+      "remainingGap": null
+    },
+    {
+      "id": "W6-02",
+      "workstream": "W6",
+      "classification": "REUSE_LOCKED",
+      "status": "PASS",
+      "lastVerifiedSha": "a72387016fec255674b8132b1f8b80b08d99da25",
+      "evidence": {
+        "commands": [
+          "GitHub Actions W6-02 AUTO Verification",
+          "npm run build"
+        ],
+        "testCount": 13,
+        "windowsArtifacts": [],
+        "sources": [
+          "docs/roadmap/evidence/W6-02.md",
+          "PR #294 merged verified repair as b11f5267121c2c4dfb11176ef6ff12841f3c877b",
+          "GitHub Actions run 33703181522 / job 100486658419 at a72387016fec255674b8132b1f8b80b08d99da25: W6-02 AUTO Verification = success; 13/13 focused tests PASS; production build PASS",
+          "W6-02-AUTO-9a07c28309ffe781d4ed1e4cea33f7e8f0706577 (artifact 9874278799, sha256:abc109aca9d519e96aec8e03d442a2e071151c659e658a27b99207607f93fc0c; artifact name uses PR synthetic merge SHA, run head_sha is authoritative product SHA)",
+          "tests/ui/campaignSystems.test.ts + tests/ui/productionSessionAdvancementReachability.test.ts: exact multi-Character XP, no-reason grant, one level-up credit, credit consumption/roster level persistence, and Host/live production reachability"
+        ]
+      },
+      "remaingGap": null
+    },
+    {
+      "id": "W6-03",
+      "workstream": "W6",
+      "classification": "REUSE_LOCKED",
+      "status": "PASS",
+      "lastVerifiedSha": "b1f54abefd7dffb2f865ccaccde31649b8080a01",
+      "evidence": {
+        "commands": [
+          "GitHub Actions W6-03 AUTO Verification",
+          "npm run build"
+        ],
+        "testCount": 13,
+        "windowsArtifacts": [],
+        "sources": [
+          "docs/roadmap/evidence/W6-03.md",
+          "PR #297 merged W6-03 evidence as 888defd2be7f2f08c2f721abf57f72aaac5f8f12",
+          "GitHub Actions run 33705306657 / job 100493052616 at b1f54abefd7dffb2f865ccaccde31649b8080a01: W6-03 AUTO Verification = success; 13/13 focused tests PASS; production build PASS",
+          "W6-03-AUTO-b1f54abefd7dffb2f865ccaccde31649b8080a01 (artifact 9875022681, sha256:8f5ef938566269b624ae4eeb33c95603eee501c514f6353945e9767899058deb)",
+          "tests/ui/campaignSystems.test.ts + tests/ui/connectedPartyStashApprovalOwnerTransfer.test.ts: shared/approval/dm-managed Party Stash lifecycle and connected owner/failure-retry coverage"
+        ]
+      },
+      "remaingGap": null
+    },
+    {
+      "id": "W6-04",
+      "workstream": "W6",
+      "classification": "REUSE_LOCKED",
+      "status": "PASS",
+      "lastVerifiedSha": "39bcd0356ca7b9a242684538253204ae17916eb1",
+      "evidence": {
+        "commands": [
+          "GitHub Actions W6-04 AUTO Verification",
+          "npm run build"
+        ],
+        "testCount": 17,
+        "windowsArtifacts": [],
+        "sources": [
+          "docs/roadmap/evidence/W6-04.md",
+          "GitHub Actions run 33709116187 / job 100504620599 at 39bcd0356ca7b9a242684538253204ae17916eb1: W6-04 AUTO Verification = success; 17/17 focused tests PASS; production build PASS",
+          "W6-04-AUTO-39bcd0356ca7b9a242684538253204ae17916eb1 (artifact 9876316867, sha256:f200803affd1a791b49ea02d4aad3f5d6395d31636a8a18d6ab3a63c9f5512bd)",
+          "connectedDurableFailure + connectedOwnerInventoryRestart + connectedPartyStashHostRecovery + connectedPartyStashHostRecoveryStructure + connectedPartyStashApprovalOwnerTransfer: MP-E12/MP-E13 exact-HEAD persistence failure, idempotent retry, owner journal restart, and Host fallback recovery mapping",
+          "No current-HEAD product/runtime or test-implementation defect reproduced; only the focused W6-04 workflow was added"
+        ]
+      },
+      "remaingGap": null
+    },
+    {
+      "id": "W6-05",
+      "workstream": "W6",
+      "classification": "REUSE_LOCKED",
+      "status": "PASS",
+      "lastVerifiedSha": "945188901c106b6114e3a7f89cb1671aab6ace27",
+      "evidence": {
+        "commands": [
+          "GitHub Actions W6-05 AUTO Verification",
+          "npm run build"
+        ],
+        "testCount": 9,
+        "windowsArtifacts": [],
+        "sources": [
+          "docs/roadmap/evidence/W6-05.md",
+          "PR #301",
+          "GitHub Actions run 33711448138 / job 100511627712 at 945188901c106b6114e3a7f89cb1671aab6ace27: W6-05 AUTO Verification = success; 9/9 focused tests PASS; production build PASS",
+          "W6-05-AUTO-945188901c106b6114e3a7f89cb1671aab6ace27 (artifact 5808814072, sha256:26ce88561019490d1c8734cb838ebf6dd789c180e9e4af57974a2559439351dc)",
+          "campaignRationConversion + runtime + legacy-stash + production-structure focused owners: MP-E14 capability-driven eligibility, configured ration units, atomic stash debit/ration credit, stale-provider failure isolation, duplicate-request idempotency, and production Campaign reachability",
+          "No current-HEAD product/runtime or test-implementation defect reproduced; only the focused W6-05 workflow was added"
+        ]
+      },
+      "remaingGap": null
+    },
+    {
+      "id": "W6-06",
+      "workstream": "W6",
+      "classification": "REUSE_LOCKED",
+      "status": "PASS",
+      "lastVerifiedSha": "cf531f34a2c2cf85174fabafdc9092022fb0c46b",
+      "evidence": {
+        "commands": [
+          "GitHub Actions W6-06 AUTO Verification",
+          "npm run test:campaign-rest",
+          "npm run build"
+        ],
+        "testCount": 93,
+        "windowsArtifacts": [],
+        "sources": [
+          "docs/roadmap/evidence/W6-06.md",
+          "PR #302",
+          "GitHub Actions run 33712312082 / job 100514236959 at cf531f34a2c2cf85174fabafdc9092022fb0c46b: W6-06 AUTO Verification = success; 93/93 focused tests PASS; production build PASS",
+          "Actions checkout 96f9e6715e32b95d6644f67fb461204661ab107c and verification head cf531f34a2c2cf85174fabafdc9092022fb0c46b share tree b3607dd639fee00d42bc51f8ea88d5c6bf466cba",
+          "W6-06-AUTO-96f9e6715e32b95d6644f67fb461204661ab107c (artifact 9877347283, sha256:45d257223dcb90dfefc79ab33ed51bcd6fabff0737d9e7039833c7860b5f4eb0)",
+          "test:campaign-rest existing Long Rest owner suite: MP-F07 success + atomic optional Campaign effects; MP-F08 preflight/no-partial-generation rejection; MP-F09 owner/Host restart recovery and idempotent settlement",
+          "No current-HEAD product/runtime or test-implementation defect reproduced; only the focused W6-06 workflow and evidence records were added"
+        ]
+      },
+      "remaingGap": null
+    },
+    {
+      "id": "W6-07",
+      "workstream": "W6",
+      "classification": "REUSE_LOCKED",
+      "status": "PASS",
+      "lastVerifiedSha": "63f6943b6c015ed24dfd405087d3d18b3d6415cd",
+      "evidence": {
+        "commands": [
+          "GitHub Actions W6-07 AUTO Verification",
+          "npx tsx --test tests/ui/campaignDmLibraryImport.test.ts tests/ui/campaignDmLibraryGrantDurability.test.ts tests/ui/sessionImageHandoutRuntimeAdapter.test.ts tests/ui/connectedSceneTopologyProjection.test.ts tests/ui/connectedSceneTopologyHostMutation.test.ts tests/ui/productionHostRemoteFixtureIdentityProjection.test.ts",
+          "npm run build"
+        ],
+        "testCount": 9,
+        "windowsArtifacts": [],
+        "sources": [
+          "docs/roadmap/evidence/W6-07.md",
+          "PR #303",
+          "GitHub Actions run 33713348784 / job 100517304162 at 63f6943b6c015ed24dfd405087d3d18b3d6415cd: W6-07 AUTO Verification = success; 9/9 focused tests PASS; production build PASS",
+          "Actions checkout 888fe416e7653d49e93c71a6165304e3fd05a9ff and verification head 63f6943b6c015ed24dfd405087d3d18b3d6415cd share tree e7009e28b279b7d1a63f291bbffde5c0a33f7746",
+          "W6-07-AUTO-888fe416e7653d49e93c71a6165304e3fd05a9ff (artifact 9877676750, sha256:1c9bffe62e50a4bf24f0ed94b9fe16327f3ec7053043f60d89edc9030a3cd094)",
+          "Existing DM Library import/materialization/provenance, image handout reveal/withdraw/privacy/reconnect, connected Scene topology/Host mutation, and remote fixture projection owners map MP-G01 through MP-G09; historical W4-07 Windows H+P1+P2 rendered evidence remains authoritative",
+          "No current-HEAD product/runtime or test-implementation defect reproduced; only the focused W6-07 workflow and evidence/current records were added"
+        ]
+      },
+      "remaingGap": null
+    },
+    {
+      "id": "W6-08",
+      "workstream": "W6",
+      "classification": "VERIFY_ONLY",
+      "status": "PASS",
+      "lastVerifiedSha": "36a9848a025f078f60b956e05f3432cbf5b14da4",
+      "evidence": {
+        "commands": [
+          "npm run test:e2e:tauri -- --w608",
+          "npm run build"
+        ],
+        "testCount": null,
+        "windowsArtifacts": [
+          "SimpleVTT-W6-08-Tauri-36a9848a025f078f60b956e05f3432cbf5b14da4 (artifact 9878842089, sha256:b44dfe4f486409522630c632819665cee4eccdab72077857838876a33ac747b9)"
+        ],
+        "sources": [
+          "docs/roadmap/evidence/W6-08.md",
+          "PR #304",
+          "GitHub Actions run 33716559390 / job 100526862083 at 36a9848a025f078f60b956e05f3432cbf5b14da4: W6-08 Tauri Verification = success; actual Windows Tauri H+P1 Journey J5 PASS; production build PASS",
+          "Actions pull-request checkout db4d81f521cf15774dcff13d3249186f0c19dde1 has zero changed files from verification head 36a9848a025f078f60b956e05f3432cbf5b14da4",
+          "Actual Windows Tauri: DM GP grant/revoke -> Player/Host owner projection, Party Stash deposit/convergence, image handout reveal/withdraw, distributed Character+Campaign Long Rest with enabled Campaign calendar +8h",
+          "Final P2 observer-parity acceptance is deliberately not claimed by W6-08 and remains W9-02",
+          "No current-HEAD product/runtime defect reproduced; all repairs made while obtaining W6-08 evidence were confined to the new test harness and no src/ file changed"
+        ]
+      },
+      "remainingGap": null
+    },
+    {
+      "id": "W7-01",
+      "workstream": "W7",
+      "classification": "REUSE_LOCKED",
+      "status": "PASS",
+      "lastVerifiedSha": "de59dd9898dd4cf4525082f0aa623e4a86cbd74d",
+      "evidence": {
+        "commands": [
+          "GitHub Actions W7-01 AUTO Verification",
+          "npx tsx --test tests/ui/productionParticipantLifecycle.test.ts tests/ui/productionClientReconnect.test.ts tests/ui/connectedResolutionPresentation.test.ts tests/ui/connectedDurableFailure.test.ts",
+          "npm run build"
+        ],
+        "testCount": 12,
+        "windowsArtifacts": [],
+        "sources": [
+          "docs/roadmap/evidence/W7-01.md",
+          "PR #305",
+          "GitHub Actions run 33718558967 / job 100532788018 at de59dd9898dd4cf4525082f0aa623e4a86cbd74d: W7-01 AUTO Verification = success; 12/12 focused tests PASS; production build PASS",
+          "Actions checkout c713e27a0989d8cd47761133e560afe4e93b77fc and verification head de59dd9898dd4cf4525082f0aa623e4a86cbd74d have zero changed files between them",
+          "W7-01-AUTO-c713e27a0989d8cd47761133e560afe4e93b77fc (artifact 9879408309, sha256:600d6153242eb621ed6eabb32f86df1ee028d6102902b02ba88bebc410269cd3)",
+          "productionParticipantLifecycle + productionClientReconnect + connectedResolutionPresentation + connectedDurableFailure: MP-H01 through MP-H03 no-ghost, duplicate catch-up/event suppression, no-reroll presentation replay, and durable retry idempotency",
+          "No current-HEAD product/runtime or test-implementation defect reproduced; only the scoped workflow and evidence/current records were added"
+        ]
+      },
+      "remainingGap": null
+    },
+    {
+      "id": "W7-02",
+      "workstream": "W7",
+      "classification": "REUSE_LOCKED",
+      "status": "PASS",
+      "lastVerifiedSha": "507459f208457e540beb19295dabb43e81f63b93",
+      "evidence": {
+        "commands": [
+          "GitHub Actions W7-02 AUTO Verification",
+          "npx tsx --test tests/ui/productionClientReconnect.test.ts tests/ui/productionParticipantLifecycle.test.ts tests/ui/connectedResolutionPresentation.test.ts tests/ui/connectedTurnProjection.test.ts tests/ui/connectedDurableFailure.test.ts tests/ui/connectedOwnerInventoryRestart.test.ts tests/ui/connectedLongRestHostRestartRecovery.test.ts tests/ui/c9FamilyOReadyConcentrationProduction.test.ts tests/ui/phase09ManualMovementReactionAdapter.test.ts tests/ui/phase09ConcentrationSaveWorkflow.test.ts",
+          "npm run build"
+        ],
+        "testCount": 34,
+        "windowsArtifacts": [],
+        "sources": [
+          "docs/roadmap/evidence/W7-02.md",
+          "PR #306",
+          "GitHub Actions run 33720461403 / job 100538359322 at 507459f208457e540beb19295dabb43e81f63b93: W7-02 AUTO Verification = success; 34/34 focused tests PASS; production build PASS",
+          "Actions checkout f1ca8d203177bb43077259dfa957fb4b5c3109ce and verification head 507459f208457e540beb19295dabb43e81f63b93 have zero changed files between them",
+          "W7-02-AUTO-f1ca8d203177bb43077259dfa957fb4b5c3109ce (artifact 9880065564, sha256:a6e7e64721600ce77c746ae1d6a7e6a3724222a4926ff633caaeca180342bc13)",
+          "productionClientReconnect + productionParticipantLifecycle + connectedResolutionPresentation + connectedTurnProjection + durable/restart owners + Ready/Reaction/Concentration lifecycle: MP-H04 through MP-H08 focused recovery mapping",
+          "Legacy Execution Boundary run 33720461389 and Contract validation run 33720461383 succeeded on the verification head",
+          "No current-HEAD product/runtime or existing test-implementation defect reproduced; only the scoped workflow and evidence/current records were added"
+        ]
+      },
+      "remaingGap": null
+    },
+    {
+      "id": "W7-03",
+      "workstream": "W7",
+      "classification": "REUSE_LOCKED",
+      "status": "PASS",
+      "lastVerifiedSha": "570dfb517f2519d505ca99be30cd712ed379ed42",
+      "evidence": {
+        "commands": [
+          "GitHub Actions W7-03 AUTO Verification",
+          "npx tsx --test tests/ui/productionSessionEnd.test.ts tests/ui/appProviderStopSessionRefresh.test.ts tests/ui/productionSessionLifecycleAdapter.test.ts tests/ui/productionParticipantLifecycle.test.ts tests/ui/connectedTurnProjection.test.ts tests/ui/connectedResolutionPresentation.test.ts tests/ui/connectedPartyStashApprovalOwnerTransfer.test.ts tests/ui/c9FamilyOReadyConcentrationProduction.test.ts",
+          "npm run build"
+        ],
+        "testCount": 29,
+        "windowsArtifacts": [],
+        "sources": [
+          "docs/roadmap/evidence/W7-03.md",
+          "PR #307",
+          "GitHub Actions run 33741127141 / job 100603038858 at 570dfb517f2519d505ca99be30cd712ed379ed42: W7-03 AUTO Verification = success; 29/29 focused tests PASS; production build PASS",
+          "W7-03-AUTO-bf282e1634152d4e2f95bc144362dce83779808b (artifact 9887795691, sha256:0c4407dcb0aba50fc01c2d4980d1f2486abacafd3c7d63c3bbc426a629701748; artifact name uses PR synthetic merge SHA, run head_sha is authoritative verification SHA)",
+          "productionSessionEnd + appProviderStopSessionRefresh + productionSessionLifecycleAdapter + productionParticipantLifecycle + connectedTurnProjection + connectedResolutionPresentation + connectedPartyStashApprovalOwnerTransfer + c9FamilyOReadyConcentrationProduction: MP-A08/MP-A09 explicit Session end, transient-state cleanup, fresh Host restart, and stale requester/turn/presentation/approval/Ready-Concentration state non-return",
+          "Legacy Execution Boundary run 33741127115 and Contract validation run 33741127222 succeeded on the verification head",
+          "No current-HEAD product/runtime or existing test-implementation defect reproduced; only the scoped verification workflow and evidence/current records were added"
+        ]
+      },
+      "remaingGap": null
+    },
+    {
+      "id": "W7-04",
+      "workstream": "W7",
+      "classification": "REUSE_LOCKED",
+      "status": "PENDING",
+      "lastVerifiedSha": null,
+      "evidence": {
+        "commands": [],
+        "testCount": null,
+        "windowsArtifacts": [],
+        "sources": []
+      },
+      "remaingGap": null
+    },
+    {
+      "id": "W7-05",
+      "workstream": "W7",
+      "classification": "REUSE_LOCKED",
+      "status": "PENDING",
+      "lastVerifiedSha": null,
+      "evidence": {
+        "commands": [],
+        "testCount": null,
+        "windowsArtifacts": [],
+        "sources": []
+      },
+      "remaingGap": null
+    },
+    {
+      "id": "W7-06",
+      "workstream": "W7",
+      "classification": "REUSE_LOCKED",
+      "status": "PENDING",
+      "lastVerifiedSha": null,
+      "evidence": {
+        "commands": [],
+        "testCount": null,
+        "windowsArtifacts": [],
+        "sources": []
+      },
+      "remaingGap": null
+    },
+    {
+      "id": "W7-07",
+      "workstream": "W7",
+      "classification": "REUSE_LOCKED",
+      "status": "PENDING",
+      "lastVerifiedSha": null,
+      "evidence": {
+        "commands": [],
+        "testCount": null,
+        "windowsArtifacts": [],
+        "sources": []
+      },
+      "remaingGap": null
+    },
+    {
+      "id": "W7-08",
+      "workstream": "W7",
+      "classification": "VERIFY_ONLY",
+      "status": "PENDING",
+      "lastVerifiedSha": null,
+      "evidence": {
+        "commands": [],
+        "testCount": null,
+        "windowsArtifacts": [],
+        "sources": []
+      },
+      "remainingGap": null
+    },
+    {
+      "id": "W8-01",
+      "workstream": "W8",
+      "classification": "REUSE_LOCKED",
+      "status": "PENDING",
+      "lastVerifiedSha": null,
+      "evidence": {
+        "commands": [],
+        "testCount": null,
+        "windowsArtifacts": [],
+        "sources": []
+      },
+      "remainingGap": null
+    },
+    {
+      "id": "W8-02",
+      "workstream": "W8",
+      "classification": "BUILD",
+      "status": "PENDING",
+      "lastVerifiedSha": null,
+      "evidence": {
+        "commands": [],
+        "testCount": null,
+        "windowsArtifacts": [],
+        "sources": []
+      },
+      "remainingGap": null
+    },
+    {
+      "id": "W8-03",
+      "workstream": "W8",
+      "classification": "BUILD",
+      "status": "PENDING",
+      "lastVerifiedSha": null,
+      "evidence": {
+        "commands": [],
+        "testCount": null,
+        "windowsArtifacts": [],
+        "sources": []
+      },
+      "remaingGap": null
+    },
+    {
+      "id": "W8-04",
+      "workstream": "W8",
+      "classification": "VERIFY_ONLY",
+      "status": "PENDING",
+      "lastVerifiedSha": null,
+      "evidence": {
+        "commands": [],
+        "testCount": null,
+        "windowsArtifacts": [],
+        "sources": []
+      },
+      "remainingGap": null
+    },
+    {
+      "id": "W9-01",
+      "workstream": "W9",
+      "classification": "BUILD",
+      "status": "PENDING",
+      "lastVerifiedSha": null,
+      "evidence": {
+        "commands": [],
+        "testCount": null,
+        "windowsArtifacts": [],
+        "sources": []
+      },
+      "remaingGap": null
+    },
+    {
+      "id": "W9-02",
+      "workstream": "W9",
+      "classification": "BUILD",
+      "status": "PENDING",
+      "lastVerifiedSha": null,
+      "evidence": {
+        "commands": [],
+        "testCount": null,
+        "windowsArtifacts": [],
+        "sources": []
+      },
+      "remainingGap": null
+    },
+    {
+      "id": "W9-03",
+      "workstream": "W9",
+      "classification": "BUILD",
+      "status": "PENDING",
+      "lastVerifiedSha": null,
+      "evidence": {
+        "commands": [],
+        "testCount": null,
+        "windowsArtifacts": [],
+        "sources": []
+      },
+      "remaingGap": null
+    },
+    {
+      "id": "W9-04",
+      "workstream": "W9",
+      "classification": "BUILD",
+      "status": "PENDING",
+      "lastVerifiedSha": null,
+      "evidence": {
+        "commands": [],
+        "testCount": null,
+        "windowsArtifacts": [],
+        "sources": []
+      },
+      "remainingGap": null
+    }
+  ]
+}
