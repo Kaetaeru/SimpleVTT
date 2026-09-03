@@ -51,9 +51,10 @@ W3: 8/8 PASS — COMPLETE
 W4: 8/8 PASS — COMPLETE
 W5: 10/10 PASS — COMPLETE
 W6: 8/8 PASS — COMPLETE
-Official ledger score: 75.0/100.0
-PASS: 56/72
-Remaining gates: 16/72
+W7: 1/8 PASS — IN PROGRESS
+Official ledger score: 76.3/100.0
+PASS: 57/72
+Remaining gates: 15/72
 FAIL: 0
 BLOCKED: 0
 ```
@@ -70,16 +71,17 @@ W3 — COMPLETE (8/8 PASS)
 W4 — COMPLETE (8/8 PASS)
 W5 — COMPLETE (10/10 PASS)
 W6 — COMPLETE (8/8 PASS)
-Next exact Gate: W7-01
+W7 — IN PROGRESS (1/8 PASS)
+Next exact Gate: W7-02
 ```
 
-`W6-08` is closed without product/runtime changes. Verification head `36a9848a025f078f60b956e05f3432cbf5b14da4` and GitHub Actions pull-request checkout `db4d81f521cf15774dcff13d3249186f0c19dde1` have zero changed files between them. `W6-08 Tauri Verification` run `33716559390`, job `100526862083`, passed the actual Windows Tauri H+P1 Journey J5 flow and the production build. Artifact `9878842089` (`SimpleVTT-W6-08-Tauri-36a9848a025f078f60b956e05f3432cbf5b14da4`) has digest `sha256:b44dfe4f486409522630c632819665cee4eccdab72077857838876a33ac747b9`. The real product journey covered DM GP grant/revoke, Party Stash convergence, connected image-handout reveal/withdraw, and distributed Character+Campaign Long Rest with +8h Campaign time. P2 observer parity is deliberately not claimed here; final acceptance remains `W9-02`.
+`W7-01` is closed without product/runtime or test-implementation changes. Verification head `de59dd9898dd4cf4525082f0aa623e4a86cbd74d` and GitHub Actions pull-request checkout `c713e27a0989d8cd47761133e560afe4e93b77fc` have zero changed files between them. `W7-01 AUTO Verification` run `33718558967`, job `100532788018`, passed 12/12 focused tests and the production build. Artifact `9879408309` (`W7-01-AUTO-c713e27a0989d8cd47761133e560afe4e93b77fc`) has digest `sha256:600d6153242eb621ed6eabb32f86df1ee028d6102902b02ba88bebc410269cd3`. Existing participant lifecycle, replica catch-up, connected presentation, and durable retry owners prove `MP-H01~H03` exactly-once behavior without ghost state or mechanics reroll.
 
-## W7-01 exact scope
+## W7-02 exact scope
 
-`W7-01` is `REUSE_LOCKED`. It freezes the existing exactly-once handling for duplicate requests, duplicate event batches, and retries mapped to `MP-H01~H03`.
+`W7-02` is `REUSE_LOCKED`. It freezes the existing reconnect, late-join, and presentation catch-up behavior without reroll for `MP-H04~H08`.
 
-Reuse the existing Host request/event ledger, idempotency keys, ordered Client replica/catch-up, durable transaction/recovery, and retry owners. Before changing product code, reproduce a current-HEAD failure or document an explicit production reachability/contract gap in `roadmap/EVIDENCE_CARD.md`. Do not introduce a second request ledger, event journal, retry coordinator, or parallel recovery path.
+Reuse the existing participant lifecycle/rebind path, accepted Client replica cursor plus ordered Host catch-up, connected resolution presentation terminal catch-up, and durable/reconnect continuity owners. Before changing product code, reproduce a current-HEAD failure or document an explicit production reachability/contract gap in `roadmap/EVIDENCE_CARD.md`. Do not introduce a second reconnect system, participant lifecycle, catch-up journal, presentation pipeline, or parallel recovery path.
 
 ## Branch roles
 
@@ -95,18 +97,18 @@ Reuse the existing Host request/event ledger, idempotency keys, ordered Client r
 
 ### Next execution sequence
 
-1. Execute `W7-01`, the first non-`PASS` Gate in the ledger.
-2. Identify the smallest existing automated owner set proving duplicate request, duplicate event batch, and retry exactly-once behavior for `MP-H01~H03`.
+1. Execute `W7-02`, the first non-`PASS` Gate in the ledger.
+2. Identify the smallest existing automated owner set proving reconnect, late join, ordered catch-up, and presentation recovery without reroll for `MP-H04~H08`.
 3. Run that set on one exact SHA and record the focused command, pass count, artifact/digest when produced, and scenario mapping before changing the ledger.
 4. If it fails or a production reachability/contract gap is reproduced, fill `roadmap/EVIDENCE_CARD.md` and repair only the smallest existing owner path.
-5. Do not reopen completed W0-W6 work without a demonstrated regression.
+5. Do not reopen completed W0-W6 or W7-01 work without a demonstrated regression.
 
 ## Non-negotiable execution rules
 
 1. Read the master roadmap, evidence ledger, and live `work/v1-composite` HEAD before editing.
 2. Fill [`roadmap/EVIDENCE_CARD.md`](roadmap/EVIDENCE_CARD.md) before any product-code change.
 3. Do not change a `REUSE_LOCKED` or `VERIFY_ONLY` Gate without a reproducible current-HEAD failure or an explicit production reachability/contract gap.
-4. Do not create a second Tauri shell, Character Creator, progression engine, Resolver, persistence backend, transport, presentation queue, dice/VFX renderer, Party Stash transaction system, Long Rest coordinator, DM Library, request/event ledger, retry coordinator, or E2E framework.
+4. Do not create a second Tauri shell, Character Creator, progression engine, Resolver, persistence backend, transport, presentation queue, dice/VFX renderer, Party Stash transaction system, Long Rest coordinator, DM Library, request/event ledger, retry coordinator, reconnect system, or E2E framework.
 5. Structural or protocol-only evidence cannot close rendered Windows behavior.
 6. Do not restore branch-writing/self-publishing automation as the normal implementation loop.
 7. V1 is complete only at `72/72`, `100.0/100.0`, `120/120`, `18/18`, `13/13`, and one matching Windows artifact plus digest.
