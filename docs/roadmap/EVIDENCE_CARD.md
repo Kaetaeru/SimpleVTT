@@ -36,5 +36,5 @@ For `REUSE_LOCKED` and `VERIFY_ONLY` gates, an empty `Exact observed failure` me
 - Record exact SHA(s), commands, deterministic pass/fail counts, and artifact references in `V1_EVIDENCE_LEDGER.json`.
 - Structural/source-only checks cannot close rendered Windows behavior.
 - Older SHA evidence may be inherited only when the relevant implementation path is unchanged and the ledger records the provenance explicitly.
-- Do not create a second shell, Character Creator, progression engine, Resolver, persistence backend, transport, presentation queue, Party Stash transaction system, Long Rest coordinator, DM Library, or E2E framework to satisfy an existing gate.
+- Do not create a second shell, Character Creator, progression engine, Resolver, persistence backend, transport, presentation queue, dice/VFX renderer, Party Stash transaction system, Long Rest coordinator, DM Library, or E2E framework to satisfy an existing gate.
 - Prefer the smallest repair that restores the existing production path.
