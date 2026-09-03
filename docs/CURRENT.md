@@ -50,10 +50,10 @@ W2: 8/8 PASS — COMPLETE
 W3: 8/8 PASS — COMPLETE
 W4: 8/8 PASS — COMPLETE
 W5: 10/10 PASS — COMPLETE
-W6: 2/8 PASS
-Official ledger score: 67.5/100.0
-PASS: 50/72
-Remaining gates: 22/72
+W6: 3/8 PASS
+Official ledger score: 68.8/100.0
+PASS: 51/72
+Remaining gates: 21/72
 FAIL: 0
 BLOCKED: 0
 ```
@@ -69,22 +69,22 @@ W2 — COMPLETE (8/8 PASS)
 W3 — COMPLETE (8/8 PASS)
 W4 — COMPLETE (8/8 PASS)
 W5 — COMPLETE (10/10 PASS)
-W6 — 2/8 PASS
-Next exact Gate: W6-03
+W6 — 3/8 PASS
+Next exact Gate: W6-04
 ```
 
-`W6-02` is closed after a canonical Evidence Card reproduced the production reachability gap: the existing Campaign advancement owner already handled exact XP, multi-Character XP, immediate level-up credit, credit consumption, and durable roster level state, but the real Host/live Session UI could not invoke it. PR #294 added only the smallest Host/live advancement control and reused `grantCampaignAdvancement`; no second progression store, engine, transport, or Character write path was introduced. Verification SHA `a72387016fec255674b8132b1f8b80b08d99da25` passed `W6-02 AUTO Verification` run `33703181522`, job `100486658419`, with 13/13 focused tests and production build PASS. Artifact `9874278799` (`W6-02-AUTO-9a07c28309ffe781d4ed1e4cea33f7e8f0706577`) has digest `sha256:abc109aca9d519e96aec8e03d442a2e071151c659e658a27b99207607f93fc0c`; its name reflects the pull-request synthetic merge SHA, while run `head_sha` `a72387016fec255674b8132b1f8b80b08d99da25` is the authoritative product verification identity. PR #294 integrated the tested repair into `work/v1-composite` as merge `b11f5267121c2c4dfb11176ef6ff12841f3c877b`. The official ledger records W6-02 PASS and the first non-PASS Gate is `W6-03`.
+`W6-03` is closed without product-code changes. Canonical exact SHA `b1f54abefd7dffb2f865ccaccde31649b8080a01` passed `W6-03 AUTO Verification` run `33705306657`, job `100493052616`, with 13/13 focused tests and production build PASS. Artifact `9875022681` (`W6-03-AUTO-b1f54abefd7dffb2f865ccaccde31649b8080a01`) has digest `sha256:8f5ef938566269b624ae4eeb33c95603eee501c514f6353945e9767899058deb`. The focused Campaign/Party Stash owners cover the shared, DM-approval, and DM-managed request lifecycle plus connected owner/failure-retry behavior required by `MP-E06~E11`. PR #297 integrated the evidence as canonical merge `888defd2be7f2f08c2f721abf57f72aaac5f8f12`. The official ledger records W6-03 PASS and the first non-PASS Gate is `W6-04`.
 
-## W6-03 exact scope
+## W6-04 exact scope
 
-`W6-03` is `REUSE_LOCKED`. It freezes the existing Party Stash request-policy lifecycle for `MP-E06~E11`:
+`W6-04` is `REUSE_LOCKED`. It freezes the existing Party Stash transfer transaction path for `MP-E12~E13`:
 
-- shared mode permits the canonical direct withdrawal path;
-- approval mode routes non-DM withdrawals through an explicit request and Host approve/reject lifecycle;
-- DM-managed mode rejects unauthorized non-DM withdrawal attempts;
-- accepted/rejected request state must stay Host-authoritative and use the existing connected/persistence owners rather than a Session-only parallel stash.
+- transfer success/failure must remain atomic across the existing source/destination owners;
+- transfer journal/history must record the authoritative result rather than invent a parallel Session-only ledger;
+- failed or reversed work must use the existing compensation model rather than silent history deletion;
+- persisted state must recover consistently after process restart/reload.
 
-Before changing product code, reproduce a current-HEAD failure or document an explicit production reachability/contract gap in `roadmap/EVIDENCE_CARD.md`. Reuse the existing Party Stash policy, request, connected authority, journal/persistence, and projection owners already established by W4-05 and later multiplayer work.
+Before changing product code, reproduce a current-HEAD failure or document an explicit production reachability/contract gap in `roadmap/EVIDENCE_CARD.md`. Reuse the existing transfer, journal, compensation, persistence, and recovery owners already established by Campaign/Party Stash work.
 
 ## Branch roles
 
@@ -100,8 +100,8 @@ Before changing product code, reproduce a current-HEAD failure or document an ex
 
 ### Next execution sequence
 
-1. Execute `W6-03`, the first non-`PASS` Gate in the ledger.
-2. Identify the smallest existing automated owners for shared withdrawal, approval request/approve/reject, DM-managed rejection, connected Host authority, and request durability/reconnect behavior mapped to `MP-E06~E11`.
+1. Execute `W6-04`, the first non-`PASS` Gate in the ledger.
+2. Identify the smallest existing automated owners for Party Stash transfer atomicity, journal/history, compensation/Undo behavior, and restart recovery mapped to `MP-E12~E13`.
 3. Run that focused set on one exact SHA and record deterministic pass/fail count plus artifact/digest before changing the official ledger.
 4. If it fails or a production reachability/contract gap is reproduced, fill `roadmap/EVIDENCE_CARD.md` and repair only the smallest existing owner-path defect.
 5. For Common Play, follow [`design/ui-ux/COMMON-PLAY-FUNCTION-FIRST.md`](design/ui-ux/COMMON-PLAY-FUNCTION-FIRST.md): functional reachability first, broad UI redesign later.
