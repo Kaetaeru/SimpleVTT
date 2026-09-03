@@ -55,7 +55,7 @@ jobs:
             echo "head_sha=${{ github.event.pull_request.head.sha }}"
             echo "base_sha=${{ github.event.pull_request.base.sha }}"
             echo 'scenario_scope=MP-B08,MP-H09,MP-H10,MP-H11 prerequisite owners; MP-H12 production transport AUTO is verified by the Windows Rust job'
-            echo 'win_obs=not claimed by this job'
+            echo 'win_obs=claimed only by the separate Windows multi-instance job when it passes'
           } > /tmp/w7-04-auto-evidence.txt
       - name: Upload AUTO prerequisite evidence
         uses: actions/upload-artifact@v4
@@ -98,7 +98,7 @@ jobs:
             'mp_h12_auto=session_transport::tests::slow_peer_queue_does_not_block_fast_peer_broadcast + session_transport::tests::peer_outbound_queue_preserves_order_when_drained',
             "release_exe=$($exe.Path)",
             "release_exe_sha256=$($hash.Hash.ToLower())",
-            'win_obs=not claimed; Host crash/write-failure/rejoin/slow-peer multi-instance observation still required'
+            'win_obs=claimed only by the separate Windows multi-instance job when it passes'
           )
           $lines | Set-Content -Encoding utf8 "$env:RUNNER_TEMP\w7-04-windows-evidence.txt"
       - name: Upload Windows prerequisite evidence
@@ -108,5 +108,30 @@ jobs:
           path: |
             ${{ runner.temp }}/w7-04-windows-evidence.txt
             src-tauri/target/release/simplevtt.exe
+          if-no-files-found: error
+          retention-days: 14
+
+  windows-multi-instance-recovery:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - run: npm ci --no-audit --no-fund
+      - name: Run W7-04 H+P1+P2 Windows recovery acceptance
+        shell: pwsh
+        env:
+          V1_VERIFICATION_SHA: ${{ github.event.pull_request.head.sha }}
+        run: powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File scripts/run-tauri-e2e.ps1 -Root . -W704
+      - name: Upload W7-04 Windows multi-instance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: W7-04-WIN-${{ github.sha }}
+          path: .live-dev/tauri-e2e/**/artifacts/**
           if-no-files-found: error
           retention-days: 14
