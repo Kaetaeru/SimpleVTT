@@ -55,7 +55,7 @@ jobs:
             echo "head_sha=${{ github.event.pull_request.head.sha }}"
             echo "base_sha=${{ github.event.pull_request.base.sha }}"
             echo 'scenario_scope=MP-B08,MP-H09,MP-H10,MP-H11 prerequisite owners; MP-H12 production transport AUTO is verified by the Windows Rust job'
-            echo 'win_obs=claimed only by the separate Windows multi-instance job when it passes'
+            echo 'win_obs=not claimed by this job'
           } > /tmp/w7-04-auto-evidence.txt
       - name: Upload AUTO prerequisite evidence
         uses: actions/upload-artifact@v4
@@ -77,6 +77,9 @@ jobs:
           cache: npm
       - uses: dtolnay/rust-toolchain@stable
       - run: npm ci --no-audit --no-fund
+      - name: Verify one-shot Tauri E2E persistence fault seam
+        shell: pwsh
+        run: cargo test --manifest-path src-tauri/Cargo.toml --lib --features tauri-e2e generation_store::e2e_fault_tests::tauri_e2e_fault_marker_fails_exactly_one_generation_write
       - name: Verify Tauri persistence and transport library tests
         shell: pwsh
         run: cargo test --manifest-path src-tauri/Cargo.toml --lib
@@ -96,9 +99,10 @@ jobs:
             'tauri_bundle_active=false',
             'scenario_scope=storage/release-executable prerequisites plus MP-H12 AUTO production transport queue coverage',
             'mp_h12_auto=session_transport::tests::slow_peer_queue_does_not_block_fast_peer_broadcast + session_transport::tests::peer_outbound_queue_preserves_order_when_drained',
+            'tauri_e2e_fault_seam=one-shot generation-store marker verified under debug tauri-e2e feature; not compiled into release behavior',
             "release_exe=$($exe.Path)",
             "release_exe_sha256=$($hash.Hash.ToLower())",
-            'win_obs=claimed only by the separate Windows multi-instance job when it passes'
+            'win_obs=not claimed; Host crash/write-failure/rejoin/slow-peer multi-instance observation still required'
           )
           $lines | Set-Content -Encoding utf8 "$env:RUNNER_TEMP\w7-04-windows-evidence.txt"
       - name: Upload Windows prerequisite evidence

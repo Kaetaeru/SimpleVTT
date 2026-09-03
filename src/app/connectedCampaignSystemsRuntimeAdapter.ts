@@ -77,10 +77,7 @@ async function broadcastProjection(adapter:MockAdapter){
   const envelope=await envelopeFor(adapter);if(!envelope)return;
   const message=JSON.stringify(envelope);
   const peers=[...connectedStateFor(adapter).peerParticipants.keys()];
-  await Promise.all(peers.map(async(peer)=>{
-    try{await baseSendTo(peer,message);}
-    catch(error){if(!String(error).includes("peer is not connected"))throw error;}
-  }));
+  await Promise.all(peers.map((peer)=>baseSendTo(peer,message)));
 }
 async function sendToWithCampaignSystems(peer:string,message:string){
   const result=await baseSendTo(peer,message);const sessionId=compatibleHelloAck(message);const host=activeHostAdapter;

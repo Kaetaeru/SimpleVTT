@@ -8,6 +8,9 @@ use std::{
 const FILE_SUFFIX: &str = ".json";
 const RETAIN_COMMITTED_GENERATIONS: usize = 3;
 
+#[cfg(all(debug_assertions, feature = "tauri-e2e"))]
+const E2E_FAIL_NEXT_WRITE_MARKER: &str = ".simplevtt-e2e-fail-next-write";
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct StoredGenerationDto {
@@ -101,6 +104,17 @@ pub(crate) fn prune_old_generations(dir: &Path, file_prefix: &str, label: &str) 
     }
 }
 
+#[cfg(all(debug_assertions, feature = "tauri-e2e"))]
+fn maybe_fail_next_e2e_write(dir: &Path, label: &str) -> Result<(), String> {
+    let marker = dir.join(E2E_FAIL_NEXT_WRITE_MARKER);
+    if !marker.exists() {
+        return Ok(());
+    }
+    fs::remove_file(&marker)
+        .map_err(|error| format!("failed to consume {label} tauri-e2e fault marker: {error}"))?;
+    Err(format!("simulated {label} write failure from tauri-e2e fault marker"))
+}
+
 fn write_generation_at_impl(
     dir: &Path,
     file_prefix: &str,
@@ -110,6 +124,9 @@ fn write_generation_at_impl(
 ) -> Result<(), String> {
     fs::create_dir_all(dir)
         .map_err(|error| format!("failed to create {label} directory: {error}"))?;
+
+    #[cfg(all(debug_assertions, feature = "tauri-e2e"))]
+    maybe_fail_next_e2e_write(dir, label)?;
 
     let committed = committed_paths(dir, file_prefix, label)?;
     let physical_generation = committed.first().map(|(generation, _)| *generation).unwrap_or(0);
@@ -179,4 +196,41 @@ pub(crate) fn write_generation_at_with_fault_after_temp_sync(
     request: &WriteGenerationRequest,
 ) -> Result<(), String> {
     write_generation_at_impl(dir, file_prefix, label, request, true)
+}
+
+#[cfg(all(test, feature = "tauri-e2e"))]
+mod e2e_fault_tests {
+    use super::*;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    fn temp_dir() -> PathBuf {
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock before unix epoch")
+            .as_nanos();
+        std::env::temp_dir().join(format!("simplevtt-generation-store-e2e-{}-{nonce}", std::process::id()))
+    }
+
+    #[test]
+    fn tauri_e2e_fault_marker_fails_exactly_one_generation_write() {
+        let dir = temp_dir();
+        fs::create_dir_all(&dir).expect("create temp generation dir");
+        fs::write(dir.join(E2E_FAIL_NEXT_WRITE_MARKER), b"fail next write")
+            .expect("write tauri-e2e fault marker");
+        let request = WriteGenerationRequest {
+            expected_generation: 0,
+            next_generation: 1,
+            payload: "{}".to_owned(),
+        };
+
+        let error = write_generation_at(&dir, "test.", "test generation", &request)
+            .expect_err("fault marker should reject the first write");
+        assert!(error.contains("simulated test generation write failure"));
+        assert!(!dir.join(E2E_FAIL_NEXT_WRITE_MARKER).exists(), "fault marker must be consumed");
+
+        write_generation_at(&dir, "test.", "test generation", &request)
+            .expect("second write should succeed after one-shot fault is consumed");
+        assert!(generation_path(&dir, "test.", 1).exists());
+        let _ = fs::remove_dir_all(dir);
+    }
 }

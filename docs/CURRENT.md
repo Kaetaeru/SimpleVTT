@@ -1,6 +1,6 @@
 # Current — SimpleVTT
 
-Updated: 2026-09-03 Asia/Seoul
+Updated: 2026-09-04 Asia/Seoul
 
 This is the human/agent entry point for **what is current now**. Live GitHub state plus this page and the active master roadmap win over older handoffs, checklists, PR bodies, archived files, and remembered status.
 
@@ -16,6 +16,7 @@ reconcile existing implementation
 → verify real Tauri journeys
 → repair only reproduced failures
 → make Common Play behavior reachable before broad visual redesign
+→ automate reusable Windows multi-instance observations
 → expand H+P1+P2/P3 acceptance
 → final UI/UX rebase from the working product
 → close the Windows release
@@ -83,6 +84,12 @@ Next exact Gate: W7-04
 
 Reuse the existing owner-writeback durability, Host Campaign persistence, idempotent durable retry/recovery, and partial-failure recovery owners. Before changing product code, reproduce a current-HEAD failure or document an explicit production reachability/contract gap in `roadmap/EVIDENCE_CARD.md`. Do not introduce a second owner store, Campaign write path, persistence journal, retry coordinator, or recovery subsystem.
 
+The remaining Windows observation gap must be closed by **reusing and extending the existing Tauri/WebDriver E2E runner**, not by asking for routine manual desktop verification and not by creating a second E2E framework. The existing Host+Client multi-process runner is the owner path; add only the smallest W7-04 scenario mode needed to exercise real Tauri instances for `MP-B08` and `MP-H09~H12`. Add a third peer only where a scenario such as slow-peer isolation actually requires it; the general H+P1+P2 and optional P3 orchestration remains the formal `W8-02` build.
+
+The W7-04 pull-request workflow must run the reusable Windows observation on `windows-latest`, retain exact-SHA scenario evidence/logs/captures, and claim `WIN` only when the production Tauri instances themselves were observed. Existing AUTO/structure evidence or a release executable alone cannot substitute for `WIN` evidence. If deterministic Character/Campaign write failure cannot be induced through the existing isolated E2E data roots or runtime controls, record that production testability/reachability gap in `roadmap/EVIDENCE_CARD.md` first; only then may the smallest test-only fault seam be added to the existing owner path. Do not build a parallel persistence, retry, transport, or recovery system.
+
+This Windows observation path is a reusable V1 acceptance asset: reuse it for the focused `W7-08` Windows cases, extend the same runner under `W8-02` for H+P1+P2 and optional P3 orchestration, map it machine-readably under `W8-03`, and rerun every applicable `WIN` scenario on the final authoritative SHA under `W9-02`. Final V1 closure still requires the matching `W9-01` Windows release artifact and digest from that same final SHA. Human intervention is not the default Windows acceptance path; reserve it for unavoidable external approval, credential, or environment constraints.
+
 ## Branch roles
 
 - Product integration target: `work/v1-composite`
@@ -97,11 +104,13 @@ Reuse the existing owner-writeback durability, Host Campaign persistence, idempo
 
 ### Next execution sequence
 
-1. Execute `W7-04`, the first non-`PASS` Gate in the ledger.
-2. Identify the smallest existing automated owner set proving owner writeback, Host Campaign write, and partial persistence recovery for `MP-B08` and `MP-H09~H12`.
-3. Run that set on one exact SHA and record the focused command, pass count, artifact/digest when produced, and scenario mapping before changing the ledger.
-4. If it fails or a production reachability/contract gap is reproduced, fill `roadmap/EVIDENCE_CARD.md` and repair only the smallest existing owner path.
-5. Do not reopen completed W0-W6 or W7-01~W7-03 work without a demonstrated regression.
+1. Execute `W7-04`, the first non-`PASS` Gate in the ledger, by closing its remaining real-Windows observation gap through the existing Tauri/WebDriver runner rather than routine manual verification.
+2. On a scoped `agent/*` branch, reuse `scripts/run-tauri-e2e.mjs`/`.ps1` and add only the W7-04 fault/reconnect scenario mode needed for `MP-B08` and `MP-H09~H12`; do not create another E2E framework.
+3. Wire the W7-04 pull-request workflow so the Windows job launches the real Tauri instances, records exact-SHA scenario results/logs/captures, and fails when required `WIN` observations are absent.
+4. If a required write-failure condition cannot be deterministically induced without code support, document the reachability/testability gap in `roadmap/EVIDENCE_CARD.md` and add only the smallest test-only fault seam to the existing production owner path.
+5. Record the resulting AUTO/WIN evidence and scenario mapping in the ledger only after the actual Windows run succeeds; do not treat structural evidence or the release executable as a substitute for `WIN` observation.
+6. Reuse the same runner for `W7-08`, formalize H+P1+P2 and optional P3 orchestration at `W8-02`, machine-map all 120 scenario requirements at `W8-03`, and rerun all applicable `WIN` scenarios on the final authoritative SHA at `W9-02` before V1 closure.
+7. Do not reopen completed W0-W6 or W7-01~W7-03 work without a demonstrated regression.
 
 ## Non-negotiable execution rules
 
