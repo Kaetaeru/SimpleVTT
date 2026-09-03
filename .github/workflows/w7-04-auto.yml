@@ -80,33 +80,33 @@ jobs:
       - name: Verify Tauri persistence and transport library tests
         shell: pwsh
         run: cargo test --manifest-path src-tauri/Cargo.toml --lib
-      - name: Build packaged Windows application
+      - name: Build release Windows application
         shell: pwsh
         run: npm run tauri:build
-      - name: Record exact-SHA Windows package prerequisite evidence
+      - name: Record exact-SHA Windows executable prerequisite evidence
         shell: pwsh
         run: |
+          $exe = Resolve-Path 'src-tauri/target/release/simplevtt.exe' -ErrorAction Stop
+          $hash = Get-FileHash -Algorithm SHA256 $exe
           $lines = @(
-            'W7-04 Windows storage/package prerequisite verification',
+            'W7-04 Windows storage/release-executable prerequisite verification',
             "checkout_sha=$env:GITHUB_SHA",
             "head_sha=${{ github.event.pull_request.head.sha }}",
             "base_sha=${{ github.event.pull_request.base.sha }}",
-            'scenario_scope=storage/package prerequisites plus MP-H12 AUTO production transport queue coverage',
+            'tauri_bundle_active=false',
+            'scenario_scope=storage/release-executable prerequisites plus MP-H12 AUTO production transport queue coverage',
             'mp_h12_auto=session_transport::tests::slow_peer_queue_does_not_block_fast_peer_broadcast + session_transport::tests::peer_outbound_queue_preserves_order_when_drained',
-            'win_obs=not claimed; packaged Host crash/write-failure/rejoin/slow-peer observation still required'
+            "release_exe=$($exe.Path)",
+            "release_exe_sha256=$($hash.Hash.ToLower())",
+            'win_obs=not claimed; Host crash/write-failure/rejoin/slow-peer multi-instance observation still required'
           )
           $lines | Set-Content -Encoding utf8 "$env:RUNNER_TEMP\w7-04-windows-evidence.txt"
-          Get-ChildItem -Path 'src-tauri/target/release/bundle' -Recurse -File -ErrorAction SilentlyContinue |
-            ForEach-Object {
-              $hash = Get-FileHash -Algorithm SHA256 $_.FullName
-              "$($hash.Hash.ToLower())  $($_.FullName)"
-            } | Add-Content -Encoding utf8 "$env:RUNNER_TEMP\w7-04-windows-evidence.txt"
       - name: Upload Windows prerequisite evidence
         uses: actions/upload-artifact@v4
         with:
           name: W7-04-WINDOWS-PREREQ-${{ github.sha }}
           path: |
             ${{ runner.temp }}/w7-04-windows-evidence.txt
-            src-tauri/target/release/bundle/**
+            src-tauri/target/release/simplevtt.exe
           if-no-files-found: error
           retention-days: 14
