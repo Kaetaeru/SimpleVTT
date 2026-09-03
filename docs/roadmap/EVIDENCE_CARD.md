@@ -1,22 +1,21 @@
 # V1 Evidence Card
 
-Status: **W5-09 CLOSED — MP-J UI PARITY AUTO PASS**
+Status: **W5-10 CLOSED — MP-01 THROUGH MP-04 AUTO SCENARIO MAP PASS**
 
 Use one card per Release Gate or coherent repair. The purpose is to stop duplicate implementation and force current-HEAD evidence before modifying an existing system.
 
 ```text
-Gate ID: W5-09
+Gate ID: W5-10
 Classification: REUSE_LOCKED
-Acceptance criterion: automated UI-facing Host/P1/P2 parity evidence covers MP-J01 through MP-J08 across public Scene state, Session/turn/economy state, selected Character actions, owner inventory/GP/items, active Resolution presentation, and public Activity changes. Protocol-only or persistence-only assertions are insufficient; rendered Windows parity remains a later V1 release requirement.
-Production entrypoint: existing connected Host/Client projection, Party Stash owner-transfer/approval, authoritative Scene topology, remote Character projection handshake, three-peer action/presentation, turn projection, and Undo compensation paths.
-Existing implementation files: src/app/connectedSessionRuntimeAdapter.ts; src/app/connectedActionRoutingAdapter.ts; src/app/connectedResolutionPresentation.ts; src/app/connectedTurnRoutingAdapter.ts; src/app/connectedSessionProtocol.ts; src/app/connectedCharacterProjectionHandshake.ts; src/app/productionSessionEmptyEncounterAdapter.ts; src/app/campaignPartyStashPolicyRuntimeAdapter.ts.
-Existing automated tests: tests/ui/connectedPartyStashApprovalOwnerTransfer.test.ts; tests/ui/connectedSceneTopologyProjection.test.ts; tests/ui/connectedSceneTopologyHostMutation.test.ts; tests/ui/productionHostRemoteFixtureIdentityProjection.test.ts; tests/ui/connectedThreePeerActionMatrix.test.ts; tests/ui/connectedThreePeerPresentation.test.ts; tests/ui/connectedTurnProjection.test.ts; tests/ui/connectedUndoCompensation.test.ts.
-Initial exact-SHA failure: canonical SHA 5f7bb4bdbc20da3ff437809e3d7f3f024e159f1d, W5-09 AUTO run 33698750944 / job 100473212192 = 17/18 PASS, 1 FAIL. The J07 test fixture built its remote projection from a stale three-entry @2024 catalog while production composition materialized the current 509-entry @0.1-draft catalog.
-Smallest repair: test-only. productionHostRemoteFixtureIdentityProjection now builds the fixture Character projection from the production snapshot catalog. No src/ product/runtime file changed.
-Repair verification: SHA 8cfba705da716d1fd5fd145a7870a774363f460b, W5-09 AUTO run 33699271386 / job 100474814937 = 18/18 PASS.
-Canonical closure evidence: SHA 4c93082d0af77ae79da82db711b7934c8e2f8544; W5-09 AUTO run 33699407674 / job 100475234429 = 18/18 PASS, 0 FAIL; artifact 9872956996 (W5-09-AUTO-4c93082d0af77ae79da82db711b7934c8e2f8544), sha256:5f7f708086b1c7b3e941d6d37bcac01cbded9f0fa6edea565dcbad171164463f.
-Exact observed result: PASS. MP-J01-J08 automated parity is closed on the canonical exact SHA. Rendered Windows parity remains governed by later release acceptance and GitHub issue #189 remains open until those criteria are satisfied.
-Smallest required change: None further for W5-09. Record W5-09 PASS in the official ledger and proceed to W5-10.
+Acceptance criterion: consolidate the existing production-adapter three-peer action, presentation, turn, reconnect, reaction/Ready, and Undo automated evidence for MP-01 through MP-04 into one exact-HEAD scenario map. This AUTO Gate does not replace later real Windows H+P1+P2 rendered acceptance.
+Production entrypoint: connectedSessionRuntimeAdapter + connectedActionRoutingAdapter + connectedResolutionPresentation + connectedTurnRoutingAdapter + connectedSessionProtocol + resolutionEventUndo and their existing production composition.
+Existing automated tests: connectedResolutionPresentation.test.ts; productionClientReconnect.test.ts; granular connectedThreePeerRemote* action acceptance tests; connectedThreePeerActionMatrix.test.ts; connectedThreePeerPresentation.test.ts; phase09ManualMovementReactionAdapter.test.ts; c9FamilyOReadyConcentrationProduction.test.ts; connectedTurnProjection.test.ts; connectedUndoCompensation.test.ts.
+Exact observed failure: None.
+Smallest required change: None to product/runtime/test implementation. Add one focused workflow to execute the existing owner tests as a single exact-SHA W5-10 acceptance set.
+Canonical closure evidence: SHA 786566303fbb6c8bac1dff6b392f65a866a1947c; W5-10 AUTO run 33700245046 / job 100477769745 = 45/45 PASS, 0 FAIL; artifact 9873251248 (W5-10-AUTO-786566303fbb6c8bac1dff6b392f65a866a1947c), sha256:189a99528d2cf6556a7c5430f3073145c91c537e1b3c354fc44e089234d3b927.
+Exact observed result: PASS. MP-01 shared presentation envelope, MP-02 remote presentation/reconnect exactly-once behavior, MP-03 H+P1+P2 action matrix, and MP-04 Initiative/reaction/Ready/correction automated owners pass together on the canonical exact SHA.
+Remaining release limitation: MP-01 through MP-04 issue-level WIN criteria and the scenario catalog's rendered Windows acceptance remain later V1 work. Do not close those issues solely from W5-10 AUTO evidence.
+Next action: record W5-10 PASS in the official ledger, mark W5 10/10 complete, and route to W6-01.
 ```
 
 ## Change gate
