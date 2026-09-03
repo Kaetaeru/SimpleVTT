@@ -77,6 +77,9 @@ jobs:
           cache: npm
       - uses: dtolnay/rust-toolchain@stable
       - run: npm ci --no-audit --no-fund
+      - name: Verify one-shot Tauri E2E persistence fault seam
+        shell: pwsh
+        run: cargo test --manifest-path src-tauri/Cargo.toml --lib --features tauri-e2e generation_store::e2e_fault_tests::tauri_e2e_fault_marker_fails_exactly_one_generation_write
       - name: Verify Tauri persistence and transport library tests
         shell: pwsh
         run: cargo test --manifest-path src-tauri/Cargo.toml --lib
@@ -96,6 +99,7 @@ jobs:
             'tauri_bundle_active=false',
             'scenario_scope=storage/release-executable prerequisites plus MP-H12 AUTO production transport queue coverage',
             'mp_h12_auto=session_transport::tests::slow_peer_queue_does_not_block_fast_peer_broadcast + session_transport::tests::peer_outbound_queue_preserves_order_when_drained',
+            'tauri_e2e_fault_seam=one-shot generation-store marker verified under debug tauri-e2e feature; not compiled into release behavior',
             "release_exe=$($exe.Path)",
             "release_exe_sha256=$($hash.Hash.ToLower())",
             'win_obs=not claimed; Host crash/write-failure/rejoin/slow-peer multi-instance observation still required'
