@@ -23,6 +23,7 @@ export interface ConnectedRuntimeState {
   publishedResolutionIds:Set<string>;
   peerManifests:Map<string,SessionCompatibilityManifest>;
   peerParticipants:Map<string,string>;
+  acceptedParticipantManifests:Map<string,SessionCompatibilityManifest>;
   sessionStarted:boolean;
   reconnectTimer:ReturnType<typeof setTimeout>|null;
   reconnectAttempts:number;
@@ -56,6 +57,7 @@ export function connectedStateFor(adapter:MockAdapter) {
       publishedResolutionIds:new Set<string>(),
       peerManifests:new Map<string,SessionCompatibilityManifest>(),
       peerParticipants:new Map<string,string>(),
+      acceptedParticipantManifests:new Map<string,SessionCompatibilityManifest>(),
       sessionStarted:false,
       reconnectTimer:null,
       reconnectAttempts:0,
@@ -91,6 +93,7 @@ export function resetConnectedState(adapter:MockAdapter,mode:"host"|"client"|nul
   state.publishedResolutionIds.clear();
   state.peerManifests.clear();
   state.peerParticipants.clear();
+  state.acceptedParticipantManifests.clear();
   state.sessionStarted=false;
   state.reconnectTimer=null;
   state.reconnectAttempts=0;
