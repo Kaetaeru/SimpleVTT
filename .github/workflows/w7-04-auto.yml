@@ -54,7 +54,7 @@ jobs:
             echo "checkout_sha=${GITHUB_SHA}"
             echo "head_sha=${{ github.event.pull_request.head.sha }}"
             echo "base_sha=${{ github.event.pull_request.base.sha }}"
-            echo 'scenario_scope=MP-B08,MP-H09,MP-H10,MP-H11 prerequisite owners; MP-H12 slow-peer owner not claimed'
+            echo 'scenario_scope=MP-B08,MP-H09,MP-H10,MP-H11 prerequisite owners; MP-H12 production transport AUTO is verified by the Windows Rust job'
             echo 'win_obs=not claimed by this job'
           } > /tmp/w7-04-auto-evidence.txt
       - name: Upload AUTO prerequisite evidence
@@ -91,7 +91,8 @@ jobs:
             "checkout_sha=$env:GITHUB_SHA",
             "head_sha=${{ github.event.pull_request.head.sha }}",
             "base_sha=${{ github.event.pull_request.base.sha }}",
-            'scenario_scope=storage/package prerequisite only',
+            'scenario_scope=storage/package prerequisites plus MP-H12 AUTO production transport queue coverage',
+            'mp_h12_auto=session_transport::tests::slow_peer_queue_does_not_block_fast_peer_broadcast + session_transport::tests::peer_outbound_queue_preserves_order_when_drained',
             'win_obs=not claimed; packaged Host crash/write-failure/rejoin/slow-peer observation still required'
           )
           $lines | Set-Content -Encoding utf8 "$env:RUNNER_TEMP\w7-04-windows-evidence.txt"
