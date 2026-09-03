@@ -1,0 +1,51 @@
+name: W6-02 AUTO Verification
+
+on:
+  push:
+    paths:
+      - "src/ProductionSessionAdvancementPanel.tsx"
+      - "src/ProductionSessionWorkspaceBridge.tsx"
+      - "src/app/campaignApplicationService.ts"
+      - "src/app/campaignPersistenceContracts.ts"
+      - "src/app/campaignRuntimeAdapter.ts"
+      - "src/app/connectedCampaignSystemsRuntimeAdapter.ts"
+      - "src/app/AppProvider.tsx"
+      - "tests/ui/campaignSystems.test.ts"
+      - "tests/ui/productionSessionAdvancementReachability.test.ts"
+      - ".github/workflows/w6-02-auto.yml"
+  pull_request:
+    paths:
+      - "src/ProductionSessionAdvancementPanel.tsx"
+      - "src/ProductionSessionWorkspaceBridge.tsx"
+      - "src/app/campaignApplicationService.ts"
+      - "src/app/campaignPersistenceContracts.ts"
+      - "src/app/campaignRuntimeAdapter.ts"
+      - "src/app/connectedCampaignSystemsRuntimeAdapter.ts"
+      - "src/app/AppProvider.tsx"
+      - "tests/ui/campaignSystems.test.ts"
+      - "tests/ui/productionSessionAdvancementReachability.test.ts"
+      - ".github/workflows/w6-02-auto.yml"
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run generate:content
+      - name: Focused W6-02 tests
+        run: |
+          npx tsx --test tests/ui/campaignSystems.test.ts tests/ui/productionSessionAdvancementReachability.test.ts > w6-02-auto.log
+          cat w6-02-auto.log
+      - name: Production build
+        run: npm run build
+      - name: Upload W6-02 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: W6-02-AUTO-${{ github.sha }}
+          path: w6-02-auto.log
