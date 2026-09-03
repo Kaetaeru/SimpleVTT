@@ -50,9 +50,10 @@ W2: 8/8 PASS — COMPLETE
 W3: 8/8 PASS — COMPLETE
 W4: 8/8 PASS — COMPLETE
 W5: 10/10 PASS — COMPLETE
-Official ledger score: 65.0/100.0
-PASS: 48/72
-Remaining gates: 24/72
+W6: 1/8 PASS
+Official ledger score: 66.3/100.0
+PASS: 49/72
+Remaining gates: 23/72
 FAIL: 0
 BLOCKED: 0
 ```
@@ -68,21 +69,21 @@ W2 — COMPLETE (8/8 PASS)
 W3 — COMPLETE (8/8 PASS)
 W4 — COMPLETE (8/8 PASS)
 W5 — COMPLETE (10/10 PASS)
-Next exact Gate: W6-01
+W6 — 1/8 PASS
+Next exact Gate: W6-02
 ```
 
-`W5-10` is closed by canonical exact-SHA MP-01~MP-04 automated evidence consolidation. Verification SHA `786566303fbb6c8bac1dff6b392f65a866a1947c` passed `W5-10 AUTO Verification` run `33700245046`, job `100477769745`, with 45/45 focused tests. Artifact `9873251248` (`W5-10-AUTO-786566303fbb6c8bac1dff6b392f65a866a1947c`) has digest `sha256:189a99528d2cf6556a7c5430f3073145c91c537e1b3c354fc44e089234d3b927`. The Gate reused the existing shared presentation, remote replay/reconnect, three-peer action, reaction/Ready/concentration, turn, and compensating Undo paths; no product/runtime or test implementation file changed. The official ledger now records W5-10 PASS and the first non-PASS Gate is `W6-01`.
+`W6-01` is closed by canonical exact-SHA automated evidence for DM item/GP grant-revoke and Character-owner projection refresh. Verification SHA `30606e6b056027a3e10ddbae70f38f428b2714b6` passed `W6-01 AUTO Verification` run `33701452879`, job `100481432959`, with 13/13 focused tests. Artifact `9873659413` (`W6-01-AUTO-30606e6b056027a3e10ddbae70f38f428b2714b6`) has digest `sha256:bb6031112dd14fedf00aa90485e7583332cdaefd1befe4f223d710e4939e2204`. The Gate reused the existing DM inventory/currency, DM Library materialization, connected owner wire, inventory projection refresh, and custom-item projection paths; no product/runtime or test implementation file changed. The official ledger now records W6-01 PASS and the first non-PASS Gate is `W6-02`.
 
-## W6-01 exact scope
+## W6-02 exact scope
 
-`W6-01` is `REUSE_LOCKED`. It freezes the existing DM item/currency and owner projection behavior for `MP-E01~E03` and `MP-J05~J06`:
+`W6-02` is `REUSE_LOCKED`. It freezes the existing XP/progression ownership behavior for `MP-E04~E05`:
 
-- DM grants an item to a Character owner and the durable owner record plus permitted Session projection converge.
-- DM revokes an item with explicit equipped/wielded/attuned transition policy and durable owner convergence.
-- DM grants or revokes GP exactly once; overdraft is rejected without partial mutation.
-- Owner inventory and GP changes refresh through the existing connected projection/UI paths rather than a parallel write or presentation system.
+- DM grants exact XP to one or multiple Characters; the Character-owned value is durable and visible and the grant requires no reason.
+- DM grants immediate level-up credit; an eligible owner can complete level-up in Session through the canonical Character progression/persistence path.
+- XP/credit changes must flow through existing owner persistence and projection paths rather than a Session-only or parallel Character store.
 
-Before changing product code, reproduce a current-HEAD failure or document an explicit production reachability/contract gap in `roadmap/EVIDENCE_CARD.md`. Reuse existing Character persistence, inventory/currency, DM grant/revoke, connected owner projection, and Session parity owners.
+Before changing product code, reproduce a current-HEAD failure or document an explicit production reachability/contract gap in `roadmap/EVIDENCE_CARD.md`. Reuse existing Character persistence, progression/XP, DM grant, connected owner projection, and level-up owners.
 
 ## Branch roles
 
@@ -98,8 +99,8 @@ Before changing product code, reproduce a current-HEAD failure or document an ex
 
 ### Next execution sequence
 
-1. Execute `W6-01`, the first non-`PASS` Gate in the ledger.
-2. Identify the existing automated owners for DM item grant/revoke, GP grant/revoke/overdraft, and owner projection refresh/parity.
+1. Execute `W6-02`, the first non-`PASS` Gate in the ledger.
+2. Identify the existing automated owners for exact XP grant, multi-Character XP grant, immediate level-up credit, canonical owner level-up, and durable projection/persistence.
 3. Run that focused set on one exact SHA and record deterministic pass/fail count plus artifact/digest before changing the official ledger.
 4. If it fails, fill `roadmap/EVIDENCE_CARD.md` and repair only the smallest reproduced owner-path defect.
 5. For Common Play, follow [`design/ui-ux/COMMON-PLAY-FUNCTION-FIRST.md`](design/ui-ux/COMMON-PLAY-FUNCTION-FIRST.md): functional reachability first, broad UI redesign later.
