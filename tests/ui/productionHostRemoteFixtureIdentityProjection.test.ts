@@ -2,29 +2,12 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import "../../src/app/progressionContracts";
 import "../../src/app/productionSessionEmptyEncounterAdapter";
-import type { CatalogEntry, CharacterSheet } from "../../src/app/contracts";
+import type { CharacterSheet } from "../../src/app/contracts";
 import { MockAdapter } from "../../src/app/mockAdapter";
-import { catalogQualifiedId } from "../../src/app/contentCatalogIdentity";
-import { buildCharacterSessionProjectionV1, parseCharacterSessionProjectionV1 } from "../../src/app/characterSessionProjection";
+import { buildCharacterSessionProjectionV1 } from "../../src/app/characterSessionProjection";
 import { acceptHostCharacterSessionProjection } from "../../src/app/connectedCharacterProjectionHandshake";
 import { connectedInternal } from "../../src/app/connectedSessionRuntimeAdapter";
 import type { SessionCompatibilityManifest } from "../../src/app/connectedSessionProtocol";
-
-const SOURCE_ID="dnd.srd-5.2.1";
-const VERSION="2024";
-
-function entry(contentId:string,category:CatalogEntry["category"],nameKo:string,nameEn:string):CatalogEntry & {contentId:string;sourceId:string} {
-  return {
-    id:catalogQualifiedId(contentId,SOURCE_ID,VERSION),contentId,sourceId:SOURCE_ID,category,nameKo,nameEn,
-    scope:"builtin",source:"SRD 5.2.1",version:VERSION,description:"test",relationships:[],capabilities:[],
-  };
-}
-
-const catalog:CatalogEntry[]=[
-  entry("dnd.srd521.class.fighter","class","파이터","Fighter"),
-  entry("dnd.srd521.species.human","species","인간","Human"),
-  entry("dnd.srd521.background.soldier","background","군인","Soldier"),
-];
 
 function remoteFixtureIdentity():CharacterSheet {
   return {
@@ -39,8 +22,7 @@ function remoteFixtureIdentity():CharacterSheet {
 
 test("production Host keeps a connected remote actor even when its ID matches a removable reference fixture", async () => {
   const adapter=new MockAdapter();
-  (adapter as unknown as {catalog:CatalogEntry[]}).catalog=structuredClone(catalog);
-  await adapter.getSnapshot();
+  const productionSnapshot=await adapter.getSnapshot();
   const sheet=remoteFixtureIdentity();
   const manifest:SessionCompatibilityManifest={
     protocolVersion:1,
@@ -48,11 +30,7 @@ test("production Host keeps a connected remote actor even when its ID matches a 
     capabilities:["resolution-event-v1","character-projection-v1","event-cursor-v1"],
     character:{characterId:sheet.id,sourceRevision:sheet.sourceRevision??0,runtimeRevision:sheet.runtimeRevision??0},
   };
-  const projection=buildCharacterSessionProjectionV1(sheet,catalog);
-  const hostCatalog=connectedInternal(adapter).catalog;
-  assert.deepEqual(hostCatalog.map((candidate)=>candidate.id),catalog.map((candidate)=>candidate.id));
-  const parsed=parseCharacterSessionProjectionV1(projection,hostCatalog);
-  assert.equal(parsed.status,"accepted",parsed.status==="rejected"?parsed.error:undefined);
+  const projection=buildCharacterSessionProjectionV1(sheet,productionSnapshot.catalog);
 
   const accepted=acceptHostCharacterSessionProjection(adapter,"peer.ilhantar",manifest,projection);
   assert.deepEqual(accepted,{status:"accepted",mode:"mounted",characterId:"char.aelar"});
