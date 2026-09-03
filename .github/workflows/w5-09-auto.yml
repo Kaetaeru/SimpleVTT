@@ -1,0 +1,81 @@
+name: W5-09 AUTO Verification
+
+on:
+  pull_request:
+    paths:
+      - "src/app/connectedSessionRuntimeAdapter.ts"
+      - "src/app/connectedActionRoutingAdapter.ts"
+      - "src/app/connectedResolutionPresentation.ts"
+      - "src/app/connectedTurnRoutingAdapter.ts"
+      - "src/app/connectedSessionProtocol.ts"
+      - "src/app/characterSessionProjectionMount.ts"
+      - "src/app/campaignPartyStashPolicyRuntimeAdapter.ts"
+      - "tests/ui/connectedPartyStashApprovalOwnerTransfer.test.ts"
+      - "tests/ui/connectedSceneTopologyProjection.test.ts"
+      - "tests/ui/connectedSceneTopologyHostMutation.test.ts"
+      - "tests/ui/productionHostRemoteFixtureIdentityProjection.test.ts"
+      - "tests/ui/connectedThreePeerActionMatrix.test.ts"
+      - "tests/ui/connectedThreePeerPresentation.test.ts"
+      - "tests/ui/connectedTurnProjection.test.ts"
+      - "tests/ui/connectedUndoCompensation.test.ts"
+      - ".github/workflows/w5-09-auto.yml"
+  push:
+    branches:
+      - "work/v1-composite"
+      - "agent/**"
+    paths:
+      - "src/app/connectedSessionRuntimeAdapter.ts"
+      - "src/app/connectedActionRoutingAdapter.ts"
+      - "src/app/connectedResolutionPresentation.ts"
+      - "src/app/connectedTurnRoutingAdapter.ts"
+      - "src/app/connectedSessionProtocol.ts"
+      - "src/app/characterSessionProjectionMount.ts"
+      - "src/app/campaignPartyStashPolicyRuntimeAdapter.ts"
+      - "tests/ui/connectedPartyStashApprovalOwnerTransfer.test.ts"
+      - "tests/ui/connectedSceneTopologyProjection.test.ts"
+      - "tests/ui/connectedSceneTopologyHostMutation.test.ts"
+      - "tests/ui/productionHostRemoteFixtureIdentityProjection.test.ts"
+      - "tests/ui/connectedThreePeerActionMatrix.test.ts"
+      - "tests/ui/connectedThreePeerPresentation.test.ts"
+      - "tests/ui/connectedTurnProjection.test.ts"
+      - "tests/ui/connectedUndoCompensation.test.ts"
+      - ".github/workflows/w5-09-auto.yml"
+
+jobs:
+  mp-j-ui-parity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Generate content dependencies
+        run: npm run generate:content
+      - name: Verify W5-09 MP-J UI parity
+        shell: bash
+        run: |
+          set +e
+          npx tsx --test \
+            tests/ui/connectedPartyStashApprovalOwnerTransfer.test.ts \
+            tests/ui/connectedSceneTopologyProjection.test.ts \
+            tests/ui/connectedSceneTopologyHostMutation.test.ts \
+            tests/ui/productionHostRemoteFixtureIdentityProjection.test.ts \
+            tests/ui/connectedThreePeerActionMatrix.test.ts \
+            tests/ui/connectedThreePeerPresentation.test.ts \
+            tests/ui/connectedTurnProjection.test.ts \
+            tests/ui/connectedUndoCompensation.test.ts \
+            > w5-09-auto.log 2>&1
+          status=$?
+          cat w5-09-auto.log
+          exit "$status"
+      - name: Upload focused test log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: W5-09-AUTO-${{ github.sha }}
+          path: w5-09-auto.log
+          if-no-files-found: error
+          retention-days: 14
