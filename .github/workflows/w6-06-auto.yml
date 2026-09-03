@@ -1,0 +1,89 @@
+name: W6-06 AUTO Verification
+
+on:
+  push:
+    paths:
+      - "src/app/characterLongRestProjection.ts"
+      - "src/app/characterCampaignCompoundPersistence.ts"
+      - "src/app/longRestCompoundCoordinator.ts"
+      - "src/app/longRestCompoundPreview.ts"
+      - "src/app/longRestCompoundRuntimeAdapter.ts"
+      - "src/app/connectedLongRestPreflight.ts"
+      - "src/app/connectedLongRestTransactionState.ts"
+      - "src/app/connectedLongRestOwnerPreparationStore.ts"
+      - "src/app/connectedLongRestOwnerPersistence.ts"
+      - "src/app/connectedLongRestCampaignPersistence.ts"
+      - "src/app/connectedLongRestRuntimePort.ts"
+      - "tests/ui/characterLongRestProjection.test.ts"
+      - "tests/ui/characterCampaignCompoundPersistence.test.ts"
+      - "tests/ui/longRestCompoundCoordinator.test.ts"
+      - "tests/ui/longRestCompoundPreview.test.ts"
+      - "tests/ui/longRestCompoundRuntimeAdapter.test.ts"
+      - "tests/ui/resolutionCharacterDurableProjection.test.ts"
+      - "tests/ui/connectedSessionWire.test.ts"
+      - "tests/ui/connectedLongRestPreflight.test.ts"
+      - "tests/ui/connectedLongRestTransactionState.test.ts"
+      - "tests/ui/connectedLongRestWire.test.ts"
+      - "tests/ui/connectedLongRestOwnerPreparationStore.test.ts"
+      - "tests/ui/connectedLongRestOwnerPersistence.test.ts"
+      - "tests/ui/connectedLongRestCampaignPersistence.test.ts"
+      - "tests/ui/connectedLongRestRuntimePort.test.ts"
+      - "tests/ui/connectedLongRestUiStructure.test.ts"
+      - "tests/ui/connectedLongRestHostRestartRecovery.test.ts"
+      - "tests/ui/connectedLongRestRestartDurabilityStructure.test.ts"
+      - ".github/workflows/w6-06-auto.yml"
+  pull_request:
+    paths:
+      - "src/app/characterLongRestProjection.ts"
+      - "src/app/characterCampaignCompoundPersistence.ts"
+      - "src/app/longRestCompoundCoordinator.ts"
+      - "src/app/longRestCompoundPreview.ts"
+      - "src/app/longRestCompoundRuntimeAdapter.ts"
+      - "src/app/connectedLongRestPreflight.ts"
+      - "src/app/connectedLongRestTransactionState.ts"
+      - "src/app/connectedLongRestOwnerPreparationStore.ts"
+      - "src/app/connectedLongRestOwnerPersistence.ts"
+      - "src/app/connectedLongRestCampaignPersistence.ts"
+      - "src/app/connectedLongRestRuntimePort.ts"
+      - "tests/ui/characterLongRestProjection.test.ts"
+      - "tests/ui/characterCampaignCompoundPersistence.test.ts"
+      - "tests/ui/longRestCompoundCoordinator.test.ts"
+      - "tests/ui/longRestCompoundPreview.test.ts"
+      - "tests/ui/longRestCompoundRuntimeAdapter.test.ts"
+      - "tests/ui/resolutionCharacterDurableProjection.test.ts"
+      - "tests/ui/connectedSessionWire.test.ts"
+      - "tests/ui/connectedLongRestPreflight.test.ts"
+      - "tests/ui/connectedLongRestTransactionState.test.ts"
+      - "tests/ui/connectedLongRestWire.test.ts"
+      - "tests/ui/connectedLongRestOwnerPreparationStore.test.ts"
+      - "tests/ui/connectedLongRestOwnerPersistence.test.ts"
+      - "tests/ui/connectedLongRestCampaignPersistence.test.ts"
+      - "tests/ui/connectedLongRestRuntimePort.test.ts"
+      - "tests/ui/connectedLongRestUiStructure.test.ts"
+      - "tests/ui/connectedLongRestHostRestartRecovery.test.ts"
+      - "tests/ui/connectedLongRestRestartDurabilityStructure.test.ts"
+      - ".github/workflows/w6-06-auto.yml"
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run generate:content
+      - name: Focused W6-06 tests
+        run: |
+          npm run test:campaign-rest > w6-06-auto.log
+          cat w6-06-auto.log
+      - name: Production build
+        run: npm run build
+      - name: Upload W6-06 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: W6-06-AUTO-${{ github.sha }}
+          path: w6-06-auto.log

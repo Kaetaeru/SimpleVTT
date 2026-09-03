@@ -1,21 +1,21 @@
 # V1 Evidence Card
 
-Status: **W6-05 CLOSED — MP-E14 CAPABILITY-DRIVEN ITEM-TO-RATIONS AUTO PASS**
+Status: **W6-06 CLOSED — MP-F07~F09 DISTRIBUTED LONG REST / RECOVERY AUTO PASS**
 
 Use one card per Release Gate or coherent repair. The purpose is to stop duplicate implementation and force current-HEAD evidence before modifying an existing system.
 
 ```text
-Gate ID: W6-05
+Gate ID: W6-06
 Classification: REUSE_LOCKED
-Acceptance criterion: Freeze the existing capability-driven item-to-rations path for MP-E14 so eligibility comes from trusted capability data and source-item debit plus Campaign ration credit commit atomically through the existing Campaign transaction owner.
-Production entrypoint: Existing Campaign Ration Conversion panel/runtime adapter, Party Stash capability catalog, Campaign ration ledger, and mutateCampaign transaction path; no parallel conversion table, second inventory model, or replacement ration store is authorized.
-Existing automated tests: tests/ui/campaignRationConversion.test.ts; tests/ui/campaignRationConversionRuntime.test.ts; tests/ui/campaignRationConversionLegacyStash.test.ts; tests/ui/campaignRationConversionProductionStructure.test.ts.
-Exact observed failure: None on integration-derived exact verification SHA 945188901c106b6114e3a7f89cb1671aab6ace27 (base 52b6fc06b114768903887de3669f6499172afb72). Canonical push verification passed the focused ration-conversion suite and production build.
-Smallest authorized change: No product/runtime or test-implementation change. Add the focused workflow and record exact-SHA evidence only.
-Verification SHA: 945188901c106b6114e3a7f89cb1671aab6ace27
-Verification: W6-05 AUTO Verification run 33711448138 / job 100511627712 = success; 9/9 focused tests PASS; production build PASS.
-Artifact: 5808814072, W6-05-AUTO-945188901c106b6114e3a7f89cb1671aab6ace27, sha256:26ce88561019490d1c8734cb838ebf6dd789c180e9e4af57974a2559439351dc.
-Closure: W6-05 PASS. Reconcile the official ledger to 71.3/100.0 (53 PASS / 19 PENDING), then open W6-06 under the same evidence-first rule. Real H + P1 + P2 Windows rendered acceptance remains later.
+Acceptance criterion: Freeze the existing distributed Character + Campaign Long Rest path for MP-F07~F09 so Character recovery plus optional Campaign time/rations commit through the existing compound owners, rejected/preflight failure cannot partially advance either owner, and disconnect/restart recovery settles or aborts exactly once.
+Production entrypoint: Existing Character Long Rest projection, Character+Campaign compound coordinator/writer, connected Long Rest preflight/transaction state, owner preparation/persistence, Campaign participant persistence, runtime/wire path, and Host restart recovery; no second rest coordinator, Character persistence path, Campaign clock/ration store, or recovery journal is authorized.
+Existing automated tests: npm run test:campaign-rest (17 focused owner files; 93 tests covering Character/Campaign compound persistence, connected preflight/transaction state, owner preparation/persistence, Campaign persistence, wire/runtime/UI reachability, and Host restart recovery).
+Exact observed failure: None on integration-derived verification head cf531f34a2c2cf85174fabafdc9092022fb0c46b. GitHub Actions pull-request checkout 96f9e6715e32b95d6644f67fb461204661ab107c and the verification head share tree b3607dd639fee00d42bc51f8ea88d5c6bf466cba; focused verification and production build passed.
+Smallest authorized change: No product/runtime or test-implementation change. Add the focused workflow and record exact-tree evidence only.
+Verification SHA: cf531f34a2c2cf85174fabafdc9092022fb0c46b (Actions checkout 96f9e6715e32b95d6644f67fb461204661ab107c; shared tree b3607dd639fee00d42bc51f8ea88d5c6bf466cba)
+Verification: W6-06 AUTO Verification run 33712312082 / job 100514236959 = success; 93/93 focused tests PASS; production build PASS.
+Artifact: 9877347283, W6-06-AUTO-96f9e6715e32b95d6644f67fb461204661ab107c, sha256:45d257223dcb90dfefc79ab33ed51bcd6fabff0737d9e7039833c7860b5f4eb0.
+Closure: W6-06 PASS. Reconcile the official ledger to 72.5/100.0 (54 PASS / 18 PENDING), then open W6-07 under the same evidence-first rule. Real H + P1 + P2 Windows rendered acceptance remains later.
 ```
 
 ## Change gate
