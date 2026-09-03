@@ -1,0 +1,112 @@
+name: W7-04 Recovery Prerequisite Verification
+
+on:
+  pull_request:
+    branches:
+      - work/v1-composite
+    paths:
+      - '.github/workflows/w7-04-auto.yml'
+      - 'src/**'
+      - 'src-tauri/**'
+      - 'tests/**'
+      - 'scripts/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'content/**'
+
+permissions:
+  contents: read
+
+jobs:
+  auto-recovery:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run generate:content
+      - name: Focused W7-04 recovery owners
+        shell: bash
+        run: |
+          set -o pipefail
+          npx tsx --test \
+            tests/ui/campaignFailureRecovery.test.ts \
+            tests/ui/connectedDurableFailure.test.ts \
+            tests/ui/connectedOwnerInventoryRestart.test.ts \
+            tests/ui/connectedPartyStashHostRecovery.test.ts \
+            tests/ui/connectedLongRestHostRestartRecovery.test.ts \
+            tests/ui/productionClientReconnect.test.ts \
+            tests/ui/productionHelloReplayIdempotency.test.ts \
+            tests/ui/connectedThreePeerRemoteConcurrentIntent.test.ts \
+            tests/ui/connectedThreePeerDuplicateEventBatch.test.ts \
+            tests/ui/connectedThreePeerRemoteRejectionExactlyOnce.test.ts \
+            | tee /tmp/w7-04-auto.tap
+      - name: Production build
+        run: npm run build
+      - name: Record AUTO prerequisite evidence
+        shell: bash
+        run: |
+          {
+            echo 'W7-04 recovery prerequisite verification'
+            echo "checkout_sha=${GITHUB_SHA}"
+            echo "head_sha=${{ github.event.pull_request.head.sha }}"
+            echo "base_sha=${{ github.event.pull_request.base.sha }}"
+            echo 'scenario_scope=MP-B08,MP-H09,MP-H10,MP-H11 prerequisite owners; MP-H12 production transport AUTO is verified by the Windows Rust job'
+            echo 'win_obs=not claimed by this job'
+          } > /tmp/w7-04-auto-evidence.txt
+      - name: Upload AUTO prerequisite evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: W7-04-AUTO-PREREQ-${{ github.sha }}
+          path: |
+            /tmp/w7-04-auto.tap
+            /tmp/w7-04-auto-evidence.txt
+          if-no-files-found: error
+
+  windows-storage-package:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - run: npm ci --no-audit --no-fund
+      - name: Verify Tauri persistence and transport library tests
+        shell: pwsh
+        run: cargo test --manifest-path src-tauri/Cargo.toml --lib
+      - name: Build packaged Windows application
+        shell: pwsh
+        run: npm run tauri:build
+      - name: Record exact-SHA Windows package prerequisite evidence
+        shell: pwsh
+        run: |
+          $lines = @(
+            'W7-04 Windows storage/package prerequisite verification',
+            "checkout_sha=$env:GITHUB_SHA",
+            "head_sha=${{ github.event.pull_request.head.sha }}",
+            "base_sha=${{ github.event.pull_request.base.sha }}",
+            'scenario_scope=storage/package prerequisites plus MP-H12 AUTO production transport queue coverage',
+            'mp_h12_auto=session_transport::tests::slow_peer_queue_does_not_block_fast_peer_broadcast + session_transport::tests::peer_outbound_queue_preserves_order_when_drained',
+            'win_obs=not claimed; packaged Host crash/write-failure/rejoin/slow-peer observation still required'
+          )
+          $lines | Set-Content -Encoding utf8 "$env:RUNNER_TEMP\w7-04-windows-evidence.txt"
+          Get-ChildItem -Path 'src-tauri/target/release/bundle' -Recurse -File -ErrorAction SilentlyContinue |
+            ForEach-Object {
+              $hash = Get-FileHash -Algorithm SHA256 $_.FullName
+              "$($hash.Hash.ToLower())  $($_.FullName)"
+            } | Add-Content -Encoding utf8 "$env:RUNNER_TEMP\w7-04-windows-evidence.txt"
+      - name: Upload Windows prerequisite evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: W7-04-WINDOWS-PREREQ-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/w7-04-windows-evidence.txt
+            src-tauri/target/release/bundle/**
+          if-no-files-found: error
+          retention-days: 14

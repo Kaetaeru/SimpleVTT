@@ -1,9 +1,10 @@
 use serde::Serialize;
 use std::{
     io::{BufRead, BufReader, Write},
-    net::{TcpListener, TcpStream},
+    net::{Shutdown, TcpListener, TcpStream},
     sync::{
         atomic::{AtomicBool, Ordering},
+        mpsc::{sync_channel, Receiver, SyncSender, TrySendError},
         Arc, Mutex,
     },
     thread,
@@ -16,6 +17,9 @@ const STATE_EVENT: &str = "session-transport-state";
 const PEER_LIFECYCLE_EVENT: &str = "session-transport-peer-lifecycle";
 // A 4 MiB handout expands to about 5.4 MiB as base64 inside its JSON envelope.
 const MAX_FRAME_BYTES: usize = 8 * 1024 * 1024;
+// Keep each peer isolated behind a small FIFO. A slow peer can fill only its own queue;
+// Host/P1 fan-out never waits for that peer's socket write to complete.
+const OUTBOUND_QUEUE_CAPACITY: usize = 8;
 
 #[derive(Clone, Copy, Debug, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
@@ -49,7 +53,7 @@ struct TransportPeerLifecycleDto {
 
 struct PeerWriter {
     peer: String,
-    stream: TcpStream,
+    sender: SyncSender<Arc<[u8]>>,
 }
 
 struct RunningTransport {
@@ -99,6 +103,57 @@ fn peer_count(writers: &Arc<Mutex<Vec<PeerWriter>>>) -> usize {
 fn set_connection_state(connection_state: &Arc<Mutex<String>>, state: &str) {
     if let Ok(mut current) = connection_state.lock() {
         *current = state.to_owned();
+    }
+}
+
+fn spawn_writer(mut stream: TcpStream, receiver: Receiver<Arc<[u8]>>) {
+    thread::spawn(move || {
+        // The application send path never waits on this socket. The timeout only bounds how
+        // long this peer's dedicated writer may remain stuck before the peer is disconnected.
+        let _ = stream.set_write_timeout(Some(Duration::from_secs(5)));
+        while let Ok(frame) = receiver.recv() {
+            if stream.write_all(frame.as_ref()).is_err() {
+                break;
+            }
+        }
+        let _ = stream.shutdown(Shutdown::Both);
+    });
+}
+
+fn enqueue_broadcast(writers: &mut Vec<PeerWriter>, frame: Arc<[u8]>) -> usize {
+    let mut sent = 0usize;
+    writers.retain(|entry| match entry.sender.try_send(frame.clone()) {
+        Ok(()) => {
+            sent += 1;
+            true
+        }
+        Err(TrySendError::Full(_)) | Err(TrySendError::Disconnected(_)) => false,
+    });
+    sent
+}
+
+fn enqueue_directed(
+    writers: &mut Vec<PeerWriter>,
+    peer: &str,
+    frame: Arc<[u8]>,
+) -> Result<usize, String> {
+    let index = writers
+        .iter()
+        .position(|entry| entry.peer == peer)
+        .ok_or_else(|| format!("session transport peer is not connected: {peer}"))?;
+    let result = writers[index].sender.try_send(frame);
+    match result {
+        Ok(()) => Ok(1),
+        Err(TrySendError::Full(_)) => {
+            writers.remove(index);
+            Err(format!(
+                "session transport outbound queue is full for slow peer: {peer}"
+            ))
+        }
+        Err(TrySendError::Disconnected(_)) => {
+            writers.remove(index);
+            Err(format!("session transport peer writer disconnected: {peer}"))
+        }
     }
 }
 
@@ -249,12 +304,17 @@ impl SessionTransportState {
                     Ok((stream, peer_addr)) => {
                         let peer = peer_addr.to_string();
                         let _ = stream.set_nodelay(true);
-                        let writer = match stream.try_clone() {
+                        let writer_stream = match stream.try_clone() {
                             Ok(writer) => writer,
                             Err(_) => continue,
                         };
+                        let (sender, receiver) = sync_channel(OUTBOUND_QUEUE_CAPACITY);
+                        spawn_writer(writer_stream, receiver);
                         if let Ok(mut peers) = accept_writers.lock() {
-                            peers.push(PeerWriter { peer: peer.clone(), stream: writer });
+                            peers.push(PeerWriter {
+                                peer: peer.clone(),
+                                sender,
+                            });
                         }
                         emit_state(
                             &accept_app,
@@ -307,12 +367,17 @@ impl SessionTransportState {
         let stream = TcpStream::connect(address)
             .map_err(|error| format!("failed to connect session client to {address}: {error}"))?;
         let _ = stream.set_nodelay(true);
-        let writer = stream
+        let writer_stream = stream
             .try_clone()
             .map_err(|error| format!("failed to clone session client stream: {error}"))?;
+        let (sender, receiver) = sync_channel(OUTBOUND_QUEUE_CAPACITY);
+        spawn_writer(writer_stream, receiver);
         let connection_state = Arc::new(Mutex::new("connected".to_owned()));
         let stop = Arc::new(AtomicBool::new(false));
-        let writers = Arc::new(Mutex::new(vec![PeerWriter { peer: address.to_owned(), stream: writer }]));
+        let writers = Arc::new(Mutex::new(vec![PeerWriter {
+            peer: address.to_owned(),
+            sender,
+        }]));
         spawn_reader(
             app.clone(),
             stream,
@@ -343,41 +408,25 @@ impl SessionTransportState {
     }
 
     pub fn send(&self, message: &str) -> Result<usize, String> {
-        let frame = frame_message(message)?;
+        let frame: Arc<[u8]> = Arc::from(frame_message(message)?);
         let guard = self.inner.lock().map_err(|_| "session transport lock poisoned".to_string())?;
         let runtime = guard.as_ref().ok_or_else(|| "session transport is not connected".to_string())?;
         let mut writers = runtime
             .writers
             .lock()
             .map_err(|_| "session transport writers lock poisoned".to_string())?;
-        let mut sent = 0usize;
-        writers.retain_mut(|entry| match entry.stream.write_all(&frame) {
-            Ok(()) => {
-                sent += 1;
-                true
-            }
-            Err(_) => false,
-        });
-        Ok(sent)
+        Ok(enqueue_broadcast(&mut writers, frame))
     }
 
     pub fn send_to(&self, peer: &str, message: &str) -> Result<usize, String> {
-        let frame = frame_message(message)?;
+        let frame: Arc<[u8]> = Arc::from(frame_message(message)?);
         let guard = self.inner.lock().map_err(|_| "session transport lock poisoned".to_string())?;
         let runtime = guard.as_ref().ok_or_else(|| "session transport is not connected".to_string())?;
         let mut writers = runtime
             .writers
             .lock()
             .map_err(|_| "session transport writers lock poisoned".to_string())?;
-        let entry = writers
-            .iter_mut()
-            .find(|entry| entry.peer == peer)
-            .ok_or_else(|| format!("session transport peer is not connected: {peer}"))?;
-        entry
-            .stream
-            .write_all(&frame)
-            .map_err(|error| format!("failed to send session frame to {peer}: {error}"))?;
-        Ok(1)
+        enqueue_directed(&mut writers, peer, frame)
     }
 }
 
@@ -407,5 +456,56 @@ mod tests {
                 state: "disconnected".into(),
             }
         );
+    }
+
+    #[test]
+    fn slow_peer_queue_does_not_block_fast_peer_broadcast() {
+        let (slow_sender, slow_receiver) = sync_channel(1);
+        let queued: Arc<[u8]> = Arc::from(frame_message("{\"sequence\":1}").unwrap());
+        slow_sender.try_send(queued.clone()).unwrap();
+
+        let (fast_sender, fast_receiver) = sync_channel(1);
+        let mut writers = vec![
+            PeerWriter {
+                peer: "slow-p2".into(),
+                sender: slow_sender,
+            },
+            PeerWriter {
+                peer: "fast-p1".into(),
+                sender: fast_sender,
+            },
+        ];
+        let frame: Arc<[u8]> = Arc::from(frame_message("{\"sequence\":2}").unwrap());
+
+        assert_eq!(enqueue_broadcast(&mut writers, frame.clone()), 1);
+        assert_eq!(writers.len(), 1);
+        assert_eq!(writers[0].peer, "fast-p1");
+        assert_eq!(fast_receiver.try_recv().unwrap().as_ref(), frame.as_ref());
+        assert_eq!(slow_receiver.try_recv().unwrap().as_ref(), queued.as_ref());
+    }
+
+    #[test]
+    fn peer_outbound_queue_preserves_order_when_drained() {
+        let (sender, receiver) = sync_channel(OUTBOUND_QUEUE_CAPACITY);
+        let mut writers = vec![PeerWriter {
+            peer: "p2".into(),
+            sender,
+        }];
+        let frames: Vec<Arc<[u8]>> = (1..=3)
+            .map(|sequence| {
+                Arc::from(frame_message(&format!("{{\"sequence\":{sequence}}}")).unwrap())
+            })
+            .collect();
+
+        for frame in &frames {
+            assert_eq!(
+                enqueue_directed(&mut writers, "p2", frame.clone()).unwrap(),
+                1
+            );
+        }
+
+        for expected in frames {
+            assert_eq!(receiver.try_recv().unwrap().as_ref(), expected.as_ref());
+        }
     }
 }
