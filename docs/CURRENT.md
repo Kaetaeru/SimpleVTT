@@ -50,10 +50,10 @@ W2: 8/8 PASS — COMPLETE
 W3: 8/8 PASS — COMPLETE
 W4: 8/8 PASS — COMPLETE
 W5: 10/10 PASS — COMPLETE
-W6: 1/8 PASS
-Official ledger score: 66.3/100.0
-PASS: 49/72
-Remaining gates: 23/72
+W6: 2/8 PASS
+Official ledger score: 67.5/100.0
+PASS: 50/72
+Remaining gates: 22/72
 FAIL: 0
 BLOCKED: 0
 ```
@@ -69,21 +69,22 @@ W2 — COMPLETE (8/8 PASS)
 W3 — COMPLETE (8/8 PASS)
 W4 — COMPLETE (8/8 PASS)
 W5 — COMPLETE (10/10 PASS)
-W6 — 1/8 PASS
-Next exact Gate: W6-02
+W6 — 2/8 PASS
+Next exact Gate: W6-03
 ```
 
-`W6-01` is closed by canonical exact-SHA automated evidence for DM item/GP grant-revoke and Character-owner projection refresh. Verification SHA `30606e6b056027a3e10ddbae70f38f428b2714b6` passed `W6-01 AUTO Verification` run `33701452879`, job `100481432959`, with 13/13 focused tests. Artifact `9873659413` (`W6-01-AUTO-30606e6b056027a3e10ddbae70f38f428b2714b6`) has digest `sha256:bb6031112dd14fedf00aa90485e7583332cdaefd1befe4f223d710e4939e2204`. The Gate reused the existing DM inventory/currency, DM Library materialization, connected owner wire, inventory projection refresh, and custom-item projection paths; no product/runtime or test implementation file changed. The official ledger now records W6-01 PASS and the first non-PASS Gate is `W6-02`.
+`W6-02` is closed after a canonical Evidence Card reproduced the production reachability gap: the existing Campaign advancement owner already handled exact XP, multi-Character XP, immediate level-up credit, credit consumption, and durable roster level state, but the real Host/live Session UI could not invoke it. PR #294 added only the smallest Host/live advancement control and reused `grantCampaignAdvancement`; no second progression store, engine, transport, or Character write path was introduced. Verification SHA `a72387016fec255674b8132b1f8b80b08d99da25` passed `W6-02 AUTO Verification` run `33703181522`, job `100486658419`, with 13/13 focused tests and production build PASS. Artifact `9874278799` (`W6-02-AUTO-9a07c28309ffe781d4ed1e4cea33f7e8f0706577`) has digest `sha256:abc109aca9d519e96aec8e03d442a2e071151c659e658a27b99207607f93fc0c`; its name reflects the pull-request synthetic merge SHA, while run `head_sha` `a72387016fec255674b8132b1f8b80b08d99da25` is the authoritative product verification identity. PR #294 integrated the tested repair into `work/v1-composite` as merge `b11f5267121c2c4dfb11176ef6ff12841f3c877b`. The official ledger records W6-02 PASS and the first non-PASS Gate is `W6-03`.
 
-## W6-02 exact scope
+## W6-03 exact scope
 
-`W6-02` is `REUSE_LOCKED`. It freezes the existing XP/progression ownership behavior for `MP-E04~E05`:
+`W6-03` is `REUSE_LOCKED`. It freezes the existing Party Stash request-policy lifecycle for `MP-E06~E11`:
 
-- DM grants exact XP to one or multiple Characters; the Character-owned value is durable and visible and the grant requires no reason.
-- DM grants immediate level-up credit; an eligible owner can complete level-up in Session through the canonical Character progression/persistence path.
-- XP/credit changes must flow through existing owner persistence and projection paths rather than a Session-only or parallel Character store.
+- shared mode permits the canonical direct withdrawal path;
+- approval mode routes non-DM withdrawals through an explicit request and Host approve/reject lifecycle;
+- DM-managed mode rejects unauthorized non-DM withdrawal attempts;
+- accepted/rejected request state must stay Host-authoritative and use the existing connected/persistence owners rather than a Session-only parallel stash.
 
-Before changing product code, reproduce a current-HEAD failure or document an explicit production reachability/contract gap in `roadmap/EVIDENCE_CARD.md`. Reuse existing Character persistence, progression/XP, DM grant, connected owner projection, and level-up owners.
+Before changing product code, reproduce a current-HEAD failure or document an explicit production reachability/contract gap in `roadmap/EVIDENCE_CARD.md`. Reuse the existing Party Stash policy, request, connected authority, journal/persistence, and projection owners already established by W4-05 and later multiplayer work.
 
 ## Branch roles
 
@@ -99,10 +100,10 @@ Before changing product code, reproduce a current-HEAD failure or document an ex
 
 ### Next execution sequence
 
-1. Execute `W6-02`, the first non-`PASS` Gate in the ledger.
-2. Identify the existing automated owners for exact XP grant, multi-Character XP grant, immediate level-up credit, canonical owner level-up, and durable projection/persistence.
+1. Execute `W6-03`, the first non-`PASS` Gate in the ledger.
+2. Identify the smallest existing automated owners for shared withdrawal, approval request/approve/reject, DM-managed rejection, connected Host authority, and request durability/reconnect behavior mapped to `MP-E06~E11`.
 3. Run that focused set on one exact SHA and record deterministic pass/fail count plus artifact/digest before changing the official ledger.
-4. If it fails, fill `roadmap/EVIDENCE_CARD.md` and repair only the smallest reproduced owner-path defect.
+4. If it fails or a production reachability/contract gap is reproduced, fill `roadmap/EVIDENCE_CARD.md` and repair only the smallest existing owner-path defect.
 5. For Common Play, follow [`design/ui-ux/COMMON-PLAY-FUNCTION-FIRST.md`](design/ui-ux/COMMON-PLAY-FUNCTION-FIRST.md): functional reachability first, broad UI redesign later.
 
 ## Non-negotiable execution rules
