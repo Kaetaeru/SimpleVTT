@@ -1,21 +1,21 @@
 # V1 Evidence Card
 
-Status: **W5-10 CLOSED — MP-01 THROUGH MP-04 AUTO SCENARIO MAP PASS**
+Status: **W6-01 CLOSED — DM INVENTORY / GP / OWNER PROJECTION AUTO PASS**
 
 Use one card per Release Gate or coherent repair. The purpose is to stop duplicate implementation and force current-HEAD evidence before modifying an existing system.
 
 ```text
-Gate ID: W5-10
+Gate ID: W6-01
 Classification: REUSE_LOCKED
-Acceptance criterion: consolidate the existing production-adapter three-peer action, presentation, turn, reconnect, reaction/Ready, and Undo automated evidence for MP-01 through MP-04 into one exact-HEAD scenario map. This AUTO Gate does not replace later real Windows H+P1+P2 rendered acceptance.
-Production entrypoint: connectedSessionRuntimeAdapter + connectedActionRoutingAdapter + connectedResolutionPresentation + connectedTurnRoutingAdapter + connectedSessionProtocol + resolutionEventUndo and their existing production composition.
-Existing automated tests: connectedResolutionPresentation.test.ts; productionClientReconnect.test.ts; granular connectedThreePeerRemote* action acceptance tests; connectedThreePeerActionMatrix.test.ts; connectedThreePeerPresentation.test.ts; phase09ManualMovementReactionAdapter.test.ts; c9FamilyOReadyConcentrationProduction.test.ts; connectedTurnProjection.test.ts; connectedUndoCompensation.test.ts.
+Acceptance criterion: freeze the existing DM item/GP grant-revoke and Character-owner projection refresh paths for MP-E01/E02/E03 and owner inventory/GP parity. Catalog/custom item grants and revokes must converge on the durable owner state; equipped-item revoke policy must be explicit; GP mutation must be exact with overdraft rejection; accepted connected owner mutations must carry fresh Character revision identity and refresh through the existing projection path.
+Production entrypoint: sessionInventoryRuntimeAdapter + connectedCampaignSystemsRuntimeAdapter + characterSessionProjection/reconstruction + connectedCharacterProjectionHandshake + characterSessionProjectionMount + campaignDmLibraryMaterializationAdapter.
+Existing automated tests: sessionInventoryRuntimeAdapter.test.ts; campaignDmLibraryGrantDurability.test.ts; connectedCampaignOwnerInventoryWire.test.ts; connectedCharacterInventoryProjectionRefresh.test.ts; connectedCustomItemProjection.test.ts.
 Exact observed failure: None.
-Smallest required change: None to product/runtime/test implementation. Add one focused workflow to execute the existing owner tests as a single exact-SHA W5-10 acceptance set.
-Canonical closure evidence: SHA 786566303fbb6c8bac1dff6b392f65a866a1947c; W5-10 AUTO run 33700245046 / job 100477769745 = 45/45 PASS, 0 FAIL; artifact 9873251248 (W5-10-AUTO-786566303fbb6c8bac1dff6b392f65a866a1947c), sha256:189a99528d2cf6556a7c5430f3073145c91c537e1b3c354fc44e089234d3b927.
-Exact observed result: PASS. MP-01 shared presentation envelope, MP-02 remote presentation/reconnect exactly-once behavior, MP-03 H+P1+P2 action matrix, and MP-04 Initiative/reaction/Ready/correction automated owners pass together on the canonical exact SHA.
-Remaining release limitation: MP-01 through MP-04 issue-level WIN criteria and the scenario catalog's rendered Windows acceptance remain later V1 work. Do not close those issues solely from W5-10 AUTO evidence.
-Next action: record W5-10 PASS in the official ledger, mark W5 10/10 complete, and route to W6-01.
+Smallest required change: None to product/runtime/test implementation. PR #291 added only one focused workflow to execute the existing owner tests together on one exact SHA.
+Canonical closure evidence: SHA 30606e6b056027a3e10ddbae70f38f428b2714b6; W6-01 AUTO run 33701452879 / job 100481432959 = 13/13 PASS, 0 FAIL; artifact 9873659413 (W6-01-AUTO-30606e6b056027a3e10ddbae70f38f428b2714b6), sha256:bb6031112dd14fedf00aa90485e7583332cdaefd1befe4f223d710e4939e2204.
+Exact observed result: PASS. Existing DM catalog/custom item grant/revoke, explicit forceUnequip revoke policy, GP grant/Undo/overdraft, durable DM Library grant, connected owner revision identity, inventory refresh, and custom-item projection safety all pass together on the canonical exact SHA.
+Remaining release limitation: W6-01 AUTO evidence does not close later Windows/rendered multiplayer acceptance or the whole MP-05/#116 issue. Those remain governed by their own repository-native criteria.
+Next action: reconcile W6-01 PASS into V1_EVIDENCE_LEDGER.json, advance the official score from 65.0 to 66.5 with 49 PASS / 23 PENDING, then route to W6-02.
 ```
 
 ## Change gate
