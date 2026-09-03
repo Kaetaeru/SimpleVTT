@@ -47,10 +47,10 @@ W1: COMPLETE — 8/8 PASS
 W2: COMPLETE — 8/8 PASS
 W3: COMPLETE — 8/8 PASS
 W4: COMPLETE — 8/8 PASS
-W5: 9/10 PASS
-Official ledger score: 63.5/100.0
-PASS: 47/72
-PENDING: 25/72
+W5: COMPLETE — 10/10 PASS
+Official ledger score: 65.0/100.0
+PASS: 48/72
+PENDING: 24/72
 FAIL: 0
 BLOCKED: 0
 ```
@@ -58,29 +58,28 @@ BLOCKED: 0
 ## Current stage
 
 ```text
-Next Gate: W5-10
+Next Gate: W6-01
 ```
 
-`W5-09` is PASS by canonical exact-SHA MP-J01~J08 automated UI-facing parity evidence. Verification SHA `4c93082d0af77ae79da82db711b7934c8e2f8544` passed `W5-09 AUTO Verification` run `33699407674`, job `100475234429`, with 18/18 focused tests. Artifact `9872956996` (`W5-09-AUTO-4c93082d0af77ae79da82db711b7934c8e2f8544`) has digest `sha256:5f7f708086b1c7b3e941d6d37bcac01cbded9f0fa6edea565dcbad171164463f`. The J07 current-HEAD failure was a stale test fixture and the repair was test-only; no product/runtime `src/` path changed. The official ledger records W5-09 PASS; the next exact Gate is `W5-10`.
+`W5-10` is PASS by canonical exact-SHA automated consolidation for MP-01 through MP-04. Verification SHA `786566303fbb6c8bac1dff6b392f65a866a1947c` passed `W5-10 AUTO Verification` run `33700245046`, job `100477769745`, with 45/45 focused tests. Artifact `9873251248` (`W5-10-AUTO-786566303fbb6c8bac1dff6b392f65a866a1947c`) has digest `sha256:189a99528d2cf6556a7c5430f3073145c91c537e1b3c354fc44e089234d3b927`. No `src/` or test implementation file changed for this Gate; the existing action, presentation, reconnect, turn, Ready/reaction/concentration, and Undo owners were reused. The official ledger records W5-10 PASS and W5 is complete at 10/10.
 
-## W5-10 routing
+## W6-01 routing
 
-`W5-10` is `REUSE_LOCKED`. The master roadmap requires the existing production-adapter evidence for `MP-01` through `MP-04` to be consolidated into one exact-HEAD automated scenario map:
+`W6-01` is `REUSE_LOCKED`. The master roadmap requires the existing DM inventory/currency and owner-projection paths to prove:
 
-- `MP-01` / issue `#111`: Shared Resolution Presentation Envelope
-- `MP-02` / issue `#114`: Client remote presentation queue / dice replay
-- `MP-03` / issue `#112`: Three-peer authoritative action matrix
-- `MP-04` / issue `#113`: Initiative / reaction / Ready / correction
+- DM item grant and revoke with durable owner state and permitted Session projection refresh (`MP-E01`, `MP-E02`).
+- DM GP grant and revoke with overdraft rejection and exact final balance (`MP-E03`).
+- UI-facing owner inventory/GP parity after the authoritative change (`MP-J05`, `MP-J06`).
 
-The Gate reuses the existing connected action, presentation, turn/reconnect, and Undo owners already exercised across W5-04 through W5-09. It does not authorize a second multiplayer implementation path. Final rendered Windows H+P1+P2 parity remains required later and cannot be replaced by structural/protocol-only evidence.
+Reuse the existing Character persistence, connected owner projection, DM grant/revoke, inventory, and currency owners. Do not add a second Character write path or a parallel multiplayer inventory system. A product-code change is authorized only after a reproducible current-HEAD failure or explicit reachability/contract gap is recorded in `EVIDENCE_CARD.md`.
 
 ### Next execution sequence
 
-1. Start `W5-10`, the first non-`PASS` Gate in the ledger.
-2. Map the existing tests and production adapters already cited by W5-04~W5-09 and issues #111/#114/#112/#113 into one W5-10 scenario/owner table.
-3. Run that focused set on one exact SHA and record exact command, deterministic test count, artifact/digest, and mapping before changing the official ledger.
+1. Start `W6-01`, the first non-`PASS` Gate in the ledger.
+2. Identify the smallest existing automated owners for DM item grant/revoke, GP grant/revoke/overdraft, and owner projection refresh/parity.
+3. Run the focused set on one exact SHA and record exact command, deterministic test count, artifact/digest, and scenario mapping before changing the official ledger.
 4. If a current-HEAD failure is reproduced, fill `EVIDENCE_CARD.md` and repair only the smallest existing owner path.
-5. Do not reopen completed W1-W5-09 evidence without a new current-HEAD regression.
+5. Do not reopen completed W1-W5 evidence without a new current-HEAD regression.
 
 ## Non-negotiable routing rules
 
