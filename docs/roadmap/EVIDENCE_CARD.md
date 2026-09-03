@@ -1,21 +1,21 @@
 # V1 Evidence Card
 
-Status: **W6-04 CLOSED — MP-E12 AND MP-E13 PERSISTENCE / RECOVERY AUTO PASS**
+Status: **W6-05 CLOSED — MP-E14 CAPABILITY-DRIVEN ITEM-TO-RATIONS AUTO PASS**
 
 Use one card per Release Gate or coherent repair. The purpose is to stop duplicate implementation and force current-HEAD evidence before modifying an existing system.
 
 ```text
-Gate ID: W6-04
+Gate ID: W6-05
 Classification: REUSE_LOCKED
-Acceptance criterion: Consolidate the existing inventory-core undetected persistence-failure exchange and Host-fallback recovery proof for exactly MP-E12 and MP-E13 into one exact-HEAD automated evidence map.
-Production entrypoint: Existing connected inventory durable-write/journal/compensation path plus Host-owned Party Stash recovery coordinator and Tauri persistence seam; no second inventory model, transaction owner, or fallback store is authorized.
-Existing automated tests: tests/ui/connectedDurableFailure.test.ts; tests/ui/connectedOwnerInventoryRestart.test.ts; tests/ui/connectedPartyStashHostRecovery.test.ts; tests/ui/connectedPartyStashHostRecoveryStructure.test.ts; tests/ui/connectedPartyStashApprovalOwnerTransfer.test.ts.
-Exact observed failure: None on canonical exact SHA 39bcd0356ca7b9a242684538253204ae17916eb1. Canonical push verification passed the focused persistence/recovery suite and production build.
+Acceptance criterion: Freeze the existing capability-driven item-to-rations path for MP-E14 so eligibility comes from trusted capability data and source-item debit plus Campaign ration credit commit atomically through the existing Campaign transaction owner.
+Production entrypoint: Existing Campaign Ration Conversion panel/runtime adapter, Party Stash capability catalog, Campaign ration ledger, and mutateCampaign transaction path; no parallel conversion table, second inventory model, or replacement ration store is authorized.
+Existing automated tests: tests/ui/campaignRationConversion.test.ts; tests/ui/campaignRationConversionRuntime.test.ts; tests/ui/campaignRationConversionLegacyStash.test.ts; tests/ui/campaignRationConversionProductionStructure.test.ts.
+Exact observed failure: None on integration-derived exact verification SHA 945188901c106b6114e3a7f89cb1671aab6ace27 (base 52b6fc06b114768903887de3669f6499172afb72). Canonical push verification passed the focused ration-conversion suite and production build.
 Smallest authorized change: No product/runtime or test-implementation change. Add the focused workflow and record exact-SHA evidence only.
-Verification SHA: 39bcd0356ca7b9a242684538253204ae17916eb1
-Verification: W6-04 AUTO Verification run 33709116187 / job 100504620599 = success; 17/17 focused tests PASS; production build PASS.
-Artifact: 9876316867, W6-04-AUTO-39bcd0356ca7b9a242684538253204ae17916eb1, sha256:f200803affd1a791b49ea02d4aad3f5d6395d31636a8a18d6ab3a63c9f5512bd.
-Closure: W6-04 PASS. Reconcile the official ledger to 70.0/100.0 (52 PASS / 20 PENDING), then open W6-05 under the same evidence-first rule. Real H + P1 + P2 Windows rendered acceptance remains later.
+Verification SHA: 945188901c106b6114e3a7f89cb1671aab6ace27
+Verification: W6-05 AUTO Verification run 33711448138 / job 100511627712 = success; 9/9 focused tests PASS; production build PASS.
+Artifact: 5808814072, W6-05-AUTO-945188901c106b6114e3a7f89cb1671aab6ace27, sha256:26ce88561019490d1c8734cb838ebf6dd789c180e9e4af57974a2559439351dc.
+Closure: W6-05 PASS. Reconcile the official ledger to 71.3/100.0 (53 PASS / 19 PENDING), then open W6-06 under the same evidence-first rule. Real H + P1 + P2 Windows rendered acceptance remains later.
 ```
 
 ## Change gate
