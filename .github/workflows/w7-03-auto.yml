@@ -1,0 +1,63 @@
+name: W7-03 AUTO Verification
+
+on:
+  pull_request:
+    branches:
+      - work/v1-composite
+    paths:
+      - '.github/workflows/w7-03-auto.yml'
+      - 'src/**'
+      - 'tests/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'content/**'
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run generate:content
+      - name: Focused W7-03 tests
+        shell: bash
+        run: |
+          set -o pipefail
+          npx tsx --test \
+            tests/ui/productionSessionEnd.test.ts \
+            tests/ui/appProviderStopSessionRefresh.test.ts \
+            tests/ui/productionSessionLifecycleAdapter.test.ts \
+            tests/ui/productionParticipantLifecycle.test.ts \
+            tests/ui/connectedTurnProjection.test.ts \
+            tests/ui/connectedResolutionPresentation.test.ts \
+            tests/ui/connectedPartyStashApprovalOwnerTransfer.test.ts \
+            tests/ui/c9FamilyOReadyConcentrationProduction.test.ts \
+            | tee /tmp/w7-03.tap
+      - name: Production build
+        run: npm run build
+      - name: Record exact-SHA evidence
+        shell: bash
+        run: |
+          {
+            echo "W7-03 AUTO Verification"
+            echo "checkout_sha=${GITHUB_SHA}"
+            echo "head_sha=${{ github.event.pull_request.head.sha }}"
+            echo "base_sha=${{ github.event.pull_request.base.sha }}"
+            echo "scenario_mapping=MP-A08,MP-A09"
+            echo "command=npx tsx --test tests/ui/productionSessionEnd.test.ts tests/ui/appProviderStopSessionRefresh.test.ts tests/ui/productionSessionLifecycleAdapter.test.ts tests/ui/productionParticipantLifecycle.test.ts tests/ui/connectedTurnProjection.test.ts tests/ui/connectedResolutionPresentation.test.ts tests/ui/connectedPartyStashApprovalOwnerTransfer.test.ts tests/ui/c9FamilyOReadyConcentrationProduction.test.ts"
+          } > /tmp/w7-03-evidence.txt
+      - name: Upload W7-03 evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: W7-03-AUTO-${{ github.sha }}
+          path: |
+            /tmp/w7-03.tap
+            /tmp/w7-03-evidence.txt
+          if-no-files-found: error
