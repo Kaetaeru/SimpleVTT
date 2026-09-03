@@ -1,4 +1,4 @@
-name: W7-02 Ledger Materializer
+name: W7-02 AUTO Verification
 
 on:
   pull_request:
@@ -6,51 +6,60 @@ on:
       - work/v1-composite
     paths:
       - '.github/workflows/w7-02-auto.yml'
+      - 'src/**'
+      - 'tests/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'content/**'
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  materialize:
+  verify:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Materialize W7-02 ledger blob without moving any ref
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run generate:content
+      - name: Focused W7-02 tests
         shell: bash
         run: |
-          node <<'NODE'
-          const fs = require('fs');
-          const path = 'docs/roadmap/V1_EVIDENCE_LEDGER.json';
-          let text = fs.readFileSync(path, 'utf8');
-          const replaceOnce = (from, to, label) => {
-            const first = text.indexOf(from);
-            if (first < 0 || text.indexOf(from, first + 1) >= 0) throw new Error(`expected exactly one ${label}`);
-            text = text.slice(0, first) + to + text.slice(first + from.length);
-          };
-          replaceOnce('"officialScore":76.3', '"officialScore":77.5', 'official score');
-          replaceOnce('"pass":57,"pending":15', '"pass":58,"pending":14', 'pass/pending counts');
-          const oldGate = '{"id":"W7-02","workstream":"W7","classification":"REUSE_LOCKED","status":"PENDING","lastVerifiedSha":null,"evidence":{"commands":[],"testCount":null,"windowsArtifacts":[],"sources":[]},"remaingGap":null}';
-          const newGate = '{"id":"W7-02","workstream":"W7","classification":"REUSE_LOCKED","status":"PASS","lastVerifiedSha":"507459f208457e540beb19295dabb43e81f63b93","evidence":{"commands":["GitHub Actions W7-02 AUTO Verification","npx tsx --test tests/ui/productionClientReconnect.test.ts tests/ui/productionParticipantLifecycle.test.ts tests/ui/connectedResolutionPresentation.test.ts tests/ui/connectedTurnProjection.test.ts tests/ui/connectedDurableFailure.test.ts tests/ui/connectedOwnerInventoryRestart.test.ts tests/ui/connectedLongRestHostRestartRecovery.test.ts tests/ui/c9FamilyOReadyConcentrationProduction.test.ts tests/ui/phase09ManualMovementReactionAdapter.test.ts tests/ui/phase09ConcentrationSaveWorkflow.test.ts","npm run build"],"testCount":34,"windowsArtifacts":[],"sources":["docs/roadmap/evidence/W7-02.md","PR #306","GitHub Actions run 33720461403 / job 100538359322 at 507459f208457e540beb19295dabb43e81f63b93: W7-02 AUTO Verification = success; 34/34 focused tests PASS; production build PASS","Actions checkout f1ca8d203177bb43077259dfa957fb4b5c3109ce and verification head 507459f208457e540beb19295dabb43e81f63b93 have zero changed files between them","W7-02-AUTO-f1ca8d203177bb43077259dfa957fb4b5c3109ce (artifact 9880065564, sha256:a6e7e64721600ce77c746ae1d6a7e6a3724222a4926ff633caaeca180342bc13)","productionClientReconnect + productionParticipantLifecycle + connectedResolutionPresentation + connectedTurnProjection + durable/restart owners + Ready/Reaction/Concentration lifecycle: MP-H04 through MP-H08 focused recovery mapping","Legacy Execution Boundary run 33720461389 and Contract validation run 33720461383 succeeded on the verification head","No current-HEAD product/runtime or existing test-implementation defect reproduced; only the scoped workflow and evidence/current records were added"]},"remaingGap":null}';
-          replaceOnce(oldGate, newGate, 'W7-02 gate');
-          const parsed = JSON.parse(text);
-          if (parsed.officialScore !== 77.5 || parsed.counts.pass !== 58 || parsed.counts.pending !== 14 || parsed.gates.length !== 72) throw new Error('patched ledger summary mismatch');
-          const gate = parsed.gates.find(g => g.id === 'W7-02');
-          if (!gate || gate.status !== 'PASS' || gate.lastVerifiedSha !== '507459f208457e540beb19295dabb43e81f63b93' || gate.evidence.testCount !== 34) throw new Error('patched W7-02 mismatch');
-          const body = JSON.stringify({content: Buffer.from(text, 'utf8').toString('base64'), encoding: 'base64'});
-          const req = require('https').request({hostname:'api.github.com', path:`/repos/${process.env.GITHUB_REPOSITORY}/git/blobs`, method:'POST', headers:{'Accept':'application/vnd.github+json','Authorization':`Bearer ${process.env.GH_TOKEN}`,'X-GitHub-Api-Version':'2022-11-28','User-Agent':'SimpleVTT-W7-02-ledger-materializer','Content-Type':'application/json','Content-Length':Buffer.byteLength(body)}}, res => {
-            let data=''; res.on('data', c => data += c); res.on('end', () => {
-              if (res.statusCode < 200 || res.statusCode >= 300) throw new Error(`GitHub blob create failed ${res.statusCode}: ${data}`);
-              const out = JSON.parse(data);
-              fs.writeFileSync('/tmp/w7-02-ledger-blob.txt', `ledger_blob_sha=${out.sha}\nledger_bytes=${Buffer.byteLength(text,'utf8')}\n`);
-              console.log(`materialized ledger blob ${out.sha}; no branch ref was moved`);
-            });
-          });
-          req.on('error', e => { throw e; }); req.write(body); req.end();
-          NODE
-      - uses: actions/upload-artifact@v4
+          set -o pipefail
+          npx tsx --test \
+            tests/ui/productionClientReconnect.test.ts \
+            tests/ui/productionParticipantLifecycle.test.ts \
+            tests/ui/connectedResolutionPresentation.test.ts \
+            tests/ui/connectedTurnProjection.test.ts \
+            tests/ui/connectedDurableFailure.test.ts \
+            tests/ui/connectedOwnerInventoryRestart.test.ts \
+            tests/ui/connectedLongRestHostRestartRecovery.test.ts \
+            tests/ui/c9FamilyOReadyConcentrationProduction.test.ts \
+            tests/ui/phase09ManualMovementReactionAdapter.test.ts \
+            tests/ui/phase09ConcentrationSaveWorkflow.test.ts \
+            | tee /tmp/w7-02.tap
+      - name: Production build
+        run: npm run build
+      - name: Record exact-SHA evidence
+        shell: bash
+        run: |
+          {
+            echo "W7-02 AUTO Verification"
+            echo "checkout_sha=${GITHUB_SHA}"
+            echo "head_sha=${{ github.event.pull_request.head.sha }}"
+            echo "base_sha=${{ github.event.pull_request.base.sha }}"
+            echo "scenario_mapping=MP-H04..MP-H08"
+            echo "command=npx tsx --test tests/ui/productionClientReconnect.test.ts tests/ui/productionParticipantLifecycle.test.ts tests/ui/connectedResolutionPresentation.test.ts tests/ui/connectedTurnProjection.test.ts tests/ui/connectedDurableFailure.test.ts tests/ui/connectedOwnerInventoryRestart.test.ts tests/ui/connectedLongRestHostRestartRecovery.test.ts tests/ui/c9FamilyOReadyConcentrationProduction.test.ts tests/ui/phase09ManualMovementReactionAdapter.test.ts tests/ui/phase09ConcentrationSaveWorkflow.test.ts"
+          } > /tmp/w7-02-evidence.txt
+      - name: Upload W7-02 evidence
+        uses: actions/upload-artifact@v4
         with:
-          name: W7-02-LEDGER-${{ github.sha }}
-          path: /tmp/w7-02-ledger-blob.txt
+          name: W7-02-AUTO-${{ github.sha }}
+          path: |
+            /tmp/w7-02.tap
+            /tmp/w7-02-evidence.txt
           if-no-files-found: error
