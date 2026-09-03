@@ -18,10 +18,11 @@ function requireLiveOwnerConnection(adapter:MockAdapter) {
 function requireLiveRemoteOwnerRoute(adapter:MockAdapter,actorId:string) {
   const state=connectedStateFor(adapter);
   if(state.mode!=="host"||!state.sessionId)return;
-  const bindings=[...state.peerManifests.entries()].filter(([,manifest])=>manifest.character?.characterId===actorId);
-  if(bindings.length===0)return;
-  const hasLiveRoute=bindings.some(([peer])=>!peer.startsWith("disconnected:")&&state.peerParticipants.has(peer));
-  if(!hasLiveRoute){
+  const accepted=[...state.acceptedParticipantManifests.entries()].find(([,manifest])=>manifest.character?.characterId===actorId);
+  if(!accepted)return;
+  const [participantId]=accepted;
+  const livePeer=[...state.peerParticipants.entries()].find(([,mappedParticipantId])=>mappedParticipantId===participantId)?.[0];
+  if(!livePeer||state.peerManifests.get(livePeer)?.character?.characterId!==actorId){
     throw new Error("Remote Character owner is offline; retry after the owner reconnects.");
   }
 }
