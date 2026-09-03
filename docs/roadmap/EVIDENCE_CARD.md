@@ -1,23 +1,21 @@
 # V1 Evidence Card
 
-Status: **W6-02 CLOSED — REACHABILITY REPAIR VERIFIED**
+Status: **W6-03 CLOSED — PARTY STASH POLICY LIFECYCLE VERIFIED**
 
 Use one card per Release Gate or coherent repair. The purpose is to stop duplicate implementation and force current-HEAD evidence before modifying an existing system.
 
 ```text
-Gate ID: W6-02
+Gate ID: W6-03
 Classification: REUSE_LOCKED
-Acceptance criterion: DM can grant exact XP to one or multiple Campaign roster members and grant immediate level-up credit without a reason field; the durable Campaign advancement owner projects the updated values in Session, and a credited Character can complete canonical level-up with the credit consumed and resulting level persisted (MP-E04/E05).
-Production entrypoint: CampaignApplicationService.grantAdvancement/consumeLevelUpCredit -> campaignRuntimeAdapter grantCampaignAdvancement/consumeCampaignLevelUpCredit -> connectedCampaignSystemsRuntimeAdapter broadcastAfter + campaign-level-up-complete request -> AppProvider grantCampaignAdvancement/consumeCampaignLevelUpCredit.
-Existing automated tests: tests/ui/campaignSystems.test.ts proves multi-member exact XP, no reason field, immediate level-up credit, credit consumption, roster level update, missing-member rejection, and durable Campaign repository ownership. Existing canonical Character level-up tests remain the owner for Character progression commit/persistence.
-Exact observed failure: Current production UI reachability was missing. AppProvider exposed grantCampaignAdvancement, and connectedCampaignSystemsRuntimeAdapter broadcast Host advancement changes, but CampaignScreen/CampaignSystemsPanel/ProductionSessionWorkspaceBridge contained no production control that invoked grantCampaignAdvancement. Therefore a DM could not perform MP-E04/E05 through the real product UI despite the owner/runtime implementation existing.
-Smallest authorized change: Add one minimal Host/live advancement control to the existing ProductionSessionWorkspaceBridge that selects existing Campaign roster members, chooses XP or one level-up credit, and calls the existing AppProvider grantCampaignAdvancement path. Do not add a new store, advancement engine, transport message, or Character write path. Preserve the existing campaign-level-up-complete credit-consumption path for Player completion.
-Implemented repair: PR #294 added ProductionSessionAdvancementPanel and mounted it in ProductionSessionWorkspaceBridge; no parallel progression owner was added.
-Verification SHA: a72387016fec255674b8132b1f8b80b08d99da25
-Verification: W6-02 AUTO Verification run 33703181522 / job 100486658419 = success; 13/13 focused tests PASS; production build PASS.
-Artifact: 9874278799, W6-02-AUTO-9a07c28309ffe781d4ed1e4cea33f7e8f0706577, sha256:abc109aca9d519e96aec8e03d442a2e071151c659e658a27b99207607f93fc0c. Artifact name uses the pull-request synthetic merge SHA; run head_sha is the authoritative product verification SHA above.
-Canonical integration: PR #294 merged as b11f5267121c2c4dfb11176ef6ff12841f3c877b.
-Closure: W6-02 PASS. Open a new Evidence Card for W6-03 only if its current exact-head verification reproduces a failure or production reachability/contract gap before changing product code.
+Acceptance criterion: Stash shared/approval/DM-managed request lifecycle remains on the existing Campaign/Party Stash production owner for MP-E06~E11, including connected owner projection and failure/retry behavior.
+Production entrypoint: Existing Campaign Party Stash policy/runtime adapters and connected approval/Host policy path; no replacement store, transaction owner, transport, or protocol-only replica is authorized.
+Existing automated tests: tests/ui/campaignSystems.test.ts and tests/ui/connectedPartyStashApprovalOwnerTransfer.test.ts.
+Exact observed failure: None on canonical exact SHA b1f54abefd7dffb2f865ccaccde31649b8080a01. Canonical push verification passed the focused Party Stash/Campaign suite and production build.
+Smallest authorized change: No product-code change. Record exact-SHA evidence only.
+Verification SHA: b1f54abefd7dffb2f865ccaccde31649b8080a01
+Verification: W6-03 AUTO Verification run 33705306657 / job 100493052616 = success; 13/13 focused tests PASS; production build PASS.
+Artifact: 9875022681, W6-03-AUTO-b1f54abefd7dffb2f865ccaccde31649b8080a01, sha256:8f5ef938566269b624ae4eeb33c95603eee501c514f6353945e9767899058deb.
+Closure: W6-03 PASS. Reconcile the official ledger, then open W6-04 under the same evidence-first rule.
 ```
 
 ## Change gate
