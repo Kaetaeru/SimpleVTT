@@ -15,17 +15,29 @@ function requireLiveOwnerConnection(adapter:MockAdapter) {
   }
 }
 
-MockAdapter.prototype.adjustDmInventory=function adjustDmInventoryWithLiveConnectionGuard(...args:Parameters<typeof baseAdjust>){
+function requireLiveRemoteOwnerRoute(adapter:MockAdapter,actorId:string) {
+  const state=connectedStateFor(adapter);
+  if(state.mode!=="host"||!state.sessionId)return;
+  const bindings=[...state.peerManifests.entries()].filter(([,manifest])=>manifest.character?.characterId===actorId);
+  if(bindings.length===0)return;
+  const hasLiveRoute=bindings.some(([peer])=>!peer.startsWith("disconnected:")&&state.peerParticipants.has(peer));
+  if(!hasLiveRoute){
+    throw new Error("Remote Character owner is offline; retry after the owner reconnects.");
+  }
+}
+
+MockAdapter.prototype.adjustDmInventory=async function adjustDmInventoryWithLiveConnectionGuard(...args:Parameters<typeof baseAdjust>){
   requireLiveOwnerConnection(this);
+  requireLiveRemoteOwnerRoute(this,args[0].actorId);
   return baseAdjust.apply(this,args);
 };
 
-MockAdapter.prototype.undoDmInventoryAdjustment=function undoDmInventoryWithLiveConnectionGuard(...args:Parameters<typeof baseUndo>){
+MockAdapter.prototype.undoDmInventoryAdjustment=async function undoDmInventoryWithLiveConnectionGuard(...args:Parameters<typeof baseUndo>){
   requireLiveOwnerConnection(this);
   return baseUndo.apply(this,args);
 };
 
-MockAdapter.prototype.undoLastDmInventoryAdjustment=function undoLastDmInventoryWithLiveConnectionGuard(...args:Parameters<typeof baseUndoLast>){
+MockAdapter.prototype.undoLastDmInventoryAdjustment=async function undoLastDmInventoryWithLiveConnectionGuard(...args:Parameters<typeof baseUndoLast>){
   requireLiveOwnerConnection(this);
   return baseUndoLast.apply(this,args);
 };
