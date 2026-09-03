@@ -48,9 +48,10 @@ W2: COMPLETE — 8/8 PASS
 W3: COMPLETE — 8/8 PASS
 W4: COMPLETE — 8/8 PASS
 W5: COMPLETE — 10/10 PASS
-Official ledger score: 65.0/100.0
-PASS: 48/72
-PENDING: 24/72
+W6: 1/8 PASS
+Official ledger score: 66.3/100.0
+PASS: 49/72
+PENDING: 23/72
 FAIL: 0
 BLOCKED: 0
 ```
@@ -58,28 +59,27 @@ BLOCKED: 0
 ## Current stage
 
 ```text
-Next Gate: W6-01
+Next Gate: W6-02
 ```
 
-`W5-10` is PASS by canonical exact-SHA automated consolidation for MP-01 through MP-04. Verification SHA `786566303fbb6c8bac1dff6b392f65a866a1947c` passed `W5-10 AUTO Verification` run `33700245046`, job `100477769745`, with 45/45 focused tests. Artifact `9873251248` (`W5-10-AUTO-786566303fbb6c8bac1dff6b392f65a866a1947c`) has digest `sha256:189a99528d2cf6556a7c5430f3073145c91c537e1b3c354fc44e089234d3b927`. No `src/` or test implementation file changed for this Gate; the existing action, presentation, reconnect, turn, Ready/reaction/concentration, and Undo owners were reused. The official ledger records W5-10 PASS and W5 is complete at 10/10.
+`W6-01` is PASS by canonical exact-SHA automated evidence for DM item/GP grant-revoke and Character-owner projection refresh. Verification SHA `30606e6b056027a3e10ddbae70f38f428b2714b6` passed `W6-01 AUTO Verification` run `33701452879`, job `100481432959`, with 13/13 focused tests. Artifact `9873659413` (`W6-01-AUTO-30606e6b056027a3e10ddbae70f38f428b2714b6`) has digest `sha256:bb6031112dd14fedf00aa90485e7583332cdaefd1befe4f223d710e4939e2204`. No product/runtime or test implementation file changed for this Gate; the existing DM inventory/currency, DM Library materialization, connected owner wire, inventory projection refresh, and custom-item projection owners were reused. The official ledger records W6-01 PASS.
 
-## W6-01 routing
+## W6-02 routing
 
-`W6-01` is `REUSE_LOCKED`. The master roadmap requires the existing DM inventory/currency and owner-projection paths to prove:
+`W6-02` is `REUSE_LOCKED`. The master roadmap requires the existing XP and level-up ownership paths to prove:
 
-- DM item grant and revoke with durable owner state and permitted Session projection refresh (`MP-E01`, `MP-E02`).
-- DM GP grant and revoke with overdraft rejection and exact final balance (`MP-E03`).
-- UI-facing owner inventory/GP parity after the authoritative change (`MP-J05`, `MP-J06`).
+- DM grants exact XP to one or multiple Characters; the Character-owned value is durable and visible, and the grant does not require a reason (`MP-E04`).
+- DM grants immediate level-up credit; an eligible owner can complete the canonical Character level-up flow during Session and persist the resulting Character state (`MP-E05`).
 
-Reuse the existing Character persistence, connected owner projection, DM grant/revoke, inventory, and currency owners. Do not add a second Character write path or a parallel multiplayer inventory system. A product-code change is authorized only after a reproducible current-HEAD failure or explicit reachability/contract gap is recorded in `EVIDENCE_CARD.md`.
+Reuse the existing Character persistence, XP/progression, DM grant, connected owner projection, and level-up owners. Do not add a second Character write path or a Session-only progression store. A product-code change is authorized only after a reproducible current-HEAD failure or explicit reachability/contract gap is recorded in `EVIDENCE_CARD.md`.
 
 ### Next execution sequence
 
-1. Start `W6-01`, the first non-`PASS` Gate in the ledger.
-2. Identify the smallest existing automated owners for DM item grant/revoke, GP grant/revoke/overdraft, and owner projection refresh/parity.
-3. Run the focused set on one exact SHA and record exact command, deterministic test count, artifact/digest, and scenario mapping before changing the official ledger.
+1. Execute `W6-02`, the first non-`PASS` Gate in the ledger.
+2. Identify the smallest existing automated owners for exact XP grant, multi-Character XP grant, immediate level-up credit, canonical owner level-up, and durable projection/persistence.
+3. Run the focused set on one exact SHA and record exact command, deterministic test count, artifact/digest, and `MP-E04~E05` mapping before changing the official ledger.
 4. If a current-HEAD failure is reproduced, fill `EVIDENCE_CARD.md` and repair only the smallest existing owner path.
-5. Do not reopen completed W1-W5 evidence without a new current-HEAD regression.
+5. Do not reopen completed W1-W5 or W6-01 evidence without a new current-HEAD regression.
 
 ## Non-negotiable routing rules
 
