@@ -1,21 +1,19 @@
 # V1 Evidence Card
 
-Status: **W6-01 CLOSED — DM INVENTORY / GP / OWNER PROJECTION AUTO PASS**
+Status: **W6-02 OPEN — PRODUCTION REACHABILITY GAP REPRODUCED**
 
 Use one card per Release Gate or coherent repair. The purpose is to stop duplicate implementation and force current-HEAD evidence before modifying an existing system.
 
 ```text
-Gate ID: W6-01
+Gate ID: W6-02
 Classification: REUSE_LOCKED
-Acceptance criterion: freeze the existing DM item/GP grant-revoke and Character-owner projection refresh paths for MP-E01/E02/E03 and owner inventory/GP parity. Catalog/custom item grants and revokes must converge on the durable owner state; equipped-item revoke policy must be explicit; GP mutation must be exact with overdraft rejection; accepted connected owner mutations must carry fresh Character revision identity and refresh through the existing projection path.
-Production entrypoint: sessionInventoryRuntimeAdapter + connectedCampaignSystemsRuntimeAdapter + characterSessionProjection/reconstruction + connectedCharacterProjectionHandshake + characterSessionProjectionMount + campaignDmLibraryMaterializationAdapter.
-Existing automated tests: sessionInventoryRuntimeAdapter.test.ts; campaignDmLibraryGrantDurability.test.ts; connectedCampaignOwnerInventoryWire.test.ts; connectedCharacterInventoryProjectionRefresh.test.ts; connectedCustomItemProjection.test.ts.
-Exact observed failure: None.
-Smallest required change: None to product/runtime/test implementation. PR #291 added only one focused workflow to execute the existing owner tests together on one exact SHA.
-Canonical closure evidence: SHA 30606e6b056027a3e10ddbae70f38f428b2714b6; W6-01 AUTO run 33701452879 / job 100481432959 = 13/13 PASS, 0 FAIL; artifact 9873659413 (W6-01-AUTO-30606e6b056027a3e10ddbae70f38f428b2714b6), sha256:bb6031112dd14fedf00aa90485e7583332cdaefd1befe4f223d710e4939e2204.
-Exact observed result: PASS. Existing DM catalog/custom item grant/revoke, explicit forceUnequip revoke policy, GP grant/Undo/overdraft, durable DM Library grant, connected owner revision identity, inventory refresh, and custom-item projection safety all pass together on the canonical exact SHA.
-Remaining release limitation: W6-01 AUTO evidence does not close later Windows/rendered multiplayer acceptance or the whole MP-05/#116 issue. Those remain governed by their own repository-native criteria.
-Next action: reconcile W6-01 PASS into V1_EVIDENCE_LEDGER.json, advance the official score from 65.0 to 66.5 with 49 PASS / 23 PENDING, then route to W6-02.
+Acceptance criterion: DM can grant exact XP to one or multiple Campaign roster members and grant immediate level-up credit without a reason field; the durable Campaign advancement owner projects the updated values in Session, and a credited Character can complete canonical level-up with the credit consumed and resulting level persisted (MP-E04/E05).
+Production entrypoint: CampaignApplicationService.grantAdvancement/consumeLevelUpCredit -> campaignRuntimeAdapter grantCampaignAdvancement/consumeCampaignLevelUpCredit -> connectedCampaignSystemsRuntimeAdapter broadcastAfter + campaign-level-up-complete request -> AppProvider grantCampaignAdvancement/consumeCampaignLevelUpCredit.
+Existing automated tests: tests/ui/campaignSystems.test.ts proves multi-member exact XP, no reason field, immediate level-up credit, credit consumption, roster level update, missing-member rejection, and durable Campaign repository ownership. Existing canonical Character level-up tests remain the owner for Character progression commit/persistence.
+Exact observed failure: Current production UI reachability is missing. AppProvider exposes grantCampaignAdvancement, and connectedCampaignSystemsRuntimeAdapter broadcasts Host advancement changes, but current CampaignScreen/CampaignSystemsPanel/ProductionSessionWorkspaceBridge contain no production control that invokes grantCampaignAdvancement. Therefore a DM cannot perform MP-E04/E05 through the real product UI despite the owner/runtime implementation existing.
+Smallest required change: Add one minimal Host/live advancement control to the existing ProductionSessionWorkspaceBridge that selects existing Campaign roster members, chooses XP or one level-up credit, and calls the existing AppProvider grantCampaignAdvancement path. Do not add a new store, advancement engine, transport message, or Character write path. Preserve the existing campaign-level-up-complete credit-consumption path for Player completion.
+Canonical W6-01 reconciliation: official score is 66.3/100.0, 49 PASS / 23 PENDING. The earlier W6-01 card prediction of 66.5 was arithmetic rounding error and is superseded by the official ledger.
+Next action: merge the W6-01 reconciliation/current routing, then implement only the W6-02 production reachability repair above and verify existing campaign advancement + connected projection/level-up owners on one exact SHA before closing W6-02.
 ```
 
 ## Change gate
