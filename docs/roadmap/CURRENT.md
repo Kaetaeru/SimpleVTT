@@ -48,10 +48,10 @@ W2: COMPLETE — 8/8 PASS
 W3: COMPLETE — 8/8 PASS
 W4: COMPLETE — 8/8 PASS
 W5: COMPLETE — 10/10 PASS
-W6: 5/8 PASS
-Official ledger score: 71.3/100.0
-PASS: 53/72
-PENDING: 19/72
+W6: 6/8 PASS
+Official ledger score: 72.5/100.0
+PASS: 54/72
+PENDING: 18/72
 FAIL: 0
 BLOCKED: 0
 ```
@@ -59,24 +59,24 @@ BLOCKED: 0
 ## Current stage
 
 ```text
-Next Gate: W6-06
+Next Gate: W6-07
 ```
 
-`W6-05` is PASS without product/runtime or test-implementation changes. Integration-derived exact verification SHA `945188901c106b6114e3a7f89cb1671aab6ace27` (base canonical SHA `52b6fc06b114768903887de3669f6499172afb72`) passed `W6-05 AUTO Verification` run `33711448138`, job `100511627712`, with 9/9 focused tests and production build PASS. Artifact `5808814072` (`W6-05-AUTO-945188901c106b6114e3a7f89cb1671aab6ace27`) has digest `sha256:26ce88561019490d1c8734cb838ebf6dd789c180e9e4af57974a2559439351dc`. The focused Campaign ration-conversion owners prove trusted capability eligibility, configured ration units, atomic Party Stash debit + ration credit, stale-provider failure isolation, duplicate-request idempotency, legacy metadata revalidation, and production Campaign reachability for `MP-E14`. Real H+P1+P2 Windows rendered acceptance remains later. The official ledger now records W6-05 PASS.
+`W6-06` is PASS without product/runtime or test-implementation changes. Integration-derived verification head `cf531f34a2c2cf85174fabafdc9092022fb0c46b` and GitHub Actions checkout `96f9e6715e32b95d6644f67fb461204661ab107c` share tree `b3607dd639fee00d42bc51f8ea88d5c6bf466cba`. `W6-06 AUTO Verification` run `33712312082`, job `100514236959`, passed 93/93 focused tests and the production build. Artifact `9877347283` (`W6-06-AUTO-96f9e6715e32b95d6644f67fb461204661ab107c`) has digest `sha256:45d257223dcb90dfefc79ab33ed51bcd6fabff0737d9e7039833c7860b5f4eb0`. The existing compound Long Rest, Character owner preparation/persistence, Campaign participant persistence, connected transaction, and Host restart recovery owners close the automation-only proof for `MP-F07~F09`. Real H+P1+P2 Windows rendered acceptance remains later. The official ledger now records W6-06 PASS.
 
-## W6-06 routing
+## W6-07 routing
 
-`W6-06` is `REUSE_LOCKED`. The master roadmap requires the existing distributed Character + Campaign Long Rest path to prove `MP-F07~F09`, including durable owner/Host recovery.
+`W6-07` is `REUSE_LOCKED`. The master roadmap requires the existing connected DM Library materialization, handout, and spatial capability paths to be fixed as the automated owner set for `MP-G`.
 
-Reuse the existing Long Rest compound coordinator, Character owner persistence, Campaign time/ration persistence, connected transaction/recovery, and restart owners. Do not add a second rest coordinator, second Character persistence path, replacement Campaign clock/ration store, or parallel recovery journal. A product-code change is authorized only after a reproducible current-HEAD failure or explicit production reachability/contract gap is recorded in `EVIDENCE_CARD.md`.
+Reuse the existing DM Library definitions/materialization path, connected image handout projection, Scene topology/spatial capability owners, Host authority, and reconnect/privacy paths. Do not add a second DM Library, handout system, Scene model, spatial transport, or presentation pipeline. A product-code change is authorized only after a reproducible current-HEAD failure or explicit production reachability/contract gap is recorded in `EVIDENCE_CARD.md`.
 
 ### Next execution sequence
 
-1. Execute `W6-06`, the first non-`PASS` Gate in the ledger.
-2. Identify the smallest existing automated owners for distributed Character + Campaign Long Rest, owner/Host persistence, recovery/retry idempotency, and restart continuity mapped to `MP-F07~F09`.
+1. Execute `W6-07`, the first non-`PASS` Gate in the ledger.
+2. Identify the smallest existing automated owners for connected DM Library materialization, handout lifecycle, Scene/spatial capabilities, reconnect continuity, and privacy mapped to `MP-G01~G09`.
 3. Run the focused set on one exact SHA and record exact command, deterministic test count, artifact/digest, and scenario mapping before changing the official ledger.
 4. If a current-HEAD failure or reachability gap is reproduced, fill `EVIDENCE_CARD.md` and repair only the smallest existing owner path.
-5. Do not reopen completed W1-W5 or W6-01 through W6-05 evidence without a new current-HEAD regression.
+5. Do not reopen completed W1-W5 or W6-01 through W6-06 evidence without a new current-HEAD regression.
 
 ## Non-negotiable routing rules
 
