@@ -71,7 +71,7 @@ async function runScenario(){
 
   // MP-B08: an owner disappears while a durable write is requested; Host keeps the last canonical value, then the exact request settles once after reconnect.
   const b08Request={requestId:"w7-04.b08.reconnect-owner",actorId:p1Character.id,operation:"grant-currency",amount:3};const b08Before=initialP1.activeGold;
-  crashInstance(p1);await sleep(750);
+  crashInstance(p1);await sleep(5000);
   const b08Offline=await callInventory(host,b08Request);assert.equal(b08Offline.ok,false,"offline owner write must not report false success");assert.equal(projectedGold(await runtimeSnapshot(host),p1Character.id),b08Before,"Host canonical owner projection must remain at the last committed value while owner is offline");
   p1=await launchInstance("W7-04 P1 Rejoined",p1Root,await reservePort());await joinClientSession(p1,sessionPort);await waitGold(p1,p1Character.id,b08Before);
   const b08Retry=await callInventory(host,b08Request);assert.equal(b08Retry.ok,true,b08Retry.error);await waitGold(p1,p1Character.id,b08Before+3);await waitGold(host,p1Character.id,b08Before+3);const b08Replay=await callInventory(host,b08Request);assert.equal(b08Replay.ok,true,b08Replay.error);await waitGold(p1,p1Character.id,b08Before+3);scenarios["MP-B08"]={status:"PASS",beforeGp:b08Before,offlineError:b08Offline.error,retryGp:b08Before+3,replayGp:(await runtimeSnapshot(p1)).activeGold};
@@ -100,6 +100,6 @@ async function runScenario(){
   for(const instance of [host,p1,p2])await saveEvidence(instance,"w7-04-final");const evidence={gate:"W7-04",scope:["MP-B08","MP-H09","MP-H10","MP-H11","MP-H12"],status:"PASS",verificationSha,windowsTauri:true,topology:{host:"DM Host",owner:p1Character.id,observer:"P2",sessionPort},scenarios};await writeFile(path.join(artifactRoot,"w7-04-summary.json"),`${JSON.stringify(evidence,null,2)}\n`,"utf8");log(`PASS evidence: ${path.join(artifactRoot,"w7-04-summary.json")}`);
 }
 
-async function cleanup(){if(keepOpen){log(`--keep-open active. Evidence: ${artifactRoot}`);return;}for(const browser of [...browsers].reverse()){try{await browser.deleteSession();}catch{}}for(const child of [...children].reverse()){if(child.exitCode===null&&!child.killed){try{child.kill();}catch{}}}if(viteStarted)log("Vite process stopped with tracked child cleanup.");}
+async function cleanup(){if(keepOpen){log(`--keep-open active. Evidence: ${artifactRoot}`);return;}for(const browser of [...browsers].reverse()){try{await browser.deleteSession();}catch{}}for(const child of [...children].reverse()){if(child.exitCode===null&&!child.killed){try{child.kill();}catch{}}if(viteStarted)log("Vite process stopped with tracked child cleanup.");}
 
 let exitCode=0;try{await runScenario();}catch(error){exitCode=1;console.error(error instanceof Error?error.stack??error.message:error);try{await writeFile(path.join(artifactRoot,"w7-04-failure.txt"),`${String(error instanceof Error?error.stack??error.message:error)}\n`,"utf8");}catch{}}finally{await cleanup();}process.exitCode=exitCode;
