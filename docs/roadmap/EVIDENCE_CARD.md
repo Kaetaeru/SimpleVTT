@@ -1,6 +1,6 @@
 # V1 Evidence Card
 
-Status: **W5-09 CURRENT-HEAD FAILURE REPRODUCED — TEST FIXTURE REPAIR VERIFIED**
+Status: **W5-09 CLOSED — MP-J UI PARITY AUTO PASS**
 
 Use one card per Release Gate or coherent repair. The purpose is to stop duplicate implementation and force current-HEAD evidence before modifying an existing system.
 
@@ -11,12 +11,12 @@ Acceptance criterion: automated UI-facing Host/P1/P2 parity evidence covers MP-J
 Production entrypoint: existing connected Host/Client projection, Party Stash owner-transfer/approval, authoritative Scene topology, remote Character projection handshake, three-peer action/presentation, turn projection, and Undo compensation paths.
 Existing implementation files: src/app/connectedSessionRuntimeAdapter.ts; src/app/connectedActionRoutingAdapter.ts; src/app/connectedResolutionPresentation.ts; src/app/connectedTurnRoutingAdapter.ts; src/app/connectedSessionProtocol.ts; src/app/connectedCharacterProjectionHandshake.ts; src/app/productionSessionEmptyEncounterAdapter.ts; src/app/campaignPartyStashPolicyRuntimeAdapter.ts.
 Existing automated tests: tests/ui/connectedPartyStashApprovalOwnerTransfer.test.ts; tests/ui/connectedSceneTopologyProjection.test.ts; tests/ui/connectedSceneTopologyHostMutation.test.ts; tests/ui/productionHostRemoteFixtureIdentityProjection.test.ts; tests/ui/connectedThreePeerActionMatrix.test.ts; tests/ui/connectedThreePeerPresentation.test.ts; tests/ui/connectedTurnProjection.test.ts; tests/ui/connectedUndoCompensation.test.ts.
-Existing exact-SHA evidence: canonical SHA 5f7bb4bdbc20da3ff437809e3d7f3f024e159f1d, W5-09 AUTO run 33698750944 / job 100473212192 = 17/18 PASS, 1 FAIL; failure artifact 9872730067 (W5-09-AUTO-5f7bb4bdbc20da3ff437809e3d7f3f024e159f1d), sha256:fc157bfecb250a2fdf719b0d9d516bf9d8340ed504ab1c292312d7b621b4d3da.
-Exact observed failure: productionHostRemoteFixtureIdentityProjection rejected the remote fixture Character because its test-only projection referenced content:dnd.srd-5.2.1@2024#dnd.srd521.background.soldier while the production-composed Host catalog uses the current generated 0.1-draft identities.
-Root cause: stale automated test fixture. The test manually injected a three-entry @2024 catalog, then production snapshot composition materialized the real 509-entry @0.1-draft catalog before the Host handshake. Product handshake/runtime behavior was not the defect.
-Smallest required change: test-only. Build the fixture Character projection from the production snapshot catalog instead of a hard-coded three-entry @2024 catalog. No src/ product/runtime file changed.
-Repair verification: SHA 8cfba705da716d1fd5fd145a7870a774363f460b, W5-09 AUTO run 33699271386 / job 100474814937 = 18/18 PASS; artifact 9872911463 (W5-09-AUTO-8cfba705da716d1fd5fd145a7870a774363f460b), sha256:a79b395d266e6084dc419ce898a63307affa44966b96c1a93442300d867f46bc.
-Required next verification: merge the test-only repair and re-run W5-09 AUTO on the canonical work/v1-composite merge SHA. Record that exact-SHA result before closing W5-09 in the official ledger.
+Initial exact-SHA failure: canonical SHA 5f7bb4bdbc20da3ff437809e3d7f3f024e159f1d, W5-09 AUTO run 33698750944 / job 100473212192 = 17/18 PASS, 1 FAIL. The J07 test fixture built its remote projection from a stale three-entry @2024 catalog while production composition materialized the current 509-entry @0.1-draft catalog.
+Smallest repair: test-only. productionHostRemoteFixtureIdentityProjection now builds the fixture Character projection from the production snapshot catalog. No src/ product/runtime file changed.
+Repair verification: SHA 8cfba705da716d1fd5fd145a7870a774363f460b, W5-09 AUTO run 33699271386 / job 100474814937 = 18/18 PASS.
+Canonical closure evidence: SHA 4c93082d0af77ae79da82db711b7934c8e2f8544; W5-09 AUTO run 33699407674 / job 100475234429 = 18/18 PASS, 0 FAIL; artifact 9872956996 (W5-09-AUTO-4c93082d0af77ae79da82db711b7934c8e2f8544), sha256:5f7f708086b1c7b3e941d6d37bcac01cbded9f0fa6edea565dcbad171164463f.
+Exact observed result: PASS. MP-J01-J08 automated parity is closed on the canonical exact SHA. Rendered Windows parity remains governed by later release acceptance and GitHub issue #189 remains open until those criteria are satisfied.
+Smallest required change: None further for W5-09. Record W5-09 PASS in the official ledger and proceed to W5-10.
 ```
 
 ## Change gate
