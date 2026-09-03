@@ -1,0 +1,72 @@
+name: W6-01 AUTO Verification
+
+on:
+  pull_request:
+    paths:
+      - "src/app/sessionInventoryRuntimeAdapter.ts"
+      - "src/app/connectedCampaignSystemsRuntimeAdapter.ts"
+      - "src/app/characterSessionProjection.ts"
+      - "src/app/characterSessionProjectionReconstruction.ts"
+      - "src/app/connectedCharacterProjectionHandshake.ts"
+      - "src/app/characterSessionProjectionMount.ts"
+      - "src/app/campaignDmLibraryMaterializationAdapter.ts"
+      - "tests/ui/sessionInventoryRuntimeAdapter.test.ts"
+      - "tests/ui/campaignDmLibraryGrantDurability.test.ts"
+      - "tests/ui/connectedCampaignOwnerInventoryWire.test.ts"
+      - "tests/ui/connectedCharacterInventoryProjectionRefresh.test.ts"
+      - "tests/ui/connectedCustomItemProjection.test.ts"
+      - ".github/workflows/w6-01-auto.yml"
+  push:
+    branches:
+      - "work/v1-composite"
+      - "agent/**"
+    paths:
+      - "src/app/sessionInventoryRuntimeAdapter.ts"
+      - "src/app/connectedCampaignSystemsRuntimeAdapter.ts"
+      - "src/app/characterSessionProjection.ts"
+      - "src/app/characterSessionProjectionReconstruction.ts"
+      - "src/app/connectedCharacterProjectionHandshake.ts"
+      - "src/app/characterSessionProjectionMount.ts"
+      - "src/app/campaignDmLibraryMaterializationAdapter.ts"
+      - "tests/ui/sessionInventoryRuntimeAdapter.test.ts"
+      - "tests/ui/campaignDmLibraryGrantDurability.test.ts"
+      - "tests/ui/connectedCampaignOwnerInventoryWire.test.ts"
+      - "tests/ui/connectedCharacterInventoryProjectionRefresh.test.ts"
+      - "tests/ui/connectedCustomItemProjection.test.ts"
+      - ".github/workflows/w6-01-auto.yml"
+
+jobs:
+  dm-inventory-owner-projection:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Generate content dependencies
+        run: npm run generate:content
+      - name: Verify W6-01 DM inventory and owner projection
+        shell: bash
+        run: |
+          set +e
+          npx tsx --test \
+            tests/ui/sessionInventoryRuntimeAdapter.test.ts \
+            tests/ui/campaignDmLibraryGrantDurability.test.ts \
+            tests/ui/connectedCampaignOwnerInventoryWire.test.ts \
+            tests/ui/connectedCharacterInventoryProjectionRefresh.test.ts \
+            tests/ui/connectedCustomItemProjection.test.ts \
+            > w6-01-auto.log 2>&1
+          status=$?
+          cat w6-01-auto.log
+          exit "$status"
+      - name: Upload focused test log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: W6-01-AUTO-${{ github.sha }}
+          path: w6-01-auto.log
+          if-no-files-found: error
+          retention-days: 14
