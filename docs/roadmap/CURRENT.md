@@ -48,10 +48,10 @@ W2: COMPLETE — 8/8 PASS
 W3: COMPLETE — 8/8 PASS
 W4: COMPLETE — 8/8 PASS
 W5: COMPLETE — 10/10 PASS
-W6: 2/8 PASS
-Official ledger score: 67.5/100.0
-PASS: 50/72
-PENDING: 22/72
+W6: 3/8 PASS
+Official ledger score: 68.8/100.0
+PASS: 51/72
+PENDING: 21/72
 FAIL: 0
 BLOCKED: 0
 ```
@@ -59,24 +59,24 @@ BLOCKED: 0
 ## Current stage
 
 ```text
-Next Gate: W6-03
+Next Gate: W6-04
 ```
 
-`W6-02` is PASS after the canonical Evidence Card reproduced a production reachability gap: the Campaign advancement owner already supported exact XP, multi-Character XP, immediate level-up credit, credit consumption, and durable roster level state, but Host/live Session UI could not invoke it. PR #294 added only the smallest reachability repair by mounting a Host/live advancement panel that reuses `grantCampaignAdvancement`; it did not add a second progression store, engine, transport, or Character write path. Verification SHA `a72387016fec255674b8132b1f8b80b08d99da25` passed `W6-02 AUTO Verification` run `33703181522`, job `100486658419`, with 13/13 focused tests and production build PASS. Artifact `9874278799` (`W6-02-AUTO-9a07c28309ffe781d4ed1e4cea33f7e8f0706577`) has digest `sha256:abc109aca9d519e96aec8e03d442a2e071151c659e658a27b99207607f93fc0c`; its name uses the pull-request synthetic merge SHA, while the run `head_sha` is the authoritative product verification SHA above. PR #294 integrated the tested repair as canonical merge `b11f5267121c2c4dfb11176ef6ff12841f3c877b`. The official ledger records W6-02 PASS.
+`W6-03` is PASS without product-code changes. Canonical exact SHA `b1f54abefd7dffb2f865ccaccde31649b8080a01` passed `W6-03 AUTO Verification` run `33705306657`, job `100493052616`, with 13/13 focused tests and production build PASS. Artifact `9875022681` (`W6-03-AUTO-b1f54abefd7dffb2f865ccaccde31649b8080a01`) has digest `sha256:8f5ef938566269b624ae4eeb33c95603eee501c514f6353945e9767899058deb`. The focused Campaign/Party Stash owners cover the shared, DM-approval, and DM-managed request lifecycle plus connected owner/failure-retry behavior required by `MP-E06~E11`. PR #297 integrated the evidence as canonical merge `888defd2be7f2f08c2f721abf57f72aaac5f8f12`. The official ledger now records W6-03 PASS.
 
-## W6-03 routing
+## W6-04 routing
 
-`W6-03` is `REUSE_LOCKED`. The master roadmap requires the existing Party Stash request-policy lifecycle to prove `MP-E06~E11` across shared, approval, and DM-managed modes.
+`W6-04` is `REUSE_LOCKED`. The master roadmap requires the existing Party Stash transfer path to prove atomic transfer behavior, authoritative journal/history, compensation, and restart recovery for `MP-E12~E13`.
 
-Reuse the existing Party Stash policy, request, approval/rejection, connected authority, and persistence owners already established by W4-05 and later connected work. Do not add a second transaction system or parallel Session-only stash state. A product-code change is authorized only after a reproducible current-HEAD failure or explicit production reachability/contract gap is recorded in `EVIDENCE_CARD.md`.
+Reuse the existing transfer, journal, compensation, persistence, and recovery owners. Do not add a second transaction system, a parallel Session-only ledger, or a replacement recovery path. A product-code change is authorized only after a reproducible current-HEAD failure or explicit production reachability/contract gap is recorded in `EVIDENCE_CARD.md`.
 
 ### Next execution sequence
 
-1. Execute `W6-03`, the first non-`PASS` Gate in the ledger.
-2. Identify the smallest existing automated owners for shared withdrawal, approval request/approve/reject, DM-managed rejection, Host-authoritative connected projection, and request durability/reconnect behavior mapped to `MP-E06~E11`.
+1. Execute `W6-04`, the first non-`PASS` Gate in the ledger.
+2. Identify the smallest existing automated owners for transfer success/failure atomicity, journal/history, compensation/Undo behavior, and restart recovery mapped to `MP-E12~E13`.
 3. Run the focused set on one exact SHA and record exact command, deterministic test count, artifact/digest, and scenario mapping before changing the official ledger.
 4. If a current-HEAD failure or reachability gap is reproduced, fill `EVIDENCE_CARD.md` and repair only the smallest existing owner path.
-5. Do not reopen completed W1-W5 or W6-01/W6-02 evidence without a new current-HEAD regression.
+5. Do not reopen completed W1-W5 or W6-01/W6-03 evidence without a new current-HEAD regression.
 
 ## Non-negotiable routing rules
 
