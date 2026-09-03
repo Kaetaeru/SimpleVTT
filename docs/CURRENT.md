@@ -49,10 +49,10 @@ W1: 8/8 PASS — COMPLETE
 W2: 8/8 PASS — COMPLETE
 W3: 8/8 PASS — COMPLETE
 W4: 8/8 PASS — COMPLETE
-W5: 9/10 PASS
-Official ledger score: 63.5/100.0
-PASS: 47/72
-Remaining gates: 25/72
+W5: 10/10 PASS — COMPLETE
+Official ledger score: 65.0/100.0
+PASS: 48/72
+Remaining gates: 24/72
 FAIL: 0
 BLOCKED: 0
 ```
@@ -67,24 +67,22 @@ W1 — COMPLETE (8/8 PASS)
 W2 — COMPLETE (8/8 PASS)
 W3 — COMPLETE (8/8 PASS)
 W4 — COMPLETE (8/8 PASS)
-W5 — 9/10 PASS
-Next exact Gate: W5-10
+W5 — COMPLETE (10/10 PASS)
+Next exact Gate: W6-01
 ```
 
-`W5-09` is closed by canonical exact-SHA MP-J01~J08 automated UI-facing parity evidence. Verification SHA `4c93082d0af77ae79da82db711b7934c8e2f8544` passed `W5-09 AUTO Verification` run `33699407674`, job `100475234429`, with 18/18 focused tests. Artifact `9872956996` (`W5-09-AUTO-4c93082d0af77ae79da82db711b7934c8e2f8544`) has digest `sha256:5f7f708086b1c7b3e941d6d37bcac01cbded9f0fa6edea565dcbad171164463f`. The reproduced J07 failure was a stale test fixture and was repaired test-only; no product/runtime `src/` path changed. The official ledger now records W5-09 PASS; the first non-PASS Gate is `W5-10`.
+`W5-10` is closed by canonical exact-SHA MP-01~MP-04 automated evidence consolidation. Verification SHA `786566303fbb6c8bac1dff6b392f65a866a1947c` passed `W5-10 AUTO Verification` run `33700245046`, job `100477769745`, with 45/45 focused tests. Artifact `9873251248` (`W5-10-AUTO-786566303fbb6c8bac1dff6b392f65a866a1947c`) has digest `sha256:189a99528d2cf6556a7c5430f3073145c91c537e1b3c354fc44e089234d3b927`. The Gate reused the existing shared presentation, remote replay/reconnect, three-peer action, reaction/Ready/concentration, turn, and compensating Undo paths; no product/runtime or test implementation file changed. The official ledger now records W5-10 PASS and the first non-PASS Gate is `W6-01`.
 
-## W5-10 exact scope
+## W6-01 exact scope
 
-`W5-10` is `REUSE_LOCKED`. It closes the existing production-adapter three-peer action, presentation, turn, and Undo automated evidence for the first four multiplayer work items into **one exact-HEAD scenario map**:
+`W6-01` is `REUSE_LOCKED`. It freezes the existing DM item/currency and owner projection behavior for `MP-E01~E03` and `MP-J05~J06`:
 
-- `MP-01` — issue `#111`, Shared Resolution Presentation Envelope
-- `MP-02` — issue `#114`, Client remote presentation queue / dice replay
-- `MP-03` — issue `#112`, Three-peer authoritative action matrix
-- `MP-04` — issue `#113`, Initiative / reaction / Ready / correction
+- DM grants an item to a Character owner and the durable owner record plus permitted Session projection converge.
+- DM revokes an item with explicit equipped/wielded/attuned transition policy and durable owner convergence.
+- DM grants or revokes GP exactly once; overdraft is rejected without partial mutation.
+- Owner inventory and GP changes refresh through the existing connected projection/UI paths rather than a parallel write or presentation system.
 
-This Gate is an evidence-consolidation Gate. Reuse the production adapter and automated coverage already proven across W5-04 through W5-09; do not create a second transport, resolver, presentation queue, dice/VFX path, turn engine, or Undo path. Before changing product code, reproduce a current-HEAD failure or document an explicit production reachability/contract gap in `roadmap/EVIDENCE_CARD.md`.
-
-The next useful action is to map the repository-owned automated owners for issues #111/#114/#112/#113 into one W5-10 focused command/scenario table, run that set on an exact SHA, and record the resulting count/artifact/digest. Rendered Windows three-window parity remains a later final acceptance concern and is not replaced by W5-10 AUTO evidence.
+Before changing product code, reproduce a current-HEAD failure or document an explicit production reachability/contract gap in `roadmap/EVIDENCE_CARD.md`. Reuse existing Character persistence, inventory/currency, DM grant/revoke, connected owner projection, and Session parity owners.
 
 ## Branch roles
 
@@ -100,9 +98,9 @@ The next useful action is to map the repository-owned automated owners for issue
 
 ### Next execution sequence
 
-1. Execute `W5-10`, the first non-`PASS` Gate in the ledger, by consolidating existing MP-01~MP-04 production-adapter automation into one exact-HEAD scenario map.
-2. Reuse the owners already proven by W5-04~W5-09 and issues #111/#114/#112/#113. Do not reopen W1-W5-09 unless a new current-HEAD regression is reproduced.
-3. Run the focused W5-10 command on one exact SHA and record deterministic pass/fail count plus artifact/digest before changing the official ledger.
+1. Execute `W6-01`, the first non-`PASS` Gate in the ledger.
+2. Identify the existing automated owners for DM item grant/revoke, GP grant/revoke/overdraft, and owner projection refresh/parity.
+3. Run that focused set on one exact SHA and record deterministic pass/fail count plus artifact/digest before changing the official ledger.
 4. If it fails, fill `roadmap/EVIDENCE_CARD.md` and repair only the smallest reproduced owner-path defect.
 5. For Common Play, follow [`design/ui-ux/COMMON-PLAY-FUNCTION-FIRST.md`](design/ui-ux/COMMON-PLAY-FUNCTION-FIRST.md): functional reachability first, broad UI redesign later.
 
