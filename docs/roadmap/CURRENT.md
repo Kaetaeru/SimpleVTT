@@ -49,10 +49,10 @@ W3: COMPLETE — 8/8 PASS
 W4: COMPLETE — 8/8 PASS
 W5: COMPLETE — 10/10 PASS
 W6: COMPLETE — 8/8 PASS
-W7: IN PROGRESS — 1/8 PASS
-Official ledger score: 76.3/100.0
-PASS: 57/72
-PENDING: 15/72
+W7: IN PROGRESS — 2/8 PASS
+Official ledger score: 77.5/100.0
+PASS: 58/72
+PENDING: 14/72
 FAIL: 0
 BLOCKED: 0
 ```
@@ -60,24 +60,24 @@ BLOCKED: 0
 ## Current stage
 
 ```text
-Next Gate: W7-02
+Next Gate: W7-03
 ```
 
-`W7-01` is PASS without product/runtime or test-implementation changes. Verification head `de59dd9898dd4cf4525082f0aa623e4a86cbd74d` and GitHub Actions pull-request checkout `c713e27a0989d8cd47761133e560afe4e93b77fc` have zero changed files between them. `W7-01 AUTO Verification` run `33718558967`, job `100532788018`, passed 12/12 focused tests and the production build. Artifact `9879408309` (`W7-01-AUTO-c713e27a0989d8cd47761133e560afe4e93b77fc`) has digest `sha256:600d6153242eb621ed6eabb32f86df1ee028d6102902b02ba88bebc410269cd3`. The focused owners prove no ghost participant state, exactly-once duplicate catch-up/event application, duplicate presentation suppression without reroll, and idempotent durable retry for `MP-H01~H03`.
+`W7-02` is PASS without product/runtime or existing test-implementation changes. Verification head `507459f208457e540beb19295dabb43e81f63b93` and GitHub Actions pull-request checkout `f1ca8d203177bb43077259dfa957fb4b5c3109ce` have zero changed files between them. `W7-02 AUTO Verification` run `33720461403`, job `100538359322`, passed 34/34 focused tests and the production build; Legacy Execution Boundary run `33720461389` and Contract validation run `33720461383` also succeeded. Artifact `9880065564` (`W7-02-AUTO-f1ca8d203177bb43077259dfa957fb4b5c3109ce`) has digest `sha256:a6e7e64721600ce77c746ae1d6a7e6a3724222a4926ff633caaeca180342bc13`. Existing reconnect, late-join, ordered catch-up, presentation replay, durable recovery, and Ready/Reaction/Concentration lifecycle owners cover `MP-H04~H08` without a parallel recovery system.
 
-## W7-02 routing
+## W7-03 routing
 
-`W7-02` is `REUSE_LOCKED`. The master roadmap requires reconnect, late join, and presentation catch-up to recover without reroll for `MP-H04~H08`.
+`W7-03` is `REUSE_LOCKED`. The master roadmap requires Host restart and Session end to leave transient Session state dead rather than resurrecting it, mapped to `MP-A08~A09` and the relevant `MP-H` recovery cases.
 
-Reuse the existing participant lifecycle/rebind path, accepted Client replica cursor and ordered Host catch-up, connected resolution presentation terminal catch-up, and existing durable/reconnect continuity owners. Do not create a second reconnect system, participant lifecycle, catch-up journal, presentation pipeline, or recovery path. A product-code change is authorized only after a reproducible current-HEAD failure or explicit production reachability/contract gap is recorded in `EVIDENCE_CARD.md`.
+Reuse the existing Session-end cleanup, Host restart/rehydration, durable-owner recovery, and transient runtime/presentation/prompt lifecycle owners. Do not create a second Session lifecycle, restart journal, transient-state store, or cleanup path. A product-code change is authorized only after a reproducible current-HEAD failure or explicit production reachability/contract gap is recorded in `EVIDENCE_CARD.md`.
 
 ### Next execution sequence
 
-1. Execute `W7-02`, the first non-`PASS` Gate in the ledger.
-2. Identify the smallest existing automated owner set for reconnect, late join, ordered catch-up, and presentation recovery without reroll mapped to `MP-H04~H08`.
+1. Execute `W7-03`, the first non-`PASS` Gate in the ledger.
+2. Identify the smallest existing automated owner set proving Host restart and Session-end transient-state cleanup for `MP-A08~A09` and the linked `MP-H` cases.
 3. Run that focused set on one exact SHA and record command, pass count, artifact/digest when produced, and scenario mapping before changing the ledger.
 4. If a current-HEAD failure or reachability gap is reproduced, fill `EVIDENCE_CARD.md` and repair only the smallest existing owner path.
-5. Do not reopen W0-W6 or W7-01 absent a demonstrated regression.
+5. Do not reopen W0-W6 or W7-01~W7-02 absent a demonstrated regression.
 
 ## Non-negotiable routing rules
 
