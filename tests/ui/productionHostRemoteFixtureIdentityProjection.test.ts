@@ -5,7 +5,7 @@ import "../../src/app/productionSessionEmptyEncounterAdapter";
 import type { CatalogEntry, CharacterSheet } from "../../src/app/contracts";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import { catalogQualifiedId } from "../../src/app/contentCatalogIdentity";
-import { buildCharacterSessionProjectionV1 } from "../../src/app/characterSessionProjection";
+import { buildCharacterSessionProjectionV1, parseCharacterSessionProjectionV1 } from "../../src/app/characterSessionProjection";
 import { acceptHostCharacterSessionProjection } from "../../src/app/connectedCharacterProjectionHandshake";
 import { connectedInternal } from "../../src/app/connectedSessionRuntimeAdapter";
 import type { SessionCompatibilityManifest } from "../../src/app/connectedSessionProtocol";
@@ -48,8 +48,13 @@ test("production Host keeps a connected remote actor even when its ID matches a 
     capabilities:["resolution-event-v1","character-projection-v1","event-cursor-v1"],
     character:{characterId:sheet.id,sourceRevision:sheet.sourceRevision??0,runtimeRevision:sheet.runtimeRevision??0},
   };
+  const projection=buildCharacterSessionProjectionV1(sheet,catalog);
+  const hostCatalog=connectedInternal(adapter).catalog;
+  assert.deepEqual(hostCatalog.map((candidate)=>candidate.id),catalog.map((candidate)=>candidate.id));
+  const parsed=parseCharacterSessionProjectionV1(projection,hostCatalog);
+  assert.equal(parsed.status,"accepted",parsed.status==="rejected"?parsed.error:undefined);
 
-  const accepted=acceptHostCharacterSessionProjection(adapter,"peer.ilhantar",manifest,buildCharacterSessionProjectionV1(sheet,catalog));
+  const accepted=acceptHostCharacterSessionProjection(adapter,"peer.ilhantar",manifest,projection);
   assert.deepEqual(accepted,{status:"accepted",mode:"mounted",characterId:"char.aelar"});
 
   const snapshot=await adapter.getSnapshot();
