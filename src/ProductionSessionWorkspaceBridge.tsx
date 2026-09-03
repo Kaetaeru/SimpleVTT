@@ -6,6 +6,7 @@ import { useSimpleVtt } from "./app/AppProvider";
 import { mockAdapter } from "./app/mockAdapter";
 import { publishExternalAdapterSnapshot } from "./app/adapterSnapshotEvents";
 import { productionJoinCharacters } from "./app/productionSessionLifecycleAdapter";
+import { ProductionSessionAdvancementPanel } from "./ProductionSessionAdvancementPanel";
 import "./app/theaterOfMindSpatialAdapter";
 import "./production-session-workspace.css";
 
@@ -298,6 +299,7 @@ export function ProductionSessionWorkspaceBridge() {
               <div><span>Encounter</span><strong>{preparedCombatants.length} Combatant</strong></div>
             </div>
             <div className="production-session-roster">{players.map((participant)=><div key={participant.id} className="production-session-roster-row"><strong>{participant.characterName??participant.name}</strong><span>{participant.state==="connected"?"연결됨":"연결 끊김"}</span></div>)}</div>
+            <ProductionSessionAdvancementPanel />
             <details className="production-session-advanced">
               <summary>고급 DM 도구 · 거리 관계</summary>
               <p>필요할 때만 Actor 쌍의 거리, 가시성, 엄폐를 명시합니다.</p>
