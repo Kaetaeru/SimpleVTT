@@ -51,10 +51,10 @@ W3: 8/8 PASS — COMPLETE
 W4: 8/8 PASS — COMPLETE
 W5: 10/10 PASS — COMPLETE
 W6: 8/8 PASS — COMPLETE
-W7: 1/8 PASS — IN PROGRESS
-Official ledger score: 76.3/100.0
-PASS: 57/72
-Remaining gates: 15/72
+W7: 2/8 PASS — IN PROGRESS
+Official ledger score: 77.5/100.0
+PASS: 58/72
+Remaining gates: 14/72
 FAIL: 0
 BLOCKED: 0
 ```
@@ -71,17 +71,17 @@ W3 — COMPLETE (8/8 PASS)
 W4 — COMPLETE (8/8 PASS)
 W5 — COMPLETE (10/10 PASS)
 W6 — COMPLETE (8/8 PASS)
-W7 — IN PROGRESS (1/8 PASS)
-Next exact Gate: W7-02
+W7 — IN PROGRESS (2/8 PASS)
+Next exact Gate: W7-03
 ```
 
-`W7-01` is closed without product/runtime or test-implementation changes. Verification head `de59dd9898dd4cf4525082f0aa623e4a86cbd74d` and GitHub Actions pull-request checkout `c713e27a0989d8cd47761133e560afe4e93b77fc` have zero changed files between them. `W7-01 AUTO Verification` run `33718558967`, job `100532788018`, passed 12/12 focused tests and the production build. Artifact `9879408309` (`W7-01-AUTO-c713e27a0989d8cd47761133e560afe4e93b77fc`) has digest `sha256:600d6153242eb621ed6eabb32f86df1ee028d6102902b02ba88bebc410269cd3`. Existing participant lifecycle, replica catch-up, connected presentation, and durable retry owners prove `MP-H01~H03` exactly-once behavior without ghost state or mechanics reroll.
+`W7-02` is closed without product/runtime or existing test-implementation changes. Verification head `507459f208457e540beb19295dabb43e81f63b93` and GitHub Actions pull-request checkout `f1ca8d203177bb43077259dfa957fb4b5c3109ce` have zero changed files between them. `W7-02 AUTO Verification` run `33720461403`, job `100538359322`, passed 34/34 focused tests and the production build; Legacy Execution Boundary run `33720461389` and Contract validation run `33720461383` also succeeded. Artifact `9880065564` (`W7-02-AUTO-f1ca8d203177bb43077259dfa957fb4b5c3109ce`) has digest `sha256:a6e7e64721600ce77c746ae1d6a7e6a3724222a4926ff633caaeca180342bc13`. Existing reconnect, late-join, ordered catch-up, presentation replay, durable recovery, and Ready/Reaction/Concentration lifecycle owners prove the focused `MP-H04~H08` recovery set without adding a parallel recovery system.
 
-## W7-02 exact scope
+## W7-03 exact scope
 
-`W7-02` is `REUSE_LOCKED`. It freezes the existing reconnect, late-join, and presentation catch-up behavior without reroll for `MP-H04~H08`.
+`W7-03` is `REUSE_LOCKED`. It requires Host restart and Session end to keep transient Session state dead rather than resurrecting it, mapped by the master roadmap to `MP-A08~A09` and the relevant `MP-H` recovery cases.
 
-Reuse the existing participant lifecycle/rebind path, accepted Client replica cursor plus ordered Host catch-up, connected resolution presentation terminal catch-up, and durable/reconnect continuity owners. Before changing product code, reproduce a current-HEAD failure or document an explicit production reachability/contract gap in `roadmap/EVIDENCE_CARD.md`. Do not introduce a second reconnect system, participant lifecycle, catch-up journal, presentation pipeline, or parallel recovery path.
+Reuse the existing Session-end cleanup, Host restart/rehydration, durable-owner recovery, and transient runtime/presentation/prompt lifecycle owners. Before changing product code, reproduce a current-HEAD failure or document an explicit production reachability/contract gap in `roadmap/EVIDENCE_CARD.md`. Do not introduce a second Session lifecycle, restart journal, transient-state store, or cleanup path.
 
 ## Branch roles
 
@@ -97,11 +97,11 @@ Reuse the existing participant lifecycle/rebind path, accepted Client replica cu
 
 ### Next execution sequence
 
-1. Execute `W7-02`, the first non-`PASS` Gate in the ledger.
-2. Identify the smallest existing automated owner set proving reconnect, late join, ordered catch-up, and presentation recovery without reroll for `MP-H04~H08`.
+1. Execute `W7-03`, the first non-`PASS` Gate in the ledger.
+2. Identify the smallest existing automated owner set proving Host restart and Session-end transient-state cleanup for `MP-A08~A09` and linked `MP-H` recovery cases.
 3. Run that set on one exact SHA and record the focused command, pass count, artifact/digest when produced, and scenario mapping before changing the ledger.
 4. If it fails or a production reachability/contract gap is reproduced, fill `roadmap/EVIDENCE_CARD.md` and repair only the smallest existing owner path.
-5. Do not reopen completed W0-W6 or W7-01 work without a demonstrated regression.
+5. Do not reopen completed W0-W6 or W7-01~W7-02 work without a demonstrated regression.
 
 ## Non-negotiable execution rules
 
