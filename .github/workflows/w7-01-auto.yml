@@ -56,4 +56,5 @@ jobs:
           path: |
             /tmp/w7-01.tap
             /tmp/w7-01-evidence.txt
+            docs/roadmap/V1_EVIDENCE_LEDGER.json
           if-no-files-found: error
