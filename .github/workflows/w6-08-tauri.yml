@@ -1,0 +1,40 @@
+name: W6-08 Tauri Verification
+
+on:
+  pull_request:
+    branches:
+      - work/v1-composite
+    paths:
+      - "scripts/run-tauri-e2e.ps1"
+      - "scripts/run-tauri-e2e-w6-08.mjs"
+      - ".github/workflows/w6-08-tauri.yml"
+  workflow_dispatch:
+
+jobs:
+  tauri-w6-08:
+    runs-on: windows-latest
+    timeout-minutes: 40
+    env:
+      V1_VERIFICATION_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Verify W6-08 Journey J5 in Windows Tauri H+P1
+        shell: pwsh
+        run: npm run test:e2e:tauri -- --w608
+      - name: Verify production build
+        run: npm run build
+      - name: Upload W6-08 rendered evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: SimpleVTT-W6-08-Tauri-${{ env.V1_VERIFICATION_SHA }}
+          path: .live-dev/tauri-e2e/**/artifacts/**
+          if-no-files-found: warn
+          retention-days: 14

@@ -1,21 +1,21 @@
 # V1 Evidence Card
 
-Status: **W6-07 CLOSED — MP-G01~G09 DM LIBRARY / HANDOUT / SPATIAL AUTO PASS**
+Status: **W6-08 CLOSED — WINDOWS H+P1 JOURNEY J5 PASS**
 
 Use one card per Release Gate or coherent repair. The purpose is to stop duplicate implementation and force current-HEAD evidence before modifying an existing system.
 
 ```text
-Gate ID: W6-07
-Classification: REUSE_LOCKED
-Acceptance criterion: Freeze the existing connected DM Library materialization, image-handout projection, and Host-authoritative Scene/spatial capability paths as the automated owner set for MP-G01~G09, including reveal/withdraw/privacy/reconnect continuity and compatible/mismatched spatial behavior.
-Production entrypoint: Existing Campaign DM Library definitions/materialization/provenance, Session image-handout runtime adapter, connected Scene topology projection and Host mutation owners, remote fixture identity projection, Host authority, reconnect, and privacy paths; no second DM Library, handout system, Scene model, spatial transport, or presentation pipeline is authorized.
-Existing automated tests: tests/ui/campaignDmLibraryImport.test.ts; tests/ui/campaignDmLibraryGrantDurability.test.ts; tests/ui/sessionImageHandoutRuntimeAdapter.test.ts; tests/ui/connectedSceneTopologyProjection.test.ts; tests/ui/connectedSceneTopologyHostMutation.test.ts; tests/ui/productionHostRemoteFixtureIdentityProjection.test.ts.
-Exact observed failure: None on verification head 63f6943b6c015ed24dfd405087d3d18b3d6415cd. GitHub Actions pull-request checkout 888fe416e7653d49e93c71a6165304e3fd05a9ff and the verification head share tree e7009e28b279b7d1a63f291bbffde5c0a33f7746; focused verification and production build passed.
-Smallest authorized change: No product/runtime or test-implementation change. Add the focused workflow and record exact-tree evidence only.
-Verification SHA: 63f6943b6c015ed24dfd405087d3d18b3d6415cd (Actions checkout 888fe416e7653d49e93c71a6165304e3fd05a9ff; shared tree e7009e28b279b7d1a63f291bbffde5c0a33f7746)
-Verification: W6-07 AUTO Verification run 33713348784 / job 100517304162 = success; 9/9 focused tests PASS; production build PASS.
-Artifact: 9877676750, W6-07-AUTO-888fe416e7653d49e93c71a6165304e3fd05a9ff, sha256:1c9bffe62e50a4bf24f0ed94b9fe16327f3ec7053043f60d89edc9030a3cd094.
-Closure: W6-07 PASS. Reconcile the official ledger to 73.8/100.0 (55 PASS / 17 PENDING), then open W6-08 under the same evidence-first rule. Existing W4-07 rendered Windows H + P1 + P2 MP-G01~G09 evidence remains authoritative for rendered acceptance.
+Gate ID: W6-08
+Classification: VERIFY_ONLY
+Acceptance criterion: Verify the existing Windows Tauri H+P1 representative DM live-operation flow for Journey J5 / MP-E~G: Character GP grant/revoke, Party Stash, connected image handout reveal/withdraw, and distributed Character+Campaign Long Rest. Final P2 observer parity remains W9-02 only.
+Production entrypoint: Existing Windows Tauri/WebDriver harness over the production Session shell, durable Character inventory owner, Campaign Party Stash transaction path, connected image-handout projection, Campaign calendar, and distributed Character+Campaign Long Rest coordinator; no alternate Session shell, inventory/Stash transaction path, rest coordinator, handout system, or E2E framework is authorized.
+Existing automated/rendered verification: scripts/run-tauri-e2e-w6-08-v2.mjs through npm run test:e2e:tauri -- --w608, followed by npm run build.
+Exact observed failure: No product/runtime failure on verification head 36a9848a025f078f60b956e05f3432cbf5b14da4. Earlier failures while constructing the new evidence were harness-only: saved-Character setup, controlled numeric input replacement, zero-GP assumption, Campaign-calendar setup, and XPath passed to document.querySelector.
+Smallest authorized change: Harness-only corrections plus the scoped W6-08 workflow/evidence. No src/ product/runtime file changed.
+Verification SHA: 36a9848a025f078f60b956e05f3432cbf5b14da4 (Actions pull-request checkout db4d81f521cf15774dcff13d3249186f0c19dde1; GitHub compare reports zero changed files between verification head and synthetic checkout).
+Verification: W6-08 Tauri Verification run 33716559390 / job 100526862083 = success; real Windows Tauri H+P1 Journey J5 PASS; production build PASS.
+Artifact: 9878842089, SimpleVTT-W6-08-Tauri-36a9848a025f078f60b956e05f3432cbf5b14da4, sha256:b44dfe4f486409522630c632819665cee4eccdab72077857838876a33ac747b9.
+Closure: W6-08 PASS. Reconcile the official ledger to 75.0/100.0 (56 PASS / 16 PENDING), W6 8/8 PASS, then execute W7-01. Final P2 observer-parity acceptance is not claimed here and remains W9-02.
 ```
 
 ## Change gate
