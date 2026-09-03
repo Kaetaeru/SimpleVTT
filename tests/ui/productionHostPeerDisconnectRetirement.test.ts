@@ -75,11 +75,10 @@ test("production Host retires a disconnected transport peer while retaining reco
     transport.emitPeerLifecycle({peer,state:"disconnected"});
     await new Promise<void>((resolve)=>setImmediate(resolve));
 
-    const retainedPeer=`disconnected:${participantId}`;
     assert.equal(state.peerParticipants.has(peer),false,"dead transport peer must leave live participant routing");
     assert.equal(state.peerManifests.has(peer),false,"dead transport peer must leave live manifest routing");
-    assert.equal(state.peerParticipants.get(retainedPeer),participantId,"participant identity must remain available for live reconnect validation");
-    assert.equal(state.peerManifests.get(retainedPeer)?.character?.characterId,"char.w704.reconnect","accepted Character identity must survive the physical disconnect");
+    assert.equal([...state.peerParticipants.keys()].some((key)=>key.startsWith("disconnected:")),false,"live participant routing must never contain synthetic reconnect peers");
+    assert.equal(state.acceptedParticipantManifests.get(participantId)?.character?.characterId,"char.w704.reconnect","accepted Character identity must survive the physical disconnect outside live routing");
     const participant=app.session.participants.find((entry)=>entry.id===participantId);
     assert.equal(participant?.state,"disconnected");
     assert.equal(participant?.ready,false);
@@ -114,7 +113,7 @@ test("production Host rejects a remote owner inventory write while that owner is
       ()=>adapter.adjustDmInventory({requestId:"w7-04.offline-owner",actorId,operation:"grant-currency",amount:5}),
       /Remote Character owner is offline/,
     );
-    assert.equal(state.peerManifests.get(`disconnected:${participantId}`)?.character?.characterId,actorId,"rejected write must preserve the retained reconnect identity");
+    assert.equal(state.acceptedParticipantManifests.get(participantId)?.character?.characterId,actorId,"rejected write must preserve participant reconnect identity without a synthetic transport route");
   } finally {
     transport.restore();
   }
