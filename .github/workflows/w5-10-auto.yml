@@ -1,0 +1,91 @@
+name: W5-10 AUTO Verification
+
+on:
+  pull_request:
+    paths:
+      - "src/app/connectedSessionRuntimeAdapter.ts"
+      - "src/app/connectedActionRoutingAdapter.ts"
+      - "src/app/connectedResolutionPresentation.ts"
+      - "src/app/connectedTurnRoutingAdapter.ts"
+      - "src/app/connectedSessionProtocol.ts"
+      - "src/app/resolutionEventUndo.ts"
+      - "tests/ui/connectedResolutionPresentation.test.ts"
+      - "tests/ui/productionClientReconnect.test.ts"
+      - "tests/ui/connectedThreePeer*.test.ts"
+      - "tests/ui/phase09ManualMovementReactionAdapter.test.ts"
+      - "tests/ui/c9FamilyOReadyConcentrationProduction.test.ts"
+      - "tests/ui/connectedTurnProjection.test.ts"
+      - "tests/ui/connectedUndoCompensation.test.ts"
+      - ".github/workflows/w5-10-auto.yml"
+  push:
+    branches:
+      - "work/v1-composite"
+      - "agent/**"
+    paths:
+      - "src/app/connectedSessionRuntimeAdapter.ts"
+      - "src/app/connectedActionRoutingAdapter.ts"
+      - "src/app/connectedResolutionPresentation.ts"
+      - "src/app/connectedTurnRoutingAdapter.ts"
+      - "src/app/connectedSessionProtocol.ts"
+      - "src/app/resolutionEventUndo.ts"
+      - "tests/ui/connectedResolutionPresentation.test.ts"
+      - "tests/ui/productionClientReconnect.test.ts"
+      - "tests/ui/connectedThreePeer*.test.ts"
+      - "tests/ui/phase09ManualMovementReactionAdapter.test.ts"
+      - "tests/ui/c9FamilyOReadyConcentrationProduction.test.ts"
+      - "tests/ui/connectedTurnProjection.test.ts"
+      - "tests/ui/connectedUndoCompensation.test.ts"
+      - ".github/workflows/w5-10-auto.yml"
+
+jobs:
+  mp-01-through-mp-04:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Generate content dependencies
+        run: npm run generate:content
+      - name: Verify W5-10 MP-01 through MP-04 scenario map
+        shell: bash
+        run: |
+          set +e
+          npx tsx --test \
+            tests/ui/connectedResolutionPresentation.test.ts \
+            tests/ui/productionClientReconnect.test.ts \
+            tests/ui/connectedThreePeerRemoteAttackOwnership.test.ts \
+            tests/ui/connectedThreePeerRemoteAttackOutcome.test.ts \
+            tests/ui/connectedThreePeerRemoteAdvantage.test.ts \
+            tests/ui/connectedThreePeerRemoteMultiDieDamage.test.ts \
+            tests/ui/connectedThreePeerHostNpcAttack.test.ts \
+            tests/ui/connectedThreePeerRemoteConsumableItem.test.ts \
+            tests/ui/connectedThreePeerRemoteSpellPresentation.test.ts \
+            tests/ui/connectedThreePeerRemoteSlottedMultiTargetSpell.test.ts \
+            tests/ui/connectedThreePeerRemoteSavingThrowSpell.test.ts \
+            tests/ui/connectedThreePeerRemoteStandardCheckPicker.test.ts \
+            tests/ui/connectedThreePeerRemoteRejectionExactlyOnce.test.ts \
+            tests/ui/connectedThreePeerRemoteConcurrentIntent.test.ts \
+            tests/ui/connectedThreePeerDuplicateEventBatch.test.ts \
+            tests/ui/connectedThreePeerRemoteDisabledAction.test.ts \
+            tests/ui/connectedThreePeerActionMatrix.test.ts \
+            tests/ui/connectedThreePeerPresentation.test.ts \
+            tests/ui/phase09ManualMovementReactionAdapter.test.ts \
+            tests/ui/c9FamilyOReadyConcentrationProduction.test.ts \
+            tests/ui/connectedTurnProjection.test.ts \
+            tests/ui/connectedUndoCompensation.test.ts \
+            > w5-10-auto.log 2>&1
+          status=$?
+          cat w5-10-auto.log
+          exit "$status"
+      - name: Upload focused test log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: W5-10-AUTO-${{ github.sha }}
+          path: w5-10-auto.log
+          if-no-files-found: error
+          retention-days: 14
