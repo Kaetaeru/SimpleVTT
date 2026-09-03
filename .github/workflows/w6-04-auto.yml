@@ -1,0 +1,59 @@
+name: W6-04 AUTO Verification
+
+on:
+  push:
+    paths:
+      - "src/app/connectedSessionProtocol.ts"
+      - "src/app/connectedOwnerInventoryJournalAdapter.ts"
+      - "src/app/connectedOwnerInventoryJournalStore.ts"
+      - "src/app/connectedOwnerInventoryExactCompensationAdapter.ts"
+      - "src/app/connectedPartyStashHostRecoveryAdapter.ts"
+      - "src/app/connectedPartyStashHostCoordinatorStore.ts"
+      - "src/app/connectedPartyStashApprovalRuntimeAdapter.ts"
+      - "src-tauri/src/connected_party_stash_host.rs"
+      - "tests/ui/connectedDurableFailure.test.ts"
+      - "tests/ui/connectedOwnerInventoryRestart.test.ts"
+      - "tests/ui/connectedPartyStashHostRecovery.test.ts"
+      - "tests/ui/connectedPartyStashHostRecoveryStructure.test.ts"
+      - "tests/ui/connectedPartyStashApprovalOwnerTransfer.test.ts"
+      - ".github/workflows/w6-04-auto.yml"
+  pull_request:
+    paths:
+      - "src/app/connectedSessionProtocol.ts"
+      - "src/app/connectedOwnerInventoryJournalAdapter.ts"
+      - "src/app/connectedOwnerInventoryJournalStore.ts"
+      - "src/app/connectedOwnerInventoryExactCompensationAdapter.ts"
+      - "src/app/connectedPartyStashHostRecoveryAdapter.ts"
+      - "src/app/connectedPartyStashHostCoordinatorStore.ts"
+      - "src/app/connectedPartyStashApprovalRuntimeAdapter.ts"
+      - "src-tauri/src/connected_party_stash_host.rs"
+      - "tests/ui/connectedDurableFailure.test.ts"
+      - "tests/ui/connectedOwnerInventoryRestart.test.ts"
+      - "tests/ui/connectedPartyStashHostRecovery.test.ts"
+      - "tests/ui/connectedPartyStashHostRecoveryStructure.test.ts"
+      - "tests/ui/connectedPartyStashApprovalOwnerTransfer.test.ts"
+      - ".github/workflows/w6-04-auto.yml"
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run generate:content
+      - name: Focused W6-04 tests
+        run: |
+          npx tsx --test tests/ui/connectedDurableFailure.test.ts tests/ui/connectedOwnerInventoryRestart.test.ts tests/ui/connectedPartyStashHostRecovery.test.ts tests/ui/connectedPartyStashHostRecoveryStructure.test.ts tests/ui/connectedPartyStashApprovalOwnerTransfer.test.ts > w6-04-auto.log
+          cat w6-04-auto.log
+      - name: Production build
+        run: npm run build
+      - name: Upload W6-04 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: W6-04-AUTO-${{ github.sha }}
+          path: w6-04-auto.log
