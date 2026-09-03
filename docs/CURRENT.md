@@ -49,10 +49,10 @@ W1: 8/8 PASS — COMPLETE
 W2: 8/8 PASS — COMPLETE
 W3: 8/8 PASS — COMPLETE
 W4: 8/8 PASS — COMPLETE
-W5: 8/10 PASS
-Official ledger score: 62.0/100.0
-PASS: 46/72
-Remaining gates: 26/72
+W5: 9/10 PASS
+Official ledger score: 63.5/100.0
+PASS: 47/72
+Remaining gates: 25/72
 FAIL: 0
 BLOCKED: 0
 ```
@@ -67,25 +67,24 @@ W1 — COMPLETE (8/8 PASS)
 W2 — COMPLETE (8/8 PASS)
 W3 — COMPLETE (8/8 PASS)
 W4 — COMPLETE (8/8 PASS)
-W5 — 8/10 PASS
-Next exact Gate: W5-09
+W5 — 9/10 PASS
+Next exact Gate: W5-10
 ```
 
-`W5-08` is closed by exact-SHA Initiative/reaction/concentration/Ready/correction fan-out AUTO evidence. Product verification SHA `faf5331ed72cd051213ab917e3c2f402fae03087` passed `W5-08 AUTO Verification` run `33697343776`, job `100468976213`, with 11/11 focused tests. Artifact `9872255696` (`W5-08-AUTO-faf5331ed72cd051213ab917e3c2f402fae03087`) has digest `sha256:59d2924fb515ef5763c608279d71b0d92e47cee5b6266114e70eb7e63bd8b2ce`. The official ledger records W5-08 PASS; the first non-PASS Gate is now `W5-09`.
+`W5-09` is closed by canonical exact-SHA MP-J01~J08 automated UI-facing parity evidence. Verification SHA `4c93082d0af77ae79da82db711b7934c8e2f8544` passed `W5-09 AUTO Verification` run `33699407674`, job `100475234429`, with 18/18 focused tests. Artifact `9872956996` (`W5-09-AUTO-4c93082d0af77ae79da82db711b7934c8e2f8544`) has digest `sha256:5f7f708086b1c7b3e941d6d37bcac01cbded9f0fa6edea565dcbad171164463f`. The reproduced J07 failure was a stale test fixture and was repaired test-only; no product/runtime `src/` path changed. The official ledger now records W5-09 PASS; the first non-PASS Gate is `W5-10`.
 
-## W5-09 exact scope
+## W5-10 exact scope
 
-`W5-09` is `REUSE_LOCKED`. It closes the automated UI-facing parity evidence for `MP-J01` through `MP-J08`; it does **not** authorize a new multiplayer UI or mechanics path.
+`W5-10` is `REUSE_LOCKED`. It closes the existing production-adapter three-peer action, presentation, turn, and Undo automated evidence for the first four multiplayer work items into **one exact-HEAD scenario map**:
 
-Repository-defined existing evidence owners:
+- `MP-01` — issue `#111`, Shared Resolution Presentation Envelope
+- `MP-02` — issue `#114`, Client remote presentation queue / dice replay
+- `MP-03` — issue `#112`, Three-peer authoritative action matrix
+- `MP-04` — issue `#113`, Initiative / reaction / Ready / correction
 
-- J01-J06: `tests/ui/connectedPartyStashApprovalOwnerTransfer.test.ts`
-- J07: `tests/ui/connectedSceneTopologyProjection.test.ts`, `tests/ui/connectedSceneTopologyHostMutation.test.ts`, `tests/ui/productionHostRemoteFixtureIdentityProjection.test.ts`
-- J08: `tests/ui/connectedThreePeerActionMatrix.test.ts`, `tests/ui/connectedThreePeerPresentation.test.ts`, `tests/ui/connectedTurnProjection.test.ts`, `tests/ui/connectedUndoCompensation.test.ts`
+This Gate is an evidence-consolidation Gate. Reuse the production adapter and automated coverage already proven across W5-04 through W5-09; do not create a second transport, resolver, presentation queue, dice/VFX path, turn engine, or Undo path. Before changing product code, reproduce a current-HEAD failure or document an explicit production reachability/contract gap in `roadmap/EVIDENCE_CARD.md`.
 
-The minimum parity fingerprint covers public Scene entity fields; Session mode/round/current Actor/economy; selected Character action definitions; owner inventory/GP/items; active resolution presentation; and public Activity state changes. A wire-message, status-code, or persistence-only assertion is insufficient. Rendered Windows motion/VFX parity remains a later final acceptance concern; W5-09 fixes the automated parity evidence first.
-
-No product code may change for W5-09 unless a reproducible current-HEAD failure or explicit production reachability/contract gap is recorded first.
+The next useful action is to map the repository-owned automated owners for issues #111/#114/#112/#113 into one W5-10 focused command/scenario table, run that set on an exact SHA, and record the resulting count/artifact/digest. Rendered Windows three-window parity remains a later final acceptance concern and is not replaced by W5-10 AUTO evidence.
 
 ## Branch roles
 
@@ -95,16 +94,16 @@ No product code may change for W5-09 unless a reproducible current-HEAD failure 
 - Evidence ledger: `docs/roadmap/V1_EVIDENCE_LEDGER.json`
 - Evidence Card: `docs/roadmap/EVIDENCE_CARD.md`
 - Multiplayer catalog: `docs/design/multiplayer-v1-scenario-catalog.md`
-- MP-13 parity issue: GitHub issue `#189`
+- Multiplayer Epic: GitHub issue `#110`
 - Working branch policy: create one scoped `agent/*` branch from the latest live integration HEAD for each Gate or coherent repair; there is no permanent global active branch.
 - `main`, C9 finalization branches, older V1 branches, and archived agent workspaces are historical/reference sources until deliberately promoted.
 
 ### Next execution sequence
 
-1. Execute `W5-09`, the first non-`PASS` Gate in the ledger, by mapping and running the repository-owned MP-J automated parity coverage on an exact SHA.
-2. Reuse the existing owners above. Do not reopen W1-W5-08 unless a new current-HEAD regression is reproduced.
-3. If the focused W5-09 suite passes, record exact-SHA commands, counts, artifact/digest evidence, and scenario mapping before changing the official ledger.
-4. If it fails, fill `docs/roadmap/EVIDENCE_CARD.md` and repair only the smallest reproduced owner-path defect.
+1. Execute `W5-10`, the first non-`PASS` Gate in the ledger, by consolidating existing MP-01~MP-04 production-adapter automation into one exact-HEAD scenario map.
+2. Reuse the owners already proven by W5-04~W5-09 and issues #111/#114/#112/#113. Do not reopen W1-W5-09 unless a new current-HEAD regression is reproduced.
+3. Run the focused W5-10 command on one exact SHA and record deterministic pass/fail count plus artifact/digest before changing the official ledger.
+4. If it fails, fill `roadmap/EVIDENCE_CARD.md` and repair only the smallest reproduced owner-path defect.
 5. For Common Play, follow [`design/ui-ux/COMMON-PLAY-FUNCTION-FIRST.md`](design/ui-ux/COMMON-PLAY-FUNCTION-FIRST.md): functional reachability first, broad UI redesign later.
 
 ## Non-negotiable execution rules
