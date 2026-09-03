@@ -48,10 +48,10 @@ W2: COMPLETE — 8/8 PASS
 W3: COMPLETE — 8/8 PASS
 W4: COMPLETE — 8/8 PASS
 W5: COMPLETE — 10/10 PASS
-W6: 7/8 PASS
-Official ledger score: 73.8/100.0
-PASS: 55/72
-PENDING: 17/72
+W6: COMPLETE — 8/8 PASS
+Official ledger score: 75.0/100.0
+PASS: 56/72
+PENDING: 16/72
 FAIL: 0
 BLOCKED: 0
 ```
@@ -59,24 +59,24 @@ BLOCKED: 0
 ## Current stage
 
 ```text
-Next Gate: W6-08
+Next Gate: W7-01
 ```
 
-`W6-07` is PASS without product/runtime or test-implementation changes. Verification head `63f6943b6c015ed24dfd405087d3d18b3d6415cd` and GitHub Actions checkout `888fe416e7653d49e93c71a6165304e3fd05a9ff` share tree `e7009e28b279b7d1a63f291bbffde5c0a33f7746`. `W6-07 AUTO Verification` run `33713348784`, job `100517304162`, passed 9/9 focused tests and the production build. Artifact `9877676750` (`W6-07-AUTO-888fe416e7653d49e93c71a6165304e3fd05a9ff`) has digest `sha256:1c9bffe62e50a4bf24f0ed94b9fe16327f3ec7053043f60d89edc9030a3cd094`. The existing DM Library import/materialization/provenance, image handout reveal/withdraw/privacy/reconnect, connected Scene topology/Host mutation, and remote fixture projection owners close the required current exact-SHA automated owner proof for `MP-G01~G09`. Historical W4-07 rendered Windows H+P1+P2 evidence remains the rendered acceptance source. The official ledger now records W6-07 PASS.
+`W6-08` is PASS without product/runtime changes. Verification head `36a9848a025f078f60b956e05f3432cbf5b14da4` and GitHub Actions pull-request checkout `db4d81f521cf15774dcff13d3249186f0c19dde1` have zero changed files between them. `W6-08 Tauri Verification` run `33716559390`, job `100526862083`, passed the real Windows Tauri H+P1 Journey J5 flow and the production build. Artifact `9878842089` (`SimpleVTT-W6-08-Tauri-36a9848a025f078f60b956e05f3432cbf5b14da4`) has digest `sha256:b44dfe4f486409522630c632819665cee4eccdab72077857838876a33ac747b9`. The journey proves representative DM GP grant/revoke, Party Stash convergence, connected image-handout reveal/withdraw, and distributed Character+Campaign Long Rest with an enabled Campaign calendar. Final P2 observer parity is not claimed and remains `W9-02`. The official ledger records W6-08 PASS and W6 is complete.
 
-## W6-08 routing
+## W7-01 routing
 
-`W6-08` is `VERIFY_ONLY`. The master roadmap requires the existing Tauri H+P1 path to verify representative DM live-operation flows across grants/revokes, Party Stash, distributed Long Rest, and handouts for Journey J5 / `MP-E~G`. P2 observer-parity final acceptance belongs only to `W9-02`.
+`W7-01` is `REUSE_LOCKED`. The master roadmap requires duplicate request, duplicate event batch, and retry handling to remain exactly-once for `MP-H01~H03`.
 
-Reuse the existing Windows Tauri H+P1 harness and production DM operation paths. Do not create a second E2E framework, alternate Session shell, replacement transaction path, or duplicate handout flow. A product-code change is authorized only after a reproducible current-HEAD failure or explicit production reachability/contract gap is recorded in `EVIDENCE_CARD.md`.
+Reuse the existing Host request/event ledger, idempotency keys, ordered replica/catch-up, durable transaction/recovery, and retry owners. Do not create a second request ledger, event journal, retry coordinator, or parallel recovery path. A product-code change is authorized only after a reproducible current-HEAD failure or explicit production reachability/contract gap is recorded in `EVIDENCE_CARD.md`.
 
 ### Next execution sequence
 
-1. Execute `W6-08`, the first non-`PASS` Gate in the ledger.
-2. Reuse the smallest existing Windows Tauri H+P1 journey that covers representative grant/revoke, Stash, Long Rest, and handout behavior across Journey J5 / `MP-E~G`.
-3. Run it from one exact SHA and record the Windows artifact/digest plus rendered acceptance evidence before changing the official ledger.
-4. If a current-HEAD failure or reachability gap is reproduced, fill `EVIDENCE_CARD.md` and repair only the smallest existing production path.
-5. Do not pull P2 observer-parity final acceptance forward from `W9-02`.
+1. Execute `W7-01`, the first non-`PASS` Gate in the ledger.
+2. Identify the smallest existing automated owner set for duplicate request, duplicate event batch, and retry exactly-once behavior mapped to `MP-H01~H03`.
+3. Run that focused set on one exact SHA and record command, pass count, artifact/digest when produced, and scenario mapping before changing the ledger.
+4. If a current-HEAD failure or reachability gap is reproduced, fill `EVIDENCE_CARD.md` and repair only the smallest existing owner path.
+5. Do not reopen W0-W6 absent a demonstrated regression.
 
 ## Non-negotiable routing rules
 
