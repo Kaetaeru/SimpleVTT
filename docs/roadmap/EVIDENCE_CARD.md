@@ -1,21 +1,21 @@
 # V1 Evidence Card
 
-Status: **W6-06 CLOSED — MP-F07~F09 DISTRIBUTED LONG REST / RECOVERY AUTO PASS**
+Status: **W6-07 CLOSED — MP-G01~G09 DM LIBRARY / HANDOUT / SPATIAL AUTO PASS**
 
 Use one card per Release Gate or coherent repair. The purpose is to stop duplicate implementation and force current-HEAD evidence before modifying an existing system.
 
 ```text
-Gate ID: W6-06
+Gate ID: W6-07
 Classification: REUSE_LOCKED
-Acceptance criterion: Freeze the existing distributed Character + Campaign Long Rest path for MP-F07~F09 so Character recovery plus optional Campaign time/rations commit through the existing compound owners, rejected/preflight failure cannot partially advance either owner, and disconnect/restart recovery settles or aborts exactly once.
-Production entrypoint: Existing Character Long Rest projection, Character+Campaign compound coordinator/writer, connected Long Rest preflight/transaction state, owner preparation/persistence, Campaign participant persistence, runtime/wire path, and Host restart recovery; no second rest coordinator, Character persistence path, Campaign clock/ration store, or recovery journal is authorized.
-Existing automated tests: npm run test:campaign-rest (17 focused owner files; 93 tests covering Character/Campaign compound persistence, connected preflight/transaction state, owner preparation/persistence, Campaign persistence, wire/runtime/UI reachability, and Host restart recovery).
-Exact observed failure: None on integration-derived verification head cf531f34a2c2cf85174fabafdc9092022fb0c46b. GitHub Actions pull-request checkout 96f9e6715e32b95d6644f67fb461204661ab107c and the verification head share tree b3607dd639fee00d42bc51f8ea88d5c6bf466cba; focused verification and production build passed.
+Acceptance criterion: Freeze the existing connected DM Library materialization, image-handout projection, and Host-authoritative Scene/spatial capability paths as the automated owner set for MP-G01~G09, including reveal/withdraw/privacy/reconnect continuity and compatible/mismatched spatial behavior.
+Production entrypoint: Existing Campaign DM Library definitions/materialization/provenance, Session image-handout runtime adapter, connected Scene topology projection and Host mutation owners, remote fixture identity projection, Host authority, reconnect, and privacy paths; no second DM Library, handout system, Scene model, spatial transport, or presentation pipeline is authorized.
+Existing automated tests: tests/ui/campaignDmLibraryImport.test.ts; tests/ui/campaignDmLibraryGrantDurability.test.ts; tests/ui/sessionImageHandoutRuntimeAdapter.test.ts; tests/ui/connectedSceneTopologyProjection.test.ts; tests/ui/connectedSceneTopologyHostMutation.test.ts; tests/ui/productionHostRemoteFixtureIdentityProjection.test.ts.
+Exact observed failure: None on verification head 63f6943b6c015ed24dfd405087d3d18b3d6415cd. GitHub Actions pull-request checkout 888fe416e7653d49e93c71a6165304e3fd05a9ff and the verification head share tree e7009e28b279b7d1a63f291bbffde5c0a33f7746; focused verification and production build passed.
 Smallest authorized change: No product/runtime or test-implementation change. Add the focused workflow and record exact-tree evidence only.
-Verification SHA: cf531f34a2c2cf85174fabafdc9092022fb0c46b (Actions checkout 96f9e6715e32b95d6644f67fb461204661ab107c; shared tree b3607dd639fee00d42bc51f8ea88d5c6bf466cba)
-Verification: W6-06 AUTO Verification run 33712312082 / job 100514236959 = success; 93/93 focused tests PASS; production build PASS.
-Artifact: 9877347283, W6-06-AUTO-96f9e6715e32b95d6644f67fb461204661ab107c, sha256:45d257223dcb90dfefc79ab33ed51bcd6fabff0737d9e7039833c7860b5f4eb0.
-Closure: W6-06 PASS. Reconcile the official ledger to 72.5/100.0 (54 PASS / 18 PENDING), then open W6-07 under the same evidence-first rule. Real H + P1 + P2 Windows rendered acceptance remains later.
+Verification SHA: 63f6943b6c015ed24dfd405087d3d18b3d6415cd (Actions checkout 888fe416e7653d49e93c71a6165304e3fd05a9ff; shared tree e7009e28b279b7d1a63f291bbffde5c0a33f7746)
+Verification: W6-07 AUTO Verification run 33713348784 / job 100517304162 = success; 9/9 focused tests PASS; production build PASS.
+Artifact: 9877676750, W6-07-AUTO-888fe416e7653d49e93c71a6165304e3fd05a9ff, sha256:1c9bffe62e50a4bf24f0ed94b9fe16327f3ec7053043f60d89edc9030a3cd094.
+Closure: W6-07 PASS. Reconcile the official ledger to 73.8/100.0 (55 PASS / 17 PENDING), then open W6-08 under the same evidence-first rule. Existing W4-07 rendered Windows H + P1 + P2 MP-G01~G09 evidence remains authoritative for rendered acceptance.
 ```
 
 ## Change gate
