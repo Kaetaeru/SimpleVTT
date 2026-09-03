@@ -1,20 +1,22 @@
 # V1 Evidence Card
 
-Status: **W5-06 CLOSED — SHARED VISUAL DICE + COMBAT VFX PASS**
+Status: **W5-09 CURRENT-HEAD FAILURE REPRODUCED — TEST FIXTURE REPAIR VERIFIED**
 
 Use one card per Release Gate or coherent repair. The purpose is to stop duplicate implementation and force current-HEAD evidence before modifying an existing system.
 
 ```text
-Gate ID: W5-06
-Acceptance criterion: local, Host, and remote Resolution presentation use the same VisualDice and CombatVfx projection owners so connected rendering consumes Host-authored authoritative results without a network-only dice/VFX resolver.
-Production entrypoint: connectedActionRoutingAdapter Host presentation publication -> connectedResolutionPresentation action metadata -> connectedSessionRuntimeAdapter remote presentation install -> shared buildVisualDiceRoll / buildCombatVfxProfile projection owners.
-Existing implementation files: src/app/diceVisuals.ts; src/app/combatVisuals.ts; src/app/connectedResolutionPresentation.ts; src/app/connectedActionRoutingAdapter.ts; src/app/connectedSessionRuntimeAdapter.ts.
-Existing automated tests: tests/ui/connectedResolutionPresentation.test.ts; connected Session/presentation regression coverage composed into GitHub Actions UI.
-Existing exact-SHA evidence: product verification SHA 2ac28651312f1fdbe82edb74fd13f342a8f910f7; GitHub Actions UI run 33636100212 / job 100267245818 = success; focused record docs/roadmap/evidence/W5-06.md merged by PR #265; GitHub compare 2ac28651312f1fdbe82edb74fd13f342a8f910f7...58a10dc1bf42dff79dd3f8035ea02bd9967d8f43 changes no src/ or tests/ files, while PR #265 adds only W5-06 focused evidence.
-Exact observed result: PASS. buildVisualDiceRoll consumes the authoritative ResolutionView dice and buildCombatVfxProfile derives combat visual semantics from the same authoritative resolution/action presentation. connectedResolutionPresentation.test.ts reconstructs the remote action from the Host envelope and requires both the visual-dice output and combat-VFX profile to deep-equal the local projections. Client presentation application does not rerun mechanics.
-Inheritance check: GitHub compare 2ac28651312f1fdbe82edb74fd13f342a8f910f7...58a10dc1bf42dff79dd3f8035ea02bd9967d8f43 contains no src/ or tests/ changes. PR #265 adds only docs/roadmap/evidence/W5-06.md. No production source, connected runtime, rendering tests, Tauri runner, or workflow implementation changed across the inherited path.
-Exact observed failure: None.
-Smallest required change: None. Record W5-06 as PASS in the official ledger/current documents and proceed to W5-07. No product-code modification is authorized.
+Gate ID: W5-09
+Classification: REUSE_LOCKED
+Acceptance criterion: automated UI-facing Host/P1/P2 parity evidence covers MP-J01 through MP-J08 across public Scene state, Session/turn/economy state, selected Character actions, owner inventory/GP/items, active Resolution presentation, and public Activity changes. Protocol-only or persistence-only assertions are insufficient; rendered Windows parity remains a later V1 release requirement.
+Production entrypoint: existing connected Host/Client projection, Party Stash owner-transfer/approval, authoritative Scene topology, remote Character projection handshake, three-peer action/presentation, turn projection, and Undo compensation paths.
+Existing implementation files: src/app/connectedSessionRuntimeAdapter.ts; src/app/connectedActionRoutingAdapter.ts; src/app/connectedResolutionPresentation.ts; src/app/connectedTurnRoutingAdapter.ts; src/app/connectedSessionProtocol.ts; src/app/connectedCharacterProjectionHandshake.ts; src/app/productionSessionEmptyEncounterAdapter.ts; src/app/campaignPartyStashPolicyRuntimeAdapter.ts.
+Existing automated tests: tests/ui/connectedPartyStashApprovalOwnerTransfer.test.ts; tests/ui/connectedSceneTopologyProjection.test.ts; tests/ui/connectedSceneTopologyHostMutation.test.ts; tests/ui/productionHostRemoteFixtureIdentityProjection.test.ts; tests/ui/connectedThreePeerActionMatrix.test.ts; tests/ui/connectedThreePeerPresentation.test.ts; tests/ui/connectedTurnProjection.test.ts; tests/ui/connectedUndoCompensation.test.ts.
+Existing exact-SHA evidence: canonical SHA 5f7bb4bdbc20da3ff437809e3d7f3f024e159f1d, W5-09 AUTO run 33698750944 / job 100473212192 = 17/18 PASS, 1 FAIL; failure artifact 9872730067 (W5-09-AUTO-5f7bb4bdbc20da3ff437809e3d7f3f024e159f1d), sha256:fc157bfecb250a2fdf719b0d9d516bf9d8340ed504ab1c292312d7b621b4d3da.
+Exact observed failure: productionHostRemoteFixtureIdentityProjection rejected the remote fixture Character because its test-only projection referenced content:dnd.srd-5.2.1@2024#dnd.srd521.background.soldier while the production-composed Host catalog uses the current generated 0.1-draft identities.
+Root cause: stale automated test fixture. The test manually injected a three-entry @2024 catalog, then production snapshot composition materialized the real 509-entry @0.1-draft catalog before the Host handshake. Product handshake/runtime behavior was not the defect.
+Smallest required change: test-only. Build the fixture Character projection from the production snapshot catalog instead of a hard-coded three-entry @2024 catalog. No src/ product/runtime file changed.
+Repair verification: SHA 8cfba705da716d1fd5fd145a7870a774363f460b, W5-09 AUTO run 33699271386 / job 100474814937 = 18/18 PASS; artifact 9872911463 (W5-09-AUTO-8cfba705da716d1fd5fd145a7870a774363f460b), sha256:a79b395d266e6084dc419ce898a63307affa44966b96c1a93442300d867f46bc.
+Required next verification: merge the test-only repair and re-run W5-09 AUTO on the canonical work/v1-composite merge SHA. Record that exact-SHA result before closing W5-09 in the official ledger.
 ```
 
 ## Change gate
