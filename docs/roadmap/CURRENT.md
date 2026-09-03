@@ -48,10 +48,10 @@ W2: COMPLETE — 8/8 PASS
 W3: COMPLETE — 8/8 PASS
 W4: COMPLETE — 8/8 PASS
 W5: COMPLETE — 10/10 PASS
-W6: 3/8 PASS
-Official ledger score: 68.8/100.0
-PASS: 51/72
-PENDING: 21/72
+W6: 4/8 PASS
+Official ledger score: 70.0/100.0
+PASS: 52/72
+PENDING: 20/72
 FAIL: 0
 BLOCKED: 0
 ```
@@ -59,24 +59,24 @@ BLOCKED: 0
 ## Current stage
 
 ```text
-Next Gate: W6-04
+Next Gate: W6-05
 ```
 
-`W6-03` is PASS without product-code changes. Canonical exact SHA `b1f54abefd7dffb2f865ccaccde31649b8080a01` passed `W6-03 AUTO Verification` run `33705306657`, job `100493052616`, with 13/13 focused tests and production build PASS. Artifact `9875022681` (`W6-03-AUTO-b1f54abefd7dffb2f865ccaccde31649b8080a01`) has digest `sha256:8f5ef938566269b624ae4eeb33c95603eee501c514f6353945e9767899058deb`. The focused Campaign/Party Stash owners cover the shared, DM-approval, and DM-managed request lifecycle plus connected owner/failure-retry behavior required by `MP-E06~E11`. PR #297 integrated the evidence as canonical merge `888defd2be7f2f08c2f721abf57f72aaac5f8f12`. The official ledger now records W6-03 PASS.
+`W6-04` is PASS without product/runtime or test-implementation changes. Canonical exact SHA `39bcd0356ca7b9a242684538253204ae17916eb1` passed `W6-04 AUTO Verification` run `33709116187`, job `100504620599`, with 17/17 focused tests and production build PASS. Artifact `9876316867` (`W6-04-AUTO-39bcd0356ca7b9a242684538253204ae17916eb1`) has digest `sha256:f200803affd1a791b49ea02d4aad3f5d6395d31636a8a18d6ab3a63c9f5512bd`. The focused durable-write, owner-journal, Host Party Stash recovery, and forced post-commit finalize-failure owners close the exact-HEAD automated persistence/recovery proof for `MP-E12~E13`. Real H+P1+P2 Windows rendered acceptance remains later. The official ledger now records W6-04 PASS.
 
-## W6-04 routing
+## W6-05 routing
 
-`W6-04` is `REUSE_LOCKED`. The master roadmap requires the existing Party Stash transfer path to prove atomic transfer behavior, authoritative journal/history, compensation, and restart recovery for `MP-E12~E13`.
+`W6-05` is `REUSE_LOCKED`. The master roadmap requires the existing capability-driven item-to-rations path to prove `MP-E14`: eligibility comes from capability data and item debit plus ration credit are atomic.
 
-Reuse the existing transfer, journal, compensation, persistence, and recovery owners. Do not add a second transaction system, a parallel Session-only ledger, or a replacement recovery path. A product-code change is authorized only after a reproducible current-HEAD failure or explicit production reachability/contract gap is recorded in `EVIDENCE_CARD.md`.
+Reuse the existing inventory, item-capability, Campaign ration, transaction, persistence, recovery, and connected projection owners. Do not add a parallel item-conversion table, second inventory model, or replacement ration store. A product-code change is authorized only after a reproducible current-HEAD failure or explicit production reachability/contract gap is recorded in `EVIDENCE_CARD.md`.
 
 ### Next execution sequence
 
-1. Execute `W6-04`, the first non-`PASS` Gate in the ledger.
-2. Identify the smallest existing automated owners for transfer success/failure atomicity, journal/history, compensation/Undo behavior, and restart recovery mapped to `MP-E12~E13`.
+1. Execute `W6-05`, the first non-`PASS` Gate in the ledger.
+2. Identify the smallest existing automated owners for capability-based eligibility, atomic item debit/ration credit, failure/retry idempotency, and connected projection mapped to `MP-E14`.
 3. Run the focused set on one exact SHA and record exact command, deterministic test count, artifact/digest, and scenario mapping before changing the official ledger.
 4. If a current-HEAD failure or reachability gap is reproduced, fill `EVIDENCE_CARD.md` and repair only the smallest existing owner path.
-5. Do not reopen completed W1-W5 or W6-01/W6-02/W6-03 evidence without a new current-HEAD regression.
+5. Do not reopen completed W1-W5 or W6-01 through W6-04 evidence without a new current-HEAD regression.
 
 ## Non-negotiable routing rules
 
