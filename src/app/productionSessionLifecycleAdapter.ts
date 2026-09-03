@@ -94,10 +94,6 @@ function stopBlockedReason(adapter:MockAdapter) {
   return undefined;
 }
 
-function retainedReconnectPeerKey(participantId:string) {
-  return `disconnected:${participantId}`;
-}
-
 async function markHostPeerDisconnected(adapter:MockAdapter,event:SessionTransportPeerLifecycle) {
   const state=connectedStateFor(adapter);
   const ledger=state.ledger;
@@ -109,16 +105,12 @@ async function markHostPeerDisconnected(adapter:MockAdapter,event:SessionTranspo
   const participant=app.session.participants.find((entry)=>entry.id===participantId);
   if (!participant||(participant.state==="disconnected"&&!participant.ready)) return;
 
-  // Retire the dead transport address immediately so reconnect work cannot route
-  // through it. Keep the accepted participant/Character identity under a
-  // non-transport key until the next hello rebinds that identity to a live peer.
-  const retainedPeer=retainedReconnectPeerKey(participantId);
+  // Live peer maps contain transport addresses only. Preserve the last accepted
+  // participant/Character identity separately so reconnect validation never
+  // routes roster, Campaign, or owner traffic through a synthetic/dead peer.
   state.peerParticipants.delete(event.peer);
   state.peerManifests.delete(event.peer);
-  if (acceptedManifest) {
-    state.peerParticipants.set(retainedPeer,participantId);
-    state.peerManifests.set(retainedPeer,structuredClone(acceptedManifest));
-  }
+  if (acceptedManifest) state.acceptedParticipantManifests.set(participantId,structuredClone(acceptedManifest));
 
   const committed=ledger.commitHostEvent({
     actorId:participantId,
