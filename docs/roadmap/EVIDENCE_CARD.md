@@ -1,21 +1,21 @@
 # V1 Evidence Card
 
-Status: **W6-03 CLOSED — PARTY STASH POLICY LIFECYCLE VERIFIED**
+Status: **W6-04 CLOSED — MP-E12 AND MP-E13 PERSISTENCE / RECOVERY AUTO PASS**
 
 Use one card per Release Gate or coherent repair. The purpose is to stop duplicate implementation and force current-HEAD evidence before modifying an existing system.
 
 ```text
-Gate ID: W6-03
+Gate ID: W6-04
 Classification: REUSE_LOCKED
-Acceptance criterion: Stash shared/approval/DM-managed request lifecycle remains on the existing Campaign/Party Stash production owner for MP-E06~E11, including connected owner projection and failure/retry behavior.
-Production entrypoint: Existing Campaign Party Stash policy/runtime adapters and connected approval/Host policy path; no replacement store, transaction owner, transport, or protocol-only replica is authorized.
-Existing automated tests: tests/ui/campaignSystems.test.ts and tests/ui/connectedPartyStashApprovalOwnerTransfer.test.ts.
-Exact observed failure: None on canonical exact SHA b1f54abefd7dffb2f865ccaccde31649b8080a01. Canonical push verification passed the focused Party Stash/Campaign suite and production build.
-Smallest authorized change: No product-code change. Record exact-SHA evidence only.
-Verification SHA: b1f54abefd7dffb2f865ccaccde31649b8080a01
-Verification: W6-03 AUTO Verification run 33705306657 / job 100493052616 = success; 13/13 focused tests PASS; production build PASS.
-Artifact: 9875022681, W6-03-AUTO-b1f54abefd7dffb2f865ccaccde31649b8080a01, sha256:8f5ef938566269b624ae4eeb33c95603eee501c514f6353945e9767899058deb.
-Closure: W6-03 PASS. Reconcile the official ledger, then open W6-04 under the same evidence-first rule.
+Acceptance criterion: Consolidate the existing inventory-core undetected persistence-failure exchange and Host-fallback recovery proof for exactly MP-E12 and MP-E13 into one exact-HEAD automated evidence map.
+Production entrypoint: Existing connected inventory durable-write/journal/compensation path plus Host-owned Party Stash recovery coordinator and Tauri persistence seam; no second inventory model, transaction owner, or fallback store is authorized.
+Existing automated tests: tests/ui/connectedDurableFailure.test.ts; tests/ui/connectedOwnerInventoryRestart.test.ts; tests/ui/connectedPartyStashHostRecovery.test.ts; tests/ui/connectedPartyStashHostRecoveryStructure.test.ts; tests/ui/connectedPartyStashApprovalOwnerTransfer.test.ts.
+Exact observed failure: None on canonical exact SHA 39bcd0356ca7b9a242684538253204ae17916eb1. Canonical push verification passed the focused persistence/recovery suite and production build.
+Smallest authorized change: No product/runtime or test-implementation change. Add the focused workflow and record exact-SHA evidence only.
+Verification SHA: 39bcd0356ca7b9a242684538253204ae17916eb1
+Verification: W6-04 AUTO Verification run 33709116187 / job 100504620599 = success; 17/17 focused tests PASS; production build PASS.
+Artifact: 9876316867, W6-04-AUTO-39bcd0356ca7b9a242684538253204ae17916eb1, sha256:f200803affd1a791b49ea02d4aad3f5d6395d31636a8a18d6ab3a63c9f5512bd.
+Closure: W6-04 PASS. Reconcile the official ledger to 70.0/100.0 (52 PASS / 20 PENDING), then open W6-05 under the same evidence-first rule. Real H + P1 + P2 Windows rendered acceptance remains later.
 ```
 
 ## Change gate
