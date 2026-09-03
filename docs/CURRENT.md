@@ -50,10 +50,10 @@ W2: 8/8 PASS — COMPLETE
 W3: 8/8 PASS — COMPLETE
 W4: 8/8 PASS — COMPLETE
 W5: 10/10 PASS — COMPLETE
-W6: 3/8 PASS
-Official ledger score: 68.8/100.0
-PASS: 51/72
-Remaining gates: 21/72
+W6: 4/8 PASS
+Official ledger score: 70.0/100.0
+PASS: 52/72
+Remaining gates: 20/72
 FAIL: 0
 BLOCKED: 0
 ```
@@ -69,22 +69,22 @@ W2 — COMPLETE (8/8 PASS)
 W3 — COMPLETE (8/8 PASS)
 W4 — COMPLETE (8/8 PASS)
 W5 — COMPLETE (10/10 PASS)
-W6 — 3/8 PASS
-Next exact Gate: W6-04
+W6 — 4/8 PASS
+Next exact Gate: W6-05
 ```
 
-`W6-03` is closed without product-code changes. Canonical exact SHA `b1f54abefd7dffb2f865ccaccde31649b8080a01` passed `W6-03 AUTO Verification` run `33705306657`, job `100493052616`, with 13/13 focused tests and production build PASS. Artifact `9875022681` (`W6-03-AUTO-b1f54abefd7dffb2f865ccaccde31649b8080a01`) has digest `sha256:8f5ef938566269b624ae4eeb33c95603eee501c514f6353945e9767899058deb`. The focused Campaign/Party Stash owners cover the shared, DM-approval, and DM-managed request lifecycle plus connected owner/failure-retry behavior required by `MP-E06~E11`. PR #297 integrated the evidence as canonical merge `888defd2be7f2f08c2f721abf57f72aaac5f8f12`. The official ledger records W6-03 PASS and the first non-PASS Gate is `W6-04`.
+`W6-04` is closed without product/runtime or test-implementation changes. Canonical exact SHA `39bcd0356ca7b9a242684538253204ae17916eb1` passed `W6-04 AUTO Verification` run `33709116187`, job `100504620599`, with 17/17 focused tests and production build PASS. Artifact `9876316867` (`W6-04-AUTO-39bcd0356ca7b9a242684538253204ae17916eb1`) has digest `sha256:f200803affd1a791b49ea02d4aad3f5d6395d31636a8a18d6ab3a63c9f5512bd`. The focused durable-write, owner journal, Host Party Stash recovery, and forced post-commit finalize-failure owners close the automation-only persistence/recovery proof for `MP-E12~E13`. Real H+P1+P2 Windows rendered acceptance remains later. The official ledger records W6-04 PASS and the first non-PASS Gate is `W6-05`.
 
-## W6-04 exact scope
+## W6-05 exact scope
 
-`W6-04` is `REUSE_LOCKED`. It freezes the existing Party Stash transfer transaction path for `MP-E12~E13`:
+`W6-05` is `REUSE_LOCKED`. It freezes the existing **capability-driven item-to-rations conversion** for `MP-E14`:
 
-- transfer success/failure must remain atomic across the existing source/destination owners;
-- transfer journal/history must record the authoritative result rather than invent a parallel Session-only ledger;
-- failed or reversed work must use the existing compensation model rather than silent history deletion;
-- persisted state must recover consistently after process restart/reload.
+- conversion eligibility must come from capability data rather than item-name heuristics or a parallel hard-coded list;
+- the source item debit and Campaign ration credit must commit atomically through the existing durable owners;
+- failure/retry must not duplicate rations or lose the item;
+- connected projection must reflect the one authoritative committed result.
 
-Before changing product code, reproduce a current-HEAD failure or document an explicit production reachability/contract gap in `roadmap/EVIDENCE_CARD.md`. Reuse the existing transfer, journal, compensation, persistence, and recovery owners already established by Campaign/Party Stash work.
+Before changing product code, reproduce a current-HEAD failure or document an explicit production reachability/contract gap in `roadmap/EVIDENCE_CARD.md`. Reuse the existing inventory, capability, ration, transaction, persistence, and recovery owners.
 
 ## Branch roles
 
@@ -100,8 +100,8 @@ Before changing product code, reproduce a current-HEAD failure or document an ex
 
 ### Next execution sequence
 
-1. Execute `W6-04`, the first non-`PASS` Gate in the ledger.
-2. Identify the smallest existing automated owners for Party Stash transfer atomicity, journal/history, compensation/Undo behavior, and restart recovery mapped to `MP-E12~E13`.
+1. Execute `W6-05`, the first non-`PASS` Gate in the ledger.
+2. Identify the smallest existing automated owners for capability-driven item-to-rations eligibility, atomic item debit/ration credit, failure/retry idempotency, and connected projection mapped to `MP-E14`.
 3. Run that focused set on one exact SHA and record deterministic pass/fail count plus artifact/digest before changing the official ledger.
 4. If it fails or a production reachability/contract gap is reproduced, fill `roadmap/EVIDENCE_CARD.md` and repair only the smallest existing owner-path defect.
 5. For Common Play, follow [`design/ui-ux/COMMON-PLAY-FUNCTION-FIRST.md`](design/ui-ux/COMMON-PLAY-FUNCTION-FIRST.md): functional reachability first, broad UI redesign later.
