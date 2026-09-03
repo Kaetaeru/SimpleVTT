@@ -76,7 +76,7 @@ Reuse the existing transfer, journal, compensation, persistence, and recovery ow
 2. Identify the smallest existing automated owners for transfer success/failure atomicity, journal/history, compensation/Undo behavior, and restart recovery mapped to `MP-E12~E13`.
 3. Run the focused set on one exact SHA and record exact command, deterministic test count, artifact/digest, and scenario mapping before changing the official ledger.
 4. If a current-HEAD failure or reachability gap is reproduced, fill `EVIDENCE_CARD.md` and repair only the smallest existing owner path.
-5. Do not reopen completed W1-W5 or W6-01/W6-03 evidence without a new current-HEAD regression.
+5. Do not reopen completed W1-W5 or W6-01/W6-02/W6-03 evidence without a new current-HEAD regression.
 
 ## Non-negotiable routing rules
 
