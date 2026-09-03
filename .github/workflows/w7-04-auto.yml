@@ -39,6 +39,8 @@ jobs:
             tests/ui/connectedPartyStashHostRecovery.test.ts \
             tests/ui/connectedLongRestHostRestartRecovery.test.ts \
             tests/ui/productionClientReconnect.test.ts \
+            tests/ui/productionHostPeerDisconnectRetirement.test.ts \
+            tests/ui/productionParticipantLifecycle.test.ts \
             tests/ui/productionHelloReplayIdempotency.test.ts \
             tests/ui/connectedThreePeerRemoteConcurrentIntent.test.ts \
             tests/ui/connectedThreePeerDuplicateEventBatch.test.ts \
