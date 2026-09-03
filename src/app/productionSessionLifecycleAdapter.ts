@@ -94,15 +94,31 @@ function stopBlockedReason(adapter:MockAdapter) {
   return undefined;
 }
 
+function retainedReconnectPeerKey(participantId:string) {
+  return `disconnected:${participantId}`;
+}
+
 async function markHostPeerDisconnected(adapter:MockAdapter,event:SessionTransportPeerLifecycle) {
   const state=connectedStateFor(adapter);
   const ledger=state.ledger;
   if (state.mode!=="host"||!ledger||event.state!=="disconnected") return;
   const participantId=state.peerParticipants.get(event.peer);
   if (!participantId) return;
+  const acceptedManifest=state.peerManifests.get(event.peer);
   const app=connectedInternal(adapter);
   const participant=app.session.participants.find((entry)=>entry.id===participantId);
   if (!participant||(participant.state==="disconnected"&&!participant.ready)) return;
+
+  // Retire the dead transport address immediately so reconnect work cannot route
+  // through it. Keep the accepted participant/Character identity under a
+  // non-transport key until the next hello rebinds that identity to a live peer.
+  const retainedPeer=retainedReconnectPeerKey(participantId);
+  state.peerParticipants.delete(event.peer);
+  state.peerManifests.delete(event.peer);
+  if (acceptedManifest) {
+    state.peerParticipants.set(retainedPeer,participantId);
+    state.peerManifests.set(retainedPeer,structuredClone(acceptedManifest));
+  }
 
   const committed=ledger.commitHostEvent({
     actorId:participantId,
