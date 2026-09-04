@@ -583,9 +583,15 @@ function scheduleClientReconnect(adapter:MockAdapter) {
     state.reconnectTimer=null;
     if (state.mode!=="client") return;
     state.reconnectInFlight=true;
+    let transportConnected=false;
     try {
       const status=await tauriSessionTransport.connectClient(app.session.address);
       setTransportStatus(adapter,status);
+      transportConnected=true;
+      // Reproduced on real Windows (W9-02 family H, MP-H04): the transport-level connect flipped the Client to
+      // "connected" before the Host had answered the hello (a restarted Host still had to reject the stale cursor
+      // and accept the rejoin). The Client is connected again only when the Host accepts its hello.
+      app.connectionState="reconnecting";
       state.reconnectAttempts=0;
       await sendClientHello(adapter,state.replica?.cursor ?? 0);
     } catch(error) {
@@ -597,9 +603,14 @@ function scheduleClientReconnect(adapter:MockAdapter) {
       state.reconnectInFlight=false;
       await publishConnectedSnapshot(adapter);
     }
-    if (app.connectionState!=="connected") scheduleClientReconnect(adapter);
+    if (!transportConnected) scheduleClientReconnect(adapter);
   },delay);
   void publishConnectedSnapshot(adapter);
+}
+
+/** Test seam: arms one Client reconnect attempt exactly as a transport disconnect would. */
+export function scheduleClientReconnectForTests(adapter:MockAdapter) {
+  scheduleClientReconnect(adapter);
 }
 
 function acceptedManifestForParticipant(adapter:MockAdapter,participantId:string) {
