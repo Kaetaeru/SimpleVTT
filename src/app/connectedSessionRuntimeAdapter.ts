@@ -190,7 +190,10 @@ export async function recoverClientFromHostRestart(adapter:MockAdapter) {
   next.listenersInstalled=true;
   app.session.role="client";
   app.session.address=address;
-  app.connectionState="connected";
+  // Reproduced on real Windows (W9-02 family H, MP-H04): reporting "connected" here let the UI (and the runner) treat the
+  // rejoin as done before the restarted Host had accepted the hello and registered the participant. The accepted snapshot
+  // is what makes this Client connected again.
+  app.connectionState="reconnecting";
   app.session.compatibility="warning";
   await sendClientHello(adapter,0);
   scheduleClientHandshakeRetry(adapter);
