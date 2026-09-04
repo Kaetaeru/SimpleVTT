@@ -16,8 +16,9 @@ test("production installs owner inventory journal after connected Campaign routi
 });
 
 test("owner journal records before apply and an exact undoing target before compensation",()=>{
-  assert.match(runtime,/store\.prepare\(\{requestId:command\.requestId,actorId:command\.actorId,command:cp\(command\),before:current\}\)/);
-  assert.match(runtime,/store\.markApplied\(command\.requestId,current\)/);
+  assert.match(runtime,/journalAttemptForApply\(store,command\)/);
+  assert.match(runtime,/store\.prepare\(\{requestId,actorId:command\.actorId,command:cp\(attemptCommand\),before:current\}\)/);
+  assert.match(runtime,/store\.markApplied\(requestId,current\)/);
   assert.match(runtime,/store\.beginUndo\(requestId,current,target\)/);
   assert.match(runtime,/sameInventory\(current,record\.afterUndo\)/);
   assert.match(runtime,/sameInventory\(current,record\.beforeUndo\)/);
