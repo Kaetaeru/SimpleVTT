@@ -5,7 +5,7 @@
     "roadmap": "docs/roadmap/V1_MASTER_ROADMAP.md",
     "ledger": "docs/roadmap/V1_EVIDENCE_LEDGER.json",
     "ledgerCreatedFromSha": "77b45028cbc4e04bb2cecc825a771269b64d1f2f",
-    "ledgerOfficialScore": 80
+    "ledgerOfficialScore": 82.5
   },
   "counts": {
     "scenarios": 120,
@@ -3168,9 +3168,13 @@
       ],
       "issues": [],
       "otherLinks": [],
-      "status": "PENDING",
-      "lastVerifiedSha": null,
-      "commands": [],
+      "status": "PASS",
+      "lastVerifiedSha": "196266567ad61506f80d359d60224c6f8be6f186",
+      "commands": [
+        "GitHub Actions W7-06 AUTO Verification",
+        "npx tsx --test tests/ui/connectedSessionProtocol.test.ts tests/ui/productionParticipantLifecycle.test.ts tests/ui/productionSessionLifecycleAdapter.test.ts tests/ui/declarativeModuleValidation.test.ts tests/domain/commonPlayMaplessTargeting.test.ts tests/domain/commonPlaySpatialFactRuntime.test.ts tests/ui/phase09RealAtomicAttackAdapter.test.ts tests/ui/productionAcceptanceWindowsRegression.test.ts tests/ui/mpG09SpatialProviderAuthority.test.ts",
+        "npm run build"
+      ],
       "windowsArtifacts": []
     },
     {
@@ -3189,9 +3193,14 @@
         "MP-10"
       ],
       "otherLinks": [],
-      "status": "PENDING",
-      "lastVerifiedSha": null,
-      "commands": [],
+      "status": "PASS",
+      "lastVerifiedSha": "196266567ad61506f80d359d60224c6f8be6f186",
+      "commands": [
+        "GitHub Actions W7-07 AUTO Verification",
+        "npx tsx --test tests/ui/productionPlayWorkspaceAccessibility.test.ts tests/ui/sessionResponsiveKeyboardFocusStructure.test.ts tests/ui/sessionResolutionAnnouncementStructure.test.ts tests/ui/visualDiceStructure.test.ts tests/ui/physicsDice3DStructure.test.ts tests/ui/connectedThreePeerPresentation.test.ts tests/ui/connectedThreePeerDuplicateEventBatch.test.ts tests/ui/connectedDiagnosticCorrelation.test.ts",
+        "cargo test --manifest-path src-tauri/Cargo.toml --lib -- session_transport::tests::slow_peer_queue_does_not_block_fast_peer_broadcast session_transport::tests::peer_outbound_queue_preserves_order_when_drained",
+        "npm run build"
+      ],
       "windowsArtifacts": []
     },
     {

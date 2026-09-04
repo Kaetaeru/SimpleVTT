@@ -23,6 +23,23 @@ Closure: W7-05 remains PENDING. Product/runtime repair is now authorized only fo
 
 `W7-04` is PASS. Product SHA `7d0bded27a624ed0d993d860cbd590262ed1f3a6` passed GitHub Actions run `33853804394`, including real Windows Tauri H+P1+P2 recovery, AUTO recovery, and Windows storage/package prerequisite jobs. Exact artifacts and digests are recorded in `docs/roadmap/evidence/W7-04.md` and `V1_EVIDENCE_LEDGER.json`.
 
+## Importer closure slice card — imported Subclass / Background / feat choices (W8-04 + W9-03 acceptance)
+
+```text
+Gate ID: importer closure slice (W8-04 + W9-03 internal acceptance; not a 73rd Gate)
+Classification: BUILD slice authorized by V1_MASTER_ROADMAP §W8 -> production reachability gap reproduced -> smallest repair on the existing progression path
+Acceptance criterion: an imported Background appears in Character creation; an imported Subclass appears as a legal subclass acquisition choice at the class's subclass level and, once chosen, its progression contributions activate for that Character only; an imported feat appears in the level-up ability-score-or-feat choice and is recorded on the sheet.
+Production entrypoint: existing Character creation background options (installedBackgroundEntries), existing progression plan subclass acquisition choice (src/domain/progression.ts featureChoiceDefinitions), existing ASI/feat choice fed by catalog feat entries, existing Common Play progression contributions (src/domain/commonPlayProgressionContribution.ts) and the production level-up commit (src/app/progressionRuntimeAdapter.ts).
+Existing automated verification: tests/ui/externalContentGoldenModule.test.ts proved Background creation options, activation persistence, uninstall, and validation; tests/domain/progressionPhase08Subclass.test.ts and tests/ui/progressionPhase08SubclassRuntime.test.ts pin SRD subclass acquisition.
+Existing Tauri/Windows evidence: none for the imported Subclass or feat; W9-03 golden journey runner (scripts/run-tauri-e2e-w9-03.mjs) is the Windows owner.
+Exact observed failure: on integration HEAD e9de1d4b the Fighter 3 subclass acquisition choice offered only subclass:챔피언; the installed subclass.spellblade was not a legal option (reproduced with a Node script driving MockAdapter after activating content/examples/homebrew-golden-v1.module.json), and its progressionContributions granted feature.spellblade.arcane-strike to every Fighter at level 3 regardless of subclass (a Champion received it). Installed feats already reached the ASI/feat choice through the catalog but had no fixture or test.
+Smallest authorized change: ProgressionRequest.subclassOptions (installed subclasses keyed by parent class) joins the existing subclass choice with option id installed-subclass:<contentId>; selection names the track after the installed subclass and records subclassIds/subclassSources on the sheet; CommonPlayProgressionContribution.ownerSubclassId gates subclass-owned contributions on the effective subclass of the track; the golden fixture gains one data-only feat (feat.spellblade.battle-focus). No second catalog, progression engine, Resolver, or persistence path.
+Verification SHA: PENDING (branch agent/importer-progression-choices from e9de1d4b).
+Verification: tests/domain/installedSubclassProgression.test.ts (3/3), tests/ui/externalContentGoldenModule.test.ts (7/7: Background in creation, Subclass offered/chosen/granted/restart/Session resolve, Champion negative, feat offered/recorded), npm run test:progression (303/303), tsc --noEmit clean, UI named-rule and legacy execution boundaries OK.
+Artifact: PENDING (W8-04 exact-SHA regression and W9-03 Windows golden journey on the integration SHA that carries this change).
+Closure: W8-04 and W9-03 stay PENDING; the roadmap importer checklist items proven by AUTO are ticked in V1_MASTER_ROADMAP.md, the Windows/exact-SHA items remain open.
+```
+
 ## Change gate
 
 Product code may change only when at least one of the following is true on the current exact integration-derived working branch:

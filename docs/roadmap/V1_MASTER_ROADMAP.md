@@ -226,14 +226,14 @@ V1은 아래 숫자가 모두 충족될 때만 완료다.
 
 이 항목은 73번째 Gate를 추가하지 않는다. 기존 72 Gate·100점 공식을 유지하면서, **외부 non-builtin rules content를 production 앱이 실제로 수용하지 못하면 `W8-04`와 `W9-03`을 PASS할 수 없게 만드는 최종 통합 조건**이다. 현재 `W7` 실행을 중단하지 않으며, `W7-08` 종료 후 `W8-04`의 exact-SHA regression 전에 구현·자동 검증을 끝낸다.
 
-- [ ] production UI의 기존 `previewContentImport -> activateContentImport` 계약이 mock 단일 `CatalogEntry` 데모가 아니라 실제 external module JSON/manifest를 읽는다.
-- [ ] module/schema version, stable ID, content kind, provenance를 검증하고 malformed/unsupported payload와 builtin 또는 기존 external ID collision을 activation 전에 거부한다.
-- [ ] external module은 SRD builtin generator/allowlist에 편입하지 않는다. `moduleId`/provenance를 유지한 채 기존 content catalog authority에 등록한다.
-- [ ] V1 golden fixture 하나가 최소 `Background 1개 + Subclass 1개 + 해당 feature/rule definition`을 포함하고, 필요한 executable behavior는 기존 CommonPlay operation으로 표현한다.
-- [ ] imported definition은 기존 Catalog -> CommonPlay runtime -> `PendingResolution` -> canonical Resolver 경로를 사용한다. second catalog/store/Resolver/content authority를 만들지 않는다.
-- [ ] imported Background/Subclass가 Character creation 또는 progression의 합법 선택지로 나타나고, 획득 후 Sheet·Action·resource/effect 동작까지 연결된다.
+- [x] production UI의 기존 `previewContentImport -> activateContentImport` 계약이 mock 단일 `CatalogEntry` 데모가 아니라 실제 external module JSON/manifest를 읽는다.
+- [x] module/schema version, stable ID, content kind, provenance를 검증하고 malformed/unsupported payload와 builtin 또는 기존 external ID collision을 activation 전에 거부한다.
+- [x] external module은 SRD builtin generator/allowlist에 편입하지 않는다. `moduleId`/provenance를 유지한 채 기존 content catalog authority에 등록한다.
+- [x] V1 golden fixture 하나가 최소 `Background 1개 + Subclass 1개 + 해당 feature/rule definition`을 포함하고, 필요한 executable behavior는 기존 CommonPlay operation으로 표현한다.
+- [x] imported definition은 기존 Catalog -> CommonPlay runtime -> `PendingResolution` -> canonical Resolver 경로를 사용한다. second catalog/store/Resolver/content authority를 만들지 않는다.
+- [x] imported Background/Subclass가 Character creation 또는 progression의 합법 선택지로 나타나고, 획득 후 Sheet·Action·resource/effect 동작까지 연결된다. imported feat도 level-up의 능력치 향상/재주 선택지에 module provenance를 유지한 채 나타난다. (AUTO: tests/ui/externalContentGoldenModule.test.ts, tests/domain/installedSubclassProgression.test.ts)
 - [ ] imported executable feature를 실제 Session에서 한 번 resolve하고 authoritative result와 Activity/presentation이 builtin content와 같은 경로를 사용함을 증명한다.
-- [ ] activation과 Character reference가 Tauri restart 뒤에도 해석 가능하며, 실패한 import는 기존 active catalog를 보존하고 half-installed state를 남기지 않는다.
+- [x] activation과 Character reference가 Tauri restart 뒤에도 해석 가능하며, 실패한 import는 기존 active catalog를 보존하고 half-installed state를 남기지 않는다.
 - [ ] focused importer tests와 full TypeScript/Vite/Rust/Tauri production build를 같은 exact SHA에서 통과시키고, fixture module ID/version/hash와 명령·pass count를 evidence에 기록한다.
 - [ ] `W9-03` Windows golden journey에서 실제 UI로 fixture를 import/activate하고 그 content로 Character를 만든 뒤 Session 1 사용 -> restart -> Session 2 재사용까지 캡처한다.
 
