@@ -218,9 +218,26 @@ V1은 아래 숫자가 모두 충족될 때만 완료다.
 | `W8-01` | 기존 실제 Tauri H+P1 2창 smoke와 GP/Stash UI assertion을 보존한다. | R | MP-J05, MP-E08 |
 | `W8-02` | 기존 하네스를 H+P1+P2와 선택적 P3 orchestration으로 확장한다. | B | MP-11 |
 | `W8-03` | 120 scenario의 AUTO/STRUCTURE/WIN 요구와 정확한 테스트·artifact를 machine-readable map으로 만든다. | B | MP-11, MP-13 |
-| `W8-04` | exact SHA에서 focused suites·connected full regression·TypeScript·Vite·Rust/Tauri·production build를 실행한다. | V | V1-60, MP-11 |
+| `W8-04` | exact SHA에서 external content importer focused suite를 포함한 focused suites·connected full regression·TypeScript·Vite·Rust/Tauri·production build를 실행한다. | V | V1-60, MP-11 |
 
 **W8 Exit:** protocol-only replica가 아닌 production adapter와 실제 Tauri 앱을 사용하는 자동 acceptance가 존재한다.
+
+#### V1 external content importer closure slice — `W8-04` + `W9-03` 내부 수락 항목, 별도 Gate 아님
+
+이 항목은 73번째 Gate를 추가하지 않는다. 기존 72 Gate·100점 공식을 유지하면서, **외부 non-builtin rules content를 production 앱이 실제로 수용하지 못하면 `W8-04`와 `W9-03`을 PASS할 수 없게 만드는 최종 통합 조건**이다. 현재 `W7` 실행을 중단하지 않으며, `W7-08` 종료 후 `W8-04`의 exact-SHA regression 전에 구현·자동 검증을 끝낸다.
+
+- [ ] production UI의 기존 `previewContentImport -> activateContentImport` 계약이 mock 단일 `CatalogEntry` 데모가 아니라 실제 external module JSON/manifest를 읽는다.
+- [ ] module/schema version, stable ID, content kind, provenance를 검증하고 malformed/unsupported payload와 builtin 또는 기존 external ID collision을 activation 전에 거부한다.
+- [ ] external module은 SRD builtin generator/allowlist에 편입하지 않는다. `moduleId`/provenance를 유지한 채 기존 content catalog authority에 등록한다.
+- [ ] V1 golden fixture 하나가 최소 `Background 1개 + Subclass 1개 + 해당 feature/rule definition`을 포함하고, 필요한 executable behavior는 기존 CommonPlay operation으로 표현한다.
+- [ ] imported definition은 기존 Catalog -> CommonPlay runtime -> `PendingResolution` -> canonical Resolver 경로를 사용한다. second catalog/store/Resolver/content authority를 만들지 않는다.
+- [ ] imported Background/Subclass가 Character creation 또는 progression의 합법 선택지로 나타나고, 획득 후 Sheet·Action·resource/effect 동작까지 연결된다.
+- [ ] imported executable feature를 실제 Session에서 한 번 resolve하고 authoritative result와 Activity/presentation이 builtin content와 같은 경로를 사용함을 증명한다.
+- [ ] activation과 Character reference가 Tauri restart 뒤에도 해석 가능하며, 실패한 import는 기존 active catalog를 보존하고 half-installed state를 남기지 않는다.
+- [ ] focused importer tests와 full TypeScript/Vite/Rust/Tauri production build를 같은 exact SHA에서 통과시키고, fixture module ID/version/hash와 명령·pass count를 evidence에 기록한다.
+- [ ] `W9-03` Windows golden journey에서 실제 UI로 fixture를 import/activate하고 그 content로 Character를 만든 뒤 Session 1 사용 -> restart -> Session 2 재사용까지 캡처한다.
+
+실행 순서는 `W7 closure -> importer closure slice -> W8-04 exact-SHA regression -> W9 Windows/golden journey`로 고정한다. importer 구현 때문에 W8 이후에 새 product SHA를 만들지 않는다.
 
 ### W9 — Windows release and next-session closure — 4 Gate / 10점
 
@@ -228,10 +245,10 @@ V1은 아래 숫자가 모두 충족될 때만 완료다.
 | --- | --- | --- | --- |
 | `W9-01` | 기존 release build 경로를 사용해 동일 SHA의 production Windows `SimpleVTT.exe`와 digest를 생성한다. | B | V1-70, V1-80 |
 | `W9-02` | 모든 적용 가능한 WIN scenario를 H/P1/P2, 필요 시 P3에서 실행하고 캡처한다. | B | MP-12, MP-13 |
-| `W9-03` | Zero-to-Next-Session golden journey를 통과한다: first run → Character → Campaign → full Session → restart → Session 2 action. | B | legacy Journey J1~J9 |
+| `W9-03` | Zero-to-Next-Session golden journey를 통과한다: first run → external content import/activate → imported Background/Subclass를 사용한 Character → Campaign → imported executable feature를 포함한 full Session → restart → Session 2 action. | B | legacy Journey J1~J9 |
 | `W9-04` | exact-SHA evidence bundle·issue closure·clean tree·canonical update 후 V1을 선언한다. | B | V1-80, #110 |
 
-**W9 Exit:** 동일 production artifact에서 첫 실행부터 다음 세션까지 끊김 없이 재현된다.
+**W9 Exit:** 동일 production artifact에서 첫 실행부터 external content import와 다음 세션까지 끊김 없이 재현된다.
 
 ## 4. 7개 실행 Wave
 
@@ -341,6 +358,7 @@ Smallest required change:
 1 matching Windows artifact + digest
 H/P1/P2 rendered parity PASS
 P3 reconnect/late-join PASS
+External content importer golden fixture PASS (W8-04 + W9-03)
 Zero-to-Next-Session golden journey PASS
 Git working tree clean
 ```
