@@ -124,6 +124,8 @@ function build(
         source:manual.source,
       } : undefined,
       attackD20Face,
+      // Advantage/disadvantage rolled two d20s in the open resolution; the atomic transaction must judge the same faces with the same roll state.
+      ...(resolution.rollStateContributions?.length?{attackD20Faces:resolution.authoritativeDice.slice(0,2),rollStateContributions:resolution.rollStateContributions}:{}),
       attackModifierContributions:resolution.rollModifierContributions,
       effectiveTargetAc,
       attackFact,

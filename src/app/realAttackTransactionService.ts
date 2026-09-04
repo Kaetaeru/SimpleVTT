@@ -9,6 +9,7 @@ import { cloneRuntimeState, type RulesRuntimeState } from "../domain/combatState
 import { effectIsActive } from "../domain/effects";
 import type { ConcentrationCheckRequest } from "../domain/concentration";
 import type { D20TestResult } from "../domain/d20";
+import type { RollStateContribution } from "../domain/profileEngine";
 import type { CompoundDamageResolution, DamageDefenseContribution } from "../domain/damage";
 import type { DamageRollResolution } from "../domain/damageRoll";
 import { resolvePendingResolution } from "../domain/resolution";
@@ -41,6 +42,9 @@ export interface AtomicAttackTransactionRequest {
   damageReduction?:number;
   damageReductionSource?:string;
   attackD20Face:number;
+  /** Every rolled attack d20 face when the roll state (advantage/disadvantage) rolled more than one; defaults to [attackD20Face]. */
+  attackD20Faces?:number[];
+  rollStateContributions?:RollStateContribution[];
   attackModifierContributions?:Array<{source:string;value:number}>;
   effectiveTargetAc:number;
   attackFact:Phase09AttackFact;
@@ -291,8 +295,9 @@ function attackRequest(request:AtomicAttackTransactionRequest,input:RulesRuntime
       id:`${request.resolutionId}:attack-d20`,
       purpose:request.action.name,
       sides:20,
-      faces:[request.attackD20Face],
+      faces:request.attackD20Faces?.length?[...request.attackD20Faces]:[request.attackD20Face],
     },
+    ...(request.rollStateContributions?.length?{rollStateContributions:request.rollStateContributions.map((entry)=>({...entry}))}:{}),
     attackModifierContributions:request.attackModifierContributions ?? [
       {source:`action:${request.action.id}:attack-bonus`,value:request.action.attackBonus??0},
     ],

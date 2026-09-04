@@ -353,6 +353,10 @@ export interface ActionVm {
     failureOutcome?:string;
     durationKey?:string;
     endsOnAttack?:boolean;
+    /** The effect also ends when the subject makes its next ability check (Help). */
+    endsOnCheck?:boolean;
+    /** Whether the runtime effect carries the "hidden" tag; defaults to endsOnAttack for external content. */
+    hidden?:boolean;
     expiresAtActorTurnBoundary?:"start"|"end";
     runtimeTags?:string[];
   };
@@ -450,6 +454,8 @@ export interface ResolutionView {
   authoritativeDice: number[];
   naturalD20?:number;
   rollModifierContributions?: Array<{source:string;value:number}>;
+  /** Advantage/disadvantage sources that shaped the authoritative d20 roll (present when more than one d20 was rolled). */
+  rollStateContributions?:RollStateContribution[];
   rollTotal?: number;
   checkTarget?:number;
   checkOutcome?:"성공"|"실패";
