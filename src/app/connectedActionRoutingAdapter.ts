@@ -14,7 +14,18 @@ import {
   sendConnectedWireTo,
 } from "./connectedSessionRuntimeAdapter";
 import { clearCommittedResolutionEvents, takeCommittedResolutionEvents } from "./resolutionEventCommitRegistry";
-import { buildConnectedResolutionPresentation } from "./connectedResolutionPresentation";
+import {
+  buildConnectedResolutionPresentation,
+  normalizedHiddenFacts,
+  redactConnectedResolutionPresentation,
+  rollFactsOf,
+  type ConnectedResolutionHiddenFact,
+  type ConnectedResolutionPresentationV1,
+  type ConnectedResolutionRollFactsV1,
+  type ConnectedResolutionVisibilityV1,
+} from "./connectedResolutionPresentation";
+import type { ConnectedEventPayload } from "./connectedSessionProtocol";
+import type { ConnectedRuntimeState } from "./connectedSessionState";
 import { tauriSessionTransport } from "./tauriSessionTransport";
 import {
   activateProjectedCharacterResolutionContext,
@@ -51,6 +62,36 @@ function restoreProjectedContext(adapter:MockAdapter) {
   return true;
 }
 
+function recordHiddenResolution(state:ConnectedRuntimeState,presentation:ConnectedResolutionPresentationV1,visibility:ConnectedResolutionVisibilityV1) {
+  const existing=state.hiddenResolutions.get(presentation.resolutionId);
+  state.hiddenResolutions.set(presentation.resolutionId,{
+    resolutionId:presentation.resolutionId,
+    actorId:presentation.resolution.actorId,
+    actionName:presentation.resolution.actionName,
+    hidden:normalizedHiddenFacts(visibility.hidden),
+    disclosed:existing?.disclosed??[],
+    presentation:structuredClone(presentation),
+  });
+}
+
+/** Builds the peer-facing envelope for one Resolution and keeps the full envelope Host-private when any fact is hidden. */
+function outboundPresentation(state:ConnectedRuntimeState,presentation:ConnectedResolutionPresentationV1) {
+  const visibility=state.resolutionVisibilityById.get(presentation.resolutionId);
+  const hidden=normalizedHiddenFacts(visibility?.hidden);
+  if (visibility&&hidden.length) recordHiddenResolution(state,presentation,visibility);
+  return {hidden,presentation:redactConnectedResolutionPresentation(presentation,visibility)};
+}
+
+function redactOutboundResolutionEvents(events:ResolutionEvent[],hidden:ConnectedResolutionHiddenFact[],targetIds:string[]) {
+  const hiddenTargets=new Set(hidden.includes("targets")?targetIds:[]);
+  return events.map((event)=>{
+    const copy=structuredClone(event);
+    if (hidden.includes("roll")) { copy.summary="비공개 판정"; copy.provenance=[]; copy.result={hidden:true}; }
+    if (copy.targetId!==undefined&&hiddenTargets.has(copy.targetId)) delete copy.targetId;
+    return copy;
+  });
+}
+
 async function publishCommittedResolution(adapter:MockAdapter,snapshot?:AppSnapshot,readyClearedActorId?:string) {
   const state=connectedStateFor(adapter);
   if (state.mode!=="host"||!state.ledger) return snapshot ?? connectedInternal(adapter).getSnapshot();
@@ -64,6 +105,8 @@ async function publishCommittedResolution(adapter:MockAdapter,snapshot?:AppSnaps
   const presentation=buildConnectedResolutionPresentation(current,state.nextPresentationSequence,"catchup",state.presentationTimelineByResolution.get(resolution.id));
   if (!presentation) return current;
   state.presentationTimelineByResolution.set(resolution.id,presentation.timeline.map((entry)=>({...entry})));
+  const peerFacing=outboundPresentation(state,presentation);
+  const rollHidden=peerFacing.hidden.includes("roll");
   const readyConfig=readyActionConfigurationFor(adapter,resolution.actorId);
   const readyArmed=isReadyPreparationAction(actionFor(adapter,resolution.actorId,resolution.actionId))&&readyConfig;
   const readyCleared=readyClearedActorId===resolution.actorId||pending?.readyActionRole==="trigger";
@@ -103,10 +146,10 @@ async function publishCommittedResolution(adapter:MockAdapter,snapshot?:AppSnaps
     payload:{
       kind:"resolution" as const,
       resolutionId:resolution.id,
-      presentation,
-      resolutionEvents:events,
-      stateChanges:[...resolution.stateChanges],
-      provenance:[...resolution.provenance],
+      presentation:peerFacing.presentation,
+      resolutionEvents:peerFacing.hidden.length?redactOutboundResolutionEvents(events,peerFacing.hidden,resolution.targetIds):events,
+      stateChanges:rollHidden?[]:[...resolution.stateChanges],
+      provenance:rollHidden?["host-private resolution"]:[...resolution.provenance],
     },
   };
 
@@ -181,7 +224,7 @@ async function publishConnectedResolutionPresentation(adapter:MockAdapter,snapsh
   state.presentationTimelineByResolution.set(resolution.id,presentation.timeline.map((entry)=>({...entry})));
   state.lastPublishedPresentationKey=key;
   state.nextPresentationSequence+=1;
-  await broadcastConnectedWire({type:"resolution-presentation",sessionId:state.ledger.sessionId,presentation});
+  await broadcastConnectedWire({type:"resolution-presentation",sessionId:state.ledger.sessionId,presentation:outboundPresentation(state,presentation).presentation});
   const interrupt=snapshot.resolution?.interrupt;
   if(snapshot.resolution?.stage!=="interrupt"&&state.interruptTimeout){clearTimeout(state.interruptTimeout);state.interruptTimeout=null;state.interruptTimeoutResolutionId=null;}
   if(snapshot.resolution?.stage==="interrupt"&&interrupt){
@@ -391,9 +434,73 @@ MockAdapter.prototype.resolveAction=async function resolveConnectedAction(action
     app.session.compatibilityMessage="Resolve or dismiss the pending remote action before starting another shared action.";
     return app.getSnapshot();
   }
+  const armedVisibility=state.mode==="host"?state.nextResolutionVisibility:null;
+  const previousResolutionId=app.resolution?.id;
   const next=await previousResolveAction.call(this,actionId,targetIds);
+  if (armedVisibility&&next.resolution&&next.resolution.id!==previousResolutionId) {
+    state.resolutionVisibilityById.set(next.resolution.id,{hidden:normalizedHiddenFacts(armedVisibility.hidden)});
+    state.nextResolutionVisibility=null;
+  }
   await publishConnectedResolutionPresentation(this,next);
   return publishCommittedResolution(this,next);
+};
+
+const HIDDEN_TARGET_LABEL="비공개 대상";
+
+/** Roll facts disclosed while the targets stay hidden must not name them: per-target structures are withheld and target ids/labels are scrubbed from text. */
+function scrubHiddenTargets(facts:ConnectedResolutionRollFactsV1,targets:Array<{id:string;label:string}>):ConnectedResolutionRollFactsV1 {
+  const scrub=(text:string)=>targets.reduce((value,target)=>value.split(target.id).join(HIDDEN_TARGET_LABEL).split(target.label).join(HIDDEN_TARGET_LABEL),text);
+  return {
+    ...facts,
+    saveResults:[],
+    damageComponents:[],
+    compact:scrub(facts.compact),
+    detail:facts.detail.map(scrub),
+    provenance:facts.provenance.map(scrub),
+    calculatedOutcome:scrub(facts.calculatedOutcome),
+    finalOutcome:scrub(facts.finalOutcome),
+    stateChanges:facts.stateChanges.map(scrub),
+  };
+}
+
+export async function discloseConnectedResolution(adapter:MockAdapter,resolutionId:string,facts:ConnectedResolutionHiddenFact[]) {
+  const state=connectedStateFor(adapter);
+  const app=connectedInternal(adapter);
+  if (state.mode!=="host"||!state.ledger) return {status:"rejected" as const,error:"only the Host can disclose a hidden Resolution"};
+  const record=state.hiddenResolutions.get(resolutionId);
+  if (!record) return {status:"rejected" as const,error:`no hidden Resolution ${resolutionId}`};
+  const selected=normalizedHiddenFacts(facts).filter((fact)=>record.hidden.includes(fact)&&!record.disclosed.includes(fact));
+  if (!selected.length) return {status:"rejected" as const,error:"no selected fact is still hidden"};
+  const disclosureId=`disclosure.${resolutionId}.${state.ledger.cursor+1}`;
+  const targetsStillHidden=record.hidden.includes("targets")&&!record.disclosed.includes("targets")&&!selected.includes("targets");
+  const rollFacts=rollFactsOf(record.presentation.resolution);
+  const payload:Extract<ConnectedEventPayload,{kind:"resolution-disclosure"}>={
+    kind:"resolution-disclosure",
+    resolutionId,
+    disclosureId,
+    disclosed:selected,
+    ...(selected.includes("roll")?{roll:{facts:targetsStillHidden?scrubHiddenTargets(rollFacts,record.presentation.targets):rollFacts,dice:structuredClone(record.presentation.dice)}}:{}),
+    ...(selected.includes("targets")?{targets:structuredClone(record.presentation.targets)}:{}),
+    stateChanges:[],
+    provenance:["Host-authoritative DM disclosure","hidden Resolution history retained"],
+  };
+  const event=state.ledger.commitHostEvent({actorId:"dm",payload});
+  record.disclosed=[...record.disclosed,...selected];
+  app.activity.unshift({id:disclosureId,time:"지금",actor:"DM",title:`DM 공개 · ${record.actionName}`,summary:selected.map((fact)=>fact==="roll"?"판정 결과":"대상").join(", "),detail:[`eventId=${event.eventId}`,...payload.provenance],stateChanges:[]});
+  await broadcastConnectedWire({type:"event-batch",sessionId:state.ledger.sessionId,afterCursor:event.sequence-1,events:[event]});
+  return {status:"disclosed" as const,event};
+}
+
+MockAdapter.prototype.setNextResolutionVisibility=async function setConnectedResolutionVisibility(visibility:ConnectedResolutionVisibilityV1|null) {
+  const state=connectedStateFor(this);
+  const hidden=normalizedHiddenFacts(visibility?.hidden);
+  state.nextResolutionVisibility=state.mode==="host"&&hidden.length?{hidden}:null;
+  return connectedInternal(this).getSnapshot();
+};
+
+MockAdapter.prototype.discloseResolution=async function discloseHiddenResolution(resolutionId:string,facts:ConnectedResolutionHiddenFact[]) {
+  await discloseConnectedResolution(this,resolutionId,facts);
+  return connectedInternal(this).getSnapshot();
 };
 
 MockAdapter.prototype.advanceResolution=async function advanceConnectedResolution() {

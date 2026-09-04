@@ -10,6 +10,8 @@ import type {
   DmAdjudicationCommand,
   EdgeState,
   LevelUpCommand,
+  ResolutionHiddenFact,
+  ResolutionVisibilityVm,
   PartyStashTransferCommand,
   SessionCharacterInventoryVm,
   SessionMode,
@@ -71,6 +73,8 @@ interface AppContextValue {
   dismissResolution(): Promise<void>;
   applyDmAdjudication(command: DmAdjudicationCommand): Promise<void>;
   undoLastResolution(): Promise<void>;
+  setNextResolutionVisibility(visibility: ResolutionVisibilityVm | null): Promise<void>;
+  discloseResolution(resolutionId: string, facts: ResolutionHiddenFact[]): Promise<void>;
   previewContentImport(payload: string): Promise<void>;
   activateContentImport(): Promise<void>;
   clearContentImport(): Promise<void>;
@@ -230,6 +234,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     dismissResolution: async () => apply(() => mockAdapter.dismissResolution()),
     applyDmAdjudication: async (command) => apply(() => mockAdapter.applyDmAdjudication(command)),
     undoLastResolution: async () => apply(() => mockAdapter.undoLastResolution()),
+    setNextResolutionVisibility: async (visibility) => apply(() => mockAdapter.setNextResolutionVisibility(visibility)),
+    discloseResolution: async (resolutionId, facts) => apply(() => mockAdapter.discloseResolution(resolutionId, facts)),
     previewContentImport: async (payload) => apply(() => mockAdapter.previewContentImport(payload)),
     activateContentImport: async () => apply(() => mockAdapter.activateContentImport()),
     clearContentImport: async () => apply(() => mockAdapter.clearContentImport()),

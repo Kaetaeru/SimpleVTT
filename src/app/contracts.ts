@@ -478,6 +478,13 @@ export interface ResolutionPresentationRuntimeVm {
   action?:ActionVm;
 }
 
+/** Host-owned visibility fact for one Resolution. Hidden facts are redacted from every unauthorized peer until the DM discloses them. */
+export type ResolutionHiddenFact = "roll" | "targets";
+
+export interface ResolutionVisibilityVm {
+  hidden: ResolutionHiddenFact[];
+}
+
 export type AdjudicationScope = "resolution" | "target" | "turn" | "scene" | "until-cleared";
 
 export interface DmAdjudicationCommand {
@@ -658,6 +665,8 @@ export interface SimpleVttAdapter {
   dismissResolution(): Promise<AppSnapshot>;
   applyDmAdjudication(command: DmAdjudicationCommand): Promise<AppSnapshot>;
   undoLastResolution(): Promise<AppSnapshot>;
+  setNextResolutionVisibility(visibility: ResolutionVisibilityVm | null): Promise<AppSnapshot>;
+  discloseResolution(resolutionId: string, facts: ResolutionHiddenFact[]): Promise<AppSnapshot>;
   previewContentImport(payload: string): Promise<AppSnapshot>;
   activateContentImport(): Promise<AppSnapshot>;
   clearContentImport(): Promise<AppSnapshot>;

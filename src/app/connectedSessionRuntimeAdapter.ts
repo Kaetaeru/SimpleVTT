@@ -450,6 +450,18 @@ async function applyConfirmedPayload(adapter:MockAdapter,payload:ConnectedEventP
     });
     return { status:"committed" as const };
   }
+  if (payload.kind==="resolution-disclosure") {
+    const detail=[`eventId=${event.eventId}`];
+    if (payload.roll) detail.push(...payload.roll.facts.detail,...payload.roll.facts.provenance.map((entry)=>`출처: ${entry}`));
+    if (payload.targets) detail.push(`대상: ${payload.targets.map((entry)=>entry.label).join(", ")||"—"}`);
+    detail.push(...payload.provenance);
+    if (app.resolution?.id===payload.resolutionId) {
+      if (payload.roll) Object.assign(app.resolution,structuredClone(payload.roll.facts));
+      if (payload.targets) app.resolution.targetIds=payload.targets.map((entry)=>entry.id);
+    }
+    app.activity.unshift({id:payload.disclosureId,time:"지금",actor:"DM",title:`DM 공개 · ${payload.resolutionId}`,summary:payload.roll?.facts.compact??(payload.targets?`대상 ${payload.targets.length}개 공개`:"공개"),detail,stateChanges:[...payload.stateChanges]});
+    return { status:"committed" as const };
+  }
   if (payload.kind!=="resolution") return { status:"committed" as const };
   if (!isConnectedResolutionPresentation(payload.presentation)) return {status:"rejected" as const,error:"Host resolution event is missing a valid presentation envelope"};
   const projected=applyConnectedResolutionEvents(adapter,payload.resolutionEvents);
