@@ -1,0 +1,105 @@
+name: W7-05 AUTO Verification
+
+on:
+  pull_request:
+    branches:
+      - work/v1-composite
+    paths:
+      - '.github/workflows/w7-05-auto.yml'
+      - 'src/**'
+      - 'src-tauri/**'
+      - 'scripts/**'
+      - 'tests/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'content/**'
+  push:
+    branches:
+      - work/v1-composite
+    paths:
+      - '.github/workflows/w7-05-auto.yml'
+      - 'src/**'
+      - 'src-tauri/**'
+      - 'scripts/**'
+      - 'tests/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'content/**'
+  workflow_dispatch:
+
+env:
+  V1_VERIFICATION_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run generate:content
+      - name: Focused W7-05 privacy owners
+        shell: bash
+        run: |
+          set -o pipefail
+          npx tsx --test \
+            tests/ui/connectedHiddenResolutionPrivacy.test.ts \
+            tests/ui/connectedResolutionPresentation.test.ts \
+            tests/ui/connectedThreePeerPresentation.test.ts \
+            tests/ui/sessionImageHandoutRuntimeAdapter.test.ts \
+            tests/ui/campaignDmLibraryNoteStructure.test.ts \
+            tests/ui/campaignDmLibraryStructure.test.ts \
+            | tee /tmp/w7-05.tap
+      - name: Production build
+        run: npm run build
+      - name: Record exact-SHA evidence
+        shell: bash
+        run: |
+          {
+            echo "W7-05 AUTO Verification"
+            echo "checkout_sha=${GITHUB_SHA}"
+            echo "verification_sha=${{ env.V1_VERIFICATION_SHA }}"
+            echo "head_sha=${{ github.event.pull_request.head.sha }}"
+            echo "base_sha=${{ github.event.pull_request.base.sha }}"
+            echo "scenario_mapping=MP-B05,MP-B06,MP-B07 (MP-09 AUTO slice)"
+            echo "command=npx tsx --test tests/ui/connectedHiddenResolutionPrivacy.test.ts tests/ui/connectedResolutionPresentation.test.ts tests/ui/connectedThreePeerPresentation.test.ts tests/ui/sessionImageHandoutRuntimeAdapter.test.ts tests/ui/campaignDmLibraryNoteStructure.test.ts tests/ui/campaignDmLibraryStructure.test.ts"
+            echo "win_obs=not claimed; Windows H+P1+P2 hidden-roll/disclosure observation remains required for W7-05 closure"
+          } > /tmp/w7-05-evidence.txt
+      - name: Upload W7-05 evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: W7-05-AUTO-${{ env.V1_VERIFICATION_SHA }}
+          path: |
+            /tmp/w7-05.tap
+            /tmp/w7-05-evidence.txt
+            docs/roadmap/V1_EVIDENCE_LEDGER.json
+          if-no-files-found: error
+
+  windows-hidden-roll-disclosure:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - run: npm ci --no-audit --no-fund
+      - name: Run W7-05 H+P1+P2 Windows hidden-roll/disclosure acceptance
+        shell: pwsh
+        run: powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File scripts/run-tauri-e2e.ps1 -Root . -W705
+      - name: Upload W7-05 Windows multi-instance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: W7-05-WIN-${{ env.V1_VERIFICATION_SHA }}
+          path: .live-dev/tauri-e2e/**/artifacts/**
+          if-no-files-found: error
+          retention-days: 14

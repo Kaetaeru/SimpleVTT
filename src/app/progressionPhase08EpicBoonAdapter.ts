@@ -6,6 +6,7 @@ import type { AppSnapshot, CharacterSheet, LevelUpDraft } from "./contracts";
 import { fightingStyleOptions, generalLanguageOptions, originFeatOptions, spellOptions } from "./characterCreationV10Data";
 import { SPELL_PRESENTATIONS } from "./spellPresentation";
 import { MockAdapter } from "./mockAdapter";
+import { installedSubclassOptions } from "./installedSubclassOptions";
 import { ensureProgressionMetadata } from "./progressionRuntimeAdapter";
 import type { ChoiceSelectionMap } from "../domain/choiceDefinition";
 import { featRuleById } from "../domain/featRuleCatalog";
@@ -110,6 +111,7 @@ function requestFor(state:AdapterState):ProgressionRequest {
     hpRoll:draft.hpRoll,
     selections:clone(draft.progressionSelections ?? {}) as ChoiceSelectionMap,
     featOptions:state.catalog.filter((entry) => entry.category === "feat").map((entry) => ({ id:entry.id, label:entry.nameKo, description:entry.description })),
+    subclassOptions:installedSubclassOptions(state.catalog),
     originFeatOptions:originFeatOptions.map((option) => ({ id:option.id, label:option.name, description:option.summary })),
     fightingStyleOptions:fightingStyleOptions.map((option) => ({ id:option.id, label:option.name, description:option.summary })),
     druidCantripOptions:progressionClassCantripOptions("dnd.srd521.class.druid"),

@@ -9,7 +9,19 @@ on:
       - "scripts/run-tauri-e2e-w9-03.mjs"
       - "content/examples/**"
       - ".github/workflows/w9-03-golden-journey.yml"
-  # push trigger is restored once the golden journey passes on a PR head; until then it iterates on agent/* branches only.
+  # The golden journey passed on a PR head (acbf18ca); it now also runs on every integration push that can change it, so W9-03 evidence is recorded on an exact integration SHA.
+  push:
+    branches:
+      - work/v1-composite
+    paths:
+      - "src/**"
+      - "src-tauri/**"
+      - "content/**"
+      - "scripts/run-tauri-e2e.ps1"
+      - "scripts/run-tauri-e2e-w9-03.mjs"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/w9-03-golden-journey.yml"
   workflow_dispatch:
 
 env:

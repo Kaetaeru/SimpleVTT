@@ -3,9 +3,17 @@
   "schemaVersion": "0.1-draft",
   "moduleId": "homebrew.golden-v1",
   "moduleVersion": "1",
-  "rulesProfile": { "id": "dnd.srd-5.2.1", "version": "0.1-draft" },
+  "rulesProfile": {
+    "id": "dnd.srd-5.2.1",
+    "version": "0.1-draft"
+  },
   "defaultLocale": "ko",
-  "source": { "document": "SimpleVTT V1 golden external module", "version": "1", "license": "CC0-1.0", "srdDerived": false },
+  "source": {
+    "document": "SimpleVTT V1 golden external module",
+    "version": "1",
+    "license": "CC0-1.0",
+    "srdDerived": false
+  },
   "dependencies": [],
   "conflicts": [],
   "capabilities": [],
@@ -18,17 +26,32 @@
         "defaultLocale": "ko",
         "originalName": "Wayfarer",
         "locales": {
-          "ko": { "name": "떠돌이 길잡이", "description": "길 위에서 살아남는 법을 익힌 외부 모듈 배경입니다. 생존과 은신 숙련, 항해 도구, 경계 재주를 얻습니다." },
-          "en": { "name": "Wayfarer" }
+          "ko": {
+            "name": "떠돌이 길잡이",
+            "description": "길 위에서 살아남는 법을 익힌 외부 모듈 배경입니다. 생존과 은신 숙련, 항해 도구, 경계 재주를 얻습니다."
+          },
+          "en": {
+            "name": "Wayfarer"
+          }
         }
       },
       "mechanics": [
         {
           "kind": "background-definition",
           "config": {
-            "abilityChoices": ["dex", "wis", "cha"],
-            "abilityIncreaseModes": ["2+1", "1+1+1"],
-            "skills": ["survival", "stealth"],
+            "abilityChoices": [
+              "dex",
+              "wis",
+              "cha"
+            ],
+            "abilityIncreaseModes": [
+              "2+1",
+              "1+1+1"
+            ],
+            "skills": [
+              "survival",
+              "stealth"
+            ],
             "tool": "navigators-tools",
             "originFeat": "dnd.srd521.feat.alert",
             "equipmentChoice": false
@@ -43,15 +66,29 @@
         "defaultLocale": "ko",
         "originalName": "Spellblade",
         "locales": {
-          "ko": { "name": "주문검사", "description": "파이터 3레벨에 비전 일격을 얻는 외부 모듈 서브클래스입니다." },
-          "en": { "name": "Spellblade" }
+          "ko": {
+            "name": "주문검사",
+            "description": "파이터 3레벨에 비전 일격을 얻는 외부 모듈 서브클래스입니다."
+          },
+          "en": {
+            "name": "Spellblade"
+          }
         }
       },
       "relationships": [
-        { "kind": "parent", "target": "dnd.srd521.class.fighter" }
+        {
+          "kind": "parent",
+          "target": "dnd.srd521.class.fighter"
+        }
       ],
       "progressionContributions": [
-        { "track": "dnd.srd521.class.fighter", "threshold": 3, "grants": ["feature.spellblade.arcane-strike"] }
+        {
+          "track": "dnd.srd521.class.fighter",
+          "threshold": 3,
+          "grants": [
+            "feature.spellblade.arcane-strike"
+          ]
+        }
       ]
     },
     {
@@ -61,8 +98,13 @@
         "defaultLocale": "ko",
         "originalName": "Arcane Strike",
         "locales": {
-          "ko": { "name": "비전 일격", "description": "행동으로 자신에게 마력 활력 2점을 회복합니다. 외부 모듈이 기존 Common Play 실행 경로로 제공하는 실행 가능 특성입니다." },
-          "en": { "name": "Arcane Strike" }
+          "ko": {
+            "name": "비전 일격",
+            "description": "행동으로 자신에게 마력 활력 2점을 회복합니다. 외부 모듈이 기존 Common Play 실행 경로로 제공하는 실행 가능 특성입니다."
+          },
+          "en": {
+            "name": "Arcane Strike"
+          }
         }
       },
       "mechanics": [
@@ -72,11 +114,40 @@
             "schemaVersion": "0.2-draft",
             "id": "spellblade.arcane-strike",
             "entryPoints": [
-              { "id": "use", "invocation": "manual", "operations": [ { "kind": "healing.apply", "amount": { "value": 2 }, "target": "self" } ] }
+              {
+                "id": "use",
+                "invocation": "manual",
+                "operations": [
+                  {
+                    "kind": "healing.apply",
+                    "amount": {
+                      "value": 2
+                    },
+                    "target": "self"
+                  }
+                ]
+              }
             ]
           }
         }
       ]
+    },
+    {
+      "id": "feat.spellblade.battle-focus",
+      "category": "feat",
+      "presentation": {
+        "defaultLocale": "ko",
+        "originalName": "Battle Focus",
+        "locales": {
+          "ko": {
+            "name": "전투 집중",
+            "description": "레벨업의 능력치 향상 대신 고를 수 있는 외부 모듈 재주입니다. 전투 시작 시 정신을 가다듬어 첫 턴에 유리하게 움직입니다."
+          },
+          "en": {
+            "name": "Battle Focus"
+          }
+        }
+      }
     }
   ]
 }

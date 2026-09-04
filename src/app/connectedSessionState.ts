@@ -1,5 +1,10 @@
 import type { ConnectedActionRequest, SessionCompatibilityManifest } from "./connectedSessionProtocol";
-import type { ConnectedResolutionPresentationV1, ConnectedResolutionTimelineEntryV1 } from "./connectedResolutionPresentation";
+import type {
+  ConnectedResolutionHiddenFact,
+  ConnectedResolutionPresentationV1,
+  ConnectedResolutionTimelineEntryV1,
+  ConnectedResolutionVisibilityV1,
+} from "./connectedResolutionPresentation";
 import type { InterruptView } from "./contracts";
 import type { ResolutionEvent } from "../domain/resolutionTypes";
 import type { ConcentrationSaveVm } from "./concentrationSaveRuntimeContracts";
@@ -11,6 +16,16 @@ export interface PendingRemoteAction {
   request:ConnectedActionRequest;
   resolutionId:string;
   readyActionRole?:"prepare"|"trigger";
+}
+
+/** Host-private record of a hidden Resolution: the full envelope never leaves the Host until the DM discloses selected facts. */
+export interface HiddenResolutionRecord {
+  resolutionId:string;
+  actorId:string;
+  actionName:string;
+  hidden:ConnectedResolutionHiddenFact[];
+  disclosed:ConnectedResolutionHiddenFact[];
+  presentation:ConnectedResolutionPresentationV1;
 }
 
 export interface ConnectedRuntimeState {
@@ -40,6 +55,9 @@ export interface ConnectedRuntimeState {
   privateConcentrationByResolution:Map<string,ConcentrationSaveVm>;
   interruptTimeout:ReturnType<typeof setTimeout>|null;
   interruptTimeoutResolutionId:string|null;
+  nextResolutionVisibility:ConnectedResolutionVisibilityV1|null;
+  resolutionVisibilityById:Map<string,ConnectedResolutionVisibilityV1>;
+  hiddenResolutions:Map<string,HiddenResolutionRecord>;
 }
 
 const states=new WeakMap<MockAdapter,ConnectedRuntimeState>();
@@ -74,6 +92,9 @@ export function connectedStateFor(adapter:MockAdapter) {
       privateConcentrationByResolution:new Map<string,ConcentrationSaveVm>(),
       interruptTimeout:null,
       interruptTimeoutResolutionId:null,
+      nextResolutionVisibility:null,
+      resolutionVisibilityById:new Map<string,ConnectedResolutionVisibilityV1>(),
+      hiddenResolutions:new Map<string,HiddenResolutionRecord>(),
     };
     states.set(adapter,state);
   }
@@ -110,5 +131,8 @@ export function resetConnectedState(adapter:MockAdapter,mode:"host"|"client"|nul
   state.privateConcentrationByResolution.clear();
   state.interruptTimeout=null;
   state.interruptTimeoutResolutionId=null;
+  state.nextResolutionVisibility=null;
+  state.resolutionVisibilityById.clear();
+  state.hiddenResolutions.clear();
   return state;
 }

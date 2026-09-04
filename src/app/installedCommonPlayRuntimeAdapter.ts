@@ -3,6 +3,7 @@ import "./installedContentContracts";
 import type { ActionVm, AppSnapshot, CatalogEntry, CharacterSheet, CombatantDefinitionVm, DamageComponentView, ResolutionView, SceneVm, SessionMode } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
 import { connectedStateFor } from "./connectedSessionState";
+import { projectedCharacterById, projectedCharacterIds } from "./characterSessionProjectionRegistry";
 import { catalogQualifiedId } from "./contentCatalogIdentity";
 import { generatedBuiltinCatalog } from "./builtinCatalogRuntimeAdapter";
 import { requiredSessionInstalledContent } from "./installedContentRuntimeAdapter";
@@ -334,6 +335,24 @@ async function projectRuntimeArtifactActions(adapter:MockAdapter,snapshot:AppSna
       const existing=new Set(actions.map((action)=>action.id));
       actions.push(...cp(ownedActions.filter((action)=>!existing.has(action.id))));
       scene.actionsByActor[ownerId]=actions;
+    }
+  }
+  // Projected remote Characters carry their installed progression grants in the mounted sheet; the Host projects the same manual Common Play entry points for them so the DM and the owning peer share one executable action set.
+  for(const characterId of projectedCharacterIds(adapter)) {
+    if(characterId===ownerId||!snapshot.scene.entities.some((entity)=>entity.id===characterId)) continue;
+    const mounted=projectedCharacterById(adapter,characterId);
+    const projectedGrantActionIds=await installedProgressionGrantActionIds(adapter,mounted?.sheet.installedProgressionGrantIds??[]);
+    if(!projectedGrantActionIds.length) continue;
+    const projectedActions=(await Promise.all(projectedGrantActionIds.map(async(actionId)=>{
+      const action=await commonPlayAction(adapter,actionId);
+      return action?projectedArtifactAction(adapter,actionId,characterId,action,snapshot.scene,state):undefined;
+    }))).filter((action):action is ActionVm=>Boolean(action));
+    if(!projectedActions.length) continue;
+    for(const scene of [snapshot.scene,(adapter as unknown as AdapterState).scene]) {
+      const actions=scene.actionsByActor[characterId]??[];
+      const existing=new Set(actions.map((action)=>action.id));
+      actions.push(...cp(projectedActions.filter((action)=>!existing.has(action.id))));
+      scene.actionsByActor[characterId]=actions;
     }
   }
   for(const artifact of state.artifacts??[]) {

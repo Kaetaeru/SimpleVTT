@@ -11,12 +11,16 @@ export interface CommonPlayProgressionContribution {
   threshold:number;
   grants:string[];
   choices?:CommonPlayProgressionChoice[];
+  /** When the contribution belongs to a subclass, it activates only while that subclass is the character's subclass on the track. */
+  ownerSubclassId?:string;
 }
 
 export interface CommonPlayProgressionContributionState {
   revision:number;
   trackLevels:Record<string,number>;
   grants:string[];
+  /** Stable subclass id per class track, including the subclass chosen in the same level-up. */
+  subclassIds?:Record<string,string>;
 }
 
 export type CommonPlayProgressionContributionResult=
@@ -40,6 +44,7 @@ export function resolveCommonPlayProgressionContributions(
       const level=inputState.trackLevels[contribution.track]??0;
       if(!Number.isInteger(level)||level<0)throw new DomainEvaluationError(`invalid progression track level: ${contribution.track}`);
       if(level<contribution.threshold)continue;
+      if(contribution.ownerSubclassId&&(inputState.subclassIds?.[contribution.track]??"")!==contribution.ownerSubclassId)continue;
       const definitions:ChoiceDefinition[]=(contribution.choices??[]).map((choice)=>({...choice,description:choice.description??"",kind:"feature-option",status:"ready",source:contribution.track,options:choice.options.map(({grants:_,replaces:__,...option})=>option)}));
       const issues=validateChoiceDefinitions(definitions,selections).filter((issue)=>issue.severity==="blocking");
       if(issues.length)throw new DomainEvaluationError(issues.map((issue)=>issue.message).join("; "));
