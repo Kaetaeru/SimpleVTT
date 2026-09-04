@@ -136,8 +136,9 @@ async function runScenario(){
 
     // MP-D03: an off-turn Character intent is refused with an explicit reason and nothing is committed.
     const offInstance=d02Host.currentActorId===fighter1.id?p2:p1;const offActor=d02Host.currentActorId===fighter1.id?bard2:fighter1;
-    const offAction=await findAction(offInstance,offActor.id,(a)=>a.resolutionKind==="attack"&&!a.readyActionRole,"off-turn attack");
-    assert.equal(offAction.available,false,"off-turn attack must be disabled");assert.ok(offAction.disabledReason,"disabled reason must be explicit");
+    // Availability is re-projected on the Client after the turn event lands; wait for the projection rather than the first snapshot.
+    let offAction=null;await offInstance.browser.waitUntil(async()=>{const list=await actions(offInstance,offActor.id);offAction=list.find((a)=>a.resolutionKind==="attack"&&!a.readyActionRole)??null;return Boolean(offAction)&&offAction.available===false;},{timeout:15_000,interval:300,timeoutMsg:`${offInstance.label}: off-turn attack stayed available; ${JSON.stringify(offAction)}`});
+    assert.ok(offAction.disabledReason,"disabled reason must be explicit");
     const cursorD03=(await peerState(host)).cursor;const d03=await clientAct(offInstance,offAction.id,[goblinIds[0]]);await sleep(1500);
     const afterD03=await peerState(host);assert.equal(afterD03.cursor,cursorD03,"off-turn intent must not commit");assert.equal(afterD03.pendingRemote,false);
     record("MP-D03",{actor:offActor.id,disabledReason:offAction.disabledReason,clientMessage:d03.compatibilityMessage});
