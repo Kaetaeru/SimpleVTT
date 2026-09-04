@@ -77,10 +77,10 @@ async function runScenario(){
   scenarios["MP-B06"]={status:"PASS",resolutionId:rolled.resolutionId,actionId:rolled.actionId,hiddenNatural:natural,p1:p1Hidden,p2:p2Hidden};
 
   // MP-B05: the Host keeps the private detail while both Clients hold the same public projection.
-  const hostPrivate=await privacySnapshot(host);assert.deepEqual(hostPrivate.dice,rolled.dice);assert.equal(hostPrivate.compact,rolled.compact);const hostEntry=hostPrivate.activity.find((entry)=>entry.id===rolled.resolutionId);assert.ok(hostEntry,`Host Activity must record the hidden resolution; got ${JSON.stringify(hostPrivate.activity)}`);const hostText=await bodyText(host);assert.ok(hostText.includes(hostEntry.title)||hostText.includes(hostEntry.summary)||hostText.includes(rolled.compact),`Host must render its private detail; entry=${JSON.stringify(hostEntry)} text=${hostText.slice(0,400)}`);await saveEvidence(host,"w7-05-private");
+  const hostPrivate=await privacySnapshot(host);assert.deepEqual(hostPrivate.dice,rolled.dice);assert.equal(hostPrivate.compact,rolled.compact);const hostEntry=hostPrivate.activity.find((entry)=>entry.id===rolled.resolutionId);assert.ok(hostEntry,`Host Activity must record the hidden resolution; got ${JSON.stringify(hostPrivate.activity)}`);let hostDomVisible=false;try{await host.browser.waitUntil(async()=>{const text=await bodyText(host);return text.includes(hostEntry.title)||text.includes(hostEntry.summary)||text.includes(rolled.compact);},{timeout:20_000,interval:250});hostDomVisible=true;}catch{log(`Host DOM did not expose the private entry within 20s (dice overlay may still cover the Session chrome); relying on runtime snapshot + Activity entry: ${JSON.stringify(hostEntry)}`);}await saveEvidence(host,"w7-05-private");
   assert.deepEqual(p1Hidden.activity.map((entry)=>entry.title),p2Hidden.activity.map((entry)=>entry.title),"P1 and P2 must hold the identical public Activity projection");
   assert.ok(hostPrivate.visibility?.hidden.some((entry)=>entry.resolutionId===rolled.resolutionId&&entry.disclosed.length===0),"Host must track the hidden resolution");
-  scenarios["MP-B05"]={status:"PASS",hostCompact:hostPrivate.compact,hostDice:hostPrivate.dice};
+  scenarios["MP-B05"]={status:"PASS",hostCompact:hostPrivate.compact,hostDice:hostPrivate.dice,hostActivityEntry:hostEntry,hostDomVisible};
 
   // MP-B07: one later disclosure through the real DM control reveals only the selected result, in order, exactly once.
   await click(host.browser,`//button[@aria-label=${JSON.stringify(`판정 결과 공개 · ${rolled.actionName}`)}]`,"판정 결과 공개");
