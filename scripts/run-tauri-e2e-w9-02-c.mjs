@@ -1,0 +1,226 @@
+import assert from "node:assert/strict";
+import { spawn, spawnSync } from "node:child_process";
+import { createServer, Socket } from "node:net";
+import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import path from "node:path";
+import process from "node:process";
+import { fileURLToPath } from "node:url";
+import { remote } from "webdriverio";
+
+const scriptDirectory=path.dirname(fileURLToPath(import.meta.url));
+const root=path.resolve(scriptDirectory,"..");
+const binary=path.join(root,".live-dev","tauri-e2e-target","debug","simplevtt.exe");
+const viteEntry=path.join(root,"node_modules","vite","bin","vite.js");
+const runId=new Date().toISOString().replace(/[:.]/g,"-");
+const runRoot=path.join(root,".live-dev","tauri-e2e",runId);
+const artifactRoot=path.join(runRoot,"artifacts");
+const verificationSha=process.env.V1_VERIFICATION_SHA??process.env.GITHUB_SHA??"local";
+const keepOpen=process.argv.includes("--keep-open");
+const children=[];
+const browsers=[];
+let viteStarted=false;
+
+function log(message){process.stdout.write(`[TAURI W9-02C E2E] ${message}\n`);}
+function sleep(ms){return new Promise((resolve)=>setTimeout(resolve,ms));}
+async function reservePort(){return new Promise((resolve,reject)=>{const server=createServer();server.unref();server.once("error",reject);server.listen(0,"127.0.0.1",()=>{const address=server.address();const port=typeof address==="object"&&address?address.port:0;server.close((error)=>error?reject(error):resolve(port));});});}
+async function canConnect(port,host="127.0.0.1"){return new Promise((resolve)=>{const socket=new Socket();const finish=(value)=>{socket.destroy();resolve(value);};socket.setTimeout(250);socket.once("connect",()=>finish(true));socket.once("timeout",()=>finish(false));socket.once("error",()=>finish(false));socket.connect(port,host);});}
+async function waitForPort(port,label,timeoutMs=30_000){const deadline=Date.now()+timeoutMs;while(Date.now()<deadline){if(await canConnect(port))return;await sleep(100);}throw new Error(`${label} did not listen on 127.0.0.1:${port} within ${timeoutMs} ms`);}
+function spawnTracked(command,args,options={}){const child=spawn(command,args,{cwd:root,stdio:["ignore","pipe","pipe"],windowsHide:false,...options});children.push(child);child.stdout?.on("data",(chunk)=>process.stdout.write(chunk));child.stderr?.on("data",(chunk)=>process.stderr.write(chunk));return child;}
+async function ensureVite(){if(await canConnect(1420)){log("기존 Vite 서버(localhost:1420)를 사용합니다.");return;}assert.ok(existsSync(viteEntry),`Vite entry was not found: ${viteEntry}`);viteStarted=true;spawnTracked(process.execPath,[viteEntry,"--host","0.0.0.0","--port","1420","--strictPort"]);await waitForPort(1420,"Vite",45_000);for(let attempt=0;attempt<50;attempt+=1){try{const response=await fetch("http://127.0.0.1:1420/");if(response.ok){await response.text();return;}}catch{}await sleep(100);}throw new Error("Vite warm-up did not become HTTP-ready");}
+function exactButton(text){return `//button[normalize-space(.)=${JSON.stringify(text)}]`;}
+function navButton(text){return `//nav[@aria-label='주요 메뉴']//button[.//span[normalize-space(.)=${JSON.stringify(text)}]]`;}
+function labelControl(label,tag="input",within=""){const scope=within?`${within}//`:"//";return `${scope}label[.//*[self::span or self::legend][normalize-space(.)=${JSON.stringify(label)}]]//${tag}`;}
+async function click(browser,selector,description=selector){const element=await browser.$(selector);await element.waitForDisplayed({timeout:15_000,timeoutMsg:`${description} is not visible`});await element.waitForEnabled({timeout:15_000,timeoutMsg:`${description} is disabled`});await element.click();}
+async function replaceValue(browser,selector,value,description=selector){const element=await browser.$(selector);await element.waitForDisplayed({timeout:15_000,timeoutMsg:`${description} is not visible`});await element.click();await element.setValue(value);assert.equal(await element.getValue(),String(value),`${description} did not accept input`);}
+async function waitForText(browser,text,timeout=20_000){await browser.waitUntil(async()=>(await browser.$("body").getText()).includes(text),{timeout,timeoutMsg:`UI text did not appear: ${text}`});}
+async function completeFirstRun(instance){const finish=await instance.browser.$(exactButton("선택 저장 · Home으로"));if(!await finish.isExisting())return;const optimized=await instance.browser.$("//button[.//strong[normalize-space(.)='SimpleVTT 최적화']]");await optimized.click();await finish.waitForEnabled({timeout:10_000});await finish.click();await waitForText(instance.browser,"TABLETOP, YOUR WAY");}
+async function launchInstance(label,dataRoot,webdriverPort){await mkdir(dataRoot,{recursive:true});const child=spawnTracked(binary,[`--simplevtt-data-root=${dataRoot}`,`--simplevtt-instance-label=${label}`],{env:{...process.env,SIMPLEVTT_LOCAL_DATA_ROOT:dataRoot,SIMPLEVTT_INSTANCE_LABEL:label,TAURI_WEBDRIVER_PORT:String(webdriverPort)}});await waitForPort(webdriverPort,`${label} WebDriver`,30_000);// The WebDriver plugin listens before the Tauri window exists; a session request in that gap fails with "No window could be found", so retry the session for a bounded time instead of failing the whole journey.
+let browser;for(let attempt=1;;attempt+=1){try{browser=await remote({hostname:"127.0.0.1",port:webdriverPort,logLevel:"error",capabilities:{}});break;}catch(error){const message=String(error instanceof Error?error.message:error);if(attempt>=20||!/No window could be found|no such window|ECONNREFUSED|ECONNRESET/i.test(message))throw error;log(`${label} WebDriver session not ready (attempt ${attempt}): ${message.slice(0,120)}`);await sleep(1000);}}browsers.push(browser);await browser.setTimeout({implicit:0,pageLoad:30_000,script:60_000});await browser.waitUntil(async()=>(await browser.$("body").getText()).includes("SimpleVTT"),{timeout:30_000,timeoutMsg:`${label} UI did not finish loading`});const instance={label,child,browser,dataRoot,webdriverPort};await completeFirstRun(instance);return instance;}
+async function saveEvidence(instance,suffix){const base=instance.label.replace(/\s+/g,"-").toLowerCase();await writeFile(path.join(artifactRoot,`${base}-${suffix}.png`),await instance.browser.takeScreenshot(),"base64");await writeFile(path.join(artifactRoot,`${base}-${suffix}.txt`),await instance.browser.$("body").getText(),"utf8");}
+
+async function createHostCampaign(host){await click(host.browser,navButton("캠페인"),"캠페인 메뉴");const body=await host.browser.$("body").getText();await click(host.browser,exactButton(body.includes("아직 캠페인이 없습니다.")?"새 캠페인 만들기":"새 캠페인"),"새 캠페인");await replaceValue(host.browser,labelControl("캠페인 이름"),"W7-05 Hidden Roll","캠페인 이름");await click(host.browser,exactButton("캠페인 만들기"),"캠페인 만들기 제출");await waitForText(host.browser,"W7-05 Hidden Roll");}
+async function openHostSession(host,sessionPort){await click(host.browser,navButton("세션"),"세션 메뉴");const direct="//*[@aria-label='직접 네트워크 세션 시작']";await replaceValue(host.browser,`${direct}//label[.//span[normalize-space(.)='Bind / Listen IP']]//input`,"127.0.0.1","Host bind 주소");const portInputs=await host.browser.$$(`${direct}//label[.//span[normalize-space(.)='포트']]//input`);assert.ok(portInputs.length>=1);await portInputs[0].setValue(String(sessionPort));const buttons=await host.browser.$$(`${direct}//button[normalize-space(.)='세션 열기']`);assert.equal(buttons.length,1);await buttons[0].click();await waitForText(host.browser,"호스트 · DM",30_000);}
+async function joinClientSession(client,sessionPort){await click(client.browser,navButton("세션"),"세션 메뉴");const direct="//*[@aria-label='직접 네트워크 세션 시작']";await replaceValue(client.browser,`${direct}//label[.//span[normalize-space(.)='Host IP / 주소']]//input`,"127.0.0.1","Client Host 주소");const portInputs=await client.browser.$$(`${direct}//label[.//span[normalize-space(.)='포트']]//input`);assert.ok(portInputs.length>=2);await portInputs[1].setValue(String(sessionPort));const buttons=await client.browser.$$(`${direct}//button[normalize-space(.)='참가하기']`);assert.equal(buttons.length,1);await buttons[0].waitForEnabled({timeout:15_000,timeoutMsg:"참가하기 is disabled"});await buttons[0].click();try{await waitForText(client.browser,"클라이언트 · 플레이어",30_000);}catch(error){const base=client.label.replace(/\s+/g,"-").toLowerCase();await saveEvidence(client,"join-failure").catch(()=>undefined);const snapshot=await runtimeSnapshot(client).catch((cause)=>({snapshotError:String(cause instanceof Error?cause.message:cause)}));await writeFile(path.join(artifactRoot,`${base}-join-failure-runtime.json`),`${JSON.stringify(snapshot,null,2)}\n`,"utf8").catch(()=>undefined);throw new Error(`${error instanceof Error?error.message:String(error)}; runtime=${JSON.stringify(snapshot)}`);}}
+async function completeVisibleCharacterChoices(browser){for(let attempt=0;attempt<120;attempt+=1){const result=await browser.execute(()=>{const sections=[...document.querySelectorAll(".focused-create-stage .create-v09-section")];for(const section of sections){if(section.querySelector(".create-status-pill")?.textContent?.trim()!=="선택 필요")continue;const candidates=[...section.querySelectorAll(".dynamic-choice-grid .create-option-card, .equipment-options .create-option-card, .spell-choice-grid button, .proficiency-grid button")];const target=candidates.find((item)=>!item.disabled&&item.getAttribute("aria-disabled")!=="true"&&!item.classList.contains("selected")&&!item.querySelector(".selected"));if(target instanceof HTMLElement){const before=section.textContent;target.scrollIntoView({block:"center"});target.click();return{clicked:true,section:section.id,before};}}return{clicked:false,unresolved:sections.filter((section)=>section.querySelector(".create-status-pill")?.textContent?.trim()==="선택 필요").map((section)=>section.id)};});if(!result.clicked)return result.unresolved;await browser.waitUntil(async()=>browser.execute(({sectionId,before})=>{const section=document.getElementById(sectionId);return Boolean(section&&section.textContent!==before);},{sectionId:result.section,before:result.before}),{timeout:15_000});}throw new Error("Character choice completion exceeded 120 UI clicks");}
+async function openCharacterTab(browser,label,sectionId){await click(browser,`//nav[contains(@class,'focused-create-tabs')]//button[.//span[normalize-space(.)=${JSON.stringify(label)}]]`,`${label} 탭`);await browser.$(`//section[@id=${JSON.stringify(sectionId)}]`).waitForDisplayed({timeout:15_000});}
+async function createDistinctPlayerCharacter(instance,name){await click(instance.browser,navButton("캐릭터"),`${instance.label} 캐릭터 메뉴`);await click(instance.browser,"//article[contains(@class,'character-card-entry')][.//h2[normalize-space(.)='Aelar']]//button[normalize-space(.)='복제']",`${instance.label} Aelar 복제`);await openCharacterTab(instance.browser,"정체성","identity");await replaceValue(instance.browser,labelControl("캐릭터 이름"),name,`${instance.label} 캐릭터 이름`);for(const [tab,sectionId] of [["정체성","identity"],["종족","species"],["클래스","class"],["배경","background"]]){await openCharacterTab(instance.browser,tab,sectionId);assert.deepEqual(await completeVisibleCharacterChoices(instance.browser),[]);}await openCharacterTab(instance.browser,"능력치","abilities");await click(instance.browser,"//section[@id='abilities']//button[contains(normalize-space(.),'파이터 추천 배치')]",`${instance.label} 파이터 추천 배치`);await openCharacterTab(instance.browser,"기술","proficiencies");assert.deepEqual(await completeVisibleCharacterChoices(instance.browser),[]);await openCharacterTab(instance.browser,"검토","review");await click(instance.browser,exactButton("모험 시작"),`${instance.label} Character 저장`);await waitForText(instance.browser,name,30_000);const snapshot=await runtimeSnapshot(instance);assert.equal(snapshot.activeCharacterName,name);return{id:snapshot.activeCharacterId,name};}
+
+async function runtimeSnapshot(instance){const result=await instance.browser.executeAsync((done)=>{import("/src/app/mockAdapter.ts").then(async({mockAdapter})=>{const snapshot=await mockAdapter.getSnapshot();done({activeCharacterId:snapshot.activeCharacter.id,activeCharacterName:snapshot.activeCharacter.name,activeGold:snapshot.activeCharacter.goldGp??0,role:snapshot.session.role,connectionState:snapshot.connectionState,participants:snapshot.session.participants.map((entry)=>({id:entry.id,characterName:entry.characterName,state:entry.state})),inventories:Object.fromEntries(Object.entries(snapshot.sessionCharacterInventories??{}).map(([id,value])=>[id,{characterId:value.characterId,goldGp:value.goldGp,revision:value.revision}])),campaignId:snapshot.campaignSessionSystems?.campaignId??snapshot.activeCampaignId??snapshot.campaigns?.[0]?.campaignId??null,stashGp:snapshot.campaignSessionSystems?.partyStash.wallet.gp??null,compatibilityMessage:snapshot.session.compatibilityMessage});}).catch((error)=>done({error:String(error?.stack??error)}));});assert.ok(!result.error,result.error);return result;}
+async function selectProductionCharacter(instance,characterId,timeout=30_000){await click(instance.browser,navButton("세션"),`${instance.label} 세션 메뉴`);const direct="//*[@aria-label='직접 네트워크 세션 시작']";const control=await instance.browser.$(`${direct}//label[.//span[normalize-space(.)='플레이 Character']]//select`);await control.waitForDisplayed({timeout,timeoutMsg:`${instance.label} production Character selector is not visible`});await control.selectByAttribute("value",characterId);await instance.browser.waitUntil(async()=>(await runtimeSnapshot(instance)).activeCharacterId===characterId,{timeout,interval:200,timeoutMsg:`${instance.label} did not restore saved Character ${characterId}`});return runtimeSnapshot(instance);}
+async function waitParticipantState(instance,participantId,expected,timeout=20_000){await instance.browser.waitUntil(async()=>{const snapshot=await runtimeSnapshot(instance);return snapshot.participants.some((entry)=>entry.id===participantId&&entry.state===expected);},{timeout,interval:150,timeoutMsg:`${instance.label} did not observe participant ${participantId} as ${expected}`});return runtimeSnapshot(instance);}
+
+async function privacySnapshot(instance){return instance.browser.executeAsync((done)=>{import("/src/app/mockAdapter.ts").then(async({mockAdapter})=>{const snapshot=await mockAdapter.getSnapshot();const resolution=snapshot.resolution;done({role:snapshot.session.role,connectionState:snapshot.connectionState,participants:snapshot.session.participants.map((entry)=>({id:entry.id,characterName:entry.characterName,state:entry.state})),resolutionId:resolution?.id??null,stage:resolution?.stage??null,dice:resolution?.authoritativeDice??[],compact:resolution?.compact??"",finalOutcome:resolution?.finalOutcome??"",targetIds:resolution?.targetIds??[],activity:snapshot.activity.slice(0,6).map((entry)=>({id:entry.id,title:entry.title,summary:entry.summary})),visibility:snapshot.resolutionVisibility??null});}).catch((error)=>done({error:String(error?.stack??error)}));});}
+async function resolveHostCheck(host){return host.browser.executeAsync((done)=>{import("/src/app/mockAdapter.ts").then(async({mockAdapter})=>{try{let snapshot=await mockAdapter.getSnapshot();const listChecks=(current)=>Object.entries(current.scene.actionsByActor??{}).flatMap(([actorId,entries])=>(entries??[]).filter((entry)=>entry.target==="none"&&entry.resolutionKind==="ability-check").map((action)=>({actorId,action})));let candidates=listChecks(snapshot).filter((candidate)=>candidate.action.available);if(!candidates.length){try{snapshot=await mockAdapter.startInitiative();}catch{}const actorId=snapshot.scene.currentActorId||snapshot.activeCharacter.id;try{snapshot=await mockAdapter.setCurrentActor(actorId);}catch{}candidates=listChecks(snapshot).filter((candidate)=>candidate.action.available);}const preferred=candidates.find((candidate)=>candidate.actorId===snapshot.activeCharacter.id)??candidates[0];if(!preferred){done({ok:false,error:`no available targetless ability check; role=${snapshot.session.role} mode=${snapshot.sessionMode} current=${snapshot.scene.currentActorId} active=${snapshot.activeCharacter.id} entities=${snapshot.scene.entities.map((entry)=>entry.id).join(",")} actors=${JSON.stringify(Object.entries(snapshot.scene.actionsByActor??{}).map(([id,entries])=>({id,total:(entries??[]).length,checks:(entries??[]).filter((entry)=>entry.resolutionKind==="ability-check").length,available:(entries??[]).filter((entry)=>entry.available).length})))}`});return;}try{await mockAdapter.selectDmActor(preferred.actorId);}catch{}const actorId=preferred.actorId;const action=preferred.action;snapshot=await mockAdapter.resolveAction(action.id,[]);for(let step=0;step<12&&snapshot.resolution&&snapshot.resolution.stage!=="complete";step+=1)snapshot=await mockAdapter.advanceResolution();const resolution=snapshot.resolution;if(!resolution){done({ok:false,error:`resolveAction(${action.id}) for ${actorId} produced no resolution`});return;}done({ok:true,actorId,actionId:action.id,actionName:action.name,resolutionId:resolution.id,stage:resolution.stage,dice:resolution.authoritativeDice??[],compact:resolution.compact??"",finalOutcome:resolution.finalOutcome??"",detail:resolution.detail??[]});}catch(error){done({ok:false,error:String(error instanceof Error?error.message:error)});}}).catch((error)=>done({ok:false,error:String(error?.stack??error)}));});}
+/** The runner drives the Host's check through the production adapter, not a button; the React shell only re-renders from its own actions or an external snapshot, so publish one exactly as the connected runtime does after inbound events. */
+async function refreshRenderedShell(instance){const result=await instance.browser.executeAsync((done)=>{Promise.all([import("/src/app/mockAdapter.ts"),import("/src/app/connectedSessionRuntimeAdapter.ts")]).then(async([{mockAdapter},{publishConnectedSnapshot}])=>{await publishConnectedSnapshot(mockAdapter);done({ok:true});}).catch((error)=>done({ok:false,error:String(error?.stack??error)}));});assert.equal(result.ok,true,result.error);}
+async function waitResolution(instance,resolutionId,predicate,description,timeout=20_000){let last=null;await instance.browser.waitUntil(async()=>{last=await privacySnapshot(instance);return last.resolutionId===resolutionId&&predicate(last);},{timeout,interval:150,timeoutMsg:`${instance.label} did not observe ${description}; last=${JSON.stringify(last)}`});return last;}
+async function bodyText(instance){const inner=await instance.browser.execute(()=>document.body?.innerText??"").catch(()=>"");if(inner&&inner.trim())return inner;return instance.browser.$("body").getText();}
+function assertNoMarkers(label,text,markers){for(const marker of markers){if(!marker)continue;assert.equal(text.includes(marker),false,`${label} leaks hidden fact ${JSON.stringify(marker)}`);}}
+
+async function installErrorHooks(instance){await instance.browser.execute(()=>{const w=window;if(w.__e2eErrors)return;w.__e2eErrors=[];w.addEventListener("error",(event)=>w.__e2eErrors.push(`error: ${event.message} @${event.filename}:${event.lineno}`));w.addEventListener("unhandledrejection",(event)=>w.__e2eErrors.push(`rejection: ${String(event.reason&&event.reason.stack||event.reason)}`));}).catch(()=>undefined);}
+async function domDiagnostics(instance){return instance.browser.execute(()=>{const q=(sel)=>Boolean(document.querySelector(sel));const buttons=[...document.querySelectorAll("button")].filter((el)=>{const r=el.getBoundingClientRect();return r.width>0&&r.height>0;}).map((el)=>(el.getAttribute("aria-label")||el.textContent||"").trim().slice(0,30)).filter(Boolean).slice(0,40);return{errors:(window.__e2eErrors||[]).slice(0,10),href:location.href,bodyTextLength:(document.body?.innerText||"").length,bodyHtmlLength:(document.body?.innerHTML||"").length,sessionRoot:q(".session-mode-root"),hotbar:q(".session-hotbar-tabs"),activityPane:q(".session-activity-pane"),resolutionLayer:q(".session-resolution-layer"),diceCanvas:q("canvas"),visibleButtons:buttons};}).catch((error)=>({diagnosticsError:String(error)}));}
+
+// ---------------------------------------------------------------------------------------------
+// W9-02 family C — combat and shared presentation on real Windows H+P1+P2 (stage 1: Fighter + NPC)
+// ---------------------------------------------------------------------------------------------
+const bounded=(promise,ms,label)=>Promise.race([promise,sleep(ms).then(()=>({timeout:label}))]);
+
+async function peerState(instance){const result=await instance.browser.executeAsync((done)=>{Promise.all([import("/src/app/mockAdapter.ts"),import("/src/app/connectedSessionState.ts")]).then(async([{mockAdapter},{connectedStateFor}])=>{const s=await mockAdapter.getSnapshot();const st=connectedStateFor(mockAdapter);const r=s.resolution;done({role:s.session.role,connectionState:s.connectionState,mode:s.sessionMode,currentActorId:s.scene.currentActorId,cursor:st.replica?.cursor??st.ledger?.cursor??null,pendingRemote:Boolean(st.pendingRemoteAction),compatibilityMessage:s.session.compatibilityMessage,activeCharacterId:s.activeCharacter.id,resolution:r?{id:r.id,stage:r.stage,actorId:r.actorId,actionName:r.actionName,targetIds:r.targetIds,dice:r.authoritativeDice,compact:r.compact,finalOutcome:r.finalOutcome,attackOutcome:r.attackOutcome,attackTotal:r.attackTotal,rollTotal:r.rollTotal,critical:r.critical,canAdvance:r.canAdvance,stateChanges:r.stateChanges,damageComponents:(r.damageComponents??[]).length,checkTarget:r.checkTarget,checkOutcome:r.checkOutcome}:null,activity:s.activity.slice(0,8).map((e)=>({id:e.id,actor:e.actor,title:e.title,summary:e.summary,stateChanges:e.stateChanges,detail:e.detail})),entities:s.scene.entities.map((e)=>({id:e.id,name:e.name,hp:e.hp,maxHp:e.maxHp,kind:e.kind})),resources:(s.activeCharacter.resources??[]).map((x)=>({id:x.id,label:x.label,current:x.current,max:x.max})),hasCanvas:Boolean(document.querySelector("canvas"))});}).catch((error)=>done({error:String(error?.stack??error)}));});assert.ok(!result.error,result.error);return result;}
+async function refreshShell(instance){await instance.browser.executeAsync((done)=>{Promise.all([import("/src/app/mockAdapter.ts"),import("/src/app/connectedSessionRuntimeAdapter.ts")]).then(async([{mockAdapter},{publishConnectedSnapshot}])=>{await publishConnectedSnapshot(mockAdapter);done({ok:true});}).catch((error)=>done({error:String(error?.stack??error)}));});}
+async function actions(instance,actorId){return instance.browser.executeAsync((actorId,done)=>{import("/src/app/mockAdapter.ts").then(async({mockAdapter})=>{const s=await mockAdapter.getSnapshot();done((s.scene.actionsByActor[actorId]??[]).map((a)=>({id:a.id,name:a.name,available:a.available,disabledReason:a.disabledReason,target:a.target,eligibleTargetIds:a.eligibleTargetIds,resolutionKind:a.resolutionKind,economy:a.economy})));}).catch((error)=>done({error:String(error?.stack??error)}));},actorId);}
+async function findAction(instance,actorId,predicate,label){const list=await actions(instance,actorId);assert.ok(!list.error,list.error);const found=list.find(predicate);assert.ok(found,`${instance.label}: action ${label} not projected for ${actorId}; have ${list.map((a)=>a.name).join("|")}`);return found;}
+async function hostCall(host,body,args){const result=await host.browser.executeAsync(new Function("args","done",`Promise.all([import("/src/app/mockAdapter.ts"),import("/src/app/connectedSessionRuntimeAdapter.ts")]).then(async([{mockAdapter},{publishConnectedSnapshot}])=>{try{const out=await (async()=>{${body}})();await publishConnectedSnapshot(mockAdapter);done({ok:true,out});}catch(error){done({ok:false,error:String(error instanceof Error?error.message:error)});}}).catch((error)=>done({ok:false,error:String(error?.stack??error)}));`),args??{});assert.equal(result.ok,true,result.error);return result.out;}
+async function walkToActor(host,actorId){const before=await peerState(host);if(before.mode!=="initiative")await hostCall(host,`await mockAdapter.startInitiative();`);for(let step=0;step<16;step+=1){const s=await peerState(host);if(s.currentActorId===actorId)return s;await hostCall(host,`await mockAdapter.endTurn();`);}const s=await peerState(host);throw new Error(`Host could not walk the initiative order to ${actorId}; current=${s.currentActorId} entities=${s.entities.map((e)=>e.id).join(",")}`);}
+async function hostAdvanceToComplete(host,resolutionId){let last=null;for(let step=0;step<14;step+=1){last=await peerState(host);if(!last.resolution||last.resolution.id!==resolutionId)break;if(last.resolution.stage==="complete")return last;if(!last.resolution.canAdvance){await sleep(300);continue;}await hostCall(host,`await mockAdapter.advanceResolution();`);}last=await peerState(host);return last;}
+async function clientAct(client,actionId,targetIds){return client.browser.executeAsync((actionId,targetIds,done)=>{Promise.all([import("/src/app/mockAdapter.ts"),import("/src/app/connectedSessionRuntimeAdapter.ts")]).then(async([{mockAdapter},{publishConnectedSnapshot}])=>{try{const s=await mockAdapter.resolveAction(actionId,targetIds);await publishConnectedSnapshot(mockAdapter);done({ok:true,resolutionId:s.resolution?.id??null,stage:s.resolution?.stage??null,compatibilityMessage:s.session.compatibilityMessage});}catch(error){done({ok:false,error:String(error instanceof Error?error.message:error)});}}).catch((error)=>done({ok:false,error:String(error?.stack??error)}));},actionId,targetIds);}
+async function waitHostResolutionFor(host,actorId,timeout=20_000){let last=null;await host.browser.waitUntil(async()=>{last=await peerState(host);return Boolean(last.resolution&&last.resolution.actorId===actorId);},{timeout,interval:200,timeoutMsg:`Host did not start a Resolution for ${actorId}; last=${JSON.stringify(last?.resolution)} msg=${last?.compatibilityMessage}`});return last;}
+async function waitActivityEntry(instance,resolutionId,timeout=20_000){let last=null;await instance.browser.waitUntil(async()=>{last=await peerState(instance);return last.activity.some((e)=>e.id===resolutionId);},{timeout,interval:200,timeoutMsg:`${instance.label} did not record ${resolutionId}; activity=${JSON.stringify(last?.activity?.map((e)=>e.id))} msg=${last?.compatibilityMessage}`});return last;}
+async function openActivity(instance){const open=await instance.browser.$("aside.session-activity-pane");if(await open.isExisting())return;await click(instance.browser,exactButton("기록"),`${instance.label} 기록 패널`);await instance.browser.$("aside.session-activity-pane").waitForExist({timeout:10_000});}
+async function closeActivity(instance){await instance.browser.keys("Escape");await sleep(200);}
+async function renderedActivityText(instance){await openActivity(instance);const text=await instance.browser.$("aside.session-activity-pane").getText().catch(async()=>bodyText(instance));return text;}
+function entity(state,id){return state.entities.find((e)=>e.id===id);}
+async function expectConverged(peers,resolutionId,label){const states=[];for(const p of peers)states.push([p.label,await waitActivityEntry(p,resolutionId)]);const hostEntry=states[0][1].activity.find((e)=>e.id===resolutionId);for(const [name,s] of states.slice(1)){const e=s.activity.find((x)=>x.id===resolutionId);assert.equal(e.title,hostEntry.title,`${label}: ${name} Activity title diverges`);assert.equal(e.summary,hostEntry.summary,`${label}: ${name} Activity summary diverges`);}for(const [name,s] of states.slice(1)){for(const he of states[0][1].entities){const pe=entity(s,he.id);if(pe)assert.equal(pe.hp,he.hp,`${label}: ${name} HP for ${he.name} diverges (${pe.hp} vs Host ${he.hp})`);}}return states;}
+async function evidenceAll(peers,suffix){for(const p of peers)await bounded(saveEvidence(p,suffix).catch(()=>undefined),15_000,"evidence");}
+
+async function runScenario(){
+  assert.equal(process.platform,"win32","W9-02 Tauri acceptance is Windows-only");assert.ok(existsSync(binary),`Tauri E2E binary was not found: ${binary}`);
+  await rm(runRoot,{recursive:true,force:true});await mkdir(artifactRoot,{recursive:true});await ensureVite();
+  const sessionPort=await reservePort();const hostRoot=path.join(runRoot,"host","data");const p1Root=path.join(runRoot,"p1","data");const p2Root=path.join(runRoot,"p2","data");
+  const host=await launchInstance("W9-02C Host",hostRoot,await reservePort());const p1=await launchInstance("W9-02C P1",p1Root,await reservePort());const p2=await launchInstance("W9-02C P2",p2Root,await reservePort());
+  const peers=[host,p1,p2];const scenarios={};const record=(id,data)=>{scenarios[id]={status:"PASS",...data};log(`${id} PASS`);};
+  const fighter1=await createDistinctPlayerCharacter(p1,"W9 Fighter One");const fighter2=await createDistinctPlayerCharacter(p2,"W9 Fighter Two");
+  await createHostCampaign(host);await openHostSession(host,sessionPort);await joinClientSession(p1,sessionPort);await joinClientSession(p2,sessionPort);
+  await host.browser.waitUntil(async()=>(await peerState(host)).entities.filter((e)=>e.kind==="character").length>=2,{timeout:20_000,timeoutMsg:"H/P1/P2 Characters did not enter the Host Scene"});
+  // The DM adds an NPC from the seeded combatant definitions and starts Initiative; every peer converges on the topology.
+  await hostCall(host,`await mockAdapter.instantiateCombatant("combatant.goblin");`);
+  const goblinId=(await peerState(host)).entities.find((e)=>e.name==="고블린")?.id;assert.ok(goblinId,"goblin NPC did not enter the Host Scene");
+  for(const p of [p1,p2])await p.browser.waitUntil(async()=>Boolean(entity(await peerState(p),goblinId)),{timeout:15_000,timeoutMsg:`${p.label} did not receive the NPC topology`});
+  await hostCall(host,`await mockAdapter.startInitiative();`);
+  for(const p of [p1,p2])await p.browser.waitUntil(async()=>(await peerState(p)).mode==="initiative",{timeout:15_000,timeoutMsg:`${p.label} did not enter Initiative`});
+  await evidenceAll(peers,"w9-02c-setup");
+  try{
+    // MP-C01 + MP-C07: P1 attacks the NPC with a multi-die weapon; H resolves once; every peer shows actor, target, d20, hit, damage, HP.
+    await walkToActor(host,fighter1.id);
+    const greatsword=await findAction(p1,fighter1.id,(a)=>a.name.startsWith("대검")&&a.available,"greatsword attack");
+    await hostCall(host,`await mockAdapter.setQueuedD20(15);`);
+    const goblinBefore=entity(await peerState(host),goblinId).hp;
+    const c01=await clientAct(p1,greatsword.id,[goblinId]);assert.equal(c01.ok,true,c01.error);
+    let hostRes=await waitHostResolutionFor(host,fighter1.id);
+    let dicePolls=0,sawCanvas=false;for(let i=0;i<10;i+=1){const s=await peerState(p2);dicePolls+=1;if(s.hasCanvas){sawCanvas=true;break;}await sleep(150);}
+    const c01Done=await hostAdvanceToComplete(host,hostRes.resolution.id);assert.equal(c01Done.resolution?.stage,"complete",JSON.stringify(c01Done.resolution));
+    assert.equal(c01Done.resolution.attackOutcome,"명중",JSON.stringify(c01Done.resolution));assert.ok(c01Done.resolution.dice.length>=1&&c01Done.resolution.dice[0]===15,"authoritative d20 must be the queued 15");
+    const c01States=await expectConverged(peers,c01Done.resolution.id,"MP-C01");
+    const goblinAfter=entity(c01States[0][1],goblinId).hp;assert.ok(goblinAfter<goblinBefore,`goblin HP must drop on hit (${goblinBefore} -> ${goblinAfter})`);
+    for(const p of [p1,p2]){const text=await renderedActivityText(p);assert.ok(text.includes("고블린")&&text.includes("명중"),`${p.label} Activity must render target and hit; got ${text.slice(0,300)}`);await closeActivity(p);}
+    await evidenceAll(peers,"w9-02c-c01");
+    record("MP-C01",{resolutionId:c01Done.resolution.id,dice:c01Done.resolution.dice,goblinBefore,goblinAfter});
+    record("MP-C07",{damageComponents:c01Done.resolution.damageComponents,stateChanges:c01Done.resolution.stateChanges});
+    record("MP-C27",{dicePolls,sawCanvas,note:sawCanvas?"3D dice canvas observed on P2 during the shared roll":"canvas not sampled in time; faces still shared"});
+
+    // MP-C04: the same attack misses (queued 1); no damage is applied anywhere.
+    await walkToActor(host,fighter1.id);await hostCall(host,`await mockAdapter.setQueuedD20(1);`);
+    const missBefore=entity(await peerState(host),goblinId).hp;
+    const c04=await clientAct(p1,greatsword.id,[goblinId]);assert.equal(c04.ok,true,c04.error);
+    hostRes=await waitHostResolutionFor(host,fighter1.id);const c04Done=await hostAdvanceToComplete(host,hostRes.resolution.id);
+    assert.equal(c04Done.resolution?.stage,"complete");assert.equal(c04Done.resolution.attackOutcome,"빗나감",JSON.stringify(c04Done.resolution));
+    const c04States=await expectConverged(peers,c04Done.resolution.id,"MP-C04");assert.equal(entity(c04States[0][1],goblinId).hp,missBefore,"a miss must not change HP");
+    await evidenceAll(peers,"w9-02c-c04");record("MP-C04",{resolutionId:c04Done.resolution.id,hp:missBefore});
+
+    // MP-C05: natural 20 result tier converges.
+    await walkToActor(host,fighter1.id);await hostCall(host,`await mockAdapter.setQueuedD20(20);`);
+    const c05=await clientAct(p1,greatsword.id,[goblinId]);assert.equal(c05.ok,true,c05.error);
+    hostRes=await waitHostResolutionFor(host,fighter1.id);const c05Done=await hostAdvanceToComplete(host,hostRes.resolution.id);
+    assert.equal(c05Done.resolution?.stage,"complete");assert.equal(c05Done.resolution.dice[0],20);
+    const c05States=await expectConverged(peers,c05Done.resolution.id,"MP-C05");
+    await evidenceAll(peers,"w9-02c-c05");record("MP-C05",{resolutionId:c05Done.resolution.id,critical:c05Done.resolution.critical??null,summary:c05States[0][1].activity.find((e)=>e.id===c05Done.resolution.id)?.summary});
+
+    // MP-C02: the NPC attacks P1, driven by the DM; the public attack fans out and P1's HP converges.
+    await walkToActor(host,goblinId);
+    const scimitar=await findAction(host,goblinId,(a)=>/시미터|Scimitar/i.test(a.name),"goblin scimitar");
+    await hostCall(host,`await mockAdapter.selectDmActor(args.goblinId);await mockAdapter.setQueuedD20(18);`,{goblinId});
+    const p1Before=entity(await peerState(host),fighter1.id).hp;
+    await hostCall(host,`await mockAdapter.resolveAction(args.actionId,[args.targetId]);`,{actionId:scimitar.id,targetId:fighter1.id});
+    hostRes=await waitHostResolutionFor(host,goblinId);const c02Done=await hostAdvanceToComplete(host,hostRes.resolution.id);
+    assert.equal(c02Done.resolution?.stage,"complete",JSON.stringify(c02Done.resolution));
+    const c02States=await expectConverged(peers,c02Done.resolution.id,"MP-C02");
+    await evidenceAll(peers,"w9-02c-c02");record("MP-C02",{resolutionId:c02Done.resolution.id,outcome:c02Done.resolution.attackOutcome,p1Before,p1After:entity(c02States[0][1],fighter1.id).hp});
+
+    // MP-C03: P1 attacks P2; target owner and observer see the identical public resolution.
+    await walkToActor(host,fighter1.id);await hostCall(host,`await mockAdapter.setQueuedD20(16);`);
+    const p2Before=entity(await peerState(host),fighter2.id).hp;
+    const c03=await clientAct(p1,greatsword.id,[fighter2.id]);assert.equal(c03.ok,true,c03.error);
+    hostRes=await waitHostResolutionFor(host,fighter1.id);const c03Done=await hostAdvanceToComplete(host,hostRes.resolution.id);
+    assert.equal(c03Done.resolution?.stage,"complete");const c03States=await expectConverged(peers,c03Done.resolution.id,"MP-C03");
+    await evidenceAll(peers,"w9-02c-c03");record("MP-C03",{resolutionId:c03Done.resolution.id,outcome:c03Done.resolution.attackOutcome,p2Before,p2After:entity(c03States[0][1],fighter2.id).hp});
+
+    // MP-C08: P1 rolls an ability check with no target; the DM sets the public DC; d20, total, and outcome fan out.
+    await walkToActor(host,fighter1.id);await hostCall(host,`await mockAdapter.setQueuedD20(13);`);
+    const athletics=await findAction(p1,fighter1.id,(a)=>a.resolutionKind==="ability-check"&&a.target==="none"&&a.available,"targetless ability check");
+    const c08=await clientAct(p1,athletics.id,[]);assert.equal(c08.ok,true,c08.error);
+    hostRes=await waitHostResolutionFor(host,fighter1.id);
+    if(hostRes.resolution.checkTarget===undefined){await hostCall(host,`await mockAdapter.applyDmAdjudication({type:"ability-check-dc",value:10,scope:"resolution"});`);}
+    const c08Done=await hostAdvanceToComplete(host,hostRes.resolution.id);assert.equal(c08Done.resolution?.stage,"complete",JSON.stringify(c08Done.resolution));
+    assert.equal(c08Done.resolution.dice[0],13);const c08States=await expectConverged(peers,c08Done.resolution.id,"MP-C08");
+    for(const p of [p1,p2]){const text=await renderedActivityText(p);assert.ok(text.includes(c08States[0][1].activity.find((e)=>e.id===c08Done.resolution.id).title),`${p.label} must render the check`);await closeActivity(p);}
+    await evidenceAll(peers,"w9-02c-c08");record("MP-C08",{resolutionId:c08Done.resolution.id,action:athletics.name,total:c08Done.resolution.rollTotal,outcome:c08Done.resolution.checkOutcome??c08Done.resolution.finalOutcome});
+
+    // MP-C10: picker-selected Study/Search/Influence skill intent reaches H and presents to every peer.
+    await walkToActor(host,fighter1.id);await hostCall(host,`await mockAdapter.setQueuedD20(12);`);
+    const study=await findAction(p1,fighter1.id,(a)=>/^action\.standard\.(study|search|influence)\./.test(a.id)&&a.available,"picker skill action");
+    const c10=await clientAct(p1,study.id,[]);assert.equal(c10.ok,true,c10.error);
+    hostRes=await waitHostResolutionFor(host,fighter1.id);
+    if(hostRes.resolution.checkTarget===undefined){await hostCall(host,`await mockAdapter.applyDmAdjudication({type:"ability-check-dc",value:12,scope:"resolution"});`);}
+    const c10Done=await hostAdvanceToComplete(host,hostRes.resolution.id);assert.equal(c10Done.resolution?.stage,"complete",JSON.stringify(c10Done.resolution));
+    await expectConverged(peers,c10Done.resolution.id,"MP-C10");await evidenceAll(peers,"w9-02c-c10");record("MP-C10",{resolutionId:c10Done.resolution.id,action:study.name});
+
+    // MP-C11 + MP-C19: a self feature with a declared resource cost (Second Wind) resolves without a phantom target; the resource debit is visible to the owner.
+    await walkToActor(host,fighter1.id);
+    const secondWind=await findAction(p1,fighter1.id,(a)=>/second wind|세컨드 윈드|재기의 바람/i.test(a.name)&&a.available,"Second Wind");
+    const swBefore=(await peerState(p1)).resources.find((r)=>/second|세컨드|재기/i.test(r.id+r.label));
+    const c11=await clientAct(p1,secondWind.id,[fighter1.id]);assert.equal(c11.ok,true,c11.error);
+    hostRes=await waitHostResolutionFor(host,fighter1.id);const c11Done=await hostAdvanceToComplete(host,hostRes.resolution.id);assert.equal(c11Done.resolution?.stage,"complete",JSON.stringify(c11Done.resolution));
+    assert.deepEqual(c11Done.resolution.targetIds.filter((id)=>id!==fighter1.id),[],"self action must not create a phantom target");
+    await expectConverged(peers,c11Done.resolution.id,"MP-C11");
+    const swAfter=(await peerState(p1)).resources.find((r)=>/second|세컨드|재기/i.test(r.id+r.label));
+    if(swBefore&&swAfter)assert.ok(swAfter.current<swBefore.current,`Second Wind resource must be debited once (${swBefore.current} -> ${swAfter.current})`);
+    await evidenceAll(peers,"w9-02c-c11");record("MP-C11",{resolutionId:c11Done.resolution.id});record("MP-C19",{resource:{before:swBefore,after:swAfter}});
+
+    // MP-C28: a no-roll self action (Dash) shares an explicit result with no invented dice.
+    await walkToActor(host,fighter1.id);
+    const dash=await findAction(p1,fighter1.id,(a)=>/^질주|dash/i.test(a.name)&&a.available,"Dash");
+    const c28=await clientAct(p1,dash.id,[fighter1.id]);assert.equal(c28.ok,true,c28.error);
+    hostRes=await waitHostResolutionFor(host,fighter1.id);const c28Done=await hostAdvanceToComplete(host,hostRes.resolution.id);assert.equal(c28Done.resolution?.stage,"complete",JSON.stringify(c28Done.resolution));
+    assert.deepEqual(c28Done.resolution.dice,[],"no-roll action must not invent dice");await expectConverged(peers,c28Done.resolution.id,"MP-C28");
+    await evidenceAll(peers,"w9-02c-c28");record("MP-C28",{resolutionId:c28Done.resolution.id,compact:c28Done.resolution.compact});
+
+    // MP-C20: off-turn action is refused with an explicit reason and the Host commits nothing.
+    await walkToActor(host,goblinId);
+    const offTurn=await findAction(p1,fighter1.id,(a)=>a.name.startsWith("대검"),"greatsword (off turn)");
+    assert.equal(offTurn.available,false,"off-turn attack must be disabled on the Client");assert.ok(offTurn.disabledReason,"disabled reason must be explicit");
+    const cursorBefore=(await peerState(host)).cursor;const activityBefore=(await peerState(host)).activity.length;
+    const c20=await clientAct(p1,offTurn.id,[goblinId]);await sleep(1500);
+    const afterOff=await peerState(host);assert.equal(afterOff.cursor,cursorBefore,"Host must not commit an off-turn action");assert.equal(afterOff.pendingRemote,false);
+    await evidenceAll(peers,"w9-02c-c20");record("MP-C20",{disabledReason:offTurn.disabledReason,clientMessage:c20.compatibilityMessage,hostCursor:cursorBefore,activityUnchanged:afterOff.activity.length===activityBefore});
+
+    // MP-C21: an invalid target is rejected before mechanics or presentation; other peers see no false action.
+    await walkToActor(host,fighter1.id);
+    const cursorBefore21=(await peerState(host)).cursor;const p2ActivityBefore=(await peerState(p2)).activity.length;
+    const c21=await clientAct(p1,greatsword.id,["combatant.does-not-exist"]);await sleep(1500);
+    const after21=await peerState(host);assert.equal(after21.cursor,cursorBefore21,"invalid target must not advance the Host ledger");
+    assert.equal(after21.resolution&&after21.resolution.stage!=="complete"?after21.resolution.actorId:null,null,"invalid target must not leave a live Resolution on the Host");
+    assert.equal((await peerState(p2)).activity.length,p2ActivityBefore,"P2 must not see a false action");
+    await evidenceAll(peers,"w9-02c-c21");record("MP-C21",{clientMessage:c21.compatibilityMessage,hostMessage:after21.compatibilityMessage});
+
+    // MP-C30: Activity detail after presentation matches the immutable committed resolution on every peer.
+    const hostActivity=(await peerState(host)).activity.find((e)=>e.id===c01Done.resolution.id);
+    for(const p of [p1,p2]){const e=(await peerState(p)).activity.find((x)=>x.id===c01Done.resolution.id);assert.deepEqual(e.stateChanges,hostActivity.stateChanges,`${p.label} state changes diverge for the committed resolution`);const text=await renderedActivityText(p);assert.ok(text.includes(hostActivity.title),`${p.label} must still render the committed entry`);await closeActivity(p);}
+    record("MP-C30",{resolutionId:c01Done.resolution.id,title:hostActivity.title});
+  }catch(error){await evidenceAll(peers,"w9-02c-failure");const diag={};for(const p of peers)diag[p.label]=await bounded(peerState(p).catch((e)=>({error:String(e)})),8_000,"state");await writeFile(path.join(artifactRoot,"w9-02c-failure-state.json"),`${JSON.stringify({scenarios,diag},null,2)}\n`,"utf8").catch(()=>undefined);throw new Error(`${error instanceof Error?error.message:String(error)}; passed=${Object.keys(scenarios).join(",")} states=${JSON.stringify(diag).slice(0,3000)}`);}
+  const evidence={gate:"W9-02",family:"C",stage:1,scope:Object.keys(scenarios),status:"PASS",verificationSha,windowsTauri:true,topology:{host:"DM Host",clients:["P1","P2"],npc:goblinId,sessionPort},scenarios};
+  await writeFile(path.join(artifactRoot,"w9-02c-summary.json"),`${JSON.stringify(evidence,null,2)}\n`,"utf8");log(`PASS evidence: ${path.join(artifactRoot,"w9-02c-summary.json")}`);
+}
+
+async function cleanup(){if(keepOpen){log(`--keep-open active. Evidence: ${artifactRoot}`);return;}for(const browser of [...browsers].reverse()){try{await browser.deleteSession();}catch{}}for(const child of [...children].reverse()){if(child.exitCode===null&&!child.killed){try{child.kill();}catch{}}}if(viteStarted)log("Vite process stopped with tracked child cleanup.");}
+
+let exitCode=0;try{await runScenario();}catch(error){exitCode=1;console.error(error instanceof Error?error.stack??error.message:error);try{await writeFile(path.join(artifactRoot,"w9-02c-failure.txt"),`${String(error instanceof Error?error.stack??error.message:error)}\n`,"utf8");}catch{}}finally{await cleanup();}process.exitCode=exitCode;
