@@ -101,6 +101,17 @@ async function sendOwnerInventoryResult(client:MockAdapter,peer:string,request:C
   }catch(cause){error=cause instanceof Error?cause.message:String(cause);}
   await baseSendTo(peer,JSON.stringify({type:"campaign-owner-inventory-result",sessionId:request.sessionId,correlationId:request.correlationId,actorId,accepted:!error,...(error?{error}:{projection})} satisfies CampaignOwnerInventoryResult));
 }
+async function applyObservedOwnerInventoryResult(client:MockAdapter,result:CampaignOwnerInventoryResult){
+  const state=connectedStateFor(client);if(state.mode!=="client"||state.sessionId!==result.sessionId||!result.accepted||!result.projection)return;
+  const snapshot=await client.getSnapshot();const reconstructed=reconstructCharacterSessionProjectionV1(result.projection,snapshot.catalog);if(reconstructed.status==="rejected")return;
+  refreshSessionCharacterInventoryProjection(client,{characterId:reconstructed.sheet.id,characterName:reconstructed.sheet.name,revision:result.projection.runtimeRevision,goldGp:reconstructed.sheet.goldGp??0,items:structuredClone(reconstructed.sheet.items)} satisfies SessionCharacterInventoryVm);
+  await publishConnectedSnapshot(client);
+}
+async function broadcastObservedOwnerInventoryResult(host:MockAdapter,ownerPeer:string,result:CampaignOwnerInventoryResult){
+  const state=connectedStateFor(host);if(state.mode!=="host"||state.sessionId!==result.sessionId||!result.accepted||!result.projection)return;
+  const message=JSON.stringify(result);const peers=[...state.peerParticipants.keys()].filter((peer)=>peer!==ownerPeer);
+  await Promise.all(peers.map((peer)=>baseSendTo(peer,message)));
+}
 async function refreshHostOwnerProjection(host:MockAdapter,peer:string,actorId:string,projection:CharacterSessionProjectionV1){
   const state=connectedStateFor(host);const manifest=state.peerManifests.get(peer);const mounted=projectedCharacterById(host,actorId);
   if(state.mode!=="host"||!state.sessionId||!manifest?.character||!mounted)throw new Error("원격 Character 소유권 projection이 없습니다.");
@@ -128,7 +139,7 @@ async function settleOwnerInventoryResult(host:MockAdapter,message:SessionTransp
   const map=pendingOwnerInventory.get(host);const pending=map?.get(result.correlationId);if(!pending||pending.peer!==message.peer||pending.actorId!==result.actorId)return;
   clearTimeout(pending.timer);map?.delete(result.correlationId);
   if(!result.accepted||!result.projection){pending.reject(new Error(result.error||"원격 Character 인벤토리 변경이 거절되었습니다."));return;}
-  try{await refreshHostOwnerProjection(host,message.peer,result.actorId,result.projection);pending.resolve(result.projection);}catch(error){pending.reject(error instanceof Error?error:new Error(String(error)));}
+  try{await refreshHostOwnerProjection(host,message.peer,result.actorId,result.projection);await broadcastObservedOwnerInventoryResult(host,message.peer,result).catch(()=>undefined);pending.resolve(result.projection);}catch(error){pending.reject(error instanceof Error?error:new Error(String(error)));}
 }
 async function onMessageWithCampaignSystems(handler:(message:SessionTransportMessage)=>void){
   const client=registeringClientAdapter;
@@ -138,6 +149,7 @@ async function onMessageWithCampaignSystems(handler:(message:SessionTransportMes
     if(client&&ownerRequest){void sendOwnerInventoryResult(client,message.peer,ownerRequest);return;}
     const ownerResult=decodeCampaignOwnerInventoryResult(message.message);
     if(host&&ownerResult){void settleOwnerInventoryResult(host,message,ownerResult);return;}
+    if(client&&ownerResult){void applyObservedOwnerInventoryResult(client,ownerResult).catch(()=>undefined);return;}
     const stashRequest=decodeStashDepositRequest(message.message);
     if(stashRequest){
       if(host)void (async()=>{
