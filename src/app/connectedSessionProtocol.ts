@@ -226,7 +226,7 @@ export class HostSessionLedger {
     if (reservedCursor===undefined) {
       return { status:"rejected", error:`request was not reserved: ${requestId}`, hostCursor:this.cursor };
     }
-    if (reservedCursor!==this.cursor) {
+    if (reservedCursor!==this.cursor && !this.events.slice(reservedCursor).every((event)=>event.payload.kind==="participant")) {
       this.reservedRequestCursors.delete(requestId);
       return { status:"rejected", error:`host history advanced while request was pending: reserved ${reservedCursor}, host ${this.cursor}`, hostCursor:this.cursor };
     }

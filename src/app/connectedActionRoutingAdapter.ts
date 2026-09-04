@@ -102,9 +102,9 @@ async function publishCommittedResolution(adapter:MockAdapter,snapshot?:AppSnaps
 
   const pending=state.pendingRemoteAction;
   const isRemotePending=pending?.resolutionId===resolution.id;
-  const events=takeCommittedResolutionEvents(resolution.id);
   const presentation=buildConnectedResolutionPresentation(current,state.nextPresentationSequence,"catchup",state.presentationTimelineByResolution.get(resolution.id));
   if (!presentation) return current;
+  const events=takeCommittedResolutionEvents(resolution.id);
   state.presentationTimelineByResolution.set(resolution.id,presentation.timeline.map((entry)=>({...entry})));
   const peerFacing=outboundPresentation(state,presentation);
   const rollHidden=peerFacing.hidden.includes("roll");
@@ -350,6 +350,19 @@ registerConnectedActionRequestHandler(async (adapter,transportMessage,request) =
       ledger.cancelReservedActionRequest(request.requestId);
       restoreProjectedContext(adapter);
       await sendConnectedWireTo(transportMessage.peer,{type:"error",code:"action-disabled",message:requestedAction.disabledReason??"Action is currently disabled",hostCursor:ledger.cursor});
+      return;
+    }
+    // The DM-facing availability projection never gates by turn (the DM may drive any Actor, and DM-owned
+    // turns stay permissive for remote players by existing contract). When another player's projected
+    // Character holds the Initiative turn, a remote intent is refused explicitly unless it is a reaction.
+    const offTurnAllowed=requestedAction.readyActionRole==="trigger"||requestedAction.economy==="반응";
+    const turnHolder=snapshot.scene.currentActorId;
+    const turnHolderPeer=turnHolder&&turnHolder!==request.actorId?projectedCharacterById(adapter,turnHolder)?.peerId:undefined;
+    if (snapshot.sessionMode==="initiative"&&turnHolderPeer!==undefined&&turnHolderPeer!==transportMessage.peer&&!offTurnAllowed) {
+      ledger.cancelReservedActionRequest(request.requestId);
+      if (request.readyConfiguration) clearReadyActionConfiguration(adapter,request.actorId);
+      restoreProjectedContext(adapter);
+      await sendConnectedWireTo(transportMessage.peer,{type:"error",code:"action-off-turn",message:`현재 Actor의 턴이 아닙니다: ${request.actorId} cannot act while ${snapshot.scene.currentActorId||"—"} holds the turn`,hostCursor:ledger.cursor});
       return;
     }
   }
