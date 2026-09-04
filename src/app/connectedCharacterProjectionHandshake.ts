@@ -44,8 +44,20 @@ function sourceFingerprintValue(projection:CharacterSessionProjectionV1):unknown
   })) as unknown;
 }
 
+function canonicalFingerprintValue(value:unknown):unknown {
+  if (Array.isArray(value)) return value.map(canonicalFingerprintValue);
+  if (value!==null && typeof value==="object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string,unknown>)
+        .sort(([left],[right])=>left.localeCompare(right,"en"))
+        .map(([key,item])=>[key,canonicalFingerprintValue(item)]),
+    );
+  }
+  return value;
+}
+
 function sourceFingerprint(projection:CharacterSessionProjectionV1) {
-  return JSON.stringify(sourceFingerprintValue(projection));
+  return JSON.stringify(canonicalFingerprintValue(sourceFingerprintValue(projection)));
 }
 
 function firstMismatchPath(left:unknown,right:unknown,path=""):string|undefined {
