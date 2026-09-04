@@ -59,6 +59,18 @@ function ownerScoped(change:RuntimeStateChange,options?:ResolutionEventApplyOpti
   return change.targetId===options.ownerId;
 }
 
+/**
+ * A remote Character's inventory (item quantities, charges, item instances) lives on its owner's sheet; an observer
+ * replica keeps no copy of it. Reproduced on real Windows (W9-02 family C, MP-C18): the observer rejected the Host's
+ * committed potion drink for another player ("event-native apply target is missing: <id>/resource.phase09:item:...:quantity")
+ * and stayed one event behind the Host for good. Such changes are accepted as authoritative no-ops on the observer.
+ */
+function remoteInventoryChange(change:RuntimeStateChange,options?:ResolutionEventApplyOptions) {
+  if (!options?.ownerId || change.targetId===options.ownerId) return false;
+  if (change.kind==="inventory-item") return true;
+  return change.kind==="resource" && Boolean(itemResource(change.resourceId));
+}
+
 /** A remote target's runtime resource that this replica has not seen yet is seeded from the authoritative event. */
 function seedsRemoteResource(runtimeState:RulesRuntimeState|undefined,change:RuntimeStateChange,options?:ResolutionEventApplyOptions) {
   if (!options?.ownerId || !runtimeState || change.kind!=="resource" || change.targetId===options.ownerId || itemResource(change.resourceId)) return false;
@@ -303,6 +315,7 @@ function validate(
   const probeItems=structuredClone(items);
   const probeRuntime=runtimeState ? cloneRuntimeState(runtimeState) : undefined;
   for (const change of changes) {
+    if (remoteInventoryChange(change,options)) continue;
     const app=ownerScoped(change,options) ? appCurrentValue(probeScene,probeResources,probeItems,change) : missing();
     const runtime=probeRuntime ? (seedsRemoteResource(probeRuntime,change,options) ? found(change.before) : runtimeCurrentValue(probeRuntime,change)) : missing();
     if (runtimeOnly(change) && !probeRuntime) return `event-native apply requires runtime state for ${change.kind}`;
@@ -390,6 +403,7 @@ export function applyResolutionEvents(
   const nextRuntimeState=runtimeState ? cloneRuntimeState(runtimeState) : undefined;
   const labels:string[]=[];
   for (const change of changes) {
+    if (remoteInventoryChange(change,options)) { labels.push(applyLabel(change)); continue; }
     const app=ownerScoped(change,options) ? appCurrentValue(nextScene,nextResources,nextItems,change) : missing();
     const runtime=nextRuntimeState ? (seedsRemoteResource(nextRuntimeState,change,options) ? found(change.before) : runtimeCurrentValue(nextRuntimeState,change)) : missing();
     if (app.found) applyAppChange(nextScene,nextResources,nextItems,change);
