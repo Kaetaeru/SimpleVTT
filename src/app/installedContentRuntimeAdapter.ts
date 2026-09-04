@@ -16,6 +16,7 @@ import { InstalledContentRepository } from "./installedContentPersistence";
 import type { InstalledCatalogEntryV1, InstalledContentDocumentV1, InstalledContentStore } from "./installedContentContracts";
 import { createPlatformInstalledContentStore } from "./tauriInstalledContentStore";
 import { generatedBuiltinCatalog } from "./builtinCatalogRuntimeAdapter";
+import { setInstalledBackgroundEntries, type Entry as CreationEntry } from "./characterCreationV10Data";
 
 const cp = <T,>(value:T):T => structuredClone(value);
 
@@ -48,10 +49,23 @@ function contextFor(adapter:MockAdapter):Context {
   contexts.set(adapter,context);
   return context;
 }
+function installedBackgroundCreationEntries(entries:InstalledCatalogEntryV1[]):CreationEntry[] {
+  return entries.flatMap((entry):CreationEntry[]=>{
+    const definition=entry.category==="background"?entry.mechanics?.find((mechanic)=>mechanic.kind==="background-definition"):undefined;
+    if (!definition) return [];
+    return [{
+      id:entry.contentId,
+      category:"background",
+      presentation:{originalName:entry.nameEn,locales:{"ko-KR":{name:entry.nameKo,summary:entry.description}}},
+      mechanics:[{kind:"background-definition",config:cp(definition.config) as unknown as Record<string,unknown>}],
+    }];
+  });
+}
 function applyComposition(adapter:MockAdapter) {
   const state=stateOf(adapter), context=contextFor(adapter), document=context.repository.snapshot();
   if (!context.builtin || !document) return;
   state.catalog=composeContentCatalog(context.builtin,document.entries);
+  setInstalledBackgroundEntries(installedBackgroundCreationEntries(document.entries));
 }
 async function ensureHydrated(adapter:MockAdapter) {
   const context=contextFor(adapter);
@@ -214,6 +228,21 @@ MockAdapter.prototype.activateContentImport=async function activateInstalledCont
   }
 };
 MockAdapter.prototype.clearContentImport=async function clearInstalledContentPreview() { await ensureHydrated(this); return oldClearContentImport.call(this); };
+MockAdapter.prototype.uninstallContentSource=async function uninstallInstalledContentSource(sourceId:string) {
+  await ensureHydrated(this);
+  const state=stateOf(this), context=contextFor(this);
+  try {
+    const result=await context.repository.removeSource(sourceId);
+    if (result.status==="conflict") { context.vm={...context.vm,status:"error",message:result.error}; return this.getSnapshot(); }
+    applyComposition(this);
+    state.contentImport=null;
+    context.vm={durability:context.repository.durability,status:"ready",storageRevision:result.hydration.document.storageRevision};
+  } catch(error) {
+    const message=error instanceof Error?error.message:String(error);
+    context.vm={durability:context.repository.durability,status:"error",storageRevision:context.repository.snapshot()?.storageRevision ?? 0,message:`애드온 제거 실패: ${message}`};
+  }
+  return this.getSnapshot();
+};
 
 export function setInstalledContentStoreForTests(adapter:MockAdapter,store:InstalledContentStore) { injectedStores.set(adapter,store); contexts.delete(adapter); }
 export function getInstalledContentPersistenceStateForTests(adapter:MockAdapter) { const context=contexts.get(adapter); return context?{...cp(context.vm),document:context.repository.snapshot()}:null; }

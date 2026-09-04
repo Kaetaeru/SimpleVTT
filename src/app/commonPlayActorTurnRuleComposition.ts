@@ -1,3 +1,4 @@
+import { commonPlayMechanicsOf } from "./installedContentContracts";
 import type { MockAdapter } from "./mockAdapter";
 import { catalogQualifiedId } from "./contentCatalogIdentity";
 import { requiredSessionInstalledContent } from "./installedContentRuntimeAdapter";
@@ -79,7 +80,7 @@ export async function installedCommonPlayActorTurnRuleBindings(
       const reference=parseInstalledCommonPlayActionId(actionDefinitionId);
       if(!reference) continue;
       const entry=entries.get(reference.catalogId);
-      const mechanic=entry?.mechanics?.find((candidate)=>candidate.kind==="common-play"&&candidate.config.id===reference.mechanicId);
+      const mechanic=commonPlayMechanicsOf(entry?.mechanics).find((candidate)=>candidate.config.id===reference.mechanicId);
       if(!mechanic) continue;
       const definition=parseCommonPlayDefinition(mechanic.config,`Installed actor turn Common Play ${reference.catalogId} ${reference.mechanicId}`);
       if(!definition.entryPoints?.some((entryPoint)=>entryPoint.id===reference.entryPointId)) continue;

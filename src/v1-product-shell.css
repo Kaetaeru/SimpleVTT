@@ -21,3 +21,8 @@
 .v1-sidebar button:focus-visible,.v1-topbar button:focus-visible,.v1-home-screen button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 @media(max-width:1000px){.v1-brand-copy{display:none}.v1-nav button{padding:0 8px}.v1-nav-icon{display:none}.v1-sidebar-status span,.v1-topbar-actions small{display:none}.v1-hero{grid-template-columns:1fr}.v1-hero-status{grid-template-columns:repeat(3,minmax(0,1fr))}.v1-hero-status span{display:grid;gap:4px}.v1-content-columns{grid-template-columns:1fr}}
 @media(max-width:720px){.v1-sidebar{padding:8px 10px;gap:7px;overflow-x:auto}.v1-brand{display:none}.v1-nav{order:1}.v1-nav button{min-width:max-content;padding:0 8px}.v1-sidebar-context{margin-left:auto}.v1-sidebar-status{display:none}.v1-topbar{min-height:48px;padding:8px 12px}.v1-topbar-title span{display:none}.v1-home-screen,.v1-content-screen{padding:16px}.v1-hero{padding:26px;min-height:auto}.v1-hero h1{font-size:48px}.v1-hero-status{grid-template-columns:1fr}.v1-start-grid,.v1-content-summary,.v1-addon-meta{grid-template-columns:1fr}.v1-page-head{align-items:flex-start;flex-direction:column}.v1-content-columns>section,.v1-addon-guide{padding:16px}}
+
+.v1-content-screen.drag-active { outline: 2px dashed var(--accent); outline-offset: -8px; }
+.v1-drop-hint { margin: 0 0 12px; padding: 10px 14px; border: 1px dashed var(--accent); border-radius: 10px; color: var(--accent); background: var(--accent-soft); text-align: center; }
+.v1-page-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.v1-addon-groups article .v1-addon-remove { margin-top: 8px; }

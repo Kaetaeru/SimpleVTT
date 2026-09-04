@@ -1,3 +1,4 @@
+import type { InstalledBackgroundDefinitionV1 } from "./installedBackgroundDefinition";
 import type { CommonPlayDefinitionIR } from "../domain/commonPlayDefinitionRuntime";
 import type { CatalogEntry } from "./contracts";
 
@@ -34,6 +35,18 @@ export interface InstalledContentRelationshipV1 {
 export interface InstalledCommonPlayMechanicV1 {
   kind:"common-play";
   config:CommonPlayDefinitionIR;
+}
+
+export interface InstalledBackgroundDefinitionMechanicV1 {
+  kind:"background-definition";
+  config:InstalledBackgroundDefinitionV1;
+}
+
+export type InstalledMechanicV1 = InstalledCommonPlayMechanicV1 | InstalledBackgroundDefinitionMechanicV1;
+
+/** Narrows an entry's mechanics to the executable Common Play definitions; declarative kinds such as background-definition are skipped. */
+export function commonPlayMechanicsOf(mechanics:InstalledMechanicV1[]|undefined):InstalledCommonPlayMechanicV1[] {
+  return (mechanics??[]).filter((mechanic):mechanic is InstalledCommonPlayMechanicV1=>mechanic.kind==="common-play");
 }
 
 export interface InstalledProgressionContributionV1 {
@@ -102,7 +115,7 @@ export interface InstalledCatalogEntryV1 {
   extensionPoints?:InstalledModuleExtensionPointV1[];
   module?:InstalledModuleManifestV1;
   /** Validated, data-only Common Play executable definitions. */
-  mechanics?:InstalledCommonPlayMechanicV1[];
+  mechanics?:InstalledMechanicV1[];
   /** Generic grants activated when the named progression track reaches its threshold. */
   progressionContributions?:InstalledProgressionContributionV1[];
   /** Data-only optional Campaign capability profile. Never executable code. */
@@ -135,7 +148,7 @@ declare module "./contracts" {
     /** Stable module/source identity; distinct from display source. */
     sourceId?:string;
     /** Validated, data-only Common Play executable definitions carried by built-in or installed content. */
-    mechanics?:InstalledCommonPlayMechanicV1[];
+    mechanics?:InstalledMechanicV1[];
     /** Validated, data-only progression grants projected by the production level-up runtime. */
     progressionContributions?:InstalledProgressionContributionV1[];
     /** Read-only data-only Campaign provider projection from installed content. */
