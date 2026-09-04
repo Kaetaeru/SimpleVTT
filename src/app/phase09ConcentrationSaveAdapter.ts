@@ -16,6 +16,7 @@ import { MockAdapter } from "./mockAdapter";
 import { projectedCharacterById } from "./characterSessionProjectionRegistry";
 import { consumeAdapterInterruptEvents } from "./phase09RealTurnRuntimeAdapter";
 import { commitAdapterTurnRuntimeState, snapshotAdapterTurnRuntimeState } from "./turnRuntimeSessionRegistry";
+import { persistCharacterResolutionEvents } from "./resolutionCharacterWriteBackPort";
 import { resolveAtomicAttackTransaction, type AtomicAttackTransactionResult } from "./realAttackTransactionService";
 import { projectResolutionEventsToActivity } from "./realActivityProjectionService";
 import {
@@ -339,6 +340,14 @@ MockAdapter.prototype.advanceResolution=async function advanceResolutionWithConc
       reject(this,internal,"concentration-save transaction is missing authoritative runtime state",false);
       return internal.getSnapshot();
     }
+    // Reproduced on real Windows (W9-02 family D, MP-D12): the damage that rides on a concentration save was committed
+    // to the turn runtime only, never to the durable Character sheet, so a later Host Undo saw write-back drift
+    // ("expected 5, current 10") and silently did nothing. Persist the same transaction the plain attack path persists.
+    const writeBack=await persistCharacterResolutionEvents(this,transaction.events,"forward");
+    if (writeBack.status==="rejected") {
+      reject(this,internal,writeBack.error,false);
+      return internal.getSnapshot();
+    }
     const committed=commitAdapterTurnRuntimeState(
       this,
       internal.scene,
@@ -346,6 +355,7 @@ MockAdapter.prototype.advanceResolution=async function advanceResolutionWithConc
       transaction.runtimeState,
     );
     if (!committed) {
+      if (writeBack.changed) await persistCharacterResolutionEvents(this,transaction.events,"inverse");
       reject(this,internal,"turn runtime revision changed before concentration-save commit",false);
       return internal.getSnapshot();
     }
