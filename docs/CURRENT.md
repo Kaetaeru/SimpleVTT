@@ -40,10 +40,10 @@ W3: 8/8 PASS — COMPLETE
 W4: 8/8 PASS — COMPLETE
 W5: 10/10 PASS — COMPLETE
 W6: 8/8 PASS — COMPLETE
-W7: 6/8 PASS — IN PROGRESS
-Official ledger score: 82.5/100.0
-PASS: 62/72
-Remaining gates: 10/72
+W7: 7/8 PASS — IN PROGRESS
+Official ledger score: 86.3/100.0
+PASS: 65/72
+Remaining gates: 7/72
 FAIL: 0
 BLOCKED: 0
 ```
@@ -61,7 +61,7 @@ W4 — COMPLETE (8/8 PASS)
 W5 — COMPLETE (10/10 PASS)
 W6 — COMPLETE (8/8 PASS)
 W7 — IN PROGRESS (6/8 PASS; W7-05 repair on PR #321 awaiting Windows H+P1+P2 evidence)
-Next exact Gate: W7-05 closure, then W7-08
+Next exact Gate: W7-08 (PR #326 Windows representative cases), then W8-03, W8-04, W9-01, W9-03 on the integration SHA that carries PR #328
 ```
 
 `W7-06` and `W7-07` are closed on integration SHA `196266567ad61506f80d359d60224c6f8be6f186` (merge of PR #323): W7-06 capability-mismatch owners 49/49 (run `33873613714`), W7-07 accessibility/motion/diagnostics owners 38/38 plus Rust transport intake 2/2 (run `33873613866`). `W7-04` remains closed on `7d0bded27a624ed0d993d860cbd590262ed1f3a6`. `W7-05` product repair (hidden roll / selective disclosure) is on PR #321 with AUTO 5/5; its Windows H+P1+P2 observation is the remaining closure item.
