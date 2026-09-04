@@ -3256,7 +3256,7 @@
     },
     {
       "id": "W8-04",
-      "title": "exact SHA에서 focused suites·connected full regression·TypeScript·Vite·Rust/Tauri·production build를 실행한다.",
+      "title": "exact SHA에서 external content importer focused suite를 포함한 focused suites·connected full regression·TypeScript·Vite·Rust/Tauri·production build를 실행한다.",
       "classification": "VERIFY_ONLY",
       "scenarios": [],
       "issues": [
@@ -3302,7 +3302,7 @@
     },
     {
       "id": "W9-03",
-      "title": "Zero-to-Next-Session golden journey를 통과한다: first run → Character → Campaign → full Session → restart → Session 2 action.",
+      "title": "Zero-to-Next-Session golden journey를 통과한다: first run → external content import/activate → imported Background/Subclass를 사용한 Character → Campaign → imported executable feature를 포함한 full Session → restart → Session 2 action.",
       "classification": "BUILD",
       "scenarios": [],
       "issues": [],
