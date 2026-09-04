@@ -182,13 +182,14 @@ async function runScenario(){
     // MP-C11 + MP-C19: a self feature with a declared resource cost (Second Wind) resolves without a phantom target; the resource debit is visible to the owner.
     await walkToActor(host,fighter1.id);
     const secondWind=await findAction(p1,fighter1.id,(a)=>/second wind|세컨드 윈드|재기의 바람/i.test(a.name)&&a.available,"Second Wind");
-    const swBefore=(await peerState(p1)).resources.find((r)=>/second|세컨드|재기/i.test(r.id+r.label));
+    const secondWindResource=(state)=>state.resources.find((r)=>r.id==="resource:fighter.second-wind")??state.resources.find((r)=>/second|세컨드|재기/i.test(r.id+r.label));const swBefore=secondWindResource(await peerState(p1));
     const c11=await clientAct(p1,secondWind.id,[fighter1.id]);assert.equal(c11.ok,true,c11.error);
     hostRes=await waitHostResolutionFor(host,fighter1.id);const c11Done=await hostAdvanceToComplete(host,hostRes.resolution.id);assert.equal(c11Done.resolution?.stage,"complete",JSON.stringify(c11Done.resolution));
     assert.deepEqual(c11Done.resolution.targetIds.filter((id)=>id!==fighter1.id),[],"self action must not create a phantom target");
     await expectConverged(peers,c11Done.resolution.id,"MP-C11");
-    const swAfter=(await peerState(p1)).resources.find((r)=>/second|세컨드|재기/i.test(r.id+r.label));
-    if(swBefore&&swAfter)assert.ok(swAfter.current<swBefore.current,`Second Wind resource must be debited once (${swBefore.current} -> ${swAfter.current})`);
+    const p1After11=await peerState(p1);const swAfter=secondWindResource(p1After11);
+    assert.ok(swBefore&&swAfter&&swAfter.current===swBefore.current-1,`Second Wind resource must be debited once (${JSON.stringify(swBefore)} -> ${JSON.stringify(swAfter)})`);
+    assert.ok((p1After11.activity.find((e)=>e.id===c11Done.resolution.id)?.stateChanges??[]).some((line)=>/second-wind/.test(line)),"the committed entry must carry the resource debit");
     await evidenceAll(peers,"w9-02c-c11");record("MP-C11",{resolutionId:c11Done.resolution.id});record("MP-C19",{resource:{before:swBefore,after:swAfter}});
 
     // MP-C28: a no-roll self action (Dash) shares an explicit result with no invented dice.
