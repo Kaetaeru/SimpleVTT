@@ -262,6 +262,7 @@ export class ClientSessionReplica {
   readonly sessionId:string;
   private appliedEventIds = new Set<string>();
   private _cursor=0;
+  private asyncBatchTail:Promise<void> = Promise.resolve();
 
   constructor(sessionId:string) { this.sessionId=sessionId; }
   get cursor() { return this._cursor; }
@@ -330,11 +331,19 @@ export class ClientSessionReplica {
     events:ConnectedSessionEvent[],
     applyPayload:(payload:ConnectedEventPayload,event:ConnectedSessionEvent)=>Promise<ConnectedPayloadApplyResult>,
   ):Promise<ClientApplyResult> {
-    let result:ClientApplyResult={ status:"duplicate", cursor:this.cursor };
-    for (const event of events) {
-      result=await this.applyAsync(event,applyPayload);
-      if (result.status === "rejected") return result;
+    const previousBatch=this.asyncBatchTail;
+    let releaseBatch:()=>void=()=>undefined;
+    this.asyncBatchTail=new Promise<void>((resolve)=>{ releaseBatch=resolve; });
+    await previousBatch;
+    try {
+      let result:ClientApplyResult={ status:"duplicate", cursor:this.cursor };
+      for (const event of events) {
+        result=await this.applyAsync(event,applyPayload);
+        if (result.status === "rejected") return result;
+      }
+      return result;
+    } finally {
+      releaseBatch();
     }
-    return result;
   }
 }
