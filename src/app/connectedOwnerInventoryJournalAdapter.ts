@@ -16,6 +16,7 @@ interface OwnerInventoryFinalizeRequest {type:"campaign-owner-inventory-finalize
 interface OwnerInventoryFinalizeResult {type:"campaign-owner-inventory-finalize-result";sessionId:string;requestId:string;actorId:string;outcome:ConnectedOwnerInventoryFinalOutcome;accepted:boolean;error?:string;}
 type Raw=Record<string,unknown>;
 type HostOwnerMutation={peer:string;actorId:string;outcome?:ConnectedOwnerInventoryFinalOutcome};
+type JournalAttempt={requestId:string;record:ConnectedOwnerInventoryJournalRecord};
 
 const cp=<T,>(value:T):T=>structuredClone(value);
 const stores=new WeakMap<MockAdapter,ConnectedOwnerInventoryJournalStore>();
@@ -34,6 +35,27 @@ function sameCommand(left:DmInventoryAdjustmentCommand,right:DmInventoryAdjustme
 function storeFor(adapter:MockAdapter){let store=stores.get(adapter);if(!store){store=createConnectedOwnerInventoryJournalStore();stores.set(adapter,store);}return store;}
 function ownerApplyMap(adapter:MockAdapter){let map=ownerApplyInFlight.get(adapter);if(!map){map=new Map();ownerApplyInFlight.set(adapter,map);}return map;}
 function stashTransferMap(adapter:MockAdapter){let map=stashTransferInFlight.get(adapter);if(!map){map=new Map();stashTransferInFlight.set(adapter,map);}return map;}
+function journalAttemptId(requestId:string,index:number){return index===0?requestId:`${requestId}:retry:${index}`;}
+function commandForJournalAttempt(command:DmInventoryAdjustmentCommand,index:number):DmInventoryAdjustmentCommand{return {...cp(command),requestId:journalAttemptId(command.requestId,index)};}
+async function journalAttemptForApply(store:ConnectedOwnerInventoryJournalStore,command:DmInventoryAdjustmentCommand){
+  for(let index=0;;index++){
+    const attemptCommand=commandForJournalAttempt(command,index);const requestId=attemptCommand.requestId;const record=await store.read(requestId);
+    if(!record)return {requestId,command:attemptCommand,record:null as ConnectedOwnerInventoryJournalRecord|null};
+    if(record.actorId!==command.actorId||!sameCommand(record.command,attemptCommand))throw new Error("owner inventory retry does not match durable journal identity");
+    if(record.phase==="finalized"&&record.finalOutcome==="undone")continue;
+    return {requestId,command:attemptCommand,record};
+  }
+}
+async function latestJournalAttempt(store:ConnectedOwnerInventoryJournalStore,requestId:string):Promise<JournalAttempt|null>{
+  let lastUndone:JournalAttempt|null=null;
+  for(let index=0;;index++){
+    const attemptId=journalAttemptId(requestId,index);const record=await store.read(attemptId);
+    if(!record)return lastUndone;
+    const attempt={requestId:attemptId,record};
+    if(record.phase==="finalized"&&record.finalOutcome==="undone"){lastUndone=attempt;continue;}
+    return attempt;
+  }
+}
 export function setConnectedOwnerInventoryJournalStoreForTests(adapter:MockAdapter,store:ConnectedOwnerInventoryJournalStore){stores.set(adapter,store);}
 
 function inventory(snapshot:AppSnapshot,actorId:string):SessionCharacterInventoryVm{
@@ -121,9 +143,9 @@ const baseOnMessage=tauriSessionTransport.onMessage.bind(tauriSessionTransport);
 const baseSendTo=tauriSessionTransport.sendTo.bind(tauriSessionTransport);
 
 async function applyClientJournal(adapter:MockAdapter,command:DmInventoryAdjustmentCommand){
-  const store=storeFor(adapter);let snapshot=await adapter.getSnapshot();let current=inventory(snapshot,command.actorId);let record=await store.read(command.requestId);
-  if(!record)record=await store.prepare({requestId:command.requestId,actorId:command.actorId,command:cp(command),before:current});
-  if(record.actorId!==command.actorId||!sameCommand(record.command,command))throw new Error("owner inventory retry does not match durable journal identity");
+  const store=storeFor(adapter);let snapshot=await adapter.getSnapshot();let current=inventory(snapshot,command.actorId);const attempt=await journalAttemptForApply(store,command);let record=attempt.record;const attemptCommand=attempt.command;const requestId=attempt.requestId;
+  if(!record)record=await store.prepare({requestId,actorId:command.actorId,command:cp(attemptCommand),before:current});
+  if(record.actorId!==command.actorId||!sameCommand(record.command,attemptCommand))throw new Error("owner inventory retry does not match durable journal identity");
   if(record.phase==="finalized"){
     if(record.finalOutcome==="applied")return snapshot;
     throw new Error("owner inventory request was already finalized as undone");
@@ -131,12 +153,12 @@ async function applyClientJournal(adapter:MockAdapter,command:DmInventoryAdjustm
   if(record.phase==="undone"||record.phase==="undoing")throw new Error("owner inventory request is already being or has been undone");
   if(record.phase==="applied")return snapshot;
   if(!sameInventory(current,record.before)){
-    if(!matchesApplied(record.before,current,command,snapshot.catalog))throw new Error("owner inventory prepared journal cannot reconcile current Character state");
-    await store.markApplied(command.requestId,current);return snapshot;
+    if(!matchesApplied(record.before,current,attemptCommand,snapshot.catalog))throw new Error("owner inventory prepared journal cannot reconcile current Character state");
+    await store.markApplied(requestId,current);return snapshot;
   }
-  await baseAdjust.call(adapter,command);
+  await baseAdjust.call(adapter,attemptCommand);
   snapshot=await adapter.getSnapshot();current=inventory(snapshot,command.actorId);
-  await store.markApplied(command.requestId,current);return snapshot;
+  await store.markApplied(requestId,current);return snapshot;
 }
 
 async function writeUndoTarget(adapter:MockAdapter,target:SessionCharacterInventoryVm){
@@ -145,8 +167,8 @@ async function writeUndoTarget(adapter:MockAdapter,target:SessionCharacterInvent
   refreshSessionCharacterInventoryProjection(adapter,target);
   return adapter.getSnapshot();
 }
-async function undoClientJournal(adapter:MockAdapter,requestId:string){
-  const store=storeFor(adapter);let record=await store.read(requestId);if(!record)return baseUndo.call(adapter,requestId);
+async function undoClientJournal(adapter:MockAdapter,logicalRequestId:string){
+  const store=storeFor(adapter);const attempt=await latestJournalAttempt(store,logicalRequestId);if(!attempt)return baseUndo.call(adapter,logicalRequestId);const requestId=attempt.requestId;let record=attempt.record;
   let snapshot=await adapter.getSnapshot();let current=inventory(snapshot,record.actorId);
   if(record.phase==="finalized"){
     if(record.finalOutcome==="undone")return snapshot;
@@ -182,7 +204,7 @@ function defer(adapter:MockAdapter,delta:number){const value=Math.max(0,(deferHo
 function finalizeKey(requestId:string,outcome:ConnectedOwnerInventoryFinalOutcome){return `${requestId}:${outcome}`;}
 function decodeFinalizeRequest(raw:string):OwnerInventoryFinalizeRequest|null{try{const value=object(JSON.parse(raw));if(value?.type!=="campaign-owner-inventory-finalize"||typeof value.sessionId!=="string"||typeof value.requestId!=="string"||typeof value.actorId!=="string"||(value.outcome!=="applied"&&value.outcome!=="undone"))return null;return value as unknown as OwnerInventoryFinalizeRequest;}catch{return null;}}
 function decodeFinalizeResult(raw:string):OwnerInventoryFinalizeResult|null{try{const value=object(JSON.parse(raw));if(value?.type!=="campaign-owner-inventory-finalize-result"||typeof value.sessionId!=="string"||typeof value.requestId!=="string"||typeof value.actorId!=="string"||(value.outcome!=="applied"&&value.outcome!=="undone")||typeof value.accepted!=="boolean"||(value.error!==undefined&&typeof value.error!=="string"))return null;return value as unknown as OwnerInventoryFinalizeResult;}catch{return null;}}
-async function finalizeLocal(adapter:MockAdapter,requestId:string,outcome:ConnectedOwnerInventoryFinalOutcome){const record=await storeFor(adapter).read(requestId);if(!record)return;if(record.phase==="finalized"){if(record.finalOutcome!==outcome)throw new Error("owner inventory journal finalized with a different outcome");return;}await storeFor(adapter).finalize(requestId,outcome);}
+async function finalizeLocal(adapter:MockAdapter,logicalRequestId:string,outcome:ConnectedOwnerInventoryFinalOutcome){const store=storeFor(adapter);const attempt=await latestJournalAttempt(store,logicalRequestId);if(!attempt)return;const {requestId,record}=attempt;if(record.phase==="finalized"){if(record.finalOutcome!==outcome)throw new Error("owner inventory journal finalized with a different outcome");return;}await store.finalize(requestId,outcome);}
 async function sendFinalize(adapter:MockAdapter,requestId:string,mutation:HostOwnerMutation){
   const state=connectedStateFor(adapter);if(state.mode!=="host"||!state.sessionId||!mutation.outcome)throw new Error("owner inventory finalize requires a settled Host transaction");
   const key=finalizeKey(requestId,mutation.outcome);let map=pendingFinalize.get(adapter);if(!map){map=new Map();pendingFinalize.set(adapter,map);}
@@ -249,12 +271,12 @@ async function transferPartyStashWithOwnerJournal(adapter:MockAdapter,command:Pa
   if(state.mode==="client"){
     let result:AppSnapshot;
     try{result=await baseTransfer.call(adapter,command);}
-    catch(error){let record=await storeFor(adapter).read(command.requestId);if(record&&record.phase!=="undone"&&record.phase!=="finalized"){await undoClientJournal(adapter,command.requestId).catch(()=>undefined);record=await storeFor(adapter).read(command.requestId);}if(record?.phase==="undone")await finalizeLocal(adapter,command.requestId,"undone").catch(()=>undefined);throw error;}
+    catch(error){let attempt=await latestJournalAttempt(storeFor(adapter),command.requestId);if(attempt&&attempt.record.phase!=="undone"&&attempt.record.phase!=="finalized"){await undoClientJournal(adapter,command.requestId).catch(()=>undefined);attempt=await latestJournalAttempt(storeFor(adapter),command.requestId);}if(attempt?.record.phase==="undone")await finalizeLocal(adapter,command.requestId,"undone").catch(()=>undefined);throw error;}
     // baseTransfer returning means the Host Campaign mutation is already
     // durable. Journal finalization is recovery metadata and must never turn a
     // committed deposit into a Client rollback (which would duplicate assets).
-    const record=await storeFor(adapter).read(command.requestId).catch(()=>null);
-    if(record?.phase==="applied")await finalizeLocal(adapter,command.requestId,"applied").catch(()=>undefined);
+    const attempt=await latestJournalAttempt(storeFor(adapter),command.requestId).catch(()=>null);
+    if(attempt?.record.phase==="applied")await finalizeLocal(adapter,command.requestId,"applied").catch(()=>undefined);
     return result;
   }
   return baseTransfer.call(adapter,command);

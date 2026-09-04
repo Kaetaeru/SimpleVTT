@@ -28,6 +28,7 @@ import "./app/campaignDmLibraryMaterializationAdapter";
 import "./app/connectedOwnerInventoryJournalAdapter";
 import "./app/connectedOwnerInventoryExactCompensationAdapter";
 import "./app/connectedDmLibraryGrantCommitAdapter";
+import "./app/connectedOwnerInventoryConnectionGuardAdapter";
 // UI modules can import presentation runtimes. Keep them after the canonical
 // offline -> connected -> presentation adapter composition above.
 import { ProductRoot } from "./ProductRoot";

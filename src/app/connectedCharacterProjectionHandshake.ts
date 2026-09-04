@@ -34,14 +34,56 @@ function projectionMatchesManifest(manifest:SessionCompatibilityManifest,project
   return undefined;
 }
 
-function sourceFingerprint(projection:CharacterSessionProjectionV1) {
-  return JSON.stringify({
+function sourceFingerprintValue(projection:CharacterSessionProjectionV1):unknown {
+  return JSON.parse(JSON.stringify({
     sourceRevision:projection.sourceRevision,
     rulesProfile:projection.rulesProfile,
     source:projection.source,
     sourceAuthority:projection.sourceAuthority,
     contentIdentities:projection.contentIdentities,
-  });
+  })) as unknown;
+}
+
+function canonicalFingerprintValue(value:unknown):unknown {
+  if (Array.isArray(value)) return value.map(canonicalFingerprintValue);
+  if (value!==null && typeof value==="object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string,unknown>)
+        .sort(([left],[right])=>left.localeCompare(right,"en"))
+        .map(([key,item])=>[key,canonicalFingerprintValue(item)]),
+    );
+  }
+  return value;
+}
+
+function sourceFingerprint(projection:CharacterSessionProjectionV1) {
+  return JSON.stringify(canonicalFingerprintValue(sourceFingerprintValue(projection)));
+}
+
+function firstMismatchPath(left:unknown,right:unknown,path=""):string|undefined {
+  if (Object.is(left,right)) return undefined;
+  if (Array.isArray(left) || Array.isArray(right)) {
+    if (!Array.isArray(left) || !Array.isArray(right)) return path || "projection";
+    if (left.length!==right.length) return `${path || "projection"}.length`;
+    for (let index=0;index<left.length;index+=1) {
+      const mismatch=firstMismatchPath(left[index],right[index],`${path}[${index}]`);
+      if (mismatch) return mismatch;
+    }
+    return undefined;
+  }
+  if (left!==null && right!==null && typeof left==="object" && typeof right==="object") {
+    const leftRecord=left as Record<string,unknown>;
+    const rightRecord=right as Record<string,unknown>;
+    const keys=[...new Set([...Object.keys(leftRecord),...Object.keys(rightRecord)])].sort((a,b)=>a.localeCompare(b,"en"));
+    for (const key of keys) {
+      const childPath=path ? `${path}.${key}` : key;
+      if (!(key in leftRecord) || !(key in rightRecord)) return childPath;
+      const mismatch=firstMismatchPath(leftRecord[key],rightRecord[key],childPath);
+      if (mismatch) return mismatch;
+    }
+    return undefined;
+  }
+  return path || "projection";
 }
 
 function refreshHostInventoryProjection(
@@ -75,7 +117,11 @@ export function acceptHostCharacterSessionProjection(
     const reconstructed=reconstructCharacterSessionProjectionV1(projection,app.catalog);
     if (reconstructed.status==="rejected") return reconstructed;
     if (sourceFingerprint(reconstructed.projection)!==sourceFingerprint(existingProjection.projection)) {
-      return {status:"rejected",error:`projected Character source/content changed during connected session: ${character.characterId}`};
+      const mismatchPath=firstMismatchPath(
+        sourceFingerprintValue(existingProjection.projection),
+        sourceFingerprintValue(reconstructed.projection),
+      ) ?? "projection";
+      return {status:"rejected",error:`projected Character source/content changed during connected session: ${character.characterId} (${mismatchPath})`};
     }
     if (!rebindCharacterSessionProjectionPeer(adapter,character.characterId,peerId)) {
       return {status:"rejected",error:`failed to rebind projected Character peer: ${character.characterId}`};

@@ -553,13 +553,8 @@ function scheduleClientReconnect(adapter:MockAdapter) {
 }
 
 function acceptedManifestForParticipant(adapter:MockAdapter,participantId:string) {
-  const state=connectedStateFor(adapter);
-  for (const [peer,mappedParticipantId] of state.peerParticipants.entries()) {
-    if (mappedParticipantId!==participantId) continue;
-    const manifest=state.peerManifests.get(peer);
-    if (manifest) return manifest;
-  }
-  return undefined;
+  const accepted=connectedStateFor(adapter).acceptedParticipantManifests.get(participantId);
+  return accepted ? structuredClone(accepted) : undefined;
 }
 
 async function rejectLiveHello(adapter:MockAdapter,peer:string,message:string) {
@@ -633,11 +628,12 @@ async function handleHostMessage(adapter:MockAdapter,message:SessionTransportMes
         }
         state.peerManifests.set(message.peer,structuredClone(wire.manifest));
         state.peerParticipants.set(message.peer,wire.participantId);
+        state.acceptedParticipantManifests.set(wire.participantId,structuredClone(wire.manifest));
         if(characterId) {
-        await resumeConnectedCommonPlayAuthorityFactRequestsForCharacter(adapter,characterId);
-        await resumeConnectedInterruptPromptForCharacter(adapter,message.peer,characterId);
-        await resumeConnectedTurnSimultaneousOrderingPromptForCharacter(adapter,message.peer,characterId);
-      }
+          await resumeConnectedCommonPlayAuthorityFactRequestsForCharacter(adapter,characterId);
+          await resumeConnectedInterruptPromptForCharacter(adapter,message.peer,characterId);
+          await resumeConnectedTurnSimultaneousOrderingPromptForCharacter(adapter,message.peer,characterId);
+        }
         const cursorBeforeParticipant=ledger.cursor;
         const participantEvent=ledger.commitHostEvent({
           actorId:wire.participantId,

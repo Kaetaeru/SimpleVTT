@@ -3,9 +3,11 @@ import test from "node:test";
 import "../../src/app/offlineRuntimeAdapters";
 import "../../src/app/connectedCampaignSystemsRuntimeAdapter";
 import "../../src/app/connectedOwnerInventoryJournalAdapter";
+import "../../src/app/connectedOwnerInventoryConnectionGuardAdapter";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import { MemoryCharacterLibraryStore } from "../../src/app/memoryCharacterLibraryStore";
 import { setCharacterLibraryStoreForTests, mutateActiveCharacterDurably } from "../../src/app/characterLibraryRuntimeAdapter";
+import { connectedInternal } from "../../src/app/connectedSessionRuntimeAdapter";
 import { connectedStateFor } from "../../src/app/connectedSessionState";
 import { MemoryConnectedOwnerInventoryJournalStore } from "../../src/app/connectedOwnerInventoryJournalStore";
 import { setConnectedOwnerInventoryJournalStoreForTests } from "../../src/app/connectedOwnerInventoryJournalAdapter";
@@ -129,4 +131,24 @@ test("undoing journal recognizes a compensation committed before the undone side
   const recovered=await second.adapter.undoDmInventoryAdjustment(command.requestId);
   assert.equal(activeInventory(recovered).goldGp,before.goldGp);
   assert.equal((await journal.read(command.requestId))?.phase,"undone");
+});
+
+test("live connected owner inventory rejects mutation while the Client is reconnecting",async()=>{
+  const characterStore=new MemoryCharacterLibraryStore();
+  const journal=new MemoryConnectedOwnerInventoryJournalStore();
+  const current=await restarted(characterStore,journal);
+  const state=connectedStateFor(current.adapter);
+  state.sessionId="session.owner-reconnecting";
+  connectedInternal(current.adapter).connectionState="reconnecting";
+  const before=activeInventory(await current.adapter.getSnapshot());
+  const command={requestId:"live.owner-reconnecting",actorId:before.characterId,operation:"grant-currency" as const,amount:50};
+
+  await assert.rejects(
+    ()=>current.adapter.adjustDmInventory(command),
+    /requires an active Host connection/,
+  );
+
+  const after=activeInventory(await current.adapter.getSnapshot());
+  assert.equal(after.goldGp,before.goldGp,"reconnecting Client must not mutate owner currency locally");
+  assert.equal(await journal.read(command.requestId),null,"rejected live mutation must not create durable owner-journal state");
 });

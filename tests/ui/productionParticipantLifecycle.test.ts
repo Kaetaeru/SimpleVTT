@@ -53,6 +53,7 @@ function assertNoRejectedPeerGhost(adapter:MockAdapter,peer:string,participantId
   assert.equal(state.ledger.cursor,cursorBefore,"rejected hello must not advance Host ledger cursor");
   assert.equal(state.peerParticipants.has(peer),false,"rejected peer must not gain participant binding");
   assert.equal(state.peerManifests.has(peer),false,"rejected peer must not gain accepted manifest state");
+  assert.equal(state.acceptedParticipantManifests.has(participantId),false,"rejected participant must not gain durable reconnect identity");
   assert.equal(app.session.participants.some((participant)=>participant.id===participantId),false,"rejected participant must not enter Host roster");
   assert.equal(projectedCharacterForPeer(adapter,peer),undefined,"rejected peer must not gain SessionProjection registry state");
   assert.equal(projectedCharacterIds(adapter).includes(characterId),false,"rejected Character must not remain in projection registry");
@@ -201,6 +202,7 @@ test("live Host accepts a genuinely new participant and returns current authorit
     assert.equal(state.ledger.cursor,cursorBefore+2,"accepted live join commits participant and Scene topology events");
     assert.equal(state.peerParticipants.get("peer.late"),participantId);
     assert.equal(state.peerManifests.get("peer.late")?.character?.characterId,characterId);
+    assert.equal(state.acceptedParticipantManifests.get(participantId)?.character?.characterId,characterId);
     assert.equal(app.session.participants.find((participant)=>participant.id===participantId)?.state,"connected");
     const ack=transport.sentTo().find((entry)=>entry.peer==="peer.late"&&entry.message.type==="hello-ack")?.message;
     assert.equal(ack?.type,"hello-ack");
@@ -228,8 +230,7 @@ test("live Host rebinds a previously accepted participant and returns ordered ca
     const characterId=manifest.character?.characterId;
     assert.ok(characterId);
     const participantId=`client:${characterId}`;
-    state.peerManifests.set("peer.old",structuredClone(manifest));
-    state.peerParticipants.set("peer.old",participantId);
+    state.acceptedParticipantManifests.set(participantId,structuredClone(manifest));
     app.session.participants=[
       {id:"host",name:"DM Host",state:"connected",ready:false},
       {id:participantId,name:"Returning Player",characterName:"Returning Player",state:"disconnected",ready:false},
@@ -257,9 +258,10 @@ test("live Host rebinds a previously accepted participant and returns ordered ca
     });
     await new Promise<void>((resolve)=>setImmediate(resolve));
 
-    assert.equal(state.peerParticipants.has("peer.old"),false,"old transport peer binding must be retired on reconnect");
+    assert.equal([...state.peerParticipants.keys()].some((peer)=>peer.startsWith("disconnected:")),false,"reconnect identity must not occupy live peer routing");
     assert.equal(state.peerParticipants.get("peer.new"),participantId);
     assert.equal(state.peerManifests.get("peer.new")?.character?.characterId,characterId);
+    assert.equal(state.acceptedParticipantManifests.get(participantId)?.character?.characterId,characterId);
     const participant=app.session.participants.find((entry)=>entry.id===participantId);
     assert.equal(participant?.state,"connected");
     assert.equal(participant?.ready,false);

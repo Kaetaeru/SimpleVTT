@@ -100,9 +100,17 @@ async function markHostPeerDisconnected(adapter:MockAdapter,event:SessionTranspo
   if (state.mode!=="host"||!ledger||event.state!=="disconnected") return;
   const participantId=state.peerParticipants.get(event.peer);
   if (!participantId) return;
+  const acceptedManifest=state.peerManifests.get(event.peer);
   const app=connectedInternal(adapter);
   const participant=app.session.participants.find((entry)=>entry.id===participantId);
   if (!participant||(participant.state==="disconnected"&&!participant.ready)) return;
+
+  // Live peer maps contain transport addresses only. Preserve the last accepted
+  // participant/Character identity separately so reconnect validation never
+  // routes roster, Campaign, or owner traffic through a synthetic/dead peer.
+  state.peerParticipants.delete(event.peer);
+  state.peerManifests.delete(event.peer);
+  if (acceptedManifest) state.acceptedParticipantManifests.set(participantId,structuredClone(acceptedManifest));
 
   const committed=ledger.commitHostEvent({
     actorId:participantId,
