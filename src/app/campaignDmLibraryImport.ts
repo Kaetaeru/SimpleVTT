@@ -1,5 +1,6 @@
 import type { CampaignDmLibraryEntry, CampaignNpcActorDefinition, CampaignPartyStashItemTemplate } from "./campaignPersistenceContracts";
 import { HANDOUT_IMAGE_MAX_BYTES, parseLocalImageDataUrl } from "./localImageAsset";
+import { parseRuntimeActions, parseRuntimeStats } from "./combatantRuntimeDefinitionParse";
 
 type RecordValue=Record<string,unknown>;
 
@@ -33,7 +34,7 @@ function integer(value:unknown,label:string,minimum:number) {
 
 const COMMON_ENTRY_KEYS=["entryId","type","kind","label","favorite","tags"] as const;
 const ITEM_TEMPLATE_KEYS=["definitionId","name","nameEn","kind","attunementRequired","charges","passiveEffects","grantedActionIds","provenance"] as const;
-const NPC_DEFINITION_KEYS=["definitionId","name","nameEn","ac","maxHp","actions","statusImmunities","source","version"] as const;
+const NPC_DEFINITION_KEYS=["definitionId","name","nameEn","ac","maxHp","actions","statusImmunities","source","version","runtimeStats","runtimeActions"] as const;
 const IMAGE_ASSET_KEYS=["mimeType","dataUrl","byteLength","fileName"] as const;
 
 function itemEntry(raw:RecordValue,context:CampaignDmLibraryImportContext,index:number):CampaignDmLibraryEntry {
@@ -70,6 +71,8 @@ function npcEntry(raw:RecordValue,context:CampaignDmLibraryImportContext,index:n
   const label=textValue(raw.label??definitionRaw.name,`항목 ${index+1}.label`)!;
   const definitionId=textValue(raw.definitionId??definitionRaw.definitionId,`항목 ${index+1}.definitionId`)!;
   const npcDefinition:CampaignNpcActorDefinition={definitionId,name:textValue(definitionRaw.name??label,`항목 ${index+1}.name`)!,nameEn:textValue(definitionRaw.nameEn,`항목 ${index+1}.nameEn`,false),ac:integer(definitionRaw.ac,`항목 ${index+1}.ac`,0),maxHp:integer(definitionRaw.maxHp,`항목 ${index+1}.maxHp`,1),actions:stringList(definitionRaw.actions,`항목 ${index+1}.actions`),statusImmunities:stringList(definitionRaw.statusImmunities,`항목 ${index+1}.statusImmunities`),source:textValue(definitionRaw.source,`항목 ${index+1}.source`,false)??`Campaign DM Library · ${context.campaignName} · JSON`,version:textValue(definitionRaw.version,`항목 ${index+1}.version`,false)??"1"};
+  if(definitionRaw.runtimeStats!==undefined){const stats=parseRuntimeStats(record(definitionRaw.runtimeStats,`항목 ${index+1}.runtimeStats`));if(!stats)throw new Error(`항목 ${index+1}.runtimeStats.abilities는 필수입니다.`);npcDefinition.runtimeStats=stats;}
+  if(definitionRaw.runtimeActions!==undefined){const actions=parseRuntimeActions({runtimeActions:definitionRaw.runtimeActions});if(actions)npcDefinition.runtimeActions=actions;}
   return {entryId:textValue(raw.entryId,`항목 ${index+1}.entryId`,false)??context.createEntryId(),kind:"npc-definition",label,definitionId,favorite:raw.favorite===true,tags:stringList(raw.tags,`항목 ${index+1}.tags`),npcDefinition};
 }
 

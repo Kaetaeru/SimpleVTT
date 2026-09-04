@@ -126,8 +126,16 @@ function enqueueOrInstallConnectedPresentation(adapter:MockAdapter,presentation:
     installConnectedResolutionPresentation(adapter,presentation);
     return "applied" as const;
   }
-  if(isRemoteDicePresentation(presentation)){
+  // A Client parked on a Resolution's interrupt stage is waiting for a decision it does not own
+  // (or the Host declined/expired its own prompt). Whatever the Host presents next for that same
+  // Resolution supersedes the wait; queueing it would leave the peer on a stale prompt forever
+  // when the outcome carries no new dice (a declined follow-up that stays a miss).
+  const supersedesInterruptWait=app.resolution?.stage==="interrupt"
+    &&app.resolutionPresentation.resolutionId===presentation.resolutionId
+    &&presentation.resolution.stage!=="interrupt";
+  if(isRemoteDicePresentation(presentation)||supersedesInterruptWait){
     state.pendingPresentations=[];
+    if(supersedesInterruptWait) state.privateInterruptsByResolution.delete(presentation.resolutionId);
     installConnectedResolutionPresentation(adapter,presentation);
     return "replaced" as const;
   }
