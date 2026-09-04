@@ -61,7 +61,8 @@ export function SessionActionDock({actorId,suspended,targeting,onBeginTargeting,
   actorId:string|null; suspended:boolean; targeting:SessionActionTargeting|null;
   onBeginTargeting(action:ActionVm,anchor:TargetingAnchor,executionActionId?:string):void; onCancelTargeting():void; onExecuteTargeting():void;
 }) {
-  const {snapshot,resolveAction,configureReadyAction,endTurn,setNextResolutionVisibility}=useSimpleVtt();
+  const {snapshot,resolveAction,configureReadyAction,endTurn}=useSimpleVtt();
+  const {setNextResolutionVisibility}=useSimpleVtt();
   const [page,setPage]=useState<HotbarPage>("mixed");
   const [rows,setRows]=useState<SessionHotbarRows>(()=>typeof window==="undefined"?DEFAULT_SESSION_HOTBAR_ROWS:readSessionHotbarRows());
   const [categoryOrder,setCategoryOrder]=useState<SessionHotbarCategory[]>(()=>typeof window==="undefined"?["action","class","item","special","custom"]:readSessionHotbarCategoryOrder());
