@@ -1,0 +1,92 @@
+name: W7-07 AUTO Verification
+
+on:
+  pull_request:
+    branches:
+      - work/v1-composite
+    paths:
+      - '.github/workflows/w7-07-auto.yml'
+      - 'src/**'
+      - 'src-tauri/**'
+      - 'tests/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'content/**'
+  push:
+    branches:
+      - work/v1-composite
+    paths:
+      - '.github/workflows/w7-07-auto.yml'
+      - 'src/**'
+      - 'src-tauri/**'
+      - 'tests/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'content/**'
+  workflow_dispatch:
+
+env:
+  V1_VERIFICATION_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run generate:content
+      - name: Focused W7-07 accessibility, responsiveness, motion, and diagnostics owners
+        shell: bash
+        run: |
+          set -o pipefail
+          npx tsx --test \
+            tests/ui/productionPlayWorkspaceAccessibility.test.ts \
+            tests/ui/sessionResponsiveKeyboardFocusStructure.test.ts \
+            tests/ui/sessionResolutionAnnouncementStructure.test.ts \
+            tests/ui/visualDiceStructure.test.ts \
+            tests/ui/physicsDice3DStructure.test.ts \
+            tests/ui/connectedThreePeerPresentation.test.ts \
+            tests/ui/connectedThreePeerDuplicateEventBatch.test.ts \
+            tests/ui/connectedDiagnosticCorrelation.test.ts \
+            | tee /tmp/w7-07.tap
+      - name: Production build
+        run: npm run build
+      - name: Record exact-SHA evidence
+        shell: bash
+        run: |
+          {
+            echo "W7-07 AUTO Verification"
+            echo "checkout_sha=${GITHUB_SHA}"
+            echo "verification_sha=${{ env.V1_VERIFICATION_SHA }}"
+            echo "head_sha=${{ github.event.pull_request.head.sha }}"
+            echo "base_sha=${{ github.event.pull_request.base.sha }}"
+            echo "scenario_mapping=MP-I01,MP-I02,MP-I03,MP-I04,MP-I05,MP-I06 (MP-10 AUTO slice)"
+            echo "command=npx tsx --test tests/ui/productionPlayWorkspaceAccessibility.test.ts tests/ui/sessionResponsiveKeyboardFocusStructure.test.ts tests/ui/sessionResolutionAnnouncementStructure.test.ts tests/ui/visualDiceStructure.test.ts tests/ui/physicsDice3DStructure.test.ts tests/ui/connectedThreePeerPresentation.test.ts tests/ui/connectedThreePeerDuplicateEventBatch.test.ts tests/ui/connectedDiagnosticCorrelation.test.ts"
+            echo "win_obs=not claimed; the Windows representative accessibility case is scheduled under W7-08"
+          } > /tmp/w7-07-evidence.txt
+      - name: Upload W7-07 evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: W7-07-AUTO-${{ env.V1_VERIFICATION_SHA }}
+          path: |
+            /tmp/w7-07.tap
+            /tmp/w7-07-evidence.txt
+            docs/roadmap/V1_EVIDENCE_LEDGER.json
+          if-no-files-found: error
+
+  transport-intake:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: MP-I05 transport intake stays ordered under a slow peer
+        shell: pwsh
+        run: cargo test --manifest-path src-tauri/Cargo.toml --lib session_transport::tests::slow_peer_queue_does_not_block_fast_peer_broadcast session_transport::tests::peer_outbound_queue_preserves_order_when_drained

@@ -41,3 +41,21 @@ For `REUSE_LOCKED` and `VERIFY_ONLY` gates, an empty `Exact observed failure` me
 - Older SHA evidence may be inherited only when the relevant implementation path is unchanged and the ledger records the provenance explicitly.
 - Do not create a second shell, Character Creator, progression engine, Resolver, persistence backend, transport, presentation queue, dice/VFX renderer, Party Stash transaction system, Long Rest coordinator, DM Library, request/event ledger, retry coordinator, reconnect system, privacy/projection system, or E2E framework to satisfy an existing gate.
 - Prefer the smallest repair that restores or observes the existing production path.
+
+## Parallel card — W7-07 (MP-I02 production entrypoint gap)
+
+```text
+Gate ID: W7-07
+Classification: REUSE_LOCKED -> MP-I02 has no production entrypoint -> smallest test-observable seam authorized
+Acceptance criterion: keyboard, screen reader, narrow desktop, Reduced Motion, and correlated diagnostics are fixed for MP-I01~I06; MP-I02 requires one coherent screen-reader announcement of actor/action/targets/dice/total/outcome/state change.
+Production entrypoint: existing Session result layer (SessionResolutionLayer in src/SessionModeRoot.tsx), already a role="status" live region; existing production dice/VFX, keyboard focus, responsive, and Activity owners.
+Existing automated verification: productionPlayWorkspaceAccessibility, sessionResponsiveKeyboardFocusStructure, visualDiceStructure, physicsDice3DStructure, connectedThreePeerPresentation, connectedThreePeerDuplicateEventBatch, session_transport Rust intake tests; new connectedDiagnosticCorrelation (MP-I06, observes existing Activity ids only).
+Existing Tauri/Windows evidence: none for W7-07; the Windows representative accessibility case is routed to W7-08 by the roadmap.
+Exact observed failure: on the integration HEAD after PR #319 the result layer announces actor·action, outcome/total, and state summary but never the target names or authoritative dice faces, so MP-I02's single coherent announcement cannot be produced by any existing element.
+Smallest authorized change: add one visually-hidden sentence inside the existing status live region (both active and passive-remote variants) composed only from the ResolutionView already rendered, and mark the visible copy aria-hidden so it is not read twice. No new component, store, or presentation path.
+Verification SHA: PENDING (branch agent/w7-06-07-capability-accessibility-auto from 1fa84f7a5c2a4c2b).
+Verification: sessionResolutionAnnouncementStructure.test.ts pins the seam; W7-07 AUTO workflow records the exact-SHA run.
+Artifact: W7-07-AUTO-<verification sha>.
+Closure: W7-07 remains PENDING until the W7-07 AUTO run (both jobs) passes on one integration-derived SHA and is recorded in V1_EVIDENCE_LEDGER.json.
+```
+

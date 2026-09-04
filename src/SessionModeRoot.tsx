@@ -488,13 +488,26 @@ function SessionResolutionLayer({ onOpenActivity }: { onOpenActivity(button: HTM
           ? resolution.finalOutcome || resolution.compact || resolution.calculatedOutcome
           : resolution.compact || resolution.calculatedOutcome;
   const stateSummary = resolution.stage === "complete" ? resolution.stateChanges.slice(0, 2).join(" · ") : "";
+  // MP-I02: one coherent screen-reader sentence (actor, action, targets, dice, total, outcome, state change) from the same authoritative ResolutionView the visuals use.
+  const targetNames = resolution.targetIds.map((id) => snapshot.scene.entities.find((entity) => entity.id === id)?.name ?? id);
+  const announcedTotal = resolution.attackTotal ?? resolution.rollTotal;
+  const announcement = [
+    `${actorName} · ${resolution.actionName}`,
+    targetNames.length > 0 ? `대상 ${targetNames.join(", ")}` : "",
+    resolution.authoritativeDice.length > 0 ? `주사위 ${resolution.authoritativeDice.join(", ")}` : "",
+    announcedTotal !== undefined ? `총합 ${announcedTotal}` : "",
+    mainOutcome,
+    stateSummary,
+  ].filter(Boolean).join(" · ");
 
   if(passiveRemote)return <section className="session-resolution-layer session-resolution-notice" role="status" aria-live="polite" aria-label="원격 판정 알림">
-    <div className="session-resolution-copy"><span>{actorName} · {resolution.actionName}</span><strong>{mainOutcome}</strong>{stateSummary&&<p>{stateSummary}</p>}</div>
+    <p className="visually-hidden session-resolution-announcement">{announcement}</p>
+    <div className="session-resolution-copy" aria-hidden="true"><span>{actorName} · {resolution.actionName}</span><strong>{mainOutcome}</strong>{stateSummary&&<p>{stateSummary}</p>}</div>
   </section>;
 
   return <section className={`session-resolution-layer ${resolution.stage === "complete" ? "complete" : "step"}`} role="status" aria-label="판정 결과" data-resolution-stage={resolution.stage}>
-    <div className="session-resolution-copy">
+    <p className="visually-hidden session-resolution-announcement">{announcement}</p>
+    <div className="session-resolution-copy" aria-hidden="true">
       <span>{actorName} · {resolution.actionName}</span>
       <strong>{mainOutcome}</strong>
       {stateSummary && <p>{stateSummary}</p>}
