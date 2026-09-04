@@ -1,5 +1,6 @@
 import { CampaignLibraryRepository, CampaignStaleRevisionError, createCampaignRecordV1 } from "./campaignPersistence";
 import type { CampaignCalendarDateTime, CampaignDmLibraryEntry, CampaignMealCommand, CampaignMutationContext, CampaignPartyStashItemTemplate, CampaignRationPreview, CampaignRecordV1, CampaignRosterMember, CampaignSessionSummary } from "./campaignPersistenceContracts";
+import { parseRuntimeActions, parseRuntimeStats } from "./combatantRuntimeDefinitionParse";
 import type { InstalledCampaignCalendarProfileV1, InstalledCampaignRationProfileV1 } from "./installedContentContracts";
 import { HANDOUT_IMAGE_MAX_BYTES, isLocalImageAssetV1 } from "./localImageAsset";
 import { campaignDateTimeToAbsoluteMinute, projectCampaignCalendar } from "./campaignCalendar";
@@ -165,6 +166,8 @@ export class CampaignApplicationService {
       const npc=entry.npcDefinition;
       if(!entry.definitionId?.trim()||!npc||npc.definitionId!==entry.definitionId||!npc.name.trim())throw new Error("NPC definition id and name are required");
       if(!Number.isInteger(npc.ac)||npc.ac<0||!Number.isInteger(npc.maxHp)||npc.maxHp<1)throw new Error("NPC AC and HP are invalid");
+      if(npc.runtimeStats!==undefined){const stats=parseRuntimeStats(npc.runtimeStats as unknown as Record<string,unknown>);if(!stats)throw new Error("NPC runtime stats require an ability block");npc.runtimeStats=stats;}
+      if(npc.runtimeActions!==undefined){npc.runtimeActions=parseRuntimeActions({runtimeActions:npc.runtimeActions});}
     }
     entry.tags=[...new Set((entry.tags??[]).map((tag)=>tag.trim()).filter(Boolean))];entry.updatedAt=context.now;
     return this.mutateCampaign(context,(campaign)=>{const index=campaign.dmLibrary.entries.findIndex((value)=>value.entryId===entry.entryId);if(index>=0)campaign.dmLibrary.entries[index]=entry;else campaign.dmLibrary.entries.push(entry);campaign.dmLibrary.revision+=1;});

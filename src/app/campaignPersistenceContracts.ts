@@ -1,4 +1,5 @@
 import type { LocalImageAssetV1 } from "./localImageAsset";
+import type { CombatantRuntimeAttackVm, CombatantRuntimeStatsVm } from "./combatantRuntimeContracts";
 
 export const CAMPAIGN_LIBRARY_SCHEMA_ID="simplevtt.campaign-library" as const;
 export const CAMPAIGN_LIBRARY_SCHEMA_VERSION=1 as const;
@@ -160,6 +161,10 @@ export interface CampaignNpcActorDefinition {
   statusImmunities:string[];
   source:string;
   version:string;
+  /** Structured ability block; without it the NPC cannot answer saving throws (explicit runtime reject). */
+  runtimeStats?:CombatantRuntimeStatsVm;
+  /** Structured atomic attack actions; when runtime stats are present these replace the legacy action names. */
+  runtimeActions?:CombatantRuntimeAttackVm[];
 }
 
 export interface CampaignDmLibraryState {
