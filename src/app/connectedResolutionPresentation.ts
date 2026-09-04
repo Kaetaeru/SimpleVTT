@@ -96,8 +96,12 @@ function dicePresentation(resolution:ResolutionView,action:ActionVm|undefined):C
   const baseModifier=resolution.rollKind==="attack"?action?.attackBonus:resolution.rollKind==="check"?action?.checkBonus:undefined;
   const expectedNatural=total!==undefined&&baseModifier!==undefined?total-baseModifier:undefined;
   const text=[resolution.finalOutcome,...resolution.detail,...resolution.provenance].join(" ").toLowerCase();
-  const selection=text.includes("불리")||text.includes("disadvantage")?"lowest"
-    :text.includes("유리")||text.includes("advantage")?"highest"
+  // Reproduced on real Windows (W9-02 family C, MP-C06): a no-roll Help whose text promises "유리" produced
+  // selection "highest" over zero faces (selected index -1), and every Client rejected the Host's event batch.
+  // The roll-state keywords only describe a roll that actually happened (two or more faces).
+  const selection=faces.length===0?"all"
+    :faces.length>1&&(text.includes("불리")||text.includes("disadvantage"))?"lowest"
+    :faces.length>1&&(text.includes("유리")||text.includes("advantage"))?"highest"
     :faces.length<=1?"all"
     :expectedNatural!==undefined&&faces.includes(expectedNatural)?"explicit"
     :"unknown";
@@ -113,6 +117,7 @@ function dicePresentation(resolution:ResolutionView,action:ActionVm|undefined):C
   }else if(selection==="all"){
     selectedIndices=faces.map((_,index)=>index);
   }else selectedIndices=[];
+  selectedIndices=selectedIndices.filter((index)=>index>=0&&index<faces.length);
   const selectedSet=new Set(selectedIndices);
   return {
     faces,
