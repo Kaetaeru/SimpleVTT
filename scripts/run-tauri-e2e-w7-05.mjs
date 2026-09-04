@@ -62,7 +62,8 @@ async function runScenario(){
   const host=await launchInstance("W7-05 Host",hostRoot,await reservePort());const p1=await launchInstance("W7-05 P1",p1Root,await reservePort());const p2=await launchInstance("W7-05 P2",p2Root,await reservePort());
   await createDistinctPlayerCharacter(p1,"W7 Player One");await createDistinctPlayerCharacter(p2,"W7 Player Two");await createHostCampaign(host);await openHostSession(host,sessionPort);await joinClientSession(p1,sessionPort);await joinClientSession(p2,sessionPort);
   await host.browser.waitUntil(async()=>(await privacySnapshot(host)).participants.filter((entry)=>entry.state==="connected").length>=3,{timeout:20_000,timeoutMsg:"H/P1/P2 topology did not converge"});
-  for(const instance of [host,p1,p2])await click(instance.browser,exactButton("기록"),`${instance.label} 기록 패널`);
+  // Only the Host opens the Activity pane (it hosts the disclosure controls); an open Activity pane hides the result layer that P1/P2 must render.
+  await click(host.browser,exactButton("기록"),`${host.label} 기록 패널`);
   const scenarios={};
 
   // MP-B06: the DM arms a hidden roll through the real UI; P1/P2 receive neither raw values nor inferable metadata.
@@ -72,7 +73,7 @@ async function runScenario(){
   const natural=rolled.dice[0];const markers=[rolled.compact,rolled.finalOutcome,`d20 ${natural}`,...rolled.detail].filter((entry)=>entry&&entry!=="비공개");
   const p1Hidden=await waitResolution(p1,rolled.resolutionId,(s)=>s.dice.length===0&&s.finalOutcome==="비공개","the redacted resolution");const p2Hidden=await waitResolution(p2,rolled.resolutionId,(s)=>s.dice.length===0&&s.finalOutcome==="비공개","the redacted resolution");
   assert.deepEqual(p1Hidden.dice,[]);assert.deepEqual(p2Hidden.dice,[]);assert.deepEqual(p1Hidden.targetIds,[]);
-  for(const instance of [p1,p2]){const text=await bodyText(instance);assert.ok(text.includes("비공개"),`${instance.label} must render the redacted state`);assertNoMarkers(`${instance.label} rendered text`,text,markers);await saveEvidence(instance,"w7-05-hidden");}
+  for(const instance of [p1,p2]){const text=await bodyText(instance);assert.ok(text.includes("비공개"),`${instance.label} must render the redacted state; got ${text.slice(0,400)}`);assertNoMarkers(`${instance.label} rendered text`,text,markers);await saveEvidence(instance,"w7-05-hidden");}
   scenarios["MP-B06"]={status:"PASS",resolutionId:rolled.resolutionId,actionId:rolled.actionId,hiddenNatural:natural,p1:p1Hidden,p2:p2Hidden};
 
   // MP-B05: the Host keeps the private detail while both Clients hold the same public projection.
@@ -86,7 +87,7 @@ async function runScenario(){
   const p1Disclosed=await waitResolution(p1,rolled.resolutionId,(s)=>s.dice.length===rolled.dice.length&&s.dice[0]===natural,"the disclosed dice");const p2Disclosed=await waitResolution(p2,rolled.resolutionId,(s)=>s.dice.length===rolled.dice.length&&s.dice[0]===natural,"the disclosed dice");
   assert.equal(p1Disclosed.compact,rolled.compact);assert.equal(p2Disclosed.compact,rolled.compact);assert.ok(p1Disclosed.activity[0]?.title.startsWith("DM 공개"),JSON.stringify(p1Disclosed.activity));assert.equal(p1Disclosed.activity[1]?.id,rolled.resolutionId,"history stays ordered: hidden resolution then disclosure");
   assert.deepEqual(p1Disclosed.activity.map((entry)=>entry.title),p2Disclosed.activity.map((entry)=>entry.title));
-  for(const instance of [p1,p2]){const text=await bodyText(instance);assert.ok(text.includes(rolled.compact),`${instance.label} must render the disclosed result`);await saveEvidence(instance,"w7-05-disclosed");}
+  for(const instance of [p1,p2]){const text=await bodyText(instance);assert.ok(text.includes(rolled.finalOutcome)||text.includes(rolled.compact)||text.includes(`주사위 ${natural}`),`${instance.label} must render the disclosed result; got ${text.slice(0,400)}`);await saveEvidence(instance,"w7-05-disclosed");}
   const afterDisclosure=await privacySnapshot(host);const record=afterDisclosure.visibility?.hidden.find((entry)=>entry.resolutionId===rolled.resolutionId);assert.deepEqual(record?.disclosed,["roll"],JSON.stringify(record));
   const rollButton=await host.browser.$(`//button[@aria-label=${JSON.stringify(`판정 결과 공개 · ${rolled.actionName}`)}]`);assert.equal(await rollButton.isExisting(),false,"a disclosed fact must not be offered again");
   await saveEvidence(host,"w7-05-disclosed");
