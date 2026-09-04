@@ -15,6 +15,22 @@ on:
       - "package-lock.json"
       - ".github/workflows/v1-w1-tauri-verification.yml"
   workflow_dispatch:
+  push:
+    branches:
+      - work/v1-composite
+    paths:
+      - "src/**"
+      - "src-tauri/**"
+      - "scripts/run-tauri-e2e.*"
+      - "scripts/run-tauri-e2e-w4-07.mjs"
+      - "scripts/run-tauri-e2e-w4-07-handout.mjs"
+      - "tests/ui/appProviderStopSessionRefresh.test.ts"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/v1-w1-tauri-verification.yml"
+
+env:
+  V1_VERIFICATION_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
 jobs:
   tauri-w2:

@@ -1,0 +1,40 @@
+name: V1 Scenario Map
+
+on:
+  push:
+    branches:
+      - work/v1-composite
+      - "agent/**"
+    paths:
+      - "docs/design/multiplayer-v1-scenario-catalog.md"
+      - "docs/roadmap/V1_MASTER_ROADMAP.md"
+      - "docs/roadmap/V1_EVIDENCE_LEDGER.json"
+      - "docs/roadmap/V1_SCENARIO_MAP.json"
+      - "scripts/generate-v1-scenario-map.mjs"
+      - "tests/ui/v1ScenarioMap.test.mjs"
+      - ".github/workflows/v1-scenario-map.yml"
+  pull_request:
+    branches:
+      - work/v1-composite
+    paths:
+      - "docs/design/multiplayer-v1-scenario-catalog.md"
+      - "docs/roadmap/V1_MASTER_ROADMAP.md"
+      - "docs/roadmap/V1_EVIDENCE_LEDGER.json"
+      - "docs/roadmap/V1_SCENARIO_MAP.json"
+      - "scripts/generate-v1-scenario-map.mjs"
+      - "tests/ui/v1ScenarioMap.test.mjs"
+      - ".github/workflows/v1-scenario-map.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scenario-map:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify the committed scenario map is derived from the current catalog, roadmap, and ledger
+        run: node scripts/generate-v1-scenario-map.mjs --check
+      - name: Run scenario map regression tests
+        run: node --test tests/ui/v1ScenarioMap.test.mjs

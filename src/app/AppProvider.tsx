@@ -78,6 +78,7 @@ interface AppContextValue {
   previewContentImport(payload: string): Promise<void>;
   activateContentImport(): Promise<void>;
   clearContentImport(): Promise<void>;
+  uninstallContentSource(sourceId: string): Promise<void>;
   previewCombatantImport(payload: string): Promise<void>;
   activateCombatantImport(): Promise<void>;
   clearCombatantImport(): Promise<void>;
@@ -239,6 +240,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     previewContentImport: async (payload) => apply(() => mockAdapter.previewContentImport(payload)),
     activateContentImport: async () => apply(() => mockAdapter.activateContentImport()),
     clearContentImport: async () => apply(() => mockAdapter.clearContentImport()),
+    uninstallContentSource: async (sourceId) => apply(() => mockAdapter.uninstallContentSource(sourceId)),
     previewCombatantImport: async (payload) => apply(() => mockAdapter.previewCombatantImport(payload)),
     activateCombatantImport: async () => apply(() => mockAdapter.activateCombatantImport()),
     clearCombatantImport: async () => apply(() => mockAdapter.clearCombatantImport()),

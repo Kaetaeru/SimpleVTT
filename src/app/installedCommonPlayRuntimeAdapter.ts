@@ -1,3 +1,4 @@
+import { commonPlayMechanicsOf } from "./installedContentContracts";
 import "./installedContentContracts";
 import type { ActionVm, AppSnapshot, CatalogEntry, CharacterSheet, CombatantDefinitionVm, DamageComponentView, ResolutionView, SceneVm, SessionMode } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
@@ -143,7 +144,7 @@ async function installedCommonPlayAction(adapter:MockAdapter,actionId:string):Pr
   if (!reference) return undefined;
   const installedEntries=await requiredSessionInstalledContent(adapter,[]);
   const entry=installedEntries.find((candidate)=>catalogQualifiedId(candidate.contentId,candidate.sourceId,candidate.version)===reference.catalogId);
-  const mechanic=entry?.mechanics?.find((candidate)=>candidate.kind==="common-play"&&candidate.config.id===reference.mechanicId);
+  const mechanic=commonPlayMechanicsOf(entry?.mechanics).find((candidate)=>candidate.config.id===reference.mechanicId);
   const entryPoint=mechanic?.config.entryPoints?.find((candidate)=>candidate.id===reference.entryPointId);
   if (!entry||!mechanic||!entryPoint) return undefined;
   const lowered=lowerCommonPlay(mechanic.config,entryPoint.id);

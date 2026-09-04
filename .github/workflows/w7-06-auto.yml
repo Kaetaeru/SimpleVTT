@@ -1,0 +1,81 @@
+name: W7-06 AUTO Verification
+
+on:
+  pull_request:
+    branches:
+      - work/v1-composite
+    paths:
+      - '.github/workflows/w7-06-auto.yml'
+      - 'src/**'
+      - 'tests/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'content/**'
+  push:
+    branches:
+      - work/v1-composite
+    paths:
+      - '.github/workflows/w7-06-auto.yml'
+      - 'src/**'
+      - 'tests/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'content/**'
+  workflow_dispatch:
+
+env:
+  V1_VERIFICATION_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run generate:content
+      - name: Focused W7-06 capability-mismatch owners
+        shell: bash
+        run: |
+          set -o pipefail
+          npx tsx --test \
+            tests/ui/connectedSessionProtocol.test.ts \
+            tests/ui/productionParticipantLifecycle.test.ts \
+            tests/ui/productionSessionLifecycleAdapter.test.ts \
+            tests/ui/declarativeModuleValidation.test.ts \
+            tests/domain/commonPlayMaplessTargeting.test.ts \
+            tests/domain/commonPlaySpatialFactRuntime.test.ts \
+            tests/ui/phase09RealAtomicAttackAdapter.test.ts \
+            tests/ui/productionAcceptanceWindowsRegression.test.ts \
+            tests/ui/mpG09SpatialProviderAuthority.test.ts \
+            | tee /tmp/w7-06.tap
+      - name: Production build
+        run: npm run build
+      - name: Record exact-SHA evidence
+        shell: bash
+        run: |
+          {
+            echo "W7-06 AUTO Verification"
+            echo "checkout_sha=${GITHUB_SHA}"
+            echo "verification_sha=${{ env.V1_VERIFICATION_SHA }}"
+            echo "head_sha=${{ github.event.pull_request.head.sha }}"
+            echo "base_sha=${{ github.event.pull_request.base.sha }}"
+            echo "scenario_mapping=MP-A05,MP-G08,MP-G09"
+            echo "command=npx tsx --test tests/ui/connectedSessionProtocol.test.ts tests/ui/productionParticipantLifecycle.test.ts tests/ui/productionSessionLifecycleAdapter.test.ts tests/ui/declarativeModuleValidation.test.ts tests/domain/commonPlayMaplessTargeting.test.ts tests/domain/commonPlaySpatialFactRuntime.test.ts tests/ui/phase09RealAtomicAttackAdapter.test.ts tests/ui/productionAcceptanceWindowsRegression.test.ts tests/ui/mpG09SpatialProviderAuthority.test.ts"
+            echo "win_obs=not claimed; the Windows representative capability-mismatch case is scheduled under W7-08"
+          } > /tmp/w7-06-evidence.txt
+      - name: Upload W7-06 evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: W7-06-AUTO-${{ env.V1_VERIFICATION_SHA }}
+          path: |
+            /tmp/w7-06.tap
+            /tmp/w7-06-evidence.txt
+            docs/roadmap/V1_EVIDENCE_LEDGER.json
+          if-no-files-found: error

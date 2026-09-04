@@ -1,3 +1,4 @@
+import { parseInstalledBackgroundDefinition } from "./installedBackgroundDefinition";
 import { lowerAllCommonPlayEntryPoints, parseCommonPlayDefinition, validateCommonPlayCapabilities } from "../domain/commonPlayDefinitionRuntime";
 import {
   INSTALLED_CONTENT_SCHEMA_ID,
@@ -41,6 +42,11 @@ function assertEntry(value:unknown):asserts value is InstalledCatalogEntryV1 {
   if(value.mechanics!==undefined) {
     if(!Array.isArray(value.mechanics)) throw new Error("installed content mechanics must be an array");
     value.mechanics.forEach((mechanic,index)=>{
+      if(isObject(mechanic)&&mechanic.kind==="background-definition") {
+        if(value.category!=="background") throw new Error(`installed content mechanic ${index} background-definition requires background content`);
+        parseInstalledBackgroundDefinition(mechanic.config,`installed content mechanic ${index}.config`);
+        return;
+      }
       if(!isObject(mechanic)||mechanic.kind!=="common-play") throw new Error(`installed content mechanic ${index} is unsupported`);
       const config=parseCommonPlayDefinition(mechanic.config,`installed content mechanic ${index}.config`);
       validateCommonPlayCapabilities(config,value.module&&isObject(value.module)&&Array.isArray(value.module.capabilities)?value.module.capabilities as string[]:[]);
@@ -201,6 +207,25 @@ export class InstalledContentRepository {
       schemaVersion:INSTALLED_CONTENT_SCHEMA_VERSION,
       storageRevision:nextGeneration,
       entries:sortedEntries([...this.document.entries,...additions]),
+    };
+    await this.store.writeGeneration(this.physicalGeneration,nextGeneration,encodeInstalledContentV1(next));
+    this.document=next;
+    this.physicalGeneration=nextGeneration;
+    this.loadedGeneration=nextGeneration;
+    return {status:"committed",hydration:this.result(false,true)};
+  }
+
+  /** Removes every entry installed from one source (module) in a single new generation; a no-op when nothing matches. */
+  async removeSource(sourceId:string):Promise<InstalledContentInstallResult> {
+    if (!this.document) throw new Error("installed content repository must hydrate before removal");
+    const remaining=this.document.entries.filter((entry)=>entry.sourceId!==sourceId);
+    if (remaining.length===this.document.entries.length) return {status:"committed",hydration:this.result(false,false)};
+    const nextGeneration=this.physicalGeneration+1;
+    const next:InstalledContentDocumentV1={
+      schemaId:INSTALLED_CONTENT_SCHEMA_ID,
+      schemaVersion:INSTALLED_CONTENT_SCHEMA_VERSION,
+      storageRevision:nextGeneration,
+      entries:sortedEntries(remaining),
     };
     await this.store.writeGeneration(this.physicalGeneration,nextGeneration,encodeInstalledContentV1(next));
     this.document=next;

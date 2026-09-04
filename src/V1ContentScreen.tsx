@@ -1,14 +1,17 @@
-import { useState, type ChangeEvent } from "react";
+import { useState, type ChangeEvent, type DragEvent } from "react";
 import { useSimpleVtt } from "./app/AppProvider";
+import goldenExampleModule from "../content/examples/homebrew-golden-v1.module.json";
 
 const MAX_ADDON_BYTES = 5 * 1024 * 1024;
 
 export function V1ContentScreen() {
-  const { snapshot, previewContentImport, activateContentImport, clearContentImport } = useSimpleVtt();
+  const { snapshot, previewContentImport, activateContentImport, clearContentImport, uninstallContentSource } = useSimpleVtt();
   const [payload, setPayload] = useState("");
   const [fileName, setFileName] = useState("");
   const [fileError, setFileError] = useState("");
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
+  const [removingSourceId, setRemovingSourceId] = useState("");
   if (!snapshot) return null;
 
   const localEntries = snapshot.catalog.filter((entry) => entry.scope === "local");
@@ -39,10 +42,7 @@ export function V1ContentScreen() {
     await previewContentImport(value);
   };
 
-  const chooseFile = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
+  const loadFile = async (file: File) => {
     if (file.size > MAX_ADDON_BYTES) {
       setFileError("애드온 파일은 5MB 이하만 불러올 수 있습니다.");
       return;
@@ -61,13 +61,41 @@ export function V1ContentScreen() {
       setFileError(error instanceof Error ? error.message : "파일을 읽지 못했습니다.");
     }
   };
+  const chooseFile = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (file) await loadFile(file);
+  };
+  const dropFile = async (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setDragActive(false);
+    const file = event.dataTransfer.files?.[0];
+    if (file) await loadFile(file);
+  };
+  const loadExample = async () => {
+    const text = JSON.stringify(goldenExampleModule, null, 2);
+    setFileName("homebrew-golden-v1.module.json");
+    setPayload(text);
+    setFileError("");
+    await previewContentImport(text);
+  };
+  const removeSource = async (sourceId: string) => {
+    if (!window.confirm("이 애드온을 제거할까요? 이 애드온의 배경·서브클래스·특성은 더 이상 새 선택지로 나타나지 않습니다.")) return;
+    setRemovingSourceId(sourceId);
+    try { await uninstallContentSource(sourceId); }
+    finally { setRemovingSourceId(""); }
+  };
 
   return (
-    <div className="v1-content-screen">
+    <div className={`v1-content-screen ${dragActive ? "drag-active" : ""}`.trim()} onDragOver={(event) => { event.preventDefault(); if (!dragActive) setDragActive(true); }} onDragLeave={(event) => { if (event.currentTarget === event.target) setDragActive(false); }} onDrop={(event) => void dropFile(event)}>
       <header className="v1-page-head">
-        <div><span className="v1-kicker">CONTENTS</span><h1>콘텐츠 · 애드온</h1><p>설치 파일은 이 화면에서 검토하고 승인합니다. 설치된 애드온은 기본 규칙과 같은 카탈로그에 합쳐져 규칙 화면에서 검색됩니다.</p></div>
-        <label className="primary v1-file-button">애드온 추가<input type="file" accept=".json,application/json" onChange={chooseFile} /></label>
+        <div><span className="v1-kicker">CONTENTS</span><h1>콘텐츠 · 애드온</h1><p>설치 파일은 이 화면에서 검토하고 승인합니다. 설치된 애드온은 기본 규칙과 같은 카탈로그에 합쳐져 규칙 화면에서 검색됩니다. JSON 파일을 이 화면에 끌어다 놓아도 되고, 설치한 배경과 서브클래스는 캐릭터 생성에도 나타납니다.</p></div>
+        <div className="v1-page-actions">
+          <button type="button" aria-label="예제 애드온 불러오기" onClick={() => void loadExample()}>예제 애드온 불러오기</button>
+          <label className="primary v1-file-button">애드온 추가<input type="file" accept=".json,application/json" onChange={chooseFile} /></label>
+        </div>
       </header>
+      {dragActive && <div className="v1-drop-hint" aria-hidden="true">JSON 애드온을 여기에 놓으면 바로 검증합니다</div>}
 
       <section className="v1-content-summary" aria-label="콘텐츠 상태">
         <div><small>기본 콘텐츠</small><strong>{builtinEntries.length}</strong><span>앱과 함께 제공됨</span></div>
@@ -108,7 +136,7 @@ export function V1ContentScreen() {
       <div className="v1-content-columns">
         <section>
           <div className="v1-section-heading"><div><span className="v1-kicker">INSTALLED</span><h2>설치된 애드온</h2></div></div>
-          {installedGroups.length === 0 ? <div className="v1-empty"><strong>아직 추가한 애드온이 없습니다.</strong><span>기본 규칙만으로 바로 사용할 수 있습니다.</span></div> : <div className="v1-addon-groups">{installedGroups.map((group) => <article key={group.id}><div><strong>{group.source}</strong><span>{group.id} · v{group.version}</span></div><b>{group.entries.length}개</b><details><summary>포함 콘텐츠</summary>{group.entries.map((entry) => <p key={`${entry.id}-${entry.version}`}>{entry.nameKo} <small>{entry.nameEn} · {entry.category}</small></p>)}</details></article>)}</div>}
+          {installedGroups.length === 0 ? <div className="v1-empty"><strong>아직 추가한 애드온이 없습니다.</strong><span>기본 규칙만으로 바로 사용할 수 있습니다.</span></div> : <div className="v1-addon-groups">{installedGroups.map((group) => <article key={group.id}><div><strong>{group.source}</strong><span>{group.id} · v{group.version}</span></div><b>{group.entries.length}개</b><details><summary>포함 콘텐츠</summary>{group.entries.map((entry) => <p key={`${entry.id}-${entry.version}`}>{entry.nameKo} <small>{entry.nameEn} · {entry.category}</small></p>)}</details><button type="button" className="quiet v1-addon-remove" aria-label={`애드온 제거 · ${group.source}`} disabled={removingSourceId === group.id} onClick={() => void removeSource(group.id)}>{removingSourceId === group.id ? "제거 중…" : "제거"}</button></article>)}</div>}
         </section>
 
         <aside className="v1-addon-guide">
@@ -119,8 +147,9 @@ export function V1ContentScreen() {
             <li><code>schemaVersion</code>은 <code>0.1-draft</code>를 사용합니다.</li>
             <li><code>moduleId</code>, <code>moduleVersion</code>, <code>rulesProfile</code>과 출처 정보를 적습니다.</li>
             <li><code>content</code> 배열에 클래스, 서브클래스, 종족, 배경, 재주, 주문, 아이템, 상태, 전투원 또는 옵션을 넣습니다.</li>
-            <li>파일을 여기서 선택하고 검증 결과를 확인한 뒤 설치합니다.</li>
+            <li>파일을 여기서 선택하거나 끌어다 놓고, 검증 결과를 확인한 뒤 설치합니다.</li>
           </ol>
+          <p className="v1-muted">처음이라면 <strong>예제 애드온 불러오기</strong>로 배경 1개·서브클래스 1개·실행 가능 특성 1개가 든 골든 모듈을 열어 구조를 확인하세요. 설치한 배경은 캐릭터 생성의 배경 선택지에, 서브클래스 특성은 해당 레벨 성장에 나타납니다.</p>
           <p className="v1-muted">의존성·충돌·지원 범위도 설치 전에 검사합니다. 현재 앱이 안전하게 적용할 수 없는 규칙 확장은 설치 전에 차단됩니다.</p>
           <button onClick={() => setShowAdvanced((value) => !value)}>{showAdvanced ? "직접 입력 닫기" : "고급: JSON 직접 입력"}</button>
           {showAdvanced && <div className="v1-json-input"><textarea value={payload} onChange={(event) => setPayload(event.target.value)} placeholder="애드온 JSON을 붙여 넣으세요."/><button onClick={() => void previewPayload()}>JSON 검증</button></div>}

@@ -34,6 +34,10 @@ on:
       - "tests/ui/connectedCharacterInventoryProjectionRefresh.test.ts"
       - "tests/ui/connectedCustomItemProjection.test.ts"
       - ".github/workflows/w6-01-auto.yml"
+  workflow_dispatch:
+
+env:
+  V1_VERIFICATION_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
 jobs:
   dm-inventory-owner-projection:
@@ -66,7 +70,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: W6-01-AUTO-${{ github.sha }}
+          name: W6-01-AUTO-${{ env.V1_VERIFICATION_SHA }}
           path: w6-01-auto.log
           if-no-files-found: error
           retention-days: 14

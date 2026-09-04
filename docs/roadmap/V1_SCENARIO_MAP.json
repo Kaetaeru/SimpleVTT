@@ -1,0 +1,3333 @@
+{
+  "schemaVersion": 1,
+  "sources": {
+    "catalog": "docs/design/multiplayer-v1-scenario-catalog.md",
+    "roadmap": "docs/roadmap/V1_MASTER_ROADMAP.md",
+    "ledger": "docs/roadmap/V1_EVIDENCE_LEDGER.json",
+    "ledgerCreatedFromSha": "77b45028cbc4e04bb2cecc825a771269b64d1f2f",
+    "ledgerOfficialScore": 80
+  },
+  "counts": {
+    "scenarios": 120,
+    "families": {
+      "A": 10,
+      "B": 8,
+      "C": 30,
+      "D": 13,
+      "E": 14,
+      "F": 10,
+      "G": 9,
+      "H": 12,
+      "I": 6,
+      "J": 8
+    },
+    "byStatus": {
+      "PASS": 54,
+      "PENDING": 3,
+      "AUTO_ONLY": 63
+    },
+    "gates": 72
+  },
+  "scenarios": [
+    {
+      "id": "MP-A01",
+      "family": "A",
+      "title": "Host creates a Campaign-bound Session",
+      "observations": "H binds immutable Campaign/session capabilities; no mock connection is reported",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-01"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "MP-A02",
+      "family": "A",
+      "title": "P1 joins with a Host-unknown persisted Character",
+      "observations": "H mounts only a trusted ephemeral projection; P1 retains Character ownership",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-01",
+        "W5-02"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "MP-A03",
+      "family": "A",
+      "title": "P2 joins the same live Session",
+      "observations": "H/P1/P2 participant lists converge without replacing P1 projection",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-01"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "MP-A04",
+      "family": "A",
+      "title": "Join without a valid Character",
+      "observations": "Join is blocked before a partial actor/projection is published",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-01"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "MP-A05",
+      "family": "A",
+      "title": "Protocol/rules/content capability mismatch",
+      "observations": "Incompatible peer is rejected with an actionable reason and no shared mutation",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-01",
+        "W7-06"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "MP-A06",
+      "family": "A",
+      "title": "Ready and Session start",
+      "observations": "readiness and start state fan out once; Session mode/round/current actor converge",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-01"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "MP-A07",
+      "family": "A",
+      "title": "Player leaves normally",
+      "observations": "participant/actor lifecycle follows the declared policy and does not delete durable Character data",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-01"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "MP-A08",
+      "family": "A",
+      "title": "Host ends Session explicitly",
+      "observations": "all Clients enter ended state; pending transient workflows are closed; summary persists to Campaign",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-01",
+        "W7-03"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "MP-A09",
+      "family": "A",
+      "title": "Host restarts after Session end",
+      "observations": "stale participants, projections, Ready actions, turns, approvals, and presentations do not return",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-01",
+        "W7-03"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "MP-A10",
+      "family": "A",
+      "title": "Navigate Product shell while Session remains live",
+      "observations": "connection and Session state remain mounted and Return to Play restores the same runtime",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-01"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "MP-B01",
+      "family": "B",
+      "title": "Character source/runtime projection",
+      "observations": "trusted identity, HP, AC, speed, resources, items, spells, and features reconstruct on H",
+      "evidence": [
+        "AUTO"
+      ],
+      "gates": [
+        "W5-02"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "MP-B02",
+      "family": "B",
+      "title": "Client presentation values are tampered",
+      "observations": "H ignores untrusted derived values and reconstructs from trusted rules/content",
+      "evidence": [
+        "AUTO"
+      ],
+      "gates": [
+        "W5-02"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "MP-B03",
+      "family": "B",
+      "title": "P1 acts with its projected Character",
+      "observations": "H temporarily activates P1 context and restores H context after completion/error",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-02"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "MP-B04",
+      "family": "B",
+      "title": "H controls NPC/PC-preset Actor",
+      "observations": "control changes do not transfer Character ownership or turn authority",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-02"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "MP-B05",
+      "family": "B",
+      "title": "Public and DM-only Activity",
+      "observations": "H sees private detail; P1/P2 receive only the permitted public projection",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W7-05"
+      ],
+      "status": "PENDING"
+    },
+    {
+      "id": "MP-B06",
+      "family": "B",
+      "title": "Hidden roll or hidden target fact",
+      "observations": "unauthorized Clients receive neither raw value nor inferable metadata",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W7-05"
+      ],
+      "status": "PENDING"
+    },
+    {
+      "id": "MP-B07",
+      "family": "B",
+      "title": "Later DM disclosure",
+      "observations": "one new disclosure event reveals only the selected result and keeps history ordered",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W7-05"
+      ],
+      "status": "PENDING"
+    },
+    {
+      "id": "MP-B08",
+      "family": "B",
+      "title": "Client disconnects while owning Character state changes",
+      "observations": "H retains canonical Session state; owner write-back settles on reconnect exactly once",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W7-04"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "MP-C01",
+      "family": "C",
+      "title": "P1 performs an attack against an NPC",
+      "observations": "H resolves once; H/P1/P2 show actor, target, d20, modifiers, hit/miss, damage, HP result, VFX, and Activity",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-06",
+        "W5-07"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-C02",
+      "family": "C",
+      "title": "NPC attacks P1",
+      "observations": "H/P1/P2 show the same public attack; P1 receives any owner-specific response UI",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-06",
+        "W5-07"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-C03",
+      "family": "C",
+      "title": "P1 attacks P2",
+      "observations": "target owner and observer see identical public resolution; only P2 Character library writes P2-owned state",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-06",
+        "W5-07"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-C04",
+      "family": "C",
+      "title": "Attack misses",
+      "observations": "no damage is applied; miss presentation/result card agree on all peers",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-06",
+        "W5-07"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-C05",
+      "family": "C",
+      "title": "Critical or other result tier",
+      "observations": "selected face/tier and damage dice semantics agree on all peers",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-06",
+        "W5-07"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-C06",
+      "family": "C",
+      "title": "Advantage/disadvantage-like attack",
+      "observations": "all rolled faces and selected/discarded dice are consistent across peers",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-06",
+        "W5-07"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-C07",
+      "family": "C",
+      "title": "Multi-die damage",
+      "observations": "die shapes, damage groups/types, flat modifiers, total, and target HP converge",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-06",
+        "W5-07"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-C08",
+      "family": "C",
+      "title": "Ability check",
+      "observations": "H/P1/P2 show the same authoritative d20, skill/ability, proficiency, total, and public outcome",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-06",
+        "W5-07"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-C09",
+      "family": "C",
+      "title": "Saving throw",
+      "observations": "requester/roller distinction, DC visibility, die, total, and result are role-correct",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-06",
+        "W5-07"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-C10",
+      "family": "C",
+      "title": "Influence/Search/Study picker action",
+      "observations": "selected skill intent reaches H and the resulting check is presented to every permitted peer",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-06",
+        "W5-07"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-C11",
+      "family": "C",
+      "title": "No-target or self action",
+      "observations": "no phantom target is created; resource/state result and presentation fan out",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-06",
+        "W5-07"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-C12",
+      "family": "C",
+      "title": "Single-target spell attack",
+      "observations": "attack roll, spell identity, target, damage/effect, slot/resource use, and Activity converge",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-06",
+        "W5-07"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-C13",
+      "family": "C",
+      "title": "Saving-throw spell",
+      "observations": "each target result is associated with the correct target; public/private DC policy is honored",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-06",
+        "W5-07"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-C14",
+      "family": "C",
+      "title": "Multi-target/area-like spell in mapless Core",
+      "observations": "explicit target set is authoritative; per-target results remain ordered and readable",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-06",
+        "W5-07"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-C15",
+      "family": "C",
+      "title": "Cantrip",
+      "observations": "no slot is consumed; authoritative dice and result still fan out",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-06",
+        "W5-07"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-C16",
+      "family": "C",
+      "title": "Slotted spell",
+      "observations": "slot consumption writes only once and is visible to the owning Character",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-06",
+        "W5-07"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-C17",
+      "family": "C",
+      "title": "Healing action/spell/item",
+      "observations": "healing dice/flat arithmetic, cap behavior, HP, resource/item cost, and presentation agree",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-06",
+        "W5-07"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-C18",
+      "family": "C",
+      "title": "Consumable item",
+      "observations": "item identity/charges/quantity and effect resolve once; owner inventory persists once",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-06",
+        "W5-07"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-C19",
+      "family": "C",
+      "title": "Feature/resource action",
+      "observations": "declared resource cost and resulting effect converge and are visible in Quick/Full Sheet",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-06",
+        "W5-07"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-C20",
+      "family": "C",
+      "title": "Unsupported/disabled action",
+      "observations": "reason is explicit; no roll, cinematic, event commit, or resource debit occurs",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-06",
+        "W5-07"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-C21",
+      "family": "C",
+      "title": "Invalid target",
+      "observations": "invalid target is rejected before mechanics/presentation; other peers see no false action",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-06",
+        "W5-07"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-C22",
+      "family": "C",
+      "title": "Concurrent P1 and P2 intents",
+      "observations": "H establishes one canonical order; each action resolves/presents without overwrite",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-06",
+        "W5-07"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-C23",
+      "family": "C",
+      "title": "Duplicate action request",
+      "observations": "prior committed event is returned; state and live cinematic are not duplicated",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-06",
+        "W5-07"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-C24",
+      "family": "C",
+      "title": "Client receives duplicate event batch",
+      "observations": "cursor/state/Activity remain exactly once; completed dice do not replay",
+      "evidence": [
+        "AUTO"
+      ],
+      "gates": [
+        "W5-06",
+        "W5-07"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "MP-C25",
+      "family": "C",
+      "title": "Observer opens Sheet/utility during a roll",
+      "observations": "body-level presentation remains visible/readable and does not corrupt focus/layer state",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-06"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-C26",
+      "family": "C",
+      "title": "Reduced Motion peer observes shared roll",
+      "observations": "same result and text appear with reduced/short motion; other peers may retain full motion",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-06"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-C27",
+      "family": "C",
+      "title": "Dice physics visual contract",
+      "observations": "dice enter from behind camera, travel in depth, land/roll/collide, remain on-screen, settle, and display the authoritative faces",
+      "evidence": [
+        "STRUCTURE",
+        "WIN"
+      ],
+      "gates": [
+        "W5-06"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-C28",
+      "family": "C",
+      "title": "Zero-dice or aggregate-only legacy result",
+      "observations": "no fake physical dice are invented; explicit result fallback is shared",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-06"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-C29",
+      "family": "C",
+      "title": "Presentation interruption by a newer event",
+      "observations": "queue preserves commit order; terminal result remains inspectable",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-06"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-C30",
+      "family": "C",
+      "title": "Activity expansion after presentation",
+      "observations": "calculation detail matches the immutable committed resolution on H/P1/P2",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-06"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-D01",
+      "family": "D",
+      "title": "Start Initiative",
+      "observations": "order, round, current actor, Actor boards, and Command Center converge",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W3-05",
+        "W5-08"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-D02",
+      "family": "D",
+      "title": "Advance/end turn",
+      "observations": "turn/economy changes precede later actions and are exactly once",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W3-05",
+        "W5-08"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-D03",
+      "family": "D",
+      "title": "Off-turn prohibited action",
+      "observations": "Client sees explicit disabled reason; H commits nothing",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W3-05",
+        "W5-08"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-D04",
+      "family": "D",
+      "title": "Reaction/interrupt prompt",
+      "observations": "only eligible owner receives the private decision; public waiting state reveals no private option detail",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W3-05",
+        "W5-08"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-D05",
+      "family": "D",
+      "title": "Reaction accepted",
+      "observations": "original resolution resumes with the authoritative reaction result; all public timelines converge",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W3-05",
+        "W5-08"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-D06",
+      "family": "D",
+      "title": "Reaction declined/timed out",
+      "observations": "original resolution resumes once with a declared terminal response",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W3-05",
+        "W5-08"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-D07",
+      "family": "D",
+      "title": "Concentration response",
+      "observations": "owner response and resulting public state are correctly separated and ordered",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W3-05",
+        "W5-08"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-D08",
+      "family": "D",
+      "title": "Ready Action armed",
+      "observations": "configuration/economy/state fan out; reconnect restores final armed state",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W3-05",
+        "W5-08"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-D09",
+      "family": "D",
+      "title": "Ready Action triggered",
+      "observations": "trigger action uses H authority, shares full presentation, and clears Ready exactly once",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W3-05",
+        "W5-08"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-D10",
+      "family": "D",
+      "title": "Ready cleared at next own turn",
+      "observations": "turn event precedes actor-specific Ready clear; reconnect sees cleared state",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W3-05",
+        "W5-08"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-D11",
+      "family": "D",
+      "title": "Ready cleared when Initiative ends",
+      "observations": "all affected actors clear deterministically; no stale configuration survives",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W3-05",
+        "W5-08"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-D12",
+      "family": "D",
+      "title": "DM correction/undo",
+      "observations": "correction is a new compensating event; state and Activity converge without erasing history",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W3-05",
+        "W5-08"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-D13",
+      "family": "D",
+      "title": "Correction during/after presentation",
+      "observations": "original result remains historical; correction does not mutate already shown dice into different dice",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W3-05",
+        "W5-08"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-E01",
+      "family": "E",
+      "title": "DM grants catalog/custom item to P1",
+      "observations": "H authorizes; P1 owner library and all permitted Session projections converge",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W4-05",
+        "W6-01",
+        "W6-08"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "MP-E02",
+      "family": "E",
+      "title": "DM revokes item",
+      "observations": "equipped/wielded/attuned policy is explicit; forced transition is deliberate and durable",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W4-05",
+        "W6-01",
+        "W6-08"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "MP-E03",
+      "family": "E",
+      "title": "DM grants/revokes GP",
+      "observations": "overdraft is rejected; requested amount and final balance converge",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W4-05",
+        "W6-01",
+        "W6-08"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "MP-E04",
+      "family": "E",
+      "title": "DM grants XP to one/multiple Characters",
+      "observations": "exact XP is durable and visible; no reason is required",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W4-05",
+        "W6-02",
+        "W6-08"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "MP-E05",
+      "family": "E",
+      "title": "DM grants immediate level-up credit",
+      "observations": "eligible owner can complete level-up in Session using canonical Character persistence",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W1-08",
+        "W4-05",
+        "W6-02",
+        "W6-08"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "MP-E06",
+      "family": "E",
+      "title": "P1 deposits item into Party Stash",
+      "observations": "owner debit and Campaign credit are atomic/idempotent; P2 sees updated shared stash",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W4-05",
+        "W6-03",
+        "W6-08"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "MP-E07",
+      "family": "E",
+      "title": "P1 withdraws item under shared policy",
+      "observations": "Campaign debit and owner credit settle once; arrow direction and quantity are correct",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W4-05",
+        "W6-03",
+        "W6-08"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "MP-E08",
+      "family": "E",
+      "title": "Deposit/withdraw GP",
+      "observations": "exact amount moves once and owner+Stash total GP is conserved; insufficient funds reject without partial mutation; a post-commit journal/finalize failure cannot roll back only the owner debit",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W4-05",
+        "W6-03",
+        "W6-08",
+        "W8-01"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "MP-E09",
+      "family": "E",
+      "title": "Custom/charged item round-trip",
+      "observations": "full item instance/template/charges/provenance survive Stash transfer",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W4-05",
+        "W6-03",
+        "W6-08"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "MP-E10",
+      "family": "E",
+      "title": "DM-approval withdrawal",
+      "observations": "request causes no mutation before approval; committed/rejected/cancelled outcomes reach requester",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W4-05",
+        "W6-03",
+        "W6-08"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "MP-E11",
+      "family": "E",
+      "title": "DM-managed policy",
+      "observations": "unauthorized Player mutation is blocked and DM operation remains available",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W4-05",
+        "W6-03",
+        "W6-08"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "MP-E12",
+      "family": "E",
+      "title": "Persistence failure during transfer",
+      "observations": "exact compensation restores both owners; retry cannot duplicate assets",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W4-05",
+        "W6-04",
+        "W6-08"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "MP-E13",
+      "family": "E",
+      "title": "Lost acknowledgement/restart during transfer",
+      "observations": "coordinator/journal recovery reaches one terminal result",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W4-05",
+        "W6-04",
+        "W6-08"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "MP-E14",
+      "family": "E",
+      "title": "Item converted to rations",
+      "observations": "eligibility comes from capability data; item debit and ration credit are atomic",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W4-05",
+        "W6-05",
+        "W6-08"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "MP-F01",
+      "family": "F",
+      "title": "DM edits era/date/time during Session",
+      "observations": "H commits structured time; permitted Clients see the same calendar and detailed day period",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W4-04",
+        "W6-08"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "MP-F02",
+      "family": "F",
+      "title": "Advance time across day/month/year boundary",
+      "observations": "deterministic calendar conversion and Activity/history converge",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W4-04",
+        "W6-08"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "MP-F03",
+      "family": "F",
+      "title": "Calendar disabled",
+      "observations": "values are preserved; automation is disabled with an explanation; Session play continues",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W4-04",
+        "W6-08"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "MP-F04",
+      "family": "F",
+      "title": "Ration visibility public/hidden",
+      "observations": "public Clients see allowed totals; hidden mode leaks no balance/need/shortage metadata",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W4-04",
+        "W6-08"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "MP-F05",
+      "family": "F",
+      "title": "Consume rations/advance day",
+      "observations": "preview and compound commit use one authoritative Campaign transaction",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W4-04",
+        "W6-08"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "MP-F06",
+      "family": "F",
+      "title": "Ration shortage",
+      "observations": "warning data converges; no undeclared Character consequence is invented",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W4-04",
+        "W6-08"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "MP-F07",
+      "family": "F",
+      "title": "Long Rest success",
+      "observations": "eligible owner Characters recover through declared rules while optional time/rations commit atomically",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W4-04",
+        "W6-06",
+        "W6-08"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "MP-F08",
+      "family": "F",
+      "title": "Long Rest rejected/preflight failure",
+      "observations": "no Character or Campaign generation partially advances",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W4-04",
+        "W6-06",
+        "W6-08"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "MP-F09",
+      "family": "F",
+      "title": "Long Rest disconnect/restart recovery",
+      "observations": "distributed transaction settles/compensates exactly once after owner/Host restart",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W4-04",
+        "W6-06",
+        "W6-08"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "MP-F10",
+      "family": "F",
+      "title": "Declarative calendar/ration provider",
+      "observations": "exact pinned compatible provider drives H; missing/incompatible provider blocks only dependent mutation",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W4-04",
+        "W6-08"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "MP-G01",
+      "family": "G",
+      "title": "DM Library NPC quick-add",
+      "observations": "Campaign-private definition materializes a public Session Actor without exposing private source metadata",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W4-06",
+        "W4-07",
+        "W6-07",
+        "W6-08"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "MP-G02",
+      "family": "G",
+      "title": "DM Library PC preset quick-add",
+      "observations": "Campaign-owned preset becomes a DM-controlled Actor, never a Player-owned Character",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W4-06",
+        "W4-07",
+        "W6-07",
+        "W6-08"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "MP-G03",
+      "family": "G",
+      "title": "Custom JSON item/NPC/image definition",
+      "observations": "validated fields survive materialization; invalid executable/unsafe data rejects",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W4-06",
+        "W4-07",
+        "W6-07",
+        "W6-08"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "MP-G04",
+      "family": "G",
+      "title": "Image/handout reveal",
+      "observations": "H preview stays private; reveal reaches P1/P2 with correct layer; withdraw removes it",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W4-06",
+        "W4-07",
+        "W6-07",
+        "W6-08"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "MP-G05",
+      "family": "G",
+      "title": "Reconnect during active handout",
+      "observations": "permitted active reveal is restored without leaking withdrawn/private assets",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W4-06",
+        "W4-07",
+        "W6-07",
+        "W6-08"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "MP-G06",
+      "family": "G",
+      "title": "DM-only note/folder/search",
+      "observations": "no note text, existence metadata, tag, favorite, or index leaks to Clients",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W4-06",
+        "W4-07",
+        "W6-07",
+        "W6-08"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "MP-G07",
+      "family": "G",
+      "title": "Rules/content lookup during live Session",
+      "observations": "lookup is local presentation over the pinned Session content snapshot",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W4-06",
+        "W4-07",
+        "W6-07",
+        "W6-08"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "MP-G08",
+      "family": "G",
+      "title": "Optional spatial provider absent",
+      "observations": "distance/out-of-range mechanics remain disabled; ranged target is not falsely rejected",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W4-06",
+        "W4-07",
+        "W6-07",
+        "W6-08",
+        "W7-06"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "MP-G09",
+      "family": "G",
+      "title": "Compatible spatial provider present",
+      "observations": "provider facts include provenance and H alone validates dependent mechanics",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W4-06",
+        "W4-07",
+        "W6-07",
+        "W6-08",
+        "W7-06"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "MP-H01",
+      "family": "H",
+      "title": "P2 disconnects before an action",
+      "observations": "H/P1 continue; P2 catches up to final state/Activity without stale live cinematic",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-05",
+        "W7-01",
+        "W7-03"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-H02",
+      "family": "H",
+      "title": "P2 disconnects during dice presentation",
+      "observations": "reconnect never rerolls; it resumes bounded presentation or shows final result by policy",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-05",
+        "W7-01",
+        "W7-03"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-H03",
+      "family": "H",
+      "title": "P1 disconnects after intent before commit",
+      "observations": "H reaches one terminal request state; retry is idempotent",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-05",
+        "W7-01",
+        "W7-03"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-H04",
+      "family": "H",
+      "title": "H disconnects/crashes during pending action",
+      "observations": "Clients show explicit recovery state; no Client self-promotes or resolves locally",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-05",
+        "W7-02",
+        "W7-03"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-H05",
+      "family": "H",
+      "title": "H restarts with durable Campaign state",
+      "observations": "authoritative durable state recovers; transient presentation/approval/interrupt state follows explicit policy",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-05",
+        "W7-02",
+        "W7-03"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-H06",
+      "family": "H",
+      "title": "P3 late-joins after several actions",
+      "observations": "final state and permitted Activity catch up in order; old full cinematics do not flood the screen",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-05",
+        "W7-02",
+        "W7-03"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-H07",
+      "family": "H",
+      "title": "Event gap/conflicting history",
+      "observations": "Client rejects the batch and requests recovery; it does not partially apply later events",
+      "evidence": [
+        "AUTO"
+      ],
+      "gates": [
+        "W5-05",
+        "W7-02",
+        "W7-03"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "MP-H08",
+      "family": "H",
+      "title": "Stale Client cursor/revision",
+      "observations": "H rejects or catches up before accepting a new intent",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-05",
+        "W7-02",
+        "W7-03"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-H09",
+      "family": "H",
+      "title": "Character owner write failure",
+      "observations": "request reports retryable/terminal status and avoids false shared success",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-05",
+        "W7-03",
+        "W7-04"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "MP-H10",
+      "family": "H",
+      "title": "Campaign write failure",
+      "observations": "candidate shared state is not published; compensation/retry is explicit",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-05",
+        "W7-03",
+        "W7-04"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "MP-H11",
+      "family": "H",
+      "title": "Asset/VFX/SFX load failure",
+      "observations": "mechanics and text result still complete; failure does not block authoritative state",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-05",
+        "W7-03",
+        "W7-04"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "MP-H12",
+      "family": "H",
+      "title": "Slow peer",
+      "observations": "slow P2 does not block H/P1; P2 preserves order when draining its queue",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-05",
+        "W7-03",
+        "W7-04"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "MP-I01",
+      "family": "I",
+      "title": "Keyboard-only action and response",
+      "observations": "focus order, target selection, interrupt response, result inspection, and Escape layering work",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-06",
+        "W7-07"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-I02",
+      "family": "I",
+      "title": "Screen-reader result",
+      "observations": "actor/action/targets/dice/total/outcome/state change have one coherent announcement",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-06",
+        "W7-07"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-I03",
+      "family": "I",
+      "title": "Narrow desktop",
+      "observations": "Actor boards, action bar, utilities, result, and reconnect controls remain reachable",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-06",
+        "W7-07"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-I04",
+      "family": "I",
+      "title": "Mixed peer motion preferences",
+      "observations": "shared mechanics remain identical while each peer uses its local motion preference",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-06",
+        "W7-07"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-I05",
+      "family": "I",
+      "title": "Presentation performance",
+      "observations": "a multi-die shared roll does not freeze network intake or lose later ordered events",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-06",
+        "W7-07"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-I06",
+      "family": "I",
+      "title": "Diagnostic correlation",
+      "observations": "H/P1/P2 logs correlate session/event/request/resolution IDs without logging private payloads",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-06",
+        "W7-07"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-J01",
+      "family": "J",
+      "title": "Owner joins and both peers open the Session",
+      "observations": "H and P1 show the same public Actor roster; production fixture NPCs do not survive on only one peer",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-09"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-J02",
+      "family": "J",
+      "title": "H selects P1 while P1 selects its own Actor",
+      "observations": "Actor name, HP/max/temp HP, AC, status, initiative, distance, turn economy, and legal target identity agree",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-09"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-J03",
+      "family": "J",
+      "title": "Both peers open the selected Character action bar",
+      "observations": "executable action IDs, labels, categories, economy, targeting, availability, formulas, costs, and mechanical details agree; only role-authorized controls and owner-source versus Host-authority citation labels may differ",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-09"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-J04",
+      "family": "J",
+      "title": "Both peers open inventory before any DM mutation",
+      "observations": "item instance identity, localized label, quantity, equipment/wield/attunement/charge state, and GP agree on first render; owner-source and Host-authority provenance labels may deliberately differ",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-09"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-J05",
+      "family": "J",
+      "title": "DM grants/revokes GP and retries the same request",
+      "observations": "P1 UI refreshes from the transport mutation without manual reload; P1 durable Character, H inventory pane, and H Actor projection converge exactly once; serialized command or inventory item key order cannot change journal identity or recovery state",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-09",
+        "W6-01",
+        "W8-01"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-J06",
+      "family": "J",
+      "title": "DM grants/revokes catalog or custom item",
+      "observations": "H/P1 inventory cards and any item-derived action refresh together; undo returns both screens to the prior state",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-09",
+        "W6-01"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-J07",
+      "family": "J",
+      "title": "Scene Actor is added/removed or owner reconnects",
+      "observations": "roster, selection fallback, current Actor, action ownership, and inventory ownership converge without stale fixture/action cards",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-09"
+      ],
+      "status": "AUTO_ONLY"
+    },
+    {
+      "id": "MP-J08",
+      "family": "J",
+      "title": "Turn, resolution, correction, and reconnect checkpoints",
+      "observations": "H/P1/P2 UI-facing Actor, action, resource, inventory, Activity, dice/result, and VFX-envelope snapshots agree after every public checkpoint",
+      "evidence": [
+        "AUTO",
+        "WIN"
+      ],
+      "gates": [
+        "W5-09"
+      ],
+      "status": "AUTO_ONLY"
+    }
+  ],
+  "gates": [
+    {
+      "id": "W0-01",
+      "title": "`work/v1-composite` exact HEAD와 정상 CI를 재조정하고, 어떤 write-capable workflow도 현재 integration/작업 branch를 변경할 수 없는지 확인한다.",
+      "classification": "VERIFY_ONLY",
+      "scenarios": [],
+      "issues": [],
+      "otherLinks": [
+        "V1-00",
+        "V1-01"
+      ],
+      "status": "PASS",
+      "lastVerifiedSha": "e9bb86f83c7c481e2c1a519c21544c88694b5d8a",
+      "commands": [
+        "Legacy Execution Boundary",
+        "Contract validation"
+      ],
+      "windowsArtifacts": []
+    },
+    {
+      "id": "W0-02",
+      "title": "`docs/roadmap/V1_EVIDENCE_LEDGER.json`에 72 Gate의 SHA·명령·테스트 수·Windows artifact를 기록한다.",
+      "classification": "BUILD",
+      "scenarios": [],
+      "issues": [],
+      "otherLinks": [
+        "전체"
+      ],
+      "status": "PASS",
+      "lastVerifiedSha": "e9bb86f83c7c481e2c1a519c21544c88694b5d8a",
+      "commands": [],
+      "windowsArtifacts": []
+    },
+    {
+      "id": "W0-03",
+      "title": "`docs/CURRENT.md`, `docs/roadmap/CURRENT.md`, `CANONICAL_ROOT.md`를 이 로드맵으로 단일 라우팅한다.",
+      "classification": "BUILD",
+      "scenarios": [],
+      "issues": [],
+      "otherLinks": [
+        "전체"
+      ],
+      "status": "PASS",
+      "lastVerifiedSha": "e9bb86f83c7c481e2c1a519c21544c88694b5d8a",
+      "commands": [],
+      "windowsArtifacts": []
+    },
+    {
+      "id": "W0-04",
+      "title": "Epic `#110`을 120 scenario 기준으로 동기화하고 누락된 `MP-13` issue를 생성·연결한다.",
+      "classification": "BUILD",
+      "scenarios": [],
+      "issues": [],
+      "otherLinks": [
+        "MP-EPIC"
+      ],
+      "status": "PASS",
+      "lastVerifiedSha": "e9bb86f83c7c481e2c1a519c21544c88694b5d8a",
+      "commands": [],
+      "windowsArtifacts": []
+    },
+    {
+      "id": "W0-05",
+      "title": "C9/과거 Phase 문서는 `COMPLETE` 또는 `ARCHIVE`로 표시하고 `NEXT` 권한을 제거한다.",
+      "classification": "BUILD",
+      "scenarios": [],
+      "issues": [],
+      "otherLinks": [
+        "C9",
+        "archived V1 docs"
+      ],
+      "status": "PASS",
+      "lastVerifiedSha": "e9bb86f83c7c481e2c1a519c21544c88694b5d8a",
+      "commands": [],
+      "windowsArtifacts": []
+    },
+    {
+      "id": "W0-06",
+      "title": "모든 구현 작업 전에 Evidence Card를 요구하는 재구현 방지 Gate를 고정한다.",
+      "classification": "BUILD",
+      "scenarios": [],
+      "issues": [],
+      "otherLinks": [
+        "전체"
+      ],
+      "status": "PASS",
+      "lastVerifiedSha": "e9bb86f83c7c481e2c1a519c21544c88694b5d8a",
+      "commands": [],
+      "windowsArtifacts": []
+    },
+    {
+      "id": "W1-01",
+      "title": "First run에서 Character Library와 생성 진입점에 도달한다.",
+      "classification": "REUSE_LOCKED",
+      "scenarios": [],
+      "issues": [],
+      "otherLinks": [
+        "V1-20"
+      ],
+      "status": "PASS",
+      "lastVerifiedSha": "9113736b5dbc565cb40d0646b0f27abdbdc6eb59",
+      "commands": [
+        "GitHub Actions UI"
+      ],
+      "windowsArtifacts": []
+    },
+    {
+      "id": "W1-02",
+      "title": "Guided Create가 Species·Background·Class·Ability·proficiency·equipment와 해당되는 spell choice를 처리한다.",
+      "classification": "REUSE_LOCKED",
+      "scenarios": [],
+      "issues": [],
+      "otherLinks": [
+        "V1-20"
+      ],
+      "status": "PASS",
+      "lastVerifiedSha": "42305b1d2a66a976b08844509a63b5999166938a",
+      "commands": [
+        "GitHub Actions UI"
+      ],
+      "windowsArtifacts": []
+    },
+    {
+      "id": "W1-03",
+      "title": "Quick Create가 Guided와 동일 draft를 공유하고 전환 시 선택을 잃지 않는다.",
+      "classification": "REUSE_LOCKED",
+      "scenarios": [],
+      "issues": [],
+      "otherLinks": [
+        "V1-20"
+      ],
+      "status": "PASS",
+      "lastVerifiedSha": "42305b1d2a66a976b08844509a63b5999166938a",
+      "commands": [
+        "GitHub Actions UI"
+      ],
+      "windowsArtifacts": []
+    },
+    {
+      "id": "W1-04",
+      "title": "Review·validation·commit이 불완전/불법 Character를 저장하지 않는다.",
+      "classification": "REUSE_LOCKED",
+      "scenarios": [],
+      "issues": [],
+      "otherLinks": [
+        "V1-20"
+      ],
+      "status": "PASS",
+      "lastVerifiedSha": "42305b1d2a66a976b08844509a63b5999166938a",
+      "commands": [
+        "GitHub Actions UI"
+      ],
+      "windowsArtifacts": []
+    },
+    {
+      "id": "W1-05",
+      "title": "실제 Tauri에서 생성 → 저장 → 앱 종료 → 재실행 → 동일 Character 로드를 증명한다.",
+      "classification": "VERIFY_ONLY",
+      "scenarios": [],
+      "issues": [],
+      "otherLinks": [
+        "J1",
+        "V1-20"
+      ],
+      "status": "PASS",
+      "lastVerifiedSha": "c0900157560ac51a745eac687eb4fff7f2580086",
+      "commands": [
+        "npm run test:e2e:tauri -- --w1"
+      ],
+      "windowsArtifacts": [
+        "SimpleVTT-W1-Tauri-c0900157560ac51a745eac687eb4fff7f2580086 (artifact 9764936861, sha256:85eda3890fdbc6d28ee0e5155617082642a4e22c1e851a5c73783be59af00b23)"
+      ]
+    },
+    {
+      "id": "W1-06",
+      "title": "실제 UI에서 import·duplicate·delete와 ID/provenance 분리를 증명한다.",
+      "classification": "VERIFY_ONLY",
+      "scenarios": [],
+      "issues": [],
+      "otherLinks": [
+        "V1-20"
+      ],
+      "status": "PASS",
+      "lastVerifiedSha": "c0900157560ac51a745eac687eb4fff7f2580086",
+      "commands": [
+        "npm run test:e2e:tauri -- --w1"
+      ],
+      "windowsArtifacts": [
+        "SimpleVTT-W1-Tauri-c0900157560ac51a745eac687eb4fff7f2580086 (artifact 9764936861, sha256:85eda3890fdbc6d28ee0e5155617082642a4e22c1e851a5c73783be59af00b23)"
+      ]
+    },
+    {
+      "id": "W1-07",
+      "title": "Full Sheet에서 HP·AC·resource·inventory·spells·features·actions가 저장본과 일치한다.",
+      "classification": "VERIFY_ONLY",
+      "scenarios": [],
+      "issues": [],
+      "otherLinks": [
+        "V1-20",
+        "V1-21"
+      ],
+      "status": "PASS",
+      "lastVerifiedSha": "c0900157560ac51a745eac687eb4fff7f2580086",
+      "commands": [
+        "npm run test:e2e:tauri -- --w1"
+      ],
+      "windowsArtifacts": [
+        "SimpleVTT-W1-Tauri-c0900157560ac51a745eac687eb4fff7f2580086 (artifact 9764936861, sha256:85eda3890fdbc6d28ee0e5155617082642a4e22c1e851a5c73783be59af00b23)"
+      ]
+    },
+    {
+      "id": "W1-08",
+      "title": "실제 Tauri에서 대표 level-up → 새 choice → commit → 새 feature/action → restart 유지까지 증명한다.",
+      "classification": "VERIFY_ONLY",
+      "scenarios": [
+        "MP-E05"
+      ],
+      "issues": [],
+      "otherLinks": [
+        "V1-21"
+      ],
+      "status": "PASS",
+      "lastVerifiedSha": "c0900157560ac51a745eac687eb4fff7f2580086",
+      "commands": [
+        "npm run test:e2e:tauri -- --w1"
+      ],
+      "windowsArtifacts": [
+        "SimpleVTT-W1-Tauri-c0900157560ac51a745eac687eb4fff7f2580086 (artifact 9764936861, sha256:85eda3890fdbc6d28ee0e5155617082642a4e22c1e851a5c73783be59af00b23)"
+      ]
+    },
+    {
+      "id": "W2-01",
+      "title": "12 class, 9 species, 4 background와 Level 1 생성 catalog를 고정한다.",
+      "classification": "REUSE_LOCKED",
+      "scenarios": [],
+      "issues": [],
+      "otherLinks": [
+        "SRD profile"
+      ],
+      "status": "PASS",
+      "lastVerifiedSha": "42305b1d2a66a976b08844509a63b5999166938a",
+      "commands": [
+        "GitHub Actions UI",
+        "GitHub compare 42305b1d2a66a976b08844509a63b5999166938a...c6257b6637603cd35abc7f6c79ab706b36aaa7fb"
+      ],
+      "windowsArtifacts": []
+    },
+    {
+      "id": "W2-02",
+      "title": "weapon·armor·equipment·item catalog와 item capability를 고정한다.",
+      "classification": "REUSE_LOCKED",
+      "scenarios": [],
+      "issues": [],
+      "otherLinks": [
+        "SRD profile"
+      ],
+      "status": "PASS",
+      "lastVerifiedSha": "ef2cdf69748195bd63c0bd7eff747420811842bf",
+      "commands": [
+        "GitHub Actions UI: Verify W2 SRD product lifecycle",
+        "npm run build"
+      ],
+      "windowsArtifacts": []
+    },
+    {
+      "id": "W2-03",
+      "title": "339 spell의 presentation과 authoritative executable definition을 고정한다.",
+      "classification": "REUSE_LOCKED",
+      "scenarios": [],
+      "issues": [],
+      "otherLinks": [
+        "SRD profile"
+      ],
+      "status": "PASS",
+      "lastVerifiedSha": "ef2cdf69748195bd63c0bd7eff747420811842bf",
+      "commands": [
+        "GitHub Actions UI: Verify W2 SRD product lifecycle",
+        "npm run build"
+      ],
+      "windowsArtifacts": []
+    },
+    {
+      "id": "W2-04",
+      "title": "class feature·feat·progression과 36 Common Play mechanism family를 기존 generic path로 고정한다.",
+      "classification": "REUSE_LOCKED",
+      "scenarios": [],
+      "issues": [],
+      "otherLinks": [
+        "C9 Gate N"
+      ],
+      "status": "PASS",
+      "lastVerifiedSha": "ef2cdf69748195bd63c0bd7eff747420811842bf",
+      "commands": [
+        "npx tsx --test tests/contracts/v1MechanismCoverage.test.mjs",
+        "node scripts/check-v1-mechanism-coverage.mjs --gate-n",
+        "node scripts/check-legacy-execution-boundary.mjs",
+        "npm run build"
+      ],
+      "windowsArtifacts": []
+    },
+    {
+      "id": "W2-05",
+      "title": "모든 Level-1 eligible shipped content가 Character creation에서 합법적으로 획득 가능한지 검사한다.",
+      "classification": "VERIFY_ONLY",
+      "scenarios": [],
+      "issues": [],
+      "otherLinks": [
+        "V1-20"
+      ],
+      "status": "PASS",
+      "lastVerifiedSha": "ef2cdf69748195bd63c0bd7eff747420811842bf",
+      "commands": [
+        "GitHub Actions UI: Verify creation ChoiceDefinition convergence",
+        "GitHub Actions UI: Verify W2 SRD product lifecycle",
+        "npm run build"
+      ],
+      "windowsArtifacts": []
+    },
+    {
+      "id": "W2-06",
+      "title": "모든 progression content가 올바른 level/choice schedule에서 획득 가능한지 검사한다.",
+      "classification": "VERIFY_ONLY",
+      "scenarios": [],
+      "issues": [],
+      "otherLinks": [
+        "V1-21"
+      ],
+      "status": "PASS",
+      "lastVerifiedSha": "ef2cdf69748195bd63c0bd7eff747420811842bf",
+      "commands": [
+        "GitHub Actions UI: Verify progression choice schedule regression",
+        "GitHub Actions UI: Verify W2 SRD product lifecycle",
+        "npm run build"
+      ],
+      "windowsArtifacts": []
+    },
+    {
+      "id": "W2-07",
+      "title": "획득 content가 Sheet·Action·resource recovery·persistence로 연결되는지 검사한다.",
+      "classification": "VERIFY_ONLY",
+      "scenarios": [],
+      "issues": [],
+      "otherLinks": [
+        "V1-21"
+      ],
+      "status": "PASS",
+      "lastVerifiedSha": "ef2cdf69748195bd63c0bd7eff747420811842bf",
+      "commands": [
+        "GitHub Actions UI: Verify W2 SRD product lifecycle",
+        "npm run build"
+      ],
+      "windowsArtifacts": []
+    },
+    {
+      "id": "W2-08",
+      "title": "대표 archetype lifecycle matrix를 Tauri에서 검증한다: martial, prepared caster, spontaneous caster, pact caster, shapeshifter, healer.",
+      "classification": "VERIFY_ONLY",
+      "scenarios": [],
+      "issues": [],
+      "otherLinks": [
+        "Journey J1",
+        "Journey J3"
+      ],
+      "status": "PASS",
+      "lastVerifiedSha": "699c923dc50dac5ecd266ced58568d3b647850b6",
+      "commands": [
+        "npm run test:e2e:tauri -- --w2"
+      ],
+      "windowsArtifacts": [
+        "SimpleVTT-W2-Tauri-699c923dc50dac5ecd266ced58568d3b647850b6 (artifact 9786387605, sha256:3077663cb94c2a444046d94808c76a677c7d92de61a0576f61d5f57b8cd1172d)"
+      ]
+    },
+    {
+      "id": "W3-01",
+      "title": "Freeform·ability check·saving throw·generic d20이 production authority를 사용한다.",
+      "classification": "REUSE_LOCKED",
+      "scenarios": [],
+      "issues": [],
+      "otherLinks": [
+        "V1-21"
+      ],
+      "status": "PASS",
+      "lastVerifiedSha": "1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff",
+      "commands": [
+        "GitHub Actions UI",
+        "npm run build"
+      ],
+      "windowsArtifacts": []
+    },
+    {
+      "id": "W3-02",
+      "title": "Initiative·round·turn·economy가 일관된 lifecycle을 가진다.",
+      "classification": "REUSE_LOCKED",
+      "scenarios": [],
+      "issues": [],
+      "otherLinks": [
+        "V1-21"
+      ],
+      "status": "PASS",
+      "lastVerifiedSha": "1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff",
+      "commands": [
+        "GitHub Actions UI",
+        "GitHub Actions UI: Verify Campaign lifecycle and declarative providers"
+      ],
+      "windowsArtifacts": []
+    },
+    {
+      "id": "W3-03",
+      "title": "attack·miss·critical·damage·healing·HP writeback이 atomic하다.",
+      "classification": "REUSE_LOCKED",
+      "scenarios": [],
+      "issues": [],
+      "otherLinks": [
+        "V1-21"
+      ],
+      "status": "PASS",
+      "lastVerifiedSha": "1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff",
+      "commands": [
+        "GitHub Actions UI",
+        "npm run build"
+      ],
+      "windowsArtifacts": []
+    },
+    {
+      "id": "W3-04",
+      "title": "spell·feature·item action이 cost·target·effect·Activity를 함께 처리한다.",
+      "classification": "REUSE_LOCKED",
+      "scenarios": [],
+      "issues": [],
+      "otherLinks": [
+        "V1-21"
+      ],
+      "status": "PASS",
+      "lastVerifiedSha": "1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff",
+      "commands": [
+        "GitHub Actions UI",
+        "npm run build"
+      ],
+      "windowsArtifacts": []
+    },
+    {
+      "id": "W3-05",
+      "title": "reaction·interrupt·concentration·Ready lifecycle이 production path를 사용한다.",
+      "classification": "REUSE_LOCKED",
+      "scenarios": [
+        "MP-D01",
+        "MP-D02",
+        "MP-D03",
+        "MP-D04",
+        "MP-D05",
+        "MP-D06",
+        "MP-D07",
+        "MP-D08",
+        "MP-D09",
+        "MP-D10",
+        "MP-D11",
+        "MP-D12",
+        "MP-D13"
+      ],
+      "issues": [],
+      "otherLinks": [
+        "V1-21"
+      ],
+      "status": "PASS",
+      "lastVerifiedSha": "1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff",
+      "commands": [
+        "GitHub Actions UI"
+      ],
+      "windowsArtifacts": []
+    },
+    {
+      "id": "W3-06",
+      "title": "duration·condition·Short Rest·Long Rest·resource recovery가 저장 상태와 일치한다.",
+      "classification": "REUSE_LOCKED",
+      "scenarios": [],
+      "issues": [],
+      "otherLinks": [
+        "V1-21"
+      ],
+      "status": "PASS",
+      "lastVerifiedSha": "1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff",
+      "commands": [
+        "GitHub Actions Rules Domain",
+        "GitHub Actions UI",
+        "npm run build"
+      ],
+      "windowsArtifacts": []
+    },
+    {
+      "id": "W3-07",
+      "title": "correction/Undo가 역사 삭제가 아닌 compensating event로 동작한다.",
+      "classification": "REUSE_LOCKED",
+      "scenarios": [],
+      "issues": [],
+      "otherLinks": [
+        "V1-21"
+      ],
+      "status": "PASS",
+      "lastVerifiedSha": "1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff",
+      "commands": [
+        "GitHub Actions UI"
+      ],
+      "windowsArtifacts": []
+    },
+    {
+      "id": "W3-08",
+      "title": "실제 Tauri에서 complete local session → rest → 종료 → restart를 한 번에 통과한다.",
+      "classification": "VERIFY_ONLY",
+      "scenarios": [],
+      "issues": [],
+      "otherLinks": [
+        "Journey J3",
+        "Journey J6"
+      ],
+      "status": "PASS",
+      "lastVerifiedSha": "53ec501555222b60d9e856b231f4f64395f75b76",
+      "commands": [
+        "npm run test:e2e:tauri -- --w3",
+        "npx tsx --test tests/ui/appProviderStopSessionRefresh.test.ts"
+      ],
+      "windowsArtifacts": [
+        "SimpleVTT-W3-Tauri-53ec501555222b60d9e856b231f4f64395f75b76 (artifact 9824674856, sha256:d51dd1d962be4533b31551f900dae26655d3a4e2b05aa8131ffa98122bb18034)"
+      ]
+    },
+    {
+      "id": "W4-01",
+      "title": "Campaign create/read/update/archive/restore/duplicate/delete와 namespace isolation을 고정한다.",
+      "classification": "REUSE_LOCKED",
+      "scenarios": [],
+      "issues": [],
+      "otherLinks": [
+        "V1-10"
+      ],
+      "status": "PASS",
+      "lastVerifiedSha": "5bef709f010543859e84c98ef7db8f14e5c06469",
+      "commands": [
+        "GitHub Actions UI: Verify Campaign lifecycle and declarative providers",
+        "npx tsx --test tests/ui/campaignPersistence.test.ts tests/ui/campaignRuntimeAdapter.test.ts tests/ui/campaignProductUiStructure.test.ts tests/ui/campaignStartupRecoveryStructure.test.ts tests/ui/campaignLifecycleRuntime.test.ts tests/ui/campaignLifecycleUiStructure.test.ts tests/ui/campaignDeclarativeProviderProfile.test.ts tests/ui/campaignDeclarativeProviderImport.test.ts tests/ui/campaignDeclarativeProviderRuntime.test.ts tests/ui/campaignDeclarativeProviderUiStructure.test.ts"
+      ],
+      "windowsArtifacts": []
+    },
+    {
+      "id": "W4-02",
+      "title": "Campaign dashboard·Session binding·Campaign-required Host start를 고정한다.",
+      "classification": "REUSE_LOCKED",
+      "scenarios": [],
+      "issues": [],
+      "otherLinks": [
+        "V1-11"
+      ],
+      "status": "PASS",
+      "lastVerifiedSha": "5bef709f010543859e84c98ef7db8f14e5c06469",
+      "commands": [
+        "GitHub Actions UI: Verify Campaign lifecycle and declarative providers"
+      ],
+      "windowsArtifacts": []
+    },
+    {
+      "id": "W4-03",
+      "title": "roster·Session snapshot·history·summary를 고정한다.",
+      "classification": "REUSE_LOCKED",
+      "scenarios": [],
+      "issues": [],
+      "otherLinks": [
+        "V1-12"
+      ],
+      "status": "PASS",
+      "lastVerifiedSha": "5bef709f010543859e84c98ef7db8f14e5c06469",
+      "commands": [
+        "GitHub Actions UI: Verify Campaign lifecycle and declarative providers",
+        "npm run test:e2e:tauri -- --w3"
+      ],
+      "windowsArtifacts": [
+        "SimpleVTT-W3-Tauri-53ec501555222b60d9e856b231f4f64395f75b76 (artifact 9824674856, sha256:d51dd1d962be4533b31551f900dae26655d3a4e2b05aa8131ffa98122bb18034)"
+      ]
+    },
+    {
+      "id": "W4-04",
+      "title": "calendar·rations·visibility·declarative provider 설정을 고정한다.",
+      "classification": "REUSE_LOCKED",
+      "scenarios": [
+        "MP-F01",
+        "MP-F02",
+        "MP-F03",
+        "MP-F04",
+        "MP-F05",
+        "MP-F06",
+        "MP-F07",
+        "MP-F08",
+        "MP-F09",
+        "MP-F10"
+      ],
+      "issues": [],
+      "otherLinks": [
+        "V1-12"
+      ],
+      "status": "PASS",
+      "lastVerifiedSha": "5bef709f010543859e84c98ef7db8f14e5c06469",
+      "commands": [
+        "GitHub Actions UI: Verify Campaign lifecycle and declarative providers"
+      ],
+      "windowsArtifacts": []
+    },
+    {
+      "id": "W4-05",
+      "title": "Party Stash와 shared/approval/DM-managed policy를 고정한다.",
+      "classification": "REUSE_LOCKED",
+      "scenarios": [
+        "MP-E01",
+        "MP-E02",
+        "MP-E03",
+        "MP-E04",
+        "MP-E05",
+        "MP-E06",
+        "MP-E07",
+        "MP-E08",
+        "MP-E09",
+        "MP-E10",
+        "MP-E11",
+        "MP-E12",
+        "MP-E13",
+        "MP-E14"
+      ],
+      "issues": [],
+      "otherLinks": [
+        "V1-13"
+      ],
+      "status": "PASS",
+      "lastVerifiedSha": "5bef709f010543859e84c98ef7db8f14e5c06469",
+      "commands": [
+        "GitHub Actions UI: Verify Party Stash sequential transfer routing"
+      ],
+      "windowsArtifacts": []
+    },
+    {
+      "id": "W4-06",
+      "title": "DM Library organization·import·private notes·provenance를 고정한다.",
+      "classification": "REUSE_LOCKED",
+      "scenarios": [
+        "MP-G01",
+        "MP-G02",
+        "MP-G03",
+        "MP-G04",
+        "MP-G05",
+        "MP-G06",
+        "MP-G07",
+        "MP-G08",
+        "MP-G09"
+      ],
+      "issues": [],
+      "otherLinks": [
+        "V1-13"
+      ],
+      "status": "PASS",
+      "lastVerifiedSha": "5bef709f010543859e84c98ef7db8f14e5c06469",
+      "commands": [
+        "GitHub Actions UI: Run UI tests",
+        "GitHub compare 5bef709f010543859e84c98ef7db8f14e5c06469...083ce354fc2c1fcfd1e1346f976f920a30ccd2c1"
+      ],
+      "windowsArtifacts": []
+    },
+    {
+      "id": "W4-07",
+      "title": "NPC/PC preset/custom Actor materialization·handout·spatial fallback을 고정한다.",
+      "classification": "REUSE_LOCKED",
+      "scenarios": [
+        "MP-G01",
+        "MP-G02",
+        "MP-G03",
+        "MP-G04",
+        "MP-G05",
+        "MP-G06",
+        "MP-G07",
+        "MP-G08",
+        "MP-G09"
+      ],
+      "issues": [],
+      "otherLinks": [
+        "V1-40"
+      ],
+      "status": "PASS",
+      "lastVerifiedSha": "2ac28651312f1fdbe82edb74fd13f342a8f910f7",
+      "commands": [
+        "GitHub Actions UI",
+        "GitHub Actions V1 Tauri Verification: tauri-w4-07-spatial"
+      ],
+      "windowsArtifacts": [
+        "SimpleVTT-W4-07-G01-G09-2ac28651312f1fdbe82edb74fd13f342a8f910f7 (artifact 9849024415, sha256:b044f73320cd10bf2446695677ca2098c7c162d01190feed7ecc599078c656a0)"
+      ]
+    },
+    {
+      "id": "W4-08",
+      "title": "실제 Tauri에서 Campaign 준비 → Session 시작/종료 → Campaign reopen을 증명한다.",
+      "classification": "VERIFY_ONLY",
+      "scenarios": [],
+      "issues": [],
+      "otherLinks": [
+        "Journey J2",
+        "Journey J5",
+        "Journey J6"
+      ],
+      "status": "PASS",
+      "lastVerifiedSha": "2ac28651312f1fdbe82edb74fd13f342a8f910f7",
+      "commands": [
+        "GitHub Actions V1 Tauri Verification: tauri-w3",
+        "npm run test:e2e:tauri -- --w3",
+        "npx tsx --test tests/ui/appProviderStopSessionRefresh.test.ts"
+      ],
+      "windowsArtifacts": [
+        "SimpleVTT-W3-Tauri-2ac28651312f1fdbe82edb74fd13f342a8f910f7 (artifact 9849024676, sha256:40fd32b55ec3f6d92f47c29b6acff20d599e64b3b7f757ddf5c9b73e270860e3)"
+      ]
+    },
+    {
+      "id": "W5-01",
+      "title": "H/P1/P2 topology와 P3 late-join/reconnect lifecycle을 고정한다.",
+      "classification": "REUSE_LOCKED",
+      "scenarios": [
+        "MP-A01",
+        "MP-A02",
+        "MP-A03",
+        "MP-A04",
+        "MP-A05",
+        "MP-A06",
+        "MP-A07",
+        "MP-A08",
+        "MP-A09",
+        "MP-A10"
+      ],
+      "issues": [],
+      "otherLinks": [],
+      "status": "PASS",
+      "lastVerifiedSha": "2ac28651312f1fdbe82edb74fd13f342a8f910f7",
+      "commands": [
+        "GitHub Actions UI",
+        "GitHub Actions V1 Tauri Verification: tauri-w4-07-spatial"
+      ],
+      "windowsArtifacts": [
+        "SimpleVTT-W4-07-G01-G09-2ac28651312f1fdbe82edb74fd13f342a8f910f7 (artifact 9849024415, sha256:b044f73320cd10bf2446695677ca2098c7c162d01190feed7ecc599078c656a0)"
+      ]
+    },
+    {
+      "id": "W5-02",
+      "title": "Host-unknown persisted Character가 trusted owner projection으로 mount된다.",
+      "classification": "REUSE_LOCKED",
+      "scenarios": [
+        "MP-A02",
+        "MP-B01",
+        "MP-B02",
+        "MP-B03",
+        "MP-B04"
+      ],
+      "issues": [],
+      "otherLinks": [],
+      "status": "PASS",
+      "lastVerifiedSha": "2ac28651312f1fdbe82edb74fd13f342a8f910f7",
+      "commands": [
+        "GitHub Actions UI",
+        "GitHub Actions V1 Tauri Verification: tauri-w4-07-spatial",
+        "GitHub compare 2ac28651312f1fdbe82edb74fd13f342a8f910f7...761f1d08601f3f4192ec9bc1339d09b64858eafe"
+      ],
+      "windowsArtifacts": [
+        "SimpleVTT-W4-07-G01-G09-2ac28651312f1fdbe82edb74fd13f342a8f910f7 (artifact 9849024415, sha256:b044f73320cd10bf2446695677ca2098c7c162d01190feed7ecc599078c656a0)"
+      ]
+    },
+    {
+      "id": "W5-03",
+      "title": "Client intent → Host validate/resolve/commit 단일 mutation 경로를 고정한다.",
+      "classification": "REUSE_LOCKED",
+      "scenarios": [],
+      "issues": [],
+      "otherLinks": [
+        "MP invariants"
+      ],
+      "status": "PASS",
+      "lastVerifiedSha": "2ac28651312f1fdbe82edb74fd13f342a8f910f7",
+      "commands": [
+        "GitHub Actions UI",
+        "GitHub compare 2ac28651312f1fdbe82edb74fd13f342a8f910f7...0ee6f493fc765ac7a617eda485392957b1874c6e"
+      ],
+      "windowsArtifacts": []
+    },
+    {
+      "id": "W5-04",
+      "title": "immutable Resolution Presentation Envelope의 identity·dice·outcome·privacy·Activity를 고정한다.",
+      "classification": "REUSE_LOCKED",
+      "scenarios": [],
+      "issues": [
+        "MP-01"
+      ],
+      "otherLinks": [],
+      "status": "PASS",
+      "lastVerifiedSha": "2ac28651312f1fdbe82edb74fd13f342a8f910f7",
+      "commands": [
+        "GitHub Actions UI",
+        "GitHub compare 2ac28651312f1fdbe82edb74fd13f342a8f910f7...1ca6e911087a09dced61cf6a4c7e60df29e64db0"
+      ],
+      "windowsArtifacts": []
+    },
+    {
+      "id": "W5-05",
+      "title": "ordered remote queue·duplicate suppression·catch-up·no-reroll을 고정한다.",
+      "classification": "REUSE_LOCKED",
+      "scenarios": [
+        "MP-H01",
+        "MP-H02",
+        "MP-H03",
+        "MP-H04",
+        "MP-H05",
+        "MP-H06",
+        "MP-H07",
+        "MP-H08",
+        "MP-H09",
+        "MP-H10",
+        "MP-H11",
+        "MP-H12"
+      ],
+      "issues": [
+        "MP-02"
+      ],
+      "otherLinks": [],
+      "status": "PASS",
+      "lastVerifiedSha": "2ac28651312f1fdbe82edb74fd13f342a8f910f7",
+      "commands": [
+        "GitHub Actions UI",
+        "GitHub compare 2ac28651312f1fdbe82edb74fd13f342a8f910f7...be061030081a3ba9f570a1a9a7696283d2512f36"
+      ],
+      "windowsArtifacts": []
+    },
+    {
+      "id": "W5-06",
+      "title": "local/Host/remote가 동일 VisualDiceBridge와 CombatVfxBridge를 사용한다.",
+      "classification": "REUSE_LOCKED",
+      "scenarios": [
+        "MP-C01",
+        "MP-C02",
+        "MP-C03",
+        "MP-C04",
+        "MP-C05",
+        "MP-C06",
+        "MP-C07",
+        "MP-C08",
+        "MP-C09",
+        "MP-C10",
+        "MP-C11",
+        "MP-C12",
+        "MP-C13",
+        "MP-C14",
+        "MP-C15",
+        "MP-C16",
+        "MP-C17",
+        "MP-C18",
+        "MP-C19",
+        "MP-C20",
+        "MP-C21",
+        "MP-C22",
+        "MP-C23",
+        "MP-C24",
+        "MP-C25",
+        "MP-C26",
+        "MP-C27",
+        "MP-C28",
+        "MP-C29",
+        "MP-C30",
+        "MP-I01",
+        "MP-I02",
+        "MP-I03",
+        "MP-I04",
+        "MP-I05",
+        "MP-I06"
+      ],
+      "issues": [],
+      "otherLinks": [],
+      "status": "PASS",
+      "lastVerifiedSha": "2ac28651312f1fdbe82edb74fd13f342a8f910f7",
+      "commands": [
+        "GitHub Actions UI",
+        "GitHub compare 2ac28651312f1fdbe82edb74fd13f342a8f910f7...58a10dc1bf42dff79dd3f8035ea02bd9967d8f43"
+      ],
+      "windowsArtifacts": []
+    },
+    {
+      "id": "W5-07",
+      "title": "H/P1/P2 attack·check·save·spell·item·feature action matrix를 고정한다.",
+      "classification": "REUSE_LOCKED",
+      "scenarios": [
+        "MP-C01",
+        "MP-C02",
+        "MP-C03",
+        "MP-C04",
+        "MP-C05",
+        "MP-C06",
+        "MP-C07",
+        "MP-C08",
+        "MP-C09",
+        "MP-C10",
+        "MP-C11",
+        "MP-C12",
+        "MP-C13",
+        "MP-C14",
+        "MP-C15",
+        "MP-C16",
+        "MP-C17",
+        "MP-C18",
+        "MP-C19",
+        "MP-C20",
+        "MP-C21",
+        "MP-C22",
+        "MP-C23",
+        "MP-C24"
+      ],
+      "issues": [
+        "MP-03"
+      ],
+      "otherLinks": [],
+      "status": "PASS",
+      "lastVerifiedSha": "0a9aeb6417c83df5f5d601b3112744cb6bd5e39a",
+      "commands": [
+        "GitHub Actions W5-07 AUTO Verification"
+      ],
+      "windowsArtifacts": []
+    },
+    {
+      "id": "W5-08",
+      "title": "Initiative·reaction·concentration·Ready·correction fan-out을 고정한다.",
+      "classification": "REUSE_LOCKED",
+      "scenarios": [
+        "MP-D01",
+        "MP-D02",
+        "MP-D03",
+        "MP-D04",
+        "MP-D05",
+        "MP-D06",
+        "MP-D07",
+        "MP-D08",
+        "MP-D09",
+        "MP-D10",
+        "MP-D11",
+        "MP-D12",
+        "MP-D13"
+      ],
+      "issues": [
+        "MP-04"
+      ],
+      "otherLinks": [],
+      "status": "PASS",
+      "lastVerifiedSha": "faf5331ed72cd051213ab917e3c2f402fae03087",
+      "commands": [
+        "GitHub Actions W5-08 AUTO Verification"
+      ],
+      "windowsArtifacts": []
+    },
+    {
+      "id": "W5-09",
+      "title": "J01~J08의 UI-facing Actor·action·inventory·Activity parity 자동 증거를 고정한다.",
+      "classification": "REUSE_LOCKED",
+      "scenarios": [
+        "MP-J01",
+        "MP-J02",
+        "MP-J03",
+        "MP-J04",
+        "MP-J05",
+        "MP-J06",
+        "MP-J07",
+        "MP-J08"
+      ],
+      "issues": [
+        "MP-13"
+      ],
+      "otherLinks": [],
+      "status": "PASS",
+      "lastVerifiedSha": "4c93082d0af77ae79da82db711b7934c8e2f8544",
+      "commands": [
+        "GitHub Actions W5-09 AUTO Verification"
+      ],
+      "windowsArtifacts": []
+    },
+    {
+      "id": "W5-10",
+      "title": "MP-01~MP-04의 기존 production-adapter 3-peer action·presentation·turn·Undo 자동 증거를 exact HEAD의 단일 scenario map으로 고정한다.",
+      "classification": "REUSE_LOCKED",
+      "scenarios": [],
+      "issues": [
+        "MP-01",
+        "MP-02",
+        "MP-03",
+        "MP-04"
+      ],
+      "otherLinks": [],
+      "status": "PASS",
+      "lastVerifiedSha": "786566303fbb6c8bac1dff6b392f65a866a1947c",
+      "commands": [
+        "GitHub Actions W5-10 AUTO Verification"
+      ],
+      "windowsArtifacts": []
+    },
+    {
+      "id": "W6-01",
+      "title": "DM item/GP grant·revoke와 owner projection refresh를 고정한다.",
+      "classification": "REUSE_LOCKED",
+      "scenarios": [
+        "MP-E01",
+        "MP-E02",
+        "MP-E03",
+        "MP-J05",
+        "MP-J06"
+      ],
+      "issues": [],
+      "otherLinks": [],
+      "status": "PASS",
+      "lastVerifiedSha": "30606e6b056027a3e10ddbae70f38f428b2714b6",
+      "commands": [
+        "GitHub Actions W6-01 AUTO Verification"
+      ],
+      "windowsArtifacts": []
+    },
+    {
+      "id": "W6-02",
+      "title": "XP grant와 immediate level-up credit의 durable ownership을 고정한다.",
+      "classification": "REUSE_LOCKED",
+      "scenarios": [
+        "MP-E04",
+        "MP-E05"
+      ],
+      "issues": [],
+      "otherLinks": [],
+      "status": "PASS",
+      "lastVerifiedSha": "a72387016fec255674b8132b1f8b80b08d99da25",
+      "commands": [
+        "GitHub Actions W6-02 AUTO Verification",
+        "npm run build"
+      ],
+      "windowsArtifacts": []
+    },
+    {
+      "id": "W6-03",
+      "title": "Stash shared/approval/DM-managed request lifecycle을 고정한다.",
+      "classification": "REUSE_LOCKED",
+      "scenarios": [
+        "MP-E06",
+        "MP-E07",
+        "MP-E08",
+        "MP-E09",
+        "MP-E10",
+        "MP-E11"
+      ],
+      "issues": [],
+      "otherLinks": [],
+      "status": "PASS",
+      "lastVerifiedSha": "b1f54abefd7dffb2f865ccaccde31649b8080a01",
+      "commands": [
+        "GitHub Actions W6-03 AUTO Verification",
+        "npm run build"
+      ],
+      "windowsArtifacts": []
+    },
+    {
+      "id": "W6-04",
+      "title": "transfer atomicity·journal·compensation·restart recovery를 고정한다.",
+      "classification": "REUSE_LOCKED",
+      "scenarios": [
+        "MP-E12",
+        "MP-E13"
+      ],
+      "issues": [],
+      "otherLinks": [],
+      "status": "PASS",
+      "lastVerifiedSha": "39bcd0356ca7b9a242684538253204ae17916eb1",
+      "commands": [
+        "GitHub Actions W6-04 AUTO Verification",
+        "npm run build"
+      ],
+      "windowsArtifacts": []
+    },
+    {
+      "id": "W6-05",
+      "title": "capability 기반 item-to-rations conversion을 고정한다.",
+      "classification": "REUSE_LOCKED",
+      "scenarios": [
+        "MP-E14"
+      ],
+      "issues": [],
+      "otherLinks": [],
+      "status": "PASS",
+      "lastVerifiedSha": "945188901c106b6114e3a7f89cb1671aab6ace27",
+      "commands": [
+        "GitHub Actions W6-05 AUTO Verification",
+        "npm run build"
+      ],
+      "windowsArtifacts": []
+    },
+    {
+      "id": "W6-06",
+      "title": "Character+Campaign distributed Long Rest와 owner/Host recovery를 고정한다.",
+      "classification": "REUSE_LOCKED",
+      "scenarios": [
+        "MP-F07",
+        "MP-F08",
+        "MP-F09"
+      ],
+      "issues": [],
+      "otherLinks": [],
+      "status": "PASS",
+      "lastVerifiedSha": "cf531f34a2c2cf85174fabafdc9092022fb0c46b",
+      "commands": [
+        "GitHub Actions W6-06 AUTO Verification",
+        "npm run test:campaign-rest",
+        "npm run build"
+      ],
+      "windowsArtifacts": []
+    },
+    {
+      "id": "W6-07",
+      "title": "connected DM Library materialization·handout·spatial capability를 고정한다.",
+      "classification": "REUSE_LOCKED",
+      "scenarios": [
+        "MP-G01",
+        "MP-G02",
+        "MP-G03",
+        "MP-G04",
+        "MP-G05",
+        "MP-G06",
+        "MP-G07",
+        "MP-G08",
+        "MP-G09"
+      ],
+      "issues": [],
+      "otherLinks": [],
+      "status": "PASS",
+      "lastVerifiedSha": "63f6943b6c015ed24dfd405087d3d18b3d6415cd",
+      "commands": [
+        "GitHub Actions W6-07 AUTO Verification",
+        "npx tsx --test tests/ui/campaignDmLibraryImport.test.ts tests/ui/campaignDmLibraryGrantDurability.test.ts tests/ui/sessionImageHandoutRuntimeAdapter.test.ts tests/ui/connectedSceneTopologyProjection.test.ts tests/ui/connectedSceneTopologyHostMutation.test.ts tests/ui/productionHostRemoteFixtureIdentityProjection.test.ts",
+        "npm run build"
+      ],
+      "windowsArtifacts": []
+    },
+    {
+      "id": "W6-08",
+      "title": "기존 Tauri H+P1 경로에서 지급·회수·Stash·Long Rest·handout 대표 flow를 검증한다. P2 observer parity의 최종 수락은 W9-02에서만 수행한다.",
+      "classification": "VERIFY_ONLY",
+      "scenarios": [
+        "MP-E01",
+        "MP-E02",
+        "MP-E03",
+        "MP-E04",
+        "MP-E05",
+        "MP-E06",
+        "MP-E07",
+        "MP-E08",
+        "MP-E09",
+        "MP-E10",
+        "MP-E11",
+        "MP-E12",
+        "MP-E13",
+        "MP-E14",
+        "MP-F01",
+        "MP-F02",
+        "MP-F03",
+        "MP-F04",
+        "MP-F05",
+        "MP-F06",
+        "MP-F07",
+        "MP-F08",
+        "MP-F09",
+        "MP-F10",
+        "MP-G01",
+        "MP-G02",
+        "MP-G03",
+        "MP-G04",
+        "MP-G05",
+        "MP-G06",
+        "MP-G07",
+        "MP-G08",
+        "MP-G09"
+      ],
+      "issues": [],
+      "otherLinks": [
+        "Journey J5"
+      ],
+      "status": "PASS",
+      "lastVerifiedSha": "36a9848a025f078f60b956e05f3432cbf5b14da4",
+      "commands": [
+        "npm run test:e2e:tauri -- --w608",
+        "npm run build"
+      ],
+      "windowsArtifacts": [
+        "SimpleVTT-W6-08-Tauri-36a9848a025f078f60b956e05f3432cbf5b14da4 (artifact 9878842089, sha256:b44dfe4f486409522630c632819665cee4eccdab72077857838876a33ac747b9)"
+      ]
+    },
+    {
+      "id": "W7-01",
+      "title": "duplicate request/event batch/retry가 exactly-once로 처리된다.",
+      "classification": "REUSE_LOCKED",
+      "scenarios": [
+        "MP-H01",
+        "MP-H02",
+        "MP-H03"
+      ],
+      "issues": [],
+      "otherLinks": [],
+      "status": "PASS",
+      "lastVerifiedSha": "de59dd9898dd4cf4525082f0aa623e4a86cbd74d",
+      "commands": [
+        "GitHub Actions W7-01 AUTO Verification",
+        "npx tsx --test tests/ui/productionParticipantLifecycle.test.ts tests/ui/productionClientReconnect.test.ts tests/ui/connectedResolutionPresentation.test.ts tests/ui/connectedDurableFailure.test.ts",
+        "npm run build"
+      ],
+      "windowsArtifacts": []
+    },
+    {
+      "id": "W7-02",
+      "title": "reconnect·late join·presentation catch-up이 reroll 없이 복구된다.",
+      "classification": "REUSE_LOCKED",
+      "scenarios": [
+        "MP-H04",
+        "MP-H05",
+        "MP-H06",
+        "MP-H07",
+        "MP-H08"
+      ],
+      "issues": [],
+      "otherLinks": [],
+      "status": "PASS",
+      "lastVerifiedSha": "507459f208457e540beb19295dabb43e81f63b93",
+      "commands": [
+        "GitHub Actions W7-02 AUTO Verification",
+        "npx tsx --test tests/ui/productionClientReconnect.test.ts tests/ui/productionParticipantLifecycle.test.ts tests/ui/connectedResolutionPresentation.test.ts tests/ui/connectedTurnProjection.test.ts tests/ui/connectedDurableFailure.test.ts tests/ui/connectedOwnerInventoryRestart.test.ts tests/ui/connectedLongRestHostRestartRecovery.test.ts tests/ui/c9FamilyOReadyConcentrationProduction.test.ts tests/ui/phase09ManualMovementReactionAdapter.test.ts tests/ui/phase09ConcentrationSaveWorkflow.test.ts",
+        "npm run build"
+      ],
+      "windowsArtifacts": []
+    },
+    {
+      "id": "W7-03",
+      "title": "Host restart와 Session end 후 transient state가 되살아나지 않는다.",
+      "classification": "REUSE_LOCKED",
+      "scenarios": [
+        "MP-A08",
+        "MP-A09",
+        "MP-H01",
+        "MP-H02",
+        "MP-H03",
+        "MP-H04",
+        "MP-H05",
+        "MP-H06",
+        "MP-H07",
+        "MP-H08",
+        "MP-H09",
+        "MP-H10",
+        "MP-H11",
+        "MP-H12"
+      ],
+      "issues": [],
+      "otherLinks": [],
+      "status": "PASS",
+      "lastVerifiedSha": "570dfb517f2519d505ca99be30cd712ed379ed42",
+      "commands": [
+        "GitHub Actions W7-03 AUTO Verification",
+        "npx tsx --test tests/ui/productionSessionEnd.test.ts tests/ui/appProviderStopSessionRefresh.test.ts tests/ui/productionSessionLifecycleAdapter.test.ts tests/ui/productionParticipantLifecycle.test.ts tests/ui/connectedTurnProjection.test.ts tests/ui/connectedResolutionPresentation.test.ts tests/ui/connectedPartyStashApprovalOwnerTransfer.test.ts tests/ui/c9FamilyOReadyConcentrationProduction.test.ts",
+        "npm run build"
+      ],
+      "windowsArtifacts": []
+    },
+    {
+      "id": "W7-04",
+      "title": "owner writeback·Host Campaign write·partial persistence recovery를 고정한다.",
+      "classification": "REUSE_LOCKED",
+      "scenarios": [
+        "MP-B08",
+        "MP-H09",
+        "MP-H10",
+        "MP-H11",
+        "MP-H12"
+      ],
+      "issues": [],
+      "otherLinks": [],
+      "status": "PASS",
+      "lastVerifiedSha": "7d0bded27a624ed0d993d860cbd590262ed1f3a6",
+      "commands": [
+        "GitHub Actions W7-04 Recovery Prerequisite Verification",
+        "scripts/run-tauri-e2e.ps1 -Root . -W704"
+      ],
+      "windowsArtifacts": [
+        "W7-04-WIN-d1d77f722e10052b1c762fcad175b0dd119063b5 (artifact 9929514375, sha256:433555460dc9fb32161e4ca5d83b72fa8dcc6046bce4f149940293c9440688dd)",
+        "W7-04-WINDOWS-PREREQ-d1d77f722e10052b1c762fcad175b0dd119063b5 (artifact 9929720763, sha256:6ee9e64f693cb3f9d51b173186f13ccfe5e7c92792d4011c47be20cdca859156)",
+        "W7-04-AUTO-PREREQ-d1d77f722e10052b1c762fcad175b0dd119063b5 (artifact 9929435490, sha256:fbd3bbf0132a4e11a34a3bd3cd2a39bb054422c1ed78884fec3d02029e34e4e7)"
+      ]
+    },
+    {
+      "id": "W7-05",
+      "title": "DM-only/hidden/private payload·Activity·handout metadata가 누출되지 않는다.",
+      "classification": "REUSE_LOCKED",
+      "scenarios": [
+        "MP-B05",
+        "MP-B06",
+        "MP-B07"
+      ],
+      "issues": [
+        "MP-09"
+      ],
+      "otherLinks": [],
+      "status": "PENDING",
+      "lastVerifiedSha": null,
+      "commands": [],
+      "windowsArtifacts": []
+    },
+    {
+      "id": "W7-06",
+      "title": "protocol/rules/content/spatial capability mismatch가 명시적으로 차단된다.",
+      "classification": "REUSE_LOCKED",
+      "scenarios": [
+        "MP-A05",
+        "MP-G08",
+        "MP-G09"
+      ],
+      "issues": [],
+      "otherLinks": [],
+      "status": "PENDING",
+      "lastVerifiedSha": null,
+      "commands": [],
+      "windowsArtifacts": []
+    },
+    {
+      "id": "W7-07",
+      "title": "keyboard·screen reader·narrow desktop·Reduced Motion·correlated diagnostics를 고정한다.",
+      "classification": "REUSE_LOCKED",
+      "scenarios": [
+        "MP-I01",
+        "MP-I02",
+        "MP-I03",
+        "MP-I04",
+        "MP-I05",
+        "MP-I06"
+      ],
+      "issues": [
+        "MP-10"
+      ],
+      "otherLinks": [],
+      "status": "PENDING",
+      "lastVerifiedSha": null,
+      "commands": [],
+      "windowsArtifacts": []
+    },
+    {
+      "id": "W7-08",
+      "title": "focused Tauri/Windows 경로에서 disconnect·restart·failure·privacy·accessibility 대표 case를 검증하고, 3/4창 comprehensive case는 W9-02에만 배치한다.",
+      "classification": "VERIFY_ONLY",
+      "scenarios": [],
+      "issues": [
+        "MP-08",
+        "MP-09",
+        "MP-10"
+      ],
+      "otherLinks": [],
+      "status": "PENDING",
+      "lastVerifiedSha": null,
+      "commands": [],
+      "windowsArtifacts": []
+    },
+    {
+      "id": "W8-01",
+      "title": "기존 실제 Tauri H+P1 2창 smoke와 GP/Stash UI assertion을 보존한다.",
+      "classification": "REUSE_LOCKED",
+      "scenarios": [
+        "MP-E08",
+        "MP-J05"
+      ],
+      "issues": [],
+      "otherLinks": [],
+      "status": "PENDING",
+      "lastVerifiedSha": null,
+      "commands": [],
+      "windowsArtifacts": []
+    },
+    {
+      "id": "W8-02",
+      "title": "기존 하네스를 H+P1+P2와 선택적 P3 orchestration으로 확장한다.",
+      "classification": "BUILD",
+      "scenarios": [],
+      "issues": [
+        "MP-11"
+      ],
+      "otherLinks": [],
+      "status": "PENDING",
+      "lastVerifiedSha": null,
+      "commands": [],
+      "windowsArtifacts": []
+    },
+    {
+      "id": "W8-03",
+      "title": "120 scenario의 AUTO/STRUCTURE/WIN 요구와 정확한 테스트·artifact를 machine-readable map으로 만든다.",
+      "classification": "BUILD",
+      "scenarios": [],
+      "issues": [
+        "MP-11",
+        "MP-13"
+      ],
+      "otherLinks": [],
+      "status": "PENDING",
+      "lastVerifiedSha": null,
+      "commands": [],
+      "windowsArtifacts": []
+    },
+    {
+      "id": "W8-04",
+      "title": "exact SHA에서 external content importer focused suite를 포함한 focused suites·connected full regression·TypeScript·Vite·Rust/Tauri·production build를 실행한다.",
+      "classification": "VERIFY_ONLY",
+      "scenarios": [],
+      "issues": [
+        "MP-11"
+      ],
+      "otherLinks": [
+        "V1-60"
+      ],
+      "status": "PENDING",
+      "lastVerifiedSha": null,
+      "commands": [],
+      "windowsArtifacts": []
+    },
+    {
+      "id": "W9-01",
+      "title": "기존 release build 경로를 사용해 동일 SHA의 production Windows `SimpleVTT.exe`와 digest를 생성한다.",
+      "classification": "BUILD",
+      "scenarios": [],
+      "issues": [],
+      "otherLinks": [
+        "V1-70",
+        "V1-80"
+      ],
+      "status": "PENDING",
+      "lastVerifiedSha": null,
+      "commands": [],
+      "windowsArtifacts": []
+    },
+    {
+      "id": "W9-02",
+      "title": "모든 적용 가능한 WIN scenario를 H/P1/P2, 필요 시 P3에서 실행하고 캡처한다.",
+      "classification": "BUILD",
+      "scenarios": [],
+      "issues": [
+        "MP-12",
+        "MP-13"
+      ],
+      "otherLinks": [],
+      "status": "PENDING",
+      "lastVerifiedSha": null,
+      "commands": [],
+      "windowsArtifacts": []
+    },
+    {
+      "id": "W9-03",
+      "title": "Zero-to-Next-Session golden journey를 통과한다: first run → external content import/activate → imported Background/Subclass를 사용한 Character → Campaign → imported executable feature를 포함한 full Session → restart → Session 2 action.",
+      "classification": "BUILD",
+      "scenarios": [],
+      "issues": [],
+      "otherLinks": [
+        "legacy Journey J1~J9"
+      ],
+      "status": "PENDING",
+      "lastVerifiedSha": null,
+      "commands": [],
+      "windowsArtifacts": []
+    },
+    {
+      "id": "W9-04",
+      "title": "exact-SHA evidence bundle·issue closure·clean tree·canonical update 후 V1을 선언한다.",
+      "classification": "BUILD",
+      "scenarios": [],
+      "issues": [],
+      "otherLinks": [
+        "#110",
+        "V1-80"
+      ],
+      "status": "PENDING",
+      "lastVerifiedSha": null,
+      "commands": [],
+      "windowsArtifacts": []
+    }
+  ]
+}

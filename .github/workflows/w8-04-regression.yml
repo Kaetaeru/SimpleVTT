@@ -1,0 +1,127 @@
+name: W8-04 Exact-SHA Regression
+
+on:
+  pull_request:
+    branches:
+      - work/v1-composite
+    paths:
+      - '.github/workflows/w8-04-regression.yml'
+      - 'src/**'
+      - 'src-tauri/**'
+      - 'tests/**'
+      - 'content/**'
+      - 'scripts/**'
+      - 'package.json'
+      - 'package-lock.json'
+  push:
+    branches:
+      - work/v1-composite
+    paths:
+      - '.github/workflows/w8-04-regression.yml'
+      - 'src/**'
+      - 'src-tauri/**'
+      - 'tests/**'
+      - 'content/**'
+      - 'scripts/**'
+      - 'package.json'
+      - 'package-lock.json'
+  workflow_dispatch:
+
+env:
+  V1_VERIFICATION_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
+permissions:
+  contents: read
+
+jobs:
+  typescript-vite-focused:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run generate:content
+      - name: TypeScript
+        run: npx tsc --noEmit
+      - name: Connected full regression
+        shell: bash
+        run: |
+          set -o pipefail
+          npx tsx --test tests/ui/connectedSessionProtocol.test.ts tests/ui/connectedSessionWire.test.ts tests/ui/connectedActionReservation.test.ts tests/ui/connectedDurableFailure.test.ts tests/ui/realEventApplyService.test.ts tests/ui/connectedCorrectionApply.test.ts tests/ui/connectedSessionRuntimeAdapter.test.ts tests/ui/connectedTwoPeerResolution.test.ts tests/ui/connectedTurnProjection.test.ts tests/ui/connectedReadyActionProjection.test.ts tests/ui/readyActionActorState.test.ts tests/ui/twoInstanceAcceptanceLauncherStructure.test.ts tests/ui/standardActionLifecycle.test.ts tests/ui/connectedAttackEventCapture.test.ts tests/ui/connectedProjectedCharacterInventoryResolution.test.ts tests/ui/connectedProjectedCharacterCunningDashResolution.test.ts tests/ui/connectedProjectedCharacterCunningDisengageResolution.test.ts tests/ui/connectedProjectedCharacterCunningHideResolution.test.ts tests/ui/connectedProjectedCharacterUncannyDodgeResolution.test.ts tests/ui/connectedProjectedCharacterBerserkerIntimidatingPresenceResolution.test.ts tests/ui/connectedProjectedCharacterWholenessResolution.test.ts tests/ui/connectedProjectedCharacterFleetStepResolution.test.ts tests/ui/connectedProjectedCharacterHolyNimbusResolution.test.ts tests/ui/connectedProjectedCharacterQuiveringPalmResolution.test.ts tests/ui/connectedProjectedCharacterSmiteOfProtectionResolution.test.ts tests/ui/connectedProjectedCharacterDarkOnesOwnLuckResolution.test.ts tests/ui/connectedProjectedCharacterPeerlessSkillResolution.test.ts tests/ui/connectedProjectedCharacterRageResolution.test.ts tests/ui/connectedProjectedCharacterWildShapeResolution.test.ts tests/ui/connectedProjectedCharacterSpellResolution.test.ts tests/ui/connectedProjectedCharacterSkillResolution.test.ts tests/ui/productionSessionLifecycleAdapter.test.ts tests/ui/productionReadyStartSafety.test.ts tests/ui/productionParticipantLifecycle.test.ts tests/ui/productionClientReconnect.test.ts tests/ui/productionHelloReplayIdempotency.test.ts tests/ui/productionSessionEnd.test.ts tests/ui/sessionImageHandoutRuntimeAdapter.test.ts | tee /tmp/w8-04-connected.tap
+      - name: Connected UI, Campaign rest, and V1 mechanism coverage suites
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run test:connected-ui 2>&1 | tee /tmp/w8-04-connected-ui.log
+          npm run test:campaign-rest 2>&1 | tee /tmp/w8-04-campaign-rest.log
+          npm run test:v1-coverage 2>&1 | tee /tmp/w8-04-v1-coverage.log
+      - name: External content importer focused suite
+        shell: bash
+        run: |
+          set -o pipefail
+          npx tsx --test tests/ui/externalContentGoldenModule.test.ts tests/ui/installedContentModuleActivation.test.ts tests/ui/installedProgressionContributionRuntime.test.ts tests/ui/ruleModulePackageImport.test.ts tests/ui/installedContentPersistence.test.ts tests/ui/installedContentRuntimeAdapter.test.ts | tee /tmp/w8-04-importer.tap
+      - name: Focused suites and Vite production build
+        run: npm run build
+      - name: Record exact-SHA evidence
+        shell: bash
+        run: |
+          {
+            echo "W8-04 Exact-SHA Regression (TypeScript/Vite/focused)"
+            echo "checkout_sha=${GITHUB_SHA}"
+            echo "verification_sha=${{ env.V1_VERIFICATION_SHA }}"
+            echo "head_sha=${{ github.event.pull_request.head.sha }}"
+            echo "base_sha=${{ github.event.pull_request.base.sha }}"
+            echo "connected_pass=$(grep -c '^ok ' /tmp/w8-04-connected.tap || true)"
+            echo "importer_pass=$(grep -c '^ok ' /tmp/w8-04-importer.tap || true)"
+            echo "scenario_mapping=V1-60, MP-11 (AUTO); importer closure slice (W8-04 + W9-03)"
+          } > /tmp/w8-04-evidence.txt
+      - name: Upload W8-04 AUTO evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: W8-04-AUTO-${{ env.V1_VERIFICATION_SHA }}
+          path: |
+            /tmp/w8-04-*.tap
+            /tmp/w8-04-*.log
+            /tmp/w8-04-evidence.txt
+            docs/roadmap/V1_EVIDENCE_LEDGER.json
+          if-no-files-found: error
+
+  rust-tauri:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - run: npm ci --no-audit --no-fund
+      - run: npm run generate:content
+      - name: Rust library tests
+        shell: pwsh
+        run: cargo test --manifest-path src-tauri/Cargo.toml --lib
+      - name: Tauri production build
+        shell: pwsh
+        run: npm run tauri:build
+      - name: Record exact-SHA Rust/Tauri evidence
+        shell: pwsh
+        run: |
+          $exe = Resolve-Path 'src-tauri/target/release/simplevtt.exe' -ErrorAction Stop
+          $hash = Get-FileHash -Algorithm SHA256 $exe
+          @(
+            'W8-04 Exact-SHA Regression (Rust/Tauri)',
+            "checkout_sha=$env:GITHUB_SHA",
+            "verification_sha=${{ env.V1_VERIFICATION_SHA }}",
+            "release_exe_sha256=$($hash.Hash.ToLower())"
+          ) | Set-Content -Encoding utf8 "$env:RUNNER_TEMP\w8-04-rust-tauri-evidence.txt"
+      - name: Upload W8-04 Rust/Tauri evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: W8-04-RUST-TAURI-${{ env.V1_VERIFICATION_SHA }}
+          path: ${{ runner.temp }}/w8-04-rust-tauri-evidence.txt
+          if-no-files-found: error

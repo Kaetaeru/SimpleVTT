@@ -9,13 +9,13 @@ This handoff is subordinate to live GitHub state, `CANONICAL_ROOT.md`, `docs/CUR
 ```text
 Integration branch: work/v1-composite
 W0-W6: COMPLETE
-W7: 4/8 PASS — IN PROGRESS
-Official ledger score: 80.0/100.0
-PASS: 60/72
-PENDING: 12/72
+W7: 6/8 PASS — IN PROGRESS
+Official ledger score: 82.5/100.0
+PASS: 62/72
+PENDING: 10/72
 FAIL: 0
 BLOCKED: 0
-Next exact Gate: W7-05
+Next exact Gate: W7-05 closure (PR #321 Windows evidence), then W7-08
 ```
 
 ## Last closed Gate — W7-04
