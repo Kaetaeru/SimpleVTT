@@ -53,9 +53,9 @@ Existing automated verification: productionPlayWorkspaceAccessibility, sessionRe
 Existing Tauri/Windows evidence: none for W7-07; the Windows representative accessibility case is routed to W7-08 by the roadmap.
 Exact observed failure: on the integration HEAD after PR #319 the result layer announces actor·action, outcome/total, and state summary but never the target names or authoritative dice faces, so MP-I02's single coherent announcement cannot be produced by any existing element.
 Smallest authorized change: add one visually-hidden sentence inside the existing status live region (both active and passive-remote variants) composed only from the ResolutionView already rendered, and mark the visible copy aria-hidden so it is not read twice. No new component, store, or presentation path.
-Verification SHA: PENDING (branch agent/w7-06-07-capability-accessibility-auto from 1fa84f7a5c2a4c2b).
+Verification SHA: 196266567ad61506f80d359d60224c6f8be6f186 (merge of PR #323 into work/v1-composite).
 Verification: sessionResolutionAnnouncementStructure.test.ts pins the seam; W7-07 AUTO workflow records the exact-SHA run.
 Artifact: W7-07-AUTO-<verification sha>.
-Closure: W7-07 remains PENDING until the W7-07 AUTO run (both jobs) passes on one integration-derived SHA and is recorded in V1_EVIDENCE_LEDGER.json.
+Closure: W7-07 is PASS — run 33873613866 (verify 38/38, transport-intake 2/2, production build) recorded in V1_EVIDENCE_LEDGER.json.
 ```
 
