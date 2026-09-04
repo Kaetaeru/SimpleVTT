@@ -67,6 +67,9 @@ test("live Host accepts a durable-rehydrated projected Character after physical 
     remoteSheet.id="char.w704.process-reconnect";
     remoteSheet.name="W7-04 Process Reconnect";
     remoteSheet.saveState="saved";
+    remoteSheet.items=[];
+    remoteSheet.equipment=[];
+    remoteSheet.attacks=[];
     remoteSheet.sourceRevision=1;
     remoteSheet.runtimeRevision=1;
     const manifest=connectedManifest(host);
