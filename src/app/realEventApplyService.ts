@@ -1,6 +1,6 @@
 import "./lifeRuntimeContracts";
 import type { CharacterResourceVm, ItemInstanceVm, SceneVm } from "./contracts";
-import { cloneRuntimeState, type RulesRuntimeState } from "../domain/combatState";
+import { cloneRuntimeState, type CombatantRuntimeState, type RulesRuntimeState } from "../domain/combatState";
 import type { ResolutionEvent } from "../domain/resolutionTypes";
 import type { RuntimeStateChange } from "../domain/runtimeStateChange";
 
@@ -41,6 +41,29 @@ function deepEquals(left:unknown,right:unknown):boolean {
   const rightKeys=Object.keys(rightRecord).filter((key)=>rightRecord[key]!==undefined).sort();
   if (leftKeys.length!==rightKeys.length || leftKeys.some((key,index)=>key!==rightKeys[index])) return false;
   return leftKeys.every((key)=>deepEquals(leftRecord[key],rightRecord[key]));
+}
+
+/**
+ * Options for applying host-authoritative events on a peer whose `resources`/`items` belong to one
+ * owner Character. Without `ownerId` every resource/item change is matched against the supplied
+ * arrays by id alone (the local-play contract, where the arrays are the acting Character's).
+ */
+export interface ResolutionEventApplyOptions {
+  /** The Character whose resources/items were supplied; changes for other targets never touch them. */
+  ownerId?:string;
+}
+
+function ownerScoped(change:RuntimeStateChange,options?:ResolutionEventApplyOptions) {
+  if (!options?.ownerId) return true;
+  if (change.kind!=="resource" && change.kind!=="inventory-item") return true;
+  return change.targetId===options.ownerId;
+}
+
+/** A remote target's runtime resource that this replica has not seen yet is seeded from the authoritative event. */
+function seedsRemoteResource(runtimeState:RulesRuntimeState|undefined,change:RuntimeStateChange,options?:ResolutionEventApplyOptions) {
+  if (!options?.ownerId || !runtimeState || change.kind!=="resource" || change.targetId===options.ownerId || itemResource(change.resourceId)) return false;
+  const combatant=runtimeState.combatants[change.targetId];
+  return Boolean(combatant) && !combatant.resources.some((entry)=>entry.id===change.resourceId);
 }
 
 function appCurrentValue(scene:SceneVm,resources:CharacterResourceVm[],items:ItemInstanceVm[],change:RuntimeStateChange):ReadValue {
@@ -230,7 +253,12 @@ function applyRuntimeChange(runtimeState:RulesRuntimeState,change:RuntimeStateCh
   }
   if (change.kind==="resource") {
     if (itemResource(change.resourceId)) return;
-    const resource=combatant.resources.find((entry)=>entry.id===change.resourceId);
+    let resource=combatant.resources.find((entry)=>entry.id===change.resourceId);
+    if (!resource && change.createdResource===undefined) {
+      const seeded={id:change.resourceId,label:change.resourceId,current:change.before,maximum:change.capacity?.before.maximum??Math.max(change.before,change.after),...(change.capacity?.before.maximumAfterLongRest!==null&&change.capacity?.before.maximumAfterLongRest!==undefined?{maximumAfterLongRest:change.capacity.before.maximumAfterLongRest}:{})} as CombatantRuntimeState["resources"][number];
+      combatant.resources.push(seeded);
+      resource=seeded;
+    }
     if (resource) {
       resource.current=change.after;
       if (change.capacity) {
@@ -268,14 +296,15 @@ function validate(
   items:ItemInstanceVm[],
   changes:RuntimeStateChange[],
   runtimeState?:RulesRuntimeState,
+  options?:ResolutionEventApplyOptions,
 ) {
   const probeScene=structuredClone(scene);
   const probeResources=structuredClone(resources);
   const probeItems=structuredClone(items);
   const probeRuntime=runtimeState ? cloneRuntimeState(runtimeState) : undefined;
   for (const change of changes) {
-    const app=appCurrentValue(probeScene,probeResources,probeItems,change);
-    const runtime=probeRuntime ? runtimeCurrentValue(probeRuntime,change) : missing();
+    const app=ownerScoped(change,options) ? appCurrentValue(probeScene,probeResources,probeItems,change) : missing();
+    const runtime=probeRuntime ? (seedsRemoteResource(probeRuntime,change,options) ? found(change.before) : runtimeCurrentValue(probeRuntime,change)) : missing();
     if (runtimeOnly(change) && !probeRuntime) return `event-native apply requires runtime state for ${change.kind}`;
     if (!app.found && !runtime.found) return `event-native apply target is missing: ${change.targetId}/${changeField(change)}`;
     if (app.found && !deepEquals(app.value,change.before)) {
@@ -350,9 +379,10 @@ export function applyResolutionEvents(
   resources:CharacterResourceVm[] = [],
   items:ItemInstanceVm[] = [],
   runtimeState?:RulesRuntimeState,
+  options?:ResolutionEventApplyOptions,
 ):ResolutionEventApplyResult {
   const changes=events.flatMap((event)=>event.stateChanges);
-  const error=validate(scene,resources,items,changes,runtimeState);
+  const error=validate(scene,resources,items,changes,runtimeState,options);
   if (error) return { status:"rejected",error };
   const nextScene=structuredClone(scene);
   const nextResources=structuredClone(resources);
@@ -360,8 +390,8 @@ export function applyResolutionEvents(
   const nextRuntimeState=runtimeState ? cloneRuntimeState(runtimeState) : undefined;
   const labels:string[]=[];
   for (const change of changes) {
-    const app=appCurrentValue(nextScene,nextResources,nextItems,change);
-    const runtime=nextRuntimeState ? runtimeCurrentValue(nextRuntimeState,change) : missing();
+    const app=ownerScoped(change,options) ? appCurrentValue(nextScene,nextResources,nextItems,change) : missing();
+    const runtime=nextRuntimeState ? (seedsRemoteResource(nextRuntimeState,change,options) ? found(change.before) : runtimeCurrentValue(nextRuntimeState,change)) : missing();
     if (app.found) applyAppChange(nextScene,nextResources,nextItems,change);
     if (nextRuntimeState && runtime.found) applyRuntimeChange(nextRuntimeState,change);
     labels.push(applyLabel(change));

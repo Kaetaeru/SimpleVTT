@@ -72,7 +72,8 @@ export function connectedInternal(adapter:MockAdapter) {
 function applyConnectedResolutionEvents(adapter:MockAdapter,events:ResolutionEvent[]) {
   const app=connectedInternal(adapter);
   const runtime=ensureAdapterTurnRuntimeState(adapter,app.scene);
-  const projected=applyResolutionEvents(app.scene,events,app.activeCharacter.resources,app.activeCharacter.items,runtime);
+  // The supplied resources/items belong to this peer's own Character; a remote target's resource change must land on that target's runtime combatant, never on a same-id local resource.
+  const projected=applyResolutionEvents(app.scene,events,app.activeCharacter.resources,app.activeCharacter.items,runtime,{ownerId:app.activeCharacter.id});
   if(projected.status==="rejected"||!projected.runtimeState)return projected;
   if(projected.runtimeState.revision!==runtime.revision&&!commitAdapterTurnRuntimeState(adapter,projected.scene,runtime.revision,projected.runtimeState))return {status:"rejected" as const,error:"connected runtime revision changed before event apply"};
   return projected;
