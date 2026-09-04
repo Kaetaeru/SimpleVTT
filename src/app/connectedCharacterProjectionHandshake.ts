@@ -57,7 +57,7 @@ function firstMismatchPath(left:unknown,right:unknown,path=""):string|undefined 
       const mismatch=firstMismatchPath(left[index],right[index],`${path}[${index}]`);
       if (mismatch) return mismatch;
     }
-    return path || "projection";
+    return undefined;
   }
   if (left!==null && right!==null && typeof left==="object" && typeof right==="object") {
     const leftRecord=left as Record<string,unknown>;
@@ -69,7 +69,7 @@ function firstMismatchPath(left:unknown,right:unknown,path=""):string|undefined 
       const mismatch=firstMismatchPath(leftRecord[key],rightRecord[key],childPath);
       if (mismatch) return mismatch;
     }
-    return path || "projection";
+    return undefined;
   }
   return path || "projection";
 }
