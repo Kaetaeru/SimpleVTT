@@ -1,0 +1,68 @@
+name: V1 Release Artifact
+
+on:
+  push:
+    branches:
+      - work/v1-composite
+    paths:
+      - 'src/**'
+      - 'src-tauri/**'
+      - 'content/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/v1-release-artifact.yml'
+  workflow_dispatch:
+
+env:
+  V1_VERIFICATION_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
+permissions:
+  contents: read
+
+jobs:
+  windows-release:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - run: npm ci --no-audit --no-fund
+      - run: npm run generate:content
+      - name: Rust persistence and transport library tests
+        shell: pwsh
+        run: cargo test --manifest-path src-tauri/Cargo.toml --lib
+      - name: Build production Windows application (W9-01 release path)
+        shell: pwsh
+        run: npm run tauri:build
+      - name: Record exact-SHA release executable digest
+        shell: pwsh
+        run: |
+          $exe = Resolve-Path 'src-tauri/target/release/simplevtt.exe' -ErrorAction Stop
+          $hash = Get-FileHash -Algorithm SHA256 $exe
+          $bundles = Get-ChildItem -Path 'src-tauri/target/release/bundle' -Recurse -File -ErrorAction SilentlyContinue | ForEach-Object { "bundle=$($_.FullName) sha256=$((Get-FileHash -Algorithm SHA256 $_.FullName).Hash.ToLower())" }
+          $lines = @(
+            'W9-01 V1 release artifact',
+            "checkout_sha=$env:GITHUB_SHA",
+            "verification_sha=${{ env.V1_VERIFICATION_SHA }}",
+            "event=${{ github.event_name }}",
+            "ref=${{ github.ref }}",
+            "release_exe=$($exe.Path)",
+            "release_exe_sha256=$($hash.Hash.ToLower())",
+            "release_exe_bytes=$((Get-Item $exe).Length)"
+          ) + $bundles
+          $lines | Set-Content -Encoding utf8 "$env:RUNNER_TEMP\v1-release-evidence.txt"
+          Get-Content "$env:RUNNER_TEMP\v1-release-evidence.txt"
+      - name: Upload V1 release artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SimpleVTT-V1-RELEASE-${{ env.V1_VERIFICATION_SHA }}
+          path: |
+            ${{ runner.temp }}/v1-release-evidence.txt
+            src-tauri/target/release/simplevtt.exe
+            src-tauri/target/release/bundle/**
+          if-no-files-found: error
+          retention-days: 90
