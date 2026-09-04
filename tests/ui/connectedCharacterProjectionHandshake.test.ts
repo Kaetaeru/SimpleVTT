@@ -105,7 +105,10 @@ test("reconnect rejects source/content drift even if the client reuses the old s
   drifted.source.name="Changed Without Source Revision";
   const rejected=acceptHostCharacterSessionProjection(adapter,"peer.new",manifest(sheet),drifted);
   assert.equal(rejected.status,"rejected");
-  if (rejected.status==="rejected") assert.match(rejected.error,/source\/content changed/);
+  if (rejected.status==="rejected") {
+    assert.match(rejected.error,/source\/content changed/);
+    assert.match(rejected.error,/\(source\.name\)$/);
+  }
 });
 
 test("host-known permanent Character keeps the Phase 12 path and does not require a projection", () => {
