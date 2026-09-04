@@ -661,6 +661,7 @@ export interface SimpleVttAdapter {
   previewContentImport(payload: string): Promise<AppSnapshot>;
   activateContentImport(): Promise<AppSnapshot>;
   clearContentImport(): Promise<AppSnapshot>;
+  uninstallContentSource(sourceId: string): Promise<AppSnapshot>;
   previewCombatantImport(payload: string): Promise<AppSnapshot>;
   activateCombatantImport(): Promise<AppSnapshot>;
   clearCombatantImport(): Promise<AppSnapshot>;

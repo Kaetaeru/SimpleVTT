@@ -1,10 +1,11 @@
 import { lowerAllCommonPlayEntryPoints, parseCommonPlayDefinition, validateCommonPlayCapabilities } from "../domain/commonPlayDefinitionRuntime";
 import type { CatalogEntry, ContentImportPreview, ValidationMessage } from "./contracts";
 import { parseInstalledCampaignProviderProfile } from "./campaignProviderProfiles";
+import { parseInstalledBackgroundDefinition } from "./installedBackgroundDefinition";
 import type {
   InstalledCatalogEntryV1,
-  InstalledCommonPlayMechanicV1,
   InstalledContentRelationshipV1,
+  InstalledMechanicV1,
   InstalledModuleExtensionPointV1,
   InstalledModuleManifestV1,
   InstalledModuleRefV1,
@@ -59,7 +60,7 @@ function semanticRelationships(value:unknown,label:string):InstalledContentRelat
     };
   });
 }
-function portableMechanics(value:unknown,label:string,availableCapabilities:Iterable<string>):InstalledCommonPlayMechanicV1[] {
+function portableMechanics(value:unknown,label:string,availableCapabilities:Iterable<string>,category:InstalledCatalogEntryV1["category"]):InstalledMechanicV1[] {
   if (value===undefined) return [];
   if (!Array.isArray(value)) throw new Error(`${label} must be an array`);
   return value.map((item,index)=>{
@@ -67,6 +68,10 @@ function portableMechanics(value:unknown,label:string,availableCapabilities:Iter
     const mechanic=object(item,mechanicLabel);
     const unsupported=Object.keys(mechanic).filter((key)=>key!=="kind"&&key!=="config");
     if (unsupported.length) throw new Error(`${mechanicLabel} contains unsupported fields: ${unsupported.join(", ")}`);
+    if (mechanic.kind==="background-definition") {
+      if (category!=="background") throw new Error(`${mechanicLabel} background-definition is only valid on background content`);
+      return {kind:"background-definition",config:parseInstalledBackgroundDefinition(mechanic.config,`${mechanicLabel}.config`)};
+    }
     if (mechanic.kind!=="common-play") {
       throw new Error(`${label} cannot be activated by the generic Catalog: unsupported mechanic kind ${String(mechanic.kind)}`);
     }
@@ -191,7 +196,7 @@ export function parseRuleModulePackage(payload:string):ParsedRuleModulePackage {
     const category=categoryRaw as InstalledCatalogEntryV1["category"];
     const present=presentation(value.presentation,defaultLocale,`content[${index}]`);
     const relations=semanticRelationships(value.relationships,`content[${index}].relationships`);
-    const mechanics=portableMechanics(value.mechanics,`content[${index}].mechanics`,module.capabilities);
+    const mechanics=portableMechanics(value.mechanics,`content[${index}].mechanics`,module.capabilities,category);
     const contributions=progressionContributions(value.progressionContributions,`content[${index}].progressionContributions`);
     const campaignProvider=value.campaignProvider===undefined?undefined:parseInstalledCampaignProviderProfile(value.campaignProvider);
     return {

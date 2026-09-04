@@ -68,7 +68,7 @@ function speciesOption(entry: Entry): Option {
   const grants = [...(def.size?.length ? [`크기 ${def.size.join(" / ")}`] : []), ...(def.speed ? [`이동 ${def.speed} ft`] : []), ...(def.darkvision ? [`암시야 ${def.darkvision} ft`] : []), ...(def.traits ?? []).slice(0, 3).map((value) => pretty(value))];
   return opt(entry.id, ko(entry), entry.presentation.originalName, summary(entry), grants, Object.keys(def.choices ?? {}).map((value) => `선택 · ${pretty(value)}`));
 }
-function backgroundOption(entry: Entry): Option {
+export function backgroundOption(entry: Entry): Option {
   const def = cfg<BackgroundDef>(entry, "background-definition") ?? {};
   const grants = [...(def.skills?.map((value) => `${SKILL_LABELS[value] ?? value} 숙련`) ?? []), ...(def.originFeat ? [`Origin Feat · ${pretty(def.originFeat)}`] : []), ...((def.tool || def.toolChoice) ? [`도구 · ${pretty(def.tool ?? def.toolChoice!)}`] : [])];
   const choices = [...(def.abilityIncreaseModes?.map((value) => `능력치 증가 ${value}`) ?? []), ...(def.equipmentChoice ? ["시작 장비 또는 시작 금화"] : [])];

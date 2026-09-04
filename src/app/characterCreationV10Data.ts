@@ -19,7 +19,7 @@ import booksJson from "../../content/modules/dnd-srd-5.2.1.equipment-books/modul
 import packsJson from "../../content/modules/dnd-srd-5.2.1.equipment-packs/module.json";
 import utilityJson from "../../content/modules/dnd-srd-5.2.1.equipment-starting-utility/module.json";
 import toolsJson from "../../content/modules/dnd-srd-5.2.1.equipment-tools/module.json";
-import { BACKGROUNDS, CLASSES, FIGHTER, SPECIES, opt, type Option } from "./srdCatalogBridge";
+import { BACKGROUNDS, CLASSES, FIGHTER, SPECIES, backgroundOption, opt, type Option } from "./srdCatalogBridge";
 
 export { BACKGROUNDS, CLASSES, FIGHTER, SPECIES, opt, type Option };
 
@@ -90,15 +90,22 @@ const itemById = new Map(itemEntries.map((entry) => [entry.id, entry]));
 const classById = new Map(classEntries.map((entry) => [entry.id, entry]));
 const speciesEntries = originEntries.filter((entry) => entry.category === "species");
 const backgroundEntries = originEntries.filter((entry) => entry.category === "background");
+// Backgrounds contributed by installed RuleModules join the builtin list at runtime; the installed-content owner replaces this list on every composition.
+const installedBackgroundEntries: Entry[] = [];
+export function setInstalledBackgroundEntries(entries: Entry[]) {
+  installedBackgroundEntries.splice(0, installedBackgroundEntries.length, ...entries);
+}
+const allBackgroundEntries = () => [...backgroundEntries, ...installedBackgroundEntries];
+export const backgroundOptions = (): Option[] => [...BACKGROUNDS, ...installedBackgroundEntries.map((entry) => backgroundOption(entry as Parameters<typeof backgroundOption>[0]))];
 const EMPTY_ENTRY: Entry = { id:"__empty__", category:"", presentation:{ originalName:"", locales:{} }, mechanics:[] };
 
 export const classIdFromName = (name: string) => CLASSES.find((entry) => entry.name === name || entry.nameEn === name || entry.id === name)?.id ?? "dnd.srd521.class.fighter";
 export const speciesIdFromName = (name: string) => speciesEntries.find((entry) => entryName(entry) === name || entry.presentation.originalName === name || entry.id === name)?.id ?? "";
-export const backgroundIdFromName = (name: string) => backgroundEntries.find((entry) => entryName(entry) === name || entry.presentation.originalName === name || entry.id === name)?.id ?? "";
+export const backgroundIdFromName = (name: string) => allBackgroundEntries().find((entry) => entryName(entry) === name || entry.presentation.originalName === name || entry.id === name)?.id ?? "";
 export const classSemantics = (classId: string): IndexedClassSemantics => INDEX.classes[classId] ?? { skills: { count: 0, options: [] }, choices: [] };
 export const classDefinition = (classId: string) => config<ClassDef>(classById.get(classId) ?? EMPTY_ENTRY, "class-definition");
 export const speciesDefinition = (name: string) => config<SpeciesDef>(speciesEntries.find((entry) => entryName(entry) === name) ?? EMPTY_ENTRY, "species-definition") ?? {};
-export const backgroundDefinition = (name: string) => config<BackgroundDef>(backgroundEntries.find((entry) => entryName(entry) === name) ?? EMPTY_ENTRY, "background-definition") ?? {};
+export const backgroundDefinition = (name: string) => config<BackgroundDef>(allBackgroundEntries().find((entry) => entryName(entry) === name) ?? EMPTY_ENTRY, "background-definition") ?? {};
 export const speciesTraits = (name: string) => speciesDefinition(name).traits ?? [];
 export const speciesSemantics = (name: string): IndexedSpeciesSemantics => INDEX.species?.[speciesIdFromName(name)] ?? {};
 

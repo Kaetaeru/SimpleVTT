@@ -1,3 +1,4 @@
+import { commonPlayMechanicsOf } from "./installedContentContracts";
 import type { AppSnapshot, ResolutionView, SceneVm } from "./contracts";
 import { catalogQualifiedId } from "./contentCatalogIdentity";
 import { requiredSessionInstalledContent } from "./installedContentRuntimeAdapter";
@@ -30,7 +31,7 @@ async function installedSelector(adapter:MockAdapter,actionId:string) {
   if(!reference) return undefined;
   const entries=await requiredSessionInstalledContent(adapter,[]);
   const entry=entries.find((candidate)=>catalogQualifiedId(candidate.contentId,candidate.sourceId,candidate.version)===reference.catalogId);
-  const mechanic=entry?.mechanics?.find((candidate)=>candidate.kind==="common-play"&&candidate.config.id===reference.mechanicId);
+  const mechanic=commonPlayMechanicsOf(entry?.mechanics).find((candidate)=>candidate.config.id===reference.mechanicId);
   const point=mechanic?.config.entryPoints?.find((candidate)=>candidate.id===reference.entryPointId);
   return point?{selector:richTargetSelector(point.targeting),actorId:runtimeReference?.actorId}:undefined;
 }
