@@ -195,6 +195,15 @@ function resolveKnownFeatureIdentities(source:CharacterSourceSnapshotV1,catalog:
     const identity=entryIdentity(matches[0]);
     identities.set(identity.qualifiedId,identity);
   }
+  // Installed progression grants (e.g. an imported Subclass feature) are executable content the Host must pin by qualified identity, exactly like subclass features.
+  for (const grantId of source.progression.installedProgressionGrantIds ?? []) {
+    if (!grantId.trim()) continue;
+    const matches=resolvedCatalog.filter((entry)=>(entry.category==="option"||entry.category==="feat")&&matchesToken(entry,grantId));
+    if (matches.length>1) throw new Error(`ambiguous canonical content for installed progression grant: ${grantId}`);
+    if (matches.length===0) continue;
+    const identity=entryIdentity(matches[0]);
+    identities.set(identity.qualifiedId,identity);
+  }
   return [...identities.values()].sort((left,right)=>left.qualifiedId.localeCompare(right.qualifiedId,"en"));
 }
 

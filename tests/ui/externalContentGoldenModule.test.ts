@@ -2,6 +2,13 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import "../../src/app/offlineRuntimeAdapters";
+import "../../src/app/connectedSessionRuntimeAdapter";
+import "../../src/app/connectedActionRoutingAdapter";
+import { buildCharacterSessionProjectionV1 } from "../../src/app/characterSessionProjection";
+import { acceptHostCharacterSessionProjection } from "../../src/app/connectedCharacterProjectionHandshake";
+import { projectedCharacterById } from "../../src/app/characterSessionProjectionRegistry";
+import { CONNECTED_CAPABILITIES } from "../../src/app/connectedSessionRuntimeAdapter";
+import type { CharacterSheet } from "../../src/app/contracts";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import { MemoryInstalledContentStore } from "../../src/app/memoryInstalledContentStore";
 import { setInstalledContentStoreForTests } from "../../src/app/installedContentRuntimeAdapter";
@@ -214,6 +221,44 @@ test("golden module: the imported feat joins the Fighter 4 ability-score-or-feat
   assert.equal(snapshot.activeCharacter.level,4);
   assert.ok(snapshot.activeCharacter.features.includes(FEAT_NAME),JSON.stringify(snapshot.activeCharacter.features));
 });
+
+test("golden module: a projected player Character keeps its imported Subclass grant on the Host, which projects the imported feature for that scene actor",async()=>{
+  // Player peer: installs the module, builds the Character, takes the imported Subclass at Fighter 3.
+  const player=(await installGolden()).adapter;
+  await freshFighter(player,2);
+  // The reference sheet reuses the seeded id; a real player Character has its own durable id distinct from anything on the Host.
+  (player as unknown as {activeCharacter:CharacterSheet}).activeCharacter.id="char.golden-player";
+  const playerCommands=player as unknown as Phase07AdapterCommands;
+  const leveled=await levelUpOnce(player,async()=>{ await playerCommands.setProgressionChoice(FIGHTER_SUBCLASS_CHOICE_ID,{kind:"options",optionIds:[`installed-subclass:${SUBCLASS_ID}`]}); });
+  assert.ok(leveled.activeCharacter.installedProgressionGrantIds?.includes("feature.spellblade.arcane-strike"));
+  const sheet=(player as unknown as {activeCharacter:CharacterSheet}).activeCharacter;
+  // The seeded reference sheet carries demo items without trusted mechanic entries; a real Creator sheet would not. Keep the projection about class/subclass/grant content.
+  sheet.items=[];sheet.equipment=[];sheet.attacks=[];
+  const projection=buildCharacterSessionProjectionV1(sheet,leveled.catalog);
+  assert.ok(projection.contentIdentities.some((identity)=>identity.qualifiedId.endsWith("#feature.spellblade.arcane-strike")),"the projection pins the imported grant by qualified identity");
+  assert.ok(projection.contentIdentities.some((identity)=>identity.qualifiedId.endsWith("#subclass.spellblade")),"the projection pins the imported Subclass");
+
+  // DM Host: has the module installed, accepts the projection through the production handshake.
+  const host=(await installGolden()).adapter;
+  await host.setReferenceRole("dm");
+  const manifest={protocolVersion:1 as const,rulesProfileId:"dnd.srd-5.2.1",capabilities:[...CONNECTED_CAPABILITIES],character:{characterId:sheet.id,sourceRevision:sheet.sourceRevision??0,runtimeRevision:sheet.runtimeRevision??0}};
+  const accepted=acceptHostCharacterSessionProjection(host,"peer.golden-player",manifest,projection);
+  assert.equal(accepted.status,"accepted",accepted.status==="rejected"?accepted.error:undefined);
+  const mounted=projectedCharacterById(host,sheet.id);
+  assert.ok(mounted?.sheet.installedProgressionGrantIds?.includes("feature.spellblade.arcane-strike"),"the mounted sheet keeps the installed grant");
+  assert.equal(mounted?.sheet.subclassIds?.[FIGHTER_ID],SUBCLASS_ID);
+
+  // Installed Common Play actions are projected against the turn runtime, so observe them once the Session clock exists (initiative), exactly as the Windows journey does.
+  await host.startInitiative();
+  let snapshot=await host.setCurrentActor(sheet.id);
+  const projectedAction=(snapshot.scene.actionsByActor[sheet.id]??[]).find((action)=>action.name===FEATURE_NAME);
+  assert.ok(projectedAction,`the Host must project the imported feature for the projected Character; got ${(snapshot.scene.actionsByActor[sheet.id]??[]).map((action)=>action.name).join("|")}`);
+  assert.equal(projectedAction.actorId,sheet.id);
+  assert.match(projectedAction.id,/installed-common-play/,"the projected action is the installed Common Play entry point, not a named branch");
+  assert.equal(projectedAction.target,"self");
+  // Executing it on the Character's turn inside a live connected Session is the W9-03 Windows golden journey's job (real transport, real turn runtime); this test pins the Host-side projection contract.
+});
+
 
 test("golden module: uninstall removes the whole source in one generation and Character creation forgets the Background",async()=>{
   const {adapter,store}=await installGolden();
