@@ -79,6 +79,8 @@ async function waitActivityEntry(instance,resolutionId,timeout=20_000){let last=
 async function openActivity(instance){const open=await instance.browser.$("aside.session-activity-pane");if(await open.isExisting())return;await click(instance.browser,exactButton("기록"),`${instance.label} 기록 패널`);await instance.browser.$("aside.session-activity-pane").waitForExist({timeout:10_000});}
 async function closeActivity(instance){await instance.browser.keys("Escape");await sleep(200);}
 async function renderedActivityText(instance){await openActivity(instance);const text=await instance.browser.$("aside.session-activity-pane").getText().catch(async()=>bodyText(instance));return text;}
+function d20FaceOf(state,resolutionId){const entry=state.activity.find((e)=>e.id===resolutionId);const detail=(entry?.detail??[]).join("\n");const match=detail.match(/selected d20 (\d+)/);if(match)return Number(match[1]);const dice=state.resolution&&state.resolution.id===resolutionId?state.resolution.dice:[];return dice.length?dice[0]:null;}
+function assertQueuedD20(state,resolutionId,face,label){const seen=d20FaceOf(state,resolutionId);assert.equal(seen,face,`${label}: authoritative d20 must be the queued ${face}; Host committed ${seen} (dice=${JSON.stringify(state.resolution?.dice)})`);}
 function entity(state,id){return state.entities.find((e)=>e.id===id);}
 async function expectConverged(peers,resolutionId,label){const states=[];for(const p of peers)states.push([p.label,await waitActivityEntry(p,resolutionId)]);const hostEntry=states[0][1].activity.find((e)=>e.id===resolutionId);for(const [name,s] of states.slice(1)){const e=s.activity.find((x)=>x.id===resolutionId);assert.equal(e.title,hostEntry.title,`${label}: ${name} Activity title diverges`);assert.equal(e.summary,hostEntry.summary,`${label}: ${name} Activity summary diverges`);}for(const [name,s] of states.slice(1)){for(const he of states[0][1].entities){const pe=entity(s,he.id);if(pe)assert.equal(pe.hp,he.hp,`${label}: ${name} HP for ${he.name} diverges (${pe.hp} vs Host ${he.hp})`);}}return states;}
 async function evidenceAll(peers,suffix){for(const p of peers)await bounded(saveEvidence(p,suffix).catch(()=>undefined),15_000,"evidence");}
@@ -108,12 +110,12 @@ async function runScenario(){
     let hostRes=await waitHostResolutionFor(host,fighter1.id);
     let dicePolls=0,sawCanvas=false;for(let i=0;i<10;i+=1){const s=await peerState(p2);dicePolls+=1;if(s.hasCanvas){sawCanvas=true;break;}await sleep(150);}
     const c01Done=await hostAdvanceToComplete(host,hostRes.resolution.id);assert.equal(c01Done.resolution?.stage,"complete",JSON.stringify(c01Done.resolution));
-    assert.equal(c01Done.resolution.attackOutcome,"명중",JSON.stringify(c01Done.resolution));assert.ok(c01Done.resolution.dice.includes(15),`authoritative dice must carry the queued d20 15; got ${JSON.stringify(c01Done.resolution.dice)}`);
+    assert.equal(c01Done.resolution.attackOutcome,"명중",JSON.stringify(c01Done.resolution));assertQueuedD20(c01Done,c01Done.resolution.id,15,"MP-C01");
     const c01States=await expectConverged(peers,c01Done.resolution.id,"MP-C01");
     const goblinAfter=entity(c01States[0][1],goblinId).hp;assert.ok(goblinAfter<goblinBefore,`goblin HP must drop on hit (${goblinBefore} -> ${goblinAfter})`);
     for(const p of [p1,p2]){const text=await renderedActivityText(p);assert.ok(text.includes("고블린")&&text.includes("명중"),`${p.label} Activity must render target and hit; got ${text.slice(0,300)}`);await closeActivity(p);}
     await evidenceAll(peers,"w9-02c-c01");
-    record("MP-C01",{resolutionId:c01Done.resolution.id,dice:c01Done.resolution.dice,goblinBefore,goblinAfter});
+    record("MP-C01",{resolutionId:c01Done.resolution.id,d20:d20FaceOf(c01Done,c01Done.resolution.id),attackTotal:c01Done.resolution.attackTotal,damageDice:c01Done.resolution.dice,goblinBefore,goblinAfter});
     record("MP-C07",{damageComponents:c01Done.resolution.damageComponents,stateChanges:c01Done.resolution.stateChanges});
     record("MP-C27",{dicePolls,sawCanvas,note:sawCanvas?"3D dice canvas observed on P2 during the shared roll":"canvas not sampled in time; faces still shared"});
 
@@ -130,7 +132,7 @@ async function runScenario(){
     await walkToActor(host,fighter1.id);await hostCall(host,`await mockAdapter.setQueuedD20(20);`);
     const c05=await clientAct(p1,greatsword.id,[goblinId]);assert.equal(c05.ok,true,c05.error);
     hostRes=await waitHostResolutionFor(host,fighter1.id);const c05Done=await hostAdvanceToComplete(host,hostRes.resolution.id);
-    assert.equal(c05Done.resolution?.stage,"complete");assert.ok(c05Done.resolution.dice.includes(20),`natural 20 must be the authoritative d20; got ${JSON.stringify(c05Done.resolution.dice)}`);
+    assert.equal(c05Done.resolution?.stage,"complete");assertQueuedD20(c05Done,c05Done.resolution.id,20,"MP-C05");
     const c05States=await expectConverged(peers,c05Done.resolution.id,"MP-C05");
     await evidenceAll(peers,"w9-02c-c05");record("MP-C05",{resolutionId:c05Done.resolution.id,critical:c05Done.resolution.critical??null,summary:c05States[0][1].activity.find((e)=>e.id===c05Done.resolution.id)?.summary});
 
@@ -160,7 +162,7 @@ async function runScenario(){
     hostRes=await waitHostResolutionFor(host,fighter1.id);
     if(hostRes.resolution.checkTarget===undefined){await hostCall(host,`await mockAdapter.applyDmAdjudication({type:"ability-check-dc",value:10,scope:"resolution"});`);}
     const c08Done=await hostAdvanceToComplete(host,hostRes.resolution.id);assert.equal(c08Done.resolution?.stage,"complete",JSON.stringify(c08Done.resolution));
-    assert.ok(c08Done.resolution.dice.includes(13),`check d20 must be the queued 13; got ${JSON.stringify(c08Done.resolution.dice)}`);const c08States=await expectConverged(peers,c08Done.resolution.id,"MP-C08");
+    assertQueuedD20(c08Done,c08Done.resolution.id,13,"MP-C08");const c08States=await expectConverged(peers,c08Done.resolution.id,"MP-C08");
     for(const p of [p1,p2]){const text=await renderedActivityText(p);assert.ok(text.includes(c08States[0][1].activity.find((e)=>e.id===c08Done.resolution.id).title),`${p.label} must render the check`);await closeActivity(p);}
     await evidenceAll(peers,"w9-02c-c08");record("MP-C08",{resolutionId:c08Done.resolution.id,action:athletics.name,total:c08Done.resolution.rollTotal,outcome:c08Done.resolution.checkOutcome??c08Done.resolution.finalOutcome});
 
