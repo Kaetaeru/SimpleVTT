@@ -15,6 +15,7 @@ import {
   connectedManifest,
 } from "../../src/app/connectedSessionRuntimeAdapter";
 import { connectedStateFor } from "../../src/app/connectedSessionState";
+import { decodeConnectedWireMessage } from "../../src/app/connectedSessionWire";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import { tauriSessionTransport } from "../../src/app/tauriSessionTransport";
 
@@ -183,6 +184,9 @@ test("MP-B07: one ordered disclosure event reveals only the selected fact and is
     if(disclosed.status!=="disclosed") throw new Error("expected disclosure");
     assert.equal(disclosed.event.sequence,2,"disclosure is the next ordered ledger event after the hidden resolution");
     assert.equal(broadcasts.length,before+1);
+    // The Windows transport decodes every broadcast through the wire codec; the disclosure must survive it, not only the in-process apply path.
+    const decoded=decodeConnectedWireMessage(broadcasts[before]);
+    assert.equal(decoded.status,"ok",JSON.stringify(decoded));
     const wire=JSON.parse(broadcasts[before]) as EventBatchWire;
     assert.equal(wire.type,"event-batch");
     assert.equal(wire.events.length,1);
