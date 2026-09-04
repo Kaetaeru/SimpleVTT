@@ -5,7 +5,7 @@
     "roadmap": "docs/roadmap/V1_MASTER_ROADMAP.md",
     "ledger": "docs/roadmap/V1_EVIDENCE_LEDGER.json",
     "ledgerCreatedFromSha": "77b45028cbc4e04bb2cecc825a771269b64d1f2f",
-    "ledgerOfficialScore": 93.8
+    "ledgerOfficialScore": 95
   },
   "counts": {
     "scenarios": 120,
@@ -3220,10 +3220,15 @@
         "MP-10"
       ],
       "otherLinks": [],
-      "status": "PENDING",
-      "lastVerifiedSha": null,
-      "commands": [],
-      "windowsArtifacts": []
+      "status": "PASS",
+      "lastVerifiedSha": "4adf1ec070b6bd6262e3e60a1fe87ed02564bf4d",
+      "commands": [
+        "GitHub Actions W7-08 Windows Representative Cases (windows-representative)",
+        "powershell.exe -File scripts/run-tauri-e2e.ps1 -Root . -W708"
+      ],
+      "windowsArtifacts": [
+        "artifact 9944622846 W7-08-WIN-4adf1ec070b6bd6262e3e60a1fe87ed02564bf4d sha256:dc6eb7bba77c21aa14b32908a61b4f456d1b685f9085d3ecd825315470fd04e9"
+      ]
     },
     {
       "id": "W8-01",
