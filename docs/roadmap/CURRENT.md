@@ -49,9 +49,9 @@ W4: COMPLETE — 8/8 PASS
 W5: COMPLETE — 10/10 PASS
 W6: COMPLETE — 8/8 PASS
 W7: IN PROGRESS — 7/8 PASS
-Official ledger score: 86.3/100.0
-PASS: 65/72
-PENDING: 7/72
+Official ledger score: 93.8/100.0
+PASS: 69/72
+PENDING: 3/72
 FAIL: 0
 BLOCKED: 0
 ```
@@ -59,7 +59,7 @@ BLOCKED: 0
 ## Current stage
 
 ```text
-Next Gate: W7-08, then W8-03 / W8-04 / W9-01 / W9-03 on the post-PR #328 integration SHA
+Next Gate: W7-08, then W9-02 (62 AUTO_ONLY scenarios by family), then W9-04 final single-SHA closure
 ```
 
 `W7-04` is PASS. Product verification SHA `7d0bded27a624ed0d993d860cbd590262ed1f3a6` passed GitHub Actions run `33853804394`: AUTO recovery, real Windows Tauri H+P1+P2 recovery, and Windows storage/package prerequisite jobs all succeeded. The real Windows evidence covers `MP-B08` and `MP-H09~H12`, including explicit offline-owner rejection, reconnect/retry recovery, injected persistence-failure handling, and slow-P2 observer convergence. Authoritative artifacts and digests are recorded in `evidence/W7-04.md` and `V1_EVIDENCE_LEDGER.json`.
