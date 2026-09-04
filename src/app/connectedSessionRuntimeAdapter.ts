@@ -164,6 +164,32 @@ export function resetConnectedSessionTransientState(adapter:MockAdapter,message:
   app.session.compatibilityMessage=message;
 }
 
+/**
+ * The Host process was restarted on the same address: its ledger starts over, so this Client's
+ * event cursor no longer means anything to it. Drop the stale session view and join again from
+ * cursor 0 over the live transport, exactly like a fresh Join (the Host's scene-topology event
+ * rebuilds the roster and the Character library keeps the local Character).
+ */
+export async function recoverClientFromHostRestart(adapter:MockAdapter) {
+  const state=connectedStateFor(adapter);
+  const app=connectedInternal(adapter);
+  if (state.mode!=="client") return false;
+  const address=app.session.address;
+  const staleCursor=state.replica?.cursor??0;
+  resetConnectedSessionTransientState(adapter,`Host restarted · rejoining from event cursor 0 (previous cursor ${staleCursor}).`);
+  const next=connectedStateFor(adapter);
+  next.mode="client";
+  next.listenersInstalled=true;
+  app.session.role="client";
+  app.session.address=address;
+  app.connectionState="connected";
+  app.session.compatibility="warning";
+  await sendClientHello(adapter,0);
+  scheduleClientHandshakeRetry(adapter);
+  await publishConnectedSnapshot(adapter);
+  return true;
+}
+
 function setTransportStatus(adapter:MockAdapter,status:SessionTransportStatus) {
   const app=connectedInternal(adapter);
   app.connectionState=status.state;
@@ -882,6 +908,7 @@ async function handleClientMessage(adapter:MockAdapter,wire:ConnectedWireMessage
   if (wire.type==="error") {
     app.session.compatibility="warning";
     app.session.compatibilityMessage=`${wire.code}: ${wire.message}`;
+    if (wire.code==="invalid-event-cursor"&&state.mode==="client"&&(await recoverClientFromHostRestart(adapter))) return;
     await publishConnectedSnapshot(adapter);
   }
 }
