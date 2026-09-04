@@ -77,10 +77,10 @@ function commitStatusEffect(adapter:MockAdapter,internal:AdapterState,action:Act
     operations:succeeded?[{
       id:"status-effect:apply",kind:"apply-effect",effect:{
         id:`effect.session-status.${encodeURIComponent(action.id)}.${subjectId}`,sourceId:action.id,sourceActorId:resolution.actorId,targetId:subjectId,kind:"marker",
-        tags:[SESSION_STATUS_TAG,...(effect.runtimeTags??[]),...(effect.endsOnAttack?["hidden"]:[])],duration:effect.expiresAtActorTurnBoundary
+        tags:[SESSION_STATUS_TAG,...(effect.runtimeTags??[]),...((effect.hidden??effect.endsOnAttack)?["hidden"]:[])],duration:effect.expiresAtActorTurnBoundary
           ?{kind:"until-turn-boundary",actorId:subjectId,round:state.clock.round+(effect.expiresAtActorTurnBoundary==="start"?1:0),boundary:effect.expiresAtActorTurnBoundary}
           :{kind:"special",key:effect.durationKey!},
-        metadata:{publicLabel:effect.status,sessionStatus:effect.status,endsOnAttack:effect.endsOnAttack??false},
+        metadata:{publicLabel:effect.status,sessionStatus:effect.status,endsOnAttack:effect.endsOnAttack??false,endsOnCheck:effect.endsOnCheck??false},
       },
     }]:[{id:"status-effect:remove",kind:"remove-effect",effectId:current!.id}],
   });
@@ -94,7 +94,11 @@ function attackEndingEffects(adapter:MockAdapter,internal:AdapterState,actorId:s
   return snapshotAdapterTurnRuntimeState(adapter,internal.scene)?.effects.filter((effect)=>effect.targetId===actorId&&effect.metadata?.endsOnAttack===true)??[];
 }
 
-function removeAttackEndingEffects(adapter:MockAdapter,internal:AdapterState,resolution:ResolutionView,effects:EffectInstance[]) {
+function checkEndingEffects(adapter:MockAdapter,internal:AdapterState,actorId:string) {
+  return snapshotAdapterTurnRuntimeState(adapter,internal.scene)?.effects.filter((effect)=>effect.targetId===actorId&&effect.metadata?.endsOnCheck===true)??[];
+}
+
+function removeAttackEndingEffects(adapter:MockAdapter,internal:AdapterState,resolution:ResolutionView,effects:EffectInstance[],reason="공격 선언") {
   const state=snapshotAdapterTurnRuntimeState(adapter,internal.scene);
   if(!state||!effects.length)return;
   const committed=resolvePendingResolution(SIMPLEVTT_APP_RULES_PROFILE,state,{
@@ -107,7 +111,7 @@ function removeAttackEndingEffects(adapter:MockAdapter,internal:AdapterState,res
   for(const effect of effects) {
     const label=typeof effect.metadata?.sessionStatus==="string"?effect.metadata.sessionStatus:undefined;
     if(label&&actor?.status.includes(label))actor.status=actor.status.filter((status)=>status!==label);
-    if(label)resolution.stateChanges.push(`${actor?.name??resolution.actorId} 상태 제거: ${label} · 공격 선언`);
+    if(label)resolution.stateChanges.push(`${actor?.name??resolution.actorId} 상태 제거: ${label} · ${reason}`);
   }
 }
 
@@ -118,6 +122,10 @@ MockAdapter.prototype.resolveAction=async function resolveActionWithStatusEffect
   const resolution=internal.resolution;
   const resolvedAction=internal.action(actionId)??action;
   const effect=statusEffect(resolvedAction);
+  if(resolvedAction?.resolutionKind==="ability-check"&&resolution?.actionId===actionId&&internal.sessionMode==="initiative") {
+    const ending=checkEndingEffects(this,internal,resolution.actorId);
+    if(ending.length) removeAttackEndingEffects(this,internal,resolution,ending,"판정 선언");
+  }
   if(effect&&resolution?.actionId===actionId&&resolution.rollKind==="check"&&resolution.checkTarget===undefined) {
     resolution.checkTarget=effect.minimumRoll;
     return internal.getSnapshot();

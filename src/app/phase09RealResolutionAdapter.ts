@@ -68,6 +68,13 @@ function removeStatus(entity:SceneEntity|undefined,status:string) {
   return true;
 }
 
+/** Help is a canonical runtime effect now; the turn runtime projects its label with the public effect prefix. */
+function removeHelped(entity:SceneEntity|undefined) {
+  const direct=removeStatus(entity,HELPED_STATUS);
+  const projected=removeStatus(entity,`✦ ${HELPED_STATUS}`);
+  return direct||projected;
+}
+
 function resolutionId() {
   return `resolution.phase09.${Date.now()}.${Math.floor(Math.random() * 1000)}`;
 }
@@ -193,8 +200,8 @@ MockAdapter.prototype.resolveAction = async function resolveActionWithRealRules(
     internal.capture();
     const actor=internal.entity(action.actorId);
     const revealed=removeStatus(actor,HIDDEN_STATUS);
-    const helped=removeStatus(actor,HELPED_STATUS);
-    const dodging=target.status.includes(DODGING_STATUS);
+    const helped=removeHelped(actor);
+    const dodging=target.status.includes(DODGING_STATUS)||target.status.includes(`✦ ${DODGING_STATUS}`);
     const rollStateContributions=[
       ...(helped ? [{ source:"action:standard.help",state:"advantage" as const }] : []),
       ...(dodging ? [{ source:`condition:${DODGING_STATUS}:target`,state:"disadvantage" as const }] : []),
@@ -212,6 +219,7 @@ MockAdapter.prototype.resolveAction = async function resolveActionWithRealRules(
       }],
       rollStateContributions,
     });
+    if (rollStateContributions.length>0) internal.resolution.rollStateContributions=rollStateContributions;
     if (revealed) {
       internal.resolution.stateChanges.push(`${actor?.name??action.actorId} 상태 제거: ${HIDDEN_STATUS} · 공격 선언`);
       internal.resolution.provenance.push("condition:hidden · applied · attack declaration ends hidden state");
@@ -235,7 +243,7 @@ MockAdapter.prototype.resolveAction = async function resolveActionWithRealRules(
 
   internal.capture();
   const actor=internal.entity(action.actorId);
-  const helped=removeStatus(actor,HELPED_STATUS);
+  const helped=removeHelped(actor);
   const checkLabel = action.details.find((entry) => entry.label === "판정")?.value ?? action.name;
   internal.resolution = resolveOpenAbilityCheckResolution({
     resolutionId:resolutionId(),
