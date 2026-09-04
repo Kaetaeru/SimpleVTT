@@ -72,7 +72,8 @@ async function runScenario(){
   const character=await createGoldenCharacter(host,"골든 길잡이");const levelUp=await levelUpWithGoldenFeature(host);stages.character={status:"PASS",character,level:levelUp.level,grants:levelUp.grants};
   // J3 Campaign and J4 Session 1 with a real second peer.
   const p1=await launchInstance("W9-03 P1",p1Root,await reservePort());const p1Character=await createDistinctPlayerCharacter(p1,"골든 동료");
-  await createHostCampaign(host);await openHostSession(host,sessionPort);await joinClientSession(p1,sessionPort);
+  // The Host's play Character enters the Session Scene only through the production Character selector; without it the golden Character is not in the initiative order (Session 2 already selects it after the restart).
+  await createHostCampaign(host);await selectProductionCharacter(host,character.id);await openHostSession(host,sessionPort);await joinClientSession(p1,sessionPort);
   await host.browser.waitUntil(async()=>(await journeySnapshot(host)).participants.filter((entry)=>entry.state==="connected").length>=2,{timeout:20_000,timeoutMsg:"H/P1 topology did not converge"});
   const session1=await resolveGoldenFeature(host);assert.equal(session1.ok,true,session1.error);assert.equal(session1.stage,"complete",JSON.stringify(session1));await waitActivity(p1,session1.resolutionId);
   await saveEvidence(host,"w9-03-session1");await saveEvidence(p1,"w9-03-session1");stages.session1={status:"PASS",resolutionId:session1.resolutionId,actionId:session1.actionId,p1Character:p1Character.name};
