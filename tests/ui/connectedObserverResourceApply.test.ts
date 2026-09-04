@@ -71,3 +71,32 @@ test("without an owner the legacy contract matches the supplied resources by id"
   assert.equal(applied.status,"committed");
   if (applied.status==="committed") assert.equal(applied.resources.find((entry)=>entry.id===SECOND_WIND)?.current,1);
 });
+
+// Reproduced on real Windows H+P1+P2 (W9-02 family C, MP-C18): P1 drank a DM-granted Potion of Healing; the observer P2
+// rejected the Host's committed event ("event-native apply target is missing: <P1>/resource.phase09:item:...:quantity")
+// because item quantities live on the owner's sheet only, and P2 stayed one event behind the Host for good.
+test("an observer replica accepts a remote Character's item quantity change as an authoritative no-op",async()=>{
+  const snapshot=await new MockAdapter().getSnapshot();
+  const runtime=createTurnRuntimeSession(snapshot.scene).state;
+  const remote="char.aelar";
+  const observer="char.mira";
+  const itemResourceId="phase09:item:item.session.remote.potion:quantity";
+  const event:ResolutionEvent={
+    id:"event.observer.remote-potion",resolutionId:"resolution.observer.remote-potion",operationId:"operation.observer.remote-potion",kind:"spend-resource",
+    actorId:remote,targetId:remote,summary:"remote potion quantity",provenance:[],
+    stateChanges:[{kind:"resource",targetId:remote,resourceId:itemResourceId,before:1,after:0,provenance:[],lifetime:"character-durable",writeBack:"character"}],
+    result:{ connected:true },
+  };
+  const ownItems=[{id:"item.session.observer.potion",definitionId:"dnd.srd521.item.gear.potion-of-healing",name:"치유 물약",nameEn:"Potion of Healing",kind:"consumable" as const,quantity:2,equipped:false,passiveEffects:[],grantedActionIds:[],provenance:["test"]}];
+  const applied=applyResolutionEvents(snapshot.scene,[event],[],ownItems,runtime,{ownerId:observer});
+  assert.equal(applied.status,"committed",applied.status==="rejected"?applied.error:"");
+  if (applied.status!=="committed") return;
+  assert.equal(applied.items[0]?.quantity,2,"the observer's own items stay untouched");
+  assert.equal(applied.runtimeState?.combatants[remote]?.resources.some((entry)=>entry.id===itemResourceId),false,"item quantities are never seeded into the runtime");
+  assert.equal(applied.stateChanges.length,1,"the authoritative change is still recorded in the Activity");
+
+  const removed:ResolutionEvent={...event,id:"event.observer.remote-potion-removed",stateChanges:[{kind:"inventory-item",targetId:remote,itemId:"item.session.remote.potion",operation:"removed",before:{id:"item.session.remote.potion",definitionId:"dnd.srd521.item.gear.potion-of-healing",name:"치유 물약",nameEn:"Potion of Healing",kind:"consumable",quantity:0,equipped:false,passiveEffects:[],grantedActionIds:[],provenance:["test"]},provenance:[],lifetime:"character-durable",writeBack:"character"}]};
+  const next=applyResolutionEvents(applied.scene,[removed],[],applied.items,applied.runtimeState,{ownerId:observer});
+  assert.equal(next.status,"committed",next.status==="rejected"?next.error:"");
+  if (next.status==="committed") assert.equal(next.items.length,1,"a remote item removal never touches the observer's inventory");
+});
