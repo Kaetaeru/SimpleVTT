@@ -142,6 +142,10 @@ MockAdapter.prototype.instantiateCampaignDmLibraryNpcDefinition=async function i
     version:source.version,
     actions:[...source.actions],
     statusImmunities:[...source.statusImmunities],
+    // A DM Library NPC carries no ability block yet; without runtime stats it cannot be the target of a
+    // saving throw ("missing runtime combatant stat definition"), so materialize the SRD default
+    // creature block (all abilities 10, no save proficiencies) until the definition authors its own.
+    runtimeStats:{abilities:{str:10,dex:10,con:10,int:10,wis:10,cha:10},proficiencyBonus:2,savingThrowProficiencies:[],speed:30,resistances:[],immunities:[],vulnerabilities:[]},
   };
   const definitions=(this as unknown as {combatantDefinitions:CombatantDefinitionVm[]}).combatantDefinitions;
   const index=definitions.findIndex((candidate)=>candidate.id===materialized.id);
