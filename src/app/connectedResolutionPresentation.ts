@@ -157,6 +157,9 @@ export function buildConnectedResolutionPresentation(
     publicResolution.finalOutcome="응답 대기";
     publicResolution.stateChanges=[];
   }
+  // Reproduced on real Windows (W9-02 family D, MP-D07): the staged save (damage-animation, "집중 내성 준비") leaked the
+  // owner-private stub to every Client one stage before the private prompt.
+  if(resolution.concentrationSave&&resolution.concentrationSave.natural===undefined) publicResolution.concentrationSave=undefined;
   if(resolution.stage==="save-animation"&&resolution.concentrationSave?.natural===undefined){
     publicResolution.concentrationSave=undefined;
     publicResolution.compact="비공개 집중 내성 입력 대기";
