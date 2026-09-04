@@ -3,6 +3,7 @@ import { MockAdapter } from "./mockAdapter";
 import { projectTurnRuntimeToScene, resolveTurnRuntimeReaction } from "./realTurnRuntimeService";
 import { turnRuntimeSessions } from "./turnRuntimeSessionRegistry";
 import { recordRuntimeResolutionEvents } from "./runtimeResolutionEventHistory";
+import { peekCommittedResolutionEvents } from "./resolutionEventCommitRegistry";
 import {
   clearReadyActionConfiguration,
   isReadyPreparationAction,
@@ -216,7 +217,11 @@ MockAdapter.prototype.advanceResolution=async function advancePreparedActionAsRe
         snapshot.resolution.finalOutcome=`준비 행동 반응 거부: ${reaction.error}`;
       } else {
         projectTurnRuntimeToScene(session,internal.scene);
-        recordRuntimeResolutionEvents(this,snapshot.resolution.id,reaction.events);
+        // The readied action already committed its own events (attack, damage, HP) under this
+        // Resolution id; the reaction spend extends that history instead of replacing it, so the
+        // connected broadcast carries the full mechanical result.
+        const committedSoFar=(peekCommittedResolutionEvents(snapshot.resolution.id)??[]).filter((event)=>!reaction.events.some((entry)=>entry.id===event.id));
+        recordRuntimeResolutionEvents(this,snapshot.resolution.id,[...committedSoFar,...reaction.events]);
       }
     } else if (economy?.reaction) {
       economy.reaction=false;
