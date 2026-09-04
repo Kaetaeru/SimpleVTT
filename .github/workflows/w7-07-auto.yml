@@ -89,4 +89,4 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: MP-I05 transport intake stays ordered under a slow peer
         shell: pwsh
-        run: cargo test --manifest-path src-tauri/Cargo.toml --lib session_transport::tests::slow_peer_queue_does_not_block_fast_peer_broadcast session_transport::tests::peer_outbound_queue_preserves_order_when_drained
+        run: cargo test --manifest-path src-tauri/Cargo.toml --lib -- session_transport::tests::slow_peer_queue_does_not_block_fast_peer_broadcast session_transport::tests::peer_outbound_queue_preserves_order_when_drained
