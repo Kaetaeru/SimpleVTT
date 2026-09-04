@@ -67,3 +67,16 @@ test("pending request cannot commit across an intervening host event", () => {
   if (rejected.status==="rejected") assert.match(rejected.error,/host history advanced/);
   assert.equal(host.cursor,1);
 });
+
+test("pending request still commits when only participant lifecycle events advanced host history", () => {
+  const host=ledger();
+  assert.equal(host.reserveActionRequest(request()).status,"reserved");
+  const left=host.commitHostEvent({actorId:"participant.p2",payload:{kind:"participant",participantId:"participant.p2",participantName:"P2",characterName:"Mira",state:"disconnected",ready:false,stateChanges:["P2 disconnected"],provenance:["transport disconnect"]}});
+  assert.equal(left.sequence,1);
+  const committed=host.commitReservedActionRequest("request.remote.1",candidate);
+  assert.equal(committed.status,"committed");
+  if (committed.status!=="committed") return;
+  assert.equal(committed.event.sequence,2);
+  assert.equal(host.cursor,2);
+  assert.equal(host.commitReservedActionRequest("request.remote.1",candidate).status,"duplicate");
+});
