@@ -13,6 +13,7 @@ import type {
 } from "./contracts";
 import type { ConcentrationSaveVm } from "./concentrationSaveRuntimeContracts";
 import { MockAdapter } from "./mockAdapter";
+import { projectedCharacterById } from "./characterSessionProjectionRegistry";
 import { consumeAdapterInterruptEvents } from "./phase09RealTurnRuntimeAdapter";
 import { commitAdapterTurnRuntimeState, snapshotAdapterTurnRuntimeState } from "./turnRuntimeSessionRegistry";
 import { resolveAtomicAttackTransaction, type AtomicAttackTransactionResult } from "./realAttackTransactionService";
@@ -200,7 +201,9 @@ function preparePrompt(
     if (probe.status==="committed") return { status:"delegate" as const };
     if (!probe.error.includes("requires fixed concentration-check input")) return { status:"delegate" as const };
 
-    const saveFact=resolveRuntimeSaveModifier(target,internal.activeCharacter,"con",internal.combatantDefinitions);
+    // The concentrating target may be a projected remote Character (its sheet lives in the projection registry, not on the Host's own activeCharacter).
+    const targetSheet=target.id===internal.activeCharacter.id?internal.activeCharacter:projectedCharacterById(adapter,target.id)?.sheet??internal.activeCharacter;
+    const saveFact=resolveRuntimeSaveModifier(target,targetSheet,"con",internal.combatantDefinitions);
     const damageRoll=resolveDamageRoll({
       dice:attackFact.damageDice,
       flat:attackFact.flatDamage,
