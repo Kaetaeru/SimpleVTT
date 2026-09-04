@@ -73,23 +73,28 @@ test("Player disconnect during live play preserves Host authority and does not c
     await adapter.hostSession();
     const state=connectedStateFor(adapter);
     const app=connectedInternal(adapter);
-    state.peerManifests.set("peer.player",connectedManifest(adapter));
-    state.peerParticipants.set("peer.player","client:char.phase14.player");
+    const participantId="client:char.phase14.player";
+    const playerManifest=connectedManifest(adapter);
+    playerManifest.character={characterId:"char.phase14.player",sourceRevision:0,runtimeRevision:0};
+    state.peerManifests.set("peer.player",playerManifest);
+    state.peerParticipants.set("peer.player",participantId);
     app.session.participants=[
       {id:"host",name:"DM Host",state:"connected",ready:false},
-      {id:"client:char.phase14.player",name:"Phase14 Player",characterName:"Phase14 Player",state:"connected",ready:false},
+      {id:participantId,name:"Phase14 Player",characterName:"Phase14 Player",state:"connected",ready:false},
     ];
 
     transport.emitPeer({peer:"peer.player",state:"disconnected"});
     await new Promise<void>((resolve)=>setImmediate(resolve));
     const dropped=await adapter.getSnapshot();
-    const player=dropped.session.participants.find((participant)=>participant.id==="client:char.phase14.player");
+    const player=dropped.session.participants.find((participant)=>participant.id===participantId);
     assert.equal(dropped.session.lifecycle,"live");
     assert.equal(dropped.sessionMode,"freeform");
     assert.equal(state.sessionStarted,true);
     assert.equal(player?.state,"disconnected");
     assert.match(dropped.session.compatibilityMessage,/Host runtime is preserved for reconnect/);
-    assert.equal(state.peerParticipants.get("peer.player"),"client:char.phase14.player","disconnect must preserve the accepted mapping for reconnect identity");
+    assert.equal(state.peerParticipants.has("peer.player"),false,"disconnect must retire the dead live peer route");
+    assert.equal(state.peerManifests.has("peer.player"),false,"disconnect must retire the dead live peer manifest");
+    assert.equal(state.acceptedParticipantManifests.get(participantId)?.character?.characterId,"char.phase14.player","disconnect must preserve participant-scoped reconnect identity");
     assert.ok(state.ledger?.eventsAfter(0).some((event)=>event.payload.kind==="participant"&&event.payload.state==="disconnected"&&event.payload.provenance.some((entry)=>entry.includes("exact transport disconnect: peer.player"))));
     assert.ok(transport.sent().some((message)=>message.type==="event-batch"&&message.events.some((event)=>event.payload.kind==="participant"&&event.payload.state==="disconnected")));
   } finally {
