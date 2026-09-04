@@ -34,7 +34,7 @@ test("a Client whose cursor the restarted Host rejects drops the stale session v
     assert.equal(next.replica,null,"the stale replica is dropped");
     assert.equal(app.session.role,"client");
     assert.equal(app.session.address,"127.0.0.1:3210","the live transport address is kept");
-    assert.equal(app.connectionState,"connected");
+    assert.equal(app.connectionState,"reconnecting","the Client is not connected again until the restarted Host accepts its hello");
     assert.equal(app.sessionMode,"freeform","the stale Initiative view is cleared until the Host's scene topology arrives");
     const snapshot=await client.getSnapshot();
     assert.match(snapshot.session.compatibilityMessage,/Host restarted/);
