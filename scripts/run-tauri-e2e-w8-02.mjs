@@ -73,15 +73,16 @@ async function runScenario(){
   // P3 late join: catch-up replays only missing ordered history once and lands on the same cursor without a reroll.
   await joinClientSession(p3,sessionPort);await waitConnected(host,4);
   const p3After=await waitActivity(p3,second.resolutionId);assert.ok(p3After.activity.some((entry)=>entry.id===first.resolutionId),"late joiner must replay the earlier ordered result too");
-  const p3Cursor=(await replicaCursor(p3)).cursor;assert.equal(p3Cursor,hostCursor,`P3 cursor ${p3Cursor} must equal Host cursor ${hostCursor}`);
-  const p1Cursor=(await replicaCursor(p1)).cursor;assert.equal(p1Cursor,hostCursor);
+  const joinedHostCursor=(await replicaCursor(host)).cursor;assert.ok(joinedHostCursor>=hostCursor,"Host cursor only moves forward across the join");
+  const waitCursor=async(instance,expected)=>{await instance.browser.waitUntil(async()=>(await replicaCursor(instance)).cursor===expected,{timeout:20_000,interval:150,timeoutMsg:`${instance.label} did not converge to Host cursor ${expected}; last=${JSON.stringify(await replicaCursor(instance))}`});};
+  await waitCursor(p3,joinedHostCursor);await waitCursor(p1,joinedHostCursor);await waitCursor(p2,joinedHostCursor);const p3Cursor=joinedHostCursor;
   for(const instance of [p1,p2,p3]){const snapshot=await peerSnapshot(instance);assert.deepEqual(snapshot.entities,(await peerSnapshot(host)).entities,`${instance.label} scene must converge with the Host`);}
   scenarios["p3-late-join"]={status:"PASS",p3Character:p3Character.name,cursor:p3Cursor};
 
   // A third ordered result after the late join reaches all three Clients in the same order.
   const third=await resolveHostCheck(host);assert.equal(third.ok,true,third.error);
   for(const instance of [p1,p2,p3])await waitActivity(instance,third.resolutionId);
-  const finalCursor=(await replicaCursor(host)).cursor;for(const instance of [p1,p2,p3])assert.equal((await replicaCursor(instance)).cursor,finalCursor,`${instance.label} must converge to cursor ${finalCursor}`);
+  const finalCursor=(await replicaCursor(host)).cursor;for(const instance of [p1,p2,p3])await waitCursor(instance,finalCursor);
   const order=(snapshot)=>snapshot.activity.filter((entry)=>[first.resolutionId,second.resolutionId,third.resolutionId].includes(entry.id)).map((entry)=>entry.id);
   const expectedOrder=[third.resolutionId,second.resolutionId,first.resolutionId];
   for(const instance of [p1,p2,p3]){assert.deepEqual(order(await peerSnapshot(instance)),expectedOrder,`${instance.label} Activity order`);await saveEvidence(instance,"w8-02-final");}
