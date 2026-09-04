@@ -63,6 +63,10 @@ on:
       - "tests/ui/connectedLongRestHostRestartRecovery.test.ts"
       - "tests/ui/connectedLongRestRestartDurabilityStructure.test.ts"
       - ".github/workflows/w6-06-auto.yml"
+  workflow_dispatch:
+
+env:
+  V1_VERIFICATION_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
 jobs:
   verify:
@@ -85,5 +89,5 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: W6-06-AUTO-${{ github.sha }}
+          name: W6-06-AUTO-${{ env.V1_VERIFICATION_SHA }}
           path: w6-06-auto.log

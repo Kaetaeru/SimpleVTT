@@ -13,6 +13,22 @@ on:
       - 'package.json'
       - 'package-lock.json'
       - 'content/**'
+  push:
+    branches:
+      - work/v1-composite
+    paths:
+      - '.github/workflows/w7-04-auto.yml'
+      - 'src/**'
+      - 'src-tauri/**'
+      - 'tests/**'
+      - 'scripts/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'content/**'
+  workflow_dispatch:
+
+env:
+  V1_VERIFICATION_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
 permissions:
   contents: read
@@ -55,6 +71,7 @@ jobs:
           {
             echo 'W7-04 recovery prerequisite verification'
             echo "checkout_sha=${GITHUB_SHA}"
+            echo "verification_sha=${{ env.V1_VERIFICATION_SHA }}"
             echo "head_sha=${{ github.event.pull_request.head.sha }}"
             echo "base_sha=${{ github.event.pull_request.base.sha }}"
             echo 'scenario_scope=MP-B08,MP-H09,MP-H10,MP-H11 prerequisite owners; MP-H12 production transport AUTO is verified by the Windows Rust job'
@@ -63,7 +80,7 @@ jobs:
       - name: Upload AUTO prerequisite evidence
         uses: actions/upload-artifact@v4
         with:
-          name: W7-04-AUTO-PREREQ-${{ github.sha }}
+          name: W7-04-AUTO-PREREQ-${{ env.V1_VERIFICATION_SHA }}
           path: |
             /tmp/w7-04-auto.tap
             /tmp/w7-04-auto-evidence.txt
@@ -97,6 +114,7 @@ jobs:
           $lines = @(
             'W7-04 Windows storage/release-executable prerequisite verification',
             "checkout_sha=$env:GITHUB_SHA",
+            "verification_sha=${{ env.V1_VERIFICATION_SHA }}",
             "head_sha=${{ github.event.pull_request.head.sha }}",
             "base_sha=${{ github.event.pull_request.base.sha }}",
             'tauri_bundle_active=false',
@@ -111,7 +129,7 @@ jobs:
       - name: Upload Windows prerequisite evidence
         uses: actions/upload-artifact@v4
         with:
-          name: W7-04-WINDOWS-PREREQ-${{ github.sha }}
+          name: W7-04-WINDOWS-PREREQ-${{ env.V1_VERIFICATION_SHA }}
           path: |
             ${{ runner.temp }}/w7-04-windows-evidence.txt
             src-tauri/target/release/simplevtt.exe
@@ -132,13 +150,13 @@ jobs:
       - name: Run W7-04 H+P1+P2 Windows recovery acceptance
         shell: pwsh
         env:
-          V1_VERIFICATION_SHA: ${{ github.event.pull_request.head.sha }}
+          V1_VERIFICATION_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File scripts/run-tauri-e2e.ps1 -Root . -W704
       - name: Upload W7-04 Windows multi-instance evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: W7-04-WIN-${{ github.sha }}
+          name: W7-04-WIN-${{ env.V1_VERIFICATION_SHA }}
           path: .live-dev/tauri-e2e/**/artifacts/**
           if-no-files-found: error
           retention-days: 14

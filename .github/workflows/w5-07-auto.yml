@@ -50,6 +50,10 @@ on:
       - "tests/ui/connectedThreePeerDuplicateEventBatch.test.ts"
       - "tests/ui/connectedThreePeerRemoteDisabledAction.test.ts"
       - ".github/workflows/w5-07-auto.yml"
+  workflow_dispatch:
+
+env:
+  V1_VERIFICATION_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
 jobs:
   remote-attack-ownership:
@@ -91,7 +95,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: W5-07-AUTO-${{ github.sha }}
+          name: W5-07-AUTO-${{ env.V1_VERIFICATION_SHA }}
           path: w5-07-auto.log
           if-no-files-found: error
           retention-days: 14
