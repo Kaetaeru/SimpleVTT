@@ -72,7 +72,10 @@ test("a remote Character's Help commits an effect event, broadcasts a valid pres
     assert.ok(changes.some((change)=>change.kind==="effect"&&change.targetId===b.id&&change.operation==="added"),`the committed events must add the Helped effect on the target; got ${JSON.stringify(changes.map((change)=>`${change.kind}:${change.targetId}`))}`);
     assert.ok(changes.some((change)=>change.kind==="economy"&&change.targetId===a.id&&change.field==="action"&&change.after===false),"Help spends the helper's action");
     assert.ok(done.scene.entities.find((entry)=>entry.id===b.id)?.status.some((status)=>/도움 받음/.test(status)),JSON.stringify(done.scene.entities.find((entry)=>entry.id===b.id)?.status));
-    for(const raw of broadcasts){const decoded=decodeConnectedWireMessage(raw);assert.equal(typeof decoded==="string"?decoded:"ok","ok",`every Host broadcast must decode on a Client: ${typeof decoded==="string"?decoded:""}`);}
+    for(const raw of broadcasts){const decoded=decodeConnectedWireMessage(raw);assert.equal(decoded.status,"ok",`every Host broadcast must decode on a Client: ${decoded.status==="rejected"?decoded.error:""} · ${raw.slice(0,200)}`);}
+    const presentation=committed.payload.presentation;
+    assert.deepEqual(presentation.dice.selectedIndices,[],"a no-roll Help presents no dice, even though its text promises advantage");
+    assert.deepEqual(presentation.dice.faces,[]);
     const runtime=snapshotAdapterTurnRuntimeState(host,(host as unknown as {scene:import("../../src/app/contracts").SceneVm}).scene);
     const helped=runtime?.effects.find((effect)=>effect.targetId===b.id&&effect.metadata?.sessionStatus==="도움 받음");
     assert.ok(helped,"the Helped effect lives in the turn runtime");
