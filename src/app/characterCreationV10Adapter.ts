@@ -51,7 +51,12 @@ const clearChoicePrefix = (draft: CharacterCreateDraft, prefix: string) => {
 
 function itemInstances(draft: CharacterCreateDraft): ItemInstanceVm[] {
   const loadout = classAndBackgroundLoadout(draft);
+  // Starting equipment wields only what two hands can hold: the first weapon (both hands if it is
+  // two-handed) and a shield in the free off-hand. Every other weapon is carried, not wielded, so
+  // the created Character keeps a legal wield state and a caster keeps a free hand for somatic
+  // components until the player changes equipment.
   let mainHandAssigned=false;
+  let offHandAssigned=false;
   return loadout.items.map((item, index) => {
     const armor = itemMechanic(item.entry, "armor-definition") as { ac?: { base?: number } } | undefined;
     const shield = itemMechanic(item.entry, "shield-definition") as { acBonus?: number } | undefined;
@@ -63,8 +68,17 @@ function itemInstances(draft: CharacterCreateDraft): ItemInstanceVm[] {
       weapon?.damage ? `${weapon.damage} ${weapon.damageType ?? ""}`.trim() : "",
     ].filter(Boolean);
     const equipped = ["armor", "shield", "weapon", "focus"].includes(item.entry.category);
-    const wieldSlot=item.entry.category === "weapon"&&!mainHandAssigned?"main-hand":item.entry.category === "shield"?"off-hand":undefined;
-    if (wieldSlot==="main-hand") mainHandAssigned=true;
+    const weaponProperties=(itemMechanic(item.entry, "weapon-definition") as { properties?: string[] } | undefined)?.properties ?? [];
+    let wieldSlot: "main-hand" | "off-hand" | "two-hand" | undefined;
+    if (item.entry.category === "weapon" && !mainHandAssigned) {
+      const twoHanded = weaponProperties.includes("two-handed");
+      wieldSlot = twoHanded && !offHandAssigned ? "two-hand" : "main-hand";
+      mainHandAssigned = true;
+      if (wieldSlot === "two-hand") offHandAssigned = true;
+    } else if (item.entry.category === "shield" && !offHandAssigned) {
+      wieldSlot = "off-hand";
+      offHandAssigned = true;
+    }
     return {
       id:`item.created.${index}.${item.id}${item.variant ? `.${item.variant}` : ""}`,
       definitionId:item.id,
@@ -73,7 +87,7 @@ function itemInstances(draft: CharacterCreateDraft): ItemInstanceVm[] {
       kind:"equipment",
       quantity:item.quantity,
       equipped,
-      wielded:item.entry.category === "weapon" || item.entry.category === "shield",
+      wielded:wieldSlot !== undefined,
       wieldSlot,
       spellcastingComponent:focus ? (focus.tradition==="material"?"component-pouch":"focus") : undefined,
       unitCostGp:focus?.priceGp,
