@@ -14,6 +14,7 @@ param(
   [switch]$W802,
   [switch]$W902C,
   [switch]$W902D,
+  [switch]$W902H,
   [switch]$W903,
   [switch]$KeepOpen
 )
@@ -84,7 +85,7 @@ if (-not (Test-Path -LiteralPath $binaryPath)) {
   throw "Tauri E2E binary was not found at $binaryPath. Remove -SkipBuild and retry."
 }
 
-$runnerScript = if ($W3) { 'scripts\run-tauri-e2e-w3.mjs' } elseif ($W407) { 'scripts\run-tauri-e2e-w4-07.mjs' } elseif ($W608) { 'scripts\run-tauri-e2e-w6-08-v2.mjs' } elseif ($W704) { 'scripts\run-tauri-e2e-w7-04.mjs' } elseif ($W705) { 'scripts\run-tauri-e2e-w7-05.mjs' } elseif ($W708) { 'scripts\run-tauri-e2e-w7-08.mjs' } elseif ($W802) { 'scripts\run-tauri-e2e-w8-02.mjs' } elseif ($W902C) { 'scripts\run-tauri-e2e-w9-02-c.mjs' } elseif ($W902D) { 'scripts\run-tauri-e2e-w9-02-d.mjs' } elseif ($W903) { 'scripts\run-tauri-e2e-w9-03.mjs' } else { 'scripts\run-tauri-e2e.mjs' }
+$runnerScript = if ($W3) { 'scripts\run-tauri-e2e-w3.mjs' } elseif ($W407) { 'scripts\run-tauri-e2e-w4-07.mjs' } elseif ($W608) { 'scripts\run-tauri-e2e-w6-08-v2.mjs' } elseif ($W704) { 'scripts\run-tauri-e2e-w7-04.mjs' } elseif ($W705) { 'scripts\run-tauri-e2e-w7-05.mjs' } elseif ($W708) { 'scripts\run-tauri-e2e-w7-08.mjs' } elseif ($W802) { 'scripts\run-tauri-e2e-w8-02.mjs' } elseif ($W902C) { 'scripts\run-tauri-e2e-w9-02-c.mjs' } elseif ($W902D) { 'scripts\run-tauri-e2e-w9-02-d.mjs' } elseif ($W902H) { 'scripts\run-tauri-e2e-w9-02-h.mjs' } elseif ($W903) { 'scripts\run-tauri-e2e-w9-03.mjs' } else { 'scripts\run-tauri-e2e.mjs' }
 $arguments = @((Join-Path $rootPath $runnerScript))
 if ($Smoke) { $arguments += '--smoke' }
 if ($W1) { $arguments += '--w1' }
