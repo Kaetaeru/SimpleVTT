@@ -249,6 +249,14 @@ function isConnectedEvent(value:unknown):value is ConnectedSessionEvent {
       ||typeof payload.ready!=="boolean") return false;
   } else if (payload.kind==="scene-topology") {
     if (!isSceneTopology(payload.topology)) return false;
+  } else if (payload.kind==="resolution-disclosure") {
+    // W7-05: one ordered DM disclosure of selected hidden facts; the receiver-side envelope validator still rejects any leak in the referenced presentation.
+    const isHiddenFact=(entry:unknown)=>entry==="roll"||entry==="targets";
+    if (!isString(payload.resolutionId)||!isString(payload.disclosureId)
+      ||!Array.isArray(payload.disclosed)||payload.disclosed.length===0||!payload.disclosed.every(isHiddenFact)||new Set(payload.disclosed).size!==payload.disclosed.length) return false;
+    if (payload.roll!==undefined&&(!isRecord(payload.roll)||!isRecord(payload.roll.facts)||!Array.isArray(payload.roll.facts.authoritativeDice)||!isRecord(payload.roll.dice)||!Array.isArray(payload.roll.dice.faces))) return false;
+    if (payload.targets!==undefined&&(!Array.isArray(payload.targets)||!payload.targets.every((entry)=>isRecord(entry)&&isString(entry.id)&&isString(entry.label)))) return false;
+    if (payload.disclosed.includes("roll")!==(payload.roll!==undefined)||payload.disclosed.includes("targets")!==(payload.targets!==undefined)) return false;
   } else if (payload.kind==="ready-action") {
     if (!isString(payload.actorId)||!isEconomy(payload.economy)||!['armed','cleared'].includes(String(payload.transition))) return false;
     const config=payload.configuration;

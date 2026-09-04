@@ -1,4 +1,4 @@
-import type { ActionVm, AppSnapshot, DamageSpecVm, ResolutionView } from "./contracts";
+import type { ActionVm, AppSnapshot, DamageSpecVm, ResolutionHiddenFact, ResolutionView, ResolutionVisibilityVm } from "./contracts";
 
 export const CONNECTED_RESOLUTION_PRESENTATION_SCHEMA_ID="simplevtt.connected-resolution-presentation" as const;
 export const CONNECTED_RESOLUTION_PRESENTATION_SCHEMA_VERSION=1 as const;
@@ -35,13 +35,20 @@ export interface ConnectedResolutionTimelineEntryV1 {
   terminal:boolean;
 }
 
+export type ConnectedResolutionHiddenFact=ResolutionHiddenFact;
+export type ConnectedResolutionVisibilityV1=ResolutionVisibilityVm;
+
+export type ConnectedResolutionAudienceV1=
+  | {scope:"public"}
+  | {scope:"public-redacted";hidden:ConnectedResolutionHiddenFact[]};
+
 export interface ConnectedResolutionPresentationV1 {
   schemaId:typeof CONNECTED_RESOLUTION_PRESENTATION_SCHEMA_ID;
   schemaVersion:typeof CONNECTED_RESOLUTION_PRESENTATION_SCHEMA_VERSION;
   resolutionId:string;
   presentationSequence:number;
   delivery:"live"|"catchup";
-  audience:{scope:"public"};
+  audience:ConnectedResolutionAudienceV1;
   actor:{id:string;label:string};
   targets:Array<{id:string;label:string}>;
   resolution:ResolutionView;
@@ -181,6 +188,57 @@ export function buildConnectedResolutionPresentation(
   };
 }
 
+export const CONNECTED_RESOLUTION_ROLL_FACT_KEYS=[
+  "authoritativeDice","naturalD20","rollModifierContributions","rollTotal","checkTarget","checkOutcome",
+  "attackTotal","targetAc","attackOutcome","critical","saveResults","damageComponents",
+  "compact","detail","provenance","calculatedOutcome","finalOutcome","stateChanges",
+] as const;
+export type ConnectedResolutionRollFactsV1=Pick<ResolutionView,(typeof CONNECTED_RESOLUTION_ROLL_FACT_KEYS)[number]>;
+
+const HIDDEN_ROLL_COMPACT="비공개 판정";
+const HIDDEN_OUTCOME="비공개";
+
+export function redactedRollFacts():ConnectedResolutionRollFactsV1 {
+  return {
+    authoritativeDice:[],naturalD20:undefined,rollModifierContributions:undefined,rollTotal:undefined,checkTarget:undefined,checkOutcome:undefined,
+    attackTotal:undefined,targetAc:undefined,attackOutcome:undefined,critical:undefined,saveResults:[],damageComponents:[],
+    compact:HIDDEN_ROLL_COMPACT,detail:[],provenance:[],calculatedOutcome:HIDDEN_OUTCOME,finalOutcome:HIDDEN_OUTCOME,stateChanges:[],
+  };
+}
+
+export function rollFactsOf(resolution:ResolutionView):ConnectedResolutionRollFactsV1 {
+  const facts:Record<string,unknown>={};
+  for(const key of CONNECTED_RESOLUTION_ROLL_FACT_KEYS) facts[key]=structuredClone(resolution[key]);
+  return facts as ConnectedResolutionRollFactsV1;
+}
+
+export function normalizedHiddenFacts(facts:readonly ConnectedResolutionHiddenFact[]|undefined):ConnectedResolutionHiddenFact[] {
+  return [...new Set(facts??[])].filter((fact):fact is ConnectedResolutionHiddenFact=>fact==="roll"||fact==="targets");
+}
+
+/** Host-side redaction of one already-built public envelope. The full envelope stays on the Host; the redacted copy is what unauthorized peers receive. */
+export function redactConnectedResolutionPresentation(
+  presentation:ConnectedResolutionPresentationV1,
+  visibility:ConnectedResolutionVisibilityV1|undefined,
+):ConnectedResolutionPresentationV1 {
+  const hidden=normalizedHiddenFacts(visibility?.hidden);
+  if(!hidden.length) return presentation;
+  const redacted=structuredClone(presentation);
+  redacted.audience={scope:"public-redacted",hidden};
+  if(hidden.includes("roll")){
+    Object.assign(redacted.resolution,redactedRollFacts());
+    (redacted.resolution as {concentrationSave?:unknown}).concentrationSave=undefined;
+    redacted.action=undefined;
+    redacted.dice={faces:[],selectedIndices:[],discardedIndices:[],selection:"unknown"};
+    redacted.timeline=redacted.timeline.map((entry)=>({...entry,label:entry.key==="roll"?"비공개 굴림":entry.key==="interrupt-wait"?entry.label:HIDDEN_OUTCOME}));
+  }
+  if(hidden.includes("targets")){
+    redacted.resolution.targetIds=[];
+    redacted.targets=[];
+  }
+  return redacted;
+}
+
 type JsonRecord=Record<string,unknown>;
 const isRecord=(value:unknown):value is JsonRecord=>typeof value==="object"&&value!==null&&!Array.isArray(value);
 const isString=(value:unknown):value is string=>typeof value==="string"&&value.length>0;
@@ -244,13 +302,34 @@ function isResolution(value:unknown):value is ResolutionView {
     &&value.interrupt===undefined&&value.nextLabel===undefined;
 }
 
+function isAudience(value:unknown):value is ConnectedResolutionAudienceV1 {
+  if(!isRecord(value)) return false;
+  if(value.scope==="public") return Object.keys(value).length===1;
+  if(value.scope!=="public-redacted"||Object.keys(value).length!==2||!Array.isArray(value.hidden)||value.hidden.length===0) return false;
+  return value.hidden.every((fact)=>fact==="roll"||fact==="targets")&&new Set(value.hidden).size===value.hidden.length;
+}
+
+function leaksHiddenFacts(presentation:ConnectedResolutionPresentationV1) {
+  if(presentation.audience.scope!=="public-redacted") return false;
+  const {hidden}=presentation.audience;
+  const resolution=presentation.resolution as ResolutionView&{concentrationSave?:unknown};
+  if(hidden.includes("roll")){
+    const expected=redactedRollFacts();
+    for(const key of CONNECTED_RESOLUTION_ROLL_FACT_KEYS) if(JSON.stringify(resolution[key]??null)!==JSON.stringify(expected[key]??null)) return true;
+    if(resolution.concentrationSave!==undefined||presentation.action!==undefined) return true;
+    if(presentation.dice.faces.length>0||presentation.dice.total!==undefined||presentation.dice.modifier!==undefined) return true;
+  }
+  if(hidden.includes("targets")&&(resolution.targetIds.length>0||presentation.targets.length>0)) return true;
+  return false;
+}
+
 export function isConnectedResolutionPresentation(value:unknown):value is ConnectedResolutionPresentationV1 {
   if (!isRecord(value)) return false;
   const valid=value.schemaId===CONNECTED_RESOLUTION_PRESENTATION_SCHEMA_ID
     &&value.schemaVersion===CONNECTED_RESOLUTION_PRESENTATION_SCHEMA_VERSION
     &&isString(value.resolutionId)&&Number.isInteger(value.presentationSequence)&&Number(value.presentationSequence)>=0
     &&(value.delivery==="live"||value.delivery==="catchup")
-    &&isRecord(value.audience)&&value.audience.scope==="public"&&Object.keys(value.audience).length===1
+    &&isAudience(value.audience)
     &&isEntityLabel(value.actor)&&Array.isArray(value.targets)&&value.targets.every(isEntityLabel)
     &&isResolution(value.resolution)&&value.resolution.id===value.resolutionId
     &&(value.action===undefined||isAction(value.action))
@@ -264,5 +343,6 @@ export function isConnectedResolutionPresentation(value:unknown):value is Connec
     &&presentation.dice.faces.join("\u0000")===presentation.resolution.authoritativeDice.join("\u0000")
     &&(presentation.action===undefined||(presentation.action.id===presentation.resolution.actionId&&presentation.action.actorId===presentation.resolution.actorId))
     &&presentation.timeline.slice(0,-1).every((entry)=>!entry.terminal)
-    &&presentation.timeline.at(-1)!.terminal===(presentation.resolution.stage==="complete");
+    &&presentation.timeline.at(-1)!.terminal===(presentation.resolution.stage==="complete")
+    &&!leaksHiddenFacts(presentation);
 }

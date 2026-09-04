@@ -1,7 +1,12 @@
 import type { EconomyVm, SceneEntity, SessionMode } from "./contracts";
 import type { ResolutionEvent } from "../domain/resolutionTypes";
 import type { ReadyActionConfiguration } from "./standardActionReadyState";
-import type { ConnectedResolutionPresentationV1 } from "./connectedResolutionPresentation";
+import type {
+  ConnectedResolutionDicePresentationV1,
+  ConnectedResolutionHiddenFact,
+  ConnectedResolutionPresentationV1,
+  ConnectedResolutionRollFactsV1,
+} from "./connectedResolutionPresentation";
 import type { ManualMovementReactionCommand } from "./manualMovementReactionContracts";
 
 export const CONNECTED_SESSION_PROTOCOL_VERSION = 1 as const;
@@ -108,6 +113,16 @@ export type ConnectedEventPayload =
       transition:"armed"|"cleared";
       configuration?:ReadyActionConfiguration;
       economy:EconomyVm;
+      stateChanges:string[];
+      provenance:string[];
+    }
+  | {
+      kind:"resolution-disclosure";
+      resolutionId:string;
+      disclosureId:string;
+      disclosed:ConnectedResolutionHiddenFact[];
+      roll?:{facts:ConnectedResolutionRollFactsV1;dice:ConnectedResolutionDicePresentationV1};
+      targets?:Array<{id:string;label:string}>;
       stateChanges:string[];
       provenance:string[];
     };
