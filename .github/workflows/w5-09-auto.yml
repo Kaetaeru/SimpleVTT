@@ -40,6 +40,10 @@ on:
       - "tests/ui/connectedTurnProjection.test.ts"
       - "tests/ui/connectedUndoCompensation.test.ts"
       - ".github/workflows/w5-09-auto.yml"
+  workflow_dispatch:
+
+env:
+  V1_VERIFICATION_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
 jobs:
   mp-j-ui-parity:
@@ -75,7 +79,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: W5-09-AUTO-${{ github.sha }}
+          name: W5-09-AUTO-${{ env.V1_VERIFICATION_SHA }}
           path: w5-09-auto.log
           if-no-files-found: error
           retention-days: 14

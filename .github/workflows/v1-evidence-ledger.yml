@@ -1,0 +1,34 @@
+name: V1 Evidence Ledger
+
+on:
+  push:
+    branches:
+      - work/v1-composite
+      - "agent/**"
+    paths:
+      - "docs/roadmap/V1_EVIDENCE_LEDGER.json"
+      - "scripts/check-v1-evidence-ledger.mjs"
+      - "tests/ui/v1EvidenceLedger.test.mjs"
+      - ".github/workflows/v1-evidence-ledger.yml"
+  pull_request:
+    branches:
+      - work/v1-composite
+    paths:
+      - "docs/roadmap/V1_EVIDENCE_LEDGER.json"
+      - "scripts/check-v1-evidence-ledger.mjs"
+      - "tests/ui/v1EvidenceLedger.test.mjs"
+      - ".github/workflows/v1-evidence-ledger.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ledger:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate ledger schema, counts, and weighted score
+        run: node scripts/check-v1-evidence-ledger.mjs
+      - name: Run ledger regression tests
+        run: node --test tests/ui/v1EvidenceLedger.test.mjs

@@ -25,6 +25,10 @@ on:
       - "tests/ui/campaignSystems.test.ts"
       - "tests/ui/productionSessionAdvancementReachability.test.ts"
       - ".github/workflows/w6-02-auto.yml"
+  workflow_dispatch:
+
+env:
+  V1_VERIFICATION_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
 jobs:
   verify:
@@ -47,5 +51,5 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: W6-02-AUTO-${{ github.sha }}
+          name: W6-02-AUTO-${{ env.V1_VERIFICATION_SHA }}
           path: w6-02-auto.log

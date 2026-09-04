@@ -11,6 +11,20 @@ on:
       - 'package.json'
       - 'package-lock.json'
       - 'content/**'
+  push:
+    branches:
+      - work/v1-composite
+    paths:
+      - '.github/workflows/w6-07-auto.yml'
+      - 'src/**'
+      - 'tests/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'content/**'
+  workflow_dispatch:
+
+env:
+  V1_VERIFICATION_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
 permissions:
   contents: read
@@ -46,6 +60,7 @@ jobs:
           {
             echo "W6-07 AUTO Verification"
             echo "checkout_sha=${GITHUB_SHA}"
+            echo "verification_sha=${{ env.V1_VERIFICATION_SHA }}"
             echo "head_sha=${{ github.event.pull_request.head.sha }}"
             echo "base_sha=${{ github.event.pull_request.base.sha }}"
             echo "scenario_mapping=MP-G01..MP-G09"
@@ -54,7 +69,7 @@ jobs:
       - name: Upload W6-07 evidence
         uses: actions/upload-artifact@v4
         with:
-          name: W6-07-AUTO-${{ github.sha }}
+          name: W6-07-AUTO-${{ env.V1_VERIFICATION_SHA }}
           path: |
             /tmp/w6-07.tap
             /tmp/w6-07-evidence.txt

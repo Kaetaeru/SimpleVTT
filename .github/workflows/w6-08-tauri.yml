@@ -9,6 +9,16 @@ on:
       - "scripts/run-tauri-e2e-w6-08.mjs"
       - ".github/workflows/w6-08-tauri.yml"
   workflow_dispatch:
+  push:
+    branches:
+      - work/v1-composite
+    paths:
+      - "scripts/run-tauri-e2e.ps1"
+      - "scripts/run-tauri-e2e-w6-08.mjs"
+      - ".github/workflows/w6-08-tauri.yml"
+
+env:
+  V1_VERIFICATION_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
 jobs:
   tauri-w6-08:
