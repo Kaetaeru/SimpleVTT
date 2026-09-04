@@ -7,6 +7,8 @@ on:
     paths:
       - '.github/workflows/w7-05-auto.yml'
       - 'src/**'
+      - 'src-tauri/**'
+      - 'scripts/**'
       - 'tests/**'
       - 'package.json'
       - 'package-lock.json'
@@ -17,6 +19,8 @@ on:
     paths:
       - '.github/workflows/w7-05-auto.yml'
       - 'src/**'
+      - 'src-tauri/**'
+      - 'scripts/**'
       - 'tests/**'
       - 'package.json'
       - 'package-lock.json'
@@ -76,3 +80,26 @@ jobs:
             /tmp/w7-05-evidence.txt
             docs/roadmap/V1_EVIDENCE_LEDGER.json
           if-no-files-found: error
+
+  windows-hidden-roll-disclosure:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - run: npm ci --no-audit --no-fund
+      - name: Run W7-05 H+P1+P2 Windows hidden-roll/disclosure acceptance
+        shell: pwsh
+        run: powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File scripts/run-tauri-e2e.ps1 -Root . -W705
+      - name: Upload W7-05 Windows multi-instance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: W7-05-WIN-${{ env.V1_VERIFICATION_SHA }}
+          path: .live-dev/tauri-e2e/**/artifacts/**
+          if-no-files-found: error
+          retention-days: 14

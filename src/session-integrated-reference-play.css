@@ -989,6 +989,8 @@
 }
 .session-hotbar-tabs .session-hotbar-menu-trigger::after { content:"⌄"; margin-left:6px; color:var(--accent); }
 .session-hotbar-tabs .session-hotbar-menu-trigger.active { border-color:var(--accent); background:var(--accent-soft); color:var(--accent); }
+.session-hotbar-tabs .session-hotbar-hidden-roll::after { content:none; }
+.session-hotbar-tabs .session-hotbar-hidden-roll.active { box-shadow: inset 0 0 0 1px var(--accent); }
 .session-hotbar-row-control { border-color:var(--line); border-radius:7px; background:var(--recess); overflow:hidden; }
 .session-reference-command-center .session-hotbar-slot { border-color:var(--line); border-radius:9px; background:radial-gradient(circle at 45% 35%,var(--surface-3),var(--recess) 72%); }
 .session-reference-command-center .session-hotbar-slot:hover:not(:disabled) { border-color:var(--line-strong); background:var(--surface-2); }

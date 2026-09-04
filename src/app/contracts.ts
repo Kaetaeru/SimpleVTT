@@ -485,6 +485,19 @@ export interface ResolutionVisibilityVm {
   hidden: ResolutionHiddenFact[];
 }
 
+export interface HiddenResolutionVm {
+  resolutionId: string;
+  actionName: string;
+  hidden: ResolutionHiddenFact[];
+  disclosed: ResolutionHiddenFact[];
+}
+
+/** Host-only view of armed visibility and hidden Resolutions awaiting disclosure; null on Clients. */
+export interface ResolutionVisibilityStateVm {
+  armed: ResolutionVisibilityVm | null;
+  hidden: HiddenResolutionVm[];
+}
+
 export type AdjudicationScope = "resolution" | "target" | "turn" | "scene" | "until-cleared";
 
 export interface DmAdjudicationCommand {
@@ -602,6 +615,7 @@ export interface AppSnapshot {
   activity: ActivityEntry[];
   resolution: ResolutionView | null;
   resolutionPresentation?: ResolutionPresentationRuntimeVm | null;
+  resolutionVisibility?: ResolutionVisibilityStateVm | null;
   session: SessionVm;
   sessionCharacterInventories?: Record<string, SessionCharacterInventoryVm>;
   campaigns?: CampaignRecordV1[];

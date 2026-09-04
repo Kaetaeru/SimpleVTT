@@ -58,11 +58,13 @@ export function SessionRulesPane({ onClose }: { onClose(): void }) {
 }
 
 export function SessionActivityPane({ onClose }: { onClose(): void }) {
-  const { snapshot, undoLastResolution } = useSimpleVtt();
+  const { snapshot, undoLastResolution, discloseResolution } = useSimpleVtt();
   if (!snapshot) return null;
   const entries = snapshot.activity.slice(0, 20);
   const isDm = snapshot.session.role === "host";
   const latestUndoable = entries.find((entry) => !entry.reversed && !entry.undoOf);
+  const hiddenById = new Map((snapshot.resolutionVisibility?.hidden ?? []).map((record) => [record.resolutionId, record]));
+  const factLabel = (fact: "roll" | "targets") => fact === "roll" ? "판정 결과" : "대상";
 
   return <aside className="session-utility-pane session-activity-pane" aria-label="최근 세션 활동">
     <header className="session-utility-pane-head">
@@ -73,7 +75,11 @@ export function SessionActivityPane({ onClose }: { onClose(): void }) {
     {isDm && latestUndoable && <div className="session-activity-undo"><div><strong>{latestUndoable.title}</strong><small>가장 최근 판정 결과를 기존 Undo 권위로 되돌립니다.</small></div><button type="button" onClick={() => void undoLastResolution()}>최근 판정 되돌리기</button></div>}
 
     <div className="session-activity-list">
-      {entries.map((entry) => <article key={entry.id} className={entry.reversed ? "reversed" : ""}><div><time>{entry.time}</time><span>{entry.actor}</span></div><strong>{entry.title}</strong><p>{entry.summary}</p>{entry.stateChanges.length > 0 && <small>{entry.stateChanges.join(" · ")}</small>}</article>)}
+      {entries.map((entry) => {
+        const hidden = hiddenById.get(entry.id);
+        const pending = hidden ? hidden.hidden.filter((fact) => !hidden.disclosed.includes(fact)) : [];
+        return <article key={entry.id} className={`${entry.reversed ? "reversed" : ""} ${hidden ? "hidden-resolution" : ""}`.trim()}><div><time>{entry.time}</time><span>{entry.actor}</span></div><strong>{entry.title}</strong><p>{entry.summary}</p>{entry.stateChanges.length > 0 && <small>{entry.stateChanges.join(" · ")}</small>}{isDm && hidden && <div className="session-activity-disclose" aria-label="비공개 판정 공개">{pending.length === 0 ? <small>모두 공개됨</small> : pending.map((fact) => <button type="button" key={fact} aria-label={`${factLabel(fact)} 공개 · ${hidden.actionName}`} onClick={() => void discloseResolution(entry.id, [fact])}>{factLabel(fact)} 공개</button>)}</div>}</article>;
+      })}
       {entries.length === 0 && <p className="session-utility-empty">아직 기록된 결과가 없습니다.</p>}
     </div>
   </aside>;

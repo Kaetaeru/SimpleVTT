@@ -44,6 +44,7 @@ const previousDismissResolution=MockAdapter.prototype.dismissResolution;
 const previousUndoLastResolution=MockAdapter.prototype.undoLastResolution;
 const previousSubmitConcentrationSaveD20=MockAdapter.prototype.submitConcentrationSaveD20;
 const previousDeclareManualMovementReaction=MockAdapter.prototype.declareManualMovementReaction;
+const previousGetSnapshot=MockAdapter.prototype.getSnapshot;
 const projectionContexts=new WeakMap<MockAdapter,ProjectionResolutionContext>();
 
 function requestId() {
@@ -490,6 +491,18 @@ export async function discloseConnectedResolution(adapter:MockAdapter,resolution
   await broadcastConnectedWire({type:"event-batch",sessionId:state.ledger.sessionId,afterCursor:event.sequence-1,events:[event]});
   return {status:"disclosed" as const,event};
 }
+
+MockAdapter.prototype.getSnapshot=async function getSnapshotWithResolutionVisibility() {
+  const snapshot=await previousGetSnapshot.call(this);
+  const state=connectedStateFor(this);
+  snapshot.resolutionVisibility=state.mode==="host"
+    ? {
+        armed:state.nextResolutionVisibility?{hidden:[...state.nextResolutionVisibility.hidden]}:null,
+        hidden:[...state.hiddenResolutions.values()].map((record)=>({resolutionId:record.resolutionId,actionName:record.actionName,hidden:[...record.hidden],disclosed:[...record.disclosed]})),
+      }
+    : null;
+  return snapshot;
+};
 
 MockAdapter.prototype.setNextResolutionVisibility=async function setConnectedResolutionVisibility(visibility:ConnectedResolutionVisibilityV1|null) {
   const state=connectedStateFor(this);
