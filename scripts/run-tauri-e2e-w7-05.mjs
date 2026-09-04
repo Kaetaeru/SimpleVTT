@@ -77,7 +77,7 @@ async function runScenario(){
   scenarios["MP-B06"]={status:"PASS",resolutionId:rolled.resolutionId,actionId:rolled.actionId,hiddenNatural:natural,p1:p1Hidden,p2:p2Hidden};
 
   // MP-B05: the Host keeps the private detail while both Clients hold the same public projection.
-  const hostPrivate=await privacySnapshot(host);assert.deepEqual(hostPrivate.dice,rolled.dice);assert.equal(hostPrivate.compact,rolled.compact);const hostText=await bodyText(host);assert.ok(hostText.includes(rolled.compact)||hostText.includes(`d20 ${natural}`),"Host must render its private detail");await saveEvidence(host,"w7-05-private");
+  const hostPrivate=await privacySnapshot(host);assert.deepEqual(hostPrivate.dice,rolled.dice);assert.equal(hostPrivate.compact,rolled.compact);const hostEntry=hostPrivate.activity.find((entry)=>entry.id===rolled.resolutionId);assert.ok(hostEntry,`Host Activity must record the hidden resolution; got ${JSON.stringify(hostPrivate.activity)}`);const hostText=await bodyText(host);assert.ok(hostText.includes(hostEntry.title)||hostText.includes(hostEntry.summary)||hostText.includes(rolled.compact),`Host must render its private detail; entry=${JSON.stringify(hostEntry)} text=${hostText.slice(0,400)}`);await saveEvidence(host,"w7-05-private");
   assert.deepEqual(p1Hidden.activity.map((entry)=>entry.title),p2Hidden.activity.map((entry)=>entry.title),"P1 and P2 must hold the identical public Activity projection");
   assert.ok(hostPrivate.visibility?.hidden.some((entry)=>entry.resolutionId===rolled.resolutionId&&entry.disclosed.length===0),"Host must track the hidden resolution");
   scenarios["MP-B05"]={status:"PASS",hostCompact:hostPrivate.compact,hostDice:hostPrivate.dice};
