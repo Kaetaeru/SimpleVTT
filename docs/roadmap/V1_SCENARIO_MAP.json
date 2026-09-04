@@ -5,7 +5,7 @@
     "roadmap": "docs/roadmap/V1_MASTER_ROADMAP.md",
     "ledger": "docs/roadmap/V1_EVIDENCE_LEDGER.json",
     "ledgerCreatedFromSha": "77b45028cbc4e04bb2cecc825a771269b64d1f2f",
-    "ledgerOfficialScore": 86.3
+    "ledgerOfficialScore": 93.8
   },
   "counts": {
     "scenarios": 120,
@@ -3152,7 +3152,7 @@
       ],
       "otherLinks": [],
       "status": "PASS",
-      "lastVerifiedSha": "7577c454540c95a186ed7f7a43f8c4bbba178aac",
+      "lastVerifiedSha": "67d40e301558c458802604e6bfdc2f3aa6080bea",
       "commands": [
         "GitHub Actions W7-05 AUTO Verification",
         "npx tsx --test tests/ui/connectedHiddenResolutionPrivacy.test.ts tests/ui/connectedResolutionPresentation.test.ts tests/ui/connectedThreePeerPresentation.test.ts tests/ui/sessionImageHandoutRuntimeAdapter.test.ts tests/ui/campaignDmLibraryNoteStructure.test.ts tests/ui/campaignDmLibraryStructure.test.ts",
@@ -3160,7 +3160,7 @@
         "powershell.exe -File scripts/run-tauri-e2e.ps1 -Root . -W705"
       ],
       "windowsArtifacts": [
-        "artifact 9942781222 W7-05-WIN-7577c454540c95a186ed7f7a43f8c4bbba178aac sha256:9a6b94b4d012b51776ec98716526888f98c9047905d71beb294a5fd24a9ea984"
+        "artifact 9943980391 W7-05-WIN-67d40e301558c458802604e6bfdc2f3aa6080bea sha256:2c653a2cb37e01d76bf90cb82739a524b679eeffc21031328a1f74e5389a3c9d"
       ]
     },
     {
@@ -3278,9 +3278,13 @@
         "MP-13"
       ],
       "otherLinks": [],
-      "status": "PENDING",
-      "lastVerifiedSha": null,
-      "commands": [],
+      "status": "PASS",
+      "lastVerifiedSha": "67d40e301558c458802604e6bfdc2f3aa6080bea",
+      "commands": [
+        "GitHub Actions V1 Scenario Map (scenario-map)",
+        "node scripts/generate-v1-scenario-map.mjs --check",
+        "node --test tests/ui/v1ScenarioMap.test.mjs"
+      ],
       "windowsArtifacts": []
     },
     {
@@ -3294,9 +3298,14 @@
       "otherLinks": [
         "V1-60"
       ],
-      "status": "PENDING",
-      "lastVerifiedSha": null,
-      "commands": [],
+      "status": "PASS",
+      "lastVerifiedSha": "67d40e301558c458802604e6bfdc2f3aa6080bea",
+      "commands": [
+        "GitHub Actions W8-04 Exact-SHA Regression (typescript-vite-focused, rust-tauri)",
+        "connected full regression (89/89) + importer focused suite (42/42) + campaign rest / connected UI / V1 coverage suites",
+        "npm run build",
+        "cargo test --manifest-path src-tauri/Cargo.toml --lib"
+      ],
       "windowsArtifacts": []
     },
     {
@@ -3309,10 +3318,17 @@
         "V1-70",
         "V1-80"
       ],
-      "status": "PENDING",
-      "lastVerifiedSha": null,
-      "commands": [],
-      "windowsArtifacts": []
+      "status": "PASS",
+      "lastVerifiedSha": "67d40e301558c458802604e6bfdc2f3aa6080bea",
+      "commands": [
+        "GitHub Actions V1 Release Artifact (windows-release)",
+        "cargo test --manifest-path src-tauri/Cargo.toml --lib",
+        "npm run tauri:build"
+      ],
+      "windowsArtifacts": [
+        "artifact 9944155056 SimpleVTT-V1-RELEASE-67d40e301558c458802604e6bfdc2f3aa6080bea sha256:f2c0763e143312572f525d264991e996da424647d6461a7793bd830d9697b92a",
+        "release executable src-tauri/target/release/simplevtt.exe 9815552 bytes sha256:5d729fa74653853ed380948d00e09e75ea2af249f00ad7ffdb1b479ee3537c0b"
+      ]
     },
     {
       "id": "W9-02",
@@ -3338,10 +3354,15 @@
       "otherLinks": [
         "legacy Journey J1~J9"
       ],
-      "status": "PENDING",
-      "lastVerifiedSha": null,
-      "commands": [],
-      "windowsArtifacts": []
+      "status": "PASS",
+      "lastVerifiedSha": "67d40e301558c458802604e6bfdc2f3aa6080bea",
+      "commands": [
+        "GitHub Actions W9-03 Zero-to-Next-Session Golden Journey (windows-golden-journey)",
+        "powershell.exe -File scripts/run-tauri-e2e.ps1 -Root . -W903"
+      ],
+      "windowsArtifacts": [
+        "artifact 9944072164 W9-03-WIN-67d40e301558c458802604e6bfdc2f3aa6080bea sha256:783872c299fadfb101a9dbdb6685db060cef1fc9289dcdd2947edc7f62742165"
+      ]
     },
     {
       "id": "W9-04",
