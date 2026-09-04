@@ -11,8 +11,11 @@ import { SPELL_PRESENTATIONS } from "./spellPresentation";
 import { MockAdapter } from "./mockAdapter";
 import { validateChoiceDefinitions, type ChoiceSelectionMap, type ChoiceSelectionValue } from "../domain/choiceDefinition";
 import { resolveCommonPlayProgressionContributions } from "../domain/commonPlayProgressionContribution";
+import type { CommonPlayProgressionContribution } from "../domain/commonPlayProgressionContribution";
 import { classById, classByName } from "../domain/progressionCatalog";
 import { buildProgressionPlan, resolveProgression, type ProgressionPlan } from "../domain/progression";
+import { selectedInstalledSubclassId } from "../domain/progression";
+import { installedSubclassEntry, installedSubclassOptions } from "./installedSubclassOptions";
 import { SORCERER_ID } from "../domain/sorcererProgressionChoices";
 import { SORCERY_POINT_RESOURCE_ID, sorceryPointMaximum } from "../domain/sorcery";
 import { wizardSignatureSpellResourceId } from "../domain/wizardProgressionChoices";
@@ -178,19 +181,29 @@ function targetClassId(sheet: CharacterSheet, draft: LevelUpDraft) {
   return draft.targetClassId ?? sheet.classLevels?.[0]?.classId ?? primaryClass(sheet)?.id ?? "dnd.srd521.class.fighter";
 }
 
-function installedProgressionContributions(state: Pick<AdapterState,"catalog">) {
-  return state.catalog.flatMap((entry) => entry.progressionContributions ?? []);
+function installedProgressionContributions(state: Pick<AdapterState,"catalog">): CommonPlayProgressionContribution[] {
+  return state.catalog.flatMap((entry) => (entry.progressionContributions ?? []).map((contribution): CommonPlayProgressionContribution => (
+    entry.category === "subclass" ? { ...contribution, ownerSubclassId:entry.contentId ?? entry.id } : contribution
+  )));
+}
+
+/** Subclass ids per class track as they will stand after this level-up: persisted ids plus the installed subclass selected in the current draft. */
+function effectiveSubclassIds(state: Pick<AdapterState,"activeCharacter">, plan: ProgressionPlan, selections: ChoiceSelectionMap) {
+  const selected = selectedInstalledSubclassId(plan.choices, selections);
+  return { ...(state.activeCharacter.subclassIds ?? {}), ...(selected ? { [plan.targetClassId]:selected } : {}) };
 }
 
 function installedProgressionGrantLabel(state: AdapterState, grantId: string) {
   return state.catalog.find((entry) => entry.contentId === grantId || entry.id === grantId)?.nameKo ?? grantId;
 }
 
-export function installedProgressionChoices(state:Pick<AdapterState,"activeCharacter"|"catalog">,plan:ProgressionPlan) {
+export function installedProgressionChoices(state:Pick<AdapterState,"activeCharacter"|"catalog">,plan:ProgressionPlan,selections:ChoiceSelectionMap={}) {
   const levels=new Map(state.activeCharacter.classLevels?.map((track)=>[track.classId,track.level])??[]);
   levels.set(plan.targetClassId,plan.targetClassLevel);
+  const subclassIds=effectiveSubclassIds(state,plan,selections);
   return installedProgressionContributions(state)
     .filter((contribution)=>(levels.get(contribution.track)??0)>=contribution.threshold)
+    .filter((contribution)=>!contribution.ownerSubclassId||subclassIds[contribution.track]===contribution.ownerSubclassId)
     .flatMap((contribution)=>(contribution.choices??[]).map((choice)=>({
       ...choice,
       description:choice.description??"",
@@ -212,6 +225,7 @@ function requestFor(state: AdapterState) {
     hpRoll:draft.hpRoll,
     selections:clone(draft.progressionSelections ?? {}),
     featOptions:featOptions(state),
+    subclassOptions:installedSubclassOptions(state.catalog),
     originFeatOptions:progressionOriginFeatOptions(),
     fightingStyleOptions:progressionFightingStyleOptions(),
     druidCantripOptions:progressionClassCantripOptions("dnd.srd521.class.druid"),
@@ -227,7 +241,7 @@ function planFor(state: AdapterState): ProgressionPlan | null {
     projectProgressionCharacterState(ensureProgressionMetadata(state.activeCharacter)),
     requestFor(state),
   );
-  const choices=installedProgressionChoices(state,plan);
+  const choices=installedProgressionChoices(state,plan,state.levelUpDraft.progressionSelections??{});
   if(choices.length){
     plan.choices.push(...choices);
     plan.blocking.push(...validateChoiceDefinitions(choices,state.levelUpDraft.progressionSelections??{}).filter((issue)=>issue.severity==="blocking").map((issue)=>issue.message));
@@ -374,11 +388,13 @@ MockAdapter.prototype.commitLevelUp = async function commitLevelUpPhase07() {
     return internal.getSnapshot();
   }
   const contributions = installedProgressionContributions(internal);
+  const selectedInstalledSubclass = selectedInstalledSubclassId(result.plan.choices, request.selections);
   const contributionResult = contributions.length
     ? resolveCommonPlayProgressionContributions({
         revision:stateBefore.revision,
         trackLevels:Object.fromEntries(result.state.classTracks.map((track) => [track.classId, track.level])),
         grants:[...(internal.activeCharacter.installedProgressionGrantIds ?? [])],
+        subclassIds:effectiveSubclassIds(internal, result.plan, request.selections),
       }, stateBefore.revision, contributions, request.selections)
     : null;
   if (contributionResult?.status === "rejected") {
@@ -389,6 +405,13 @@ MockAdapter.prototype.commitLevelUp = async function commitLevelUpPhase07() {
     scope:"full",
     featureLabelById:(featureId)=>internal.catalog.find((entry)=>entry.id===featureId)?.nameKo,
   });
+  if (selectedInstalledSubclass) {
+    // An installed subclass has no SRD relationship row; record its stable content id on the sheet so runtime owners and contributions can key on it.
+    const entry = installedSubclassEntry(internal.catalog, selectedInstalledSubclass);
+    internal.activeCharacter.subclassIds = { ...(internal.activeCharacter.subclassIds ?? {}), [result.plan.targetClassId]:selectedInstalledSubclass };
+    internal.activeCharacter.subclassSources = { ...(internal.activeCharacter.subclassSources ?? {}), [result.plan.targetClassId]:`${entry?.source ?? "installed RuleModule"} · ${entry?.nameKo ?? selectedInstalledSubclass}` };
+    internal.activeCharacter.subclassName = entry?.nameKo ?? internal.activeCharacter.subclassName;
+  }
   const addedInstalledGrantIds = contributionResult?.status === "committed" ? contributionResult.addedGrantIds : [];
   if (contributionResult?.status === "committed") {
     internal.activeCharacter.installedProgressionGrantIds = [...contributionResult.state.grants];

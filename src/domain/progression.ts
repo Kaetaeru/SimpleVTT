@@ -57,6 +57,20 @@ import {
   wizardSpellbookSelectionIds,
 } from "./wizardProgressionChoices";
 
+/** Option id prefix for a subclass contributed by an installed RuleModule; the remainder is the stable content id. */
+export const INSTALLED_SUBCLASS_OPTION_PREFIX = "installed-subclass:";
+
+export function installedSubclassOptionId(contentId: string) { return `${INSTALLED_SUBCLASS_OPTION_PREFIX}${contentId}`; }
+
+/** Stable content id of the installed subclass selected in a subclass acquisition choice, if the selection is an installed one. */
+export function selectedInstalledSubclassId(choices: ChoiceDefinition[], selections: ChoiceSelectionMap) {
+  const choice = choices.find((entry) => entry.kind === "subclass");
+  if (!choice) return undefined;
+  const selection = selections[choice.id];
+  const optionId = selection?.kind === "options" ? selection.optionIds[0] : undefined;
+  return optionId?.startsWith(INSTALLED_SUBCLASS_OPTION_PREFIX) ? optionId.slice(INSTALLED_SUBCLASS_OPTION_PREFIX.length) : undefined;
+}
+
 export interface ProgressionClassTrack {
   classId: string;
   className: string;
@@ -109,6 +123,8 @@ export interface ProgressionRequest {
   hpRoll?: number;
   selections: ChoiceSelectionMap;
   featOptions?: Array<{ id: string; label: string; description?: string }>;
+  /** Subclasses contributed by installed RuleModules; each names the class it extends and joins that class's subclass acquisition choice. */
+  subclassOptions?: Array<{ id: string; label: string; description?: string; classId: string }>;
   originFeatOptions?: Array<{ id: string; label: string; description?: string }>;
   fightingStyleOptions?: Array<{ id: string; label: string; description?: string }>;
   druidCantripOptions?: Array<{ id: string; label: string; description?: string }>;
@@ -465,7 +481,7 @@ function featureChoiceDefinitions(
       continue;
     }
     if (feature.includes("서브클래스") && !feature.includes("특성")) {
-      result.push({ id:`progression.${targetClassId}.${targetLevel}.subclass`, label:"서브클래스", description:"이 클래스의 SRD 서브클래스를 선택합니다.", kind:"subclass", count:1, required:true, status:"ready", source:`${definition.nameKo} ${targetLevel}레벨`, options:[{ id:`subclass:${definition.srdSubclassName}`, label:definition.srdSubclassName }] });
+      result.push({ id:`progression.${targetClassId}.${targetLevel}.subclass`, label:"서브클래스", description:"이 클래스의 SRD 서브클래스를 선택합니다.", kind:"subclass", count:1, required:true, status:"ready", source:`${definition.nameKo} ${targetLevel}레벨`, options:[{ id:`subclass:${definition.srdSubclassName}`, label:definition.srdSubclassName }, ...(request.subclassOptions ?? []).filter((option) => option.classId === targetClassId).map((option) => ({ id:installedSubclassOptionId(option.id), label:option.label, description:option.description }))] });
       continue;
     }
     if (feature === "에픽 은총") {
@@ -763,6 +779,9 @@ export function buildProgressionPlan(state: ProgressionCharacterState, request: 
     const selected = request.selections[subclassChoice.id];
     if (selected?.kind === "options" && selected.optionIds[0]?.startsWith("subclass:")) {
       classTracksAfter.find((track) => track.classId === target.id)!.subclassName = selected.optionIds[0].slice("subclass:".length);
+    } else if (selected?.kind === "options" && selected.optionIds[0]?.startsWith(INSTALLED_SUBCLASS_OPTION_PREFIX)) {
+      const installed = subclassChoice.options.find((option) => option.id === selected.optionIds[0]);
+      if (installed) classTracksAfter.find((track) => track.classId === target.id)!.subclassName = installed.label;
     }
   }
   const asiChoice = choices.find((choice) => choice.kind === "asi-or-feat");

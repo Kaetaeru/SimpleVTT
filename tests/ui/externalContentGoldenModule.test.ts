@@ -2,6 +2,13 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import "../../src/app/offlineRuntimeAdapters";
+import "../../src/app/connectedSessionRuntimeAdapter";
+import "../../src/app/connectedActionRoutingAdapter";
+import { buildCharacterSessionProjectionV1 } from "../../src/app/characterSessionProjection";
+import { acceptHostCharacterSessionProjection } from "../../src/app/connectedCharacterProjectionHandshake";
+import { projectedCharacterById } from "../../src/app/characterSessionProjectionRegistry";
+import { CONNECTED_CAPABILITIES } from "../../src/app/connectedSessionRuntimeAdapter";
+import type { CharacterSheet } from "../../src/app/contracts";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import { MemoryInstalledContentStore } from "../../src/app/memoryInstalledContentStore";
 import { setInstalledContentStoreForTests } from "../../src/app/installedContentRuntimeAdapter";
@@ -44,17 +51,17 @@ async function installGolden(store=new MemoryInstalledContentStore(),characterSt
   let snapshot=await adapter.previewContentImport(golden);
   assert.deepEqual(snapshot.contentImport?.validation.filter((entry)=>entry.severity==="blocking"),[]);
   assert.equal(snapshot.contentImport?.package?.moduleId,MODULE_ID);
-  assert.equal(snapshot.contentImport?.package?.entries.length,3);
+  assert.equal(snapshot.contentImport?.package?.entries.length,4);
   snapshot=await adapter.activateContentImport();
   assert.equal(snapshot.contentImport,null,"activation clears the preview");
   return {adapter,store,snapshot};
 }
 
-test("golden module: one Background, one Subclass, and one executable feature parse through the production package path",()=>{
+test("golden module: one Background, one Subclass, one executable feature, and one feat parse through the production package path",()=>{
   const parsed=parseRuleModulePackage(golden);
   assert.equal(parsed.module.moduleId,MODULE_ID);
   assert.deepEqual(parsed.entries.map((entry)=>[entry.contentId,entry.category]),[
-    ["background.wayfarer","background"],["subclass.spellblade","subclass"],["feature.spellblade.arcane-strike","option"],
+    ["background.wayfarer","background"],["subclass.spellblade","subclass"],["feature.spellblade.arcane-strike","option"],["feat.spellblade.battle-focus","feat"],
   ]);
   const background=parsed.entries[0];
   assert.equal(background.nameKo,BACKGROUND_NAME);
@@ -70,7 +77,7 @@ test("golden module: one Background, one Subclass, and one executable feature pa
 test("golden module: installs through the real activation path, survives restart, and offers the Background in Character creation",async()=>{
   const {adapter,store}=await installGolden();
   const installed=(await adapter.getSnapshot()).catalog.filter((entry)=>entry.sourceId===MODULE_ID);
-  assert.equal(installed.length,3);
+  assert.equal(installed.length,4);
   assert.equal(installed.every((entry)=>entry.scope==="local"),true);
 
   assert.ok(backgroundOptions().some((option)=>option.name===BACKGROUND_NAME),"imported Background joins the creation option list");
@@ -91,31 +98,80 @@ test("golden module: installs through the real activation path, survives restart
   const restarted=new MockAdapter();
   setInstalledContentStoreForTests(restarted,store);
   const restored=await restarted.getSnapshot();
-  assert.equal(restored.catalog.filter((entry)=>entry.sourceId===MODULE_ID).length,3,"activation is resolvable after restart");
+  assert.equal(restored.catalog.filter((entry)=>entry.sourceId===MODULE_ID).length,4,"activation is resolvable after restart");
   assert.ok(backgroundOptions().some((option)=>option.name===BACKGROUND_NAME));
   assert.equal((await store.readGenerations()).length,1,"one durable generation for the whole package");
 });
 
-test("golden module: the imported Subclass feature is granted by stable ID and resolves in a Session",async()=>{
-  const characterStore=new DurableMemoryCharacterLibraryStore();
-  const {adapter,store}=await installGolden(new MemoryInstalledContentStore(),characterStore);
+const FEAT_ID="feat.spellblade.battle-focus";
+const FEAT_NAME="전투 집중";
+const SUBCLASS_ID="subclass.spellblade";
+const SUBCLASS_NAME="주문검사";
+const FIGHTER_ID="dnd.srd521.class.fighter";
+const FIGHTER_SUBCLASS_CHOICE_ID=`progression.${FIGHTER_ID}.3.subclass`;
+const FIGHTER_ASI_CHOICE_ID=`progression.${FIGHTER_ID}.4.asi`;
+
+/** Rewrites the seeded Fighter into a fresh level-N Fighter with no subclass, the state a Character created through the Creator reaches before its first subclass level. */
+async function freshFighter(adapter:MockAdapter,level:number) {
+  const baseline=(await adapter.getSnapshot()).activeCharacter;
+  const internal=adapter as unknown as {activeCharacter:typeof baseline};
+  internal.activeCharacter={
+    ...baseline,
+    name:"골든 길잡이",
+    level,
+    subclassName:"",
+    classLevels:[{classId:FIGHTER_ID,className:"전사",level}],
+    subclassIds:{},
+    subclassSources:{},
+    subclassFeatureIds:[],
+    subclassFeatureSources:{},
+    installedProgressionGrantIds:[],
+    proficiencyBonus:2,
+    hitDiceByDie:{d10:level},
+  } as typeof baseline;
+  return adapter.getSnapshot();
+}
+
+async function levelUpOnce(adapter:MockAdapter,select:(snapshot:Awaited<ReturnType<MockAdapter["getSnapshot"]>>)=>Promise<void>) {
   let snapshot=await adapter.getSnapshot();
   await adapter.startLevelUp(snapshot.activeCharacter.id);
   snapshot=await adapter.getSnapshot();
-  assert.equal(snapshot.progressionPlan?.targetClassId,"dnd.srd521.class.fighter");
-  const asi=snapshot.progressionPlan?.choices.find((entry)=>entry.kind==="asi-or-feat");
-  if (asi) await (adapter as unknown as Phase07AdapterCommands).setProgressionChoice(asi.id,{kind:"asi",mode:"plus-two",primary:"str"});
+  await select(snapshot);
   snapshot=await adapter.getSnapshot();
   assert.deepEqual(snapshot.progressionPlan?.blocking,[]);
-  snapshot=await adapter.commitLevelUp();
+  return adapter.commitLevelUp();
+}
+
+test("golden module: the imported Subclass joins the Fighter 3 subclass choice, is chosen, grants its feature by stable ID, survives restart, and resolves in a Session",async()=>{
+  const characterStore=new DurableMemoryCharacterLibraryStore();
+  const {adapter,store}=await installGolden(new MemoryInstalledContentStore(),characterStore);
+  await freshFighter(adapter,2);
+  const commands=adapter as unknown as Phase07AdapterCommands;
+
+  let snapshot=await levelUpOnce(adapter,async(plan)=>{
+    assert.equal(plan.progressionPlan?.targetClassId,FIGHTER_ID);
+    const subclassChoice=plan.progressionPlan?.choices.find((entry)=>entry.id===FIGHTER_SUBCLASS_CHOICE_ID);
+    assert.ok(subclassChoice,"Fighter 3 exposes the subclass acquisition choice");
+    assert.deepEqual(subclassChoice.options.map((option)=>option.id),["subclass:챔피언",`installed-subclass:${SUBCLASS_ID}`],"the imported Subclass is a legal option next to the SRD one");
+    assert.equal(subclassChoice.options[1]?.label,SUBCLASS_NAME);
+    await commands.setProgressionChoice(FIGHTER_SUBCLASS_CHOICE_ID,{kind:"options",optionIds:[`installed-subclass:${SUBCLASS_ID}`]});
+  });
+  assert.equal(snapshot.activeCharacter.level,3);
+  assert.equal(snapshot.activeCharacter.subclassName,SUBCLASS_NAME);
+  assert.equal(snapshot.activeCharacter.classLevels?.[0]?.subclassName,SUBCLASS_NAME);
+  assert.equal(snapshot.activeCharacter.subclassIds?.[FIGHTER_ID],SUBCLASS_ID,"the stable content id is recorded, not an SRD fallback");
+  assert.match(snapshot.activeCharacter.subclassSources?.[FIGHTER_ID]??"",/golden external module/);
   assert.ok(snapshot.activeCharacter.installedProgressionGrantIds?.includes("feature.spellblade.arcane-strike"),JSON.stringify(snapshot.activeCharacter.installedProgressionGrantIds));
   assert.ok(snapshot.activeCharacter.features.includes(FEATURE_NAME));
+  assert.ok(snapshot.activeCharacter.features.includes(SUBCLASS_NAME));
+  assert.equal(snapshot.activeCharacter.subclassFeatureIds?.some((id)=>id.includes("champion")),false,"choosing the imported Subclass grants no SRD Champion feature");
 
   const restarted=new MockAdapter();
   setCharacterLibraryStoreForTests(restarted,characterStore);
   setInstalledContentStoreForTests(restarted,store);
   let restored=await restarted.getSnapshot();
   assert.ok(restored.activeCharacter.features.includes(FEATURE_NAME),"the grant survives restart");
+  assert.equal(restored.activeCharacter.subclassIds?.[FIGHTER_ID],SUBCLASS_ID,"the installed subclass id survives restart");
   await restarted.startProductionLocalPlay("player");
   await restarted.startInitiative();
   await restarted.setCurrentActor(restored.activeCharacter.id);
@@ -126,6 +182,83 @@ test("golden module: the imported Subclass feature is granted by stable ID and r
   assert.equal(restored.resolution?.stage,"complete",JSON.stringify(restored.resolution));
   assert.equal(restored.activity[0]?.title.includes(FEATURE_NAME),true,"Activity uses the same path as builtin content");
 });
+
+test("golden module: choosing the SRD Champion at Fighter 3 grants the Champion features and not the imported Subclass feature",async()=>{
+  const {adapter}=await installGolden();
+  await freshFighter(adapter,2);
+  const commands=adapter as unknown as Phase07AdapterCommands;
+  const snapshot=await levelUpOnce(adapter,async()=>{
+    await commands.setProgressionChoice(FIGHTER_SUBCLASS_CHOICE_ID,{kind:"options",optionIds:["subclass:챔피언"]});
+  });
+  assert.equal(snapshot.activeCharacter.level,3);
+  assert.equal(snapshot.activeCharacter.subclassName,"챔피언");
+  assert.notEqual(snapshot.activeCharacter.subclassIds?.[FIGHTER_ID],SUBCLASS_ID);
+  assert.deepEqual(snapshot.activeCharacter.installedProgressionGrantIds??[],[],"a subclass-owned contribution stays inactive for another subclass");
+  assert.equal(snapshot.activeCharacter.features.includes(FEATURE_NAME),false);
+  assert.ok(snapshot.activeCharacter.subclassFeatureIds?.includes("dnd.srd521.feature.fighter.champion.improved-critical"));
+});
+
+test("golden module: the imported feat joins the Fighter 4 ability-score-or-feat choice and is recorded on the sheet",async()=>{
+  const {adapter}=await installGolden();
+  await freshFighter(adapter,3);
+  const commands=adapter as unknown as Phase07AdapterCommands;
+  const snapshot=await levelUpOnce(adapter,async(plan)=>{
+    const asi=plan.progressionPlan?.choices.find((entry)=>entry.id===FIGHTER_ASI_CHOICE_ID);
+    assert.ok(asi,"Fighter 4 exposes the ability-score-or-feat choice");
+    // Installed content is addressed by its qualified catalog id (module@version#contentId), like every other catalog-backed option.
+    const featOptionId=`feat:content:${MODULE_ID}@1#${FEAT_ID}`;
+    const option=asi.options.find((entry)=>entry.id===featOptionId);
+    assert.ok(option,`the imported feat is a legal level-up option with module provenance; got ${asi.options.map((entry)=>entry.id).join("|")}`);
+    assert.equal(option.label,FEAT_NAME);
+    await commands.setProgressionChoice(FIGHTER_ASI_CHOICE_ID,{kind:"asi",mode:"feat",featId:featOptionId.slice("feat:".length)});
+    // Fighter 4 also asks for its Weapon Mastery increase; resolve every other required option choice with its first legal option so only the feat is under test.
+    for(const choice of plan.progressionPlan?.choices??[]){
+      if(choice.id===FIGHTER_ASI_CHOICE_ID||!choice.required||!choice.options.length) continue;
+      const legal=choice.options.find((entry)=>!entry.disabledReason);
+      if(legal) await commands.setProgressionChoice(choice.id,{kind:"options",optionIds:[legal.id]});
+    }
+  });
+  assert.equal(snapshot.activeCharacter.level,4);
+  assert.ok(snapshot.activeCharacter.features.includes(FEAT_NAME),JSON.stringify(snapshot.activeCharacter.features));
+});
+
+test("golden module: a projected player Character keeps its imported Subclass grant on the Host, which projects the imported feature for that scene actor",async()=>{
+  // Player peer: installs the module, builds the Character, takes the imported Subclass at Fighter 3.
+  const player=(await installGolden()).adapter;
+  await freshFighter(player,2);
+  // The reference sheet reuses the seeded id; a real player Character has its own durable id distinct from anything on the Host.
+  (player as unknown as {activeCharacter:CharacterSheet}).activeCharacter.id="char.golden-player";
+  const playerCommands=player as unknown as Phase07AdapterCommands;
+  const leveled=await levelUpOnce(player,async()=>{ await playerCommands.setProgressionChoice(FIGHTER_SUBCLASS_CHOICE_ID,{kind:"options",optionIds:[`installed-subclass:${SUBCLASS_ID}`]}); });
+  assert.ok(leveled.activeCharacter.installedProgressionGrantIds?.includes("feature.spellblade.arcane-strike"));
+  const sheet=(player as unknown as {activeCharacter:CharacterSheet}).activeCharacter;
+  // The seeded reference sheet carries demo items without trusted mechanic entries; a real Creator sheet would not. Keep the projection about class/subclass/grant content.
+  sheet.items=[];sheet.equipment=[];sheet.attacks=[];
+  const projection=buildCharacterSessionProjectionV1(sheet,leveled.catalog);
+  assert.ok(projection.contentIdentities.some((identity)=>identity.qualifiedId.endsWith("#feature.spellblade.arcane-strike")),"the projection pins the imported grant by qualified identity");
+  assert.ok(projection.contentIdentities.some((identity)=>identity.qualifiedId.endsWith("#subclass.spellblade")),"the projection pins the imported Subclass");
+
+  // DM Host: has the module installed, accepts the projection through the production handshake.
+  const host=(await installGolden()).adapter;
+  await host.setReferenceRole("dm");
+  const manifest={protocolVersion:1 as const,rulesProfileId:"dnd.srd-5.2.1",capabilities:[...CONNECTED_CAPABILITIES],character:{characterId:sheet.id,sourceRevision:sheet.sourceRevision??0,runtimeRevision:sheet.runtimeRevision??0}};
+  const accepted=acceptHostCharacterSessionProjection(host,"peer.golden-player",manifest,projection);
+  assert.equal(accepted.status,"accepted",accepted.status==="rejected"?accepted.error:undefined);
+  const mounted=projectedCharacterById(host,sheet.id);
+  assert.ok(mounted?.sheet.installedProgressionGrantIds?.includes("feature.spellblade.arcane-strike"),"the mounted sheet keeps the installed grant");
+  assert.equal(mounted?.sheet.subclassIds?.[FIGHTER_ID],SUBCLASS_ID);
+
+  // Installed Common Play actions are projected against the turn runtime, so observe them once the Session clock exists (initiative), exactly as the Windows journey does.
+  await host.startInitiative();
+  let snapshot=await host.setCurrentActor(sheet.id);
+  const projectedAction=(snapshot.scene.actionsByActor[sheet.id]??[]).find((action)=>action.name===FEATURE_NAME);
+  assert.ok(projectedAction,`the Host must project the imported feature for the projected Character; got ${(snapshot.scene.actionsByActor[sheet.id]??[]).map((action)=>action.name).join("|")}`);
+  assert.equal(projectedAction.actorId,sheet.id);
+  assert.match(projectedAction.id,/installed-common-play/,"the projected action is the installed Common Play entry point, not a named branch");
+  assert.equal(projectedAction.target,"self");
+  // Executing it on the Character's turn inside a live connected Session is the W9-03 Windows golden journey's job (real transport, real turn runtime); this test pins the Host-side projection contract.
+});
+
 
 test("golden module: uninstall removes the whole source in one generation and Character creation forgets the Background",async()=>{
   const {adapter,store}=await installGolden();
