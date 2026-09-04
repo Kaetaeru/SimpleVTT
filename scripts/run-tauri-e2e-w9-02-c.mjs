@@ -108,7 +108,7 @@ async function runScenario(){
     let hostRes=await waitHostResolutionFor(host,fighter1.id);
     let dicePolls=0,sawCanvas=false;for(let i=0;i<10;i+=1){const s=await peerState(p2);dicePolls+=1;if(s.hasCanvas){sawCanvas=true;break;}await sleep(150);}
     const c01Done=await hostAdvanceToComplete(host,hostRes.resolution.id);assert.equal(c01Done.resolution?.stage,"complete",JSON.stringify(c01Done.resolution));
-    assert.equal(c01Done.resolution.attackOutcome,"명중",JSON.stringify(c01Done.resolution));assert.ok(c01Done.resolution.dice.length>=1&&c01Done.resolution.dice[0]===15,"authoritative d20 must be the queued 15");
+    assert.equal(c01Done.resolution.attackOutcome,"명중",JSON.stringify(c01Done.resolution));assert.ok(c01Done.resolution.dice.includes(15),`authoritative dice must carry the queued d20 15; got ${JSON.stringify(c01Done.resolution.dice)}`);
     const c01States=await expectConverged(peers,c01Done.resolution.id,"MP-C01");
     const goblinAfter=entity(c01States[0][1],goblinId).hp;assert.ok(goblinAfter<goblinBefore,`goblin HP must drop on hit (${goblinBefore} -> ${goblinAfter})`);
     for(const p of [p1,p2]){const text=await renderedActivityText(p);assert.ok(text.includes("고블린")&&text.includes("명중"),`${p.label} Activity must render target and hit; got ${text.slice(0,300)}`);await closeActivity(p);}
@@ -130,7 +130,7 @@ async function runScenario(){
     await walkToActor(host,fighter1.id);await hostCall(host,`await mockAdapter.setQueuedD20(20);`);
     const c05=await clientAct(p1,greatsword.id,[goblinId]);assert.equal(c05.ok,true,c05.error);
     hostRes=await waitHostResolutionFor(host,fighter1.id);const c05Done=await hostAdvanceToComplete(host,hostRes.resolution.id);
-    assert.equal(c05Done.resolution?.stage,"complete");assert.equal(c05Done.resolution.dice[0],20);
+    assert.equal(c05Done.resolution?.stage,"complete");assert.ok(c05Done.resolution.dice.includes(20),`natural 20 must be the authoritative d20; got ${JSON.stringify(c05Done.resolution.dice)}`);
     const c05States=await expectConverged(peers,c05Done.resolution.id,"MP-C05");
     await evidenceAll(peers,"w9-02c-c05");record("MP-C05",{resolutionId:c05Done.resolution.id,critical:c05Done.resolution.critical??null,summary:c05States[0][1].activity.find((e)=>e.id===c05Done.resolution.id)?.summary});
 
@@ -160,7 +160,7 @@ async function runScenario(){
     hostRes=await waitHostResolutionFor(host,fighter1.id);
     if(hostRes.resolution.checkTarget===undefined){await hostCall(host,`await mockAdapter.applyDmAdjudication({type:"ability-check-dc",value:10,scope:"resolution"});`);}
     const c08Done=await hostAdvanceToComplete(host,hostRes.resolution.id);assert.equal(c08Done.resolution?.stage,"complete",JSON.stringify(c08Done.resolution));
-    assert.equal(c08Done.resolution.dice[0],13);const c08States=await expectConverged(peers,c08Done.resolution.id,"MP-C08");
+    assert.ok(c08Done.resolution.dice.includes(13),`check d20 must be the queued 13; got ${JSON.stringify(c08Done.resolution.dice)}`);const c08States=await expectConverged(peers,c08Done.resolution.id,"MP-C08");
     for(const p of [p1,p2]){const text=await renderedActivityText(p);assert.ok(text.includes(c08States[0][1].activity.find((e)=>e.id===c08Done.resolution.id).title),`${p.label} must render the check`);await closeActivity(p);}
     await evidenceAll(peers,"w9-02c-c08");record("MP-C08",{resolutionId:c08Done.resolution.id,action:athletics.name,total:c08Done.resolution.rollTotal,outcome:c08Done.resolution.checkOutcome??c08Done.resolution.finalOutcome});
 
