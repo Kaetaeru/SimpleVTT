@@ -1,9 +1,10 @@
 import "./phase09RealNoRollDamageAdapter";
 import "./combatantRuntimeContracts";
-import type { AbilityKey, AbilityScores, ActionVm, AppSnapshot, CombatantDefinitionVm, CombatantImportPreview, SceneEntity, SceneVm } from "./contracts";
-import type { CombatantRuntimeAttackVm } from "./combatantRuntimeContracts";
+import type { ActionVm, AppSnapshot, CombatantDefinitionVm, CombatantImportPreview, DamageSpecVm, SceneEntity, SceneVm } from "./contracts";
+import type { CombatantRuntimeAttackVm, CombatantRuntimeDamageVm, CombatantRuntimeSaveActionVm } from "./combatantRuntimeContracts";
 import { MockAdapter } from "./mockAdapter";
 import { diceShape, parseRuntimeActions, parseRuntimeStats } from "./combatantRuntimeDefinitionParse";
+import { abilityLabelKo, isSrdMonsterId, srdMonsterById, srdMonsterCombatantDefinition } from "./srdMonsterCatalog";
 
 const BUILTIN_RUNTIME_ACTIONS:Record<string,CombatantRuntimeAttackVm[]>={
   "combatant.goblin":[
@@ -16,7 +17,20 @@ interface CombatantRuntimeAdapterState {
   combatantImport:CombatantImportPreview|null;
   combatantDefinitions:CombatantDefinitionVm[];
   scene:SceneVm;
+  /** Test hook: the next initiative d20 for an instantiated SRD monster (consumed once). */
+  queuedInitiativeD20?:number|null;
   getSnapshot():Promise<AppSnapshot>;
+}
+
+function damageSpec(component:CombatantRuntimeDamageVm):DamageSpecVm {
+  const shape=diceShape(component.dice);
+  const average=Math.max(0,Math.round(shape.count*((shape.sides+1)/2)+component.flat));
+  return { type:component.type, dice:component.dice, flat:component.flat, average };
+}
+
+function damageText(component:CombatantRuntimeDamageVm) {
+  const signedFlat=component.flat===0 ? "" : ` ${component.flat>0?"+":"-"} ${Math.abs(component.flat)}`;
+  return `${component.dice}${signedFlat} ${component.type}`;
 }
 
 function actionVm(
@@ -26,21 +40,24 @@ function actionVm(
   existingId?:string,
 ):ActionVm {
   const shape=diceShape(spec.damage.dice);
-  const average=Math.max(0,Math.round(shape.count*((shape.sides+1)/2)+spec.damage.flat));
-  const signedFlat=spec.damage.flat===0 ? "" : ` ${spec.damage.flat>0?"+":"-"} ${Math.abs(spec.damage.flat)}`;
+  const components=[spec.damage,...(spec.extraDamage ?? [])];
+  const damage=components.map(damageSpec);
+  const damageLabel=components.map(damageText).join(" + ");
+  const multi=spec.attacksPerAction && spec.attacksPerAction>1 ? ` · ${spec.attacksPerAction}회` : "";
   return {
     id:existingId ?? `action.${actorId}.${spec.id}`,
     actorId,
     name:spec.name,
     category:spec.category,
     target:"enemy",
-    economy:"행동",
+    economy:spec.economy ?? "행동",
     resolutionKind:"attack",
-    summary:`${spec.attackBonus>=0?"+":""}${spec.attackBonus} · ${spec.damage.dice}${signedFlat} ${spec.damage.type}`,
+    summary:`${spec.attackBonus>=0?"+":""}${spec.attackBonus} · ${damageLabel}${multi}`,
     available:true,
     eligibleTargetIds:[],
     attackBonus:spec.attackBonus,
-    damage:[{ type:spec.damage.type, dice:spec.damage.dice, flat:spec.damage.flat, average }],
+    damage,
+    ...(spec.attacksPerAction && spec.attacksPerAction>1 ? { attacksPerAction:spec.attacksPerAction } : {}),
     runtimeAttack:{
       sourceKind:spec.sourceKind,
       rangeFeet:spec.rangeFeet,
@@ -50,9 +67,43 @@ function actionVm(
     },
     details:[
       { label:"출처", value:definition.source, source:`Combatant Definition ${definition.id}` },
-      { label:"사거리", value:`${spec.rangeFeet}피트`, source:"runtime action contract" },
+      { label:"사거리", value:spec.longRangeFeet ? `${spec.rangeFeet}/${spec.longRangeFeet}피트` : `${spec.rangeFeet}피트`, source:"runtime action contract" },
       { label:"명중", value:`${spec.attackBonus>=0?"+":""}${spec.attackBonus}`, source:"runtime action contract" },
-      { label:"피해", value:`${spec.damage.dice}${signedFlat} ${spec.damage.type}`, source:"runtime action contract" },
+      { label:"피해", value:damageLabel, source:"runtime action contract" },
+      ...(spec.attacksPerAction && spec.attacksPerAction>1 ? [{ label:"다중 공격", value:`행동당 ${spec.attacksPerAction}회`, source:"runtime action contract" }] : []),
+      ...(spec.hitText ? [{ label:"적중", value:spec.hitText, source:"stat block" }] : []),
+    ],
+  };
+}
+
+function saveActionVm(definition:CombatantDefinitionVm,actorId:string,spec:CombatantRuntimeSaveActionVm):ActionVm {
+  const damage=spec.damage.map(damageSpec);
+  const abilityLabel=abilityLabelKo(spec.saveAbility);
+  const damageLabel=spec.damage.map(damageText).join(" + ");
+  const successLabel=spec.successDamage==="half" ? "성공 시 절반" : "성공 시 피해 없음";
+  return {
+    id:`action.${actorId}.${spec.id}`,
+    actorId,
+    name:spec.name,
+    category:"basic",
+    target:spec.maxTargets>1 ? "multi-enemy" : "enemy",
+    economy:spec.economy ?? "행동",
+    resolutionKind:"saving-throw",
+    summary:`${abilityLabel} 내성 DC ${spec.saveDc} · ${damageLabel || "효과"}${spec.maxTargets>1 ? " · 여러 대상" : ""}`,
+    available:true,
+    eligibleTargetIds:[],
+    maxTargets:spec.maxTargets,
+    saveDc:spec.saveDc,
+    saveAbility:abilityLabel,
+    saveHalf:spec.successDamage==="half",
+    damage,
+    details:[
+      { label:"출처", value:definition.source, source:`Combatant Definition ${definition.id}` },
+      ...(spec.areaText ? [{ label:"범위", value:spec.areaText, source:"stat block" }] : []),
+      { label:"내성", value:`${abilityLabel} DC ${spec.saveDc}`, source:"runtime action contract" },
+      ...(damage.length ? [{ label:"피해", value:`${damageLabel} · ${successLabel}`, source:"runtime action contract" }] : []),
+      ...(spec.failText ? [{ label:"실패", value:spec.failText, source:"stat block" }] : []),
+      ...(spec.successText ? [{ label:"성공", value:spec.successText, source:"stat block" }] : []),
     ],
   };
 }
@@ -73,11 +124,28 @@ function runtimeActionsFor(definition:CombatantDefinitionVm) {
   return definition.runtimeActions ?? BUILTIN_RUNTIME_ACTIONS[definition.id];
 }
 
+function runtimeActionVms(definition:CombatantDefinitionVm,actorId:string,existing:ActionVm[]=[],preserveLegacyIds=false):ActionVm[]|undefined {
+  const attacks=runtimeActionsFor(definition);
+  const saves=definition.runtimeSaveActions ?? [];
+  if (!attacks && !saves.length) return undefined;
+  return [
+    ...(attacks ?? []).map((spec)=>{
+      const existingId=preserveLegacyIds ? existing.find((action)=>action.name===spec.name)?.id : undefined;
+      return actionVm(definition,actorId,spec,existingId);
+    }),
+    ...saves.map((spec)=>saveActionVm(definition,actorId,spec)),
+  ];
+}
+
 function sameRuntimeAction(left:ActionVm,right:ActionVm) {
   return left.id===right.id
     && left.actorId===right.actorId
     && left.name===right.name
+    && left.resolutionKind===right.resolutionKind
     && left.attackBonus===right.attackBonus
+    && left.saveDc===right.saveDc
+    && left.attacksPerAction===right.attacksPerAction
+    && (left.damage?.length ?? 0)===(right.damage?.length ?? 0)
     && left.damage?.[0]?.type===right.damage?.[0]?.type
     && left.damage?.[0]?.dice===right.damage?.[0]?.dice
     && left.damage?.[0]?.flat===right.damage?.[0]?.flat
@@ -91,17 +159,33 @@ function materializeEncounterRuntimeActions(internal:CombatantRuntimeAdapterStat
   for (const combatant of entities) {
     const definition=definitionForEntity(internal.combatantDefinitions,combatant.id);
     if (!definition) continue;
-    const specs=runtimeActionsFor(definition);
-    if (!specs) continue;
     const existing=internal.scene.actionsByActor[combatant.id] ?? [];
-    const preserveLegacyIds=!combatant.id.includes(".instance-");
-    const next=specs.map((spec)=>{
-      const existingId=preserveLegacyIds ? existing.find((action)=>action.name===spec.name)?.id : undefined;
-      return actionVm(definition,combatant.id,spec,existingId);
-    });
+    const next=runtimeActionVms(definition,combatant.id,existing,!combatant.id.includes(".instance-"));
+    if (!next) continue;
     if (existing.length===next.length && existing.every((action,index)=>sameRuntimeAction(action,next[index]))) continue;
     internal.scene.actionsByActor[combatant.id]=next;
   }
+}
+
+/** SRD monsters live in the catalog module until the DM adds one; the definition is materialized then. */
+export function ensureCombatantDefinition(internal:CombatantRuntimeAdapterState,definitionId:string):CombatantDefinitionVm|undefined {
+  const existing=internal.combatantDefinitions.find((entry)=>entry.id===definitionId);
+  if (existing) return existing;
+  if (!isSrdMonsterId(definitionId)) return undefined;
+  const monster=srdMonsterById(definitionId);
+  if (!monster) return undefined;
+  const definition=srdMonsterCombatantDefinition(monster);
+  internal.combatantDefinitions=[...internal.combatantDefinitions,definition];
+  return definition;
+}
+
+function rollInitiativeD20(internal:CombatantRuntimeAdapterState) {
+  const queued=internal.queuedInitiativeD20;
+  if (typeof queued==="number") {
+    internal.queuedInitiativeD20=null;
+    return queued;
+  }
+  return Math.floor(Math.random()*20)+1;
 }
 
 const previousGetSnapshot=MockAdapter.prototype.getSnapshot;
@@ -144,10 +228,10 @@ MockAdapter.prototype.previewCombatantImport=async function previewCombatantImpo
 
 MockAdapter.prototype.instantiateCombatant=async function instantiateCombatantWithRuntimeDefinition(definitionId:string) {
   const internal=this as unknown as CombatantRuntimeAdapterState;
+  const definition=ensureCombatantDefinition(internal,definitionId);
   const beforeIds=new Set(internal.scene.entities.map((entity)=>entity.id));
   await previousInstantiate.call(this,definitionId);
   const added=internal.scene.entities.find((entity)=>!beforeIds.has(entity.id));
-  const definition=internal.combatantDefinitions.find((entry)=>entry.id===definitionId);
   if (!added || !definition) return internal.getSnapshot();
   const stats=definition.runtimeStats;
   if (stats) {
@@ -156,9 +240,12 @@ MockAdapter.prototype.instantiateCombatant=async function instantiateCombatantWi
     added.vulnerabilities=[...stats.vulnerabilities];
     internal.scene.economyByActor[added.id]={ action:true, bonusAction:true, reaction:true, movement:stats.speed, movementMax:stats.speed };
   }
-  const runtimeActions=runtimeActionsFor(definition);
-  if (runtimeActions) {
-    internal.scene.actionsByActor[added.id]=runtimeActions.map((entry)=>actionVm(definition,added.id,entry));
+  if (definition.runtimeMonster) {
+    added.initiative=rollInitiativeD20(internal)+definition.runtimeMonster.initiativeBonus;
+  }
+  const actions=runtimeActionVms(definition,added.id);
+  if (actions) {
+    internal.scene.actionsByActor[added.id]=actions;
   } else if (stats) {
     internal.scene.actionsByActor[added.id]=[];
   }

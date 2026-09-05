@@ -168,3 +168,9 @@
   .session-dm-definition-grid { grid-template-columns: 1fr; }
   .session-dm-share-card { grid-template-columns: 1fr; }
 }
+
+.session-dm-monster-search { display: grid; grid-template-columns: 1fr auto; gap: 6px; align-items: center; margin-bottom: 8px; }
+.session-dm-monster-search input[type="search"] { width: 100%; min-width: 0; padding: 7px 9px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface-2, transparent); color: inherit; font-size: 12px; }
+.session-dm-monster-search label { display: inline-flex; align-items: center; gap: 3px; color: var(--muted); font-size: 12px; }
+.session-dm-monster-search input[type="number"] { width: 44px; padding: 6px 4px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface-2, transparent); color: inherit; font-size: 12px; text-align: center; }
+.session-dm-monster-results { margin-bottom: 10px; }

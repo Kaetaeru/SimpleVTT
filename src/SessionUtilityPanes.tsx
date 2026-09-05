@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useSimpleVtt } from "./app/AppProvider";
 import type { CatalogEntry } from "./app/contracts";
+import { srdMonsterByCatalogEntryId } from "./app/srdMonsterCatalog";
+import { SrdMonsterStatBlock } from "./SrdMonsterStatBlock";
 import "./session-utility-panes.css";
 
 function searchable(entry: CatalogEntry) {
@@ -31,9 +33,10 @@ export function SessionRulesPane({ onClose }: { onClose(): void }) {
   if (!snapshot) return null;
 
   const normalized = query.trim().toLowerCase();
-  const source = snapshot.catalog.filter((entry) => entry.category !== "combatant");
-  const results = (normalized ? source.filter((entry) => searchable(entry).includes(normalized)) : source).slice(0, normalized ? 60 : 24);
+  const source = snapshot.catalog;
+  const results = (normalized ? source.filter((entry) => searchable(entry).includes(normalized)) : source.filter((entry) => entry.category !== "combatant")).slice(0, normalized ? 60 : 24);
   const selected = snapshot.catalog.find((entry) => entry.id === selectedId) ?? null;
+  const selectedMonster = selected?.category === "combatant" ? srdMonsterByCatalogEntryId(selected.id) ?? null : null;
 
   return <aside className="session-utility-pane session-rules-pane" aria-label="세션 규칙 찾아보기">
     <header className="session-utility-pane-head">
@@ -41,14 +44,14 @@ export function SessionRulesPane({ onClose }: { onClose(): void }) {
       <button type="button" autoFocus aria-label="규칙 닫기" onClick={onClose}>×</button>
     </header>
 
-    <div className="session-rules-search"><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="주문, 상태, 행동, 기능 검색" aria-label="규칙 검색" /></div>
+    <div className="session-rules-search"><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="주문, 상태, 몬스터, 기능 검색" aria-label="규칙 검색" /></div>
 
     {selected ? <section className="session-rule-detail">
       <button type="button" className="session-rule-back" onClick={() => setSelectedId(null)}>← 검색 결과</button>
       <span className="eyebrow">{categoryLabel(selected.category)} · {selected.source}</span>
       <h2>{selected.nameKo}</h2>
       {selected.nameEn && <small>{selected.nameEn}</small>}
-      <p>{selected.description}</p>
+      {selectedMonster ? <SrdMonsterStatBlock monster={selectedMonster} /> : <p>{selected.description}</p>}
       {selected.relationships.length > 0 && <div className="session-rule-related"><strong>관련 규칙</strong>{selected.relationships.slice(0, 8).map((relation) => <button type="button" key={`${relation.label}:${relation.targetId}`} onClick={() => setSelectedId(relation.targetId)}>{relation.label} · {relation.targetName}</button>)}</div>}
     </section> : <div className="session-rule-results" role="list">
       {results.map((entry) => <button type="button" role="listitem" key={entry.id} onClick={() => setSelectedId(entry.id)}><div><strong>{entry.nameKo}</strong>{entry.nameEn && <small>{entry.nameEn}</small>}</div><span>{categoryLabel(entry.category)}</span><p>{entry.description}</p></button>)}
