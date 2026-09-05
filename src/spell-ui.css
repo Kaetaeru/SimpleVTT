@@ -130,7 +130,7 @@
   border-bottom:1px solid var(--line);
 }
 .spell-tooltip-header > div { min-width:0; }
-.spell-tooltip-header strong { display:block; font:700 17px Georgia,"Noto Serif KR",serif; }
+.spell-tooltip-header strong { display:block; font:700 17px var(--font-sans); }
 .spell-tooltip-header small { display:block; margin-top:2px; color:var(--accent); font-size:8px; }
 .spell-tooltip-badges { display:flex; flex-wrap:wrap; gap:4px; margin-top:7px; }
 .spell-tooltip-badges span {
@@ -168,9 +168,9 @@
 }
 .spell-choice-topline > div { min-width:0; display:grid; gap:2px; }
 .spell-choice-topline span { color:var(--accent); font-size:7px; font-weight:900; letter-spacing:.12em; }
-.spell-choice-topline strong { font:700 13px Georgia,"Noto Serif KR",serif; }
+.spell-choice-topline strong { font:700 13px var(--font-sans); }
 .spell-choice-topline small { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--muted); font-size:8px; }
-.spell-choice-topline > b { flex:0 0 auto; font:700 20px Georgia,serif; }
+.spell-choice-topline > b { flex:0 0 auto; font:700 20px var(--font-sans); }
 .spell-selected-strip {
   min-height:52px;
   display:grid;
@@ -241,9 +241,9 @@
 .spellbook-prepared-block > header { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:7px; }
 .spellbook-prepared-block > header > div { display:grid; gap:1px; }
 .spellbook-prepared-block > header span { color:#7c6855; font-size:6px; font-weight:900; letter-spacing:.13em; }
-.spellbook-prepared-block > header strong { font:700 12px Georgia,"Noto Serif KR",serif; }
+.spellbook-prepared-block > header strong { font:700 12px var(--font-sans); }
 .spellbook-prepared-block > header small { color:#766e65; font-size:7px; }
-.spellbook-prepared-block > header b { width:32px; height:32px; display:grid; place-items:center; border:1px solid #9f9487; border-radius:50%; font:700 14px Georgia,serif; }
+.spellbook-prepared-block > header b { width:32px; height:32px; display:grid; place-items:center; border:1px solid #9f9487; border-radius:50%; font:700 14px var(--font-sans); }
 .spellbook-prepared-strip {
   min-height:48px;
   display:grid;
