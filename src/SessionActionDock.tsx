@@ -11,6 +11,7 @@ import { ActionIcon } from "./ActionIcon";
 import { actionIconDescriptor } from "./app/actionIconProjection";
 import { isReadyPreparationAction, isReadyTriggerAction, READY_MOVEMENT_ACTION_ID } from "./app/standardActionReadyState";
 import "./app/movementDeclarationRuntimeAdapter";
+import { presentDamageFormula } from "./app/activityPresentation";
 import { visibleCharacterResources } from "./app/characterResourcePresentation";
 import { buildLayOnHandsExecutionActionId, layOnHandsMaximumHealing, type LayOnHandsActionOption } from "./app/paladinLayOnHandsRuntimeContracts";
 import "./session-action-dock.css";
@@ -36,7 +37,7 @@ export interface SessionActionTargeting { action:ActionVm; selectedTargetIds:str
 
 function signed(value:number|undefined) { if (value===undefined) return ""; return value>=0?`+${value}`:String(value); }
 function actionEffect(action:ActionVm) {
-  if (action.damage?.length) return action.damage.map((part)=>`${part.dice}${part.flat?signed(part.flat):""} ${part.type}`).join(" + ");
+  if (action.damage?.length) return action.damage.map(presentDamageFormula).join(" + ");
   if (action.healing) return `${action.healing.dice}${action.healing.flat?signed(action.healing.flat):""} 회복`;
   if (action.checkBonus!==undefined) return `판정 ${signed(action.checkBonus)}`;
   return action.summary;

@@ -45,6 +45,18 @@ const ko = (entry: Entry) => entry.presentation.locales["ko-KR"]?.name ?? entry.
 const summary = (entry: Entry) => entry.presentation.locales["ko-KR"]?.summary ?? `${entry.presentation.originalName} · SRD 5.2.1`;
 export const opt = (id: string, name: string, nameEn: string, text: string, grants: string[], choices: string[] = [], recommended = false): Option => ({ id, name, nameEn, summary: text, source: "SRD 5.2.1 · Catalog", recommended, grants, choices });
 const pretty = (value: string) => value.split(/[.\-]/).slice(-3).join(" ");
+// T1-08: table-facing names for the SRD 5.2.1 origin vocabulary (the origins module carries ids only).
+const SIZE_KO: Record<string, string> = { tiny:"초소형", small:"소형", medium:"중형", large:"대형" };
+const TRAIT_KO: Record<string, string> = {
+  "breath-weapon":"브레스 무기", "damage-resistance":"피해 저항", "draconic-flight":"용의 비행", "poison-resistance":"독 저항", "dwarven-toughness":"드워프의 강인함",
+  stonecunning:"돌 감각", "fey-ancestry":"요정 혈통", trance:"명상", "lineage-spells":"혈통 주문", "gnomish-cunning":"노움의 교활함", "lineage-traits":"혈통 특성",
+  "giant-ancestry-power":"거인 혈통의 힘", "large-form":"거대한 형태", "powerful-build":"강건한 체격", brave:"용감함", "halfling-nimbleness":"하플링의 민첩함", luck:"행운",
+  "naturally-stealthy":"타고난 은신", resourceful:"임기응변", skillful:"숙련", versatile:"다재다능", "adrenaline-rush":"아드레날린 분출", "relentless-endurance":"끈질긴 인내",
+  "otherworldly-presence":"이계의 존재감", "fiendish-legacy":"악마의 유산",
+};
+const TOOL_KO: Record<string, string> = { "calligrapher-supplies":"서예 도구", "thieves-tools":"도둑 도구", "gaming-set":"게임 도구 (택 1)", "artisans-tools":"장인 도구 (택 1)", "musical-instrument":"악기 (택 1)" };
+const traitKo = (value: string) => { const [id, level] = value.split("@"); const name = TRAIT_KO[id] ?? pretty(id); return level ? `${name} (${level}레벨)` : name; };
+const featKo = (id: string) => { const entry = featEntries.find((feat) => feat.id === id) ?? featEntries.find((feat) => id.startsWith(feat.id)); const name = entry ? ko(entry) : pretty(id); const variant = entry && id !== entry.id ? id.slice(entry.id.length + 1) : ""; const VARIANT_KO: Record<string, string> = { cleric:"클레릭", wizard:"위저드", druid:"드루이드" }; return variant ? `${name} (${VARIANT_KO[variant] ?? pretty(variant)})` : name; };
 const ABILITY: Record<AbilityKey, string> = { str: "근력", dex: "민첩", con: "건강", int: "지능", wis: "지혜", cha: "매력" };
 export const SKILL_LABELS: Record<string, string> = { "acrobatics":"곡예", "animal-handling":"동물 조련", "arcana":"비전", "athletics":"운동", "deception":"기만", "history":"역사", "insight":"통찰", "intimidation":"위협", "investigation":"조사", "medicine":"의학", "nature":"자연", "perception":"지각", "performance":"공연", "persuasion":"설득", "religion":"종교", "sleight-of-hand":"손재주", "stealth":"은신", "survival":"생존" };
 const ALL_SKILLS = Object.values(SKILL_LABELS);
@@ -65,14 +77,21 @@ function classOption(entry: Entry): Option {
 }
 export function speciesOption(entry: Entry): Option {
   const def = cfg<SpeciesDef>(entry, "species-definition") ?? {};
-  const grants = [...(def.size?.length ? [`크기 ${def.size.join(" / ")}`] : []), ...(def.speed ? [`이동 ${def.speed} ft`] : []), ...(def.darkvision ? [`암시야 ${def.darkvision} ft`] : []), ...(def.traits ?? []).slice(0, 3).map((value) => pretty(value))];
-  return opt(entry.id, ko(entry), entry.presentation.originalName, summary(entry), grants, Object.keys(def.choices ?? {}).map((value) => `선택 · ${pretty(value)}`));
+  const sizeKo = (def.size ?? []).map((value) => SIZE_KO[value] ?? value).join(" / ");
+  const traitsKo = (def.traits ?? []).map(traitKo);
+  const speciesSummary = [sizeKo, def.speed ? `이동 ${def.speed}피트` : "", def.darkvision ? `암시야 ${def.darkvision}피트` : "", traitsKo.length ? `특성: ${traitsKo.join(", ")}` : ""].filter(Boolean).join(" · ");
+  const grants = [...(sizeKo ? [`크기 ${sizeKo}`] : []), ...(def.speed ? [`이동 ${def.speed}피트`] : []), ...(def.darkvision ? [`암시야 ${def.darkvision}피트`] : []), ...traitsKo.slice(0, 3)];
+  return opt(entry.id, ko(entry), entry.presentation.originalName, entry.presentation.locales["ko-KR"]?.summary ?? speciesSummary ?? summary(entry), grants, Object.keys(def.choices ?? {}).map((value) => `선택 · ${pretty(value)}`));
 }
 export function backgroundOption(entry: Entry): Option {
   const def = cfg<BackgroundDef>(entry, "background-definition") ?? {};
-  const grants = [...(def.skills?.map((value) => `${SKILL_LABELS[value] ?? value} 숙련`) ?? []), ...(def.originFeat ? [`Origin Feat · ${pretty(def.originFeat)}`] : []), ...((def.tool || def.toolChoice) ? [`도구 · ${pretty(def.tool ?? def.toolChoice!)}`] : [])];
+  const skillsKo = (def.skills ?? []).map((value) => SKILL_LABELS[value] ?? value);
+  const toolKo = def.tool ? (TOOL_KO[def.tool] ?? pretty(def.tool)) : def.toolChoice ? (TOOL_KO[def.toolChoice] ?? `${pretty(def.toolChoice)} (택 1)`) : "";
+  const abilitiesKo = (def.abilityChoices ?? []).map((value) => ABILITY[value]).join("·");
+  const backgroundSummary = [skillsKo.length ? `기술: ${skillsKo.join(", ")}` : "", toolKo ? `도구: ${toolKo}` : "", def.originFeat ? `기원 재주: ${featKo(def.originFeat)}` : "", abilitiesKo ? `능력치 +2/+1 (${abilitiesKo})` : ""].filter(Boolean).join(" · ");
+  const grants = [...skillsKo.map((value) => `${value} 숙련`), ...(def.originFeat ? [`기원 재주 · ${featKo(def.originFeat)}`] : []), ...(toolKo ? [`도구 · ${toolKo}`] : [])];
   const choices = [...(def.abilityIncreaseModes?.map((value) => `능력치 증가 ${value}`) ?? []), ...(def.equipmentChoice ? ["시작 장비 또는 시작 금화"] : [])];
-  return opt(entry.id, ko(entry), entry.presentation.originalName, summary(entry), grants, choices);
+  return opt(entry.id, ko(entry), entry.presentation.originalName, entry.presentation.locales["ko-KR"]?.summary ?? backgroundSummary ?? summary(entry), grants, choices);
 }
 function fightingStyleOption(entry: Entry): Option {
   const def = cfg<Record<string, unknown>>(entry, "feat-definition") ?? {};

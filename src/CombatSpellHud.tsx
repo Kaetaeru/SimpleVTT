@@ -139,7 +139,6 @@ export function CombatSpellHudBridge() {
           </div>;
         })}
       </div>
-      <footer>Phase 06 · mechanics manifest → targeting / slot / d20 / damage / effect atomic resolution</footer>
     </section>,
     host,
   );

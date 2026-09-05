@@ -45,7 +45,8 @@ test("DM Play chrome keeps accepted geometry while the Core Systems pass lowers 
   const quick = root.indexOf('>＋ 빠른 메뉴</button>');
   const session = root.indexOf('>세션</button>');
   assert.ok(rules >= 0 && visibility > rules && activity > visibility && encounter > activity && quick > encounter && session > quick);
-  assert.match(root, /GAP-DM-ONLY-DELIVERY-PROTOCOL/);
+  assert.match(root, /Public \/ DM Only 전달/);
+  assert.doesNotMatch(root, /GAP-DM-ONLY-DELIVERY-PROTOCOL|W7-05/);
   assert.doesNotMatch(root, /session-reference-unavailable-control|Spatial Facts/);
   assert.match(coreSystems,/data-action="toggle-quick"/);
   assert.match(root,/SessionQuickPalette/);

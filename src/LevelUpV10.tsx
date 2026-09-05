@@ -180,7 +180,7 @@ function LevelUpSpellChoice({ choice, selection, onSelect }: { choice:ChoiceDefi
 
 function ChoicePanel({ choice, onSelect, selection }: { choice: ChoiceDefinition; selection?: ChoiceSelectionValue; onSelect(value: ChoiceSelectionValue): void }) {
   const section = sectionForChoice(choice, selection);
-  if (choice.status === "catalog-pending") return <SectionShell section={section}><div className="create-principle-callout"><strong>아직 선택 데이터를 연결할 수 없습니다.</strong><span>{choice.pendingReason ?? "이 선택의 canonical catalog relationship이 필요합니다."}</span><small>Phase 08 필요 · {choice.source}</small></div></SectionShell>;
+  if (choice.status === "catalog-pending") return <SectionShell section={section}><div className="create-principle-callout"><strong>아직 선택 데이터를 연결할 수 없습니다.</strong><span>{choice.pendingReason ?? "이 선택의 canonical catalog relationship이 필요합니다."}</span><small>콘텐츠 연결 필요 · {choice.source}</small></div></SectionShell>;
 
   if (choice.kind === "spell") return <LevelUpSpellChoice choice={choice} selection={selection} onSelect={onSelect}/>;
 

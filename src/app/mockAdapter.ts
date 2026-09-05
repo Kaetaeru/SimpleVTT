@@ -46,7 +46,7 @@ const ENTITIES: SceneEntity[] = [
   {id:"combatant.goblin-a",name:"고블린 A",side:"enemy",kind:"combatant",hp:12,maxHp:21,tempHp:0,ac:15,initiative:14,status:["중독됨"],distance:"22피트",resistances:[],immunities:[],vulnerabilities:[],reactions:[]},
   {id:"combatant.goblin-b",name:"고블린 B",side:"enemy",kind:"combatant",hp:21,maxHp:21,tempHp:0,ac:14,initiative:11,status:[],distance:"35피트",resistances:[],immunities:[],vulnerabilities:[],reactions:[]},
   {id:"combatant.wolf",name:"늑대",side:"enemy",kind:"combatant",hp:8,maxHp:11,tempHp:0,ac:13,initiative:9,status:["넘어짐"],distance:"18피트",resistances:[],immunities:[],vulnerabilities:[],reactions:[]},
-  {id:"combatant.training-guardian",name:"훈련용 수호체",side:"enemy",kind:"combatant",hp:30,maxHp:30,tempHp:4,ac:16,initiative:7,status:["Reference Mock"],distance:"20피트",resistances:["천둥"],immunities:["독"],vulnerabilities:["냉기"],reactions:[{id:"reaction.guard",name:"방어 반응",trigger:"공격에 명중될 때",cost:"반응 1",effect:"이번 공격에 대한 AC +3",source:"Reference Mock · UI Session",acBonus:3}]},
+  {id:"combatant.training-guardian",name:"훈련용 수호체",side:"enemy",kind:"combatant",hp:30,maxHp:30,tempHp:4,ac:16,initiative:7,status:[],distance:"20피트",resistances:["천둥"],immunities:["독"],vulnerabilities:["냉기"],reactions:[{id:"reaction.guard",name:"방어 반응",trigger:"공격에 명중될 때",cost:"반응 1",effect:"이번 공격에 대한 AC +3",source:"Reference Mock · UI Session",acBonus:3}]},
 ];
 
 const details = (rows: Array<[string,string,string?]>) => rows.map(([label,value,source]) => ({label,value,source}));
