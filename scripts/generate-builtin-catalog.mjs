@@ -8,6 +8,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const modulesDir = join(root, "content", "modules");
 const presentationDir = join(root, "content", "presentation", "dnd-srd-5.2.1.spells");
 const outputPath = join(root, "src", "generated", "builtinCatalog.generated.json");
+const monsterCatalogPath = join(root, "src", "generated", "monsterCatalog.generated.json");
 const rulesProfileId = "dnd.srd-5.2.1";
 const rulesProfileVersion = "0.1-draft";
 const sourceLabel = "SRD 5.2.1";
@@ -155,7 +156,32 @@ const spellEntries = spellPresentation.spells.map((spell) => ({
   mechanics:[],
 }));
 
-const entries = [...moduleEntries,...spellEntries].sort((a,b) => {
+// T1-01: SRD 5.2.1 monsters (parsed by scripts/generate-monster-catalog.mjs) ship as builtin combatant entries.
+const monsterCatalog = JSON.parse(readFileSync(monsterCatalogPath,"utf8"));
+const monsterEntries = monsterCatalog.monsters.map((monster) => ({
+  id:monster.id,
+  contentId:monster.id,
+  category:"combatant",
+  nameKo:monster.name,
+  nameEn:monster.nameEn,
+  scope:"builtin",
+  sourceId:rulesProfileId,
+  source:sourceLabel,
+  version:rulesProfileVersion,
+  description:`${monster.typeText} · CR ${monster.crText} · AC ${monster.ac} · HP ${monster.hp}`,
+  relationships:[],
+  capabilities:[
+    "stat-block",
+    ...(monster.actions.some((entry) => entry.kind === "attack") ? ["attack"] : []),
+    ...(monster.actions.some((entry) => entry.kind === "save") ? ["saving-throw"] : []),
+    ...(monster.actions.some((entry) => entry.kind === "multiattack") ? ["multiattack"] : []),
+    ...(monster.legendaryActions.length ? ["legendary"] : []),
+    ...(monster.actions.some((entry) => entry.kind === "spellcasting") ? ["spellcasting"] : []),
+  ],
+  mechanics:[],
+}));
+
+const entries = [...moduleEntries,...spellEntries,...monsterEntries].sort((a,b) => {
   const categoryDelta = (categoryOrder.get(a.category) ?? 99) - (categoryOrder.get(b.category) ?? 99);
   return categoryDelta || a.id.localeCompare(b.id,"en");
 });
@@ -170,6 +196,7 @@ if (counts.class !== 12) throw new Error(`builtin class count mismatch: expected
 if (counts.species !== 9) throw new Error(`builtin species count mismatch: expected 9, got ${counts.species}`);
 if (counts.background !== 4) throw new Error(`builtin background count mismatch: expected 4, got ${counts.background}`);
 if (counts.spell !== 339) throw new Error(`builtin spell count mismatch: expected 339, got ${counts.spell}`);
+if (counts.combatant !== 329) throw new Error(`builtin monster count mismatch: expected 329, got ${counts.combatant}`);
 if (counts.feat < 17) throw new Error(`builtin feat coverage regressed: expected at least 17, got ${counts.feat}`);
 if (counts.item < 51) throw new Error(`builtin item-like coverage regressed: expected at least 51, got ${counts.item}`);
 
@@ -183,4 +210,4 @@ const output = {
 };
 mkdirSync(dirname(outputPath),{recursive:true});
 writeFileSync(outputPath,JSON.stringify(output),"utf8");
-console.log(`Generated generic builtin catalog: ${entries.length} entries (${counts.class} classes, ${counts.species} species, ${counts.background} backgrounds, ${counts.feat} feats, ${counts.spell} spells, ${counts.item} items)`);
+console.log(`Generated generic builtin catalog: ${entries.length} entries (${counts.class} classes, ${counts.species} species, ${counts.background} backgrounds, ${counts.feat} feats, ${counts.spell} spells, ${counts.item} items, ${counts.combatant} monsters)`);

@@ -1,0 +1,20 @@
+{
+  "formatVersion": "1",
+  "rulesProfileId": "dnd.srd-5.2.1",
+  "locale": "ko-KR",
+  "count": 329,
+  "source": {
+    "document": "System Reference Document",
+    "version": "5.2.1",
+    "license": "CC-BY-4.0",
+    "repository": "Kaetaeru/D-D-2024-",
+    "revision": "87265659c52a515d84c4608aea3f5e322b090f74",
+    "bundlePaths": [
+      "10-RULEBOOKS/srd-5.2.1/monsters/statblocks/*.md"
+    ]
+  },
+  "compressedBytes": 93405,
+  "uncompressedBytes": 555649,
+  "sha256": "3831e50ec2f948f9c42beefd74cab8c8036e4cbdcbaa518cdb27865828170865",
+  "chunks": 16
+}

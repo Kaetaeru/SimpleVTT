@@ -3,6 +3,7 @@ import { useSimpleVtt } from "./app/AppProvider";
 import type { SceneEntity } from "./app/contracts";
 import "./app/campaignDmLibraryOrganizationRuntimeAdapter";
 import { mockAdapter } from "./app/mockAdapter";
+import { SRD_MONSTER_COUNT, searchSrdMonsters } from "./app/srdMonsterCatalog";
 import "./session-dm-tools.css";
 
 function entitySummary(entity: SceneEntity) {
@@ -68,9 +69,12 @@ export function SessionDmActorPane({ onClose }: { onClose(): void }) {
 export function SessionDmEncounterPane({ onClose }: { onClose(): void }) {
   const { snapshot, refresh, instantiateCombatant, instantiateCampaignDmLibraryNpc, removeCombatant, startInitiative, endInitiative } = useSimpleVtt();
   const [pendingKey, setPendingKey] = useState<string | null>(null);
+  const [monsterQuery, setMonsterQuery] = useState("");
+  const [monsterCount, setMonsterCount] = useState(1);
   if (!snapshot) return null;
 
   const combatants = snapshot.scene.entities.filter((entity) => entity.kind === "combatant");
+  const monsterResults = monsterQuery.trim() ? searchSrdMonsters(monsterQuery, { limit: 12 }) : [];
   const initiative = snapshot.sessionMode === "initiative";
   const removalBlocked = initiative || Boolean(snapshot.resolution);
   const campaignId=snapshot.campaignSessionSnapshot?.campaignId??snapshot.activeCampaignId??null;
@@ -83,6 +87,15 @@ export function SessionDmEncounterPane({ onClose }: { onClose(): void }) {
     setPendingKey(`add:${definitionId}`);
     try {
       await instantiateCombatant(definitionId);
+    } finally {
+      setPendingKey(null);
+    }
+  };
+  const addMonster = async (monsterId: string) => {
+    if (pendingKey) return;
+    setPendingKey(`monster:${monsterId}`);
+    try {
+      for (let index = 0; index < Math.max(1, Math.min(monsterCount, 12)); index += 1) await instantiateCombatant(monsterId);
     } finally {
       setPendingKey(null);
     }
@@ -122,6 +135,18 @@ export function SessionDmEncounterPane({ onClose }: { onClose(): void }) {
     <section className="session-dm-section">
       <div className="session-dm-section-title"><strong>Combatant 추가</strong><span>현재 세션을 떠나지 않고 Encounter에 추가합니다.</span></div>
       {campaign&&<><div className="session-dm-section-title compact"><strong>캠페인 DM 라이브러리</strong><span>비공개 NPC 정의와 PC Actor preset</span></div>{libraryNpcs.length||libraryPresets.length?<div className="session-dm-definition-grid campaign-library">{libraryNpcs.map((entry)=><button type="button" key={entry.entryId} disabled={Boolean(pendingKey)} onClick={()=>void addLibraryNpc(entry.entryId)}><div><strong>{entry.favorite?"★ ":""}{entry.label}</strong><small>{entry.tags?.join(" · ")||"Campaign NPC"}</small></div><span>AC {entry.npcDefinition!.ac} · HP {entry.npcDefinition!.maxHp}</span>{pendingKey===`library:${entry.entryId}`&&<em>추가 중…</em>}</button>)}{libraryPresets.map((entry)=><button type="button" key={entry.entryId} disabled={Boolean(pendingKey)} onClick={()=>void addLibraryPreset(entry.entryId)}><div><strong>{entry.favorite?"★ ":""}{entry.label}</strong><small>{entry.tags?.join(" · ")||"Campaign PC preset"}</small></div><span>Lv.{entry.pcPreset!.level} · AC {entry.pcPreset!.ac} · HP {entry.pcPreset!.maxHp}</span>{pendingKey===`preset:${entry.entryId}`&&<em>추가 중…</em>}</button>)}</div>:<p className="session-dm-empty">캠페인에 저장된 NPC/PC Actor가 없습니다.</p>}</>}
+      <div className="session-dm-section-title compact"><strong>SRD 몬스터</strong><span>{SRD_MONSTER_COUNT}종 · 이름, 유형, CR로 검색해 바로 추가합니다.</span></div>
+      <div className="session-dm-monster-search">
+        <input type="search" value={monsterQuery} onChange={(event) => setMonsterQuery(event.target.value)} placeholder="고블린, 드래곤, 언데드…" aria-label="SRD 몬스터 검색" />
+        <label>×<input type="number" min={1} max={12} value={monsterCount} onChange={(event) => setMonsterCount(Math.max(1, Math.min(12, Number(event.target.value) || 1)))} aria-label="추가할 마리 수" /></label>
+      </div>
+      {monsterQuery.trim() ? (monsterResults.length ? <div className="session-dm-definition-grid session-dm-monster-results">
+        {monsterResults.map((monster) => <button type="button" key={monster.id} disabled={Boolean(pendingKey)} onClick={() => void addMonster(monster.id)}>
+          <div><strong>{monster.name}</strong><small>{monster.typeText} · CR {monster.crText}</small></div>
+          <span>AC {monster.ac} · HP {monster.hp}</span>
+          {pendingKey === `monster:${monster.id}` && <em>추가 중…</em>}
+        </button>)}
+      </div> : <p className="session-dm-empty">일치하는 몬스터가 없습니다.</p>) : null}
       {snapshot.combatantDefinitions.length ? <div className="session-dm-definition-grid">
         {snapshot.combatantDefinitions.map((definition) => <button type="button" key={definition.id} disabled={Boolean(pendingKey)} onClick={() => void addCombatant(definition.id)}>
           <div><strong>{definition.name}</strong><small>{definition.source}</small></div>
