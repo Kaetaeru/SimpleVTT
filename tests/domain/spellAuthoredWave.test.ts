@@ -18,13 +18,13 @@ function casterFor(definition:SpellMechanicDefinition):SpellCasterContext {
   return {
     characterLevel:17,spellAttackModifier:9,spellSaveDc:17,spellcastingAbilityModifier:5,
     preparedSpellIds:definition.baseLevel>0?[definition.spellId]:[],alwaysPreparedSpellIds:[],cantripSpellIds:definition.baseLevel===0?[definition.spellId]:[],
-    slotResourceIds:{1:"spell-slot-1",2:"spell-slot-2",3:"spell-slot-3",4:"spell-slot-4",6:"spell-slot-6",9:"spell-slot-9"},
+    slotResourceIds:Object.fromEntries([1,2,3,4,5,6,7,8,9].map((level)=>[level,`spell-slot-${level}`])),
   };
 }
 
 function stateWithSlots() {
   const state=runtimeState();
-  for(const level of [2,3,4,6,9])state.combatants.hero.resources.push({id:`spell-slot-${level}`,label:`${level}레벨 주문 슬롯`,current:1,maximum:1,recovery:{longRest:"all"}});
+  for(const level of [2,3,4,5,6,7,8,9])state.combatants.hero.resources.push({id:`spell-slot-${level}`,label:`${level}레벨 주문 슬롯`,current:1,maximum:1,recovery:{longRest:"all"}});
   state.combatants.goblin.life.hp={current:200,maximum:200,temporary:0};
   return state;
 }
