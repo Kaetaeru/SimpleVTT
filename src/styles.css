@@ -44,15 +44,15 @@ small { color: var(--muted); }
 .workspace { min-width: 0; height: 100%; display: grid; grid-template-rows: 56px minmax(0,1fr); }
 .topbar { z-index: 50; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 0 18px; background: color-mix(in srgb, var(--surface) 95%, transparent); border-bottom: 1px solid var(--line); }
 .topbar strong { display: block; margin-top: 2px; font-size: 13px; }
-.eyebrow { display: block; color: var(--quiet); font-size: 8px; font-weight: 900; letter-spacing: .16em; text-transform: uppercase; }
+.eyebrow { display: block; color: var(--quiet); font-size: var(--text-xs); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
 .eyebrow.accent { color: var(--accent); }
 .topbar-meta { display: flex; gap: 14px; align-items: center; color: var(--muted); font-size: 10px; }
 .status-text.connected { color: var(--good); } .status-text.reconnecting { color: var(--accent); } .status-text.disconnected { color: var(--bad); }
 .content { position: relative; min-width: 0; min-height: 0; overflow: hidden; }
-.screen { width: 100%; height: 100%; overflow: auto; padding: 22px 24px 36px; }
+.screen { width: 100%; height: 100%; overflow: auto; padding: var(--space-8) clamp(20px, 4vw, 48px) 40px; scrollbar-gutter: stable; }
 .page-dark { background: var(--bg); }
-.screen-head { max-width: 1540px; margin: 0 auto 16px; display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; }
-.screen-head p { margin: 4px 0 0; color: var(--muted); font-size: 11px; }
+.screen-head { max-width: none; margin: 0 0 var(--space-5); padding-bottom: var(--space-4); border-bottom: 1px solid var(--line); display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; }
+.screen-head p { margin: 4px 0 0; color: var(--muted); font-size: var(--text-sm); max-width: 700px; }
 .screen-actions { display: flex; gap: 7px; }
 .badge { display: inline-flex; width: max-content; padding: 2px 6px; border: 1px solid var(--line); border-radius: 3px; color: var(--muted); font-size: 9px; }
 .badge.warning { color: var(--accent); border-color: var(--line-strong); }
