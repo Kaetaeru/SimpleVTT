@@ -94,7 +94,7 @@ test("Session result handoff waits for the body-level replay instead of renderin
   assert.match(sessionRoot,/if \(!snapshot \|\| !resolution \|\| diceAnimated\) return null/);
   assert.match(sessionRoot,/if\(passiveRemote\)return <section className="session-resolution-layer session-resolution-notice"/);
   assert.match(sessionRoot,/session-resolution-layer/);
-  assert.match(sessionRoot,/resolution\.stateChanges\.slice\(0, 2\)/);
+  assert.match(sessionRoot,/(?:resolution\.stateChanges|presentedChanges)\.slice\(0, 2\)/);
   assert.match(sessionRoot,/onOpenActivity\(event\.currentTarget\)/);
   assert.match(sessionCss,/\.session-resolution-layer\s*\{[\s\S]*bottom:\s*14px/);
   assert.doesNotMatch(sessionRoot,/SessionResolutionFallback/);
