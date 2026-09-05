@@ -18,13 +18,13 @@ function casterFor(definition:SpellMechanicDefinition):SpellCasterContext {
   return {
     characterLevel:17,spellAttackModifier:9,spellSaveDc:17,spellcastingAbilityModifier:5,
     preparedSpellIds:definition.baseLevel>0?[definition.spellId]:[],alwaysPreparedSpellIds:[],cantripSpellIds:definition.baseLevel===0?[definition.spellId]:[],
-    slotResourceIds:{1:"spell-slot-1",2:"spell-slot-2",3:"spell-slot-3",4:"spell-slot-4",6:"spell-slot-6",9:"spell-slot-9"},
+    slotResourceIds:Object.fromEntries([1,2,3,4,5,6,7,8,9].map((level)=>[level,`spell-slot-${level}`])),
   };
 }
 
 function stateWithSlots() {
   const state=runtimeState();
-  for(const level of [2,3,4,6,9])state.combatants.hero.resources.push({id:`spell-slot-${level}`,label:`${level}레벨 주문 슬롯`,current:1,maximum:1,recovery:{longRest:"all"}});
+  for(const level of [2,3,4,5,6,7,8,9])state.combatants.hero.resources.push({id:`spell-slot-${level}`,label:`${level}레벨 주문 슬롯`,current:1,maximum:1,recovery:{longRest:"all"}});
   state.combatants.goblin.life.hp={current:200,maximum:200,temporary:0};
   return state;
 }
@@ -32,7 +32,7 @@ function stateWithSlots() {
 function targetsFor(definition:SpellMechanicDefinition):SpellCastTarget[] {
   const base=(id:string,relation:"self"|"ally"|"enemy"):SpellCastTarget=>({id,kind:"creature",relation,distanceFeet:definition.targeting.rangeFeet===0?0:5,visible:true,cover:"none",ac:12,creatureKind:id==="hero"?"character":"monster",saveModifiers:{},targetCanSeeCaster:true});
   const allowed=definition.targeting.allowedRelations;
-  if(allowed&&allowed.every((relation)=>relation==="self"||relation==="ally"))return [base("hero","self")];
+  if(allowed&&allowed.every((relation)=>relation==="self"||relation==="ally"))return [base("hero",allowed.includes("self")?"self":"ally")];
   return [base("goblin","enemy")];
 }
 
@@ -58,6 +58,7 @@ test("every authored definition casts through the unchanged spell runtime with a
       attack:{id:"attack",purpose:"spell attack",sides:20,faces:[15]},
       saves:Object.fromEntries(targets.map((target)=>[target.id,{id:`save-${target.id}`,purpose:"save",sides:20,faces:[3]}])),
       effectFaces:Array.from({length:40},()=>4),
+      projectileFaces:Array.from({length:12},()=>4),
       attackInstances:targets.map((target)=>({targetId:target.id,attack:{id:`attack-${target.id}`,purpose:"spell attack",sides:20,faces:[15]},effectFaces:Array.from({length:12},()=>4)})),
     };
     const result=resolveSpellCast(TEST_PROFILE,spellMechanicById(definition.spellId)!,state,{

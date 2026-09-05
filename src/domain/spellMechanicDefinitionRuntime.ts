@@ -30,7 +30,9 @@ const EFFECT_TRIGGERS=new Set(["hit","failed-save","always"]);
 const MODIFIER_FAMILIES=new Set(["attack-roll","saving-throw","ability-check"]);
 const ROLL_STATES=new Set(["advantage","disadvantage"]);
 const MODIFIER_SCOPES=new Set(["actor","target"]);
-const DURATION_KINDS=new Set(["instant","seconds","minutes","hours","until-rest","concentration","permanent","special"]);
+const DURATION_KINDS=new Set(["instant","seconds","minutes","hours","until-rest","concentration","permanent","special","rounds"]);
+const DURATION_ANCHORS=new Set(["$source","$target"]);
+const TURN_BOUNDARIES=new Set(["start","end"]);
 const REST_KINDS=new Set(["short","long","either"]);
 const PRIMARY_KINDS=new Set([
   "attack-damage","multi-attack-damage","save-damage","save-compound-damage","healing","temporary-hp","full-healing",
@@ -111,6 +113,11 @@ export function parseSpellDuration(value:unknown,label:string):DurationSpec {
     case "until-rest": onlyKeys(raw,label,["kind","rest"]); return {kind:"until-rest",rest:oneOf(raw.rest,`${label}.rest`,REST_KINDS)};
     case "concentration": onlyKeys(raw,label,["kind"]); return {kind:"concentration"};
     case "permanent": onlyKeys(raw,label,["kind"]); return {kind:"permanent"};
+    case "rounds": {
+      onlyKeys(raw,label,["kind","amount","anchorActorId","boundary"]);
+      const anchorActorId=oneOf<"$source"|"$target">(raw.anchorActorId,`${label}.anchorActorId`,DURATION_ANCHORS);
+      return {kind:"rounds",amount:integer(raw.amount,`${label}.amount`,1),anchorActorId,boundary:oneOf<"start"|"end">(raw.boundary,`${label}.boundary`,TURN_BOUNDARIES)};
+    }
     default: onlyKeys(raw,label,["kind","key"]); return {kind:"special",key:nonEmptyString(raw.key,`${label}.key`)};
   }
 }
@@ -219,16 +226,52 @@ function parseConditionEffect(value:unknown,label:string):SpellConditionEffectDe
 
 function parseTrackedEffect(value:unknown,label:string):SpellTrackedEffectDefinition {
   const raw=object(value,label);
-  onlyKeys(raw,label,["summary","trigger","duration","termination","modifier"]);
+  onlyKeys(raw,label,["summary","trigger","duration","termination","modifier","armorClass","damageDefenses","attackDamage"]);
   const termination=parseTermination(raw.termination,`${label}.termination`);
   const modifier=raw.modifier===undefined?undefined:(()=>{
     const entry=object(raw.modifier,`${label}.modifier`);
-    onlyKeys(entry,`${label}.modifier`,["family","rollState","scope","consumeOnUse"]);
+    onlyKeys(entry,`${label}.modifier`,["family","rollState","scope","consumeOnUse","ability","bonus"]);
+    if(entry.rollState===undefined&&entry.bonus===undefined)throw new DomainEvaluationError(`${label}.modifier needs a rollState or a bonus`);
     return {
       family:oneOf<SpellTrackedEffectDefinition["modifier"] extends infer M|undefined?M extends {family:infer F}?F:never:never>(entry.family,`${label}.modifier.family`,MODIFIER_FAMILIES),
-      rollState:oneOf<"advantage"|"disadvantage">(entry.rollState,`${label}.modifier.rollState`,ROLL_STATES),
+      ...(entry.rollState!==undefined?{rollState:oneOf<"advantage"|"disadvantage">(entry.rollState,`${label}.modifier.rollState`,ROLL_STATES)}:{}),
       scope:oneOf<"actor"|"target">(entry.scope,`${label}.modifier.scope`,MODIFIER_SCOPES),
       ...(entry.consumeOnUse!==undefined?{consumeOnUse:optionalBoolean(entry.consumeOnUse,`${label}.modifier.consumeOnUse`)}:{}),
+      ...(entry.ability!==undefined?{ability:oneOf<AbilityKey>(entry.ability,`${label}.modifier.ability`,ABILITIES)}:{}),
+      ...(entry.bonus!==undefined?{bonus:parseD20Bonus(entry.bonus,`${label}.modifier.bonus`)}:{}),
+    };
+  })();
+  const armorClass=raw.armorClass===undefined?undefined:(()=>{
+    const entry=object(raw.armorClass,`${label}.armorClass`);
+    onlyKeys(entry,`${label}.armorClass`,["bonus","floor"]);
+    if(entry.bonus===undefined&&entry.floor===undefined)throw new DomainEvaluationError(`${label}.armorClass needs a bonus or a floor`);
+    return {
+      ...(entry.bonus!==undefined?{bonus:integer(entry.bonus,`${label}.armorClass.bonus`,1)}:{}),
+      ...(entry.floor!==undefined?{floor:integer(entry.floor,`${label}.armorClass.floor`,1)}:{}),
+    };
+  })();
+  const damageDefenses=raw.damageDefenses===undefined?undefined:(()=>{
+    if(!Array.isArray(raw.damageDefenses)||!raw.damageDefenses.length)throw new DomainEvaluationError(`${label}.damageDefenses must be a non-empty array`);
+    return raw.damageDefenses.map((defense,index)=>{
+      const entry=object(defense,`${label}.damageDefenses[${index}]`);
+      onlyKeys(entry,`${label}.damageDefenses[${index}]`,["kind","damageType"]);
+      return {kind:oneOf<"resistance"|"immunity"|"vulnerability">(entry.kind,`${label}.damageDefenses[${index}].kind`,DEFENSE_KINDS),damageType:nonEmptyString(entry.damageType,`${label}.damageDefenses[${index}].damageType`)};
+    });
+  })();
+  const attackDamage=raw.attackDamage===undefined?undefined:(()=>{
+    const entry=object(raw.attackDamage,`${label}.attackDamage`);
+    onlyKeys(entry,`${label}.attackDamage`,["damageType","dice","flat","sourceKinds","againstTargetOnly"]);
+    if(entry.dice===undefined&&entry.flat===undefined)throw new DomainEvaluationError(`${label}.attackDamage needs dice or a flat value`);
+    const sourceKinds=entry.sourceKinds===undefined?undefined:(()=>{
+      if(!Array.isArray(entry.sourceKinds)||!entry.sourceKinds.length)throw new DomainEvaluationError(`${label}.attackDamage.sourceKinds must be a non-empty array`);
+      return entry.sourceKinds.map((kind,index)=>oneOf<"weapon"|"unarmed"|"wild-shape">(kind,`${label}.attackDamage.sourceKinds[${index}]`,ATTACK_SOURCE_KINDS));
+    })();
+    return {
+      damageType:nonEmptyString(entry.damageType,`${label}.attackDamage.damageType`),
+      ...(entry.dice!==undefined?{dice:parseSimpleDice(entry.dice,`${label}.attackDamage.dice`)}:{}),
+      ...(entry.flat!==undefined?{flat:integer(entry.flat,`${label}.attackDamage.flat`,1)}:{}),
+      ...(sourceKinds?{sourceKinds}:{}),
+      ...(entry.againstTargetOnly!==undefined?{againstTargetOnly:optionalBoolean(entry.againstTargetOnly,`${label}.attackDamage.againstTargetOnly`)}:{}),
     };
   })();
   return {
@@ -237,6 +280,30 @@ function parseTrackedEffect(value:unknown,label:string):SpellTrackedEffectDefini
     duration:parseSpellDuration(raw.duration,`${label}.duration`),
     ...(termination?{termination}:{}),
     ...(modifier?{modifier}:{}),
+    ...(armorClass?{armorClass}:{}),
+    ...(damageDefenses?{damageDefenses}:{}),
+    ...(attackDamage?{attackDamage}:{}),
+  };
+}
+
+const DEFENSE_KINDS=new Set(["resistance","immunity","vulnerability"]);
+const ATTACK_SOURCE_KINDS=new Set(["weapon","unarmed","wild-shape"]);
+
+function parseSimpleDice(value:unknown,label:string) {
+  const entry=object(value,label);
+  onlyKeys(entry,label,["count","sides"]);
+  return {count:integer(entry.count,`${label}.count`,1),sides:integer(entry.sides,`${label}.sides`,1)};
+}
+
+function parseD20Bonus(value:unknown,label:string) {
+  const entry=object(value,label);
+  onlyKeys(entry,label,["flat","dice","sign"]);
+  if(entry.flat===undefined&&entry.dice===undefined)throw new DomainEvaluationError(`${label} needs a flat value or dice`);
+  if(entry.sign!==undefined&&entry.sign!==1&&entry.sign!==-1)throw new DomainEvaluationError(`${label}.sign must be 1 or -1`);
+  return {
+    ...(entry.flat!==undefined?{flat:integer(entry.flat,`${label}.flat`,1)}:{}),
+    ...(entry.dice!==undefined?{dice:parseSimpleDice(entry.dice,`${label}.dice`)}:{}),
+    ...(entry.sign!==undefined?{sign:entry.sign as 1|-1}:{}),
   };
 }
 

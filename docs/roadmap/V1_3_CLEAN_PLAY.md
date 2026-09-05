@@ -27,3 +27,67 @@ changes, exact merge SHA in the evidence table. New adapters register in `offlin
 
 | Gate | SHA | Evidence |
 | --- | --- | --- |
+| `C1-01` | `f63b5467a6799b70b775aa577dd4bafc7b016683` | PR #368. `productionPlayRuntimeAdapter` reconcile drops every local character from a hosted scene (the DM's saved character never projects); the host workspace no longer names a character; `tests/ui/hostHasNoCharacter.test.ts` covers hosting with a saved character and a player projection still joining. |
+| `C1-02` | `1bf3c7fc357ffd5d84a5165e43cf2589a946f4cf` | PR #369. `ConnectedSceneTopology` carries groups, engagements, scene conditions, movement declarations and the 물러남 prompt; `connectedTheaterOfMindRoutingAdapter` republishes after every host-side theater mutation and routes a player's `movement-request` to the Host (`connectedMovementRequestPort`); `tests/ui/connectedTheaterOfMindParity.test.ts` runs host + client adapters over the in-process transport. |
+| `C1-03` | _pending merge_ | Spell coverage moves from 10 authored / 216 tracked to **66 authored / 162 tracked** (`SPELL_EXECUTION_COVERAGE`). See "C1-03 spell waves" below for the waves, the engine additions and the reviewed list of what stays tracked. |
+
+### C1-03 spell waves
+
+Authored files live in `content/spell-mechanics/dnd-srd-5.2.1/`; every definition's `executionScope` starts with
+"Authored (C1-03)" and states what the runtime enforces and what the DM narrates.
+
+| Wave | File | Spells |
+| --- | --- | --- |
+| 2a damage | `wave2-damage.json` | Sorcerous Burst, Chromatic Orb, Acid Arrow, Spiritual Weapon, Moonbeam, Spirit Guardians, Wind Wall, Cloudkill, Insect Plague, Blade Barrier, Wall of Fire, Wall of Thorns, Wall of Ice, Disintegrate, Tsunami, Incendiary Cloud, Black Tentacles |
+| 2a control | `wave2-control.json` | Web, Entangle, Grease, Stinking Cloud, Sleet Storm, Suggestion, Mass Suggestion |
+| 2a buffs | `wave2-buffs.json` | Enhance Ability, Foresight, Protection from Evil and Good, Protection from Poison, Lesser Restoration, Greater Restoration, Holy Aura, Goodberry |
+| 2b engine | `wave2-engine.json` | Shield, Shield of Faith, Barkskin, Warding Bond, Stoneskin, Protection from Energy, Bless, Bane, Guidance, Resistance, Heroism, Hunter's Mark, Hex, Divine Favor, Magic Weapon, Heat Metal, Haste |
+| 2c summons | `wave2-summons.json` | Guardian of Faith, Arcane Sword, Conjure Animals, Conjure Celestial, Conjure Minor Elementals, Conjure Elemental, Fire Shield |
+
+Engine additions (all in the rules domain, exercised by `tests/domain/spellAuthoredWave2Engine.test.ts`):
+
+- Tracked effects may carry `armorClass {bonus, floor}`; the d20 executor raises the target AC an attack roll is
+  judged against and records it in provenance.
+- Tracked effects may carry `damageDefenses`; the effect is tagged `damage-resistance:<type>` and the existing
+  health ops halve the damage.
+- `modifier.bonus {flat, dice, sign}` and `modifier.ability`: Bless/Bane d4s are rolled by the runtime with a
+  deterministic face seeded by resolution, operation and effect id (`src/domain/seededFace.ts`), so replays and
+  peers agree; `consumeOnUse` still removes Guidance/Resistance after one roll.
+- `attackDamage {dice, flat, sourceKinds, againstTargetOnly}`: `effectAttackDamageRiders` turns effects into
+  attack riders in the production attack transaction (Hunter's Mark and Hex only against the marked creature).
+- Spell formulas may be a bare spellcasting modifier (Heroism); authored durations accept `rounds` anchored to
+  `$source`/`$target` (Shield ends at the caster's next turn).
+
+Reviewed and left tracked (162), with the reason:
+
+- **Needs engine work the runtime does not have yet** — True Strike, Shillelagh (weapon die/ability change);
+  Divine Smite, Shining Smite (post-hit bonus action; Divine Smite has its own adapter path); Mage Armor
+  (AC = 13 + DEX); Aid (HP maximum); Death Ward, Revivify, Raise Dead, Resurrection, True Resurrection,
+  Reincarnate (0-HP / dead targets); Dispel Magic, Antimagic Field, Globe of Invulnerability (ending or blocking
+  other effects); Darkness, Fog Cloud, Silence, Mirror Image, Blink (senses and miss chances); Misty Step,
+  Dimension Door, Fly, Expeditious Retreat, Spider Climb, Freedom of Movement, Gaseous Form (movement in
+  theater of mind); Spike Growth (damage per distance moved); Wall of Force, Wall of Stone, Forcecage,
+  Antilife Shell; Telekinesis (contested check); Animate Objects,
+  Animate Dead, Create Undead, Summon Dragon, Planar Ally (summoned stat blocks);
+  Earthquake, Time Stop, Maze, Prismatic Wall, Aura of Life, Magic Circle, Glyph of Warding, Symbol,
+  Contingency.
+- **Narrative or utility** (tracked with duration and description) — the cantrips Dancing Lights, Druidcraft,
+  Elementalism, Light, Mage Hand, Mending, Message, Minor Illusion, Prestidigitation, Spare the Dying,
+  Thaumaturgy; and Alarm, Comprehend Languages, Create or Destroy Water, Detect Evil and Good, Detect Magic,
+  Detect Poison and Disease, Disguise Self, Feather Fall, Find Familiar, Floating Disk, Identify, Illusory
+  Script, Jump, Longstrider, Purify Food and Drink, Silent Image, Speak with Animals, Unseen Servant, Alter
+  Self, Arcane Lock, Arcanist's Magic Aura, Augury, Continual Flame, Darkvision, Detect Thoughts, Find Steed,
+  Find Traps, Gentle Repose, Knock, Locate Animals or Plants, Locate Object, Magic Mouth, Pass without Trace,
+  Rope Trick, See Invisibility, Clairvoyance, Create Food and Water, Daylight, Major Image, Meld into Stone,
+  Nondetection, Phantom Steed, Plant Growth, Remove Curse, Sending, Speak with Dead, Speak with Plants, Tiny
+  Hut, Tongues, Water Breathing, Water Walk, Arcane Eye, Control Water, Divination, Fabricate, Faithful Hound,
+  Giant Insect, Hallucinatory Terrain, Locate Creature, Private Sanctum, Secret Chest, Stone Shape, Arcane
+  Hand, Awaken, Commune, Commune with Nature, Creation, Dispel Evil and Good, Dream, Hallow, Legend Lore,
+  Passwall, Telepathic Bond, Teleportation Circle, Tree Stride, Find the Path, Forbiddance, Guards and Wards,
+  Heroes' Feast, Instant Summons, Magic Jar, Move Earth, Programmed Illusion, Transport via Plants, True
+  Seeing, Wind Walk, Word of Recall, Etherealness, Magnificent Mansion, Mirage Arcane, Plane Shift, Project
+  Image, Simulacrum, Teleport, Animal Shapes, Clone, Control Weather, Demiplane, Glibness, Mind Blank, Astral
+  Projection, Gate, Shapechange, Wish.
+
+The list above is the output of `spellMechanicById(id).runtimeSupport === "tracked-executable"` over the 339
+catalog spells minus the authored tier; the HUD labels these as tracked effects with their duration.

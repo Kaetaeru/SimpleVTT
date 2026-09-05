@@ -1,0 +1,109 @@
+{
+  "schemaVersion": "1",
+  "source": {
+    "document": "SRD 5.2.1",
+    "review": "C1-03 wave 2 — protection, restoration and buff spells the existing kinds express: attack-roll and saving-throw advantage/disadvantage riders, condition removal, and a flat heal. Narrowing to creature types or damage types is recorded in each executionScope; the rider applies to every roll of that family."
+  },
+  "definitions": [
+    {
+      "spellId": "dnd.srd521.spell.enhance-ability",
+      "baseLevel": 2,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 5, "minTargets": 1, "maxTargets": 1, "allowedRelations": ["self", "ally"] },
+      "primary": { "kind": "tracked-effect", "summary": "대상은 선택한 능력치를 사용하는 능력치 판정에 이점을 얻는다.", "duration": { "kind": "concentration" } },
+      "trackedEffects": [{ "summary": "능력치 판정에 이점", "trigger": "always", "duration": { "kind": "concentration" }, "modifier": { "family": "ability-check", "rollState": "advantage", "scope": "actor" } }],
+      "concentration": true,
+      "components": { "verbal": true, "somatic": true, "materials": [{ "id": "fur-or-feather" }] },
+      "executionScope": "Authored (C1-03): the touched creature has advantage on ability checks while the caster concentrates. The SRD narrows this to one chosen ability, and adds one target per slot level above 2nd; neither is enforced."
+    },
+    {
+      "spellId": "dnd.srd521.spell.foresight",
+      "baseLevel": 9,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 5, "minTargets": 1, "maxTargets": 1, "allowedRelations": ["self", "ally"] },
+      "primary": { "kind": "tracked-effect", "summary": "대상은 명중 굴림과 내성 굴림에 이점을 얻고, 대상을 향한 명중 굴림은 불리점을 받는다.", "duration": { "kind": "hours", "amount": 8 } },
+      "trackedEffects": [
+        { "summary": "명중 굴림에 이점", "trigger": "always", "duration": { "kind": "hours", "amount": 8 }, "modifier": { "family": "attack-roll", "rollState": "advantage", "scope": "actor" } },
+        { "summary": "내성 굴림에 이점", "trigger": "always", "duration": { "kind": "hours", "amount": 8 }, "modifier": { "family": "saving-throw", "rollState": "advantage", "scope": "actor" } },
+        { "summary": "능력치 판정에 이점", "trigger": "always", "duration": { "kind": "hours", "amount": 8 }, "modifier": { "family": "ability-check", "rollState": "advantage", "scope": "actor" } },
+        { "summary": "대상을 향한 명중 굴림에 불리점", "trigger": "always", "duration": { "kind": "hours", "amount": 8 }, "modifier": { "family": "attack-roll", "rollState": "disadvantage", "scope": "target" } }
+      ],
+      "components": { "verbal": true, "somatic": true, "materials": [{ "id": "hummingbird-feather" }] },
+      "castingDurationSeconds": 60,
+      "executionScope": "Authored (C1-03): for 8 hours the target has advantage on attack rolls, saving throws and ability checks, and attack rolls against it have disadvantage. The one-minute casting time is recorded; the early end when the spell is cast again is not enforced."
+    },
+    {
+      "spellId": "dnd.srd521.spell.protection-from-evil-and-good",
+      "baseLevel": 1,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 5, "minTargets": 1, "maxTargets": 1, "allowedRelations": ["self", "ally"] },
+      "primary": { "kind": "tracked-effect", "summary": "기괴체·천상체·원소·요정·악마·언데드는 대상을 향한 명중 굴림에 불리점을 받는다.", "duration": { "kind": "concentration" } },
+      "trackedEffects": [{ "summary": "대상을 향한 명중 굴림에 불리점 (기괴체·천상체·원소·요정·악마·언데드)", "trigger": "always", "duration": { "kind": "concentration" }, "modifier": { "family": "attack-roll", "rollState": "disadvantage", "scope": "target" } }],
+      "concentration": true,
+      "components": { "verbal": true, "somatic": true, "materials": [{ "id": "holy-water-consumed" }] },
+      "executionScope": "Authored (C1-03): attack rolls against the touched creature have disadvantage while the caster concentrates. The SRD limits this to aberrations, celestials, elementals, fey, fiends and undead; the runtime applies it to every attacker, so the DM lifts it for other creatures. Immunity to possession and the advantage on saves against charm and fear from those creatures are not enforced."
+    },
+    {
+      "spellId": "dnd.srd521.spell.protection-from-poison",
+      "baseLevel": 2,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 5, "minTargets": 1, "maxTargets": 1, "allowedRelations": ["self", "ally"] },
+      "primary": { "kind": "tracked-effect", "summary": "중독 상태를 끝내고, 대상은 독을 피하거나 끝내는 내성 굴림에 이점을 얻는다.", "duration": { "kind": "hours", "amount": 1 } },
+      "trackedEffects": [{ "summary": "내성 굴림에 이점 (독 관련)", "trigger": "always", "duration": { "kind": "hours", "amount": 1 }, "modifier": { "family": "saving-throw", "rollState": "advantage", "scope": "actor" }, "damageDefenses": [{ "kind": "resistance", "damageType": "poison" }] }],
+      "removesConditions": ["poisoned"],
+      "components": { "verbal": true, "somatic": true },
+      "executionScope": "Authored (C1-03): the Poisoned condition on the touched creature ends, and for 1 hour it has advantage on saving throws. The SRD limits the advantage to saves against being poisoned and grants resistance to poison damage; the runtime applies the advantage to every save; the poison resistance is granted."
+    },
+    {
+      "spellId": "dnd.srd521.spell.lesser-restoration",
+      "baseLevel": 2,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "bonus-action",
+      "targeting": { "kind": "creature", "rangeFeet": 5, "minTargets": 1, "maxTargets": 1, "allowedRelations": ["self", "ally"] },
+      "primary": { "kind": "tracked-effect", "summary": "실명, 실청, 마비, 중독 중 하나를 끝낸다.", "duration": { "kind": "instant" } },
+      "removesConditions": ["blinded", "deafened", "paralyzed", "poisoned"],
+      "components": { "verbal": true, "somatic": true },
+      "executionScope": "Authored (C1-03): ends the Blinded, Deafened, Paralyzed and Poisoned conditions on the touched creature. The SRD ends one of them per cast; the runtime removes every one present, so the DM re-applies any that should remain."
+    },
+    {
+      "spellId": "dnd.srd521.spell.greater-restoration",
+      "baseLevel": 5,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 5, "minTargets": 1, "maxTargets": 1, "allowedRelations": ["self", "ally"] },
+      "primary": { "kind": "tracked-effect", "summary": "매혹, 석화, 탈진 1단계 또는 저주·최대 HP 감소 중 하나를 끝낸다.", "duration": { "kind": "instant" } },
+      "removesConditions": ["charmed", "petrified", "exhaustion"],
+      "components": { "verbal": true, "somatic": true, "materials": [{ "id": "diamond-dust-100gp-consumed" }] },
+      "executionScope": "Authored (C1-03): ends the Charmed and Petrified conditions and Exhaustion on the touched creature. The SRD ends one effect per cast (also curses, one Exhaustion level, or a reduced HP maximum); the runtime removes every listed condition present, and the curse and HP-maximum options are left to the DM."
+    },
+    {
+      "spellId": "dnd.srd521.spell.holy-aura",
+      "baseLevel": 8,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 30, "minTargets": 1, "maxTargets": 8, "allowedRelations": ["self", "ally"] },
+      "primary": { "kind": "tracked-effect", "summary": "아군은 내성 굴림에 이점을 얻고, 아군을 향한 명중 굴림은 불리점을 받는다.", "duration": { "kind": "concentration" } },
+      "trackedEffects": [
+        { "summary": "내성 굴림에 이점", "trigger": "always", "duration": { "kind": "concentration" }, "modifier": { "family": "saving-throw", "rollState": "advantage", "scope": "actor" } },
+        { "summary": "대상을 향한 명중 굴림에 불리점", "trigger": "always", "duration": { "kind": "concentration" }, "modifier": { "family": "attack-roll", "rollState": "disadvantage", "scope": "target" } }
+      ],
+      "concentration": true,
+      "components": { "verbal": true, "somatic": true, "materials": [{ "id": "reliquary-1000gp" }] },
+      "executionScope": "Authored (C1-03): chosen allies within the 30-foot emanation have advantage on saving throws and attack rolls against them have disadvantage while the caster concentrates. The blinding CON save for fiends and undead that hit an ally is not enforced."
+    },
+    {
+      "spellId": "dnd.srd521.spell.goodberry",
+      "baseLevel": 1,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 5, "minTargets": 1, "maxTargets": 1, "allowedRelations": ["self", "ally"] },
+      "primary": { "kind": "healing", "dice": { "count": 0, "sides": 2, "flat": 1 } },
+      "components": { "verbal": true, "somatic": true, "materials": [{ "id": "sprig-of-mistletoe" }] },
+      "executionScope": "Authored (C1-03): eating one berry restores 1 HP; the cast is modelled as one berry eaten by the touched creature. The ten berries, their 24-hour lifetime, the bonus action to eat and the day's nourishment are tracked by the table."
+    }
+  ]
+}

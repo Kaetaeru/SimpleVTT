@@ -1,0 +1,194 @@
+{
+  "schemaVersion": "1",
+  "source": {
+    "document": "SRD 5.2.1",
+    "review": "C1-03 wave 2 — damage spells whose combat effect the existing kinds express: single-target spell attacks and area saving throws with half damage on success. Area spells are authored as multi-target creature selection within the caster's range (the DM picks who is in the area); moving areas, repeat damage on later turns, and choose-at-cast damage types are recorded in each executionScope and not enforced."
+  },
+  "definitions": [
+    {
+      "spellId": "dnd.srd521.spell.sorcerous-burst",
+      "baseLevel": 0,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 120, "minTargets": 1, "maxTargets": 1, "requiresSight": true },
+      "primary": { "kind": "attack-damage", "damageType": "fire", "dice": { "count": 1, "sides": 8, "cantripScaling": true } },
+      "components": { "verbal": true, "somatic": true },
+      "executionScope": "Authored (C1-03): a ranged spell attack for 1d8 damage, scaling with character level as a cantrip. The damage type is chosen at cast in the SRD (acid, cold, fire, lightning, poison, psychic, thunder); it is authored as fire and the exploding 8 is not enforced."
+    },
+    {
+      "spellId": "dnd.srd521.spell.chromatic-orb",
+      "baseLevel": 1,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 90, "minTargets": 1, "maxTargets": 1, "requiresSight": true },
+      "primary": { "kind": "attack-damage", "damageType": "fire", "dice": { "count": 3, "sides": 8, "dicePerSlotAboveBase": 1 } },
+      "components": { "verbal": true, "somatic": true, "materials": [{ "id": "diamond-50gp" }] },
+      "executionScope": "Authored (C1-03): a ranged spell attack for 3d8, +1d8 per slot level above 1st. The damage type is chosen at cast in the SRD (acid, cold, fire, lightning, poison, thunder); it is authored as fire. The leap to a second target on doubles is not enforced."
+    },
+    {
+      "spellId": "dnd.srd521.spell.acid-arrow",
+      "baseLevel": 2,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 90, "minTargets": 1, "maxTargets": 1, "requiresSight": true },
+      "primary": { "kind": "attack-damage", "damageType": "acid", "dice": { "count": 4, "sides": 4, "dicePerSlotAboveBase": 1 } },
+      "components": { "verbal": true, "somatic": true, "materials": [{ "id": "powdered-rhubarb-leaf" }] },
+      "executionScope": "Authored (C1-03): a ranged spell attack for 4d4 acid, +1d4 per slot level above 2nd. The 2d4 acid at the end of the target's next turn and the half damage on a miss are not enforced."
+    },
+    {
+      "spellId": "dnd.srd521.spell.spiritual-weapon",
+      "baseLevel": 2,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "bonus-action",
+      "targeting": { "kind": "creature", "rangeFeet": 60, "minTargets": 1, "maxTargets": 1, "requiresSight": true },
+      "primary": { "kind": "attack-damage", "damageType": "force", "dice": { "count": 1, "sides": 8, "addSpellcastingModifier": true } },
+      "concentration": true,
+      "components": { "verbal": true, "somatic": true },
+      "executionScope": "Authored (C1-03): the cast makes one melee spell attack for 1d8 + spellcasting modifier force damage against a creature within range. Repeating the attack with a bonus action on later turns and +1d8 per two slot levels above 2nd are not enforced."
+    },
+    {
+      "spellId": "dnd.srd521.spell.moonbeam",
+      "baseLevel": 2,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 120, "minTargets": 1, "maxTargets": 4, "requiresSight": true },
+      "primary": { "kind": "save-damage", "saveAbility": "con", "damageType": "radiant", "dice": { "count": 2, "sides": 10, "dicePerSlotAboveBase": 1 }, "successDamage": "half" },
+      "concentration": true,
+      "components": { "verbal": true, "somatic": true, "materials": [{ "id": "moonseed-leaves" }] },
+      "executionScope": "Authored (C1-03): creatures in the 5-foot-radius cylinder make a CON save for 2d10 radiant, half on success, +1d10 per slot level above 2nd. Moving the beam and the damage on later turns are not enforced; the DM selects who is in the beam."
+    },
+    {
+      "spellId": "dnd.srd521.spell.spirit-guardians",
+      "baseLevel": 3,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 15, "minTargets": 1, "maxTargets": 8, "allowedRelations": ["enemy", "neutral"] },
+      "primary": { "kind": "save-damage", "saveAbility": "wis", "damageType": "radiant", "dice": { "count": 3, "sides": 8, "dicePerSlotAboveBase": 1 }, "successDamage": "half" },
+      "concentration": true,
+      "components": { "verbal": true, "somatic": true, "materials": [{ "id": "holy-symbol" }] },
+      "executionScope": "Authored (C1-03): enemies in the 15-foot emanation make a WIS save for 3d8 radiant (necrotic for evil casters), half on success, +1d8 per slot level above 3rd. The halved speed and the repeat damage when creatures enter or start their turn in the area are not enforced."
+    },
+    {
+      "spellId": "dnd.srd521.spell.wind-wall",
+      "baseLevel": 3,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 120, "minTargets": 1, "maxTargets": 8 },
+      "primary": { "kind": "save-damage", "saveAbility": "str", "damageType": "bludgeoning", "dice": { "count": 4, "sides": 8 }, "successDamage": "half" },
+      "concentration": true,
+      "components": { "verbal": true, "somatic": true, "materials": [{ "id": "fan-and-feather" }] },
+      "executionScope": "Authored (C1-03): creatures in the wall's space when it appears make a STR save for 4d8 bludgeoning, half on success. The wall's effect on ranged attacks, gases and flying creatures is not enforced."
+    },
+    {
+      "spellId": "dnd.srd521.spell.cloudkill",
+      "baseLevel": 5,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 120, "minTargets": 1, "maxTargets": 10 },
+      "primary": { "kind": "save-damage", "saveAbility": "con", "damageType": "poison", "dice": { "count": 5, "sides": 8, "dicePerSlotAboveBase": 1 }, "successDamage": "half" },
+      "concentration": true,
+      "components": { "verbal": true, "somatic": true },
+      "executionScope": "Authored (C1-03): creatures in the 20-foot-radius sphere make a CON save for 5d8 poison, half on success, +1d8 per slot level above 5th. The heavily obscured area, its drift each round and the repeat damage are not enforced."
+    },
+    {
+      "spellId": "dnd.srd521.spell.insect-plague",
+      "baseLevel": 5,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 300, "minTargets": 1, "maxTargets": 10 },
+      "primary": { "kind": "save-damage", "saveAbility": "con", "damageType": "piercing", "dice": { "count": 4, "sides": 10, "dicePerSlotAboveBase": 1 }, "successDamage": "half" },
+      "concentration": true,
+      "components": { "verbal": true, "somatic": true, "materials": [{ "id": "locust" }] },
+      "executionScope": "Authored (C1-03): creatures in the 20-foot-radius sphere make a CON save for 4d10 piercing, half on success, +1d10 per slot level above 5th. The lightly obscured, difficult-terrain area and the repeat damage are not enforced."
+    },
+    {
+      "spellId": "dnd.srd521.spell.blade-barrier",
+      "baseLevel": 6,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 90, "minTargets": 1, "maxTargets": 10 },
+      "primary": { "kind": "save-damage", "saveAbility": "dex", "damageType": "force", "dice": { "count": 6, "sides": 10 }, "successDamage": "half" },
+      "concentration": true,
+      "components": { "verbal": true, "somatic": true },
+      "executionScope": "Authored (C1-03): creatures in the wall's space when it appears make a DEX save for 6d10 force, half on success. The three-quarters cover, difficult terrain and the repeat damage when creatures enter the wall are not enforced."
+    },
+    {
+      "spellId": "dnd.srd521.spell.wall-of-fire",
+      "baseLevel": 4,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 120, "minTargets": 1, "maxTargets": 10 },
+      "primary": { "kind": "save-damage", "saveAbility": "dex", "damageType": "fire", "dice": { "count": 5, "sides": 8, "dicePerSlotAboveBase": 1 }, "successDamage": "half" },
+      "concentration": true,
+      "components": { "verbal": true, "somatic": true, "materials": [{ "id": "phosphorus" }] },
+      "executionScope": "Authored (C1-03): creatures in the wall's space when it appears make a DEX save for 5d8 fire, half on success, +1d8 per slot level above 4th. The chosen hot side, the damage within 10 feet of it and the repeat damage are not enforced."
+    },
+    {
+      "spellId": "dnd.srd521.spell.wall-of-thorns",
+      "baseLevel": 6,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 120, "minTargets": 1, "maxTargets": 10 },
+      "primary": { "kind": "save-damage", "saveAbility": "dex", "damageType": "piercing", "dice": { "count": 7, "sides": 8, "dicePerSlotAboveBase": 1 }, "successDamage": "half" },
+      "concentration": true,
+      "components": { "verbal": true, "somatic": true, "materials": [{ "id": "handful-of-thorns" }] },
+      "executionScope": "Authored (C1-03): creatures in the wall's space when it appears make a DEX save for 7d8 piercing, half on success, +1d8 per slot level above 6th. The 7d8 slashing for moving through the wall and its blocking of sight are not enforced."
+    },
+    {
+      "spellId": "dnd.srd521.spell.wall-of-ice",
+      "baseLevel": 6,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 120, "minTargets": 1, "maxTargets": 10 },
+      "primary": { "kind": "save-damage", "saveAbility": "dex", "damageType": "cold", "dice": { "count": 10, "sides": 6, "dicePerSlotAboveBase": 2 }, "successDamage": "half" },
+      "concentration": true,
+      "components": { "verbal": true, "somatic": true, "materials": [{ "id": "piece-of-quartz" }] },
+      "executionScope": "Authored (C1-03): creatures in the wall's space when it appears make a DEX save for 10d6 cold, half on success, +2d6 per slot level above 6th. The wall's hit points, the frigid air after a section breaks (5d6 cold, CON save) and the halved speed are not enforced."
+    },
+    {
+      "spellId": "dnd.srd521.spell.disintegrate",
+      "baseLevel": 6,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 60, "minTargets": 1, "maxTargets": 1, "requiresSight": true },
+      "primary": { "kind": "save-damage", "saveAbility": "dex", "damageType": "force", "dice": { "count": 10, "sides": 6, "flat": 40, "dicePerSlotAboveBase": 3 }, "successDamage": "none" },
+      "components": { "verbal": true, "somatic": true, "materials": [{ "id": "lodestone-and-dust" }] },
+      "executionScope": "Authored (C1-03): the target makes a DEX save; on a failure it takes 10d6 + 40 force, +3d6 per slot level above 6th; nothing on a success. Disintegration at 0 HP (no revival by Raise Dead and the like) and the object/force-wall destruction are not enforced."
+    },
+    {
+      "spellId": "dnd.srd521.spell.tsunami",
+      "baseLevel": 8,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 5280, "minTargets": 1, "maxTargets": 10 },
+      "primary": { "kind": "save-damage", "saveAbility": "str", "damageType": "bludgeoning", "dice": { "count": 6, "sides": 10 }, "successDamage": "half" },
+      "concentration": true,
+      "components": { "verbal": true, "somatic": true },
+      "castingDurationSeconds": 60,
+      "executionScope": "Authored (C1-03): creatures in the wall of water when it appears make a STR save for 6d10 bludgeoning, half on success. The one-minute casting time is recorded; the wall's movement each round, the 5d10 as it passes, and the grappling water are not enforced."
+    },
+    {
+      "spellId": "dnd.srd521.spell.incendiary-cloud",
+      "baseLevel": 8,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 150, "minTargets": 1, "maxTargets": 10 },
+      "primary": { "kind": "save-damage", "saveAbility": "dex", "damageType": "fire", "dice": { "count": 10, "sides": 8 }, "successDamage": "half" },
+      "concentration": true,
+      "components": { "verbal": true, "somatic": true },
+      "executionScope": "Authored (C1-03): creatures in the 20-foot-radius sphere make a DEX save for 10d8 fire, half on success. The heavily obscured area, its 10-foot drift each round and the repeat damage are not enforced."
+    },
+    {
+      "spellId": "dnd.srd521.spell.black-tentacles",
+      "baseLevel": 4,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 90, "minTargets": 1, "maxTargets": 8, "requiresSight": true },
+      "primary": { "kind": "save-damage", "saveAbility": "str", "damageType": "bludgeoning", "dice": { "count": 3, "sides": 6 }, "successDamage": "none" },
+      "effects": [{ "conditionId": "restrained", "trigger": "failed-save", "duration": { "kind": "concentration" } }],
+      "concentration": true,
+      "components": { "verbal": true, "somatic": true, "materials": [{ "id": "tentacle-of-giant-octopus" }] },
+      "executionScope": "Authored (C1-03): creatures in the 20-foot square when it appears make a STR save; on a failure they take 3d6 bludgeoning and are Restrained while the caster concentrates. The difficult terrain, the repeat save and damage each turn, and escaping by a STR or DEX check are not enforced."
+    }
+  ]
+}

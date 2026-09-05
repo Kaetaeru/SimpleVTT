@@ -1,3 +1,4 @@
+import { effectAttackDamageRiders as effectAttackDamageRidersFromEffects } from "../domain/effectAttackRiders";
 import "./lifeRuntimeContracts";
 import type { ActionVm, DamageComponentView, EconomyVm, SceneEntity } from "./contracts";
 import type { RuntimeLifeVm } from "./lifeRuntimeContracts";
@@ -187,6 +188,10 @@ function transactionInput(request:AtomicAttackTransactionRequest):RulesRuntimeSt
   return input;
 }
 
+function effectAttackDamageRiders(state:RulesRuntimeState,request:AtomicAttackTransactionRequest) {
+  return effectAttackDamageRidersFromEffects(state,request.actor.id,request.target.id,request.attackFact.sourceKind,request.resolutionId);
+}
+
 function effectAttackDamageFlat(state:RulesRuntimeState,actorId:string,attackFact:Phase09AttackFact) {
   return state.effects.flatMap((effect)=>{
     if(effect.targetId!==actorId||!effectIsActive(effect))return [];
@@ -312,6 +317,7 @@ function attackRequest(request:AtomicAttackTransactionRequest,input:RulesRuntime
         ...damageReductionFlat(request),
       ],
     },
+    riders:effectAttackDamageRiders(input,request),
     economy:request.reaction||!cost ? undefined : {
       ...cost,
       ...(request.action.economy==="행동"?{actionKind:"attack" as const,attacksPerAction:request.action.attacksPerAction??1}:{}),

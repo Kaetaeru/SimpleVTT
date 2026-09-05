@@ -1,0 +1,91 @@
+{
+  "schemaVersion": "1",
+  "source": {
+    "document": "SRD 5.2.1",
+    "review": "C1-03 wave 2 — control spells: one saving throw at cast, a condition on failure, tracked for the spell's duration. Repeat saves, escape checks, area drift and speech-dependent nuances are recorded in each executionScope and left to the DM."
+  },
+  "definitions": [
+    {
+      "spellId": "dnd.srd521.spell.web",
+      "baseLevel": 2,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 60, "minTargets": 1, "maxTargets": 8 },
+      "primary": { "kind": "save-effect", "saveAbility": "dex", "summary": "실패한 크리처는 거미줄에 걸려 포박 상태가 된다.", "duration": { "kind": "concentration" } },
+      "effects": [{ "conditionId": "restrained", "trigger": "failed-save", "duration": { "kind": "concentration" } }],
+      "concentration": true,
+      "components": { "verbal": true, "somatic": true, "materials": [{ "id": "bit-of-spiderweb" }] },
+      "executionScope": "Authored (C1-03): creatures in the 20-foot cube when the webs appear make a DEX save; on a failure they are Restrained while the caster concentrates. Escaping with a STR check, the difficult terrain, the webs burning (2d4 fire) and the anchoring rule are not enforced."
+    },
+    {
+      "spellId": "dnd.srd521.spell.entangle",
+      "baseLevel": 1,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 90, "minTargets": 1, "maxTargets": 8 },
+      "primary": { "kind": "save-effect", "saveAbility": "str", "summary": "실패한 크리처는 식물에 붙들려 포박 상태가 된다.", "duration": { "kind": "concentration" } },
+      "effects": [{ "conditionId": "restrained", "trigger": "failed-save", "duration": { "kind": "concentration" } }],
+      "concentration": true,
+      "components": { "verbal": true, "somatic": true },
+      "executionScope": "Authored (C1-03): creatures in the 20-foot square when the plants appear make a STR save; on a failure they are Restrained while the caster concentrates. The difficult terrain and escaping with a STR check are not enforced."
+    },
+    {
+      "spellId": "dnd.srd521.spell.grease",
+      "baseLevel": 1,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 60, "minTargets": 1, "maxTargets": 4 },
+      "primary": { "kind": "save-effect", "saveAbility": "dex", "summary": "실패한 크리처는 미끄러져 넘어짐 상태가 된다.", "duration": { "kind": "instant" } },
+      "effects": [{ "conditionId": "prone", "trigger": "failed-save", "duration": { "kind": "special", "key": "until-stood-up" } }],
+      "components": { "verbal": true, "somatic": true, "materials": [{ "id": "pork-rind-or-butter" }] },
+      "executionScope": "Authored (C1-03): creatures in the 10-foot square when the grease appears make a DEX save; on a failure they fall Prone. The one-minute difficult terrain and the save for creatures entering later are not enforced."
+    },
+    {
+      "spellId": "dnd.srd521.spell.stinking-cloud",
+      "baseLevel": 3,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 90, "minTargets": 1, "maxTargets": 10 },
+      "primary": { "kind": "save-effect", "saveAbility": "con", "summary": "실패한 크리처는 구름 속에서 구토하며 중독 상태가 된다.", "duration": { "kind": "concentration" } },
+      "effects": [{ "conditionId": "poisoned", "trigger": "failed-save", "duration": { "kind": "concentration" } }],
+      "concentration": true,
+      "components": { "verbal": true, "somatic": true, "materials": [{ "id": "rotten-egg-or-skunk-cabbage" }] },
+      "executionScope": "Authored (C1-03): creatures in the 20-foot-radius sphere make a CON save; on a failure they are Poisoned (the SRD's incapacitating retching) while the caster concentrates. The heavily obscured area and the repeat save each turn are not enforced."
+    },
+    {
+      "spellId": "dnd.srd521.spell.sleet-storm",
+      "baseLevel": 3,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 150, "minTargets": 1, "maxTargets": 10 },
+      "primary": { "kind": "save-effect", "saveAbility": "dex", "summary": "실패한 크리처는 얼어붙은 바닥에서 넘어짐 상태가 된다.", "duration": { "kind": "instant" } },
+      "effects": [{ "conditionId": "prone", "trigger": "failed-save", "duration": { "kind": "special", "key": "until-stood-up" } }],
+      "concentration": true,
+      "components": { "verbal": true, "somatic": true, "materials": [{ "id": "pinch-of-dust-and-water" }] },
+      "executionScope": "Authored (C1-03): creatures in the 40-foot-tall, 20-foot-radius cylinder make a DEX save; on a failure they fall Prone. The heavily obscured, difficult terrain, the concentration check for casters inside, and the repeat save for creatures entering later are not enforced."
+    },
+    {
+      "spellId": "dnd.srd521.spell.suggestion",
+      "baseLevel": 2,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 30, "minTargets": 1, "maxTargets": 1, "requiresSight": true },
+      "primary": { "kind": "save-effect", "saveAbility": "wis", "summary": "실패한 대상은 매혹 상태로 암시된 행동 방침을 따른다.", "duration": { "kind": "concentration" } },
+      "effects": [{ "conditionId": "charmed", "trigger": "failed-save", "duration": { "kind": "concentration" } }],
+      "concentration": true,
+      "components": { "verbal": true, "materials": [{ "id": "snake-tongue" }] },
+      "executionScope": "Authored (C1-03): the target makes a WIS save; on a failure it is Charmed and follows the suggestion while the caster concentrates (up to 8 hours). The suggestion's wording, its completion ending the spell, and damage ending it are left to the DM."
+    },
+    {
+      "spellId": "dnd.srd521.spell.mass-suggestion",
+      "baseLevel": 6,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 60, "minTargets": 1, "maxTargets": 12, "requiresSight": true },
+      "primary": { "kind": "save-effect", "saveAbility": "wis", "summary": "실패한 대상들은 매혹 상태로 암시된 행동 방침을 따른다.", "duration": { "kind": "hours", "amount": 24 } },
+      "effects": [{ "conditionId": "charmed", "trigger": "failed-save", "duration": { "kind": "hours", "amount": 24 } }],
+      "components": { "verbal": true, "materials": [{ "id": "snake-tongue" }] },
+      "executionScope": "Authored (C1-03): up to twelve targets make a WIS save; on a failure they are Charmed and follow the suggestion for 24 hours. The longer durations for higher slots and damage ending the spell are not enforced."
+    }
+  ]
+}
