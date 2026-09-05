@@ -42,6 +42,7 @@ import "./app/campaignDmLibraryOrganizationRuntimeAdapter";
 import "./session-mode.css";
 import "./session-connected-layout.css";
 import "./session-integrated-reference-play.css";
+import "./session-workspace.css";
 
 type SessionUtility = "quick-sheet" | "actor" | "inventory" | "library" | "campaign" | "calendar" | "rations" | "rest" | "rules" | "encounter" | "participants" | "handout" | "activity" | "session" | "player-session" | null;
 type WorkspaceLayer = "full-sheet" | "level-up" | "time-meals" | null;
