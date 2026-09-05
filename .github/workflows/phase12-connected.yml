@@ -4,6 +4,7 @@ env:
   SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - "agent/103-connected-session-runtime"
