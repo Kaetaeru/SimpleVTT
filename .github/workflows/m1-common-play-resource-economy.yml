@@ -1,6 +1,7 @@
 name: M1 Common Play Resource Economy
 
 on:
+  workflow_dispatch:
   pull_request:
     paths:
       - "content/modules/dnd-srd-5.2.1.class-feature-common-play/module.json"

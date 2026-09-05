@@ -1,6 +1,7 @@
 name: Phase 11 Playable
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - "agent/101-offline-playable-vertical-slice"

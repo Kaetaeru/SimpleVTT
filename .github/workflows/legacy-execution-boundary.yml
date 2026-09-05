@@ -1,6 +1,7 @@
 name: Legacy Execution Boundary
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - agent/resolver-foundation-convergence
