@@ -5,7 +5,6 @@ import test from "node:test";
 const app=readFileSync(new URL("../../src/App.tsx",import.meta.url),"utf8");
 const main=readFileSync(new URL("../../src/main.tsx",import.meta.url),"utf8");
 const sessionRoot=readFileSync(new URL("../../src/SessionModeRoot.tsx",import.meta.url),"utf8");
-const play=readFileSync(new URL("../../src/ProductionPlayScreen.tsx",import.meta.url),"utf8");
 const content=readFileSync(new URL("../../src/V1ContentScreen.tsx",import.meta.url),"utf8");
 const wire=readFileSync(new URL("../../src/app/connectedSessionWire.ts",import.meta.url),"utf8");
 const runtime=readFileSync(new URL("../../src/app/connectedSessionRuntimeAdapter.ts",import.meta.url),"utf8");
@@ -33,25 +32,19 @@ test("Session route is a dedicated production mount instead of legacy duplicate 
   assert.doesNotMatch(session,/Host Session|Join by IP|RulesProfile|Reference 흐름|sessionContent/);
 });
 
-test("production play owns the scene route and old local scene/sheet/create helpers are gone",()=>{
-  assert.match(app,/route === "scene" && <ProductionPlayScreen role=\{productionRole\} \/>/);
+test("the live session owns play and old local scene/sheet/create helpers are gone",()=>{
+  assert.doesNotMatch(app,/route === "scene"|ProductionPlayScreen/);
   for(const legacy of ["CharacterSheetScreen","CharacterCreateScreen","GuidedCreateStep","useTargeting","PlayerSceneScreen","DmSceneScreen","ActionConsole","EntityList","EntityPortrait","Inspector","TargetingOverlay"]) {
     assert.doesNotMatch(app,new RegExp(`function ${legacy}`));
   }
-  assert.match(play,/if \(!actor\) return/);
-  assert.match(play,/Encounter가 비어 있습니다/);
-  assert.doesNotMatch(play,/<Inspector|ActionConsole|activity-mini|scene-side/);
 });
 
-test("production DM encounter preparation is contextual and presentation copy avoids mechanics jargon",()=>{
-  assert.match(play,/instantiateCombatant/);
-  assert.match(play,/removeCombatant/);
-  assert.match(play,/snapshot\.session\.lifecycle==="preparing"/);
-  assert.match(play,/Encounter 준비/);
-  assert.match(play,/Encounter 편집/);
-  assert.match(play,/선택 Combatant 제거/);
-  assert.doesNotMatch(play,/capability/i);
-  assert.doesNotMatch(play,/ResolutionEvent|Fog|pathfinding|minimap|line of sight/i);
+test("the live Encounter pane owns DM encounter editing and its copy avoids mechanics jargon",()=>{
+  const pane=readFileSync(new URL("../../src/SessionDmTools.tsx",import.meta.url),"utf8");
+  assert.match(pane,/instantiateCombatant/);
+  assert.match(pane,/removeCombatant/);
+  assert.match(pane,/SRD 몬스터/);
+  assert.doesNotMatch(pane,/ResolutionEvent|Fog|pathfinding|minimap|line of sight/i);
 });
 
 test("Content is the primary addon review/install surface and points users to Rules for lookup",()=>{

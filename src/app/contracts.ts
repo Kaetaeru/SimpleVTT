@@ -18,7 +18,6 @@ export type AppRoute =
   | "character"
   | "create"
   | "levelup"
-  | "scene"
   | "combatants"
   | "catalog"
   | "activity"

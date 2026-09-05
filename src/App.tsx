@@ -1,7 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useSimpleVtt } from "./app/AppProvider";
 import { CharacterSheetPlayScreen } from "./CharacterSheetPlayScreen";
-import { ProductionPlayScreen } from "./ProductionPlayScreen";
 import { V1HomeScreen } from "./V1HomeScreen";
 import { V1ContentScreen } from "./V1ContentScreen";
 import { CharacterCreateScreenV10 } from "./CharacterCreateV10";
@@ -55,7 +54,7 @@ export function App({ onOpenSessionPreview }: { onOpenSessionPreview?(role: "dm"
       setRoute("session");
       return;
     }
-    if (productionRole === "dm" && ["characters", "character", "create", "levelup"].includes(route)) setRoute("scene");
+    if (productionRole === "dm" && ["characters", "character", "create", "levelup"].includes(route)) setRoute("session");
   }, [snapshot, productionRole, route]);
 
   if (loading || !snapshot) return <div className="loading-screen">SimpleVTT 불러오는 중…</div>;
@@ -88,7 +87,7 @@ export function App({ onOpenSessionPreview }: { onOpenSessionPreview?(role: "dm"
         </nav>
         <div className="v1-sidebar-spacer" />
         <div className="v1-sidebar-context">
-          {liveSession && <button className="primary" onClick={() => setRoute("scene")}>플레이로 돌아가기</button>}
+          {liveSession && <button className="primary" onClick={() => setRoute("session")}>플레이로 돌아가기</button>}
           {connectedSession && <div className={`v1-sidebar-status ${snapshot.connectionState}`}><i/><span>{connectionLabel(snapshot.connectionState)}</span></div>}
         </div>
       </aside>
@@ -97,19 +96,18 @@ export function App({ onOpenSessionPreview }: { onOpenSessionPreview?(role: "dm"
         <header className="v1-topbar" hidden={route === "character"}>
           <div className="v1-topbar-title"><span>SimpleVTT</span><strong>{topTitle(route, productionRole)}</strong></div>
           <div className="v1-topbar-actions">
-            {liveSession && route !== "scene" && <button className="primary" onClick={() => setRoute("scene")}>플레이로 돌아가기</button>}
+            {liveSession && <button className="primary" onClick={() => setRoute("session")}>플레이로 돌아가기</button>}
             {liveSession && <small>{snapshot.sessionMode === "initiative" ? `이니셔티브 · ${snapshot.scene.round}라운드` : "자유 진행"}</small>}
           </div>
         </header>
         <main className="content">
           {snapshot.edgeState !== "normal" && <EdgeBanner />}
-          {route === "home" && <V1HomeScreen onCharacters={() => setRoute("characters")} onCreateCharacter={() => setRoute("create")} onCampaigns={() => setRoute("campaigns")} onSession={() => setRoute("session")} onContent={() => setRoute("content")} onRules={() => setRoute("catalog")} onPlay={() => setRoute("scene")} />}
+          {route === "home" && <V1HomeScreen onCharacters={() => setRoute("characters")} onCreateCharacter={() => setRoute("create")} onCampaigns={() => setRoute("campaigns")} onSession={() => setRoute("session")} onContent={() => setRoute("content")} onRules={() => setRoute("catalog")} onPlay={() => setRoute("session")} />}
           {route === "campaigns" && <CampaignScreen onOpenSession={() => setRoute("session")} />}
           {snapshot.role === "player" && route === "characters" && <CharacterLibraryScreen onOpen={() => setRoute("character")} onCreate={() => setRoute("create")} />}
           {snapshot.role === "player" && route === "character" && <CharacterSheetPlayScreen onLevelUp={() => setRoute("levelup")} onEdit={() => setRoute("create")} />}
           {snapshot.role === "player" && route === "create" && <CharacterCreateScreenV10 onDone={() => setRoute("character")} onCancel={() => setRoute("characters")} />}
           {snapshot.role === "player" && route === "levelup" && <LevelUpScreen onDone={() => setRoute("character")} onCancel={() => setRoute("character")} />}
-          {route === "scene" && <ProductionPlayScreen role={productionRole} />}
           {route === "combatants" && productionRole === "dm" && <CombatantsScreen />}
           {route === "content" && <V1ContentScreen />}
           {route === "catalog" && <CatalogScreen />}
@@ -132,7 +130,6 @@ function topTitle(route: AppRoute, role: "player" | "dm") {
   if (route === "character") return "캐릭터 시트";
   if (route === "create") return "캐릭터 생성 / 편집";
   if (route === "levelup") return "레벨 업";
-  if (route === "scene") return role === "player" ? "플레이" : "DM 플레이";
   if (route === "combatants") return "Encounter";
   if (route === "catalog") return "규칙";
   if (route === "activity") return "플레이 기록";
