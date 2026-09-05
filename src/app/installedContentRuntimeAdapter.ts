@@ -16,7 +16,7 @@ import { InstalledContentRepository } from "./installedContentPersistence";
 import type { InstalledCatalogEntryV1, InstalledContentDocumentV1, InstalledContentStore } from "./installedContentContracts";
 import { createPlatformInstalledContentStore } from "./tauriInstalledContentStore";
 import { generatedBuiltinCatalog } from "./builtinCatalogRuntimeAdapter";
-import { setInstalledBackgroundEntries, type Entry as CreationEntry } from "./characterCreationV10Data";
+import { setInstalledBackgroundEntries, setInstalledFeatEntries, setInstalledSpeciesEntries, type Entry as CreationEntry } from "./characterCreationV10Data";
 import { setInstalledSpellEntries } from "./installedSpellRuntime";
 
 const cp = <T,>(value:T):T => structuredClone(value);
@@ -62,11 +62,26 @@ function installedBackgroundCreationEntries(entries:InstalledCatalogEntryV1[]):C
     }];
   });
 }
+function installedDeclarativeCreationEntries(entries:InstalledCatalogEntryV1[],category:"species"|"feat",kind:"species-definition"|"feat-definition"):CreationEntry[] {
+  return entries.flatMap((entry):CreationEntry[]=>{
+    if (entry.category!==category) return [];
+    const definition=entry.mechanics?.find((mechanic)=>mechanic.kind===kind);
+    if (!definition) return [];
+    return [{
+      id:entry.contentId,
+      category,
+      presentation:{originalName:entry.nameEn,locales:{"ko-KR":{name:entry.nameKo,summary:entry.description}}},
+      mechanics:[{kind,config:cp(definition.config) as unknown as Record<string,unknown>}],
+    }];
+  });
+}
 function applyComposition(adapter:MockAdapter) {
   const state=stateOf(adapter), context=contextFor(adapter), document=context.repository.snapshot();
   if (!context.builtin || !document) return;
   state.catalog=composeContentCatalog(context.builtin,document.entries);
   setInstalledBackgroundEntries(installedBackgroundCreationEntries(document.entries));
+  setInstalledSpeciesEntries(installedDeclarativeCreationEntries(document.entries,"species","species-definition"));
+  setInstalledFeatEntries(installedDeclarativeCreationEntries(document.entries,"feat","feat-definition"));
   setInstalledSpellEntries(document.entries);
 }
 async function ensureHydrated(adapter:MockAdapter) {

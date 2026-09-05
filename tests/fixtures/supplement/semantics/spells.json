@@ -1,0 +1,35 @@
+{
+  "tide-bolt": {
+    "definition": {
+      "classes": [
+        "wizard",
+        "sorcerer"
+      ]
+    },
+    "mechanic": {
+      "baseLevel": 0,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": {
+        "kind": "creature",
+        "rangeFeet": 60,
+        "minTargets": 1,
+        "maxTargets": 1,
+        "requiresSight": true
+      },
+      "primary": {
+        "kind": "attack-damage",
+        "damageType": "cold",
+        "dice": {
+          "count": 1,
+          "sides": 8,
+          "cantripScaling": true
+        }
+      },
+      "components": {
+        "verbal": true,
+        "somatic": true
+      }
+    }
+  }
+}

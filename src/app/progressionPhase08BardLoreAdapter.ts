@@ -194,7 +194,8 @@ MockAdapter.prototype.commitLevelUp = async function commitLevelUpWithCollegeLor
   internal.activeCharacter.skills = clone(next.proficientSkills ?? internal.activeCharacter.skills);
   internal.activeCharacter.preparedSpells = clone(next.preparedSpellIds ?? internal.activeCharacter.preparedSpells);
   internal.activeCharacter.preparedSpellSources = clone(next.preparedSpellSources ?? internal.activeCharacter.preparedSpellSources ?? {});
-  internal.activeCharacter.subclassIds = clone(next.subclassIds ?? internal.activeCharacter.subclassIds ?? {});
+  // Merge, never replace: an installed subclass chosen in the same level-up is recorded by the generic progression path.
+  internal.activeCharacter.subclassIds = { ...(internal.activeCharacter.subclassIds ?? {}), ...clone(next.subclassIds ?? {}) };
   internal.activeCharacter.subclassFeatureIds = clone(next.subclassFeatureIds ?? internal.activeCharacter.subclassFeatureIds ?? []);
   internal.activeCharacter.subclassFeatureSources = clone(next.subclassFeatureSources ?? internal.activeCharacter.subclassFeatureSources ?? {});
   internal.activeCharacter.bardMagicalDiscoverySpellIds = clone(next.bardMagicalDiscoverySpellIds ?? []);

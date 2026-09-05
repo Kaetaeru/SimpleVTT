@@ -1,5 +1,7 @@
 import type { InstalledBackgroundDefinitionV1 } from "./installedBackgroundDefinition";
 import type { InstalledSpellDefinitionV1 } from "./installedSpellDefinition";
+import type { InstalledSpeciesDefinitionV1 } from "./installedSpeciesDefinition";
+import type { InstalledFeatDefinitionV1 } from "./installedFeatDefinition";
 import type { SpellMechanicDefinition } from "../domain/spellcasting";
 import type { CommonPlayDefinitionIR } from "../domain/commonPlayDefinitionRuntime";
 import type { CatalogEntry } from "./contracts";
@@ -56,7 +58,19 @@ export interface InstalledSpellMechanicMechanicV1 {
   config:SpellMechanicDefinition;
 }
 
-export type InstalledMechanicV1 = InstalledCommonPlayMechanicV1 | InstalledBackgroundDefinitionMechanicV1 | InstalledSpellDefinitionMechanicV1 | InstalledSpellMechanicMechanicV1;
+/** Declarative species semantics (size, speed, darkvision, traits, creation choices) for an installed species. */
+export interface InstalledSpeciesDefinitionMechanicV1 {
+  kind:"species-definition";
+  config:InstalledSpeciesDefinitionV1;
+}
+
+/** Declarative feat semantics (tier, prerequisites, ability increase, execution record) for an installed feat. */
+export interface InstalledFeatDefinitionMechanicV1 {
+  kind:"feat-definition";
+  config:InstalledFeatDefinitionV1;
+}
+
+export type InstalledMechanicV1 = InstalledCommonPlayMechanicV1 | InstalledBackgroundDefinitionMechanicV1 | InstalledSpellDefinitionMechanicV1 | InstalledSpellMechanicMechanicV1 | InstalledSpeciesDefinitionMechanicV1 | InstalledFeatDefinitionMechanicV1;
 
 /** Narrows an entry's mechanics to the executable Common Play definitions; declarative kinds such as background-definition are skipped. */
 export function commonPlayMechanicsOf(mechanics:InstalledMechanicV1[]|undefined):InstalledCommonPlayMechanicV1[] {

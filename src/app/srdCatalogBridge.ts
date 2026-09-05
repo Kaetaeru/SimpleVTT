@@ -63,7 +63,7 @@ function classOption(entry: Entry): Option {
   const choices = level1.filter((value) => value.includes("choice")).map((value) => `레벨 1 선택 · ${pretty(value)}`);
   return opt(entry.id, ko(entry), entry.presentation.originalName, summary(entry), grants, choices);
 }
-function speciesOption(entry: Entry): Option {
+export function speciesOption(entry: Entry): Option {
   const def = cfg<SpeciesDef>(entry, "species-definition") ?? {};
   const grants = [...(def.size?.length ? [`크기 ${def.size.join(" / ")}`] : []), ...(def.speed ? [`이동 ${def.speed} ft`] : []), ...(def.darkvision ? [`암시야 ${def.darkvision} ft`] : []), ...(def.traits ?? []).slice(0, 3).map((value) => pretty(value))];
   return opt(entry.id, ko(entry), entry.presentation.originalName, summary(entry), grants, Object.keys(def.choices ?? {}).map((value) => `선택 · ${pretty(value)}`));

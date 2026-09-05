@@ -1,6 +1,6 @@
 import "./creationContracts";
 import type { AbilityKey, CharacterCreateDraft, CharacterCreationOptionVm, CharacterCreationPlan, CharacterCreationSection, ValidationMessage } from "./contracts";
-import { CLASSES, SPECIES, SKILL_LABELS, backgroundOptions, backgroundSkills, classIdFromName, classLoadoutOptions, classMeta, classSkillOptions, itemMechanic, opt, speciesDefinition, speciesTraits, type Option } from "./characterCreationV10Data";
+import { CLASSES, SKILL_LABELS, backgroundOptions, speciesOptions, backgroundSkills, classIdFromName, classLoadoutOptions, classMeta, classSkillOptions, itemMechanic, opt, speciesDefinition, speciesTraits, type Option } from "./characterCreationV10Data";
 import { classAndBackgroundLoadout, finalAbilities, nonClassSkillNames, speciesAutomaticEffects } from "./characterCreationV10Choices";
 import {
   creationChoiceDefinitions,
@@ -152,7 +152,7 @@ export function buildCreationPlanV10(draft: CharacterCreateDraft): CharacterCrea
   const primary: CharacterCreationSection[] = [
     section("rules", "rules-profile", "규칙", "규칙 의미와 호환 콘텐츠 범위를 결정합니다.", "complete", true, [], [{ ...opt(draft.rulesProfileId, "D&D SRD 5.2.1", "D&D SRD 5.2.1", "SRD RuleModule과 선언형 캐릭터 생성 인덱스를 사용합니다.", ["stable content IDs", "generic choices"]), selected:true }], ["RulesProfile identity/version 저장"]),
     section("identity", "identity", "정체성", "이름과 공용어 외 표준 언어 두 개를 정합니다.", status(true, false, Boolean(draft.name.trim())), true, []),
-    section("species", "species", "종족", "SRD 종족과 해당 종족의 후속 선택을 정합니다.", status(true, false, Boolean(draft.species)), true, ["rules"], choose(SPECIES, draft.species), draft.species ? SPECIES.find((item) => item.name === draft.species)?.grants ?? [] : []),
+    section("species", "species", "종족", "SRD 종족과 해당 종족의 후속 선택을 정합니다.", status(true, false, Boolean(draft.species)), true, ["rules"], choose(speciesOptions(), draft.species), draft.species ? speciesOptions().find((item) => item.name === draft.species)?.grants ?? [] : []),
     section("background", "background", "배경", "능력치 증가, 기원 재주, 도구와 배경 장비를 함께 정합니다.", status(true, false, Boolean(draft.background)), true, ["rules"], choose(backgroundOptions(), draft.background), draft.background ? backgroundOptions().find((item) => item.name === draft.background)?.grants ?? [] : []),
     section("class", "class", "클래스", "12개 SRD 클래스와 해당 1레벨 선택을 정합니다.", status(true, false, Boolean(draft.className)), true, ["rules"], choose(CLASSES, draft.className), draft.className ? CLASSES.find((item) => item.name === draft.className)?.grants ?? [] : []),
     section("abilities", "abilities", "능력치", "RulesProfile 방식으로 기본 능력치를 정한 뒤 배경 증가를 적용합니다.", status(true, !draft.className, !abilityBlocking), true, ["class", "background"], [], [], validation.filter((item) => abilityLegacy.test(item.message))),
