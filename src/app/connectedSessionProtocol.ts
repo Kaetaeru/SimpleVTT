@@ -8,6 +8,10 @@ import type {
   ConnectedResolutionRollFactsV1,
 } from "./connectedResolutionPresentation";
 import type { ManualMovementReactionCommand } from "./manualMovementReactionContracts";
+import type { SceneGroupVm } from "./encounterGroupContracts";
+import type { EngagementRecord } from "../domain/engagement";
+import type { SceneConditionKind } from "./sceneConditionContracts";
+import type { MovementDeclarationKind, MovementDeclarationVm, PendingWithdrawalVm } from "./movementDeclarationContracts";
 
 export const CONNECTED_SESSION_PROTOCOL_VERSION = 1 as const;
 
@@ -54,6 +58,22 @@ export interface ConnectedSceneTopology {
   currentActorId:string;
   entities:SceneEntity[];
   economyByActor:Record<string,EconomyVm>;
+  /** V1.3 C1-02: theater-of-mind scene state (absent on older hosts). */
+  groups?:Record<string,SceneGroupVm>;
+  engagements?:EngagementRecord[];
+  sceneConditions?:SceneConditionKind[];
+  movementDeclarations?:Record<string,MovementDeclarationVm>;
+  pendingWithdrawal?:PendingWithdrawalVm;
+}
+
+/** A player's 접근/물러남/그대로, declared on the Host on the player's behalf. */
+export interface ConnectedMovementRequest {
+  sessionId:string;
+  requestId:string;
+  actorId:string;
+  kind:MovementDeclarationKind;
+  targetId?:string;
+  knownEventCursor:number;
 }
 
 export type ConnectedEventPayload =

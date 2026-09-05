@@ -51,7 +51,7 @@ jobs:
       - name: Verify v1 shell, connected topology, continuity, and Session layer contracts
         run: npx tsx --test tests/ui/firstRunTutorialPreferences.test.ts tests/ui/firstRunTutorialStructure.test.ts tests/ui/v1ProductShellStructure.test.ts tests/ui/connectedProductShellContinuity.test.ts tests/ui/connectedPlayAcceptedTopology.test.ts tests/ui/sessionFullSheetWorkspaceStructure.test.ts tests/ui/sessionUtilityPanesStructure.test.ts tests/ui/sessionFreeformMainFocusStructure.test.ts tests/ui/sessionActionDockStructure.test.ts tests/ui/sessionDmToolsStructure.test.ts tests/ui/sessionPlayerReconnectStructure.test.ts tests/ui/sessionInitiativeExpansionStructure.test.ts tests/ui/sessionHandoutIntegrationStructure.test.ts tests/ui/sessionResponsiveKeyboardFocusStructure.test.ts
       - name: Verify the single live play surface (V1.2 T1-09)
-        run: npx tsx --test tests/ui/singlePlaySurface.test.ts tests/ui/hostHasNoCharacter.test.ts
+        run: npx tsx --test tests/ui/singlePlaySurface.test.ts tests/ui/hostHasNoCharacter.test.ts tests/ui/connectedTheaterOfMindParity.test.ts
       - name: Verify V0.9 combat VFX projection and presentation boundaries
         run: npx tsx --test tests/ui/combatVfxProjection.test.ts tests/ui/combatVfxStructure.test.ts
       - name: Verify Phase 14 unified production session UX
