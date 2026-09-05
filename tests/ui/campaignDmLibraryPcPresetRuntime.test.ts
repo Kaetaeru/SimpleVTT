@@ -7,7 +7,7 @@ const runtimeSource=readFileSync(new URL("../../src/app/campaignDmLibraryOrganiz
 
 test("PC presets retain rich action snapshots for rendered DM materialization",()=>{
   assert.match(contractsSource,/actionSnapshots\?:ActionVm\[\]/,"PC preset persistence must retain rich ActionVm metadata");
-  assert.match(runtimeSource,/preset\.actionSnapshots\?\.map\(\(action,index\)=>\(\{/,"materialization must clone persisted rich actions");
+  assert.match(runtimeSource,/preset\.actionSnapshots(\?\.|\.)map\(\(action,index\)=>\(\{/,"materialization must clone persisted rich actions");
   assert.match(runtimeSource,/actorId:spawned\.id/,"cloned actions must belong to the spawned preset Actor");
   assert.match(runtimeSource,/id:`\$\{action\.id\}\.pc-preset\.\$\{spawned\.id\}\.\$\{index\}`/,"cloned action ids must be unique per spawned Actor");
 });
