@@ -541,6 +541,13 @@ async function offerPassiveReaction(adapter:MockAdapter):Promise<"interrupt"|"ap
     if(!projections.length)continue;
     if(interceptor&&!interceptor.interaction){
       // Automatic interceptor: apply immediately when eligible, no interrupt. The resolution keeps advancing.
+      // The applied modification is visible on the resolution itself; never apply the same definition twice to one resolution,
+      // whatever path re-enters this pass (the atomic attack transaction re-runs the stage with a new revision).
+      const marker=`common-play:${candidate.definition.id}`;
+      if((resolution.rollModifierContributions??[]).some((entry)=>entry.source===marker)||resolution.provenance.some((entry)=>entry.startsWith(`${marker} ·`))){
+        state.handled.add(candidate.key);
+        continue;
+      }
       for(const projected of projections){
         if(!await interceptorEligible(internal,candidate,projected.pending,runtime))continue;
         if(await applyAutomaticReaction(adapter,resolution,runtime,candidate,interceptor.id,projected,damage))applied=true;
