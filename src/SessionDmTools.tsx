@@ -8,6 +8,8 @@ import { monsterTimingBadges } from "./app/monsterTimingPresentation";
 import "./app/srdMonsterTimingRuntimeAdapter";
 import "./app/engagementRuntimeAdapter";
 import "./app/encounterGroupRuntimeAdapter";
+import "./app/sceneConditionRuntimeAdapter";
+import { CREATURE_BADGE_LABELS, NARRATIVE_CONDITION_LABELS, SCENE_CONDITION_LABELS, type CreatureBadgeKind, type SceneConditionKind } from "./app/sceneConditionContracts";
 import "./session-dm-tools.css";
 
 function entitySummary(entity: SceneEntity) {
@@ -119,6 +121,12 @@ export function SessionDmEncounterPane({ onClose }: { onClose(): void }) {
       setPendingKey(null);
     }
   };
+  const run = async (key: string, task: () => Promise<unknown>) => {
+    if (pendingKey) return;
+    setPendingKey(key);
+    try { await task(); await refresh(); } finally { setPendingKey(null); }
+  };
+  const [editingId, setEditingId] = useState<string | null>(null);
   const ungroup = async (groupId: string) => {
     if (pendingKey) return;
     setPendingKey(`ungroup:${groupId}`);
@@ -178,6 +186,13 @@ export function SessionDmEncounterPane({ onClose }: { onClose(): void }) {
       <div><span>모드</span><strong>{initiative ? `이니셔티브 · ${snapshot.scene.round}R` : "자유 진행"}</strong></div>
       <button type="button" className={initiative ? "" : "primary"} disabled={Boolean(pendingKey || snapshot.resolution)} onClick={() => void changeInitiative()}>{initiative ? "이니셔티브 종료" : "이니셔티브 시작"}</button>
     </section>
+    <section className="session-dm-scene-conditions" aria-label="장면 조건">
+      <span>장면</span>
+      {(Object.keys(SCENE_CONDITION_LABELS) as SceneConditionKind[]).map((kind) => {
+        const on = snapshot.scene.sceneConditions?.includes(kind) ?? false;
+        return <button type="button" key={kind} aria-pressed={on} disabled={Boolean(pendingKey)} title="양쪽 모두 보지 못하면 이점·불리점이 상쇄됩니다. 배지로 예외를 표시하세요." onClick={() => void run(`scene:${kind}`, () => mockAdapter.setSceneCondition(kind, !on))}>{SCENE_CONDITION_LABELS[kind]}</button>;
+      })}
+    </section>
 
     <section className="session-dm-section">
       <div className="session-dm-section-title"><strong>Combatant 추가</strong><span>현재 세션을 떠나지 않고 Encounter에 추가합니다.</span></div>
@@ -220,7 +235,13 @@ export function SessionDmEncounterPane({ onClose }: { onClose(): void }) {
                 return <button type="button" key={otherId} disabled={Boolean(pendingKey)} title="교전 해제 (다음 원거리 공격에 근접 불리점 없음)" onClick={() => void clearEngagement(combatant.id, otherId)}>교전 · {other?.name ?? otherId} ×</button>;
               })}</span>}
             </div>
+            {editingId === combatant.id && <div className="session-dm-narrative" aria-label={`${combatant.name} 서술 편집`}>
+              <div><span>HP</span>{([5, 10] as const).map((amount) => <button type="button" key={amount} disabled={Boolean(pendingKey)} onClick={() => void run(`hp:${combatant.id}`, () => mockAdapter.applyNarrativeDamage(combatant.id, amount))}>−{amount}</button>)}<button type="button" disabled={Boolean(pendingKey)} onClick={() => void run(`hp:${combatant.id}`, () => mockAdapter.applyNarrativeDamage(combatant.id, "half"))}>절반</button><button type="button" disabled={Boolean(pendingKey)} onClick={() => void run(`hp:${combatant.id}`, () => mockAdapter.applyNarrativeDamage(combatant.id, -5))}>+5</button></div>
+              <div><span>배지</span>{(Object.keys(CREATURE_BADGE_LABELS) as CreatureBadgeKind[]).map((badge) => { const label = CREATURE_BADGE_LABELS[badge]; const on = combatant.status.includes(label); return <button type="button" key={badge} aria-pressed={on} disabled={Boolean(pendingKey)} onClick={() => void run(`badge:${combatant.id}`, () => mockAdapter.setCreatureBadge(combatant.id, badge, !on))}>{label}</button>; })}</div>
+              <div><span>상태</span>{NARRATIVE_CONDITION_LABELS.map((label) => { const on = combatant.status.includes(label); return <button type="button" key={label} aria-pressed={on} disabled={Boolean(pendingKey)} onClick={() => void run(`status:${combatant.id}`, () => mockAdapter.setCreatureStatus(combatant.id, label, !on))}>{label}</button>; })}</div>
+            </div>}
             <span className="session-dm-combatant-actions">
+              <button type="button" aria-expanded={editingId === combatant.id} disabled={Boolean(pendingKey)} onClick={() => setEditingId((current) => current === combatant.id ? null : combatant.id)} title="HP·배지·상태를 굴림 없이 바로 편집합니다.">{editingId === combatant.id ? "닫기" : "편집"}</button>
               {timing?.legendaryResistance && timing.legendaryResistance.remaining > 0 && <button type="button" disabled={Boolean(pendingKey)} onClick={() => void useLegendaryResistance(combatant.id)} title="실패한 내성 굴림을 성공으로 바꿉니다. 판정에는 강제 성공을 적용하세요.">{pendingKey === `lr:${combatant.id}` ? "…" : `전설 저항 ${timing.legendaryResistance.remaining}`}</button>}
               {group && group.memberIds[0] === combatant.id && <button type="button" disabled={Boolean(pendingKey)} onClick={() => void ungroup(group.id)} title="무리를 풀어 개별 카드로 보여줍니다.">{pendingKey === `ungroup:${group.id}` ? "…" : "무리 해제"}</button>}
               {timing && <button type="button" disabled={Boolean(pendingKey)} onClick={() => void resetTiming(combatant.id)} title="재충전, 사용 횟수, 전설 행동을 모두 되돌립니다.">{pendingKey === `timing:${combatant.id}` ? "…" : "재정비"}</button>}

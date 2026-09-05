@@ -181,3 +181,12 @@
 
 .session-dm-engagements { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
 .session-dm-engagements button { font-size: 10px; padding: 1px 6px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--bad) 45%, var(--line)); background: transparent; color: var(--text); }
+
+.session-dm-scene-conditions { display: flex; align-items: center; gap: 6px; margin: 0 0 10px; font-size: 10px; color: var(--muted); }
+.session-dm-scene-conditions button { padding: 2px 8px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface-2); color: var(--text); font-size: 10px; font-weight: 700; }
+.session-dm-scene-conditions button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+.session-dm-narrative { grid-column: 1 / -1; display: grid; gap: 4px; margin-top: 6px; }
+.session-dm-narrative > div { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.session-dm-narrative > div > span { font-size: 9px; color: var(--muted); min-width: 24px; }
+.session-dm-narrative button { padding: 1px 7px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface-2); color: var(--text); font-size: 10px; }
+.session-dm-narrative button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }

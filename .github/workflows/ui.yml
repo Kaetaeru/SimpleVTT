@@ -119,6 +119,7 @@ jobs:
           tests/ui/encounterGroups.test.ts
           tests/ui/movementDeclarations.test.ts
           tests/ui/resolutionPostHocToggles.test.ts
+          tests/ui/sceneConditionsBadges.test.ts
           tests/ui/phase09RealLifeRuntime.test.ts
           tests/ui/phase09ManualMovementReactionAdapter.test.ts
           tests/ui/phase09RealHealingRollService.test.ts

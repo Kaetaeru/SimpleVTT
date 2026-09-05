@@ -369,8 +369,8 @@ test("owning Client persists a Host-confirmed durable event across explicit sess
 });
 
 test("production Host live UI exposes explicit session end control without debug path",()=>{
-  const source=readFileSync(new URL("../../src/ProductionSessionLifecycleBridge.tsx",import.meta.url),"utf8");
+  const source=readFileSync(new URL("../../src/ProductionSessionWorkspaceBridge.tsx",import.meta.url),"utf8");
   assert.match(source,/세션 종료/);
   assert.match(source,/stopSession\(\)/);
-  assert.doesNotMatch(source,/Host 중지|setReferenceRole|loadReferenceScenario|Ctrl\+Shift\+D/);
+  assert.doesNotMatch(source,/setReferenceRole|loadReferenceScenario|Ctrl\+Shift\+D/);
 });

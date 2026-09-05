@@ -132,6 +132,10 @@
       "classification": "GENERIC_ENGINE"
     },
     {
+      "module": "./sceneConditionRuntimeAdapter",
+      "classification": "GENERIC_ENGINE"
+    },
+    {
       "module": "./phase09RealRuntimeStatAdapter",
       "classification": "GENERIC_ENGINE"
     },

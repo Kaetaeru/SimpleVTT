@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import type { SessionMode } from "./app/contracts";
-import type { RuntimeCover } from "./app/spatialRuntimeContracts";
 import { useSimpleVtt } from "./app/AppProvider";
 import { mockAdapter } from "./app/mockAdapter";
 import { publishExternalAdapterSnapshot } from "./app/adapterSnapshotEvents";
@@ -42,12 +41,6 @@ export function ProductionSessionWorkspaceBridge() {
   const [sessionName,setSessionName]=useState("새 플레이 세션");
   const [address,setAddress]=useState("192.168.0.10:3210");
   const [mode,setMode]=useState<SessionMode>("freeform");
-  const [relationSourceId,setRelationSourceId]=useState("");
-  const [relationTargetId,setRelationTargetId]=useState("");
-  const [distanceFeet,setDistanceFeet]=useState("5");
-  const [visible,setVisible]=useState(true);
-  const [cover,setCover]=useState<RuntimeCover>("none");
-  const [targetCanSeeAttacker,setTargetCanSeeAttacker]=useState(true);
 
   useEffect(()=>{
     const findTarget=()=>setTarget(document.getElementById("production-session-workspace-root"));
@@ -95,9 +88,6 @@ export function ProductionSessionWorkspaceBridge() {
   const canSaveSessionName=preparing&&normalizedSessionName.length>0&&normalizedSessionName.length<=80&&normalizedSessionName!==snapshot.session.name;
   const hasActionableError=snapshot.session.compatibility==="incompatible";
   const hostStartFailed=offline&&hasActionableError&&snapshot.session.compatibilityMessage.startsWith("Host start failed:");
-  const parsedDistanceFeet=Number(distanceFeet);
-  const canAuthorRelation=host&&live&&Boolean(relationSourceId)&&Boolean(relationTargetId)
-    &&relationSourceId!==relationTargetId&&Number.isFinite(parsedDistanceFeet)&&parsedDistanceFeet>=0;
 
   async function selectCharacter(characterId:string) {
     if (!characterId) return;
@@ -124,18 +114,6 @@ export function ProductionSessionWorkspaceBridge() {
     if (address.trim()) await joinSession(address.trim());
   }
 
-  async function authorSpatialRelation() {
-    if (!canAuthorRelation) return;
-    await mockAdapter.setTheaterOfMindSpatialRelation({
-      sourceId:relationSourceId,
-      targetId:relationTargetId,
-      distanceFeet:parsedDistanceFeet,
-      visible,
-      cover,
-      targetCanSeeAttacker,
-    });
-    await refresh();
-  }
 
   const content=(
     <section className="production-session-workspace" aria-label="세션 관리">
@@ -300,18 +278,6 @@ export function ProductionSessionWorkspaceBridge() {
             </div>
             <div className="production-session-roster">{players.map((participant)=><div key={participant.id} className="production-session-roster-row"><strong>{participant.characterName??participant.name}</strong><span>{participant.state==="connected"?"연결됨":"연결 끊김"}</span></div>)}</div>
             <ProductionSessionAdvancementPanel />
-            <details className="production-session-advanced">
-              <summary>고급 DM 도구 · 거리 관계</summary>
-              <p>필요할 때만 Actor 쌍의 거리, 가시성, 엄폐를 명시합니다.</p>
-              <div className="production-session-relation-grid">
-                <select aria-label="거리 기준 Actor" value={relationSourceId} onChange={(event)=>setRelationSourceId(event.target.value)}><option value="">기준 Actor</option>{snapshot.scene.entities.map((entity)=><option key={entity.id} value={entity.id}>{entity.name}</option>)}</select>
-                <select aria-label="거리 대상 Actor" value={relationTargetId} onChange={(event)=>setRelationTargetId(event.target.value)}><option value="">대상 Actor</option>{snapshot.scene.entities.map((entity)=><option key={entity.id} value={entity.id}>{entity.name}</option>)}</select>
-                <input aria-label="거리(피트)" type="number" min={0} step={1} value={distanceFeet} onChange={(event)=>setDistanceFeet(event.target.value)} />
-                <select aria-label="엄폐" value={cover} onChange={(event)=>setCover(event.target.value as RuntimeCover)}><option value="none">엄폐 없음</option><option value="half">절반 엄폐</option><option value="three-quarters">3/4 엄폐</option><option value="total">완전 엄폐</option></select>
-              </div>
-              <div className="production-session-relation-checks"><label><input type="checkbox" checked={visible} onChange={(event)=>setVisible(event.target.checked)} /> 공격자가 대상을 볼 수 있음</label><label><input type="checkbox" checked={targetCanSeeAttacker} onChange={(event)=>setTargetCanSeeAttacker(event.target.checked)} /> 대상이 공격자를 볼 수 있음</label></div>
-              <button type="button" disabled={!canAuthorRelation} onClick={()=>void authorSpatialRelation()}>거리 관계 적용</button>
-            </details>
             <button type="button" className="danger-action" onClick={()=>void stopSession()}>세션 종료</button>
           </article>
         </div>
