@@ -1,0 +1,87 @@
+{
+  "schemaVersion": "1",
+  "source": {
+    "document": "SRD 5.2.1",
+    "review": "C1-03 wave 2 — summoning and guardian spells whose SRD 5.2.1 text resolves as a saving throw, spell attack or attack rider rather than a creature stat block. The summoned form itself is narrated; the damage it deals is executable."
+  },
+  "definitions": [
+    {
+      "spellId": "dnd.srd521.spell.guardian-of-faith",
+      "baseLevel": 4,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 30, "minTargets": 1, "maxTargets": 8, "allowedRelations": ["enemy", "neutral"] },
+      "primary": { "kind": "save-damage", "saveAbility": "dex", "damageType": "radiant", "dice": { "count": 0, "sides": 1, "flat": 20 }, "successDamage": "half" },
+      "components": { "verbal": true },
+      "executionScope": "Authored (C1-03): each enemy that moves within 10 feet of the guardian for the first time on a turn or starts its turn there makes a DEX save for 20 radiant, half on success; the DM selects who triggers it on each cast. The 8-hour duration and the guardian vanishing after 60 damage are tracked by the table."
+    },
+    {
+      "spellId": "dnd.srd521.spell.arcane-sword",
+      "baseLevel": 7,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 60, "minTargets": 1, "maxTargets": 1, "requiresSight": true },
+      "primary": { "kind": "attack-damage", "damageType": "force", "dice": { "count": 4, "sides": 12 } },
+      "concentration": true,
+      "components": { "verbal": true, "somatic": true, "materials": [{ "id": "miniature-platinum-sword-250gp" }] },
+      "executionScope": "Authored (C1-03): the cast makes one melee spell attack against a creature within 5 feet of the sword for 4d12 force damage. Moving the sword and attacking again with a bonus action on later turns are not enforced."
+    },
+    {
+      "spellId": "dnd.srd521.spell.conjure-animals",
+      "baseLevel": 3,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 60, "minTargets": 1, "maxTargets": 8, "requiresSight": true },
+      "primary": { "kind": "save-damage", "saveAbility": "dex", "damageType": "slashing", "dice": { "count": 3, "sides": 10, "dicePerSlotAboveBase": 1 }, "successDamage": "half" },
+      "concentration": true,
+      "components": { "verbal": true, "somatic": true },
+      "executionScope": "Authored (C1-03): creatures the spectral pack moves within 10 feet of, or that enter or end their turn there, make a DEX save for 3d10 slashing, half on success, +1d10 per slot level above 3rd; the DM selects who is affected on each cast. The pack's movement and the once-per-turn limit are tracked by the table."
+    },
+    {
+      "spellId": "dnd.srd521.spell.conjure-celestial",
+      "baseLevel": 7,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 90, "minTargets": 1, "maxTargets": 10, "requiresSight": true },
+      "primary": { "kind": "save-damage", "saveAbility": "dex", "damageType": "radiant", "dice": { "count": 6, "sides": 12, "dicePerSlotAboveBase": 1 }, "successDamage": "half" },
+      "concentration": true,
+      "components": { "verbal": true, "somatic": true },
+      "executionScope": "Authored (C1-03): creatures of the caster's choice in the 20-foot-radius cylinder make a DEX save for 6d12 radiant, half on success, +1d12 per slot level above 7th. The SRD lets the caster instead heal one creature in the cylinder for 6d12; the DM applies that option with 서술 회복. Repeating the choice at the start of each turn and the bright light are not enforced."
+    },
+    {
+      "spellId": "dnd.srd521.spell.conjure-minor-elementals",
+      "baseLevel": 4,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 0, "minTargets": 1, "maxTargets": 1, "allowedRelations": ["self"] },
+      "primary": { "kind": "tracked-effect", "summary": "15피트 방출 안의 대상을 명중 굴림으로 맞출 때마다 선택한 유형(산성·냉기·화염·번개)의 피해 2d8을 추가한다.", "duration": { "kind": "concentration" } },
+      "trackedEffects": [{ "summary": "명중 시 화염 2d8 추가 (15피트 방출 안)", "trigger": "always", "duration": { "kind": "concentration" }, "attackDamage": { "damageType": "fire", "dice": { "count": 2, "sides": 8 } } }],
+      "concentration": true,
+      "components": { "verbal": true, "somatic": true },
+      "executionScope": "Authored (C1-03): the caster's attack hits deal an extra 2d8 damage while the caster concentrates (up to 10 minutes). The SRD limits this to targets within the 15-foot emanation, lets the caster choose acid, cold, fire or lightning (authored as fire), and adds 2d8 per slot level above 4th; the DM lifts the rider for distant targets and the upcast dice are not scaled."
+    },
+    {
+      "spellId": "dnd.srd521.spell.conjure-elemental",
+      "baseLevel": 5,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 60, "minTargets": 1, "maxTargets": 4, "requiresSight": true },
+      "primary": { "kind": "save-damage", "saveAbility": "dex", "damageType": "fire", "dice": { "count": 8, "sides": 8, "dicePerSlotAboveBase": 2 }, "successDamage": "half" },
+      "effects": [{ "conditionId": "restrained", "trigger": "failed-save", "duration": { "kind": "concentration" } }],
+      "concentration": true,
+      "components": { "verbal": true, "somatic": true, "materials": [{ "id": "air-earth-fire-water-sample" }] },
+      "executionScope": "Authored (C1-03): a creature that enters the elemental's space or starts its turn within 5 feet of it makes a DEX save; on a failure it takes 8d8 damage and is Restrained until the spell ends, on a success half damage and no restraint; +2d8 per slot level above 5th. The SRD lets the caster choose acid, cold, fire or lightning (authored as fire); the repeat save to end the restraint is left to the DM."
+    },
+    {
+      "spellId": "dnd.srd521.spell.fire-shield",
+      "baseLevel": 4,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 0, "minTargets": 1, "maxTargets": 1, "allowedRelations": ["self"] },
+      "primary": { "kind": "tracked-effect", "summary": "온기 방패(냉기 저항) 또는 한기 방패(화염 저항)를 두르고, 5피트 안에서 근접 공격으로 맞힌 상대는 2d8 피해를 받는다.", "duration": { "kind": "minutes", "amount": 10 } },
+      "trackedEffects": [{ "summary": "온기 방패: 냉기 저항", "trigger": "always", "duration": { "kind": "minutes", "amount": 10 }, "damageDefenses": [{ "kind": "resistance", "damageType": "cold" }] }],
+      "components": { "verbal": true, "somatic": true, "materials": [{ "id": "bit-of-phosphorus-or-firefly" }] },
+      "executionScope": "Authored (C1-03): for 10 minutes the caster has resistance to cold damage (the warm shield). The chill shield's fire resistance and the 2d8 fire or cold damage dealt to a creature that hits the caster with a melee attack within 5 feet are applied by the DM with 서술 피해."
+    }
+  ]
+}
