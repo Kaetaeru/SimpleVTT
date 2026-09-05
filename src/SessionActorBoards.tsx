@@ -57,6 +57,7 @@ function SessionActorCard({entity,role,controlled,currentTurn,pending,targeting,
   const invalidReason=targeting&&!validTarget?targetReason:null;
   const combatMotion=sessionActorCombatMotion(snapshot.resolution,entity.id);
   const timingBadges=monsterTimingBadges(entity);
+  const engagedNames=(entity.engagedWithIds??[]).map((id)=>snapshot.scene.entities.find((other)=>other.id===id)?.name??id);
   const stateCopy=[controlled?"조작":null,currentTurn?"현재 턴":null,...entity.status].filter(Boolean).join(" · ");
   const className=["session-actor-card",entity.side==="enemy"?"hostile":"allied",controlled?"controlled":"",currentTurn?"current-turn":"",targeting?"targeting":"",validTarget?"valid-target":"",selectedTarget?"selected-target":"",targeting&&!validTarget?"invalid-target":"",combatMotion?`combat-${combatMotion}`:""].filter(Boolean).join(" ");
   const combatCopy=combatMotion==="attacking"?" · 공격 중":combatMotion==="targeted"||combatMotion==="braced"?" · 공격 대상":combatMotion==="dodged"?" · 회피":combatMotion==="hit"?" · 피격":"";
@@ -64,7 +65,7 @@ function SessionActorCard({entity,role,controlled,currentTurn,pending,targeting,
   return <div className="session-actor-card-shell" role="listitem">
     <button type="button" data-actor-id={entity.id} data-combat-motion={combatMotion??undefined} className={className} aria-pressed={targeting?selectedTarget:controlled} aria-disabled={disabled||(targeting&&!validTarget)} aria-label={`${entity.name} · ${relationLabel(entity)} · HP ${entity.hp}/${entity.maxHp} · AC ${entity.ac}${stateCopy?` · ${stateCopy}`:""}${combatCopy}`} disabled={disabled} onClick={()=>{if(!targeting||validTarget)onSelect();}} onPointerEnter={(event)=>show(event.currentTarget)} onPointerLeave={()=>setTip(null)} onFocus={(event)=>show(event.currentTarget)} onBlur={()=>setTip(null)} style={{"--session-actor-damage":`${100-hpPercent(entity)}%`} as React.CSSProperties}>
       <span className="session-actor-card-portrait">{portrait?<img src={portrait.asset.dataUrl} alt="" style={{objectPosition:`${portrait.focalX*100}% ${portrait.focalY*100}%`}}/>:<span className="session-actor-card-fallback" aria-hidden="true"><i/><b>{initials}</b></span>}</span>
-      {(entity.status.length>0||timingBadges.length>0)&&<span className="session-actor-card-statuses" aria-label="공개 컨디션">{entity.status.map((status)=><span key={status} title={status}>{status}</span>)}{timingBadges.map((badge)=><span key={badge.key} className="timing" title={badge.title}>{badge.text}</span>)}</span>}
+      {(entity.status.length>0||timingBadges.length>0||engagedNames.length>0)&&<span className="session-actor-card-statuses" aria-label="공개 컨디션">{entity.status.map((status)=><span key={status} title={status}>{status}</span>)}{timingBadges.map((badge)=><span key={badge.key} className="timing" title={badge.title}>{badge.text}</span>)}{engagedNames.length>0&&<span className="engaged" title={`교전 중: ${engagedNames.join(", ")}`}>교전 · {engagedNames.join(", ")}</span>}</span>}
       <span className="session-actor-damage-fill" aria-hidden="true"/>
       <span className="session-actor-damage-frame" aria-hidden="true"/>
       {pending&&<span className="session-actor-card-pending">…</span>}

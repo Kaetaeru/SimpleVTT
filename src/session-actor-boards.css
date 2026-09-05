@@ -279,3 +279,9 @@ button.session-actor-card:disabled { cursor: default; opacity: 1; }
   background: color-mix(in srgb, var(--warn, #c9a227) 12%, var(--recess));
   color: var(--text);
 }
+
+.session-actor-card-statuses > span.engaged {
+  border-color: color-mix(in srgb, var(--bad) 55%, var(--line));
+  background: color-mix(in srgb, var(--bad) 12%, var(--recess));
+  color: var(--text);
+}

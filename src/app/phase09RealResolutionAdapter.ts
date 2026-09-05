@@ -23,6 +23,14 @@ import { resolveHealingRollResolution } from "./realHealingRollService";
 import { resolveAttackRollResolution, resolveOpenAbilityCheckResolution } from "./realResolutionService";
 import { recordRuntimeResolutionEvents } from "./runtimeResolutionEventHistory";
 import type { ResolutionEvent } from "../domain/resolutionTypes";
+import type { RollStateContribution } from "../domain/profileEngine";
+
+/** Other adapters add advantage/disadvantage sources to an attack roll (T1-03: engagement → ranged attack in melee). */
+export type AttackRollStateContributor=(context:{ scene:AppSnapshot["scene"]; action:ActionVm; actor:SceneEntity|undefined; target:SceneEntity })=>RollStateContribution[];
+const attackRollStateContributors:AttackRollStateContributor[]=[];
+export function registerAttackRollStateContributor(contributor:AttackRollStateContributor) {
+  attackRollStateContributors.push(contributor);
+}
 
 interface Phase09BeforeSnapshot {
   scene:AppSnapshot["scene"];
@@ -202,9 +210,10 @@ MockAdapter.prototype.resolveAction = async function resolveActionWithRealRules(
     const revealed=removeStatus(actor,HIDDEN_STATUS);
     const helped=removeHelped(actor);
     const dodging=target.status.includes(DODGING_STATUS)||target.status.includes(`✦ ${DODGING_STATUS}`);
-    const rollStateContributions=[
+    const rollStateContributions:RollStateContribution[]=[
       ...(helped ? [{ source:"action:standard.help",state:"advantage" as const }] : []),
       ...(dodging ? [{ source:`condition:${DODGING_STATUS}:target`,state:"disadvantage" as const }] : []),
+      ...attackRollStateContributors.flatMap((contributor)=>contributor({ scene:internal.scene, action, actor, target })),
     ];
     internal.resolution = resolveAttackRollResolution({
       resolutionId:resolutionId(),
