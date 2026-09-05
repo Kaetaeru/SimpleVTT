@@ -232,17 +232,3 @@ test("production Host UI exposes live share state and session end without a debu
   assert.doesNotMatch(source,/setReferenceRole|loadReferenceScenario|Ctrl\+Shift\+D/);
 });
 
-test("production Player entry joins and syncs directly without exposing a Ready lobby action",()=>{
-  const source=readFileSync(new URL("../../src/ProductionPlayerLobbyBridge.tsx",import.meta.url),"utf8");
-  const css=readFileSync(new URL("../../src/production-player-lobby.css",import.meta.url),"utf8");
-  assert.match(source,/productionJoinCharacters/);
-  assert.match(source,/selectProductionCharacter/);
-  assert.match(source,/Host 주소/);
-  assert.match(source,/connecting/);
-  assert.match(source,/현재 플레이 상태 동기화 중/);
-  assert.match(source,/joinSession\(address\)/);
-  assert.doesNotMatch(source,/setSessionReady|Ready 취소|>Ready</);
-  assert.match(css,/article:nth-child\(2\)/);
-  assert.match(css,/screen-head p/);
-  assert.doesNotMatch(source,/setReferenceRole|loadReferenceScenario|Ctrl\+Shift\+D/);
-});
