@@ -12,6 +12,7 @@ import { SessionActionDock, type SessionActionTargeting } from "./SessionActionD
 import { SessionActorBoard } from "./SessionActorBoards";
 import { SessionTargetingCursor, type TargetingAnchor } from "./SessionTargetingCursor";
 import { SessionWithdrawPrompt } from "./SessionWithdrawPrompt";
+import { POST_HOC_LABEL, type PostHocToggle } from "./app/resolutionPostHocRuntimeAdapter";
 import { SessionDmActorPane, SessionDmEncounterPane, SessionParticipantsPane, SessionSharePane } from "./SessionDmTools";
 import {
   dismissCurrentSessionImageHandout,
@@ -470,24 +471,32 @@ function QuickSheet({ onClose, onOpenFull }: { onClose(): void; onOpenFull(butto
 }
 
 function SessionResolutionLayer({ onOpenActivity }: { onOpenActivity(button: HTMLButtonElement): void }) {
-  const { snapshot, advanceResolution, respondToInterrupt, dismissResolution, undoLastResolution, applyDmAdjudication } = useSimpleVtt();
+  const { snapshot, advanceResolution, respondToInterrupt, dismissResolution, undoLastResolution, applyDmAdjudication, refresh } = useSimpleVtt();
   const [abilityCheckDc,setAbilityCheckDc]=useState(15);
+  const [detailOpen,setDetailOpen]=useState(false);
+  const [togglePending,setTogglePending]=useState<PostHocToggle|null>(null);
   const resolution = snapshot?.resolution;
   const diceAnimated = Boolean(resolution && ANIMATED_RESOLUTION_STAGES.has(resolution.stage) && resolution.authoritativeDice.length > 0);
   const passiveRemote=Boolean(snapshot&&isNonBlockingRemoteResolution(snapshot));
   const awaitingAbilityCheckDc=Boolean(snapshot?.session.role==="host"&&resolution?.rollKind==="check"&&resolution.stage==="effect-preview"&&resolution.checkTarget===undefined);
 
-  useEffect(()=>setAbilityCheckDc(15),[resolution?.id]);
+  useEffect(()=>{setAbilityCheckDc(15);setDetailOpen(false);},[resolution?.id]);
 
+  // T1-06: one tap. Every stage that can advance does so on its own (dice replay first when there is one);
+  // only an interrupt choice or a missing ability-check DC waits for a person.
   useEffect(() => {
-    if (!resolution || !diceAnimated || !resolution.canAdvance || passiveRemote) return;
+    if (!resolution || !resolution.canAdvance || resolution.interrupt || awaitingAbilityCheckDc || passiveRemote) return;
     const reduced = isReducedMotionPreferred();
-    const timer = window.setTimeout(
-      () => void advanceResolution(),
-      reduced ? VISUAL_DICE_REDUCED_REPLAY_MS : VISUAL_DICE_REPLAY_MS,
-    );
+    const delay = diceAnimated ? (reduced ? VISUAL_DICE_REDUCED_REPLAY_MS : VISUAL_DICE_REPLAY_MS) : 0;
+    const timer = window.setTimeout(() => void advanceResolution(), delay);
     return () => window.clearTimeout(timer);
-  }, [resolution?.id, resolution?.stage, resolution?.canAdvance, diceAnimated, passiveRemote, advanceResolution]);
+  }, [resolution?.id, resolution?.stage, resolution?.canAdvance, resolution?.interrupt, awaitingAbilityCheckDc, diceAnimated, passiveRemote, advanceResolution]);
+
+  const applyToggle=async(toggle:PostHocToggle)=>{
+    if (togglePending) return;
+    setTogglePending(toggle);
+    try { await mockAdapter.applyPostHocToggle(toggle); await refresh(); } finally { setTogglePending(null); }
+  };
 
   if (!snapshot || !resolution || diceAnimated) return null;
 
@@ -534,7 +543,10 @@ function SessionResolutionLayer({ onOpenActivity }: { onOpenActivity(button: HTM
       <div aria-label="표준 난이도">{[5,10,15,20,25,30].map((dc)=><button type="button" key={dc} onClick={()=>void applyDmAdjudication({type:"ability-check-dc",value:dc,scope:"resolution"})}>{dc}</button>)}</div>
       <button className="primary" type="submit">판정 확정</button>
     </form>}
-    {!resolution.interrupt && resolution.canAdvance && <button className="primary session-resolution-next" type="button" onClick={() => void advanceResolution()}>{resolution.nextLabel ?? "계속"}</button>}
-    {resolution.stage === "complete" && <div className="session-resolution-actions"><button type="button" onClick={(event) => onOpenActivity(event.currentTarget)}>상세</button>{snapshot.session.role === "host" && <button type="button" onClick={() => void undoLastResolution()}>되돌리기</button>}<button className="primary" type="button" onClick={() => void dismissResolution()}>닫기</button></div>}
+    {resolution.stage === "complete" && snapshot.role === "dm" && (resolution.attackOutcome || resolution.damageComponents.length > 0) && <div className="session-resolution-toggles" aria-label="DM 사후 수정">
+      {(["advantage","disadvantage","plain-roll","cover-half","cover-three-quarters","out-of-reach","half-damage"] as PostHocToggle[]).filter((toggle) => toggle === "half-damage" ? resolution.damageComponents.some((component) => component.adjusted > 0) : Boolean(resolution.attackOutcome)).map((toggle) => <button type="button" key={toggle} disabled={Boolean(togglePending)} aria-pressed={resolution.postHoc?.toggle === toggle} onClick={() => void applyToggle(toggle)}>{togglePending === toggle ? "…" : POST_HOC_LABEL[toggle]}</button>)}
+    </div>}
+    {resolution.stage === "complete" && detailOpen && <div className="session-resolution-detail" aria-label="판정 상세">{[...resolution.detail, ...resolution.stateChanges].map((line, index) => <p key={index}>{line}</p>)}</div>}
+    {resolution.stage === "complete" && <div className="session-resolution-actions"><button type="button" aria-expanded={detailOpen} onClick={(event) => { if (event.shiftKey) { onOpenActivity(event.currentTarget); return; } setDetailOpen((open) => !open); }}>{detailOpen ? "접기" : "상세"}</button>{snapshot.session.role === "host" && <button type="button" onClick={() => void undoLastResolution()}>되돌리기</button>}<button className="primary" type="button" onClick={() => void dismissResolution()}>닫기</button></div>}
   </section>;
 }
