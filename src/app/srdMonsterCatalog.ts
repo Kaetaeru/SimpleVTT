@@ -1,5 +1,6 @@
 import rawCatalog from "../generated/monsterCatalog.generated.json";
 import type { AbilityKey, AbilityScores, CombatantDefinitionVm } from "./contracts";
+import { monsterSpellSpecs } from "./srdMonsterSpellProjection";
 import type { CombatantRuntimeAttackVm, CombatantRuntimeEconomy, CombatantRuntimeSaveActionVm, CombatantRuntimeStatsVm, CombatantRuntimeTextActionVm, CombatantRuntimeTimingVm } from "./combatantRuntimeContracts";
 
 /**
@@ -15,9 +16,14 @@ export interface SrdMonsterEntry {
   timing?:{ recharge?:{ min:number; sides:number }; usesPerDay?:number; usesPerRound?:number };
   attack?:{ mode:"melee"|"ranged"|"melee-or-ranged"; bonus:number; reachFeet?:number; rangeFeet?:number; longRangeFeet?:number; damage:SrdMonsterDamageComponent[]; hitText:string; riderConditions:string[] };
   save?:{ ability:AbilityKey; dc:number; areaText:string; areaKind:"cone"|"line"|"sphere"|"area"|"single"; areaFeet?:number; failDamage:SrdMonsterDamageComponent[]; failText:string; successDamage:"half"|"none"|"other"; successText:string; failConditions:string[] };
-  multiattack?:{ count:number; text:string; parsed:boolean };
-  spellcasting?:{ ability?:AbilityKey; dc:number; attackBonus?:number; lists:Array<{ frequency:"at-will"|"per-day"|"per-rest"; uses?:number; spells:string[] }> };
+  multiattack?:{ count:number; text:string; parsed:boolean; routine?:SrdMonsterRoutineItem[] };
+  spellcasting?:SrdMonsterSpellcasting;
 }
+/** C1-04: one attack of a multiattack routine ("물기 한 번과 발톱 두 번"), named by the stat block's attack entry. */
+export interface SrdMonsterRoutineItem { name:string; count:number }
+export interface SrdMonsterSpellEntry { name:string; note?:string; slotLevel?:number; spellId?:string }
+export interface SrdMonsterSpellList { frequency:"at-will"|"per-day"|"per-rest"; uses?:number; spells:string[]; entries?:SrdMonsterSpellEntry[] }
+export interface SrdMonsterSpellcasting { ability?:AbilityKey; dc:number; attackBonus?:number; lists:SrdMonsterSpellList[] }
 export interface SrdMonster {
   id:string; slug:string; name:string; nameEn:string;
   size:string; creatureType:string; typeText:string; alignment:string;
@@ -163,6 +169,10 @@ export function srdMonsterCombatantDefinition(monster:SrdMonster):CombatantDefin
   const runtimeActions=actionEntries.flatMap(({entry,economy,legendary},index)=>entry.kind==="attack" ? [attackSpec(monster,entry,index,economy==="행동"?attacksPerAction:undefined,economy,legendary)] : []);
   const runtimeSaveActions=actionEntries.flatMap(({entry,economy,legendary},index)=>entry.kind==="save" ? [saveSpec(monster,entry,index,economy,legendary)] : []);
   const runtimeTextActions=actionEntries.flatMap(({entry,economy,legendary},index)=>entry.kind==="text" ? [textSpec(entry,index,economy,legendary)] : []);
+  const spellcasting=monster.actions.find((entry)=>entry.kind==="spellcasting")?.spellcasting;
+  const spells=spellcasting ? monsterSpellSpecs(monster,spellcasting,damageLabelKo) : { attacks:[], saves:[] };
+  runtimeActions.push(...spells.attacks);
+  runtimeSaveActions.push(...spells.saves);
   const savingThrowProficiencies=(Object.keys(monster.abilities) as AbilityKey[]).filter((key)=>monster.saves[key]!==undefined&&monster.saves[key]!==abilityModifier(monster.abilities[key]));
   const stats:CombatantRuntimeStatsVm={
     creatureType:monster.creatureType,
@@ -195,12 +205,13 @@ export function srdMonsterCombatantDefinition(monster:SrdMonster):CombatantDefin
       initiativeBonus:monster.initiativeBonus,
       senses:{ ...monster.senses }, passivePerception:monster.passivePerception,
       multiattackText:multiattack?.text,
+      ...(multiattack?.routine ? { multiattackRoutine:multiattack.routine.map((item)=>({ ...item, actionName:runtimeActions.find((action)=>action.name===item.name)?.name ?? item.name })) } : {}),
       traits:monster.traits.map((entry)=>({ name:entry.name, text:entry.text })),
       reactions:monster.reactions.map((entry)=>({ name:entry.name, text:entry.text })),
       legendaryActions:monster.legendaryActions.map((entry)=>({ name:entry.name, text:entry.text, cost:entry.legendaryCost??1 })),
       legendaryActionsPerRound:monster.legendaryActionsPerRound,
       legendaryResistance:monster.legendaryResistance,
-      spellcasting:monster.actions.find((entry)=>entry.kind==="spellcasting")?.spellcasting,
+      spellcasting,
       textActions:monster.actions.filter((entry)=>entry.kind==="text").map((entry)=>({ name:entry.name, text:entry.text })),
     },
   } as CombatantDefinitionVm;

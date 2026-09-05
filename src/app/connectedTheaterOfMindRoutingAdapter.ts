@@ -23,7 +23,7 @@ import { tauriSessionTransport } from "./tauriSessionTransport";
  * A player's own 접근/물러남/그대로 is sent to the Host as a `movement-request`; the Host validates the peer's
  * character, declares on its behalf, and publishes.
  */
-type RoutedMethod="declareMovement"|"answerWithdrawalPrompt"|"setEngagement"|"setCreatureStatus"|"setCreatureBadge"|"applyNarrativeDamage"|"setSceneCondition"|"instantiateCombatantGroup"|"groupCombatants"|"ungroupCombatants"|"useLegendaryResistance"|"resetMonsterTiming"|"applyPostHocToggle"|"endTurn"|"startInitiative"|"dismissResolution"|"undoLastResolution";
+type RoutedMethod="declareMovement"|"answerWithdrawalPrompt"|"setEngagement"|"setCreatureStatus"|"setCreatureBadge"|"applyNarrativeDamage"|"setSceneCondition"|"instantiateCombatantGroup"|"groupCombatants"|"ungroupCombatants"|"useLegendaryResistance"|"resolveMultiattackRoutine"|"resetMonsterTiming"|"applyPostHocToggle"|"endTurn"|"startInitiative"|"dismissResolution"|"undoLastResolution";
 
 let requestSequence=0;
 const requestId=()=>`movement.${Date.now()}.${requestSequence++}`;
@@ -108,4 +108,4 @@ registerConnectedMovementRequestHandler(async (adapter,transportMessage,request)
   await adapter.declareMovement(request.actorId,request.kind,request.targetId);
 });
 
-for (const method of ["answerWithdrawalPrompt","setEngagement","setCreatureStatus","setCreatureBadge","applyNarrativeDamage","setSceneCondition","instantiateCombatantGroup","groupCombatants","ungroupCombatants","useLegendaryResistance","resetMonsterTiming","applyPostHocToggle","endTurn","startInitiative","dismissResolution","undoLastResolution"] as RoutedMethod[]) wrapHostPublish(method);
+for (const method of ["answerWithdrawalPrompt","setEngagement","setCreatureStatus","setCreatureBadge","applyNarrativeDamage","setSceneCondition","instantiateCombatantGroup","groupCombatants","ungroupCombatants","useLegendaryResistance","resolveMultiattackRoutine","resetMonsterTiming","applyPostHocToggle","endTurn","startInitiative","dismissResolution","undoLastResolution"] as RoutedMethod[]) wrapHostPublish(method);

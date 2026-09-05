@@ -1,6 +1,7 @@
 import "./spellcastingRuntimeContracts";
 import type { ActionVm, AppSnapshot, CharacterSheet, ResolutionView, SceneEntity } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
+import { takeForcedSaveSuccess } from "./forcedSaveSuccess";
 import { selectedCombatSpellSlot } from "./spellcastingRuntimeSelection";
 import { ensureAdapterTurnRuntimeState, snapshotAdapterTurnRuntimeState } from "./turnRuntimeSessionRegistry";
 import { SIMPLEVTT_APP_RULES_PROFILE } from "./realResolutionService";
@@ -401,6 +402,8 @@ MockAdapter.prototype.resolveAction=async function resolveProductionSpell(action
     componentContext:componentPreparation?.context,
     useActionEconomy:internal.sessionMode==="initiative",
     turnId,
+    // C1-04: a Legendary Resistance re-judge marks the creature whose save auto-succeeds on this cast.
+    forcedSaveSuccessIds:takeForcedSaveSuccess(this,uniqueTargetIds),
   };
   let result:SpellCastResolution;
   let authoritativeDice:number[]=[];

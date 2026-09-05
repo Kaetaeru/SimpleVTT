@@ -30,6 +30,7 @@ import "./phase09RealNoRollDamageAdapter";
 import "./phase09RealTurnRuntimeAdapter";
 import "./phase09EffectAwareTurnAdapter";
 import "./srdMonsterTimingRuntimeAdapter";
+import "./srdMonsterMultiattackRuntimeAdapter";
 import "./engagementRuntimeAdapter";
 import "./encounterGroupRuntimeAdapter";
 import "./movementDeclarationRuntimeAdapter";

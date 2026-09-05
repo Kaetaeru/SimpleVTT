@@ -126,6 +126,66 @@ const RECHARGE_NAME = /브레스|숨결|분사|거미줄/;
 const RECHARGE_ON_SIX = new Set(["ankheg", "dust-mephit", "ice-mephit", "magma-mephit", "steam-mephit", "iron-golem"]);
 const LEGENDARY_RESISTANCE_OVERRIDES = { tarrasque:5, kraken:4 };
 const USES_PER_DAY = /(\d+)\s*\/\s*(일|Day)/i;
+
+// C1-04: stat-block spell lists resolve to catalog spell ids. The presentation catalog is generated first
+// (`generate:presentation`); its Korean and English names resolve most entries, the alias table covers the
+// translation variants the monster bundle uses.
+const SPELL_ID_PREFIX = "dnd.srd521.spell.";
+const spellNameIndex = (() => {
+  const index = new Map();
+  try {
+    const raw = JSON.parse(readFileSync(join(root, "src", "generated", "spellPresentationCatalog.generated.json"), "utf8"));
+    const lists = Array.isArray(raw) ? [raw] : Object.values(raw).filter(Array.isArray);
+    for (const list of lists) for (const spell of list) {
+      if (!spell || typeof spell.id !== "string" || !spell.id.startsWith(SPELL_ID_PREFIX)) continue;
+      for (const key of [spell.name, spell.nameKo, spell.nameEn]) if (typeof key === "string" && key) index.set(key.trim().toLowerCase(), spell.id);
+    }
+  } catch (error) { warn("catalog", `spell presentation catalog unavailable for spell id resolution: ${error.message}`); }
+  return index;
+})();
+const SPELL_ALIASES = {
+  "마법 감지":"detect-magic", "멜프의 산성 화살":"acid-arrow", "산산조각":"shatter", "보내기":"sending", "사소한 환영":"minor-illusion", "사소한 환상":"minor-illusion",
+  "작열 광선":"scorching-ray", "모양 변경":"shapechange", "형상 변경":"shapechange", "형태 변화":"shapechange", "형상변화":"shapechange", "동물과 대화":"speak-with-animals",
+  "안내 볼트":"guiding-bolt", "가이딩 볼트":"guiding-bolt", "기적학":"thaumaturgy", "정신 스파이크":"mind-spike", "더 큰 복원":"greater-restoration", "대복원":"greater-restoration",
+  "주요 이미지":"major-image", "화염 공격":"flame-strike", "진실의 지대":"zone-of-truth", "기아스":"geas", "파이어볼":"fireball", "괴물 잡기":"hold-monster", "몬스터 잡기":"hold-monster",
+  "참 몬스터":"charm-monster", "언데드 만들기":"create-undead", "죽은 사람과 대화":"speak-with-dead", "vitriolic 구체":"vitriolic-sphere", "생각 감지":"detect-thoughts", "물 제어":"control-water",
+  "프로젝트 이미지":"project-image", "메모리 수정":"modify-memory", "아이스 나이프":"ice-knife", "자기 변장":"disguise-self", "변장 셀프":"disguise-self", "자아 변장":"disguise-self",
+  "마법사 갑옷":"mage-armor", "마법사 손":"mage-hand", "번개 bolt":"lightning-bolt", "라이트닝 볼트":"lightning-bolt", "원뿔 of 냉기":"cone-of-cold", "악과 선 감지":"detect-evil-and-good",
+  "악과 선을 감지":"detect-evil-and-good", "악과 선을 감지하고 마법을 감지한다.":"detect-evil-and-good", "음식과 물 만들기":"create-food-and-water", "꿈":"dream", "사람 잡아두기":"hold-person",
+  "기체 형태":"gaseous-form", "평면 이동":"plane-shift", "플레인 시프트":"plane-shift", "동물 메신저":"animal-messenger", "롱스트라이더":"longstrider", "달빛":"moonbeam", "동물 우정":"animal-friendship",
+  "얽힘":"entangle", "흔적 없이 통과":"pass-without-trace", "원소주의":"elementalism", "wall of 화염":"wall-of-fire", "어둠":"darkness", "힘의 권능 기절":"power-word-stun", "질병의 광선":"ray-of-sickness",
+  "에테르성":"etherealness", "마법 해제":"dispel-magic", "애니메이트 데드":"animate-dead", "디멘션 도어":"dimension-door", "해로움":"harm", "곤충 역병 애니메이션화":"insect-plague", "곤충 역병":"insect-plague",
+  "마법 미사일":"magic-missile", "판타스멀 킬러":"phantasmal-killer", "공동체":"commune", "날씨 제어":"control-weather", "악과 선 추방":"dispel-evil-and-good", "악과 선 제거":"dispel-evil-and-good",
+  "영웅의 향연":"heroes-feast", "마법학":"thaumaturgy", "마석학":"thaumaturgy", "빛 감지":"light", "감정 진정":"calm-emotions", "회상의 말씀":"word-of-recall", "투명화":"invisibility", "빛":"light", "요술":"prestidigitation",
+};
+function resolveSpellId(name) {
+  const key = name.trim().toLowerCase();
+  if (!key) return undefined;
+  return spellNameIndex.get(key) ?? (SPELL_ALIASES[key] ? SPELL_ID_PREFIX + SPELL_ALIASES[key] : undefined);
+}
+/** Split a spell list on commas outside parentheses; each item keeps its parenthetical note and an upcast level. */
+function spellEntries(listText, slug) {
+  const items = []; let depth = 0; let current = "";
+  for (const char of listText) {
+    if (char === "(") depth += 1; else if (char === ")") depth = Math.max(0, depth - 1);
+    if (char === "," && depth === 0) { items.push(current); current = ""; } else current += char;
+  }
+  items.push(current);
+  return items.map((item) => item.trim()).filter(Boolean).map((item) => {
+    const note = /\(([^)]*)\)/.exec(item)?.[1]?.trim();
+    const name = item.replace(/\s*\([^)]*\)\s*/g, " ").replace(/\s+/g, " ").trim();
+    const slotLevel = note ? /레벨\s*(\d+)\s*버전/.exec(note)?.[1] : undefined;
+    const spellId = resolveSpellId(name);
+    if (!spellId) warn(slug, `spell not resolved: "${name}"`);
+    return { name, ...(note ? { note } : {}), ...(slotLevel ? { slotLevel: num(slotLevel) } : {}), ...(spellId ? { spellId } : {}) };
+  });
+}
+const KO_COUNT = { "한":1, "두":2, "세":3, "네":4, "다섯":5, "여섯":6 };
+/** "물기 공격 한 번과 발톱 공격 두 번" → [{ name:"물기", count:1 }, { name:"발톱", count:2 }]. */
+function multiattackRoutine(sentence) {
+  return [...sentence.matchAll(/([가-힣A-Za-z]+(?: [가-힣A-Za-z]+)?)\s*공격(?:을|를)?\s*(한|두|세|네|다섯|여섯|\d+)\s*번/g)]
+    .map((m) => ({ name: m[1].trim(), count: KO_COUNT[m[2]] ?? num(m[2]) }));
+}
 const USES_PER_ROUND = /다음 턴이 시작될 때까지 이 행동을 다시 사용할 수 없다/;
 
 function timingFor(entry, slug, section, flat, originalName) {
@@ -197,6 +257,8 @@ function parseEntry(entry, slug, section) {
       const singles = (first.match(/한 번/g) ?? []).length;
       const count = explicit.reduce((sum, value) => sum + value, 0) + singles;
       out.multiattack = { count: count > 0 ? count : 2, text: flat, parsed: count > 0 };
+      const routine = multiattackRoutine(first);
+      if (routine.length) out.multiattack.routine = routine;
       if (count <= 0) warn(slug, `multiattack count not parsed: "${flat.slice(0, 80)}"`);
     } else if (/^주문 시전$/.test(entry.title) || /Spellcasting/i.test(originalName)) {
       out.kind = "spellcasting";
@@ -209,6 +271,7 @@ function parseEntry(entry, slug, section) {
           frequency: m[1] === "의지대로" ? "at-will" : /휴식/.test(m[1]) ? "per-rest" : "per-day",
           uses: m[1] === "의지대로" ? undefined : num(m[2] ?? m[3] ?? m[4] ?? m[5] ?? m[6]),
           spells: m[7].split(/,\s*/).map((item) => item.trim()).filter(Boolean),
+          entries: spellEntries(m[7], slug),
         })),
       };
     }
@@ -233,11 +296,26 @@ const monsters = bundle.monsters.map((monster) => {
   const legendaryResistance = pick("특성").some((entry) => /전설 저항/.test(entry.title))
     ? (LEGENDARY_RESISTANCE_OVERRIDES[monster.slug] ?? (monster.slug.startsWith("ancient-") ? 4 : 3))
     : 0;
+  const actions = entriesOf("행동");
+  // A multiattack routine is kept only when every named attack is an attack entry of this stat block.
+  for (const action of actions) {
+    const routine = action.multiattack?.routine;
+    if (!routine) continue;
+    // "성인 레드 드래곤은 찢기 공격을 세 번" captures "드래곤은 찢기"; try the full capture, then its trailing words.
+    const attackNamed = (name) => actions.find((entry) => entry.kind === "attack" && (entry.name === name || entry.name.startsWith(name)))?.name;
+    const resolved = routine.map((item) => {
+      const words = item.name.split(" ");
+      const attackName = words.map((_, index) => words.slice(index).join(" ")).map(attackNamed).find(Boolean);
+      return { ...item, attackName };
+    });
+    if (resolved.every((item) => item.attackName)) action.multiattack.routine = resolved.map((item) => ({ name: item.attackName, count: item.count }));
+    else delete action.multiattack.routine;
+  }
   return {
     id: monster.id, slug: monster.slug, name: monster.name, nameEn: monster.nameEn,
     ...stat,
     traits: entriesOf("특성"),
-    actions: entriesOf("행동"),
+    actions,
     bonusActions: entriesOf("추가 행동"),
     reactions: entriesOf("반응 행동"),
     legendaryActions: entriesOf("전설 행동"),
@@ -252,9 +330,12 @@ const stats = {
   saves: monsters.reduce((sum, m) => sum + m.actions.filter((a) => a.kind === "save").length, 0),
   multiattack: monsters.filter((m) => m.actions.some((a) => a.kind === "multiattack")).length,
   spellcasters: monsters.filter((m) => m.actions.some((a) => a.kind === "spellcasting")).length,
+  resolvedSpells: monsters.reduce((sum, m) => sum + m.actions.flatMap((a) => a.spellcasting?.lists ?? []).flatMap((l) => l.entries).filter((e) => e.spellId).length, 0),
+  unresolvedSpells: monsters.reduce((sum, m) => sum + m.actions.flatMap((a) => a.spellcasting?.lists ?? []).flatMap((l) => l.entries).filter((e) => !e.spellId).length, 0),
+  routines: monsters.filter((m) => m.actions.some((a) => a.multiattack?.routine)).length,
   legendary: monsters.filter((m) => m.legendaryActions.length).length,
   textOnlyActions: monsters.reduce((sum, m) => sum + m.actions.filter((a) => a.kind === "text").length, 0),
 };
 mkdirSync(dirname(outputPath), { recursive:true });
 writeFileSync(outputPath, JSON.stringify({ formatVersion:1, rulesProfileId:bundle.rulesProfileId, source:bundle.source, count:monsters.length, stats, warnings, monsters }), "utf8");
-console.log(`Generated SRD monster catalog: ${monsters.length} monsters (${stats.attacks} attacks, ${stats.saves} save actions, ${stats.multiattack} multiattack, ${stats.spellcasters} spellcasters, ${stats.legendary} legendary, ${stats.textOnlyActions} text-only actions, ${warnings.length} warnings)`);
+console.log(`Generated SRD monster catalog: ${monsters.length} monsters (${stats.attacks} attacks, ${stats.saves} save actions, ${stats.multiattack} multiattack, ${stats.spellcasters} spellcasters with ${stats.resolvedSpells}/${stats.resolvedSpells + stats.unresolvedSpells} spells resolved, ${stats.routines} multiattack routines, ${stats.legendary} legendary, ${stats.textOnlyActions} text-only actions, ${warnings.length} warnings)`);

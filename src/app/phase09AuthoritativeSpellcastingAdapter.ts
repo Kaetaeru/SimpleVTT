@@ -18,6 +18,7 @@ import { normalizedSpellDefinitionById } from "../domain/spellExecutionCatalog";
 import type { ResolutionEvent } from "../domain/resolutionTypes";
 import { resolveRuntimeTargetingFact } from "./realRuntimeAttackFactProvider";
 import { spellRuntimeDice } from "./spellRuntimeDice";
+import { takeForcedSaveSuccess } from "./forcedSaveSuccess";
 
 const NO_SLOT="사용 가능한 주문 슬롯이 없습니다.";
 const SLOT_ALREADY_USED="이번 턴에는 이미 주문 슬롯을 소비해 주문을 시전했습니다.";
@@ -178,6 +179,7 @@ function resolutionFromCast(
   slotLevel:number|undefined,
   result:SpellCastResolution,
   authoritativeDice:number[],
+  nameOf:(id:string)=>string=(id)=>id,
 ):ResolutionView {
   if (result.status==="rejected") {
     return {
@@ -194,11 +196,17 @@ function resolutionFromCast(
   const healing=Object.values(result.results).find((entry)=>Boolean(entry&&typeof entry==="object"&&"restored" in (entry as Record<string,unknown>))) as { restored?:number }|undefined;
   const roll=Object.values(result.results).find((entry)=>Boolean(entry&&typeof entry==="object"&&"diceTotal" in (entry as Record<string,unknown>))) as { total?:number }|undefined;
   const outcome=healing?.restored!==undefined ? `${healing.restored} HP 회복` : result.events.at(-1)?.summary ?? "주문 적용";
+  const saveResults=Object.entries(result.results).flatMap(([key,entry])=>{
+    const match=/:save:([^:]+)$/.exec(key);
+    const roll=entry as { family?:string; natural?:number; total?:number; target?:number; outcome?:"success"|"failure" }|undefined;
+    if (!match||!roll||roll.family!=="saving-throw"||typeof roll.total!=="number") return [];
+    return [{ targetId:match[1], targetName:nameOf(match[1]), d20:roll.natural??0, total:roll.total, dc:roll.target??0, outcome:roll.outcome==="success"?"성공" as const:"실패" as const }];
+  });
   return {
     id:result.events[0]?.resolutionId ?? `spell.${Date.now()}`,
     actorId,targetIds,actionId,actionName,
-    rollKind:healing ? "healing" : "effect",stage:"complete",authoritativeDice,
-    rollTotal:roll?.total,saveResults:[],damageComponents:[],
+    rollKind:healing ? "healing" : saveResults.length ? "save" : "effect",stage:"complete",authoritativeDice,
+    rollTotal:roll?.total,saveResults,damageComponents:[],
     compact:`${actionName}${slotLevel ? ` · ${slotLevel}레벨 슬롯` : ""} · ${outcome}`,
     detail:result.events.map((event)=>event.summary),
     provenance:[...new Set(result.events.flatMap((event)=>event.provenance.map((entry)=>entry.source)))],
@@ -241,6 +249,7 @@ MockAdapter.prototype.getSnapshot=async function getSnapshotWithAuthoritativeSpe
 MockAdapter.prototype.resolveAction=async function resolveActionThroughAuthoritativeSpellRuntime(actionId,targetIds) {
   const internal=this as unknown as AdapterInternalState;
   const baseline=await previousGetSnapshot.call(this);
+  const nameOf=(id:string)=>internal.scene.entities.find((entity)=>entity.id===id)?.name ?? id;
   const sourceAction=Object.values(baseline.scene.actionsByActor).flat().find((entry)=>entry.id===actionId);
   const metadata=sourceAction?.spellCast;
   if (!sourceAction || !metadata || !isExecutableSpellRuntimeSupport(metadata.runtimeSupport)) {
@@ -281,8 +290,9 @@ MockAdapter.prototype.resolveAction=async function resolveActionThroughAuthorita
     useActionEconomy:internal.sessionMode==="initiative",
     turnId,
     dice:dice.request,
+    forcedSaveSuccessIds:takeForcedSaveSuccess(this,targetIds),
   });
-  internal.resolution=resolutionFromCast(sourceAction.name,actionId,sourceAction.actorId,targetIds,slotLevel,result,faces);
+  internal.resolution=resolutionFromCast(sourceAction.name,actionId,sourceAction.actorId,targetIds,slotLevel,result,faces,nameOf);
   if (result.status==="rejected") return this.getSnapshot();
   if (!commitAdapterTurnRuntimeState(this,internal.scene,runtime.revision,result.state)) {
     internal.resolution=resolutionFromCast(sourceAction.name,actionId,sourceAction.actorId,targetIds,slotLevel,{

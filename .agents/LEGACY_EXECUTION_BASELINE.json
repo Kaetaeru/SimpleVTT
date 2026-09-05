@@ -116,6 +116,10 @@
       "classification": "GENERIC_ENGINE"
     },
     {
+      "module": "./srdMonsterMultiattackRuntimeAdapter",
+      "classification": "GENERIC_ENGINE"
+    },
+    {
       "module": "./engagementRuntimeAdapter",
       "classification": "GENERIC_ENGINE"
     },
