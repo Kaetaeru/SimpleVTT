@@ -256,7 +256,7 @@ export function ProductionSessionWorkspaceBridge() {
             <div className="production-session-summary-grid">
               <div><span>세션</span><strong>{snapshot.session.name}</strong></div>
               <div><span>Host 주소</span><strong>{snapshot.session.address||address}</strong></div>
-              <div><span>Character</span><strong>{snapshot.activeCharacter.name}</strong></div>
+              {snapshot.session.role==="client"&&<div><span>Character</span><strong>{snapshot.activeCharacter.name}</strong></div>}
               {live&&<div><span>진행</span><strong>{snapshot.sessionMode==="initiative"?`이니셔티브 · ${snapshot.scene.round}라운드`:"자유 진행"}</strong></div>}
             </div>
             {lobby&&<div className="production-session-ready-row"><div><strong>{ready?"Ready 상태입니다.":"준비가 되면 Ready를 눌러주세요."}</strong><small>Host가 모든 플레이어의 Ready를 확인한 뒤 플레이를 시작합니다.</small></div><button type="button" className={ready?"secondary":"primary"} disabled={snapshot.connectionState!=="connected"||snapshot.session.compatibility==="incompatible"} onClick={()=>void setSessionReady(!ready)}>{ready?"Ready 취소":"Ready"}</button></div>}
