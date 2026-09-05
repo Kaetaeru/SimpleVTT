@@ -166,3 +166,4 @@
 .session-reference-play-title { min-width: 0; flex: 0 1 auto; }
 .session-reference-play-title strong { max-width: 220px; }
 @media (max-width: 1100px) { .session-reference-play-title span { display: none; } .session-reference-play-title strong { max-width: 140px; } }
+.session-reference-connection { white-space: nowrap; flex: 0 0 auto; }
