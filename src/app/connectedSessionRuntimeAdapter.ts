@@ -18,6 +18,7 @@ import { SIMPLEVTT_APP_RULES_PROFILE } from "./realResolutionService";
 import { publishExternalAdapterSnapshot } from "./adapterSnapshotEvents";
 import { connectedStateFor, resetConnectedState } from "./connectedSessionState";
 import { routeConnectedActionRequest } from "./connectedActionRequestPort";
+import { routeConnectedMovementRequest } from "./connectedMovementRequestPort";
 import { routeConnectedInterruptResponse } from "./connectedInterruptResponsePort";
 import { routeConnectedConcentrationResponse } from "./connectedConcentrationResponsePort";
 import { routeConnectedTurnSimultaneousOrderingResponse } from "./connectedTurnSimultaneousOrderingResponsePort";
@@ -279,6 +280,11 @@ function sceneTopology(scene:SceneVm):ConnectedSceneTopology {
     currentActorId:scene.currentActorId,
     entities:structuredClone(scene.entities),
     economyByActor:structuredClone(scene.economyByActor),
+    ...(scene.groups ? { groups:structuredClone(scene.groups) } : {}),
+    ...(scene.engagements?.length ? { engagements:structuredClone(scene.engagements) } : {}),
+    ...(scene.sceneConditions?.length ? { sceneConditions:[...scene.sceneConditions] } : {}),
+    ...(scene.movementDeclarations && Object.keys(scene.movementDeclarations).length ? { movementDeclarations:structuredClone(scene.movementDeclarations) } : {}),
+    ...(scene.pendingWithdrawal ? { pendingWithdrawal:structuredClone(scene.pendingWithdrawal) } : {}),
   };
 }
 
@@ -427,6 +433,11 @@ async function applyConfirmedPayload(adapter:MockAdapter,payload:ConnectedEventP
       entities:structuredClone(topology.entities),
       actionsByActor:localActions.length?{[localActorId]:localActions}:{},
       economyByActor:structuredClone(topology.economyByActor),
+      groups:topology.groups?structuredClone(topology.groups):undefined,
+      engagements:topology.engagements?structuredClone(topology.engagements):undefined,
+      sceneConditions:topology.sceneConditions?[...topology.sceneConditions]:undefined,
+      movementDeclarations:topology.movementDeclarations?structuredClone(topology.movementDeclarations):undefined,
+      pendingWithdrawal:topology.pendingWithdrawal?structuredClone(topology.pendingWithdrawal):undefined,
     };
     app.activity.unshift({
       id:`connected:${event.eventId}`,
@@ -790,6 +801,13 @@ async function handleHostMessage(adapter:MockAdapter,message:SessionTransportMes
     const routed=await routeConnectedActionRequest(adapter,message,wire.request);
     if (!routed) {
       await sendConnectedWireTo(message.peer,{type:"error",code:"action-route-unavailable",message:"connected ActionRequest router is unavailable",hostCursor:ledger.cursor});
+    }
+    return;
+  }
+  if (wire.type==="movement-request") {
+    const routed=await routeConnectedMovementRequest(adapter,message,wire.request);
+    if (!routed) {
+      await sendConnectedWireTo(message.peer,{type:"error",code:"movement-route-unavailable",message:"connected movement request router is unavailable",hostCursor:ledger.cursor});
     }
     return;
   }

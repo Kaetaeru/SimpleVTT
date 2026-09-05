@@ -16,6 +16,7 @@ import "./app/connectedCorrectionRoutingAdapter";
 import "./app/productionSessionLifecycleAdapter";
 import "./app/productionSessionEmptyEncounterAdapter";
 import "./app/connectedSceneTopologyRuntimeAdapter";
+import "./app/connectedTheaterOfMindRoutingAdapter";
 import "./app/productionSessionUiStateAdapter";
 import "./app/sessionImageHandoutRuntimeAdapter";
 import "./app/sessionContentParityRuntimeAdapter";

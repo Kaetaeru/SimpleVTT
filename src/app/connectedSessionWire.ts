@@ -1,5 +1,6 @@
 import type {
   ConnectedActionRequest,
+  ConnectedMovementRequest,
   ConnectedSessionEvent,
   SessionCompatibilityManifest,
   SessionCompatibilityResult,
@@ -36,6 +37,7 @@ export type ConnectedWireMessage =
     }
   | { type:"ready-intent"; sessionId:string; ready:boolean }
   | { type:"action-request"; request:ConnectedActionRequest }
+  | { type:"movement-request"; request:ConnectedMovementRequest }
   | { type:"catchup-request"; sessionId:string; afterCursor:number }
   | { type:"event-batch"; sessionId:string; afterCursor:number; events:ConnectedSessionEvent[] }
   | { type:"resolution-presentation"; sessionId:string; presentation:ConnectedResolutionPresentationV1 }
@@ -333,6 +335,12 @@ function validateMessage(value:unknown):ConnectedWireMessage|string {
   }
   if (value.type==="action-request") {
     if (!isActionRequest(value.request)) return "invalid action-request message";
+    return value as ConnectedWireMessage;
+  }
+  if (value.type==="movement-request") {
+    const request=value.request;
+    if (!isRecord(request)||!isString(request.sessionId)||!isString(request.requestId)||!isString(request.actorId)
+      ||!["approach","withdraw","stay"].includes(String(request.kind))||(request.targetId!==undefined&&!isString(request.targetId))||!isCursor(request.knownEventCursor)) return "invalid movement-request message";
     return value as ConnectedWireMessage;
   }
   if (value.type==="catchup-request") {
