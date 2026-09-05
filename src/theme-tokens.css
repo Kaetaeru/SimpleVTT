@@ -1,48 +1,112 @@
+/* V1.4 U1-01 — one token sheet. Every stylesheet reads these; screens do not define colours of their own.
+   Legacy names (--surface, --line, --accent-soft, --bg-panel, …) stay as aliases so existing rules keep working. */
 :root {
   color-scheme: dark;
-  --accent-base: #c58a2c;
-  --bg: #0b0d10;
-  --bg-2: #11151b;
-  --surface: #171c23;
-  --surface-2: #1e252e;
-  --surface-3: #252d38;
-  --recess: #0e1217;
-  --overlay: #090c10;
-  --line: rgba(255,255,255,.11);
-  --text: #f1eee7;
-  --muted: #aeb6c1;
-  --quiet: #737e8b;
-  --good: #78c391;
-  --bad: #d97878;
-  --info: #78a9d8;
-  --shadow: 0 22px 62px rgba(0,0,0,.44);
-  --accent: color-mix(in srgb, var(--accent-base) 52%, white);
+
+  /* accent: the appearance settings override --accent-base on the root */
+  --accent-base: #d9a24c;
+
+  /* type */
+  --font-sans: "Pretendard Variable", Pretendard, "Apple SD Gothic Neo", "Noto Sans KR", Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  --text-xs: 11px;
+  --text-sm: 12.5px;
+  --text-md: 14px;
+  --text-lg: 16px;
+  --text-xl: 20px;
+  --text-2xl: 26px;
+  --text-3xl: 34px;
+
+  /* rhythm */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --radius-s: 6px;
+  --radius-m: 10px;
+  --radius-l: 14px;
+
+  /* surfaces: two-step elevation, no glows */
+  --bg: #0e1013;
+  --bg-2: #12151a;
+  --surface: #171b21;
+  --surface-2: #1d222a;
+  --surface-3: #242a33;
+  --recess: #0b0d10;
+  --overlay: #101317;
+  --line: rgba(255, 255, 255, .08);
+  --line-2: rgba(255, 255, 255, .14);
+  --shadow: 0 8px 24px rgba(0, 0, 0, .28);
+  --elev-1: 0 1px 2px rgba(0, 0, 0, .3);
+  --elev-2: 0 8px 24px rgba(0, 0, 0, .35);
+
+  /* text */
+  --text: #e9e7e2;
+  --muted: #a7adb7;
+  --quiet: #6f7885;
+
+  /* semantic */
+  --good: #5fbf85;
+  --bad: #e06c6c;
+  --info: #6aa6e6;
+  --warn: #e0a54a;
+  --violet: #a58cf0;
+  --side-ally: #5b9ee6;
+  --side-enemy: #e06c6c;
+  --hp-good: #5fbf85;
+  --hp-warn: #e0a54a;
+  --hp-bad: #e06c6c;
+  --condition: #a58cf0;
+
+  /* derived */
+  --accent: var(--accent-base);
   --accent-soft: color-mix(in srgb, var(--accent) 14%, transparent);
-  --line-strong: color-mix(in srgb, var(--accent) 48%, transparent);
-  --on-accent: #101217;
+  --accent-strong: color-mix(in srgb, var(--accent) 80%, white);
+  --line-strong: color-mix(in srgb, var(--accent) 45%, transparent);
+  --on-accent: #141008;
+
+  /* legacy aliases */
   --border: var(--line);
   --bg-panel: var(--recess);
   --surface-hover: var(--surface-2);
   --danger: var(--bad);
-  --warning: var(--accent);
+  --warning: var(--warn);
 }
 
 :root[data-theme="light"] {
   color-scheme: light;
-  --bg: #d5cfc5;
-  --bg-2: #e5dfd5;
-  --surface: #f0ebe3;
-  --surface-2: #f7f2ea;
-  --surface-3: #fffaf2;
-  --recess: #ddd5c8;
-  --overlay: #fffaf2;
-  --line: rgba(45,38,31,.14);
-  --text: #2d2924;
-  --muted: #615a51;
-  --quiet: #82786d;
-  --shadow: 0 20px 52px rgba(64,50,34,.18);
-  --accent: color-mix(in srgb, var(--accent-base) 35%, #121212);
+  --bg: #efece6;
+  --bg-2: #e7e3dc;
+  --surface: #f8f6f2;
+  --surface-2: #ffffff;
+  --surface-3: #ffffff;
+  --recess: #e3ded6;
+  --overlay: #ffffff;
+  --line: rgba(35, 30, 24, .12);
+  --line-2: rgba(35, 30, 24, .2);
+  --shadow: 0 8px 24px rgba(50, 40, 25, .14);
+  --elev-1: 0 1px 2px rgba(50, 40, 25, .12);
+  --elev-2: 0 8px 24px rgba(50, 40, 25, .16);
+  --text: #23201b;
+  --muted: #5c564e;
+  --quiet: #837b71;
+  --good: #2f9a5d;
+  --bad: #c9484c;
+  --info: #2f78c4;
+  --warn: #b7791f;
+  --violet: #7a5fd6;
+  --side-ally: #2f78c4;
+  --side-enemy: #c9484c;
+  --hp-good: #2f9a5d;
+  --hp-warn: #b7791f;
+  --hp-bad: #c9484c;
+  --condition: #7a5fd6;
+  --accent: color-mix(in srgb, var(--accent-base) 70%, #3a2a0c);
   --accent-soft: color-mix(in srgb, var(--accent) 12%, transparent);
-  --line-strong: color-mix(in srgb, var(--accent) 42%, transparent);
-  --on-accent: #fffdf8;
+  --accent-strong: color-mix(in srgb, var(--accent) 80%, black);
+  --line-strong: color-mix(in srgb, var(--accent) 45%, transparent);
+  --on-accent: #fffaf0;
 }

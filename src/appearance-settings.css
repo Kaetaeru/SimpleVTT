@@ -1,16 +1,5 @@
-button.primary {
-  border-color: var(--line-strong);
-  background: linear-gradient(
-    color-mix(in srgb, var(--accent) 22%, var(--surface-2)),
-    color-mix(in srgb, var(--accent) 8%, var(--surface))
-  );
-  color: var(--accent);
-}
-
 .page-dark {
-  background:
-    radial-gradient(circle at 75% -10%, color-mix(in srgb, var(--accent) 6%, transparent), transparent 30rem),
-    linear-gradient(var(--bg-2), var(--bg));
+  background: var(--bg);
 }
 
 :where(button, input, select, textarea):focus-visible {
@@ -25,7 +14,7 @@ button.primary {
   margin-bottom: 6px;
   border: 1px solid var(--line);
   border-radius: 12px;
-  background: linear-gradient(145deg, var(--surface-2), var(--surface));
+  background: var(--surface);
 }
 
 .appearance-v09-heading {

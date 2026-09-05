@@ -47,3 +47,4 @@ against the dev build and reviewed before a gate closes; the in-app browser pane
 
 | Gate | SHA | Evidence |
 | --- | --- | --- |
+| `U1-01` | _pending merge_ | `src/theme-tokens.css` is the one token sheet (type scale, 4 px rhythm, radii, two-step elevation, semantic colours for HP/sides/conditions, legacy aliases kept); `styles.css` moves every heading and control to the sans stack and flat buttons (`primary` is filled accent); the shell keeps its pinned single nav bar but drops the title band and the hero gradient; the home is a continue dashboard (`V1HomeScreen`); the gradient overrides in `appearance-settings.css` and the creation shell are gone. Screenshots at 1440×900: `docs/design/ui-ux/v1_4/u1-01/{home,char,campaign,content,rules,settings,create,dm,player}.png` (the session shots already include the U1-03 workspace sheet). |

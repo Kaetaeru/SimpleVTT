@@ -1,5 +1,6 @@
 import { useSimpleVtt } from "./app/AppProvider";
 
+/** V1.4 U1-02: the home is a "continue" dashboard — the last character, the session, the campaign, then the rest. */
 export function V1HomeScreen({
   onCharacters,
   onCreateCharacter,
@@ -24,6 +25,8 @@ export function V1HomeScreen({
   const live = snapshot.session.lifecycle === "live";
   const localContent = snapshot.catalog.filter((entry) => entry.scope === "local");
   const savedCharacters = snapshot.characters.filter((character) => character.saveState === "saved");
+  const recent = savedCharacters.find((character) => character.id === snapshot.activeCharacter.id) ?? savedCharacters[0];
+  const campaigns = snapshot.campaigns ?? [];
 
   const startCharacter = async () => {
     await createCharacterDraft("guided");
@@ -34,9 +37,9 @@ export function V1HomeScreen({
     <div className="v1-home-screen">
       <header className="v1-hero">
         <div className="v1-hero-copy">
-          <span className="v1-kicker">TABLETOP, YOUR WAY</span>
+          <span className="v1-kicker">홈</span>
           <h1>SimpleVTT v1</h1>
-          <p>종이 시트처럼 가볍게, 필요할 때는 같은 캐릭터로 바로 연결해서 플레이하세요.</p>
+          <p>이어서 플레이하거나 새로 시작합니다.</p>
           <div className="v1-hero-actions">
             <button className="primary" onClick={startCharacter}>새 캐릭터 만들기</button>
             <button onClick={onCharacters}>내 캐릭터 열기</button>
@@ -44,33 +47,32 @@ export function V1HomeScreen({
         </div>
         <div className="v1-hero-status" aria-label="현재 준비 상태">
           <span><b>{savedCharacters.length}</b> 저장된 캐릭터</span>
+          <span><b>{campaigns.length}</b> 캠페인</span>
           <span><b>{localContent.length}</b> 추가 콘텐츠</span>
-          <span><b>{connected ? "연결" : "오프라인"}</b> 세션 상태</span>
+          <span><b>{live ? "플레이 중" : connected ? "연결됨" : "오프라인"}</b> 세션</span>
         </div>
       </header>
 
       <section className="v1-start-grid" aria-label="시작할 작업">
         <article className="v1-start-card featured">
-          <span className="v1-kicker">CHARACTER</span>
-          <h2>캐릭터 시트</h2>
-          <p>현실 테이블에서는 시트만 열어 능력, 내성, 기술, 공격, 피해와 주사위를 바로 사용합니다.</p>
-          <div className="v1-card-actions">
-            <button className="primary" onClick={onCharacters}>캐릭터 보기</button>
-            <button onClick={startCharacter}>새로 만들기</button>
-          </div>
+          <span className="v1-kicker">캐릭터</span>
+          {recent ? <>
+            <h2>{recent.name}</h2>
+            <p>{recent.className} {recent.level} · {recent.species} · {recent.background} · HP {recent.hp}/{recent.maxHp} · AC {recent.ac}</p>
+          </> : <>
+            <h2>첫 캐릭터 만들기</h2>
+            <p>안내에 따라 클래스, 종족, 배경, 능력치를 정하면 시트가 바로 준비됩니다.</p>
+          </>}
+          {recent && <div className="v1-card-actions">
+            <button className="primary" onClick={onCharacters}>시트 열기</button>
+            <button onClick={onCharacters}>모든 캐릭터</button>
+          </div>}
         </article>
 
         <article className="v1-start-card">
-          <span className="v1-kicker">CAMPAIGN</span>
-          <h2>캠페인 관리</h2>
-          <p>DM 세션의 파티, 달력, 식량, 공동 보관함과 비공개 준비물을 캠페인별로 이어갑니다.</p>
-          <div className="v1-card-actions"><button onClick={onCampaigns}>캠페인 열기</button></div>
-        </article>
-
-        <article className="v1-start-card">
-          <span className="v1-kicker">SESSION</span>
-          <h2>{connected ? "현재 세션" : "함께 플레이"}</h2>
-          <p>{connected ? "연결된 세션의 준비 상태와 참가자를 확인하고 플레이로 돌아갑니다." : "세션을 열거나 이미 진행 중인 Host 세션에 참가합니다."}</p>
+          <span className="v1-kicker">세션</span>
+          <h2>{live ? "플레이 중" : connected ? "연결된 세션" : "함께 플레이"}</h2>
+          <p>{connected ? "연결된 세션의 준비 상태와 참가자를 확인하고 플레이로 돌아갑니다." : "세션을 열거나(Host) 진행 중인 세션에 참가합니다(Join)."}</p>
           <div className="v1-card-actions">
             {live && <button className="primary" onClick={onPlay}>플레이로 돌아가기</button>}
             <button className={live ? "" : "primary"} onClick={onSession}>{connected ? "세션 보기" : "Host / Join"}</button>
@@ -78,16 +80,23 @@ export function V1HomeScreen({
         </article>
 
         <article className="v1-start-card">
-          <span className="v1-kicker">ADDONS</span>
-          <h2>콘텐츠 · 애드온</h2>
-          <p>지원되는 애드온 파일을 선택하고 검증 결과를 확인한 뒤 설치합니다.</p>
-          <div className="v1-card-actions"><button onClick={onContent}>애드온 추가</button></div>
+          <span className="v1-kicker">캠페인</span>
+          <h2>{campaigns.length ? campaigns[0].name : "캠페인"}</h2>
+          <p>{campaigns.length ? `${campaigns.length}개 캠페인 · 달력, 식량, 파티 보관함, DM 라이브러리` : "달력, 식량, 파티 보관함, DM 라이브러리를 세션 사이에 이어갑니다."}</p>
+          <div className="v1-card-actions"><button onClick={onCampaigns}>캠페인 열기</button></div>
         </article>
 
         <article className="v1-start-card">
-          <span className="v1-kicker">REFERENCE</span>
+          <span className="v1-kicker">콘텐츠</span>
+          <h2>애드온</h2>
+          <p>{localContent.length ? `${localContent.length}개 설치됨` : "애드온 파일을 검증하고 설치합니다."}</p>
+          <div className="v1-card-actions"><button onClick={onContent}>콘텐츠 관리</button></div>
+        </article>
+
+        <article className="v1-start-card">
+          <span className="v1-kicker">규칙</span>
           <h2>규칙 찾기</h2>
-          <p>기본 콘텐츠와 설치한 애드온을 한 카탈로그에서 이름과 종류로 검색합니다.</p>
+          <p>기본 콘텐츠와 애드온을 한 카탈로그에서 검색합니다.</p>
           <div className="v1-card-actions"><button onClick={onRules}>규칙 찾아보기</button></div>
         </article>
       </section>
