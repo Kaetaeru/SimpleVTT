@@ -44,6 +44,9 @@ declare module "./contracts" {
     installedProgressionGrantIds?: string[];
     epicBoonFeatIds?:string[];
     epicBoonFeatSources?:Record<string,string>;
+    /** Stable content ids of every origin/general feat the Character chose (creation, background, ability-score-or-feat); fighting styles and Epic Boons keep their own lists. */
+    featIds?:string[];
+    featSources?:Record<string,string>;
     weaponMasteryIds?:string[];
     weaponMasterySources?:Record<string,string>;
     fightingStyleFeatIds?:string[];

@@ -195,6 +195,15 @@ function resolveKnownFeatureIdentities(source:CharacterSourceSnapshotV1,catalog:
     const identity=entryIdentity(matches[0]);
     identities.set(identity.qualifiedId,identity);
   }
+  // Chosen feats (origin/general, fighting style, Epic Boon) are content identities too: their Common Play mechanics execute for the owner.
+  for (const featId of [...(source.progression.featIds ?? []),...(source.progression.fightingStyleFeatIds ?? []),...(source.progression.epicBoonFeatIds ?? [])]) {
+    if (!featId.trim()) continue;
+    const matches=resolvedCatalog.filter((entry)=>entry.category==="feat"&&matchesToken(entry,featId));
+    if (matches.length>1) throw new Error(`ambiguous canonical content for feat: ${featId}`);
+    if (matches.length===0) continue;
+    const identity=entryIdentity(matches[0]);
+    identities.set(identity.qualifiedId,identity);
+  }
   // Installed progression grants (e.g. an imported Subclass feature) are executable content the Host must pin by qualified identity, exactly like subclass features.
   for (const grantId of source.progression.installedProgressionGrantIds ?? []) {
     if (!grantId.trim()) continue;

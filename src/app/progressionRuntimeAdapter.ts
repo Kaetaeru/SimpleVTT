@@ -8,6 +8,7 @@ import {
   projectProgressionCharacterState,
 } from "./progressionCharacterApplicationService";
 import { SPELL_PRESENTATIONS } from "./spellPresentation";
+import { catalogQualifiedId } from "./contentCatalogIdentity";
 import { MockAdapter } from "./mockAdapter";
 import { validateChoiceDefinitions, type ChoiceSelectionMap, type ChoiceSelectionValue } from "../domain/choiceDefinition";
 import { resolveCommonPlayProgressionContributions } from "../domain/commonPlayProgressionContribution";
@@ -405,6 +406,17 @@ MockAdapter.prototype.commitLevelUp = async function commitLevelUpPhase07() {
     scope:"full",
     featureLabelById:(featureId)=>internal.catalog.find((entry)=>entry.id===featureId)?.nameKo,
   });
+  // A feat taken in place of an ability score increase lands in the domain feature list as its catalog id (builtin) or
+  // qualified catalog id (installed); keep the stable content id on the sheet so runtime owners can key on it.
+  for (const featureId of result.state.features) {
+    const entry = internal.catalog.find((candidate) => candidate.category === "feat" && (candidate.id === featureId
+      || (candidate.contentId && candidate.sourceId && candidate.version && catalogQualifiedId(candidate.contentId, candidate.sourceId, candidate.version) === featureId)));
+    if (!entry) continue;
+    const featId = entry.contentId ?? entry.id;
+    const current = internal.activeCharacter.featIds ?? [];
+    if (!current.includes(featId)) internal.activeCharacter.featIds = [...current, featId];
+    internal.activeCharacter.featSources = { ...(internal.activeCharacter.featSources ?? {}), [featId]:internal.activeCharacter.featSources?.[featId] ?? `${result.plan.targetClassName} ${result.state.totalLevel} ability-score-or-feat` };
+  }
   if (selectedInstalledSubclass) {
     // An installed subclass has no SRD relationship row; record its stable content id on the sheet so runtime owners and contributions can key on it.
     const entry = installedSubclassEntry(internal.catalog, selectedInstalledSubclass);

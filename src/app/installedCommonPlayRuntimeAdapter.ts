@@ -184,14 +184,24 @@ function specialOptionDefinitionActionId(definitionActionId:string,entryPointId:
   return reference?installedCommonPlayActionId({...reference,entryPointId}):undefined;
 }
 
+/** Every stable content id whose Common Play mechanics the Character owns through progression: installed grants plus chosen feats. */
+function progressionGrantIdsOf(sheet:Pick<CharacterSheet,"installedProgressionGrantIds"|"featIds"|"fightingStyleFeatIds"|"epicBoonFeatIds">) {
+  return [...new Set([...(sheet.installedProgressionGrantIds??[]),...(sheet.featIds??[]),...(sheet.fightingStyleFeatIds??[]),...(sheet.epicBoonFeatIds??[])])];
+}
+
 async function installedProgressionGrantActionIds(adapter:MockAdapter,grantIds:string[]) {
   if(!grantIds.length)return [];
   const grants=new Set(grantIds),entries=await requiredSessionInstalledContent(adapter,[]);
-  return entries.filter((entry)=>grants.has(entry.contentId)).flatMap((entry)=>(entry.mechanics??[]).flatMap((mechanic)=>
+  const installed=entries.filter((entry)=>grants.has(entry.contentId)).flatMap((entry)=>(entry.mechanics??[]).flatMap((mechanic)=>
     mechanic.kind==="common-play"?(mechanic.config.entryPoints??[]).filter((point)=>point.invocation==="manual").map((point)=>installedCommonPlayActionId({
       catalogId:catalogQualifiedId(entry.contentId,entry.sourceId,entry.version),mechanicId:mechanic.config.id,entryPointId:point.id,
     })):[],
   ));
+  // Builtin feats keep their manual entry points on the generated catalog entry; the entry id is the builtin action id.
+  const builtin=builtinCatalogFor(adapter).filter((entry)=>grants.has(entry.contentId??entry.id)&&(entry.mechanics??[]).some((mechanic)=>
+    mechanic.kind==="common-play"&&(mechanic.config.entryPoints??[]).some((point:{invocation?:string})=>point.invocation==="manual"),
+  )).map((entry)=>entry.contentId??entry.id);
+  return [...installed,...builtin];
 }
 
 function referencedResourceIds(definition:CommonPlayOperationDefinition) {
@@ -323,7 +333,7 @@ async function projectRuntimeArtifactActions(adapter:MockAdapter,snapshot:AppSna
   const itemActionIds=snapshot.activeCharacter.items
     .filter((item)=>!item.attunementRequired||item.attuned)
     .flatMap((item)=>item.grantedActionIds);
-  const grantActionIds=await installedProgressionGrantActionIds(adapter,snapshot.activeCharacter.installedProgressionGrantIds??[]);
+  const grantActionIds=await installedProgressionGrantActionIds(adapter,progressionGrantIdsOf(snapshot.activeCharacter));
   const ownedActions=(await Promise.all([...new Set([...itemActionIds,...grantActionIds])]
     .map(async(actionId)=>{
       const action=await commonPlayAction(adapter,actionId);
@@ -341,7 +351,7 @@ async function projectRuntimeArtifactActions(adapter:MockAdapter,snapshot:AppSna
   for(const characterId of projectedCharacterIds(adapter)) {
     if(characterId===ownerId||!snapshot.scene.entities.some((entity)=>entity.id===characterId)) continue;
     const mounted=projectedCharacterById(adapter,characterId);
-    const projectedGrantActionIds=await installedProgressionGrantActionIds(adapter,mounted?.sheet.installedProgressionGrantIds??[]);
+    const projectedGrantActionIds=mounted?await installedProgressionGrantActionIds(adapter,progressionGrantIdsOf(mounted.sheet)):[];
     if(!projectedGrantActionIds.length) continue;
     const projectedActions=(await Promise.all(projectedGrantActionIds.map(async(actionId)=>{
       const action=await commonPlayAction(adapter,actionId);
