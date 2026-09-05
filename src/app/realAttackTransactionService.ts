@@ -1,4 +1,4 @@
-import { effectAttackDamageRiders as effectAttackDamageRidersFromEffects } from "../domain/effectAttackRiders";
+import { effectAttackDamageRiders as effectAttackDamageRidersFromEffects, effectRetaliations } from "../domain/effectAttackRiders";
 import "./lifeRuntimeContracts";
 import type { ActionVm, DamageComponentView, EconomyVm, SceneEntity } from "./contracts";
 import type { RuntimeLifeVm } from "./lifeRuntimeContracts";
@@ -318,6 +318,8 @@ function attackRequest(request:AtomicAttackTransactionRequest,input:RulesRuntime
       ],
     },
     riders:effectAttackDamageRiders(input,request),
+    retaliations:effectRetaliations(input,request.target.id,request.attackFact.rangeFeet,request.resolutionId),
+    actorCreatureKind:request.actor.kind==="character"?"character" as const:"monster" as const,
     economy:request.reaction||!cost ? undefined : {
       ...cost,
       ...(request.action.economy==="행동"?{actionKind:"attack" as const,attacksPerAction:request.action.attacksPerAction??1}:{}),

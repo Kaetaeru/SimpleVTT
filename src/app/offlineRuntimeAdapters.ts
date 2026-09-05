@@ -68,6 +68,8 @@ import "./productionPlayRuntimeAdapter";
 import "./sessionInventoryRuntimeAdapter";
 import "./theaterOfMindSpatialAdapter";
 import "./productionSpellRuntimeAdapter";
+// C1-06: summons run after the production spell cast commits, so this wrapper sits outside the spell adapter.
+import "./spellSummonRuntimeAdapter";
 import "./productionDiceRuntimeAdapter";
 import "./standardActionReactionAdapter";
 import "./installedCommonPlayRuntimeAdapter";

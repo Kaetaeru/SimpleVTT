@@ -1,3 +1,4 @@
+import { effectIsActive } from "./effects";
 import { resolveCompoundDamage, resolveDamage, resolveHealing, type DamageDefenseContribution, type DamageReductionContribution, type DamageResolution, type DamageThresholdContribution } from "./damage";
 import { type D20TestResult } from "./d20";
 import { resolveDeathSavingThrow, resolveZeroHpAfterDamage, type LifeState } from "./life";
@@ -113,6 +114,17 @@ function finalizeDamage(
   const critical = operation.criticalFrom
     ? Boolean((ctx.results.get(operation.criticalFrom) as D20TestResult | undefined)?.critical)
     : false;
+  // C1-06 Death Ward: the first blow that would drop the creature to 0 HP leaves it at 1 HP and ends the ward.
+  const ward = damage.nextHp.current === 0 && beforeHp.current > 0
+    ? ctx.state.effects.find((effect) => effect.targetId === operation.targetId && effect.metadata?.deathWard === true && effectIsActive(effect))
+    : undefined;
+  let wardChange: RuntimeStateChange | undefined;
+  if (ward) {
+    const wardProvenance = { source: ward.sourceId, status: "applied" as const, reason: `effect ${ward.id} keeps the creature at 1 HP instead of 0 and ends` };
+    damage = { ...damage, nextHp: { ...damage.nextHp, current: 1 }, provenance: [...damage.provenance, wardProvenance] };
+    ctx.state.effects = ctx.state.effects.filter((effect) => effect.id !== ward.id);
+    wardChange = effectStateChange(operation.targetId, ward.id, "removed", [wardProvenance], ward, undefined);
+  }
   const life = resolveZeroHpAfterDamage({
     creatureKind:operation.creatureKind,
     before:target.life,
@@ -127,6 +139,7 @@ function finalizeDamage(
     ...deathSaveStateChanges(operation.targetId,beforeLife,target.life,provenance),
     ...lifeFlagStateChanges(operation.targetId, beforeLife, target.life, provenance),
   ];
+  if (wardChange) changes.push(wardChange);
   const currentConcentration = ctx.state.concentration[operation.targetId];
   let concentrationCheck:ConcentrationCheckResolution|undefined;
 
@@ -295,7 +308,7 @@ export function executeHealing(ctx: ResolutionExecutionContext, operation: Heali
   const beforeLife = structuredClone(target.life);
   const beforeHp = { ...beforeLife.hp };
   const healing = resolveHealing(beforeHp, valueFromResult(ctx.results, operation.amount));
-  const transition = applyHealingToLife(target.life, healing);
+  const transition = applyHealingToLife(target.life, healing, operation.revive === true);
   target.life = transition.next;
   const changes:RuntimeStateChange[] = [
     ...hpStateChanges(operation.targetId, beforeHp, target.life.hp, transition.provenance),

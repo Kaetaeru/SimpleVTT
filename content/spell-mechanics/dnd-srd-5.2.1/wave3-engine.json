@@ -1,0 +1,188 @@
+{
+  "schemaVersion": "1",
+  "source": {
+    "document": "SRD 5.2.1",
+    "review": "C1-06 wave 3 — spells that needed the revive, maximum-hp and dispel kinds, Death Ward, the Mage Armor AC formula, spent-on-hit riders (smites), retaliation and summons. Each executionScope states what the runtime enforces."
+  },
+  "definitions": [
+    {
+      "spellId": "dnd.srd521.spell.revivify",
+      "baseLevel": 3,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 5, "minTargets": 1, "maxTargets": 1, "allowedRelations": ["self", "ally"] },
+      "primary": { "kind": "revive", "hp": "one" },
+      "components": { "verbal": true, "somatic": true, "materials": [{ "id": "diamonds-300gp-consumed" }] },
+      "executionScope": "Authored (C1-06): the touched creature returns to life with 1 HP; death saves reset. The one-minute limit since death and the exclusions (old age, missing body parts) are left to the DM."
+    },
+    {
+      "spellId": "dnd.srd521.spell.raise-dead",
+      "baseLevel": 5,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 5, "minTargets": 1, "maxTargets": 1, "allowedRelations": ["self", "ally"] },
+      "primary": { "kind": "revive", "hp": "one" },
+      "components": { "verbal": true, "somatic": true, "materials": [{ "id": "diamond-500gp-consumed" }] },
+      "castingDurationSeconds": 3600,
+      "executionScope": "Authored (C1-06): the touched creature returns to life with 1 HP. The one-hour casting time is recorded; the ten-day limit, the −4 penalty that fades over four long rests, and the disease/curse rules are left to the DM."
+    },
+    {
+      "spellId": "dnd.srd521.spell.resurrection",
+      "baseLevel": 7,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 5, "minTargets": 1, "maxTargets": 1, "allowedRelations": ["self", "ally"] },
+      "primary": { "kind": "revive", "hp": "full" },
+      "components": { "verbal": true, "somatic": true, "materials": [{ "id": "diamond-1000gp-consumed" }] },
+      "castingDurationSeconds": 3600,
+      "executionScope": "Authored (C1-06): the touched creature returns to life with all its HP. The century limit, the −4 penalty and the caster's exhaustion for a creature dead over a year are left to the DM."
+    },
+    {
+      "spellId": "dnd.srd521.spell.true-resurrection",
+      "baseLevel": 9,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 5, "minTargets": 1, "maxTargets": 1, "allowedRelations": ["self", "ally"] },
+      "primary": { "kind": "revive", "hp": "full" },
+      "removesConditions": ["poisoned", "exhaustion"],
+      "components": { "verbal": true, "somatic": true, "materials": [{ "id": "diamonds-25000gp-consumed" }] },
+      "castingDurationSeconds": 3600,
+      "executionScope": "Authored (C1-06): the touched creature returns to life with all its HP, and Poisoned and Exhaustion end. Creating a new body and the 200-year limit are left to the DM."
+    },
+    {
+      "spellId": "dnd.srd521.spell.reincarnate",
+      "baseLevel": 5,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 5, "minTargets": 1, "maxTargets": 1, "allowedRelations": ["self", "ally"] },
+      "primary": { "kind": "revive", "hp": "full" },
+      "components": { "verbal": true, "somatic": true, "materials": [{ "id": "rare-oils-1000gp-consumed" }] },
+      "castingDurationSeconds": 3600,
+      "executionScope": "Authored (C1-06): the creature returns to life with all its HP in the same character record. The new species rolled on the Reincarnate table is applied by the DM on the sheet."
+    },
+    {
+      "spellId": "dnd.srd521.spell.aid",
+      "baseLevel": 2,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 30, "minTargets": 1, "maxTargets": 3, "allowedRelations": ["self", "ally"] },
+      "primary": { "kind": "maximum-hp", "amount": 5, "amountPerSlotAboveBase": 5 },
+      "components": { "verbal": true, "somatic": true, "materials": [{ "id": "strip-of-white-cloth" }] },
+      "executionScope": "Authored (C1-06): up to three creatures gain +5 HP maximum and +5 current HP, +5 per slot level above 2nd. The 8-hour end, when the maximum returns to normal, is applied by the DM (재정비 or the sheet)."
+    },
+    {
+      "spellId": "dnd.srd521.spell.death-ward",
+      "baseLevel": 4,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 5, "minTargets": 1, "maxTargets": 1, "allowedRelations": ["self", "ally"] },
+      "primary": { "kind": "tracked-effect", "summary": "대상이 0 HP로 떨어질 피해를 받으면 대신 1 HP로 남고 주문이 끝난다.", "duration": { "kind": "hours", "amount": 8 } },
+      "trackedEffects": [{ "summary": "죽음 방비: 0 HP 대신 1 HP", "trigger": "always", "duration": { "kind": "hours", "amount": 8 }, "preventsDeath": true }],
+      "components": { "verbal": true, "somatic": true },
+      "executionScope": "Authored (C1-06): for 8 hours the first damage that would reduce the warded creature to 0 HP leaves it at 1 HP and ends the spell. The instant-death clause (the ward negates the killing effect) is judged by the DM."
+    },
+    {
+      "spellId": "dnd.srd521.spell.dispel-magic",
+      "baseLevel": 3,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 120, "minTargets": 1, "maxTargets": 1, "requiresSight": true },
+      "primary": { "kind": "dispel" },
+      "components": { "verbal": true, "somatic": true },
+      "executionScope": "Authored (C1-06): every spell effect on the chosen creature ends. The SRD only ends spells of 3rd level or lower automatically and asks for a spellcasting ability check (DC 10 + spell level) for higher ones; the runtime ends them all, so the DM re-applies any that should survive. Objects and magical effects that are not spells are left to the DM."
+    },
+    {
+      "spellId": "dnd.srd521.spell.mage-armor",
+      "baseLevel": 1,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 5, "minTargets": 1, "maxTargets": 1, "allowedRelations": ["self", "ally"] },
+      "primary": { "kind": "tracked-effect", "summary": "갑옷을 입지 않은 대상의 기본 AC가 13 + 민첩 수정치가 된다.", "duration": { "kind": "hours", "amount": 8 } },
+      "trackedEffects": [{ "summary": "마법 갑주: AC 최소 13 + 민첩", "trigger": "always", "duration": { "kind": "hours", "amount": 8 }, "armorClass": { "floor": 13, "addTargetSaveModifier": "dex" } }],
+      "components": { "verbal": true, "somatic": true, "materials": [{ "id": "piece-of-cured-leather" }] },
+      "executionScope": "Authored (C1-06): for 8 hours the target's AC is judged as at least 13 + its DEX save modifier (the runtime's stand-in for the DEX modifier; a creature proficient in DEX saves gets its proficiency bonus too). The armor restriction and the early end when armor is donned are left to the DM."
+    },
+    {
+      "spellId": "dnd.srd521.spell.freedom-of-movement",
+      "baseLevel": 4,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 5, "minTargets": 1, "maxTargets": 1, "allowedRelations": ["self", "ally"] },
+      "primary": { "kind": "tracked-effect", "summary": "이동의 자유: 어려운 지형과 마법적 속박에 영향받지 않으며 붙잡힘·포박이 끝난다.", "duration": { "kind": "hours", "amount": 1 } },
+      "removesConditions": ["grappled", "restrained"],
+      "components": { "verbal": true, "somatic": true, "materials": [{ "id": "leather-strap" }] },
+      "executionScope": "Authored (C1-06): the Grappled and Restrained conditions on the touched creature end, and the spell is tracked for 1 hour. Ignoring difficult terrain, magical speed reduction and the underwater rule are narrated."
+    },
+    {
+      "spellId": "dnd.srd521.spell.aura-of-life",
+      "baseLevel": 4,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 30, "minTargets": 1, "maxTargets": 8, "allowedRelations": ["self", "ally"] },
+      "primary": { "kind": "tracked-effect", "summary": "오라 안의 아군은 사령 피해에 저항을 얻고 최대 HP가 줄지 않으며, 0 HP인 아군은 턴 시작에 1 HP를 되찾는다.", "duration": { "kind": "concentration" } },
+      "trackedEffects": [{ "summary": "생명의 오라: 사령 저항", "trigger": "always", "duration": { "kind": "concentration" }, "damageDefenses": [{ "kind": "resistance", "damageType": "necrotic" }] }],
+      "concentration": true,
+      "components": { "verbal": true },
+      "executionScope": "Authored (C1-06): chosen allies within the 30-foot emanation have resistance to necrotic damage while the caster concentrates (up to 10 minutes). The HP-maximum protection and the 1 HP at the start of a 0-HP ally's turn are applied by the DM."
+    },
+    {
+      "spellId": "dnd.srd521.spell.earthquake",
+      "baseLevel": 8,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 500, "minTargets": 1, "maxTargets": 10 },
+      "primary": { "kind": "save-effect", "saveAbility": "dex", "summary": "실패한 크리처는 넘어짐 상태가 된다.", "duration": { "kind": "instant" } },
+      "effects": [{ "conditionId": "prone", "trigger": "failed-save", "duration": { "kind": "special", "key": "until-stood-up" } }],
+      "concentration": true,
+      "components": { "verbal": true, "somatic": true, "materials": [{ "id": "pinch-of-dirt-rock-clay" }] },
+      "executionScope": "Authored (C1-06): creatures on the ground in the 100-foot-radius circle make a DEX save; on a failure they fall Prone. The difficult terrain, the concentration checks, fissures and collapsing structures are narrated by the DM."
+    },
+    {
+      "spellId": "dnd.srd521.spell.divine-smite",
+      "baseLevel": 1,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "bonus-action",
+      "targeting": { "kind": "creature", "rangeFeet": 0, "minTargets": 1, "maxTargets": 1, "allowedRelations": ["self"] },
+      "primary": { "kind": "tracked-effect", "summary": "다음 무기·맨손 명중에 광휘 피해 2d8(슬롯 레벨당 +1d8)을 더한다.", "duration": { "kind": "minutes", "amount": 1 } },
+      "trackedEffects": [{ "summary": "신성한 강타: 다음 명중에 광휘 2d8", "trigger": "always", "duration": { "kind": "minutes", "amount": 1 }, "attackDamage": { "damageType": "radiant", "dice": { "count": 2, "sides": 8, "dicePerSlotAboveBase": 1 }, "sourceKinds": ["weapon", "unarmed"], "consumeOnUse": true } }],
+      "components": { "verbal": true },
+      "executionScope": "Authored (C1-06): cast as a bonus action, the next melee weapon or unarmed hit within a minute deals an extra 2d8 radiant damage, +1d8 per slot level above 1st, and the rider is spent. The SRD casts it after the hit lands; the runtime asks for it before the attack. The extra 1d8 against Fiends and Undead is added with 서술 피해."
+    },
+    {
+      "spellId": "dnd.srd521.spell.shining-smite",
+      "baseLevel": 2,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "bonus-action",
+      "targeting": { "kind": "creature", "rangeFeet": 0, "minTargets": 1, "maxTargets": 1, "allowedRelations": ["self"] },
+      "primary": { "kind": "tracked-effect", "summary": "다음 무기 명중에 광휘 피해 2d6(슬롯 레벨당 +1d6)을 더하고 대상이 빛을 낸다.", "duration": { "kind": "concentration" } },
+      "trackedEffects": [{ "summary": "빛나는 강타: 다음 명중에 광휘 2d6", "trigger": "always", "duration": { "kind": "concentration" }, "attackDamage": { "damageType": "radiant", "dice": { "count": 2, "sides": 6, "dicePerSlotAboveBase": 1 }, "sourceKinds": ["weapon", "unarmed"], "consumeOnUse": true } }],
+      "concentration": true,
+      "components": { "verbal": true },
+      "executionScope": "Authored (C1-06): the next melee weapon or unarmed hit deals an extra 2d6 radiant damage, +1d6 per slot level above 2nd, and the rider is spent. The SRD casts it after the hit; the runtime asks for it before. The 5-foot light and the loss of Invisible on the target are narrated."
+    },
+    {
+      "spellId": "dnd.srd521.spell.animate-dead",
+      "baseLevel": 3,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 0, "minTargets": 1, "maxTargets": 1, "allowedRelations": ["self"] },
+      "primary": { "kind": "tracked-effect", "summary": "시체 하나를 스켈레톤(또는 좀비)으로 일으켜 24시간 동안 부린다.", "duration": { "kind": "hours", "amount": 24 } },
+      "summons": { "monsterId": "dnd.srd521.monster.skeleton", "count": 1, "countPerSlotAboveBase": 2 },
+      "components": { "verbal": true, "somatic": true, "materials": [{ "id": "drop-of-blood-flesh-bone-dust" }] },
+      "castingDurationSeconds": 60,
+      "executionScope": "Authored (C1-06): the cast adds one Skeleton to the scene on the caster's side, plus two per slot level above 3rd. The SRD lets the caster choose a Zombie for a corpse; the runtime always raises a Skeleton (add a Zombie from 인카운터 instead). The 24-hour control and the bonus-action commands are narrated."
+    },
+    {
+      "spellId": "dnd.srd521.spell.create-undead",
+      "baseLevel": 6,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 0, "minTargets": 1, "maxTargets": 1, "allowedRelations": ["self"] },
+      "primary": { "kind": "tracked-effect", "summary": "시체 셋을 구울로 일으켜 24시간 동안 부린다.", "duration": { "kind": "hours", "amount": 24 } },
+      "summons": { "monsterId": "dnd.srd521.monster.ghoul", "count": 3 },
+      "components": { "verbal": true, "somatic": true, "materials": [{ "id": "black-onyx-150gp-per-corpse-consumed" }] },
+      "castingDurationSeconds": 60,
+      "executionScope": "Authored (C1-06): the cast adds three Ghouls to the scene on the caster's side. The higher-slot options (four Ghouls or three Ghasts/Wights at 7th, five Ghouls or three Ghasts/Wights or two Mummies at 8th…) are added from 인카운터. The 24-hour control is narrated."
+    }
+  ]
+}

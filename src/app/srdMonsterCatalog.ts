@@ -20,7 +20,7 @@ export interface SrdMonsterEntry {
   spellcasting?:SrdMonsterSpellcasting;
 }
 /** C1-04: one attack of a multiattack routine ("물기 한 번과 발톱 두 번"), named by the stat block's attack entry. */
-export interface SrdMonsterRoutineItem { name:string; count:number }
+export interface SrdMonsterRoutineItem { name:string; count:number; /** C1-07: "A 또는 B" choice — the first name is the default. */ alternatives?:string[] }
 export interface SrdMonsterSpellEntry { name:string; note?:string; slotLevel?:number; spellId?:string }
 export interface SrdMonsterSpellList { frequency:"at-will"|"per-day"|"per-rest"; uses?:number; spells:string[]; entries?:SrdMonsterSpellEntry[] }
 export interface SrdMonsterSpellcasting { ability?:AbilityKey; dc:number; attackBonus?:number; lists:SrdMonsterSpellList[] }

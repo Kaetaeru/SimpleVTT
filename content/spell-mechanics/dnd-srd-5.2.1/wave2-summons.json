@@ -79,9 +79,9 @@
       "castingEconomy": "action",
       "targeting": { "kind": "creature", "rangeFeet": 0, "minTargets": 1, "maxTargets": 1, "allowedRelations": ["self"] },
       "primary": { "kind": "tracked-effect", "summary": "온기 방패(냉기 저항) 또는 한기 방패(화염 저항)를 두르고, 5피트 안에서 근접 공격으로 맞힌 상대는 2d8 피해를 받는다.", "duration": { "kind": "minutes", "amount": 10 } },
-      "trackedEffects": [{ "summary": "온기 방패: 냉기 저항", "trigger": "always", "duration": { "kind": "minutes", "amount": 10 }, "damageDefenses": [{ "kind": "resistance", "damageType": "cold" }] }],
+      "trackedEffects": [{ "summary": "온기 방패: 냉기 저항 · 근접 명중 시 화염 2d8 반격", "trigger": "always", "duration": { "kind": "minutes", "amount": 10 }, "damageDefenses": [{ "kind": "resistance", "damageType": "cold" }], "retaliation": { "damageType": "fire", "dice": { "count": 2, "sides": 8 }, "meleeOnly": true } }],
       "components": { "verbal": true, "somatic": true, "materials": [{ "id": "bit-of-phosphorus-or-firefly" }] },
-      "executionScope": "Authored (C1-03): for 10 minutes the caster has resistance to cold damage (the warm shield). The chill shield's fire resistance and the 2d8 fire or cold damage dealt to a creature that hits the caster with a melee attack within 5 feet are applied by the DM with 서술 피해."
+      "executionScope": "Authored (C1-03): for 10 minutes the caster has resistance to cold damage (the warm shield), and a creature that hits the caster with a melee attack takes 2d8 fire damage. The chill shield (fire resistance, cold retaliation) is applied by the DM."
     }
   ]
 }

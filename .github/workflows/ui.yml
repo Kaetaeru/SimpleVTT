@@ -112,7 +112,7 @@ jobs:
           tests/ui/phase09ConcentrationSaveWorkflow.test.ts
           tests/ui/phase09CombatantRuntimeActions.test.ts
           tests/ui/srdMonsterCatalog.test.ts
-          tests/ui/srdMonsterTiming.test.ts tests/ui/srdMonsterSpellcasting.test.ts tests/ui/srdMonsterLegendaryResistance.test.ts tests/ui/srdMonsterMultiattack.test.ts
+          tests/ui/srdMonsterTiming.test.ts tests/ui/srdMonsterSpellcasting.test.ts tests/ui/srdMonsterLegendaryResistance.test.ts tests/ui/srdMonsterMultiattack.test.ts tests/ui/srdMonsterChoiceRoutine.test.ts tests/ui/srdMonsterLegendaryBreath.test.ts
           tests/ui/engagementRuntime.test.ts
           tests/ui/encounterGroups.test.ts
           tests/ui/movementDeclarations.test.ts

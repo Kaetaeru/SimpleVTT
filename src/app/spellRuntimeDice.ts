@@ -21,7 +21,7 @@ function formulaCount(definition:SpellMechanicDefinition,slotLevel:number|undefi
 
 export function spellRuntimeDice(adapter:MockAdapter,actionId:string,definition:SpellMechanicDefinition,slotLevel:number|undefined,characterLevel:number,targetIds:string[]) {
   const primary=definition.primary;
-  if (primary.kind==="tracked-effect"||primary.kind==="full-healing") return {authoritative:[],request:{}};
+  if (primary.kind==="tracked-effect"||primary.kind==="full-healing"||primary.kind==="revive"||primary.kind==="maximum-hp"||primary.kind==="dispel") return {authoritative:[],request:{}};
   if (primary.kind==="power-word-kill") {
     const effectFaces=Array.from({length:primary.fallbackDamage.count},(_,index)=>boundedFace(adapter,actionId,index,primary.fallbackDamage.sides));
     return {authoritative:effectFaces,request:{effectFaces}};

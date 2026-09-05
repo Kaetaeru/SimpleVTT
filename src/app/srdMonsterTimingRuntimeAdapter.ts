@@ -310,6 +310,8 @@ MockAdapter.prototype.useLegendaryResistance=async function useLegendaryResistan
     await this.undoLastResolution();
     forceSaveSuccess(this,actorId);
     await this.resolveAction(actionId,targetIds);
+    // A stat-block saving-throw action completes through its stages; a spell cast is already complete.
+    for (let step=0; step<8&&internal.resolution&&internal.resolution.stage!=="complete"; step+=1) await this.advanceResolution();
     const after=internal.resolution;
     rejudged=Boolean(after && after.saveResults.some((entry)=>entry.targetId===actorId&&entry.outcome==="성공"));
     if (after && rejudged) {

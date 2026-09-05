@@ -14,6 +14,8 @@ export interface AtomicSavingThrowTarget {
   d20:number;
   expectedTotal:number;
   expectedOutcome:"성공"|"실패";
+  /** C1-07: Legendary Resistance — the save is an automatic success. */
+  forcedSuccess?:boolean;
 }
 
 export interface AtomicSavingThrowTransactionRequest {
@@ -163,8 +165,8 @@ export function resolveAtomicSavingThrowTransaction(request:AtomicSavingThrowTra
       targetId:request.actor.id,
       request:{
         family:"saving-throw",
-        target:dc!,
-        targetSource:`action:${request.action.id}:save-dc`,
+        target:target.forcedSuccess ? 0 : dc!,
+        targetSource:target.forcedSuccess ? `action:${request.action.id}:legendary-resistance:auto-success` : `action:${request.action.id}:save-dc`,
         modifierContributions:[{ source:target.modifierSource,value:target.modifier }],
         dice:{
           id:`${request.resolutionId}:${target.entity.id}:d20`,

@@ -1,3 +1,4 @@
+import { takeForcedSaveSuccess } from "./forcedSaveSuccess";
 import "./phase09RealAtomicItemAdapter";
 import type {
   ActionVm,
@@ -100,6 +101,7 @@ MockAdapter.prototype.advanceResolution=async function advanceResolutionWithAtom
     return internal.getSnapshot();
   }
 
+  const forced=new Set(takeForcedSaveSuccess(this,resolution.saveResults.map((preview)=>preview.targetId)));
   let targets;
   try {
     targets=resolution.saveResults.map((preview)=>{
@@ -123,7 +125,8 @@ MockAdapter.prototype.advanceResolution=async function advanceResolutionWithAtom
           : `resolution:${resolution.id}:authoritative-save-preview`,
         d20:preview.d20,
         expectedTotal:preview.total,
-        expectedOutcome:preview.outcome,
+        expectedOutcome:forced.has(preview.targetId) ? "성공" as const : preview.outcome,
+        ...(forced.has(preview.targetId) ? { forcedSuccess:true } : {}),
       };
     });
   } catch(error) {

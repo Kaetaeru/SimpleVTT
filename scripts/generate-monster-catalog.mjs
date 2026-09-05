@@ -180,11 +180,21 @@ function spellEntries(listText, slug) {
     return { name, ...(note ? { note } : {}), ...(slotLevel ? { slotLevel: num(slotLevel) } : {}), ...(spellId ? { spellId } : {}) };
   });
 }
-const KO_COUNT = { "한":1, "두":2, "세":3, "네":4, "다섯":5, "여섯":6 };
-/** "물기 공격 한 번과 발톱 공격 두 번" → [{ name:"물기", count:1 }, { name:"발톱", count:2 }]. */
+const KO_COUNT = { "한":1, "두":2, "세":3, "네":4, "다섯":5, "여섯":6, "여러":2 };
+/**
+ * "물기 공격 한 번과 발톱 공격 두 번" → [{ name:"물기", count:1 }, { name:"발톱", count:2 }].
+ * C1-07: "시미터 또는 단궁를 조합해 두 번 공격한다" → [{ name:"시미터", count:2, alternatives:["시미터","단궁"] }].
+ */
 function multiattackRoutine(sentence) {
-  return [...sentence.matchAll(/([가-힣A-Za-z]+(?: [가-힣A-Za-z]+)?)\s*공격(?:을|를)?\s*(한|두|세|네|다섯|여섯|\d+)\s*번/g)]
+  const explicit = [...sentence.matchAll(/([가-힣A-Za-z]+(?: [가-힣A-Za-z]+)?)\s*공격(?:을|를)?\s*(한|두|세|네|다섯|여섯|\d+)\s*번/g)]
     .map((m) => ({ name: m[1].trim(), count: KO_COUNT[m[2]] ?? num(m[2]) }));
+  if (explicit.length && !/또는|\s와\s|\s과\s/.test(sentence)) return explicit;
+  const count = /(한|두|세|네|다섯|여섯|여러|\d+)\s*번/.exec(sentence);
+  const subject = /(?:은|는)\s+(.+?)\s*(?:공격을|공격|(?:를|을)\s*(?:조합해|사용해)|로|으로)\s*(?:여러|한|두|세|네|다섯|여섯|\d+)\s*번/.exec(sentence);
+  if (!count || !subject) return explicit;
+  const alternatives = subject[1].replace(/\([^)]*\)/g, "").split(/\s*(?:또는|\s와\s|\s과\s|,)\s*/).map((name) => name.replace(/\s*공격$/, "").trim()).filter(Boolean);
+  if (!alternatives.length) return explicit;
+  return [{ name: alternatives[0], count: KO_COUNT[count[1]] ?? num(count[1]), alternatives }];
 }
 const USES_PER_ROUND = /다음 턴이 시작될 때까지 이 행동을 다시 사용할 수 없다/;
 
@@ -302,13 +312,13 @@ const monsters = bundle.monsters.map((monster) => {
     const routine = action.multiattack?.routine;
     if (!routine) continue;
     // "성인 레드 드래곤은 찢기 공격을 세 번" captures "드래곤은 찢기"; try the full capture, then its trailing words.
-    const attackNamed = (name) => actions.find((entry) => entry.kind === "attack" && (entry.name === name || entry.name.startsWith(name)))?.name;
+    const attackNamed = (name) => actions.find((entry) => entry.kind === "attack" && (entry.name === name || entry.name.startsWith(name) || entry.nameEn.toLowerCase() === name.toLowerCase()))?.name;
+    const resolveName = (name) => { const words = name.split(" "); return words.map((_, index) => words.slice(index).join(" ")).map(attackNamed).find(Boolean); };
     const resolved = routine.map((item) => {
-      const words = item.name.split(" ");
-      const attackName = words.map((_, index) => words.slice(index).join(" ")).map(attackNamed).find(Boolean);
-      return { ...item, attackName };
+      const alternatives = (item.alternatives ?? [item.name]).map(resolveName).filter(Boolean);
+      return { count: item.count, attackName: alternatives[0], alternatives: [...new Set(alternatives)] };
     });
-    if (resolved.every((item) => item.attackName)) action.multiattack.routine = resolved.map((item) => ({ name: item.attackName, count: item.count }));
+    if (resolved.every((item) => item.attackName)) action.multiattack.routine = resolved.map((item) => ({ name: item.attackName, count: item.count, ...(item.alternatives.length > 1 ? { alternatives: item.alternatives } : {}) }));
     else delete action.multiattack.routine;
   }
   return {

@@ -120,6 +120,10 @@
       "classification": "GENERIC_ENGINE"
     },
     {
+      "module": "./spellSummonRuntimeAdapter",
+      "classification": "GENERIC_ENGINE"
+    },
+    {
       "module": "./engagementRuntimeAdapter",
       "classification": "GENERIC_ENGINE"
     },

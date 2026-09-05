@@ -483,7 +483,7 @@ function spellActions(character:ExtendedCharacter):ActionVm[] {
     const maxTargets=projectileUnits||multiAttackTargets||mechanic?.targeting.maxTargets;
     const many=(maxTargets??1)>1;
     const selfOnly=mechanic?.targeting.allowedRelations?.length===1&&mechanic.targeting.allowedRelations[0]==="self";
-    const target:ActionVm["target"]=(mechanic?.targeting.maxTargets??0)===0?"none":selfOnly?"self":primary?.kind==="healing"||primary?.kind==="full-healing"||primary?.kind==="temporary-hp"?"ally":harmful?(many?"multi-enemy":"enemy"):"any";
+    const target:ActionVm["target"]=(mechanic?.targeting.maxTargets??0)===0?"none":selfOnly?"self":primary?.kind==="healing"||primary?.kind==="full-healing"||primary?.kind==="temporary-hp"||primary?.kind==="revive"||primary?.kind==="maximum-hp"?"ally":harmful?(many?"multi-enemy":"enemy"):"any";
     const resolutionKind:ActionVm["resolutionKind"]=primary?.kind==="attack-damage"||primary?.kind==="multi-attack-damage"?"attack":primary?.kind==="save-damage"||primary?.kind==="save-compound-damage"||primary?.kind==="save-effect"?"saving-throw":primary?.kind==="healing"||primary?.kind==="full-healing"||primary?.kind==="temporary-hp"?"healing":primary?.kind==="automatic-projectiles"||primary?.kind==="power-word-kill"?"no-roll-damage":"no-roll";
     const damage=primary?.kind==="save-compound-damage"
       ? primary.components.map((component)=>({type:component.damageType,dice:`${component.dice.count}d${component.dice.sides}`,flat:component.dice.flat??0,average:Math.floor(component.dice.count*(component.dice.sides+1)/2)+(component.dice.flat??0)}))

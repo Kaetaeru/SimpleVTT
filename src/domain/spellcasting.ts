@@ -52,15 +52,21 @@ export interface SpellTrackedEffectDefinition {
     bonus?: { flat?: number; dice?: { count: number; sides: number }; sign?: 1 | -1 };
   };
   /** AC on the warded creature (Shield +5, Shield of Faith +2, Barkskin floor 17). */
-  armorClass?: { bonus?: number; floor?: number };
+  armorClass?: { bonus?: number; floor?: number; /** Mage Armor: the floor is 13 + the target's DEX save modifier. */ addTargetSaveModifier?: AbilityKey };
+  /** Death Ward: damage that would drop the creature to 0 HP leaves it at 1 HP and ends the effect. */
+  preventsDeath?: boolean;
+  /** Fire Shield: a creature that hits the warded creature takes this damage. */
+  retaliation?: { damageType: string; dice: { count: number; sides: number }; meleeOnly?: boolean };
   /** Damage defenses on the warded creature (Stoneskin, Protection from Energy). */
   damageDefenses?: Array<{ kind: "resistance" | "immunity" | "vulnerability"; damageType: string }>;
   /** Extra damage on the caster's attack hits (Hunter's Mark, Hex, Divine Favor, Magic Weapon). */
   attackDamage?: {
     damageType: string;
-    dice?: { count: number; sides: number };
+    dice?: { count: number; sides: number; dicePerSlotAboveBase?: number };
     flat?: number;
     sourceKinds?: Array<"weapon" | "unarmed" | "wild-shape">;
+    /** Divine Smite: the rider is spent on the first hit. */
+    consumeOnUse?: boolean;
     /** The rider applies only when the caster attacks the creature this effect sits on. */
     againstTargetOnly?: boolean;
   };
@@ -107,6 +113,21 @@ export type SpellPrimaryMechanic =
       kind: "full-healing";
     }
   | {
+      /** C1-06: a dead or dying creature returns with 1 HP or full HP (Revivify, Raise Dead, Resurrection). */
+      kind: "revive";
+      hp: "one" | "full";
+    }
+  | {
+      /** C1-06: HP maximum and current HP rise together (Aid). */
+      kind: "maximum-hp";
+      amount: number;
+      amountPerSlotAboveBase?: number;
+    }
+  | {
+      /** C1-06: every spell effect on the targets ends (Dispel Magic). */
+      kind: "dispel";
+    }
+  | {
       kind: "power-word-kill";
       fallbackDamage:SpellDiceFormula;
     }
@@ -140,6 +161,8 @@ export interface SpellMechanicDefinition {
   effects?: SpellConditionEffectDefinition[];
   trackedEffects?: SpellTrackedEffectDefinition[];
   removesConditions?: ConditionId[];
+  /** C1-06: creatures the cast adds to the scene on the caster's side (Animate Dead, Create Undead). */
+  summons?: { monsterId: string; count: number; countPerSlotAboveBase?: number };
   unsupportedInteractions?: string[];
   executionScope?: string;
   components?:SpellComponentRequirements;
@@ -443,12 +466,12 @@ function applyTrackedEffectOperations(
           sourceId:definition.spellId,
           sourceActorId:request.actorId,
           targetId:target.id,
-          kind:effect.modifier||effect.armorClass||effect.attackDamage?"modifier":"marker",
+          kind:effect.modifier||effect.armorClass||effect.attackDamage||effect.retaliation||effect.preventsDeath?"modifier":"marker",
           tags:["spell",definition.spellId,"tracked-effect",...(effect.damageDefenses??[]).map((defense)=>`damage-${defense.kind}:${defense.damageType}`)],
           duration:resolveEffectDuration(effect.duration,request,target.id),
           termination:effect.termination,
           concentrationGroupId,
-          metadata:trackedEffectMetadata(effect),
+          metadata:trackedEffectMetadata(effect,target,request,definition),
         },
       });
     }
@@ -456,8 +479,9 @@ function applyTrackedEffectOperations(
   return operations;
 }
 
-function trackedEffectMetadata(effect:SpellTrackedEffectDefinition):Record<string,string|number|boolean> {
+function trackedEffectMetadata(effect:SpellTrackedEffectDefinition,target:SpellCastTarget,request:SpellCastRequest,definition:SpellMechanicDefinition):Record<string,string|number|boolean> {
   const metadata:Record<string,string|number|boolean>={summary:effect.summary};
+  const slotSteps=Math.max(0,(request.slotLevel??definition.baseLevel)-definition.baseLevel);
   const modifier=effect.modifier;
   if (modifier) {
     metadata.d20Family=modifier.family;
@@ -470,12 +494,20 @@ function trackedEffectMetadata(effect:SpellTrackedEffectDefinition):Record<strin
     if (modifier.bonus?.sign===-1) metadata.d20BonusSign=-1;
   }
   if (effect.armorClass?.bonus) metadata.acBonus=effect.armorClass.bonus;
-  if (effect.armorClass?.floor) metadata.acFloor=effect.armorClass.floor;
+  if (effect.armorClass?.floor) metadata.acFloor=effect.armorClass.floor+(effect.armorClass.addTargetSaveModifier?(target.saveModifiers?.[effect.armorClass.addTargetSaveModifier]??0):0);
+  if (effect.preventsDeath) metadata.deathWard=true;
+  if (effect.retaliation) {
+    metadata.retaliationDamageType=effect.retaliation.damageType;
+    metadata.retaliationDiceCount=effect.retaliation.dice.count;
+    metadata.retaliationDiceSides=effect.retaliation.dice.sides;
+    if (effect.retaliation.meleeOnly) metadata.retaliationMeleeOnly=true;
+  }
   const attack=effect.attackDamage;
   if (attack) {
     metadata.attackDamageType=attack.damageType;
     if (attack.flat) metadata.attackDamageFlat=attack.flat;
-    if (attack.dice) { metadata.attackDamageDiceCount=attack.dice.count; metadata.attackDamageDiceSides=attack.dice.sides; }
+    if (attack.dice) { metadata.attackDamageDiceCount=attack.dice.count+slotSteps*(attack.dice.dicePerSlotAboveBase??0); metadata.attackDamageDiceSides=attack.dice.sides; }
+    if (attack.consumeOnUse) metadata.attackDamageConsumeOnUse=true;
     if (attack.sourceKinds) metadata.attackDamageSourceKinds=attack.sourceKinds.join(",");
     if (attack.againstTargetOnly) metadata.attackDamageAgainstTargetOnly=true;
   }
@@ -708,6 +740,25 @@ export function compileSpellCast(
         id:`${request.id}:compound-damage:${target.id}:successful-save`,kind:"compound-damage",when:{operationId:saveId,field:"outcome",equals:"success"},targetId:target.id,
         components:components.map((component)=>({...component,amount:{...component.amount,multiplier:0.5,rounding:"floor" as const}})),creatureKind:target.creatureKind,
       });
+    }
+  } else if (definition.primary.kind==="revive") {
+    for (const target of request.targets) {
+      const life=inputState.combatants[target.id]?.life;
+      if (!life) throw new DomainEvaluationError(`revive target is not in the scene: ${target.id}`);
+      const amount=definition.primary.hp==="full"?Math.max(1,life.hp.maximum-life.hp.current):1;
+      operations.push({id:`${request.id}:revive:${target.id}`,kind:"healing",targetId:target.id,amount,revive:true});
+    }
+  } else if (definition.primary.kind==="maximum-hp") {
+    const amount=definition.primary.amount+Math.max(0,(request.slotLevel??definition.baseLevel)-definition.baseLevel)*(definition.primary.amountPerSlotAboveBase??0);
+    for (const target of request.targets) {
+      operations.push({id:`${request.id}:maximum-hp:${target.id}`,kind:"maximum-hp",targetId:target.id,amount});
+      operations.push({id:`${request.id}:maximum-hp-healing:${target.id}`,kind:"healing",targetId:target.id,amount});
+    }
+  } else if (definition.primary.kind==="dispel") {
+    for (const target of request.targets) {
+      for (const effect of inputState.effects.filter((entry)=>entry.targetId===target.id&&entry.tags.includes("spell"))) {
+        operations.push({id:`${request.id}:dispel:${target.id}:${effect.id}`,kind:"remove-effect",effectId:effect.id});
+      }
     }
   } else if (definition.primary.kind === "healing") {
     if (!request.targets.length) throw new DomainEvaluationError("healing spell requires at least one target");
