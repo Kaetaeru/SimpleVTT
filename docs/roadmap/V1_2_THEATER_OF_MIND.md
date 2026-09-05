@@ -27,3 +27,4 @@ changes, exact merge SHA in the evidence table.
 
 | Gate | SHA | Evidence |
 | --- | --- | --- |
+| `T1-01` | `1230d4fd8001482fe678cb00be9809705f7b4cd1` (PR #358) | 329 SRD 5.2.1 stat blocks parsed into `src/generated/monsterCatalog.generated.json` (409 attacks, 129 save actions, 180 multiattack, 49 spellcasters, 30 legendary; 12 residual parser warnings listed in the file); builtin catalog emits 329 `combatant` entries; `tests/ui/srdMonsterCatalog.test.ts` (all parse, search, ogre/goblin boss/adult red dragon projections, instantiate with rolled initiative, dragon breath resolving through the real save adapter); Rules pane renders stat blocks; Encounter pane adds monsters by name/type/CR with a count. Known: several translated numbers differ from the English SRD (goblin warrior `+1`, adult red dragon rend `+12`); corrections belong upstream. |

@@ -4,6 +4,8 @@ import type { SceneEntity } from "./app/contracts";
 import "./app/campaignDmLibraryOrganizationRuntimeAdapter";
 import { mockAdapter } from "./app/mockAdapter";
 import { SRD_MONSTER_COUNT, searchSrdMonsters } from "./app/srdMonsterCatalog";
+import { monsterTimingBadges } from "./app/monsterTimingPresentation";
+import "./app/srdMonsterTimingRuntimeAdapter";
 import "./session-dm-tools.css";
 
 function entitySummary(entity: SceneEntity) {
@@ -103,6 +105,27 @@ export function SessionDmEncounterPane({ onClose }: { onClose(): void }) {
   const addLibraryNpc=async(entryId:string)=>{if(pendingKey||!campaignId)return;setPendingKey(`library:${entryId}`);try{await instantiateCampaignDmLibraryNpc(campaignId,entryId);}finally{setPendingKey(null);}};
   const addLibraryPreset=async(entryId:string)=>{if(pendingKey||!campaignId)return;setPendingKey(`preset:${entryId}`);try{await mockAdapter.instantiateCampaignDmLibraryPcPreset(campaignId,entryId);await refresh();}finally{setPendingKey(null);}};
 
+  const useLegendaryResistance = async (combatantId: string) => {
+    if (pendingKey) return;
+    setPendingKey(`lr:${combatantId}`);
+    try {
+      await mockAdapter.useLegendaryResistance(combatantId);
+      await refresh();
+    } finally {
+      setPendingKey(null);
+    }
+  };
+  const resetTiming = async (combatantId: string) => {
+    if (pendingKey) return;
+    setPendingKey(`timing:${combatantId}`);
+    try {
+      await mockAdapter.resetMonsterTiming(combatantId);
+      await refresh();
+    } finally {
+      setPendingKey(null);
+    }
+  };
+
   const remove = async (combatantId: string) => {
     if (pendingKey || removalBlocked) return;
     setPendingKey(`remove:${combatantId}`);
@@ -159,10 +182,22 @@ export function SessionDmEncounterPane({ onClose }: { onClose(): void }) {
     <section className="session-dm-section">
       <div className="session-dm-section-title"><strong>현재 Combatant</strong><span>{removalBlocked ? "이니셔티브 또는 진행 중 판정을 마치면 제거할 수 있습니다." : "Freeform에서는 안전하게 Encounter에서 제거할 수 있습니다."}</span></div>
       {combatants.length ? <div className="session-dm-combatant-list">
-        {combatants.map((combatant) => <div key={combatant.id}>
-          <div><strong>{combatant.name}</strong><small>{entitySummary(combatant)}</small></div>
-          <button type="button" disabled={Boolean(pendingKey || removalBlocked)} onClick={() => void remove(combatant.id)}>{pendingKey === `remove:${combatant.id}` ? "제거 중…" : "제거"}</button>
-        </div>)}
+        {combatants.map((combatant) => {
+          const timing = combatant.runtimeMonsterTiming;
+          const badges = monsterTimingBadges(combatant);
+          return <div key={combatant.id} className={timing ? "has-timing" : ""}>
+            <div>
+              <strong>{combatant.name}</strong>
+              <small>{entitySummary(combatant)}</small>
+              {badges.length > 0 && <span className="session-dm-timing-badges">{badges.map((badge) => <em key={badge.key} title={badge.title}>{badge.text}</em>)}</span>}
+            </div>
+            <span className="session-dm-combatant-actions">
+              {timing?.legendaryResistance && timing.legendaryResistance.remaining > 0 && <button type="button" disabled={Boolean(pendingKey)} onClick={() => void useLegendaryResistance(combatant.id)} title="실패한 내성 굴림을 성공으로 바꿉니다. 판정에는 강제 성공을 적용하세요.">{pendingKey === `lr:${combatant.id}` ? "…" : `전설 저항 ${timing.legendaryResistance.remaining}`}</button>}
+              {timing && <button type="button" disabled={Boolean(pendingKey)} onClick={() => void resetTiming(combatant.id)} title="재충전, 사용 횟수, 전설 행동을 모두 되돌립니다.">{pendingKey === `timing:${combatant.id}` ? "…" : "재정비"}</button>}
+              <button type="button" disabled={Boolean(pendingKey || removalBlocked)} onClick={() => void remove(combatant.id)}>{pendingKey === `remove:${combatant.id}` ? "제거 중…" : "제거"}</button>
+            </span>
+          </div>;
+        })}
       </div> : <p className="session-dm-empty">현재 Combatant가 없습니다. 0 Combatant도 정상적인 활성 세션 상태입니다.</p>}
     </section>
   </aside>;

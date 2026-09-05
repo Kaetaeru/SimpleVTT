@@ -1,6 +1,6 @@
 import rawCatalog from "../generated/monsterCatalog.generated.json";
 import type { AbilityKey, AbilityScores, CombatantDefinitionVm } from "./contracts";
-import type { CombatantRuntimeAttackVm, CombatantRuntimeSaveActionVm, CombatantRuntimeStatsVm } from "./combatantRuntimeContracts";
+import type { CombatantRuntimeAttackVm, CombatantRuntimeEconomy, CombatantRuntimeSaveActionVm, CombatantRuntimeStatsVm, CombatantRuntimeTextActionVm, CombatantRuntimeTimingVm } from "./combatantRuntimeContracts";
 
 /**
  * SRD 5.2.1 monster catalog (V1.2 T1-01): 329 stat blocks parsed by `scripts/generate-monster-catalog.mjs` from the
@@ -12,6 +12,7 @@ export interface SrdMonsterDamageComponent { average:number; dice?:string; count
 export interface SrdMonsterEntry {
   name:string; nameEn:string; text:string; kind:"text"|"attack"|"save"|"multiattack"|"spellcasting";
   costText?:string; legendaryCost?:number;
+  timing?:{ recharge?:{ min:number; sides:number }; usesPerDay?:number; usesPerRound?:number };
   attack?:{ mode:"melee"|"ranged"|"melee-or-ranged"; bonus:number; reachFeet?:number; rangeFeet?:number; longRangeFeet?:number; damage:SrdMonsterDamageComponent[]; hitText:string; riderConditions:string[] };
   save?:{ ability:AbilityKey; dc:number; areaText:string; areaKind:"cone"|"line"|"sphere"|"area"|"single"; areaFeet?:number; failDamage:SrdMonsterDamageComponent[]; failText:string; successDamage:"half"|"none"|"other"; successText:string; failConditions:string[] };
   multiattack?:{ count:number; text:string; parsed:boolean };
@@ -90,13 +91,27 @@ export function srdMonsterAbilityRows(monster:Pick<SrdMonster,"abilities"|"saves
   });
 }
 
-function attackSpec(monster:SrdMonster,entry:SrdMonsterEntry,index:number,attacksPerAction:number|undefined,economy:"행동"|"추가 행동"):CombatantRuntimeAttackVm {
+const specId=(entry:SrdMonsterEntry,index:number,fallback:string)=>`${index}-${entry.nameEn.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"")||fallback}`;
+
+function timingSpec(entry:SrdMonsterEntry,legendary:boolean):CombatantRuntimeTimingVm|undefined {
+  const timing:CombatantRuntimeTimingVm={ ...(entry.timing ?? {}) };
+  if (legendary) timing.legendaryCost=entry.legendaryCost ?? 1;
+  return Object.keys(timing).length ? timing : undefined;
+}
+
+function textSpec(entry:SrdMonsterEntry,index:number,economy:CombatantRuntimeEconomy,legendary:boolean):CombatantRuntimeTextActionVm {
+  const timing=timingSpec(entry,legendary);
+  return { id:specId(entry,index,"action"), name:entry.name, text:entry.text, economy, ...(timing?{ timing }:{}) };
+}
+
+function attackSpec(monster:SrdMonster,entry:SrdMonsterEntry,index:number,attacksPerAction:number|undefined,economy:CombatantRuntimeEconomy,legendary=false):CombatantRuntimeAttackVm {
   const attack=entry.attack!;
   const primary=attack.damage[0]??{ average:0, dice:undefined, count:0, sides:0, flat:0, type:"bludgeoning" };
   const dice=primary.dice??`0d${Math.max(2,primary.sides||2)}`;
   const ranged=attack.mode==="ranged";
+  const timing=timingSpec(entry,legendary);
   return {
-    id:`${index}-${entry.nameEn.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"")||"attack"}`,
+    id:specId(entry,index,"attack"),
     name:entry.name,
     category:"basic",
     sourceKind:"weapon",
@@ -109,15 +124,17 @@ function attackSpec(monster:SrdMonster,entry:SrdMonsterEntry,index:number,attack
     ...(attacksPerAction&&attacksPerAction>1?{ attacksPerAction }:{}),
     ...(economy!=="행동"?{ economy }:{}),
     ...(attack.riderConditions.length?{ riderConditionIds:attack.riderConditions }:{}),
+    ...(timing?{ timing }:{}),
     hitText:attack.hitText,
   };
 }
 
-function saveSpec(monster:SrdMonster,entry:SrdMonsterEntry,index:number,economy:"행동"|"추가 행동"):CombatantRuntimeSaveActionVm {
+function saveSpec(monster:SrdMonster,entry:SrdMonsterEntry,index:number,economy:CombatantRuntimeEconomy,legendary=false):CombatantRuntimeSaveActionVm {
   const save=entry.save!;
   const maxTargets=save.areaKind==="single"?1:save.areaKind==="cone"||save.areaKind==="line"?8:save.areaKind==="sphere"||save.areaKind==="area"?10:1;
+  const timing=timingSpec(entry,legendary);
   return {
-    id:`${index}-${entry.nameEn.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"")||"save"}`,
+    id:specId(entry,index,"save"),
     name:entry.name,
     saveAbility:save.ability,
     saveDc:save.dc,
@@ -129,6 +146,7 @@ function saveSpec(monster:SrdMonster,entry:SrdMonsterEntry,index:number,economy:
     successText:save.successText,
     ...(save.failConditions.length?{ failConditionIds:save.failConditions }:{}),
     ...(economy!=="행동"?{ economy }:{}),
+    ...(timing?{ timing }:{}),
   };
 }
 
@@ -136,9 +154,15 @@ function saveSpec(monster:SrdMonster,entry:SrdMonsterEntry,index:number,economy:
 export function srdMonsterCombatantDefinition(monster:SrdMonster):CombatantDefinitionVm {
   const multiattack=monster.actions.find((entry)=>entry.kind==="multiattack")?.multiattack;
   const attacksPerAction=multiattack?multiattack.count:undefined;
-  const actionEntries=[...monster.actions.map((entry)=>({ entry, economy:"행동" as const })),...monster.bonusActions.map((entry)=>({ entry, economy:"추가 행동" as const }))];
-  const runtimeActions=actionEntries.filter(({entry})=>entry.kind==="attack").map(({entry,economy},index)=>attackSpec(monster,entry,index,economy==="행동"?attacksPerAction:undefined,economy));
-  const runtimeSaveActions=actionEntries.filter(({entry})=>entry.kind==="save").map(({entry,economy},index)=>saveSpec(monster,entry,index,economy));
+  const actionEntries:Array<{ entry:SrdMonsterEntry; economy:CombatantRuntimeEconomy; legendary:boolean }>=[
+    ...monster.actions.map((entry)=>({ entry, economy:"행동" as const, legendary:false })),
+    ...monster.bonusActions.map((entry)=>({ entry, economy:"추가 행동" as const, legendary:false })),
+    // Legendary actions cost no action economy of their own; the per-round pool is the constraint (T1-02).
+    ...monster.legendaryActions.map((entry)=>({ entry, economy:"없음" as const, legendary:true })),
+  ];
+  const runtimeActions=actionEntries.flatMap(({entry,economy,legendary},index)=>entry.kind==="attack" ? [attackSpec(monster,entry,index,economy==="행동"?attacksPerAction:undefined,economy,legendary)] : []);
+  const runtimeSaveActions=actionEntries.flatMap(({entry,economy,legendary},index)=>entry.kind==="save" ? [saveSpec(monster,entry,index,economy,legendary)] : []);
+  const runtimeTextActions=actionEntries.flatMap(({entry,economy,legendary},index)=>entry.kind==="text" ? [textSpec(entry,index,economy,legendary)] : []);
   const savingThrowProficiencies=(Object.keys(monster.abilities) as AbilityKey[]).filter((key)=>monster.saves[key]!==undefined&&monster.saves[key]!==abilityModifier(monster.abilities[key]));
   const stats:CombatantRuntimeStatsVm={
     creatureType:monster.creatureType,
@@ -156,13 +180,14 @@ export function srdMonsterCombatantDefinition(monster:SrdMonster):CombatantDefin
     nameEn:monster.nameEn,
     ac:monster.ac,
     maxHp:monster.hp,
-    actions:[...runtimeActions.map((action)=>action.name),...runtimeSaveActions.map((action)=>action.name)],
+    actions:[...runtimeActions.map((action)=>action.name),...runtimeSaveActions.map((action)=>action.name),...runtimeTextActions.map((action)=>action.name)],
     statusImmunities:monster.conditionImmunities.map(conditionLabelKo),
     source:"SRD 5.2.1",
     version:"5.2.1",
     runtimeStats:stats,
     runtimeActions,
     runtimeSaveActions,
+    runtimeTextActions,
     runtimeMonster:{
       catalogId:monster.id,
       cr:monster.cr, crText:monster.crText, xp:monster.xp,

@@ -1,7 +1,7 @@
 import "./phase09RealNoRollDamageAdapter";
 import "./combatantRuntimeContracts";
 import type { ActionVm, AppSnapshot, CombatantDefinitionVm, CombatantImportPreview, DamageSpecVm, SceneEntity, SceneVm } from "./contracts";
-import type { CombatantRuntimeAttackVm, CombatantRuntimeDamageVm, CombatantRuntimeSaveActionVm } from "./combatantRuntimeContracts";
+import type { CombatantRuntimeAttackVm, CombatantRuntimeDamageVm, CombatantRuntimeSaveActionVm, CombatantRuntimeTextActionVm } from "./combatantRuntimeContracts";
 import { MockAdapter } from "./mockAdapter";
 import { diceShape, parseRuntimeActions, parseRuntimeStats } from "./combatantRuntimeDefinitionParse";
 import { abilityLabelKo, isSrdMonsterId, srdMonsterById, srdMonsterCombatantDefinition } from "./srdMonsterCatalog";
@@ -108,6 +108,28 @@ function saveActionVm(definition:CombatantDefinitionVm,actorId:string,spec:Comba
   };
 }
 
+function textActionVm(definition:CombatantDefinitionVm,actorId:string,spec:CombatantRuntimeTextActionVm):ActionVm {
+  const firstSentence=spec.text.replace(/\s+/g," ").split(/(?<=다\.)\s/)[0] ?? spec.text;
+  const summary=firstSentence.length>72 ? `${firstSentence.slice(0,70)}…` : firstSentence;
+  return {
+    id:`action.${actorId}.${spec.id}`,
+    actorId,
+    name:spec.name,
+    category:"basic",
+    target:"none",
+    economy:spec.economy,
+    resolutionKind:"no-roll",
+    summary,
+    available:true,
+    eligibleTargetIds:[],
+    details:[
+      { label:"출처", value:definition.source, source:`Combatant Definition ${definition.id}` },
+      { label:"효과", value:spec.text, source:"stat block" },
+      ...(spec.economy==="없음" ? [{ label:"비용", value:"전설 행동 (다른 크리처의 턴이 끝날 때)", source:"stat block" }] : []),
+    ],
+  };
+}
+
 function matchesDefinition(entityId:string,definitionId:string) {
   return entityId===definitionId
     || entityId.startsWith(`${definitionId}.`)
@@ -127,13 +149,15 @@ function runtimeActionsFor(definition:CombatantDefinitionVm) {
 function runtimeActionVms(definition:CombatantDefinitionVm,actorId:string,existing:ActionVm[]=[],preserveLegacyIds=false):ActionVm[]|undefined {
   const attacks=runtimeActionsFor(definition);
   const saves=definition.runtimeSaveActions ?? [];
-  if (!attacks && !saves.length) return undefined;
+  const texts=definition.runtimeTextActions ?? [];
+  if (!attacks && !saves.length && !texts.length) return undefined;
   return [
     ...(attacks ?? []).map((spec)=>{
       const existingId=preserveLegacyIds ? existing.find((action)=>action.name===spec.name)?.id : undefined;
       return actionVm(definition,actorId,spec,existingId);
     }),
     ...saves.map((spec)=>saveActionVm(definition,actorId,spec)),
+    ...texts.map((spec)=>textActionVm(definition,actorId,spec)),
   ];
 }
 
@@ -142,6 +166,7 @@ function sameRuntimeAction(left:ActionVm,right:ActionVm) {
     && left.actorId===right.actorId
     && left.name===right.name
     && left.resolutionKind===right.resolutionKind
+    && left.economy===right.economy
     && left.attackBonus===right.attackBonus
     && left.saveDc===right.saveDc
     && left.attacksPerAction===right.attacksPerAction
@@ -154,7 +179,7 @@ function sameRuntimeAction(left:ActionVm,right:ActionVm) {
     && left.runtimeAttack?.damageSource===right.runtimeAttack?.damageSource;
 }
 
-function materializeEncounterRuntimeActions(internal:CombatantRuntimeAdapterState,entity?:SceneEntity) {
+export function materializeEncounterRuntimeActions(internal:CombatantRuntimeAdapterState,entity?:SceneEntity) {
   const entities=entity ? [entity] : internal.scene.entities.filter((entry)=>entry.kind==="combatant");
   for (const combatant of entities) {
     const definition=definitionForEntity(internal.combatantDefinitions,combatant.id);
