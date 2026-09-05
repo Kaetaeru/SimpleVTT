@@ -296,3 +296,8 @@ button.session-actor-card:disabled { cursor: default; opacity: 1; }
 .session-actor-group-members { display: flex; gap: 6px; padding-left: 6px; border-left: 2px solid color-mix(in srgb, var(--accent) 45%, var(--line)); }
 .session-actor-group.expanded { flex-direction: row; align-items: stretch; }
 .session-actor-group.expanded .session-actor-group-card { flex: 0 0 132px; min-width: 120px; }
+
+.session-actor-card-statuses > span.movement {
+  border-style: dashed;
+  color: var(--muted);
+}

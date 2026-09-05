@@ -10,6 +10,7 @@ import type { TargetingAnchor } from "./SessionTargetingCursor";
 import { ActionIcon } from "./ActionIcon";
 import { actionIconDescriptor } from "./app/actionIconProjection";
 import { isReadyPreparationAction, isReadyTriggerAction, READY_MOVEMENT_ACTION_ID } from "./app/standardActionReadyState";
+import "./app/movementDeclarationRuntimeAdapter";
 import { visibleCharacterResources } from "./app/characterResourcePresentation";
 import { buildLayOnHandsExecutionActionId, layOnHandsMaximumHealing, type LayOnHandsActionOption } from "./app/paladinLayOnHandsRuntimeContracts";
 import "./session-action-dock.css";
@@ -61,7 +62,9 @@ export function SessionActionDock({actorId,suspended,targeting,onBeginTargeting,
   actorId:string|null; suspended:boolean; targeting:SessionActionTargeting|null;
   onBeginTargeting(action:ActionVm,anchor:TargetingAnchor,executionActionId?:string):void; onCancelTargeting():void; onExecuteTargeting():void;
 }) {
-  const {snapshot,resolveAction,configureReadyAction,endTurn}=useSimpleVtt();
+  const {snapshot,resolveAction,configureReadyAction,endTurn,refresh}=useSimpleVtt();
+  const [approachOpen,setApproachOpen]=useState(false);
+  const [movementPending,setMovementPending]=useState(false);
   const {setNextResolutionVisibility}=useSimpleVtt();
   const [page,setPage]=useState<HotbarPage>("mixed");
   const [rows,setRows]=useState<SessionHotbarRows>(()=>typeof window==="undefined"?DEFAULT_SESSION_HOTBAR_ROWS:readSessionHotbarRows());
@@ -174,11 +177,27 @@ export function SessionActionDock({actorId,suspended,targeting,onBeginTargeting,
     const unavailable=!action.available; const selected=action.id===targeting?.action.id; const mainHand=isMainHand(action);
     return <button type="button" role="listitem" key={action.id} className={`session-hotbar-slot ${selected?"selected":""} ${unavailable?"unavailable":""} ${mainHand?"main-hand":""}`} aria-label={`${action.name} · ${action.summary}${mainHand?" · 장착 주무기":""}`} aria-pressed={selected} aria-disabled={unavailable||Boolean(pendingActionId)||suspended||targeting?.pending} onPointerEnter={(event)=>showTooltip(action,event.currentTarget)} onPointerLeave={()=>setTooltip(null)} onFocus={(event)=>showTooltip(action,event.currentTarget)} onBlur={()=>setTooltip(null)} onClick={(event)=>chooseAction(action,event.currentTarget)}><ActionIcon action={action}/>{mainHand&&<span className="session-hotbar-main-hand">M</span>}<span className="session-hotbar-cost">{action.itemCost?"I":action.economy.slice(0,1)}</span></button>;
   };
+  // Movement is declared for the creature whose turn it is: the DM declares for the current actor, a player for their own character on their turn.
+  const movementActorId=snapshot.sessionMode==="initiative"&&snapshot.role==="dm"?snapshot.scene.currentActorId:actorId;
+  const movementActor=movementActorId?snapshot.scene.entities.find((entity)=>entity.id===movementActorId):undefined;
+  const movementDeclaration=movementActor?.movementDeclaration;
+  const movementDisabled=!movementActor||suspended||movementPending||Boolean(snapshot.resolution)||Boolean(snapshot.scene.pendingWithdrawal)||(snapshot.sessionMode==="initiative"&&snapshot.role!=="dm"&&snapshot.scene.currentActorId!==actorId);
+  const approachTargets=movementActor?snapshot.scene.entities.filter((entity)=>entity.id!==movementActor.id&&entity.hp>0&&entity.side!==movementActor.side):[];
+  const declareMovement=async(kind:"approach"|"withdraw"|"stay",targetId?:string)=>{
+    if(!movementActor||movementDisabled)return;
+    setApproachOpen(false);setMovementPending(true);
+    try{await mockAdapter.declareMovement(movementActor.id,kind,targetId);await refresh();}finally{setMovementPending(false);}
+  };
   const menuActionButton=(action:ActionVm)=><button type="button" key={action.id} disabled={!action.available||Boolean(pendingActionId)||suspended||targeting?.pending} onClick={(event)=>{setActionMenu(null);setStandardSkillPicker(null);chooseAction(action,event.currentTarget);}}><strong>{action.name}</strong><small>{action.summary}</small></button>;
 
   return <section className="session-command-center session-reference-command-center" data-action-dock-state={targeting?"target":"hotbar"}>
     <div className="session-command-top">
-      <div className="session-command-economy" aria-label="행동 자원">{snapshot.sessionMode==="initiative"&&economy?<><span data-available={economy.action||Boolean(economy.extraActions?.length)||Boolean(economy.extraAttacks?.length)}><i/>행동{economy.extraActions?.length?` +${economy.extraActions.length}`:""}{economy.extraAttacks?.length?` · 추가 공격 ${economy.extraAttacks.length}`:""}</span><span data-available={economy.bonusAction}><i/>보너스</span><span data-available={economy.reaction}><i/>반응</span><span><i/>이동 {economy.movement}/{economy.movementMax}</span></>:<span className="freeform">자유 진행 · 턴 자원 없음</span>}</div>
+      <div className="session-command-economy" aria-label="행동 자원">{snapshot.sessionMode==="initiative"&&economy?<><span data-available={economy.action||Boolean(economy.extraActions?.length)||Boolean(economy.extraAttacks?.length)}><i/>행동{economy.extraActions?.length?` +${economy.extraActions.length}`:""}{economy.extraAttacks?.length?` · 추가 공격 ${economy.extraAttacks.length}`:""}</span><span data-available={economy.bonusAction}><i/>보너스</span><span data-available={economy.reaction}><i/>반응</span><span className="session-movement-declare" data-movement={movementDeclaration?.kind??"none"}><i/>이동 {economy.movementMax}피트{movementActor&&movementActor.id!==actorId?` · ${movementActor.name}`:""}
+        <button type="button" disabled={movementDisabled} aria-pressed={movementDeclaration?.kind==="approach"} onClick={()=>setApproachOpen((open)=>!open)} title="대상에게 접근합니다. 위치는 기록하지 않습니다.">접근</button>
+        <button type="button" disabled={movementDisabled} aria-pressed={movementDeclaration?.kind==="withdraw"} onClick={()=>void declareMovement("withdraw")} title="물러납니다. 교전 중인 상대가 있으면 DM에게 기회공격 여부를 묻습니다.">물러남</button>
+        <button type="button" disabled={movementDisabled} aria-pressed={movementDeclaration?.kind==="stay"} onClick={()=>void declareMovement("stay")} title="자리를 지킵니다.">그대로</button>
+        {approachOpen&&<span className="session-movement-approach-menu" role="menu" aria-label="접근 대상">{approachTargets.length?approachTargets.map((target)=><button type="button" role="menuitem" key={target.id} disabled={movementDisabled} onClick={()=>void declareMovement("approach",target.id)}>{target.name}</button>):<em>접근할 상대가 없습니다.</em>}</span>}
+      </span></>:<span className="freeform">자유 진행 · 턴 자원 없음</span>}</div>
       <div className="session-command-resources" aria-label="Resource Rail">{resources.length?resources.map((resource)=><span key={resource.id}><b>{resource.label}</b><strong>{resource.current}/{resource.max}</strong></span>):<span className="empty"><b>주요 자원</b><strong>표시할 자원 없음</strong></span>}</div>
     </div>
     <div className="session-command-body">

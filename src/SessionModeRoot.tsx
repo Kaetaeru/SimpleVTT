@@ -11,6 +11,7 @@ import { CharacterSheetWorkspace } from "./CharacterSheetPlayScreen";
 import { SessionActionDock, type SessionActionTargeting } from "./SessionActionDock";
 import { SessionActorBoard } from "./SessionActorBoards";
 import { SessionTargetingCursor, type TargetingAnchor } from "./SessionTargetingCursor";
+import { SessionWithdrawPrompt } from "./SessionWithdrawPrompt";
 import { SessionDmActorPane, SessionDmEncounterPane, SessionParticipantsPane, SessionSharePane } from "./SessionDmTools";
 import {
   dismissCurrentSessionImageHandout,
@@ -394,6 +395,7 @@ export function SessionModeRoot({ onOpenProduct }: { onOpenProduct(): void }) {
         <SessionActorBoard position="lower" role={role} targetingAction={targetingAction} selectedTargetIds={selectedTargetIds} targetingPending={targetingPending} onTarget={chooseActorTarget} onTargetMany={chooseActorTargets} />
         {libraryDropActive&&<div className="session-dm-library-drop-guide" aria-hidden="true"><div><strong>{libraryDropPending?"적용 중…":"라이브러리 항목 놓기"}</strong><span>Actor 소환 · 이미지 공개 · Character 아이템 지급</span></div></div>}
         {libraryDropFeedback&&<div className={`session-dm-library-drop-feedback ${libraryDropFeedback.kind}`} role="status">{libraryDropFeedback.message}</div>}
+        <SessionWithdrawPrompt role={role} />
       </div>
 
       {(activeUtility||quickOpen) && <aside id="session-quick-panel" className="session-reference-utility-host" aria-label={quickOpen?"세션 빠른 메뉴 패널":"Contextual Session Utility"}>{quickOpen?<SessionQuickPalette role={role} onClose={closeQuick} onChoose={chooseQuick}/>:utilityPane}</aside>}
