@@ -56,7 +56,7 @@ const TRAIT_KO: Record<string, string> = {
 };
 const TOOL_KO: Record<string, string> = { "calligrapher-supplies":"서예 도구", "thieves-tools":"도둑 도구", "gaming-set":"게임 도구 (택 1)", "artisans-tools":"장인 도구 (택 1)", "musical-instrument":"악기 (택 1)" };
 const traitKo = (value: string) => { const [id, level] = value.split("@"); const name = TRAIT_KO[id] ?? pretty(id); return level ? `${name} (${level}레벨)` : name; };
-const featKo = (id: string) => { const entry = featEntries.find((feat) => feat.id === id) ?? featEntries.find((feat) => id.startsWith(feat.id)); const name = entry ? ko(entry) : pretty(id); const variant = entry && id !== entry.id ? id.slice(entry.id.length + 1) : ""; return variant ? `${name} (${pretty(variant)})` : name; };
+const featKo = (id: string) => { const entry = featEntries.find((feat) => feat.id === id) ?? featEntries.find((feat) => id.startsWith(feat.id)); const name = entry ? ko(entry) : pretty(id); const variant = entry && id !== entry.id ? id.slice(entry.id.length + 1) : ""; const VARIANT_KO: Record<string, string> = { cleric:"클레릭", wizard:"위저드", druid:"드루이드" }; return variant ? `${name} (${VARIANT_KO[variant] ?? pretty(variant)})` : name; };
 const ABILITY: Record<AbilityKey, string> = { str: "근력", dex: "민첩", con: "건강", int: "지능", wis: "지혜", cha: "매력" };
 export const SKILL_LABELS: Record<string, string> = { "acrobatics":"곡예", "animal-handling":"동물 조련", "arcana":"비전", "athletics":"운동", "deception":"기만", "history":"역사", "insight":"통찰", "intimidation":"위협", "investigation":"조사", "medicine":"의학", "nature":"자연", "perception":"지각", "performance":"공연", "persuasion":"설득", "religion":"종교", "sleight-of-hand":"손재주", "stealth":"은신", "survival":"생존" };
 const ALL_SKILLS = Object.values(SKILL_LABELS);
