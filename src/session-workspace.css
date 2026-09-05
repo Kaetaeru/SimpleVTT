@@ -156,3 +156,13 @@
 .session-reference-play-root .session-actor-board-label span { font-size: 0; }
 .session-reference-play-root .session-actor-board-label span::before { content: "상대"; font-size: var(--text-xs); }
 .session-reference-play-root .session-actor-board-lower .session-actor-board-label span::before { content: "아군"; }
+
+/* U1-05: the chrome never wraps its tabs; it scrolls sideways on narrow tables */
+.session-reference-play-chrome { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+.session-reference-play-chrome > button,
+.session-reference-play-chrome .session-player-handout-rail-button,
+.session-reference-play-chrome .session-reference-system-tab,
+.session-reference-play-chrome .session-reference-campaign-clock { white-space: nowrap; flex: 0 0 auto; }
+.session-reference-play-title { min-width: 0; flex: 0 1 auto; }
+.session-reference-play-title strong { max-width: 220px; }
+@media (max-width: 1100px) { .session-reference-play-title span { display: none; } .session-reference-play-title strong { max-width: 140px; } }
