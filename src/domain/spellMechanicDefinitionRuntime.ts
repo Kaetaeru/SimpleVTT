@@ -36,11 +36,12 @@ const TURN_BOUNDARIES=new Set(["start","end"]);
 const REST_KINDS=new Set(["short","long","either"]);
 const PRIMARY_KINDS=new Set([
   "attack-damage","multi-attack-damage","save-damage","save-compound-damage","healing","temporary-hp","full-healing",
-  "power-word-kill","save-effect","automatic-projectiles","tracked-effect",
+  "power-word-kill","save-effect","automatic-projectiles","tracked-effect","revive","maximum-hp","dispel",
 ]);
+const REVIVE_HP=new Set(["one","full"]);
 const DEFINITION_FIELDS=new Set([
   "spellId","baseLevel","runtimeSupport","castingEconomy","targeting","primary","concentration","effects","trackedEffects",
-  "removesConditions","unsupportedInteractions","executionScope","components","castingDurationSeconds","ritual","castingInterruption",
+  "removesConditions","summons","unsupportedInteractions","executionScope","components","castingDurationSeconds","ritual","castingInterruption",
 ]);
 
 function isObject(value:unknown):value is Obj {
@@ -181,6 +182,15 @@ function parsePrimary(value:unknown,label:string):SpellPrimaryMechanic {
     case "full-healing":
       onlyKeys(raw,label,["kind"]);
       return {kind};
+    case "dispel":
+      onlyKeys(raw,label,["kind"]);
+      return {kind};
+    case "revive":
+      onlyKeys(raw,label,["kind","hp"]);
+      return {kind,hp:oneOf<"one"|"full">(raw.hp,`${label}.hp`,REVIVE_HP)};
+    case "maximum-hp":
+      onlyKeys(raw,label,["kind","amount","amountPerSlotAboveBase"]);
+      return {kind,amount:integer(raw.amount,`${label}.amount`,1),...(raw.amountPerSlotAboveBase!==undefined?{amountPerSlotAboveBase:integer(raw.amountPerSlotAboveBase,`${label}.amountPerSlotAboveBase`,1)}:{})};
     case "power-word-kill":
       onlyKeys(raw,label,["kind","fallbackDamage"]);
       return {kind,fallbackDamage:parseSpellDiceFormula(raw.fallbackDamage,`${label}.fallbackDamage`)};
@@ -226,7 +236,7 @@ function parseConditionEffect(value:unknown,label:string):SpellConditionEffectDe
 
 function parseTrackedEffect(value:unknown,label:string):SpellTrackedEffectDefinition {
   const raw=object(value,label);
-  onlyKeys(raw,label,["summary","trigger","duration","termination","modifier","armorClass","damageDefenses","attackDamage"]);
+  onlyKeys(raw,label,["summary","trigger","duration","termination","modifier","armorClass","damageDefenses","attackDamage","preventsDeath","retaliation"]);
   const termination=parseTermination(raw.termination,`${label}.termination`);
   const modifier=raw.modifier===undefined?undefined:(()=>{
     const entry=object(raw.modifier,`${label}.modifier`);
@@ -243,11 +253,13 @@ function parseTrackedEffect(value:unknown,label:string):SpellTrackedEffectDefini
   })();
   const armorClass=raw.armorClass===undefined?undefined:(()=>{
     const entry=object(raw.armorClass,`${label}.armorClass`);
-    onlyKeys(entry,`${label}.armorClass`,["bonus","floor"]);
+    onlyKeys(entry,`${label}.armorClass`,["bonus","floor","addTargetSaveModifier"]);
     if(entry.bonus===undefined&&entry.floor===undefined)throw new DomainEvaluationError(`${label}.armorClass needs a bonus or a floor`);
+    if(entry.addTargetSaveModifier!==undefined&&entry.floor===undefined)throw new DomainEvaluationError(`${label}.armorClass.addTargetSaveModifier needs a floor`);
     return {
       ...(entry.bonus!==undefined?{bonus:integer(entry.bonus,`${label}.armorClass.bonus`,1)}:{}),
       ...(entry.floor!==undefined?{floor:integer(entry.floor,`${label}.armorClass.floor`,1)}:{}),
+      ...(entry.addTargetSaveModifier!==undefined?{addTargetSaveModifier:oneOf<AbilityKey>(entry.addTargetSaveModifier,`${label}.armorClass.addTargetSaveModifier`,ABILITIES)}:{}),
     };
   })();
   const damageDefenses=raw.damageDefenses===undefined?undefined:(()=>{
@@ -260,7 +272,7 @@ function parseTrackedEffect(value:unknown,label:string):SpellTrackedEffectDefini
   })();
   const attackDamage=raw.attackDamage===undefined?undefined:(()=>{
     const entry=object(raw.attackDamage,`${label}.attackDamage`);
-    onlyKeys(entry,`${label}.attackDamage`,["damageType","dice","flat","sourceKinds","againstTargetOnly"]);
+    onlyKeys(entry,`${label}.attackDamage`,["damageType","dice","flat","sourceKinds","againstTargetOnly","consumeOnUse"]);
     if(entry.dice===undefined&&entry.flat===undefined)throw new DomainEvaluationError(`${label}.attackDamage needs dice or a flat value`);
     const sourceKinds=entry.sourceKinds===undefined?undefined:(()=>{
       if(!Array.isArray(entry.sourceKinds)||!entry.sourceKinds.length)throw new DomainEvaluationError(`${label}.attackDamage.sourceKinds must be a non-empty array`);
@@ -268,10 +280,21 @@ function parseTrackedEffect(value:unknown,label:string):SpellTrackedEffectDefini
     })();
     return {
       damageType:nonEmptyString(entry.damageType,`${label}.attackDamage.damageType`),
-      ...(entry.dice!==undefined?{dice:parseSimpleDice(entry.dice,`${label}.attackDamage.dice`)}:{}),
+      ...(entry.dice!==undefined?{dice:parseSimpleDice(entry.dice,`${label}.attackDamage.dice`,true)}:{}),
       ...(entry.flat!==undefined?{flat:integer(entry.flat,`${label}.attackDamage.flat`,1)}:{}),
       ...(sourceKinds?{sourceKinds}:{}),
       ...(entry.againstTargetOnly!==undefined?{againstTargetOnly:optionalBoolean(entry.againstTargetOnly,`${label}.attackDamage.againstTargetOnly`)}:{}),
+      ...(entry.consumeOnUse!==undefined?{consumeOnUse:optionalBoolean(entry.consumeOnUse,`${label}.attackDamage.consumeOnUse`)}:{}),
+    };
+  })();
+  const preventsDeath=raw.preventsDeath===undefined?undefined:optionalBoolean(raw.preventsDeath,`${label}.preventsDeath`);
+  const retaliation=raw.retaliation===undefined?undefined:(()=>{
+    const entry=object(raw.retaliation,`${label}.retaliation`);
+    onlyKeys(entry,`${label}.retaliation`,["damageType","dice","meleeOnly"]);
+    return {
+      damageType:nonEmptyString(entry.damageType,`${label}.retaliation.damageType`),
+      dice:parseSimpleDice(entry.dice,`${label}.retaliation.dice`),
+      ...(entry.meleeOnly!==undefined?{meleeOnly:optionalBoolean(entry.meleeOnly,`${label}.retaliation.meleeOnly`)}:{}),
     };
   })();
   return {
@@ -283,16 +306,22 @@ function parseTrackedEffect(value:unknown,label:string):SpellTrackedEffectDefini
     ...(armorClass?{armorClass}:{}),
     ...(damageDefenses?{damageDefenses}:{}),
     ...(attackDamage?{attackDamage}:{}),
+    ...(preventsDeath?{preventsDeath}:{}),
+    ...(retaliation?{retaliation}:{}),
   };
 }
 
 const DEFENSE_KINDS=new Set(["resistance","immunity","vulnerability"]);
 const ATTACK_SOURCE_KINDS=new Set(["weapon","unarmed","wild-shape"]);
 
-function parseSimpleDice(value:unknown,label:string) {
+function parseSimpleDice(value:unknown,label:string,allowSlotScaling=false) {
   const entry=object(value,label);
-  onlyKeys(entry,label,["count","sides"]);
-  return {count:integer(entry.count,`${label}.count`,1),sides:integer(entry.sides,`${label}.sides`,1)};
+  onlyKeys(entry,label,allowSlotScaling?["count","sides","dicePerSlotAboveBase"]:["count","sides"]);
+  return {
+    count:integer(entry.count,`${label}.count`,1),
+    sides:integer(entry.sides,`${label}.sides`,1),
+    ...(entry.dicePerSlotAboveBase!==undefined?{dicePerSlotAboveBase:integer(entry.dicePerSlotAboveBase,`${label}.dicePerSlotAboveBase`,1)}:{}),
+  };
 }
 
 function parseD20Bonus(value:unknown,label:string) {
@@ -353,6 +382,11 @@ export function parseSpellMechanicDefinition(value:unknown,label:string,options:
     if(!Array.isArray(raw.trackedEffects))throw new DomainEvaluationError(`${label}.trackedEffects must be an array`);
     return raw.trackedEffects.map((effect,index)=>parseTrackedEffect(effect,`${label}.trackedEffects[${index}]`));
   })();
+  const summons=raw.summons===undefined?undefined:(()=>{
+    const entry=object(raw.summons,`${label}.summons`);
+    onlyKeys(entry,`${label}.summons`,["monsterId","count","countPerSlotAboveBase"]);
+    return {monsterId:nonEmptyString(entry.monsterId,`${label}.summons.monsterId`),count:integer(entry.count,`${label}.summons.count`,1),...(entry.countPerSlotAboveBase!==undefined?{countPerSlotAboveBase:integer(entry.countPerSlotAboveBase,`${label}.summons.countPerSlotAboveBase`,1)}:{})};
+  })();
   const removesConditions=raw.removesConditions===undefined?undefined:stringList(raw.removesConditions,`${label}.removesConditions`).map((conditionId)=>{
     if(!CONDITIONS.has(conditionId))throw new DomainEvaluationError(`${label}.removesConditions contains a non-SRD condition: ${conditionId}`);
     return conditionId as ConditionId;
@@ -375,6 +409,7 @@ export function parseSpellMechanicDefinition(value:unknown,label:string,options:
     ...(effects&&effects.length?{effects}:{}),
     ...(trackedEffects&&trackedEffects.length?{trackedEffects}:{}),
     ...(removesConditions&&removesConditions.length?{removesConditions}:{}),
+    ...(summons?{summons}:{}),
     ...(raw.unsupportedInteractions!==undefined?{unsupportedInteractions:stringList(raw.unsupportedInteractions,`${label}.unsupportedInteractions`)}:{}),
     ...(raw.executionScope!==undefined?{executionScope:nonEmptyString(raw.executionScope,`${label}.executionScope`)}:{}),
     ...(components?{components}:{}),

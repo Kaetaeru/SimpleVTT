@@ -40,14 +40,23 @@ export function stabilizeAtZero(
 export function applyHealingToLife(
   state: LifeState,
   healing: HealingResolution,
+  revive = false,
 ): LifeTransitionResolution {
-  if (state.dead && healing.restored > 0) {
+  if (state.dead && healing.restored > 0 && !revive) {
     throw new DomainEvaluationError("ordinary healing cannot restore a dead creature");
   }
 
   const next = cloneLife(state);
   next.hp = { ...healing.nextHp };
   const provenance = [...healing.provenance];
+  if (revive && state.dead) {
+    next.dead = false;
+    provenance.push({
+      source: "profile:dnd.srd-5.2.1/revive",
+      status: "applied",
+      reason: "the spell returns the dead creature to life",
+    });
+  }
 
   if (state.hp.current === 0 && next.hp.current > 0) {
     next.deathSaves = { successes: 0, failures: 0 };

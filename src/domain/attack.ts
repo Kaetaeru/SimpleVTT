@@ -21,6 +21,8 @@ export type AttackTarget=AttackTargetIdentity&(
 );
 
 export interface AttackDamageComponent {
+  /** C1-06: the effect this rider comes from is removed once the attack hits (Divine Smite, Shining Smite). */
+  consumeEffectId?: string;
   sourceId: string;
   damageType: string;
   dice: FixedDamageDice[];
@@ -53,6 +55,8 @@ export interface AttackRequest {
   sourceId: string;
   sourceKind: AttackSourceKind;
   target: AttackTarget;
+  /** C1-06: the attacker's creature kind, for retaliation damage typed defenses. */
+  actorCreatureKind?: "character" | "monster";
   rangeFeet: number;
   attackDice: FixedDiceInput;
   attackModifierContributions: ModifierContribution[];
@@ -60,10 +64,18 @@ export interface AttackRequest {
   requiresSight?: boolean;
   baseDamage: AttackDamageComponent;
   riders?: AttackDamageComponent[];
+  /** C1-06: damage the target's active effects deal back to the attacker on a hit (Fire Shield). */
+  retaliations?: AttackRetaliation[];
   economy?: AttackEconomyCost;
   criticalRange?: AttackCriticalRange;
   onCriticalFreeMovement?:AttackCriticalFreeMovement;
   concentrationCheck?: Omit<ConcentrationCheckRequest, "damage">;
+}
+
+export interface AttackRetaliation {
+  sourceId: string;
+  damageType: string;
+  dice: FixedDamageDice[];
 }
 
 function validateComponent(component: AttackDamageComponent, label: string) {
@@ -218,6 +230,35 @@ export function compileAttack(request: AttackRequest): PendingResolution {
     creatureKind:request.target.creatureKind,
     criticalFrom:attackId,
     concentrationCheck:request.concentrationCheck,
+  });
+
+  components.forEach((component, index) => {
+    if (!component.consumeEffectId) return;
+    operations.push({
+      id:`${request.id}:consume-rider:${index}`,
+      kind:"remove-effect",
+      effectId:component.consumeEffectId,
+      when:{ operationId:attackId, field:"outcome", equals:"success" },
+    });
+  });
+
+  (request.retaliations ?? []).forEach((retaliation, index) => {
+    const rollId=`${request.id}:retaliation-roll:${index}`;
+    operations.push({
+      id:rollId,
+      kind:"damage-roll",
+      when:{ operationId:attackId, field:"outcome", equals:"success" },
+      request:{ dice:retaliation.dice },
+    });
+    operations.push({
+      id:`${request.id}:retaliation:${index}`,
+      kind:"damage",
+      when:{ operationId:attackId, field:"outcome", equals:"success" },
+      targetId:request.actorId,
+      damageType:retaliation.damageType,
+      amount:{ operationId:rollId, field:"total" },
+      creatureKind:request.actorCreatureKind ?? "character",
+    });
   });
 
   if (request.onCriticalFreeMovement) {

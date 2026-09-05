@@ -173,6 +173,8 @@ export type ResolutionOperation =
       kind: "healing";
       targetId: string;
       amount: NumericOperand;
+      /** C1-06: the healing also returns a dead creature to life (Revivify, Raise Dead). */
+      revive?: boolean;
     })
   | (OperationBase & {
       kind: "maximum-hp";
