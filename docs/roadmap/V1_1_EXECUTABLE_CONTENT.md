@@ -47,3 +47,4 @@ changes, evidence with exact SHA in this file's evidence table. `main` remains t
 
 | Gate | SHA | Evidence |
 | --- | --- | --- |
+| `X1-01` | `d0122f09f2153503a29e49d024719c700d459647` | PR #351 merged 2026-09-05. `tests/ui/featGrantsRuntime.test.ts` (3): Criminal background records Alert by id and the projection pins a `feat` identity; Fighter 4 records Grappler by stable id; a builtin feat with a manual `common-play` entry point is an owned action and executes. |

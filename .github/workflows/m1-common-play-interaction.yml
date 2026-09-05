@@ -23,6 +23,7 @@ on:
       - "tests/domain/commonPlayInteractionProductionRuntime.test.ts"
       - "tests/domain/commonPlayReactionDefinitionRuntime.test.ts"
       - "tests/domain/commonPlayReactionRuntime.test.ts"
+      - "tests/domain/commonPlayAutomaticInterceptorRuntime.test.ts"
       - "tests/domain/commonPlayResourceEconomyRuntime.test.ts"
       - "tests/domain/commonPlayD20Runtime.test.ts"
       - "tests/domain/commonPlayHpRuntime.test.ts"
@@ -30,6 +31,7 @@ on:
       - "tests/ui/ruleModulePackageImport.test.ts"
       - "tests/ui/installedCommonPlayProductionRuntime.test.ts"
       - "tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts"
+      - "tests/ui/commonPlayAutomaticInterceptorProduction.test.ts"
       - "tests/ui/installedCommonPlayActorOwnerInteractionProduction.test.ts"
       - "tests/ui/c9FamilyQTargetOwnerInteractionProduction.test.ts"
       - "tests/ui/c9FamilyQTargetOwnerStaleInteractionProduction.test.ts"
@@ -59,6 +61,7 @@ jobs:
           tests/domain/commonPlayInteractionProductionRuntime.test.ts
           tests/domain/commonPlayReactionDefinitionRuntime.test.ts
           tests/domain/commonPlayReactionRuntime.test.ts
+          tests/domain/commonPlayAutomaticInterceptorRuntime.test.ts
           tests/domain/commonPlayResourceEconomyRuntime.test.ts
           tests/domain/commonPlayD20Runtime.test.ts
           tests/domain/commonPlayHpRuntime.test.ts
@@ -66,6 +69,7 @@ jobs:
           tests/ui/ruleModulePackageImport.test.ts
           tests/ui/installedCommonPlayProductionRuntime.test.ts
           tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts
+          tests/ui/commonPlayAutomaticInterceptorProduction.test.ts
           tests/ui/installedCommonPlayActorOwnerInteractionProduction.test.ts
           tests/ui/c9FamilyQTargetOwnerInteractionProduction.test.ts
           tests/ui/c9FamilyQTargetOwnerStaleInteractionProduction.test.ts

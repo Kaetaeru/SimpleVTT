@@ -105,6 +105,11 @@ const LEGACY_ITEM_DEFINITION_ALIASES:Record<string,string>={
   "item.potion-of-healing":"dnd.srd521.item.gear.potion-of-healing",
 };
 
+/** Canonical item definition id for a legacy/reference item id (e.g. the reference Character's `item.chain-mail`). */
+export function compatibleItemDefinitionId(definitionId:string) {
+  return LEGACY_ITEM_DEFINITION_ALIASES[definitionId]??definitionId;
+}
+
 function compatibleDefinitionId(definitionId:string) {
   return LEGACY_ITEM_DEFINITION_ALIASES[definitionId]??definitionId;
 }
