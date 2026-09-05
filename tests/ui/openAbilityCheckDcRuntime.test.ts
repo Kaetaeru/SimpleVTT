@@ -17,7 +17,8 @@ async function prepareHost(adapter:MockAdapter) {
   await adapter.selectDmActor(character.id);
   const snapshot=await adapter.getSnapshot();
   assert.ok((snapshot.scene.actionsByActor[snapshot.activeCharacter.id]??[]).some((action)=>action.id==="action.ability.str"),JSON.stringify((snapshot.scene.actionsByActor[snapshot.activeCharacter.id]??[]).map((action)=>action.id)));
-  internal.session.role="host";
+  // C1-01: a Host has no character of its own in the scene, so the DM authority for the DC step comes from the reference DM role.
+  await adapter.setReferenceRole("dm");
 }
 
 test("Host publishes an ability-check DC before commit",async()=>{
