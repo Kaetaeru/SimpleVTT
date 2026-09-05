@@ -572,12 +572,17 @@ function reconcile(adapter:MockAdapter) {
   if (isEphemeralSessionProjectionCharacter(adapter,character.id)) return;
 
   const fixtureIds=new Set(["char.aelar","char.mira"]);
-  if (internal.session.role==="host"&&fixtureIds.has(character.id)) {
-    internal.scene.entities=internal.scene.entities.filter((entity)=>entity.id!==character.id);
-    delete internal.scene.actionsByActor[character.id];
-    delete internal.scene.economyByActor[character.id];
-    if (internal.scene.currentActorId===character.id) internal.scene.currentActorId=internal.scene.entities[0]?.id??"";
-    if (internal.scene.selectedActorId===character.id) internal.scene.selectedActorId=internal.scene.currentActorId;
+  // C1-01: a Host has no character in play. The DM's own (most recently edited) character never enters the
+  // hosted scene; players' characters arrive through their session projections, and a DM who wants a PC on the
+  // board adds one from the campaign library on purpose.
+  if (internal.session.role==="host") {
+    const local=internal.scene.entities.filter((entity)=>entity.kind==="character"&&!isEphemeralSessionProjectionCharacter(adapter,entity.id));
+    if (!local.length) return;
+    const localIds=new Set(local.map((entity)=>entity.id));
+    internal.scene.entities=internal.scene.entities.filter((entity)=>!localIds.has(entity.id));
+    for (const id of localIds) { delete internal.scene.actionsByActor[id]; delete internal.scene.economyByActor[id]; }
+    if (localIds.has(internal.scene.currentActorId)) internal.scene.currentActorId=internal.scene.entities[0]?.id??"";
+    if (localIds.has(internal.scene.selectedActorId)) internal.scene.selectedActorId=internal.scene.currentActorId;
     return;
   }
 
