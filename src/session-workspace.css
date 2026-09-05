@@ -131,3 +131,28 @@
 .session-reference-play-root .session-actor-card-statuses { grid-column: 2; padding: 0 9px 8px; }
 .session-reference-play-root .session-actor-damage-fill { inset: auto auto 0 0; height: 3px; width: calc(100% - var(--session-actor-damage, 0%)); background: var(--hp-good); }
 .session-reference-play-root .session-actor-card-pending { position: absolute; right: 8px; top: 6px; color: var(--muted); }
+
+/* stage feed: the last few results under the focus */
+.session-reference-stage-focus { display: grid; grid-template-rows: minmax(0, 1fr) auto; place-items: stretch; }
+.session-reference-stage-focus .session-main-focus-state { justify-self: center; align-self: center; }
+.session-stage-feed { list-style: none; margin: 0; padding: 12px 20px 16px; display: grid; gap: 6px; border-top: 1px solid var(--line); background: var(--bg-2); }
+.session-stage-feed li { display: grid; grid-template-columns: minmax(80px, 140px) minmax(0, 1fr); gap: 2px 12px; align-items: baseline; padding: 6px 10px; border: 1px solid var(--line); border-radius: var(--radius-s); background: var(--surface); font-size: var(--text-sm); }
+.session-stage-feed li.correction { border-color: color-mix(in srgb, var(--warn) 45%, transparent); }
+.session-stage-feed-actor { color: var(--muted); font-size: var(--text-xs); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.session-stage-feed strong { font-weight: 600; }
+.session-stage-feed small { grid-column: 2; color: var(--muted); font-size: var(--text-xs); }
+.session-stage-feed li:first-child { border-color: var(--line-strong); }
+
+/* result layer and utility panes on the tokens */
+.session-reference-play-root .session-resolution-layer { border: 1px solid var(--line-strong); border-radius: var(--radius-l); background: var(--surface); box-shadow: var(--elev-2); }
+.session-reference-play-root .session-resolution-copy strong { font-family: var(--font-sans); font-weight: 700; }
+.session-reference-play-root .session-utility-pane { background: var(--surface); }
+.session-reference-play-root .session-utility-pane-head { border-bottom: 1px solid var(--line); background: var(--bg-2); }
+.session-reference-play-root .session-utility-pane-head strong { font-size: var(--text-lg); font-weight: 700; }
+.session-reference-play-root .session-utility-pane-head small { color: var(--muted); font-size: var(--text-xs); }
+.session-reference-play-root .session-utility-pane-head > button { min-height: 30px; width: 30px; padding: 0; border-radius: var(--radius-s); }
+.session-stage-feed { padding: 8px 16px 12px; gap: 4px; }
+.session-stage-feed li { padding: 5px 10px; }
+.session-reference-play-root .session-actor-board-label span { font-size: 0; }
+.session-reference-play-root .session-actor-board-label span::before { content: "상대"; font-size: var(--text-xs); }
+.session-reference-play-root .session-actor-board-lower .session-actor-board-label span::before { content: "아군"; }

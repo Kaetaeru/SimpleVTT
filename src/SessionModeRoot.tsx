@@ -43,6 +43,7 @@ import "./session-mode.css";
 import "./session-connected-layout.css";
 import "./session-integrated-reference-play.css";
 import "./session-workspace.css";
+import { SessionStageFeed } from "./SessionStageFeed";
 
 type SessionUtility = "quick-sheet" | "actor" | "inventory" | "library" | "campaign" | "calendar" | "rations" | "rest" | "rules" | "encounter" | "participants" | "handout" | "activity" | "session" | "player-session" | null;
 type WorkspaceLayer = "full-sheet" | "level-up" | "time-meals" | null;
@@ -390,6 +391,7 @@ export function SessionModeRoot({ onOpenProduct }: { onOpenProduct(): void }) {
             {snapshot.sessionMode==="freeform"&&<SessionPlayerHandoutViewer />}
             {role==="dm"&&<SessionDmHandoutPreview />}
             <SessionMainFocus role={role} lastRollActorId={lastRollActorId} lastRollHidden={Boolean(lastRollResolutionId&&lastRollPresentation.dismissedResolutionId===lastRollResolutionId)} onDismissLastRoll={lastRollResolutionId?()=>dismissSessionLastRoll(mockAdapter,lastRollResolutionId):undefined} />
+            <SessionStageFeed />
           </main>
         </section>
 
