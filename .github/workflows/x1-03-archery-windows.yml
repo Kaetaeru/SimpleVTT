@@ -1,0 +1,50 @@
+name: X1-03 Archery Windows Verification
+
+on:
+  pull_request:
+    branches:
+      - work/v1-composite
+    paths:
+      - "scripts/run-tauri-e2e.ps1"
+      - "scripts/run-tauri-e2e-x1-03.mjs"
+      - "content/modules/dnd-srd-5.2.1.feats/module.json"
+      - ".github/workflows/x1-03-archery-windows.yml"
+  push:
+    branches:
+      - work/v1-composite
+    paths:
+      - "scripts/run-tauri-e2e.ps1"
+      - "scripts/run-tauri-e2e-x1-03.mjs"
+      - "content/modules/dnd-srd-5.2.1.feats/module.json"
+      - ".github/workflows/x1-03-archery-windows.yml"
+  workflow_dispatch:
+
+env:
+  V1_VERIFICATION_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
+permissions:
+  contents: read
+
+jobs:
+  windows-x1-03:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - run: npm ci --no-audit --no-fund
+      - name: Run X1-03 (Archery as data-driven feat) on Windows H+P1+P2
+        shell: pwsh
+        run: powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File scripts/run-tauri-e2e.ps1 -Root . -X103
+      - name: Upload X1-03 Windows evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: X1-03-WIN-${{ env.V1_VERIFICATION_SHA }}
+          path: .live-dev/tauri-e2e/**/artifacts/**
+          if-no-files-found: error
+          retention-days: 14
