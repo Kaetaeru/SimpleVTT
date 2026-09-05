@@ -18,6 +18,7 @@ import { economyStateChanges } from "./stateChange";
 import { resourceStateChange } from "./runtimeStateChange";
 import { grantExtraAction, grantExtraAttacks, spendExtraAttack, spendTurnSlot, useMovement } from "./turnEconomy";
 import { DomainEvaluationError, type ProvenanceRecord } from "./profileEngine";
+import { deterministicFace } from "./seededFace";
 import type { OperationExecution, ResolutionExecutionContext } from "./resolutionContext";
 import { makeEvent, targetingResult } from "./resolutionContext";
 import type { ResolutionOperation } from "./resolutionTypes";
@@ -270,6 +271,26 @@ export function executeD20(ctx: ResolutionExecutionContext, operation: D20Op): O
     : []);
   let target = operation.request.target;
   const modifiers = [...operation.request.modifierContributions, ...adjustments.modifierContributions];
+  for (const effect of d20Modifiers) {
+    const meta=effect.metadata??{};
+    const flat=typeof meta.d20BonusFlat==="number"?meta.d20BonusFlat:0;
+    const count=typeof meta.d20BonusDiceCount==="number"?meta.d20BonusDiceCount:0;
+    const sides=typeof meta.d20BonusDiceSides==="number"?meta.d20BonusDiceSides:0;
+    if (!flat&&!(count&&sides)) continue;
+    const faces=Array.from({length:count},(_,die)=>deterministicFace(`${ctx.pending.id}:${operation.id}:${effect.id}:${die}`,sides));
+    const value=(meta.d20BonusSign===-1?-1:1)*(flat+faces.reduce((sum,face)=>sum+face,0));
+    modifiers.push({source:`effect:${effect.sourceId}${faces.length?`:${count}d${sides}=${faces.join("+")}`:""}`,value});
+  }
+  const acProvenance:ProvenanceRecord[]=[];
+  if (operation.request.family==="attack-roll"&&operation.targetId) {
+    for (const effect of ctx.state.effects) {
+      if (!effectIsActive(effect)||effect.kind!=="modifier"||effect.targetId!==operation.targetId) continue;
+      const bonus=typeof effect.metadata?.acBonus==="number"?effect.metadata.acBonus:0;
+      if (bonus) { target+=bonus; acProvenance.push({source:effect.sourceId,status:"applied",reason:`effect ${effect.id} adjusts AC by ${bonus>0?"+":""}${bonus}`}); }
+      const floor=typeof effect.metadata?.acFloor==="number"?effect.metadata.acFloor:0;
+      if (floor&&target<floor) { acProvenance.push({source:effect.sourceId,status:"applied",reason:`effect ${effect.id} raises AC ${target} to ${floor}`}); target=floor; }
+    }
+  }
   if (operation.cover) {
     const targetEntry = targetingResult(ctx.results, operation.cover.targetingOperationId).targets
       .find((entry) => entry.targetId === operation.cover!.targetId);
@@ -283,6 +304,7 @@ export function executeD20(ctx: ResolutionExecutionContext, operation: D20Op): O
     modifierContributions:modifiers,
     rollStateContributions:[...(operation.request.rollStateContributions ?? []), ...adjustments.rollStateContributions, ...effectRollStates],
   });
+  if (acProvenance.length) resolved={...resolved,provenance:[...resolved.provenance,...acProvenance]};
   if (adjustments.autoFailure) {
     resolved = {
       ...resolved,

@@ -32,7 +32,7 @@ function stateWithSlots() {
 function targetsFor(definition:SpellMechanicDefinition):SpellCastTarget[] {
   const base=(id:string,relation:"self"|"ally"|"enemy"):SpellCastTarget=>({id,kind:"creature",relation,distanceFeet:definition.targeting.rangeFeet===0?0:5,visible:true,cover:"none",ac:12,creatureKind:id==="hero"?"character":"monster",saveModifiers:{},targetCanSeeCaster:true});
   const allowed=definition.targeting.allowedRelations;
-  if(allowed&&allowed.every((relation)=>relation==="self"||relation==="ally"))return [base("hero","self")];
+  if(allowed&&allowed.every((relation)=>relation==="self"||relation==="ally"))return [base("hero",allowed.includes("self")?"self":"ally")];
   return [base("goblin","enemy")];
 }
 
@@ -58,6 +58,7 @@ test("every authored definition casts through the unchanged spell runtime with a
       attack:{id:"attack",purpose:"spell attack",sides:20,faces:[15]},
       saves:Object.fromEntries(targets.map((target)=>[target.id,{id:`save-${target.id}`,purpose:"save",sides:20,faces:[3]}])),
       effectFaces:Array.from({length:40},()=>4),
+      projectileFaces:Array.from({length:12},()=>4),
       attackInstances:targets.map((target)=>({targetId:target.id,attack:{id:`attack-${target.id}`,purpose:"spell attack",sides:20,faces:[15]},effectFaces:Array.from({length:12},()=>4)})),
     };
     const result=resolveSpellCast(TEST_PROFILE,spellMechanicById(definition.spellId)!,state,{

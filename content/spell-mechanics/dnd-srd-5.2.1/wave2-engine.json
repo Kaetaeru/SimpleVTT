@@ -1,0 +1,225 @@
+{
+  "schemaVersion": "1",
+  "source": {
+    "document": "SRD 5.2.1",
+    "review": "C1-03 wave 2 — spells that needed new tracked-effect vocabulary: AC bonus/floor, damage defenses, d20 bonus dice, attack-hit damage riders, and modifier-only temporary HP. Each executionScope states what the runtime enforces."
+  },
+  "definitions": [
+    {
+      "spellId": "dnd.srd521.spell.shield",
+      "baseLevel": 1,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "reaction",
+      "targeting": { "kind": "creature", "rangeFeet": 0, "minTargets": 1, "maxTargets": 1, "allowedRelations": ["self"] },
+      "primary": { "kind": "tracked-effect", "summary": "다음 자기 턴 시작까지 AC +5.", "duration": { "kind": "rounds", "amount": 1, "anchorActorId": "$source", "boundary": "start" } },
+      "trackedEffects": [{ "summary": "AC +5", "trigger": "always", "duration": { "kind": "rounds", "amount": 1, "anchorActorId": "$source", "boundary": "start" }, "armorClass": { "bonus": 5 } }],
+      "components": { "verbal": true, "somatic": true },
+      "executionScope": "Authored (C1-03): a reaction that gives the caster +5 AC until the start of their next turn; attack rolls against the caster judge against the raised AC. Casting it against the triggering attack after that attack's roll, and the Magic Missile immunity, are left to the DM (재판정 with the post-hoc toggles)."
+    },
+    {
+      "spellId": "dnd.srd521.spell.shield-of-faith",
+      "baseLevel": 1,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "bonus-action",
+      "targeting": { "kind": "creature", "rangeFeet": 60, "minTargets": 1, "maxTargets": 1, "requiresSight": true, "allowedRelations": ["self", "ally"] },
+      "primary": { "kind": "tracked-effect", "summary": "대상은 AC +2를 얻는다.", "duration": { "kind": "concentration" } },
+      "trackedEffects": [{ "summary": "AC +2", "trigger": "always", "duration": { "kind": "concentration" }, "armorClass": { "bonus": 2 } }],
+      "concentration": true,
+      "components": { "verbal": true, "somatic": true, "materials": [{ "id": "prayer-strip" }] },
+      "executionScope": "Authored (C1-03): the target has +2 AC while the caster concentrates (up to 10 minutes); attack rolls against it judge against the raised AC."
+    },
+    {
+      "spellId": "dnd.srd521.spell.barkskin",
+      "baseLevel": 2,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "bonus-action",
+      "targeting": { "kind": "creature", "rangeFeet": 5, "minTargets": 1, "maxTargets": 1, "allowedRelations": ["self", "ally"] },
+      "primary": { "kind": "tracked-effect", "summary": "대상의 AC는 17 미만이 되지 않는다.", "duration": { "kind": "hours", "amount": 1 } },
+      "trackedEffects": [{ "summary": "AC 최소 17", "trigger": "always", "duration": { "kind": "hours", "amount": 1 }, "armorClass": { "floor": 17 } }],
+      "components": { "verbal": true, "somatic": true, "materials": [{ "id": "handful-of-oak-bark" }] },
+      "executionScope": "Authored (C1-03): for 1 hour the touched creature's AC is judged as at least 17 against attack rolls."
+    },
+    {
+      "spellId": "dnd.srd521.spell.warding-bond",
+      "baseLevel": 2,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 5, "minTargets": 1, "maxTargets": 1, "allowedRelations": ["ally"] },
+      "primary": { "kind": "tracked-effect", "summary": "대상은 AC +1, 내성 굴림 +1, 모든 피해에 저항을 얻고 시전자가 같은 피해를 나눠 받는다.", "duration": { "kind": "hours", "amount": 1 } },
+      "trackedEffects": [
+        { "summary": "AC +1", "trigger": "always", "duration": { "kind": "hours", "amount": 1 }, "armorClass": { "bonus": 1 } },
+        { "summary": "내성 굴림 +1", "trigger": "always", "duration": { "kind": "hours", "amount": 1 }, "modifier": { "family": "saving-throw", "scope": "actor", "bonus": { "flat": 1 } } }
+      ],
+      "components": { "verbal": true, "somatic": true, "materials": [{ "id": "pair-of-platinum-rings-50gp" }] },
+      "executionScope": "Authored (C1-03): for 1 hour the warded ally has +1 AC and +1 on saving throws. The resistance to all damage, the caster taking the same damage, and the 60-foot range limit are left to the DM (edit both HP bars with 서술 피해)."
+    },
+    {
+      "spellId": "dnd.srd521.spell.stoneskin",
+      "baseLevel": 4,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 5, "minTargets": 1, "maxTargets": 1, "allowedRelations": ["self", "ally"] },
+      "primary": { "kind": "tracked-effect", "summary": "대상은 타격·관통·참격 피해에 저항을 얻는다.", "duration": { "kind": "concentration" } },
+      "trackedEffects": [{ "summary": "타격·관통·참격 저항", "trigger": "always", "duration": { "kind": "concentration" }, "damageDefenses": [{ "kind": "resistance", "damageType": "bludgeoning" }, { "kind": "resistance", "damageType": "piercing" }, { "kind": "resistance", "damageType": "slashing" }] }],
+      "concentration": true,
+      "components": { "verbal": true, "somatic": true, "materials": [{ "id": "diamond-dust-100gp-consumed" }] },
+      "executionScope": "Authored (C1-03): the touched creature has resistance to bludgeoning, piercing and slashing damage while the caster concentrates (up to 1 hour); damage against it is halved by the runtime."
+    },
+    {
+      "spellId": "dnd.srd521.spell.protection-from-energy",
+      "baseLevel": 3,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 5, "minTargets": 1, "maxTargets": 1, "allowedRelations": ["self", "ally"] },
+      "primary": { "kind": "tracked-effect", "summary": "대상은 선택한 피해 유형(산성·냉기·화염·번개·천둥) 하나에 저항을 얻는다.", "duration": { "kind": "concentration" } },
+      "trackedEffects": [{ "summary": "화염 저항", "trigger": "always", "duration": { "kind": "concentration" }, "damageDefenses": [{ "kind": "resistance", "damageType": "fire" }] }],
+      "concentration": true,
+      "components": { "verbal": true, "somatic": true },
+      "executionScope": "Authored (C1-03): the touched creature has resistance to fire damage while the caster concentrates (up to 1 hour). The SRD lets the caster choose acid, cold, fire, lightning or thunder; the runtime authors fire, so the DM applies another type by hand."
+    },
+    {
+      "spellId": "dnd.srd521.spell.bless",
+      "baseLevel": 1,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 30, "minTargets": 1, "maxTargets": 3, "allowedRelations": ["self", "ally"] },
+      "primary": { "kind": "tracked-effect", "summary": "대상들은 명중 굴림과 내성 굴림에 1d4를 더한다.", "duration": { "kind": "concentration" } },
+      "trackedEffects": [
+        { "summary": "명중 굴림 +1d4", "trigger": "always", "duration": { "kind": "concentration" }, "modifier": { "family": "attack-roll", "scope": "actor", "bonus": { "dice": { "count": 1, "sides": 4 } } } },
+        { "summary": "내성 굴림 +1d4", "trigger": "always", "duration": { "kind": "concentration" }, "modifier": { "family": "saving-throw", "scope": "actor", "bonus": { "dice": { "count": 1, "sides": 4 } } } }
+      ],
+      "concentration": true,
+      "components": { "verbal": true, "somatic": true, "materials": [{ "id": "holy-water-sprinkle" }] },
+      "executionScope": "Authored (C1-03): up to three creatures add 1d4 to attack rolls and saving throws while the caster concentrates (up to 1 minute); the d4 is rolled by the runtime on each roll. One extra target per slot level above 1st is not enforced."
+    },
+    {
+      "spellId": "dnd.srd521.spell.bane",
+      "baseLevel": 1,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 30, "minTargets": 1, "maxTargets": 3, "requiresSight": true },
+      "primary": { "kind": "save-effect", "saveAbility": "cha", "summary": "실패한 대상들은 명중 굴림과 내성 굴림에서 1d4를 뺀다.", "duration": { "kind": "concentration" } },
+      "trackedEffects": [
+        { "summary": "명중 굴림 -1d4", "trigger": "failed-save", "duration": { "kind": "concentration" }, "modifier": { "family": "attack-roll", "scope": "actor", "bonus": { "dice": { "count": 1, "sides": 4 }, "sign": -1 } } },
+        { "summary": "내성 굴림 -1d4", "trigger": "failed-save", "duration": { "kind": "concentration" }, "modifier": { "family": "saving-throw", "scope": "actor", "bonus": { "dice": { "count": 1, "sides": 4 }, "sign": -1 } } }
+      ],
+      "concentration": true,
+      "components": { "verbal": true, "somatic": true, "materials": [{ "id": "drop-of-blood" }] },
+      "executionScope": "Authored (C1-03): up to three creatures make a CHA save; on a failure they subtract 1d4 from attack rolls and saving throws while the caster concentrates (up to 1 minute). One extra target per slot level above 1st is not enforced."
+    },
+    {
+      "spellId": "dnd.srd521.spell.guidance",
+      "baseLevel": 0,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 5, "minTargets": 1, "maxTargets": 1, "allowedRelations": ["self", "ally"] },
+      "primary": { "kind": "tracked-effect", "summary": "대상은 다음 능력치 판정 하나에 1d4를 더한다.", "duration": { "kind": "concentration" } },
+      "trackedEffects": [{ "summary": "다음 능력치 판정 +1d4", "trigger": "always", "duration": { "kind": "concentration" }, "modifier": { "family": "ability-check", "scope": "actor", "consumeOnUse": true, "bonus": { "dice": { "count": 1, "sides": 4 } } } }],
+      "concentration": true,
+      "components": { "verbal": true, "somatic": true },
+      "executionScope": "Authored (C1-03): the touched creature adds 1d4 to its next ability check while the caster concentrates (up to 1 minute); the bonus is consumed by that check."
+    },
+    {
+      "spellId": "dnd.srd521.spell.resistance",
+      "baseLevel": 0,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 5, "minTargets": 1, "maxTargets": 1, "allowedRelations": ["self", "ally"] },
+      "primary": { "kind": "tracked-effect", "summary": "대상은 다음 내성 굴림 하나에 1d4를 더한다.", "duration": { "kind": "concentration" } },
+      "trackedEffects": [{ "summary": "다음 내성 굴림 +1d4", "trigger": "always", "duration": { "kind": "concentration" }, "modifier": { "family": "saving-throw", "scope": "actor", "consumeOnUse": true, "bonus": { "dice": { "count": 1, "sides": 4 } } } }],
+      "concentration": true,
+      "components": { "verbal": true, "somatic": true },
+      "executionScope": "Authored (C1-03): the touched creature adds 1d4 to its next saving throw while the caster concentrates (up to 1 minute); the bonus is consumed by that save."
+    },
+    {
+      "spellId": "dnd.srd521.spell.heroism",
+      "baseLevel": 1,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 5, "minTargets": 1, "maxTargets": 1, "allowedRelations": ["self", "ally"] },
+      "primary": { "kind": "temporary-hp", "dice": { "count": 0, "sides": 1, "addSpellcastingModifier": true } },
+      "removesConditions": ["frightened"],
+      "concentration": true,
+      "components": { "verbal": true, "somatic": true },
+      "executionScope": "Authored (C1-03): the touched creature gains temporary HP equal to the caster's spellcasting ability modifier and its Frightened condition ends. The SRD repeats the temporary HP at the start of each of its turns and grants immunity to Frightened while the caster concentrates; the DM re-applies those."
+    },
+    {
+      "spellId": "dnd.srd521.spell.hunter-s-mark",
+      "baseLevel": 1,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "bonus-action",
+      "targeting": { "kind": "creature", "rangeFeet": 90, "minTargets": 1, "maxTargets": 1, "requiresSight": true, "allowedRelations": ["enemy", "neutral"] },
+      "primary": { "kind": "tracked-effect", "summary": "표식된 대상을 명중 굴림으로 맞출 때마다 역장 피해 1d6을 추가한다.", "duration": { "kind": "concentration" } },
+      "trackedEffects": [{ "summary": "표식: 시전자의 명중 시 역장 1d6 추가", "trigger": "always", "duration": { "kind": "concentration" }, "attackDamage": { "damageType": "force", "dice": { "count": 1, "sides": 6 }, "againstTargetOnly": true } }],
+      "concentration": true,
+      "components": { "verbal": true },
+      "executionScope": "Authored (C1-03): the caster's attack hits against the marked creature deal an extra 1d6 force damage while the caster concentrates (up to 1 hour). Moving the mark after the target drops to 0 HP and the longer durations for higher slots are left to the DM."
+    },
+    {
+      "spellId": "dnd.srd521.spell.hex",
+      "baseLevel": 1,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "bonus-action",
+      "targeting": { "kind": "creature", "rangeFeet": 90, "minTargets": 1, "maxTargets": 1, "requiresSight": true, "allowedRelations": ["enemy", "neutral"] },
+      "primary": { "kind": "tracked-effect", "summary": "저주받은 대상을 명중 굴림으로 맞출 때마다 사령 피해 1d6을 추가하고, 대상은 선택한 능력치 판정에 불리점을 받는다.", "duration": { "kind": "concentration" } },
+      "trackedEffects": [
+        { "summary": "저주: 시전자의 명중 시 사령 1d6 추가", "trigger": "always", "duration": { "kind": "concentration" }, "attackDamage": { "damageType": "necrotic", "dice": { "count": 1, "sides": 6 }, "againstTargetOnly": true } },
+        { "summary": "능력치 판정에 불리점 (선택한 능력치)", "trigger": "always", "duration": { "kind": "concentration" }, "modifier": { "family": "ability-check", "rollState": "disadvantage", "scope": "actor" } }
+      ],
+      "concentration": true,
+      "components": { "verbal": true, "somatic": true, "materials": [{ "id": "petrified-eye-of-newt" }] },
+      "executionScope": "Authored (C1-03): the caster's attack hits against the cursed creature deal an extra 1d6 necrotic damage, and the creature has disadvantage on ability checks, while the caster concentrates (up to 1 hour). The SRD limits the disadvantage to one chosen ability; moving the curse and the longer durations for higher slots are left to the DM."
+    },
+    {
+      "spellId": "dnd.srd521.spell.divine-favor",
+      "baseLevel": 1,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "bonus-action",
+      "targeting": { "kind": "creature", "rangeFeet": 0, "minTargets": 1, "maxTargets": 1, "allowedRelations": ["self"] },
+      "primary": { "kind": "tracked-effect", "summary": "무기 공격이 명중하면 광휘 피해 1d4를 추가한다.", "duration": { "kind": "minutes", "amount": 1 } },
+      "trackedEffects": [{ "summary": "무기 명중 시 광휘 1d4 추가", "trigger": "always", "duration": { "kind": "minutes", "amount": 1 }, "attackDamage": { "damageType": "radiant", "dice": { "count": 1, "sides": 4 }, "sourceKinds": ["weapon"] } }],
+      "components": { "verbal": true, "somatic": true },
+      "executionScope": "Authored (C1-03): for 1 minute the caster's weapon attack hits deal an extra 1d4 radiant damage."
+    },
+    {
+      "spellId": "dnd.srd521.spell.magic-weapon",
+      "baseLevel": 2,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "bonus-action",
+      "targeting": { "kind": "creature", "rangeFeet": 5, "minTargets": 1, "maxTargets": 1, "allowedRelations": ["self", "ally"] },
+      "primary": { "kind": "tracked-effect", "summary": "무기가 마법 무기가 되어 명중 굴림과 피해 굴림에 +1을 얻는다.", "duration": { "kind": "hours", "amount": 1 } },
+      "trackedEffects": [
+        { "summary": "무기 명중 굴림 +1", "trigger": "always", "duration": { "kind": "hours", "amount": 1 }, "modifier": { "family": "attack-roll", "scope": "actor", "bonus": { "flat": 1 } } },
+        { "summary": "무기 피해 +1", "trigger": "always", "duration": { "kind": "hours", "amount": 1 }, "attackDamage": { "damageType": "weapon", "flat": 1, "sourceKinds": ["weapon"] } }
+      ],
+      "components": { "verbal": true, "somatic": true },
+      "executionScope": "Authored (C1-03): for 1 hour the wielder's attack rolls and weapon damage rolls have +1; the effect sits on the wielder, so it applies to every weapon they use. The +2 with a 3rd–5th-level slot and +3 with a 6th-level or higher slot are not scaled."
+    },
+    {
+      "spellId": "dnd.srd521.spell.heat-metal",
+      "baseLevel": 2,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 60, "minTargets": 1, "maxTargets": 1, "requiresSight": true },
+      "primary": { "kind": "automatic-projectiles", "damageType": "fire", "projectileDice": { "sides": 8, "flat": 0 }, "baseProjectiles": 2, "projectilesPerSlotAboveBase": 1 },
+      "concentration": true,
+      "components": { "verbal": true, "somatic": true, "materials": [{ "id": "piece-of-iron-and-flame" }] },
+      "executionScope": "Authored (C1-03): the creature holding or wearing the heated object takes 2d8 fire damage with no roll to avoid it, +1d8 per slot level above 2nd. Repeating the damage with a bonus action, and the CON save to avoid dropping the object or suffer disadvantage, are left to the DM."
+    },
+    {
+      "spellId": "dnd.srd521.spell.haste",
+      "baseLevel": 3,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 30, "minTargets": 1, "maxTargets": 1, "requiresSight": true, "allowedRelations": ["self", "ally"] },
+      "primary": { "kind": "tracked-effect", "summary": "대상은 속도 2배, AC +2, 민첩 내성 굴림에 이점, 매 턴 추가 행동 하나를 얻는다.", "duration": { "kind": "concentration" } },
+      "trackedEffects": [
+        { "summary": "AC +2", "trigger": "always", "duration": { "kind": "concentration" }, "armorClass": { "bonus": 2 } },
+        { "summary": "민첩 내성 굴림에 이점", "trigger": "always", "duration": { "kind": "concentration" }, "modifier": { "family": "saving-throw", "rollState": "advantage", "scope": "actor", "ability": "dex" } }
+      ],
+      "concentration": true,
+      "components": { "verbal": true, "somatic": true, "materials": [{ "id": "shaving-of-licorice-root" }] },
+      "executionScope": "Authored (C1-03): the target has +2 AC and advantage on DEX saving throws while the caster concentrates (up to 1 minute). The doubled speed, the extra limited action each turn, and the lethargy when the spell ends are left to the DM."
+    }
+  ]
+}

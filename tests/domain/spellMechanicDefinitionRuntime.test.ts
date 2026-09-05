@@ -27,7 +27,9 @@ test("a complete authored definition parses to the runtime shape and unknown fie
   assert.throws(()=>parseSpellMechanicDefinition({...FROST_LASH,primary:{kind:"save-damage",saveAbility:"luck",damageType:"cold",dice:{count:1,sides:8},successDamage:"half"}},"frost lash"),/saveAbility/);
   assert.throws(()=>parseSpellMechanicDefinition({...FROST_LASH,effects:[{conditionId:"dazed",trigger:"hit",duration:{kind:"instant"}}]},"frost lash"),/not an SRD condition/);
   assert.throws(()=>parseSpellMechanicDefinition({...FROST_LASH,targeting:{...FROST_LASH.targeting,minTargets:0,maxTargets:0}},"frost lash"),/maxTargets must be at least 1/);
-  assert.throws(()=>parseSpellMechanicDefinition({...FROST_LASH,primary:{kind:"tracked-effect",summary:"x",duration:{kind:"rounds",amount:1}}},"frost lash"),/duration\.kind/);
+  assert.throws(()=>parseSpellMechanicDefinition({...FROST_LASH,primary:{kind:"tracked-effect",summary:"x",duration:{kind:"weeks",amount:1}}},"frost lash"),/duration.kind/);
+  assert.throws(()=>parseSpellMechanicDefinition({...FROST_LASH,primary:{kind:"tracked-effect",summary:"x",duration:{kind:"rounds",amount:1}}},"frost lash"),/anchorActorId/);
+  assert.deepEqual(parseSpellMechanicDefinition({...FROST_LASH,primary:{kind:"tracked-effect",summary:"x",duration:{kind:"rounds",amount:1,anchorActorId:"$source",boundary:"start"}}},"frost lash").primary.duration,{kind:"rounds",amount:1,anchorActorId:"$source",boundary:"start"});
 });
 
 test("the spellId option pins an installed definition to its content id",()=>{

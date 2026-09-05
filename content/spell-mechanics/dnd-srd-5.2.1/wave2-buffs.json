@@ -53,10 +53,10 @@
       "castingEconomy": "action",
       "targeting": { "kind": "creature", "rangeFeet": 5, "minTargets": 1, "maxTargets": 1, "allowedRelations": ["self", "ally"] },
       "primary": { "kind": "tracked-effect", "summary": "중독 상태를 끝내고, 대상은 독을 피하거나 끝내는 내성 굴림에 이점을 얻는다.", "duration": { "kind": "hours", "amount": 1 } },
-      "trackedEffects": [{ "summary": "내성 굴림에 이점 (독 관련)", "trigger": "always", "duration": { "kind": "hours", "amount": 1 }, "modifier": { "family": "saving-throw", "rollState": "advantage", "scope": "actor" } }],
+      "trackedEffects": [{ "summary": "내성 굴림에 이점 (독 관련)", "trigger": "always", "duration": { "kind": "hours", "amount": 1 }, "modifier": { "family": "saving-throw", "rollState": "advantage", "scope": "actor" }, "damageDefenses": [{ "kind": "resistance", "damageType": "poison" }] }],
       "removesConditions": ["poisoned"],
       "components": { "verbal": true, "somatic": true },
-      "executionScope": "Authored (C1-03): the Poisoned condition on the touched creature ends, and for 1 hour it has advantage on saving throws. The SRD limits the advantage to saves against being poisoned and grants resistance to poison damage; the runtime applies the advantage to every save and does not grant the resistance."
+      "executionScope": "Authored (C1-03): the Poisoned condition on the touched creature ends, and for 1 hour it has advantage on saving throws. The SRD limits the advantage to saves against being poisoned and grants resistance to poison damage; the runtime applies the advantage to every save; the poison resistance is granted."
     },
     {
       "spellId": "dnd.srd521.spell.lesser-restoration",

@@ -43,9 +43,26 @@ export interface SpellTrackedEffectDefinition {
   };
   modifier?: {
     family: "attack-roll" | "saving-throw" | "ability-check";
-    rollState: "advantage" | "disadvantage";
+    rollState?: "advantage" | "disadvantage";
     scope: "actor" | "target";
     consumeOnUse?: boolean;
+    /** Only rolls of this ability (Haste: DEX saves). */
+    ability?: AbilityKey;
+    /** A flat or rolled bonus to the d20 total (Bless +1d4, Bane -1d4, Magic Weapon +1). */
+    bonus?: { flat?: number; dice?: { count: number; sides: number }; sign?: 1 | -1 };
+  };
+  /** AC on the warded creature (Shield +5, Shield of Faith +2, Barkskin floor 17). */
+  armorClass?: { bonus?: number; floor?: number };
+  /** Damage defenses on the warded creature (Stoneskin, Protection from Energy). */
+  damageDefenses?: Array<{ kind: "resistance" | "immunity" | "vulnerability"; damageType: string }>;
+  /** Extra damage on the caster's attack hits (Hunter's Mark, Hex, Divine Favor, Magic Weapon). */
+  attackDamage?: {
+    damageType: string;
+    dice?: { count: number; sides: number };
+    flat?: number;
+    sourceKinds?: Array<"weapon" | "unarmed" | "wild-shape">;
+    /** The rider applies only when the caster attacks the creature this effect sits on. */
+    againstTargetOnly?: boolean;
   };
 }
 
@@ -245,7 +262,6 @@ function scaledFormula(
   request: SpellCastRequest,
 ) {
   if (!Number.isInteger(formula.count) || formula.count < 0) throw new DomainEvaluationError("spell dice count must be a non-negative integer");
-  if (formula.count === 0 && (formula.flat ?? 0) <= 0) throw new DomainEvaluationError("spell formula must contain dice or positive flat value");
   requirePositiveInteger(formula.sides, "spell die sides");
   let count = formula.count;
   if (formula.cantripScaling) count += cantripScaleSteps(request.caster.characterLevel);
@@ -255,13 +271,14 @@ function scaledFormula(
   const flat = (formula.flat ?? 0)
     +Math.max(0,(request.slotLevel??definition.baseLevel)-definition.baseLevel)*(formula.flatPerSlotAboveBase??0)
     +(formula.addSpellcastingModifier ? request.caster.spellcastingAbilityModifier : 0);
+  if (count === 0 && flat <= 0) throw new DomainEvaluationError("spell formula must contain dice or positive flat value");
   return { count, sides: formula.sides, flat };
 }
 
 function diceRequest(source: string, count: number, sides: number, faces: number[], flat: number) {
   const die: FixedDamageDice = { source, count, sides, faces };
   return {
-    dice: [die],
+    dice: count === 0 ? [] : [die],
     flat: flat === 0 ? [] : [{ source: `${source}:flat`, value: flat }],
   };
 }
@@ -424,25 +441,43 @@ function applyTrackedEffectOperations(
           sourceId:definition.spellId,
           sourceActorId:request.actorId,
           targetId:target.id,
-          kind:effect.modifier?"modifier":"marker",
-          tags:["spell",definition.spellId,"tracked-effect"],
+          kind:effect.modifier||effect.armorClass||effect.attackDamage?"modifier":"marker",
+          tags:["spell",definition.spellId,"tracked-effect",...(effect.damageDefenses??[]).map((defense)=>`damage-${defense.kind}:${defense.damageType}`)],
           duration:resolveEffectDuration(effect.duration,request,target.id),
           termination:effect.termination,
           concentrationGroupId,
-          metadata:{
-            summary:effect.summary,
-            ...(effect.modifier?{
-              d20Family:effect.modifier.family,
-              d20RollState:effect.modifier.rollState,
-              d20Scope:effect.modifier.scope,
-              consumeOnUse:effect.modifier.consumeOnUse===true,
-            }:{}),
-          },
+          metadata:trackedEffectMetadata(effect),
         },
       });
     }
   }
   return operations;
+}
+
+function trackedEffectMetadata(effect:SpellTrackedEffectDefinition):Record<string,string|number|boolean> {
+  const metadata:Record<string,string|number|boolean>={summary:effect.summary};
+  const modifier=effect.modifier;
+  if (modifier) {
+    metadata.d20Family=modifier.family;
+    metadata.d20Scope=modifier.scope;
+    metadata.consumeOnUse=modifier.consumeOnUse===true;
+    if (modifier.rollState) metadata.d20RollState=modifier.rollState;
+    if (modifier.ability) metadata.d20Ability=modifier.ability;
+    if (modifier.bonus?.flat) metadata.d20BonusFlat=modifier.bonus.flat;
+    if (modifier.bonus?.dice) { metadata.d20BonusDiceCount=modifier.bonus.dice.count; metadata.d20BonusDiceSides=modifier.bonus.dice.sides; }
+    if (modifier.bonus?.sign===-1) metadata.d20BonusSign=-1;
+  }
+  if (effect.armorClass?.bonus) metadata.acBonus=effect.armorClass.bonus;
+  if (effect.armorClass?.floor) metadata.acFloor=effect.armorClass.floor;
+  const attack=effect.attackDamage;
+  if (attack) {
+    metadata.attackDamageType=attack.damageType;
+    if (attack.flat) metadata.attackDamageFlat=attack.flat;
+    if (attack.dice) { metadata.attackDamageDiceCount=attack.dice.count; metadata.attackDamageDiceSides=attack.dice.sides; }
+    if (attack.sourceKinds) metadata.attackDamageSourceKinds=attack.sourceKinds.join(",");
+    if (attack.againstTargetOnly) metadata.attackDamageAgainstTargetOnly=true;
+  }
+  return metadata;
 }
 
 function saveOperations(
