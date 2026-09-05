@@ -31,7 +31,7 @@ test("Initiative tracker is projection-only and stays a compact order strip", ()
 
 test("Initiative economy and End Turn stay in the persistent Command Center", () => {
   assert.match(dock, /snapshot\.scene\.economyByActor\[actorId\]/);
-  assert.match(dock, /const \{snapshot,resolveAction,configureReadyAction,endTurn\}=useSimpleVtt\(\)/);
+  assert.match(dock, /const \{snapshot,resolveAction,configureReadyAction,endTurn(?:,refresh)?\}=useSimpleVtt\(\)/);
   assert.match(dock, /currentActor\?\.id===snapshot\.activeCharacter\.id/);
   assert.match(dock, /role==="dm"\|\|playerOwnsTurn/);
   assert.match(dock, /await endTurn\(\)/);
