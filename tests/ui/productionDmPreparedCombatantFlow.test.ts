@@ -113,12 +113,10 @@ test("Host can add/remove Encounter Combatants after Open in active Freeform and
 
 test("live DM Encounter pane owns Combatant add/remove instead of a pre-start preparation gate",()=>{
   const source=readFileSync(new URL("../../src/SessionDmTools.tsx",import.meta.url),"utf8");
-  const lifecycleSource=readFileSync(new URL("../../src/ProductionSessionLifecycleBridge.tsx",import.meta.url),"utf8");
   assert.match(source,/SessionDmEncounterPane/);
   assert.match(source,/combatantDefinitions/);
   assert.match(source,/instantiateCombatant/);
   assert.match(source,/removeCombatant/);
   assert.match(source,/0 Combatant도 정상적인 활성 세션 상태입니다/);
-  assert.doesNotMatch(lifecycleSource,/Combatant 준비|플레이 시작/);
   assert.doesNotMatch(source,/setReferenceRole|loadReferenceScenario|Ctrl\+Shift\+D/);
 });

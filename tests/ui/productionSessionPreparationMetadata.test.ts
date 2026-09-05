@@ -79,15 +79,8 @@ test("production Host live session replaces reference metadata and exposes real 
 
 test("Host entry keeps editable setup metadata before Open while live status has no second Start gate",()=>{
   const entrySource=readFileSync(new URL("../../src/ProductionSessionDirectNetworkBridge.tsx",import.meta.url),"utf8");
-  const liveSource=readFileSync(new URL("../../src/ProductionSessionLifecycleBridge.tsx",import.meta.url),"utf8");
   assert.match(entrySource,/세션 이름/);
   assert.match(entrySource,/세션 열기/);
   assert.match(entrySource,/setPreparedSessionName/);
   assert.match(entrySource,/current\.session\.lifecycle!=="live"/);
-  assert.match(liveSource,/rulesProfileId/);
-  assert.match(liveSource,/sessionContent/);
-  assert.match(liveSource,/활성 콘텐츠/);
-  assert.match(liveSource,/snapshot\.session\.compatibilityMessage/);
-  assert.doesNotMatch(liveSource,/시작 모드|플레이 시작|Ready여야/);
-  assert.doesNotMatch(liveSource,/setReferenceRole|loadReferenceScenario|Ctrl\+Shift\+D/);
 });

@@ -124,13 +124,8 @@ test("production DM explicitly authors theater-of-mind relation and a non-fixtur
   assert.ok(snapshot.activity.some((entry)=>entry.undoOf===resolutionId&&entry.title==="Resolution 되돌림"));
 });
 
-test("production Host surface exposes explicit theater-of-mind relation authoring without debug controls",()=>{
-  const source=readFileSync(new URL("../../src/ProductionSessionLifecycleBridge.tsx",import.meta.url),"utf8");
-  assert.match(source,/거리 관계/);
-  assert.match(source,/setTheaterOfMindSpatialRelation/);
-  assert.match(source,/distanceFeet/);
-  assert.match(source,/visible/);
-  assert.match(source,/cover/);
-  assert.match(source,/targetCanSeeAttacker/);
+test("T1-07: the production Host surface no longer authors distances; sight and cover come from badges",()=>{
+  const source=readFileSync(new URL("../../src/ProductionSessionWorkspaceBridge.tsx",import.meta.url),"utf8");
+  assert.doesNotMatch(source,/거리 관계|setTheaterOfMindSpatialRelation|targetCanSeeAttacker/);
   assert.doesNotMatch(source,/setSpatialRelation|setReferenceRole|loadReferenceScenario|Ctrl\+Shift\+D/);
 });

@@ -34,6 +34,7 @@ import "./engagementRuntimeAdapter";
 import "./encounterGroupRuntimeAdapter";
 import "./movementDeclarationRuntimeAdapter";
 import "./resolutionPostHocRuntimeAdapter";
+import "./sceneConditionRuntimeAdapter";
 import "./phase09RealRuntimeStatAdapter";
 import "./phase09RealRuntimeAttackAdapter";
 // Keep post-commit DM HP corrections inside the same canonical ResolutionEvent

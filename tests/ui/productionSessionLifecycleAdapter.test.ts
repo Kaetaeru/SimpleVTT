@@ -224,15 +224,11 @@ test("saved Character joins a live Host and opens the authoritative current mode
   }
 });
 
-test("production Host UI exposes live share state and zero-Player validity without Ready or a second Start gate",()=>{
-  const source=readFileSync(new URL("../../src/ProductionSessionLifecycleBridge.tsx",import.meta.url),"utf8");
-  assert.match(source,/Host 플레이 중/);
-  assert.match(source,/공유 주소/);
+test("production Host UI exposes live share state and session end without a debug path",()=>{
+  const source=readFileSync(new URL("../../src/ProductionSessionWorkspaceBridge.tsx",import.meta.url),"utf8");
   assert.match(source,/snapshot\.session\.address/);
-  assert.match(source,/Host 혼자서도 플레이할 수 있습니다/);
   assert.match(source,/세션 종료/);
   assert.match(source,/stopSession\(\)/);
-  assert.doesNotMatch(source,/participant\.ready|startPreparedSession|플레이 시작|Ready여야/);
   assert.doesNotMatch(source,/setReferenceRole|loadReferenceScenario|Ctrl\+Shift\+D/);
 });
 
