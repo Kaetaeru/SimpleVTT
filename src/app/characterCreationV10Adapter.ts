@@ -151,6 +151,8 @@ function sheet(draft: CharacterCreateDraft): CharacterSheet {
     saves:meta.saves.map((key) => `${key.toUpperCase()} +${draft.derived.proficiencyBonus + abilityMod(abilities[key])}`),
     skills:finalSkillNames(draft),
     features:[...meta.features, ...originFeats, ...speciesAutomatic.features, ...selectedFeatures],
+    featIds:[...new Set(activeOriginFeats(draft))],
+    featSources:Object.fromEntries(activeOriginFeats(draft).map((featId) => [featId, "character creation origin feat"])),
     equipment:instances.map((item) => item.quantity > 1 ? `${item.name} ×${item.quantity}` : item.name),
     items:instances,
     resources,

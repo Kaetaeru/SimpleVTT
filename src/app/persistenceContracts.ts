@@ -45,6 +45,8 @@ export interface CharacterProgressionSelectionsV1 {
   installedProgressionGrantIds?:string[];
   epicBoonFeatIds?:string[];
   epicBoonFeatSources?:Record<string,string>;
+  featIds?:string[];
+  featSources?:Record<string,string>;
   weaponMasteryIds?:string[];
   weaponMasterySources?:Record<string,string>;
   fightingStyleFeatIds?:string[];

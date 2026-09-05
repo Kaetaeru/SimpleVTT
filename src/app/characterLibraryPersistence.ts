@@ -54,6 +54,8 @@ function progressionSelections(sheet:CharacterSheet):CharacterProgressionSelecti
     installedProgressionGrantIds:sheet.installedProgressionGrantIds,
     epicBoonFeatIds:sheet.epicBoonFeatIds,
     epicBoonFeatSources:sheet.epicBoonFeatSources,
+    featIds:sheet.featIds,
+    featSources:sheet.featSources,
     weaponMasteryIds:sheet.weaponMasteryIds,
     weaponMasterySources:sheet.weaponMasterySources,
     fightingStyleFeatIds:sheet.fightingStyleFeatIds,
@@ -253,6 +255,8 @@ function applyProgressionSource(sheet:CharacterSheet,progression:CharacterProgre
   sheet.installedProgressionGrantIds=progression.installedProgressionGrantIds ? cp(progression.installedProgressionGrantIds) : undefined;
   sheet.epicBoonFeatIds=progression.epicBoonFeatIds ? cp(progression.epicBoonFeatIds) : undefined;
   sheet.epicBoonFeatSources=progression.epicBoonFeatSources ? cp(progression.epicBoonFeatSources) : undefined;
+  sheet.featIds=progression.featIds ? cp(progression.featIds) : undefined;
+  sheet.featSources=progression.featSources ? cp(progression.featSources) : undefined;
   sheet.weaponMasteryIds=progression.weaponMasteryIds ? cp(progression.weaponMasteryIds) : undefined;
   sheet.weaponMasterySources=progression.weaponMasterySources ? cp(progression.weaponMasterySources) : undefined;
   sheet.fightingStyleFeatIds=progression.fightingStyleFeatIds ? cp(progression.fightingStyleFeatIds) : undefined;
