@@ -520,7 +520,7 @@ function SessionResolutionLayer({ onOpenActivity }: { onOpenActivity(button: HTM
   const announcement = [
     `${actorName} · ${resolution.actionName}`,
     targetNames.length > 0 ? `대상 ${targetNames.join(", ")}` : "",
-    resolution.authoritativeDice.length > 0 ? `주사위 ${resolution.authoritativeDice.join(", ")}` : "",
+    resolution.naturalD20 !== undefined ? `d20 ${resolution.naturalD20}` : resolution.authoritativeDice.length > 0 ? `주사위 ${resolution.authoritativeDice.join(", ")}` : "",
     announcedTotal !== undefined ? `총합 ${announcedTotal}` : "",
     mainOutcome,
     stateSummary,
