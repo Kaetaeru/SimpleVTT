@@ -15,7 +15,7 @@ interface MultiattackAdapterState {
   getSnapshot():Promise<AppSnapshot>;
 }
 
-export interface MultiattackRoutineStep { name:string; count:number; actionName:string }
+export interface MultiattackRoutineStep { name:string; count:number; actionName:string; alternatives?:string[] }
 
 function definitionFor(state:MultiattackAdapterState,actorId:string):CombatantDefinitionVm|undefined {
   const entity=state.scene.entities.find((entry)=>entry.id===actorId);
@@ -31,7 +31,7 @@ export function multiattackRoutineOf(snapshot:Pick<AppSnapshot,"scene"|"combatan
 }
 
 export function multiattackRoutineLabel(routine:MultiattackRoutineStep[]) {
-  return routine.map((step)=>`${step.actionName} ${step.count}회`).join(" · ");
+  return routine.map((step)=>`${step.alternatives&&step.alternatives.length>1?step.alternatives.join("/"):step.actionName} ${step.count}회`).join(" · ");
 }
 
 declare module "./mockAdapter" {
