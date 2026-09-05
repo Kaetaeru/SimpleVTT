@@ -18,6 +18,10 @@ historical_or_reference_branches:
   - agent/resolver-foundation-convergence
 ```
 
+## V1 status
+
+V1 is complete: 72/72 release gates PASS (100.0/100.0), 120/120 multiplayer scenarios PASS, on exact SHA `7429e2c77ee969aec1c3fe28c252a8ad07e4cd06` with the matching Windows release artifact (`SimpleVTT-V1-RELEASE-7429e2c77ee969aec1c3fe28c252a8ad07e4cd06`, `simplevtt.exe` sha256 `2b7394794e37924f707a749d00925e8818577d70bd582dfe499c01df11c843be`). Record: `docs/roadmap/evidence/W9-04.md`. `work/v1-composite` stays the integration target until the owner changes the integration model.
+
 ## Authority order
 
 When sources conflict, use this order:

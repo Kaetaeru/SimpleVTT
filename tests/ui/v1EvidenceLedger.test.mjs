@@ -45,10 +45,17 @@ test("a stale official score is rejected", () => {
 
 test("counts must match the gate list", () => {
   const ledger = ledgerFixture();
+  // Once every gate is PASS (V1 complete) there is no PENDING gate to promote; demote a PASS gate instead so the stored counts go stale either way.
   const pending = ledger.gates.find((gate) => gate.status === "PENDING");
-  pending.status = "PASS";
-  pending.lastVerifiedSha = ledger.createdFromSha;
-  pending.evidence.sources = ["fixture"];
+  if (pending) {
+    pending.status = "PASS";
+    pending.lastVerifiedSha = ledger.createdFromSha;
+    pending.evidence.sources = ["fixture"];
+  } else {
+    const passed = ledger.gates.find((gate) => gate.status === "PASS");
+    passed.status = "PENDING";
+    passed.lastVerifiedSha = null;
+  }
   const result = validateV1EvidenceLedger(ledger);
   assert.equal(result.ok, false);
   assert.ok(result.errors.some((error) => error.startsWith("counts.pass is")));
