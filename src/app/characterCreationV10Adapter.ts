@@ -153,6 +153,9 @@ function sheet(draft: CharacterCreateDraft): CharacterSheet {
     features:[...meta.features, ...originFeats, ...speciesAutomatic.features, ...selectedFeatures],
     featIds:[...new Set(activeOriginFeats(draft))],
     featSources:Object.fromEntries(activeOriginFeats(draft).map((featId) => [featId, "character creation origin feat"])),
+    // A fighting style chosen at creation (Fighter 1) is a feat grant exactly like one chosen at level-up.
+    fightingStyleFeatIds:[...new Set(draft.choiceSelections?.["class.fighting-style"] ?? [])],
+    fightingStyleFeatSources:Object.fromEntries((draft.choiceSelections?.["class.fighting-style"] ?? []).map((featId) => [featId, "character creation fighting style"])),
     equipment:instances.map((item) => item.quantity > 1 ? `${item.name} ×${item.quantity}` : item.name),
     items:instances,
     resources,

@@ -32,6 +32,8 @@ on:
       - "tests/ui/installedCommonPlayProductionRuntime.test.ts"
       - "tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts"
       - "tests/ui/commonPlayAutomaticInterceptorProduction.test.ts"
+      - "tests/ui/srdFeatRuntime.test.ts"
+      - "content/modules/dnd-srd-5.2.1.feats/module.json"
       - "tests/ui/installedCommonPlayActorOwnerInteractionProduction.test.ts"
       - "tests/ui/c9FamilyQTargetOwnerInteractionProduction.test.ts"
       - "tests/ui/c9FamilyQTargetOwnerStaleInteractionProduction.test.ts"
@@ -70,6 +72,7 @@ jobs:
           tests/ui/installedCommonPlayProductionRuntime.test.ts
           tests/ui/installedCommonPlayInterceptorProductionRuntime.test.ts
           tests/ui/commonPlayAutomaticInterceptorProduction.test.ts
+          tests/ui/srdFeatRuntime.test.ts
           tests/ui/installedCommonPlayActorOwnerInteractionProduction.test.ts
           tests/ui/c9FamilyQTargetOwnerInteractionProduction.test.ts
           tests/ui/c9FamilyQTargetOwnerStaleInteractionProduction.test.ts

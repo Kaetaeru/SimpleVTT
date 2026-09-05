@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  FEAT_RULE_CATALOG,
   epicBoonFeatRules,
   featAbilityIncreaseOptions,
   featEligibility,
+  featExecution,
   featRuleById,
 } from "../../src/domain/featRuleCatalog";
 
@@ -53,4 +55,20 @@ test("Epic Boon ability increase choices come from canonical config instead of d
   assert.deepEqual(featAbilityIncreaseOptions(night!),["dex","int","wis","cha"]);
   assert.deepEqual(featAbilityIncreaseOptions(truesight!),["int","wis","cha"]);
   assert.deepEqual(featAbilityIncreaseOptions(combat!),["str","dex","con","int","wis","cha"]);
+});
+
+// X1-03: the catalog records how each feat executes so the roadmap can count executable feats honestly.
+test("every SRD feat records an execution status, and a non-executing feat names the missing seam", () => {
+  const statuses = new Map<string,number>();
+  for (const feat of FEAT_RULE_CATALOG.feats) {
+    const execution = featExecution(feat);
+    assert.ok(feat.config.execution, `${feat.id} has an execution record`);
+    assert.ok(["common-play","derived","selection","descriptive"].includes(execution.status), `${feat.id}: ${execution.status}`);
+    if (execution.status !== "common-play") assert.ok(execution.reason && execution.reason.length > 10, `${feat.id} explains why it is ${execution.status}`);
+    statuses.set(execution.status, (statuses.get(execution.status) ?? 0) + 1);
+  }
+  assert.equal(featExecution(featRuleById("dnd.srd521.feat.fighting-style.archery")!).status, "common-play");
+  assert.equal(featExecution(featRuleById("dnd.srd521.feat.fighting-style.defense")!).status, "derived");
+  assert.equal(featExecution(featRuleById("dnd.srd521.feat.skilled")!).status, "selection");
+  assert.deepEqual(Object.fromEntries([...statuses.entries()].sort()), { "common-play":1, derived:1, descriptive:12, selection:3 });
 });

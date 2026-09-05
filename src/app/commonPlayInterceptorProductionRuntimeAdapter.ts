@@ -75,18 +75,21 @@ type PendingPassiveReaction={
 };
 
 type ResolutionReactionState={resolutionId:string;handled:Set<string>};
+/** Handled-candidate memory survives interleaved resolutions (an atomic attack transaction can surface other resolution ids between two passes over the same one). */
+const REACTION_STATE_MEMORY=16;
 
 const previousResolveAction=MockAdapter.prototype.resolveAction;
 const previousAdvanceResolution=MockAdapter.prototype.advanceResolution;
 const previousRespondToInterrupt=MockAdapter.prototype.respondToInterrupt;
 const pendingByAdapter=new WeakMap<MockAdapter,PendingPassiveReaction>();
-const reactionStateByAdapter=new WeakMap<MockAdapter,ResolutionReactionState>();
+const reactionStateByAdapter=new WeakMap<MockAdapter,ResolutionReactionState[]>();
 
 function reactionState(adapter:MockAdapter,resolutionId:string) {
-  const current=reactionStateByAdapter.get(adapter);
-  if(current?.resolutionId===resolutionId)return current;
+  const states=reactionStateByAdapter.get(adapter)??[];
+  const current=states.find((entry)=>entry.resolutionId===resolutionId);
+  if(current)return current;
   const next:ResolutionReactionState={resolutionId,handled:new Set()};
-  reactionStateByAdapter.set(adapter,next);
+  reactionStateByAdapter.set(adapter,[...states.slice(-(REACTION_STATE_MEMORY-1)),next]);
   return next;
 }
 
@@ -466,7 +469,8 @@ function attackWeaponFact(internal:AdapterState,candidate:PassiveReactionCandida
   const runtimeAttack=action?.runtimeAttack;
   if(!runtimeAttack)return {status:"unknown"};
   const sheet=sheetForSubject(internal,candidate,subjectId);
-  const item=sheet?.items.find((entry)=>entry.grantedActionIds.includes(pending.sourceId));
+  const item=sheet?.items.find((entry)=>entry.grantedActionIds.includes(pending.sourceId))
+    ??sheet?.items.find((entry)=>entry.name===action.name&&itemEntryById(compatibleItemDefinitionId(entry.definitionId))?.category==="weapon");
   const definition=item?weaponDefinitionOf(item):undefined;
   const weapon=runtimeAttack.sourceKind==="weapon";
   const ranged=weapon&&(definition?definition.mode==="ranged":runtimeAttack.rangeFeet>10);
@@ -537,6 +541,13 @@ async function offerPassiveReaction(adapter:MockAdapter):Promise<"interrupt"|"ap
     if(!projections.length)continue;
     if(interceptor&&!interceptor.interaction){
       // Automatic interceptor: apply immediately when eligible, no interrupt. The resolution keeps advancing.
+      // The applied modification is visible on the resolution itself; never apply the same definition twice to one resolution,
+      // whatever path re-enters this pass (the atomic attack transaction re-runs the stage with a new revision).
+      const marker=`common-play:${candidate.definition.id}`;
+      if((resolution.rollModifierContributions??[]).some((entry)=>entry.source===marker)||resolution.provenance.some((entry)=>entry.startsWith(`${marker} ·`))){
+        state.handled.add(candidate.key);
+        continue;
+      }
       for(const projected of projections){
         if(!await interceptorEligible(internal,candidate,projected.pending,runtime))continue;
         if(await applyAutomaticReaction(adapter,resolution,runtime,candidate,interceptor.id,projected,damage))applied=true;

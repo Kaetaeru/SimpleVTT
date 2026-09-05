@@ -12,8 +12,20 @@ export interface FeatAbilityIncrease {
   maximum:number;
 }
 
+/**
+ * How a feat's effect executes in play: `common-play` (the entry carries executable mechanics), `derived`
+ * (folded into a derived stat such as AC), `selection` (choices applied at creation/level-up), or
+ * `descriptive` (not executed; `reason` names the missing engine seam).
+ */
+export type FeatExecutionStatus="common-play"|"derived"|"selection"|"descriptive";
+export interface FeatExecution {
+  status:FeatExecutionStatus;
+  reason?:string;
+}
+
 export interface FeatRuleConfig {
   tier?:"origin"|"general";
+  execution?:FeatExecution;
   minimumLevel?:number;
   repeatable?:boolean;
   requires?:string;
@@ -43,6 +55,10 @@ const BY_ID = new Map(FEAT_RULE_CATALOG.feats.map((entry) => [entry.id,entry]));
 
 export function featRuleById(featId:string) {
   return BY_ID.get(featId);
+}
+
+export function featExecution(definition:FeatRuleDefinition):FeatExecution {
+  return definition.config.execution ?? { status:"descriptive", reason:"no execution record" };
 }
 
 export function epicBoonFeatRules() {

@@ -102,7 +102,9 @@ type WeaponDefinition={mode?:"melee"|"ranged";properties?:string[]};
 type ArmorDefinition={training?:"light"|"medium"|"heavy"};
 
 function weaponRuntimeFact(character:CharacterSheet,attack:CharacterSheet["attacks"][number]) {
-  const item=character.items.find((candidate)=>candidate.grantedActionIds.includes(attack.id));
+  // Characters created before weapon items were linked to their attacks match by display name.
+  const item=character.items.find((candidate)=>candidate.grantedActionIds.includes(attack.id))
+    ??character.items.find((candidate)=>candidate.name===attack.name&&itemEntryById(candidate.definitionId)?.category==="weapon");
   const entry=item&&itemEntryById(item.definitionId);
   const definition=entry?.category==="weapon"?itemMechanic(entry,"weapon-definition") as WeaponDefinition|undefined:undefined;
   if(!definition)return {rangeFeet:5,loading:false};
