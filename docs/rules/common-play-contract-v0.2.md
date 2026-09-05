@@ -161,6 +161,28 @@ Allowed interceptor operations are `append`, `replace`, `prevent`, `modify`, `re
 
 This makes reaction defenses, damage replacement, extra damage, and outcome recalculation generic without turning JSON into unrestricted JSON Patch.
 
+### 10.1 Automatic interceptors (V1.1, X1-02)
+
+An interceptor that declares no `interaction` is **automatic**: the runtime applies its `recalculate` operations whenever
+its `factQueries` + `when` eligibility holds, without opening a choice. This is how a passive feat or fighting style
+(Archery +2 on ranged attack rolls, Defense +1 AC while wearing armor) executes from data. Rules:
+
+- Supported on the same slots as interactive interceptors: `d20.roll` (`roll.modify`), `attack.outcome` (`property.modify` on `defense.ac`, applied when the source is the attack target), `primary.damage`.
+- An automatic `d20.roll` interceptor applies to every outcome unless `outcomes` narrows it (an interactive one defaults to `success` only, because a choice is offered only when it can change the result).
+- Payments are staged exactly like an interactive reaction; an unaffordable payment makes the interceptor not applicable, never a partial spend.
+- The owner is the source actor (`actor-owner`); the applied modification is recorded on the resolution (`common-play:<definition>` contribution and provenance) so Host and every Client see the same numbers.
+
+Attack and equipment facts an automatic interceptor may query (all boolean; `subject` is the attacker for `attack.*` and any Character for `equipment.*`):
+
+| Fact | Meaning |
+| --- | --- |
+| `attack.weapon.ranged` | the intercepted attack uses a weapon whose definition mode is ranged |
+| `attack.weapon.melee` | the intercepted attack is a melee weapon or unarmed strike |
+| `attack.weapon.two-handed` | the weapon has the two-handed property or is wielded in the two-hand slot |
+| `equipment.armor.worn` | the subject has an armor item equipped |
+| `equipment.shield.worn` | the subject has a shield equipped |
+| `equipment.weapons.two-wielded` | the subject wields a weapon in each hand |
+
 ## 11. RuntimeArtifact and lifetime graph
 
 Persistent spell/feature output is represented by an `ArtifactTemplate`, not by keeping a named spell resolver alive.

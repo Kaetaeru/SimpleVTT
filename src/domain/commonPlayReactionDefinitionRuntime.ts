@@ -96,6 +96,11 @@ function eligibility(value:Obj,label:string) {
   return {factQueries,when:structuredClone(value.when) as SemanticPredicate};
 }
 
+/** Absent interaction = automatic interceptor (applied by the runtime whenever eligible, without a choice). */
+function optionalInteraction(value:unknown,label:string):{interaction:CommonPlayInteractionDefinition}|Record<string,never> {
+  return value===undefined?{}:{interaction:interaction(value,label)};
+}
+
 function interaction(value:unknown,label:string):CommonPlayInteractionDefinition {
   const raw=object(value,label);
   const id=stableId(raw.id,`${label}.id`);
@@ -177,7 +182,7 @@ function lowerD20Interceptor(value:Obj,index:number,options:ReactionLoweringOpti
   return {
     id:stableId(value.id,`${label}.id`),
     timing:"d20.outcome-determined",
-    interaction:interaction(value.interaction,`${label}.interaction`),
+    ...optionalInteraction(value.interaction,`${label}.interaction`),
     operation:"recalculate",
     slot:"d20.roll",
     ...(families?{families:families as CommonPlayD20RollInterceptor["families"]}:{}),
@@ -240,7 +245,7 @@ function lowerAttackOutcomeInterceptor(value:Obj,index:number):CommonPlayAttackO
   return {
     id:stableId(value.id,`${label}.id`),
     timing:"attack.outcome-determined",
-    interaction:interaction(value.interaction,`${label}.interaction`),
+    ...optionalInteraction(value.interaction,`${label}.interaction`),
     operation:"recalculate",
     slot:"attack.outcome",
     ...(eligibilityDefinition?{eligibility:eligibilityDefinition}:{}),

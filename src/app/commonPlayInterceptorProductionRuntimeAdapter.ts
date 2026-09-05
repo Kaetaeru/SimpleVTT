@@ -18,12 +18,15 @@ import { commitAdapterTurnRuntimeState, snapshotAdapterTurnRuntimeState } from "
 import { parseCommonPlayDefinition } from "../domain/commonPlayDefinitionRuntime";
 import { lowerCommonPlayReactionDefinition } from "../domain/commonPlayReactionDefinitionRuntime";
 import {
+  applyAutomaticCommonPlayInterceptor,
   resumeCommonPlayInteraction,
   startCommonPlayResolution,
   type AwaitingCommonPlayInteraction,
   type CommonPlayInteractionAuthority,
   type CommonPlayReactionDefinition,
 } from "../domain/commonPlayRuntime";
+import { itemEntryById, itemMechanic } from "./characterCreationV10Data";
+import { compatibleItemDefinitionId } from "./sessionInventoryRuntimeAdapter";
 import type { RulesRuntimeState } from "../domain/combatState";
 import type { D20TestResult, ModifierContribution } from "../domain/d20";
 import type { DamageRollResolution } from "../domain/damageRoll";
@@ -101,8 +104,8 @@ function drawDie(internal:AdapterState,purpose:string,sides:number,index:number)
   return {face:((face-1)%sides)+1,nextDraw:draw};
 }
 
-function modifierAuthority(internal:AdapterState,pending:PendingPassiveReaction):CommonPlayInteractionAuthority|undefined {
-  const interceptor=pending.awaiting.context.definition.interceptors.find((entry)=>entry.id===pending.awaiting.context.interceptorId);
+function modifierAuthority(internal:AdapterState,pending:Pick<PendingPassiveReaction,"candidate">&{interceptorId:string}):CommonPlayInteractionAuthority|undefined {
+  const interceptor=pending.candidate.definition.interceptors.find((entry)=>entry.id===pending.interceptorId);
   if(!interceptor||(interceptor.slot!=="d20.roll"&&interceptor.slot!=="primary.damage"))return undefined;
   const modifierDiceFaces:Record<number,number[]>={};
   let drawIndex=0;
@@ -206,7 +209,8 @@ async function passiveReactionCandidates(adapter:MockAdapter):Promise<PassiveRea
           candidate.contentId===canonical.id&&candidate.sourceId===entry.sourceId&&candidate.version===entry.version
         );
         for(const interceptor of definition.interceptors){
-          const responder=interceptor.interaction.responder;
+          // An automatic interceptor (no interaction) is owned by its source actor exactly like an actor-owner choice.
+          const responder=interceptor.interaction?.responder??"actor-owner";
           if(responder!=="actor"&&responder!=="actor-owner")continue;
           candidates.push({
             key:`${owner.sheet.id}:${qualifiedId}:${canonical.id}:${interceptor.id}`,
@@ -414,6 +418,8 @@ function interceptorFactProvider(internal:AdapterState,candidate:PassiveReaction
         return creatureType?{status:"answered",value:creatureType}:{status:"unknown"};
       }
       if(query.fact==="sense.hidden")return {status:"answered",value:runtime.effects.some((effect)=>effect.targetId===subjectId&&effect.tags.includes("hidden"))};
+      if(query.fact.startsWith("attack.weapon."))return attackWeaponFact(internal,candidate,pending,subjectId,query.fact);
+      if(query.fact.startsWith("equipment."))return equipmentFact(internal,candidate,subjectId,query.fact);
       const relation=authoritativeCommonPlaySpatialRelation(internal.scene,candidate.sourceActorId,subjectId);
       if(!relation)return {status:"unknown"};
       const resolverTargetInvisible=runtime.effects.some((effect)=>effect.targetId===subjectId&&effect.conditionId==="invisible"&&!effect.suppression);
@@ -435,6 +441,60 @@ function interceptorFactProvider(internal:AdapterState,candidate:PassiveReaction
       return {status:"unknown"};
     },
   };
+}
+
+type WeaponDefinitionConfig={mode?:"melee"|"ranged";properties?:string[]};
+
+/** The sheet whose equipment answers a fact about `subjectId`, when that subject is a Character this adapter knows. */
+function sheetForSubject(internal:AdapterState,candidate:PassiveReactionCandidate,subjectId:string):CharacterSheet|undefined {
+  if(subjectId===candidate.sourceActorId)return candidate.sheet;
+  if(subjectId===internal.activeCharacter.id)return internal.activeCharacter;
+  return projectedCharacterById(internal as unknown as MockAdapter,subjectId)?.sheet;
+}
+
+function weaponDefinitionOf(item:CharacterSheet["items"][number]):WeaponDefinitionConfig|undefined {
+  const entry=itemEntryById(compatibleItemDefinitionId(item.definitionId));
+  return entry?.category==="weapon"?itemMechanic(entry,"weapon-definition") as WeaponDefinitionConfig|undefined:undefined;
+}
+
+/** Facts about the intercepted attack: the action is the pending resolution's source, the attacker its actor. */
+function attackWeaponFact(internal:AdapterState,candidate:PassiveReactionCandidate,pending:PendingResolution,subjectId:string,fact:string):ReturnType<CommonPlayFactProvider["resolve"]> {
+  const attack=pending.operations.find((operation)=>operation.kind==="d20"&&operation.request.family==="attack-roll");
+  if(!attack||attack.kind!=="d20")return {status:"unsupported",reason:`${fact} requires an intercepted attack roll`};
+  if(attack.actorId!==subjectId)return {status:"unsupported",reason:`${fact} describes the attacker; subject must be intercepted.actor`};
+  const action=Object.values(internal.scene.actionsByActor).flat().find((entry)=>entry.id===pending.sourceId&&entry.actorId===attack.actorId);
+  const runtimeAttack=action?.runtimeAttack;
+  if(!runtimeAttack)return {status:"unknown"};
+  const sheet=sheetForSubject(internal,candidate,subjectId);
+  const item=sheet?.items.find((entry)=>entry.grantedActionIds.includes(pending.sourceId));
+  const definition=item?weaponDefinitionOf(item):undefined;
+  const weapon=runtimeAttack.sourceKind==="weapon";
+  const ranged=weapon&&(definition?definition.mode==="ranged":runtimeAttack.rangeFeet>10);
+  if(fact==="attack.weapon.ranged")return {status:"answered",value:ranged};
+  if(fact==="attack.weapon.melee")return {status:"answered",value:(weapon||runtimeAttack.sourceKind==="unarmed")&&!ranged};
+  if(fact==="attack.weapon.two-handed"){
+    if(!weapon)return {status:"answered",value:false};
+    if(!item)return {status:"unknown"};
+    const properties=definition?.properties??[];
+    return {status:"answered",value:item.wieldSlot==="two-hand"||properties.includes("two-handed")};
+  }
+  return {status:"unknown"};
+}
+
+/** Facts about what the subject wears or wields, from the Character sheet's equipped items. */
+function equipmentFact(internal:AdapterState,candidate:PassiveReactionCandidate,subjectId:string,fact:string):ReturnType<CommonPlayFactProvider["resolve"]> {
+  const sheet=sheetForSubject(internal,candidate,subjectId);
+  if(!sheet)return {status:"unknown"};
+  const equipped=sheet.items.filter((item)=>item.equipped);
+  const categoryOf=(item:CharacterSheet["items"][number])=>itemEntryById(compatibleItemDefinitionId(item.definitionId))?.category;
+  if(fact==="equipment.armor.worn")return {status:"answered",value:equipped.some((item)=>categoryOf(item)==="armor")};
+  if(fact==="equipment.shield.worn")return {status:"answered",value:equipped.some((item)=>categoryOf(item)==="shield")};
+  if(fact==="equipment.weapons.two-wielded"){
+    const wielded=equipped.filter((item)=>categoryOf(item)==="weapon"&&(item.wielded||item.wieldSlot));
+    const main=wielded.some((item)=>item.wieldSlot==="main-hand"),off=wielded.some((item)=>item.wieldSlot==="off-hand");
+    return {status:"answered",value:main&&off};
+  }
+  return {status:"unknown"};
 }
 
 async function interceptorEligible(internal:AdapterState,candidate:PassiveReactionCandidate,pending:PendingResolution,runtime:RulesRuntimeState) {
@@ -459,13 +519,15 @@ function interactionCost(definition:CommonPlayReactionDefinition) {
   }).join(" + ")||"비용 없음";
 }
 
-async function offerPassiveReaction(adapter:MockAdapter) {
+/** "interrupt": a choice was opened and the resolution paused; "applied": an automatic interceptor changed the resolution; false: nothing happened. */
+async function offerPassiveReaction(adapter:MockAdapter):Promise<"interrupt"|"applied"|false> {
   const internal=adapter as unknown as AdapterState;
   const resolution=internal.resolution;
   if(!resolution||resolution.interrupt||internal.sessionMode!=="initiative")return false;
   const runtime=snapshotAdapterTurnRuntimeState(adapter,internal.scene);
   if(!runtime)return false;
   const state=reactionState(adapter,resolution.id);
+  let applied=false;
   for(const candidate of await passiveReactionCandidates(adapter)){
     if(state.handled.has(candidate.key)||!runtime.combatants[candidate.sourceActorId])continue;
     const interceptor=candidate.definition.interceptors[0];
@@ -473,6 +535,15 @@ async function offerPassiveReaction(adapter:MockAdapter) {
     const damageProjection=damage?pendingDamage(adapter,resolution,runtime):undefined;
     const projections=damageProjection?[damageProjection]:pendingD20s(resolution,runtime,internal.scene);
     if(!projections.length)continue;
+    if(interceptor&&!interceptor.interaction){
+      // Automatic interceptor: apply immediately when eligible, no interrupt. The resolution keeps advancing.
+      for(const projected of projections){
+        if(!await interceptorEligible(internal,candidate,projected.pending,runtime))continue;
+        if(await applyAutomaticReaction(adapter,resolution,runtime,candidate,interceptor.id,projected,damage))applied=true;
+      }
+      state.handled.add(candidate.key);
+      continue;
+    }
     for(const projected of projections){
       const seeded=seededReactionState(runtime,candidate);
       if(!await interceptorEligible(internal,candidate,projected.pending,runtime))continue;
@@ -501,11 +572,58 @@ async function offerPassiveReaction(adapter:MockAdapter) {
       resolution.stage="interrupt";
       resolution.canAdvance=false;
       resolution.nextLabel=undefined;
-      return true;
+      return "interrupt";
     }
     state.handled.add(candidate.key);
   }
-  return false;
+  return applied?"applied":false;
+}
+
+async function applyAutomaticReaction(
+  adapter:MockAdapter,
+  resolution:ResolutionView,
+  runtime:RulesRuntimeState,
+  candidate:PassiveReactionCandidate,
+  interceptorId:string,
+  projected:{pending:PendingResolution;operationId:string;originalTotal?:number},
+  damage:boolean,
+) {
+  const internal=adapter as unknown as AdapterState;
+  const seeded=seededReactionState(runtime,candidate);
+  const authority=modifierAuthority(internal,{candidate,interceptorId});
+  const applied=applyAutomaticCommonPlayInterceptor(SIMPLEVTT_APP_RULES_PROFILE,seeded,projected.pending,candidate.definition,candidate.sourceActorId,authority);
+  if(applied.status==="not-applicable")return false;
+  if(applied.status==="rejected"){
+    resolution.detail.push(`${candidate.optionName}: 자동 인터셉터 거부 · ${applied.error}`);
+    return false;
+  }
+  const pending:PendingPassiveReaction={
+    resolutionId:resolution.id,operationId:projected.operationId,kind:damage?"damage":"d20",originalTotal:projected.originalTotal,
+    resumeCheckAfterResponse:resolution.rollKind==="check"&&resolution.stage!=="complete",candidate,
+    awaiting:{
+      status:"awaiting-input",state:seeded,
+      interaction:{id:`${projected.pending.id}:${candidate.definition.id}:automatic`,idempotencyKey:`${projected.pending.id}:${candidate.definition.id}:automatic`,responder:"actor-owner",mode:"blocking",expectedRevision:seeded.revision,resolutionId:projected.pending.id,sourceId:projected.pending.sourceId},
+      context:{sourceActorId:candidate.sourceActorId,definition:candidate.definition,interceptorId,interceptedOperationId:projected.operationId,pending:projected.pending},
+    },
+  };
+  const committed=await commitAcceptedReaction(adapter,pending,applied);
+  if(committed.status==="rejected"){
+    resolution.detail.push(`${candidate.optionName}: 자동 인터셉터 적용 거부 · ${committed.error}`);
+    return false;
+  }
+  if(damage){
+    const result=applied.results[projected.operationId] as DamageRollResolution|undefined;
+    if(!result||projected.originalTotal===undefined){resolution.detail.push(`${candidate.optionName}: 자동 피해 인터셉터 결과 누락`);return false;}
+    queueAtomicAttackDamageReduction(resolution.id,projected.originalTotal-result.total,`common-play:${candidate.definition.id}`);
+    resolution.detail.push(`${candidate.optionName}: 피해 ${projected.originalTotal} → ${result.total} (자동)`);
+    resolution.provenance.push(`common-play:${candidate.definition.id} · automatic damage-roll interceptor`);
+    return true;
+  }
+  const d20=applied.results[projected.operationId] as D20TestResult|undefined;
+  if(!d20){resolution.detail.push(`${candidate.optionName}: 자동 인터셉터 결과 누락`);return false;}
+  updateD20Presentation(resolution,pending,d20,authority,internal.scene);
+  resolution.detail.push(`${candidate.optionName}: 자동 적용 · ${d20.total} vs ${d20.family==="attack-roll"?"AC":"DC"} ${d20.target}`);
+  return true;
 }
 
 function paymentEvents(events:ResolutionEvent[]) {
@@ -633,7 +751,8 @@ MockAdapter.prototype.resolveAction=async function resolveWithPortableCommonPlay
 MockAdapter.prototype.advanceResolution=async function advanceWithPortableCommonPlayInterceptors() {
   const pending=pendingByAdapter.get(this);
   if(pending&&(this as unknown as AdapterState).resolution?.id===pending.resolutionId)return (this as unknown as AdapterState).getSnapshot();
-  if(await offerPassiveReaction(this))return (this as unknown as AdapterState).getSnapshot();
+  // An automatic application before the advance does not consume the advance; only an opened choice pauses.
+  if(await offerPassiveReaction(this)==="interrupt")return (this as unknown as AdapterState).getSnapshot();
   const advanced=await previousAdvanceResolution.call(this);
   if(await offerPassiveReaction(this))return (this as unknown as AdapterState).getSnapshot();
   return advanced;
@@ -651,7 +770,7 @@ MockAdapter.prototype.respondToInterrupt=async function respondToPortableCommonP
   const current=snapshotAdapterTurnRuntimeState(this,internal.scene);
   if(!current){restoreInterruptedStage(resolution,pending);return internal.getSnapshot();}
   const seeded=seededReactionState(current,pending.candidate);
-  const authority=accept?modifierAuthority(internal,pending):undefined;
+  const authority=accept?modifierAuthority(internal,{candidate:pending.candidate,interceptorId:pending.awaiting.context.interceptorId}):undefined;
   const resumed=resumeCommonPlayInteraction(SIMPLEVTT_APP_RULES_PROFILE,seeded,pending.awaiting,{
     interactionId:pending.awaiting.interaction.id,
     idempotencyKey:pending.awaiting.interaction.idempotencyKey,
@@ -700,7 +819,7 @@ MockAdapter.prototype.respondToInterrupt=async function respondToPortableCommonP
   // A response may finish one timing window, but must not enter a later one in the same interaction.
   // Attack-result remains observable before a damage.rolled interceptor is offered on the next advance.
   if(pending.kind==="d20"&&resolution.rollKind==="attack")return internal.getSnapshot();
-  if(await offerPassiveReaction(this))return internal.getSnapshot();
+  if(await offerPassiveReaction(this)==="interrupt")return internal.getSnapshot();
   if(resolution.rollKind==="check"&&pending.resumeCheckAfterResponse)return previousAdvanceResolution.call(this);
   return internal.getSnapshot();
 };

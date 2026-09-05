@@ -27,6 +27,13 @@ export const COMMON_PLAY_STANDARD_FACTS:CommonPlayFactRegistry={
   "sense.light":{valueType:"string"},
   "sense.obscurement":{valueType:"string"},
   "sense.hidden":{valueType:"boolean"},
+  // Attack facts describe the intercepted attack (subject: the attacker); equipment facts describe the subject's worn/wielded items.
+  "attack.weapon.ranged":{valueType:"boolean"},
+  "attack.weapon.melee":{valueType:"boolean"},
+  "attack.weapon.two-handed":{valueType:"boolean"},
+  "equipment.armor.worn":{valueType:"boolean"},
+  "equipment.shield.worn":{valueType:"boolean"},
+  "equipment.weapons.two-wielded":{valueType:"boolean"},
 };
 
 export interface CommonPlayFactQuery {
