@@ -493,3 +493,11 @@
 .session-ready-options label { grid-template-columns:16px 1fr; align-items:center; padding:7px; border:1px solid var(--line); border-radius:7px; background:var(--recess); }
 .session-ready-options label input { width:14px; min-height:14px; padding:0; }
 .session-ready-options label span { color:var(--text); font-size:10px; }
+
+.session-movement-declare { position: relative; display: inline-flex; align-items: center; gap: 4px; }
+.session-movement-declare button { padding: 2px 7px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface-2); color: var(--text); font-size: 10px; font-weight: 700; }
+.session-movement-declare button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+.session-movement-declare button:disabled { opacity: .5; }
+.session-movement-approach-menu { position: absolute; left: 0; bottom: calc(100% + 6px); z-index: 9; display: grid; gap: 3px; min-width: 150px; padding: 6px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); box-shadow: 0 6px 18px rgba(0,0,0,.25); }
+.session-movement-approach-menu button { text-align: left; border-radius: 6px; }
+.session-movement-approach-menu em { font-size: 10px; color: var(--muted); }
