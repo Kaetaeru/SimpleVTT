@@ -1,0 +1,41 @@
+{
+  "schemaVersion": "1",
+  "source": {
+    "document": "SRD 5.2.1",
+    "review": "X1-06 wave 1 — damage spells the prose parser missed because the attack or the bolt is a later Magic action rather than the cast itself. Each definition executes the attack/bolt as the combat action; the sustained part (re-attacking with the blade, calling further bolts) is tracked."
+  },
+  "definitions": [
+    {
+      "spellId": "dnd.srd521.spell.produce-flame",
+      "baseLevel": 0,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 60, "minTargets": 1, "maxTargets": 1, "requiresSight": true },
+      "primary": { "kind": "attack-damage", "damageType": "fire", "dice": { "count": 1, "sides": 8, "cantripScaling": true } },
+      "components": { "verbal": true, "somatic": true },
+      "executionScope": "Authored: the thrown flame — a ranged spell attack within 60 feet for 1d8 fire (2d8/3d8/4d8 at levels 5/11/17) as the Magic action. Lighting the flame as a Bonus Action and its light are tracked, not executed."
+    },
+    {
+      "spellId": "dnd.srd521.spell.flame-blade",
+      "baseLevel": 2,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 5, "minTargets": 1, "maxTargets": 1 },
+      "primary": { "kind": "attack-damage", "damageType": "fire", "dice": { "count": 3, "sides": 6, "addSpellcastingModifier": true, "dicePerSlotAboveBase": 1 } },
+      "concentration": true,
+      "components": { "verbal": true, "somatic": true, "materials": [{ "id": "sumac-leaf" }] },
+      "executionScope": "Authored: one melee spell attack with the blade for 3d6 + spellcasting ability modifier fire (+1d6 per slot level above 2nd). Creating the blade as a Bonus Action, further attacks on later turns, and its light are tracked under concentration."
+    },
+    {
+      "spellId": "dnd.srd521.spell.call-lightning",
+      "baseLevel": 3,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 120, "minTargets": 1, "maxTargets": 4, "requiresSight": true },
+      "primary": { "kind": "save-damage", "saveAbility": "dex", "damageType": "lightning", "dice": { "count": 3, "sides": 10, "dicePerSlotAboveBase": 1 }, "successDamage": "half" },
+      "concentration": true,
+      "components": { "verbal": true, "somatic": true },
+      "executionScope": "Authored: the first bolt — creatures within 5 feet of the chosen point (up to four, DM-validated) save against Dexterity for 3d10 lightning, half on success (+1d10 per slot level above 3rd). Later bolts as the Magic action and the outdoor-storm bonus are tracked under concentration."
+    }
+  ]
+}

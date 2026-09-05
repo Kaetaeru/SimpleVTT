@@ -1,0 +1,237 @@
+{
+  "schemaVersion": "1",
+  "source": {
+    "document": "SRD 5.2.1",
+    "review": "X1-06 wave 1 — buff and control spells whose combat effect the existing kinds express: Invisible condition, attack-roll advantage/disadvantage riders, temporary HP, and a save-gated concentration effect. Each executionScope states what is not enforced (early-end triggers, per-slot extra targets, ability narrowing). Heroism was reviewed and left to prose derivation: its temporary HP equals the spellcasting ability modifier alone, which the temporary-hp formula cannot express without dice or a flat base."
+  },
+  "definitions": [
+    {
+      "spellId": "dnd.srd521.spell.invisibility",
+      "baseLevel": 2,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": {
+        "kind": "creature",
+        "rangeFeet": 5,
+        "minTargets": 1,
+        "maxTargets": 1,
+        "allowedRelations": [
+          "self",
+          "ally"
+        ]
+      },
+      "primary": {
+        "kind": "tracked-effect",
+        "summary": "접촉한 크리처 하나가 주문이 끝날 때까지 투명 상태가 된다.",
+        "duration": {
+          "kind": "concentration"
+        }
+      },
+      "effects": [
+        {
+          "conditionId": "invisible",
+          "trigger": "always",
+          "duration": {
+            "kind": "concentration"
+          }
+        }
+      ],
+      "concentration": true,
+      "components": {
+        "verbal": true,
+        "somatic": true,
+        "materials": [
+          {
+            "id": "eyelash-in-gum-arabic"
+          }
+        ]
+      },
+      "executionScope": "Authored: the touched creature gains the Invisible condition while the caster concentrates (up to 1 hour). The early end when the target attacks, deals damage, or casts, and the extra target per slot level above 2nd, are not enforced."
+    },
+    {
+      "spellId": "dnd.srd521.spell.greater-invisibility",
+      "baseLevel": 4,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": {
+        "kind": "creature",
+        "rangeFeet": 5,
+        "minTargets": 1,
+        "maxTargets": 1,
+        "allowedRelations": [
+          "self",
+          "ally"
+        ]
+      },
+      "primary": {
+        "kind": "tracked-effect",
+        "summary": "접촉한 크리처 하나가 주문이 끝날 때까지 투명 상태가 된다.",
+        "duration": {
+          "kind": "concentration"
+        }
+      },
+      "effects": [
+        {
+          "conditionId": "invisible",
+          "trigger": "always",
+          "duration": {
+            "kind": "concentration"
+          }
+        }
+      ],
+      "concentration": true,
+      "components": {
+        "verbal": true,
+        "somatic": true
+      },
+      "executionScope": "Authored: the touched creature is Invisible while the caster concentrates (up to 1 minute); no early-end trigger exists for this spell."
+    },
+    {
+      "spellId": "dnd.srd521.spell.blur",
+      "baseLevel": 2,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": {
+        "kind": "creature",
+        "rangeFeet": 0,
+        "minTargets": 1,
+        "maxTargets": 1,
+        "allowedRelations": [
+          "self"
+        ]
+      },
+      "primary": {
+        "kind": "tracked-effect",
+        "summary": "지속시간 동안 모든 크리처는 당신을 대상으로 하는 명중 굴림에 불리점을 받는다.",
+        "duration": {
+          "kind": "concentration"
+        }
+      },
+      "trackedEffects": [
+        {
+          "summary": "당신을 대상으로 하는 명중 굴림에 불리점",
+          "trigger": "always",
+          "duration": {
+            "kind": "concentration"
+          },
+          "modifier": {
+            "family": "attack-roll",
+            "rollState": "disadvantage",
+            "scope": "target"
+          }
+        }
+      ],
+      "concentration": true,
+      "components": {
+        "verbal": true
+      },
+      "executionScope": "Authored: attack rolls against the caster have disadvantage while concentrating (up to 1 minute). Attackers with blindsight or truesight are not exempted."
+    },
+    {
+      "spellId": "dnd.srd521.spell.faerie-fire",
+      "baseLevel": 1,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": {
+        "kind": "creature",
+        "rangeFeet": 60,
+        "minTargets": 1,
+        "maxTargets": 10
+      },
+      "primary": {
+        "kind": "save-effect",
+        "saveAbility": "dex",
+        "summary": "실패한 크리처는 지속시간 동안 윤곽이 드러나 그를 향한 명중 굴림에 이점이 붙고 투명 상태의 이득을 받지 못한다.",
+        "duration": {
+          "kind": "concentration"
+        }
+      },
+      "trackedEffects": [
+        {
+          "summary": "영향을 받은 크리처를 향한 명중 굴림에 이점",
+          "trigger": "failed-save",
+          "duration": {
+            "kind": "concentration"
+          },
+          "modifier": {
+            "family": "attack-roll",
+            "rollState": "advantage",
+            "scope": "target"
+          }
+        }
+      ],
+      "concentration": true,
+      "components": {
+        "verbal": true
+      },
+      "executionScope": "Authored: each chosen creature in the 20-foot cube (up to ten within 60 feet; the DM validates the cube) saves against Dexterity; on a failure attack rolls against it have advantage while the caster concentrates. Objects, the dim light, and the loss of Invisible benefits are not modeled."
+    },
+    {
+      "spellId": "dnd.srd521.spell.slow",
+      "baseLevel": 3,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": {
+        "kind": "creature",
+        "rangeFeet": 120,
+        "minTargets": 1,
+        "maxTargets": 6,
+        "requiresSight": true
+      },
+      "primary": {
+        "kind": "save-effect",
+        "saveAbility": "wis",
+        "summary": "실패한 대상은 이동 속도 절반, AC와 민첩 내성 −2, 반응행동 불가, 턴마다 행동 또는 추가 행동 하나, 공격 행동 시 공격 한 번 (추적)",
+        "duration": {
+          "kind": "concentration"
+        }
+      },
+      "concentration": true,
+      "components": {
+        "verbal": true,
+        "somatic": true,
+        "materials": [
+          {
+            "id": "drop-of-molasses"
+          }
+        ]
+      },
+      "executionScope": "Authored: up to six creatures in the 40-foot cube (the DM validates the cube) save against Wisdom; a failure is a tracked concentration effect. The speed, AC, reaction, action, and spell-failure penalties and the repeat saves are not enforced."
+    },
+    {
+      "spellId": "dnd.srd521.spell.mass-heal",
+      "baseLevel": 9,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": {
+        "kind": "creature",
+        "rangeFeet": 60,
+        "minTargets": 1,
+        "maxTargets": 1,
+        "allowedRelations": [
+          "self",
+          "ally"
+        ],
+        "requiresSight": true
+      },
+      "primary": {
+        "kind": "healing",
+        "dice": {
+          "count": 0,
+          "sides": 4,
+          "flat": 700
+        }
+      },
+      "removesConditions": [
+        "blinded",
+        "deafened",
+        "poisoned"
+      ],
+      "components": {
+        "verbal": true,
+        "somatic": true
+      },
+      "executionScope": "Authored: the 700-HP pool heals one creature (dividing it among several creatures is not modeled) and removes Blinded, Deafened, and Poisoned from it."
+    }
+  ]
+}
