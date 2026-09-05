@@ -1,5 +1,6 @@
 import catalogJson from "../generated/spellPresentationCatalog.generated.json";
 import type { CharacterCreationOptionVm } from "./contracts";
+import { installedSpellPresentationById } from "./installedSpellRuntime";
 
 export type SpellPresentation = {
   id: string;
@@ -71,7 +72,7 @@ export const SPELL_PRESENTATION_SOURCE = CATALOG.source;
 export const SPELL_PRESENTATIONS: readonly SpellPresentation[] = CATALOG.spells;
 
 export function spellPresentationById(id: string) {
-  return BY_ID.get(id);
+  return BY_ID.get(id) ?? installedSpellPresentationById(id);
 }
 
 export function spellPresentationByEnglish(nameEn: string) {
@@ -83,7 +84,7 @@ export function spellNameKo(id: string, fallback?: string) {
 }
 
 export function hasLocalizedSpellName(id: string) {
-  return BY_ID.has(id);
+  return BY_ID.has(id) || installedSpellPresentationById(id) !== undefined;
 }
 
 export function isGenericSpellSummary(summary?: string) {

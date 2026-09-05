@@ -1,4 +1,6 @@
 import type { InstalledBackgroundDefinitionV1 } from "./installedBackgroundDefinition";
+import type { InstalledSpellDefinitionV1 } from "./installedSpellDefinition";
+import type { SpellMechanicDefinition } from "../domain/spellcasting";
 import type { CommonPlayDefinitionIR } from "../domain/commonPlayDefinitionRuntime";
 import type { CatalogEntry } from "./contracts";
 
@@ -42,7 +44,19 @@ export interface InstalledBackgroundDefinitionMechanicV1 {
   config:InstalledBackgroundDefinitionV1;
 }
 
-export type InstalledMechanicV1 = InstalledCommonPlayMechanicV1 | InstalledBackgroundDefinitionMechanicV1;
+/** Presentation-level spell facts (level, school, casting time, range, components, duration, class lists). */
+export interface InstalledSpellDefinitionMechanicV1 {
+  kind:"spell-definition";
+  config:InstalledSpellDefinitionV1;
+}
+
+/** Executable spell definition in the reviewed `SpellMechanicDefinition` shape; keyed by the entry's content id. */
+export interface InstalledSpellMechanicMechanicV1 {
+  kind:"spell-mechanic";
+  config:SpellMechanicDefinition;
+}
+
+export type InstalledMechanicV1 = InstalledCommonPlayMechanicV1 | InstalledBackgroundDefinitionMechanicV1 | InstalledSpellDefinitionMechanicV1 | InstalledSpellMechanicMechanicV1;
 
 /** Narrows an entry's mechanics to the executable Common Play definitions; declarative kinds such as background-definition are skipped. */
 export function commonPlayMechanicsOf(mechanics:InstalledMechanicV1[]|undefined):InstalledCommonPlayMechanicV1[] {

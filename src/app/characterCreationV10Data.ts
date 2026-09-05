@@ -20,6 +20,7 @@ import packsJson from "../../content/modules/dnd-srd-5.2.1.equipment-packs/modul
 import utilityJson from "../../content/modules/dnd-srd-5.2.1.equipment-starting-utility/module.json";
 import toolsJson from "../../content/modules/dnd-srd-5.2.1.equipment-tools/module.json";
 import { BACKGROUNDS, CLASSES, FIGHTER, SPECIES, backgroundOption, opt, type Option } from "./srdCatalogBridge";
+import { installedSpellsForClass } from "./installedSpellRuntime";
 
 export { BACKGROUNDS, CLASSES, FIGHTER, SPECIES, opt, type Option };
 
@@ -231,7 +232,10 @@ export function spellId(nameEn: string) {
 }
 export function spellOptions(classId: string, level: 0 | 1): Option[] {
   const names = INDEX.spellLists[classId]?.[String(level) as "0" | "1"] ?? [];
-  return names.map((nameEn) => option(spellId(nameEn), nameEn, nameEn, level === 0 ? "SRD 소마법" : "SRD 1레벨 주문", ["SRD 5.2.1 class spell list"]));
+  const builtin = names.map((nameEn) => option(spellId(nameEn), nameEn, nameEn, level === 0 ? "SRD 소마법" : "SRD 1레벨 주문", ["SRD 5.2.1 class spell list"]));
+  // Installed add-on spells that declare this class join the list after the SRD entries.
+  const installed = installedSpellsForClass(classId, level).map((record) => option(record.contentId, record.presentation.name, record.presentation.nameEn, level === 0 ? `${record.source} 소마법` : `${record.source} 1레벨 주문`, [`${record.source} class spell list`]));
+  return [...builtin, ...installed];
 }
 
 export function classMeta(classId: string) {

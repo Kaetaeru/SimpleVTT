@@ -17,6 +17,7 @@ import type { InstalledCatalogEntryV1, InstalledContentDocumentV1, InstalledCont
 import { createPlatformInstalledContentStore } from "./tauriInstalledContentStore";
 import { generatedBuiltinCatalog } from "./builtinCatalogRuntimeAdapter";
 import { setInstalledBackgroundEntries, type Entry as CreationEntry } from "./characterCreationV10Data";
+import { setInstalledSpellEntries } from "./installedSpellRuntime";
 
 const cp = <T,>(value:T):T => structuredClone(value);
 
@@ -66,6 +67,7 @@ function applyComposition(adapter:MockAdapter) {
   if (!context.builtin || !document) return;
   state.catalog=composeContentCatalog(context.builtin,document.entries);
   setInstalledBackgroundEntries(installedBackgroundCreationEntries(document.entries));
+  setInstalledSpellEntries(document.entries);
 }
 async function ensureHydrated(adapter:MockAdapter) {
   const context=contextFor(adapter);

@@ -23,7 +23,7 @@ function target(id:string,overrides:Partial<SpellCastTarget>={}):SpellCastTarget
 test("all 339 catalog spells have an executable authoritative definition",()=>{
   assert.equal(SPELL_PRESENTATIONS.length,339);
   assert.equal(SPELL_EXECUTION_COVERAGE.total,339);
-  assert.equal(SPELL_EXECUTION_COVERAGE.reviewed+SPELL_EXECUTION_COVERAGE.derivedCombat+SPELL_EXECUTION_COVERAGE.tracked,339);
+  assert.equal(SPELL_EXECUTION_COVERAGE.authored+SPELL_EXECUTION_COVERAGE.reviewed+SPELL_EXECUTION_COVERAGE.derivedCombat+SPELL_EXECUTION_COVERAGE.tracked,339);
   for (const spell of SPELL_PRESENTATIONS) {
     const mechanic=spellMechanicById(spell.id);
     assert.ok(mechanic,`${spell.nameEn} is missing a mechanic definition`);

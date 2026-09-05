@@ -1,4 +1,6 @@
 import { parseInstalledBackgroundDefinition } from "./installedBackgroundDefinition";
+import { parseInstalledSpellDefinition } from "./installedSpellDefinition";
+import { parseSpellMechanicDefinition } from "../domain/spellMechanicDefinitionRuntime";
 import { lowerAllCommonPlayEntryPoints, parseCommonPlayDefinition, validateCommonPlayCapabilities } from "../domain/commonPlayDefinitionRuntime";
 import {
   INSTALLED_CONTENT_SCHEMA_ID,
@@ -45,6 +47,16 @@ function assertEntry(value:unknown):asserts value is InstalledCatalogEntryV1 {
       if(isObject(mechanic)&&mechanic.kind==="background-definition") {
         if(value.category!=="background") throw new Error(`installed content mechanic ${index} background-definition requires background content`);
         parseInstalledBackgroundDefinition(mechanic.config,`installed content mechanic ${index}.config`);
+        return;
+      }
+      if(isObject(mechanic)&&mechanic.kind==="spell-definition") {
+        if(value.category!=="spell") throw new Error(`installed content mechanic ${index} spell-definition requires spell content`);
+        parseInstalledSpellDefinition(mechanic.config,`installed content mechanic ${index}.config`);
+        return;
+      }
+      if(isObject(mechanic)&&mechanic.kind==="spell-mechanic") {
+        if(value.category!=="spell") throw new Error(`installed content mechanic ${index} spell-mechanic requires spell content`);
+        parseSpellMechanicDefinition(mechanic.config,`installed content mechanic ${index}.config`,{spellId:String(value.contentId)});
         return;
       }
       if(!isObject(mechanic)||mechanic.kind!=="common-play") throw new Error(`installed content mechanic ${index} is unsupported`);
