@@ -1,6 +1,6 @@
 # SimpleVTT V1 Current Handoff
 
-Updated: 2026-09-04 Asia/Seoul
+Updated: 2026-09-05 Asia/Seoul
 
 This handoff is subordinate to live GitHub state, `CANONICAL_ROOT.md`, `docs/CURRENT.md`, `docs/roadmap/CURRENT.md`, `docs/roadmap/V1_MASTER_ROADMAP.md`, and `docs/roadmap/V1_EVIDENCE_LEDGER.json`. It exists to give the next execution a concise resumable checkpoint without replacing repository-native authority.
 
@@ -8,39 +8,27 @@ This handoff is subordinate to live GitHub state, `CANONICAL_ROOT.md`, `docs/CUR
 
 ```text
 Integration branch: work/v1-composite
-W0-W6: COMPLETE
-W7: 6/8 PASS — IN PROGRESS
-Official ledger score: 82.5/100.0
-PASS: 62/72
-PENDING: 10/72
+W0-W9: COMPLETE
+Official ledger score: 100.0/100.0
+PASS: 72/72
+PENDING: 0/72
 FAIL: 0
 BLOCKED: 0
-Next exact Gate: W7-05 closure (PR #321 Windows evidence), then W7-08
+V1 COMPLETE — declared on exact SHA 7429e2c77ee969aec1c3fe28c252a8ad07e4cd06 (W9-04)
 ```
 
-## Last closed Gate — W7-04
+## Last closed Gate — W9-04
 
-`W7-04` is PASS with authoritative real-Windows recovery evidence.
+`W9-04` is PASS: every release gate was re-verified on one exact SHA with every workflow dispatched on it, the MP work issues and epic are closed with exact-SHA records, merged branches are deleted, and the canonical documents declare V1.
 
-- Product verification SHA: `7d0bded27a624ed0d993d860cbd590262ed1f3a6`
-- GitHub Actions run: `33853804394`
-- `auto-recovery`: PASS
-- `windows-multi-instance-recovery`: PASS on real Windows Tauri H+P1+P2
-- `windows-storage-package`: PASS
-- Scenario mapping: `MP-B08`, `MP-H09~H12`
-- Evidence: `docs/roadmap/evidence/W7-04.md`
+- Exact verification SHA: `7429e2c77ee969aec1c3fe28c252a8ad07e4cd06`
+- Release executable: `src-tauri/target/release/simplevtt.exe`, 9817088 bytes, `sha256:2b7394794e37924f707a749d00925e8818577d70bd582dfe499c01df11c843be`
+- Evidence: `docs/roadmap/evidence/W9-04.md` (documentation PR #350)
+- Scenario mapping: V1-80, #110; 120/120 scenarios PASS
 
-The passing path covers explicit offline-owner failure, reconnect/retry durability, partial persistence failure isolation/recovery, and slow-P2 observer convergence. Do not redo W7-04 without a demonstrated regression.
+## Next exact action — none inside V1
 
-## Next exact action — W7-05
-
-`W7-05` is `REUSE_LOCKED` and covers privacy leakage boundaries for `MP-B05~B07` and `MP-09`.
-
-1. Start from the latest live `work/v1-composite` HEAD on one scoped `agent/*` branch.
-2. Reuse the existing Session privacy/redaction, Activity visibility, projection, and handout metadata owners.
-3. Identify and run the smallest exact-head focused automated set proving DM-only/hidden/private payloads, Activities, and handout metadata do not reach unauthorized peers.
-4. If the focused set passes, record exact SHA, command, deterministic pass count, and scenario mapping, then close W7-05 without product/runtime changes.
-5. If it fails, record the current-HEAD failure or reachability gap in `docs/roadmap/EVIDENCE_CARD.md` before making only the smallest repair.
+V1 is complete. Post-V1 work starts from a new roadmap; do not reopen W0-W9 without a demonstrated regression on the exact SHA above. The default branch and any routing of V1 to `main` remain the owner's explicit decision (`CANONICAL_ROOT.md` rule 1).
 
 ## Guardrails
 

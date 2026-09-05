@@ -5,7 +5,7 @@
     "roadmap": "docs/roadmap/V1_MASTER_ROADMAP.md",
     "ledger": "docs/roadmap/V1_EVIDENCE_LEDGER.json",
     "ledgerCreatedFromSha": "77b45028cbc4e04bb2cecc825a771269b64d1f2f",
-    "ledgerOfficialScore": 97.5
+    "ledgerOfficialScore": 100
   },
   "counts": {
     "scenarios": 120,
@@ -1862,7 +1862,7 @@
         "V1-01"
       ],
       "status": "PASS",
-      "lastVerifiedSha": "e9bb86f83c7c481e2c1a519c21544c88694b5d8a",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "Legacy Execution Boundary",
         "Contract validation"
@@ -1879,7 +1879,7 @@
         "전체"
       ],
       "status": "PASS",
-      "lastVerifiedSha": "e9bb86f83c7c481e2c1a519c21544c88694b5d8a",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [],
       "windowsArtifacts": []
     },
@@ -1893,7 +1893,7 @@
         "전체"
       ],
       "status": "PASS",
-      "lastVerifiedSha": "e9bb86f83c7c481e2c1a519c21544c88694b5d8a",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [],
       "windowsArtifacts": []
     },
@@ -1907,7 +1907,7 @@
         "MP-EPIC"
       ],
       "status": "PASS",
-      "lastVerifiedSha": "e9bb86f83c7c481e2c1a519c21544c88694b5d8a",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [],
       "windowsArtifacts": []
     },
@@ -1922,7 +1922,7 @@
         "archived V1 docs"
       ],
       "status": "PASS",
-      "lastVerifiedSha": "e9bb86f83c7c481e2c1a519c21544c88694b5d8a",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [],
       "windowsArtifacts": []
     },
@@ -1936,7 +1936,7 @@
         "전체"
       ],
       "status": "PASS",
-      "lastVerifiedSha": "e9bb86f83c7c481e2c1a519c21544c88694b5d8a",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [],
       "windowsArtifacts": []
     },
@@ -1950,7 +1950,7 @@
         "V1-20"
       ],
       "status": "PASS",
-      "lastVerifiedSha": "9113736b5dbc565cb40d0646b0f27abdbdc6eb59",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "GitHub Actions UI"
       ],
@@ -1966,7 +1966,7 @@
         "V1-20"
       ],
       "status": "PASS",
-      "lastVerifiedSha": "42305b1d2a66a976b08844509a63b5999166938a",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "GitHub Actions UI"
       ],
@@ -1982,7 +1982,7 @@
         "V1-20"
       ],
       "status": "PASS",
-      "lastVerifiedSha": "42305b1d2a66a976b08844509a63b5999166938a",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "GitHub Actions UI"
       ],
@@ -1998,7 +1998,7 @@
         "V1-20"
       ],
       "status": "PASS",
-      "lastVerifiedSha": "42305b1d2a66a976b08844509a63b5999166938a",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "GitHub Actions UI"
       ],
@@ -2015,7 +2015,7 @@
         "V1-20"
       ],
       "status": "PASS",
-      "lastVerifiedSha": "c0900157560ac51a745eac687eb4fff7f2580086",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "npm run test:e2e:tauri -- --w1"
       ],
@@ -2033,7 +2033,7 @@
         "V1-20"
       ],
       "status": "PASS",
-      "lastVerifiedSha": "c0900157560ac51a745eac687eb4fff7f2580086",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "npm run test:e2e:tauri -- --w1"
       ],
@@ -2052,7 +2052,7 @@
         "V1-21"
       ],
       "status": "PASS",
-      "lastVerifiedSha": "c0900157560ac51a745eac687eb4fff7f2580086",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "npm run test:e2e:tauri -- --w1"
       ],
@@ -2072,7 +2072,7 @@
         "V1-21"
       ],
       "status": "PASS",
-      "lastVerifiedSha": "c0900157560ac51a745eac687eb4fff7f2580086",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "npm run test:e2e:tauri -- --w1"
       ],
@@ -2090,7 +2090,7 @@
         "SRD profile"
       ],
       "status": "PASS",
-      "lastVerifiedSha": "42305b1d2a66a976b08844509a63b5999166938a",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "GitHub Actions UI",
         "GitHub compare 42305b1d2a66a976b08844509a63b5999166938a...c6257b6637603cd35abc7f6c79ab706b36aaa7fb"
@@ -2107,7 +2107,7 @@
         "SRD profile"
       ],
       "status": "PASS",
-      "lastVerifiedSha": "ef2cdf69748195bd63c0bd7eff747420811842bf",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "GitHub Actions UI: Verify W2 SRD product lifecycle",
         "npm run build"
@@ -2124,7 +2124,7 @@
         "SRD profile"
       ],
       "status": "PASS",
-      "lastVerifiedSha": "ef2cdf69748195bd63c0bd7eff747420811842bf",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "GitHub Actions UI: Verify W2 SRD product lifecycle",
         "npm run build"
@@ -2141,7 +2141,7 @@
         "C9 Gate N"
       ],
       "status": "PASS",
-      "lastVerifiedSha": "ef2cdf69748195bd63c0bd7eff747420811842bf",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "npx tsx --test tests/contracts/v1MechanismCoverage.test.mjs",
         "node scripts/check-v1-mechanism-coverage.mjs --gate-n",
@@ -2160,7 +2160,7 @@
         "V1-20"
       ],
       "status": "PASS",
-      "lastVerifiedSha": "ef2cdf69748195bd63c0bd7eff747420811842bf",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "GitHub Actions UI: Verify creation ChoiceDefinition convergence",
         "GitHub Actions UI: Verify W2 SRD product lifecycle",
@@ -2178,7 +2178,7 @@
         "V1-21"
       ],
       "status": "PASS",
-      "lastVerifiedSha": "ef2cdf69748195bd63c0bd7eff747420811842bf",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "GitHub Actions UI: Verify progression choice schedule regression",
         "GitHub Actions UI: Verify W2 SRD product lifecycle",
@@ -2196,7 +2196,7 @@
         "V1-21"
       ],
       "status": "PASS",
-      "lastVerifiedSha": "ef2cdf69748195bd63c0bd7eff747420811842bf",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "GitHub Actions UI: Verify W2 SRD product lifecycle",
         "npm run build"
@@ -2214,7 +2214,7 @@
         "Journey J3"
       ],
       "status": "PASS",
-      "lastVerifiedSha": "699c923dc50dac5ecd266ced58568d3b647850b6",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "npm run test:e2e:tauri -- --w2"
       ],
@@ -2232,7 +2232,7 @@
         "V1-21"
       ],
       "status": "PASS",
-      "lastVerifiedSha": "1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "GitHub Actions UI",
         "npm run build"
@@ -2249,7 +2249,7 @@
         "V1-21"
       ],
       "status": "PASS",
-      "lastVerifiedSha": "1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "GitHub Actions UI",
         "GitHub Actions UI: Verify Campaign lifecycle and declarative providers"
@@ -2266,7 +2266,7 @@
         "V1-21"
       ],
       "status": "PASS",
-      "lastVerifiedSha": "1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "GitHub Actions UI",
         "npm run build"
@@ -2283,7 +2283,7 @@
         "V1-21"
       ],
       "status": "PASS",
-      "lastVerifiedSha": "1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "GitHub Actions UI",
         "npm run build"
@@ -2314,12 +2314,12 @@
         "V1-21"
       ],
       "status": "PASS",
-      "lastVerifiedSha": "1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "GitHub Actions UI"
       ],
       "windowsArtifacts": [
-        "artifact 9958685973 W9-02-D-WIN-8d6856e397b29d31dceba9586f3b57a6666770a2 sha256:52750d0d92514ecee5cc9dbe09dee811864974451820c0137caff1868488a586"
+        "artifact 9959530483 W9-02-D-WIN-7429e2c77ee969aec1c3fe28c252a8ad07e4cd06 sha256:ac4f4adcdf035df69c8011bc4cbc67f35dfb94e3295050bb7205f06f2419506f"
       ]
     },
     {
@@ -2332,7 +2332,7 @@
         "V1-21"
       ],
       "status": "PASS",
-      "lastVerifiedSha": "1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "GitHub Actions Rules Domain",
         "GitHub Actions UI",
@@ -2350,7 +2350,7 @@
         "V1-21"
       ],
       "status": "PASS",
-      "lastVerifiedSha": "1a2a5e92f34f3d1dc1a325c9dc6dd39a06eac2ff",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "GitHub Actions UI"
       ],
@@ -2367,7 +2367,7 @@
         "Journey J6"
       ],
       "status": "PASS",
-      "lastVerifiedSha": "53ec501555222b60d9e856b231f4f64395f75b76",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "npm run test:e2e:tauri -- --w3",
         "npx tsx --test tests/ui/appProviderStopSessionRefresh.test.ts"
@@ -2386,7 +2386,7 @@
         "V1-10"
       ],
       "status": "PASS",
-      "lastVerifiedSha": "5bef709f010543859e84c98ef7db8f14e5c06469",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "GitHub Actions UI: Verify Campaign lifecycle and declarative providers",
         "npx tsx --test tests/ui/campaignPersistence.test.ts tests/ui/campaignRuntimeAdapter.test.ts tests/ui/campaignProductUiStructure.test.ts tests/ui/campaignStartupRecoveryStructure.test.ts tests/ui/campaignLifecycleRuntime.test.ts tests/ui/campaignLifecycleUiStructure.test.ts tests/ui/campaignDeclarativeProviderProfile.test.ts tests/ui/campaignDeclarativeProviderImport.test.ts tests/ui/campaignDeclarativeProviderRuntime.test.ts tests/ui/campaignDeclarativeProviderUiStructure.test.ts"
@@ -2403,7 +2403,7 @@
         "V1-11"
       ],
       "status": "PASS",
-      "lastVerifiedSha": "5bef709f010543859e84c98ef7db8f14e5c06469",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "GitHub Actions UI: Verify Campaign lifecycle and declarative providers"
       ],
@@ -2419,7 +2419,7 @@
         "V1-12"
       ],
       "status": "PASS",
-      "lastVerifiedSha": "5bef709f010543859e84c98ef7db8f14e5c06469",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "GitHub Actions UI: Verify Campaign lifecycle and declarative providers",
         "npm run test:e2e:tauri -- --w3"
@@ -2449,7 +2449,7 @@
         "V1-12"
       ],
       "status": "PASS",
-      "lastVerifiedSha": "5bef709f010543859e84c98ef7db8f14e5c06469",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "GitHub Actions UI: Verify Campaign lifecycle and declarative providers"
       ],
@@ -2480,7 +2480,7 @@
         "V1-13"
       ],
       "status": "PASS",
-      "lastVerifiedSha": "5bef709f010543859e84c98ef7db8f14e5c06469",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "GitHub Actions UI: Verify Party Stash sequential transfer routing"
       ],
@@ -2506,7 +2506,7 @@
         "V1-13"
       ],
       "status": "PASS",
-      "lastVerifiedSha": "5bef709f010543859e84c98ef7db8f14e5c06469",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "GitHub Actions UI: Run UI tests",
         "GitHub compare 5bef709f010543859e84c98ef7db8f14e5c06469...083ce354fc2c1fcfd1e1346f976f920a30ccd2c1"
@@ -2533,7 +2533,7 @@
         "V1-40"
       ],
       "status": "PASS",
-      "lastVerifiedSha": "2ac28651312f1fdbe82edb74fd13f342a8f910f7",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "GitHub Actions UI",
         "GitHub Actions V1 Tauri Verification: tauri-w4-07-spatial"
@@ -2554,7 +2554,7 @@
         "Journey J6"
       ],
       "status": "PASS",
-      "lastVerifiedSha": "2ac28651312f1fdbe82edb74fd13f342a8f910f7",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "GitHub Actions V1 Tauri Verification: tauri-w3",
         "npm run test:e2e:tauri -- --w3",
@@ -2583,7 +2583,7 @@
       "issues": [],
       "otherLinks": [],
       "status": "PASS",
-      "lastVerifiedSha": "2ac28651312f1fdbe82edb74fd13f342a8f910f7",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "GitHub Actions UI",
         "GitHub Actions V1 Tauri Verification: tauri-w4-07-spatial"
@@ -2606,7 +2606,7 @@
       "issues": [],
       "otherLinks": [],
       "status": "PASS",
-      "lastVerifiedSha": "2ac28651312f1fdbe82edb74fd13f342a8f910f7",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "GitHub Actions UI",
         "GitHub Actions V1 Tauri Verification: tauri-w4-07-spatial",
@@ -2626,7 +2626,7 @@
         "MP invariants"
       ],
       "status": "PASS",
-      "lastVerifiedSha": "2ac28651312f1fdbe82edb74fd13f342a8f910f7",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "GitHub Actions UI",
         "GitHub compare 2ac28651312f1fdbe82edb74fd13f342a8f910f7...0ee6f493fc765ac7a617eda485392957b1874c6e"
@@ -2643,7 +2643,7 @@
       ],
       "otherLinks": [],
       "status": "PASS",
-      "lastVerifiedSha": "2ac28651312f1fdbe82edb74fd13f342a8f910f7",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "GitHub Actions UI",
         "GitHub compare 2ac28651312f1fdbe82edb74fd13f342a8f910f7...1ca6e911087a09dced61cf6a4c7e60df29e64db0"
@@ -2673,13 +2673,13 @@
       ],
       "otherLinks": [],
       "status": "PASS",
-      "lastVerifiedSha": "2ac28651312f1fdbe82edb74fd13f342a8f910f7",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "GitHub Actions UI",
         "GitHub compare 2ac28651312f1fdbe82edb74fd13f342a8f910f7...be061030081a3ba9f570a1a9a7696283d2512f36"
       ],
       "windowsArtifacts": [
-        "artifact 9958712754 W9-02-H-WIN-8d6856e397b29d31dceba9586f3b57a6666770a2 sha256:5abb469318ae194f3961387d6d80925104ba08779b7ecad1ec63aa95bd6012c3"
+        "artifact 9959421864 W9-02-H-WIN-7429e2c77ee969aec1c3fe28c252a8ad07e4cd06 sha256:b8d221e11c300cb00008bc2f04e73176c906c11e85ada3fd3b5f6e8eac67f8ab"
       ]
     },
     {
@@ -2727,14 +2727,14 @@
       "issues": [],
       "otherLinks": [],
       "status": "PASS",
-      "lastVerifiedSha": "2ac28651312f1fdbe82edb74fd13f342a8f910f7",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "GitHub Actions UI",
         "GitHub compare 2ac28651312f1fdbe82edb74fd13f342a8f910f7...58a10dc1bf42dff79dd3f8035ea02bd9967d8f43"
       ],
       "windowsArtifacts": [
-        "artifact 9958720877 W9-02-C-WIN-8d6856e397b29d31dceba9586f3b57a6666770a2 sha256:aa53085cccf2d69bc281ba94b22a897fe8439daad09d62f3ad9b41111c2de16f",
-        "artifact 9958685973 W9-02-D-WIN-8d6856e397b29d31dceba9586f3b57a6666770a2 sha256:52750d0d92514ecee5cc9dbe09dee811864974451820c0137caff1868488a586"
+        "artifact 9959522140 W9-02-C-WIN-7429e2c77ee969aec1c3fe28c252a8ad07e4cd06 sha256:fea5091bf36bfc859b2d986e2a7db3e9e9cb6de1897dd4967c2bc282d1063bc9",
+        "artifact 9959530483 W9-02-D-WIN-7429e2c77ee969aec1c3fe28c252a8ad07e4cd06 sha256:ac4f4adcdf035df69c8011bc4cbc67f35dfb94e3295050bb7205f06f2419506f"
       ]
     },
     {
@@ -2772,13 +2772,13 @@
       ],
       "otherLinks": [],
       "status": "PASS",
-      "lastVerifiedSha": "0a9aeb6417c83df5f5d601b3112744cb6bd5e39a",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "GitHub Actions W5-07 AUTO Verification"
       ],
       "windowsArtifacts": [
-        "artifact 9958720877 W9-02-C-WIN-8d6856e397b29d31dceba9586f3b57a6666770a2 sha256:aa53085cccf2d69bc281ba94b22a897fe8439daad09d62f3ad9b41111c2de16f",
-        "artifact 9958685973 W9-02-D-WIN-8d6856e397b29d31dceba9586f3b57a6666770a2 sha256:52750d0d92514ecee5cc9dbe09dee811864974451820c0137caff1868488a586"
+        "artifact 9959522140 W9-02-C-WIN-7429e2c77ee969aec1c3fe28c252a8ad07e4cd06 sha256:fea5091bf36bfc859b2d986e2a7db3e9e9cb6de1897dd4967c2bc282d1063bc9",
+        "artifact 9959530483 W9-02-D-WIN-7429e2c77ee969aec1c3fe28c252a8ad07e4cd06 sha256:ac4f4adcdf035df69c8011bc4cbc67f35dfb94e3295050bb7205f06f2419506f"
       ]
     },
     {
@@ -2805,12 +2805,12 @@
       ],
       "otherLinks": [],
       "status": "PASS",
-      "lastVerifiedSha": "faf5331ed72cd051213ab917e3c2f402fae03087",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "GitHub Actions W5-08 AUTO Verification"
       ],
       "windowsArtifacts": [
-        "artifact 9958685973 W9-02-D-WIN-8d6856e397b29d31dceba9586f3b57a6666770a2 sha256:52750d0d92514ecee5cc9dbe09dee811864974451820c0137caff1868488a586"
+        "artifact 9959530483 W9-02-D-WIN-7429e2c77ee969aec1c3fe28c252a8ad07e4cd06 sha256:ac4f4adcdf035df69c8011bc4cbc67f35dfb94e3295050bb7205f06f2419506f"
       ]
     },
     {
@@ -2832,13 +2832,13 @@
       ],
       "otherLinks": [],
       "status": "PASS",
-      "lastVerifiedSha": "4c93082d0af77ae79da82db711b7934c8e2f8544",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "GitHub Actions W5-09 AUTO Verification"
       ],
       "windowsArtifacts": [
-        "artifact 9958720877 W9-02-C-WIN-8d6856e397b29d31dceba9586f3b57a6666770a2 sha256:aa53085cccf2d69bc281ba94b22a897fe8439daad09d62f3ad9b41111c2de16f",
-        "artifact 9958712754 W9-02-H-WIN-8d6856e397b29d31dceba9586f3b57a6666770a2 sha256:5abb469318ae194f3961387d6d80925104ba08779b7ecad1ec63aa95bd6012c3"
+        "artifact 9959522140 W9-02-C-WIN-7429e2c77ee969aec1c3fe28c252a8ad07e4cd06 sha256:fea5091bf36bfc859b2d986e2a7db3e9e9cb6de1897dd4967c2bc282d1063bc9",
+        "artifact 9959421864 W9-02-H-WIN-7429e2c77ee969aec1c3fe28c252a8ad07e4cd06 sha256:b8d221e11c300cb00008bc2f04e73176c906c11e85ada3fd3b5f6e8eac67f8ab"
       ]
     },
     {
@@ -2854,7 +2854,7 @@
       ],
       "otherLinks": [],
       "status": "PASS",
-      "lastVerifiedSha": "786566303fbb6c8bac1dff6b392f65a866a1947c",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "GitHub Actions W5-10 AUTO Verification"
       ],
@@ -2874,12 +2874,12 @@
       "issues": [],
       "otherLinks": [],
       "status": "PASS",
-      "lastVerifiedSha": "30606e6b056027a3e10ddbae70f38f428b2714b6",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "GitHub Actions W6-01 AUTO Verification"
       ],
       "windowsArtifacts": [
-        "artifact 9958720877 W9-02-C-WIN-8d6856e397b29d31dceba9586f3b57a6666770a2 sha256:aa53085cccf2d69bc281ba94b22a897fe8439daad09d62f3ad9b41111c2de16f"
+        "artifact 9959522140 W9-02-C-WIN-7429e2c77ee969aec1c3fe28c252a8ad07e4cd06 sha256:fea5091bf36bfc859b2d986e2a7db3e9e9cb6de1897dd4967c2bc282d1063bc9"
       ]
     },
     {
@@ -2893,7 +2893,7 @@
       "issues": [],
       "otherLinks": [],
       "status": "PASS",
-      "lastVerifiedSha": "a72387016fec255674b8132b1f8b80b08d99da25",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "GitHub Actions W6-02 AUTO Verification",
         "npm run build"
@@ -2915,7 +2915,7 @@
       "issues": [],
       "otherLinks": [],
       "status": "PASS",
-      "lastVerifiedSha": "b1f54abefd7dffb2f865ccaccde31649b8080a01",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "GitHub Actions W6-03 AUTO Verification",
         "npm run build"
@@ -2933,7 +2933,7 @@
       "issues": [],
       "otherLinks": [],
       "status": "PASS",
-      "lastVerifiedSha": "39bcd0356ca7b9a242684538253204ae17916eb1",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "GitHub Actions W6-04 AUTO Verification",
         "npm run build"
@@ -2950,7 +2950,7 @@
       "issues": [],
       "otherLinks": [],
       "status": "PASS",
-      "lastVerifiedSha": "945188901c106b6114e3a7f89cb1671aab6ace27",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "GitHub Actions W6-05 AUTO Verification",
         "npm run build"
@@ -2969,7 +2969,7 @@
       "issues": [],
       "otherLinks": [],
       "status": "PASS",
-      "lastVerifiedSha": "cf531f34a2c2cf85174fabafdc9092022fb0c46b",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "GitHub Actions W6-06 AUTO Verification",
         "npm run test:campaign-rest",
@@ -2995,7 +2995,7 @@
       "issues": [],
       "otherLinks": [],
       "status": "PASS",
-      "lastVerifiedSha": "63f6943b6c015ed24dfd405087d3d18b3d6415cd",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "GitHub Actions W6-07 AUTO Verification",
         "npx tsx --test tests/ui/campaignDmLibraryImport.test.ts tests/ui/campaignDmLibraryGrantDurability.test.ts tests/ui/sessionImageHandoutRuntimeAdapter.test.ts tests/ui/connectedSceneTopologyProjection.test.ts tests/ui/connectedSceneTopologyHostMutation.test.ts tests/ui/productionHostRemoteFixtureIdentityProjection.test.ts",
@@ -3047,7 +3047,7 @@
         "Journey J5"
       ],
       "status": "PASS",
-      "lastVerifiedSha": "36a9848a025f078f60b956e05f3432cbf5b14da4",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "npm run test:e2e:tauri -- --w608",
         "npm run build"
@@ -3068,14 +3068,14 @@
       "issues": [],
       "otherLinks": [],
       "status": "PASS",
-      "lastVerifiedSha": "de59dd9898dd4cf4525082f0aa623e4a86cbd74d",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "GitHub Actions W7-01 AUTO Verification",
         "npx tsx --test tests/ui/productionParticipantLifecycle.test.ts tests/ui/productionClientReconnect.test.ts tests/ui/connectedResolutionPresentation.test.ts tests/ui/connectedDurableFailure.test.ts",
         "npm run build"
       ],
       "windowsArtifacts": [
-        "artifact 9958712754 W9-02-H-WIN-8d6856e397b29d31dceba9586f3b57a6666770a2 sha256:5abb469318ae194f3961387d6d80925104ba08779b7ecad1ec63aa95bd6012c3"
+        "artifact 9959421864 W9-02-H-WIN-7429e2c77ee969aec1c3fe28c252a8ad07e4cd06 sha256:b8d221e11c300cb00008bc2f04e73176c906c11e85ada3fd3b5f6e8eac67f8ab"
       ]
     },
     {
@@ -3092,14 +3092,14 @@
       "issues": [],
       "otherLinks": [],
       "status": "PASS",
-      "lastVerifiedSha": "507459f208457e540beb19295dabb43e81f63b93",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "GitHub Actions W7-02 AUTO Verification",
         "npx tsx --test tests/ui/productionClientReconnect.test.ts tests/ui/productionParticipantLifecycle.test.ts tests/ui/connectedResolutionPresentation.test.ts tests/ui/connectedTurnProjection.test.ts tests/ui/connectedDurableFailure.test.ts tests/ui/connectedOwnerInventoryRestart.test.ts tests/ui/connectedLongRestHostRestartRecovery.test.ts tests/ui/c9FamilyOReadyConcentrationProduction.test.ts tests/ui/phase09ManualMovementReactionAdapter.test.ts tests/ui/phase09ConcentrationSaveWorkflow.test.ts",
         "npm run build"
       ],
       "windowsArtifacts": [
-        "artifact 9958712754 W9-02-H-WIN-8d6856e397b29d31dceba9586f3b57a6666770a2 sha256:5abb469318ae194f3961387d6d80925104ba08779b7ecad1ec63aa95bd6012c3"
+        "artifact 9959421864 W9-02-H-WIN-7429e2c77ee969aec1c3fe28c252a8ad07e4cd06 sha256:b8d221e11c300cb00008bc2f04e73176c906c11e85ada3fd3b5f6e8eac67f8ab"
       ]
     },
     {
@@ -3125,14 +3125,14 @@
       "issues": [],
       "otherLinks": [],
       "status": "PASS",
-      "lastVerifiedSha": "570dfb517f2519d505ca99be30cd712ed379ed42",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "GitHub Actions W7-03 AUTO Verification",
         "npx tsx --test tests/ui/productionSessionEnd.test.ts tests/ui/appProviderStopSessionRefresh.test.ts tests/ui/productionSessionLifecycleAdapter.test.ts tests/ui/productionParticipantLifecycle.test.ts tests/ui/connectedTurnProjection.test.ts tests/ui/connectedResolutionPresentation.test.ts tests/ui/connectedPartyStashApprovalOwnerTransfer.test.ts tests/ui/c9FamilyOReadyConcentrationProduction.test.ts",
         "npm run build"
       ],
       "windowsArtifacts": [
-        "artifact 9958712754 W9-02-H-WIN-8d6856e397b29d31dceba9586f3b57a6666770a2 sha256:5abb469318ae194f3961387d6d80925104ba08779b7ecad1ec63aa95bd6012c3"
+        "artifact 9959421864 W9-02-H-WIN-7429e2c77ee969aec1c3fe28c252a8ad07e4cd06 sha256:b8d221e11c300cb00008bc2f04e73176c906c11e85ada3fd3b5f6e8eac67f8ab"
       ]
     },
     {
@@ -3149,7 +3149,7 @@
       "issues": [],
       "otherLinks": [],
       "status": "PASS",
-      "lastVerifiedSha": "7d0bded27a624ed0d993d860cbd590262ed1f3a6",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "GitHub Actions W7-04 Recovery Prerequisite Verification",
         "scripts/run-tauri-e2e.ps1 -Root . -W704"
@@ -3174,7 +3174,7 @@
       ],
       "otherLinks": [],
       "status": "PASS",
-      "lastVerifiedSha": "67d40e301558c458802604e6bfdc2f3aa6080bea",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "GitHub Actions W7-05 AUTO Verification",
         "npx tsx --test tests/ui/connectedHiddenResolutionPrivacy.test.ts tests/ui/connectedResolutionPresentation.test.ts tests/ui/connectedThreePeerPresentation.test.ts tests/ui/sessionImageHandoutRuntimeAdapter.test.ts tests/ui/campaignDmLibraryNoteStructure.test.ts tests/ui/campaignDmLibraryStructure.test.ts",
@@ -3182,7 +3182,7 @@
         "powershell.exe -File scripts/run-tauri-e2e.ps1 -Root . -W705"
       ],
       "windowsArtifacts": [
-        "artifact 9943980391 W7-05-WIN-67d40e301558c458802604e6bfdc2f3aa6080bea sha256:2c653a2cb37e01d76bf90cb82739a524b679eeffc21031328a1f74e5389a3c9d"
+        "artifact 9959487465 W7-05-WIN-7429e2c77ee969aec1c3fe28c252a8ad07e4cd06 sha256:b6248c84253f744a025001e9dec25845c1c88525220394d44a67532ede0f19cf"
       ]
     },
     {
@@ -3197,7 +3197,7 @@
       "issues": [],
       "otherLinks": [],
       "status": "PASS",
-      "lastVerifiedSha": "196266567ad61506f80d359d60224c6f8be6f186",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "GitHub Actions W7-06 AUTO Verification",
         "npx tsx --test tests/ui/connectedSessionProtocol.test.ts tests/ui/productionParticipantLifecycle.test.ts tests/ui/productionSessionLifecycleAdapter.test.ts tests/ui/declarativeModuleValidation.test.ts tests/domain/commonPlayMaplessTargeting.test.ts tests/domain/commonPlaySpatialFactRuntime.test.ts tests/ui/phase09RealAtomicAttackAdapter.test.ts tests/ui/productionAcceptanceWindowsRegression.test.ts tests/ui/mpG09SpatialProviderAuthority.test.ts",
@@ -3222,7 +3222,7 @@
       ],
       "otherLinks": [],
       "status": "PASS",
-      "lastVerifiedSha": "196266567ad61506f80d359d60224c6f8be6f186",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "GitHub Actions W7-07 AUTO Verification",
         "npx tsx --test tests/ui/productionPlayWorkspaceAccessibility.test.ts tests/ui/sessionResponsiveKeyboardFocusStructure.test.ts tests/ui/sessionResolutionAnnouncementStructure.test.ts tests/ui/visualDiceStructure.test.ts tests/ui/physicsDice3DStructure.test.ts tests/ui/connectedThreePeerPresentation.test.ts tests/ui/connectedThreePeerDuplicateEventBatch.test.ts tests/ui/connectedDiagnosticCorrelation.test.ts",
@@ -3230,7 +3230,7 @@
         "npm run build"
       ],
       "windowsArtifacts": [
-        "artifact 9958720877 W9-02-C-WIN-8d6856e397b29d31dceba9586f3b57a6666770a2 sha256:aa53085cccf2d69bc281ba94b22a897fe8439daad09d62f3ad9b41111c2de16f"
+        "artifact 9959522140 W9-02-C-WIN-7429e2c77ee969aec1c3fe28c252a8ad07e4cd06 sha256:fea5091bf36bfc859b2d986e2a7db3e9e9cb6de1897dd4967c2bc282d1063bc9"
       ]
     },
     {
@@ -3245,13 +3245,13 @@
       ],
       "otherLinks": [],
       "status": "PASS",
-      "lastVerifiedSha": "4adf1ec070b6bd6262e3e60a1fe87ed02564bf4d",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "GitHub Actions W7-08 Windows Representative Cases (windows-representative)",
         "powershell.exe -File scripts/run-tauri-e2e.ps1 -Root . -W708"
       ],
       "windowsArtifacts": [
-        "artifact 9944622846 W7-08-WIN-4adf1ec070b6bd6262e3e60a1fe87ed02564bf4d sha256:dc6eb7bba77c21aa14b32908a61b4f456d1b685f9085d3ecd825315470fd04e9"
+        "artifact 9959499356 W7-08-WIN-7429e2c77ee969aec1c3fe28c252a8ad07e4cd06 sha256:478f392df090950e096fb227dbe39d868aa8e02e3943ae85f8a3d9814277dfb7"
       ]
     },
     {
@@ -3265,17 +3265,17 @@
       "issues": [],
       "otherLinks": [],
       "status": "PASS",
-      "lastVerifiedSha": "7577c454540c95a186ed7f7a43f8c4bbba178aac",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "GitHub Actions V1 Tauri Verification (tauri-w2, tauri-w3, tauri-w4-07-spatial)",
         "GitHub Actions W6-08 Tauri Verification (tauri-w6-08)",
         "powershell.exe -File scripts/run-tauri-e2e.ps1 -Root . -W2 / -W3 / -W407 / -W608"
       ],
       "windowsArtifacts": [
-        "artifact 9942506247 SimpleVTT-W2-Tauri-7577c454540c95a186ed7f7a43f8c4bbba178aac sha256:409b269e47f4235c3ef044a17c074efd00211f9c4eb3db0ed21343600f905952",
-        "artifact 9942485560 SimpleVTT-W3-Tauri-7577c454540c95a186ed7f7a43f8c4bbba178aac sha256:8d98f9f7c19ba45b9dc2d2c5de889ffab54411ddb60ecb2647083c651b517646",
-        "artifact 9942381483 SimpleVTT-W4-07-G01-G09-7577c454540c95a186ed7f7a43f8c4bbba178aac sha256:c18112c72b1a6b0757d7f13f2144721196a68fd5e091b0347f6102b0aeffaca3",
-        "artifact 9942373131 SimpleVTT-W6-08-Tauri-7577c454540c95a186ed7f7a43f8c4bbba178aac sha256:8d164a4e6a9eb0e0ed7ac4ab0742ff53b07f6ab3971c37533d56e6d643d155a3"
+        "artifact 9959424127 SimpleVTT-W2-Tauri-7429e2c77ee969aec1c3fe28c252a8ad07e4cd06 sha256:effe313d114a9d2fa3edfacce32e53bdf5fa4338f209f872854b6256b31016ce",
+        "artifact 9959388416 SimpleVTT-W3-Tauri-7429e2c77ee969aec1c3fe28c252a8ad07e4cd06 sha256:a9cc57fea22d30ef98f1df3984865abe2ecea9830e5ecbc43d082601da5ec24c",
+        "artifact 9959432024 SimpleVTT-W4-07-G01-G09-7429e2c77ee969aec1c3fe28c252a8ad07e4cd06 sha256:955129af0bc2bebbfc5ab0ed612b340a339cb37212e4d42b2c6693f5a7607f0b",
+        "artifact 9959428334 SimpleVTT-W6-08-Tauri-7429e2c77ee969aec1c3fe28c252a8ad07e4cd06 sha256:668bd62a489d919f30cec7b12496b8f1bb50a36373caf90c7a4d9e33ce0c2f55"
       ]
     },
     {
@@ -3288,13 +3288,13 @@
       ],
       "otherLinks": [],
       "status": "PASS",
-      "lastVerifiedSha": "7577c454540c95a186ed7f7a43f8c4bbba178aac",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "GitHub Actions W8-02 Four-Peer Windows Acceptance (windows-four-peer)",
         "powershell.exe -File scripts/run-tauri-e2e.ps1 -Root . -W802"
       ],
       "windowsArtifacts": [
-        "artifact 9942342403 W8-02-WIN-7577c454540c95a186ed7f7a43f8c4bbba178aac sha256:a843fd9a41bac09f92d923677d059460fa0177c38401a8c9d641997b7b416258"
+        "artifact 9959419497 W8-02-WIN-7429e2c77ee969aec1c3fe28c252a8ad07e4cd06 sha256:945549cb95413d8806906d0554fbde8c0178fee717c7af92942536beec9e9187"
       ]
     },
     {
@@ -3308,7 +3308,7 @@
       ],
       "otherLinks": [],
       "status": "PASS",
-      "lastVerifiedSha": "67d40e301558c458802604e6bfdc2f3aa6080bea",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "GitHub Actions V1 Scenario Map (scenario-map)",
         "node scripts/generate-v1-scenario-map.mjs --check",
@@ -3328,7 +3328,7 @@
         "V1-60"
       ],
       "status": "PASS",
-      "lastVerifiedSha": "67d40e301558c458802604e6bfdc2f3aa6080bea",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "GitHub Actions W8-04 Exact-SHA Regression (typescript-vite-focused, rust-tauri)",
         "connected full regression (89/89) + importer focused suite (42/42) + campaign rest / connected UI / V1 coverage suites",
@@ -3348,15 +3348,15 @@
         "V1-80"
       ],
       "status": "PASS",
-      "lastVerifiedSha": "67d40e301558c458802604e6bfdc2f3aa6080bea",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "GitHub Actions V1 Release Artifact (windows-release)",
         "cargo test --manifest-path src-tauri/Cargo.toml --lib",
         "npm run tauri:build"
       ],
       "windowsArtifacts": [
-        "artifact 9944155056 SimpleVTT-V1-RELEASE-67d40e301558c458802604e6bfdc2f3aa6080bea sha256:f2c0763e143312572f525d264991e996da424647d6461a7793bd830d9697b92a",
-        "release executable src-tauri/target/release/simplevtt.exe 9815552 bytes sha256:5d729fa74653853ed380948d00e09e75ea2af249f00ad7ffdb1b479ee3537c0b"
+        "artifact 9959485824 SimpleVTT-V1-RELEASE-7429e2c77ee969aec1c3fe28c252a8ad07e4cd06 sha256:d31ba3d3ae91940967916923bc8db10c2d52ed5ea6f8be1b42fca9c188e97ebd",
+        "release executable src-tauri/target/release/simplevtt.exe 9817088 bytes sha256:2b7394794e37924f707a749d00925e8818577d70bd582dfe499c01df11c843be"
       ]
     },
     {
@@ -3370,7 +3370,7 @@
       ],
       "otherLinks": [],
       "status": "PASS",
-      "lastVerifiedSha": "8d6856e397b29d31dceba9586f3b57a6666770a2",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "GitHub Actions W9-02 Family C Windows Scenarios (windows-family-c)",
         "GitHub Actions W9-02 Family D Windows Scenarios (windows-family-d)",
@@ -3380,9 +3380,9 @@
         "powershell.exe -File scripts/run-tauri-e2e.ps1 -Root . -W902H"
       ],
       "windowsArtifacts": [
-        "artifact 9958720877 W9-02-C-WIN-8d6856e397b29d31dceba9586f3b57a6666770a2 sha256:aa53085cccf2d69bc281ba94b22a897fe8439daad09d62f3ad9b41111c2de16f",
-        "artifact 9958685973 W9-02-D-WIN-8d6856e397b29d31dceba9586f3b57a6666770a2 sha256:52750d0d92514ecee5cc9dbe09dee811864974451820c0137caff1868488a586",
-        "artifact 9958712754 W9-02-H-WIN-8d6856e397b29d31dceba9586f3b57a6666770a2 sha256:5abb469318ae194f3961387d6d80925104ba08779b7ecad1ec63aa95bd6012c3"
+        "artifact 9959522140 W9-02-C-WIN-7429e2c77ee969aec1c3fe28c252a8ad07e4cd06 sha256:fea5091bf36bfc859b2d986e2a7db3e9e9cb6de1897dd4967c2bc282d1063bc9",
+        "artifact 9959530483 W9-02-D-WIN-7429e2c77ee969aec1c3fe28c252a8ad07e4cd06 sha256:ac4f4adcdf035df69c8011bc4cbc67f35dfb94e3295050bb7205f06f2419506f",
+        "artifact 9959421864 W9-02-H-WIN-7429e2c77ee969aec1c3fe28c252a8ad07e4cd06 sha256:b8d221e11c300cb00008bc2f04e73176c906c11e85ada3fd3b5f6e8eac67f8ab"
       ]
     },
     {
@@ -3395,13 +3395,13 @@
         "legacy Journey J1~J9"
       ],
       "status": "PASS",
-      "lastVerifiedSha": "67d40e301558c458802604e6bfdc2f3aa6080bea",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
       "commands": [
         "GitHub Actions W9-03 Zero-to-Next-Session Golden Journey (windows-golden-journey)",
         "powershell.exe -File scripts/run-tauri-e2e.ps1 -Root . -W903"
       ],
       "windowsArtifacts": [
-        "artifact 9944072164 W9-03-WIN-67d40e301558c458802604e6bfdc2f3aa6080bea sha256:783872c299fadfb101a9dbdb6685db060cef1fc9289dcdd2947edc7f62742165"
+        "artifact 9959472117 W9-03-WIN-7429e2c77ee969aec1c3fe28c252a8ad07e4cd06 sha256:47250d58aee4d28ab2a4d607ae92403afe6e9485803814af39810b073ddea651"
       ]
     },
     {
@@ -3414,10 +3414,58 @@
         "#110",
         "V1-80"
       ],
-      "status": "PENDING",
-      "lastVerifiedSha": null,
-      "commands": [],
-      "windowsArtifacts": []
+      "status": "PASS",
+      "lastVerifiedSha": "7429e2c77ee969aec1c3fe28c252a8ad07e4cd06",
+      "commands": [
+        "GitHub Actions Contract validation (workflow_dispatch at 7429e2c7)",
+        "GitHub Actions Gate E Spatial Fact (workflow_dispatch at 7429e2c7)",
+        "GitHub Actions Legacy Execution Boundary (workflow_dispatch at 7429e2c7)",
+        "GitHub Actions M1 Common Play d20 (workflow_dispatch at 7429e2c7)",
+        "GitHub Actions M1 Common Play HP (workflow_dispatch at 7429e2c7)",
+        "GitHub Actions M1 Common Play Interaction (workflow_dispatch at 7429e2c7)",
+        "GitHub Actions M1 Common Play Resource Economy (workflow_dispatch at 7429e2c7)",
+        "GitHub Actions M1 Common Play Targeting (workflow_dispatch at 7429e2c7)",
+        "GitHub Actions Persistence (workflow_dispatch at 7429e2c7)",
+        "GitHub Actions Phase 11 Playable (workflow_dispatch at 7429e2c7)",
+        "GitHub Actions Phase 12 Connected Session (workflow_dispatch at 7429e2c7)",
+        "GitHub Actions Main Playable (workflow_dispatch at 7429e2c7)",
+        "GitHub Actions Rules Domain (workflow_dispatch at 7429e2c7)",
+        "GitHub Actions UI (workflow_dispatch at 7429e2c7)",
+        "GitHub Actions V1 Evidence Ledger (workflow_dispatch at 7429e2c7)",
+        "GitHub Actions V1 Release Artifact (workflow_dispatch at 7429e2c7)",
+        "GitHub Actions V1 Scenario Map (workflow_dispatch at 7429e2c7)",
+        "GitHub Actions V1 Tauri Verification (workflow_dispatch at 7429e2c7)",
+        "GitHub Actions W5-07 AUTO Verification (workflow_dispatch at 7429e2c7)",
+        "GitHub Actions W5-08 AUTO Verification (workflow_dispatch at 7429e2c7)",
+        "GitHub Actions W5-09 AUTO Verification (workflow_dispatch at 7429e2c7)",
+        "GitHub Actions W5-10 AUTO Verification (workflow_dispatch at 7429e2c7)",
+        "GitHub Actions W6-01 AUTO Verification (workflow_dispatch at 7429e2c7)",
+        "GitHub Actions W6-02 AUTO Verification (workflow_dispatch at 7429e2c7)",
+        "GitHub Actions W6-03 AUTO Verification (workflow_dispatch at 7429e2c7)",
+        "GitHub Actions W6-04 AUTO Verification (workflow_dispatch at 7429e2c7)",
+        "GitHub Actions W6-05 AUTO Verification (workflow_dispatch at 7429e2c7)",
+        "GitHub Actions W6-06 AUTO Verification (workflow_dispatch at 7429e2c7)",
+        "GitHub Actions W6-07 AUTO Verification (workflow_dispatch at 7429e2c7)",
+        "GitHub Actions W6-08 Tauri Verification (workflow_dispatch at 7429e2c7)",
+        "GitHub Actions W7-01 AUTO Verification (workflow_dispatch at 7429e2c7)",
+        "GitHub Actions W7-02 AUTO Verification (workflow_dispatch at 7429e2c7)",
+        "GitHub Actions W7-03 AUTO Verification (workflow_dispatch at 7429e2c7)",
+        "GitHub Actions W7-04 Recovery Prerequisite Verification (workflow_dispatch at 7429e2c7)",
+        "GitHub Actions W7-05 AUTO Verification (workflow_dispatch at 7429e2c7)",
+        "GitHub Actions W7-06 AUTO Verification (workflow_dispatch at 7429e2c7)",
+        "GitHub Actions W7-07 AUTO Verification (workflow_dispatch at 7429e2c7)",
+        "GitHub Actions W7-08 Windows Representative Cases (workflow_dispatch at 7429e2c7)",
+        "GitHub Actions W8-02 Four-Peer Windows Acceptance (workflow_dispatch at 7429e2c7)",
+        "GitHub Actions W8-04 Exact-SHA Regression (workflow_dispatch at 7429e2c7)",
+        "GitHub Actions W9-02 Family C Windows Scenarios (workflow_dispatch at 7429e2c7)",
+        "GitHub Actions W9-02 Family D Windows Scenarios (workflow_dispatch at 7429e2c7)",
+        "GitHub Actions W9-02 Family H Windows Scenarios (workflow_dispatch at 7429e2c7)",
+        "GitHub Actions W9-03 Zero-to-Next-Session Golden Journey (workflow_dispatch at 7429e2c7)"
+      ],
+      "windowsArtifacts": [
+        "artifact 9959485824 SimpleVTT-V1-RELEASE-7429e2c77ee969aec1c3fe28c252a8ad07e4cd06 sha256:d31ba3d3ae91940967916923bc8db10c2d52ed5ea6f8be1b42fca9c188e97ebd",
+        "release executable src-tauri/target/release/simplevtt.exe 9817088 bytes sha256:2b7394794e37924f707a749d00925e8818577d70bd582dfe499c01df11c843be"
+      ]
     }
   ]
 }

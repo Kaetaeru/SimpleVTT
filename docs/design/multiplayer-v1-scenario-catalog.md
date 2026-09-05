@@ -320,12 +320,12 @@ Owner-approved state:
 - [x] Owner designated the full catalog as the final V1 objective.
 - [x] GitHub Epic `#110` and implementation issues `#111` through `#122` were created.
 - [x] Documentation PR `#123` was created against `work/v1-composite`.
-- [ ] Merge documentation PR `#123`.
-- [ ] Complete MP-01 and freeze presentation/privacy/reconnect semantics.
-- [ ] Complete MP-02 through MP-10 in dependency order.
-- [ ] Complete MP-11 automated H+P1+P2 acceptance.
-- [ ] Complete MP-12 Windows H+P1+P2 acceptance.
-- [ ] Complete the release gates in `.agents/V1_RELEASE_EXECUTION_CHECKLIST.md` on one exact SHA.
+- [x] Merge documentation PR `#123`.
+- [x] Complete MP-01 and freeze presentation/privacy/reconnect semantics.
+- [x] Complete MP-02 through MP-10 in dependency order.
+- [x] Complete MP-11 automated H+P1+P2 acceptance.
+- [x] Complete MP-12 Windows H+P1+P2 acceptance.
+- [x] Complete the release gates on one exact SHA (`7429e2c77ee969aec1c3fe28c252a8ad07e4cd06`; `docs/roadmap/V1_EVIDENCE_LEDGER.json` 72/72, `docs/roadmap/evidence/W9-04.md`).
 
 Any newly discovered multiplayer behavior must first receive a scenario ID and acceptance rule here or in the epic before code is changed.
 
