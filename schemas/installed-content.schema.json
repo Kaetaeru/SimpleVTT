@@ -47,7 +47,7 @@
       "additionalProperties": false,
       "required": ["kind", "config"],
       "properties": {
-        "kind": { "enum": ["background-definition", "spell-definition", "spell-mechanic"] },
+        "kind": { "enum": ["background-definition", "spell-definition", "spell-mechanic", "species-definition", "feat-definition"] },
         "config": { "type": "object" }
       }
     },

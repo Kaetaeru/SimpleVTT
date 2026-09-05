@@ -19,7 +19,7 @@ import booksJson from "../../content/modules/dnd-srd-5.2.1.equipment-books/modul
 import packsJson from "../../content/modules/dnd-srd-5.2.1.equipment-packs/module.json";
 import utilityJson from "../../content/modules/dnd-srd-5.2.1.equipment-starting-utility/module.json";
 import toolsJson from "../../content/modules/dnd-srd-5.2.1.equipment-tools/module.json";
-import { BACKGROUNDS, CLASSES, FIGHTER, SPECIES, backgroundOption, opt, type Option } from "./srdCatalogBridge";
+import { BACKGROUNDS, CLASSES, FIGHTER, SPECIES, backgroundOption, speciesOption, opt, type Option } from "./srdCatalogBridge";
 import { installedSpellsForClass } from "./installedSpellRuntime";
 
 export { BACKGROUNDS, CLASSES, FIGHTER, SPECIES, opt, type Option };
@@ -97,18 +97,36 @@ export function setInstalledBackgroundEntries(entries: Entry[]) {
   installedBackgroundEntries.splice(0, installedBackgroundEntries.length, ...entries);
 }
 const allBackgroundEntries = () => [...backgroundEntries, ...installedBackgroundEntries];
+// Species contributed by installed RuleModules join the builtin list the same way; their creation-index semantics travel inside the species-definition.
+const installedSpeciesEntries: Entry[] = [];
+export function setInstalledSpeciesEntries(entries: Entry[]) {
+  installedSpeciesEntries.splice(0, installedSpeciesEntries.length, ...entries);
+}
+const allSpeciesEntries = () => [...speciesEntries, ...installedSpeciesEntries];
+export const speciesOptions = (): Option[] => [...SPECIES, ...installedSpeciesEntries.map((entry) => speciesOption(entry as Parameters<typeof speciesOption>[0]))];
+// Feats contributed by installed RuleModules: origin feats join the creation origin-feat lists; every installed feat resolves through featEntry.
+const installedFeatEntries: Entry[] = [];
+export function setInstalledFeatEntries(entries: Entry[]) {
+  installedFeatEntries.splice(0, installedFeatEntries.length, ...entries);
+}
 export const backgroundOptions = (): Option[] => [...BACKGROUNDS, ...installedBackgroundEntries.map((entry) => backgroundOption(entry as Parameters<typeof backgroundOption>[0]))];
 const EMPTY_ENTRY: Entry = { id:"__empty__", category:"", presentation:{ originalName:"", locales:{} }, mechanics:[] };
 
 export const classIdFromName = (name: string) => CLASSES.find((entry) => entry.name === name || entry.nameEn === name || entry.id === name)?.id ?? "dnd.srd521.class.fighter";
-export const speciesIdFromName = (name: string) => speciesEntries.find((entry) => entryName(entry) === name || entry.presentation.originalName === name || entry.id === name)?.id ?? "";
+export const speciesIdFromName = (name: string) => allSpeciesEntries().find((entry) => entryName(entry) === name || entry.presentation.originalName === name || entry.id === name)?.id ?? "";
 export const backgroundIdFromName = (name: string) => allBackgroundEntries().find((entry) => entryName(entry) === name || entry.presentation.originalName === name || entry.id === name)?.id ?? "";
 export const classSemantics = (classId: string): IndexedClassSemantics => INDEX.classes[classId] ?? { skills: { count: 0, options: [] }, choices: [] };
 export const classDefinition = (classId: string) => config<ClassDef>(classById.get(classId) ?? EMPTY_ENTRY, "class-definition");
-export const speciesDefinition = (name: string) => config<SpeciesDef>(speciesEntries.find((entry) => entryName(entry) === name) ?? EMPTY_ENTRY, "species-definition") ?? {};
+export const speciesDefinition = (name: string) => config<SpeciesDef>(allSpeciesEntries().find((entry) => entryName(entry) === name) ?? EMPTY_ENTRY, "species-definition") ?? {};
 export const backgroundDefinition = (name: string) => config<BackgroundDef>(allBackgroundEntries().find((entry) => entryName(entry) === name) ?? EMPTY_ENTRY, "background-definition") ?? {};
 export const speciesTraits = (name: string) => speciesDefinition(name).traits ?? [];
-export const speciesSemantics = (name: string): IndexedSpeciesSemantics => INDEX.species?.[speciesIdFromName(name)] ?? {};
+export const speciesSemantics = (name: string): IndexedSpeciesSemantics => {
+  const id = speciesIdFromName(name);
+  const indexed = INDEX.species?.[id];
+  if (indexed) return indexed;
+  const installed = installedSpeciesEntries.find((entry) => entry.id === id);
+  return (installed ? config<SpeciesDef & { semantics?: IndexedSpeciesSemantics }>(installed, "species-definition")?.semantics : undefined) ?? {};
+};
 
 export function classSkillOptions(classId: string): Option[] {
   const semantic = classSemantics(classId).skills;
@@ -119,6 +137,13 @@ export function classSkillOptions(classId: string): Option[] {
 export const originFeatOptions = featEntries
   .filter((entry) => entry.category === "feat" && entry.tags?.includes("origin"))
   .map((entry) => option(entry.id, entryName(entry), entry.presentation.originalName, "SRD 기원 재주", ["Origin Feat"]));
+/** Builtin origin feats plus installed feats whose feat-definition declares the origin tier. */
+export function allOriginFeatOptions(): Option[] {
+  const installed = installedFeatEntries
+    .filter((entry) => config<{ tier?: string }>(entry, "feat-definition")?.tier === "origin")
+    .map((entry) => option(entry.id, entryName(entry), entry.presentation.originalName, "설치된 기원 재주", ["Origin Feat"]));
+  return [...originFeatOptions, ...installed];
+}
 
 const instrumentNames: Record<string, string> = { bagpipes:"백파이프", drum:"북", dulcimer:"덜시머", flute:"플루트", horn:"호른", lute:"류트", lyre:"리라", "pan-flute":"팬파이프", shawm:"숌", viol:"비올" };
 const gamingNames: Record<string, string> = { dice:"주사위 세트", dragonchess:"드래곤 체스", "playing-cards":"카드 세트", "three-dragon-ante":"쓰리 드래곤 앤티" };
@@ -258,7 +283,7 @@ export const backgroundToolChoice = (backgroundName: string) => backgroundDefini
 export const classLoadoutOptions = (classId: string) => loadoutOptions(classId);
 export const backgroundLoadoutOptions = (backgroundName: string) => loadoutOptions(backgroundIdFromName(backgroundName));
 export const classEntry = (classId: string) => classById.get(classId);
-export const featEntry = (id: string) => featEntries.find((entry) => entry.id === id);
+export const featEntry = (id: string) => featEntries.find((entry) => entry.id === id) ?? installedFeatEntries.find((entry) => entry.id === id);
 function canonicalFeatId(id: string | undefined) {
   if (!id) return undefined;
   if (id === "dnd.srd521.feat.magic-initiate-cleric" || id === "dnd.srd521.feat.magic-initiate-wizard") return "dnd.srd521.feat.magic-initiate";
@@ -266,9 +291,9 @@ function canonicalFeatId(id: string | undefined) {
 }
 export function humanOriginFeatOptions(backgroundName: string): Option[] {
   const existing = canonicalFeatId(backgroundOriginFeat(backgroundName));
-  return originFeatOptions.filter((item) => {
+  return allOriginFeatOptions().filter((item) => {
     if (item.id !== existing) return true;
-    const def = config<{ repeatable?: boolean }>(featEntries.find((entry) => entry.id === item.id) ?? EMPTY_ENTRY, "feat-definition");
+    const def = config<{ repeatable?: boolean }>(featEntry(item.id) ?? EMPTY_ENTRY, "feat-definition");
     return def?.repeatable === true;
   });
 }

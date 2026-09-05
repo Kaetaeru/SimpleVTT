@@ -3,6 +3,8 @@ import type { CatalogEntry, ContentImportPreview, ValidationMessage } from "./co
 import { parseInstalledCampaignProviderProfile } from "./campaignProviderProfiles";
 import { parseInstalledBackgroundDefinition } from "./installedBackgroundDefinition";
 import { parseInstalledSpellDefinition } from "./installedSpellDefinition";
+import { parseInstalledSpeciesDefinition } from "./installedSpeciesDefinition";
+import { parseInstalledFeatDefinition } from "./installedFeatDefinition";
 import { parseSpellMechanicDefinition } from "../domain/spellMechanicDefinitionRuntime";
 import type {
   InstalledCatalogEntryV1,
@@ -73,6 +75,14 @@ function portableMechanics(value:unknown,label:string,availableCapabilities:Iter
     if (mechanic.kind==="background-definition") {
       if (category!=="background") throw new Error(`${mechanicLabel} background-definition is only valid on background content`);
       return {kind:"background-definition",config:parseInstalledBackgroundDefinition(mechanic.config,`${mechanicLabel}.config`)};
+    }
+    if (mechanic.kind==="species-definition") {
+      if (category!=="species") throw new Error(`${mechanicLabel} species-definition is only valid on species content`);
+      return {kind:"species-definition",config:parseInstalledSpeciesDefinition(mechanic.config,`${mechanicLabel}.config`)};
+    }
+    if (mechanic.kind==="feat-definition") {
+      if (category!=="feat") throw new Error(`${mechanicLabel} feat-definition is only valid on feat content`);
+      return {kind:"feat-definition",config:parseInstalledFeatDefinition(mechanic.config,`${mechanicLabel}.config`)};
     }
     if (mechanic.kind==="spell-definition") {
       if (category!=="spell") throw new Error(`${mechanicLabel} spell-definition is only valid on spell content`);

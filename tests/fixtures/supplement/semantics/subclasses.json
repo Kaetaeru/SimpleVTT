@@ -1,0 +1,27 @@
+{
+  "storm-knight": {
+    "features": {
+      "3-1": {
+        "commonPlay": {
+          "schemaVersion": "0.2-draft",
+          "id": "fixture.storm-knight.lightning-reset",
+          "entryPoints": [
+            {
+              "id": "use",
+              "invocation": "manual",
+              "operations": [
+                {
+                  "kind": "healing.apply",
+                  "amount": {
+                    "value": 2
+                  },
+                  "target": "self"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  }
+}

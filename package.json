@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "generate:presentation": "node scripts/generate-spell-presentation.mjs",
+    "compile:supplement": "tsx scripts/compile-supplement.ts",
     "generate:spell-authored": "tsx scripts/generate-spell-authored.ts",
     "generate:spell-execution": "tsx scripts/generate-spell-execution.ts",
     "generate:progression": "node scripts/generate-progression.mjs",

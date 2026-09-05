@@ -1,5 +1,7 @@
 import { parseInstalledBackgroundDefinition } from "./installedBackgroundDefinition";
 import { parseInstalledSpellDefinition } from "./installedSpellDefinition";
+import { parseInstalledSpeciesDefinition } from "./installedSpeciesDefinition";
+import { parseInstalledFeatDefinition } from "./installedFeatDefinition";
 import { parseSpellMechanicDefinition } from "../domain/spellMechanicDefinitionRuntime";
 import { lowerAllCommonPlayEntryPoints, parseCommonPlayDefinition, validateCommonPlayCapabilities } from "../domain/commonPlayDefinitionRuntime";
 import {
@@ -47,6 +49,16 @@ function assertEntry(value:unknown):asserts value is InstalledCatalogEntryV1 {
       if(isObject(mechanic)&&mechanic.kind==="background-definition") {
         if(value.category!=="background") throw new Error(`installed content mechanic ${index} background-definition requires background content`);
         parseInstalledBackgroundDefinition(mechanic.config,`installed content mechanic ${index}.config`);
+        return;
+      }
+      if(isObject(mechanic)&&mechanic.kind==="species-definition") {
+        if(value.category!=="species") throw new Error(`installed content mechanic ${index} species-definition requires species content`);
+        parseInstalledSpeciesDefinition(mechanic.config,`installed content mechanic ${index}.config`);
+        return;
+      }
+      if(isObject(mechanic)&&mechanic.kind==="feat-definition") {
+        if(value.category!=="feat") throw new Error(`installed content mechanic ${index} feat-definition requires feat content`);
+        parseInstalledFeatDefinition(mechanic.config,`installed content mechanic ${index}.config`);
         return;
       }
       if(isObject(mechanic)&&mechanic.kind==="spell-definition") {

@@ -63,7 +63,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          npx tsx --test tests/ui/externalContentGoldenModule.test.ts tests/ui/installedContentModuleActivation.test.ts tests/ui/installedProgressionContributionRuntime.test.ts tests/ui/ruleModulePackageImport.test.ts tests/ui/installedContentPersistence.test.ts tests/ui/installedContentRuntimeAdapter.test.ts | tee /tmp/w8-04-importer.tap
+          npx tsx --test tests/ui/externalContentGoldenModule.test.ts tests/ui/supplementCompiler.test.ts tests/ui/installedContentModuleActivation.test.ts tests/ui/installedProgressionContributionRuntime.test.ts tests/ui/ruleModulePackageImport.test.ts tests/ui/installedContentPersistence.test.ts tests/ui/installedContentRuntimeAdapter.test.ts | tee /tmp/w8-04-importer.tap
       - name: Focused suites and Vite production build
         run: npm run build
       - name: Record exact-SHA evidence
