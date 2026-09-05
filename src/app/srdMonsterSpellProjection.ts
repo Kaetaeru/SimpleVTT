@@ -2,6 +2,7 @@ import type { AbilityKey } from "./contracts";
 import type { CombatantRuntimeAttackVm, CombatantRuntimeDamageVm, CombatantRuntimeEconomy, CombatantRuntimeSaveActionVm, CombatantRuntimeTimingVm } from "./combatantRuntimeContracts";
 import type { SrdMonster, SrdMonsterSpellcasting, SrdMonsterSpellList } from "./srdMonsterCatalog";
 import { spellMechanicById } from "../domain/spellMechanics";
+import { spellPresentationById } from "./spellPresentation";
 import type { SpellDiceFormula, SpellMechanicDefinition } from "../domain/spellcasting";
 
 /**
@@ -33,7 +34,8 @@ export function monsterSpellSpecs(monster:Pick<SrdMonster,"cr"|"proficiencyBonus
       };
       const timing=timingFor(list);
       const id=`spell.${listIndex}.${entryIndex}.${entry.spellId.replace(/^dnd\.srd521\.spell\./,"")}`;
-      const name=`${entry.name} (주문${entry.slotLevel?` · ${entry.slotLevel}레벨`:""})`;
+      // The catalog's Korean name, so the DM sees the same label the players' hotbars use ("냉기 분사", not "원뿔 of 냉기").
+      const name=`${spellPresentationById(entry.spellId)?.name ?? entry.name} (주문${entry.slotLevel?` · ${entry.slotLevel}레벨`:""})`;
       const economy=ECONOMY[mechanic.castingEconomy];
       const primary=mechanic.primary;
       const failConditionIds=(mechanic.effects??[]).filter((effect)=>effect.trigger==="failed-save").map((effect)=>effect.conditionId);

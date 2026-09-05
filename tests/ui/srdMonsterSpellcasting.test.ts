@@ -15,15 +15,16 @@ type Definition={ runtimeActions:CombatantRuntimeAttackVm[]; runtimeSaveActions:
 
 test("C1-04: the mage's Fireball and Cone of Cold are saving-throw actions with DC 14 and per-day uses",()=>{
   const mage=srdMonsterCombatantDefinition(srdMonsterById(MAGE)!) as unknown as Definition;
-  const fireball=mage.runtimeSaveActions.find((action)=>/파이어볼/.test(action.name));
-  assert.ok(fireball,"Fireball projects as a save action");
+  const fireball=mage.runtimeSaveActions.find((action)=>/화염구/.test(action.name));
+  assert.ok(fireball,"Fireball projects as a save action under its catalog name");
+  assert.equal(fireball.name,"화염구 (주문 · 4레벨)");
   assert.equal(fireball.saveAbility,"dex");
   assert.equal(fireball.saveDc,14,"the stat block's DC, not a character formula");
   assert.deepEqual(fireball.damage,[{ type:"화염", dice:"9d6", flat:0 }],"the 4th-level version adds a die");
   assert.equal(fireball.successDamage,"half");
   assert.equal(fireball.maxTargets,10);
   assert.deepEqual(fireball.timing,{ usesPerDay:2 },"2/일 list");
-  const cone=mage.runtimeSaveActions.find((action)=>/냉기/.test(action.name));
+  const cone=mage.runtimeSaveActions.find((action)=>/냉기 분사/.test(action.name));
   assert.deepEqual([cone?.saveAbility,cone?.saveDc,cone?.damage[0]?.dice,cone?.timing?.usesPerDay],["con",14,"8d8",1]);
   const entries=mage.runtimeMonster.spellcasting!.lists.flatMap((list)=>list.entries??[]);
   assert.ok(entries.some((entry)=>entry.spellId==="dnd.srd521.spell.fireball"&&entry.slotLevel===4),"the catalog carries the resolved spell id and upcast level");
@@ -33,14 +34,14 @@ test("C1-04: the mage's Fireball and Cone of Cold are saving-throw actions with 
 
 test("C1-04: the adult red dragon's Scorching Ray is three spell attacks at +12 and Fireball is 1/day at DC 20",()=>{
   const dragon=srdMonsterCombatantDefinition(srdMonsterById(DRAGON)!) as unknown as Definition;
-  const ray=dragon.runtimeActions.find((action)=>/작열 광선/.test(action.name));
+  const ray=dragon.runtimeActions.find((action)=>/타오르는 광선/.test(action.name));
   assert.ok(ray);
   assert.equal(ray.attackBonus,12,"DC 20 − 8");
   assert.equal(ray.attacksPerAction,3);
   assert.deepEqual(ray.damage,{ type:"화염", dice:"2d6", flat:0 });
   assert.equal(ray.category,"magic");
   assert.equal(ray.timing,undefined,"at-will");
-  const fireball=dragon.runtimeSaveActions.find((action)=>/파이어볼/.test(action.name));
+  const fireball=dragon.runtimeSaveActions.find((action)=>/화염구/.test(action.name));
   assert.deepEqual([fireball?.saveDc,fireball?.damage[0]?.dice,fireball?.timing?.usesPerDay],[20,"8d6",1]);
   const command=dragon.runtimeSaveActions.find((action)=>/명령/.test(action.name));
   assert.ok(command&&command.damage.length===0&&command.saveAbility==="wis","a save-effect spell projects without damage");
@@ -62,7 +63,7 @@ test("C1-04: an instantiated mage exposes the spell actions with the block's DC 
   const snapshot=await adapter.getSnapshot();
   const mage=snapshot.scene.entities.find((entity)=>entity.id.startsWith(`${MAGE}.instance-`))!;
   const actions=snapshot.scene.actionsByActor[mage.id]??[];
-  const fireball=actions.find((action)=>/파이어볼/.test(action.name));
+  const fireball=actions.find((action)=>/화염구/.test(action.name));
   assert.ok(fireball,"Fireball is on the mage's action list");
   assert.equal(fireball.resolutionKind,"saving-throw");
   assert.equal(fireball.saveDc,14);

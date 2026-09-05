@@ -30,7 +30,28 @@ changes, exact merge SHA in the evidence table. New adapters register in `offlin
 | `C1-01` | `f63b5467a6799b70b775aa577dd4bafc7b016683` | PR #368. `productionPlayRuntimeAdapter` reconcile drops every local character from a hosted scene (the DM's saved character never projects); the host workspace no longer names a character; `tests/ui/hostHasNoCharacter.test.ts` covers hosting with a saved character and a player projection still joining. |
 | `C1-02` | `1bf3c7fc357ffd5d84a5165e43cf2589a946f4cf` | PR #369. `ConnectedSceneTopology` carries groups, engagements, scene conditions, movement declarations and the 물러남 prompt; `connectedTheaterOfMindRoutingAdapter` republishes after every host-side theater mutation and routes a player's `movement-request` to the Host (`connectedMovementRequestPort`); `tests/ui/connectedTheaterOfMindParity.test.ts` runs host + client adapters over the in-process transport. |
 | `C1-03` | `5679c59dea20da88d09bfac678bb5d23e836827c` | PR #370. Spell coverage moves from 10 authored / 216 tracked to **66 authored / 162 tracked** (`SPELL_EXECUTION_COVERAGE`). See "C1-03 spell waves" below for the waves, the engine additions and the reviewed list of what stays tracked. |
-| `C1-04` | _pending merge_ | Stat-block spellcasting: the monster generator resolves each spell list entry to a catalog spell id (253/255 resolved; Korean/English names plus an alias table for the translation variants) and `srdMonsterSpellProjection` turns combat-executable mechanics into runtime attack/save actions with the block's DC, spell attack bonus (DC − 8 when the block has none), upcast dice and per-day counters — mage Fireball (level 4) is a DEX DC 14 save for 9d6, 2/일; the adult red dragon's Scorching Ray is three +12 attacks. Legendary Resistance re-judges: `useLegendaryResistance` undoes the last card when it holds that creature's failed save, re-resolves the same cast with `forcedSaveSuccessIds` (the save is judged against target 0 with a `legendary-resistance:auto-success` source), spends the counter and annotates the card. Multiattack routines: the generator parses "물기 한 번과 발톱 두 번" into named attacks (135/180 lines), `resolveMultiattackRoutine` resolves them against one target as one DM action with a single activity summary, and the DM tools show a 다중공격 button with a target row. Tests: `srdMonsterSpellcasting`, `srdMonsterLegendaryResistance`, `srdMonsterMultiattack`. |
+| `C1-04` | `a4f59adb5e54a1360cf3344fcae2609e4f1a7946` | PR #371. Stat-block spellcasting: the monster generator resolves each spell list entry to a catalog spell id (253/255 resolved; Korean/English names plus an alias table for the translation variants) and `srdMonsterSpellProjection` turns combat-executable mechanics into runtime attack/save actions with the block's DC, spell attack bonus (DC − 8 when the block has none), upcast dice and per-day counters — mage Fireball (level 4) is a DEX DC 14 save for 9d6, 2/일; the adult red dragon's Scorching Ray is three +12 attacks. Legendary Resistance re-judges: `useLegendaryResistance` undoes the last card when it holds that creature's failed save, re-resolves the same cast with `forcedSaveSuccessIds` (the save is judged against target 0 with a `legendary-resistance:auto-success` source), spends the counter and annotates the card. Multiattack routines: the generator parses "물기 한 번과 발톱 두 번" into named attacks (135/180 lines), `resolveMultiattackRoutine` resolves them against one target as one DM action with a single activity summary, and the DM tools show a 다중공격 button with a target row. Tests: `srdMonsterSpellcasting`, `srdMonsterLegendaryResistance`, `srdMonsterMultiattack`. |
+| `C1-05` | _pending merge_ | Walkthrough (DM preview and player preview, initiative mode, dev build after C1-04) — see "C1-05 walkthrough" below. Stale suites resolved: `campaignDmLibraryPcPresetRuntime` (materialization guard accepts the null-checked map) and `productionOfficialActions` (a spellbook ritual is offered as a ritual cast beside the prepared spells). |
+
+### C1-05 walkthrough
+
+Screens on the play path were driven from the browser against the dev build (the first-run choice, the session
+workspace, 인카운터 panel, initiative strip, DM turn focus, hotbar, 기록 feed, player preview). Findings and what
+changed:
+
+- **Monster spell labels** used the stat block's translation ("파이어볼", "원뿔 of 냉기") while the players' hotbars
+  use the catalog names — the projection now labels spells with the catalog's Korean name ("화염구 (주문 · 4레벨)",
+  "냉기 분사 (주문)").
+- **다중공격 off-turn**: the button ran the routine while another creature had the turn, and every attack was
+  refused by the turn runtime, leaving an entry "Aelar HP 31 → 31". In initiative the button is disabled until the
+  creature's turn and its title says so; on the creature's turn the routine resolves ("아케인 버스트 3회 · Aelar HP
+  31 → 0", one entry per attack in 기록).
+- Verified as designed: the first-run overlay is centered at 1280 px and stores the choice; the 인카운터 search adds
+  an SRD monster with its stat-block actions (아케인 버스트 3회, the two projected spells, the bonus-action text
+  entry); the DM hotbar follows the current turn (T1-07); the player preview shows the movement declaration row,
+  the hotbar groups with empty-state text, and the resource strip.
+- Left as is: the reference preview's fighter action is named "Second Wind" while production projections say
+  "세컨드 윈드" — the reference mock is pinned by 25 suites and is not a production surface.
 
 ### C1-03 spell waves
 

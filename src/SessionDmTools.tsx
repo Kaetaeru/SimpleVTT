@@ -247,7 +247,13 @@ export function SessionDmEncounterPane({ onClose }: { onClose(): void }) {
             </div>}
             <span className="session-dm-combatant-actions">
               <button type="button" aria-expanded={editingId === combatant.id} disabled={Boolean(pendingKey)} onClick={() => setEditingId((current) => current === combatant.id ? null : combatant.id)} title="HP·배지·상태를 굴림 없이 바로 편집합니다.">{editingId === combatant.id ? "닫기" : "편집"}</button>
-              {(() => { const routine = multiattackRoutineOf(snapshot, combatant.id); return routine && <button type="button" aria-expanded={routineFor === combatant.id} disabled={Boolean(pendingKey)} onClick={() => setRoutineFor((current) => current === combatant.id ? null : combatant.id)} title="다중공격 루틴을 한 대상에게 순서대로 한 번에 판정합니다.">{pendingKey === `routine:${combatant.id}` ? "…" : `다중공격 · ${multiattackRoutineLabel(routine)}`}</button>; })()}
+              {(() => {
+                const routine = multiattackRoutineOf(snapshot, combatant.id);
+                if (!routine) return null;
+                // In initiative the routine spends the creature's action, so it is offered on its own turn only.
+                const notItsTurn = snapshot.sessionMode === "initiative" && snapshot.scene.currentActorId !== combatant.id;
+                return <button type="button" aria-expanded={routineFor === combatant.id} disabled={Boolean(pendingKey) || notItsTurn} onClick={() => setRoutineFor((current) => current === combatant.id ? null : combatant.id)} title={notItsTurn ? "다중공격 루틴은 이 크리처의 턴에 판정합니다." : "다중공격 루틴을 한 대상에게 순서대로 한 번에 판정합니다."}>{pendingKey === `routine:${combatant.id}` ? "…" : `다중공격 · ${multiattackRoutineLabel(routine)}`}</button>;
+              })()}
               {timing?.legendaryResistance && timing.legendaryResistance.remaining > 0 && <button type="button" disabled={Boolean(pendingKey)} onClick={() => void useLegendaryResistance(combatant.id)} title="실패한 내성 굴림을 성공으로 바꿉니다. 판정에는 강제 성공을 적용하세요.">{pendingKey === `lr:${combatant.id}` ? "…" : `전설 저항 ${timing.legendaryResistance.remaining}`}</button>}
               {group && group.memberIds[0] === combatant.id && <button type="button" disabled={Boolean(pendingKey)} onClick={() => void ungroup(group.id)} title="무리를 풀어 개별 카드로 보여줍니다.">{pendingKey === `ungroup:${group.id}` ? "…" : "무리 해제"}</button>}
               {timing && <button type="button" disabled={Boolean(pendingKey)} onClick={() => void resetTiming(combatant.id)} title="재충전, 사용 횟수, 전설 행동을 모두 되돌립니다.">{pendingKey === `timing:${combatant.id}` ? "…" : "재정비"}</button>}

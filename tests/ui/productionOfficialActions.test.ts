@@ -31,13 +31,16 @@ test("created spellcasters keep every prepared spell visible in the Session hotb
   character.preparedSpells=["dnd.srd521.spell.charm-person"];
   character.spellbookSpells=["dnd.srd521.spell.alarm"];
   const spells=deriveProductionCharacterActions(character).filter((action)=>action.category==="magic"&&!action.itemCost);
+  // Ritual casting (V1.1): a spellbook ritual (Alarm) is offered as a ritual cast beside the prepared spells.
   assert.deepEqual(spells.map((action)=>action.spellCast?.spellId),[
     "dnd.srd521.spell.dancing-lights",
     "dnd.srd521.spell.minor-illusion",
     "dnd.srd521.spell.charm-person",
+    "dnd.srd521.spell.alarm",
   ]);
   assert.ok(spells.every((action)=>action.available&&!action.disabledReason));
-  assert.deepEqual(spells.map((action)=>action.spellCast?.runtimeSupport),["tracked-executable","tracked-executable","combat-executable"]);
+  assert.deepEqual(spells.map((action)=>action.spellCast?.runtimeSupport),["tracked-executable","tracked-executable","combat-executable","tracked-executable"]);
+  assert.equal(spells[3]?.spellCast?.castSource,"ritual","the spellbook-only spell is a ritual cast, not a prepared slot cast");
 });
 
 test("implemented spells expose real target selection without partial approval placeholders",async()=>{
