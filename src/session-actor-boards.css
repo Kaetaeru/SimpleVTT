@@ -273,3 +273,9 @@ button.session-actor-card:disabled { cursor: default; opacity: 1; }
   .session-actor-board-label strong { display: none; }
   .session-actor-card { flex-basis: 166px; min-width: 160px; }
 }
+
+.session-actor-card-statuses > span.timing {
+  border-color: color-mix(in srgb, var(--warn, #c9a227) 55%, var(--line));
+  background: color-mix(in srgb, var(--warn, #c9a227) 12%, var(--recess));
+  color: var(--text);
+}

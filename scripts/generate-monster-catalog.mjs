@@ -118,6 +118,27 @@ function parseHead(head, slug) {
   return stat;
 }
 
+// T1-02 timing semantics. The translation dropped the "(Recharge 5–6)", "(N/Day)", "Legendary Action Uses: 3"
+// and "Legendary Resistance (3/Day)" annotations, so the values below follow the SRD 5.2.1 English text:
+// breath weapons, webs and sprays recharge on 5–6 except the ones listed as 6; every legendary creature has 3
+// legendary action uses and 3 legendary resistances per day, ancient dragons and the kraken 4, the tarrasque 5.
+const RECHARGE_NAME = /브레스|숨결|분사|거미줄/;
+const RECHARGE_ON_SIX = new Set(["ankheg", "dust-mephit", "ice-mephit", "magma-mephit", "steam-mephit", "iron-golem"]);
+const LEGENDARY_RESISTANCE_OVERRIDES = { tarrasque:5, kraken:4 };
+const USES_PER_DAY = /(\d+)\s*\/\s*(일|Day)/i;
+const USES_PER_ROUND = /다음 턴이 시작될 때까지 이 행동을 다시 사용할 수 없다/;
+
+function timingFor(entry, slug, section, flat, originalName) {
+  const timing = {};
+  if ((section === "행동" || section === "추가 행동") && (RECHARGE_NAME.test(entry.title) || /Breath|Web|Spray/i.test(originalName))) {
+    timing.recharge = { min: RECHARGE_ON_SIX.has(slug) ? 6 : 5, sides: 6 };
+  }
+  const perDay = USES_PER_DAY.exec(entry.title);
+  if (perDay) timing.usesPerDay = num(perDay[1]);
+  if (USES_PER_ROUND.test(flat)) timing.usesPerRound = 1;
+  return Object.keys(timing).length ? timing : undefined;
+}
+
 function parseEntry(entry, slug, section) {
   const originalName = entry.lines.map((line) => /^- \*\*원문명:\*\*\s*(.+)$/.exec(line)?.[1]?.trim()).find(Boolean) ?? entry.title;
   const text = entry.lines.filter((line) => !/^- \*\*원문명:\*\*/.test(line)).join("\n").trim();
@@ -195,6 +216,9 @@ function parseEntry(entry, slug, section) {
   if (cost) out.costText = cost[1];
   const legendary = section === "전설 행동" ? /\(([1-3])\s*행동\)/.exec(entry.title) : null;
   if (legendary) out.legendaryCost = num(legendary[1]);
+  else if (section === "전설 행동") out.legendaryCost = 1;
+  const timing = timingFor(entry, slug, section, flat, originalName);
+  if (timing) out.timing = timing;
   return out;
 }
 
@@ -204,7 +228,11 @@ const monsters = bundle.monsters.map((monster) => {
   const pick = (title) => parsed.find((section) => section.title === title)?.entries ?? [];
   const entriesOf = (title) => pick(title).map((entry) => parseEntry(entry, monster.slug, title));
   const legendaryIntro = parsed.find((section) => section.title === "전설 행동");
-  const legendaryUses = legendaryIntro ? num(/(\d+)\s*회|(\d+)개의 전설 행동|전설 행동 (\d+)/.exec(monster.markdown)?.slice(1).find(Boolean) ?? 3) : 0;
+  // SRD 5.2.1: every legendary creature has 3 legendary action uses (4 in its lair); the translation dropped the line.
+  const legendaryUses = legendaryIntro ? 3 : 0;
+  const legendaryResistance = pick("특성").some((entry) => /전설 저항/.test(entry.title))
+    ? (LEGENDARY_RESISTANCE_OVERRIDES[monster.slug] ?? (monster.slug.startsWith("ancient-") ? 4 : 3))
+    : 0;
   return {
     id: monster.id, slug: monster.slug, name: monster.name, nameEn: monster.nameEn,
     ...stat,
@@ -214,7 +242,7 @@ const monsters = bundle.monsters.map((monster) => {
     reactions: entriesOf("반응 행동"),
     legendaryActions: entriesOf("전설 행동"),
     legendaryActionsPerRound: legendaryUses,
-    legendaryResistance: pick("특성").some((entry) => /전설 저항/.test(entry.title)) ? (num(/전설 저항[^0-9]*(\d+)/.exec(monster.markdown)?.[1] ?? 3)) : 0,
+    legendaryResistance,
     presentation: { markdown: monster.markdown },
   };
 });
