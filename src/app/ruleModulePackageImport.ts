@@ -2,6 +2,8 @@ import { lowerAllCommonPlayEntryPoints, parseCommonPlayDefinition, validateCommo
 import type { CatalogEntry, ContentImportPreview, ValidationMessage } from "./contracts";
 import { parseInstalledCampaignProviderProfile } from "./campaignProviderProfiles";
 import { parseInstalledBackgroundDefinition } from "./installedBackgroundDefinition";
+import { parseInstalledSpellDefinition } from "./installedSpellDefinition";
+import { parseSpellMechanicDefinition } from "../domain/spellMechanicDefinitionRuntime";
 import type {
   InstalledCatalogEntryV1,
   InstalledContentRelationshipV1,
@@ -60,7 +62,7 @@ function semanticRelationships(value:unknown,label:string):InstalledContentRelat
     };
   });
 }
-function portableMechanics(value:unknown,label:string,availableCapabilities:Iterable<string>,category:InstalledCatalogEntryV1["category"]):InstalledMechanicV1[] {
+function portableMechanics(value:unknown,label:string,availableCapabilities:Iterable<string>,category:InstalledCatalogEntryV1["category"],contentId?:string):InstalledMechanicV1[] {
   if (value===undefined) return [];
   if (!Array.isArray(value)) throw new Error(`${label} must be an array`);
   return value.map((item,index)=>{
@@ -71,6 +73,18 @@ function portableMechanics(value:unknown,label:string,availableCapabilities:Iter
     if (mechanic.kind==="background-definition") {
       if (category!=="background") throw new Error(`${mechanicLabel} background-definition is only valid on background content`);
       return {kind:"background-definition",config:parseInstalledBackgroundDefinition(mechanic.config,`${mechanicLabel}.config`)};
+    }
+    if (mechanic.kind==="spell-definition") {
+      if (category!=="spell") throw new Error(`${mechanicLabel} spell-definition is only valid on spell content`);
+      return {kind:"spell-definition",config:parseInstalledSpellDefinition(mechanic.config,`${mechanicLabel}.config`)};
+    }
+    if (mechanic.kind==="spell-mechanic") {
+      if (category!=="spell") throw new Error(`${mechanicLabel} spell-mechanic is only valid on spell content`);
+      try {
+        return {kind:"spell-mechanic",config:parseSpellMechanicDefinition(mechanic.config,`${mechanicLabel}.config`,contentId?{spellId:contentId}:{})};
+      } catch(error) {
+        throw new Error(`${mechanicLabel} contains an unsupported spell mechanic: ${error instanceof Error?error.message:String(error)}`);
+      }
     }
     if (mechanic.kind!=="common-play") {
       throw new Error(`${label} cannot be activated by the generic Catalog: unsupported mechanic kind ${String(mechanic.kind)}`);
@@ -196,7 +210,10 @@ export function parseRuleModulePackage(payload:string):ParsedRuleModulePackage {
     const category=categoryRaw as InstalledCatalogEntryV1["category"];
     const present=presentation(value.presentation,defaultLocale,`content[${index}]`);
     const relations=semanticRelationships(value.relationships,`content[${index}].relationships`);
-    const mechanics=portableMechanics(value.mechanics,`content[${index}].mechanics`,module.capabilities,category);
+    const mechanics=portableMechanics(value.mechanics,`content[${index}].mechanics`,module.capabilities,category,contentId);
+    if (category==="spell"&&mechanics.some((mechanic)=>mechanic.kind==="spell-mechanic")&&!mechanics.some((mechanic)=>mechanic.kind==="spell-definition")) {
+      throw new Error(`content[${index}] spell-mechanic requires a spell-definition on the same entry`);
+    }
     const contributions=progressionContributions(value.progressionContributions,`content[${index}].progressionContributions`);
     const campaignProvider=value.campaignProvider===undefined?undefined:parseInstalledCampaignProviderProfile(value.campaignProvider);
     return {

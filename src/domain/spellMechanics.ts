@@ -1,5 +1,6 @@
 import type { SpellDiceFormula, SpellMechanicDefinition } from "./spellcasting";
 import rawCatalog from "../generated/spellPresentationCatalog.generated.json";
+import rawAuthored from "../generated/spellAuthoredMechanics.generated.json";
 import type { AbilityKey, ConditionId } from "./conditions";
 import type { DurationSpec } from "./effects";
 
@@ -430,18 +431,32 @@ export const SRD_521_SPELL_MECHANICS: Record<string, SpellMechanicDefinition> = 
   },
 };
 
+/** Authored JSON definitions (content/spell-mechanics, X1-04) outrank the reviewed TypeScript definitions and prose derivation. */
+const AUTHORED_SPELL_MECHANICS:Record<string,SpellMechanicDefinition>=Object.fromEntries(
+  ((rawAuthored as {definitions:SpellMechanicDefinition[]}).definitions??[]).map((definition)=>[definition.spellId,definition]),
+);
+
+export function authoredSpellMechanicById(spellId:string):SpellMechanicDefinition|undefined {
+  const definition=AUTHORED_SPELL_MECHANICS[spellId];
+  return definition?structuredClone(definition):undefined;
+}
+
 export function spellMechanicById(spellId: string) {
   const spell=CATALOG_BY_ID.get(spellId);
-  const definition=SRD_521_SPELL_MECHANICS[spellId]??(spell?catalogMechanic(spell):undefined);
+  const definition=AUTHORED_SPELL_MECHANICS[spellId]??SRD_521_SPELL_MECHANICS[spellId]??(spell?catalogMechanic(spell):undefined);
   return definition&&spell?{
     ...definition,components:catalogComponents(spell),ritual:spell.ritual,
     ...(castingDurationSeconds(spell.castingTime)?{castingDurationSeconds:castingDurationSeconds(spell.castingTime)}:{}),
   }:definition;
 }
 
+const isAuthored=(spellId:string)=>Boolean(AUTHORED_SPELL_MECHANICS[spellId]);
+const isReviewed=(spellId:string)=>!isAuthored(spellId)&&Boolean(SRD_521_SPELL_MECHANICS[spellId]);
 export const SPELL_EXECUTION_COVERAGE={
   total:CATALOG.length,
-  reviewed:Object.keys(SRD_521_SPELL_MECHANICS).length,
-  derivedCombat:CATALOG.filter((spell)=>!SRD_521_SPELL_MECHANICS[spell.id]&&catalogMechanic(spell).runtimeSupport==="combat-executable").length,
-  tracked:CATALOG.filter((spell)=>!SRD_521_SPELL_MECHANICS[spell.id]&&catalogMechanic(spell).runtimeSupport==="tracked-executable").length,
+  /** Authored JSON definitions for catalog spells (content/spell-mechanics). */
+  authored:CATALOG.filter((spell)=>isAuthored(spell.id)).length,
+  reviewed:CATALOG.filter((spell)=>isReviewed(spell.id)).length,
+  derivedCombat:CATALOG.filter((spell)=>!isAuthored(spell.id)&&!isReviewed(spell.id)&&catalogMechanic(spell).runtimeSupport==="combat-executable").length,
+  tracked:CATALOG.filter((spell)=>!isAuthored(spell.id)&&!isReviewed(spell.id)&&catalogMechanic(spell).runtimeSupport==="tracked-executable").length,
 };

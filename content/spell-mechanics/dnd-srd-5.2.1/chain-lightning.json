@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "1",
+  "source": {
+    "document": "SRD 5.2.1",
+    "spell": "Chain Lightning",
+    "review": "X1-04 authored example. The SRD text: one primary target within 150 feet, then up to three more targets within 30 feet of the first, each takes 10d8 lightning on a failed Dexterity save, half on a success; +1 target per slot level above 6th. The secondary 30-foot constraint is not expressible with the targeting rule (all targets are validated against the caster's range), so the definition accepts up to four targets within 150 feet and records that limit in executionScope."
+  },
+  "definitions": [
+    {
+      "spellId": "dnd.srd521.spell.chain-lightning",
+      "baseLevel": 6,
+      "runtimeSupport": "combat-executable",
+      "castingEconomy": "action",
+      "targeting": { "kind": "creature", "rangeFeet": 150, "minTargets": 1, "maxTargets": 4, "requiresSight": true },
+      "primary": {
+        "kind": "save-damage",
+        "saveAbility": "dex",
+        "damageType": "lightning",
+        "dice": { "count": 10, "sides": 8 },
+        "successDamage": "half"
+      },
+      "components": { "verbal": true, "somatic": true, "materials": [{ "id": "chain-lightning-focus-materials" }] },
+      "executionScope": "Authored (X1-04): primary target plus up to three additional targets take 10d8 lightning on a failed DEX save, half on success. The 30-foot chaining constraint between the first and the additional targets and the +1 target per slot above 6th are not enforced; the DM validates target selection."
+    }
+  ]
+}

@@ -42,6 +42,15 @@
         "targetVersion":{"type":"string","minLength":1}, "extensionPoint":{"type":"string","minLength":1}
       }
     },
+    "declarativeMechanic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "config"],
+      "properties": {
+        "kind": { "enum": ["background-definition", "spell-definition", "spell-mechanic"] },
+        "config": { "type": "object" }
+      }
+    },
     "commonPlayMechanic": {
       "type": "object",
       "additionalProperties": false,
@@ -67,7 +76,7 @@
         "semanticRelationships": {"type":"array","items":{"$ref":"#/$defs/semanticRelationship"}},
         "extensionPoints": {"type":"array","items":{"$ref":"#/$defs/extensionPoint"}},
         "module": {"$ref":"#/$defs/moduleManifest"},
-        "mechanics": {"type":"array","items":{"$ref":"#/$defs/commonPlayMechanic"}}
+        "mechanics": {"type":"array","items":{"anyOf":[{"$ref":"#/$defs/commonPlayMechanic"},{"$ref":"#/$defs/declarativeMechanic"}]}}
       }
     }
   }
