@@ -31,6 +31,7 @@ import "./phase09RealTurnRuntimeAdapter";
 import "./phase09EffectAwareTurnAdapter";
 import "./srdMonsterTimingRuntimeAdapter";
 import "./engagementRuntimeAdapter";
+import "./encounterGroupRuntimeAdapter";
 import "./phase09RealRuntimeStatAdapter";
 import "./phase09RealRuntimeAttackAdapter";
 // Keep post-commit DM HP corrections inside the same canonical ResolutionEvent

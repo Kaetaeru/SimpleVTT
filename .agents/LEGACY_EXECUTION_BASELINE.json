@@ -120,6 +120,10 @@
       "classification": "GENERIC_ENGINE"
     },
     {
+      "module": "./encounterGroupRuntimeAdapter",
+      "classification": "GENERIC_ENGINE"
+    },
+    {
       "module": "./phase09RealRuntimeStatAdapter",
       "classification": "GENERIC_ENGINE"
     },
