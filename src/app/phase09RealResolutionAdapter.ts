@@ -31,6 +31,18 @@ const attackRollStateContributors:AttackRollStateContributor[]=[];
 export function registerAttackRollStateContributor(contributor:AttackRollStateContributor) {
   attackRollStateContributors.push(contributor);
 }
+/** T1-06: a post-hoc toggle may drop other roll-state sources ("판정 그대로"). */
+export type AttackRollStateFilter=(contributions:RollStateContribution[],context:Parameters<AttackRollStateContributor>[0])=>RollStateContribution[];
+const attackRollStateFilters:AttackRollStateFilter[]=[];
+export function registerAttackRollStateFilter(filter:AttackRollStateFilter) {
+  attackRollStateFilters.push(filter);
+}
+/** T1-06: cover after the fact — an AC bonus judged against the same roll. */
+export type AttackTargetAcContributor=(context:Parameters<AttackRollStateContributor>[0])=>{ bonus:number; source:string }|null;
+const attackTargetAcContributors:AttackTargetAcContributor[]=[];
+export function registerAttackTargetAcContributor(contributor:AttackTargetAcContributor) {
+  attackTargetAcContributors.push(contributor);
+}
 
 interface Phase09BeforeSnapshot {
   scene:AppSnapshot["scene"];
@@ -210,15 +222,20 @@ MockAdapter.prototype.resolveAction = async function resolveActionWithRealRules(
     const revealed=removeStatus(actor,HIDDEN_STATUS);
     const helped=removeHelped(actor);
     const dodging=target.status.includes(DODGING_STATUS)||target.status.includes(`✦ ${DODGING_STATUS}`);
-    const rollStateContributions:RollStateContribution[]=[
+    const context={ scene:internal.scene, action, actor, target };
+    let rollStateContributions:RollStateContribution[]=[
       ...(helped ? [{ source:"action:standard.help",state:"advantage" as const }] : []),
       ...(dodging ? [{ source:`condition:${DODGING_STATUS}:target`,state:"disadvantage" as const }] : []),
-      ...attackRollStateContributors.flatMap((contributor)=>contributor({ scene:internal.scene, action, actor, target })),
+      ...attackRollStateContributors.flatMap((contributor)=>contributor(context)),
     ];
+    for (const filter of attackRollStateFilters) rollStateContributions=filter(rollStateContributions,context);
+    const acContributions=attackTargetAcContributors.map((contributor)=>contributor(context)).filter((entry):entry is { bonus:number; source:string }=>Boolean(entry && entry.bonus));
+    const acBonus=acContributions.reduce((sum,entry)=>sum+entry.bonus,0);
+    const judgedTarget=acBonus ? { ...target, ac:target.ac+acBonus } : target;
     internal.resolution = resolveAttackRollResolution({
       resolutionId:resolutionId(),
       action,
-      target,
+      target:judgedTarget,
       diceFaces:rollStateContributions.length>0
         ? [internal.d20(action.id),internal.d20(`${action.id}:roll-state`,1)]
         : [internal.d20(action.id)],
@@ -229,6 +246,7 @@ MockAdapter.prototype.resolveAction = async function resolveActionWithRealRules(
       rollStateContributions,
     });
     if (rollStateContributions.length>0) internal.resolution.rollStateContributions=rollStateContributions;
+    for (const entry of acContributions) internal.resolution.provenance.push(`${entry.source} · 목표 AC ${target.ac} → ${target.ac+acBonus}`);
     if (revealed) {
       internal.resolution.stateChanges.push(`${actor?.name??action.actorId} 상태 제거: ${HIDDEN_STATUS} · 공격 선언`);
       internal.resolution.provenance.push("condition:hidden · applied · attack declaration ends hidden state");

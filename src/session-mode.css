@@ -479,3 +479,10 @@
   .session-resolution-stage { justify-self: start; }
   .session-resolution-actions { flex-wrap: wrap; }
 }
+
+.session-resolution-toggles { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px; }
+.session-resolution-toggles button { padding: 3px 8px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface-2); color: var(--text); font-size: 10px; font-weight: 700; }
+.session-resolution-toggles button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+.session-resolution-toggles button:disabled { opacity: .55; }
+.session-resolution-detail { grid-column: 1 / -1; max-height: 140px; overflow: auto; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--recess); font-size: 10px; line-height: 1.4; }
+.session-resolution-detail p { margin: 0 0 2px; }
