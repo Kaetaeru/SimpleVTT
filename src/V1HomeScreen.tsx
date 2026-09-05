@@ -37,7 +37,7 @@ export function V1HomeScreen({
     <div className="v1-home-screen">
       <header className="v1-hero">
         <div className="v1-hero-copy">
-          <span className="v1-kicker">홈</span>
+          <span className="v1-kicker">TABLETOP, YOUR WAY</span>
           <h1>SimpleVTT v1</h1>
           <p>이어서 플레이하거나 새로 시작합니다.</p>
           <div className="v1-hero-actions">
