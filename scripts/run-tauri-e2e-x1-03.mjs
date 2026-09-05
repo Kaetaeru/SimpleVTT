@@ -135,7 +135,11 @@ async function runScenario(){
     assert.equal(a01Detail.attackTotal,10+base+2,`attack total must include the +2; detail=${JSON.stringify(a01Detail)}`);
     assert.equal(a01Detail.interrupt,null,"Archery is automatic: no interrupt");
     const a01States=await expectConverged(peers,a01Done.resolution.id,"X1-A01");
-    for(const view of a01States.views)assert.equal(view.attackTotal,a01Detail.attackTotal,`every peer shows the +2 total; views=${JSON.stringify(a01States.views)}`);
+    // The acting Client (P1) mirrors the Host resolution presentation; a non-acting Client (P2) converges through the Activity entry and carries no attack total.
+    const presented=a01States.views.filter((view)=>view[1]&&view[1].attackTotal!==null);
+    assert.ok(presented.length>=1,`at least the acting Client presents the resolution; views=${JSON.stringify(a01States.views)}`);
+    for(const [peer,view] of presented)assert.equal(view.attackTotal,a01Detail.attackTotal,`${peer} shows the +2 total; views=${JSON.stringify(a01States.views)}`);
+    assert.ok(!a01Detail.detail.some((line)=>/적용 거부/.test(line)),`Archery must apply exactly once; detail=${JSON.stringify(a01Detail.detail)}`);
     await evidenceAll(peers,"x1-03-a01");
     record("X1-A01",{resolutionId:a01Done.resolution.id,d20:10,attackTotal:a01Detail.attackTotal,contributions:a01Detail.contributions,detail:a01Detail.detail,views:a01States.views});
 

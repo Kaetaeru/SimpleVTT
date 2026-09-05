@@ -75,18 +75,21 @@ type PendingPassiveReaction={
 };
 
 type ResolutionReactionState={resolutionId:string;handled:Set<string>};
+/** Handled-candidate memory survives interleaved resolutions (an atomic attack transaction can surface other resolution ids between two passes over the same one). */
+const REACTION_STATE_MEMORY=16;
 
 const previousResolveAction=MockAdapter.prototype.resolveAction;
 const previousAdvanceResolution=MockAdapter.prototype.advanceResolution;
 const previousRespondToInterrupt=MockAdapter.prototype.respondToInterrupt;
 const pendingByAdapter=new WeakMap<MockAdapter,PendingPassiveReaction>();
-const reactionStateByAdapter=new WeakMap<MockAdapter,ResolutionReactionState>();
+const reactionStateByAdapter=new WeakMap<MockAdapter,ResolutionReactionState[]>();
 
 function reactionState(adapter:MockAdapter,resolutionId:string) {
-  const current=reactionStateByAdapter.get(adapter);
-  if(current?.resolutionId===resolutionId)return current;
+  const states=reactionStateByAdapter.get(adapter)??[];
+  const current=states.find((entry)=>entry.resolutionId===resolutionId);
+  if(current)return current;
   const next:ResolutionReactionState={resolutionId,handled:new Set()};
-  reactionStateByAdapter.set(adapter,next);
+  reactionStateByAdapter.set(adapter,[...states.slice(-(REACTION_STATE_MEMORY-1)),next]);
   return next;
 }
 
