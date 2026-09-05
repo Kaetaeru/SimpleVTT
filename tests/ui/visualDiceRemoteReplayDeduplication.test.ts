@@ -23,7 +23,7 @@ test("all non-interactive remote results are non-blocking auto-dismiss notices",
   assert.match(notice,/presentation\?\.resolutionId===resolution\.id/);
   assert.doesNotMatch(notice,/delivery/);
   assert.match(root,/snapshot\.resolution&&!passiveRemoteResolution/);
-  assert.match(root,/!resolution\.canAdvance \|\| passiveRemote/);
+  assert.match(root,/!resolution\.canAdvance \|\| (?:resolution\.interrupt \|\| awaitingAbilityCheckDc \|\| )?passiveRemote/);
   assert.match(root,/session-resolution-notice/);
   assert.match(css,/\.session-resolution-notice\s*\{[^}]*pointer-events:\s*none/);
   assert.match(dock,/connectionState==="connected"&&!suspended/);
