@@ -115,6 +115,7 @@ jobs:
           tests/ui/phase09CombatantRuntimeActions.test.ts
           tests/ui/srdMonsterCatalog.test.ts
           tests/ui/srdMonsterTiming.test.ts
+          tests/ui/engagementRuntime.test.ts
           tests/ui/phase09RealLifeRuntime.test.ts
           tests/ui/phase09ManualMovementReactionAdapter.test.ts
           tests/ui/phase09RealHealingRollService.test.ts

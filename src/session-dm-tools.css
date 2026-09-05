@@ -178,3 +178,6 @@
 .session-dm-timing-badges { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
 .session-dm-timing-badges em { font-style: normal; font-size: 10px; padding: 1px 6px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
 .session-dm-combatant-actions { display: inline-flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; }
+
+.session-dm-engagements { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.session-dm-engagements button { font-size: 10px; padding: 1px 6px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--bad) 45%, var(--line)); background: transparent; color: var(--text); }

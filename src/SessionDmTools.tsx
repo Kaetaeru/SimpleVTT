@@ -6,6 +6,7 @@ import { mockAdapter } from "./app/mockAdapter";
 import { SRD_MONSTER_COUNT, searchSrdMonsters } from "./app/srdMonsterCatalog";
 import { monsterTimingBadges } from "./app/monsterTimingPresentation";
 import "./app/srdMonsterTimingRuntimeAdapter";
+import "./app/engagementRuntimeAdapter";
 import "./session-dm-tools.css";
 
 function entitySummary(entity: SceneEntity) {
@@ -115,6 +116,16 @@ export function SessionDmEncounterPane({ onClose }: { onClose(): void }) {
       setPendingKey(null);
     }
   };
+  const clearEngagement = async (leftId: string, rightId: string) => {
+    if (pendingKey) return;
+    setPendingKey(`engage:${leftId}:${rightId}`);
+    try {
+      await mockAdapter.setEngagement(leftId, rightId, false);
+      await refresh();
+    } finally {
+      setPendingKey(null);
+    }
+  };
   const resetTiming = async (combatantId: string) => {
     if (pendingKey) return;
     setPendingKey(`timing:${combatantId}`);
@@ -190,6 +201,10 @@ export function SessionDmEncounterPane({ onClose }: { onClose(): void }) {
               <strong>{combatant.name}</strong>
               <small>{entitySummary(combatant)}</small>
               {badges.length > 0 && <span className="session-dm-timing-badges">{badges.map((badge) => <em key={badge.key} title={badge.title}>{badge.text}</em>)}</span>}
+              {(combatant.engagedWithIds?.length ?? 0) > 0 && <span className="session-dm-engagements">{combatant.engagedWithIds!.map((otherId) => {
+                const other = snapshot.scene.entities.find((entity) => entity.id === otherId);
+                return <button type="button" key={otherId} disabled={Boolean(pendingKey)} title="교전 해제 (다음 원거리 공격에 근접 불리점 없음)" onClick={() => void clearEngagement(combatant.id, otherId)}>교전 · {other?.name ?? otherId} ×</button>;
+              })}</span>}
             </div>
             <span className="session-dm-combatant-actions">
               {timing?.legendaryResistance && timing.legendaryResistance.remaining > 0 && <button type="button" disabled={Boolean(pendingKey)} onClick={() => void useLegendaryResistance(combatant.id)} title="실패한 내성 굴림을 성공으로 바꿉니다. 판정에는 강제 성공을 적용하세요.">{pendingKey === `lr:${combatant.id}` ? "…" : `전설 저항 ${timing.legendaryResistance.remaining}`}</button>}
