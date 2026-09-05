@@ -1,9 +1,6 @@
-import type { AbilityKey } from "./app/contracts";
-import { SIZE_LABEL_KO, abilityLabelKo, conditionLabelKo, damageLabelKo, type SrdMonster, type SrdMonsterEntry } from "./app/srdMonsterCatalog";
+import { SIZE_LABEL_KO, conditionLabelKo, damageLabelKo, srdMonsterAbilityRows, type SrdMonster, type SrdMonsterEntry } from "./app/srdMonsterCatalog";
 
-const ABILITY_KEYS:AbilityKey[]=["str","dex","con","int","wis","cha"];
 const signed=(value:number)=>`${value>=0?"+":""}${value}`;
-const modifier=(score:number)=>Math.floor((score-10)/2);
 
 function EntryList({ title, entries }:{ title:string; entries:SrdMonsterEntry[] }) {
   if (!entries.length) return null;
@@ -36,11 +33,7 @@ export function SrdMonsterStatBlock({ monster }:{ monster:SrdMonster }) {
     <table className="srd-stat-block-abilities">
       <thead><tr><th>능력</th><th>수치</th><th>수정치</th><th>내성</th></tr></thead>
       <tbody>
-        {ABILITY_KEYS.map((key)=>{
-          const score=monster.abilities[key];
-          const save=monster.saves[key]??modifier(score);
-          return <tr key={key}><th>{abilityLabelKo(key)}</th><td>{score}</td><td>{signed(modifier(score))}</td><td>{signed(save)}</td></tr>;
-        })}
+        {srdMonsterAbilityRows(monster).map((row)=><tr key={row.key}><th>{row.label}</th><td>{row.score}</td><td>{signed(row.modifier)}</td><td>{signed(row.save)}</td></tr>)}
       </tbody>
     </table>
     <EntryList title="특성" entries={monster.traits} />

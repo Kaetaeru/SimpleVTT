@@ -81,6 +81,15 @@ export function searchSrdMonsters(query:string,options:SrdMonsterSearchOptions={
 
 const abilityModifier=(score:number)=>Math.floor((score-10)/2);
 
+/** Presentation rows for a stat block's ability table (score, modifier, save) — computed here, not in UI files. */
+export function srdMonsterAbilityRows(monster:Pick<SrdMonster,"abilities"|"saves">):Array<{ key:AbilityKey; label:string; score:number; modifier:number; save:number }> {
+  return (["str","dex","con","int","wis","cha"] as AbilityKey[]).map((key)=>{
+    const score=monster.abilities[key];
+    const modifier=abilityModifier(score);
+    return { key, label:ABILITY_LABEL[key], score, modifier, save:monster.saves[key]??modifier };
+  });
+}
+
 function attackSpec(monster:SrdMonster,entry:SrdMonsterEntry,index:number,attacksPerAction:number|undefined,economy:"행동"|"추가 행동"):CombatantRuntimeAttackVm {
   const attack=entry.attack!;
   const primary=attack.damage[0]??{ average:0, dice:undefined, count:0, sides:0, flat:0, type:"bludgeoning" };
