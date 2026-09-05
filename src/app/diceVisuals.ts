@@ -115,7 +115,7 @@ export function buildVisualDiceRoll(resolution:ResolutionView, action:ActionVm|u
   if (resolution.rollKind === "damage" || resolution.stage === "damage-animation") {
     const shape = parseDiceShape(action?.damage?.[0]?.dice);
     dice = typedDice(values,shape);
-    label = action?.damage?.[0]?.dice ? `피해 ${action.damage[0].dice}` : "피해 굴림";
+    label = action?.damage?.[0]?.dice && !/^0d/.test(action.damage[0].dice) ? `피해 ${action.damage[0].dice}` : "피해 굴림";
   }
 
   if (!dice) dice = values.map((value) => ({ value, sides:null, authoritative:true }));

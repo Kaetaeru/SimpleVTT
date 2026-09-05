@@ -486,3 +486,5 @@
 .session-resolution-toggles button:disabled { opacity: .55; }
 .session-resolution-detail { grid-column: 1 / -1; max-height: 140px; overflow: auto; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--recess); font-size: 10px; line-height: 1.4; }
 .session-resolution-detail p { margin: 0 0 2px; }
+
+.session-resolution-dice { margin: 2px 0 0; font-variant-numeric: tabular-nums; color: var(--muted); font-size: 10px; }

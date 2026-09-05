@@ -136,6 +136,10 @@
       "classification": "GENERIC_ENGINE"
     },
     {
+      "module": "./dmTurnFocusRuntimeAdapter",
+      "classification": "GENERIC_ENGINE"
+    },
+    {
       "module": "./phase09RealRuntimeStatAdapter",
       "classification": "GENERIC_ENGINE"
     },

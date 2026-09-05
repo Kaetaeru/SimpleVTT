@@ -77,6 +77,7 @@ test("Phase 07 level-up uses the same stage-only scroll and persistent preview v
 test("Phase 07 UI renders catalog-pending choices explicitly instead of silently approximating them", () => {
   const ui = source("src/LevelUpV10.tsx");
   assert.match(ui, /catalog-pending/);
-  assert.match(ui, /Phase 08 필요/);
+  assert.match(ui, /콘텐츠 연결 필요/);
+  assert.doesNotMatch(ui, /Phase 08 필요/);
   assert.match(ui, /pendingReason/);
 });

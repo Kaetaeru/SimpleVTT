@@ -13,6 +13,7 @@ import { SessionActorBoard } from "./SessionActorBoards";
 import { SessionTargetingCursor, type TargetingAnchor } from "./SessionTargetingCursor";
 import { SessionWithdrawPrompt } from "./SessionWithdrawPrompt";
 import { POST_HOC_LABEL, type PostHocToggle } from "./app/resolutionPostHocRuntimeAdapter";
+import { presentDamageFormula, presentDiceLine, presentStateChanges } from "./app/activityPresentation";
 import { SessionDmActorPane, SessionDmEncounterPane, SessionParticipantsPane, SessionSharePane } from "./SessionDmTools";
 import {
   dismissCurrentSessionImageHandout,
@@ -49,9 +50,7 @@ const ANIMATED_RESOLUTION_STAGES = new Set(["roll-animation", "save-animation", 
 
 function actionDamageSummary(action: ActionVm) {
   if (!action.damage?.length) return action.summary;
-  return action.damage
-    .map((part) => `${part.dice}${part.flat ? signed(part.flat) : ""} ${part.type}`)
-    .join(" + ");
+  return action.damage.map(presentDamageFormula).join(" + ");
 }
 
 function resolutionStageCopy(stage: string) {
@@ -371,7 +370,7 @@ export function SessionModeRoot({ onOpenProduct }: { onOpenProduct(): void }) {
       {role === "dm" && <button type="button" className={utilityClass(activeUtility, "library")} onClick={(event) => toggleUtility("library", event.currentTarget)}>라이브러리</button>}
       <button type="button" className={utilityClass(activeUtility, "campaign")} onClick={(event) => toggleUtility("campaign", event.currentTarget)}>파티</button>
       <button type="button" className={utilityClass(activeUtility, "rules")} onClick={(event) => toggleUtility("rules", event.currentTarget)}>규칙</button>
-      {role === "dm" && <div className="session-reference-visibility" aria-label="Public / DM Only 전달: 명령 센터의 비공개 굴림으로 다음 판정을 DM 전용으로 숨기고, 기록 패널에서 선택한 결과만 공개합니다." title="GAP-DM-ONLY-DELIVERY-PROTOCOL 해결됨 (W7-05): 비공개 굴림은 명령 센터에서 켜고, 기록 패널에서 공개합니다."><span className="active">Public</span><span>DM Only</span></div>}
+      {role === "dm" && <div className="session-reference-visibility" aria-label="Public / DM Only 전달: 명령 센터의 비공개 굴림으로 다음 판정을 DM 전용으로 숨기고, 기록 패널에서 선택한 결과만 공개합니다." title="비공개 굴림은 명령 센터에서 켜고, 기록 패널에서 공개합니다."><span className="active">Public</span><span>DM Only</span></div>}
       <button type="button" className={utilityClass(activeUtility, "activity")} onClick={(event) => toggleUtility("activity", event.currentTarget)}>기록</button>
       {role === "dm" && <button type="button" className={utilityClass(activeUtility, "encounter")} onClick={(event) => toggleUtility("encounter", event.currentTarget)}>인카운터</button>}
       {role === "dm" && <button ref={quickLauncher} type="button" className={quickOpen?"active session-reference-quick-button":"session-reference-quick-button"} aria-expanded={quickOpen} aria-controls="session-quick-panel" onClick={()=>{setActiveUtility(null);setQuickOpen((current)=>!current);}}>＋ 빠른 메뉴</button>}
@@ -511,7 +510,10 @@ function SessionResolutionLayer({ onOpenActivity }: { onOpenActivity(button: HTM
         : resolution.stage === "complete"
           ? resolution.finalOutcome || resolution.compact || resolution.calculatedOutcome
           : resolution.compact || resolution.calculatedOutcome;
-  const stateSummary = resolution.stage === "complete" ? resolution.stateChanges.slice(0, 2).join(" · ") : "";
+  const presentation = { entities: snapshot.scene.entities, resourceLabels: new Map(snapshot.activeCharacter.resources.map((resource) => [resource.id, resource.label])), activeCharacterId: snapshot.activeCharacter.id, activeCharacterName: snapshot.activeCharacter.name };
+  const presentedChanges = presentStateChanges(resolution.stateChanges, presentation);
+  const stateSummary = resolution.stage === "complete" ? presentedChanges.slice(0, 2).join(" · ") : "";
+  const diceLine = resolution.stage === "complete" ? presentDiceLine(resolution) : null;
   // MP-I02: one coherent screen-reader sentence (actor, action, targets, dice, total, outcome, state change) from the same authoritative ResolutionView the visuals use.
   const targetNames = resolution.targetIds.map((id) => snapshot.scene.entities.find((entity) => entity.id === id)?.name ?? id);
   const announcedTotal = resolution.attackTotal ?? resolution.rollTotal;
@@ -534,6 +536,7 @@ function SessionResolutionLayer({ onOpenActivity }: { onOpenActivity(button: HTM
     <div className="session-resolution-copy" aria-hidden="true">
       <span>{actorName} · {resolution.actionName}</span>
       <strong>{mainOutcome}</strong>
+      {diceLine && <p className="session-resolution-dice">{diceLine}</p>}
       {stateSummary && <p>{stateSummary}</p>}
     </div>
     <span className="session-resolution-stage">{resolutionStageCopy(resolution.stage)}</span>
@@ -546,7 +549,7 @@ function SessionResolutionLayer({ onOpenActivity }: { onOpenActivity(button: HTM
     {resolution.stage === "complete" && snapshot.role === "dm" && (resolution.attackOutcome || resolution.damageComponents.length > 0) && <div className="session-resolution-toggles" aria-label="DM 사후 수정">
       {(["advantage","disadvantage","plain-roll","cover-half","cover-three-quarters","out-of-reach","half-damage"] as PostHocToggle[]).filter((toggle) => toggle === "half-damage" ? resolution.damageComponents.some((component) => component.adjusted > 0) : Boolean(resolution.attackOutcome)).map((toggle) => <button type="button" key={toggle} disabled={Boolean(togglePending)} aria-pressed={resolution.postHoc?.toggle === toggle} onClick={() => void applyToggle(toggle)}>{togglePending === toggle ? "…" : POST_HOC_LABEL[toggle]}</button>)}
     </div>}
-    {resolution.stage === "complete" && detailOpen && <div className="session-resolution-detail" aria-label="판정 상세">{[...resolution.detail, ...resolution.stateChanges].map((line, index) => <p key={index}>{line}</p>)}</div>}
+    {resolution.stage === "complete" && detailOpen && <div className="session-resolution-detail" aria-label="판정 상세">{[...presentStateChanges(resolution.detail, presentation), ...presentedChanges].map((line, index) => <p key={index}>{line}</p>)}</div>}
     {resolution.stage === "complete" && <div className="session-resolution-actions"><button type="button" aria-expanded={detailOpen} onClick={(event) => { if (event.shiftKey) { onOpenActivity(event.currentTarget); return; } setDetailOpen((open) => !open); }}>{detailOpen ? "접기" : "상세"}</button>{snapshot.session.role === "host" && <button type="button" onClick={() => void undoLastResolution()}>되돌리기</button>}<button className="primary" type="button" onClick={() => void dismissResolution()}>닫기</button></div>}
   </section>;
 }
