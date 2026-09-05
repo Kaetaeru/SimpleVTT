@@ -122,7 +122,7 @@ async function runScenario(){
   try{
     // X1-A01: P1 fires the longbow; the Host applies Archery (+2) automatically, no interrupt; H/P1/P2 converge on the same total.
     await walkToActor(host,archer.id);
-    const longbow=await findAction(p1,archer.id,(a)=>/롱보우|longbow/i.test(a.name)&&a.available,"longbow attack");
+    const longbow=await findAction(p1,archer.id,(a)=>/장궁|롱보우|longbow/i.test(a.name)&&a.available,"longbow attack");
     await hostCall(host,`await mockAdapter.setQueuedD20(10);`);
     const a01=await clientAct(p1,longbow.id,[goblinId]);assert.equal(a01.ok,true,a01.error);
     let hostRes=await waitHostResolutionFor(host,archer.id);
@@ -141,7 +141,7 @@ async function runScenario(){
 
     // X1-A02: the same Fighter's melee attack (scimitar) gets no Archery bonus.
     await walkToActor(host,archer.id);
-    const scimitar=await findAction(p1,archer.id,(a)=>/시미터|scimitar|숏소드|shortsword/i.test(a.name)&&a.available,"melee attack");
+    const scimitar=await findAction(p1,archer.id,(a)=>/시미터|소검|scimitar|shortsword/i.test(a.name)&&a.available,"melee attack");
     await hostCall(host,`await mockAdapter.setQueuedD20(10);`);
     const a02=await clientAct(p1,scimitar.id,[goblinId]);assert.equal(a02.ok,true,a02.error);
     hostRes=await waitHostResolutionFor(host,archer.id);

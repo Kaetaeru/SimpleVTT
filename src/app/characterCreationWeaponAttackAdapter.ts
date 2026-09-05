@@ -48,12 +48,17 @@ export function materializeCreatedWeaponAttacks(character: CharacterSheet): Char
     return [{ item, def }];
   });
 
-  return weapons.map(({ item, def }, index) => ({
-    id: attackId(item, index),
-    name: item.name,
-    bonus: attackBonus(character, def),
-    damage: def.damage ? `${def.damage} ${def.damageType ?? ""}`.trim() : "시작 무기 피해",
-  }));
+  return weapons.map(({ item, def }, index) => {
+    const id = attackId(item, index);
+    // The weapon item owns its attack: runtime facts (range, ability, ranged/melee) resolve through this link.
+    if (!item.grantedActionIds.includes(id)) item.grantedActionIds = [...item.grantedActionIds, id];
+    return {
+      id,
+      name: item.name,
+      bonus: attackBonus(character, def),
+      damage: def.damage ? `${def.damage} ${def.damageType ?? ""}`.trim() : "시작 무기 피해",
+    };
+  });
 }
 
 const previousFinalize = MockAdapter.prototype.finalizeCharacterDraft;

@@ -466,7 +466,8 @@ function attackWeaponFact(internal:AdapterState,candidate:PassiveReactionCandida
   const runtimeAttack=action?.runtimeAttack;
   if(!runtimeAttack)return {status:"unknown"};
   const sheet=sheetForSubject(internal,candidate,subjectId);
-  const item=sheet?.items.find((entry)=>entry.grantedActionIds.includes(pending.sourceId));
+  const item=sheet?.items.find((entry)=>entry.grantedActionIds.includes(pending.sourceId))
+    ??sheet?.items.find((entry)=>entry.name===action.name&&itemEntryById(compatibleItemDefinitionId(entry.definitionId))?.category==="weapon");
   const definition=item?weaponDefinitionOf(item):undefined;
   const weapon=runtimeAttack.sourceKind==="weapon";
   const ranged=weapon&&(definition?definition.mode==="ranged":runtimeAttack.rangeFeet>10);
