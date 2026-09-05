@@ -8,6 +8,8 @@ import { mockAdapter } from "./app/mockAdapter";
 import { sessionActorCombatMotion } from "./app/sessionActorCombatMotion";
 import { isOpportunityAttackAction, opportunityAttackCommand } from "./app/manualMovementReactionContracts";
 import { monsterTimingBadges } from "./app/monsterTimingPresentation";
+import { groupOf } from "./app/encounterGroupRuntimeAdapter";
+import type { SceneGroupVm } from "./app/encounterGroupContracts";
 import "./session-actor-boards.css";
 
 type BoardPosition="upper"|"lower";
@@ -15,11 +17,12 @@ type SessionRole="dm"|"player";
 function relationLabel(entity:SceneEntity) { return entity.side==="enemy"?"상대":"아군"; }
 function hpPercent(entity:SceneEntity) { return entity.maxHp<=0?0:Math.max(0,Math.min(100,entity.hp/entity.maxHp*100)); }
 
-export function SessionActorBoard({position,role,targetingAction,selectedTargetIds,targetingPending,onTarget}:{
-  position:BoardPosition; role:SessionRole; targetingAction:ActionVm|null; selectedTargetIds:string[]; targetingPending:boolean; onTarget(entityId:string):void;
+export function SessionActorBoard({position,role,targetingAction,selectedTargetIds,targetingPending,onTarget,onTargetMany}:{
+  position:BoardPosition; role:SessionRole; targetingAction:ActionVm|null; selectedTargetIds:string[]; targetingPending:boolean; onTarget(entityId:string):void; onTargetMany?(entityIds:string[]):void;
 }) {
   const {snapshot,selectDmActor,declareManualMovementReaction}=useSimpleVtt();
   const [pendingActorId,setPendingActorId]=useState<string|null>(null);
+  const [expandedGroups,setExpandedGroups]=useState<Record<string,boolean>>({});
   if (!snapshot) return null;
   const wantedSide=position==="upper"?"enemy":"ally";
   const actors=snapshot.scene.entities.filter((entity)=>entity.side===wantedSide);
@@ -31,17 +34,67 @@ export function SessionActorBoard({position,role,targetingAction,selectedTargetI
     if (role!=="dm"||pendingActorId||snapshot.resolution||entity.id===snapshot.scene.selectedActorId) return;
     setPendingActorId(entity.id); try { await selectDmActor(entity.id); } finally { setPendingActorId(null); }
   };
+  const renderCard=(entity:SceneEntity)=>{
+    const opportunityActions=controlsCurrentTurn&&currentActor&&entity.id!==currentActor.id&&entity.side!==currentActor.side&&entity.hp>0&&snapshot.scene.economyByActor[entity.id]?.reaction&&!currentActor.status.includes("이탈")
+      ? (snapshot.scene.actionsByActor[entity.id]??[]).filter(isOpportunityAttackAction)
+      : [];
+    return <SessionActorCard key={entity.id} entity={entity} role={role} controlled={role==="dm"?entity.id===snapshot.scene.selectedActorId:entity.id===snapshot.activeCharacter.id} currentTurn={snapshot.sessionMode==="initiative"&&entity.id===snapshot.scene.currentActorId} pending={pendingActorId===entity.id||targetingPending} targeting={Boolean(targetingAction)} validTarget={Boolean(targetingAction?.eligibleTargetIds.includes(entity.id))} targetReason={targetingAction?.eligibleTargetReasons?.[entity.id]??null} selectedTarget={selectedTargetIds.includes(entity.id)} position={position} opportunityActions={opportunityActions} onOpportunity={(action)=>void declareManualMovementReaction(opportunityAttackCommand(currentActor!.id,entity.id,action))} onSelect={()=>void selectActor(entity)}/>;
+  };
+  // T1-04: fold group members into one card (a group needs at least two members on this board).
+  const clusters:Array<{kind:"entity";entity:SceneEntity}|{kind:"group";group:SceneGroupVm;members:SceneEntity[]}>=[];
+  const seenGroups=new Set<string>();
+  for (const entity of actors) {
+    const group=groupOf(snapshot.scene,entity);
+    const members=group?actors.filter((candidate)=>candidate.groupId===group.id):[];
+    if (group&&members.length>=2) {
+      if (!seenGroups.has(group.id)) { seenGroups.add(group.id); clusters.push({kind:"group",group,members}); }
+      continue;
+    }
+    clusters.push({kind:"entity",entity});
+  }
+  const multiTargeting=Boolean(targetingAction&&(targetingAction.maxTargets??1)>1&&!targetingAction.allocation);
   return <section className={`session-actor-board session-actor-board-${position}`} aria-label={boardLabel} data-board-position={position} data-targeting={Boolean(targetingAction)}>
     <div className="session-actor-board-label" aria-hidden="true"><span>{position==="upper"?"OPPOSING":"ALLIED"}</span><strong>{actors.length}</strong></div>
     <div className="session-actor-board-scroll" role="list">
-      {!actors.length?<div className="session-actor-board-empty" role="listitem"><strong>{position==="upper"?"상대 Actor 없음":"아군 Actor 없음"}</strong></div>:actors.map((entity)=>{
-        const opportunityActions=controlsCurrentTurn&&currentActor&&entity.id!==currentActor.id&&entity.side!==currentActor.side&&entity.hp>0&&snapshot.scene.economyByActor[entity.id]?.reaction&&!currentActor.status.includes("이탈")
-          ? (snapshot.scene.actionsByActor[entity.id]??[]).filter(isOpportunityAttackAction)
-          : [];
-        return <SessionActorCard key={entity.id} entity={entity} role={role} controlled={role==="dm"?entity.id===snapshot.scene.selectedActorId:entity.id===snapshot.activeCharacter.id} currentTurn={snapshot.sessionMode==="initiative"&&entity.id===snapshot.scene.currentActorId} pending={pendingActorId===entity.id||targetingPending} targeting={Boolean(targetingAction)} validTarget={Boolean(targetingAction?.eligibleTargetIds.includes(entity.id))} targetReason={targetingAction?.eligibleTargetReasons?.[entity.id]??null} selectedTarget={selectedTargetIds.includes(entity.id)} position={position} opportunityActions={opportunityActions} onOpportunity={(action)=>void declareManualMovementReaction(opportunityAttackCommand(currentActor!.id,entity.id,action))} onSelect={()=>void selectActor(entity)}/>;
-      }) }
+      {!actors.length?<div className="session-actor-board-empty" role="listitem"><strong>{position==="upper"?"상대 Actor 없음":"아군 Actor 없음"}</strong></div>:clusters.map((cluster)=>{
+        if (cluster.kind==="entity") return renderCard(cluster.entity);
+        const {group,members}=cluster;
+        const expanded=Boolean(expandedGroups[group.id])||(Boolean(targetingAction)&&!multiTargeting);
+        const eligibleMembers=members.filter((member)=>targetingAction?.eligibleTargetIds.includes(member.id));
+        const allSelected=eligibleMembers.length>0&&eligibleMembers.every((member)=>selectedTargetIds.includes(member.id));
+        const onGroupTap=()=>{
+          if (multiTargeting&&onTargetMany) { onTargetMany(eligibleMembers.map((member)=>member.id)); return; }
+          setExpandedGroups((current)=>({...current,[group.id]:!current[group.id]}));
+        };
+        return <div key={group.id} className={`session-actor-group ${expanded?"expanded":"folded"}`} role="listitem" data-group-id={group.id}>
+          <SessionActorGroupCard group={group} members={members} expanded={expanded} targeting={Boolean(targetingAction)} multiTargeting={multiTargeting} eligibleCount={eligibleMembers.length} allSelected={allSelected} currentTurn={snapshot.sessionMode==="initiative"&&members.some((member)=>member.id===snapshot.scene.currentActorId)} onTap={onGroupTap} />
+          {expanded&&<div className="session-actor-group-members" role="list">{members.map(renderCard)}</div>}
+        </div>;
+      })}
     </div>
   </section>;
+}
+
+function SessionActorGroupCard({group,members,expanded,targeting,multiTargeting,eligibleCount,allSelected,currentTurn,onTap}:{
+  group:SceneGroupVm; members:SceneEntity[]; expanded:boolean; targeting:boolean; multiTargeting:boolean; eligibleCount:number; allSelected:boolean; currentTurn:boolean; onTap():void;
+}) {
+  const alive=members.filter((member)=>member.hp>0);
+  const hp=members.reduce((sum,member)=>sum+Math.max(0,member.hp),0);
+  const maxHp=members.reduce((sum,member)=>sum+member.maxHp,0);
+  const statuses=[...new Set(members.flatMap((member)=>member.status))];
+  const engaged=[...new Set(members.flatMap((member)=>member.engagedWithIds??[]))];
+  const hint=multiTargeting?(eligibleCount?`무리 전체 ${eligibleCount}명 대상`:"대상 없음"):expanded?"접기":"펼치기";
+  const className=["session-actor-card","session-actor-group-card",members[0]?.side==="enemy"?"hostile":"allied",currentTurn?"current-turn":"",targeting?"targeting":"",multiTargeting&&eligibleCount?"valid-target":"",allSelected?"selected-target":""].filter(Boolean).join(" ");
+  return <button type="button" className={className} data-group-card={group.id} aria-pressed={allSelected} aria-expanded={expanded} disabled={multiTargeting&&!eligibleCount} onClick={onTap} aria-label={`${group.label} · ${alive.length}/${members.length}명 · HP ${hp}/${maxHp} · ${hint}`}>
+    <span className="session-actor-card-portrait"><span className="session-actor-card-fallback" aria-hidden="true"><i/><b>×{alive.length}</b></span></span>
+    <span className="session-actor-card-body">
+      <strong>{group.label}</strong>
+      <small>{alive.length}/{members.length}명 · HP {hp}/{maxHp}{engaged.length?" · 교전 중":""}</small>
+      {statuses.length>0&&<span className="session-actor-card-statuses" aria-label="무리 컨디션">{statuses.slice(0,4).map((status)=><span key={status} title={status}>{status}</span>)}</span>}
+      <em className="session-actor-group-hint">{hint}</em>
+    </span>
+    <span className="session-actor-damage-fill" aria-hidden="true" style={{width:`${maxHp?Math.round(hp/maxHp*100):0}%`}}/>
+  </button>;
 }
 
 function SessionActorCard({entity,role,controlled,currentTurn,pending,targeting,validTarget,targetReason,selectedTarget,position,opportunityActions,onOpportunity,onSelect}:{

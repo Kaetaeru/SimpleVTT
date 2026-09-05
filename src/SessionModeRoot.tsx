@@ -233,6 +233,19 @@ export function SessionModeRoot({ onOpenProduct }: { onOpenProduct(): void }) {
     catch { setTargetingFeedback("행동을 완료하지 못했습니다. 현재 상태를 확인하고 다시 시도하세요."); }
     finally { setTargetingPending(false); }
   };
+  const chooseActorTargets=(entityIds:string[])=>{
+    if (!targetingAction||targetingPending) return;
+    const max=Math.max(1,targetingAction.maxTargets??targetingAction.eligibleTargetIds.length);
+    const eligible=entityIds.filter((id)=>targetingAction.eligibleTargetIds.includes(id));
+    if (!eligible.length) return;
+    setSelectedTargetIds((current)=>{
+      const allIn=eligible.every((id)=>current.includes(id));
+      if (allIn) return current.filter((id)=>!eligible.includes(id));
+      const next=[...current];
+      for (const id of eligible) { if (next.length>=max) break; if (!next.includes(id)) next.push(id); }
+      return next;
+    });
+  };
   const chooseActorTarget=(entityId:string)=>{
     if (!targetingAction||targetingPending||!targetingAction.eligibleTargetIds.includes(entityId)) return;
     if ((targetingAction.maxTargets??1)<=1) { void runTargeting([entityId]); return; }
@@ -366,7 +379,7 @@ export function SessionModeRoot({ onOpenProduct }: { onOpenProduct(): void }) {
 
     <div className={`session-reference-play-main ${activeUtility||quickOpen ? "utility-open" : ""}`}>
       <div ref={playCore} className={`session-reference-play-core ${libraryDropActive?"dm-library-drag-active":""}`}>
-        <SessionActorBoard position="upper" role={role} targetingAction={targetingAction} selectedTargetIds={selectedTargetIds} targetingPending={targetingPending} onTarget={chooseActorTarget} />
+        <SessionActorBoard position="upper" role={role} targetingAction={targetingAction} selectedTargetIds={selectedTargetIds} targetingPending={targetingPending} onTarget={chooseActorTarget} onTargetMany={chooseActorTargets} />
 
         <section className="session-play-context session-reference-mapless-stage" aria-label="Mapless Play Context">
           <div className="session-reference-stage-label" aria-hidden="true"><strong>테이블 플레이 공간</strong><span>지도 없이 현재 맥락과 결과만 표시</span></div>
@@ -378,7 +391,7 @@ export function SessionModeRoot({ onOpenProduct }: { onOpenProduct(): void }) {
           </main>
         </section>
 
-        <SessionActorBoard position="lower" role={role} targetingAction={targetingAction} selectedTargetIds={selectedTargetIds} targetingPending={targetingPending} onTarget={chooseActorTarget} />
+        <SessionActorBoard position="lower" role={role} targetingAction={targetingAction} selectedTargetIds={selectedTargetIds} targetingPending={targetingPending} onTarget={chooseActorTarget} onTargetMany={chooseActorTargets} />
         {libraryDropActive&&<div className="session-dm-library-drop-guide" aria-hidden="true"><div><strong>{libraryDropPending?"적용 중…":"라이브러리 항목 놓기"}</strong><span>Actor 소환 · 이미지 공개 · Character 아이템 지급</span></div></div>}
         {libraryDropFeedback&&<div className={`session-dm-library-drop-feedback ${libraryDropFeedback.kind}`} role="status">{libraryDropFeedback.message}</div>}
       </div>

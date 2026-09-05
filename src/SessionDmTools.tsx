@@ -7,6 +7,7 @@ import { SRD_MONSTER_COUNT, searchSrdMonsters } from "./app/srdMonsterCatalog";
 import { monsterTimingBadges } from "./app/monsterTimingPresentation";
 import "./app/srdMonsterTimingRuntimeAdapter";
 import "./app/engagementRuntimeAdapter";
+import "./app/encounterGroupRuntimeAdapter";
 import "./session-dm-tools.css";
 
 function entitySummary(entity: SceneEntity) {
@@ -98,7 +99,9 @@ export function SessionDmEncounterPane({ onClose }: { onClose(): void }) {
     if (pendingKey) return;
     setPendingKey(`monster:${monsterId}`);
     try {
-      for (let index = 0; index < Math.max(1, Math.min(monsterCount, 12)); index += 1) await instantiateCombatant(monsterId);
+      const count = Math.max(1, Math.min(monsterCount, 12));
+      if (count > 1) { await mockAdapter.instantiateCombatantGroup(monsterId, count); await refresh(); }
+      else await instantiateCombatant(monsterId);
     } finally {
       setPendingKey(null);
     }
@@ -111,6 +114,16 @@ export function SessionDmEncounterPane({ onClose }: { onClose(): void }) {
     setPendingKey(`lr:${combatantId}`);
     try {
       await mockAdapter.useLegendaryResistance(combatantId);
+      await refresh();
+    } finally {
+      setPendingKey(null);
+    }
+  };
+  const ungroup = async (groupId: string) => {
+    if (pendingKey) return;
+    setPendingKey(`ungroup:${groupId}`);
+    try {
+      await mockAdapter.ungroupCombatants(groupId);
       await refresh();
     } finally {
       setPendingKey(null);
@@ -172,7 +185,7 @@ export function SessionDmEncounterPane({ onClose }: { onClose(): void }) {
       <div className="session-dm-section-title compact"><strong>SRD 몬스터</strong><span>{SRD_MONSTER_COUNT}종 · 이름, 유형, CR로 검색해 바로 추가합니다.</span></div>
       <div className="session-dm-monster-search">
         <input type="search" value={monsterQuery} onChange={(event) => setMonsterQuery(event.target.value)} placeholder="고블린, 드래곤, 언데드…" aria-label="SRD 몬스터 검색" />
-        <label>×<input type="number" min={1} max={12} value={monsterCount} onChange={(event) => setMonsterCount(Math.max(1, Math.min(12, Number(event.target.value) || 1)))} aria-label="추가할 마리 수" /></label>
+        <label title="2 이상이면 한 무리로 추가합니다: 우선권을 한 번만 굴리고 상대 보드에서 한 카드로 접힙니다.">×<input type="number" min={1} max={12} value={monsterCount} onChange={(event) => setMonsterCount(Math.max(1, Math.min(12, Number(event.target.value) || 1)))} aria-label="추가할 마리 수" />{monsterCount > 1 && <small>한 무리</small>}</label>
       </div>
       {monsterQuery.trim() ? (monsterResults.length ? <div className="session-dm-definition-grid session-dm-monster-results">
         {monsterResults.map((monster) => <button type="button" key={monster.id} disabled={Boolean(pendingKey)} onClick={() => void addMonster(monster.id)}>
@@ -196,10 +209,11 @@ export function SessionDmEncounterPane({ onClose }: { onClose(): void }) {
         {combatants.map((combatant) => {
           const timing = combatant.runtimeMonsterTiming;
           const badges = monsterTimingBadges(combatant);
+          const group = combatant.groupId ? snapshot.scene.groups?.[combatant.groupId] : undefined;
           return <div key={combatant.id} className={timing ? "has-timing" : ""}>
             <div>
               <strong>{combatant.name}</strong>
-              <small>{entitySummary(combatant)}</small>
+              <small>{entitySummary(combatant)}{group ? ` · ${group.label}` : ""}</small>
               {badges.length > 0 && <span className="session-dm-timing-badges">{badges.map((badge) => <em key={badge.key} title={badge.title}>{badge.text}</em>)}</span>}
               {(combatant.engagedWithIds?.length ?? 0) > 0 && <span className="session-dm-engagements">{combatant.engagedWithIds!.map((otherId) => {
                 const other = snapshot.scene.entities.find((entity) => entity.id === otherId);
@@ -208,6 +222,7 @@ export function SessionDmEncounterPane({ onClose }: { onClose(): void }) {
             </div>
             <span className="session-dm-combatant-actions">
               {timing?.legendaryResistance && timing.legendaryResistance.remaining > 0 && <button type="button" disabled={Boolean(pendingKey)} onClick={() => void useLegendaryResistance(combatant.id)} title="실패한 내성 굴림을 성공으로 바꿉니다. 판정에는 강제 성공을 적용하세요.">{pendingKey === `lr:${combatant.id}` ? "…" : `전설 저항 ${timing.legendaryResistance.remaining}`}</button>}
+              {group && group.memberIds[0] === combatant.id && <button type="button" disabled={Boolean(pendingKey)} onClick={() => void ungroup(group.id)} title="무리를 풀어 개별 카드로 보여줍니다.">{pendingKey === `ungroup:${group.id}` ? "…" : "무리 해제"}</button>}
               {timing && <button type="button" disabled={Boolean(pendingKey)} onClick={() => void resetTiming(combatant.id)} title="재충전, 사용 횟수, 전설 행동을 모두 되돌립니다.">{pendingKey === `timing:${combatant.id}` ? "…" : "재정비"}</button>}
               <button type="button" disabled={Boolean(pendingKey || removalBlocked)} onClick={() => void remove(combatant.id)}>{pendingKey === `remove:${combatant.id}` ? "제거 중…" : "제거"}</button>
             </span>

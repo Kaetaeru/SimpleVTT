@@ -285,3 +285,14 @@ button.session-actor-card:disabled { cursor: default; opacity: 1; }
   background: color-mix(in srgb, var(--bad) 12%, var(--recess));
   color: var(--text);
 }
+
+.session-actor-group { position: relative; display: flex; flex-direction: column; gap: 4px; flex: 0 0 auto; }
+.session-actor-group.folded { flex-basis: 184px; min-width: 168px; }
+.session-actor-group-card { min-width: 168px; width: 100%; }
+.session-actor-group-card .session-actor-card-body { display: grid; gap: 2px; min-width: 0; }
+.session-actor-group-card .session-actor-card-body strong { font-size: 12px; line-height: 1.2; }
+.session-actor-group-card .session-actor-card-body small { color: var(--muted); font-size: 9px; }
+.session-actor-group-hint { font-style: normal; font-size: 8px; color: var(--accent); letter-spacing: .04em; }
+.session-actor-group-members { display: flex; gap: 6px; padding-left: 6px; border-left: 2px solid color-mix(in srgb, var(--accent) 45%, var(--line)); }
+.session-actor-group.expanded { flex-direction: row; align-items: stretch; }
+.session-actor-group.expanded .session-actor-group-card { flex: 0 0 132px; min-width: 120px; }
