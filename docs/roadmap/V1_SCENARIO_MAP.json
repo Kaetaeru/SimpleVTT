@@ -5,7 +5,7 @@
     "roadmap": "docs/roadmap/V1_MASTER_ROADMAP.md",
     "ledger": "docs/roadmap/V1_EVIDENCE_LEDGER.json",
     "ledgerCreatedFromSha": "77b45028cbc4e04bb2cecc825a771269b64d1f2f",
-    "ledgerOfficialScore": 95
+    "ledgerOfficialScore": 97.5
   },
   "counts": {
     "scenarios": 120,
@@ -22,8 +22,7 @@
       "J": 8
     },
     "byStatus": {
-      "PASS": 58,
-      "AUTO_ONLY": 62
+      "PASS": 120
     },
     "gates": 72
   },
@@ -295,7 +294,7 @@
         "W5-06",
         "W5-07"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-C02",
@@ -310,7 +309,7 @@
         "W5-06",
         "W5-07"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-C03",
@@ -325,7 +324,7 @@
         "W5-06",
         "W5-07"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-C04",
@@ -340,7 +339,7 @@
         "W5-06",
         "W5-07"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-C05",
@@ -355,7 +354,7 @@
         "W5-06",
         "W5-07"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-C06",
@@ -370,7 +369,7 @@
         "W5-06",
         "W5-07"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-C07",
@@ -385,7 +384,7 @@
         "W5-06",
         "W5-07"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-C08",
@@ -400,7 +399,7 @@
         "W5-06",
         "W5-07"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-C09",
@@ -415,7 +414,7 @@
         "W5-06",
         "W5-07"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-C10",
@@ -430,7 +429,7 @@
         "W5-06",
         "W5-07"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-C11",
@@ -445,7 +444,7 @@
         "W5-06",
         "W5-07"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-C12",
@@ -460,7 +459,7 @@
         "W5-06",
         "W5-07"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-C13",
@@ -475,7 +474,7 @@
         "W5-06",
         "W5-07"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-C14",
@@ -490,7 +489,7 @@
         "W5-06",
         "W5-07"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-C15",
@@ -505,7 +504,7 @@
         "W5-06",
         "W5-07"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-C16",
@@ -520,7 +519,7 @@
         "W5-06",
         "W5-07"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-C17",
@@ -535,7 +534,7 @@
         "W5-06",
         "W5-07"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-C18",
@@ -550,7 +549,7 @@
         "W5-06",
         "W5-07"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-C19",
@@ -565,7 +564,7 @@
         "W5-06",
         "W5-07"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-C20",
@@ -580,7 +579,7 @@
         "W5-06",
         "W5-07"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-C21",
@@ -595,7 +594,7 @@
         "W5-06",
         "W5-07"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-C22",
@@ -610,7 +609,7 @@
         "W5-06",
         "W5-07"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-C23",
@@ -625,7 +624,7 @@
         "W5-06",
         "W5-07"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-C24",
@@ -653,7 +652,7 @@
       "gates": [
         "W5-06"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-C26",
@@ -667,7 +666,7 @@
       "gates": [
         "W5-06"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-C27",
@@ -681,7 +680,7 @@
       "gates": [
         "W5-06"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-C28",
@@ -695,7 +694,7 @@
       "gates": [
         "W5-06"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-C29",
@@ -709,7 +708,7 @@
       "gates": [
         "W5-06"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-C30",
@@ -723,7 +722,7 @@
       "gates": [
         "W5-06"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-D01",
@@ -738,7 +737,7 @@
         "W3-05",
         "W5-08"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-D02",
@@ -753,7 +752,7 @@
         "W3-05",
         "W5-08"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-D03",
@@ -768,7 +767,7 @@
         "W3-05",
         "W5-08"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-D04",
@@ -783,7 +782,7 @@
         "W3-05",
         "W5-08"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-D05",
@@ -798,7 +797,7 @@
         "W3-05",
         "W5-08"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-D06",
@@ -813,7 +812,7 @@
         "W3-05",
         "W5-08"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-D07",
@@ -828,7 +827,7 @@
         "W3-05",
         "W5-08"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-D08",
@@ -843,7 +842,7 @@
         "W3-05",
         "W5-08"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-D09",
@@ -858,7 +857,7 @@
         "W3-05",
         "W5-08"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-D10",
@@ -873,7 +872,7 @@
         "W3-05",
         "W5-08"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-D11",
@@ -888,7 +887,7 @@
         "W3-05",
         "W5-08"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-D12",
@@ -903,7 +902,7 @@
         "W3-05",
         "W5-08"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-D13",
@@ -918,7 +917,7 @@
         "W3-05",
         "W5-08"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-E01",
@@ -1468,7 +1467,7 @@
         "W7-01",
         "W7-03"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-H02",
@@ -1484,7 +1483,7 @@
         "W7-01",
         "W7-03"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-H03",
@@ -1500,7 +1499,7 @@
         "W7-01",
         "W7-03"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-H04",
@@ -1516,7 +1515,7 @@
         "W7-02",
         "W7-03"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-H05",
@@ -1532,7 +1531,7 @@
         "W7-02",
         "W7-03"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-H06",
@@ -1548,7 +1547,7 @@
         "W7-02",
         "W7-03"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-H07",
@@ -1579,7 +1578,7 @@
         "W7-02",
         "W7-03"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-H09",
@@ -1658,7 +1657,7 @@
         "W5-06",
         "W7-07"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-I02",
@@ -1673,7 +1672,7 @@
         "W5-06",
         "W7-07"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-I03",
@@ -1688,7 +1687,7 @@
         "W5-06",
         "W7-07"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-I04",
@@ -1703,7 +1702,7 @@
         "W5-06",
         "W7-07"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-I05",
@@ -1718,7 +1717,7 @@
         "W5-06",
         "W7-07"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-I06",
@@ -1733,7 +1732,7 @@
         "W5-06",
         "W7-07"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-J01",
@@ -1747,7 +1746,7 @@
       "gates": [
         "W5-09"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-J02",
@@ -1761,7 +1760,7 @@
       "gates": [
         "W5-09"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-J03",
@@ -1775,7 +1774,7 @@
       "gates": [
         "W5-09"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-J04",
@@ -1789,7 +1788,7 @@
       "gates": [
         "W5-09"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-J05",
@@ -1820,7 +1819,7 @@
         "W5-09",
         "W6-01"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-J07",
@@ -1834,7 +1833,7 @@
       "gates": [
         "W5-09"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     },
     {
       "id": "MP-J08",
@@ -1848,7 +1847,7 @@
       "gates": [
         "W5-09"
       ],
-      "status": "AUTO_ONLY"
+      "status": "PASS"
     }
   ],
   "gates": [
@@ -2319,7 +2318,9 @@
       "commands": [
         "GitHub Actions UI"
       ],
-      "windowsArtifacts": []
+      "windowsArtifacts": [
+        "artifact 9958685973 W9-02-D-WIN-8d6856e397b29d31dceba9586f3b57a6666770a2 sha256:52750d0d92514ecee5cc9dbe09dee811864974451820c0137caff1868488a586"
+      ]
     },
     {
       "id": "W3-06",
@@ -2677,7 +2678,9 @@
         "GitHub Actions UI",
         "GitHub compare 2ac28651312f1fdbe82edb74fd13f342a8f910f7...be061030081a3ba9f570a1a9a7696283d2512f36"
       ],
-      "windowsArtifacts": []
+      "windowsArtifacts": [
+        "artifact 9958712754 W9-02-H-WIN-8d6856e397b29d31dceba9586f3b57a6666770a2 sha256:5abb469318ae194f3961387d6d80925104ba08779b7ecad1ec63aa95bd6012c3"
+      ]
     },
     {
       "id": "W5-06",
@@ -2729,7 +2732,10 @@
         "GitHub Actions UI",
         "GitHub compare 2ac28651312f1fdbe82edb74fd13f342a8f910f7...58a10dc1bf42dff79dd3f8035ea02bd9967d8f43"
       ],
-      "windowsArtifacts": []
+      "windowsArtifacts": [
+        "artifact 9958720877 W9-02-C-WIN-8d6856e397b29d31dceba9586f3b57a6666770a2 sha256:aa53085cccf2d69bc281ba94b22a897fe8439daad09d62f3ad9b41111c2de16f",
+        "artifact 9958685973 W9-02-D-WIN-8d6856e397b29d31dceba9586f3b57a6666770a2 sha256:52750d0d92514ecee5cc9dbe09dee811864974451820c0137caff1868488a586"
+      ]
     },
     {
       "id": "W5-07",
@@ -2770,7 +2776,10 @@
       "commands": [
         "GitHub Actions W5-07 AUTO Verification"
       ],
-      "windowsArtifacts": []
+      "windowsArtifacts": [
+        "artifact 9958720877 W9-02-C-WIN-8d6856e397b29d31dceba9586f3b57a6666770a2 sha256:aa53085cccf2d69bc281ba94b22a897fe8439daad09d62f3ad9b41111c2de16f",
+        "artifact 9958685973 W9-02-D-WIN-8d6856e397b29d31dceba9586f3b57a6666770a2 sha256:52750d0d92514ecee5cc9dbe09dee811864974451820c0137caff1868488a586"
+      ]
     },
     {
       "id": "W5-08",
@@ -2800,7 +2809,9 @@
       "commands": [
         "GitHub Actions W5-08 AUTO Verification"
       ],
-      "windowsArtifacts": []
+      "windowsArtifacts": [
+        "artifact 9958685973 W9-02-D-WIN-8d6856e397b29d31dceba9586f3b57a6666770a2 sha256:52750d0d92514ecee5cc9dbe09dee811864974451820c0137caff1868488a586"
+      ]
     },
     {
       "id": "W5-09",
@@ -2825,7 +2836,10 @@
       "commands": [
         "GitHub Actions W5-09 AUTO Verification"
       ],
-      "windowsArtifacts": []
+      "windowsArtifacts": [
+        "artifact 9958720877 W9-02-C-WIN-8d6856e397b29d31dceba9586f3b57a6666770a2 sha256:aa53085cccf2d69bc281ba94b22a897fe8439daad09d62f3ad9b41111c2de16f",
+        "artifact 9958712754 W9-02-H-WIN-8d6856e397b29d31dceba9586f3b57a6666770a2 sha256:5abb469318ae194f3961387d6d80925104ba08779b7ecad1ec63aa95bd6012c3"
+      ]
     },
     {
       "id": "W5-10",
@@ -2864,7 +2878,9 @@
       "commands": [
         "GitHub Actions W6-01 AUTO Verification"
       ],
-      "windowsArtifacts": []
+      "windowsArtifacts": [
+        "artifact 9958720877 W9-02-C-WIN-8d6856e397b29d31dceba9586f3b57a6666770a2 sha256:aa53085cccf2d69bc281ba94b22a897fe8439daad09d62f3ad9b41111c2de16f"
+      ]
     },
     {
       "id": "W6-02",
@@ -3058,7 +3074,9 @@
         "npx tsx --test tests/ui/productionParticipantLifecycle.test.ts tests/ui/productionClientReconnect.test.ts tests/ui/connectedResolutionPresentation.test.ts tests/ui/connectedDurableFailure.test.ts",
         "npm run build"
       ],
-      "windowsArtifacts": []
+      "windowsArtifacts": [
+        "artifact 9958712754 W9-02-H-WIN-8d6856e397b29d31dceba9586f3b57a6666770a2 sha256:5abb469318ae194f3961387d6d80925104ba08779b7ecad1ec63aa95bd6012c3"
+      ]
     },
     {
       "id": "W7-02",
@@ -3080,7 +3098,9 @@
         "npx tsx --test tests/ui/productionClientReconnect.test.ts tests/ui/productionParticipantLifecycle.test.ts tests/ui/connectedResolutionPresentation.test.ts tests/ui/connectedTurnProjection.test.ts tests/ui/connectedDurableFailure.test.ts tests/ui/connectedOwnerInventoryRestart.test.ts tests/ui/connectedLongRestHostRestartRecovery.test.ts tests/ui/c9FamilyOReadyConcentrationProduction.test.ts tests/ui/phase09ManualMovementReactionAdapter.test.ts tests/ui/phase09ConcentrationSaveWorkflow.test.ts",
         "npm run build"
       ],
-      "windowsArtifacts": []
+      "windowsArtifacts": [
+        "artifact 9958712754 W9-02-H-WIN-8d6856e397b29d31dceba9586f3b57a6666770a2 sha256:5abb469318ae194f3961387d6d80925104ba08779b7ecad1ec63aa95bd6012c3"
+      ]
     },
     {
       "id": "W7-03",
@@ -3111,7 +3131,9 @@
         "npx tsx --test tests/ui/productionSessionEnd.test.ts tests/ui/appProviderStopSessionRefresh.test.ts tests/ui/productionSessionLifecycleAdapter.test.ts tests/ui/productionParticipantLifecycle.test.ts tests/ui/connectedTurnProjection.test.ts tests/ui/connectedResolutionPresentation.test.ts tests/ui/connectedPartyStashApprovalOwnerTransfer.test.ts tests/ui/c9FamilyOReadyConcentrationProduction.test.ts",
         "npm run build"
       ],
-      "windowsArtifacts": []
+      "windowsArtifacts": [
+        "artifact 9958712754 W9-02-H-WIN-8d6856e397b29d31dceba9586f3b57a6666770a2 sha256:5abb469318ae194f3961387d6d80925104ba08779b7ecad1ec63aa95bd6012c3"
+      ]
     },
     {
       "id": "W7-04",
@@ -3207,7 +3229,9 @@
         "cargo test --manifest-path src-tauri/Cargo.toml --lib -- session_transport::tests::slow_peer_queue_does_not_block_fast_peer_broadcast session_transport::tests::peer_outbound_queue_preserves_order_when_drained",
         "npm run build"
       ],
-      "windowsArtifacts": []
+      "windowsArtifacts": [
+        "artifact 9958720877 W9-02-C-WIN-8d6856e397b29d31dceba9586f3b57a6666770a2 sha256:aa53085cccf2d69bc281ba94b22a897fe8439daad09d62f3ad9b41111c2de16f"
+      ]
     },
     {
       "id": "W7-08",
@@ -3345,10 +3369,21 @@
         "MP-13"
       ],
       "otherLinks": [],
-      "status": "PENDING",
-      "lastVerifiedSha": null,
-      "commands": [],
-      "windowsArtifacts": []
+      "status": "PASS",
+      "lastVerifiedSha": "8d6856e397b29d31dceba9586f3b57a6666770a2",
+      "commands": [
+        "GitHub Actions W9-02 Family C Windows Scenarios (windows-family-c)",
+        "GitHub Actions W9-02 Family D Windows Scenarios (windows-family-d)",
+        "GitHub Actions W9-02 Family H Windows Scenarios (windows-family-h)",
+        "powershell.exe -File scripts/run-tauri-e2e.ps1 -Root . -W902C",
+        "powershell.exe -File scripts/run-tauri-e2e.ps1 -Root . -W902D",
+        "powershell.exe -File scripts/run-tauri-e2e.ps1 -Root . -W902H"
+      ],
+      "windowsArtifacts": [
+        "artifact 9958720877 W9-02-C-WIN-8d6856e397b29d31dceba9586f3b57a6666770a2 sha256:aa53085cccf2d69bc281ba94b22a897fe8439daad09d62f3ad9b41111c2de16f",
+        "artifact 9958685973 W9-02-D-WIN-8d6856e397b29d31dceba9586f3b57a6666770a2 sha256:52750d0d92514ecee5cc9dbe09dee811864974451820c0137caff1868488a586",
+        "artifact 9958712754 W9-02-H-WIN-8d6856e397b29d31dceba9586f3b57a6666770a2 sha256:5abb469318ae194f3961387d6d80925104ba08779b7ecad1ec63aa95bd6012c3"
+      ]
     },
     {
       "id": "W9-03",
