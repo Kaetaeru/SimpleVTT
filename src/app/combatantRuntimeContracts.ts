@@ -100,7 +100,9 @@ export interface CombatantRuntimeMonsterVm {
   legendaryActions:CombatantRuntimeTextEntryVm[];
   legendaryActionsPerRound:number;
   legendaryResistance:number;
-  spellcasting?:{ ability?:AbilityKey; dc:number; attackBonus?:number; lists:Array<{ frequency:"at-will"|"per-day"|"per-rest"; uses?:number; spells:string[] }> };
+  spellcasting?:{ ability?:AbilityKey; dc:number; attackBonus?:number; lists:Array<{ frequency:"at-will"|"per-day"|"per-rest"; uses?:number; spells:string[]; entries?:Array<{ name:string; note?:string; slotLevel?:number; spellId?:string }> }> };
+  /** C1-04: the multiattack line as a routine of named attacks the DM resolves as one action. */
+  multiattackRoutine?:Array<{ name:string; count:number; actionName:string }>;
   textActions:CombatantRuntimeTextEntryVm[];
 }
 

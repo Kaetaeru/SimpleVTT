@@ -207,6 +207,8 @@ export interface SpellCastRequest {
   turnId?: string;
   dice: SpellCastDiceInput;
   projectileAllocations?: SpellProjectileAllocation[];
+  /** Targets whose saving throw is an automatic success (Legendary Resistance, judged by the DM). */
+  forcedSaveSuccessIds?: string[];
 }
 
 export interface SpellCastCompilation {
@@ -494,16 +496,17 @@ function saveOperations(
     if (!saveDice) throw new DomainEvaluationError(`missing fixed save dice for ${target.id}`);
     const saveId=`${request.id}:save:${target.id}`;
     triggerOperationIds[target.id]=saveId;
+    const forced=request.forcedSaveSuccessIds?.includes(target.id)===true;
     operations.push({
       id:saveId,
       kind:"d20",
       actorId:target.id,
       request:{
         family:"saving-throw",
-        target:request.caster.spellSaveDc,
+        target:forced?0:request.caster.spellSaveDc,
         modifierContributions:[{source:`target:${target.id}:${saveAbility}-save`,value:target.saveModifiers?.[saveAbility]??0}],
         dice:saveDice,
-        targetSource:`${definition.spellId}:spell-save-dc`,
+        targetSource:forced?`${definition.spellId}:legendary-resistance:auto-success`:`${definition.spellId}:spell-save-dc`,
       },
       cover:saveAbility==="dex"&&!ignoresCoverForSave?{targetingOperationId:targetOpId,targetId:target.id,appliesTo:"dexterity-save"}:undefined,
       condition:{ability:saveAbility,actorCanSeeTarget:target.targetCanSeeCaster,targetCanSeeActor:target.visible},

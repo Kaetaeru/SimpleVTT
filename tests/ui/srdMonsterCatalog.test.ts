@@ -27,7 +27,8 @@ test("T1-01: every SRD 5.2.1 stat block is in the catalog with parsed core stats
     assert.ok(monster.abilities.str>0 && monster.abilities.cha>0,`${monster.slug}: abilities`);
     assert.ok(monster.actions.length>0 || monster.traits.length>0 || monster.reactions.length>0,`${monster.slug}: no actions, traits or reactions`);
   }
-  assert.ok(SRD_MONSTER_PARSE_WARNINGS.length<=12,`parser warnings grew: ${SRD_MONSTER_PARSE_WARNINGS.length}`);
+  assert.ok(SRD_MONSTER_PARSE_WARNINGS.filter((warning)=>!/spell not resolved/.test(warning)).length<=12,`parser warnings grew: ${SRD_MONSTER_PARSE_WARNINGS.length}`);
+  assert.ok(SRD_MONSTER_PARSE_WARNINGS.filter((warning)=>/spell not resolved/.test(warning)).length<=2,"C1-04: only sentence fragments stay unresolved");
   const catalog=generatedBuiltinCatalog();
   const combatants=catalog.filter((entry)=>entry.category==="combatant");
   assert.equal(combatants.length,329);

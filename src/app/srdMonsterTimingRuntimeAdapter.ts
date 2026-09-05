@@ -1,3 +1,4 @@
+import { forceSaveSuccess } from "./forcedSaveSuccess";
 import "./phase09RealTurnRuntimeAdapter";
 import "./phase09CombatantDefinitionRuntimeAdapter";
 import type { ActionVm, ActivityEntry, AppSnapshot, CombatantDefinitionVm, ResolutionView, SceneEntity, SceneVm } from "./contracts";
@@ -296,9 +297,29 @@ MockAdapter.prototype.undoLastResolution=async function undoLastResolutionWithMo
 
 MockAdapter.prototype.useLegendaryResistance=async function useLegendaryResistanceRuntime(actorId:string) {
   const internal=this as unknown as TimingAdapterState;
-  const state=internal.scene.monsterTimingByActor?.[actorId];
+  const initial=internal.scene.monsterTimingByActor?.[actorId];
   const entity=timingEntity(internal,actorId);
-  if (!state?.legendaryResistance || !entity || state.legendaryResistance.remaining<=0) return internal.getSnapshot();
+  if (!initial?.legendaryResistance || !entity || initial.legendaryResistance.remaining<=0) return internal.getSnapshot();
+  // C1-04: when the last card holds this creature's failed save, undo it and judge the same cast with that save
+  // as an automatic success; the counter is spent on the re-judged card.
+  const card=internal.resolution;
+  const failed=card?.saveResults.find((entry)=>entry.targetId===actorId&&entry.outcome==="실패");
+  let rejudged=false;
+  if (card && failed && card.stage==="complete") {
+    const { actionId, targetIds }=card;
+    await this.undoLastResolution();
+    forceSaveSuccess(this,actorId);
+    await this.resolveAction(actionId,targetIds);
+    const after=internal.resolution;
+    rejudged=Boolean(after && after.saveResults.some((entry)=>entry.targetId===actorId&&entry.outcome==="성공"));
+    if (after && rejudged) {
+      after.detail.unshift(`전설 저항 · ${entity.name}의 실패한 내성 굴림을 성공으로 재판정`);
+      after.provenance.push(`legendary-resistance:${actorId} · auto-success`);
+      after.stateChanges.push(`${entity.name} 전설 저항 사용`);
+    }
+  }
+  const state=internal.scene.monsterTimingByActor?.[actorId];
+  if (!state?.legendaryResistance || state.legendaryResistance.remaining<=0) return internal.getSnapshot();
   const before=state.legendaryResistance.remaining;
   state.legendaryResistance.remaining=before-1;
   internal.activity.unshift({
@@ -307,7 +328,7 @@ MockAdapter.prototype.useLegendaryResistance=async function useLegendaryResistan
     actor:entity.name,
     title:"전설 저항 사용",
     summary:`실패한 내성 굴림을 성공으로 바꿉니다 · 남은 ${state.legendaryResistance.remaining}/${state.legendaryResistance.max}`,
-    detail:["DM이 해당 판정에 강제 성공을 적용합니다."],
+    detail:[rejudged ? `${card?.actionName ?? "직전 판정"}의 내성 굴림을 성공으로 재판정했습니다.` : "DM이 해당 판정에 강제 성공을 적용합니다."],
     stateChanges:[`전설 저항 ${before} → ${state.legendaryResistance.remaining}`],
   });
   return internal.getSnapshot();
