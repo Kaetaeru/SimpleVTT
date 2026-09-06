@@ -23,7 +23,7 @@ import { tauriSessionTransport } from "./tauriSessionTransport";
  * A player's own 접근/물러남/그대로 is sent to the Host as a `movement-request`; the Host validates the peer's
  * character, declares on its behalf, and publishes.
  */
-type RoutedMethod="declareMovement"|"answerWithdrawalPrompt"|"setEngagement"|"setCreatureStatus"|"setCreatureBadge"|"applyNarrativeDamage"|"setSceneCondition"|"instantiateCombatantGroup"|"groupCombatants"|"ungroupCombatants"|"useLegendaryResistance"|"resolveMultiattackRoutine"|"resetMonsterTiming"|"applyPostHocToggle"|"endTurn"|"startInitiative"|"dismissResolution"|"undoLastResolution";
+type RoutedMethod="declareMovement"|"answerWithdrawalPrompt"|"setEngagement"|"setCreatureStatus"|"setCreatureBadge"|"applyNarrativeDamage"|"setSceneCondition"|"instantiateCombatantGroup"|"groupCombatants"|"ungroupCombatants"|"useLegendaryResistance"|"resolveMultiattackRoutine"|"resetMonsterTiming"|"applyPostHocToggle"|"endTurn"|"startInitiative"|"dismissResolution"|"undoLastResolution"|"resolveAction"|"advanceResolution";
 
 let requestSequence=0;
 const requestId=()=>`movement.${Date.now()}.${requestSequence++}`;
@@ -42,24 +42,34 @@ export function theaterTopologyFingerprint(scene:SceneVm) {
   });
 }
 
-export async function publishTheaterTopologyIfChanged(adapter:MockAdapter,before:string,operation:string) {
+/** What a resolution can change besides HP/economy (which travel as events): the engagement it infers (T1-03), the conditions it applies. */
+export function resolutionTheaterFingerprint(scene:SceneVm) {
+  return JSON.stringify({
+    entities:scene.entities.map((entity)=>[entity.id,entity.status,entity.engagedWithIds]),
+    engagements:scene.engagements,
+    movementDeclarations:scene.movementDeclarations,
+    pendingWithdrawal:scene.pendingWithdrawal,
+  });
+}
+
+export async function publishTheaterTopologyIfChanged(adapter:MockAdapter,before:string,operation:string,fingerprint:(scene:SceneVm)=>string=theaterTopologyFingerprint) {
   const app=connectedInternal(adapter);
   if (connectedStateFor(adapter).mode!=="host") return;
   // Projections (engagement chips, group folds, timing badges) are refreshed by a snapshot read.
   await app.getSnapshot();
-  if (theaterTopologyFingerprint(app.scene)===before) return;
+  if (fingerprint(app.scene)===before) return;
   await commitConnectedSceneTopology(adapter,[`Scene state changed: ${operation}`],["host-authoritative theater-of-mind scene state"]);
 }
 
-function wrapHostPublish(method:RoutedMethod) {
+function wrapHostPublish(method:RoutedMethod,fingerprint:(scene:SceneVm)=>string=theaterTopologyFingerprint) {
   const prototype=MockAdapter.prototype as unknown as Record<string,(...args:unknown[])=>Promise<AppSnapshot>>;
   const previous=prototype[method];
   if (typeof previous!=="function") return;
   prototype[method]=async function publishAfter(this:MockAdapter,...args:unknown[]) {
     const host=connectedStateFor(this).mode==="host";
-    const before=host ? theaterTopologyFingerprint(connectedInternal(this).scene) : "";
+    const before=host ? fingerprint(connectedInternal(this).scene) : "";
     const result=await previous.apply(this,args);
-    if (host) await publishTheaterTopologyIfChanged(this,before,method);
+    if (host) await publishTheaterTopologyIfChanged(this,before,method,fingerprint);
     return host ? connectedInternal(this).getSnapshot() : result;
   };
 }
@@ -109,3 +119,6 @@ registerConnectedMovementRequestHandler(async (adapter,transportMessage,request)
 });
 
 for (const method of ["answerWithdrawalPrompt","setEngagement","setCreatureStatus","setCreatureBadge","applyNarrativeDamage","setSceneCondition","instantiateCombatantGroup","groupCombatants","ungroupCombatants","useLegendaryResistance","resolveMultiattackRoutine","resetMonsterTiming","applyPostHocToggle","endTurn","startInitiative","dismissResolution","undoLastResolution"] as RoutedMethod[]) wrapHostPublish(method);
+// A melee resolution engages its target (T1-03) the moment it resolves; players must see the chip then, not after the
+// DM's next edit. Only the engagement/condition part of the scene is compared: HP and turn state travel as events.
+for (const method of ["resolveAction","advanceResolution"] as RoutedMethod[]) wrapHostPublish(method,resolutionTheaterFingerprint);
