@@ -366,7 +366,7 @@ registerConnectedActionRequestHandler(async (adapter,transportMessage,request) =
       restoreProjectedContext(adapter);
       connectedInternal(adapter).refusal=makeRefusal(targetRefusal.code,targetRefusal.message,{origin:"remote",actorId:request.actorId,actionId:request.actionId});
       await publishConnectedSnapshot(adapter);
-      await sendConnectedWireTo(transportMessage.peer,{type:"error",code:targetRefusal.code,message:targetRefusal.message,hostCursor:ledger.cursor});
+      await sendConnectedWireTo(transportMessage.peer,{type:"error",code:"action-rejected",message:targetRefusal.message,hostCursor:ledger.cursor});
       return;
     }
     // The DM-facing availability projection never gates by turn (the DM may drive any Actor, and DM-owned
@@ -475,8 +475,10 @@ MockAdapter.prototype.resolveAction=async function resolveConnectedAction(action
   }
   if (state.mode==="host") {
     const local=await app.getSnapshot();
-    const localRefusal=targetRefusalFor(Object.values(local.scene.actionsByActor).flat().find((entry)=>entry.id===actionId),targetIds);
-    if (localRefusal) { app.refusal=makeRefusal(localRefusal.code,localRefusal.message,{actionId}); return app.getSnapshot(); }
+    const localAction=Object.values(local.scene.actionsByActor).flat().find((entry)=>entry.id===actionId);
+    if (localAction&&!localAction.available) { app.refusal=makeRefusal("action-unavailable",localAction.disabledReason??refusalMessageFor("action-unavailable"),{actionId,actorId:localAction.actorId}); return app.getSnapshot(); }
+    const localRefusal=targetRefusalFor(localAction,targetIds);
+    if (localRefusal) { app.refusal=makeRefusal(localRefusal.code,localRefusal.message,{actionId,actorId:localAction?.actorId}); return app.getSnapshot(); }
   }
   const armedVisibility=state.mode==="host"?state.nextResolutionVisibility:null;
   const previousResolutionId=app.resolution?.id;

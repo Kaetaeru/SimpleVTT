@@ -209,12 +209,12 @@ async function runScenario(){
     // M2 · 자유 진행 — 프로젝션이 내주지 않는 대상(자기 자신)에게 무기 공격: 대상 부적격. 호스트가 거부하고, 카엘의 도크와 DM 도크에 이유가 뜬다.
     // (다른 PC는 무기 공격 대상으로 프로젝션이 일부러 내준다 — characterSessionProjectionMount.eligibleTargetIds — 그래서 아군 공격은 정상 플레이다.)
     const projectedTargets=await hostCall(host,`const s=await mockAdapter.getSnapshot();return (s.scene.actionsByActor[args.id]??[]).filter((a)=>a.resolutionKind==="attack").map((a)=>({name:a.name,target:a.target,eligible:a.eligibleTargetIds,max:a.maxTargets??null}));`,{id:kael.id});
-    const self=await expectRefused(p2,host,kael.id,isAttack("대검"),[kael.id],"M2 카엘 대검 → 카엘 (자기 자신)",{code:"target-ineligible",message:"그 대상에게는 사용할 수 없습니다."});
+    const self=await expectRefused(p2,host,kael.id,isAttack("대검"),[kael.id],"M2 카엘 대검 → 카엘 (자기 자신)",{code:"action-rejected",message:"그 대상에게는 사용할 수 없습니다."});
     await evidenceAll(peers,"matrix-m2-self-refused");
     record("M2-대상부적격-거부",{self,projectedTargets});
 
     // M3 · 자유 진행 — 대상 초과: 단일 대상 주문에 대상 둘. 그리고 정상 치유는 확정.
-    const crowd=await expectRefused(p1,host,sera.id,(a)=>a.spellId==="dnd.srd521.spell.sacred-flame",[gob1,gob2],"M3 세라 신성한 불길 → 좀비 둘",{code:"too-many-targets"});
+    const crowd=await expectRefused(p1,host,sera.id,(a)=>a.spellId==="dnd.srd521.spell.sacred-flame",[gob1,gob2],"M3 세라 신성한 불길 → 좀비 둘",{code:"action-rejected"});
     assert.match(crowd.message,/최대 1명/,"M3: the refusal names the limit");
     const heal=await playerAct(p1,sera.id,(a)=>a.spellId==="dnd.srd521.spell.healing-word"&&a.available,[kael.id],null,host,"M3 세라 치유의 단어 → 카엘");
     await expectConverged(peers,heal.resolutionId,"M3 치유");
