@@ -288,15 +288,15 @@ async function runScenario(){
     assert.equal(lockedSword.disabledReason,"의식불명 · 죽음 내성 굴림만 할 수 있습니다.");
     const deathSave=await playerAct(p2,kael.id,(a)=>a.id==="action.death-save"&&a.available,[kael.id],12,host,"카엘 죽음 내성 굴림");
     await expectConverged(peers,deathSave.resolutionId,"장면2 죽음 내성");
-    await closeResultCard(host);
     await evidenceAll(peers,"tom2-02d-death-save");
-    // 막간 · 되돌리기 — DM이 방금의 죽음 내성 굴림을 되돌린다: 보상 이벤트가 모든 창에 도착하고 원 기록은 남는다.
+    // 막간 · 되돌리기 (closing the result card releases the undo target — the DM undoes from the open card, as at the table) — DM이 방금의 죽음 내성 굴림을 되돌린다: 보상 이벤트가 모든 창에 도착하고 원 기록은 남는다.
     const undoTarget=deathSave.resolutionId;const cursorBeforeUndo=(await peerState(host)).cursor;
     await hostCall(host,`await mockAdapter.undoLastResolution();`);
     const undoHost=await peerState(host);assert.ok(undoHost.cursor>cursorBeforeUndo,`undo commits a compensating event; refusal=${JSON.stringify(undoHost.refusal)}`);
     for(const p of [p1,p2]){const s=await waitCursor(p,undoHost.cursor);assert.ok(s.activity.some((e)=>e.id===undoTarget),`${p.label} keeps the original entry in history`);assert.ok(s.activity.some((e)=>/되돌/.test(e.title)),`${p.label} records the undo`);}
     await evidenceAll(peers,"tom2-02d2-undo");
     record("막간-되돌리기",{undoTarget,cursor:[cursorBeforeUndo,undoHost.cursor]});
+    await closeResultCard(host);
     // 세라의 턴 — 안정화(의학 판정), 다음 턴 상처 치료로 일어남.
     await walkToActor(host,sera.id);
     // 안정화 is a targeted 의학 check against a fixed DC 10: the downed character is the target.
