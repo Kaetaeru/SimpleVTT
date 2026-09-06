@@ -66,17 +66,23 @@ export function subscribeRefusal(listener:RefusalListener):()=>void {
 }
 
 /**
- * The targets a request names must be the targets the projection offers: the dock only lets a player pick from
- * `eligibleTargetIds`, so a request outside that list (a stale client, a script, a race) is refused the same way.
- * An action whose eligibility is not projected (empty list) is left to the resolution path.
+ * Two target rules no resolution path disputes: an enemy-only action cannot name the actor himself, and a
+ * single-target action (enemy / ally / self) or a bounded multi-target action cannot name more targets than it allows.
+ * Everything else (range, cover, visibility, membership of the projected list) is left to the resolution path and its
+ * own facts — the spatial provider answers "적용 거부: beyond range", for instance.
  */
-export function targetRefusalFor(action:{eligibleTargetIds?:string[];maxTargets?:number;target?:string}|undefined,targetIds:string[]):{code:string;message:string}|null {
+export function targetRefusalFor(action:{actorId?:string;maxTargets?:number;target?:string}|undefined,targetIds:string[]):{code:string;message:string}|null {
   if(!action||!targetIds.length) return null;
-  const eligible=action.eligibleTargetIds??[];
-  if(eligible.length&&targetIds.some((id)=>!eligible.includes(id))) return {code:"target-ineligible",message:REFUSAL_MESSAGES["target-ineligible"]};
-  const limit=action.maxTargets??(action.target==="multi-enemy"||action.target==="multi-ally"||action.target==="multi-any"?undefined:1);
+  if((action.target==="enemy"||action.target==="multi-enemy")&&action.actorId&&targetIds.includes(action.actorId)) return {code:"target-ineligible",message:REFUSAL_MESSAGES["target-ineligible"]};
+  const single=action.target==="enemy"||action.target==="ally"||action.target==="self";
+  const limit=action.maxTargets??(single?1:undefined);
   if(limit!==undefined&&targetIds.length>limit) return {code:"too-many-targets",message:`대상은 최대 ${limit}명입니다.`};
   return null;
+}
+
+/** The reasons the table's own economy produces (turn, action/bonus/reaction spent, 0 HP, resources, items) — the Host refuses these on its own path before any production path can swallow them; provider-specific reasons (range, cover) stay with their path. */
+export function isTableEconomyReason(reason:string|undefined):boolean {
+  return Boolean(reason&&/이미 사용했습니다|턴이 아닙니다|의식불명|쓰러진 상태|자원이 부족|아이템이 없습니다|수량이 부족|충전이 부족/.test(reason));
 }
 
 /** True when a command left nothing behind: no new resolution, activity, refusal, economy or entity change. */

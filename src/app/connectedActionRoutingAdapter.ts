@@ -1,6 +1,6 @@
 import type { AppSnapshot } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
-import { makeRefusal, refusalMessageFor, targetRefusalFor } from "./sessionRefusal";
+import { isTableEconomyReason, makeRefusal, refusalMessageFor, targetRefusalFor } from "./sessionRefusal";
 import { registerConnectedActionRequestHandler } from "./connectedActionRequestPort";
 import { registerConnectedInterruptResponseHandler } from "./connectedInterruptResponsePort";
 import { registerConnectedConcentrationResponseHandler } from "./connectedConcentrationResponsePort";
@@ -476,7 +476,7 @@ MockAdapter.prototype.resolveAction=async function resolveConnectedAction(action
   if (state.mode==="host") {
     const local=await app.getSnapshot();
     const localAction=Object.values(local.scene.actionsByActor).flat().find((entry)=>entry.id===actionId);
-    if (localAction&&!localAction.available) { app.refusal=makeRefusal("action-unavailable",localAction.disabledReason??refusalMessageFor("action-unavailable"),{actionId,actorId:localAction.actorId}); return app.getSnapshot(); }
+    if (localAction&&!localAction.available&&isTableEconomyReason(localAction.disabledReason)) { app.refusal=makeRefusal("action-unavailable",localAction.disabledReason??refusalMessageFor("action-unavailable"),{actionId,actorId:localAction.actorId}); return app.getSnapshot(); }
     const localRefusal=targetRefusalFor(localAction,targetIds);
     if (localRefusal) { app.refusal=makeRefusal(localRefusal.code,localRefusal.message,{actionId,actorId:localAction?.actorId}); return app.getSnapshot(); }
   }

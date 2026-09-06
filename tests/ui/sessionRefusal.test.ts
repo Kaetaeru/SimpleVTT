@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { MockAdapter } from "../../src/app/mockAdapter";
-import { commandWasNoOp, makeRefusal, refusalMessageFor, targetRefusalFor } from "../../src/app/sessionRefusal";
+import { commandWasNoOp, isTableEconomyReason, makeRefusal, refusalMessageFor, targetRefusalFor } from "../../src/app/sessionRefusal";
 
 async function adapterWithAelarTurn() {
   const adapter=new MockAdapter();
@@ -61,15 +61,21 @@ test("S1-01/M8: a creature at 0 HP cannot act — a character may only roll a de
   assert.equal(dead.refusal?.message,"쓰러진 상태라 행동할 수 없습니다.");
 });
 
-test("S1-03/M2: the Host refuses targets the projection did not offer, and more targets than the action allows", () => {
-  const greatsword={eligibleTargetIds:["zombie.1","zombie.2"],target:"enemy"};
+test("S1-03/M2: the Host refuses an enemy-only action aimed at the actor himself, and more targets than the action allows; range and membership stay with the resolution path", () => {
+  const greatsword={actorId:"char.kael",target:"enemy"};
   assert.equal(targetRefusalFor(greatsword,["zombie.1"]),null);
-  assert.deepEqual(targetRefusalFor(greatsword,["char.sera"]),{code:"target-ineligible",message:"그 대상에게는 사용할 수 없습니다."});
+  assert.equal(targetRefusalFor(greatsword,["char.sera"]),null,"another character is a legal weapon target (the projection offers it); range is the spatial provider's call");
+  assert.deepEqual(targetRefusalFor(greatsword,["char.kael"]),{code:"target-ineligible",message:"그 대상에게는 사용할 수 없습니다."});
   assert.deepEqual(targetRefusalFor(greatsword,["zombie.1","zombie.2"]),{code:"too-many-targets",message:"대상은 최대 1명입니다."});
-  assert.equal(targetRefusalFor({eligibleTargetIds:["a","b","c"],target:"multi-enemy",maxTargets:2},["a","b"]),null);
-  assert.deepEqual(targetRefusalFor({eligibleTargetIds:["a","b","c"],target:"multi-enemy",maxTargets:2},["a","b","c"]),{code:"too-many-targets",message:"대상은 최대 2명입니다."});
-  assert.equal(targetRefusalFor({eligibleTargetIds:[],target:"any"},["anyone"]),null,"unprojected eligibility is left to the resolution path");
+  assert.equal(targetRefusalFor({actorId:"a",target:"multi-enemy",maxTargets:2},["b","c"]),null);
+  assert.deepEqual(targetRefusalFor({actorId:"a",target:"multi-enemy",maxTargets:2},["b","c","d"]),{code:"too-many-targets",message:"대상은 최대 2명입니다."});
+  assert.equal(targetRefusalFor({actorId:"a",target:"any"},["x","y"]),null,"an unbounded any-target action is left to its path");
+  assert.equal(targetRefusalFor({actorId:"a",target:"none"},["x"]),null,"a readied trigger names its target through its configuration");
   assert.equal(targetRefusalFor(undefined,["x"]),null);
+  assert.equal(isTableEconomyReason("행동을 이미 사용했습니다."),true);
+  assert.equal(isTableEconomyReason("의식불명 · 죽음 내성 굴림만 할 수 있습니다."),true);
+  assert.equal(isTableEconomyReason("적용 거부: beyond range 80 ft"),false,"a provider's reason is not pre-empted");
+  assert.equal(isTableEconomyReason(undefined),false);
 });
 
 test("S1-01: refusal ids only grow, so a notice can key on them", () => {

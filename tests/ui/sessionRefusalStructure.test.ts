@@ -45,7 +45,7 @@ test("S1-01: the base adapter, the connected client and the Host all record refu
   assert.match(routing,/makeRefusal\("remote-pending"/);
   assert.match(routing,/const targetRefusal=targetRefusalFor\(requestedAction,request\.targetIds\)/,"remote targets are checked against the projection");
   assert.match(routing,/const localRefusal=targetRefusalFor\(/,"the Host's own targets are checked the same way");
-  assert.match(routing,/if \(localAction&&!localAction\.available\) \{ app\.refusal=makeRefusal\("action-unavailable"/,"the Host's own unavailable action is refused before any production path can swallow it");
+  assert.match(routing,/if \(localAction&&!localAction\.available&&isTableEconomyReason\(localAction\.disabledReason\)\) \{ app\.refusal=makeRefusal\("action-unavailable"/,"the Host's own economy/turn/0-HP refusal happens before any production path can swallow it; provider reasons stay with their path");
   assert.match(routing,/code:"action-rejected",message:targetRefusal\.message/,"MP-C21: an invalid target is answered with the terminal action-rejected code");
   const provider=read("../../src/app/AppProvider.tsx");
   assert.match(provider,/commandWasNoOp\(before, after\)/);
