@@ -9,6 +9,8 @@ import { sheetAbilityModifier } from "./app/sheetRollValues";
 import { visibleCharacterResources } from "./app/characterResourcePresentation";
 import { CharacterSheetWorkspace } from "./CharacterSheetPlayScreen";
 import { SessionActionDock, type SessionActionTargeting } from "./SessionActionDock";
+import { SessionRefusalNotice } from "./SessionRefusalNotice";
+import { announceRefusal } from "./app/sessionRefusal";
 import { SessionActorBoard } from "./SessionActorBoards";
 import { SessionTargetingCursor, type TargetingAnchor } from "./SessionTargetingCursor";
 import { SessionWithdrawPrompt } from "./SessionWithdrawPrompt";
@@ -233,7 +235,7 @@ export function SessionModeRoot({ onOpenProduct }: { onOpenProduct(): void }) {
     if (!targetingAction||targetingPending) return;
     setTargetingPending(true);setTargetingFeedback(null);
     try { await resolveAction(targetingExecutionActionId??targetingAction.id,targetIds); cancelTargeting(); }
-    catch { setTargetingFeedback("행동을 완료하지 못했습니다. 현재 상태를 확인하고 다시 시도하세요."); }
+    catch { setTargetingFeedback("행동을 완료하지 못했습니다. 현재 상태를 확인하고 다시 시도하세요."); announceRefusal("action-error","행동을 완료하지 못했습니다. 현재 상태를 확인하고 다시 시도하세요."); }
     finally { setTargetingPending(false); }
   };
   const chooseActorTargets=(entityIds:string[])=>{
@@ -404,6 +406,7 @@ export function SessionModeRoot({ onOpenProduct }: { onOpenProduct(): void }) {
       {(activeUtility||quickOpen) && <aside id="session-quick-panel" className="session-reference-utility-host" aria-label={quickOpen?"세션 빠른 메뉴 패널":"Contextual Session Utility"}>{quickOpen?<SessionQuickPalette role={role} onClose={closeQuick} onChoose={chooseQuick}/>:utilityPane}</aside>}
     </div>
 
+    <SessionRefusalNotice />
     <footer className="session-mode-action-dock" aria-label="Command Center">
       <SessionActionDock
         actorId={actionActorId}

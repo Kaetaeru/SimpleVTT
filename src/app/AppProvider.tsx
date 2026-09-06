@@ -29,6 +29,7 @@ import "./productionCombatantPreparationAdapter";
 import "./campaignRuntimeAdapter";
 import { mockAdapter } from "./mockAdapter";
 import { subscribeExternalAdapterSnapshot } from "./adapterSnapshotEvents";
+import { commandWasNoOp, makeRefusal, refusalMessageFor } from "./sessionRefusal";
 import { setSessionDebugPreviewRole } from "./sessionDebugPreviewRole";
 import { deleteCharacterDurably } from "./characterLibraryRuntimeAdapter";
 
@@ -145,9 +146,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [uiDebug, setUiDebugState] = useState<UiDebugState>({ selectedActionId: null, eligibleTargetIds: [], selectedTargetIds: [], hoverTargetId: null });
   const operationSequenceRef = useRef(0);
+  const latestSnapshotRef = useRef<AppSnapshot | null>(null);
 
   const publishIfLatest = useCallback((sequence: number, next: AppSnapshot) => {
     if (sequence !== operationSequenceRef.current) return;
+    latestSnapshotRef.current = next;
     setSnapshot(next);
   }, []);
 
@@ -228,7 +231,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
     endTurn: async () => apply(() => mockAdapter.endTurn()),
     declareManualMovementReaction: async (command) => apply(() => mockAdapter.declareManualMovementReaction(command)),
     configureReadyAction: async (command) => apply(() => mockAdapter.configureReadyAction(command)),
-    resolveAction: async (actionId, targetIds) => apply(() => mockAdapter.resolveAction(actionId, targetIds)),
+    resolveAction: async (actionId, targetIds) => {
+      const before = latestSnapshotRef.current;
+      await apply(() => mockAdapter.resolveAction(actionId, targetIds));
+      // V1.6 S1-01 catch-all: a command that left nothing behind is a refusal the table must see. A connected client's
+      // request is answered by the Host later, so it is exempt here.
+      const after = latestSnapshotRef.current;
+      if (before && after && after.session.role !== "client" && commandWasNoOp(before, after)) {
+        const sequence = ++operationSequenceRef.current;
+        publishIfLatest(sequence, { ...after, refusal: makeRefusal("no-op", refusalMessageFor("no-op"), { actionId }) });
+      }
+    },
     advanceResolution: async () => apply(() => mockAdapter.advanceResolution()),
     submitConcentrationSaveD20: async (face) => apply(() => mockAdapter.submitConcentrationSaveD20(face)),
     respondToInterrupt: async (accept) => apply(() => mockAdapter.respondToInterrupt(accept)),

@@ -601,6 +601,17 @@ export interface SessionVm {
   sessionContent: string[];
 }
 
+/** V1.6 S1-01 — a refused table command: what was refused and why, in the rules' words, on the peer that issued it. */
+export interface SessionRefusalVm {
+  id: number;
+  code: string;
+  message: string;
+  /** local: this adapter refused; host: the Host refused this client's request; remote: the Host recorded a player's refused request. */
+  origin: "local" | "host" | "remote";
+  actionId?: string;
+  actorId?: string;
+}
+
 export interface AppSnapshot {
   role: AppRole;
   sessionMode: SessionMode;
@@ -622,6 +633,7 @@ export interface AppSnapshot {
   resolutionPresentation?: ResolutionPresentationRuntimeVm | null;
   resolutionVisibility?: ResolutionVisibilityStateVm | null;
   session: SessionVm;
+  refusal?: SessionRefusalVm | null;
   sessionCharacterInventories?: Record<string, SessionCharacterInventoryVm>;
   campaigns?: CampaignRecordV1[];
   activeCampaignId?: string | null;

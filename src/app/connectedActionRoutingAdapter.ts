@@ -1,5 +1,6 @@
 import type { AppSnapshot } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
+import { makeRefusal, refusalMessageFor } from "./sessionRefusal";
 import { registerConnectedActionRequestHandler } from "./connectedActionRequestPort";
 import { registerConnectedInterruptResponseHandler } from "./connectedInterruptResponsePort";
 import { registerConnectedConcentrationResponseHandler } from "./connectedConcentrationResponsePort";
@@ -400,7 +401,11 @@ registerConnectedActionRequestHandler(async (adapter,transportMessage,request) =
       ledger.cancelReservedActionRequest(request.requestId);
       if (request.readyConfiguration) clearReadyActionConfiguration(adapter,request.actorId);
       restoreProjectedContext(adapter);
-      await sendConnectedWireTo(transportMessage.peer,{type:"error",code:"action-rejected",message:"host production resolution path rejected the requested actor/action/targets",hostCursor:ledger.cursor});
+      // S1-01: the reason the Host's own adapter recorded travels to the player; the Host sees the player's refusal too.
+      const reason=next.refusal?.message??refusalMessageFor("action-rejected");
+      connectedInternal(adapter).refusal=makeRefusal("action-rejected",reason,{origin:"remote",actorId:request.actorId,actionId:request.actionId});
+      await publishConnectedSnapshot(adapter);
+      await sendConnectedWireTo(transportMessage.peer,{type:"error",code:"action-rejected",message:reason,hostCursor:ledger.cursor});
       return;
     }
     state.pendingRemoteAction={peer:transportMessage.peer,request:structuredClone(request),resolutionId:resolution.id,readyActionRole:actionFor(adapter,request.actorId,request.actionId)?.readyActionRole};
@@ -423,6 +428,7 @@ MockAdapter.prototype.resolveAction=async function resolveConnectedAction(action
     if (!state.sessionId||!state.replica||app.connectionState!=="connected") {
       app.session.compatibility="warning";
       app.session.compatibilityMessage="ActionRequest cannot be sent until the host handshake is complete.";
+      app.refusal=makeRefusal("not-connected",refusalMessageFor("not-connected"),{actionId});
       return app.getSnapshot();
     }
     const character=connectedManifest(this).character;
@@ -449,6 +455,7 @@ MockAdapter.prototype.resolveAction=async function resolveConnectedAction(action
   if (state.mode==="host"&&state.pendingRemoteAction) {
     app.session.compatibility="warning";
     app.session.compatibilityMessage="Resolve or dismiss the pending remote action before starting another shared action.";
+    app.refusal=makeRefusal("remote-pending",refusalMessageFor("remote-pending"),{actionId});
     return app.getSnapshot();
   }
   const armedVisibility=state.mode==="host"?state.nextResolutionVisibility:null;

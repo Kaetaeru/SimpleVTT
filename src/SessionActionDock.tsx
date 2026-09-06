@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { useSimpleVtt } from "./app/AppProvider";
 import type { ActionVm } from "./app/contracts";
+import { announceRefusal } from "./app/sessionRefusal";
 import { sanitizeCharacterPortrait } from "./app/characterPortraitContracts";
 import { projectedCharacterById } from "./app/characterSessionProjectionRegistry";
 import { mockAdapter } from "./app/mockAdapter";
@@ -128,12 +129,12 @@ export function SessionActionDock({actorId,suspended,targeting,onBeginTargeting,
     if (pendingActionId) return;
     setPendingActionId(action.id); setFeedback(null);
     try { await resolveAction(action.id,targetIds); }
-    catch { setFeedback("행동을 완료하지 못했습니다. 현재 상태를 확인하고 다시 시도하세요."); }
+    catch { setFeedback("행동을 완료하지 못했습니다. 현재 상태를 확인하고 다시 시도하세요."); announceRefusal("action-error","행동을 완료하지 못했습니다. 현재 상태를 확인하고 다시 시도하세요.",{actionId:action.id}); }
     finally { setPendingActionId(null); }
   };
   const chooseAction=(action:ActionVm,button:HTMLButtonElement)=>{
     if (suspended||targeting?.pending) return;
-    if (!action.available) { setFeedback(action.disabledReason||"현재 사용할 수 없습니다."); return; }
+    if (!action.available) { const reason=action.disabledReason||"현재 사용할 수 없습니다."; setFeedback(reason); announceRefusal("action-unavailable",reason,{actionId:action.id,actorId:action.actorId}); return; }
     if(isReadyPreparationAction(action)){
       setReadyActionId(readyOptions[0]?.id??"");setReadyTrigger("");setReadyOpen(true);setTooltip(null);return;
     }
