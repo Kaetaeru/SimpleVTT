@@ -309,13 +309,7 @@ async function runScenario(){
     await p2.browser.waitUntil(async()=>potionQuantity(await peerState(p2))===potionBefore-1,{timeout:15_000,timeoutMsg:"카엘's potion quantity did not decrement exactly once"});
     const afterPotion=ent(await tomState(host),kael.id).hp;assert.ok(afterPotion>=hpBeforePotion,`the potion must not lower HP (${hpBeforePotion} → ${afterPotion})`);
     await closeResultCard(host);
-    await clickInitiative(host,"이니셔티브 종료");
-    await waitTom(host,(s)=>s.mode==="freeform","freeform on the Host");
-    await expectTomParity(peers,"장면2 정리");
-    await evidenceAll(peers,"tom2-02e-stairs-end");
-    record("장면2-계단",{crowd,grapple,grappled,spent,guidance,unshielded,cureRefused,slam:{id:slamDone.resolution.id,save:slamDone.resolution.concentrationSave},ready:{armed:armed.resolution.id,fired:firedDone.resolution.id},narrative:{full:kaelFull,halved:halved[host.label].hp,healedBack:healedBack[host.label].hp},deathSave,stabilize,cure,revived,potion:{before:potionBefore,after:potionQuantity(await peerState(p2)),hp:[hpBeforePotion,afterPotion]}});
-
-    // 막간 · 되돌리기 — DM이 마지막 판정(물약)을 되돌린다: 보상 이벤트가 모든 창에 도착하고 원 기록은 남는다.
+    // 막간 · 되돌리기 — 이니셔티브가 아직 열려 있을 때 DM이 마지막 판정(물약)을 되돌린다: 보상 이벤트가 모든 창에 도착하고 원 기록은 남는다.
     const undoTarget=potion.resolutionId;const cursorBeforeUndo=(await peerState(host)).cursor;const hpBeforeUndo=ent(await tomState(host),kael.id).hp;
     await hostCall(host,`await mockAdapter.undoLastResolution();`);
     const undoHost=await peerState(host);assert.ok(undoHost.cursor>cursorBeforeUndo,"undo commits a compensating event");
@@ -323,6 +317,12 @@ async function runScenario(){
     for(const p of [p1,p2]){const s=await waitCursor(p,undoHost.cursor);assert.equal(entity(s,kael.id).hp,hpAfterUndo,`${p.label} HP diverges after undo`);assert.ok(s.activity.some((e)=>e.id===undoTarget),`${p.label} keeps the original entry in history`);}
     await evidenceAll(peers,"tom2-03-undo");
     record("막간-되돌리기",{undoTarget,hp:[hpBeforeUndo,hpAfterUndo],cursor:[cursorBeforeUndo,undoHost.cursor]});
+
+    await clickInitiative(host,"이니셔티브 종료");
+    await waitTom(host,(s)=>s.mode==="freeform","freeform on the Host");
+    await expectTomParity(peers,"장면2 정리");
+    await evidenceAll(peers,"tom2-02e-stairs-end");
+    record("장면2-계단",{crowd,grapple,grappled,spent,guidance,unshielded,cureRefused,slam:{id:slamDone.resolution.id,save:slamDone.resolution.concentrationSave},ready:{armed:armed.resolution.id,fired:firedDone.resolution.id},narrative:{full:kaelFull,halved:halved[host.label].hp,healedBack:healedBack[host.label].hp},deathSave,stabilize,cure,revived,potion:{before:potionBefore,after:potionQuantity(await peerState(p2)),hp:[hpBeforePotion,afterPotion]}});
 
     // 장면 3 · 종루 — 홉고블린; 슬롯 소진 거부; 남의 턴 거부; 투창; XP; 종료.
     const [hob]=await addSrdMonstersViaUi(host,"홉고블린","홉고블린",1);
