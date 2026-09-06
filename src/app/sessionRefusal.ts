@@ -15,6 +15,7 @@ export const REFUSAL_MESSAGES:Record<string,string>={
   "remote-pending":"플레이어의 행동이 처리 중입니다. 먼저 끝내세요.",
   "not-connected":"호스트와 연결이 끝나지 않아 행동을 보낼 수 없습니다.",
   "no-op":"행동이 처리되지 않았습니다. 현재 턴·자원·대상을 확인하세요.",
+  "spell-rejected":"주문을 시전할 수 없습니다.",
   // Host → client wire error codes.
   "action-rejected":"호스트가 행동을 거부했습니다.",
   "action-disabled":"지금은 사용할 수 없는 행동입니다.",
@@ -47,6 +48,19 @@ export function refusalMessageFor(code:string,raw?:string):string {
   if(!raw) return base;
   const korean=/[ㄱ-힝]/.test(raw);
   return korean?raw:base;
+}
+
+/** The spell kernel's rejection texts, in the rules' words. */
+export function spellRejectionMessage(error:string|undefined):string {
+  const text=String(error??"").trim();
+  if(!text) return REFUSAL_MESSAGES["spell-rejected"];
+  if(/[가-힣]/.test(text)) return text;
+  if(/^action is not available/.test(text)) return "행동을 이미 사용했습니다.";
+  if(/^bonus[- ]action is not available/.test(text)) return "추가 행동을 이미 사용했습니다.";
+  if(/^reaction is not available/.test(text)) return "반응을 이미 사용했습니다.";
+  if(/already expended a spell slot/.test(text)) return "이번 턴에 이미 주문 슬롯을 썼습니다.";
+  if(/spell slot/.test(text)&&/no |not available|insufficient|exhausted/.test(text)) return "주문 슬롯이 없습니다.";
+  return `시전 거부 · ${text}`;
 }
 
 let sequence=0;

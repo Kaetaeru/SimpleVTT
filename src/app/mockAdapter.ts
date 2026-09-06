@@ -126,6 +126,8 @@ export class MockAdapter implements SimpleVttAdapter {
   private session:AppSnapshot["session"]={name:"금요일 세션",address:"192.168.0.10:3210",role:"offline",compatibility:"compatible",compatibilityMessage:"RulesProfile과 활성 모듈이 호환됩니다.",participants:[{id:"user.aelar",name:"Player 1",characterName:"Aelar",state:"connected"},{id:"user.mira",name:"Player 2",characterName:"Mira",state:"connected"}],sessionContent:["Homebrew 0.1 · 철벽 수호자"]};
 
   /** V1.6 S1-01 — a refused command is recorded on the snapshot instead of returning silently. */
+  /** The base judgement of an action's availability (turn, economy, 0 HP, resources, items) for outer projections to re-apply. */
+  projectedAvailability(a:ActionVm){return this.availability(a);}
   protected refuse(code:string,message:string,actionId?:string,actorId?:string){this.refusal=makeRefusal(code,message,{actionId,actorId});return this.getSnapshot();}
   private entity(id:string){return this.scene.entities.find(e=>e.id===id);} private action(id:string){return Object.values(this.scene.actionsByActor).flat().find(a=>a.id===id);}
   private side(actorId:string){return this.entity(actorId)?.side??"ally";}
