@@ -170,7 +170,9 @@ function resolutionFromCast(
       calculatedOutcome:"시전 거부",finalOutcome:"시전 거부",stateChanges:[],adjudicated:false,canAdvance:false,
     };
   }
-  const outcome=result.events.at(-1)?.summary??"주문 적용";
+  // The kernel names effect applications by id ("effect <id> applied"); players read the damage/heal/save line instead.
+  const readable=[...result.events].reverse().find((event)=>!/^effect .* applied$/.test(event.summary))?.summary;
+  const outcome=readable??(result.events.length?"효과 적용":"주문 적용");
   const saveResults=saveResultsFromCast(result,targetIds,targetNames);
   return {
     id:result.events[0]?.resolutionId??`production-spell.${Date.now()}`,

@@ -77,7 +77,8 @@ test("Host and both Clients correlate the same session, event, and resolution id
     // Clients keep the Host event id and sequence next to the resolution id, so a log line from any peer can be joined on either key.
     for(const [label,activity] of [["P1",p1Activity],["P2",p2Activity]] as const){
       assert.ok(activity.detail.includes(`eventId=${event.eventId}`),`${label} detail must carry the Host event id`);
-      assert.equal(activity.summary,`Host event #${event.sequence}`);
+      assert.ok(activity.detail.includes(`Host event #${event.sequence}`),`${label} detail must carry the Host event sequence`);
+      assert.equal(activity.title.includes(resolutionId),false,`${label} title must read like the Host's entry, not the resolution id`);
       assert.ok(activity.detail.some((line)=>/^ResolutionEvent \d+개$/.test(line)),`${label} reports the applied event count, not the payload`);
       assert.equal(activity.detail.some((line)=>line.includes("authoritativeDice")||line.includes("{")),false,`${label} diagnostics must not dump raw payload JSON`);
     }
