@@ -1,5 +1,6 @@
 import "./persistenceContracts";
-import type { ActivityEntry, AppSnapshot, CatalogEntry, CharacterSheet, CharacterSummary, ConnectionState, SceneVm } from "./contracts";
+import type { ActivityEntry, AppSnapshot, CatalogEntry, CharacterSheet, CharacterSummary, ConnectionState, SceneVm, SessionRefusalVm } from "./contracts";
+import { makeRefusal, refusalMessageFor } from "./sessionRefusal";
 import { MockAdapter } from "./mockAdapter";
 import {
   CONNECTED_SESSION_PROTOCOL_VERSION,
@@ -60,6 +61,7 @@ export interface ConnectedAdapterState {
   scene:SceneVm;
   resolution:AppSnapshot["resolution"];
   resolutionPresentation:AppSnapshot["resolutionPresentation"];
+  refusal:SessionRefusalVm|null;
   activeCharacter:CharacterSheet;
   characters:CharacterSummary[];
   catalog:CatalogEntry[];
@@ -968,6 +970,8 @@ async function handleClientMessage(adapter:MockAdapter,wire:ConnectedWireMessage
   if (wire.type==="error") {
     app.session.compatibility="warning";
     app.session.compatibilityMessage=`${wire.code}: ${wire.message}`;
+    // S1-01: the player sees the Host's refusal in the dock, in the rules' words.
+    app.refusal=makeRefusal(wire.code,refusalMessageFor(wire.code,wire.message),{origin:"host"});
     if (wire.code==="invalid-event-cursor"&&state.mode==="client"&&(await recoverClientFromHostRestart(adapter))) return;
     await publishConnectedSnapshot(adapter);
   }

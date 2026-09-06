@@ -1,5 +1,6 @@
 import type { AppSnapshot } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
+import { isTableEconomyReason, makeRefusal, refusalMessageFor, targetRefusalFor } from "./sessionRefusal";
 import { registerConnectedActionRequestHandler } from "./connectedActionRequestPort";
 import { registerConnectedInterruptResponseHandler } from "./connectedInterruptResponsePort";
 import { registerConnectedConcentrationResponseHandler } from "./connectedConcentrationResponsePort";
@@ -352,7 +353,20 @@ registerConnectedActionRequestHandler(async (adapter,transportMessage,request) =
     if (!requestedAction.available) {
       ledger.cancelReservedActionRequest(request.requestId);
       restoreProjectedContext(adapter);
-      await sendConnectedWireTo(transportMessage.peer,{type:"error",code:"action-disabled",message:requestedAction.disabledReason??"Action is currently disabled",hostCursor:ledger.cursor});
+      const reason=requestedAction.disabledReason??refusalMessageFor("action-disabled");
+      connectedInternal(adapter).refusal=makeRefusal("action-disabled",reason,{origin:"remote",actorId:request.actorId,actionId:request.actionId});
+      await publishConnectedSnapshot(adapter);
+      await sendConnectedWireTo(transportMessage.peer,{type:"error",code:"action-disabled",message:reason,hostCursor:ledger.cursor});
+      return;
+    }
+    // S1-03/M2: the targets must be the ones the projection offers this actor.
+    const targetRefusal=targetRefusalFor(requestedAction,request.targetIds);
+    if (targetRefusal) {
+      ledger.cancelReservedActionRequest(request.requestId);
+      restoreProjectedContext(adapter);
+      connectedInternal(adapter).refusal=makeRefusal(targetRefusal.code,targetRefusal.message,{origin:"remote",actorId:request.actorId,actionId:request.actionId});
+      await publishConnectedSnapshot(adapter);
+      await sendConnectedWireTo(transportMessage.peer,{type:"error",code:"action-rejected",message:targetRefusal.message,hostCursor:ledger.cursor});
       return;
     }
     // The DM-facing availability projection never gates by turn (the DM may drive any Actor, and DM-owned
@@ -365,7 +379,9 @@ registerConnectedActionRequestHandler(async (adapter,transportMessage,request) =
       ledger.cancelReservedActionRequest(request.requestId);
       if (request.readyConfiguration) clearReadyActionConfiguration(adapter,request.actorId);
       restoreProjectedContext(adapter);
-      await sendConnectedWireTo(transportMessage.peer,{type:"error",code:"action-off-turn",message:`현재 Actor의 턴이 아닙니다: ${request.actorId} cannot act while ${snapshot.scene.currentActorId||"—"} holds the turn`,hostCursor:ledger.cursor});
+      connectedInternal(adapter).refusal=makeRefusal("action-off-turn",refusalMessageFor("action-off-turn"),{origin:"remote",actorId:request.actorId,actionId:request.actionId});
+      await publishConnectedSnapshot(adapter);
+      await sendConnectedWireTo(transportMessage.peer,{type:"error",code:"action-off-turn",message:refusalMessageFor("action-off-turn"),hostCursor:ledger.cursor});
       return;
     }
   }
@@ -400,7 +416,11 @@ registerConnectedActionRequestHandler(async (adapter,transportMessage,request) =
       ledger.cancelReservedActionRequest(request.requestId);
       if (request.readyConfiguration) clearReadyActionConfiguration(adapter,request.actorId);
       restoreProjectedContext(adapter);
-      await sendConnectedWireTo(transportMessage.peer,{type:"error",code:"action-rejected",message:"host production resolution path rejected the requested actor/action/targets",hostCursor:ledger.cursor});
+      // S1-01: the reason the Host's own adapter recorded travels to the player; the Host sees the player's refusal too.
+      const reason=next.refusal?.message??refusalMessageFor("action-rejected");
+      connectedInternal(adapter).refusal=makeRefusal("action-rejected",reason,{origin:"remote",actorId:request.actorId,actionId:request.actionId});
+      await publishConnectedSnapshot(adapter);
+      await sendConnectedWireTo(transportMessage.peer,{type:"error",code:"action-rejected",message:reason,hostCursor:ledger.cursor});
       return;
     }
     state.pendingRemoteAction={peer:transportMessage.peer,request:structuredClone(request),resolutionId:resolution.id,readyActionRole:actionFor(adapter,request.actorId,request.actionId)?.readyActionRole};
@@ -423,6 +443,7 @@ MockAdapter.prototype.resolveAction=async function resolveConnectedAction(action
     if (!state.sessionId||!state.replica||app.connectionState!=="connected") {
       app.session.compatibility="warning";
       app.session.compatibilityMessage="ActionRequest cannot be sent until the host handshake is complete.";
+      app.refusal=makeRefusal("not-connected",refusalMessageFor("not-connected"),{actionId});
       return app.getSnapshot();
     }
     const character=connectedManifest(this).character;
@@ -449,7 +470,15 @@ MockAdapter.prototype.resolveAction=async function resolveConnectedAction(action
   if (state.mode==="host"&&state.pendingRemoteAction) {
     app.session.compatibility="warning";
     app.session.compatibilityMessage="Resolve or dismiss the pending remote action before starting another shared action.";
+    app.refusal=makeRefusal("remote-pending",refusalMessageFor("remote-pending"),{actionId});
     return app.getSnapshot();
+  }
+  if (state.mode==="host") {
+    const local=await app.getSnapshot();
+    const localAction=Object.values(local.scene.actionsByActor).flat().find((entry)=>entry.id===actionId);
+    if (localAction&&!localAction.available&&isTableEconomyReason(localAction.disabledReason)) { app.refusal=makeRefusal("action-unavailable",localAction.disabledReason??refusalMessageFor("action-unavailable"),{actionId,actorId:localAction.actorId}); return app.getSnapshot(); }
+    const localRefusal=targetRefusalFor(localAction,targetIds);
+    if (localRefusal) { app.refusal=makeRefusal(localRefusal.code,localRefusal.message,{actionId,actorId:localAction?.actorId}); return app.getSnapshot(); }
   }
   const armedVisibility=state.mode==="host"?state.nextResolutionVisibility:null;
   const previousResolutionId=app.resolution?.id;
