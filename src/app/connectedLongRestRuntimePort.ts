@@ -1,4 +1,5 @@
 import type { AppSnapshot, CharacterSheet } from "./contracts";
+import { broadcastConnectedCampaignProjection } from "./connectedCampaignProjectionPort";
 import { MockAdapter } from "./mockAdapter";
 import {
   beginConnectedLongRestTransaction,
@@ -357,6 +358,9 @@ export async function recordConnectedLongRestHostOwnerPrepared(adapter:MockAdapt
   catch(error){const reason=`connected Long Rest Host durable prepare failed: ${error instanceof Error?error.message:String(error)}`;record.transaction=abortConnectedLongRestTransaction(ownerPrepared,reason);await store.write(durableRecord(record.transaction)).catch(()=>undefined);return {status:"aborted" as const,peer,transactionId:prepared.transactionId,reason};}
   try{
     const campaign=await commitConnectedLongRestCampaignParticipant(adapter,ownerPrepared.preflight);
+    // The commit wrote the Campaign library directly (not through the wrapped calendar/ration methods), so the
+    // players' 캠페인 clock and rations would stay stale until the DM's next edit: push the projection now.
+    await broadcastConnectedCampaignProjection(adapter).catch(()=>undefined);
     const commit:ConnectedLongRestGlobalCommit={transactionId:prepared.transactionId,campaignCommitId:campaign.campaignCommitId,ownerParticipantId:prepared.ownerParticipantId,character:cp(prepared.character),preparationId:prepared.preparationId};
     record.transaction=commitConnectedLongRestTransaction(record.transaction,commit);
     let persistenceWarning:string|undefined;try{await store.write(durableRecord(record.transaction));}catch(error){persistenceWarning=`Host coordinator commit phase persistence needs recovery: ${error instanceof Error?error.message:String(error)}`;}

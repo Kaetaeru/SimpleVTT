@@ -1,6 +1,7 @@
 import type { CampaignSessionSystemsProjection } from "./campaignPersistenceContracts";
 import type { DmInventoryAdjustmentCommand, PartyStashTransferCommand, SessionCharacterInventoryVm } from "./contracts";
 import { connectedStateFor } from "./connectedSessionState";
+import { registerConnectedCampaignProjectionBroadcaster } from "./connectedCampaignProjectionPort";
 import { publishConnectedSnapshot } from "./connectedSessionRuntimeAdapter";
 import { buildCharacterSessionProjectionV1, type CharacterSessionProjectionV1 } from "./characterSessionProjection";
 import { reconstructCharacterSessionProjectionV1 } from "./characterSessionProjectionReconstruction";
@@ -79,6 +80,7 @@ async function broadcastProjection(adapter:MockAdapter){
   const peers=[...connectedStateFor(adapter).peerParticipants.keys()];
   await Promise.all(peers.map((peer)=>baseSendTo(peer,message)));
 }
+registerConnectedCampaignProjectionBroadcaster(broadcastProjection);
 async function sendToWithCampaignSystems(peer:string,message:string){
   const result=await baseSendTo(peer,message);const sessionId=compatibleHelloAck(message);const host=activeHostAdapter;
   if(!host||!sessionId) return result;const envelope=await envelopeFor(host);if(envelope&&envelope.sessionId===sessionId) await baseSendTo(peer,JSON.stringify(envelope));return result;
