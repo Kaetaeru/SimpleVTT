@@ -147,14 +147,18 @@ MockAdapter.prototype.advanceResolution=async function advanceSessionStatusEffec
   const effect=statusEffect(action);
   if(!resolution||!action)return previousAdvanceResolution.call(this);
   const expectedStage=action.resolutionKind==="ability-check"?"roll-animation":"effect-preview";
-  const before=effect&&resolution.stage===expectedStage&&internal.sessionMode==="initiative"?structuredClone(internal.scene.economyByActor[resolution.actorId]):undefined;
+  // V1.6 S1-04 (무너진 종탑 장면 1): the status effect commits in 자유 진행 too — a Help/Dodge/Disengage/Hide that only
+  // touched the Host's status list left the players with nothing and a remote request refused as not event-native.
+  // The turn economy is Initiative-only, so its event is only recorded there.
+  const committing=Boolean(effect)&&resolution.stage===expectedStage;
+  const before=committing&&internal.sessionMode==="initiative"?structuredClone(internal.scene.economyByActor[resolution.actorId]):undefined;
   const snapshot=await previousAdvanceResolution.call(this);
-  if(before&&snapshot.resolution?.id===resolution.id&&snapshot.resolution.stage==="complete") {
+  if(committing&&snapshot.resolution?.id===resolution.id&&snapshot.resolution.stage==="complete") {
     const after=internal.scene.economyByActor[resolution.actorId];
     const succeeded=effect!.minimumRoll===undefined||(resolution.rollTotal??0)>=effect!.minimumRoll;
     const events=commitStatusEffect(this,internal,action,resolution,succeeded);
-    if(after&&events) {
-      combineEvents(this,resolution.id,[economyEvent(resolution,action.id,before,after),...events]);
+    if(events) {
+      combineEvents(this,resolution.id,[...(before&&after?[economyEvent(resolution,action.id,before,after)]:[]),...events]);
       return internal.getSnapshot();
     }
   }
