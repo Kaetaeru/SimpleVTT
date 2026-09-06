@@ -133,8 +133,9 @@ async function runScenario(){
   const joined=await waitState(host,(s)=>s.entities.filter((e)=>e.kind==="character").length===2,"both players in the Host scene");
   const names=joined.entities.filter((e)=>e.kind==="character").map((e)=>e.name).sort();assert.deepEqual(names,["C1 Cleric","C1 Fighter"],`Host scene characters must be the two players only; got ${JSON.stringify(names)}`);
   assert.ok(!names.includes("Aelar"),"the DM's saved character must never enter the hosted scene");
-  const hostBody=await bodyText(host);assert.equal(/Aelar/.test(hostBody),false,"the Host workspace must not name the DM's saved character");
   await evidenceAll(peers(),"c1-mp-01-joined");
+  assert.equal(joined.activity.some((e)=>e.actor==="Aelar"||e.actor==="Mira"),false,`the reference fixture's 기록 entries must not appear in a hosted session; activity=${JSON.stringify(joined.activity.map((e)=>e.actor+": "+e.title))}`);
+  const hostBody=await bodyText(host);const aelarAt=hostBody.indexOf("Aelar");assert.equal(aelarAt,-1,`the Host workspace must not name the DM's saved character; context=${JSON.stringify(hostBody.slice(Math.max(0,aelarAt-80),aelarAt+80))}`);
   record("C1-MP-01",{hostRole:hosted.role,characters:names,participants:joined.participants});
   try{
     // C1-MP-02 — an SRD monster added from the 인카운터 search reaches every peer with its catalog name and stat block.
