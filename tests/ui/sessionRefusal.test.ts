@@ -78,6 +78,19 @@ test("S1-03/M2: the Host refuses an enemy-only action aimed at the actor himself
   assert.equal(isTableEconomyReason(undefined),false);
 });
 
+test("S1-04: a reaction and a readied trigger stay available off-turn; an action does not", async () => {
+  const adapter=new MockAdapter();
+  await adapter.startInitiative();
+  await adapter.setCurrentActor("combatant.goblin-a");
+  const base={actorId:"char.aelar",name:"x",category:"basic" as const,target:"enemy" as const,resolutionKind:"attack" as const,summary:"",available:true,eligibleTargetIds:[],details:[]};
+  const reaction=adapter.projectedAvailability({...base,id:"test.reaction",economy:"반응"} as never);
+  const trigger=adapter.projectedAvailability({...base,id:"test.trigger",economy:"행동",readyActionRole:"trigger"} as never);
+  const action=adapter.projectedAvailability({...base,id:"test.action",economy:"행동"} as never);
+  assert.equal(reaction.available,true);
+  assert.equal(trigger.available,true);
+  assert.deepEqual(action,{available:false,reason:"현재 Actor의 턴이 아닙니다."});
+});
+
 test("S1-01: refusal ids only grow, so a notice can key on them", () => {
   const first=makeRefusal("x","a");const second=makeRefusal("x","a");
   assert.ok(second.id>first.id);
