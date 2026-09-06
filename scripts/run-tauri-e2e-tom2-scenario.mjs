@@ -292,7 +292,8 @@ async function runScenario(){
     await evidenceAll(peers,"tom2-02d-death-save");
     // 세라의 턴 — 안정화(의학 판정), 다음 턴 상처 치료로 일어남.
     await walkToActor(host,sera.id);
-    const stabilize=await playerCheck(p1,sera.id,"action.standard.stabilize",15,host,10);
+    // 안정화 is a targeted 의학 check against a fixed DC 10: the downed character is the target.
+    const stabilize=await playerAct(p1,sera.id,(a)=>a.id==="action.standard.stabilize"&&a.available,[kael.id],15,host,"세라 안정화 → 카엘");
     await expectConverged(peers,stabilize.resolutionId,"장면2 안정화");
     await closeResultCard(host);
     await walkToActor(host,sera.id);
