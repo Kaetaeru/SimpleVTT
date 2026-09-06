@@ -242,6 +242,22 @@ test("S1-04: effects and concentration committed in 자유 진행 survive 이니
   assert.equal((await adapter.getSnapshot()).sessionMode,"freeform");
 });
 
+test("S1-04: an actor added to the scene after the runtime session exists gets a runtime combatant, and its effects project as chips", async () => {
+  const adapter=new MockAdapter();
+  await adapter.endInitiative();
+  const internal=adapter as unknown as {scene:import("../../src/app/contracts").SceneVm};
+  ensureAdapterTurnRuntimeState(adapter,internal.scene);
+  internal.scene.entities.push({id:"late.skeleton",name:"해골 1",side:"enemy",kind:"combatant",hp:13,maxHp:13,tempHp:0,ac:14,initiative:14,status:[],resistances:[],immunities:[],vulnerabilities:[],reactions:[]} as never);
+  const state=snapshotAdapterTurnRuntimeState(adapter,internal.scene);
+  assert.ok(state?.combatants["late.skeleton"],"the late actor is a runtime combatant");
+  const seeded=state!;
+  seeded.effects.push(createEffect({id:"test:grapple",sourceId:"action.unarmed-strike.grapple",targetId:"late.skeleton",kind:"condition",conditionId:"grappled",duration:{kind:"special",key:"escape:char.aelar"}},seeded.clock));
+  const expected=seeded.revision;seeded.revision+=1;
+  assert.equal(commitAdapterTurnRuntimeState(adapter,internal.scene,expected,seeded),true);
+  const skeleton=(await adapter.getSnapshot()).scene.entities.find((entry)=>entry.id==="late.skeleton");
+  assert.ok(skeleton?.status.some((status)=>status.includes("붙잡힘")),`the late actor's effect projects as a chip; got ${JSON.stringify(skeleton?.status)}`);
+});
+
 test("ending initiative releases the runtime session and returns to freeform", async () => {
   const adapter=new MockAdapter();
   await adapter.startInitiative();
