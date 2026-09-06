@@ -36,3 +36,14 @@ test("S1-04: DM narrative damage to 0 HP kills a monster", async () => {
   assert.equal(goblin.hp,0);
   assert.equal(goblin.runtimeLife?.dead,true);
 });
+
+test("S1-01: 안정화 guards refuse with a reason instead of returning the unchanged snapshot", async () => {
+  const adapter=new MockAdapter();
+  await adapter.setReferenceRole("dm");
+  await adapter.startInitiative();
+  await adapter.setCurrentActor("char.aelar");
+  await adapter.selectDmActor("char.aelar");
+  const refused=await adapter.resolveAction("action.standard.stabilize",["combatant.goblin-a"]);
+  assert.ok(refused.refusal,"a refusal is recorded");
+  assert.match(refused.refusal!.message,/안정화|불안정한 대상/);
+});
