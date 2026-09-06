@@ -230,17 +230,24 @@ async function runScenario(){
     const skeletons=await addSrdMonstersViaUi(host,"해골","해골",2);
     const [boss]=await addSrdMonstersViaUi(host,"고블린 보스","고블린 보스",1);
     await expectTomParity(peers,"장면3 관문");
-    await hostCall(host,`await mockAdapter.setNextResolutionVisibility({hidden:["roll"]});`);
     const trap=await playerCheck(p1,sera.id,"action.standard.study.investigation",9,host,15);
-    await waitActivityIds(p2,[trap.resolutionId]);
-    const hiddenOnP2=await tomState(p2);const hiddenView=hiddenOnP2.resolution&&hiddenOnP2.resolution.id===trap.resolutionId?hiddenOnP2.resolution:null;
-    const hostView=(await tomState(host)).activity.find((e)=>e.id===trap.resolutionId);
-    await hostCall(host,`await mockAdapter.discloseResolution(args.id,["roll"]);`,{id:trap.resolutionId});
-    const disclosed=await waitTom(p2,(s)=>s.activity.some((e)=>e.title.startsWith("DM 공개")),"P2 receiving the disclosure",20_000);
+    await expectConverged(peers,trap.resolutionId,"장면3 조사");
     await evidenceAll(peers,"tom-04a-gate");
     await clickInitiative(host,"이니셔티브 시작");
     await waitTom(host,(s)=>s.mode==="initiative","Initiative at the gate");
     await expectTomParity(peers,"장면3 이니셔티브");
+    // 이빨 shoots from the dark: the DM hides the attack roll (비공개 굴림 applies to the DM's own next resolution), then discloses it.
+    await walkToActor(host,boss);
+    await hostCall(host,`await mockAdapter.setNextResolutionVisibility({hidden:["roll"]});`);
+    const shot=await hostAttack(host,{actorId:boss,targetId:kael.id,queued:14,match:"단궁|shortbow"});
+    await waitActivityIds(p2,[shot.resolutionId]);
+    const hiddenOnP2=await tomState(p2);const hiddenView=hiddenOnP2.resolution&&hiddenOnP2.resolution.id===shot.resolutionId?hiddenOnP2.resolution:null;
+    if(hiddenView)assert.equal(hiddenView.dice.length,0,`P2 must not see the hidden d20; got ${JSON.stringify(hiddenView)}`);
+    const hostView=(await tomState(host)).activity.find((e)=>e.id===shot.resolutionId);
+    await hostCall(host,`await mockAdapter.discloseResolution(args.id,["roll"]);`,{id:shot.resolutionId});
+    const disclosed=await waitTom(p2,(s)=>s.activity.some((e)=>e.title.startsWith("DM 공개")),"P2 receiving the disclosure",20_000);
+    await evidenceAll(peers,"tom-04b-hidden-shot");
+    // Next round: the boss's multiattack routine.
     await walkToActor(host,boss);
     const known=new Set((await tomState(host)).activity.map((e)=>e.id));
     const bossName=ent(await tomState(host),boss).name;
@@ -261,14 +268,14 @@ async function runScenario(){
     const bolt=await playerAct(p1,sera.id,(a)=>a.spellId==="dnd.srd521.spell.guiding-bolt"&&a.available,[boss],15,host,"세라 유도 화살 → 보스");
     await expectConverged(peers,bolt.resolutionId,"장면3 유도 화살");
     await expectTomParity(peers,"장면3 전투 후");
-    await evidenceAll(peers,"tom-04b-gate-fight");
+    await evidenceAll(peers,"tom-04c-gate-fight");
     await clickInitiative(host,"이니셔티브 종료");
     await waitTom(host,(s)=>s.mode==="freeform","freeform after the gate");
     const rosterIds=(await tomState(host)).campaign.roster.filter((m)=>m.characterId).map((m)=>m.id);
     await rawCall(host,`await mockAdapter.grantCampaignAdvancement(args.id,{rosterMemberIds:args.members,kind:"xp",amount:150});`,{id:campaignId,members:rosterIds});
     const xp=await waitTom(p1,(s)=>(s.campaign?.roster??[]).some((m)=>m.characterId===sera.id&&m.xp>=150),"세라 seeing 150 XP",20_000);
     await evidenceAll(peers,"tom-05-xp");
-    record("장면3-관문",{skeletons,boss:bossName,hiddenCheck:{host:hostView?{title:hostView.title,summary:hostView.summary}:null,p2ResolutionView:hiddenView,p2Disclosure:disclosed.activity.find((e)=>e.title.startsWith("DM 공개"))},multiattack:multi,heal:{before:kaelBefore,after:ent(healed,kael.id).hp,compact:heal.compact},cut,bolt,xp:xp.campaign.roster.map((m)=>({label:m.label,xp:m.xp}))});
+    record("장면3-관문",{skeletons,boss:bossName,investigation:trap,hiddenShot:{host:hostView?{title:hostView.title,summary:hostView.summary}:null,p2ResolutionView:hiddenView,p2Disclosure:disclosed.activity.find((e)=>e.title.startsWith("DM 공개"))},multiattack:multi,heal:{before:kaelBefore,after:ent(healed,kael.id).hp,compact:heal.compact},cut,bolt,xp:xp.campaign.roster.map((m)=>({label:m.label,xp:m.xp}))});
 
     // 마무리 — 세션 종료, 캠페인 세션 요약.
     await click(host.browser,exactButton("← 제품"),"Host ← 제품");await click(host.browser,navButton("세션"),"Host 세션 메뉴");
