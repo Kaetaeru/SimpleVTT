@@ -231,7 +231,7 @@ async function runScenario(){
 
     // MP-C30: Activity detail after presentation matches the immutable committed resolution on every peer.
     const hostActivity=(await peerState(host)).activity.find((e)=>e.id===c01Done.resolution.id);
-    for(const p of [p1,p2]){const e=(await peerState(p)).activity.find((x)=>x.id===c01Done.resolution.id);assert.deepEqual(e.stateChanges,hostActivity.stateChanges,`${p.label} state changes diverge for the committed resolution`);const text=await renderedActivityText(p);assert.ok(text.includes(c28Done.resolution.id),`${p.label} must still render the latest committed entry`);await closeActivity(p);}
+    for(const p of [p1,p2]){const e=(await peerState(p)).activity.find((x)=>x.id===c01Done.resolution.id);assert.deepEqual(e.stateChanges,hostActivity.stateChanges,`${p.label} state changes diverge for the committed resolution`);const text=await renderedActivityText(p);const latest=(await peerState(p)).activity.find((x)=>x.id===c28Done.resolution.id);assert.ok(latest&&text.includes(latest.title),`${p.label} must still render the latest committed entry; got ${text.slice(0,200)}`);await closeActivity(p);}
     record("MP-C30",{resolutionId:c01Done.resolution.id,title:hostActivity.title,renderedLatest:c28Done.resolution.id});
 
     // ------------------------------------------------------------------------------------------
