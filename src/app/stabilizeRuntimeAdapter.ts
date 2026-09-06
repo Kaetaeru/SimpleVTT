@@ -1,6 +1,7 @@
 import "./lifeRuntimeContracts";
 import type { ActionVm, ActivityEntry, AppRole, AppSnapshot, CharacterSheet, ResolutionView, SceneEntity, SceneVm, SessionMode } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
+import { makeRefusal } from "./sessionRefusal";
 import { applyResolutionEvents } from "./realEventApplyService";
 import { projectResolutionEventsToActivity } from "./realActivityProjectionService";
 import { recordRuntimeResolutionEvents } from "./runtimeResolutionEventHistory";
@@ -69,10 +70,15 @@ MockAdapter.prototype.resolveAction=async function resolveStabilize(actionId:str
   const snapshot=await internal.getSnapshot();
   const action=actorAction(snapshot.scene);
   const targetId=targetIds[0];
-  if (!action?.available||targetIds.length!==1||!action.eligibleTargetIds.includes(targetId)) return snapshot;
-  if (internal.sessionMode==="initiative"&&internal.role==="player"&&action.actorId!==internal.scene.currentActorId) return snapshot;
+  // V1.6 S1-01: every guard refuses with its reason instead of returning the unchanged snapshot.
+  const refuse=(code:string,message:string)=>{(internal as unknown as {refusal:unknown}).refusal=makeRefusal(code,message,{actionId:ACTION_ID,actorId:action?.actorId});return internal.getSnapshot();};
+  if (!action) return refuse("action-unknown","안정화 행동이 없습니다.");
+  if (!action.available) return refuse("action-unavailable",action.disabledReason??"지금은 안정화할 수 없습니다.");
+  if (targetIds.length!==1) return refuse("too-many-targets","안정화 대상은 한 명입니다.");
+  if (!action.eligibleTargetIds.includes(targetId)) return refuse("target-ineligible",action.eligibleTargetReasons?.[targetId]??"HP 0의 불안정한 대상만 안정화할 수 있습니다.");
+  if (internal.sessionMode==="initiative"&&internal.role==="player"&&action.actorId!==internal.scene.currentActorId) return refuse("action-off-turn","현재 Actor의 턴이 아닙니다.");
   const state=snapshotAdapterTurnRuntimeState(this,internal.scene);
-  if (!state?.combatants[action.actorId]||!state.combatants[targetId]) return snapshot;
+  if (!state?.combatants[action.actorId]||!state.combatants[targetId]) return refuse("runtime-missing","전투 상태에 없는 대상입니다.");
   const resolutionId=`stabilize.${Date.now()}.${Math.floor(Math.random()*1000)}`;
   const rollId=`${resolutionId}:medicine`;
   const faces=[0,1].map((index)=>(MockAdapter.prototype as unknown as DicePrototype).d20.call(this,ACTION_ID,index));
@@ -84,9 +90,9 @@ MockAdapter.prototype.resolveAction=async function resolveStabilize(actionId:str
       {id:`${resolutionId}:stabilize`,kind:"stabilize",targetId,when:{operationId:rollId,field:"outcome",equals:"success"}},
     ],
   });
-  if (committed.status==="rejected") return snapshot;
+  if (committed.status==="rejected") return refuse("stabilize-rejected",`안정화 거부 · ${committed.error}`);
   const projected=applyResolutionEvents(internal.scene,committed.events);
-  if (projected.status==="rejected") return snapshot;
+  if (projected.status==="rejected") return refuse("stabilize-rejected",`안정화 거부 · ${projected.error}`);
   const writeBack=await persistCharacterResolutionEvents(this,committed.events,"forward");
   if (writeBack.status==="rejected") return snapshot;
   if (!commitAdapterTurnRuntimeState(this,internal.scene,state.revision,committed.state)) {

@@ -21,6 +21,28 @@ function eventWithChanges(stateChanges:ResolutionEvent["stateChanges"]):Resoluti
   };
 }
 
+test("S1-04: the owner's replica seeds its own first spell-slot resource from the Host's cast event instead of rejecting it", async () => {
+  const adapter=new MockAdapter();
+  const snapshot=await adapter.getSnapshot();
+  const session=createTurnRuntimeSession(snapshot.scene);
+  const caster=session.state.combatants["char.aelar"];
+  assert.ok(caster);
+  caster.resources=caster.resources.filter((entry)=>!entry.id.startsWith("spell-slot-"));
+  const event=eventWithChanges([{
+    kind:"resource",targetId:"char.aelar",resourceId:"spell-slot-1",before:2,after:1,
+    capacity:{before:{maximum:2,maximumAfterLongRest:null},after:{maximum:2,maximumAfterLongRest:null}},
+    provenance:[],lifetime:"character-durable",writeBack:"character",
+  } as ResolutionEvent["stateChanges"][number]]);
+  const rejectedWithoutOwner=applyResolutionEvents(snapshot.scene,[event],[],[],session.state);
+  assert.equal(rejectedWithoutOwner.status,"rejected","without an owner scope a missing resource is still a drift");
+  const applied=applyResolutionEvents(snapshot.scene,[event],[],[],session.state,{ownerId:"char.aelar"});
+  assert.equal(applied.status,"committed",JSON.stringify(applied));
+  const seeded=applied.status==="committed"?applied.runtimeState?.combatants["char.aelar"]?.resources.find((entry)=>entry.id==="spell-slot-1"):undefined;
+  assert.deepEqual(seeded&&{current:seeded.current,maximum:seeded.maximum},{current:1,maximum:2});
+  const again=applyResolutionEvents(snapshot.scene,[eventWithChanges([{kind:"resource",targetId:"char.aelar",resourceId:"spell-slot-1",before:1,after:0,provenance:[],lifetime:"character-durable",writeBack:"character"} as ResolutionEvent["stateChanges"][number]])],[],[],applied.status==="committed"?applied.runtimeState:undefined,{ownerId:"char.aelar"});
+  assert.equal(again.status,"committed","the second cast applies against the seeded resource");
+});
+
 test("authoritative ResolutionEvent applies HP, economy, and ItemInstance mutation forward once", async () => {
   const adapter=new MockAdapter();
   const snapshot=await adapter.getSnapshot();

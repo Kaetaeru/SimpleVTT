@@ -119,3 +119,8 @@ import "./commonPlayFormProjectionAdapter";
 import "./campaignRuntimeAdapter";
 import "./campaignPartyStashCapabilityRuntimeAdapter";
 import "./campaignRationConversionRuntimeAdapter";
+// V1.6 S1-04: the displayed AC includes active AC-bonus effects (신앙의 방패); display only, outermost.
+import "./effectArmorClassProjectionAdapter";
+// V1.6 S1-04: re-apply the base availability judgement to every projected action, and turn a kernel-rejected cast
+// into a refusal. Outermost of the offline chain; the connected adapters wrap it.
+import "./actionAvailabilityProjectionAdapter";

@@ -119,6 +119,30 @@ export function createTurnRuntimeSession(scene:SceneVm):TurnRuntimeSession {
   return { state, initiativeOrder:ordered, activeIndex:Math.max(0,ordered.indexOf(activeActorId)) };
 }
 
+/**
+ * V1.6 S1-04 (무너진 종탑 장면 2): effects, concentration, artifacts and zone memberships committed before a mode change
+ * belong to the table, not to the Initiative session — 카엘's 도움 on 세라 and 세라's 신앙의 방패 concentration were dropped on the
+ * Host by 이니셔티브 시작 (a fresh session) while every replica kept them. Carry them into the new session; the turn
+ * clock, order and turn-bound feature usage start fresh.
+ */
+export function carryOverRuntimeState(previous:RulesRuntimeState|undefined,next:RulesRuntimeState) {
+  if (!previous) return next;
+  const known=new Set(Object.keys(next.combatants));
+  next.effects=previous.effects.filter((effect)=>known.has(effect.targetId)).map((effect)=>structuredClone(effect));
+  next.concentration=Object.fromEntries(Object.entries(previous.concentration).filter(([actorId,entry])=>entry&&known.has(actorId)).map(([actorId,entry])=>[actorId,structuredClone(entry)]));
+  if (previous.artifacts?.length) next.artifacts=structuredClone(previous.artifacts);
+  if (previous.zoneMemberships?.length) next.zoneMemberships=structuredClone(previous.zoneMemberships);
+  // Spent resources (spell slots, class features) belong to the creature, not to the session: a fresh session rebuilt
+  // them at full, so 세라's slot spent in 자유 진행 came back at 이니셔티브 시작 on the Host while every replica kept it
+  // spent, and her next cast drifted ("expected 2, current 1"). The economy is turn-bound and stays fresh.
+  for (const [id,combatant] of Object.entries(previous.combatants)) {
+    const carried=next.combatants[id];
+    if (!carried) continue;
+    carried.resources=combatant.resources.map((resource)=>structuredClone(resource));
+  }
+  return next;
+}
+
 export function addTurnRuntimeCombatant(session:TurnRuntimeSession,scene:SceneVm,entityId:string) {
   const entity=scene.entities.find((entry)=>entry.id===entityId);
   if (!entity || session.state.combatants[entityId]) return false;
@@ -221,6 +245,21 @@ function sameProjectedLife(runtime:RulesRuntimeState["combatants"][string]["life
 export function synchronizeTurnRuntimeFromScene(session:TurnRuntimeSession,scene:SceneVm) {
   const state=cloneRuntimeState(session.state);
   let changed=false;
+  // V1.6 S1-04 (무너진 종탑 장면 2): an actor that joined the scene after this runtime session was created — a monster the
+  // DM added mid-session, seen by a replica through the scene topology — had no runtime combatant here, so its effects
+  // (해골 1's 붙잡힘) were never projected as chips on that peer. Seed missing combatants from the scene.
+  let joined=false;
+  for (const entity of scene.entities) {
+    if (state.combatants[entity.id] || entity.runtimeArtifactId) continue;
+    state.combatants[entity.id]=runtimeCombatant(scene,entity);
+    joined=true;
+  }
+  if (joined) {
+    changed=true;
+    const activeActorId=state.clock.activeActorId;
+    session.initiativeOrder=initiativeOrder(scene);
+    session.activeIndex=Math.max(0,activeActorId ? session.initiativeOrder.indexOf(activeActorId) : 0);
+  }
   for (const id of session.initiativeOrder) {
     const runtime=state.combatants[id];
     const projected=scene.economyByActor[id];

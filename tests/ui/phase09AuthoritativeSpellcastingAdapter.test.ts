@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import "../../src/app/phase09AuthoritativeSpellcastingAdapter";
+import "../../src/app/actionAvailabilityProjectionAdapter";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import { snapshotAdapterTurnRuntimeState } from "../../src/app/turnRuntimeSessionRegistry";
 
@@ -76,10 +77,12 @@ test("second slotted spell cast in the same authoritative turn rejects without s
   await adapter.resolveAction("action.healing-word",["char.aelar"]);
   assert.equal(spellSlotCurrent(adapter,1),3);
 
-  await adapter.resolveAction("action.healing-word",["char.aelar"]);
+  const refused=await adapter.resolveAction("action.healing-word",["char.aelar"]);
+  // V1.6 S1-04: a kernel rejection is a refusal in the rules' words, not a completed 시전 거부 card.
+  assert.equal(refused.refusal?.code,"spell-rejected");
+  assert.equal(refused.refusal?.message,"이번 턴에 이미 주문 슬롯을 썼습니다.");
   const snapshot=await adapter.getSnapshot();
-  assert.match(snapshot.resolution?.finalOutcome ?? "",/시전 거부/);
-  assert.ok(snapshot.resolution?.detail.some((line)=>/already expended a spell slot/.test(line)));
+  assert.doesNotMatch(snapshot.resolution?.finalOutcome ?? "",/시전 거부/);
   assert.equal(spellSlotCurrent(adapter,1),3);
   assert.equal(snapshot.scene.economyByActor["char.mira"]?.bonusAction,false);
 });

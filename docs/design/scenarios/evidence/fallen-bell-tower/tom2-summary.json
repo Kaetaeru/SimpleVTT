@@ -1,0 +1,301 @@
+{
+  "gate": "S1-04",
+  "scenario": "무너진 종탑",
+  "status": "PASS",
+  "verificationSha": "1fcad1a852c7ee717da415b672f69718fa77fbdc",
+  "windowsTauri": true,
+  "topology": {
+    "host": "DM Host (no character)",
+    "clients": [
+      "P1 세라 (클레릭)",
+      "P2 카엘 (파이터)"
+    ],
+    "sessionPort": 61530,
+    "campaignId": "campaign.무너진-종탑.1788724862377"
+  },
+  "beats": {
+    "장면1-마을": {
+      "status": "PASS",
+      "potion": 1,
+      "shield": {
+        "resolutionId": "production-spell-cast.dnd.srd521.spell.shield-of-faith.1788724865081",
+        "name": "신앙의 방패",
+        "dice": [],
+        "compact": "신앙의 방패 · 1레벨 슬롯 · char.fbc0cb79-0010-4dec-9ae9-88cfd849f15e concentrates on production-spell-cast.dnd.srd521.spell.shield-of-faith.1788724865081:concentration",
+        "finalOutcome": "char.fbc0cb79-0010-4dec-9ae9-88cfd849f15e concentrates on production-spell-cast.dnd.srd521.spell.shield-of-faith.1788724865081:concentration",
+        "saves": []
+      },
+      "shielded": {
+        "TOM2 Host": {
+          "hp": 11,
+          "ac": 18,
+          "status": []
+        },
+        "TOM2 P1": {
+          "hp": 11,
+          "ac": 18,
+          "status": []
+        },
+        "TOM2 P2": {
+          "hp": 11,
+          "ac": 18,
+          "status": []
+        }
+      },
+      "help": {
+        "resolutionId": "resolution.1788724866230.702",
+        "name": "도움",
+        "dice": [],
+        "compact": "지원",
+        "finalOutcome": "지원",
+        "saves": []
+      },
+      "selfTarget": {
+        "action": "신성한 불길",
+        "code": "action-rejected",
+        "message": "그 대상에게는 사용할 수 없습니다."
+      }
+    },
+    "막간-되돌리기": {
+      "status": "PASS",
+      "undoTarget": "death-save.1788724916228.297",
+      "cursor": [
+        53,
+        54
+      ]
+    },
+    "장면2-계단": {
+      "status": "PASS",
+      "crowd": {
+        "action": "신성한 불길",
+        "code": "action-rejected",
+        "message": "대상은 최대 1명입니다."
+      },
+      "grapple": {
+        "resolutionId": "structural-save-condition.1788724875278.259",
+        "name": "맨손 타격 · 붙잡기",
+        "dice": [
+          3,
+          8
+        ],
+        "compact": "해골 1 DEX 6 vs DC 13 · 붙잡힘 적용",
+        "finalOutcome": "붙잡힘 적용",
+        "saves": [
+          {
+            "dc": 13,
+            "outcome": "실패",
+            "targetId": "dnd.srd521.monster.skeleton.instance-1",
+            "targetName": "해골 1",
+            "total": 6
+          }
+        ]
+      },
+      "grappled": {
+        "TOM2 Host": {
+          "hp": 13,
+          "ac": 14,
+          "status": [
+            "✦ 붙잡힘 · 맨손 타격 · 붙잡기"
+          ]
+        },
+        "TOM2 P1": {
+          "hp": 13,
+          "ac": 14,
+          "status": [
+            "✦ 붙잡힘 · 맨손 타격 · 붙잡기"
+          ]
+        },
+        "TOM2 P2": {
+          "hp": 13,
+          "ac": 14,
+          "status": [
+            "✦ 붙잡힘 · 맨손 타격 · 붙잡기"
+          ]
+        }
+      },
+      "spent": {
+        "action": "대검",
+        "code": "action-disabled",
+        "message": "행동을 이미 사용했습니다."
+      },
+      "guidance": {
+        "resolutionId": "production-spell-cast.dnd.srd521.spell.guidance.1788724878526",
+        "name": "인도",
+        "dice": [],
+        "compact": "인도 · char.fbc0cb79-0010-4dec-9ae9-88cfd849f15e concentrates on production-spell-cast.dnd.srd521.spell.guidance.1788724878526:concentration",
+        "finalOutcome": "char.fbc0cb79-0010-4dec-9ae9-88cfd849f15e concentrates on production-spell-cast.dnd.srd521.spell.guidance.1788724878526:concentration",
+        "saves": []
+      },
+      "unshielded": {
+        "TOM2 Host": {
+          "hp": 11,
+          "ac": 16,
+          "status": []
+        },
+        "TOM2 P1": {
+          "hp": 11,
+          "ac": 16,
+          "status": []
+        },
+        "TOM2 P2": {
+          "hp": 11,
+          "ac": 16,
+          "status": []
+        }
+      },
+      "cureRefused": {
+        "action": "상처 치료",
+        "code": "action-disabled",
+        "message": "행동을 이미 사용했습니다."
+      },
+      "slam": {
+        "id": "resolution.phase09.1788724881401.153",
+        "save": {
+          "dc": 10,
+          "natural": 3,
+          "outcome": "실패",
+          "targetId": "char.fbc0cb79-0010-4dec-9ae9-88cfd849f15e",
+          "total": 5
+        }
+      },
+      "ready": {
+        "armed": "resolution.1788724901356.281",
+        "fired": "resolution.phase09.1788724905825.162"
+      },
+      "narrative": {
+        "full": 11,
+        "halved": 6,
+        "healedBack": 11
+      },
+      "deathSave": {
+        "resolutionId": "death-save.1788724916228.297",
+        "name": "죽음 내성 굴림",
+        "dice": [
+          12
+        ],
+        "compact": "d20 12 · 성공",
+        "finalOutcome": "성공",
+        "saves": []
+      },
+      "stabilize": {
+        "resolutionId": "stabilize.1788724919761.517",
+        "name": "안정화",
+        "dice": [
+          15,
+          14
+        ],
+        "compact": "의학 17 vs DC 10 · 안정화 성공",
+        "finalOutcome": "안정화 성공",
+        "saves": []
+      },
+      "cure": {
+        "resolutionId": "production-spell-cast.dnd.srd521.spell.cure-wounds.1788724924685",
+        "name": "상처 치료",
+        "dice": [
+          1,
+          1
+        ],
+        "compact": "상처 치료 · 1레벨 슬롯 · 카엘 HP 4 회복",
+        "finalOutcome": "카엘 HP 4 회복",
+        "saves": []
+      },
+      "revived": {
+        "TOM2 Host": {
+          "hp": 4,
+          "ac": 16,
+          "status": []
+        },
+        "TOM2 P1": {
+          "hp": 4,
+          "ac": 16,
+          "status": []
+        },
+        "TOM2 P2": {
+          "hp": 4,
+          "ac": 16,
+          "status": []
+        }
+      },
+      "potion": {
+        "before": 1,
+        "after": 0,
+        "hp": [
+          4,
+          10
+        ]
+      }
+    },
+    "장면3-종루": {
+      "status": "PASS",
+      "slots": [
+        {
+          "current": 0,
+          "level": 1,
+          "max": 2
+        }
+      ],
+      "slotRefusal": {
+        "action": "유도 화살",
+        "code": "action-disabled",
+        "message": "사용 가능한 주문 슬롯이 없습니다."
+      },
+      "flame": {
+        "resolutionId": "production-spell-cast.dnd.srd521.spell.sacred-flame.1788724940806",
+        "name": "신성한 불길",
+        "dice": [
+          3,
+          9
+        ],
+        "compact": "신성한 불길 · 홉고블린 전사 1 3 광휘 피해",
+        "finalOutcome": "홉고블린 전사 1 3 광휘 피해",
+        "saves": [
+          {
+            "dc": 12,
+            "outcome": "실패",
+            "targetId": "dnd.srd521.monster.hobgoblin-warrior.instance-1",
+            "targetName": "홉고블린 전사 1",
+            "total": 10
+          }
+        ]
+      },
+      "offTurn": {
+        "action": "투창",
+        "code": "action-off-turn",
+        "message": "현재 Actor의 턴이 아닙니다."
+      },
+      "javelin": {
+        "resolutionId": "resolution.phase09.1788724946252.269",
+        "name": "투창",
+        "dice": [
+          3
+        ],
+        "compact": "20 vs AC 18 — 명중 · 3 piercing 피해",
+        "finalOutcome": "20 vs AC 18 — 명중 · 3 piercing 피해",
+        "saves": []
+      },
+      "xp": [
+        {
+          "label": "세라",
+          "xp": 100
+        },
+        {
+          "label": "카엘",
+          "xp": 100
+        }
+      ]
+    },
+    "마무리": {
+      "status": "PASS",
+      "history": [
+        {
+          "participants": [
+            "DM Host",
+            "세라",
+            "카엘"
+          ],
+          "title": "무너진 종탑"
+        }
+      ]
+    }
+  }
+}

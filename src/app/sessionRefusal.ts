@@ -15,6 +15,8 @@ export const REFUSAL_MESSAGES:Record<string,string>={
   "remote-pending":"플레이어의 행동이 처리 중입니다. 먼저 끝내세요.",
   "not-connected":"호스트와 연결이 끝나지 않아 행동을 보낼 수 없습니다.",
   "no-op":"행동이 처리되지 않았습니다. 현재 턴·자원·대상을 확인하세요.",
+  "spell-rejected":"주문을 시전할 수 없습니다.",
+  "undo-rejected":"되돌릴 수 없습니다.",
   // Host → client wire error codes.
   "action-rejected":"호스트가 행동을 거부했습니다.",
   "action-disabled":"지금은 사용할 수 없는 행동입니다.",
@@ -22,6 +24,9 @@ export const REFUSAL_MESSAGES:Record<string,string>={
   "host-commit-rejected":"호스트가 행동을 확정하지 못했습니다.",
   "request-rejected":"호스트가 요청을 받지 않았습니다.",
   "action-resolution-error":"호스트에서 행동 처리 중 오류가 났습니다.",
+  "remote-action-not-event-native":"호스트가 이 행동을 공유 기록으로 만들지 못했습니다. DM에게 알리세요.",
+  "action-unsupported":"호스트가 이 행동을 지원하지 않습니다.",
+  "projection-activation-failed":"호스트가 캐릭터를 불러오지 못했습니다.",
   "ready-config-rejected":"준비 행동 설정이 맞지 않습니다.",
   "movement-request-rejected":"이동 선언이 거부되었습니다.",
   "interrupt-not-pending":"응답할 반응 창이 없습니다.",
@@ -44,6 +49,19 @@ export function refusalMessageFor(code:string,raw?:string):string {
   if(!raw) return base;
   const korean=/[ㄱ-힝]/.test(raw);
   return korean?raw:base;
+}
+
+/** The spell kernel's rejection texts, in the rules' words. */
+export function spellRejectionMessage(error:string|undefined):string {
+  const text=String(error??"").trim();
+  if(!text) return REFUSAL_MESSAGES["spell-rejected"];
+  if(/[가-힣]/.test(text)) return text;
+  if(/^action is not available/.test(text)) return "행동을 이미 사용했습니다.";
+  if(/^bonus[- ]action is not available/.test(text)) return "추가 행동을 이미 사용했습니다.";
+  if(/^reaction is not available/.test(text)) return "반응을 이미 사용했습니다.";
+  if(/already expended a spell slot/.test(text)) return "이번 턴에 이미 주문 슬롯을 썼습니다.";
+  if(/spell slot/.test(text)&&/no |not available|insufficient|exhausted/.test(text)) return "주문 슬롯이 없습니다.";
+  return `시전 거부 · ${text}`;
 }
 
 let sequence=0;

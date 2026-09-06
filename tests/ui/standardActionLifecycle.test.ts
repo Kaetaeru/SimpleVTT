@@ -51,7 +51,8 @@ test("Hide records success and failure and attacking reveals the actor",async()=
   await adapter.resolveAction("action.standard.hide.stealth",[]);
   snapshot=await adapter.advanceResolution();
   assert.match(snapshot.resolution?.finalOutcome??"",/숨기 성공/);
-  assert.equal(snapshot.scene.entities.find((entry)=>entry.id===actorId)?.status.includes("숨음"),true);
+  // V1.6 S1-04: 숨음 is a runtime effect in 자유 진행 too (event-native, replicated), projected as the "✦ 숨음" chip.
+  assert.equal(snapshot.scene.entities.find((entry)=>entry.id===actorId)?.status.some((status)=>status.endsWith("숨음")),true);
 
   const attack=snapshot.scene.actionsByActor[actorId]?.find((entry)=>entry.resolutionKind==="attack");
   assert.ok(attack,"active production character requires an attack action");
@@ -59,7 +60,7 @@ test("Hide records success and failure and attacking reveals the actor",async()=
   assert.ok(targetId,"attack requires an eligible enemy target");
   await adapter.resolveAction(attack.id,[targetId]);
   snapshot=await adapter.getSnapshot();
-  assert.equal(snapshot.scene.entities.find((entry)=>entry.id===actorId)?.status.includes("숨음"),false);
+  assert.equal(snapshot.scene.entities.find((entry)=>entry.id===actorId)?.status.some((status)=>status.endsWith("숨음")),false);
   assert.ok(snapshot.resolution?.stateChanges.some((entry)=>entry.includes("숨음")&&entry.includes("공격 선언")));
 
   const failed=new MockAdapter();
@@ -69,7 +70,7 @@ test("Hide records success and failure and attacking reveals the actor",async()=
   await failed.resolveAction("action.standard.hide.stealth",[]);
   snapshot=await failed.advanceResolution();
   assert.match(snapshot.resolution?.finalOutcome??"",/숨기 실패/);
-  assert.equal(snapshot.scene.entities.find((entry)=>entry.id===actorId)?.status.includes("숨음"),false);
+  assert.equal(snapshot.scene.entities.find((entry)=>entry.id===actorId)?.status.some((status)=>status.endsWith("숨음")),false);
 });
 
 test("turn boundaries expire Disengage at turn end and Dodge or Ready at next turn start",async()=>{

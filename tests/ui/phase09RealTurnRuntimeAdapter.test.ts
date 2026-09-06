@@ -3,6 +3,8 @@ import test from "node:test";
 import "../../src/app/phase09RealRuntimeAttackAdapter";
 import { createMovementModuleHost } from "../../src/app/phase09RealTurnRuntimeAdapter";
 import { MockAdapter } from "../../src/app/mockAdapter";
+import { createEffect } from "../../src/domain/effects";
+import { commitAdapterTurnRuntimeState, ensureAdapterTurnRuntimeState, snapshotAdapterTurnRuntimeState } from "../../src/app/turnRuntimeSessionRegistry";
 import type { MovementSpatialUpdate } from "../../src/app/movementRuntimeContracts";
 
 function movedAelarSpatial():MovementSpatialUpdate[] {
@@ -221,6 +223,43 @@ test("combatant instantiated during initiative joins runtime with Definition-bac
   assert.equal(snapshot.scene.round,2);
 });
 
+test("S1-04: effects and concentration committed in 자유 진행 survive 이니셔티브 시작 and 이니셔티브 종료 on the Host", async () => {
+  const adapter=new MockAdapter();
+  await adapter.endInitiative();
+  const internal=adapter as unknown as {scene:import("../../src/app/contracts").SceneVm};
+  const seeded=ensureAdapterTurnRuntimeState(adapter,internal.scene);
+  seeded.effects.push(createEffect({id:"test:help",sourceId:"action.standard.help",targetId:"char.mira",kind:"marker",duration:{kind:"special",key:"helped-until-next-attack-or-check"},metadata:{sessionStatus:"도움 받음"}},seeded.clock));
+  seeded.concentration["char.aelar"]={groupId:"test:shield",sourceId:"dnd.srd521.spell.shield-of-faith",startedAt:seeded.clock} as never;
+  seeded.combatants["char.aelar"].resources=[...seeded.combatants["char.aelar"].resources.filter((resource)=>resource.id!=="spell-slot-1"),{id:"spell-slot-1",label:"1레벨 주문 슬롯",current:1,maximum:2,recovery:{longRest:"all"}}];
+  const expected=seeded.revision;seeded.revision+=1;
+  assert.equal(commitAdapterTurnRuntimeState(adapter,internal.scene,expected,seeded),true);
+  await adapter.startInitiative();
+  const inCombat=snapshotAdapterTurnRuntimeState(adapter,internal.scene);
+  assert.ok(inCombat?.effects.some((effect)=>effect.id==="test:help"),"이니셔티브 시작 keeps the freeform effect");
+  assert.equal(inCombat?.combatants["char.aelar"]?.resources.find((resource)=>resource.id==="spell-slot-1")?.current,1,"이니셔티브 시작 keeps the spent slot");
+  assert.ok(inCombat?.concentration["char.aelar"],"이니셔티브 시작 keeps the concentration");
+  await adapter.endInitiative();
+  const after=snapshotAdapterTurnRuntimeState(adapter,internal.scene);
+  assert.ok(after?.effects.some((effect)=>effect.id==="test:help"),"이니셔티브 종료 keeps the effect for 자유 진행");
+  assert.equal((await adapter.getSnapshot()).sessionMode,"freeform");
+});
+
+test("S1-04: an actor added to the scene after the runtime session exists gets a runtime combatant, and its effects project as chips", async () => {
+  const adapter=new MockAdapter();
+  await adapter.endInitiative();
+  const internal=adapter as unknown as {scene:import("../../src/app/contracts").SceneVm};
+  ensureAdapterTurnRuntimeState(adapter,internal.scene);
+  internal.scene.entities.push({id:"late.skeleton",name:"해골 1",side:"enemy",kind:"combatant",hp:13,maxHp:13,tempHp:0,ac:14,initiative:14,status:[],resistances:[],immunities:[],vulnerabilities:[],reactions:[]} as never);
+  const state=snapshotAdapterTurnRuntimeState(adapter,internal.scene);
+  assert.ok(state?.combatants["late.skeleton"],"the late actor is a runtime combatant");
+  const seeded=state!;
+  seeded.effects.push(createEffect({id:"test:grapple",sourceId:"action.unarmed-strike.grapple",targetId:"late.skeleton",kind:"condition",conditionId:"grappled",duration:{kind:"special",key:"escape:char.aelar"}},seeded.clock));
+  const expected=seeded.revision;seeded.revision+=1;
+  assert.equal(commitAdapterTurnRuntimeState(adapter,internal.scene,expected,seeded),true);
+  const skeleton=(await adapter.getSnapshot()).scene.entities.find((entry)=>entry.id==="late.skeleton");
+  assert.ok(skeleton?.status.some((status)=>status.includes("붙잡힘")),`the late actor's effect projects as a chip; got ${JSON.stringify(skeleton?.status)}`);
+});
+
 test("ending initiative releases the runtime session and returns to freeform", async () => {
   const adapter=new MockAdapter();
   await adapter.startInitiative();
@@ -228,4 +267,26 @@ test("ending initiative releases the runtime session and returns to freeform", a
   const snapshot=await adapter.getSnapshot();
   assert.equal(snapshot.sessionMode,"freeform");
   assert.equal(snapshot.activity[0]?.title,"이니셔티브 종료");
+});
+test("S1-04: a connected replica keeps effects and spent resources across 자유 진행 and 이니셔티브 시작", async () => {
+  const { connectedStateFor }=await import("../../src/app/connectedSessionState");
+  const { synchronizeConnectedClientTurnProjection }=await import("../../src/app/turnRuntimeSessionRegistry");
+  const adapter=new MockAdapter();
+  await adapter.startInitiative();
+  const internal=adapter as unknown as {scene:import("../../src/app/contracts").SceneVm};
+  connectedStateFor(adapter).mode="client";
+  const seeded=ensureAdapterTurnRuntimeState(adapter,internal.scene);
+  seeded.effects.push(createEffect({id:"test:client-help",sourceId:"action.standard.help",targetId:"char.aelar",kind:"marker",duration:{kind:"special",key:"helped-until-next-attack-or-check"},metadata:{sessionStatus:"도움 받음"}},seeded.clock));
+  seeded.combatants["char.aelar"].resources=[...seeded.combatants["char.aelar"].resources.filter((resource)=>resource.id!=="spell-slot-1"),{id:"spell-slot-1",label:"1레벨 주문 슬롯",current:0,maximum:2,recovery:{longRest:"all"}}];
+  const expected=seeded.revision;seeded.revision+=1;
+  assert.equal(commitAdapterTurnRuntimeState(adapter,internal.scene,expected,seeded),true);
+  internal.scene.round=1;
+  synchronizeConnectedClientTurnProjection(adapter,internal.scene,"freeform");
+  const freeform=snapshotAdapterTurnRuntimeState(adapter,internal.scene);
+  assert.ok(freeform?.effects.some((effect)=>effect.id==="test:client-help"),"자유 진행 keeps the effect on the replica");
+  assert.equal(freeform?.combatants["char.aelar"]?.resources.find((resource)=>resource.id==="spell-slot-1")?.current,0,"자유 진행 keeps the spent slot on the replica");
+  synchronizeConnectedClientTurnProjection(adapter,internal.scene,"initiative");
+  const initiative=snapshotAdapterTurnRuntimeState(adapter,internal.scene);
+  assert.ok(initiative?.effects.some((effect)=>effect.id==="test:client-help"),"이니셔티브 시작 keeps the effect on the replica");
+  assert.equal(initiative?.combatants["char.aelar"]?.resources.find((resource)=>resource.id==="spell-slot-1")?.current,0,"이니셔티브 시작 keeps the spent slot on the replica");
 });

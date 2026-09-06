@@ -32,6 +32,31 @@ test("unknown ability-check status action commits economy and effect events",asy
   assert.ok(events.some((event)=>event.stateChanges.some((change)=>change.kind==="economy"&&change.field==="bonusAction"&&change.after===false)));
 });
 
+test("S1-04: a no-roll status action commits its effect event in 자유 진행 too, without an economy event",async()=>{
+  const adapter=new MockAdapter();
+  await adapter.endInitiative();
+  const scene=(adapter as unknown as {scene:SceneVm}).scene;
+  const actorId="char.aelar";
+  const targetId="char.mira";
+  const action:ActionVm={
+    id:"external.freeform.help",actorId,name:"외부 도움",category:"basic",target:"ally",economy:"행동",resolutionKind:"no-roll",
+    summary:"외부 도움",available:true,eligibleTargetIds:[targetId],
+    sessionStatusEffect:{status:"외부 도움 받음",target:"first-target",successOutcome:"지원",durationKey:"external-helped",endsOnAttack:true},details:[],
+  };
+  scene.actionsByActor[actorId].push(action);
+  await adapter.selectDmActor(actorId);
+  await adapter.resolveAction(action.id,[targetId]);
+  let snapshot=await adapter.getSnapshot();
+  for(let step=0;step<6&&snapshot.resolution&&snapshot.resolution.stage!=="complete";step+=1)snapshot=await adapter.advanceResolution();
+  assert.equal(snapshot.sessionMode,"freeform");
+  assert.equal(snapshot.resolution?.stage,"complete",JSON.stringify(snapshot.resolution));
+  const events=runtimeResolutionEventHistory(adapter)?.events??[];
+  assert.ok(events.some((event)=>event.stateChanges.some((change)=>change.kind==="effect"&&change.targetId===targetId)),`the Help effect is an authoritative event in 자유 진행; got ${JSON.stringify(events.map((event)=>event.kind))}`);
+  assert.equal(events.some((event)=>event.stateChanges.some((change)=>change.kind==="economy")),false,"no turn economy event outside Initiative");
+  const runtime=snapshotAdapterTurnRuntimeState(adapter,scene);
+  assert.ok(runtime?.effects.some((effect)=>effect.targetId===targetId&&effect.metadata?.sessionStatus==="외부 도움 받음"),"the effect lives in the runtime state every peer replicates");
+});
+
 test("unknown no-roll status action uses the same event path",async()=>{
   const adapter=new MockAdapter();
   await adapter.startInitiative();

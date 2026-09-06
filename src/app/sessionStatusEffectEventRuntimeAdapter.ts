@@ -122,15 +122,25 @@ MockAdapter.prototype.resolveAction=async function resolveActionWithStatusEffect
   const resolution=internal.resolution;
   const resolvedAction=internal.action(actionId)??action;
   const effect=statusEffect(resolvedAction);
-  if(resolvedAction?.resolutionKind==="ability-check"&&resolution?.actionId===actionId&&internal.sessionMode==="initiative") {
+  // Status effects commit in every mode now, so a check or an attack ends them in every mode too.
+  if(resolvedAction?.resolutionKind==="ability-check"&&resolution?.actionId===actionId) {
     const ending=checkEndingEffects(this,internal,resolution.actorId);
     if(ending.length) removeAttackEndingEffects(this,internal,resolution,ending,"판정 선언");
+    // V1.6 S1-04 (무너진 종탑 장면 2): a check that completes inside resolveAction (안정화) never advances, so the
+    // ending-effect events waited in pendingRevealEvents for an advance that never came — the Host dropped 세라's
+    // 도움 받음 while every replica kept it. Combine them now when the resolution is already terminal.
+    const reveal=pendingRevealEvents.get(this);
+    if(reveal&&reveal.resolutionId===resolution.id&&internal.resolution?.id===resolution.id&&internal.resolution.stage==="complete"){
+      pendingRevealEvents.delete(this);
+      combineEvents(this,resolution.id,reveal.events,true);
+      return internal.getSnapshot();
+    }
   }
   if(effect&&resolution?.actionId===actionId&&resolution.rollKind==="check"&&resolution.checkTarget===undefined) {
     resolution.checkTarget=effect.minimumRoll;
     return internal.getSnapshot();
   }
-  if(resolvedAction?.resolutionKind==="attack"&&resolution?.actionId===actionId&&internal.sessionMode==="initiative") {
+  if(resolvedAction?.resolutionKind==="attack"&&resolution?.actionId===actionId) {
     const ending=attackEndingEffects(this,internal,resolution.actorId);
     if(ending.length) {
       removeAttackEndingEffects(this,internal,resolution,ending);
@@ -147,14 +157,18 @@ MockAdapter.prototype.advanceResolution=async function advanceSessionStatusEffec
   const effect=statusEffect(action);
   if(!resolution||!action)return previousAdvanceResolution.call(this);
   const expectedStage=action.resolutionKind==="ability-check"?"roll-animation":"effect-preview";
-  const before=effect&&resolution.stage===expectedStage&&internal.sessionMode==="initiative"?structuredClone(internal.scene.economyByActor[resolution.actorId]):undefined;
+  // V1.6 S1-04 (무너진 종탑 장면 1): the status effect commits in 자유 진행 too — a Help/Dodge/Disengage/Hide that only
+  // touched the Host's status list left the players with nothing and a remote request refused as not event-native.
+  // The turn economy is Initiative-only, so its event is only recorded there.
+  const committing=Boolean(effect)&&resolution.stage===expectedStage;
+  const before=committing&&internal.sessionMode==="initiative"?structuredClone(internal.scene.economyByActor[resolution.actorId]):undefined;
   const snapshot=await previousAdvanceResolution.call(this);
-  if(before&&snapshot.resolution?.id===resolution.id&&snapshot.resolution.stage==="complete") {
+  if(committing&&snapshot.resolution?.id===resolution.id&&snapshot.resolution.stage==="complete") {
     const after=internal.scene.economyByActor[resolution.actorId];
     const succeeded=effect!.minimumRoll===undefined||(resolution.rollTotal??0)>=effect!.minimumRoll;
     const events=commitStatusEffect(this,internal,action,resolution,succeeded);
-    if(after&&events) {
-      combineEvents(this,resolution.id,[economyEvent(resolution,action.id,before,after),...events]);
+    if(events) {
+      combineEvents(this,resolution.id,[...(before&&after?[economyEvent(resolution,action.id,before,after)]:[]),...events]);
       return internal.getSnapshot();
     }
   }

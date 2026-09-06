@@ -11,8 +11,7 @@ import {
   resolveTurnRuntimeMovement,
   resolveTurnRuntimeReaction,
   setTurnRuntimeActiveActor,
-  synchronizeTurnRuntimeFromScene,
-} from "./realTurnRuntimeService";
+  synchronizeTurnRuntimeFromScene , carryOverRuntimeState } from "./realTurnRuntimeService";
 import { turnRuntimeSessions } from "./turnRuntimeSessionRegistry";
 import type { ResolutionEvent } from "../domain/resolutionTypes";
 
@@ -168,7 +167,9 @@ MockAdapter.prototype.startInitiative=async function startInitiativeWithTurnRunt
   const internal=this as unknown as Phase09TurnAdapterState;
   internal.sessionMode="initiative";
   interruptEvents.delete(this);
+  const carried=sessions.get(this)?.state;
   const session=createTurnRuntimeSession(internal.scene);
+  carryOverRuntimeState(carried,session.state);
   sessions.set(this,session);
   projectTurnRuntimeToScene(session,internal.scene);
   const current=internal.scene.entities.find((entity)=>entity.id===internal.scene.currentActorId);
@@ -186,9 +187,16 @@ MockAdapter.prototype.startInitiative=async function startInitiativeWithTurnRunt
 
 MockAdapter.prototype.endInitiative=async function endInitiativeWithTurnRuntime() {
   const internal=this as unknown as Phase09TurnAdapterState;
+  const carried=sessions.get(this)?.state;
   sessions.delete(this);
   interruptEvents.delete(this);
   internal.sessionMode="freeform";
+  // What the table carries out of combat (도움 받음, a concentration spell) stays on the Host as it does on every replica.
+  if (carried&&(carried.effects.length||Object.values(carried.concentration).some(Boolean)||carried.artifacts?.length)) {
+    const freeform=createTurnRuntimeSession(internal.scene);
+    carryOverRuntimeState(carried,freeform.state);
+    sessions.set(this,freeform);
+  }
   internal.activity.unshift({
     id:eventId("initiative-end"),
     time:"지금",
