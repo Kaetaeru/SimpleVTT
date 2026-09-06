@@ -268,3 +268,25 @@ test("ending initiative releases the runtime session and returns to freeform", a
   assert.equal(snapshot.sessionMode,"freeform");
   assert.equal(snapshot.activity[0]?.title,"이니셔티브 종료");
 });
+test("S1-04: a connected replica keeps effects and spent resources across 자유 진행 and 이니셔티브 시작", async () => {
+  const { connectedStateFor }=await import("../../src/app/connectedSessionState");
+  const { synchronizeConnectedClientTurnProjection }=await import("../../src/app/turnRuntimeSessionRegistry");
+  const adapter=new MockAdapter();
+  await adapter.startInitiative();
+  const internal=adapter as unknown as {scene:import("../../src/app/contracts").SceneVm};
+  connectedStateFor(adapter).mode="client";
+  const seeded=ensureAdapterTurnRuntimeState(adapter,internal.scene);
+  seeded.effects.push(createEffect({id:"test:client-help",sourceId:"action.standard.help",targetId:"char.aelar",kind:"marker",duration:{kind:"special",key:"helped-until-next-attack-or-check"},metadata:{sessionStatus:"도움 받음"}},seeded.clock));
+  seeded.combatants["char.aelar"].resources=[...seeded.combatants["char.aelar"].resources.filter((resource)=>resource.id!=="spell-slot-1"),{id:"spell-slot-1",label:"1레벨 주문 슬롯",current:0,maximum:2,recovery:{longRest:"all"}}];
+  const expected=seeded.revision;seeded.revision+=1;
+  assert.equal(commitAdapterTurnRuntimeState(adapter,internal.scene,expected,seeded),true);
+  internal.scene.round=1;
+  synchronizeConnectedClientTurnProjection(adapter,internal.scene,"freeform");
+  const freeform=snapshotAdapterTurnRuntimeState(adapter,internal.scene);
+  assert.ok(freeform?.effects.some((effect)=>effect.id==="test:client-help"),"자유 진행 keeps the effect on the replica");
+  assert.equal(freeform?.combatants["char.aelar"]?.resources.find((resource)=>resource.id==="spell-slot-1")?.current,0,"자유 진행 keeps the spent slot on the replica");
+  synchronizeConnectedClientTurnProjection(adapter,internal.scene,"initiative");
+  const initiative=snapshotAdapterTurnRuntimeState(adapter,internal.scene);
+  assert.ok(initiative?.effects.some((effect)=>effect.id==="test:client-help"),"이니셔티브 시작 keeps the effect on the replica");
+  assert.equal(initiative?.combatants["char.aelar"]?.resources.find((resource)=>resource.id==="spell-slot-1")?.current,0,"이니셔티브 시작 keeps the spent slot on the replica");
+});

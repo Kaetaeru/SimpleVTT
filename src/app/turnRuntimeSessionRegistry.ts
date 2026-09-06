@@ -3,8 +3,7 @@ import {
   createTurnRuntimeSession,
   projectTurnRuntimeToScene,
   synchronizeTurnRuntimeFromScene,
-  type TurnRuntimeSession,
-} from "./realTurnRuntimeService";
+  type TurnRuntimeSession, carryOverRuntimeState } from "./realTurnRuntimeService";
 import { resolveRuntimeProfileProperty } from "./realResolutionService";
 import { connectedStateFor } from "./connectedSessionState";
 import type { CharacterSheet, SceneVm, SessionMode } from "./contracts";
@@ -175,10 +174,22 @@ export function ensureAdapterTurnRuntimeState(adapter:MockAdapter,scene:SceneVm)
 
 export function synchronizeConnectedClientTurnProjection(adapter:MockAdapter,scene:SceneVm,mode:SessionMode) {
   if(connectedStateFor(adapter).mode!=="client") return;
-  if(mode==="freeform") { turnRuntimeSessions.delete(adapter); return; }
+  // V1.6 S1-04 (무너진 종탑 장면 3): the replica used to drop its runtime session at 자유 진행 and rebuild it fresh at
+  // 이니셔티브 시작, so 세라's spent spell slots came back as 2/2 on her own window while the Host had 0. Like the Host,
+  // effects, concentration, artifacts and spent resources are carried across both transitions; only the clock,
+  // order and turn economy start fresh.
+  if(mode==="freeform") {
+    const previous=sessions.get(adapter);
+    turnRuntimeSessions.delete(adapter);
+    if(previous) { const fresh=createTurnRuntimeSession(scene); carryOverRuntimeState(previous.state,fresh.state); turnRuntimeSessions.set(adapter,fresh); }
+    return;
+  }
   let session=sessions.get(adapter);
-  if(!session) {
-    session=createTurnRuntimeSession(scene);
+  const fresh=createTurnRuntimeSession(scene);
+  const orderChanged=Boolean(session)&&JSON.stringify(session!.initiativeOrder)!==JSON.stringify(fresh.initiativeOrder)&&scene.round<=1;
+  if(!session||orderChanged) {
+    carryOverRuntimeState(session?.state,fresh.state);
+    session=fresh;
     turnRuntimeSessions.set(adapter,session);
   }
   const activeIndex=session.initiativeOrder.indexOf(scene.currentActorId);
