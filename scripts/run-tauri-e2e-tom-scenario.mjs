@@ -133,6 +133,9 @@ async function setReactNumberInput(browser,xpath,value){const ok=await browser.e
 async function playerCheck(peer,actorId,actionId,queued,host,dc){await hostCall(host,`await mockAdapter.setQueuedD20(args.queued);`,{queued});const action=await findAction(peer,actorId,(a)=>a.id===actionId,actionId);const started=await clientAct(peer,action.id,[]);assert.equal(started.ok,true,started.error);const hostRes=await waitHostResolutionFor(host,actorId);let done=await hostAdvanceToComplete(host,hostRes.resolution.id);let dcPath="none";if(done.resolution&&done.resolution.id===hostRes.resolution.id&&done.resolution.stage!=="complete"){const form="//form[@aria-label='능력 판정 난이도 설정']";await host.browser.$(form).waitForDisplayed({timeout:10_000,timeoutMsg:`DC form did not open for ${actionId}`});await setReactNumberInput(host.browser,`${form}//label[.//span[normalize-space(.)='공개 DC']]//input`,dc);await click(host.browser,`${form}//button[normalize-space(.)='판정 확정']`,"판정 확정");dcPath="ui";done=await hostAdvanceToComplete(host,hostRes.resolution.id);}assert.equal(done.resolution?.stage,"complete",JSON.stringify(done.resolution));return {resolutionId:done.resolution.id,name:action.name,dice:done.resolution.dice,compact:done.resolution.compact,finalOutcome:done.resolution.finalOutcome,dc,dcPath};}
 async function playerAct(peer,actorId,pick,targets,queued,host,label){if(queued)await hostCall(host,`await mockAdapter.setQueuedD20(args.queued);`,{queued});const action=await findAction(peer,actorId,pick,label);const started=await clientAct(peer,action.id,targets);assert.equal(started.ok,true,`${label}: ${started.error}`);const hostRes=await waitHostResolutionFor(host,actorId);const done=await hostAdvanceToComplete(host,hostRes.resolution.id);assert.equal(done.resolution?.stage,"complete",`${label}: ${JSON.stringify(done.resolution)}`);return {resolutionId:done.resolution.id,name:action.name,dice:done.resolution.dice,compact:done.resolution.compact,finalOutcome:done.resolution.finalOutcome,saves:done.resolution.saves};}
 function ent(state,id){return state.entities.find((e)=>e.id===id);}
+// The DM tools disable 이니셔티브 시작/종료 while a result card is open; the DM closes the card first (닫기), like at the table.
+async function closeResultCard(host){const close=await host.browser.$("//button[normalize-space(.)='닫기']");if(await close.isExisting()&&await close.isDisplayed().catch(()=>false)){await close.click();}else{await hostCall(host,`if((await mockAdapter.getSnapshot()).resolution)await mockAdapter.dismissResolution();`);}await waitTom(host,(x)=>!x.resolution,"no open result card",10_000);}
+async function clickInitiative(host,label){await closeResultCard(host);const pane=await hostEncounterPane(host);await click(host.browser,`${pane}//button[normalize-space(.)=${JSON.stringify(label)}]`,label);}
 // The chrome tabs (시간·식량·휴식) render as span+strong, so they are matched by their span label.
 async function openTab(instance,label){const active=await instance.browser.$(`//button[contains(@class,'active')][.//span[normalize-space(.)=${JSON.stringify(label)}]]`);if(await active.isExisting())return;await click(instance.browser,`//button[.//span[normalize-space(.)=${JSON.stringify(label)}]]`,`${instance.label} ${label} 탭`);await sleep(300);}
 
@@ -171,7 +174,7 @@ async function runScenario(){
     const perception=await playerCheck(p2,kael.id,"action.standard.search.perception",14,host,13);
     await expectConverged(peers,perception.resolutionId,"장면2 지각");
     await rawCall(host,`for(const id of args.ids)await mockAdapter.setCreatureBadge(id,"hidden",false);`,{ids:wolves});
-    const pane=await hostEncounterPane(host);await click(host.browser,`${pane}//button[normalize-space(.)='이니셔티브 시작']`,"이니셔티브 시작");
+    await clickInitiative(host,"이니셔티브 시작");
     await waitTom(host,(s)=>s.mode==="initiative","Initiative on the Host");
     const order=await expectTomParity(peers,"장면2 이니셔티브");
     const [wolf1,wolf2,wolf3]=wolves;
@@ -200,7 +203,7 @@ async function runScenario(){
     await expectConverged(peers,oaDone.resolution.id,"장면2 기회공격");
     const afterOa=await waitTom(host,(s)=>!s.pendingWithdrawal&&!(ent(s,wolf1)?.engaged.includes(kael.id)),"the engagement ended after 물러남");
     await evidenceAll(peers,"tom-02d-opportunity");
-    await click(host.browser,`${await hostEncounterPane(host)}//button[normalize-space(.)='이니셔티브 종료']`,"이니셔티브 종료");
+    await clickInitiative(host,"이니셔티브 종료");
     await waitTom(host,(s)=>s.mode==="freeform","freeform on the Host");
     await rawCall(host,`for(const id of args.ids){const s=await mockAdapter.getSnapshot();if(s.scene.entities.some((e)=>e.id===id))await mockAdapter.removeCombatant(id);}`,{ids:wolves});
     await toggleSceneCondition(host,"어둠");
@@ -233,14 +236,14 @@ async function runScenario(){
     await hostCall(host,`await mockAdapter.discloseResolution(args.id,["roll"]);`,{id:trap.resolutionId});
     const disclosed=await waitTom(p2,(s)=>s.activity.some((e)=>e.title.startsWith("DM 공개")),"P2 receiving the disclosure",20_000);
     await evidenceAll(peers,"tom-04a-gate");
-    await click(host.browser,`${await hostEncounterPane(host)}//button[normalize-space(.)='이니셔티브 시작']`,"이니셔티브 시작 (관문)");
+    await clickInitiative(host,"이니셔티브 시작");
     await waitTom(host,(s)=>s.mode==="initiative","Initiative at the gate");
     await expectTomParity(peers,"장면3 이니셔티브");
     await walkToActor(host,boss);
     const known=new Set((await tomState(host)).activity.map((e)=>e.id));
     const bossName=ent(await tomState(host),boss).name;
     const pane3=await hostEncounterPane(host);
-    const routineButton=await host.browser.$(`${pane3}//div[.//strong[normalize-space(.)=${JSON.stringify(bossName)}]]//button[starts-with(normalize-space(.),'다중공격')]`);
+    await closeResultCard(host);const routineButton=await host.browser.$(`${pane3}//div[.//strong[normalize-space(.)=${JSON.stringify(bossName)}]]//button[starts-with(normalize-space(.),'다중공격')]`);
     let multi;
     if(await routineButton.isExisting()){await routineButton.waitForEnabled({timeout:10_000});await routineButton.click();await click(host.browser,`${pane3}//div[@aria-label=${JSON.stringify(`${bossName} 다중공격 대상`)}]//button[normalize-space(.)='카엘']`,"다중공격 대상 카엘");const entries=await newActivitySince(host,known,2);for(const p of [p1,p2])await waitActivityIds(p,entries.map((e)=>e.id));multi={path:"ui",entries:entries.map((e)=>({title:e.title,summary:e.summary}))};}
     else{const swing=await hostAttack(host,{actorId:boss,targetId:kael.id,queued:16,match:"시미터"});await expectConverged(peers,swing.resolutionId,"장면3 보스 시미터");multi={path:"api-single",swing};}
@@ -257,7 +260,7 @@ async function runScenario(){
     await expectConverged(peers,bolt.resolutionId,"장면3 유도 화살");
     await expectTomParity(peers,"장면3 전투 후");
     await evidenceAll(peers,"tom-04b-gate-fight");
-    await click(host.browser,`${await hostEncounterPane(host)}//button[normalize-space(.)='이니셔티브 종료']`,"이니셔티브 종료 (관문)");
+    await clickInitiative(host,"이니셔티브 종료");
     await waitTom(host,(s)=>s.mode==="freeform","freeform after the gate");
     const rosterIds=(await tomState(host)).campaign.roster.filter((m)=>m.characterId).map((m)=>m.id);
     await rawCall(host,`await mockAdapter.grantCampaignAdvancement(args.id,{rosterMemberIds:args.members,kind:"xp",amount:150});`,{id:campaignId,members:rosterIds});
