@@ -79,7 +79,7 @@
 
 ## 구동 결과
 
-PR #381, head `137e78ff714f6757e2900125e46618ae58a22826`: run https://github.com/Kaetaeru/SimpleVTT/actions/runs/34028996395 (artifact `TOM-WIN-137e78ff…`). 증거 사본: `docs/design/scenarios/evidence/ashen-gate-wolves/` (`tom-summary.json`과 비트별 스크린샷 12장). 같은 헤드에서 기존 윈도우 수락 매트릭스(W1–W4-07, W6-08, W7-04/05/08, W8-02, W9-02 C/D/H, W9-03, X1-03, C1-MP)도 함께 돌았다.
+PR #381 (merged `4db4e88fca887bcbbec3fd6af571a03f0e2828b3`), head `137e78ff714f6757e2900125e46618ae58a22826`: run https://github.com/Kaetaeru/SimpleVTT/actions/runs/34028996395 (artifact `TOM-WIN-137e78ff…`). 증거 사본: `docs/design/scenarios/evidence/ashen-gate-wolves/` (`tom-summary.json`과 비트별 스크린샷 12장). 같은 헤드에서 기존 윈도우 수락 매트릭스(W1–W4-07, W6-08, W7-04/05/08, W8-02, W9-02 C/D/H, W9-03, X1-03, C1-MP)도 함께 돌았다.
 
 **비트별 결과** (세 창 모두에서 같은 결과를 봤는지까지 확인):
 
