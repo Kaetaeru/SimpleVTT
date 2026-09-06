@@ -217,7 +217,7 @@ async function runScenario(){
     const before=await tomState(host);
     await openTab(host,"휴식");
     for(const label of ["장기 휴식과 함께 캠페인 시간 8시간 진행","장기 휴식과 함께 하루치 식량 소비"]){const box=await host.browser.$(`//input[@aria-label=${JSON.stringify(label)}]`);await box.waitForDisplayed({timeout:10_000});if(!(await box.isSelected()))await box.click();}
-    for(let n=0;n<2;n+=1){const offers=await host.browser.$$("//button[normalize-space(.)='장기 휴식 제안']");assert.ok(offers.length>=1,`장기 휴식 제안 button ${n+1} missing`);await offers[0].waitForEnabled({timeout:10_000});await offers[0].click();await sleep(800);}
+    for(const label of ["세라","카엘"]){const offer=await host.browser.$(`//section[@aria-label='연결된 플레이어 장기 휴식']//div[contains(@class,'session-campaign-xp-member')][.//strong[normalize-space(.)=${JSON.stringify(label)}]]//button[normalize-space(.)='장기 휴식 제안']`);await offer.waitForDisplayed({timeout:10_000,timeoutMsg:`${label} has no 장기 휴식 제안 button`});await offer.waitForEnabled({timeout:10_000});await offer.click();await sleep(800);}
     for(const p of [p1,p2]){await openTab(p,"휴식");const approve=await p.browser.$(exactButton("승인"));await approve.waitForDisplayed({timeout:20_000,timeoutMsg:`${p.label} did not receive the long rest offer`});await approve.click();}
     const rested1=await waitTom(p1,(s)=>s.hp===s.maxHp&&s.slots.every((l)=>l.current===l.max)&&s.longRestPrompts.every((x)=>x.phase!=="offered"),"세라 rested",40_000);
     const rested2=await waitTom(p2,(s)=>s.hp===s.maxHp&&s.longRestPrompts.every((x)=>x.phase!=="offered"),"카엘 rested",40_000);
