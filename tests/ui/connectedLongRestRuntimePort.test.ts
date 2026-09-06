@@ -187,6 +187,10 @@ test("C1-08: a Campaign that moved on since the offer does not lose the player's
   assert.equal(authorized.status,"ready",JSON.stringify(authorized));
   if(authorized.status!=="ready") return;
   assert.equal(authorized.preflight.expectedCampaignRevision,campaignNow,"the commit preflight targets the current Campaign revision");
+  const prepared=await prepareAuthorizedConnectedLongRestOwner(client,authorized.preflight);
+  assert.equal(prepared.transactionId,started.offer.transactionId,"the owner prepares against the re-stamped preflight");
+  const global=await recordConnectedLongRestHostOwnerPrepared(host,PEER,prepared);
+  assert.equal(global.status,"committed",JSON.stringify(global));
 });
 
 test("connected Long Rest aborts owner preparation when Campaign revision drifts before global commit",async()=>{

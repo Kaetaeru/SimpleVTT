@@ -135,7 +135,8 @@ function preflightMatchesOffer(preflight:ConnectedLongRestCommitPreflight,offer:
   return preflight.transactionId===offer.transactionId
     &&preflight.sessionId===offer.sessionId
     &&preflight.campaignId===offer.campaignId
-    &&preflight.expectedCampaignRevision===offer.campaignRevision
+    // The Campaign is Host-owned: an offer re-stamped after the Campaign moved on (another rest committed) comes back with a newer revision.
+    &&preflight.expectedCampaignRevision>=offer.campaignRevision
     &&preflight.ownerParticipantId===offer.ownerParticipantId
     &&sameCharacter(preflight.character,offer.character)
     &&sameOptions(preflight.options,offer.options);
