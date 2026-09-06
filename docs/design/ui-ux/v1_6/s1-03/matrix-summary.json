@@ -1,0 +1,207 @@
+{
+  "gate": "S1-03",
+  "status": "PASS",
+  "verificationSha": "294d21544c8057daa0f2c12037773945d85f2454",
+  "windowsTauri": true,
+  "topology": {
+    "host": "DM Host (no character)",
+    "clients": [
+      "P1 세라 (클레릭)",
+      "P2 카엘 (파이터)"
+    ],
+    "sessionPort": 61724,
+    "campaignId": "campaign.플레이-매트릭스.1788706534908"
+  },
+  "steps": {
+    "M1-자유진행-연속공격": {
+      "status": "PASS",
+      "free1": {
+        "resolutionId": "resolution.phase09.1788706537846.293",
+        "name": "대검",
+        "dice": [
+          3,
+          3
+        ],
+        "compact": "20 vs AC 10 — 명중 · 6 slashing 피해",
+        "finalOutcome": "20 vs AC 10 — 명중 · 6 slashing 피해",
+        "saves": []
+      },
+      "free2": {
+        "resolutionId": "resolution.phase09.1788706544682.129",
+        "name": "대검",
+        "dice": [
+          3,
+          3
+        ],
+        "compact": "20 vs AC 10 — 명중 · 6 slashing 피해",
+        "finalOutcome": "20 vs AC 10 — 명중 · 6 slashing 피해",
+        "saves": []
+      }
+    },
+    "M2-대상부적격-거부": {
+      "status": "PASS",
+      "self": {
+        "action": "대검",
+        "code": "action-rejected",
+        "message": "그 대상에게는 사용할 수 없습니다."
+      },
+      "projectedTargets": [
+        {
+          "eligible": [
+            "char.829c6bb5-af39-4e02-a35a-411bb27514dd",
+            "dnd.srd521.monster.zombie.instance-1",
+            "dnd.srd521.monster.zombie.instance-2"
+          ],
+          "max": null,
+          "name": "대검",
+          "target": "enemy"
+        },
+        {
+          "eligible": [
+            "char.829c6bb5-af39-4e02-a35a-411bb27514dd",
+            "dnd.srd521.monster.zombie.instance-1",
+            "dnd.srd521.monster.zombie.instance-2"
+          ],
+          "max": null,
+          "name": "도리깨",
+          "target": "enemy"
+        },
+        {
+          "eligible": [
+            "char.829c6bb5-af39-4e02-a35a-411bb27514dd",
+            "dnd.srd521.monster.zombie.instance-1",
+            "dnd.srd521.monster.zombie.instance-2"
+          ],
+          "max": null,
+          "name": "투창",
+          "target": "enemy"
+        },
+        {
+          "eligible": [
+            "char.829c6bb5-af39-4e02-a35a-411bb27514dd",
+            "dnd.srd521.monster.zombie.instance-1",
+            "dnd.srd521.monster.zombie.instance-2"
+          ],
+          "max": null,
+          "name": "창",
+          "target": "enemy"
+        },
+        {
+          "eligible": [
+            "char.829c6bb5-af39-4e02-a35a-411bb27514dd",
+            "dnd.srd521.monster.zombie.instance-1",
+            "dnd.srd521.monster.zombie.instance-2"
+          ],
+          "max": null,
+          "name": "단궁",
+          "target": "enemy"
+        },
+        {
+          "eligible": [
+            "char.829c6bb5-af39-4e02-a35a-411bb27514dd",
+            "dnd.srd521.monster.zombie.instance-1",
+            "dnd.srd521.monster.zombie.instance-2"
+          ],
+          "max": null,
+          "name": "맨손 타격 · 피해",
+          "target": "enemy"
+        }
+      ]
+    },
+    "M3-대상초과-거부": {
+      "status": "PASS",
+      "crowd": {
+        "action": "신성한 불길",
+        "code": "action-rejected",
+        "message": "대상은 최대 1명입니다."
+      },
+      "heal": {
+        "resolutionId": "production-spell-cast.dnd.srd521.spell.healing-word.1788706552321",
+        "name": "치유의 단어",
+        "dice": [
+          2,
+          2
+        ],
+        "compact": "치유의 단어 · 1레벨 슬롯 · 카엘 HP 0 회복",
+        "finalOutcome": "카엘 HP 0 회복",
+        "saves": []
+      }
+    },
+    "M4-행동소진-거부": {
+      "status": "PASS",
+      "swing1": {
+        "resolutionId": "resolution.phase09.1788706556682.575",
+        "name": "대검",
+        "dice": [
+          3,
+          3
+        ],
+        "compact": "20 vs AC 10 — 명중 · 6 slashing 피해",
+        "finalOutcome": "20 vs AC 10 — 명중 · 6 slashing 피해",
+        "saves": []
+      },
+      "second": {
+        "action": "대검",
+        "code": "action-disabled",
+        "message": "행동을 이미 사용했습니다."
+      },
+      "parity": {
+        "actions": 55,
+        "items": 12,
+        "goldGp": 18,
+        "roster": 4,
+        "availabilityCompared": true,
+        "offTurnAvailability": null
+      }
+    },
+    "M5-추가행동소진-거부": {
+      "status": "PASS",
+      "wind": {
+        "resolutionId": "resolution.phase09.1788706565367.847",
+        "name": "Second Wind",
+        "dice": [
+          2
+        ],
+        "compact": "카엘 0 HP 회복",
+        "finalOutcome": "회복 적용",
+        "saves": []
+      },
+      "wind2": {
+        "action": "Second Wind",
+        "code": "action-disabled",
+        "message": "추가 행동을 이미 사용했습니다."
+      }
+    },
+    "M6-남의턴-거부": {
+      "status": "PASS",
+      "action": "철퇴",
+      "code": "action-off-turn",
+      "message": "현재 Actor의 턴이 아닙니다."
+    },
+    "M7-DM행동소진-거부": {
+      "status": "PASS",
+      "gobSwing": {
+        "actionName": "쾅",
+        "compact": "21 vs AC 16 — 명중 · 5 타격 피해",
+        "dice": [
+          4
+        ],
+        "resolutionId": "resolution.phase09.1788706575251.891",
+        "stage": "complete"
+      },
+      "gobAgain": {
+        "code": "action-unavailable",
+        "message": "행동을 이미 사용했습니다."
+      }
+    },
+    "M8-쓰러짐-거부": {
+      "status": "PASS",
+      "action": "대검",
+      "code": "action-disabled",
+      "message": "의식불명 · 죽음 내성 굴림만 할 수 있습니다."
+    },
+    "M9-정리": {
+      "status": "PASS"
+    }
+  }
+}
