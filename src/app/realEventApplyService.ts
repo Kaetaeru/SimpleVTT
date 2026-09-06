@@ -78,6 +78,19 @@ function seedsRemoteResource(runtimeState:RulesRuntimeState|undefined,change:Run
   return Boolean(combatant) && !combatant.resources.some((entry)=>entry.id===change.resourceId);
 }
 
+/**
+ * The owner's own spell-slot resource that its replica has not seen yet is seeded from the authoritative event too.
+ * The Host mints `spell-slot-N` on a caster's runtime combatant the first time a slotted spell is cast
+ * (phase09AuthoritativeSpellcastingAdapter); a fresh cleric's owner replica has no such resource until then, and
+ * without this the owner rejected its own cast ("event-native apply target is missing: <self>/resource.spell-slot-1")
+ * and stayed behind the Host for good — reproduced on real Windows H+P1+P2 (V1.6 S1-04, 무너진 종탑 장면 1).
+ */
+function seedsOwnerSlotResource(runtimeState:RulesRuntimeState|undefined,change:RuntimeStateChange,options?:ResolutionEventApplyOptions) {
+  if (!options?.ownerId || !runtimeState || change.kind!=="resource" || change.targetId!==options.ownerId || !/^spell-slot-\d+$/.test(change.resourceId)) return false;
+  const combatant=runtimeState.combatants[change.targetId];
+  return Boolean(combatant) && !combatant.resources.some((entry)=>entry.id===change.resourceId);
+}
+
 function appCurrentValue(scene:SceneVm,resources:CharacterResourceVm[],items:ItemInstanceVm[],change:RuntimeStateChange):ReadValue {
   if(change.kind==="inventory-item") return found(items.find((entry)=>entry.id===change.itemId));
   if (change.kind==="hp") {
@@ -317,7 +330,7 @@ function validate(
   for (const change of changes) {
     if (remoteInventoryChange(change,options)) continue;
     const app=ownerScoped(change,options) ? appCurrentValue(probeScene,probeResources,probeItems,change) : missing();
-    const runtime=probeRuntime ? (seedsRemoteResource(probeRuntime,change,options) ? found(change.before) : runtimeCurrentValue(probeRuntime,change)) : missing();
+    const runtime=probeRuntime ? (seedsRemoteResource(probeRuntime,change,options)||seedsOwnerSlotResource(probeRuntime,change,options) ? found(change.before) : runtimeCurrentValue(probeRuntime,change)) : missing();
     if (runtimeOnly(change) && !probeRuntime) return `event-native apply requires runtime state for ${change.kind}`;
     if (!app.found && !runtime.found) return `event-native apply target is missing: ${change.targetId}/${changeField(change)}`;
     if (app.found && !deepEquals(app.value,change.before)) {
@@ -405,7 +418,7 @@ export function applyResolutionEvents(
   for (const change of changes) {
     if (remoteInventoryChange(change,options)) { labels.push(applyLabel(change)); continue; }
     const app=ownerScoped(change,options) ? appCurrentValue(nextScene,nextResources,nextItems,change) : missing();
-    const runtime=nextRuntimeState ? (seedsRemoteResource(nextRuntimeState,change,options) ? found(change.before) : runtimeCurrentValue(nextRuntimeState,change)) : missing();
+    const runtime=nextRuntimeState ? (seedsRemoteResource(nextRuntimeState,change,options)||seedsOwnerSlotResource(nextRuntimeState,change,options) ? found(change.before) : runtimeCurrentValue(nextRuntimeState,change)) : missing();
     if (app.found) applyAppChange(nextScene,nextResources,nextItems,change);
     if (nextRuntimeState && runtime.found) applyRuntimeChange(nextRuntimeState,change);
     labels.push(applyLabel(change));
