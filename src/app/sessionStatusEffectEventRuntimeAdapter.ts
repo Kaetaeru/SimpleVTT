@@ -122,7 +122,8 @@ MockAdapter.prototype.resolveAction=async function resolveActionWithStatusEffect
   const resolution=internal.resolution;
   const resolvedAction=internal.action(actionId)??action;
   const effect=statusEffect(resolvedAction);
-  if(resolvedAction?.resolutionKind==="ability-check"&&resolution?.actionId===actionId&&internal.sessionMode==="initiative") {
+  // Status effects commit in every mode now, so a check or an attack ends them in every mode too.
+  if(resolvedAction?.resolutionKind==="ability-check"&&resolution?.actionId===actionId) {
     const ending=checkEndingEffects(this,internal,resolution.actorId);
     if(ending.length) removeAttackEndingEffects(this,internal,resolution,ending,"판정 선언");
     // V1.6 S1-04 (무너진 종탑 장면 2): a check that completes inside resolveAction (안정화) never advances, so the
@@ -139,7 +140,7 @@ MockAdapter.prototype.resolveAction=async function resolveActionWithStatusEffect
     resolution.checkTarget=effect.minimumRoll;
     return internal.getSnapshot();
   }
-  if(resolvedAction?.resolutionKind==="attack"&&resolution?.actionId===actionId&&internal.sessionMode==="initiative") {
+  if(resolvedAction?.resolutionKind==="attack"&&resolution?.actionId===actionId) {
     const ending=attackEndingEffects(this,internal,resolution.actorId);
     if(ending.length) {
       removeAttackEndingEffects(this,internal,resolution,ending);
