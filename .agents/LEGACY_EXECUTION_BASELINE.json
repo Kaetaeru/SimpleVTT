@@ -378,6 +378,14 @@
     {
       "module": "./campaignRationConversionRuntimeAdapter",
       "classification": "GENERIC_ENGINE"
+    },
+    {
+      "module": "./effectArmorClassProjectionAdapter",
+      "classification": "CONTENT/PRESENTATION"
+    },
+    {
+      "module": "./actionAvailabilityProjectionAdapter",
+      "classification": "GENERIC_ENGINE"
     }
   ],
   "transitiveEntries": [
