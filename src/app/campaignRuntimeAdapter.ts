@@ -405,9 +405,23 @@ export function setCampaignLibraryStoreForTests(adapter:MockAdapter,store:Campai
   injectedStores.set(adapter,store);contexts.delete(adapter);
 }
 
+// Two hellos (or a hello beside a Host-side Campaign write) can race on the same Campaign generation: both read the
+// document, the first commit lands, the second fails with a stale revision/generation. The roster sync is a
+// projection of who is at the table, so it re-reads the library and applies again instead of rejecting the join.
+const STALE_CAMPAIGN_WRITE=/stale Campaign (revision|library generation)/;
+
 registerConnectedCampaignRosterHandler(async(adapter,candidate)=>{
   const captured=sessionSnapshots.get(adapter);
   if(!captured) return {status:"ignored",reason:"Host Session has no captured Campaign"};
+  for(let attempt=1;;attempt+=1){
+    const result=await syncRosterOnce(adapter,candidate,captured.campaignId);
+    if(result.status!=="rejected"||attempt>=3||!STALE_CAMPAIGN_WRITE.test(result.error)) return result;
+    await contextFor(adapter).service.hydrate();
+  }
+});
+
+async function syncRosterOnce(adapter:MockAdapter,candidate:Parameters<Parameters<typeof registerConnectedCampaignRosterHandler>[0]>[1],campaignId:string):Promise<Awaited<ReturnType<Parameters<typeof registerConnectedCampaignRosterHandler>[0]>>>{
+  const captured={campaignId};
   try{
     const service=await ensureHydrated(adapter);
     const campaign=service.getCampaign(captured.campaignId);
@@ -444,6 +458,6 @@ registerConnectedCampaignRosterHandler(async(adapter,candidate)=>{
   }catch(error){
     return {status:"rejected",error:error instanceof Error?error.message:String(error)};
   }
-});
+}
 
 export function clearCampaignSessionSnapshot(adapter:MockAdapter){sessionSnapshots.delete(adapter);}
