@@ -14,6 +14,7 @@ import { decodeConnectedWireMessage, encodeConnectedWireMessage, type ConnectedW
 import { applyConnectedCorrections } from "./connectedCorrectionApply";
 import { applyResolutionEvents } from "./realEventApplyService";
 import { persistCharacterResolutionEvents } from "./resolutionCharacterWriteBackPort";
+import type { EngagementRecord } from "../domain/engagement";
 import { notifyConnectedOwnerWriteBack } from "./connectedOwnerWriteBackPort";
 import { SIMPLEVTT_APP_RULES_PROFILE } from "./realResolutionService";
 import { publishExternalAdapterSnapshot } from "./adapterSnapshotEvents";
@@ -523,6 +524,7 @@ async function applyConfirmedPayload(adapter:MockAdapter,payload:ConnectedEventP
   }
 
   app.scene=projected.scene;
+  if (payload.engagements) applyResolutionEngagements(app.scene,payload.engagements);
   app.activeCharacter.resources=projected.resources.map((entry)=>structuredClone(entry));
   app.activeCharacter.items=projected.items.map((entry)=>structuredClone(entry));
   app.syncChar();
@@ -542,6 +544,18 @@ async function applyConfirmedPayload(adapter:MockAdapter,payload:ConnectedEventP
     stateChanges:[...projected.stateChanges],
   });
   return { status:"committed" as const };
+}
+
+/** The Host's engagements after a resolution, projected onto the replica's entities (dead creatures drop out). */
+function applyResolutionEngagements(scene:SceneVm,engagements:EngagementRecord[]) {
+  const alive=new Set(scene.entities.filter((entity)=>entity.hp>0).map((entity)=>entity.id));
+  const kept=engagements.filter((record)=>alive.has(record.a)&&alive.has(record.b)).map((record)=>structuredClone(record));
+  scene.engagements=kept.length?kept:undefined;
+  for (const entity of scene.entities) {
+    const ids=kept.filter((record)=>record.a===entity.id||record.b===entity.id).map((record)=>record.a===entity.id?record.b:record.a);
+    if (ids.length) entity.engagedWithIds=ids;
+    else delete entity.engagedWithIds;
+  }
 }
 
 export function applyConnectedResolutionPresentation(adapter:MockAdapter,presentation:ConnectedResolutionPresentationV1) {

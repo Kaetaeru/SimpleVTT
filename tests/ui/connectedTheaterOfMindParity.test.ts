@@ -152,7 +152,7 @@ test("C1-02: a player's movement declaration is routed to the Host, and the ыЌМы
     let snapshot=await host.getSnapshot();
     for (let step=0; step<8 && snapshot.resolution && snapshot.resolution.stage!=="complete"; step+=1) snapshot=await host.advanceResolution();
     // C1-08 (seen in the Windows scenario run): the engagement must reach the players when the attack resolves, before the DM closes the card.
-    await eventually(()=>topologiesAfter(transport,attackMark).some((topology)=>(topology.engagements??[]).length>0),"the melee attack publishes its engagement");
+    await eventually(()=>transport.after(attackMark).filter((message):message is Extract<ConnectedWireMessage,{type:"event-batch"}>=>message.type==="event-batch").flatMap((batch)=>batch.events).some((event)=>event.payload.kind==="resolution"&&(event.payload.engagements??[]).length>0),"the melee attack's resolution event carries its engagement");
     {
       const replica=await clientReplica(host,state.sessionId!);
       const engaged=(await replica.getSnapshot()).scene.entities.find((entity)=>entity.id===p1.characterId)?.engagedWithIds??[];

@@ -61,6 +61,7 @@ type JsonRecord=Record<string,unknown>;
 const isRecord=(value:unknown):value is JsonRecord=>typeof value==="object"&&value!==null&&!Array.isArray(value);
 const isString=(value:unknown):value is string=>typeof value==="string"&&value.length>0;
 const isCursor=(value:unknown):value is number=>Number.isInteger(value)&&Number(value)>=0;
+const isEngagementRecord=(value:unknown):boolean=>isRecord(value)&&isString(value.a)&&isString(value.b)&&Number.isInteger(value.sinceRound)&&Number.isInteger(value.lastMeleeRound);
 const isStringArray=(value:unknown):value is string[]=>Array.isArray(value)&&value.every((entry)=>typeof entry==="string");
 
 function isSimultaneousOrderingRequest(value:unknown):value is CommonPlaySimultaneousOrderingRequest {
@@ -236,6 +237,7 @@ function isConnectedEvent(value:unknown):value is ConnectedSessionEvent {
     if (!isString(payload.resolutionId)||!isConnectedResolutionPresentation(payload.presentation)
       ||payload.presentation.resolutionId!==payload.resolutionId
       ||!Array.isArray(payload.resolutionEvents)||!payload.resolutionEvents.every(isResolutionEvent)) return false;
+    if (payload.engagements!==undefined&&(!Array.isArray(payload.engagements)||!payload.engagements.every(isEngagementRecord))) return false;
   } else if(payload.kind==="resolution-undo"){
     if(!isString(payload.undoId)||!isString(payload.undoOf)||!Array.isArray(payload.inverseResolutionEvents)||!payload.inverseResolutionEvents.every(isResolutionEvent))return false;
   } else if (payload.kind==="mode-transition") {

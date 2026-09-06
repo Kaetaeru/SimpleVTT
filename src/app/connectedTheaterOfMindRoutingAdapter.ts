@@ -23,7 +23,7 @@ import { tauriSessionTransport } from "./tauriSessionTransport";
  * A player's own 접근/물러남/그대로 is sent to the Host as a `movement-request`; the Host validates the peer's
  * character, declares on its behalf, and publishes.
  */
-type RoutedMethod="declareMovement"|"answerWithdrawalPrompt"|"setEngagement"|"setCreatureStatus"|"setCreatureBadge"|"applyNarrativeDamage"|"setSceneCondition"|"instantiateCombatantGroup"|"groupCombatants"|"ungroupCombatants"|"useLegendaryResistance"|"resolveMultiattackRoutine"|"resetMonsterTiming"|"applyPostHocToggle"|"endTurn"|"startInitiative"|"dismissResolution"|"undoLastResolution"|"resolveAction"|"advanceResolution";
+type RoutedMethod="declareMovement"|"answerWithdrawalPrompt"|"setEngagement"|"setCreatureStatus"|"setCreatureBadge"|"applyNarrativeDamage"|"setSceneCondition"|"instantiateCombatantGroup"|"groupCombatants"|"ungroupCombatants"|"useLegendaryResistance"|"resolveMultiattackRoutine"|"resetMonsterTiming"|"applyPostHocToggle"|"endTurn"|"startInitiative"|"dismissResolution"|"undoLastResolution";
 
 let requestSequence=0;
 const requestId=()=>`movement.${Date.now()}.${requestSequence++}`;
@@ -39,16 +39,6 @@ export function theaterTopologyFingerprint(scene:SceneVm) {
     pendingWithdrawal:scene.pendingWithdrawal,
     currentActorId:scene.currentActorId,
     round:scene.round,
-  });
-}
-
-/** What a resolution can change besides HP/economy (which travel as events): the engagement it infers (T1-03), the conditions it applies. */
-export function resolutionTheaterFingerprint(scene:SceneVm) {
-  return JSON.stringify({
-    entities:scene.entities.map((entity)=>[entity.id,entity.status,entity.engagedWithIds]),
-    engagements:scene.engagements,
-    movementDeclarations:scene.movementDeclarations,
-    pendingWithdrawal:scene.pendingWithdrawal,
   });
 }
 
@@ -119,6 +109,3 @@ registerConnectedMovementRequestHandler(async (adapter,transportMessage,request)
 });
 
 for (const method of ["answerWithdrawalPrompt","setEngagement","setCreatureStatus","setCreatureBadge","applyNarrativeDamage","setSceneCondition","instantiateCombatantGroup","groupCombatants","ungroupCombatants","useLegendaryResistance","resolveMultiattackRoutine","resetMonsterTiming","applyPostHocToggle","endTurn","startInitiative","dismissResolution","undoLastResolution"] as RoutedMethod[]) wrapHostPublish(method);
-// A melee resolution engages its target (T1-03) the moment it resolves; players must see the chip then, not after the
-// DM's next edit. Only the engagement/condition part of the scene is compared: HP and turn state travel as events.
-for (const method of ["resolveAction","advanceResolution"] as RoutedMethod[]) wrapHostPublish(method,resolutionTheaterFingerprint);
