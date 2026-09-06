@@ -260,7 +260,8 @@ async function runScenario(){
     const greatsword=await findAction(p2,kael.id,isAttack("대검"),"대검");
     await peerCall(p2,`await mockAdapter.configureReadyAction({actorId:args.actorId,actionId:args.actionId,trigger:args.trigger});`,{actorId:kael.id,actionId:greatsword.id,trigger:"해골이 다가오면"});
     hostRes=await waitHostResolutionFor(host,kael.id);const armed=await hostAdvanceToComplete(host,hostRes.resolution.id);assert.equal(armed.resolution?.stage,"complete",JSON.stringify(armed.resolution));
-    await expectConverged(peers,armed.resolution.id,"장면2 준비 행동");
+    // Arming Ready is broadcast as a ready-action event ("원격 준비 행동 설정"), not as a resolution: every peer shows 카엘's 준비 행동 chip.
+    for(const p of peers)await waitEntity(p,kael.id,(e)=>e.status.some((status)=>status.includes("준비 행동")),"카엘 준비 행동 chip");
     const hostReady=await readyConfigurations(host);assert.ok(hostReady.some((c)=>c.actorId===kael.id&&c.actionId===greatsword.id),`Host holds the Ready configuration; got ${JSON.stringify(hostReady)}`);
     await closeResultCard(host);
     await walkToActor(host,skeleton);
