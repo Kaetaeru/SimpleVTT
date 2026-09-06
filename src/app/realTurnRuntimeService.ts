@@ -119,6 +119,22 @@ export function createTurnRuntimeSession(scene:SceneVm):TurnRuntimeSession {
   return { state, initiativeOrder:ordered, activeIndex:Math.max(0,ordered.indexOf(activeActorId)) };
 }
 
+/**
+ * V1.6 S1-04 (무너진 종탑 장면 2): effects, concentration, artifacts and zone memberships committed before a mode change
+ * belong to the table, not to the Initiative session — 카엘's 도움 on 세라 and 세라's 신앙의 방패 concentration were dropped on the
+ * Host by 이니셔티브 시작 (a fresh session) while every replica kept them. Carry them into the new session; the turn
+ * clock, order and turn-bound feature usage start fresh.
+ */
+export function carryOverRuntimeState(previous:RulesRuntimeState|undefined,next:RulesRuntimeState) {
+  if (!previous) return next;
+  const known=new Set(Object.keys(next.combatants));
+  next.effects=previous.effects.filter((effect)=>known.has(effect.targetId)).map((effect)=>structuredClone(effect));
+  next.concentration=Object.fromEntries(Object.entries(previous.concentration).filter(([actorId,entry])=>entry&&known.has(actorId)).map(([actorId,entry])=>[actorId,structuredClone(entry)]));
+  if (previous.artifacts?.length) next.artifacts=structuredClone(previous.artifacts);
+  if (previous.zoneMemberships?.length) next.zoneMemberships=structuredClone(previous.zoneMemberships);
+  return next;
+}
+
 export function addTurnRuntimeCombatant(session:TurnRuntimeSession,scene:SceneVm,entityId:string) {
   const entity=scene.entities.find((entry)=>entry.id===entityId);
   if (!entity || session.state.combatants[entityId]) return false;

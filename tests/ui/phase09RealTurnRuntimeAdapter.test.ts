@@ -3,6 +3,8 @@ import test from "node:test";
 import "../../src/app/phase09RealRuntimeAttackAdapter";
 import { createMovementModuleHost } from "../../src/app/phase09RealTurnRuntimeAdapter";
 import { MockAdapter } from "../../src/app/mockAdapter";
+import { createEffect } from "../../src/domain/effects";
+import { commitAdapterTurnRuntimeState, ensureAdapterTurnRuntimeState, snapshotAdapterTurnRuntimeState } from "../../src/app/turnRuntimeSessionRegistry";
 import type { MovementSpatialUpdate } from "../../src/app/movementRuntimeContracts";
 
 function movedAelarSpatial():MovementSpatialUpdate[] {
@@ -219,6 +221,25 @@ test("combatant instantiated during initiative joins runtime with Definition-bac
   snapshot=await adapter.getSnapshot();
   assert.equal(snapshot.scene.currentActorId,"char.mira","advancing from the lowest-initiative added combatant wraps the round");
   assert.equal(snapshot.scene.round,2);
+});
+
+test("S1-04: effects and concentration committed in 자유 진행 survive 이니셔티브 시작 and 이니셔티브 종료 on the Host", async () => {
+  const adapter=new MockAdapter();
+  await adapter.endInitiative();
+  const internal=adapter as unknown as {scene:import("../../src/app/contracts").SceneVm};
+  const seeded=ensureAdapterTurnRuntimeState(adapter,internal.scene);
+  seeded.effects.push(createEffect({id:"test:help",sourceId:"action.standard.help",targetId:"char.mira",kind:"marker",duration:{kind:"special",key:"helped-until-next-attack-or-check"},metadata:{sessionStatus:"도움 받음"}},seeded.clock));
+  seeded.concentration["char.aelar"]={groupId:"test:shield",sourceId:"dnd.srd521.spell.shield-of-faith",startedAt:seeded.clock} as never;
+  const expected=seeded.revision;seeded.revision+=1;
+  assert.equal(commitAdapterTurnRuntimeState(adapter,internal.scene,expected,seeded),true);
+  await adapter.startInitiative();
+  const inCombat=snapshotAdapterTurnRuntimeState(adapter,internal.scene);
+  assert.ok(inCombat?.effects.some((effect)=>effect.id==="test:help"),"이니셔티브 시작 keeps the freeform effect");
+  assert.ok(inCombat?.concentration["char.aelar"],"이니셔티브 시작 keeps the concentration");
+  await adapter.endInitiative();
+  const after=snapshotAdapterTurnRuntimeState(adapter,internal.scene);
+  assert.ok(after?.effects.some((effect)=>effect.id==="test:help"),"이니셔티브 종료 keeps the effect for 자유 진행");
+  assert.equal((await adapter.getSnapshot()).sessionMode,"freeform");
 });
 
 test("ending initiative releases the runtime session and returns to freeform", async () => {
