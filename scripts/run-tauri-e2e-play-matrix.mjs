@@ -193,25 +193,26 @@ async function runScenario(){
   const campaignId=await createNamedCampaign(host,"플레이 매트릭스");
   await openHostSession(host,sessionPort);await joinClientSession(p1,sessionPort);await joinClientSession(p2,sessionPort);
   await waitTom(host,(s)=>s.entities.filter((e)=>e.kind==="character").length===2,"both players in the scene");
-  const goblins=await addSrdMonstersViaUi(host,"고블린","고블린",2);assert.equal(goblins.length,2,`two goblins; got ${JSON.stringify(goblins)}`);
-  const [gob1,gob2]=goblins;
+  // 좀비 (15 HP): a level-1 fighter's 대검 (2d6+3) leaves it standing after one hit, so every step has a live target.
+  const zombies=await addSrdMonstersViaUi(host,"좀비","좀비",2);assert.equal(zombies.length,2,`two zombies; got ${JSON.stringify(zombies)}`);
+  const [gob1,gob2]=zombies;
   await expectTomParity(peers,"setup");
   await evidenceAll(peers,"matrix-00-table");
   try{
     // M1 · 자유 진행 — 공격 두 번 연속: 자유 진행에는 턴 경제가 없다. 둘 다 확정.
-    const free1=await playerAct(p2,kael.id,(a)=>a.available&&isAttack("롱소드")(a)&&(a.eligibleTargetIds??[]).includes(gob1),[gob1],15,host,"M1 카엘 롱소드 → 고블린 1");
+    const free1=await playerAct(p2,kael.id,(a)=>a.available&&isAttack("대검")(a)&&(a.eligibleTargetIds??[]).includes(gob1),[gob1],15,host,"M1 카엘 대검 → 좀비 1");
     await expectConverged(peers,free1.resolutionId,"M1 첫 공격");
-    const free2=await playerAct(p2,kael.id,(a)=>a.available&&isAttack("롱소드")(a)&&(a.eligibleTargetIds??[]).includes(gob1),[gob1],15,host,"M1 카엘 롱소드 → 고블린 1 (둘째)");
+    const free2=await playerAct(p2,kael.id,(a)=>a.available&&isAttack("대검")(a)&&(a.eligibleTargetIds??[]).includes(gob1),[gob2],15,host,"M1 카엘 대검 → 좀비 2 (둘째)");
     await expectConverged(peers,free2.resolutionId,"M1 둘째 공격");
     record("M1-자유진행-연속공격",{free1,free2});
 
     // M2 · 자유 진행 — 아군을 공격: 대상 부적격. 호스트가 거부하고, 카엘의 도크와 DM 도크에 이유가 뜬다.
-    const ally=await expectRefused(p2,host,kael.id,isAttack("롱소드"),[sera.id],"M2 카엘 롱소드 → 세라",{code:"action-rejected",message:"그 대상에게는 사용할 수 없습니다."});
+    const ally=await expectRefused(p2,host,kael.id,isAttack("대검"),[sera.id],"M2 카엘 대검 → 세라",{code:"action-rejected",message:"그 대상에게는 사용할 수 없습니다."});
     await evidenceAll(peers,"matrix-m2-ally-refused");
     record("M2-아군공격-거부",ally);
 
     // M3 · 자유 진행 — 대상 초과: 단일 대상 주문에 대상 둘. 그리고 정상 치유는 확정.
-    const crowd=await expectRefused(p1,host,sera.id,(a)=>a.spellId==="dnd.srd521.spell.sacred-flame",[gob1,gob2],"M3 세라 신성한 불길 → 고블린 둘",{code:"action-rejected"});
+    const crowd=await expectRefused(p1,host,sera.id,(a)=>a.spellId==="dnd.srd521.spell.sacred-flame",[gob1,gob2],"M3 세라 신성한 불길 → 좀비 둘",{code:"action-rejected"});
     assert.match(crowd.message,/최대 1명/,"M3: the refusal names the limit");
     const heal=await playerAct(p1,sera.id,(a)=>a.spellId==="dnd.srd521.spell.healing-word"&&a.available,[kael.id],null,host,"M3 세라 치유의 단어 → 카엘");
     await expectConverged(peers,heal.resolutionId,"M3 치유");
@@ -223,19 +224,16 @@ async function runScenario(){
     await expectTomParity(peers,"M4 이니셔티브");
     await walkToActor(host,kael.id);
     await waitTom(p2,(s)=>s.currentActorId===kael.id,"P2 seeing 카엘's turn");
-    const swing1=await playerAct(p2,kael.id,(a)=>a.available&&isAttack("롱소드")(a)&&(a.eligibleTargetIds??[]).includes(gob2),[gob2],15,host,"M4 카엘 롱소드 1");
+    const swing1=await playerAct(p2,kael.id,(a)=>a.available&&isAttack("대검")(a)&&(a.eligibleTargetIds??[]).includes(gob2),[gob2],15,host,"M4 카엘 대검 1");
     await expectConverged(peers,swing1.resolutionId,"M4 첫 공격");
     await closeResultCard(host);
-    const swing2=await playerAct(p2,kael.id,(a)=>a.available&&isAttack("롱소드")(a)&&(a.eligibleTargetIds??[]).includes(gob2),[gob2],15,host,"M4 카엘 롱소드 2 (추가 공격)");
-    await expectConverged(peers,swing2.resolutionId,"M4 추가 공격");
-    await closeResultCard(host);
-    // S1-02: the player's own projection must show the tile spent before he even tries.
-    const spent=await waitProjected(p2,kael.id,isAttack("롱소드"),(a)=>a.available===false,"롱소드 unavailable after the action is spent");
+    // S1-02: the player's own projection must show the tile spent before he even tries (a level-1 fighter has no Extra Attack).
+    const spent=await waitProjected(p2,kael.id,isAttack("대검"),(a)=>a.available===false,"대검 unavailable after the action is spent");
     assert.equal(spent.disabledReason,"행동을 이미 사용했습니다.","M4: the projected reason on the player");
-    const third=await expectRefused(p2,host,kael.id,isAttack("롱소드"),[gob2],"M4 카엘 롱소드 3 (행동 소진)",{code:"action-disabled",message:"행동을 이미 사용했습니다.",projectedUnavailable:true});
+    const second=await expectRefused(p2,host,kael.id,isAttack("대검"),[gob2],"M4 카엘 대검 2 (행동 소진)",{code:"action-disabled",message:"행동을 이미 사용했습니다.",projectedUnavailable:true});
     const parity4=await expectUiParity(host,p2,kael.id,"M4 행동 소진 후");
     await evidenceAll(peers,"matrix-m4-action-spent");
-    record("M4-행동소진-거부",{swing1,swing2,third,parity:parity4});
+    record("M4-행동소진-거부",{swing1,second,parity:parity4});
 
     // M5 · 같은 턴 — 추가 행동: 세컨드 윈드 확정, 두 번째 세컨드 윈드는 거부.
     const wind=await playerAct(p2,kael.id,(a)=>/세컨드 윈드|Second Wind/.test(a.name)&&a.available,[kael.id],null,host,"M5 카엘 세컨드 윈드");
@@ -252,19 +250,19 @@ async function runScenario(){
 
     // M7 · DM의 고블린 턴 — 공격 확정, 같은 턴 두 번째 공격은 DM 도크에 거부.
     await walkToActor(host,gob1);
-    const gobSwing=await hostAttack(host,{actorId:gob1,targetId:kael.id,queued:18,match:"시미터|단궁|shortbow|scimitar"});
-    await expectConverged(peers,gobSwing.resolutionId,"M7 고블린 공격");
+    const gobSwing=await hostAttack(host,{actorId:gob1,targetId:kael.id,queued:18,match:"후려치기|강타|slam|."});
+    await expectConverged(peers,gobSwing.resolutionId,"M7 좀비 공격");
     await closeResultCard(host);
-    const gobAgain=await expectHostRefused(host,`await mockAdapter.selectDmActor(args.id);const s0=await mockAdapter.getSnapshot();const a=(s0.scene.actionsByActor[args.id]??[]).find((x)=>x.resolutionKind==="attack");await mockAdapter.resolveAction(a.id,[args.target])`,{id:gob1,target:kael.id},"M7 고블린 둘째 공격",{code:"action-unavailable"});
+    const gobAgain=await expectHostRefused(host,`await mockAdapter.selectDmActor(args.id);const s0=await mockAdapter.getSnapshot();const a=(s0.scene.actionsByActor[args.id]??[]).find((x)=>x.resolutionKind==="attack");await mockAdapter.resolveAction(a.id,[args.target])`,{id:gob1,target:kael.id},"M7 좀비 둘째 공격",{code:"action-unavailable"});
     await evidenceAll(peers,"matrix-m7-dm-refused");
     record("M7-DM행동소진-거부",{gobSwing,gobAgain});
 
-    // M8 · 쓰러진 캐릭터 — 카엘 HP 0. 자기 턴이 와도 행동은 거부되어야 한다 (의식불명).
+    // M8 · 쓰러진 캐릭터 — 카엘 HP 0. 자기 턴이 와도 무기 공격은 거부되어야 한다 (의식불명 · 죽음 내성 굴림만 가능).
     await hostCall(host,`await mockAdapter.applyNarrativeDamage(args.id,999);`,{id:kael.id});
     await waitTom(p2,(s)=>ent(s,kael.id)?.hp===0,"P2 seeing 카엘 at 0 HP");
     await walkToActor(host,kael.id);
     await waitTom(p2,(s)=>s.currentActorId===kael.id,"P2 seeing 카엘's turn while down");
-    const down=await expectRefused(p2,host,kael.id,isAttack("롱소드"),[gob2],"M8 쓰러진 카엘의 공격");
+    const down=await expectRefused(p2,host,kael.id,isAttack("대검"),[gob1],"M8 쓰러진 카엘의 공격");
     await evidenceAll(peers,"matrix-m8-down");
     record("M8-쓰러짐-거부",down);
 

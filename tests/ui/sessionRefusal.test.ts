@@ -42,6 +42,25 @@ test("S1-01: an ineligible target and too many targets are refused by name; a co
   assert.equal(committed.refusal,null,"a committed action leaves no refusal behind");
 });
 
+test("S1-01/M8: a creature at 0 HP cannot act — a character may only roll a death save, and the reason says so", async () => {
+  const adapter=await adapterWithAelarTurn();
+  const scene=(adapter as unknown as {scene:{entities:{id:string;hp:number}[]}}).scene;
+  scene.entities.find((entity)=>entity.id==="char.aelar")!.hp=0;
+  const downed=await adapter.resolveAction("action.longsword",["combatant.goblin-a"]);
+  assert.equal(downed.resolution,null);
+  assert.equal(downed.refusal?.code,"action-unavailable");
+  assert.equal(downed.refusal?.message,"의식불명 · 죽음 내성 굴림만 할 수 있습니다.");
+  const projected=(downed.scene.actionsByActor["char.aelar"]??[]).find((action)=>action.id==="action.longsword");
+  assert.equal(projected?.available,false,"the projection shows the tile unavailable before anyone clicks");
+  assert.equal(projected?.disabledReason,"의식불명 · 죽음 내성 굴림만 할 수 있습니다.");
+  await adapter.setCurrentActor("combatant.goblin-a");
+  scene.entities.find((entity)=>entity.id==="combatant.goblin-a")!.hp=0;
+  const goblinAction=(await adapter.getSnapshot()).scene.actionsByActor["combatant.goblin-a"]?.[0];
+  assert.ok(goblinAction);
+  const dead=await adapter.resolveAction(goblinAction.id,["char.aelar"]);
+  assert.equal(dead.refusal?.message,"쓰러진 상태라 행동할 수 없습니다.");
+});
+
 test("S1-01: refusal ids only grow, so a notice can key on them", () => {
   const first=makeRefusal("x","a");const second=makeRefusal("x","a");
   assert.ok(second.id>first.id);
