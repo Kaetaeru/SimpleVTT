@@ -202,15 +202,18 @@ async function runScenario(){
     const conc1=await hostConcentration(host);assert.ok(conc1?.concentration?.[sera.id],`Host holds 세라's concentration; got ${JSON.stringify(conc1)}`);
     const help=await playerAct(p2,kael.id,(a)=>a.id==="action.standard.help"&&a.available,[sera.id],null,host,"카엘 도움 → 세라");
     await expectConverged(peers,help.resolutionId,"장면1 도움");
-    const crowd=await expectRefused(p1,host,sera.id,(a)=>a.spellId==="dnd.srd521.spell.sacred-flame",[kael.id,sera.id],"장면1 신성한 불길 대상 둘",{code:"action-rejected",messagePattern:/최대 1명/});
+    // 틀린 플레이: 세라가 적 대상 주문을 자기 자신에게 → "그 대상에게는 사용할 수 없습니다."
+    const selfTarget=await expectRefused(p1,host,sera.id,(a)=>a.spellId==="dnd.srd521.spell.sacred-flame",[sera.id],"장면1 신성한 불길 → 세라 자신",{code:"action-rejected",message:"그 대상에게는 사용할 수 없습니다."});
     await evidenceAll(peers,"tom2-01-village");
-    record("장면1-마을",{potion:potionQuantity(await peerState(p2)),shield,shielded,help,crowd});
+    record("장면1-마을",{potion:potionQuantity(await peerState(p2)),shield,shielded,help,selfTarget});
 
     // 장면 2 · 무너진 계단 — 좀비 ×2, 해골 ×1; 넘어짐; 붙잡기; 행동 소진; 인도로 집중 교체; 집중 판정; 준비 행동; 서술 피해; 쓰러짐; 죽음 내성; 안정화; 일어남; 물약.
     const zombies=await addSrdMonstersViaUi(host,"좀비","좀비",2);assert.equal(zombies.length,2);
     const [skeleton]=await addSrdMonstersViaUi(host,"해골","해골",1);
     await rawCall(host,`await mockAdapter.setCreatureStatus(args.id,"넘어짐",true);`,{id:zombies[0]});
     await everyPeerEntity(peers,zombies[0],(e)=>e.status.includes("넘어짐"),"좀비 1 넘어짐 on every peer");
+    // 틀린 플레이: 단일 대상 주문에 좀비 둘 → "대상은 최대 1명입니다."
+    const crowd=await expectRefused(p1,host,sera.id,(a)=>a.spellId==="dnd.srd521.spell.sacred-flame",[zombies[0],zombies[1]],"장면2 신성한 불길 → 좀비 둘",{code:"action-rejected",messagePattern:/최대 1명/});
     await expectTomParity(peers,"장면2 준비");
     await clickInitiative(host,"이니셔티브 시작");
     await waitTom(host,(s)=>s.mode==="initiative","Initiative on the Host");
@@ -305,7 +308,7 @@ async function runScenario(){
     await waitTom(host,(s)=>s.mode==="freeform","freeform on the Host");
     await expectTomParity(peers,"장면2 정리");
     await evidenceAll(peers,"tom2-02e-stairs-end");
-    record("장면2-계단",{grapple,grappled,spent,guidance,unshielded,cureRefused,slam:{id:slamDone.resolution.id,save:slamDone.resolution.concentrationSave},ready:{armed:armed.resolution.id,fired:firedDone.resolution.id},narrative:{full:kaelFull,halved:halved[host.label].hp,healedBack:healedBack[host.label].hp},deathSave,stabilize,cure,revived,potion:{before:potionBefore,after:potionQuantity(await peerState(p2)),hp:[hpBeforePotion,afterPotion]}});
+    record("장면2-계단",{crowd,grapple,grappled,spent,guidance,unshielded,cureRefused,slam:{id:slamDone.resolution.id,save:slamDone.resolution.concentrationSave},ready:{armed:armed.resolution.id,fired:firedDone.resolution.id},narrative:{full:kaelFull,halved:halved[host.label].hp,healedBack:healedBack[host.label].hp},deathSave,stabilize,cure,revived,potion:{before:potionBefore,after:potionQuantity(await peerState(p2)),hp:[hpBeforePotion,afterPotion]}});
 
     // 막간 · 되돌리기 — DM이 마지막 판정(물약)을 되돌린다: 보상 이벤트가 모든 창에 도착하고 원 기록은 남는다.
     const undoTarget=potion.resolutionId;const cursorBeforeUndo=(await peerState(host)).cursor;const hpBeforeUndo=ent(await tomState(host),kael.id).hp;
