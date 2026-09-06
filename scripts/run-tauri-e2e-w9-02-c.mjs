@@ -128,7 +128,7 @@ async function runScenario(){
     assert.equal(c01Done.resolution.attackOutcome,"명중",JSON.stringify(c01Done.resolution));assertQueuedD20(c01Done,c01Done.resolution.id,15,"MP-C01");
     const c01States=await expectConverged(peers,c01Done.resolution.id,"MP-C01");
     const goblinAfter=entity(c01States[0][1],goblinId).hp;assert.ok(goblinAfter<goblinBefore,`goblin HP must drop on hit (${goblinBefore} -> ${goblinAfter})`);
-    for(const p of [p1,p2]){const text=await renderedActivityText(p);assert.ok(text.includes(c01Done.resolution.id)&&text.includes("HP"),`${p.label} Activity must render the committed resolution and its HP change; got ${text.slice(0,300)}`);await closeActivity(p);}
+    for(const p of [p1,p2]){const text=await renderedActivityText(p);const st=await peerState(p);assert.ok(st.activity.some((x)=>x.id===c01Done.resolution.id)&&text.includes("HP"),`${p.label} Activity must render the committed resolution and its HP change; got ${text.slice(0,300)}`);await closeActivity(p);}
     await evidenceAll(peers,"w9-02c-c01");
     record("MP-C01",{resolutionId:c01Done.resolution.id,d20:d20FaceOf(c01Done,c01Done.resolution.id),attackTotal:c01Done.resolution.attackTotal,damageDice:c01Done.resolution.dice,goblinBefore,goblinAfter,clientViews:c01States.views,announcements:c01States.announcements});
     record("MP-C07",{damageComponents:c01Done.resolution.damageComponents,stateChanges:c01Done.resolution.stateChanges});
@@ -178,7 +178,7 @@ async function runScenario(){
     if(hostRes.resolution.checkTarget===undefined){await hostCall(host,`await mockAdapter.applyDmAdjudication({type:"ability-check-dc",value:10,scope:"resolution"});`);}
     const c08Done=await hostAdvanceToComplete(host,hostRes.resolution.id);assert.equal(c08Done.resolution?.stage,"complete",JSON.stringify(c08Done.resolution));
     assertQueuedD20(c08Done,c08Done.resolution.id,13,"MP-C08");const c08States=await expectConverged(peers,c08Done.resolution.id,"MP-C08");
-    for(const p of [p1,p2]){const text=await renderedActivityText(p);assert.ok(text.includes(c08Done.resolution.id),`${p.label} must render the committed check entry`);await closeActivity(p);}
+    for(const p of [p1,p2]){const text=await renderedActivityText(p);const st=await peerState(p);assert.ok(st.activity.some((x)=>x.id===c08Done.resolution.id)&&text.includes(c08Done.resolution.actionName),`${p.label} must render the committed check entry; got ${text.slice(0,200)}`);await closeActivity(p);}
     await evidenceAll(peers,"w9-02c-c08");record("MP-C08",{resolutionId:c08Done.resolution.id,action:athletics.name,total:c08Done.resolution.rollTotal,outcome:c08Done.resolution.checkOutcome??c08Done.resolution.finalOutcome,clientViews:c08States.views});
 
     // MP-C10: picker-selected Study/Search/Influence skill intent reaches H and presents to every peer.
@@ -231,7 +231,7 @@ async function runScenario(){
 
     // MP-C30: Activity detail after presentation matches the immutable committed resolution on every peer.
     const hostActivity=(await peerState(host)).activity.find((e)=>e.id===c01Done.resolution.id);
-    for(const p of [p1,p2]){const e=(await peerState(p)).activity.find((x)=>x.id===c01Done.resolution.id);assert.deepEqual(e.stateChanges,hostActivity.stateChanges,`${p.label} state changes diverge for the committed resolution`);const text=await renderedActivityText(p);assert.ok(text.includes(c28Done.resolution.id),`${p.label} must still render the latest committed entry`);await closeActivity(p);}
+    for(const p of [p1,p2]){const e=(await peerState(p)).activity.find((x)=>x.id===c01Done.resolution.id);assert.deepEqual(e.stateChanges,hostActivity.stateChanges,`${p.label} state changes diverge for the committed resolution`);const text=await renderedActivityText(p);const latest=(await peerState(p)).activity.find((x)=>x.id===c28Done.resolution.id);assert.ok(latest&&text.includes(latest.title),`${p.label} must still render the latest committed entry; got ${text.slice(0,200)}`);await closeActivity(p);}
     record("MP-C30",{resolutionId:c01Done.resolution.id,title:hostActivity.title,renderedLatest:c28Done.resolution.id});
 
     // ------------------------------------------------------------------------------------------

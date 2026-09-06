@@ -444,7 +444,7 @@ async function applyConfirmedPayload(adapter:MockAdapter,payload:ConnectedEventP
       time:"지금",
       actor:"Host",
       title:"장면 액터 동기화",
-      summary:`${topology.entities.length} actors`,
+      summary:`액터 ${topology.entities.length}명`,
       detail:[`eventId=${event.eventId}`,...payload.provenance],
       stateChanges:[...payload.stateChanges],
     });
@@ -527,13 +527,15 @@ async function applyConfirmedPayload(adapter:MockAdapter,payload:ConnectedEventP
   app.syncChar();
   const presentationStatus=enqueueOrInstallConnectedPresentation(adapter,payload.presentation);
   state.lastAppliedPresentationSequence=Math.max(state.lastAppliedPresentationSequence,payload.presentation.presentationSequence);
+  const view=payload.presentation.resolution;
+  const targetLabels=payload.presentation.targets.map((target)=>target.label).filter(Boolean);
   app.activity.unshift({
     id:payload.resolutionId,
     time:"지금",
-    actor:event.actorId ?? "Host",
-    title:`원격 Resolution 적용 · ${payload.resolutionId}`,
-    summary:`Host event #${event.sequence}`,
-    detail:[`eventId=${event.eventId}`,`ResolutionEvent ${payload.resolutionEvents.length}개`,`host-authoritative forward apply`,`presentation=${presentationStatus}`],
+    actor:payload.presentation.actor.label||event.actorId||"Host",
+    title:targetLabels.length?`${view.actionName} → ${targetLabels.join(", ")}`:view.actionName,
+    summary:view.compact||view.finalOutcome||`Host event #${event.sequence}`,
+    detail:[`Host event #${event.sequence}`,`eventId=${event.eventId}`,`ResolutionEvent ${payload.resolutionEvents.length}개`,`host-authoritative forward apply`,`presentation=${presentationStatus}`],
     stateChanges:[...projected.stateChanges],
   });
   return { status:"committed" as const };

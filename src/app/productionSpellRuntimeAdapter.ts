@@ -1,4 +1,5 @@
 import "./spellcastingRuntimeContracts";
+import { DAMAGE_LABEL_KO } from "./srdMonsterCatalog";
 import type { ActionVm, AppSnapshot, CharacterSheet, ResolutionView, SceneEntity } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
 import { takeForcedSaveSuccess } from "./forcedSaveSuccess";
@@ -148,6 +149,24 @@ function saveResultsFromCast(
   });
 }
 
+/** The kernel names creatures by id and writes English templates; players read names and Korean damage types. */
+export function readableCastSummary(summary:string,nameOf:(id:string)=>string,fallbackTargetId?:string):string {
+  const damage=summary.match(/^(\S+) takes (\d+) (\S+) damage$/);
+  if (damage) return `${nameOf(damage[1])} ${damage[2]} ${DAMAGE_LABEL_KO[damage[3]]??damage[3]} 피해`;
+  const compound=summary.match(/^(\S+) takes (\d+) compound damage \((.*)\)$/);
+  if (compound) return `${nameOf(compound[1])} ${compound[2]} 복합 피해 (${compound[3]})`;
+  const heal=summary.match(/^(\S+) regains (\d+) HP$/);
+  if (heal) return `${nameOf(heal[1])} HP ${heal[2]} 회복`;
+  const temp=summary.match(/^(\S+) Temporary HP (\d+)$/);
+  if (temp) return `${nameOf(temp[1])} 임시 HP ${temp[2]}`;
+  const maximum=summary.match(/^(\S+) maximum HP (\d+) -> (\d+)$/);
+  if (maximum) return `${nameOf(maximum[1])} 최대 HP ${maximum[2]} → ${maximum[3]}`;
+  const stabilized=summary.match(/^(\S+) is stabilized$/);
+  if (stabilized) return `${nameOf(stabilized[1])} 안정화`;
+  if (/^effect .* applied$/.test(summary)) return fallbackTargetId?`${nameOf(fallbackTargetId)} 효과 적용`:"효과 적용";
+  return summary;
+}
+
 function resolutionFromCast(
   actionName:string,
   actionId:string,
@@ -170,7 +189,11 @@ function resolutionFromCast(
       calculatedOutcome:"시전 거부",finalOutcome:"시전 거부",stateChanges:[],adjudicated:false,canAdvance:false,
     };
   }
-  const outcome=result.events.at(-1)?.summary??"주문 적용";
+  // The kernel names effect applications by id ("effect <id> applied"); players read the damage/heal/save line instead.
+  const nameOf=(id:string)=>{const index=targetIds.indexOf(id);return index>=0?(targetNames[index]??id):id===actorId?"시전자":id;};
+  const readableOf=(event:SpellCastResolution["events"][number])=>readableCastSummary(event.summary,nameOf,(event as {targetId?:string}).targetId);
+  const readableEvent=[...result.events].reverse().find((event)=>!/^effect .* applied$/.test(event.summary));
+  const outcome=readableEvent?readableOf(readableEvent):(result.events.length?"효과 적용":"주문 적용");
   const saveResults=saveResultsFromCast(result,targetIds,targetNames);
   return {
     id:result.events[0]?.resolutionId??`production-spell.${Date.now()}`,
@@ -178,10 +201,10 @@ function resolutionFromCast(
     rollKind:saveResults.length?"save":"effect",stage:"complete",authoritativeDice,
     saveResults,damageComponents:[],
     compact:`${actionName}${slotLevel?` · ${slotLevel}레벨 슬롯`:""} · ${outcome}`,
-    detail:result.events.map((event)=>event.summary),
+    detail:result.events.map((event)=>readableOf(event)),
     provenance:[...new Set(result.events.flatMap((event)=>event.provenance.map((entry)=>entry.source)))],
     calculatedOutcome:outcome,finalOutcome:outcome,
-    stateChanges:result.events.flatMap((event)=>event.stateChanges.map((change)=>`${event.summary} · ${change.kind}`)),
+    stateChanges:result.events.flatMap((event)=>event.stateChanges.map((change)=>`${readableOf(event)} · ${change.kind}`)),
     adjudicated:false,canAdvance:false,
   };
 }

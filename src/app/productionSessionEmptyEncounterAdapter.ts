@@ -4,6 +4,8 @@ import { connectedInternal } from "./connectedSessionRuntimeAdapter";
 import { isEphemeralSessionProjectionCharacter } from "./characterSessionProjectionRegistry";
 
 const previousGetSnapshot=MockAdapter.prototype.getSnapshot;
+/** The reference scene's seeded 기록 entries (Aelar's longsword, Mira's healing word): never part of a real session. */
+const FIXTURE_ACTIVITY_IDS=new Set(["evt.201","evt.200"]);
 const FIXTURE_ENTITY_IDS=new Set([
   "char.aelar",
   "char.mira",
@@ -31,6 +33,7 @@ MockAdapter.prototype.getSnapshot=async function getSnapshotWithoutProductionHos
     removedIds.add(entity.id);
     return false;
   });
+  if (app.activity.some((entry)=>FIXTURE_ACTIVITY_IDS.has(entry.id))) app.activity=app.activity.filter((entry)=>!FIXTURE_ACTIVITY_IDS.has(entry.id));
   for (const id of removedIds) {
     delete app.scene.actionsByActor[id];
     delete app.scene.economyByActor[id];
@@ -56,6 +59,7 @@ MockAdapter.prototype.getSnapshot=async function getSnapshotWithoutProductionHos
 
   return {
     ...refreshed,
+    activity:refreshed.activity.filter((entry)=>!FIXTURE_ACTIVITY_IDS.has(entry.id)),
     scene,
     resolution:app.resolution ? structuredClone(app.resolution) : null,
   };

@@ -1,0 +1,150 @@
+{
+  "gate": "C1-MP",
+  "scope": [
+    "C1-MP-01",
+    "C1-MP-02",
+    "C1-MP-04",
+    "C1-MP-03",
+    "C1-MP-05",
+    "C1-MP-06",
+    "C1-MP-07",
+    "C1-MP-08",
+    "C1-MP-09"
+  ],
+  "status": "PASS",
+  "verificationSha": "555a312c2dd32ff21abf6cc586a16676547c41a9",
+  "windowsTauri": true,
+  "topology": {
+    "host": "DM Host (no character)",
+    "clients": [
+      "P1 C1 Cleric",
+      "P2 C1 Fighter"
+    ],
+    "sessionPort": 51491
+  },
+  "scenarios": {
+    "C1-MP-01": {
+      "status": "PASS",
+      "hostRole": "host",
+      "characters": [
+        "C1 Cleric",
+        "C1 Fighter"
+      ],
+      "participants": [
+        {
+          "id": "host",
+          "state": "connected"
+        },
+        {
+          "characterName": "C1 Cleric",
+          "id": "client:char.25338995-aabe-4d25-9957-af48684efe16",
+          "state": "connected"
+        },
+        {
+          "characterName": "C1 Fighter",
+          "id": "client:char.afdf7ec1-177a-444f-8ad9-c39a729dcdfa",
+          "state": "connected"
+        }
+      ]
+    },
+    "C1-MP-02": {
+      "status": "PASS",
+      "monster": {
+        "ac": 10,
+        "hp": 39,
+        "id": "dnd.srd521.monster.death-dog.instance-1",
+        "initiative": 19,
+        "kind": "combatant",
+        "maxHp": 39,
+        "movement": null,
+        "name": "죽음의 개 1",
+        "side": "enemy",
+        "status": []
+      }
+    },
+    "C1-MP-04": {
+      "status": "PASS",
+      "round": 1,
+      "currentActorId": "dnd.srd521.monster.death-dog.instance-1",
+      "order": [
+        {
+          "name": "C1 Cleric",
+          "initiative": 11
+        },
+        {
+          "name": "C1 Fighter",
+          "initiative": 12
+        },
+        {
+          "name": "죽음의 개 1",
+          "initiative": 19
+        }
+      ]
+    },
+    "C1-MP-03": {
+      "status": "PASS",
+      "path": "ui",
+      "host": "withdraw",
+      "p2": "withdraw"
+    },
+    "C1-MP-05": {
+      "status": "PASS",
+      "resolutionId": "production-spell-cast.dnd.srd521.spell.guiding-bolt.1788658239656",
+      "slotBefore": 2,
+      "slotAfter": 1,
+      "bearHp": 25
+    },
+    "C1-MP-06": {
+      "status": "PASS",
+      "resolutionId": "resolution.phase09.1788658242442.523",
+      "action": "대검",
+      "bearHp": 19
+    },
+    "C1-MP-07": {
+      "status": "PASS",
+      "entries": [
+        {
+          "actor": "죽음의 개 1",
+          "title": "물기 → C1 Cleric",
+          "summary": "6 vs AC 14 — 빗나감",
+          "stateChanges": [
+            "dnd.srd521.monster.death-dog.instance-1 추가 공격 1 → 0"
+          ]
+        },
+        {
+          "actor": "죽음의 개 1",
+          "title": "물기 → C1 Cleric",
+          "summary": "20 vs AC 14 — 명중 · 4 관통 피해",
+          "stateChanges": [
+            "dnd.srd521.monster.death-dog.instance-1 economy.action true → false",
+            "dnd.srd521.monster.death-dog.instance-1 추가 공격 0 → 1",
+            "char.25338995-aabe-4d25-9957-af48684efe16 HP 10 → 6"
+          ]
+        }
+      ],
+      "clericHp": 6
+    },
+    "C1-MP-08": {
+      "status": "PASS",
+      "mode": "initiative",
+      "currentActorId": "dnd.srd521.monster.death-dog.instance-1",
+      "activityCount": 25
+    },
+    "C1-MP-09": {
+      "status": "PASS",
+      "viaUi": true,
+      "host": {
+        "role": "offline",
+        "connectionState": "disconnected"
+      },
+      "p1": {
+        "role": "offline",
+        "connectionState": "disconnected"
+      },
+      "p2": {
+        "role": "offline",
+        "connectionState": "disconnected"
+      }
+    }
+  }
+}
