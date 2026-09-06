@@ -1,6 +1,6 @@
 import type { AppSnapshot } from "./contracts";
 import { MockAdapter } from "./mockAdapter";
-import { makeRefusal, refusalMessageFor } from "./sessionRefusal";
+import { makeRefusal, refusalMessageFor, targetRefusalFor } from "./sessionRefusal";
 import { registerConnectedActionRequestHandler } from "./connectedActionRequestPort";
 import { registerConnectedInterruptResponseHandler } from "./connectedInterruptResponsePort";
 import { registerConnectedConcentrationResponseHandler } from "./connectedConcentrationResponsePort";
@@ -359,6 +359,16 @@ registerConnectedActionRequestHandler(async (adapter,transportMessage,request) =
       await sendConnectedWireTo(transportMessage.peer,{type:"error",code:"action-disabled",message:reason,hostCursor:ledger.cursor});
       return;
     }
+    // S1-03/M2: the targets must be the ones the projection offers this actor.
+    const targetRefusal=targetRefusalFor(requestedAction,request.targetIds);
+    if (targetRefusal) {
+      ledger.cancelReservedActionRequest(request.requestId);
+      restoreProjectedContext(adapter);
+      connectedInternal(adapter).refusal=makeRefusal(targetRefusal.code,targetRefusal.message,{origin:"remote",actorId:request.actorId,actionId:request.actionId});
+      await publishConnectedSnapshot(adapter);
+      await sendConnectedWireTo(transportMessage.peer,{type:"error",code:targetRefusal.code,message:targetRefusal.message,hostCursor:ledger.cursor});
+      return;
+    }
     // The DM-facing availability projection never gates by turn (the DM may drive any Actor, and DM-owned
     // turns stay permissive for remote players by existing contract). When another player's projected
     // Character holds the Initiative turn, a remote intent is refused explicitly unless it is a reaction.
@@ -462,6 +472,11 @@ MockAdapter.prototype.resolveAction=async function resolveConnectedAction(action
     app.session.compatibilityMessage="Resolve or dismiss the pending remote action before starting another shared action.";
     app.refusal=makeRefusal("remote-pending",refusalMessageFor("remote-pending"),{actionId});
     return app.getSnapshot();
+  }
+  if (state.mode==="host") {
+    const local=await app.getSnapshot();
+    const localRefusal=targetRefusalFor(Object.values(local.scene.actionsByActor).flat().find((entry)=>entry.id===actionId),targetIds);
+    if (localRefusal) { app.refusal=makeRefusal(localRefusal.code,localRefusal.message,{actionId}); return app.getSnapshot(); }
   }
   const armedVisibility=state.mode==="host"?state.nextResolutionVisibility:null;
   const previousResolutionId=app.resolution?.id;

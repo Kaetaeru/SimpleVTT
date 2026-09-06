@@ -43,6 +43,8 @@ test("S1-01: the base adapter, the connected client and the Host all record refu
   assert.match(routing,/makeRefusal\("action-disabled",reason,\{origin:"remote"/,"the Host's pre-check refusal is recorded and relayed with its reason");
   assert.match(routing,/code:"action-off-turn",message:refusalMessageFor\("action-off-turn"\)/,"the off-turn refusal reads in Korean only");
   assert.match(routing,/makeRefusal\("remote-pending"/);
+  assert.match(routing,/const targetRefusal=targetRefusalFor\(requestedAction,request\.targetIds\)/,"remote targets are checked against the projection");
+  assert.match(routing,/const localRefusal=targetRefusalFor\(/,"the Host's own targets are checked the same way");
   const provider=read("../../src/app/AppProvider.tsx");
   assert.match(provider,/commandWasNoOp\(before, after\)/);
   assert.match(provider,/after\.session\.role !== "client"/,"a client's request is answered by the Host later");

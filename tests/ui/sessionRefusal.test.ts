@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { MockAdapter } from "../../src/app/mockAdapter";
-import { commandWasNoOp, makeRefusal, refusalMessageFor } from "../../src/app/sessionRefusal";
+import { commandWasNoOp, makeRefusal, refusalMessageFor, targetRefusalFor } from "../../src/app/sessionRefusal";
 
 async function adapterWithAelarTurn() {
   const adapter=new MockAdapter();
@@ -59,6 +59,17 @@ test("S1-01/M8: a creature at 0 HP cannot act — a character may only roll a de
   assert.ok(goblinAction);
   const dead=await adapter.resolveAction(goblinAction.id,["char.aelar"]);
   assert.equal(dead.refusal?.message,"쓰러진 상태라 행동할 수 없습니다.");
+});
+
+test("S1-03/M2: the Host refuses targets the projection did not offer, and more targets than the action allows", () => {
+  const greatsword={eligibleTargetIds:["zombie.1","zombie.2"],target:"enemy"};
+  assert.equal(targetRefusalFor(greatsword,["zombie.1"]),null);
+  assert.deepEqual(targetRefusalFor(greatsword,["char.sera"]),{code:"target-ineligible",message:"그 대상에게는 사용할 수 없습니다."});
+  assert.deepEqual(targetRefusalFor(greatsword,["zombie.1","zombie.2"]),{code:"too-many-targets",message:"대상은 최대 1명입니다."});
+  assert.equal(targetRefusalFor({eligibleTargetIds:["a","b","c"],target:"multi-enemy",maxTargets:2},["a","b"]),null);
+  assert.deepEqual(targetRefusalFor({eligibleTargetIds:["a","b","c"],target:"multi-enemy",maxTargets:2},["a","b","c"]),{code:"too-many-targets",message:"대상은 최대 2명입니다."});
+  assert.equal(targetRefusalFor({eligibleTargetIds:[],target:"any"},["anyone"]),null,"unprojected eligibility is left to the resolution path");
+  assert.equal(targetRefusalFor(undefined,["x"]),null);
 });
 
 test("S1-01: refusal ids only grow, so a notice can key on them", () => {

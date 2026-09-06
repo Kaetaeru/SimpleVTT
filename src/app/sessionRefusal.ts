@@ -65,6 +65,20 @@ export function subscribeRefusal(listener:RefusalListener):()=>void {
   return ()=>{listeners.delete(listener);};
 }
 
+/**
+ * The targets a request names must be the targets the projection offers: the dock only lets a player pick from
+ * `eligibleTargetIds`, so a request outside that list (a stale client, a script, a race) is refused the same way.
+ * An action whose eligibility is not projected (empty list) is left to the resolution path.
+ */
+export function targetRefusalFor(action:{eligibleTargetIds?:string[];maxTargets?:number;target?:string}|undefined,targetIds:string[]):{code:string;message:string}|null {
+  if(!action||!targetIds.length) return null;
+  const eligible=action.eligibleTargetIds??[];
+  if(eligible.length&&targetIds.some((id)=>!eligible.includes(id))) return {code:"target-ineligible",message:REFUSAL_MESSAGES["target-ineligible"]};
+  const limit=action.maxTargets??(action.target==="multi-enemy"||action.target==="multi-ally"||action.target==="multi-any"?undefined:1);
+  if(limit!==undefined&&targetIds.length>limit) return {code:"too-many-targets",message:`대상은 최대 ${limit}명입니다.`};
+  return null;
+}
+
 /** True when a command left nothing behind: no new resolution, activity, refusal, economy or entity change. */
 export function commandWasNoOp(before:{resolution:{id:string}|null;activity:{id:string}[];refusal?:SessionRefusalVm|null;scene:{economyByActor:unknown;entities:unknown}},after:{resolution:{id:string}|null;activity:{id:string}[];refusal?:SessionRefusalVm|null;scene:{economyByActor:unknown;entities:unknown}}):boolean {
   if((before.resolution?.id??null)!==(after.resolution?.id??null)) return false;

@@ -147,7 +147,7 @@ async function openTab(instance,label){const active=await instance.browser.$(`//
 // ---------------------------------------------------------------------------------------------
 function korean(text){return /[가-힣]/.test(String(text??""));}
 async function noticeText(instance){return instance.browser.execute(()=>document.querySelector(".session-refusal-notice")?.textContent??null).catch(()=>null);}
-async function waitRefusal(instance,predicate,label,timeout=20_000){let last=null;await instance.browser.waitUntil(async()=>{last=await peerState(instance);return Boolean(last.refusal&&predicate(last.refusal));},{timeout,interval:150,timeoutMsg:`${instance.label} did not see the refusal ${label}; last=${JSON.stringify(last?.refusal)} msg=${last?.compatibilityMessage}`});return last.refusal;}
+async function waitRefusal(instance,predicate,label,timeout=20_000){let last=null;try{await instance.browser.waitUntil(async()=>{last=await peerState(instance);return Boolean(last.refusal&&predicate(last.refusal));},{timeout,interval:150,timeoutMsg:"refusal wait timed out"});}catch(error){throw new Error(`${instance.label} did not see the refusal ${label}; refusal=${JSON.stringify(last?.refusal)} resolution=${JSON.stringify(last?.resolution&&{id:last.resolution.id,stage:last.resolution.stage,actionName:last.resolution.actionName})} activity=${JSON.stringify(last?.activity?.slice(0,3).map((e)=>e.title))} msg=${last?.compatibilityMessage} (${error instanceof Error?error.message:error})`);}return last.refusal;}
 /** A player's request that the Host must refuse: the player sees a Korean refusal in the dock, the DM sees the same refusal for that player, and nothing was committed. */
 async function expectRefused(peer,host,actorId,pick,targets,label,expected={}){
   const action=await findAction(peer,actorId,pick,label);
@@ -178,7 +178,7 @@ async function expectHostRefused(host,body,args,label,expected={}){
   let notice=null;await host.browser.waitUntil(async()=>{notice=await noticeText(host);return Boolean(notice&&notice.includes(out.refusal.message));},{timeout:5_000,interval:100,timeoutMsg:`${label}: the DM's dock notice did not show the refusal; notice=${JSON.stringify(notice)}`});
   return {code:out.refusal.code,message:out.refusal.message};
 }
-async function waitProjected(peer,actorId,pick,predicate,label,timeout=15_000){let last=null;await peer.browser.waitUntil(async()=>{const list=await actions(peer,actorId);if(list.error)return false;last=list.find(pick)??null;return Boolean(last&&predicate(last));},{timeout,interval:200,timeoutMsg:`${peer.label} projection did not reach ${label}; last=${JSON.stringify(last)}`});return last;}
+async function waitProjected(peer,actorId,pick,predicate,label,timeout=15_000){let last=null;try{await peer.browser.waitUntil(async()=>{const list=await actions(peer,actorId);if(list.error)return false;last=list.find(pick)??null;return Boolean(last&&predicate(last));},{timeout,interval:200,timeoutMsg:"projection wait timed out"});}catch(error){throw new Error(`${peer.label} projection did not reach ${label}; last=${JSON.stringify(last)} (${error instanceof Error?error.message:error})`);}return last;}
 const isAttack=(name)=>(a)=>a.resolutionKind==="attack"&&new RegExp(name).test(a.name);
 
 async function runScenario(){
@@ -207,12 +207,12 @@ async function runScenario(){
     record("M1-자유진행-연속공격",{free1,free2});
 
     // M2 · 자유 진행 — 아군을 공격: 대상 부적격. 호스트가 거부하고, 카엘의 도크와 DM 도크에 이유가 뜬다.
-    const ally=await expectRefused(p2,host,kael.id,isAttack("대검"),[sera.id],"M2 카엘 대검 → 세라",{code:"action-rejected",message:"그 대상에게는 사용할 수 없습니다."});
+    const ally=await expectRefused(p2,host,kael.id,isAttack("대검"),[sera.id],"M2 카엘 대검 → 세라",{code:"target-ineligible",message:"그 대상에게는 사용할 수 없습니다."});
     await evidenceAll(peers,"matrix-m2-ally-refused");
     record("M2-아군공격-거부",ally);
 
     // M3 · 자유 진행 — 대상 초과: 단일 대상 주문에 대상 둘. 그리고 정상 치유는 확정.
-    const crowd=await expectRefused(p1,host,sera.id,(a)=>a.spellId==="dnd.srd521.spell.sacred-flame",[gob1,gob2],"M3 세라 신성한 불길 → 좀비 둘",{code:"action-rejected"});
+    const crowd=await expectRefused(p1,host,sera.id,(a)=>a.spellId==="dnd.srd521.spell.sacred-flame",[gob1,gob2],"M3 세라 신성한 불길 → 좀비 둘",{code:"too-many-targets"});
     assert.match(crowd.message,/최대 1명/,"M3: the refusal names the limit");
     const heal=await playerAct(p1,sera.id,(a)=>a.spellId==="dnd.srd521.spell.healing-word"&&a.available,[kael.id],null,host,"M3 세라 치유의 단어 → 카엘");
     await expectConverged(peers,heal.resolutionId,"M3 치유");
