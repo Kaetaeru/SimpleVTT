@@ -235,11 +235,8 @@ async function runScenario(){
     await expectConverged(peers,guidance.resolutionId,"장면2 인도");
     const unshielded=await everyPeerEntity(peers,kael.id,(e)=>e.ac===acBefore,`카엘 AC back to ${acBefore} once 신앙의 방패 ended`);
     await closeResultCard(host);
-    // 인도 is a reaction in SRD 5.2.1 — the action is still free: 신성한 불길 commits, then 상처 치료 is the refused one.
-    const flame2=await playerAct(p1,sera.id,(a)=>a.spellId==="dnd.srd521.spell.sacred-flame"&&a.available,[zombies[1]],11,host,"세라 신성한 불길 → 좀비 2");
-    await expectConverged(peers,flame2.resolutionId,"장면2 신성한 불길");
-    await closeResultCard(host);
-    await waitProjected(p1,sera.id,(a)=>a.spellId==="dnd.srd521.spell.cure-wounds",(a)=>a.available===false,"상처 치료 unavailable after the action is spent");
+    // 인도 costs the action in this SRD 5.2.1 content: every other action tile of 세라 must now read spent, and 상처 치료 is refused.
+    await waitProjected(p1,sera.id,(a)=>a.spellId==="dnd.srd521.spell.cure-wounds",(a)=>a.available===false,"상처 치료 unavailable after 인도 spent the action");
     const cureRefused=await expectRefused(p1,host,sera.id,(a)=>a.spellId==="dnd.srd521.spell.cure-wounds",[kael.id],"장면2 세라 상처 치료 (행동 소진)",{code:"action-disabled",projectedUnavailable:true});
     // 좀비 1의 턴 — 세라를 후려친다; 명중이면 세라만 집중 판정을 받고, 3을 굴려 실패한다.
     await walkToActor(host,zombies[0]);
@@ -313,7 +310,7 @@ async function runScenario(){
     await waitTom(host,(s)=>s.mode==="freeform","freeform on the Host");
     await expectTomParity(peers,"장면2 정리");
     await evidenceAll(peers,"tom2-02e-stairs-end");
-    record("장면2-계단",{crowd,grapple,flame2,grappled,spent,guidance,unshielded,cureRefused,slam:{id:slamDone.resolution.id,save:slamDone.resolution.concentrationSave},ready:{armed:armed.resolution.id,fired:firedDone.resolution.id},narrative:{full:kaelFull,halved:halved[host.label].hp,healedBack:healedBack[host.label].hp},deathSave,stabilize,cure,revived,potion:{before:potionBefore,after:potionQuantity(await peerState(p2)),hp:[hpBeforePotion,afterPotion]}});
+    record("장면2-계단",{crowd,grapple,grappled,spent,guidance,unshielded,cureRefused,slam:{id:slamDone.resolution.id,save:slamDone.resolution.concentrationSave},ready:{armed:armed.resolution.id,fired:firedDone.resolution.id},narrative:{full:kaelFull,halved:halved[host.label].hp,healedBack:healedBack[host.label].hp},deathSave,stabilize,cure,revived,potion:{before:potionBefore,after:potionQuantity(await peerState(p2)),hp:[hpBeforePotion,afterPotion]}});
 
     // 막간 · 되돌리기 — DM이 마지막 판정(물약)을 되돌린다: 보상 이벤트가 모든 창에 도착하고 원 기록은 남는다.
     const undoTarget=potion.resolutionId;const cursorBeforeUndo=(await peerState(host)).cursor;const hpBeforeUndo=ent(await tomState(host),kael.id).hp;
