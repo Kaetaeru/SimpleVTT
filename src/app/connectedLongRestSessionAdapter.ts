@@ -120,6 +120,8 @@ async function handleHostLongRest(adapter:MockAdapter,message:SessionTransportMe
       await sendConnectedWireTo(message.peer,{type:"long-rest-prepare-authorized",preflight:result.preflight});
     }else if(result.status==="rejected"){
       await sendConnectedWireTo(message.peer,{type:"error",code:"connected-long-rest-preflight",message:result.error});
+      // The player approved and is waiting: close the prompt with the reason instead of leaving it on "accepted".
+      await sendConnectedWireTo(message.peer,{type:"long-rest-abort",transactionId:wire.decision.transactionId,reason:result.error});
     }
     await publishConnectedSnapshot(adapter);
     return;

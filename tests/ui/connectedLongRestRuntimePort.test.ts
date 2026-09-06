@@ -174,6 +174,21 @@ test("connected Long Rest commits Campaign before owner materialization and refr
   assert.equal(connectedLongRestHostRecoveryMessages(host,PEER).length,0);
 });
 
+test("C1-08: a Campaign that moved on since the offer does not lose the player's approval",async()=>{
+  const {host,client,sheet}=await setupPair();
+  const started=await beginConnectedLongRestHostOffer(host,{characterId:sheet.id,transactionId:"long-rest.runtime.moved",advanceMinutes:480,consumeRations:true});
+  receiveConnectedLongRestOwnerOffer(client,started.offer);
+  // Another player's rest (or any DM edit) commits before this owner answers.
+  await host.adjustCampaignRations("campaign.connected-rest",{amount:1,note:"another rest"});
+  const campaignNow=(await host.getSnapshot()).campaignSessionSystems!.campaignRevision;
+  assert.notEqual(campaignNow,started.offer.campaignRevision,"the Campaign revision moved on");
+  const decision=decideConnectedLongRestOwnerOffer(client,started.offer.transactionId,true);
+  const authorized=await authorizeConnectedLongRestHostDecision(host,PEER,decision);
+  assert.equal(authorized.status,"ready",JSON.stringify(authorized));
+  if(authorized.status!=="ready") return;
+  assert.equal(authorized.preflight.expectedCampaignRevision,campaignNow,"the commit preflight targets the current Campaign revision");
+});
+
 test("connected Long Rest aborts owner preparation when Campaign revision drifts before global commit",async()=>{
   const {host,client,sheet}=await setupPair();
   const started=await beginConnectedLongRestHostOffer(host,{characterId:sheet.id,transactionId:"long-rest.runtime.stale",advanceMinutes:480,consumeRations:true});

@@ -317,7 +317,15 @@ export async function authorizeConnectedLongRestHostDecision(adapter:MockAdapter
   if(!state.sessionId||!mounted) return {status:"rejected" as const,error:"connected Long Rest current Character authority is unavailable"};
   const participantId=state.peerParticipants.get(peer);
   const campaign=currentCampaign(snapshot,record.offer.campaignId);
-  const result=preflightConnectedLongRest(record.offer,decision,{sessionId:state.sessionId,campaignId:campaign.campaignId,campaignRevision:campaign.revision,registeredOwnerParticipantId:participantId??"",projection:mounted.projection});
+  const current={sessionId:state.sessionId,campaignId:campaign.campaignId,campaignRevision:campaign.revision,registeredOwnerParticipantId:participantId??"",projection:mounted.projection};
+  let result=preflightConnectedLongRest(record.offer,decision,current);
+  if(result.status==="rejected"&&!record.transaction&&/Campaign revision is stale/.test(result.error)){
+    // The Campaign moved on since the offer (another player's rest committed, the DM advanced the clock or the
+    // rations). The rest is applied on top of the current Campaign, so re-stamp the offer and gate again instead
+    // of dropping the player's approval.
+    record.offer={...record.offer,campaignRevision:campaign.revision};
+    result=preflightConnectedLongRest(record.offer,decision,current);
+  }
   if(result.status==="declined"){record.outcome="declined";return result;}
   if(result.status==="rejected") return result;
   if(record.transaction){if(record.transaction.preflight.transactionId!==result.preflight.transactionId) return {status:"rejected" as const,error:"connected Long Rest Host transaction identity changed"};return result;}
