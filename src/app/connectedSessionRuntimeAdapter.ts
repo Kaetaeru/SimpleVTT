@@ -444,7 +444,7 @@ async function applyConfirmedPayload(adapter:MockAdapter,payload:ConnectedEventP
       time:"지금",
       actor:"Host",
       title:"장면 액터 동기화",
-      summary:`${topology.entities.length} actors`,
+      summary:`액터 ${topology.entities.length}명`,
       detail:[`eventId=${event.eventId}`,...payload.provenance],
       stateChanges:[...payload.stateChanges],
     });
