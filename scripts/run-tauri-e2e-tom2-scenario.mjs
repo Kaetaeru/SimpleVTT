@@ -211,7 +211,7 @@ async function runScenario(){
     const zombies=await addSrdMonstersViaUi(host,"좀비","좀비",2);assert.equal(zombies.length,2);
     const [skeleton]=await addSrdMonstersViaUi(host,"해골","해골",1);
     await rawCall(host,`await mockAdapter.setCreatureStatus(args.id,"넘어짐",true);`,{id:zombies[0]});
-    await everyPeerEntity(peers,zombies[0],(e)=>e.status.includes("넘어짐"),"좀비 1 넘어짐 on every peer");
+    await everyPeerEntity(peers,zombies[0],(e)=>e.status.some((status)=>status.includes("넘어짐")),"좀비 1 넘어짐 on every peer");
     // 틀린 플레이: 단일 대상 주문에 좀비 둘 → "대상은 최대 1명입니다."
     const crowd=await expectRefused(p1,host,sera.id,(a)=>a.spellId==="dnd.srd521.spell.sacred-flame",[zombies[0],zombies[1]],"장면2 신성한 불길 → 좀비 둘",{code:"action-rejected",messagePattern:/최대 1명/});
     await expectTomParity(peers,"장면2 준비");
@@ -223,7 +223,7 @@ async function runScenario(){
     await waitTom(p2,(s)=>s.currentActorId===kael.id,"P2 seeing 카엘's turn");
     const grapple=await playerAct(p2,kael.id,(a)=>a.id==="action.unarmed-strike.grapple"&&a.available,[skeleton],3,host,"카엘 붙잡기 → 해골");
     await expectConverged(peers,grapple.resolutionId,"장면2 붙잡기");
-    const grappled=await everyPeerEntity(peers,skeleton,(e)=>e.status.includes("붙잡힘"),"해골 붙잡힘 on every peer");
+    const grappled=await everyPeerEntity(peers,skeleton,(e)=>e.status.some((status)=>status.includes("붙잡힘")),"해골 붙잡힘 on every peer");
     await closeResultCard(host);
     await waitProjected(p2,kael.id,isAttack("대검"),(a)=>a.available===false,"대검 unavailable after the grapple used the action");
     const spent=await expectRefused(p2,host,kael.id,isAttack("대검"),[skeleton],"장면2 카엘 대검 (행동 소진)",{code:"action-disabled",message:"행동을 이미 사용했습니다.",projectedUnavailable:true});
