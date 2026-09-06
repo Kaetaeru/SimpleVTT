@@ -65,6 +65,23 @@ test("C1-08: a completed result card left open does not defer a declaration; a s
   assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="char.aelar")?.movementDeclaration?.kind,"stay");
 });
 
+test("C1-08: the DM's chosen opportunity attack still opens when a completed card was left open", async () => {
+  const { adapter, internal }=await engagedScene();
+  const scene=internal.scene as unknown as { actionsByActor:Record<string,Array<{ id:string; resolutionKind:string; available:boolean; target:string }>> };
+  const check=(scene.actionsByActor["char.aelar"]??[]).find((action)=>action.resolutionKind==="ability-check"&&action.target==="none"&&action.available);
+  assert.ok(check,"Aelar has a targetless ability check");
+  let snapshot=await adapter.resolveAction(check.id,[]);
+  for (let step=0; step<8 && snapshot.resolution && snapshot.resolution.stage!=="complete"; step+=1) snapshot=await adapter.advanceResolution();
+  if (snapshot.resolution && snapshot.resolution.stage!=="complete") snapshot=await adapter.applyDmAdjudication({type:"ability-check-dc",value:10,scope:"resolution"});
+  assert.equal(snapshot.resolution?.stage,"complete","the card stays open, completed");
+  snapshot=await adapter.declareMovement("char.aelar","withdraw");
+  assert.equal(snapshot.scene.pendingWithdrawal?.actorId,"char.aelar","the prompt opens under the completed card");
+  await adapter.setQueuedD20(18);
+  snapshot=await adapter.answerWithdrawalPrompt("combatant.goblin-a");
+  assert.ok(snapshot.resolution&&snapshot.resolution.actionName.includes("기회공격"),`the goblin's opportunity attack opened; got ${JSON.stringify(snapshot.resolution?.actionName)} / ${snapshot.activity[0]?.title}`);
+  assert.equal(snapshot.activity.some((entry)=>entry.title==="이동 반응 입력 거부"),false,"no refusal is logged");
+});
+
 test("T1-05: 물러남 while engaged prompts the DM; choosing the reactor resolves its opportunity attack and ends the engagement", async () => {
   const { adapter, internal }=await engagedScene();
   let snapshot=await adapter.declareMovement("char.aelar","withdraw");

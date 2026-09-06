@@ -18,4 +18,5 @@ test("C1-08: effect applications name the target instead of the effect id; unkno
   assert.equal(readableCastSummary("effect cast.1:tracked-rider:0:char.p1 applied",nameOf,"char.p1"),"C1 Cleric 효과 적용");
   assert.equal(readableCastSummary("effect cast.1:tracked-rider:0:char.p1 applied",nameOf),"효과 적용");
   assert.equal(readableCastSummary("주문 저항 성공",nameOf),"주문 저항 성공");
+  assert.equal(readableCastSummary("operation skipped by predicate",nameOf),"효과 없음");
 });
