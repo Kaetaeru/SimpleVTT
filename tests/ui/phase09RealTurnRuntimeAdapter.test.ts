@@ -232,9 +232,11 @@ test("S1-04: effects and concentration committed in 자유 진행 survive 이니
   seeded.concentration["char.aelar"]={groupId:"test:shield",sourceId:"dnd.srd521.spell.shield-of-faith",startedAt:seeded.clock} as never;
   const expected=seeded.revision;seeded.revision+=1;
   assert.equal(commitAdapterTurnRuntimeState(adapter,internal.scene,expected,seeded),true);
+  seeded.combatants["char.aelar"].resources=[...seeded.combatants["char.aelar"].resources.filter((resource)=>resource.id!=="spell-slot-1"),{id:"spell-slot-1",label:"1레벨 주문 슬롯",current:1,maximum:2,recovery:{longRest:"all"}}];
   await adapter.startInitiative();
   const inCombat=snapshotAdapterTurnRuntimeState(adapter,internal.scene);
   assert.ok(inCombat?.effects.some((effect)=>effect.id==="test:help"),"이니셔티브 시작 keeps the freeform effect");
+  assert.equal(inCombat?.combatants["char.aelar"]?.resources.find((resource)=>resource.id==="spell-slot-1")?.current,1,"이니셔티브 시작 keeps the spent slot");
   assert.ok(inCombat?.concentration["char.aelar"],"이니셔티브 시작 keeps the concentration");
   await adapter.endInitiative();
   const after=snapshotAdapterTurnRuntimeState(adapter,internal.scene);

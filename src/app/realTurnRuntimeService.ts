@@ -132,6 +132,14 @@ export function carryOverRuntimeState(previous:RulesRuntimeState|undefined,next:
   next.concentration=Object.fromEntries(Object.entries(previous.concentration).filter(([actorId,entry])=>entry&&known.has(actorId)).map(([actorId,entry])=>[actorId,structuredClone(entry)]));
   if (previous.artifacts?.length) next.artifacts=structuredClone(previous.artifacts);
   if (previous.zoneMemberships?.length) next.zoneMemberships=structuredClone(previous.zoneMemberships);
+  // Spent resources (spell slots, class features) belong to the creature, not to the session: a fresh session rebuilt
+  // them at full, so 세라's slot spent in 자유 진행 came back at 이니셔티브 시작 on the Host while every replica kept it
+  // spent, and her next cast drifted ("expected 2, current 1"). The economy is turn-bound and stays fresh.
+  for (const [id,combatant] of Object.entries(previous.combatants)) {
+    const carried=next.combatants[id];
+    if (!carried) continue;
+    carried.resources=combatant.resources.map((resource)=>structuredClone(resource));
+  }
   return next;
 }
 
