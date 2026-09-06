@@ -48,6 +48,16 @@ test("T1-05: 접근 and 그대로 are declarations only — logged, shown on the
   assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="char.aelar")?.movementDeclaration,undefined);
 });
 
+test("C1-08: 이니셔티브 종료 clears the declarations of the fight that ended", async () => {
+  const { adapter }=await engagedScene();
+  let snapshot=await adapter.declareMovement("char.aelar","stay");
+  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="char.aelar")?.movementDeclaration?.kind,"stay");
+  snapshot=await adapter.endInitiative();
+  assert.equal(snapshot.sessionMode,"freeform");
+  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="char.aelar")?.movementDeclaration,undefined,"the chip does not follow the party into the next scene");
+  assert.equal(snapshot.scene.pendingWithdrawal,undefined);
+});
+
 test("C1-08: a completed result card left open does not defer a declaration; a staged one does", async () => {
   const { adapter, internal }=await engagedScene();
   const scene=internal.scene as unknown as { entities:Array<{ id:string }>; actionsByActor:Record<string,Array<{ id:string; resolutionKind:string; available:boolean; target:string }>> };

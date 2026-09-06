@@ -210,6 +210,7 @@ async function runScenario(){
     await rawCall(host,`for(const id of args.ids){const s=await mockAdapter.getSnapshot();if(s.scene.entities.some((e)=>e.id===id))await mockAdapter.removeCombatant(id);}`,{ids:wolves});
     await toggleSceneCondition(host,"어둠");
     const cleared=await waitTom(host,(s)=>!s.sceneConditions.includes("darkness")&&!s.entities.some((e)=>wolves.includes(e.id)),"wolves gone and 어둠 off");
+    await waitTom(p2,(s)=>ent(s,kael.id)?.movement===null,"카엘's 물러남 chip gone after the fight");
     await expectTomParity(peers,"장면2 정리");
     record("장면2-매복",{group:grouped.groups.find((g)=>g.members.length===3),order:order.entities.map((e)=>({name:e.name,initiative:e.initiative})),perception,bite,engagedAfterBite:ent(engagedHost,wolf1).engaged,greatsword,sacredFlame:flame,prompt:prompt.pendingWithdrawal,opportunityAttack:{id:oaDone.resolution.id,compact:oaDone.resolution.compact},withdrewFrom:wolfName,engagedAfterWithdraw:ent(afterOa,engagedWolf)?.engaged??[],kaelHp:ent(cleared,kael.id).hp});
 
@@ -246,6 +247,7 @@ async function runScenario(){
     const hostView=(await tomState(host)).activity.find((e)=>e.id===shot.resolutionId);
     await hostCall(host,`await mockAdapter.discloseResolution(args.id,["roll"]);`,{id:shot.resolutionId});
     const disclosed=await waitTom(p2,(s)=>s.activity.some((e)=>e.title.startsWith("DM 공개")),"P2 receiving the disclosure",20_000);
+    assert.equal(/resolution\./.test(disclosed.activity.find((e)=>e.title.startsWith("DM 공개")).title),false,"the disclosure names the action, not the resolution id");
     await evidenceAll(peers,"tom-04b-hidden-shot");
     // Next round: the boss's multiattack routine.
     await walkToActor(host,boss);

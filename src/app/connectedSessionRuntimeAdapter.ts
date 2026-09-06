@@ -510,7 +510,8 @@ async function applyConfirmedPayload(adapter:MockAdapter,payload:ConnectedEventP
       if (payload.roll) Object.assign(app.resolution,structuredClone(payload.roll.facts));
       if (payload.targets) app.resolution.targetIds=payload.targets.map((entry)=>entry.id);
     }
-    app.activity.unshift({id:payload.disclosureId,time:"지금",actor:"DM",title:`DM 공개 · ${payload.resolutionId}`,summary:payload.roll?.facts.compact??(payload.targets?`대상 ${payload.targets.length}개 공개`:"공개"),detail,stateChanges:[...payload.stateChanges]});
+    const disclosedEntry=app.activity.find((entry)=>entry.id===payload.resolutionId);
+    app.activity.unshift({id:payload.disclosureId,time:"지금",actor:"DM",title:`DM 공개 · ${disclosedEntry?.title??payload.resolutionId}`,summary:payload.roll?.facts.compact??(payload.targets?`대상 ${payload.targets.length}개 공개`:"공개"),detail,stateChanges:[...payload.stateChanges]});
     return { status:"committed" as const };
   }
   if (payload.kind!=="resolution") return { status:"committed" as const };

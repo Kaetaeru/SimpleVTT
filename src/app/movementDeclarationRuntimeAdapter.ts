@@ -148,4 +148,14 @@ MockAdapter.prototype.answerWithdrawalPrompt=async function answerWithdrawalProm
   return this.declareManualMovementReaction(opportunityAttackCommand(pending.actorId,candidate.reactorId,action));
 };
 
+// The fight ended: declarations (접근/물러남/그대로) and an unanswered 물러남 prompt belong to it and must not follow the
+// party into the next scene as stale chips.
+const previousEndInitiativeForMovement=MockAdapter.prototype.endInitiative;
+MockAdapter.prototype.endInitiative=async function endInitiativeClearingMovementDeclarations() {
+  const internal=this as unknown as MovementAdapterState;
+  delete internal.scene.movementDeclarations;
+  delete internal.scene.pendingWithdrawal;
+  return previousEndInitiativeForMovement.call(this);
+};
+
 export const MOVEMENT_KIND_LABEL=KIND_LABEL;
