@@ -40,6 +40,8 @@ test("S1-01: the base adapter, the connected client and the Host all record refu
   assert.match(routing,/const reason=next\.refusal\?\.message\?\?refusalMessageFor\("action-rejected"\)/,"the Host's own reason travels on the wire");
   assert.match(routing,/origin:"remote",actorId:request\.actorId/,"the Host sees the player's refusal");
   assert.match(routing,/makeRefusal\("not-connected"/);
+  assert.match(routing,/makeRefusal\("action-disabled",reason,\{origin:"remote"/,"the Host's pre-check refusal is recorded and relayed with its reason");
+  assert.match(routing,/code:"action-off-turn",message:refusalMessageFor\("action-off-turn"\)/,"the off-turn refusal reads in Korean only");
   assert.match(routing,/makeRefusal\("remote-pending"/);
   const provider=read("../../src/app/AppProvider.tsx");
   assert.match(provider,/commandWasNoOp\(before, after\)/);

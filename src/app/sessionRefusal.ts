@@ -17,6 +17,8 @@ export const REFUSAL_MESSAGES:Record<string,string>={
   "no-op":"행동이 처리되지 않았습니다. 현재 턴·자원·대상을 확인하세요.",
   // Host → client wire error codes.
   "action-rejected":"호스트가 행동을 거부했습니다.",
+  "action-disabled":"지금은 사용할 수 없는 행동입니다.",
+  "action-off-turn":"현재 Actor의 턴이 아닙니다.",
   "host-commit-rejected":"호스트가 행동을 확정하지 못했습니다.",
   "request-rejected":"호스트가 요청을 받지 않았습니다.",
   "action-resolution-error":"호스트에서 행동 처리 중 오류가 났습니다.",

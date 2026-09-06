@@ -353,7 +353,10 @@ registerConnectedActionRequestHandler(async (adapter,transportMessage,request) =
     if (!requestedAction.available) {
       ledger.cancelReservedActionRequest(request.requestId);
       restoreProjectedContext(adapter);
-      await sendConnectedWireTo(transportMessage.peer,{type:"error",code:"action-disabled",message:requestedAction.disabledReason??"Action is currently disabled",hostCursor:ledger.cursor});
+      const reason=requestedAction.disabledReason??refusalMessageFor("action-disabled");
+      connectedInternal(adapter).refusal=makeRefusal("action-disabled",reason,{origin:"remote",actorId:request.actorId,actionId:request.actionId});
+      await publishConnectedSnapshot(adapter);
+      await sendConnectedWireTo(transportMessage.peer,{type:"error",code:"action-disabled",message:reason,hostCursor:ledger.cursor});
       return;
     }
     // The DM-facing availability projection never gates by turn (the DM may drive any Actor, and DM-owned
@@ -366,7 +369,9 @@ registerConnectedActionRequestHandler(async (adapter,transportMessage,request) =
       ledger.cancelReservedActionRequest(request.requestId);
       if (request.readyConfiguration) clearReadyActionConfiguration(adapter,request.actorId);
       restoreProjectedContext(adapter);
-      await sendConnectedWireTo(transportMessage.peer,{type:"error",code:"action-off-turn",message:`현재 Actor의 턴이 아닙니다: ${request.actorId} cannot act while ${snapshot.scene.currentActorId||"—"} holds the turn`,hostCursor:ledger.cursor});
+      connectedInternal(adapter).refusal=makeRefusal("action-off-turn",refusalMessageFor("action-off-turn"),{origin:"remote",actorId:request.actorId,actionId:request.actionId});
+      await publishConnectedSnapshot(adapter);
+      await sendConnectedWireTo(transportMessage.peer,{type:"error",code:"action-off-turn",message:refusalMessageFor("action-off-turn"),hostCursor:ledger.cursor});
       return;
     }
   }

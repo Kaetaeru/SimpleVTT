@@ -54,6 +54,8 @@ test("S1-01: Host wire error codes read in the rules' words; a Korean Host reaso
   assert.equal(refusalMessageFor("action-rejected","행동을 이미 사용했습니다."),"행동을 이미 사용했습니다.");
   assert.equal(refusalMessageFor("action-rejected","host production resolution path rejected the requested actor/action/targets"),"호스트가 행동을 거부했습니다.");
   assert.equal(refusalMessageFor("some-new-code"),"요청이 거부되었습니다.");
+  assert.equal(refusalMessageFor("action-off-turn"),"현재 Actor의 턴이 아닙니다.");
+  assert.equal(refusalMessageFor("action-disabled","추가 행동을 이미 사용했습니다."),"추가 행동을 이미 사용했습니다.");
 });
 
 test("S1-01: the provider's catch-all recognises a command that left nothing behind", () => {
