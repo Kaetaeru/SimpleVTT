@@ -188,7 +188,7 @@ async function runScenario(){
     const pane07=await hostEncounterPane(host);
     await click(host.browser,`${pane07}//button[starts-with(normalize-space(.),'다중공격 · 물기 2회')]`,"다중공격 · 물기 2회");
     await click(host.browser,`${pane07}//div[@aria-label=${JSON.stringify(`${bear.name} 다중공격 대상`)}]//button[normalize-space(.)='C1 Cleric']`,"다중공격 대상 C1 Cleric");
-    const routineEntries=await newActivitySince(host,known,2);
+    const routineEntries=(await newActivitySince(host,known,2)).filter((e)=>!e.id.startsWith("multiattack."));
     const routineIds=routineEntries.map((e)=>e.id);
     for(const p of [p1,p2])await waitActivityIds(p,routineIds);
     await expectSceneParity(peers(),"C1-MP-07");

@@ -256,7 +256,7 @@ async function runScenario(){
     const pane3=await hostEncounterPane(host);
     await closeResultCard(host);const routineButton=await host.browser.$(`${pane3}//div[.//strong[normalize-space(.)=${JSON.stringify(bossName)}]]//button[starts-with(normalize-space(.),'다중공격')]`);
     let multi;
-    if(await routineButton.isExisting()){await routineButton.waitForEnabled({timeout:10_000});await routineButton.click();await click(host.browser,`${pane3}//div[@aria-label=${JSON.stringify(`${bossName} 다중공격 대상`)}]//button[normalize-space(.)='카엘']`,"다중공격 대상 카엘");const entries=await newActivitySince(host,known,2);for(const p of [p1,p2])await waitActivityIds(p,entries.map((e)=>e.id));multi={path:"ui",entries:entries.map((e)=>({title:e.title,summary:e.summary}))};}
+    if(await routineButton.isExisting()){await routineButton.waitForEnabled({timeout:10_000});await routineButton.click();await click(host.browser,`${pane3}//div[@aria-label=${JSON.stringify(`${bossName} 다중공격 대상`)}]//button[normalize-space(.)='카엘']`,"다중공격 대상 카엘");const entries=(await newActivitySince(host,known,2)).filter((e)=>!e.id.startsWith("multiattack."));/* the routine summary entry is DM-side; each attack is its own event */for(const p of [p1,p2])await waitActivityIds(p,entries.map((e)=>e.id));multi={path:"ui",entries:entries.map((e)=>({title:e.title,summary:e.summary}))};}
     else{const swing=await hostAttack(host,{actorId:boss,targetId:kael.id,queued:16,match:"시미터"});await expectConverged(peers,swing.resolutionId,"장면3 보스 시미터");multi={path:"api-single",swing};}
     const hurt=await tomState(host);const kaelBefore=ent(hurt,kael.id).hp;
     await walkToActor(host,sera.id);
