@@ -65,6 +65,8 @@ export function invertRuntimeResolutionEvents(events:ResolutionEvent[]):Resoluti
   }));
 }
 
+import { makeRefusal } from "./sessionRefusal";
+
 const oldUndoLastResolution=MockAdapter.prototype.undoLastResolution;
 
 MockAdapter.prototype.undoLastResolution=async function undoRuntimeResolution():Promise<AppSnapshot> {
@@ -81,10 +83,13 @@ MockAdapter.prototype.undoLastResolution=async function undoRuntimeResolution():
     internal.activeCharacter.items,
     runtimeState,
   );
-  if (projected.status==="rejected") return internal.getSnapshot();
+  // V1.6 S1-01: a refused undo says why (무너진 종탑: the DM's undo of a player's potion failed silently because the
+  // player's inventory is not held on the Host).
+  const refuse=(message:string)=>{(internal as unknown as {refusal:unknown}).refusal=makeRefusal("undo-rejected",`되돌리기 거부 · ${message}`);return internal.getSnapshot();};
+  if (projected.status==="rejected") return refuse(projected.error);
 
   const writeBack=await persistCharacterResolutionEvents(this,history.events,"inverse");
-  if (writeBack.status==="rejected") return internal.getSnapshot();
+  if (writeBack.status==="rejected") return refuse(writeBack.error);
 
   if (runtimeState && projected.runtimeState) {
     const committed=commitAdapterTurnRuntimeState(

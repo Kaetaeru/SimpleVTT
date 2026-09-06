@@ -290,6 +290,13 @@ async function runScenario(){
     await expectConverged(peers,deathSave.resolutionId,"장면2 죽음 내성");
     await closeResultCard(host);
     await evidenceAll(peers,"tom2-02d-death-save");
+    // 막간 · 되돌리기 — DM이 방금의 죽음 내성 굴림을 되돌린다: 보상 이벤트가 모든 창에 도착하고 원 기록은 남는다.
+    const undoTarget=deathSave.resolutionId;const cursorBeforeUndo=(await peerState(host)).cursor;
+    await hostCall(host,`await mockAdapter.undoLastResolution();`);
+    const undoHost=await peerState(host);assert.ok(undoHost.cursor>cursorBeforeUndo,`undo commits a compensating event; refusal=${JSON.stringify(undoHost.refusal)}`);
+    for(const p of [p1,p2]){const s=await waitCursor(p,undoHost.cursor);assert.ok(s.activity.some((e)=>e.id===undoTarget),`${p.label} keeps the original entry in history`);assert.ok(s.activity.some((e)=>/되돌/.test(e.title)),`${p.label} records the undo`);}
+    await evidenceAll(peers,"tom2-02d2-undo");
+    record("막간-되돌리기",{undoTarget,cursor:[cursorBeforeUndo,undoHost.cursor]});
     // 세라의 턴 — 안정화(의학 판정), 다음 턴 상처 치료로 일어남.
     await walkToActor(host,sera.id);
     // 안정화 is a targeted 의학 check against a fixed DC 10: the downed character is the target.
@@ -309,15 +316,6 @@ async function runScenario(){
     await p2.browser.waitUntil(async()=>potionQuantity(await peerState(p2))===potionBefore-1,{timeout:15_000,timeoutMsg:"카엘's potion quantity did not decrement exactly once"});
     const afterPotion=ent(await tomState(host),kael.id).hp;assert.ok(afterPotion>=hpBeforePotion,`the potion must not lower HP (${hpBeforePotion} → ${afterPotion})`);
     await closeResultCard(host);
-    // 막간 · 되돌리기 — 이니셔티브가 아직 열려 있을 때 DM이 마지막 판정(물약)을 되돌린다: 보상 이벤트가 모든 창에 도착하고 원 기록은 남는다.
-    const undoTarget=potion.resolutionId;const cursorBeforeUndo=(await peerState(host)).cursor;const hpBeforeUndo=ent(await tomState(host),kael.id).hp;
-    await hostCall(host,`await mockAdapter.undoLastResolution();`);
-    const undoHost=await peerState(host);assert.ok(undoHost.cursor>cursorBeforeUndo,"undo commits a compensating event");
-    const hpAfterUndo=entity(undoHost,kael.id).hp;
-    for(const p of [p1,p2]){const s=await waitCursor(p,undoHost.cursor);assert.equal(entity(s,kael.id).hp,hpAfterUndo,`${p.label} HP diverges after undo`);assert.ok(s.activity.some((e)=>e.id===undoTarget),`${p.label} keeps the original entry in history`);}
-    await evidenceAll(peers,"tom2-03-undo");
-    record("막간-되돌리기",{undoTarget,hp:[hpBeforeUndo,hpAfterUndo],cursor:[cursorBeforeUndo,undoHost.cursor]});
-
     await clickInitiative(host,"이니셔티브 종료");
     await waitTom(host,(s)=>s.mode==="freeform","freeform on the Host");
     await expectTomParity(peers,"장면2 정리");

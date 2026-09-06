@@ -16,6 +16,7 @@ export const REFUSAL_MESSAGES:Record<string,string>={
   "not-connected":"호스트와 연결이 끝나지 않아 행동을 보낼 수 없습니다.",
   "no-op":"행동이 처리되지 않았습니다. 현재 턴·자원·대상을 확인하세요.",
   "spell-rejected":"주문을 시전할 수 없습니다.",
+  "undo-rejected":"되돌릴 수 없습니다.",
   // Host → client wire error codes.
   "action-rejected":"호스트가 행동을 거부했습니다.",
   "action-disabled":"지금은 사용할 수 없는 행동입니다.",
