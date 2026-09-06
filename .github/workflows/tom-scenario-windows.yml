@@ -1,0 +1,59 @@
+name: Theater-of-Mind Scenario Windows Verification
+
+on:
+  pull_request:
+    branches:
+      - work/v1-composite
+    paths:
+      - "scripts/run-tauri-e2e.ps1"
+      - "scripts/run-tauri-e2e-tom-scenario.mjs"
+      - "src/app/connected*.ts"
+      - "src/app/srdMonster*.ts"
+      - "src/app/productionPlayRuntimeAdapter.ts"
+      - "src/app/spellSummonRuntimeAdapter.ts"
+      - "src-tauri/**"
+      - "docs/design/scenarios/ashen-gate-wolves.md"
+      - ".github/workflows/tom-scenario-windows.yml"
+  push:
+    branches:
+      - work/v1-composite
+    paths:
+      - "scripts/run-tauri-e2e.ps1"
+      - "scripts/run-tauri-e2e-tom-scenario.mjs"
+      - "src/app/connected*.ts"
+      - "src/app/srdMonster*.ts"
+      - "src/app/productionPlayRuntimeAdapter.ts"
+      - "src/app/spellSummonRuntimeAdapter.ts"
+      - "src-tauri/**"
+      - ".github/workflows/tom-scenario-windows.yml"
+  workflow_dispatch:
+
+env:
+  V1_VERIFICATION_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
+permissions:
+  contents: read
+
+jobs:
+  windows-tom-scenario:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - run: npm ci --no-audit --no-fund
+      - name: Play 잿빛 관문의 늑대들 (theater of mind) on Windows H+P1+P2
+        shell: pwsh
+        run: powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File scripts/run-tauri-e2e.ps1 -Root . -TOM
+      - name: Upload TOM Windows evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TOM-WIN-${{ env.V1_VERIFICATION_SHA }}
+          path: .live-dev/tauri-e2e/**/artifacts/**
+          if-no-files-found: error
+          retention-days: 14
