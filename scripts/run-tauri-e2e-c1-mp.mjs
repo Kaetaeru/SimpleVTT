@@ -138,9 +138,9 @@ async function runScenario(){
   const hostBody=await bodyText(host);const aelarAt=hostBody.indexOf("Aelar");assert.equal(aelarAt,-1,`the Host workspace must not name the DM's saved character; context=${JSON.stringify(hostBody.slice(Math.max(0,aelarAt-80),aelarAt+80))}`);
   record("C1-MP-01",{hostRole:hosted.role,characters:names,participants:joined.participants});
   try{
-    // C1-MP-02 — an SRD monster added from the 인카운터 search reaches every peer with its catalog name and stat block.
-    const bear=await addSrdMonsterViaUi(host,"흑곰","흑곰");assert.ok(bear,"흑곰 did not enter the Host scene");
-    assert.equal(bear.maxHp,19,`흑곰 max HP from the stat block; got ${JSON.stringify(bear)}`);assert.equal(bear.ac,10,`흑곰 AC from the stat block; got ${JSON.stringify(bear)}`);
+    // C1-MP-02 — an SRD monster (죽음의 개, CR 1, 물기 2회) added from the 인카운터 search reaches every peer with its catalog name and stat block.
+    const bear=await addSrdMonsterViaUi(host,"죽음의 개","죽음의 개");assert.ok(bear,"죽음의 개 did not enter the Host scene");
+    assert.equal(bear.maxHp,39,`죽음의 개 max HP from the stat block; got ${JSON.stringify(bear)}`);assert.equal(bear.ac,10,`죽음의 개 AC from the stat block; got ${JSON.stringify(bear)}`);
     await expectSceneParity(peers(),"C1-MP-02");
     await evidenceAll(peers(),"c1-mp-02-monster");
     record("C1-MP-02",{monster:bear});
@@ -182,12 +182,12 @@ async function runScenario(){
     await expectSceneParity(peers(),"C1-MP-06");
     await evidenceAll(peers(),"c1-mp-06-attack");
     record("C1-MP-06",{resolutionId:swingDone.resolution.id,action:weapon.name,bearHp:(await stateOf(host)).entities.find((e)=>e.id===bear.id).hp});
-    // C1-MP-07 — the DM resolves the bear's multiattack routine (찢기 2회) from the 인카운터 pane on the bear's turn; every attack reaches the players.
+    // C1-MP-07 — the DM resolves the bear's multiattack routine (물기 2회; 39 HP so it survives the two player hits) from the 인카운터 pane on the bear's turn; every attack reaches the players.
     await walkToActor(host,bear.id);
     const known=new Set((await stateOf(host)).activity.map((e)=>e.id));
     const pane07=await hostEncounterPane(host);
-    await click(host.browser,`${pane07}//button[starts-with(normalize-space(.),'다중공격 · 찢기 2회')]`,"다중공격 · 찢기 2회");
-    await click(host.browser,`${pane07}//div[@aria-label='흑곰 다중공격 대상']//button[normalize-space(.)='C1 Cleric']`,"다중공격 대상 C1 Cleric");
+    await click(host.browser,`${pane07}//button[starts-with(normalize-space(.),'다중공격 · 물기 2회')]`,"다중공격 · 물기 2회");
+    await click(host.browser,`${pane07}//div[@aria-label=${JSON.stringify(`${bear.name} 다중공격 대상`)}]//button[normalize-space(.)='C1 Cleric']`,"다중공격 대상 C1 Cleric");
     const routineEntries=await newActivitySince(host,known,2);
     const routineIds=routineEntries.map((e)=>e.id);
     for(const p of [p1,p2])await waitActivityIds(p,routineIds);
