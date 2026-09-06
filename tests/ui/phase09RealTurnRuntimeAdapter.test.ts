@@ -230,9 +230,9 @@ test("S1-04: effects and concentration committed in 자유 진행 survive 이니
   const seeded=ensureAdapterTurnRuntimeState(adapter,internal.scene);
   seeded.effects.push(createEffect({id:"test:help",sourceId:"action.standard.help",targetId:"char.mira",kind:"marker",duration:{kind:"special",key:"helped-until-next-attack-or-check"},metadata:{sessionStatus:"도움 받음"}},seeded.clock));
   seeded.concentration["char.aelar"]={groupId:"test:shield",sourceId:"dnd.srd521.spell.shield-of-faith",startedAt:seeded.clock} as never;
+  seeded.combatants["char.aelar"].resources=[...seeded.combatants["char.aelar"].resources.filter((resource)=>resource.id!=="spell-slot-1"),{id:"spell-slot-1",label:"1레벨 주문 슬롯",current:1,maximum:2,recovery:{longRest:"all"}}];
   const expected=seeded.revision;seeded.revision+=1;
   assert.equal(commitAdapterTurnRuntimeState(adapter,internal.scene,expected,seeded),true);
-  seeded.combatants["char.aelar"].resources=[...seeded.combatants["char.aelar"].resources.filter((resource)=>resource.id!=="spell-slot-1"),{id:"spell-slot-1",label:"1레벨 주문 슬롯",current:1,maximum:2,recovery:{longRest:"all"}}];
   await adapter.startInitiative();
   const inCombat=snapshotAdapterTurnRuntimeState(adapter,internal.scene);
   assert.ok(inCombat?.effects.some((effect)=>effect.id==="test:help"),"이니셔티브 시작 keeps the freeform effect");

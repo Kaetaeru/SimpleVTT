@@ -125,6 +125,15 @@ MockAdapter.prototype.resolveAction=async function resolveActionWithStatusEffect
   if(resolvedAction?.resolutionKind==="ability-check"&&resolution?.actionId===actionId&&internal.sessionMode==="initiative") {
     const ending=checkEndingEffects(this,internal,resolution.actorId);
     if(ending.length) removeAttackEndingEffects(this,internal,resolution,ending,"판정 선언");
+    // V1.6 S1-04 (무너진 종탑 장면 2): a check that completes inside resolveAction (안정화) never advances, so the
+    // ending-effect events waited in pendingRevealEvents for an advance that never came — the Host dropped 세라's
+    // 도움 받음 while every replica kept it. Combine them now when the resolution is already terminal.
+    const reveal=pendingRevealEvents.get(this);
+    if(reveal&&reveal.resolutionId===resolution.id&&internal.resolution?.id===resolution.id&&internal.resolution.stage==="complete"){
+      pendingRevealEvents.delete(this);
+      combineEvents(this,resolution.id,reveal.events,true);
+      return internal.getSnapshot();
+    }
   }
   if(effect&&resolution?.actionId===actionId&&resolution.rollKind==="check"&&resolution.checkTarget===undefined) {
     resolution.checkTarget=effect.minimumRoll;

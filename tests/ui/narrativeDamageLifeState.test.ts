@@ -47,3 +47,28 @@ test("S1-01: 안정화 guards refuse with a reason instead of returning the unch
   assert.ok(refused.refusal,"a refusal is recorded");
   assert.match(refused.refusal!.message,/안정화|불안정한 대상/);
 });
+
+test("S1-04: an effect that ends on a check is removed by an immediately-complete check (안정화) through resolution events", async () => {
+  const { createEffect }=await import("../../src/domain/effects");
+  const { commitAdapterTurnRuntimeState, snapshotAdapterTurnRuntimeState }=await import("../../src/app/turnRuntimeSessionRegistry");
+  const { runtimeResolutionEventHistory }=await import("../../src/app/runtimeResolutionEventHistory");
+  // The player reference scene holds both characters; 미라 goes down and Aelar (helped) stabilizes her on his turn.
+  const adapter=new MockAdapter();
+  await adapter.setReferenceRole("player");
+  await adapter.startInitiative();
+  await adapter.applyNarrativeDamage("char.mira",999);
+  await adapter.setCurrentActor("char.aelar");
+  await adapter.selectDmActor("char.aelar");
+  const internal=adapter as unknown as {scene:import("../../src/app/contracts").SceneVm};
+  const state=snapshotAdapterTurnRuntimeState(adapter,internal.scene)!;
+  state.effects.push(createEffect({id:"test:helped",sourceId:"action.standard.help",targetId:"char.aelar",kind:"marker",tags:["session-status"],duration:{kind:"special",key:"helped-until-next-attack-or-check"},metadata:{publicLabel:"도움 받음",sessionStatus:"도움 받음",endsOnAttack:true,endsOnCheck:true}},state.clock));
+  const expected=state.revision;state.revision+=1;
+  assert.equal(commitAdapterTurnRuntimeState(adapter,internal.scene,expected,state),true);
+  assert.ok((await adapter.getSnapshot()).scene.entities.find((entry)=>entry.id==="char.aelar")?.status.some((status)=>status.includes("도움 받음")));
+  await adapter.setQueuedD20(15);
+  const done=await adapter.resolveAction("action.standard.stabilize",["char.mira"]);
+  assert.equal(done.resolution?.stage,"complete",JSON.stringify(done.refusal??done.resolution));
+  const events=runtimeResolutionEventHistory(adapter)?.events??[];
+  assert.ok(events.some((event)=>event.stateChanges.some((change)=>change.kind==="effect"&&change.targetId==="char.aelar"&&change.after===undefined)),`the ending-effect removal is an authoritative event; got ${JSON.stringify(events.map((event)=>event.stateChanges.map((change)=>change.kind)))}`);
+  assert.equal(done.scene.entities.find((entry)=>entry.id==="char.aelar")?.status.some((status)=>status.includes("도움 받음")),false,"the Host shows the effect gone");
+});
