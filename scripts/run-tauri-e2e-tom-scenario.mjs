@@ -154,7 +154,7 @@ async function runScenario(){
     // 장면 1 · 쉬어가는 등불 여관 — 세라의 설득, 브람의 건량, 달력 메모.
     const persuade=await playerCheck(p1,sera.id,"action.standard.influence.persuasion",13,host,12);
     await expectConverged(peers,persuade.resolutionId,"장면1 설득");
-    await rawCall(host,`await mockAdapter.adjustCampaignRations(args.id,{amount:6,note:"촌장 브람이 내준 건량"});await mockAdapter.setCampaignCalendarNote(args.id,{note:"1일차 해질녘 · 쉬어가는 등불 여관"});`,{id:campaignId});
+    await rawCall(host,`await mockAdapter.adjustCampaignRations(args.id,{amount:6,note:"촌장 브람이 내준 건량"});await mockAdapter.setCampaignCalendarNote(args.id,"1일차 해질녘 · 쉬어가는 등불 여관");`,{id:campaignId});
     const inn=await waitTom(p2,(s)=>s.campaign?.note==="1일차 해질녘 · 쉬어가는 등불 여관"&&(s.campaign?.rations??0)>=6,"P2 seeing the calendar note and the rations");
     await evidenceAll(peers,"tom-01-inn");
     record("장면1-여관",{persuade,rations:inn.campaign.rations,note:inn.campaign.note});
