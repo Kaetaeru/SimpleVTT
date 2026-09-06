@@ -4,6 +4,30 @@ import type { ActivityEntry, AppSnapshot, SceneEntity, SceneVm } from "./contrac
 import { MockAdapter } from "./mockAdapter";
 import { registerAttackRollStateContributor, registerAttackTargetAcContributor } from "./phase09RealResolutionAdapter";
 import { CREATURE_BADGE_LABELS, SCENE_CONDITION_LABELS, type CreatureBadgeKind, type SceneConditionKind } from "./sceneConditionContracts";
+import { commitAdapterTurnRuntimeState, snapshotAdapterTurnRuntimeState } from "./turnRuntimeSessionRegistry";
+
+/**
+ * V1.6 S1-04 (무너진 종탑 장면 2): DM narrative damage moved HP alone — a character taken to 0 HP by "서술 피해" was never
+ * Unconscious, so no 죽음 내성 굴림 appeared on any peer. The runtime life follows the rules: 0 HP knocks a character
+ * unconscious (death saves reset), kills a monster; regaining HP from 0 ends the unconsciousness.
+ */
+function syncNarrativeLife(adapter:MockAdapter,scene:SceneVm,entity:SceneEntity,before:number) {
+  const state=snapshotAdapterTurnRuntimeState(adapter,scene);
+  const combatant=state?.combatants[entity.id];
+  if (!state||!combatant) return;
+  const life=combatant.life;
+  const next={...life,hp:{...life.hp,current:entity.hp},deathSaves:{...life.deathSaves}};
+  if (entity.hp===0&&before>0) {
+    if (entity.kind==="character") { next.unconscious=true; next.stable=false; next.dead=false; next.deathSaves={successes:0,failures:0}; }
+    else { next.dead=true; next.unconscious=false; }
+  } else if (entity.hp>0&&before===0) {
+    next.unconscious=false; next.stable=false; next.dead=false; next.deathSaves={successes:0,failures:0};
+  } else return;
+  combatant.life=next;
+  const expected=state.revision;
+  state.revision=expected+1;
+  commitAdapterTurnRuntimeState(adapter,scene,expected,state);
+}
 
 /**
  * V1.2 T1-07 — sight and cover without positions. Per-creature badges (숨음, 투명, 엄폐 ½, 엄폐 ¾) live in the
@@ -103,6 +127,7 @@ MockAdapter.prototype.applyNarrativeDamage=async function applyNarrativeDamageRu
   const delta=amount==="half" ? Math.floor(entity.hp/2) : amount;
   entity.hp=Math.max(0,Math.min(entity.maxHp,entity.hp-delta));
   if (entity.hp===before) return internal.getSnapshot();
+  syncNarrativeLife(this,internal.scene,entity,before);
   const label=amount==="half" ? "절반" : delta>0 ? `−${delta}` : `+${-delta}`;
   log(internal,"DM",`서술 ${delta>0 ? "피해" : "회복"} · ${entity.name} ${label}`,`HP ${before} → ${entity.hp}`,[`${entity.name} HP ${before} → ${entity.hp}`]);
   return internal.getSnapshot();
