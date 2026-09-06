@@ -49,7 +49,8 @@ export function CombatVfxBridge() {
   const profile=useMemo(()=>resolution?buildCombatVfxProfile(resolution,action):null,[resolution,action]);
 
   useEffect(()=>{
-    if(!snapshot||snapshot.sessionMode!=="initiative"||!resolution||!profile||!VFX_STAGES.has(resolution.stage))return;
+    // F1-03: the shots play in 자유 진행 as well as Initiative — an attack is an attack whichever mode the table is in.
+    if(!snapshot||!resolution||!profile||!VFX_STAGES.has(resolution.stage))return;
     const key=`${resolution.id}:${resolution.stage}:${profile.delivery}:${profile.element??profile.physical??"impact"}`;
     if(lastKeyRef.current===key)return;
     lastKeyRef.current=key;

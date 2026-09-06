@@ -1,6 +1,6 @@
 import type { ActionVm, ResolutionView } from "./contracts";
 
-export type CombatVfxDelivery = "slashing"|"piercing"|"bludgeoning"|"projectile"|"beam"|"wave"|"impact";
+export type CombatVfxDelivery = "slashing"|"piercing"|"bludgeoning"|"projectile"|"beam"|"wave"|"impact"|"heal";
 export type CombatVfxElement = "fire"|"lightning"|"poison"|"cold"|"force"|"acid"|"radiant"|"necrotic"|"thunder"|"psychic"|null;
 
 export interface CombatVfxProfile {
@@ -32,6 +32,12 @@ const ELEMENT:Record<string,Exclude<CombatVfxElement,null>>={
 
 function normalized(value:string) { return value.trim().toLowerCase(); }
 
+/** The colour semantic of a damage type as the rules name it ("참격" → slashing, "광휘" → radiant); shared by the shots and the floating numbers. */
+export function combatDamageSemantic(type:string):string|null {
+  const key=normalized(type);
+  return ELEMENT[key]??PHYSICAL[key]??null;
+}
+
 function damageProfile(action:ActionVm) {
   let physical:CombatVfxProfile["physical"]=null;
   let element:CombatVfxElement=null;
@@ -52,7 +58,12 @@ function baseDelivery(action:ActionVm,physical:CombatVfxProfile["physical"],elem
 }
 
 export function buildCombatVfxProfile(resolution:ResolutionView,action:ActionVm|undefined):CombatVfxProfile|null {
-  if (!action || !(action.damage?.length)) return null;
+  if (!action) return null;
+  // F1-03: healing gets its own delivery — a green mend on the target instead of a shot.
+  if (!(action.damage?.length) && (action.healing || resolution.rollKind==="healing")) {
+    return {delivery:"heal",physical:null,element:null,phase:resolution.stage==="damage-animation"||resolution.stage==="complete"?"impact":"delivery",label:"heal"};
+  }
+  if (!(action.damage?.length)) return null;
   const {physical,element}=damageProfile(action);
   // damage-animation is the post-roll impact phase. effect-preview is the only
   // pre-apply stage for no-roll damage such as a magic projectile, so it must

@@ -38,6 +38,7 @@ import { CombatSpellHudBridge } from "./CombatSpellHud";
 import { LevelUpV10Bridge } from "./LevelUpV10";
 import { VisualDiceBridge } from "./VisualDiceBridge";
 import { CombatVfxBridge } from "./CombatVfxBridge";
+import { SessionCombatFeedback } from "./SessionCombatFeedback";
 import { FirstRunTutorialBridge } from "./FirstRunTutorialBridge";
 import { ConcentrationSaveBridge } from "./ConcentrationSaveBridge";
 import { ProductionSessionWorkspaceBridge } from "./ProductionSessionWorkspaceBridge";
@@ -87,6 +88,7 @@ createRoot(document.getElementById("root")!).render(
       <LevelUpV10Bridge />
       <VisualDiceBridge />
       <CombatVfxBridge />
+      <SessionCombatFeedback />
       <FirstRunTutorialBridge />
       <ConcentrationSaveBridge />
       <ProductionSessionWorkspaceBridge />

@@ -14,7 +14,7 @@ test("Combat VFX is a mounted presentation bridge and only replays in Initiative
   assert.match(main,/<CombatVfxBridge \/>/);
   assert.match(bridge,/createPortal/);
   assert.match(bridge,/document\.body/);
-  assert.match(bridge,/snapshot\.sessionMode!=="initiative"/);
+  assert.doesNotMatch(bridge,/snapshot\.sessionMode!=="initiative"/);
   assert.match(bridge,/buildCombatVfxProfile/);
   assert.match(bridge,/\.session-actor-card\[data-actor-id\]/);
   assert.match(bridge,/element\.dataset\.actorId===entityId/);

@@ -61,6 +61,11 @@
 .combat-vfx-overlay.element-lightning .combat-vfx-trail{filter:drop-shadow(0 0 4px #fff) drop-shadow(0 0 9px var(--vfx))}
 .combat-vfx-overlay.element-force .combat-vfx-ring,.combat-vfx-overlay.element-thunder .combat-vfx-ring,.combat-vfx-overlay.element-psychic .combat-vfx-ring{border-radius:50%;transform:scaleY(.55)}
 
+/* healing: no trail, a green mend that blooms on the target */
+.combat-vfx-overlay.delivery-heal .combat-vfx-trail,.combat-vfx-overlay.delivery-heal .combat-vfx-core{display:none}
+.combat-vfx-overlay.delivery-heal .combat-vfx-impact{background:radial-gradient(circle,rgba(120,220,150,.95),rgba(60,180,110,.3) 60%,transparent 72%);animation:vfx-impact .62s ease-out forwards}
+.combat-vfx-overlay.delivery-heal .combat-vfx-ring{border-color:rgba(120,220,150,.8)}
+.combat-vfx-overlay.delivery-heal .combat-vfx-particle{background:rgba(160,240,180,.95)}
 @keyframes vfx-travel{0%{transform:scaleX(0);opacity:0}18%{opacity:1}72%{transform:scaleX(1);opacity:.95}100%{transform:scaleX(1);opacity:0}}
 @keyframes vfx-core-flight{0%{transform:translateX(0) scale(.45);opacity:.2}75%{opacity:1}100%{transform:translateX(calc(var(--vfx-distance) - 18px)) scale(1);opacity:.9}}
 @keyframes vfx-impact{0%{transform:scale(.15);opacity:0}30%{transform:scale(1);opacity:1}100%{transform:scale(1.85);opacity:0}}
