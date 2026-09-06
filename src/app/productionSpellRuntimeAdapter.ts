@@ -164,6 +164,7 @@ export function readableCastSummary(summary:string,nameOf:(id:string)=>string,fa
   const stabilized=summary.match(/^(\S+) is stabilized$/);
   if (stabilized) return `${nameOf(stabilized[1])} 안정화`;
   if (/^effect .* applied$/.test(summary)) return fallbackTargetId?`${nameOf(fallbackTargetId)} 효과 적용`:"효과 적용";
+  if (summary==="operation skipped by predicate") return "효과 없음";
   return summary;
 }
 
@@ -193,8 +194,12 @@ function resolutionFromCast(
   const nameOf=(id:string)=>{const index=targetIds.indexOf(id);return index>=0?(targetNames[index]??id):id===actorId?"시전자":id;};
   const readableOf=(event:SpellCastResolution["events"][number])=>readableCastSummary(event.summary,nameOf,(event as {targetId?:string}).targetId);
   const readableEvent=[...result.events].reverse().find((event)=>!/^effect .* applied$/.test(event.summary));
-  const outcome=readableEvent?readableOf(readableEvent):(result.events.length?"효과 적용":"주문 적용");
   const saveResults=saveResultsFromCast(result,targetIds,targetNames);
+  const readableOutcome=readableEvent?readableOf(readableEvent):(result.events.length?"효과 적용":"주문 적용");
+  // When every target made its save and nothing landed, say so in the table's words.
+  const outcome=readableOutcome==="효과 없음"&&saveResults.length&&saveResults.every((entry)=>entry.outcome==="성공")
+    ?`${saveResults.map((entry)=>`${entry.targetName} 내성 성공`).join(", ")} · 피해 없음`
+    :readableOutcome;
   return {
     id:result.events[0]?.resolutionId??`production-spell.${Date.now()}`,
     actorId,targetIds,actionId,actionName,

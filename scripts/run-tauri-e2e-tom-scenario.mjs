@@ -21,7 +21,7 @@ const children=[];
 const browsers=[];
 let viteStarted=false;
 
-function log(message){process.stdout.write(`[TAURI C1-MP E2E] ${message}\n`);}
+function log(message){process.stdout.write(`[TAURI TOM E2E] ${message}\n`);}
 function sleep(ms){return new Promise((resolve)=>setTimeout(resolve,ms));}
 async function reservePort(){return new Promise((resolve,reject)=>{const server=createServer();server.unref();server.once("error",reject);server.listen(0,"127.0.0.1",()=>{const address=server.address();const port=typeof address==="object"&&address?address.port:0;server.close((error)=>error?reject(error):resolve(port));});});}
 async function canConnect(port,host="127.0.0.1"){return new Promise((resolve)=>{const socket=new Socket();const finish=(value)=>{socket.destroy();resolve(value);};socket.setTimeout(250);socket.once("connect",()=>finish(true));socket.once("timeout",()=>finish(false));socket.once("error",()=>finish(false));socket.connect(port,host);});}
@@ -64,9 +64,7 @@ async function installErrorHooks(instance){await instance.browser.execute(()=>{c
 async function domDiagnostics(instance){return instance.browser.execute(()=>{const q=(sel)=>Boolean(document.querySelector(sel));const buttons=[...document.querySelectorAll("button")].filter((el)=>{const r=el.getBoundingClientRect();return r.width>0&&r.height>0;}).map((el)=>(el.getAttribute("aria-label")||el.textContent||"").trim().slice(0,30)).filter(Boolean).slice(0,40);return{errors:(window.__e2eErrors||[]).slice(0,10),href:location.href,bodyTextLength:(document.body?.innerText||"").length,bodyHtmlLength:(document.body?.innerHTML||"").length,sessionRoot:q(".session-mode-root"),hotbar:q(".session-hotbar-tabs"),activityPane:q(".session-activity-pane"),resolutionLayer:q(".session-resolution-layer"),diceCanvas:q("canvas"),visibleButtons:buttons};}).catch((error)=>({diagnosticsError:String(error)}));}
 
 // ---------------------------------------------------------------------------------------------
-// C1-MP — V1.3 clean play on real Windows H+P1+P2: DM without a character, SRD monster from the 인카운터 search,
-// theater-of-mind declaration routed to the Host, Initiative from the DM tools, a player spell and a player weapon
-// attack, the monster multiattack routine, client restart catch-up and the explicit session end.
+// TOM — theater-of-mind one-shot on real Windows H+P1+P2 (helper header shared with run-tauri-e2e-c1-mp.mjs).
 // ---------------------------------------------------------------------------------------------
 const bounded=(promise,ms,label)=>Promise.race([promise,sleep(ms).then(()=>({timeout:label}))]);
 
@@ -105,7 +103,7 @@ async function hostResolutionDetail(host){return hostCall(host,`const s=await mo
 async function stateOf(instance){const result=await instance.browser.executeAsync((done)=>{import("/src/app/mockAdapter.ts").then(async({mockAdapter})=>{const s=await mockAdapter.getSnapshot();done({role:s.session.role,lifecycle:s.session.lifecycle??null,connectionState:s.connectionState,mode:s.sessionMode,round:s.scene.round??null,currentActorId:s.scene.currentActorId,activeCharacterId:s.activeCharacter.id,activeCharacterName:s.activeCharacter.name,participants:s.session.participants.map((p)=>({id:p.id,characterName:p.characterName,state:p.state})),slots:(s.scene.spellcastingByActor?.[s.activeCharacter.id]?.slots??[]).map((l)=>({level:l.level,current:l.current,max:l.max})),entities:s.scene.entities.map((e)=>({id:e.id,name:e.name,kind:e.kind,side:e.side,hp:e.hp,maxHp:e.maxHp,ac:e.ac,initiative:e.initiative??null,status:[...(e.status??[])].sort(),movement:e.movementDeclaration?.kind??s.scene.movementDeclarations?.[e.id]?.kind??null})).sort((a,b)=>a.id<b.id?-1:1),activity:s.activity.slice(0,80).map((e)=>({id:e.id,actor:e.actor,title:e.title,summary:e.summary,stateChanges:e.stateChanges})),resolution:s.resolution?{id:s.resolution.id,stage:s.resolution.stage,actorId:s.resolution.actorId,actionName:s.resolution.actionName,canAdvance:s.resolution.canAdvance}:null});}).catch((error)=>done({error:String(error?.stack??error)}));});assert.ok(!result.error,`${instance.label}: ${result.error}`);return result;}
 async function waitState(instance,predicate,description,timeout=20_000){let last=null;await instance.browser.waitUntil(async()=>{last=await stateOf(instance);return predicate(last);},{timeout,interval:200,timeoutMsg:`${instance.label} did not reach ${description}; last=${JSON.stringify({role:last?.role,connectionState:last?.connectionState,mode:last?.mode,current:last?.currentActorId,entities:last?.entities?.map((e)=>`${e.name}:${e.hp}`),activity:last?.activity?.slice(0,4).map((e)=>e.title)})}`});return last;}
 function publicEntities(state){return state.entities.map((e)=>({id:e.id,name:e.name,kind:e.kind,side:e.side,hp:e.hp,maxHp:e.maxHp,initiative:e.initiative,status:e.status}));}
-async function expectSceneParity(peers,label){const host=await stateOf(peers[0]);const expected=publicEntities(host);for(const p of peers.slice(1)){const s=await waitState(p,(x)=>JSON.stringify(publicEntities(x))===JSON.stringify(expected),`${label}: scene parity with the Host`);assert.equal(s.mode,host.mode,`${label}: ${p.label} mode diverges`);assert.equal(s.currentActorId,host.currentActorId,`${label}: ${p.label} current actor diverges`);}return host;}
+async function expectSceneParity(peers,label){const host=await stateOf(peers[0]);const expected=publicEntities(host);for(const p of peers.slice(1)){const s=await waitState(p,(x)=>JSON.stringify(publicEntities(x))===JSON.stringify(expected),`${label}: scene parity with the Host`);assert.equal(s.mode,host.mode,`${label}: ${p.label} mode diverges`);if(host.mode==="initiative")assert.equal(s.currentActorId,host.currentActorId,`${label}: ${p.label} current actor diverges`);}return host;}
 async function openUtility(instance,label){const pressed=await instance.browser.$(`//button[normalize-space(.)=${JSON.stringify(label)} and contains(@class,'active')]`);if(await pressed.isExisting())return;await click(instance.browser,exactButton(label),`${instance.label} ${label}`);await sleep(300);}
 async function hostEncounterPane(host){await openUtility(host,"인카운터");const pane="//aside[@aria-label='DM Encounter 도구']";await host.browser.$(pane).waitForDisplayed({timeout:10_000,timeoutMsg:"DM Encounter 도구 pane did not open"});return pane;}
 async function addSrdMonsterViaUi(host,query,namePrefix){const pane=await hostEncounterPane(host);await replaceValue(host.browser,`${pane}//input[@aria-label='SRD 몬스터 검색']`,query,"SRD 몬스터 검색");const result=`${pane}//div[contains(@class,'session-dm-monster-results')]//button[.//strong[starts-with(normalize-space(.),${JSON.stringify(namePrefix)})]]`;await click(host.browser,result,`SRD 몬스터 ${namePrefix}`);const state=await waitState(host,(s)=>s.entities.some((e)=>e.kind!=="character"&&e.name.startsWith(namePrefix)),`${namePrefix} in the Host scene`);return state.entities.find((e)=>e.kind!=="character"&&e.name.startsWith(namePrefix));}
@@ -116,114 +114,185 @@ async function relaunchClient(instance,label){await stopInstance(instance);await
 async function stopInstance(instance){try{await instance.browser.deleteSession();}catch{}if(instance.child.pid&&instance.child.exitCode===null){spawnSync("taskkill.exe",["/PID",String(instance.child.pid),"/T","/F"],{stdio:"ignore",windowsHide:true});}}
 async function clickIfPresent(browser,selector){const element=await browser.$(selector);if(!(await element.isExisting()))return false;if(!(await element.isDisplayed().catch(()=>false)))return false;await element.click();return true;}
 
+// ---------------------------------------------------------------------------------------------
+// TOM — "잿빛 관문의 늑대들": a theater-of-mind one-shot played end to end on real Windows H+P1+P2.
+// Scenario text and the VTT mapping: docs/design/scenarios/ashen-gate-wolves.md
+// ---------------------------------------------------------------------------------------------
+async function rawCall(instance,body,args){const result=await instance.browser.executeAsync(new Function("args","done",`import("/src/app/mockAdapter.ts").then(async({mockAdapter})=>{try{const out=await (async()=>{${body}})();done({ok:true,out});}catch(error){done({ok:false,error:String(error instanceof Error?error.message:error)});}}).catch((error)=>done({ok:false,error:String(error?.stack??error)}));`),args??{});assert.equal(result.ok,true,`${instance.label}: ${result.error}`);return result.out;}
+async function tomState(instance){const result=await instance.browser.executeAsync((done)=>{import("/src/app/mockAdapter.ts").then(async({mockAdapter})=>{const s=await mockAdapter.getSnapshot();const cs=s.campaignSessionSystems;done({role:s.session.role,connectionState:s.connectionState,mode:s.sessionMode,round:s.scene.round??null,currentActorId:s.scene.currentActorId,activeCharacterId:s.activeCharacter.id,hp:s.activeCharacter.hp,maxHp:s.activeCharacter.maxHp,slots:(s.scene.spellcastingByActor?.[s.activeCharacter.id]?.slots??[]).map((l)=>({level:l.level,current:l.current,max:l.max})),sceneConditions:[...(s.scene.sceneConditions??[])],groups:Object.values(s.scene.groups??{}).map((g)=>({id:g.id,label:g.label,members:[...(g.memberIds??[])].sort()})),pendingWithdrawal:s.scene.pendingWithdrawal?{actorId:s.scene.pendingWithdrawal.actorId,candidates:s.scene.pendingWithdrawal.candidates.map((c)=>c.reactorId)}:null,entities:s.scene.entities.map((e)=>({id:e.id,name:e.name,kind:e.kind,side:e.side,hp:e.hp,maxHp:e.maxHp,ac:e.ac,initiative:e.initiative??null,status:[...(e.status??[])].sort(),engaged:[...(e.engagedWithIds??[])].sort(),movement:e.movementDeclaration?.kind??null,groupId:e.groupId??null})).sort((a,b)=>a.id<b.id?-1:1),campaign:cs?{id:cs.campaignId,name:cs.campaignName,note:cs.calendar.currentNote??null,calendarEnabled:cs.calendar.enabled,absoluteMinute:cs.calendar.absoluteMinute,rationsEnabled:cs.rations.enabled,rations:cs.rations.balance??null,roster:cs.roster.map((m)=>({id:m.rosterMemberId,label:m.label,characterId:m.characterId??null,xp:m.advancement?.xp??0,credits:m.advancement?.levelUpCredits??0}))}:null,compatibility:s.session.compatibility,compatibilityMessage:s.session.compatibilityMessage??null,longRestPrompts:(s.connectedLongRest?.ownerPrompts??[]).map((p)=>({transactionId:p.offer.transactionId,phase:p.phase,hpBefore:p.hp.before,hpAfter:p.hp.after,error:p.error??null})),activity:s.activity.slice(0,60).map((e)=>({id:e.id,actor:e.actor,title:e.title,summary:e.summary,stateChanges:e.stateChanges})),resolution:s.resolution?{id:s.resolution.id,stage:s.resolution.stage,actorId:s.resolution.actorId,actionName:s.resolution.actionName,dice:s.resolution.authoritativeDice??[],compact:s.resolution.compact,finalOutcome:s.resolution.finalOutcome,saves:(s.resolution.saveResults??[]).map((x)=>({targetName:x.targetName,total:x.total,dc:x.dc,outcome:x.outcome}))}:null});}).catch((error)=>done({error:String(error?.stack??error)}));});assert.ok(!result.error,`${instance.label}: ${result.error}`);return result;}
+async function waitTom(instance,predicate,description,timeout=20_000){let last=null;await instance.browser.waitUntil(async()=>{last=await tomState(instance);return predicate(last);},{timeout,interval:200,timeoutMsg:`${instance.label} did not reach ${description}; last=${JSON.stringify({mode:last?.mode,current:last?.currentActorId,conditions:last?.sceneConditions,groups:last?.groups,pending:last?.pendingWithdrawal,campaign:last?.campaign,prompts:last?.longRestPrompts,compat:last?.compatibilityMessage,entities:last?.entities?.map((e)=>`${e.name}:${e.hp}${e.engaged.length?"⚔"+e.engaged.length:""}${e.status.length?"["+e.status.join(",")+"]":""}`),activity:last?.activity?.slice(0,3).map((e)=>e.title)})}`});return last;}
+function scenePublic(state){return state.entities.map((e)=>({id:e.id,name:e.name,side:e.side,hp:e.hp,maxHp:e.maxHp,initiative:e.initiative,status:e.status,engaged:e.engaged,groupId:e.groupId}));}
+async function expectTomParity(peers,label){const host=await tomState(peers[0]);const expected=JSON.stringify({scene:scenePublic(host),conditions:host.sceneConditions,groups:host.groups});for(const p of peers.slice(1)){const s=await waitTom(p,(x)=>JSON.stringify({scene:scenePublic(x),conditions:x.sceneConditions,groups:x.groups})===expected,`${label}: scene parity with the Host`);assert.equal(s.mode,host.mode,`${label}: ${p.label} mode diverges`);if(host.mode==="initiative")assert.equal(s.currentActorId,host.currentActorId,`${label}: ${p.label} current actor diverges`);}return host;}
+async function createNamedCampaign(host,name){await click(host.browser,navButton("캠페인"),"캠페인 메뉴");const body=await host.browser.$("body").getText();await click(host.browser,exactButton(body.includes("아직 캠페인이 없습니다.")?"새 캠페인 만들기":"새 캠페인"),"새 캠페인");await replaceValue(host.browser,labelControl("캠페인 이름"),name,"캠페인 이름");await click(host.browser,exactButton("캠페인 만들기"),"캠페인 만들기 제출");await waitForText(host.browser,name);return rawCall(host,`const s=await mockAdapter.getSnapshot();const c=(s.campaigns??[]).find((x)=>x.name===args.name);if(!c)throw new Error("campaign not found: "+args.name);return c.campaignId;`,{name});}
+async function addSrdMonstersViaUi(host,query,namePrefix,count){const pane=await hostEncounterPane(host);await setReactNumberInput(host.browser,`${pane}//input[@aria-label='추가할 마리 수']`,count);await replaceValue(host.browser,`${pane}//input[@aria-label='SRD 몬스터 검색']`,query,"SRD 몬스터 검색");await click(host.browser,`${pane}//div[contains(@class,'session-dm-monster-results')]//button[.//strong[starts-with(normalize-space(.),${JSON.stringify(namePrefix)})]]`,`SRD 몬스터 ${namePrefix} ×${count}`);const state=await waitTom(host,(s)=>s.entities.filter((e)=>e.kind!=="character"&&e.name.startsWith(namePrefix)).length>=count,`${count}× ${namePrefix} in the Host scene`);return state.entities.filter((e)=>e.kind!=="character"&&e.name.startsWith(namePrefix)).map((e)=>e.id);}
+async function toggleSceneCondition(host,label){const pane=await hostEncounterPane(host);await click(host.browser,`${pane}//section[@aria-label='장면 조건']//button[normalize-space(.)=${JSON.stringify(label)}]`,`장면 조건 ${label}`);}
+async function hostAttack(host,{actorId,targetId,queued,match}){const out=await hostCall(host,`await mockAdapter.selectDmActor(args.actorId);if(args.queued)await mockAdapter.setQueuedD20(args.queued);const s=await mockAdapter.getSnapshot();const list=s.scene.actionsByActor[args.actorId]??[];const re=new RegExp(args.match);const action=list.find((a)=>a.resolutionKind==="attack"&&a.available&&re.test(a.name)&&(a.eligibleTargetIds??[]).includes(args.targetId))??list.find((a)=>a.resolutionKind==="attack"&&re.test(a.name));if(!action)throw new Error("no attack matching "+args.match+" for "+args.actorId+"; have "+list.map((a)=>a.name+(a.available?"":"(x)")).join("|"));let snapshot=await mockAdapter.resolveAction(action.id,[args.targetId]);for(let step=0;step<12&&snapshot.resolution&&snapshot.resolution.stage!=="complete"&&snapshot.resolution.canAdvance;step+=1)snapshot=await mockAdapter.advanceResolution();snapshot=await mockAdapter.getSnapshot();return {actionName:action.name,resolutionId:snapshot.resolution?.id??null,stage:snapshot.resolution?.stage??null,compact:snapshot.resolution?.compact??null,dice:snapshot.resolution?.authoritativeDice??[]};`,{actorId,targetId,queued,match});assert.ok(out.resolutionId,`Host attack produced no resolution: ${JSON.stringify(out)}`);seenResolutionIds.add(out.resolutionId);return out;}
+// A controlled <input type=number>: webdriverio's clear+type fights React's re-render, so set the value through the native setter and fire an input event.
+async function setReactNumberInput(browser,xpath,value){const ok=await browser.execute((xpath,value)=>{const input=document.evaluate(xpath,document,null,XPathResult.FIRST_ORDERED_NODE_TYPE,null).singleNodeValue;if(!input)return false;const setter=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,"value").set;setter.call(input,String(value));input.dispatchEvent(new Event("input",{bubbles:true}));return input.value===String(value);},xpath,value);assert.equal(ok,true,`number input ${xpath} did not take ${value}`);}
+// An open ability check stops at effect-preview ("DM 공개 DC 대기") until the DM sets the DC in the result card; the runner plays the DM: 공개 DC → 판정 확정.
+async function playerCheck(peer,actorId,actionId,queued,host,dc){await hostCall(host,`await mockAdapter.setQueuedD20(args.queued);`,{queued});const action=await findAction(peer,actorId,(a)=>a.id===actionId,actionId);const started=await clientAct(peer,action.id,[]);assert.equal(started.ok,true,started.error);const hostRes=await waitHostResolutionFor(host,actorId);let done=await hostAdvanceToComplete(host,hostRes.resolution.id);let dcPath="none";if(done.resolution&&done.resolution.id===hostRes.resolution.id&&done.resolution.stage!=="complete"){const form="//form[@aria-label='능력 판정 난이도 설정']";await host.browser.$(form).waitForDisplayed({timeout:10_000,timeoutMsg:`DC form did not open for ${actionId}`});await setReactNumberInput(host.browser,`${form}//label[.//span[normalize-space(.)='공개 DC']]//input`,dc);await click(host.browser,`${form}//button[normalize-space(.)='판정 확정']`,"판정 확정");dcPath="ui";done=await hostAdvanceToComplete(host,hostRes.resolution.id);}assert.equal(done.resolution?.stage,"complete",JSON.stringify(done.resolution));return {resolutionId:done.resolution.id,name:action.name,dice:done.resolution.dice,compact:done.resolution.compact,finalOutcome:done.resolution.finalOutcome,dc,dcPath};}
+async function playerAct(peer,actorId,pick,targets,queued,host,label){if(queued)await hostCall(host,`await mockAdapter.setQueuedD20(args.queued);`,{queued});const action=await findAction(peer,actorId,pick,label);const started=await clientAct(peer,action.id,targets);assert.equal(started.ok,true,`${label}: ${started.error}`);const hostRes=await waitHostResolutionFor(host,actorId);const done=await hostAdvanceToComplete(host,hostRes.resolution.id);assert.equal(done.resolution?.stage,"complete",`${label}: ${JSON.stringify(done.resolution)}`);return {resolutionId:done.resolution.id,name:action.name,dice:done.resolution.dice,compact:done.resolution.compact,finalOutcome:done.resolution.finalOutcome,saves:done.resolution.saves};}
+function ent(state,id){return state.entities.find((e)=>e.id===id);}
+// The DM tools disable 이니셔티브 시작/종료 while a result card is open; the DM closes the card first (닫기), like at the table.
+async function closeResultCard(host){const close=await host.browser.$("//button[normalize-space(.)='닫기']");if(await close.isExisting()&&await close.isDisplayed().catch(()=>false)){await close.click();}else{await hostCall(host,`if((await mockAdapter.getSnapshot()).resolution)await mockAdapter.dismissResolution();`);}await waitTom(host,(x)=>!x.resolution,"no open result card",10_000);}
+async function clickInitiative(host,label){await closeResultCard(host);const pane=await hostEncounterPane(host);await click(host.browser,`${pane}//button[normalize-space(.)=${JSON.stringify(label)}]`,label);}
+// The chrome tabs (시간·식량·휴식) render as span+strong, so they are matched by their span label.
+async function openTab(instance,label){const active=await instance.browser.$(`//button[contains(@class,'active')][.//span[normalize-space(.)=${JSON.stringify(label)}]]`);if(await active.isExisting())return;await click(instance.browser,`//button[.//span[normalize-space(.)=${JSON.stringify(label)}]]`,`${instance.label} ${label} 탭`);await sleep(300);}
+
 async function runScenario(){
-  assert.equal(process.platform,"win32","C1-MP Tauri acceptance is Windows-only");assert.ok(existsSync(binary),`Tauri E2E binary was not found: ${binary}`);
+  assert.equal(process.platform,"win32","TOM Tauri acceptance is Windows-only");assert.ok(existsSync(binary),`Tauri E2E binary was not found: ${binary}`);
   await rm(runRoot,{recursive:true,force:true});await mkdir(artifactRoot,{recursive:true});await ensureVite();
-  const sessionPort=await reservePort();const hostRoot=path.join(runRoot,"host","data");const p1Root=path.join(runRoot,"p1","data");const p2Root=path.join(runRoot,"p2","data");
-  const host=await launchInstance("C1-MP Host",hostRoot,await reservePort());let p1=await launchInstance("C1-MP P1",p1Root,await reservePort());let p2=await launchInstance("C1-MP P2",p2Root,await reservePort());
-  const peers=()=>[host,p1,p2];const scenarios={};const record=(id,data)=>{scenarios[id]={status:"PASS",...data};log(`${id} PASS`);};
+  const sessionPort=await reservePort();
+  const host=await launchInstance("TOM Host",path.join(runRoot,"host","data"),await reservePort());const p1=await launchInstance("TOM P1",path.join(runRoot,"p1","data"),await reservePort());const p2=await launchInstance("TOM P2",path.join(runRoot,"p2","data"),await reservePort());
+  const peers=[host,p1,p2];const beats={};const record=(id,data)=>{beats[id]={status:"PASS",...data};log(`${id} PASS`);};
   const CLERIC={className:"클레릭",spellTiles:{"choice:class.spells.cantrips":["신성한 불길","인도","빛"],"choice:class.spells.prepared":["신앙의 방패","상처 치료","유도 화살","치유의 단어"]},choiceCards:{"choice:class.divine-order":"수호자","choice:class.loadout.0":"부적"}};
-  const cleric=await createDistinctPlayerCharacter(p1,"C1 Cleric",CLERIC);
-  const shield=await stowShield(p1);log(`P1 shield: ${JSON.stringify(shield)}`);
-  const fighter=await createDistinctPlayerCharacter(p2,"C1 Fighter");
-  await createHostCampaign(host);await openHostSession(host,sessionPort);
-  // C1-01 — the Host owns a saved character (the seeded Aelar) but hosting projects nothing of its own.
-  const hosted=await stateOf(host);assert.equal(hosted.role,"host");assert.equal(hosted.entities.filter((e)=>e.kind==="character").length,0,`Host scene must start without characters; got ${JSON.stringify(hosted.entities)}`);
-  await joinClientSession(p1,sessionPort);await joinClientSession(p2,sessionPort);
-  const joined=await waitState(host,(s)=>s.entities.filter((e)=>e.kind==="character").length===2,"both players in the Host scene");
-  const names=joined.entities.filter((e)=>e.kind==="character").map((e)=>e.name).sort();assert.deepEqual(names,["C1 Cleric","C1 Fighter"],`Host scene characters must be the two players only; got ${JSON.stringify(names)}`);
-  assert.ok(!names.includes("Aelar"),"the DM's saved character must never enter the hosted scene");
-  await evidenceAll(peers(),"c1-mp-01-joined");
-  assert.equal(joined.activity.some((e)=>e.actor==="Aelar"||e.actor==="Mira"),false,`the reference fixture's 기록 entries must not appear in a hosted session; activity=${JSON.stringify(joined.activity.map((e)=>e.actor+": "+e.title))}`);
-  const hostBody=await bodyText(host);const aelarAt=hostBody.indexOf("Aelar");assert.equal(aelarAt,-1,`the Host workspace must not name the DM's saved character; context=${JSON.stringify(hostBody.slice(Math.max(0,aelarAt-80),aelarAt+80))}`);
-  record("C1-MP-01",{hostRole:hosted.role,characters:names,participants:joined.participants});
+  const sera=await createDistinctPlayerCharacter(p1,"세라",CLERIC);await stowShield(p1);
+  const kael=await createDistinctPlayerCharacter(p2,"카엘");
+  const campaignId=await createNamedCampaign(host,"잿빛 관문의 늑대들");
+  await rawCall(host,`await mockAdapter.configureCampaignCalendar(args.id,{enabled:true,providerId:"builtin.gregorian"});await mockAdapter.configureCampaignRations(args.id,{enabled:true,providerId:"builtin.tracking-only"});`,{id:campaignId});
+  await openHostSession(host,sessionPort);await joinClientSession(p1,sessionPort);await joinClientSession(p2,sessionPort);
+  await waitTom(host,(s)=>s.entities.filter((e)=>e.kind==="character").length===2&&s.campaign?.calendarEnabled===true,"both players in the scene with the campaign systems live");
+  await evidenceAll(peers,"tom-00-table");
   try{
-    // C1-MP-02 — an SRD monster (죽음의 개, CR 1, 물기 2회) added from the 인카운터 search reaches every peer with its catalog name and stat block.
-    const bear=await addSrdMonsterViaUi(host,"죽음의 개","죽음의 개");assert.ok(bear,"죽음의 개 did not enter the Host scene");
-    assert.equal(bear.maxHp,39,`죽음의 개 max HP from the stat block; got ${JSON.stringify(bear)}`);assert.equal(bear.ac,10,`죽음의 개 AC from the stat block; got ${JSON.stringify(bear)}`);
-    await expectSceneParity(peers(),"C1-MP-02");
-    await evidenceAll(peers(),"c1-mp-02-monster");
-    record("C1-MP-02",{monster:bear});
-    // C1-MP-04 — Initiative from the DM tools: order, round and current actor converge.
-    const pane=await hostEncounterPane(host);await click(host.browser,`${pane}//button[normalize-space(.)='이니셔티브 시작']`,"이니셔티브 시작");
-    const initiative=await waitState(host,(s)=>s.mode==="initiative"&&Boolean(s.currentActorId),"Initiative on the Host");
-    await expectSceneParity(peers(),"C1-MP-04");
-    await evidenceAll(peers(),"c1-mp-04-initiative");
-    record("C1-MP-04",{round:initiative.round,currentActorId:initiative.currentActorId,order:initiative.entities.map((e)=>({name:e.name,initiative:e.initiative}))});
-    // C1-MP-05 — P1 casts Guiding Bolt (spell attack, level-1 slot) at the bear: one Host resolution, HP and the slot converge.
-    await walkToActor(host,cleric.id);
-    // C1-MP-03 — on P1's turn, the dock's 물러남 declaration is routed to the Host and republished to the other player (the row renders in Initiative).
-    let movementPath="ui";
-    const withdraw=await p1.browser.$(exactButton("물러남"));
-    const withdrawReady=await withdraw.isExisting()&&await withdraw.waitForEnabled({timeout:10_000}).then(()=>true).catch(()=>false);
-    if(withdrawReady)await withdraw.click();else{movementPath="api";await peerCall(p1,`await mockAdapter.declareMovement(args.actorId,"withdraw");`,{actorId:cleric.id});}
-    const hostMove=await waitState(host,(s)=>s.entities.find((e)=>e.id===cleric.id)?.movement==="withdraw","the Host recording P1's 물러남");
-    const p2Move=await waitState(p2,(s)=>s.entities.find((e)=>e.id===cleric.id)?.movement==="withdraw","P2 observing P1's 물러남");
-    await evidenceAll(peers(),"c1-mp-03-movement");
-    record("C1-MP-03",{path:movementPath,host:hostMove.entities.find((e)=>e.id===cleric.id).movement,p2:p2Move.entities.find((e)=>e.id===cleric.id).movement});
-    const before05=await stateOf(p1);const slotBefore=before05.slots.find((l)=>l.level===1);assert.ok(slotBefore&&slotBefore.current>0,`P1 needs a level-1 slot; slots=${JSON.stringify(before05.slots)}`);
-    const bolt=await findAction(p1,cleric.id,(a)=>a.spellId==="dnd.srd521.spell.guiding-bolt"&&a.available,"Guiding Bolt");
-    await hostCall(host,`await mockAdapter.setQueuedD20(15);`);
-    const cast=await clientAct(p1,bolt.id,[bear.id]);assert.equal(cast.ok,true,cast.error);
-    let hostRes=await waitHostResolutionFor(host,cleric.id);const castDone=await hostAdvanceToComplete(host,hostRes.resolution.id);assert.equal(castDone.resolution?.stage,"complete",JSON.stringify(castDone.resolution));
-    await expectConverged(peers(),castDone.resolution.id,"C1-MP-05");
-    const after05=await waitState(p1,(s)=>s.slots.find((l)=>l.level===1)?.current===slotBefore.current-1,"one level-1 slot spent on P1");
-    const bearAfterBolt=(await stateOf(host)).entities.find((e)=>e.id===bear.id);assert.ok(bearAfterBolt.hp<bear.maxHp,`Guiding Bolt with a queued 15 must hit AC 10; bear=${JSON.stringify(bearAfterBolt)}`);
-    await expectSceneParity(peers(),"C1-MP-05");
-    await evidenceAll(peers(),"c1-mp-05-spell");
-    record("C1-MP-05",{resolutionId:castDone.resolution.id,slotBefore:slotBefore.current,slotAfter:after05.slots.find((l)=>l.level===1).current,bearHp:bearAfterBolt.hp});
-    // C1-MP-06 — P2's weapon attack on the bear converges the same way.
-    await walkToActor(host,fighter.id);
-    const weapon=await findAction(p2,fighter.id,(a)=>a.available&&a.resolutionKind==="attack"&&(a.eligibleTargetIds??[]).includes(bear.id),"weapon attack");
-    await hostCall(host,`await mockAdapter.setQueuedD20(15);`);
-    const swing=await clientAct(p2,weapon.id,[bear.id]);assert.equal(swing.ok,true,swing.error);
-    hostRes=await waitHostResolutionFor(host,fighter.id);const swingDone=await hostAdvanceToComplete(host,hostRes.resolution.id);assert.equal(swingDone.resolution?.stage,"complete",JSON.stringify(swingDone.resolution));
-    await expectConverged(peers(),swingDone.resolution.id,"C1-MP-06");
-    await expectSceneParity(peers(),"C1-MP-06");
-    await evidenceAll(peers(),"c1-mp-06-attack");
-    record("C1-MP-06",{resolutionId:swingDone.resolution.id,action:weapon.name,bearHp:(await stateOf(host)).entities.find((e)=>e.id===bear.id).hp});
-    // C1-MP-07 — the DM resolves the bear's multiattack routine (물기 2회; 39 HP so it survives the two player hits) from the 인카운터 pane on the bear's turn; every attack reaches the players.
-    await walkToActor(host,bear.id);
-    const known=new Set((await stateOf(host)).activity.map((e)=>e.id));
-    const pane07=await hostEncounterPane(host);
-    await click(host.browser,`${pane07}//button[starts-with(normalize-space(.),'다중공격 · 물기 2회')]`,"다중공격 · 물기 2회");
-    await click(host.browser,`${pane07}//div[@aria-label=${JSON.stringify(`${bear.name} 다중공격 대상`)}]//button[normalize-space(.)='C1 Cleric']`,"다중공격 대상 C1 Cleric");
-    const routineEntries=(await newActivitySince(host,known,2)).filter((e)=>!e.id.startsWith("multiattack."));
-    const routineIds=routineEntries.map((e)=>e.id);
-    for(const p of [p1,p2])await waitActivityIds(p,routineIds);
-    await expectSceneParity(peers(),"C1-MP-07");
-    await evidenceAll(peers(),"c1-mp-07-multiattack");
-    record("C1-MP-07",{entries:routineEntries.map((e)=>({actor:e.actor,title:e.title,summary:e.summary,stateChanges:e.stateChanges})),clericHp:(await stateOf(host)).entities.find((e)=>e.id===cleric.id).hp});
-    // C1-MP-08 — P2's process is killed and relaunched on the same data; rejoining catches up to the Host scene and Activity exactly once.
-    const hostBefore08=await stateOf(host);
-    p2=await relaunchClient(p2,"C1-MP P2 Restart");
-    await selectProductionCharacter(p2,fighter.id);await joinClientSession(p2,sessionPort);
-    const caught=await waitState(p2,(s)=>JSON.stringify(publicEntities(s))===JSON.stringify(publicEntities(hostBefore08)),"catch-up scene parity after restart",40_000);
-    await waitActivityIds(p2,[...routineIds,castDone.resolution.id,swingDone.resolution.id]);
-    assertUniqueActivity(await stateOf(p2),"C1-MP-08");
-    await expectSceneParity(peers(),"C1-MP-08");
-    await evidenceAll(peers(),"c1-mp-08-rejoin");
-    record("C1-MP-08",{mode:caught.mode,currentActorId:caught.currentActorId,activityCount:caught.activity.length});
-    // C1-MP-09 — the Host ends the session explicitly; the players drop to offline without a silent reconnect.
-    // The product shell stays live during a session (MP-A10): the 세션 screen carries the Host's 세션 종료.
-    await click(host.browser,exactButton("← 제품"),"Host ← 제품");
-    await click(host.browser,navButton("세션"),"Host 세션 메뉴");
-    const endButton=await host.browser.$("//button[contains(@class,'danger-action') and normalize-space(.)='세션 종료']");
-    let ended=await endButton.waitForDisplayed({timeout:10_000}).then(()=>true).catch(()=>false);
-    if(ended)await endButton.click();
-    if(!ended){await hostCall(host,`await mockAdapter.stopSession();`);}
-    const hostEnded=await waitState(host,(s)=>s.role!=="host","the Host leaving the host role",30_000);
-    const p1Ended=await waitState(p1,(s)=>s.role==="offline"||s.connectionState==="disconnected","P1 offline after the session end",40_000);
-    const p2Ended=await waitState(p2,(s)=>s.role==="offline"||s.connectionState==="disconnected","P2 offline after the session end",40_000);
-    await sleep(3000);
-    const p1Still=await stateOf(p1);assert.notEqual(p1Still.connectionState,"connected","P1 must not silently reconnect after the Host ended the session");
-    await evidenceAll(peers(),"c1-mp-09-ended");
-    record("C1-MP-09",{viaUi:ended,host:{role:hostEnded.role,connectionState:hostEnded.connectionState},p1:{role:p1Ended.role,connectionState:p1Ended.connectionState},p2:{role:p2Ended.role,connectionState:p2Ended.connectionState}});
-  }catch(error){await evidenceAll(peers(),"c1-mp-failure");const diag={};for(const p of peers())diag[p.label]=await bounded(stateOf(p).catch((e)=>({error:String(e)})),8_000,"state");await writeFile(path.join(artifactRoot,"c1-mp-failure-state.json"),`${JSON.stringify({scenarios,diag},null,2)}\n`,"utf8");throw error;}
-  const evidence={gate:"C1-MP",scope:Object.keys(scenarios),status:"PASS",verificationSha,windowsTauri:true,topology:{host:"DM Host (no character)",clients:["P1 C1 Cleric","P2 C1 Fighter"],sessionPort},scenarios};
-  await writeFile(path.join(artifactRoot,"c1-mp-summary.json"),`${JSON.stringify(evidence,null,2)}\n`,"utf8");log(`PASS evidence: ${path.join(artifactRoot,'c1-mp-summary.json')}`);
+    // 장면 1 · 쉬어가는 등불 여관 — 세라의 설득, 브람의 건량, 달력 메모.
+    const persuade=await playerCheck(p1,sera.id,"action.standard.influence.persuasion",13,host,12);
+    await expectConverged(peers,persuade.resolutionId,"장면1 설득");
+    await rawCall(host,`await mockAdapter.adjustCampaignRations(args.id,{amount:6,note:"촌장 브람이 내준 건량"});await mockAdapter.setCampaignCalendarNote(args.id,"1일차 해질녘 · 쉬어가는 등불 여관");`,{id:campaignId});
+    const inn=await waitTom(p2,(s)=>s.campaign?.note==="1일차 해질녘 · 쉬어가는 등불 여관"&&(s.campaign?.rations??0)>=6,"P2 seeing the calendar note and the rations");
+    await evidenceAll(peers,"tom-01-inn");
+    record("장면1-여관",{persuade,rations:inn.campaign.rations,note:inn.campaign.note});
+
+    // 장면 2 · 숲길 매복 — 어둠, 늑대 ×3 무리, 숨음, 지각 탐색, 이니셔티브, 물기·교전, 대검, 신성한 불길, 물러남 → 기회공격.
+    await toggleSceneCondition(host,"어둠");
+    await waitTom(host,(s)=>s.sceneConditions.includes("darkness"),"어둠 on the Host");
+    const wolves=await addSrdMonstersViaUi(host,"늑대","늑대",3);assert.equal(wolves.length,3,`three wolves; got ${JSON.stringify(wolves)}`);
+    const grouped=await waitTom(host,(s)=>s.groups.some((g)=>g.members.length===3),"the wolves grouped");
+    await rawCall(host,`for(const id of args.ids)await mockAdapter.setCreatureBadge(id,"hidden",true);`,{ids:wolves});
+    await waitTom(host,(s)=>wolves.every((id)=>ent(s,id)?.status.includes("숨음")),"숨음 badges on the Host");
+    await expectTomParity(peers,"장면2 매복 준비");
+    await evidenceAll(peers,"tom-02a-ambush");
+    const perception=await playerCheck(p2,kael.id,"action.standard.search.perception",14,host,13);
+    await expectConverged(peers,perception.resolutionId,"장면2 지각");
+    await rawCall(host,`for(const id of args.ids)await mockAdapter.setCreatureBadge(id,"hidden",false);`,{ids:wolves});
+    await clickInitiative(host,"이니셔티브 시작");
+    await waitTom(host,(s)=>s.mode==="initiative","Initiative on the Host");
+    const order=await expectTomParity(peers,"장면2 이니셔티브");
+    const [wolf1,wolf2,wolf3]=wolves;
+    await walkToActor(host,wolf1);
+    const bite=await hostAttack(host,{actorId:wolf1,targetId:kael.id,queued:18,match:"물기"});
+    await expectConverged(peers,bite.resolutionId,"장면2 늑대 물기");
+    const engagedHost=await waitTom(host,(s)=>ent(s,wolf1)?.engaged.includes(kael.id)===true,"늑대 1 engaged with 카엘");
+    await waitTom(p2,(s)=>ent(s,wolf1)?.engaged.includes(kael.id)===true,"P2 seeing the engagement");
+    await walkToActor(host,kael.id);
+    const greatsword=await playerAct(p2,kael.id,(a)=>a.available&&a.resolutionKind==="attack"&&(a.eligibleTargetIds??[]).includes(wolf2),[wolf2],15,host,"카엘 대검 → 늑대 2");
+    await expectConverged(peers,greatsword.resolutionId,"장면2 대검");
+    await walkToActor(host,sera.id);
+    const flame=await playerAct(p1,sera.id,(a)=>a.spellId==="dnd.srd521.spell.sacred-flame"&&a.available,[wolf3],11,host,"세라 신성한 불길 → 늑대 3");
+    await expectConverged(peers,flame.resolutionId,"장면2 신성한 불길");
+    await evidenceAll(peers,"tom-02b-fight");
+    // 카엘의 다음 턴: 물러남 → DM 프롬프트 → 늑대 1의 기회공격.
+    await walkToActor(host,kael.id);
+    // T1-03: 카엘's own 대검 engaged him with 늑대 2, and the bite's engagement with 늑대 1 lapsed after a round without melee between them; he withdraws from whoever holds him now.
+    const engagedWolf=ent(await tomState(host),kael.id).engaged.find((id)=>wolves.includes(id));assert.ok(engagedWolf,"카엘 is engaged with a wolf before withdrawing");
+    const withdraw=await p2.browser.$(exactButton("물러남"));await withdraw.waitForEnabled({timeout:10_000,timeoutMsg:"카엘의 물러남 is not enabled on his turn"});await withdraw.click();
+    const prompt=await waitTom(host,(s)=>s.pendingWithdrawal?.actorId===kael.id&&s.pendingWithdrawal.candidates.includes(engagedWolf),"the DM's 기회공격 prompt with the engaged wolf");
+    await waitTom(p2,(s)=>Boolean(s.pendingWithdrawal)||ent(s,kael.id)?.movement==="withdraw","P2 seeing the withdrawal");
+    await evidenceAll(peers,"tom-02c-withdraw-prompt");
+    await hostCall(host,`await mockAdapter.setQueuedD20(17);`);
+    const wolfName=ent(prompt,engagedWolf).name;
+    await click(host.browser,`//aside[@aria-label='기회공격 확인']//button[.//strong[normalize-space(.)=${JSON.stringify(wolfName)}]]`,`기회공격 ${wolfName}`);
+    const oa=await waitHostResolutionFor(host,engagedWolf);const oaDone=await hostAdvanceToComplete(host,oa.resolution.id);
+    await expectConverged(peers,oaDone.resolution.id,"장면2 기회공격");
+    const afterOa=await waitTom(host,(s)=>!s.pendingWithdrawal&&!(ent(s,engagedWolf)?.engaged.includes(kael.id)),"the engagement ended after 물러남");
+    await evidenceAll(peers,"tom-02d-opportunity");
+    await clickInitiative(host,"이니셔티브 종료");
+    await waitTom(host,(s)=>s.mode==="freeform","freeform on the Host");
+    await rawCall(host,`for(const id of args.ids){const s=await mockAdapter.getSnapshot();if(s.scene.entities.some((e)=>e.id===id))await mockAdapter.removeCombatant(id);}`,{ids:wolves});
+    await toggleSceneCondition(host,"어둠");
+    const cleared=await waitTom(host,(s)=>!s.sceneConditions.includes("darkness")&&!s.entities.some((e)=>wolves.includes(e.id)),"wolves gone and 어둠 off");
+    await waitTom(p2,(s)=>ent(s,kael.id)?.movement===null,"카엘's 물러남 chip gone after the fight");
+    await expectTomParity(peers,"장면2 정리");
+    record("장면2-매복",{group:grouped.groups.find((g)=>g.members.length===3),order:order.entities.map((e)=>({name:e.name,initiative:e.initiative})),perception,bite,engagedAfterBite:ent(engagedHost,wolf1).engaged,greatsword,sacredFlame:flame,prompt:prompt.pendingWithdrawal,opportunityAttack:{id:oaDone.resolution.id,compact:oaDone.resolution.compact},withdrewFrom:wolfName,engagedAfterWithdraw:ent(afterOa,engagedWolf)?.engaged??[],kaelHp:ent(cleared,kael.id).hp});
+
+    // 막간 · 야영 — DM이 휴식 탭에서 두 플레이어에게 장기 휴식을 제안하고, 각자 승인한다.
+    const before=await tomState(host);
+    await openTab(host,"휴식");
+    for(const label of ["장기 휴식과 함께 캠페인 시간 8시간 진행","장기 휴식과 함께 하루치 식량 소비"]){const box=await host.browser.$(`//input[@aria-label=${JSON.stringify(label)}]`);await box.waitForDisplayed({timeout:10_000});if(!(await box.isSelected()))await box.click();}
+    for(const label of ["세라","카엘"]){const offer=await host.browser.$(`//section[@aria-label='연결된 플레이어 장기 휴식']//div[contains(@class,'session-campaign-xp-member')][.//strong[normalize-space(.)=${JSON.stringify(label)}]]//button[normalize-space(.)='장기 휴식 제안']`);await offer.waitForDisplayed({timeout:10_000,timeoutMsg:`${label} has no 장기 휴식 제안 button`});await offer.waitForEnabled({timeout:10_000});await offer.click();await sleep(800);}
+    for(const p of [p1,p2]){await openTab(p,"휴식");const approve=await p.browser.$(exactButton("승인"));await approve.waitForDisplayed({timeout:20_000,timeoutMsg:`${p.label} did not receive the long rest offer`});await approve.click();}
+    const rested1=await waitTom(p1,(s)=>s.hp===s.maxHp&&s.slots.every((l)=>l.current===l.max)&&s.longRestPrompts.every((x)=>x.phase!=="offered"),"세라 rested",40_000);
+    const rested2=await waitTom(p2,(s)=>s.hp===s.maxHp&&s.longRestPrompts.every((x)=>x.phase!=="offered"),"카엘 rested",40_000);
+    const camp=await waitTom(host,(s)=>(s.campaign?.absoluteMinute??0)>=(before.campaign?.absoluteMinute??0)+480,"the campaign clock advanced 8 hours",30_000);
+    await waitTom(p2,(s)=>s.campaign?.absoluteMinute===camp.campaign.absoluteMinute,"P2 seeing the same clock");
+    await evidenceAll(peers,"tom-03-camp");
+    record("막간-야영",{hp:{세라:[rested1.hp,rested1.maxHp],카엘:[rested2.hp,rested2.maxHp]},slots:rested1.slots,clock:{before:before.campaign.absoluteMinute,after:camp.campaign.absoluteMinute},rations:{before:before.campaign.rations,after:camp.campaign.rations},prompts:{p1:rested1.longRestPrompts,p2:rested2.longRestPrompts}});
+
+    // 장면 3 · 잿빛 관문 — 해골 ×2, 고블린 보스, 비공개 조사 판정과 공개, 다중공격, 치유의 단어, 대검, 유도 화살, XP.
+    const skeletons=await addSrdMonstersViaUi(host,"해골","해골",2);
+    const [boss]=await addSrdMonstersViaUi(host,"고블린 보스","고블린 보스",1);
+    await expectTomParity(peers,"장면3 관문");
+    const trap=await playerCheck(p1,sera.id,"action.standard.study.investigation",9,host,15);
+    await expectConverged(peers,trap.resolutionId,"장면3 조사");
+    await evidenceAll(peers,"tom-04a-gate");
+    await clickInitiative(host,"이니셔티브 시작");
+    await waitTom(host,(s)=>s.mode==="initiative","Initiative at the gate");
+    await expectTomParity(peers,"장면3 이니셔티브");
+    // 이빨 shoots from the dark: the DM hides the attack roll (비공개 굴림 applies to the DM's own next resolution), then discloses it.
+    await walkToActor(host,boss);
+    await hostCall(host,`await mockAdapter.setNextResolutionVisibility({hidden:["roll"]});`);
+    const shot=await hostAttack(host,{actorId:boss,targetId:kael.id,queued:14,match:"단궁|shortbow"});
+    await waitActivityIds(p2,[shot.resolutionId]);
+    const hiddenOnP2=await tomState(p2);const hiddenView=hiddenOnP2.resolution&&hiddenOnP2.resolution.id===shot.resolutionId?hiddenOnP2.resolution:null;
+    if(hiddenView)assert.equal(hiddenView.dice.length,0,`P2 must not see the hidden d20; got ${JSON.stringify(hiddenView)}`);
+    const hostView=(await tomState(host)).activity.find((e)=>e.id===shot.resolutionId);
+    await hostCall(host,`await mockAdapter.discloseResolution(args.id,["roll"]);`,{id:shot.resolutionId});
+    const disclosed=await waitTom(p2,(s)=>s.activity.some((e)=>e.title.startsWith("DM 공개")),"P2 receiving the disclosure",20_000);
+    assert.equal(/resolution\./.test(disclosed.activity.find((e)=>e.title.startsWith("DM 공개")).title),false,"the disclosure names the action, not the resolution id");
+    await evidenceAll(peers,"tom-04b-hidden-shot");
+    // Next round: the boss's multiattack routine.
+    await walkToActor(host,boss);
+    const known=new Set((await tomState(host)).activity.map((e)=>e.id));
+    const bossName=ent(await tomState(host),boss).name;
+    const pane3=await hostEncounterPane(host);
+    await closeResultCard(host);const routineButton=await host.browser.$(`${pane3}//div[.//strong[normalize-space(.)=${JSON.stringify(bossName)}]]//button[starts-with(normalize-space(.),'다중공격')]`);
+    let multi;
+    if(await routineButton.isExisting()){await routineButton.waitForEnabled({timeout:10_000});await routineButton.click();await click(host.browser,`${pane3}//div[@aria-label=${JSON.stringify(`${bossName} 다중공격 대상`)}]//button[normalize-space(.)='카엘']`,"다중공격 대상 카엘");const entries=(await newActivitySince(host,known,2)).filter((e)=>!e.id.startsWith("multiattack."));/* the routine summary entry is DM-side; each attack is its own event */for(const p of [p1,p2])await waitActivityIds(p,entries.map((e)=>e.id));multi={path:"ui",entries:entries.map((e)=>({title:e.title,summary:e.summary}))};}
+    else{const swing=await hostAttack(host,{actorId:boss,targetId:kael.id,queued:16,match:"시미터"});await expectConverged(peers,swing.resolutionId,"장면3 보스 시미터");multi={path:"api-single",swing};}
+    const hurt=await tomState(host);const kaelBefore=ent(hurt,kael.id).hp;
+    await walkToActor(host,sera.id);
+    const heal=await playerAct(p1,sera.id,(a)=>a.spellId==="dnd.srd521.spell.healing-word"&&a.available,[kael.id],null,host,"세라 치유의 단어 → 카엘");
+    await expectConverged(peers,heal.resolutionId,"장면3 치유의 단어");
+    const healed=await tomState(host);assert.ok(ent(healed,kael.id).hp>=kaelBefore,`healing must not lower HP (${kaelBefore} → ${ent(healed,kael.id).hp})`);
+    await walkToActor(host,kael.id);
+    const cut=await playerAct(p2,kael.id,(a)=>a.available&&a.resolutionKind==="attack"&&(a.eligibleTargetIds??[]).includes(skeletons[0]),[skeletons[0]],15,host,"카엘 대검 → 해골 1");
+    await expectConverged(peers,cut.resolutionId,"장면3 대검");
+    await walkToActor(host,sera.id);
+    const bolt=await playerAct(p1,sera.id,(a)=>a.spellId==="dnd.srd521.spell.guiding-bolt"&&a.available,[boss],15,host,"세라 유도 화살 → 보스");
+    await expectConverged(peers,bolt.resolutionId,"장면3 유도 화살");
+    await expectTomParity(peers,"장면3 전투 후");
+    await evidenceAll(peers,"tom-04c-gate-fight");
+    await clickInitiative(host,"이니셔티브 종료");
+    await waitTom(host,(s)=>s.mode==="freeform","freeform after the gate");
+    const rosterIds=(await tomState(host)).campaign.roster.filter((m)=>m.characterId).map((m)=>m.id);
+    await rawCall(host,`await mockAdapter.grantCampaignAdvancement(args.id,{rosterMemberIds:args.members,kind:"xp",amount:150});`,{id:campaignId,members:rosterIds});
+    const xp=await waitTom(p1,(s)=>(s.campaign?.roster??[]).some((m)=>m.characterId===sera.id&&m.xp>=150),"세라 seeing 150 XP",20_000);
+    await evidenceAll(peers,"tom-05-xp");
+    record("장면3-관문",{skeletons,boss:bossName,investigation:trap,hiddenShot:{host:hostView?{title:hostView.title,summary:hostView.summary}:null,p2ResolutionView:hiddenView,p2Disclosure:disclosed.activity.find((e)=>e.title.startsWith("DM 공개"))},multiattack:multi,heal:{before:kaelBefore,after:ent(healed,kael.id).hp,compact:heal.compact},cut,bolt,xp:xp.campaign.roster.map((m)=>({label:m.label,xp:m.xp}))});
+
+    // 마무리 — 세션 종료, 캠페인 세션 요약.
+    await click(host.browser,exactButton("← 제품"),"Host ← 제품");await click(host.browser,navButton("세션"),"Host 세션 메뉴");
+    const endButton=await host.browser.$("//button[contains(@class,'danger-action') and normalize-space(.)='세션 종료']");await endButton.waitForDisplayed({timeout:10_000});await endButton.click();
+    await waitTom(host,(s)=>s.role!=="host","the Host offline",30_000);
+    for(const p of [p1,p2])await waitTom(p,(s)=>s.role==="offline"||s.connectionState==="disconnected",`${p.label} offline`,40_000);
+    const history=await rawCall(host,`const s=await mockAdapter.getSnapshot();const c=(s.campaigns??[]).find((x)=>x.campaignId===args.id);return (c?.sessionHistory??[]).map((h)=>({title:h.title,participants:h.participantLabels,calendarBefore:h.calendarBefore,calendarAfter:h.calendarAfter,rationDelta:h.rationDelta}));`,{id:campaignId});
+    assert.equal(history.length,1,`one session summary; got ${JSON.stringify(history)}`);
+    await evidenceAll(peers,"tom-06-ended");
+    record("마무리",{history});
+  }catch(error){await evidenceAll(peers,"tom-failure");const diag={};for(const p of peers)diag[p.label]=await bounded(tomState(p).catch((e)=>({error:String(e)})),8_000,"state");await writeFile(path.join(artifactRoot,"tom-failure-state.json"),`${JSON.stringify({beats,diag},null,2)}\n`,"utf8");throw error;}
+  const evidence={gate:"TOM",scenario:"잿빛 관문의 늑대들",status:"PASS",verificationSha,windowsTauri:true,topology:{host:"DM Host (no character)",clients:["P1 세라 (클레릭)","P2 카엘 (파이터)"],sessionPort},beats};
+  await writeFile(path.join(artifactRoot,"tom-summary.json"),`${JSON.stringify(evidence,null,2)}\n`,"utf8");log(`PASS evidence: ${path.join(artifactRoot,'tom-summary.json')}`);
 }
 
 async function cleanup(){if(keepOpen){log(`--keep-open active. Evidence: ${artifactRoot}`);return;}for(const browser of [...browsers].reverse()){try{await browser.deleteSession();}catch{}}for(const child of [...children].reverse()){if(child.exitCode===null&&!child.killed){try{child.kill();}catch{}}}if(viteStarted)log("Vite process stopped with tracked child cleanup.");}
 
-let exitCode=0;try{await runScenario();}catch(error){exitCode=1;console.error(error instanceof Error?error.stack??error.message:error);try{await writeFile(path.join(artifactRoot,"c1-mp-failure.txt"),`${String(error instanceof Error?error.stack??error.message:error)}\n`,"utf8");}catch{}}finally{await cleanup();}process.exitCode=exitCode;
+let exitCode=0;try{await runScenario();}catch(error){exitCode=1;console.error(error instanceof Error?error.stack??error.message:error);try{await writeFile(path.join(artifactRoot,"tom-failure.txt"),`${String(error instanceof Error?error.stack??error.message:error)}\n`,"utf8");}catch{}}finally{await cleanup();}process.exitCode=exitCode;

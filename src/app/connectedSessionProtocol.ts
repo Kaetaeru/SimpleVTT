@@ -82,6 +82,8 @@ export type ConnectedEventPayload =
       resolutionId:string;
       presentation:ConnectedResolutionPresentationV1;
       resolutionEvents:ResolutionEvent[];
+      /** The Host's engagements after this resolution (a melee attack engages its target); absent on older events. */
+      engagements?:EngagementRecord[];
       stateChanges:string[];
       provenance:string[];
     }

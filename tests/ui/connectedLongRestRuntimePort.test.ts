@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import type { CatalogEntry, CharacterSheet, EconomyVm, SceneEntity } from "../../src/app/contracts";
 import { MockAdapter } from "../../src/app/mockAdapter";
+import { registerConnectedCampaignProjectionBroadcaster } from "../../src/app/connectedCampaignProjectionPort";
 import { catalogQualifiedId } from "../../src/app/contentCatalogIdentity";
 import { buildCharacterSessionProjectionV1 } from "../../src/app/characterSessionProjection";
 import { acceptHostCharacterSessionProjection } from "../../src/app/connectedCharacterProjectionHandshake";
@@ -138,9 +139,16 @@ test("connected Long Rest commits Campaign before owner materialization and refr
   assert.equal((await client.getSnapshot()).activeCharacter.hp,5,"owner prepare must remain invisible");
   assert.equal(connectedLongRestClientRecoveryMessages(client)[0]?.type,"long-rest-owner-prepared");
 
-  const global=await recordConnectedLongRestHostOwnerPrepared(host,PEER,prepared);
+  // C1-08: the global Campaign commit pushes the campaign-systems projection to the players (the commit bypasses the wrapped calendar/ration methods).
+  const broadcasts:Array<{absoluteMinute:number|undefined;rations:number|undefined}>=[];
+  registerConnectedCampaignProjectionBroadcaster(async(adapter)=>{const systems=(await adapter.getSnapshot()).campaignSessionSystems;broadcasts.push({absoluteMinute:systems?.calendar.absoluteMinute,rations:systems?.rations.balance});});
+  let global;
+  try{global=await recordConnectedLongRestHostOwnerPrepared(host,PEER,prepared);}finally{registerConnectedCampaignProjectionBroadcaster(async()=>{});}
   assert.equal(global.status,"committed");
   if(global.status!=="committed") return;
+  assert.ok(broadcasts.length>=1,"the Long Rest commit broadcasts the campaign-systems projection");
+  assert.equal(broadcasts.at(-1)!.absoluteMinute,480,"players receive the advanced clock");
+  assert.equal(broadcasts.at(-1)!.rations,4,"players receive the consumed rations");
   assert.equal(global.snapshot.campaignSessionSystems?.calendar.absoluteMinute,480);
   assert.equal(global.snapshot.campaignSessionSystems?.rations.balance,4);
   assert.equal((await client.getSnapshot()).activeCharacter.hp,5,"global Campaign commit does not materialize owner Character by itself");
@@ -164,6 +172,25 @@ test("connected Long Rest commits Campaign before owner materialization and refr
   assert.deepEqual(hostSnapshot.scene.economyByActor[sheet.id],preservedEconomy,"turn economy remains Session authority");
   assert.equal(hostRuntime.characters.some((entry)=>entry.id===sheet.id),false,"remote Character is never copied into Host Character library");
   assert.equal(connectedLongRestHostRecoveryMessages(host,PEER).length,0);
+});
+
+test("C1-08: a Campaign that moved on since the offer does not lose the player's approval",async()=>{
+  const {host,client,sheet}=await setupPair();
+  const started=await beginConnectedLongRestHostOffer(host,{characterId:sheet.id,transactionId:"long-rest.runtime.moved",advanceMinutes:480,consumeRations:true});
+  receiveConnectedLongRestOwnerOffer(client,started.offer);
+  // Another player's rest (or any DM edit) commits before this owner answers.
+  await host.adjustCampaignRations("campaign.connected-rest",{amount:1,note:"another rest"});
+  const campaignNow=(await host.getSnapshot()).campaignSessionSystems!.campaignRevision;
+  assert.notEqual(campaignNow,started.offer.campaignRevision,"the Campaign revision moved on");
+  const decision=decideConnectedLongRestOwnerOffer(client,started.offer.transactionId,true);
+  const authorized=await authorizeConnectedLongRestHostDecision(host,PEER,decision);
+  assert.equal(authorized.status,"ready",JSON.stringify(authorized));
+  if(authorized.status!=="ready") return;
+  assert.equal(authorized.preflight.expectedCampaignRevision,campaignNow,"the commit preflight targets the current Campaign revision");
+  const prepared=await prepareAuthorizedConnectedLongRestOwner(client,authorized.preflight);
+  assert.equal(prepared.transactionId,started.offer.transactionId,"the owner prepares against the re-stamped preflight");
+  const global=await recordConnectedLongRestHostOwnerPrepared(host,PEER,prepared);
+  assert.equal(global.status,"committed",JSON.stringify(global));
 });
 
 test("connected Long Rest aborts owner preparation when Campaign revision drifts before global commit",async()=>{

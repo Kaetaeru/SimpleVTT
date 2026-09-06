@@ -120,6 +120,8 @@ async function handleHostLongRest(adapter:MockAdapter,message:SessionTransportMe
       await sendConnectedWireTo(message.peer,{type:"long-rest-prepare-authorized",preflight:result.preflight});
     }else if(result.status==="rejected"){
       await sendConnectedWireTo(message.peer,{type:"error",code:"connected-long-rest-preflight",message:result.error});
+      // The player approved and is waiting: close the prompt with the reason instead of leaving it on "accepted".
+      await sendConnectedWireTo(message.peer,{type:"long-rest-abort",transactionId:wire.decision.transactionId,reason:result.error});
     }
     await publishConnectedSnapshot(adapter);
     return;
@@ -190,7 +192,8 @@ async function materializeClientGlobalCommit(adapter:MockAdapter,wire:Extract<Co
 
 async function handleClientLongRest(adapter:MockAdapter,wire:ConnectedWireMessage) {
   if(wire.type==="long-rest-offer"){
-    receiveConnectedLongRestOwnerOffer(adapter,wire.offer);
+    try{receiveConnectedLongRestOwnerOffer(adapter,wire.offer);}
+    catch(error){await warn(adapter,`Connected Long Rest offer could not be accepted: ${error instanceof Error?error.message:String(error)}`);return;}
     await publishConnectedSnapshot(adapter);
     return;
   }

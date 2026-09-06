@@ -171,7 +171,7 @@ export function SessionDmEncounterPane({ onClose }: { onClose(): void }) {
   };
 
   const changeInitiative = async () => {
-    if (pendingKey || snapshot.resolution) return;
+    if (pendingKey || (snapshot.resolution && snapshot.resolution.stage !== "complete")) return;
     setPendingKey("initiative");
     try {
       if (initiative) await endInitiative();
@@ -186,7 +186,7 @@ export function SessionDmEncounterPane({ onClose }: { onClose(): void }) {
     <section className="session-dm-encounter-summary">
       <div><span>Combatant</span><strong>{combatants.length}</strong></div>
       <div><span>모드</span><strong>{initiative ? `이니셔티브 · ${snapshot.scene.round}R` : "자유 진행"}</strong></div>
-      <button type="button" className={initiative ? "" : "primary"} disabled={Boolean(pendingKey || snapshot.resolution)} onClick={() => void changeInitiative()}>{initiative ? "이니셔티브 종료" : "이니셔티브 시작"}</button>
+      <button type="button" className={initiative ? "" : "primary"} disabled={Boolean(pendingKey || (snapshot.resolution && snapshot.resolution.stage !== "complete"))} onClick={() => void changeInitiative()}>{initiative ? "이니셔티브 종료" : "이니셔티브 시작"}</button>
     </section>
     <section className="session-dm-scene-conditions" aria-label="장면 조건">
       <span>장면</span>

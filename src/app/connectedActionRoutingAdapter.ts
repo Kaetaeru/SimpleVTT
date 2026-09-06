@@ -149,6 +149,9 @@ async function publishCommittedResolution(adapter:MockAdapter,snapshot?:AppSnaps
       resolutionId:resolution.id,
       presentation:peerFacing.presentation,
       resolutionEvents:peerFacing.hidden.length?redactOutboundResolutionEvents(events,peerFacing.hidden,resolution.targetIds):events,
+      // T1-03: a melee resolution engaged its target on the Host; the players' rails show the chip from the same event.
+      // A hidden-target resolution keeps its engagement Host-private too (an engagement names the target).
+      engagements:peerFacing.hidden.includes("targets")?undefined:structuredClone(connectedInternal(adapter).scene.engagements??[]),
       stateChanges:rollHidden?[]:[...resolution.stateChanges],
       provenance:rollHidden?["host-private resolution"]:[...resolution.provenance],
     },

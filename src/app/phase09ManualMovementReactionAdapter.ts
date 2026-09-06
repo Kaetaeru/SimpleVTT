@@ -89,6 +89,8 @@ function targetingProvenance(command:ManualMovementReactionCommand,triggerId:str
 
 MockAdapter.prototype.declareManualMovementReaction=async function declareManualMovementReaction(command:ManualMovementReactionCommand) {
   const internal=this as unknown as ManualMovementReactionAdapterState;
+  // A completed card the DM left open is a result, not a resolution in progress: close it so the reaction can open its own.
+  if (internal.resolution&&internal.resolution.stage==="complete") await this.dismissResolution();
   clearPendingManualMovementReaction(this);
   try {
     const { provoker,reactor,action }=validate(internal,command);

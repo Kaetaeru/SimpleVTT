@@ -42,24 +42,24 @@ export function theaterTopologyFingerprint(scene:SceneVm) {
   });
 }
 
-export async function publishTheaterTopologyIfChanged(adapter:MockAdapter,before:string,operation:string) {
+export async function publishTheaterTopologyIfChanged(adapter:MockAdapter,before:string,operation:string,fingerprint:(scene:SceneVm)=>string=theaterTopologyFingerprint) {
   const app=connectedInternal(adapter);
   if (connectedStateFor(adapter).mode!=="host") return;
   // Projections (engagement chips, group folds, timing badges) are refreshed by a snapshot read.
   await app.getSnapshot();
-  if (theaterTopologyFingerprint(app.scene)===before) return;
+  if (fingerprint(app.scene)===before) return;
   await commitConnectedSceneTopology(adapter,[`Scene state changed: ${operation}`],["host-authoritative theater-of-mind scene state"]);
 }
 
-function wrapHostPublish(method:RoutedMethod) {
+function wrapHostPublish(method:RoutedMethod,fingerprint:(scene:SceneVm)=>string=theaterTopologyFingerprint) {
   const prototype=MockAdapter.prototype as unknown as Record<string,(...args:unknown[])=>Promise<AppSnapshot>>;
   const previous=prototype[method];
   if (typeof previous!=="function") return;
   prototype[method]=async function publishAfter(this:MockAdapter,...args:unknown[]) {
     const host=connectedStateFor(this).mode==="host";
-    const before=host ? theaterTopologyFingerprint(connectedInternal(this).scene) : "";
+    const before=host ? fingerprint(connectedInternal(this).scene) : "";
     const result=await previous.apply(this,args);
-    if (host) await publishTheaterTopologyIfChanged(this,before,method);
+    if (host) await publishTheaterTopologyIfChanged(this,before,method,fingerprint);
     return host ? connectedInternal(this).getSnapshot() : result;
   };
 }

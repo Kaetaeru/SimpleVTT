@@ -1,6 +1,8 @@
 import type { CampaignSessionSystemsProjection } from "./campaignPersistenceContracts";
 import type { DmInventoryAdjustmentCommand, PartyStashTransferCommand, SessionCharacterInventoryVm } from "./contracts";
 import { connectedStateFor } from "./connectedSessionState";
+import { registerConnectedCampaignProjectionBroadcaster } from "./connectedCampaignProjectionPort";
+import { registerConnectedOwnerWriteBackHandler } from "./connectedOwnerWriteBackPort";
 import { publishConnectedSnapshot } from "./connectedSessionRuntimeAdapter";
 import { buildCharacterSessionProjectionV1, type CharacterSessionProjectionV1 } from "./characterSessionProjection";
 import { reconstructCharacterSessionProjectionV1 } from "./characterSessionProjectionReconstruction";
@@ -18,6 +20,8 @@ interface CampaignStashDepositResult {type:"campaign-stash-deposit-result";sessi
 type CampaignOwnerInventoryRequest=
   | {type:"campaign-owner-inventory";sessionId:string;correlationId:string;operation:"apply";command:DmInventoryAdjustmentCommand}
   | {type:"campaign-owner-inventory";sessionId:string;correlationId:string;operation:"undo";actorId:string;requestId:string};
+/** Owner → Host after a durable write-back: the owner's current projection (and revisions). */
+interface CampaignOwnerProjectionRefresh {type:"campaign-owner-projection-refresh";sessionId:string;actorId:string;projection:CharacterSessionProjectionV1;}
 interface CampaignOwnerInventoryResult {type:"campaign-owner-inventory-result";sessionId:string;correlationId:string;actorId:string;accepted:boolean;error?:string;projection?:CharacterSessionProjectionV1;}
 type Raw=Record<string,unknown>;
 const remoteProjections=new WeakMap<MockAdapter,{sessionId:string;revision:number;projection:CampaignSessionSystemsProjection}>();
@@ -67,6 +71,7 @@ function validInventoryCommand(command:Raw|undefined){
   return false;
 }
 export function decodeCampaignOwnerInventoryRequest(raw:string):CampaignOwnerInventoryRequest|null{try{const value=object(JSON.parse(raw));if(value?.type!=="campaign-owner-inventory"||typeof value.sessionId!=="string"||typeof value.correlationId!=="string"||(value.operation!=="apply"&&value.operation!=="undo"))return null;if(value.operation==="apply"){if(!validInventoryCommand(object(value.command)))return null;}else if(typeof value.actorId!=="string"||typeof value.requestId!=="string")return null;return value as unknown as CampaignOwnerInventoryRequest;}catch{return null;}}
+export function decodeCampaignOwnerProjectionRefresh(raw:string):CampaignOwnerProjectionRefresh|null{try{const value=object(JSON.parse(raw));if(value?.type!=="campaign-owner-projection-refresh"||typeof value.sessionId!=="string"||!value.sessionId||typeof value.actorId!=="string"||!value.actorId)return null;const projection=object(value.projection);if(!projection||projection.characterId!==value.actorId||!Number.isInteger(projection.sourceRevision)||!Number.isInteger(projection.runtimeRevision))return null;return {type:"campaign-owner-projection-refresh",sessionId:value.sessionId,actorId:value.actorId,projection:projection as unknown as CharacterSessionProjectionV1};}catch{return null;}}
 export function decodeCampaignOwnerInventoryResult(raw:string):CampaignOwnerInventoryResult|null{try{const value=object(JSON.parse(raw));if(value?.type!=="campaign-owner-inventory-result"||typeof value.sessionId!=="string"||typeof value.correlationId!=="string"||typeof value.actorId!=="string"||typeof value.accepted!=="boolean"||(value.error!==undefined&&typeof value.error!=="string"))return null;const projection=object(value.projection);if(value.accepted&&(typeof projection?.characterId!=="string"||!Number.isInteger(projection.sourceRevision)||!Number.isInteger(projection.runtimeRevision)))return null;return value as unknown as CampaignOwnerInventoryResult;}catch{return null;}}
 async function envelopeFor(adapter:MockAdapter):Promise<CampaignSystemsEnvelope|null>{
   const state=connectedStateFor(adapter);if(state.mode!=="host"||!state.sessionId) return null;
@@ -79,6 +84,7 @@ async function broadcastProjection(adapter:MockAdapter){
   const peers=[...connectedStateFor(adapter).peerParticipants.keys()];
   await Promise.all(peers.map((peer)=>baseSendTo(peer,message)));
 }
+registerConnectedCampaignProjectionBroadcaster(broadcastProjection);
 async function sendToWithCampaignSystems(peer:string,message:string){
   const result=await baseSendTo(peer,message);const sessionId=compatibleHelloAck(message);const host=activeHostAdapter;
   if(!host||!sessionId) return result;const envelope=await envelopeFor(host);if(envelope&&envelope.sessionId===sessionId) await baseSendTo(peer,JSON.stringify(envelope));return result;
@@ -149,6 +155,8 @@ async function onMessageWithCampaignSystems(handler:(message:SessionTransportMes
     if(client&&ownerRequest){void sendOwnerInventoryResult(client,message.peer,ownerRequest);return;}
     const ownerResult=decodeCampaignOwnerInventoryResult(message.message);
     if(host&&ownerResult){void settleOwnerInventoryResult(host,message,ownerResult);return;}
+    const ownerRefresh=decodeCampaignOwnerProjectionRefresh(message.message);
+    if(host&&ownerRefresh){if(connectedStateFor(host).sessionId===ownerRefresh.sessionId)void refreshHostOwnerProjection(host,message.peer,ownerRefresh.actorId,ownerRefresh.projection).catch(()=>undefined);return;}
     if(client&&ownerResult){void applyObservedOwnerInventoryResult(client,ownerResult).catch(()=>undefined);return;}
     const stashRequest=decodeStashDepositRequest(message.message);
     if(stashRequest){
@@ -213,6 +221,14 @@ async function onMessageWithCampaignSystems(handler:(message:SessionTransportMes
 }
 tauriSessionTransport.sendTo=sendToWithCampaignSystems;
 tauriSessionTransport.onMessage=onMessageWithCampaignSystems;
+// After a Host-confirmed resolution wrote back to the owner's library, the owner sends its fresh projection so the
+// Host's mount (and every owner-revision check built on it) follows the library revision.
+registerConnectedOwnerWriteBackHandler(async(client)=>{
+  const state=connectedStateFor(client);if(state.mode!=="client"||!state.sessionId)return;
+  const snapshot=await client.getSnapshot();
+  const projection=buildCharacterSessionProjectionV1(snapshot.activeCharacter,snapshot.catalog);
+  await tauriSessionTransport.send(JSON.stringify({type:"campaign-owner-projection-refresh",sessionId:state.sessionId,actorId:snapshot.activeCharacter.id,projection} satisfies CampaignOwnerProjectionRefresh));
+});
 
 const previousGetSnapshot=MockAdapter.prototype.getSnapshot;
 MockAdapter.prototype.getSnapshot=async function getSnapshotWithRemoteCampaignSystems(){

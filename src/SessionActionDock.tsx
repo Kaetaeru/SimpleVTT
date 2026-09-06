@@ -182,7 +182,7 @@ export function SessionActionDock({actorId,suspended,targeting,onBeginTargeting,
   const movementActorId=snapshot.sessionMode==="initiative"&&snapshot.role==="dm"?snapshot.scene.currentActorId:actorId;
   const movementActor=movementActorId?snapshot.scene.entities.find((entity)=>entity.id===movementActorId):undefined;
   const movementDeclaration=movementActor?.movementDeclaration;
-  const movementDisabled=!movementActor||suspended||movementPending||Boolean(snapshot.resolution)||Boolean(snapshot.scene.pendingWithdrawal)||(snapshot.sessionMode==="initiative"&&snapshot.role!=="dm"&&snapshot.scene.currentActorId!==actorId);
+  const movementDisabled=!movementActor||suspended||movementPending||Boolean(snapshot.resolution&&snapshot.resolution.stage!=="complete")||Boolean(snapshot.scene.pendingWithdrawal)||(snapshot.sessionMode==="initiative"&&snapshot.role!=="dm"&&snapshot.scene.currentActorId!==actorId);
   const approachTargets=movementActor?snapshot.scene.entities.filter((entity)=>entity.id!==movementActor.id&&entity.hp>0&&entity.side!==movementActor.side):[];
   const declareMovement=async(kind:"approach"|"withdraw"|"stay",targetId?:string)=>{
     if(!movementActor||movementDisabled)return;

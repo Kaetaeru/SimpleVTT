@@ -1,0 +1,293 @@
+{
+  "gate": "TOM",
+  "scenario": "잿빛 관문의 늑대들",
+  "status": "PASS",
+  "verificationSha": "137e78ff714f6757e2900125e46618ae58a22826",
+  "windowsTauri": true,
+  "topology": {
+    "host": "DM Host (no character)",
+    "clients": [
+      "P1 세라 (클레릭)",
+      "P2 카엘 (파이터)"
+    ],
+    "sessionPort": 61800
+  },
+  "beats": {
+    "장면1-여관": {
+      "status": "PASS",
+      "persuade": {
+        "resolutionId": "resolution.phase09.1788692770017.368",
+        "name": "영향 주기 · 설득",
+        "dice": [
+          13
+        ],
+        "compact": "12 vs DC 12 · 성공",
+        "finalOutcome": "성공",
+        "dc": 12,
+        "dcPath": "ui"
+      },
+      "rations": 6,
+      "note": "1일차 해질녘 · 쉬어가는 등불 여관"
+    },
+    "장면2-매복": {
+      "status": "PASS",
+      "group": {
+        "id": "group.dnd-srd521-monster-wolf.1",
+        "label": "늑대 ×3",
+        "members": [
+          "dnd.srd521.monster.wolf.instance-1",
+          "dnd.srd521.monster.wolf.instance-2",
+          "dnd.srd521.monster.wolf.instance-3"
+        ]
+      },
+      "order": [
+        {
+          "name": "세라",
+          "initiative": 11
+        },
+        {
+          "name": "카엘",
+          "initiative": 12
+        },
+        {
+          "name": "늑대 1",
+          "initiative": 16
+        },
+        {
+          "name": "늑대 2",
+          "initiative": 16
+        },
+        {
+          "name": "늑대 3",
+          "initiative": 16
+        }
+      ],
+      "perception": {
+        "resolutionId": "resolution.phase09.1788692780383.750",
+        "name": "탐색 · 지각",
+        "dice": [
+          14
+        ],
+        "compact": "14 vs DC 13 · 성공",
+        "finalOutcome": "성공",
+        "dc": 13,
+        "dcPath": "ui"
+      },
+      "bite": {
+        "actionName": "물기",
+        "compact": "22 vs AC 16 — 명중 · 5 관통 피해",
+        "dice": [
+          3
+        ],
+        "resolutionId": "resolution.phase09.1788692791175.213",
+        "stage": "complete"
+      },
+      "engagedAfterBite": [
+        "char.ced801de-c2cd-442b-8e95-90bdb440a94c"
+      ],
+      "greatsword": {
+        "resolutionId": "resolution.phase09.1788692799920.140",
+        "name": "대검",
+        "dice": [
+          3,
+          3
+        ],
+        "compact": "20 vs AC 10 — 명중 · 6 slashing 피해",
+        "finalOutcome": "20 vs AC 10 — 명중 · 6 slashing 피해",
+        "saves": []
+      },
+      "sacredFlame": {
+        "resolutionId": "production-spell-cast.dnd.srd521.spell.sacred-flame.1788692808416",
+        "name": "신성한 불길",
+        "dice": [
+          3,
+          14
+        ],
+        "compact": "신성한 불길 · 늑대 3 내성 성공 · 피해 없음",
+        "finalOutcome": "늑대 3 내성 성공 · 피해 없음",
+        "saves": [
+          {
+            "dc": 12,
+            "outcome": "성공",
+            "targetId": "dnd.srd521.monster.wolf.instance-3",
+            "targetName": "늑대 3",
+            "total": 16
+          }
+        ]
+      },
+      "prompt": {
+        "actorId": "char.ced801de-c2cd-442b-8e95-90bdb440a94c",
+        "candidates": [
+          "dnd.srd521.monster.wolf.instance-1",
+          "dnd.srd521.monster.wolf.instance-2"
+        ]
+      },
+      "opportunityAttack": {
+        "id": "phase09.manual-movement-reaction.1788692813018.661",
+        "compact": "21 vs AC 16 — 명중 · 5 관통 피해"
+      },
+      "withdrewFrom": "늑대 1",
+      "engagedAfterWithdraw": [],
+      "kaelHp": 1
+    },
+    "막간-야영": {
+      "status": "PASS",
+      "hp": {
+        "세라": [
+          10,
+          10
+        ],
+        "카엘": [
+          11,
+          11
+        ]
+      },
+      "slots": [
+        {
+          "current": 2,
+          "level": 1,
+          "max": 2
+        }
+      ],
+      "clock": {
+        "before": 0,
+        "after": 960
+      },
+      "rations": {
+        "before": 6,
+        "after": 2
+      },
+      "prompts": {
+        "p1": [
+          {
+            "error": null,
+            "hpAfter": 10,
+            "hpBefore": 10,
+            "phase": "complete",
+            "transactionId": "connected-long-rest.b83c7f98-5b27-43d1-b579-66efcf518247"
+          }
+        ],
+        "p2": [
+          {
+            "error": null,
+            "hpAfter": 11,
+            "hpBefore": 1,
+            "phase": "complete",
+            "transactionId": "connected-long-rest.ca1094fc-d0e7-4656-ad96-982fd1698678"
+          }
+        ]
+      }
+    },
+    "장면3-관문": {
+      "status": "PASS",
+      "skeletons": [
+        "dnd.srd521.monster.skeleton.instance-1",
+        "dnd.srd521.monster.skeleton.instance-2"
+      ],
+      "boss": "고블린 보스 1",
+      "investigation": {
+        "resolutionId": "resolution.phase09.1788692826792.384",
+        "name": "연구 · 조사",
+        "dice": [
+          9
+        ],
+        "compact": "9 vs DC 15 · 실패",
+        "finalOutcome": "실패",
+        "dc": 15,
+        "dcPath": "ui"
+      },
+      "hiddenShot": {
+        "host": {
+          "title": "단궁 → 카엘",
+          "summary": "18 vs AC 16 — 명중 · 3 관통 피해"
+        },
+        "p2ResolutionView": {
+          "actionName": "단궁",
+          "actorId": "dnd.srd521.monster.goblin-boss.instance-1",
+          "compact": "비공개 판정",
+          "dice": [],
+          "finalOutcome": "비공개",
+          "id": "resolution.phase09.1788692837407.603",
+          "saves": [],
+          "stage": "roll-animation"
+        },
+        "p2Disclosure": {
+          "actor": "DM",
+          "id": "disclosure.resolution.phase09.1788692837407.603.81",
+          "stateChanges": [],
+          "summary": "18 vs AC 16 — 명중 · 3 관통 피해",
+          "title": "DM 공개 · 단궁 → 카엘"
+        }
+      },
+      "multiattack": {
+        "path": "ui",
+        "entries": [
+          {
+            "title": "시미터 → 카엘",
+            "summary": "16 vs AC 16 — 명중 · 3 참격 피해"
+          },
+          {
+            "title": "시미터 → 카엘",
+            "summary": "18 vs AC 16 — 명중 · 3 참격 피해"
+          }
+        ]
+      },
+      "heal": {
+        "before": 2,
+        "after": 9,
+        "compact": "치유의 단어 · 1레벨 슬롯 · 카엘 HP 7 회복"
+      },
+      "cut": {
+        "resolutionId": "resolution.phase09.1788692856719.456",
+        "name": "대검",
+        "dice": [
+          3,
+          3
+        ],
+        "compact": "20 vs AC 14 — 명중 · 6 slashing 피해",
+        "finalOutcome": "20 vs AC 14 — 명중 · 6 slashing 피해",
+        "saves": []
+      },
+      "bolt": {
+        "resolutionId": "production-spell-cast.dnd.srd521.spell.guiding-bolt.1788692864865",
+        "name": "유도 화살",
+        "dice": [
+          15,
+          2,
+          3,
+          1,
+          2
+        ],
+        "compact": "유도 화살 · 1레벨 슬롯 · 고블린 보스 1 8 광휘 피해",
+        "finalOutcome": "고블린 보스 1 8 광휘 피해",
+        "saves": []
+      },
+      "xp": [
+        {
+          "label": "세라",
+          "xp": 150
+        },
+        {
+          "label": "카엘",
+          "xp": 150
+        }
+      ]
+    },
+    "마무리": {
+      "status": "PASS",
+      "history": [
+        {
+          "calendarAfter": "서력 1년 1월 1일 · 16:00",
+          "calendarBefore": "서력 1년 1월 1일 · 00:00",
+          "participants": [
+            "DM Host",
+            "세라",
+            "카엘"
+          ],
+          "rationDelta": 2,
+          "title": "잿빛 관문의 늑대들"
+        }
+      ]
+    }
+  }
+}

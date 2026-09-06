@@ -1,4 +1,5 @@
 import type { AppSnapshot, CharacterSheet } from "./contracts";
+import { broadcastConnectedCampaignProjection } from "./connectedCampaignProjectionPort";
 import { MockAdapter } from "./mockAdapter";
 import {
   beginConnectedLongRestTransaction,
@@ -134,7 +135,8 @@ function preflightMatchesOffer(preflight:ConnectedLongRestCommitPreflight,offer:
   return preflight.transactionId===offer.transactionId
     &&preflight.sessionId===offer.sessionId
     &&preflight.campaignId===offer.campaignId
-    &&preflight.expectedCampaignRevision===offer.campaignRevision
+    // The Campaign is Host-owned: an offer re-stamped after the Campaign moved on (another rest committed) comes back with a newer revision.
+    &&preflight.expectedCampaignRevision>=offer.campaignRevision
     &&preflight.ownerParticipantId===offer.ownerParticipantId
     &&sameCharacter(preflight.character,offer.character)
     &&sameOptions(preflight.options,offer.options);
@@ -316,7 +318,15 @@ export async function authorizeConnectedLongRestHostDecision(adapter:MockAdapter
   if(!state.sessionId||!mounted) return {status:"rejected" as const,error:"connected Long Rest current Character authority is unavailable"};
   const participantId=state.peerParticipants.get(peer);
   const campaign=currentCampaign(snapshot,record.offer.campaignId);
-  const result=preflightConnectedLongRest(record.offer,decision,{sessionId:state.sessionId,campaignId:campaign.campaignId,campaignRevision:campaign.revision,registeredOwnerParticipantId:participantId??"",projection:mounted.projection});
+  const current={sessionId:state.sessionId,campaignId:campaign.campaignId,campaignRevision:campaign.revision,registeredOwnerParticipantId:participantId??"",projection:mounted.projection};
+  let result=preflightConnectedLongRest(record.offer,decision,current);
+  if(result.status==="rejected"&&!record.transaction&&/Campaign revision is stale/.test(result.error)){
+    // The Campaign moved on since the offer (another player's rest committed, the DM advanced the clock or the
+    // rations). The rest is applied on top of the current Campaign, so re-stamp the offer and gate again instead
+    // of dropping the player's approval.
+    record.offer={...record.offer,campaignRevision:campaign.revision};
+    result=preflightConnectedLongRest(record.offer,decision,current);
+  }
   if(result.status==="declined"){record.outcome="declined";return result;}
   if(result.status==="rejected") return result;
   if(record.transaction){if(record.transaction.preflight.transactionId!==result.preflight.transactionId) return {status:"rejected" as const,error:"connected Long Rest Host transaction identity changed"};return result;}
@@ -357,6 +367,9 @@ export async function recordConnectedLongRestHostOwnerPrepared(adapter:MockAdapt
   catch(error){const reason=`connected Long Rest Host durable prepare failed: ${error instanceof Error?error.message:String(error)}`;record.transaction=abortConnectedLongRestTransaction(ownerPrepared,reason);await store.write(durableRecord(record.transaction)).catch(()=>undefined);return {status:"aborted" as const,peer,transactionId:prepared.transactionId,reason};}
   try{
     const campaign=await commitConnectedLongRestCampaignParticipant(adapter,ownerPrepared.preflight);
+    // The commit wrote the Campaign library directly (not through the wrapped calendar/ration methods), so the
+    // players' 캠페인 clock and rations would stay stale until the DM's next edit: push the projection now.
+    await broadcastConnectedCampaignProjection(adapter).catch(()=>undefined);
     const commit:ConnectedLongRestGlobalCommit={transactionId:prepared.transactionId,campaignCommitId:campaign.campaignCommitId,ownerParticipantId:prepared.ownerParticipantId,character:cp(prepared.character),preparationId:prepared.preparationId};
     record.transaction=commitConnectedLongRestTransaction(record.transaction,commit);
     let persistenceWarning:string|undefined;try{await store.write(durableRecord(record.transaction));}catch(error){persistenceWarning=`Host coordinator commit phase persistence needs recovery: ${error instanceof Error?error.message:String(error)}`;}

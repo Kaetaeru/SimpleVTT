@@ -147,9 +147,17 @@ test("C1-02: a player's movement declaration is routed to the Host, and the 물�
     await host.setCurrentActor(goblinId);
     const scimitar=(await host.getSnapshot()).scene.actionsByActor[goblinId].find((action)=>action.name==="시미터")!;
     await host.setQueuedD20(3);
+    const attackMark=transport.count();
     await host.resolveAction(scimitar.id,[p1.characterId]);
     let snapshot=await host.getSnapshot();
     for (let step=0; step<8 && snapshot.resolution && snapshot.resolution.stage!=="complete"; step+=1) snapshot=await host.advanceResolution();
+    // C1-08 (seen in the Windows scenario run): the engagement must reach the players when the attack resolves, before the DM closes the card.
+    await eventually(()=>transport.after(attackMark).filter((message):message is Extract<ConnectedWireMessage,{type:"event-batch"}>=>message.type==="event-batch").flatMap((batch)=>batch.events).some((event)=>event.payload.kind==="resolution"&&(event.payload.engagements??[]).length>0),"the melee attack's resolution event carries its engagement");
+    {
+      const replica=await clientReplica(host,state.sessionId!);
+      const engaged=(await replica.getSnapshot()).scene.entities.find((entity)=>entity.id===p1.characterId)?.engagedWithIds??[];
+      assert.ok(engaged.includes(goblinId),`the player's replica shows the engagement; got ${JSON.stringify(engaged)}`);
+    }
     await host.dismissResolution();
     assert.ok((await host.getSnapshot()).scene.entities.find((entity)=>entity.id===p1.characterId)?.engagedWithIds?.includes(goblinId),"player is engaged");
     await host.setCurrentActor(p1.characterId);
