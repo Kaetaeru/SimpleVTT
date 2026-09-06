@@ -119,3 +119,5 @@ import "./commonPlayFormProjectionAdapter";
 import "./campaignRuntimeAdapter";
 import "./campaignPartyStashCapabilityRuntimeAdapter";
 import "./campaignRationConversionRuntimeAdapter";
+// V1.6 S1-04: the displayed AC includes active AC-bonus effects (신앙의 방패); display only, outermost.
+import "./effectArmorClassProjectionAdapter";
