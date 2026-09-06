@@ -192,16 +192,18 @@ async function runScenario(){
     await evidenceAll(peers,"tom-02b-fight");
     // 카엘의 다음 턴: 물러남 → DM 프롬프트 → 늑대 1의 기회공격.
     await walkToActor(host,kael.id);
+    // T1-03: 카엘's own 대검 engaged him with 늑대 2, and the bite's engagement with 늑대 1 lapsed after a round without melee between them; he withdraws from whoever holds him now.
+    const engagedWolf=ent(await tomState(host),kael.id).engaged.find((id)=>wolves.includes(id));assert.ok(engagedWolf,"카엘 is engaged with a wolf before withdrawing");
     const withdraw=await p2.browser.$(exactButton("물러남"));await withdraw.waitForEnabled({timeout:10_000,timeoutMsg:"카엘의 물러남 is not enabled on his turn"});await withdraw.click();
-    const prompt=await waitTom(host,(s)=>s.pendingWithdrawal?.actorId===kael.id&&s.pendingWithdrawal.candidates.includes(wolf1),"the DM's 기회공격 prompt with 늑대 1");
+    const prompt=await waitTom(host,(s)=>s.pendingWithdrawal?.actorId===kael.id&&s.pendingWithdrawal.candidates.includes(engagedWolf),"the DM's 기회공격 prompt with the engaged wolf");
     await waitTom(p2,(s)=>Boolean(s.pendingWithdrawal)||ent(s,kael.id)?.movement==="withdraw","P2 seeing the withdrawal");
     await evidenceAll(peers,"tom-02c-withdraw-prompt");
     await hostCall(host,`await mockAdapter.setQueuedD20(17);`);
-    const wolf1Name=ent(prompt,wolf1).name;
-    await click(host.browser,`//aside[@aria-label='기회공격 확인']//button[.//strong[normalize-space(.)=${JSON.stringify(wolf1Name)}]]`,`기회공격 ${wolf1Name}`);
-    const oa=await waitHostResolutionFor(host,wolf1);const oaDone=await hostAdvanceToComplete(host,oa.resolution.id);
+    const wolfName=ent(prompt,engagedWolf).name;
+    await click(host.browser,`//aside[@aria-label='기회공격 확인']//button[.//strong[normalize-space(.)=${JSON.stringify(wolfName)}]]`,`기회공격 ${wolfName}`);
+    const oa=await waitHostResolutionFor(host,engagedWolf);const oaDone=await hostAdvanceToComplete(host,oa.resolution.id);
     await expectConverged(peers,oaDone.resolution.id,"장면2 기회공격");
-    const afterOa=await waitTom(host,(s)=>!s.pendingWithdrawal&&!(ent(s,wolf1)?.engaged.includes(kael.id)),"the engagement ended after 물러남");
+    const afterOa=await waitTom(host,(s)=>!s.pendingWithdrawal&&!(ent(s,engagedWolf)?.engaged.includes(kael.id)),"the engagement ended after 물러남");
     await evidenceAll(peers,"tom-02d-opportunity");
     await clickInitiative(host,"이니셔티브 종료");
     await waitTom(host,(s)=>s.mode==="freeform","freeform on the Host");
@@ -209,7 +211,7 @@ async function runScenario(){
     await toggleSceneCondition(host,"어둠");
     const cleared=await waitTom(host,(s)=>!s.sceneConditions.includes("darkness")&&!s.entities.some((e)=>wolves.includes(e.id)),"wolves gone and 어둠 off");
     await expectTomParity(peers,"장면2 정리");
-    record("장면2-매복",{group:grouped.groups.find((g)=>g.members.length===3),order:order.entities.map((e)=>({name:e.name,initiative:e.initiative})),perception,bite,engagedAfterBite:ent(engagedHost,wolf1).engaged,greatsword,sacredFlame:flame,prompt:prompt.pendingWithdrawal,opportunityAttack:{id:oaDone.resolution.id,compact:oaDone.resolution.compact},engagedAfterWithdraw:ent(afterOa,wolf1)?.engaged??[],kaelHp:ent(cleared,kael.id).hp});
+    record("장면2-매복",{group:grouped.groups.find((g)=>g.members.length===3),order:order.entities.map((e)=>({name:e.name,initiative:e.initiative})),perception,bite,engagedAfterBite:ent(engagedHost,wolf1).engaged,greatsword,sacredFlame:flame,prompt:prompt.pendingWithdrawal,opportunityAttack:{id:oaDone.resolution.id,compact:oaDone.resolution.compact},withdrewFrom:wolfName,engagedAfterWithdraw:ent(afterOa,engagedWolf)?.engaged??[],kaelHp:ent(cleared,kael.id).hp});
 
     // 막간 · 야영 — DM이 휴식 탭에서 두 플레이어에게 장기 휴식을 제안하고, 각자 승인한다.
     const before=await tomState(host);

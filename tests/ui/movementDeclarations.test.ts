@@ -48,6 +48,23 @@ test("T1-05: 접근 and 그대로 are declarations only — logged, shown on the
   assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="char.aelar")?.movementDeclaration,undefined);
 });
 
+test("C1-08: a completed result card left open does not defer a declaration; a staged one does", async () => {
+  const { adapter, internal }=await engagedScene();
+  const scene=internal.scene as unknown as { entities:Array<{ id:string }>; actionsByActor:Record<string,Array<{ id:string; resolutionKind:string; available:boolean; target:string }>> };
+  const check=(scene.actionsByActor["char.aelar"]??[]).find((action)=>action.resolutionKind==="ability-check"&&action.target==="none"&&action.available);
+  assert.ok(check,"Aelar has a targetless ability check");
+  let snapshot=await adapter.resolveAction(check.id,[]);
+  assert.ok(snapshot.resolution&&snapshot.resolution.stage!=="complete","the check is staged");
+  snapshot=await adapter.declareMovement("char.aelar","stay");
+  assert.equal(snapshot.activity[0]?.title,"이동 선언 보류","a staged resolution defers the move");
+  for (let step=0; step<8 && snapshot.resolution && snapshot.resolution.stage!=="complete"; step+=1) snapshot=await adapter.advanceResolution();
+  if (snapshot.resolution && snapshot.resolution.stage!=="complete") snapshot=await adapter.applyDmAdjudication({type:"ability-check-dc",value:10,scope:"resolution"});
+  assert.equal(snapshot.resolution?.stage,"complete","the card stays open, completed");
+  snapshot=await adapter.declareMovement("char.aelar","stay");
+  assert.equal(snapshot.activity[0]?.title,"이동 · 그대로","a completed card does not block the declaration");
+  assert.equal(snapshot.scene.entities.find((entity)=>entity.id==="char.aelar")?.movementDeclaration?.kind,"stay");
+});
+
 test("T1-05: 물러남 while engaged prompts the DM; choosing the reactor resolves its opportunity attack and ends the engagement", async () => {
   const { adapter, internal }=await engagedScene();
   let snapshot=await adapter.declareMovement("char.aelar","withdraw");

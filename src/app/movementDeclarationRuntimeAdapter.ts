@@ -88,7 +88,8 @@ MockAdapter.prototype.declareMovement=async function declareMovementRuntime(acto
   const internal=this as unknown as MovementAdapterState;
   const actor=internal.scene.entities.find((entity)=>entity.id===actorId);
   if (!actor) return internal.getSnapshot();
-  if (internal.resolution) {
+  // A completed card the DM left open is a result, not a resolution in progress: only a staged one defers the move.
+  if (internal.resolution && internal.resolution.stage!=="complete") {
     log(internal,actor.name,"이동 선언 보류","진행 중인 판정을 먼저 마쳐야 합니다.",[],[]);
     return internal.getSnapshot();
   }
