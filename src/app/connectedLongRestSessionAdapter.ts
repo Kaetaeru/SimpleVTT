@@ -190,7 +190,8 @@ async function materializeClientGlobalCommit(adapter:MockAdapter,wire:Extract<Co
 
 async function handleClientLongRest(adapter:MockAdapter,wire:ConnectedWireMessage) {
   if(wire.type==="long-rest-offer"){
-    receiveConnectedLongRestOwnerOffer(adapter,wire.offer);
+    try{receiveConnectedLongRestOwnerOffer(adapter,wire.offer);}
+    catch(error){await warn(adapter,`Connected Long Rest offer could not be accepted: ${error instanceof Error?error.message:String(error)}`);return;}
     await publishConnectedSnapshot(adapter);
     return;
   }

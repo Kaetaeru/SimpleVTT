@@ -14,6 +14,7 @@ import { decodeConnectedWireMessage, encodeConnectedWireMessage, type ConnectedW
 import { applyConnectedCorrections } from "./connectedCorrectionApply";
 import { applyResolutionEvents } from "./realEventApplyService";
 import { persistCharacterResolutionEvents } from "./resolutionCharacterWriteBackPort";
+import { notifyConnectedOwnerWriteBack } from "./connectedOwnerWriteBackPort";
 import { SIMPLEVTT_APP_RULES_PROFILE } from "./realResolutionService";
 import { publishExternalAdapterSnapshot } from "./adapterSnapshotEvents";
 import { connectedStateFor, resetConnectedState } from "./connectedSessionState";
@@ -525,6 +526,8 @@ async function applyConfirmedPayload(adapter:MockAdapter,payload:ConnectedEventP
   app.activeCharacter.resources=projected.resources.map((entry)=>structuredClone(entry));
   app.activeCharacter.items=projected.items.map((entry)=>structuredClone(entry));
   app.syncChar();
+  // The owner's library revision moved: let the Host's mounted projection follow (see connectedOwnerWriteBackPort).
+  if (writeBack.status==="committed"&&writeBack.changed) await notifyConnectedOwnerWriteBack(adapter).catch(()=>undefined);
   const presentationStatus=enqueueOrInstallConnectedPresentation(adapter,payload.presentation);
   state.lastAppliedPresentationSequence=Math.max(state.lastAppliedPresentationSequence,payload.presentation.presentationSequence);
   const view=payload.presentation.resolution;
