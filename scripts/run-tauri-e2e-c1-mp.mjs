@@ -154,7 +154,9 @@ async function runScenario(){
     await walkToActor(host,cleric.id);
     // C1-MP-03 — on P1's turn, the dock's 물러남 declaration is routed to the Host and republished to the other player (the row renders in Initiative).
     let movementPath="ui";
-    if(!(await clickIfPresent(p1.browser,exactButton("물러남")))){movementPath="api";await peerCall(p1,`await mockAdapter.declareMovement(args.actorId,"withdraw");`,{actorId:cleric.id});}
+    const withdraw=await p1.browser.$(exactButton("물러남"));
+    const withdrawReady=await withdraw.isExisting()&&await withdraw.waitForEnabled({timeout:10_000}).then(()=>true).catch(()=>false);
+    if(withdrawReady)await withdraw.click();else{movementPath="api";await peerCall(p1,`await mockAdapter.declareMovement(args.actorId,"withdraw");`,{actorId:cleric.id});}
     const hostMove=await waitState(host,(s)=>s.entities.find((e)=>e.id===cleric.id)?.movement==="withdraw","the Host recording P1's 물러남");
     const p2Move=await waitState(p2,(s)=>s.entities.find((e)=>e.id===cleric.id)?.movement==="withdraw","P2 observing P1's 물러남");
     await evidenceAll(peers(),"c1-mp-03-movement");
@@ -204,8 +206,11 @@ async function runScenario(){
     record("C1-MP-08",{mode:caught.mode,currentActorId:caught.currentActorId,activityCount:caught.activity.length});
     // C1-MP-09 — the Host ends the session explicitly; the players drop to offline without a silent reconnect.
     // The product shell stays live during a session (MP-A10): the 세션 screen carries the Host's 세션 종료.
+    await click(host.browser,exactButton("← 제품"),"Host ← 제품");
     await click(host.browser,navButton("세션"),"Host 세션 메뉴");
-    let ended=await clickIfPresent(host.browser,"//button[contains(@class,'danger-action') and normalize-space(.)='세션 종료']");
+    const endButton=await host.browser.$("//button[contains(@class,'danger-action') and normalize-space(.)='세션 종료']");
+    let ended=await endButton.waitForDisplayed({timeout:10_000}).then(()=>true).catch(()=>false);
+    if(ended)await endButton.click();
     if(!ended){await hostCall(host,`await mockAdapter.stopSession();`);}
     const hostEnded=await waitState(host,(s)=>s.role!=="host","the Host leaving the host role",30_000);
     const p1Ended=await waitState(p1,(s)=>s.role==="offline"||s.connectionState==="disconnected","P1 offline after the session end",40_000);
