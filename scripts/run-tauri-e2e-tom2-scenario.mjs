@@ -243,7 +243,8 @@ async function runScenario(){
     const slam=await findAction(host,zombies[0],(a)=>a.resolutionKind==="attack","좀비 공격");
     await hostCall(host,`await mockAdapter.selectDmActor(args.id);await mockAdapter.setQueuedD20(19);await mockAdapter.resolveAction(args.actionId,[args.targetId]);`,{id:zombies[0],actionId:slam.id,targetId:sera.id});
     let hostRes=await waitHostResolutionFor(host,zombies[0]);
-    const concHost=await hostAdvanceUntil(host,hostRes.resolution.id,(r)=>r.stage==="save-animation"&&Boolean(r.concentrationSave));
+    // The hit walks roll → attack-result → damage-animation before the concentration save stage opens; give the presentation its time.
+    const concHost=await hostAdvanceUntil(host,hostRes.resolution.id,(r)=>r.stage==="save-animation"&&Boolean(r.concentrationSave),60_000);
     assert.ok(concHost.resolution?.concentrationSave,`the hit must request a concentration save on the Host; got ${JSON.stringify(concHost.resolution)}`);
     await p1.browser.waitUntil(async()=>Boolean((await peerState(p1)).resolution?.concentrationSave),{timeout:15_000,timeoutMsg:"세라 did not receive the private concentration save"});
     assert.equal((await peerState(p2)).resolution?.concentrationSave??null,null,"카엘 must not receive 세라's private concentration save");
