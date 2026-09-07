@@ -8,7 +8,7 @@ test("AppProvider stopSession refreshes from the adapter after stop completes",(
   const match=appProviderSource.match(/stopSession:\s*async\s*\(\)\s*=>\s*\{([\s\S]*?)\n\s*\},\n\s*setSessionReady:/);
   assert.ok(match,"AppProvider stopSession must remain an explicit async block");
   const body=match[1];
-  const stopIndex=body.indexOf("await apply(() => mockAdapter.stopSession());");
+  const stopIndex=body.indexOf("await apply(() => adapter.stopSession());");
   const refreshIndex=body.indexOf("await refresh();");
   assert.ok(stopIndex>=0,"stopSession must await the existing adapter stop path");
   assert.ok(refreshIndex>stopIndex,"stopSession must authoritatively refresh after adapter stop completes");

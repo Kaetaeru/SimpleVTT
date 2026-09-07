@@ -34,6 +34,8 @@ import "./app/connectedOwnerInventoryConnectionGuardAdapter";
 // offline -> connected -> presentation adapter composition above.
 import { ProductRoot } from "./ProductRoot";
 import { AppProvider } from "./app/AppProvider";
+import { mockAdapter } from "./app/mockAdapter";
+import { createTableSessionFacade } from "./table/facade";
 import { CombatSpellHudBridge } from "./CombatSpellHud";
 import { LevelUpV10Bridge } from "./LevelUpV10";
 import { VisualDiceBridge } from "./VisualDiceBridge";
@@ -81,9 +83,13 @@ void CombatSpellHudBridge;
 initializeAppearancePreference();
 initializeMotionPreference();
 
+// V2 table runtime behind a dev flag (T2-01): the old play screens render the new runtime's snapshot.
+const tableFacade=import.meta.env.DEV&&new URLSearchParams(window.location.search).get("table")==="v2"?createTableSessionFacade(mockAdapter):null;
+if(tableFacade) (window as unknown as {__table?:unknown}).__table=tableFacade;
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <AppProvider>
+    <AppProvider adapter={tableFacade?.adapter}>
       <ProductRoot />
       <LevelUpV10Bridge />
       <VisualDiceBridge />
