@@ -10,7 +10,7 @@ const main = readFileSync("src/main.tsx", "utf8");
 const authorization = readFileSync("docs/design/ui-ux/work-orders/WO-UI-002-SCOPED-AUTHORIZATION.md", "utf8");
 
 test("AppProvider remains above ProductRoot and owns canonical application state", () => {
-  assert.match(main, /<AppProvider>[\s\S]*<ProductRoot\s*\/>[\s\S]*<\/AppProvider>/);
+  assert.match(main, /<AppProvider[^>]*>[\s\S]*<ProductRoot\s*\/>[\s\S]*<\/AppProvider>/);
   assert.match(provider, /snapshot: AppSnapshot \| null/);
   assert.doesNotMatch(productRoot, /createContext|AppSnapshot\s*=|useReducer/);
 });

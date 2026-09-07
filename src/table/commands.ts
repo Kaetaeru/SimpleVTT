@@ -1,0 +1,45 @@
+import type { CharacterSheet } from "../app/contracts";
+import type { ConditionId } from "../domain/conditions";
+import type { DurationSpec } from "../domain/effects";
+import type { Side, Visibility } from "./state";
+
+/** What a command may add to the table. */
+export type ActorSpec=
+  |{kind:"monster";monsterId:string;count?:number;side?:Side;name?:string}
+  |{kind:"character";sheet:CharacterSheet;controllerPeer?:string;side?:Side};
+
+/** DM 즉석 재량 (D1-01, absorbed into V2): every ruling is event-native, replicated and undoable. */
+export type Ruling=
+  |{kind:"damage";amount:number;damageType?:string}
+  |{kind:"heal";amount:number}
+  |{kind:"temp-hp";amount:number}
+  |{kind:"max-hp";delta:number}
+  |{kind:"condition";conditionId:ConditionId;on:boolean;duration?:DurationSpec}
+  |{kind:"exhaustion";level:number}
+  |{kind:"next-roll";state:"advantage"|"disadvantage";family:"attack-roll"|"ability-check"|"saving-throw"|"any"}
+  |{kind:"inspiration";on:boolean}
+  |{kind:"life";state:"down"|"stable"|"dead"|"revive"}
+  |{kind:"resource";resourceId:string;delta:number}
+  |{kind:"engage";otherId:string;on:boolean}
+  |{kind:"badge";badge:"hidden"|"cover-half"|"cover-three-quarters";on:boolean};
+
+export type TableCommand=
+  |{type:"add-actors";specs:ActorSpec[]}
+  |{type:"remove-actor";actorId:string}
+  |{type:"set-actor";actorId:string;patch:{name?:string;side?:Side;hidden?:boolean;controllerPeer?:string|null;initiative?:number}}
+  |{type:"start-initiative"}
+  |{type:"end-initiative"}
+  |{type:"end-turn"}
+  |{type:"set-current-actor";actorId:string}
+  |{type:"set-order";order:string[]}
+  |{type:"act";actorId:string;actionId:string;targetIds:string[]}
+  |{type:"ruling";targetIds:string[];ruling:Ruling;note?:string}
+  |{type:"undo"}
+  |{type:"set-roll-visibility";visibility:Visibility};
+
+export interface CommandOrigin {
+  peerId:string;
+  role:"dm"|"player";
+}
+
+export const HOST_ORIGIN:CommandOrigin={peerId:"host",role:"dm"};

@@ -27,7 +27,7 @@ import "./restSpellManagementRuntimeAdapter";
 import "./phase09ConcentrationSaveAdapter";
 import "./productionCombatantPreparationAdapter";
 import "./campaignRuntimeAdapter";
-import { mockAdapter } from "./mockAdapter";
+import { mockAdapter, type MockAdapter } from "./mockAdapter";
 import { subscribeExternalAdapterSnapshot } from "./adapterSnapshotEvents";
 import { commandWasNoOp, makeRefusal, refusalMessageFor } from "./sessionRefusal";
 import { setSessionDebugPreviewRole } from "./sessionDebugPreviewRole";
@@ -141,7 +141,7 @@ function isOptimisticTextCommand(command: CharacterDraftCommand) {
   return command.type === "set-name" || command.type === "set-notes";
 }
 
-export function AppProvider({ children }: { children: ReactNode }) {
+export function AppProvider({ children, adapter = mockAdapter }: { children: ReactNode; adapter?: MockAdapter }) {
   const [snapshot, setSnapshot] = useState<AppSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const [uiDebug, setUiDebugState] = useState<UiDebugState>({ selectedActionId: null, eligibleTargetIds: [], selectedTargetIds: [], hoverTargetId: null });
@@ -162,12 +162,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const refresh = useCallback(async () => {
     const sequence = ++operationSequenceRef.current;
-    const next = await mockAdapter.getSnapshot();
+    const next = await adapter.getSnapshot();
     publishIfLatest(sequence, next);
   }, [publishIfLatest]);
   const updateCharacterDraft = useCallback(async (command: CharacterDraftCommand) => {
     if (!isOptimisticTextCommand(command)) {
-      await apply(() => mockAdapter.updateCharacterDraft(command));
+      await apply(() => adapter.updateCharacterDraft(command));
       return;
     }
     const sequence = ++operationSequenceRef.current;
@@ -182,7 +182,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         },
       };
     });
-    const next = await mockAdapter.updateCharacterDraft(command);
+    const next = await adapter.updateCharacterDraft(command);
     publishIfLatest(sequence, next);
   }, [apply, publishIfLatest]);
 
@@ -207,33 +207,33 @@ export function AppProvider({ children }: { children: ReactNode }) {
     uiDebug,
     setUiDebug,
     refresh,
-    createCharacterDraft: async (mode) => apply(() => mockAdapter.createCharacterDraft(mode)),
+    createCharacterDraft: async (mode) => apply(() => adapter.createCharacterDraft(mode)),
     duplicateCharacterDraft: async (characterId) => apply(async () => {
-      await mockAdapter.selectProductionCharacter(characterId);
-      return mockAdapter.createCharacterDraft("duplicate");
+      await adapter.selectProductionCharacter(characterId);
+      return adapter.createCharacterDraft("duplicate");
     }),
-    deleteCharacter: async (characterId) => apply(() => deleteCharacterDurably(mockAdapter,characterId)),
-    editCharacterDraft: async (characterId) => apply(() => mockAdapter.editCharacterDraft(characterId)),
+    deleteCharacter: async (characterId) => apply(() => deleteCharacterDurably(adapter,characterId)),
+    editCharacterDraft: async (characterId) => apply(() => adapter.editCharacterDraft(characterId)),
     updateCharacterDraft,
-    finalizeCharacterDraft: async () => apply(() => mockAdapter.finalizeCharacterDraft()),
-    toggleItemEquipped: async (itemId) => apply(() => mockAdapter.toggleItemEquipped(itemId)),
-    toggleItemAttunement: async (itemId) => apply(() => mockAdapter.toggleItemAttunement(itemId)),
-    useItem: async (itemId) => apply(() => mockAdapter.useItem(itemId)),
-    startLevelUp: async (characterId) => apply(() => mockAdapter.startLevelUp(characterId)),
-    updateLevelUp: async (command) => apply(() => mockAdapter.updateLevelUp(command)),
-    commitLevelUp: async () => apply(() => mockAdapter.commitLevelUp()),
-    configureWizardLongRest: async (command) => apply(() => mockAdapter.configureWizardLongRest(command)),
-    configurePactTomeRest: async (command) => apply(() => mockAdapter.configurePactTomeRest(command)),
-    configureCircleLandRest: async (landType) => apply(() => mockAdapter.configureCircleLandRest(landType)),
-    selectDmActor: async (actorId) => apply(() => mockAdapter.selectDmActor(actorId)),
-    startInitiative: async () => apply(() => mockAdapter.startInitiative()),
-    endInitiative: async () => apply(() => mockAdapter.endInitiative()),
-    endTurn: async () => apply(() => mockAdapter.endTurn()),
-    declareManualMovementReaction: async (command) => apply(() => mockAdapter.declareManualMovementReaction(command)),
-    configureReadyAction: async (command) => apply(() => mockAdapter.configureReadyAction(command)),
+    finalizeCharacterDraft: async () => apply(() => adapter.finalizeCharacterDraft()),
+    toggleItemEquipped: async (itemId) => apply(() => adapter.toggleItemEquipped(itemId)),
+    toggleItemAttunement: async (itemId) => apply(() => adapter.toggleItemAttunement(itemId)),
+    useItem: async (itemId) => apply(() => adapter.useItem(itemId)),
+    startLevelUp: async (characterId) => apply(() => adapter.startLevelUp(characterId)),
+    updateLevelUp: async (command) => apply(() => adapter.updateLevelUp(command)),
+    commitLevelUp: async () => apply(() => adapter.commitLevelUp()),
+    configureWizardLongRest: async (command) => apply(() => adapter.configureWizardLongRest(command)),
+    configurePactTomeRest: async (command) => apply(() => adapter.configurePactTomeRest(command)),
+    configureCircleLandRest: async (landType) => apply(() => adapter.configureCircleLandRest(landType)),
+    selectDmActor: async (actorId) => apply(() => adapter.selectDmActor(actorId)),
+    startInitiative: async () => apply(() => adapter.startInitiative()),
+    endInitiative: async () => apply(() => adapter.endInitiative()),
+    endTurn: async () => apply(() => adapter.endTurn()),
+    declareManualMovementReaction: async (command) => apply(() => adapter.declareManualMovementReaction(command)),
+    configureReadyAction: async (command) => apply(() => adapter.configureReadyAction(command)),
     resolveAction: async (actionId, targetIds) => {
       const before = latestSnapshotRef.current;
-      await apply(() => mockAdapter.resolveAction(actionId, targetIds));
+      await apply(() => adapter.resolveAction(actionId, targetIds));
       // V1.6 S1-01 catch-all: a command that left nothing behind is a refusal the table must see. A connected client's
       // request is answered by the Host later, so it is exempt here.
       const after = latestSnapshotRef.current;
@@ -242,73 +242,73 @@ export function AppProvider({ children }: { children: ReactNode }) {
         publishIfLatest(sequence, { ...after, refusal: makeRefusal("no-op", refusalMessageFor("no-op"), { actionId }) });
       }
     },
-    advanceResolution: async () => apply(() => mockAdapter.advanceResolution()),
-    submitConcentrationSaveD20: async (face) => apply(() => mockAdapter.submitConcentrationSaveD20(face)),
-    respondToInterrupt: async (accept) => apply(() => mockAdapter.respondToInterrupt(accept)),
-    dismissResolution: async () => apply(() => mockAdapter.dismissResolution()),
-    applyDmAdjudication: async (command) => apply(() => mockAdapter.applyDmAdjudication(command)),
-    undoLastResolution: async () => apply(() => mockAdapter.undoLastResolution()),
-    setNextResolutionVisibility: async (visibility) => apply(() => mockAdapter.setNextResolutionVisibility(visibility)),
-    discloseResolution: async (resolutionId, facts) => apply(() => mockAdapter.discloseResolution(resolutionId, facts)),
-    previewContentImport: async (payload) => apply(() => mockAdapter.previewContentImport(payload)),
-    activateContentImport: async () => apply(() => mockAdapter.activateContentImport()),
-    clearContentImport: async () => apply(() => mockAdapter.clearContentImport()),
-    uninstallContentSource: async (sourceId) => apply(() => mockAdapter.uninstallContentSource(sourceId)),
-    previewCombatantImport: async (payload) => apply(() => mockAdapter.previewCombatantImport(payload)),
-    activateCombatantImport: async () => apply(() => mockAdapter.activateCombatantImport()),
-    clearCombatantImport: async () => apply(() => mockAdapter.clearCombatantImport()),
-    instantiateCombatant: async (definitionId) => apply(() => mockAdapter.instantiateCombatant(definitionId)),
-    removeCombatant: async (combatantId) => apply(() => mockAdapter.removeCombatant(combatantId)),
-    adjustDmInventory: async (command) => apply(() => mockAdapter.adjustDmInventory(command)),
-    undoLastDmInventoryAdjustment: async () => apply(() => mockAdapter.undoLastDmInventoryAdjustment()),
-    transferPartyStash: async (command) => apply(() => mockAdapter.transferPartyStash(command)),
-    upsertCampaignDmLibraryEntry: async (campaignId,entry) => apply(() => mockAdapter.upsertCampaignDmLibraryEntry(campaignId,entry)),
-    removeCampaignDmLibraryEntry: async (campaignId,entryId) => apply(() => mockAdapter.removeCampaignDmLibraryEntry(campaignId,entryId)),
-    grantCampaignDmLibraryItem: async (campaignId,entryId,target,quantity) => apply(() => mockAdapter.grantCampaignDmLibraryItem(campaignId,entryId,target,quantity)),
-    revealCampaignDmLibraryImage: async (campaignId,entryId) => apply(() => mockAdapter.revealCampaignDmLibraryImage(campaignId,entryId)),
-    instantiateCampaignDmLibraryNpc: async (campaignId,entryId) => apply(() => mockAdapter.instantiateCampaignDmLibraryNpc(campaignId,entryId)),
-    createCampaign: async (input) => apply(() => mockAdapter.createCampaign(input)),
-    openCampaign: async (campaignId) => apply(() => mockAdapter.openCampaign(campaignId)),
-    updateCampaign: async (campaignId,payload) => apply(() => mockAdapter.updateCampaign(campaignId,payload)),
-    archiveCampaign: async (campaignId) => apply(() => mockAdapter.archiveCampaign(campaignId)),
-    restoreCampaign: async (campaignId) => apply(() => mockAdapter.restoreCampaign(campaignId)),
-    configureCampaignSessionDefaults: async (campaignId,input) => apply(() => mockAdapter.configureCampaignSessionDefaults(campaignId,input)),
-    prepareCampaignSessionSnapshot: async (campaignId,input) => apply(() => mockAdapter.prepareCampaignSessionSnapshot(campaignId,input)),
-    upsertCampaignRosterMember: async (campaignId,member) => apply(() => mockAdapter.upsertCampaignRosterMember(campaignId,member)),
-    removeCampaignRosterMember: async (campaignId,rosterMemberId) => apply(() => mockAdapter.removeCampaignRosterMember(campaignId,rosterMemberId)),
-    configureCampaignCalendar: async (campaignId,input) => apply(() => mockAdapter.configureCampaignCalendar(campaignId,input)),
-    advanceCampaignCalendar: async (campaignId,input) => apply(() => mockAdapter.advanceCampaignCalendar(campaignId,input)),
-    correctCampaignCalendar: async (campaignId,input) => apply(() => mockAdapter.correctCampaignCalendar(campaignId,input)),
-    correctCampaignCalendarDateTime: async (campaignId,input) => apply(() => mockAdapter.correctCampaignCalendarDateTime(campaignId,input)),
-    setCampaignCalendarNote: async (campaignId,note) => apply(() => mockAdapter.setCampaignCalendarNote(campaignId,note)),
-    undoCampaignCalendar: async (campaignId) => apply(() => mockAdapter.undoCampaignCalendar(campaignId)),
-    configureCampaignRations: async (campaignId,input) => apply(() => mockAdapter.configureCampaignRations(campaignId,input)),
-    adjustCampaignRations: async (campaignId,input) => apply(() => mockAdapter.adjustCampaignRations(campaignId,input)),
-    consumeCampaignDailyRations: async (campaignId,input) => apply(() => mockAdapter.consumeCampaignDailyRations(campaignId,input)),
-    undoCampaignRationConsumption: async (campaignId) => apply(() => mockAdapter.undoCampaignRationConsumption(campaignId)),
-    serveCampaignMeals: async (campaignId,input) => apply(() => mockAdapter.serveCampaignMeals(campaignId,input)),
-    setCampaignMemberMeals: async (campaignId,input) => apply(() => mockAdapter.setCampaignMemberMeals(campaignId,input)),
-    undoCampaignMeal: async (campaignId) => apply(() => mockAdapter.undoCampaignMeal(campaignId)),
-    advanceCampaignDay: async (campaignId,input) => apply(() => mockAdapter.advanceCampaignDay(campaignId,input)),
-    appendCampaignSessionSummary: async (campaignId,summary) => apply(() => mockAdapter.appendCampaignSessionSummary(campaignId,summary)),
-    grantCampaignAdvancement: async (campaignId,input) => apply(() => mockAdapter.grantCampaignAdvancement(campaignId,input)),
-    consumeCampaignLevelUpCredit: async (campaignId,rosterMemberId,level) => apply(() => mockAdapter.consumeCampaignLevelUpCredit(campaignId,rosterMemberId,level)),
-    hostSession: async () => apply(() => mockAdapter.hostSession()),
-    joinSession: async (address) => apply(() => mockAdapter.joinSession(address)),
+    advanceResolution: async () => apply(() => adapter.advanceResolution()),
+    submitConcentrationSaveD20: async (face) => apply(() => adapter.submitConcentrationSaveD20(face)),
+    respondToInterrupt: async (accept) => apply(() => adapter.respondToInterrupt(accept)),
+    dismissResolution: async () => apply(() => adapter.dismissResolution()),
+    applyDmAdjudication: async (command) => apply(() => adapter.applyDmAdjudication(command)),
+    undoLastResolution: async () => apply(() => adapter.undoLastResolution()),
+    setNextResolutionVisibility: async (visibility) => apply(() => adapter.setNextResolutionVisibility(visibility)),
+    discloseResolution: async (resolutionId, facts) => apply(() => adapter.discloseResolution(resolutionId, facts)),
+    previewContentImport: async (payload) => apply(() => adapter.previewContentImport(payload)),
+    activateContentImport: async () => apply(() => adapter.activateContentImport()),
+    clearContentImport: async () => apply(() => adapter.clearContentImport()),
+    uninstallContentSource: async (sourceId) => apply(() => adapter.uninstallContentSource(sourceId)),
+    previewCombatantImport: async (payload) => apply(() => adapter.previewCombatantImport(payload)),
+    activateCombatantImport: async () => apply(() => adapter.activateCombatantImport()),
+    clearCombatantImport: async () => apply(() => adapter.clearCombatantImport()),
+    instantiateCombatant: async (definitionId) => apply(() => adapter.instantiateCombatant(definitionId)),
+    removeCombatant: async (combatantId) => apply(() => adapter.removeCombatant(combatantId)),
+    adjustDmInventory: async (command) => apply(() => adapter.adjustDmInventory(command)),
+    undoLastDmInventoryAdjustment: async () => apply(() => adapter.undoLastDmInventoryAdjustment()),
+    transferPartyStash: async (command) => apply(() => adapter.transferPartyStash(command)),
+    upsertCampaignDmLibraryEntry: async (campaignId,entry) => apply(() => adapter.upsertCampaignDmLibraryEntry(campaignId,entry)),
+    removeCampaignDmLibraryEntry: async (campaignId,entryId) => apply(() => adapter.removeCampaignDmLibraryEntry(campaignId,entryId)),
+    grantCampaignDmLibraryItem: async (campaignId,entryId,target,quantity) => apply(() => adapter.grantCampaignDmLibraryItem(campaignId,entryId,target,quantity)),
+    revealCampaignDmLibraryImage: async (campaignId,entryId) => apply(() => adapter.revealCampaignDmLibraryImage(campaignId,entryId)),
+    instantiateCampaignDmLibraryNpc: async (campaignId,entryId) => apply(() => adapter.instantiateCampaignDmLibraryNpc(campaignId,entryId)),
+    createCampaign: async (input) => apply(() => adapter.createCampaign(input)),
+    openCampaign: async (campaignId) => apply(() => adapter.openCampaign(campaignId)),
+    updateCampaign: async (campaignId,payload) => apply(() => adapter.updateCampaign(campaignId,payload)),
+    archiveCampaign: async (campaignId) => apply(() => adapter.archiveCampaign(campaignId)),
+    restoreCampaign: async (campaignId) => apply(() => adapter.restoreCampaign(campaignId)),
+    configureCampaignSessionDefaults: async (campaignId,input) => apply(() => adapter.configureCampaignSessionDefaults(campaignId,input)),
+    prepareCampaignSessionSnapshot: async (campaignId,input) => apply(() => adapter.prepareCampaignSessionSnapshot(campaignId,input)),
+    upsertCampaignRosterMember: async (campaignId,member) => apply(() => adapter.upsertCampaignRosterMember(campaignId,member)),
+    removeCampaignRosterMember: async (campaignId,rosterMemberId) => apply(() => adapter.removeCampaignRosterMember(campaignId,rosterMemberId)),
+    configureCampaignCalendar: async (campaignId,input) => apply(() => adapter.configureCampaignCalendar(campaignId,input)),
+    advanceCampaignCalendar: async (campaignId,input) => apply(() => adapter.advanceCampaignCalendar(campaignId,input)),
+    correctCampaignCalendar: async (campaignId,input) => apply(() => adapter.correctCampaignCalendar(campaignId,input)),
+    correctCampaignCalendarDateTime: async (campaignId,input) => apply(() => adapter.correctCampaignCalendarDateTime(campaignId,input)),
+    setCampaignCalendarNote: async (campaignId,note) => apply(() => adapter.setCampaignCalendarNote(campaignId,note)),
+    undoCampaignCalendar: async (campaignId) => apply(() => adapter.undoCampaignCalendar(campaignId)),
+    configureCampaignRations: async (campaignId,input) => apply(() => adapter.configureCampaignRations(campaignId,input)),
+    adjustCampaignRations: async (campaignId,input) => apply(() => adapter.adjustCampaignRations(campaignId,input)),
+    consumeCampaignDailyRations: async (campaignId,input) => apply(() => adapter.consumeCampaignDailyRations(campaignId,input)),
+    undoCampaignRationConsumption: async (campaignId) => apply(() => adapter.undoCampaignRationConsumption(campaignId)),
+    serveCampaignMeals: async (campaignId,input) => apply(() => adapter.serveCampaignMeals(campaignId,input)),
+    setCampaignMemberMeals: async (campaignId,input) => apply(() => adapter.setCampaignMemberMeals(campaignId,input)),
+    undoCampaignMeal: async (campaignId) => apply(() => adapter.undoCampaignMeal(campaignId)),
+    advanceCampaignDay: async (campaignId,input) => apply(() => adapter.advanceCampaignDay(campaignId,input)),
+    appendCampaignSessionSummary: async (campaignId,summary) => apply(() => adapter.appendCampaignSessionSummary(campaignId,summary)),
+    grantCampaignAdvancement: async (campaignId,input) => apply(() => adapter.grantCampaignAdvancement(campaignId,input)),
+    consumeCampaignLevelUpCredit: async (campaignId,rosterMemberId,level) => apply(() => adapter.consumeCampaignLevelUpCredit(campaignId,rosterMemberId,level)),
+    hostSession: async () => apply(() => adapter.hostSession()),
+    joinSession: async (address) => apply(() => adapter.joinSession(address)),
     stopSession: async () => {
-      await apply(() => mockAdapter.stopSession());
+      await apply(() => adapter.stopSession());
       await refresh();
     },
-    setSessionReady: async (ready) => apply(() => mockAdapter.setSessionReady(ready)),
-    startPreparedSession: async (mode) => apply(() => mockAdapter.startPreparedSession(mode)),
+    setSessionReady: async (ready) => apply(() => adapter.setSessionReady(ready)),
+    startPreparedSession: async (mode) => apply(() => adapter.startPreparedSession(mode)),
     debug: {
-      setRole: async (role) => apply(() => mockAdapter.setReferenceRole(role)),
-      setMode: async (mode) => apply(() => mockAdapter.setSessionMode(mode)),
-      setCurrentActor: async (actorId) => apply(() => mockAdapter.setCurrentActor(actorId)),
-      setQueuedD20: async (value) => apply(() => mockAdapter.setQueuedD20(value)),
-      setConnectionState: async (state) => apply(() => mockAdapter.setConnectionState(state)),
-      setEdgeState: async (state) => apply(() => mockAdapter.setEdgeState(state)),
-      loadScenario: async (id) => apply(() => mockAdapter.loadReferenceScenario(id)),
+      setRole: async (role) => apply(() => adapter.setReferenceRole(role)),
+      setMode: async (mode) => apply(() => adapter.setSessionMode(mode)),
+      setCurrentActor: async (actorId) => apply(() => adapter.setCurrentActor(actorId)),
+      setQueuedD20: async (value) => apply(() => adapter.setQueuedD20(value)),
+      setConnectionState: async (state) => apply(() => adapter.setConnectionState(state)),
+      setEdgeState: async (state) => apply(() => adapter.setEdgeState(state)),
+      loadScenario: async (id) => apply(() => adapter.loadReferenceScenario(id)),
     },
   }), [snapshot, loading, uiDebug, setUiDebug, refresh, apply, updateCharacterDraft]);
 
