@@ -13,6 +13,14 @@ Repository documentation has one reading order:
 
 Historical phase plans, superseded handoffs, and old agent notes are archived under [`docs/archive/`](docs/archive/). They are evidence, not current instructions.
 
+## Current renovation
+
+2026-09-09 owner direction: Korean-first D&D, Theater of the Mind without mandatory distance calculations,
+fast combat and expressive non-blocking effects. The renovation includes character creation, personal sheets,
+level-up, inventory, DM preparation, session authority and durable saves.
+Read [the product renovation design](docs/design/v2/PRODUCT_RENOVATION.md) before extending the session-only T2 plan.
+Implementation integration is `work/v2-table`; the existing product stays on `work/v1-composite` until verified switch-over.
+
 ## Product direction
 
 The rules system is converging on a declarative execution model:

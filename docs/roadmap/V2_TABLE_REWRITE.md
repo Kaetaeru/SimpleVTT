@@ -1,5 +1,8 @@
 # V2 · Table Rewrite (세션 플레이 층 재작성 + DM Workspace)
 
+> 2026-09-09: 범위·우선순위·충돌 시 기준은 [제품 전면 개편 설계](../design/v2/PRODUCT_RENOVATION.md)를 따른다.
+> 이 문서의 T2 순서와 전체 상태 방송/복원 설명은 그대로 구현할 지시가 아니다. 기존 세션 설계 참고로 유지한다.
+
 Owner decisions (2026-09-07):
 
 - "지금 파악안된 오류가 너무 많을게 뻔해서 전면 재작성을 해보자고 했던거야." → rewrite the session/play layer.

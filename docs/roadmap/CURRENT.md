@@ -1,89 +1,16 @@
 # Current roadmap
 
-Updated: 2026-09-04 Asia/Seoul
+Updated: 2026-09-09 Asia/Tokyo
 
-This page routes to the **one active V1 execution plan**. It does not replace that plan.
+활성 작업은 **한국어 D&D / ToTM 제품 전면 개편**이다.
 
-## Active plan
+- 현재 상태: [../CURRENT.md](../CURRENT.md)
+- 단일 설계·실행 순서: [전면 개편 §10](../design/v2/PRODUCT_RENOVATION.md#10-공사-순서--커널-기능-목록보다-완결되는-사용자-여정)
+- 다음 작업: [P0 작업 패킷](../design/v2/P0_WORK_PACKET.md)
+- 확인할 소유자 결정: [전면 개편 §12](../design/v2/PRODUCT_RENOVATION.md#12-소유자-결정-기록--2026-09-09-확정)
 
-[`V1_MASTER_ROADMAP.md`](V1_MASTER_ROADMAP.md)
+P0 기반 검증 → P1 개인 시트/가방 → P2 생성/성장 → P3 연결된 짧은 실전 → P4 준비/캠페인 → P5 기능군 → P6 교체/배포.
 
-Evidence tracking:
-
-- [`V1_EVIDENCE_LEDGER.json`](V1_EVIDENCE_LEDGER.json)
-- [`EVIDENCE_CARD.md`](EVIDENCE_CARD.md)
-- [`evidence/W7-04.md`](evidence/W7-04.md)
-
-Multiplayer acceptance source:
-
-- [`../design/multiplayer-v1-scenario-catalog.md`](../design/multiplayer-v1-scenario-catalog.md)
-
-## Fixed V1 numbers
-
-```text
-10 workstreams: W0-W9
-72 release gates
-100 weighted points
-120 multiplayer scenarios: MP-A01-MP-J08
-18 legacy V1 release gates
-13 required MP work issues: MP-01-MP-13
-```
-
-Initial repository audit classification remains:
-
-```text
-47/72 REUSE_LOCKED
-14/72 VERIFY_ONLY
-11/72 BUILD
-61/72 existing implementation reused = 84.7%
-```
-
-## Current evidence state
-
-```text
-W0: COMPLETE — 6/6 PASS
-W1: COMPLETE — 8/8 PASS
-W2: COMPLETE — 8/8 PASS
-W3: COMPLETE — 8/8 PASS
-W4: COMPLETE — 8/8 PASS
-W5: COMPLETE — 10/10 PASS
-W6: COMPLETE — 8/8 PASS
-W7: COMPLETE — 8/8 PASS
-Official ledger score: 100.0/100.0
-PASS: 72/72
-PENDING: 0/72
-FAIL: 0
-BLOCKED: 0
-```
-
-## Current stage
-
-```text
-V1 COMPLETE — declared on exact SHA 7429e2c77ee969aec1c3fe28c252a8ad07e4cd06 (W9-04)
-```
-
-`W7-04` is PASS. Product verification SHA `7d0bded27a624ed0d993d860cbd590262ed1f3a6` passed GitHub Actions run `33853804394`: AUTO recovery, real Windows Tauri H+P1+P2 recovery, and Windows storage/package prerequisite jobs all succeeded. The real Windows evidence covers `MP-B08` and `MP-H09~H12`, including explicit offline-owner rejection, reconnect/retry recovery, injected persistence-failure handling, and slow-P2 observer convergence. Authoritative artifacts and digests are recorded in `evidence/W7-04.md` and `V1_EVIDENCE_LEDGER.json`.
-
-## W7-05 routing
-
-`W7-05` is `REUSE_LOCKED`. The master roadmap requires that DM-only, hidden, and private payloads, Activities, and handout metadata do not leak across the connected Session boundary. It maps to `MP-B05~B07` and `MP-09`.
-
-Reuse the existing privacy projection, redaction, Activity visibility, and handout projection owners. Do not create a second privacy model, projection layer, Activity log, or handout system. No product-code change is authorized until a reproducible current-HEAD privacy failure or an explicit production reachability/contract gap is recorded in `EVIDENCE_CARD.md`.
-
-### Next execution sequence
-
-1. Execute `W7-05`, the first non-`PASS` Gate in the ledger.
-2. Identify the smallest existing automated owner set covering DM-only/hidden/private payloads, Activities, and handout metadata for `MP-B05~B07` and `MP-09`.
-3. Run that focused set on one exact integration-derived SHA and record command, deterministic pass count, and scenario mapping.
-4. If the exact-head focused verification passes, add a scoped W7-05 evidence record and close the Gate without product/runtime changes.
-5. If a current-HEAD failure or reachability gap is reproduced, record it in `EVIDENCE_CARD.md` before repairing only the smallest existing owner path.
-6. Do not reopen W0-W6 or W7-01~W7-04 absent a demonstrated regression.
-
-## Non-negotiable routing rules
-
-- Product integration target remains `work/v1-composite`.
-- Create one scoped `agent/*` branch from the latest live integration HEAD per Gate or coherent repair.
-- `REUSE_LOCKED` and `VERIFY_ONLY` gates cannot trigger product-code changes without a reproducible current-HEAD failure or explicit production reachability/contract gap.
-- Structural/protocol-only evidence cannot close rendered Windows behavior where Windows observation is required.
-- Do not create a second shell, persistence backend, Resolver, transport, presentation pipeline, Party Stash transaction system, Long Rest coordinator, DM Library, request/event ledger, retry coordinator, reconnect system, privacy/projection system, or E2E framework.
-- V1 is complete only at 72/72 PASS, 100.0/100.0, 120/120 scenarios, 18/18 legacy gates, 13/13 MP issues, and one matching Windows release artifact plus digest.
+[V2_TABLE_REWRITE.md](V2_TABLE_REWRITE.md)의 T2 순서는 이 설계 이전의 세션 한정 계획이며 새 작업의 NEXT가 아니다.
+[V1_MASTER_ROADMAP.md](V1_MASTER_ROADMAP.md)와 V1 ledger는 이전 제품의 증거로 유지한다.
+이번 설계 변경만으로 완료 처리된 구현 단계는 없다.

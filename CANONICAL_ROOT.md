@@ -1,49 +1,38 @@
 # SimpleVTT canonical development routing
 
-This file defines branch and document authority. It does not duplicate the execution plan.
+Updated: 2026-09-09 Asia/Tokyo
+
+소유자가 세션 한정 재작성에서 캐릭터·준비·플레이·저장 전반의 개편으로 범위를 확대했다.
 
 ```yaml
-product_integration_target: work/v1-composite
+existing_product_integration: work/v1-composite
+renovation_integration_target: work/v2-table
 current_status_pointer: docs/CURRENT.md
-current_execution_plan: docs/roadmap/V1_MASTER_ROADMAP.md
+current_execution_plan: docs/design/v2/PRODUCT_RENOVATION.md
 current_roadmap_pointer: docs/roadmap/CURRENT.md
-roadmap_audit_baseline: a38b0f07ac012bc9e600a28b2630a365d1bd098b
-working_branch_policy: one scoped agent/* branch from the latest live integration HEAD per Gate or coherent repair
-permanent_global_active_branch: null
-historical_or_reference_branches:
-  - main
-  - work/v1-latest
-  - agent/codex-c9-gate-n-finalization
-  - agent/c9-gate-n-coverage-reconciliation
-  - agent/resolver-foundation-convergence
+next_work_packet: docs/design/v2/P0_WORK_PACKET.md
+historical_landing_branch: main
+working_branch_policy: scoped agent/* branches; explicit stacked bases when dependencies are unmerged
 ```
 
-## V1 status
+## Authority
 
-V1 is complete: 72/72 release gates PASS (100.0/100.0), 120/120 multiplayer scenarios PASS, on exact SHA `7429e2c77ee969aec1c3fe28c252a8ad07e4cd06` with the matching Windows release artifact (`SimpleVTT-V1-RELEASE-7429e2c77ee969aec1c3fe28c252a8ad07e4cd06`, `simplevtt.exe` sha256 `2b7394794e37924f707a749d00925e8818577d70bd582dfe499c01df11c843be`). Record: `docs/roadmap/evidence/W9-04.md`. `work/v1-composite` stays the integration target until the owner changes the integration model.
+1. 소유자의 최신 대화 지시와 명시적 결정.
+2. live GitHub의 branch/PR/CI 상태(문서가 병합이나 테스트 성공을 대신하지 않음).
+3. `docs/CURRENT.md`와 `docs/design/v2/PRODUCT_RENOVATION.md`.
+4. 새 설계와 충돌하지 않는 기존 domain·콘텐츠·ToTM·저장 계약.
+5. 과거 T2·V1·Phase 문서는 증거와 재사용 참고이며 현재 NEXT가 아님.
 
-## Authority order
+## Branch / transition
 
-When sources conflict, use this order:
+- 새 기능은 `work/v2-table`로 통합한다. `main`을 제품 통합 대상으로 바꾸지 않는다.
+- 기존 제품은 `work/v1-composite`에서 유지하고, P6 검증 후 교체 PR을 만든다.
+- 현재 설계는 #390의 `agent/t2-01-kernel`에 쌓은 문서 변경이다. #389/#390 자동 병합을 뜻하지 않는다.
+- 후속 코딩 전에 live HEAD를 확인하고 의존 PR을 명시한다. 같은 파일의 병렬 작업은 피한다.
+- 제품 입력/규칙 변경은 현재 재현 사례 또는 새로 합의한 사용자 여정의 실패 테스트에서 시작한다.
+- 새 셸·규칙 엔진·저장 엔진·독립 전송 서비스를 새로 만드는 것보다 기존 인프라와 순수 계산을 재사용한다.
+- 두 런타임이 같은 활성 세션/저장본에 동시에 쓰지 않는다. 새 저장 형식은 복사본 이관과 검증을 거친다.
+- 이 변경으로 기존 PR 종료·branch 삭제·V1 저장본 초기화를 수행하지 않는다.
 
-1. live GitHub state of `work/v1-composite`;
-2. `docs/CURRENT.md`;
-3. `docs/roadmap/V1_MASTER_ROADMAP.md`;
-4. `docs/roadmap/V1_EVIDENCE_LEDGER.json` after it is created;
-5. canonical product and scenario contracts under `docs/design/` and `docs/rules/`;
-6. historical files under `docs/archive/`, old PR/issue text, and retired handoffs.
-
-## Rules
-
-1. `work/v1-composite` remains the V1 product integration target. Do not route V1 completion to `main` unless the owner explicitly changes the integration model.
-2. Before editing, read the live integration HEAD, `docs/CURRENT.md`, and the V1 master roadmap.
-3. Create a scoped working branch from the latest integration HEAD. Do not reuse an old branch merely because it contains related work.
-4. Select the first unblocked non-`PASS` roadmap Gate. Do not select `NEXT` from C9, Phase, V0.9, archived V1, or old Rerun documents.
-5. A `REUSE_LOCKED` or `VERIFY_ONLY` Gate cannot trigger product-code changes without a reproducible failure on the current exact HEAD.
-6. Fill the eight-field Evidence Card before changing product code and prefer the smallest repair to the existing owner path.
-7. Do not add a second shell, store, Resolver, network transport, authority path, presentation pipeline, Party Stash transaction system, Long Rest coordinator, DM Library, or E2E framework.
-8. Do not use a self-publishing workflow that commits or pushes to the integration or active working branch as the normal implementation loop.
-9. C9 Gate N is complete and integrated. Its branches, handoffs, and mechanism ledger remain evidence, not current routing authority.
-10. V1 completion requires all numeric closure conditions in the master roadmap on one exact SHA and one matching Windows artifact.
-
-The `.chatgpt-rerun/` control set is not present on this lineage. Do not recreate or follow it unless the owner explicitly re-enables that coordination mechanism.
+이전 V1 완료 기록은 `docs/roadmap/evidence/W9-04.md`와 `V1_EVIDENCE_LEDGER.json`에 남아 있다.
+새 개편의 진행률은 별도로 증명한다. `.chatgpt-rerun/` 자기 커밋 자동화는 다시 만들지 않는다.
