@@ -1,5 +1,8 @@
 # V2 · Table Runtime (세션 플레이 층 재작성)
 
+> 2026-09-09: 범위·우선순위·충돌 시 기준은 [제품 전면 개편 설계](PRODUCT_RENOVATION.md)를 따른다.
+> 이 문서의 T2 순서와 전체 상태 방송/복원 설명은 그대로 구현할 지시가 아니다. 기존 세션 설계 참고로 유지한다.
+
 Status: **DESIGN — owner-approved direction (2026-09-07)**
 
 Owner decision (2026-09-07): "지금 파악안된 오류가 너무 많을게 뻔해서 전면 재작성을 해보자." Recommended direction accepted in

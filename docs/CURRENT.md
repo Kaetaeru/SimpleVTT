@@ -1,103 +1,37 @@
 # Current — SimpleVTT
 
-Updated: 2026-09-04 Asia/Seoul
+Updated: 2026-09-09 Asia/Tokyo
 
-This is the human/agent entry point for **what is current now**. Live GitHub state plus this page and the active master roadmap win over older handoffs, checklists, PR bodies, archived files, and remembered status.
+## 현재 목표
 
-## Current objective
+한국어 D&D, 거리 계산 없는 ToTM, 빠른 전투, 화려한 비차단 연출을 중심으로 제품을 전면 개편한다.
+세션뿐 아니라 개인 시트·가방·캐릭터 생성·레벨업·DM 준비·저장·연결이 같은 사용자 여정을 이루어야 한다.
+소유자는 2026-09-09 대화에서 범위와 여섯 가지 사용 결정을 확정했다.
 
-Finish SimpleVTT V1 by **reusing the existing Tauri product and proving complete user journeys on one exact SHA and one matching Windows artifact**.
+**읽을 문서:** [전면 개편 설계와 결정 기록](design/v2/PRODUCT_RENOVATION.md).
+실행 순서는 같은 문서 §10, 수락 시나리오는 §11, 소유자 결정은 §12다.
 
-The canonical execution plan is `docs/roadmap/V1_MASTER_ROADMAP.md`; the authoritative score is `docs/roadmap/V1_EVIDENCE_LEDGER.json`.
+## 현재 실제 상태
 
-## Numeric V1 baseline
+- 기존 제품 통합: `work/v1-composite` @ `cfd7279279ed58acb29f7c29832ee7c136e6b25e` (조사 시점).
+- 새 통합 대상: 기존 `work/v2-table`. 조사 시점에는 같은 SHA이며 V2 기능은 아직 통합 전이다.
+- 설계 PR #389와 오프라인 커널 PR #390은 조사 시점 **open / unmerged**.
+- 이 설계 브랜치는 #390 head `198bacf5e84326e44666d7ea905fb136e9819db5`를 기반으로 한다.
+- 이번 변경은 설계/라우팅뿐이다. P0~P6 구현이나 새 Windows 앱 수락은 완료되지 않았다.
+- #390의 이전 CI 성공은 해당 커널의 증거이며, 전체 개편의 완료 증거로 재사용하지 않는다.
 
-```text
-10 workstreams: W0-W9
-72 release gates
-100 weighted points
-120 multiplayer scenarios: MP-A01-MP-J08
-18 legacy V1 release gates
-13 required MP work issues: MP-01-MP-13
-```
+## 다음 작업: P0
 
-Initial audit classification remains:
+1. #389/#390과 이 설계의 실제 live GitHub 상태를 다시 확인하고 통합 순서를 정리한다.
+2. [P0 작업 패킷](design/v2/P0_WORK_PACKET.md)에 따라 저장본/캐릭터/세션 경계의 좁은 실험을 만든다.
+3. 특히 빗나간 근접 공격의 교전, 수신자별 비공개 데이터, 명령 중복과 소유자 저장 확인을 검증한다.
+4. 그다음 P1 개인 시트/가방 → P2 생성/성장 → P3 짧은 실전 순서로 진행한다.
 
-```text
-47/72 REUSE_LOCKED
-14/72 VERIFY_ONLY
-11/72 BUILD
-61/72 existing implementation reused = 84.7%
-```
+T2-02의 주문 목록만 확장하거나 과거 W7-05 NEXT로 돌아가지 않는다.
+소유자의 후속 지시가 이 파일보다 우선하며, 진도가 바뀌면 이 페이지를 갱신한다.
 
-## Official evidence state
+## 과거 V1 증거
 
-```text
-W0: 6/6 PASS — COMPLETE
-W1: 8/8 PASS — COMPLETE
-W2: 8/8 PASS — COMPLETE
-W3: 8/8 PASS — COMPLETE
-W4: 8/8 PASS — COMPLETE
-W5: 10/10 PASS — COMPLETE
-W6: 8/8 PASS — COMPLETE
-W7: 8/8 PASS — COMPLETE
-Official ledger score: 100.0/100.0
-PASS: 72/72
-Remaining gates: 0/72
-FAIL: 0
-BLOCKED: 0
-```
-
-The score is evidence status, not an implementation estimate. Existing code receives completion credit only when the required exact-SHA/Tauri/Windows evidence is recorded in `roadmap/V1_EVIDENCE_LEDGER.json`.
-
-## Current stage
-
-```text
-W0 — COMPLETE
-W1 — COMPLETE (8/8 PASS)
-W2 — COMPLETE (8/8 PASS)
-W3 — COMPLETE (8/8 PASS)
-W4 — COMPLETE (8/8 PASS)
-W5 — COMPLETE (10/10 PASS)
-W6 — COMPLETE (8/8 PASS)
-W7 — IN PROGRESS (6/8 PASS; W7-05 repair on PR #321 awaiting Windows H+P1+P2 evidence)
-V1 COMPLETE — declared on exact SHA 7429e2c77ee969aec1c3fe28c252a8ad07e4cd06 (W9-04); no remaining Gate
-```
-
-`W7-06` and `W7-07` are closed on integration SHA `196266567ad61506f80d359d60224c6f8be6f186` (merge of PR #323): W7-06 capability-mismatch owners 49/49 (run `33873613714`), W7-07 accessibility/motion/diagnostics owners 38/38 plus Rust transport intake 2/2 (run `33873613866`). `W7-04` remains closed on `7d0bded27a624ed0d993d860cbd590262ed1f3a6`. `W7-05` product repair (hidden roll / selective disclosure) is on PR #321 with AUTO 5/5; its Windows H+P1+P2 observation is the remaining closure item.
-
-## W7-05 exact scope
-
-`W7-05` is `REUSE_LOCKED`. It requires that DM-only, hidden, and private payloads, Activities, and handout metadata never leak to unauthorized peers. The canonical mapping is `MP-B05~B07` and `MP-09`.
-
-Reuse the existing connected privacy/redaction, Activity visibility, projection, and handout metadata paths. Before changing product code, reproduce a current-HEAD failure or document an explicit production reachability/contract gap in `roadmap/EVIDENCE_CARD.md`. Do not introduce a second privacy policy, projection layer, Activity log, handout system, transport, or Session authority path.
-
-## Branch roles
-
-- Product integration target: `work/v1-composite`
-- Roadmap audit baseline: `a38b0f07ac012bc9e600a28b2630a365d1bd098b`
-- Current execution plan: `docs/roadmap/V1_MASTER_ROADMAP.md`
-- Evidence ledger: `docs/roadmap/V1_EVIDENCE_LEDGER.json`
-- Evidence Card: `docs/roadmap/EVIDENCE_CARD.md`
-- Multiplayer catalog: `docs/design/multiplayer-v1-scenario-catalog.md`
-- Multiplayer Epic: GitHub issue `#110`
-- Working branch policy: create one scoped `agent/*` branch from the latest live integration HEAD for each Gate or coherent repair; there is no permanent global active branch.
-
-### Next execution sequence
-
-1. Execute `W7-05`, now the first non-`PASS` Gate in the ledger.
-2. Select the smallest existing automated privacy/redaction/handout owner set that maps to `MP-B05~B07` and `MP-09`.
-3. Run the focused set on one exact integration-derived SHA and record deterministic pass count and scenario mapping.
-4. If it passes, record W7-05 evidence and close the Gate without product/runtime changes.
-5. If it fails, record the exact current-HEAD failure in `roadmap/EVIDENCE_CARD.md` before the smallest repair.
-6. Do not reopen completed W0-W6 or W7-01~W7-04 work without a demonstrated regression.
-
-## Non-negotiable execution rules
-
-1. Read the master roadmap, evidence ledger, and live `work/v1-composite` HEAD before editing.
-2. Fill [`roadmap/EVIDENCE_CARD.md`](roadmap/EVIDENCE_CARD.md) before any product-code change.
-3. Do not change a `REUSE_LOCKED` or `VERIFY_ONLY` Gate without a reproducible current-HEAD failure or an explicit production reachability/contract gap.
-4. Do not create a second Tauri shell, Character Creator, progression engine, Resolver, persistence backend, transport, presentation queue, dice/VFX renderer, Party Stash transaction system, Long Rest coordinator, DM Library, request/event ledger, retry coordinator, reconnect system, privacy/projection system, or E2E framework.
-5. Structural or protocol-only evidence cannot close rendered Windows behavior when Windows observation is required.
-6. Do not restore branch-writing/self-publishing automation as the normal implementation loop.
-7. V1 is complete only at `72/72`, `100.0/100.0`, `120/120`, `18/18`, `13/13`, and one matching Windows artifact plus digest.
+V1 완료 선언은 [W9-04](roadmap/evidence/W9-04.md),
+[V1 ledger](roadmap/V1_EVIDENCE_LEDGER.json), [V1 master roadmap](roadmap/V1_MASTER_ROADMAP.md)에 보존한다.
+기존 72/72 등의 수치를 새 제품의 완료율로 표시하지 않는다.

@@ -1,5 +1,8 @@
 # V2 · DM Workspace (FVTT / Roll20 형태의 호스트 UI)
 
+> 2026-09-09: 범위·우선순위·충돌 시 기준은 [제품 전면 개편 설계](PRODUCT_RENOVATION.md)를 따른다.
+> 이 문서의 T2 순서와 전체 상태 방송/복원 설명은 그대로 구현할 지시가 아니다. 기존 세션 설계 참고로 유지한다.
+
 Status: **DESIGN — owner mandate (2026-09-07)**
 
 Owner: "FVTT와 Roll20의 호스트와 비슷한 형태의 DM UI를 원했는데 많이 조잡해져버렸었어. 전부 한번에 편하게 등록 가능하고
