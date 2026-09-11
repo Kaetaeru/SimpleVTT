@@ -11,7 +11,7 @@ const unavailable=(reason:string):Availability=>({available:false,reason});
  * The one judgement of whether an actor may use an action now (TABLE_RUNTIME.md §2.5): the same function narrows
  * the projected tile and refuses the command, so the tile's reason and the refusal's reason never differ.
  */
-export function availabilityOf(state:TableState,action:ActionVm):Availability {
+export function availabilityOf(state:TableState,action:ActionVm,options:{asReaction?:boolean}={}):Availability {
   const actor=state.actors[action.actorId];
   const combatant=state.rules.combatants[action.actorId];
   if(!actor||!combatant) return unavailable("테이블에 없는 액터입니다.");
@@ -24,16 +24,17 @@ export function availabilityOf(state:TableState,action:ActionVm):Availability {
     if(combatant.life.stable) return unavailable("안정된 상태입니다. 죽음 내성을 굴리지 않습니다.");
   } else if(deathSave) return unavailable("HP가 0일 때만 죽음 내성을 굴립니다.");
   const conditions=conditionActionAvailability(conditionEffectsFor(state.rules,action.actorId));
-  if(action.economy==="행동"&&!conditions.action) return unavailable("행동불능 상태라 행동할 수 없습니다.");
-  if(action.economy==="추가 행동"&&!conditions.bonusAction) return unavailable("행동불능 상태라 추가 행동을 할 수 없습니다.");
-  if(action.economy==="반응"&&!conditions.reaction) return unavailable("행동불능 상태라 반응할 수 없습니다.");
+  const economyKind=options.asReaction?"반응":action.economy;
+  if(economyKind==="행동"&&!conditions.action) return unavailable("행동불능 상태라 행동할 수 없습니다.");
+  if(economyKind==="추가 행동"&&!conditions.bonusAction) return unavailable("행동불능 상태라 추가 행동을 할 수 없습니다.");
+  if(economyKind==="반응"&&!conditions.reaction) return unavailable("행동불능 상태라 반응할 수 없습니다.");
   if(state.mode==="initiative") {
     const offTurn=state.currentActorId!==action.actorId;
-    if(offTurn&&action.economy!=="반응"&&action.readyActionRole!=="trigger"&&!deathSave) return unavailable("현재 Actor의 턴이 아닙니다.");
+    if(offTurn&&economyKind!=="반응"&&economyKind!=="없음"&&action.readyActionRole!=="trigger"&&!deathSave) return unavailable("현재 Actor의 턴이 아닙니다.");
     const economy=combatant.economy;
-    if(action.economy==="행동"&&!economy.action&&!(economy.extraActions?.length)&&!(action.resolutionKind==="attack"&&economy.extraAttacks?.length)) return unavailable("행동을 이미 사용했습니다.");
-    if(action.economy==="추가 행동"&&!economy.bonusAction) return unavailable("추가 행동을 이미 사용했습니다.");
-    if(action.economy==="반응"&&!economy.reaction) return unavailable("반응을 이미 사용했습니다.");
+    if(economyKind==="행동"&&!economy.action&&!(economy.extraActions?.length)&&!(action.resolutionKind==="attack"&&economy.extraAttacks?.length)) return unavailable("행동을 이미 사용했습니다.");
+    if(economyKind==="추가 행동"&&!economy.bonusAction) return unavailable("추가 행동을 이미 사용했습니다.");
+    if(economyKind==="반응"&&!economy.reaction) return unavailable("반응을 이미 사용했습니다.");
   }
   if(action.resourceCost) {
     const resource=combatant.resources.find((entry)=>entry.id===action.resourceCost!.resourceId);

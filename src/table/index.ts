@@ -5,6 +5,7 @@ export * from "./dice";
 export * from "./refusal";
 export { actionsFor, materializeActors, monsterDefinition, characterWeaponFor, CONDITION_IDS } from "./actors";
 export * from "./hands";
+export * from "./questions";
 export { availabilityOf, eligibleTargetIds, targetRefusalFor } from "./availability";
 export { projectTable, projectedActions, statusChips, displayedAc, type TableView, type TableViewer } from "./project";
 export { TableRuntime, type Outcome, type TableRuntimeOptions } from "./runtime";

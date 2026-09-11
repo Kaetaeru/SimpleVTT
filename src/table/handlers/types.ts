@@ -16,6 +16,8 @@ export interface HandlerContext {
   nextSeq:number;
   now:()=>string;
   origin:CommandOrigin;
+  /** The action fires as a reaction (opportunity attack, readied action): the reaction slot is spent instead of the action. */
+  asReaction?:boolean;
 }
 
 export interface EventDraft {

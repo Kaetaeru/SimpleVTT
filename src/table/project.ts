@@ -7,9 +7,13 @@ import { availabilityOf, eligibleTargetIds } from "./availability";
 import type { TableRefusal } from "./refusal";
 import { actorIds, type Actor, type TableMode, type TableState } from "./state";
 import { handsLabel } from "./hands";
+import type { TableQuestion } from "./state";
+import "../app/movementDeclarationContracts";
 
 declare module "../app/contracts" {
   interface SceneVm {
+    /** Questions this viewer may answer (the DM sees every pending question). */
+    tableQuestions?:TableQuestion[];
     /** Items on the scene floor: dropped, thrown, placed. Anyone may pick one up. */
     floorItems?:Array<{id:string;name:string;quantity:number;droppedById:string;droppedByName:string;recoverable:boolean}>;
   }
@@ -56,7 +60,8 @@ export function statusChips(state:TableState,actor:Actor,viewer:TableViewer):str
   const seen=new Set<string>();
   for(const effect of state.rules.effects) {
     if(effect.targetId!==actor.id||!effectIsActive(effect)) continue;
-    const label=effect.kind==="condition"&&effect.conditionId?conditionLabelKo(effect.conditionId):typeof effect.metadata?.publicLabel==="string"?effect.metadata.publicLabel:null;
+    // A condition's own label, or the more specific public label an effect carries ("붙잡힘 (카엘)").
+    const label=typeof effect.metadata?.publicLabel==="string"?effect.metadata.publicLabel:effect.kind==="condition"&&effect.conditionId?conditionLabelKo(effect.conditionId):null;
     if(!label||seen.has(label)) continue;
     seen.add(label);
     chips.push(`${PUBLIC_EFFECT_PREFIX}${label}`);
@@ -88,6 +93,8 @@ function entityFor(state:TableState,actor:Actor,viewer:TableViewer):SceneEntity 
   const engaged=engagedWith(state.engagements,actor.id);
   if(engaged.length) entity.engagedWithIds=engaged;
   if(actor.source.kind==="character") entity.hands=handsLabel(actor.source.sheet);
+  const declaration=state.declarations[actor.id];
+  if(declaration) entity.movementDeclaration={...declaration};
   return entity;
 }
 
@@ -103,7 +110,10 @@ export function projectTable(state:TableState,viewer:TableViewer,refusal?:(Table
   const entities=visible.map((id)=>entityFor(state,state.actors[id],viewer));
   const actionsByActor=Object.fromEntries(visible.map((id)=>[id,projectedActions(state,state.actors[id])]));
   const economyByActor=Object.fromEntries(visible.map((id)=>[id,economyView(state,id)]));
-  const scene:SceneVm={id:state.sessionId,name:"",round:state.round,currentActorId:state.currentActorId??"",selectedActorId:"",entities,actionsByActor,economyByActor,...(state.engagements.length?{engagements:state.engagements.map((record)=>({...record}))}:{}),...(state.floor.length?{floorItems:state.floor.map((entry)=>({id:entry.id,name:entry.item.name,quantity:entry.item.quantity,droppedById:entry.droppedBy,droppedByName:state.actors[entry.droppedBy]?.name??entry.droppedBy,recoverable:entry.recoverable}))}:{})};
+  const questions=state.questions.filter((question)=>viewer.role==="dm"||question.toPeer===viewer.peerId).map((question)=>({...question,options:question.options.map((option)=>({...option})),context:{...question.context}}));
+  const withdrawal=state.questions.find((question)=>question.kind==="opportunity-attack");
+  const pendingWithdrawal=withdrawal?{actorId:String(withdrawal.context.moverId),actorName:state.actors[String(withdrawal.context.moverId)]?.name??String(withdrawal.context.moverId),round:state.round,candidates:state.questions.filter((question)=>question.kind==="opportunity-attack"&&question.context.moverId===withdrawal.context.moverId).flatMap((question)=>question.options.filter((option)=>option.id!=="decline").map((option)=>({reactorId:question.actorId,reactorName:state.actors[question.actorId]?.name??question.actorId,actionId:option.id,actionName:option.label})))}:undefined;
+  const scene:SceneVm={id:state.sessionId,name:"",round:state.round,currentActorId:state.currentActorId??"",selectedActorId:"",entities,actionsByActor,economyByActor,...(questions.length?{tableQuestions:questions}:{}),...(Object.keys(state.declarations).length?{movementDeclarations:Object.fromEntries(Object.entries(state.declarations).map(([id,declaration])=>[id,{...declaration}]))}:{}),...(pendingWithdrawal&&viewer.role==="dm"?{pendingWithdrawal}:{}),...(state.engagements.length?{engagements:state.engagements.map((record)=>({...record}))}:{}),...(state.floor.length?{floorItems:state.floor.map((entry)=>({id:entry.id,name:entry.item.name,quantity:entry.item.quantity,droppedById:entry.droppedBy,droppedByName:state.actors[entry.droppedBy]?.name??entry.droppedBy,recoverable:entry.recoverable}))}:{})};
   const activity:ActivityEntry[]=state.log.filter((entry)=>viewer.role==="dm"||entry.visibility==="public").map((entry)=>({
     id:entry.id,time:entry.time,actor:entry.actor,title:entry.title,summary:entry.summary,detail:[...entry.detail],stateChanges:[...entry.stateChanges],
     ...(entry.ruling?{ruling:entry.ruling}:{}),...(entry.undoOf?{undoOf:entry.undoOf}:{}),...(entry.reversed?{reversed:true}:{}),

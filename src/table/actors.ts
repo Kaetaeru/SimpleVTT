@@ -17,7 +17,32 @@ declare module "../app/contracts" {
     tableThrow?:{itemId?:string;recoverable:boolean};
     /** Improvised weapon (1d4, 20/60 ft thrown): a chair, a bottle, a shield swung — any object the actor names. */
     tableImprovised?:boolean;
+    /** Unarmed Strike options (2024): the target saves against 8 + PB + STR instead of an attack roll. */
+    tableUnarmedOption?:"grapple"|"shove-prone"|"shove-push";
+    /** Escape a grapple: STR (Athletics) or DEX (Acrobatics), the better one, against the grappler's DC. */
+    tableEscape?:boolean;
+    /** Let go of a grappled creature (free). */
+    tableRelease?:boolean;
   }
+}
+
+const SIZE_ORDER=["tiny","small","medium","large","huge","gargantuan"];
+const SIZE_FROM_KO:Record<string,string>={"초소형":"tiny","소형":"small","중형":"medium","대형":"large","거대형":"huge","초거대형":"gargantuan"};
+
+/** Creature size rank (0 tiny … 5 gargantuan); characters count as medium unless the sheet says otherwise. */
+export function actorSizeRank(actor:Actor):number {
+  const raw=actor.source.kind==="monster"?(srdMonsterById(actor.source.definitionId)?.size??"medium"):((actor.source.sheet as {size?:string}).size??"medium");
+  const key=SIZE_FROM_KO[raw]??raw.toLowerCase();
+  const index=SIZE_ORDER.indexOf(key);
+  return index<0?2:index;
+}
+
+/** "운동 +7" on the sheet, else the ability modifier alone. */
+export function characterSkillBonus(sheet:CharacterSheet,skill:string,ability:AbilityKey):number {
+  const entry=sheet.skills.find((item)=>item===skill||item.startsWith(`${skill} `)||item.startsWith(`${skill}+`));
+  const explicit=entry?/([+-]\d+)/.exec(entry):null;
+  if(explicit) return Number(explicit[1]);
+  return abilityModifier(sheet.abilities[ability])+(entry?sheet.proficiencyBonus:0);
 }
 
 export const CONDITION_IDS:ConditionId[]=["blinded","charmed","deafened","exhaustion","frightened","grappled","incapacitated","invisible","paralyzed","petrified","poisoned","prone","restrained","stunned","unconscious"];
@@ -261,6 +286,20 @@ function characterActions(actor:Actor,sheet:CharacterSheet,state?:TableState):Ac
     details:[detail("피해","1d4 (유형은 DM이 정합니다)"),detail("숙련","없음 (무기를 닮은 물건은 DM 재량)"),detail("사거리",throwing?"20/60피트":"5피트"),detail("출처",`${STANDARD_SOURCE} · Improvised Weapons`)],
   });
   actions.push(improvised("action.improvised.melee","즉흥 무기",false),improvised("action.improvised.throw","즉흥 무기 던지기",true));
+  // Unarmed Strike options (2024): grapple and shove replace one attack of the Attack action; the target saves.
+  const unarmedDc=8+sheet.proficiencyBonus+strength;
+  const option=(id:string,name:string,kind:"grapple"|"shove-prone"|"shove-push",summary:string,extra:ActionDetailVm[]):ActionVm=>({
+    id,actorId,name,category:"basic",target:"any",economy:"행동",resolutionKind:"saving-throw",summary,available:true,eligibleTargetIds:[],attacksPerAction:attacks,
+    saveDc:unarmedDc,saveAbility:"근력 또는 민첩",tableUnarmedOption:kind,
+    details:[detail("내성",`근력 또는 민첩 (높은 쪽) DC ${unarmedDc}`),...extra,detail("비용",attacks>1?`공격 행동의 공격 1회분`:"행동 1"),detail("출처",`${STANDARD_SOURCE} · Unarmed Strike`)],
+  });
+  actions.push(
+    option("action.unarmed-strike.grapple","붙잡기","grapple",`대상 내성 DC ${unarmedDc} · 실패 시 붙잡힘 (속도 0)`,[detail("조건","빈손 1개 · 대상은 나보다 최대 한 단계 큰 크기"),detail("해제","붙잡은 쪽이 놓아주거나 행동불능이 될 때, 대상이 탈출에 성공할 때")]),
+    option("action.unarmed-strike.shove-prone","넘어뜨리기","shove-prone",`대상 내성 DC ${unarmedDc} · 실패 시 넘어짐`,[detail("조건","대상은 나보다 최대 한 단계 큰 크기")]),
+    option("action.unarmed-strike.shove-push","밀어내기","shove-push",`대상 내성 DC ${unarmedDc} · 실패 시 5피트 밀려남 (교전 해제)`,[detail("조건","대상은 나보다 최대 한 단계 큰 크기")]),
+  );
+  actions.push({id:"action.escape-grapple",actorId,name:"붙잡힘 탈출",category:"basic",target:"self",economy:"행동",resolutionKind:"ability-check",summary:`근력(운동) ${signed(characterSkillBonus(sheet,"운동","str"))} 또는 민첩(곡예) ${signed(characterSkillBonus(sheet,"곡예","dex"))} vs 붙잡은 쪽의 DC`,available:true,eligibleTargetIds:[actorId],checkBonus:Math.max(characterSkillBonus(sheet,"운동","str"),characterSkillBonus(sheet,"곡예","dex")),tableEscape:true,details:[detail("판정","운동 또는 곡예 (높은 쪽)"),detail("비용","행동 1"),detail("출처",`${STANDARD_SOURCE} · Grappled`)]});
+  actions.push({id:"action.release-grapple",actorId,name:"놓아주기",category:"basic",target:"self",economy:"없음",resolutionKind:"no-roll",summary:"붙잡은 대상을 놓아준다 (비용 없음)",available:true,eligibleTargetIds:[actorId],tableRelease:true,details:[detail("비용","없음")]});
   actions.push(...standardActions(actor,sheet.speed));
   for(const key of ABILITY_KEYS) {
     const label=abilityLabelKo(key);
@@ -309,6 +348,8 @@ function monsterActions(actor:Actor,definition:CombatantDefinitionVm):ActionVm[]
     ...(definition.runtimeSaveActions??[]).map((spec)=>monsterSaveAction(actor,spec)),
     ...(definition.runtimeTextActions??[]).map((spec)=>monsterTextAction(actor,spec)),
     ...standardActions(actor,definition.runtimeStats?.speed??30).filter((action)=>action.id!=="action.standard.help"),
+    {id:"action.escape-grapple",actorId:actor.id,name:"붙잡힘 탈출",category:"basic",target:"self",economy:"행동",resolutionKind:"ability-check",summary:"근력 또는 민첩 (높은 쪽) vs 붙잡은 쪽의 DC",available:true,eligibleTargetIds:[actor.id],checkBonus:Math.max(actorAbilityModifier(actor,"str"),actorAbilityModifier(actor,"dex")),tableEscape:true,details:[detail("판정","근력 또는 민첩 (높은 쪽)"),detail("비용","행동 1")]},
+    {id:"action.release-grapple",actorId:actor.id,name:"놓아주기",category:"basic",target:"self",economy:"없음",resolutionKind:"no-roll",summary:"붙잡은 대상을 놓아준다 (비용 없음)",available:true,eligibleTargetIds:[actor.id],tableRelease:true,details:[detail("비용","없음")]},
   ];
 }
 

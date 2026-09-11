@@ -1,7 +1,7 @@
 import type { CombatantRuntimeState, RulesRuntimeState } from "../domain/combatState";
 import { type EngagementRecord, pruneEngagementsToPresent } from "../domain/engagement";
 import type { CharacterSheet } from "../app/contracts";
-import { cloneState, type Actor, type FloorItem, type LogEntry, type ResolutionRecord, type TableMode, type TableState, type Visibility } from "./state";
+import { cloneState, type Actor, type FloorItem, type LogEntry, type MovementDeclaration, type ReadiedAction, type ResolutionRecord, type TableMode, type TableQuestion, type TableState, type Visibility } from "./state";
 
 /** Durable character changes (items moved, quantities) ride with the commit so the owner's client can write them back. */
 export type SheetPatch={actorId:string;sheet:CharacterSheet};
@@ -19,9 +19,9 @@ export type TableEventPayload=
   |{type:"actor-updated";actorId:string;patch:ActorPatch}
   |{type:"mode-changed";mode:TableMode;order:string[];round:number;currentActorId:string|null;rules:RulesRuntimeState;engagements?:EngagementRecord[]}
   |{type:"turn-changed";currentActorId:string|null;round:number;order?:string[];rules:RulesRuntimeState;engagements?:EngagementRecord[]}
-  |{type:"rules-committed";rules:RulesRuntimeState;resolution?:ResolutionRecord|null;actorPatches?:Array<{actorId:string;patch:ActorPatch}>;engagements?:EngagementRecord[];sheets?:SheetPatch[];floor?:FloorItem[];interactions?:Record<string,number>}
-  /** Object handling that needs no kernel commit: hands, floor, transfers, interaction count. */
-  |{type:"table-changed";sheets?:SheetPatch[];floor?:FloorItem[];interactions?:Record<string,number>;rules?:RulesRuntimeState}
+  |{type:"rules-committed";rules:RulesRuntimeState;resolution?:ResolutionRecord|null;actorPatches?:Array<{actorId:string;patch:ActorPatch}>;engagements?:EngagementRecord[];sheets?:SheetPatch[];floor?:FloorItem[];interactions?:Record<string,number>;questions?:TableQuestion[];declarations?:Record<string,MovementDeclaration>;readied?:Record<string,ReadiedAction>}
+  /** Table bookkeeping that needs no kernel commit: hands, floor, transfers, interaction count, questions, declarations, readied actions. */
+  |{type:"table-changed";sheets?:SheetPatch[];floor?:FloorItem[];interactions?:Record<string,number>;rules?:RulesRuntimeState;engagements?:EngagementRecord[];questions?:TableQuestion[];declarations?:Record<string,MovementDeclaration>;readied?:Record<string,ReadiedAction>}
   |{type:"state-restored";state:TableState}
   |{type:"visibility-changed";rollVisibility:Visibility};
 
@@ -58,6 +58,9 @@ export function applyEvent(input:TableState,event:TableEvent):TableState {
       state.order=state.order.filter((id)=>id!==payload.actorId);
       if(state.currentActorId===payload.actorId) state.currentActorId=state.order[0]??null;
       state.engagements=pruneEngagementsToPresent(state.engagements,new Set(Object.keys(state.actors)));
+      state.questions=state.questions.filter((question)=>question.actorId!==payload.actorId&&Object.values(question.context).every((value)=>value!==payload.actorId));
+      delete state.declarations[payload.actorId];
+      delete state.readied[payload.actorId];
       break;
     }
     case "actor-updated": {
@@ -73,6 +76,7 @@ export function applyEvent(input:TableState,event:TableEvent):TableState {
       state.rules=cloneState(payload.rules);
       if(payload.engagements) state.engagements=cloneState(payload.engagements);
       state.interactions={};
+      if(payload.mode==="freeform") { state.declarations={}; state.readied={}; state.questions=state.questions.filter((question)=>question.kind!=="ready-trigger"); }
       state.activeResolution=null;
       break;
     }
@@ -83,6 +87,7 @@ export function applyEvent(input:TableState,event:TableEvent):TableState {
       state.rules=cloneState(payload.rules);
       if(payload.engagements) state.engagements=cloneState(payload.engagements);
       state.interactions={};
+      if(payload.currentActorId) { delete state.declarations[payload.currentActorId]; delete state.readied[payload.currentActorId]; }
       break;
     }
     case "rules-committed": {
@@ -96,6 +101,9 @@ export function applyEvent(input:TableState,event:TableEvent):TableState {
       applySheets(state,payload.sheets);
       if(payload.floor) state.floor=cloneState(payload.floor);
       if(payload.interactions) state.interactions=cloneState(payload.interactions);
+      if(payload.questions) state.questions=cloneState(payload.questions);
+      if(payload.declarations) state.declarations=cloneState(payload.declarations);
+      if(payload.readied) state.readied=cloneState(payload.readied);
       break;
     }
     case "table-changed":
@@ -103,6 +111,10 @@ export function applyEvent(input:TableState,event:TableEvent):TableState {
       if(payload.floor) state.floor=cloneState(payload.floor);
       if(payload.interactions) state.interactions=cloneState(payload.interactions);
       if(payload.rules) state.rules=cloneState(payload.rules);
+      if(payload.engagements) state.engagements=cloneState(payload.engagements);
+      if(payload.questions) state.questions=cloneState(payload.questions);
+      if(payload.declarations) state.declarations=cloneState(payload.declarations);
+      if(payload.readied) state.readied=cloneState(payload.readied);
       break;
     case "state-restored":
       break;

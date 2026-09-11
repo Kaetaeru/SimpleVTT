@@ -8,16 +8,19 @@ import type { ResolutionOperation } from "../../domain/resolutionTypes";
 import type { AbilityKey, ActionVm, SaveResultVm } from "../../app/contracts";
 import { abilityLabelKo, conditionLabelKo } from "../../app/srdMonsterCatalog";
 import type { ConditionId } from "../../domain/conditions";
-import { ABILITY_KEYS, actionsFor, actorAc, actorSaveModifier, damageFromDiceText } from "../actors";
+import { ABILITY_KEYS, actionsFor, actorAbilityModifier, actorAc, actorSaveModifier, damageFromDiceText } from "../actors";
 import { availabilityOf, targetRefusalFor } from "../availability";
 import type { TableCommand } from "../commands";
 import type { SheetPatch } from "../events";
 import { parseDiceNotation } from "../dice";
-import { clearEngagementsOf, type EngagementRecord, engagedWith, isEngaged, recordMeleeAttack } from "../../domain/engagement";
+import { clearEngagement, clearEngagementsOf, type EngagementRecord, engagedWith, isEngaged, recordMeleeAttack } from "../../domain/engagement";
 import { ENGAGEMENT_RANGED_IN_MELEE_SOURCE, engagementsAmongLiving, engagementsEqual, hostileEngagedIds, isMeleeAttack, isRangedAttack } from "../engagement";
+import { knockOutQuestion } from "../questions";
+import { freeHands } from "../hands";
+import { actorProficiencyBonus, actorSizeRank } from "../actors";
 import { kernelErrorKo, refused } from "../refusal";
 import { attackCard, checkCard, lifeStateChanges, logFromCard, plainCard } from "../resolutionCard";
-import { cloneState, engagementRound, type Actor, type FloorItem, type ResolutionRecord, type TableState } from "../state";
+import { cloneState, engagementRound, type Actor, type FloorItem, type ResolutionRecord, type TableQuestion, type TableState } from "../state";
 import { handsLabel } from "../hands";
 import { actorName, commitOperations, type HandlerContext, type HandlerResult } from "./types";
 
@@ -27,7 +30,7 @@ export const STATUS_TAG="table:status";
 const economySlot=(action:ActionVm)=>action.economy==="행동"?"action" as const:action.economy==="추가 행동"?"bonus-action" as const:action.economy==="반응"?"reaction" as const:undefined;
 
 function economyOperation(ctx:HandlerContext,resolutionId:string,action:ActionVm):ResolutionOperation|undefined {
-  const slot=economySlot(action);
+  const slot=ctx.asReaction?"reaction" as const:economySlot(action);
   if(ctx.state.mode!=="initiative"||!slot) return undefined;
   return {id:`${resolutionId}:economy`,kind:"use-economy",actorId:action.actorId,slot,bonusActionGranted:slot==="bonus-action"?true:undefined,actionKind:action.resolutionKind==="attack"?"attack":"other",...(action.resolutionKind==="attack"&&action.attacksPerAction?{attacksPerAction:action.attacksPerAction}:{})};
 }
@@ -114,14 +117,14 @@ function throwFromHand(state:TableState,actor:Actor,itemId:string|undefined,seq:
 }
 
 /** One committed event: the kernel's state, the card, the engagement set pruned to who is still alive, and any sheet/floor change. */
-function commitEvents(ctx:HandlerContext,card:ResolutionRecord,rules:RulesRuntimeState,engagements?:EngagementRecord[],extra?:{sheets?:SheetPatch[];floor?:FloorItem[]}):HandlerResult {
+export function commitEvents(ctx:HandlerContext,card:ResolutionRecord,rules:RulesRuntimeState,engagements?:EngagementRecord[],extra?:{sheets?:SheetPatch[];floor?:FloorItem[];questions?:TableQuestion[]}):HandlerResult {
   const state=ctx.state;
   const next=engagementsAmongLiving(state,engagements??state.engagements,rules);
   const changed=!engagementsEqual(next,state.engagements);
-  return {status:"committed",resolution:card,events:[{payload:{type:"rules-committed",rules,resolution:card,...(changed?{engagements:next}:{}),...(extra?.sheets?.length?{sheets:extra.sheets}:{}),...(extra?.floor?{floor:extra.floor}:{})},log:[logFromCard(card,actorName(ctx.state,card.actorId),ctx.now)]}]};
+  return {status:"committed",resolution:card,events:[{payload:{type:"rules-committed",rules,resolution:card,...(changed?{engagements:next}:{}),...(extra?.sheets?.length?{sheets:extra.sheets}:{}),...(extra?.floor?{floor:extra.floor}:{}),...(extra?.questions?{questions:extra.questions}:{})},log:[logFromCard(card,actorName(ctx.state,card.actorId),ctx.now)]}]};
 }
 
-function attackAct(ctx:HandlerContext,actor:Actor,action:ActionVm,targetIds:string[],resolutionId:string,itemId?:string):HandlerResult {
+export function attackAct(ctx:HandlerContext,actor:Actor,action:ActionVm,targetIds:string[],resolutionId:string,itemId?:string,options:{noEngagement?:boolean}={}):HandlerResult {
   const state=ctx.state;
   const targetId=targetIds[0];
   const target=state.actors[targetId];
@@ -146,7 +149,7 @@ function attackAct(ctx:HandlerContext,actor:Actor,action:ActionVm,targetIds:stri
     ...(rangedInMelee.length?{rollStateContributions:[{source:`${ENGAGEMENT_RANGED_IN_MELEE_SOURCE}:${rangedInMelee.join(",")}`,state:"disadvantage" as const}]}:{}),
     baseDamage:{sourceId:action.id,damageType:spec.type,dice:base.count?[{source:action.id,sides:base.sides,count:base.count,faces:damageFaces}]:[],flat:base.flat?[{source:`${action.id}:flat`,value:base.flat}]:[]},
     riders,
-    economy:state.mode==="initiative"&&economySlot(action)?{slot:economySlot(action)!,bonusActionGranted:economySlot(action)==="bonus-action"?true:undefined,actionKind:"attack",attacksPerAction:action.attacksPerAction??1}:undefined,
+    economy:state.mode==="initiative"&&(ctx.asReaction||economySlot(action))?(ctx.asReaction?{slot:"reaction",actionKind:"attack",attacksPerAction:1}:{slot:economySlot(action)!,bonusActionGranted:economySlot(action)==="bonus-action"?true:undefined,actionKind:"attack",attacksPerAction:action.attacksPerAction??1}):undefined,
   };
   let commit;
   try { commit=resolveAttack(ctx.profile,state.rules,request); }
@@ -156,12 +159,15 @@ function attackAct(ctx:HandlerContext,actor:Actor,action:ActionVm,targetIds:stri
   const damage=Object.entries(commit.results).find(([key,value])=>key.startsWith(resolutionId)&&Boolean(value)&&typeof value==="object"&&"components" in (value as object))?.[1] as CompoundDamageResolution|undefined;
   const rules=commit.state;
   const consumed=consumeNextRoll(rules,actor.id,"attack-roll");
-  const engaged=engageByMelee(state,action,actor.id,targetId);
+  const engaged=options.noEngagement?null:engageByMelee(state,action,actor.id,targetId);
   const thrown=action.tableThrow?throwFromHand(state,actor,action.tableThrow.itemId??itemId,ctx.nextSeq):null;
-  const stateChanges=[...lifeStateChanges(state,state.rules,rules),...consumed.map((label)=>`${actor.name} 상태 종료: ${label}`),...(engaged?[engaged.line]:[]),...(thrown?.lines??[])];
+  // D9: a melee attack that drops a creature to 0 HP may knock it out instead — one question to the attacker.
+  const killedNow=isMeleeAttack(action)&&target.kind==="npc"&&!state.rules.combatants[targetId]?.life.dead&&rules.combatants[targetId]?.life.dead;
+  const questions=killedNow?[...state.questions,knockOutQuestion(state,actor.id,targetId,ctx.nextSeq)]:undefined;
+  const stateChanges=[...lifeStateChanges(state,state.rules,rules),...consumed.map((label)=>`${actor.name} 상태 종료: ${label}`),...(engaged?[engaged.line]:[]),...(thrown?.lines??[]),...(killedNow?[`질문: ${target.name} 죽임/기절`]:[])];
   const card=attackCard({id:resolutionId,seq:ctx.nextSeq,visibility:state.rollVisibility,action,actorId:actor.id,targetIds:[targetId],targetName:target.name,attack,damage,events:commit.events,stateChanges});
   if(engaged) card.provenance.push(`engagement:melee-attack:${actor.id}<->${targetId}:round:${engagementRound(state)}`);
-  return commitEvents(ctx,card,rules,engaged?.engagements,thrown??undefined);
+  return commitEvents(ctx,card,rules,engaged?.engagements,{...(thrown??{}),...(questions?{questions}:{})});
 }
 
 function checkAct(ctx:HandlerContext,actor:Actor,action:ActionVm,targetIds:string[],resolutionId:string):HandlerResult {
@@ -295,19 +301,101 @@ function noRollAct(ctx:HandlerContext,actor:Actor,action:ActionVm,targetIds:stri
   return commitEvents(ctx,card,rules,disengaged?.engagements);
 }
 
+export const GRAPPLE_SOURCE="table:grapple";
+
+function grappleEffectsOn(state:TableState,targetId:string,grapplerId?:string) {
+  return state.rules.effects.filter((effect)=>effect.targetId===targetId&&effect.kind==="condition"&&effect.conditionId==="grappled"&&effect.sourceId===GRAPPLE_SOURCE&&(!grapplerId||effect.sourceActorId===grapplerId));
+}
+
+/** Unarmed Strike — Grapple / Shove (2024): the target makes a STR or DEX save (its better one) against 8 + PB + STR. */
+function unarmedOptionAct(ctx:HandlerContext,actor:Actor,action:ActionVm,targetIds:string[],resolutionId:string):HandlerResult {
+  const state=ctx.state;
+  const targetId=targetIds[0];
+  const target=state.actors[targetId];
+  const kind=action.tableUnarmedOption!;
+  if(!target||targetId===actor.id) return refused("target-ineligible","자기 자신을 대상으로 할 수 없습니다.",{actorId:actor.id,actionId:action.id});
+  if(actorSizeRank(target)>actorSizeRank(actor)+1) return refused("target-too-large","나보다 두 단계 이상 큰 대상은 붙잡거나 밀 수 없습니다.",{actorId:actor.id,actionId:action.id});
+  if(kind==="grapple"&&actor.source.kind==="character"&&freeHands(actor.source.sheet)<1) return refused("hands-full","붙잡으려면 빈손이 하나 필요합니다. 먼저 놓거나 집어넣으세요.",{actorId:actor.id,actionId:action.id});
+  if(kind==="grapple"&&grappleEffectsOn(state,targetId,actor.id).length) return refused("already-grappled","이미 붙잡고 있는 대상입니다.",{actorId:actor.id,actionId:action.id});
+  const dc=action.saveDc??8+actorProficiencyBonus(actor)+actorAbilityModifier(actor,"str");
+  const key:AbilityKey=actorSaveModifier(target,"dex")>actorSaveModifier(target,"str")?"dex":"str";
+  const saveId=`${resolutionId}:save`;
+  const operations:ResolutionOperation[]=[];
+  const economy=economyOperation(ctx,resolutionId,{...action,resolutionKind:"attack"}); if(economy) operations.push(economy);
+  operations.push({id:saveId,kind:"d20",actorId:targetId,request:{family:"saving-throw",target:dc,modifierContributions:[{source:`save:${key}`,value:actorSaveModifier(target,key)}],dice:{id:`${saveId}:d20`,purpose:`${target.name} ${abilityLabelKo(key)} 내성`,faces:d20Faces(ctx,`${target.name} 내성`),sides:20}},condition:{ability:key}});
+  if(kind==="grapple") operations.push({id:`${resolutionId}:grapple`,kind:"apply-effect",when:{operationId:saveId,field:"outcome",equals:"failure"},effect:{id:`${resolutionId}:grappled:${targetId}`,sourceId:GRAPPLE_SOURCE,sourceActorId:actor.id,targetId,kind:"condition",conditionId:"grappled",tags:[STATUS_TAG],duration:{kind:"special",key:`grapple:${actor.id}`},termination:{sourceBecomesIncapacitated:true,sourceDies:true,targetDies:true},metadata:{publicLabel:`붙잡힘 (${actor.name})`,escapeDc:dc,grapplerId:actor.id}}});
+  if(kind==="shove-prone") operations.push({id:`${resolutionId}:prone`,kind:"apply-effect",when:{operationId:saveId,field:"outcome",equals:"failure"},effect:{id:`${resolutionId}:prone:${targetId}`,sourceId:"table:posture",sourceActorId:actor.id,targetId,kind:"condition",conditionId:"prone",tags:[STATUS_TAG],duration:{kind:"permanent"},metadata:{publicLabel:"넘어짐"}}});
+  const committed=commitOperations(ctx,{id:resolutionId,actorId:actor.id,sourceId:action.id,operations,actionId:action.id});
+  if(committed.status==="refused") return committed;
+  const test=committed.commit.results[saveId] as D20TestResult;
+  const rules=committed.commit.state;
+  consumeNextRoll(rules,targetId,"saving-throw");
+  const failed=test.outcome!=="success";
+  const label={grapple:"붙잡기","shove-prone":"넘어뜨리기","shove-push":"밀어내기"}[kind];
+  const outcome=failed?{grapple:`${target.name} 붙잡힘 (속도 0)`,"shove-prone":`${target.name} 넘어짐`,"shove-push":`${target.name} 5피트 밀려남 · 교전 해제`}[kind]:`${target.name} 내성 성공`;
+  // Pushing the creature away breaks the pair's engagement (it left reach); it may also break a grapple the actor held.
+  let engagements=state.engagements;
+  if(kind==="shove-push"&&failed) engagements=clearEngagement(state.engagements,actor.id,targetId);
+  const engagedLine=isMeleeAttack({resolutionKind:"attack",runtimeAttack:{sourceKind:"unarmed",rangeFeet:5,attackMode:"melee",diceSides:2,diceCount:0,damageSource:""}})&&!(kind==="shove-push"&&failed)?engageByMelee(state,{...action,resolutionKind:"attack",runtimeAttack:{sourceKind:"unarmed",rangeFeet:5,attackMode:"melee",diceSides:2,diceCount:0,damageSource:""}},actor.id,targetId):null;
+  if(engagedLine) engagements=engagedLine.engagements;
+  const compact=`${label} · ${target.name} ${abilityLabelKo(key)} 내성 ${test.total} vs DC ${dc} ${failed?"실패":"성공"} → ${outcome}`;
+  const card=plainCard({id:resolutionId,seq:ctx.nextSeq,visibility:state.rollVisibility,action,actorId:actor.id,targetIds:[targetId],rollKind:"save",compact,detail:[`d20 ${test.natural} ${signedText(actorSaveModifier(target,key))} = ${test.total}`],dice:[test.natural],rollTotal:test.total,events:committed.commit.events,stateChanges:[...lifeStateChanges(state,state.rules,rules),...(engagedLine?[engagedLine.line]:[]),...(kind==="shove-push"&&failed?[`교전 종료 (밀려남): ${actor.name} ↔ ${target.name}`]:[])]});
+  card.saveResults=[{targetId,targetName:target.name,d20:test.natural,total:test.total,dc,outcome:failed?"실패":"성공"}];
+  return commitEvents(ctx,card,rules,engagements);
+}
+
+const signedText=(value:number)=>value>=0?`+${value}`:`${value}`;
+
+/** Escape a grapple (action): STR (Athletics) or DEX (Acrobatics) against the grappler's DC; success ends every grapple on the actor. */
+function escapeAct(ctx:HandlerContext,actor:Actor,action:ActionVm,resolutionId:string):HandlerResult {
+  const state=ctx.state;
+  const holds=grappleEffectsOn(state,actor.id);
+  if(!holds.length) return refused("not-grappled","붙잡힌 상태가 아닙니다.",{actorId:actor.id,actionId:action.id});
+  const dc=Math.max(...holds.map((effect)=>Number(effect.metadata?.escapeDc??10)));
+  const checkId=`${resolutionId}:escape`;
+  const operations:ResolutionOperation[]=[];
+  const economy=economyOperation(ctx,resolutionId,action); if(economy) operations.push(economy);
+  operations.push({id:checkId,kind:"d20",actorId:actor.id,request:{family:"ability-check",target:dc,modifierContributions:[{source:`action:${action.id}:check-bonus`,value:action.checkBonus??0}],dice:{id:`${resolutionId}:d20`,purpose:"붙잡힘 탈출",sides:20,faces:d20Faces(ctx,"붙잡힘 탈출")}}});
+  for(const effect of holds) operations.push({id:`${resolutionId}:free:${effect.id}`,kind:"remove-effect",effectId:effect.id,when:{operationId:checkId,field:"outcome",equals:"success"}});
+  const committed=commitOperations(ctx,{id:resolutionId,actorId:actor.id,sourceId:action.id,operations,actionId:action.id});
+  if(committed.status==="refused") return committed;
+  const test=committed.commit.results[checkId] as D20TestResult;
+  const rules=committed.commit.state;
+  consumeNextRoll(rules,actor.id,"ability-check");
+  const grapplers=holds.map((effect)=>actorName(state,String(effect.metadata?.grapplerId??effect.sourceActorId??""))).join(", ");
+  const compact=`붙잡힘 탈출 · ${test.total} vs DC ${dc} ${test.outcome==="success"?`성공 → ${grapplers}에게서 풀려남`:"실패"}`;
+  const card=plainCard({id:resolutionId,seq:ctx.nextSeq,visibility:state.rollVisibility,action,actorId:actor.id,targetIds:[],rollKind:"check",compact,detail:[`d20 ${test.natural} ${signedText(action.checkBonus??0)} = ${test.total}`],dice:[test.natural],rollTotal:test.total,events:committed.commit.events,stateChanges:lifeStateChanges(state,state.rules,rules)});
+  return commitEvents(ctx,card,rules);
+}
+
+/** Let a grappled creature go: free, ends the grapples this actor holds. */
+function releaseAct(ctx:HandlerContext,actor:Actor,action:ActionVm,resolutionId:string):HandlerResult {
+  const state=ctx.state;
+  const held=state.rules.effects.filter((effect)=>effect.kind==="condition"&&effect.conditionId==="grappled"&&effect.sourceId===GRAPPLE_SOURCE&&effect.sourceActorId===actor.id);
+  if(!held.length) return refused("not-grappling","붙잡고 있는 대상이 없습니다.",{actorId:actor.id,actionId:action.id});
+  const committed=commitOperations(ctx,{id:resolutionId,actorId:actor.id,sourceId:action.id,operations:held.map((effect)=>({id:`${resolutionId}:release:${effect.id}`,kind:"remove-effect" as const,effectId:effect.id})),actionId:action.id});
+  if(committed.status==="refused") return committed;
+  const names=held.map((effect)=>actorName(state,effect.targetId)).join(", ");
+  const card=plainCard({id:resolutionId,seq:ctx.nextSeq,visibility:state.rollVisibility,action,actorId:actor.id,targetIds:held.map((effect)=>effect.targetId),rollKind:"effect",compact:`놓아주기 · ${names}`,detail:["비용 없음"],events:committed.commit.events,stateChanges:lifeStateChanges(state,state.rules,committed.commit.state)});
+  return commitEvents(ctx,card,committed.commit.state);
+}
+
 export function act(ctx:HandlerContext,command:Extract<TableCommand,{type:"act"}>):HandlerResult {
   const state=ctx.state;
   const actor=state.actors[command.actorId];
   if(!actor||!state.rules.combatants[command.actorId]) return refused("actor-unknown","테이블에 없는 액터입니다.",{actorId:command.actorId});
   const action=actionsFor(actor,state).find((entry)=>entry.id===command.actionId);
   if(!action) return refused("action-unknown","알 수 없는 행동입니다.",{actorId:actor.id,actionId:command.actionId});
-  const availability=availabilityOf(state,action);
+  const availability=availabilityOf(state,action,{asReaction:ctx.asReaction});
   if(!availability.available) return refused("action-unavailable",availability.reason??"지금은 사용할 수 없는 행동입니다.",{actorId:actor.id,actionId:action.id});
   const targetIds=[...new Set(command.targetIds)];
   const targetRefusal=targetRefusalFor(state,action,targetIds);
   if(targetRefusal) return refused(targetRefusal.code,targetRefusal.message,{actorId:actor.id,actionId:action.id});
   const resolutionId=`res.${ctx.nextSeq}`;
   if(action.id==="action.death-save") return deathSaveAct(ctx,actor,action,resolutionId);
+  if(action.tableUnarmedOption) return unarmedOptionAct(ctx,actor,action,targetIds,resolutionId);
+  if(action.tableEscape) return escapeAct(ctx,actor,action,resolutionId);
+  if(action.tableRelease) return releaseAct(ctx,actor,action,resolutionId);
   switch(action.resolutionKind) {
     case "attack": return attackAct(ctx,actor,action,targetIds,resolutionId,command.itemId);
     case "ability-check": return checkAct(ctx,actor,action,targetIds,resolutionId);

@@ -38,6 +38,16 @@ export type TableCommand=
   /** Hands and objects: draw/stow (free interaction, then Utilize), drop (free), pick-up, give (adjacent), throw-to (an ally, at range). */
   |{type:"object";actorId:string;op:"draw"|"stow"|"drop"|"pick-up"|"give"|"throw-to";itemId:string;slot?:"main-hand"|"off-hand"|"two-hand";targetId?:string;quantity?:number}
   |{type:"ruling";targetIds:string[];ruling:Ruling;note?:string}
+  /** 접근(대상) · 물러남 · 그대로 — movement without feet. 물러남 while engaged asks the engaged enemies for an opportunity attack. */
+  |{type:"declare";actorId:string;movement:"approach"|"withdraw"|"stay";targetId?:string}
+  /** Answer a pending question (the asked peer, or the DM). */
+  |{type:"answer-question";questionId:string;optionId:string}
+  /** DM: pass over a question (D5: no automatic forfeit, the DM may skip). */
+  |{type:"skip-question";questionId:string}
+  /** Ready: spend the action now, name the trigger, fire the action later as a reaction. */
+  |{type:"ready";actorId:string;actionId:string;trigger:string;targetIds?:string[]}
+  /** DM: the readied trigger happened — asks the actor whether to fire. */
+  |{type:"trigger-ready";actorId:string}
   |{type:"undo"}
   |{type:"set-roll-visibility";visibility:Visibility};
 

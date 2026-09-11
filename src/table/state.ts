@@ -69,6 +69,27 @@ export interface FloorItem {
   recoverable:boolean;
 }
 
+/** A table question: one card to one peer (the asked actor's controller, or the DM), a few options, one answer. */
+export interface TableQuestion {
+  id:string;
+  kind:"opportunity-attack"|"knock-out"|"ready-trigger"|"dm";
+  /** The actor whose choice this is. */
+  actorId:string;
+  /** The peer that may answer (the actor's controller); the DM may always answer or skip. */
+  toPeer?:string;
+  prompt:string;
+  options:Array<{id:string;label:string;cost?:string}>;
+  /** What the answer continues: the mover of a withdrawal, the target of a knock-out, the readied action. */
+  context:Record<string,string|number|boolean>;
+  seq:number;
+}
+
+export type MovementDeclarationKind="approach"|"withdraw"|"stay";
+export interface MovementDeclaration { kind:MovementDeclarationKind; targetId?:string; round:number }
+
+/** A readied action (2024 Ready): the trigger in the actor's words and the action to fire as a reaction. */
+export interface ReadiedAction { actionId:string; trigger:string; targetIds:string[]; round:number }
+
 export interface TableState {
   sessionId:string;
   /** The sequence of the last applied event. */
@@ -89,6 +110,11 @@ export interface TableState {
   floor:FloorItem[];
   /** Free object interactions used this turn, per actor (2024: one per turn; the second costs the Utilize action). */
   interactions:Record<string,number>;
+  /** Pending questions, oldest first. Nothing else blocks on them (D5). */
+  questions:TableQuestion[];
+  /** 접근/물러남/그대로 per actor; cleared at the actor's next turn start and when the fight ends. */
+  declarations:Record<string,MovementDeclaration>;
+  readied:Record<string,ReadiedAction>;
   activeResolution:ResolutionRecord|null;
   /** Newest first. */
   log:LogEntry[];
@@ -109,6 +135,9 @@ export function createTableState(sessionId:string):TableState {
     engagements:[],
     floor:[],
     interactions:{},
+    questions:[],
+    declarations:{},
+    readied:{},
     activeResolution:null,
     log:[],
     rollVisibility:"public",
