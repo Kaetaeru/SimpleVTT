@@ -10,3 +10,8 @@ export * from "./spells";
 export { availabilityOf, eligibleTargetIds, targetRefusalFor } from "./availability";
 export { projectTable, projectedActions, statusChips, displayedAc, type TableView, type TableViewer } from "./project";
 export { TableRuntime, type Outcome, type TableRuntimeOptions } from "./runtime";
+export * from "./transport";
+export * from "./wire";
+export * from "./redact";
+export { TableHost, type HostPeer, type TableHostOptions } from "./host";
+export { TableClient, type TableClientOptions, type ClientReply } from "./client";
