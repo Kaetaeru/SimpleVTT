@@ -35,7 +35,7 @@
 | 레벨업은 DOM 문구를 매 프레임 확인하고 기존 버튼을 대신 클릭 | `src/LevelUpV10.tsx`: `useLevelUpHost`, `legacyCancel`, `legacyCommit` | 레벨업을 직접 마운트하는 정식 화면으로 재작성. domain progression 함수는 재사용 후보 |
 | 개인 가방은 수량·충전을 표시하지만 주요 작업은 장착·조율이며 사용을 세션으로 안내 | `src/CharacterInventoryView.tsx` | 개인 수정과 세션 사용을 구분한 일관된 아이템 명령/화면 필요 |
 | 성장 상태와 화면 시트 사이에 큰 필드 복사 계층 존재 | `src/app/progressionCharacterApplicationService.ts` | 저장 모델을 화면 VM과 분리하고 생성·편집·성장에 공통 계산 계약 도입 |
-| 기존 교전은 명중·빗나감 모두 기록, V2는 명중 때만 기록 | `src/domain/engagement.ts`, `src/table/handlers/act.ts` | 기존 ToTM 정책의 회귀 사례로 등록. 기회공격 이식 전에 복구 |
+| 기존 교전은 명중·빗나감 모두 기록, V2는 명중 때만 기록 | `src/domain/engagement.ts`, `src/table/handlers/act.ts` | 기존 ToTM 정책의 회귀 사례로 등록. 기회공격 이식 전에 복구 → P0b에서 복구(`src/table/engagement.ts`, `tests/table/engagement.test.ts`, [진행 기록](P0_WORK_PACKET.md#p0b-진행-기록-2026-09-11)) |
 | V2 이벤트는 전체 rules를, undo는 전체 상태를 포함 | `src/table/events.ts`, `src/table/runtime.ts` | 로컬 재생의 출발점으로 사용하되 그대로 네트워크 배포 금지. 수신자별 비공개 정보 필터와 저장 정책을 먼저 설계 |
 | V2 facade의 일부 미구현 동작은 변경 없는 snapshot 반환 | `respondToInterrupt`, `applyDmAdjudication` | 미지원 기능은 실행 경로를 닫거나 명확히 표시. 침묵하는 성공처럼 보이지 않음 |
 | 현행 CURRENT 문서에 완료 선언과 과거 W7-05 NEXT가 공존 | `docs/CURRENT.md`, `docs/roadmap/CURRENT.md` | 구현 착수 전 현행 라우터를 하나로 정리 |

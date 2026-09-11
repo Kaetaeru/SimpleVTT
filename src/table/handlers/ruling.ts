@@ -1,10 +1,12 @@
 import type { ResolutionOperation } from "../../domain/resolutionTypes";
+import { clearEngagement, clearEngagementsOf, type EngagementRecord, isEngaged, recordMeleeAttack } from "../../domain/engagement";
 import { conditionLabelKo } from "../../app/srdMonsterCatalog";
+import { engagementsAmongLiving, engagementsEqual } from "../engagement";
 import type { Ruling, TableCommand } from "../commands";
 import type { ActorPatch } from "../events";
 import { refused } from "../refusal";
 import { lifeStateChanges } from "../resolutionCard";
-import { cloneState, type TableState } from "../state";
+import { cloneState, engagementRound, type TableState } from "../state";
 import { NEXT_ROLL_TAG } from "./act";
 import { actorName, commitOperations, logEntry, type EventDraft, type HandlerContext, type HandlerResult } from "./types";
 
@@ -110,18 +112,18 @@ function operationsFor(ctx:HandlerContext,seq:number,targetId:string,ruling:Ruli
   }
 }
 
-/** Rulings the kernel has no operation for: life flags set directly, presentation patches on the actor. */
-function directRuling(ctx:HandlerContext,targetId:string,ruling:Ruling):{rules?:TableState["rules"];patches:Array<{actorId:string;patch:ActorPatch}>}|{error:string} {
+/** Rulings the kernel has no operation for: life flags set directly, presentation patches on the actor, engagement toggles. */
+function directRuling(ctx:HandlerContext,targetId:string,ruling:Ruling):{rules?:TableState["rules"];patches:Array<{actorId:string;patch:ActorPatch}>;engagements?:EngagementRecord[]}|{error:string} {
   const state=ctx.state;
   const actor=state.actors[targetId];
   if(!actor) return {error:"테이블에 없는 대상입니다."};
   if(ruling.kind==="engage") {
+    // The DM's toggle for the rare exception: the same domain records a melee attack would have made or cleared.
     const other=state.actors[ruling.otherId];
     if(!other||ruling.otherId===targetId) return {error:"교전 상대가 없습니다."};
-    const has=actor.engagement.includes(ruling.otherId);
+    const has=isEngaged(state.engagements,targetId,ruling.otherId);
     if(ruling.on===has) return {error:ruling.on?"이미 교전 중입니다.":"교전 중이 아닙니다."};
-    const toggle=(list:string[],id:string)=>ruling.on?[...list,id]:list.filter((entry)=>entry!==id);
-    return {patches:[{actorId:targetId,patch:{engagement:toggle(actor.engagement,ruling.otherId)}},{actorId:ruling.otherId,patch:{engagement:toggle(other.engagement,targetId)}}]};
+    return {patches:[],engagements:ruling.on?recordMeleeAttack(state.engagements,targetId,ruling.otherId,engagementRound(state)):clearEngagement(state.engagements,targetId,ruling.otherId)};
   }
   if(ruling.kind==="badge") {
     const has=actor.badges.includes(ruling.badge);
@@ -138,10 +140,7 @@ function directRuling(ctx:HandlerContext,targetId:string,ruling:Ruling):{rules?:
     rules.effects=rules.effects.filter((effect)=>!(effect.targetId===targetId&&effect.termination?.targetBecomesIncapacitated));
     delete rules.concentration[targetId];
     rules.revision+=1;
-    const patches:Array<{actorId:string;patch:ActorPatch}>=[];
-    if(combatant.life.dead) for(const other of Object.values(state.actors)) if(other.engagement.includes(targetId)) patches.push({actorId:other.id,patch:{engagement:other.engagement.filter((id)=>id!==targetId)}});
-    if(combatant.life.dead&&actor.engagement.length) patches.push({actorId:targetId,patch:{engagement:[]}});
-    return {rules,patches};
+    return {rules,patches:[],...(combatant.life.dead?{engagements:clearEngagementsOf(state.engagements,targetId)}:{})};
   }
   return {patches:[]};
 }
@@ -154,13 +153,15 @@ export function ruling(ctx:HandlerContext,command:Extract<TableCommand,{type:"ru
   const label=rulingLabel(state,command.ruling);
   const direct=command.ruling.kind==="engage"||command.ruling.kind==="badge"||(command.ruling.kind==="life"&&(command.ruling.state==="down"||command.ruling.state==="dead"));
   let rules=state.rules;
+  let engagements=state.engagements;
   let patches:Array<{actorId:string;patch:ActorPatch}>=[];
   const events:EventDraft[]=[];
   if(direct) {
     for(const targetId of targetIds) {
-      const result=directRuling({...ctx,state:{...state,rules}},targetId,command.ruling);
+      const result=directRuling({...ctx,state:{...state,rules,engagements}},targetId,command.ruling);
       if("error" in result) return refused("ruling-rejected",result.error,{actorId:targetId});
       if(result.rules) rules=result.rules;
+      if(result.engagements) engagements=result.engagements;
       for(const patch of result.patches) {
         const index=patches.findIndex((entry)=>entry.actorId===patch.actorId);
         if(index>=0) patches[index]={actorId:patch.actorId,patch:{...patches[index].patch,...patch.patch}}; else patches.push(patch);
@@ -180,10 +181,13 @@ export function ruling(ctx:HandlerContext,command:Extract<TableCommand,{type:"ru
     const immune=committed.commit.events.filter((event)=>event.kind==="apply-effect"&&(event.result as {immune?:boolean})?.immune);
     if(immune.length&&immune.length===committed.commit.events.filter((event)=>event.kind==="apply-effect").length) return refused("ruling-immune",`${actorName(state,immune[0].targetId??targetIds[0])}은(는) 면역입니다.`,{actorId:immune[0].targetId});
   }
-  const stateChanges=[...lifeStateChanges(state,state.rules,rules),...patches.map((entry)=>`${actorName(state,entry.actorId)} ${Object.keys(entry.patch).join(", ")} 변경`)];
+  // Whatever the ruling did (a killing blow included), a dead creature is engaged with no one.
+  engagements=engagementsAmongLiving(state,engagements,rules);
+  const engagementsChanged=!engagementsEqual(engagements,state.engagements);
+  const stateChanges=[...lifeStateChanges(state,state.rules,rules),...patches.map((entry)=>`${actorName(state,entry.actorId)} ${Object.keys(entry.patch).join(", ")} 변경`),...(engagementsChanged?[command.ruling.kind==="engage"?`${command.ruling.on?"교전 시작":"교전 종료"}: ${targetIds.map((id)=>actorName(state,id)).join(", ")} ↔ ${actorName(state,command.ruling.otherId)}`:`교전 종료: ${targetIds.map((id)=>actorName(state,id)).join(", ")}`]:[])];
   const summary=`${label} → ${targetIds.map((id)=>actorName(state,id)).join(", ")}`;
   events.push({
-    payload:{type:"rules-committed",rules,...(patches.length?{actorPatches:patches}:{})},
+    payload:{type:"rules-committed",rules,...(patches.length?{actorPatches:patches}:{}),...(engagementsChanged?{engagements}:{})},
     log:[logEntry(ctx,{actor:"DM",title:`DM 재량 · ${label}`,summary,detail:command.note?[command.note]:[],stateChanges,ruling:label})],
   });
   return {status:"committed",events};

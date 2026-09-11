@@ -87,7 +87,7 @@ export function materializeActors(state:TableState,spec:ActorSpec):{actors:Actor
     const actor:Actor={
       id:sheet.id,kind:"character",name:sheet.name,side:spec.side??"ally",
       source:{kind:"character",sheet,sourceRevision:sheet.sourceRevision??0},
-      controllerPeer:spec.controllerPeer,badges:[],engagement:[],initiative:0,
+      controllerPeer:spec.controllerPeer,badges:[],initiative:0,
     };
     return {actors:[actor],combatants:{[sheet.id]:characterCombatant(sheet)}};
   }
@@ -99,7 +99,7 @@ export function materializeActors(state:TableState,spec:ActorSpec):{actors:Actor
   const actors=ids.map((id,index)=>({
     id,kind:"npc" as const,name:spec.name?(count>1?`${spec.name} ${index+1}`:spec.name):`${definition.name} ${existing+index+1}`,
     side:spec.side??"enemy",source:{kind:"monster" as const,definitionId:definition.id,definition:structuredClone(definition)},
-    badges:[],engagement:[],initiative:0,
+    badges:[],initiative:0,
   }));
   return {actors,combatants:Object.fromEntries(actors.map((actor)=>[actor.id,monsterCombatant(actor.id,definition)]))};
 }
@@ -173,7 +173,7 @@ function characterActions(actor:Actor,sheet:CharacterSheet):ActionVm[] {
       summary:`${signed(attack.bonus)} · ${damage.dice}${damage.flat?signed(damage.flat):""} ${damage.type}${attacks>1?` · 공격 ${attacks}회`:""}`,
       available:true,eligibleTargetIds:[],attackBonus:attack.bonus,attacksPerAction:attacks,
       damage:[{type:damage.type,dice:damage.dice,flat:damage.flat,average:diceAverage(dice.count,dice.sides,dice.flat)}],
-      runtimeAttack:{sourceKind:"weapon",rangeFeet:ranged?80:5,diceSides:dice.sides,diceCount:dice.count,damageSource:`character:${actorId}:${attack.id}`},
+      runtimeAttack:{sourceKind:"weapon",rangeFeet:ranged?80:5,attackMode:ranged?"ranged":"melee",diceSides:dice.sides,diceCount:dice.count,damageSource:`character:${actorId}:${attack.id}`},
       details:[detail("명중",signed(attack.bonus)),detail("피해",`${damage.dice}${damage.flat?` ${signed(damage.flat)}`:""} ${damage.type}`),detail("비용",attacks>1?`공격 행동 1 · 최대 ${attacks}회 공격`:"행동 1")],
     };
   });
@@ -182,7 +182,7 @@ function characterActions(actor:Actor,sheet:CharacterSheet):ActionVm[] {
     id:"action.unarmed-strike.damage",actorId,name:"맨손 타격",category:"weapon",target:"enemy",economy:"행동",resolutionKind:"attack",
     summary:`${signed(sheet.proficiencyBonus+strength)} · ${unarmed} 타격`,available:true,eligibleTargetIds:[],attackBonus:sheet.proficiencyBonus+strength,attacksPerAction:attacks,
     damage:[{type:"타격",dice:"0d2",flat:unarmed,average:unarmed}],
-    runtimeAttack:{sourceKind:"unarmed",rangeFeet:5,diceSides:2,diceCount:0,damageSource:`character:${actorId}:unarmed-strike`},
+    runtimeAttack:{sourceKind:"unarmed",rangeFeet:5,attackMode:"melee",diceSides:2,diceCount:0,damageSource:`character:${actorId}:unarmed-strike`},
     details:[detail("명중",signed(sheet.proficiencyBonus+strength)),detail("피해",`${unarmed} 타격`),detail("출처",`${STANDARD_SOURCE} · Unarmed Strike`)],
   });
   actions.push(...standardActions(actor,sheet.speed));
@@ -208,7 +208,7 @@ function monsterAttackAction(actor:Actor,spec:CombatantRuntimeAttackVm):ActionVm
     summary:`${signed(spec.attackBonus)} · ${spec.damage.dice}${spec.damage.flat?signed(spec.damage.flat):""} ${spec.damage.type}${spec.attacksPerAction&&spec.attacksPerAction>1?` · 공격 ${spec.attacksPerAction}회`:""}`,
     available:true,eligibleTargetIds:[],attackBonus:spec.attackBonus,attacksPerAction:spec.attacksPerAction,
     damage:[{type:spec.damage.type,dice:spec.damage.dice,flat:spec.damage.flat,average:diceAverage(dice.count,dice.sides,dice.flat)},...(spec.extraDamage??[]).map((extra)=>{const parsed=damageFromDiceText(extra.dice,extra.flat);return {type:extra.type,dice:extra.dice,flat:extra.flat,average:diceAverage(parsed.count,parsed.sides,parsed.flat)};})],
-    runtimeAttack:{sourceKind:spec.sourceKind,rangeFeet:spec.rangeFeet,diceSides:dice.sides,diceCount:dice.count,damageSource:`monster:${actor.id}:${spec.id}`},
+    runtimeAttack:{sourceKind:spec.sourceKind,rangeFeet:spec.rangeFeet,...(spec.attackMode?{attackMode:spec.attackMode}:{}),diceSides:dice.sides,diceCount:dice.count,damageSource:`monster:${actor.id}:${spec.id}`},
     details:[detail("명중",signed(spec.attackBonus)),detail("사거리",`${spec.rangeFeet}피트`),...(spec.hitText?[detail("명중 시",spec.hitText)]:[])],
   };
 }

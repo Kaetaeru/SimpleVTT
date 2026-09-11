@@ -12,10 +12,11 @@ import { ABILITY_KEYS, actionsFor, actorAc, actorSaveModifier, damageFromDiceTex
 import { availabilityOf, targetRefusalFor } from "../availability";
 import type { TableCommand } from "../commands";
 import { parseDiceNotation } from "../dice";
-import type { ActorPatch } from "../events";
+import { clearEngagementsOf, type EngagementRecord, engagedWith, isEngaged, recordMeleeAttack } from "../../domain/engagement";
+import { ENGAGEMENT_RANGED_IN_MELEE_SOURCE, engagementsAmongLiving, engagementsEqual, hostileEngagedIds, isMeleeAttack, isRangedAttack } from "../engagement";
 import { kernelErrorKo, refused } from "../refusal";
 import { attackCard, checkCard, lifeStateChanges, logFromCard, plainCard } from "../resolutionCard";
-import { cloneState, type Actor, type ResolutionRecord, type TableState } from "../state";
+import { cloneState, engagementRound, type Actor, type ResolutionRecord, type TableState } from "../state";
 import { actorName, commitOperations, type HandlerContext, type HandlerResult } from "./types";
 
 export const NEXT_ROLL_TAG="table:next-roll";
@@ -76,33 +77,32 @@ function statusEffects(ctx:HandlerContext,resolutionId:string,action:ActionVm,ta
 
 function d20Faces(ctx:HandlerContext,purpose:string) { return ctx.dice.faces(20,2,purpose); }
 
-function engagementPatches(state:TableState,actorId:string,targetId:string,rangeFeet:number):Array<{actorId:string;patch:ActorPatch}> {
-  if(rangeFeet>5) return [];
-  const actor=state.actors[actorId],target=state.actors[targetId];
-  if(!actor||!target||state.rules.combatants[targetId]?.life.dead) return [];
-  const patches:Array<{actorId:string;patch:ActorPatch}>=[];
-  if(!actor.engagement.includes(targetId)) patches.push({actorId,patch:{engagement:[...actor.engagement,targetId]}});
-  if(!target.engagement.includes(actorId)) patches.push({actorId:targetId,patch:{engagement:[...target.engagement,actorId]}});
-  return patches;
+/**
+ * A melee attack (hit or miss) engages attacker and target — the domain policy, stamped with the table's round.
+ * Ranged attacks never engage; a self-target never engages.
+ */
+function engageByMelee(state:TableState,action:ActionVm,actorId:string,targetId:string):{engagements:EngagementRecord[];line:string}|null {
+  if(!isMeleeAttack(action)||actorId===targetId||!state.actors[targetId]) return null;
+  const already=isEngaged(state.engagements,actorId,targetId);
+  const engagements=recordMeleeAttack(state.engagements,actorId,targetId,engagementRound(state));
+  const label=`${actorName(state,actorId)} ↔ ${actorName(state,targetId)}`;
+  return {engagements,line:already?`교전 유지: ${label}`:`교전 시작: ${label}`};
 }
 
-function releaseDeadEngagements(state:TableState,rules:RulesRuntimeState,existing:Array<{actorId:string;patch:ActorPatch}>):Array<{actorId:string;patch:ActorPatch}> {
-  const dead=Object.keys(rules.combatants).filter((id)=>rules.combatants[id].life.dead&&!state.rules.combatants[id]?.life.dead);
-  if(!dead.length) return existing;
-  const patches=[...existing];
-  for(const actor of Object.values(state.actors)) {
-    const current=patches.find((entry)=>entry.actorId===actor.id)?.patch.engagement??actor.engagement;
-    const next=dead.includes(actor.id)?[]:current.filter((id)=>!dead.includes(id));
-    if(next.length!==current.length) {
-      const index=patches.findIndex((entry)=>entry.actorId===actor.id);
-      if(index>=0) patches[index]={actorId:actor.id,patch:{...patches[index].patch,engagement:next}}; else patches.push({actorId:actor.id,patch:{engagement:next}});
-    }
-  }
-  return patches;
+/** 이탈: every engagement of the actor ends (the Disengage action itself is the kernel's status effect). */
+function disengage(state:TableState,action:ActionVm,actorId:string):{engagements:EngagementRecord[];line:string}|null {
+  if(action.id!=="action.standard.disengage"&&action.sessionStatusEffect?.status!=="이탈") return null;
+  const engaged=engagedWith(state.engagements,actorId);
+  if(!engaged.length) return null;
+  return {engagements:clearEngagementsOf(state.engagements,actorId),line:`교전 종료 (이탈): ${actorName(state,actorId)} ↔ ${engaged.map((id)=>actorName(state,id)).join(", ")}`};
 }
 
-function commitEvents(ctx:HandlerContext,card:ResolutionRecord,rules:RulesRuntimeState,actorPatches?:Array<{actorId:string;patch:ActorPatch}>):HandlerResult {
-  return {status:"committed",resolution:card,events:[{payload:{type:"rules-committed",rules,resolution:card,...(actorPatches?.length?{actorPatches}:{})},log:[logFromCard(card,actorName(ctx.state,card.actorId),ctx.now)]}]};
+/** One committed event: the kernel's state, the card, and the engagement set pruned to who is still alive. */
+function commitEvents(ctx:HandlerContext,card:ResolutionRecord,rules:RulesRuntimeState,engagements?:EngagementRecord[]):HandlerResult {
+  const state=ctx.state;
+  const next=engagementsAmongLiving(state,engagements??state.engagements,rules);
+  const changed=!engagementsEqual(next,state.engagements);
+  return {status:"committed",resolution:card,events:[{payload:{type:"rules-committed",rules,resolution:card,...(changed?{engagements:next}:{})},log:[logFromCard(card,actorName(ctx.state,card.actorId),ctx.now)]}]};
 }
 
 function attackAct(ctx:HandlerContext,actor:Actor,action:ActionVm,targetIds:string[],resolutionId:string):HandlerResult {
@@ -113,6 +113,8 @@ function attackAct(ctx:HandlerContext,actor:Actor,action:ActionVm,targetIds:stri
   if(!target||!spec||!action.runtimeAttack) return refused("action-rejected","공격 정보가 없습니다.",{actorId:actor.id,actionId:action.id});
   const base=damageFromDiceText(spec.dice,spec.flat);
   const rangeFeet=action.runtimeAttack.rangeFeet;
+  // Theater of the mind: an engaged archer shoots "in melee" — disadvantage, from the engagement records alone.
+  const rangedInMelee=isRangedAttack(action)?hostileEngagedIds(state,actor.id):[];
   const attackDice={id:`${resolutionId}:d20`,purpose:`${action.name} 명중`,sides:20,faces:d20Faces(ctx,`${action.name} 명중`)};
   const damageFaces=base.count?ctx.dice.faces(base.sides,base.count*2,`${action.name} 피해`):[];
   const riders=(action.damage??[]).slice(1).map((extra,index)=>{
@@ -125,6 +127,7 @@ function attackAct(ctx:HandlerContext,actor:Actor,action:ActionVm,targetIds:stri
     target:{id:targetId,kind:"creature",relation:actor.side===target.side?"ally":"enemy",ac:actorAc(target),creatureKind:target.kind==="character"?"character":"monster",...(rangeFeet<=5?{spatialAuthority:"authoritative",distanceFeet:5,visible:true,cover:"none",targetCanSeeAttacker:true}:{spatialAuthority:"manual-unconstrained"})} as AttackRequest["target"],
     actorCreatureKind:actor.kind==="character"?"character":"monster",
     rangeFeet,attackDice,attackModifierContributions:[{source:`action:${action.id}:attack-bonus`,value:action.attackBonus??0}],requiresSight:rangeFeet<=5,
+    ...(rangedInMelee.length?{rollStateContributions:[{source:`${ENGAGEMENT_RANGED_IN_MELEE_SOURCE}:${rangedInMelee.join(",")}`,state:"disadvantage" as const}]}:{}),
     baseDamage:{sourceId:action.id,damageType:spec.type,dice:base.count?[{source:action.id,sides:base.sides,count:base.count,faces:damageFaces}]:[],flat:base.flat?[{source:`${action.id}:flat`,value:base.flat}]:[]},
     riders,
     economy:state.mode==="initiative"&&economySlot(action)?{slot:economySlot(action)!,bonusActionGranted:economySlot(action)==="bonus-action"?true:undefined,actionKind:"attack",attacksPerAction:action.attacksPerAction??1}:undefined,
@@ -137,10 +140,11 @@ function attackAct(ctx:HandlerContext,actor:Actor,action:ActionVm,targetIds:stri
   const damage=Object.entries(commit.results).find(([key,value])=>key.startsWith(resolutionId)&&Boolean(value)&&typeof value==="object"&&"components" in (value as object))?.[1] as CompoundDamageResolution|undefined;
   const rules=commit.state;
   const consumed=consumeNextRoll(rules,actor.id,"attack-roll");
-  const stateChanges=[...lifeStateChanges(state,state.rules,rules),...consumed.map((label)=>`${actor.name} 상태 종료: ${label}`)];
-  const patches=releaseDeadEngagements(state,rules,attack.outcome==="success"?engagementPatches(state,actor.id,targetId,rangeFeet):[]);
+  const engaged=engageByMelee(state,action,actor.id,targetId);
+  const stateChanges=[...lifeStateChanges(state,state.rules,rules),...consumed.map((label)=>`${actor.name} 상태 종료: ${label}`),...(engaged?[engaged.line]:[])];
   const card=attackCard({id:resolutionId,seq:ctx.nextSeq,visibility:state.rollVisibility,action,actorId:actor.id,targetIds:[targetId],targetName:target.name,attack,damage,events:commit.events,stateChanges});
-  return commitEvents(ctx,card,rules,patches);
+  if(engaged) card.provenance.push(`engagement:melee-attack:${actor.id}<->${targetId}:round:${engagementRound(state)}`);
+  return commitEvents(ctx,card,rules,engaged?.engagements);
 }
 
 function checkAct(ctx:HandlerContext,actor:Actor,action:ActionVm,targetIds:string[],resolutionId:string):HandlerResult {
@@ -269,8 +273,9 @@ function noRollAct(ctx:HandlerContext,actor:Actor,action:ActionVm,targetIds:stri
   }
   const targetName=targetIds[0]?actorName(state,targetIds[0]):undefined;
   const compact=action.sessionStatusEffect?`${action.sessionStatusEffect.successOutcome}${targetName&&action.sessionStatusEffect.target==="first-target"?` → ${targetName}`:""}`:action.completionOutcome??action.name;
-  const card=plainCard({id:resolutionId,seq:ctx.nextSeq,visibility:state.rollVisibility,action,actorId:actor.id,targetIds,rollKind:"effect",compact,detail:[action.summary],events:committed.commit.events,stateChanges:[...lifeStateChanges(state,state.rules,rules),...extraChanges]});
-  return commitEvents(ctx,card,rules);
+  const disengaged=disengage(state,action,actor.id);
+  const card=plainCard({id:resolutionId,seq:ctx.nextSeq,visibility:state.rollVisibility,action,actorId:actor.id,targetIds,rollKind:"effect",compact,detail:[action.summary],events:committed.commit.events,stateChanges:[...lifeStateChanges(state,state.rules,rules),...extraChanges,...(disengaged?[disengaged.line]:[])]});
+  return commitEvents(ctx,card,rules,disengaged?.engagements);
 }
 
 export function act(ctx:HandlerContext,command:Extract<TableCommand,{type:"act"}>):HandlerResult {

@@ -123,6 +123,7 @@ function attackSpec(monster:SrdMonster,entry:SrdMonsterEntry,index:number,attack
     sourceKind:"weapon",
     attackBonus:attack.bonus,
     rangeFeet:ranged?(attack.rangeFeet??60):(attack.reachFeet??attack.rangeFeet??5),
+    attackMode:attack.mode,
     damage:{ type:damageLabelKo(primary.type), dice, flat:primary.flat },
     ...(attack.damage.length>1?{ extraDamage:attack.damage.slice(1).map((component)=>({ type:damageLabelKo(component.type), dice:component.dice??`0d${Math.max(2,component.sides||2)}`, flat:component.flat })) }:{}),
     ...(attack.mode==="melee-or-ranged"&&attack.rangeFeet?{ thrownRangeFeet:attack.rangeFeet }:{}),

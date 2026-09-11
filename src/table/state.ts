@@ -1,5 +1,6 @@
 import "../app/combatantRuntimeContracts";
 import type { CombatantRuntimeState, RulesRuntimeState } from "../domain/combatState";
+import type { EngagementRecord } from "../domain/engagement";
 import type { CharacterSheet, CombatantDefinitionVm, ResolutionView } from "../app/contracts";
 
 /**
@@ -26,7 +27,6 @@ export interface Actor {
   groupId?:string;
   hidden?:boolean;
   badges:string[];
-  engagement:string[];
   initiative:number;
 }
 
@@ -71,6 +71,11 @@ export interface TableState {
   rules:RulesRuntimeState;
   actors:Record<string,Actor>;
   peers:Record<string,Peer>;
+  /**
+   * The only spatial relation the table stores (theater-of-mind-play.md, domain/engagement.ts): pairs that traded
+   * melee attacks, with the rounds that made and last refreshed them. Freeform play counts as round 1.
+   */
+  engagements:EngagementRecord[];
   activeResolution:ResolutionRecord|null;
   /** Newest first. */
   log:LogEntry[];
@@ -88,6 +93,7 @@ export function createTableState(sessionId:string):TableState {
     rules:{revision:0,clock:{round:0,elapsedSeconds:0},combatants:{},effects:[],concentration:{},history:[]},
     actors:{},
     peers:{},
+    engagements:[],
     activeResolution:null,
     log:[],
     rollVisibility:"public",
@@ -95,6 +101,9 @@ export function createTableState(sessionId:string):TableState {
 }
 
 export const cloneState=<T>(value:T):T=>structuredClone(value);
+
+/** The round engagement records are stamped with: the initiative round, or 1 in freeform play. */
+export function engagementRound(state:Pick<TableState,"mode"|"round">):number { return state.mode==="initiative"?Math.max(1,state.round):1; }
 
 export function actorOf(state:TableState,actorId:string):Actor|undefined { return state.actors[actorId]; }
 export function combatantOf(state:TableState,actorId:string):CombatantRuntimeState|undefined { return state.rules.combatants[actorId]; }

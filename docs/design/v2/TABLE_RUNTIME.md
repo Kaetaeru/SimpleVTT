@@ -95,6 +95,8 @@ interface TableState {
                                                           // effects, concentration, clock, artifacts, zones
   actors: Record<string, Actor>;                          // identity + presentation + source, never HP
   peers: Record<string, Peer>;                            // participantId, name, characterId, connection
+  engagements: EngagementRecord[];                        // P0b: domain/engagement.ts records (pair + rounds); the only
+                                                          // spatial relation; melee hit or miss makes one, freeform = round 1
   questions: Question[];                                  // pending table questions (reaction? DC? target cap?)
   activeResolution: ResolutionRecord | null;              // the card being presented (host-decided stages)
   log: LogEntry[];                                        // activity (public / dm-only)
@@ -105,7 +107,7 @@ interface Actor {
   controllerPeer?: string;                                // owner (PC) or DM-assigned
   source: { kind: "character"; sheet: CharacterSheet; sourceRevision: number }   // uploaded at join
         | { kind: "monster"; definitionId: string; stat: MonsterStatBlock };
-  portrait?: PortraitRef; groupId?: string; hidden?: boolean; badges: Badge[]; engagement: string[];
+  portrait?: PortraitRef; groupId?: string; hidden?: boolean; badges: Badge[];
 }
 ```
 

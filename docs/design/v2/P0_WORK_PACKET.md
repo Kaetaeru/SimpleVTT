@@ -38,6 +38,24 @@ V2의 현재 `attack.outcome === "success"` 조건과 round 정보 누락을 기
 범위 숫자는 콘텐츠 정보일 뿐 사용자에게 거리를 입력시키지 않는다.
 관련 사망/제거/이탈/idle-round 회귀도 함께 검증하되 실제 반응 UI 전체는 P3에서 완성한다.
 
+#### P0b 진행 기록 (2026-09-11)
+
+- RED → GREEN: `tests/table/engagement.test.ts` 3건. 기준 head `962eb416`에서는 `TableState.engagements`가 없어 전부 실패했다.
+- 상태: `Actor.engagement: string[]`를 없애고 `TableState.engagements: EngagementRecord[]`(domain 타입) 하나로 바꿨다.
+  `applyEvent`는 `rules-committed` / `turn-changed` / `mode-changed`에 실린 기록을 그대로 적용하고,
+  `actor-removed`는 `pruneEngagementsToPresent`로 정리한다. 되돌리기는 상태 복원이므로 교전도 함께 돌아간다.
+- 근접/원거리: 사거리 숫자로 추정하지 않고 스탯 블록의 표현을 `attackMode`(`melee` / `ranged` / `melee-or-ranged`)로
+  `CombatantRuntimeAttackVm` → `runtimeAttack`에 실었다(`srdMonsterCatalog.attackSpec`). 모드가 없을 때만 기존 정책(10피트 이하 = 근접)으로 되돌아간다.
+  캐릭터 시트 공격은 아직 이름 기반 원거리 판별을 쓴다(시트 데이터에 공격 종류가 없음 — P1/P2의 시트 모델에서 해결).
+- 연결한 순수 함수: `recordMeleeAttack`(명중·빗나감 모두, 자기 자신 제외), `clearEngagementsOf`(이탈, DM 사망 처리),
+  `pruneEngagementsToPresent`(사망·제거, 커널 경로의 치명 피해 포함), `pruneIdleEngagements`(라운드 넘어갈 때),
+  `engagedWith`/`isEngaged`(투영·토글). 교전 중 원거리 공격은 `engagement:ranged-in-melee` 출처의 불리로 커널에 전달한다.
+- 이니셔티브 종료 시 교전은 남고 라운드 도장은 자유 진행 기준(1)으로 정규화한다. 자유 진행의 모든 기록은 1라운드다.
+- 투영: 옛 화면이 읽던 `scene.engagements`와 `entity.engagedWithIds`를 채운다(`SessionActorBoards`, `SessionDmTools`가 그대로 교전 선을 그린다).
+- 확인한 것: `npm run test:table`(6/6), `tsc --noEmit`, `npm run test:ui-rule-boundary`, `check-legacy-execution-boundary`(UNCLEAR 0),
+  SRD 몬스터 카탈로그·옛 교전 어댑터·provider 구조 테스트, `vite build`. Windows H+P1+P2 실행은 하지 않았다(오프라인 커널 범위).
+- 남은 것(P3): 물러남 선언 → 교전 상대의 기회공격 질문, 이탈 상태의 억제, 반응 UI. 이 패킷에서는 기록 집합만 고정했다.
+
 ### P0c — 개인 ↔ Host ↔ 개인의 좁은 실제 경로
 
 1. 개인 저장본의 사용량 수정 → 저장 → 다시 로드.

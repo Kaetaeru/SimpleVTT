@@ -40,6 +40,8 @@ export interface CombatantRuntimeAttackVm {
   sourceKind:"weapon"|"unarmed"|"wild-shape";
   attackBonus:number;
   rangeFeet:number;
+  /** How the stat block words the attack: melee (reach), ranged (range), or a thrown weapon that is either. */
+  attackMode?:AttackMode;
   damage:CombatantRuntimeDamageVm;
   /** Additional damage components rolled on a hit (e.g. "및 3(1d6) 화염 피해"). */
   extraDamage?:CombatantRuntimeDamageVm[];
@@ -124,10 +126,14 @@ export interface ActionMonsterTimingVm {
   legendaryCost?:number;
 }
 
+/** The attack's own wording, so melee versus ranged is read from the data rather than guessed from a range number. */
+export type AttackMode="melee"|"ranged"|"melee-or-ranged";
+
 export interface RuntimeAttackFactVm {
   sourceKind:"weapon"|"unarmed"|"wild-shape";
   ability?:AbilityKey;
   rangeFeet:number;
+  attackMode?:AttackMode;
   diceSides:number;
   diceCount:number;
   damageSource:string;

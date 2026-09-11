@@ -1,4 +1,5 @@
 import type { CombatantRuntimeState, RulesRuntimeState } from "../domain/combatState";
+import { type EngagementRecord, pruneEngagementsToPresent } from "../domain/engagement";
 import { cloneState, type Actor, type LogEntry, type ResolutionRecord, type TableMode, type TableState, type Visibility } from "./state";
 
 /**
@@ -6,15 +7,15 @@ import { cloneState, type Actor, type LogEntry, type ResolutionRecord, type Tabl
  * state after event n is a function of the ledger alone. Kernel commits carry the resulting domain state whole: the
  * table is small (dozens of actors) and a state-carrying event makes replay, reconnect, undo and parity trivial.
  */
-export type ActorPatch=Partial<Pick<Actor,"name"|"side"|"hidden"|"controllerPeer"|"badges"|"engagement"|"initiative"|"groupId">>;
+export type ActorPatch=Partial<Pick<Actor,"name"|"side"|"hidden"|"controllerPeer"|"badges"|"initiative"|"groupId">>;
 
 export type TableEventPayload=
   |{type:"actors-added";actors:Actor[];combatants:Record<string,CombatantRuntimeState>;order?:string[]}
   |{type:"actor-removed";actorId:string}
   |{type:"actor-updated";actorId:string;patch:ActorPatch}
-  |{type:"mode-changed";mode:TableMode;order:string[];round:number;currentActorId:string|null;rules:RulesRuntimeState}
-  |{type:"turn-changed";currentActorId:string|null;round:number;order?:string[];rules:RulesRuntimeState}
-  |{type:"rules-committed";rules:RulesRuntimeState;resolution?:ResolutionRecord|null;actorPatches?:Array<{actorId:string;patch:ActorPatch}>}
+  |{type:"mode-changed";mode:TableMode;order:string[];round:number;currentActorId:string|null;rules:RulesRuntimeState;engagements?:EngagementRecord[]}
+  |{type:"turn-changed";currentActorId:string|null;round:number;order?:string[];rules:RulesRuntimeState;engagements?:EngagementRecord[]}
+  |{type:"rules-committed";rules:RulesRuntimeState;resolution?:ResolutionRecord|null;actorPatches?:Array<{actorId:string;patch:ActorPatch}>;engagements?:EngagementRecord[]}
   |{type:"state-restored";state:TableState}
   |{type:"visibility-changed";rollVisibility:Visibility};
 
@@ -43,7 +44,7 @@ export function applyEvent(input:TableState,event:TableEvent):TableState {
       state.rules.effects=state.rules.effects.filter((effect)=>effect.targetId!==payload.actorId);
       state.order=state.order.filter((id)=>id!==payload.actorId);
       if(state.currentActorId===payload.actorId) state.currentActorId=state.order[0]??null;
-      for(const actor of Object.values(state.actors)) actor.engagement=actor.engagement.filter((id)=>id!==payload.actorId);
+      state.engagements=pruneEngagementsToPresent(state.engagements,new Set(Object.keys(state.actors)));
       break;
     }
     case "actor-updated": {
@@ -57,6 +58,7 @@ export function applyEvent(input:TableState,event:TableEvent):TableState {
       state.round=payload.round;
       state.currentActorId=payload.currentActorId;
       state.rules=cloneState(payload.rules);
+      if(payload.engagements) state.engagements=cloneState(payload.engagements);
       state.activeResolution=null;
       break;
     }
@@ -65,6 +67,7 @@ export function applyEvent(input:TableState,event:TableEvent):TableState {
       state.round=payload.round;
       if(payload.order) state.order=[...payload.order];
       state.rules=cloneState(payload.rules);
+      if(payload.engagements) state.engagements=cloneState(payload.engagements);
       break;
     }
     case "rules-committed": {
@@ -74,6 +77,7 @@ export function applyEvent(input:TableState,event:TableEvent):TableState {
         const actor=state.actors[actorId];
         if(actor) Object.assign(actor,cloneState(patch));
       }
+      if(payload.engagements) state.engagements=cloneState(payload.engagements);
       break;
     }
     case "state-restored":

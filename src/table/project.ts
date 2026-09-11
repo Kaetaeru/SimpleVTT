@@ -1,4 +1,5 @@
 import { effectIsActive } from "../domain/effects";
+import { engagedWith } from "../domain/engagement";
 import type { ActionVm, ActivityEntry, EconomyVm, ResolutionView, SceneEntity, SceneVm, SessionRefusalVm } from "../app/contracts";
 import { conditionLabelKo } from "../app/srdMonsterCatalog";
 import { actionsFor, actorAc } from "./actors";
@@ -61,7 +62,7 @@ function economyView(state:TableState,actorId:string):EconomyVm {
 function entityFor(state:TableState,actor:Actor,viewer:TableViewer):SceneEntity {
   const combatant=state.rules.combatants[actor.id];
   const defenses=combatant?.damageDefenses??[];
-  const entity:SceneEntity&{runtimeLife?:unknown;engagement?:string[]}={
+  const entity:SceneEntity&{runtimeLife?:unknown}={
     id:actor.id,name:actor.name,side:actor.side,kind:actor.kind==="character"?"character":"combatant",
     hp:combatant?.life.hp.current??0,maxHp:combatant?.life.hp.maximum??0,tempHp:combatant?.life.hp.temporary??0,ac:displayedAc(state,actor),
     initiative:actor.initiative,status:statusChips(state,actor,viewer),
@@ -72,7 +73,8 @@ function entityFor(state:TableState,actor:Actor,viewer:TableViewer):SceneEntity 
     ...(actor.controllerPeer?{controllerId:actor.controllerPeer}:{}),
   };
   if(combatant) entity.runtimeLife={deathSaves:{...combatant.life.deathSaves},stable:combatant.life.stable,unconscious:combatant.life.unconscious,dead:combatant.life.dead};
-  entity.engagement=[...actor.engagement];
+  const engaged=engagedWith(state.engagements,actor.id);
+  if(engaged.length) entity.engagedWithIds=engaged;
   return entity;
 }
 
@@ -88,7 +90,7 @@ export function projectTable(state:TableState,viewer:TableViewer,refusal?:(Table
   const entities=visible.map((id)=>entityFor(state,state.actors[id],viewer));
   const actionsByActor=Object.fromEntries(visible.map((id)=>[id,projectedActions(state,state.actors[id])]));
   const economyByActor=Object.fromEntries(visible.map((id)=>[id,economyView(state,id)]));
-  const scene:SceneVm={id:state.sessionId,name:"",round:state.round,currentActorId:state.currentActorId??"",selectedActorId:"",entities,actionsByActor,economyByActor};
+  const scene:SceneVm={id:state.sessionId,name:"",round:state.round,currentActorId:state.currentActorId??"",selectedActorId:"",entities,actionsByActor,economyByActor,...(state.engagements.length?{engagements:state.engagements.map((record)=>({...record}))}:{})};
   const activity:ActivityEntry[]=state.log.filter((entry)=>viewer.role==="dm"||entry.visibility==="public").map((entry)=>({
     id:entry.id,time:entry.time,actor:entry.actor,title:entry.title,summary:entry.summary,detail:[...entry.detail],stateChanges:[...entry.stateChanges],
     ...(entry.ruling?{ruling:entry.ruling}:{}),...(entry.undoOf?{undoOf:entry.undoOf}:{}),...(entry.reversed?{reversed:true}:{}),

@@ -1,4 +1,6 @@
 import { beginTurn } from "../../domain/turnEconomy";
+import { pruneIdleEngagements } from "../../domain/engagement";
+import { pairLabel } from "../engagement";
 import type { ResolutionOperation } from "../../domain/resolutionTypes";
 import type { TableCommand } from "../commands";
 import { actorDexModifier } from "../actors";
@@ -42,8 +44,10 @@ export function endInitiative(ctx:HandlerContext):HandlerResult {
   for(const combatant of Object.values(rules.combatants)) combatant.economy=beginTurn(combatant.baseSpeed);
   rules.clock={...rules.clock,activeActorId:undefined,phase:undefined,specialWindows:undefined};
   rules.turnFeatureUsage=undefined;
+  // Engagements outlive the fight (a relation play produced); freeform play counts every record as round 1.
+  const engagements=state.engagements.map((record)=>({...record,sinceRound:1,lastMeleeRound:1}));
   return {status:"committed",events:[{
-    payload:{type:"mode-changed",mode:"freeform",order:[],round:0,currentActorId:null,rules},
+    payload:{type:"mode-changed",mode:"freeform",order:[],round:0,currentActorId:null,rules,...(engagements.length?{engagements}:{})},
     log:[logEntry(ctx,{actor:"DM",title:"이니셔티브 종료",summary:"자유 진행으로 전환",detail:[],stateChanges:["SessionMode = freeform"]})],
   }]};
 }
@@ -74,9 +78,15 @@ export function endTurn(ctx:HandlerContext):HandlerResult {
     {id:`turn.${ctx.nextSeq}.begin-turn`,kind:"begin-turn",actorId:next.actorId,round:next.round},
   ]});
   if(committed.status==="refused") return committed;
+  const turnLog=logEntry(ctx,{actor:"시스템",title:"턴 종료",summary:`${actorName(state,current)} → ${actorName(state,next.actorId)}${next.round!==state.round?` · ${next.round}라운드`:""}`,detail:[],stateChanges:[]});
+  if(next.round===state.round) return {status:"committed",events:[{payload:{type:"turn-changed",currentActorId:next.actorId,round:next.round,rules:committed.commit.state},log:[turnLog]}]};
+  const kept=pruneIdleEngagements(state.engagements,next.round);
+  const dropped=state.engagements.filter((record)=>!kept.includes(record));
+  const log=[turnLog];
+  if(dropped.length) log.push(logEntry(ctx,{index:1,actor:"시스템",title:"교전 종료 · 한 라운드 동안 근접 공격 없음",summary:dropped.map((record)=>pairLabel(state,record)).join(", "),detail:[`${next.round}라운드 시작 · 직전 라운드에 근접 공격이 없던 교전이 끝납니다.`],stateChanges:dropped.map((record)=>`교전 종료: ${pairLabel(state,record)}`)}));
   return {status:"committed",events:[{
-    payload:{type:"turn-changed",currentActorId:next.actorId,round:next.round,rules:committed.commit.state},
-    log:[logEntry(ctx,{actor:"시스템",title:"턴 종료",summary:`${actorName(state,current)} → ${actorName(state,next.actorId)}${next.round!==state.round?` · ${next.round}라운드`:""}`,detail:[],stateChanges:[]})],
+    payload:{type:"turn-changed",currentActorId:next.actorId,round:next.round,rules:committed.commit.state,...(dropped.length?{engagements:kept}:{})},
+    log,
   }]};
 }
 

@@ -1,32 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { CharacterSheet } from "../../src/app/contracts";
-import { queuedDice } from "../../src/table/dice";
+import { engagedWith } from "../../src/domain/engagement";
 import { replayEvents } from "../../src/table/events";
 import { projectTable } from "../../src/table/project";
 import { TableRuntime } from "../../src/table/runtime";
 import { createTableState } from "../../src/table/state";
+import { GOBLIN, P1, fighter, hp, table } from "./fixtures";
 
-const GOBLIN="dnd.srd521.monster.goblin-warrior"; // HP 10 · AC 15 · 시미터 +1, 1d6-1 참격
-const P1={peerId:"peer.p1",role:"player" as const};
-
-function fighter():CharacterSheet {
-  return {
-    id:"char.kael",name:"카엘",className:"전사",subclassName:"챔피언",level:5,classLevels:[{classId:"dnd.srd521.class.fighter",className:"전사",level:5}],species:"인간",background:"군인",
-    hp:31,maxHp:42,tempHp:0,ac:18,speed:30,proficiencyBonus:3,saveState:"saved",
-    abilities:{str:18,dex:14,con:16,int:10,wis:12,cha:8},saves:["근력 +7","건강 +6"],skills:["운동 +7"],features:["추가 공격"],equipment:[],items:[],
-    resources:[{id:"resource.second-wind",label:"세컨드 윈드",current:1,max:1,source:"전사 1레벨"}],
-    attacks:[{id:"action.longsword",name:"롱소드",bonus:7,damage:"1d8 + 4 참격"}],
-  } as unknown as CharacterSheet;
-}
-
-function table(queue:number[]) {
-  const dice=queuedDice(queue);
-  const runtime=new TableRuntime({sessionId:"table.test",dice,now:()=>"T"});
-  return {runtime,dice};
-}
-
-const hp=(runtime:TableRuntime,id:string)=>runtime.state.rules.combatants[id].life.hp.current;
 const actionOf=(runtime:TableRuntime,actorId:string,actionId:string,viewer:{role:"dm"|"player"}={role:"dm"})=>projectTable(runtime.state,viewer).scene.actionsByActor[actorId]?.find((action)=>action.id===actionId);
 
 test("T2-01: a fight on the table runtime — add actors, initiative, attacks, economy, refusals, rulings, undo, replay parity", () => {
@@ -60,7 +40,7 @@ test("T2-01: a fight on the table runtime — add actors, initiative, attacks, e
   assert.equal(swing.resolution?.damageComponents[0]?.adjusted,9);
   assert.equal(hp(runtime,gob1),1);
   assert.ok(swing.resolution?.stateChanges.includes("고블린 전사 1 HP 10 → 1"),JSON.stringify(swing.resolution?.stateChanges));
-  assert.deepEqual(runtime.state.actors[kael].engagement,[gob1],"a melee hit engages the pair");
+  assert.deepEqual(engagedWith(runtime.state.engagements,kael),[gob1],"a melee hit engages the pair");
   assert.equal(runtime.state.log[0].title,swing.resolution?.finalOutcome);
   // 추가 공격: 5레벨 전사는 공격 행동으로 두 번 — 행동은 썼지만 두 번째 공격은 가능
   assert.equal(runtime.state.rules.combatants[kael].economy.action,false);
@@ -72,7 +52,7 @@ test("T2-01: a fight on the table runtime — add actors, initiative, attacks, e
   assert.equal(second.status,"committed",JSON.stringify(second));
   assert.equal(hp(runtime,gob1),0);
   assert.equal(runtime.state.rules.combatants[gob1].life.dead,true,"a monster at 0 HP dies");
-  assert.deepEqual(runtime.state.actors[kael].engagement,[],"a dead target releases the engagement");
+  assert.deepEqual(engagedWith(runtime.state.engagements,kael),[],"a dead target releases the engagement");
   // 세 번째 공격은 거부 — 타일 이유와 거부 이유가 같다
   const tile=actionOf(runtime,kael,"action.longsword");
   assert.equal(tile?.available,false);
@@ -230,7 +210,7 @@ test("T2-01: a monster save action against several targets, and the rest of the 
   assert.ok(projectTable(runtime.state,{role:"dm"}).scene.entities.find((entity)=>entity.id===dragon)?.status.includes("숨음"));
   assert.ok(!projectTable(runtime.state,{role:"player"}).scene.entities.find((entity)=>entity.id===dragon)?.status.includes("숨음"),"players do not see the DM's hidden badge");
   assert.equal(runtime.dispatch({type:"ruling",targetIds:["char.kael"],ruling:{kind:"engage",otherId:dragon,on:true}}).status,"committed");
-  assert.deepEqual(runtime.state.actors[dragon].engagement,["char.kael"]);
+  assert.deepEqual(engagedWith(runtime.state.engagements,dragon),["char.kael"]);
   assert.equal(runtime.dispatch({type:"ruling",targetIds:["char.kael"],ruling:{kind:"resource",resourceId:"resource.second-wind",delta:-1}}).status,"committed");
   assert.equal(runtime.state.rules.combatants["char.kael"].resources[0].current,0);
   const broke=runtime.dispatch({type:"ruling",targetIds:["char.kael"],ruling:{kind:"resource",resourceId:"resource.second-wind",delta:-1}});
