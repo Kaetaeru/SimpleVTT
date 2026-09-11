@@ -8,6 +8,7 @@ import { addActors, removeActor, setActor } from "./handlers/actors";
 import { object, posture } from "./handlers/objects";
 import { answerQuestion, declare, ready, skipQuestion, triggerReady } from "./handlers/flow";
 import { forgetRuling, improvise, narrate, rememberRuling, request, rule } from "./handlers/improvise";
+import { rest } from "./handlers/rest";
 import { ruling, rulingLabel } from "./handlers/ruling";
 import { endInitiative, endTurn, setCurrentActor, setOrder, startInitiative } from "./handlers/turns";
 import type { HandlerContext, HandlerResult } from "./handlers/types";
@@ -41,6 +42,11 @@ function authorize(state:TableState,command:TableCommand,origin:CommandOrigin):T
     if(actor.controllerPeer!==origin.peerId) return {code:"not-authorized",message:"자기 캐릭터로만 말할 수 있습니다.",actorId:command.actorId};
     return null;
   }
+  if(command.type==="rest") {
+    const foreign=command.actorIds.find((id)=>state.actors[id]?.controllerPeer!==origin.peerId);
+    if(foreign) return {code:"not-authorized",message:"자기 캐릭터만 쉬게 할 수 있습니다. 파티 휴식은 DM이 시작합니다.",actorId:foreign};
+    return null;
+  }
   if(command.type==="act"||command.type==="posture"||command.type==="object"||command.type==="declare"||command.type==="ready"||command.type==="improvise"||command.type==="request") {
     const actor=state.actors[command.actorId];
     if(!actor) return {code:"actor-unknown",message:"테이블에 없는 액터입니다.",actorId:command.actorId};
@@ -71,6 +77,7 @@ function describe(state:TableState,command:TableCommand):string {
     case "request": return `${state.actors[command.actorId]?.name??command.actorId} · 요청`;
     case "remember-ruling": return `즉석 규칙 저장 · ${command.name}`;
     case "forget-ruling": return "즉석 규칙 삭제";
+    case "rest": return command.kind==="short"?"짧은 휴식":"긴 휴식";
     case "ruling": return `DM 재량 · ${rulingLabel(state,command.ruling)}`;
     case "add-actors": return "액터 추가";
     case "remove-actor": return `액터 제거 · ${state.actors[command.actorId]?.name??command.actorId}`;
@@ -174,6 +181,7 @@ export class TableRuntime {
       case "request": return request(ctx,command);
       case "remember-ruling": return rememberRuling(ctx,command);
       case "forget-ruling": return forgetRuling(ctx,command);
+      case "rest": return rest(ctx,command);
       case "ruling": return ruling(ctx,command);
       default: return refused("command-unknown","알 수 없는 명령입니다.");
     }

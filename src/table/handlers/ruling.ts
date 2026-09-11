@@ -7,7 +7,7 @@ import type { ActorPatch } from "../events";
 import { refused } from "../refusal";
 import { lifeStateChanges } from "../resolutionCard";
 import { cloneState, engagementRound, type TableState } from "../state";
-import { NEXT_ROLL_TAG } from "./act";
+import { NEXT_ROLL_TAG, concentrationCheckFor } from "./act";
 import { actorName, commitOperations, logEntry, type EventDraft, type HandlerContext, type HandlerResult } from "./types";
 
 export const RULING_SOURCE="table:ruling";
@@ -39,9 +39,11 @@ function operationsFor(ctx:HandlerContext,seq:number,targetId:string,ruling:Ruli
   const creatureKind=actor.kind==="character"?"character" as const:"monster" as const;
   const base=`ruling.${seq}.${targetId}`;
   switch(ruling.kind) {
-    case "damage":
+    case "damage": {
       if(!Number.isInteger(ruling.amount)||ruling.amount<=0) return {error:"피해는 1 이상의 정수여야 합니다."};
-      return [{id:`${base}:damage`,kind:"damage",targetId,damageType:ruling.damageType??"재량",amount:ruling.amount,creatureKind}];
+      const concentrationCheck=concentrationCheckFor(ctx,targetId);
+      return [{id:`${base}:damage`,kind:"damage",targetId,damageType:ruling.damageType??"재량",amount:ruling.amount,creatureKind,...(concentrationCheck?{concentrationCheck}:{})}];
+    }
     case "heal":
       if(!Number.isInteger(ruling.amount)||ruling.amount<=0) return {error:"회복은 1 이상의 정수여야 합니다."};
       if(combatant.life.dead) return {error:"죽은 대상은 회복되지 않습니다. 부활을 사용하세요."};

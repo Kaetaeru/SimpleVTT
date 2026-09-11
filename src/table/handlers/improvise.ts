@@ -13,7 +13,7 @@ import { playerRequestQuestion, rulingRequestQuestion, withoutQuestion } from ".
 import { refused } from "../refusal";
 import { lifeStateChanges, plainCard } from "../resolutionCard";
 import { cloneState, type Actor, type FloorItem, type RulingOutcome, type TableQuestion, type TableState } from "../state";
-import { NEXT_ROLL_TAG, STATUS_TAG } from "./act";
+import { NEXT_ROLL_TAG, STATUS_TAG, concentrationCheckFor } from "./act";
 import { actorName, commitOperations, logEntry, type EventDraft, type HandlerContext, type HandlerResult } from "./types";
 
 /**
@@ -63,7 +63,10 @@ function outcomeOperations(ctx:HandlerContext,resolutionId:string,label:string,a
     const targets=(outcome.damage.targetIds??targetIds).filter((id)=>state.rules.combatants[id]);
     if(targets.length) {
       operations.push({id:rollId,kind:"damage-roll",...(when?{when}:{}),request:{dice:parsed.count?[{source:RULING_SOURCE,sides:parsed.sides,count:parsed.count,faces:ctx.dice.faces(parsed.sides,parsed.count*2,`판정 피해`)}]:[],flat:parsed.flat?[{source:`${RULING_SOURCE}:flat`,value:parsed.flat}]:[]}});
-      for(const targetId of targets) operations.push({id:`${resolutionId}:${label}:damage:${targetId}`,kind:"damage",...(when?{when}:{}),targetId,damageType:outcome.damage.type,amount:{operationId:rollId,field:"total"},creatureKind:state.actors[targetId]?.kind==="character"?"character":"monster"});
+      for(const targetId of targets) {
+        const concentrationCheck=concentrationCheckFor(ctx,targetId);
+        operations.push({id:`${resolutionId}:${label}:damage:${targetId}`,kind:"damage",...(when?{when}:{}),targetId,damageType:outcome.damage.type,amount:{operationId:rollId,field:"total"},creatureKind:state.actors[targetId]?.kind==="character"?"character":"monster",...(concentrationCheck?{concentrationCheck}:{})});
+      }
     }
   }
   for(const [index,condition] of (outcome.conditions??[]).entries()) {

@@ -21,6 +21,25 @@ export function fighter():CharacterSheet {
   } as unknown as CharacterSheet;
 }
 
+/** 세라 — 3레벨 생명 영역 클레릭. 주문 DC 13 · 주문 공격 +5 · 슬롯 1레벨 4, 2레벨 2 · 성표(초점) · 메이스 · 방패(가방). */
+export function cleric():CharacterSheet {
+  return {
+    id:"char.sera",name:"세라",className:"클레릭",subclassName:"생명 영역",level:3,classLevels:[{classId:"dnd.srd521.class.cleric",className:"클레릭",level:3}],species:"인간",background:"복사",
+    hp:24,maxHp:24,tempHp:0,ac:18,speed:30,proficiencyBonus:2,saveState:"saved",
+    abilities:{str:14,dex:10,con:14,int:10,wis:16,cha:12},saves:["지혜 +5","매력 +3"],skills:["의학 +5","통찰 +5"],features:[],equipment:[],
+    items:[
+      {id:"item.mace",definitionId:"dnd.srd521.item.weapon.mace",name:"메이스",kind:"equipment",quantity:1,equipped:true,wielded:true,wieldSlot:"main-hand",passiveEffects:[],grantedActionIds:["action.mace"],provenance:[]},
+      {id:"item.shield",definitionId:"dnd.srd521.item.armor.shield",name:"방패",kind:"equipment",quantity:1,equipped:true,wielded:false,passiveEffects:[],grantedActionIds:[],provenance:[]},
+      {id:"item.holy-symbol",definitionId:"dnd.srd521.item.gear.holy-symbol",name:"성표",kind:"equipment",quantity:1,equipped:true,spellcastingComponent:"focus",passiveEffects:[],grantedActionIds:[],provenance:[]},
+      {id:"item.holy-water",definitionId:"dnd.srd521.spell.bless.material.1",name:"성수 (축복 재료, 5gp)",kind:"consumable",quantity:1,equipped:false,unitCostGp:5,passiveEffects:[],grantedActionIds:[],provenance:[]},
+    ],
+    resources:[],
+    attacks:[{id:"action.mace",name:"메이스",bonus:4,damage:"1d6 + 2 타격"}],
+    cantrips:["dnd.srd521.spell.sacred-flame"],
+    preparedSpells:["dnd.srd521.spell.healing-word","dnd.srd521.spell.cure-wounds","dnd.srd521.spell.bless","dnd.srd521.spell.guiding-bolt"],
+  } as unknown as CharacterSheet;
+}
+
 export function table(queue:number[]) {
   const dice=queuedDice(queue);
   const runtime=new TableRuntime({sessionId:"table.test",dice,now:()=>"T"});

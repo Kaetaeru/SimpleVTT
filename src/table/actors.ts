@@ -2,6 +2,7 @@ import type { CombatantRuntimeState } from "../domain/combatState";
 import { beginTurn } from "../domain/turnEconomy";
 import type { AbilityKey, ActionDetailVm, ActionVm, CharacterSheet, CombatantDefinitionVm, ItemInstanceVm } from "../app/contracts";
 import { weaponHasProperty, weaponRuleById, type WeaponRuleDefinition } from "../domain/weaponRuleCatalog";
+import { hitDicePools, spellActionsFor, spellSlotPools, type SpellSheet } from "./spells";
 import type { CombatantRuntimeAttackVm, CombatantRuntimeSaveActionVm, CombatantRuntimeTextActionVm } from "../app/combatantRuntimeContracts";
 import { abilityLabelKo, conditionLabelKo, srdMonsterById, srdMonsterCombatantDefinition } from "../app/srdMonsterCatalog";
 import type { ConditionId } from "../domain/conditions";
@@ -23,6 +24,14 @@ declare module "../app/contracts" {
     tableEscape?:boolean;
     /** Let go of a grappled creature (free). */
     tableRelease?:boolean;
+    /** Hide: on success the actor gets the Invisible condition until it attacks, casts with a verbal component, or is found. */
+    tableHide?:boolean;
+    /** Stabilize: WIS (Medicine) DC 10 on a creature at 0 HP. */
+    tableStabilize?:boolean;
+    /** Search / Study / Influence: a check the DM reads; no DC of its own. */
+    tableOpenCheck?:"search"|"study"|"influence";
+    /** Drink (bonus action) or administer (action) a potion; the item's quantity drops by one. */
+    tablePotion?:{itemId:string;administer:boolean};
   }
 }
 
@@ -99,13 +108,16 @@ function monsterCombatant(actorId:string,definition:CombatantDefinitionVm):Comba
 
 function characterCombatant(sheet:CharacterSheet):CombatantRuntimeState {
   const speed=Number.isInteger(sheet.speed)&&sheet.speed>=0?sheet.speed:30;
+  const spellSheet=sheet as SpellSheet;
+  const ownResources=sheet.resources.map((resource)=>({id:resource.id,label:resource.label,current:resource.current,maximum:resource.max,recovery:/짧은 휴식|short rest/i.test(resource.source)?{shortRest:"all" as const,longRest:"all" as const}:{longRest:"all" as const}}));
+  const slotIds=new Set(ownResources.map((resource)=>resource.id));
   return {
     id:sheet.id,
     baseSpeed:speed,
     life:{hp:{current:sheet.hp,maximum:sheet.maxHp,temporary:sheet.tempHp??0},deathSaves:{successes:0,failures:0},stable:false,unconscious:sheet.hp<=0,dead:false},
     economy:beginTurn(speed),
-    resources:sheet.resources.map((resource)=>({id:resource.id,label:resource.label,current:resource.current,maximum:resource.max})),
-    hitDice:[],
+    resources:[...ownResources,...spellSlotPools(spellSheet).filter((pool)=>!slotIds.has(pool.id))],
+    hitDice:hitDicePools(spellSheet),
     damageDefenses:[],
   };
 }
@@ -301,6 +313,15 @@ function characterActions(actor:Actor,sheet:CharacterSheet,state?:TableState):Ac
   actions.push({id:"action.escape-grapple",actorId,name:"붙잡힘 탈출",category:"basic",target:"self",economy:"행동",resolutionKind:"ability-check",summary:`근력(운동) ${signed(characterSkillBonus(sheet,"운동","str"))} 또는 민첩(곡예) ${signed(characterSkillBonus(sheet,"곡예","dex"))} vs 붙잡은 쪽의 DC`,available:true,eligibleTargetIds:[actorId],checkBonus:Math.max(characterSkillBonus(sheet,"운동","str"),characterSkillBonus(sheet,"곡예","dex")),tableEscape:true,details:[detail("판정","운동 또는 곡예 (높은 쪽)"),detail("비용","행동 1"),detail("출처",`${STANDARD_SOURCE} · Grappled`)]});
   actions.push({id:"action.release-grapple",actorId,name:"놓아주기",category:"basic",target:"self",economy:"없음",resolutionKind:"no-roll",summary:"붙잡은 대상을 놓아준다 (비용 없음)",available:true,eligibleTargetIds:[actorId],tableRelease:true,details:[detail("비용","없음")]});
   actions.push(...standardActions(actor,sheet.speed));
+  actions.push(...spellActionsFor(actor,sheet as SpellSheet));
+  for(const item of sheet.items) {
+    const potion=/potion-of-healing/i.test(item.definitionId)||/치유 물약|potion of healing/i.test(`${item.name} ${item.nameEn??""}`);
+    if(!potion) continue;
+    const base={category:"basic" as const,resolutionKind:"healing" as const,healing:{dice:"2d4",flat:2,average:7},itemCost:{itemId:item.id,quantity:1},available:item.quantity>0,...(item.quantity>0?{}:{disabledReason:"남은 수량이 없습니다."})};
+    actions.push({id:`item.${item.id}.drink`,actorId,name:`${item.name} 마시기`,target:"self",economy:"추가 행동",summary:`2d4 + 2 회복 · ${item.quantity}개 · 추가 행동`,eligibleTargetIds:[actorId],tablePotion:{itemId:item.id,administer:false},details:[detail("대상","자신"),detail("회복","2d4 + 2"),detail("비용","추가 행동 · 물약 1개"),detail("출처",`${STANDARD_SOURCE} · Potion of Healing`)],...base});
+    actions.push({id:`item.${item.id}.administer`,actorId,name:`${item.name} 먹이기`,target:"any",economy:"행동",summary:`다른 이에게 2d4 + 2 회복 · 행동`,eligibleTargetIds:[],tablePotion:{itemId:item.id,administer:true},details:[detail("대상","다른 크리처 1명"),detail("회복","2d4 + 2"),detail("비용","행동 · 물약 1개")],...base});
+  }
+  actions.push(...tableChecks(actor,(skill,ability)=>characterSkillBonus(sheet,skill,ability)));
   for(const key of ABILITY_KEYS) {
     const label=abilityLabelKo(key);
     actions.push({id:`action.ability.${key}`,actorId,name:`${label} 판정`,category:"basic",target:"none",economy:"없음",resolutionKind:"ability-check",summary:`d20 ${signed(actorAbilityModifier(actor,key))}`,available:true,eligibleTargetIds:[],checkBonus:actorAbilityModifier(actor,key),details:[detail("능력",label),detail("수정치",signed(actorAbilityModifier(actor,key)))]});
@@ -342,6 +363,29 @@ function monsterTextAction(actor:Actor,spec:CombatantRuntimeTextActionVm):Action
   return {id:spec.id,actorId:actor.id,name:spec.name,category:"basic",target:"none",economy:spec.economy,resolutionKind:"no-roll",summary:spec.text.slice(0,80),available:true,eligibleTargetIds:[],completionOutcome:spec.name,details:[detail("설명",spec.text)]};
 }
 
+/** Hide, Stabilize, Search, Study and Influence (2024 action list) as checks; the DM reads the open ones. */
+function tableChecks(actor:Actor,bonus:(skill:string,ability:AbilityKey)=>number):ActionVm[] {
+  const actorId=actor.id;
+  const check=(id:string,name:string,skill:string,ability:AbilityKey,extra:Partial<ActionVm>,details:ActionDetailVm[]):ActionVm=>({id,actorId,name,category:"basic",target:"none",economy:"행동",resolutionKind:"ability-check",summary:`${abilityLabelKo(ability)}(${skill}) ${signed(bonus(skill,ability))}`,available:true,eligibleTargetIds:[],checkBonus:bonus(skill,ability),details:[...details,detail("비용","행동 1")],...extra});
+  return [
+    check("action.standard.hide","숨기","은신","dex",{tableHide:true},[detail("판정","민첩(은신) DC 15"),detail("성공","숨음 (투명 조건) · 공격하거나 음성 주문을 쓰면 해제"),detail("출처",`${STANDARD_SOURCE} · Hide`)]),
+    check("action.standard.stabilize","안정화","의학","wis",{tableStabilize:true,target:"any"},[detail("판정","지혜(의학) DC 10"),detail("대상","HP 0의 불안정한 크리처"),detail("출처",`${STANDARD_SOURCE} · Stabilize`)]),
+    check("action.standard.search.perception","찾기 · 지각","지각","wis",{tableOpenCheck:"search"},[detail("판정","지혜(지각)"),detail("결과","DM이 읽고 판단합니다")]),
+    check("action.standard.search.insight","찾기 · 통찰","통찰","wis",{tableOpenCheck:"search"},[detail("판정","지혜(통찰)")]),
+    check("action.standard.search.survival","찾기 · 생존","생존","wis",{tableOpenCheck:"search"},[detail("판정","지혜(생존)")]),
+    check("action.standard.study.investigation","조사 · 조사","조사","int",{tableOpenCheck:"study"},[detail("판정","지능(조사)")]),
+    check("action.standard.study.arcana","조사 · 비전","비전","int",{tableOpenCheck:"study"},[detail("판정","지능(비전)")]),
+    check("action.standard.study.history","조사 · 역사","역사","int",{tableOpenCheck:"study"},[detail("판정","지능(역사)")]),
+    check("action.standard.study.nature","조사 · 자연","자연","int",{tableOpenCheck:"study"},[detail("판정","지능(자연)")]),
+    check("action.standard.study.religion","조사 · 종교","종교","int",{tableOpenCheck:"study"},[detail("판정","지능(종교)")]),
+    check("action.standard.influence.persuasion","영향 · 설득","설득","cha",{tableOpenCheck:"influence"},[detail("판정","매력(설득)"),detail("결과","DM이 태도와 DC를 정합니다")]),
+    check("action.standard.influence.deception","영향 · 기만","기만","cha",{tableOpenCheck:"influence"},[detail("판정","매력(기만)")]),
+    check("action.standard.influence.intimidation","영향 · 위협","위협","cha",{tableOpenCheck:"influence"},[detail("판정","매력(위협)")]),
+    check("action.standard.influence.performance","영향 · 공연","공연","cha",{tableOpenCheck:"influence"},[detail("판정","매력(공연)")]),
+    check("action.standard.influence.animal-handling","영향 · 동물 조련","동물 조련","wis",{tableOpenCheck:"influence"},[detail("판정","지혜(동물 조련)")]),
+  ];
+}
+
 function monsterActions(actor:Actor,definition:CombatantDefinitionVm):ActionVm[] {
   return [
     ...(definition.runtimeActions??[]).map((spec)=>monsterAttackAction(actor,spec)),
@@ -350,6 +394,7 @@ function monsterActions(actor:Actor,definition:CombatantDefinitionVm):ActionVm[]
     ...standardActions(actor,definition.runtimeStats?.speed??30).filter((action)=>action.id!=="action.standard.help"),
     {id:"action.escape-grapple",actorId:actor.id,name:"붙잡힘 탈출",category:"basic",target:"self",economy:"행동",resolutionKind:"ability-check",summary:"근력 또는 민첩 (높은 쪽) vs 붙잡은 쪽의 DC",available:true,eligibleTargetIds:[actor.id],checkBonus:Math.max(actorAbilityModifier(actor,"str"),actorAbilityModifier(actor,"dex")),tableEscape:true,details:[detail("판정","근력 또는 민첩 (높은 쪽)"),detail("비용","행동 1")]},
     {id:"action.release-grapple",actorId:actor.id,name:"놓아주기",category:"basic",target:"self",economy:"없음",resolutionKind:"no-roll",summary:"붙잡은 대상을 놓아준다 (비용 없음)",available:true,eligibleTargetIds:[actor.id],tableRelease:true,details:[detail("비용","없음")]},
+    ...tableChecks(actor,(_skill,ability)=>actorAbilityModifier(actor,ability)),
   ];
 }
 

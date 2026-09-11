@@ -32,7 +32,7 @@ export type TableCommand=
   |{type:"end-turn"}
   |{type:"set-current-actor";actorId:string}
   |{type:"set-order";order:string[]}
-  |{type:"act";actorId:string;actionId:string;targetIds:string[];itemId?:string}
+  |{type:"act";actorId:string;actionId:string;targetIds:string[];itemId?:string;/** Upcast: the slot level to spend (spells only). */slotLevel?:number}
   /** 엎드리기 (free, any time) / 일어나기 (half speed of movement in Initiative). */
   |{type:"posture";actorId:string;posture:"prone"|"stand"}
   /** Hands and objects: draw/stow (free interaction, then Utilize), drop (free), pick-up, give (adjacent), throw-to (an ally, at range). */
@@ -58,6 +58,8 @@ export type TableCommand=
   |{type:"request";actorId:string;kind:"undo"|"correction"|"item-fix"|"visibility";text:string;payload?:{itemId?:string;quantity?:number;resourceId?:string;current?:number}}
   /** DM: remember a ruling as a house rule for this table. */
   |{type:"remember-ruling";name:string;keyword:string;spec:RulingSpec}
+  /** Short or long rest for the named actors (freeform only); hit dice to spend per actor on a short rest. */
+  |{type:"rest";kind:"short"|"long";actorIds:string[];hitDice?:Record<string,number>}
   |{type:"forget-ruling";ruleId:string}
   |{type:"undo"}
   |{type:"set-roll-visibility";visibility:Visibility};

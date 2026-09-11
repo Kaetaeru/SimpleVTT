@@ -62,7 +62,7 @@ export function eligibleTargetIds(state:TableState,action:ActionVm):string[] {
   switch(action.target) {
     case "self": return [actor.id];
     case "none": return [];
-    case "ally": return candidates.filter((candidate)=>candidate.side===actor.side&&candidate.id!==actor.id&&!state.rules.combatants[candidate.id].life.dead).map((candidate)=>candidate.id);
+    case "ally": return candidates.filter((candidate)=>candidate.side===actor.side&&(candidate.id!==actor.id||action.tableSpell?.allowSelf)&&!state.rules.combatants[candidate.id].life.dead).map((candidate)=>candidate.id);
     case "enemy":
     case "multi-enemy": return candidates.filter((candidate)=>candidate.side!==actor.side&&!state.rules.combatants[candidate.id].life.dead).map((candidate)=>candidate.id);
     // Attacks may aim at anyone on the table but the attacker (D7: allies included, no confirmation); never the dead.

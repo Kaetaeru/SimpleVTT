@@ -16,6 +16,8 @@ import { parseDiceNotation } from "../dice";
 import { clearEngagement, clearEngagementsOf, type EngagementRecord, engagedWith, isEngaged, recordMeleeAttack } from "../../domain/engagement";
 import { ENGAGEMENT_RANGED_IN_MELEE_SOURCE, engagementsAmongLiving, engagementsEqual, hostileEngagedIds, isMeleeAttack, isRangedAttack } from "../engagement";
 import { knockOutQuestion } from "../questions";
+import { castAct } from "./spells";
+import type { ConcentrationCheckRequest } from "../../domain/concentration";
 import { freeHands } from "../hands";
 import { actorProficiencyBonus, actorSizeRank } from "../actors";
 import { kernelErrorKo, refused } from "../refusal";
@@ -26,6 +28,27 @@ import { actorName, commitOperations, type HandlerContext, type HandlerResult } 
 
 export const NEXT_ROLL_TAG="table:next-roll";
 export const STATUS_TAG="table:status";
+export const HIDDEN_TAG="table:hidden";
+
+/** Damage to a concentrating creature needs its concentration save rolled up front (the kernel refuses otherwise). */
+export function concentrationCheckFor(ctx:HandlerContext,targetId:string,rules:RulesRuntimeState=ctx.state.rules):Omit<ConcentrationCheckRequest,"damage">|undefined {
+  if(!rules.concentration[targetId]) return undefined;
+  const target=ctx.state.actors[targetId];
+  if(!target) return undefined;
+  return {dice:{id:`concentration:${targetId}:${ctx.nextSeq}`,purpose:`${target.name} 집중 유지`,sides:20,faces:ctx.dice.faces(20,2,"집중 유지")},modifierContributions:[{source:"save:con",value:actorSaveModifier(target,"con")}]};
+}
+
+/** Hiding ends when the hidden creature attacks or casts with a verbal component: the effect ids to remove. */
+export function hiddenEndsFor(rules:RulesRuntimeState,actorId:string):string[] {
+  return rules.effects.filter((effect)=>effect.targetId===actorId&&effect.tags.includes(HIDDEN_TAG)).map((effect)=>effect.id);
+}
+
+/** D9: melee kills ask 죽임/기절; spells and ranged attacks do not. Returns the new question list, or undefined when nothing changed. */
+export function knockOutQuestionsFor(state:TableState,after:RulesRuntimeState,attackerId:string,targetIds:string[],seq:number,melee:boolean):TableQuestion[]|undefined {
+  if(!melee) return undefined;
+  const killed=targetIds.filter((targetId)=>state.actors[targetId]?.kind==="npc"&&!state.rules.combatants[targetId]?.life.dead&&after.combatants[targetId]?.life.dead);
+  return killed.length?[...state.questions,...killed.map((targetId)=>knockOutQuestion(state,attackerId,targetId,seq))]:undefined;
+}
 
 const economySlot=(action:ActionVm)=>action.economy==="행동"?"action" as const:action.economy==="추가 행동"?"bonus-action" as const:action.economy==="반응"?"reaction" as const:undefined;
 
@@ -102,6 +125,17 @@ function disengage(state:TableState,action:ActionVm,actorId:string):{engagements
   return {engagements:clearEngagementsOf(state.engagements,actorId),line:`교전 종료 (이탈): ${actorName(state,actorId)} ↔ ${engaged.map((id)=>actorName(state,id)).join(", ")}`};
 }
 
+/** A consumable leaves the bag (a potion drunk, a scroll read): the sheet patch for the owner's write-back. */
+function takeItem(actor:Actor,itemId:string,quantity:number):{sheets:SheetPatch[];line:string}|null {
+  if(actor.source.kind!=="character") return null;
+  const sheet=cloneState(actor.source.sheet);
+  const item=sheet.items.find((entry)=>entry.id===itemId);
+  if(!item||item.quantity<quantity) return null;
+  if(item.quantity>quantity) sheet.items=sheet.items.map((entry)=>entry.id===itemId?{...entry,quantity:entry.quantity-quantity}:entry);
+  else sheet.items=sheet.items.filter((entry)=>entry.id!==itemId);
+  return {sheets:[{actorId:actor.id,sheet}],line:`${item.name} ${item.quantity} → ${item.quantity-quantity}`};
+}
+
 /** A thrown weapon or object leaves the hand and lands on the floor, recoverable; a stack loses one. */
 function throwFromHand(state:TableState,actor:Actor,itemId:string|undefined,seq:number):{sheets:SheetPatch[];floor:FloorItem[];lines:string[]}|null {
   if(!itemId||actor.source.kind!=="character") return null;
@@ -140,6 +174,8 @@ export function attackAct(ctx:HandlerContext,actor:Actor,action:ActionVm,targetI
     const parsed=damageFromDiceText(extra.dice,extra.flat);
     return {sourceId:`${action.id}:extra:${index}`,damageType:extra.type,dice:parsed.count?[{source:`${action.id}:extra:${index}`,sides:parsed.sides,count:parsed.count,faces:ctx.dice.faces(parsed.sides,parsed.count*2,`${action.name} 추가 피해`)}]:[],flat:parsed.flat?[{source:`${action.id}:extra:${index}:flat`,value:parsed.flat}]:[]};
   });
+  // Drawn after the attack and damage dice so the ledger order stays attack → damage → concentration.
+  const concentrationCheck=concentrationCheckFor(ctx,targetId);
   const request:AttackRequest={
     id:resolutionId,actorId:actor.id,expectedRevision:state.rules.revision,sourceId:action.id,sourceKind:action.runtimeAttack.sourceKind,
     // Mapless table: a melee attack is adjacent by declaration (prone targets, reach); ranged distance stays unknown.
@@ -147,6 +183,7 @@ export function attackAct(ctx:HandlerContext,actor:Actor,action:ActionVm,targetI
     actorCreatureKind:actor.kind==="character"?"character":"monster",
     rangeFeet,attackDice,attackModifierContributions:[{source:`action:${action.id}:attack-bonus`,value:action.attackBonus??0}],requiresSight:rangeFeet<=5,
     ...(rangedInMelee.length?{rollStateContributions:[{source:`${ENGAGEMENT_RANGED_IN_MELEE_SOURCE}:${rangedInMelee.join(",")}`,state:"disadvantage" as const}]}:{}),
+    ...(concentrationCheck?{concentrationCheck}:{}),
     baseDamage:{sourceId:action.id,damageType:spec.type,dice:base.count?[{source:action.id,sides:base.sides,count:base.count,faces:damageFaces}]:[],flat:base.flat?[{source:`${action.id}:flat`,value:base.flat}]:[]},
     riders,
     economy:state.mode==="initiative"&&(ctx.asReaction||economySlot(action))?(ctx.asReaction?{slot:"reaction",actionKind:"attack",attacksPerAction:1}:{slot:economySlot(action)!,bonusActionGranted:economySlot(action)==="bonus-action"?true:undefined,actionKind:"attack",attacksPerAction:action.attacksPerAction??1}):undefined,
@@ -159,12 +196,14 @@ export function attackAct(ctx:HandlerContext,actor:Actor,action:ActionVm,targetI
   const damage=Object.entries(commit.results).find(([key,value])=>key.startsWith(resolutionId)&&Boolean(value)&&typeof value==="object"&&"components" in (value as object))?.[1] as CompoundDamageResolution|undefined;
   const rules=commit.state;
   const consumed=consumeNextRoll(rules,actor.id,"attack-roll");
+  const unhidden=hiddenEndsFor(rules,actor.id);
+  if(unhidden.length) rules.effects=rules.effects.filter((effect)=>!unhidden.includes(effect.id));
   const engaged=options.noEngagement?null:engageByMelee(state,action,actor.id,targetId);
   const thrown=action.tableThrow?throwFromHand(state,actor,action.tableThrow.itemId??itemId,ctx.nextSeq):null;
   // D9: a melee attack that drops a creature to 0 HP may knock it out instead — one question to the attacker.
   const killedNow=isMeleeAttack(action)&&target.kind==="npc"&&!state.rules.combatants[targetId]?.life.dead&&rules.combatants[targetId]?.life.dead;
   const questions=killedNow?[...state.questions,knockOutQuestion(state,actor.id,targetId,ctx.nextSeq)]:undefined;
-  const stateChanges=[...lifeStateChanges(state,state.rules,rules),...consumed.map((label)=>`${actor.name} 상태 종료: ${label}`),...(engaged?[engaged.line]:[]),...(thrown?.lines??[]),...(killedNow?[`질문: ${target.name} 죽임/기절`]:[])];
+  const stateChanges=[...lifeStateChanges(state,state.rules,rules),...consumed.map((label)=>`${actor.name} 상태 종료: ${label}`),...(unhidden.length?[`${actor.name} 숨음 해제 (공격)`]:[]),...(engaged?[engaged.line]:[]),...(thrown?.lines??[]),...(killedNow?[`질문: ${target.name} 죽임/기절`]:[])];
   const card=attackCard({id:resolutionId,seq:ctx.nextSeq,visibility:state.rollVisibility,action,actorId:actor.id,targetIds:[targetId],targetName:target.name,attack,damage,events:commit.events,stateChanges});
   if(engaged) card.provenance.push(`engagement:melee-attack:${actor.id}<->${targetId}:round:${engagementRound(state)}`);
   return commitEvents(ctx,card,rules,engaged?.engagements,{...(thrown??{}),...(questions?{questions}:{})});
@@ -172,20 +211,33 @@ export function attackAct(ctx:HandlerContext,actor:Actor,action:ActionVm,targetI
 
 function checkAct(ctx:HandlerContext,actor:Actor,action:ActionVm,targetIds:string[],resolutionId:string):HandlerResult {
   const state=ctx.state;
-  const dc=action.sessionStatusEffect?.minimumRoll??0;
+  const dc=action.tableHide?15:action.tableStabilize?10:action.sessionStatusEffect?.minimumRoll??0;
   const d20Id=`${resolutionId}:check`;
   const operations:ResolutionOperation[]=[];
+  if(action.tableStabilize) {
+    const targetId=targetIds[0];
+    const target=targetId?state.rules.combatants[targetId]:undefined;
+    if(!target) return refused("target-missing","안정화할 대상을 선택하세요.",{actorId:actor.id,actionId:action.id});
+    if(target.life.dead) return refused("target-ineligible","죽은 대상입니다.",{actorId:actor.id,actionId:action.id});
+    if(target.life.hp.current>0||target.life.stable) return refused("target-ineligible","HP 0의 불안정한 대상만 안정화할 수 있습니다.",{actorId:actor.id,actionId:action.id});
+  }
+  if(action.tableHide&&hiddenEndsFor(state.rules,actor.id).length) return refused("already-hidden","이미 숨어 있습니다.",{actorId:actor.id,actionId:action.id});
   const economy=economyOperation(ctx,resolutionId,action); if(economy) operations.push(economy);
   const resource=resourceOperation(resolutionId,action); if(resource) operations.push(resource);
   operations.push({id:d20Id,kind:"d20",actorId:actor.id,request:{family:"ability-check",target:dc,modifierContributions:[{source:`action:${action.id}:check-bonus`,value:action.checkBonus??0}],dice:{id:`${resolutionId}:d20`,purpose:action.name,sides:20,faces:d20Faces(ctx,action.name)}}});
   for(const effect of statusEffects(ctx,resolutionId,action,targetIds)) operations.push({id:`${effect.id}:apply`,kind:"apply-effect",effect,when:{operationId:d20Id,field:"outcome",equals:"success"}});
+  if(action.tableHide) operations.push({id:`${resolutionId}:hide`,kind:"apply-effect",when:{operationId:d20Id,field:"outcome",equals:"success"},effect:{id:`${resolutionId}:hidden`,sourceId:action.id,sourceActorId:actor.id,targetId:actor.id,kind:"condition",conditionId:"invisible",tags:[STATUS_TAG,HIDDEN_TAG],duration:{kind:"permanent"},metadata:{publicLabel:"숨음"}}});
+  if(action.tableStabilize) operations.push({id:`${resolutionId}:stabilize`,kind:"stabilize",targetId:targetIds[0],when:{operationId:d20Id,field:"outcome",equals:"success"}});
   const committed=commitOperations(ctx,{id:resolutionId,actorId:actor.id,sourceId:action.id,operations,actionId:action.id});
   if(committed.status==="refused") return committed;
   const test=committed.commit.results[d20Id] as D20TestResult;
   const rules=committed.commit.state;
   const consumed=consumeNextRoll(rules,actor.id,"ability-check");
   const stateChanges=[...lifeStateChanges(state,state.rules,rules),...consumed.map((label)=>`${actor.name} 상태 종료: ${label}`)];
-  const labels=action.sessionStatusEffect?{success:action.sessionStatusEffect.successOutcome,failure:action.sessionStatusEffect.failureOutcome??"실패"}:undefined;
+  const labels=action.sessionStatusEffect?{success:action.sessionStatusEffect.successOutcome,failure:action.sessionStatusEffect.failureOutcome??"실패"}
+    :action.tableHide?{success:"숨음",failure:"들킴"}
+    :action.tableStabilize?{success:`${actorName(state,targetIds[0])} 안정`,failure:"안정화 실패"}
+    :action.tableOpenCheck?{success:`판정 ${test.total} (DM이 판단)`,failure:`판정 ${test.total} (DM이 판단)`}:undefined;
   const card=checkCard({id:resolutionId,seq:ctx.nextSeq,visibility:state.rollVisibility,action,actorId:actor.id,targetIds,label:action.name,test,events:committed.commit.events,stateChanges,rollKind:"check",outcomeLabels:labels});
   return commitEvents(ctx,card,rules);
 }
@@ -216,8 +268,9 @@ function saveAct(ctx:HandlerContext,actor:Actor,action:ActionVm,targetIds:string
     if(components.length) {
       const creatureKind=target.kind==="character"?"character" as const:"monster" as const;
       const damageType=components[0].type;
-      operations.push({id:`${resolutionId}:damage:${targetId}:fail`,kind:"damage",targetId,damageType,amount:{operationId:damageRollId,field:"total"},creatureKind,when:{operationId:saveId,field:"outcome",equals:"failure"}});
-      if(action.saveHalf) operations.push({id:`${resolutionId}:damage:${targetId}:half`,kind:"damage",targetId,damageType,amount:{operationId:damageRollId,field:"total",multiplier:0.5,rounding:"floor"},creatureKind,when:{operationId:saveId,field:"outcome",equals:"success"}});
+      const concentrationCheck=concentrationCheckFor(ctx,targetId);
+      operations.push({id:`${resolutionId}:damage:${targetId}:fail`,kind:"damage",targetId,damageType,amount:{operationId:damageRollId,field:"total"},creatureKind,when:{operationId:saveId,field:"outcome",equals:"failure"},...(concentrationCheck?{concentrationCheck}:{})});
+      if(action.saveHalf) operations.push({id:`${resolutionId}:damage:${targetId}:half`,kind:"damage",targetId,damageType,amount:{operationId:damageRollId,field:"total",multiplier:0.5,rounding:"floor"},creatureKind,when:{operationId:saveId,field:"outcome",equals:"success"},...(concentrationCheck?{concentrationCheck}:{})});
     }
     for(const conditionId of definition?.failConditionIds??[]) {
       operations.push({id:`${resolutionId}:condition:${targetId}:${conditionId}`,kind:"apply-effect",when:{operationId:saveId,field:"outcome",equals:"failure"},effect:{id:`${resolutionId}:${conditionId}:${targetId}`,sourceId:action.id,sourceActorId:actor.id,targetId,kind:"condition",conditionId:conditionId as ConditionId,tags:[STATUS_TAG],duration:{kind:"minutes",amount:1},metadata:{publicLabel:conditionLabelKo(conditionId)}}});
@@ -255,13 +308,20 @@ function healAct(ctx:HandlerContext,actor:Actor,action:ActionVm,targetIds:string
   const economy=economyOperation(ctx,resolutionId,action); if(economy) operations.push(economy);
   const resource=resourceOperation(resolutionId,action); if(resource) operations.push(resource);
   operations.push({id:`${resolutionId}:healing`,kind:"healing",targetId,amount});
+  if(action.tablePotion) {
+    const targetActor=state.actors[targetId];
+    if(action.tablePotion.administer&&(targetId===actor.id||!targetActor)) return refused("target-missing","먹일 대상을 선택하세요 (자신은 마시기).",{actorId:actor.id,actionId:action.id});
+    if(state.rules.combatants[targetId]?.life.dead) return refused("target-ineligible","죽은 대상입니다.",{actorId:actor.id,actionId:action.id});
+  }
   const committed=commitOperations(ctx,{id:resolutionId,actorId:actor.id,sourceId:action.id,operations,actionId:action.id});
   if(committed.status==="refused") return committed;
   const rules=committed.commit.state;
   const restored=(committed.commit.results[`${resolutionId}:healing`] as {restored:number}).restored;
   const compact=`${healing.dice}${healing.flat?` + ${healing.flat}`:""} = ${amount} · ${actorName(state,targetId)} ${restored} HP 회복`;
-  const card=plainCard({id:resolutionId,seq:ctx.nextSeq,visibility:state.rollVisibility,action,actorId:actor.id,targetIds:[targetId],rollKind:"healing",compact,detail:[`주사위 ${faces.join("+")||"—"} + ${parsed.flat+healing.flat} = ${amount}`],dice:faces,rollTotal:amount,events:committed.commit.events,stateChanges:lifeStateChanges(state,state.rules,rules)});
-  return commitEvents(ctx,card,rules);
+  const used=action.itemCost&&actor.source.kind==="character"?takeItem(actor,action.itemCost.itemId,action.itemCost.quantity??1):null;
+  if(action.itemCost&&!used) return refused("item-unknown","가방에 없는 물건입니다.",{actorId:actor.id,actionId:action.id});
+  const card=plainCard({id:resolutionId,seq:ctx.nextSeq,visibility:state.rollVisibility,action,actorId:actor.id,targetIds:[targetId],rollKind:"healing",compact,detail:[`주사위 ${faces.join("+")||"—"} + ${parsed.flat+healing.flat} = ${amount}`],dice:faces,rollTotal:amount,events:committed.commit.events,stateChanges:[...lifeStateChanges(state,state.rules,rules),...(used?[used.line]:[])]});
+  return commitEvents(ctx,card,rules,undefined,used?{sheets:used.sheets}:undefined);
 }
 
 function deathSaveAct(ctx:HandlerContext,actor:Actor,action:ActionVm,resolutionId:string):HandlerResult {
@@ -393,6 +453,7 @@ export function act(ctx:HandlerContext,command:Extract<TableCommand,{type:"act"}
   if(targetRefusal) return refused(targetRefusal.code,targetRefusal.message,{actorId:actor.id,actionId:action.id});
   const resolutionId=`res.${ctx.nextSeq}`;
   if(action.id==="action.death-save") return deathSaveAct(ctx,actor,action,resolutionId);
+  if(action.tableSpell) return castAct(ctx,actor,action,targetIds,resolutionId,command.slotLevel);
   if(action.tableUnarmedOption) return unarmedOptionAct(ctx,actor,action,targetIds,resolutionId);
   if(action.tableEscape) return escapeAct(ctx,actor,action,resolutionId);
   if(action.tableRelease) return releaseAct(ctx,actor,action,resolutionId);
