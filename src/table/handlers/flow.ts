@@ -7,6 +7,7 @@ import { opportunityAttackQuestions, readyTriggerQuestion, withoutQuestion } fro
 import { refused } from "../refusal";
 import { cloneState, type TableQuestion, type TableState } from "../state";
 import { act, attackAct } from "./act";
+import { resolvePlayerRequest } from "./improvise";
 import { actorName, commitOperations, logEntry, type EventDraft, type HandlerContext, type HandlerResult } from "./types";
 
 /**
@@ -102,6 +103,10 @@ export function answerQuestion(ctx:HandlerContext,command:Extract<TableCommand,{
       if(first&&(first.payload.type==="rules-committed"||first.payload.type==="table-changed")) first.payload={...first.payload,readied:readiedNext};
       return result;
     }
+    case "player-request":
+      return resolvePlayerRequest(ctx,question,command.optionId);
+    case "ruling-request":
+      return refused("use-rule","즉흥 행동은 판정 카드(rule)로 답합니다. 넘기려면 skip-question을 쓰세요.");
     case "dm":
       return {status:"committed",events:[{payload:{type:"table-changed",questions:remaining},log:[log("질문 답변",`${question.prompt} → ${question.options.find((option)=>option.id===command.optionId)?.label??command.optionId}`)]}]};
   }

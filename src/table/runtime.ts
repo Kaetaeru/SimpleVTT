@@ -7,6 +7,7 @@ import { act } from "./handlers/act";
 import { addActors, removeActor, setActor } from "./handlers/actors";
 import { object, posture } from "./handlers/objects";
 import { answerQuestion, declare, ready, skipQuestion, triggerReady } from "./handlers/flow";
+import { forgetRuling, improvise, narrate, rememberRuling, request, rule } from "./handlers/improvise";
 import { ruling, rulingLabel } from "./handlers/ruling";
 import { endInitiative, endTurn, setCurrentActor, setOrder, startInitiative } from "./handlers/turns";
 import type { HandlerContext, HandlerResult } from "./handlers/types";
@@ -33,7 +34,14 @@ function authorize(state:TableState,command:TableCommand,origin:CommandOrigin):T
     if(question.toPeer!==origin.peerId) return {code:"not-authorized",message:"이 질문은 당신에게 온 것이 아닙니다.",actorId:question.actorId};
     return null;
   }
-  if(command.type==="act"||command.type==="posture"||command.type==="object"||command.type==="declare"||command.type==="ready") {
+  if(command.type==="narrate") {
+    if(!command.actorId) return null;
+    const actor=state.actors[command.actorId];
+    if(!actor) return {code:"actor-unknown",message:"테이블에 없는 액터입니다.",actorId:command.actorId};
+    if(actor.controllerPeer!==origin.peerId) return {code:"not-authorized",message:"자기 캐릭터로만 말할 수 있습니다.",actorId:command.actorId};
+    return null;
+  }
+  if(command.type==="act"||command.type==="posture"||command.type==="object"||command.type==="declare"||command.type==="ready"||command.type==="improvise"||command.type==="request") {
     const actor=state.actors[command.actorId];
     if(!actor) return {code:"actor-unknown",message:"테이블에 없는 액터입니다.",actorId:command.actorId};
     if(actor.controllerPeer!==origin.peerId) return {code:"not-authorized",message:"자기 캐릭터만 조작할 수 있습니다.",actorId:command.actorId,...(command.type==="act"?{actionId:command.actionId}:{})};
@@ -57,6 +65,12 @@ function describe(state:TableState,command:TableCommand):string {
     case "skip-question": return "질문 넘김";
     case "ready": return `${state.actors[command.actorId]?.name??command.actorId} · 준비 행동`;
     case "trigger-ready": return `${state.actors[command.actorId]?.name??command.actorId} · 준비 조건 발생`;
+    case "improvise": return `${state.actors[command.actorId]?.name??command.actorId} · 즉흥 행동 선언`;
+    case "narrate": return "서술";
+    case "rule": return `DM 판정 · ${state.actors[command.actorId]?.name??command.actorId}`;
+    case "request": return `${state.actors[command.actorId]?.name??command.actorId} · 요청`;
+    case "remember-ruling": return `즉석 규칙 저장 · ${command.name}`;
+    case "forget-ruling": return "즉석 규칙 삭제";
     case "ruling": return `DM 재량 · ${rulingLabel(state,command.ruling)}`;
     case "add-actors": return "액터 추가";
     case "remove-actor": return `액터 제거 · ${state.actors[command.actorId]?.name??command.actorId}`;
@@ -81,7 +95,7 @@ export class TableRuntime {
   lastRefusal:(TableRefusal&{id:number})|null=null;
   private seq=0;
   private refusals=0;
-  private history:Array<{seq:number;before:TableState;label:string}>=[];
+  private history:Array<{seq:number;before:TableState;label:string;commandType:TableCommand["type"]}>=[];
   private readonly dice:Dice;
   private readonly now:()=>string;
   private readonly profile:RulesProfileLike;
@@ -101,7 +115,7 @@ export class TableRuntime {
   dispatch(command:TableCommand,origin:CommandOrigin=HOST_ORIGIN):Outcome {
     const denied=authorize(this.state,command,origin);
     if(denied) return this.refuse(denied);
-    if(command.type==="undo") return this.undo();
+    if(command.type==="undo") return this.undo(origin.peerId===HOST_ORIGIN.peerId&&this.undoSkipsBookkeeping);
     if(command.type==="set-roll-visibility") {
       if(this.state.rollVisibility===command.visibility) return this.refuse({code:"visibility-same",message:"이미 그 설정입니다."});
       return this.commit(command,{status:"committed",events:[{payload:{type:"visibility-changed",rollVisibility:command.visibility},log:[]}]});
@@ -109,7 +123,14 @@ export class TableRuntime {
     const ctx:HandlerContext={state:this.state,dice:this.dice,profile:this.profile,nextSeq:this.seq+1,now:this.now,origin};
     const result=this.handle(ctx,command);
     if(result.status==="refused") return this.refuse(result.refusal);
-    return this.commit(command,result);
+    const outcome=this.commit(command,result,{recordHistory:result.followUp?.type!=="undo"});
+    if(result.followUp&&outcome.status==="committed") {
+      this.undoSkipsBookkeeping=result.followUp.type==="undo";
+      const followed=this.dispatch(result.followUp,HOST_ORIGIN);
+      this.undoSkipsBookkeeping=false;
+      if(followed.status==="committed") return {status:"committed",events:[...outcome.events,...followed.events],resolution:followed.resolution??outcome.resolution};
+    }
+    return outcome;
   }
 
   /** Replicas apply the Host's events in order; a gap is a protocol error the connected layer resolves by snapshot. */
@@ -147,12 +168,18 @@ export class TableRuntime {
       case "skip-question": return skipQuestion(ctx,command);
       case "ready": return ready(ctx,command);
       case "trigger-ready": return triggerReady(ctx,command);
+      case "improvise": return improvise(ctx,command);
+      case "narrate": return narrate(ctx,command);
+      case "rule": return rule(ctx,command);
+      case "request": return request(ctx,command);
+      case "remember-ruling": return rememberRuling(ctx,command);
+      case "forget-ruling": return forgetRuling(ctx,command);
       case "ruling": return ruling(ctx,command);
       default: return refused("command-unknown","알 수 없는 명령입니다.");
     }
   }
 
-  private commit(command:TableCommand,result:Extract<HandlerResult,{status:"committed"}>):Outcome {
+  private commit(command:TableCommand,result:Extract<HandlerResult,{status:"committed"}>,options:{recordHistory?:boolean}={}):Outcome {
     const before=cloneState(this.state);
     const events:TableEvent[]=[];
     for(const draft of result.events) {
@@ -164,16 +191,21 @@ export class TableRuntime {
       events.push(event);
       for(const listener of this.listeners) listener(event);
     }
-    if(events.length) {
-      this.history.push({seq:events[0].seq,before,label:describe(before,command)});
+    if(events.length&&options.recordHistory!==false) {
+      this.history.push({seq:events[0].seq,before,label:describe(before,command),commandType:command.type});
       if(this.history.length>this.historyLimit) this.history.splice(0,this.history.length-this.historyLimit);
     }
     this.lastRefusal=null;
     return {status:"committed",events,resolution:result.resolution??null};
   }
 
-  private undo():Outcome {
-    const last=this.history.pop();
+  /** Set while an approved undo request runs: the undo reaches past the request itself and other bookkeeping. */
+  private undoSkipsBookkeeping=false;
+
+  private undo(skipBookkeeping=false):Outcome {
+    const bookkeeping=new Set<TableCommand["type"]>(["request","narrate","improvise","remember-ruling","forget-ruling","skip-question"]);
+    let last=this.history.pop();
+    while(skipBookkeeping&&last&&bookkeeping.has(last.commandType)) last=this.history.pop();
     if(!last) return this.refuse({code:"undo-empty",message:"되돌릴 행동이 없습니다."});
     const seq=this.seq+1;
     const log:LogEntry={id:`log.${seq}.undo`,seq,time:this.now(),actor:"DM",title:`되돌리기 · ${last.label}`,summary:`이벤트 ${last.seq}부터 되돌림`,detail:[],stateChanges:[],visibility:"public",undoOf:String(last.seq)};

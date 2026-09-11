@@ -1,7 +1,7 @@
 import type { CombatantRuntimeState, RulesRuntimeState } from "../domain/combatState";
 import { type EngagementRecord, pruneEngagementsToPresent } from "../domain/engagement";
 import type { CharacterSheet } from "../app/contracts";
-import { cloneState, type Actor, type FloorItem, type LogEntry, type MovementDeclaration, type ReadiedAction, type ResolutionRecord, type TableMode, type TableQuestion, type TableState, type Visibility } from "./state";
+import { cloneState, type Actor, type FloorItem, type HouseRule, type LogEntry, type MovementDeclaration, type ReadiedAction, type ResolutionRecord, type TableMode, type TableQuestion, type TableState, type Visibility } from "./state";
 
 /** Durable character changes (items moved, quantities) ride with the commit so the owner's client can write them back. */
 export type SheetPatch={actorId:string;sheet:CharacterSheet};
@@ -21,7 +21,7 @@ export type TableEventPayload=
   |{type:"turn-changed";currentActorId:string|null;round:number;order?:string[];rules:RulesRuntimeState;engagements?:EngagementRecord[]}
   |{type:"rules-committed";rules:RulesRuntimeState;resolution?:ResolutionRecord|null;actorPatches?:Array<{actorId:string;patch:ActorPatch}>;engagements?:EngagementRecord[];sheets?:SheetPatch[];floor?:FloorItem[];interactions?:Record<string,number>;questions?:TableQuestion[];declarations?:Record<string,MovementDeclaration>;readied?:Record<string,ReadiedAction>}
   /** Table bookkeeping that needs no kernel commit: hands, floor, transfers, interaction count, questions, declarations, readied actions. */
-  |{type:"table-changed";sheets?:SheetPatch[];floor?:FloorItem[];interactions?:Record<string,number>;rules?:RulesRuntimeState;engagements?:EngagementRecord[];questions?:TableQuestion[];declarations?:Record<string,MovementDeclaration>;readied?:Record<string,ReadiedAction>}
+  |{type:"table-changed";sheets?:SheetPatch[];floor?:FloorItem[];interactions?:Record<string,number>;rules?:RulesRuntimeState;engagements?:EngagementRecord[];questions?:TableQuestion[];declarations?:Record<string,MovementDeclaration>;readied?:Record<string,ReadiedAction>;houseRules?:Record<string,HouseRule>}
   |{type:"state-restored";state:TableState}
   |{type:"visibility-changed";rollVisibility:Visibility};
 
@@ -115,6 +115,7 @@ export function applyEvent(input:TableState,event:TableEvent):TableState {
       if(payload.questions) state.questions=cloneState(payload.questions);
       if(payload.declarations) state.declarations=cloneState(payload.declarations);
       if(payload.readied) state.readied=cloneState(payload.readied);
+      if(payload.houseRules) state.houseRules=cloneState(payload.houseRules);
       break;
     case "state-restored":
       break;

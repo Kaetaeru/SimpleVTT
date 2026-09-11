@@ -26,7 +26,7 @@ export interface EventDraft {
 }
 
 export type HandlerResult=
-  |{status:"committed";events:EventDraft[];resolution?:ResolutionRecord|null}
+  |{status:"committed";events:EventDraft[];resolution?:ResolutionRecord|null;/** A command the runtime dispatches as the DM once this one is committed (an approved undo request). */followUp?:import("../commands").TableCommand}
   |Refused;
 
 export function logEntry(ctx:HandlerContext,input:Omit<LogEntry,"id"|"seq"|"time"|"visibility">&{visibility?:Visibility;index?:number}):LogEntry {

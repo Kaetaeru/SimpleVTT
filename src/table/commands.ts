@@ -1,7 +1,7 @@
 import type { CharacterSheet } from "../app/contracts";
 import type { ConditionId } from "../domain/conditions";
 import type { DurationSpec } from "../domain/effects";
-import type { Side, Visibility } from "./state";
+import type { RulingSpec, Side, Visibility } from "./state";
 
 /** What a command may add to the table. */
 export type ActorSpec=
@@ -48,6 +48,17 @@ export type TableCommand=
   |{type:"ready";actorId:string;actionId:string;trigger:string;targetIds?:string[]}
   /** DM: the readied trigger happened — asks the actor whether to fire. */
   |{type:"trigger-ready";actorId:string}
+  /** Grade R: anything the rules do not cover. One line from the player; the DM gets a ruling card (§13). */
+  |{type:"improvise";actorId:string;text:string;targetIds?:string[];itemId?:string}
+  /** Grade N: words and gestures. Recorded, changes nothing; the DM may later rule on it. */
+  |{type:"narrate";actorId?:string;text:string}
+  /** DM: rule on an improvised action (or on nothing in particular): roll, cost, outcome, or a verdict. */
+  |{type:"rule";questionId?:string;actorId:string;targetIds?:string[];text?:string;spec:RulingSpec;note?:string}
+  /** A player asks the DM: undo, a correction, an item/resource fix (D10), a visibility change. */
+  |{type:"request";actorId:string;kind:"undo"|"correction"|"item-fix"|"visibility";text:string;payload?:{itemId?:string;quantity?:number;resourceId?:string;current?:number}}
+  /** DM: remember a ruling as a house rule for this table. */
+  |{type:"remember-ruling";name:string;keyword:string;spec:RulingSpec}
+  |{type:"forget-ruling";ruleId:string}
   |{type:"undo"}
   |{type:"set-roll-visibility";visibility:Visibility};
 
