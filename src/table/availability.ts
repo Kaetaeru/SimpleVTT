@@ -39,6 +39,12 @@ export function availabilityOf(state:TableState,action:ActionVm):Availability {
     const resource=combatant.resources.find((entry)=>entry.id===action.resourceCost!.resourceId);
     if(!resource||resource.current<action.resourceCost.amount) return unavailable("자원이 부족합니다.");
   }
+  if(action.tableWeaponItemId&&actor.source.kind==="character") {
+    const item=actor.source.sheet.items.find((entry)=>entry.id===action.tableWeaponItemId);
+    if(!item) return unavailable("무기가 가방에 없습니다.");
+    // 2024: a thrown weapon is drawn as part of the attack, so it only has to be in the bag.
+    if(!item.wielded&&!action.tableThrow) return unavailable("무기를 들고 있지 않습니다. 먼저 꺼내세요.");
+  }
   return {available:true};
 }
 
@@ -58,7 +64,8 @@ export function eligibleTargetIds(state:TableState,action:ActionVm):string[] {
     case "ally": return candidates.filter((candidate)=>candidate.side===actor.side&&candidate.id!==actor.id&&!state.rules.combatants[candidate.id].life.dead).map((candidate)=>candidate.id);
     case "enemy":
     case "multi-enemy": return candidates.filter((candidate)=>candidate.side!==actor.side&&!state.rules.combatants[candidate.id].life.dead).map((candidate)=>candidate.id);
-    case "any": return candidates.map((candidate)=>candidate.id);
+    // Attacks may aim at anyone on the table but the attacker (D7: allies included, no confirmation); never the dead.
+    case "any": return action.resolutionKind==="attack"?candidates.filter((candidate)=>candidate.id!==actor.id&&!state.rules.combatants[candidate.id].life.dead).map((candidate)=>candidate.id):candidates.map((candidate)=>candidate.id);
   }
 }
 
@@ -73,7 +80,7 @@ export function targetRefusalFor(state:TableState,action:ActionVm,targetIds:stri
   const eligible=new Set(eligibleTargetIds(state,action));
   for(const id of unique) {
     if(!state.actors[id]) return {code:"target-unknown",message:"테이블에 없는 대상입니다."};
-    if(id===action.actorId&&(action.target==="enemy"||action.target==="multi-enemy")) return {code:"target-ineligible",message:"자기 자신을 대상으로 할 수 없습니다."};
+    if(id===action.actorId&&(action.target==="enemy"||action.target==="multi-enemy"||(action.target==="any"&&action.resolutionKind==="attack"))) return {code:"target-ineligible",message:"자기 자신을 대상으로 할 수 없습니다."};
     if(state.rules.combatants[id]?.life.dead) return {code:"target-ineligible",message:"죽은 대상입니다."};
     if(!eligible.has(id)) return {code:"target-ineligible",message:action.target==="ally"?"아군에게만 사용할 수 있습니다.":"그 대상에게는 사용할 수 없습니다."};
   }

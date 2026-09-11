@@ -11,12 +11,14 @@ import type { ConditionId } from "../../domain/conditions";
 import { ABILITY_KEYS, actionsFor, actorAc, actorSaveModifier, damageFromDiceText } from "../actors";
 import { availabilityOf, targetRefusalFor } from "../availability";
 import type { TableCommand } from "../commands";
+import type { SheetPatch } from "../events";
 import { parseDiceNotation } from "../dice";
 import { clearEngagementsOf, type EngagementRecord, engagedWith, isEngaged, recordMeleeAttack } from "../../domain/engagement";
 import { ENGAGEMENT_RANGED_IN_MELEE_SOURCE, engagementsAmongLiving, engagementsEqual, hostileEngagedIds, isMeleeAttack, isRangedAttack } from "../engagement";
 import { kernelErrorKo, refused } from "../refusal";
 import { attackCard, checkCard, lifeStateChanges, logFromCard, plainCard } from "../resolutionCard";
-import { cloneState, engagementRound, type Actor, type ResolutionRecord, type TableState } from "../state";
+import { cloneState, engagementRound, type Actor, type FloorItem, type ResolutionRecord, type TableState } from "../state";
+import { handsLabel } from "../hands";
 import { actorName, commitOperations, type HandlerContext, type HandlerResult } from "./types";
 
 export const NEXT_ROLL_TAG="table:next-roll";
@@ -97,15 +99,29 @@ function disengage(state:TableState,action:ActionVm,actorId:string):{engagements
   return {engagements:clearEngagementsOf(state.engagements,actorId),line:`교전 종료 (이탈): ${actorName(state,actorId)} ↔ ${engaged.map((id)=>actorName(state,id)).join(", ")}`};
 }
 
-/** One committed event: the kernel's state, the card, and the engagement set pruned to who is still alive. */
-function commitEvents(ctx:HandlerContext,card:ResolutionRecord,rules:RulesRuntimeState,engagements?:EngagementRecord[]):HandlerResult {
+/** A thrown weapon or object leaves the hand and lands on the floor, recoverable; a stack loses one. */
+function throwFromHand(state:TableState,actor:Actor,itemId:string|undefined,seq:number):{sheets:SheetPatch[];floor:FloorItem[];lines:string[]}|null {
+  if(!itemId||actor.source.kind!=="character") return null;
+  const sheet=cloneState(actor.source.sheet);
+  const item=sheet.items.find((entry)=>entry.id===itemId);
+  if(!item) return null;
+  const thrown={...cloneState(item),quantity:1,equipped:false,wielded:false};
+  delete thrown.wieldSlot;
+  if(item.quantity>1) sheet.items=sheet.items.map((entry)=>entry.id===itemId?{...entry,quantity:entry.quantity-1}:entry);
+  else sheet.items=sheet.items.filter((entry)=>entry.id!==itemId);
+  const floor=[...state.floor,{id:`floor.${seq}.${item.id}`,item:thrown,droppedBy:actor.id,recoverable:true}];
+  return {sheets:[{actorId:actor.id,sheet}],floor,lines:[`${item.name} → 바닥 (회수 가능)`,`손: ${handsLabel(sheet)}`]};
+}
+
+/** One committed event: the kernel's state, the card, the engagement set pruned to who is still alive, and any sheet/floor change. */
+function commitEvents(ctx:HandlerContext,card:ResolutionRecord,rules:RulesRuntimeState,engagements?:EngagementRecord[],extra?:{sheets?:SheetPatch[];floor?:FloorItem[]}):HandlerResult {
   const state=ctx.state;
   const next=engagementsAmongLiving(state,engagements??state.engagements,rules);
   const changed=!engagementsEqual(next,state.engagements);
-  return {status:"committed",resolution:card,events:[{payload:{type:"rules-committed",rules,resolution:card,...(changed?{engagements:next}:{})},log:[logFromCard(card,actorName(ctx.state,card.actorId),ctx.now)]}]};
+  return {status:"committed",resolution:card,events:[{payload:{type:"rules-committed",rules,resolution:card,...(changed?{engagements:next}:{}),...(extra?.sheets?.length?{sheets:extra.sheets}:{}),...(extra?.floor?{floor:extra.floor}:{})},log:[logFromCard(card,actorName(ctx.state,card.actorId),ctx.now)]}]};
 }
 
-function attackAct(ctx:HandlerContext,actor:Actor,action:ActionVm,targetIds:string[],resolutionId:string):HandlerResult {
+function attackAct(ctx:HandlerContext,actor:Actor,action:ActionVm,targetIds:string[],resolutionId:string,itemId?:string):HandlerResult {
   const state=ctx.state;
   const targetId=targetIds[0];
   const target=state.actors[targetId];
@@ -141,10 +157,11 @@ function attackAct(ctx:HandlerContext,actor:Actor,action:ActionVm,targetIds:stri
   const rules=commit.state;
   const consumed=consumeNextRoll(rules,actor.id,"attack-roll");
   const engaged=engageByMelee(state,action,actor.id,targetId);
-  const stateChanges=[...lifeStateChanges(state,state.rules,rules),...consumed.map((label)=>`${actor.name} 상태 종료: ${label}`),...(engaged?[engaged.line]:[])];
+  const thrown=action.tableThrow?throwFromHand(state,actor,action.tableThrow.itemId??itemId,ctx.nextSeq):null;
+  const stateChanges=[...lifeStateChanges(state,state.rules,rules),...consumed.map((label)=>`${actor.name} 상태 종료: ${label}`),...(engaged?[engaged.line]:[]),...(thrown?.lines??[])];
   const card=attackCard({id:resolutionId,seq:ctx.nextSeq,visibility:state.rollVisibility,action,actorId:actor.id,targetIds:[targetId],targetName:target.name,attack,damage,events:commit.events,stateChanges});
   if(engaged) card.provenance.push(`engagement:melee-attack:${actor.id}<->${targetId}:round:${engagementRound(state)}`);
-  return commitEvents(ctx,card,rules,engaged?.engagements);
+  return commitEvents(ctx,card,rules,engaged?.engagements,thrown??undefined);
 }
 
 function checkAct(ctx:HandlerContext,actor:Actor,action:ActionVm,targetIds:string[],resolutionId:string):HandlerResult {
@@ -282,7 +299,7 @@ export function act(ctx:HandlerContext,command:Extract<TableCommand,{type:"act"}
   const state=ctx.state;
   const actor=state.actors[command.actorId];
   if(!actor||!state.rules.combatants[command.actorId]) return refused("actor-unknown","테이블에 없는 액터입니다.",{actorId:command.actorId});
-  const action=actionsFor(actor).find((entry)=>entry.id===command.actionId);
+  const action=actionsFor(actor,state).find((entry)=>entry.id===command.actionId);
   if(!action) return refused("action-unknown","알 수 없는 행동입니다.",{actorId:actor.id,actionId:command.actionId});
   const availability=availabilityOf(state,action);
   if(!availability.available) return refused("action-unavailable",availability.reason??"지금은 사용할 수 없는 행동입니다.",{actorId:actor.id,actionId:action.id});
@@ -292,7 +309,7 @@ export function act(ctx:HandlerContext,command:Extract<TableCommand,{type:"act"}
   const resolutionId=`res.${ctx.nextSeq}`;
   if(action.id==="action.death-save") return deathSaveAct(ctx,actor,action,resolutionId);
   switch(action.resolutionKind) {
-    case "attack": return attackAct(ctx,actor,action,targetIds,resolutionId);
+    case "attack": return attackAct(ctx,actor,action,targetIds,resolutionId,command.itemId);
     case "ability-check": return checkAct(ctx,actor,action,targetIds,resolutionId);
     case "saving-throw": return saveAct(ctx,actor,action,targetIds,resolutionId);
     case "healing": return healAct(ctx,actor,action,targetIds,resolutionId);

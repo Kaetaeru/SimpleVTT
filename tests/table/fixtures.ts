@@ -10,9 +10,14 @@ export function fighter():CharacterSheet {
   return {
     id:"char.kael",name:"카엘",className:"전사",subclassName:"챔피언",level:5,classLevels:[{classId:"dnd.srd521.class.fighter",className:"전사",level:5}],species:"인간",background:"군인",
     hp:31,maxHp:42,tempHp:0,ac:18,speed:30,proficiencyBonus:3,saveState:"saved",
-    abilities:{str:18,dex:14,con:16,int:10,wis:12,cha:8},saves:["근력 +7","건강 +6"],skills:["운동 +7"],features:["추가 공격"],equipment:[],items:[],
+    abilities:{str:18,dex:14,con:16,int:10,wis:12,cha:8},saves:["근력 +7","건강 +6"],skills:["운동 +7"],features:["추가 공격"],equipment:[],
+    items:[
+      {id:"item.longsword",definitionId:"dnd.srd521.item.weapon.longsword",name:"롱소드",kind:"equipment",quantity:1,equipped:true,wielded:true,wieldSlot:"main-hand",passiveEffects:[],grantedActionIds:["action.longsword"],provenance:[]},
+      {id:"item.dagger",definitionId:"dnd.srd521.item.weapon.dagger",name:"단검",kind:"equipment",quantity:2,equipped:true,wielded:false,passiveEffects:[],grantedActionIds:["action.dagger"],provenance:[]},
+      {id:"item.potion",definitionId:"dnd.srd521.item.potion-of-healing",name:"치유 물약",kind:"consumable",quantity:2,equipped:false,passiveEffects:[],grantedActionIds:[],provenance:[]},
+    ],
     resources:[{id:"resource.second-wind",label:"세컨드 윈드",current:1,max:1,source:"전사 1레벨"}],
-    attacks:[{id:"action.longsword",name:"롱소드",bonus:7,damage:"1d8 + 4 참격"}],
+    attacks:[{id:"action.longsword",name:"롱소드",bonus:7,damage:"1d8 + 4 참격"},{id:"action.dagger",name:"단검",bonus:7,damage:"1d4 + 4 관통"}],
   } as unknown as CharacterSheet;
 }
 

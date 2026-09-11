@@ -30,5 +30,6 @@ export function kernelErrorKo(error:string|undefined):string {
   if(/dead creatures/i.test(text)) return "죽은 대상입니다.";
   if(/resource .* insufficient|not enough|insufficient/i.test(text)) return "자원이 부족합니다.";
   if(/immune/i.test(text)) return "면역인 대상입니다.";
+  if(/movement exceeds remaining speed/i.test(text)) return "이동력이 부족합니다.";
   return `규칙 거부 · ${text}`;
 }

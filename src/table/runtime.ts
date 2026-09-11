@@ -5,6 +5,7 @@ import { randomDice, type Dice } from "./dice";
 import { applyEvent, type TableEvent } from "./events";
 import { act } from "./handlers/act";
 import { addActors, removeActor, setActor } from "./handlers/actors";
+import { object, posture } from "./handlers/objects";
 import { ruling, rulingLabel } from "./handlers/ruling";
 import { endInitiative, endTurn, setCurrentActor, setOrder, startInitiative } from "./handlers/turns";
 import type { HandlerContext, HandlerResult } from "./handlers/types";
@@ -25,10 +26,10 @@ export interface TableRuntimeOptions {
 
 function authorize(state:TableState,command:TableCommand,origin:CommandOrigin):TableRefusal|null {
   if(origin.role==="dm") return null;
-  if(command.type==="act") {
+  if(command.type==="act"||command.type==="posture"||command.type==="object") {
     const actor=state.actors[command.actorId];
     if(!actor) return {code:"actor-unknown",message:"테이블에 없는 액터입니다.",actorId:command.actorId};
-    if(actor.controllerPeer!==origin.peerId) return {code:"not-authorized",message:"자기 캐릭터만 조작할 수 있습니다.",actorId:command.actorId,actionId:command.actionId};
+    if(actor.controllerPeer!==origin.peerId) return {code:"not-authorized",message:"자기 캐릭터만 조작할 수 있습니다.",actorId:command.actorId,...(command.type==="act"?{actionId:command.actionId}:{})};
     return null;
   }
   if(command.type==="end-turn") {
@@ -42,6 +43,8 @@ function authorize(state:TableState,command:TableCommand,origin:CommandOrigin):T
 function describe(state:TableState,command:TableCommand):string {
   switch(command.type) {
     case "act": return `${state.actors[command.actorId]?.name??command.actorId} · ${command.actionId}`;
+    case "posture": return `${state.actors[command.actorId]?.name??command.actorId} · ${command.posture==="prone"?"엎드리기":"일어나기"}`;
+    case "object": return `${state.actors[command.actorId]?.name??command.actorId} · ${{draw:"꺼내기",stow:"집어넣기",drop:"놓기","pick-up":"줍기",give:"건네기","throw-to":"던져서 건네기"}[command.op]}`;
     case "ruling": return `DM 재량 · ${rulingLabel(state,command.ruling)}`;
     case "add-actors": return "액터 추가";
     case "remove-actor": return `액터 제거 · ${state.actors[command.actorId]?.name??command.actorId}`;
@@ -125,6 +128,8 @@ export class TableRuntime {
       case "set-current-actor": return setCurrentActor(ctx,command);
       case "set-order": return setOrder(ctx,command);
       case "act": return act(ctx,command);
+      case "posture": return posture(ctx,command);
+      case "object": return object(ctx,command);
       case "ruling": return ruling(ctx,command);
       default: return refused("command-unknown","알 수 없는 명령입니다.");
     }

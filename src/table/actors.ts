@@ -1,12 +1,24 @@
 import type { CombatantRuntimeState } from "../domain/combatState";
 import { beginTurn } from "../domain/turnEconomy";
-import type { AbilityKey, ActionDetailVm, ActionVm, CharacterSheet, CombatantDefinitionVm } from "../app/contracts";
+import type { AbilityKey, ActionDetailVm, ActionVm, CharacterSheet, CombatantDefinitionVm, ItemInstanceVm } from "../app/contracts";
+import { weaponHasProperty, weaponRuleById, type WeaponRuleDefinition } from "../domain/weaponRuleCatalog";
 import type { CombatantRuntimeAttackVm, CombatantRuntimeSaveActionVm, CombatantRuntimeTextActionVm } from "../app/combatantRuntimeContracts";
 import { abilityLabelKo, conditionLabelKo, srdMonsterById, srdMonsterCombatantDefinition } from "../app/srdMonsterCatalog";
 import type { ConditionId } from "../domain/conditions";
 import type { ActorSpec } from "./commands";
 import { diceAverage, parseDiceNotation } from "./dice";
 import type { Actor, Side, TableState } from "./state";
+
+declare module "../app/contracts" {
+  interface ActionVm {
+    /** The sheet item this weapon attack swings; the tile is unavailable while the item is not in hand. */
+    tableWeaponItemId?:string;
+    /** A thrown attack: the item leaves the hand for the floor when it flies (2024: drawn as part of the attack). */
+    tableThrow?:{itemId?:string;recoverable:boolean};
+    /** Improvised weapon (1d4, 20/60 ft thrown): a chair, a bottle, a shield swung — any object the actor names. */
+    tableImprovised?:boolean;
+  }
+}
 
 export const CONDITION_IDS:ConditionId[]=["blinded","charmed","deafened","exhaustion","frightened","grappled","incapacitated","invisible","paralyzed","petrified","poisoned","prone","restrained","stunned","unconscious"];
 const CONDITION_BY_LABEL=new Map(CONDITION_IDS.map((id)=>[conditionLabelKo(id),id]));
@@ -160,31 +172,95 @@ function standardActions(actor:Actor,speed:number):ActionVm[] {
   ];
 }
 
-function characterActions(actor:Actor,sheet:CharacterSheet):ActionVm[] {
+const damage_text=(attack:CharacterSheet["attacks"][number])=>attack.damage;
+
+/** The catalog weapon behind a sheet attack: linked by the item's granted action id, else by matching names. */
+export function characterWeaponFor(sheet:CharacterSheet,attack:CharacterSheet["attacks"][number]):{item?:ItemInstanceVm;rule?:WeaponRuleDefinition} {
+  const linked=sheet.items.find((item)=>(item.grantedActionIds??[]).includes(attack.id));
+  const byName=linked??sheet.items.find((item)=>item.name===attack.name||weaponRuleById(item.definitionId)?.name===attack.name);
+  const rule=byName?weaponRuleById(byName.definitionId):undefined;
+  return {item:byName,rule};
+}
+
+function thrownRange(rule:WeaponRuleDefinition):{normal:number;long:number}|undefined {
+  const property=rule.properties.find((entry)=>entry.startsWith("thrown:"));
+  const match=property?/^thrown:(\d+)\/(\d+)$/.exec(property):null;
+  return match?{normal:Number(match[1]),long:Number(match[2])}:undefined;
+}
+
+function ammunitionRange(rule:WeaponRuleDefinition):{normal:number;long:number}|undefined {
+  const property=rule.properties.find((entry)=>entry.startsWith("ammunition:"));
+  const match=property?/^ammunition:(\d+)\/(\d+)$/.exec(property):null;
+  return match?{normal:Number(match[1]),long:Number(match[2])}:undefined;
+}
+
+/** The weapon behind an attack left this character's bag (dropped, thrown, handed over): it lies on the floor or in another bag. */
+function weaponElsewhere(state:TableState|undefined,actorId:string,attackId:string):ItemInstanceVm|undefined {
+  if(!state) return undefined;
+  const onFloor=state.floor.find((entry)=>(entry.item.grantedActionIds??[]).includes(attackId)&&entry.droppedBy===actorId);
+  if(onFloor) return onFloor.item;
+  for(const other of Object.values(state.actors)) {
+    if(other.id===actorId||other.source.kind!=="character") continue;
+    const held=other.source.sheet.items.find((item)=>(item.grantedActionIds??[]).includes(attackId));
+    if(held) return held;
+  }
+  return undefined;
+}
+
+function characterActions(actor:Actor,sheet:CharacterSheet,state?:TableState):ActionVm[] {
   const actorId=actor.id;
   const strength=abilityModifier(sheet.abilities.str);
   const attacks=weaponAttacksPerAction(sheet);
-  const actions:ActionVm[]=sheet.attacks.map((attack)=>{
-    const damage=parseAttackDamage(attack.damage);
+  const actions:ActionVm[]=[];
+  for(const attack of sheet.attacks) {
+    const damage=parseAttackDamage(damage_text(attack));
     const dice=damageFromDiceText(damage.dice,damage.flat);
-    const ranged=/보우|석궁|bow|crossbow|투창|다트|sling|슬링/i.test(attack.name);
-    return {
-      id:attack.id,actorId,name:attack.name,category:"weapon",target:"enemy",economy:"행동",resolutionKind:"attack",
+    const found=characterWeaponFor(sheet,attack);
+    const elsewhere=found.item?undefined:weaponElsewhere(state,actorId,attack.id);
+    const rule=found.rule??(elsewhere?weaponRuleById(elsewhere.definitionId):undefined);
+    const item=found.item??(elsewhere?{id:`missing:${attack.id}`}:undefined);
+    // Melee versus ranged is read from the weapon's own rules; a sheet without a linked item falls back to its wording.
+    const ranged=rule?rule.mode==="ranged":/보우|석궁|bow|crossbow|투창|다트|sling|슬링/i.test(attack.name);
+    const thrown=rule?thrownRange(rule):undefined;
+    const reach=rule?weaponHasProperty(rule,"reach"):false;
+    const rangeFeet=ranged?(rule?ammunitionRange(rule)?.normal??80:80):reach?10:5;
+    const attackMode=ranged?"ranged":thrown?"melee-or-ranged":"melee";
+    const base:ActionVm={
+      id:attack.id,actorId,name:attack.name,category:"weapon",target:"any",economy:"행동",resolutionKind:"attack",
       summary:`${signed(attack.bonus)} · ${damage.dice}${damage.flat?signed(damage.flat):""} ${damage.type}${attacks>1?` · 공격 ${attacks}회`:""}`,
       available:true,eligibleTargetIds:[],attackBonus:attack.bonus,attacksPerAction:attacks,
       damage:[{type:damage.type,dice:damage.dice,flat:damage.flat,average:diceAverage(dice.count,dice.sides,dice.flat)}],
-      runtimeAttack:{sourceKind:"weapon",rangeFeet:ranged?80:5,attackMode:ranged?"ranged":"melee",diceSides:dice.sides,diceCount:dice.count,damageSource:`character:${actorId}:${attack.id}`},
-      details:[detail("명중",signed(attack.bonus)),detail("피해",`${damage.dice}${damage.flat?` ${signed(damage.flat)}`:""} ${damage.type}`),detail("비용",attacks>1?`공격 행동 1 · 최대 ${attacks}회 공격`:"행동 1")],
+      runtimeAttack:{sourceKind:"weapon",rangeFeet,attackMode,diceSides:dice.sides,diceCount:dice.count,damageSource:`character:${actorId}:${attack.id}`},
+      ...(item?{tableWeaponItemId:item.id}:{}),
+      details:[detail("명중",signed(attack.bonus)),detail("피해",`${damage.dice}${damage.flat?` ${signed(damage.flat)}`:""} ${damage.type}`),detail("사거리",ranged?`${rangeFeet}피트`:reach?"10피트 (긴 무기)":"5피트"),detail("비용",attacks>1?`공격 행동 1 · 최대 ${attacks}회 공격`:"행동 1")],
     };
-  });
+    actions.push(base);
+    if(thrown&&!ranged) actions.push({
+      ...base,id:`${attack.id}.throw`,name:`${attack.name} 던지기`,
+      summary:`${signed(attack.bonus)} · ${damage.dice}${damage.flat?signed(damage.flat):""} ${damage.type} · 투척 ${thrown.normal}/${thrown.long}피트`,
+      runtimeAttack:{...base.runtimeAttack!,rangeFeet:thrown.normal,attackMode:"ranged"},
+      tableThrow:{itemId:item?.id,recoverable:true},
+      details:[detail("명중",signed(attack.bonus)),detail("피해",`${damage.dice}${damage.flat?` ${signed(damage.flat)}`:""} ${damage.type}`),detail("사거리",`${thrown.normal}/${thrown.long}피트 (투척)`),detail("결과","던진 무기는 바닥에 떨어져 회수할 수 있습니다"),detail("출처",`${STANDARD_SOURCE} · Thrown`)],
+    });
+  }
   const unarmed=Math.max(0,1+strength);
   actions.push({
-    id:"action.unarmed-strike.damage",actorId,name:"맨손 타격",category:"weapon",target:"enemy",economy:"행동",resolutionKind:"attack",
+    id:"action.unarmed-strike.damage",actorId,name:"맨손 타격",category:"weapon",target:"any",economy:"행동",resolutionKind:"attack",
     summary:`${signed(sheet.proficiencyBonus+strength)} · ${unarmed} 타격`,available:true,eligibleTargetIds:[],attackBonus:sheet.proficiencyBonus+strength,attacksPerAction:attacks,
     damage:[{type:"타격",dice:"0d2",flat:unarmed,average:unarmed}],
     runtimeAttack:{sourceKind:"unarmed",rangeFeet:5,attackMode:"melee",diceSides:2,diceCount:0,damageSource:`character:${actorId}:unarmed-strike`},
     details:[detail("명중",signed(sheet.proficiencyBonus+strength)),detail("피해",`${unarmed} 타격`),detail("출처",`${STANDARD_SOURCE} · Unarmed Strike`)],
   });
+  // Improvised weapons (2024): 1d4, no proficiency unless it resembles a weapon; thrown 20/60. Any object the actor names.
+  const improvised=(id:string,name:string,throwing:boolean):ActionVm=>({
+    id,actorId,name,category:"weapon",target:"any",economy:"행동",resolutionKind:"attack",
+    summary:`${signed(strength)} · 1d4${signed(strength)} 타격${throwing?" · 투척 20/60피트":""}`,available:true,eligibleTargetIds:[],attackBonus:strength,attacksPerAction:attacks,
+    damage:[{type:"타격",dice:"1d4",flat:strength,average:diceAverage(1,4,strength)}],
+    runtimeAttack:{sourceKind:"weapon",rangeFeet:throwing?20:5,attackMode:throwing?"ranged":"melee",diceSides:4,diceCount:1,damageSource:`character:${actorId}:${id}`},
+    tableImprovised:true,...(throwing?{tableThrow:{recoverable:true}}:{}),
+    details:[detail("피해","1d4 (유형은 DM이 정합니다)"),detail("숙련","없음 (무기를 닮은 물건은 DM 재량)"),detail("사거리",throwing?"20/60피트":"5피트"),detail("출처",`${STANDARD_SOURCE} · Improvised Weapons`)],
+  });
+  actions.push(improvised("action.improvised.melee","즉흥 무기",false),improvised("action.improvised.throw","즉흥 무기 던지기",true));
   actions.push(...standardActions(actor,sheet.speed));
   for(const key of ABILITY_KEYS) {
     const label=abilityLabelKo(key);
@@ -237,8 +313,8 @@ function monsterActions(actor:Actor,definition:CombatantDefinitionVm):ActionVm[]
 }
 
 /** The raw actions an actor's source offers, before availability and targets are judged (see availability.ts). */
-export function actionsFor(actor:Actor):ActionVm[] {
-  return actor.source.kind==="character"?characterActions(actor,actor.source.sheet):monsterActions(actor,actor.source.definition);
+export function actionsFor(actor:Actor,state?:TableState):ActionVm[] {
+  return actor.source.kind==="character"?characterActions(actor,actor.source.sheet,state):monsterActions(actor,actor.source.definition);
 }
 
 export function sideOf(state:TableState,actorId:string):Side|undefined { return state.actors[actorId]?.side; }

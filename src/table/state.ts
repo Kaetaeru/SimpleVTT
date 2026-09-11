@@ -1,7 +1,7 @@
 import "../app/combatantRuntimeContracts";
 import type { CombatantRuntimeState, RulesRuntimeState } from "../domain/combatState";
 import type { EngagementRecord } from "../domain/engagement";
-import type { CharacterSheet, CombatantDefinitionVm, ResolutionView } from "../app/contracts";
+import type { CharacterSheet, CombatantDefinitionVm, ItemInstanceVm, ResolutionView } from "../app/contracts";
 
 /**
  * V2 table runtime — the one mutable play state (docs/design/v2/TABLE_RUNTIME.md §4).
@@ -60,6 +60,15 @@ export interface ResolutionRecord extends ResolutionView {
   visibility:Visibility;
 }
 
+/** An item lying in the scene: dropped, thrown or placed. Nothing is deleted by dropping; anyone may pick it up. */
+export interface FloorItem {
+  id:string;
+  item:ItemInstanceVm;
+  droppedBy:string;
+  /** A thrown weapon can be recovered; a shattered vial cannot. */
+  recoverable:boolean;
+}
+
 export interface TableState {
   sessionId:string;
   /** The sequence of the last applied event. */
@@ -76,6 +85,10 @@ export interface TableState {
    * melee attacks, with the rounds that made and last refreshed them. Freeform play counts as round 1.
    */
   engagements:EngagementRecord[];
+  /** Items on the scene floor (§6 of the capability inventory). */
+  floor:FloorItem[];
+  /** Free object interactions used this turn, per actor (2024: one per turn; the second costs the Utilize action). */
+  interactions:Record<string,number>;
   activeResolution:ResolutionRecord|null;
   /** Newest first. */
   log:LogEntry[];
@@ -94,6 +107,8 @@ export function createTableState(sessionId:string):TableState {
     actors:{},
     peers:{},
     engagements:[],
+    floor:[],
+    interactions:{},
     activeResolution:null,
     log:[],
     rollVisibility:"public",

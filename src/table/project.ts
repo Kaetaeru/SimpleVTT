@@ -6,6 +6,18 @@ import { actionsFor, actorAc } from "./actors";
 import { availabilityOf, eligibleTargetIds } from "./availability";
 import type { TableRefusal } from "./refusal";
 import { actorIds, type Actor, type TableMode, type TableState } from "./state";
+import { handsLabel } from "./hands";
+
+declare module "../app/contracts" {
+  interface SceneVm {
+    /** Items on the scene floor: dropped, thrown, placed. Anyone may pick one up. */
+    floorItems?:Array<{id:string;name:string;quantity:number;droppedById:string;droppedByName:string;recoverable:boolean}>;
+  }
+  interface SceneEntity {
+    /** What the character holds: "장검 (주손) · 방패 (보조손)" or "빈손". */
+    hands?:string;
+  }
+}
 
 export const PUBLIC_EFFECT_PREFIX="✦ ";
 const BADGE_LABEL:Record<string,string>={hidden:"숨음","cover-half":"엄폐 절반","cover-three-quarters":"엄폐 ¾"};
@@ -75,11 +87,12 @@ function entityFor(state:TableState,actor:Actor,viewer:TableViewer):SceneEntity 
   if(combatant) entity.runtimeLife={deathSaves:{...combatant.life.deathSaves},stable:combatant.life.stable,unconscious:combatant.life.unconscious,dead:combatant.life.dead};
   const engaged=engagedWith(state.engagements,actor.id);
   if(engaged.length) entity.engagedWithIds=engaged;
+  if(actor.source.kind==="character") entity.hands=handsLabel(actor.source.sheet);
   return entity;
 }
 
 export function projectedActions(state:TableState,actor:Actor):ActionVm[] {
-  return actionsFor(actor).map((action)=>{
+  return actionsFor(actor,state).map((action)=>{
     const availability=availabilityOf(state,action);
     return {...action,eligibleTargetIds:eligibleTargetIds(state,action),available:availability.available,...(availability.reason?{disabledReason:availability.reason}:{})};
   });
@@ -90,7 +103,7 @@ export function projectTable(state:TableState,viewer:TableViewer,refusal?:(Table
   const entities=visible.map((id)=>entityFor(state,state.actors[id],viewer));
   const actionsByActor=Object.fromEntries(visible.map((id)=>[id,projectedActions(state,state.actors[id])]));
   const economyByActor=Object.fromEntries(visible.map((id)=>[id,economyView(state,id)]));
-  const scene:SceneVm={id:state.sessionId,name:"",round:state.round,currentActorId:state.currentActorId??"",selectedActorId:"",entities,actionsByActor,economyByActor,...(state.engagements.length?{engagements:state.engagements.map((record)=>({...record}))}:{})};
+  const scene:SceneVm={id:state.sessionId,name:"",round:state.round,currentActorId:state.currentActorId??"",selectedActorId:"",entities,actionsByActor,economyByActor,...(state.engagements.length?{engagements:state.engagements.map((record)=>({...record}))}:{}),...(state.floor.length?{floorItems:state.floor.map((entry)=>({id:entry.id,name:entry.item.name,quantity:entry.item.quantity,droppedById:entry.droppedBy,droppedByName:state.actors[entry.droppedBy]?.name??entry.droppedBy,recoverable:entry.recoverable}))}:{})};
   const activity:ActivityEntry[]=state.log.filter((entry)=>viewer.role==="dm"||entry.visibility==="public").map((entry)=>({
     id:entry.id,time:entry.time,actor:entry.actor,title:entry.title,summary:entry.summary,detail:[...entry.detail],stateChanges:[...entry.stateChanges],
     ...(entry.ruling?{ruling:entry.ruling}:{}),...(entry.undoOf?{undoOf:entry.undoOf}:{}),...(entry.reversed?{reversed:true}:{}),

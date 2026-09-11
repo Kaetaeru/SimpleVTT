@@ -1,6 +1,10 @@
 import type { CombatantRuntimeState, RulesRuntimeState } from "../domain/combatState";
 import { type EngagementRecord, pruneEngagementsToPresent } from "../domain/engagement";
-import { cloneState, type Actor, type LogEntry, type ResolutionRecord, type TableMode, type TableState, type Visibility } from "./state";
+import type { CharacterSheet } from "../app/contracts";
+import { cloneState, type Actor, type FloorItem, type LogEntry, type ResolutionRecord, type TableMode, type TableState, type Visibility } from "./state";
+
+/** Durable character changes (items moved, quantities) ride with the commit so the owner's client can write them back. */
+export type SheetPatch={actorId:string;sheet:CharacterSheet};
 
 /**
  * Events are the record (TABLE_RUNTIME.md §2.4). `applyEvent` is pure and shared by the Host and every replica, so
@@ -15,7 +19,9 @@ export type TableEventPayload=
   |{type:"actor-updated";actorId:string;patch:ActorPatch}
   |{type:"mode-changed";mode:TableMode;order:string[];round:number;currentActorId:string|null;rules:RulesRuntimeState;engagements?:EngagementRecord[]}
   |{type:"turn-changed";currentActorId:string|null;round:number;order?:string[];rules:RulesRuntimeState;engagements?:EngagementRecord[]}
-  |{type:"rules-committed";rules:RulesRuntimeState;resolution?:ResolutionRecord|null;actorPatches?:Array<{actorId:string;patch:ActorPatch}>;engagements?:EngagementRecord[]}
+  |{type:"rules-committed";rules:RulesRuntimeState;resolution?:ResolutionRecord|null;actorPatches?:Array<{actorId:string;patch:ActorPatch}>;engagements?:EngagementRecord[];sheets?:SheetPatch[];floor?:FloorItem[];interactions?:Record<string,number>}
+  /** Object handling that needs no kernel commit: hands, floor, transfers, interaction count. */
+  |{type:"table-changed";sheets?:SheetPatch[];floor?:FloorItem[];interactions?:Record<string,number>;rules?:RulesRuntimeState}
   |{type:"state-restored";state:TableState}
   |{type:"visibility-changed";rollVisibility:Visibility};
 
@@ -25,6 +31,13 @@ export interface TableEvent {
   commandType:string;
   log:LogEntry[];
   payload:TableEventPayload;
+}
+
+function applySheets(state:TableState,sheets:SheetPatch[]|undefined) {
+  for(const {actorId,sheet} of sheets??[]) {
+    const actor=state.actors[actorId];
+    if(actor&&actor.source.kind==="character") actor.source={...actor.source,sheet:cloneState(sheet)};
+  }
 }
 
 export function applyEvent(input:TableState,event:TableEvent):TableState {
@@ -59,6 +72,7 @@ export function applyEvent(input:TableState,event:TableEvent):TableState {
       state.currentActorId=payload.currentActorId;
       state.rules=cloneState(payload.rules);
       if(payload.engagements) state.engagements=cloneState(payload.engagements);
+      state.interactions={};
       state.activeResolution=null;
       break;
     }
@@ -68,6 +82,7 @@ export function applyEvent(input:TableState,event:TableEvent):TableState {
       if(payload.order) state.order=[...payload.order];
       state.rules=cloneState(payload.rules);
       if(payload.engagements) state.engagements=cloneState(payload.engagements);
+      state.interactions={};
       break;
     }
     case "rules-committed": {
@@ -78,8 +93,17 @@ export function applyEvent(input:TableState,event:TableEvent):TableState {
         if(actor) Object.assign(actor,cloneState(patch));
       }
       if(payload.engagements) state.engagements=cloneState(payload.engagements);
+      applySheets(state,payload.sheets);
+      if(payload.floor) state.floor=cloneState(payload.floor);
+      if(payload.interactions) state.interactions=cloneState(payload.interactions);
       break;
     }
+    case "table-changed":
+      applySheets(state,payload.sheets);
+      if(payload.floor) state.floor=cloneState(payload.floor);
+      if(payload.interactions) state.interactions=cloneState(payload.interactions);
+      if(payload.rules) state.rules=cloneState(payload.rules);
+      break;
     case "state-restored":
       break;
     case "visibility-changed":

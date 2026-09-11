@@ -32,7 +32,11 @@ export type TableCommand=
   |{type:"end-turn"}
   |{type:"set-current-actor";actorId:string}
   |{type:"set-order";order:string[]}
-  |{type:"act";actorId:string;actionId:string;targetIds:string[]}
+  |{type:"act";actorId:string;actionId:string;targetIds:string[];itemId?:string}
+  /** 엎드리기 (free, any time) / 일어나기 (half speed of movement in Initiative). */
+  |{type:"posture";actorId:string;posture:"prone"|"stand"}
+  /** Hands and objects: draw/stow (free interaction, then Utilize), drop (free), pick-up, give (adjacent), throw-to (an ally, at range). */
+  |{type:"object";actorId:string;op:"draw"|"stow"|"drop"|"pick-up"|"give"|"throw-to";itemId:string;slot?:"main-hand"|"off-hand"|"two-hand";targetId?:string;quantity?:number}
   |{type:"ruling";targetIds:string[];ruling:Ruling;note?:string}
   |{type:"undo"}
   |{type:"set-roll-visibility";visibility:Visibility};
