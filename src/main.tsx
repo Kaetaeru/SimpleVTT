@@ -84,7 +84,9 @@ initializeAppearancePreference();
 initializeMotionPreference();
 
 // V2 table runtime behind a dev flag (T2-01): the old play screens render the new runtime's snapshot.
-const tableFacade=import.meta.env.DEV&&new URLSearchParams(window.location.search).get("table")==="v2"?createTableSessionFacade(mockAdapter):null;
+// V2 table runtime (T2-01 … T2-03): dev `?table=v2`, or `localStorage.simplevtt.table = "v2"` in a built app, until the switch-over (T2-07).
+const tableRequested=new URLSearchParams(window.location.search).get("table")==="v2"||(()=>{ try { return window.localStorage.getItem("simplevtt.table")==="v2"; } catch { return false; } })();
+const tableFacade=tableRequested?createTableSessionFacade(mockAdapter):null;
 if(tableFacade) (window as unknown as {__table?:unknown}).__table=tableFacade;
 
 createRoot(document.getElementById("root")!).render(

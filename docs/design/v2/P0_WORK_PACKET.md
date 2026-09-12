@@ -56,6 +56,13 @@ V2의 현재 `attack.outcome === "success"` 조건과 round 정보 누락을 기
   SRD 몬스터 카탈로그·옛 교전 어댑터·provider 구조 테스트, `vite build`. Windows H+P1+P2 실행은 하지 않았다(오프라인 커널 범위).
 - 남은 것(P3): 물러남 선언 → 교전 상대의 기회공격 질문, 이탈 상태의 억제, 반응 UI. 이 패킷에서는 기록 집합만 고정했다.
 
+#### P0c/P0d 진행 기록 (2026-09-11)
+
+- `src/table/{transport,wire,redact,host,client}.ts`, `tests/table/connected.test.ts`: hello(시트 포함)로 입장 → Host가 actor를
+  소유자에게 묶음 → 명령 ID로 한 번만 처리(중복 재전송은 저장된 응답) → 이벤트를 수신자별로 필터해 방송 → 커서 재접속 또는
+  스냅샷 → 소유자 클라이언트가 durable sheet 변경을 훅으로 받고 ack. 숨은 액터·DM 전용 굴림·남의 질문은 플레이어 payload에 없다.
+- 남은 것: 실제 저장소(`CharacterLibraryRepository`)에 훅 연결, 데스크톱 전송 실기기 검증, 재접속 중 개인 저장본 revision 충돌 UX.
+
 ### P0c — 개인 ↔ Host ↔ 개인의 좁은 실제 경로
 
 1. 개인 저장본의 사용량 수정 → 저장 → 다시 로드.

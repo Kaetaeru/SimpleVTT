@@ -3,7 +3,8 @@
 > 2026-09-09: 범위·우선순위·충돌 시 기준은 [제품 전면 개편 설계](PRODUCT_RENOVATION.md)를 따른다.
 > 이 문서의 T2 순서와 전체 상태 방송/복원 설명은 그대로 구현할 지시가 아니다. 기존 세션 설계 참고로 유지한다.
 
-Status: **DESIGN — owner-approved direction (2026-09-07)**
+Status: **DESIGN — owner-approved direction (2026-09-07)** · 2026-09-11: 커널이 기능 인벤토리 §4–§13, §17, §19를 오프라인 테스트로 덮는다
+(`src/table/handlers/{act,objects,flow,improvise,spells,rest}.ts`, `src/table/{host,client,redact,wire,transport}.ts`). 화면·Windows 검증은 아직이다.
 
 Owner decision (2026-09-07): "지금 파악안된 오류가 너무 많을게 뻔해서 전면 재작성을 해보자." Recommended direction accepted in
 full: Host single authority · keep domain/UI · core-first switch-over · same repo, new branch (`work/v2-table`).

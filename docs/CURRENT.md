@@ -22,6 +22,14 @@ Updated: 2026-09-09 Asia/Tokyo
 - 이번 변경은 설계/라우팅뿐이다. P0~P6 구현이나 새 Windows 앱 수락은 완료되지 않았다.
 - #390의 이전 CI 성공은 해당 커널의 증거이며, 전체 개편의 완료 증거로 재사용하지 않는다.
 
+## 2026-09-11 진행 (브랜치 `claude/practical-newton-rye61w`, #390 위에 stacked)
+
+- V2 커널이 기능 인벤토리 대부분을 오프라인 테스트로 덮는다: 자세·손·바닥·투척·즉흥 무기·아군 대상, 붙잡기/밀치기/탈출,
+  질문 큐(기회공격·준비 발동·비치명), 즉흥 행동→DM 판정 카드·서술·요청·즉석 규칙, 주문(도메인 커널)·물약·휴식·안정화·숨기·열린 판정,
+  Host/Client 연결(수신자별 필터·재접속·명령 중복 제거·소유자 write-back 훅). 상태표는 [인벤토리 §0.1](design/v2/CAPABILITY_INVENTORY.md#01-구현-상태--2026-09-11-브랜치-claudepractical-newton-rye61w-v2-커널-srctable).
+- 옛 화면은 facade로 새 런타임을 렌더링한다 (`?table=v2` 또는 `localStorage.simplevtt.table="v2"`). 새 화면(T2-04)과 Windows 검증은 없다.
+- 생성·시트·레벨업은 기존 화면·기존 adapter가 facade 프록시를 통해 그대로 동작한다. 새 시트 모델(P1/P2)은 미착수.
+
 ## 다음 작업: P0
 
 1. #389/#390과 이 설계의 실제 live GitHub 상태를 다시 확인하고 통합 순서를 정리한다.
