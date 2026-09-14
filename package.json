@@ -47,6 +47,10 @@
     "preview": "vite preview",
     "test:e2e:tauri": "powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File scripts/run-tauri-e2e.ps1 -Root .",
     "build:frontend": "npm run generate:content && vite build",
+    "dev:client": "vite --config vite.client.config.ts",
+    "build:client": "tsc --noEmit -p tsconfig.client.json && vite build --config vite.client.config.ts",
+    "test:client": "node --import tsx --import ./tests/support/register-css.mjs --test tests/client/*.test.ts",
+    "check:client-boundary": "node scripts/check-client-boundary.mjs",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build"
