@@ -177,7 +177,11 @@ export function createTableSessionFacade(base:MockAdapter,options:{runtime?:Tabl
   let lastWriteBackError:string|null=null;
   const persistDurableSheet=async(sheet:CharacterSheet)=>{
     try {
-      await mutateCharacterDurably(base,sheet.id,(character)=>{ character.hp=sheet.hp; character.tempHp=sheet.tempHp; character.resources=structuredClone(sheet.resources); });
+      await mutateCharacterDurably(base,sheet.id,(character)=>{
+        character.hp=sheet.hp; character.tempHp=sheet.tempHp; character.resources=structuredClone(sheet.resources);
+        if(sheet.durableLifeFlags) character.durableLifeFlags=structuredClone(sheet.durableLifeFlags);
+        if(sheet.hitDiceByDie) character.hitDiceByDie={...sheet.hitDiceByDie};
+      });
       lastWriteBackError=null;
     } catch(error) { lastWriteBackError=error instanceof Error?error.message:String(error); }
   };

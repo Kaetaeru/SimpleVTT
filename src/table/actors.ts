@@ -166,7 +166,8 @@ function characterCombatant(sheet:CharacterSheet):CombatantRuntimeState {
   return {
     id:sheet.id,
     baseSpeed:speed,
-    life:{hp:{current:sheet.hp,maximum:sheet.maxHp,temporary:sheet.tempHp??0},deathSaves:{successes:0,failures:0},stable:false,unconscious:sheet.hp<=0,dead:false},
+    // Life flags written back by an earlier session (death saves, stable, dead) come back with the sheet.
+    life:{hp:{current:sheet.hp,maximum:sheet.maxHp,temporary:sheet.tempHp??0},deathSaves:{successes:0,failures:0,...(sheet.hp<=0?sheet.durableLifeFlags?.deathSaves:undefined)},stable:sheet.hp<=0&&(sheet.durableLifeFlags?.stable??false),unconscious:sheet.hp<=0,dead:sheet.durableLifeFlags?.dead??false},
     economy:beginTurn(speed),
     resources:[...ownResources,...featurePools,...spellSlotPools(spellSheet).filter((pool)=>!slotIds.has(pool.id))],
     hitDice:hitDicePools(spellSheet),

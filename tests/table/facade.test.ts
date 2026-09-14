@@ -91,8 +91,28 @@ test("solo write-back: damage and healing rulings on the local character land in
   await facade.dispatch({type:"undo"});
   assert.equal((await base.getSnapshot()).activeCharacter.tempHp,0,"undo is written back too");
   assert.equal(libraryHp(base,id),before-3);
+  // Death saves, stable and hit dice are durable too (RULES_RUNTIME_SPECS.md §4).
+  await facade.dispatch({type:"ruling",targetIds:[id],ruling:{kind:"damage",amount:60}});
+  await facade.adapter.setQueuedD20(4);
+  const save=await facade.dispatch({type:"act",actorId:id,actionId:"action.death-save",targetIds:[]},{peerId:"peer.local",role:"player"});
+  assert.equal(save.status,"committed",JSON.stringify(save));
+  const record=()=>getCharacterLibraryPersistenceStateForTests(base)?.document?.characters.find((entry)=>entry.characterId===id);
+  assert.deepEqual(record()?.runtime.lifeFlags?.deathSaves,{successes:0,failures:1},JSON.stringify(record()?.runtime.lifeFlags));
+  assert.equal(record()?.runtime.hp,0);
+  await facade.dispatch({type:"ruling",targetIds:[id],ruling:{kind:"life",state:"stable"}});
+  assert.equal(record()?.runtime.lifeFlags?.stable,true);
+  await facade.dispatch({type:"ruling",targetIds:[id],ruling:{kind:"heal",amount:10}});
+  assert.equal(facade.dispatch&&(await facade.dispatch({type:"rest",kind:"short",actorIds:[id],hitDice:{[id]:2}})).status,"committed");
+  assert.equal((await facade.dispatch({type:"rest-complete"})).status,"committed");
+  assert.equal(facade.runtime.state.rules.combatants[id].hitDice[0].current,3,"two of five d10 spent");
+  assert.deepEqual(record()?.source.build.hitDiceByDie,{d10:3},"remaining hit dice reach the library");
+  assert.equal(facade.lastWriteBackError,null);
   const left=await facade.adapter.stopSession();
-  assert.equal(left.activeCharacter.hp,before-3,"the sheet keeps the session's HP after leaving");
+  assert.equal(left.activeCharacter.hitDiceByDie?.d10,3,"the sheet keeps the session's hit dice after leaving");
+  // A new table seeds the character from the written-back sheet: the spent hit dice stay spent.
+  const again=createTableSessionFacade(base);
+  await again.adapter.hostSession();
+  assert.equal(again.runtime.state.rules.combatants[id].hitDice[0].current,3);
 });
 
 test("connected write-back: the DM's ruling on a player's character reaches that player's library, not the DM's", async () => {
