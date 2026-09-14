@@ -1,7 +1,7 @@
 import type { CombatantRuntimeState, RulesRuntimeState } from "../domain/combatState";
 import { type EngagementRecord, pruneEngagementsToPresent } from "../domain/engagement";
 import type { CharacterSheet } from "../app/contracts";
-import { cloneState, type Actor, type FloorItem, type HouseRule, type LogEntry, type MovementDeclaration, type ReadiedAction, type ResolutionRecord, type RestingState, type TableMode, type TableQuestion, type TableState, type TableTime, type Timer, type Visibility } from "./state";
+import { cloneState, type Actor, type FloorItem, type HouseRule, type LogEntry, type MovementDeclaration, type ReadiedAction, type ResolutionRecord, type PendingResolution, type ResolutionReplay, type RestingState, type TableMode, type TableQuestion, type TableSettings, type TableState, type TableTime, type Timer, type Visibility } from "./state";
 
 /** Durable character changes (items moved, quantities) ride with the commit so the owner's client can write them back. */
 export type SheetPatch={actorId:string;sheet:CharacterSheet};
@@ -19,11 +19,11 @@ export type TableEventPayload=
   |{type:"actor-updated";actorId:string;patch:ActorPatch}
   |{type:"mode-changed";mode:TableMode;order:string[];round:number;currentActorId:string|null;rules:RulesRuntimeState;engagements?:EngagementRecord[]}
   |{type:"turn-changed";currentActorId:string|null;round:number;order?:string[];rules:RulesRuntimeState;engagements?:EngagementRecord[];timers?:Timer[];questions?:TableQuestion[]}
-  |{type:"rules-committed";rules:RulesRuntimeState;resolution?:ResolutionRecord|null;actorPatches?:Array<{actorId:string;patch:ActorPatch}>;engagements?:EngagementRecord[];sheets?:SheetPatch[];floor?:FloorItem[];interactions?:Record<string,number>;questions?:TableQuestion[];declarations?:Record<string,MovementDeclaration>;readied?:Record<string,ReadiedAction>;timers?:Timer[];resting?:RestingState|null;time?:TableTime}
+  |{type:"rules-committed";rules:RulesRuntimeState;resolution?:ResolutionRecord|null;actorPatches?:Array<{actorId:string;patch:ActorPatch}>;engagements?:EngagementRecord[];sheets?:SheetPatch[];floor?:FloorItem[];interactions?:Record<string,number>;questions?:TableQuestion[];declarations?:Record<string,MovementDeclaration>;readied?:Record<string,ReadiedAction>;timers?:Timer[];resting?:RestingState|null;time?:TableTime;pending?:PendingResolution|null;replay?:ResolutionReplay}
   /** The clock moved (a round, a rest, the DM): the kernel's state after expiry, the timers that fired, the cards they opened. */
   |{type:"time-advanced";seconds:number;rules:RulesRuntimeState;expired:string[];fired:string[];timers:Timer[];questions?:TableQuestion[];resting?:RestingState|null;time?:TableTime}
   /** Table bookkeeping that needs no kernel commit: hands, floor, transfers, interaction count, questions, declarations, readied actions. */
-  |{type:"table-changed";sheets?:SheetPatch[];floor?:FloorItem[];interactions?:Record<string,number>;rules?:RulesRuntimeState;engagements?:EngagementRecord[];questions?:TableQuestion[];declarations?:Record<string,MovementDeclaration>;readied?:Record<string,ReadiedAction>;houseRules?:Record<string,HouseRule>;timers?:Timer[];resting?:RestingState|null;time?:TableTime}
+  |{type:"table-changed";sheets?:SheetPatch[];floor?:FloorItem[];interactions?:Record<string,number>;rules?:RulesRuntimeState;engagements?:EngagementRecord[];questions?:TableQuestion[];declarations?:Record<string,MovementDeclaration>;readied?:Record<string,ReadiedAction>;houseRules?:Record<string,HouseRule>;timers?:Timer[];resting?:RestingState|null;time?:TableTime;pending?:PendingResolution|null;settings?:TableSettings}
   |{type:"state-restored";state:TableState}
   |{type:"visibility-changed";rollVisibility:Visibility};
 
@@ -85,6 +85,8 @@ export function applyEvent(input:TableState,event:TableEvent):TableState {
       state.interactions={};
       if(payload.mode==="freeform") { state.declarations={}; state.readied={}; state.questions=state.questions.filter((question)=>question.kind!=="ready-trigger"); }
       state.activeResolution=null;
+      state.pending=null;
+      state.questions=state.questions.filter((question)=>question.kind!=="reaction-window");
       break;
     }
     case "turn-changed": {
@@ -116,6 +118,8 @@ export function applyEvent(input:TableState,event:TableEvent):TableState {
       if(payload.timers) state.timers=cloneState(payload.timers);
       if(payload.resting!==undefined) state.resting=payload.resting?cloneState(payload.resting):null;
       if(payload.time) state.time=cloneState(payload.time);
+      if(payload.pending!==undefined) state.pending=payload.pending?cloneState(payload.pending):null;
+      if(payload.replay) state.replays=[cloneState(payload.replay),...state.replays.filter((entry)=>entry.resolutionId!==payload.replay!.resolutionId)].slice(0,10);
       break;
     }
     case "time-advanced":
@@ -135,6 +139,8 @@ export function applyEvent(input:TableState,event:TableEvent):TableState {
       if(payload.declarations) state.declarations=cloneState(payload.declarations);
       if(payload.readied) state.readied=cloneState(payload.readied);
       if(payload.houseRules) state.houseRules=cloneState(payload.houseRules);
+      if(payload.pending!==undefined) state.pending=payload.pending?cloneState(payload.pending):null;
+      if(payload.settings) state.settings=cloneState(payload.settings);
       if(payload.timers) state.timers=cloneState(payload.timers);
       if(payload.resting!==undefined) state.resting=payload.resting?cloneState(payload.resting):null;
       if(payload.time) state.time=cloneState(payload.time);

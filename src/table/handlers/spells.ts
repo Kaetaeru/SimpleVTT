@@ -64,9 +64,11 @@ export function castAct(ctx:HandlerContext,actor:Actor,action:ActionVm,targetIds
     caster,targets,...(level!==undefined?{slotLevel:level}:{}),
     ...(componentContext?{componentContext}:{componentsSatisfied:true}),
     useActionEconomy:state.mode==="initiative"||ctx.asReaction===true,
-    ...(state.mode==="initiative"?{turnId:turnIdOf(state)??`freeform:${actor.id}`}:{}),
+    ...(state.mode==="initiative"||ctx.asReaction?{turnId:turnIdOf(state)??`freeform:${actor.id}`}:{}),
     dice:spellDice(ctx.dice,definition,level,sheet.level,targetIds),
   };
+  // Legendary Resistance (D21): the DM turned these failed saves into successes; same faces otherwise.
+  for(const autoId of ctx.overrides?.autoSuccessSaves??[]) { const save=request.dice.saves?.[autoId]; if(save) save.faces=save.faces.map(()=>20); }
   let compilation;
   try { compilation=compileSpellCast(definition,payment.state,request); }
   catch(error) { return refused("spell-rejected",koSpellError(error instanceof Error?error.message:String(error)),{actorId:actor.id,actionId:action.id}); }

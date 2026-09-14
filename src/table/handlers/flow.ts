@@ -1,4 +1,5 @@
 import { clearEngagementsOf } from "../../domain/engagement";
+import { answerWindow } from "./windows";
 import type { ResolutionOperation } from "../../domain/resolutionTypes";
 import { actionsFor } from "../actors";
 import { availabilityOf, targetRefusalFor } from "../availability";
@@ -103,6 +104,8 @@ export function answerQuestion(ctx:HandlerContext,command:Extract<TableCommand,{
       if(first&&(first.payload.type==="rules-committed"||first.payload.type==="table-changed")) first.payload={...first.payload,readied:readiedNext};
       return result;
     }
+    case "reaction-window":
+      return answerWindow(ctx,question,command.optionId);
     case "rest": {
       const resting=state.resting;
       if(!resting||!resting.actorIds.includes(question.actorId)) return {status:"committed",events:[{payload:{type:"table-changed",questions:remaining},log:[log("휴식 답변",`${name}: 휴식이 더 이상 진행 중이 아닙니다`)]}]};
@@ -123,6 +126,7 @@ export function skipQuestion(ctx:HandlerContext,command:Extract<TableCommand,{ty
   const state=ctx.state;
   const question=questionById(state,command.questionId);
   if(!question) return refused("question-unknown","이미 처리된 질문입니다.");
+  if(question.kind==="reaction-window") return answerWindow(ctx,question,"decline");
   return {status:"committed",events:[{payload:{type:"table-changed",questions:withoutQuestion(state.questions,question.id)},log:[logEntry(ctx,{actor:"DM",title:"질문 넘김",summary:question.prompt,detail:["DM이 이 질문을 넘겼습니다. 반응은 소비되지 않습니다."],stateChanges:[]})]}]};
 }
 

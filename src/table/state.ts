@@ -74,7 +74,7 @@ export interface FloorItem {
 /** A table question: one card to one peer (the asked actor's controller, or the DM), a few options, one answer. */
 export interface TableQuestion {
   id:string;
-  kind:"opportunity-attack"|"knock-out"|"ready-trigger"|"ruling-request"|"player-request"|"dm"|"rest";
+  kind:"opportunity-attack"|"knock-out"|"ready-trigger"|"ruling-request"|"player-request"|"dm"|"rest"|"reaction-window";
   /** The actor whose choice this is. */
   actorId:string;
   /** The peer that may answer (the actor's controller); the DM may always answer or skip. */
@@ -145,6 +145,58 @@ export interface RestingState {
   interruptedAt?:number;
 }
 
+/** Reaction windows (RULES_RUNTIME_SPECS.md §2): where a resolution pauses before its result commits. */
+export type ReactionWindow="hit-determined"|"spell-being-cast"|"damage-taken"|"save-failed"|"dm-intervention";
+
+/** DM attack-intervention palette (D42): what the DM may change on an attack, before or after it resolves. */
+export interface AttackOverrides {
+  outcome?:"hit"|"miss"|"crit";
+  cover?:"none"|"half"|"three-quarters"|"total";
+  rollState?:"advantage"|"disadvantage"|"normal";
+  reach?:"in"|"out";
+  range?:"normal"|"long"|"out";
+  unseen?:{attacker?:boolean;target?:boolean};
+  damage?:{mode:"half"|"zero"|"set";value?:number};
+  /** Legendary Resistance (D21): these targets' failed saves become successes. */
+  autoSuccessSaves?:string[];
+  /** Counterspell succeeded: the spell is lost, the slot is spent. */
+  cancelled?:boolean;
+}
+
+/** A resolution waiting on reaction windows: the command, the dice it drew, and the answers so far. */
+export interface PendingResolution {
+  id:string;
+  actorId:string;
+  targetIds:string[];
+  command:{type:"act";actorId:string;actionId:string;targetIds:string[];itemId?:string;slotLevel?:number};
+  asReaction?:boolean;
+  /** Every dice draw of the first run, in order; the final run replays them. */
+  diceRecord:number[][];
+  /** Windows still open, in order; each is one question. */
+  windows:Array<{window:ReactionWindow;reactorId:string;questionId:string}>;
+  answers:string[];
+  overrides:AttackOverrides;
+  label:string;
+}
+
+/** What a committed resolution needs to be re-resolved by the DM palette after the fact. */
+export interface ResolutionReplay {
+  resolutionId:string;
+  command:PendingResolution["command"];
+  asReaction?:boolean;
+  diceRecord:number[][];
+  rulesBefore:RulesRuntimeState;
+  engagementsBefore:EngagementRecord[];
+  questionsBefore:TableQuestion[];
+  revisionAfter:number;
+  answers:string[];
+}
+
+export interface TableSettings {
+  /** D42 pre-resolution hold: attacks against DM-controlled creatures wait for the DM card. */
+  holdAttacks:boolean;
+}
+
 /** A readied action (2024 Ready): the trigger in the actor's words and the action to fire as a reaction. */
 export interface ReadiedAction { actionId:string; trigger:string; targetIds:string[]; round:number }
 
@@ -177,6 +229,10 @@ export interface TableState {
   time:TableTime;
   timers:Timer[];
   resting:RestingState|null;
+  settings:TableSettings;
+  pending:PendingResolution|null;
+  /** Replays for the last few committed resolutions (DM palette after the fact); newest first. */
+  replays:ResolutionReplay[];
   activeResolution:ResolutionRecord|null;
   /** Newest first. */
   log:LogEntry[];
@@ -204,6 +260,9 @@ export function createTableState(sessionId:string):TableState {
     time:{dayStartSeconds:8*3600,lastLongRest:{}},
     timers:[],
     resting:null,
+    settings:{holdAttacks:false},
+    pending:null,
+    replays:[],
     activeResolution:null,
     log:[],
     rollVisibility:"public",

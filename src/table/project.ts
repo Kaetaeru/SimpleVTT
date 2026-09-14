@@ -23,6 +23,8 @@ declare module "../app/contracts" {
     resting?:{kind:"short"|"long";actorIds:string[];answered:string[];interrupted:boolean};
     /** DM only: scheduled reminders and recoveries. */
     timers?:Array<{id:string;kind:string;label:string;inSeconds:number}>;
+    /** A resolution held in a reaction window (RULES_RUNTIME_SPECS.md §2). */
+    pendingResolution?:{id:string;actorId:string;actorName:string;label:string;waitingOn:string[];window:string};
   }
   interface SceneEntity {
     /** What the character holds: "장검 (주손) · 방패 (보조손)" or "빈손". */
@@ -124,7 +126,8 @@ export function projectTable(state:TableState,viewer:TableViewer,refusal?:(Table
   const scene:SceneVm={id:state.sessionId,name:"",round:state.round,currentActorId:state.currentActorId??"",selectedActorId:"",entities,actionsByActor,economyByActor,...(questions.length?{tableQuestions:questions}:{}),...(Object.keys(state.declarations).length?{movementDeclarations:Object.fromEntries(Object.entries(state.declarations).map(([id,declaration])=>[id,{...declaration}]))}:{}),...(pendingWithdrawal&&viewer.role==="dm"?{pendingWithdrawal}:{}),...(state.engagements.length?{engagements:state.engagements.map((record)=>({...record}))}:{}),...(state.floor.length?{floorItems:state.floor.map((entry)=>({id:entry.id,name:entry.item.name,quantity:entry.item.quantity,droppedById:entry.droppedBy,droppedByName:state.actors[entry.droppedBy]?.name??entry.droppedBy,recoverable:entry.recoverable}))}:{}),
     clock:{elapsedSeconds:state.rules.clock.elapsedSeconds,round:state.round,timeOfDay:timeOfDayLabel(clockOfDay(state))},
     ...(state.resting?{resting:{kind:state.resting.kind,actorIds:[...state.resting.actorIds],answered:Object.keys(state.resting.answers),interrupted:state.resting.interruptedAt!==undefined}}:{}),
-    ...(viewer.role==="dm"&&state.timers.length?{timers:state.timers.map((timer)=>({id:timer.id,kind:timer.kind,label:timer.label,inSeconds:Math.max(0,timer.at-state.rules.clock.elapsedSeconds)}))}:{})};
+    ...(viewer.role==="dm"&&state.timers.length?{timers:state.timers.map((timer)=>({id:timer.id,kind:timer.kind,label:timer.label,inSeconds:Math.max(0,timer.at-state.rules.clock.elapsedSeconds)}))}:{}),
+    ...(state.pending?{pendingResolution:{id:state.pending.id,actorId:state.pending.actorId,actorName:state.actors[state.pending.actorId]?.name??state.pending.actorId,label:state.pending.label,waitingOn:state.pending.windows.map((entry)=>state.actors[entry.reactorId]?.name??entry.reactorId),window:state.pending.windows[0]?.window??""}}:{})};
   const activity:ActivityEntry[]=state.log.filter((entry)=>viewer.role==="dm"||entry.visibility==="public").map((entry)=>({
     id:entry.id,time:entry.time,actor:entry.actor,title:entry.title,summary:entry.summary,detail:[...entry.detail],stateChanges:[...entry.stateChanges],
     ...(entry.ruling?{ruling:entry.ruling}:{}),...(entry.undoOf?{undoOf:entry.undoOf}:{}),...(entry.reversed?{reversed:true}:{}),

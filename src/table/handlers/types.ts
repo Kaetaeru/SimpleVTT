@@ -18,6 +18,10 @@ export interface HandlerContext {
   origin:CommandOrigin;
   /** The action fires as a reaction (opportunity attack, readied action): the reaction slot is spent instead of the action. */
   asReaction?:boolean;
+  /** DM palette and window answers applied to this run (RULES_RUNTIME_SPECS.md §2). */
+  overrides?:import("../state").AttackOverrides;
+  /** The final run of a pending resolution: do not open windows again. */
+  skipWindows?:boolean;
 }
 
 export interface EventDraft {

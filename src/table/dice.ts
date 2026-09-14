@@ -35,3 +35,15 @@ export function parseDiceNotation(text:string):{count:number;sides:number;flat:n
 }
 
 export const diceAverage=(count:number,sides:number,flat:number)=>Math.floor(count*(sides+1)/2)+flat;
+
+/** Records every draw so a pending resolution can be replayed with the same faces (RULES_RUNTIME_SPECS.md §2). */
+export function recordingDice(inner:Dice):{dice:Dice;record:number[][]} {
+  const record:number[][]=[];
+  return {record,dice:{faces:(sides,count,purpose)=>{const out=inner.faces(sides,count,purpose);record.push([...out]);return out;}}};
+}
+
+/** Replays a recording in order, then falls back to the live dice for anything the replay did not cover. */
+export function replayingDice(record:number[][],inner:Dice):Dice {
+  const queue=record.map((faces)=>[...faces]);
+  return {faces:(sides,count,purpose)=>{const next=queue.shift();return next&&next.length===count?next:inner.faces(sides,count,purpose);}};
+}

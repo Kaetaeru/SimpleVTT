@@ -24,7 +24,9 @@ import { kernelErrorKo, refused } from "../refusal";
 import { attackCard, checkCard, lifeStateChanges, logFromCard, plainCard } from "../resolutionCard";
 import { cloneState, engagementRound, type Actor, type FloorItem, type ResolutionRecord, type TableQuestion, type TableState } from "../state";
 import { handsLabel } from "../hands";
+import { displayedAc } from "../project";
 import { actorName, commitOperations, type HandlerContext, type HandlerResult } from "./types";
+import { holdOrCommit, setPendingRunner } from "./windows";
 
 export const NEXT_ROLL_TAG="table:next-roll";
 export const STATUS_TAG="table:status";
@@ -151,11 +153,11 @@ function throwFromHand(state:TableState,actor:Actor,itemId:string|undefined,seq:
 }
 
 /** One committed event: the kernel's state, the card, the engagement set pruned to who is still alive, and any sheet/floor change. */
-export function commitEvents(ctx:HandlerContext,card:ResolutionRecord,rules:RulesRuntimeState,engagements?:EngagementRecord[],extra?:{sheets?:SheetPatch[];floor?:FloorItem[];questions?:TableQuestion[]}):HandlerResult {
+export function commitEvents(ctx:HandlerContext,card:ResolutionRecord,rules:RulesRuntimeState,engagements?:EngagementRecord[],extra?:{sheets?:SheetPatch[];floor?:FloorItem[];questions?:TableQuestion[];declarations?:TableState["declarations"]}):HandlerResult {
   const state=ctx.state;
   const next=engagementsAmongLiving(state,engagements??state.engagements,rules);
   const changed=!engagementsEqual(next,state.engagements);
-  return {status:"committed",resolution:card,events:[{payload:{type:"rules-committed",rules,resolution:card,...(changed?{engagements:next}:{}),...(extra?.sheets?.length?{sheets:extra.sheets}:{}),...(extra?.floor?{floor:extra.floor}:{}),...(extra?.questions?{questions:extra.questions}:{})},log:[logFromCard(card,actorName(ctx.state,card.actorId),ctx.now)]}]};
+  return {status:"committed",resolution:card,events:[{payload:{type:"rules-committed",rules,resolution:card,...(changed?{engagements:next}:{}),...(extra?.sheets?.length?{sheets:extra.sheets}:{}),...(extra?.floor?{floor:extra.floor}:{}),...(extra?.questions?{questions:extra.questions}:{}),...(extra?.declarations?{declarations:extra.declarations}:{})},log:[logFromCard(card,actorName(ctx.state,card.actorId),ctx.now)]}]};
 }
 
 export function attackAct(ctx:HandlerContext,actor:Actor,action:ActionVm,targetIds:string[],resolutionId:string,itemId?:string,options:{noEngagement?:boolean}={}):HandlerResult {
@@ -176,13 +178,26 @@ export function attackAct(ctx:HandlerContext,actor:Actor,action:ActionVm,targetI
   });
   // Drawn after the attack and damage dice so the ledger order stays attack → damage → concentration.
   const concentrationCheck=concentrationCheckFor(ctx,targetId);
+  // D42: the DM palette changes the facts the kernel is given, never the kernel's rules.
+  const o=ctx.overrides??{};
+  const forcedMiss=o.outcome==="miss"||o.cover==="total"||o.range==="out";
+  if(o.outcome==="crit") attackDice.faces=attackDice.faces.map(()=>20);
+  const situational=o.cover!==undefined||o.unseen!==undefined;
+  const rollStates:Array<{source:string;state:"advantage"|"disadvantage"}>=[
+    ...(rangedInMelee.length?[{source:`${ENGAGEMENT_RANGED_IN_MELEE_SOURCE}:${rangedInMelee.join(",")}`,state:"disadvantage" as const}]:[]),
+    ...(o.rollState==="advantage"||o.rollState==="disadvantage"?[{source:"dm:override:roll-state",state:o.rollState}]:[]),
+    ...(o.range==="long"?[{source:"dm:override:long-range",state:"disadvantage" as const}]:[]),
+  ];
+  const targetFacts=rangeFeet<=5||situational
+    ?{spatialAuthority:"authoritative" as const,distanceFeet:rangeFeet<=5?5:rangeFeet,visible:!o.unseen?.target,cover:(o.cover&&o.cover!=="total"?o.cover:"none") as "none"|"half"|"three-quarters",targetCanSeeAttacker:!o.unseen?.attacker}
+    :{spatialAuthority:"manual-unconstrained" as const};
   const request:AttackRequest={
     id:resolutionId,actorId:actor.id,expectedRevision:state.rules.revision,sourceId:action.id,sourceKind:action.runtimeAttack.sourceKind,
-    // Mapless table: a melee attack is adjacent by declaration (prone targets, reach); ranged distance stays unknown.
-    target:{id:targetId,kind:"creature",relation:actor.side===target.side?"ally":"enemy",ac:actorAc(target),creatureKind:target.kind==="character"?"character":"monster",...(rangeFeet<=5?{spatialAuthority:"authoritative",distanceFeet:5,visible:true,cover:"none",targetCanSeeAttacker:true}:{spatialAuthority:"manual-unconstrained"})} as AttackRequest["target"],
+    // Mapless table: a melee attack is adjacent by declaration (prone targets, reach); ranged distance stays unknown unless the DM says otherwise.
+    target:{id:targetId,kind:"creature",relation:actor.side===target.side?"ally":"enemy",ac:displayedAc(state,target),creatureKind:target.kind==="character"?"character":"monster",...targetFacts} as AttackRequest["target"],
     actorCreatureKind:actor.kind==="character"?"character":"monster",
-    rangeFeet,attackDice,attackModifierContributions:[{source:`action:${action.id}:attack-bonus`,value:action.attackBonus??0}],requiresSight:rangeFeet<=5,
-    ...(rangedInMelee.length?{rollStateContributions:[{source:`${ENGAGEMENT_RANGED_IN_MELEE_SOURCE}:${rangedInMelee.join(",")}`,state:"disadvantage" as const}]}:{}),
+    rangeFeet,attackDice,attackModifierContributions:[{source:`action:${action.id}:attack-bonus`,value:action.attackBonus??0},...(o.outcome==="hit"?[{source:"dm:override:hit",value:100}]:[]),...(forcedMiss?[{source:"dm:override:miss",value:-100}]:[])],requiresSight:rangeFeet<=5&&!situational,
+    ...(rollStates.length?{rollStateContributions:rollStates}:{}),
     ...(concentrationCheck?{concentrationCheck}:{}),
     baseDamage:{sourceId:action.id,damageType:spec.type,dice:base.count?[{source:action.id,sides:base.sides,count:base.count,faces:damageFaces}]:[],flat:base.flat?[{source:`${action.id}:flat`,value:base.flat}]:[]},
     riders,
@@ -194,7 +209,19 @@ export function attackAct(ctx:HandlerContext,actor:Actor,action:ActionVm,targetI
   if(commit.status==="rejected") return refused("action-rejected",kernelErrorKo(commit.error),{actorId:actor.id,actionId:action.id});
   const attack=commit.results[`${resolutionId}:attack`] as D20TestResult;
   const damage=Object.entries(commit.results).find(([key,value])=>key.startsWith(resolutionId)&&Boolean(value)&&typeof value==="object"&&"components" in (value as object))?.[1] as CompoundDamageResolution|undefined;
-  const rules=commit.state;
+  let rules=commit.state;
+  const overrideChanges:string[]=[];
+  if(o.damage&&damage&&attack.outcome==="success") {
+    const dealt=damage.finalDamage;
+    const wanted=o.damage.mode==="half"?Math.floor(dealt/2):o.damage.mode==="zero"?0:Math.max(0,Math.floor(o.damage.value??dealt));
+    if(wanted<dealt) {
+      const adjusted=commitOperations(ctx,{id:`${resolutionId}:dm-damage`,actorId:actor.id,sourceId:"dm:override",rules,operations:[{id:`${resolutionId}:dm-damage:healing`,kind:"healing",targetId,amount:dealt-wanted}]});
+      if(adjusted.status==="committed") { rules=adjusted.commit.state; overrideChanges.push(`DM 개입: 피해 ${dealt} → ${wanted}`); }
+    } else if(wanted>dealt) {
+      const adjusted=commitOperations(ctx,{id:`${resolutionId}:dm-damage`,actorId:actor.id,sourceId:"dm:override",rules,operations:[{id:`${resolutionId}:dm-damage:extra`,kind:"damage",targetId,damageType:spec.type,amount:wanted-dealt,creatureKind:target.kind==="character"?"character":"monster"}]});
+      if(adjusted.status==="committed") { rules=adjusted.commit.state; overrideChanges.push(`DM 개입: 피해 ${dealt} → ${wanted}`); }
+    }
+  }
   const consumed=consumeNextRoll(rules,actor.id,"attack-roll");
   const unhidden=hiddenEndsFor(rules,actor.id);
   if(unhidden.length) rules.effects=rules.effects.filter((effect)=>!unhidden.includes(effect.id));
@@ -203,10 +230,13 @@ export function attackAct(ctx:HandlerContext,actor:Actor,action:ActionVm,targetI
   // D9: a melee attack that drops a creature to 0 HP may knock it out instead — one question to the attacker.
   const killedNow=isMeleeAttack(action)&&target.kind==="npc"&&!state.rules.combatants[targetId]?.life.dead&&rules.combatants[targetId]?.life.dead;
   const questions=killedNow?[...state.questions,knockOutQuestion(state,actor.id,targetId,ctx.nextSeq)]:undefined;
-  const stateChanges=[...lifeStateChanges(state,state.rules,rules),...consumed.map((label)=>`${actor.name} 상태 종료: ${label}`),...(unhidden.length?[`${actor.name} 숨음 해제 (공격)`]:[]),...(engaged?[engaged.line]:[]),...(thrown?.lines??[]),...(killedNow?[`질문: ${target.name} 죽임/기절`]:[])];
+  const stateChanges=[...lifeStateChanges(state,state.rules,rules),...consumed.map((label)=>`${actor.name} 상태 종료: ${label}`),...(unhidden.length?[`${actor.name} 숨음 해제 (공격)`]:[]),...(engaged?[engaged.line]:[]),...(thrown?.lines??[]),...(killedNow?[`질문: ${target.name} 죽임/기절`]:[]),...overrideChanges];
   const card=attackCard({id:resolutionId,seq:ctx.nextSeq,visibility:state.rollVisibility,action,actorId:actor.id,targetIds:[targetId],targetName:target.name,attack,damage,events:commit.events,stateChanges});
+  if(forcedMiss) { card.attackOutcome="빗나감"; card.compact=`${o.cover==="total"?"완전 엄폐":o.range==="out"?"사거리 밖":"DM 개입"} — 빗나감`; card.finalOutcome=`${action.name} → ${target.name} · 빗나감`; }
   if(engaged) card.provenance.push(`engagement:melee-attack:${actor.id}<->${targetId}:round:${engagementRound(state)}`);
-  return commitEvents(ctx,card,rules,engaged?.engagements,{...(thrown??{}),...(questions?{questions}:{})});
+  // D24: "닿지 않음" re-records the attack as an approach and the same attack; the action is kept.
+  const declarations=o.reach==="out"?{...state.declarations,[actor.id]:{kind:"approach" as const,targetId,round:state.round}}:undefined;
+  return commitEvents(ctx,card,rules,engaged?.engagements,{...(thrown??{}),...(questions?{questions}:{}),...(declarations?{declarations}:{})});
 }
 
 function checkAct(ctx:HandlerContext,actor:Actor,action:ActionVm,targetIds:string[],resolutionId:string):HandlerResult {
@@ -264,7 +294,8 @@ function saveAct(ctx:HandlerContext,actor:Actor,action:ActionVm,targetIds:string
     if(!target) continue;
     const saveId=`${resolutionId}:save:${targetId}`;
     saveIds[targetId]=saveId;
-    operations.push({id:saveId,kind:"d20",actorId:targetId,request:{family:"saving-throw",target:dc,modifierContributions:[{source:`save:${key}`,value:actorSaveModifier(target,key)}],dice:{id:`${saveId}:d20`,purpose:`${target.name} ${abilityLabelKo(key)} 내성`,sides:20,faces:d20Faces(ctx,`${target.name} 내성`)}},condition:{ability:key}});
+    const saveFaces=d20Faces(ctx,`${target.name} 내성`);
+    operations.push({id:saveId,kind:"d20",actorId:targetId,request:{family:"saving-throw",target:dc,modifierContributions:[{source:`save:${key}`,value:actorSaveModifier(target,key)}],dice:{id:`${saveId}:d20`,purpose:`${target.name} ${abilityLabelKo(key)} 내성`,sides:20,faces:ctx.overrides?.autoSuccessSaves?.includes(targetId)?saveFaces.map(()=>20):saveFaces}},condition:{ability:key}});
     if(components.length) {
       const creatureKind=target.kind==="character"?"character" as const:"monster" as const;
       const damageType=components[0].type;
@@ -440,7 +471,12 @@ function releaseAct(ctx:HandlerContext,actor:Actor,action:ActionVm,resolutionId:
   return commitEvents(ctx,card,committed.commit.state);
 }
 
+/** Every action runs through the reaction-window hold (RULES_RUNTIME_SPECS.md §2); the inner handler stays pure. */
 export function act(ctx:HandlerContext,command:Extract<TableCommand,{type:"act"}>):HandlerResult {
+  return holdOrCommit(ctx,command,(inner)=>actInner(inner,command));
+}
+
+export function actInner(ctx:HandlerContext,command:Extract<TableCommand,{type:"act"}>):HandlerResult {
   const state=ctx.state;
   const actor=state.actors[command.actorId];
   if(!actor||!state.rules.combatants[command.actorId]) return refused("actor-unknown","테이블에 없는 액터입니다.",{actorId:command.actorId});
@@ -452,6 +488,7 @@ export function act(ctx:HandlerContext,command:Extract<TableCommand,{type:"act"}
   const targetRefusal=targetRefusalFor(state,action,targetIds);
   if(targetRefusal) return refused(targetRefusal.code,targetRefusal.message,{actorId:actor.id,actionId:action.id});
   const resolutionId=`res.${ctx.nextSeq}`;
+  if(ctx.overrides?.cancelled&&action.tableSpell) return cancelledCastAct(ctx,actor,action,resolutionId,command.slotLevel);
   if(action.id==="action.death-save") return deathSaveAct(ctx,actor,action,resolutionId);
   if(action.tableSpell) return castAct(ctx,actor,action,targetIds,resolutionId,command.slotLevel);
   if(action.tableUnarmedOption) return unarmedOptionAct(ctx,actor,action,targetIds,resolutionId);
@@ -466,3 +503,19 @@ export function act(ctx:HandlerContext,command:Extract<TableCommand,{type:"act"}
     case "no-roll-damage": return noRollAct(ctx,actor,action,targetIds,resolutionId);
   }
 }
+
+/** Counterspell succeeded (RULES_RUNTIME_SPECS.md §2): the slot and the action are spent, nothing happens. */
+function cancelledCastAct(ctx:HandlerContext,actor:Actor,action:ActionVm,resolutionId:string,slotLevel?:number):HandlerResult {
+  const state=ctx.state;
+  const spell=action.tableSpell!;
+  const level=spell.baseLevel===0?undefined:slotLevel??spell.baseLevel;
+  const operations:ResolutionOperation[]=[];
+  const economy=economyOperation(ctx,resolutionId,action); if(economy) operations.push(economy);
+  if(level!==undefined) operations.push({id:`${resolutionId}:slot`,kind:"spend-resource",actorId:actor.id,resourceId:`spell-slot-${level}`,amount:1});
+  const committed=commitOperations(ctx,{id:resolutionId,actorId:actor.id,sourceId:action.id,operations,actionId:action.id});
+  if(committed.status==="refused") return committed;
+  const card=plainCard({id:resolutionId,seq:ctx.nextSeq,visibility:state.rollVisibility,action,actorId:actor.id,targetIds:[],rollKind:"effect",compact:`${action.name} — 역마법으로 무산${level!==undefined?` · ${level}레벨 슬롯 소비`:""}`,detail:["주문은 효과 없이 끝났습니다 (2024: 슬롯은 소비)."],events:committed.commit.events,stateChanges:lifeStateChanges(state,state.rules,committed.commit.state)});
+  return commitEvents(ctx,card,committed.commit.state);
+}
+
+setPendingRunner(actInner);

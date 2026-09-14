@@ -34,6 +34,8 @@ export function redactStateFor(state:TableState,viewer:TableViewer):TableState {
   next.log=next.log.filter((entry)=>visibleLog(entry,viewer));
   next.questions=next.questions.filter((question)=>visibleQuestion(question,viewer));
   next.timers=[];
+  next.replays=[];
+  if(next.pending) next.pending={...next.pending,diceRecord:[]};
   if(next.activeResolution&&next.activeResolution.visibility!=="public") next.activeResolution=null;
   return next;
 }
@@ -78,10 +80,11 @@ export function redactEventFor(event:TableEvent,before:TableState,after:TableSta
       return {...event,log,payload:{...payload,rules:redactRules(payload.rules,hiddenAfter),timers:[],...(payload.questions?{questions:payload.questions.filter((question)=>visibleQuestion(question,viewer))}:{})}};
     case "rules-committed": {
       const resolution=payload.resolution===undefined?undefined:payload.resolution&&payload.resolution.visibility==="public"?payload.resolution:null;
-      return {...event,log,payload:{...payload,rules:redactRules(payload.rules,hiddenAfter),...(resolution!==undefined?{resolution}:{}),...(payload.questions?{questions:payload.questions.filter((question)=>visibleQuestion(question,viewer))}:{}),...(payload.sheets?{sheets:payload.sheets.filter((patch)=>!hiddenAfter.includes(patch.actorId))}:{}),...(payload.engagements?{engagements:payload.engagements.filter((record)=>!hiddenAfter.includes(record.a)&&!hiddenAfter.includes(record.b))}:{})}};
+      const {replay:_replay,...rest}=payload;
+      return {...event,log,payload:{...rest,rules:redactRules(payload.rules,hiddenAfter),...(resolution!==undefined?{resolution}:{}),...(payload.questions?{questions:payload.questions.filter((question)=>visibleQuestion(question,viewer))}:{}),...(payload.sheets?{sheets:payload.sheets.filter((patch)=>!hiddenAfter.includes(patch.actorId))}:{}),...(payload.engagements?{engagements:payload.engagements.filter((record)=>!hiddenAfter.includes(record.a)&&!hiddenAfter.includes(record.b))}:{})}};
     }
     case "table-changed":
-      return {...event,log,payload:{...payload,...(payload.rules?{rules:redactRules(payload.rules,hiddenAfter)}:{}),...(payload.questions?{questions:payload.questions.filter((question)=>visibleQuestion(question,viewer))}:{}),...(payload.sheets?{sheets:payload.sheets.filter((patch)=>!hiddenAfter.includes(patch.actorId))}:{}),...(payload.engagements?{engagements:payload.engagements.filter((record)=>!hiddenAfter.includes(record.a)&&!hiddenAfter.includes(record.b))}:{})}};
+      return {...event,log,payload:{...payload,...(payload.pending?{pending:{...payload.pending,diceRecord:[]}}:{}),...(payload.rules?{rules:redactRules(payload.rules,hiddenAfter)}:{}),...(payload.questions?{questions:payload.questions.filter((question)=>visibleQuestion(question,viewer))}:{}),...(payload.sheets?{sheets:payload.sheets.filter((patch)=>!hiddenAfter.includes(patch.actorId))}:{}),...(payload.engagements?{engagements:payload.engagements.filter((record)=>!hiddenAfter.includes(record.a)&&!hiddenAfter.includes(record.b))}:{})}};
     case "state-restored":
       return {...event,log,payload:{type:"state-restored",state:redactStateFor(payload.state,viewer)}};
     case "visibility-changed":

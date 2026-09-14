@@ -1,7 +1,7 @@
 import type { CharacterSheet } from "../app/contracts";
 import type { ConditionId } from "../domain/conditions";
 import type { DurationSpec } from "../domain/effects";
-import type { RulingSpec, Side, Visibility } from "./state";
+import type { AttackOverrides, RulingSpec, Side, TableSettings, Visibility } from "./state";
 
 /** What a command may add to the table. */
 export type ActorSpec=
@@ -67,6 +67,9 @@ export type TableCommand=
   /** DM schedules a reminder card on the clock. */
   |{type:"set-timer";label:string;inSeconds:number}
   |{type:"clear-timer";timerId:string}
+  /** DM attack-intervention palette (D42): on the pending resolution, or after the fact on the latest committed one. */
+  |{type:"override";resolutionId:string;changes:AttackOverrides;note?:string}
+  |{type:"set-setting";settings:Partial<TableSettings>}
   |{type:"forget-ruling";ruleId:string}
   |{type:"undo"}
   |{type:"set-roll-visibility";visibility:Visibility};

@@ -10,6 +10,7 @@ import { answerQuestion, declare, ready, skipQuestion, triggerReady } from "./ha
 import { forgetRuling, improvise, narrate, rememberRuling, request, rule } from "./handlers/improvise";
 import { rest, restComplete } from "./handlers/rest";
 import { advanceTime, clearTimer, setTimer, stableRecoveryTimers } from "./handlers/time";
+import { overrideResolution, pendingGuard, setSetting } from "./handlers/windows";
 import { ruling, rulingLabel } from "./handlers/ruling";
 import { endInitiative, endTurn, setCurrentActor, setOrder, startInitiative } from "./handlers/turns";
 import type { HandlerContext, HandlerResult } from "./handlers/types";
@@ -79,6 +80,8 @@ function describe(state:TableState,command:TableCommand):string {
     case "advance-time": return "시간 경과";
     case "set-timer": return "알림 예약";
     case "clear-timer": return "알림 취소";
+    case "override": return "DM 개입";
+    case "set-setting": return "세션 설정";
     case "ruling": return `DM 재량 · ${rulingLabel(state,command.ruling)}`;
     case "add-actors": return "액터 추가";
     case "remove-actor": return `액터 제거 · ${state.actors[command.actorId]?.name??command.actorId}`;
@@ -123,6 +126,8 @@ export class TableRuntime {
   dispatch(command:TableCommand,origin:CommandOrigin=HOST_ORIGIN):Outcome {
     const denied=authorize(this.state,command,origin);
     if(denied) return this.refuse(denied);
+    const waiting=pendingGuard(this.state,command);
+    if(waiting) return this.refuse(waiting);
     if(command.type==="undo") return this.undo(origin.peerId===HOST_ORIGIN.peerId&&this.undoSkipsBookkeeping);
     if(command.type==="set-roll-visibility") {
       if(this.state.rollVisibility===command.visibility) return this.refuse({code:"visibility-same",message:"이미 그 설정입니다."});
@@ -188,6 +193,8 @@ export class TableRuntime {
       case "advance-time": return advanceTime(ctx,command);
       case "set-timer": return setTimer(ctx,command);
       case "clear-timer": return clearTimer(ctx,command);
+      case "override": return overrideResolution(ctx,command);
+      case "set-setting": return setSetting(ctx,command);
       case "ruling": return ruling(ctx,command);
       default: return refused("command-unknown","알 수 없는 명령입니다.");
     }

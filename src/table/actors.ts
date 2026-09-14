@@ -95,7 +95,7 @@ function monsterCombatant(actorId:string,definition:CombatantDefinitionVm):Comba
     baseSpeed:speed,
     life:{hp:{current:definition.maxHp,maximum:definition.maxHp,temporary:0},deathSaves:{successes:0,failures:0},stable:false,unconscious:false,dead:false},
     economy:beginTurn(speed),
-    resources:[],
+    resources:definition.runtimeMonster&&definition.runtimeMonster.legendaryResistance>0?[{id:"legendary-resistance",label:"전설 저항",current:definition.runtimeMonster.legendaryResistance,maximum:definition.runtimeMonster.legendaryResistance,recovery:{longRest:"all"}}]:[],
     hitDice:[],
     damageDefenses:[
       ...(stats?.resistances??[]).map((damageType)=>({source:`monster:${actorId}:resistance:${damageType}`,kind:"resistance" as const,damageType})),
