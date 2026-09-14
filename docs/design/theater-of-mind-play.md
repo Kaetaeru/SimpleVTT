@@ -23,7 +23,7 @@ question, and the default answer is always the permissive one the DM would alrea
 | areas | target caps (already the model) plus **groups**: the DM pre-groups enemies once ("고블린 ×3 · 한 무리") and an area picks a group in one tap |
 | opportunity attacks | only when an engagement exists, prompted at the moment a creature declares **물러남**; Disengage suppresses the prompt |
 | movement | three declarations instead of feet: 접근(대상), 물러남, 그대로. Speed is displayed, never gates. Dash is a narrative flag |
-| sight / light / cover | scene-wide conditions (어둠, 안개) and per-creature badges (숨음, 투명, 엄폐). Badges drive the rules; no badge means clear |
+| sight / light / cover | scene-wide conditions (어둠, 안개) and per-creature badges (숨음, 투명, 엄폐) are reminders; the DM applies sight and cover on the result card with the attack-intervention palette (D42, 2026-09-14). No DM choice means clear |
 | engagement end | persists across turns; ends on 물러남, 이탈, target death, or a round without melee between the pair |
 
 Range bands (교전 / 가까움 / 멀리) are optional: a DM may drop a card into a band, but every flow above works
@@ -34,7 +34,7 @@ without bands.
 - The opposing board folds by **group**: three goblins are one card; expanded shows individual HP. Encounter add
   is one line ("고블린 ×3 한 무리"); identical monsters share group initiative by default.
 - Engagement lines are thin links between cards — the only "spatial" information on screen.
-- Every result card carries post-hoc toggles: 닿지 않음, 엄폐 반/¾, 불리점, 이점, 피해 절반. A toggle recalculates
+- Every result card carries the DM attack-intervention palette (D42): 닿지 않음, 엄폐 반/¾/완전, 불리점, 이점, 강제 명중, 강제 빗나감, 강제 치명타, 피해 절반/0/수정. A session setting "공격 보류" lets the DM choose before the attack resolves. A toggle recalculates
   that one resolution.
 - Narrative damage and conditions are direct: −5, −10, 절반 chips and condition badges on the card, no roll.
 - A DM question queue holds only what the app could not decide (target count at the cap, opportunity-attack
