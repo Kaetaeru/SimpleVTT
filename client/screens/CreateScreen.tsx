@@ -22,7 +22,7 @@ const STEPS: Array<{ id: StepId; label: string }> = [
 const ALIGNMENTS = ["질서 선", "중립 선", "혼돈 선", "질서 중립", "중립", "혼돈 중립", "질서 악", "중립 악", "혼돈 악"];
 
 export function CreateScreen({ existing, initialStep }: { existing?: CharacterSource; initialStep?: StepId }) {
-  const { catalog, navigate, saveCharacter, getDraft, putDraft, characters } = useClient();
+  const { catalog, navigate, saveCharacter, getDraft, putDraft, characters, store } = useClient();
   const [source, setSource] = useState<CharacterSource>(() => existing ?? emptySource());
   const [step, setStep] = useState<StepId>(initialStep ?? "basics");
   const [draftLoaded, setDraftLoaded] = useState(Boolean(existing));
@@ -30,13 +30,21 @@ export function CreateScreen({ existing, initialStep }: { existing?: CharacterSo
   const derived = useMemo(() => deriveCharacter(source, catalog), [source, catalog]);
   const draftTimer = useRef<number | undefined>(undefined);
 
-  // A new character restores the last unsaved draft; edits never touch the draft.
+  // A new character restores the last unsaved draft once (the store may open after mount); edits never touch the draft.
+  const savedIds = useRef(characters.map((record) => record.id));
+  savedIds.current = characters.map((record) => record.id);
+  const restored = useRef(false);
   useEffect(() => {
-    if (existing) return;
+    if (existing || restored.current || !store) return;
+    restored.current = true;
     let cancelled = false;
-    getDraft().then((draft) => { if (!cancelled && draft && draft.schema === 2 && !characters.some((record) => record.id === draft.id)) setSource(draft); setDraftLoaded(true); });
+    getDraft().then((draft) => {
+      if (cancelled) return;
+      if (draft && draft.schema === 2 && !savedIds.current.includes(draft.id)) setSource((current) => (current.name || current.tracks.length || current.origin.speciesId ? current : draft));
+      setDraftLoaded(true);
+    });
     return () => { cancelled = true; };
-  }, [existing, getDraft, characters]);
+  }, [existing, getDraft, store]);
   useEffect(() => {
     if (existing || !draftLoaded || typeof window === "undefined") return;
     window.clearTimeout(draftTimer.current);
