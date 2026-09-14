@@ -185,7 +185,7 @@ export function holdOrCommit(ctx:HandlerContext,command:ActCommand,run:(ctx:Hand
   const state=ctx.state;
   const card=result.resolution;
   const windows=windowsFor(ctx,card,[]);
-  const pending:PendingResolution={id:`pending.${ctx.nextSeq}`,actorId:command.actorId,targetIds:[...command.targetIds],command:{type:"act",actorId:command.actorId,actionId:command.actionId,targetIds:[...command.targetIds],...(command.itemId?{itemId:command.itemId}:{}),...(command.slotLevel!==undefined?{slotLevel:command.slotLevel}:{})},...(ctx.asReaction?{asReaction:true}:{}),diceRecord:recording.record,windows:[],answers:[],overrides:ctx.overrides??{},label:card?`${card.actionName} → ${card.targetIds.map((id)=>actorName(state,id)).join(", ")||actorName(state,command.actorId)}`:command.actionId};
+  const pending:PendingResolution={id:`pending.${ctx.nextSeq}`,actorId:command.actorId,targetIds:[...command.targetIds],command:{type:"act",actorId:command.actorId,actionId:command.actionId,targetIds:[...command.targetIds],...(command.itemId?{itemId:command.itemId}:{}),...(command.slotLevel!==undefined?{slotLevel:command.slotLevel}:{}),...(command.amount!==undefined?{amount:command.amount}:{})},...(ctx.asReaction?{asReaction:true}:{}),diceRecord:recording.record,windows:[],answers:[],overrides:ctx.overrides??{},label:card?`${card.actionName} → ${card.targetIds.map((id)=>actorName(state,id)).join(", ")||actorName(state,command.actorId)}`:command.actionId};
   if(windows.length) return openWindow(ctx,pending,windows[0]);
   return finalize(ctx,pending,result);
 }

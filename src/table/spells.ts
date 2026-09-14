@@ -1,4 +1,5 @@
 import type { AbilityKey } from "../domain/conditions";
+import { pactMagicSlots } from "./features";
 import type { ResourcePool } from "../domain/resources";
 import { classById, multiclassSpellSlots } from "../domain/progressionCatalog";
 import { normalizedSpellDefinitionById } from "../domain/spellExecutionCatalog";
@@ -38,9 +39,14 @@ export function isSpellcaster(sheet:SpellSheet):boolean {
 /** Spell slot pools for the combatant: the sheet's maximums, else the multiclass table; recovered on a long rest. */
 export function spellSlotPools(sheet:SpellSheet):ResourcePool[] {
   if(!isSpellcaster(sheet)) return [];
-  const maximums=sheet.spellSlotMaximums??multiclassSpellSlots(sheet.classLevels??[]).slots;
+  const maximums:Record<string,number>={...(sheet.spellSlotMaximums??multiclassSpellSlots(sheet.classLevels??[]).slots)};
+  // Pact Magic (2024): a Warlock's slots share the same level and come back on a short rest. A multiclass caster's
+  // pool of that level is merged and recovers on the short rest too (an approximation the card labels).
+  const warlock=(sheet.classLevels??[]).find((entry)=>entry.classId==="dnd.srd521.class.warlock")?.level??0;
+  const pact=pactMagicSlots(warlock);
+  if(pact&&!sheet.spellSlotMaximums) maximums[String(pact.slotLevel)]=(maximums[String(pact.slotLevel)]??0)+pact.count;
   return Object.entries(maximums).map(([level,maximum])=>({level:Number(level),maximum})).filter((entry)=>Number.isInteger(entry.level)&&entry.level>0&&entry.maximum>0).sort((a,b)=>a.level-b.level)
-    .map((entry)=>({id:slotResourceId(entry.level),label:`${entry.level}레벨 주문 슬롯`,current:entry.maximum,maximum:entry.maximum,recovery:{longRest:"all"}}));
+    .map((entry)=>({id:slotResourceId(entry.level),label:`${entry.level}레벨 주문 슬롯${pact&&entry.level===pact.slotLevel?" (계약 마법)":""}`,current:entry.maximum,maximum:entry.maximum,recovery:pact&&entry.level===pact.slotLevel?{shortRest:"all",longRest:"all"}:{longRest:"all"}}));
 }
 
 /** Hit dice pools from the class levels: one pool per die size, remaining count from the sheet when it says. */

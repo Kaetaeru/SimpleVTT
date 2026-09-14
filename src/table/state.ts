@@ -168,7 +168,7 @@ export interface PendingResolution {
   id:string;
   actorId:string;
   targetIds:string[];
-  command:{type:"act";actorId:string;actionId:string;targetIds:string[];itemId?:string;slotLevel?:number};
+  command:{type:"act";actorId:string;actionId:string;targetIds:string[];itemId?:string;slotLevel?:number;amount?:number};
   asReaction?:boolean;
   /** Every dice draw of the first run, in order; the final run replays them. */
   diceRecord:number[][];

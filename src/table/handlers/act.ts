@@ -27,6 +27,12 @@ import { handsLabel } from "../hands";
 import { displayedAc } from "../project";
 import { actorName, commitOperations, type HandlerContext, type HandlerResult } from "./types";
 import { holdOrCommit, setPendingRunner } from "./windows";
+import { compileBarbarianRageEnd, compileBarbarianRageStart, BARBARIAN_RAGE_TAG } from "../../domain/barbarianRage";
+import { applyRageEffectUpdate, barbarianRageExtensionUpdate } from "../../domain/barbarianRageLifecycle";
+import { compileFighterActionSurge } from "../../domain/fighterActionSurge";
+import { PALADIN_LAY_ON_HANDS_RESOURCE_ID } from "../../domain/coreClassResources";
+import { CLASS, classLevel, featureRiders } from "../features";
+import { weaponHasProperty, weaponRuleById } from "../../domain/weaponRuleCatalog";
 
 export const NEXT_ROLL_TAG="table:next-roll";
 export const STATUS_TAG="table:status";
@@ -88,6 +94,14 @@ function statusEffects(ctx:HandlerContext,resolutionId:string,action:ActionVm,ta
   if(!targetId) return [];
   const duration=turnBoundaryDuration(ctx.state,actorId,status.expiresAtActorTurnBoundary??"start");
   const base={sourceId:action.id,sourceActorId:actorId,targetId,duration};
+  if(action.tableFeature==="patient-defense-focus"||action.tableFeature==="step-of-the-wind-focus") {
+    const marker:EffectApplyRequest={...base,id:`${resolutionId}:disengage`,kind:"marker",tags:[STATUS_TAG],duration:turnBoundaryDuration(ctx.state,actorId,"end"),metadata:{publicLabel:"이탈"}};
+    if(action.tableFeature==="step-of-the-wind-focus") return [marker];
+    return [marker,
+      {...base,id:`${resolutionId}:dodge:attacks`,kind:"modifier",tags:[STATUS_TAG],metadata:{publicLabel:"회피",d20Family:"attack-roll",d20Scope:"target",d20RollState:"disadvantage"}},
+      {...base,id:`${resolutionId}:dodge:dex-saves`,kind:"modifier",tags:[STATUS_TAG],metadata:{d20Family:"saving-throw",d20Ability:"dex",d20RollState:"advantage"}},
+    ];
+  }
   switch(action.id) {
     case "action.standard.dodge": return [
       {...base,id:`${resolutionId}:dodge:attacks`,kind:"modifier",tags:[STATUS_TAG],metadata:{publicLabel:"회피",d20Family:"attack-roll",d20Scope:"target",d20RollState:"disadvantage"}},
@@ -176,6 +190,21 @@ export function attackAct(ctx:HandlerContext,actor:Actor,action:ActionVm,targetI
     const parsed=damageFromDiceText(extra.dice,extra.flat);
     return {sourceId:`${action.id}:extra:${index}`,damageType:extra.type,dice:parsed.count?[{source:`${action.id}:extra:${index}`,sides:parsed.sides,count:parsed.count,faces:ctx.dice.faces(parsed.sides,parsed.count*2,`${action.name} 추가 피해`)}]:[],flat:parsed.flat?[{source:`${action.id}:extra:${index}:flat`,value:parsed.flat}]:[]};
   });
+  // Class riders (RULES_RUNTIME_SPECS.md §3): Rage damage on Strength melee attacks, Sneak Attack once per turn.
+  const featureLines:string[]=[];
+  if(actor.source.kind==="character") {
+    const sheet=actor.source.sheet;
+    const rule=action.tableWeaponItemId?weaponRuleById(sheet.items.find((item)=>item.id===action.tableWeaponItemId)?.definitionId??""):undefined;
+    const finesse=rule?weaponHasProperty(rule,"finesse"):false;
+    const melee=isMeleeAttack(action);
+    const raging=state.rules.effects.some((effect)=>effect.targetId===actor.id&&effect.tags.includes(BARBARIAN_RAGE_TAG));
+    const advantageGrant=state.rules.effects.some((effect)=>effect.targetId===actor.id&&effect.tags.includes(NEXT_ROLL_TAG)&&effect.metadata?.d20Family==="attack-roll"&&effect.metadata?.d20RollState==="advantage");
+    const allyEngaged=Object.values(state.actors).some((other)=>other.id!==actor.id&&other.id!==targetId&&other.side===actor.side&&isEngaged(state.engagements,other.id,targetId)&&!(state.rules.combatants[other.id]?.life.dead)&&(state.rules.combatants[other.id]?.life.hp.current??0)>0);
+    for(const rider of featureRiders(sheet,{meleeStrength:melee&&!(finesse&&sheet.abilities.dex>sheet.abilities.str),finesseOrRanged:finesse||isRangedAttack(action),damageType:spec.type,raging,sneakEligible:(advantageGrant||allyEngaged)&&!rangedInMelee.length})) {
+      riders.push({sourceId:rider.sourceId,damageType:rider.damageType,dice:rider.dice?[{source:rider.sourceId,sides:rider.dice.sides,count:rider.dice.count,faces:ctx.dice.faces(rider.dice.sides,rider.dice.count*2,`${rider.label} 피해`)}]:[],flat:rider.flat?[{source:`${rider.sourceId}:flat`,value:rider.flat}]:[],...(rider.oncePerOwnTurnFeatureId&&state.mode==="initiative"&&state.rules.clock.activeActorId===actor.id?{oncePerOwnTurnFeatureId:rider.oncePerOwnTurnFeatureId}:{})});
+      featureLines.push(rider.label);
+    }
+  }
   // Drawn after the attack and damage dice so the ledger order stays attack → damage → concentration.
   const concentrationCheck=concentrationCheckFor(ctx,targetId);
   // D42: the DM palette changes the facts the kernel is given, never the kernel's rules.
@@ -203,14 +232,32 @@ export function attackAct(ctx:HandlerContext,actor:Actor,action:ActionVm,targetI
     riders,
     economy:state.mode==="initiative"&&(ctx.asReaction||economySlot(action))?(ctx.asReaction?{slot:"reaction",actionKind:"attack",attacksPerAction:1}:{slot:economySlot(action)!,bonusActionGranted:economySlot(action)==="bonus-action"?true:undefined,actionKind:"attack",attacksPerAction:action.attacksPerAction??1}):undefined,
   };
+  let attackRules=state.rules;
+  if(action.resourceCost) {
+    const spent=commitOperations(ctx,{id:`${resolutionId}:cost`,actorId:actor.id,sourceId:action.id,operations:[{id:`${resolutionId}:resource`,kind:"spend-resource",actorId:actor.id,resourceId:action.resourceCost.resourceId,amount:action.resourceCost.amount}],actionId:action.id});
+    if(spent.status==="refused") return spent;
+    attackRules=spent.commit.state;
+    request.expectedRevision=attackRules.revision;
+  }
   let commit;
-  try { commit=resolveAttack(ctx.profile,state.rules,request); }
+  try { commit=resolveAttack(ctx.profile,attackRules,request); }
   catch(error) { return refused("action-rejected",error instanceof Error?error.message:String(error),{actorId:actor.id,actionId:action.id}); }
   if(commit.status==="rejected") return refused("action-rejected",kernelErrorKo(commit.error),{actorId:actor.id,actionId:action.id});
   const attack=commit.results[`${resolutionId}:attack`] as D20TestResult;
   const damage=Object.entries(commit.results).find(([key,value])=>key.startsWith(resolutionId)&&Boolean(value)&&typeof value==="object"&&"components" in (value as object))?.[1] as CompoundDamageResolution|undefined;
   let rules=commit.state;
   const overrideChanges:string[]=[];
+  // Turn markers other features read: a Light weapon attack (off-hand attack), a Monk's unarmed or monk-weapon attack, a Rage extended by attacking.
+  if(actor.source.kind==="character"&&rules.turnFeatureUsage&&rules.turnFeatureUsage.actorId===actor.id) {
+    const sheet=actor.source.sheet;
+    const rule=action.tableWeaponItemId?weaponRuleById(sheet.items.find((item)=>item.id===action.tableWeaponItemId)?.definitionId??""):undefined;
+    const marks:string[]=[];
+    if(rule&&weaponHasProperty(rule,"light")&&action.economy==="행동") marks.push("table:light-attack");
+    if(classLevel(sheet,CLASS.monk)>=1&&(action.runtimeAttack.sourceKind==="unarmed"||(rule&&rule.mode==="melee"&&(rule.training==="simple"||weaponHasProperty(rule,"light"))))) marks.push("table:monk-attack");
+    if(marks.length) rules.turnFeatureUsage={...rules.turnFeatureUsage,featureIds:[...new Set([...rules.turnFeatureUsage.featureIds,...marks])]};
+  }
+  const rageUpdate=barbarianRageExtensionUpdate(rules.effects,actor.id,rules.clock);
+  if(rageUpdate) rules.effects=applyRageEffectUpdate(rules.effects,rageUpdate);
   if(o.damage&&damage&&attack.outcome==="success") {
     const dealt=damage.finalDamage;
     const wanted=o.damage.mode==="half"?Math.floor(dealt/2):o.damage.mode==="zero"?0:Math.max(0,Math.floor(o.damage.value??dealt));
@@ -230,7 +277,7 @@ export function attackAct(ctx:HandlerContext,actor:Actor,action:ActionVm,targetI
   // D9: a melee attack that drops a creature to 0 HP may knock it out instead — one question to the attacker.
   const killedNow=isMeleeAttack(action)&&target.kind==="npc"&&!state.rules.combatants[targetId]?.life.dead&&rules.combatants[targetId]?.life.dead;
   const questions=killedNow?[...state.questions,knockOutQuestion(state,actor.id,targetId,ctx.nextSeq)]:undefined;
-  const stateChanges=[...lifeStateChanges(state,state.rules,rules),...consumed.map((label)=>`${actor.name} 상태 종료: ${label}`),...(unhidden.length?[`${actor.name} 숨음 해제 (공격)`]:[]),...(engaged?[engaged.line]:[]),...(thrown?.lines??[]),...(killedNow?[`질문: ${target.name} 죽임/기절`]:[]),...overrideChanges];
+  const stateChanges=[...lifeStateChanges(state,state.rules,rules),...consumed.map((label)=>`${actor.name} 상태 종료: ${label}`),...(unhidden.length?[`${actor.name} 숨음 해제 (공격)`]:[]),...(engaged?[engaged.line]:[]),...(thrown?.lines??[]),...(killedNow?[`질문: ${target.name} 죽임/기절`]:[]),...overrideChanges,...featureLines.map((label)=>`${actor.name} ${label} 적용`)];
   const card=attackCard({id:resolutionId,seq:ctx.nextSeq,visibility:state.rollVisibility,action,actorId:actor.id,targetIds:[targetId],targetName:target.name,attack,damage,events:commit.events,stateChanges});
   if(forcedMiss) { card.attackOutcome="빗나감"; card.compact=`${o.cover==="total"?"완전 엄폐":o.range==="out"?"사거리 밖":"DM 개입"} — 빗나감`; card.finalOutcome=`${action.name} → ${target.name} · 빗나감`; }
   if(engaged) card.provenance.push(`engagement:melee-attack:${actor.id}<->${targetId}:round:${engagementRound(state)}`);
@@ -303,7 +350,7 @@ function saveAct(ctx:HandlerContext,actor:Actor,action:ActionVm,targetIds:string
       operations.push({id:`${resolutionId}:damage:${targetId}:fail`,kind:"damage",targetId,damageType,amount:{operationId:damageRollId,field:"total"},creatureKind,when:{operationId:saveId,field:"outcome",equals:"failure"},...(concentrationCheck?{concentrationCheck}:{})});
       if(action.saveHalf) operations.push({id:`${resolutionId}:damage:${targetId}:half`,kind:"damage",targetId,damageType,amount:{operationId:damageRollId,field:"total",multiplier:0.5,rounding:"floor"},creatureKind,when:{operationId:saveId,field:"outcome",equals:"success"},...(concentrationCheck?{concentrationCheck}:{})});
     }
-    for(const conditionId of definition?.failConditionIds??[]) {
+    for(const conditionId of definition?.failConditionIds??action.tableFailConditions??[]) {
       operations.push({id:`${resolutionId}:condition:${targetId}:${conditionId}`,kind:"apply-effect",when:{operationId:saveId,field:"outcome",equals:"failure"},effect:{id:`${resolutionId}:${conditionId}:${targetId}`,sourceId:action.id,sourceActorId:actor.id,targetId,kind:"condition",conditionId:conditionId as ConditionId,tags:[STATUS_TAG],duration:{kind:"minutes",amount:1},metadata:{publicLabel:conditionLabelKo(conditionId)}}});
     }
   }
@@ -488,6 +535,12 @@ export function actInner(ctx:HandlerContext,command:Extract<TableCommand,{type:"
   const targetRefusal=targetRefusalFor(state,action,targetIds);
   if(targetRefusal) return refused(targetRefusal.code,targetRefusal.message,{actorId:actor.id,actionId:action.id});
   const resolutionId=`res.${ctx.nextSeq}`;
+  if(action.tableFeature) {
+    const gate=featureGate(state,actor,action);
+    if(gate) return refused("feature-unavailable",gate,{actorId:actor.id,actionId:action.id});
+    const handled=featureAct(ctx,actor,action,targetIds,resolutionId,command.amount);
+    if(handled) return handled;
+  }
   if(ctx.overrides?.cancelled&&action.tableSpell) return cancelledCastAct(ctx,actor,action,resolutionId,command.slotLevel);
   if(action.id==="action.death-save") return deathSaveAct(ctx,actor,action,resolutionId);
   if(action.tableSpell) return castAct(ctx,actor,action,targetIds,resolutionId,command.slotLevel);
@@ -519,3 +572,79 @@ function cancelledCastAct(ctx:HandlerContext,actor:Actor,action:ActionVm,resolut
 }
 
 setPendingRunner(actInner);
+
+/** Turn preconditions of feature actions (RULES_RUNTIME_SPECS.md §3). */
+function featureGate(state:TableState,actor:Actor,action:ActionVm):string|null {
+  const usage=state.mode==="initiative"&&state.rules.turnFeatureUsage?.actorId===actor.id?state.rules.turnFeatureUsage.featureIds:null;
+  switch(action.tableFeature) {
+    case "off-hand-attack": return usage&&!usage.includes("table:light-attack")?"먼저 공격 행동으로 다른 가벼운 무기를 휘두르세요.":null;
+    case "martial-arts-strike": return usage&&!usage.includes("table:monk-attack")?"먼저 공격 행동으로 맨손 타격이나 몽크 무기를 쓰세요.":null;
+    case "rage-start": return state.rules.effects.some((effect)=>effect.targetId===actor.id&&effect.tags.includes(BARBARIAN_RAGE_TAG))?"이미 격노 중입니다.":null;
+    case "rage-end": return state.rules.effects.some((effect)=>effect.targetId===actor.id&&effect.tags.includes(BARBARIAN_RAGE_TAG))?null:"격노 중이 아닙니다.";
+    default: return null;
+  }
+}
+
+/** Feature actions with their own operations; returns null for features the ordinary handlers already cover. */
+function featureAct(ctx:HandlerContext,actor:Actor,action:ActionVm,targetIds:string[],resolutionId:string,amount?:number):HandlerResult|null {
+  const state=ctx.state;
+  if(actor.source.kind!=="character") return null;
+  const sheet=actor.source.sheet;
+  const commitPlain=(rules:RulesRuntimeState,events:import("../../domain/resolutionTypes").ResolutionEvent[],compact:string,detailLines:string[],targets:string[]=[actor.id])=>commitEvents(ctx,plainCard({id:resolutionId,seq:ctx.nextSeq,visibility:state.rollVisibility,action,actorId:actor.id,targetIds:targets,rollKind:"effect",compact,detail:detailLines,events,stateChanges:lifeStateChanges(state,state.rules,rules)}),rules);
+  switch(action.tableFeature) {
+    case "action-surge": {
+      let pending;
+      try { pending=compileFighterActionSurge({id:resolutionId,actorId:actor.id,expectedRevision:state.rules.revision,fighterLevel:classLevel(sheet,CLASS.fighter)}); }
+      catch(error) { return refused("feature-rejected",kernelErrorKo(error instanceof Error?error.message:String(error)),{actorId:actor.id,actionId:action.id}); }
+      const committed=commitOperations(ctx,{id:resolutionId,actorId:actor.id,sourceId:action.id,operations:pending.operations,actionId:action.id});
+      if(committed.status==="refused") return committed;
+      return commitPlain(committed.commit.state,committed.commit.events,"행동 폭증 · 이번 턴 행동 1회 추가",["짧은 휴식에 회복"]);
+    }
+    case "rage-start": {
+      let pending;
+      try { pending=compileBarbarianRageStart(state.rules,{id:resolutionId,actorId:actor.id,expectedRevision:state.rules.revision,barbarianLevel:classLevel(sheet,CLASS.barbarian),wearingHeavyArmor:false,useBonusActionEconomy:state.mode==="initiative"}); }
+      catch(error) { return refused("feature-rejected",kernelErrorKo(error instanceof Error?error.message:String(error)),{actorId:actor.id,actionId:action.id}); }
+      const committed=commitOperations(ctx,{id:resolutionId,actorId:actor.id,sourceId:action.id,operations:pending.operations,actionId:action.id});
+      if(committed.status==="refused") return committed;
+      return commitPlain(committed.commit.state,committed.commit.events,"격노 시작 · 타격·관통·참격 저항, 근력 근접 피해 보너스",["공격하거나 피해를 받거나 추가 행동으로 이어 가지 않으면 턴 끝에 끝난다 (10분 최대)"]);
+    }
+    case "rage-end": {
+      let pending;
+      try { pending=compileBarbarianRageEnd(state.rules,{id:resolutionId,actorId:actor.id,expectedRevision:state.rules.revision}); }
+      catch(error) { return refused("feature-rejected",kernelErrorKo(error instanceof Error?error.message:String(error)),{actorId:actor.id,actionId:action.id}); }
+      const committed=commitOperations(ctx,{id:resolutionId,actorId:actor.id,sourceId:action.id,operations:pending.operations,actionId:action.id});
+      if(committed.status==="refused") return committed;
+      return commitPlain(committed.commit.state,committed.commit.events,"격노 종료",[]);
+    }
+    case "lay-on-hands": {
+      const targetId=targetIds[0]??actor.id;
+      const pool=state.rules.combatants[actor.id]?.resources.find((entry)=>entry.id===PALADIN_LAY_ON_HANDS_RESOURCE_ID);
+      const wanted=Math.floor(amount??0);
+      if(!pool) return refused("feature-rejected","안수 풀이 없습니다.",{actorId:actor.id,actionId:action.id});
+      if(!Number.isFinite(wanted)||wanted<1) return refused("amount-required",`회복량을 정하세요 (1~${pool.current}).`,{actorId:actor.id,actionId:action.id});
+      if(wanted>pool.current) return refused("resource-short",`안수 풀이 ${pool.current}밖에 남지 않았습니다.`,{actorId:actor.id,actionId:action.id});
+      if(state.rules.combatants[targetId]?.life.dead) return refused("target-ineligible","죽은 대상입니다.",{actorId:actor.id,actionId:action.id});
+      const operations:ResolutionOperation[]=[];
+      const economy=economyOperation(ctx,resolutionId,action); if(economy) operations.push(economy);
+      operations.push({id:`${resolutionId}:pool`,kind:"spend-resource",actorId:actor.id,resourceId:PALADIN_LAY_ON_HANDS_RESOURCE_ID,amount:wanted});
+      operations.push({id:`${resolutionId}:healing`,kind:"healing",targetId,amount:wanted});
+      const committed=commitOperations(ctx,{id:resolutionId,actorId:actor.id,sourceId:action.id,operations,actionId:action.id});
+      if(committed.status==="refused") return committed;
+      const restored=(committed.commit.results[`${resolutionId}:healing`] as {restored:number}).restored;
+      return commitPlain(committed.commit.state,committed.commit.events,`안수 ${wanted} · ${actorName(state,targetId)} ${restored} HP 회복`,[`풀 ${pool.current} → ${pool.current-wanted}`],[targetId]);
+    }
+    case "lay-on-hands-cure": {
+      const targetId=targetIds[0]??actor.id;
+      const poisoned=state.rules.effects.filter((effect)=>effect.targetId===targetId&&effect.kind==="condition"&&effect.conditionId==="poisoned");
+      if(!poisoned.length) return refused("target-ineligible","중독 상태가 아닙니다.",{actorId:actor.id,actionId:action.id});
+      const operations:ResolutionOperation[]=[];
+      const economy=economyOperation(ctx,resolutionId,action); if(economy) operations.push(economy);
+      const resource=resourceOperation(resolutionId,action); if(resource) operations.push(resource);
+      operations.push({id:`${resolutionId}:cure`,kind:"remove-effect",effectId:poisoned[0].id});
+      const committed=commitOperations(ctx,{id:resolutionId,actorId:actor.id,sourceId:action.id,operations,actionId:action.id});
+      if(committed.status==="refused") return committed;
+      return commitPlain(committed.commit.state,committed.commit.events,`안수 · ${actorName(state,targetId)} 중독 해제`,["풀 5 소비"],[targetId]);
+    }
+    default: return null;
+  }
+}

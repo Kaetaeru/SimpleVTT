@@ -9,6 +9,7 @@ import type { ConditionId } from "../domain/conditions";
 import type { ActorSpec } from "./commands";
 import { diceAverage, parseDiceNotation } from "./dice";
 import type { Actor, Side, TableState } from "./state";
+import { featureActions, featureResourcePools, unarmedStrike } from "./features";
 
 declare module "../app/contracts" {
   interface ActionVm {
@@ -109,14 +110,17 @@ function monsterCombatant(actorId:string,definition:CombatantDefinitionVm):Comba
 function characterCombatant(sheet:CharacterSheet):CombatantRuntimeState {
   const speed=Number.isInteger(sheet.speed)&&sheet.speed>=0?sheet.speed:30;
   const spellSheet=sheet as SpellSheet;
-  const ownResources=sheet.resources.map((resource)=>({id:resource.id,label:resource.label,current:resource.current,maximum:resource.max,recovery:/짧은 휴식|short rest/i.test(resource.source)?{shortRest:"all" as const,longRest:"all" as const}:{longRest:"all" as const}}));
-  const slotIds=new Set(ownResources.map((resource)=>resource.id));
+  // Feature pools carry their recovery from the domain's definitions; the sheet's own pools (legacy ids) are kept as they are.
+  const featurePools=featureResourcePools(sheet);
+  const featureIds=new Set(featurePools.map((pool)=>pool.id));
+  const ownResources=sheet.resources.filter((resource)=>!featureIds.has(resource.id)).map((resource)=>({id:resource.id,label:resource.label,current:resource.current,maximum:resource.max,recovery:/짧은 휴식|short rest/i.test(resource.source)?{shortRest:"all" as const,longRest:"all" as const}:{longRest:"all" as const}}));
+  const slotIds=new Set([...ownResources.map((resource)=>resource.id),...featureIds]);
   return {
     id:sheet.id,
     baseSpeed:speed,
     life:{hp:{current:sheet.hp,maximum:sheet.maxHp,temporary:sheet.tempHp??0},deathSaves:{successes:0,failures:0},stable:false,unconscious:sheet.hp<=0,dead:false},
     economy:beginTurn(speed),
-    resources:[...ownResources,...spellSlotPools(spellSheet).filter((pool)=>!slotIds.has(pool.id))],
+    resources:[...ownResources,...featurePools,...spellSlotPools(spellSheet).filter((pool)=>!slotIds.has(pool.id))],
     hitDice:hitDicePools(spellSheet),
     damageDefenses:[],
   };
@@ -272,6 +276,16 @@ function characterActions(actor:Actor,sheet:CharacterSheet,state?:TableState):Ac
       details:[detail("명중",signed(attack.bonus)),detail("피해",`${damage.dice}${damage.flat?` ${signed(damage.flat)}`:""} ${damage.type}`),detail("사거리",ranged?`${rangeFeet}피트`:reach?"10피트 (긴 무기)":"5피트"),detail("비용",attacks>1?`공격 행동 1 · 최대 ${attacks}회 공격`:"행동 1")],
     };
     actions.push(base);
+    if(rule&&weaponHasProperty(rule,"light")&&!ranged) {
+      const mod=attack.bonus-sheet.proficiencyBonus;
+      actions.push({
+        ...base,id:`${attack.id}.offhand`,name:`${attack.name} 보조 공격`,economy:"추가 행동",attacksPerAction:1,
+        summary:`${signed(attack.bonus)} · ${damage.dice}${Math.min(0,damage.flat-Math.max(0,mod))?signed(Math.min(0,damage.flat)):""} ${damage.type} · 추가 행동 (가벼움)`,
+        damage:[{type:damage.type,dice:damage.dice,flat:Math.min(0,damage.flat),average:diceAverage(dice.count,dice.sides,Math.min(0,damage.flat))}],
+        tableFeature:"off-hand-attack",
+        details:[detail("조건","이번 턴 공격 행동에서 다른 가벼운 무기로 공격했을 때"),detail("피해","능력 수정치를 더하지 않음 (음수면 적용)"),detail("출처",`${STANDARD_SOURCE} · Light`)],
+      });
+    }
     if(thrown&&!ranged) actions.push({
       ...base,id:`${attack.id}.throw`,name:`${attack.name} 던지기`,
       summary:`${signed(attack.bonus)} · ${damage.dice}${damage.flat?signed(damage.flat):""} ${damage.type} · 투척 ${thrown.normal}/${thrown.long}피트`,
@@ -280,14 +294,16 @@ function characterActions(actor:Actor,sheet:CharacterSheet,state?:TableState):Ac
       details:[detail("명중",signed(attack.bonus)),detail("피해",`${damage.dice}${damage.flat?` ${signed(damage.flat)}`:""} ${damage.type}`),detail("사거리",`${thrown.normal}/${thrown.long}피트 (투척)`),detail("결과","던진 무기는 바닥에 떨어져 회수할 수 있습니다"),detail("출처",`${STANDARD_SOURCE} · Thrown`)],
     });
   }
-  const unarmed=Math.max(0,1+strength);
+  const strike=unarmedStrike(sheet);
+  const strikeDice=damageFromDiceText(strike.dice,strike.flat);
   actions.push({
     id:"action.unarmed-strike.damage",actorId,name:"맨손 타격",category:"weapon",target:"any",economy:"행동",resolutionKind:"attack",
-    summary:`${signed(sheet.proficiencyBonus+strength)} · ${unarmed} 타격`,available:true,eligibleTargetIds:[],attackBonus:sheet.proficiencyBonus+strength,attacksPerAction:attacks,
-    damage:[{type:"타격",dice:"0d2",flat:unarmed,average:unarmed}],
-    runtimeAttack:{sourceKind:"unarmed",rangeFeet:5,attackMode:"melee",diceSides:2,diceCount:0,damageSource:`character:${actorId}:unarmed-strike`},
-    details:[detail("명중",signed(sheet.proficiencyBonus+strength)),detail("피해",`${unarmed} 타격`),detail("출처",`${STANDARD_SOURCE} · Unarmed Strike`)],
+    summary:`${signed(strike.bonus)} · ${strike.label}`,available:true,eligibleTargetIds:[],attackBonus:strike.bonus,attacksPerAction:attacks,
+    damage:[{type:"타격",dice:strike.dice,flat:strike.flat,average:diceAverage(strikeDice.count,strikeDice.sides,strikeDice.flat)}],
+    runtimeAttack:{sourceKind:"unarmed",rangeFeet:5,attackMode:"melee",diceSides:strikeDice.sides,diceCount:strikeDice.count,damageSource:`character:${actorId}:unarmed-strike`},
+    details:[detail("명중",signed(strike.bonus)),detail("피해",`${strike.label}`),detail("출처",`${STANDARD_SOURCE} · Unarmed Strike`)],
   });
+  actions.push(...featureActions(actor,sheet,attacks));
   // Improvised weapons (2024): 1d4, no proficiency unless it resembles a weapon; thrown 20/60. Any object the actor names.
   const improvised=(id:string,name:string,throwing:boolean):ActionVm=>({
     id,actorId,name,category:"weapon",target:"any",economy:"행동",resolutionKind:"attack",

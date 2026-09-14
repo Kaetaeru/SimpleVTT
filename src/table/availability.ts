@@ -38,7 +38,9 @@ export function availabilityOf(state:TableState,action:ActionVm,options:{asReact
   }
   if(action.resourceCost) {
     const resource=combatant.resources.find((entry)=>entry.id===action.resourceCost!.resourceId);
-    if(!resource||resource.current<action.resourceCost.amount) return unavailable("자원이 부족합니다.");
+    const slotLevel=/^spell-slot-(\d)$/.exec(action.resourceCost.resourceId)?.[1];
+    const higherSlot=slotLevel?combatant.resources.some((entry)=>/^spell-slot-\d$/.test(entry.id)&&Number(entry.id.replace("spell-slot-",""))>Number(slotLevel)&&entry.current>0):false;
+    if((!resource||resource.current<action.resourceCost.amount)&&!higherSlot) return unavailable("자원이 부족합니다.");
   }
   if(action.tableWeaponItemId&&actor.source.kind==="character") {
     const item=actor.source.sheet.items.find((entry)=>entry.id===action.tableWeaponItemId);

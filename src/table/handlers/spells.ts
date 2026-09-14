@@ -31,8 +31,13 @@ export function castAct(ctx:HandlerContext,actor:Actor,action:ActionVm,targetIds
   const spell=action.tableSpell!;
   const definition=normalizedSpellDefinitionById(spell.spellId);
   if(!definition) return refused("spell-unknown","실행 정의가 없는 주문입니다.",{actorId:actor.id,actionId:action.id});
-  const level=spell.baseLevel===0?undefined:slotLevel??spell.baseLevel;
+  let level=spell.baseLevel===0?undefined:slotLevel??spell.baseLevel;
   if(level!==undefined&&(level<spell.baseLevel||level>9)) return refused("slot-invalid",`${spell.baseLevel}레벨 이상 슬롯이 필요합니다.`,{actorId:actor.id,actionId:action.id});
+  // No slot of the spell's own level (a Warlock's Pact Magic): the lowest higher slot casts it at that level.
+  if(level!==undefined&&slotLevel===undefined&&!state.rules.combatants[actor.id]?.resources.some((entry)=>entry.id===`spell-slot-${level}`&&entry.current>0)) {
+    const higher=(state.rules.combatants[actor.id]?.resources??[]).filter((entry)=>/^spell-slot-\d$/.test(entry.id)&&entry.current>0).map((entry)=>Number(entry.id.replace("spell-slot-","")) ).filter((entry)=>entry>level!).sort((a,b)=>a-b)[0];
+    if(higher) level=higher;
+  }
   if(level!==undefined) {
     const pool=state.rules.combatants[actor.id]?.resources.find((entry)=>entry.id===`spell-slot-${level}`);
     if(!pool||pool.current<1) return refused("slot-empty",`${level}레벨 주문 슬롯이 남아 있지 않습니다.`,{actorId:actor.id,actionId:action.id});
