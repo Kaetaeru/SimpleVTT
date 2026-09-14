@@ -171,9 +171,10 @@ export function srdMonsterCombatantDefinition(monster:SrdMonster):CombatantDefin
   const runtimeSaveActions=actionEntries.flatMap(({entry,economy,legendary},index)=>entry.kind==="save" ? [saveSpec(monster,entry,index,economy,legendary)] : []);
   const runtimeTextActions=actionEntries.flatMap(({entry,economy,legendary},index)=>entry.kind==="text" ? [textSpec(entry,index,economy,legendary)] : []);
   const spellcasting=monster.actions.find((entry)=>entry.kind==="spellcasting")?.spellcasting;
-  const spells=spellcasting ? monsterSpellSpecs(monster,spellcasting,damageLabelKo) : { attacks:[], saves:[] };
+  const spells=spellcasting ? monsterSpellSpecs(monster,spellcasting,damageLabelKo) : { attacks:[], saves:[], texts:[] };
   runtimeActions.push(...spells.attacks);
   runtimeSaveActions.push(...spells.saves);
+  runtimeTextActions.push(...spells.texts);
   const savingThrowProficiencies=(Object.keys(monster.abilities) as AbilityKey[]).filter((key)=>monster.saves[key]!==undefined&&monster.saves[key]!==abilityModifier(monster.abilities[key]));
   const stats:CombatantRuntimeStatsVm={
     creatureType:monster.creatureType,

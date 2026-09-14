@@ -236,3 +236,28 @@ test("§22.14 hit riders: a ghoul's claw forces a CON save or paralysis; a croco
   assert.deepEqual(replayEvents(createTableState("table.test"),runtime.ledger),runtime.state);
   assert.equal(dice.remaining(),0,`unused dice: ${dice.remaining()}`);
 });
+
+test("§22.14 monster spellcasting: the mage's utility spells are text tiles — 투명화 spends its 2/day pool, 마법 탐지 is at will, 화염구 stays a save tile", () => {
+  const MAGE="dnd.srd521.monster.mage";
+  const {runtime,dice}=table([]);
+  runtime.dispatch({type:"add-actors",specs:[{kind:"character",sheet:fighter(),controllerPeer:P1.peerId},{kind:"monster",monsterId:MAGE}]});
+  const mage=`${MAGE}.instance-1`;
+  const invisibility=byName(runtime,mage,/^투명화 \(주문\)/);
+  assert.equal(invisibility.resolutionKind,"no-roll");
+  assert.equal(invisibility.economy,"행동");
+  assert.match(invisibility.summary,/투명/);
+  assert.equal(pool(runtime,mage,"uses:spell.1.1.invisibility"),2,"the per-day list's uses become the pool");
+  const detect=byName(runtime,mage,/^마법 탐지 \(주문\)/);
+  assert.equal(detect.resourceCost,undefined,"at will");
+  assert.ok(byName(runtime,mage,/^화염구 \(주문 · 4레벨\)/).resolutionKind==="saving-throw","the damaging spell is still projected as a save action");
+  const cast=runtime.dispatch({type:"act",actorId:mage,actionId:invisibility.id,targetIds:[]});
+  assert.equal(cast.status,"committed",JSON.stringify(cast));
+  assert.equal(pool(runtime,mage,"uses:spell.1.1.invisibility"),1);
+  runtime.dispatch({type:"act",actorId:mage,actionId:invisibility.id,targetIds:[]});
+  assert.equal(pool(runtime,mage,"uses:spell.1.1.invisibility"),0);
+  const spent=runtime.dispatch({type:"act",actorId:mage,actionId:invisibility.id,targetIds:[]});
+  assert.equal(spent.status,"refused","no uses left today");
+  assert.equal(runtime.dispatch({type:"act",actorId:mage,actionId:detect.id,targetIds:[]}).status,"committed","at-will spells never run out");
+  assert.deepEqual(replayEvents(createTableState("table.test"),runtime.ledger),runtime.state);
+  assert.equal(dice.remaining(),0);
+});

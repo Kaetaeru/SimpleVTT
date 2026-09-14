@@ -1,5 +1,5 @@
 import type { AbilityKey } from "./contracts";
-import type { CombatantRuntimeAttackVm, CombatantRuntimeDamageVm, CombatantRuntimeEconomy, CombatantRuntimeSaveActionVm, CombatantRuntimeTimingVm } from "./combatantRuntimeContracts";
+import type { CombatantRuntimeAttackVm, CombatantRuntimeDamageVm, CombatantRuntimeEconomy, CombatantRuntimeSaveActionVm, CombatantRuntimeTextActionVm, CombatantRuntimeTimingVm } from "./combatantRuntimeContracts";
 import type { SrdMonster, SrdMonsterSpellcasting, SrdMonsterSpellList } from "./srdMonsterCatalog";
 import { spellMechanicById } from "../domain/spellMechanics";
 import { spellPresentationById } from "./spellPresentation";
@@ -7,10 +7,11 @@ import type { SpellDiceFormula, SpellMechanicDefinition } from "../domain/spellc
 
 /**
  * C1-04: a stat block's spell list becomes runtime attack and saving-throw actions that carry the block's own
- * save DC, spell attack bonus and per-day uses. Only combat-executable mechanics project; utility spells stay in
- * the stat block's spellcasting text.
+ * save DC, spell attack bonus and per-day uses. Combat-executable mechanics become attack/save actions; every other
+ * spell (utility, buff, summon) becomes a text action with the same per-day pool, so the DM casts it from the tile and
+ * narrates the effect while the counter is kept.
  */
-export interface MonsterSpellSpecs { attacks:CombatantRuntimeAttackVm[]; saves:CombatantRuntimeSaveActionVm[] }
+export interface MonsterSpellSpecs { attacks:CombatantRuntimeAttackVm[]; saves:CombatantRuntimeSaveActionVm[]; texts:CombatantRuntimeTextActionVm[] }
 
 const ECONOMY:Record<SpellMechanicDefinition["castingEconomy"],CombatantRuntimeEconomy>={ "action":"행동", "bonus-action":"추가 행동", "reaction":"반응" };
 
@@ -20,12 +21,24 @@ export function monsterSpellSpecs(monster:Pick<SrdMonster,"cr"|"proficiencyBonus
   const casterLevel=Math.min(20,Math.max(1,Math.round(monster.cr)));
   const modifier=spellcasting.dc-8-monster.proficiencyBonus;
   const attackBonus=spellcasting.attackBonus??(spellcasting.dc-8);
-  const specs:MonsterSpellSpecs={ attacks:[], saves:[] };
+  const specs:MonsterSpellSpecs={ attacks:[], saves:[], texts:[] };
   spellcasting.lists.forEach((list,listIndex)=>{
     for (const [entryIndex,entry] of (list.entries??[]).entries()) {
       if (!entry.spellId) continue;
-      const mechanic=spellMechanicById(entry.spellId);
-      if (!mechanic||mechanic.runtimeSupport!=="combat-executable") continue;
+      const spellId=entry.spellId;
+      const asText=()=>{
+        const presentation=spellPresentationById(spellId);
+        const timing=timingFor(list);
+        specs.texts.push({
+          id:`spell.${listIndex}.${entryIndex}.${spellId.replace(/^dnd\.srd521\.spell\./,"")}`,
+          name:`${presentation?.name ?? entry.name} (주문${entry.slotLevel?` · ${entry.slotLevel}레벨`:""})`,
+          text:[entry.note,presentation?.summary,presentation?`${presentation.castingTime} · ${presentation.range} · ${presentation.duration}`:undefined,`주문 내성 DC ${spellcasting.dc}`].filter(Boolean).join(" · "),
+          economy:presentation?.castingTime==="추가 행동"?"추가 행동":presentation?.castingTime==="반응"?"반응":"행동",
+          ...(timing?{ timing }:{}),
+        });
+      };
+      const mechanic=spellMechanicById(spellId);
+      if (!mechanic||mechanic.runtimeSupport!=="combat-executable") { asText(); continue; }
       const slotLevel=entry.slotLevel??mechanic.baseLevel;
       const scale=(formula:SpellDiceFormula):CombatantRuntimeDamageVm=>{
         const count=formula.count+(formula.cantripScaling?cantripSteps(casterLevel):0)+Math.max(0,slotLevel-mechanic.baseLevel)*(formula.dicePerSlotAboveBase??0);
@@ -72,7 +85,10 @@ export function monsterSpellSpecs(monster:Pick<SrdMonster,"cr"|"proficiencyBonus
           ...(economy!=="행동"?{ economy }:{}),
           ...(timing?{ timing }:{}),
         });
+        continue;
       }
+      // Buffs, summons, utility with a combat mechanic the table does not execute on its own: a text tile with the same pool.
+      asText();
     }
   });
   return specs;
