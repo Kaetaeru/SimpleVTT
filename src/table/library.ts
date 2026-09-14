@@ -5,6 +5,7 @@ import type { CombatantRuntimeStatsVm } from "../app/combatantRuntimeContracts";
 import { srdMonsterById, srdMonsterCombatantDefinition } from "../app/srdMonsterCatalog";
 import type { ActorSpec } from "./commands";
 import type { Side } from "./state";
+import { weaponRuleById } from "../domain/weaponRuleCatalog";
 
 /**
  * The host library (DM_WORKSPACE.md §3): NPC definitions, PC presets, custom items, notes and scene bundles the DM owns
@@ -144,6 +145,9 @@ export function itemEntry(library:HostLibrary,item:LibraryItemSpec):LibraryEntry
   const id=library.nextId("item",item.name);
   return library.upsert({id,kind:"item",name:item.name,tags:[item.kind],item:{...item,quantity:Math.max(1,Math.floor(item.quantity||1))}});
 }
+
+/** Whether an item definition is a weapon the rules know (a grant of it also adds an attack tile). */
+export function isWeaponItem(definitionId:string):boolean { return Boolean(weaponRuleById(definitionId)); }
 
 /** An image the DM may show later (DM_WORKSPACE.md §3 자료): kept in the host library, shown with the `handout` command. */
 export function imageEntry(library:HostLibrary,asset:LocalImageAssetV1,name?:string):LibraryEntry {

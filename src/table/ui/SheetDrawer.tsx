@@ -1,5 +1,6 @@
 import type { CharacterSheet, CombatantDefinitionVm, SceneEntity } from "../../app/contracts";
 import { srdMonsterById } from "../../app/srdMonsterCatalog";
+import { abilityScoreLabel } from "../actors";
 import { SrdMonsterStatBlock } from "../../SrdMonsterStatBlock";
 import type { Actor } from "../state";
 
@@ -9,10 +10,9 @@ function LibraryStatBlock({entity,definition}:{entity:SceneEntity;definition?:Co
   const stats=definition?.runtimeStats;
   const attacks=definition?.runtimeActions??[];
   const saves=definition?.runtimeSaveActions??[];
-  const mod=(score:number)=>{ const value=Math.floor((score-10)/2); return `${score} (${value>=0?"+":""}${value})`; };
   return <div className="tw-sheet">
     <div className="tw-kv"><span>AC <strong>{entity.ac}</strong></span><span>HP <strong>{entity.hp}/{entity.maxHp}</strong></span>{stats&&<span>속도 <strong>{stats.speed}피트</strong></span>}{definition?.tags&&definition.tags.length>0&&<span>{definition.tags.join(" · ")}</span>}</div>
-    {stats&&<dl><dt>능력치</dt><dd>{(["str","dex","con","int","wis","cha"] as const).map((key)=>`${key.toUpperCase()} ${mod(stats.abilities[key])}`).join(" · ")}</dd>
+    {stats&&<dl><dt>능력치</dt><dd>{(["str","dex","con","int","wis","cha"] as const).map((key)=>`${key.toUpperCase()} ${abilityScoreLabel(stats.abilities[key])}`).join(" · ")}</dd>
       {stats.resistances.length>0&&<><dt>저항</dt><dd>{stats.resistances.join(", ")}</dd></>}
       {stats.immunities.length>0&&<><dt>면역</dt><dd>{stats.immunities.join(", ")}</dd></>}
       {attacks.length>0&&<><dt>공격</dt><dd>{attacks.map((attack)=>`${attack.name} ${attack.attackBonus>=0?"+":""}${attack.attackBonus} · ${attack.damage.dice}${attack.damage.flat?` + ${attack.damage.flat}`:""} ${attack.damage.type}${attack.attacksPerAction&&attack.attacksPerAction>1?` ×${attack.attacksPerAction}`:""}`).join(" · ")}</dd></>}

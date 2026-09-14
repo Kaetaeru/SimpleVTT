@@ -237,6 +237,9 @@ export function materializeActors(state:TableState,spec:ActorSpec):{actors:Actor
   return {actors,combatants:Object.fromEntries(actors.map((actor)=>[actor.id,monsterCombatant(actor.id,definition)]))};
 }
 
+/** "16 (+3)" for a stat block line. */
+export function abilityScoreLabel(score:number):string { const value=abilityModifier(score); return `${score} (${value>=0?"+":""}${value})`; }
+
 export function actorAc(actor:Actor):number {
   if(actor.source.kind==="object") return OBJECT_AC[actor.source.material]??15;
   return actor.source.kind==="character"?actor.source.sheet.ac:actor.source.definition.ac;

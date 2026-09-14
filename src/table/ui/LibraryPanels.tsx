@@ -1,8 +1,7 @@
 import { useState } from "react";
 import type { AppSnapshot, CatalogEntry } from "../../app/contracts";
-import { weaponRuleById } from "../../domain/weaponRuleCatalog";
 import type { ActorSpec, TableCommand } from "../commands";
-import { blankNpc, bundleEntry, bundleFromActors, bundleSpecs, editNpc, imageEntry, itemEntry, noteEntry, npcFromSrd, npcsFromJson, presetFromSheet, type HostLibrary, type LibraryEntry, type LibraryItemSpec } from "../library";
+import { blankNpc, bundleEntry, bundleFromActors, bundleSpecs, editNpc, imageEntry, isWeaponItem, itemEntry, noteEntry, npcFromSrd, npcsFromJson, presetFromSheet, type HostLibrary, type LibraryEntry, type LibraryItemSpec } from "../library";
 import type { CharacterPortraitV1 } from "../../app/characterPortraitContracts";
 import { LOCAL_IMAGE_ACCEPT } from "../../app/localImageAsset";
 import { readHandoutFile, readPortraitFile } from "./portrait";
@@ -186,12 +185,12 @@ export function ItemLibrary({library:given,mode,snapshot,dispatch,onFeedback,tar
       <div className="tw-section">내 아이템 {mine.length>0&&<span>{mine.length}</span>}</div>
       {mine.length===0&&<div className="tw-empty">아직 내 아이템이 없습니다. SRD 항목을 "내 아이템으로" 두거나 + 추가로 만드세요.</div>}
       {mine.map((entry)=><div key={entry.id} className="tw-list-item" role="listitem" draggable onDragStart={(event)=>entry.item&&startDrag(event,{kind:"item",entryId:entry.id,definitionId:entry.item.definitionId,name:entry.item.name,itemKind:entry.item.kind,quantity:entry.item.quantity})}>
-        <div className="tw-grow"><strong>{entry.name}{(entry.item?.quantity??1)>1?` ×${entry.item?.quantity}`:""}</strong><small>{entry.item?.kind==="consumable"?"소모품":entry.item?.kind==="magic"?"마법 물건":"장비"}{weaponRuleById(entry.item?.definitionId??"")?" · 무기":""}</small></div>
+        <div className="tw-grow"><strong>{entry.name}{(entry.item?.quantity??1)>1?` ×${entry.item?.quantity}`:""}</strong><small>{entry.item?.kind==="consumable"?"소모품":entry.item?.kind==="magic"?"마법 물건":"장비"}{isWeaponItem(entry.item?.definitionId??"")?" · 무기":""}</small></div>
         <span className="tw-verbs">{mode==="session"&&<button type="button" className="primary" disabled={!target} onClick={()=>entry.item&&grant(entry.item)}>지급</button>}<button type="button" className="quiet" onClick={()=>library.remove(entry.id)}>삭제</button></span>
       </div>)}
       <div className="tw-section">SRD 아이템 {q?"":"· 일부"}</div>
       {catalog.map((entry)=><div key={entry.id} className="tw-list-item" role="listitem" draggable onDragStart={(event)=>startDrag(event,{kind:"item",definitionId:entry.id,name:entry.nameKo,itemKind:itemKindOf(entry),quantity:1})}>
-        <div className="tw-grow"><strong>{entry.nameKo}</strong><small>{entry.nameEn}{weaponRuleById(entry.id)?" · 무기":""}</small></div>
+        <div className="tw-grow"><strong>{entry.nameKo}</strong><small>{entry.nameEn}{isWeaponItem(entry.id)?" · 무기":""}</small></div>
         <span className="tw-verbs">{mode==="session"&&<button type="button" disabled={!target} onClick={()=>grant(specOf(entry))}>지급</button>}<button type="button" onClick={()=>{ itemEntry(library,specOf(entry)); onFeedback?.(`내 아이템으로: ${entry.nameKo}`); }}>내 아이템으로</button></span>
       </div>)}
       {q&&catalog.length===0&&mine.length===0&&<div className="tw-empty">일치하는 아이템이 없습니다.</div>}
