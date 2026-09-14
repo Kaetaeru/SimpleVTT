@@ -71,7 +71,7 @@ The old app keeps running on `work/v1-composite` until then.
 | `T2-05` | 부분 | 결과 카드 사후 토글(D42 `override`), `award`, `advance-time` | 화면 |
 | `T2-06` | 대부분 | 핵심 직업 자원 풀·회복, 기능 행동 14종, 분노·암습 부가 효과, 계약 마법, 소환 액터; 슬라이스 5·6: 바드의 영감(부여·사용), 불굴, 표식·강타 부가 효과, 무기 숙련 6종, 야생 변신, 몬스터 재충전·전설 행동·다중공격 루틴·명중 부가 효과 | 베어가르기·찌르기 숙련, 몬스터 주문 시전, 야생 변신 속도·감각 |
 | `T2-04` | 슬라이스 A·B·C | A: 워크스페이스 뼈대 (`src/table/ui/`): 상단 바·테이블(토큰 카드, 초점 카드, D42 판정 메뉴, 질문)·사이드바 7탭·명령 센터(대상 지정)·재량 바·토큰 HUD·Ctrl+K·시트 서랍. B: 호스트 라이브러리(내 NPC(초상·설명·DM 메모·능력치)·PC 프리셋·내 아이템·장면 묶음, 캠페인 없이 유지)·준비실·묶음 소환·드래그 소환·아이템 지급(`grant-item`)·토큰 드롭. C: 호스트 소유 이미지·노트, `handout`(모두/한 플레이어), 이미지 토큰 드롭, 기록에서 카드 재열람. 증거 [T2-04.md](evidence/T2-04.md) | 소유자 검토, Windows |
-| `T2-07` | 미착수 | — | 전환 |
+| `T2-07` | 전반 | `main.tsx`가 테이블 facade를 기본으로 구성(`?table=legacy`만 옛 화면), 시나리오 3 "DM 재량" 오프라인 테스트, 전환 구조 테스트, 준비된 세션 이름 반영. 증거 [T2-07.md](evidence/T2-07.md) | 옛 세션 adapter 삭제(소유자 결정·Windows 이후), Windows H+P1+P2, `work/v1-composite` PR, 릴리스 |
 
 ## Evidence
 
@@ -81,4 +81,5 @@ The old app keeps running on `work/v1-composite` until then.
 | `T2-03` (커널) | 이 브랜치 head | `tests/table/connected.test.ts` 4건, `tests/table/facade.test.ts` 2건 green (메모리 전송) |
 | 명세 §1~§4 | `66bb2053` | `tests/table/{clock,windows,features,scene}.test.ts` 17건 포함 `npm run test:table` 45건 green; `tsc`, `check-legacy-execution-boundary`, `test:ui-rule-boundary`, `vite build` green (Linux) |
 | `T2-04` 슬라이스 A·B·C | 이 브랜치 head | `tests/table/workspace.test.ts` 4건 (`npm run test:workspace`), `tests/table/library.test.ts` 4건, `tests/table/handout.test.ts` 2건, [evidence/T2-04.md](evidence/T2-04.md)의 Chromium 캡처 19장 (dev 미리보기, Linux) |
+| `T2-07` 전반 | 이 브랜치 head | `tests/table/switchover.test.ts` 2건, `tests/table/scenario3.test.ts` 2건 (`npm run test:table` 71건), [evidence/T2-07.md](evidence/T2-07.md)의 Chromium 캡처 4장 (플래그 없는 제품 경로, Linux) |
 | 슬라이스 5·6 | `72fa7dd8` | `tests/table/{statblock,mastery}.test.ts` 14건과 `features.test.ts` 2건 추가, `npm run test:table` 61건 green; `tsc`, 경계 검사 둘, `vite build` green (Linux) |

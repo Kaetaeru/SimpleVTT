@@ -88,7 +88,7 @@ export function createTableSessionFacade(base:MockAdapter,options:{runtime?:Tabl
     const resolution=view.resolution&&view.resolution.id!==dismissedResolutionId?view.resolution:null;
     const session=mode==="offline"?snapshot.session:{
       ...snapshot.session,
-      name:snapshot.session.name||"테이블",
+      name:snapshot.campaignSessionSnapshot?.sessionName||snapshot.session.name||"테이블",
       address,
       role:mode,
       lifecycle:"live" as const,

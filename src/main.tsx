@@ -84,10 +84,11 @@ void CombatSpellHudBridge;
 initializeAppearancePreference();
 initializeMotionPreference();
 
-// V2 table runtime behind a dev flag (T2-01): the old play screens render the new runtime's snapshot.
-// V2 table runtime (T2-01 … T2-03): dev `?table=v2`, or `localStorage.simplevtt.table = "v2"` in a built app, until the switch-over (T2-07).
-const tableRequested=new URLSearchParams(window.location.search).get("table")==="v2"||(()=>{ try { return window.localStorage.getItem("simplevtt.table")==="v2"; } catch { return false; } })();
-const tableFacade=tableRequested?createTableSessionFacade(mockAdapter):null;
+// T2-07 switch-over: the V2 table runtime (kernel + DM workspace) is the product session path.
+// The old play screens stay reachable for the transition with `?table=legacy` or `localStorage.simplevtt.table = "legacy"`
+// (Windows runners that still target them); the old session adapters above remain composed until that verification is done.
+const legacyRequested=new URLSearchParams(window.location.search).get("table")==="legacy"||(()=>{ try { return window.localStorage.getItem("simplevtt.table")==="legacy"; } catch { return false; } })();
+const tableFacade=legacyRequested?null:createTableSessionFacade(mockAdapter);
 if(tableFacade) (window as unknown as {__table?:unknown}).__table=tableFacade;
 
 createRoot(document.getElementById("root")!).render(

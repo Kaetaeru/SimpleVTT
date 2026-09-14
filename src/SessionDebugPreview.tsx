@@ -38,7 +38,7 @@ export function SessionDebugPreview({ state, onChange, onExit }: {
   </SessionDebugPreviewProvider>;
 }
 
-/** With the V2 table facade (`?table=v2`) the preview shows the new workspace; otherwise the reference play screen. */
+/** The preview shows the V2 workspace (the product path since T2-07); `?table=legacy` shows the reference play screen. */
 function PreviewViewport({ onExit }: { onExit(): void }) {
   const facade = useTableFacade();
   if (facade) return <TableWorkspace onLeave={onExit} />;
