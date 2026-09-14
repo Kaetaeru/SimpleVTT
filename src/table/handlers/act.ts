@@ -35,6 +35,9 @@ import { CLASS, classLevel, featureRiders } from "../features";
 import { effectAttackDamageRiders, effectRetaliations } from "../../domain/effectAttackRiders";
 import { conditionEffectsFor } from "../../domain/combatState";
 import { bardicInspirationDieSides, compileGrantBardicInspiration } from "../../domain/bardicInspiration";
+import { compileDruidWildShapeEnd, compileDruidWildShapeStart, DRUID_WILD_SHAPE_TAG } from "../../domain/druidWildShape";
+import { wildShapeForm } from "../actors";
+import { applyDrafts } from "./windows";
 import { weaponHasProperty, weaponRuleById } from "../../domain/weaponRuleCatalog";
 
 export const NEXT_ROLL_TAG="table:next-roll";
@@ -250,6 +253,9 @@ export function attackAct(ctx:HandlerContext,actor:Actor,action:ActionVm,targetI
     economy:state.mode==="initiative"&&(ctx.asReaction||economySlot(action))?(ctx.asReaction?{slot:"reaction",actionKind:"attack",attacksPerAction:1}:{slot:economySlot(action)!,bonusActionGranted:economySlot(action)==="bonus-action"?true:undefined,actionKind:"attack",attacksPerAction:action.attacksPerAction??1}):undefined,
   };
   let attackRules=state.rules;
+  // Vex: the advantage it granted counts only against the creature it was earned from.
+  const vexElsewhere=state.rules.effects.filter((effect)=>effect.targetId===actor.id&&typeof effect.metadata?.vexTargetId==="string"&&effect.metadata.vexTargetId!==targetId);
+  if(vexElsewhere.length) { attackRules=cloneState(attackRules); attackRules.effects=attackRules.effects.filter((effect)=>!vexElsewhere.some((vex)=>vex.id===effect.id)); }
   if(action.resourceCost) {
     const spent=commitOperations(ctx,{id:`${resolutionId}:cost`,actorId:actor.id,sourceId:action.id,operations:[{id:`${resolutionId}:resource`,kind:"spend-resource",actorId:actor.id,resourceId:action.resourceCost.resourceId,amount:action.resourceCost.amount}],actionId:action.id});
     if(spent.status==="refused") return spent;
@@ -263,7 +269,68 @@ export function attackAct(ctx:HandlerContext,actor:Actor,action:ActionVm,targetI
   const attack=commit.results[`${resolutionId}:attack`] as D20TestResult;
   const damage=Object.entries(commit.results).find(([key,value])=>key.startsWith(resolutionId)&&Boolean(value)&&typeof value==="object"&&"components" in (value as object))?.[1] as CompoundDamageResolution|undefined;
   let rules=commit.state;
+  if(vexElsewhere.length) rules.effects=[...rules.effects,...vexElsewhere.filter((vex)=>!rules.effects.some((effect)=>effect.id===vex.id))];
   const overrideChanges:string[]=[];
+  const hit=attack.outcome==="success"&&!forcedMiss;
+  // Stat-block riders on a hit (§22.14): a save the text names, or an immediate hold with its escape DC.
+  if(hit&&action.tableHitRider&&!rules.combatants[targetId]?.life.dead) {
+    const rider=action.tableHitRider;
+    const riderOps:ResolutionOperation[]=[];
+    const saveId=`${resolutionId}:rider-save`;
+    const when=rider.saveAbility&&rider.saveDc?{operationId:saveId,field:"outcome" as const,equals:"failure" as const}:undefined;
+    if(rider.saveAbility&&rider.saveDc) {
+      const saveFaces=d20Faces(ctx,`${target.name} 내성`);
+      riderOps.push({id:saveId,kind:"d20",actorId:targetId,request:{family:"saving-throw",target:rider.saveDc,modifierContributions:[{source:`save:${rider.saveAbility}`,value:actorSaveModifier(target,rider.saveAbility)}],dice:{id:`${saveId}:d20`,purpose:`${target.name} ${abilityLabelKo(rider.saveAbility)} 내성`,sides:20,faces:target.kind==="object"?saveFaces.map(()=>1):saveFaces}},condition:{ability:rider.saveAbility}});
+    }
+    const duration:DurationSpec=rider.untilTargetNextTurnEnd?(state.mode==="initiative"?{kind:"until-turn-boundary",actorId:targetId,round:state.round+1,boundary:"end"}:{kind:"rounds",amount:1,anchorActorId:targetId,boundary:"end"}):rider.escapeDc?{kind:"special",key:`grapple:${actor.id}`}:{kind:"minutes",amount:1};
+    for(const conditionId of rider.conditionIds) {
+      const grapple=conditionId==="grappled";
+      riderOps.push({id:`${resolutionId}:rider:${conditionId}`,kind:"apply-effect",...(when?{when}:{}),effect:{id:`${resolutionId}:${conditionId}:${targetId}`,sourceId:grapple?GRAPPLE_SOURCE:action.id,sourceActorId:actor.id,targetId,kind:"condition",conditionId:conditionId as ConditionId,tags:[STATUS_TAG],duration,...(grapple||rider.escapeDc?{termination:{sourceBecomesIncapacitated:true,sourceDies:true,targetDies:true}}:{}),metadata:{publicLabel:grapple?`붙잡힘 (${actor.name})`:conditionLabelKo(conditionId),...(rider.escapeDc?{escapeDc:rider.escapeDc,grapplerId:actor.id}:{})}}});
+    }
+    const applied=commitOperations(ctx,{id:`${resolutionId}:rider`,actorId:actor.id,sourceId:action.id,rules,operations:riderOps});
+    if(applied.status==="committed") {
+      rules=applied.commit.state;
+      const save=rider.saveAbility?applied.commit.results[saveId] as D20TestResult|undefined:undefined;
+      const failed=!save||save.outcome!=="success";
+      overrideChanges.push(save?`${target.name} ${abilityLabelKo(rider.saveAbility!)} 내성 ${save.total} vs DC ${rider.saveDc} ${failed?`실패 → ${rider.conditionIds.map(conditionLabelKo).join(", ")}`:"성공"}`:`${target.name} ${rider.conditionIds.map(conditionLabelKo).join(", ")}${rider.escapeDc?` (탈출 DC ${rider.escapeDc})`:""}`);
+    }
+  }
+  // Weapon Mastery (2024, §22.7): Graze on a miss; Vex, Sap, Slow, Topple, Push on a hit. Cleave and Nick are not automated.
+  const mastery=masteryOf(actor,action);
+  let masteryEngagements:EngagementRecord[]|undefined;
+  if(mastery&&actor.source.kind==="character"&&!rules.combatants[targetId]?.life.dead) {
+    const sheet=actor.source.sheet;
+    const rule=weaponRuleById(mastery.ruleId);
+    const finesse=rule?weaponHasProperty(rule,"finesse"):false;
+    const abilityMod=isRangedAttack(action)||(finesse&&sheet.abilities.dex>sheet.abilities.str)?Math.floor((sheet.abilities.dex-10)/2):Math.floor((sheet.abilities.str-10)/2);
+    const untilMyNextTurn=(boundary:"start"|"end"):DurationSpec=>state.mode==="initiative"?{kind:"until-turn-boundary",actorId:actor.id,round:state.round+1,boundary}:{kind:"rounds",amount:1,anchorActorId:actor.id,boundary};
+    const label=MASTERY_KO[mastery.mastery]??mastery.mastery;
+    if(mastery.mastery==="graze"&&!hit&&abilityMod>0) {
+      const grazed=commitOperations(ctx,{id:`${resolutionId}:graze`,actorId:actor.id,sourceId:action.id,rules,operations:[{id:`${resolutionId}:graze:damage`,kind:"damage",targetId,damageType:spec.type,amount:abilityMod,creatureKind:target.kind==="character"?"character":"monster"}]});
+      if(grazed.status==="committed") { rules=grazed.commit.state; overrideChanges.push(`${label}: 빗나가도 ${abilityMod} ${spec.type} 피해`); }
+    }
+    if(hit&&(mastery.mastery==="vex"||mastery.mastery==="sap"||mastery.mastery==="slow"||mastery.mastery==="topple")) {
+      const ops:ResolutionOperation[]=[];
+      const saveId=`${resolutionId}:topple-save`;
+      if(mastery.mastery==="vex") ops.push({id:`${resolutionId}:vex`,kind:"apply-effect",effect:{id:`${resolutionId}:vex:${actor.id}`,sourceId:`mastery:vex`,sourceActorId:actor.id,targetId:actor.id,kind:"modifier",tags:[NEXT_ROLL_TAG,STATUS_TAG],duration:untilMyNextTurn("end"),metadata:{publicLabel:`교란 (${target.name}에게 다음 공격 유리)`,d20Family:"attack-roll",d20RollState:"advantage",grantId:`${resolutionId}:vex`,vexTargetId:targetId}}});
+      if(mastery.mastery==="sap") ops.push({id:`${resolutionId}:sap`,kind:"apply-effect",effect:{id:`${resolutionId}:sap:${targetId}`,sourceId:`mastery:sap`,sourceActorId:actor.id,targetId,kind:"modifier",tags:[NEXT_ROLL_TAG,STATUS_TAG],duration:untilMyNextTurn("start"),metadata:{publicLabel:"약화 (다음 공격 불리)",d20Family:"attack-roll",d20RollState:"disadvantage",grantId:`${resolutionId}:sap`}}});
+      if(mastery.mastery==="slow") ops.push({id:`${resolutionId}:slow`,kind:"apply-effect",effect:{id:`${resolutionId}:slow:${targetId}`,sourceId:`mastery:slow`,sourceActorId:actor.id,targetId,kind:"marker",tags:[STATUS_TAG],duration:untilMyNextTurn("start"),metadata:{publicLabel:"둔화 (속도 −10피트)"}}});
+      if(mastery.mastery==="topple") {
+        const dc=8+actorProficiencyBonus(actor)+abilityMod;
+        const faces=d20Faces(ctx,`${target.name} 건강 내성`);
+        ops.push({id:saveId,kind:"d20",actorId:targetId,request:{family:"saving-throw",target:dc,modifierContributions:[{source:"save:con",value:actorSaveModifier(target,"con")}],dice:{id:`${saveId}:d20`,purpose:`${target.name} 건강 내성`,sides:20,faces:target.kind==="object"?faces.map(()=>1):faces}},condition:{ability:"con"}});
+        ops.push({id:`${resolutionId}:topple`,kind:"apply-effect",when:{operationId:saveId,field:"outcome",equals:"failure"},effect:{id:`${resolutionId}:prone:${targetId}`,sourceId:"table:posture",sourceActorId:actor.id,targetId,kind:"condition",conditionId:"prone",tags:[STATUS_TAG],duration:{kind:"permanent"},metadata:{publicLabel:"넘어짐"}}});
+      }
+      const applied=commitOperations(ctx,{id:`${resolutionId}:mastery`,actorId:actor.id,sourceId:action.id,rules,operations:ops});
+      if(applied.status==="committed") {
+        rules=applied.commit.state;
+        if(mastery.mastery==="slow"&&state.mode==="initiative") { const economy=rules.combatants[targetId].economy; rules.combatants[targetId].economy={...economy,movement:Math.max(0,economy.movement-10),movementMaximum:Math.max(0,economy.movementMaximum-10)}; }
+        const save=mastery.mastery==="topple"?applied.commit.results[saveId] as D20TestResult|undefined:undefined;
+        overrideChanges.push(save?`${label}: ${target.name} 건강 내성 ${save.total} vs DC ${8+actorProficiencyBonus(actor)+abilityMod} ${save.outcome==="success"?"성공":"실패 → 넘어짐"}`:`${label}: ${mastery.mastery==="vex"?`다음 ${target.name} 공격 유리`:mastery.mastery==="sap"?`${target.name} 다음 공격 불리`:`${target.name} 속도 −10피트`}`);
+      }
+    }
+    if(hit&&mastery.mastery==="push"&&actorSizeRank(target)<=3) { masteryEngagements=clearEngagement(state.engagements,actor.id,targetId); overrideChanges.push(`${label}: ${target.name} 10피트 밀려남 · 교전 해제`); }
+  }
   // Turn markers other features read: a Light weapon attack (off-hand attack), a Monk's unarmed or monk-weapon attack, a Rage extended by attacking.
   if(actor.source.kind==="character"&&rules.turnFeatureUsage&&rules.turnFeatureUsage.actorId===actor.id) {
     const sheet=actor.source.sheet;
@@ -289,7 +356,7 @@ export function attackAct(ctx:HandlerContext,actor:Actor,action:ActionVm,targetI
   const consumed=consumeNextRoll(rules,actor.id,"attack-roll");
   const unhidden=hiddenEndsFor(rules,actor.id);
   if(unhidden.length) rules.effects=rules.effects.filter((effect)=>!unhidden.includes(effect.id));
-  const engaged=options.noEngagement?null:engageByMelee(state,action,actor.id,targetId);
+  const engaged=options.noEngagement||masteryEngagements?null:engageByMelee(state,action,actor.id,targetId);
   const thrown=action.tableThrow?throwFromHand(state,actor,action.tableThrow.itemId??itemId,ctx.nextSeq):null;
   // D9: a melee attack that drops a creature to 0 HP may knock it out instead — one question to the attacker.
   const killedNow=isMeleeAttack(action)&&target.kind==="npc"&&!state.rules.combatants[targetId]?.life.dead&&rules.combatants[targetId]?.life.dead;
@@ -301,7 +368,7 @@ export function attackAct(ctx:HandlerContext,actor:Actor,action:ActionVm,targetI
   if(engaged) card.provenance.push(`engagement:melee-attack:${actor.id}<->${targetId}:round:${engagementRound(state)}`);
   // D24: "닿지 않음" re-records the attack as an approach and the same attack; the action is kept.
   const declarations=o.reach==="out"?{...state.declarations,[actor.id]:{kind:"approach" as const,targetId,round:state.round}}:undefined;
-  return commitEvents(ctx,card,rules,engaged?.engagements,{...(thrown??{}),...(questions?{questions}:{}),...(declarations?{declarations}:{})});
+  return commitEvents(ctx,card,rules,masteryEngagements??engaged?.engagements,{...(thrown??{}),...(questions?{questions}:{}),...(declarations?{declarations}:{})});
 }
 
 function checkAct(ctx:HandlerContext,actor:Actor,action:ActionVm,targetIds:string[],resolutionId:string):HandlerResult {
@@ -518,6 +585,8 @@ function escapeAct(ctx:HandlerContext,actor:Actor,action:ActionVm,resolutionId:s
   if(committed.status==="refused") return committed;
   const test=committed.commit.results[checkId] as D20TestResult;
   const rules=committed.commit.state;
+  const specialKey=(effect:{expiry:{kind:string;key?:string}})=>effect.expiry.kind==="special"?effect.expiry.key:undefined;
+  if(test.outcome==="success") rules.effects=rules.effects.filter((effect)=>!(effect.targetId===actor.id&&specialKey(effect)!==undefined&&holds.some((hold)=>specialKey(hold)===specialKey(effect))));
   consumeNextRoll(rules,actor.id,"ability-check");
   const grapplers=holds.map((effect)=>actorName(state,String(effect.metadata?.grapplerId??effect.sourceActorId??""))).join(", ");
   const compact=`붙잡힘 탈출 · ${test.total} vs DC ${dc} ${test.outcome==="success"?`성공 → ${grapplers}에게서 풀려남`:"실패"}`;
@@ -533,8 +602,11 @@ function releaseAct(ctx:HandlerContext,actor:Actor,action:ActionVm,resolutionId:
   const committed=commitOperations(ctx,{id:resolutionId,actorId:actor.id,sourceId:action.id,operations:held.map((effect)=>({id:`${resolutionId}:release:${effect.id}`,kind:"remove-effect" as const,effectId:effect.id})),actionId:action.id});
   if(committed.status==="refused") return committed;
   const names=held.map((effect)=>actorName(state,effect.targetId)).join(", ");
-  const card=plainCard({id:resolutionId,seq:ctx.nextSeq,visibility:state.rollVisibility,action,actorId:actor.id,targetIds:held.map((effect)=>effect.targetId),rollKind:"effect",compact:`놓아주기 · ${names}`,detail:["비용 없음"],events:committed.commit.events,stateChanges:lifeStateChanges(state,state.rules,committed.commit.state)});
-  return commitEvents(ctx,card,committed.commit.state);
+  const rules=committed.commit.state;
+  const keyOf=(effect:{expiry:{kind:string;key?:string}})=>effect.expiry.kind==="special"?effect.expiry.key:undefined;
+  rules.effects=rules.effects.filter((effect)=>!(keyOf(effect)!==undefined&&effect.sourceActorId===actor.id&&held.some((hold)=>hold.targetId===effect.targetId&&keyOf(hold)===keyOf(effect))));
+  const card=plainCard({id:resolutionId,seq:ctx.nextSeq,visibility:state.rollVisibility,action,actorId:actor.id,targetIds:held.map((effect)=>effect.targetId),rollKind:"effect",compact:`놓아주기 · ${names}`,detail:["비용 없음"],events:committed.commit.events,stateChanges:lifeStateChanges(state,state.rules,rules)});
+  return commitEvents(ctx,card,rules);
 }
 
 /** Every action runs through the reaction-window hold (RULES_RUNTIME_SPECS.md §2); the inner handler stays pure. */
@@ -557,7 +629,7 @@ export function actInner(ctx:HandlerContext,command:Extract<TableCommand,{type:"
   if(action.tableFeature) {
     const gate=featureGate(state,actor,action);
     if(gate) return refused("feature-unavailable",gate,{actorId:actor.id,actionId:action.id});
-    const handled=featureAct(ctx,actor,action,targetIds,resolutionId,command.amount);
+    const handled=featureAct(ctx,actor,action,targetIds,resolutionId,command.amount,command.formId);
     if(handled) return handled;
   }
   if(ctx.overrides?.cancelled&&action.tableSpell) return cancelledCastAct(ctx,actor,action,resolutionId,command.slotLevel);
@@ -566,6 +638,7 @@ export function actInner(ctx:HandlerContext,command:Extract<TableCommand,{type:"
   if(action.tableUnarmedOption) return unarmedOptionAct(ctx,actor,action,targetIds,resolutionId);
   if(action.tableEscape) return escapeAct(ctx,actor,action,resolutionId);
   if(action.tableRelease) return releaseAct(ctx,actor,action,resolutionId);
+  if(action.tableRoutine) return routineAct(ctx,actor,action,targetIds);
   switch(action.resolutionKind) {
     case "attack": return attackAct(ctx,actor,action,targetIds,resolutionId,command.itemId);
     case "ability-check": return checkAct(ctx,actor,action,targetIds,resolutionId);
@@ -575,6 +648,47 @@ export function actInner(ctx:HandlerContext,command:Extract<TableCommand,{type:"
     case "no-roll-damage": return noRollAct(ctx,actor,action,targetIds,resolutionId);
   }
 }
+
+/** A multiattack routine: each step's attack resolves in order against the one target, each with its own card; the routine stops when an attack is refused (the target fell, the action ran out). */
+function routineAct(ctx:HandlerContext,actor:Actor,action:ActionVm,targetIds:string[]):HandlerResult {
+  const targetId=targetIds[0];
+  if(!targetId) return refused("target-missing","대상을 선택하세요.",{actorId:actor.id,actionId:action.id});
+  const events:import("./types").EventDraft[]=[];
+  let working=ctx.state;
+  let seq=ctx.nextSeq;
+  let last:ResolutionRecord|null=null;
+  const lines:string[]=[];
+  outer: for(const step of action.tableRoutine!.steps) {
+    for(let index=0;index<step.count;index+=1) {
+      const sub=actionsFor(actor,working).find((entry)=>entry.id===step.actionId);
+      if(!sub) { lines.push(`${step.name}: 행동 없음`); continue; }
+      const availability=availabilityOf(working,sub,{asReaction:ctx.asReaction});
+      const targetRefusal=availability.available?targetRefusalFor(working,sub,[targetId]):null;
+      if(!availability.available||targetRefusal) { lines.push(`${sub.name}: ${availability.reason??targetRefusal?.message}`); break outer; }
+      const result=attackAct({...ctx,state:working,nextSeq:seq},actor,sub,[targetId],`res.${seq}`);
+      if(result.status==="refused") { if(!events.length) return result; lines.push(`${sub.name}: ${result.refusal.message}`); break outer; }
+      events.push(...result.events);
+      working=applyDrafts(working,result.events,seq,ctx.now());
+      seq+=result.events.length;
+      last=result.resolution??last;
+      lines.push(result.resolution?.compact??sub.name);
+    }
+  }
+  if(!events.length) return refused("action-unavailable",lines[0]??"다중공격을 할 수 없습니다.",{actorId:actor.id,actionId:action.id});
+  if(last) { last.detail.push(`다중공격: ${lines.join(" / ")}`); }
+  return {status:"committed",events,resolution:last};
+}
+
+/** Weapon Mastery (2024) the character has with this weapon, applied after the attack resolves. */
+function masteryOf(actor:Actor,action:ActionVm):{mastery:string;ruleId:string}|null {
+  if(actor.source.kind!=="character"||!action.tableWeaponItemId) return null;
+  const sheet=actor.source.sheet;
+  const item=sheet.items.find((entry)=>entry.id===action.tableWeaponItemId);
+  const rule=item?weaponRuleById(item.definitionId):undefined;
+  if(!rule||!rule.mastery||!(sheet.weaponMasteryIds??[]).includes(rule.id)) return null;
+  return {mastery:rule.mastery,ruleId:rule.id};
+}
+const MASTERY_KO:Record<string,string>={graze:"훑기",vex:"교란",sap:"약화",slow:"둔화",topple:"넘어뜨림",push:"밀치기",cleave:"베어가르기",nick:"찌르기"};
 
 /** Counterspell succeeded (RULES_RUNTIME_SPECS.md §2): the slot and the action are spent, nothing happens. */
 function cancelledCastAct(ctx:HandlerContext,actor:Actor,action:ActionVm,resolutionId:string,slotLevel?:number):HandlerResult {
@@ -600,17 +714,36 @@ function featureGate(state:TableState,actor:Actor,action:ActionVm):string|null {
     case "martial-arts-strike": return usage&&!usage.includes("table:monk-attack")?"먼저 공격 행동으로 맨손 타격이나 몽크 무기를 쓰세요.":null;
     case "rage-start": return state.rules.effects.some((effect)=>effect.targetId===actor.id&&effect.tags.includes(BARBARIAN_RAGE_TAG))?"이미 격노 중입니다.":null;
     case "rage-end": return state.rules.effects.some((effect)=>effect.targetId===actor.id&&effect.tags.includes(BARBARIAN_RAGE_TAG))?null:"격노 중이 아닙니다.";
+    case "wild-shape-end": return state.rules.effects.some((effect)=>effect.targetId===actor.id&&effect.tags.includes(DRUID_WILD_SHAPE_TAG))?null:"야생 변신 중이 아닙니다.";
     default: return null;
   }
 }
 
 /** Feature actions with their own operations; returns null for features the ordinary handlers already cover. */
-function featureAct(ctx:HandlerContext,actor:Actor,action:ActionVm,targetIds:string[],resolutionId:string,amount?:number):HandlerResult|null {
+function featureAct(ctx:HandlerContext,actor:Actor,action:ActionVm,targetIds:string[],resolutionId:string,amount?:number,formId?:string):HandlerResult|null {
   const state=ctx.state;
   if(actor.source.kind!=="character") return null;
   const sheet=actor.source.sheet;
   const commitPlain=(rules:RulesRuntimeState,events:import("../../domain/resolutionTypes").ResolutionEvent[],compact:string,detailLines:string[],targets:string[]=[actor.id])=>commitEvents(ctx,plainCard({id:resolutionId,seq:ctx.nextSeq,visibility:state.rollVisibility,action,actorId:actor.id,targetIds:targets,rollKind:"effect",compact,detail:detailLines,events,stateChanges:lifeStateChanges(state,state.rules,rules)}),rules);
   switch(action.tableFeature) {
+    case "wild-shape": {
+      const form=formId?wildShapeForm(formId):undefined;
+      if(!form) return refused("form-missing","변신할 야수를 고르세요 (act 명령의 formId).",{actorId:actor.id,actionId:action.id});
+      let pending;
+      try { pending=compileDruidWildShapeStart(state.rules,{id:resolutionId,actorId:actor.id,expectedRevision:state.rules.revision,druidLevel:classLevel(sheet,CLASS.druid),form,useBonusActionEconomy:state.mode==="initiative"}); }
+      catch(error) { return refused("feature-rejected",kernelErrorKo(error instanceof Error?error.message:String(error)),{actorId:actor.id,actionId:action.id}); }
+      const committed=commitOperations(ctx,{id:resolutionId,actorId:actor.id,sourceId:action.id,operations:pending.operations,actionId:action.id});
+      if(committed.status==="refused") return committed;
+      return commitPlain(committed.commit.state,committed.commit.events,`야생 변신 → ${form.name} · AC ${form.armorClass} · 임시 HP ${classLevel(sheet,CLASS.druid)}`,[`형태의 공격 타일이 열린다 · ${classLevel(sheet,CLASS.druid)/2}시간, HP 0이나 행동불능이면 풀린다`]);
+    }
+    case "wild-shape-end": {
+      let pending;
+      try { pending=compileDruidWildShapeEnd(state.rules,{id:resolutionId,actorId:actor.id,expectedRevision:state.rules.revision,useBonusActionEconomy:state.mode==="initiative"}); }
+      catch(error) { return refused("feature-rejected",kernelErrorKo(error instanceof Error?error.message:String(error)),{actorId:actor.id,actionId:action.id}); }
+      const committed=commitOperations(ctx,{id:resolutionId,actorId:actor.id,sourceId:action.id,operations:pending.operations,actionId:action.id});
+      if(committed.status==="refused") return committed;
+      return commitPlain(committed.commit.state,committed.commit.events,"야생 변신 해제 · 원래 모습으로",[]);
+    }
     case "bardic-inspiration": {
       const targetId=targetIds[0];
       if(!targetId) return refused("target-missing","영감을 줄 대상을 선택하세요.",{actorId:actor.id,actionId:action.id});

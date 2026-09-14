@@ -61,6 +61,8 @@ export interface TableView {
 /** Displayed AC: the source's AC plus active effect bonuses and floors, as the kernel judges attacks. */
 export function displayedAc(state:TableState,actor:Actor):number {
   let ac=actorAc(actor);
+  // Wild Shape: the form's AC replaces the character's (RULES_RUNTIME_SPECS.md §3).
+  for(const effect of state.rules.effects) if(effectIsActive(effect)&&effect.targetId===actor.id&&typeof effect.metadata?.formArmorClass==="number") ac=effect.metadata.formArmorClass;
   for(const effect of state.rules.effects) {
     if(!effectIsActive(effect)||effect.kind!=="modifier"||effect.targetId!==actor.id) continue;
     const bonus=typeof effect.metadata?.acBonus==="number"?effect.metadata.acBonus:0;

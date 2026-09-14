@@ -4,6 +4,7 @@ import { beginTurn } from "../domain/turnEconomy";
 import type { AbilityKey, ActionDetailVm, ActionVm, CharacterSheet, CombatantDefinitionVm, ItemInstanceVm } from "../app/contracts";
 import { weaponHasProperty, weaponRuleById, type WeaponRuleDefinition } from "../domain/weaponRuleCatalog";
 import { hitDicePools, spellActionsFor, spellSlotPools, type SpellSheet } from "./spells";
+import { effectIsActive } from "../domain/effects";
 import type { CombatantRuntimeAttackVm, CombatantRuntimeSaveActionVm, CombatantRuntimeTextActionVm } from "../app/combatantRuntimeContracts";
 import { abilityLabelKo, conditionLabelKo, srdMonsterById, srdMonsterCombatantDefinition } from "../app/srdMonsterCatalog";
 import type { ConditionId } from "../domain/conditions";
@@ -14,6 +15,10 @@ import { featureActions, featureResourcePools, unarmedStrike } from "./features"
 
 declare module "../app/contracts" {
   interface ActionVm {
+    /** A stat block's multiattack routine as one tile: every step resolves in order against the chosen target. */
+    tableRoutine?:{steps:Array<{actionId:string;name:string;count:number}>};
+    /** Conditions a stat-block hit applies: after a save when the text names one, at once (with an escape DC) otherwise. */
+    tableHitRider?:{conditionIds:string[];saveAbility?:AbilityKey;saveDc?:number;escapeDc?:number;untilTargetNextTurnEnd?:boolean};
     /** The sheet item this weapon attack swings; the tile is unavailable while the item is not in hand. */
     tableWeaponItemId?:string;
     /** A thrown attack: the item leaves the hand for the floor when it flies (2024: drawn as part of the attack). */
@@ -399,6 +404,7 @@ function characterActions(actor:Actor,sheet:CharacterSheet,state?:TableState):Ac
   actions.push({id:"action.release-grapple",actorId,name:"놓아주기",category:"basic",target:"self",economy:"없음",resolutionKind:"no-roll",summary:"붙잡은 대상을 놓아준다 (비용 없음)",available:true,eligibleTargetIds:[actorId],tableRelease:true,details:[detail("비용","없음")]});
   actions.push(...standardActions(actor,sheet.speed));
   actions.push(...spellActionsFor(actor,sheet as SpellSheet));
+  actions.push(...wildShapeAttacks(actor,state));
   for(const item of sheet.items) {
     const potion=/potion-of-healing/i.test(item.definitionId)||/치유 물약|potion of healing/i.test(`${item.name} ${item.nameEn??""}`);
     if(!potion) continue;
@@ -422,11 +428,23 @@ function characterActions(actor:Actor,sheet:CharacterSheet,state?:TableState):Ac
   return actions;
 }
 
+/** "건강 내성 굴림: DC 10 … 다음 턴이 끝날 때까지" / "붙잡힘 상태가 된다(DC 12 탈출)" read from the hit text. */
+function hitRiderOf(spec:CombatantRuntimeAttackVm):ActionVm["tableHitRider"] {
+  if(!spec.riderConditionIds?.length) return undefined;
+  const text=spec.hitText??"";
+  const save=/(근력|민첩|건강|지능|지혜|매력)\s*내성 굴림:?\s*DC\s*(\d+)/.exec(text);
+  const escape=/DC\s*(\d+)\s*탈출/.exec(text);
+  const ability=save?ABILITY_KEYS.find((key)=>abilityLabelKo(key)===save[1]):undefined;
+  return {conditionIds:spec.riderConditionIds,...(ability&&save?{saveAbility:ability,saveDc:Number(save[2])}:{}),...(escape?{escapeDc:Number(escape[1])}:{}),...(/다음 턴이 끝날 때까지/.test(text)?{untilTargetNextTurnEnd:true}:{})};
+}
+
 function monsterAttackAction(actor:Actor,spec:CombatantRuntimeAttackVm):ActionVm {
   const dice=damageFromDiceText(spec.damage.dice,spec.damage.flat);
   const timed=timingCost(spec);
+  const rider=hitRiderOf(spec);
   return {
     ...(timed.resourceCost?{resourceCost:timed.resourceCost}:{}),
+    ...(rider?{tableHitRider:rider}:{}),
     id:spec.id,actorId:actor.id,name:spec.name,category:spec.category,target:"enemy",economy:spec.economy??"행동",resolutionKind:"attack",
     summary:`${signed(spec.attackBonus)} · ${spec.damage.dice}${spec.damage.flat?signed(spec.damage.flat):""} ${spec.damage.type}${spec.attacksPerAction&&spec.attacksPerAction>1?` · 공격 ${spec.attacksPerAction}회`:""}`,
     available:true,eligibleTargetIds:[],attackBonus:spec.attackBonus,attacksPerAction:spec.attacksPerAction,
@@ -491,8 +509,34 @@ function tableChecks(actor:Actor,bonus:(skill:string,ability:AbilityKey)=>number
   ];
 }
 
+/** The stat block's multiattack line as one tile ("물기 한 번과 발톱 한 번"), when the catalog parsed it into named steps. */
+function routineAction(actor:Actor,definition:CombatantDefinitionVm):ActionVm[] {
+  const routine=definition.runtimeMonster?.multiattackRoutine;
+  const attacks=definition.runtimeActions??[];
+  if(!routine||routine.length<1) return [];
+  const steps=routine.flatMap((item)=>{ const spec=attacks.find((entry)=>entry.name===item.actionName)??attacks.find((entry)=>entry.name===item.name); return spec?[{actionId:spec.id,name:spec.name,count:item.count}]:[]; });
+  if(!steps.length||steps.reduce((sum,step)=>sum+step.count,0)<2) return [];
+  const label=steps.map((step)=>`${step.name} ${step.count}회`).join(" · ");
+  return [{id:"action.multiattack",actorId:actor.id,name:"다중공격",category:"weapon",target:"enemy",economy:"행동",resolutionKind:"attack",summary:label,available:true,eligibleTargetIds:[],attacksPerAction:steps.reduce((sum,step)=>sum+step.count,0),tableRoutine:{steps},details:[detail("루틴",label),detail("결과","각 공격이 순서대로 같은 대상에게 해결되고 카드마다 기록됩니다"),detail("출처",definition.runtimeMonster?.multiattackText??"다중공격")]}];
+}
+
+/** While Wild Shaped, the form's stat-block attacks are the druid's (sourceKind wild-shape). */
+export function wildShapeForm(monsterId:string):{id:string;name:string;challengeRating:number;hasFlySpeed:boolean;armorClass:number;speedFeet:number}|undefined {
+  const monster=srdMonsterById(monsterId);
+  if(!monster) return undefined;
+  return {id:monster.id,name:monster.name,challengeRating:monster.cr,hasFlySpeed:(monster.speeds?.fly??0)>0,armorClass:monster.ac,speedFeet:monster.speed};
+}
+function wildShapeAttacks(actor:Actor,state?:TableState):ActionVm[] {
+  const effect=state?.rules.effects.find((entry)=>entry.targetId===actor.id&&entry.tags.includes("class-feature:druid-wild-shape")&&effectIsActive(entry));
+  const formId=effect&&typeof effect.metadata?.formId==="string"?effect.metadata.formId:undefined;
+  const definition=formId?monsterDefinition(formId):undefined;
+  if(!definition) return [];
+  return (definition.runtimeActions??[]).map((spec)=>{ const base=monsterAttackAction(actor,{...spec,sourceKind:"wild-shape",timing:undefined}); return {...base,id:`wild.${spec.id}`,name:`${String(effect?.metadata?.formName??"야생 변신")} · ${spec.name}`,target:"any" as const,details:[...base.details,detail("출처","야생 변신 형태의 스탯 블록")]}; });
+}
+
 function monsterActions(actor:Actor,definition:CombatantDefinitionVm):ActionVm[] {
   return [
+    ...routineAction(actor,definition),
     ...(definition.runtimeActions??[]).map((spec)=>monsterAttackAction(actor,spec)),
     ...(definition.runtimeSaveActions??[]).map((spec)=>monsterSaveAction(actor,spec)),
     ...(definition.runtimeTextActions??[]).map((spec)=>monsterTextAction(actor,spec)),

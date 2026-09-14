@@ -36,7 +36,7 @@ export type TableCommand=
   |{type:"end-turn"}
   |{type:"set-current-actor";actorId:string}
   |{type:"set-order";order:string[]}
-  |{type:"act";actorId:string;actionId:string;targetIds:string[];itemId?:string;/** Upcast: the slot level to spend (spells only). */slotLevel?:number;/** A feature that takes a number (Lay on Hands healing). */amount?:number}
+  |{type:"act";actorId:string;actionId:string;targetIds:string[];itemId?:string;/** Upcast: the slot level to spend (spells only). */slotLevel?:number;/** A feature that takes a number (Lay on Hands healing). */amount?:number;/** Wild Shape: the beast (monster id) to become. */formId?:string}
   /** 엎드리기 (free, any time) / 일어나기 (half speed of movement in Initiative). */
   |{type:"posture";actorId:string;posture:"prone"|"stand"}
   /** Hands and objects: draw/stow (free interaction, then Utilize), drop (free), pick-up, give (adjacent), throw-to (an ally, at range). */
