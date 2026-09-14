@@ -61,7 +61,7 @@ function operationsFor(ctx:HandlerContext,seq:number,targetId:string,ruling:Ruli
         return existing.map((effect)=>({id:`${base}:remove:${effect.id}`,kind:"remove-effect" as const,effectId:effect.id}));
       }
       if(ruling.conditionId!=="exhaustion"&&state.rules.effects.some((effect)=>effect.targetId===targetId&&effect.kind==="condition"&&effect.conditionId===ruling.conditionId)) return {error:`${actor.name}은(는) 이미 ${conditionLabelKo(ruling.conditionId)} 상태입니다.`};
-      return [{id:`${base}:condition`,kind:"apply-effect",effect:{id:`${base}:${ruling.conditionId}`,sourceId:RULING_SOURCE,targetId,kind:"condition",conditionId:ruling.conditionId,tags:["table:ruling"],duration:ruling.duration??{kind:"permanent"},metadata:{publicLabel:conditionLabelKo(ruling.conditionId)}}}];
+      return [{id:`${base}:condition`,kind:"apply-effect",effect:{id:`${base}:${ruling.conditionId}`,sourceId:RULING_SOURCE,...(ruling.sourceActorId?{sourceActorId:ruling.sourceActorId}:{}),targetId,kind:"condition",conditionId:ruling.conditionId,tags:["table:ruling"],duration:ruling.duration??{kind:"permanent"},metadata:{publicLabel:conditionLabelKo(ruling.conditionId)}}}];
     }
     case "exhaustion": {
       if(!Number.isInteger(ruling.level)||ruling.level<0||ruling.level>6) return {error:"탈진 단계는 0~6입니다."};

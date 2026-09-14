@@ -1,4 +1,5 @@
 import type { CombatantRuntimeState } from "../domain/combatState";
+import type { ResourcePool } from "../domain/resources";
 import { beginTurn } from "../domain/turnEconomy";
 import type { AbilityKey, ActionDetailVm, ActionVm, CharacterSheet, CombatantDefinitionVm, ItemInstanceVm } from "../app/contracts";
 import { weaponHasProperty, weaponRuleById, type WeaponRuleDefinition } from "../domain/weaponRuleCatalog";
@@ -88,6 +89,38 @@ function instanceIds(state:TableState,base:string,count:number) {
   return ids;
 }
 
+/** Stat-block counters as resource pools (RULES_RUNTIME_SPECS.md §3): recharge (1, back on a d6 at turn start), uses per day, legendary actions per round. */
+export const LEGENDARY_ACTIONS_POOL="legendary-actions";
+export const rechargePoolId=(actionId:string)=>`recharge:${actionId}`;
+export const usesPoolId=(actionId:string)=>`uses:${actionId}`;
+
+export interface TimedMonsterSpec { id:string;name:string;timing:NonNullable<CombatantRuntimeAttackVm["timing"]> }
+export function timedSpecsOf(definition:CombatantDefinitionVm):TimedMonsterSpec[] {
+  return [...(definition.runtimeActions??[]),...(definition.runtimeSaveActions??[]),...(definition.runtimeTextActions??[])].flatMap((spec)=>spec.timing?[{id:spec.id,name:spec.name,timing:spec.timing}]:[]);
+}
+
+function monsterPools(definition:CombatantDefinitionVm):ResourcePool[] {
+  const pools:ResourcePool[]=[];
+  const monster=definition.runtimeMonster;
+  if(monster&&monster.legendaryResistance>0) pools.push({id:"legendary-resistance",label:"전설 저항",current:monster.legendaryResistance,maximum:monster.legendaryResistance,recovery:{longRest:"all"}});
+  if(monster&&monster.legendaryActionsPerRound>0) pools.push({id:LEGENDARY_ACTIONS_POOL,label:"전설 행동",current:monster.legendaryActionsPerRound,maximum:monster.legendaryActionsPerRound,recovery:{longRest:"all"}});
+  for(const spec of timedSpecsOf(definition)) {
+    if(spec.timing.recharge) pools.push({id:rechargePoolId(spec.id),label:`${spec.name} 재충전`,current:1,maximum:1,recovery:{longRest:"all"}});
+    if(spec.timing.usesPerDay) pools.push({id:usesPoolId(spec.id),label:`${spec.name} 일일 사용`,current:spec.timing.usesPerDay,maximum:spec.timing.usesPerDay,recovery:{longRest:"all"}});
+  }
+  return pools;
+}
+
+/** The pool a timed stat-block action spends, and the lines its tile shows. */
+function timingCost(spec:{id:string;timing?:CombatantRuntimeAttackVm["timing"]}):{resourceCost?:ActionVm["resourceCost"];details:ActionDetailVm[]} {
+  const timing=spec.timing;
+  if(!timing) return {details:[]};
+  if(timing.recharge) return {resourceCost:{resourceId:rechargePoolId(spec.id),amount:1},details:[detail("재충전",`${timing.recharge.min}~${timing.recharge.sides??6} · 자기 턴 시작에 d${timing.recharge.sides??6}`)]};
+  if(timing.usesPerDay) return {resourceCost:{resourceId:usesPoolId(spec.id),amount:1},details:[detail("사용",`하루 ${timing.usesPerDay}회`)]};
+  if(timing.legendaryCost) return {resourceCost:{resourceId:LEGENDARY_ACTIONS_POOL,amount:timing.legendaryCost},details:[detail("전설 행동",`${timing.legendaryCost} · 다른 크리처의 턴이 끝날 때 · 자기 턴 시작에 회복`)]};
+  return {details:[]};
+}
+
 function monsterCombatant(actorId:string,definition:CombatantDefinitionVm):CombatantRuntimeState {
   const stats=definition.runtimeStats;
   const speed=stats?.speed??30;
@@ -96,7 +129,7 @@ function monsterCombatant(actorId:string,definition:CombatantDefinitionVm):Comba
     baseSpeed:speed,
     life:{hp:{current:definition.maxHp,maximum:definition.maxHp,temporary:0},deathSaves:{successes:0,failures:0},stable:false,unconscious:false,dead:false},
     economy:beginTurn(speed),
-    resources:definition.runtimeMonster&&definition.runtimeMonster.legendaryResistance>0?[{id:"legendary-resistance",label:"전설 저항",current:definition.runtimeMonster.legendaryResistance,maximum:definition.runtimeMonster.legendaryResistance,recovery:{longRest:"all"}}]:[],
+    resources:monsterPools(definition),
     hitDice:[],
     damageDefenses:[
       ...(stats?.resistances??[]).map((damageType)=>({source:`monster:${actorId}:resistance:${damageType}`,kind:"resistance" as const,damageType})),
@@ -391,28 +424,48 @@ function characterActions(actor:Actor,sheet:CharacterSheet,state?:TableState):Ac
 
 function monsterAttackAction(actor:Actor,spec:CombatantRuntimeAttackVm):ActionVm {
   const dice=damageFromDiceText(spec.damage.dice,spec.damage.flat);
+  const timed=timingCost(spec);
   return {
+    ...(timed.resourceCost?{resourceCost:timed.resourceCost}:{}),
     id:spec.id,actorId:actor.id,name:spec.name,category:spec.category,target:"enemy",economy:spec.economy??"행동",resolutionKind:"attack",
     summary:`${signed(spec.attackBonus)} · ${spec.damage.dice}${spec.damage.flat?signed(spec.damage.flat):""} ${spec.damage.type}${spec.attacksPerAction&&spec.attacksPerAction>1?` · 공격 ${spec.attacksPerAction}회`:""}`,
     available:true,eligibleTargetIds:[],attackBonus:spec.attackBonus,attacksPerAction:spec.attacksPerAction,
     damage:[{type:spec.damage.type,dice:spec.damage.dice,flat:spec.damage.flat,average:diceAverage(dice.count,dice.sides,dice.flat)},...(spec.extraDamage??[]).map((extra)=>{const parsed=damageFromDiceText(extra.dice,extra.flat);return {type:extra.type,dice:extra.dice,flat:extra.flat,average:diceAverage(parsed.count,parsed.sides,parsed.flat)};})],
     runtimeAttack:{sourceKind:spec.sourceKind,rangeFeet:spec.rangeFeet,...(spec.attackMode?{attackMode:spec.attackMode}:{}),diceSides:dice.sides,diceCount:dice.count,damageSource:`monster:${actor.id}:${spec.id}`},
-    details:[detail("명중",signed(spec.attackBonus)),detail("사거리",`${spec.rangeFeet}피트`),...(spec.hitText?[detail("명중 시",spec.hitText)]:[])],
+    details:[detail("명중",signed(spec.attackBonus)),detail("사거리",`${spec.rangeFeet}피트`),...(spec.hitText?[detail("명중 시",spec.hitText)]:[]),...timed.details],
   };
 }
 
 function monsterSaveAction(actor:Actor,spec:CombatantRuntimeSaveActionVm):ActionVm {
+  const timed=timingCost(spec);
   return {
+    ...(timed.resourceCost?{resourceCost:timed.resourceCost}:{}),
     id:spec.id,actorId:actor.id,name:spec.name,category:"basic",target:spec.maxTargets>1?"multi-enemy":"enemy",economy:spec.economy??"행동",resolutionKind:"saving-throw",
     summary:`${abilityLabelKo(spec.saveAbility)} 내성 DC ${spec.saveDc}${spec.damage[0]?` · ${spec.damage.map((entry)=>`${entry.dice}${entry.flat?signed(entry.flat):""} ${entry.type}`).join(" + ")}`:""}`,
     available:true,eligibleTargetIds:[],saveDc:spec.saveDc,saveAbility:abilityLabelKo(spec.saveAbility),maxTargets:spec.maxTargets,saveHalf:spec.successDamage==="half",
     damage:spec.damage.map((entry)=>{const parsed=damageFromDiceText(entry.dice,entry.flat);return {type:entry.type,dice:entry.dice,flat:entry.flat,average:diceAverage(parsed.count,parsed.sides,parsed.flat)};}),
-    details:[detail("내성",`${abilityLabelKo(spec.saveAbility)} DC ${spec.saveDc}`),...(spec.areaText?[detail("범위",spec.areaText)]:[]),...(spec.failText?[detail("실패",spec.failText)]:[]),...(spec.successText?[detail("성공",spec.successText)]:[])],
+    details:[detail("내성",`${abilityLabelKo(spec.saveAbility)} DC ${spec.saveDc}`),...(spec.areaText?[detail("범위",spec.areaText)]:[]),...(spec.failText?[detail("실패",spec.failText)]:[]),...(spec.successText?[detail("성공",spec.successText)]:[]),...timed.details],
   };
 }
 
 function monsterTextAction(actor:Actor,spec:CombatantRuntimeTextActionVm):ActionVm {
-  return {id:spec.id,actorId:actor.id,name:spec.name,category:"basic",target:"none",economy:spec.economy,resolutionKind:"no-roll",summary:spec.text.slice(0,80),available:true,eligibleTargetIds:[],completionOutcome:spec.name,details:[detail("설명",spec.text)]};
+  const timed=timingCost(spec);
+  return {id:spec.id,actorId:actor.id,name:spec.name,category:"basic",target:"none",economy:spec.economy,resolutionKind:"no-roll",summary:spec.text.slice(0,80),available:true,eligibleTargetIds:[],completionOutcome:spec.name,...(timed.resourceCost?{resourceCost:timed.resourceCost}:{}),details:[detail("설명",spec.text),...timed.details]};
+}
+
+/** A legendary action that is "one X attack" (아볼렛 후려치기: 촉수 공격 한 번) becomes that attack, off-turn, paid from the legendary pool. */
+function legendaryAttackActions(actor:Actor,definition:CombatantDefinitionVm):ActionVm[] {
+  const attacks=definition.runtimeActions??[];
+  return (definition.runtimeTextActions??[]).flatMap((spec)=>{
+    const cost=spec.timing?.legendaryCost;
+    if(!cost) return [];
+    // Named in the text ("촉수 공격을 한 번"), or the stat block's one weapon attack when the text says "공격을 한다" (급습 → 찢기).
+    const weapons=attacks.filter((entry)=>!/\(주문/.test(entry.name));
+    const attack=attacks.find((entry)=>entry.name&&spec.text.includes(entry.name))??(/공격/.test(spec.text)&&weapons.length===1?weapons[0]:undefined);
+    if(!attack) return [];
+    const base=monsterAttackAction(actor,{...attack,timing:undefined});
+    return [{...base,id:`${spec.id}.attack`,name:`${spec.name} · ${attack.name}`,economy:"없음",attacksPerAction:1,resourceCost:{resourceId:LEGENDARY_ACTIONS_POOL,amount:cost},details:[...base.details,detail("전설 행동",`${cost} · 다른 크리처의 턴이 끝날 때`)]}];
+  });
 }
 
 /** Hide, Stabilize, Search, Study and Influence (2024 action list) as checks; the DM reads the open ones. */
@@ -443,6 +496,7 @@ function monsterActions(actor:Actor,definition:CombatantDefinitionVm):ActionVm[]
     ...(definition.runtimeActions??[]).map((spec)=>monsterAttackAction(actor,spec)),
     ...(definition.runtimeSaveActions??[]).map((spec)=>monsterSaveAction(actor,spec)),
     ...(definition.runtimeTextActions??[]).map((spec)=>monsterTextAction(actor,spec)),
+    ...legendaryAttackActions(actor,definition),
     ...standardActions(actor,definition.runtimeStats?.speed??30).filter((action)=>action.id!=="action.standard.help"),
     {id:"action.escape-grapple",actorId:actor.id,name:"붙잡힘 탈출",category:"basic",target:"self",economy:"행동",resolutionKind:"ability-check",summary:"근력 또는 민첩 (높은 쪽) vs 붙잡은 쪽의 DC",available:true,eligibleTargetIds:[actor.id],checkBonus:Math.max(actorAbilityModifier(actor,"str"),actorAbilityModifier(actor,"dex")),tableEscape:true,details:[detail("판정","근력 또는 민첩 (높은 쪽)"),detail("비용","행동 1")]},
     {id:"action.release-grapple",actorId:actor.id,name:"놓아주기",category:"basic",target:"self",economy:"없음",resolutionKind:"no-roll",summary:"붙잡은 대상을 놓아준다 (비용 없음)",available:true,eligibleTargetIds:[actor.id],tableRelease:true,details:[detail("비용","없음")]},

@@ -32,6 +32,9 @@ import { applyRageEffectUpdate, barbarianRageExtensionUpdate } from "../../domai
 import { compileFighterActionSurge } from "../../domain/fighterActionSurge";
 import { PALADIN_LAY_ON_HANDS_RESOURCE_ID } from "../../domain/coreClassResources";
 import { CLASS, classLevel, featureRiders } from "../features";
+import { effectAttackDamageRiders, effectRetaliations } from "../../domain/effectAttackRiders";
+import { conditionEffectsFor } from "../../domain/combatState";
+import { bardicInspirationDieSides, compileGrantBardicInspiration } from "../../domain/bardicInspiration";
 import { weaponHasProperty, weaponRuleById } from "../../domain/weaponRuleCatalog";
 
 export const NEXT_ROLL_TAG="table:next-roll";
@@ -205,20 +208,32 @@ export function attackAct(ctx:HandlerContext,actor:Actor,action:ActionVm,targetI
       featureLines.push(rider.label);
     }
   }
+  // Effects that ride on hits (Hunter's Mark, Hex, Divine Favor) and strike back at the attacker (Fire Shield). Their faces are seeded by the resolution id, so replays agree.
+  for(const rider of effectAttackDamageRiders(state.rules,actor.id,targetId,action.runtimeAttack.sourceKind,resolutionId)) {
+    riders.push({...rider,flat:rider.flat??[]});
+    const effect=state.rules.effects.find((entry)=>`effect:${entry.id}`===rider.dice[0]?.source);
+    featureLines.push(String(effect?.metadata?.displayName??effect?.metadata?.publicLabel??effect?.metadata?.summary??rider.sourceId));
+  }
+  const retaliations=effectRetaliations(state.rules,targetId,rangeFeet,resolutionId);
   // Drawn after the attack and damage dice so the ledger order stays attack → damage → concentration.
   const concentrationCheck=concentrationCheckFor(ctx,targetId);
   // D42: the DM palette changes the facts the kernel is given, never the kernel's rules.
   const o=ctx.overrides??{};
   const forcedMiss=o.outcome==="miss"||o.cover==="total"||o.range==="out";
   if(o.outcome==="crit") attackDice.faces=attackDice.faces.map(()=>20);
-  const situational=o.cover!==undefined||o.unseen!==undefined;
+  // Sight (§22.7): an invisible or hidden creature is unseen unless the DM says otherwise (D42); Frightened needs its source in view.
+  const unseen=(id:string)=>conditionEffectsFor(state.rules,id).some((effect)=>effect.conditionId==="invisible");
+  const attackerUnseen=o.unseen?.attacker??unseen(actor.id);
+  const targetUnseen=o.unseen?.target??unseen(targetId);
+  const visibleSourceIds=Object.keys(state.actors).filter((id)=>state.actors[id].present!==false&&!state.actors[id].hidden&&!unseen(id));
+  const situational=o.cover!==undefined||o.unseen!==undefined||attackerUnseen||targetUnseen;
   const rollStates:Array<{source:string;state:"advantage"|"disadvantage"}>=[
     ...(rangedInMelee.length?[{source:`${ENGAGEMENT_RANGED_IN_MELEE_SOURCE}:${rangedInMelee.join(",")}`,state:"disadvantage" as const}]:[]),
     ...(o.rollState==="advantage"||o.rollState==="disadvantage"?[{source:"dm:override:roll-state",state:o.rollState}]:[]),
     ...(o.range==="long"?[{source:"dm:override:long-range",state:"disadvantage" as const}]:[]),
   ];
   const targetFacts=rangeFeet<=5||situational
-    ?{spatialAuthority:"authoritative" as const,distanceFeet:rangeFeet<=5?5:rangeFeet,visible:!o.unseen?.target,cover:(o.cover&&o.cover!=="total"?o.cover:"none") as "none"|"half"|"three-quarters",targetCanSeeAttacker:!o.unseen?.attacker}
+    ?{spatialAuthority:"authoritative" as const,distanceFeet:rangeFeet<=5?5:rangeFeet,visible:!targetUnseen,cover:(o.cover&&o.cover!=="total"?o.cover:"none") as "none"|"half"|"three-quarters",targetCanSeeAttacker:!attackerUnseen}
     :{spatialAuthority:"manual-unconstrained" as const};
   const request:AttackRequest={
     id:resolutionId,actorId:actor.id,expectedRevision:state.rules.revision,sourceId:action.id,sourceKind:action.runtimeAttack.sourceKind,
@@ -228,6 +243,8 @@ export function attackAct(ctx:HandlerContext,actor:Actor,action:ActionVm,targetI
     rangeFeet,attackDice,attackModifierContributions:[{source:`action:${action.id}:attack-bonus`,value:action.attackBonus??0},...(o.outcome==="hit"?[{source:"dm:override:hit",value:100}]:[]),...(forcedMiss?[{source:"dm:override:miss",value:-100}]:[])],requiresSight:rangeFeet<=5&&!situational,
     ...(rollStates.length?{rollStateContributions:rollStates}:{}),
     ...(concentrationCheck?{concentrationCheck}:{}),
+    visibleSourceIds,
+    ...(retaliations.length?{retaliations}:{}),
     baseDamage:{sourceId:action.id,damageType:spec.type,dice:base.count?[{source:action.id,sides:base.sides,count:base.count,faces:damageFaces}]:[],flat:base.flat?[{source:`${action.id}:flat`,value:base.flat}]:[]},
     riders,
     economy:state.mode==="initiative"&&(ctx.asReaction||economySlot(action))?(ctx.asReaction?{slot:"reaction",actionKind:"attack",attacksPerAction:1}:{slot:economySlot(action)!,bonusActionGranted:economySlot(action)==="bonus-action"?true:undefined,actionKind:"attack",attacksPerAction:action.attacksPerAction??1}):undefined,
@@ -277,7 +294,8 @@ export function attackAct(ctx:HandlerContext,actor:Actor,action:ActionVm,targetI
   // D9: a melee attack that drops a creature to 0 HP may knock it out instead — one question to the attacker.
   const killedNow=isMeleeAttack(action)&&target.kind==="npc"&&!state.rules.combatants[targetId]?.life.dead&&rules.combatants[targetId]?.life.dead;
   const questions=killedNow?[...state.questions,knockOutQuestion(state,actor.id,targetId,ctx.nextSeq)]:undefined;
-  const stateChanges=[...lifeStateChanges(state,state.rules,rules),...consumed.map((label)=>`${actor.name} 상태 종료: ${label}`),...(unhidden.length?[`${actor.name} 숨음 해제 (공격)`]:[]),...(engaged?[engaged.line]:[]),...(thrown?.lines??[]),...(killedNow?[`질문: ${target.name} 죽임/기절`]:[]),...overrideChanges,...featureLines.map((label)=>`${actor.name} ${label} 적용`)];
+  const struckBack=retaliations.length&&attack.outcome==="success"?retaliations.map((retaliation)=>`${actor.name} 반격 피해 (${retaliation.damageType})`):[];
+  const stateChanges=[...lifeStateChanges(state,state.rules,rules),...struckBack,...consumed.map((label)=>`${actor.name} 상태 종료: ${label}`),...(unhidden.length?[`${actor.name} 숨음 해제 (공격)`]:[]),...(engaged?[engaged.line]:[]),...(thrown?.lines??[]),...(killedNow?[`질문: ${target.name} 죽임/기절`]:[]),...overrideChanges,...featureLines.map((label)=>`${actor.name} ${label} 적용`)];
   const card=attackCard({id:resolutionId,seq:ctx.nextSeq,visibility:state.rollVisibility,action,actorId:actor.id,targetIds:[targetId],targetName:target.name,attack,damage,events:commit.events,stateChanges});
   if(forcedMiss) { card.attackOutcome="빗나감"; card.compact=`${o.cover==="total"?"완전 엄폐":o.range==="out"?"사거리 밖":"DM 개입"} — 빗나감`; card.finalOutcome=`${action.name} → ${target.name} · 빗나감`; }
   if(engaged) card.provenance.push(`engagement:melee-attack:${actor.id}<->${targetId}:round:${engagementRound(state)}`);
@@ -593,6 +611,16 @@ function featureAct(ctx:HandlerContext,actor:Actor,action:ActionVm,targetIds:str
   const sheet=actor.source.sheet;
   const commitPlain=(rules:RulesRuntimeState,events:import("../../domain/resolutionTypes").ResolutionEvent[],compact:string,detailLines:string[],targets:string[]=[actor.id])=>commitEvents(ctx,plainCard({id:resolutionId,seq:ctx.nextSeq,visibility:state.rollVisibility,action,actorId:actor.id,targetIds:targets,rollKind:"effect",compact,detail:detailLines,events,stateChanges:lifeStateChanges(state,state.rules,rules)}),rules);
   switch(action.tableFeature) {
+    case "bardic-inspiration": {
+      const targetId=targetIds[0];
+      if(!targetId) return refused("target-missing","영감을 줄 대상을 선택하세요.",{actorId:actor.id,actionId:action.id});
+      let pending;
+      try { pending=compileGrantBardicInspiration(state.rules,{id:resolutionId,actorId:actor.id,targetId,expectedRevision:state.rules.revision,bardLevel:classLevel(sheet,CLASS.bard),distanceFeet:30,targetCanSeeOrHearBard:true,useBonusAction:state.mode==="initiative"}); }
+      catch(error) { return refused("feature-rejected",kernelErrorKo(error instanceof Error?error.message:String(error)),{actorId:actor.id,actionId:action.id}); }
+      const committed=commitOperations(ctx,{id:resolutionId,actorId:actor.id,sourceId:action.id,operations:pending.operations,actionId:action.id});
+      if(committed.status==="refused") return committed;
+      return commitPlain(committed.commit.state,committed.commit.events,`바드의 영감 → ${actorName(state,targetId)} · d${bardicInspirationDieSides(classLevel(sheet,CLASS.bard))}`,["실패한 d20 판정에 주사위를 더할 수 있다 (1시간, 1회)"],[targetId]);
+    }
     case "action-surge": {
       let pending;
       try { pending=compileFighterActionSurge({id:resolutionId,actorId:actor.id,expectedRevision:state.rules.revision,fighterLevel:classLevel(sheet,CLASS.fighter)}); }

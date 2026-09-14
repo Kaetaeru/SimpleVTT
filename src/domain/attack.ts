@@ -62,6 +62,8 @@ export interface AttackRequest {
   attackModifierContributions: ModifierContribution[];
   rollStateContributions?: RollStateContribution[];
   requiresSight?: boolean;
+  /** Creatures the attacker can see (Frightened: disadvantage while the source is in sight). */
+  visibleSourceIds?: string[];
   baseDamage: AttackDamageComponent;
   riders?: AttackDamageComponent[];
   /** C1-06: damage the target's active effects deal back to the attacker on a hit (Fire Shield). */
@@ -188,6 +190,7 @@ export function compileAttack(request: AttackRequest): PendingResolution {
       distanceToTargetFeet:request.target.distanceFeet,
       actorCanSeeTarget:request.target.visible,
       targetCanSeeActor:request.target.targetCanSeeAttacker,
+      visibleSourceIds:request.visibleSourceIds,
     },
   });
 

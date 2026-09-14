@@ -18,7 +18,7 @@ export type Ruling=
   |{kind:"heal";amount:number}
   |{kind:"temp-hp";amount:number}
   |{kind:"max-hp";delta:number}
-  |{kind:"condition";conditionId:ConditionId;on:boolean;duration?:DurationSpec}
+  |{kind:"condition";conditionId:ConditionId;on:boolean;duration?:DurationSpec;sourceActorId?:string}
   |{kind:"exhaustion";level:number}
   |{kind:"next-roll";state:"advantage"|"disadvantage";family:"attack-roll"|"ability-check"|"saving-throw"|"any"}
   |{kind:"inspiration";on:boolean}

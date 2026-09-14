@@ -156,7 +156,7 @@ export interface RestingState {
 }
 
 /** Reaction windows (RULES_RUNTIME_SPECS.md §2): where a resolution pauses before its result commits. */
-export type ReactionWindow="hit-determined"|"spell-being-cast"|"damage-taken"|"save-failed"|"dm-intervention";
+export type ReactionWindow="hit-determined"|"spell-being-cast"|"damage-taken"|"save-failed"|"attack-missed"|"dm-intervention";
 
 /** DM attack-intervention palette (D42): what the DM may change on an attack, before or after it resolves. */
 export interface AttackOverrides {

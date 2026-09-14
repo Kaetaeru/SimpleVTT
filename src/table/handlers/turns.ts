@@ -5,6 +5,7 @@ import { actorDexModifier } from "../actors";
 import { refused } from "../refusal";
 import { actorIds, cloneState, type TableState } from "../state";
 import { rollInitiative } from "./actors";
+import { monsterTurnStart } from "./statblock";
 import { advanceClock, ROUND_SECONDS } from "./time";
 import { actorName, commitOperations, logEntry, type HandlerContext, type HandlerResult } from "./types";
 
@@ -86,15 +87,19 @@ export function endTurn(ctx:HandlerContext):HandlerResult {
   if(next.round===state.round) {
     const began=commitOperations(ctx,{id:`turn.${ctx.nextSeq}.begin`,actorId:next.actorId,sourceId:"table:turn",rules:committed.commit.state,refusalCode:"turn-rejected",operations:[begin]});
     if(began.status==="refused") return began;
-    return {status:"committed",events:[{payload:{type:"turn-changed",currentActorId:next.actorId,round:next.round,rules:began.commit.state},log:[turnLog]}]};
+    const started=monsterTurnStart(ctx,began.commit.state,next.actorId);
+    turnLog.detail.push(...started.lines);
+    return {status:"committed",events:[{payload:{type:"turn-changed",currentActorId:next.actorId,round:next.round,rules:started.rules},log:[turnLog]}]};
   }
   // A new round: six seconds pass (RULES_RUNTIME_SPECS.md §1). Engagements persist until movement, death or a scene change (D25).
   const advance=advanceClock(ctx,committed.commit.state,ROUND_SECONDS,[begin]);
   if("status" in advance) return advance;
   if(advance.lines.length) turnLog.detail.push(...advance.lines);
+  const started=monsterTurnStart(ctx,advance.rules,next.actorId);
+  turnLog.detail.push(...started.lines);
   const questions=advance.questions.length?[...state.questions,...advance.questions]:undefined;
   return {status:"committed",events:[{
-    payload:{type:"turn-changed",currentActorId:next.actorId,round:next.round,rules:advance.rules,timers:advance.timers,...(questions?{questions}:{})},
+    payload:{type:"turn-changed",currentActorId:next.actorId,round:next.round,rules:started.rules,timers:advance.timers,...(questions?{questions}:{})},
     log:[turnLog],
   }]};
 }
@@ -109,9 +114,10 @@ export function setCurrentActor(ctx:HandlerContext,command:Extract<TableCommand,
   operations.push({id:`turn.${ctx.nextSeq}.begin-turn`,kind:"begin-turn",actorId:command.actorId,round:state.round});
   const committed=commitOperations(ctx,{id:`turn.${ctx.nextSeq}.jump`,actorId:command.actorId,sourceId:"table:turn",refusalCode:"turn-rejected",operations});
   if(committed.status==="refused") return committed;
+  const started=monsterTurnStart(ctx,committed.commit.state,command.actorId);
   return {status:"committed",events:[{
-    payload:{type:"turn-changed",currentActorId:command.actorId,round:state.round,rules:committed.commit.state},
-    log:[logEntry(ctx,{actor:"DM",title:"턴 이동",summary:`${actorName(state,command.actorId)}의 턴`,detail:[],stateChanges:[]})],
+    payload:{type:"turn-changed",currentActorId:command.actorId,round:state.round,rules:started.rules},
+    log:[logEntry(ctx,{actor:"DM",title:"턴 이동",summary:`${actorName(state,command.actorId)}의 턴`,detail:started.lines,stateChanges:[]})],
   }]};
 }
 

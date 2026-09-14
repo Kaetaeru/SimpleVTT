@@ -2,6 +2,7 @@ import { conditionEffectsFor } from "../domain/combatState";
 import { conditionActionAvailability } from "../domain/conditions";
 import type { ActionVm } from "../app/contracts";
 import type { TableState } from "./state";
+import { LEGENDARY_ACTIONS_POOL } from "./actors";
 
 export interface Availability { available:boolean; reason?:string }
 
@@ -35,6 +36,7 @@ export function availabilityOf(state:TableState,action:ActionVm,options:{asReact
     if(economyKind==="행동"&&!economy.action&&!(economy.extraActions?.length)&&!(action.resolutionKind==="attack"&&economy.extraAttacks?.length)) return unavailable("행동을 이미 사용했습니다.");
     if(economyKind==="추가 행동"&&!economy.bonusAction) return unavailable("추가 행동을 이미 사용했습니다.");
     if(economyKind==="반응"&&!economy.reaction) return unavailable("반응을 이미 사용했습니다.");
+    if(action.resourceCost?.resourceId===LEGENDARY_ACTIONS_POOL&&!offTurn) return unavailable("전설 행동은 다른 크리처의 턴이 끝날 때 씁니다.");
   }
   if(action.resourceCost) {
     const resource=combatant.resources.find((entry)=>entry.id===action.resourceCost!.resourceId);

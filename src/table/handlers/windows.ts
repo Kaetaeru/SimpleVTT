@@ -1,6 +1,10 @@
 import { conditionActionAvailability } from "../../domain/conditions";
 import { conditionEffectsFor } from "../../domain/combatState";
-import { actionsFor } from "../actors";
+import { ABILITY_KEYS, actionsFor, actorSaveModifier } from "../actors";
+import { abilityLabelKo } from "../../app/srdMonsterCatalog";
+import { BARDIC_INSPIRATION_EFFECT_TAG, bardicInspirationEffectForTarget } from "../../domain/bardicInspiration";
+import { FIGHTER_INDOMITABLE_RESOURCE_ID } from "../../domain/coreClassResources";
+import { CLASS, classLevel } from "../features";
 import { availabilityOf } from "../availability";
 import type { TableCommand } from "../commands";
 import { recordingDice, replayingDice } from "../dice";
@@ -58,15 +62,34 @@ export function reactionOptionsFor(state:TableState,reactorId:string,window:Reac
 function legendaryResistanceLeft(state:TableState,actorId:string):number {
   return state.rules.combatants[actorId]?.resources.find((pool)=>pool.id===LEGENDARY_RESISTANCE_POOL)?.current??0;
 }
+function indomitableLeft(state:TableState,actorId:string):number {
+  const actor=state.actors[actorId];
+  if(!actor||actor.source.kind!=="character"||classLevel(actor.source.sheet,CLASS.fighter)<9) return 0;
+  return state.rules.combatants[actorId]?.resources.find((pool)=>pool.id===FIGHTER_INDOMITABLE_RESOURCE_ID)?.current??0;
+}
+function inspirationDie(state:TableState,actorId:string):number {
+  const effect=bardicInspirationEffectForTarget(state.rules,actorId);
+  return effect&&typeof effect.metadata?.dieSides==="number"?effect.metadata.dieSides:0;
+}
+
+/** What a creature may do about a failed save (D21 Legendary Resistance, Indomitable, a Bardic Inspiration die it holds). */
+export function saveFailedOptions(state:TableState,actorId:string):Array<{id:string;label:string}> {
+  const options:Array<{id:string;label:string}>=[];
+  if(legendaryResistanceLeft(state,actorId)>0) options.push({id:"use",label:`전설 저항 사용 (남은 ${legendaryResistanceLeft(state,actorId)})`});
+  if(indomitableLeft(state,actorId)>0) { const actor=state.actors[actorId]; options.push({id:"indomitable",label:`불굴 · d20 다시 굴림 +${actor.source.kind==="character"?classLevel(actor.source.sheet,CLASS.fighter):0} (남은 ${indomitableLeft(state,actorId)})`}); }
+  if(inspirationDie(state,actorId)) options.push({id:"inspiration",label:`바드의 영감 d${inspirationDie(state,actorId)} 더하기`});
+  return options;
+}
 
 const windowKey=(window:ReactionWindow,reactorId:string)=>`${window}:${reactorId}`;
 
 /** The windows a first (or replayed) run of a command would open, in the order they are asked. */
-export function windowsFor(ctx:HandlerContext,card:ResolutionRecord|null|undefined,answered:string[]):Array<{window:ReactionWindow;reactorId:string}> {
+export interface OpenWindow { window:ReactionWindow;reactorId:string;context?:Record<string,string|number|boolean> }
+export function windowsFor(ctx:HandlerContext,card:ResolutionRecord|null|undefined,answered:string[]):OpenWindow[] {
   const state=ctx.state;
   if(!card) return [];
-  const out:Array<{window:ReactionWindow;reactorId:string}>=[];
-  const push=(window:ReactionWindow,reactorId:string)=>{ if(!answered.includes(windowKey(window,reactorId))) out.push({window,reactorId}); };
+  const out:OpenWindow[]=[];
+  const push=(window:ReactionWindow,reactorId:string,context?:OpenWindow["context"])=>{ if(!answered.includes(windowKey(window,reactorId))) out.push({window,reactorId,...(context?{context}:{})}); };
   const attack=card.rollKind==="attack";
   if(attack&&state.settings.holdAttacks&&ctx.origin.role!=="dm") {
     for(const targetId of card.targetIds) if(state.actors[targetId]&&!state.actors[targetId].controllerPeer) push("dm-intervention",targetId);
@@ -75,7 +98,9 @@ export function windowsFor(ctx:HandlerContext,card:ResolutionRecord|null|undefin
   if(action?.tableSpell&&WINDOW_SPELLS[action.tableSpell.spellId]!=="spell-being-cast") {
     for(const id of Object.keys(state.actors)) if(id!==card.actorId&&state.actors[id].side!==state.actors[card.actorId]?.side&&reactionOptionsFor(state,id,"spell-being-cast").length) push("spell-being-cast",id);
   }
-  for(const save of card.saveResults??[]) if(save.outcome==="실패"&&legendaryResistanceLeft(state,save.targetId)>0) push("save-failed",save.targetId);
+  const saveAbility=action?.saveAbility??"";
+  for(const save of card.saveResults??[]) if(save.outcome==="실패"&&saveFailedOptions(state,save.targetId).length) push("save-failed",save.targetId,{total:save.total,dc:save.dc,ability:saveAbility});
+  if(attack&&card.attackOutcome==="빗나감"&&inspirationDie(state,card.actorId)&&card.attackTotal!==undefined&&card.targetAc!==undefined) push("attack-missed",card.actorId,{attackTotal:card.attackTotal,targetAc:card.targetAc});
   if(attack&&card.attackOutcome==="명중") for(const targetId of card.targetIds) if(reactionOptionsFor(state,targetId,"hit-determined").length) push("hit-determined",targetId);
   return out;
 }
@@ -95,13 +120,16 @@ export function afterCommitWindows(ctx:HandlerContext,card:ResolutionRecord|null
   return questions;
 }
 
-function windowQuestion(state:TableState,pending:PendingResolution,window:ReactionWindow,reactorId:string,seq:number):TableQuestion {
+function windowQuestion(state:TableState,pending:PendingResolution,next:OpenWindow,seq:number):TableQuestion {
+  const {window,reactorId}=next;
   const reactor=state.actors[reactorId];
-  const toPeer=window==="dm-intervention"||window==="save-failed"?undefined:reactor?.controllerPeer;
-  const base={id:`question.${seq}.window.${reactorId}`,kind:"reaction-window" as const,actorId:reactorId,toPeer,context:{pendingId:pending.id,window,attackerId:pending.actorId},seq};
+  // A monster's save-failed card is the DM's; a character's goes to its player.
+  const toPeer=window==="dm-intervention"||(window==="save-failed"&&reactor?.kind!=="character")?undefined:reactor?.controllerPeer;
+  const base={id:`question.${seq}.window.${reactorId}`,kind:"reaction-window" as const,actorId:reactorId,toPeer,context:{pendingId:pending.id,window,attackerId:pending.actorId,...(next.context??{})},seq};
   switch(window) {
     case "dm-intervention": return {...base,prompt:`${pending.label} — DM 개입? (팔레트: override)`,options:[{id:"proceed",label:"그대로"}]};
-    case "save-failed": return {...base,prompt:`${reactor?.name??reactorId}이(가) 내성에 실패했습니다. 전설 저항을 쓸까요? (남은 ${legendaryResistanceLeft(state,reactorId)})`,options:[{id:"use",label:"전설 저항 사용"},{id:"decline",label:"그대로 실패"}]};
+    case "save-failed": return {...base,prompt:`${reactor?.name??reactorId}이(가) 내성에 실패했습니다 (${next.context?.total??"?"} vs DC ${next.context?.dc??"?"}).`,options:[...saveFailedOptions(state,reactorId),{id:"decline",label:"그대로 실패"}]};
+    case "attack-missed": return {...base,prompt:`${reactor?.name??reactorId}의 공격이 빗나갔습니다 (${next.context?.attackTotal??"?"} vs AC ${next.context?.targetAc??"?"}). 바드의 영감 d${inspirationDie(state,reactorId)}을 더할까요?`,options:[{id:"inspiration",label:`바드의 영감 d${inspirationDie(state,reactorId)} 더하기`},{id:"decline",label:"그대로 빗나감"}]};
     case "spell-being-cast": return {...base,prompt:`${actorName(state,pending.actorId)}이(가) 주문을 시전합니다. ${reactor?.name??reactorId}의 반응?`,options:[...reactionOptionsFor(state,reactorId,window),{id:"decline",label:"넘김"}]};
     default: return {...base,prompt:`${pending.label} — 명중. ${reactor?.name??reactorId}의 반응?`,options:[...reactionOptionsFor(state,reactorId,window),{id:"decline",label:"넘김"}]};
   }
@@ -112,9 +140,9 @@ function withoutPendingQuestions(state:TableState,pending:PendingResolution):Tab
   return state.questions.filter((question)=>!ids.has(question.id)&&!(question.kind==="reaction-window"&&question.context.pendingId===pending.id));
 }
 
-function openWindow(ctx:HandlerContext,pending:PendingResolution,next:{window:ReactionWindow;reactorId:string}):HandlerResult {
+function openWindow(ctx:HandlerContext,pending:PendingResolution,next:OpenWindow):HandlerResult {
   const state=ctx.state;
-  const question=windowQuestion(state,pending,next.window,next.reactorId,ctx.nextSeq);
+  const question=windowQuestion(state,pending,next,ctx.nextSeq);
   const held:PendingResolution={...pending,windows:[{window:next.window,reactorId:next.reactorId,questionId:question.id}]};
   return {status:"committed",events:[{
     payload:{type:"table-changed",pending:held,questions:[...withoutPendingQuestions(state,pending),question]},
@@ -229,7 +257,7 @@ export function answerWindow(ctx:HandlerContext,question:TableQuestion,optionId:
       rules.revision+=1;
       events.push({payload:{type:"rules-committed",rules},log:[logEntry(ctx,{actor:name,title:`반응 · ${reaction?.name??optionId}`,summary:reaction?.text??"",detail:["효과는 DM이 팔레트(override)나 재량으로 적용합니다."],stateChanges:[`${name} 반응 사용`]})]});
       answer=`${name} ${reaction?.name??"반응"} (DM 처리)`;
-    } else if(window==="save-failed") {
+    } else if(window==="save-failed"&&optionId==="use") {
       const rules=cloneState(state.rules);
       const pool=rules.combatants[reactorId]?.resources.find((entry)=>entry.id===LEGENDARY_RESISTANCE_POOL);
       if(!pool||pool.current<1) return refused("legendary-resistance-spent","전설 저항이 남아 있지 않습니다.",{actorId:reactorId});
@@ -238,6 +266,39 @@ export function answerWindow(ctx:HandlerContext,question:TableQuestion,optionId:
       overrides.autoSuccessSaves=[...(overrides.autoSuccessSaves??[]),reactorId];
       events.push({payload:{type:"rules-committed",rules},log:[logEntry(ctx,{actor:name,title:"전설 저항",summary:`실패한 내성을 성공으로 (남은 ${pool.current})`,detail:[],stateChanges:[`${name} 전설 저항 ${pool.current+1} → ${pool.current}`]})]});
       answer=`${name} 전설 저항 사용`;
+    } else if(window==="save-failed"&&optionId==="indomitable") {
+      // Indomitable (2024): reroll the failed save and add the Fighter level; the new result stands.
+      const rules=cloneState(state.rules);
+      const reactor=state.actors[reactorId];
+      const pool=rules.combatants[reactorId]?.resources.find((entry)=>entry.id===FIGHTER_INDOMITABLE_RESOURCE_ID);
+      if(!pool||pool.current<1||!reactor||reactor.source.kind!=="character") return refused("indomitable-spent","불굴이 남아 있지 않습니다.",{actorId:reactorId});
+      const key=ABILITY_KEYS.find((entry)=>abilityLabelKo(entry)===String(question.context.ability));
+      const dc=Number(question.context.dc);
+      const level=classLevel(reactor.source.sheet,CLASS.fighter);
+      const face=ctx.dice.faces(20,1,`${name} 불굴 재굴림`)[0];
+      const total=face+(key?actorSaveModifier(reactor,key):0)+level;
+      const success=Number.isFinite(dc)&&total>=dc;
+      pool.current-=1;
+      rules.revision+=1;
+      if(success) overrides.autoSuccessSaves=[...(overrides.autoSuccessSaves??[]),reactorId];
+      events.push({payload:{type:"rules-committed",rules},log:[logEntry(ctx,{actor:name,title:"불굴",summary:`d20 ${face} ${key?`${actorSaveModifier(reactor,key)>=0?"+":""}${actorSaveModifier(reactor,key)}`:""} + ${level} = ${total} vs DC ${dc} → ${success?"성공":"여전히 실패"}`,detail:[],stateChanges:[`${name} 불굴 ${pool.current+1} → ${pool.current}`]})]});
+      answer=`${name} 불굴 (${total} vs DC ${dc} ${success?"성공":"실패"})`;
+    } else if((window==="save-failed"||window==="attack-missed")&&optionId==="inspiration") {
+      // Bardic Inspiration (2024): after a failed d20 Test, add the die; the die is spent either way.
+      const rules=cloneState(state.rules);
+      const effect=rules.effects.find((entry)=>entry.targetId===reactorId&&entry.tags.includes(BARDIC_INSPIRATION_EFFECT_TAG));
+      const sides=effect&&typeof effect.metadata?.dieSides==="number"?effect.metadata.dieSides:0;
+      if(!effect||!sides) return refused("inspiration-missing","바드의 영감 주사위가 없습니다.",{actorId:reactorId});
+      const face=ctx.dice.faces(sides,1,`${name} 바드의 영감`)[0];
+      const before=Number(window==="save-failed"?question.context.total:question.context.attackTotal);
+      const needed=Number(window==="save-failed"?question.context.dc:question.context.targetAc);
+      const success=before+face>=needed;
+      rules.effects=rules.effects.filter((entry)=>entry.id!==effect.id);
+      rules.revision+=1;
+      if(success&&window==="save-failed") overrides.autoSuccessSaves=[...(overrides.autoSuccessSaves??[]),reactorId];
+      if(success&&window==="attack-missed") overrides.outcome="hit";
+      events.push({payload:{type:"rules-committed",rules},log:[logEntry(ctx,{actor:name,title:"바드의 영감",summary:`${before} + d${sides} ${face} = ${before+face} vs ${needed} → ${success?(window==="save-failed"?"성공":"명중"):"여전히 실패"}`,detail:[],stateChanges:[`${name} 바드의 영감 사용`]})]});
+      answer=`${name} 바드의 영감 (${before+face} vs ${needed} ${success?"성공":"실패"})`;
     } else {
       const targetIds=window==="spell-being-cast"?[pending.actorId]:[reactorId];
       const reaction=run({...ctx,asReaction:true,skipWindows:true},{type:"act",actorId:reactorId,actionId:optionId,targetIds});

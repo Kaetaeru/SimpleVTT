@@ -3,7 +3,7 @@ import type { ResourcePool } from "../domain/resources";
 import { coreClassResourceDefinitions, FIGHTER_ACTION_SURGE_RESOURCE_ID, FIGHTER_SECOND_WIND_RESOURCE_ID, PALADIN_LAY_ON_HANDS_RESOURCE_ID, CLERIC_CHANNEL_DIVINITY_RESOURCE_ID } from "../domain/coreClassResources";
 import { BARBARIAN_RAGE_RESOURCE_ID } from "../domain/barbarianBerserker";
 import { MONK_FOCUS_RESOURCE_ID } from "../domain/monkOpenHand";
-import { bardicInspirationResourceDefinition } from "../domain/bardicInspiration";
+import { BARDIC_INSPIRATION_RESOURCE_ID, bardicInspirationDieSides, bardicInspirationMaximum, bardicInspirationResourceDefinition } from "../domain/bardicInspiration";
 import type { Actor } from "./state";
 
 /**
@@ -14,7 +14,7 @@ import type { Actor } from "./state";
 export const CLASS={barbarian:"dnd.srd521.class.barbarian",bard:"dnd.srd521.class.bard",cleric:"dnd.srd521.class.cleric",druid:"dnd.srd521.class.druid",fighter:"dnd.srd521.class.fighter",monk:"dnd.srd521.class.monk",paladin:"dnd.srd521.class.paladin",ranger:"dnd.srd521.class.ranger",rogue:"dnd.srd521.class.rogue",sorcerer:"dnd.srd521.class.sorcerer",warlock:"dnd.srd521.class.warlock",wizard:"dnd.srd521.class.wizard"} as const;
 
 export type FeatureKey=
-  |"action-surge"|"rage-start"|"rage-end"|"lay-on-hands"|"lay-on-hands-cure"|"flurry-of-blows"|"patient-defense"|"patient-defense-focus"|"step-of-the-wind"|"step-of-the-wind-focus"|"martial-arts-strike"|"cunning-dash"|"cunning-disengage"|"cunning-hide"|"divine-spark-heal"|"divine-spark-damage"|"turn-undead"|"off-hand-attack";
+  |"action-surge"|"rage-start"|"rage-end"|"lay-on-hands"|"lay-on-hands-cure"|"flurry-of-blows"|"patient-defense"|"patient-defense-focus"|"step-of-the-wind"|"step-of-the-wind-focus"|"martial-arts-strike"|"cunning-dash"|"cunning-disengage"|"cunning-hide"|"divine-spark-heal"|"divine-spark-damage"|"turn-undead"|"off-hand-attack"|"bardic-inspiration";
 
 declare module "../app/contracts" {
   interface ActionVm {
@@ -95,6 +95,8 @@ export function featureActions(actor:Actor,sheet:CharacterSheet,attacksPerAction
     actions.push({id:"action.rage",actorId,name:"격노",category:"basic",target:"self",economy:"추가 행동",resolutionKind:"no-roll",summary:`타격·관통·참격 저항, 근력 근접 피해 +${bonus} · 10분`,available:true,eligibleTargetIds:[actorId],resourceCost:{resourceId:BARBARIAN_RAGE_RESOURCE_ID,amount:1},tableFeature:"rage-start",details:[detail("효과",`타격·관통·참격 피해 저항 · 근력 근접 공격 피해 +${bonus} · 근력 판정·내성 유리`),detail("지속","10분. 공격하거나 피해를 받거나 추가 행동으로 연장하지 않으면 턴 끝에 종료 (2024)"),detail("출처",`${SOURCE} · Rage`)]});
     actions.push({id:"action.rage-end",actorId,name:"격노 종료",category:"basic",target:"self",economy:"없음",resolutionKind:"no-roll",summary:"격노를 끝낸다 (비용 없음)",available:true,eligibleTargetIds:[actorId],tableFeature:"rage-end",details:[detail("비용","없음")]});
   }
+  const bard=classLevel(sheet,CLASS.bard);
+  if(bard>=1) actions.push({id:"action.bardic-inspiration",actorId,name:"바드의 영감",category:"basic",target:"ally",economy:"추가 행동",resolutionKind:"no-roll",summary:`아군 하나에게 d${bardicInspirationDieSides(bard)} 영감 주사위 · 사용 ${bardicInspirationMaximum(abilityModifier(sheet.abilities.cha))}회`,available:true,eligibleTargetIds:[],resourceCost:{resourceId:BARDIC_INSPIRATION_RESOURCE_ID,amount:1},tableFeature:"bardic-inspiration",details:[detail("효과",`받은 크리처는 1시간 안에 실패한 d20 판정 하나에 d${bardicInspirationDieSides(bard)}를 더할 수 있다`),detail("회복",bard>=5?"짧은 휴식":"긴 휴식"),detail("출처",`${SOURCE} · Bardic Inspiration`)]});
   const paladin=classLevel(sheet,CLASS.paladin);
   if(paladin>=1) {
     actions.push({id:"action.lay-on-hands",actorId,name:"안수",category:"basic",target:"any",economy:"추가 행동",resolutionKind:"healing",summary:`풀에서 원하는 만큼 회복 (최대 ${paladin*5})`,available:true,eligibleTargetIds:[],tableFeature:"lay-on-hands",tableAmountInput:{min:1,max:paladin*5,label:"회복량"},details:[detail("풀",`${paladin*5} HP · 긴 휴식에 회복`),detail("비용","추가 행동 (2024)"),detail("출처",`${SOURCE} · Lay On Hands`)]});
