@@ -60,7 +60,7 @@ CHARACTER_SYSTEM §3.1의 모든 행에 더해:
 | C1 카탈로그 | `client/catalog/` — SRD 모듈 36개 + 생성 색인 + 진행표 + 주문 339 + 저작 데이터(`client/data/srd/`)를 한 id 공간으로. 경고 0 | 완료 |
 | C1 엔진 | `client/character/` — `deriveCharacter(source, catalog)`: 원장(ledger) 한 번 순회로 종족·배경·트랙·장비를 적용하고 선택 요청(`ChoiceRequest`)을 등록, 끝에서 숫자를 계산. 자동 채우기(`autofill`)로 검사·빠른 생성 | 완료 |
 | C1 검사 | `tests/client/derive.test.ts`(17 시나리오) + `tests/client/matrix.test.ts`(종족 9 × 직업 12 × 배경 4 × L1·L5 = 864, 직업 12 × L1~20 = 240, 독립 공식 대조) | green |
-| C2 저장·JSON | IndexedDB + 메모리 폴백, 캐릭터 JSON v2 내보내기/가져오기, RuleModule JSON 설치 | 예정 |
+| C2 저장·JSON | `client/storage/store.ts`(IndexedDB `simplevtt-client` v1: characters/modules/settings, 메모리 폴백), `client/character/json.ts`(파일 형식 `simplevtt.character` 스키마 2 = source + runtime + summary, 필드별 검증·오류 일괄 보고, 미설치 모듈 id 목록), `client/catalog/install.ts`(RuleModule JSON 파싱·요약·의존성). 검사: `install.test.ts`(합성 보충 모듈 → 종족·배경·기원 재주·일반 재주·서브클래스·주문이 생성까지 흐름, 기원 재주는 ASI 후보 밖), `json.test.ts`, `storage.test.ts`(fake-indexeddb) | 완료 |
 | C3 화면 | 라이브러리, 생성 마법사(실시간 시트), 시트, 콘텐츠 설치, exe | 예정 |
 
 엔진의 선택 id 규약(원본 `choices` 맵의 키): `origin.languages`, `origin.species.<choice>`(`origin.species.lineage`…), `origin.background.abilityMode|abilityPlus2|abilityPlus1|tool`, `class.<트랙>.skills|expertise|fighting-style|subclass|asi|epic-boon|...`, 직업 전체 풀은 첫 트랙에 붙는다(`class.<첫 트랙>.weapon-mastery|invocations|metamagic|cantrips|spells|spellbook`), 재주 하위 선택은 `feat.<부여 위치>.<재주 id>.<항목>`, 장비는 `equipment.class|background[.<옵션>.<n>]`. 답은 항상 옵션 id 배열이고, 옵션 밖의 답은 무시된다(모듈 제거·레벨 되돌림에도 안전).

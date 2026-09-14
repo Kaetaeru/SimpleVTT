@@ -205,6 +205,17 @@ function mechanic<T = Record<string, unknown>>(entry: { mechanics: Array<{ kind:
 
 export const slugOfId = (id: string) => id.split(".").pop() ?? id;
 
+/** The paragraph block of a compiled description that starts with the given heading line (installed species traits). */
+export function sectionOf(description: string | undefined, heading: string): string | undefined {
+  if (!description) return undefined;
+  const wanted = heading.trim();
+  for (const block of description.split(/\n\s*\n/)) {
+    const lines = block.split("\n").map((line) => line.trim()).filter(Boolean);
+    if (lines.length >= 2 && lines[0] === wanted) return lines.slice(1).join(" ");
+  }
+  return undefined;
+}
+
 const normalizeName = (name: string) => name.toLowerCase().replace(/[’']/g, "'").trim();
 
 export class ContentCatalog {
@@ -406,13 +417,14 @@ export class ContentCatalog {
       const traits: SpeciesTrait[] = (def.traits ?? []).map((raw, index) => {
         const [traitId, level] = raw.split("@");
         const authored = extras?.traits[traitId];
-        const installedName = def.semantics?.baseFeatures?.[index];
+        const installedName = def.semantics?.baseFeatures?.[index]?.replace(/\s*\(.*\)\s*$/, "");
+        const installedDescription = installedName ? sectionOf(entry.description, installedName) : undefined;
         return {
           id: `${entry.id}.trait.${traitId}`,
-          name: authored?.name ?? installedName?.replace(/\s*\(.*\)\s*$/, "") ?? traitId,
+          name: authored?.name ?? installedName ?? traitId,
           nameEn: authored?.nameEn ?? traitId,
-          description: authored?.description,
-          descriptionSource: authored ? "srd-summary" : undefined,
+          description: authored?.description ?? installedDescription,
+          descriptionSource: authored ? "srd-summary" : installedDescription ? "module" : undefined,
           ...(level ? { minLevel: Number(level) } : {}),
         };
       });

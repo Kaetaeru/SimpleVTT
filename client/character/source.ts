@@ -7,7 +7,7 @@ import { ABILITY_KEYS } from "../catalog/types";
 import { POINT_BUY_BUDGET, pointBuyCost, STANDARD_ARRAY } from "../rules/tables";
 import type { AbilityScores, CharacterSource, HitPointChoiceValue } from "./types";
 
-export const DEFAULT_RULES_PROFILE = "dnd-srd-5.2.1";
+export const DEFAULT_RULES_PROFILE = "dnd.srd-5.2.1";
 
 export function newCharacterId() {
   const random = typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
