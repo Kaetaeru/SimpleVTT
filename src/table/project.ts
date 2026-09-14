@@ -7,6 +7,7 @@ import { availabilityOf, eligibleTargetIds } from "./availability";
 import type { TableRefusal } from "./refusal";
 import { actorIds, type Actor, type TableMode, type TableState } from "./state";
 import { handsLabel } from "./hands";
+import { clockOfDay } from "./handlers/time";
 import type { TableQuestion } from "./state";
 import "../app/movementDeclarationContracts";
 
@@ -16,6 +17,12 @@ declare module "../app/contracts" {
     tableQuestions?:TableQuestion[];
     /** Items on the scene floor: dropped, thrown, placed. Anyone may pick one up. */
     floorItems?:Array<{id:string;name:string;quantity:number;droppedById:string;droppedByName:string;recoverable:boolean}>;
+    /** The table clock: elapsed seconds this session and the time of day (RULES_RUNTIME_SPECS.md §1). */
+    clock?:{elapsedSeconds:number;round:number;timeOfDay:string};
+    /** A rest the DM proposed and has not completed. */
+    resting?:{kind:"short"|"long";actorIds:string[];answered:string[];interrupted:boolean};
+    /** DM only: scheduled reminders and recoveries. */
+    timers?:Array<{id:string;kind:string;label:string;inSeconds:number}>;
   }
   interface SceneEntity {
     /** What the character holds: "장검 (주손) · 방패 (보조손)" or "빈손". */
@@ -24,6 +31,7 @@ declare module "../app/contracts" {
 }
 
 export const PUBLIC_EFFECT_PREFIX="✦ ";
+function timeOfDayLabel(secondsOfDay:number):string { const h=Math.floor(secondsOfDay/3600), m=Math.floor((secondsOfDay%3600)/60); return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`; }
 const BADGE_LABEL:Record<string,string>={hidden:"숨음","cover-half":"엄폐 절반","cover-three-quarters":"엄폐 ¾"};
 
 export interface TableViewer {
@@ -113,7 +121,10 @@ export function projectTable(state:TableState,viewer:TableViewer,refusal?:(Table
   const questions=state.questions.filter((question)=>viewer.role==="dm"||question.toPeer===viewer.peerId).map((question)=>({...question,options:question.options.map((option)=>({...option})),context:{...question.context}}));
   const withdrawal=state.questions.find((question)=>question.kind==="opportunity-attack");
   const pendingWithdrawal=withdrawal?{actorId:String(withdrawal.context.moverId),actorName:state.actors[String(withdrawal.context.moverId)]?.name??String(withdrawal.context.moverId),round:state.round,candidates:state.questions.filter((question)=>question.kind==="opportunity-attack"&&question.context.moverId===withdrawal.context.moverId).flatMap((question)=>question.options.filter((option)=>option.id!=="decline").map((option)=>({reactorId:question.actorId,reactorName:state.actors[question.actorId]?.name??question.actorId,actionId:option.id,actionName:option.label})))}:undefined;
-  const scene:SceneVm={id:state.sessionId,name:"",round:state.round,currentActorId:state.currentActorId??"",selectedActorId:"",entities,actionsByActor,economyByActor,...(questions.length?{tableQuestions:questions}:{}),...(Object.keys(state.declarations).length?{movementDeclarations:Object.fromEntries(Object.entries(state.declarations).map(([id,declaration])=>[id,{...declaration}]))}:{}),...(pendingWithdrawal&&viewer.role==="dm"?{pendingWithdrawal}:{}),...(state.engagements.length?{engagements:state.engagements.map((record)=>({...record}))}:{}),...(state.floor.length?{floorItems:state.floor.map((entry)=>({id:entry.id,name:entry.item.name,quantity:entry.item.quantity,droppedById:entry.droppedBy,droppedByName:state.actors[entry.droppedBy]?.name??entry.droppedBy,recoverable:entry.recoverable}))}:{})};
+  const scene:SceneVm={id:state.sessionId,name:"",round:state.round,currentActorId:state.currentActorId??"",selectedActorId:"",entities,actionsByActor,economyByActor,...(questions.length?{tableQuestions:questions}:{}),...(Object.keys(state.declarations).length?{movementDeclarations:Object.fromEntries(Object.entries(state.declarations).map(([id,declaration])=>[id,{...declaration}]))}:{}),...(pendingWithdrawal&&viewer.role==="dm"?{pendingWithdrawal}:{}),...(state.engagements.length?{engagements:state.engagements.map((record)=>({...record}))}:{}),...(state.floor.length?{floorItems:state.floor.map((entry)=>({id:entry.id,name:entry.item.name,quantity:entry.item.quantity,droppedById:entry.droppedBy,droppedByName:state.actors[entry.droppedBy]?.name??entry.droppedBy,recoverable:entry.recoverable}))}:{}),
+    clock:{elapsedSeconds:state.rules.clock.elapsedSeconds,round:state.round,timeOfDay:timeOfDayLabel(clockOfDay(state))},
+    ...(state.resting?{resting:{kind:state.resting.kind,actorIds:[...state.resting.actorIds],answered:Object.keys(state.resting.answers),interrupted:state.resting.interruptedAt!==undefined}}:{}),
+    ...(viewer.role==="dm"&&state.timers.length?{timers:state.timers.map((timer)=>({id:timer.id,kind:timer.kind,label:timer.label,inSeconds:Math.max(0,timer.at-state.rules.clock.elapsedSeconds)}))}:{})};
   const activity:ActivityEntry[]=state.log.filter((entry)=>viewer.role==="dm"||entry.visibility==="public").map((entry)=>({
     id:entry.id,time:entry.time,actor:entry.actor,title:entry.title,summary:entry.summary,detail:[...entry.detail],stateChanges:[...entry.stateChanges],
     ...(entry.ruling?{ruling:entry.ruling}:{}),...(entry.undoOf?{undoOf:entry.undoOf}:{}),...(entry.reversed?{reversed:true}:{}),

@@ -103,6 +103,13 @@ export function answerQuestion(ctx:HandlerContext,command:Extract<TableCommand,{
       if(first&&(first.payload.type==="rules-committed"||first.payload.type==="table-changed")) first.payload={...first.payload,readied:readiedNext};
       return result;
     }
+    case "rest": {
+      const resting=state.resting;
+      if(!resting||!resting.actorIds.includes(question.actorId)) return {status:"committed",events:[{payload:{type:"table-changed",questions:remaining},log:[log("휴식 답변",`${name}: 휴식이 더 이상 진행 중이 아닙니다`)]}]};
+      const count=Number(command.optionId.replace(/^hd:/,""));
+      const next={...resting,answers:{...resting.answers,[question.actorId]:{hitDice:Number.isFinite(count)?count:0}}};
+      return {status:"committed",events:[{payload:{type:"table-changed",questions:remaining,resting:next},log:[log("휴식 답변",`${name}: 히트 다이스 ${next.answers[question.actorId].hitDice}개`)]}]};
+    }
     case "player-request":
       return resolvePlayerRequest(ctx,question,command.optionId);
     case "ruling-request":

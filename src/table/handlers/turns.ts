@@ -1,12 +1,11 @@
 import { beginTurn } from "../../domain/turnEconomy";
-import { pruneIdleEngagements } from "../../domain/engagement";
-import { pairLabel } from "../engagement";
 import type { ResolutionOperation } from "../../domain/resolutionTypes";
 import type { TableCommand } from "../commands";
 import { actorDexModifier } from "../actors";
 import { refused } from "../refusal";
 import { actorIds, cloneState, type TableState } from "../state";
 import { rollInitiative } from "./actors";
+import { advanceClock, ROUND_SECONDS } from "./time";
 import { actorName, commitOperations, logEntry, type HandlerContext, type HandlerResult } from "./types";
 
 function livingOrder(state:TableState,order:string[]) {
@@ -75,18 +74,23 @@ export function endTurn(ctx:HandlerContext):HandlerResult {
   if(!next) return refused("table-dead","살아 있는 액터가 없습니다.");
   const committed=commitOperations(ctx,{id:`turn.${ctx.nextSeq}.end`,actorId:current,sourceId:"table:turn",refusalCode:"turn-rejected",operations:[
     {id:`turn.${ctx.nextSeq}.end-turn`,kind:"end-turn",actorId:current,round:state.round},
-    {id:`turn.${ctx.nextSeq}.begin-turn`,kind:"begin-turn",actorId:next.actorId,round:next.round},
   ]});
   if(committed.status==="refused") return committed;
   const turnLog=logEntry(ctx,{actor:"시스템",title:"턴 종료",summary:`${actorName(state,current)} → ${actorName(state,next.actorId)}${next.round!==state.round?` · ${next.round}라운드`:""}`,detail:[],stateChanges:[]});
-  if(next.round===state.round) return {status:"committed",events:[{payload:{type:"turn-changed",currentActorId:next.actorId,round:next.round,rules:committed.commit.state},log:[turnLog]}]};
-  const kept=pruneIdleEngagements(state.engagements,next.round);
-  const dropped=state.engagements.filter((record)=>!kept.includes(record));
-  const log=[turnLog];
-  if(dropped.length) log.push(logEntry(ctx,{index:1,actor:"시스템",title:"교전 종료 · 한 라운드 동안 근접 공격 없음",summary:dropped.map((record)=>pairLabel(state,record)).join(", "),detail:[`${next.round}라운드 시작 · 직전 라운드에 근접 공격이 없던 교전이 끝납니다.`],stateChanges:dropped.map((record)=>`교전 종료: ${pairLabel(state,record)}`)}));
+  const begin:ResolutionOperation={id:`turn.${ctx.nextSeq}.begin-turn`,kind:"begin-turn",actorId:next.actorId,round:next.round};
+  if(next.round===state.round) {
+    const began=commitOperations(ctx,{id:`turn.${ctx.nextSeq}.begin`,actorId:next.actorId,sourceId:"table:turn",rules:committed.commit.state,refusalCode:"turn-rejected",operations:[begin]});
+    if(began.status==="refused") return began;
+    return {status:"committed",events:[{payload:{type:"turn-changed",currentActorId:next.actorId,round:next.round,rules:began.commit.state},log:[turnLog]}]};
+  }
+  // A new round: six seconds pass (RULES_RUNTIME_SPECS.md §1). Engagements persist until movement, death or a scene change (D25).
+  const advance=advanceClock(ctx,committed.commit.state,ROUND_SECONDS,[begin]);
+  if("status" in advance) return advance;
+  if(advance.lines.length) turnLog.detail.push(...advance.lines);
+  const questions=advance.questions.length?[...state.questions,...advance.questions]:undefined;
   return {status:"committed",events:[{
-    payload:{type:"turn-changed",currentActorId:next.actorId,round:next.round,rules:committed.commit.state,...(dropped.length?{engagements:kept}:{})},
-    log,
+    payload:{type:"turn-changed",currentActorId:next.actorId,round:next.round,rules:advance.rules,timers:advance.timers,...(questions?{questions}:{})},
+    log:[turnLog],
   }]};
 }
 

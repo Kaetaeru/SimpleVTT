@@ -8,7 +8,8 @@ import { addActors, removeActor, setActor } from "./handlers/actors";
 import { object, posture } from "./handlers/objects";
 import { answerQuestion, declare, ready, skipQuestion, triggerReady } from "./handlers/flow";
 import { forgetRuling, improvise, narrate, rememberRuling, request, rule } from "./handlers/improvise";
-import { rest } from "./handlers/rest";
+import { rest, restComplete } from "./handlers/rest";
+import { advanceTime, clearTimer, setTimer, stableRecoveryTimers } from "./handlers/time";
 import { ruling, rulingLabel } from "./handlers/ruling";
 import { endInitiative, endTurn, setCurrentActor, setOrder, startInitiative } from "./handlers/turns";
 import type { HandlerContext, HandlerResult } from "./handlers/types";
@@ -42,11 +43,7 @@ function authorize(state:TableState,command:TableCommand,origin:CommandOrigin):T
     if(actor.controllerPeer!==origin.peerId) return {code:"not-authorized",message:"자기 캐릭터로만 말할 수 있습니다.",actorId:command.actorId};
     return null;
   }
-  if(command.type==="rest") {
-    const foreign=command.actorIds.find((id)=>state.actors[id]?.controllerPeer!==origin.peerId);
-    if(foreign) return {code:"not-authorized",message:"자기 캐릭터만 쉬게 할 수 있습니다. 파티 휴식은 DM이 시작합니다.",actorId:foreign};
-    return null;
-  }
+  if(command.type==="rest") return {code:"not-authorized",message:"휴식은 DM이 제안합니다. 제안이 오면 히트 다이스 개수만 답하세요."};
   if(command.type==="act"||command.type==="posture"||command.type==="object"||command.type==="declare"||command.type==="ready"||command.type==="improvise"||command.type==="request") {
     const actor=state.actors[command.actorId];
     if(!actor) return {code:"actor-unknown",message:"테이블에 없는 액터입니다.",actorId:command.actorId};
@@ -77,7 +74,11 @@ function describe(state:TableState,command:TableCommand):string {
     case "request": return `${state.actors[command.actorId]?.name??command.actorId} · 요청`;
     case "remember-ruling": return `즉석 규칙 저장 · ${command.name}`;
     case "forget-ruling": return "즉석 규칙 삭제";
-    case "rest": return command.kind==="short"?"짧은 휴식":"긴 휴식";
+    case "rest": return command.kind==="short"?"짧은 휴식 제안":"긴 휴식 제안";
+    case "rest-complete": return "휴식 완료";
+    case "advance-time": return "시간 경과";
+    case "set-timer": return "알림 예약";
+    case "clear-timer": return "알림 취소";
     case "ruling": return `DM 재량 · ${rulingLabel(state,command.ruling)}`;
     case "add-actors": return "액터 추가";
     case "remove-actor": return `액터 제거 · ${state.actors[command.actorId]?.name??command.actorId}`;
@@ -130,6 +131,7 @@ export class TableRuntime {
     const ctx:HandlerContext={state:this.state,dice:this.dice,profile:this.profile,nextSeq:this.seq+1,now:this.now,origin};
     const result=this.handle(ctx,command);
     if(result.status==="refused") return this.refuse(result.refusal);
+    this.scheduleStableRecovery(ctx,result);
     const outcome=this.commit(command,result,{recordHistory:result.followUp?.type!=="undo"});
     if(result.followUp&&outcome.status==="committed") {
       this.undoSkipsBookkeeping=result.followUp.type==="undo";
@@ -182,9 +184,26 @@ export class TableRuntime {
       case "remember-ruling": return rememberRuling(ctx,command);
       case "forget-ruling": return forgetRuling(ctx,command);
       case "rest": return rest(ctx,command);
+      case "rest-complete": return restComplete(ctx,command);
+      case "advance-time": return advanceTime(ctx,command);
+      case "set-timer": return setTimer(ctx,command);
+      case "clear-timer": return clearTimer(ctx,command);
       case "ruling": return ruling(ctx,command);
       default: return refused("command-unknown","알 수 없는 명령입니다.");
     }
+  }
+
+  /** A creature that just became stable at 0 HP gets its 1d4-hour recovery timer on the same commit (RULES_RUNTIME_SPECS.md §1). */
+  private scheduleStableRecovery(ctx:HandlerContext,result:Extract<HandlerResult,{status:"committed"}>) {
+    const last=[...result.events].reverse().find((draft)=>"rules" in draft.payload&&draft.payload.rules);
+    if(!last) return;
+    const payload=last.payload as Extract<TableEvent["payload"],{type:"rules-committed"|"time-advanced"|"turn-changed"|"table-changed"|"mode-changed"}>;
+    const rules=payload.rules;
+    if(!rules) return;
+    const timers=stableRecoveryTimers(ctx,this.state.rules,rules,("timers" in payload&&payload.timers)?payload.timers:this.state.timers);
+    if(!timers) return;
+    if(payload.type==="mode-changed") result.events.push({payload:{type:"table-changed",timers},log:[]});
+    else (payload as {timers?:typeof timers}).timers=timers;
   }
 
   private commit(command:TableCommand,result:Extract<HandlerResult,{status:"committed"}>,options:{recordHistory?:boolean}={}):Outcome {

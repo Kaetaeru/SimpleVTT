@@ -12,7 +12,7 @@ const tile=(runtime:TableRuntime,actorId:string,actionId:string)=>projectTable(r
 const chips=(runtime:TableRuntime,id:string)=>projectTable(runtime.state,{role:"dm"}).scene.entities.find((entity)=>entity.id===id)!.status;
 const itemOf=(runtime:TableRuntime,actorId:string,itemId:string)=>{const actor=runtime.state.actors[actorId]; return actor.source.kind==="character"?actor.source.sheet.items.find((item)=>item.id===itemId):undefined;};
 
-test("§17 rests: a short rest spends hit dice with the table's dice; a long rest restores HP, slots and half the hit dice; never in Initiative", () => {
+test("§17 rests (D30): the DM proposes, hit dice answers come per actor, completion spends them with the table's dice and moves the clock; a long rest restores HP, slots and every hit die (2024); never in Initiative", () => {
   const {runtime,dice}=table([]);
   runtime.dispatch({type:"add-actors",specs:[{kind:"character",sheet:fighter(),controllerPeer:P1.peerId},{kind:"character",sheet:cleric(),controllerPeer:P2.peerId}]});
   const kael="char.kael",sera="char.sera";
@@ -21,20 +21,35 @@ test("§17 rests: a short rest spends hit dice with the table's dice; a long res
   runtime.dispatch({type:"act",actorId:sera,actionId:"spell.dnd.srd521.spell.healing-word",targetIds:[kael]},P2);
   runtime.dispatch({type:"ruling",targetIds:[kael],ruling:{kind:"damage",amount:20}});
   assert.equal(hp(runtime,kael),21);
-  // 짧은 휴식: 카엘 히트 다이스 2개 (6, 4) + 건강 3×2 = 16 → 37; 세라는 0개
-  dice.push(6,4);
+  // 짧은 휴식 제안: 카엘은 DM이 2개로 답을 대신 넣었고, 세라에게는 질문이 간다
   const short=runtime.dispatch({type:"rest",kind:"short",actorIds:[kael,sera],hitDice:{[kael]:2}});
   assert.equal(short.status,"committed",JSON.stringify(short));
+  assert.equal(hp(runtime,kael),21,"proposing changes nothing yet");
+  const ask=runtime.state.questions.find((question)=>question.kind==="rest"&&question.actorId===sera);
+  assert.ok(ask&&ask.toPeer===P2.peerId,JSON.stringify(runtime.state.questions));
+  assert.equal(runtime.dispatch({type:"answer-question",questionId:ask!.id,optionId:"hd:0"},P2).status,"committed");
+  // 완료: 카엘 히트 다이스 2개 (6, 4) + 건강 3×2 = 16 → 37; 세라는 0개; 1시간 경과
+  dice.push(6,4);
+  const done=runtime.dispatch({type:"rest-complete"});
+  assert.equal(done.status,"committed",JSON.stringify(done));
   assert.equal(hp(runtime,kael),37);
   assert.equal(runtime.state.rules.combatants[kael].hitDice[0].current,3);
+  assert.equal(runtime.state.rules.clock.elapsedSeconds,3600);
+  assert.equal(runtime.state.resting,null);
   const tooMany=runtime.dispatch({type:"rest",kind:"short",actorIds:[kael],hitDice:{[kael]:4}});
-  assert.equal(tooMany.status==="refused"&&tooMany.refusal.message,"카엘의 히트 다이스가 4개 남아 있지 않습니다.");
-  // 플레이어는 자기 캐릭터만 쉬게 할 수 있다
-  assert.equal(runtime.dispatch({type:"rest",kind:"short",actorIds:[sera]},P1).status,"refused");
-  // 긴 휴식: HP 전부, 1레벨 슬롯 3 → 4, 히트 다이스 3 → 5 (최대의 절반 회복)
-  const long=runtime.dispatch({type:"rest",kind:"long",actorIds:[kael,sera]});
+  assert.equal(tooMany.status,"committed","the proposal is fine; the count is checked on completion");
+  const short2=runtime.dispatch({type:"rest-complete"});
+  assert.equal(short2.status==="refused"&&short2.refusal.message,"카엘의 히트 다이스가 4개 남아 있지 않습니다.");
+  // 플레이어는 휴식을 제안하지 못한다 (D30)
+  const playerRest=runtime.dispatch({type:"rest",kind:"short",actorIds:[sera]},P1);
+  assert.equal(playerRest.status==="refused"&&playerRest.refusal.message,"휴식은 DM이 제안합니다. 제안이 오면 히트 다이스 개수만 답하세요.");
+  // 긴 휴식: HP 전부, 1레벨 슬롯 3 → 4, 히트 다이스 3 → 5 (2024: 전부 회복), 8시간 경과
+  assert.equal(runtime.dispatch({type:"rest",kind:"long",actorIds:[kael,sera]}).status,"committed");
+  const long=runtime.dispatch({type:"rest-complete"});
   assert.equal(long.status,"committed",JSON.stringify(long));
   assert.equal(hp(runtime,kael),42);
+  assert.equal(runtime.state.rules.clock.elapsedSeconds,3600+8*3600);
+  assert.equal(runtime.state.time.lastLongRest[kael],3600+8*3600);
   assert.equal(runtime.state.rules.combatants[sera].resources.find((entry)=>entry.id==="spell-slot-1")?.current,4);
   assert.equal(runtime.state.rules.combatants[kael].hitDice[0].current,5);
   // 이니셔티브 중에는 쉴 수 없다

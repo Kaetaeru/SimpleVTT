@@ -33,6 +33,7 @@ export function redactStateFor(state:TableState,viewer:TableViewer):TableState {
   next.engagements=pruneEngagementsToPresent(next.engagements,new Set(Object.keys(next.actors)));
   next.log=next.log.filter((entry)=>visibleLog(entry,viewer));
   next.questions=next.questions.filter((question)=>visibleQuestion(question,viewer));
+  next.timers=[];
   if(next.activeResolution&&next.activeResolution.visibility!=="public") next.activeResolution=null;
   return next;
 }
@@ -68,8 +69,13 @@ export function redactEventFor(event:TableEvent,before:TableState,after:TableSta
     }
     case "actor-removed":
       return hiddenBefore.includes(payload.actorId)?(log.length?{...event,log,payload:{type:"table-changed"}}:null):{...event,log};
-    case "mode-changed": case "turn-changed":
+    case "mode-changed":
       return {...event,log,payload:{...payload,rules:redactRules(payload.rules,hiddenAfter)}};
+    case "turn-changed":
+      return {...event,log,payload:{...payload,rules:redactRules(payload.rules,hiddenAfter),...(payload.questions?{questions:payload.questions.filter((question)=>visibleQuestion(question,viewer))}:{}),...(payload.timers?{timers:[]}:{})}};
+    case "time-advanced":
+      // Timers are the DM's; players see the clock move and the cards addressed to them.
+      return {...event,log,payload:{...payload,rules:redactRules(payload.rules,hiddenAfter),timers:[],...(payload.questions?{questions:payload.questions.filter((question)=>visibleQuestion(question,viewer))}:{})}};
     case "rules-committed": {
       const resolution=payload.resolution===undefined?undefined:payload.resolution&&payload.resolution.visibility==="public"?payload.resolution:null;
       return {...event,log,payload:{...payload,rules:redactRules(payload.rules,hiddenAfter),...(resolution!==undefined?{resolution}:{}),...(payload.questions?{questions:payload.questions.filter((question)=>visibleQuestion(question,viewer))}:{}),...(payload.sheets?{sheets:payload.sheets.filter((patch)=>!hiddenAfter.includes(patch.actorId))}:{}),...(payload.engagements?{engagements:payload.engagements.filter((record)=>!hiddenAfter.includes(record.a)&&!hiddenAfter.includes(record.b))}:{})}};

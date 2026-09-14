@@ -74,7 +74,7 @@ export interface FloorItem {
 /** A table question: one card to one peer (the asked actor's controller, or the DM), a few options, one answer. */
 export interface TableQuestion {
   id:string;
-  kind:"opportunity-attack"|"knock-out"|"ready-trigger"|"ruling-request"|"player-request"|"dm";
+  kind:"opportunity-attack"|"knock-out"|"ready-trigger"|"ruling-request"|"player-request"|"dm"|"rest";
   /** The actor whose choice this is. */
   actorId:string;
   /** The peer that may answer (the actor's controller); the DM may always answer or skip. */
@@ -118,6 +118,33 @@ export interface RulingSpec {
 /** A remembered ruling: the next declaration containing the keyword suggests this spec first. */
 export interface HouseRule { id:string; name:string; keyword:string; spec:RulingSpec }
 
+/** The table clock's context (RULES_RUNTIME_SPECS.md §1): where the session sits in the campaign day, and each actor's last long rest. */
+export interface TableTime {
+  /** Seconds after midnight at elapsedSeconds 0. Dawn is 06:00. */
+  dayStartSeconds:number;
+  lastLongRest:Record<string,number>;
+}
+
+/** Something scheduled on the clock: a DM reminder, dawn, an affliction's periodic save, a stable creature's 1 HP. */
+export interface Timer {
+  id:string;
+  /** Fires when elapsedSeconds reaches this. */
+  at:number;
+  kind:"reminder"|"dawn"|"affliction-tick"|"stable-recovery";
+  label:string;
+  targetId?:string;
+}
+
+/** A rest in progress (D30): proposed by the DM, answered per actor, completed by the DM. */
+export interface RestingState {
+  kind:"short"|"long";
+  actorIds:string[];
+  startedAt:number;
+  answers:Record<string,{hitDice:number}>;
+  /** Initiative started during a long rest: the rest must start over. */
+  interruptedAt?:number;
+}
+
 /** A readied action (2024 Ready): the trigger in the actor's words and the action to fire as a reaction. */
 export interface ReadiedAction { actionId:string; trigger:string; targetIds:string[]; round:number }
 
@@ -147,6 +174,9 @@ export interface TableState {
   declarations:Record<string,MovementDeclaration>;
   readied:Record<string,ReadiedAction>;
   houseRules:Record<string,HouseRule>;
+  time:TableTime;
+  timers:Timer[];
+  resting:RestingState|null;
   activeResolution:ResolutionRecord|null;
   /** Newest first. */
   log:LogEntry[];
@@ -171,6 +201,9 @@ export function createTableState(sessionId:string):TableState {
     declarations:{},
     readied:{},
     houseRules:{},
+    time:{dayStartSeconds:8*3600,lastLongRest:{}},
+    timers:[],
+    resting:null,
     activeResolution:null,
     log:[],
     rollVisibility:"public",

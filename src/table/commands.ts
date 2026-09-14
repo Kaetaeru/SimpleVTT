@@ -58,8 +58,15 @@ export type TableCommand=
   |{type:"request";actorId:string;kind:"undo"|"correction"|"item-fix"|"visibility";text:string;payload?:{itemId?:string;quantity?:number;resourceId?:string;current?:number}}
   /** DM: remember a ruling as a house rule for this table. */
   |{type:"remember-ruling";name:string;keyword:string;spec:RulingSpec}
-  /** Short or long rest for the named actors (freeform only); hit dice to spend per actor on a short rest. */
+  /** DM proposes a short or long rest (freeform only, D30). Hit dice given here count as those actors' answers; the rest completes with rest-complete. */
   |{type:"rest";kind:"short"|"long";actorIds:string[];hitDice?:Record<string,number>}
+  /** DM completes the proposed rest: unanswered actors spend no hit dice; the clock advances 1 hour or 8 hours. */
+  |{type:"rest-complete";/** D4: complete an interrupted long rest anyway. */force?:boolean}
+  /** DM moves the clock (RULES_RUNTIME_SPECS.md §1). Rounds and rests move it by themselves. */
+  |{type:"advance-time";preset?:"round"|"1min"|"10min"|"1h"|"8h"|"1d"|"to-dawn";seconds?:number;reason?:string}
+  /** DM schedules a reminder card on the clock. */
+  |{type:"set-timer";label:string;inSeconds:number}
+  |{type:"clear-timer";timerId:string}
   |{type:"forget-ruling";ruleId:string}
   |{type:"undo"}
   |{type:"set-roll-visibility";visibility:Visibility};

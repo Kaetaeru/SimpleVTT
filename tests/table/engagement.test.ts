@@ -154,19 +154,19 @@ test("P0b: a full round without melee between the pair ends the engagement at th
   passRound();
   assert.equal(round(),2);
   assert.equal(runtime.state.engagements.length,1,"round 2 start: round-1 melee still counts");
-  // 2라운드: 근접 공격 없음 → 3라운드 시작에 교전이 끝난다
+  // 2라운드: 근접 공격 없음 → D25: 유휴 라운드로는 교전이 끝나지 않는다 (사거리를 벗어나는 이동·사망·장면 전환에만)
   passRound();
   assert.equal(round(),3);
-  assert.deepEqual(runtime.state.engagements,[],"round 3 start: the pair idled through round 2");
-  assert.ok(runtime.state.log.some((entry)=>entry.title==="교전 종료 · 한 라운드 동안 근접 공격 없음"&&entry.summary==="카엘 ↔ 고블린 전사 1"),JSON.stringify(runtime.state.log.slice(0,3)));
-  // 3라운드: 고블린 1 시미터 → 카엘 (교전 재개), 4라운드에 카엘이 다시 공격 → 5라운드 시작에도 유지
+  assert.equal(runtime.state.engagements.length,1,"D25: an idle round does not end an engagement");
+  assert.equal(runtime.state.rules.clock.elapsedSeconds,12,"two rounds passed: twelve seconds");
+  // 3라운드: 고블린 1 시미터 → 카엘 (같은 교전 갱신), 4라운드에 카엘이 다시 공격 → 5라운드 시작에도 유지
   assert.equal(runtime.dispatch({type:"end-turn"}).status,"committed");
   assert.equal(runtime.state.currentActorId,gob1);
   const scimitar=attackNamed(runtime,gob1,/시미터/);
   dice.push(1,1,2,2);
   const swing=runtime.dispatch({type:"act",actorId:gob1,actionId:scimitar.id,targetIds:[kael]});
   assert.equal(swing.status,"committed",JSON.stringify(swing));
-  assert.deepEqual(runtime.state.engagements.map((record)=>[record.a,record.b,record.sinceRound,record.lastMeleeRound]),[[kael,gob1,3,3]]);
+  assert.deepEqual(runtime.state.engagements.map((record)=>[record.a,record.b,record.sinceRound,record.lastMeleeRound]),[[kael,gob1,1,3]]);
   assert.equal(runtime.dispatch({type:"end-turn"}).status,"committed");
   assert.equal(runtime.dispatch({type:"end-turn"}).status,"committed");
   assert.equal(round(),4);
