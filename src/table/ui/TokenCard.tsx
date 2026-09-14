@@ -1,4 +1,5 @@
-import { useState, type MouseEvent } from "react";
+import { useState, type DragEvent, type MouseEvent } from "react";
+import { acceptsDrag, readDrag, type DragPayload } from "./drag";
 import type { SceneEntity } from "../../app/contracts";
 import { damageLabelKo } from "../../app/srdMonsterCatalog";
 import { CONDITION_PALETTE, DURATION_PRESETS, hpFraction, hpLabel, hpTone, rulingFrom, type DiscretionInput, type DurationPreset } from "./model";
@@ -17,6 +18,7 @@ export interface TokenCardProps {
   onCommand?(kind:"hide"|"reveal"|"remove"|"bench"|"engage"|"initiative",value?:string|number):void;
   hudOpen:boolean;
   onToggleHud(rect:{left:number;top:number;bottom:number}):void;
+  onDrop?(payload:DragPayload):void;
 }
 
 /** A token card (DM_WORKSPACE.md §4): click selects, Shift+click extends, double-click opens the sheet, ⋯ opens the HUD. */
@@ -24,8 +26,11 @@ export function TokenCard(props:TokenCardProps) {
   const {entity,role,selected,current,eligible,picked}=props;
   const tone=hpTone(entity);
   const engaged=(entity as {engagedWithIds?:string[]}).engagedWithIds??[];
-  const classes=["tw-token",entity.side,selected?"selected":"",current?"current":"",eligible?"eligible":"",picked?"picked":"",entity.hidden?"hidden":"",tone==="down"?"down":""].filter(Boolean).join(" ");
-  return <div className={classes} role="button" tabIndex={0} aria-label={`${entity.name} · HP ${hpLabel(entity)}`} aria-pressed={selected} data-entity-id={entity.id} onClick={props.onSelect} onDoubleClick={(event)=>{ event.stopPropagation(); props.onOpenSheet(); }}>
+  const [over,setOver]=useState(false);
+  const classes=["tw-token",entity.side,selected?"selected":"",current?"current":"",eligible?"eligible":"",picked?"picked":"",entity.hidden?"hidden":"",tone==="down"?"down":"",over?"dragover":""].filter(Boolean).join(" ");
+  const onDragOver=(event:DragEvent)=>{ if(!props.onDrop||!acceptsDrag(event)) return; event.preventDefault(); event.stopPropagation(); event.dataTransfer.dropEffect="copy"; setOver(true); };
+  const onDrop=(event:DragEvent)=>{ setOver(false); const payload=readDrag(event); if(!payload||!props.onDrop) return; event.preventDefault(); event.stopPropagation(); props.onDrop(payload); };
+  return <div className={classes} role="button" tabIndex={0} aria-label={`${entity.name} · HP ${hpLabel(entity)}`} aria-pressed={selected} data-entity-id={entity.id} onClick={props.onSelect} onDoubleClick={(event)=>{ event.stopPropagation(); props.onOpenSheet(); }} onDragOver={onDragOver} onDragLeave={()=>setOver(false)} onDrop={onDrop}>
     {current&&<span className="tw-turn">턴</span>}
     <div className="tw-token-head">
       <span className="tw-avatar" aria-hidden="true">{entity.name.slice(0,1)}</span>

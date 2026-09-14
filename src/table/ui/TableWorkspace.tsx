@@ -15,6 +15,8 @@ import { TokenHud } from "./TokenCard";
 import { TopBar } from "./TopBar";
 import { ActorsTab, CombatTab, ItemsTab, LogTab, MaterialsTab, RulesTab, SessionTab } from "./tabs";
 import { DM_TABS, PLAYER_TABS, nextSelection, rulingFrom, type DiscretionInput, type SearchHit, type SidebarTab, type WorkspaceRole } from "./model";
+import type { DragPayload } from "./drag";
+import { bundleSpecs, hostLibrary } from "../library";
 import "./workspace.css";
 
 /**
@@ -42,6 +44,8 @@ export function WorkspaceView({snapshot,facade,onLeave,onStop,initialSelectedIds
   const [targeting,setTargeting]=useState<TargetingState|null>(null);
   const [searchOpen,setSearchOpen]=useState(false);
   const [dismissedResolution,setDismissedResolution]=useState<string|null>(null);
+  const [toast,setToast]=useState<string|null>(null);
+  const feedback=(message:string)=>{ setToast(message); window.setTimeout(()=>setToast((current)=>current===message?null:current),2400); };
   const dispatch=async(command:TableCommand)=>facade?facade.dispatch(command):Promise.resolve({status:"refused" as const,refusal:{code:"no-table",message:"테이블 런타임이 없습니다.",id:0}});
 
   const entities=snapshot?.scene.entities??[];
@@ -76,6 +80,24 @@ export function WorkspaceView({snapshot,facade,onLeave,onStop,initialSelectedIds
       case "initiative": if(typeof value==="number"&&Number.isFinite(value)) void dispatch({type:"set-actor",actorId:id,patch:{initiative:value}}); break;
     }
   };
+  /** Drops (DM_WORKSPACE.md §4): an actor on the table summons it there; an item on a token is a grant; a condition on a token is a ruling. */
+  const dropOnTable=(side:"enemy"|"ally"|"neutral",payload:DragPayload)=>{
+    if(role!=="dm") return;
+    const library=hostLibrary();
+    if(payload.kind==="monster") void dispatch({type:"add-actors",specs:[{kind:"monster",monsterId:payload.monsterId,count:payload.count??1,side}]});
+    else if(payload.kind==="npc") { const entry=library.get(payload.entryId); if(entry?.npc) void dispatch({type:"add-actors",specs:[{kind:"npc",definition:entry.npc,count:payload.count??1,side}]}); }
+    else if(payload.kind==="preset") { const entry=library.get(payload.entryId); if(entry?.preset) { const sheet=structuredClone(entry.preset); sheet.id=`${sheet.id}.preset.${Date.now().toString(36)}`; void dispatch({type:"add-actors",specs:[{kind:"character",sheet,side}]}); } }
+    else if(payload.kind==="bundle") { const entry=library.get(payload.entryId); if(entry?.bundle) { void dispatch({type:"add-actors",specs:bundleSpecs(library,entry.bundle)}); if(entry.bundle.sceneName) void dispatch({type:"scene",name:entry.bundle.sceneName,conditions:entry.bundle.conditions}); } }
+    else feedback("아이템과 상태는 토큰 위에 놓으세요.");
+  };
+  const dropOnToken=(entityId:string,payload:DragPayload)=>{
+    if(role!=="dm") return;
+    const entity=entities.find((entry)=>entry.id===entityId);
+    if(!entity) return;
+    if(payload.kind==="item") { if(entity.tableKind!=="character") { feedback("아이템은 캐릭터에게만 지급합니다."); return; } void dispatch({type:"grant-item",actorId:entityId,item:{definitionId:payload.definitionId,name:payload.name,kind:payload.itemKind,quantity:payload.quantity}}); }
+    else if(payload.kind==="condition") void dispatch({type:"ruling",targetIds:[entityId],ruling:rulingFrom({kind:"condition",conditionId:payload.conditionId,on:true,preset:"1min"})});
+    else dropOnTable(entity.side,payload);
+  };
   const pickSearch=(hit:SearchHit)=>{
     switch(hit.payload.kind) {
       case "entity": setSelectedIds([hit.payload.entityId]); setTab("combat"); break;
@@ -105,7 +127,7 @@ export function WorkspaceView({snapshot,facade,onLeave,onStop,initialSelectedIds
   },[role,targeting,snapshot?.sessionMode,entities,effectiveSelection]);
 
   const tabs=role==="dm"?DM_TABS:PLAYER_TABS;
-  const tabProps={snapshot,role,selectedIds:effectiveSelection,dispatch,onSelect:(id:string)=>{ if(role==="dm") setSelectedIds([id]); },onOpenCard:(resolutionId:string)=>{ setDismissedResolution(null); void resolutionId; },onOpenSheet:(id:string)=>setSheetId(id),onSave:facade?.host?()=>{ void facade.host?.save(); }:undefined,onLeave,onStop};
+  const tabProps={snapshot,role,selectedIds:effectiveSelection,dispatch,onSelect:(id:string)=>{ if(role==="dm") setSelectedIds([id]); },onOpenCard:(resolutionId:string)=>{ setDismissedResolution(null); void resolutionId; },onOpenSheet:(id:string)=>setSheetId(id),onSave:facade?.host?()=>{ void facade.host?.save(); feedback("저장했습니다."); }:undefined,onLeave,onStop,onFeedback:feedback};
   const sheetEntity=sheetId?entities.find((entity)=>entity.id===sheetId)??null:null;
   const sheetActor=sheetId&&facade?(facade.client?.runtime.state.actors[sheetId]??facade.runtime.state.actors[sheetId])??null:null;
   const lastEntry=snapshot.activity.find((entry)=>!entry.reversed&&!entry.undoOf);
@@ -115,7 +137,7 @@ export function WorkspaceView({snapshot,facade,onLeave,onStop,initialSelectedIds
     <TopBar snapshot={snapshot} role={role} sidebarOpen={sidebarOpen} onToggleSidebar={()=>setSidebarOpen(!sidebarOpen)} onSearch={()=>setSearchOpen(true)} onLeave={onLeave} dispatch={dispatch}/>
     <div className={`tw-main ${sidebarOpen?"":"sidebar-collapsed"}`}>
       <TableStage entities={entities} role={role} selectedIds={effectiveSelection} currentActorId={snapshot.scene.currentActorId} targeting={targeting?{eligible:targeting.eligible,picked:targeting.picked}:null} hudId={hudId}
-        onSelect={onSelectToken} onOpenSheet={(id)=>setSheetId(id)} onRule={rule} onCommand={tokenCommand} onToggleHud={(id,rect)=>setHud(hud?.id===id?null:{id,left:Math.min(rect.left,Math.max(0,window.innerWidth-336)),top:Math.min(rect.bottom+4,Math.max(0,window.innerHeight-420))})} onBackgroundClick={()=>{ setHudId(null); if(!targeting&&role==="dm") setSelectedIds([]); }}
+        onSelect={onSelectToken} onOpenSheet={(id)=>setSheetId(id)} onRule={rule} onCommand={tokenCommand} onDropOnToken={role==="dm"?dropOnToken:undefined} onDropOnTable={role==="dm"?dropOnTable:undefined} onToggleHud={(id,rect)=>setHud(hud?.id===id?null:{id,left:Math.min(rect.left,Math.max(0,window.innerWidth-336)),top:Math.min(rect.bottom+4,Math.max(0,window.innerHeight-420))})} onBackgroundClick={()=>{ setHudId(null); if(!targeting&&role==="dm") setSelectedIds([]); }}
         focus={<Focus snapshot={visibleSnapshot} role={role} peerId={peerId} dispatch={dispatch} onDismiss={()=>setDismissedResolution(snapshot.resolution?.id??null)}/>}/>
       <aside className="tw-sidebar" aria-label="사이드바">
         {sidebarOpen?<>
@@ -135,6 +157,7 @@ export function WorkspaceView({snapshot,facade,onLeave,onStop,initialSelectedIds
       {role==="dm"?<DiscretionBar selected={selectedEntities} lastEntry={lastEntry} dispatch={dispatch}/>:<FreeActionBar snapshot={snapshot} actor={primary} dispatch={dispatch}/>}
     </div>
     {hud&&role==="dm"&&entities.some((entity)=>entity.id===hud.id)&&<div className="tw-hud-float" style={{left:hud.left,top:hud.top}}><TokenHud entity={entities.find((entity)=>entity.id===hud.id)!} names={names} onRule={(input)=>rule(hud.id,input)} onCommand={(kind,value)=>tokenCommand(hud.id,kind,value)} onOpenSheet={()=>{ setSheetId(hud.id); setHud(null); }} onClose={()=>setHud(null)}/></div>}
+    {toast&&<div className="tw-toast" role="status">{toast}</div>}
     {searchOpen&&<QuickSearch entities={entities} actions={snapshot.scene.actionsByActor} selectedActorId={primary?.id??null} role={role} onPick={pickSearch} onClose={()=>setSearchOpen(false)}/>}
     {sheetEntity&&<SheetDrawer entity={sheetEntity} actor={sheetActor} onClose={()=>setSheetId(null)}/>}
   </div>;

@@ -1,5 +1,7 @@
 import { clearEngagementsOf } from "../../domain/engagement";
 import type { TableCommand } from "../commands";
+import { weaponRuleById } from "../../domain/weaponRuleCatalog";
+import { damageLabelKo } from "../../app/srdMonsterCatalog";
 import { refused } from "../refusal";
 import { cloneState, type Scene, type TableState } from "../state";
 import { HIDDEN_TAG } from "./act";
@@ -63,6 +65,39 @@ export function bench(ctx:HandlerContext,command:Extract<TableCommand,{type:"ben
     drafts.push({payload:{type:"table-changed",engagements:clearEngagementsOf(state.engagements,command.actorId)},log:[]});
   }
   return {status:"committed",events:drafts};
+}
+
+/** DM item grant (DM_WORKSPACE.md §3 아이템 · 지급): into the character's bag; a weapon the rules know also becomes an attack tile. */
+export function grantItem(ctx:HandlerContext,command:Extract<TableCommand,{type:"grant-item"}>):HandlerResult {
+  const state=ctx.state;
+  const actor=state.actors[command.actorId];
+  if(!actor||actor.source.kind!=="character") return refused("actor-unknown","아이템은 캐릭터에게만 지급합니다.",{actorId:command.actorId});
+  const spec=command.item;
+  const quantity=Math.max(1,Math.floor(spec.quantity??1));
+  if(!spec.definitionId||!spec.name.trim()) return refused("item-invalid","아이템에 정의 id와 이름이 필요합니다.");
+  const sheet=cloneState(actor.source.sheet);
+  const rule=weaponRuleById(spec.definitionId);
+  const stackable=spec.kind!=="equipment"||!rule;
+  const existing=stackable?sheet.items.find((item)=>item.definitionId===spec.definitionId&&!item.equipped):undefined;
+  const lines:string[]=[];
+  if(existing) { existing.quantity+=quantity; lines.push(`${actor.name} ${spec.name} ×${existing.quantity}`); }
+  else {
+    const itemId=`item.${spec.definitionId.split(".").pop()??"item"}.${ctx.nextSeq}`;
+    const attackId=rule?`action.${itemId}`:undefined;
+    sheet.items.push({id:itemId,definitionId:spec.definitionId,name:spec.name,...(spec.nameEn?{nameEn:spec.nameEn}:{}),kind:spec.kind,quantity,equipped:false,passiveEffects:[],grantedActionIds:attackId?[attackId]:[],provenance:[`dm-grant:${ctx.nextSeq}`]});
+    if(rule&&attackId) {
+      const finesse=rule.properties.includes("finesse");
+      const ranged=rule.mode==="ranged";
+      const dex=Math.floor((sheet.abilities.dex-10)/2),str=Math.floor((sheet.abilities.str-10)/2);
+      const modifier=ranged||(finesse&&dex>str)?dex:str;
+      const bonus=modifier+(sheet.proficiencyBonus??0);
+      const dice=typeof rule.damage==="number"?`${rule.damage}`:rule.damage;
+      sheet.attacks=[...sheet.attacks,{id:attackId,name:spec.name,bonus,damage:`${dice} ${modifier>=0?"+":"-"} ${Math.abs(modifier)} ${damageLabelKo(rule.damageType)}`}];
+      lines.push(`${actor.name} 공격 추가: ${spec.name} (+${bonus})`);
+    }
+    lines.push(`${actor.name} ${spec.name}${quantity>1?` ×${quantity}`:""} 획득`);
+  }
+  return {status:"committed",events:[{payload:{type:"table-changed",sheets:[{actorId:actor.id,sheet}]},log:[logEntry(ctx,{actor:"DM",title:"지급",summary:`${actor.name} ← ${spec.name}${quantity>1?` ×${quantity}`:""}`,detail:command.note?[command.note]:[],stateChanges:lines})]}]};
 }
 
 export function award(ctx:HandlerContext,command:Extract<TableCommand,{type:"award"}>):HandlerResult {

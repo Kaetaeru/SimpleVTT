@@ -1,6 +1,6 @@
 import type { ActionVm, ActivityEntry, SceneEntity } from "../../app/contracts";
 import type { DurationSpec } from "../../domain/effects";
-import { conditionLabelKo, searchSrdMonsters, type SrdMonster } from "../../app/srdMonsterCatalog";
+import { conditionLabelKo, searchSrdMonsters, srdMonsterById, type SrdMonster } from "../../app/srdMonsterCatalog";
 import { CONDITION_IDS } from "../actors";
 import type { Ruling } from "../commands";
 
@@ -134,6 +134,9 @@ export function searchEverything(query:string,input:{entities:SceneEntity[];acti
 
 /** A monster tile in the 액터 tab. */
 export interface MonsterListing { id:string; name:string; nameEn:string; cr:string; hp:number; ac:number; size:string; type:string }
+/** With no query the list opens on the creatures a low-level table reaches for, not the catalog's first rows. */
+const COMMON_MONSTERS=["goblin-warrior","wolf","skeleton","zombie","bandit","kobold-warrior","orc-warrior","giant-rat","cultist","guard","hobgoblin-warrior","bugbear-warrior","dire-wolf","ghoul","ogre","brown-bear"].map((slug)=>`dnd.srd521.monster.${slug}`);
 export function monsterListings(query:string,limit=40):MonsterListing[] {
-  return searchSrdMonsters(query).slice(0,limit).map((monster)=>({id:monster.id,name:monster.name,nameEn:monster.nameEn,cr:monster.crText,hp:monster.hp,ac:monster.ac,size:monster.size,type:monster.creatureType}));
+  const list=query.trim()?searchSrdMonsters(query):COMMON_MONSTERS.map((id)=>srdMonsterById(id)).filter((monster):monster is SrdMonster=>Boolean(monster));
+  return list.slice(0,limit).map((monster)=>({id:monster.id,name:monster.name,nameEn:monster.nameEn,cr:monster.crText,hp:monster.hp,ac:monster.ac,size:monster.size,type:monster.creatureType}));
 }

@@ -1,11 +1,13 @@
-import type { CharacterSheet } from "../app/contracts";
+import type { CharacterSheet, CombatantDefinitionVm } from "../app/contracts";
 import type { ConditionId } from "../domain/conditions";
 import type { DurationSpec } from "../domain/effects";
 import type { AttackOverrides, RulingSpec, Side, TableSettings, Visibility } from "./state";
 
 /** What a command may add to the table. */
 export type ActorSpec=
-  |{kind:"monster";monsterId:string;count?:number;side?:Side;name?:string}
+  |{kind:"monster";monsterId:string;count?:number;side?:Side;name?:string;hidden?:boolean}
+  /** A host-library NPC: a definition the DM cloned from the SRD, pasted as JSON or wrote by hand (DM_WORKSPACE.md §3). */
+  |{kind:"npc";definition:CombatantDefinitionVm;count?:number;side?:Side;name?:string;hidden?:boolean}
   |{kind:"character";sheet:CharacterSheet;controllerPeer?:string;side?:Side}
   /** An object (2024 Breaking Objects): AC by material, HP by size; immune to poison and psychic; fails saves. */
   |{kind:"object";name:string;material:"cloth"|"wood"|"stone"|"iron"|"mithral"|"adamantine";size:"tiny"|"small"|"medium"|"large";hp?:number;ac?:number;locked?:{dc:number}}
@@ -82,6 +84,8 @@ export type TableCommand=
   |{type:"bench";actorId:string;present:boolean}
   /** DM: XP or a milestone for the named characters (D34); the owner's sheet records it. */
   |{type:"award";actorIds:string[];xp?:number;milestone?:boolean;note?:string}
+  /** DM: an item lands in a character's bag (a weapon also becomes an attack); the owner's sheet records it. */
+  |{type:"grant-item";actorId:string;item:{definitionId:string;name:string;nameEn?:string;kind:"equipment"|"consumable"|"magic";quantity?:number};note?:string}
   |{type:"forget-ruling";ruleId:string}
   |{type:"undo"}
   |{type:"set-roll-visibility";visibility:Visibility};

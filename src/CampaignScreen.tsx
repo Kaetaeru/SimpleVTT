@@ -4,6 +4,7 @@ import type { CampaignRecordV1 } from "./app/campaignPersistenceContracts";
 import { CampaignSystemsPanel } from "./CampaignSystemsPanel";
 import { CampaignRationConversionPanel } from "./CampaignRationConversionPanel";
 import { CampaignDmLibraryOrganizationPanel } from "./CampaignDmLibraryOrganizationPanel";
+import { PrepRoom } from "./table/ui/PrepRoom";
 import { formatCampaignCalendarDateTime } from "./app/campaignCalendar";
 import { deleteCampaign, duplicateCampaign } from "./app/campaignLifecycleCommands";
 
@@ -33,6 +34,7 @@ function CampaignCard({campaign,active,onOpen,onArchive,onRestore,onDuplicate,on
 export function CampaignScreen({onOpenSession}:{onOpenSession():void}){
   const {snapshot,refresh,createCampaign,openCampaign,archiveCampaign,restoreCampaign,configureCampaignSessionDefaults}=useSimpleVtt();
   const [creating,setCreating]=useState(false);
+  const [prepOpen,setPrepOpen]=useState(false);
   const [setupOpen,setSetupOpen]=useState(false);
   const [name,setName]=useState("");
   const [description,setDescription]=useState("");
@@ -94,8 +96,9 @@ export function CampaignScreen({onOpenSession}:{onOpenSession():void}){
   return <div className="campaign-screen">
     <header className="campaign-page-head">
       <div><span>CAMPAIGN</span><h1>캠페인</h1><p>파티의 시간, 식량, 보관함과 DM 준비물을 세션 사이에 이어갑니다.</p></div>
-      <button className="primary" onClick={()=>setCreating(true)}>새 캠페인</button>
+      <div className="campaign-page-actions"><button onClick={()=>setPrepOpen(true)}>준비실</button><button className="primary" onClick={()=>setCreating(true)}>새 캠페인</button></div>
     </header>
+    {prepOpen&&<PrepRoom onClose={()=>setPrepOpen(false)}/>}
     {error&&<div className="campaign-error" role="alert">{error}</div>}
 
     {creating&&<section className="campaign-create-panel" aria-label="새 캠페인 만들기">

@@ -28,7 +28,8 @@ test("DM workspace: three areas, seven tabs, the selected token's hotbar and the
   assert.match(html,/DM 재량/,"the discretion bar");
   assert.match(html,/HP 10\+?\s*\/ 10|HP 10 \/ 10/,"the DM sees numbers");
   assert.match(html,/Ctrl\+K/);
-  assert.match(html,/SRD 몬스터 329종 검색/,"the 액터 tab opens first for the DM");
+  assert.match(html,/내 NPC · 프리셋/,"the 액터 tab opens first for the DM with the host library");
+  assert.match(html,/장면 묶음/);
   await facade.adapter.stopSession();
 });
 
@@ -74,4 +75,15 @@ test("model: targeting plans, selection, rulings, log filter, durations and the 
   assert.equal(hits[0]?.payload.kind,"entity");
   assert.ok(hits.some((hit)=>hit.payload.kind==="monster"&&hit.verb==="소환"),"SRD monsters are searchable for the DM");
   assert.ok(searchEverything("중독",{entities:[],actions:{},selectedActorId:null,role:"player"}).some((hit)=>hit.payload.kind==="condition"));
+});
+
+test("준비실 renders the same library lists full width without a table", async () => {
+  const {PrepRoom}=await import("../../src/table/ui/PrepRoom");
+  const {AppProvider}=await import("../../src/app/AppProvider");
+  const html=renderToStaticMarkup(createElement(AppProvider,{adapter:new MockAdapter()},createElement(PrepRoom,{onClose:noop})));
+  assert.match(html,/준비실/);
+  assert.match(html,/내 NPC · 프리셋/);
+  assert.match(html,/장면 묶음 만들기/,"the bundle composer is prep-only");
+  assert.match(html,/내 아이템/);
+  assert.doesNotMatch(html,/소환</,"no summon verbs outside a session");
 });

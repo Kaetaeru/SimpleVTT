@@ -11,7 +11,7 @@ import { forgetRuling, improvise, narrate, rememberRuling, request, rule } from 
 import { rest, restComplete } from "./handlers/rest";
 import { advanceTime, clearTimer, setTimer, stableRecoveryTimers } from "./handlers/time";
 import { overrideResolution, pendingGuard, setSetting } from "./handlers/windows";
-import { award, bench, expiredSummonIds, sceneConditions, sceneSwitch } from "./handlers/scene";
+import { award, bench, expiredSummonIds, grantItem, sceneConditions, sceneSwitch } from "./handlers/scene";
 import { ruling, rulingLabel } from "./handlers/ruling";
 import { endInitiative, endTurn, setCurrentActor, setOrder, startInitiative } from "./handlers/turns";
 import type { HandlerContext, HandlerResult } from "./handlers/types";
@@ -89,6 +89,7 @@ function describe(state:TableState,command:TableCommand):string {
     case "scene-conditions": return "장면 조건";
     case "bench": return `${state.actors[command.actorId]?.name??command.actorId} · ${command.present?"장면 복귀":"대기석"}`;
     case "award": return "보상";
+    case "grant-item": return `지급 · ${command.item.name}`;
     case "ruling": return `DM 재량 · ${rulingLabel(state,command.ruling)}`;
     case "add-actors": return "액터 추가";
     case "remove-actor": return `액터 제거 · ${state.actors[command.actorId]?.name??command.actorId}`;
@@ -207,6 +208,7 @@ export class TableRuntime {
       case "scene-conditions": return sceneConditions(ctx,command);
       case "bench": return bench(ctx,command);
       case "award": return award(ctx,command);
+      case "grant-item": return grantItem(ctx,command);
       case "ruling": return ruling(ctx,command);
       default: return refused("command-unknown","알 수 없는 명령입니다.");
     }

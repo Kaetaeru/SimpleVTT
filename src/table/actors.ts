@@ -213,15 +213,16 @@ export function materializeActors(state:TableState,spec:ActorSpec):{actors:Actor
     };
     return {actors:[actor],combatants:{[sheet.id]:characterCombatant(sheet)}};
   }
-  const definition=monsterDefinition(spec.monsterId);
-  if(!definition) throw new Error(`몬스터를 찾을 수 없습니다: ${spec.monsterId}`);
+  const definition=spec.kind==="npc"?structuredClone(spec.definition):monsterDefinition(spec.monsterId);
+  if(!definition) throw new Error(`몬스터를 찾을 수 없습니다: ${spec.kind==="monster"?spec.monsterId:"npc"}`);
+  if(spec.kind==="npc"&&(!definition.id||!definition.name||!Number.isFinite(definition.ac)||!Number.isFinite(definition.maxHp))) throw new Error("NPC 정의에 id·이름·AC·HP가 필요합니다.");
   const count=Math.max(1,Math.min(20,Math.floor(spec.count??1)));
   const ids=instanceIds(state,definition.id,count);
   const existing=Object.values(state.actors).filter((actor)=>actor.source.kind==="monster"&&actor.source.definitionId===definition.id).length;
   const actors=ids.map((id,index)=>({
     id,kind:"npc" as const,name:spec.name?(count>1?`${spec.name} ${index+1}`:spec.name):`${definition.name} ${existing+index+1}`,
     side:spec.side??"enemy",source:{kind:"monster" as const,definitionId:definition.id,definition:structuredClone(definition)},
-    badges:[],initiative:0,
+    badges:[],initiative:0,...(spec.hidden?{hidden:true}:{}),
   }));
   return {actors,combatants:Object.fromEntries(actors.map((actor)=>[actor.id,monsterCombatant(actor.id,definition)]))};
 }

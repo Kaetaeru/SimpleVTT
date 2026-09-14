@@ -4,9 +4,10 @@ import { conditionLabelKo } from "../../app/srdMonsterCatalog";
 import { SessionDmHandoutPane, useSessionImageHandout } from "../../SessionImageHandoutBridge";
 import { SessionRulesPane } from "../../SessionUtilityPanes";
 import type { TableCommand } from "../commands";
-import { CONDITION_PALETTE, filterActivity, formatClock, isInitiative, monsterListings, type DiscretionInput, type LogFilter, rulingFrom } from "./model";
+import { CONDITION_PALETTE, filterActivity, formatClock, isInitiative, type DiscretionInput, type LogFilter, rulingFrom } from "./model";
+import { ItemLibrary, NpcLibrary } from "./LibraryPanels";
 
-interface TabProps { snapshot:AppSnapshot; role:"dm"|"player"; selectedIds:string[]; dispatch(command:TableCommand):Promise<unknown>; onSelect(id:string):void; onOpenCard(resolutionId:string):void; onOpenSheet(id:string):void; onSave?():void; onLeave():void; onStop():void }
+interface TabProps { snapshot:AppSnapshot; role:"dm"|"player"; selectedIds:string[]; dispatch(command:TableCommand):Promise<unknown>; onSelect(id:string):void; onOpenCard(resolutionId:string):void; onOpenSheet(id:string):void; onSave?():void; onLeave():void; onStop():void; onFeedback?(message:string):void }
 
 /** 기록: rolls, results, refusals, whispers, system lines; Public/DM filter; a line reopens its card; DM Only → Public. */
 export function LogTab({snapshot,role,onOpenCard}:TabProps) {
@@ -56,62 +57,54 @@ export function CombatTab({snapshot,role,selectedIds,dispatch,onSelect}:TabProps
   </>;
 }
 
-/** 액터 (DM): party, SRD monsters with multi-select summon (×N, hidden), objects; 파티 (player): the party's characters. */
-export function ActorsTab({snapshot,role,dispatch,onSelect,onOpenSheet}:TabProps) {
+/** 액터 (DM): the party, then the host library (내 NPC·프리셋·장면 묶음) and the SRD catalog; 파티 (player): the party's characters. */
+export function ActorsTab({snapshot,role,dispatch,onSelect,onOpenSheet,onFeedback}:TabProps) {
   const [query,setQuery]=useState("");
-  const [checked,setChecked]=useState<string[]>([]);
-  const [count,setCount]=useState(1);
-  const [hidden,setHidden]=useState(false);
   const [objectName,setObjectName]=useState("나무 문");
   const [material,setMaterial]=useState<"cloth"|"wood"|"stone"|"iron"|"mithral"|"adamantine">("wood");
   const [size,setSize]=useState<"tiny"|"small"|"medium"|"large">("medium");
   const party=snapshot.scene.entities.filter((entity)=>entity.tableKind==="character");
-  const summon=async(ids:string[])=>{
-    if(!ids.length) return;
-    await dispatch({type:"add-actors",specs:ids.map((monsterId)=>({kind:"monster" as const,monsterId,count}))});
-    if(hidden) { const state=snapshot; void state; }
-    setChecked([]);
-  };
-  const listings=role==="dm"?monsterListings(query,query.trim()?40:16):[];
-  return <>
-    <div className="tw-tabhead">
-      <input type="search" value={query} placeholder={role==="dm"?"SRD 몬스터 329종 검색":"파티 검색"} aria-label="액터 검색" onChange={(event)=>setQuery(event.target.value)}/>
-      {role==="dm"&&<><input type="number" min={1} max={20} value={count} aria-label="소환 수" onChange={(event)=>setCount(Math.max(1,Number(event.target.value)))}/><button type="button" className="primary" disabled={!checked.length} onClick={()=>void summon(checked)}>+ 소환 {checked.length?`(${checked.length}종 ×${count})`:""}</button></>}
-    </div>
-    <div className="tw-tabbody">
-      <div className="tw-section">파티</div>
-      {party.length===0&&<div className="tw-empty">아직 참가한 캐릭터가 없습니다.</div>}
-      {party.filter((entity)=>!query.trim()||entity.name.includes(query.trim())).map((entity)=><div key={entity.id} className="tw-list-item" role="listitem"><div className="tw-grow" onClick={()=>onSelect(entity.id)}><strong>{entity.name}</strong><small>HP {entity.hp}/{entity.maxHp} · AC {entity.ac}{entity.hands?` · ${entity.hands}`:""}</small></div><span className="tw-verbs"><button type="button" onClick={()=>onOpenSheet(entity.id)}>시트</button></span></div>)}
-      {role==="dm"&&<>
-        <div className="tw-section">SRD 몬스터 {query.trim()?"":"· 자주 쓰는 것"}</div>
-        <label className="tw-checkrow" style={{fontSize:"var(--text-sm)"}}><input type="checkbox" checked={hidden} onChange={(event)=>setHidden(event.target.checked)}/>숨긴 채 소환 (소환 뒤 HUD에서 공개)</label>
-        {listings.map((monster)=><div key={monster.id} className={`tw-list-item ${checked.includes(monster.id)?"selected":""}`} role="listitem">
-          <input type="checkbox" aria-label={`${monster.name} 선택`} checked={checked.includes(monster.id)} onChange={(event)=>setChecked(event.target.checked?[...checked,monster.id]:checked.filter((id)=>id!==monster.id))}/>
-          <div className="tw-grow"><strong>{monster.name}</strong><small>CR {monster.cr} · HP {monster.hp} · AC {monster.ac} · {monster.type}</small></div>
-          <span className="tw-verbs"><button type="button" onClick={()=>void summonOne(dispatch,monster.id,1,hidden)}>소환</button><button type="button" onClick={()=>void summonOne(dispatch,monster.id,count,hidden)}>×{count}</button></span>
-        </div>)}
-        {query.trim()&&listings.length===0&&<div className="tw-empty">일치하는 몬스터가 없습니다.</div>}
-        <div className="tw-section">물체</div>
-        <div className="tw-form">
-          <div className="tw-line"><input type="text" value={objectName} aria-label="물체 이름" onChange={(event)=>setObjectName(event.target.value)}/>
-            <select value={material} aria-label="재질" onChange={(event)=>setMaterial(event.target.value as typeof material)}><option value="cloth">천</option><option value="wood">나무</option><option value="stone">돌</option><option value="iron">철</option><option value="mithral">미스랄</option><option value="adamantine">아다만틴</option></select>
-            <select value={size} aria-label="크기" onChange={(event)=>setSize(event.target.value as typeof size)}><option value="tiny">초소형</option><option value="small">소형</option><option value="medium">중형</option><option value="large">대형</option></select>
-            <button type="button" disabled={!objectName.trim()} onClick={()=>void dispatch({type:"add-actors",specs:[{kind:"object",name:objectName.trim(),material,size}]})}>놓기</button></div>
-        </div>
-      </>}
-    </div>
+  const partyList=<>
+    <div className="tw-section">파티 {party.length>0&&<span>{party.length}</span>}</div>
+    {party.length===0&&<div className="tw-empty">아직 참가한 캐릭터가 없습니다.</div>}
+    {party.filter((entity)=>!query.trim()||entity.name.includes(query.trim())).map((entity)=><div key={entity.id} className="tw-list-item" role="listitem"><div className="tw-grow" onClick={()=>onSelect(entity.id)}><strong>{entity.name}</strong><small>HP {entity.hp}/{entity.maxHp} · AC {entity.ac}{entity.hands?` · ${entity.hands}`:""}</small></div><span className="tw-verbs"><button type="button" onClick={()=>onOpenSheet(entity.id)}>시트</button></span></div>)}
   </>;
-}
-async function summonOne(dispatch:(command:TableCommand)=>Promise<unknown>,monsterId:string,count:number,hidden:boolean) {
-  const outcome=await dispatch({type:"add-actors",specs:[{kind:"monster",monsterId,count}]}) as {status:string;events?:Array<{payload:{type:string;actors?:Array<{id:string}>}}>};
-  if(hidden&&outcome.status==="committed") for(const event of outcome.events??[]) if(event.payload.type==="actors-added") for(const actor of event.payload.actors??[]) await dispatch({type:"set-actor",actorId:actor.id,patch:{hidden:true}});
+  if(role==="player") return <>
+    <div className="tw-tabhead"><input type="search" value={query} placeholder="파티 검색" aria-label="액터 검색" onChange={(event)=>setQuery(event.target.value)}/></div>
+    <div className="tw-tabbody">{partyList}</div>
+  </>;
+  return <div className="tw-tabstack">
+    <NpcLibrary mode="session" snapshot={snapshot} dispatch={dispatch} onFeedback={onFeedback}/>
+    <div className="tw-tabbody tw-tabbody-extra">
+      {partyList}
+      <div className="tw-section">물체</div>
+      <div className="tw-form">
+        <div className="tw-line"><input type="text" value={objectName} aria-label="물체 이름" onChange={(event)=>setObjectName(event.target.value)}/>
+          <select value={material} aria-label="재질" onChange={(event)=>setMaterial(event.target.value as typeof material)}><option value="cloth">천</option><option value="wood">나무</option><option value="stone">돌</option><option value="iron">철</option><option value="mithral">미스랄</option><option value="adamantine">아다만틴</option></select>
+          <select value={size} aria-label="크기" onChange={(event)=>setSize(event.target.value as typeof size)}><option value="tiny">초소형</option><option value="small">소형</option><option value="medium">중형</option><option value="large">대형</option></select>
+          <button type="button" disabled={!objectName.trim()} onClick={()=>void dispatch({type:"add-actors",specs:[{kind:"object",name:objectName.trim(),material,size}]})}>놓기</button></div>
+      </div>
+    </div>
+  </div>;
 }
 
 /** 아이템: the selected character's hands and bag, the scene floor. Granting from the library stays on the campaign screen for now. */
-export function ItemsTab({snapshot,role,selectedIds,dispatch}:TabProps) {
+export function ItemsTab({snapshot,role,selectedIds,dispatch,onFeedback}:TabProps) {
   const selected=snapshot.scene.entities.find((entity)=>entity.id===selectedIds[0]);
   const own=role==="player"?snapshot.activeCharacter:selected&&selected.id===snapshot.activeCharacter.id?snapshot.activeCharacter:null;
   const floor=snapshot.scene.floorItems??[];
+  if(role==="dm") return <div className="tw-tabstack">
+    <ItemLibrary mode="session" snapshot={snapshot} dispatch={dispatch} onFeedback={onFeedback} targetId={selectedIds[0]??null}/>
+    <div className="tw-tabbody tw-tabbody-extra">
+      <div className="tw-section">{selected?selected.name:"선택한 토큰"}</div>
+      {selected?.hands&&<div className="tw-kv"><span>손 <strong>{selected.hands}</strong></span></div>}
+      {selected&&selected.tableKind==="character"&&selected.id!==snapshot.activeCharacter.id&&<div className="tw-empty">다른 플레이어의 가방은 그 플레이어가 관리합니다. 시트에서 확인하세요.</div>}
+      {own&&own.items.map((item)=><div key={item.id} className="tw-list-item"><div className="tw-grow"><strong>{item.name}{item.quantity>1?` ×${item.quantity}`:""}</strong><small>{item.kind}{item.wielded?" · 손에 듦":item.equipped?" · 장착":""}</small></div></div>)}
+      <div className="tw-section">바닥</div>
+      {floor.length===0&&<div className="tw-empty">바닥에 놓인 물건이 없습니다.</div>}
+      {floor.map((item)=><div key={item.id} className="tw-list-item"><div className="tw-grow"><strong>{item.name}{item.quantity>1?` ×${item.quantity}`:""}</strong><small>{item.droppedByName}이(가) 놓음{item.recoverable?"":" · 회수 불가"}</small></div>{selected&&selected.tableKind==="character"&&<span className="tw-verbs"><button type="button" onClick={()=>void dispatch({type:"object",actorId:selected.id,op:"pick-up",itemId:item.id})}>줍기</button></span>}</div>)}
+    </div>
+  </div>;
   return <>
     <div className="tw-tabhead"><strong style={{flex:1}}>{selected?`${selected.name}`:"토큰을 선택하세요"}</strong></div>
     <div className="tw-tabbody">
