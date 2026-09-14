@@ -53,7 +53,10 @@
     "check:client-boundary": "node scripts/check-client-boundary.mjs",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build"
+    "tauri:build": "tauri build",
+    "tauri:dev:client": "tauri dev --config src-tauri/tauri.client.conf.json",
+    "tauri:build:client": "tauri build --no-bundle --config src-tauri/tauri.client.conf.json",
+    "capture:client": "node scripts/capture-client-m1.mjs"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.0.0",

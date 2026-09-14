@@ -1,0 +1,96 @@
+name: Windows EXE (new client, M1)
+
+# Builds the new client (docs/design/v3/NEW_CLIENT.md) as a single Windows executable and publishes it as a GitHub
+# pre-release. The client gate (typecheck, boundary, tests) runs first on the same runner.
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - claude/practical-newton-rye61w
+    paths:
+      - ".github/workflows/windows-exe-client.yml"
+      - "client/**"
+      - "tests/client/**"
+      - "vite.client.config.ts"
+      - "tsconfig.client.json"
+      - "src-tauri/tauri.client.conf.json"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: windows-exe-client-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows-exe-client:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - run: npm ci --no-audit --no-fund
+      - name: Client gate (typecheck, boundary, tests)
+        shell: pwsh
+        run: |
+          npx tsc --noEmit -p tsconfig.client.json
+          npm run check:client-boundary
+          npm run test:client
+      - name: Build the Windows executable (client bundle + Tauri, no installer)
+        shell: pwsh
+        run: npm run tauri:build:client
+      - name: Stage the executable
+        id: stage
+        shell: pwsh
+        run: |
+          $source = "src-tauri/target/release/simplevtt.exe"
+          if (-not (Test-Path $source)) { throw "SimpleVTT executable was not produced at $source" }
+          $short = "${{ github.sha }}".Substring(0, 8)
+          New-Item -ItemType Directory -Force -Path exe-artifact | Out-Null
+          $name = "SimpleVTT-client-$short.exe"
+          Copy-Item $source "exe-artifact/$name"
+          $hash = (Get-FileHash -Algorithm SHA256 "exe-artifact/$name").Hash.ToLower()
+          @(
+            "SimpleVTT new client M1 build (character creation, sheet, JSON, module install)",
+            "commit=${{ github.sha }}",
+            "ref=${{ github.ref }}",
+            "run_id=${{ github.run_id }}",
+            "exe=$name",
+            "sha256=$hash",
+            "requires=Windows 10/11 with the WebView2 runtime (preinstalled on current Windows)"
+          ) | Set-Content -Encoding utf8 "exe-artifact/BUILD.txt"
+          "name=$name" >> $env:GITHUB_OUTPUT
+          "short=$short" >> $env:GITHUB_OUTPUT
+          "sha256=$hash" >> $env:GITHUB_OUTPUT
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SimpleVTT-client-${{ github.sha }}
+          path: exe-artifact/
+          if-no-files-found: error
+          retention-days: 90
+      - name: Publish as a GitHub pre-release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: client-m1-${{ github.run_number }}-${{ steps.stage.outputs.short }}
+          name: SimpleVTT 새 클라이언트 M1 ${{ steps.stage.outputs.short }}
+          target_commitish: ${{ github.sha }}
+          prerelease: true
+          body: |
+            새 클라이언트 M1 빌드 — 캐릭터 생성·시트·JSON·모듈 설치 (commit ${{ github.sha }}).
+
+            - `${{ steps.stage.outputs.name }}`: 설치 없이 실행하는 단일 실행 파일. Windows 10/11의 WebView2 런타임이 필요합니다.
+            - SHA-256: `${{ steps.stage.outputs.sha256 }}`
+            - 화면: 캐릭터(라이브러리) → 새 캐릭터(마법사 7단계, 오른쪽에 실시간 시트) → 시트. 콘텐츠 화면에서 RuleModule JSON(PHB 보충 모듈 등)을 설치합니다.
+            - 저장은 이 PC의 IndexedDB(WebView2)입니다. JSON 내보내기로 백업하세요.
+          files: |
+            exe-artifact/${{ steps.stage.outputs.name }}
+            exe-artifact/BUILD.txt

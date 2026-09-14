@@ -13,3 +13,4 @@ target/
 src/generated/
 .live-dev/
 src-tauri/Cargo.lock
+dist-client/

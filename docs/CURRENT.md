@@ -13,6 +13,18 @@ Updated: 2026-09-14 Asia/Seoul
 **할 수 있어야 하는 것 전체:** [기능 인벤토리](design/v2/CAPABILITY_INVENTORY.md) — 모든 행동의 규칙 근거·비용·실행 등급(자동/질문/DM 판정/서술).
 소유자 지시(2026-09-11): 구현 전에 기획을 확실히 한다. 인벤토리는 소유자 결정 D7~D11을 반영해 확정됐다(§20). 다음은 P0을 이어 가는 것이다.
 
+## 2026-09-14 새 클라이언트 — 전면 재작성 (소유자 지시)
+
+소유자 지시: "모든 부분을 전면적으로 새로 만든다는 느낌으로. 멀티세션은 나중으로 미루고, 캐릭터 시트를 완벽하게 생성 가능하게. JSON도."
+계획은 [새 클라이언트](design/v3/NEW_CLIENT.md), 캐릭터 모델은 [캐릭터 시스템](design/v2/CHARACTER_SYSTEM.md).
+
+- **M1 캐릭터 생성 — 코드 완료(C1·C2·C3), 소유자 exe 확인 대기.** `client/`(옛 `src/`를 import하지 않음, `npm run check:client-boundary`).
+  카탈로그(SRD 모듈 36 + 색인 + 진행표 + 주문 339 + 저작 SRD 요약 설명) → `deriveCharacter` 엔진(원장·선택 요청·검증) → IndexedDB 저장 → JSON v2 내보내기/가져오기 → RuleModule JSON 설치 → 화면(라이브러리·마법사·시트·콘텐츠).
+- 검사: `npm run test:client` 40건(전수 행렬: 종족 9 × 직업 12 × 배경 4 × L1·L5 + 직업 12 × L1~20, 설치 모듈 흐름, JSON 왕복, 저장소, 화면 렌더). 증거 캡처 15장 `docs/evidence/new-client-m1/`.
+- exe: 워크플로 `windows-exe-client.yml` → 프리릴리스 `client-m1-*` (`SimpleVTT-client-<sha>.exe`). 옛 V2 미리보기 exe 워크플로는 그대로 있다.
+- 소유자가 보고한 세 문제(레벨업에 기원 재주, 종족 특성 미표시, 드워프 HP)는 새 엔진에서 검사 항목으로 고정됐다(`derive.test.ts`, `matrix.test.ts`, `install.test.ts`).
+- 다음: M2 시트 운용(사용량·가방·휴식·레벨업 UI 다듬기) → M3 테이블 이식 → M4 멀티세션.
+
 ## 현재 실제 상태
 
 - 기존 제품 통합: `work/v1-composite` @ `cfd7279279ed58acb29f7c29832ee7c136e6b25e` (조사 시점).

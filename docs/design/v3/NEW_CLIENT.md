@@ -61,7 +61,9 @@ CHARACTER_SYSTEM §3.1의 모든 행에 더해:
 | C1 엔진 | `client/character/` — `deriveCharacter(source, catalog)`: 원장(ledger) 한 번 순회로 종족·배경·트랙·장비를 적용하고 선택 요청(`ChoiceRequest`)을 등록, 끝에서 숫자를 계산. 자동 채우기(`autofill`)로 검사·빠른 생성 | 완료 |
 | C1 검사 | `tests/client/derive.test.ts`(17 시나리오) + `tests/client/matrix.test.ts`(종족 9 × 직업 12 × 배경 4 × L1·L5 = 864, 직업 12 × L1~20 = 240, 독립 공식 대조) | green |
 | C2 저장·JSON | `client/storage/store.ts`(IndexedDB `simplevtt-client` v1: characters/modules/settings, 메모리 폴백), `client/character/json.ts`(파일 형식 `simplevtt.character` 스키마 2 = source + runtime + summary, 필드별 검증·오류 일괄 보고, 미설치 모듈 id 목록), `client/catalog/install.ts`(RuleModule JSON 파싱·요약·의존성). 검사: `install.test.ts`(합성 보충 모듈 → 종족·배경·기원 재주·일반 재주·서브클래스·주문이 생성까지 흐름, 기원 재주는 ASI 후보 밖), `json.test.ts`, `storage.test.ts`(fake-indexeddb) | 완료 |
-| C3 화면 | 라이브러리, 생성 마법사(실시간 시트), 시트, 콘텐츠 설치, exe | 예정 |
+| C3 화면 | `client/app/`(셸·해시 라우터·컨텍스트), `client/screens/`(라이브러리, 생성 마법사 7단계 + 오른쪽 실시간 시트·검증, 시트, 콘텐츠 설치 미리보기, 선택 피커), `client/ui/`(토큰 사본·스타일). `npm run dev:client`(포트 1430) · `npm run build:client` · `npm run tauri:build:client`(`src-tauri/tauri.client.conf.json`, dist-client). 워크플로 `windows-exe-client.yml`이 `client-m1-*` 프리릴리스로 exe를 올린다. 검사: `screens.test.ts`(정적 렌더) + `npm run capture:client`(Chromium이 마법사→시트→레벨업→JSON→모듈 설치→설치 콘텐츠 캐릭터까지 진행, `docs/evidence/new-client-m1/` 15장) | 완료 |
+
+화면 규약: 마법사는 원본만 바꾸고(`setChoice`/`addLevel`…) 매 변경마다 `deriveCharacter`를 다시 돌려 오른쪽 시트와 검증을 갱신한다. 막힘(blocking)이 하나라도 있으면 저장 버튼이 잠긴다(수락 6). 새 캐릭터 초안은 설정 키 `creation-draft`에 자동 저장되어 창을 닫아도 남는다. "남은 선택 빠르게 채우기"는 `autofill`이다. 시트의 현재 HP만 런타임을 바꾼다(나머지 운용은 M2).
 
 엔진의 선택 id 규약(원본 `choices` 맵의 키): `origin.languages`, `origin.species.<choice>`(`origin.species.lineage`…), `origin.background.abilityMode|abilityPlus2|abilityPlus1|tool`, `class.<트랙>.skills|expertise|fighting-style|subclass|asi|epic-boon|...`, 직업 전체 풀은 첫 트랙에 붙는다(`class.<첫 트랙>.weapon-mastery|invocations|metamagic|cantrips|spells|spellbook`), 재주 하위 선택은 `feat.<부여 위치>.<재주 id>.<항목>`, 장비는 `equipment.class|background[.<옵션>.<n>]`. 답은 항상 옵션 id 배열이고, 옵션 밖의 답은 무시된다(모듈 제거·레벨 되돌림에도 안전).
 
