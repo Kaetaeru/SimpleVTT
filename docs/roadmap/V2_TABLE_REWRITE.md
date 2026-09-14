@@ -32,7 +32,7 @@ The old app keeps running on `work/v1-composite` until then.
 ## 2026-09-11 상태 — 기능 인벤토리 기준 커널 확장 (브랜치 `claude/practical-newton-rye61w`)
 
 소유자 지시 "인벤토리와 SRD 5.2.1을 기준으로 멀티 세션·솔로·생성까지 전부 가능하게"에 따라 T2 게이트를 순서대로가 아니라
-[기능 인벤토리](../design/v2/CAPABILITY_INVENTORY.md) 절 단위로 채웠다. 모든 검증은 Linux 오프라인 테스트(`npm run test:table`, 28건)와
+[기능 인벤토리](../design/v2/CAPABILITY_INVENTORY.md) 절 단위로 채웠다. 모든 검증은 Linux 오프라인 테스트(`npm run test:table`, 당시 28건 → 2026-09-14 45건)와
 `tsc`/`vite build`/경계 검사다. **Windows H+P1+P2 실행과 새 화면(T2-04)은 하지 않았다.**
 
 | 게이트 | 상태 | 이 브랜치에서 한 것 |
@@ -59,9 +59,23 @@ The old app keeps running on `work/v1-composite` until then.
 | `T2-06` | 직업·종족·특기 기능군 전부와 자원 풀·짧은 휴식 회복, 무기 숙련, 몬스터 재충전·전설·다중 공격·부가 효과·주문 시전, 소환·변신 액터 |
 | `T2-05`/`T2-04` | 결과 카드 사후 토글, 장면 엔티티·장면 조건, 물체 액터, DM 아이템 지급·화폐, 시간 경과 명령 |
 
+## 2026-09-14 진행 — 규칙 런타임 명세 네 슬라이스 GREEN (같은 브랜치)
+
+[RULES_RUNTIME_SPECS.md](../design/v2/RULES_RUNTIME_SPECS.md) §1~§4를 순서대로 구현했다 (`0e160b3d` 시계, `1b8eb7d3` 반응 창·D42 팔레트, `01d7d148` 직업 기능 원장, `66bb2053` 장면·액터 종류·저장). 요약은 [인벤토리 §0.2](../design/v2/CAPABILITY_INVENTORY.md). 게이트별로는:
+
+| 게이트 | 상태 | 이번에 들어온 것 | 남은 것 |
+| --- | --- | --- | --- |
+| `T2-01` | 확장 | 한 시계(라운드·휴식·시간 경과·타이머), 교전 종료 규칙(D25), 물체 액터, 장면 전환·대기석 | 이니셔티브 기습, 공포·투명 공격 수정, 피해 유형 ID 통일 |
+| `T2-02` | 대부분 | 명중·시전·피해·내성 시점 반응 창(방패·역마법·지옥의 질책·전설적 저항), 보류 해결의 같은 눈 재생, 휴식 제안/완료(D30) | 대상 없는 주문·부활·의식, 죽음 내성 자동화, 준비 주문 시전 시점 |
+| `T2-03` | 커널 | 스냅샷 저장·재개, 새 피어 id 재접속 후 카드 답변, write-back(HP·임시 HP·자원), 몬스터 정의 비공개·HP 단계(D22), 귓속말, 원장 무결 | write-back 나머지(슬롯·히트 다이스·죽음 내성), Windows H+P1+P2 |
+| `T2-05` | 부분 | 결과 카드 사후 토글(D42 `override`), `award`, `advance-time` | 화면 |
+| `T2-06` | 부분 | 핵심 직업 자원 풀·회복, 기능 행동 12종, 분노·암습 부가 효과, 계약 마법, 소환 액터 | 바드 영감 사용, 무기 숙련, 사냥꾼의 표식·신성한 강타, 불굴, 야생 변신, 몬스터 재충전·전설 행동·다중 공격·명중 부가 효과 |
+| `T2-04`/`T2-07` | 미착수 | — | 화면, 전환 |
+
 ## Evidence
 
 | Gate | SHA | Evidence |
 | --- | --- | --- |
 | `T2-01`+ | 이 브랜치 head | `tests/table/{kernel,engagement,objects,reactions,improvise,spells,rest}.test.ts` 22건 green (Linux) |
 | `T2-03` (커널) | 이 브랜치 head | `tests/table/connected.test.ts` 4건, `tests/table/facade.test.ts` 2건 green (메모리 전송) |
+| 명세 §1~§4 | `66bb2053` | `tests/table/{clock,windows,features,scene}.test.ts` 17건 포함 `npm run test:table` 45건 green; `tsc`, `check-legacy-execution-boundary`, `test:ui-rule-boundary`, `vite build` green (Linux) |
