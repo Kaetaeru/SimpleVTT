@@ -421,6 +421,30 @@ export function getCharacterLibraryPersistenceStateForTests(adapter:MockAdapter)
   return context ? { ...cp(context.vm),document:context.repository.snapshot() } : null;
 }
 
+/** Durable runtime write-back for one library character by id (the table's HP, temp HP and resource counts); the active copy follows. */
+export async function mutateCharacterDurably(
+  adapter:MockAdapter,
+  characterId:string,
+  mutation:(character:CharacterSheet)=>void,
+) {
+  return durableMutation(adapter,async () => {
+    const state=stateOf(adapter);
+    if(state.activeCharacter.id===characterId) {
+      mutation(state.activeCharacter);
+      // The reference scene mirrors the active character back on every snapshot; keep its entity in step so the write sticks.
+      const entity=state.scene.entities.find((candidate)=>candidate.id===characterId);
+      if(entity) { entity.hp=state.activeCharacter.hp; entity.tempHp=state.activeCharacter.tempHp; entity.maxHp=state.activeCharacter.maxHp; }
+    }
+    state.characters=state.characters.map((character)=>{
+      if(character.id!==characterId) return character;
+      const next=state.activeCharacter.id===characterId?{ ...character,...cp(state.activeCharacter) }:cp(character);
+      if(state.activeCharacter.id!==characterId) mutation(next as CharacterSheet);
+      return next;
+    });
+    return adapter.getSnapshot();
+  });
+}
+
 export async function mutateActiveCharacterDurably(
   adapter:MockAdapter,
   mutation:(character:CharacterSheet)=>void,

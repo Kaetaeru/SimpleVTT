@@ -4,6 +4,7 @@ import type { MockAdapter } from "../app/mockAdapter";
 import { publishExternalAdapterSnapshot } from "../app/adapterSnapshotEvents";
 import { isSrdMonsterId } from "../app/srdMonsterCatalog";
 import { sessionDebugPreviewRoleFor } from "../app/sessionDebugPreviewRole";
+import { mutateCharacterDurably } from "../app/characterLibraryRuntimeAdapter";
 import type { ReadyActionConfiguration } from "../app/standardActionReadyState";
 import { tauriSessionTransport } from "../app/tauriSessionTransport";
 import { CONDITION_IDS } from "./actors";
@@ -16,6 +17,7 @@ import { projectTable, type TableViewer } from "./project";
 import type { TableRefusal } from "./refusal";
 import { TableRuntime, type Outcome } from "./runtime";
 import { MemoryTransportHub, tauriTableTransport, type TableTransport } from "./transport";
+import { durableKey, durableSheetFor } from "./writeback";
 
 export const LOCAL_PLAYER_PEER="peer.local";
 
@@ -41,6 +43,8 @@ export interface TableSessionFacade {
   dispatch(command:TableCommand,origin?:CommandOrigin):Promise<Outcome>;
   /** Seed the local character as a controlled ally when the table has no actors yet. */
   ensureLocalCharacter():Promise<void>;
+  /** The last failure of the durable write-back to the character library, or null. */
+  readonly lastWriteBackError:string|null;
 }
 
 const CONDITION_BY_LABEL=new Map(CONDITION_IDS.map((id)=>[conditionLabelKo(id),id]));
@@ -118,6 +122,7 @@ export function createTableSessionFacade(base:MockAdapter,options:{runtime?:Tabl
     }
     const outcome=host?host.dispatch(command,commandOrigin??originFor(snapshot)):runtime.dispatch(command,commandOrigin??originFor(snapshot));
     if(outcome.status==="committed"&&outcome.events.some((event)=>event.payload.type==="rules-committed"&&event.payload.resolution)) dismissedResolutionId=null;
+    if(outcome.status==="committed") await writeBackLocal();
     return outcome;
   };
 
@@ -168,10 +173,27 @@ export function createTableSessionFacade(base:MockAdapter,options:{runtime?:Tabl
     return merged();
   };
 
-  /** The owner's durable sheet: the base adapter still owns the library, so the write-back goes through it when it can. */
+  /** The owner's durable sheet (HP, temp HP, resource counts) goes to the character library the base adapter owns. */
+  let lastWriteBackError:string|null=null;
   const persistDurableSheet=async(sheet:CharacterSheet)=>{
-    const persist=(base as unknown as {persistTableSheet?:(sheet:CharacterSheet)=>Promise<unknown>}).persistTableSheet;
-    if(persist) await persist.call(base,sheet);
+    try {
+      await mutateCharacterDurably(base,sheet.id,(character)=>{ character.hp=sheet.hp; character.tempHp=sheet.tempHp; character.resources=structuredClone(sheet.resources); });
+      lastWriteBackError=null;
+    } catch(error) { lastWriteBackError=error instanceof Error?error.message:String(error); }
+  };
+  // Host and solo play: the characters this device controls are written back after every commit, once per real change.
+  const lastDurable=new Map<string,string>();
+  const writeBackLocal=async()=>{
+    if(client) return;
+    for(const actor of Object.values(runtime.state.actors)) {
+      if(actor.source.kind!=="character"||(actor.controllerPeer&&actor.controllerPeer!==LOCAL_PLAYER_PEER&&actor.controllerPeer!==HOST_ORIGIN.peerId)) continue;
+      const sheet=durableSheetFor(runtime.state,actor.id);
+      if(!sheet) continue;
+      const key=durableKey(sheet);
+      if(lastDurable.get(actor.id)===key) continue;
+      lastDurable.set(actor.id,key);
+      await persistDurableSheet(sheet);
+    }
   };
 
   const actorForAction=(snapshot:AppSnapshot,actionId:string)=>{
@@ -187,6 +209,8 @@ export function createTableSessionFacade(base:MockAdapter,options:{runtime?:Tabl
     const sheet=snapshot.activeCharacter as CharacterSheet;
     if(!sheet?.id||runtime.state.actors[sheet.id]) return;
     runtime.dispatch({type:"add-actors",specs:[{kind:"character",sheet,controllerPeer:LOCAL_PLAYER_PEER,side:"ally"}]},HOST_ORIGIN);
+    const seeded=durableSheetFor(runtime.state,sheet.id);
+    if(seeded) lastDurable.set(sheet.id,durableKey(seeded));
   };
 
   const overrides:Partial<Record<keyof MockAdapter,unknown>>={
@@ -278,5 +302,6 @@ export function createTableSessionFacade(base:MockAdapter,options:{runtime?:Tabl
     get host() { return host; },
     get client() { return client; },
     get mode() { return mode; },
+    get lastWriteBackError() { return lastWriteBackError; },
   };
 }

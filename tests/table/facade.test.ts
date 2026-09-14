@@ -4,6 +4,8 @@ import test from "node:test";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import { createTableSessionFacade } from "../../src/table/facade";
 import { MemoryTransportHub } from "../../src/table/transport";
+import { MemoryCharacterLibraryStore } from "../../src/app/memoryCharacterLibraryStore";
+import { getCharacterLibraryPersistenceStateForTests, setCharacterLibraryStoreForTests } from "../../src/app/characterLibraryRuntimeAdapter";
 
 /**
  * Capability inventory §3 through the old screens' adapter surface: 세션 열기 is the session (no lobby), a solo table
@@ -66,4 +68,51 @@ test("connected play through the adapter surface: a client joins with its sheet,
   // 나가기
   const left=await player.adapter.stopSession();
   assert.equal(left.session.role,"offline");
+});
+
+/** RULES_RUNTIME_SPECS.md §4 write-back on the product path: HP, temp HP and resource counts reach the character library. */
+const libraryHp=(base:MockAdapter,id:string)=>getCharacterLibraryPersistenceStateForTests(base)?.document?.characters.find((record)=>record.characterId===id)?.runtime.hp;
+
+test("solo write-back: damage and healing rulings on the local character land in the library record and the active sheet", async () => {
+  const base=new MockAdapter();
+  setCharacterLibraryStoreForTests(base,new MemoryCharacterLibraryStore());
+  const facade=createTableSessionFacade(base);
+  const hosted=await facade.adapter.hostSession();
+  const id=hosted.activeCharacter.id;
+  const before=hosted.activeCharacter.hp;
+  assert.equal(hosted.activeCharacter.tempHp,5,"the reference character starts with 5 temp HP");
+  await facade.dispatch({type:"ruling",targetIds:[id],ruling:{kind:"damage",amount:8}});
+  assert.equal(facade.lastWriteBackError,null);
+  assert.equal((await base.getSnapshot()).activeCharacter.hp,before-3,"the active sheet follows the table (5 absorbed by temp HP)");
+  assert.equal((await base.getSnapshot()).activeCharacter.tempHp,0);
+  assert.equal(libraryHp(base,id),before-3,"the library record carries the new HP");
+  await facade.dispatch({type:"ruling",targetIds:[id],ruling:{kind:"temp-hp",amount:4}});
+  assert.equal((await base.getSnapshot()).activeCharacter.tempHp,4);
+  await facade.dispatch({type:"undo"});
+  assert.equal((await base.getSnapshot()).activeCharacter.tempHp,0,"undo is written back too");
+  assert.equal(libraryHp(base,id),before-3);
+  const left=await facade.adapter.stopSession();
+  assert.equal(left.activeCharacter.hp,before-3,"the sheet keeps the session's HP after leaving");
+});
+
+test("connected write-back: the DM's ruling on a player's character reaches that player's library, not the DM's", async () => {
+  const hub=new MemoryTransportHub();
+  const dmBase=new MockAdapter();
+  setCharacterLibraryStoreForTests(dmBase,new MemoryCharacterLibraryStore());
+  const dm=createTableSessionFacade(dmBase,{transport:{hub}});
+  await dm.adapter.hostSession();
+  const playerBase=new MockAdapter();
+  setCharacterLibraryStoreForTests(playerBase,new MemoryCharacterLibraryStore());
+  const player=createTableSessionFacade(playerBase,{transport:{hub,peerId:"peer.p1"}});
+  const joined=await player.adapter.joinSession("memory://host");
+  const id=joined.activeCharacter.id;
+  const before=joined.activeCharacter.hp;
+  await dm.dispatch({type:"ruling",targetIds:[id],ruling:{kind:"damage",amount:9}});
+  await new Promise((resolve)=>setTimeout(resolve,20));
+  assert.equal(player.lastWriteBackError,null);
+  assert.equal((await playerBase.getSnapshot()).activeCharacter.hp,before-4,"the player's active sheet (5 absorbed by temp HP)");
+  assert.equal((await playerBase.getSnapshot()).activeCharacter.tempHp,0);
+  assert.equal(libraryHp(playerBase,id),before-4,"the player's library record");
+  assert.equal(dm.lastWriteBackError,null);
+  assert.notEqual(libraryHp(dmBase,id),before-4,"the DM's library never holds the player's character");
 });
