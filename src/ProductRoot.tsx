@@ -2,6 +2,8 @@ import { useEffect, useRef, useState, type MouseEvent } from "react";
 import { App } from "./App";
 import { SessionDebugPreview, type SessionDebugPreviewState } from "./SessionDebugPreview";
 import { SessionModeRoot } from "./SessionModeRoot";
+import { useTableFacade } from "./table/ui/context";
+import { TableWorkspace } from "./table/ui/TableWorkspace";
 import { useSimpleVtt } from "./app/AppProvider";
 import "./product-root.css";
 
@@ -37,6 +39,7 @@ function isReturnToConnectedPlayTarget(target: EventTarget | null) {
 
 export function ProductRoot() {
   const { snapshot, loading, debug } = useSimpleVtt();
+  const tableFacade = useTableFacade();
   const [surface, setSurface] = useState<ProductSurface>("product");
   const [debugPreview, setDebugPreview] = useState<SessionDebugPreviewState | null>(() => readSessionDebugPreview());
   const wasLiveConnected = useRef(false);
@@ -81,7 +84,7 @@ export function ProductRoot() {
 
   if (liveConnected && surface === "play") {
     return <div className="connected-product-root" data-connected-surface="play">
-      <SessionModeRoot onOpenProduct={() => setSurface("product")} />
+      {tableFacade ? <TableWorkspace onLeave={() => setSurface("product")} /> : <SessionModeRoot onOpenProduct={() => setSurface("product")} />}
     </div>;
   }
 

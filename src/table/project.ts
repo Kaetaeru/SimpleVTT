@@ -29,6 +29,20 @@ declare module "../app/contracts" {
     sceneReminders?:string[];
     /** DM only: actors kept whole but out of the scene. */
     benched?:Array<{id:string;name:string}>;
+    /** Initiative order as the table holds it (empty in freeform). */
+    order?:string[];
+    /** The default visibility of rolls (top-bar toggle). */
+    rollVisibility?:"public"|"dm";
+    /** DM only: table settings (D42 hold). */
+    tableSettings?:{holdAttacks:boolean};
+    /** The current scene's name. */
+    sceneName?:string;
+  }
+  interface ActivityEntry {
+    /** public, dm, or peer:<ids> — the DM's log filter. */
+    visibility?:string;
+    /** The result card this line came from, for reopening it. */
+    resolutionId?:string;
   }
   interface SceneEntity {
     /** What the character holds: "장검 (주손) · 방패 (보조손)" or "빈손". */
@@ -38,6 +52,10 @@ declare module "../app/contracts" {
     /** object: a thing with AC and HP; summon: a creature owned by another actor. */
     tableKind?:"character"|"npc"|"object"|"summon";
     ownerId?:string;
+    /** DM only: the actor is hidden from players. */
+    hidden?:boolean;
+    /** The actor's own resource pools (numbers only for those who know them). */
+    resources?:Array<{id:string;label:string;current:number;maximum:number}>;
   }
 }
 
@@ -114,6 +132,8 @@ function entityFor(state:TableState,actor:Actor,viewer:TableViewer):SceneEntity 
     ...(knows?{}:{hpStage:HP_STAGE_LABEL[stage]}),
     tableKind:actor.kind,
     ...(actor.ownerId?{ownerId:actor.ownerId}:{}),
+    ...(viewer.role==="dm"&&actor.hidden?{hidden:true}:{}),
+    ...(knows&&combatant?.resources.length?{resources:combatant.resources.map((pool)=>({id:pool.id,label:pool.label,current:pool.current,maximum:pool.maximum}))}:{}),
   };
   if(combatant) entity.runtimeLife={deathSaves:{...combatant.life.deathSaves},stable:combatant.life.stable,unconscious:combatant.life.unconscious,dead:combatant.life.dead};
   const engaged=engagedWith(state.engagements,actor.id);
@@ -146,10 +166,13 @@ export function projectTable(state:TableState,viewer:TableViewer,refusal?:(Table
     ...(viewer.role==="dm"&&state.timers.length?{timers:state.timers.map((timer)=>({id:timer.id,kind:timer.kind,label:timer.label,inSeconds:Math.max(0,timer.at-state.rules.clock.elapsedSeconds)}))}:{}),
     ...(state.pending?{pendingResolution:{id:state.pending.id,actorId:state.pending.actorId,actorName:state.actors[state.pending.actorId]?.name??state.pending.actorId,label:state.pending.label,waitingOn:state.pending.windows.map((entry)=>state.actors[entry.reactorId]?.name??entry.reactorId),window:state.pending.windows[0]?.window??""}}:{}),
     ...(state.scene.conditions.length?{sceneReminders:[...state.scene.conditions]}:{}),
+    order:[...state.order],rollVisibility:state.rollVisibility==="public"?"public":"dm",sceneName:state.scene.name,
+    ...(viewer.role==="dm"?{tableSettings:{holdAttacks:state.settings.holdAttacks}}:{}),
     ...(viewer.role==="dm"&&benchedActorIds(state).length?{benched:benchedActorIds(state).map((id)=>({id,name:state.actors[id].name}))}:{})};
   const activity:ActivityEntry[]=state.log.filter((entry)=>viewer.role==="dm"||entry.visibility==="public"||(entry.visibility.startsWith("peer:")&&entry.visibility.slice(5).split(",").includes(viewer.peerId??""))).map((entry)=>({
     id:entry.id,time:entry.time,actor:entry.actor,title:entry.title,summary:entry.summary,detail:[...entry.detail],stateChanges:[...entry.stateChanges],
     ...(entry.ruling?{ruling:entry.ruling}:{}),...(entry.undoOf?{undoOf:entry.undoOf}:{}),...(entry.reversed?{reversed:true}:{}),
+    visibility:entry.visibility,...(entry.resolutionId?{resolutionId:entry.resolutionId}:{}),
   }));
   const resolution=state.activeResolution&&(viewer.role==="dm"||state.activeResolution.visibility==="public")?state.activeResolution:null;
   return {

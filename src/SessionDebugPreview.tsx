@@ -2,6 +2,8 @@ import { useMemo, useState } from "react";
 import type { SessionMode } from "./app/contracts";
 import { SessionDebugPreviewProvider, type SessionDebugPreviewRole, useSimpleVtt } from "./app/AppProvider";
 import { SessionModeRoot } from "./SessionModeRoot";
+import { useTableFacade } from "./table/ui/context";
+import { TableWorkspace } from "./table/ui/TableWorkspace";
 import "./session-debug-preview.css";
 
 export interface SessionDebugPreviewState {
@@ -30,10 +32,17 @@ export function SessionDebugPreview({ state, onChange, onExit }: {
         <button type="button" className="session-debug-preview-exit" onClick={onExit}>미리보기 종료</button>
       </header>
       <div className="session-debug-preview-viewport">
-        <SessionModeRoot onOpenProduct={onExit} />
+        <PreviewViewport onExit={onExit} />
       </div>
     </div>
   </SessionDebugPreviewProvider>;
+}
+
+/** With the V2 table facade (`?table=v2`) the preview shows the new workspace; otherwise the reference play screen. */
+function PreviewViewport({ onExit }: { onExit(): void }) {
+  const facade = useTableFacade();
+  if (facade) return <TableWorkspace onLeave={onExit} />;
+  return <SessionModeRoot onOpenProduct={onExit} />;
 }
 
 function SessionDebugDiceControl() {

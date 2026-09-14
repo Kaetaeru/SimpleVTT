@@ -36,6 +36,7 @@ import { ProductRoot } from "./ProductRoot";
 import { AppProvider } from "./app/AppProvider";
 import { mockAdapter } from "./app/mockAdapter";
 import { createTableSessionFacade } from "./table/facade";
+import { TableFacadeContext } from "./table/ui/context";
 import { CombatSpellHudBridge } from "./CombatSpellHud";
 import { LevelUpV10Bridge } from "./LevelUpV10";
 import { VisualDiceBridge } from "./VisualDiceBridge";
@@ -92,6 +93,7 @@ if(tableFacade) (window as unknown as {__table?:unknown}).__table=tableFacade;
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <AppProvider adapter={tableFacade?.adapter}>
+      <TableFacadeContext.Provider value={tableFacade}>
       <ProductRoot />
       <LevelUpV10Bridge />
       <VisualDiceBridge />
@@ -105,6 +107,7 @@ createRoot(document.getElementById("root")!).render(
       <CharacterLibraryUxBridge />
       <CampaignStartupRecoveryBridge />
       <PartyStashApprovalOutcomeBridge />
+      </TableFacadeContext.Provider>
     </AppProvider>
   </StrictMode>,
 );
