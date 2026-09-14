@@ -37,7 +37,7 @@ export function CombatTab({snapshot,role,selectedIds,dispatch,onSelect}:TabProps
   const order=(scene.order??[]).map((id)=>byId[id]).filter((entity):entity is SceneEntity=>Boolean(entity));
   const rest=scene.entities.filter((entity)=>!(scene.order??[]).includes(entity.id));
   const row=(entity:SceneEntity,index?:number)=><div key={entity.id} className={`tw-list-item ${scene.currentActorId===entity.id?"current":""} ${selectedIds.includes(entity.id)?"selected":""}`} role="listitem" onClick={()=>onSelect(entity.id)}>
-    <span style={{width:22,color:"var(--quiet)"}}>{index!==undefined?index+1:""}</span>
+    <span className="tw-idx">{index!==undefined?index+1:""}</span>
     <div className="tw-grow"><strong>{entity.name}{entity.hidden?" (숨김)":""}</strong><small>HP {entity.hpStage??`${entity.hp}/${entity.maxHp}`}{entity.ac?` · AC ${entity.ac}`:""}{entity.status.length?` · ${entity.status.map((chip)=>chip.replace(/^✦ /,"")).join(", ")}`:""}</small></div>
     {role==="dm"&&initiative&&<input type="number" aria-label={`${entity.name} 이니셔티브`} defaultValue={entity.initiative} onClick={(event)=>event.stopPropagation()} onKeyDown={(event)=>{ if(event.key==="Enter") void dispatch({type:"set-actor",actorId:entity.id,patch:{initiative:Number((event.target as HTMLInputElement).value)}}); }}/>}
     {role==="dm"&&<span className="tw-verbs">{initiative&&scene.currentActorId!==entity.id&&<button type="button" onClick={(event)=>{ event.stopPropagation(); void dispatch({type:"set-current-actor",actorId:entity.id}); }}>턴으로</button>}<button type="button" onClick={(event)=>{ event.stopPropagation(); if(window.confirm(`${entity.name} 제거?`)) void dispatch({type:"remove-actor",actorId:entity.id}); }}>제거</button></span>}
@@ -45,7 +45,7 @@ export function CombatTab({snapshot,role,selectedIds,dispatch,onSelect}:TabProps
   return <>
     <div className="tw-tabhead" style={{alignItems:"center"}}>
       <strong style={{flex:1}}>{initiative?`${scene.round}라운드 · ${byId[scene.currentActorId]?.name??""}의 턴`:"자유 진행"}</strong>
-      {role==="dm"&&(initiative?<><button type="button" className="primary" onClick={()=>void dispatch({type:"end-turn"})}>다음 턴 (N)</button><button type="button" onClick={()=>void dispatch({type:"end-initiative"})}>종료</button></>:<button type="button" className="primary" onClick={()=>void dispatch({type:"start-initiative"})}>이니셔티브 시작</button>)}
+      {role==="dm"&&(initiative?<><button type="button" className="primary" onClick={()=>void dispatch({type:"end-turn"})}>다음 턴 <kbd>N</kbd></button><button type="button" className="quiet" onClick={()=>void dispatch({type:"end-initiative"})}>종료</button></>:<button type="button" className="primary" onClick={()=>void dispatch({type:"start-initiative"})}>이니셔티브 시작</button>)}
     </div>
     <div className="tw-tabbody">
       {initiative&&<div className="tw-order" role="list" aria-label="이니셔티브 순서">{order.map((entity,index)=>row(entity,index))}</div>}

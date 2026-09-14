@@ -32,11 +32,16 @@ export function TokenCard(props:TokenCardProps) {
       <span className="tw-name">{entity.name}{entity.hidden?" (숨김)":""}</span>
       {role==="dm"&&<button type="button" className="tw-more" aria-label={`${entity.name} 조작`} onClick={(event)=>{ event.stopPropagation(); const rect=(event.currentTarget.closest(".tw-token") as HTMLElement).getBoundingClientRect(); props.onToggleHud({left:rect.left,top:rect.top,bottom:rect.bottom}); }}>⋯</button>}
     </div>
-    <div className={`tw-hpbar ${tone}`}><i style={{width:`${hpFraction(entity)*100}%`}}/></div>
-    <div className="tw-meta"><span>{entity.hpStage?entity.hpStage:`HP ${hpLabel(entity)}`}</span><span>{entity.ac?`AC ${entity.ac}`:""}{entity.initiative?` · 이니 ${entity.initiative}`:""}</span></div>
-    {entity.status.length>0&&<div className="tw-chips">{entity.status.map((chip)=><span key={chip} className={`tw-chip ${chip.startsWith("✦")?"":"badge"}`}>{chip.replace(/^✦ /,"")}</span>)}</div>}
-    {engaged.length>0&&<div className="tw-engaged">교전: {engaged.map((id)=>props.names[id]??id).join(", ")}</div>}
-    {entity.hands&&role==="player"&&<div className="tw-engaged" style={{color:"var(--muted)"}}>손: {entity.hands}</div>}
+    <div className="tw-hpwrap">
+      <div className={`tw-hpbar ${tone}`} title={entity.hpStage??`HP ${hpLabel(entity)}`}><i style={{width:`${hpFraction(entity)*100}%`}}/><span>{entity.hpStage?entity.hpStage:hpLabel(entity)}</span></div>
+      {entity.ac>0&&<span className="tw-ac" title="AC">AC <b>{entity.ac}</b></span>}
+    </div>
+    <div className="tw-foot">
+      {entity.initiative>0&&<span className="tw-chip muted" title="이니셔티브">이니 {entity.initiative}</span>}
+      {entity.status.map((chip)=><span key={chip} className={`tw-chip ${chip.startsWith("✦")?"":"badge"}`}>{chip.replace(/^✦ /,"")}</span>)}
+    </div>
+    {engaged.length>0&&<div className="tw-engaged">교전 · {engaged.map((id)=>props.names[id]??id).join(", ")}</div>}
+    {entity.hands&&role==="player"&&<div className="tw-hands">손 · {entity.hands}</div>}
   </div>;
 }
 
@@ -50,7 +55,7 @@ export function TokenHud({entity,names,onRule,onCommand,onOpenSheet,onClose}:{en
   const [engageWith,setEngageWith]=useState("");
   const active=new Set(entity.status.map((chip)=>chip.replace(/^✦ /,"").replace(/ \(.*\)$/,"")));
   return <div className="tw-hud" role="dialog" aria-label={`${entity.name} 토큰 HUD`} onClick={(event)=>event.stopPropagation()} onDoubleClick={(event)=>event.stopPropagation()}>
-    <div className="tw-hud-row"><strong>{entity.name}</strong><span style={{flex:1}}/><button type="button" onClick={onOpenSheet}>시트</button><button type="button" className="quiet" aria-label="HUD 닫기" onClick={onClose}>×</button></div>
+    <div className="tw-hud-title"><span>{entity.name}</span><button type="button" className="sm" onClick={onOpenSheet}>시트</button><button type="button" className="quiet sm" aria-label="HUD 닫기" onClick={onClose}>×</button></div>
     <div className="tw-hud-row">
       <input type="number" min={0} value={amount} aria-label="수치" onChange={(event)=>setAmount(Number(event.target.value))}/>
       <select value={damageType} aria-label="피해 유형" onChange={(event)=>setDamageType(event.target.value)}><option value="">유형 없음</option>{DAMAGE_TYPES.map((type)=><option key={type} value={type}>{damageLabelKo(type)}</option>)}</select>
@@ -61,7 +66,7 @@ export function TokenHud({entity,names,onRule,onCommand,onOpenSheet,onClose}:{en
       <button type="button" onClick={()=>onRule({kind:"max-hp",delta:amount})}>최대 +{amount}</button>
       <button type="button" onClick={()=>onRule({kind:"max-hp",delta:-amount})}>최대 −{amount}</button>
     </div>
-    <div className="tw-hud-row"><span>상태 지속</span><select value={preset} aria-label="상태 지속" onChange={(event)=>setPreset(event.target.value as DurationPreset)}>{DURATION_PRESETS.map((entry)=><option key={entry.id} value={entry.id}>{entry.label}</option>)}</select></div>
+    <div className="tw-hud-row"><span className="tw-eyebrow">상태</span><select value={preset} aria-label="상태 지속" onChange={(event)=>setPreset(event.target.value as DurationPreset)}>{DURATION_PRESETS.map((entry)=><option key={entry.id} value={entry.id}>{entry.label}</option>)}</select></div>
     <div className="tw-grid" role="group" aria-label="상태 14종">
       {CONDITION_PALETTE.map((condition)=>{ const on=active.has(condition.label); return <button type="button" key={condition.id} className={on?"on":""} aria-pressed={on} onClick={()=>onRule({kind:"condition",conditionId:condition.id,on:!on,preset})}>{condition.label}</button>; })}
     </div>

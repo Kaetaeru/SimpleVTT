@@ -17,22 +17,25 @@ export function DiscretionBar({selected,lastEntry,dispatch}:{selected:SceneEntit
   const prefix=targetIds.length>1?`${targetIds.length}명에게`:selected[0]?.name??"선택 없음";
   const rule=(input:DiscretionInput)=>{ if(none) return; void dispatch({type:"ruling",targetIds,ruling:rulingFrom(input)}); };
   return <div className="tw-discretion" aria-label="DM 재량 바">
-    <div className="tw-discretion-head">DM 재량 · {prefix}</div>
+    <div className="tw-discretion-head">DM 재량 <strong>{prefix}</strong><span style={{flex:1}}/><button type="button" className="quiet sm" disabled={!lastEntry} title={lastEntry?`되돌리기: ${lastEntry.title}`:"되돌릴 것이 없습니다"} onClick={()=>void dispatch({type:"undo"})}>↶ 되돌리기{lastEntry?` · ${lastEntry.title.length>14?`${lastEntry.title.slice(0,14)}…`:lastEntry.title}`:""}</button></div>
     <div className="tw-line">
-      <input type="number" min={0} value={amount} aria-label="재량 수치" onChange={(event)=>setAmount(Number(event.target.value))}/>
-      <select value={damageType} aria-label="재량 피해 유형" onChange={(event)=>setDamageType(event.target.value)}><option value="">유형 없음</option>{DAMAGE_TYPES.map((type)=><option key={type} value={type}>{damageLabelKo(type)}</option>)}</select>
-      <button type="button" disabled={none} onClick={()=>rule({kind:"damage",amount,...(damageType?{damageType}:{})})}>피해</button>
-      <button type="button" disabled={none} onClick={()=>rule({kind:"heal",amount})}>회복</button>
-      <button type="button" disabled={none} onClick={()=>rule({kind:"temp-hp",amount})}>임시 HP</button>
-      <button type="button" disabled={none} onClick={()=>rule({kind:"next-roll",state:"advantage"})}>유리</button>
-      <button type="button" disabled={none} onClick={()=>rule({kind:"next-roll",state:"disadvantage"})}>불리</button>
-      <button type="button" disabled={none} onClick={()=>rule({kind:"inspiration",on:true})}>영감</button>
+      <span className="tw-group">
+        <input type="number" min={0} value={amount} aria-label="재량 수치" onChange={(event)=>setAmount(Number(event.target.value))}/>
+        <select value={damageType} aria-label="재량 피해 유형" onChange={(event)=>setDamageType(event.target.value)}><option value="">유형</option>{DAMAGE_TYPES.map((type)=><option key={type} value={type}>{damageLabelKo(type)}</option>)}</select>
+        <button type="button" disabled={none} onClick={()=>rule({kind:"damage",amount,...(damageType?{damageType}:{})})}>피해</button>
+        <button type="button" disabled={none} onClick={()=>rule({kind:"heal",amount})}>회복</button>
+        <button type="button" disabled={none} onClick={()=>rule({kind:"temp-hp",amount})}>임시 HP</button>
+      </span>
+      <span className="tw-group">
+        <button type="button" disabled={none} onClick={()=>rule({kind:"next-roll",state:"advantage"})}>유리</button>
+        <button type="button" disabled={none} onClick={()=>rule({kind:"next-roll",state:"disadvantage"})}>불리</button>
+        <button type="button" disabled={none} onClick={()=>rule({kind:"inspiration",on:true})}>영감</button>
+      </span>
     </div>
     <div className="tw-line">
       <select value={preset} aria-label="상태 지속" onChange={(event)=>setPreset(event.target.value as DurationPreset)}>{DURATION_PRESETS.map((entry)=><option key={entry.id} value={entry.id}>{entry.label}</option>)}</select>
       {(allConditions?CONDITION_PALETTE.map((entry)=>entry.id):[...QUICK_CONDITIONS]).map((conditionId)=><button type="button" key={conditionId} disabled={none} onClick={()=>rule({kind:"condition",conditionId,on:!selected.every((entity)=>entity.status.some((chip)=>chip.replace(/^✦ /,"").startsWith(conditionLabelKo(conditionId)))),preset})}>{conditionLabelKo(conditionId)}</button>)}
-      <button type="button" className="quiet" onClick={()=>setAllConditions(!allConditions)}>{allConditions?"접기":"전체 14종"}</button>
-      <button type="button" disabled={!lastEntry} title={lastEntry?`되돌리기: ${lastEntry.title}`:"되돌릴 것이 없습니다"} onClick={()=>void dispatch({type:"undo"})}>↶ 되돌리기{lastEntry?` · ${lastEntry.title.slice(0,18)}`:""}</button>
+      <button type="button" className="quiet" onClick={()=>setAllConditions(!allConditions)}>{allConditions?"접기":"전체 14종 …"}</button>
     </div>
   </div>;
 }

@@ -24,7 +24,7 @@ export function TableStage(props:TableStageProps) {
   const groups=groupEntities(props.entities);
   const names=Object.fromEntries(props.entities.map((entity)=>[entity.id,entity.name]));
   const row=(label:string,side:"enemy"|"ally"|"neutral",list:SceneEntity[],empty:string)=><div className={`tw-row ${side} ${list.length?"":"empty"}`} data-row={side}>
-    <span className="tw-row-label">{label}</span>
+    <span className="tw-row-label">{label}{list.length>0&&<span style={{color:"var(--muted)",letterSpacing:0}}>{list.length}</span>}</span>
     {list.length===0&&<span>{empty}</span>}
     {list.map((entity)=><TokenCard key={entity.id} entity={entity} role={props.role} names={names}
       selected={props.selectedIds.includes(entity.id)} current={props.currentActorId===entity.id}

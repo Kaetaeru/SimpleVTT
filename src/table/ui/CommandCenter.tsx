@@ -36,7 +36,7 @@ export function CommandCenter({snapshot,actor,role,targeting,onStartTargeting,on
   return <div className="tw-command" aria-label="명령 센터">
     <div className="tw-command-head">
       <strong>{actor.name}</strong>
-      {economy&&isInitiative(snapshot)&&<span className="tw-econ"><span className={economy.action?"on":""}>행동</span><span className={economy.bonusAction?"on":""}>추가</span><span className={economy.reaction?"on":""}>반응</span><span>이동 {economy.movement}/{economy.movementMax}</span></span>}
+      {economy&&isInitiative(snapshot)&&<span className="tw-econ"><span className={economy.action?"on":""}>행동</span><span className={economy.bonusAction?"on":""}>추가 행동</span><span className={economy.reaction?"on":""}>반응</span><span className="move">이동 {economy.movement}/{economy.movementMax}</span></span>}
       {actor.hands&&<span>손: {actor.hands}</span>}
       {targeting&&<span className="tw-targeting">대상 선택 {targeting.picked.length}/{targeting.max} <button type="button" className="primary" disabled={!targeting.picked.length} onClick={onConfirmTargeting}>실행</button><button type="button" className="quiet" onClick={onCancelTargeting}>취소 (Esc)</button></span>}
     </div>
@@ -54,11 +54,11 @@ export function CommandCenter({snapshot,actor,role,targeting,onStartTargeting,on
 
 function ActionTile({action,active,slotLevel,onSlot,amount,onAmount,onRun}:{action:ActionVm;active:boolean;slotLevel?:number;onSlot(level:number):void;amount?:number;onAmount(value:number):void;onRun():void}) {
   const upcast=action.tableSpell&&action.tableSpell.baseLevel>0&&action.tableSpell.maxSlotLevel>action.tableSpell.baseLevel;
-  return <div className={`tw-tile ${action.category==="magic"?"magic":action.category==="weapon"?"weapon":""} ${active?"targeting":""}`} title={action.disabledReason??action.details?.map((entry)=>`${entry.label}: ${entry.value}`).join("\n")}>
-    <button type="button" className="quiet" style={{padding:0,textAlign:"left"}} disabled={!action.available} aria-label={`${action.name}${action.available?"":` · ${action.disabledReason??"사용 불가"}`}`} onClick={onRun}>
+  return <div className={`tw-tile ${action.category==="magic"?"magic":action.category==="weapon"||action.resolutionKind==="attack"?"weapon":"basic"} ${active?"targeting":""} ${action.available?"":"disabled"}`} title={action.disabledReason??action.details?.map((entry)=>`${entry.label}: ${entry.value}`).join("\n")}>
+    <button type="button" className="quiet" disabled={!action.available} aria-label={`${action.name}${action.available?"":` · ${action.disabledReason??"사용 불가"}`}`} onClick={onRun}>
+      <span className="tw-tile-econ">{action.economy}{action.available?"":" · 불가"}</span>
       <strong>{action.name}</strong>
-      <small>{action.economy} · {action.summary}</small>
-      {!action.available&&action.disabledReason&&<small style={{color:"var(--bad)"}}>{action.disabledReason}</small>}
+      <small>{action.summary}</small>
     </button>
     {upcast&&<select value={slotLevel??action.tableSpell!.baseLevel} aria-label={`${action.name} 슬롯 레벨`} onChange={(event)=>onSlot(Number(event.target.value))}>{Array.from({length:action.tableSpell!.maxSlotLevel-action.tableSpell!.baseLevel+1},(_,index)=>action.tableSpell!.baseLevel+index).map((level)=><option key={level} value={level}>{level}레벨 슬롯</option>)}</select>}
     {action.tableAmountInput&&<input type="number" min={action.tableAmountInput.min} max={action.tableAmountInput.max} value={amount??action.tableAmountInput.min} aria-label={action.tableAmountInput.label} onChange={(event)=>onAmount(Number(event.target.value))}/>}

@@ -14,7 +14,7 @@ export function Focus({snapshot,role,peerId,dispatch,onDismiss}:{snapshot:AppSna
     {pending&&<div className="tw-card tw-pending">⏳ {pending.label} — 대기 중: {pending.waitingOn.join(", ")||pending.window}</div>}
     {questions.map((question)=><QuestionCard key={question.id} question={question} mine={role==="dm"?question.toPeer===undefined||question.toPeer===peerId:question.toPeer===peerId} isDm={role==="dm"} dispatch={dispatch}/>)}
     {snapshot.resolution&&<ResolutionCard resolution={snapshot.resolution} role={role} dispatch={dispatch} onDismiss={onDismiss}/>}
-    {!snapshot.resolution&&!questions.length&&!pending&&<div className="tw-card" style={{color:"var(--quiet)",fontSize:"var(--text-sm)",boxShadow:"none",borderStyle:"dashed"}}>{role==="dm"?"토큰을 고르고 아래 명령 센터나 재량 바로 진행하세요. 결과 카드는 여기에 뜹니다.":"결과 카드와 질문이 여기에 뜹니다."}</div>}
+    {!snapshot.resolution&&!questions.length&&!pending&&<div className="tw-card placeholder">{role==="dm"?"토큰을 고르고 아래 명령 센터나 재량 바로 진행하세요. 결과 카드는 여기에 뜹니다.":"결과 카드와 질문이 여기에 뜹니다."}</div>}
   </>;
 }
 
@@ -39,13 +39,13 @@ export function ResolutionCard({resolution,role,dispatch,onDismiss}:{resolution:
   const apply=()=>{ void dispatch({type:"override",resolutionId:resolution.id,changes}); setMenu(false); setChanges({}); };
   const seg=<T extends string>(label:string,current:T|undefined,options:Array<{id:T;label:string}>,set:(value:T|undefined)=>void)=><><span>{label}</span><span className="tw-seg">{options.map((option)=><button type="button" key={option.id} className={current===option.id?"active":""} onClick={()=>set(current===option.id?undefined:option.id)}>{option.label}</button>)}</span></>;
   return <div className="tw-card" role="group" aria-label="결과 카드" data-resolution-id={resolution.id}>
-    <h3>{resolution.actionName}</h3>
+    <div className="tw-card-head"><h3>{resolution.actionName}</h3><span className="tw-card-sub">{resolution.rollKind==="attack"?"공격":resolution.rollKind==="save"?"내성":resolution.rollKind==="check"?"판정":resolution.rollKind==="healing"?"회복":"효과"}</span></div>
     <div className="tw-compact">{resolution.compact}</div>
     {resolution.detail.length>0&&<ul>{resolution.detail.slice(0,6).map((line,index)=><li key={index}>{line}</li>)}</ul>}
     {resolution.stateChanges.length>0&&<ul>{resolution.stateChanges.map((line,index)=><li key={index}>{line}</li>)}</ul>}
     <div className="tw-card-actions">
       {role==="dm"&&attack&&<button type="button" className={menu?"active":""} onClick={()=>setMenu(!menu)}>판정 (DM 개입)</button>}
-      {role==="dm"&&<button type="button" onClick={()=>void dispatch({type:"undo"})}>되돌리기</button>}
+      {role==="dm"&&<button type="button" className="quiet" onClick={()=>void dispatch({type:"undo"})}>되돌리기</button>}
       <button type="button" className="quiet" onClick={onDismiss}>닫기</button>
     </div>
     {menu&&<div className="tw-override" role="group" aria-label="DM 개입 팔레트">
