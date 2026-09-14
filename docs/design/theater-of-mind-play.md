@@ -21,10 +21,10 @@ question, and the default answer is always the permissive one the DM would alrea
 | melee reach | always allowed; DM toggle "닿지 않음" on the result (re-records as approach + attack, or cancels) |
 | ranged range | always allowed; if the attacker is engaged, ranged-in-melee disadvantage is applied automatically with a toggle to lift it |
 | areas | target caps (already the model) plus **groups**: the DM pre-groups enemies once ("고블린 ×3 · 한 무리") and an area picks a group in one tap |
-| opportunity attacks | only when an engagement exists, prompted at the moment a creature declares **물러남**; Disengage suppresses the prompt |
-| movement | three declarations instead of feet: 접근(대상), 물러남, 그대로. Speed is displayed, never gates. Dash is a narrative flag |
+| opportunity attacks | only when an engagement exists, prompted when a creature declares **물러남** or 접근 to another target while engaged (D26); Disengage suppresses the prompt for this turn's movement (D27) |
+| movement | three declarations instead of feet: 접근(대상), 물러남, 그대로. Speed is displayed; a second move without Dash is not blocked, the card shows "이동력 초과" (D28). Speed 0 conditions do gate |
 | sight / light / cover | scene-wide conditions (어둠, 안개) and per-creature badges (숨음, 투명, 엄폐) are reminders; the DM applies sight and cover on the result card with the attack-intervention palette (D42, 2026-09-14). No DM choice means clear |
-| engagement end | persists across turns; ends on 물러남, 이탈, target death, or a round without melee between the pair |
+| engagement end | persists across turns; ends only on movement out of reach (물러남, forced movement, teleport), death, leaving the scene, or a scene change (D25). Not on 이탈 alone and not on an idle round |
 
 Range bands (교전 / 가까움 / 멀리) are optional: a DM may drop a card into a band, but every flow above works
 without bands.
