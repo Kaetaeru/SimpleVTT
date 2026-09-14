@@ -53,6 +53,20 @@ CHARACTER_SYSTEM §3.1의 모든 행에 더해:
 6. **검증**: 능력치 상한·포인트 바이 합, 선행 조건, 중복 선택, 알 수 없는 id, 갑옷 숙련 경고. 막힘이 있으면 저장하지 않는다.
 7. **전수 검사**: 종족 9 × 직업 12 × 배경 4 × 레벨 1→20을 결정적 기본 선택으로 만들어 골든 표와 비교한다. 화면 캡처는 대표 6조합.
 
+### 4.1 M1 진행 상태
+
+| 조각 | 내용 | 상태 |
+| --- | --- | --- |
+| C1 카탈로그 | `client/catalog/` — SRD 모듈 36개 + 생성 색인 + 진행표 + 주문 339 + 저작 데이터(`client/data/srd/`)를 한 id 공간으로. 경고 0 | 완료 |
+| C1 엔진 | `client/character/` — `deriveCharacter(source, catalog)`: 원장(ledger) 한 번 순회로 종족·배경·트랙·장비를 적용하고 선택 요청(`ChoiceRequest`)을 등록, 끝에서 숫자를 계산. 자동 채우기(`autofill`)로 검사·빠른 생성 | 완료 |
+| C1 검사 | `tests/client/derive.test.ts`(17 시나리오) + `tests/client/matrix.test.ts`(종족 9 × 직업 12 × 배경 4 × L1·L5 = 864, 직업 12 × L1~20 = 240, 독립 공식 대조) | green |
+| C2 저장·JSON | IndexedDB + 메모리 폴백, 캐릭터 JSON v2 내보내기/가져오기, RuleModule JSON 설치 | 예정 |
+| C3 화면 | 라이브러리, 생성 마법사(실시간 시트), 시트, 콘텐츠 설치, exe | 예정 |
+
+엔진의 선택 id 규약(원본 `choices` 맵의 키): `origin.languages`, `origin.species.<choice>`(`origin.species.lineage`…), `origin.background.abilityMode|abilityPlus2|abilityPlus1|tool`, `class.<트랙>.skills|expertise|fighting-style|subclass|asi|epic-boon|...`, 직업 전체 풀은 첫 트랙에 붙는다(`class.<첫 트랙>.weapon-mastery|invocations|metamagic|cantrips|spells|spellbook`), 재주 하위 선택은 `feat.<부여 위치>.<재주 id>.<항목>`, 장비는 `equipment.class|background[.<옵션>.<n>]`. 답은 항상 옵션 id 배열이고, 옵션 밖의 답은 무시된다(모듈 제거·레벨 되돌림에도 안전).
+
+M1에서 단순화한 것: 반복 가능한 기원술(고통스러운 폭발 등)은 한 번만 고른다. 준비 주문은 최대치보다 적어도 막지 않는다(규칙대로). ASI 후보에서 기원 재주를 뺀다(소유자 결정; 규칙상은 허용).
+
 ## 5. 결정(가정)과 열린 질문
 
 CHARACTER_SYSTEM §10의 추천안을 M1의 가정으로 쓴다: HP 고정값 기본(D44), 능력치 직접 입력 허용·표시(D45), 시작 장비 옵션 기본(D46), 멀티클래스 허용(D47), 마일스톤이면 XP 숨김(D51), SRD 설명을 저장소에 추가(D52). 옛 저장본 이관(D43)은 M2 이후로 미룬다(새 클라이언트는 빈 라이브러리에서 시작하고 옛 캐릭터는 JSON 가져오기로 옮긴다).

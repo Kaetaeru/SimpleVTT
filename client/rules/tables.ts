@@ -95,11 +95,5 @@ export const MULTICLASS_PREREQUISITES: Record<string, { all?: AbilityKey[]; any?
   wizard: { all: ["int"] },
 };
 
-export const ASI_LEVELS_BY_CLASS: Record<string, readonly number[]> = {
-  default: [4, 8, 12, 16, 19],
-  fighter: [4, 6, 8, 12, 14, 16, 19],
-  rogue: [4, 8, 10, 12, 16, 19],
-};
-
 /** Hit-point gain of a level after the first when the fixed value is chosen: die/2 + 1. */
 export const fixedHitPoints = (hitDie: number) => Math.floor(hitDie / 2) + 1;
