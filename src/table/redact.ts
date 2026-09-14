@@ -46,7 +46,7 @@ function redactCombatants(rules:RulesRuntimeState,actors:Record<string,Actor>,vi
 function redactActor(actor:Actor,viewer:TableViewer):Actor {
   if(viewer.role==="dm"||actor.source.kind!=="monster"||actor.controllerPeer===viewer.peerId) return actor;
   const definition=actor.source.definition;
-  return {...actor,source:{kind:"monster",definitionId:actor.source.definitionId,definition:{id:definition.id,name:definition.name,...(definition.nameEn?{nameEn:definition.nameEn}:{}),ac:0,maxHp:0,source:definition.source,version:definition.version,actions:[],statusImmunities:[]}}};
+  return {...actor,source:{kind:"monster",definitionId:actor.source.definitionId,definition:{id:definition.id,name:definition.name,...(definition.nameEn?{nameEn:definition.nameEn}:{}),ac:0,maxHp:0,source:definition.source,version:definition.version,actions:[],statusImmunities:[],...(definition.portrait?{portrait:structuredClone(definition.portrait)}:{}),...(definition.description?{description:definition.description}:{})}}};
 }
 
 export function redactStateFor(state:TableState,viewer:TableViewer):TableState {

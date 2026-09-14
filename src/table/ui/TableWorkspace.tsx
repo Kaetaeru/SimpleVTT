@@ -159,6 +159,6 @@ export function WorkspaceView({snapshot,facade,onLeave,onStop,initialSelectedIds
     {hud&&role==="dm"&&entities.some((entity)=>entity.id===hud.id)&&<div className="tw-hud-float" style={{left:hud.left,top:hud.top}}><TokenHud entity={entities.find((entity)=>entity.id===hud.id)!} names={names} onRule={(input)=>rule(hud.id,input)} onCommand={(kind,value)=>tokenCommand(hud.id,kind,value)} onOpenSheet={()=>{ setSheetId(hud.id); setHud(null); }} onClose={()=>setHud(null)}/></div>}
     {toast&&<div className="tw-toast" role="status">{toast}</div>}
     {searchOpen&&<QuickSearch entities={entities} actions={snapshot.scene.actionsByActor} selectedActorId={primary?.id??null} role={role} onPick={pickSearch} onClose={()=>setSearchOpen(false)}/>}
-    {sheetEntity&&<SheetDrawer entity={sheetEntity} actor={sheetActor} onClose={()=>setSheetId(null)}/>}
+    {sheetEntity&&<SheetDrawer entity={sheetEntity} actor={sheetActor} role={role} onClose={()=>setSheetId(null)}/>}
   </div>;
 }

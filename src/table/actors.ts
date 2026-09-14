@@ -2,6 +2,7 @@ import type { CombatantRuntimeState } from "../domain/combatState";
 import type { ResourcePool } from "../domain/resources";
 import { beginTurn } from "../domain/turnEconomy";
 import type { AbilityKey, ActionDetailVm, ActionVm, CharacterSheet, CombatantDefinitionVm, ItemInstanceVm } from "../app/contracts";
+import type { CharacterPortraitV1 } from "../app/characterPortraitContracts";
 import { weaponHasProperty, weaponRuleById, type WeaponRuleDefinition } from "../domain/weaponRuleCatalog";
 import { hitDicePools, spellActionsFor, spellSlotPools, type SpellSheet } from "./spells";
 import { effectIsActive } from "../domain/effects";
@@ -14,6 +15,15 @@ import type { Actor, Side, TableState } from "./state";
 import { featureActions, featureResourcePools, unarmedStrike } from "./features";
 
 declare module "../app/contracts" {
+  interface CombatantDefinitionVm {
+    /** A library NPC's portrait (DM_WORKSPACE.md §3): shown on the token and the stat block; travels to players. */
+    portrait?:CharacterPortraitV1;
+    /** Public description (what players may read on the card). */
+    description?:string;
+    /** DM-only notes; never leave the Host. */
+    dmNotes?:string;
+    tags?:string[];
+  }
   interface ActionVm {
     /** A stat block's multiattack routine as one tile: every step resolves in order against the chosen target. */
     tableRoutine?:{steps:Array<{actionId:string;name:string;count:number}>};

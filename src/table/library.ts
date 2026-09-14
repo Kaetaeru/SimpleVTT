@@ -1,4 +1,6 @@
 import type { CharacterSheet, CombatantDefinitionVm } from "../app/contracts";
+import type { CharacterPortraitV1 } from "../app/characterPortraitContracts";
+import type { CombatantRuntimeStatsVm } from "../app/combatantRuntimeContracts";
 import { srdMonsterById, srdMonsterCombatantDefinition } from "../app/srdMonsterCatalog";
 import type { ActorSpec } from "./commands";
 import type { Side } from "./state";
@@ -107,6 +109,27 @@ export function npcsFromJson(library:HostLibrary,text:string):LibraryEntry[] {
     delete (definition as {hp?:number}).hp;
     return library.upsert({id,kind:"npc",name,tags:Array.isArray((value as {tags?:string[]}).tags)?(value as {tags:string[]}).tags:[],npc:definition});
   });
+}
+
+/** What the NPC editor may change (DM_WORKSPACE.md §3 "이름·HP·AC 수정" and the owner's ask for a portrait and more): identity, numbers, abilities, text, picture. */
+export interface NpcEdit { name?:string; ac?:number; maxHp?:number; speed?:number; abilities?:Partial<CombatantRuntimeStatsVm["abilities"]>; description?:string; dmNotes?:string; tags?:string[]; portrait?:CharacterPortraitV1|null }
+export function editNpc(library:HostLibrary,entryId:string,edit:NpcEdit):LibraryEntry {
+  const entry=library.get(entryId);
+  if(!entry||entry.kind!=="npc"||!entry.npc) throw new Error("편집할 NPC가 없습니다.");
+  const npc=structuredClone(entry.npc);
+  if(edit.name!==undefined) { const name=edit.name.trim(); if(!name) throw new Error("이름을 비울 수 없습니다."); npc.name=name; }
+  if(edit.ac!==undefined) { if(!Number.isFinite(edit.ac)||edit.ac<0) throw new Error("AC는 0 이상의 숫자입니다."); npc.ac=Math.floor(edit.ac); }
+  if(edit.maxHp!==undefined) { if(!Number.isFinite(edit.maxHp)||edit.maxHp<1) throw new Error("HP는 1 이상의 숫자입니다."); npc.maxHp=Math.floor(edit.maxHp); }
+  const stats=npc.runtimeStats??{abilities:{str:10,dex:10,con:10,int:10,wis:10,cha:10},proficiencyBonus:2,savingThrowProficiencies:[],speed:30,resistances:[],immunities:[],vulnerabilities:[]};
+  if(edit.speed!==undefined&&Number.isFinite(edit.speed)) stats.speed=Math.max(0,Math.floor(edit.speed));
+  if(edit.abilities) for(const [key,value] of Object.entries(edit.abilities)) if(typeof value==="number"&&Number.isFinite(value)) stats.abilities[key as keyof typeof stats.abilities]=Math.max(1,Math.min(30,Math.floor(value)));
+  npc.runtimeStats=stats;
+  if(edit.description!==undefined) { if(edit.description.trim()) npc.description=edit.description.trim(); else delete npc.description; }
+  if(edit.dmNotes!==undefined) { if(edit.dmNotes.trim()) npc.dmNotes=edit.dmNotes.trim(); else delete npc.dmNotes; }
+  if(edit.portrait===null) delete npc.portrait; else if(edit.portrait) npc.portrait=structuredClone(edit.portrait);
+  const tags=edit.tags!==undefined?edit.tags.map((tag)=>tag.trim()).filter(Boolean):entry.tags;
+  npc.tags=tags;
+  return library.upsert({...entry,name:npc.name,tags,npc});
 }
 
 /** A PC preset: a character sheet kept in the library, summoned as an ally the DM controls (NPC party members, backups). */

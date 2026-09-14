@@ -33,7 +33,7 @@ export function TokenCard(props:TokenCardProps) {
   return <div className={classes} role="button" tabIndex={0} aria-label={`${entity.name} · HP ${hpLabel(entity)}`} aria-pressed={selected} data-entity-id={entity.id} onClick={props.onSelect} onDoubleClick={(event)=>{ event.stopPropagation(); props.onOpenSheet(); }} onDragOver={onDragOver} onDragLeave={()=>setOver(false)} onDrop={onDrop}>
     {current&&<span className="tw-turn">턴</span>}
     <div className="tw-token-head">
-      <span className="tw-avatar" aria-hidden="true">{entity.name.slice(0,1)}</span>
+      <span className="tw-avatar" aria-hidden="true">{entity.portrait?<img src={entity.portrait.dataUrl} alt="" style={{objectPosition:`${entity.portrait.focalX*100}% ${entity.portrait.focalY*100}%`}}/>:entity.name.slice(0,1)}</span>
       <span className="tw-name">{entity.name}{entity.hidden?" (숨김)":""}</span>
       {role==="dm"&&<button type="button" className="tw-more" aria-label={`${entity.name} 조작`} onClick={(event)=>{ event.stopPropagation(); const rect=(event.currentTarget.closest(".tw-token") as HTMLElement).getBoundingClientRect(); props.onToggleHud({left:rect.left,top:rect.top,bottom:rect.bottom}); }}>⋯</button>}
     </div>

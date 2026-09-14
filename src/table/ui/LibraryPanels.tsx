@@ -2,7 +2,10 @@ import { useState } from "react";
 import type { AppSnapshot, CatalogEntry } from "../../app/contracts";
 import { weaponRuleById } from "../../domain/weaponRuleCatalog";
 import type { ActorSpec, TableCommand } from "../commands";
-import { blankNpc, bundleEntry, bundleFromActors, bundleSpecs, itemEntry, npcFromSrd, npcsFromJson, presetFromSheet, type HostLibrary, type LibraryEntry, type LibraryItemSpec } from "../library";
+import { blankNpc, bundleEntry, bundleFromActors, bundleSpecs, editNpc, itemEntry, npcFromSrd, npcsFromJson, presetFromSheet, type HostLibrary, type LibraryEntry, type LibraryItemSpec } from "../library";
+import type { CharacterPortraitV1 } from "../../app/characterPortraitContracts";
+import { LOCAL_IMAGE_ACCEPT } from "../../app/localImageAsset";
+import { readPortraitFile } from "./portrait";
 import { startDrag } from "./drag";
 import { monsterListings } from "./model";
 import { useHostLibrary } from "./useHostLibrary";
@@ -49,6 +52,7 @@ export function NpcLibrary({library:given,mode,snapshot,dispatch,onFeedback}:Lib
     const summary=entry.kind==="npc"?`AC ${entry.npc?.ac} · HP ${entry.npc?.maxHp}${entry.tags[0]?` · ${CREATURE_KO[entry.tags[0]]??entry.tags[0]}`:""}`:entry.kind==="preset"?`${entry.preset?.className} ${entry.preset?.level}레벨 · PC 프리셋`:`${entry.bundle?.actors.reduce((sum,actor)=>sum+actor.count,0)??0}명${entry.bundle?.sceneName?` · 장면 ${entry.bundle.sceneName}`:""}`;
     return <div key={entry.id} className="tw-list-item" role="listitem" draggable onDragStart={(event)=>startDrag(event,entry.kind==="npc"?{kind:"npc",entryId:entry.id,count}:entry.kind==="preset"?{kind:"preset",entryId:entry.id}:{kind:"bundle",entryId:entry.id})}>
       <button type="button" className={`quiet sm tw-star ${entry.favorite?"on":""}`} aria-label="즐겨찾기" onClick={()=>library.toggleFavorite(entry.id)}>{entry.favorite?"★":"☆"}</button>
+      {entry.npc?.portrait?<img className="tw-thumb" src={entry.npc.portrait.asset.dataUrl} alt="" style={{objectPosition:`${entry.npc.portrait.focalX*100}% ${entry.npc.portrait.focalY*100}%`}}/>:<span className="tw-thumb tw-thumb-empty" aria-hidden="true">{entry.name.slice(0,1)}</span>}
       <div className="tw-grow"><strong>{entry.name}</strong><small>{summary}</small></div>
       <span className="tw-verbs">
         {mode==="session"&&<button type="button" className="primary" onClick={()=>summonEntry(entry,entry.kind==="npc"?1:count)}>소환</button>}
@@ -75,7 +79,7 @@ export function NpcLibrary({library:given,mode,snapshot,dispatch,onFeedback}:Lib
       {mode==="session"&&snapshot&&snapshot.scene.entities.some((entity)=>entity.tableKind==="npc")&&<button type="button" className="quiet sm" style={{alignSelf:"flex-end"}} onClick={saveTable}>현재 테이블을 묶음으로 저장</button>}
       <div className="tw-section">내 NPC · 프리셋 {npcs.length+presets.length>0&&<span>{npcs.length+presets.length}</span>}</div>
       {npcs.length+presets.length===0&&<div className="tw-empty">아직 내 NPC가 없습니다.<br/><button type="button" onClick={()=>setAdding("srd")}>+ 추가</button></div>}
-      {[...npcs,...presets].map((entry)=><div key={entry.id}>{row(entry)}{editing===entry.id&&entry.npc&&<NpcEditor entry={entry} onSave={(patch)=>{ library.upsert({...entry,name:patch.name,npc:{...entry.npc!,name:patch.name,ac:patch.ac,maxHp:patch.maxHp}}); setEditing(null); }} onCancel={()=>setEditing(null)}/>}</div>)}
+      {[...npcs,...presets].map((entry)=><div key={entry.id}>{row(entry)}{editing===entry.id&&entry.npc&&<NpcEditor library={library} entry={entry} onDone={()=>setEditing(null)} onFeedback={onFeedback}/>}</div>)}
       <div className="tw-section">장면 묶음 {bundles.length>0&&<span>{bundles.length}</span>}</div>
       {bundles.length===0&&<div className="tw-empty">묶음이 없습니다. {mode==="session"?"테이블을 차린 뒤 '현재 테이블을 묶음으로 저장'하세요.":"세션에서 테이블을 차린 뒤 저장하거나, 여기서 만드세요."}</div>}
       {bundles.map(row)}
@@ -112,9 +116,33 @@ function JsonForm({placeholder,onSave}:{placeholder:string;onSave(text:string):v
   return <div className="tw-line" style={{alignItems:"stretch"}}><textarea value={text} placeholder={placeholder} aria-label="JSON" rows={4} style={{flex:1,minWidth:200,height:"auto",padding:8}} onChange={(event)=>setText(event.target.value)}/><button type="button" className="primary" disabled={!text.trim()} onClick={()=>onSave(text)}>가져오기</button></div>;
 }
 
-function NpcEditor({entry,onSave,onCancel}:{entry:LibraryEntry;onSave(patch:{name:string;ac:number;maxHp:number}):void;onCancel():void}) {
-  const [name,setName]=useState(entry.name); const [ac,setAc]=useState(entry.npc?.ac??10); const [maxHp,setMaxHp]=useState(entry.npc?.maxHp??1);
-  return <div className="tw-form"><div className="tw-line"><input type="text" value={name} aria-label="이름" onChange={(event)=>setName(event.target.value)}/><input type="number" value={ac} aria-label="AC" onChange={(event)=>setAc(Number(event.target.value))}/><span>AC</span><input type="number" value={maxHp} aria-label="HP" onChange={(event)=>setMaxHp(Number(event.target.value))}/><span>HP</span><button type="button" className="primary" onClick={()=>onSave({name,ac,maxHp})}>저장</button><button type="button" className="quiet" onClick={onCancel}>취소</button></div></div>;
+function NpcEditor({library,entry,onDone,onFeedback}:{library:HostLibrary;entry:LibraryEntry;onDone():void;onFeedback?(message:string):void}) {
+  const npc=entry.npc!;
+  const stats=npc.runtimeStats;
+  const [name,setName]=useState(entry.name); const [ac,setAc]=useState(npc.ac); const [maxHp,setMaxHp]=useState(npc.maxHp); const [speed,setSpeed]=useState(stats?.speed??30);
+  const [abilities,setAbilities]=useState({str:10,dex:10,con:10,int:10,wis:10,cha:10,...(stats?.abilities??{})});
+  const [description,setDescription]=useState(npc.description??""); const [dmNotes,setDmNotes]=useState(npc.dmNotes??""); const [tags,setTags]=useState(entry.tags.join(", "));
+  const [portrait,setPortrait]=useState<CharacterPortraitV1|null|undefined>(undefined);
+  const shown=portrait===undefined?npc.portrait:portrait??undefined;
+  const pick=async(file:File|undefined)=>{ if(!file) return; try { setPortrait(await readPortraitFile(file)); } catch(error) { onFeedback?.(error instanceof Error?error.message:String(error)); } };
+  const save=()=>{ try { editNpc(library,entry.id,{name,ac,maxHp,speed,abilities,description,dmNotes,tags:tags.split(","),...(portrait!==undefined?{portrait}:{})}); onFeedback?.(`저장: ${name}`); onDone(); } catch(error) { onFeedback?.(error instanceof Error?error.message:String(error)); } };
+  return <div className="tw-form tw-npc-editor" role="group" aria-label={`${entry.name} 편집`}>
+    <div className="tw-line" style={{alignItems:"flex-start"}}>
+      <label className="tw-portrait-pick" title="초상 이미지 (PNG·JPEG·WebP, 자동 축소)">
+        {shown?<img className="tw-portrait" src={shown.asset.dataUrl} alt="" style={{objectPosition:`${shown.focalX*100}% ${shown.focalY*100}%`}}/>:<span className="tw-portrait tw-portrait-empty">초상<br/>추가</span>}
+        <input type="file" accept={LOCAL_IMAGE_ACCEPT} aria-label="초상 이미지" onChange={(event)=>void pick(event.target.files?.[0])}/>
+      </label>
+      <div className="tw-grow" style={{display:"flex",flexDirection:"column",gap:6}}>
+        <div className="tw-line"><input type="text" value={name} aria-label="이름" style={{flex:1}} onChange={(event)=>setName(event.target.value)}/>{shown&&<button type="button" className="quiet sm" onClick={()=>setPortrait(null)}>초상 지움</button>}</div>
+        <div className="tw-line"><span>AC</span><input type="number" value={ac} aria-label="AC" onChange={(event)=>setAc(Number(event.target.value))}/><span>HP</span><input type="number" value={maxHp} aria-label="HP" onChange={(event)=>setMaxHp(Number(event.target.value))}/><span>속도</span><input type="number" value={speed} aria-label="속도" onChange={(event)=>setSpeed(Number(event.target.value))}/></div>
+        <div className="tw-line tw-abilities">{(["str","dex","con","int","wis","cha"] as const).map((key)=><label key={key}><span>{key.toUpperCase()}</span><input type="number" min={1} max={30} value={abilities[key]} aria-label={key.toUpperCase()} onChange={(event)=>setAbilities({...abilities,[key]:Number(event.target.value)})}/></label>)}</div>
+      </div>
+    </div>
+    <input type="text" value={tags} placeholder="태그 (쉼표로 구분: 종탑, 언데드)" aria-label="태그" onChange={(event)=>setTags(event.target.value)}/>
+    <textarea value={description} placeholder="공개 설명 — 플레이어가 카드에서 읽는 글" aria-label="공개 설명" rows={2} style={{height:"auto",padding:8}} onChange={(event)=>setDescription(event.target.value)}/>
+    <textarea value={dmNotes} placeholder="DM 메모 — 호스트에만 남는다" aria-label="DM 메모" rows={2} style={{height:"auto",padding:8}} onChange={(event)=>setDmNotes(event.target.value)}/>
+    <div className="tw-line" style={{justifyContent:"flex-end"}}><button type="button" className="quiet" onClick={onDone}>취소</button><button type="button" className="primary" onClick={save}>저장</button></div>
+  </div>;
 }
 
 /** 준비실: compose a bundle from library NPCs and SRD monsters without a table. */

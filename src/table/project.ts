@@ -5,6 +5,7 @@ import { conditionLabelKo } from "../app/srdMonsterCatalog";
 import { actionsFor, actorAc } from "./actors";
 import { availabilityOf, eligibleTargetIds } from "./availability";
 import type { TableRefusal } from "./refusal";
+import { sanitizeCharacterPortrait } from "../app/characterPortraitContracts";
 import { actorIds, benchedActorIds, hpStageOf, HP_STAGE_LABEL, questionPeerOf, type Actor, type TableMode, type TableState } from "./state";
 import { handsLabel } from "./hands";
 import { clockOfDay } from "./handlers/time";
@@ -54,6 +55,12 @@ declare module "../app/contracts" {
     ownerId?:string;
     /** DM only: the actor is hidden from players. */
     hidden?:boolean;
+    /** The portrait on the token: a character's own, or a library NPC's. */
+    portrait?:{dataUrl:string;focalX:number;focalY:number};
+    /** A library NPC's public description. */
+    description?:string;
+    /** DM only: a library NPC's notes. */
+    dmNotes?:string;
     /** The actor's own resource pools (numbers only for those who know them). */
     resources?:Array<{id:string;label:string;current:number;maximum:number}>;
   }
@@ -115,6 +122,12 @@ function economyView(state:TableState,actorId:string):EconomyVm {
   return {action:economy.action,bonusAction:economy.bonusAction,reaction:economy.reaction,movement:economy.movement,movementMax:economy.movementMaximum,...(economy.extraActions?.length?{extraActions:economy.extraActions}:{}),...(economy.extraAttacks?.length?{extraAttacks:economy.extraAttacks}:{})};
 }
 
+function portraitOf(actor:Actor):{dataUrl:string;focalX:number;focalY:number}|undefined {
+  const raw=actor.source.kind==="character"?actor.source.sheet.portrait:actor.source.kind==="monster"?actor.source.definition.portrait:undefined;
+  const portrait=sanitizeCharacterPortrait(raw);
+  return portrait?{dataUrl:portrait.asset.dataUrl,focalX:portrait.focalX,focalY:portrait.focalY}:undefined;
+}
+
 function entityFor(state:TableState,actor:Actor,viewer:TableViewer):SceneEntity {
   const combatant=state.rules.combatants[actor.id];
   const defenses=combatant?.damageDefenses??[];
@@ -133,6 +146,9 @@ function entityFor(state:TableState,actor:Actor,viewer:TableViewer):SceneEntity 
     tableKind:actor.kind,
     ...(actor.ownerId?{ownerId:actor.ownerId}:{}),
     ...(viewer.role==="dm"&&actor.hidden?{hidden:true}:{}),
+    ...(portraitOf(actor)?{portrait:portraitOf(actor)}:{}),
+    ...(actor.source.kind==="monster"&&actor.source.definition.description?{description:actor.source.definition.description}:{}),
+    ...(viewer.role==="dm"&&actor.source.kind==="monster"&&actor.source.definition.dmNotes?{dmNotes:actor.source.definition.dmNotes}:{}),
     ...(knows&&combatant?.resources.length?{resources:combatant.resources.map((pool)=>({id:pool.id,label:pool.label,current:pool.current,maximum:pool.maximum}))}:{}),
   };
   if(combatant) entity.runtimeLife={deathSaves:{...combatant.life.deathSaves},stable:combatant.life.stable,unconscious:combatant.life.unconscious,dead:combatant.life.dead};

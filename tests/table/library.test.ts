@@ -69,3 +69,26 @@ test("grant-item: a potion stacks in the bag, a weapon becomes an attack tile, o
   assert.deepEqual(replayEvents(createTableState("table.test"),runtime.ledger),runtime.state);
   assert.equal(dice.remaining(),0);
 });
+
+test("library: an NPC edit carries a portrait, description, DM notes, tags and abilities into the table; players get the portrait and description, never the notes", async () => {
+  const {projectTable}=await import("../../src/table/project");
+  const {redactStateFor}=await import("../../src/table/redact");
+  const {editNpc}=await import("../../src/table/library");
+  const library=lib();
+  const boss=npcFromSrd(library,GOBLIN,{name:"고블린 두목"});
+  const dataUrl=`data:image/png;base64,${Buffer.from("png-bytes").toString("base64")}`;
+  const edited=editNpc(library,boss.id,{ac:17,maxHp:30,speed:25,abilities:{str:16},description:"흉터가 많은 두목",dmNotes:"보물 지도를 숨겼다",tags:["종탑","두목"],portrait:{asset:{mimeType:"image/png",dataUrl,byteLength:9},focalX:0.5,focalY:0.3}});
+  assert.equal(edited.npc?.ac,17); assert.equal(edited.npc?.runtimeStats?.speed,25); assert.equal(edited.npc?.runtimeStats?.abilities.str,16); assert.deepEqual(edited.tags,["종탑","두목"]);
+  assert.throws(()=>editNpc(library,boss.id,{maxHp:0}),/HP/);
+  const {runtime}=table([]);
+  runtime.dispatch({type:"add-actors",specs:[{kind:"npc",definition:edited.npc!}]});
+  const id=Object.keys(runtime.state.actors)[0];
+  const dm=projectTable(runtime.state,{role:"dm"}).scene.entities[0];
+  assert.equal(dm.portrait?.dataUrl,dataUrl); assert.equal(dm.description,"흉터가 많은 두목"); assert.equal(dm.dmNotes,"보물 지도를 숨겼다"); assert.equal(dm.ac,17);
+  const player=projectTable(redactStateFor(runtime.state,{role:"player",peerId:"peer.p1"}),{role:"player",peerId:"peer.p1"}).scene.entities[0];
+  assert.equal(player.portrait?.dataUrl,dataUrl,"the portrait reaches players");
+  assert.equal(player.description,"흉터가 많은 두목");
+  assert.equal(player.dmNotes,undefined,"DM notes never leave the Host");
+  assert.equal(JSON.stringify(redactStateFor(runtime.state,{role:"player",peerId:"peer.p1"})).includes("보물 지도"),false);
+  void id;
+});

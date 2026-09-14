@@ -1,14 +1,35 @@
-import type { CharacterSheet, SceneEntity } from "../../app/contracts";
+import type { CharacterSheet, CombatantDefinitionVm, SceneEntity } from "../../app/contracts";
 import { srdMonsterById } from "../../app/srdMonsterCatalog";
 import { SrdMonsterStatBlock } from "../../SrdMonsterStatBlock";
 import type { Actor } from "../state";
 
 /** Double-click on a token: a read-only sheet for a character (level, HP, resources, items, spells) or the stat block for a monster. */
-export function SheetDrawer({entity,actor,onClose}:{entity:SceneEntity;actor:Actor|null;onClose():void}) {
+/** A library NPC (no SRD stat block): the numbers the definition carries, in the same shape a DM reads a stat block. */
+function LibraryStatBlock({entity,definition}:{entity:SceneEntity;definition?:CombatantDefinitionVm}) {
+  const stats=definition?.runtimeStats;
+  const attacks=definition?.runtimeActions??[];
+  const saves=definition?.runtimeSaveActions??[];
+  const mod=(score:number)=>{ const value=Math.floor((score-10)/2); return `${score} (${value>=0?"+":""}${value})`; };
+  return <div className="tw-sheet">
+    <div className="tw-kv"><span>AC <strong>{entity.ac}</strong></span><span>HP <strong>{entity.hp}/{entity.maxHp}</strong></span>{stats&&<span>속도 <strong>{stats.speed}피트</strong></span>}{definition?.tags&&definition.tags.length>0&&<span>{definition.tags.join(" · ")}</span>}</div>
+    {stats&&<dl><dt>능력치</dt><dd>{(["str","dex","con","int","wis","cha"] as const).map((key)=>`${key.toUpperCase()} ${mod(stats.abilities[key])}`).join(" · ")}</dd>
+      {stats.resistances.length>0&&<><dt>저항</dt><dd>{stats.resistances.join(", ")}</dd></>}
+      {stats.immunities.length>0&&<><dt>면역</dt><dd>{stats.immunities.join(", ")}</dd></>}
+      {attacks.length>0&&<><dt>공격</dt><dd>{attacks.map((attack)=>`${attack.name} ${attack.attackBonus>=0?"+":""}${attack.attackBonus} · ${attack.damage.dice}${attack.damage.flat?` + ${attack.damage.flat}`:""} ${attack.damage.type}${attack.attacksPerAction&&attack.attacksPerAction>1?` ×${attack.attacksPerAction}`:""}`).join(" · ")}</dd></>}
+      {saves.length>0&&<><dt>내성 행동</dt><dd>{saves.map((save)=>`${save.name} DC ${save.saveDc}`).join(" · ")}</dd></>}
+      {entity.status.length>0&&<><dt>상태</dt><dd>{entity.status.map((chip)=>chip.replace(/^✦ /,"")).join(", ")}</dd></>}
+    </dl>}
+    {!stats&&entity.status.length>0&&<div className="tw-kv"><span>{entity.status.join(", ")}</span></div>}
+  </div>;
+}
+
+export function SheetDrawer({entity,actor,role="dm",onClose}:{entity:SceneEntity;actor:Actor|null;role?:"dm"|"player";onClose():void}) {
   const sheet=actor?.source.kind==="character"?actor.source.sheet as CharacterSheet&{cantrips?:string[];preparedSpells?:string[]}:null;
   const monster=actor?.source.kind==="monster"?srdMonsterById(actor.source.definitionId):undefined;
   return <aside className="tw-drawer" role="dialog" aria-label={`${entity.name} 시트`}>
     <header><h2>{entity.name}</h2><button type="button" aria-label="시트 닫기" onClick={onClose}>×</button></header>
+    {(entity.portrait||entity.description)&&<div className="tw-sheet-intro">{entity.portrait&&<img className="tw-portrait" src={entity.portrait.dataUrl} alt="" style={{objectPosition:`${entity.portrait.focalX*100}% ${entity.portrait.focalY*100}%`}}/>}{entity.description&&<p>{entity.description}</p>}</div>}
+    {role==="dm"&&entity.dmNotes&&<div className="tw-dm-notes"><span className="tw-eyebrow">DM 메모</span><p>{entity.dmNotes}</p></div>}
     {sheet&&<div className="tw-sheet">
       <div className="tw-kv"><span>{sheet.className} {sheet.subclassName?`· ${sheet.subclassName}`:""} <strong>{sheet.level}레벨</strong></span><span>{sheet.species} · {sheet.background}</span></div>
       <dl>
@@ -27,6 +48,6 @@ export function SheetDrawer({entity,actor,onClose}:{entity:SceneEntity;actor:Act
       </dl>
     </div>}
     {monster&&<SrdMonsterStatBlock monster={monster}/>}
-    {!sheet&&!monster&&<div className="tw-kv"><span>AC <strong>{entity.ac}</strong></span><span>HP <strong>{entity.hp}/{entity.maxHp}</strong></span>{entity.status.length>0&&<span>{entity.status.join(", ")}</span>}</div>}
+    {!sheet&&!monster&&<LibraryStatBlock entity={entity} definition={actor?.source.kind==="monster"?actor.source.definition:undefined}/>}
   </aside>;
 }
