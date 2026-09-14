@@ -173,6 +173,8 @@ export interface AttackOverrides {
   cancelled?:boolean;
 }
 
+export interface Handout { id:string; name:string; dataUrl:string; toPeer?:string; at:string }
+
 /** A resolution waiting on reaction windows: the command, the dice it drew, and the answers so far. */
 export interface PendingResolution {
   id:string;
@@ -247,6 +249,10 @@ export interface TableState {
   pending:PendingResolution|null;
   /** Replays for the last few committed resolutions (DM palette after the fact); newest first. */
   replays:ResolutionReplay[];
+  /** An image the DM is showing: to everyone, or to one peer (DM_WORKSPACE.md §3 자료 · 공개). */
+  handout:Handout|null;
+  /** The last result cards, newest first, so a 기록 line can reopen its card. */
+  recentCards:ResolutionRecord[];
   activeResolution:ResolutionRecord|null;
   /** Newest first. */
   log:LogEntry[];
@@ -278,6 +284,8 @@ export function createTableState(sessionId:string):TableState {
     scene:{id:"scene.1",name:"",conditions:[],enteredAt:0},
     pending:null,
     replays:[],
+    handout:null,
+    recentCards:[],
     activeResolution:null,
     log:[],
     rollVisibility:"public",

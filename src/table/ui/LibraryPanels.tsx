@@ -2,10 +2,10 @@ import { useState } from "react";
 import type { AppSnapshot, CatalogEntry } from "../../app/contracts";
 import { weaponRuleById } from "../../domain/weaponRuleCatalog";
 import type { ActorSpec, TableCommand } from "../commands";
-import { blankNpc, bundleEntry, bundleFromActors, bundleSpecs, editNpc, itemEntry, npcFromSrd, npcsFromJson, presetFromSheet, type HostLibrary, type LibraryEntry, type LibraryItemSpec } from "../library";
+import { blankNpc, bundleEntry, bundleFromActors, bundleSpecs, editNpc, imageEntry, itemEntry, noteEntry, npcFromSrd, npcsFromJson, presetFromSheet, type HostLibrary, type LibraryEntry, type LibraryItemSpec } from "../library";
 import type { CharacterPortraitV1 } from "../../app/characterPortraitContracts";
 import { LOCAL_IMAGE_ACCEPT } from "../../app/localImageAsset";
-import { readPortraitFile } from "./portrait";
+import { readHandoutFile, readPortraitFile } from "./portrait";
 import { startDrag } from "./drag";
 import { monsterListings } from "./model";
 import { useHostLibrary } from "./useHostLibrary";
@@ -202,4 +202,54 @@ export function ItemLibrary({library:given,mode,snapshot,dispatch,onFeedback,tar
 function CustomItemForm({onSave}:{onSave(item:LibraryItemSpec):void}) {
   const [name,setName]=useState(""); const [kind,setKind]=useState<"equipment"|"consumable"|"magic">("equipment"); const [quantity,setQuantity]=useState(1);
   return <div className="tw-line"><input type="text" value={name} placeholder="이름 (예: 낡은 열쇠)" aria-label="아이템 이름" onChange={(event)=>setName(event.target.value)}/><select value={kind} aria-label="종류" onChange={(event)=>setKind(event.target.value as typeof kind)}><option value="equipment">장비</option><option value="consumable">소모품</option><option value="magic">마법 물건</option></select><input type="number" min={1} value={quantity} aria-label="수량" onChange={(event)=>setQuantity(Math.max(1,Number(event.target.value)))}/><button type="button" className="primary" disabled={!name.trim()} onClick={()=>onSave({definitionId:`custom.item.${name.trim().toLowerCase().replace(/\s+/g,"-")}`,name:name.trim(),kind,quantity})}>저장</button></div>;
+}
+
+/** 자료: host-owned images and notes. 보기 previews for the DM alone; 공개 shows an image to everyone (or, dragged onto a token, to that player); a note is read aloud as narration. */
+export function MaterialsLibrary({library:given,mode,snapshot,dispatch,onFeedback}:LibraryPanelProps) {
+  const library=useHostLibrary(given);
+  const [query,setQuery]=useState("");
+  const [adding,setAdding]=useState<null|"image"|"note">(null);
+  const [preview,setPreview]=useState<string|null>(null);
+  const [noteName,setNoteName]=useState(""); const [noteText,setNoteText]=useState("");
+  const q=query.trim().toLowerCase();
+  const images=library.entries("image").filter((entry)=>!q||entry.name.toLowerCase().includes(q));
+  const notes=library.entries("note").filter((entry)=>!q||`${entry.name} ${entry.note??""}`.toLowerCase().includes(q));
+  const showing=snapshot?.scene.handout;
+  const addFiles=async(files:FileList|null)=>{
+    if(!files?.length) return;
+    let added=0;
+    for(const file of Array.from(files)) { try { imageEntry(library,await readHandoutFile(file),file.name); added+=1; } catch(error) { onFeedback?.(error instanceof Error?error.message:String(error)); } }
+    if(added) onFeedback?.(`이미지 ${added}장 추가`);
+    setAdding(null);
+  };
+  const show=(entry:LibraryEntry,toPeer?:string)=>{ if(!dispatch||!entry.image) return; void dispatch({type:"handout",image:{name:entry.name,dataUrl:entry.image.dataUrl},...(toPeer?{toPeer}:{})}); library.touch(entry.id); };
+  const previewEntry=preview?library.get(preview):undefined;
+  return <>
+    <div className="tw-tabhead">
+      <input type="search" value={query} placeholder="이미지 · 노트 검색" aria-label="자료 검색" onChange={(event)=>setQuery(event.target.value)}/>
+      <button type="button" className={adding?"active":""} onClick={()=>setAdding(adding?null:"image")}>+ 추가</button>
+    </div>
+    <div className="tw-tabbody">
+      {adding&&<div className="tw-form" role="group" aria-label="자료 추가">
+        <div className="tw-seg"><button type="button" className={adding==="image"?"active":""} onClick={()=>setAdding("image")}>이미지</button><button type="button" className={adding==="note"?"active":""} onClick={()=>setAdding("note")}>노트</button></div>
+        {adding==="image"&&<label className="tw-dropzone"><input type="file" multiple accept={LOCAL_IMAGE_ACCEPT} aria-label="이미지 파일" onChange={(event)=>void addFiles(event.target.files)}/><span>이미지를 여러 장 골라 넣으세요 (PNG·JPEG·WebP, 1280px로 축소 저장)</span></label>}
+        {adding==="note"&&<><input type="text" value={noteName} placeholder="제목" aria-label="노트 제목" onChange={(event)=>setNoteName(event.target.value)}/><textarea value={noteText} placeholder="플레이어에게 읽어 줄 글, 또는 DM만 볼 메모" aria-label="노트 내용" rows={4} style={{height:"auto",padding:8}} onChange={(event)=>setNoteText(event.target.value)}/><div className="tw-line" style={{justifyContent:"flex-end"}}><button type="button" className="primary" disabled={!noteText.trim()} onClick={()=>{ noteEntry(library,noteName,noteText); onFeedback?.("노트 저장"); setNoteName(""); setNoteText(""); setAdding(null); }}>저장</button></div></>}
+      </div>}
+      {mode==="session"&&showing&&<div className="tw-kv"><span>공개 중 <strong>{showing.name}</strong>{showing.toPeer?<> · {snapshot?.scene.entities.find((entity)=>entity.controllerId===showing.toPeer)?.name??showing.toPeer}에게만</>:" · 모두에게"}</span><button type="button" className="sm" onClick={()=>void dispatch?.({type:"handout"})}>공개 해제</button></div>}
+      <div className="tw-section">이미지 {images.length>0&&<span>{images.length}</span>}</div>
+      {images.length===0&&<div className="tw-empty">아직 이미지가 없습니다.<br/><button type="button" onClick={()=>setAdding("image")}>+ 이미지</button></div>}
+      {images.map((entry)=><div key={entry.id} className={`tw-list-item ${showing?.name===entry.name?"selected":""}`} role="listitem" draggable onDragStart={(event)=>startDrag(event,{kind:"image",entryId:entry.id})}>
+        <img className="tw-thumb" src={entry.image?.dataUrl} alt=""/>
+        <div className="tw-grow"><strong>{entry.name}</strong><small>{Math.round((entry.image?.byteLength??0)/1024)} KiB{mode==="session"?" · 토큰에 끌어 놓으면 그 플레이어에게만":""}</small></div>
+        <span className="tw-verbs"><button type="button" onClick={()=>setPreview(preview===entry.id?null:entry.id)}>보기</button>{mode==="session"&&<button type="button" className="primary" onClick={()=>show(entry)}>공개</button>}<button type="button" className="quiet" onClick={()=>{ if(window.confirm(`${entry.name} 삭제?`)) library.remove(entry.id); }}>삭제</button></span>
+      </div>)}
+      {previewEntry?.image&&<div className="tw-preview" role="img" aria-label={`${previewEntry.name} 미리보기 (DM만)`}><img src={previewEntry.image.dataUrl} alt=""/><small>DM 미리보기 · 플레이어에게는 보이지 않습니다</small></div>}
+      <div className="tw-section">노트 {notes.length>0&&<span>{notes.length}</span>}</div>
+      {notes.length===0&&<div className="tw-empty">노트가 없습니다.</div>}
+      {notes.map((entry)=><div key={entry.id} className="tw-list-item" role="listitem">
+        <div className="tw-grow"><strong>{entry.name}</strong><small>{entry.note}</small></div>
+        <span className="tw-verbs">{mode==="session"&&<button type="button" onClick={()=>{ void dispatch?.({type:"narrate",text:entry.note??""}); onFeedback?.("서술로 읽어 줌"); }}>읽어 주기</button>}<button type="button" className="quiet" onClick={()=>library.remove(entry.id)}>삭제</button></span>
+      </div>)}
+    </div>
+  </>;
 }

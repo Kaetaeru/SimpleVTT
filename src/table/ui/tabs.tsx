@@ -1,11 +1,10 @@
 import { useState } from "react";
 import type { AppSnapshot, SceneEntity } from "../../app/contracts";
 import { conditionLabelKo } from "../../app/srdMonsterCatalog";
-import { SessionDmHandoutPane, useSessionImageHandout } from "../../SessionImageHandoutBridge";
 import { SessionRulesPane } from "../../SessionUtilityPanes";
 import type { TableCommand } from "../commands";
 import { CONDITION_PALETTE, filterActivity, formatClock, isInitiative, type DiscretionInput, type LogFilter, rulingFrom } from "./model";
-import { ItemLibrary, NpcLibrary } from "./LibraryPanels";
+import { ItemLibrary, MaterialsLibrary, NpcLibrary } from "./LibraryPanels";
 
 interface TabProps { snapshot:AppSnapshot; role:"dm"|"player"; selectedIds:string[]; dispatch(command:TableCommand):Promise<unknown>; onSelect(id:string):void; onOpenCard(resolutionId:string):void; onOpenSheet(id:string):void; onSave?():void; onLeave():void; onStop():void; onFeedback?(message:string):void }
 
@@ -118,11 +117,11 @@ export function ItemsTab({snapshot,role,selectedIds,dispatch,onFeedback}:TabProp
   </>;
 }
 
-/** 자료: the existing image handout runtime (DM pane; player sees the shared image). */
-export function MaterialsTab({role,onLeave}:TabProps) {
-  const handout=useSessionImageHandout();
-  if(role==="dm") return <div className="tw-tabbody" style={{padding:0}}><SessionDmHandoutPane onClose={onLeave}/></div>;
-  return <div className="tw-tabbody">{handout.asset?<img src={handout.asset.dataUrl} alt={handout.asset.fileName??"공유 이미지"} style={{maxWidth:"100%",borderRadius:8}}/>:<div className="tw-empty">DM이 공개한 자료가 여기에 보입니다.</div>}</div>;
+/** 자료 (DM): host-owned images and notes; (player): the image the DM is showing this viewer. */
+export function MaterialsTab({snapshot,role,dispatch,onFeedback}:TabProps) {
+  if(role==="dm") return <MaterialsLibrary mode="session" snapshot={snapshot} dispatch={dispatch} onFeedback={onFeedback}/>;
+  const handout=snapshot.scene.handout;
+  return <div className="tw-tabbody">{handout?<div className="tw-preview"><img src={handout.dataUrl} alt={handout.name}/><small>{handout.name}{handout.toPeer?" · 당신에게만":""}</small></div>:<div className="tw-empty">DM이 공개한 자료가 여기에 보입니다.</div>}</div>;
 }
 
 /** 규칙: the 14 conditions (apply to the selection) and the rules search. */

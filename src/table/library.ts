@@ -1,5 +1,6 @@
 import type { CharacterSheet, CombatantDefinitionVm } from "../app/contracts";
 import type { CharacterPortraitV1 } from "../app/characterPortraitContracts";
+import type { LocalImageAssetV1 } from "../app/localImageAsset";
 import type { CombatantRuntimeStatsVm } from "../app/combatantRuntimeContracts";
 import { srdMonsterById, srdMonsterCombatantDefinition } from "../app/srdMonsterCatalog";
 import type { ActorSpec } from "./commands";
@@ -10,7 +11,7 @@ import type { Side } from "./state";
  * outside any campaign. A campaign is a tag on an entry, never a precondition. Registration is one form in and out of a
  * session (준비실 = the same lists full-width). Stored as one JSON document; a memory store serves tests and previews.
  */
-export type LibraryKind="npc"|"preset"|"item"|"bundle"|"note";
+export type LibraryKind="npc"|"preset"|"item"|"bundle"|"note"|"image";
 export interface LibraryItemSpec { definitionId:string; name:string; nameEn?:string; kind:"equipment"|"consumable"|"magic"; quantity:number }
 export interface BundleActor { entryId?:string; monsterId?:string; count:number; side?:Side; hidden?:boolean }
 export interface LibraryBundle { actors:BundleActor[]; noteIds:string[]; sceneName?:string; conditions?:string[] }
@@ -27,6 +28,7 @@ export interface LibraryEntry {
   item?:LibraryItemSpec;
   bundle?:LibraryBundle;
   note?:string;
+  image?:LocalImageAssetV1;
 }
 export interface LibraryDocument { version:1; entries:LibraryEntry[]; recent:string[] }
 
@@ -141,6 +143,18 @@ export function presetFromSheet(library:HostLibrary,sheet:CharacterSheet):Librar
 export function itemEntry(library:HostLibrary,item:LibraryItemSpec):LibraryEntry {
   const id=library.nextId("item",item.name);
   return library.upsert({id,kind:"item",name:item.name,tags:[item.kind],item:{...item,quantity:Math.max(1,Math.floor(item.quantity||1))}});
+}
+
+/** An image the DM may show later (DM_WORKSPACE.md §3 자료): kept in the host library, shown with the `handout` command. */
+export function imageEntry(library:HostLibrary,asset:LocalImageAssetV1,name?:string):LibraryEntry {
+  const label=(name??asset.fileName??"이미지").replace(/\.[a-z0-9]+$/i,"").trim()||"이미지";
+  const id=library.nextId("image",label);
+  return library.upsert({id,kind:"image",name:label,tags:[],image:structuredClone(asset)});
+}
+export function noteEntry(library:HostLibrary,name:string,text:string):LibraryEntry {
+  const label=name.trim()||text.trim().slice(0,24)||"노트";
+  const id=library.nextId("note",label);
+  return library.upsert({id,kind:"note",name:label,tags:[],note:text});
 }
 
 export function bundleEntry(library:HostLibrary,name:string,bundle:LibraryBundle):LibraryEntry {

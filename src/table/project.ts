@@ -6,7 +6,7 @@ import { actionsFor, actorAc } from "./actors";
 import { availabilityOf, eligibleTargetIds } from "./availability";
 import type { TableRefusal } from "./refusal";
 import { sanitizeCharacterPortrait } from "../app/characterPortraitContracts";
-import { actorIds, benchedActorIds, hpStageOf, HP_STAGE_LABEL, questionPeerOf, type Actor, type TableMode, type TableState } from "./state";
+import { actorIds, benchedActorIds, cloneState, hpStageOf, HP_STAGE_LABEL, questionPeerOf, type Actor, type TableMode, type TableState } from "./state";
 import { handsLabel } from "./hands";
 import { clockOfDay } from "./handlers/time";
 import type { TableQuestion } from "./state";
@@ -38,6 +38,10 @@ declare module "../app/contracts" {
     tableSettings?:{holdAttacks:boolean};
     /** The current scene's name. */
     sceneName?:string;
+    /** The image the DM is showing this viewer (everyone, or this peer). */
+    handout?:{id:string;name:string;dataUrl:string;toPeer?:string};
+    /** The last result cards this viewer may reopen from the 기록 tab. */
+    recentCards?:ResolutionView[];
   }
   interface ActivityEntry {
     /** public, dm, or peer:<ids> — the DM's log filter. */
@@ -176,6 +180,7 @@ export function projectTable(state:TableState,viewer:TableViewer,refusal?:(Table
   const questions=state.questions.filter((question)=>viewer.role==="dm"||questionPeerOf(state,question)===viewer.peerId).map((question)=>({...question,toPeer:questionPeerOf(state,question),options:question.options.map((option)=>({...option})),context:{...question.context}}));
   const withdrawal=state.questions.find((question)=>question.kind==="opportunity-attack");
   const pendingWithdrawal=withdrawal?{actorId:String(withdrawal.context.moverId),actorName:state.actors[String(withdrawal.context.moverId)]?.name??String(withdrawal.context.moverId),round:state.round,candidates:state.questions.filter((question)=>question.kind==="opportunity-attack"&&question.context.moverId===withdrawal.context.moverId).flatMap((question)=>question.options.filter((option)=>option.id!=="decline").map((option)=>({reactorId:question.actorId,reactorName:state.actors[question.actorId]?.name??question.actorId,actionId:option.id,actionName:option.label})))}:undefined;
+  const recentCards=state.recentCards.filter((card)=>viewer.role==="dm"||card.visibility==="public").map((card)=>cloneState(card));
   const scene:SceneVm={id:state.scene.id,name:state.scene.name,round:state.round,currentActorId:state.currentActorId??"",selectedActorId:"",entities,actionsByActor,economyByActor,...(questions.length?{tableQuestions:questions}:{}),...(Object.keys(state.declarations).length?{movementDeclarations:Object.fromEntries(Object.entries(state.declarations).map(([id,declaration])=>[id,{...declaration}]))}:{}),...(pendingWithdrawal&&viewer.role==="dm"?{pendingWithdrawal}:{}),...(state.engagements.length?{engagements:state.engagements.map((record)=>({...record}))}:{}),...(state.floor.length?{floorItems:state.floor.map((entry)=>({id:entry.id,name:entry.item.name,quantity:entry.item.quantity,droppedById:entry.droppedBy,droppedByName:state.actors[entry.droppedBy]?.name??entry.droppedBy,recoverable:entry.recoverable}))}:{}),
     clock:{elapsedSeconds:state.rules.clock.elapsedSeconds,round:state.round,timeOfDay:timeOfDayLabel(clockOfDay(state))},
     ...(state.resting?{resting:{kind:state.resting.kind,actorIds:[...state.resting.actorIds],answered:Object.keys(state.resting.answers),interrupted:state.resting.interruptedAt!==undefined}}:{}),
@@ -183,6 +188,8 @@ export function projectTable(state:TableState,viewer:TableViewer,refusal?:(Table
     ...(state.pending?{pendingResolution:{id:state.pending.id,actorId:state.pending.actorId,actorName:state.actors[state.pending.actorId]?.name??state.pending.actorId,label:state.pending.label,waitingOn:state.pending.windows.map((entry)=>state.actors[entry.reactorId]?.name??entry.reactorId),window:state.pending.windows[0]?.window??""}}:{}),
     ...(state.scene.conditions.length?{sceneReminders:[...state.scene.conditions]}:{}),
     order:[...state.order],rollVisibility:state.rollVisibility==="public"?"public":"dm",sceneName:state.scene.name,
+    ...(state.handout&&(viewer.role==="dm"||!state.handout.toPeer||state.handout.toPeer===viewer.peerId)?{handout:{id:state.handout.id,name:state.handout.name,dataUrl:state.handout.dataUrl,...(state.handout.toPeer?{toPeer:state.handout.toPeer}:{})}}:{}),
+    ...(recentCards.length?{recentCards}:{}),
     ...(viewer.role==="dm"?{tableSettings:{holdAttacks:state.settings.holdAttacks}}:{}),
     ...(viewer.role==="dm"&&benchedActorIds(state).length?{benched:benchedActorIds(state).map((id)=>({id,name:state.actors[id].name}))}:{})};
   const activity:ActivityEntry[]=state.log.filter((entry)=>viewer.role==="dm"||entry.visibility==="public"||(entry.visibility.startsWith("peer:")&&entry.visibility.slice(5).split(",").includes(viewer.peerId??""))).map((entry)=>({

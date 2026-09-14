@@ -100,6 +100,19 @@ export function grantItem(ctx:HandlerContext,command:Extract<TableCommand,{type:
   return {status:"committed",events:[{payload:{type:"table-changed",sheets:[{actorId:actor.id,sheet}]},log:[logEntry(ctx,{actor:"DM",title:"지급",summary:`${actor.name} ← ${spec.name}${quantity>1?` ×${quantity}`:""}`,detail:command.note?[command.note]:[],stateChanges:lines})]}]};
 }
 
+/** DM handout (DM_WORKSPACE.md §3 자료): an image for everyone or for one peer; no image takes the current one down. */
+export function handout(ctx:HandlerContext,command:Extract<TableCommand,{type:"handout"}>):HandlerResult {
+  const state=ctx.state;
+  if(!command.image) {
+    if(!state.handout) return refused("handout-none","공개 중인 자료가 없습니다.");
+    return {status:"committed",events:[{payload:{type:"table-changed",handout:null},log:[logEntry(ctx,{actor:"DM",title:"자료 공개 해제",summary:state.handout.name,detail:[],stateChanges:[],visibility:state.handout.toPeer?`peer:${state.handout.toPeer}`:"public"})]}]};
+  }
+  if(!command.image.name.trim()||!/^data:image\/(png|jpeg|webp);base64,/.test(command.image.dataUrl)) return refused("handout-invalid","이미지 이름과 PNG·JPEG·WebP 데이터가 필요합니다.");
+  const toName=command.toPeer?Object.values(state.actors).find((actor)=>actor.controllerPeer===command.toPeer)?.name??command.toPeer:undefined;
+  const next={id:`handout.${ctx.nextSeq}`,name:command.image.name.trim(),dataUrl:command.image.dataUrl,...(command.toPeer?{toPeer:command.toPeer}:{}),at:ctx.now()};
+  return {status:"committed",events:[{payload:{type:"table-changed",handout:next},log:[logEntry(ctx,{actor:"DM",title:command.toPeer?`자료 → ${toName}`:"자료 공개",summary:next.name,detail:[],stateChanges:[],visibility:command.toPeer?`peer:${command.toPeer}`:"public"})]}]};
+}
+
 export function award(ctx:HandlerContext,command:Extract<TableCommand,{type:"award"}>):HandlerResult {
   const state=ctx.state;
   const targets=[...new Set(command.actorIds)].filter((id)=>state.actors[id]?.source.kind==="character");

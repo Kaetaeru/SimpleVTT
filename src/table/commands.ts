@@ -86,6 +86,8 @@ export type TableCommand=
   |{type:"award";actorIds:string[];xp?:number;milestone?:boolean;note?:string}
   /** DM: an item lands in a character's bag (a weapon also becomes an attack); the owner's sheet records it. */
   |{type:"grant-item";actorId:string;item:{definitionId:string;name:string;nameEn?:string;kind:"equipment"|"consumable"|"magic";quantity?:number};note?:string}
+  /** DM: show an image to everyone or to one peer; without an image the current handout comes down. */
+  |{type:"handout";image?:{name:string;dataUrl:string};toPeer?:string}
   |{type:"forget-ruling";ruleId:string}
   |{type:"undo"}
   |{type:"set-roll-visibility";visibility:Visibility};

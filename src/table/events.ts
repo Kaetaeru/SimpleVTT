@@ -1,7 +1,7 @@
 import type { CombatantRuntimeState, RulesRuntimeState } from "../domain/combatState";
 import { type EngagementRecord, pruneEngagementsToPresent } from "../domain/engagement";
 import type { CharacterSheet } from "../app/contracts";
-import { cloneState, type Actor, type FloorItem, type HouseRule, type LogEntry, type MovementDeclaration, type ReadiedAction, type ResolutionRecord, type PendingResolution, type ResolutionReplay, type RestingState, type Scene, type TableMode, type TableQuestion, type TableSettings, type TableState, type TableTime, type Timer, type Visibility } from "./state";
+import { type Handout, cloneState, type Actor, type FloorItem, type HouseRule, type LogEntry, type MovementDeclaration, type ReadiedAction, type ResolutionRecord, type PendingResolution, type ResolutionReplay, type RestingState, type Scene, type TableMode, type TableQuestion, type TableSettings, type TableState, type TableTime, type Timer, type Visibility } from "./state";
 
 /** Durable character changes (items moved, quantities) ride with the commit so the owner's client can write them back. */
 export type SheetPatch={actorId:string;sheet:CharacterSheet};
@@ -23,7 +23,7 @@ export type TableEventPayload=
   /** The clock moved (a round, a rest, the DM): the kernel's state after expiry, the timers that fired, the cards they opened. */
   |{type:"time-advanced";seconds:number;rules:RulesRuntimeState;expired:string[];fired:string[];timers:Timer[];questions?:TableQuestion[];resting?:RestingState|null;time?:TableTime}
   /** Table bookkeeping that needs no kernel commit: hands, floor, transfers, interaction count, questions, declarations, readied actions. */
-  |{type:"table-changed";sheets?:SheetPatch[];floor?:FloorItem[];interactions?:Record<string,number>;rules?:RulesRuntimeState;engagements?:EngagementRecord[];questions?:TableQuestion[];declarations?:Record<string,MovementDeclaration>;readied?:Record<string,ReadiedAction>;houseRules?:Record<string,HouseRule>;timers?:Timer[];resting?:RestingState|null;time?:TableTime;pending?:PendingResolution|null;settings?:TableSettings;scene?:Scene;order?:string[]}
+  |{type:"table-changed";sheets?:SheetPatch[];floor?:FloorItem[];interactions?:Record<string,number>;rules?:RulesRuntimeState;engagements?:EngagementRecord[];questions?:TableQuestion[];declarations?:Record<string,MovementDeclaration>;readied?:Record<string,ReadiedAction>;houseRules?:Record<string,HouseRule>;timers?:Timer[];resting?:RestingState|null;time?:TableTime;pending?:PendingResolution|null;settings?:TableSettings;scene?:Scene;order?:string[];handout?:Handout|null}
   |{type:"state-restored";state:TableState}
   |{type:"visibility-changed";rollVisibility:Visibility};
 
@@ -107,6 +107,7 @@ export function applyEvent(input:TableState,event:TableEvent):TableState {
     case "rules-committed": {
       state.rules=cloneState(payload.rules);
       if(payload.resolution!==undefined) state.activeResolution=payload.resolution?cloneState(payload.resolution):null;
+      if(payload.resolution) state.recentCards=[cloneState(payload.resolution),...state.recentCards.filter((card)=>card.id!==payload.resolution!.id)].slice(0,20);
       for(const {actorId,patch} of payload.actorPatches??[]) {
         const actor=state.actors[actorId];
         if(actor) Object.assign(actor,cloneState(patch));
@@ -144,6 +145,7 @@ export function applyEvent(input:TableState,event:TableEvent):TableState {
       if(payload.houseRules) state.houseRules=cloneState(payload.houseRules);
       if(payload.pending!==undefined) state.pending=payload.pending?cloneState(payload.pending):null;
       if(payload.settings) state.settings=cloneState(payload.settings);
+      if(payload.handout!==undefined) state.handout=payload.handout?cloneState(payload.handout):null;
       if(payload.scene) state.scene=cloneState(payload.scene);
       if(payload.order) { state.order=[...payload.order]; if(state.currentActorId&&!state.order.includes(state.currentActorId)) state.currentActorId=state.order[0]??null; }
       if(payload.timers) state.timers=cloneState(payload.timers);

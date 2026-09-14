@@ -4,17 +4,20 @@ import type { TableQuestion } from "../state";
 import type { AttackOverrides, TableCommand } from "../index";
 
 /** What sits in the middle of the table: the latest result card (with the DM's D42 menu), the questions, a held resolution, scene reminders and a refusal. */
-export function Focus({snapshot,role,peerId,dispatch,onDismiss}:{snapshot:AppSnapshot;role:"dm"|"player";peerId:string;dispatch(command:TableCommand):Promise<unknown>;onDismiss():void}) {
+export function Focus({snapshot,role,peerId,dispatch,onDismiss,openCard,onCloseCard}:{snapshot:AppSnapshot;role:"dm"|"player";peerId:string;dispatch(command:TableCommand):Promise<unknown>;onDismiss():void;openCard?:ResolutionView|null;onCloseCard?():void}) {
   const scene=snapshot.scene;
+  const handout=scene.handout;
   const questions=(scene.tableQuestions??[]) as TableQuestion[];
   const pending=scene.pendingResolution;
   return <>
     {scene.sceneReminders&&scene.sceneReminders.length>0&&<div className="tw-reminders"><span>장면: {scene.sceneName??""}</span>{scene.sceneReminders.map((reminder)=><span key={reminder} className="tw-chip">{reminder}</span>)}</div>}
     {snapshot.refusal&&<div className="tw-refusal" role="alert">{snapshot.refusal.message}</div>}
+    {handout&&<div className="tw-card tw-handout" role="img" aria-label={handout.name}><img src={handout.dataUrl} alt={handout.name}/><div className="tw-card-actions" style={{justifyContent:"space-between",alignItems:"center"}}><span className="tw-card-sub">{handout.name}{handout.toPeer?(role==="dm"?` · ${scene.entities.find((entity)=>entity.controllerId===handout.toPeer)?.name??handout.toPeer}에게만`:" · 당신에게만"):" · 모두에게"}</span>{role==="dm"&&<button type="button" className="quiet" onClick={()=>void dispatch({type:"handout"})}>공개 해제</button>}</div></div>}
+    {openCard&&<div className="tw-reopened"><ResolutionCard resolution={openCard} role={role} dispatch={dispatch} onDismiss={()=>onCloseCard?.()}/><small className="tw-card-sub">기록에서 다시 연 카드</small></div>}
     {pending&&<div className="tw-card tw-pending">⏳ {pending.label} — 대기 중: {pending.waitingOn.join(", ")||pending.window}</div>}
     {questions.map((question)=><QuestionCard key={question.id} question={question} mine={role==="dm"?question.toPeer===undefined||question.toPeer===peerId:question.toPeer===peerId} isDm={role==="dm"} dispatch={dispatch}/>)}
-    {snapshot.resolution&&<ResolutionCard resolution={snapshot.resolution} role={role} dispatch={dispatch} onDismiss={onDismiss}/>}
-    {!snapshot.resolution&&!questions.length&&!pending&&<div className="tw-card placeholder">{role==="dm"?"토큰을 고르고 아래 명령 센터나 재량 바로 진행하세요. 결과 카드는 여기에 뜹니다.":"결과 카드와 질문이 여기에 뜹니다."}</div>}
+    {snapshot.resolution&&(!openCard||openCard.id!==snapshot.resolution.id)&&<ResolutionCard resolution={snapshot.resolution} role={role} dispatch={dispatch} onDismiss={onDismiss}/>}
+    {!snapshot.resolution&&!questions.length&&!pending&&!handout&&!openCard&&<div className="tw-card placeholder">{role==="dm"?"토큰을 고르고 아래 명령 센터나 재량 바로 진행하세요. 결과 카드는 여기에 뜹니다.":"결과 카드와 질문이 여기에 뜹니다."}</div>}
   </>;
 }
 

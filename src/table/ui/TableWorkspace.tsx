@@ -45,6 +45,7 @@ export function WorkspaceView({snapshot,facade,onLeave,onStop,initialSelectedIds
   const [searchOpen,setSearchOpen]=useState(false);
   const [dismissedResolution,setDismissedResolution]=useState<string|null>(null);
   const [toast,setToast]=useState<string|null>(null);
+  const [openCardId,setOpenCardId]=useState<string|null>(null);
   const feedback=(message:string)=>{ setToast(message); window.setTimeout(()=>setToast((current)=>current===message?null:current),2400); };
   const dispatch=async(command:TableCommand)=>facade?facade.dispatch(command):Promise.resolve({status:"refused" as const,refusal:{code:"no-table",message:"테이블 런타임이 없습니다.",id:0}});
 
@@ -96,6 +97,7 @@ export function WorkspaceView({snapshot,facade,onLeave,onStop,initialSelectedIds
     if(!entity) return;
     if(payload.kind==="item") { if(entity.tableKind!=="character") { feedback("아이템은 캐릭터에게만 지급합니다."); return; } void dispatch({type:"grant-item",actorId:entityId,item:{definitionId:payload.definitionId,name:payload.name,kind:payload.itemKind,quantity:payload.quantity}}); }
     else if(payload.kind==="condition") void dispatch({type:"ruling",targetIds:[entityId],ruling:rulingFrom({kind:"condition",conditionId:payload.conditionId,on:true,preset:"1min"})});
+    else if(payload.kind==="image") { const entry=hostLibrary().get(payload.entryId); if(!entry?.image) return; if(!entity.controllerId||entity.tableKind!=="character") { feedback("플레이어가 조작하는 캐릭터 토큰에 놓으면 그 플레이어에게만 보입니다."); return; } void dispatch({type:"handout",image:{name:entry.name,dataUrl:entry.image.dataUrl},toPeer:entity.controllerId}); feedback(`${entity.name}에게만 공개: ${entry.name}`); }
     else dropOnTable(entity.side,payload);
   };
   const pickSearch=(hit:SearchHit)=>{
@@ -127,7 +129,7 @@ export function WorkspaceView({snapshot,facade,onLeave,onStop,initialSelectedIds
   },[role,targeting,snapshot?.sessionMode,entities,effectiveSelection]);
 
   const tabs=role==="dm"?DM_TABS:PLAYER_TABS;
-  const tabProps={snapshot,role,selectedIds:effectiveSelection,dispatch,onSelect:(id:string)=>{ if(role==="dm") setSelectedIds([id]); },onOpenCard:(resolutionId:string)=>{ setDismissedResolution(null); void resolutionId; },onOpenSheet:(id:string)=>setSheetId(id),onSave:facade?.host?()=>{ void facade.host?.save(); feedback("저장했습니다."); }:undefined,onLeave,onStop,onFeedback:feedback};
+  const tabProps={snapshot,role,selectedIds:effectiveSelection,dispatch,onSelect:(id:string)=>{ if(role==="dm") setSelectedIds([id]); },onOpenCard:(resolutionId:string)=>{ setOpenCardId(resolutionId); },onOpenSheet:(id:string)=>setSheetId(id),onSave:facade?.host?()=>{ void facade.host?.save(); feedback("저장했습니다."); }:undefined,onLeave,onStop,onFeedback:feedback};
   const sheetEntity=sheetId?entities.find((entity)=>entity.id===sheetId)??null:null;
   const sheetActor=sheetId&&facade?(facade.client?.runtime.state.actors[sheetId]??facade.runtime.state.actors[sheetId])??null:null;
   const lastEntry=snapshot.activity.find((entry)=>!entry.reversed&&!entry.undoOf);
@@ -138,7 +140,7 @@ export function WorkspaceView({snapshot,facade,onLeave,onStop,initialSelectedIds
     <div className={`tw-main ${sidebarOpen?"":"sidebar-collapsed"}`}>
       <TableStage entities={entities} role={role} selectedIds={effectiveSelection} currentActorId={snapshot.scene.currentActorId} targeting={targeting?{eligible:targeting.eligible,picked:targeting.picked}:null} hudId={hudId}
         onSelect={onSelectToken} onOpenSheet={(id)=>setSheetId(id)} onRule={rule} onCommand={tokenCommand} onDropOnToken={role==="dm"?dropOnToken:undefined} onDropOnTable={role==="dm"?dropOnTable:undefined} onToggleHud={(id,rect)=>setHud(hud?.id===id?null:{id,left:Math.min(rect.left,Math.max(0,window.innerWidth-336)),top:Math.min(rect.bottom+4,Math.max(0,window.innerHeight-420))})} onBackgroundClick={()=>{ setHudId(null); if(!targeting&&role==="dm") setSelectedIds([]); }}
-        focus={<Focus snapshot={visibleSnapshot} role={role} peerId={peerId} dispatch={dispatch} onDismiss={()=>setDismissedResolution(snapshot.resolution?.id??null)}/>}/>
+        focus={<Focus snapshot={visibleSnapshot} role={role} peerId={peerId} dispatch={dispatch} onDismiss={()=>setDismissedResolution(snapshot.resolution?.id??null)} openCard={openCardId?(snapshot.scene.recentCards??[]).find((card)=>card.id===openCardId)??null:null} onCloseCard={()=>setOpenCardId(null)}/>}/>
       <aside className="tw-sidebar" aria-label="사이드바">
         {sidebarOpen?<>
           <nav className="tw-tabs" role="tablist">{tabs.map((entry)=><button type="button" key={entry.id} role="tab" aria-selected={tab===entry.id} className={tab===entry.id?"active":""} onClick={()=>setTab(entry.id)}>{entry.label}<span className="k">{entry.key}</span></button>)}</nav>

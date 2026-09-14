@@ -7,7 +7,8 @@ export type DragPayload=
   |{kind:"preset";entryId:string}
   |{kind:"bundle";entryId:string}
   |{kind:"item";entryId?:string;definitionId:string;name:string;itemKind:"equipment"|"consumable"|"magic";quantity:number}
-  |{kind:"condition";conditionId:string};
+  |{kind:"condition";conditionId:string}
+  |{kind:"image";entryId:string};
 export const DRAG_MIME="application/x-simplevtt";
 export function startDrag(event:DragEvent,payload:DragPayload) { event.dataTransfer.setData(DRAG_MIME,JSON.stringify(payload)); event.dataTransfer.effectAllowed="copy"; }
 export function readDrag(event:DragEvent):DragPayload|null { try { const raw=event.dataTransfer.getData(DRAG_MIME); return raw?JSON.parse(raw) as DragPayload:null; } catch { return null; } }
