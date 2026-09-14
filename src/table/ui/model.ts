@@ -17,6 +17,11 @@ export const PLAYER_TABS:Array<{id:SidebarTab;label:string;key:string}>=[
   {id:"log",label:"기록",key:"1"},{id:"combat",label:"전투",key:"2"},{id:"actors",label:"파티",key:"3"},{id:"materials",label:"자료",key:"4"},{id:"rules",label:"규칙",key:"5"},{id:"session",label:"세션",key:"6"},
 ];
 
+/** The preview provider may pin `sessionMode`; the table's own order is the truth. */
+export function isInitiative(snapshot:{sessionMode:string;scene:{order?:string[];currentActorId:string}}):boolean {
+  return snapshot.sessionMode==="initiative"||Boolean(snapshot.scene.order&&snapshot.scene.order.length)||Boolean(snapshot.scene.currentActorId);
+}
+
 export interface EntityGroups { enemies:SceneEntity[]; allies:SceneEntity[]; neutrals:SceneEntity[] }
 export function groupEntities(entities:SceneEntity[]):EntityGroups {
   return {enemies:entities.filter((entity)=>entity.side==="enemy"),allies:entities.filter((entity)=>entity.side==="ally"),neutrals:entities.filter((entity)=>entity.side==="neutral")};

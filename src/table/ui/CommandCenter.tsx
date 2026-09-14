@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { ActionVm, AppSnapshot, SceneEntity } from "../../app/contracts";
 import type { TableCommand } from "../commands";
-import { monsterListings, targetingPlan } from "./model";
+import { isInitiative, monsterListings, targetingPlan } from "./model";
 
 export interface TargetingState { actionId:string; actorId:string; max:number; eligible:string[]; picked:string[]; slotLevel?:number; amount?:number; formId?:string }
 
@@ -36,7 +36,7 @@ export function CommandCenter({snapshot,actor,role,targeting,onStartTargeting,on
   return <div className="tw-command" aria-label="명령 센터">
     <div className="tw-command-head">
       <strong>{actor.name}</strong>
-      {economy&&snapshot.sessionMode==="initiative"&&<span className="tw-econ"><span className={economy.action?"on":""}>행동</span><span className={economy.bonusAction?"on":""}>추가</span><span className={economy.reaction?"on":""}>반응</span><span>이동 {economy.movement}/{economy.movementMax}</span></span>}
+      {economy&&isInitiative(snapshot)&&<span className="tw-econ"><span className={economy.action?"on":""}>행동</span><span className={economy.bonusAction?"on":""}>추가</span><span className={economy.reaction?"on":""}>반응</span><span>이동 {economy.movement}/{economy.movementMax}</span></span>}
       {actor.hands&&<span>손: {actor.hands}</span>}
       {targeting&&<span className="tw-targeting">대상 선택 {targeting.picked.length}/{targeting.max} <button type="button" className="primary" disabled={!targeting.picked.length} onClick={onConfirmTargeting}>실행</button><button type="button" className="quiet" onClick={onCancelTargeting}>취소 (Esc)</button></span>}
     </div>

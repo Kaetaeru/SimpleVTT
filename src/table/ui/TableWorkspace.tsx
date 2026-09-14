@@ -11,6 +11,7 @@ import { Focus } from "./Focus";
 import { QuickSearch } from "./QuickSearch";
 import { SheetDrawer } from "./SheetDrawer";
 import { TableStage } from "./TableStage";
+import { TokenHud } from "./TokenCard";
 import { TopBar } from "./TopBar";
 import { ActorsTab, CombatTab, ItemsTab, LogTab, MaterialsTab, RulesTab, SessionTab } from "./tabs";
 import { DM_TABS, PLAYER_TABS, nextSelection, rulingFrom, type DiscretionInput, type SearchHit, type SidebarTab, type WorkspaceRole } from "./model";
@@ -34,7 +35,9 @@ export function WorkspaceView({snapshot,facade,onLeave,onStop,initialSelectedIds
   const [selectedIds,setSelectedIds]=useState<string[]>(initialSelectedIds);
   const [tab,setTab]=useState<SidebarTab>(role==="dm"?"actors":"combat");
   const [sidebarOpen,setSidebarOpen]=useState(role==="dm");
-  const [hudId,setHudId]=useState<string|null>(null);
+  const [hud,setHud]=useState<{id:string;left:number;top:number}|null>(null);
+  const hudId=hud?.id??null;
+  const setHudId=(id:string|null)=>{ if(id===null) setHud(null); };
   const [sheetId,setSheetId]=useState<string|null>(null);
   const [targeting,setTargeting]=useState<TargetingState|null>(null);
   const [searchOpen,setSearchOpen]=useState(false);
@@ -105,14 +108,14 @@ export function WorkspaceView({snapshot,facade,onLeave,onStop,initialSelectedIds
   const tabProps={snapshot,role,selectedIds:effectiveSelection,dispatch,onSelect:(id:string)=>{ if(role==="dm") setSelectedIds([id]); },onOpenCard:(resolutionId:string)=>{ setDismissedResolution(null); void resolutionId; },onOpenSheet:(id:string)=>setSheetId(id),onSave:facade?.host?()=>{ void facade.host?.save(); }:undefined,onLeave,onStop};
   const sheetEntity=sheetId?entities.find((entity)=>entity.id===sheetId)??null:null;
   const sheetActor=sheetId&&facade?(facade.client?.runtime.state.actors[sheetId]??facade.runtime.state.actors[sheetId])??null:null;
-  const lastEntry=snapshot.activity.find((entry)=>!entry.reversed);
+  const lastEntry=snapshot.activity.find((entry)=>!entry.reversed&&!entry.undoOf);
   const visibleSnapshot=dismissedResolution&&snapshot.resolution?.id===dismissedResolution?{...snapshot,resolution:null}:snapshot;
 
   return <div className="tw-root" data-workspace-role={role} data-session-mode={snapshot.sessionMode}>
     <TopBar snapshot={snapshot} role={role} sidebarOpen={sidebarOpen} onToggleSidebar={()=>setSidebarOpen(!sidebarOpen)} onSearch={()=>setSearchOpen(true)} onLeave={onLeave} dispatch={dispatch}/>
     <div className={`tw-main ${sidebarOpen?"":"sidebar-collapsed"}`}>
       <TableStage entities={entities} role={role} selectedIds={effectiveSelection} currentActorId={snapshot.scene.currentActorId} targeting={targeting?{eligible:targeting.eligible,picked:targeting.picked}:null} hudId={hudId}
-        onSelect={onSelectToken} onOpenSheet={(id)=>setSheetId(id)} onRule={rule} onCommand={tokenCommand} onToggleHud={(id)=>setHudId(hudId===id?null:id)} onBackgroundClick={()=>{ setHudId(null); if(!targeting&&role==="dm") setSelectedIds([]); }}
+        onSelect={onSelectToken} onOpenSheet={(id)=>setSheetId(id)} onRule={rule} onCommand={tokenCommand} onToggleHud={(id,rect)=>setHud(hud?.id===id?null:{id,left:Math.min(rect.left,Math.max(0,window.innerWidth-336)),top:Math.min(rect.bottom+4,Math.max(0,window.innerHeight-420))})} onBackgroundClick={()=>{ setHudId(null); if(!targeting&&role==="dm") setSelectedIds([]); }}
         focus={<Focus snapshot={visibleSnapshot} role={role} peerId={peerId} dispatch={dispatch} onDismiss={()=>setDismissedResolution(snapshot.resolution?.id??null)}/>}/>
       <aside className="tw-sidebar" aria-label="사이드바">
         {sidebarOpen?<>
@@ -131,6 +134,7 @@ export function WorkspaceView({snapshot,facade,onLeave,onStop,initialSelectedIds
       <CommandCenter snapshot={snapshot} actor={primary} role={role} targeting={targeting} onStartTargeting={setTargeting} onCancelTargeting={()=>setTargeting(null)} onConfirmTargeting={confirmTargeting} dispatch={dispatch}/>
       {role==="dm"?<DiscretionBar selected={selectedEntities} lastEntry={lastEntry} dispatch={dispatch}/>:<FreeActionBar snapshot={snapshot} actor={primary} dispatch={dispatch}/>}
     </div>
+    {hud&&role==="dm"&&entities.some((entity)=>entity.id===hud.id)&&<div className="tw-hud-float" style={{left:hud.left,top:hud.top}}><TokenHud entity={entities.find((entity)=>entity.id===hud.id)!} names={names} onRule={(input)=>rule(hud.id,input)} onCommand={(kind,value)=>tokenCommand(hud.id,kind,value)} onOpenSheet={()=>{ setSheetId(hud.id); setHud(null); }} onClose={()=>setHud(null)}/></div>}
     {searchOpen&&<QuickSearch entities={entities} actions={snapshot.scene.actionsByActor} selectedActorId={primary?.id??null} role={role} onPick={pickSearch} onClose={()=>setSearchOpen(false)}/>}
     {sheetEntity&&<SheetDrawer entity={sheetEntity} actor={sheetActor} onClose={()=>setSheetId(null)}/>}
   </div>;

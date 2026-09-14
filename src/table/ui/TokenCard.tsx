@@ -16,7 +16,7 @@ export interface TokenCardProps {
   onRule?(input:DiscretionInput):void;
   onCommand?(kind:"hide"|"reveal"|"remove"|"bench"|"engage"|"initiative",value?:string|number):void;
   hudOpen:boolean;
-  onToggleHud():void;
+  onToggleHud(rect:{left:number;top:number;bottom:number}):void;
 }
 
 /** A token card (DM_WORKSPACE.md §4): click selects, Shift+click extends, double-click opens the sheet, ⋯ opens the HUD. */
@@ -30,14 +30,13 @@ export function TokenCard(props:TokenCardProps) {
     <div className="tw-token-head">
       <span className="tw-avatar" aria-hidden="true">{entity.name.slice(0,1)}</span>
       <span className="tw-name">{entity.name}{entity.hidden?" (숨김)":""}</span>
-      {role==="dm"&&<button type="button" className="tw-more" aria-label={`${entity.name} 조작`} onClick={(event)=>{ event.stopPropagation(); props.onToggleHud(); }}>⋯</button>}
+      {role==="dm"&&<button type="button" className="tw-more" aria-label={`${entity.name} 조작`} onClick={(event)=>{ event.stopPropagation(); const rect=(event.currentTarget.closest(".tw-token") as HTMLElement).getBoundingClientRect(); props.onToggleHud({left:rect.left,top:rect.top,bottom:rect.bottom}); }}>⋯</button>}
     </div>
     <div className={`tw-hpbar ${tone}`}><i style={{width:`${hpFraction(entity)*100}%`}}/></div>
     <div className="tw-meta"><span>{entity.hpStage?entity.hpStage:`HP ${hpLabel(entity)}`}</span><span>{entity.ac?`AC ${entity.ac}`:""}{entity.initiative?` · 이니 ${entity.initiative}`:""}</span></div>
     {entity.status.length>0&&<div className="tw-chips">{entity.status.map((chip)=><span key={chip} className={`tw-chip ${chip.startsWith("✦")?"":"badge"}`}>{chip.replace(/^✦ /,"")}</span>)}</div>}
-    {engaged.length>0&&<div className="tw-engaged">⚔ {engaged.map((id)=>props.names[id]??id).join(", ")}</div>}
+    {engaged.length>0&&<div className="tw-engaged">교전: {engaged.map((id)=>props.names[id]??id).join(", ")}</div>}
     {entity.hands&&role==="player"&&<div className="tw-engaged" style={{color:"var(--muted)"}}>손: {entity.hands}</div>}
-    {props.hudOpen&&role==="dm"&&<TokenHud entity={entity} names={props.names} onRule={(input)=>props.onRule?.(input)} onCommand={(kind,value)=>props.onCommand?.(kind,value)} onOpenSheet={props.onOpenSheet} onClose={props.onToggleHud}/>}
   </div>;
 }
 

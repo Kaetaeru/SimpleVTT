@@ -14,7 +14,7 @@ export interface TableStageProps {
   onOpenSheet(id:string):void;
   onRule(id:string,input:DiscretionInput):void;
   onCommand(id:string,kind:"hide"|"reveal"|"remove"|"bench"|"engage"|"initiative",value?:string|number):void;
-  onToggleHud(id:string):void;
+  onToggleHud(id:string,rect:{left:number;top:number;bottom:number}):void;
   focus:React.ReactNode;
   onBackgroundClick():void;
 }
@@ -29,7 +29,7 @@ export function TableStage(props:TableStageProps) {
     {list.map((entity)=><TokenCard key={entity.id} entity={entity} role={props.role} names={names}
       selected={props.selectedIds.includes(entity.id)} current={props.currentActorId===entity.id}
       eligible={Boolean(props.targeting?.eligible.includes(entity.id))} picked={Boolean(props.targeting?.picked.includes(entity.id))}
-      hudOpen={props.hudId===entity.id} onToggleHud={()=>props.onToggleHud(entity.id)}
+      hudOpen={props.hudId===entity.id} onToggleHud={(rect)=>props.onToggleHud(entity.id,rect)}
       onSelect={(event)=>{ event.stopPropagation(); props.onSelect(entity.id,event); }} onOpenSheet={()=>props.onOpenSheet(entity.id)}
       onRule={(input)=>props.onRule(entity.id,input)} onCommand={(kind,value)=>props.onCommand(entity.id,kind,value)}/>)}
   </div>;

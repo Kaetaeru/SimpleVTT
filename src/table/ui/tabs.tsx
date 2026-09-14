@@ -4,7 +4,7 @@ import { conditionLabelKo } from "../../app/srdMonsterCatalog";
 import { SessionDmHandoutPane, useSessionImageHandout } from "../../SessionImageHandoutBridge";
 import { SessionRulesPane } from "../../SessionUtilityPanes";
 import type { TableCommand } from "../commands";
-import { CONDITION_PALETTE, filterActivity, formatClock, monsterListings, type DiscretionInput, type LogFilter, rulingFrom } from "./model";
+import { CONDITION_PALETTE, filterActivity, formatClock, isInitiative, monsterListings, type DiscretionInput, type LogFilter, rulingFrom } from "./model";
 
 interface TabProps { snapshot:AppSnapshot; role:"dm"|"player"; selectedIds:string[]; dispatch(command:TableCommand):Promise<unknown>; onSelect(id:string):void; onOpenCard(resolutionId:string):void; onOpenSheet(id:string):void; onSave?():void; onLeave():void; onStop():void }
 
@@ -32,7 +32,7 @@ export function LogTab({snapshot,role,onOpenCard}:TabProps) {
 /** 전투: the initiative order, round, current turn, per-row HP and chips; start/end, next turn, jump, remove; initiative editable. */
 export function CombatTab({snapshot,role,selectedIds,dispatch,onSelect}:TabProps) {
   const scene=snapshot.scene;
-  const initiative=snapshot.sessionMode==="initiative";
+  const initiative=isInitiative(snapshot);
   const byId=Object.fromEntries(scene.entities.map((entity)=>[entity.id,entity]));
   const order=(scene.order??[]).map((id)=>byId[id]).filter((entity):entity is SceneEntity=>Boolean(entity));
   const rest=scene.entities.filter((entity)=>!(scene.order??[]).includes(entity.id));
@@ -165,7 +165,7 @@ export function SessionTab({snapshot,role,dispatch,onSave,onLeave,onStop}:TabPro
         <div className="tw-line">{(["1min","10min","1h","8h","to-dawn"] as const).map((preset)=><button type="button" key={preset} onClick={()=>void dispatch({type:"advance-time",preset})}>{preset==="to-dawn"?"새벽까지":preset==="1min"?"+1분":preset==="10min"?"+10분":preset==="1h"?"+1시간":"+8시간"}</button>)}</div>
         <div className="tw-line">
           {scene.resting?<><span>{scene.resting.kind==="short"?"짧은":"긴"} 휴식 진행 중 · 답한 {scene.resting.answered.length}/{scene.resting.actorIds.length}{scene.resting.interrupted?" · 중단됨":""}</span><button type="button" className="primary" onClick={()=>void dispatch({type:"rest-complete"})}>완료</button>{scene.resting.interrupted&&<button type="button" onClick={()=>void dispatch({type:"rest-complete",force:true})}>그래도 완료</button>}</>
-          :<><select value={restKind} aria-label="휴식 종류" onChange={(event)=>setRestKind(event.target.value as "short"|"long")}><option value="short">짧은 휴식 (1시간)</option><option value="long">긴 휴식 (8시간)</option></select><button type="button" disabled={!characters.length||snapshot.sessionMode==="initiative"} onClick={()=>void dispatch({type:"rest",kind:restKind,actorIds:characters})}>휴식 제안</button></>}
+          :<><select value={restKind} aria-label="휴식 종류" onChange={(event)=>setRestKind(event.target.value as "short"|"long")}><option value="short">짧은 휴식 (1시간)</option><option value="long">긴 휴식 (8시간)</option></select><button type="button" disabled={!characters.length||isInitiative(snapshot)} onClick={()=>void dispatch({type:"rest",kind:restKind,actorIds:characters})}>휴식 제안</button></>}
         </div>
         <div className="tw-line"><input type="text" value={timerLabel} placeholder="알림 (횃불 꺼짐…)" aria-label="타이머 이름" onChange={(event)=>setTimerLabel(event.target.value)}/><input type="number" min={1} value={timerMinutes} aria-label="타이머 분" onChange={(event)=>setTimerMinutes(Number(event.target.value))}/><button type="button" disabled={!timerLabel.trim()} onClick={()=>{ void dispatch({type:"set-timer",label:timerLabel.trim(),inSeconds:timerMinutes*60}); setTimerLabel(""); }}>타이머</button></div>
         {scene.timers?.map((timer)=><div key={timer.id} className="tw-list-item"><div className="tw-grow"><strong>{timer.label}</strong><small>{formatClock(timer.inSeconds)} 뒤</small></div><span className="tw-verbs"><button type="button" onClick={()=>void dispatch({type:"clear-timer",timerId:timer.id})}>지움</button></span></div>)}
