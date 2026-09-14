@@ -69,7 +69,10 @@ export function executeBeginTurn(ctx:ResolutionExecutionContext, operation:Begin
 
   const conditions = conditionEffectsFor(ctx.state, operation.actorId);
   const speedDelta=ctx.state.effects.reduce((sum,effect)=>effectIsActive(effect)&&effect.targetId===operation.actorId&&effect.kind==="modifier"&&typeof effect.metadata?.speedDelta==="number"?sum+effect.metadata.speedDelta:sum,0);
-  const speed = Math.max(0,effectiveSpeed(actor.baseSpeed, conditions)+speedDelta);
+  // Wild Shape: the beast form's walking speed replaces the druid's while the form lasts.
+  const wildForm=ctx.state.effects.find((effect)=>effectIsActive(effect)&&effect.targetId===operation.actorId&&effect.tags.includes("class-feature:druid-wild-shape")&&typeof effect.metadata?.formSpeedFeet==="number");
+  const baseSpeed=wildForm?Number(wildForm.metadata!.formSpeedFeet):actor.baseSpeed;
+  const speed = Math.max(0,effectiveSpeed(baseSpeed, conditions)+speedDelta);
   const availability = conditionActionAvailability(conditions);
   const before = actor.economy;
   const fresh = beginTurn(speed);

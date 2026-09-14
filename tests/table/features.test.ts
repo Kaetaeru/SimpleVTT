@@ -191,6 +191,14 @@ test("§3 Druid: Wild Shape into a wolf takes the form's AC and bite, grants tem
   assert.equal(pool(runtime,oak,"resource:druid.wild-shape"),1);
   assert.equal(runtime.state.rules.combatants[oak].life.hp.temporary,4);
   assert.equal(projectTable(runtime.state,{role:"dm"}).scene.entities.find((entity)=>entity.id===oak)?.ac,10,"the wolf's AC");
+  assert.ok(shaped.resolution?.detail.some((line)=>/이동 .*40피트/.test(line)),JSON.stringify(shaped.resolution?.detail));
+  // the form's speed applies from the druid's next turn
+  dice.push(12,8);
+  runtime.dispatch({type:"start-initiative"});
+  for(let index=0;index<2;index+=1) runtime.dispatch({type:"end-turn"});
+  assert.equal(runtime.state.currentActorId,oak);
+  assert.equal(runtime.state.rules.combatants[oak].economy.movement,40,"the wolf's 40 feet, not the druid's 30");
+  runtime.dispatch({type:"end-initiative"});
   const bite=tile(runtime,oak,"wild.0-bite")!;
   assert.match(bite.name,/늑대 · 물기/);
   dice.push(15,15,3,3);

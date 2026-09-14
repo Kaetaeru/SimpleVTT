@@ -374,6 +374,25 @@ function characterActions(actor:Actor,sheet:CharacterSheet,state?:TableState):Ac
         details:[detail("조건","이번 턴 공격 행동에서 다른 가벼운 무기로 공격했을 때"),detail("피해","능력 수정치를 더하지 않음 (음수면 적용)"),detail("출처",`${STANDARD_SOURCE} · Light`)],
       });
     }
+    // Weapon Mastery (2024): Nick makes the Light extra attack part of the Attack action; Cleave grants one more swing at a different creature after a hit.
+    const mastered=rule&&rule.mastery&&(sheet.weaponMasteryIds??[]).includes(rule.id)?rule.mastery:undefined;
+    if(mastered==="nick"&&rule&&weaponHasProperty(rule,"light")&&!ranged) {
+      const offhand=actions.pop()!;
+      actions.push({
+        ...offhand,id:`${attack.id}.nick`,name:`${attack.name} 보조 공격 (찌르기)`,economy:"없음",
+        summary:offhand.summary.replace("추가 행동 (가벼움)","공격 행동의 일부 (찌르기)"),tableFeature:"nick-attack",
+        details:[detail("조건","이번 턴 공격 행동에서 다른 가벼운 무기로 공격했을 때 · 턴마다 한 번"),detail("피해","능력 수정치를 더하지 않음 (음수면 적용)"),detail("비용","없음 (추가 행동을 남긴다)"),detail("출처","Weapon Mastery · Nick")],
+      });
+    }
+    if(mastered==="cleave"&&rule&&weaponHasProperty(rule,"heavy")&&!ranged) {
+      actions.push({
+        ...base,id:`${attack.id}.cleave`,name:`${attack.name} 베어가르기`,economy:"없음",attacksPerAction:1,
+        summary:`${signed(attack.bonus)} · ${damage.dice}${Math.min(0,damage.flat)?signed(Math.min(0,damage.flat)):""} ${damage.type} · 명중 뒤 다른 생물에게 (베어가르기)`,
+        damage:[{type:damage.type,dice:damage.dice,flat:Math.min(0,damage.flat),average:diceAverage(dice.count,dice.sides,Math.min(0,damage.flat))}],
+        tableFeature:"cleave-attack",
+        details:[detail("조건","이번 턴 이 무기로 명중한 뒤, 그 대상과 닿아 있는 다른 생물에게 · 턴마다 한 번"),detail("피해","능력 수정치를 더하지 않음 (음수면 적용)"),detail("비용","없음"),detail("출처","Weapon Mastery · Cleave")],
+      });
+    }
     if(thrown&&!ranged) actions.push({
       ...base,id:`${attack.id}.throw`,name:`${attack.name} 던지기`,
       summary:`${signed(attack.bonus)} · ${damage.dice}${damage.flat?signed(damage.flat):""} ${damage.type} · 투척 ${thrown.normal}/${thrown.long}피트`,
@@ -535,10 +554,10 @@ function routineAction(actor:Actor,definition:CombatantDefinitionVm):ActionVm[] 
 }
 
 /** While Wild Shaped, the form's stat-block attacks are the druid's (sourceKind wild-shape). */
-export function wildShapeForm(monsterId:string):{id:string;name:string;challengeRating:number;hasFlySpeed:boolean;armorClass:number;speedFeet:number}|undefined {
+export function wildShapeForm(monsterId:string):{id:string;name:string;challengeRating:number;hasFlySpeed:boolean;armorClass:number;speedFeet:number;speedText:string;sensesText:string}|undefined {
   const monster=srdMonsterById(monsterId);
   if(!monster) return undefined;
-  return {id:monster.id,name:monster.name,challengeRating:monster.cr,hasFlySpeed:(monster.speeds?.fly??0)>0,armorClass:monster.ac,speedFeet:monster.speed};
+  return {id:monster.id,name:monster.name,challengeRating:monster.cr,hasFlySpeed:(monster.speeds?.fly??0)>0,armorClass:monster.ac,speedFeet:monster.speed,speedText:monster.speedText,sensesText:monster.sensesText};
 }
 function wildShapeAttacks(actor:Actor,state?:TableState):ActionVm[] {
   const effect=state?.rules.effects.find((entry)=>entry.targetId===actor.id&&entry.tags.includes("class-feature:druid-wild-shape")&&effectIsActive(entry));

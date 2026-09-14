@@ -295,7 +295,7 @@ export function attackAct(ctx:HandlerContext,actor:Actor,action:ActionVm,targetI
       overrideChanges.push(save?`${target.name} ${abilityLabelKo(rider.saveAbility!)} 내성 ${save.total} vs DC ${rider.saveDc} ${failed?`실패 → ${rider.conditionIds.map(conditionLabelKo).join(", ")}`:"성공"}`:`${target.name} ${rider.conditionIds.map(conditionLabelKo).join(", ")}${rider.escapeDc?` (탈출 DC ${rider.escapeDc})`:""}`);
     }
   }
-  // Weapon Mastery (2024, §22.7): Graze on a miss; Vex, Sap, Slow, Topple, Push on a hit. Cleave and Nick are not automated.
+  // Weapon Mastery (2024, §22.7): Graze on a miss; Vex, Sap, Slow, Topple, Push on a hit; Cleave opens a second swing (tile), Nick folds the Light extra attack into the Attack action (tile).
   const mastery=masteryOf(actor,action);
   let masteryEngagements:EngagementRecord[]|undefined;
   if(mastery&&actor.source.kind==="character"&&!rules.combatants[targetId]?.life.dead) {
@@ -329,6 +329,7 @@ export function attackAct(ctx:HandlerContext,actor:Actor,action:ActionVm,targetI
         overrideChanges.push(save?`${label}: ${target.name} 건강 내성 ${save.total} vs DC ${8+actorProficiencyBonus(actor)+abilityMod} ${save.outcome==="success"?"성공":"실패 → 넘어짐"}`:`${label}: ${mastery.mastery==="vex"?`다음 ${target.name} 공격 유리`:mastery.mastery==="sap"?`${target.name} 다음 공격 불리`:`${target.name} 속도 −10피트`}`);
       }
     }
+    if(hit&&mastery.mastery==="cleave"&&action.tableFeature!=="cleave-attack"&&state.mode==="initiative") overrideChanges.push(`${label}: 이번 턴 닿아 있는 다른 생물에게 한 번 더 공격 (능력 수정치 없음)`);
     if(hit&&mastery.mastery==="push"&&actorSizeRank(target)<=3) { masteryEngagements=clearEngagement(state.engagements,actor.id,targetId); overrideChanges.push(`${label}: ${target.name} 10피트 밀려남 · 교전 해제`); }
   }
   // Turn markers other features read: a Light weapon attack (off-hand attack), a Monk's unarmed or monk-weapon attack, a Rage extended by attacking.
@@ -337,6 +338,9 @@ export function attackAct(ctx:HandlerContext,actor:Actor,action:ActionVm,targetI
     const rule=action.tableWeaponItemId?weaponRuleById(sheet.items.find((item)=>item.id===action.tableWeaponItemId)?.definitionId??""):undefined;
     const marks:string[]=[];
     if(rule&&weaponHasProperty(rule,"light")&&action.economy==="행동") marks.push("table:light-attack");
+    if(action.tableFeature==="nick-attack") marks.push("table:nick-used");
+    if(action.tableFeature==="cleave-attack") marks.push("table:cleave-used");
+    else if(hit&&rule&&weaponHasProperty(rule,"heavy")&&rule.mode==="melee"&&masteryOf(actor,action)?.mastery==="cleave") marks.push(`table:cleave-ready:${targetId}`);
     if(classLevel(sheet,CLASS.monk)>=1&&(action.runtimeAttack.sourceKind==="unarmed"||(rule&&rule.mode==="melee"&&(rule.training==="simple"||weaponHasProperty(rule,"light"))))) marks.push("table:monk-attack");
     if(marks.length) rules.turnFeatureUsage={...rules.turnFeatureUsage,featureIds:[...new Set([...rules.turnFeatureUsage.featureIds,...marks])]};
   }
@@ -633,6 +637,7 @@ export function actInner(ctx:HandlerContext,command:Extract<TableCommand,{type:"
   if(action.tableFeature) {
     const gate=featureGate(state,actor,action);
     if(gate) return refused("feature-unavailable",gate,{actorId:actor.id,actionId:action.id});
+    if(action.tableFeature==="cleave-attack"&&state.rules.turnFeatureUsage?.actorId===actor.id&&state.rules.turnFeatureUsage.featureIds.includes(`table:cleave-ready:${targetIds[0]}`)) return refused("cleave-same-target","베어가르기는 방금 명중한 대상이 아닌 다른 생물에게 합니다.",{actorId:actor.id,actionId:action.id});
     const handled=featureAct(ctx,actor,action,targetIds,resolutionId,command.amount,command.formId);
     if(handled) return handled;
   }
@@ -715,6 +720,8 @@ function featureGate(state:TableState,actor:Actor,action:ActionVm):string|null {
   const usage=state.mode==="initiative"&&state.rules.turnFeatureUsage?.actorId===actor.id?state.rules.turnFeatureUsage.featureIds:null;
   switch(action.tableFeature) {
     case "off-hand-attack": return usage&&!usage.includes("table:light-attack")?"먼저 공격 행동으로 다른 가벼운 무기를 휘두르세요.":null;
+    case "nick-attack": return usage&&!usage.includes("table:light-attack")?"먼저 공격 행동으로 다른 가벼운 무기를 휘두르세요.":usage&&usage.includes("table:nick-used")?"찌르기의 추가 공격은 턴마다 한 번입니다.":null;
+    case "cleave-attack": return usage&&!usage.some((id)=>id.startsWith("table:cleave-ready:"))?"먼저 이 무거운 무기로 명중하세요.":usage&&usage.includes("table:cleave-used")?"베어가르기는 턴마다 한 번입니다.":null;
     case "martial-arts-strike": return usage&&!usage.includes("table:monk-attack")?"먼저 공격 행동으로 맨손 타격이나 몽크 무기를 쓰세요.":null;
     case "rage-start": return state.rules.effects.some((effect)=>effect.targetId===actor.id&&effect.tags.includes(BARBARIAN_RAGE_TAG))?"이미 격노 중입니다.":null;
     case "rage-end": return state.rules.effects.some((effect)=>effect.targetId===actor.id&&effect.tags.includes(BARBARIAN_RAGE_TAG))?null:"격노 중이 아닙니다.";
@@ -738,7 +745,7 @@ function featureAct(ctx:HandlerContext,actor:Actor,action:ActionVm,targetIds:str
       catch(error) { return refused("feature-rejected",kernelErrorKo(error instanceof Error?error.message:String(error)),{actorId:actor.id,actionId:action.id}); }
       const committed=commitOperations(ctx,{id:resolutionId,actorId:actor.id,sourceId:action.id,operations:pending.operations,actionId:action.id});
       if(committed.status==="refused") return committed;
-      return commitPlain(committed.commit.state,committed.commit.events,`야생 변신 → ${form.name} · AC ${form.armorClass} · 임시 HP ${classLevel(sheet,CLASS.druid)}`,[`형태의 공격 타일이 열린다 · ${classLevel(sheet,CLASS.druid)/2}시간, HP 0이나 행동불능이면 풀린다`]);
+      return commitPlain(committed.commit.state,committed.commit.events,`야생 변신 → ${form.name} · AC ${form.armorClass} · 임시 HP ${classLevel(sheet,CLASS.druid)}`,[`이동 ${form.speedText} · 감각 ${form.sensesText||"없음"} (다음 턴부터 형태의 속도)`,`형태의 공격 타일이 열린다 · ${classLevel(sheet,CLASS.druid)/2}시간, HP 0이나 행동불능이면 풀린다`]);
     }
     case "wild-shape-end": {
       let pending;

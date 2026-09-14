@@ -15,7 +15,7 @@ import type { Actor } from "./state";
 export const CLASS={barbarian:"dnd.srd521.class.barbarian",bard:"dnd.srd521.class.bard",cleric:"dnd.srd521.class.cleric",druid:"dnd.srd521.class.druid",fighter:"dnd.srd521.class.fighter",monk:"dnd.srd521.class.monk",paladin:"dnd.srd521.class.paladin",ranger:"dnd.srd521.class.ranger",rogue:"dnd.srd521.class.rogue",sorcerer:"dnd.srd521.class.sorcerer",warlock:"dnd.srd521.class.warlock",wizard:"dnd.srd521.class.wizard"} as const;
 
 export type FeatureKey=
-  |"action-surge"|"rage-start"|"rage-end"|"lay-on-hands"|"lay-on-hands-cure"|"flurry-of-blows"|"patient-defense"|"patient-defense-focus"|"step-of-the-wind"|"step-of-the-wind-focus"|"martial-arts-strike"|"cunning-dash"|"cunning-disengage"|"cunning-hide"|"divine-spark-heal"|"divine-spark-damage"|"turn-undead"|"off-hand-attack"|"bardic-inspiration"|"wild-shape"|"wild-shape-end";
+  |"nick-attack"|"cleave-attack"|"action-surge"|"rage-start"|"rage-end"|"lay-on-hands"|"lay-on-hands-cure"|"flurry-of-blows"|"patient-defense"|"patient-defense-focus"|"step-of-the-wind"|"step-of-the-wind-focus"|"martial-arts-strike"|"cunning-dash"|"cunning-disengage"|"cunning-hide"|"divine-spark-heal"|"divine-spark-damage"|"turn-undead"|"off-hand-attack"|"bardic-inspiration"|"wild-shape"|"wild-shape-end";
 
 declare module "../app/contracts" {
   interface ActionVm {

@@ -123,3 +123,69 @@ test("Push: a warhammer hit shoves the goblin 10 feet away, ending the engagemen
   assert.deepEqual(replayEvents(createTableState("table.test"),runtime.ledger),runtime.state);
   assert.equal(dice.remaining(),0);
 });
+
+/** Cleave and Nick (2024): two more masteries that open tiles instead of riding on the hit. */
+const CLEAVE_NICK:Record<string,Weapon>={
+  greataxe:{id:"item.greataxe",definitionId:"dnd.srd521.item.weapon.greataxe",name:"그레이트액스",damage:"1d12 + 4 참격"},
+  scimitar:{id:"item.scimitar",definitionId:"dnd.srd521.item.weapon.scimitar",name:"시미터",damage:"1d6 + 4 참격"},
+  dagger:{id:"item.dagger",definitionId:"dnd.srd521.item.weapon.dagger",name:"단검",damage:"1d4 + 4 관통"},
+};
+
+test("Cleave: after a greataxe hit in initiative one free swing at a different creature, without the ability modifier, once per turn", () => {
+  const {runtime,dice,bren,gob,gob2,actionId}=setup(CLEAVE_NICK.greataxe,2);
+  dice.push(15,10,9);
+  runtime.dispatch({type:"start-initiative"});
+  assert.equal(runtime.state.currentActorId,bren);
+  const cleaveId=`${actionId}.cleave`;
+  const tiles=()=>projectTable(runtime.state,{role:"dm"}).scene.actionsByActor[bren];
+  assert.ok(tiles().some((action)=>action.id===cleaveId),"the tile exists for a mastered heavy weapon");
+  const early=runtime.dispatch({type:"act",actorId:bren,actionId:cleaveId,targetIds:[gob2]},P1);
+  assert.equal(early.status==="refused"&&early.refusal.message,"먼저 이 무거운 무기로 명중하세요.");
+  dice.push(15,15,3,3); // 15 + 7 = 22 vs AC 15 명중 · 1d12 3 + 4 = 7
+  const hit=runtime.dispatch({type:"act",actorId:bren,actionId,targetIds:[gob]},P1);
+  assert.equal(hit.status,"committed",JSON.stringify(hit));
+  assert.equal(hp(runtime,gob),3);
+  assert.ok(hit.resolution?.stateChanges.some((line)=>/베어가르기/.test(line)),JSON.stringify(hit.resolution?.stateChanges));
+  const same=runtime.dispatch({type:"act",actorId:bren,actionId:cleaveId,targetIds:[gob]},P1);
+  assert.equal(same.status==="refused"&&same.refusal.code,"cleave-same-target");
+  dice.push(12,12,5,5); // 12 + 7 = 19 명중 · 1d12 5, 능력 수정치 없음
+  const cleave=runtime.dispatch({type:"act",actorId:bren,actionId:cleaveId,targetIds:[gob2]},P1);
+  assert.equal(cleave.status,"committed",JSON.stringify(cleave));
+  assert.equal(hp(runtime,gob2),5,"1d12 only");
+  assert.equal(runtime.state.rules.combatants[bren].economy.bonusAction,true,"cleave costs nothing");
+  const again=runtime.dispatch({type:"act",actorId:bren,actionId:cleaveId,targetIds:[gob2]},P1);
+  assert.equal(again.status==="refused"&&again.refusal.message,"베어가르기는 턴마다 한 번입니다.");
+  assert.deepEqual(replayEvents(createTableState("table.test"),runtime.ledger),runtime.state);
+  assert.equal(dice.remaining(),0);
+});
+
+test("Nick: the Light extra attack with a mastered scimitar is part of the Attack action, keeps the bonus action, once per turn", () => {
+  const {runtime,dice}=table([]);
+  const sheet=master(CLEAVE_NICK.scimitar);
+  const dagger=CLEAVE_NICK.dagger;
+  sheet.items.push({id:dagger.id,definitionId:dagger.definitionId,name:dagger.name,kind:"equipment",quantity:1,equipped:true,wielded:true,wieldSlot:"main-hand",passiveEffects:[],grantedActionIds:["action.dagger"],provenance:[]} as unknown as CharacterSheet["items"][number]);
+  sheet.items[0].wieldSlot="off-hand";
+  sheet.attacks.push({id:"action.dagger",name:dagger.name,bonus:7,damage:dagger.damage} as unknown as CharacterSheet["attacks"][number]);
+  runtime.dispatch({type:"add-actors",specs:[{kind:"character",sheet,controllerPeer:P1.peerId},{kind:"monster",monsterId:GOBLIN}]});
+  const bren="char.bren",gob=`${GOBLIN}.instance-1`;
+  dice.push(15,10);
+  runtime.dispatch({type:"start-initiative"});
+  const tiles=()=>projectTable(runtime.state,{role:"dm"}).scene.actionsByActor[bren];
+  assert.ok(tiles().some((action)=>action.id==="action.scimitar.nick"),"the mastered scimitar's extra attack is a Nick tile");
+  assert.ok(!tiles().some((action)=>action.id==="action.scimitar.offhand"),"and replaces the bonus-action tile");
+  assert.ok(tiles().some((action)=>action.id==="action.dagger.offhand"),"the unmastered dagger keeps the bonus-action tile");
+  const early=runtime.dispatch({type:"act",actorId:bren,actionId:"action.scimitar.nick",targetIds:[gob]},P1);
+  assert.equal(early.status==="refused"&&early.refusal.message,"먼저 공격 행동으로 다른 가벼운 무기를 휘두르세요.");
+  dice.push(15,15,2,2); // 단검 명중 · 1d4 2 + 4 = 6
+  assert.equal(runtime.dispatch({type:"act",actorId:bren,actionId:"action.dagger",targetIds:[gob]},P1).status,"committed");
+  assert.equal(hp(runtime,gob),4);
+  dice.push(15,15,3,3); // 시미터 명중 · 1d6 3, 능력 수정치 없음
+  const nick=runtime.dispatch({type:"act",actorId:bren,actionId:"action.scimitar.nick",targetIds:[gob]},P1);
+  assert.equal(nick.status,"committed",JSON.stringify(nick));
+  assert.equal(hp(runtime,gob),1,"1d6 only");
+  assert.equal(runtime.state.rules.combatants[bren].economy.bonusAction,true,"the bonus action is still free");
+  const again=runtime.dispatch({type:"act",actorId:bren,actionId:"action.scimitar.nick",targetIds:[gob]},P1);
+  assert.equal(again.status==="refused"&&again.refusal.message,"찌르기의 추가 공격은 턴마다 한 번입니다.");
+  assert.deepEqual(replayEvents(createTableState("table.test"),runtime.ledger),runtime.state);
+  assert.equal(dice.remaining(),0);
+});
