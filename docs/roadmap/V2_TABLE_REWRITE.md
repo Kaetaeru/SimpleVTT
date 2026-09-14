@@ -47,6 +47,8 @@ The old app keeps running on `work/v1-composite` until then.
 
 ## 2026-09-14 공식 규칙 대조 — 게이트별 남은 일
 
+구현 명세와 순서: [RULES_RUNTIME_SPECS.md](../design/v2/RULES_RUNTIME_SPECS.md) §5.
+
 [인벤토리 §22](../design/v2/CAPABILITY_INVENTORY.md)의 감사 결과를 게이트에 대응시키면 다음과 같다. 위 표의 "확장/부분"은 공식 규칙 기준 완료가 아니다.
 
 | 게이트 | §22가 요구하는 것 |

@@ -525,6 +525,7 @@ DM 판정 카드:
 - [DM_WORKSPACE.md](DM_WORKSPACE.md): §14~§16의 화면 배치.
 - [campaign-systems.md](../campaign-systems.md): §17의 시간·식량·보관함 저장 데이터.
 - [P0_WORK_PACKET.md](P0_WORK_PACKET.md): 교전 기록(P0b)은 이 문서 §4·§5·§7의 전제다.
+- [RULES_RUNTIME_SPECS.md](RULES_RUNTIME_SPECS.md): §22가 찾은 다섯 구멍(시계, 반응 창과 DM 개입 팔레트, 직업 기능 원장, 장면·액터 종류·저장)의 구현 명세. §22 행의 `현재`를 갱신하는 순서가 거기 있다.
 - 시나리오 1·2(`docs/design/scenarios/`)는 이 문서의 수락 오라클이다. §1의 네 가지 예는 시나리오 3 "DM 재량"의 필수 장면이 된다.
 
 
