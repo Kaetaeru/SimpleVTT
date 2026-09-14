@@ -38,12 +38,9 @@ jobs:
         with:
           workspaces: src-tauri
       - run: npm ci --no-audit --no-fund
-      - name: Client gate (typecheck, boundary, tests)
+      - name: Client gate (generated content, typecheck, boundary, tests)
         shell: pwsh
-        run: |
-          npx tsc --noEmit -p tsconfig.client.json
-          npm run check:client-boundary
-          npm run test:client
+        run: npm run gate:client
       - name: Build the Windows executable (client bundle + Tauri, no installer)
         shell: pwsh
         run: npm run tauri:build:client
