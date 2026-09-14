@@ -42,6 +42,11 @@ export function narrate(ctx:HandlerContext,command:Extract<TableCommand,{type:"n
   const text=command.text.trim();
   if(!text) return refused("text-missing","내용을 적으세요.");
   const speaker=command.actorId?actorName(state,command.actorId):ctx.origin.role==="dm"?"DM":ctx.origin.peerId;
+  if(command.toPeer) {
+    // A whisper (RULES_RUNTIME_SPECS.md §4): the DM, the sender and one peer. Nothing else on the table changes.
+    const to=command.toPeer==="dm"?"DM":Object.values(state.actors).find((actor)=>actor.controllerPeer===command.toPeer)?.name??command.toPeer;
+    return {status:"committed",events:[{payload:{type:"table-changed"},log:[logEntry(ctx,{actor:speaker,title:`귓속말 → ${to}`,summary:text,detail:[],stateChanges:[],visibility:`peer:${ctx.origin.peerId},${command.toPeer}`})]}]};
+  }
   return {status:"committed",events:[{payload:{type:"table-changed"},log:[logEntry(ctx,{actor:speaker,title:"서술",summary:text,detail:[],stateChanges:[]})]}]};
 }
 

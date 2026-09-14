@@ -1,7 +1,7 @@
 import type { CombatantRuntimeState, RulesRuntimeState } from "../domain/combatState";
 import { type EngagementRecord, pruneEngagementsToPresent } from "../domain/engagement";
 import type { CharacterSheet } from "../app/contracts";
-import { cloneState, type Actor, type FloorItem, type HouseRule, type LogEntry, type MovementDeclaration, type ReadiedAction, type ResolutionRecord, type PendingResolution, type ResolutionReplay, type RestingState, type TableMode, type TableQuestion, type TableSettings, type TableState, type TableTime, type Timer, type Visibility } from "./state";
+import { cloneState, type Actor, type FloorItem, type HouseRule, type LogEntry, type MovementDeclaration, type ReadiedAction, type ResolutionRecord, type PendingResolution, type ResolutionReplay, type RestingState, type Scene, type TableMode, type TableQuestion, type TableSettings, type TableState, type TableTime, type Timer, type Visibility } from "./state";
 
 /** Durable character changes (items moved, quantities) ride with the commit so the owner's client can write them back. */
 export type SheetPatch={actorId:string;sheet:CharacterSheet};
@@ -11,7 +11,7 @@ export type SheetPatch={actorId:string;sheet:CharacterSheet};
  * state after event n is a function of the ledger alone. Kernel commits carry the resulting domain state whole: the
  * table is small (dozens of actors) and a state-carrying event makes replay, reconnect, undo and parity trivial.
  */
-export type ActorPatch=Partial<Pick<Actor,"name"|"side"|"hidden"|"controllerPeer"|"badges"|"initiative"|"groupId">>;
+export type ActorPatch=Partial<Pick<Actor,"name"|"side"|"hidden"|"controllerPeer"|"badges"|"initiative"|"groupId"|"present"|"expiresWith">>;
 
 export type TableEventPayload=
   |{type:"actors-added";actors:Actor[];combatants:Record<string,CombatantRuntimeState>;order?:string[]}
@@ -23,7 +23,7 @@ export type TableEventPayload=
   /** The clock moved (a round, a rest, the DM): the kernel's state after expiry, the timers that fired, the cards they opened. */
   |{type:"time-advanced";seconds:number;rules:RulesRuntimeState;expired:string[];fired:string[];timers:Timer[];questions?:TableQuestion[];resting?:RestingState|null;time?:TableTime}
   /** Table bookkeeping that needs no kernel commit: hands, floor, transfers, interaction count, questions, declarations, readied actions. */
-  |{type:"table-changed";sheets?:SheetPatch[];floor?:FloorItem[];interactions?:Record<string,number>;rules?:RulesRuntimeState;engagements?:EngagementRecord[];questions?:TableQuestion[];declarations?:Record<string,MovementDeclaration>;readied?:Record<string,ReadiedAction>;houseRules?:Record<string,HouseRule>;timers?:Timer[];resting?:RestingState|null;time?:TableTime;pending?:PendingResolution|null;settings?:TableSettings}
+  |{type:"table-changed";sheets?:SheetPatch[];floor?:FloorItem[];interactions?:Record<string,number>;rules?:RulesRuntimeState;engagements?:EngagementRecord[];questions?:TableQuestion[];declarations?:Record<string,MovementDeclaration>;readied?:Record<string,ReadiedAction>;houseRules?:Record<string,HouseRule>;timers?:Timer[];resting?:RestingState|null;time?:TableTime;pending?:PendingResolution|null;settings?:TableSettings;scene?:Scene;order?:string[]}
   |{type:"state-restored";state:TableState}
   |{type:"visibility-changed";rollVisibility:Visibility};
 
@@ -67,7 +67,10 @@ export function applyEvent(input:TableState,event:TableEvent):TableState {
     }
     case "actor-updated": {
       const actor=state.actors[payload.actorId];
-      if(actor) Object.assign(actor,cloneState(payload.patch));
+      if(actor) {
+        Object.assign(actor,cloneState(payload.patch));
+        if(payload.patch.present===true) delete actor.present;
+      }
       break;
     }
     case "mode-changed": {
@@ -141,6 +144,8 @@ export function applyEvent(input:TableState,event:TableEvent):TableState {
       if(payload.houseRules) state.houseRules=cloneState(payload.houseRules);
       if(payload.pending!==undefined) state.pending=payload.pending?cloneState(payload.pending):null;
       if(payload.settings) state.settings=cloneState(payload.settings);
+      if(payload.scene) state.scene=cloneState(payload.scene);
+      if(payload.order) { state.order=[...payload.order]; if(state.currentActorId&&!state.order.includes(state.currentActorId)) state.currentActorId=state.order[0]??null; }
       if(payload.timers) state.timers=cloneState(payload.timers);
       if(payload.resting!==undefined) state.resting=payload.resting?cloneState(payload.resting):null;
       if(payload.time) state.time=cloneState(payload.time);

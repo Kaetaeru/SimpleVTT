@@ -79,10 +79,12 @@ export class TableClient {
         this.sessionId=message.sessionId;
         this.runtime.restore(message.snapshot);
         this.cursor=message.cursor;
+        this.seedDurableBaseline();
         this.notify();
         return;
       case "snapshot":
         this.runtime.restore(message.snapshot);
+        this.seedDurableBaseline();
         this.cursor=message.snapshot.revision;
         this.notify();
         return;
@@ -121,12 +123,50 @@ export class TableClient {
   }
 
   /** Durable changes for the character this peer controls go to the app's persistence hook, then the Host is told. */
+  private lastDurable=new Map<string,string>();
+
+  /** What the owner's sheet already says, so only real changes are written back. */
+  private seedDurableBaseline() {
+    for(const actorId of Object.keys(this.runtime.state.actors)) {
+      if(this.runtime.state.actors[actorId].controllerPeer!==this.peerId) continue;
+      const sheet=this.durableSheetFor(actorId);
+      if(sheet) this.lastDurable.set(actorId,JSON.stringify([sheet.hp,sheet.tempHp,sheet.resources.map((resource)=>resource.current)]));
+    }
+  }
+
+  /** The durable subset of a combatant on its sheet: HP, temp HP, resource counts (RULES_RUNTIME_SPECS.md §4). */
+  private durableSheetFor(actorId:string):CharacterSheet|null {
+    const actor=this.runtime.state.actors[actorId];
+    const combatant=this.runtime.state.rules.combatants[actorId];
+    if(!actor||actor.source.kind!=="character"||!combatant) return null;
+    const sheet=structuredClone(actor.source.sheet);
+    sheet.hp=combatant.life.hp.current;
+    sheet.tempHp=combatant.life.hp.temporary;
+    sheet.resources=sheet.resources.map((resource)=>{ const pool=combatant.resources.find((entry)=>entry.id===resource.id); return pool?{...resource,current:pool.current}:resource; });
+    for(const pool of combatant.resources) if(!sheet.resources.some((resource)=>resource.id===pool.id)&&!pool.id.startsWith("spell-slot-")) sheet.resources.push({id:pool.id,label:pool.label,current:pool.current,max:pool.maximum,source:"table"});
+    return sheet;
+  }
+
   private writeBack(event:TableEvent) {
     const payload=event.payload;
     const sheets=payload.type==="rules-committed"||payload.type==="table-changed"?payload.sheets??[]:[];
     const mine=sheets.filter((patch)=>this.runtime.state.actors[patch.actorId]?.controllerPeer===this.peerId);
-    if(!mine.length) return;
-    for(const patch of mine) void this.options.onDurableSheet?.(patch.sheet);
+    const written=new Set<string>();
+    for(const patch of mine) { void this.options.onDurableSheet?.(patch.sheet); written.add(patch.actorId); this.lastDurable.set(patch.actorId,JSON.stringify([patch.sheet.hp,patch.sheet.tempHp,patch.sheet.resources.map((resource)=>resource.current)])); }
+    // Durable combatant changes (HP, temp HP, resources) of the character this peer controls go back too — once per change.
+    if("rules" in payload&&payload.rules) {
+      for(const actorId of Object.keys(this.runtime.state.actors)) {
+        if(written.has(actorId)||this.runtime.state.actors[actorId].controllerPeer!==this.peerId) continue;
+        const sheet=this.durableSheetFor(actorId);
+        if(!sheet) continue;
+        const key=JSON.stringify([sheet.hp,sheet.tempHp,sheet.resources.map((resource)=>resource.current)]);
+        if(this.lastDurable.get(actorId)===key) continue;
+        this.lastDurable.set(actorId,key);
+        void this.options.onDurableSheet?.(sheet);
+        written.add(actorId);
+      }
+    }
+    if(!written.size) return;
     this.transport.send("host",encodeWire({type:"ack",cursor:event.seq}));
   }
 }

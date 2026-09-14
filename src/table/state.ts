@@ -11,19 +11,29 @@ import type { CharacterSheet, CombatantDefinitionVm, ItemInstanceVm, ResolutionV
  * `actors` carries identity, presentation and the durable source (sheet or stat block), never HP.
  */
 export type TableMode="freeform"|"initiative";
-export type Side="ally"|"enemy";
-export type Visibility="public"|"dm";
+export type Side="ally"|"enemy"|"neutral";
+/** public: everyone · dm: the DM only · peer:<from>,<to>: the DM and those two peers (a whisper). */
+export type Visibility="public"|"dm"|`peer:${string}`;
 
 export type ActorSource=
   |{kind:"character";sheet:CharacterSheet;sourceRevision:number}
-  |{kind:"monster";definitionId:string;definition:CombatantDefinitionVm};
+  |{kind:"monster";definitionId:string;definition:CombatantDefinitionVm}
+  /** An object with AC and HP (2024 Breaking Objects): a door, a rope, a chest. */
+  |{kind:"object";material:string;size:string;locked?:{dc:number}};
 
 export interface Actor {
   id:string;
-  kind:"character"|"npc";
+  /** summon: a creature a spell or feature created, owned by another actor; object: a thing that can be attacked. */
+  kind:"character"|"npc"|"object"|"summon";
   name:string;
   side:Side;
   source:ActorSource;
+  /** Benched (RULES_RUNTIME_SPECS.md §4): absent from the scene but kept whole — HP, effects, death saves. Undefined = present. */
+  present?:boolean;
+  /** A summon's owner: shares its initiative, acts right after it, and is removed with it. */
+  ownerId?:string;
+  /** When a summon goes away: with the owner's concentration, with a named effect, or at a clock time. */
+  expiresWith?:{concentration?:boolean;effectId?:string;at?:number};
   /** The peer that controls this actor (a player's own character, or a DM assignment). Undefined = DM only. */
   controllerPeer?:string;
   groupId?:string;
@@ -197,6 +207,9 @@ export interface TableSettings {
   holdAttacks:boolean;
 }
 
+/** The scene (RULES_RUNTIME_SPECS.md §4): a name and reminder conditions; effects belong to creatures, not the scene. */
+export interface Scene { id:string; name:string; conditions:string[]; enteredAt:number }
+
 /** A readied action (2024 Ready): the trigger in the actor's words and the action to fire as a reaction. */
 export interface ReadiedAction { actionId:string; trigger:string; targetIds:string[]; round:number }
 
@@ -230,6 +243,7 @@ export interface TableState {
   timers:Timer[];
   resting:RestingState|null;
   settings:TableSettings;
+  scene:Scene;
   pending:PendingResolution|null;
   /** Replays for the last few committed resolutions (DM palette after the fact); newest first. */
   replays:ResolutionReplay[];
@@ -261,6 +275,7 @@ export function createTableState(sessionId:string):TableState {
     timers:[],
     resting:null,
     settings:{holdAttacks:false},
+    scene:{id:"scene.1",name:"",conditions:[],enteredAt:0},
     pending:null,
     replays:[],
     activeResolution:null,
@@ -277,9 +292,29 @@ export function engagementRound(state:Pick<TableState,"mode"|"round">):number { 
 export function actorOf(state:TableState,actorId:string):Actor|undefined { return state.actors[actorId]; }
 export function combatantOf(state:TableState,actorId:string):CombatantRuntimeState|undefined { return state.rules.combatants[actorId]; }
 
-/** Every actor in table order: initiative order when it exists, else allies then enemies by insertion. */
+/** Every present actor in table order: initiative order when it exists, else allies, neutrals, then enemies by insertion. */
 export function actorIds(state:TableState):string[] {
-  if(state.order.length) return [...state.order,...Object.keys(state.actors).filter((id)=>!state.order.includes(id))];
-  const ids=Object.keys(state.actors);
-  return [...ids.filter((id)=>state.actors[id].side==="ally"),...ids.filter((id)=>state.actors[id].side==="enemy")];
+  const present=(id:string)=>state.actors[id]&&state.actors[id].present!==false;
+  if(state.order.length) return [...state.order.filter(present),...Object.keys(state.actors).filter((id)=>!state.order.includes(id)&&present(id))];
+  const ids=Object.keys(state.actors).filter(present);
+  return [...ids.filter((id)=>state.actors[id].side==="ally"),...ids.filter((id)=>state.actors[id].side==="neutral"),...ids.filter((id)=>state.actors[id].side==="enemy")];
 }
+
+/** Benched actors: kept whole, out of the scene (RULES_RUNTIME_SPECS.md §4). */
+export function benchedActorIds(state:TableState):string[] { return Object.keys(state.actors).filter((id)=>state.actors[id].present===false); }
+
+/** The peer that may answer a question: the asked actor's current controller (recomputed so a reconnect can answer). */
+export function questionPeerOf(state:TableState,question:TableQuestion):string|undefined {
+  if(question.toPeer===undefined) return undefined; // a DM question stays the DM's
+  const actor=state.actors[question.actorId];
+  return actor?.controllerPeer??question.toPeer;
+}
+
+/** HP as the table shows it to those who may not know the numbers (D22): 3 멀쩡 · 2 다침 · 1 위독 · 0 쓰러짐. */
+export function hpStageOf(current:number,maximum:number):number {
+  if(current<=0) return 0;
+  if(maximum<=0) return 3;
+  const ratio=current/maximum;
+  return ratio>2/3?3:ratio>1/3?2:1;
+}
+export const HP_STAGE_LABEL=["쓰러짐","위독","다침","멀쩡"] as const;

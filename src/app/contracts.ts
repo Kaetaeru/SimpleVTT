@@ -271,7 +271,7 @@ export interface ReactionOptionVm {
 export interface SceneEntity {
   id: string;
   name: string;
-  side: "ally" | "enemy";
+  side: "ally" | "enemy" | "neutral";
   kind: "character" | "combatant";
   hp: number;
   maxHp: number;

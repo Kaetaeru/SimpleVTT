@@ -11,11 +11,14 @@ import { forgetRuling, improvise, narrate, rememberRuling, request, rule } from 
 import { rest, restComplete } from "./handlers/rest";
 import { advanceTime, clearTimer, setTimer, stableRecoveryTimers } from "./handlers/time";
 import { overrideResolution, pendingGuard, setSetting } from "./handlers/windows";
+import { award, bench, expiredSummonIds, sceneConditions, sceneSwitch } from "./handlers/scene";
 import { ruling, rulingLabel } from "./handlers/ruling";
 import { endInitiative, endTurn, setCurrentActor, setOrder, startInitiative } from "./handlers/turns";
 import type { HandlerContext, HandlerResult } from "./handlers/types";
 import { refused, type TableRefusal } from "./refusal";
-import { cloneState, createTableState, type LogEntry, type ResolutionRecord, type TableState } from "./state";
+import { cloneState, createTableState, questionPeerOf, type LogEntry, type ResolutionRecord, type TableState } from "./state";
+
+const command_of=(_draft:unknown)=>"act";
 
 export type Outcome=
   |{status:"committed";events:TableEvent[];resolution:ResolutionRecord|null}
@@ -34,7 +37,7 @@ function authorize(state:TableState,command:TableCommand,origin:CommandOrigin):T
   if(command.type==="answer-question") {
     const question=state.questions.find((entry)=>entry.id===command.questionId);
     if(!question) return {code:"question-unknown",message:"이미 처리된 질문입니다."};
-    if(question.toPeer!==origin.peerId) return {code:"not-authorized",message:"이 질문은 당신에게 온 것이 아닙니다.",actorId:question.actorId};
+    if(questionPeerOf(state,question)!==origin.peerId) return {code:"not-authorized",message:"이 질문은 당신에게 온 것이 아닙니다.",actorId:question.actorId};
     return null;
   }
   if(command.type==="narrate") {
@@ -82,6 +85,10 @@ function describe(state:TableState,command:TableCommand):string {
     case "clear-timer": return "알림 취소";
     case "override": return "DM 개입";
     case "set-setting": return "세션 설정";
+    case "scene": return `장면 · ${command.name}`;
+    case "scene-conditions": return "장면 조건";
+    case "bench": return `${state.actors[command.actorId]?.name??command.actorId} · ${command.present?"장면 복귀":"대기석"}`;
+    case "award": return "보상";
     case "ruling": return `DM 재량 · ${rulingLabel(state,command.ruling)}`;
     case "add-actors": return "액터 추가";
     case "remove-actor": return `액터 제거 · ${state.actors[command.actorId]?.name??command.actorId}`;
@@ -137,6 +144,7 @@ export class TableRuntime {
     const result=this.handle(ctx,command);
     if(result.status==="refused") return this.refuse(result.refusal);
     this.scheduleStableRecovery(ctx,result);
+    this.pruneSummons(ctx,result);
     const outcome=this.commit(command,result,{recordHistory:result.followUp?.type!=="undo"});
     if(result.followUp&&outcome.status==="committed") {
       this.undoSkipsBookkeeping=result.followUp.type==="undo";
@@ -195,6 +203,10 @@ export class TableRuntime {
       case "clear-timer": return clearTimer(ctx,command);
       case "override": return overrideResolution(ctx,command);
       case "set-setting": return setSetting(ctx,command);
+      case "scene": return sceneSwitch(ctx,command);
+      case "scene-conditions": return sceneConditions(ctx,command);
+      case "bench": return bench(ctx,command);
+      case "award": return award(ctx,command);
       case "ruling": return ruling(ctx,command);
       default: return refused("command-unknown","알 수 없는 명령입니다.");
     }
@@ -211,6 +223,16 @@ export class TableRuntime {
     if(!timers) return;
     if(payload.type==="mode-changed") result.events.push({payload:{type:"table-changed",timers},log:[]});
     else (payload as {timers?:typeof timers}).timers=timers;
+  }
+
+  /** Summons whose concentration, effect, time or owner ended leave with the same command (RULES_RUNTIME_SPECS.md §4). */
+  private pruneSummons(ctx:HandlerContext,result:Extract<HandlerResult,{status:"committed"}>) {
+    if(!Object.values(this.state.actors).some((actor)=>actor.kind==="summon")) return;
+    let preview=this.state;
+    result.events.forEach((draft,index)=>{ preview=applyEvent(preview,{seq:ctx.nextSeq+index,at:ctx.now(),commandType:command_of(draft),log:[],payload:draft.payload}); });
+    for(const id of expiredSummonIds(preview)) {
+      result.events.push({payload:{type:"actor-removed",actorId:id},log:[{id:`log.${ctx.nextSeq}.summon.${id}`,seq:ctx.nextSeq,time:ctx.now(),actor:"시스템",title:"소환 종료",summary:this.state.actors[id]?.name??id,detail:["집중·지속시간·주인이 끝나면 소환수는 사라집니다."],stateChanges:[],visibility:"public"}]});
+    }
   }
 
   private commit(command:TableCommand,result:Extract<HandlerResult,{status:"committed"}>,options:{recordHistory?:boolean}={}):Outcome {

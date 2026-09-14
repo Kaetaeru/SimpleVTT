@@ -6,7 +6,11 @@ import type { AttackOverrides, RulingSpec, Side, TableSettings, Visibility } fro
 /** What a command may add to the table. */
 export type ActorSpec=
   |{kind:"monster";monsterId:string;count?:number;side?:Side;name?:string}
-  |{kind:"character";sheet:CharacterSheet;controllerPeer?:string;side?:Side};
+  |{kind:"character";sheet:CharacterSheet;controllerPeer?:string;side?:Side}
+  /** An object (2024 Breaking Objects): AC by material, HP by size; immune to poison and psychic; fails saves. */
+  |{kind:"object";name:string;material:"cloth"|"wood"|"stone"|"iron"|"mithral"|"adamantine";size:"tiny"|"small"|"medium"|"large";hp?:number;ac?:number;locked?:{dc:number}}
+  /** A summoned or created creature: a stat block owned by an actor, sharing its initiative, gone with what made it. */
+  |{kind:"summon";monsterId:string;ownerId:string;name?:string;count?:number;expiresWith?:{concentration?:boolean;effectId?:string;seconds?:number}};
 
 /** DM 즉석 재량 (D1-01, absorbed into V2): every ruling is event-native, replicated and undoable. */
 export type Ruling=
@@ -50,8 +54,8 @@ export type TableCommand=
   |{type:"trigger-ready";actorId:string}
   /** Grade R: anything the rules do not cover. One line from the player; the DM gets a ruling card (§13). */
   |{type:"improvise";actorId:string;text:string;targetIds?:string[];itemId?:string}
-  /** Grade N: words and gestures. Recorded, changes nothing; the DM may later rule on it. */
-  |{type:"narrate";actorId?:string;text:string}
+  /** Grade N: words and gestures. Recorded, changes nothing; the DM may later rule on it. A whisper reaches one peer and the DM. */
+  |{type:"narrate";actorId?:string;text:string;toPeer?:string}
   /** DM: rule on an improvised action (or on nothing in particular): roll, cost, outcome, or a verdict. */
   |{type:"rule";questionId?:string;actorId:string;targetIds?:string[];text?:string;spec:RulingSpec;note?:string}
   /** A player asks the DM: undo, a correction, an item/resource fix (D10), a visibility change. */
@@ -70,6 +74,14 @@ export type TableCommand=
   /** DM attack-intervention palette (D42): on the pending resolution, or after the fact on the latest committed one. */
   |{type:"override";resolutionId:string;changes:AttackOverrides;note?:string}
   |{type:"set-setting";settings:Partial<TableSettings>}
+  /** DM: a new scene. Scene-bound state ends (hidden, engagements, declarations, readied, pending); creature effects stay. */
+  |{type:"scene";name:string;conditions?:string[]}
+  /** DM: reminder conditions on the current scene (어둠·안개·침묵·좁음…). They are reminders (D42), never automatic modifiers. */
+  |{type:"scene-conditions";conditions:string[]}
+  /** DM: bench an actor (out of the scene, kept whole) or bring it back. */
+  |{type:"bench";actorId:string;present:boolean}
+  /** DM: XP or a milestone for the named characters (D34); the owner's sheet records it. */
+  |{type:"award";actorIds:string[];xp?:number;milestone?:boolean;note?:string}
   |{type:"forget-ruling";ruleId:string}
   |{type:"undo"}
   |{type:"set-roll-visibility";visibility:Visibility};

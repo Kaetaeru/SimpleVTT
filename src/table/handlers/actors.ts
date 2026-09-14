@@ -16,6 +16,8 @@ export function rollInitiative(ctx:HandlerContext,actor:Actor):{face:number;tota
 export function insertIntoOrder(state:TableState,order:string[],actors:Actor[]):string[] {
   const next=[...order];
   for(const actor of [...actors].sort((a,b)=>b.initiative-a.initiative)) {
+    if(actor.kind==="object") continue;
+    if(actor.kind==="summon"&&actor.ownerId&&next.includes(actor.ownerId)) { next.splice(next.indexOf(actor.ownerId)+1,0,actor.id); continue; }
     const index=next.findIndex((id)=>(state.actors[id]?.initiative??-Infinity)<actor.initiative);
     if(index<0) next.push(actor.id); else next.splice(index,0,actor.id);
   }
@@ -33,7 +35,8 @@ export function addActors(ctx:HandlerContext,command:Extract<TableCommand,{type:
     try { materialized=materializeActors(staged,spec); }
     catch(error) { return refused("actor-source",error instanceof Error?error.message:String(error)); }
     for(const actor of materialized.actors) {
-      if(ctx.state.mode==="initiative") {
+      // Objects take no turn; a summon shares its owner's count (set by materializeActors) and acts right after it.
+      if(ctx.state.mode==="initiative"&&actor.kind!=="object"&&!(actor.kind==="summon"&&actor.ownerId&&ctx.state.order.includes(actor.ownerId))) {
         const roll=rollInitiative(ctx,actor);
         actor.initiative=roll.total;
         rolls.push(`${actor.name} 이니셔티브 ${roll.total} (d20 ${roll.face})`);

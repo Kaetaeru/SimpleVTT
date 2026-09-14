@@ -41,7 +41,7 @@ const SIZE_FROM_KO:Record<string,string>={"초소형":"tiny","소형":"small","�
 
 /** Creature size rank (0 tiny … 5 gargantuan); characters count as medium unless the sheet says otherwise. */
 export function actorSizeRank(actor:Actor):number {
-  const raw=actor.source.kind==="monster"?(srdMonsterById(actor.source.definitionId)?.size??"medium"):((actor.source.sheet as {size?:string}).size??"medium");
+  const raw=actor.source.kind==="monster"?(srdMonsterById(actor.source.definitionId)?.size??"medium"):actor.source.kind==="object"?actor.source.size:((actor.source.sheet as {size?:string}).size??"medium");
   const key=SIZE_FROM_KO[raw]??raw.toLowerCase();
   const index=SIZE_ORDER.indexOf(key);
   return index<0?2:index;
@@ -132,7 +132,38 @@ export function monsterDefinition(monsterId:string):CombatantDefinitionVm|undefi
 }
 
 /** Actors and their runtime combatants for one spec; throws with a Korean reason when the source is unknown. */
+const OBJECT_AC:Record<string,number>={cloth:11,wood:15,stone:17,iron:19,mithral:21,adamantine:23};
+const OBJECT_HP:Record<string,number>={tiny:2,small:5,medium:11,large:27};
+const OBJECT_MATERIAL_KO:Record<string,string>={cloth:"천·종이·밧줄",wood:"나무·뼈",stone:"돌·수정",iron:"철·강철",mithral:"미스랄",adamantine:"아다만틴"};
+
 export function materializeActors(state:TableState,spec:ActorSpec):{actors:Actor[];combatants:Record<string,CombatantRuntimeState>} {
+  if(spec.kind==="object") {
+    const name=spec.name.trim();
+    if(!name) throw new Error("물체 이름을 적으세요.");
+    const id=instanceIds(state,`object.${name.replace(/\s+/g,"-")}`,1)[0];
+    const ac=spec.ac??OBJECT_AC[spec.material];
+    const hp=spec.hp??OBJECT_HP[spec.size];
+    const actor:Actor={id,kind:"object",name,side:"neutral",source:{kind:"object",material:spec.material,size:spec.size,...(spec.locked?{locked:spec.locked}:{})},badges:[],initiative:0};
+    const combatant:CombatantRuntimeState={id,baseSpeed:0,life:{hp:{current:hp,maximum:hp,temporary:0},deathSaves:{successes:0,failures:0},stable:false,unconscious:false,dead:false},economy:beginTurn(0),resources:[],hitDice:[],
+      damageDefenses:[{source:`object:${id}:immunity:poison`,kind:"immunity",damageType:"poison"},{source:`object:${id}:immunity:psychic`,kind:"immunity",damageType:"psychic"}],conditionImmunities:CONDITION_IDS};
+    void OBJECT_MATERIAL_KO;
+    return {actors:[actor],combatants:{[id]:combatant}};
+  }
+  if(spec.kind==="summon") {
+    const owner=state.actors[spec.ownerId];
+    if(!owner) throw new Error("소환수의 주인이 테이블에 없습니다.");
+    const definition=monsterDefinition(spec.monsterId);
+    if(!definition) throw new Error(`몬스터를 찾을 수 없습니다: ${spec.monsterId}`);
+    const count=Math.max(1,Math.min(8,Math.floor(spec.count??1)));
+    const ids=instanceIds(state,`${definition.id}.summon`,count);
+    const expiresWith=spec.expiresWith?{...(spec.expiresWith.concentration?{concentration:true}:{}),...(spec.expiresWith.effectId?{effectId:spec.expiresWith.effectId}:{}),...(spec.expiresWith.seconds!==undefined?{at:state.rules.clock.elapsedSeconds+spec.expiresWith.seconds}:{})}:undefined;
+    const actors=ids.map((id,index)=>({
+      id,kind:"summon" as const,name:spec.name?(count>1?`${spec.name} ${index+1}`:spec.name):`${definition.name} (${owner.name})${count>1?` ${index+1}`:""}`,
+      side:owner.side,source:{kind:"monster" as const,definitionId:definition.id,definition:structuredClone(definition)},
+      controllerPeer:owner.controllerPeer,ownerId:owner.id,...(expiresWith&&Object.keys(expiresWith).length?{expiresWith}:{}),badges:[],initiative:owner.initiative,
+    }));
+    return {actors,combatants:Object.fromEntries(actors.map((actor)=>[actor.id,monsterCombatant(actor.id,definition)]))};
+  }
   if(spec.kind==="character") {
     const sheet=structuredClone(spec.sheet);
     if(!sheet.id||!sheet.name) throw new Error("캐릭터 시트에 id와 이름이 필요합니다.");
@@ -158,11 +189,13 @@ export function materializeActors(state:TableState,spec:ActorSpec):{actors:Actor
 }
 
 export function actorAc(actor:Actor):number {
+  if(actor.source.kind==="object") return OBJECT_AC[actor.source.material]??15;
   return actor.source.kind==="character"?actor.source.sheet.ac:actor.source.definition.ac;
 }
 
 export function actorDexModifier(actor:Actor):number {
   if(actor.source.kind==="character") return abilityModifier(actor.source.sheet.abilities.dex);
+  if(actor.source.kind==="object") return -5;
   const stats=actor.source.definition.runtimeStats;
   return stats?abilityModifier(stats.abilities.dex):0;
 }
@@ -174,11 +207,13 @@ export function actorInitiativeBonus(actor:Actor):number {
 
 export function actorAbilityModifier(actor:Actor,key:AbilityKey):number {
   if(actor.source.kind==="character") return abilityModifier(actor.source.sheet.abilities[key]);
+  if(actor.source.kind==="object") return key==="str"||key==="dex"?-5:0;
   const stats=actor.source.definition.runtimeStats;
   return stats?abilityModifier(stats.abilities[key]):0;
 }
 
 export function actorProficiencyBonus(actor:Actor):number {
+  if(actor.source.kind==="object") return 0;
   return actor.source.kind==="character"?actor.source.sheet.proficiencyBonus:(actor.source.definition.runtimeStats?.proficiencyBonus??2);
 }
 
@@ -188,8 +223,9 @@ export function actorSaveModifier(actor:Actor,key:AbilityKey):number {
     const proficient=actor.source.definition.runtimeStats?.savingThrowProficiencies.includes(key);
     return base+(proficient?actorProficiencyBonus(actor):0);
   }
+  if(actor.source.kind==="object") return base;
   const label=abilityLabelKo(key);
-  const proficient=actor.source.sheet.saves.some((entry)=>entry.startsWith(label));
+  const proficient=actor.source.sheet.saves.some((entry:string)=>entry.startsWith(label));
   return base+(proficient?actorProficiencyBonus(actor):0);
 }
 
@@ -416,6 +452,7 @@ function monsterActions(actor:Actor,definition:CombatantDefinitionVm):ActionVm[]
 
 /** The raw actions an actor's source offers, before availability and targets are judged (see availability.ts). */
 export function actionsFor(actor:Actor,state?:TableState):ActionVm[] {
+  if(actor.source.kind==="object") return [];
   return actor.source.kind==="character"?characterActions(actor,actor.source.sheet,state):monsterActions(actor,actor.source.definition);
 }
 

@@ -5,7 +5,7 @@ import { conditionLabelKo } from "../app/srdMonsterCatalog";
 import { actionsFor, actorAc } from "./actors";
 import { availabilityOf, eligibleTargetIds } from "./availability";
 import type { TableRefusal } from "./refusal";
-import { actorIds, type Actor, type TableMode, type TableState } from "./state";
+import { actorIds, benchedActorIds, hpStageOf, HP_STAGE_LABEL, questionPeerOf, type Actor, type TableMode, type TableState } from "./state";
 import { handsLabel } from "./hands";
 import { clockOfDay } from "./handlers/time";
 import type { TableQuestion } from "./state";
@@ -25,10 +25,19 @@ declare module "../app/contracts" {
     timers?:Array<{id:string;kind:string;label:string;inSeconds:number}>;
     /** A resolution held in a reaction window (RULES_RUNTIME_SPECS.md §2). */
     pendingResolution?:{id:string;actorId:string;actorName:string;label:string;waitingOn:string[];window:string};
+    /** Scene reminder conditions (D42: never automatic modifiers). */
+    sceneReminders?:string[];
+    /** DM only: actors kept whole but out of the scene. */
+    benched?:Array<{id:string;name:string}>;
   }
   interface SceneEntity {
     /** What the character holds: "장검 (주손) · 방패 (보조손)" or "빈손". */
     hands?:string;
+    /** D22: what a player knows of a creature that is not theirs — a stage, not numbers. */
+    hpStage?:"쓰러짐"|"위독"|"다침"|"멀쩡";
+    /** object: a thing with AC and HP; summon: a creature owned by another actor. */
+    tableKind?:"character"|"npc"|"object"|"summon";
+    ownerId?:string;
   }
 }
 
@@ -89,15 +98,20 @@ function economyView(state:TableState,actorId:string):EconomyVm {
 function entityFor(state:TableState,actor:Actor,viewer:TableViewer):SceneEntity {
   const combatant=state.rules.combatants[actor.id];
   const defenses=combatant?.damageDefenses??[];
+  const knows=viewer.role==="dm"||actor.kind==="character"||actor.controllerPeer===viewer.peerId;
+  const stage=combatant?hpStageOf(combatant.life.hp.current,combatant.life.hp.maximum):3;
   const entity:SceneEntity&{runtimeLife?:unknown}={
     id:actor.id,name:actor.name,side:actor.side,kind:actor.kind==="character"?"character":"combatant",
-    hp:combatant?.life.hp.current??0,maxHp:combatant?.life.hp.maximum??0,tempHp:combatant?.life.hp.temporary??0,ac:displayedAc(state,actor),
+    hp:knows?combatant?.life.hp.current??0:stage,maxHp:knows?combatant?.life.hp.maximum??0:3,tempHp:knows?combatant?.life.hp.temporary??0:(combatant?.life.hp.temporary??0)>0?1:0,ac:knows?displayedAc(state,actor):0,
     initiative:actor.initiative,status:statusChips(state,actor,viewer),
-    resistances:defenses.filter((entry)=>entry.kind==="resistance").map((entry)=>entry.damageType),
-    immunities:defenses.filter((entry)=>entry.kind==="immunity").map((entry)=>entry.damageType),
-    vulnerabilities:defenses.filter((entry)=>entry.kind==="vulnerability").map((entry)=>entry.damageType),
+    resistances:knows?defenses.filter((entry)=>entry.kind==="resistance").map((entry)=>entry.damageType):[],
+    immunities:knows?defenses.filter((entry)=>entry.kind==="immunity").map((entry)=>entry.damageType):[],
+    vulnerabilities:knows?defenses.filter((entry)=>entry.kind==="vulnerability").map((entry)=>entry.damageType):[],
     reactions:[],
     ...(actor.controllerPeer?{controllerId:actor.controllerPeer}:{}),
+    ...(knows?{}:{hpStage:HP_STAGE_LABEL[stage]}),
+    tableKind:actor.kind,
+    ...(actor.ownerId?{ownerId:actor.ownerId}:{}),
   };
   if(combatant) entity.runtimeLife={deathSaves:{...combatant.life.deathSaves},stable:combatant.life.stable,unconscious:combatant.life.unconscious,dead:combatant.life.dead};
   const engaged=engagedWith(state.engagements,actor.id);
@@ -118,17 +132,20 @@ export function projectedActions(state:TableState,actor:Actor):ActionVm[] {
 export function projectTable(state:TableState,viewer:TableViewer,refusal?:(TableRefusal&{id:number})|null):TableView {
   const visible=actorIds(state).filter((id)=>state.actors[id]&&(viewer.role==="dm"||!state.actors[id].hidden));
   const entities=visible.map((id)=>entityFor(state,state.actors[id],viewer));
-  const actionsByActor=Object.fromEntries(visible.map((id)=>[id,projectedActions(state,state.actors[id])]));
+  // Players get the actions of what they control (a local preview without a peer id sees everything, as before).
+  const actionsByActor=Object.fromEntries(visible.filter((id)=>viewer.role==="dm"||!viewer.peerId||state.actors[id].controllerPeer===viewer.peerId).map((id)=>[id,projectedActions(state,state.actors[id])]));
   const economyByActor=Object.fromEntries(visible.map((id)=>[id,economyView(state,id)]));
-  const questions=state.questions.filter((question)=>viewer.role==="dm"||question.toPeer===viewer.peerId).map((question)=>({...question,options:question.options.map((option)=>({...option})),context:{...question.context}}));
+  const questions=state.questions.filter((question)=>viewer.role==="dm"||questionPeerOf(state,question)===viewer.peerId).map((question)=>({...question,toPeer:questionPeerOf(state,question),options:question.options.map((option)=>({...option})),context:{...question.context}}));
   const withdrawal=state.questions.find((question)=>question.kind==="opportunity-attack");
   const pendingWithdrawal=withdrawal?{actorId:String(withdrawal.context.moverId),actorName:state.actors[String(withdrawal.context.moverId)]?.name??String(withdrawal.context.moverId),round:state.round,candidates:state.questions.filter((question)=>question.kind==="opportunity-attack"&&question.context.moverId===withdrawal.context.moverId).flatMap((question)=>question.options.filter((option)=>option.id!=="decline").map((option)=>({reactorId:question.actorId,reactorName:state.actors[question.actorId]?.name??question.actorId,actionId:option.id,actionName:option.label})))}:undefined;
-  const scene:SceneVm={id:state.sessionId,name:"",round:state.round,currentActorId:state.currentActorId??"",selectedActorId:"",entities,actionsByActor,economyByActor,...(questions.length?{tableQuestions:questions}:{}),...(Object.keys(state.declarations).length?{movementDeclarations:Object.fromEntries(Object.entries(state.declarations).map(([id,declaration])=>[id,{...declaration}]))}:{}),...(pendingWithdrawal&&viewer.role==="dm"?{pendingWithdrawal}:{}),...(state.engagements.length?{engagements:state.engagements.map((record)=>({...record}))}:{}),...(state.floor.length?{floorItems:state.floor.map((entry)=>({id:entry.id,name:entry.item.name,quantity:entry.item.quantity,droppedById:entry.droppedBy,droppedByName:state.actors[entry.droppedBy]?.name??entry.droppedBy,recoverable:entry.recoverable}))}:{}),
+  const scene:SceneVm={id:state.scene.id,name:state.scene.name,round:state.round,currentActorId:state.currentActorId??"",selectedActorId:"",entities,actionsByActor,economyByActor,...(questions.length?{tableQuestions:questions}:{}),...(Object.keys(state.declarations).length?{movementDeclarations:Object.fromEntries(Object.entries(state.declarations).map(([id,declaration])=>[id,{...declaration}]))}:{}),...(pendingWithdrawal&&viewer.role==="dm"?{pendingWithdrawal}:{}),...(state.engagements.length?{engagements:state.engagements.map((record)=>({...record}))}:{}),...(state.floor.length?{floorItems:state.floor.map((entry)=>({id:entry.id,name:entry.item.name,quantity:entry.item.quantity,droppedById:entry.droppedBy,droppedByName:state.actors[entry.droppedBy]?.name??entry.droppedBy,recoverable:entry.recoverable}))}:{}),
     clock:{elapsedSeconds:state.rules.clock.elapsedSeconds,round:state.round,timeOfDay:timeOfDayLabel(clockOfDay(state))},
     ...(state.resting?{resting:{kind:state.resting.kind,actorIds:[...state.resting.actorIds],answered:Object.keys(state.resting.answers),interrupted:state.resting.interruptedAt!==undefined}}:{}),
     ...(viewer.role==="dm"&&state.timers.length?{timers:state.timers.map((timer)=>({id:timer.id,kind:timer.kind,label:timer.label,inSeconds:Math.max(0,timer.at-state.rules.clock.elapsedSeconds)}))}:{}),
-    ...(state.pending?{pendingResolution:{id:state.pending.id,actorId:state.pending.actorId,actorName:state.actors[state.pending.actorId]?.name??state.pending.actorId,label:state.pending.label,waitingOn:state.pending.windows.map((entry)=>state.actors[entry.reactorId]?.name??entry.reactorId),window:state.pending.windows[0]?.window??""}}:{})};
-  const activity:ActivityEntry[]=state.log.filter((entry)=>viewer.role==="dm"||entry.visibility==="public").map((entry)=>({
+    ...(state.pending?{pendingResolution:{id:state.pending.id,actorId:state.pending.actorId,actorName:state.actors[state.pending.actorId]?.name??state.pending.actorId,label:state.pending.label,waitingOn:state.pending.windows.map((entry)=>state.actors[entry.reactorId]?.name??entry.reactorId),window:state.pending.windows[0]?.window??""}}:{}),
+    ...(state.scene.conditions.length?{sceneReminders:[...state.scene.conditions]}:{}),
+    ...(viewer.role==="dm"&&benchedActorIds(state).length?{benched:benchedActorIds(state).map((id)=>({id,name:state.actors[id].name}))}:{})};
+  const activity:ActivityEntry[]=state.log.filter((entry)=>viewer.role==="dm"||entry.visibility==="public"||(entry.visibility.startsWith("peer:")&&entry.visibility.slice(5).split(",").includes(viewer.peerId??""))).map((entry)=>({
     id:entry.id,time:entry.time,actor:entry.actor,title:entry.title,summary:entry.summary,detail:[...entry.detail],stateChanges:[...entry.stateChanges],
     ...(entry.ruling?{ruling:entry.ruling}:{}),...(entry.undoOf?{undoOf:entry.undoOf}:{}),...(entry.reversed?{reversed:true}:{}),
   }));

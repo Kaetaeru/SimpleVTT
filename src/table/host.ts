@@ -7,6 +7,7 @@ import type { TableRefusal } from "./refusal";
 import type { Outcome, TableRuntime } from "./runtime";
 import { cloneState, type TableState } from "./state";
 import type { TableTransport } from "./transport";
+import { snapshotOf, type TableStore } from "./persistence";
 import { TABLE_WIRE_VERSION, decodeWire, encodeWire, type TableWireMessage } from "./wire";
 
 export interface HostPeer {
@@ -26,6 +27,9 @@ export interface TableHostOptions {
   /** How many ledger events stay servable for catch-up; an older cursor gets a snapshot. */
   retention?:number;
   now?:()=>string;
+  /** Where the session is saved (RULES_RUNTIME_SPECS.md §4): every `saveEvery` events and on close. */
+  store?:TableStore;
+  saveEvery?:number;
 }
 
 /**
@@ -40,21 +44,41 @@ export class TableHost {
   private readonly retention:number;
   readonly sessionId:string;
   private readonly off:Array<()=>void>=[];
+  private readonly store?:TableStore;
+  private readonly saveEvery:number;
+  private readonly now:()=>string;
+  private savedRevision=0;
 
   constructor(readonly runtime:TableRuntime,readonly transport:TableTransport,options:TableHostOptions={}) {
     this.sessionId=options.sessionId??runtime.state.sessionId;
     this.retention=options.retention??500;
+    this.store=options.store;
+    this.saveEvery=Math.max(1,options.saveEvery??10);
+    this.now=options.now??(()=>"지금");
     this.off.push(transport.onMessage((peer,raw)=>this.receive(peer,raw)));
     this.off.push(transport.onPeerLeft((peer)=>{ const entry=this.peers.get(peer); if(entry) entry.connected=false; }));
   }
 
-  close() { for(const off of this.off) off(); this.transport.broadcast(encodeWire({type:"ended",reason:"host-closed"})); }
+  close() { for(const off of this.off) off(); void this.save(); this.transport.broadcast(encodeWire({type:"ended",reason:"host-closed"})); }
+
+  /** Write the table to the store now; called on a schedule, on rests and scene changes, and on close. */
+  save():void|Promise<void> {
+    if(!this.store) return;
+    this.savedRevision=this.runtime.state.revision;
+    return this.store.save(this.sessionId,snapshotOf(this.runtime.state,[],this.now()));
+  }
+
+  private maybeSave(commandType:string) {
+    if(!this.store) return;
+    const due=this.runtime.state.revision-this.savedRevision>=this.saveEvery||commandType==="rest-complete"||commandType==="scene"||commandType==="end-initiative";
+    if(due) void this.save();
+  }
 
   /** The DM's own commands go through here so their events reach the players too. */
   dispatch(command:TableCommand,origin:CommandOrigin=HOST_ORIGIN):Outcome {
     const before=cloneState(this.runtime.state);
     const outcome=this.runtime.dispatch(command,origin);
-    if(outcome.status==="committed") this.broadcastEvents(outcome.events,before);
+    if(outcome.status==="committed") { this.broadcastEvents(outcome.events,before); this.maybeSave(command.type); }
     return outcome;
   }
 
@@ -67,8 +91,7 @@ export class TableHost {
       this.stateBefore.set(event.seq,current);
       for(const peer of this.peers.values()) {
         if(!peer.connected) continue;
-        const redacted=redactEventFor(event,current,after,this.viewerFor(peer));
-        if(redacted) this.transport.send(peer.peerId,encodeWire({type:"events",events:[redacted]}));
+        this.transport.send(peer.peerId,encodeWire({type:"events",events:[redactEventFor(event,current,after,this.viewerFor(peer))]}));
       }
       current=after;
     }
@@ -95,7 +118,9 @@ export class TableHost {
     if(existing&&existing.peerId!==peer) { this.peers.delete(existing.peerId); entry.peerId=peer; }
     entry.connected=true;
     entry.name=message.name;
-    this.peers.set(peer,entry);
+    // The peer is registered after its character is bound, so the binding events are not broadcast ahead of the
+    // welcome (a replica at cursor 0 would ask for a catch-up it cannot be served); the welcome snapshot carries them.
+    this.peers.delete(peer);
     // A character joins the table on its owner's first hello; on a reconnect it is already there.
     if(message.sheet&&!this.runtime.state.actors[message.sheet.id]) {
       const before=cloneState(this.runtime.state);
@@ -110,12 +135,7 @@ export class TableHost {
         if(outcome.status==="committed") this.broadcastEvents(outcome.events,before);
       }
     }
-    const canCatchUp=message.cursor>0&&message.cursor<=this.runtime.state.revision&&this.runtime.ledger.some((event)=>event.seq===message.cursor+1||message.cursor===this.runtime.state.revision);
-    if(canCatchUp) {
-      this.transport.send(peer,encodeWire({type:"welcome",sessionId:this.sessionId,peerId:peer,participantId:entry.participantId,snapshot:redactStateFor(this.runtime.state,this.viewerFor(entry)),cursor:this.runtime.state.revision}));
-      entry.cursor=this.runtime.state.revision;
-      return;
-    }
+    this.peers.set(peer,entry);
     this.transport.send(peer,encodeWire({type:"welcome",sessionId:this.sessionId,peerId:peer,participantId:entry.participantId,snapshot:redactStateFor(this.runtime.state,this.viewerFor(entry)),cursor:this.runtime.state.revision}));
     entry.cursor=this.runtime.state.revision;
   }
@@ -124,13 +144,14 @@ export class TableHost {
     const entry=this.peers.get(peer);
     if(!entry) return;
     const missing=this.runtime.ledger.filter((event)=>event.seq>cursor);
-    const servable=missing.every((event)=>this.stateBefore.has(event.seq));
+    // Servable only when the ledger continues right after the cursor (a resumed Host's ledger starts at its snapshot).
+    const servable=missing.every((event)=>this.stateBefore.has(event.seq))&&(missing.length===0||missing[0].seq===cursor+1);
     if(!servable||missing.length>this.retention) {
       this.transport.send(peer,encodeWire({type:"snapshot",snapshot:redactStateFor(this.runtime.state,this.viewerFor(entry))}));
       entry.cursor=this.runtime.state.revision;
       return;
     }
-    const events=missing.flatMap((event)=>{ const before=this.stateBefore.get(event.seq)!; const redacted=redactEventFor(event,before,applyEvent(before,event),this.viewerFor(entry)); return redacted?[redacted]:[]; });
+    const events=missing.map((event)=>{ const before=this.stateBefore.get(event.seq)!; return redactEventFor(event,before,applyEvent(before,event),this.viewerFor(entry)); });
     this.transport.send(peer,encodeWire({type:"events",events}));
     entry.cursor=this.runtime.state.revision;
   }

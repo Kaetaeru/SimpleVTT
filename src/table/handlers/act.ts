@@ -342,7 +342,7 @@ function saveAct(ctx:HandlerContext,actor:Actor,action:ActionVm,targetIds:string
     const saveId=`${resolutionId}:save:${targetId}`;
     saveIds[targetId]=saveId;
     const saveFaces=d20Faces(ctx,`${target.name} 내성`);
-    operations.push({id:saveId,kind:"d20",actorId:targetId,request:{family:"saving-throw",target:dc,modifierContributions:[{source:`save:${key}`,value:actorSaveModifier(target,key)}],dice:{id:`${saveId}:d20`,purpose:`${target.name} ${abilityLabelKo(key)} 내성`,sides:20,faces:ctx.overrides?.autoSuccessSaves?.includes(targetId)?saveFaces.map(()=>20):saveFaces}},condition:{ability:key}});
+    operations.push({id:saveId,kind:"d20",actorId:targetId,request:{family:"saving-throw",target:dc,modifierContributions:[{source:`save:${key}`,value:actorSaveModifier(target,key)}],dice:{id:`${saveId}:d20`,purpose:`${target.name} ${abilityLabelKo(key)} 내성`,sides:20,faces:ctx.overrides?.autoSuccessSaves?.includes(targetId)?saveFaces.map(()=>20):target.kind==="object"?saveFaces.map(()=>1):saveFaces}},condition:{ability:key}});
     if(components.length) {
       const creatureKind=target.kind==="character"?"character" as const:"monster" as const;
       const damageType=components[0].type;
@@ -452,6 +452,7 @@ function unarmedOptionAct(ctx:HandlerContext,actor:Actor,action:ActionVm,targetI
   const target=state.actors[targetId];
   const kind=action.tableUnarmedOption!;
   if(!target||targetId===actor.id) return refused("target-ineligible","자기 자신을 대상으로 할 수 없습니다.",{actorId:actor.id,actionId:action.id});
+  if(target.kind==="object") return refused("target-ineligible","물체는 붙잡거나 밀 수 없습니다. 부수거나 DM 판정으로 다루세요.",{actorId:actor.id,actionId:action.id});
   if(actorSizeRank(target)>actorSizeRank(actor)+1) return refused("target-too-large","나보다 두 단계 이상 큰 대상은 붙잡거나 밀 수 없습니다.",{actorId:actor.id,actionId:action.id});
   if(kind==="grapple"&&actor.source.kind==="character"&&freeHands(actor.source.sheet)<1) return refused("hands-full","붙잡으려면 빈손이 하나 필요합니다. 먼저 놓거나 집어넣으세요.",{actorId:actor.id,actionId:action.id});
   if(kind==="grapple"&&grappleEffectsOn(state,targetId,actor.id).length) return refused("already-grappled","이미 붙잡고 있는 대상입니다.",{actorId:actor.id,actionId:action.id});

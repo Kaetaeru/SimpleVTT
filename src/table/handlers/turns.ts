@@ -15,10 +15,15 @@ function livingOrder(state:TableState,order:string[]) {
 export function startInitiative(ctx:HandlerContext):HandlerResult {
   const state=ctx.state;
   if(state.mode==="initiative") return refused("mode-already","이미 이니셔티브 중입니다.");
-  const ids=actorIds(state).filter((id)=>state.rules.combatants[id]);
+  // Objects take no turn; a summon acts right after its owner on the owner's count (RULES_RUNTIME_SPECS.md §4).
+  const ids=actorIds(state).filter((id)=>state.rules.combatants[id]&&state.actors[id].kind!=="object");
   if(!ids.length) return refused("table-empty","테이블에 액터가 없습니다.");
-  const rolls=ids.map((id)=>({id,actor:state.actors[id],roll:rollInitiative(ctx,state.actors[id])}));
-  const order=[...rolls].sort((a,b)=>b.roll.total-a.roll.total||actorDexModifier(b.actor)-actorDexModifier(a.actor)||a.actor.name.localeCompare(b.actor.name,"ko-KR")).map((entry)=>entry.id);
+  const followsOwner=(id:string)=>{ const owner=state.actors[id].ownerId; return state.actors[id].kind==="summon"&&owner!==undefined&&ids.includes(owner)?owner:undefined; };
+  const rollers=ids.filter((id)=>!followsOwner(id));
+  const rolled=rollers.map((id)=>({id,actor:state.actors[id],roll:rollInitiative(ctx,state.actors[id])}));
+  const rolls=[...rolled,...ids.filter((id)=>followsOwner(id)).map((id)=>{ const owner=rolled.find((entry)=>entry.id===followsOwner(id))!; return {id,actor:state.actors[id],roll:owner.roll}; })];
+  const order=[...rolled].sort((a,b)=>b.roll.total-a.roll.total||actorDexModifier(b.actor)-actorDexModifier(a.actor)||a.actor.name.localeCompare(b.actor.name,"ko-KR")).map((entry)=>entry.id);
+  for(const id of ids) { const owner=followsOwner(id); if(owner) order.splice(order.indexOf(owner)+1,0,id); }
   const first=livingOrder(state,order)[0];
   if(!first) return refused("table-dead","살아 있는 액터가 없습니다.");
   const rules=cloneState(state.rules);
@@ -59,7 +64,7 @@ function nextTurn(state:TableState):{actorId:string;round:number}|null {
     const index=(current+step)%order.length;
     const id=order[index];
     const combatant=state.rules.combatants[id];
-    if(!state.actors[id]||!combatant||combatant.life.dead) continue;
+    if(!state.actors[id]||state.actors[id].present===false||!combatant||combatant.life.dead) continue;
     return {actorId:id,round:index<=current?state.round+1:state.round};
   }
   return null;

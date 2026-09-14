@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { hpStageOf } from "../../src/table/state";
 import test from "node:test";
 import { MockAdapter } from "../../src/app/mockAdapter";
 import { createTableSessionFacade } from "../../src/table/facade";
@@ -52,7 +53,12 @@ test("connected play through the adapter surface: a client joins with its sheet,
   const attack=joined.scene.actionsByActor[characterId].find((action)=>action.resolutionKind==="attack"&&action.available)!;
   const after=await player.adapter.resolveAction(attack.id,[goblin.id]);
   assert.ok(after.activity.length>0);
-  assert.equal(after.scene.entities.find((entity)=>entity.id===goblin.id)?.hp,(await dm.adapter.getSnapshot()).scene.entities.find((entity)=>entity.id===goblin.id)?.hp);
+  // D22: the DM sees numbers, the player sees the stage (3 멀쩡 · 2 다침 · 1 위독 · 0 쓰러짐)
+  const dmGoblin=(await dm.adapter.getSnapshot()).scene.entities.find((entity)=>entity.id===goblin.id)!;
+  const playerGoblin=after.scene.entities.find((entity)=>entity.id===goblin.id)!;
+  assert.equal(playerGoblin.hp,hpStageOf(dmGoblin.hp,dmGoblin.maxHp));
+  assert.equal(playerGoblin.maxHp,3);
+  assert.ok(playerGoblin.hpStage);
   // A refusal from the Host lands in the player's snapshot with origin host
   const refused=await player.adapter.resolveAction("action.standard.dodge",[goblin.id]);
   assert.equal(refused.refusal?.origin,"host");
