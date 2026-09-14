@@ -353,7 +353,11 @@ export function attackAct(ctx:HandlerContext,actor:Actor,action:ActionVm,targetI
       if(adjusted.status==="committed") { rules=adjusted.commit.state; overrideChanges.push(`DM 개입: 피해 ${dealt} → ${wanted}`); }
     }
   }
+  // A Vex grant earned from another creature is not spent by this roll (it never applied to it).
+  const keptVex=rules.effects.filter((effect)=>vexElsewhere.some((vex)=>vex.id===effect.id)||effect.id===`${resolutionId}:vex:${actor.id}`);
+  rules.effects=rules.effects.filter((effect)=>!keptVex.includes(effect));
   const consumed=consumeNextRoll(rules,actor.id,"attack-roll");
+  rules.effects=[...rules.effects,...keptVex];
   const unhidden=hiddenEndsFor(rules,actor.id);
   if(unhidden.length) rules.effects=rules.effects.filter((effect)=>!unhidden.includes(effect.id));
   const engaged=options.noEngagement||masteryEngagements?null:engageByMelee(state,action,actor.id,targetId);
@@ -671,7 +675,7 @@ function routineAct(ctx:HandlerContext,actor:Actor,action:ActionVm,targetIds:str
       working=applyDrafts(working,result.events,seq,ctx.now());
       seq+=result.events.length;
       last=result.resolution??last;
-      lines.push(result.resolution?.compact??sub.name);
+      lines.push(`${sub.name}: ${result.resolution?.compact??"해결"}`);
     }
   }
   if(!events.length) return refused("action-unavailable",lines[0]??"다중공격을 할 수 없습니다.",{actorId:actor.id,actionId:action.id});

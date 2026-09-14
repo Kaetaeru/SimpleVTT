@@ -186,3 +186,53 @@ test("§22.9 Bardic Inspiration: granted as a bonus action, spent on a missed at
   assert.deepEqual(replayEvents(createTableState("table.test"),runtime.ledger),runtime.state);
   assert.equal(dice.remaining(),0,`unused dice: ${dice.remaining()}`);
 });
+
+test("§22.14 multiattack routine: the brown bear's one tile resolves 물기 then 발톱 against the same target, one card each, and spends the action", () => {
+  const {runtime,dice}=table([]);
+  runtime.dispatch({type:"add-actors",specs:[{kind:"character",sheet:fighter(),controllerPeer:P1.peerId},{kind:"monster",monsterId:"dnd.srd521.monster.brown-bear"}]});
+  const kael="char.kael",bear="dnd.srd521.monster.brown-bear.instance-1";
+  const routine=tile(runtime,bear,"action.multiattack")!;
+  assert.deepEqual(routine.tableRoutine?.steps.map((step)=>`${step.name}×${step.count}`),["물기×1","발톱×1"]);
+  dice.push(1,20); // 곰 먼저
+  runtime.dispatch({type:"start-initiative"});
+  assert.equal(runtime.state.currentActorId,bear);
+  dice.push(15,15,4,4, 15,15,2,2); // 물기 명중 1d8 4 + 3 = 7 · 발톱 명중 1d4 2 + 3 = 5
+  const before=hp(runtime,kael);
+  const result=runtime.dispatch({type:"act",actorId:bear,actionId:"action.multiattack",targetIds:[kael]});
+  assert.equal(result.status,"committed",JSON.stringify(result));
+  assert.equal(hp(runtime,kael),before-12);
+  assert.equal(result.events.length,2,"one card per attack");
+  assert.match(result.resolution?.detail.at(-1)??"",/다중공격: .*물기.*발톱/);
+  assert.equal(runtime.state.log.filter((entry)=>/물기|발톱/.test(entry.title)).length,2);
+  const bite=projectTable(runtime.state,{role:"dm"}).scene.actionsByActor[bear].find((action)=>action.name==="물기")!;
+  assert.equal(bite.available,false,"the action is spent");
+  assert.deepEqual(replayEvents(createTableState("table.test"),runtime.ledger),runtime.state);
+  assert.equal(dice.remaining(),0,`unused dice: ${dice.remaining()}`);
+});
+
+test("§22.14 hit riders: a ghoul's claw forces a CON save or paralysis; a crocodile's bite grapples and restrains until the escape check frees both", () => {
+  const {runtime,dice}=table([]);
+  runtime.dispatch({type:"add-actors",specs:[{kind:"character",sheet:fighter(),controllerPeer:P1.peerId},{kind:"monster",monsterId:"dnd.srd521.monster.ghoul"},{kind:"monster",monsterId:"dnd.srd521.monster.crocodile"}]});
+  const kael="char.kael",ghoul="dnd.srd521.monster.ghoul.instance-1",croc="dnd.srd521.monster.crocodile.instance-1";
+  const claw=byName(runtime,ghoul,/^발톱$/);
+  assert.deepEqual(claw.tableHitRider,{conditionIds:["paralyzed"],saveAbility:"con",saveDc:10,untilTargetNextTurnEnd:true});
+  dice.push(15,15,2,2, 2,2); // 명중 · 1d4 · 카엘 건강 내성 2 + 6 = 8 vs DC 10 → 실패
+  const clawed=runtime.dispatch({type:"act",actorId:ghoul,actionId:claw.id,targetIds:[kael]});
+  assert.equal(clawed.status,"committed",JSON.stringify(clawed));
+  assert.ok(clawed.resolution?.stateChanges.some((line)=>/건강 내성 8 vs DC 10 실패 → 마비/.test(line)),JSON.stringify(clawed.resolution?.stateChanges));
+  assert.ok(runtime.state.rules.effects.some((effect)=>effect.targetId===kael&&effect.conditionId==="paralyzed"));
+  runtime.dispatch({type:"ruling",targetIds:[kael],ruling:{kind:"condition",conditionId:"paralyzed",on:false}});
+  const bite=byName(runtime,croc,/^물기$/);
+  assert.deepEqual(bite.tableHitRider,{conditionIds:["grappled","restrained"],escapeDc:12});
+  dice.push(15,15,3,3);
+  const bitten=runtime.dispatch({type:"act",actorId:croc,actionId:bite.id,targetIds:[kael]});
+  assert.equal(bitten.status,"committed",JSON.stringify(bitten));
+  assert.ok(runtime.state.rules.effects.some((effect)=>effect.targetId===kael&&effect.conditionId==="grappled"&&effect.metadata?.escapeDc===12));
+  assert.ok(runtime.state.rules.effects.some((effect)=>effect.targetId===kael&&effect.conditionId==="restrained"));
+  dice.push(20,20);
+  const escaped=runtime.dispatch({type:"act",actorId:kael,actionId:"action.escape-grapple",targetIds:[kael]},P1);
+  assert.equal(escaped.status,"committed",JSON.stringify(escaped));
+  assert.ok(!runtime.state.rules.effects.some((effect)=>effect.targetId===kael&&(effect.conditionId==="grappled"||effect.conditionId==="restrained")),"both end with the hold");
+  assert.deepEqual(replayEvents(createTableState("table.test"),runtime.ledger),runtime.state);
+  assert.equal(dice.remaining(),0,`unused dice: ${dice.remaining()}`);
+});

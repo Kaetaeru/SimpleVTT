@@ -178,3 +178,50 @@ test("§3 Fighter: Action Surge grants one more action this turn and spends its 
   assert.deepEqual(replayEvents(createTableState("table.test"),runtime.ledger),runtime.state);
   assert.equal(dice.remaining(),0);
 });
+
+test("§3 Druid: Wild Shape into a wolf takes the form's AC and bite, grants temp HP equal to the level, and ends on demand", () => {
+  const {runtime,dice}=table([]);
+  const druid=base({id:"char.oak",name:"오크",className:"드루이드",classId:"dnd.srd521.class.druid",level:4,hitDie:8,abilities:{str:10,dex:14,con:14,int:12,wis:16,cha:10},proficiencyBonus:2});
+  runtime.dispatch({type:"add-actors",specs:[{kind:"character",sheet:druid,controllerPeer:P1.peerId},{kind:"monster",monsterId:GOBLIN}]});
+  const oak="char.oak",gob=`${GOBLIN}.instance-1`;
+  assert.equal(pool(runtime,oak,"resource:druid.wild-shape"),2);
+  assert.equal(runtime.dispatch({type:"act",actorId:oak,actionId:"action.wild-shape",targetIds:[oak]},P1).status,"refused","a form is required");
+  const shaped=runtime.dispatch({type:"act",actorId:oak,actionId:"action.wild-shape",targetIds:[oak],formId:"dnd.srd521.monster.wolf"},P1);
+  assert.equal(shaped.status,"committed",JSON.stringify(shaped));
+  assert.equal(pool(runtime,oak,"resource:druid.wild-shape"),1);
+  assert.equal(runtime.state.rules.combatants[oak].life.hp.temporary,4);
+  assert.equal(projectTable(runtime.state,{role:"dm"}).scene.entities.find((entity)=>entity.id===oak)?.ac,10,"the wolf's AC");
+  const bite=tile(runtime,oak,"wild.0-bite")!;
+  assert.match(bite.name,/늑대 · 물기/);
+  dice.push(15,15,3,3);
+  const bitten=runtime.dispatch({type:"act",actorId:oak,actionId:bite.id,targetIds:[gob]},P1);
+  assert.equal(bitten.status,"committed",JSON.stringify(bitten));
+  assert.equal(hp(runtime,gob),10-5,"1d6 3 + 2");
+  assert.equal(runtime.dispatch({type:"act",actorId:oak,actionId:"action.wild-shape",targetIds:[oak],formId:"dnd.srd521.monster.brown-bear"},P1).status,"refused","CR 1 is beyond level 4");
+  assert.equal(runtime.dispatch({type:"act",actorId:oak,actionId:"action.wild-shape-end",targetIds:[oak]},P1).status,"committed");
+  assert.equal(projectTable(runtime.state,{role:"dm"}).scene.entities.find((entity)=>entity.id===oak)?.ac,14);
+  assert.equal(tile(runtime,oak,"wild.0-bite"),undefined);
+  assert.deepEqual(replayEvents(createTableState("table.test"),runtime.ledger),runtime.state);
+  assert.equal(dice.remaining(),0);
+});
+
+test("§3 Paladin: Divine Smite is cast as a bonus action and rides the next weapon hit as radiant damage, then is spent", () => {
+  const {runtime,dice}=table([]);
+  const aria={...paladin(),items:[{id:"item.longsword",definitionId:"dnd.srd521.item.weapon.longsword",name:"롱소드",kind:"equipment",quantity:1,equipped:true,wielded:true,wieldSlot:"main-hand",passiveEffects:[],grantedActionIds:["action.longsword"],provenance:[]}],attacks:[{id:"action.longsword",name:"롱소드",bonus:5,damage:"1d8 + 3 참격"}],preparedSpells:["dnd.srd521.spell.divine-smite"]} as unknown as CharacterSheet;
+  runtime.dispatch({type:"add-actors",specs:[{kind:"character",sheet:aria,controllerPeer:P1.peerId},{kind:"monster",monsterId:GOBLIN}]});
+  const id="char.aria",gob=`${GOBLIN}.instance-1`;
+  const slots=pool(runtime,id,"spell-slot-1");
+  assert.ok(slots&&slots>0,"a 3rd-level paladin has 1st-level slots");
+  const cast=runtime.dispatch({type:"act",actorId:id,actionId:"spell.dnd.srd521.spell.divine-smite",targetIds:[id]},P1);
+  assert.equal(cast.status,"committed",JSON.stringify(cast));
+  assert.equal(pool(runtime,id,"spell-slot-1"),slots-1);
+  assert.ok(runtime.state.rules.effects.some((effect)=>effect.targetId===id&&effect.metadata?.attackDamageType==="radiant"));
+  dice.push(15,15,3,3);
+  const hit=runtime.dispatch({type:"act",actorId:id,actionId:"action.longsword",targetIds:[gob]},P1);
+  assert.equal(hit.status,"committed",JSON.stringify(hit));
+  const types=hit.resolution?.damageComponents.map((component)=>component.type)??[];
+  assert.ok(types.includes("radiant"),types.join(","));
+  assert.ok(!runtime.state.rules.effects.some((effect)=>effect.targetId===id&&effect.metadata?.attackDamageType==="radiant"),"spent on the hit");
+  assert.deepEqual(replayEvents(createTableState("table.test"),runtime.ledger),runtime.state);
+  assert.equal(dice.remaining(),0);
+});
