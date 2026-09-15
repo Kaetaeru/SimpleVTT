@@ -63,14 +63,16 @@ export interface Campaign {
 /** One chat message of the archive (Roll20 chat types), stored per campaign in month files (§7). */
 /** "○○이(가) △△에게서 벗어남": the reactor's controller may take an opportunity attack or let it go. */
 export interface ReactionPrompt {
-  /** "opportunity": the mover leaves the reactor's reach (D96). "shield": the mover's attack hit the reactor, who may cast Shield (R11). */
-  kind: "opportunity" | "shield";
+  /** "opportunity": the mover leaves the reactor's reach (D96). "shield": the mover's attack hit the reactor, who may cast Shield (R11). "counterspell": the mover is casting and the reactor may counter it (R16). */
+  kind: "opportunity" | "shield" | "counterspell";
   mover: { name: string; entryId?: string; pageId?: string; tokenId?: string };
   reactor: { name: string; entryId?: string; pageId?: string; tokenId?: string };
   /** The held attack (shield prompts): what hit and by how much. */
   attack?: { name: string; total: number; ac: number };
-  /** Filled once answered: the attack card id, or declined; for shield: whether it was cast and the resulting card. */
-  outcome?: { attacked?: string; declined?: boolean; shielded?: boolean; card?: string };
+  /** R16: the held spell (counterspell prompts): what is being cast and at what level. */
+  spell?: { name: string; level: number };
+  /** Filled once answered: the attack card id, or declined; for shield: whether it was cast; for counterspell: whether it landed. */
+  outcome?: { attacked?: string; declined?: boolean; shielded?: boolean; countered?: boolean; card?: string };
 }
 
 export interface ChatMessage {

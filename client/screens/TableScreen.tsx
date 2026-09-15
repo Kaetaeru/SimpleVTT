@@ -5,7 +5,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useCampaigns } from "../app/campaigns";
 import { controlsToken } from "../campaign/page";
-import type { SpellTargetResult } from "../rules/spellcast";
+import type { SpellResolution, SpellTargetResult } from "../rules/spellcast";
+import { monsterById } from "../compendium/monsters";
+import { summonRule, summonsNothing } from "../rules/summons";
 import { useClient } from "../app/context";
 import type { ChatMessage } from "../campaign/model";
 import { PromptChoices } from "./Notify";
@@ -163,6 +165,45 @@ function ChatLine({ message, me, color, targetName }: { message: ChatMessage; me
   }
 }
 
+/**
+ * R16 (D112): a spell that puts a creature on the board offers it right on the card — the summoner's controller (or
+ * the DM) picks one of the forms the SRD names and the host makes its journal entry and token. The 2024 conjure
+ * spells that summon nothing say so instead of offering a button that would be wrong.
+ */
+function SummonRow({ spell }: { spell: SpellResolution }) {
+  const c = useCampaigns();
+  const snapshot = c.table.snapshot!;
+  const isGm = snapshot.players.find((player) => player.userId === c.userId)?.role === "gm";
+  const rule = summonRule(spell.spellId);
+  const nothing = summonsNothing(spell.spellId);
+  const casterEntry = snapshot.journal.find((item) => item.id === spell.caster.id);
+  const seat = useMemo(() => {
+    for (const page of snapshot.pages) { const token = page.tokens.find((item) => item.represents === spell.caster.id); if (token) return { entryId: spell.caster.id, pageId: page.id, tokenId: token.id }; }
+    return null;
+  }, [snapshot.pages, spell.caster.id]);
+  const mine = isGm || Boolean(casterEntry && casterEntry.canEdit.includes(c.userId));
+  const [pick, setPick] = useState("");
+  const placed = snapshot.journal.some((item) => item.kind === "npc" && item.summonedBy?.entryId === spell.caster.id && item.summonedBy.spellId === spell.spellId);
+  if (nothing) return <div className="cl-small cl-quiet">🌀 {nothing}</div>;
+  if (!rule || !mine) return null;
+  if (!seat) return <div className="cl-small cl-quiet">🌀 시전자의 토큰이 장면에 없어 소환물을 놓을 수 없습니다.</div>;
+  const options = rule.choices.map((id) => monsterById(id)).filter((monster): monster is NonNullable<typeof monster> => Boolean(monster));
+  return (
+    <div className="cl-row cl-small" style={{ gap: 4, flexWrap: "wrap" }}>
+      <span className="cl-quiet">🌀 {rule.note}</span>
+      {options.length ? (
+        <>
+          <select className="cl-select" style={{ height: 26 }} aria-label="소환할 크리처" value={pick || options[0].id} onChange={(event) => setPick(event.target.value)}>
+            {options.map((monster) => <option key={monster.id} value={monster.id}>{monster.name}</option>)}
+          </select>
+          <button type="button" className="cl-btn small primary" onClick={() => c.summon(seat, pick || options[0].id, { count: rule.count, spellId: spell.spellId })}>소환{rule.count > 1 ? ` ×${rule.count}` : ""}</button>
+        </>
+      ) : <span className="cl-quiet">컴펜디움에서 괴물을 골라 캔버스에 놓으세요.</span>}
+      {placed ? <button type="button" className="cl-btn small" onClick={() => c.dismissSummons(seat, spell.spellId)}>소환물 돌려보내기</button> : null}
+    </div>
+  );
+}
+
 /** D102: a spell's card — one row per target: the spell attack's dice, the save vs DC, damage after resistances, healing, the effect started. */
 function SpellCard({ message, time, color }: { message: ChatMessage; time: string; color?: string }) {
   const c = useCampaigns();
@@ -195,6 +236,7 @@ function SpellCard({ message, time, color }: { message: ChatMessage; time: strin
           </div>
         ))}
         {spell.note ? <div className="cl-small cl-quiet">{spell.note}</div> : null}
+        <SummonRow spell={spell} />
         {isGm && !message.undone && spell.applied ? <div className="cl-row" style={{ gap: 4 }}><button type="button" className="cl-btn small danger" onClick={() => c.undoAction(message.id)}>되돌리기</button></div> : null}
         {isGm && !message.undone && !spell.applied ? <div className="cl-row" style={{ gap: 4 }}><button type="button" className="cl-btn small primary" onClick={() => c.confirmAction(message.id)}>적용</button><button type="button" className="cl-btn small quiet" onClick={() => c.undoAction(message.id)}>취소</button></div> : null}
       </div>
@@ -226,8 +268,10 @@ function PromptCard({ message, time, color }: { message: ChatMessage; time: stri
     <div className="cl-chat-msg prompt" data-prompt-id={message.id}>
       <span className="cl-at">{time}</span>{message.who ? <span className="cl-who" style={{ color }}>{message.who}</span> : null}
       <div className="cl-prompt-card">
-        {prompt.kind === "shield" ? <div>🛡 {prompt.mover.name}의 {prompt.attack?.name}이(가) <strong>{prompt.reactor.name}</strong>에게 적중 ({prompt.attack?.total} vs AC {prompt.attack?.ac}) — 방패?</div> : <div>🏃 {prompt.mover.name}이(가) <strong>{prompt.reactor.name}</strong>에게서 벗어납니다</div>}
-        {prompt.outcome ? <Pill tone={prompt.outcome.attacked || prompt.outcome.shielded ? "bad" : "accent"}>{prompt.kind === "shield" ? (prompt.outcome.shielded ? "방패 시전" : "방패 안 씀") : prompt.outcome.attacked ? "기회 공격" : "기회 공격 안 함"}</Pill> : <PromptChoices message={message} />}
+        {prompt.kind === "counterspell" ? <div>🚫 {prompt.mover.name}이(가) {prompt.spell?.name}{prompt.spell ? ` (${prompt.spell.level}레벨)` : ""} 시전 — <strong>{prompt.reactor.name}</strong>의 주문 차단?</div>
+          : prompt.kind === "shield" ? <div>🛡 {prompt.mover.name}의 {prompt.attack?.name}이(가) <strong>{prompt.reactor.name}</strong>에게 적중 ({prompt.attack?.total} vs AC {prompt.attack?.ac}) — 방패?</div>
+          : <div>🏃 {prompt.mover.name}이(가) <strong>{prompt.reactor.name}</strong>에게서 벗어납니다</div>}
+        {prompt.outcome ? <Pill tone={prompt.outcome.attacked || prompt.outcome.shielded || prompt.outcome.countered ? "bad" : "accent"}>{prompt.kind === "counterspell" ? (prompt.outcome.countered ? "주문 차단" : prompt.outcome.declined ? "차단 안 함" : "차단 실패") : prompt.kind === "shield" ? (prompt.outcome.shielded ? "방패 시전" : "방패 안 씀") : prompt.outcome.attacked ? "기회 공격" : "기회 공격 안 함"}</Pill> : <PromptChoices message={message} />}
       </div>
     </div>
   );

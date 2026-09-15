@@ -7,10 +7,10 @@
  */
 import type { ArtAsset } from "../campaign/art";
 import { ART_LIMIT, artVisible, canManageArt, ChunkAssembler, chunkText } from "../campaign/art";
-import type { JournalCharacter, JournalEntry } from "../campaign/journal";
-import { canEdit, canView, mergePlayerEdit, projectEntry } from "../campaign/journal";
+import type { JournalCharacter, JournalEntry, JournalNpc } from "../campaign/journal";
+import { canEdit, canView, mergePlayerEdit, newJournalNpc, projectEntry } from "../campaign/journal";
 import type { Page, Token } from "../campaign/page";
-import { controlsToken, mergeControllerTokenEdit, playerPageId, projectPage, projectToken } from "../campaign/page";
+import { controlsToken, mergeControllerTokenEdit, playerPageId, projectPage, projectToken, tokenForNpc } from "../campaign/page";
 import type { Tracker } from "../campaign/tracker";
 import { advanceTurn, emptyTracker, newTurn, withoutToken, withTurn } from "../campaign/tracker";
 import { advanceRound, endEffect, noteLog, recordDeathSave, resetDeathSaves } from "../character/play";
@@ -35,6 +35,11 @@ import { parseChatInput, renderInline, visibleTo } from "./chat";
 import type { ClientCommand, HostMessage, Presence, TableEvent, TableSnapshot } from "./protocol";
 import { PROTOCOL_VERSION, isClientCommand } from "./protocol";
 import type { Transport } from "./transport";
+import { summonRule } from "../rules/summons";
+import { monsterById } from "../compendium/monsters";
+
+/** R16: the 2024 Counterspell — a reaction that makes the other caster roll a Constitution save. */
+const COUNTERSPELL = "dnd.srd521.spell.counterspell";
 
 const EVENT_BUFFER = 5000;
 const SNAPSHOT_CHAT = 300;
@@ -87,6 +92,10 @@ export class TableHost {
   /** Applied action cards, newest last: inputs to re-resolve and a restore closure for undo. */
   /** Spell cards that can still be undone (or, D90, applied). */
   private readonly spells = new Map<string, { resolution: SpellResolution; restore: () => void; apply?: () => void; /** R12: per-target undo and what was cast, for Legendary Resistance re-application. */ rows?: Array<(() => void) | null>; restoreCaster?: () => void; context?: { spec: SpellCastSpec; casterStats: CasterStats; who: string; playerId?: string } }>();
+  /** R16: casts held while a would-be counterspeller decides (prompt id → the command to re-run, and who was asked). */
+  private readonly heldCasts = new Map<string, { command: Extract<ClientCommand, { type: "act.cast" }>; userId: string; peerId: string; asked: string[]; name: string; economy: "action" | "bonus" }>();
+  /** Set for the length of one resumed cast so the same would-be counterspellers are not asked twice. */
+  private counterAsked: string[] | null = null;
   /** R11: attacks held while the target decides on Shield (prompt id → everything needed to finish the attack). */
   private readonly held = new Map<string, { inputs: { attacker: ActorRef; targets: ActorRef[]; attack: AttackRef; riders?: AttackRiders; by: string; targetIndex: number }; attacker: { entry: JournalEntry; token?: Token; page?: Page }; target: { entry: JournalEntry; token?: Token; page?: Page }; spec: AttackSpec; overrides?: AttackOverrides; resolution: AttackResolution; supersedes?: string }>();
   private readonly actions = new Map<string, { inputs: { attacker: ActorRef; targets: ActorRef[]; attack: AttackRef; riders?: AttackRiders; by: string; targetIndex: number }; resolution: AttackResolution; restore: () => void }>();
@@ -516,13 +525,24 @@ export class TableHost {
         const exec = prepared.spec.exec;
         if (!isGm && !command.readied && exec.castingEconomy !== "reaction" && this.tracker.turns.length && this.turnOf(command.caster)?.id !== this.tracker.turns[this.tracker.current]?.id) return refuse("자기 턴에만 시전할 수 있습니다 (남의 턴에는 반응 주문·준비한 행동만)");
         // R11: answering a shield prompt — the reaction spell against the held attack.
+        // R16: answering a counterspell prompt — Counterspell against the held cast.
         let heldPrompt: ChatMessage | undefined;
+        let counterPrompt: ChatMessage | undefined;
         if (command.reaction) {
-          heldPrompt = this.chat.find((message) => message.id === command.reaction && message.type === "prompt");
-          if (!heldPrompt?.prompt || heldPrompt.prompt.kind !== "shield" || this.promptAnswered(command.reaction) || !this.held.has(command.reaction)) return refuse("그 방패 반응은 더 이상 열려 있지 않습니다");
-          if (!sameActor(heldPrompt.prompt.reactor, command.caster)) return refuse("그 프롬프트의 반응자만 방패를 시전할 수 있습니다");
-          if (exec.castingEconomy !== "reaction") return refuse("반응 주문만 답이 됩니다");
-          if (this.reactionUsed(command.caster)) return refuse("이번 라운드의 반응을 이미 썼습니다");
+          const answered = this.chat.find((message) => message.id === command.reaction && message.type === "prompt");
+          if (answered?.prompt?.kind === "counterspell") {
+            if (this.promptAnswered(command.reaction) || !this.heldCasts.has(command.reaction)) return refuse("그 주문 차단은 더 이상 열려 있지 않습니다");
+            if (!sameActor(answered.prompt.reactor, command.caster)) return refuse("그 프롬프트의 반응자만 주문 차단을 할 수 있습니다");
+            if (prepared.spec.spellId !== COUNTERSPELL) return refuse("주문 차단으로만 답합니다");
+            if (this.reactionUsed(command.caster)) return refuse("이번 라운드의 반응을 이미 썼습니다");
+            counterPrompt = answered;
+          } else {
+            heldPrompt = answered;
+            if (!heldPrompt?.prompt || heldPrompt.prompt.kind !== "shield" || this.promptAnswered(command.reaction) || !this.held.has(command.reaction)) return refuse("그 방패 반응은 더 이상 열려 있지 않습니다");
+            if (!sameActor(heldPrompt.prompt.reactor, command.caster)) return refuse("그 프롬프트의 반응자만 방패를 시전할 수 있습니다");
+            if (exec.castingEconomy !== "reaction") return refuse("반응 주문만 답이 됩니다");
+            if (this.reactionUsed(command.caster)) return refuse("이번 라운드의 반응을 이미 썼습니다");
+          }
         }
         const targetRefs = command.targets.length ? command.targets : exec.targeting.allowedRelations?.every((relation) => relation === "self") ? [command.caster] : [];
         if (targetRefs.length < Math.min(1, exec.targeting.minTargets)) return refuse("대상이 없습니다");
@@ -534,6 +554,21 @@ export class TableHost {
         const rows = targets.map((target) => ({ target, combatant: this.combatantOf(target), stats: this.statsOf(target) }));
         if (rows.some((row) => !row.combatant || !row.stats)) return refuse("대상의 능력치를 알 수 없습니다");
         const overrides = isGm ? command.overrides : command.overrides?.advantage ? { advantage: command.overrides.advantage } : undefined;
+        // R16 (D111): a spell that takes an action or a bonus action can be countered. Ask the first creature that
+        // still has its reaction and can cast 주문 차단; the cast is held, so nothing is paid until it goes off.
+        const alreadyAsked = this.counterAsked ?? [];
+        this.counterAsked = null;
+        const economy = exec.castingEconomy === "bonus-action" ? "bonus" : "action";
+        if (!command.reaction && exec.castingEconomy !== "reaction") {
+          const counterer = this.findCounterspeller(command.caster, caster, alreadyAsked);
+          if (counterer) {
+            const promptId = newMessageId();
+            const casterName = caster.token?.name ?? caster.entry.name;
+            this.heldCasts.set(promptId, { command, userId, peerId, asked: [...alreadyAsked, counterer.key], name: prepared.spec.name, economy });
+            this.sayWithId(promptId, { type: "prompt", who: player.displayName, playerId: userId, content: `${casterName}이(가) ${prepared.spec.name}을(를) 시전합니다 — ${counterer.name}의 주문 차단?`, prompt: { kind: "counterspell", mover: { name: casterName, ...command.caster }, reactor: { name: counterer.name, ...counterer.ref }, spell: { name: prepared.spec.name, level: prepared.spec.level } } });
+            return;
+          }
+        }
         const waits = Boolean(this.campaign.settings.dmConfirmsResults) && !isGm;
         const resolution = resolveSpell({ caster: casterCombatant, casterStats: prepared.casterStats, spec: prepared.spec, targets: rows.map((row) => ({ combatant: row.combatant!, stats: row.stats! })), dice: diceFrom(this.options.random ?? Math.random), overrides, apply: !waits });
         // The cost is paid on casting (a slot, concentration on the caster) even when the DM still has to confirm the result.
@@ -546,6 +581,12 @@ export class TableHost {
         else if (exec.castingEconomy === "reaction") this.markReactionUsed(command.caster); else this.markUsed(command.caster, exec.castingEconomy === "bonus-action" ? "bonus" : "action");
         this.postSpell(resolution, rows.map((row) => row.target), restoreCaster, waits, player.displayName, userId, { spec: prepared.spec, casterStats: prepared.casterStats });
         if (heldPrompt) { this.say({ ...heldPrompt, prompt: { ...heldPrompt.prompt!, outcome: { shielded: true } }, supersedes: heldPrompt.id, content: `${heldPrompt.content} → 방패 시전` }); this.releaseHeld(heldPrompt.id, true); }
+        if (counterPrompt) {
+          // 2024: the caster of the held spell makes a Constitution save against the counterspeller's save DC.
+          const saved = resolution.targets[0]?.save?.success ?? true;
+          this.say({ ...counterPrompt, prompt: { ...counterPrompt.prompt!, outcome: { countered: !saved } }, supersedes: counterPrompt.id, content: `${counterPrompt.content} → ${saved ? "차단 실패" : "주문 차단"}` });
+          this.releaseCast(counterPrompt.id, !saved);
+        }
         return;
       }
       case "act.npcSave": {
@@ -580,6 +621,49 @@ export class TableHost {
         const name = actor.token?.name ?? actor.entry.name;
         const result = { kind: "legendary" as const, name: `전설 행동 · ${action.name}`, actor: { name }, text: `${action.text} (전설 행동 ${used + cost}/${per})`, actorMarks: [], targetMarks: [], actorUnmarks: [] };
         this.say({ type: "act", who: player.displayName, playerId: userId, content: describeAct(result), act: result });
+        return;
+      }
+      case "act.summon": {
+        const summoner = this.resolveActor(command.summoner);
+        if (!summoner) return refuse("소환하는 쪽을 찾을 수 없습니다");
+        if (!isGm && !this.mayAct(userId, command.summoner, summoner.entry)) return refuse("자기 캐릭터로만 소환할 수 있습니다");
+        const page = summoner.page ?? (command.summoner.pageId ? this.pages.get(command.summoner.pageId) : undefined);
+        if (!page) return refuse("소환할 장면이 없습니다");
+        const monster = monsterById(command.monsterId);
+        if (!monster) return refuse("그 괴물을 컴펜디움에서 찾을 수 없습니다");
+        const rule = command.spellId ? summonRule(command.spellId) : undefined;
+        const most = rule?.count ?? 8;
+        const count = Math.max(1, Math.min(most, command.count ?? 1));
+        if (rule && rule.choices.length && !rule.choices.includes(command.monsterId)) return refuse(`${rule.spellId.split(".").pop()}은(는) 그 크리처를 소환하지 않습니다`);
+        const summonerName = summoner.token?.name ?? summoner.entry.name;
+        // The summoner's controller drives the creature; an NPC summoner leaves it to the GM.
+        const controller = summoner.entry.kind === "character" ? summoner.entry.canEdit : [];
+        const placed: string[] = [];
+        for (let at = 0; at < count; at += 1) {
+          const name = count > 1 ? `${monster.name} ${at + 1}` : monster.name;
+          const entry: JournalNpc = { ...newJournalNpc(this.campaign.id, userId, monster, { name, now: this.now() }), folder: "소환", canView: controller, canEdit: controller, summonedBy: { entryId: summoner.entry.id, spellId: command.spellId, name: summonerName } };
+          this.storeEntry(entry);
+          const token = { ...tokenForNpc(entry), controlledBy: controller.length ? controller : ("inherit" as const), z: page.tokens.length + at };
+          this.storeToken(this.pages.get(page.id) ?? page, token);
+          placed.push(name);
+        }
+        this.say({ type: "system", who: "", content: `${summonerName}이(가) ${placed.join(", ")}을(를) 소환했습니다${command.spellId ? ` (${rule ? rule.spellId.split(".").pop() : command.spellId})` : ""}` });
+        return;
+      }
+      case "act.dismiss": {
+        const summoner = this.resolveActor(command.summoner);
+        if (!summoner) return refuse("소환한 쪽을 찾을 수 없습니다");
+        if (!isGm && !this.mayAct(userId, command.summoner, summoner.entry)) return refuse("자기 소환물만 돌려보낼 수 있습니다");
+        const gone: string[] = [];
+        for (const entry of [...this.journalEntries.values()]) {
+          if (entry.kind !== "npc" || entry.summonedBy?.entryId !== summoner.entry.id) continue;
+          if (command.spellId && entry.summonedBy.spellId !== command.spellId) continue;
+          for (const page of [...this.pages.values()]) for (const token of [...page.tokens]) if (token.represents === entry.id) this.dropToken(page.id, token.id);
+          this.dropEntry(entry.id);
+          gone.push(entry.name);
+        }
+        if (!gone.length) return refuse("돌려보낼 소환물이 없습니다");
+        this.say({ type: "system", who: "", content: `${summoner.token?.name ?? summoner.entry.name}의 소환물이 사라집니다: ${gone.join(", ")}` });
         return;
       }
       case "act.resist": {
@@ -709,6 +793,7 @@ export class TableHost {
         if (!isGm && !this.mayAct(userId, promptMessage.prompt.reactor, reactor.entry)) return refuse("반응자의 조종자만 답할 수 있습니다");
         this.say({ ...promptMessage, prompt: { ...promptMessage.prompt, outcome: { declined: true } }, supersedes: promptMessage.id, content: `${promptMessage.content} → 안 함` });
         if (this.held.has(command.messageId)) this.releaseHeld(command.messageId, false);
+        if (this.heldCasts.has(command.messageId)) this.releaseCast(command.messageId, false);
         return;
       }
       case "act.adjust": {
@@ -888,6 +973,47 @@ export class TableHost {
     const entryId = caster.entry.id;
     const setUses = (count: number) => { const current = this.journalEntries.get(entryId); if (current?.kind === "npc") this.storeEntry({ ...current, runtime: { ...current.runtime, uses: { ...(current.runtime.uses ?? {}), [spellId]: count }, updatedAt: this.now() }, updatedAt: this.now() }); };
     return { spec: { spellId, name: entry.name, level, exec }, casterStats: { attackBonus: casting.dc - 8, saveDc: casting.dc, modifier: Math.floor((block.abilities[casting.ability] - 10) / 2), level: cr >= 17 ? 17 : cr >= 11 ? 11 : cr >= 5 ? 5 : 1 }, spend: (runtime) => runtime, npcSpend: perDay !== undefined ? () => { setUses(used + 1); return () => setUses(used); } : undefined };
+  }
+
+  /**
+   * R16: the first creature on the caster's scene that still has its reaction, can act, and can cast 주문 차단 —
+   * skipping anyone already asked about this cast, so a round of declines ends instead of looping.
+   */
+  private findCounterspeller(casterRef: ActorRef, caster: { entry: JournalEntry; token?: Token; page?: Page }, asked: string[]) {
+    const page = caster.page ?? (casterRef.pageId ? this.pages.get(casterRef.pageId) : undefined);
+    if (!page) return null;
+    for (const token of page.tokens) {
+      if (token.id === caster.token?.id || asked.includes(token.id)) continue;
+      const entry = token.represents ? this.journalEntries.get(token.represents) : undefined;
+      if (!entry || entry.kind === "handout" || entry.id === caster.entry.id) continue;
+      // The table convention: the other side answers. A party member is never asked to counter their own party.
+      if (entry.kind === caster.entry.kind) continue;
+      const ref: ActorRef = { entryId: entry.id, pageId: page.id, tokenId: token.id };
+      if (this.reactionUsed(ref) || cannotAct(this.conditionsOf({ entry, token }))) continue;
+      const able = entry.kind === "character" ? Boolean(this.options.pcReactionSpell?.(entry, COUNTERSPELL)) : Boolean(this.prepareSpell({ entry, token }, COUNTERSPELL));
+      if (!able) continue;
+      return { ref, key: token.id, name: token.name || entry.name };
+    }
+    return null;
+  }
+
+  /**
+   * R16: the held cast goes off (nobody countered, or the counter failed) or fades. 2024: a countered spell has no
+   * effect and the action is wasted, but the slot is not spent — which is why the cast was held before paying.
+   */
+  private releaseCast(promptId: string, countered: boolean) {
+    const held = this.heldCasts.get(promptId);
+    if (!held) return;
+    this.heldCasts.delete(promptId);
+    if (!countered) {
+      this.counterAsked = held.asked;
+      try { this.apply(held.userId, held.command, held.peerId); } finally { this.counterAsked = null; }
+      return;
+    }
+    const actor = this.resolveActor(held.command.caster);
+    const name = actor ? actor.token?.name ?? actor.entry.name : "시전자";
+    this.markUsed(held.command.caster, held.economy);
+    this.say({ type: "system", who: "", content: `${name}의 ${held.name}이(가) 주문 차단으로 사라집니다 — 슬롯은 소모되지 않고 ${held.economy === "bonus" ? "추가 행동" : "행동"}만 낭비됩니다` });
   }
 
   /** R11: finish an attack held for a Shield answer — re-resolved against the raised AC (same dice) when the shield went up, else as rolled. */
@@ -1251,6 +1377,18 @@ export class TableHost {
     const ref = entry.avatar;
     if (ref?.startsWith("art:")) { const asset = this.artAssets.get(ref.slice(4)); if (asset) this.emit({ type: "art", asset }); }
     this.refreshTokensOf(entry);
+  }
+
+  /** R16: take a token off a page (a summon going away); the tracker forgets its turn too. */
+  private dropToken(pageId: string, tokenId: string) {
+    const page = this.pages.get(pageId);
+    if (!page || !page.tokens.some((token) => token.id === tokenId)) return;
+    const next = { ...page, tokens: page.tokens.filter((token) => token.id !== tokenId), updatedAt: this.now() };
+    this.pages.set(page.id, next);
+    this.options.onPage?.({ page: next });
+    this.emit({ type: "token.removed", pageId: page.id, id: tokenId });
+    const tracker = withoutToken(this.tracker, page.id, tokenId);
+    if (tracker !== this.tracker && tracker.turns.length !== this.tracker.turns.length) this.setTracker(tracker);
   }
 
   private dropEntry(id: string) {

@@ -69,6 +69,8 @@ export interface NpcRuntime {
 
 /** A monster from the compendium as a journal entry (Roll20's NPC sheet), with its own copy of the stat block. */
 export interface JournalNpc extends JournalBase {
+  /** R16: what put this creature on the board — the summoner's entry, the spell, and the name shown at the table. */
+  summonedBy?: { entryId: string; spellId?: string; name: string };
   kind: "npc";
   monsterId: string;
   statBlock: MonsterView;
