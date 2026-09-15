@@ -111,13 +111,14 @@ export function suggestAdvantage(attacker: Combatant, target: Combatant, spec: A
   const plus: string[] = [];
   const minus: string[] = [];
   const has = (who: Combatant, name: string) => who.conditions.includes(name);
-  const effect = (who: Combatant, name: string) => who.effects.includes(name);
+  const effect = (who: Combatant, name: string) => who.effects.includes(name) || who.conditions.includes(name);
   if (has(attacker, "장님")) minus.push("공격자 장님");
   if (has(attacker, "넘어짐")) minus.push("공격자 넘어짐");
   if (has(attacker, "포박")) minus.push("공격자 포박");
   if (has(attacker, "중독")) minus.push("공격자 중독");
   if (has(attacker, "공포")) minus.push("공격자 공포");
   if (has(attacker, "투명")) plus.push("공격자 투명");
+  if (effect(attacker, "은신")) plus.push("공격자 은신");
   if (effect(attacker, "도움")) plus.push("도움 받음");
   if (has(target, "넘어짐")) (spec.mode === "melee" ? plus : minus).push(spec.mode === "melee" ? "대상 넘어짐 (근접)" : "대상 넘어짐 (원거리)");
   for (const name of ["마비", "석화", "포박", "충격", "행동불능", "무의식"]) if (has(target, name)) plus.push(`대상 ${name}`);

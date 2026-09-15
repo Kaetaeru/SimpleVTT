@@ -19,7 +19,9 @@ import { npcAttackSpec, npcCombatant } from "../rules/attackSpec";
 import type { AttackOverrides, AttackResolution, AttackSpec, Combatant } from "../rules/resolve";
 import { describeResolution, diceFrom, resolveAttack } from "../rules/resolve";
 import type { ActorRef, AttackRef, AttackRiders } from "./protocol";
-import { cellDistance, isScene } from "../campaign/page";
+import { cellDistance, isConditionMarker, isScene } from "../campaign/page";
+import { ACTIONS, cannotAct, describeAct, npcStats, resolveAction, TURN_MARKS, type ActorStats } from "../rules/actions";
+import type { TrackerTurn } from "../campaign/tracker";
 import type { Campaign, ChatMessage, PlayerRole } from "../campaign/model";
 import { newMessageId, withPlayer, withPlayerKicked, withPlayerRole } from "../campaign/model";
 import { rollFormula } from "../character/dice";
@@ -55,6 +57,8 @@ export interface TableHostOptions {
   pcCombatant?: (entry: JournalCharacter) => Combatant;
   pcConcentrationKey?: (entry: JournalCharacter) => string | undefined;
   pcAttackSpec?: (entry: JournalCharacter, attackId: string, riders: AttackRiders) => { spec: AttackSpec; spend: (runtime: CharacterRuntime) => CharacterRuntime } | null;
+  /** The official actions (D97) need a PC's ability modifiers, saves and skills from the derived sheet. */
+  pcStats?: (entry: JournalCharacter) => ActorStats;
   now?: () => string;
   random?: () => number;
 }
@@ -406,7 +410,11 @@ export class TableHost {
         return;
       }
       case "tracker.next": {
-        if (!isGm) return refuse("GM만 턴을 넘깁니다");
+        // "턴 마침": the current turn's controller may pass their own turn (D97).
+        const current = this.tracker.turns[this.tracker.current];
+        const currentPage = current?.pageId ? this.pages.get(current.pageId) : undefined;
+        const currentToken = currentPage?.tokens.find((token) => token.id === current?.tokenId);
+        if (!isGm && !(currentToken && controlsToken(currentToken, this.viewer(userId), this.journal))) return refuse("GM이나 현재 턴의 조종자만 턴을 넘깁니다");
         this.nextTurn();
         return;
       }
@@ -441,7 +449,37 @@ export class TableHost {
         if (promptMessage && firstCardId) {
           this.say({ ...promptMessage, prompt: { ...promptMessage.prompt!, outcome: { attacked: firstCardId } }, supersedes: promptMessage.id, content: `${promptMessage.content} → 기회 공격` });
           this.markReactionUsed(command.attacker);
-        }
+        } else if (firstCardId) this.markUsed(command.attacker, "action");
+        // Attacking spends 도움 and ends 은신 (D97).
+        if (firstCardId) this.mark(attackerEntry, [...TURN_MARKS.onAttack], false);
+        return;
+      }
+      case "act.action": {
+        const actor = this.resolveActor(command.actor);
+        if (!actor) return refuse("행동하는 쪽을 찾을 수 없습니다");
+        if (!isGm && !this.mayAct(userId, command.actor, actor.entry)) return refuse("자기 캐릭터로만 행동할 수 있습니다");
+        const current = this.tracker.turns[this.tracker.current];
+        if (!isGm && this.tracker.turns.length && (!current || this.turnOf(command.actor)?.id !== current.id)) return refuse("자기 턴에만 행동할 수 있습니다");
+        const def = ACTIONS.find((item) => item.kind === command.kind);
+        if (!def) return refuse("모르는 행동입니다");
+        const blocked = cannotAct(this.conditionsOf(actor));
+        if (blocked) return refuse(`${blocked} 상태라 행동할 수 없습니다`);
+        const target = command.target ? this.resolveActor(command.target) : null;
+        if (def.target && !target) return refuse("대상을 찾을 수 없습니다");
+        const stats = this.statsOf(actor);
+        if (!stats) return refuse("이 인물의 능력치를 알 수 없습니다");
+        const targetStats = target ? this.statsOf(target) : null;
+        if (target && !targetStats) return refuse("대상의 능력치를 알 수 없습니다");
+        const result = resolveAction({
+          kind: command.kind, skill: command.skill, dc: isGm ? command.dc : undefined, note: command.note, choice: command.choice, bonus: command.bonus, random: this.options.random ?? Math.random,
+          actor: { name: actor.token?.name ?? actor.entry.name, stats, conditions: this.conditionsOf(actor) },
+          target: target && targetStats ? { name: target.token?.name ?? target.entry.name, stats: targetStats, conditions: this.conditionsOf(target) } : undefined,
+        });
+        this.mark(actor, result.actorMarks, true);
+        this.mark(actor, result.actorUnmarks, false);
+        if (target) this.mark(target, result.targetMarks, true, actor.token?.id);
+        this.markUsed(command.actor, command.bonus ? "bonus" : "action");
+        this.say({ type: "act", who: player.displayName, playerId: userId, content: describeAct(result), act: result });
         return;
       }
       case "act.provoke": {
@@ -452,6 +490,7 @@ export class TableHost {
         if (mover.entry.id === from.entry.id && mover.token?.id === from.token?.id) return refuse("자기 자신에게서 벗어날 수는 없습니다");
         const moverName = mover.token?.name ?? mover.entry.name;
         const fromName = from.token?.name ?? from.entry.name;
+        if (this.conditionsOf(mover).includes("이탈")) { this.say({ type: "system", who: "", content: `${moverName}이(가) 이탈 중이라 ${fromName}에게서 기회 공격 없이 벗어납니다` }); return; }
         this.say({ type: "prompt", who: player.displayName, playerId: userId, content: `${moverName}이(가) ${fromName}에게서 벗어납니다 — ${fromName}의 기회 공격?`, prompt: { kind: "opportunity", mover: { name: moverName, ...command.mover }, reactor: { name: fromName, ...command.from } } });
         return;
       }
@@ -529,7 +568,7 @@ export class TableHost {
 
   private combatantOf(actor: { entry: JournalEntry; token?: Token }): Combatant | null {
     if (actor.entry.kind === "npc") return npcCombatant(actor.entry, actor.token);
-    if (actor.entry.kind === "character" && this.options.pcCombatant) return { ...this.options.pcCombatant(actor.entry), name: actor.token?.name ?? actor.entry.name };
+    if (actor.entry.kind === "character" && this.options.pcCombatant) { const base = this.options.pcCombatant(actor.entry); return { ...base, name: actor.token?.name ?? actor.entry.name, conditions: [...new Set([...base.conditions, ...(actor.token?.markers.map((marker) => marker.name) ?? [])])] }; }
     return null;
   }
 
@@ -570,6 +609,40 @@ export class TableHost {
     if (!turn) return;
     this.setTracker({ ...this.tracker, turns: this.tracker.turns.map((item) => (item.id === turn.id ? { ...item, reactionUsed: true } : item)) });
   }
+  /** Action economy (D97): noted on the current turn's row only, never enforced. */
+  private markUsed(ref: ActorRef, which: "action" | "bonus") {
+    const turn = this.turnOf(ref);
+    if (!turn || this.tracker.turns[this.tracker.current]?.id !== turn.id) return;
+    this.setTracker({ ...this.tracker, turns: this.tracker.turns.map((item) => (item.id === turn.id ? { ...item, [which === "action" ? "actionUsed" : "bonusUsed"]: true } : item)) });
+  }
+  private statsOf(actor: { entry: JournalEntry }): ActorStats | null {
+    if (actor.entry.kind === "npc") return npcStats(actor.entry.statBlock);
+    if (actor.entry.kind === "character") return this.options.pcStats?.(actor.entry) ?? null;
+    return null;
+  }
+  /** Sheet conditions plus token markers (turn-scoped marks such as 회피 live on the token). */
+  private conditionsOf(actor: { entry: JournalEntry; token?: Token }): string[] {
+    const own = actor.entry.kind === "character" || actor.entry.kind === "npc" ? actor.entry.runtime.conditions : [];
+    return [...new Set([...own, ...(actor.token?.markers.map((marker) => marker.name) ?? [])])];
+  }
+  /** Real conditions go to a PC's sheet (D84 mirrors them to the token) or an NPC's token; turn-scoped marks to the token. */
+  private mark(actor: { entry: JournalEntry; token?: Token; page?: Page }, names: string[], on: boolean, from?: string) {
+    if (!names.length) return;
+    const now = this.now();
+    const toggle = (list: string[]) => { let next = list; for (const name of names) next = on ? (next.includes(name) ? next : [...next, name]) : next.filter((item) => item !== name); return next; };
+    const sheetNames = actor.entry.kind === "character" ? names.filter((name) => isConditionMarker(name)) : actor.token ? [] : names;
+    const tokenNames = actor.entry.kind === "character" ? names.filter((name) => !isConditionMarker(name)) : actor.token ? names : [];
+    if (sheetNames.length) {
+      const current = this.journalEntries.get(actor.entry.id);
+      if (current?.kind === "character" || current?.kind === "npc") { const conditions = toggle(current.runtime.conditions); if (conditions !== current.runtime.conditions) this.storeEntry({ ...current, runtime: { ...current.runtime, conditions, updatedAt: now }, updatedAt: now } as JournalEntry); }
+    }
+    if (tokenNames.length && actor.token && actor.page) {
+      const page = this.pages.get(actor.page.id);
+      const token = page?.tokens.find((item) => item.id === actor.token!.id);
+      if (page && token) { let markers = token.markers; for (const name of tokenNames) markers = on ? (markers.some((marker) => marker.name === name) ? markers : [...markers, from ? { name, from } : { name }]) : markers.filter((marker) => marker.name !== name); if (markers !== token.markers) this.storeToken(page, { ...token, markers }); }
+    }
+  }
+  private actorOfTurn(turn: TrackerTurn | undefined) { return turn ? this.resolveActor({ entryId: turn.entryId, pageId: turn.pageId, tokenId: turn.tokenId }) : null; }
 
   /** Write the result into the target (PC sheet or NPC token/sheet) and post the card; remember how to undo it. */
   private applyResolution(resolution: AttackResolution, target: { entry: JournalEntry; token?: Token; page?: Page }, attacker: { entry: JournalEntry; token?: Token }, messageId: string, confirming: boolean, inputs?: { attacker: ActorRef; targets: ActorRef[]; attack: AttackRef; riders?: AttackRiders; by: string; targetIndex: number }, supersedes?: string, who?: string) {
@@ -650,9 +723,19 @@ export class TableHost {
       runtime = { ...runtime, updatedAt: this.now() };
       this.storeEntry({ ...started, runtime, updatedAt: this.now() });
     }
-    // The reaction comes back at the start of the creature's turn.
+    // Turn-scoped marks (D97): 이탈·질주 end with the turn; 회피·도움·준비 last until the bearer's next turn starts.
+    const endedActor = this.actorOfTurn(result.ended);
+    if (endedActor) this.mark(endedActor, [...TURN_MARKS.endOfTurn], false);
+    const startedActor = this.actorOfTurn(result.started);
+    if (startedActor) this.mark(startedActor, [...TURN_MARKS.startOfTurn], false);
+    // 도움 the starting creature granted ends now (until the start of the helper's next turn).
+    if (startedActor?.token && startedActor.page) {
+      const page = this.pages.get(startedActor.page.id);
+      if (page) for (const token of page.tokens) { const kept = token.markers.filter((marker) => !(marker.name === "도움" && marker.from === startedActor.token!.id)); if (kept.length !== token.markers.length) this.storeToken(page, { ...token, markers: kept }); }
+    }
+    // The reaction and the action economy come back at the start of the creature's turn.
     const startedId = result.started?.id;
-    this.setTracker(startedId ? { ...result.tracker, turns: result.tracker.turns.map((turn) => (turn.id === startedId && turn.reactionUsed ? { ...turn, reactionUsed: false } : turn)) } : result.tracker);
+    this.setTracker(startedId ? { ...result.tracker, turns: result.tracker.turns.map((turn) => (turn.id === startedId ? { ...turn, reactionUsed: false, actionUsed: false, bonusUsed: false } : turn)) } : result.tracker);
   }
 
   /** The ribbon or a bookmark moved: every mirror learns it, then every page is resent so each player ends up with exactly their page. */

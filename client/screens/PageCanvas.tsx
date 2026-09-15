@@ -19,6 +19,8 @@ import { useDice } from "../ui/dice/DiceProvider";
 import type { Layer, Page, Token, TokenBar, TokenMarker } from "../campaign/page";
 import { ALL_MARKERS, applyBarInput, cellDistance, clampToPage, controlsToken, isConditionMarker, isScene, MARKER_GLYPH, newPage, newScene, newToken, playerPageId, snap, tokenForEntry, tokenForNpc } from "../campaign/page";
 import type { Advantage, AttackOverrides } from "../rules/resolve";
+import { ACTIONS, actionDef, cannotAct, SKILL_ABILITY_OF, SKILL_KO, type ActionDef } from "../rules/actions";
+import { ABILITY_KO } from "../catalog/types";
 import { hasSmite, hasSneakAttack, npcAttackSpec, smiteSlots, weaponRange } from "../rules/attackSpec";
 import type { AttackRef, AttackRiders } from "../session/protocol";
 import { Modal as RiderModal } from "../ui/components";
@@ -205,6 +207,9 @@ export function PageCanvas({ onOpenEntry, onOpenToken, onOpenPageSettings }: Can
   const currentTurn = snapshot.tracker.turns[snapshot.tracker.current];
   const turnToken = currentTurn?.pageId === page.id ? page.tokens.find((token) => token.id === currentTurn.tokenId) : undefined;
   const acting = (turnToken && controlsToken(turnToken, viewer, journal) ? turnToken : undefined) ?? (selected.length === 1 ? page.tokens.find((token) => token.id === selected[0] && controlsToken(token, viewer, journal)) : undefined);
+  // D97: the turn panel — a player's own character's turn; for the DM, the turn of anyone no player controls.
+  const players = snapshot.players.filter((player) => player.role !== "gm");
+  const myTurn = turnToken && (isGm ? !players.some((player) => controlsToken(turnToken, { userId: player.userId, role: "player" }, journal)) : controlsToken(turnToken, viewer, journal)) ? turnToken : undefined;
   const sortedTokens = [...page.tokens].sort((a, b) => layerOrder(a.layer) - layerOrder(b.layer) || a.z - b.z);
   const rangeOf = (token: Token): "in" | "long" | "out" | null => {
     if (!targeting?.from || isScene(page)) return null;
@@ -238,6 +243,7 @@ export function PageCanvas({ onOpenEntry, onOpenToken, onOpenPageSettings }: Can
           </div>
         </div>
       ) : <div className="cl-page-bar"><span className="cl-small"><strong>{page.name}</strong> <span className="cl-quiet">{scene ? "장면 · 위치와 거리는 DM이 말로" : `${page.width}×${page.height} · 1칸 = ${page.scale} ${page.unit}`}</span></span></div>}
+      {myTurn ? <TurnPanel token={myTurn} page={page} onOpenEntry={onOpenEntry} /> : null}
       <div className="cl-canvas-body">
         <div className="cl-toolbar" role="toolbar" aria-label="도구">
           <button type="button" className="cl-tool active" title="선택·이동">⬚</button>
@@ -283,6 +289,7 @@ export function PageCanvas({ onOpenEntry, onOpenToken, onOpenPageSettings }: Can
         </div>
       </div>
       <AttackAskBridge />
+      <ActAskBridge />
       <PlaceCharacterBridge onPlace={(id) => placeCharacter(id)} onPlaceToken={(token) => placeTokenAt(token)} onTargets={(request) => { setSelected([]); setMenu(null); setTargeting({ ...request, picked: [] }); }} />
     </div>
   );
@@ -315,23 +322,10 @@ function PlaceCharacterBridge({ onPlace, onPlaceToken, onTargets }: { onPlace: (
   return null;
 }
 
-/* ---------- Token action bar (D88): the sheet's buttons above the canvas for the selected token ---------- */
 
-function ActionBar({ token, page, onOpenEntry }: { token: Token; page: Page; onOpenEntry: (id: string) => void }) {
-  const c = useCampaigns();
-  const dice = useDice();
-  const { catalog } = useClient();
-  const { viewer, snapshot, isGm } = useViewer();
-  const entry = token.represents ? snapshot.journal.find((item) => item.id === token.represents) : undefined;
-  const controls = controlsToken(token, viewer, snapshot.journal);
-  const derived = useMemo(() => (entry?.kind === "character" ? deriveCharacter(entry.source, catalog, { equipped: entry.runtime.equipped, inventory: entry.runtime.inventory, effects: entry.runtime.effects }) : null), [entry, catalog]);
-  if (!controls || !entry || entry.kind === "handout") return null;
-  const roll = async (spec: RollSpec) => { const result = await dice.roll(spec); c.sendRoll({ formula: result.formula, total: result.total, dice: result.dice.map((die) => ({ sides: die.sides, value: die.value })), modifier: result.modifier, label: `${token.name} · ${result.label}${result.note ? ` (${result.note})` : ""}` }); };
-  const d20 = (bonus: number) => `1d20${bonus >= 0 ? "+" : "-"}${Math.abs(bonus)}`;
-  const initiativeBonus = derived ? derived.initiative : entry.kind === "npc" ? entry.statBlock.initiativeBonus : 0;
-  const inTracker = snapshot.tracker.turns.some((turn) => turn.tokenId === token.id && turn.pageId === page.id);
-  /** ⚔: pick targets (range dims tokens on a grid, never on a scene), the pre-roll dialog (riders; the DM's 유리/불리·엄폐·반드시 — D95), then the host resolves (§12.2). */
-  const attackWith = async (ref: AttackRef) => {
+/** ⚔: pick targets (range dims tokens on a grid, never on a scene), the pre-roll dialog (riders; the DM's 유리/불리·엄폐·반드시 — D95), then the host resolves (§12.2). Shared by the action bar and the turn panel. */
+function makeAttackWith({ c, token, page, entry, derived, isGm }: { c: ReturnType<typeof useCampaigns>; token: Token; page: Page; entry: JournalEntry; derived: ReturnType<typeof deriveCharacter> | null; isGm: boolean }) {
+  return async (ref: AttackRef) => {
     const range = ref.source === "weapon" && derived ? weaponRange(derived.attacks.find((item) => item.id === ref.attackId)!) : ref.source === "npc" && entry.kind === "npc" ? (() => { const spec = npcAttackSpec(entry, ref.actionName); return spec ? { rangeFeet: spec.rangeFeet ?? 5, longRangeFeet: spec.longRangeFeet } : null; })() : null;
     const name = ref.source === "weapon" && derived ? derived.attacks.find((item) => item.id === ref.attackId)!.name : ref.source === "npc" ? ref.actionName : "공격";
     const targets = await requestTargets(`${name} 대상을 클릭하세요 (Esc 취소, 여러 대상은 Shift)`, { multi: true, from: range && !isScene(page) ? { tokenId: token.id, rangeFeet: range.rangeFeet, longRangeFeet: range.longRangeFeet } : undefined });
@@ -347,6 +341,120 @@ function ActionBar({ token, page, onOpenEntry }: { token: Token; page: Page; onO
     if (isGm || sneak || slots.length) { answer = await requestAttackOptions({ name, sneak, slots, gm: isGm }); if (answer === null) return; }
     c.attack({ entryId: entry.id, pageId: page.id, tokenId: token.id }, targets.map((id) => ({ pageId: page.id, tokenId: id })), ref, answer?.riders, { overrides: answer?.overrides });
   };
+}
+
+/* ---------- Turn panel (D97): the official actions on your turn ---------- */
+
+interface ActAsk { def: ActionDef; gm: boolean; resolve: (answer: ActAnswer | null) => void }
+interface ActAnswer { skill?: string; dc?: number; note?: string; choice?: string }
+const actAskListeners = new Set<(ask: ActAsk) => void>();
+const requestActOptions = (ask: Omit<ActAsk, "resolve">) => new Promise<ActAnswer | null>((resolve) => { if (!actAskListeners.size) { resolve({}); return; } for (const listener of [...actAskListeners]) listener({ ...ask, resolve }); });
+function ActAskBridge() {
+  const [ask, setAsk] = useState<ActAsk | null>(null);
+  useEffect(() => { actAskListeners.add(setAsk); return () => { actAskListeners.delete(setAsk); }; }, []);
+  return ask ? <ActDialog ask={ask} onDone={(answer) => { ask.resolve(answer); setAsk(null); }} /> : null;
+}
+
+/** Skill, DC (DM), free text or the 밀치기 choice for an action that needs one. */
+function ActDialog({ ask, onDone }: { ask: ActAsk; onDone: (answer: ActAnswer | null) => void }) {
+  const [skill, setSkill] = useState(ask.def.skills?.[0] ?? "");
+  const [dc, setDc] = useState("");
+  const [note, setNote] = useState("");
+  const [choice, setChoice] = useState(ask.def.choice?.[0]?.value ?? "");
+  return (
+    <RiderModal title={`${ask.def.name} (${ask.def.en})`} onClose={() => onDone(null)} actions={<button type="button" className="cl-btn primary" onClick={() => onDone({ skill: skill || undefined, dc: dc.trim() ? Number(dc) : undefined, note: note.trim() || undefined, choice: choice || undefined })}>{ask.def.name}</button>}>
+      <p className="cl-quiet cl-small">{ask.def.summary}</p>
+      {ask.def.skills && ask.def.skills.length > 1 ? <div className="cl-field"><label htmlFor="cl-act-skill">기술</label><select id="cl-act-skill" className="cl-select" value={skill} onChange={(event) => setSkill(event.target.value)}>{ask.def.skills.map((id) => <option key={id} value={id}>{ABILITY_KO[SKILL_ABILITY_OF[id]]}({SKILL_KO[id]})</option>)}</select></div> : null}
+      {ask.def.choice ? <div className="cl-field"><label htmlFor="cl-act-choice">방식</label><select id="cl-act-choice" className="cl-select" value={choice} onChange={(event) => setChoice(event.target.value)}>{ask.def.choice.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></div> : null}
+      {ask.def.text ? <div className="cl-field"><label htmlFor="cl-act-note">{ask.def.text}</label><input id="cl-act-note" className="cl-input" value={note} onChange={(event) => setNote(event.target.value)} placeholder={ask.def.kind === "ready" ? "예: 문이 열리면 → 활을 쏜다" : ""} /></div> : null}
+      {ask.gm && (ask.def.skills || ask.def.kind === "escape") ? <div className="cl-field"><label htmlFor="cl-act-dc">DC (비우면 기본)</label><input id="cl-act-dc" className="cl-input" style={{ width: 90 }} value={dc} onChange={(event) => setDc(event.target.value)} placeholder={ask.def.kind === "hide" || ask.def.kind === "influence" ? "15" : "—"} /></div> : null}
+    </RiderModal>
+  );
+}
+
+/**
+ * The turn panel: shown when the current turn is yours — a player's own character, or for the DM any creature no
+ * player controls. 공격 lists the sheet's attacks; the rest is the 2024 action list. The economy chips only inform.
+ */
+function TurnPanel({ token, page, onOpenEntry }: { token: Token; page: Page; onOpenEntry: (id: string) => void }) {
+  const c = useCampaigns();
+  const { catalog } = useClient();
+  const { snapshot, isGm } = useViewer();
+  const entry = token.represents ? snapshot.journal.find((item) => item.id === token.represents) : undefined;
+  const derived = useMemo(() => (entry?.kind === "character" ? deriveCharacter(entry.source, catalog, { equipped: entry.runtime.equipped, inventory: entry.runtime.inventory, effects: entry.runtime.effects }) : null), [entry, catalog]);
+  if (!entry || entry.kind === "handout") return null;
+  const turn = snapshot.tracker.turns[snapshot.tracker.current];
+  const attackWith = makeAttackWith({ c, token, page, entry, derived, isGm });
+  const me = { entryId: entry.id, pageId: page.id, tokenId: token.id };
+  const conditions = new Set([...(entry.runtime.conditions ?? []), ...token.markers.map((marker) => marker.name)]);
+  const blocked = cannotAct([...conditions]);
+  const take = async (def: ActionDef, bonus = false) => {
+    let target: string | undefined;
+    if (def.target) {
+      const picked = await requestTargets(`${def.name}: ${def.target === "ally" ? "도울 아군" : def.kind === "escape" ? "붙잡은 상대" : "대상"}을 클릭하세요 (Esc 취소)`, { multi: false });
+      if (!picked.length) return;
+      target = picked[0];
+    }
+    let answer: ActAnswer | null | undefined = {};
+    if ((def.skills && def.skills.length > 1) || def.text || def.choice || (isGm && (def.skills || def.kind === "escape"))) { answer = await requestActOptions({ def, gm: isGm }); if (answer === null) return; }
+    c.act(me, def.kind, { target: target ? { pageId: page.id, tokenId: target } : undefined, skill: answer?.skill ?? def.skills?.[0], dc: answer?.dc, note: answer?.note, choice: answer?.choice, bonus });
+  };
+  const chip = (label: string, used: boolean | undefined) => <span className={`cl-econ${used ? " used" : ""}`} title={used ? `${label} 사용함` : `${label} 남음`}><i />{label}</span>;
+  const bonusActions = entry.kind === "npc" ? entry.statBlock.bonusActions : [];
+  return (
+    <div className="cl-turn-panel" role="region" aria-label={`${token.name}의 턴`}>
+      <div className="cl-turn-head">
+        <strong>{token.name}의 턴</strong>{snapshot.tracker.turns.length ? <span className="cl-quiet cl-small"> · 라운드 {snapshot.tracker.round}</span> : null}
+        <span className="cl-turn-econ">{chip("행동", turn?.actionUsed)}{chip("추가 행동", turn?.bonusUsed)}{chip("반응", turn?.reactionUsed)}</span>
+        {blocked ? <span className="cl-pill bad">{blocked}: 행동 불가</span> : null}
+        <span style={{ flex: 1 }} />
+        <button type="button" className="cl-btn small quiet" onClick={() => onOpenEntry(entry.id)}>시트</button>
+        <button type="button" className="cl-btn small primary" onClick={() => c.nextTurn()} title="턴을 마치고 다음 차례로">턴 마침 ▶</button>
+      </div>
+      <div className="cl-turn-groups">
+        <div className="cl-turn-group">
+          <h5>공격 <small>Attack</small></h5>
+          <div className="cl-turn-btns">
+            {derived ? derived.attacks.map((attack) => <button type="button" key={attack.id} className="cl-btn small primary" disabled={Boolean(blocked)} onClick={() => void attackWith({ source: "weapon", attackId: attack.id })}>⚔ {attack.name} {attack.attackBonus >= 0 ? "+" : ""}{attack.attackBonus}</button>) : null}
+            {entry.kind === "npc" ? entry.statBlock.actions.filter((action) => action.kind === "attack" && action.attack).map((action) => <button type="button" key={action.name} className="cl-btn small primary" disabled={Boolean(blocked) || Boolean(action.timing?.recharge && entry.runtime.spent[action.name])} onClick={() => void attackWith({ source: "npc", actionName: action.name })}>⚔ {action.name} {action.attack!.bonus >= 0 ? "+" : ""}{action.attack!.bonus}</button>) : null}
+            {ACTIONS.filter((def) => def.kind === "grapple" || def.kind === "shove" || def.kind === "escape").map((def) => <button type="button" key={def.kind} className="cl-btn small" disabled={Boolean(blocked) || (def.kind === "escape" && !conditions.has("붙잡힘"))} title={def.summary} onClick={() => void take(def)}>{def.name}</button>)}
+            <button type="button" className="cl-btn small" disabled title="주문·마법 (R8)">✨ 마법</button>
+          </div>
+        </div>
+        <div className="cl-turn-group">
+          <h5>행동 <small>Action</small></h5>
+          <div className="cl-turn-btns">
+            {ACTIONS.filter((def) => !["grapple", "shove", "escape"].includes(def.kind)).map((def) => <button type="button" key={def.kind} className="cl-btn small" disabled={Boolean(blocked)} title={`${def.en} — ${def.summary}`} onClick={() => void take(def)}>{def.name}</button>)}
+          </div>
+        </div>
+        <div className="cl-turn-group">
+          <h5>추가 행동 <small>Bonus</small></h5>
+          <div className="cl-turn-btns">
+            {bonusActions.map((action) => action.kind === "attack" && action.attack ? <button type="button" key={action.name} className="cl-btn small primary" disabled={Boolean(blocked)} onClick={() => void attackWith({ source: "npc", actionName: action.name })}>⚔ {action.name}</button> : <button type="button" key={action.name} className="cl-btn small" disabled={Boolean(blocked)} title={action.text} onClick={() => c.act(me, "utilize", { note: action.name, bonus: true })}>{action.name}</button>)}
+            <button type="button" className="cl-btn small quiet" disabled={Boolean(blocked)} title="시트의 추가 행동(특성·주문)을 쓴 것으로 기록" onClick={() => void take({ ...actionDef("utilize"), name: "추가 행동", text: "무엇을" }, true)}>기록…</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------- Token action bar (D88): the sheet's buttons above the canvas for the selected token ---------- */
+
+function ActionBar({ token, page, onOpenEntry }: { token: Token; page: Page; onOpenEntry: (id: string) => void }) {
+  const c = useCampaigns();
+  const dice = useDice();
+  const { catalog } = useClient();
+  const { viewer, snapshot, isGm } = useViewer();
+  const entry = token.represents ? snapshot.journal.find((item) => item.id === token.represents) : undefined;
+  const controls = controlsToken(token, viewer, snapshot.journal);
+  const derived = useMemo(() => (entry?.kind === "character" ? deriveCharacter(entry.source, catalog, { equipped: entry.runtime.equipped, inventory: entry.runtime.inventory, effects: entry.runtime.effects }) : null), [entry, catalog]);
+  if (!controls || !entry || entry.kind === "handout") return null;
+  const roll = async (spec: RollSpec) => { const result = await dice.roll(spec); c.sendRoll({ formula: result.formula, total: result.total, dice: result.dice.map((die) => ({ sides: die.sides, value: die.value })), modifier: result.modifier, label: `${token.name} · ${result.label}${result.note ? ` (${result.note})` : ""}` }); };
+  const d20 = (bonus: number) => `1d20${bonus >= 0 ? "+" : "-"}${Math.abs(bonus)}`;
+  const initiativeBonus = derived ? derived.initiative : entry.kind === "npc" ? entry.statBlock.initiativeBonus : 0;
+  const inTracker = snapshot.tracker.turns.some((turn) => turn.tokenId === token.id && turn.pageId === page.id);
+  const attackWith = makeAttackWith({ c, token, page, entry, derived, isGm });
   return (
     <div className="cl-action-bar" role="toolbar" aria-label={`${token.name} 액션`}>
       <strong className="cl-small">{token.name}</strong>

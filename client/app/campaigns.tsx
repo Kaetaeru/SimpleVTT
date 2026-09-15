@@ -17,6 +17,7 @@ import { TableClient, type TableStatus } from "../session/client";
 import { TableHost } from "../session/host";
 import type { ActorRef, AttackRef, AttackRiders, ClientCommand, Invite, RollPayload, TableSnapshot } from "../session/protocol";
 import { derivedOf, pcAttackSpec, pcCombatant, pcConcentrationKey } from "../rules/attackSpec";
+import { pcStats, type ActionKind } from "../rules/actions";
 import type { AttackOverrides } from "../rules/resolve";
 import { decodeInvite, encodeInvite } from "../session/protocol";
 import { DEFAULT_SESSION_PORT, listSessionAddresses, tauriAvailable, TauriTcpTransport } from "../session/tauriTransport";
@@ -94,6 +95,8 @@ export interface CampaignsState {
   attack: (attacker: ActorRef, targets: ActorRef[], attack: AttackRef, riders?: AttackRiders, options?: { overrides?: AttackOverrides; reaction?: string }) => void;
   /** D96: the mover leaves `from`'s reach; the host asks `from`'s controller for an opportunity attack. */
   provoke: (mover: ActorRef, from: ActorRef) => void;
+  /** D97: one of the official actions on the actor's turn. */
+  act: (actor: ActorRef, kind: ActionKind, options?: { target?: ActorRef; skill?: string; dc?: number; note?: string; choice?: string; bonus?: boolean }) => void;
   declineReaction: (messageId: string) => void;
   adjustAction: (messageId: string, overrides: AttackOverrides, reroll?: boolean) => void;
   undoAction: (messageId: string) => void;
@@ -282,6 +285,7 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
       pcCombatant: (entry) => pcCombatant(entry, derivedOf(entry, catalogRef.current)),
       pcConcentrationKey,
       pcAttackSpec: (entry, attackId, riders) => pcAttackSpec(entry, derivedOf(entry, catalogRef.current), attackId, riders),
+      pcStats: (entry) => pcStats(derivedOf(entry, catalogRef.current)),
       artData: {
         get: async (hash) => (await store?.getAsset(hash))?.dataUrl,
         put: async (hash, dataUrl) => { await store?.putAsset({ hash, dataUrl, bytes: dataUrl.length, savedAt: new Date().toISOString() }); },
@@ -390,6 +394,7 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
   const nextTurn = useCallback(() => send({ type: "tracker.next" }), [send]);
   const attack = useCallback((attacker: ActorRef, targets: ActorRef[], ref: AttackRef, riders?: AttackRiders, options?: { overrides?: AttackOverrides; reaction?: string }) => send({ type: "act.attack", attacker, targets, attack: ref, riders, overrides: options?.overrides, reaction: options?.reaction }), [send]);
   const provoke = useCallback((mover: ActorRef, from: ActorRef) => send({ type: "act.provoke", mover, from }), [send]);
+  const act = useCallback((actor: ActorRef, kind: ActionKind, options: { target?: ActorRef; skill?: string; dc?: number; note?: string; choice?: string; bonus?: boolean } = {}) => send({ type: "act.action", actor, kind, ...options }), [send]);
   const declineReaction = useCallback((messageId: string) => send({ type: "act.decline", messageId }), [send]);
   const adjustAction = useCallback((messageId: string, overrides: AttackOverrides, reroll?: boolean) => send({ type: "act.adjust", messageId, overrides, reroll }), [send]);
   const undoAction = useCallback((messageId: string) => send({ type: "act.undo", messageId }), [send]);
@@ -425,7 +430,7 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
   const table = useMemo<TableState>(() => ({ role, status: client ? client.status : "idle", reason: client?.reason ?? null, campaignId, snapshot: client?.snapshot ?? null, invite, invites, transportNote, refusals, shows, artUrls, artPending, pings }),
   // eslint-disable-next-line react-hooks/exhaustive-deps
   [role, client, campaignId, invite, invites, transportNote, refusals, shows, artUrls, artPending, pings, tick]);
-  const value = useMemo<CampaignsState>(() => ({ userId, displayName, setDisplayName, campaigns, joined, archives, journals, arts, pages, createCampaign, updateCampaign, deleteCampaign, regenerateJoinCode, forgetJoined, table, launch, join, leave, say, sendRoll, setRole, kick, putJournal, removeJournal, showJournal, dismissShow, uploadArt, updateArt, removeArt, requestArt, putPage, removePage, setRibbon, setBookmark, putToken, removeToken, ping, setTracker, addTurn, nextTurn, attack, provoke, declineReaction, adjustAction, undoAction, confirmAction }),
+  const value = useMemo<CampaignsState>(() => ({ userId, displayName, setDisplayName, campaigns, joined, archives, journals, arts, pages, createCampaign, updateCampaign, deleteCampaign, regenerateJoinCode, forgetJoined, table, launch, join, leave, say, sendRoll, setRole, kick, putJournal, removeJournal, showJournal, dismissShow, uploadArt, updateArt, removeArt, requestArt, putPage, removePage, setRibbon, setBookmark, putToken, removeToken, ping, setTracker, addTurn, nextTurn, attack, provoke, act, declineReaction, adjustAction, undoAction, confirmAction }),
     [userId, displayName, setDisplayName, campaigns, joined, archives, journals, arts, pages, createCampaign, updateCampaign, deleteCampaign, regenerateJoinCode, forgetJoined, table, launch, join, leave, say, sendRoll, setRole, kick, putJournal, removeJournal, showJournal, dismissShow, uploadArt, updateArt, removeArt, requestArt, putPage, removePage, setRibbon, setBookmark, putToken, removeToken, ping, setTracker, addTurn, nextTurn, attack, adjustAction, undoAction, confirmAction]);
   return <CampaignsContext.Provider value={value}>{children}</CampaignsContext.Provider>;
 }

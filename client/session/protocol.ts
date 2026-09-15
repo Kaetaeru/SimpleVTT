@@ -7,10 +7,11 @@ import type { ArtAsset } from "../campaign/art";
 import type { JournalEntry } from "../campaign/journal";
 import type { Page, Token } from "../campaign/page";
 import type { Tracker, TrackerTurn } from "../campaign/tracker";
+import type { ActionKind } from "../rules/actions";
 import type { AttackOverrides } from "../rules/resolve";
 import type { CampaignSettings, ChatMessage, PlayerRole } from "../campaign/model";
 
-export const PROTOCOL_VERSION = 8;
+export const PROTOCOL_VERSION = 9;
 
 export interface Presence { userId: string; displayName: string; role: PlayerRole; color: string; connected: boolean }
 
@@ -74,7 +75,7 @@ export type ClientCommand =
   | { type: "tracker.set"; tracker: Tracker }
   /** Add (or refresh) a token's turn. With `rollBonus` the host rolls 1d20 + bonus and posts the card; else `initiative` (default 0). */
   | { type: "tracker.add"; turn: Omit<TrackerTurn, "id" | "initiative"> & { initiative?: number }; rollBonus?: number }
-  /** "다음 턴" (GM): turn-end and turn-start processing, then the highlight moves. */
+  /** "다음 턴" (GM, or the current turn's controller as "턴 마침"): turn-end and turn-start processing, then the highlight moves. */
   | { type: "tracker.next" }
   /** Attack (§12.2): the host resolves and applies, one card per target. */
   | { type: "act.attack"; attacker: ActorRef; targets: ActorRef[]; attack: AttackRef; riders?: AttackRiders; overrides?: AttackOverrides; /** Answering an opportunity prompt (the prompt's message id): the attack is the reactor's reaction. */ reaction?: string }
@@ -82,6 +83,8 @@ export type ClientCommand =
   | { type: "act.provoke"; mover: ActorRef; from: ActorRef }
   /** The reactor's controller lets the opportunity go. */
   | { type: "act.decline"; messageId: string }
+  /** D97: one of the official actions (dash, dodge, help, hide, grapple …) on the actor's turn; the host resolves and marks. */
+  | { type: "act.action"; actor: ActorRef; kind: ActionKind; target?: ActorRef; skill?: string; dc?: number; note?: string; choice?: string; bonus?: boolean }
   /** DM palette: re-resolve a card with overrides (same dice unless `reroll`), superseding it. */
   | { type: "act.adjust"; messageId: string; overrides: AttackOverrides; reroll?: boolean }
   /** DM palette: take the card's application back. */

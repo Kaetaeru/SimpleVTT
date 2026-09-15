@@ -16,6 +16,9 @@ export interface TrackerTurn {
   image?: string;
   /** The creature spent its reaction (an opportunity attack) since its last turn started; cleared at its turn start. */
   reactionUsed?: boolean;
+  /** Action economy for the current turn (D97): shown, never enforced — extra attacks and features still go. */
+  actionUsed?: boolean;
+  bonusUsed?: boolean;
   /** A custom row; `formula` like "+1" changes its value every time it comes around (Roll20's round counter idiom). */
   custom?: boolean;
   formula?: string;

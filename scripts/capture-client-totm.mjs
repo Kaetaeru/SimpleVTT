@@ -3,7 +3,7 @@
  * a scene with no grid; a goblin from the compendium and the player's character appear as icons; the player's ⚔
  * resolves without any distance; the DM's ⚔ opens the pre-roll dialog and "반드시 치명타" forces a crit; on the
  * player's turn the 벗어남 button on the goblin's icon asks the DM for an opportunity attack, which lands as a
- * reaction card. Writes 63-66 to docs/evidence/new-client-m1.
+ * reaction card; the turn panel (D97) shows the official actions on your turn. Writes 63-68 to docs/evidence/new-client-m1.
  *
  *   node scripts/capture-client-totm.mjs
  */
@@ -149,6 +149,41 @@ try {
   await player.locator(".cl-chat-msg.prompt .cl-pill", { hasText: "기회 공격" }).waitFor({ timeout: 15000 });
   check(true, "the opportunity attack is a card on both screens and the prompt shows 기회 공격");
   await player.screenshot({ path: path.join(OUT, "66-totm-opportunity-attack-player.png") });
+
+  // SC-48: it is the fighter's turn, so the player has the turn panel; 회피 leaves a card and a 🛡 mark; 턴 마침 passes the turn.
+  const panel = player.getByRole("region", { name: "앨리스의 파이터의 턴" });
+  await panel.waitFor({ timeout: 10000 });
+  check(await dm.getByRole("region", { name: "앨리스의 파이터의 턴" }).count() === 0, "the DM has no panel for a player's character");
+  check((await panel.innerText()).includes("질주") && (await panel.innerText()).includes("붙잡기"), "the panel lists the official actions");
+  await panel.getByRole("button", { name: "회피", exact: true }).click();
+  await player.locator(".cl-chat-msg.act", { hasText: "회피" }).waitFor({ timeout: 15000 });
+  await iconOf(dm, "앨리스의 파이터").locator(".cl-marker[title='회피']").waitFor({ timeout: 15000 });
+  check(true, "회피 lands as a card and a mark on the DM's screen");
+  await panel.getByRole("button", { name: "영향" }).click();
+  await player.getByLabel("기술").selectOption("intimidation");
+  await player.getByRole("button", { name: "영향", exact: true }).last().click();
+  await player.locator(".cl-chat-msg.act", { hasText: "위협" }).waitFor({ timeout: 15000 });
+  check(true, "영향 asks for the skill and rolls it");
+  await player.screenshot({ path: path.join(OUT, "67-turn-panel-player.png") });
+  await panel.getByRole("button", { name: /턴 마침/ }).click();
+  // SC-49: the goblin's turn belongs to no player, so the DM gets its panel; 붙잡기 targets the fighter and rolls its save.
+  const dmPanel = dm.getByRole("region", { name: "고블린 전사의 턴" });
+  // The round-counter row may sit between the two turns: the DM advances until the goblin's turn.
+  for (let n = 0; n < 3 && (await dmPanel.count()) === 0; n += 1) { await dm.waitForTimeout(1200); if ((await dmPanel.count()) === 0) await tracker.getByRole("button", { name: "▶ 다음 턴" }).click(); }
+  await dmPanel.waitFor({ timeout: 10000 });
+  check(await player.getByRole("region", { name: "고블린 전사의 턴" }).count() === 0, "the player has no panel on the goblin's turn");
+  // The tracker window opens over the panel: drag it down out of the way, as a DM would.
+  const trackerHead = await tracker.locator(".cl-window-head").boundingBox();
+  await dm.mouse.move(trackerHead.x + trackerHead.width / 2, trackerHead.y + trackerHead.height / 2);
+  await dm.mouse.down();
+  await dm.mouse.move(trackerHead.x + trackerHead.width / 2 + 60, trackerHead.y + 480, { steps: 8 });
+  await dm.mouse.up();
+  await dm.screenshot({ path: path.join(OUT, "68-turn-panel-dm-goblin.png") });
+  await dmPanel.getByRole("button", { name: "붙잡기" }).click();
+  await dm.locator(".cl-targeting-banner").waitFor();
+  await iconOf(dm, "앨리스의 파이터").click();
+  await dm.locator(".cl-chat-msg.act", { hasText: "붙잡기" }).waitFor({ timeout: 15000 });
+  check((await dm.locator(".cl-chat-msg.act", { hasText: "붙잡기" }).last().innerText()).includes("내성"), "붙잡기 rolls the target's save against the DC");
 
   await browser.close();
   if (failures.length) { console.error(`${failures.length} failure(s)`); process.exitCode = 1; } else console.log("done");

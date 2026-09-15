@@ -7,6 +7,7 @@ import type { ArtAsset } from "./art";
 import type { JournalEntry } from "./journal";
 import type { Page } from "./page";
 import type { Tracker } from "./tracker";
+import type { ActResult } from "../rules/actions";
 import type { AttackResolution } from "../rules/resolve";
 
 export type PlayerRole = "gm" | "player";
@@ -70,7 +71,7 @@ export interface ReactionPrompt {
 export interface ChatMessage {
   id: string;
   at: string;
-  type: "general" | "whisper" | "emote" | "desc" | "rollresult" | "gmroll" | "system" | "action" | "prompt";
+  type: "general" | "whisper" | "emote" | "desc" | "rollresult" | "gmroll" | "system" | "action" | "prompt" | "act";
   /** Display name at the time. */
   who: string;
   playerId?: string;
@@ -86,6 +87,8 @@ export interface ChatMessage {
   undone?: boolean;
   /** A question to one side (type "prompt"): an opportunity attack offered to the creature being left (D96). */
   prompt?: ReactionPrompt;
+  /** One of the official actions taken on a turn (type "act", D97): the check, what it did, what it marked. */
+  act?: ActResult;
 }
 
 export interface ChatArchive {

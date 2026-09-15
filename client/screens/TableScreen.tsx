@@ -139,6 +139,7 @@ function ChatLine({ message, me, color, targetName }: { message: ChatMessage; me
   switch (message.type) {
     case "action": return <ActionCard message={message} time={time} color={color} />;
     case "prompt": return <PromptCard message={message} time={time} color={color} />;
+    case "act": return <ActCard message={message} time={time} color={color} />;
     case "system": return <div className="cl-chat-msg system"><span className="cl-at">{time}</span>{message.content}</div>;
     case "desc": return <div className="cl-chat-msg desc"><span className="cl-at">{time}</span>{message.content}</div>;
     case "emote": return <div className="cl-chat-msg emote"><span className="cl-at">{time}</span><span className="cl-swatch" style={{ background: color }} /><em>{message.who} {message.content}</em></div>;
@@ -159,6 +160,23 @@ function ChatLine({ message, me, color, targetName }: { message: ChatMessage; me
     }
     default: return <div className={`cl-chat-msg${mine ? " mine" : ""}`}><span className="cl-at">{time}</span><span className="cl-who" style={{ color }}>{message.who}</span><div>{message.content}</div></div>;
   }
+}
+
+/** D97: an official action's card — the check with its die, what happened, what was marked. */
+function ActCard({ message, time, color }: { message: ChatMessage; time: string; color?: string }) {
+  const act = message.act!;
+  const marks = [...act.actorMarks.map((name) => `${act.actor.name}: ${name}`), ...act.targetMarks.map((name) => `${act.target?.name ?? "대상"}: ${name}`), ...act.actorUnmarks.map((name) => `${act.actor.name}: ${name} 해제`)];
+  return (
+    <div className="cl-chat-msg act" data-act-kind={act.kind}>
+      <span className="cl-at">{time}</span>{message.who ? <span className="cl-who" style={{ color }}>{message.who}</span> : null}
+      <div className="cl-act-card">
+        <div className="cl-roll-head">{act.actor.name}{act.target ? ` → ${act.target.name}` : ""}: <strong>{act.name}</strong>{act.bonus ? <Pill tone="accent">추가 행동</Pill> : null}</div>
+        {act.check ? <div className="cl-roll-dice"><span className="cl-quiet cl-small">{act.check.label}</span><span className={`cl-die d20${act.check.d20 === 20 ? " crit" : act.check.d20 === 1 ? " fumble" : ""}`}>{act.check.d20}</span>{act.check.bonus ? <span className="cl-mod">{act.check.bonus > 0 ? "+" : "−"}{Math.abs(act.check.bonus)}</span> : null}<span className="cl-eq">=</span><strong className="cl-total">{act.check.total}</strong>{act.check.dc !== undefined ? <span className="cl-quiet cl-small">vs DC {act.check.dc}</span> : null}{act.check.success !== undefined ? <Pill tone={act.check.success ? "good" : "bad"}>{act.check.success ? "성공" : "실패"}</Pill> : null}</div> : null}
+        <div className="cl-small">{act.text}</div>
+        {marks.length ? <div className="cl-quiet cl-small">표시: {marks.join(" · ")}</div> : null}
+      </div>
+    </div>
+  );
 }
 
 /** D96: "○○이(가) △△에게서 벗어납니다" — the reactor's controller takes an opportunity attack (a melee attack as the reaction) or lets it go. */

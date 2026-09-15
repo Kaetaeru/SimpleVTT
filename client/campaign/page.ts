@@ -24,7 +24,7 @@ export interface TokenBar {
 
 export interface TokenAura { radius: number; color: string; square: boolean; visible: boolean }
 
-export interface TokenMarker { name: string; badge?: number }
+export interface TokenMarker { name: string; badge?: number; /** Who granted a turn-scoped mark such as 도움 (token id): it ends when their next turn starts. */ from?: string }
 
 export interface Token {
   id: string;
@@ -91,6 +91,7 @@ export const DOT_MARKERS = ["빨강", "파랑", "초록", "갈색", "보라", "�
 export const MARKER_GLYPH: Record<string, string> = {
   장님: "🙈", 매혹: "💗", 귀머거리: "🙉", 공포: "😱", 붙잡힘: "✊", 행동불능: "💫", 투명: "👻", 마비: "⚡", 석화: "🗿", 중독: "☠", 넘어짐: "⬇", 포박: "⛓", 충격: "💥", 무의식: "💤",
   집중: "🎯", 사망: "✖", 은신: "🕶", "엄폐 1/2": "◧", "엄폐 3/4": "◨",
+  회피: "🛡", 이탈: "🌀", 도움: "🤝", 준비: "⏳", 질주: "💨",
   빨강: "🔴", 파랑: "🔵", 초록: "🟢", 갈색: "🟤", 보라: "🟣", 분홍: "🩷", 노랑: "🟡",
 };
 export const ALL_MARKERS: string[] = [...CONDITION_MARKERS, ...NAMED_MARKERS, ...DOT_MARKERS];
