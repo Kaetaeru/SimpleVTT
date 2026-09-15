@@ -45,6 +45,8 @@ export function NpcWindow({ entry, onClose, onOpen: _onOpen }: { entry: JournalN
   const roll = useNpcRoller(entry.name);
   const runtime = entry.runtime;
   const save = (patch: Partial<NpcRuntime>) => c.putJournal({ ...entry, runtime: { ...runtime, ...patch, updatedAt: new Date().toISOString() }, updatedAt: new Date().toISOString() });
+  // R10: the stat block's per-day spells and how many casts are left today.
+  const perDay = (entry.statBlock.actions.find((action) => action.kind === "spellcasting" && action.spellcasting)?.spellcasting?.lists ?? []).filter((list) => list.frequency === "per-day").flatMap((list) => list.entries.filter((item) => item.spellId).map((item) => ({ spellId: item.spellId!, name: item.name, uses: list.uses ?? 1 })));
   const hpPreview = useMemo(() => previewHp(runtime, hpInput), [runtime, hpInput]);
   const block = entry.statBlock;
   return (
@@ -67,6 +69,13 @@ export function NpcWindow({ entry, onClose, onOpen: _onOpen }: { entry: JournalN
           </div>
           <div className="cl-cond">{CONDITION_MARKERS.map((condition) => <button type="button" key={condition} className={runtime.conditions.includes(condition) ? "on" : ""} onClick={() => save({ conditions: runtime.conditions.includes(condition) ? runtime.conditions.filter((item) => item !== condition) : [...runtime.conditions, condition] })}>{MARKER_GLYPH[condition]} {condition}</button>)}</div>
           {block.legendaryActionsPerRound ? <div className="cl-row cl-small" style={{ gap: 6 }}><span>전설 행동 {block.legendaryActionsPerRound - runtime.legendaryUsed}/{block.legendaryActionsPerRound} 남음</span><button type="button" className="cl-btn small" disabled={runtime.legendaryUsed >= block.legendaryActionsPerRound} onClick={() => save({ legendaryUsed: runtime.legendaryUsed + 1 })}>1 사용</button><button type="button" className="cl-btn small quiet" onClick={() => save({ legendaryUsed: 0 })}>초기화</button>{block.legendaryResistance ? <Pill>전설 저항 {block.legendaryResistance}/일</Pill> : null}</div> : null}
+        </div>
+      ) : null}
+      {editable && perDay.length ? (
+        <div className="cl-card cl-row cl-small" style={{ gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+          <span className="cl-quiet">주문 횟수 (일)</span>
+          {perDay.map((item) => <Pill key={item.spellId} tone={(runtime.uses?.[item.spellId] ?? 0) >= item.uses ? "bad" : "good"}>{item.name} {Math.max(0, item.uses - (runtime.uses?.[item.spellId] ?? 0))}/{item.uses}</Pill>)}
+          <button type="button" className="cl-btn small" onClick={() => save({ uses: {} })} title="긴 휴식: 하루 횟수를 모두 되돌립니다">횟수 초기화</button>
         </div>
       ) : null}
       <StatBlock block={block} runtime={editable ? runtime : undefined} onRoll={editable ? roll : undefined} onSpend={editable ? (name, spent) => save({ spent: { ...runtime.spent, [name]: spent } }) : undefined} />

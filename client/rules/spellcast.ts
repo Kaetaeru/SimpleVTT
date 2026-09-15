@@ -34,8 +34,12 @@ export interface SpellCastSpec {
   exec: SpellExec;
 }
 
-export interface SpellSave { ability: AbilityKey; d20: number; bonus: number; total: number; dc: number; success: boolean }
-export interface SpellEffectStart { key: string; name: string; concentration: boolean; duration: string; rounds?: number }
+export interface SpellSave { ability: AbilityKey; d20: number; bonus: number; total: number; dc: number; success: boolean; /** R10: the save was rolled with advantage and why (회피 on a DEX save). */ advantage?: string; dropped?: number }
+export interface SpellEffectStart { key: string; name: string; concentration: boolean; duration: string; rounds?: number; /** R10: the target repeats this save at the end of each of its turns and ends the effect on a success. */ endSave?: { ability: AbilityKey; dc: number } }
+
+/** R10: the SRD text that lets a target repeat the save at the end of each of its turns (hold person, blindness/deafness, sleep breath …). */
+export const REPEAT_SAVE = /턴이 끝날 때[^.]{0,40}(내성 굴림을 반복|내성 굴림을 다시|내성을 반복|다시 내성)/;
+export const repeatsSaveAtTurnEnd = (exec: SpellExec) => REPEAT_SAVE.test(`${(exec.primary as { summary?: string }).summary ?? ""} ${(exec.trackedEffects ?? []).map((effect) => effect.summary).join(" ")}`);
 export interface SpellTargetResult {
   target: { id: string; name: string; kind: "pc" | "npc"; tokenId?: string };
   mode: "attack" | "save" | "heal" | "temp" | "projectiles" | "effect" | "note";
@@ -94,9 +98,11 @@ export function resolveSpell(input: CastInput): SpellResolution {
   const { spec, caster, casterStats, dice } = input;
   const exec = spec.exec;
   const primary = exec.primary;
-  const effectStart = (duration?: SpellDuration): SpellEffectStart => ({ key: `spell:${spec.spellId}`, name: spec.name, concentration: Boolean(exec.concentration), duration: durationText(duration), rounds: roundsOf(duration) });
+  const endSave = repeatsSaveAtTurnEnd(exec) && "saveAbility" in primary ? { ability: ((primary as { saveAbility: string }).saveAbility in ABILITY_KO ? (primary as { saveAbility: string }).saveAbility : "wis") as AbilityKey, dc: casterStats.saveDc } : undefined;
+  const effectStart = (duration?: SpellDuration): SpellEffectStart => ({ key: `spell:${spec.spellId}`, name: spec.name, concentration: Boolean(exec.concentration), duration: durationText(duration), rounds: roundsOf(duration), ...(endSave ? { endSave } : {}) });
   const base = (target: Combatant): SpellTargetResult => ({ target: { id: target.id, name: target.name, kind: target.kind, tokenId: target.tokenId }, mode: "note", hpBefore: target.hp.current, hpAfter: target.hp.current, tempAfter: target.hp.temp, marks: [] });
-  const save = (target: Combatant, stats: ActorStats, ability: string): SpellSave => { const key = (ability in ABILITY_KO ? ability : "dex") as AbilityKey; const d20 = dice.d(20); const bonus = stats.saves[key] ?? 0; const total = d20 + bonus; return { ability: key, d20, bonus, total, dc: casterStats.saveDc, success: total >= casterStats.saveDc }; };
+  // R10: 회피 (Dodge) gives advantage on Dexterity saves.
+  const save = (target: Combatant, stats: ActorStats, ability: string): SpellSave => { const key = (ability in ABILITY_KO ? ability : "dex") as AbilityKey; const dodging = key === "dex" && (target.conditions.includes("회피") || target.effects.includes("회피")); const first = dice.d(20); const second = dodging ? dice.d(20) : undefined; const d20 = second !== undefined ? Math.max(first, second) : first; const bonus = stats.saves[key] ?? 0; const total = d20 + bonus; return { ability: key, d20, bonus, total, dc: casterStats.saveDc, success: total >= casterStats.saveDc, ...(second !== undefined ? { advantage: "회피", dropped: Math.min(first, second) } : {}) }; };
   const conditionMarks = (trigger: "failed-save" | "hit" | "always") => (exec.effects ?? []).filter((effect) => effect.trigger === trigger || effect.trigger === "always").map((effect) => CONDITION_KO[effect.conditionId] ?? effect.conditionId);
   const afterDamage = (row: SpellTargetResult, outcome: DamageOutcome) => { row.damage = outcome; row.hpAfter = outcome.hpAfter; row.tempAfter = outcome.tempAfter; };
   const targets: SpellTargetResult[] = [];

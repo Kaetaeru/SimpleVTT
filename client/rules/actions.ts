@@ -9,7 +9,7 @@ import { ABILITY_KO } from "../catalog/types";
 import type { DerivedCharacter } from "../character/types";
 import type { MonsterView } from "../compendium/monsters";
 
-export type ActionKind = "dash" | "disengage" | "dodge" | "help" | "hide" | "influence" | "search" | "study" | "utilize" | "ready" | "grapple" | "shove" | "escape" | /** R9: a legendary action card (not in ACTIONS). */ "legendary";
+export type ActionKind = "dash" | "disengage" | "dodge" | "help" | "hide" | "influence" | "search" | "study" | "utilize" | "ready" | "grapple" | "shove" | "escape" | /** R9: a legendary action card (not in ACTIONS). */ "legendary" | /** R10: an item used on someone (a potion). */ "item";
 
 export interface ActionDef {
   kind: ActionKind;

@@ -92,6 +92,8 @@ export interface ActiveEffect {
   rounds?: number;
   elapsed: number;
   startedAt: string;
+  /** R10: repeat this save at the end of each of the bearer's turns; on a success the effect and these conditions end. */
+  endSave?: { ability: AbilityKey; dc: number; conditions: string[] };
 }
 
 /** What an active effect changed on the sheet, for the effects card. `applied` false: no rule yet, apply the text by hand. */

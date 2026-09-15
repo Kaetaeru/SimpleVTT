@@ -236,7 +236,7 @@ try {
   await mageBar.getByRole("button", { name: /마법/ }).click();
   const fireball = dm.getByRole("menuitem", { name: /파이어볼/ });
   await fireball.waitFor({ timeout: 5000 });
-  check((await fireball.getAttribute("title") ?? "").includes("2/일") && (await fireball.getAttribute("title") ?? "").includes("민첩 내성"), "the menu says how often and what the spell asks for");
+  check((await fireball.getAttribute("title") ?? "").includes("2/2 남음") && (await fireball.getAttribute("title") ?? "").includes("민첩 내성"), "the menu says how often and what the spell asks for");
   await fireball.click();
   await dm.locator(".cl-targeting-banner[data-multi='1']").waitFor();
   await iconOf(dm, "고블린 전사").click();
@@ -252,6 +252,13 @@ try {
   check(!(await iconOf(dm, "고블린 전사").innerText()).includes("10/10"), "the goblin's HP fell from the fireball on the DM's screen");
   check((await iconOf(player, "고블린 전사").locator(".cl-scene-gauge").innerText()) === (await iconOf(dm, "고블린 전사").locator(".cl-scene-gauge").innerText()), "the player's HP bar agrees with the DM's");
   await dm.screenshot({ path: path.join(OUT, "69-totm-spell-fireball.png") });
+  // R10: the mage's per-day list counts the cast — the menu now says 1/2 left.
+  await iconOf(dm, "마법사").click();
+  await mageBar.waitFor();
+  await mageBar.getByRole("button", { name: /마법/ }).click();
+  await dm.getByRole("menuitem", { name: /파이어볼/ }).waitFor({ timeout: 5000 });
+  check((await dm.getByRole("menuitem", { name: /파이어볼/ }).getAttribute("title") ?? "").includes("1/2 남음"), "the per-day spell shows its remaining uses after the cast");
+  await dm.keyboard.press("Escape");
 
   // SC-54 (R9, D103/D104): the DM's dragon — 다중공격 runs the routine (three 찢기 cards, one pre-roll dialog), ☄ 화염 브레스
   // rolls every target's save like a spell and waits for its recharge, 👑 전설 spends the per-round pool.

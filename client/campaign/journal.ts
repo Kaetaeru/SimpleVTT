@@ -4,6 +4,7 @@
  * The GM sees and edits everything; GM notes never leave the host for players. A campaign character is a full
  * character (source + runtime) whose original lives in the campaign; the library copy is only a Vault (D73).
  */
+import type { AbilityKey } from "../catalog/types";
 import type { CharacterRuntime } from "../character/runtime";
 import type { CharacterSource } from "../character/types";
 import type { MonsterView } from "../compendium/monsters";
@@ -57,6 +58,10 @@ export interface NpcRuntime {
   legendaryUsed: number;
   /** Recharge actions spent and waiting for their roll (action name → true = spent). */
   spent: Record<string, boolean>;
+  /** R10: per-day spells used (spell id → count); the sheet's 초기화 clears it. */
+  uses?: Record<string, number>;
+  /** R10: effects the NPC may shake off with a save at the end of its turns. */
+  endSaves?: Array<{ key: string; name: string; ability: AbilityKey; dc: number; conditions: string[] }>;
   updatedAt: string;
 }
 

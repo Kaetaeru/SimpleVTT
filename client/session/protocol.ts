@@ -90,6 +90,8 @@ export type ClientCommand =
   | { type: "act.npcSave"; actor: ActorRef; actionName: string; targets: ActorRef[] }
   /** R9 (D104): a legendary action from the pool (reset at the monster's turn start); a save action takes targets, the rest is a card. */
   | { type: "act.legendary"; actor: ActorRef; name: string; targets?: ActorRef[] }
+  /** R10: use an item from the actor's bag on a creature (a potion poured into an ally's mouth); the host rolls and applies. */
+  | { type: "act.item"; actor: ActorRef; target?: ActorRef; instanceId: string }
   /** D97: one of the official actions (dash, dodge, help, hide, grapple …) on the actor's turn; the host resolves and marks. */
   | { type: "act.action"; actor: ActorRef; kind: ActionKind; target?: ActorRef; skill?: string; dc?: number; note?: string; choice?: string; bonus?: boolean }
   /** DM palette: re-resolve a card with overrides (same dice unless `reroll`), superseding it. */

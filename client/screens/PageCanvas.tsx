@@ -470,6 +470,17 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
   const freeHand = derived ? hasFreeHand(derived.inventory) : true;
   const rollToChat = async (spec: RollSpec) => { const result = await dice.roll(spec); c.sendRoll({ formula: result.formula, total: result.total, dice: result.dice.map((die) => ({ sides: die.sides, value: die.value })), modifier: result.modifier, label: `${token.name} · ${result.label}${result.note ? ` (${result.note})` : ""}` }); return result; };
   const d20 = (bonus: number) => `1d20${bonus >= 0 ? "+" : "-"}${Math.abs(bonus)}`;
+  // R10: 도움 (Help) on this creature gives advantage to its next ability check — roll twice, keep the better, spend the mark.
+  const helped = token.markers.some((marker) => marker.name === "도움");
+  const rollCheck = async (spec: RollSpec) => {
+    if (!helped) return rollToChat(spec);
+    const first = await dice.roll(spec);
+    const second = await dice.roll(spec);
+    const best = first.total >= second.total ? first : second;
+    c.sendRoll({ formula: best.formula, total: best.total, dice: best.dice.map((die) => ({ sides: die.sides, value: die.value })), modifier: best.modifier, label: `${token.name} · ${best.label} (도움 유리: ${first.total}·${second.total})` });
+    c.putToken(page.id, { ...token, markers: token.markers.filter((marker) => marker.name !== "도움") });
+    return best;
+  };
   const currentRuntime = () => (entry.kind === "character" && latest.current && latest.current.sentAt > entry.updatedAt ? latest.current.runtime : (entry as JournalCharacter).runtime);
   const saveRuntime = (input: (current: CharacterRuntime) => CharacterRuntime) => {
     if (entry.kind !== "character") return;
@@ -492,7 +503,7 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
   const stats = entry.kind === "npc" ? npcStats(entry.statBlock) : derived ? pcStats(derived) : null;
   const checkItems = stats ? [
     ...ABILITY_KEYS.map((key) => ({ key: `save:${key}`, label: `${ABILITY_KO[key]} 내성`, hint: `${stats.saves[key] >= 0 ? "+" : ""}${stats.saves[key]}`, onSelect: () => void rollToChat({ label: `${ABILITY_KO[key]} 내성`, formula: d20(stats.saves[key]), kind: "save" }) })),
-    ...Object.keys(SKILL_KO).map((id) => { const bonus = skillBonus(stats, id); return { key: `skill:${id}`, label: `${ABILITY_KO[SKILL_ABILITY_OF[id]]}(${SKILL_KO[id]})`, hint: `${bonus >= 0 ? "+" : ""}${bonus}`, onSelect: () => void rollToChat({ label: `${ABILITY_KO[SKILL_ABILITY_OF[id]]}(${SKILL_KO[id]})`, formula: d20(bonus), kind: "check" }) }; }),
+    ...Object.keys(SKILL_KO).map((id) => { const bonus = skillBonus(stats, id); return { key: `skill:${id}`, label: `${ABILITY_KO[SKILL_ABILITY_OF[id]]}(${SKILL_KO[id]})`, hint: `${bonus >= 0 ? "+" : ""}${bonus}${helped ? " · 도움 유리" : ""}`, onSelect: () => void rollCheck({ label: `${ABILITY_KO[SKILL_ABILITY_OF[id]]}(${SKILL_KO[id]})`, formula: d20(bonus), kind: "check" }) }; }),
   ] : [];
   const usable = entry.kind === "character" && derived ? usableFeatures(derived, entry.runtime) : [];
   const useIt = async (feature: DerivedFeature) => {
@@ -508,8 +519,14 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
   const useItem = async (item: DerivedItem) => {
     if (entry.kind !== "character" || !derived) return;
     const use = itemUse(item);
+    // R10: a potion can be poured into anyone's mouth — pick who drinks (yourself included); the host rolls and applies.
+    if (use.heal) {
+      const picked = await requestTargets(`${item.name} — 마실 대상을 클릭하세요 (자기 자신도)`, { multi: false });
+      if (!picked.length) return;
+      c.useItem(me, { pageId: page.id, tokenId: picked[0] }, item.instanceId);
+      return;
+    }
     let healed: number | undefined;
-    if (use.heal) healed = (await rollToChat({ label: use.text, formula: use.heal, note: "회복", kind: "custom" })).total;
     saveRuntime((current) => { let next = noteLog(current, `${use.text}${healed !== undefined ? ` — ${healed} 회복` : ""}`); if (healed !== undefined) next = applyHealing(next, derived, healed); if (use.consumes) next = setItemQuantity(next, derived, item.instanceId, item.quantity - 1); return next; });
     c.say(`/em ${token.name}: ${use.text}${healed !== undefined ? ` (${healed} 회복)` : ""}`);
   };
@@ -546,7 +563,7 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
   const spellItems = entry.kind === "character" && derived
     ? castableSpells(derived).map((id) => ({ id, view: catalog.spellById(id), exec: spellExec(id)! })).sort((a, b) => (a.view?.level ?? 0) - (b.view?.level ?? 0) || (a.view?.name ?? "").localeCompare(b.view?.name ?? "", "ko")).map(({ id, view, exec }) => ({ key: id, label: `${view?.level ? `${view.level}레벨 ` : "소마법 "}${view?.name ?? id}`, hint: describeSpellExec(exec), onSelect: () => void castIt(id, view?.name ?? id) }))
     : entry.kind === "npc"
-      ? (entry.statBlock.actions.find((action) => action.kind === "spellcasting" && action.spellcasting)?.spellcasting?.lists ?? []).flatMap((list) => list.entries.filter((item) => item.spellId && spellExec(item.spellId)).map((item) => ({ key: `${list.frequency}:${item.spellId}`, label: `${item.name}${item.slotLevel ? ` (${item.slotLevel}레벨)` : ""}`, hint: `${list.frequency === "at-will" ? "의지대로" : list.frequency === "per-day" ? `${list.uses ?? 1}/일` : list.frequency} · ${describeSpellExec(spellExec(item.spellId!)!)}`, onSelect: () => void castIt(item.spellId!, item.name) })))
+      ? (entry.statBlock.actions.find((action) => action.kind === "spellcasting" && action.spellcasting)?.spellcasting?.lists ?? []).flatMap((list) => list.entries.filter((item) => item.spellId && spellExec(item.spellId)).map((item) => ({ key: `${list.frequency}:${item.spellId}`, label: `${item.name}${item.slotLevel ? ` (${item.slotLevel}레벨)` : ""}`, hint: `${list.frequency === "at-will" ? "의지대로" : list.frequency === "per-day" ? `${Math.max(0, (list.uses ?? 1) - (entry.runtime.uses?.[item.spellId!] ?? 0))}/${list.uses ?? 1} 남음 (일)` : list.frequency} · ${describeSpellExec(spellExec(item.spellId!)!)}`, disabled: list.frequency === "per-day" && (entry.runtime.uses?.[item.spellId!] ?? 0) >= (list.uses ?? 1), onSelect: () => void castIt(item.spellId!, item.name) })))
       : [];
   // R9: the stat block's multiattack routine as one button (each attack its own card, one pre-roll dialog for all), its save
   // actions (breath, gaze) resolved like save spells (D103), and its legendary actions from the per-round pool (D104).

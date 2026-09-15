@@ -29,6 +29,7 @@ import type { TrackerTurn } from "../campaign/tracker";
 import type { Campaign, ChatMessage, PlayerRole } from "../campaign/model";
 import { newMessageId, withPlayer, withPlayerKicked, withPlayerRole } from "../campaign/model";
 import { rollFormula } from "../character/dice";
+import { ABILITY_KO, type AbilityKey } from "../catalog/types";
 import { parseChatInput, renderInline, visibleTo } from "./chat";
 import type { ClientCommand, HostMessage, Presence, TableEvent, TableSnapshot } from "./protocol";
 import { PROTOCOL_VERSION, isClientCommand } from "./protocol";
@@ -65,6 +66,8 @@ export interface TableHostOptions {
   pcStats?: (entry: JournalCharacter) => ActorStats;
   /** Spells (D102): the spec and caster stats for a spell the PC can cast, and how its cost is paid (null when it cannot). */
   pcSpell?: (entry: JournalCharacter, spellId: string, method?: CastMethod) => { spec: SpellCastSpec; casterStats: CasterStats; spend: (runtime: CharacterRuntime) => CharacterRuntime | null } | null;
+  /** R10: an item in the character's bag as a table use (healing formula, consumed) and how to take it out of the bag. */
+  pcItem?: (entry: JournalCharacter, instanceId: string) => { name: string; heal?: string; text: string; consumes: boolean; consume: (runtime: CharacterRuntime) => CharacterRuntime } | null;
   now?: () => string;
   random?: () => number;
 }
@@ -496,8 +499,9 @@ export class TableHost {
         // The cost is paid on casting (a slot, concentration on the caster) even when the DM still has to confirm the result.
         const casterBefore = caster.entry;
         if (casterBefore.kind === "character") { const next = prepared.spend(casterBefore.runtime); if (!next) return refuse("슬롯이나 횟수가 없습니다"); this.storeEntry({ ...casterBefore, runtime: { ...next, updatedAt: this.now() }, updatedAt: this.now() }); }
-        else if (resolution.concentration) this.mark(caster, ["집중"], true);
-        const restoreCaster = () => { const current = this.journalEntries.get(casterBefore.id); if (current?.kind === "character" && casterBefore.kind === "character") this.storeEntry({ ...current, runtime: { ...current.runtime, slotsUsed: casterBefore.runtime.slotsUsed, pactSlotsUsed: casterBefore.runtime.pactSlotsUsed, resourcesUsed: casterBefore.runtime.resourcesUsed, effects: casterBefore.runtime.effects }, updatedAt: this.now() }); else if (casterBefore.kind === "npc" && resolution.concentration) this.mark(caster, ["집중"], false); };
+        else { if (resolution.concentration) this.mark(caster, ["집중"], true); }
+        const restoreNpcUse = casterBefore.kind === "npc" && prepared.npcSpend ? prepared.npcSpend() : undefined;
+        const restoreCaster = () => { restoreNpcUse?.(); const current = this.journalEntries.get(casterBefore.id); if (current?.kind === "character" && casterBefore.kind === "character") this.storeEntry({ ...current, runtime: { ...current.runtime, slotsUsed: casterBefore.runtime.slotsUsed, pactSlotsUsed: casterBefore.runtime.pactSlotsUsed, resourcesUsed: casterBefore.runtime.resourcesUsed, effects: casterBefore.runtime.effects }, updatedAt: this.now() }); else if (casterBefore.kind === "npc" && resolution.concentration) this.mark(caster, ["집중"], false); };
         if (command.readied) { this.markReactionUsed(command.caster); this.mark(caster, ["준비"], false); }
         else if (exec.castingEconomy === "reaction") this.markReactionUsed(command.caster); else this.markUsed(command.caster, exec.castingEconomy === "bonus-action" ? "bonus" : "action");
         this.postSpell(resolution, rows.map((row) => row.target), restoreCaster, waits, player.displayName, userId);
@@ -534,6 +538,49 @@ export class TableHost {
         spendPool();
         const name = actor.token?.name ?? actor.entry.name;
         const result = { kind: "legendary" as const, name: `전설 행동 · ${action.name}`, actor: { name }, text: `${action.text} (전설 행동 ${used + cost}/${per})`, actorMarks: [], targetMarks: [], actorUnmarks: [] };
+        this.say({ type: "act", who: player.displayName, playerId: userId, content: describeAct(result), act: result });
+        return;
+      }
+      case "act.item": {
+        const actor = this.resolveActor(command.actor);
+        if (!actor) return refuse("쓰는 쪽을 찾을 수 없습니다");
+        if (!isGm && !this.mayAct(userId, command.actor, actor.entry)) return refuse("자기 캐릭터의 물건만 쓸 수 있습니다");
+        if (actor.entry.kind !== "character") return refuse("가방이 있는 캐릭터만 물건을 씁니다");
+        const blocked = cannotAct(this.conditionsOf(actor));
+        if (blocked) return refuse(`${blocked} 상태라 쓸 수 없습니다`);
+        const item = this.options.pcItem?.(actor.entry, command.instanceId);
+        if (!item) return refuse("그 물건이 가방에 없습니다");
+        const target = command.target ? this.resolveActor(command.target) : actor;
+        if (!target) return refuse("대상을 찾을 수 없습니다");
+        const actorName = actor.token?.name ?? actor.entry.name;
+        const targetName = target.token?.name ?? target.entry.name;
+        const self = target.entry.id === actor.entry.id && (!target.token || target.token.id === actor.token?.id);
+        const now = this.now();
+        let text = item.text;
+        let healed: number | undefined;
+        if (item.heal) {
+          const roll = rollFormula({ label: item.name, formula: item.heal, kind: "custom" }, this.options.random ?? Math.random);
+          healed = roll.total;
+          const dice = roll.dice.map((die) => die.value).join("+");
+          if (target.entry.kind === "character") {
+            const before = target.entry.runtime;
+            const after = Math.min(before.hp.maxSeen, before.hp.current + healed);
+            const current = this.journalEntries.get(target.entry.id);
+            if (current?.kind === "character") this.storeEntry({ ...current, runtime: noteLog({ ...current.runtime, hp: { ...current.runtime.hp, current: after }, updatedAt: now }, `${actorName}의 ${item.name}: 회복 ${healed}`), updatedAt: now });
+            text = `${item.name} (${dice}${roll.modifier ? ` +${roll.modifier}` : ""} = ${healed} 회복) · HP ${before.hp.current} → ${after}`;
+          } else if (target.entry.kind === "npc") {
+            const before = target.entry.runtime;
+            const bar = target.token?.bars[0];
+            const page = target.page ? this.pages.get(target.page.id) : undefined;
+            const live = page?.tokens.find((candidate) => candidate.id === target.token?.id);
+            if (live && bar && !bar.link && page) { const value = Math.min(bar.max ?? before.hp.max, (bar.value ?? 0) + healed); this.storeToken(page, { ...live, bars: [{ ...bar, value }, live.bars[1], live.bars[2]] }); text = `${item.name} (${dice} = ${healed} 회복) · HP ${bar.value ?? 0} → ${value}`; }
+            else { const after = Math.min(before.hp.max, before.hp.current + healed); const current = this.journalEntries.get(target.entry.id); if (current?.kind === "npc") this.storeEntry({ ...current, runtime: { ...current.runtime, hp: { ...current.runtime.hp, current: after }, updatedAt: now }, updatedAt: now }); text = `${item.name} (${dice} = ${healed} 회복) · HP ${before.hp.current} → ${after}`; }
+          }
+        }
+        const owner = this.journalEntries.get(actor.entry.id);
+        if (owner?.kind === "character") this.storeEntry({ ...owner, runtime: noteLog({ ...item.consume(owner.runtime), updatedAt: now }, `${item.text}${self ? "" : ` → ${targetName}`}`), updatedAt: now });
+        this.markUsed(command.actor, "action");
+        const result = { kind: "item" as const, name: item.name, actor: { name: actorName }, target: self ? undefined : { name: targetName }, text, actorMarks: [], targetMarks: [], actorUnmarks: [] };
         this.say({ type: "act", who: player.displayName, playerId: userId, content: describeAct(result), act: result });
         return;
       }
@@ -740,7 +787,7 @@ export class TableHost {
     }
   }
   /** A PC's spell through the app's catalog callback; an NPC's from its stat block's spellcasting lists (DC and, 2024-style, attack bonus = DC − 8). */
-  private prepareSpell(caster: { entry: JournalEntry; token?: Token }, spellId: string, method?: CastMethod): { spec: SpellCastSpec; casterStats: CasterStats; spend: (runtime: CharacterRuntime) => CharacterRuntime | null } | null {
+  private prepareSpell(caster: { entry: JournalEntry; token?: Token }, spellId: string, method?: CastMethod): { spec: SpellCastSpec; casterStats: CasterStats; spend: (runtime: CharacterRuntime) => CharacterRuntime | null; /** R10 (NPC per-day list): spend one use, get the undo back. */ npcSpend?: () => () => void } | null {
     if (caster.entry.kind === "character") return this.options.pcSpell?.(caster.entry, spellId, method) ?? null;
     if (caster.entry.kind !== "npc") return null;
     const block = caster.entry.statBlock;
@@ -750,7 +797,14 @@ export class TableHost {
     if (!casting || !entry || !exec) return null;
     const level = method?.kind === "slot" ? method.level : entry.slotLevel ?? exec.baseLevel;
     const cr = block.cr;
-    return { spec: { spellId, name: entry.name, level, exec }, casterStats: { attackBonus: casting.dc - 8, saveDc: casting.dc, modifier: Math.floor((block.abilities[casting.ability] - 10) / 2), level: cr >= 17 ? 17 : cr >= 11 ? 11 : cr >= 5 ? 5 : 1 }, spend: (runtime) => runtime };
+    // R10: per-day lists count their uses on the NPC's runtime (the sheet's 초기화 clears them).
+    const list = casting.lists.find((item) => item.entries.some((candidate) => candidate.spellId === spellId));
+    const perDay = list?.frequency === "per-day" ? (list.uses ?? 1) : undefined;
+    const used = caster.entry.runtime.uses?.[spellId] ?? 0;
+    if (perDay !== undefined && used >= perDay) return null;
+    const entryId = caster.entry.id;
+    const setUses = (count: number) => { const current = this.journalEntries.get(entryId); if (current?.kind === "npc") this.storeEntry({ ...current, runtime: { ...current.runtime, uses: { ...(current.runtime.uses ?? {}), [spellId]: count }, updatedAt: this.now() }, updatedAt: this.now() }); };
+    return { spec: { spellId, name: entry.name, level, exec }, casterStats: { attackBonus: casting.dc - 8, saveDc: casting.dc, modifier: Math.floor((block.abilities[casting.ability] - 10) / 2), level: cr >= 17 ? 17 : cr >= 11 ? 11 : cr >= 5 ? 5 : 1 }, spend: (runtime) => runtime, npcSpend: perDay !== undefined ? () => { setUses(used + 1); return () => setUses(used); } : undefined };
   }
 
   /** A resolved spell (or an NPC save action) becomes a card: applied now, or held for the DM (D90) with its restores. */
@@ -814,13 +868,21 @@ export class TableHost {
       for (const condition of row.marks) if (!runtime.conditions.includes(condition)) runtime = { ...runtime, conditions: [...runtime.conditions, condition] };
       if (downed === "unconscious") for (const condition of ["무의식", "넘어짐"]) if (!runtime.conditions.includes(condition)) runtime = { ...runtime, conditions: [...runtime.conditions, condition] };
       // A lasting effect on a target: on the caster's own sheet castSpell already started it (with concentration); others get it without.
-      if (row.effect && !(runtime.effects ?? []).some((effect) => effect.key === row.effect!.key)) runtime = startEffect(runtime, { key: row.effect.key, name: row.effect.name, source: "spell", duration: row.effect.duration, concentration: resolution.caster.id === before.id && row.effect.concentration, rounds: row.effect.rounds });
+      if (row.effect && !(runtime.effects ?? []).some((effect) => effect.key === row.effect!.key)) runtime = startEffect(runtime, { key: row.effect.key, name: row.effect.name, source: "spell", duration: row.effect.duration, concentration: resolution.caster.id === before.id && row.effect.concentration, rounds: row.effect.rounds, ...(row.effect.endSave ? { endSave: { ...row.effect.endSave, conditions: row.marks } } : {}) });
       this.storeEntry({ ...before, runtime: { ...runtime, updatedAt: now }, updatedAt: now });
       if (downed) this.releaseGrapples(target.page, target.token?.id);
       return () => { const current = this.journalEntries.get(before.id); if (current?.kind === "character") this.storeEntry({ ...current, runtime: { ...current.runtime, hp: before.runtime.hp, conditions: before.runtime.conditions, effects: before.runtime.effects, log: before.runtime.log }, updatedAt: this.now() }); };
     }
     if (target.entry.kind !== "npc") return null;
     const marks = [...row.marks, ...(row.effect ? [row.effect.name] : []), ...(downed ? ["사망"] : [])];
+    // R10: an effect the NPC may shake off at the end of its turns is remembered on its runtime.
+    const npcBefore = target.entry;
+    let restoreEndSaves: () => void = () => undefined;
+    if (row.effect?.endSave) {
+      const endSaves = [...(npcBefore.runtime.endSaves ?? []).filter((item) => item.key !== row.effect!.key), { key: row.effect.key, name: row.effect.name, ability: row.effect.endSave.ability, dc: row.effect.endSave.dc, conditions: row.marks }];
+      this.storeEntry({ ...npcBefore, runtime: { ...npcBefore.runtime, endSaves, updatedAt: now }, updatedAt: now });
+      restoreEndSaves = () => { const current = this.journalEntries.get(npcBefore.id); if (current?.kind === "npc") this.storeEntry({ ...current, runtime: { ...current.runtime, endSaves: npcBefore.runtime.endSaves }, updatedAt: this.now() }); };
+    }
     const token = target.token;
     const bar = token?.bars[0];
     if (token && target.page && !bar?.link) {
@@ -831,12 +893,51 @@ export class TableHost {
       const markers = [...live.markers, ...marks.filter((name) => !live.markers.some((marker) => marker.name === name)).map((name) => ({ name }))];
       this.storeToken(page, { ...live, bars: [{ ...bar!, value: row.hpAfter }, live.bars[1], live.bars[2]], markers });
       if (downed) this.releaseGrapples(page, token.id);
-      return () => { const current = this.pages.get(page.id)?.tokens.find((item) => item.id === before.id); if (current && this.pages.get(page.id)) this.storeToken(this.pages.get(page.id)!, { ...current, bars: before.bars, markers: before.markers }); };
+      return () => { restoreEndSaves(); const current = this.pages.get(page.id)?.tokens.find((item) => item.id === before.id); if (current && this.pages.get(page.id)) this.storeToken(this.pages.get(page.id)!, { ...current, bars: before.bars, markers: before.markers }); };
     }
-    const before = target.entry;
+    const before = this.journalEntries.get(npcBefore.id) as typeof npcBefore;
     const conditions = [...before.runtime.conditions, ...marks.filter((name) => !before.runtime.conditions.includes(name))];
     this.storeEntry({ ...before, runtime: { ...before.runtime, hp: { ...before.runtime.hp, current: row.hpAfter, temp: row.tempHp ?? row.tempAfter }, conditions, updatedAt: now }, updatedAt: now });
-    return () => { const current = this.journalEntries.get(before.id); if (current?.kind === "npc") this.storeEntry({ ...current, runtime: { ...current.runtime, hp: before.runtime.hp, conditions: before.runtime.conditions }, updatedAt: this.now() }); };
+    return () => { const current = this.journalEntries.get(before.id); if (current?.kind === "npc") this.storeEntry({ ...current, runtime: { ...current.runtime, hp: before.runtime.hp, conditions: before.runtime.conditions, endSaves: npcBefore.runtime.endSaves }, updatedAt: this.now() }); };
+  }
+
+  /** R10: at the end of a creature's turn it repeats the saves its effects allow; a success ends the effect and its conditions. */
+  private rollEndSaves(actor: { entry: JournalEntry; token?: Token; page?: Page }) {
+    const stats = this.statsOf(actor);
+    if (!stats) return;
+    const random = this.options.random ?? Math.random;
+    const name = actor.token?.name ?? actor.entry.name;
+    const report = (effect: string, ability: AbilityKey, dc: number, die: number, bonus: number, success: boolean) => this.say({ type: "rollresult", who: "", content: `${name} · ${effect} 종료 내성 (${ABILITY_KO[ability]}) ${die}${bonus >= 0 ? "+" : ""}${bonus} = ${die + bonus} vs DC ${dc} — ${success ? "성공, 효과 끝" : "실패"}`, roll: { formula: `1d20${bonus >= 0 ? "+" : "-"}${Math.abs(bonus)}`, total: die + bonus, dice: [{ sides: 20, value: die }], modifier: bonus, label: `${name} · ${effect} 종료 내성 — ${success ? "성공, 효과 끝" : "실패"} (DC ${dc})` } });
+    if (actor.entry.kind === "character") {
+      let runtime = actor.entry.runtime;
+      let changed = false;
+      for (const effect of runtime.effects ?? []) {
+        if (!effect.endSave) continue;
+        const die = 1 + Math.floor(random() * 20);
+        const bonus = stats.saves[effect.endSave.ability] ?? 0;
+        const success = die + bonus >= effect.endSave.dc;
+        report(effect.name, effect.endSave.ability, effect.endSave.dc, die, bonus, success);
+        if (!success) continue;
+        runtime = endEffect(runtime, effect.key, "내성 성공");
+        runtime = { ...runtime, conditions: runtime.conditions.filter((condition) => !effect.endSave!.conditions.includes(condition)) };
+        changed = true;
+      }
+      if (changed) this.storeEntry({ ...actor.entry, runtime: { ...runtime, updatedAt: this.now() }, updatedAt: this.now() });
+      return;
+    }
+    if (actor.entry.kind !== "npc" || !actor.entry.runtime.endSaves?.length) return;
+    const kept: NonNullable<typeof actor.entry.runtime.endSaves> = [];
+    const shed: string[] = [];
+    for (const item of actor.entry.runtime.endSaves) {
+      const die = 1 + Math.floor(random() * 20);
+      const bonus = stats.saves[item.ability] ?? 0;
+      const success = die + bonus >= item.dc;
+      report(item.name, item.ability, item.dc, die, bonus, success);
+      if (success) shed.push(item.name, ...item.conditions); else kept.push(item);
+    }
+    const current = this.journalEntries.get(actor.entry.id);
+    if (current?.kind === "npc") this.storeEntry({ ...current, runtime: { ...current.runtime, endSaves: kept, conditions: current.runtime.conditions.filter((condition) => !shed.includes(condition)), updatedAt: this.now() }, updatedAt: this.now() });
+    if (shed.length && actor.token && actor.page) { const page = this.pages.get(actor.page.id); const token = page?.tokens.find((item) => item.id === actor.token!.id); if (page && token) this.storeToken(page, { ...token, markers: token.markers.filter((marker) => !shed.includes(marker.name)) }); }
   }
   private actorOfTurn(turn: TrackerTurn | undefined) { return turn ? this.resolveActor({ entryId: turn.entryId, pageId: turn.pageId, tokenId: turn.tokenId }) : null; }
   /** A grappler that is incapacitated (or dead) lets go: every 붙잡힘 it holds on this page ends (2024). */
@@ -934,7 +1035,7 @@ export class TableHost {
     }
     // Turn-scoped marks (D97): 이탈·질주 end with the turn; 회피·도움·준비 last until the bearer's next turn starts.
     const endedActor = this.actorOfTurn(result.ended);
-    if (endedActor) this.mark(endedActor, [...TURN_MARKS.endOfTurn], false);
+    if (endedActor) { this.rollEndSaves(endedActor); this.mark(endedActor, [...TURN_MARKS.endOfTurn], false); }
     const startedActor = this.actorOfTurn(result.started);
     if (startedActor) this.mark(startedActor, [...TURN_MARKS.startOfTurn], false);
     // 도움 the starting creature granted ends now (until the start of the helper's next turn).
