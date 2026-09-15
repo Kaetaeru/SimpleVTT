@@ -12,7 +12,7 @@ import type { CastMethod } from "../character/play";
 import type { AttackOverrides } from "../rules/resolve";
 import type { CampaignSettings, ChatMessage, PlayerRole } from "../campaign/model";
 
-export const PROTOCOL_VERSION = 12;
+export const PROTOCOL_VERSION = 13;
 
 export interface Presence { userId: string; displayName: string; role: PlayerRole; color: string; connected: boolean }
 
@@ -71,7 +71,6 @@ export type ClientCommand =
   /** Create or replace a token. A controller's put is merged (position, rotation, markers, editable bars). */
   | { type: "token.put"; pageId: string; token: Token }
   | { type: "token.remove"; pageId: string; id: string }
-  | { type: "ping"; pageId: string; x: number; y: number }
   /** Replace the tracker (GM): open/close, reorder, edit values, add custom rows, clear. */
   | { type: "tracker.set"; tracker: Tracker }
   /** Add (or refresh) a token's turn. With `rollBonus` the host rolls 1d20 + bonus and posts the card; else `initiative` (default 0). */
@@ -120,7 +119,6 @@ export type TableEvent =
   | { n: number; type: "ribbon"; playerPageId?: string; pageBookmarks: Record<string, string> }
   | { n: number; type: "token"; pageId: string; token: Token }
   | { n: number; type: "token.removed"; pageId: string; id: string }
-  | { n: number; type: "ping"; pageId: string; x: number; y: number; by: string; color: string }
   | { n: number; type: "tracker"; tracker: Tracker }
   | { n: number; type: "kicked"; userId: string }
   | { n: number; type: "closed" };

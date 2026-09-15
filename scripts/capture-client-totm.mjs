@@ -1,5 +1,5 @@
 /**
- * Theatre of the Mind on one PC (SESSION_SCENARIOS.md SC-44..49, 53..55): a new campaign opens in TotM mode; "+ 장면" makes
+ * Theatre of the Mind on one PC (SESSION_SCENARIOS.md SC-44..49, 53..55): the table is a Theatre-of-the-Mind scene; "+ 장면" makes
  * a scene with no grid; a goblin from the compendium and the player's character appear as icons; the player's ⚔
  * resolves without any distance; the DM's ⚔ opens the pre-roll dialog and "반드시 치명타" forces a crit; on the
  * player's turn the 벗어남 button on the goblin's icon asks the DM for an opportunity attack, which lands as a
@@ -41,7 +41,6 @@ try {
   await dm.getByLabel("새 캠페인 이름").fill("여관 난투");
   await dm.getByRole("button", { name: "새 캠페인" }).click();
   await dm.getByRole("heading", { name: "여관 난투" }).waitFor();
-  check((await dm.getByLabel("테이블 방식").inputValue()) === "totm", "a new campaign opens in TotM mode");
   const code = (await dm.locator(".cl-code").first().textContent())?.trim() ?? "";
   await dm.getByRole("button", { name: "게임 시작" }).click();
   await dm.locator(".cl-chat-input").waitFor();

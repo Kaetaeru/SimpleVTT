@@ -46,7 +46,6 @@ export interface TableState {
   /** Fetches in flight (for "자료 받는 중 n"). */
   artPending: number;
   /** Pings seen in the last moments (the canvas animates them). */
-  pings: Array<{ id: string; pageId: string; x: number; y: number; color: string; by: string; at: number }>;
 }
 
 export interface CampaignsState {
@@ -92,7 +91,6 @@ export interface CampaignsState {
   setBookmark: (userId: string, pageId: string | null) => void;
   putToken: (pageId: string, token: Token) => void;
   removeToken: (pageId: string, id: string) => void;
-  ping: (pageId: string, x: number, y: number) => void;
   setTracker: (tracker: Tracker) => void;
   addTurn: (turn: Omit<TrackerTurn, "id" | "initiative"> & { initiative?: number }, rollBonus?: number) => void;
   nextTurn: () => void;
@@ -146,7 +144,6 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
   const [journals, setJournals] = useState<Record<string, JournalEntry[]>>({});
   const [arts, setArts] = useState<Record<string, ArtAsset[]>>({});
   const [pages, setPages] = useState<Record<string, Page[]>>({});
-  const [pings, setPings] = useState<TableState["pings"]>([]);
   const [shows, setShows] = useState<string[]>([]);
   const [artUrls, setArtUrls] = useState<Record<string, string>>({});
   const [artPending, setArtPending] = useState(0);
@@ -241,11 +238,6 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
     client.subscribe(bump);
     client.onRefused((reason, commandType) => { if (commandType === "hello" || commandType === "kicked") return; setRefusals((list) => [reason, ...list].slice(0, 5)); window.setTimeout(() => setRefusals((list) => list.filter((item) => item !== reason)), 6000); });
     client.onShow((id) => setShows((list) => (list.includes(id) ? list : [...list, id])));
-    client.onPing((ping) => {
-      const id = `ping_${Math.random().toString(36).slice(2, 8)}`;
-      setPings((list) => [...list, { id, pageId: ping.pageId, x: ping.x, y: ping.y, color: ping.color, by: ping.by, at: Date.now() }]);
-      window.setTimeout(() => setPings((list) => list.filter((item) => item.id !== id)), 2500);
-    });
   }, [bump]);
 
   const leave = useCallback(() => {
@@ -406,7 +398,6 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
   const setBookmark = useCallback((target: string, pageId: string | null) => send({ type: "page.bookmark", userId: target, pageId }), [send]);
   const putToken = useCallback((pageId: string, token: Token) => send({ type: "token.put", pageId, token }), [send]);
   const removeToken = useCallback((pageId: string, id: string) => send({ type: "token.remove", pageId, id }), [send]);
-  const ping = useCallback((pageId: string, x: number, y: number) => send({ type: "ping", pageId, x, y }), [send]);
   const setTracker = useCallback((tracker: Tracker) => send({ type: "tracker.set", tracker }), [send]);
   const addTurn = useCallback((turn: Omit<TrackerTurn, "id" | "initiative"> & { initiative?: number }, rollBonus?: number) => send({ type: "tracker.add", turn, rollBonus }), [send]);
   const nextTurn = useCallback(() => send({ type: "tracker.next" }), [send]);
@@ -451,11 +442,11 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
   useEffect(() => () => { clientRef.current?.leave(); hostRef.current?.close(); }, []);
 
   const client = clientRef.current;
-  const table = useMemo<TableState>(() => ({ role, status: client ? client.status : "idle", reason: client?.reason ?? null, campaignId, snapshot: client?.snapshot ?? null, invite, invites, transportNote, refusals, shows, artUrls, artPending, pings }),
+  const table = useMemo<TableState>(() => ({ role, status: client ? client.status : "idle", reason: client?.reason ?? null, campaignId, snapshot: client?.snapshot ?? null, invite, invites, transportNote, refusals, shows, artUrls, artPending }),
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  [role, client, campaignId, invite, invites, transportNote, refusals, shows, artUrls, artPending, pings, tick]);
-  const value = useMemo<CampaignsState>(() => ({ userId, displayName, setDisplayName, campaigns, joined, archives, journals, arts, pages, createCampaign, updateCampaign, deleteCampaign, regenerateJoinCode, forgetJoined, table, launch, join, leave, say, sendRoll, setRole, kick, putJournal, removeJournal, showJournal, dismissShow, uploadArt, updateArt, removeArt, requestArt, putPage, removePage, setRibbon, setBookmark, putToken, removeToken, ping, setTracker, addTurn, nextTurn, swapTurn, attack, npcSave, legendary, useItem, resist, provoke, act, cast, declineReaction, adjustAction, undoAction, confirmAction }),
-    [userId, displayName, setDisplayName, campaigns, joined, archives, journals, arts, pages, createCampaign, updateCampaign, deleteCampaign, regenerateJoinCode, forgetJoined, table, launch, join, leave, say, sendRoll, setRole, kick, putJournal, removeJournal, showJournal, dismissShow, uploadArt, updateArt, removeArt, requestArt, putPage, removePage, setRibbon, setBookmark, putToken, removeToken, ping, setTracker, addTurn, nextTurn, swapTurn, attack, npcSave, legendary, useItem, resist, adjustAction, undoAction, confirmAction]);
+  [role, client, campaignId, invite, invites, transportNote, refusals, shows, artUrls, artPending, tick]);
+  const value = useMemo<CampaignsState>(() => ({ userId, displayName, setDisplayName, campaigns, joined, archives, journals, arts, pages, createCampaign, updateCampaign, deleteCampaign, regenerateJoinCode, forgetJoined, table, launch, join, leave, say, sendRoll, setRole, kick, putJournal, removeJournal, showJournal, dismissShow, uploadArt, updateArt, removeArt, requestArt, putPage, removePage, setRibbon, setBookmark, putToken, removeToken, setTracker, addTurn, nextTurn, swapTurn, attack, npcSave, legendary, useItem, resist, provoke, act, cast, declineReaction, adjustAction, undoAction, confirmAction }),
+    [userId, displayName, setDisplayName, campaigns, joined, archives, journals, arts, pages, createCampaign, updateCampaign, deleteCampaign, regenerateJoinCode, forgetJoined, table, launch, join, leave, say, sendRoll, setRole, kick, putJournal, removeJournal, showJournal, dismissShow, uploadArt, updateArt, removeArt, requestArt, putPage, removePage, setRibbon, setBookmark, putToken, removeToken, setTracker, addTurn, nextTurn, swapTurn, attack, npcSave, legendary, useItem, resist, adjustAction, undoAction, confirmAction]);
   return <CampaignsContext.Provider value={value}>{children}</CampaignsContext.Provider>;
 }
 

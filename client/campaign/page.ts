@@ -1,15 +1,14 @@
 /**
- * Pages and tokens as Roll20 has them (ROLL20_TABLE_SPEC.md §2–§3): a page is a grid of cells with a background and
- * layers; a token is an image on a page that may represent a journal character (then bars link to the sheet, D78,
- * and markers are the sheet's conditions, D84). Players see only the page their ribbon (or a split-the-party
- * bookmark) points at, never the GM layer, and move only tokens they control.
+ * Scenes and tokens (D95, D109): a scene is a named board with a background and a description; a token is an actor
+ * present in it, an icon that may represent a journal character (then bars link to the sheet, D78, and markers are
+ * the sheet's conditions, D84). There are no positions and no distances — the DM narrates where everyone is.
+ * Players see only the scene their ribbon (or a split-the-party bookmark) points at, never the GM layer.
  */
-import { sizeCells } from "../compendium/monsters";
 import type { Audience, JournalCharacter, JournalEntry, JournalNpc, JournalViewer } from "./journal";
 import { audienceIncludes, canEdit } from "./journal";
 
-export type Layer = "map" | "objects" | "gm";
-export type GridType = "square" | "hex-h" | "hex-v";
+/** "objects" = everyone sees it, "gm" = the GM alone (D109: the old map layer went with the grid). */
+export type Layer = "objects" | "gm";
 
 export interface TokenBar {
   value?: number;
@@ -22,21 +21,12 @@ export interface TokenBar {
   editable: boolean;
 }
 
-export interface TokenAura { radius: number; color: string; square: boolean; visible: boolean }
-
 export interface TokenMarker { name: string; badge?: number; /** Who granted a turn-scoped mark such as 도움 (token id): it ends when their next turn starts. */ from?: string }
 
 export interface Token {
   id: string;
   name: string;
   layer: Layer;
-  /** Top-left in cells (fractions allowed when snapping is off). */
-  x: number;
-  y: number;
-  /** Size in cells. */
-  w: number;
-  h: number;
-  rotation: number;
   /** `art:<id>`, a data URL, or nothing (the initial letter is drawn). */
   image?: string;
   /** Journal character this token represents. */
@@ -46,19 +36,12 @@ export interface Token {
   showName: boolean;
   nameVisibleToPlayers: boolean;
   bars: [TokenBar, TokenBar, TokenBar];
-  barStyle: { position: "above" | "below"; overlap: boolean; showNumbers: boolean };
-  auras: [TokenAura, TokenAura];
   tint?: string;
   markers: TokenMarker[];
   gmNotes: string;
   locked: boolean;
-  flipH: boolean;
-  flipV: boolean;
-  /** Stacking order within the layer (higher = in front). */
+  /** Order within its row on the stage (higher = further right). */
   z: number;
-  vision: { sight: boolean; angle?: number; range?: number; nightVision?: number };
-  light: { bright: number; dim: number; angle?: number; visibleToPlayers: boolean };
-  isDrawing: boolean;
 }
 
 export interface Page {
@@ -67,18 +50,8 @@ export interface Page {
   campaignId: string;
   name: string;
   order: number;
-  /** Size in cells. */
-  width: number;
-  height: number;
-  /** One cell = `scale` `unit` (5 ft). */
-  scale: number;
-  unit: string;
-  grid: { enabled: boolean; type: GridType; cell: number; color: string; opacity: number; labels: boolean; snap: boolean };
   background: { color: string; image?: string };
-  fog: { enabled: boolean };
-  /** "scene" = Theatre of the Mind: tokens are icons on a board, positions and distances are not tracked. Missing = grid. */
-  layout?: "grid" | "scene";
-  /** R13: a few lines the DM writes for the scene ("비 오는 밤, 여관 뒷마당…"), shown on the stage card. */
+  /** A few lines the DM writes for the scene ("비 오는 밤, 여관 뒷마당…"), shown on the stage card. */
   description?: string;
   archived: boolean;
   tokens: Token[];
@@ -102,48 +75,34 @@ export const isConditionMarker = (name: string) => (CONDITION_MARKERS as readonl
 const randomId = (prefix: string) => `${prefix}_${typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID().slice(0, 12) : Math.random().toString(36).slice(2, 14)}`;
 
 export const emptyBar = (link?: string): TokenBar => ({ link, visible: true, editable: false });
-export const emptyAura = (): TokenAura => ({ radius: 0, color: "#ffd166", square: false, visible: true });
 
-export function newPage(campaignId: string, name: string, order: number, now = new Date().toISOString()): Page {
-  return {
-    id: randomId("page"), kind: "page", campaignId, name, order, width: 25, height: 25, scale: 5, unit: "ft",
-    grid: { enabled: true, type: "square", cell: 70, color: "#000000", opacity: 0.35, labels: false, snap: true },
-    background: { color: "#d9d2c5" }, fog: { enabled: false }, archived: false, tokens: [], createdAt: now, updatedAt: now,
-  };
-}
-
-/** A Theatre-of-the-Mind scene: no grid, no distances; tokens are the actors present (D95). */
+/** A Theatre-of-the-Mind scene (D95): the actors present, no positions and no distances. */
 export function newScene(campaignId: string, name: string, order: number, now = new Date().toISOString()): Page {
-  const page = newPage(campaignId, name, order, now);
-  return { ...page, layout: "scene", grid: { ...page.grid, enabled: false } };
+  return { id: randomId("page"), kind: "page", campaignId, name, order, background: { color: "#d9d2c5" }, archived: false, tokens: [], createdAt: now, updatedAt: now };
 }
-
-export const isScene = (page: Pick<Page, "layout"> | null | undefined) => page?.layout === "scene";
 
 export function newToken(partial: Partial<Token> & { name: string }): Token {
   const { id, ...rest } = partial;
   return {
-    id: id ?? randomId("tok"), layer: "objects", x: 0, y: 0, w: 1, h: 1, rotation: 0, controlledBy: partial.represents ? "inherit" : [], showName: true, nameVisibleToPlayers: true,
-    bars: [emptyBar(partial.represents ? "hp" : undefined), emptyBar(), emptyBar()], barStyle: { position: "above", overlap: false, showNumbers: true }, auras: [emptyAura(), emptyAura()],
-    markers: [], gmNotes: "", locked: false, flipH: false, flipV: false, z: 0, vision: { sight: Boolean(partial.represents) }, light: { bright: 0, dim: 0, visibleToPlayers: true }, isDrawing: false,
+    id: id ?? randomId("tok"), layer: "objects", controlledBy: partial.represents ? "inherit" : [], showName: true, nameVisibleToPlayers: true,
+    bars: [emptyBar(partial.represents ? "hp" : undefined), emptyBar(), emptyBar()], markers: [], gmNotes: "", locked: false, z: 0,
     ...rest,
   };
 }
 
-/** A token for a journal character: its default token if saved, else a 1×1 token with the avatar and HP on bar 1. */
-export function tokenForCharacter(entry: JournalCharacter, at: { x: number; y: number }): Token {
+/** A token for a journal character: its default token if saved, else an icon with the avatar and HP on bar 1. */
+export function tokenForCharacter(entry: JournalCharacter): Token {
   const { id: _ignored, ...base } = entry.defaultToken ?? {};
-  return newToken({ ...base, name: entry.name, represents: entry.id, image: entry.avatar ?? base.image, x: at.x, y: at.y, layer: "objects" });
+  return newToken({ ...base, name: entry.name, represents: entry.id, image: entry.avatar ?? base.image, layer: "objects" });
 }
 
-/** A token for an NPC: sized by the monster, bars unlinked (each token has its own HP, D78), controlled by the GM only. */
-export function tokenForNpc(entry: JournalNpc, at: { x: number; y: number }): Token {
+/** A token for an NPC: bars unlinked (each token has its own HP, D78), controlled by the GM only. */
+export function tokenForNpc(entry: JournalNpc): Token {
   const { id: _ignored, ...base } = entry.defaultToken ?? {};
-  const cells = sizeCells(entry.statBlock.size);
-  return newToken({ w: cells, h: cells, ...base, name: entry.name, represents: entry.id, image: entry.avatar ?? base.image, x: at.x, y: at.y, layer: "objects", controlledBy: [], bars: [{ value: entry.statBlock.hp, max: entry.statBlock.hp, visible: true, editable: false }, emptyBar(), emptyBar()], vision: { sight: true } });
+  return newToken({ ...base, name: entry.name, represents: entry.id, image: entry.avatar ?? base.image, layer: "objects", controlledBy: [], bars: [{ value: entry.statBlock.hp, max: entry.statBlock.hp, visible: true, editable: false }, emptyBar(), emptyBar()] });
 }
 
-export const tokenForEntry = (entry: JournalEntry, at: { x: number; y: number }) => (entry.kind === "character" ? tokenForCharacter(entry, at) : entry.kind === "npc" ? tokenForNpc(entry, at) : null);
+export const tokenForEntry = (entry: JournalEntry) => (entry.kind === "character" ? tokenForCharacter(entry) : entry.kind === "npc" ? tokenForNpc(entry) : null);
 
 /** Who controls a token: the token's own list, or (inherit) the character's 고칠 수 있는 사람. GM always. */
 export function controlsToken(token: Token, viewer: JournalViewer, journal: JournalEntry[]): boolean {
@@ -158,17 +117,11 @@ export function playerPageId(campaign: { playerPageId?: string; pageBookmarks?: 
   return campaign.pageBookmarks?.[viewer.userId] ?? campaign.playerPageId;
 }
 
-/** What a player receives of a page: no GM-layer tokens, no GM notes, hidden bars and auras blanked. */
+/** What a player receives of a scene: no GM-layer tokens, no GM notes, hidden bars blanked. */
 export function projectToken(token: Token, viewer: JournalViewer): Token | null {
   if (viewer.role === "gm") return token;
   if (token.layer === "gm") return null;
-  return {
-    ...token,
-    gmNotes: "",
-    bars: token.bars.map((bar) => (bar.visible ? bar : { ...bar, value: undefined, max: undefined })) as Token["bars"],
-    auras: token.auras.map((aura) => (aura.visible ? aura : { ...aura, radius: 0 })) as Token["auras"],
-    light: token.light.visibleToPlayers ? token.light : { ...token.light, bright: 0, dim: 0 },
-  };
+  return { ...token, gmNotes: "", bars: token.bars.map((bar) => (bar.visible ? bar : { ...bar, value: undefined, max: undefined })) as Token["bars"] };
 }
 
 export function projectPage(page: Page, viewer: JournalViewer, campaign: { playerPageId?: string; pageBookmarks?: Record<string, string> }): Page | null {
@@ -178,25 +131,16 @@ export function projectPage(page: Page, viewer: JournalViewer, campaign: { playe
 }
 
 /**
- * Merge a controller's edit of a token: position, rotation, flips, markers, and the values of editable bars.
- * Everything else (layer, size, image, permissions, links, GM notes, lock) stays as it was.
+ * Merge a controller's edit of a token: the order on the stage, markers, and the values of editable bars.
+ * Everything else (layer, image, permissions, links, GM notes, lock) stays as it was.
  */
 export function mergeControllerTokenEdit(stored: Token, incoming: Token): Token {
   if (stored.locked) return stored;
   return {
-    ...stored,
-    x: incoming.x, y: incoming.y, rotation: incoming.rotation, flipH: incoming.flipH, flipV: incoming.flipV, markers: incoming.markers,
+    ...stored, z: incoming.z, markers: incoming.markers,
     bars: stored.bars.map((bar, index) => (bar.editable ? { ...bar, value: incoming.bars[index]?.value } : bar)) as Token["bars"],
   };
 }
-
-/** Snap a cell coordinate to the grid (whole cells; half cells for tokens smaller than one cell). */
-export const snap = (value: number, size = 1) => (size >= 1 ? Math.round(value) : Math.round(value / size) * size);
-
-export const clampToPage = (page: Page, token: Pick<Token, "x" | "y" | "w" | "h">) => ({ x: Math.min(Math.max(0, token.x), page.width - token.w), y: Math.min(Math.max(0, token.y), page.height - token.h) });
-
-/** Column label A, B, … AA as Roll20's grid labels. */
-export function columnLabel(index: number) { let label = ""; let n = index; do { label = String.fromCharCode(65 + (n % 26)) + label; n = Math.floor(n / 26) - 1; } while (n >= 0); return label; }
 
 /** Apply a bar edit as our HP command grammar: "12" sets, "-4" and "+4" adjust. */
 export function applyBarInput(bar: TokenBar, text: string): TokenBar | null {
@@ -206,6 +150,3 @@ export function applyBarInput(bar: TokenBar, text: string): TokenBar | null {
   const next = trimmed.startsWith("+") ? current + Number(trimmed.slice(1)) : trimmed.startsWith("-") ? current - Number(trimmed.slice(1)) : Number(trimmed);
   return { ...bar, value: bar.max !== undefined ? Math.max(0, Math.min(bar.max, next)) : Math.max(0, next) };
 }
-
-/** Distance between two cell points in page units (5e diagonal = 1 cell, Roll20's default "no diagonal cost"). */
-export const cellDistance = (a: { x: number; y: number }, b: { x: number; y: number }) => Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y));

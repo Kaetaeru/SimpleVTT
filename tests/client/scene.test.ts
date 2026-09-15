@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { newJournalCharacter, newJournalNpc } from "../../client/campaign/journal";
 import { newCampaign, repairCampaign } from "../../client/campaign/model";
-import { isScene, newPage, newScene, tokenForCharacter, tokenForNpc } from "../../client/campaign/page";
+import { newScene, tokenForCharacter, tokenForNpc } from "../../client/campaign/page";
 import { newTurn } from "../../client/campaign/tracker";
 import { initialRuntime } from "../../client/character/runtime";
 import { monsterById } from "../../client/compendium/monsters";
@@ -38,8 +38,8 @@ async function table() {
   const goblin = newJournalNpc(campaign.id, "dm", monsterById("dnd.srd521.monster.goblin-warrior")!);
   dm.send({ type: "journal.put", entry: goblin });
   await tick();
-  const pcToken = tokenForCharacter(pc, { x: 0, y: 0 });
-  const goblinToken = tokenForNpc(goblin, { x: 20, y: 20 });
+  const pcToken = tokenForCharacter(pc);
+  const goblinToken = tokenForNpc(goblin);
   alice.send({ type: "token.put", pageId: scene.id, token: pcToken });
   dm.send({ type: "token.put", pageId: scene.id, token: goblinToken });
   await tick();
@@ -50,17 +50,12 @@ async function table() {
   return { host, dm, alice, scene, pc, goblin, pcToken, goblinToken, sword, pcRef, goblinRef, lastAction };
 }
 
-test("scenes: the default table mode is TotM; a scene decides nothing by range; players declare 유리/불리 only; the DM forces outcomes before the roll", async () => {
-  assert.equal(newCampaign("x", { userId: "u", displayName: "U" }).settings.tableMode, "totm");
-  assert.equal(repairCampaign({ ...newCampaign("x", { userId: "u", displayName: "U" }), settings: { playersCanCreateCharacters: true, playersCanExportToVault: true, chatAvatars: true } }).settings.tableMode, "totm");
-  assert.ok(isScene(newScene("c", "s", 0)) && !isScene(newPage("c", "p", 0)));
-  assert.equal(newScene("c", "s", 0).grid.enabled, false);
+test("scenes: the table is always Theatre of the Mind; nothing is decided by range; players declare 유리/불리 only; the DM forces outcomes before the roll", async () => {
   const { dm, alice, sword, pcRef, goblinRef, lastAction } = await table();
-  // Tokens are 20 cells apart, far beyond a sword's reach: on a scene that is not the host's business.
+  // There are no positions at all: reach and range are never the host's business.
   alice.send({ type: "act.attack", attacker: pcRef, targets: [goblinRef], attack: { source: "weapon", attackId: sword.id }, overrides: { advantage: "advantage", outcome: "crit", cover: 5 } });
   await tick();
   const card = lastAction(dm);
-  assert.equal(card.action!.distanceFeet, undefined, "no distance on a scene");
   assert.equal(card.action!.outcome, "hit", "a player's 반드시 치명타 is ignored");
   assert.equal(card.action!.cover, 0, "a player's cover is ignored");
   assert.deepEqual([card.action!.advantage, card.action!.d20s.length], ["advantage", 2], "a player's declared advantage is honoured");

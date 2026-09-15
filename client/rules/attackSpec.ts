@@ -45,12 +45,10 @@ export function npcCombatant(entry: JournalNpc, token?: Token): Combatant {
   };
 }
 
-/** Range in feet from a sheet attack: "80/320" → 80 / 320; reach 10 for reach weapons; thrown melee weapons use their thrown range when the mode is ranged. */
-export function weaponRange(attack: DerivedAttack): { mode: "melee" | "ranged"; rangeFeet: number; longRangeFeet?: number } {
-  const ranged = attack.properties.includes("ammunition") || attack.ability === "dex" && Boolean(attack.range) && !attack.properties.includes("finesse");
-  const [normal, long] = (attack.range ?? "").split("/").map((part) => Number(part)).filter((value) => !Number.isNaN(value));
-  if (ranged) return { mode: "ranged", rangeFeet: normal || 30, longRangeFeet: long };
-  return { mode: "melee", rangeFeet: attack.properties.includes("reach") ? 10 : 5 };
+/** Whether a sheet attack is thrown/shot or swung (D109: the table tracks no distances, so only the mode matters — opportunity attacks are melee). */
+export function weaponRange(attack: DerivedAttack): { mode: "melee" | "ranged" } {
+  const ranged = attack.properties.includes("ammunition") || (attack.ability === "dex" && Boolean(attack.range) && !attack.properties.includes("finesse"));
+  return { mode: ranged ? "ranged" : "melee" };
 }
 
 const sneakDice = (derived: DerivedCharacter) => { const rogue = derived.classes.find((cls) => cls.classId.endsWith(".rogue")); return rogue ? Math.ceil(rogue.level / 2) : 0; };
@@ -77,14 +75,14 @@ export function pcAttackSpec(entry: JournalCharacter, derived: DerivedCharacter,
   }
   const abilityMod = derived.abilities[attack.ability].modifier;
   const mastery = attack.masteryActive && attack.masteryKey && !cleave ? attack.masteryKey : undefined;
-  return { spec: { name: cleave ? `${attack.name} · 쪼개기` : attack.name, source: "weapon", attackBonus: attack.attackBonus, mode: range.mode, rangeFeet: range.rangeFeet, longRangeFeet: range.longRangeFeet, damage, riders: extra, ...(mastery ? { mastery, abilityMod, masteryDc: 8 + abilityMod + derived.proficiencyBonus } : {}) }, spend: (runtime) => spenders.reduce((acc, spend) => spend(acc), runtime) };
+  return { spec: { name: cleave ? `${attack.name} · 쪼개기` : attack.name, source: "weapon", attackBonus: attack.attackBonus, mode: range.mode, damage, riders: extra, ...(mastery ? { mastery, abilityMod, masteryDc: 8 + abilityMod + derived.proficiencyBonus } : {}) }, spend: (runtime) => spenders.reduce((acc, spend) => spend(acc), runtime) };
 }
 
 export function npcAttackSpec(entry: JournalNpc, actionName: string): AttackSpec | null {
   const action: MonsterAction | undefined = [...entry.statBlock.actions, ...entry.statBlock.bonusActions, ...entry.statBlock.legendaryActions, ...entry.statBlock.reactions].find((item) => item.name === actionName);
   if (!action || action.kind !== "attack" || !action.attack) return null;
   const attack = action.attack;
-  return { name: action.name, source: "npc", attackBonus: attack.bonus, mode: attack.mode === "ranged" ? "ranged" : "melee", rangeFeet: attack.rangeFeet ?? 5, longRangeFeet: attack.longRangeFeet, damage: attack.damage.map((part) => ({ formula: damageFormula(part), type: part.type, label: action.name })), inflicts: attack.riderConditions ?? [] };
+  return { name: action.name, source: "npc", attackBonus: attack.bonus, mode: attack.mode === "ranged" ? "ranged" : "melee", damage: attack.damage.map((part) => ({ formula: damageFormula(part), type: part.type, label: action.name })), inflicts: attack.riderConditions ?? [] };
 }
 
 export const derivedOf = (entry: JournalCharacter, catalog: ContentCatalog) => deriveCharacter(entry.source, catalog, { equipped: entry.runtime.equipped, inventory: entry.runtime.inventory, effects: entry.runtime.effects });

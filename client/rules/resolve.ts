@@ -31,8 +31,6 @@ export interface Combatant {
   grappledBy?: string;
   /** R12: token id of the wielder whose Vex mastery gave advantage against this creature. */
   vexedBy?: string;
-  /** Cells from the attacker (undefined when either has no token). */
-  distanceFeet?: number;
 }
 
 export interface DamagePart { formula: string; type: string; label?: string; /** Dice double on a critical hit (weapon/spell dice); a flat rider never does. */ critDoubles?: boolean }
@@ -42,9 +40,6 @@ export interface AttackSpec {
   source: "weapon" | "spell" | "npc";
   attackBonus: number;
   mode: "melee" | "ranged";
-  /** Normal / long range in feet (melee: reach, default 5). */
-  rangeFeet?: number;
-  longRangeFeet?: number;
   damage: DamagePart[];
   /** Extra damage the attacker chose (암습, 신성한 강타 …), already as parts. */
   riders?: DamagePart[];
@@ -105,7 +100,6 @@ export interface AttackResolution {
   downed?: "unconscious" | "dead" | "instant-death";
   inflicted: string[];
   overrides?: AttackOverrides;
-  distanceFeet?: number;
   /** True once HP was written (D90: with "DM 확인 후 적용" the card waits). */
   applied: boolean;
 }
@@ -148,15 +142,14 @@ export function suggestAdvantage(attacker: Combatant, target: Combatant, spec: A
   if (has(target, "장님")) plus.push("대상 장님");
   if (has(target, "투명")) minus.push("대상 투명");
   if (effect(target, "회피")) minus.push("대상 회피");
-  if (spec.mode === "ranged" && target.distanceFeet !== undefined && spec.rangeFeet !== undefined && target.distanceFeet > spec.rangeFeet) minus.push("긴 사거리");
   if (plus.length && minus.length) return { advantage: "normal", reasons: [...plus, ...minus, "유리·불리가 상쇄"] };
   if (plus.length) return { advantage: "advantage", reasons: plus };
   if (minus.length) return { advantage: "disadvantage", reasons: minus };
   return { advantage: "normal", reasons: [] };
 }
 
-/** A hit on a paralysed or unconscious target within 5 ft is a critical hit. */
-const autoCrit = (target: Combatant, spec: AttackSpec) => (target.conditions.includes("마비") || target.conditions.includes("무의식")) && (spec.mode === "melee" || (target.distanceFeet !== undefined && target.distanceFeet <= 5));
+/** A melee hit on a paralysed or unconscious target is a critical hit (D95: the table has no distances, so melee stands in for "within 5 ft"). */
+const autoCrit = (target: Combatant, spec: AttackSpec) => (target.conditions.includes("마비") || target.conditions.includes("무의식")) && spec.mode === "melee";
 
 /* ---------- dice ---------- */
 
@@ -196,8 +189,6 @@ export function resolveAttack(attacker: Combatant, target: Combatant, spec: Atta
   let outcome: AttackResolution["outcome"] = kept === 20 ? "crit" : kept === 1 ? "fumble" : attackTotal >= targetAc ? "hit" : "miss";
   if (outcome === "hit" && autoCrit(target, spec)) { outcome = "crit"; reasons.push(`대상 ${target.conditions.includes("마비") ? "마비" : "무의식"}: 5ft 안의 적중은 치명타`); }
   if (overrides.outcome) outcome = overrides.outcome;
-  const beyondLong = spec.mode === "ranged" && target.distanceFeet !== undefined && spec.longRangeFeet !== undefined && target.distanceFeet > spec.longRangeFeet;
-  if (beyondLong && !overrides.outcome) { outcome = "miss"; reasons.push("최대 사거리 밖"); }
   const hit = outcome === "hit" || outcome === "crit";
   // R12: weapon mastery — Graze deals the ability modifier on a miss; on a hit Topple asks for a CON save, Vex/Sap/Slow mark the target, Push is a note.
   let mastery: MasteryResult | undefined;
@@ -224,7 +215,7 @@ export function resolveAttack(attacker: Combatant, target: Combatant, spec: Atta
     attacker: { id: attacker.id, name: attacker.name, kind: attacker.kind }, target: { id: target.id, name: target.name, kind: target.kind },
     attack: { name: spec.name, source: spec.source, mode: spec.mode, bonus: spec.attackBonus },
     advantage, reasons, d20s, kept, cover, attackTotal, targetAc, outcome, damage, damageTotal, absorbed, hpLost, hpBefore: target.hp.current, hpAfter, tempAfter, concentration, downed,
-    inflicted, mastery, overrides: Object.keys(overrides).length ? overrides : undefined, distanceFeet: target.distanceFeet, applied: options.apply ?? true,
+    inflicted, mastery, overrides: Object.keys(overrides).length ? overrides : undefined, applied: options.apply ?? true,
   };
 }
 

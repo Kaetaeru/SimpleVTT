@@ -32,8 +32,6 @@ export interface CampaignSettings {
   chatAvatars: boolean;
   /** D90: results wait for the GM's "적용" instead of landing at once. */
   dmConfirmsResults?: boolean;
-  /** D95: "totm" (Theatre of the Mind, the default) plays on scenes without distances; "grid" on maps. */
-  tableMode?: "totm" | "grid";
   /** R13: how long a toast stays (seconds, default 4) and how many at once (default 3). */
   toastSeconds?: number;
   toastCount?: number;
@@ -139,7 +137,7 @@ export function newCampaign(name: string, owner: { userId: string; displayName: 
     ruleset: "dnd.srd-5.2.1",
     moduleIds: [],
     joinCode: newJoinCode(),
-    settings: { playersCanCreateCharacters: true, playersCanExportToVault: true, chatAvatars: true, tableMode: "totm" },
+    settings: { playersCanCreateCharacters: true, playersCanExportToVault: true, chatAvatars: true },
     description: "",
     players: [{ userId: owner.userId, displayName: owner.displayName || "DM", role: "gm", color: PLAYER_COLORS[0], joinedAt: now, lastSeenAt: now }],
     createdAt: now,
@@ -206,7 +204,7 @@ export function repairCampaign(campaign: Campaign): Campaign {
     description: campaign.description ?? "",
     createdAt: campaign.createdAt ?? now,
     updatedAt: now,
-    settings: { playersCanCreateCharacters: true, playersCanExportToVault: true, chatAvatars: true, tableMode: "totm", ...(campaign.settings as Partial<CampaignSettings>) },
+    settings: { playersCanCreateCharacters: true, playersCanExportToVault: true, chatAvatars: true, ...(campaign.settings as Partial<CampaignSettings>) },
     players: campaign.players.filter((player) => player && typeof player.userId === "string").map((player, index) => ({ ...player, displayName: player.displayName ?? "플레이어", role: player.role === "gm" ? "gm" : "player", color: player.color ?? PLAYER_COLORS[index % PLAYER_COLORS.length], joinedAt: player.joinedAt ?? now })),
   };
 }

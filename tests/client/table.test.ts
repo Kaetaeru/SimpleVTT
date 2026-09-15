@@ -140,7 +140,7 @@ test("documents of another shape are skipped and older rows of this shape are re
   assert.equal(isStoredDocument({ id: "chat_x", kind: "chat", campaignId: "x", messages: [] }), true);
   const older = { ...current, settings: { playersCanCreateCharacters: false } as unknown as typeof current.settings, description: undefined as unknown as string, players: [{ userId: "u1", displayName: "누구" } as unknown as typeof current.players[number]] };
   const repaired = repairCampaign(older);
-  assert.deepEqual(repaired.settings, { playersCanCreateCharacters: false, playersCanExportToVault: true, chatAvatars: true, tableMode: "totm" });
+  assert.deepEqual(repaired.settings, { playersCanCreateCharacters: false, playersCanExportToVault: true, chatAvatars: true });
   assert.equal(repaired.description, "");
   assert.equal(repaired.players[0].role, "player");
   assert.ok(repaired.players[0].color && repaired.players[0].joinedAt);

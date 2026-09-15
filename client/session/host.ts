@@ -19,7 +19,7 @@ import { npcAttackSpec, npcCombatant, npcSaveExec } from "../rules/attackSpec";
 import type { AttackOverrides, AttackResolution, AttackSpec, Combatant } from "../rules/resolve";
 import { describeResolution, diceFrom, resolveAttack } from "../rules/resolve";
 import type { ActorRef, AttackRef, AttackRiders } from "./protocol";
-import { cellDistance, isConditionMarker, isScene } from "../campaign/page";
+import { isConditionMarker } from "../campaign/page";
 import { ACTIONS, cannotAct, describeAct, npcStats, resolveAction, TURN_MARKS, type ActorStats } from "../rules/actions";
 import { describeSpell, resolveSpell, type CasterStats, type SpellCastSpec, type SpellResolution, type SpellTargetResult } from "../rules/spellcast";
 import { spellExec } from "../compendium/spells";
@@ -332,7 +332,7 @@ export class TableHost {
       case "page.put": {
         if (!isGm) return refuse("GM만 페이지를 만들고 고칩니다");
         const incoming = command.page;
-        if (!incoming || typeof incoming.id !== "string" || typeof incoming.grid !== "object") return refuse("페이지 형식이 아닙니다");
+        if (!incoming || typeof incoming.id !== "string" || !Array.isArray(incoming.tokens)) return refuse("페이지 형식이 아닙니다");
         const stored = this.pages.get(incoming.id);
         const page: Page = { ...incoming, kind: "page", campaignId: this.campaign.id, tokens: stored ? stored.tokens : (incoming.tokens ?? []), createdAt: stored?.createdAt ?? incoming.createdAt ?? this.now(), updatedAt: this.now() };
         this.storePage(page);
@@ -753,13 +753,6 @@ export class TableHost {
         this.applyResolution(record.resolution, targetEntry, attackerEntry, command.messageId, true);
         return;
       }
-      case "ping": {
-        const page = this.pages.get(command.pageId);
-        if (!page) return;
-        if (!isGm && page.id !== playerPageId(this.campaign, this.viewer(userId))) return;
-        this.emit({ type: "ping", pageId: page.id, x: command.x, y: command.y, by: userId, color: player.color });
-        return;
-      }
       default: return;
     }
   }
@@ -799,7 +792,6 @@ export class TableHost {
     const targetCombatant = this.combatantOf(target);
     if (!attackerCombatant || !targetCombatant) return undefined;
     // D95: a scene (Theatre of the Mind) tracks no positions, so range never decides; the DM adjusts by hand.
-    if (attacker.token && target.token && attacker.page && target.page && attacker.page.id === target.page.id && !isScene(attacker.page)) targetCombatant.distanceFeet = Math.max(0, cellDistance(centre(attacker.token), centre(target.token)) - (attacker.token.w + target.token.w) / 2 + 1) * attacker.page.scale;
     const waits = Boolean(this.campaign.settings.dmConfirmsResults) && this.roleOf(inputs.by) !== "gm";
     const resolution: AttackResolution = { ...resolveAttack(attackerCombatant, targetCombatant, prepared.spec, { dice: diceFrom(this.options.random ?? Math.random), overrides, fixed, apply: !waits }), attackRef: inputs.attack, attackerRef: inputs.attacker };
     // Riders with a cost (a smite slot) are paid once per attack, by the first target's card.
@@ -903,7 +895,6 @@ export class TableHost {
       const targetCombatant = this.combatantOf(target);
       if (attackerCombatant && targetCombatant) {
         if (targetCombatant.ac < held.resolution.targetAc + 5) targetCombatant.ac = held.resolution.targetAc + 5;
-        targetCombatant.distanceFeet = undefined;
         resolution = resolveAttack(attackerCombatant, targetCombatant, held.spec, { dice: diceFrom(this.options.random ?? Math.random), overrides: { ...(held.overrides ?? {}), note: [held.overrides?.note, "방패 반응: AC +5"].filter(Boolean).join(" · ") }, fixed: { d20s: held.resolution.d20s, damage: held.resolution.damage.map((part) => part.dice) }, apply: true });
       }
     }
@@ -1279,7 +1270,7 @@ export class TableHost {
       case "art": return artVisible(event.asset, viewer, this.journal) ? event : { n: event.n, type: "art.removed", id: event.asset.id };
       case "page": { const page = projectPage(event.page, viewer, this.campaign); return page ? { ...event, page } : { n: event.n, type: "page.removed", id: event.page.id }; }
       case "token": { if (viewer.role === "gm") return event; const page = this.pages.get(event.pageId); if (!page || page.archived || page.id !== playerPageId(this.campaign, viewer)) return null; const token = projectToken(event.token, viewer); return token ? { ...event, token } : { n: event.n, type: "token.removed", pageId: event.pageId, id: event.token.id }; }
-      case "token.removed": case "ping": { if (viewer.role === "gm") return event; return event.pageId === playerPageId(this.campaign, viewer) ? event : null; }
+      case "token.removed": { if (viewer.role === "gm") return event; return event.pageId === playerPageId(this.campaign, viewer) ? event : null; }
       case "ribbon": {
         if (viewer.role === "gm") return event;
         // A player's page changed: they get their new page whole (the mirror replaces what it had).
@@ -1300,5 +1291,4 @@ export class TableHost {
   private reply(peerId: string, message: HostMessage) { (this.peerTransports.get(peerId) ?? this.transports[0]).send(peerId, message); }
 }
 
-const centre = (token: Token) => ({ x: token.x + token.w / 2, y: token.y + token.h / 2 });
 const sameActor = (a: ActorRef, b: ActorRef) => (a.tokenId && b.tokenId ? a.tokenId === b.tokenId && (a.pageId ?? "") === (b.pageId ?? "") : Boolean(a.entryId) && a.entryId === b.entryId);

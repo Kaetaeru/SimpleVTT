@@ -70,10 +70,10 @@ async function table() {
   dm.send({ type: "journal.put", entry: goblin });
   dm.send({ type: "journal.put", entry: mage });
   await tick();
-  const clericToken = tokenForCharacter(pc, { x: 0, y: 0 });
-  const fighterToken = tokenForCharacter(pc2, { x: 1, y: 0 });
-  const goblinToken = tokenForNpc(goblin, { x: 2, y: 0 });
-  const mageToken = tokenForNpc(mage, { x: 3, y: 0 });
+  const clericToken = tokenForCharacter(pc);
+  const fighterToken = tokenForCharacter(pc2);
+  const goblinToken = tokenForNpc(goblin);
+  const mageToken = tokenForNpc(mage);
   alice.send({ type: "token.put", pageId: scene.id, token: clericToken });
   alice.send({ type: "token.put", pageId: scene.id, token: fighterToken });
   dm.send({ type: "token.put", pageId: scene.id, token: goblinToken });

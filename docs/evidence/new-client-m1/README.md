@@ -1,6 +1,6 @@
 # 새 클라이언트 M1 증거 (자동 캡처)
 
-생성: 2026-09-14T14:33:02.698Z · `node --import tsx scripts/capture-client-m1.mjs`
+생성: 2026-09-15T14:20:27.434Z · `node --import tsx scripts/capture-client-m1.mjs`
 
 Chromium이 Vite 개발 서버(포트 1430)에서 마법사를 처음부터 끝까지 진행하고, 보충 모듈(합성 픽스처)을 설치한 뒤 설치 콘텐츠로 캐릭터를 만든다.
 
@@ -19,59 +19,3 @@ Chromium이 Vite 개발 서버(포트 1430)에서 마법사를 처음부터 끝�
 - `13-sheet-installed-content.png`
 - `14-library-two-characters.png`
 - `15-library-light-theme.png`
-- `16-sheet-play-ac-provenance.png` — 시트 운용: HP 입력 `-9`·`++4`(슬라이더 위 한 칸)·중독·아이템 추가/장비·금화 뒤, AC에 마우스를 올려 출처(사슬 셔츠 13 · 민첩 +2 · 방패 +2)
-- `17-sheet-attack-provenance.png` — 명중 굴림 출처(근력 수정치 · 숙련 보너스)
-- `18-sheet-short-rest.png` — 짧은 휴식 대화상자(히트 다이스 선택)
-- `19-sheet-after-rest-log.png` — 휴식 뒤 HP·히트 다이스·기록 (`node scripts/capture-client-play.mjs`)
-- `20-wizard-hp-roll-dice.png` — 마법사에서 2레벨 HP를 d8로 굴림(주사위 오버레이, 결과 릴)
-- `21-sheet-skill-roll.png` — 시트에서 곡예 판정 d20 굴림
-- `22-levelup-screen.png` — 별도 레벨 업 화면: 직업·레벨 수, 레벨별 HP 고정/굴림, 새로 열린 선택만 표시, 바뀌는 것 요약
-- `23-sheet-after-levelup.png` — 적용 뒤 시트 (`node scripts/capture-client-levelup.mjs`)
-- `24-sheet-rage-rounds.png` — 바바리안 격노 "사용": 횟수 차감, 진행 중인 효과 카드에 10분(100라운드) 효과, "다음 라운드" 세 번 뒤 3/100, 종료 버튼
-- `25-sheet-cast-picker.png` — 클레릭 주문 목록의 행별 "시전": 축복에서 1레벨/2레벨 슬롯 선택지(남은 수), 의식·집중 표시
-- `26-sheet-effects-after-cast.png` — 축복 시전 뒤 주문 행이 진행 중(종료 버튼)으로 바뀜 (`node scripts/capture-client-use.mjs`)
-- `27-sheet-rage-damage-provenance.png` — 격노 중 공격 표의 피해 보너스에 마우스: 근력 수정치 + 격노 +2, 진행 중인 효과 카드에 적용 내용(피해 +2 근력 근접 공격 · 저항 타격·관통·참격 · 유리 메모)
-- `28-campaign-details.png` — 캠페인 상세(Roll20 게임 상세): 게임 시작, 고정 참가 코드(복사·다시 만들기), 참가자(GM/플레이어·내보내기), 설정, 채팅 보관함 개수, 삭제
-- `29-table-player-joined.png` — 플레이어가 참가 코드로 입장한 테이블: 참가자 줄(색 점, GM 표시), 채팅 탭에 "입장 (처음)"
-- `30-table-chat-roll.png` — 채팅: 말하기, 인라인 `[[1d20+2]]`, `/roll 2d6+3 # 피해`가 주사위 카드(눈·수정치·합)로 양쪽에
-- `31-table-whisper-gmroll.png` — DM 화면: `/w gm` 귓속말, 플레이어의 `/gmroll`(GM 굴림 배지), DM의 `/desc` 서술
-- `32-table-rejoin.png` — 내보내기 → 다시 허용 → "다시 입장"으로 같은 코드로 돌아와 지난 채팅이 그대로
-- `33-campaign-archive.png` — 게임을 닫은 뒤 캠페인 상세의 채팅 보관함 개수
-- `34-table-relaunched-history.png` — 다시 "게임 시작"한 테이블에 보관된 채팅이 그대로
-- `35-join-wrong-code.png` — 잘못된 코드는 "참가 코드가 맞지 않습니다" (`node scripts/capture-client-table.mjs`, 시나리오 SC-1~8)
-- `36-journal-handout-gm.png` — DM의 핸드아웃 창: 이름·본문 편집(서식 안내)·GM 노트, 볼 수 있는 사람/고칠 수 있는 사람, 폴더·태그, 플레이어에게 보여주기·보관·삭제. 오른쪽 저널 목록에 "GM만"
-- `37-journal-handout-player.png` — 플레이어에게 열린 같은 핸드아웃: 제목·굵게·목록·저널 링크(@[늑대 소굴], 아직 없는 항목은 흐리게)가 서식대로, GM 노트 없음, 편집 버튼 없음
-- `38-journal-character-sheet-player.png` — 플레이어가 테이블에서 만든 캐릭터의 창(정보·시트·속성 탭): 시트 탭에 운용 패널(HP·휴식·효과·상태·기록)과 시트
-- `39-journal-dm-sees-hp-and-roll.png` — DM이 연 같은 캐릭터: 플레이어의 `-5` 뒤 HP 23/28과 기록, 채팅에 "앨리스의 파이터 · 이니셔티브" 굴림 카드
-- `40-journal-character-info-export.png` — 정보 탭: 소개, "라이브러리로 내보내기" 뒤 저장 알림
-- `41-library-after-vault-export.png` — 플레이어의 캐릭터 화면에 내보낸 사본
-- `42-journal-after-relaunch.png` — 게임을 닫고 다시 시작한 DM 테이블의 저널 목록(핸드아웃 + 캐릭터, 문서에서 복원) (`node scripts/capture-client-journal.mjs`, 시나리오 SC-13~19)
-- `43-art-library-gm-upload.png` — DM의 아트 탭: 올린 PNG 카드(썸네일·이름), 올리기 버튼·끌어 놓기 안내
-- `44-art-handout-avatar-player.png` — 플레이어에게 보여진 핸드아웃 창의 아바타(호스트에서 조각으로 받은 원본), 플레이어 아트 탭에도 그 이미지
-- `45-art-library-gm-two-uploads.png` — DM 아트 탭: 자기 이미지와 플레이어가 올린 "지연의 초상"(올린 사람 배지)
-- `46-art-library-player-after-reload.png` — 새로고침·재입장 뒤 플레이어 아트 탭: 두 이미지가 캐시에서 바로 (`node scripts/capture-client-art.mjs`, 시나리오 SC-22~25)
-- `47-page-created-ribbon.png` — DM 테이블: 페이지 줄(첫 페이지에 🎗 리본), 페이지 도구(추가·복제·설정·보관·보관함·파티 나누기), 왼쪽 도구막대(선택·지도/토큰/GM 레이어·확대), 격자 캔버스
-- `48-token-placed-player.png` — 플레이어가 저널에서 놓은 캐릭터 토큰(이름표, HP 바)
-- `49-token-bar-and-marker-dm.png` — DM 화면: 시트 HP −5 뒤 바 23/28, 우클릭 메뉴에서 켠 ☠ 중독 마커(시트 상태와 같은 것)
-- `50-ping-player.png` — DM의 Shift+클릭 핑이 플레이어 화면에
-- `51-token-settings-player.png` — 플레이어의 토큰 설정 창(기본/고급 탭): GM 전용 필드는 읽기 전용
-- `52-page-settings-dm.png` — 페이지 설정(이름·격자 끄기) 반영 뒤 DM 화면 (`node scripts/capture-client-pages.mjs`, 시나리오 SC-27~32)
-- `53-compendium-goblin-npc-sheet.png` — 컴펜디움에서 놓은 고블린: 저널 "괴물" 폴더의 NPC 창(스탯 블록, HP 입력, 상태, 행동마다 명중/피해 굴림 버튼)과 페이지의 토큰(7/7)
-- `54-targeting-mode.png` — "전투 시작"의 대상 지정 모드: 과녁 배너, 고른 토큰에 붉은 점선(2개 선택), 확정/취소
-- `55-tracker-after-initiative.png` — 트래커 창(정렬된 행, 이니셔티브 편집, ▲▼, 삭제)과 채팅의 이니셔티브 카드
-- `56-tracker-player-round-2.png` — 플레이어 화면: 읽기 전용 트래커, 현재 턴 토큰 테두리, 라운드 2
-- `57-action-bar-goblin.png` — DM이 고블린 토큰을 선택했을 때의 액션 줄(이니셔티브·⚔ 시미터·피해·⚔ 단궁)과 채팅의 피해 카드
-- `58-action-bar-player.png` — 플레이어의 자기 캐릭터 액션 줄 (`node scripts/capture-client-tracker.mjs`, 시나리오 SC-34~38)
-- `59-attack-targeting-range.png` — 플레이어의 "⚔ 대검" 뒤 과녁 모드: 사거리 안 토큰만 밝게, 고른 고블린에 점선, "1개 선택"
-- `60-attack-card-dm-palette.png` — DM 채팅의 판정 카드: d20 + 명중 보너스 = 합계 vs AC, 적중 배지, 피해 주사위마다 값·유형, HP 전→후, "HP 0 — 사망", DM 팔레트(강제 적중·빗나감·치명타·엄폐·재굴림·피해 절반/0·±N·되돌리기). 토큰 바 0/10과 ✖ 사망 마커
-- `61-attack-undone-player.png` — 되돌리기 뒤 플레이어 화면: 바 10/10 복원, 마커 사라짐, "되돌림" 카드
-- `62-goblin-hits-fighter-player.png` — 고블린의 시미터가 파이터를 적중: 연결 바 25/28, 시트 HP 25/28, 카드의 HP 28 → 25 (`node scripts/capture-client-attack.mjs`, 시나리오 SC-40~42)
-- `63-totm-scene-targeting.png` — 플레이어의 대상 지정: 후보인 고블린 카드만 붉게 맥동, 자기 카드·무대는 어둡게, 가운데 큰 안내 배너, 아래 회색 커맨드 바(전투 전). 플레이어에게는 페이지 바·도구 열이 없다
-- `64-totm-dm-preroll-dialog.png` — DM의 "판정 전 조정" 대화: 유리·불리(자동/보통/유리/불리), 엄폐(없음/+2/+5), 반드시(주사위대로/적중/치명타/빗나감)
-- `65-totm-opportunity-prompt-dm.png` — 플레이어가 "🏃 벗어남"을 누른 뒤 DM 화면: 보드가 흐려지고 가운데 승인 오버레이("당신의 답을 기다립니다" · ⚔ 시미터 / 안 함), 채팅 카드는 결과 배지가 먼저(적중 · 피해 9)이고 팔레트는 "조정 ▾" 뒤에
-- `66-totm-opportunity-attack-player.png` — 플레이어 화면: "시미터 · 기회 공격" 판정 카드와 "기회 공격" 배지가 붙은 프롬프트 (`node scripts/capture-client-totm.mjs`, 시나리오 SC-44~47)
-- `67-turn-panel-player.png` — 플레이어 화면, 자기 턴: 보드 위 BG3식 턴 순서 바(맨 앞 금테 큰 초상 = 지금, 이어서 작은 초상, 붉은/푸른 테, HP 바), 확대·금테의 자기 카드, 아래 금색 커맨드 바("당신의 턴", 빨간 공격 묶음, 행동·추가 행동, 시트 메뉴, 큰 턴 마침), 굴림 토스트
-- `68-turn-panel-dm-goblin.png` — DM 화면, 고블린의 턴: 턴 순서 바(고블린이 맨 앞 금테, 끝에 ▶ 다음 턴·트래커), 행동 중인 고블린 카드, DM이 연 트래커 창, 고블린의 커맨드 바(시미터·단궁·붙잡기…), 붙잡기 카드(대상의 내성 vs DC) (`node scripts/capture-client-totm.mjs`, 시나리오 SC-48~49)
-- `69-totm-spell-fireball.png` — DM 화면, 고블린의 턴에 DM이 마법사를 골라 파이어볼을 고블린·파이터에게: 채팅의 주문 카드("✨ 파이어볼 4레벨 · 마법사", 대상마다 민첩 내성 vs DC 14와 성공/실패 배지, 피해 주사위 9개, 피해 32 → 고블린 HP 10 → 0 사망 / 파이터는 절반 16, HP 28 → 12, 되돌리기), 아이콘 위 떠오름과 HP 바, NPC 줄의 고블린은 ✖ 사망 (`node scripts/capture-client-totm.mjs`, 시나리오 SC-53)
-- `70-totm-dragon-multiattack-breath-legendary.png` — DM 화면, 고블린의 턴에 DM이 고른 성인 황동 드래곤의 커맨드 바(⚔⚔ 다중공격 찢기×3, ⚔ 찢기, ☄ 화염 브레스 "재충전 대기", ☄ 수면 브레스 DC 18, ✨ 마법, 👑 전설 2/3): 채팅에 찢기 카드들, "화염 브레스 NPC 행동" 주문 카드(마법사·고블린의 민첩 내성 vs DC 18, 성공 절반), "전설 행동 · 급습 (1/3)" 카드; 아이콘 위 "−22 내성 ✓"·"사망" 떠오름 (`node scripts/capture-client-totm.mjs`, 시나리오 SC-54; SC-55의 준비 발동은 같은 실행에서 확인)
-- `71-d90-dm-approval.png` — DM 화면, 캠페인 설정 "플레이어의 판정 결과를 DM이 확인한 뒤 적용"을 켠 장면에서 플레이어의 대검 공격이 "DM 확인 대기"로 붙잡힌 상태: 보드가 흐려지고 가운데 "DM 확인" 오버레이(공격자 → 대상: 결과, 적용/취소); 적용하면 같은 카드가 적용판으로 바뀌고 오버레이가 사라짐 (`node scripts/capture-client-d90.mjs`, 시나리오 SC-43)

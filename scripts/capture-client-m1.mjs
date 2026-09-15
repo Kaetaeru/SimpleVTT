@@ -94,16 +94,16 @@ try {
   await page.getByText("막힘 없음").first().waitFor();
   await shot("07-wizard-review", true);
   await page.getByRole("button", { name: "저장하고 시트 열기" }).click();
-  await page.getByText("드워프의 강인함").first().waitFor();
+  await page.locator(".cl-hp-big").first().waitFor();
   await shot("08-sheet-fighter", true);
 
-  // Level up to 5 from the sheet (edit → add a level → save).
-  await page.getByRole("button", { name: "편집 · 레벨 업" }).click();
-  await page.getByRole("button", { name: "레벨 추가" }).click();
+  // Level up to 5 from the sheet (레벨 업 → +1 레벨 → 적용).
+  await page.getByRole("button", { name: "레벨 업" }).click();
+  await page.getByRole("button", { name: "+1 레벨" }).click();
   await page.getByText("총 5레벨").first().waitFor();
-  await page.getByRole("button", { name: "남은 선택 빠르게 채우기" }).click();
-  await page.getByRole("button", { name: "저장", exact: true }).click();
-  await page.getByText("총 5레벨").first().waitFor();
+  const fill = page.getByRole("button", { name: "남은 선택 빠르게 채우기" });
+  if (await fill.count()) await fill.click();
+  await page.getByRole("button", { name: "레벨 업 적용" }).click();
   await shot("09-sheet-fighter-level5");
 
   // JSON export modal.

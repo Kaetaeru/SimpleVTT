@@ -20,7 +20,6 @@ export class TableClient {
   private readonly listeners = new Set<() => void>();
   private readonly refusedListeners = new Set<(reason: string, commandType?: string) => void>();
   private readonly showListeners = new Set<(id: string) => void>();
-  private readonly pingListeners = new Set<(ping: Extract<TableEvent, { type: "ping" }>) => void>();
   private readonly assembler = new ChunkAssembler();
   private readonly artWaiters = new Map<string, { resolve: (value: { hash: string; dataUrl: string }) => void; reject: (error: Error) => void; progress?: (done: number, total: number) => void }>();
   private readonly unsubscribe: Array<() => void> = [];
@@ -57,7 +56,6 @@ export class TableClient {
   onRefused(listener: (reason: string, commandType?: string) => void) { this.refusedListeners.add(listener); return () => { this.refusedListeners.delete(listener); }; }
   /** The GM pressed "플레이어에게 보여주기" on an entry this viewer can see. */
   onShow(listener: (id: string) => void) { this.showListeners.add(listener); return () => { this.showListeners.delete(listener); }; }
-  onPing(listener: (ping: Extract<TableEvent, { type: "ping" }>) => void) { this.pingListeners.add(listener); return () => { this.pingListeners.delete(listener); }; }
 
   leave() {
     for (const [id, waiter] of this.artWaiters) { waiter.reject(new Error("연결이 끝났습니다")); this.assembler.drop(id); }
@@ -140,7 +138,6 @@ export class TableClient {
         break;
       }
       case "token.removed": state.pages = state.pages.map((item) => (item.id === event.pageId ? { ...item, tokens: item.tokens.filter((token) => token.id !== event.id) } : item)); break;
-      case "ping": for (const listener of [...this.pingListeners]) listener(event); break;
       case "tracker": state.tracker = event.tracker; break;
       case "journal.show": for (const listener of [...this.showListeners]) listener(event.id); break;
       case "kicked": state.players = state.players.filter((item) => item.userId !== event.userId); if (event.userId === this.options.userId) { this.statusState = "refused"; this.refusal = "GM이 내보냈습니다"; } break;

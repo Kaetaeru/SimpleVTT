@@ -73,8 +73,8 @@ async function table(random: () => number) {
   const goblin = newJournalNpc(campaign.id, "dm", monsterById("dnd.srd521.monster.goblin-warrior")!);
   dm.send({ type: "journal.put", entry: goblin });
   await tick();
-  const pcToken = tokenForCharacter(pc, { x: 0, y: 0 });
-  const goblinToken = tokenForNpc(goblin, { x: 2, y: 0 });
+  const pcToken = tokenForCharacter(pc);
+  const goblinToken = tokenForNpc(goblin);
   alice.send({ type: "token.put", pageId: scene.id, token: pcToken });
   dm.send({ type: "token.put", pageId: scene.id, token: goblinToken });
   await tick();
@@ -191,7 +191,7 @@ test("grapple rules: who holds whom is remembered, attacking anyone else is at d
   const bob = newJournalCharacter(host.state.id, "alice", source, initialRuntime(build({ name: "보브", classes: "fighter", level: 1 }).derived));
   alice.send({ type: "journal.put", entry: bob });
   await tick();
-  const bobToken = tokenForCharacter(bob, { x: 3, y: 0 });
+  const bobToken = tokenForCharacter(bob);
   alice.send({ type: "token.put", pageId: host.pageList[0].id, token: bobToken });
   await tick();
   dm.send({ type: "act.attack", attacker: goblinRef, targets: [{ entryId: bob.id, pageId: host.pageList[0].id, tokenId: bobToken.id }], attack: { source: "npc", actionName: "시미터" } });

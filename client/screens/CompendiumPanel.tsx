@@ -33,7 +33,7 @@ export function CompendiumTab({ onOpenEntry }: { onOpenEntry: (id: string) => vo
     const count = snapshot.journal.filter((entry) => entry.kind === "npc" && entry.monsterId === monster.id).length;
     const npc = newJournalNpc(snapshot.campaignId, c.userId, monster, { name: count ? `${monster.name} ${count + 1}` : monster.name });
     c.putJournal(npc);
-    if (!placeToken(tokenForNpc(npc, { x: 0, y: 0 }))) alert("열린 페이지가 없습니다. 저널에는 NPC가 만들어졌습니다.");
+    if (!placeToken(tokenForNpc(npc))) alert("열린 페이지가 없습니다. 저널에는 NPC가 만들어졌습니다.");
   };
   return (
     <div className="cl-compendium">

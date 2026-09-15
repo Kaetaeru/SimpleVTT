@@ -256,7 +256,7 @@ function ActionCard({ message, time, color }: { message: ChatMessage; time: stri
     <div className={`cl-chat-msg action${message.undone ? " undone" : ""}`} data-action-id={message.id} onMouseEnter={() => setHighlight({ entryId: result.target.id })} onMouseLeave={() => setHighlight(null)}>
       <span className="cl-at">{time}</span>{message.who ? <span className="cl-who" style={{ color }}>{message.who}</span> : null}{message.undone ? <Pill tone="bad">되돌림</Pill> : !result.applied ? <Pill tone="accent">DM 확인 대기</Pill> : null}
       <div className="cl-action-card">
-        <div className="cl-roll-head"><Pill tone={tone}>{outcome}{result.damage.length && (result.outcome === "hit" || result.outcome === "crit") ? ` · 피해 ${result.damageTotal}` : ""}</Pill> {result.attacker.name} → {result.target.name}: {result.attack.name}{result.distanceFeet !== undefined ? <span className="cl-quiet cl-small"> · {result.distanceFeet} ft</span> : null}</div>
+        <div className="cl-roll-head"><Pill tone={tone}>{outcome}{result.damage.length && (result.outcome === "hit" || result.outcome === "crit") ? ` · 피해 ${result.damageTotal}` : ""}</Pill> {result.attacker.name} → {result.target.name}: {result.attack.name}</div>
         <div className="cl-roll-dice">
           {result.d20s.map((die, index) => <span key={index} className={`cl-die d20${die === result.kept ? "" : " dropped"}${die === 20 ? " crit" : die === 1 ? " fumble" : ""}`}>{die}</span>)}
           {result.attack.bonus ? <span className="cl-mod">{result.attack.bonus > 0 ? "+" : "−"}{Math.abs(result.attack.bonus)}</span> : null}

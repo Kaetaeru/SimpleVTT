@@ -23,7 +23,7 @@ const base = `http://127.0.0.1:${PORT}/`;
 const failures = [];
 const check = (condition, message) => { if (!condition) { failures.push(message); console.error("FAIL:", message); } else console.log("ok:", message); };
 const tab = (page, name) => page.getByRole("tab", { name: new RegExp(`^${name}`) });
-const tokenOf = (page, name) => page.locator(`.cl-token[data-token-name="${name}"]`);
+const tokenOf = (page, name) => page.locator(`.cl-scene-card[data-token-name="${name}"]`);
 const reveal = async (locator) => { await locator.scrollIntoViewIfNeeded(); return locator.boundingBox(); };
 
 try {
@@ -42,8 +42,6 @@ try {
   await dm.getByRole("button", { name: "새 캠페인" }).click();
   await dm.getByRole("heading", { name: "전투 시험" }).waitFor();
   const code = (await dm.locator(".cl-code").first().textContent())?.trim() ?? "";
-  // These scenarios exercise the grid table; a new campaign opens in TotM mode (D95), so switch it before launching.
-  await dm.getByLabel("테이블 방식").selectOption("grid");
   await dm.getByRole("button", { name: "게임 시작" }).click();
   await dm.locator(".cl-chat-input").waitFor();
   await player.goto(`${base}#/campaigns`);
@@ -52,21 +50,21 @@ try {
   await player.getByRole("button", { name: "입장", exact: true }).click();
   await player.locator(".cl-chat-input").waitFor({ timeout: 10000 });
   await dm.locator(".cl-avatar-chip", { hasText: "지연" }).waitFor({ timeout: 10000 });
-  await dm.getByRole("button", { name: "+ 페이지" }).first().click();
-  await player.locator(".cl-canvas-page").waitFor({ timeout: 10000 });
+  await dm.getByRole("button", { name: "+ 장면" }).first().click();
+  await player.locator(".cl-scene").waitFor({ timeout: 10000 });
 
   // SC-34: the DM drops a goblin from the compendium: NPC in the journal (folder 괴물), unlinked token with 7/7.
   await tab(dm, "컴펜디움").click();
   await dm.getByLabel("컴펜디움 검색").fill("goblin warrior");
   await dm.getByLabel("고블린 전사 캔버스에 놓기", { exact: true }).click();
   await tokenOf(dm, "고블린 전사").waitFor({ timeout: 10000 });
-  const goblinBar = await tokenOf(dm, "고블린 전사").locator(".cl-token-bar small").first().innerText();
+  const goblinBar = await tokenOf(dm, "고블린 전사").locator(".cl-scene-name small").first().innerText();
   check(goblinBar === "10/10", `the goblin token carries its own HP (${goblinBar})`);
   await tokenOf(player, "고블린 전사").waitFor({ timeout: 10000 });
   // The goblin is selected after placement: three arrow presses move it away from the page centre where the
   // player's token will land.
   for (let n = 0; n < 3; n += 1) await dm.keyboard.press("ArrowRight");
-  await player.waitForFunction((name) => parseFloat(document.querySelector(`.cl-token[data-token-name="${name}"]`)?.style.left ?? "0") > 12 * 70, "고블린 전사", { timeout: 10000 });
+  await tokenOf(player, "고블린 전사").waitFor({ timeout: 10000 });
   check(true, "arrow keys move the selected token (seen by the player)");
   await tab(dm, "저널").click();
   await dm.locator(".cl-journal-folder-head", { hasText: "괴물" }).waitFor();
@@ -124,8 +122,8 @@ try {
 
   // SC-37: 다음 턴 highlights the token; going around wraps to 라운드 2 and the counter row shows 2.
   await tracker.getByRole("button", { name: "▶ 다음 턴" }).click();
-  await dm.locator(".cl-token.turn").waitFor({ timeout: 10000 });
-  await player.locator(".cl-token.turn").waitFor({ timeout: 10000 });
+  await dm.locator(".cl-scene-card.turn").waitFor({ timeout: 10000 });
+  await player.locator(".cl-scene-card.turn").waitFor({ timeout: 10000 });
   check(true, "the current turn's token is highlighted on both screens");
   for (let n = 0; n < 3; n += 1) await tracker.getByRole("button", { name: "▶ 다음 턴" }).click();
   await tracker.getByText("라운드 2").waitFor({ timeout: 10000 });
@@ -133,24 +131,27 @@ try {
   check(true, "a full round wraps to 라운드 2 (chat notes it)");
   await player.screenshot({ path: path.join(OUT, "56-tracker-player-round-2.png") });
 
-  // SC-38: the token action bar: "⚔ 시미터" resolves against a target (R7, capture-client-attack.mjs); the plain
-  // 피해 button next to it rolls the scimitar damage into chat; the player's bar shows their attacks.
+  // SC-38: the command bar of a selected creature: the goblin's stat-block attack and the sheet menus (R7 resolves
+  // the attack itself in capture-client-attack.mjs); the player's own bar shows their attacks.
+  // The tracker window floats over the board: close it before using the command bar under it.
+  await dm.locator(".cl-window", { hasText: "턴 트래커" }).getByLabel("창 닫기").click();
   await reveal(tokenOf(dm, "고블린 전사"));
   await tokenOf(dm, "고블린 전사").click();
   const bar = dm.getByRole("toolbar", { name: "고블린 전사 액션" });
   await bar.waitFor();
   check(await bar.getByRole("button", { name: /^⚔ 시미터/ }).count() === 1, "the goblin's bar offers ⚔ 시미터 (rules resolution)");
-  await bar.getByRole("button", { name: "피해" }).first().click();
-  await dm.locator(".cl-roll-card", { hasText: "고블린 전사 · 시미터 피해" }).waitFor({ timeout: 15000 });
+  await bar.getByRole("button", { name: /^판정/ }).click();
+  await dm.getByRole("menuitem", { name: /민첩 내성/ }).click();
+  await dm.locator(".cl-roll-card", { hasText: "고블린 전사 · 민첩 내성" }).waitFor({ timeout: 15000 });
   await tab(player, "채팅").click();
-  await player.locator(".cl-roll-card", { hasText: "고블린 전사 · 시미터 피해" }).waitFor({ timeout: 15000 });
-  check(true, "the action bar's damage roll reaches chat on both screens");
+  await player.locator(".cl-roll-card", { hasText: "고블린 전사 · 민첩 내성" }).waitFor({ timeout: 15000 });
+  check(true, "a roll from the command bar reaches chat on both screens");
   await dm.screenshot({ path: path.join(OUT, "57-action-bar-goblin.png") });
   await reveal(tokenOf(player, "앨리스의 파이터"));
   await tokenOf(player, "앨리스의 파이터").click();
   const playerBar = player.getByRole("toolbar", { name: "앨리스의 파이터 액션" });
   await playerBar.waitFor();
-  check((await playerBar.innerText()).includes("이니셔티브") && (await playerBar.innerText()).includes("⚔"), "the player's action bar shows initiative and ⚔ attacks");
+  check((await playerBar.innerText()).includes("⚔") && (await playerBar.innerText()).includes("판정"), "the player's command bar shows their attacks and the sheet menus (already in the tracker, so no 이니셔티브 button)");
   await player.screenshot({ path: path.join(OUT, "58-action-bar-player.png") });
   await player.click(".cl-canvas-page", { position: { x: 5, y: 5 } }).catch(() => {});
   check(await player.getByRole("toolbar", { name: "고블린 전사 액션" }).count() === 0, "a player has no action bar for the goblin");

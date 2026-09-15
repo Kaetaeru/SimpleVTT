@@ -21,7 +21,6 @@ import { NpcWindow } from "./NpcSheet";
 import { TrackerWindow } from "./TrackerWindow";
 import { journalDragProps, PageSettingsWindow, placeCharacterToken, requestAttackOptions, requestTargets, TokenWindow } from "./PageCanvas";
 import { hasSmite, hasSneakAttack, smiteSlots, weaponRange } from "../rules/attackSpec";
-import { isScene } from "../campaign/page";
 import { SheetPlay } from "./SheetPlay";
 import { SheetView } from "./SheetView";
 
@@ -397,7 +396,7 @@ function CharacterWindow({ entry, onClose, onOpen }: { entry: JournalCharacter; 
     const page = viewer.snapshot.pages.find((item) => item.tokens.some((token) => token.represents === entry.id));
     const token = page?.tokens.find((item) => item.represents === entry.id);
     const range = weaponRange(attack);
-    const targets = await requestTargets(`${attack.name} 대상을 클릭하세요 (Esc 취소, 여러 대상은 Shift)`, { multi: true, from: token && !isScene(page) ? { tokenId: token.id, rangeFeet: range.rangeFeet, longRangeFeet: range.longRangeFeet } : undefined });
+    const targets = await requestTargets(`${attack.name} 대상을 클릭하세요 (Esc 취소, 여러 대상은 Shift)`, { multi: true });
     if (!targets.length || !page) return;
     const sneak = hasSneakAttack(derived, attack);
     const slots = hasSmite(derived) ? smiteSlots(derived, entry.runtime) : [];
@@ -455,7 +454,7 @@ function AttributesTab({ derived, runtime }: { derived: ReturnType<typeof derive
   const label = (key: string) => key.endsWith("_save") ? `${ABILITY_KO[key.slice(0, 3) as keyof typeof ABILITY_KO]} 내성` : (ABILITY_KO as Record<string, string>)[key] ?? derived.skills.find((skill) => skill.id === key)?.name ?? ({ hp: "HP", ac: "AC", initiative: "이니셔티브", speed: "이동 속도", proficiency: "숙련 보너스", passive_perception: "패시브 지각" } as Record<string, string>)[key] ?? key;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      <p className="cl-muted cl-small">Roll20의 Attributes 탭에 해당합니다. 값은 시트에서 파생돼 자동으로 맞춰지며, 토큰 바(R5)가 여기의 HP·AC를 연결합니다. 능력(매크로)은 R10에서 옵니다.</p>
+      <p className="cl-muted cl-small">Roll20의 Attributes 탭에 해당합니다. 값은 시트에서 파생돼 자동으로 맞춰지며, 아이콘의 바가 여기의 HP·AC를 연결합니다. 능력(매크로)은 R17에서 옵니다.</p>
       <table className="cl-table"><thead><tr><th>속성</th><th>이름</th><th>값</th></tr></thead><tbody>{rows.map(([key, value]) => <tr key={key}><td><code>{key}</code></td><td>{label(key)}</td><td className="num">{value}</td></tr>)}</tbody></table>
     </div>
   );

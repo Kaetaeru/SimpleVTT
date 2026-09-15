@@ -55,9 +55,9 @@ async function table() {
   dm.send({ type: "journal.put", entry: goblin });
   dm.send({ type: "journal.put", entry: dragon });
   await tick();
-  const pcToken = tokenForCharacter(pc, { x: 0, y: 0 });
-  const goblinToken = tokenForNpc(goblin, { x: 2, y: 0 });
-  const dragonToken = tokenForNpc(dragon, { x: 4, y: 0 });
+  const pcToken = tokenForCharacter(pc);
+  const goblinToken = tokenForNpc(goblin);
+  const dragonToken = tokenForNpc(dragon);
   alice.send({ type: "token.put", pageId: scene.id, token: pcToken });
   dm.send({ type: "token.put", pageId: scene.id, token: goblinToken });
   dm.send({ type: "token.put", pageId: scene.id, token: dragonToken });

@@ -43,9 +43,9 @@ async function table() {
   const goblin = newJournalNpc(campaign.id, "dm", monsterById("dnd.srd521.monster.goblin-warrior")!);
   dm.send({ type: "journal.put", entry: goblin });
   await tick();
-  const wizardToken = tokenForCharacter(pc, { x: 0, y: 0 });
-  const fighterToken = tokenForCharacter(pc2, { x: 1, y: 0 });
-  const goblinToken = tokenForNpc(goblin, { x: 2, y: 0 });
+  const wizardToken = tokenForCharacter(pc);
+  const fighterToken = tokenForCharacter(pc2);
+  const goblinToken = tokenForNpc(goblin);
   alice.send({ type: "token.put", pageId: scene.id, token: wizardToken });
   alice.send({ type: "token.put", pageId: scene.id, token: fighterToken });
   dm.send({ type: "token.put", pageId: scene.id, token: goblinToken });

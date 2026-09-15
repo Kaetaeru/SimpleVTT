@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { newJournalCharacter, newJournalNpc } from "../../client/campaign/journal";
 import { newCampaign } from "../../client/campaign/model";
-import { newPage, tokenForCharacter, tokenForNpc } from "../../client/campaign/page";
+import { newScene, tokenForCharacter, tokenForNpc } from "../../client/campaign/page";
 import { advanceTurn, emptyTracker, newTurn, roundCounterTurn, sortTurns, withoutTurn, withTurn } from "../../client/campaign/tracker";
 import { startEffect } from "../../client/character/play";
 import { initialRuntime } from "../../client/character/runtime";
@@ -65,7 +65,7 @@ test("compendium: monsters are searchable and become NPCs with unlinked tokens s
   assert.equal(boss.ac, 17);
   const npc = newJournalNpc("camp", "dm", boss);
   assert.deepEqual([npc.kind, npc.folder, npc.runtime.hp.current, npc.runtime.hp.max, npc.canView], ["npc", "괴물", 21, 21, []]);
-  const token = tokenForNpc(npc, { x: 1, y: 1 });
+  const token = tokenForNpc(npc);
   assert.equal(token.bars[0].link, undefined, "monster tokens carry their own HP (unlinked, D78)");
   assert.equal(token.bars[0].value, 21);
   assert.deepEqual(token.controlledBy, []);
@@ -80,7 +80,7 @@ test("host: opening the tracker reaches players; initiative rolls into rows; 다
   let at = 0;
   const { host, dm, alice, campaign } = stage(() => rolls[at++ % rolls.length]);
   await tick();
-  const cave = newPage(campaign.id, "동굴", 0);
+  const cave = newScene(campaign.id, "동굴", 0);
   dm.send({ type: "page.put", page: cave });
   dm.send({ type: "page.ribbon", pageId: cave.id });
   const { source, derived } = build({ name: "앨리스의 파이터", classes: "fighter", level: 3 });
@@ -91,8 +91,8 @@ test("host: opening the tracker reaches players; initiative rolls into rows; 다
   const npc = { ...newJournalNpc(campaign.id, "dm", dragon), runtime: { ...newJournalNpc(campaign.id, "dm", dragon).runtime, spent: { "산성 브레스": true }, legendaryUsed: 2 } };
   dm.send({ type: "journal.put", entry: npc });
   await tick();
-  const pcToken = tokenForCharacter(pc, { x: 1, y: 1 });
-  const npcToken = tokenForNpc(npc, { x: 5, y: 5 });
+  const pcToken = tokenForCharacter(pc);
+  const npcToken = tokenForNpc(npc);
   alice.send({ type: "token.put", pageId: cave.id, token: pcToken });
   dm.send({ type: "token.put", pageId: cave.id, token: npcToken });
   await tick();
