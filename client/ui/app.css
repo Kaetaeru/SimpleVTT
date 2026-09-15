@@ -520,3 +520,84 @@ span.cl-tracker-init{display:inline-grid;place-items:center}
 .cl-approvals{position:absolute;right:12px;bottom:12px;z-index:56;display:flex;flex-direction:column;gap:8px;max-width:360px;pointer-events:none}
 .cl-approvals:empty{display:none}
 .cl-approval{pointer-events:auto;padding:8px 10px;border-radius:var(--radius-m);background:rgba(20,23,29,.95);border:1px solid rgba(255,209,102,.55);box-shadow:0 8px 24px rgba(0,0,0,.45);display:flex;flex-direction:column;gap:6px;animation:cl-toast-in .18s ease-out}
+
+/* ---- T4: visual hierarchy (D100) — what stands out in each situation ---- */
+.cl-canvas.scene-mode .cl-canvas-body{position:relative}
+.cl-scene{padding-top:52px}
+.cl-canvas.scene-mode:not(.has-tracker) .cl-scene{padding-top:14px}
+/* the acting card is the loudest thing on the board; the rest steps back */
+.cl-scene-card{transition:opacity .2s ease,transform .2s ease}
+.cl-scene-card.dimmed{opacity:.72}
+.cl-scene-card.turn{transform:translateY(-4px) scale(1.06)}
+.cl-scene-card.turn .cl-scene-portrait{box-shadow:0 0 0 3px #ffd166,0 0 26px rgba(255,209,102,.7)}
+.cl-scene-now{position:absolute;top:-12px;left:50%;transform:translateX(-50%);z-index:2;padding:2px 8px;border-radius:999px;background:#ffd166;color:#141008;font-size:10px;font-weight:700;letter-spacing:.04em;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.5)}
+/* targeting: candidates lit and pulsing, everything else dark */
+.cl-scene.targeting .cl-scene-card.not-candidate{opacity:.28;filter:grayscale(.6);pointer-events:none}
+.cl-scene.targeting .cl-scene-card.candidate{cursor:crosshair}
+.cl-scene.targeting .cl-scene-card.candidate .cl-scene-portrait{animation:cl-pulse 1.2s ease-in-out infinite;border-color:rgba(229,72,77,.7)}
+.cl-scene.targeting .cl-scene-card.candidate.picked .cl-scene-portrait{animation:none;outline:3px solid #e5484d;outline-offset:2px}
+.cl-scene.targeting .cl-scene-stage,.cl-scene.targeting .cl-scene-row h4{opacity:.35}
+@keyframes cl-pulse{0%,100%{box-shadow:0 0 0 0 rgba(229,72,77,.0),0 6px 18px rgba(0,0,0,.35)}50%{box-shadow:0 0 0 4px rgba(229,72,77,.45),0 6px 18px rgba(0,0,0,.35)}}
+.cl-targeting-banner{position:absolute;left:50%;top:14px;transform:translateX(-50%);z-index:45;margin:0;padding:10px 16px;gap:12px;border:1px solid #e5484d;background:rgba(20,23,29,.96);box-shadow:0 10px 30px rgba(0,0,0,.5);border-radius:12px;font-size:14px}
+.cl-targeting-icon{font-size:20px}
+.cl-targeting-text{display:flex;flex-direction:column;line-height:1.2}
+.cl-targeting-text strong{font-size:15px}
+.cl-targeting-text small{color:var(--muted);font-size:11px}
+/* results float over the card they happened to */
+.cl-float{position:absolute;left:50%;top:38%;transform:translate(-50%,-50%);z-index:3;padding:3px 9px;border-radius:8px;font-weight:800;font-size:16px;color:#fff;text-shadow:0 1px 3px #000;background:rgba(20,23,29,.85);border:1px solid rgba(255,255,255,.15);white-space:nowrap;pointer-events:none;animation:cl-float 2.6s ease-out forwards}
+.cl-float.hit{color:#ff8a8a;border-color:rgba(229,72,77,.7)}
+.cl-float.crit{color:#ffb347;font-size:19px;border-color:#ffb347}
+.cl-float.miss{color:#c9ced8;font-weight:600}
+.cl-float.good{color:#7ee2a0;border-color:rgba(63,185,80,.7)}
+.cl-float.bad{color:#ff8a8a;border-color:rgba(229,72,77,.7)}
+.cl-float.info{color:#e9ecf2}
+@keyframes cl-float{0%{opacity:0;transform:translate(-50%,-30%) scale(.8)}12%{opacity:1;transform:translate(-50%,-50%) scale(1.08)}20%{transform:translate(-50%,-50%) scale(1)}75%{opacity:1}100%{opacity:0;transform:translate(-50%,-110%)}}
+/* the initiative ribbon: who acts now, who is next */
+.cl-turn-ribbon{position:absolute;left:50%;top:8px;transform:translateX(-50%);z-index:30;display:flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:rgba(20,23,29,.92);border:1px solid rgba(255,255,255,.12);box-shadow:0 6px 18px rgba(0,0,0,.4);backdrop-filter:blur(6px);max-width:calc(100% - 40px);overflow:hidden}
+.cl-turn-ribbon-round{font-size:11px;color:var(--muted);padding-right:6px;border-right:1px solid rgba(255,255,255,.12);white-space:nowrap}
+.cl-turn-ribbon-item{display:inline-flex;align-items:center;gap:6px;opacity:.55}
+.cl-turn-ribbon-item.now{opacity:1}
+.cl-turn-ribbon-avatar{width:22px;height:22px;border-radius:50%;overflow:hidden;background:var(--surface-2);border:1px solid rgba(255,255,255,.2);display:grid;place-items:center;font-size:11px;font-weight:700}
+.cl-turn-ribbon-avatar img{width:100%;height:100%;object-fit:cover}
+.cl-turn-ribbon-item.now .cl-turn-ribbon-avatar{width:30px;height:30px;border:2px solid #ffd166;box-shadow:0 0 10px rgba(255,209,102,.6)}
+.cl-turn-ribbon-name{display:flex;flex-direction:column;line-height:1.05;font-size:12px;font-weight:700;white-space:nowrap}
+.cl-turn-ribbon-name small{font-size:9px;font-weight:600;color:#ffd166;letter-spacing:.06em}
+.cl-turn-ribbon-name.next{font-weight:500;font-size:11px;color:var(--muted)}
+.cl-turn-ribbon-name.next small{color:var(--muted)}
+.cl-turn-ribbon-tools{display:inline-flex;gap:4px;margin-left:6px;padding-left:8px;border-left:1px solid rgba(255,255,255,.12)}
+/* the command bar: loud on your turn, quiet otherwise */
+.cl-cmd{display:flex;align-items:center;gap:14px;padding:8px 14px;border-top:1px solid var(--line);background:var(--surface);min-height:58px}
+.cl-cmd.turn{background:linear-gradient(90deg,rgba(255,209,102,.16),rgba(255,209,102,.04) 40%,transparent);border-top:2px solid #ffd166;box-shadow:inset 0 1px 0 rgba(255,209,102,.4)}
+.cl-cmd-who{display:flex;flex-direction:column;gap:2px;min-width:150px}
+.cl-cmd-status{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.cl-cmd.turn .cl-cmd-status{color:#ffd166;font-weight:800;font-size:15px;letter-spacing:.02em}
+.cl-cmd-name{font-weight:600;font-size:13px}
+.cl-cmd.free .cl-cmd-name{color:var(--muted)}
+.cl-cmd-groups{display:flex;flex-wrap:wrap;align-items:center;gap:12px;flex:1;min-width:0}
+.cl-cmd-group{display:flex;flex-wrap:wrap;align-items:center;gap:4px;padding:4px 8px;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06)}
+.cl-cmd-group.attack{border-color:rgba(229,72,77,.35);background:rgba(229,72,77,.06)}
+.cl-cmd-label{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-right:4px}
+.cl-btn.attack{background:#9e2a2b;border-color:#c23c3e;color:#fff;font-weight:600}
+.cl-btn.attack:hover:not(:disabled){background:#b93435}
+.cl-btn.attack b{font-weight:800;opacity:.9}
+.cl-cmd.free .cl-cmd-group{opacity:.85}
+.cl-cmd-end{padding:10px 18px;font-size:15px;font-weight:800;background:#ffd166;color:#141008;border-color:#ffd166;white-space:nowrap;box-shadow:0 4px 14px rgba(255,209,102,.35)}
+.cl-cmd-end:hover{background:#ffdc85}
+/* approvals: centred, the board dimmed behind */
+.cl-approval-overlay{position:absolute;inset:0;z-index:70;display:grid;place-items:center;background:rgba(6,8,12,.55);backdrop-filter:blur(2px)}
+.cl-approval-overlay .cl-approval{width:min(440px,92%);padding:16px 18px;border:1px solid #ffd166;border-radius:14px;background:rgba(20,23,29,.98);box-shadow:0 18px 50px rgba(0,0,0,.6);display:flex;flex-direction:column;gap:10px;animation:cl-toast-in .18s ease-out}
+.cl-approval-head{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:#ffd166;font-weight:700}
+.cl-approval-head small{color:var(--muted);margin-left:6px}
+.cl-approval-body{font-size:15px;line-height:1.4}
+.cl-approval-overlay .cl-btn.small{font-size:13px;padding:8px 12px}
+.cl-waiting-note{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);z-index:40;padding:6px 12px;border-radius:999px;background:rgba(20,23,29,.9);border:1px solid rgba(255,255,255,.12);color:var(--muted);font-size:12px;white-space:nowrap}
+/* chat: the outcome first, the palette folded */
+.cl-palette-toggle{align-self:flex-start;margin-top:2px}
+.cl-toasts{top:52px}
+
+/* T4 polish: the targeting banner never wraps or competes with toasts; the board leaves room for the ribbon */
+.cl-targeting-text strong{white-space:nowrap}
+.cl-canvas.is-targeting .cl-toasts{display:none}
+.cl-toasts{top:10px}
+.cl-canvas.has-tracker .cl-toasts{top:58px}
+.cl-canvas.scene-mode.has-tracker .cl-scene{padding-top:60px}

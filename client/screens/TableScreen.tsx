@@ -44,7 +44,8 @@ function Table() {
   const focusWindow = useCallback((key: string) => setWindows((list) => { const item = list.find((entry) => entry.key === key); return item && list[list.length - 1] !== item ? [...list.filter((entry) => entry !== item), item] : list; }), []);
   // The tracker window follows the tracker's open flag (the GM opens it for everyone, §6.1).
   const trackerOpen = snapshot.tracker.open;
-  useEffect(() => { setWindows((list) => { const has = list.some((item) => item.kind === "tracker"); if (trackerOpen && !has) return [...list, { key: "tracker", kind: "tracker" }]; if (!trackerOpen && has) return list.filter((item) => item.kind !== "tracker"); return list; }); }, [trackerOpen]);
+  useEffect(() => { setWindows((list) => { const has = list.some((item) => item.kind === "tracker"); if (trackerOpen && isGm && !has) return [...list, { key: "tracker", kind: "tracker" }]; if (!trackerOpen && has) return list.filter((item) => item.kind !== "tracker"); return list; }); }, [trackerOpen, isGm]);
+  const openTracker = useCallback(() => { c.setTracker({ ...snapshot.tracker, open: true }); setWindows((list) => (list.some((item) => item.kind === "tracker") ? list : [...list, { key: "tracker", kind: "tracker" }])); }, [c, snapshot.tracker]);
   // "플레이어에게 보여주기": the GM's request opens the entry here.
   const shows = c.table.shows;
   useEffect(() => { for (const id of shows) { openEntry(id); c.dismissShow(id); } }, [shows, openEntry, c]);
@@ -74,7 +75,7 @@ function Table() {
       <JournalWindows windows={windows} onClose={closeWindow} onFocus={focusWindow} onOpen={openEntry} />
       <div className="cl-table-grid">
         <section className="cl-table-main">
-          <PageCanvas onOpenEntry={openEntry} onOpenToken={openToken} onOpenPageSettings={openPageSettings} />
+          <PageCanvas onOpenEntry={openEntry} onOpenToken={openToken} onOpenPageSettings={openPageSettings} onOpenTracker={openTracker} />
         </section>
         <aside className="cl-sidebar">
           <div className="cl-sidebar-tabs" role="tablist">
@@ -196,13 +197,14 @@ function ActionCard({ message, time, color }: { message: ChatMessage; time: stri
   const isGm = snapshot.players.find((player) => player.userId === c.userId)?.role === "gm";
   const result = message.action as AttackResolution;
   const [delta, setDelta] = useState("");
+  const [palette, setPalette] = useState(false);
   const outcome = result.outcome === "crit" ? "치명타" : result.outcome === "hit" ? "적중" : result.outcome === "fumble" ? "자동 실패" : "빗나감";
   const tone = result.outcome === "crit" || result.outcome === "hit" ? "good" : "bad";
   return (
     <div className={`cl-chat-msg action${message.undone ? " undone" : ""}`} data-action-id={message.id}>
       <span className="cl-at">{time}</span>{message.who ? <span className="cl-who" style={{ color }}>{message.who}</span> : null}{message.undone ? <Pill tone="bad">되돌림</Pill> : !result.applied ? <Pill tone="accent">DM 확인 대기</Pill> : null}
       <div className="cl-action-card">
-        <div className="cl-roll-head">{result.attacker.name} → {result.target.name}: {result.attack.name}{result.distanceFeet !== undefined ? <span className="cl-quiet cl-small"> · {result.distanceFeet} ft</span> : null}</div>
+        <div className="cl-roll-head"><Pill tone={tone}>{outcome}{result.damage.length && (result.outcome === "hit" || result.outcome === "crit") ? ` · 피해 ${result.damageTotal}` : ""}</Pill> {result.attacker.name} → {result.target.name}: {result.attack.name}{result.distanceFeet !== undefined ? <span className="cl-quiet cl-small"> · {result.distanceFeet} ft</span> : null}</div>
         <div className="cl-roll-dice">
           {result.d20s.map((die, index) => <span key={index} className={`cl-die d20${die === result.kept ? "" : " dropped"}${die === 20 ? " crit" : die === 1 ? " fumble" : ""}`}>{die}</span>)}
           {result.attack.bonus ? <span className="cl-mod">{result.attack.bonus > 0 ? "+" : "−"}{Math.abs(result.attack.bonus)}</span> : null}
@@ -222,7 +224,8 @@ function ActionCard({ message, time, color }: { message: ChatMessage; time: stri
           </div>
         ) : null}
         {result.overrides?.note ? <div className="cl-small cl-quiet">DM 메모: {result.overrides.note}</div> : null}
-        {isGm && !message.undone ? (
+        {isGm && !message.undone ? <button type="button" className="cl-btn small quiet cl-palette-toggle" aria-expanded={palette} onClick={() => setPalette((value) => !value)}>{palette ? "조정 닫기" : "조정 ▾"}</button> : null}
+        {isGm && !message.undone && palette ? (
           <div className="cl-palette" aria-label="DM 팔레트">
             {!result.applied ? <button type="button" className="cl-btn small primary" onClick={() => c.confirmAction(message.id)}>적용</button> : null}
             <button type="button" className="cl-btn small" onClick={() => c.adjustAction(message.id, { outcome: "hit" })}>강제 적중</button>

@@ -53,11 +53,13 @@ export interface CanvasHandlers {
   onOpenEntry: (id: string) => void;
   onOpenToken: (pageId: string, tokenId: string) => void;
   onOpenPageSettings: (pageId: string) => void;
+  /** The DM's editable tracker window (players read the ribbon instead). */
+  onOpenTracker?: () => void;
 }
 
 /* ---------- Canvas ---------- */
 
-export function PageCanvas({ onOpenEntry, onOpenToken, onOpenPageSettings }: CanvasHandlers) {
+export function PageCanvas({ onOpenEntry, onOpenToken, onOpenPageSettings, onOpenTracker }: CanvasHandlers) {
   const c = useCampaigns();
   const { isGm, snapshot, viewer } = useViewer();
   const pages = useMemo(() => [...snapshot.pages].sort((a, b) => a.order - b.order), [snapshot.pages]);
@@ -217,6 +219,9 @@ export function PageCanvas({ onOpenEntry, onOpenToken, onOpenPageSettings }: Can
   // D97: the turn panel — a player's own character's turn; for the DM, the turn of anyone no player controls.
   const players = snapshot.players.filter((player) => player.role !== "gm");
   const myTurn = turnToken && (isGm ? !players.some((player) => controlsToken(turnToken, { userId: player.userId, role: "player" }, journal)) : controlsToken(turnToken, viewer, journal)) ? turnToken : undefined;
+  // The command bar's creature: my turn's, else my selection, else (a player) my only creature on the scene.
+  const mine = page.tokens.filter((token) => token.represents && token.layer !== "map" && controlsToken(token, viewer, journal));
+  const commandToken = myTurn ?? (selected.length === 1 ? page.tokens.find((token) => token.id === selected[0] && token.represents && controlsToken(token, viewer, journal)) : undefined) ?? (!isGm && mine.length === 1 ? mine[0] : undefined);
   const sortedTokens = [...page.tokens].sort((a, b) => layerOrder(a.layer) - layerOrder(b.layer) || a.z - b.z);
   const rangeOf = (token: Token): "in" | "long" | "out" | null => {
     if (!targeting?.from || isScene(page)) return null;
@@ -228,7 +233,7 @@ export function PageCanvas({ onOpenEntry, onOpenToken, onOpenPageSettings }: Can
   const menuToken = menu ? page.tokens.find((token) => token.id === menu.tokenId) ?? null : null;
   const pageStyle = { width: page.width * cell, height: page.height * cell, background: page.background.color, backgroundImage: page.grid.enabled ? gridCss(page) : undefined, backgroundSize: page.grid.enabled ? `${cell}px ${cell}px` : undefined } as React.CSSProperties;
   return (
-    <div className="cl-canvas" data-page-id={page.id}>
+    <div className={`cl-canvas${scene ? " scene-mode" : ""}${targeting ? " is-targeting" : ""}${myTurn ? " my-turn" : ""}${snapshot.tracker.turns.length ? " has-tracker" : ""}`} data-page-id={page.id}>
       {isGm ? (
         <div className="cl-page-bar">
           <div className="cl-page-strip" role="tablist" aria-label="페이지">
@@ -241,33 +246,39 @@ export function PageCanvas({ onOpenEntry, onOpenToken, onOpenPageSettings }: Can
           </div>
           <div className="cl-row" style={{ gap: 4 }}>
             <button type="button" className="cl-btn small" onClick={() => addPage(totm ? "scene" : "grid")}>{totm ? "+ 장면" : "+ 페이지"}</button>
-            <button type="button" className="cl-btn small quiet" title={totm ? "격자 지도 페이지 (위치·거리 추적)" : "위치 없는 장면 (Theatre of the Mind)"} onClick={() => addPage(totm ? "grid" : "scene")}>{totm ? "+ 격자 페이지" : "+ 장면"}</button>
-            <button type="button" className="cl-btn small" onClick={() => { const copy = { ...page, id: newPage(page.campaignId, "", 0).id, name: `${page.name} (복제)`, order: live.length, tokens: page.tokens.map((token) => ({ ...token, id: newToken({ name: "" }).id })), createdAt: new Date().toISOString() }; c.putPage({ ...copy, tokens: [] }); for (const token of copy.tokens) c.putToken(copy.id, token); setGmPageId(copy.id); }}>복제</button>
-            <button type="button" className="cl-btn small" onClick={() => onOpenPageSettings(page.id)}>페이지 설정</button>
-            <button type="button" className="cl-btn small" onClick={() => c.putPage({ ...page, archived: !page.archived })}>{page.archived ? "보관 해제" : "보관"}</button>
-            <button type="button" className={`cl-btn small quiet${showArchived ? " active" : ""}`} onClick={() => setShowArchived((value) => !value)}>보관함</button>
+            <Dropdown label="⋯" items={[
+              { key: "other", label: totm ? "+ 격자 페이지" : "+ 장면", hint: totm ? "위치·거리를 추적하는 지도" : "위치 없는 장면", onSelect: () => addPage(totm ? "grid" : "scene") },
+              { key: "settings", label: "페이지 설정", hint: "이름·배경 그림·격자", onSelect: () => onOpenPageSettings(page.id) },
+              { key: "dup", label: "복제", onSelect: () => { const copy = { ...page, id: newPage(page.campaignId, "", 0).id, name: `${page.name} (복제)`, order: live.length, tokens: page.tokens.map((token) => ({ ...token, id: newToken({ name: "" }).id })), createdAt: new Date().toISOString() }; c.putPage({ ...copy, tokens: [] }); for (const token of copy.tokens) c.putToken(copy.id, token); setGmPageId(copy.id); } },
+              { key: "archive", label: page.archived ? "보관 해제" : "보관", onSelect: () => c.putPage({ ...page, archived: !page.archived }) },
+              { key: "archived", label: showArchived ? "보관함 숨기기" : "보관함 보기", onSelect: () => setShowArchived((value) => !value) },
+              ...(scene ? [{ key: "layer", label: layer === "gm" ? "토큰 레이어에 놓기" : "GM 레이어에 놓기 (플레이어에게 숨김)", hint: "새로 놓는 토큰의 레이어", onSelect: () => setLayer(layer === "gm" ? "objects" : "gm") }] : []),
+            ]} />
             {snapshot.players.filter((player) => player.role !== "gm").length ? <SplitParty page={page} pages={live} /> : null}
           </div>
         </div>
-      ) : <div className="cl-page-bar"><span className="cl-small"><strong>{page.name}</strong> <span className="cl-quiet">{scene ? "장면 · 위치와 거리는 DM이 말로" : `${page.width}×${page.height} · 1칸 = ${page.scale} ${page.unit}`}</span></span></div>}
-      {myTurn ? <TurnPanel token={myTurn} page={page} onOpenEntry={onOpenEntry} /> : null}
+      ) : scene ? null : <div className="cl-page-bar"><span className="cl-small"><strong>{page.name}</strong> <span className="cl-quiet">{page.width}×{page.height} · 1칸 = {page.scale} {page.unit}</span></span></div>}
+      {!scene && myTurn ? <TurnPanel token={myTurn} page={page} onOpenEntry={onOpenEntry} /> : null}
       <div className="cl-canvas-body">
-        <ToastLayer />
+        <ToastLayer boardShowsResults={scene} />
         <ApprovalLayer />
+        {snapshot.tracker.turns.length ? <TurnRibbon page={page} onOpenTracker={onOpenTracker} /> : null}
+        {scene ? null : (
         <div className="cl-toolbar" role="toolbar" aria-label="도구">
           <button type="button" className="cl-tool active" title="선택·이동">⬚</button>
-          {isGm ? (scene ? ["objects", "gm"] : ["map", "objects", "gm"]) .map((item) => item as Layer).map((item) => <button type="button" key={item} className={`cl-tool${layer === item ? " active" : ""}`} title={`${LAYER_KO[item]} 레이어`} aria-label={`${LAYER_KO[item]} 레이어`} aria-pressed={layer === item} onClick={() => { setLayer(item); setSelected([]); }}>{item === "map" ? "🗺" : item === "objects" ? "♟" : "👁"}</button>) : null}
-          {scene ? null : <><span className="cl-tool-gap" />
+          {isGm ? (["map", "objects", "gm"] as Layer[]).map((item) => <button type="button" key={item} className={`cl-tool${layer === item ? " active" : ""}`} title={`${LAYER_KO[item]} 레이어`} aria-label={`${LAYER_KO[item]} 레이어`} aria-pressed={layer === item} onClick={() => { setLayer(item); setSelected([]); }}>{item === "map" ? "🗺" : item === "objects" ? "♟" : "👁"}</button>) : null}
+          <span className="cl-tool-gap" />
           <button type="button" className="cl-tool" title="확대 (Ctrl+휠)" onClick={() => zoomBy(1)}>+</button>
           <button type="button" className="cl-tool small" title="100%" onClick={() => setZoom(1)}>{Math.round(zoom * 100)}%</button>
           <button type="button" className="cl-tool" title="축소" onClick={() => zoomBy(-1)}>−</button>
           <button type="button" className="cl-tool" title="그리기 (R9)" disabled>✎</button>
           <button type="button" className="cl-tool" title="안개 (R9)" disabled>☁</button>
-          <button type="button" className="cl-tool" title="자 (R9)" disabled>📏</button></>}
+          <button type="button" className="cl-tool" title="자 (R9)" disabled>📏</button>
         </div>
+        )}
         <div className={`cl-canvas-viewport${targeting ? " targeting" : ""}${scene ? " scene" : ""}`} ref={viewport} onWheel={scene ? undefined : onWheel} onDragOver={(event) => { const types = [...event.dataTransfer.types]; if (types.includes(JOURNAL_DRAG_TYPE) || types.includes(ART_DRAG_TYPE) || types.includes(COMPENDIUM_DRAG_TYPE)) event.preventDefault(); }} onDrop={onDrop}>
           {scene ? (
-            <SceneBoard page={page} tokens={sortedTokens} selected={selected} picked={targeting?.picked ?? []} turnTokenId={turnToken?.id} acting={acting} journal={journal} isGm={isGm}
+            <SceneBoard page={page} tokens={sortedTokens} selected={selected} targeting={targeting} turnTokenId={turnToken?.id} acting={acting} journal={journal} isGm={isGm}
               onPointerDown={onIconPointerDown} onPointerDownBoard={() => { setSelected([]); setMenu(null); }}
               onContextMenu={(event, token) => { event.preventDefault(); event.stopPropagation(); setSelected([token.id]); const box = viewport.current!.getBoundingClientRect(); setMenu({ tokenId: token.id, x: event.clientX - box.left + viewport.current!.scrollLeft, y: event.clientY - box.top + viewport.current!.scrollTop }); }}
               onDoubleClick={(token) => { if (token.represents && journal.some((entry) => entry.id === token.represents)) onOpenEntry(token.represents); else if (controlsToken(token, viewer, journal)) onOpenToken(page.id, token.id); }}
@@ -289,14 +300,16 @@ export function PageCanvas({ onOpenEntry, onOpenToken, onOpenPageSettings }: Can
           {menuToken ? <TokenMenu token={menuToken} page={page} at={menu!} onClose={() => setMenu(null)} onOpenToken={() => onOpenToken(page.id, menuToken.id)} onOpenEntry={onOpenEntry} /> : null}
           {targeting ? (
             <div className="cl-targeting-banner" role="status" data-multi={targeting.multi ? "1" : "0"} data-picked={targeting.picked.length}>
-              <span>🎯 {targeting.prompt}</span>
-              {targeting.multi ? <><span className="cl-quiet cl-small">{targeting.picked.length}개 선택</span><button type="button" className="cl-btn small primary" disabled={!targeting.picked.length} onClick={() => { targeting.resolve(targeting.picked); setTargeting(null); }}>확정</button></> : null}
-              <button type="button" className="cl-btn small quiet" onClick={() => { targeting.resolve([]); setTargeting(null); }}>취소 (Esc)</button>
+              <span className="cl-targeting-icon" aria-hidden="true">🎯</span>
+              <span className="cl-targeting-text"><strong>{targeting.prompt}</strong><small>{targeting.multi ? "여러 대상은 Shift+클릭 · Esc 취소" : "Esc 취소"}</small></span>
+              {targeting.multi ? <><span className="cl-quiet cl-small">{targeting.picked.length}개 선택</span><button type="button" className="cl-btn primary" disabled={!targeting.picked.length} onClick={() => { targeting.resolve(targeting.picked); setTargeting(null); }}>확정</button></> : null}
+              <button type="button" className="cl-btn quiet" onClick={() => { targeting.resolve([]); setTargeting(null); }}>취소</button>
             </div>
           ) : null}
-          {!targeting && selected.length === 1 && page.tokens.some((token) => token.id === selected[0]) ? <ActionBar token={page.tokens.find((token) => token.id === selected[0])!} page={page} onOpenEntry={onOpenEntry} /> : null}
+          {!scene && !targeting && selected.length === 1 && page.tokens.some((token) => token.id === selected[0]) ? <ActionBar token={page.tokens.find((token) => token.id === selected[0])!} page={page} onOpenEntry={onOpenEntry} /> : null}
         </div>
       </div>
+      {scene && commandToken ? <CommandBar token={commandToken} page={page} mode={myTurn && commandToken.id === myTurn.id ? "turn" : "free"} onOpenEntry={onOpenEntry} /> : null}
       <AttackAskBridge />
       <ActAskBridge />
       <PlaceCharacterBridge onPlace={(id) => placeCharacter(id)} onPlaceToken={(token) => placeTokenAt(token)} onTargets={(request) => { setSelected([]); setMenu(null); setTargeting({ ...request, picked: [] }); }} />
@@ -318,14 +331,14 @@ function hexWithAlpha(hex: string, alpha: number) {
 }
 
 /** Lets the journal, the compendium and the tracker reach the canvas without threading props through the table. */
-interface TargetingState { prompt: string; multi: boolean; picked: string[]; resolve: (ids: string[]) => void; /** Attacker token and range (ft): tokens beyond are dimmed. */ from?: { tokenId: string; rangeFeet: number; longRangeFeet?: number } }
+interface TargetingState { prompt: string; multi: boolean; picked: string[]; resolve: (ids: string[]) => void; /** Attacker token and range (ft): tokens beyond are dimmed. */ from?: { tokenId: string; rangeFeet: number; longRangeFeet?: number }; /** The actor: never a candidate. */ exclude?: string }
 const placeListeners = new Set<(id: string) => void>();
 const placeTokenListeners = new Set<(token: Token) => void>();
 const targetListeners = new Set<(request: Omit<TargetingState, "picked">) => void>();
 export const placeCharacterToken = (journalId: string) => { for (const listener of [...placeListeners]) listener(journalId); return placeListeners.size > 0; };
 export const placeToken = (token: Token) => { for (const listener of [...placeTokenListeners]) listener(token); return placeTokenListeners.size > 0; };
 /** Targeting mode (§12.1): the crosshair banner appears, the promise resolves with the clicked token ids ([] when cancelled). */
-export const requestTargets = (prompt: string, options: { multi?: boolean; from?: TargetingState["from"] } = {}) => new Promise<string[]>((resolve) => { if (!targetListeners.size) { resolve([]); return; } for (const listener of [...targetListeners]) listener({ prompt, multi: Boolean(options.multi), resolve, from: options.from }); });
+export const requestTargets = (prompt: string, options: { multi?: boolean; from?: TargetingState["from"]; exclude?: string } = {}) => new Promise<string[]>((resolve) => { if (!targetListeners.size) { resolve([]); return; } for (const listener of [...targetListeners]) listener({ prompt, multi: Boolean(options.multi), resolve, from: options.from, exclude: options.exclude }); });
 function PlaceCharacterBridge({ onPlace, onPlaceToken, onTargets }: { onPlace: (id: string) => void; onPlaceToken: (token: Token) => void; onTargets: (request: Omit<TargetingState, "picked">) => void }) {
   useEffect(() => { placeListeners.add(onPlace); placeTokenListeners.add(onPlaceToken); targetListeners.add(onTargets); return () => { placeListeners.delete(onPlace); placeTokenListeners.delete(onPlaceToken); targetListeners.delete(onTargets); }; }, [onPlace, onPlaceToken, onTargets]);
   return null;
@@ -337,7 +350,7 @@ function makeAttackWith({ c, token, page, entry, derived, isGm }: { c: ReturnTyp
   return async (ref: AttackRef) => {
     const range = ref.source === "weapon" && derived ? weaponRange(derived.attacks.find((item) => item.id === ref.attackId)!) : ref.source === "npc" && entry.kind === "npc" ? (() => { const spec = npcAttackSpec(entry, ref.actionName); return spec ? { rangeFeet: spec.rangeFeet ?? 5, longRangeFeet: spec.longRangeFeet } : null; })() : null;
     const name = ref.source === "weapon" && derived ? derived.attacks.find((item) => item.id === ref.attackId)!.name : ref.source === "npc" ? ref.actionName : "공격";
-    const targets = await requestTargets(`${name} 대상을 클릭하세요 (Esc 취소, 여러 대상은 Shift)`, { multi: true, from: range && !isScene(page) ? { tokenId: token.id, rangeFeet: range.rangeFeet, longRangeFeet: range.longRangeFeet } : undefined });
+    const targets = await requestTargets(`${name} — 대상을 클릭하세요`, { multi: true, exclude: token.id, from: range && !isScene(page) ? { tokenId: token.id, rangeFeet: range.rangeFeet, longRangeFeet: range.longRangeFeet } : undefined });
     if (!targets.length) return;
     let sneak = false;
     let slots: Array<{ level: number; free: number }> = [];
@@ -401,6 +414,119 @@ function Dropdown({ label, items, disabled, tone }: { label: string; items: Arra
           {items.map((item) => <button type="button" key={item.key} role="menuitem" className="cl-dd-item" disabled={item.disabled} title={item.hint} onClick={() => { setOpen(false); item.onSelect(); }}><span>{item.label}</span>{item.hint ? <small>{item.hint}</small> : null}</button>)}
         </div>
       ) : null}
+    </div>
+  );
+}
+
+/**
+ * The command bar (D100): the one place to act on a scene. In "turn" mode it is the loudest thing on screen —
+ * "당신의 턴", the attacks in red, the action list, the sheet menus and a big 턴 마침. In "free" mode (someone else's
+ * turn, or no combat) it is quiet and only what the rules allow out of turn stays enabled.
+ */
+function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Page; mode: "turn" | "free"; onOpenEntry: (id: string) => void }) {
+  const c = useCampaigns();
+  const dice = useDice();
+  const { catalog } = useClient();
+  const { snapshot, isGm } = useViewer();
+  const entry = token.represents ? snapshot.journal.find((item) => item.id === token.represents) : undefined;
+  const derived = useMemo(() => (entry?.kind === "character" ? deriveCharacter(entry.source, catalog, { equipped: entry.runtime.equipped, inventory: entry.runtime.inventory, effects: entry.runtime.effects }) : null), [entry, catalog]);
+  const latest = useRef<{ runtime: CharacterRuntime; sentAt: string } | null>(null);
+  if (!entry || entry.kind === "handout") return null;
+  const tracker = snapshot.tracker;
+  const turn = tracker.turns[tracker.current];
+  const inCombat = tracker.turns.length > 0;
+  const attackWith = makeAttackWith({ c, token, page, entry, derived, isGm });
+  const me = { entryId: entry.id, pageId: page.id, tokenId: token.id };
+  const conditions = new Set([...(entry.runtime.conditions ?? []), ...token.markers.map((marker) => marker.name)]);
+  const blocked = cannotAct([...conditions]);
+  // Out of turn during combat a player may only roll checks and read the sheet; the DM may do anything.
+  const off = Boolean(blocked) || (mode === "free" && inCombat && !isGm);
+  const rollToChat = async (spec: RollSpec) => { const result = await dice.roll(spec); c.sendRoll({ formula: result.formula, total: result.total, dice: result.dice.map((die) => ({ sides: die.sides, value: die.value })), modifier: result.modifier, label: `${token.name} · ${result.label}${result.note ? ` (${result.note})` : ""}` }); return result; };
+  const d20 = (bonus: number) => `1d20${bonus >= 0 ? "+" : "-"}${Math.abs(bonus)}`;
+  const currentRuntime = () => (entry.kind === "character" && latest.current && latest.current.sentAt > entry.updatedAt ? latest.current.runtime : (entry as JournalCharacter).runtime);
+  const saveRuntime = (input: (current: CharacterRuntime) => CharacterRuntime) => {
+    if (entry.kind !== "character") return;
+    const runtime = { ...resolveRuntime(entry.source, catalog, currentRuntime(), input), updatedAt: new Date().toISOString() };
+    const sentAt = new Date().toISOString();
+    latest.current = { runtime, sentAt };
+    c.putJournal({ ...entry, runtime, updatedAt: sentAt });
+  };
+  const take = async (def: ActionDef, bonus = false) => {
+    let target: string | undefined;
+    if (def.target) {
+      const picked = await requestTargets(`${def.name} — ${def.target === "ally" ? "도울 아군" : def.kind === "escape" ? "붙잡은 상대" : "대상"}을 클릭하세요`, { multi: false, exclude: token.id });
+      if (!picked.length) return;
+      target = picked[0];
+    }
+    let answer: ActAnswer | null | undefined = {};
+    if ((def.skills && def.skills.length > 1) || def.text || def.choice || (isGm && (def.skills || def.kind === "escape"))) { answer = await requestActOptions({ def, gm: isGm }); if (answer === null) return; }
+    c.act(me, def.kind, { target: target ? { pageId: page.id, tokenId: target } : undefined, skill: answer?.skill ?? def.skills?.[0], dc: answer?.dc, note: answer?.note, choice: answer?.choice, bonus });
+  };
+  const stats = entry.kind === "npc" ? npcStats(entry.statBlock) : derived ? pcStats(derived) : null;
+  const checkItems = stats ? [
+    ...ABILITY_KEYS.map((key) => ({ key: `save:${key}`, label: `${ABILITY_KO[key]} 내성`, hint: `${stats.saves[key] >= 0 ? "+" : ""}${stats.saves[key]}`, onSelect: () => void rollToChat({ label: `${ABILITY_KO[key]} 내성`, formula: d20(stats.saves[key]), kind: "save" }) })),
+    ...Object.keys(SKILL_KO).map((id) => { const bonus = skillBonus(stats, id); return { key: `skill:${id}`, label: `${ABILITY_KO[SKILL_ABILITY_OF[id]]}(${SKILL_KO[id]})`, hint: `${bonus >= 0 ? "+" : ""}${bonus}`, onSelect: () => void rollToChat({ label: `${ABILITY_KO[SKILL_ABILITY_OF[id]]}(${SKILL_KO[id]})`, formula: d20(bonus), kind: "check" }) }; }),
+  ] : [];
+  const usable = entry.kind === "character" && derived ? usableFeatures(derived, entry.runtime) : [];
+  const useIt = async (feature: DerivedFeature) => {
+    if (entry.kind !== "character" || !derived) return;
+    const outcome = await activateFeature(feature, { source: entry.source, catalog, derived, runtime: currentRuntime(), rollDice: rollToChat, save: saveRuntime });
+    if (outcome === "refused") alert("남은 횟수가 없습니다.");
+    if (outcome === "done") c.say(`/em ${token.name}: ${feature.name} 사용`);
+  };
+  const featureItems = entry.kind === "npc"
+    ? entry.statBlock.traits.map((trait) => ({ key: trait.name, label: trait.name, hint: trait.text.slice(0, 60), onSelect: () => c.say(`/em ${token.name}: ${trait.name}`) }))
+    : usable.filter((item) => !item.bonus).map((item) => ({ key: item.feature.id, label: item.feature.name, hint: item.left !== undefined ? `${item.left}/${item.pool!.max}${item.activation.note ? ` · ${item.activation.note}` : ""}` : item.activation.note, disabled: item.left !== undefined && item.left <= 0, onSelect: () => void useIt(item.feature) }));
+  const items = entry.kind === "character" && derived ? derived.inventory.filter((item) => item.quantity > 0 && !["weapon", "armor", "shield"].includes(item.kind)) : [];
+  const useItem = async (item: DerivedItem) => {
+    if (entry.kind !== "character" || !derived) return;
+    const use = itemUse(item);
+    let healed: number | undefined;
+    if (use.heal) healed = (await rollToChat({ label: use.text, formula: use.heal, note: "회복", kind: "custom" })).total;
+    saveRuntime((current) => { let next = noteLog(current, `${use.text}${healed !== undefined ? ` — ${healed} 회복` : ""}`); if (healed !== undefined) next = applyHealing(next, derived, healed); if (use.consumes) next = setItemQuantity(next, derived, item.instanceId, item.quantity - 1); return next; });
+    c.say(`/em ${token.name}: ${use.text}${healed !== undefined ? ` (${healed} 회복)` : ""}`);
+  };
+  const itemItems = items.map((item) => ({ key: item.instanceId, label: item.name, hint: `${item.quantity > 1 ? `×${item.quantity} · ` : ""}${itemUse(item).heal ? `회복 ${itemUse(item).heal}` : itemUse(item).consumes ? "소모" : "기록"}`, onSelect: () => void useItem(item) }));
+  const bonusItems = [
+    ...(entry.kind === "npc" ? entry.statBlock.bonusActions.map((action) => ({ key: action.name, label: `${action.kind === "attack" && action.attack ? "⚔ " : ""}${action.name}`, hint: action.text?.slice(0, 60), onSelect: () => { if (action.kind === "attack" && action.attack) void attackWith({ source: "npc", actionName: action.name }); else c.act(me, "utilize", { note: action.name, bonus: true }); } })) : []),
+    ...usable.filter((item) => item.bonus).map((item) => ({ key: item.feature.id, label: item.feature.name, hint: item.left !== undefined ? `${item.left}/${item.pool!.max}` : undefined, disabled: item.left !== undefined && item.left <= 0, onSelect: () => void useIt(item.feature) })),
+    { key: "note", label: "기록…", hint: "다른 추가 행동을 쓴 것으로 남김", onSelect: () => void take({ ...actionDef("utilize"), name: "추가 행동", text: "무엇을" }, true) },
+  ];
+  const initiativeBonus = derived ? derived.initiative : entry.kind === "npc" ? entry.statBlock.initiativeBonus : 0;
+  const inTracker = tracker.turns.some((item) => item.tokenId === token.id && item.pageId === page.id);
+  const chip = (label: string, used: boolean | undefined) => <span className={`cl-econ${used ? " used" : ""}`} title={used ? `${label} 사용함` : `${label} 남음`}><i />{label}</span>;
+  const status = mode === "turn" ? (isGm ? `${token.name}의 턴` : "당신의 턴") : inCombat ? `${turn?.name ?? "…"}의 턴 · 기다리는 중` : "전투 전";
+  return (
+    <div className={`cl-cmd ${mode}`} role="region" aria-label={mode === "turn" ? `${token.name}의 턴` : `${token.name} 대기`}>
+      <div className="cl-cmd-who">
+        <span className="cl-cmd-status">{status}</span>
+        <span className="cl-cmd-name">{mode === "turn" && !isGm ? token.name : mode === "turn" ? (tracker.turns.length ? `라운드 ${tracker.round}` : "") : token.name}</span>
+        {mode === "turn" ? <span className="cl-turn-econ">{chip("행동", turn?.actionUsed)}{chip("추가 행동", turn?.bonusUsed)}{chip("반응", turn?.reactionUsed)}</span> : null}
+        {blocked ? <span className="cl-pill bad">{blocked}: 행동 불가</span> : null}
+      </div>
+      <div className="cl-cmd-groups" role="toolbar" aria-label={`${token.name} 액션`}>
+        <div className="cl-cmd-group attack">
+          <span className="cl-cmd-label">공격</span>
+          {derived ? derived.attacks.map((attack) => <button type="button" key={attack.id} className="cl-btn small attack" disabled={off} onClick={() => void attackWith({ source: "weapon", attackId: attack.id })}>⚔ {attack.name} <b>{attack.attackBonus >= 0 ? "+" : ""}{attack.attackBonus}</b></button>) : null}
+          {entry.kind === "npc" ? entry.statBlock.actions.filter((action) => action.kind === "attack" && action.attack).map((action) => <button type="button" key={action.name} className="cl-btn small attack" disabled={off || Boolean(action.timing?.recharge && entry.runtime.spent[action.name])} onClick={() => void attackWith({ source: "npc", actionName: action.name })}>⚔ {action.name} <b>{action.attack!.bonus >= 0 ? "+" : ""}{action.attack!.bonus}</b></button>) : null}
+          {ACTIONS.filter((def) => def.kind === "grapple" || def.kind === "shove" || def.kind === "escape").map((def) => <button type="button" key={def.kind} className="cl-btn small" disabled={off || (def.kind === "escape" && !conditions.has("붙잡힘"))} title={def.summary} onClick={() => void take(def)}>{def.name}</button>)}
+          <button type="button" className="cl-btn small" disabled title="주문·마법 (R8)">✨ 마법</button>
+        </div>
+        <div className="cl-cmd-group">
+          <span className="cl-cmd-label">행동</span>
+          <Dropdown label="행동" disabled={off} items={ACTIONS.filter((def) => !["grapple", "shove", "escape"].includes(def.kind)).map((def) => ({ key: def.kind, label: def.name, hint: def.summary, onSelect: () => void take(def) }))} />
+          <Dropdown label="추가 행동" disabled={off} items={bonusItems} />
+        </div>
+        <div className="cl-cmd-group">
+          <span className="cl-cmd-label">시트</span>
+          <Dropdown label="판정" items={checkItems} />
+          <Dropdown label="특성" disabled={Boolean(blocked)} items={featureItems} />
+          <Dropdown label="아이템" disabled={Boolean(blocked)} items={itemItems} />
+          {!inTracker ? <button type="button" className="cl-btn small" onClick={() => c.addTurn({ name: token.name, tokenId: token.id, pageId: page.id, entryId: entry.id, image: token.image }, initiativeBonus)} title="1d20 + 이니셔티브 보너스를 굴려 트래커에 넣습니다">이니셔티브 {initiativeBonus >= 0 ? "+" : ""}{initiativeBonus}</button> : null}
+          <button type="button" className="cl-btn small quiet" onClick={() => onOpenEntry(entry.id)}>시트 열기</button>
+        </div>
+      </div>
+      {mode === "turn" ? <button type="button" className="cl-btn cl-cmd-end" onClick={() => c.nextTurn()} title="턴을 마치고 다음 차례로">턴 마침 ▶</button> : null}
     </div>
   );
 }
@@ -597,22 +723,60 @@ function AttackDialog({ ask, onDone }: { ask: AttackAsk; onDone: (answer: Attack
 
 /* ---------- Scene board (D95: Theatre of the Mind) ---------- */
 
+/** Results that just landed, shown on the cards themselves (D100): damage, misses, checks — then gone. */
+interface CardFloat { id: string; tokenId: string; text: string; tone: "hit" | "crit" | "miss" | "good" | "bad" | "info" }
+function useCardFloats(page: Page, journal: JournalEntry[]) {
+  const c = useCampaigns();
+  const chat = c.table.snapshot?.chat ?? [];
+  const seen = useRef<Set<string> | null>(null);
+  const [floats, setFloats] = useState<CardFloat[]>([]);
+  useEffect(() => {
+    if (!seen.current) { seen.current = new Set(chat.map((message) => message.id)); return; }
+    const fresh = chat.filter((message) => !seen.current!.has(message.id));
+    if (!fresh.length) return;
+    for (const message of fresh) seen.current.add(message.id);
+    const byEntry = (entryId: string) => page.tokens.find((token) => token.represents === entryId)?.id;
+    const byName = (name: string) => page.tokens.find((token) => token.name === name)?.id ?? page.tokens.find((token) => journal.find((entry) => entry.id === token.represents)?.name === name)?.id;
+    const next: CardFloat[] = [];
+    for (const message of fresh) {
+      if (message.type === "action" && message.action && !message.undone && !message.supersedes) {
+        const result = message.action;
+        const tokenId = byEntry(result.target.id) ?? byName(result.target.name);
+        if (!tokenId) continue;
+        const hit = result.outcome === "hit" || result.outcome === "crit";
+        next.push({ id: message.id, tokenId, text: !result.applied ? "DM 확인 대기" : result.outcome === "crit" ? `치명타 −${result.damageTotal}` : hit ? `−${result.damageTotal}` : result.outcome === "fumble" ? "자동 실패" : "빗나감", tone: !result.applied ? "info" : result.outcome === "crit" ? "crit" : hit ? "hit" : "miss" });
+        if (result.downed) next.push({ id: `${message.id}:down`, tokenId, text: result.downed === "dead" ? "사망" : result.downed === "instant-death" ? "즉사" : "쓰러짐", tone: "bad" });
+      } else if (message.type === "act" && message.act) {
+        const act = message.act;
+        const tokenId = byName(act.actor.name);
+        if (tokenId) next.push({ id: message.id, tokenId, text: act.check ? `${act.name} ${act.check.success === undefined ? act.check.total : act.check.success ? "성공" : "실패"}` : act.name, tone: act.check?.success === false ? "bad" : act.check?.success ? "good" : "info" });
+        const targetId = act.target ? byName(act.target.name) : undefined;
+        if (targetId && act.targetMarks.length) next.push({ id: `${message.id}:t`, tokenId: targetId, text: act.targetMarks.join(" · "), tone: "bad" });
+      }
+    }
+    if (!next.length) return;
+    setFloats((list) => [...list, ...next]);
+    for (const item of next) setTimeout(() => setFloats((list) => list.filter((entry) => entry.id !== item.id)), 2600);
+  }, [chat, page.tokens, journal]);
+  return floats;
+}
+
 /**
  * The scene as a stage: NPC cards along the top, the scene card (name, backdrop, round/turn) in the middle, the
- * players' cards along the bottom. A card is a portrait with the AC shield, an HP gauge rising from the bottom,
- * markers and the name; the 벗어남 button (D96) sits under every other card while you act.
+ * players' cards along the bottom. What matters most is what stands out (D100): the acting card is larger with a
+ * gold ring; in targeting mode only candidates stay lit; results float over the card they happened to.
  */
-function SceneBoard({ page, tokens, selected, picked, turnTokenId, acting, journal, isGm, onPointerDown, onPointerDownBoard, onContextMenu, onDoubleClick, onLeave }: {
-  page: Page; tokens: Token[]; selected: string[]; picked: string[]; turnTokenId?: string; acting?: Token; journal: JournalEntry[]; isGm: boolean;
+function SceneBoard({ page, tokens, selected, targeting, turnTokenId, acting, journal, isGm, onPointerDown, onPointerDownBoard, onContextMenu, onDoubleClick, onLeave }: {
+  page: Page; tokens: Token[]; selected: string[]; targeting: TargetingState | null; turnTokenId?: string; acting?: Token; journal: JournalEntry[]; isGm: boolean;
   onPointerDown: (event: ReactPointerEvent, token: Token) => void; onPointerDownBoard: () => void; onContextMenu: (event: React.MouseEvent, token: Token) => void; onDoubleClick: (token: Token) => void; onLeave: (token: Token) => void;
 }) {
   const c = useCampaigns();
   const { catalog } = useClient();
   const snapshot = c.table.snapshot!;
+  const floats = useCardFloats(page, journal);
   const visible = tokens.filter((token) => token.layer !== "map");
   const party = visible.filter((token) => journal.find((entry) => entry.id === token.represents)?.kind === "character");
   const others = visible.filter((token) => !party.includes(token));
-  // AC per card: the stat block's for NPCs, the derived sheet's for characters (memoised over the journal).
   const acOf = useMemo(() => {
     const map = new Map<string, number>();
     for (const entry of journal) {
@@ -621,12 +785,11 @@ function SceneBoard({ page, tokens, selected, picked, turnTokenId, acting, journ
     }
     return map;
   }, [journal, catalog]);
-  const turn = snapshot.tracker.turns[snapshot.tracker.current];
-  const status = snapshot.tracker.turns.length ? `라운드 ${snapshot.tracker.round}${turn ? ` · ${turn.name}의 턴` : ""}` : null;
-  // Players cannot see GM-only NPC entries, so the row (not the entry) decides the card's kind.
+  const inCombat = snapshot.tracker.turns.length > 0;
   const card = (kind: "pc" | "npc") => (token: Token) => (
-    <SceneIcon key={token.id} token={token} kind={kind} journal={journal} ac={token.represents ? acOf.get(token.represents) : undefined} selected={selected.includes(token.id)} picked={picked.includes(token.id)} turn={turnTokenId === token.id}
-      leave={Boolean(acting && acting.id !== token.id && token.represents)} onPointerDown={(event) => onPointerDown(event, token)} onContextMenu={(event) => onContextMenu(event, token)} onDoubleClick={() => onDoubleClick(token)} onLeave={() => onLeave(token)} />
+    <SceneIcon key={token.id} token={token} kind={kind} journal={journal} ac={token.represents ? acOf.get(token.represents) : undefined} selected={selected.includes(token.id)} picked={targeting?.picked.includes(token.id) ?? false}
+      candidate={targeting ? targeting.exclude !== token.id : null} turn={turnTokenId === token.id} dimmed={inCombat && !targeting && turnTokenId !== undefined && turnTokenId !== token.id} floats={floats.filter((item) => item.tokenId === token.id)}
+      leave={Boolean(acting && acting.id !== token.id && token.represents && !targeting)} onPointerDown={(event) => onPointerDown(event, token)} onContextMenu={(event) => onContextMenu(event, token)} onDoubleClick={() => onDoubleClick(token)} onLeave={() => onLeave(token)} />
   );
   const row = (label: string, kind: "pc" | "npc", list: Token[], hint: string) => (
     <section className="cl-scene-row" aria-label={label}>
@@ -635,12 +798,11 @@ function SceneBoard({ page, tokens, selected, picked, turnTokenId, acting, journ
     </section>
   );
   return (
-    <div className="cl-scene" data-page-id={page.id} onPointerDown={(event) => { if (!(event.target as HTMLElement).closest(".cl-scene-card")) onPointerDownBoard(); }} onContextMenu={(event) => { if (!(event.target as HTMLElement).closest(".cl-scene-card")) event.preventDefault(); }}>
+    <div className={`cl-scene${targeting ? " targeting" : ""}`} data-page-id={page.id} onPointerDown={(event) => { if (!(event.target as HTMLElement).closest(".cl-scene-card")) onPointerDownBoard(); }} onContextMenu={(event) => { if (!(event.target as HTMLElement).closest(".cl-scene-card")) event.preventDefault(); }}>
       {row("NPC", "npc", others, isGm ? "컴펜디움이나 저널의 NPC를 끌어 놓거나 \"놓기\"를 누르면 여기에 섭니다." : "아직 상대가 없습니다.")}
       <div className="cl-scene-stage" aria-label="장면">
         <span className="cl-scene-chip cl-scene-title">{page.name}</span>
-        {page.background.image ? <ArtImage src={page.background.image} className="cl-scene-backdrop" alt={page.name} /> : <span className="cl-scene-placeholder" aria-hidden="true"><svg viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="3" y="4" width="18" height="16" rx="2.5" /><circle cx="9" cy="10" r="1.8" /><path d="M3.5 18.5 9 13l3.5 3.5L16 13l4.5 5" strokeLinejoin="round" /></svg>{isGm ? <small>페이지 설정 → 배경 이미지</small> : null}</span>}
-        {status ? <span className="cl-scene-chip cl-scene-status">{status}</span> : null}
+        {page.background.image ? <ArtImage src={page.background.image} className="cl-scene-backdrop" alt={page.name} /> : <span className="cl-scene-placeholder" aria-hidden="true"><svg viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="3" y="4" width="18" height="16" rx="2.5" /><circle cx="9" cy="10" r="1.8" /><path d="M3.5 18.5 9 13l3.5 3.5L16 13l4.5 5" strokeLinejoin="round" /></svg>{isGm ? <small>⋯ → 페이지 설정 → 배경 이미지</small> : null}</span>}
       </div>
       {row("플레이어", "pc", party, "저널의 \"토큰\"이나 끌어 놓기로 캐릭터를 세웁니다.")}
     </div>
@@ -650,8 +812,8 @@ function SceneBoard({ page, tokens, selected, picked, turnTokenId, acting, journ
 const SKULL = <svg viewBox="0 0 24 24" width="40" height="40" fill="currentColor" aria-hidden="true"><path d="M12 2a8 8 0 0 0-8 8c0 2.6 1.3 4.9 3.3 6.3V19a1 1 0 0 0 1 1h1v1.2a.8.8 0 0 0 .8.8h3.8a.8.8 0 0 0 .8-.8V20h1a1 1 0 0 0 1-1v-2.7A8 8 0 0 0 12 2Zm-3.2 12a2.2 2.2 0 1 1 0-4.4 2.2 2.2 0 0 1 0 4.4Zm6.4 0a2.2 2.2 0 1 1 0-4.4 2.2 2.2 0 0 1 0 4.4ZM12 17.2l-1.3-2.4h2.6L12 17.2Z" /></svg>;
 const PERSON = <svg viewBox="0 0 24 24" width="40" height="40" fill="currentColor" aria-hidden="true"><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0Z" /></svg>;
 
-function SceneIcon({ token, kind, journal, ac, selected, picked, turn, leave, onPointerDown, onContextMenu, onDoubleClick, onLeave }: {
-  token: Token; kind: "pc" | "npc"; journal: JournalEntry[]; ac?: number; selected: boolean; picked: boolean; turn: boolean; leave: boolean;
+function SceneIcon({ token, kind, journal, ac, selected, picked, candidate, turn, dimmed, floats, leave, onPointerDown, onContextMenu, onDoubleClick, onLeave }: {
+  token: Token; kind: "pc" | "npc"; journal: JournalEntry[]; ac?: number; selected: boolean; picked: boolean; /** null: no targeting; true/false: lit or dimmed. */ candidate: boolean | null; turn: boolean; dimmed: boolean; floats: CardFloat[]; leave: boolean;
   onPointerDown: (event: ReactPointerEvent) => void; onContextMenu: (event: React.MouseEvent) => void; onDoubleClick: () => void; onLeave: () => void;
 }) {
   const entry = token.represents ? journal.find((item) => item.id === token.represents) : undefined;
@@ -665,16 +827,41 @@ function SceneIcon({ token, kind, journal, ac, selected, picked, turn, leave, on
   const fraction = hp && hp.max ? Math.max(0, Math.min(1, (hp.value ?? 0) / hp.max)) : null;
   const down = fraction === 0 || markers.some((marker) => marker.name === "사망" || marker.name === "무의식");
   return (
-    <div className={`cl-scene-card ${kind}${selected ? " selected" : ""}${picked ? " picked" : ""}${turn ? " turn" : ""}${token.layer === "gm" ? " layer-gm" : ""}${down ? " down" : ""}`} data-token-id={token.id} data-token-name={token.name} title={token.name}
+    <div className={`cl-scene-card ${kind}${selected ? " selected" : ""}${picked ? " picked" : ""}${candidate === true ? " candidate" : candidate === false ? " not-candidate" : ""}${turn ? " turn" : ""}${dimmed ? " dimmed" : ""}${token.layer === "gm" ? " layer-gm" : ""}${down ? " down" : ""}`} data-token-id={token.id} data-token-name={token.name} title={token.name}
       onPointerDown={onPointerDown} onContextMenu={onContextMenu} onDoubleClick={onDoubleClick}>
+      {turn ? <span className="cl-scene-now">행동 중</span> : null}
       <div className="cl-scene-portrait">
         {fraction !== null ? <span className="cl-scene-gauge" style={{ height: `${Math.round(fraction * 100)}%` }} aria-hidden="true" /> : null}
         {token.image ? <ArtImage src={token.image} className="cl-scene-art" alt={token.name} /> : <span className="cl-scene-glyph">{kind === "npc" ? SKULL : PERSON}</span>}
         {ac !== undefined ? <span className="cl-scene-ac" title={`AC ${ac}`} aria-label={`AC ${ac}`}><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3Z" fill="#161a21" stroke="#8b93a3" strokeWidth="1.4" /></svg><b>{ac}</b></span> : null}
         {markers.length ? <div className="cl-scene-markers">{markers.slice(0, 6).map((marker) => <span key={marker.name} className="cl-marker" title={marker.name}>{MARKER_GLYPH[marker.name] ?? "•"}{marker.badge !== undefined ? <small>{marker.badge}</small> : null}</span>)}</div> : null}
         <span className="cl-scene-name">{token.name}{hp && (hp.value !== undefined || hp.max !== undefined) ? <small>{hp.value ?? "?"}{hp.max !== undefined ? `/${hp.max}` : ""}</small> : null}</span>
+        {floats.map((item, index) => <span key={item.id} className={`cl-float ${item.tone}`} style={{ animationDelay: `${index * 120}ms` }}>{item.text}</span>)}
       </div>
       {leave ? <button type="button" className="cl-scene-leave" aria-label={`${token.name}에게서 벗어남`} title="이동으로 이 상대의 사정거리를 벗어납니다 — 상대에게 기회 공격을 물어봅니다 (D96)" onPointerDown={(event) => event.stopPropagation()} onClick={(event) => { event.stopPropagation(); onLeave(); }}>🏃 벗어남</button> : null}
+    </div>
+  );
+}
+
+/** Who acts now and who is next (D100): a ribbon over the board on every screen; the DM's editable window opens from it. */
+function TurnRibbon({ page, onOpenTracker }: { page: Page; onOpenTracker?: () => void }) {
+  const c = useCampaigns();
+  const { snapshot, isGm } = useViewer();
+  const tracker = snapshot.tracker;
+  const order = tracker.turns.map((turn, index) => ({ turn, index })).filter(({ turn }) => !turn.custom);
+  const currentIndex = tracker.current;
+  const upcoming = order.length ? [...order.filter(({ index }) => index >= currentIndex), ...order.filter(({ index }) => index < currentIndex)] : [];
+  const tokenOf = (tokenId?: string) => page.tokens.find((token) => token.id === tokenId);
+  return (
+    <div className="cl-turn-ribbon" role="list" aria-label="이니셔티브 순서">
+      <span className="cl-turn-ribbon-round">라운드 {tracker.round}</span>
+      {upcoming.map(({ turn, index }, at) => { const token = tokenOf(turn.tokenId); const now = index === currentIndex; return (
+        <span key={turn.id} role="listitem" className={`cl-turn-ribbon-item${now ? " now" : ""}`} data-turn-name={turn.name} title={`${turn.name} · 이니셔티브 ${turn.initiative}`}>
+          <span className="cl-turn-ribbon-avatar">{token?.image ? <ArtImage src={token.image} alt="" /> : (turn.name || "?").slice(0, 1)}</span>
+          {now ? <span className="cl-turn-ribbon-name">{turn.name}<small>지금</small></span> : at === 1 ? <span className="cl-turn-ribbon-name next"><small>다음</small>{turn.name}</span> : null}
+        </span>
+      ); })}
+      {isGm ? <span className="cl-turn-ribbon-tools"><button type="button" className="cl-btn small primary" onClick={() => c.nextTurn()}>▶ 다음 턴</button><button type="button" className="cl-btn small quiet" onClick={() => onOpenTracker?.()} title="이니셔티브 편집·전투 시작">트래커</button></span> : null}
     </div>
   );
 }

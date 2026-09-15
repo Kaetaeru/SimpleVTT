@@ -55,7 +55,8 @@ try {
   // SC-44: "+ 장면" → a scene without a grid on both screens; the goblin and the fighter are icons.
   await dm.getByRole("button", { name: "+ 장면" }).first().click();
   await player.locator(".cl-scene").waitFor({ timeout: 10000 });
-  check((await player.locator(".cl-page-bar").innerText()).includes("장면"), "the player's page bar says it is a scene");
+  check((await player.locator(".cl-scene-title").innerText()).includes("장면"), "the player sees the scene's name on the stage and no page chrome");
+  check(await player.locator(".cl-page-bar").count() === 0 && await player.locator(".cl-toolbar").count() === 0, "no page bar or tool column for a player on a scene");
   check(await player.locator(".cl-canvas-page").count() === 0, "no grid canvas on a scene");
   await tab(dm, "컴펜디움").click();
   await dm.getByLabel("컴펜디움 검색").fill("goblin warrior");
@@ -133,16 +134,18 @@ try {
   await iconOf(dm, "앨리스의 파이터").click();
   await dm.locator(".cl-targeting-banner").getByRole("button", { name: "확정" }).click();
   await tracker.locator(".cl-tracker-row[data-turn-name='앨리스의 파이터']").waitFor({ timeout: 10000 });
-  for (let n = 0; n < 3 && (await player.locator(".cl-scene-card.turn[data-token-name='앨리스의 파이터']").count()) === 0; n += 1) { await tracker.getByRole("button", { name: "▶ 다음 턴" }).click(); await player.waitForTimeout(400); }
+  for (let n = 0; n < 3 && (await player.locator(".cl-scene-card.turn[data-token-name='앨리스의 파이터']").count()) === 0; n += 1) { await dm.locator(".cl-turn-ribbon").getByRole("button", { name: "▶ 다음 턴" }).click(); await player.waitForTimeout(400); }
+  await player.locator(".cl-turn-ribbon .cl-turn-ribbon-item.now[data-turn-name='앨리스의 파이터']").waitFor({ timeout: 10000 });
+  check(await player.locator(".cl-window", { hasText: "턴 트래커" }).count() === 0, "the player reads the ribbon; no tracker window pops up");
   await player.locator(".cl-scene-card.turn[data-token-name='앨리스의 파이터']").waitFor({ timeout: 10000 });
   const leave = player.getByRole("button", { name: "고블린 전사에게서 벗어남" });
   await leave.waitFor({ timeout: 10000 });
   check(await player.getByRole("button", { name: "앨리스의 파이터에게서 벗어남" }).count() === 0, "no 벗어남 on one's own icon");
   await leave.click();
-  const approval = dm.locator(".cl-approvals .cl-approval", { hasText: "벗어납니다" });
+  const approval = dm.locator(".cl-approval-overlay .cl-approval", { hasText: "벗어납니다" });
   await approval.getByRole("button", { name: /⚔ 시미터/ }).waitFor({ timeout: 15000 });
   check(await dm.locator(".cl-chat-msg.prompt", { hasText: "벗어납니다" }).getByRole("button", { name: /⚔ 시미터/ }).count() === 1, "the chat record carries the same choices");
-  check(await player.locator(".cl-approvals .cl-approval").count() === 0 && await player.locator(".cl-chat-msg.prompt", { hasText: "벗어납니다" }).getByRole("button").count() === 0, "the player has no approval to answer");
+  check(await player.locator(".cl-approval-overlay").count() === 0 && (await player.locator(".cl-waiting-note").innerText()).includes("기다리는 중"), "the player sees a waiting note, not an approval");
   await dm.screenshot({ path: path.join(OUT, "65-totm-opportunity-prompt-dm.png") });
   await approval.getByRole("button", { name: /⚔ 시미터/ }).click();
   const head3 = "시미터 · 기회 공격";
@@ -160,8 +163,7 @@ try {
   check(await player.getByRole("menuitem", { name: /^질주/ }).count() === 1, "the 행동 menu lists the official actions");
   await player.getByRole("menuitem", { name: /^회피/ }).click();
   await player.locator(".cl-chat-msg.act", { hasText: "회피" }).waitFor({ timeout: 15000 });
-  await dm.locator(".cl-toast", { hasText: "회피" }).waitFor({ timeout: 15000 });
-  check(true, "회피 is announced by a toast on the DM's screen");
+  check(await dm.locator(".cl-toast", { hasText: "회피" }).count() === 0, "no toast for what the board shows (the act floats over the card)");
   await iconOf(dm, "앨리스의 파이터").locator(".cl-marker[title='회피']").waitFor({ timeout: 15000 });
   check(true, "회피 lands as a card and a mark on the DM's screen");
   await panel.getByRole("button", { name: /^행동/ }).click();
@@ -173,7 +175,8 @@ try {
   await panel.getByRole("button", { name: /^판정/ }).click();
   await player.getByRole("menuitem", { name: /근력\(운동\)/ }).click();
   await player.locator(".cl-roll-card", { hasText: "근력(운동)" }).waitFor({ timeout: 15000 });
-  check(true, "판정 rolls a skill check into chat");
+  await dm.locator(".cl-toast", { hasText: "근력(운동)" }).waitFor({ timeout: 15000 });
+  check(true, "판정 rolls a skill check into chat and a toast tells the DM");
   await panel.getByRole("button", { name: /^특성/ }).click();
   await player.getByRole("menuitem", { name: /행동 폭증/ }).click();
   await player.locator(".cl-chat-msg.emote", { hasText: "행동 폭증" }).waitFor({ timeout: 20000 });
@@ -183,19 +186,14 @@ try {
   await player.locator(".cl-chat-msg.emote", { hasText: "재기의 바람" }).waitFor({ timeout: 20000 });
   check(await player.locator(".cl-roll-card", { hasText: "재기의 바람" }).count() >= 1, "추가 행동 uses Second Wind: the heal roll lands in chat");
   await player.screenshot({ path: path.join(OUT, "67-turn-panel-player.png") });
+  check((await panel.innerText()).includes("당신의 턴"), "the command bar shouts 당신의 턴");
   await panel.getByRole("button", { name: /턴 마침/ }).click();
   // SC-49: the goblin's turn belongs to no player, so the DM gets its panel; 붙잡기 targets the fighter and rolls its save.
   const dmPanel = dm.getByRole("region", { name: "고블린 전사의 턴" });
   // The round-counter row may sit between the two turns: the DM advances until the goblin's turn.
-  for (let n = 0; n < 3 && (await dmPanel.count()) === 0; n += 1) { await dm.waitForTimeout(1200); if ((await dmPanel.count()) === 0) await tracker.getByRole("button", { name: "▶ 다음 턴" }).click(); }
+  for (let n = 0; n < 3 && (await dmPanel.count()) === 0; n += 1) { await dm.waitForTimeout(1200); if ((await dmPanel.count()) === 0) await dm.locator(".cl-turn-ribbon").getByRole("button", { name: "▶ 다음 턴" }).click(); }
   await dmPanel.waitFor({ timeout: 10000 });
   check(await player.getByRole("region", { name: "고블린 전사의 턴" }).count() === 0, "the player has no panel on the goblin's turn");
-  // The tracker window opens over the panel: drag it down out of the way, as a DM would.
-  const trackerHead = await tracker.locator(".cl-window-head").boundingBox();
-  await dm.mouse.move(trackerHead.x + trackerHead.width / 2, trackerHead.y + trackerHead.height / 2);
-  await dm.mouse.down();
-  await dm.mouse.move(trackerHead.x + trackerHead.width / 2 + 60, trackerHead.y + 480, { steps: 8 });
-  await dm.mouse.up();
   await dm.screenshot({ path: path.join(OUT, "68-turn-panel-dm-goblin.png") });
   await dmPanel.getByRole("button", { name: "붙잡기" }).click();
   await dm.locator(".cl-targeting-banner").waitFor();

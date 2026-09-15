@@ -117,17 +117,20 @@ try {
   await dm.screenshot({ path: path.join(OUT, "60-attack-card-dm-palette.png") });
 
   // SC-41: the DM palette: 강제 적중 applies damage to the unlinked bar; +20 kills (bar 0, 사망 marker); 되돌리기 restores.
+  await cardOf(dm, head).getByRole("button", { name: /^조정/ }).click();
   await cardOf(dm, head).getByRole("button", { name: "강제 적중" }).click();
   await dm.waitForFunction((name) => { const text = document.querySelector(`.cl-token[data-token-name="${name}"] .cl-token-bar small`)?.textContent ?? ""; return /^\d+\/10$/.test(text) && text !== "10/10"; }, "고블린 전사", { timeout: 15000 });
   const afterHit = await barOf(dm, "고블린 전사").innerText();
   check(afterHit !== "10/10", `a forced hit took the goblin's own HP (${afterHit})`);
   check((await cardOf(dm, head).innerText()).includes("적중"), "the replaced card reads 적중");
+  await cardOf(dm, head).getByRole("button", { name: /^조정/ }).click();
   await cardOf(dm, head).getByLabel("피해 수정").fill("+20");
   await cardOf(dm, head).getByLabel("피해 수정").press("Enter");
   await tokenOf(dm, "고블린 전사").locator(".cl-marker[title='사망']").waitFor({ timeout: 15000 });
   check((await barOf(dm, "고블린 전사").innerText()) === "0/10", "+20 damage drops the goblin to 0 and marks it 사망");
   await tokenOf(player, "고블린 전사").locator(".cl-marker[title='사망']").waitFor({ timeout: 15000 });
   check((await cardOf(player, head).innerText()).includes("사망"), "the player's card says the goblin died");
+  await cardOf(dm, head).getByRole("button", { name: /^조정/ }).click();
   await cardOf(dm, head).getByRole("button", { name: "되돌리기" }).click();
   await dm.waitForFunction((name) => document.querySelector(`.cl-token[data-token-name="${name}"] .cl-token-bar small`)?.textContent === "10/10", "고블린 전사", { timeout: 15000 });
   check(await tokenOf(dm, "고블린 전사").locator(".cl-marker[title='사망']").count() === 0, "undo restores the bar and removes 사망");
@@ -149,6 +152,7 @@ try {
   await dm.getByRole("button", { name: "공격", exact: true }).click();
   const head2 = "고블린 전사 → 앨리스의 파이터: 시미터";
   await cardOf(dm, head2).waitFor({ timeout: 15000 });
+  await cardOf(dm, head2).getByRole("button", { name: /^조정/ }).click();
   await cardOf(dm, head2).getByRole("button", { name: "강제 적중" }).click();
   await player.waitForFunction(([name, before]) => { const text = document.querySelector(`.cl-token[data-token-name="${name}"] .cl-token-bar small`)?.textContent ?? ""; return text !== before && /^\d+\/\d+$/.test(text); }, ["앨리스의 파이터", pcHp], { timeout: 15000 });
   const pcAfter = await barOf(player, "앨리스의 파이터").innerText();

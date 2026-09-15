@@ -105,8 +105,7 @@ try {
   await dm.getByRole("button", { name: /^턴 트래커/ }).click();
   const tracker = dm.locator(".cl-window", { hasText: "턴 트래커" });
   await tracker.waitFor();
-  await player.locator(".cl-window", { hasText: "턴 트래커" }).waitFor({ timeout: 10000 });
-  check(true, "opening the tracker opens it on the player's screen");
+  check(await player.locator(".cl-window", { hasText: "턴 트래커" }).count() === 0, "the player gets no tracker window (the ribbon shows the order once combat starts)");
   await tracker.getByRole("button", { name: "전투 시작" }).click();
   await dm.locator(".cl-targeting-banner").waitFor();
   const g = await reveal(tokenOf(dm, "고블린 전사"));
@@ -118,7 +117,7 @@ try {
   await dm.locator(".cl-targeting-banner").getByRole("button", { name: "확정" }).click();
   await tracker.locator(".cl-tracker-row[data-turn-name='고블린 전사']").waitFor({ timeout: 10000 });
   await tracker.locator(".cl-tracker-row[data-turn-name='앨리스의 파이터']").waitFor({ timeout: 10000 });
-  await player.locator(".cl-window", { hasText: "턴 트래커" }).locator(".cl-tracker-row[data-turn-name='고블린 전사']").waitFor({ timeout: 10000 });
+  await player.locator(".cl-turn-ribbon .cl-turn-ribbon-item[data-turn-name='고블린 전사']").waitFor({ timeout: 10000 });
   await tab(dm, "채팅").click();
   check(await dm.locator(".cl-roll-card", { hasText: "이니셔티브" }).count() >= 2, "initiative rolls are chat cards");
   await dm.screenshot({ path: path.join(OUT, "55-tracker-after-initiative.png") });
