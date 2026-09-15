@@ -62,11 +62,14 @@ export interface Campaign {
 /** One chat message of the archive (Roll20 chat types), stored per campaign in month files (§7). */
 /** "○○이(가) △△에게서 벗어남": the reactor's controller may take an opportunity attack or let it go. */
 export interface ReactionPrompt {
-  kind: "opportunity";
+  /** "opportunity": the mover leaves the reactor's reach (D96). "shield": the mover's attack hit the reactor, who may cast Shield (R11). */
+  kind: "opportunity" | "shield";
   mover: { name: string; entryId?: string; pageId?: string; tokenId?: string };
   reactor: { name: string; entryId?: string; pageId?: string; tokenId?: string };
-  /** Filled once answered: the attack card id, or declined. */
-  outcome?: { attacked?: string; declined?: boolean };
+  /** The held attack (shield prompts): what hit and by how much. */
+  attack?: { name: string; total: number; ac: number };
+  /** Filled once answered: the attack card id, or declined; for shield: whether it was cast and the resulting card. */
+  outcome?: { attacked?: string; declined?: boolean; shielded?: boolean; card?: string };
 }
 
 export interface ChatMessage {

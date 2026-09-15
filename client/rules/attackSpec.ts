@@ -23,6 +23,7 @@ export function pcCombatant(entry: JournalCharacter, derived: DerivedCharacter):
   const runtime = entry.runtime;
   const concentration = (runtime.effects ?? []).find((effect) => effect.concentration);
   return {
+    // (R11: the Shield spell's +5 AC already comes through the sheet's active effects → derived.ac.)
     id: entry.id, name: entry.name, kind: "pc", ac: derived.ac.value, hp: { current: runtime.hp.current, max: derived.hp.max, temp: runtime.hp.temp },
     conditions: runtime.conditions, defenses: derived.defenses, conSave: derived.saves.con.bonus, concentration: concentration?.name, effects: (runtime.effects ?? []).map((effect) => effect.name),
   };

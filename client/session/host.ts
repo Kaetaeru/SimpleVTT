@@ -66,6 +66,8 @@ export interface TableHostOptions {
   pcStats?: (entry: JournalCharacter) => ActorStats;
   /** Spells (D102): the spec and caster stats for a spell the PC can cast, and how its cost is paid (null when it cannot). */
   pcSpell?: (entry: JournalCharacter, spellId: string, method?: CastMethod) => { spec: SpellCastSpec; casterStats: CasterStats; spend: (runtime: CharacterRuntime) => CharacterRuntime | null } | null;
+  /** R11: whether the character can cast this reaction spell right now (knows it, has a slot) — the cast method to use, or null. */
+  pcReactionSpell?: (entry: JournalCharacter, spellId: string) => CastMethod | null;
   /** R10: an item in the character's bag as a table use (healing formula, consumed) and how to take it out of the bag. */
   pcItem?: (entry: JournalCharacter, instanceId: string) => { name: string; heal?: string; text: string; consumes: boolean; consume: (runtime: CharacterRuntime) => CharacterRuntime } | null;
   now?: () => string;
@@ -84,6 +86,8 @@ export class TableHost {
   /** Applied action cards, newest last: inputs to re-resolve and a restore closure for undo. */
   /** Spell cards that can still be undone (or, D90, applied). */
   private readonly spells = new Map<string, { resolution: SpellResolution; restore: () => void; apply?: () => void }>();
+  /** R11: attacks held while the target decides on Shield (prompt id → everything needed to finish the attack). */
+  private readonly held = new Map<string, { inputs: { attacker: ActorRef; targets: ActorRef[]; attack: AttackRef; riders?: AttackRiders; by: string; targetIndex: number }; attacker: { entry: JournalEntry; token?: Token; page?: Page }; target: { entry: JournalEntry; token?: Token; page?: Page }; spec: AttackSpec; overrides?: AttackOverrides; resolution: AttackResolution; supersedes?: string }>();
   private readonly actions = new Map<string, { inputs: { attacker: ActorRef; targets: ActorRef[]; attack: AttackRef; riders?: AttackRiders; by: string; targetIndex: number }; resolution: AttackResolution; restore: () => void }>();
   private readonly connected = new Set<string>();
   private readonly peerUsers = new Map<string, string>();
@@ -420,6 +424,29 @@ export class TableHost {
         this.setTracker(withTurn(this.tracker, newTurn({ ...turn, initiative })));
         return;
       }
+      case "tracker.swap": {
+        const { turns, current } = this.tracker;
+        if (!turns.length || current < 0) return refuse("전투 중이 아닙니다");
+        const targetIndex = turns.findIndex((turn) => turn.id === command.turnId);
+        if (targetIndex < 0) return refuse("그 차례를 찾을 수 없습니다");
+        if (targetIndex === current) return refuse("이미 지금 차례입니다");
+        const now = turns[current];
+        const later = turns[targetIndex];
+        const refOf = (turn: TrackerTurn): ActorRef => ({ entryId: turn.entryId, pageId: turn.pageId, tokenId: turn.tokenId });
+        const nowActor = this.actorOfTurn(now);
+        const laterActor = this.actorOfTurn(later);
+        if (!isGm && !(nowActor && this.mayAct(userId, refOf(now), nowActor.entry)) && !(laterActor && this.mayAct(userId, refOf(later), laterActor.entry))) return refuse("자기 차례나 자기 인물의 차례만 바꿀 수 있습니다");
+        // Only within one linked party group: every row from now to the later one (in play order) is a party member.
+        const span: number[] = [];
+        for (let at = current; span.length <= turns.length; at = (at + 1) % turns.length) { span.push(at); if (at === targetIndex) break; }
+        if (span[span.length - 1] !== targetIndex || !span.every((at) => !turns[at].custom && this.actorOfTurn(turns[at])?.entry.kind === "character")) return refuse("이어진 일행 차례끼리만 순서를 바꿉니다 (지금 차례 뒤의 같은 묶음)");
+        const swapped = [...turns];
+        swapped[current] = { ...later, actionUsed: false, bonusUsed: false };
+        swapped[targetIndex] = { ...now, actionUsed: false, bonusUsed: false };
+        this.setTracker({ ...this.tracker, turns: swapped });
+        this.say({ type: "system", who: "", content: `${later.name}이(가) ${now.name}보다 먼저 행동합니다 (순서 교대)` });
+        return;
+      }
       case "tracker.next": {
         // "턴 마침": the current turn's controller may pass their own turn (D97).
         const current = this.tracker.turns[this.tracker.current];
@@ -484,6 +511,15 @@ export class TableHost {
         if (!prepared) return refuse("그 주문을 시전할 수 없습니다 (모르는 주문이거나 슬롯이 없습니다)");
         const exec = prepared.spec.exec;
         if (!isGm && !command.readied && exec.castingEconomy !== "reaction" && this.tracker.turns.length && this.turnOf(command.caster)?.id !== this.tracker.turns[this.tracker.current]?.id) return refuse("자기 턴에만 시전할 수 있습니다 (남의 턴에는 반응 주문·준비한 행동만)");
+        // R11: answering a shield prompt — the reaction spell against the held attack.
+        let heldPrompt: ChatMessage | undefined;
+        if (command.reaction) {
+          heldPrompt = this.chat.find((message) => message.id === command.reaction && message.type === "prompt");
+          if (!heldPrompt?.prompt || heldPrompt.prompt.kind !== "shield" || this.promptAnswered(command.reaction) || !this.held.has(command.reaction)) return refuse("그 방패 반응은 더 이상 열려 있지 않습니다");
+          if (!sameActor(heldPrompt.prompt.reactor, command.caster)) return refuse("그 프롬프트의 반응자만 방패를 시전할 수 있습니다");
+          if (exec.castingEconomy !== "reaction") return refuse("반응 주문만 답이 됩니다");
+          if (this.reactionUsed(command.caster)) return refuse("이번 라운드의 반응을 이미 썼습니다");
+        }
         const targetRefs = command.targets.length ? command.targets : exec.targeting.allowedRelations?.every((relation) => relation === "self") ? [command.caster] : [];
         if (targetRefs.length < Math.min(1, exec.targeting.minTargets)) return refuse("대상이 없습니다");
         if (targetRefs.length > exec.targeting.maxTargets) return refuse(`대상은 최대 ${exec.targeting.maxTargets}명입니다`);
@@ -505,6 +541,7 @@ export class TableHost {
         if (command.readied) { this.markReactionUsed(command.caster); this.mark(caster, ["준비"], false); }
         else if (exec.castingEconomy === "reaction") this.markReactionUsed(command.caster); else this.markUsed(command.caster, exec.castingEconomy === "bonus-action" ? "bonus" : "action");
         this.postSpell(resolution, rows.map((row) => row.target), restoreCaster, waits, player.displayName, userId);
+        if (heldPrompt) { this.say({ ...heldPrompt, prompt: { ...heldPrompt.prompt!, outcome: { shielded: true } }, supersedes: heldPrompt.id, content: `${heldPrompt.content} → 방패 시전` }); this.releaseHeld(heldPrompt.id, true); }
         return;
       }
       case "act.npcSave": {
@@ -631,6 +668,7 @@ export class TableHost {
         if (!reactor) return refuse("반응자를 찾을 수 없습니다");
         if (!isGm && !this.mayAct(userId, promptMessage.prompt.reactor, reactor.entry)) return refuse("반응자의 조종자만 답할 수 있습니다");
         this.say({ ...promptMessage, prompt: { ...promptMessage.prompt, outcome: { declined: true } }, supersedes: promptMessage.id, content: `${promptMessage.content} → 안 함` });
+        if (this.held.has(command.messageId)) this.releaseHeld(command.messageId, false);
         return;
       }
       case "act.adjust": {
@@ -732,6 +770,16 @@ export class TableHost {
     // Riders with a cost (a smite slot) are paid once per attack, by the first target's card.
     if (spend && attacker.entry.kind === "character") { const before = attacker.entry; this.storeEntry({ ...before, runtime: spend(before.runtime), updatedAt: this.now() }); }
     const player = this.campaign.players.find((item) => item.userId === inputs.by);
+    // R11: a hit on a caster who can still cast Shield is held until they answer (their reaction, +5 AC, maybe a miss).
+    const targetRef = inputs.targets[inputs.targetIndex];
+    if (!waits && resolution.outcome === "hit" && target.entry.kind === "character" && !fixed && !this.reactionUsed(targetRef) && this.options.pcReactionSpell?.(target.entry, "dnd.srd521.spell.shield")) {
+      const promptId = newMessageId();
+      const attackerName = attacker.token?.name ?? attacker.entry.name;
+      const targetName = target.token?.name ?? target.entry.name;
+      this.held.set(promptId, { inputs, attacker, target, spec: prepared.spec, overrides, resolution, supersedes });
+      this.sayWithId(promptId, { type: "prompt", who: player?.displayName ?? "", playerId: inputs.by, content: `${attackerName}의 ${prepared.spec.name}이(가) ${targetName}에게 적중 (${resolution.attackTotal} vs AC ${resolution.targetAc}) — 방패 반응?`, prompt: { kind: "shield", mover: { name: attackerName, ...inputs.attacker }, reactor: { name: targetName, ...targetRef }, attack: { name: prepared.spec.name, total: resolution.attackTotal, ac: resolution.targetAc } } });
+      return promptId;
+    }
     const messageId = newMessageId();
     if (waits) {
       this.actions.set(messageId, { inputs, resolution, restore: () => undefined });
@@ -807,6 +855,28 @@ export class TableHost {
     return { spec: { spellId, name: entry.name, level, exec }, casterStats: { attackBonus: casting.dc - 8, saveDc: casting.dc, modifier: Math.floor((block.abilities[casting.ability] - 10) / 2), level: cr >= 17 ? 17 : cr >= 11 ? 11 : cr >= 5 ? 5 : 1 }, spend: (runtime) => runtime, npcSpend: perDay !== undefined ? () => { setUses(used + 1); return () => setUses(used); } : undefined };
   }
 
+  /** R11: finish an attack held for a Shield answer — re-resolved against the raised AC (same dice) when the shield went up, else as rolled. */
+  private releaseHeld(promptId: string, shielded: boolean) {
+    const held = this.held.get(promptId);
+    if (!held) return;
+    this.held.delete(promptId);
+    const attacker = this.resolveActor(held.inputs.attacker) ?? held.attacker;
+    const target = this.resolveActor(held.inputs.targets[held.inputs.targetIndex]) ?? held.target;
+    let resolution = held.resolution;
+    if (shielded) {
+      const attackerCombatant = this.combatantOf(attacker);
+      const targetCombatant = this.combatantOf(target);
+      if (attackerCombatant && targetCombatant) {
+        if (targetCombatant.ac < held.resolution.targetAc + 5) targetCombatant.ac = held.resolution.targetAc + 5;
+        targetCombatant.distanceFeet = undefined;
+        resolution = resolveAttack(attackerCombatant, targetCombatant, held.spec, { dice: diceFrom(this.options.random ?? Math.random), overrides: { ...(held.overrides ?? {}), note: [held.overrides?.note, "방패 반응: AC +5"].filter(Boolean).join(" · ") }, fixed: { d20s: held.resolution.d20s, damage: held.resolution.damage.map((part) => part.dice) }, apply: true });
+      }
+    }
+    const player = this.campaign.players.find((item) => item.userId === held.inputs.by);
+    const messageId = newMessageId();
+    this.applyResolution(resolution, target, attacker, messageId, false, held.inputs, held.supersedes, player?.displayName);
+  }
+
   /** A resolved spell (or an NPC save action) becomes a card: applied now, or held for the DM (D90) with its restores. */
   private postSpell(resolution: SpellResolution, targets: Array<{ entry: JournalEntry; token?: Token; page?: Page }>, restoreCaster: () => void, waits: boolean, displayName: string, userId: string) {
     const messageId = newMessageId();
@@ -861,7 +931,9 @@ export class TableHost {
     const concentrationFailed = (row.attack?.concentration ?? row.damage?.concentration)?.success === false;
     const line = `${resolution.caster.name}의 ${resolution.name}: ${row.healed !== undefined ? `회복 ${row.healed}` : row.tempHp !== undefined ? `임시 HP ${row.tempHp}` : row.attack ? `${row.attack.outcome === "hit" || row.attack.outcome === "crit" ? `피해 ${row.attack.damageTotal}` : "빗나감"}` : row.damage ? `피해 ${row.damage.damageTotal}${row.save ? ` (내성 ${row.save.success ? "성공" : "실패"})` : ""}` : row.effect ? `${row.effect.name} (${row.effect.duration})` : row.marks.join(", ") || "효과"} → HP ${row.hpAfter}`;
     if (target.entry.kind === "character") {
-      const before = target.entry;
+      // The live entry, not the one captured before the cast: a self-target spell already paid its slot on this sheet.
+      const live = this.journalEntries.get(target.entry.id);
+      const before = live?.kind === "character" ? live : target.entry;
       let runtime: CharacterRuntime = { ...before.runtime, hp: { ...before.runtime.hp, current: row.hpAfter, temp: row.tempHp !== undefined ? row.tempHp : row.tempAfter } };
       runtime = noteLog(runtime, line);
       if (concentrationFailed) { const key = this.options.pcConcentrationKey?.(before); if (key) runtime = endEffect(runtime, key, "집중 실패"); }
@@ -1136,9 +1208,10 @@ export class TableHost {
 
   private say(body: Omit<ChatMessage, "id" | "at">) { this.sayWithId(newMessageId(), body); }
 
+  /** Says a card under a fixed id; saying it again under the same id (D90 확인, a held spell applied) replaces the earlier version. */
   private sayWithId(id: string, body: Omit<ChatMessage, "id" | "at">) {
     const message: ChatMessage = { ...body, id, at: this.now() };
-    this.chat = [...this.chat, message];
+    this.chat = this.chat.some((item) => item.id === id) ? this.chat.map((item) => (item.id === id ? message : item)) : [...this.chat, message];
     this.options.onChat?.(message);
     this.emit({ type: "chat", message });
   }

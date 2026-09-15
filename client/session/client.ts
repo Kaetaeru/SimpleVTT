@@ -110,7 +110,7 @@ export class TableClient {
         state.players = index >= 0 ? state.players.map((item, at) => (at === index ? event.player : item)) : [...state.players, event.player];
         break;
       }
-      case "chat": state.chat = [...state.chat, event.message].slice(-500); break;
+      case "chat": { const index = state.chat.findIndex((item) => item.id === event.message.id); state.chat = (index >= 0 ? state.chat.map((item, at) => (at === index ? event.message : item)) : [...state.chat, event.message]).slice(-500); break; }
       case "settings": state.settings = event.settings; break;
       case "journal": {
         const index = state.journal.findIndex((item) => item.id === event.entry.id);

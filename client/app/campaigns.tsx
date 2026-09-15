@@ -18,7 +18,7 @@ import { TableHost } from "../session/host";
 import type { ActorRef, AttackRef, AttackRiders, ClientCommand, Invite, RollPayload, TableSnapshot } from "../session/protocol";
 import { derivedOf, pcAttackSpec, pcCombatant, pcConcentrationKey } from "../rules/attackSpec";
 import { pcStats, type ActionKind } from "../rules/actions";
-import { pcSpell } from "../rules/spellcast";
+import { castableSpells, cheapestCast, pcSpell } from "../rules/spellcast";
 import { itemUse } from "../rules/items";
 import { setItemQuantity } from "../character/play";
 import type { CastMethod } from "../character/play";
@@ -96,6 +96,8 @@ export interface CampaignsState {
   setTracker: (tracker: Tracker) => void;
   addTurn: (turn: Omit<TrackerTurn, "id" | "initiative"> & { initiative?: number }, rollBonus?: number) => void;
   nextTurn: () => void;
+  /** R11: swap the current turn with a later party member in the same linked group (BG3). */
+  swapTurn: (turnId: string) => void;
   attack: (attacker: ActorRef, targets: ActorRef[], attack: AttackRef, riders?: AttackRiders, options?: { overrides?: AttackOverrides; reaction?: string; readied?: boolean }) => void;
   /** R9: an NPC's save action (breath, gaze) at targets; a legendary action from the pool. */
   npcSave: (actor: ActorRef, actionName: string, targets: ActorRef[]) => void;
@@ -107,7 +109,7 @@ export interface CampaignsState {
   /** D97: one of the official actions on the actor's turn. */
   act: (actor: ActorRef, kind: ActionKind, options?: { target?: ActorRef; skill?: string; dc?: number; note?: string; choice?: string; bonus?: boolean }) => void;
   /** D102: cast a spell at targets; the host pays and resolves. */
-  cast: (caster: ActorRef, spellId: string, targets: ActorRef[], method?: CastMethod, overrides?: AttackOverrides, readied?: boolean) => void;
+  cast: (caster: ActorRef, spellId: string, targets: ActorRef[], method?: CastMethod, overrides?: AttackOverrides, readied?: boolean, reaction?: string) => void;
   declineReaction: (messageId: string) => void;
   adjustAction: (messageId: string, overrides: AttackOverrides, reroll?: boolean) => void;
   undoAction: (messageId: string) => void;
@@ -298,6 +300,7 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
       pcAttackSpec: (entry, attackId, riders) => pcAttackSpec(entry, derivedOf(entry, catalogRef.current), attackId, riders),
       pcStats: (entry) => pcStats(derivedOf(entry, catalogRef.current)),
       pcSpell: (entry, spellId, method) => pcSpell(entry, derivedOf(entry, catalogRef.current), catalogRef.current, spellId, method),
+      pcReactionSpell: (entry, spellId) => { const derived = derivedOf(entry, catalogRef.current); if (!castableSpells(derived).includes(spellId)) return null; const view = catalogRef.current.spellById(spellId); return view ? cheapestCast(derived, entry.runtime, view.level) : null; },
       pcItem: (entry, instanceId) => { const derived = derivedOf(entry, catalogRef.current); const item = derived.inventory.find((candidate) => candidate.instanceId === instanceId); if (!item || item.quantity <= 0) return null; const use = itemUse(item); return { name: item.name, heal: use.heal, text: use.text, consumes: use.consumes, consume: (runtime) => (use.consumes ? setItemQuantity(runtime, derived, instanceId, item.quantity - 1) : runtime) }; },
       artData: {
         get: async (hash) => (await store?.getAsset(hash))?.dataUrl,
@@ -405,12 +408,13 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
   const setTracker = useCallback((tracker: Tracker) => send({ type: "tracker.set", tracker }), [send]);
   const addTurn = useCallback((turn: Omit<TrackerTurn, "id" | "initiative"> & { initiative?: number }, rollBonus?: number) => send({ type: "tracker.add", turn, rollBonus }), [send]);
   const nextTurn = useCallback(() => send({ type: "tracker.next" }), [send]);
+  const swapTurn = useCallback((turnId: string) => send({ type: "tracker.swap", turnId }), [send]);
   const attack = useCallback((attacker: ActorRef, targets: ActorRef[], ref: AttackRef, riders?: AttackRiders, options?: { overrides?: AttackOverrides; reaction?: string; readied?: boolean }) => send({ type: "act.attack", attacker, targets, attack: ref, riders, overrides: options?.overrides, reaction: options?.reaction, readied: options?.readied }), [send]);
   const npcSave = useCallback((actor: ActorRef, actionName: string, targets: ActorRef[]) => send({ type: "act.npcSave", actor, actionName, targets }), [send]);
   const legendary = useCallback((actor: ActorRef, name: string, targets?: ActorRef[]) => send({ type: "act.legendary", actor, name, targets }), [send]);
   const useItem = useCallback((actor: ActorRef, target: ActorRef | undefined, instanceId: string) => send({ type: "act.item", actor, target, instanceId }), [send]);
   const provoke = useCallback((mover: ActorRef, from: ActorRef) => send({ type: "act.provoke", mover, from }), [send]);
-  const cast = useCallback((caster: ActorRef, spellId: string, targets: ActorRef[], method?: CastMethod, overrides?: AttackOverrides, readied?: boolean) => send({ type: "act.cast", caster, spellId, targets, method, overrides, readied }), [send]);
+  const cast = useCallback((caster: ActorRef, spellId: string, targets: ActorRef[], method?: CastMethod, overrides?: AttackOverrides, readied?: boolean, reaction?: string) => send({ type: "act.cast", caster, spellId, targets, method, overrides, readied, reaction }), [send]);
   const act = useCallback((actor: ActorRef, kind: ActionKind, options: { target?: ActorRef; skill?: string; dc?: number; note?: string; choice?: string; bonus?: boolean } = {}) => send({ type: "act.action", actor, kind, ...options }), [send]);
   const declineReaction = useCallback((messageId: string) => send({ type: "act.decline", messageId }), [send]);
   const adjustAction = useCallback((messageId: string, overrides: AttackOverrides, reroll?: boolean) => send({ type: "act.adjust", messageId, overrides, reroll }), [send]);
@@ -447,8 +451,8 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
   const table = useMemo<TableState>(() => ({ role, status: client ? client.status : "idle", reason: client?.reason ?? null, campaignId, snapshot: client?.snapshot ?? null, invite, invites, transportNote, refusals, shows, artUrls, artPending, pings }),
   // eslint-disable-next-line react-hooks/exhaustive-deps
   [role, client, campaignId, invite, invites, transportNote, refusals, shows, artUrls, artPending, pings, tick]);
-  const value = useMemo<CampaignsState>(() => ({ userId, displayName, setDisplayName, campaigns, joined, archives, journals, arts, pages, createCampaign, updateCampaign, deleteCampaign, regenerateJoinCode, forgetJoined, table, launch, join, leave, say, sendRoll, setRole, kick, putJournal, removeJournal, showJournal, dismissShow, uploadArt, updateArt, removeArt, requestArt, putPage, removePage, setRibbon, setBookmark, putToken, removeToken, ping, setTracker, addTurn, nextTurn, attack, npcSave, legendary, useItem, provoke, act, cast, declineReaction, adjustAction, undoAction, confirmAction }),
-    [userId, displayName, setDisplayName, campaigns, joined, archives, journals, arts, pages, createCampaign, updateCampaign, deleteCampaign, regenerateJoinCode, forgetJoined, table, launch, join, leave, say, sendRoll, setRole, kick, putJournal, removeJournal, showJournal, dismissShow, uploadArt, updateArt, removeArt, requestArt, putPage, removePage, setRibbon, setBookmark, putToken, removeToken, ping, setTracker, addTurn, nextTurn, attack, npcSave, legendary, useItem, adjustAction, undoAction, confirmAction]);
+  const value = useMemo<CampaignsState>(() => ({ userId, displayName, setDisplayName, campaigns, joined, archives, journals, arts, pages, createCampaign, updateCampaign, deleteCampaign, regenerateJoinCode, forgetJoined, table, launch, join, leave, say, sendRoll, setRole, kick, putJournal, removeJournal, showJournal, dismissShow, uploadArt, updateArt, removeArt, requestArt, putPage, removePage, setRibbon, setBookmark, putToken, removeToken, ping, setTracker, addTurn, nextTurn, swapTurn, attack, npcSave, legendary, useItem, provoke, act, cast, declineReaction, adjustAction, undoAction, confirmAction }),
+    [userId, displayName, setDisplayName, campaigns, joined, archives, journals, arts, pages, createCampaign, updateCampaign, deleteCampaign, regenerateJoinCode, forgetJoined, table, launch, join, leave, say, sendRoll, setRole, kick, putJournal, removeJournal, showJournal, dismissShow, uploadArt, updateArt, removeArt, requestArt, putPage, removePage, setRibbon, setBookmark, putToken, removeToken, ping, setTracker, addTurn, nextTurn, swapTurn, attack, npcSave, legendary, useItem, adjustAction, undoAction, confirmAction]);
   return <CampaignsContext.Provider value={value}>{children}</CampaignsContext.Provider>;
 }
 

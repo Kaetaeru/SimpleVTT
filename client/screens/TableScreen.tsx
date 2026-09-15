@@ -222,8 +222,8 @@ function PromptCard({ message, time, color }: { message: ChatMessage; time: stri
     <div className="cl-chat-msg prompt" data-prompt-id={message.id}>
       <span className="cl-at">{time}</span>{message.who ? <span className="cl-who" style={{ color }}>{message.who}</span> : null}
       <div className="cl-prompt-card">
-        <div>🏃 {prompt.mover.name}이(가) <strong>{prompt.reactor.name}</strong>에게서 벗어납니다</div>
-        {prompt.outcome ? <Pill tone={prompt.outcome.attacked ? "bad" : "accent"}>{prompt.outcome.attacked ? "기회 공격" : "기회 공격 안 함"}</Pill> : <PromptChoices message={message} />}
+        {prompt.kind === "shield" ? <div>🛡 {prompt.mover.name}의 {prompt.attack?.name}이(가) <strong>{prompt.reactor.name}</strong>에게 적중 ({prompt.attack?.total} vs AC {prompt.attack?.ac}) — 방패?</div> : <div>🏃 {prompt.mover.name}이(가) <strong>{prompt.reactor.name}</strong>에게서 벗어납니다</div>}
+        {prompt.outcome ? <Pill tone={prompt.outcome.attacked || prompt.outcome.shielded ? "bad" : "accent"}>{prompt.kind === "shield" ? (prompt.outcome.shielded ? "방패 시전" : "방패 안 씀") : prompt.outcome.attacked ? "기회 공격" : "기회 공격 안 함"}</Pill> : <PromptChoices message={message} />}
       </div>
     </div>
   );

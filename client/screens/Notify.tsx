@@ -11,6 +11,7 @@ import type { ChatMessage } from "../campaign/model";
 import { controlsToken } from "../campaign/page";
 import { deriveCharacter } from "../character/derive";
 import { weaponRange } from "../rules/attackSpec";
+import { cheapestCast } from "../rules/spellcast";
 import type { ActorRef, AttackRef } from "../session/protocol";
 import { Pill } from "../ui/components";
 
@@ -87,7 +88,21 @@ export function PromptChoices({ message, compact = false }: { message: ChatMessa
     return [];
   }, [reactorEntry, catalog]);
   const ref = (actor: typeof prompt.reactor): ActorRef => ({ entryId: actor.entryId, pageId: actor.pageId, tokenId: actor.tokenId });
+  // R11: a shield prompt offers the reaction spell with its cheapest slot.
+  const shield = useMemo(() => {
+    if (prompt.kind !== "shield" || reactorEntry?.kind !== "character") return null;
+    const derived = deriveCharacter(reactorEntry.source, catalog, { equipped: reactorEntry.runtime.equipped, inventory: reactorEntry.runtime.inventory, effects: reactorEntry.runtime.effects });
+    return cheapestCast(derived, reactorEntry.runtime, 1);
+  }, [prompt.kind, reactorEntry, catalog]);
   if (prompt.outcome || !controls) return null;
+  if (prompt.kind === "shield") {
+    return (
+      <div className="cl-row" style={{ gap: 4, flexWrap: "wrap" }}>
+        {reactionUsed ? <span className="cl-quiet cl-small">이번 라운드의 반응을 이미 썼습니다</span> : shield ? <button type="button" className="cl-btn small primary" onClick={() => c.cast(ref(prompt.reactor), "dnd.srd521.spell.shield", [ref(prompt.reactor)], shield, undefined, undefined, message.id)}>🛡 방패 시전 ({shield.kind === "slot" ? `${shield.level}레벨 슬롯` : "계약 슬롯"}) — AC +5{prompt.attack && prompt.attack.total < prompt.attack.ac + 5 ? " → 빗나감" : " (그래도 적중)"}</button> : <span className="cl-quiet cl-small">슬롯이 없습니다</span>}
+        <button type="button" className="cl-btn small" onClick={() => c.declineReaction(message.id)}>안 함</button>
+      </div>
+    );
+  }
   return (
     <div className="cl-row" style={{ gap: 4, flexWrap: "wrap" }}>
       {reactionUsed ? <span className="cl-quiet cl-small">이번 라운드의 반응을 이미 썼습니다</span> : attacks.map((attack) => <button type="button" key={attack.name} className="cl-btn small primary" onClick={() => c.attack(ref(prompt.reactor), [ref(prompt.mover)], attack.ref, undefined, { reaction: message.id })}>⚔ {attack.name}{compact ? "" : " (기회 공격)"}</button>)}
@@ -113,7 +128,7 @@ export function ApprovalLayer() {
   const firstWait = waiting[0];
   if (!first && !firstWait) {
     const theirs = prompts[0];
-    return theirs ? <div className="cl-waiting-note" role="status">⏳ {theirs.prompt!.reactor.name}의 기회 공격 선택을 기다리는 중…</div> : null;
+    return theirs ? <div className="cl-waiting-note" role="status">⏳ {theirs.prompt!.reactor.name}의 {theirs.prompt!.kind === "shield" ? "방패 반응" : "기회 공격"} 선택을 기다리는 중…</div> : null;
   }
   return (
     <div className="cl-approval-overlay" role="dialog" aria-modal="false" aria-label="승인">
@@ -121,7 +136,7 @@ export function ApprovalLayer() {
         <div className="cl-approval-head">{first ? "당신의 답을 기다립니다" : "DM 확인"}{(mine.length + waiting.length) > 1 ? <small> +{mine.length + waiting.length - 1}</small> : null}</div>
         {first ? (
           <>
-            <div className="cl-approval-body">🏃 <strong>{first.prompt!.mover.name}</strong>이(가) <strong>{first.prompt!.reactor.name}</strong>에게서 벗어납니다.<br />기회 공격을 하시겠습니까?</div>
+            {first.prompt!.kind === "shield" ? <div className="cl-approval-body">🛡 <strong>{first.prompt!.mover.name}</strong>의 {first.prompt!.attack?.name}이(가) <strong>{first.prompt!.reactor.name}</strong>에게 적중했습니다 (명중 {first.prompt!.attack?.total} vs AC {first.prompt!.attack?.ac}).<br />방패를 시전하시겠습니까?</div> : <div className="cl-approval-body">🏃 <strong>{first.prompt!.mover.name}</strong>이(가) <strong>{first.prompt!.reactor.name}</strong>에게서 벗어납니다.<br />기회 공격을 하시겠습니까?</div>}
             <PromptChoices message={first} compact />
           </>
         ) : (

@@ -658,3 +658,7 @@ span.cl-tracker-init{display:inline-grid;place-items:center}
 @media (max-width:1100px){.cl-cmd{flex-wrap:wrap;gap:8px 12px}.cl-cmd-groups{order:3;flex-basis:100%}.cl-cmd-end{margin-left:auto}}
 .cl-grid-float{left:auto;top:auto;z-index:5000;font-size:15px}
 .cl-btn .cl-extra{margin-left:5px;font-size:10px;font-weight:600;opacity:.8}
+/* R11: swap within a linked party group on the ribbon */
+.cl-turn-ribbon-item{position:relative}
+.cl-turn-ribbon-swap{position:absolute;right:-6px;top:-8px;width:18px;height:18px;border-radius:50%;border:1px solid #7dd3fc;background:#0f1a24;color:#7dd3fc;font-size:11px;line-height:16px;padding:0;cursor:pointer;opacity:.75}
+.cl-turn-ribbon-swap:hover{opacity:1;background:#173042}

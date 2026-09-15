@@ -970,7 +970,7 @@ function SceneIcon({ token, kind, journal, ac, selected, picked, candidate, turn
  */
 function TurnRibbon({ page, onOpenTracker }: { page: Page; onOpenTracker?: () => void }) {
   const c = useCampaigns();
-  const { snapshot, isGm } = useViewer();
+  const { snapshot, isGm, viewer } = useViewer();
   const tracker = snapshot.tracker;
   const rows = tracker.turns.map((turn, index) => ({ turn, index })).filter(({ turn }) => !turn.custom);
   const currentIndex = tracker.current;
@@ -998,6 +998,9 @@ function TurnRibbon({ page, onOpenTracker }: { page: Page; onOpenTracker?: () =>
           const inGroup = linked.has(at);
           const groupStart = groups.some((group) => group.start === at && group.end > group.start);
           const groupEnd = groups.some((group) => group.end === at && group.end > group.start);
+          // R11: inside the current linked group a later member may go first — the DM or either creature's controller.
+          const currentToken = tokenOf(tracker.turns[currentIndex]?.tokenId);
+          const canSwap = inGroup && !now && !acted && at > 0 && linked.has(0) && groups.some((group) => group.start === 0 && at <= group.end) && (isGm || (token ? controlsToken(token, viewer, snapshot.journal) : false) || (currentToken ? controlsToken(currentToken, viewer, snapshot.journal) : false));
           return (
             <span key={turn.id} role="listitem" className={`cl-turn-ribbon-item ${side}${now ? " now" : ""}${acted ? " acted" : ""}${down ? " down" : ""}${inGroup ? " linked" : ""}${groupStart ? " group-start" : ""}${groupEnd ? " group-end" : ""}`} data-turn-name={turn.name} title={`${turn.name} · 이니셔티브 ${turn.initiative}${down ? " · 쓰러짐" : ""}`}>
               <span className="cl-turn-ribbon-frame">
@@ -1007,6 +1010,7 @@ function TurnRibbon({ page, onOpenTracker }: { page: Page; onOpenTracker?: () =>
               </span>
               {inGroup ? <span className={`cl-turn-ribbon-arrow${acted || now ? " filled" : ""}`} aria-hidden="true">{acted ? "⌛" : now ? "▲" : "△"}</span> : null}
               {now ? <span className="cl-turn-ribbon-name">{turn.name}</span> : null}
+              {canSwap ? <button type="button" className="cl-turn-ribbon-swap" title={`${turn.name}이(가) 먼저 행동 (순서 교대)`} aria-label={`${turn.name} 먼저`} onClick={(event) => { event.stopPropagation(); c.swapTurn(turn.id); }}>↔</button> : null}
             </span>
           );
         })}

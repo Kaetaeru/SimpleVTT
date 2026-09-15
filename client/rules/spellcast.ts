@@ -240,6 +240,16 @@ export function describeSpell(result: SpellResolution) {
 }
 
 /** Spell ids a character can cast right now (cantrips, prepared and always-prepared spells that the catalog can execute). */
+/** R11: the cheapest way to cast a leveled spell right now (lowest slot that fits, else the pact slot), or null. */
+export function cheapestCast(derived: DerivedCharacter, runtime: CharacterRuntime, level: number): CastMethod | null {
+  if (level === 0) return { kind: "cantrip" };
+  for (const [slot, count] of Object.entries(derived.spellSlots).map(([key, value]) => [Number(key), value] as const).sort((a, b) => a[0] - b[0])) {
+    if (slot >= level && count - (runtime.slotsUsed[slot] ?? 0) > 0) return { kind: "slot", level: slot };
+  }
+  if (derived.pactMagic && derived.pactMagic.level >= level && derived.pactMagic.count - (runtime.pactSlotsUsed ?? 0) > 0) return { kind: "pact" };
+  return null;
+}
+
 export function castableSpells(derived: DerivedCharacter) {
   const ids = new Set<string>();
   for (const list of derived.spellcasting) for (const id of [...list.cantrips, ...list.prepared, ...list.alwaysPrepared]) ids.add(id);

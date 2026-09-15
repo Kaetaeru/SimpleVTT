@@ -169,7 +169,7 @@ export function resolveAttack(attacker: Combatant, target: Combatant, spec: Atta
   const overrides = options.overrides ?? {};
   const suggested = suggestAdvantage(attacker, target, spec);
   const advantage = overrides.advantage ?? suggested.advantage;
-  const reasons = overrides.advantage && overrides.advantage !== suggested.advantage ? [...suggested.reasons, `DM: ${advantage === "advantage" ? "유리" : advantage === "disadvantage" ? "불리" : "보통"}`] : suggested.reasons;
+  const reasons = [...(overrides.advantage && overrides.advantage !== suggested.advantage ? [...suggested.reasons, `DM: ${advantage === "advantage" ? "유리" : advantage === "disadvantage" ? "불리" : "보통"}`] : suggested.reasons), ...(overrides.note ? [overrides.note] : [])];
   const d20s = options.fixed?.d20s ?? (advantage === "normal" ? [options.dice.d(20)] : [options.dice.d(20), options.dice.d(20)]);
   const kept = advantage === "advantage" ? Math.max(...d20s) : advantage === "disadvantage" ? Math.min(...d20s) : d20s[0];
   const cover = overrides.cover ?? 0;
