@@ -8,6 +8,7 @@ import { durationInRounds, effectKeyForFeature, effectKeyForSpell, parseDuration
 import type { ActiveEffect, CharacterRuntime } from "./runtime";
 import { emptyInventoryPatch } from "./runtime";
 import type { DerivedCharacter } from "./types";
+import { scrollSpellId } from "../rules/scrolls";
 
 const MAX_LOG = 200;
 const stamp = (runtime: CharacterRuntime, text: string): CharacterRuntime => ({ ...runtime, log: [...(runtime.log ?? []), { at: new Date().toISOString(), text }].slice(-MAX_LOG), updatedAt: new Date().toISOString() });
@@ -304,7 +305,7 @@ export function useFeature(runtime: CharacterRuntime, derived: DerivedCharacter,
 }
 
 export interface SpellSummary { id: string; name: string; level: number; duration?: string; ritual?: boolean }
-export type CastMethod = { kind: "slot"; level: number } | { kind: "pact" } | { kind: "ritual" } | { kind: "cantrip" } | { kind: "resource"; id: string };
+export type CastMethod = { kind: "slot"; level: number } | { kind: "pact" } | { kind: "ritual" } | { kind: "cantrip" } | { kind: "resource"; id: string } | { kind: "scroll"; instanceId: string };
 
 /** Cast a spell: spend the slot, pact slot, free-cast pool or nothing (cantrip, ritual); a lasting spell becomes an effect. Null when the cost cannot be paid. */
 export function castSpell(runtime: CharacterRuntime, derived: DerivedCharacter, spell: SpellSummary, method: CastMethod): CharacterRuntime | null {
@@ -333,6 +334,14 @@ export function castSpell(runtime: CharacterRuntime, derived: DerivedCharacter, 
       if (!resource || used >= resource.max) return null;
       next = { ...next, resourcesUsed: { ...next.resourcesUsed, [method.id]: used + 1 } };
       how = `${resource.label}, 남은 ${resource.max - used - 1}/${resource.max}`;
+      break;
+    }
+    case "scroll": {
+      // R19: the scroll is the cost — no slot, and the scroll itself is destroyed.
+      const item = derived.inventory.find((entry) => entry.instanceId === method.instanceId);
+      if (!item || item.quantity <= 0 || scrollSpellId(item.itemId) !== spell.id) return null;
+      next = setItemQuantity(next, derived, method.instanceId, item.quantity - 1);
+      how = `두루마리 (${item.name}) — 슬롯 없이, 두루마리는 사라집니다`;
       break;
     }
   }

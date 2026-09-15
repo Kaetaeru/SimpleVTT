@@ -60,8 +60,13 @@ export interface NpcRuntime {
   spent: Record<string, boolean>;
   /** R12: Legendary Resistance uses spent today (the sheet's 초기화 clears it). */
   legendaryResistanceUsed?: number;
-  /** R10: per-day spells used (spell id → count); the sheet's 초기화 clears it. */
+  /** R10: per-day spells used (spell id → count) and R19 traits used (key `trait:<이름>`); the sheet's 초기화 clears it. */
   uses?: Record<string, number>;
+  /**
+   * R19: how many times a day each trait may be used, by trait name. SRD 5.2.1 stat blocks carry no such number
+   * for traits (only actions have Recharge), so the DM sets it here for the monsters that need one.
+   */
+  traitUses?: Record<string, number>;
   /** R10: effects the NPC may shake off with a save at the end of its turns. */
   endSaves?: Array<{ key: string; name: string; ability: AbilityKey; dc: number; conditions: string[] }>;
   updatedAt: string;

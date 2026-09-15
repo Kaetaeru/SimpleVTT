@@ -36,6 +36,7 @@ import { Modal as RiderModal } from "../ui/components";
 import { toggleCondition } from "../character/play";
 import { Modal, Notice } from "../ui/components";
 import { ART_DRAG_TYPE, ArtImage, ArtPicker } from "./ArtPanel";
+import { scrollCheckDc, scrollSpellId } from "../rules/scrolls";
 
 export const JOURNAL_DRAG_TYPE = "application/x-simplevtt-journal";
 export const COMPENDIUM_DRAG_TYPE = "application/x-simplevtt-monster";
@@ -403,7 +404,7 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
     if (outcome === "done") c.say(`/em ${token.name}: ${feature.name} 사용`);
   };
   const featureItems = entry.kind === "npc"
-    ? entry.statBlock.traits.map((trait) => ({ key: trait.name, label: trait.name, hint: trait.text.slice(0, 60), onSelect: () => c.say(`/em ${token.name}: ${trait.name}`) }))
+    ? entry.statBlock.traits.map((trait) => { const most = entry.runtime.traitUses?.[trait.name]; const used = entry.runtime.uses?.[`trait:${trait.name}`] ?? 0; return { key: trait.name, label: trait.name, hint: `${most ? `${Math.max(0, most - used)}/${most} 남음 · ` : ""}${trait.text.slice(0, 60)}`, disabled: most !== undefined && used >= most, onSelect: () => c.useTrait(me, trait.name) }; })
     : usable.filter((item) => !item.bonus).map((item) => ({ key: item.feature.id, label: item.feature.name, hint: item.left !== undefined ? `${item.left}/${item.pool!.max}${item.activation.note ? ` · ${item.activation.note}` : ""}` : item.activation.note, disabled: item.left !== undefined && item.left <= 0, onSelect: () => void useIt(item.feature) }));
   const items = entry.kind === "character" && derived ? derived.inventory.filter((item) => item.quantity > 0 && !["weapon", "armor", "shield"].includes(item.kind)) : [];
   const useItem = async (item: DerivedItem) => {
@@ -420,14 +421,24 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
     saveRuntime((current) => { let next = noteLog(current, `${use.text}${healed !== undefined ? ` — ${healed} 회복` : ""}`); if (healed !== undefined) next = applyHealing(next, derived, healed); if (use.consumes) next = setItemQuantity(next, derived, item.instanceId, item.quantity - 1); return next; });
     c.say(`/em ${token.name}: ${use.text}${healed !== undefined ? ` (${healed} 회복)` : ""}`);
   };
-  const itemItems = items.map((item) => ({ key: item.instanceId, label: item.name, hint: `${item.quantity > 1 ? `×${item.quantity} · ` : ""}${itemUse(item).heal ? `회복 ${itemUse(item).heal}` : itemUse(item).consumes ? "소모" : "기록"}`, onSelect: () => void useItem(item) }));
+  // R19 (D113): a 주문 두루마리 in the bag casts its spell — no slot, and the scroll is gone.
+  const itemItems = items.map((item) => {
+    const spellId = scrollSpellId(item.itemId);
+    const view = spellId ? catalog.spellById(spellId) : undefined;
+    const highest = derived ? Math.max(0, ...Object.entries(derived.spellSlots).filter(([, max]) => max > 0).map(([level]) => Number(level))) : 0;
+    if (spellId && view && spellExec(spellId)) {
+      const overLevel = view.level > highest;
+      return { key: item.instanceId, label: `📜 ${item.name}`, hint: `${item.quantity > 1 ? `×${item.quantity} · ` : ""}두루마리로 시전 (슬롯 없음)${overLevel ? ` · 지능(신비학) DC ${scrollCheckDc(view.level)} — DM 판단` : ""}`, onSelect: () => void castIt(spellId, view.name, { kind: "scroll", instanceId: item.instanceId }) };
+    }
+    return { key: item.instanceId, label: item.name, hint: `${item.quantity > 1 ? `×${item.quantity} · ` : ""}${itemUse(item).heal ? `회복 ${itemUse(item).heal}` : itemUse(item).consumes ? "소모" : "기록"}`, onSelect: () => void useItem(item) };
+  });
   const bonusItems = [
     ...(entry.kind === "npc" ? entry.statBlock.bonusActions.map((action) => ({ key: action.name, label: `${action.kind === "attack" && action.attack ? "⚔ " : ""}${action.name}`, hint: action.text?.slice(0, 60), onSelect: () => { if (action.kind === "attack" && action.attack) void attackWith({ source: "npc", actionName: action.name }); else c.act(me, "utilize", { note: action.name, bonus: true }); } })) : []),
     ...usable.filter((item) => item.bonus).map((item) => ({ key: item.feature.id, label: item.feature.name, hint: item.left !== undefined ? `${item.left}/${item.pool!.max}` : undefined, disabled: item.left !== undefined && item.left <= 0, onSelect: () => void useIt(item.feature) })),
     { key: "note", label: "기록…", hint: "다른 추가 행동을 쓴 것으로 남김", onSelect: () => void take({ ...actionDef("utilize"), name: "추가 행동", text: "무엇을" }, true) },
   ];
   // 마법 (D102): the sheet's castable spells or the stat block's lists; targets from the board, the slot from a dialog.
-  const castIt = async (spellId: string, name: string) => {
+  const castIt = async (spellId: string, name: string, forced?: CastMethod) => {
     const exec = spellExec(spellId);
     if (!exec) return;
     const selfOnly = exec.targeting.allowedRelations?.every((relation) => relation === "self");
@@ -437,8 +448,8 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
       if (!targets.length) return;
       if (targets.length > exec.targeting.maxTargets) targets = targets.slice(0, exec.targeting.maxTargets);
     }
-    let method: CastMethod | undefined;
-    if (entry.kind === "character" && derived) {
+    let method: CastMethod | undefined = forced;
+    if (!forced && entry.kind === "character" && derived) {
       const view = catalog.spellById(spellId);
       const options = view ? castOptions(view, derived, currentRuntime()) : [];
       if (!options.length) { alert("슬롯이나 횟수가 없습니다."); return; }

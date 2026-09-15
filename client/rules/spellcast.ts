@@ -15,6 +15,7 @@ import type { CharacterRuntime } from "../character/runtime";
 import type { DerivedCharacter } from "../character/types";
 import { spellExec } from "../compendium/spells";
 import { applyDamage, noDamage, resolveAttack, type AttackOverrides, type AttackResolution, type Combatant, type DamageOutcome, type DamagePart, type DiceSource } from "./resolve";
+import { scrollStats } from "./scrolls";
 
 export interface CasterStats {
   /** Spell attack bonus and save DC of the list the spell comes from. */
@@ -265,12 +266,14 @@ export function pcSpell(entry: { runtime: CharacterRuntime }, derived: DerivedCh
   const view = catalog.spellById(spellId);
   if (!exec || !view) return null;
   const list = derived.spellcasting.find((item) => item.cantrips.includes(spellId) || item.prepared.includes(spellId) || item.alwaysPrepared.includes(spellId)) ?? derived.spellcasting[0];
-  if (!list) return null;
+  // R19: a scroll carries the spell, so someone with no spellcasting of their own may still read it.
+  const fromScroll = method?.kind === "scroll";
+  if (!list && !fromScroll) return null;
   const chosen: CastMethod = method ?? (view.level === 0 ? { kind: "cantrip" } : { kind: "slot", level: view.level });
   const level = chosen.kind === "slot" ? chosen.level : chosen.kind === "pact" ? derived.pactMagic?.level ?? view.level : view.level;
   return {
     spec: { spellId, name: view.name, level, exec },
-    casterStats: { attackBonus: list.attackBonus, saveDc: list.saveDc, modifier: derived.abilities[list.ability].modifier, level: derived.level },
+    casterStats: list ? { attackBonus: list.attackBonus, saveDc: list.saveDc, modifier: derived.abilities[list.ability].modifier, level: derived.level } : { ...scrollStats(view.level), modifier: 0, level: derived.level },
     spend: (runtime) => castSpell(runtime, derived, { id: view.id, name: view.name, level: view.level, duration: view.duration, ritual: view.ritual }, chosen),
   };
 }

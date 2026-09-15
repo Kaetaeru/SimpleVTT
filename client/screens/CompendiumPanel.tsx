@@ -13,6 +13,9 @@ import { CR_VALUES, CREATURE_TYPES, searchMonsters } from "../compendium/monster
 import { Pill } from "../ui/components";
 import { npcSummary, StatBlock } from "./NpcSheet";
 import { COMPENDIUM_DRAG_TYPE, placeToken } from "./PageCanvas";
+import { addItem } from "../character/play";
+import { spellExec } from "../compendium/spells";
+import { scrollItemId, scrollName, scrollRarity } from "../rules/scrolls";
 
 export function CompendiumTab({ onOpenEntry }: { onOpenEntry: (id: string) => void }) {
   const c = useCampaigns();
@@ -34,6 +37,18 @@ export function CompendiumTab({ onOpenEntry }: { onOpenEntry: (id: string) => vo
     const npc = newJournalNpc(snapshot.campaignId, c.userId, monster, { name: count ? `${monster.name} ${count + 1}` : monster.name });
     c.putJournal(npc);
     if (!placeToken(tokenForNpc(npc))) alert("열린 페이지가 없습니다. 저널에는 NPC가 만들어졌습니다.");
+  };
+  /**
+   * R19 (D113): SRD 5.2.1 lists no magic items, so a 주문 두루마리 is made here — the DM picks a spell and a
+   * character, and the scroll lands in that character's bag as an item that casts the spell once.
+   */
+  const characters = snapshot.journal.filter((entry): entry is Extract<typeof entry, { kind: "character" }> => entry.kind === "character" && !entry.archived);
+  const giveScroll = (spell: { id: string; name: string; level: number }, entryId: string) => {
+    const entry = characters.find((item) => item.id === entryId);
+    if (!entry) return;
+    const runtime = addItem(entry.runtime, { itemId: scrollItemId(spell.id), name: scrollName(spell.name, spell.level) });
+    c.putJournal({ ...entry, runtime, updatedAt: new Date().toISOString() });
+    c.say(`/em ${entry.name}이(가) ${scrollName(spell.name, spell.level)}을(를) 받았습니다 (${scrollRarity(spell.level)})`);
   };
   return (
     <div className="cl-compendium">
@@ -63,6 +78,12 @@ export function CompendiumTab({ onOpenEntry }: { onOpenEntry: (id: string) => vo
             <div className="cl-row" style={{ gap: 6 }}>
               <button type="button" className="cl-compendium-name" onClick={() => setOpen(open === spell.id ? null : spell.id)}>{spell.name} <span className="cl-quiet cl-small">{spell.nameEn}</span></button>
               <Pill>{spell.level === 0 ? "소마법" : `${spell.level}레벨`}</Pill>
+              {isGm && characters.length && spellExec(spell.id) ? (
+                <select className="cl-select" style={{ height: 26, maxWidth: 150 }} aria-label={`${spell.name} 두루마리로 주기`} value="" onChange={(event) => { if (event.target.value) giveScroll(spell, event.target.value); event.target.value = ""; }}>
+                  <option value="">📜 두루마리로 주기…</option>
+                  {characters.map((entry) => <option key={entry.id} value={entry.id}>{entry.name}</option>)}
+                </select>
+              ) : null}
             </div>
             {open === spell.id ? <div className="cl-compendium-detail cl-small"><p className="cl-quiet">{spell.school} · {spell.castingTime} · {spell.range} · {spell.components} · {spell.duration}{spell.ritual ? " · 의식" : ""}</p><p style={{ whiteSpace: "pre-wrap" }}>{spell.description ?? spell.summary ?? ""}</p><p className="cl-quiet">{spell.classes.map((id) => catalog.name(id)).join(", ")}</p></div> : null}
           </div>

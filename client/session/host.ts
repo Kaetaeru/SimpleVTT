@@ -623,6 +623,25 @@ export class TableHost {
         this.say({ type: "act", who: player.displayName, playerId: userId, content: describeAct(result), act: result });
         return;
       }
+      case "act.trait": {
+        const actor = this.resolveActor(command.actor);
+        if (!actor) return refuse("그 크리처를 찾을 수 없습니다");
+        if (!isGm && !this.mayAct(userId, command.actor, actor.entry)) return refuse("자기 크리처의 특성만 쓸 수 있습니다");
+        if (actor.entry.kind !== "npc") return refuse("특성은 스탯 블록이 있는 NPC의 것입니다");
+        const trait = actor.entry.statBlock.traits.find((item) => item.name === command.name);
+        if (!trait) return refuse("그 특성을 찾을 수 없습니다");
+        const name = actor.token?.name ?? actor.entry.name;
+        // R19: SRD traits carry no uses, so only the ones the DM gave a per-day count are counted.
+        const most = actor.entry.runtime.traitUses?.[trait.name];
+        if (most === undefined) { this.say({ type: "emote", who: player.displayName, playerId: userId, content: `${name}: ${trait.name}` }); return; }
+        const key = `trait:${trait.name}`;
+        const used = actor.entry.runtime.uses?.[key] ?? 0;
+        if (used >= most) return refuse(`${trait.name}의 오늘 횟수를 다 썼습니다 (${most}회)`);
+        const live = this.journalEntries.get(actor.entry.id);
+        if (live?.kind === "npc") this.storeEntry({ ...live, runtime: { ...live.runtime, uses: { ...(live.runtime.uses ?? {}), [key]: used + 1 }, updatedAt: this.now() }, updatedAt: this.now() });
+        this.say({ type: "emote", who: player.displayName, playerId: userId, content: `${name}: ${trait.name} (${most - used - 1}/${most} 남음)` });
+        return;
+      }
       case "act.summon": {
         const summoner = this.resolveActor(command.summoner);
         if (!summoner) return refuse("소환하는 쪽을 찾을 수 없습니다");

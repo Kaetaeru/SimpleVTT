@@ -76,7 +76,24 @@ export function NpcWindow({ entry, onClose, onOpen: _onOpen }: { entry: JournalN
         <div className="cl-card cl-row cl-small" style={{ gap: 8, flexWrap: "wrap", alignItems: "center" }}>
           <span className="cl-quiet">주문 횟수 (일)</span>
           {perDay.map((item) => <Pill key={item.spellId} tone={(runtime.uses?.[item.spellId] ?? 0) >= item.uses ? "bad" : "good"}>{item.name} {Math.max(0, item.uses - (runtime.uses?.[item.spellId] ?? 0))}/{item.uses}</Pill>)}
-          <button type="button" className="cl-btn small" onClick={() => save({ uses: {}, legendaryResistanceUsed: 0 })} title="긴 휴식: 하루 횟수와 전설 저항을 모두 되돌립니다">횟수 초기화</button>
+          <button type="button" className="cl-btn small" onClick={() => save({ uses: {}, legendaryResistanceUsed: 0 })} title="긴 휴식: 주문·특성의 하루 횟수와 전설 저항을 모두 되돌립니다">횟수 초기화</button>
+        </div>
+      ) : null}
+      {viewer.isGm && block.traits.length ? (
+        <div className="cl-card cl-small" style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <span className="cl-quiet">특성 횟수 (일) — SRD 스탯 블록에는 특성의 횟수가 없습니다. 하루 몇 번인지 여기서 정하면 테이블이 세어 줍니다.</span>
+          {block.traits.map((trait) => {
+            const most = runtime.traitUses?.[trait.name];
+            const used = runtime.uses?.[`trait:${trait.name}`] ?? 0;
+            return (
+              <label key={trait.name} className="cl-row" style={{ gap: 6 }}>
+                <span style={{ flex: 1 }}>{trait.name}</span>
+                {most ? <Pill tone={used >= most ? "bad" : "good"}>{Math.max(0, most - used)}/{most} 남음</Pill> : <span className="cl-quiet">제한 없음</span>}
+                <input className="cl-input" style={{ width: 66, height: 24 }} type="number" min={0} max={20} aria-label={`${trait.name} 하루 횟수`} value={most ?? ""} placeholder="–"
+                  onChange={(event) => { const value = Number(event.target.value); const next = { ...(runtime.traitUses ?? {}) }; if (!value) delete next[trait.name]; else next[trait.name] = Math.max(1, Math.min(20, value)); save({ traitUses: next }); }} />
+              </label>
+            );
+          })}
         </div>
       ) : null}
       <StatBlock block={block} runtime={editable ? runtime : undefined} onRoll={editable ? roll : undefined} onSpend={editable ? (name, spent) => save({ spent: { ...runtime.spent, [name]: spent } }) : undefined} />
