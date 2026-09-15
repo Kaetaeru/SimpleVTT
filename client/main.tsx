@@ -4,6 +4,7 @@ import { App } from "./app/App";
 import { ClientProvider } from "./app/context";
 import "./ui/tokens.css";
 import "./ui/app.css";
+import "./ui/dice/dice.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

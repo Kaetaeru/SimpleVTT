@@ -11,6 +11,9 @@ const MAX_LOG = 200;
 const stamp = (runtime: CharacterRuntime, text: string): CharacterRuntime => ({ ...runtime, log: [...(runtime.log ?? []), { at: new Date().toISOString(), text }].slice(-MAX_LOG), updatedAt: new Date().toISOString() });
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 
+/** Append a free log line (dice rolls, notes). */
+export const noteLog = (runtime: CharacterRuntime, text: string) => stamp(runtime, text);
+
 export const CONDITIONS = ["장님", "매혹", "귀머거리", "공포", "붙잡힘", "행동불능", "투명", "마비", "석화", "중독", "넘어짐", "포박", "충격", "무의식"] as const;
 
 // ---- hit points

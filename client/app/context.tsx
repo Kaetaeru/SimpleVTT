@@ -16,6 +16,7 @@ export type Route =
   | { screen: "new" }
   | { screen: "edit"; id: string }
   | { screen: "sheet"; id: string }
+  | { screen: "levelup"; id: string }
   | { screen: "contents" };
 
 export function parseRoute(hash: string): Route {
@@ -24,6 +25,7 @@ export function parseRoute(hash: string): Route {
   if (parts[0] === "new") return { screen: "new" };
   if (parts[0] === "edit" && parts[1]) return { screen: "edit", id: decodeURIComponent(parts[1]) };
   if (parts[0] === "sheet" && parts[1]) return { screen: "sheet", id: decodeURIComponent(parts[1]) };
+  if (parts[0] === "levelup" && parts[1]) return { screen: "levelup", id: decodeURIComponent(parts[1]) };
   if (parts[0] === "contents") return { screen: "contents" };
   return { screen: "library" };
 }
@@ -33,6 +35,7 @@ export function routeHash(route: Route) {
     case "new": return "#/new";
     case "edit": return `#/edit/${encodeURIComponent(route.id)}`;
     case "sheet": return `#/sheet/${encodeURIComponent(route.id)}`;
+    case "levelup": return `#/levelup/${encodeURIComponent(route.id)}`;
     case "contents": return "#/contents";
     default: return "#/";
   }

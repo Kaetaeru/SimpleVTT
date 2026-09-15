@@ -27,7 +27,11 @@ export interface SheetActions {
   setQuantity: (instanceId: string, quantity: number) => void;
   removeItem: (instanceId: string) => void;
   openAddItem: () => void;
+  /** Roll dice with the overlay: label, formula ("1d20+5"), note. */
+  roll: (label: string, formula: string, note?: string, kind?: "check" | "attack" | "damage" | "save" | "initiative" | "custom") => void;
 }
+
+const d20 = (bonus: number) => `1d20${bonus >= 0 ? "+" : "-"}${Math.abs(bonus)}`;
 
 export function SheetView({ derived, catalog, runtime, compact = false, actions }: { derived: DerivedCharacter; catalog: ContentCatalog; runtime?: CharacterRuntime; compact?: boolean; actions?: SheetActions }) {
   const [openFeatures, setOpenFeatures] = useState<Record<string, boolean>>({});
@@ -60,7 +64,7 @@ export function SheetView({ derived, catalog, runtime, compact = false, actions 
       <div className="cl-stat-row">
         <Stat label="최대 HP" value={<Explain terms={derived.hp.terms} total={derived.hp.max} label="최대 HP">{derived.hp.max}</Explain>} sub={runtime ? `현재 ${runtime.hp.current}${runtime.hp.temp ? ` (+${runtime.hp.temp} 임시)` : ""}` : `히트 다이스 ${Object.entries(derived.hitDice).map(([die, count]) => `${count}${die}`).join(" ")}`} />
         <Stat label="AC" value={<Explain terms={derived.ac.terms} total={derived.ac.value} label={`AC (${derived.ac.source})`}>{derived.ac.value}</Explain>} sub={derived.ac.source} />
-        <Stat label="이니셔티브" value={<Explain terms={derived.initiativeTerms} total={derived.initiative} label="이니셔티브">{signed(derived.initiative)}</Explain>} />
+        <Stat label="이니셔티브" value={<Explain terms={derived.initiativeTerms} total={derived.initiative} label="이니셔티브">{signed(derived.initiative)}</Explain>} sub={live ? undefined : undefined} action={live ? <RollButton onClick={() => actions!.roll("이니셔티브", d20(derived.initiative), undefined, "initiative")} /> : null} />
         <Stat label="이동 속도" value={<Explain terms={derived.speed.terms} total={derived.speed.walk} label="이동 속도 (피트)">{derived.speed.walk}ft</Explain>} sub={[derived.speed.fly ? `비행 ${derived.speed.fly}` : "", derived.speed.swim ? `수영 ${derived.speed.swim}` : "", derived.speed.climb ? `등반 ${derived.speed.climb}` : ""].filter(Boolean).join(" · ") || undefined} />
         <Stat label="패시브 지각" value={<Explain terms={derived.passivePerceptionTerms} total={derived.passivePerception} label="패시브 지각">{derived.passivePerception}</Explain>} />
         <Stat label="감각" value={derived.senses.darkvision ? `암시야 ${derived.senses.darkvision}` : "—"} sub={[derived.senses.blindsight ? `맹안시야 ${derived.senses.blindsight}` : "", derived.senses.truesight ? `진실시야 ${derived.senses.truesight}` : ""].filter(Boolean).join(" · ") || undefined} />
@@ -76,6 +80,7 @@ export function SheetView({ derived, catalog, runtime, compact = false, actions 
               <Explain terms={terms} total={ability.score} label={`${ABILITY_KO[key]} 점수`}><div className="cl-score">{ability.score}</div></Explain>
               <div className="cl-mod">{signed(ability.modifier)}</div>
               <Explain terms={derived.saves[key].terms} total={derived.saves[key].bonus} label={`${ABILITY_KO[key]} 내성`}><div className="cl-small cl-quiet">내성 {signed(derived.saves[key].bonus)}{derived.saves[key].proficient ? " ●" : ""}</div></Explain>
+              {live ? <div className="cl-row" style={{ gap: 3 }}><RollButton label="판정" onClick={() => actions!.roll(`${ABILITY_KO[key]} 판정`, d20(ability.modifier), undefined, "check")} /><RollButton label="내성" onClick={() => actions!.roll(`${ABILITY_KO[key]} 내성`, d20(derived.saves[key].bonus), undefined, "save")} /></div> : null}
             </div>
           );
         })}
@@ -90,7 +95,10 @@ export function SheetView({ derived, catalog, runtime, compact = false, actions 
                 <div className="cl-skill" key={skill.id}>
                   <span className={`cl-dot${skill.proficient ? " on" : ""}${skill.expertise ? " x2" : ""}`} title={skill.expertise ? "전문화" : skill.proficient ? "숙련" : ""} />
                   <span>{skill.name} <span className="cl-quiet cl-small">{ABILITY_KO[skill.ability]}</span></span>
-                  <Explain terms={skill.terms} total={skill.bonus} label={skill.name}><span className="cl-bonus">{signed(skill.bonus)}</span></Explain>
+                  <span className="cl-row" style={{ gap: 4, justifyContent: "flex-end" }}>
+                    <Explain terms={skill.terms} total={skill.bonus} label={skill.name}><span className="cl-bonus">{signed(skill.bonus)}</span></Explain>
+                    {live ? <RollButton onClick={() => actions!.roll(`${skill.name} 판정`, d20(skill.bonus), undefined, "check")} /> : null}
+                  </span>
                 </div>
               ))}
             </div>
@@ -176,8 +184,8 @@ export function SheetView({ derived, catalog, runtime, compact = false, actions 
                 {derived.attacks.map((attack) => (
                   <tr key={attack.id}>
                     <td>{attack.name}{attack.masteryActive ? <Pill tone="accent">통달 {attack.mastery}</Pill> : null}</td>
-                    <td className="num"><Explain terms={attack.attackTerms} total={attack.attackBonus} label={`${attack.name} 명중`}>{signed(attack.attackBonus)}</Explain></td>
-                    <td>{attack.damage} <Explain terms={attack.damageTerms} total={attack.damageBonus} label={`${attack.name} 피해 보너스`}>{signed(attack.damageBonus)}</Explain> {attack.damageType}</td>
+                    <td className="num"><Explain terms={attack.attackTerms} total={attack.attackBonus} label={`${attack.name} 명중`}>{signed(attack.attackBonus)}</Explain>{live ? <RollButton onClick={() => actions!.roll(`${attack.name} 명중`, d20(attack.attackBonus), undefined, "attack")} /> : null}</td>
+                    <td>{attack.damage} <Explain terms={attack.damageTerms} total={attack.damageBonus} label={`${attack.name} 피해 보너스`}>{signed(attack.damageBonus)}</Explain> {attack.damageType}{live ? <RollButton label="피해" onClick={() => actions!.roll(`${attack.name} 피해`, `${attack.damage.split(" ")[0]}${attack.damageBonus ? `${attack.damageBonus > 0 ? "+" : "-"}${Math.abs(attack.damageBonus)}` : ""}`, attack.damageType, "damage")} /> : null}</td>
                     <td className="cl-quiet cl-small">{[...attack.properties, attack.range ? `사거리 ${attack.range}` : ""].filter(Boolean).join(", ")}</td>
                   </tr>
                 ))}
@@ -266,14 +274,18 @@ export function Pips({ max, used, onUse, onRestore }: { max: number; used: numbe
   );
 }
 
-function Stat({ label, value, sub }: { label: string; value: React.ReactNode; sub?: string }) {
+function Stat({ label, value, sub, action }: { label: string; value: React.ReactNode; sub?: string; action?: React.ReactNode }) {
   return (
     <div className="cl-stat">
-      <span className="cl-k">{label}</span>
+      <span className="cl-k">{label}{action ? <span style={{ float: "right" }}>{action}</span> : null}</span>
       <span className="cl-v">{value}</span>
       {sub ? <span className="cl-s">{sub}</span> : null}
     </div>
   );
+}
+
+export function RollButton({ onClick, label = "굴림" }: { onClick: () => void; label?: string }) {
+  return <button type="button" className="cl-roll" onClick={onClick} title="주사위 굴림">{label}</button>;
 }
 
 export function ValidationList({ derived }: { derived: DerivedCharacter }) {

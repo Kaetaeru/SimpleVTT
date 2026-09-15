@@ -4,6 +4,7 @@
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useClient } from "../app/context";
+import { useDice } from "../ui/dice/DiceProvider";
 import { ABILITY_KEYS, ABILITY_KO, type AbilityKey } from "../catalog/types";
 import { autofill } from "../character/autofill";
 import { deriveCharacter } from "../character/derive";
@@ -238,7 +239,12 @@ function AbilitiesStep({ source, update, derived }: { source: CharacterSource; u
 
 function ClassesStep({ source, update, derived, choices, onToggle, onClear }: { source: CharacterSource; update: (next: CharacterSource) => void; derived: ReturnType<typeof deriveCharacter>; choices: ChoiceRequest[]; onToggle: (choice: ChoiceRequest, value: string) => void; onClear: (choice: ChoiceRequest) => void }) {
   const { catalog } = useClient();
+  const dice = useDice();
   const [nextClass, setNextClass] = useState(source.tracks[source.tracks.length - 1]?.classId ?? catalog.classes[0]?.id ?? "");
+  const rollHp = async (index: number, die: number) => {
+    const result = await dice.roll({ label: `${index + 1}레벨 히트 다이스`, formula: `1d${die}`, kind: "hit-die" });
+    update(setTrackHp(source, index, { kind: "roll", value: result.total }));
+  };
   const grouped = new Map<string, ChoiceRequest[]>();
   for (const choice of choices) { const key = choice.trackIndex !== undefined ? String(choice.trackIndex) : "x"; grouped.set(key, [...(grouped.get(key) ?? []), choice]); }
   const classLevelAt = (index: number) => source.tracks.slice(0, index + 1).filter((track) => track.classId === source.tracks[index].classId).length;
@@ -253,11 +259,11 @@ function ClassesStep({ source, update, derived, choices, onToggle, onClear }: { 
               <div className="cl-track" key={index}>
                 <span className="cl-lvl">{index + 1}레벨</span>
                 <span>{cls?.name ?? track.classId} {classLevelAt(index)}</span>
-                {index === 0 ? <span className="cl-quiet cl-small">HP d{die} 최대값</span> : (
+                {index === 0 ? <span className="cl-quiet cl-small">1레벨 HP: d{die} 최대값 {die} + 건강 수정치 (규칙상 굴리지 않음)</span> : (
                   <span className="cl-row" style={{ gap: 6 }}>
                     <button type="button" className={`cl-btn small${track.hp.kind === "fixed" ? " primary" : ""}`} onClick={() => update(setTrackHp(source, index, { kind: "fixed" }))}>고정 {fixedHitPoints(die)}</button>
-                    <button type="button" className={`cl-btn small${track.hp.kind === "roll" ? " primary" : ""}`} onClick={() => update(setTrackHp(source, index, { kind: "roll", value: track.hp.kind === "roll" ? track.hp.value : Math.ceil(die / 2) }))}>굴림</button>
-                    {track.hp.kind === "roll" ? <input className="cl-input" type="number" min={1} max={die} value={track.hp.value} style={{ width: 60 }} onChange={(event) => update(setTrackHp(source, index, { kind: "roll", value: Number(event.target.value) }))} /> : null}
+                    <button type="button" className={`cl-btn small${track.hp.kind === "roll" ? " primary" : ""}`} onClick={() => void rollHp(index, die)}>{track.hp.kind === "roll" ? `d${die} 다시 굴림` : `d${die} 굴림`}</button>
+                    {track.hp.kind === "roll" ? <input className="cl-input" type="number" min={1} max={die} value={track.hp.value} style={{ width: 60 }} aria-label="굴림 값" onChange={(event) => update(setTrackHp(source, index, { kind: "roll", value: Number(event.target.value) }))} /> : null}
                   </span>
                 )}
               </div>

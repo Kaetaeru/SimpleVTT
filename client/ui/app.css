@@ -218,3 +218,9 @@ details.cl-details[open]>summary{color:var(--text)}
 .cl-inline-btns{display:inline-flex;gap:2px;margin-left:6px}
 .cl-inline-btns button{height:20px;width:20px;padding:0;justify-content:center;font-size:var(--text-xs)}
 @media (max-width: 1100px){.cl-play{grid-template-columns:1fr}}
+
+/* dice */
+.cl-roll{height:20px;padding:0 6px;margin-left:4px;border-radius:4px;border:1px solid var(--line-2);background:var(--surface-2);color:var(--accent);font-size:var(--text-xs);font-weight:600;cursor:pointer;vertical-align:middle}
+.cl-roll:hover{background:var(--accent-soft);border-color:var(--accent)}
+.cl-hp-roll{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius-s);background:var(--surface)}
+.cl-hp-roll .cl-big{font-size:var(--text-xl);font-weight:700;min-width:36px;text-align:center}

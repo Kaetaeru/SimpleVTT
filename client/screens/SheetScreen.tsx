@@ -5,10 +5,12 @@
 import { useMemo, useState } from "react";
 import { useClient } from "../app/context";
 import { deriveCharacter } from "../character/derive";
+import { describeRoll, parseFormula, type RollSpec } from "../character/dice";
+import { useDice } from "../ui/dice/DiceProvider";
 import { exportCharacterFile, serializeCharacterFile } from "../character/json";
 import {
-  addItem, adjustGold, applyDamage, applyHealing, clearTempHp, CONDITIONS, grantTempHp, hitDiceAvailable, longRest, recordDeathSave, removeItem, resetDeathSaves,
-  restorePactSlot, restoreResource, restoreSpellSlot, rollDie, setCurrentHp, setExhaustion, setGold, setInspiration, setItemQuantity, shortRest, toggleCondition, toggleEquip,
+  addItem, adjustGold, applyDamage, applyHealing, clearTempHp, CONDITIONS, grantTempHp, hitDiceAvailable, longRest, noteLog, recordDeathSave, removeItem, resetDeathSaves,
+  restorePactSlot, restoreResource, restoreSpellSlot, setCurrentHp, setExhaustion, setGold, setInspiration, setItemQuantity, shortRest, toggleCondition, toggleEquip,
   usePactSlot, useResource, useSpellSlot,
 } from "../character/play";
 import type { CharacterRuntime } from "../character/runtime";
@@ -25,9 +27,14 @@ export function SheetScreen({ id }: { id: string }) {
   const [resting, setResting] = useState<{ spends: Record<string, number> } | null>(null);
   const [adding, setAdding] = useState<{ query: string; custom: string; quantity: string } | null>(null);
   const [showLog, setShowLog] = useState(true);
+  const [customRoll, setCustomRoll] = useState("");
+  const dice = useDice();
   if (!record || !derived) return <div className="cl-page"><Notice tone="bad">캐릭터를 찾을 수 없습니다.</Notice><button type="button" className="cl-btn" onClick={() => navigate({ screen: "library" })}>라이브러리로</button></div>;
   const runtime = record.runtime;
   const commit = (next: CharacterRuntime) => { if (next !== runtime) void saveCharacter(record.source, next); };
+  const rollAndLog = async (spec: RollSpec) => { const result = await dice.roll(spec); void saveCharacter(record.source, noteLog(latestRuntime(), describeRoll(result))); return result; };
+  // Rolls resolve later; read the freshest runtime from the record list at that moment.
+  const latestRuntime = () => characters.find((item) => item.id === id)?.runtime ?? runtime;
   const hpNumber = () => { const value = Number(hpInput); return Number.isFinite(value) && hpInput.trim() ? Math.abs(Math.floor(value)) : null; };
 
   const actions: SheetActions = {
@@ -43,6 +50,7 @@ export function SheetScreen({ id }: { id: string }) {
     setQuantity: (instanceId, quantity) => commit(setItemQuantity(runtime, derived, instanceId, quantity)),
     removeItem: (instanceId) => commit(removeItem(runtime, derived, instanceId)),
     openAddItem: () => setAdding({ query: "", custom: "", quantity: "1" }),
+    roll: (label, formula, note, kind) => { void rollAndLog({ label, formula, note, kind }); },
   };
 
   const remove = async () => {
@@ -53,11 +61,20 @@ export function SheetScreen({ id }: { id: string }) {
   const text = () => serializeCharacterFile(exportCharacterFile(record.source, runtime, derived));
   const hpRatio = derived.hp.max ? runtime.hp.current / derived.hp.max : 0;
   const available = hitDiceAvailable(runtime, derived);
-  const doShortRest = () => {
-    const spends: Array<{ die: string; roll: number }> = [];
-    for (const [die, count] of Object.entries(resting?.spends ?? {})) for (let index = 0; index < count; index += 1) spends.push({ die, roll: rollDie(die) });
-    commit(shortRest(runtime, derived, spends));
+  const doShortRest = async () => {
+    const plan = Object.entries(resting?.spends ?? {}).filter(([, count]) => count > 0);
     setResting(null);
+    const spends: Array<{ die: string; roll: number }> = [];
+    for (const [die, count] of plan) {
+      const result = await dice.roll({ label: `히트 다이스 ${count}${die}`, formula: `${count}${die}`, note: `건강 ${derived.abilities.con.modifier >= 0 ? "+" : ""}${derived.abilities.con.modifier} ×${count}`, kind: "hit-die" });
+      for (const rolled of result.dice) spends.push({ die, roll: rolled.value });
+    }
+    commit(shortRest(latestRuntime(), derived, spends));
+  };
+  const submitCustomRoll = () => {
+    if (!parseFormula(customRoll)) return;
+    void rollAndLog({ label: "주사위", formula: customRoll, kind: "custom" });
+    setCustomRoll("");
   };
   const catalogMatches = adding && adding.query.trim() ? catalog.items.filter((item) => item.name.includes(adding.query.trim()) || item.nameEn.toLowerCase().includes(adding.query.trim().toLowerCase())).slice(0, 30) : [];
 
@@ -68,7 +85,8 @@ export function SheetScreen({ id }: { id: string }) {
         <span className="cl-sub">저장 {new Date(record.savedAt).toLocaleString("ko-KR")}</span>
         <div className="cl-actions">
           <button type="button" className="cl-btn" onClick={() => setExporting(text())}>JSON 내보내기</button>
-          <button type="button" className="cl-btn" onClick={() => navigate({ screen: "edit", id: record.id })}>편집 · 레벨 업</button>
+          <button type="button" className="cl-btn primary" onClick={() => navigate({ screen: "levelup", id: record.id })}>레벨 업</button>
+          <button type="button" className="cl-btn" onClick={() => navigate({ screen: "edit", id: record.id })}>편집</button>
           <button type="button" className="cl-btn danger" onClick={remove}>삭제</button>
           <button type="button" className="cl-btn quiet" onClick={() => navigate({ screen: "library" })}>라이브러리</button>
         </div>
@@ -99,6 +117,11 @@ export function SheetScreen({ id }: { id: string }) {
               {[0, 1, 2, 3, 4, 5, 6].map((level) => <option key={level} value={level}>{level}</option>)}
             </select>
             <label className="cl-row cl-small" style={{ gap: 4 }}><input type="checkbox" checked={runtime.heroicInspiration} onChange={(event) => commit(setInspiration(runtime, event.target.checked))} /> 영웅적 영감</label>
+          </div>
+          <div className="cl-row" style={{ gap: 6 }}>
+            <input className="cl-input" style={{ width: 120 }} placeholder="주사위 (2d6+3)" aria-label="주사위 식" value={customRoll} onChange={(event) => setCustomRoll(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") submitCustomRoll(); }} />
+            <button type="button" className="cl-btn" disabled={!parseFormula(customRoll)} onClick={submitCustomRoll}>굴림</button>
+            {["1d20", "1d12", "1d10", "1d8", "1d6", "1d4"].map((formula) => <button type="button" key={formula} className="cl-btn small" onClick={() => void rollAndLog({ label: "주사위", formula, kind: "custom" })}>{formula.slice(1)}</button>)}
           </div>
         </div>
         <div className="cl-card">

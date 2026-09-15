@@ -23,3 +23,7 @@ Chromium이 Vite 개발 서버(포트 1430)에서 마법사를 처음부터 끝�
 - `17-sheet-attack-provenance.png` — 명중 굴림 출처(근력 수정치 · 숙련 보너스)
 - `18-sheet-short-rest.png` — 짧은 휴식 대화상자(히트 다이스 선택)
 - `19-sheet-after-rest-log.png` — 휴식 뒤 HP·히트 다이스·기록 (`node scripts/capture-client-play.mjs`)
+- `20-wizard-hp-roll-dice.png` — 마법사에서 2레벨 HP를 d8로 굴림(주사위 오버레이, 결과 릴)
+- `21-sheet-skill-roll.png` — 시트에서 곡예 판정 d20 굴림
+- `22-levelup-screen.png` — 별도 레벨 업 화면: 직업·레벨 수, 레벨별 HP 고정/굴림, 새로 열린 선택만 표시, 바뀌는 것 요약
+- `23-sheet-after-levelup.png` — 적용 뒤 시트 (`node scripts/capture-client-levelup.mjs`)

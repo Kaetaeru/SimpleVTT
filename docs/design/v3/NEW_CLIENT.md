@@ -67,6 +67,8 @@ CHARACTER_SYSTEM §3.1의 모든 행에 더해:
 
 **M2 착수 (2026-09-15, 소유자 지시 "숫자 출처 추적 + 오프라인 세션처럼 시트 조작")**: 파생값마다 `terms`(가산 항목)를 붙여 시트에서 마우스를 올리면 출처가 나온다(HP·AC·이니셔티브·속도·패시브 지각·능력치·내성·기술·공격 명중/피해·주문 DC/명중). 시트는 런타임을 직접 조작한다: 피해/회복/설정/임시 HP, 히트 다이스 소비, 짧은 휴식(자원 회복 규칙 `restore.short`, 계약 슬롯)·긴 휴식(전부 회복, 히트 다이스 절반, 탈진 −1), 슬롯·자원 핍 클릭, 금화 증감, 아이템 추가(카탈로그 검색 또는 직접 입력)·수량·버리기·착용(AC·공격에 반영), 상태 토글, 탈진, 죽음 내성, 영웅적 영감, 활동 기록 200줄. 연산은 `client/character/play.ts`의 순수 함수이고 `play.test.ts`가 덮는다. 런타임 스키마에 `inventory`(제거·수량·추가)와 `log`가 추가됐다(JSON v2 호환, 없으면 빈 값).
 
+**주사위·레벨 업 (2026-09-15)**: 옛 클라이언트의 물리 주사위(`PhysicsDice3D`, three.js + cannon-es)를 `client/ui/dice/`로 복사해 `DiceProvider`가 오버레이로 굴린다(`useDice().roll({label, formula})` → 결과 Promise). 시트의 기술·능력치 판정·내성·이니셔티브·공격 명중/피해와 임의 식(`2d6+3`), 짧은 휴식 히트 다이스, 마법사와 레벨 업 화면의 HP 굴림이 모두 이 주사위를 쓰고 기록에 남는다. 1레벨 HP는 규칙대로 최대값(굴리지 않음)이며 마법사에 그렇게 표시한다. 레벨 업은 생성 마법사와 별개 화면(`#/levelup/<id>`): 직업과 올릴 레벨 수 → 레벨별 HP 고정/굴림 → `choicesOpenedByLevelUp`이 고른 "이번 레벨 업이 새로 연 선택"만 → 바뀌는 것 요약(HP·숙련 보너스·새 특성) → 적용. 검사: `dice.test.ts`(식 파싱·RNG 주입·레벨 업 선택 필터).
+
 엔진의 선택 id 규약(원본 `choices` 맵의 키): `origin.languages`, `origin.species.<choice>`(`origin.species.lineage`…), `origin.background.abilityMode|abilityPlus2|abilityPlus1|tool`, `class.<트랙>.skills|expertise|fighting-style|subclass|asi|epic-boon|...`, 직업 전체 풀은 첫 트랙에 붙는다(`class.<첫 트랙>.weapon-mastery|invocations|metamagic|cantrips|spells|spellbook`), 재주 하위 선택은 `feat.<부여 위치>.<재주 id>.<항목>`, 장비는 `equipment.class|background[.<옵션>.<n>]`. 답은 항상 옵션 id 배열이고, 옵션 밖의 답은 무시된다(모듈 제거·레벨 되돌림에도 안전).
 
 M1에서 단순화한 것: 반복 가능한 기원술(고통스러운 폭발 등)은 한 번만 고른다. 준비 주문은 최대치보다 적어도 막지 않는다(규칙대로). ASI 후보에서 기원 재주를 뺀다(소유자 결정; 규칙상은 허용).

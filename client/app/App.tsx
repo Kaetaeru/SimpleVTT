@@ -3,7 +3,9 @@ import { useClient } from "./context";
 import { ContentsScreen } from "../screens/ContentsScreen";
 import { CreateScreen } from "../screens/CreateScreen";
 import { LibraryScreen } from "../screens/LibraryScreen";
+import { LevelUpScreen } from "../screens/LevelUpScreen";
 import { SheetScreen } from "../screens/SheetScreen";
+import { DiceProvider } from "../ui/dice/DiceProvider";
 
 export function App() {
   const { route, navigate, theme, setTheme, ready, characters } = useClient();
@@ -19,10 +21,12 @@ export function App() {
       break;
     }
     case "sheet": body = <SheetScreen key={route.id} id={route.id} />; break;
+    case "levelup": body = ready ? <LevelUpScreen key={route.id} id={route.id} /> : <div className="cl-page"><p className="cl-quiet">불러오는 중…</p></div>; break;
     case "contents": body = <ContentsScreen />; break;
     default: body = <LibraryScreen />;
   }
   return (
+    <DiceProvider>
     <div className="cl-root">
       <header className="cl-topbar">
         <div className="cl-brand">SimpleVTT <small>캐릭터</small></div>
@@ -32,5 +36,6 @@ export function App() {
       </header>
       <main className="cl-main">{body}</main>
     </div>
+    </DiceProvider>
   );
 }
