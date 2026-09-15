@@ -66,7 +66,7 @@ Chromium이 Vite 개발 서버(포트 1430)에서 마법사를 처음부터 끝�
 - `60-attack-card-dm-palette.png` — DM 채팅의 판정 카드: d20 + 명중 보너스 = 합계 vs AC, 적중 배지, 피해 주사위마다 값·유형, HP 전→후, "HP 0 — 사망", DM 팔레트(강제 적중·빗나감·치명타·엄폐·재굴림·피해 절반/0·±N·되돌리기). 토큰 바 0/10과 ✖ 사망 마커
 - `61-attack-undone-player.png` — 되돌리기 뒤 플레이어 화면: 바 10/10 복원, 마커 사라짐, "되돌림" 카드
 - `62-goblin-hits-fighter-player.png` — 고블린의 시미터가 파이터를 적중: 연결 바 25/28, 시트 HP 25/28, 카드의 HP 28 → 25 (`node scripts/capture-client-attack.mjs`, 시나리오 SC-40~42)
-- `63-totm-scene-targeting.png` — 장면(TotM) 보드: "일행"과 "상대·기타" 묶음의 아이콘, 플레이어의 ⚔ 대검 과녁 모드(사거리 판단 없음), 고른 고블린에 점선
+- `63-totm-scene-targeting.png` — 장면(TotM) 무대: 위 NPC 카드 줄, 가운데 장면 카드(이름 칩·배경 자리·라운드/턴 칩), 아래 플레이어 카드 줄; 카드는 AC 방패 배지와 아래에서 차오르는 HP 게이지. 플레이어의 ⚔ 대검 과녁 모드(사거리 판단 없음), 고른 고블린에 점선
 - `64-totm-dm-preroll-dialog.png` — DM의 "판정 전 조정" 대화: 유리·불리(자동/보통/유리/불리), 엄폐(없음/+2/+5), 반드시(주사위대로/적중/치명타/빗나감)
 - `65-totm-opportunity-prompt-dm.png` — 플레이어가 고블린 아이콘의 "🏃 벗어남"을 누른 뒤 DM 채팅의 프롬프트 카드("⚔ 시미터 (기회 공격)" / "안 함"), 트래커의 현재 턴, 강제 치명타 카드(vs AC 18 (엄폐 +2))
 - `66-totm-opportunity-attack-player.png` — 플레이어 화면: "시미터 · 기회 공격" 판정 카드와 "기회 공격" 배지가 붙은 프롬프트 (`node scripts/capture-client-totm.mjs`, 시나리오 SC-44~47)

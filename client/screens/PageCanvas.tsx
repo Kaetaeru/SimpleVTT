@@ -421,28 +421,61 @@ function AttackDialog({ ask, onDone }: { ask: AttackAsk; onDone: (answer: Attack
 
 /* ---------- Scene board (D95: Theatre of the Mind) ---------- */
 
+/**
+ * The scene as a stage: NPC cards along the top, the scene card (name, backdrop, round/turn) in the middle, the
+ * players' cards along the bottom. A card is a portrait with the AC shield, an HP gauge rising from the bottom,
+ * markers and the name; the 벗어남 button (D96) sits under every other card while you act.
+ */
 function SceneBoard({ page, tokens, selected, picked, turnTokenId, acting, journal, isGm, onPointerDown, onPointerDownBoard, onContextMenu, onDoubleClick, onLeave }: {
   page: Page; tokens: Token[]; selected: string[]; picked: string[]; turnTokenId?: string; acting?: Token; journal: JournalEntry[]; isGm: boolean;
   onPointerDown: (event: ReactPointerEvent, token: Token) => void; onPointerDownBoard: () => void; onContextMenu: (event: React.MouseEvent, token: Token) => void; onDoubleClick: (token: Token) => void; onLeave: (token: Token) => void;
 }) {
+  const c = useCampaigns();
+  const { catalog } = useClient();
+  const snapshot = c.table.snapshot!;
   const visible = tokens.filter((token) => token.layer !== "map");
   const party = visible.filter((token) => journal.find((entry) => entry.id === token.represents)?.kind === "character");
   const others = visible.filter((token) => !party.includes(token));
-  const icon = (token: Token) => (
-    <SceneIcon key={token.id} token={token} journal={journal} selected={selected.includes(token.id)} picked={picked.includes(token.id)} turn={turnTokenId === token.id}
+  // AC per card: the stat block's for NPCs, the derived sheet's for characters (memoised over the journal).
+  const acOf = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const entry of journal) {
+      if (entry.kind === "npc") map.set(entry.id, entry.statBlock.ac);
+      else if (entry.kind === "character") { try { map.set(entry.id, deriveCharacter(entry.source, catalog, { equipped: entry.runtime.equipped, inventory: entry.runtime.inventory, effects: entry.runtime.effects }).ac.value); } catch { /* an unreadable sheet has no badge */ } }
+    }
+    return map;
+  }, [journal, catalog]);
+  const turn = snapshot.tracker.turns[snapshot.tracker.current];
+  const status = snapshot.tracker.turns.length ? `라운드 ${snapshot.tracker.round}${turn ? ` · ${turn.name}의 턴` : ""}` : null;
+  // Players cannot see GM-only NPC entries, so the row (not the entry) decides the card's kind.
+  const card = (kind: "pc" | "npc") => (token: Token) => (
+    <SceneIcon key={token.id} token={token} kind={kind} journal={journal} ac={token.represents ? acOf.get(token.represents) : undefined} selected={selected.includes(token.id)} picked={picked.includes(token.id)} turn={turnTokenId === token.id}
       leave={Boolean(acting && acting.id !== token.id && token.represents)} onPointerDown={(event) => onPointerDown(event, token)} onContextMenu={(event) => onContextMenu(event, token)} onDoubleClick={() => onDoubleClick(token)} onLeave={() => onLeave(token)} />
   );
+  const row = (label: string, kind: "pc" | "npc", list: Token[], hint: string) => (
+    <section className="cl-scene-row" aria-label={label}>
+      <h4>{label}{list.length ? <span className="cl-quiet"> {list.length}</span> : null}</h4>
+      <div className="cl-scene-cards">{list.length ? list.map(card(kind)) : <span className="cl-scene-hint cl-quiet cl-small">{hint}</span>}</div>
+    </section>
+  );
   return (
-    <div className="cl-scene" data-page-id={page.id} onPointerDown={(event) => { if (!(event.target as HTMLElement).closest(".cl-scene-icon")) onPointerDownBoard(); }} onContextMenu={(event) => { if (!(event.target as HTMLElement).closest(".cl-scene-icon")) event.preventDefault(); }}>
-      {visible.length === 0 ? <p className="cl-quiet cl-small cl-scene-empty">{isGm ? "저널이나 컴펜디움에서 인물을 끌어 놓거나 \"토큰\"을 누르면 장면에 나타납니다. 위치와 거리는 말로 정합니다." : "아직 장면에 아무도 없습니다. 저널의 \"토큰\"으로 자기 캐릭터를 놓을 수 있습니다."}</p> : null}
-      {party.length ? <section className="cl-scene-group" aria-label="일행"><h4>일행 <span className="cl-quiet">{party.length}</span></h4><div className="cl-scene-icons">{party.map(icon)}</div></section> : null}
-      {others.length ? <section className="cl-scene-group" aria-label="상대"><h4>상대·기타 <span className="cl-quiet">{others.length}</span></h4><div className="cl-scene-icons">{others.map(icon)}</div></section> : null}
+    <div className="cl-scene" data-page-id={page.id} onPointerDown={(event) => { if (!(event.target as HTMLElement).closest(".cl-scene-card")) onPointerDownBoard(); }} onContextMenu={(event) => { if (!(event.target as HTMLElement).closest(".cl-scene-card")) event.preventDefault(); }}>
+      {row("NPC", "npc", others, isGm ? "컴펜디움이나 저널의 NPC를 끌어 놓거나 \"놓기\"를 누르면 여기에 섭니다." : "아직 상대가 없습니다.")}
+      <div className="cl-scene-stage" aria-label="장면">
+        <span className="cl-scene-chip cl-scene-title">{page.name}</span>
+        {page.background.image ? <ArtImage src={page.background.image} className="cl-scene-backdrop" alt={page.name} /> : <span className="cl-scene-placeholder" aria-hidden="true"><svg viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="3" y="4" width="18" height="16" rx="2.5" /><circle cx="9" cy="10" r="1.8" /><path d="M3.5 18.5 9 13l3.5 3.5L16 13l4.5 5" strokeLinejoin="round" /></svg>{isGm ? <small>페이지 설정 → 배경 이미지</small> : null}</span>}
+        {status ? <span className="cl-scene-chip cl-scene-status">{status}</span> : null}
+      </div>
+      {row("플레이어", "pc", party, "저널의 \"토큰\"이나 끌어 놓기로 캐릭터를 세웁니다.")}
     </div>
   );
 }
 
-function SceneIcon({ token, journal, selected, picked, turn, leave, onPointerDown, onContextMenu, onDoubleClick, onLeave }: {
-  token: Token; journal: JournalEntry[]; selected: boolean; picked: boolean; turn: boolean; leave: boolean;
+const SKULL = <svg viewBox="0 0 24 24" width="40" height="40" fill="currentColor" aria-hidden="true"><path d="M12 2a8 8 0 0 0-8 8c0 2.6 1.3 4.9 3.3 6.3V19a1 1 0 0 0 1 1h1v1.2a.8.8 0 0 0 .8.8h3.8a.8.8 0 0 0 .8-.8V20h1a1 1 0 0 0 1-1v-2.7A8 8 0 0 0 12 2Zm-3.2 12a2.2 2.2 0 1 1 0-4.4 2.2 2.2 0 0 1 0 4.4Zm6.4 0a2.2 2.2 0 1 1 0-4.4 2.2 2.2 0 0 1 0 4.4ZM12 17.2l-1.3-2.4h2.6L12 17.2Z" /></svg>;
+const PERSON = <svg viewBox="0 0 24 24" width="40" height="40" fill="currentColor" aria-hidden="true"><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0Z" /></svg>;
+
+function SceneIcon({ token, kind, journal, ac, selected, picked, turn, leave, onPointerDown, onContextMenu, onDoubleClick, onLeave }: {
+  token: Token; kind: "pc" | "npc"; journal: JournalEntry[]; ac?: number; selected: boolean; picked: boolean; turn: boolean; leave: boolean;
   onPointerDown: (event: ReactPointerEvent) => void; onContextMenu: (event: React.MouseEvent) => void; onDoubleClick: () => void; onLeave: () => void;
 }) {
   const entry = token.represents ? journal.find((item) => item.id === token.represents) : undefined;
@@ -452,16 +485,20 @@ function SceneIcon({ token, journal, selected, picked, turn, leave, onPointerDow
     const conditions: TokenMarker[] = character.runtime.conditions.filter((name) => isConditionMarker(name)).map((name) => ({ name }));
     return [...conditions, ...token.markers.filter((marker) => !isConditionMarker(marker.name))];
   }, [character, token.markers]);
-  const bars = token.bars.map((bar, index) => ({ ...bar, color: BAR_COLORS[index] })).filter((bar) => bar.value !== undefined || bar.max !== undefined);
+  const hp = token.bars[0];
+  const fraction = hp && hp.max ? Math.max(0, Math.min(1, (hp.value ?? 0) / hp.max)) : null;
+  const down = fraction === 0 || markers.some((marker) => marker.name === "사망" || marker.name === "무의식");
   return (
-    <div className={`cl-scene-icon layer-${token.layer}${selected ? " selected" : ""}${picked ? " picked" : ""}${turn ? " turn" : ""}`} data-token-id={token.id} data-token-name={token.name} onPointerDown={onPointerDown} onContextMenu={onContextMenu} onDoubleClick={onDoubleClick}>
-      <div className="cl-scene-avatar">
-        {token.image ? <ArtImage src={token.image} className="cl-token-img" alt={token.name} /> : <span className="cl-token-initial">{(token.name || "?").slice(0, 1)}</span>}
-        {markers.length ? <div className="cl-token-markers">{markers.slice(0, 8).map((marker) => <span key={marker.name} className="cl-marker" title={marker.name}>{MARKER_GLYPH[marker.name] ?? "•"}{marker.badge !== undefined ? <small>{marker.badge}</small> : null}</span>)}</div> : null}
+    <div className={`cl-scene-card ${kind}${selected ? " selected" : ""}${picked ? " picked" : ""}${turn ? " turn" : ""}${token.layer === "gm" ? " layer-gm" : ""}${down ? " down" : ""}`} data-token-id={token.id} data-token-name={token.name} title={token.name}
+      onPointerDown={onPointerDown} onContextMenu={onContextMenu} onDoubleClick={onDoubleClick}>
+      <div className="cl-scene-portrait">
+        {fraction !== null ? <span className="cl-scene-gauge" style={{ height: `${Math.round(fraction * 100)}%` }} aria-hidden="true" /> : null}
+        {token.image ? <ArtImage src={token.image} className="cl-scene-art" alt={token.name} /> : <span className="cl-scene-glyph">{kind === "npc" ? SKULL : PERSON}</span>}
+        {ac !== undefined ? <span className="cl-scene-ac" title={`AC ${ac}`} aria-label={`AC ${ac}`}><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3Z" fill="#161a21" stroke="#8b93a3" strokeWidth="1.4" /></svg><b>{ac}</b></span> : null}
+        {markers.length ? <div className="cl-scene-markers">{markers.slice(0, 6).map((marker) => <span key={marker.name} className="cl-marker" title={marker.name}>{MARKER_GLYPH[marker.name] ?? "•"}{marker.badge !== undefined ? <small>{marker.badge}</small> : null}</span>)}</div> : null}
+        <span className="cl-scene-name">{token.name}{hp && (hp.value !== undefined || hp.max !== undefined) ? <small>{hp.value ?? "?"}{hp.max !== undefined ? `/${hp.max}` : ""}</small> : null}</span>
       </div>
-      <div className="cl-scene-label">{token.name}</div>
-      {bars.length ? <div className="cl-scene-bars">{bars.map((bar, index) => <span key={index} className="cl-token-bar" style={{ borderColor: bar.color }} title={`바 ${index + 1}: ${bar.value ?? "?"}${bar.max !== undefined ? ` / ${bar.max}` : ""}`}><span style={{ width: bar.max ? `${Math.max(0, Math.min(100, ((bar.value ?? 0) / bar.max) * 100))}%` : "100%", background: bar.color }} /><small>{bar.value ?? "?"}{bar.max !== undefined ? `/${bar.max}` : ""}</small></span>)}</div> : null}
-      {leave ? <button type="button" className="cl-btn small cl-scene-leave" aria-label={`${token.name}에게서 벗어남`} title="이동으로 이 상대의 사정거리를 벗어납니다 — 상대에게 기회 공격을 물어봅니다 (D96)" onPointerDown={(event) => event.stopPropagation()} onClick={(event) => { event.stopPropagation(); onLeave(); }}>🏃 벗어남</button> : null}
+      {leave ? <button type="button" className="cl-scene-leave" aria-label={`${token.name}에게서 벗어남`} title="이동으로 이 상대의 사정거리를 벗어납니다 — 상대에게 기회 공격을 물어봅니다 (D96)" onPointerDown={(event) => event.stopPropagation()} onClick={(event) => { event.stopPropagation(); onLeave(); }}>🏃 벗어남</button> : null}
     </div>
   );
 }

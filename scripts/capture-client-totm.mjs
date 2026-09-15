@@ -23,7 +23,7 @@ const base = `http://127.0.0.1:${PORT}/`;
 const failures = [];
 const check = (condition, message) => { if (!condition) { failures.push(message); console.error("FAIL:", message); } else console.log("ok:", message); };
 const tab = (page, name) => page.getByRole("tab", { name: new RegExp(`^${name}`) });
-const iconOf = (page, name) => page.locator(`.cl-scene-icon[data-token-name="${name}"]`);
+const iconOf = (page, name) => page.locator(`.cl-scene-card[data-token-name="${name}"]`);
 const cardOf = (page, head) => page.locator(".cl-chat-msg.action", { hasText: head });
 
 try {
@@ -86,7 +86,7 @@ try {
   await player.locator(".cl-window").last().getByLabel("창 닫기").click();
   await player.getByLabel("앨리스의 파이터 토큰 놓기").click();
   await iconOf(dm, "앨리스의 파이터").waitFor({ timeout: 10000 });
-  check(await player.locator(".cl-scene-group[aria-label='일행'] .cl-scene-icon[data-token-name='앨리스의 파이터']").count() === 1, "the fighter is in the 일행 group");
+  check(await player.locator(".cl-scene-row[aria-label='플레이어'] .cl-scene-card[data-token-name='앨리스의 파이터']").count() === 1, "the fighter is in the 플레이어 row");
   await tab(player, "채팅").click();
 
   // SC-45: the player's ⚔ on the goblin icon: no range, no distance on the card.
@@ -133,8 +133,8 @@ try {
   await iconOf(dm, "앨리스의 파이터").click();
   await dm.locator(".cl-targeting-banner").getByRole("button", { name: "확정" }).click();
   await tracker.locator(".cl-tracker-row[data-turn-name='앨리스의 파이터']").waitFor({ timeout: 10000 });
-  for (let n = 0; n < 3 && (await player.locator(".cl-scene-icon.turn[data-token-name='앨리스의 파이터']").count()) === 0; n += 1) { await tracker.getByRole("button", { name: "▶ 다음 턴" }).click(); await player.waitForTimeout(400); }
-  await player.locator(".cl-scene-icon.turn[data-token-name='앨리스의 파이터']").waitFor({ timeout: 10000 });
+  for (let n = 0; n < 3 && (await player.locator(".cl-scene-card.turn[data-token-name='앨리스의 파이터']").count()) === 0; n += 1) { await tracker.getByRole("button", { name: "▶ 다음 턴" }).click(); await player.waitForTimeout(400); }
+  await player.locator(".cl-scene-card.turn[data-token-name='앨리스의 파이터']").waitFor({ timeout: 10000 });
   const leave = player.getByRole("button", { name: "고블린 전사에게서 벗어남" });
   await leave.waitFor({ timeout: 10000 });
   check(await player.getByRole("button", { name: "앨리스의 파이터에게서 벗어남" }).count() === 0, "no 벗어남 on one's own icon");
