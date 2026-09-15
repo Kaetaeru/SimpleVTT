@@ -13,11 +13,12 @@ import { COLUMN, numericColumn } from "../rules/classes";
 import { MASTERY_KO, SKILL_ABILITY, weaponIsProficient } from "./choices";
 import { applyEquipment } from "./equipment";
 import { Ledger } from "./ledger";
+import { applyActiveEffects } from "../rules/effects";
 import { applyBackground, applyLanguages, applySpecies, damageTypeKo } from "./origin";
 import { validateAbilities } from "./source";
 import { deriveSpellSlots } from "./spells";
 import { applyTracks } from "./tracks";
-import type { CharacterSource, DerivedAttack, DerivedCharacter, DerivedItem, DerivedSkill, DerivedSpellcasting, InventoryPatch, Term } from "./types";
+import type { ActiveEffect, CharacterSource, DerivedAttack, DerivedCharacter, DerivedItem, DerivedSkill, DerivedSpellcasting, InventoryPatch, Term } from "./types";
 
 const ARMOR_KO: Record<string, string> = { light: "경장 방어구", medium: "평장 방어구", heavy: "중장 방어구", shield: "방패" };
 const WEAPON_KO: Record<string, string> = { simple: "단순 무기", martial: "군용 무기", "martial-light": "경량 속성 군용 무기", "martial-finesse-or-light": "교묘·경량 속성 군용 무기" };
@@ -28,6 +29,8 @@ export interface DeriveOptions {
   equipped?: { armor?: string; shield?: string; mainHand?: string; offHand?: string };
   /** Bag changes made during play (removed, quantity, added items). */
   inventory?: InventoryPatch;
+  /** Effects in force (Rage, Bless, Shield…): their numbers land on the sheet with provenance. */
+  effects?: ActiveEffect[];
 }
 
 export function deriveCharacter(source: CharacterSource, catalog: ContentCatalog, options: DeriveOptions = {}): DerivedCharacter {
@@ -43,7 +46,8 @@ export function deriveCharacter(source: CharacterSource, catalog: ContentCatalog
   applyEquipment(ledger);
   if (options.inventory) applyInventoryPatch(ledger, options.inventory);
   if (options.equipped) applyEquipState(ledger, options.equipped);
-  return finalize(ledger);
+  const derived = finalize(ledger);
+  return options.effects?.length ? applyActiveEffects(derived, options.effects, catalog) : derived;
 }
 
 function applyInventoryPatch(ledger: Ledger, patch: InventoryPatch) {
@@ -275,6 +279,8 @@ function finalize(ledger: Ledger): DerivedCharacter {
     hitDice,
     choices: ledger.choices,
     validation: { blocking, warnings: ledger.warnings },
+    activeEffects: [],
+    checkTerms: [],
   };
 }
 

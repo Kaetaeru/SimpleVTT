@@ -1,6 +1,6 @@
 /**
  * Evidence capture: feature use (Rage with the round counter), spell casting with the slot picker, the active-effects panel.
- * Writes 24-26 to docs/evidence/new-client-m1.
+ * Writes 24-27 to docs/evidence/new-client-m1.
  *
  *   node scripts/capture-client-use.mjs
  */
@@ -48,6 +48,12 @@ try {
   for (let i = 0; i < 3; i++) await page.getByRole("button", { name: "다음 라운드" }).click();
   await page.getByText("3/10 라운드").waitFor();
   await page.screenshot({ path: path.join(OUT, "24-sheet-rage-rounds.png") });
+  // Rage on the numbers: the damage bonus of the first Strength weapon carries a "격노 +2" term.
+  const rageRow = page.locator(".cl-table tr", { hasText: "격노" }).filter({ has: page.locator(".cl-explain") }).first();
+  await rageRow.scrollIntoViewIfNeeded();
+  await rageRow.locator(".cl-explain").nth(1).hover();
+  await page.waitForTimeout(200);
+  await page.screenshot({ path: path.join(OUT, "27-sheet-rage-damage-provenance.png") });
   // Cleric: cast Bless with the slot picker, then a ritual and an instantaneous heal.
   await create("브란", "인간", "신앙 수행자", "dnd.srd521.class.cleric", 3);
   const bless = page.locator(".cl-spell-row", { hasText: "축복" }).first();

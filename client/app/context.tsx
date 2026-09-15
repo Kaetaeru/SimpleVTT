@@ -108,8 +108,10 @@ export function ClientProvider({ children, store: presetStore, initialRoute }: {
 
   const saveCharacter = useCallback(async (source: CharacterSource, runtime?: CharacterRuntime) => {
     if (!store) throw new Error("store not ready");
-    const derived = deriveCharacter(source, catalog);
     const existing = await store.getCharacter(source.id);
+    const base = runtime ?? existing?.runtime;
+    // Reconcile against the sheet as it is in play (worn items, bag, effects in force) so an Aid +5 is not clamped away.
+    const derived = deriveCharacter(source, catalog, base ? { equipped: base.equipped, inventory: base.inventory, effects: base.effects } : {});
     const nextRuntime = runtime ?? (existing ? reconcileRuntime(existing.runtime, derived) : initialRuntime(derived));
     const record: CharacterRecord = { id: source.id, source, runtime: { ...nextRuntime, characterId: source.id }, savedAt: new Date().toISOString() };
     await store.putCharacter(record);

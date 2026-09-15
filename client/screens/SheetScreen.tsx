@@ -9,19 +9,20 @@ import { describeRoll, parseFormula, type RollSpec } from "../character/dice";
 import { useDice } from "../ui/dice/DiceProvider";
 import { exportCharacterFile, serializeCharacterFile } from "../character/json";
 import {
-  addItem, adjustGold, advanceRound, applyHpCommand, castSpell, clearTempHp, CONDITIONS, endEffect, hitDiceAvailable, longRest, noteLog, recordDeathSave, removeItem, resetDeathSaves,
+  addItem, adjustGold, advanceRound, applyHealing, applyHpCommand, castSpell, clearTempHp, CONDITIONS, endEffect, hitDiceAvailable, longRest, noteLog, recordDeathSave, removeItem, resetDeathSaves,
   restorePactSlot, restoreResource, restoreSpellSlot, setCurrentHp, setExhaustion, setGold, setInspiration, setItemQuantity, shortRest, toggleCondition, toggleEquip,
   useFeature, usePactSlot, useResource, useSpellSlot,
 } from "../character/play";
 import type { CharacterRuntime } from "../character/runtime";
 import { featureActivation } from "../rules/activation";
+import { effectApplication } from "../rules/effects";
 import { copyText, downloadText, Modal, Notice, Pill } from "../ui/components";
 import { SheetView, ValidationList, type SheetActions } from "./SheetView";
 
 export function SheetScreen({ id }: { id: string }) {
   const { catalog, characters, navigate, saveCharacter, deleteCharacter } = useClient();
   const record = characters.find((item) => item.id === id);
-  const derived = useMemo(() => (record ? deriveCharacter(record.source, catalog, { equipped: record.runtime.equipped, inventory: record.runtime.inventory }) : null), [record, catalog]);
+  const derived = useMemo(() => (record ? deriveCharacter(record.source, catalog, { equipped: record.runtime.equipped, inventory: record.runtime.inventory, effects: record.runtime.effects }) : null), [record, catalog]);
   const [exporting, setExporting] = useState<string | null>(null);
   const [hpInput, setHpInput] = useState("");
 
@@ -57,8 +58,21 @@ export function SheetScreen({ id }: { id: string }) {
     endEffect: (key) => commit(endEffect(runtime, key)),
     castSpell: (spell, method) => {
       const next = castSpell(runtime, derived, { id: spell.id, name: spell.name, level: spell.level, duration: spell.duration, ritual: spell.ritual }, method);
-      if (next) commit(next); else alert("그 방법으로는 시전할 수 없습니다 (슬롯이나 횟수가 없습니다).");
+      if (next) commit(withEffectStart(next)); else alert("그 방법으로는 시전할 수 없습니다 (슬롯이나 횟수가 없습니다).");
     },
+  };
+  /** An effect that just started may change the sheet at once (Aid: +5 max HP and +5 current HP). */
+  const withEffectStart = (next: CharacterRuntime) => {
+    const started = (next.effects ?? []).filter((effect) => !(runtime.effects ?? []).some((item) => item.key === effect.key));
+    let out = next;
+    for (const effect of started) {
+      const application = effectApplication(effect, derived, catalog);
+      if (application?.onStart?.heal) {
+        const live = deriveCharacter(record.source, catalog, { equipped: out.equipped, inventory: out.inventory, effects: out.effects });
+        out = applyHealing(out, live, application.onStart.heal);
+      }
+    }
+    return out;
   };
   /** "사용": ask for points when the pool is spent by amount, roll heal/temp HP through the overlay, then apply. */
   const activateFeature = async (feature: Parameters<SheetActions["useFeature"]>[0]) => {
@@ -78,7 +92,7 @@ export function SheetScreen({ id }: { id: string }) {
     if (activation.heal) extras.healRoll = (await dice.roll({ label: feature.name, formula: activation.heal(derived), note: "회복", kind: "custom" })).total;
     if (activation.tempHp) extras.tempRoll = (await dice.roll({ label: feature.name, formula: activation.tempHp(derived), note: "임시 HP", kind: "custom" })).total;
     const next = useFeature(latestRuntime(), derived, feature, activation.points ? { ...activation, heal: undefined } : activation, extras);
-    if (next) commit(next); else alert("남은 횟수가 없습니다.");
+    if (next) commit(withEffectStart(next)); else alert("남은 횟수가 없습니다.");
   };
 
   const remove = async () => {
@@ -156,14 +170,21 @@ export function SheetScreen({ id }: { id: string }) {
           </h3>
           {runtime.effects?.length ? (
             <div className="cl-effects">
-              {runtime.effects.map((effect) => (
-                <div className="cl-effect" key={effect.key}>
-                  <span className="cl-name">{effect.name}</span>
-                  {effect.concentration ? <Pill tone="accent">집중</Pill> : null}
-                  <span className="cl-quiet cl-small">{effect.rounds !== undefined ? `${effect.elapsed}/${effect.rounds} 라운드 · ` : ""}{effect.duration}</span>
-                  <button type="button" className="cl-btn small danger" style={{ marginLeft: "auto" }} onClick={() => commit(endEffect(runtime, effect.key))}>종료</button>
-                </div>
-              ))}
+              {runtime.effects.map((effect) => {
+                const summary = derived.activeEffects.find((item) => item.key === effect.key);
+                return (
+                  <div className={`cl-effect${summary && !summary.applied ? " manual" : ""}`} key={effect.key}>
+                    <div className="cl-row" style={{ gap: 8 }}>
+                      <span className="cl-name">{effect.name}</span>
+                      {effect.concentration ? <Pill tone="accent">집중</Pill> : null}
+                      {summary && !summary.applied ? <Pill tone="bad">수동</Pill> : <Pill tone="good">적용됨</Pill>}
+                      <span className="cl-quiet cl-small">{effect.rounds !== undefined ? `${effect.elapsed}/${effect.rounds} 라운드 · ` : ""}{effect.duration}</span>
+                      <button type="button" className="cl-btn small danger" style={{ marginLeft: "auto" }} onClick={() => commit(endEffect(runtime, effect.key))}>종료</button>
+                    </div>
+                    {summary?.notes.length ? <div className="cl-effect-notes">{summary.notes.map((note) => <span key={note}>{note}</span>)}</div> : null}
+                  </div>
+                );
+              })}
             </div>
           ) : <p className="cl-quiet cl-small">격노·주문처럼 지속되는 것을 사용하면 여기에 나타나고, 종료 버튼이나 라운드 진행으로 끝냅니다.</p>}
         </div>

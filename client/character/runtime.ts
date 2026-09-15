@@ -3,23 +3,11 @@
  * bag changes, a short activity log), persisted next to the source and reconciled against the derived character
  * whenever the source changes.
  */
-import type { DerivedCharacter, InventoryPatch } from "./types";
+import type { ActiveEffect, DerivedCharacter, InventoryPatch } from "./types";
+
+export type { ActiveEffect } from "./types";
 
 export interface RuntimeLogEntry { at: string; text: string }
-
-/** A feature or spell in effect (Rage, Bless): ended by its "종료" button, by the round counter, or by a rest. */
-export interface ActiveEffect {
-  /** `feature:<featureId>` or `spell:<spellId>`. */
-  key: string;
-  name: string;
-  source: "feature" | "spell";
-  duration: string;
-  concentration: boolean;
-  /** Round counter when the duration is short enough to track (10 rounds for one minute). */
-  rounds?: number;
-  elapsed: number;
-  startedAt: string;
-}
 
 export interface CharacterRuntime {
   schema: 2;

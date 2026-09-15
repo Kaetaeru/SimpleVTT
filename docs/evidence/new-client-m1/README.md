@@ -30,3 +30,4 @@ Chromium이 Vite 개발 서버(포트 1430)에서 마법사를 처음부터 끝�
 - `24-sheet-rage-rounds.png` — 바바리안 격노 "사용": 횟수 차감, 진행 중인 효과 카드에 1분(10라운드) 효과, "다음 라운드" 세 번 뒤 3/10, 종료 버튼
 - `25-sheet-cast-picker.png` — 클레릭 주문 목록의 행별 "시전": 축복에서 1레벨/2레벨 슬롯 선택지(남은 수), 의식·집중 표시
 - `26-sheet-effects-after-cast.png` — 축복 시전 뒤 주문 행이 진행 중(종료 버튼)으로 바뀜 (`node scripts/capture-client-use.mjs`)
+- `27-sheet-rage-damage-provenance.png` — 격노 중 공격 표의 피해 보너스에 마우스: 근력 수정치 + 격노 +2, 진행 중인 효과 카드에 적용 내용(피해 +2 근력 근접 공격 · 저항 타격·관통·참격 · 유리 메모)

@@ -78,7 +78,24 @@ export interface DerivedFeature {
 }
 
 /** One addend of a derived number, so the sheet can show where it came from ("민첩 +2", "숙련 보너스 +3"). */
-export interface Term { label: string; value: number }
+export interface Term { label: string; value: number; /** Dice added instead of a number ("1d4" from Bless); value stays 0. */ dice?: string }
+
+/** A feature or spell in effect (Rage, Bless): ended by its "종료" button, by the round counter, or by a rest. */
+export interface ActiveEffect {
+  /** `feature:<featureRuleKey>` or `spell:<spellId>`. */
+  key: string;
+  name: string;
+  source: "feature" | "spell";
+  duration: string;
+  concentration: boolean;
+  /** Round counter when the duration is short enough to track (10 rounds for one minute). */
+  rounds?: number;
+  elapsed: number;
+  startedAt: string;
+}
+
+/** What an active effect changed on the sheet, for the effects card. `applied` false: no rule yet, apply the text by hand. */
+export interface AppliedEffect { key: string; name: string; applied: boolean; notes: string[] }
 
 export interface DerivedSkill { id: string; name: string; ability: AbilityKey; proficient: boolean; expertise: boolean; bonus: number; terms: Term[] }
 
@@ -169,6 +186,10 @@ export interface DerivedCharacter {
   attacks: DerivedAttack[];
   defenses: { resistances: string[]; immunities: string[]; vulnerabilities: string[]; conditionImmunities: string[] };
   inventory: DerivedItem[];
+  /** Effects in force when deriving (from the runtime) and what each one changed. */
+  activeEffects: AppliedEffect[];
+  /** Dice or numbers every ability check gets from effects (Guidance). Skills already carry them in their terms. */
+  checkTerms: Term[];
   gold: number;
   weaponMasteries: string[];
   hitDice: Record<string, number>;

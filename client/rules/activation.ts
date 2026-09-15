@@ -45,6 +45,7 @@ const classLevel = (derived: DerivedCharacter, slug: string) => derived.classes.
 const timed = (text: string, rounds?: number, concentration = false): ParsedDuration => ({ text, instantaneous: false, concentration, rounds });
 
 const FEATURE_ACTIVATIONS: Record<string, FeatureActivation> = {
+  "barbarian.reckless-attack": { duration: () => timed("이 턴 (다음 턴 시작까지)", 1), note: "첫 공격 때 결정 · 근력 근접 공격 유리, 받는 공격도 유리" },
   "barbarian.rage": { resourceId: "resource.barbarian.rage", duration: () => timed("1분 (10라운드)", 10), note: "추가 행동. 턴이 끝날 때 공격도 피해도 없었으면 종료" },
   "fighter.second-wind": { resourceId: "resource.fighter.second-wind", heal: (derived) => `1d10+${classLevel(derived, "fighter")}`, note: "추가 행동 · 1d10 + 파이터 레벨 회복" },
   "fighter.action-surge": { resourceId: "resource.fighter.action-surge", note: "이번 턴에 행동 하나 추가" },
