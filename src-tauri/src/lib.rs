@@ -371,32 +371,6 @@ fn stop_session_transport(
     state.stop(&app)
 }
 
-/// Addresses a player can reach this host at: the interface the OS would use toward the public internet, toward a
-/// Hamachi network (25.0.0.0/8) and toward the common private ranges. A UDP socket is "connected" (no packet is
-/// sent) only to learn which local address routes there, so no crate and no admin rights are needed.
-#[tauri::command]
-fn list_session_addresses() -> Vec<String> {
-    use std::net::UdpSocket;
-    let probes = ["8.8.8.8:53", "25.255.255.254:53", "192.168.255.254:53", "10.255.255.254:53", "172.31.255.254:53"];
-    let mut found: Vec<String> = Vec::new();
-    for probe in probes {
-        if let Ok(socket) = UdpSocket::bind("0.0.0.0:0") {
-            if socket.connect(probe).is_ok() {
-                if let Ok(local) = socket.local_addr() {
-                    let ip = local.ip();
-                    if !ip.is_loopback() && !ip.is_unspecified() {
-                        let text = ip.to_string();
-                        if !found.contains(&text) {
-                            found.push(text);
-                        }
-                    }
-                }
-            }
-        }
-    }
-    found
-}
-
 #[tauri::command]
 fn get_session_transport_status(
     state: tauri::State<'_, session_transport::SessionTransportState>,
@@ -477,8 +451,7 @@ pub fn run() {
             send_session_message,
             send_session_message_to,
             stop_session_transport,
-            get_session_transport_status,
-            list_session_addresses
+            get_session_transport_status
         ])
         .run(context)
         .expect("error while running SimpleVTT");

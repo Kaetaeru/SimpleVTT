@@ -2,7 +2,6 @@
  * Client persistence: characters (source + runtime), installed RuleModule JSON and settings. IndexedDB in the
  * browser (and the Tauri webview), an in-memory store where IndexedDB is unavailable (tests, private windows).
  */
-import type { CampaignDocument } from "../campaign/types";
 import type { RuleModuleJson } from "../catalog/types";
 import type { CharacterRuntime } from "../character/runtime";
 import type { CharacterSource } from "../character/types";
@@ -32,11 +31,6 @@ export interface ClientStore {
   deleteModule(moduleId: string): Promise<void>;
   getSetting<T>(key: string): Promise<T | undefined>;
   putSetting<T>(key: string, value: T): Promise<void>;
-  /** Campaign documents (CAMPAIGN_RESOURCES.md §2): library and campaign contents, one envelope each. */
-  listDocuments(): Promise<CampaignDocument[]>;
-  getDocument(id: string): Promise<CampaignDocument | undefined>;
-  putDocument(doc: CampaignDocument): Promise<void>;
-  deleteDocument(id: string): Promise<void>;
 }
 
 export class MemoryStore implements ClientStore {
@@ -44,12 +38,6 @@ export class MemoryStore implements ClientStore {
   private readonly characters = new Map<string, CharacterRecord>();
   private readonly modules = new Map<string, InstalledModuleRecord>();
   private readonly settings = new Map<string, unknown>();
-  private readonly documents = new Map<string, CampaignDocument>();
-
-  async listDocuments() { return [...this.documents.values()].map((doc) => structuredClone(doc)).sort((a, b) => a.name.localeCompare(b.name)); }
-  async getDocument(id: string) { const doc = this.documents.get(id); return doc ? structuredClone(doc) : undefined; }
-  async putDocument(doc: CampaignDocument) { this.documents.set(doc.id, structuredClone(doc)); }
-  async deleteDocument(id: string) { this.documents.delete(id); }
 
   async listCharacters() { return [...this.characters.values()].map((record) => structuredClone(record)).sort((a, b) => b.savedAt.localeCompare(a.savedAt)); }
   async getCharacter(id: string) { const record = this.characters.get(id); return record ? structuredClone(record) : undefined; }
@@ -63,8 +51,8 @@ export class MemoryStore implements ClientStore {
 }
 
 const DB_NAME = "simplevtt-client";
-const DB_VERSION = 2;
-const STORES = { characters: "characters", modules: "modules", settings: "settings", documents: "documents" } as const;
+const DB_VERSION = 1;
+const STORES = { characters: "characters", modules: "modules", settings: "settings" } as const;
 
 function request<T>(req: IDBRequest<T>): Promise<T> {
   return new Promise((resolve, reject) => {
@@ -81,7 +69,6 @@ function openDatabase(factory: IDBFactory): Promise<IDBDatabase> {
       if (!db.objectStoreNames.contains(STORES.characters)) db.createObjectStore(STORES.characters, { keyPath: "id" });
       if (!db.objectStoreNames.contains(STORES.modules)) db.createObjectStore(STORES.modules, { keyPath: "moduleId" });
       if (!db.objectStoreNames.contains(STORES.settings)) db.createObjectStore(STORES.settings, { keyPath: "key" });
-      if (!db.objectStoreNames.contains(STORES.documents)) db.createObjectStore(STORES.documents, { keyPath: "id" });
     };
     open.onsuccess = () => resolve(open.result);
     open.onerror = () => reject(open.error ?? new Error("IndexedDB open failed"));
@@ -116,10 +103,6 @@ export class IndexedDbStore implements ClientStore {
   async deleteModule(moduleId: string) { await this.tx(STORES.modules, "readwrite", (store) => store.delete(moduleId)); }
   async getSetting<T>(key: string) { const row = await this.tx<{ key: string; value: T } | undefined>(STORES.settings, "readonly", (store) => store.get(key)); return row?.value; }
   async putSetting<T>(key: string, value: T) { await this.tx(STORES.settings, "readwrite", (store) => store.put({ key, value })); }
-  async listDocuments() { const rows = await this.tx<CampaignDocument[]>(STORES.documents, "readonly", (store) => store.getAll()); return rows.sort((a, b) => a.name.localeCompare(b.name)); }
-  getDocument(id: string) { return this.tx<CampaignDocument | undefined>(STORES.documents, "readonly", (store) => store.get(id)); }
-  async putDocument(doc: CampaignDocument) { await this.tx(STORES.documents, "readwrite", (store) => store.put(doc)); }
-  async deleteDocument(id: string) { await this.tx(STORES.documents, "readwrite", (store) => store.delete(id)); }
 }
 
 /** IndexedDB when the environment has it and it opens; otherwise memory (with a console note so it is not silent). */

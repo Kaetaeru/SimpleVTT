@@ -23,7 +23,7 @@ Updated: 2026-09-14 Asia/Seoul
 - 검사: `npm run test:client` 40건(전수 행렬: 종족 9 × 직업 12 × 배경 4 × L1·L5 + 직업 12 × L1~20, 설치 모듈 흐름, JSON 왕복, 저장소, 화면 렌더). 증거 캡처 15장 `docs/evidence/new-client-m1/`.
 - exe: 워크플로 `windows-exe-client.yml` → 프리릴리스 `client-m1-*` (`SimpleVTT-client-<sha>.exe`). 옛 V2 미리보기 exe 워크플로는 그대로 있다.
 - 소유자가 보고한 세 문제(레벨업에 기원 재주, 종족 특성 미표시, 드워프 HP)는 새 엔진에서 검사 항목으로 고정됐다(`derive.test.ts`, `matrix.test.ts`, `install.test.ts`).
-- 다음: M4 멀티세션(LAN·하마치, 소유자 결정 2026-09-15) — 설계 `docs/design/v3/CAMPAIGN_RESOURCES.md`(카탈로그→라이브러리→캠페인→세션 네 층, 문서 모델, 자산 해시 저장·청크 전송, 권한 4단계 투영, 명령→이벤트 동기화, 초대 코드) → S1·S2·S4 완료(문서 모델, 세션 코어, 세션 화면; 같은 PC 두 탭으로 검증, 시나리오 `SESSION_SCENARIOS.md`). S3 LAN/하마치 TCP 어댑터 완료(exe에서 수동 체크리스트 §B 확인 필요), 세션은 캠페인에서 열리고 캠페인에 기록됨(캠페인 화면) → 다음 S5 자산·핸드아웃 → S6 장면·토큰·NPC → S7 캠페인 저장. M3 테이블 커널 이식은 장면 문서 위에.
+- 다음: M4 멀티세션(LAN·하마치, 소유자 결정 2026-09-15) — 설계 `docs/design/v3/CAMPAIGN_RESOURCES.md`(카탈로그→라이브러리→캠페인→세션 네 층, 문서 모델, 자산 해시 저장·청크 전송, 권한 4단계 투영, 명령→이벤트 동기화, 초대 코드) → S1 문서 모델부터. M3 테이블 커널 이식은 장면 문서 위에.
 
 ## 현재 실제 상태
 
