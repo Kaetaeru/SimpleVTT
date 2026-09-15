@@ -213,6 +213,16 @@ export class TableHost {
       if (existing?.kicked) return this.reply(peerId, { type: "refused", reason: "GM이 이 캠페인에서 내보낸 참가자입니다", commandType: "hello" });
       const isNew = !existing;
       this.setCampaign(withPlayer(this.campaign, { userId: command.userId, displayName: command.displayName.trim() || "플레이어" }, this.now()));
+      // R21: whoever launched this table is its DM, always. The campaign remembers the user id of the tab that made
+      // it, and a browser tab mints a new id every time, so the host would otherwise sit at its own table as a plain
+      // player. The host secret is minted per launch and only the launching app has it, so this cannot be borrowed.
+      if (isHostUser && this.roleOf(command.userId) !== "gm") this.setCampaign(withPlayerRole(this.campaign, command.userId, "gm"));
+      // A GM record left behind by an earlier tab that never actually sat at a table is a leftover of making the
+      // campaign, not a person: it would show as an offline DM for ever, one more on every launch.
+      if (isHostUser) {
+        const ghosts = this.campaign.players.filter((item) => item.role === "gm" && item.userId !== command.userId && !this.connected.has(item.userId) && item.lastSeenAt === item.joinedAt);
+        if (ghosts.length) this.setCampaign({ ...this.campaign, players: this.campaign.players.filter((item) => !ghosts.includes(item)), updatedAt: this.now() });
+      }
       this.peerUsers.set(peerId, command.userId);
       this.connected.add(command.userId);
       const viewer = this.viewer(command.userId);
