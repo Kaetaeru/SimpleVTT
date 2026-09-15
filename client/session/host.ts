@@ -13,7 +13,13 @@ import type { Page, Token } from "../campaign/page";
 import { controlsToken, mergeControllerTokenEdit, playerPageId, projectPage, projectToken } from "../campaign/page";
 import type { Tracker } from "../campaign/tracker";
 import { advanceTurn, emptyTracker, newTurn, withoutToken, withTurn } from "../campaign/tracker";
-import { advanceRound, recordDeathSave, resetDeathSaves } from "../character/play";
+import { advanceRound, endEffect, noteLog, recordDeathSave, resetDeathSaves } from "../character/play";
+import type { CharacterRuntime } from "../character/runtime";
+import { npcAttackSpec, npcCombatant } from "../rules/attackSpec";
+import type { AttackOverrides, AttackResolution, AttackSpec, Combatant } from "../rules/resolve";
+import { describeResolution, diceFrom, resolveAttack } from "../rules/resolve";
+import type { ActorRef, AttackRef, AttackRiders } from "./protocol";
+import { cellDistance } from "../campaign/page";
 import type { Campaign, ChatMessage, PlayerRole } from "../campaign/model";
 import { newMessageId, withPlayer, withPlayerKicked, withPlayerRole } from "../campaign/model";
 import { rollFormula } from "../character/dice";
@@ -45,6 +51,10 @@ export interface TableHostOptions {
   onPage?: (change: { page: Page } | { removed: string }) => void;
   /** Linked bars (D78): the host app derives a character's attribute values with its catalog; hp is at least current/max. */
   attributeOf?: (entry: JournalCharacter, link: string) => { value?: number; max?: number } | undefined;
+  /** Attack resolution (§12.2) needs the PC sheet derived with the host app's catalog. */
+  pcCombatant?: (entry: JournalCharacter) => Combatant;
+  pcConcentrationKey?: (entry: JournalCharacter) => string | undefined;
+  pcAttackSpec?: (entry: JournalCharacter, attackId: string, riders: AttackRiders) => { spec: AttackSpec; spend: (runtime: CharacterRuntime) => CharacterRuntime } | null;
   now?: () => string;
   random?: () => number;
 }
@@ -58,6 +68,8 @@ export class TableHost {
   /** Uploads in flight: metadata waiting for its chunks. */
   private readonly uploads = new Map<string, { asset: ArtAsset; by: string }>();
   private readonly assembler = new ChunkAssembler();
+  /** Applied action cards, newest last: inputs to re-resolve and a restore closure for undo. */
+  private readonly actions = new Map<string, { inputs: { attacker: ActorRef; targets: ActorRef[]; attack: AttackRef; riders?: AttackRiders; by: string; targetIndex: number }; resolution: AttackResolution; restore: () => void }>();
   private readonly connected = new Set<string>();
   private readonly peerUsers = new Map<string, string>();
   private readonly peerTransports = new Map<string, Transport>();
@@ -398,6 +410,54 @@ export class TableHost {
         this.nextTurn();
         return;
       }
+      case "act.attack": {
+        const attackerEntry = this.resolveActor(command.attacker);
+        if (!attackerEntry) return refuse("공격자를 찾을 수 없습니다");
+        if (!isGm && !this.mayAct(userId, command.attacker, attackerEntry.entry)) return refuse("자기 캐릭터로만 공격할 수 있습니다");
+        if (!command.targets?.length) return refuse("대상이 없습니다");
+        const prepared = this.prepareAttack(attackerEntry, command.attack, command.riders ?? {});
+        if (!prepared) return refuse("그 공격을 찾을 수 없습니다");
+        command.targets.forEach((ref, index) => {
+          const targetEntry = this.resolveActor(ref);
+          if (!targetEntry) { this.reply(peerId, { type: "refused", reason: "대상을 찾을 수 없습니다", commandType: command.type }); return; }
+          this.runAttack({ attacker: command.attacker, targets: command.targets, attack: command.attack, riders: command.riders, by: userId, targetIndex: index }, attackerEntry, targetEntry, prepared, command.overrides, undefined, undefined, index === 0 ? prepared.spend : undefined);
+        });
+        return;
+      }
+      case "act.adjust": {
+        if (!isGm) return refuse("DM 팔레트는 GM만 씁니다");
+        const record = this.actions.get(command.messageId);
+        if (!record) return refuse("그 카드를 더 고칠 수 없습니다");
+        record.restore();
+        this.actions.delete(command.messageId);
+        const attackerEntry = this.resolveActor(record.inputs.attacker);
+        const targetEntry = this.resolveActor(record.inputs.targets[record.inputs.targetIndex]);
+        const prepared = attackerEntry ? this.prepareAttack(attackerEntry, record.inputs.attack, record.inputs.riders ?? {}) : null;
+        if (!attackerEntry || !targetEntry || !prepared) return refuse("공격자나 대상이 더 없습니다");
+        const overrides = { ...(record.resolution.overrides ?? {}), ...command.overrides };
+        this.runAttack(record.inputs, attackerEntry, targetEntry, prepared, overrides, command.reroll ? undefined : { d20s: record.resolution.d20s, damage: record.resolution.damage.map((item) => item.dice) }, command.messageId);
+        return;
+      }
+      case "act.undo": {
+        if (!isGm) return refuse("되돌리기는 GM만 씁니다");
+        const record = this.actions.get(command.messageId);
+        if (!record) return refuse("그 카드는 더 되돌릴 수 없습니다");
+        record.restore();
+        this.actions.delete(command.messageId);
+        this.say({ type: "action", who: player.displayName, playerId: userId, content: `되돌림: ${describeResolution(record.resolution)}`, action: { ...record.resolution, applied: false }, supersedes: command.messageId, undone: true });
+        return;
+      }
+      case "act.confirm": {
+        if (!isGm) return refuse("적용은 GM만 합니다");
+        const record = this.actions.get(command.messageId);
+        if (!record || record.resolution.applied) return refuse("적용할 카드가 없습니다");
+        const attackerEntry = this.resolveActor(record.inputs.attacker);
+        const targetEntry = this.resolveActor(record.inputs.targets[record.inputs.targetIndex]);
+        if (!attackerEntry || !targetEntry) return refuse("대상이 더 없습니다");
+        this.actions.delete(command.messageId);
+        this.applyResolution(record.resolution, targetEntry, attackerEntry, command.messageId, true);
+        return;
+      }
       case "ping": {
         const page = this.pages.get(command.pageId);
         if (!page) return;
@@ -407,6 +467,93 @@ export class TableHost {
       }
       default: return;
     }
+  }
+
+  /* ---------- attacks (§12.2) ---------- */
+
+  private resolveActor(ref: ActorRef): { entry: JournalEntry; token?: Token; page?: Page } | null {
+    const page = ref.pageId ? this.pages.get(ref.pageId) : undefined;
+    const token = page?.tokens.find((item) => item.id === ref.tokenId);
+    const entryId = ref.entryId ?? token?.represents;
+    const entry = entryId ? this.journalEntries.get(entryId) : undefined;
+    if (!entry || entry.kind === "handout") return null;
+    return { entry, token, page };
+  }
+
+  private mayAct(userId: string, ref: ActorRef, entry: JournalEntry) {
+    const viewer = this.viewer(userId);
+    const page = ref.pageId ? this.pages.get(ref.pageId) : undefined;
+    const token = page?.tokens.find((item) => item.id === ref.tokenId);
+    return token ? controlsToken(token, viewer, this.journal) : canEdit(entry, viewer);
+  }
+
+  private combatantOf(actor: { entry: JournalEntry; token?: Token }): Combatant | null {
+    if (actor.entry.kind === "npc") return npcCombatant(actor.entry, actor.token);
+    if (actor.entry.kind === "character" && this.options.pcCombatant) return { ...this.options.pcCombatant(actor.entry), name: actor.token?.name ?? actor.entry.name };
+    return null;
+  }
+
+  private prepareAttack(actor: { entry: JournalEntry; token?: Token }, ref: AttackRef, riders: AttackRiders): { spec: AttackSpec; spend?: (runtime: CharacterRuntime) => CharacterRuntime } | null {
+    if (ref.source === "npc" && actor.entry.kind === "npc") { const spec = npcAttackSpec(actor.entry, ref.actionName); return spec ? { spec } : null; }
+    if (ref.source === "weapon" && actor.entry.kind === "character" && this.options.pcAttackSpec) return this.options.pcAttackSpec(actor.entry, ref.attackId, riders);
+    return null;
+  }
+
+  private runAttack(inputs: { attacker: ActorRef; targets: ActorRef[]; attack: AttackRef; riders?: AttackRiders; by: string; targetIndex: number }, attacker: { entry: JournalEntry; token?: Token; page?: Page }, target: { entry: JournalEntry; token?: Token; page?: Page }, prepared: { spec: AttackSpec; spend?: (runtime: CharacterRuntime) => CharacterRuntime }, overrides?: AttackOverrides, fixed?: { d20s: number[]; damage: number[][] }, supersedes?: string, spend?: (runtime: CharacterRuntime) => CharacterRuntime) {
+    const attackerCombatant = this.combatantOf(attacker);
+    const targetCombatant = this.combatantOf(target);
+    if (!attackerCombatant || !targetCombatant) return;
+    if (attacker.token && target.token && attacker.page && target.page && attacker.page.id === target.page.id) targetCombatant.distanceFeet = Math.max(0, cellDistance(centre(attacker.token), centre(target.token)) - (attacker.token.w + target.token.w) / 2 + 1) * attacker.page.scale;
+    const waits = Boolean(this.campaign.settings.dmConfirmsResults) && this.roleOf(inputs.by) !== "gm";
+    const resolution = resolveAttack(attackerCombatant, targetCombatant, prepared.spec, { dice: diceFrom(this.options.random ?? Math.random), overrides, fixed, apply: !waits });
+    // Riders with a cost (a smite slot) are paid once per attack, by the first target's card.
+    if (spend && attacker.entry.kind === "character") { const before = attacker.entry; this.storeEntry({ ...before, runtime: spend(before.runtime), updatedAt: this.now() }); }
+    const player = this.campaign.players.find((item) => item.userId === inputs.by);
+    const messageId = newMessageId();
+    if (waits) {
+      this.actions.set(messageId, { inputs, resolution, restore: () => undefined });
+      this.sayWithId(messageId, { type: "action", who: player?.displayName ?? "", playerId: inputs.by, content: `${describeResolution(resolution)} (DM 확인 대기)`, action: resolution, supersedes });
+      return;
+    }
+    this.applyResolution(resolution, target, attacker, messageId, false, inputs, supersedes, player?.displayName);
+  }
+
+  /** Write the result into the target (PC sheet or NPC token/sheet) and post the card; remember how to undo it. */
+  private applyResolution(resolution: AttackResolution, target: { entry: JournalEntry; token?: Token; page?: Page }, attacker: { entry: JournalEntry; token?: Token }, messageId: string, confirming: boolean, inputs?: { attacker: ActorRef; targets: ActorRef[]; attack: AttackRef; riders?: AttackRiders; by: string; targetIndex: number }, supersedes?: string, who?: string) {
+    const restores: Array<() => void> = [];
+    const hit = resolution.outcome === "hit" || resolution.outcome === "crit";
+    if (hit && target.entry.kind === "character") {
+      const before = target.entry;
+      let runtime: CharacterRuntime = { ...before.runtime, hp: { ...before.runtime.hp, current: resolution.hpAfter, temp: resolution.tempAfter } };
+      runtime = noteLog(runtime, `${resolution.attacker.name}의 ${resolution.attack.name}: 피해 ${resolution.damageTotal}${resolution.absorbed ? ` (임시 HP ${resolution.absorbed} 흡수)` : ""} → HP ${resolution.hpAfter}/${before.runtime.hp.maxSeen}`);
+      if (resolution.concentration && !resolution.concentration.success) { const key = this.options.pcConcentrationKey?.(before); if (key) runtime = endEffect(runtime, key, "집중 실패"); }
+      for (const condition of resolution.inflicted) if (!runtime.conditions.includes(condition)) runtime = { ...runtime, conditions: [...runtime.conditions, condition] };
+      if (resolution.downed === "unconscious") for (const condition of ["무의식", "넘어짐"]) if (!runtime.conditions.includes(condition)) runtime = { ...runtime, conditions: [...runtime.conditions, condition] };
+      if (resolution.downed === "instant-death") runtime = noteLog(runtime, "대량 피해: 즉사");
+      this.storeEntry({ ...before, runtime: { ...runtime, updatedAt: this.now() }, updatedAt: this.now() });
+      restores.push(() => { const current = this.journalEntries.get(before.id); if (current?.kind === "character") this.storeEntry({ ...current, runtime: { ...current.runtime, hp: before.runtime.hp, conditions: before.runtime.conditions, effects: before.runtime.effects, log: before.runtime.log }, updatedAt: this.now() }); });
+    } else if (hit && target.entry.kind === "npc") {
+      const token = target.token;
+      const bar = token?.bars[0];
+      if (token && target.page && !bar?.link) {
+        const beforeToken = token;
+        const page = this.pages.get(target.page.id)!;
+        const markers = resolution.downed ? [...token.markers.filter((marker) => marker.name !== "사망"), { name: "사망" }] : token.markers;
+        const inflicted = resolution.inflicted.filter((name) => !markers.some((marker) => marker.name === name)).map((name) => ({ name }));
+        this.storeToken(page, { ...token, bars: [{ ...bar!, value: resolution.hpAfter }, token.bars[1], token.bars[2]], markers: [...markers, ...inflicted] });
+        restores.push(() => { const current = this.pages.get(page.id)?.tokens.find((item) => item.id === beforeToken.id); if (current && this.pages.get(page.id)) this.storeToken(this.pages.get(page.id)!, { ...current, bars: beforeToken.bars, markers: beforeToken.markers }); });
+      } else {
+        const before = target.entry;
+        const conditions = [...before.runtime.conditions, ...resolution.inflicted.filter((name) => !before.runtime.conditions.includes(name))];
+        this.storeEntry({ ...before, runtime: { ...before.runtime, hp: { ...before.runtime.hp, current: resolution.hpAfter, temp: resolution.tempAfter }, conditions, updatedAt: this.now() }, updatedAt: this.now() });
+        restores.push(() => { const current = this.journalEntries.get(before.id); if (current?.kind === "npc") this.storeEntry({ ...current, runtime: { ...current.runtime, hp: before.runtime.hp, conditions: before.runtime.conditions }, updatedAt: this.now() }); });
+      }
+    }
+    const applied = { ...resolution, applied: true };
+    if (inputs) this.actions.set(messageId, { inputs, resolution: applied, restore: () => { for (const restore of restores.reverse()) restore(); } });
+    else { const existing = this.actions.get(messageId); if (existing) this.actions.set(messageId, { ...existing, resolution: applied, restore: () => { for (const restore of restores.reverse()) restore(); } }); }
+    this.sayWithId(messageId, { type: "action", who: who ?? "", playerId: inputs?.by, content: describeResolution(applied), action: applied, supersedes: confirming ? undefined : supersedes });
+    if (this.actions.size > 200) this.actions.delete(this.actions.keys().next().value as string);
   }
 
   private setTracker(tracker: Tracker) {
@@ -539,8 +686,10 @@ export class TableHost {
     this.emit({ type: "journal.removed", id });
   }
 
-  private say(body: Omit<ChatMessage, "id" | "at">) {
-    const message: ChatMessage = { ...body, id: newMessageId(), at: this.now() };
+  private say(body: Omit<ChatMessage, "id" | "at">) { this.sayWithId(newMessageId(), body); }
+
+  private sayWithId(id: string, body: Omit<ChatMessage, "id" | "at">) {
+    const message: ChatMessage = { ...body, id, at: this.now() };
     this.chat = [...this.chat, message];
     this.options.onChat?.(message);
     this.emit({ type: "chat", message });
@@ -590,3 +739,5 @@ export class TableHost {
 
   private reply(peerId: string, message: HostMessage) { (this.peerTransports.get(peerId) ?? this.transports[0]).send(peerId, message); }
 }
+
+const centre = (token: Token) => ({ x: token.x + token.w / 2, y: token.y + token.h / 2 });

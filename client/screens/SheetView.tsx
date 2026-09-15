@@ -8,7 +8,7 @@ import type { ContentCatalog, SpellView } from "../catalog/catalog";
 import { ABILITY_KEYS, ABILITY_KO } from "../catalog/types";
 import type { CastMethod } from "../character/play";
 import type { CharacterRuntime } from "../character/runtime";
-import type { DerivedCharacter, DerivedFeature, Term } from "../character/types";
+import type { DerivedAttack, DerivedCharacter, DerivedFeature, Term } from "../character/types";
 import { effectKeyForFeature, effectKeyForSpell, featureActivation, parseDuration } from "../rules/activation";
 import { Pill, signed } from "../ui/components";
 import { Explain } from "../ui/Explain";
@@ -40,6 +40,8 @@ export interface SheetActions {
   endEffect: (key: string) => void;
   /** "시전": spend the chosen slot/pool and start the spell's effect when it lasts. */
   castSpell: (spell: SpellView, method: CastMethod) => void;
+  /** At the table: "⚔" on an attack row picks targets and resolves (§12.2). Absent offline. */
+  attack?: (attack: DerivedAttack) => void;
 }
 
 /** d20 + bonus, plus any dice the terms carry ("+1d4" from Bless). */
@@ -200,7 +202,7 @@ export function SheetView({ derived, catalog, runtime, compact = false, actions 
                 {derived.attacks.map((attack) => (
                   <tr key={attack.id}>
                     <td>{attack.name}{attack.masteryActive ? <Pill tone="accent">통달 {attack.mastery}</Pill> : null}</td>
-                    <td className="num"><Explain terms={attack.attackTerms} total={attack.attackBonus} label={`${attack.name} 명중`}>{signed(attack.attackBonus)}</Explain>{live ? <RollButton onClick={() => actions!.roll(`${attack.name} 명중`, d20(attack.attackBonus, attack.attackTerms), undefined, "attack")} /> : null}</td>
+                    <td className="num"><Explain terms={attack.attackTerms} total={attack.attackBonus} label={`${attack.name} 명중`}>{signed(attack.attackBonus)}</Explain>{live && actions!.attack ? <button type="button" className="cl-roll" title="대상을 클릭하면 판정" onClick={() => actions!.attack!(attack)}>⚔ 공격</button> : null}{live ? <RollButton onClick={() => actions!.roll(`${attack.name} 명중`, d20(attack.attackBonus, attack.attackTerms), undefined, "attack")} /> : null}</td>
                     <td>{attack.damage} <Explain terms={attack.damageTerms} total={attack.damageBonus} label={`${attack.name} 피해 보너스`}>{signed(attack.damageBonus)}</Explain> {attack.damageType}{live ? <RollButton label="피해" onClick={() => actions!.roll(`${attack.name} 피해`, `${attack.damage.split(" ")[0]}${attack.damageBonus ? `${attack.damageBonus > 0 ? "+" : "-"}${Math.abs(attack.damageBonus)}` : ""}${diceOf(attack.damageTerms)}`, attack.damageType, "damage")} /> : null}</td>
                     <td className="cl-quiet cl-small">{[...attack.properties.map(propertyKo), attack.range ? `사거리 ${attack.range}` : ""].filter(Boolean).join(", ")}</td>
                   </tr>

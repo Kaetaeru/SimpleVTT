@@ -15,6 +15,9 @@ import { damageFormula, monsterById } from "../compendium/monsters";
 import { useDice } from "../ui/dice/DiceProvider";
 import type { Layer, Page, Token, TokenBar, TokenMarker } from "../campaign/page";
 import { ALL_MARKERS, applyBarInput, cellDistance, clampToPage, controlsToken, isConditionMarker, MARKER_GLYPH, newPage, newToken, playerPageId, snap, tokenForEntry, tokenForNpc } from "../campaign/page";
+import { hasSmite, hasSneakAttack, npcAttackSpec, smiteSlots, weaponRange } from "../rules/attackSpec";
+import type { AttackRef, AttackRiders } from "../session/protocol";
+import { Modal as RiderModal } from "../ui/components";
 import { toggleCondition } from "../character/play";
 import { Modal, Notice } from "../ui/components";
 import { ART_DRAG_TYPE, ArtImage, ArtPicker } from "./ArtPanel";
@@ -183,6 +186,13 @@ export function PageCanvas({ onOpenEntry, onOpenToken, onOpenPageSettings }: Can
     setGmPageId(created.id);
   }
   const sortedTokens = [...page.tokens].sort((a, b) => layerOrder(a.layer) - layerOrder(b.layer) || a.z - b.z);
+  const rangeOf = (token: Token): "in" | "long" | "out" | null => {
+    if (!targeting?.from) return null;
+    const from = page.tokens.find((item) => item.id === targeting.from!.tokenId);
+    if (!from || from.id === token.id) return null;
+    const feet = Math.max(0, cellDistance({ x: from.x + from.w / 2, y: from.y + from.h / 2 }, { x: token.x + token.w / 2, y: token.y + token.h / 2 }) - (from.w + token.w) / 2 + 1) * page.scale;
+    return feet <= targeting.from.rangeFeet ? "in" : targeting.from.longRangeFeet !== undefined && feet <= targeting.from.longRangeFeet ? "long" : "out";
+  };
   const menuToken = menu ? page.tokens.find((token) => token.id === menu.tokenId) ?? null : null;
   const pageStyle = { width: page.width * cell, height: page.height * cell, background: page.background.color, backgroundImage: page.grid.enabled ? gridCss(page) : undefined, backgroundSize: page.grid.enabled ? `${cell}px ${cell}px` : undefined } as React.CSSProperties;
   return (
@@ -224,7 +234,7 @@ export function PageCanvas({ onOpenEntry, onOpenToken, onOpenPageSettings }: Can
             <div className="cl-canvas-page" style={{ ...pageStyle, transform: `scale(${zoom})` }} onPointerDown={onPagePointerDown} onContextMenu={(event) => { if (!(event.target as HTMLElement).closest(".cl-token")) event.preventDefault(); }}>
               {page.background.image ? <ArtImage src={page.background.image} className="cl-canvas-bg" /> : null}
               {sortedTokens.map((token) => (
-                <TokenView key={token.id} token={token} page={page} cell={cell} selected={selected.includes(token.id)} picked={targeting?.picked.includes(token.id) ?? false} turn={snapshot.tracker.turns[snapshot.tracker.current]?.tokenId === token.id} dragging={drag?.tokenId === token.id ? drag : null} movable={mayMove(token)} journal={journal}
+                <TokenView key={token.id} token={token} page={page} cell={cell} selected={selected.includes(token.id)} picked={targeting?.picked.includes(token.id) ?? false} range={rangeOf(token)} turn={snapshot.tracker.turns[snapshot.tracker.current]?.tokenId === token.id} dragging={drag?.tokenId === token.id ? drag : null} movable={mayMove(token)} journal={journal}
                   onPointerDown={(event) => onTokenPointerDown(event, token)} onPointerMove={onTokenPointerMove} onPointerUp={onTokenPointerUp}
                   onContextMenu={(event) => { event.preventDefault(); event.stopPropagation(); setSelected([token.id]); const box = viewport.current!.getBoundingClientRect(); setMenu({ tokenId: token.id, x: event.clientX - box.left + viewport.current!.scrollLeft, y: event.clientY - box.top + viewport.current!.scrollTop }); }}
                   onDoubleClick={() => { if (token.represents && journal.some((entry) => entry.id === token.represents)) onOpenEntry(token.represents); else if (controlsToken(token, viewer, journal)) onOpenToken(page.id, token.id); }} />
@@ -262,14 +272,14 @@ function hexWithAlpha(hex: string, alpha: number) {
 }
 
 /** Lets the journal, the compendium and the tracker reach the canvas without threading props through the table. */
-interface TargetingState { prompt: string; multi: boolean; picked: string[]; resolve: (ids: string[]) => void }
+interface TargetingState { prompt: string; multi: boolean; picked: string[]; resolve: (ids: string[]) => void; /** Attacker token and range (ft): tokens beyond are dimmed. */ from?: { tokenId: string; rangeFeet: number; longRangeFeet?: number } }
 const placeListeners = new Set<(id: string) => void>();
 const placeTokenListeners = new Set<(token: Token) => void>();
 const targetListeners = new Set<(request: Omit<TargetingState, "picked">) => void>();
 export const placeCharacterToken = (journalId: string) => { for (const listener of [...placeListeners]) listener(journalId); return placeListeners.size > 0; };
 export const placeToken = (token: Token) => { for (const listener of [...placeTokenListeners]) listener(token); return placeTokenListeners.size > 0; };
 /** Targeting mode (§12.1): the crosshair banner appears, the promise resolves with the clicked token ids ([] when cancelled). */
-export const requestTargets = (prompt: string, options: { multi?: boolean } = {}) => new Promise<string[]>((resolve) => { if (!targetListeners.size) { resolve([]); return; } for (const listener of [...targetListeners]) listener({ prompt, multi: Boolean(options.multi), resolve }); });
+export const requestTargets = (prompt: string, options: { multi?: boolean; from?: TargetingState["from"] } = {}) => new Promise<string[]>((resolve) => { if (!targetListeners.size) { resolve([]); return; } for (const listener of [...targetListeners]) listener({ prompt, multi: Boolean(options.multi), resolve, from: options.from }); });
 function PlaceCharacterBridge({ onPlace, onPlaceToken, onTargets }: { onPlace: (id: string) => void; onPlaceToken: (token: Token) => void; onTargets: (request: Omit<TargetingState, "picked">) => void }) {
   useEffect(() => { placeListeners.add(onPlace); placeTokenListeners.add(onPlaceToken); targetListeners.add(onTargets); return () => { placeListeners.delete(onPlace); placeTokenListeners.delete(onPlaceToken); targetListeners.delete(onTargets); }; }, [onPlace, onPlaceToken, onTargets]);
   return null;
@@ -285,37 +295,68 @@ function ActionBar({ token, page, onOpenEntry }: { token: Token; page: Page; onO
   const entry = token.represents ? snapshot.journal.find((item) => item.id === token.represents) : undefined;
   const controls = controlsToken(token, viewer, snapshot.journal);
   const derived = useMemo(() => (entry?.kind === "character" ? deriveCharacter(entry.source, catalog, { equipped: entry.runtime.equipped, inventory: entry.runtime.inventory, effects: entry.runtime.effects }) : null), [entry, catalog]);
+  const [riderAsk, setRiderAsk] = useState<{ sneak: boolean; slots: Array<{ level: number; free: number }>; resolve: (riders: AttackRiders | null) => void } | null>(null);
+  const askRiders = (sneak: boolean, slots: Array<{ level: number; free: number }>) => new Promise<AttackRiders | null>((resolve) => setRiderAsk({ sneak, slots, resolve }));
   if (!controls || !entry || entry.kind === "handout") return null;
   const roll = async (spec: RollSpec) => { const result = await dice.roll(spec); c.sendRoll({ formula: result.formula, total: result.total, dice: result.dice.map((die) => ({ sides: die.sides, value: die.value })), modifier: result.modifier, label: `${token.name} · ${result.label}${result.note ? ` (${result.note})` : ""}` }); };
   const d20 = (bonus: number) => `1d20${bonus >= 0 ? "+" : "-"}${Math.abs(bonus)}`;
   const initiativeBonus = derived ? derived.initiative : entry.kind === "npc" ? entry.statBlock.initiativeBonus : 0;
   const inTracker = snapshot.tracker.turns.some((turn) => turn.tokenId === token.id && turn.pageId === page.id);
+  /** ⚔: pick targets in range, choose riders when the sheet offers them, then the host resolves (§12.2). */
+  const attackWith = async (ref: AttackRef) => {
+    const range = ref.source === "weapon" && derived ? weaponRange(derived.attacks.find((item) => item.id === ref.attackId)!) : ref.source === "npc" && entry.kind === "npc" ? (() => { const spec = npcAttackSpec(entry, ref.actionName); return spec ? { mode: spec.mode, rangeFeet: spec.rangeFeet ?? 5, longRangeFeet: spec.longRangeFeet } : null; })() : null;
+    const targets = await requestTargets(`${ref.source === "weapon" && derived ? derived.attacks.find((item) => item.id === ref.attackId)!.name : ref.source === "npc" ? ref.actionName : "공격"} 대상을 클릭하세요 (Esc 취소, 여러 대상은 Shift)`, { multi: true, from: range ? { tokenId: token.id, rangeFeet: range.rangeFeet, longRangeFeet: range.longRangeFeet } : undefined });
+    if (!targets.length) return;
+    let riders: AttackRiders | null | undefined;
+    if (ref.source === "weapon" && derived && entry.kind === "character") {
+      const attack = derived.attacks.find((item) => item.id === ref.attackId)!;
+      const sneak = hasSneakAttack(derived, attack);
+      const slots = hasSmite(derived) ? smiteSlots(derived, entry.runtime) : [];
+      if (sneak || slots.length) riders = await askRiders(sneak, slots);
+      if (riders === null) return;
+    }
+    c.attack({ entryId: entry.id, pageId: page.id, tokenId: token.id }, targets.map((id) => ({ pageId: page.id, tokenId: id })), ref, riders ?? undefined);
+  };
   return (
     <div className="cl-action-bar" role="toolbar" aria-label={`${token.name} 액션`}>
       <strong className="cl-small">{token.name}</strong>
       <button type="button" className="cl-btn small" onClick={() => c.addTurn({ name: token.name, tokenId: token.id, pageId: page.id, entryId: entry.id, image: token.image }, initiativeBonus)} title="1d20 + 이니셔티브 보너스를 굴려 트래커에 넣습니다">이니셔티브 {initiativeBonus >= 0 ? "+" : ""}{initiativeBonus}{inTracker ? " ↻" : ""}</button>
       {derived ? derived.attacks.map((attack) => (
         <span key={attack.id} className="cl-action-group">
-          <button type="button" className="cl-btn small" onClick={() => void roll({ label: `${attack.name} 명중`, formula: d20(attack.attackBonus), kind: "attack" })} title="R7에서 대상 지정과 판정으로 이어집니다">{attack.name} {attack.attackBonus >= 0 ? "+" : ""}{attack.attackBonus}</button>
-          <button type="button" className="cl-btn small quiet" onClick={() => void roll({ label: `${attack.name} 피해`, formula: `${attack.damage.split(" ")[0]}${attack.damageBonus ? `${attack.damageBonus > 0 ? "+" : "-"}${Math.abs(attack.damageBonus)}` : ""}`, note: attack.damageType, kind: "damage" })}>피해</button>
+          <button type="button" className="cl-btn small primary" onClick={() => void attackWith({ source: "weapon", attackId: attack.id })} title="대상을 클릭하면 명중·피해가 규칙대로 판정됩니다">⚔ {attack.name} {attack.attackBonus >= 0 ? "+" : ""}{attack.attackBonus}</button>
+          <button type="button" className="cl-btn small quiet" title="판정 없이 명중만 굴림" onClick={() => void roll({ label: `${attack.name} 명중`, formula: d20(attack.attackBonus), kind: "attack" })}>굴림</button>
         </span>
       )) : null}
       {entry.kind === "npc" ? entry.statBlock.actions.filter((action) => action.kind === "attack" || action.kind === "save").map((action) => (
         <span key={action.name} className="cl-action-group">
-          {action.kind === "attack" && action.attack ? <button type="button" className="cl-btn small" onClick={() => void roll({ label: `${action.name} 명중`, formula: d20(action.attack!.bonus), kind: "attack" })} disabled={Boolean(action.timing?.recharge && entry.runtime.spent[action.name])}>{action.name} {action.attack.bonus >= 0 ? "+" : ""}{action.attack.bonus}</button> : null}
+          {action.kind === "attack" && action.attack ? <button type="button" className="cl-btn small primary" onClick={() => void attackWith({ source: "npc", actionName: action.name })} disabled={Boolean(action.timing?.recharge && entry.runtime.spent[action.name])} title="대상을 클릭하면 명중·피해가 규칙대로 판정됩니다">⚔ {action.name} {action.attack.bonus >= 0 ? "+" : ""}{action.attack.bonus}</button> : null}
           {action.kind === "save" && action.save ? <button type="button" className="cl-btn small" disabled={Boolean(action.timing?.recharge && entry.runtime.spent[action.name])} onClick={() => { const damage = action.save!.failDamage?.[0]; if (damage) void roll({ label: `${action.name} 피해`, formula: damageFormula(damage), note: `${damage.type} · DC ${action.save!.dc}`, kind: "damage" }); if (action.timing?.recharge) c.putJournal({ ...entry, runtime: { ...entry.runtime, spent: { ...entry.runtime.spent, [action.name]: true } } }); }}>{action.name} DC {action.save.dc}{action.timing?.recharge && entry.runtime.spent[action.name] ? " (재충전 대기)" : ""}</button> : null}
           {action.kind === "attack" && action.attack ? action.attack.damage.map((damage, index) => <button type="button" key={index} className="cl-btn small quiet" onClick={() => void roll({ label: `${action.name} 피해`, formula: damageFormula(damage), note: damage.type, kind: "damage" })}>피해</button>) : null}
         </span>
       )) : null}
       <button type="button" className="cl-btn small quiet" onClick={() => onOpenEntry(entry.id)}>시트</button>
+      {riderAsk ? <RiderDialog ask={riderAsk} onDone={(riders) => { riderAsk.resolve(riders); setRiderAsk(null); }} /> : null}
     </div>
+  );
+}
+
+/** 암습과 신성한 강타처럼 공격에 얹는 선택지 (§12.2 라이더 프롬프트). */
+function RiderDialog({ ask, onDone }: { ask: { sneak: boolean; slots: Array<{ level: number; free: number }> }; onDone: (riders: AttackRiders | null) => void }) {
+  const [sneak, setSneak] = useState(ask.sneak);
+  const [slot, setSlot] = useState<number>(0);
+  return (
+    <RiderModal title="공격에 얹기" onClose={() => onDone(null)} actions={<button type="button" className="cl-btn primary" onClick={() => onDone({ sneak: ask.sneak && sneak, smiteSlot: slot || undefined })}>공격</button>}>
+      {ask.sneak ? <label className="cl-row cl-small" style={{ gap: 6 }}><input type="checkbox" checked={sneak} onChange={(event) => setSneak(event.target.checked)} /> 암습 (유리하거나 아군이 대상 옆에 있을 때, 턴당 한 번)</label> : null}
+      {ask.slots.length ? <div className="cl-field"><label>신성한 강타 (적중 시 슬롯 소비, 2d8 + 슬롯 레벨당 1d8 광휘)</label><select className="cl-select" aria-label="강타 슬롯" value={slot} onChange={(event) => setSlot(Number(event.target.value))}><option value={0}>안 씀</option>{ask.slots.map((item) => <option key={item.level} value={item.level}>{item.level}레벨 슬롯 ({item.free} 남음)</option>)}</select></div> : null}
+      <p className="cl-quiet cl-small">진행 중인 효과의 추가 주사위(격노·사냥꾼의 표식 등)는 저절로 붙습니다.</p>
+    </RiderModal>
   );
 }
 
 /* ---------- Token ---------- */
 
-function TokenView({ token, page, cell, selected, picked, turn, dragging, movable, journal, onPointerDown, onPointerMove, onPointerUp, onContextMenu, onDoubleClick }: {
-  token: Token; page: Page; cell: number; selected: boolean; picked: boolean; turn: boolean; dragging: { x: number; y: number; originX: number; originY: number } | null; movable: boolean; journal: JournalEntry[];
+function TokenView({ token, page, cell, selected, picked, range, turn, dragging, movable, journal, onPointerDown, onPointerMove, onPointerUp, onContextMenu, onDoubleClick }: {
+  token: Token; page: Page; cell: number; selected: boolean; picked: boolean; range: "in" | "long" | "out" | null; turn: boolean; dragging: { x: number; y: number; originX: number; originY: number } | null; movable: boolean; journal: JournalEntry[];
   onPointerDown: (event: ReactPointerEvent) => void; onPointerMove: (event: ReactPointerEvent) => void; onPointerUp: () => void; onContextMenu: (event: React.MouseEvent) => void; onDoubleClick: () => void;
 }) {
   const x = dragging ? dragging.x : token.x;
@@ -332,7 +373,7 @@ function TokenView({ token, page, cell, selected, picked, turn, dragging, movabl
   const distance = dragging ? cellDistance({ x: dragging.originX, y: dragging.originY }, { x, y }) * page.scale : 0;
   const aura = (index: 0 | 1) => { const item = token.auras[index]; if (!item || item.radius <= 0) return null; const radiusCells = item.radius / page.scale; const size = (token.w + radiusCells * 2) * cell; return <span key={index} className={`cl-aura${item.square ? " square" : ""}`} style={{ width: size, height: size, left: -radiusCells * cell, top: -radiusCells * cell, background: hexWithAlpha(item.color, 0.22), borderColor: item.color }} />; };
   return (
-    <div className={`cl-token layer-${token.layer}${selected ? " selected" : ""}${picked ? " picked" : ""}${turn ? " turn" : ""}${movable ? " movable" : ""}${token.locked ? " locked" : ""}`} data-token-id={token.id} data-token-name={token.name}
+    <div className={`cl-token layer-${token.layer}${selected ? " selected" : ""}${picked ? " picked" : ""}${range ? ` range-${range}` : ""}${turn ? " turn" : ""}${movable ? " movable" : ""}${token.locked ? " locked" : ""}`} data-token-id={token.id} data-token-name={token.name}
       style={{ left: x * cell, top: y * cell, width: token.w * cell, height: token.h * cell, zIndex: 10 + layerOrder(token.layer) * 1000 + token.z }}
       onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp} onContextMenu={onContextMenu} onDoubleClick={onDoubleClick} title={token.showName ? token.name : undefined}>
       {aura(0)}{aura(1)}

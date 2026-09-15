@@ -6,6 +6,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useCampaigns } from "../app/campaigns";
 import { useClient } from "../app/context";
 import type { ChatMessage } from "../campaign/model";
+import type { AttackResolution } from "../rules/resolve";
+import { damageTypeKo } from "../rules/resolve";
 import { parseFormula } from "../character/dice";
 import { describeChatRoll, parseChatInput } from "../session/chat";
 import { copyText, Notice, Pill } from "../ui/components";
@@ -93,7 +95,8 @@ function ChatTab({ isGm }: { isGm: boolean }) {
   const snapshot = c.table.snapshot!;
   const [text, setText] = useState("");
   const listRef = useRef<HTMLDivElement>(null);
-  const messages = snapshot.chat;
+  const superseded = useMemo(() => new Set(snapshot.chat.map((message) => message.supersedes).filter((id): id is string => Boolean(id))), [snapshot.chat]);
+  const messages = useMemo(() => snapshot.chat.filter((message) => !superseded.has(message.id)), [snapshot.chat, superseded]);
   useEffect(() => { const list = listRef.current; if (list) list.scrollTop = list.scrollHeight; }, [messages.length]);
   const names = useMemo(() => Object.fromEntries(snapshot.players.map((player) => [player.userId, player])), [snapshot.players]);
   const submit = async () => {
@@ -129,6 +132,7 @@ function ChatLine({ message, me, color, targetName }: { message: ChatMessage; me
   const time = new Date(message.at).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" });
   const mine = message.playerId === me;
   switch (message.type) {
+    case "action": return <ActionCard message={message} time={time} color={color} />;
     case "system": return <div className="cl-chat-msg system"><span className="cl-at">{time}</span>{message.content}</div>;
     case "desc": return <div className="cl-chat-msg desc"><span className="cl-at">{time}</span>{message.content}</div>;
     case "emote": return <div className="cl-chat-msg emote"><span className="cl-at">{time}</span><span className="cl-swatch" style={{ background: color }} /><em>{message.who} {message.content}</em></div>;
@@ -149,4 +153,58 @@ function ChatLine({ message, me, color, targetName }: { message: ChatMessage; me
     }
     default: return <div className={`cl-chat-msg${mine ? " mine" : ""}`}><span className="cl-at">{time}</span><span className="cl-who" style={{ color }}>{message.who}</span><div>{message.content}</div></div>;
   }
+}
+
+/** The 판정 card (§12.2 ⑥): every die, the comparison, what was applied, follow-ups, and the GM's palette. */
+function ActionCard({ message, time, color }: { message: ChatMessage; time: string; color?: string }) {
+  const c = useCampaigns();
+  const snapshot = c.table.snapshot!;
+  const isGm = snapshot.players.find((player) => player.userId === c.userId)?.role === "gm";
+  const result = message.action as AttackResolution;
+  const [delta, setDelta] = useState("");
+  const outcome = result.outcome === "crit" ? "치명타" : result.outcome === "hit" ? "적중" : result.outcome === "fumble" ? "자동 실패" : "빗나감";
+  const tone = result.outcome === "crit" || result.outcome === "hit" ? "good" : "bad";
+  return (
+    <div className={`cl-chat-msg action${message.undone ? " undone" : ""}`} data-action-id={message.id}>
+      <span className="cl-at">{time}</span>{message.who ? <span className="cl-who" style={{ color }}>{message.who}</span> : null}{message.undone ? <Pill tone="bad">되돌림</Pill> : !result.applied ? <Pill tone="accent">DM 확인 대기</Pill> : null}
+      <div className="cl-action-card">
+        <div className="cl-roll-head">{result.attacker.name} → {result.target.name}: {result.attack.name}{result.distanceFeet !== undefined ? <span className="cl-quiet cl-small"> · {result.distanceFeet} ft</span> : null}</div>
+        <div className="cl-roll-dice">
+          {result.d20s.map((die, index) => <span key={index} className={`cl-die d20${die === result.kept ? "" : " dropped"}${die === 20 ? " crit" : die === 1 ? " fumble" : ""}`}>{die}</span>)}
+          {result.attack.bonus ? <span className="cl-mod">{result.attack.bonus > 0 ? "+" : "−"}{Math.abs(result.attack.bonus)}</span> : null}
+          <span className="cl-eq">=</span><strong className="cl-total">{result.attackTotal}</strong>
+          <span className="cl-quiet cl-small">vs AC {result.targetAc}{result.cover ? ` (엄폐 +${result.cover})` : ""}</span>
+          <Pill tone={tone}>{outcome}</Pill>
+          {result.advantage !== "normal" ? <Pill tone="accent">{result.advantage === "advantage" ? "유리" : "불리"}</Pill> : null}
+        </div>
+        {result.reasons.length ? <div className="cl-quiet cl-small">{result.reasons.join(" · ")}</div> : null}
+        {result.damage.length ? (
+          <div className="cl-action-damage">
+            {result.damage.map((part, index) => <div key={index} className="cl-row cl-small" style={{ gap: 4 }}><span>{part.part.label ?? "피해"}</span>{part.dice.map((die, at) => <span key={at} className="cl-die small">{die}</span>)}<span>= {part.rolled} {damageTypeKo(part.part.type)}</span>{part.adjustment ? <Pill tone={part.adjustment === "취약" ? "bad" : "accent"}>{part.adjustment} → {part.adjusted}</Pill> : null}</div>)}
+            <div className="cl-small"><strong>피해 {result.damageTotal}</strong>{result.overrides?.damageScale !== undefined || result.overrides?.damageDelta ? <span className="cl-quiet"> (DM 수정)</span> : null}{result.absorbed ? ` · 임시 HP ${result.absorbed} 흡수` : ""} · HP {result.hpBefore} → {result.hpAfter}{result.tempAfter ? ` (임시 ${result.tempAfter})` : ""}</div>
+            {result.concentration ? <div className="cl-small">집중({result.concentration.effect}) 내성 DC {result.concentration.dc}: d20 {result.concentration.d20} {result.concentration.total >= 0 ? "+" : ""}{result.concentration.total - result.concentration.d20} = {result.concentration.total} → {result.concentration.success ? "유지" : "실패 (효과 종료)"}</div> : null}
+            {result.inflicted.length ? <div className="cl-small">부여: {result.inflicted.join(", ")}</div> : null}
+            {result.downed ? <div className="cl-small" style={{ color: "var(--bad)" }}>{result.downed === "dead" ? "HP 0 — 사망" : result.downed === "instant-death" ? "대량 피해 — 즉사" : "HP 0 — 무의식·넘어짐, 죽음 내성 시작"}</div> : null}
+          </div>
+        ) : null}
+        {result.overrides?.note ? <div className="cl-small cl-quiet">DM 메모: {result.overrides.note}</div> : null}
+        {isGm && !message.undone ? (
+          <div className="cl-palette" aria-label="DM 팔레트">
+            {!result.applied ? <button type="button" className="cl-btn small primary" onClick={() => c.confirmAction(message.id)}>적용</button> : null}
+            <button type="button" className="cl-btn small" onClick={() => c.adjustAction(message.id, { outcome: "hit" })}>강제 적중</button>
+            <button type="button" className="cl-btn small" onClick={() => c.adjustAction(message.id, { outcome: "miss" })}>빗나감</button>
+            <button type="button" className="cl-btn small" onClick={() => c.adjustAction(message.id, { outcome: "crit" })}>치명타</button>
+            <button type="button" className="cl-btn small" onClick={() => c.adjustAction(message.id, { cover: result.cover === 2 ? 0 : 2 })}>엄폐 +2</button>
+            <button type="button" className="cl-btn small" onClick={() => c.adjustAction(message.id, { cover: result.cover === 5 ? 0 : 5 })}>엄폐 +5</button>
+            <button type="button" className="cl-btn small" onClick={() => c.adjustAction(message.id, { advantage: "advantage" }, true)}>유리 재굴림</button>
+            <button type="button" className="cl-btn small" onClick={() => c.adjustAction(message.id, { advantage: "disadvantage" }, true)}>불리 재굴림</button>
+            <button type="button" className="cl-btn small" onClick={() => c.adjustAction(message.id, { damageScale: 0.5 })}>피해 절반</button>
+            <button type="button" className="cl-btn small" onClick={() => c.adjustAction(message.id, { damageScale: 0 })}>피해 0</button>
+            <input className="cl-input" style={{ width: 56, height: 26 }} placeholder="±N" aria-label="피해 수정" value={delta} onChange={(event) => setDelta(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && /^[+-]?\d+$/.test(delta.trim())) { c.adjustAction(message.id, { damageDelta: Number(delta) }); setDelta(""); } }} />
+            <button type="button" className="cl-btn small danger" onClick={() => c.undoAction(message.id)}>되돌리기</button>
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
 }

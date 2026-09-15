@@ -15,7 +15,9 @@ import type { Campaign, ChatArchive, ChatMessage, JoinedCampaign, PlayerRole } f
 import { chatArchiveId, emptyChatArchive, isStoredDocument, newCampaign, newJoinCode, repairCampaign } from "../campaign/model";
 import { TableClient, type TableStatus } from "../session/client";
 import { TableHost } from "../session/host";
-import type { ClientCommand, Invite, RollPayload, TableSnapshot } from "../session/protocol";
+import type { ActorRef, AttackRef, AttackRiders, ClientCommand, Invite, RollPayload, TableSnapshot } from "../session/protocol";
+import { derivedOf, pcAttackSpec, pcCombatant, pcConcentrationKey } from "../rules/attackSpec";
+import type { AttackOverrides } from "../rules/resolve";
 import { decodeInvite, encodeInvite } from "../session/protocol";
 import { DEFAULT_SESSION_PORT, listSessionAddresses, tauriAvailable, TauriTcpTransport } from "../session/tauriTransport";
 import { BroadcastChannelTransport, MemoryHub } from "../session/transport";
@@ -89,6 +91,10 @@ export interface CampaignsState {
   setTracker: (tracker: Tracker) => void;
   addTurn: (turn: Omit<TrackerTurn, "id" | "initiative"> & { initiative?: number }, rollBonus?: number) => void;
   nextTurn: () => void;
+  attack: (attacker: ActorRef, targets: ActorRef[], attack: AttackRef, riders?: AttackRiders) => void;
+  adjustAction: (messageId: string, overrides: AttackOverrides, reroll?: boolean) => void;
+  undoAction: (messageId: string) => void;
+  confirmAction: (messageId: string) => void;
 }
 
 const CampaignsContext = createContext<CampaignsState | null>(null);
@@ -270,6 +276,9 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
         else { setPages((map) => ({ ...map, [campaign.id]: (map[campaign.id] ?? []).filter((item) => item.id !== change.removed) })); void store?.deleteDocument(change.removed); }
       },
       attributeOf: (entry, link) => attributeOf(entry, link, catalogRef.current),
+      pcCombatant: (entry) => pcCombatant(entry, derivedOf(entry, catalogRef.current)),
+      pcConcentrationKey,
+      pcAttackSpec: (entry, attackId, riders) => pcAttackSpec(entry, derivedOf(entry, catalogRef.current), attackId, riders),
       artData: {
         get: async (hash) => (await store?.getAsset(hash))?.dataUrl,
         put: async (hash, dataUrl) => { await store?.putAsset({ hash, dataUrl, bytes: dataUrl.length, savedAt: new Date().toISOString() }); },
@@ -376,6 +385,10 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
   const setTracker = useCallback((tracker: Tracker) => send({ type: "tracker.set", tracker }), [send]);
   const addTurn = useCallback((turn: Omit<TrackerTurn, "id" | "initiative"> & { initiative?: number }, rollBonus?: number) => send({ type: "tracker.add", turn, rollBonus }), [send]);
   const nextTurn = useCallback(() => send({ type: "tracker.next" }), [send]);
+  const attack = useCallback((attacker: ActorRef, targets: ActorRef[], ref: AttackRef, riders?: AttackRiders) => send({ type: "act.attack", attacker, targets, attack: ref, riders }), [send]);
+  const adjustAction = useCallback((messageId: string, overrides: AttackOverrides, reroll?: boolean) => send({ type: "act.adjust", messageId, overrides, reroll }), [send]);
+  const undoAction = useCallback((messageId: string) => send({ type: "act.undo", messageId }), [send]);
+  const confirmAction = useCallback((messageId: string) => send({ type: "act.confirm", messageId }), [send]);
   const updateArt = useCallback((id: string, patch: { name?: string; folder?: string; tags?: string[] }) => send({ type: "art.update", id, ...patch }), [send]);
   const removeArt = useCallback((id: string) => send({ type: "art.remove", id }), [send]);
   const requestArt = useCallback((id: string) => {
@@ -407,8 +420,8 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
   const table = useMemo<TableState>(() => ({ role, status: client ? client.status : "idle", reason: client?.reason ?? null, campaignId, snapshot: client?.snapshot ?? null, invite, invites, transportNote, refusals, shows, artUrls, artPending, pings }),
   // eslint-disable-next-line react-hooks/exhaustive-deps
   [role, client, campaignId, invite, invites, transportNote, refusals, shows, artUrls, artPending, pings, tick]);
-  const value = useMemo<CampaignsState>(() => ({ userId, displayName, setDisplayName, campaigns, joined, archives, journals, arts, pages, createCampaign, updateCampaign, deleteCampaign, regenerateJoinCode, forgetJoined, table, launch, join, leave, say, sendRoll, setRole, kick, putJournal, removeJournal, showJournal, dismissShow, uploadArt, updateArt, removeArt, requestArt, putPage, removePage, setRibbon, setBookmark, putToken, removeToken, ping, setTracker, addTurn, nextTurn }),
-    [userId, displayName, setDisplayName, campaigns, joined, archives, journals, arts, pages, createCampaign, updateCampaign, deleteCampaign, regenerateJoinCode, forgetJoined, table, launch, join, leave, say, sendRoll, setRole, kick, putJournal, removeJournal, showJournal, dismissShow, uploadArt, updateArt, removeArt, requestArt, putPage, removePage, setRibbon, setBookmark, putToken, removeToken, ping, setTracker, addTurn, nextTurn]);
+  const value = useMemo<CampaignsState>(() => ({ userId, displayName, setDisplayName, campaigns, joined, archives, journals, arts, pages, createCampaign, updateCampaign, deleteCampaign, regenerateJoinCode, forgetJoined, table, launch, join, leave, say, sendRoll, setRole, kick, putJournal, removeJournal, showJournal, dismissShow, uploadArt, updateArt, removeArt, requestArt, putPage, removePage, setRibbon, setBookmark, putToken, removeToken, ping, setTracker, addTurn, nextTurn, attack, adjustAction, undoAction, confirmAction }),
+    [userId, displayName, setDisplayName, campaigns, joined, archives, journals, arts, pages, createCampaign, updateCampaign, deleteCampaign, regenerateJoinCode, forgetJoined, table, launch, join, leave, say, sendRoll, setRole, kick, putJournal, removeJournal, showJournal, dismissShow, uploadArt, updateArt, removeArt, requestArt, putPage, removePage, setRibbon, setBookmark, putToken, removeToken, ping, setTracker, addTurn, nextTurn, attack, adjustAction, undoAction, confirmAction]);
   return <CampaignsContext.Provider value={value}>{children}</CampaignsContext.Provider>;
 }
 

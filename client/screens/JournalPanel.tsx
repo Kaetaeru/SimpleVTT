@@ -19,7 +19,8 @@ import { ArtDropZone, ArtImage, ArtPicker } from "./ArtPanel";
 import { CreateScreen } from "./CreateScreen";
 import { NpcWindow } from "./NpcSheet";
 import { TrackerWindow } from "./TrackerWindow";
-import { journalDragProps, PageSettingsWindow, placeCharacterToken, TokenWindow } from "./PageCanvas";
+import { journalDragProps, PageSettingsWindow, placeCharacterToken, requestTargets, TokenWindow } from "./PageCanvas";
+import { hasSmite, hasSneakAttack, smiteSlots, weaponRange } from "../rules/attackSpec";
 import { SheetPlay } from "./SheetPlay";
 import { SheetView } from "./SheetView";
 
@@ -390,6 +391,18 @@ function CharacterWindow({ entry, onClose, onOpen }: { entry: JournalCharacter; 
     setWizard(false);
   };
   const derived = useMemo(() => deriveCharacter(entry.source, catalog, { equipped: entry.runtime.equipped, inventory: entry.runtime.inventory, effects: entry.runtime.effects }), [entry.source, entry.runtime, catalog]);
+  /** ⚔ on the sheet's attack row: the character's token on the current page (if any) is the attacker; targets come from the canvas. */
+  const attackFromSheet = async (attack: (typeof derived.attacks)[number]) => {
+    const page = viewer.snapshot.pages.find((item) => item.tokens.some((token) => token.represents === entry.id));
+    const token = page?.tokens.find((item) => item.represents === entry.id);
+    const range = weaponRange(attack);
+    const targets = await requestTargets(`${attack.name} 대상을 클릭하세요 (Esc 취소, 여러 대상은 Shift)`, { multi: true, from: token ? { tokenId: token.id, rangeFeet: range.rangeFeet, longRangeFeet: range.longRangeFeet } : undefined });
+    if (!targets.length || !page) return;
+    const sneak = hasSneakAttack(derived, attack);
+    const slots = hasSmite(derived) ? smiteSlots(derived, entry.runtime) : [];
+    const riders = sneak || slots.length ? { sneak: sneak && confirm("암습을 얹을까요? (유리하거나 아군이 대상 옆에 있을 때, 턴당 한 번)"), smiteSlot: slots.length ? Number(prompt(`신성한 강타 슬롯 레벨 (${slots.map((slot) => `${slot.level}: ${slot.free}`).join(", ")}; 비우면 안 씀)`, "") || 0) || undefined : undefined } : undefined;
+    c.attack({ entryId: entry.id, pageId: page.id, tokenId: token?.id }, targets.map((id) => ({ pageId: page.id, tokenId: id })), { source: "weapon", attackId: attack.id }, riders);
+  };
   if (wizard) return <CreateScreen existing={entry.source} initialStep="classes" onSave={saveEdited} onClose={() => setWizard(false)} title={`편집 · ${entry.name}`} />;
   return (
     <div className="cl-journal-window">
@@ -418,7 +431,7 @@ function CharacterWindow({ entry, onClose, onOpen }: { entry: JournalCharacter; 
           {viewer.isGm ? <GmFields draft={draft} edit={edit} set={set} /> : null}
         </div>
       ) : null}
-      {tab === "sheet" ? (editable ? <SheetPlay embedded source={entry.source} runtime={entry.runtime} catalog={catalog} save={saveRuntime} onRolled={onRolled} /> : <SheetView derived={derived} catalog={catalog} runtime={entry.runtime} />) : null}
+      {tab === "sheet" ? (editable ? <SheetPlay embedded source={entry.source} runtime={entry.runtime} catalog={catalog} save={saveRuntime} onRolled={onRolled} onAttack={(attack) => void attackFromSheet(attack)} /> : <SheetView derived={derived} catalog={catalog} runtime={entry.runtime} />) : null}
       {tab === "attributes" ? <AttributesTab derived={derived} runtime={entry.runtime} /> : null}
     </div>
   );

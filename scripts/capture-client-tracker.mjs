@@ -132,22 +132,24 @@ try {
   check(true, "a full round wraps to 라운드 2 (chat notes it)");
   await player.screenshot({ path: path.join(OUT, "56-tracker-player-round-2.png") });
 
-  // SC-38: the token action bar rolls the goblin's scimitar attack into chat; the player's bar shows their attacks.
+  // SC-38: the token action bar: "⚔ 시미터" resolves against a target (R7, capture-client-attack.mjs); the plain
+  // 피해 button next to it rolls the scimitar damage into chat; the player's bar shows their attacks.
   await reveal(tokenOf(dm, "고블린 전사"));
   await tokenOf(dm, "고블린 전사").click();
   const bar = dm.getByRole("toolbar", { name: "고블린 전사 액션" });
   await bar.waitFor();
-  await bar.getByRole("button", { name: /^시미터/ }).click();
-  await dm.locator(".cl-roll-card", { hasText: "고블린 전사 · 시미터 명중" }).waitFor({ timeout: 15000 });
+  check(await bar.getByRole("button", { name: /^⚔ 시미터/ }).count() === 1, "the goblin's bar offers ⚔ 시미터 (rules resolution)");
+  await bar.getByRole("button", { name: "피해" }).first().click();
+  await dm.locator(".cl-roll-card", { hasText: "고블린 전사 · 시미터 피해" }).waitFor({ timeout: 15000 });
   await tab(player, "채팅").click();
-  await player.locator(".cl-roll-card", { hasText: "고블린 전사 · 시미터 명중" }).waitFor({ timeout: 15000 });
-  check(true, "the action bar's attack roll reaches chat on both screens");
+  await player.locator(".cl-roll-card", { hasText: "고블린 전사 · 시미터 피해" }).waitFor({ timeout: 15000 });
+  check(true, "the action bar's damage roll reaches chat on both screens");
   await dm.screenshot({ path: path.join(OUT, "57-action-bar-goblin.png") });
   await reveal(tokenOf(player, "앨리스의 파이터"));
   await tokenOf(player, "앨리스의 파이터").click();
   const playerBar = player.getByRole("toolbar", { name: "앨리스의 파이터 액션" });
   await playerBar.waitFor();
-  check((await playerBar.innerText()).includes("이니셔티브"), "the player's action bar shows initiative and attacks");
+  check((await playerBar.innerText()).includes("이니셔티브") && (await playerBar.innerText()).includes("⚔"), "the player's action bar shows initiative and ⚔ attacks");
   await player.screenshot({ path: path.join(OUT, "58-action-bar-player.png") });
   await player.click(".cl-canvas-page", { position: { x: 5, y: 5 } }).catch(() => {});
   check(await player.getByRole("toolbar", { name: "고블린 전사 액션" }).count() === 0, "a player has no action bar for the goblin");

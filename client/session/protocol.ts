@@ -7,9 +7,10 @@ import type { ArtAsset } from "../campaign/art";
 import type { JournalEntry } from "../campaign/journal";
 import type { Page, Token } from "../campaign/page";
 import type { Tracker, TrackerTurn } from "../campaign/tracker";
+import type { AttackOverrides } from "../rules/resolve";
 import type { CampaignSettings, ChatMessage, PlayerRole } from "../campaign/model";
 
-export const PROTOCOL_VERSION = 6;
+export const PROTOCOL_VERSION = 7;
 
 export interface Presence { userId: string; displayName: string; role: PlayerRole; color: string; connected: boolean }
 
@@ -31,6 +32,12 @@ export interface TableSnapshot {
   tracker: Tracker;
   lastEventN: number;
 }
+
+/** Who acts or is targeted: a journal entry, usually through its token on a page. */
+export interface ActorRef { entryId?: string; pageId?: string; tokenId?: string }
+/** Which attack: a sheet attack row, an NPC action, or (R8) a spell. */
+export type AttackRef = { source: "weapon"; attackId: string } | { source: "npc"; actionName: string } | { source: "spell"; spellId: string; slotLevel?: number };
+export interface AttackRiders { sneak?: boolean; smiteSlot?: number }
 
 export interface RollPayload { formula: string; total: number; dice: Array<{ sides: number; value: number }>; modifier: number; label?: string }
 
@@ -69,6 +76,14 @@ export type ClientCommand =
   | { type: "tracker.add"; turn: Omit<TrackerTurn, "id" | "initiative"> & { initiative?: number }; rollBonus?: number }
   /** "다음 턴" (GM): turn-end and turn-start processing, then the highlight moves. */
   | { type: "tracker.next" }
+  /** Attack (§12.2): the host resolves and applies, one card per target. */
+  | { type: "act.attack"; attacker: ActorRef; targets: ActorRef[]; attack: AttackRef; riders?: AttackRiders; overrides?: AttackOverrides }
+  /** DM palette: re-resolve a card with overrides (same dice unless `reroll`), superseding it. */
+  | { type: "act.adjust"; messageId: string; overrides: AttackOverrides; reroll?: boolean }
+  /** DM palette: take the card's application back. */
+  | { type: "act.undo"; messageId: string }
+  /** D90 "DM 확인 후 적용": apply a waiting card. */
+  | { type: "act.confirm"; messageId: string }
   | { type: "bye" };
 
 export type TableEvent =

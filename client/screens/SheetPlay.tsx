@@ -16,7 +16,7 @@ import {
 } from "../character/play";
 import type { FeatureUseExtras } from "../character/play";
 import type { CharacterRuntime } from "../character/runtime";
-import type { CharacterSource } from "../character/types";
+import type { CharacterSource, DerivedAttack } from "../character/types";
 import { featureActivation } from "../rules/activation";
 import { castHook, effectApplication, type CastHook } from "../rules/effects";
 import { copyText, downloadText, Modal, Notice, Pill } from "../ui/components";
@@ -36,9 +36,11 @@ export interface SheetPlayProps {
   actions?: ReactNode;
   /** Embedded in a journal window: no page chrome. */
   embedded?: boolean;
+  /** At the table: an attack row's ⚔ hands the attack to targeting mode. */
+  onAttack?: (attack: DerivedAttack) => void;
 }
 
-export function SheetPlay({ source, runtime, catalog, save, onRolled, savedAt, title = "시트", actions: headerActions, embedded = false }: SheetPlayProps) {
+export function SheetPlay({ source, runtime, catalog, save, onRolled, savedAt, title = "시트", actions: headerActions, embedded = false, onAttack }: SheetPlayProps) {
   const derived = useMemo(() => deriveCharacter(source, catalog, { equipped: runtime.equipped, inventory: runtime.inventory, effects: runtime.effects }), [source, runtime, catalog]);
   const [exporting, setExporting] = useState<string | null>(null);
   const [hpInput, setHpInput] = useState("");
@@ -61,6 +63,7 @@ export function SheetPlay({ source, runtime, catalog, save, onRolled, savedAt, t
   const submitHp = () => { if (hpPreview) { commit(hpPreview); setHpInput(""); } };
 
   const actions: SheetActions = {
+    attack: onAttack,
     useSlot: (level) => commit(useSpellSlot(runtime, derived, level)),
     restoreSlot: (level) => commit(restoreSpellSlot(runtime, level)),
     usePactSlot: () => commit(usePactSlot(runtime, derived)),

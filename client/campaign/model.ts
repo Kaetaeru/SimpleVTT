@@ -7,6 +7,7 @@ import type { ArtAsset } from "./art";
 import type { JournalEntry } from "./journal";
 import type { Page } from "./page";
 import type { Tracker } from "./tracker";
+import type { AttackResolution } from "../rules/resolve";
 
 export type PlayerRole = "gm" | "player";
 
@@ -27,6 +28,8 @@ export interface CampaignSettings {
   /** Roll20 Vault export permission: players may copy their in-campaign character back to their library. */
   playersCanExportToVault: boolean;
   chatAvatars: boolean;
+  /** D90: results wait for the GM's "적용" instead of landing at once. */
+  dmConfirmsResults?: boolean;
 }
 
 export interface Campaign {
@@ -56,7 +59,7 @@ export interface Campaign {
 export interface ChatMessage {
   id: string;
   at: string;
-  type: "general" | "whisper" | "emote" | "desc" | "rollresult" | "gmroll" | "system";
+  type: "general" | "whisper" | "emote" | "desc" | "rollresult" | "gmroll" | "system" | "action";
   /** Display name at the time. */
   who: string;
   playerId?: string;
@@ -64,6 +67,12 @@ export interface ChatMessage {
   target?: string;
   content: string;
   roll?: { formula: string; total: number; dice: Array<{ sides: number; value: number }>; modifier: number; label?: string };
+  /** A resolved attack (type "action"): the 판정 card with every die and what was applied. */
+  action?: AttackResolution;
+  /** This card replaces an earlier one (a DM palette edit, a confirmation, an undo). */
+  supersedes?: string;
+  /** Set on a card whose application was undone. */
+  undone?: boolean;
 }
 
 export interface ChatArchive {

@@ -60,5 +60,9 @@ Chromium이 Vite 개발 서버(포트 1430)에서 마법사를 처음부터 끝�
 - `54-targeting-mode.png` — "전투 시작"의 대상 지정 모드: 과녁 배너, 고른 토큰에 붉은 점선(2개 선택), 확정/취소
 - `55-tracker-after-initiative.png` — 트래커 창(정렬된 행, 이니셔티브 편집, ▲▼, 삭제)과 채팅의 이니셔티브 카드
 - `56-tracker-player-round-2.png` — 플레이어 화면: 읽기 전용 트래커, 현재 턴 토큰 테두리, 라운드 2
-- `57-action-bar-goblin.png` — DM이 고블린 토큰을 선택했을 때의 액션 줄(이니셔티브·시미터 명중/피해·단궁)과 채팅의 명중 카드
+- `57-action-bar-goblin.png` — DM이 고블린 토큰을 선택했을 때의 액션 줄(이니셔티브·⚔ 시미터·피해·⚔ 단궁)과 채팅의 피해 카드
 - `58-action-bar-player.png` — 플레이어의 자기 캐릭터 액션 줄 (`node scripts/capture-client-tracker.mjs`, 시나리오 SC-34~38)
+- `59-attack-targeting-range.png` — 플레이어의 "⚔ 대검" 뒤 과녁 모드: 사거리 안 토큰만 밝게, 고른 고블린에 점선, "1개 선택"
+- `60-attack-card-dm-palette.png` — DM 채팅의 판정 카드: d20 + 명중 보너스 = 합계 vs AC, 적중 배지, 피해 주사위마다 값·유형, HP 전→후, "HP 0 — 사망", DM 팔레트(강제 적중·빗나감·치명타·엄폐·재굴림·피해 절반/0·±N·되돌리기). 토큰 바 0/10과 ✖ 사망 마커
+- `61-attack-undone-player.png` — 되돌리기 뒤 플레이어 화면: 바 10/10 복원, 마커 사라짐, "되돌림" 카드
+- `62-goblin-hits-fighter-player.png` — 고블린의 시미터가 파이터를 적중: 연결 바 25/28, 시트 HP 25/28, 카드의 HP 28 → 25 (`node scripts/capture-client-attack.mjs`, 시나리오 SC-40~42)
