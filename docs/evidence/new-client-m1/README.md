@@ -46,3 +46,7 @@ Chromium이 Vite 개발 서버(포트 1430)에서 마법사를 처음부터 끝�
 - `40-journal-character-info-export.png` — 정보 탭: 소개, "라이브러리로 내보내기" 뒤 저장 알림
 - `41-library-after-vault-export.png` — 플레이어의 캐릭터 화면에 내보낸 사본
 - `42-journal-after-relaunch.png` — 게임을 닫고 다시 시작한 DM 테이블의 저널 목록(핸드아웃 + 캐릭터, 문서에서 복원) (`node scripts/capture-client-journal.mjs`, 시나리오 SC-13~19)
+- `43-art-library-gm-upload.png` — DM의 아트 탭: 올린 PNG 카드(썸네일·이름), 올리기 버튼·끌어 놓기 안내
+- `44-art-handout-avatar-player.png` — 플레이어에게 보여진 핸드아웃 창의 아바타(호스트에서 조각으로 받은 원본), 플레이어 아트 탭에도 그 이미지
+- `45-art-library-gm-two-uploads.png` — DM 아트 탭: 자기 이미지와 플레이어가 올린 "지연의 초상"(올린 사람 배지)
+- `46-art-library-player-after-reload.png` — 새로고침·재입장 뒤 플레이어 아트 탭: 두 이미지가 캐시에서 바로 (`node scripts/capture-client-art.mjs`, 시나리오 SC-22~25)

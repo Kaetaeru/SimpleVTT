@@ -10,6 +10,7 @@ import { parseFormula } from "../character/dice";
 import { describeChatRoll, parseChatInput } from "../session/chat";
 import { copyText, Notice, Pill } from "../ui/components";
 import { useDice } from "../ui/dice/DiceProvider";
+import { ArtTab } from "./ArtPanel";
 import { JournalTab, JournalWindows, type JournalWindow } from "./JournalPanel";
 
 export function TableScreen() {
@@ -28,7 +29,7 @@ function Table() {
   const snapshot = c.table.snapshot!;
   const isGm = snapshot.players.find((player) => player.userId === c.userId)?.role === "gm";
   const [copied, setCopied] = useState(false);
-  const [tab, setTab] = useState<"chat" | "journal">("chat");
+  const [tab, setTab] = useState<"chat" | "journal" | "art">("chat");
   const [windows, setWindows] = useState<JournalWindow[]>([]);
   const openEntry = useCallback((id: string) => setWindows((list) => { const existing = list.find((item) => item.kind === "entry" && item.id === id); const rest = existing ? list.filter((item) => item !== existing) : list; return [...rest, existing ?? { key: `entry:${id}`, kind: "entry", id }]; }), []);
   const openNewCharacter = useCallback(() => setWindows((list) => (list.some((item) => item.kind === "new-character") ? list : [...list, { key: `new:${Date.now()}`, kind: "new-character" }])), []);
@@ -70,10 +71,10 @@ function Table() {
           <div className="cl-sidebar-tabs" role="tablist">
             <button type="button" role="tab" aria-selected={tab === "chat"} className={tab === "chat" ? "active" : ""} onClick={() => setTab("chat")}>채팅</button>
             <button type="button" role="tab" aria-selected={tab === "journal"} className={tab === "journal" ? "active" : ""} onClick={() => setTab("journal")}>저널{snapshot.journal.length ? <small className="cl-quiet"> {snapshot.journal.filter((entry) => !entry.archived).length}</small> : null}</button>
-            <button type="button" role="tab" disabled title="R4">아트</button>
+            <button type="button" role="tab" aria-selected={tab === "art"} className={tab === "art" ? "active" : ""} onClick={() => setTab("art")}>아트{snapshot.art.length ? <small className="cl-quiet"> {snapshot.art.length}</small> : null}</button>
             <button type="button" role="tab" disabled title="R6">컴펜디움</button>
           </div>
-          {tab === "chat" ? <ChatTab isGm={isGm} /> : <JournalTab onOpen={openEntry} onNewCharacter={openNewCharacter} />}
+          {tab === "chat" ? <ChatTab isGm={isGm} /> : tab === "journal" ? <JournalTab onOpen={openEntry} onNewCharacter={openNewCharacter} /> : <ArtTab />}
         </aside>
       </div>
     </div>

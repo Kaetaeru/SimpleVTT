@@ -2,6 +2,7 @@
  * A table participant's mirror: sends commands, applies the host's numbered events, remembers the last event
  * number for a reconnect, and reports refusals (wrong code, kicked).
  */
+import { ChunkAssembler } from "../campaign/art";
 import type { ClientCommand, HostMessage, TableEvent, TableSnapshot } from "./protocol";
 import { PROTOCOL_VERSION, isHostMessage } from "./protocol";
 import type { Transport } from "./transport";
@@ -18,6 +19,8 @@ export class TableClient {
   private readonly listeners = new Set<() => void>();
   private readonly refusedListeners = new Set<(reason: string, commandType?: string) => void>();
   private readonly showListeners = new Set<(id: string) => void>();
+  private readonly assembler = new ChunkAssembler();
+  private readonly artWaiters = new Map<string, { resolve: (value: { hash: string; dataUrl: string }) => void; reject: (error: Error) => void; progress?: (done: number, total: number) => void }>();
   private readonly unsubscribe: Array<() => void> = [];
 
   constructor(private readonly transport: Transport, private readonly options: TableClientOptions) {
@@ -39,12 +42,23 @@ export class TableClient {
   }
 
   send(command: ClientCommand) { this.transport.send("host", command); }
+
+  /** Ask the host for an asset's bytes; resolves with the data URL once every chunk arrived (one request per id at a time). */
+  fetchArt(id: string, progress?: (done: number, total: number) => void): Promise<{ hash: string; dataUrl: string }> {
+    return new Promise((resolve, reject) => {
+      if (this.artWaiters.has(id)) { reject(new Error("이미 받는 중입니다")); return; }
+      this.artWaiters.set(id, { resolve, reject, progress });
+      this.send({ type: "art.fetch", id });
+    });
+  }
   subscribe(listener: () => void) { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; }
   onRefused(listener: (reason: string, commandType?: string) => void) { this.refusedListeners.add(listener); return () => { this.refusedListeners.delete(listener); }; }
   /** The GM pressed "플레이어에게 보여주기" on an entry this viewer can see. */
   onShow(listener: (id: string) => void) { this.showListeners.add(listener); return () => { this.showListeners.delete(listener); }; }
 
   leave() {
+    for (const [id, waiter] of this.artWaiters) { waiter.reject(new Error("연결이 끝났습니다")); this.assembler.drop(id); }
+    this.artWaiters.clear();
     if (this.statusState === "joined") this.send({ type: "bye" });
     this.statusState = "closed";
     for (const off of this.unsubscribe) off();
@@ -61,12 +75,21 @@ export class TableClient {
         this.refusal = null;
         break;
       case "events":
-        if (!this.snapshotState) this.snapshotState = { campaignId: "", name: "", settings: { playersCanCreateCharacters: true, playersCanExportToVault: true, chatAvatars: true }, players: [], chat: [], journal: [], lastEventN: 0 };
+        if (!this.snapshotState) this.snapshotState = { campaignId: "", name: "", settings: { playersCanCreateCharacters: true, playersCanExportToVault: true, chatAvatars: true }, players: [], chat: [], journal: [], art: [], lastEventN: 0 };
         this.statusState = "joined";
         for (const event of message.events) this.applyEvent(event);
         break;
+      case "art.data": {
+        const waiter = this.artWaiters.get(message.id);
+        const whole = this.assembler.add(message.id, message.index, message.total, message.data);
+        if (whole === null) { const progress = this.assembler.progress(message.id); if (progress) waiter?.progress?.(progress.done, progress.total); return; }
+        this.artWaiters.delete(message.id);
+        waiter?.resolve({ hash: message.hash, dataUrl: whole });
+        return;
+      }
       case "refused":
         if (message.commandType === "hello" || message.commandType === "kicked") { this.statusState = "refused"; this.refusal = message.reason; }
+        if (message.commandType === "art.fetch" && message.id) { const waiter = this.artWaiters.get(message.id); this.artWaiters.delete(message.id); this.assembler.drop(message.id); waiter?.reject(new Error(message.reason)); return; }
         for (const listener of [...this.refusedListeners]) listener(message.reason, message.commandType);
         break;
     }
@@ -92,6 +115,12 @@ export class TableClient {
         break;
       }
       case "journal.removed": state.journal = state.journal.filter((item) => item.id !== event.id); break;
+      case "art": {
+        const index = state.art.findIndex((item) => item.id === event.asset.id);
+        state.art = index >= 0 ? state.art.map((item, at) => (at === index ? event.asset : item)) : [...state.art, event.asset];
+        break;
+      }
+      case "art.removed": state.art = state.art.filter((item) => item.id !== event.id); break;
       case "journal.show": for (const listener of [...this.showListeners]) listener(event.id); break;
       case "kicked": state.players = state.players.filter((item) => item.userId !== event.userId); if (event.userId === this.options.userId) { this.statusState = "refused"; this.refusal = "GM이 내보냈습니다"; } break;
       case "closed": this.statusState = "closed"; break;

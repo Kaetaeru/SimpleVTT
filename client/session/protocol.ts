@@ -3,10 +3,11 @@
  * launches a campaign, players enter with the campaign's fixed join code, and the host numbers every event.
  * Journal entries travel whole (they are small JSON); the host projects them per viewer (GM notes, permissions).
  */
+import type { ArtAsset } from "../campaign/art";
 import type { JournalEntry } from "../campaign/journal";
 import type { CampaignSettings, ChatMessage, PlayerRole } from "../campaign/model";
 
-export const PROTOCOL_VERSION = 3;
+export const PROTOCOL_VERSION = 4;
 
 export interface Presence { userId: string; displayName: string; role: PlayerRole; color: string; connected: boolean }
 
@@ -19,6 +20,8 @@ export interface TableSnapshot {
   chat: ChatMessage[];
   /** Journal entries this viewer may see (GM notes stripped for players). */
   journal: JournalEntry[];
+  /** Art the viewer may see: their own uploads, and what visible entries reference (everything for the GM). */
+  art: ArtAsset[];
   lastEventN: number;
 }
 
@@ -35,6 +38,13 @@ export type ClientCommand =
   | { type: "journal.remove"; id: string }
   /** "플레이어에게 보여주기": open the entry on every viewer who can see it. */
   | { type: "journal.show"; id: string }
+  /** Upload: metadata first, then the data URL in base64 text chunks; the host stores it once every chunk arrived. */
+  | { type: "art.upload"; asset: ArtAsset; total: number }
+  | { type: "art.chunk"; id: string; index: number; total: number; data: string }
+  | { type: "art.update"; id: string; name?: string; folder?: string; tags?: string[] }
+  | { type: "art.remove"; id: string }
+  /** Ask for the bytes of an asset this viewer may see; the host answers this peer with art.data chunks. */
+  | { type: "art.fetch"; id: string }
   | { type: "bye" };
 
 export type TableEvent =
@@ -44,13 +54,16 @@ export type TableEvent =
   | { n: number; type: "journal"; entry: JournalEntry }
   | { n: number; type: "journal.removed"; id: string }
   | { n: number; type: "journal.show"; id: string; by: string }
+  | { n: number; type: "art"; asset: ArtAsset }
+  | { n: number; type: "art.removed"; id: string }
   | { n: number; type: "kicked"; userId: string }
   | { n: number; type: "closed" };
 
 export type HostMessage =
   | { type: "welcome"; snapshot: TableSnapshot }
   | { type: "events"; events: TableEvent[] }
-  | { type: "refused"; reason: string; commandType?: string };
+  | { type: "art.data"; id: string; hash: string; index: number; total: number; data: string }
+  | { type: "refused"; reason: string; commandType?: string; id?: string };
 
 export const isClientCommand = (value: unknown): value is ClientCommand => typeof value === "object" && value !== null && typeof (value as { type?: unknown }).type === "string";
 export const isHostMessage = (value: unknown): value is HostMessage => typeof value === "object" && value !== null && typeof (value as { type?: unknown }).type === "string";

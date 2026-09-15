@@ -15,14 +15,13 @@ import type { CharacterRuntime } from "../character/runtime";
 import { resolveRuntime } from "../character/save";
 import type { CharacterSource } from "../character/types";
 import { Modal, Notice, Pill, signed } from "../ui/components";
+import { ArtDropZone, ArtImage, ArtPicker } from "./ArtPanel";
 import { CreateScreen } from "./CreateScreen";
 import { SheetPlay } from "./SheetPlay";
 import { SheetView } from "./SheetView";
 
 /** What the table shows as windows: a journal entry, or the wizard for a new character. */
 export type JournalWindow = { key: string; kind: "entry"; id: string } | { key: string; kind: "new-character" };
-
-const AVATAR_LIMIT = 300_000;
 
 function useViewer() {
   const c = useCampaigns();
@@ -113,7 +112,7 @@ function characterLine(entry: JournalCharacter, catalog: ReturnType<typeof useCl
 }
 
 function EntryAvatar({ entry, size = 22 }: { entry: JournalEntry; size?: number }) {
-  if (entry.avatar) return <img className="cl-journal-avatar" src={entry.avatar} alt="" style={{ width: size, height: size }} />;
+  if (entry.avatar) return <ArtImage className="cl-journal-avatar" src={entry.avatar} style={{ width: size, height: size }} />;
   return <span className="cl-journal-avatar" style={{ width: size, height: size, fontSize: size * 0.55 }} aria-hidden="true">{entry.kind === "handout" ? "📜" : (entry.name || "?").slice(0, 1)}</span>;
 }
 
@@ -256,24 +255,27 @@ function GmFields<T extends JournalEntry>({ draft, edit, set }: { draft: T; edit
 }
 
 function AvatarField({ entry, onChange, disabled }: { entry: JournalEntry; onChange: (avatar: string | undefined) => void; disabled: boolean }) {
+  const c = useCampaigns();
+  const [picking, setPicking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const pick = async (file: File | undefined) => {
     if (!file) return;
-    if (file.size > AVATAR_LIMIT) { setError("이미지가 너무 큽니다 (300KB까지). 아트 라이브러리(R4)에서 큰 이미지를 다룹니다."); return; }
-    const url = await new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = () => reject(reader.error); reader.readAsDataURL(file); });
-    setError(null);
-    onChange(url);
+    try { const id = await c.uploadArt(file); setError(null); onChange(`art:${id}`); } catch (reason) { setError(reason instanceof Error ? reason.message : String(reason)); }
   };
-  return (
-    <div className="cl-journal-avatar-field">
+  const body = (
+    <>
       <EntryAvatar entry={entry} size={72} />
       {!disabled ? <div className="cl-row" style={{ gap: 4 }}>
-        <label className="cl-btn small" style={{ cursor: "pointer" }}>이미지 선택<input type="file" accept="image/*" hidden onChange={(event) => void pick(event.target.files?.[0])} /></label>
+        <button type="button" className="cl-btn small" onClick={() => setPicking(true)}>라이브러리에서</button>
+        <label className="cl-btn small" style={{ cursor: "pointer" }}>이미지 올리기<input type="file" accept="image/png,image/jpeg,image/gif,image/webp" hidden onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ""; void pick(file); }} /></label>
         {entry.avatar ? <button type="button" className="cl-btn small quiet" onClick={() => onChange(undefined)}>지우기</button> : null}
       </div> : null}
       {error ? <span className="cl-small" style={{ color: "var(--bad)" }}>{error}</span> : null}
-    </div>
+      {picking ? <ArtPicker title="아바타 고르기" onPick={(ref) => { onChange(ref); setPicking(false); }} onClose={() => setPicking(false)} /> : null}
+    </>
   );
+  if (disabled) return <div className="cl-journal-avatar-field">{body}</div>;
+  return <ArtDropZone className="cl-journal-avatar-field" onRef={(ref) => onChange(ref)}>{body}</ArtDropZone>;
 }
 
 function CommonActions({ draft, set, onClose }: { draft: JournalEntry; set: (patch: Partial<JournalEntry>) => void; onClose: () => void }) {

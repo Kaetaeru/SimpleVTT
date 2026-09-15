@@ -5,6 +5,8 @@
  * when sent (chat visibility, journal permissions and GM notes), also on a reconnect replay. Persistence happens
  * through callbacks: the campaign (players), the chat archive and journal entries.
  */
+import type { ArtAsset } from "../campaign/art";
+import { ART_LIMIT, artVisible, canManageArt, ChunkAssembler, chunkText } from "../campaign/art";
 import type { JournalEntry } from "../campaign/journal";
 import { canEdit, canView, mergePlayerEdit, projectEntry } from "../campaign/journal";
 import type { Campaign, ChatMessage, PlayerRole } from "../campaign/model";
@@ -26,10 +28,14 @@ export interface TableHostOptions {
   hostSecret?: string;
   archive?: ChatMessage[];
   journal?: JournalEntry[];
+  art?: ArtAsset[];
+  /** Where the host keeps image bytes by hash (its store); uploads are put here, fetches read from here. */
+  artData?: { get(hash: string): Promise<string | undefined>; put(hash: string, dataUrl: string): Promise<void> | void };
   onCampaign?: (campaign: Campaign) => void;
   onChat?: (message: ChatMessage) => void;
   /** An entry was created or changed (persist it), or removed (`{ removed: id }`). */
   onJournal?: (change: { entry: JournalEntry } | { removed: string }) => void;
+  onArt?: (change: { asset: ArtAsset } | { removed: string }) => void;
   now?: () => string;
   random?: () => number;
 }
@@ -38,6 +44,10 @@ export class TableHost {
   private campaign: Campaign;
   private chat: ChatMessage[];
   private journalEntries: Map<string, JournalEntry>;
+  private artAssets: Map<string, ArtAsset>;
+  /** Uploads in flight: metadata waiting for its chunks. */
+  private readonly uploads = new Map<string, { asset: ArtAsset; by: string }>();
+  private readonly assembler = new ChunkAssembler();
   private readonly connected = new Set<string>();
   private readonly peerUsers = new Map<string, string>();
   private readonly peerTransports = new Map<string, Transport>();
@@ -53,6 +63,7 @@ export class TableHost {
     this.campaign = options.campaign;
     this.chat = [...(options.archive ?? [])];
     this.journalEntries = new Map((options.journal ?? []).map((entry) => [entry.id, entry]));
+    this.artAssets = new Map((options.art ?? []).map((asset) => [asset.id, asset]));
     this.now = options.now ?? (() => new Date().toISOString());
     this.connected.add(options.hostUserId);
     for (const carrier of Array.isArray(transport) ? transport : [transport]) this.attach(carrier);
@@ -61,6 +72,7 @@ export class TableHost {
   get state() { return this.campaign; }
   get archive() { return this.chat; }
   get journal() { return [...this.journalEntries.values()]; }
+  get art() { return [...this.artAssets.values()]; }
 
   attach(carrier: Transport) {
     if (this.transports.includes(carrier)) return;
@@ -96,6 +108,7 @@ export class TableHost {
       players: this.campaign.players.filter((player) => !player.kicked).map((player) => this.presence(player.userId)),
       chat: this.chat.filter((message) => visibleTo(message, viewer)).slice(-SNAPSHOT_CHAT),
       journal: [...this.journalEntries.values()].map((entry) => projectEntry(entry, viewer)).filter((entry): entry is JournalEntry => entry !== null),
+      art: [...this.artAssets.values()].filter((asset) => artVisible(asset, viewer, this.journal)),
       lastEventN: this.n,
     };
   }
@@ -226,14 +239,75 @@ export class TableHost {
         this.emit({ type: "journal.show", id: command.id, by: userId });
         return;
       }
+      case "art.upload": {
+        const asset = command.asset;
+        if (!asset || typeof asset.id !== "string" || typeof asset.hash !== "string") return refuse("아트 형식이 아닙니다");
+        if (asset.bytes > ART_LIMIT) return refuse("이미지가 너무 큽니다 (20MB까지)");
+        if (this.artAssets.has(asset.id)) return refuse("이미 있는 아트 id입니다");
+        this.uploads.set(asset.id, { asset: { ...asset, campaignId: this.campaign.id, ownerId: userId, createdAt: this.now(), updatedAt: this.now() }, by: userId });
+        if (command.total === 0) void this.finishUpload(asset.id, "");
+        return;
+      }
+      case "art.chunk": {
+        const upload = this.uploads.get(command.id);
+        if (!upload || upload.by !== userId) return refuse("업로드 중인 아트가 아닙니다");
+        const whole = this.assembler.add(command.id, command.index, command.total, command.data);
+        if (whole !== null) void this.finishUpload(command.id, whole);
+        return;
+      }
+      case "art.update": {
+        const asset = this.artAssets.get(command.id);
+        if (!asset) return refuse("그 아트가 없습니다");
+        if (!canManageArt(asset, this.viewer(userId))) return refuse("이 아트를 고칠 권한이 없습니다");
+        const next: ArtAsset = { ...asset, name: command.name?.trim() || asset.name, folder: command.folder ?? asset.folder, tags: command.tags ?? asset.tags, updatedAt: this.now() };
+        this.artAssets.set(next.id, next);
+        this.options.onArt?.({ asset: next });
+        this.emit({ type: "art", asset: next });
+        return;
+      }
+      case "art.remove": {
+        const asset = this.artAssets.get(command.id);
+        if (!asset) return refuse("그 아트가 없습니다");
+        if (!canManageArt(asset, this.viewer(userId))) return refuse("이 아트를 지울 권한이 없습니다");
+        this.artAssets.delete(command.id);
+        this.options.onArt?.({ removed: command.id });
+        this.emit({ type: "art.removed", id: command.id });
+        return;
+      }
+      case "art.fetch": {
+        const asset = this.artAssets.get(command.id);
+        if (!asset || !artVisible(asset, this.viewer(userId), this.journal)) return this.reply(peerId, { type: "refused", reason: "볼 수 없는 아트입니다", commandType: command.type, id: command.id });
+        void this.sendArt(peerId, asset);
+        return;
+      }
       default: return;
     }
+  }
+
+  private async finishUpload(id: string, dataUrl: string) {
+    const upload = this.uploads.get(id);
+    if (!upload) return;
+    this.uploads.delete(id);
+    await this.options.artData?.put(upload.asset.hash, dataUrl);
+    this.artAssets.set(id, upload.asset);
+    this.options.onArt?.({ asset: upload.asset });
+    this.emit({ type: "art", asset: upload.asset });
+  }
+
+  private async sendArt(peerId: string, asset: ArtAsset) {
+    const dataUrl = await this.options.artData?.get(asset.hash);
+    if (dataUrl === undefined) return this.reply(peerId, { type: "refused", reason: "호스트에 이 아트의 파일이 없습니다", commandType: "art.fetch", id: asset.id });
+    const chunks = chunkText(dataUrl);
+    chunks.forEach((data, index) => this.reply(peerId, { type: "art.data", id: asset.id, hash: asset.hash, index, total: chunks.length, data }));
   }
 
   private storeEntry(entry: JournalEntry) {
     this.journalEntries.set(entry.id, entry);
     this.options.onJournal?.({ entry });
     this.emit({ type: "journal", entry });
+    // The entry's avatar may now be visible to more (or fewer) viewers: resend that asset so mirrors converge.
+    const ref = entry.avatar;
+    if (ref?.startsWith("art:")) { const asset = this.artAssets.get(ref.slice(4)); if (asset) this.emit({ type: "art", asset }); }
   }
 
   private dropEntry(id: string) {
@@ -270,6 +344,7 @@ export class TableHost {
       case "chat": return visibleTo(event.message, viewer) ? event : null;
       case "journal": { const entry = projectEntry(event.entry, viewer); return entry ? { ...event, entry } : { n: event.n, type: "journal.removed", id: event.entry.id }; }
       case "journal.show": { const entry = this.journalEntries.get(event.id); return entry && canView(entry, viewer) ? event : null; }
+      case "art": return artVisible(event.asset, viewer, this.journal) ? event : { n: event.n, type: "art.removed", id: event.asset.id };
       default: return event;
     }
   }

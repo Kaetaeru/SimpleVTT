@@ -3,6 +3,7 @@
  * A campaign keeps its players, one fixed join code, its settings, and (in later slices) journal, pages, art and
  * the chat archive. Every object is stored as one JSON document row keyed by id; `kind` says what it is.
  */
+import type { ArtAsset } from "./art";
 import type { JournalEntry } from "./journal";
 
 export type PlayerRole = "gm" | "player";
@@ -74,7 +75,7 @@ export interface JoinedCampaign {
   lastSeenAt: string;
 }
 
-export type StoredDocument = Campaign | ChatArchive | JournalEntry;
+export type StoredDocument = Campaign | ChatArchive | JournalEntry | ArtAsset;
 
 export const PLAYER_COLORS = ["#e0a458", "#7fb3d5", "#a3c585", "#d98cb3", "#c3a6ff", "#f28b82", "#8fd3c8", "#f6c177"];
 
@@ -146,6 +147,7 @@ export function isStoredDocument(value: unknown): value is StoredDocument {
     case "chat": return typeof doc.campaignId === "string" && Array.isArray(doc.messages);
     case "handout": return typeof doc.campaignId === "string" && typeof doc.name === "string" && "canView" in doc && typeof doc.notes === "string";
     case "character": return typeof doc.campaignId === "string" && typeof doc.name === "string" && "canView" in doc && typeof doc.source === "object" && typeof doc.runtime === "object";
+    case "art": return typeof doc.campaignId === "string" && typeof doc.name === "string" && typeof doc.hash === "string" && typeof doc.mime === "string";
     default: return false;
   }
 }

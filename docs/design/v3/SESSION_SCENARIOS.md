@@ -1,6 +1,6 @@
 # 캠페인·테이블 검증 시나리오 (M4, Roll20 모델)
 
-`ROLL20_MODEL.md`·`ROLL20_TABLE_SPEC.md` 기준. 자동 시나리오는 `scripts/capture-client-table.mjs`(SC-1~8)와 `scripts/capture-client-journal.mjs`(SC-13~19) — 같은 PC의 DM 탭 + 플레이어 탭, BroadcastChannel — 와 `tests/client/table.test.ts`·`tests/client/journal.test.ts`(호스트 + 클라이언트 시뮬레이션)가 돌린다. 기대 결과는 두 탭 **모두**에서 확인한다. LAN·하마치는 exe에서 §B로.
+`ROLL20_MODEL.md`·`ROLL20_TABLE_SPEC.md` 기준. 자동 시나리오는 `scripts/capture-client-table.mjs`(SC-1~8)와 `scripts/capture-client-journal.mjs`(SC-13~19), `scripts/capture-client-art.mjs`(SC-22~25) — 같은 PC의 DM 탭 + 플레이어 탭, BroadcastChannel — 와 `tests/client/table.test.ts`·`tests/client/journal.test.ts`·`tests/client/art.test.ts`(호스트 + 클라이언트 시뮬레이션)가 돌린다. 기대 결과는 두 탭 **모두**에서 확인한다. LAN·하마치는 exe에서 §B로.
 
 ## A. 자동 (두 탭, 한 PC)
 
@@ -27,6 +27,11 @@
 | SC-19 | 재접속·재시작 | 플레이어 새로고침 → "다시 입장"; DM "게임 닫기" → "게임 시작" | 저널이 그대로(호스트 문서에서 다시 읽음). 캠페인 상세에 "저널 항목 2개" | capture 42 |
 | SC-20 | 고칠 수 있는 사람 | DM이 핸드아웃의 "고칠 수 있는 사람"에 플레이어 추가 → 플레이어가 본문 수정 | 본문은 바뀌고 GM 노트·권한·폴더는 그대로 | journal.test |
 | SC-21 | GM 승격과 저널 | DM이 참가자를 GM으로 | 승격된 사람에게 저널 전부가 GM 노트와 함께 다시 온다 | journal.test |
+| SC-22 | 아트 올리기 | DM: 아트 탭 → "이미지 올리기"(또는 끌어 놓기·붙여넣기) 240KB PNG | 여러 조각으로 호스트에 저장되고 DM 목록에 카드. 플레이어의 아트 탭은 비어 있다(GM 것은 안 보임) | capture 43, art.test |
+| SC-23 | 아바타로 쓰고 보여주기 | DM: 핸드아웃 아바타 "라이브러리에서" 선택 → 볼 수 있는 사람 모두 → 플레이어에게 보여주기 | 플레이어 창에 원본 크기 이미지가 도착하고, 그 이미지가 플레이어의 아트 탭에도 나타난다 | capture 44, art.test |
+| SC-24 | 플레이어 업로드와 관리 | 플레이어가 초상 업로드 → 이름·폴더 바꾸기 | GM 카드에 올린 사람 이름. 이름 변경이 GM에게 반영. 다른 플레이어는 못 보고 못 고침 | capture 45, art.test |
+| SC-25 | 캐시 | 플레이어 새로고침 → 다시 입장 → 아트 탭 | 두 이미지가 캐시(IndexedDB `assets`)에서 바로 뜬다 | capture 46 |
+| SC-26 | 크기 제한·권한 | 20MB 초과 업로드, 숨긴 항목의 이미지 fetch | 거절 | art.test |
 
 ## B. 수동 (exe, LAN·하마치)
 
@@ -41,6 +46,6 @@
 ## C. 다음 단계에서 추가할 시나리오
 
 - R3 남은 것: 항목 끌어서 정렬, 아바타를 아트 라이브러리에서 고르기(R4), 캐릭터 → 캔버스 끌어 놓기(R5).
-- R4 아트: 업로드 → 상대 화면 도착·캐시, 권한 밖 이미지 미전송.
+- R4 남은 것: 안 쓰는 이미지 정리(GC) 화면, 아트를 캔버스에 끌어 토큰/배경으로(R5).
 - R5 페이지·토큰: 플레이어 리본, 토큰 이동 권한, 바 연결/미연결(몹), GM 레이어 비가시.
 - R6 턴 트래커: 트래커 동기, 다음 턴에 효과 라운드 진행.

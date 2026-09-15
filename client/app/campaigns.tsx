@@ -5,6 +5,8 @@
  * campaign's fixed code (D71); presence and chat are written into the campaign documents as they happen.
  */
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import type { ArtAsset } from "../campaign/art";
+import { ART_LIMIT, ART_MIMES, chunkText, hashText, newArtAsset } from "../campaign/art";
 import type { JournalEntry } from "../campaign/journal";
 import type { Campaign, ChatArchive, ChatMessage, JoinedCampaign, PlayerRole } from "../campaign/model";
 import { chatArchiveId, emptyChatArchive, isStoredDocument, newCampaign, newJoinCode, repairCampaign } from "../campaign/model";
@@ -29,6 +31,10 @@ export interface TableState {
   refusals: string[];
   /** Entries the GM asked to open on this viewer ("플레이어에게 보여주기"), oldest first; the table consumes them. */
   shows: string[];
+  /** Art bytes by asset id as this viewer has them: a data URL, "loading", or "error". */
+  artUrls: Record<string, string>;
+  /** Fetches in flight (for "자료 받는 중 n"). */
+  artPending: number;
 }
 
 export interface CampaignsState {
@@ -40,6 +46,8 @@ export interface CampaignsState {
   archives: Record<string, ChatArchive>;
   /** Journal entries of my campaigns, by campaign id (the host's copy). */
   journals: Record<string, JournalEntry[]>;
+  /** Art metadata of my campaigns, by campaign id (the host's copy; bytes are in the store by hash). */
+  arts: Record<string, ArtAsset[]>;
   createCampaign: (name: string) => Promise<Campaign>;
   updateCampaign: (campaign: Campaign) => Promise<void>;
   deleteCampaign: (id: string) => Promise<void>;
@@ -58,6 +66,12 @@ export interface CampaignsState {
   showJournal: (id: string) => void;
   /** Drop a consumed "show" request. */
   dismissShow: (id: string) => void;
+  /** Upload an image to the campaign's art library; resolves with the asset id once the host has it. */
+  uploadArt: (file: File) => Promise<string>;
+  updateArt: (id: string, patch: { name?: string; folder?: string; tags?: string[] }) => void;
+  removeArt: (id: string) => void;
+  /** Make sure the bytes of an asset are on this viewer (cache, else the host); the URL lands in table.artUrls. */
+  requestArt: (id: string) => void;
 }
 
 const CampaignsContext = createContext<CampaignsState | null>(null);
@@ -86,7 +100,11 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [archives, setArchives] = useState<Record<string, ChatArchive>>({});
   const [journals, setJournals] = useState<Record<string, JournalEntry[]>>({});
+  const [arts, setArts] = useState<Record<string, ArtAsset[]>>({});
   const [shows, setShows] = useState<string[]>([]);
+  const [artUrls, setArtUrls] = useState<Record<string, string>>({});
+  const [artPending, setArtPending] = useState(0);
+  const artRequests = useRef(new Set<string>());
   const [joined, setJoined] = useState<JoinedCampaign[]>([]);
   const [role, setRoleState] = useState<"host" | "player" | null>(null);
   const [campaignId, setCampaignId] = useState<string | null>(null);
@@ -103,6 +121,8 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
   archivesRef.current = archives;
   const journalsRef = useRef(journals);
   journalsRef.current = journals;
+  const artsRef = useRef(arts);
+  artsRef.current = arts;
   const bump = useCallback(() => setTick((value) => value + 1), []);
 
   useEffect(() => {
@@ -119,8 +139,13 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
       setCampaigns(docs.filter((doc): doc is Campaign => doc.kind === "campaign").map(repairCampaign).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)));
       setArchives(Object.fromEntries(docs.filter((doc): doc is ChatArchive => doc.kind === "chat").map((doc) => [doc.campaignId, doc])));
       const byCampaign: Record<string, JournalEntry[]> = {};
-      for (const doc of docs) if (doc.kind === "handout" || doc.kind === "character") (byCampaign[doc.campaignId] ??= []).push(doc);
+      const artByCampaign: Record<string, ArtAsset[]> = {};
+      for (const doc of docs) {
+        if (doc.kind === "handout" || doc.kind === "character") (byCampaign[doc.campaignId] ??= []).push(doc);
+        else if (doc.kind === "art") (artByCampaign[doc.campaignId] ??= []).push(doc);
+      }
       setJournals(byCampaign);
+      setArts(artByCampaign);
       setJoined(Array.isArray(joinedRows) ? joinedRows.filter((row) => row && typeof row.campaignId === "string" && typeof row.invite === "string") : []);
     })();
     return () => { cancelled = true; };
@@ -143,10 +168,13 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
     setCampaigns((list) => list.filter((item) => item.id !== id));
     setArchives((map) => { const { [id]: _gone, ...rest } = map; return rest; });
     const entries = journalsRef.current[id] ?? [];
+    const assets = artsRef.current[id] ?? [];
     setJournals((map) => { const { [id]: _gone, ...rest } = map; return rest; });
+    setArts((map) => { const { [id]: _gone, ...rest } = map; return rest; });
     await store?.deleteDocument(id);
     await store?.deleteDocument(chatArchiveId(id));
     for (const entry of entries) await store?.deleteDocument(entry.id);
+    for (const asset of assets) await store?.deleteDocument(asset.id);
   }, [store]);
   const regenerateJoinCode = useCallback(async (id: string) => { const campaign = campaignsRef.current.find((item) => item.id === id); if (campaign) await updateCampaign({ ...campaign, joinCode: newJoinCode() }); }, [updateCampaign]);
   const saveJoined = useCallback(async (list: JoinedCampaign[]) => { setJoined(list); await store?.putSetting("joined-campaigns", list); }, [store]);
@@ -170,6 +198,9 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
     setInvites([]);
     setTransportNote(null);
     setShows([]);
+    setArtUrls({});
+    setArtPending(0);
+    artRequests.current.clear();
     bump();
   }, [bump]);
 
@@ -198,6 +229,15 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
       hostSecret,
       archive: archivesRef.current[campaign.id]?.messages ?? [],
       journal: journalsRef.current[campaign.id] ?? [],
+      art: artsRef.current[campaign.id] ?? [],
+      artData: {
+        get: async (hash) => (await store?.getAsset(hash))?.dataUrl,
+        put: async (hash, dataUrl) => { await store?.putAsset({ hash, dataUrl, bytes: dataUrl.length, savedAt: new Date().toISOString() }); },
+      },
+      onArt: (change) => {
+        if ("asset" in change) { setArts((map) => { const list = map[campaign.id] ?? []; const index = list.findIndex((item) => item.id === change.asset.id); return { ...map, [campaign.id]: index >= 0 ? list.map((item, at) => (at === index ? change.asset : item)) : [...list, change.asset] }; }); void store?.putDocument(change.asset); }
+        else { setArts((map) => ({ ...map, [campaign.id]: (map[campaign.id] ?? []).filter((item) => item.id !== change.removed) })); void store?.deleteDocument(change.removed); }
+      },
       onCampaign: (next) => { void saveCampaign(next); },
       onJournal: (change) => {
         if ("entry" in change) { setJournals((map) => { const list = map[campaign.id] ?? []; const index = list.findIndex((item) => item.id === change.entry.id); return { ...map, [campaign.id]: index >= 0 ? list.map((item, at) => (at === index ? change.entry : item)) : [...list, change.entry] }; }); void store?.putDocument(change.entry); }
@@ -269,15 +309,93 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
   const showJournal = useCallback((id: string) => send({ type: "journal.show", id }), [send]);
   const dismissShow = useCallback((id: string) => setShows((list) => list.filter((item) => item !== id)), []);
 
+  const uploadArt = useCallback(async (file: File) => {
+    const client = clientRef.current;
+    if (!client || client.status !== "joined" || !client.snapshot) throw new Error("테이블에 들어가 있어야 올릴 수 있습니다");
+    if (!ART_MIMES.includes(file.type)) throw new Error("png, jpg, gif, webp 이미지만 올릴 수 있습니다");
+    if (file.size > ART_LIMIT) throw new Error("이미지가 너무 큽니다 (20MB까지)");
+    const dataUrl = await new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = () => reject(reader.error ?? new Error("read failed")); reader.readAsDataURL(file); });
+    const probe = await imageProbe(dataUrl);
+    const hash = await hashText(dataUrl);
+    const asset = newArtAsset(client.snapshot.campaignId, userId, { name: file.name.replace(/\.[a-z0-9]+$/i, "") || "이미지", mime: file.type, bytes: file.size, hash, width: probe?.width, height: probe?.height, thumb: probe?.thumb });
+    // The uploader already has the bytes: cache them now so its own thumbnails never wait on the host.
+    await store?.putAsset({ hash, dataUrl, bytes: dataUrl.length, savedAt: new Date().toISOString() });
+    setArtUrls((map) => ({ ...map, [asset.id]: dataUrl }));
+    const chunks = chunkText(dataUrl);
+    client.send({ type: "art.upload", asset, total: chunks.length });
+    chunks.forEach((data, index) => client.send({ type: "art.chunk", id: asset.id, index, total: chunks.length, data }));
+    return asset.id;
+  }, [store, userId]);
+  const updateArt = useCallback((id: string, patch: { name?: string; folder?: string; tags?: string[] }) => send({ type: "art.update", id, ...patch }), [send]);
+  const removeArt = useCallback((id: string) => send({ type: "art.remove", id }), [send]);
+  const requestArt = useCallback((id: string) => {
+    const client = clientRef.current;
+    if (!client || artRequests.current.has(id)) return;
+    const asset = client.snapshot?.art.find((item) => item.id === id);
+    if (!asset) return;
+    artRequests.current.add(id);
+    setArtUrls((map) => (map[id] ? map : { ...map, [id]: "loading" }));
+    (async () => {
+      const cached = await store?.getAsset(asset.hash);
+      if (cached) { setArtUrls((map) => ({ ...map, [id]: cached.dataUrl })); return; }
+      setArtPending((count) => count + 1);
+      try {
+        const { hash, dataUrl } = await client.fetchArt(id);
+        await store?.putAsset({ hash, dataUrl, bytes: dataUrl.length, savedAt: new Date().toISOString() });
+        setArtUrls((map) => ({ ...map, [id]: dataUrl }));
+      } catch (error) {
+        console.warn("art fetch failed", id, error);
+        setArtUrls((map) => ({ ...map, [id]: "error" }));
+        artRequests.current.delete(id);
+      } finally { setArtPending((count) => Math.max(0, count - 1)); }
+    })();
+  }, [store]);
+
   useEffect(() => () => { clientRef.current?.leave(); hostRef.current?.close(); }, []);
 
   const client = clientRef.current;
-  const table = useMemo<TableState>(() => ({ role, status: client ? client.status : "idle", reason: client?.reason ?? null, campaignId, snapshot: client?.snapshot ?? null, invite, invites, transportNote, refusals, shows }),
+  const table = useMemo<TableState>(() => ({ role, status: client ? client.status : "idle", reason: client?.reason ?? null, campaignId, snapshot: client?.snapshot ?? null, invite, invites, transportNote, refusals, shows, artUrls, artPending }),
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  [role, client, campaignId, invite, invites, transportNote, refusals, shows, tick]);
-  const value = useMemo<CampaignsState>(() => ({ userId, displayName, setDisplayName, campaigns, joined, archives, journals, createCampaign, updateCampaign, deleteCampaign, regenerateJoinCode, forgetJoined, table, launch, join, leave, say, sendRoll, setRole, kick, putJournal, removeJournal, showJournal, dismissShow }),
-    [userId, displayName, setDisplayName, campaigns, joined, archives, journals, createCampaign, updateCampaign, deleteCampaign, regenerateJoinCode, forgetJoined, table, launch, join, leave, say, sendRoll, setRole, kick, putJournal, removeJournal, showJournal, dismissShow]);
+  [role, client, campaignId, invite, invites, transportNote, refusals, shows, artUrls, artPending, tick]);
+  const value = useMemo<CampaignsState>(() => ({ userId, displayName, setDisplayName, campaigns, joined, archives, journals, arts, createCampaign, updateCampaign, deleteCampaign, regenerateJoinCode, forgetJoined, table, launch, join, leave, say, sendRoll, setRole, kick, putJournal, removeJournal, showJournal, dismissShow, uploadArt, updateArt, removeArt, requestArt }),
+    [userId, displayName, setDisplayName, campaigns, joined, archives, journals, arts, createCampaign, updateCampaign, deleteCampaign, regenerateJoinCode, forgetJoined, table, launch, join, leave, say, sendRoll, setRole, kick, putJournal, removeJournal, showJournal, dismissShow, uploadArt, updateArt, removeArt, requestArt]);
   return <CampaignsContext.Provider value={value}>{children}</CampaignsContext.Provider>;
+}
+
+/** Dimensions and a small thumbnail (≤128px, webp) of an image data URL; null where there is no DOM. */
+async function imageProbe(dataUrl: string): Promise<{ width: number; height: number; thumb?: string } | null> {
+  if (typeof Image === "undefined" || typeof document === "undefined") return null;
+  return new Promise((resolve) => {
+    const image = new Image();
+    image.onload = () => {
+      let thumb: string | undefined;
+      try {
+        const scale = Math.min(1, 128 / Math.max(image.naturalWidth, image.naturalHeight));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+        canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+        canvas.getContext("2d")?.drawImage(image, 0, 0, canvas.width, canvas.height);
+        thumb = canvas.toDataURL("image/webp", 0.7);
+        if (thumb.length > 24_000) thumb = undefined;
+      } catch { thumb = undefined; }
+      resolve({ width: image.naturalWidth, height: image.naturalHeight, thumb });
+    };
+    image.onerror = () => resolve(null);
+    image.src = dataUrl;
+  });
+}
+
+/** The bytes of an `art:<id>` reference (or a plain data URL) as this viewer has them; requests them when missing. */
+export function useArtUrl(ref: string | undefined): { url: string | null; thumb?: string; status: "ready" | "loading" | "error" | "none" } {
+  const c = useCampaigns();
+  const id = ref && ref.startsWith("art:") ? ref.slice(4) : null;
+  const state = id ? c.table.artUrls[id] : undefined;
+  const asset = id ? c.table.snapshot?.art.find((item) => item.id === id) : undefined;
+  useEffect(() => { if (id && !state && asset) c.requestArt(id); }, [id, state, asset, c]);
+  if (!ref) return { url: null, status: "none" };
+  if (!id) return { url: ref, status: "ready" };
+  if (state && state !== "loading" && state !== "error") return { url: state, thumb: asset?.thumb, status: "ready" };
+  return { url: null, thumb: asset?.thumb, status: state === "error" ? "error" : asset ? "loading" : "none" };
 }
 
 export function useCampaigns() {

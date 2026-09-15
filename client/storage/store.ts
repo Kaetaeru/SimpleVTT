@@ -37,7 +37,14 @@ export interface ClientStore {
   getDocument(id: string): Promise<StoredDocument | undefined>;
   putDocument(doc: StoredDocument): Promise<void>;
   deleteDocument(id: string): Promise<void>;
+  /** Image bytes (data URLs) by content hash — the host's art files and every viewer's cache (CAMPAIGN_RESOURCES.md §3). */
+  getAsset(hash: string): Promise<StoredAsset | undefined>;
+  putAsset(asset: StoredAsset): Promise<void>;
+  deleteAsset(hash: string): Promise<void>;
+  listAssets(): Promise<Array<Omit<StoredAsset, "dataUrl">>>;
 }
+
+export interface StoredAsset { hash: string; dataUrl: string; bytes: number; savedAt: string }
 
 export class MemoryStore implements ClientStore {
   readonly kind = "memory" as const;
@@ -45,6 +52,12 @@ export class MemoryStore implements ClientStore {
   private readonly modules = new Map<string, InstalledModuleRecord>();
   private readonly settings = new Map<string, unknown>();
   private readonly documents = new Map<string, StoredDocument>();
+  private readonly assets = new Map<string, StoredAsset>();
+
+  async getAsset(hash: string) { return this.assets.get(hash); }
+  async putAsset(asset: StoredAsset) { this.assets.set(asset.hash, asset); }
+  async deleteAsset(hash: string) { this.assets.delete(hash); }
+  async listAssets() { return [...this.assets.values()].map(({ dataUrl: _data, ...rest }) => rest); }
 
   async listDocuments() { return [...this.documents.values()].map((doc) => structuredClone(doc)); }
   async getDocument(id: string) { const doc = this.documents.get(id); return doc ? structuredClone(doc) : undefined; }
@@ -63,8 +76,8 @@ export class MemoryStore implements ClientStore {
 }
 
 const DB_NAME = "simplevtt-client";
-const DB_VERSION = 2;
-const STORES = { characters: "characters", modules: "modules", settings: "settings", documents: "documents" } as const;
+const DB_VERSION = 3;
+const STORES = { characters: "characters", modules: "modules", settings: "settings", documents: "documents", assets: "assets" } as const;
 
 function request<T>(req: IDBRequest<T>): Promise<T> {
   return new Promise((resolve, reject) => {
@@ -82,6 +95,7 @@ function openDatabase(factory: IDBFactory): Promise<IDBDatabase> {
       if (!db.objectStoreNames.contains(STORES.modules)) db.createObjectStore(STORES.modules, { keyPath: "moduleId" });
       if (!db.objectStoreNames.contains(STORES.settings)) db.createObjectStore(STORES.settings, { keyPath: "key" });
       if (!db.objectStoreNames.contains(STORES.documents)) db.createObjectStore(STORES.documents, { keyPath: "id" });
+      if (!db.objectStoreNames.contains(STORES.assets)) db.createObjectStore(STORES.assets, { keyPath: "hash" });
     };
     open.onsuccess = () => resolve(open.result);
     open.onerror = () => reject(open.error ?? new Error("IndexedDB open failed"));
@@ -120,6 +134,10 @@ export class IndexedDbStore implements ClientStore {
   getDocument(id: string) { return this.tx<StoredDocument | undefined>(STORES.documents, "readonly", (store) => store.get(id)); }
   async putDocument(doc: StoredDocument) { await this.tx(STORES.documents, "readwrite", (store) => store.put(doc)); }
   async deleteDocument(id: string) { await this.tx(STORES.documents, "readwrite", (store) => store.delete(id)); }
+  getAsset(hash: string) { return this.tx<StoredAsset | undefined>(STORES.assets, "readonly", (store) => store.get(hash)); }
+  async putAsset(asset: StoredAsset) { await this.tx(STORES.assets, "readwrite", (store) => store.put(asset)); }
+  async deleteAsset(hash: string) { await this.tx(STORES.assets, "readwrite", (store) => store.delete(hash)); }
+  async listAssets() { const rows = await this.tx<StoredAsset[]>(STORES.assets, "readonly", (store) => store.getAll()); return rows.map(({ dataUrl: _data, ...rest }) => rest); }
 }
 
 /** IndexedDB when the environment has it and it opens; otherwise memory (with a console note so it is not silent). */
