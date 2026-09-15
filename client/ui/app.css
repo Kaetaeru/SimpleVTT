@@ -249,3 +249,43 @@ details.cl-details[open]>summary{color:var(--text)}
 /* Option detail floats over the next rows instead of pushing them down (hover no longer moves the row under the cursor). */
 .cl-option-wrap{position:relative}
 .cl-option-detail{position:absolute;left:12px;right:8px;top:100%;z-index:6;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-s);box-shadow:0 10px 24px rgba(0,0,0,.35);margin:2px 0 0;pointer-events:none}
+
+/* Campaigns and the table (ROLL20_MODEL.md §2–§3). */
+.cl-nav-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--good,#4caf7d);margin-left:6px;vertical-align:middle}
+.cl-code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:var(--text-xs);background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-s);padding:2px 6px;user-select:all}
+.cl-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px}
+.cl-swatch{display:inline-block;width:10px;height:10px;border-radius:50%;flex:none}
+.cl-presence{display:inline-flex;gap:4px;flex-wrap:wrap}
+.cl-avatar-chip{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border:1px solid var(--line);border-radius:999px;font-size:var(--text-xs);background:var(--surface)}
+.cl-avatar-chip.off{opacity:.45}
+.cl-avatar-chip small{color:var(--quiet)}
+.cl-toasts{display:flex;flex-direction:column;gap:4px;margin-bottom:8px}
+.cl-table-grid{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:12px;align-items:stretch;min-height:calc(100vh - 140px)}
+.cl-table-main{min-width:0}
+.cl-page-canvas{height:100%;min-height:420px;border:1px dashed var(--line-2);border-radius:var(--radius-m);background:radial-gradient(circle at 50% 40%,color-mix(in srgb,var(--accent) 6%,transparent),transparent 60%),var(--recess);display:grid;place-items:center;padding:24px}
+.cl-sidebar{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:var(--radius-m);background:var(--surface);min-height:420px;position:sticky;top:8px;max-height:calc(100vh - 100px)}
+.cl-sidebar-tabs{display:flex;border-bottom:1px solid var(--line)}
+.cl-sidebar-tabs button{flex:1;height:34px;border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:var(--text-s)}
+.cl-sidebar-tabs button.active{color:var(--text);box-shadow:inset 0 -2px 0 var(--accent)}
+.cl-sidebar-tabs button:disabled{opacity:.4;cursor:default}
+.cl-chat{display:flex;flex-direction:column;flex:1;min-height:0}
+.cl-chat-list{flex:1;overflow:auto;padding:8px 10px;display:flex;flex-direction:column;gap:6px;font-size:var(--text-s)}
+.cl-chat-input{border-top:1px solid var(--line);padding:8px;display:flex;flex-direction:column;gap:6px}
+.cl-chat-input textarea{resize:none;font:inherit}
+.cl-chat-msg{padding:4px 6px;border-radius:var(--radius-s)}
+.cl-chat-msg .cl-at{color:var(--quiet);font-size:var(--text-xs);margin-right:6px}
+.cl-chat-msg .cl-who{font-weight:600;margin-right:6px}
+.cl-chat-msg.system{color:var(--quiet);font-size:var(--text-xs)}
+.cl-chat-msg.desc{font-style:italic;background:color-mix(in srgb,var(--accent) 8%,transparent);border-left:2px solid var(--accent)}
+.cl-chat-msg.whisper{background:color-mix(in srgb,#c3a6ff 12%,transparent)}
+.cl-chat-msg.emote{color:var(--muted)}
+.cl-chat-msg.roll.gm{background:color-mix(in srgb,var(--accent) 6%,transparent)}
+.cl-roll-card{margin-top:4px;padding:6px 8px;border:1px solid var(--line);border-radius:var(--radius-s);background:var(--surface-2)}
+.cl-roll-head{font-weight:600;font-size:var(--text-xs)}
+.cl-roll-dice{display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin-top:4px}
+.cl-die{display:inline-grid;place-items:center;min-width:26px;height:26px;padding:0 4px;border:1px solid var(--line-2);border-radius:6px;background:var(--surface);font-weight:700}
+.cl-die.crit{border-color:var(--good,#4caf7d);color:var(--good,#4caf7d)}
+.cl-die.fumble{border-color:var(--bad,#c0504d);color:var(--bad,#c0504d)}
+.cl-mod,.cl-eq{color:var(--muted)}
+.cl-total{font-size:var(--text-l);color:var(--accent)}
+@media (max-width:1100px){.cl-table-grid{grid-template-columns:1fr}.cl-sidebar{position:static;max-height:none}}

@@ -31,3 +31,11 @@ Chromium이 Vite 개발 서버(포트 1430)에서 마법사를 처음부터 끝�
 - `25-sheet-cast-picker.png` — 클레릭 주문 목록의 행별 "시전": 축복에서 1레벨/2레벨 슬롯 선택지(남은 수), 의식·집중 표시
 - `26-sheet-effects-after-cast.png` — 축복 시전 뒤 주문 행이 진행 중(종료 버튼)으로 바뀜 (`node scripts/capture-client-use.mjs`)
 - `27-sheet-rage-damage-provenance.png` — 격노 중 공격 표의 피해 보너스에 마우스: 근력 수정치 + 격노 +2, 진행 중인 효과 카드에 적용 내용(피해 +2 근력 근접 공격 · 저항 타격·관통·참격 · 유리 메모)
+- `28-campaign-details.png` — 캠페인 상세(Roll20 게임 상세): 게임 시작, 고정 참가 코드(복사·다시 만들기), 참가자(GM/플레이어·내보내기), 설정, 채팅 보관함 개수, 삭제
+- `29-table-player-joined.png` — 플레이어가 참가 코드로 입장한 테이블: 참가자 줄(색 점, GM 표시), 채팅 탭에 "입장 (처음)"
+- `30-table-chat-roll.png` — 채팅: 말하기, 인라인 `[[1d20+2]]`, `/roll 2d6+3 # 피해`가 주사위 카드(눈·수정치·합)로 양쪽에
+- `31-table-whisper-gmroll.png` — DM 화면: `/w gm` 귓속말, 플레이어의 `/gmroll`(GM 굴림 배지), DM의 `/desc` 서술
+- `32-table-rejoin.png` — 내보내기 → 다시 허용 → "다시 입장"으로 같은 코드로 돌아와 지난 채팅이 그대로
+- `33-campaign-archive.png` — 게임을 닫은 뒤 캠페인 상세의 채팅 보관함 개수
+- `34-table-relaunched-history.png` — 다시 "게임 시작"한 테이블에 보관된 채팅이 그대로
+- `35-join-wrong-code.png` — 잘못된 코드는 "참가 코드가 맞지 않습니다" (`node scripts/capture-client-table.mjs`, 시나리오 SC-1~8)
