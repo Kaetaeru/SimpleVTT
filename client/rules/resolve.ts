@@ -24,6 +24,10 @@ export interface Combatant {
   concentration?: string;
   /** Active effect flags that change attack rolls (회피, 도움 …). */
   effects: string[];
+  /** The token on the board, when there is one. */
+  tokenId?: string;
+  /** Token id of whoever holds this creature in a grapple (2024: attacks against anyone else are at disadvantage). */
+  grappledBy?: string;
   /** Cells from the attacker (undefined when either has no token). */
   distanceFeet?: number;
 }
@@ -117,6 +121,7 @@ export function suggestAdvantage(attacker: Combatant, target: Combatant, spec: A
   if (has(attacker, "포박")) minus.push("공격자 포박");
   if (has(attacker, "중독")) minus.push("공격자 중독");
   if (has(attacker, "공포")) minus.push("공격자 공포");
+  if (attacker.grappledBy && target.tokenId && attacker.grappledBy !== target.tokenId) minus.push("붙잡힌 채 다른 대상 공격");
   if (has(attacker, "투명")) plus.push("공격자 투명");
   if (effect(attacker, "은신")) plus.push("공격자 은신");
   if (effect(attacker, "도움")) plus.push("도움 받음");

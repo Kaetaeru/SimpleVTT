@@ -123,6 +123,9 @@ export interface ActInput {
 
 const d20 = (random: () => number) => 1 + Math.floor(random() * 20);
 
+/** 2024 Unarmed Strike (Grapple/Shove) needs a free hand: nothing in the off hand and no two-handed weapon in use. */
+export const hasFreeHand = (items: Array<{ equipped?: boolean; wieldSlot?: "main-hand" | "off-hand" | "two-hand" }>) => !items.some((item) => item.equipped && (item.wieldSlot === "off-hand" || item.wieldSlot === "two-hand"));
+
 /** Conditions that take the action away altogether. */
 export const CANNOT_ACT = ["행동불능", "무의식", "마비", "석화"];
 export const cannotAct = (conditions: string[]) => CANNOT_ACT.find((name) => conditions.includes(name));

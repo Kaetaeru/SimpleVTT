@@ -12,7 +12,7 @@ import { newScene, tokenForCharacter, tokenForNpc } from "../../client/campaign/
 import { newTurn } from "../../client/campaign/tracker";
 import { initialRuntime } from "../../client/character/runtime";
 import { monsterById } from "../../client/compendium/monsters";
-import { ACTIONS, describeAct, npcStats, pcStats, resolveAction, skillBonus, unarmedDc, type ActorStats } from "../../client/rules/actions";
+import { ACTIONS, describeAct, hasFreeHand, npcStats, pcStats, resolveAction, skillBonus, unarmedDc, type ActorStats } from "../../client/rules/actions";
 import { derivedOf, pcAttackSpec, pcCombatant, pcConcentrationKey } from "../../client/rules/attackSpec";
 import { TableClient } from "../../client/session/client";
 import { TableHost } from "../../client/session/host";
@@ -169,4 +169,38 @@ test("host: a failed save marks the target — 붙잡힘 on the goblin's token, 
   await tick();
   assert.equal(lastAct(dm).act!.check!.dc, 15);
   assert.equal(markersOf(pcToken.id).includes("은신"), lastAct(dm).act!.check!.success);
+});
+
+test("grapple rules: who holds whom is remembered, attacking anyone else is at disadvantage, the hold ends when the grappler falls, a free hand is required", async () => {
+  assert.equal(hasFreeHand([{ equipped: true, wieldSlot: "main-hand" }]), true);
+  assert.equal(hasFreeHand([{ equipped: true, wieldSlot: "two-hand" }]), false);
+  assert.equal(hasFreeHand([{ equipped: true, wieldSlot: "main-hand" }, { equipped: true, wieldSlot: "off-hand" }]), false);
+  assert.equal(hasFreeHand([{ equipped: false, wieldSlot: "two-hand" }]), true);
+  const { host, dm, alice, pcToken, goblinToken, pcRef, goblinRef, markersOf, lastAct, lastAction } = await table(scripted(3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3));
+  // The fighter grapples the goblin (a 3 fails the save): the goblin's token remembers the grappler.
+  alice.send({ type: "act.action", actor: pcRef, kind: "grapple", target: goblinRef });
+  await tick();
+  assert.equal(lastAct(dm).act!.check!.success, false);
+  const held = host.pageList[0].tokens.find((token) => token.id === goblinToken.id)!.markers.find((marker) => marker.name === "붙잡힘")!;
+  assert.equal(held.from, pcToken.id, "the mark carries who holds the goblin");
+  // The goblin attacking its grappler is normal; attacking anyone else would be at disadvantage (a second PC).
+  dm.send({ type: "act.attack", attacker: goblinRef, targets: [pcRef], attack: { source: "npc", actionName: "시미터" } });
+  await tick();
+  assert.ok(!lastAction(alice).action!.reasons.includes("붙잡힌 채 다른 대상 공격"));
+  const { source } = build({ name: "보브", classes: "fighter", level: 1 });
+  const bob = newJournalCharacter(host.state.id, "alice", source, initialRuntime(build({ name: "보브", classes: "fighter", level: 1 }).derived));
+  alice.send({ type: "journal.put", entry: bob });
+  await tick();
+  const bobToken = tokenForCharacter(bob, { x: 3, y: 0 });
+  alice.send({ type: "token.put", pageId: host.pageList[0].id, token: bobToken });
+  await tick();
+  dm.send({ type: "act.attack", attacker: goblinRef, targets: [{ entryId: bob.id, pageId: host.pageList[0].id, tokenId: bobToken.id }], attack: { source: "npc", actionName: "시미터" } });
+  await tick();
+  assert.deepEqual([lastAction(alice).action!.advantage, lastAction(alice).action!.reasons], ["disadvantage", ["붙잡힌 채 다른 대상 공격"]]);
+  // The grappler falls (forced crit with +30 damage): the hold ends and the table hears it.
+  dm.send({ type: "act.attack", attacker: goblinRef, targets: [pcRef], attack: { source: "npc", actionName: "시미터" }, overrides: { outcome: "crit", damageDelta: 30 } });
+  await tick();
+  assert.ok(lastAction(alice).action!.downed, "the fighter went down");
+  assert.ok(!markersOf(goblinToken.id).includes("붙잡힘"), "the goblin is released");
+  assert.ok(alice.snapshot!.chat.some((message) => message.type === "system" && message.content.includes("붙잡힘이 풀립니다")));
 });

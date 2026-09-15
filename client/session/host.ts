@@ -567,8 +567,8 @@ export class TableHost {
   }
 
   private combatantOf(actor: { entry: JournalEntry; token?: Token }): Combatant | null {
-    if (actor.entry.kind === "npc") return npcCombatant(actor.entry, actor.token);
-    if (actor.entry.kind === "character" && this.options.pcCombatant) { const base = this.options.pcCombatant(actor.entry); return { ...base, name: actor.token?.name ?? actor.entry.name, conditions: [...new Set([...base.conditions, ...(actor.token?.markers.map((marker) => marker.name) ?? [])])] }; }
+    if (actor.entry.kind === "npc") return { ...npcCombatant(actor.entry, actor.token), tokenId: actor.token?.id, grappledBy: actor.token?.markers.find((marker) => marker.name === "붙잡힘")?.from };
+    if (actor.entry.kind === "character" && this.options.pcCombatant) { const base = this.options.pcCombatant(actor.entry); return { ...base, name: actor.token?.name ?? actor.entry.name, conditions: [...new Set([...base.conditions, ...(actor.token?.markers.map((marker) => marker.name) ?? [])])], tokenId: actor.token?.id, grappledBy: actor.token?.markers.find((marker) => marker.name === "붙잡힘")?.from }; }
     return null;
   }
 
@@ -631,7 +631,8 @@ export class TableHost {
     const now = this.now();
     const toggle = (list: string[]) => { let next = list; for (const name of names) next = on ? (next.includes(name) ? next : [...next, name]) : next.filter((item) => item !== name); return next; };
     const sheetNames = actor.entry.kind === "character" ? names.filter((name) => isConditionMarker(name)) : actor.token ? [] : names;
-    const tokenNames = actor.entry.kind === "character" ? names.filter((name) => !isConditionMarker(name)) : actor.token ? names : [];
+    // A grapple is remembered on the token as well (who holds whom), even for a PC whose sheet carries the condition.
+    const tokenNames = actor.entry.kind === "character" ? names.filter((name) => !isConditionMarker(name) || name === "붙잡힘") : actor.token ? names : [];
     if (sheetNames.length) {
       const current = this.journalEntries.get(actor.entry.id);
       if (current?.kind === "character" || current?.kind === "npc") { const conditions = toggle(current.runtime.conditions); if (conditions !== current.runtime.conditions) this.storeEntry({ ...current, runtime: { ...current.runtime, conditions, updatedAt: now }, updatedAt: now } as JournalEntry); }
@@ -643,6 +644,18 @@ export class TableHost {
     }
   }
   private actorOfTurn(turn: TrackerTurn | undefined) { return turn ? this.resolveActor({ entryId: turn.entryId, pageId: turn.pageId, tokenId: turn.tokenId }) : null; }
+  /** A grappler that is incapacitated (or dead) lets go: every 붙잡힘 it holds on this page ends (2024). */
+  private releaseGrapples(page: Page | undefined, grapplerTokenId: string | undefined) {
+    if (!page || !grapplerTokenId) return;
+    const live = this.pages.get(page.id);
+    if (!live) return;
+    for (const token of live.tokens) {
+      if (!token.markers.some((marker) => marker.name === "붙잡힘" && marker.from === grapplerTokenId)) continue;
+      const entry = token.represents ? this.journalEntries.get(token.represents) : undefined;
+      this.mark({ entry: entry ?? ({ kind: "npc" } as JournalEntry), token, page: live }, ["붙잡힘"], false);
+      this.say({ type: "system", who: "", content: `${token.name}: 붙잡은 쪽이 쓰러져 붙잡힘이 풀립니다` });
+    }
+  }
 
   /** Write the result into the target (PC sheet or NPC token/sheet) and post the card; remember how to undo it. */
   private applyResolution(resolution: AttackResolution, target: { entry: JournalEntry; token?: Token; page?: Page }, attacker: { entry: JournalEntry; token?: Token }, messageId: string, confirming: boolean, inputs?: { attacker: ActorRef; targets: ActorRef[]; attack: AttackRef; riders?: AttackRiders; by: string; targetIndex: number }, supersedes?: string, who?: string) {
@@ -675,6 +688,7 @@ export class TableHost {
         restores.push(() => { const current = this.journalEntries.get(before.id); if (current?.kind === "npc") this.storeEntry({ ...current, runtime: { ...current.runtime, hp: before.runtime.hp, conditions: before.runtime.conditions }, updatedAt: this.now() }); });
       }
     }
+    if (hit && resolution.downed) this.releaseGrapples(target.page, target.token?.id);
     const applied = { ...resolution, applied: true };
     if (inputs) this.actions.set(messageId, { inputs, resolution: applied, restore: () => { for (const restore of restores.reverse()) restore(); } });
     else { const existing = this.actions.get(messageId); if (existing) this.actions.set(messageId, { ...existing, resolution: applied, restore: () => { for (const restore of restores.reverse()) restore(); } }); }

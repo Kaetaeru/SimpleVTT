@@ -20,7 +20,7 @@ import type { Layer, Page, Token, TokenBar, TokenMarker } from "../campaign/page
 import type { TrackerTurn } from "../campaign/tracker";
 import { ALL_MARKERS, applyBarInput, cellDistance, clampToPage, controlsToken, isConditionMarker, isScene, MARKER_GLYPH, newPage, newScene, newToken, playerPageId, snap, tokenForEntry, tokenForNpc } from "../campaign/page";
 import type { Advantage, AttackOverrides } from "../rules/resolve";
-import { ACTIONS, actionDef, cannotAct, npcStats, pcStats, skillBonus, SKILL_ABILITY_OF, SKILL_KO, type ActionDef } from "../rules/actions";
+import { ACTIONS, actionDef, cannotAct, hasFreeHand, npcStats, pcStats, skillBonus, SKILL_ABILITY_OF, SKILL_KO, type ActionDef } from "../rules/actions";
 import { ABILITY_KEYS, ABILITY_KO } from "../catalog/types";
 import { activateFeature, usableFeatures } from "../character/activate";
 import { applyHealing, noteLog, setItemQuantity } from "../character/play";
@@ -442,6 +442,7 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
   const blocked = cannotAct([...conditions]);
   // Out of turn during combat a player may only roll checks and read the sheet; the DM may do anything.
   const off = Boolean(blocked) || (mode === "free" && inCombat && !isGm);
+  const freeHand = derived ? hasFreeHand(derived.inventory) : true;
   const rollToChat = async (spec: RollSpec) => { const result = await dice.roll(spec); c.sendRoll({ formula: result.formula, total: result.total, dice: result.dice.map((die) => ({ sides: die.sides, value: die.value })), modifier: result.modifier, label: `${token.name} · ${result.label}${result.note ? ` (${result.note})` : ""}` }); return result; };
   const d20 = (bonus: number) => `1d20${bonus >= 0 ? "+" : "-"}${Math.abs(bonus)}`;
   const currentRuntime = () => (entry.kind === "character" && latest.current && latest.current.sentAt > entry.updatedAt ? latest.current.runtime : (entry as JournalCharacter).runtime);
@@ -510,7 +511,7 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
           <span className="cl-cmd-label">공격</span>
           {derived ? derived.attacks.map((attack) => <button type="button" key={attack.id} className="cl-btn small attack" disabled={off} onClick={() => void attackWith({ source: "weapon", attackId: attack.id })}>⚔ {attack.name} <b>{attack.attackBonus >= 0 ? "+" : ""}{attack.attackBonus}</b></button>) : null}
           {entry.kind === "npc" ? entry.statBlock.actions.filter((action) => action.kind === "attack" && action.attack).map((action) => <button type="button" key={action.name} className="cl-btn small attack" disabled={off || Boolean(action.timing?.recharge && entry.runtime.spent[action.name])} onClick={() => void attackWith({ source: "npc", actionName: action.name })}>⚔ {action.name} <b>{action.attack!.bonus >= 0 ? "+" : ""}{action.attack!.bonus}</b></button>) : null}
-          {ACTIONS.filter((def) => def.kind === "grapple" || def.kind === "shove" || def.kind === "escape").map((def) => <button type="button" key={def.kind} className="cl-btn small" disabled={off || (def.kind === "escape" && !conditions.has("붙잡힘"))} title={def.summary} onClick={() => void take(def)}>{def.name}</button>)}
+          {ACTIONS.filter((def) => def.kind === "grapple" || def.kind === "shove" || def.kind === "escape").map((def) => { const needsHand = (def.kind === "grapple" || def.kind === "shove") && !freeHand; return <button type="button" key={def.kind} className="cl-btn small" disabled={off || needsHand || (def.kind === "escape" && !conditions.has("붙잡힘"))} title={needsHand ? "빈 손이 없습니다 (보조 손이나 양손 무기를 내려놓으세요)" : def.summary} onClick={() => void take(def)}>{def.name}</button>; })}
           <button type="button" className="cl-btn small" disabled title="주문·마법 (R8)">✨ 마법</button>
         </div>
         <div className="cl-cmd-group">
