@@ -98,6 +98,8 @@ export interface AttackResolution {
   attackerRef?: ActorRef;
   /** What happened at 0 HP. */
   downed?: "unconscious" | "dead" | "instant-death";
+  /** Death-save failures the hit caused on a PC already at 0 HP. */
+  deathFailures?: number;
   inflicted: string[];
   overrides?: AttackOverrides;
   /** True once HP was written (D90: with "DM 확인 후 적용" the card waits). */
@@ -138,7 +140,8 @@ export function suggestAdvantage(attacker: Combatant, target: Combatant, spec: A
   if (has(attacker, "약화")) minus.push("약화 (Sap): 다음 공격 불리");
   if (target.vexedBy && attacker.tokenId && target.vexedBy === attacker.tokenId) plus.push("교란 (Vex): 이 대상에게 유리");
   if (has(target, "넘어짐")) (spec.mode === "melee" ? plus : minus).push(spec.mode === "melee" ? "대상 넘어짐 (근접)" : "대상 넘어짐 (원거리)");
-  for (const name of ["마비", "석화", "포박", "충격", "행동불능", "무의식"]) if (has(target, name)) plus.push(`대상 ${name}`);
+  // 2024: 행동불능(Incapacitated) on its own gives an attacker nothing — it only bars actions, reactions and concentration.
+  for (const name of ["마비", "석화", "포박", "충격", "무의식"]) if (has(target, name)) plus.push(`대상 ${name}`);
   if (has(target, "장님")) plus.push("대상 장님");
   if (has(target, "투명")) minus.push("대상 투명");
   if (effect(target, "회피")) minus.push("대상 회피");
@@ -196,7 +199,7 @@ export function resolveAttack(attacker: Combatant, target: Combatant, spec: Atta
   const outcomeDamage = hit
     ? applyDamage(target, [...spec.damage, ...(spec.riders ?? [])], options.dice, { fixed: options.fixed?.damage, crit: outcome === "crit", scale: overrides.damageScale, delta: overrides.damageDelta })
     : grazes ? applyDamage(target, [{ formula: String(spec.abilityMod), type: spec.damage[0]?.type ?? "타격", label: "스치기", critDoubles: false }], options.dice, { fixed: options.fixed?.damage, scale: overrides.damageScale, delta: overrides.damageDelta }) : noDamage(target);
-  const { damage, damageTotal, absorbed, hpLost, hpAfter, tempAfter, concentration, downed } = outcomeDamage;
+  const { damage, damageTotal, absorbed, hpLost, hpAfter, tempAfter, concentration, downed, deathFailures } = outcomeDamage;
   const inflicted = hit ? [...(spec.inflicts ?? [])] : [];
   if (grazes) mastery = { kind: "graze", label: MASTERY_LABEL.graze, grazed: damageTotal, marks: [], note: `빗나갔지만 ${damageTotal} 피해` };
   else if (hit && spec.mastery) {
@@ -214,13 +217,13 @@ export function resolveAttack(attacker: Combatant, target: Combatant, spec: Atta
   return {
     attacker: { id: attacker.id, name: attacker.name, kind: attacker.kind }, target: { id: target.id, name: target.name, kind: target.kind },
     attack: { name: spec.name, source: spec.source, mode: spec.mode, bonus: spec.attackBonus },
-    advantage, reasons, d20s, kept, cover, attackTotal, targetAc, outcome, damage, damageTotal, absorbed, hpLost, hpBefore: target.hp.current, hpAfter, tempAfter, concentration, downed,
+    advantage, reasons, d20s, kept, cover, attackTotal, targetAc, outcome, damage, damageTotal, absorbed, hpLost, hpBefore: target.hp.current, hpAfter, tempAfter, concentration, downed, deathFailures,
     inflicted, mastery, overrides: Object.keys(overrides).length ? overrides : undefined, applied: options.apply ?? true,
   };
 }
 
 /** What a hit (or a failed save) does to the target: dice per part, resistances, temp HP first, concentration, 0 HP. Shared by weapon attacks and spells. */
-export interface DamageOutcome { damage: DamageResult[]; damageTotal: number; absorbed: number; hpLost: number; hpBefore: number; hpAfter: number; tempAfter: number; concentration?: AttackResolution["concentration"]; downed?: AttackResolution["downed"] }
+export interface DamageOutcome { damage: DamageResult[]; damageTotal: number; absorbed: number; hpLost: number; hpBefore: number; hpAfter: number; tempAfter: number; concentration?: AttackResolution["concentration"]; downed?: AttackResolution["downed"]; /** Death-save failures the damage caused on a PC already at 0 HP (2 from a critical hit). */ deathFailures?: number }
 export const noDamage = (target: Combatant): DamageOutcome => ({ damage: [], damageTotal: 0, absorbed: 0, hpLost: 0, hpBefore: target.hp.current, hpAfter: target.hp.current, tempAfter: target.hp.temp });
 export function applyDamage(target: Combatant, parts: DamagePart[], dice: DiceSource, options: { fixed?: number[][]; crit?: boolean; scale?: number; delta?: number; /** Halve after resistances (a successful save). */ half?: boolean } = {}): DamageOutcome {
   const damage: DamageResult[] = [];
@@ -252,11 +255,16 @@ export function applyDamage(target: Combatant, parts: DamagePart[], dice: DiceSo
     concentration = { effect: target.concentration, dc, d20, total, success: total >= dc };
   }
   let downed: AttackResolution["downed"];
+  let deathFailures: number | undefined;
   if (hpAfter === 0 && target.hp.current > 0) {
     const overflow = damageTotal - absorbed - target.hp.current;
     downed = target.kind === "npc" ? "dead" : overflow >= target.hp.max ? "instant-death" : "unconscious";
+  } else if (target.kind === "pc" && target.hp.current === 0 && damageTotal - absorbed > 0) {
+    // Damage on a PC already at 0 HP: one death-save failure, two from a critical hit, instant death at HP maximum.
+    if (damageTotal - absorbed >= target.hp.max) downed = "instant-death";
+    else deathFailures = options.crit ? 2 : 1;
   }
-  return { damage, damageTotal, absorbed, hpLost, hpBefore: target.hp.current, hpAfter, tempAfter, concentration, downed };
+  return { damage, damageTotal, absorbed, hpLost, hpBefore: target.hp.current, hpAfter, tempAfter, concentration, downed, deathFailures };
 }
 
 const flatOf = (formula: string) => { let total = 0; for (const term of formula.replace(/\s+/g, "").replace(/\(.*?\)/g, "").match(/[+-]?[^+-]+/g) ?? []) if (/^[+-]?\d+$/.test(term)) total += Number(term); return total; };
@@ -266,5 +274,5 @@ export function describeResolution(result: AttackResolution) {
   const roll = `${result.d20s.length > 1 ? `[${result.d20s.join(", ")}]→${result.kept}` : result.kept}${result.attack.bonus >= 0 ? "+" : ""}${result.attack.bonus} = ${result.attackTotal} vs AC ${result.targetAc}`;
   const outcome = result.outcome === "crit" ? "치명타" : result.outcome === "hit" ? "적중" : result.outcome === "fumble" ? "자동 실패" : "빗나감";
   const damage = result.damage.length ? ` · 피해 ${result.damageTotal}${result.absorbed ? ` (임시 ${result.absorbed} 흡수)` : ""} → HP ${result.hpBefore} → ${result.hpAfter}` : "";
-  return `${result.attacker.name} → ${result.target.name}: ${result.attack.name} ${roll} ${outcome}${damage}${result.concentration ? ` · 집중 ${result.concentration.success ? "유지" : "실패"}` : ""}${result.downed ? ` · ${result.downed === "dead" ? "사망" : result.downed === "instant-death" ? "즉사" : "무의식"}` : ""}`;
+  return `${result.attacker.name} → ${result.target.name}: ${result.attack.name} ${roll} ${outcome}${damage}${result.concentration ? ` · 집중 ${result.concentration.success ? "유지" : "실패"}` : ""}${result.downed ? ` · ${result.downed === "dead" ? "사망" : result.downed === "instant-death" ? "즉사" : "무의식"}` : result.deathFailures ? ` · 죽음 내성 실패 ${result.deathFailures}회` : ""}`;
 }

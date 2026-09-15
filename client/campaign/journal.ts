@@ -198,3 +198,13 @@ export function parseJournalText(text: string): TextBlock[] {
 
 /** Journal link targets by name (the first entry with that name the viewer can see). */
 export const findByName = (entries: JournalEntry[], name: string) => entries.find((entry) => entry.name.trim().toLowerCase() === name.trim().toLowerCase());
+
+/**
+ * R15: a sheet edit is optimistic — the host has not echoed it back yet. The pending value stands only while the
+ * entry is unchanged on the host. The earlier version compared the local clock against the host's `updatedAt`,
+ * which misfires whenever the two machines disagree: a client running even slightly ahead would keep showing its
+ * own value and never see the host's writes (damage taken, a condition applied) again.
+ */
+export interface Pending<T> { base: string; value: T }
+export const pendingFor = <T>(value: T, updatedAt: string): Pending<T> => ({ base: updatedAt, value });
+export const pendingValue = <T>(pending: Pending<T> | null | undefined, updatedAt: string, stored: T): T => (pending && pending.base === updatedAt ? pending.value : stored);

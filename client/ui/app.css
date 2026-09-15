@@ -303,6 +303,8 @@ details.cl-details[open]>summary{color:var(--text)}
 .cl-journal-avatar-field{display:flex;flex-direction:column;gap:6px;align-items:flex-start}
 .cl-journal-avatar-field .cl-journal-avatar{border-radius:var(--radius-m)}
 .cl-windows{position:fixed;inset:0;pointer-events:none;z-index:10}
+/* R15: targeting owns the board — floating windows never intercept the click that picks a target. */
+body.cl-picking-targets .cl-window{pointer-events:none;opacity:.32;filter:saturate(.6)}
 .cl-window{position:absolute;pointer-events:auto;width:min(560px,94vw);max-height:calc(100vh - 80px);display:flex;flex-direction:column;background:var(--overlay);border:1px solid var(--line-2);border-radius:var(--radius-l);box-shadow:var(--elev-2)}
 .cl-window.wide{width:min(980px,94vw)}
 .cl-window-head{display:flex;align-items:center;gap:8px;padding:6px 8px 6px 12px;border-bottom:1px solid var(--line);cursor:grab;user-select:none;background:var(--surface);border-radius:var(--radius-l) var(--radius-l) 0 0}

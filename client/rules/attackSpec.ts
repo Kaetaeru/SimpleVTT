@@ -53,6 +53,13 @@ export function weaponRange(attack: DerivedAttack): { mode: "melee" | "ranged" }
 
 const sneakDice = (derived: DerivedCharacter) => { const rogue = derived.classes.find((cls) => cls.classId.endsWith(".rogue")); return rogue ? Math.ceil(rogue.level / 2) : 0; };
 export const hasSneakAttack = (derived: DerivedCharacter, attack: DerivedAttack) => sneakDice(derived) > 0 && (attack.properties.includes("finesse") || weaponRange(attack).mode === "ranged");
+export const SMITE_LABEL = "신성한 강타";
+/** 2024 Divine Smite deals +1d8 against a Fiend or an Undead; the host adds it per target, since one attack may hit several. */
+export function smiteFiendBonus(spec: AttackSpec, creatureType?: string): DamagePart | null {
+  if (!creatureType || !["fiend", "undead"].includes(creatureType.toLowerCase())) return null;
+  if (!(spec.riders ?? []).some((part) => part.label?.startsWith(SMITE_LABEL))) return null;
+  return { formula: "1d8", type: "광휘", label: `${SMITE_LABEL} (악마·언데드 +1d8)` };
+}
 export const hasSmite = (derived: DerivedCharacter) => derived.features.some((feature) => feature.id.includes("paladin") && feature.id.endsWith(".smite"));
 export const smiteSlots = (derived: DerivedCharacter, runtime: CharacterRuntime) => Object.entries(derived.spellSlots).map(([level, max]) => ({ level: Number(level), free: max - (runtime.slotsUsed[Number(level)] ?? 0) })).filter((slot) => slot.free > 0);
 
@@ -70,7 +77,8 @@ export function pcAttackSpec(entry: JournalCharacter, derived: DerivedCharacter,
   if (riders.sneak && hasSneakAttack(derived, attack)) extra.push({ formula: `${sneakDice(derived)}d6`, type: attack.damageType, label: "암습" });
   if (riders.smiteSlot && hasSmite(derived) && (derived.spellSlots[riders.smiteSlot] ?? 0) > 0) {
     const level = riders.smiteSlot;
-    extra.push({ formula: `${Math.min(5, 1 + level)}d8`, type: "광휘", label: `신성한 강타 (${level}레벨 슬롯)` });
+    // 2024 Divine Smite: 2d8 from a 1st-level slot, +1d8 per slot level above that, with no cap.
+    extra.push({ formula: `${1 + level}d8`, type: "광휘", label: `${SMITE_LABEL} (${level}레벨 슬롯)` });
     spenders.push((runtime) => useSpellSlot(runtime, derived, level));
   }
   const abilityMod = derived.abilities[attack.ability].modifier;

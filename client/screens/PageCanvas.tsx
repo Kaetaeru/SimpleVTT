@@ -7,8 +7,8 @@
 import { useEffect, useMemo, useRef, useState, type DragEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { useCampaigns } from "../app/campaigns";
 import { useClient } from "../app/context";
-import type { JournalCharacter, JournalEntry } from "../campaign/journal";
-import { canEdit, canView, newJournalNpc } from "../campaign/journal";
+import type { JournalCharacter, JournalEntry, Pending } from "../campaign/journal";
+import { canEdit, canView, newJournalNpc, pendingFor, pendingValue } from "../campaign/journal";
 import { deriveCharacter } from "../character/derive";
 import type { RollSpec } from "../character/dice";
 import { damageFormula, monsterById } from "../compendium/monsters";
@@ -76,6 +76,14 @@ export function PageCanvas({ onOpenEntry, onOpenToken, onOpenPageSettings, onOpe
   const live = pages.filter((page) => !page.archived);
   const page = isGm ? (pages.find((item) => item.id === gmPageId) ?? live.find((item) => item.id === snapshot.playerPageId) ?? live[0] ?? null) : (pages.find((item) => item.id === ribbonId) ?? null);
   useEffect(() => { if (isGm && page && page.id !== gmPageId) setGmPageId(page.id); }, [isGm, page, gmPageId]);
+  /**
+   * R15: while the table is picking targets, the floating windows (the turn tracker above all) sit over the board
+   * and swallowed the click — the DM's target landed on the window, not on the icon. They go click-through.
+   */
+  useEffect(() => {
+    document.body.classList.toggle("cl-picking-targets", Boolean(targeting));
+    return () => document.body.classList.remove("cl-picking-targets");
+  }, [targeting]);
   const journal = snapshot.journal;
 
   // Keyboard: Delete removes the selection (its controller), Escape clears it or cancels targeting.
@@ -335,7 +343,7 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
   const { snapshot, isGm } = useViewer();
   const entry = token.represents ? snapshot.journal.find((item) => item.id === token.represents) : undefined;
   const derived = useMemo(() => (entry?.kind === "character" ? deriveCharacter(entry.source, catalog, { equipped: entry.runtime.equipped, inventory: entry.runtime.inventory, effects: entry.runtime.effects }) : null), [entry, catalog]);
-  const latest = useRef<{ runtime: CharacterRuntime; sentAt: string } | null>(null);
+  const latest = useRef<Pending<CharacterRuntime> | null>(null);
   if (!entry || entry.kind === "handout") return null;
   const tracker = snapshot.tracker;
   const turn = tracker.turns[tracker.current];
@@ -364,13 +372,12 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
     c.putToken(page.id, { ...token, markers: token.markers.filter((marker) => marker.name !== "도움") });
     return best;
   };
-  const currentRuntime = () => (entry.kind === "character" && latest.current && latest.current.sentAt > entry.updatedAt ? latest.current.runtime : (entry as JournalCharacter).runtime);
+  const currentRuntime = () => pendingValue(latest.current, entry.updatedAt, (entry as JournalCharacter).runtime);
   const saveRuntime = (input: (current: CharacterRuntime) => CharacterRuntime) => {
     if (entry.kind !== "character") return;
     const runtime = { ...resolveRuntime(entry.source, catalog, currentRuntime(), input), updatedAt: new Date().toISOString() };
-    const sentAt = new Date().toISOString();
-    latest.current = { runtime, sentAt };
-    c.putJournal({ ...entry, runtime, updatedAt: sentAt });
+    latest.current = pendingFor(runtime, entry.updatedAt);
+    c.putJournal({ ...entry, runtime, updatedAt: runtime.updatedAt });
   };
   const take = async (def: ActionDef, bonus = false) => {
     let target: string | undefined;
@@ -807,6 +814,25 @@ function TokenMenu({ token, page, at, onClose, onOpenToken, onOpenEntry }: { tok
   const activeMarkers = new Set([...token.markers.map((marker) => marker.name), ...(character ? character.runtime.conditions : [])]);
   const setBadge = (name: string, badge: number | undefined) => put({ ...token, markers: token.markers.map((marker) => (marker.name === name ? { ...marker, badge } : marker)) });
   const reorder = (direction: 1 | -1) => put({ ...token, z: token.z + direction });
+  /**
+   * R15: a duplicated NPC gets its OWN journal entry. Sharing one entry shared its runtime too, so a recharge roll,
+   * the legendary-action pool, legendary resistances and per-day spell uses of one goblin were spent by the other.
+   */
+  const duplicate = () => {
+    const fresh = newToken({ name: "" }).id;
+    if (entry?.kind === "npc") {
+      const base = entry.name.replace(/\s\d+$/, "");
+      const taken = page.tokens.filter((item) => item.name === base || new RegExp(`^${base.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} \\d+$`).test(item.name)).length;
+      const copy = { ...newJournalNpc(page.campaignId, c.userId, entry.statBlock, { name: `${base} ${taken + 1}` }), folder: entry.folder, gmNotes: entry.gmNotes, canView: entry.canView, canEdit: entry.canEdit, avatar: entry.avatar, tags: entry.tags };
+      c.putJournal(copy);
+      const bars = token.bars.map((bar, index) => (index === 0 && !bar.link ? { ...bar, value: entry.statBlock.hp, max: entry.statBlock.hp } : bar)) as Token["bars"];
+      put({ ...token, id: fresh, z: token.z + 1, name: copy.name, represents: copy.id, markers: [], bars });
+      onClose();
+      return;
+    }
+    put({ ...token, id: fresh, z: token.z + 1 });
+    onClose();
+  };
   return (
     <div className="cl-token-menu" style={{ left: at.x, top: at.y }} role="menu" aria-label={`토큰 메뉴 ${token.name}`} onPointerDown={(event) => event.stopPropagation()}>
       <div className="cl-token-menu-head"><strong>{token.name}</strong><button type="button" className="cl-btn quiet small" aria-label="메뉴 닫기" onClick={onClose}>✕</button></div>
@@ -836,7 +862,7 @@ function TokenMenu({ token, page, at, onClose, onOpenToken, onOpenEntry }: { tok
         {isGm ? <select className="cl-select" style={{ height: 26 }} aria-label="레이어로 이동" value={token.layer} onChange={(event) => put({ ...token, layer: event.target.value as Layer })}>{(["objects", "gm"] as Layer[]).map((item) => <option key={item} value={item}>{item === "gm" ? "GM만 보임" : "모두에게 보임"}</option>)}</select> : null}
         {controls ? <><button type="button" className="cl-btn small" onClick={() => reorder(1)} title="줄에서 오른쪽으로">▶ 오른쪽으로</button><button type="button" className="cl-btn small" onClick={() => reorder(-1)} title="줄에서 왼쪽으로">◀ 왼쪽으로</button></> : null}
         {character && canEdit(character, viewer) ? <button type="button" className="cl-btn small" title="이 토큰의 설정을 캐릭터의 기본 토큰으로 저장" onClick={() => { const { id: _id, z: _z, represents: _r, ...rest } = token; c.putJournal({ ...character, defaultToken: rest, updatedAt: new Date().toISOString() }); onClose(); }}>기본 토큰으로 저장</button> : null}
-        {isGm ? <button type="button" className="cl-btn small" onClick={() => { const copy = { ...token, id: newToken({ name: "" }).id, z: token.z + 1 }; put(copy); onClose(); }}>복제</button> : null}
+        {isGm ? <button type="button" className="cl-btn small" title={entry?.kind === "npc" ? "복사본은 자기 저널 항목을 가집니다 (재충전·전설 행동·하루 횟수가 따로)" : undefined} onClick={duplicate}>복제</button> : null}
         {isGm ? <button type="button" className="cl-btn small" onClick={() => put({ ...token, locked: !token.locked })}>{token.locked ? "잠금 해제" : "잠금"}</button> : null}
         {controls ? <button type="button" className="cl-btn small" onClick={() => { c.addTurn({ name: token.name, tokenId: token.id, pageId: page.id, entryId: token.represents, image: token.image }); onClose(); }} title="이니셔티브 0으로 넣습니다 (액션 줄의 '이니셔티브'는 굴려서 넣습니다)">턴 트래커에 추가</button> : null}
         {controls ? <button type="button" className="cl-btn small danger" onClick={() => { c.removeToken(page.id, token.id); onClose(); }}>삭제</button> : null}

@@ -21,6 +21,7 @@ import { describeResolution, diceFrom, resolveAttack } from "../rules/resolve";
 import type { ActorRef, AttackRef, AttackRiders } from "./protocol";
 import { isConditionMarker } from "../campaign/page";
 import { ACTIONS, cannotAct, describeAct, npcStats, resolveAction, TURN_MARKS, type ActorStats } from "../rules/actions";
+import { smiteFiendBonus } from "../rules/attackSpec";
 import { describeSpell, resolveSpell, type CasterStats, type SpellCastSpec, type SpellResolution, type SpellTargetResult } from "../rules/spellcast";
 import { spellExec } from "../compendium/spells";
 import { startEffect } from "../character/play";
@@ -460,6 +461,9 @@ export class TableHost {
         const attackerEntry = this.resolveActor(command.attacker);
         if (!attackerEntry) return refuse("공격자를 찾을 수 없습니다");
         if (!isGm && !this.mayAct(userId, command.attacker, attackerEntry.entry)) return refuse("자기 캐릭터로만 공격할 수 있습니다");
+        // R15: 마비·무의식·충격 … bar every action and reaction, so they bar attacks too (the cast and act paths already check).
+        const cannotAttack = cannotAct(this.conditionsOf(attackerEntry));
+        if (cannotAttack) return refuse(`${cannotAttack} 상태라 공격할 수 없습니다`);
         if (!command.targets?.length) return refuse("대상이 없습니다");
         // In combat a player attacks on their turn; out of turn only as a reaction (an opportunity prompt or a readied action).
         if (!isGm && !command.reaction && !command.readied && this.tracker.turns.length && this.turnOf(command.attacker)?.id !== this.tracker.turns[this.tracker.current]?.id) return refuse("자기 턴에만 공격할 수 있습니다 (남의 턴에는 기회 공격·준비한 행동만)");
@@ -582,7 +586,8 @@ export class TableHost {
         if (!isGm) return refuse("전설 저항은 DM이 결정합니다");
         const record = this.spells.get(command.messageId);
         if (!record || !record.resolution.applied || !record.rows || !record.context) return refuse("적용된 주문 카드가 아닙니다");
-        const index = record.resolution.targets.findIndex((row) => row.target.id === command.targetId);
+        // R15: two tokens may share one stat block, so the token decides which row the DM meant.
+        const index = record.resolution.targets.findIndex((row) => (command.tokenId ? row.target.tokenId === command.tokenId : row.target.id === command.targetId));
         const row = index >= 0 ? record.resolution.targets[index] : undefined;
         if (!row || !row.save || row.save.success) return refuse("실패한 내성이 있는 대상이 아닙니다");
         const page = row.target.tokenId ? [...this.pages.values()].find((item) => item.tokens.some((token) => token.id === row.target.tokenId)) : undefined;
@@ -791,6 +796,9 @@ export class TableHost {
     const attackerCombatant = this.combatantOf(attacker);
     const targetCombatant = this.combatantOf(target);
     if (!attackerCombatant || !targetCombatant) return undefined;
+    // R15: Divine Smite's +1d8 against a Fiend or an Undead depends on who was hit, so it is added here, per target.
+    const fiendBonus = target.entry.kind === "npc" ? smiteFiendBonus(prepared.spec, target.entry.statBlock.creatureType) : null;
+    if (fiendBonus) prepared = { ...prepared, spec: { ...prepared.spec, riders: [...(prepared.spec.riders ?? []), fiendBonus] } };
     // D95: a scene (Theatre of the Mind) tracks no positions, so range never decides; the DM adjusts by hand.
     const waits = Boolean(this.campaign.settings.dmConfirmsResults) && this.roleOf(inputs.by) !== "gm";
     const resolution: AttackResolution = { ...resolveAttack(attackerCombatant, targetCombatant, prepared.spec, { dice: diceFrom(this.options.random ?? Math.random), overrides, fixed, apply: !waits }), attackRef: inputs.attack, attackerRef: inputs.attacker };
@@ -964,11 +972,12 @@ export class TableHost {
       if (concentrationFailed) { const key = this.options.pcConcentrationKey?.(before); if (key) runtime = endEffect(runtime, key, "집중 실패"); }
       for (const condition of row.marks) if (!runtime.conditions.includes(condition)) runtime = { ...runtime, conditions: [...runtime.conditions, condition] };
       if (downed === "unconscious") for (const condition of ["무의식", "넘어짐"]) if (!runtime.conditions.includes(condition)) runtime = { ...runtime, conditions: [...runtime.conditions, condition] };
+      runtime = this.takeDeathFailures(runtime, row.attack?.deathFailures ?? row.damage?.deathFailures, row.target.name, resolution.name);
       // A lasting effect on a target: on the caster's own sheet castSpell already started it (with concentration); others get it without.
       if (row.effect && !(runtime.effects ?? []).some((effect) => effect.key === row.effect!.key)) runtime = startEffect(runtime, { key: row.effect.key, name: row.effect.name, source: "spell", duration: row.effect.duration, concentration: resolution.caster.id === before.id && row.effect.concentration, rounds: row.effect.rounds, ...(row.effect.endSave ? { endSave: { ...row.effect.endSave, conditions: row.marks } } : {}) });
       this.storeEntry({ ...before, runtime: { ...runtime, updatedAt: now }, updatedAt: now });
       if (downed) this.releaseGrapples(target.page, target.token?.id);
-      return () => { const current = this.journalEntries.get(before.id); if (current?.kind === "character") this.storeEntry({ ...current, runtime: { ...current.runtime, hp: before.runtime.hp, conditions: before.runtime.conditions, effects: before.runtime.effects, log: before.runtime.log }, updatedAt: this.now() }); };
+      return () => { const current = this.journalEntries.get(before.id); if (current?.kind === "character") this.storeEntry({ ...current, runtime: { ...current.runtime, hp: before.runtime.hp, conditions: before.runtime.conditions, effects: before.runtime.effects, log: before.runtime.log, deathSaves: before.runtime.deathSaves }, updatedAt: this.now() }); };
     }
     if (target.entry.kind !== "npc") return null;
     const marks = [...row.marks, ...(row.effect ? [row.effect.name] : []), ...(downed ? ["사망"] : [])];
@@ -1050,6 +1059,19 @@ export class TableHost {
     }
   }
 
+  /**
+   * R15: damage on a PC already at 0 HP is a death-save failure (two from a critical hit); three end the character.
+   * The table hears about it, because nothing else on the card says so.
+   */
+  private takeDeathFailures(runtime: CharacterRuntime, failures: number | undefined, name: string, source: string): CharacterRuntime {
+    if (!failures) return runtime;
+    let next = runtime;
+    for (let at = 0; at < failures; at += 1) next = recordDeathSave(next, false);
+    const dead = next.deathSaves.failure >= 3;
+    this.say({ type: "system", who: "", content: `${name}: 0 HP에서 ${source}의 피해 — 죽음 내성 실패 ${failures}회 (${next.deathSaves.success}/${next.deathSaves.failure})${dead ? " — 사망" : ""}` });
+    return next;
+  }
+
   /** Write the result into the target (PC sheet or NPC token/sheet) and post the card; remember how to undo it. */
   private applyResolution(resolution: AttackResolution, target: { entry: JournalEntry; token?: Token; page?: Page }, attacker: { entry: JournalEntry; token?: Token }, messageId: string, confirming: boolean, inputs?: { attacker: ActorRef; targets: ActorRef[]; attack: AttackRef; riders?: AttackRiders; by: string; targetIndex: number }, supersedes?: string, who?: string) {
     const restores: Array<() => void> = [];
@@ -1062,8 +1084,9 @@ export class TableHost {
       for (const condition of resolution.inflicted) if (!runtime.conditions.includes(condition)) runtime = { ...runtime, conditions: [...runtime.conditions, condition] };
       if (resolution.downed === "unconscious") for (const condition of ["무의식", "넘어짐"]) if (!runtime.conditions.includes(condition)) runtime = { ...runtime, conditions: [...runtime.conditions, condition] };
       if (resolution.downed === "instant-death") runtime = noteLog(runtime, "대량 피해: 즉사");
+      runtime = this.takeDeathFailures(runtime, resolution.deathFailures, resolution.target.name, resolution.attack.name);
       this.storeEntry({ ...before, runtime: { ...runtime, updatedAt: this.now() }, updatedAt: this.now() });
-      restores.push(() => { const current = this.journalEntries.get(before.id); if (current?.kind === "character") this.storeEntry({ ...current, runtime: { ...current.runtime, hp: before.runtime.hp, conditions: before.runtime.conditions, effects: before.runtime.effects, log: before.runtime.log }, updatedAt: this.now() }); });
+      restores.push(() => { const current = this.journalEntries.get(before.id); if (current?.kind === "character") this.storeEntry({ ...current, runtime: { ...current.runtime, hp: before.runtime.hp, conditions: before.runtime.conditions, effects: before.runtime.effects, log: before.runtime.log, deathSaves: before.runtime.deathSaves }, updatedAt: this.now() }); });
     } else if (hit && target.entry.kind === "npc") {
       const token = target.token;
       const bar = token?.bars[0];

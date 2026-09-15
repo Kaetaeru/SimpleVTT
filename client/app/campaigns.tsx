@@ -103,7 +103,7 @@ export interface CampaignsState {
   /** R10: use a bag item (a potion) on a creature; the host rolls, applies and takes it out of the bag. */
   useItem: (actor: ActorRef, target: ActorRef | undefined, instanceId: string) => void;
   /** R12 (DM): Legendary Resistance on a failed save in a spell card. */
-  resist: (messageId: string, targetId: string) => void;
+  resist: (messageId: string, targetId: string, tokenId?: string) => void;
   /** D96: the mover leaves `from`'s reach; the host asks `from`'s controller for an opportunity attack. */
   provoke: (mover: ActorRef, from: ActorRef) => void;
   /** D97: one of the official actions on the actor's turn. */
@@ -406,7 +406,7 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
   const npcSave = useCallback((actor: ActorRef, actionName: string, targets: ActorRef[]) => send({ type: "act.npcSave", actor, actionName, targets }), [send]);
   const legendary = useCallback((actor: ActorRef, name: string, targets?: ActorRef[]) => send({ type: "act.legendary", actor, name, targets }), [send]);
   const useItem = useCallback((actor: ActorRef, target: ActorRef | undefined, instanceId: string) => send({ type: "act.item", actor, target, instanceId }), [send]);
-  const resist = useCallback((messageId: string, targetId: string) => send({ type: "act.resist", messageId, targetId }), [send]);
+  const resist = useCallback((messageId: string, targetId: string, tokenId?: string) => send({ type: "act.resist", messageId, targetId, ...(tokenId ? { tokenId } : {}) }), [send]);
   const provoke = useCallback((mover: ActorRef, from: ActorRef) => send({ type: "act.provoke", mover, from }), [send]);
   const cast = useCallback((caster: ActorRef, spellId: string, targets: ActorRef[], method?: CastMethod, overrides?: AttackOverrides, readied?: boolean, reaction?: string) => send({ type: "act.cast", caster, spellId, targets, method, overrides, readied, reaction }), [send]);
   const act = useCallback((actor: ActorRef, kind: ActionKind, options: { target?: ActorRef; skill?: string; dc?: number; note?: string; choice?: string; bonus?: boolean } = {}) => send({ type: "act.action", actor, kind, ...options }), [send]);

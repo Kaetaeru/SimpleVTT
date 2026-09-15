@@ -12,7 +12,7 @@ import type { CastMethod } from "../character/play";
 import type { AttackOverrides } from "../rules/resolve";
 import type { CampaignSettings, ChatMessage, PlayerRole } from "../campaign/model";
 
-export const PROTOCOL_VERSION = 13;
+export const PROTOCOL_VERSION = 14;
 
 export interface Presence { userId: string; displayName: string; role: PlayerRole; color: string; connected: boolean }
 
@@ -94,7 +94,7 @@ export type ClientCommand =
   /** R10: use an item from the actor's bag on a creature (a potion poured into an ally's mouth); the host rolls and applies. */
   | { type: "act.item"; actor: ActorRef; target?: ActorRef; instanceId: string }
   /** R12 (DM): a monster spends Legendary Resistance on a failed save in a spell card — that row is re-applied as a success. */
-  | { type: "act.resist"; messageId: string; targetId: string }
+  | { type: "act.resist"; messageId: string; targetId: string; /** R15: the target token, so two copies of one stat block are told apart. */ tokenId?: string }
   /** D97: one of the official actions (dash, dodge, help, hide, grapple …) on the actor's turn; the host resolves and marks. */
   | { type: "act.action"; actor: ActorRef; kind: ActionKind; target?: ActorRef; skill?: string; dc?: number; note?: string; choice?: string; bonus?: boolean }
   /** DM palette: re-resolve a card with overrides (same dice unless `reroll`), superseding it. */

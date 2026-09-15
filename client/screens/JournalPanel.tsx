@@ -6,8 +6,8 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useCampaigns } from "../app/campaigns";
 import { useClient } from "../app/context";
-import type { Audience, JournalCharacter, JournalEntry, JournalFolder, TextSpan } from "../campaign/journal";
-import { canEdit, findByName, journalFolders, journalTree, newHandout, newJournalCharacter, parseJournalText } from "../campaign/journal";
+import type { Audience, JournalCharacter, JournalEntry, JournalFolder, Pending, TextSpan } from "../campaign/journal";
+import { canEdit, findByName, journalFolders, journalTree, newHandout, newJournalCharacter, parseJournalText, pendingFor, pendingValue } from "../campaign/journal";
 import { ABILITY_KEYS, ABILITY_KO } from "../catalog/types";
 import { deriveCharacter } from "../character/derive";
 import type { RollResult } from "../character/dice";
@@ -369,13 +369,12 @@ function CharacterWindow({ entry, onClose, onOpen }: { entry: JournalCharacter; 
   const [message, setMessage] = useState<string | null>(null);
   const { draft, edit, set } = useEntryDraft(entry);
   // The sheet saves against the newest runtime we know: what the host echoed, or what we sent since (an echo takes a moment).
-  const latest = useRef<{ runtime: CharacterRuntime; sentAt: string } | null>(null);
-  const currentRuntime = () => (latest.current && latest.current.sentAt > entry.updatedAt ? latest.current.runtime : entry.runtime);
+  const latest = useRef<Pending<CharacterRuntime> | null>(null);
+  const currentRuntime = () => pendingValue(latest.current, entry.updatedAt, entry.runtime);
   const saveRuntime = (input: CharacterRuntime | ((current: CharacterRuntime) => CharacterRuntime)) => {
     const runtime = { ...resolveRuntime(entry.source, catalog, currentRuntime(), input), updatedAt: new Date().toISOString() };
-    const sentAt = new Date().toISOString();
-    latest.current = { runtime, sentAt };
-    c.putJournal({ ...entry, runtime, updatedAt: sentAt });
+    latest.current = pendingFor(runtime, entry.updatedAt);
+    c.putJournal({ ...entry, runtime, updatedAt: runtime.updatedAt });
   };
   const onRolled = (result: RollResult) => c.sendRoll({ formula: result.formula, total: result.total, dice: result.dice.map((die) => ({ sides: die.sides, value: die.value })), modifier: result.modifier, label: `${entry.name} · ${result.label}${result.note ? ` (${result.note})` : ""}` });
   const mayExport = viewer.isGm || viewer.snapshot.settings.playersCanExportToVault;

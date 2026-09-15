@@ -127,7 +127,8 @@ const d20 = (random: () => number) => 1 + Math.floor(random() * 20);
 export const hasFreeHand = (items: Array<{ equipped?: boolean; wieldSlot?: "main-hand" | "off-hand" | "two-hand" }>) => !items.some((item) => item.equipped && (item.wieldSlot === "off-hand" || item.wieldSlot === "two-hand"));
 
 /** Conditions that take the action away altogether. */
-export const CANNOT_ACT = ["행동불능", "무의식", "마비", "석화"];
+// 2024: Paralyzed, Petrified, Stunned and Unconscious all include the Incapacitated condition.
+export const CANNOT_ACT = ["행동불능", "무의식", "마비", "석화", "충격"];
 export const cannotAct = (conditions: string[]) => CANNOT_ACT.find((name) => conditions.includes(name));
 
 export function resolveAction(input: ActInput): ActResult {
