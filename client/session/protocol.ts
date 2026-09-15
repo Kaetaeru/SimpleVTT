@@ -10,7 +10,7 @@ import type { Tracker, TrackerTurn } from "../campaign/tracker";
 import type { AttackOverrides } from "../rules/resolve";
 import type { CampaignSettings, ChatMessage, PlayerRole } from "../campaign/model";
 
-export const PROTOCOL_VERSION = 7;
+export const PROTOCOL_VERSION = 8;
 
 export interface Presence { userId: string; displayName: string; role: PlayerRole; color: string; connected: boolean }
 
@@ -77,7 +77,11 @@ export type ClientCommand =
   /** "다음 턴" (GM): turn-end and turn-start processing, then the highlight moves. */
   | { type: "tracker.next" }
   /** Attack (§12.2): the host resolves and applies, one card per target. */
-  | { type: "act.attack"; attacker: ActorRef; targets: ActorRef[]; attack: AttackRef; riders?: AttackRiders; overrides?: AttackOverrides }
+  | { type: "act.attack"; attacker: ActorRef; targets: ActorRef[]; attack: AttackRef; riders?: AttackRiders; overrides?: AttackOverrides; /** Answering an opportunity prompt (the prompt's message id): the attack is the reactor's reaction. */ reaction?: string }
+  /** D96: `mover` leaves `from`'s reach (the 벗어남 button); the host asks `from`'s controller for an opportunity attack. */
+  | { type: "act.provoke"; mover: ActorRef; from: ActorRef }
+  /** The reactor's controller lets the opportunity go. */
+  | { type: "act.decline"; messageId: string }
   /** DM palette: re-resolve a card with overrides (same dice unless `reroll`), superseding it. */
   | { type: "act.adjust"; messageId: string; overrides: AttackOverrides; reroll?: boolean }
   /** DM palette: take the card's application back. */

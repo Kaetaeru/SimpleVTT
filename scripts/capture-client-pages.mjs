@@ -42,6 +42,8 @@ try {
   await dm.getByRole("button", { name: "새 캠페인" }).click();
   await dm.getByRole("heading", { name: "페이지 시험" }).waitFor();
   const code = (await dm.locator(".cl-code").first().textContent())?.trim() ?? "";
+  // These scenarios exercise the grid table; a new campaign opens in TotM mode (D95), so switch it before launching.
+  await dm.getByLabel("테이블 방식").selectOption("grid");
   await dm.getByRole("button", { name: "게임 시작" }).click();
   await dm.locator(".cl-chat-input").waitFor();
   await player.goto(`${base}#/campaigns`);

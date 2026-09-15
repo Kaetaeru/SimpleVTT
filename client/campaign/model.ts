@@ -30,6 +30,8 @@ export interface CampaignSettings {
   chatAvatars: boolean;
   /** D90: results wait for the GM's "적용" instead of landing at once. */
   dmConfirmsResults?: boolean;
+  /** D95: "totm" (Theatre of the Mind, the default) plays on scenes without distances; "grid" on maps. */
+  tableMode?: "totm" | "grid";
 }
 
 export interface Campaign {
@@ -56,10 +58,19 @@ export interface Campaign {
 }
 
 /** One chat message of the archive (Roll20 chat types), stored per campaign in month files (§7). */
+/** "○○이(가) △△에게서 벗어남": the reactor's controller may take an opportunity attack or let it go. */
+export interface ReactionPrompt {
+  kind: "opportunity";
+  mover: { name: string; entryId?: string; pageId?: string; tokenId?: string };
+  reactor: { name: string; entryId?: string; pageId?: string; tokenId?: string };
+  /** Filled once answered: the attack card id, or declined. */
+  outcome?: { attacked?: string; declined?: boolean };
+}
+
 export interface ChatMessage {
   id: string;
   at: string;
-  type: "general" | "whisper" | "emote" | "desc" | "rollresult" | "gmroll" | "system" | "action";
+  type: "general" | "whisper" | "emote" | "desc" | "rollresult" | "gmroll" | "system" | "action" | "prompt";
   /** Display name at the time. */
   who: string;
   playerId?: string;
@@ -73,6 +84,8 @@ export interface ChatMessage {
   supersedes?: string;
   /** Set on a card whose application was undone. */
   undone?: boolean;
+  /** A question to one side (type "prompt"): an opportunity attack offered to the creature being left (D96). */
+  prompt?: ReactionPrompt;
 }
 
 export interface ChatArchive {
@@ -114,7 +127,7 @@ export function newCampaign(name: string, owner: { userId: string; displayName: 
     ruleset: "dnd.srd-5.2.1",
     moduleIds: [],
     joinCode: newJoinCode(),
-    settings: { playersCanCreateCharacters: true, playersCanExportToVault: true, chatAvatars: true },
+    settings: { playersCanCreateCharacters: true, playersCanExportToVault: true, chatAvatars: true, tableMode: "totm" },
     description: "",
     players: [{ userId: owner.userId, displayName: owner.displayName || "DM", role: "gm", color: PLAYER_COLORS[0], joinedAt: now, lastSeenAt: now }],
     createdAt: now,
@@ -181,7 +194,7 @@ export function repairCampaign(campaign: Campaign): Campaign {
     description: campaign.description ?? "",
     createdAt: campaign.createdAt ?? now,
     updatedAt: now,
-    settings: { playersCanCreateCharacters: true, playersCanExportToVault: true, chatAvatars: true, ...(campaign.settings as Partial<CampaignSettings>) },
+    settings: { playersCanCreateCharacters: true, playersCanExportToVault: true, chatAvatars: true, tableMode: "totm", ...(campaign.settings as Partial<CampaignSettings>) },
     players: campaign.players.filter((player) => player && typeof player.userId === "string").map((player, index) => ({ ...player, displayName: player.displayName ?? "플레이어", role: player.role === "gm" ? "gm" : "player", color: player.color ?? PLAYER_COLORS[index % PLAYER_COLORS.length], joinedAt: player.joinedAt ?? now })),
   };
 }

@@ -91,7 +91,10 @@ export interface CampaignsState {
   setTracker: (tracker: Tracker) => void;
   addTurn: (turn: Omit<TrackerTurn, "id" | "initiative"> & { initiative?: number }, rollBonus?: number) => void;
   nextTurn: () => void;
-  attack: (attacker: ActorRef, targets: ActorRef[], attack: AttackRef, riders?: AttackRiders) => void;
+  attack: (attacker: ActorRef, targets: ActorRef[], attack: AttackRef, riders?: AttackRiders, options?: { overrides?: AttackOverrides; reaction?: string }) => void;
+  /** D96: the mover leaves `from`'s reach; the host asks `from`'s controller for an opportunity attack. */
+  provoke: (mover: ActorRef, from: ActorRef) => void;
+  declineReaction: (messageId: string) => void;
   adjustAction: (messageId: string, overrides: AttackOverrides, reroll?: boolean) => void;
   undoAction: (messageId: string) => void;
   confirmAction: (messageId: string) => void;
@@ -385,7 +388,9 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
   const setTracker = useCallback((tracker: Tracker) => send({ type: "tracker.set", tracker }), [send]);
   const addTurn = useCallback((turn: Omit<TrackerTurn, "id" | "initiative"> & { initiative?: number }, rollBonus?: number) => send({ type: "tracker.add", turn, rollBonus }), [send]);
   const nextTurn = useCallback(() => send({ type: "tracker.next" }), [send]);
-  const attack = useCallback((attacker: ActorRef, targets: ActorRef[], ref: AttackRef, riders?: AttackRiders) => send({ type: "act.attack", attacker, targets, attack: ref, riders }), [send]);
+  const attack = useCallback((attacker: ActorRef, targets: ActorRef[], ref: AttackRef, riders?: AttackRiders, options?: { overrides?: AttackOverrides; reaction?: string }) => send({ type: "act.attack", attacker, targets, attack: ref, riders, overrides: options?.overrides, reaction: options?.reaction }), [send]);
+  const provoke = useCallback((mover: ActorRef, from: ActorRef) => send({ type: "act.provoke", mover, from }), [send]);
+  const declineReaction = useCallback((messageId: string) => send({ type: "act.decline", messageId }), [send]);
   const adjustAction = useCallback((messageId: string, overrides: AttackOverrides, reroll?: boolean) => send({ type: "act.adjust", messageId, overrides, reroll }), [send]);
   const undoAction = useCallback((messageId: string) => send({ type: "act.undo", messageId }), [send]);
   const confirmAction = useCallback((messageId: string) => send({ type: "act.confirm", messageId }), [send]);
@@ -420,7 +425,7 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
   const table = useMemo<TableState>(() => ({ role, status: client ? client.status : "idle", reason: client?.reason ?? null, campaignId, snapshot: client?.snapshot ?? null, invite, invites, transportNote, refusals, shows, artUrls, artPending, pings }),
   // eslint-disable-next-line react-hooks/exhaustive-deps
   [role, client, campaignId, invite, invites, transportNote, refusals, shows, artUrls, artPending, pings, tick]);
-  const value = useMemo<CampaignsState>(() => ({ userId, displayName, setDisplayName, campaigns, joined, archives, journals, arts, pages, createCampaign, updateCampaign, deleteCampaign, regenerateJoinCode, forgetJoined, table, launch, join, leave, say, sendRoll, setRole, kick, putJournal, removeJournal, showJournal, dismissShow, uploadArt, updateArt, removeArt, requestArt, putPage, removePage, setRibbon, setBookmark, putToken, removeToken, ping, setTracker, addTurn, nextTurn, attack, adjustAction, undoAction, confirmAction }),
+  const value = useMemo<CampaignsState>(() => ({ userId, displayName, setDisplayName, campaigns, joined, archives, journals, arts, pages, createCampaign, updateCampaign, deleteCampaign, regenerateJoinCode, forgetJoined, table, launch, join, leave, say, sendRoll, setRole, kick, putJournal, removeJournal, showJournal, dismissShow, uploadArt, updateArt, removeArt, requestArt, putPage, removePage, setRibbon, setBookmark, putToken, removeToken, ping, setTracker, addTurn, nextTurn, attack, provoke, declineReaction, adjustAction, undoAction, confirmAction }),
     [userId, displayName, setDisplayName, campaigns, joined, archives, journals, arts, pages, createCampaign, updateCampaign, deleteCampaign, regenerateJoinCode, forgetJoined, table, launch, join, leave, say, sendRoll, setRole, kick, putJournal, removeJournal, showJournal, dismissShow, uploadArt, updateArt, removeArt, requestArt, putPage, removePage, setRibbon, setBookmark, putToken, removeToken, ping, setTracker, addTurn, nextTurn, attack, adjustAction, undoAction, confirmAction]);
   return <CampaignsContext.Provider value={value}>{children}</CampaignsContext.Provider>;
 }

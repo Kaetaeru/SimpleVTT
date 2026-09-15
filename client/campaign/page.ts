@@ -76,6 +76,8 @@ export interface Page {
   grid: { enabled: boolean; type: GridType; cell: number; color: string; opacity: number; labels: boolean; snap: boolean };
   background: { color: string; image?: string };
   fog: { enabled: boolean };
+  /** "scene" = Theatre of the Mind: tokens are icons on a board, positions and distances are not tracked. Missing = grid. */
+  layout?: "grid" | "scene";
   archived: boolean;
   tokens: Token[];
   createdAt: string;
@@ -106,6 +108,14 @@ export function newPage(campaignId: string, name: string, order: number, now = n
     background: { color: "#d9d2c5" }, fog: { enabled: false }, archived: false, tokens: [], createdAt: now, updatedAt: now,
   };
 }
+
+/** A Theatre-of-the-Mind scene: no grid, no distances; tokens are the actors present (D95). */
+export function newScene(campaignId: string, name: string, order: number, now = new Date().toISOString()): Page {
+  const page = newPage(campaignId, name, order, now);
+  return { ...page, layout: "scene", grid: { ...page.grid, enabled: false } };
+}
+
+export const isScene = (page: Pick<Page, "layout"> | null | undefined) => page?.layout === "scene";
 
 export function newToken(partial: Partial<Token> & { name: string }): Token {
   const { id, ...rest } = partial;

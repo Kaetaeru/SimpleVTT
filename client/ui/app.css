@@ -452,3 +452,24 @@ span.cl-tracker-init{display:inline-grid;place-items:center}
 .cl-die.small{min-width:20px;height:20px;font-size:11px}
 .cl-action-damage{display:flex;flex-direction:column;gap:2px;padding-top:2px;border-top:1px dashed var(--line)}
 .cl-palette{display:flex;flex-wrap:wrap;gap:3px;padding-top:4px;border-top:1px dashed var(--line)}
+
+/* ---- T1: Theatre-of-the-Mind scene board (D95) and opportunity prompts (D96) ---- */
+.cl-canvas-viewport.scene{background:var(--surface);background-image:none;overflow:auto}
+.cl-scene{min-height:100%;padding:16px;display:flex;flex-direction:column;gap:18px}
+.cl-scene-empty{max-width:520px}
+.cl-scene-group h4{margin:0 0 8px;font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.cl-scene-icons{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start}
+.cl-scene-icon{position:relative;width:104px;display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 6px 6px;border-radius:var(--radius-m);border:1px solid var(--line);background:var(--surface-2);cursor:pointer;user-select:none}
+.cl-scene-icon.layer-gm{opacity:.75;border-style:dashed;border-color:#ffb347}
+.cl-scene-icon.selected{outline:3px solid var(--accent);outline-offset:1px}
+.cl-scene-icon.picked{outline:3px dashed #e5484d;outline-offset:2px}
+.cl-scene-icon.turn{box-shadow:0 0 0 3px #ffd166,0 0 14px #ffd166}
+.cl-scene-avatar{position:relative;width:64px;height:64px;border-radius:12px;overflow:visible;background:var(--surface);border:2px solid rgba(0,0,0,.4);display:grid;place-items:center}
+.cl-scene-avatar .cl-token-img{border-radius:10px}
+.cl-scene-avatar .cl-token-markers{right:-6px;top:-6px}
+.cl-scene-label{font-size:12px;font-weight:600;text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cl-scene-bars{width:100%;display:flex;flex-direction:column;gap:2px}
+.cl-scene-bars .cl-token-bar{height:11px}
+.cl-scene-bars .cl-token-bar>small{font-size:9px;line-height:10px}
+.cl-scene-leave{margin-top:2px;font-size:11px}
+.cl-chat-msg.prompt .cl-prompt-card{margin-top:4px;padding:8px 10px;border-radius:var(--radius-m);border:1px solid var(--line-2);background:var(--surface-2);display:flex;flex-direction:column;gap:6px}

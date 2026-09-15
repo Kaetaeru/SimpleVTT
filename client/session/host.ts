@@ -19,7 +19,7 @@ import { npcAttackSpec, npcCombatant } from "../rules/attackSpec";
 import type { AttackOverrides, AttackResolution, AttackSpec, Combatant } from "../rules/resolve";
 import { describeResolution, diceFrom, resolveAttack } from "../rules/resolve";
 import type { ActorRef, AttackRef, AttackRiders } from "./protocol";
-import { cellDistance } from "../campaign/page";
+import { cellDistance, isScene } from "../campaign/page";
 import type { Campaign, ChatMessage, PlayerRole } from "../campaign/model";
 import { newMessageId, withPlayer, withPlayerKicked, withPlayerRole } from "../campaign/model";
 import { rollFormula } from "../character/dice";
@@ -415,13 +415,53 @@ export class TableHost {
         if (!attackerEntry) return refuse("공격자를 찾을 수 없습니다");
         if (!isGm && !this.mayAct(userId, command.attacker, attackerEntry.entry)) return refuse("자기 캐릭터로만 공격할 수 있습니다");
         if (!command.targets?.length) return refuse("대상이 없습니다");
-        const prepared = this.prepareAttack(attackerEntry, command.attack, command.riders ?? {});
+        let prepared = this.prepareAttack(attackerEntry, command.attack, command.riders ?? {});
         if (!prepared) return refuse("그 공격을 찾을 수 없습니다");
+        // D95: players may declare advantage/disadvantage; cover and forced outcomes are the DM's (pre-roll or palette).
+        const overrides = isGm ? command.overrides : command.overrides?.advantage ? { advantage: command.overrides.advantage } : undefined;
+        // D96: answering an opportunity prompt — the attack is the reactor's reaction against the mover.
+        let promptMessage: ChatMessage | undefined;
+        if (command.reaction) {
+          promptMessage = this.chat.find((message) => message.id === command.reaction && message.type === "prompt");
+          const prompt = promptMessage?.prompt;
+          if (!prompt || this.promptAnswered(command.reaction)) return refuse("그 기회 공격은 더 이상 열려 있지 않습니다");
+          if (!sameActor(prompt.reactor, command.attacker)) return refuse("그 프롬프트의 반응자만 기회 공격을 할 수 있습니다");
+          if (command.targets.length !== 1 || !sameActor(prompt.mover, command.targets[0])) return refuse("기회 공격의 대상은 벗어나는 쪽입니다");
+          if (this.reactionUsed(command.attacker)) return refuse("이번 라운드의 반응을 이미 썼습니다");
+          if (prepared.spec.mode !== "melee") return refuse("기회 공격은 근접 공격으로만 합니다");
+          prepared = { ...prepared, spec: { ...prepared.spec, name: `${prepared.spec.name} · 기회 공격` } };
+        }
+        let firstCardId: string | undefined;
         command.targets.forEach((ref, index) => {
           const targetEntry = this.resolveActor(ref);
           if (!targetEntry) { this.reply(peerId, { type: "refused", reason: "대상을 찾을 수 없습니다", commandType: command.type }); return; }
-          this.runAttack({ attacker: command.attacker, targets: command.targets, attack: command.attack, riders: command.riders, by: userId, targetIndex: index }, attackerEntry, targetEntry, prepared, command.overrides, undefined, undefined, index === 0 ? prepared.spend : undefined);
+          const id = this.runAttack({ attacker: command.attacker, targets: command.targets, attack: command.attack, riders: command.riders, by: userId, targetIndex: index }, attackerEntry, targetEntry, prepared!, overrides, undefined, undefined, index === 0 ? prepared!.spend : undefined);
+          if (index === 0) firstCardId = id;
         });
+        if (promptMessage && firstCardId) {
+          this.say({ ...promptMessage, prompt: { ...promptMessage.prompt!, outcome: { attacked: firstCardId } }, supersedes: promptMessage.id, content: `${promptMessage.content} → 기회 공격` });
+          this.markReactionUsed(command.attacker);
+        }
+        return;
+      }
+      case "act.provoke": {
+        const mover = this.resolveActor(command.mover);
+        const from = this.resolveActor(command.from);
+        if (!mover || !from) return refuse("벗어나는 쪽이나 상대를 찾을 수 없습니다");
+        if (!isGm && !this.mayAct(userId, command.mover, mover.entry)) return refuse("자기 캐릭터로만 벗어날 수 있습니다");
+        if (mover.entry.id === from.entry.id && mover.token?.id === from.token?.id) return refuse("자기 자신에게서 벗어날 수는 없습니다");
+        const moverName = mover.token?.name ?? mover.entry.name;
+        const fromName = from.token?.name ?? from.entry.name;
+        this.say({ type: "prompt", who: player.displayName, playerId: userId, content: `${moverName}이(가) ${fromName}에게서 벗어납니다 — ${fromName}의 기회 공격?`, prompt: { kind: "opportunity", mover: { name: moverName, ...command.mover }, reactor: { name: fromName, ...command.from } } });
+        return;
+      }
+      case "act.decline": {
+        const promptMessage = this.chat.find((message) => message.id === command.messageId && message.type === "prompt");
+        if (!promptMessage?.prompt || this.promptAnswered(command.messageId)) return refuse("그 프롬프트는 더 이상 열려 있지 않습니다");
+        const reactor = this.resolveActor(promptMessage.prompt.reactor);
+        if (!reactor) return refuse("반응자를 찾을 수 없습니다");
+        if (!isGm && !this.mayAct(userId, promptMessage.prompt.reactor, reactor.entry)) return refuse("반응자의 조종자만 답할 수 있습니다");
+        this.say({ ...promptMessage, prompt: { ...promptMessage.prompt, outcome: { declined: true } }, supersedes: promptMessage.id, content: `${promptMessage.content} → 안 함` });
         return;
       }
       case "act.adjust": {
@@ -499,11 +539,12 @@ export class TableHost {
     return null;
   }
 
-  private runAttack(inputs: { attacker: ActorRef; targets: ActorRef[]; attack: AttackRef; riders?: AttackRiders; by: string; targetIndex: number }, attacker: { entry: JournalEntry; token?: Token; page?: Page }, target: { entry: JournalEntry; token?: Token; page?: Page }, prepared: { spec: AttackSpec; spend?: (runtime: CharacterRuntime) => CharacterRuntime }, overrides?: AttackOverrides, fixed?: { d20s: number[]; damage: number[][] }, supersedes?: string, spend?: (runtime: CharacterRuntime) => CharacterRuntime) {
+  private runAttack(inputs: { attacker: ActorRef; targets: ActorRef[]; attack: AttackRef; riders?: AttackRiders; by: string; targetIndex: number }, attacker: { entry: JournalEntry; token?: Token; page?: Page }, target: { entry: JournalEntry; token?: Token; page?: Page }, prepared: { spec: AttackSpec; spend?: (runtime: CharacterRuntime) => CharacterRuntime }, overrides?: AttackOverrides, fixed?: { d20s: number[]; damage: number[][] }, supersedes?: string, spend?: (runtime: CharacterRuntime) => CharacterRuntime): string | undefined {
     const attackerCombatant = this.combatantOf(attacker);
     const targetCombatant = this.combatantOf(target);
-    if (!attackerCombatant || !targetCombatant) return;
-    if (attacker.token && target.token && attacker.page && target.page && attacker.page.id === target.page.id) targetCombatant.distanceFeet = Math.max(0, cellDistance(centre(attacker.token), centre(target.token)) - (attacker.token.w + target.token.w) / 2 + 1) * attacker.page.scale;
+    if (!attackerCombatant || !targetCombatant) return undefined;
+    // D95: a scene (Theatre of the Mind) tracks no positions, so range never decides; the DM adjusts by hand.
+    if (attacker.token && target.token && attacker.page && target.page && attacker.page.id === target.page.id && !isScene(attacker.page)) targetCombatant.distanceFeet = Math.max(0, cellDistance(centre(attacker.token), centre(target.token)) - (attacker.token.w + target.token.w) / 2 + 1) * attacker.page.scale;
     const waits = Boolean(this.campaign.settings.dmConfirmsResults) && this.roleOf(inputs.by) !== "gm";
     const resolution = resolveAttack(attackerCombatant, targetCombatant, prepared.spec, { dice: diceFrom(this.options.random ?? Math.random), overrides, fixed, apply: !waits });
     // Riders with a cost (a smite slot) are paid once per attack, by the first target's card.
@@ -513,9 +554,21 @@ export class TableHost {
     if (waits) {
       this.actions.set(messageId, { inputs, resolution, restore: () => undefined });
       this.sayWithId(messageId, { type: "action", who: player?.displayName ?? "", playerId: inputs.by, content: `${describeResolution(resolution)} (DM 확인 대기)`, action: resolution, supersedes });
-      return;
+      return messageId;
     }
     this.applyResolution(resolution, target, attacker, messageId, false, inputs, supersedes, player?.displayName);
+    return messageId;
+  }
+
+  /** A prompt is answered once a later message supersedes it. */
+  private promptAnswered(promptId: string) { return this.chat.some((message) => message.supersedes === promptId); }
+
+  private turnOf(ref: ActorRef) { return this.tracker.turns.find((turn) => (ref.tokenId ? turn.tokenId === ref.tokenId && turn.pageId === ref.pageId : Boolean(ref.entryId) && turn.entryId === ref.entryId)); }
+  private reactionUsed(ref: ActorRef) { return Boolean(this.turnOf(ref)?.reactionUsed); }
+  private markReactionUsed(ref: ActorRef) {
+    const turn = this.turnOf(ref);
+    if (!turn) return;
+    this.setTracker({ ...this.tracker, turns: this.tracker.turns.map((item) => (item.id === turn.id ? { ...item, reactionUsed: true } : item)) });
   }
 
   /** Write the result into the target (PC sheet or NPC token/sheet) and post the card; remember how to undo it. */
@@ -597,7 +650,9 @@ export class TableHost {
       runtime = { ...runtime, updatedAt: this.now() };
       this.storeEntry({ ...started, runtime, updatedAt: this.now() });
     }
-    this.setTracker(result.tracker);
+    // The reaction comes back at the start of the creature's turn.
+    const startedId = result.started?.id;
+    this.setTracker(startedId ? { ...result.tracker, turns: result.tracker.turns.map((turn) => (turn.id === startedId && turn.reactionUsed ? { ...turn, reactionUsed: false } : turn)) } : result.tracker);
   }
 
   /** The ribbon or a bookmark moved: every mirror learns it, then every page is resent so each player ends up with exactly their page. */
@@ -741,3 +796,4 @@ export class TableHost {
 }
 
 const centre = (token: Token) => ({ x: token.x + token.w / 2, y: token.y + token.h / 2 });
+const sameActor = (a: ActorRef, b: ActorRef) => (a.tokenId && b.tokenId ? a.tokenId === b.tokenId && (a.pageId ?? "") === (b.pageId ?? "") : Boolean(a.entryId) && a.entryId === b.entryId);

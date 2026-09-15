@@ -14,6 +14,8 @@ export interface TrackerTurn {
   /** The journal entry behind the token (character or npc) for turn processing. */
   entryId?: string;
   image?: string;
+  /** The creature spent its reaction (an opportunity attack) since its last turn started; cleared at its turn start. */
+  reactionUsed?: boolean;
   /** A custom row; `formula` like "+1" changes its value every time it comes around (Roll20's round counter idiom). */
   custom?: boolean;
   formula?: string;

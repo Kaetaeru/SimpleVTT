@@ -21,6 +21,7 @@ import { NpcWindow } from "./NpcSheet";
 import { TrackerWindow } from "./TrackerWindow";
 import { journalDragProps, PageSettingsWindow, placeCharacterToken, requestTargets, TokenWindow } from "./PageCanvas";
 import { hasSmite, hasSneakAttack, smiteSlots, weaponRange } from "../rules/attackSpec";
+import { isScene } from "../campaign/page";
 import { SheetPlay } from "./SheetPlay";
 import { SheetView } from "./SheetView";
 
@@ -396,7 +397,7 @@ function CharacterWindow({ entry, onClose, onOpen }: { entry: JournalCharacter; 
     const page = viewer.snapshot.pages.find((item) => item.tokens.some((token) => token.represents === entry.id));
     const token = page?.tokens.find((item) => item.represents === entry.id);
     const range = weaponRange(attack);
-    const targets = await requestTargets(`${attack.name} 대상을 클릭하세요 (Esc 취소, 여러 대상은 Shift)`, { multi: true, from: token ? { tokenId: token.id, rangeFeet: range.rangeFeet, longRangeFeet: range.longRangeFeet } : undefined });
+    const targets = await requestTargets(`${attack.name} 대상을 클릭하세요 (Esc 취소, 여러 대상은 Shift)`, { multi: true, from: token && !isScene(page) ? { tokenId: token.id, rangeFeet: range.rangeFeet, longRangeFeet: range.longRangeFeet } : undefined });
     if (!targets.length || !page) return;
     const sneak = hasSneakAttack(derived, attack);
     const slots = hasSmite(derived) ? smiteSlots(derived, entry.runtime) : [];

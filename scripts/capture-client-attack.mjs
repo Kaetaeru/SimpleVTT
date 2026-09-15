@@ -46,6 +46,8 @@ try {
   await dm.getByRole("button", { name: "새 캠페인" }).click();
   await dm.getByRole("heading", { name: "판정 시험" }).waitFor();
   const code = (await dm.locator(".cl-code").first().textContent())?.trim() ?? "";
+  // These scenarios exercise the grid table; a new campaign opens in TotM mode (D95), so switch it before launching.
+  await dm.getByLabel("테이블 방식").selectOption("grid");
   await dm.getByRole("button", { name: "게임 시작" }).click();
   await dm.locator(".cl-chat-input").waitFor();
   await player.goto(`${base}#/campaigns`);
@@ -143,6 +145,8 @@ try {
   await pickTarget(dm, "앨리스의 파이터");
   await dm.locator(".cl-targeting-banner[data-picked='1']").waitFor({ timeout: 10000 });
   await dm.locator(".cl-targeting-banner").getByRole("button", { name: "확정" }).click();
+  // The DM gets the pre-roll dialog (D95): roll as the dice fall.
+  await dm.getByRole("button", { name: "공격", exact: true }).click();
   const head2 = "고블린 전사 → 앨리스의 파이터: 시미터";
   await cardOf(dm, head2).waitFor({ timeout: 15000 });
   await cardOf(dm, head2).getByRole("button", { name: "강제 적중" }).click();

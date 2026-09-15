@@ -6,6 +6,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useCampaigns } from "../app/campaigns";
 import { useClient } from "../app/context";
 import type { ChatMessage } from "../campaign/model";
+import { canEdit } from "../campaign/journal";
+import { controlsToken } from "../campaign/page";
+import { deriveCharacter } from "../character/derive";
+import { weaponRange } from "../rules/attackSpec";
+import type { ActorRef, AttackRef } from "../session/protocol";
 import type { AttackResolution } from "../rules/resolve";
 import { damageTypeKo } from "../rules/resolve";
 import { parseFormula } from "../character/dice";
@@ -133,6 +138,7 @@ function ChatLine({ message, me, color, targetName }: { message: ChatMessage; me
   const mine = message.playerId === me;
   switch (message.type) {
     case "action": return <ActionCard message={message} time={time} color={color} />;
+    case "prompt": return <PromptCard message={message} time={time} color={color} />;
     case "system": return <div className="cl-chat-msg system"><span className="cl-at">{time}</span>{message.content}</div>;
     case "desc": return <div className="cl-chat-msg desc"><span className="cl-at">{time}</span>{message.content}</div>;
     case "emote": return <div className="cl-chat-msg emote"><span className="cl-at">{time}</span><span className="cl-swatch" style={{ background: color }} /><em>{message.who} {message.content}</em></div>;
@@ -153,6 +159,42 @@ function ChatLine({ message, me, color, targetName }: { message: ChatMessage; me
     }
     default: return <div className={`cl-chat-msg${mine ? " mine" : ""}`}><span className="cl-at">{time}</span><span className="cl-who" style={{ color }}>{message.who}</span><div>{message.content}</div></div>;
   }
+}
+
+/** D96: "○○이(가) △△에게서 벗어납니다" — the reactor's controller takes an opportunity attack (a melee attack as the reaction) or lets it go. */
+function PromptCard({ message, time, color }: { message: ChatMessage; time: string; color?: string }) {
+  const c = useCampaigns();
+  const { catalog } = useClient();
+  const snapshot = c.table.snapshot!;
+  const role = snapshot.players.find((player) => player.userId === c.userId)?.role ?? "player";
+  const viewer = { userId: c.userId, role };
+  const prompt = message.prompt!;
+  const reactorEntry = snapshot.journal.find((entry) => entry.id === prompt.reactor.entryId);
+  const reactorToken = snapshot.pages.find((page) => page.id === prompt.reactor.pageId)?.tokens.find((token) => token.id === prompt.reactor.tokenId);
+  const controls = Boolean(reactorEntry && (reactorToken ? controlsToken(reactorToken, viewer, snapshot.journal) : canEdit(reactorEntry, viewer)));
+  const reactionUsed = snapshot.tracker.turns.some((turn) => (prompt.reactor.tokenId ? turn.tokenId === prompt.reactor.tokenId && turn.pageId === prompt.reactor.pageId : turn.entryId === prompt.reactor.entryId) && turn.reactionUsed);
+  const attacks = useMemo<Array<{ name: string; ref: AttackRef }>>(() => {
+    if (!reactorEntry) return [];
+    if (reactorEntry.kind === "npc") return reactorEntry.statBlock.actions.filter((action) => action.kind === "attack" && action.attack && action.attack.mode !== "ranged").map((action) => ({ name: action.name, ref: { source: "npc", actionName: action.name } }));
+    if (reactorEntry.kind === "character") { const derived = deriveCharacter(reactorEntry.source, catalog, { equipped: reactorEntry.runtime.equipped, inventory: reactorEntry.runtime.inventory, effects: reactorEntry.runtime.effects }); return derived.attacks.filter((attack) => weaponRange(attack).mode === "melee").map((attack) => ({ name: attack.name, ref: { source: "weapon", attackId: attack.id } })); }
+    return [];
+  }, [reactorEntry, catalog]);
+  const ref = (actor: typeof prompt.reactor): ActorRef => ({ entryId: actor.entryId, pageId: actor.pageId, tokenId: actor.tokenId });
+  return (
+    <div className="cl-chat-msg prompt" data-prompt-id={message.id}>
+      <span className="cl-at">{time}</span>{message.who ? <span className="cl-who" style={{ color }}>{message.who}</span> : null}
+      <div className="cl-prompt-card">
+        <div>🏃 {prompt.mover.name}이(가) <strong>{prompt.reactor.name}</strong>에게서 벗어납니다</div>
+        {prompt.outcome ? <Pill tone={prompt.outcome.attacked ? "bad" : "accent"}>{prompt.outcome.attacked ? "기회 공격" : "기회 공격 안 함"}</Pill>
+          : controls ? (
+            <div className="cl-row" style={{ gap: 4, flexWrap: "wrap" }}>
+              {reactionUsed ? <span className="cl-quiet cl-small">이번 라운드의 반응을 이미 썼습니다</span> : attacks.map((attack) => <button type="button" key={attack.name} className="cl-btn small primary" onClick={() => c.attack(ref(prompt.reactor), [ref(prompt.mover)], attack.ref, undefined, { reaction: message.id })}>⚔ {attack.name} (기회 공격)</button>)}
+              <button type="button" className="cl-btn small" onClick={() => c.declineReaction(message.id)}>안 함</button>
+            </div>
+          ) : <span className="cl-quiet cl-small">{prompt.reactor.name}의 조종자가 답을 기다립니다</span>}
+      </div>
+    </div>
+  );
 }
 
 /** The 판정 card (§12.2 ⑥): every die, the comparison, what was applied, follow-ups, and the GM's palette. */
