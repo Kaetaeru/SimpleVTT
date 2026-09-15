@@ -76,7 +76,7 @@ export class TableClient {
         this.refusal = null;
         break;
       case "events":
-        if (!this.snapshotState) this.snapshotState = { campaignId: "", name: "", settings: { playersCanCreateCharacters: true, playersCanExportToVault: true, chatAvatars: true }, players: [], chat: [], journal: [], art: [], pages: [], pageBookmarks: {}, tracker: emptyTracker(), lastEventN: 0 };
+        if (!this.snapshotState) this.snapshotState = { campaignId: "", name: "", settings: { playersCanCreateCharacters: true, playersCanExportToVault: true, chatAvatars: true }, players: [], chat: [], journal: [], art: [], pages: [], pageBookmarks: {}, tracker: emptyTracker(), macros: [], tables: [], lastEventN: 0 };
         this.statusState = "joined";
         for (const event of message.events) this.applyEvent(event);
         break;
@@ -110,6 +110,8 @@ export class TableClient {
       }
       case "chat": { const index = state.chat.findIndex((item) => item.id === event.message.id); state.chat = (index >= 0 ? state.chat.map((item, at) => (at === index ? event.message : item)) : [...state.chat, event.message]).slice(-500); break; }
       case "settings": state.settings = event.settings; break;
+      case "macros": state.macros = event.macros; break;
+      case "tables": state.tables = event.tables; break;
       case "journal": {
         const index = state.journal.findIndex((item) => item.id === event.entry.id);
         state.journal = index >= 0 ? state.journal.map((item, at) => (at === index ? event.entry : item)) : [...state.journal, event.entry];

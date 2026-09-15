@@ -7,6 +7,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useCampaigns } from "../app/campaigns";
 import { useClient } from "../app/context";
 import type { Audience, JournalCharacter, JournalEntry, JournalFolder, Pending, TextSpan } from "../campaign/journal";
+import type { Macro } from "../campaign/model";
 import { canEdit, findByName, journalFolders, journalTree, newHandout, newJournalCharacter, parseJournalText, pendingFor, pendingValue } from "../campaign/journal";
 import { ABILITY_KEYS, ABILITY_KO } from "../catalog/types";
 import { deriveCharacter } from "../character/derive";
@@ -357,6 +358,34 @@ export function JournalText({ text, onOpen, empty }: { text: string; onOpen: (id
   );
 }
 
+/**
+ * R17 (D114): the macros saved on one sheet. Its controller edits them here and runs them from the chat macro bar
+ * or by typing `#이름`; anything the chat box understands works, so `/roll 1d20+7 #장검` or plain narration.
+ */
+function SheetMacros({ entry }: { entry: JournalCharacter }) {
+  const c = useCampaigns();
+  const macros = entry.macros ?? [];
+  const save = (next: Macro[]) => c.putJournal({ ...entry, macros: next, updatedAt: new Date().toISOString() });
+  return (
+    <div className="cl-field">
+      <label>매크로</label>
+      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+        {macros.map((macro, index) => (
+          <div className="cl-row" style={{ gap: 4 }} key={macro.id}>
+            <input className="cl-input" style={{ width: 120, height: 26 }} aria-label={`매크로 ${index + 1} 이름`} value={macro.name} onChange={(event) => save(macros.map((item, at) => (at === index ? { ...item, name: event.target.value.replace(/\s/g, "") } : item)))} />
+            <input className="cl-input" style={{ flex: 1, height: 26 }} aria-label={`매크로 ${index + 1} 내용`} placeholder="/roll 1d20+7 #장검 명중" value={macro.text} onChange={(event) => save(macros.map((item, at) => (at === index ? { ...item, text: event.target.value } : item)))} />
+            <button type="button" className="cl-btn small danger" aria-label={`매크로 ${index + 1} 삭제`} onClick={() => save(macros.filter((_, at) => at !== index))}>✕</button>
+          </div>
+        ))}
+        <div className="cl-row" style={{ gap: 6 }}>
+          <button type="button" className="cl-btn small" onClick={() => save([...macros, { id: `m_${Math.random().toString(36).slice(2, 9)}`, name: `매크로${macros.length + 1}`, text: "/roll 1d20" }])}>+ 매크로</button>
+          <span className="cl-quiet cl-small">채팅에서 <code>#이름</code>으로 실행합니다.</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ---------- Character ---------- */
 
 function CharacterWindow({ entry, onClose, onOpen }: { entry: JournalCharacter; onClose: () => void; onOpen: (id: string) => void }) {
@@ -429,6 +458,7 @@ function CharacterWindow({ entry, onClose, onOpen }: { entry: JournalCharacter; 
             </div>
           </div>
           <div className="cl-field"><label htmlFor={`cl-bio-${draft.id}`}>소개 (Bio)</label>{editable ? <textarea id={`cl-bio-${draft.id}`} className="cl-textarea" rows={6} value={draft.bio} onChange={(event) => edit({ bio: event.target.value })} placeholder="외모, 성격, 배경 이야기…" /> : <JournalText text={draft.bio} onOpen={onOpen} empty="소개가 없습니다." />}</div>
+          {editable ? <SheetMacros entry={entry} /> : null}
           {viewer.isGm ? <GmFields draft={draft} edit={edit} set={set} /> : null}
         </div>
       ) : null}

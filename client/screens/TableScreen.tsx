@@ -9,13 +9,13 @@ import type { SpellResolution, SpellTargetResult } from "../rules/spellcast";
 import { monsterById } from "../compendium/monsters";
 import { summonRule, summonsNothing } from "../rules/summons";
 import { useClient } from "../app/context";
-import type { ChatMessage } from "../campaign/model";
+import type { ChatMessage, Macro, RollTable } from "../campaign/model";
 import { PromptChoices } from "./Notify";
 import { ABILITY_KO } from "../catalog/types";
 import type { AttackResolution } from "../rules/resolve";
 import { damageTypeKo } from "../rules/resolve";
 import { parseFormula } from "../character/dice";
-import { describeChatRoll, parseChatInput } from "../session/chat";
+import { describeChatRoll, expandMacros, parseChatInput } from "../session/chat";
 import { copyText, Notice, Pill } from "../ui/components";
 import { useDice } from "../ui/dice/DiceProvider";
 import { ArtTab } from "./ArtPanel";
@@ -106,15 +106,21 @@ function ChatTab({ isGm }: { isGm: boolean }) {
   const messages = useMemo(() => snapshot.chat.filter((message) => !superseded.has(message.id)), [snapshot.chat, superseded]);
   useEffect(() => { const list = listRef.current; if (list) list.scrollTop = list.scrollHeight; }, [messages.length]);
   const names = useMemo(() => Object.fromEntries(snapshot.players.map((player) => [player.userId, player])), [snapshot.players]);
-  const submit = async () => {
-    const raw = text;
-    setText("");
+  // R17: `#이름` runs a macro — the campaign's shared ones plus the macros on sheets this viewer controls.
+  const myMacros = useMemo(() => {
+    const mine = snapshot.journal.filter((entry) => entry.canEdit.includes(c.userId) || isGm).flatMap((entry) => (entry.macros ?? []).map((macro) => ({ ...macro, from: entry.name })));
+    return [...snapshot.macros.map((macro) => ({ ...macro, from: "캠페인" })), ...mine];
+  }, [snapshot.journal, snapshot.macros, c.userId, isGm]);
+  const submit = async (typed?: string) => {
+    const raw = expandMacros(typed ?? text, myMacros);
+    if (typed === undefined) setText("");
     const input = parseChatInput(raw);
     if (input.kind === "empty") return;
+    if (input.kind === "table") { c.rollTable(input.name, input.count, input.mode); return; }
     // Rolls typed here go through the 3D dice: the roller sees them tumble, then the result reaches the table.
     if (input.kind === "roll" && parseFormula(input.formula)) {
       const result = await dice.roll({ label: input.label ?? "굴림", formula: input.formula, kind: "custom" });
-      c.sendRoll({ formula: input.formula, total: result.total, dice: result.dice.map((die) => ({ sides: die.sides, value: die.value })), modifier: result.modifier, label: input.label }, input.mode);
+      c.sendRoll({ formula: input.formula, total: result.total, dice: result.dice.map((die) => ({ sides: die.sides, value: die.value, ...(die.dropped ? { dropped: true } : {}), ...(die.exploded ? { exploded: true } : {}), ...(die.success ? { success: true } : {}) })), modifier: result.modifier, label: input.label, ...(result.successes !== undefined ? { successes: result.successes } : {}) }, input.mode);
       return;
     }
     c.say(raw);
@@ -125,12 +131,69 @@ function ChatTab({ isGm }: { isGm: boolean }) {
         {messages.length === 0 ? <p className="cl-quiet cl-small">아직 채팅이 없습니다. <code>/roll 1d20+5</code>, <code>/w 이름 귓속말</code>, <code>/gmroll</code>, <code>/em</code>{isGm ? ", /desc" : ""}, 인라인 <code>[[2d6]]</code></p> : messages.map((message) => <ChatLine key={message.id} message={message} me={c.userId} color={message.playerId ? names[message.playerId]?.color : undefined} targetName={message.target === "gm" ? "GM" : message.target ? names[message.target]?.displayName : undefined} />)}
       </div>
       <div className="cl-chat-input">
-        <textarea className="cl-input" rows={2} placeholder="말하기… (/roll, /w, /em, [[1d6]])" aria-label="채팅 입력" value={text} onChange={(event) => setText(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); void submit(); } }} />
+        <MacroBar macros={myMacros} tables={snapshot.tables} isGm={isGm} onRun={(macro) => void submit(macro)} onTable={(name) => c.rollTable(name)} />
+        <textarea className="cl-input" rows={2} placeholder="말하기… (/roll 4d6kh3, #매크로, /roll 1t[표], [[1d6]])" aria-label="채팅 입력" value={text} onChange={(event) => setText(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); void submit(); } }} />
         <div className="cl-row" style={{ gap: 4 }}>
           {["1d20", "1d12", "1d10", "1d8", "1d6", "1d4"].map((formula) => <button type="button" key={formula} className="cl-btn small" onClick={() => { setText(`/roll ${formula}`); }} title={`/roll ${formula}`}>{formula.slice(1)}</button>)}
           <button type="button" className="cl-btn small primary" style={{ marginLeft: "auto" }} disabled={!text.trim()} onClick={() => void submit()}>보내기</button>
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * R17 (D114): the macro bar over the chat box — one button per macro this viewer may run and per rollable table,
+ * with the GM's editor for the campaign's own behind ✎. A character's macros live on its sheet (저널 → 매크로).
+ */
+function MacroBar({ macros, tables, isGm, onRun, onTable }: { macros: Array<Macro & { from: string }>; tables: RollTable[]; isGm: boolean; onRun: (text: string) => void; onTable: (name: string) => void }) {
+  const c = useCampaigns();
+  const [editing, setEditing] = useState(false);
+  const campaign = c.table.snapshot!.macros;
+  const set = (next: Macro[]) => c.saveMacros(next);
+  const setTables = (next: RollTable[]) => c.saveTables(next);
+  const newId = () => `m_${Math.random().toString(36).slice(2, 9)}`;
+  return (
+    <div className="cl-macro-bar">
+      <div className="cl-row cl-small" style={{ gap: 4, flexWrap: "wrap" }}>
+        {macros.map((macro) => <button type="button" key={`${macro.from}:${macro.id}`} className="cl-btn small" title={`${macro.from} · ${macro.text}`} onClick={() => onRun(macro.text)}>#{macro.name}</button>)}
+        {tables.map((table) => <button type="button" key={table.id} className="cl-btn small" title={`굴림표 ${table.name} — /roll 2t[${table.name}]로 여러 번`} onClick={() => onTable(table.name)}>🎲 {table.name}</button>)}
+        {isGm ? <button type="button" className="cl-btn small quiet" aria-label="매크로·굴림표 편집" onClick={() => setEditing((value) => !value)}>{editing ? "닫기" : "✎ 매크로·굴림표"}</button> : null}
+        {!macros.length && !tables.length && !isGm ? <span className="cl-quiet">매크로는 시트의 "매크로"에서, 굴림표는 DM이 만듭니다.</span> : null}
+      </div>
+      {editing && isGm ? (
+        <div className="cl-card cl-small" style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 4 }}>
+          <strong>캠페인 매크로</strong>
+          {campaign.map((macro, index) => (
+            <div className="cl-row" style={{ gap: 4 }} key={macro.id}>
+              <input className="cl-input" style={{ width: 110, height: 24 }} aria-label={`매크로 ${index + 1} 이름`} value={macro.name} onChange={(event) => set(campaign.map((item, at) => (at === index ? { ...item, name: event.target.value.replace(/\s/g, "") } : item)))} />
+              <input className="cl-input" style={{ flex: 1, height: 24 }} aria-label={`매크로 ${index + 1} 내용`} placeholder="/roll 1d20+5 #공격" value={macro.text} onChange={(event) => set(campaign.map((item, at) => (at === index ? { ...item, text: event.target.value } : item)))} />
+              <label className="cl-row cl-small" style={{ gap: 2 }}><input type="checkbox" checked={Boolean(macro.shared)} onChange={(event) => set(campaign.map((item, at) => (at === index ? { ...item, shared: event.target.checked } : item)))} aria-label={`${macro.name} 플레이어에게도`} />공유</label>
+              <button type="button" className="cl-btn small danger" onClick={() => set(campaign.filter((_, at) => at !== index))}>✕</button>
+            </div>
+          ))}
+          <button type="button" className="cl-btn small" onClick={() => set([...campaign, { id: newId(), name: `매크로${campaign.length + 1}`, text: "/roll 1d20" }])}>+ 매크로</button>
+          <strong>굴림표</strong>
+          {tables.map((table, index) => (
+            <div key={table.id} style={{ display: "flex", flexDirection: "column", gap: 3, borderTop: "1px solid var(--line)", paddingTop: 4 }}>
+              <div className="cl-row" style={{ gap: 4 }}>
+                <input className="cl-input" style={{ width: 130, height: 24 }} aria-label={`굴림표 ${index + 1} 이름`} value={table.name} onChange={(event) => setTables(tables.map((item, at) => (at === index ? { ...item, name: event.target.value } : item)))} />
+                <span className="cl-quiet">{table.rows.length}개 항목 · <code>/roll 1t[{table.name}]</code></span>
+                <button type="button" className="cl-btn small danger" style={{ marginLeft: "auto" }} onClick={() => setTables(tables.filter((_, at) => at !== index))}>표 삭제</button>
+              </div>
+              {table.rows.map((row, rowAt) => (
+                <div className="cl-row" style={{ gap: 4 }} key={rowAt}>
+                  <input className="cl-input" style={{ flex: 1, height: 24 }} aria-label={`${table.name} ${rowAt + 1}번 항목`} value={row.text} onChange={(event) => setTables(tables.map((item, at) => (at === index ? { ...item, rows: item.rows.map((candidate, where) => (where === rowAt ? { ...candidate, text: event.target.value } : candidate)) } : item)))} />
+                  <input className="cl-input" type="number" min={1} max={999} style={{ width: 56, height: 24 }} aria-label={`${table.name} ${rowAt + 1}번 가중치`} value={row.weight} onChange={(event) => setTables(tables.map((item, at) => (at === index ? { ...item, rows: item.rows.map((candidate, where) => (where === rowAt ? { ...candidate, weight: Math.max(1, Number(event.target.value) || 1) } : candidate)) } : item)))} />
+                  <button type="button" className="cl-btn small danger" onClick={() => setTables(tables.map((item, at) => (at === index ? { ...item, rows: item.rows.filter((_, where) => where !== rowAt) } : item)))}>✕</button>
+                </div>
+              ))}
+              <button type="button" className="cl-btn small" onClick={() => setTables(tables.map((item, at) => (at === index ? { ...item, rows: [...item.rows, { text: "", weight: 1 }] } : item)))}>+ 항목</button>
+            </div>
+          ))}
+          <button type="button" className="cl-btn small" onClick={() => setTables([...tables, { id: newId(), name: `굴림표${tables.length + 1}`, rows: [{ text: "", weight: 1 }] }])}>+ 굴림표</button>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -149,13 +212,25 @@ function ChatLine({ message, me, color, targetName }: { message: ChatMessage; me
     case "whisper": return <div className="cl-chat-msg whisper"><span className="cl-at">{time}</span><span className="cl-who" style={{ color }}>{message.who}</span><span className="cl-quiet cl-small"> → {targetName ?? "?"} (귓속말)</span><div>{message.content}</div></div>;
     case "rollresult":
     case "gmroll": {
-      const roll = message.roll!;
+      const roll = message.roll;
+      // R17: a rollable table draws rows, not dice — its card is the drawn text, with no die block.
+      if (!roll || roll.drawn?.length) {
+        return (
+          <div className={`cl-chat-msg roll${message.type === "gmroll" ? " gm" : ""}`}>
+            <span className="cl-at">{time}</span><span className="cl-who" style={{ color }}>{message.who}</span>{message.type === "gmroll" ? <Pill tone="accent">GM 굴림</Pill> : null}
+            <div className="cl-roll-card">
+              <div className="cl-roll-head">🎲 {roll?.label || "굴림표"}</div>
+              {(roll?.drawn ?? [message.content]).map((row, index) => <div key={index} className="cl-roll-drawn">{row}</div>)}
+            </div>
+          </div>
+        );
+      }
       return (
         <div className={`cl-chat-msg roll${message.type === "gmroll" ? " gm" : ""}`}>
           <span className="cl-at">{time}</span><span className="cl-who" style={{ color }}>{message.who}</span>{message.type === "gmroll" ? <Pill tone="accent">GM 굴림</Pill> : null}{message.target ? <Pill>나만</Pill> : null}
           <div className="cl-roll-card">
             <div className="cl-roll-head">{roll.label || "굴림"} <span className="cl-quiet cl-small">{roll.formula}</span></div>
-            <div className="cl-roll-dice">{roll.dice.map((die, index) => <span key={index} className={`cl-die d${die.sides}${die.sides === 20 && die.value === 20 ? " crit" : die.sides === 20 && die.value === 1 ? " fumble" : ""}`} title={`d${die.sides}`}>{die.value}</span>)}{roll.modifier ? <span className="cl-mod">{roll.modifier > 0 ? "+" : "−"}{Math.abs(roll.modifier)}</span> : null}<span className="cl-eq">=</span><strong className="cl-total">{roll.total}</strong></div>
+            <div className="cl-roll-dice">{roll.dice.map((die, index) => <span key={index} className={`cl-die d${die.sides}${die.dropped ? " dropped" : ""}${die.success ? " success" : ""}${die.sides === 20 && die.value === 20 ? " crit" : die.sides === 20 && die.value === 1 ? " fumble" : ""}`} title={die.dropped ? `d${die.sides} · 버림` : die.exploded ? `d${die.sides} · 폭발` : `d${die.sides}`}>{die.value}{die.exploded ? "!" : ""}</span>)}{roll.modifier && roll.successes === undefined ? <span className="cl-mod">{roll.modifier > 0 ? "+" : "−"}{Math.abs(roll.modifier)}</span> : null}<span className="cl-eq">=</span><strong className="cl-total">{roll.successes !== undefined ? `성공 ${roll.successes}` : roll.total}</strong></div>
             <div className="cl-quiet cl-small" hidden>{describeChatRoll(roll)}</div>
           </div>
         </div>

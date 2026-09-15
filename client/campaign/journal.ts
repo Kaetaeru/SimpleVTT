@@ -9,11 +9,14 @@ import type { CharacterRuntime } from "../character/runtime";
 import type { CharacterSource } from "../character/types";
 import type { MonsterView } from "../compendium/monsters";
 import type { PlayerRole } from "./model";
+import type { Macro } from "./model";
 
 /** "all" = every player, otherwise the listed user ids (empty = nobody but the GM). */
 export type Audience = "all" | string[];
 
 interface JournalBase {
+  /** R17: macros saved on this sheet; its controller sees them in the macro bar. */
+  macros?: Macro[];
   id: string;
   campaignId: string;
   name: string;

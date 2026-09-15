@@ -11,7 +11,7 @@ import type { JournalCharacter, JournalEntry } from "../campaign/journal";
 import type { Page, Token } from "../campaign/page";
 import type { Tracker, TrackerTurn } from "../campaign/tracker";
 import { deriveCharacter } from "../character/derive";
-import type { Campaign, ChatArchive, ChatMessage, JoinedCampaign, PlayerRole } from "../campaign/model";
+import type { Campaign, ChatArchive, ChatMessage, JoinedCampaign, Macro, PlayerRole, RollTable } from "../campaign/model";
 import { chatArchiveId, emptyChatArchive, isStoredDocument, newCampaign, newJoinCode, repairCampaign } from "../campaign/model";
 import { TableClient, type TableStatus } from "../session/client";
 import { TableHost } from "../session/host";
@@ -102,6 +102,11 @@ export interface CampaignsState {
   legendary: (actor: ActorRef, name: string, targets?: ActorRef[]) => void;
   /** R10: use a bag item (a potion) on a creature; the host rolls, applies and takes it out of the bag. */
   useItem: (actor: ActorRef, target: ActorRef | undefined, instanceId: string) => void;
+  /** R17: save the campaign's macros / rollable tables (GM). */
+  saveMacros: (macros: Macro[]) => void;
+  saveTables: (tables: RollTable[]) => void;
+  /** R17: draw rows from a rollable table; the host rolls and posts the result. */
+  rollTable: (name: string, count?: number, mode?: "public" | "gm" | "self") => void;
   /** R19: use an NPC trait; a per-day count the DM set is spent. */
   useTrait: (actor: ActorRef, name: string) => void;
   /** R16: put a summoned creature on the board (its own journal entry, controlled by the summoner's controller). */
@@ -412,6 +417,9 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
   const npcSave = useCallback((actor: ActorRef, actionName: string, targets: ActorRef[]) => send({ type: "act.npcSave", actor, actionName, targets }), [send]);
   const legendary = useCallback((actor: ActorRef, name: string, targets?: ActorRef[]) => send({ type: "act.legendary", actor, name, targets }), [send]);
   const useItem = useCallback((actor: ActorRef, target: ActorRef | undefined, instanceId: string) => send({ type: "act.item", actor, target, instanceId }), [send]);
+  const saveMacros = useCallback((macros: Macro[]) => send({ type: "table.macros", macros }), [send]);
+  const saveTables = useCallback((tables: RollTable[]) => send({ type: "table.tables", tables }), [send]);
+  const rollTable = useCallback((name: string, count = 1, mode: "public" | "gm" | "self" = "public") => send({ type: "chat.table", name, count, mode }), [send]);
   const useTrait = useCallback((actor: ActorRef, name: string) => send({ type: "act.trait", actor, name }), [send]);
   const summon = useCallback((summoner: ActorRef, monsterId: string, options: { count?: number; spellId?: string } = {}) => send({ type: "act.summon", summoner, monsterId, ...(options.count ? { count: options.count } : {}), ...(options.spellId ? { spellId: options.spellId } : {}) }), [send]);
   const dismissSummons = useCallback((summoner: ActorRef, spellId?: string) => send({ type: "act.dismiss", summoner, ...(spellId ? { spellId } : {}) }), [send]);
@@ -454,8 +462,8 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
   const table = useMemo<TableState>(() => ({ role, status: client ? client.status : "idle", reason: client?.reason ?? null, campaignId, snapshot: client?.snapshot ?? null, invite, invites, transportNote, refusals, shows, artUrls, artPending }),
   // eslint-disable-next-line react-hooks/exhaustive-deps
   [role, client, campaignId, invite, invites, transportNote, refusals, shows, artUrls, artPending, tick]);
-  const value = useMemo<CampaignsState>(() => ({ userId, displayName, setDisplayName, campaigns, joined, archives, journals, arts, pages, createCampaign, updateCampaign, deleteCampaign, regenerateJoinCode, forgetJoined, table, launch, join, leave, say, sendRoll, setRole, kick, putJournal, removeJournal, showJournal, dismissShow, uploadArt, updateArt, removeArt, requestArt, putPage, removePage, setRibbon, setBookmark, putToken, removeToken, setTracker, addTurn, nextTurn, swapTurn, attack, npcSave, legendary, useItem, useTrait, summon, dismissSummons, resist, provoke, act, cast, declineReaction, adjustAction, undoAction, confirmAction }),
-    [userId, displayName, setDisplayName, campaigns, joined, archives, journals, arts, pages, createCampaign, updateCampaign, deleteCampaign, regenerateJoinCode, forgetJoined, table, launch, join, leave, say, sendRoll, setRole, kick, putJournal, removeJournal, showJournal, dismissShow, uploadArt, updateArt, removeArt, requestArt, putPage, removePage, setRibbon, setBookmark, putToken, removeToken, setTracker, addTurn, nextTurn, swapTurn, attack, npcSave, legendary, useItem, useTrait, summon, dismissSummons, resist, adjustAction, undoAction, confirmAction]);
+  const value = useMemo<CampaignsState>(() => ({ userId, displayName, setDisplayName, campaigns, joined, archives, journals, arts, pages, createCampaign, updateCampaign, deleteCampaign, regenerateJoinCode, forgetJoined, table, launch, join, leave, say, sendRoll, setRole, kick, putJournal, removeJournal, showJournal, dismissShow, uploadArt, updateArt, removeArt, requestArt, putPage, removePage, setRibbon, setBookmark, putToken, removeToken, setTracker, addTurn, nextTurn, swapTurn, attack, npcSave, legendary, useItem, useTrait, saveMacros, saveTables, rollTable, summon, dismissSummons, resist, provoke, act, cast, declineReaction, adjustAction, undoAction, confirmAction }),
+    [userId, displayName, setDisplayName, campaigns, joined, archives, journals, arts, pages, createCampaign, updateCampaign, deleteCampaign, regenerateJoinCode, forgetJoined, table, launch, join, leave, say, sendRoll, setRole, kick, putJournal, removeJournal, showJournal, dismissShow, uploadArt, updateArt, removeArt, requestArt, putPage, removePage, setRibbon, setBookmark, putToken, removeToken, setTracker, addTurn, nextTurn, swapTurn, attack, npcSave, legendary, useItem, useTrait, saveMacros, saveTables, rollTable, summon, dismissSummons, resist, adjustAction, undoAction, confirmAction]);
   return <CampaignsContext.Provider value={value}>{children}</CampaignsContext.Provider>;
 }
 

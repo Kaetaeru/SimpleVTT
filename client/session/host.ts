@@ -168,6 +168,9 @@ export class TableHost {
       playerPageId: this.campaign.playerPageId,
       pageBookmarks: this.campaign.pageBookmarks ?? {},
       tracker: this.tracker,
+      // R17: a player sees only shared macros, and a table's name without its rows (the host draws).
+      macros: (this.campaign.macros ?? []).filter((macro) => viewer.role === "gm" || macro.shared),
+      tables: (this.campaign.tables ?? []).map((table) => (viewer.role === "gm" ? table : { ...table, rows: [] })),
       lastEventN: this.n,
     };
   }
@@ -408,6 +411,43 @@ export class TableHost {
         this.emit({ type: "token.removed", pageId: page.id, id: command.id });
         const tracker = withoutToken(this.tracker, page.id, command.id);
         if (tracker !== this.tracker && tracker.turns.length !== this.tracker.turns.length) this.setTracker(tracker);
+        return;
+      }
+      case "table.macros": {
+        if (!isGm) return refuse("매크로는 GM이 캠페인에 저장합니다 (자기 매크로는 시트에)");
+        if (!Array.isArray(command.macros) || command.macros.length > 100) return refuse("매크로 형식이 아닙니다");
+        const macros = command.macros.map((macro) => ({ id: String(macro.id), name: String(macro.name).slice(0, 40), text: String(macro.text).slice(0, 2000), ...(macro.shared ? { shared: true as const } : {}) })).filter((macro) => macro.name && macro.text);
+        this.setCampaign({ ...this.campaign, macros, updatedAt: this.now() });
+        this.emit({ type: "macros", macros });
+        return;
+      }
+      case "table.tables": {
+        if (!isGm) return refuse("굴림표는 GM이 만듭니다");
+        if (!Array.isArray(command.tables) || command.tables.length > 100) return refuse("굴림표 형식이 아닙니다");
+        const tables = command.tables.map((table) => ({ id: String(table.id), name: String(table.name).slice(0, 40), rows: (table.rows ?? []).slice(0, 200).map((row) => ({ text: String(row.text).slice(0, 300), weight: Math.max(1, Math.min(999, Math.floor(row.weight) || 1)) })) })).filter((table) => table.name);
+        this.setCampaign({ ...this.campaign, tables, updatedAt: this.now() });
+        this.emit({ type: "tables", tables });
+        return;
+      }
+      case "chat.table": {
+        // R17: the host draws, because a player never holds the rows.
+        const table = (this.campaign.tables ?? []).find((item) => item.name === command.name);
+        if (!table) return refuse(`"${command.name}" 굴림표가 없습니다`);
+        const rows = table.rows.filter((row) => row.text.trim());
+        if (!rows.length) return refuse(`"${table.name}"에 항목이 없습니다`);
+        const count = Math.max(1, Math.min(20, Math.floor(command.count) || 1));
+        const random = this.options.random ?? Math.random;
+        const total = rows.reduce((sum, row) => sum + row.weight, 0);
+        const drawn: string[] = [];
+        for (let at = 0; at < count; at += 1) {
+          let ticket = Math.floor(random() * total);
+          let picked = rows[rows.length - 1];
+          for (const row of rows) { if (ticket < row.weight) { picked = row; break; } ticket -= row.weight; }
+          drawn.push(picked.text);
+        }
+        const label = `굴림표 ${table.name}${count > 1 ? ` ×${count}` : ""}`;
+        const type = command.mode === "gm" ? "gmroll" as const : "rollresult" as const;
+        this.say({ type, who: player.displayName, playerId: userId, content: `${label}: ${drawn.join(" · ")}`, roll: { formula: `${count}t[${table.name}]`, total: drawn.length, dice: [], modifier: 0, label, drawn } });
         return;
       }
       case "tracker.set": {
@@ -1445,6 +1485,9 @@ export class TableHost {
   private project(event: TableEvent, viewer: Viewer): TableEvent | null {
     switch (event.type) {
       case "chat": return visibleTo(event.message, viewer) ? event : null;
+      // R17: a player gets only the shared macros, and a table's name without its rows.
+      case "macros": return viewer.role === "gm" ? event : { ...event, macros: event.macros.filter((macro) => macro.shared) };
+      case "tables": return viewer.role === "gm" ? event : { ...event, tables: event.tables.map((table) => ({ ...table, rows: [] })) };
       case "journal": { const entry = projectEntry(event.entry, viewer); return entry ? { ...event, entry } : { n: event.n, type: "journal.removed", id: event.entry.id }; }
       case "journal.show": { const entry = this.journalEntries.get(event.id); return entry && canView(entry, viewer) ? event : null; }
       case "art": return artVisible(event.asset, viewer, this.journal) ? event : { n: event.n, type: "art.removed", id: event.asset.id };

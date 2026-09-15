@@ -630,3 +630,13 @@ span.cl-tracker-init{display:inline-grid;place-items:center}
 @keyframes cl-flash{0%{background:rgba(125,211,252,.35)}100%{background:transparent}}
 /* R13: the scene's description on the stage */
 .cl-scene-desc{position:absolute;left:12px;right:12px;bottom:10px;margin:0;padding:8px 12px;border-radius:10px;background:rgba(10,12,16,.72);color:#e9ecf2;font-size:13px;line-height:1.45;white-space:pre-wrap;max-height:40%;overflow:hidden;pointer-events:none}
+
+/* R17: the macro bar over the chat box — macros and rollable tables one click away. */
+.cl-macro-bar{padding:4px 6px 0;border-top:1px solid var(--line)}
+.cl-macro-bar code{font-size:var(--text-xs)}
+/* R17: a die kept out of the total, and one that counted as a success. */
+.cl-die.dropped{opacity:.4;text-decoration:line-through}
+.cl-die.success{outline:2px solid var(--good);outline-offset:-2px}
+/* R17: one row drawn from a rollable table. */
+.cl-roll-drawn{padding:2px 0;font-size:var(--text-s)}
+.cl-roll-drawn + .cl-roll-drawn{border-top:1px dashed var(--line)}

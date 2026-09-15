@@ -37,6 +37,15 @@ export interface CampaignSettings {
   toastCount?: number;
 }
 
+/**
+ * R17 (D114): a macro is a saved chat line. `#이름` in the chat box runs it, and it shows as a button in the macro
+ * bar. Campaign macros belong to the GM (shared ones reach every player's bar); a journal entry may carry its own.
+ */
+export interface Macro { id: string; name: string; text: string; /** GM macros: shown in every player's macro bar too. */ shared?: boolean }
+
+/** R17 (D114): a rollable table. `/roll 2t[조우]` draws two rows; weights make a row more likely. */
+export interface RollTable { id: string; name: string; rows: Array<{ text: string; weight: number }> }
+
 export interface Campaign {
   id: string;
   kind: "campaign";
@@ -58,6 +67,10 @@ export interface Campaign {
   pageBookmarks?: Record<string, string>;
   /** The turn tracker (ROLL20_TABLE_SPEC.md §6). */
   tracker?: Tracker;
+  /** R17: campaign macros (the GM's; `shared` ones reach the players' macro bar). */
+  macros?: Macro[];
+  /** R17: rollable tables; players may roll on them but never see the rows. */
+  tables?: RollTable[];
 }
 
 /** One chat message of the archive (Roll20 chat types), stored per campaign in month files (§7). */
@@ -85,7 +98,8 @@ export interface ChatMessage {
   /** Whisper target user id (or "gm"). */
   target?: string;
   content: string;
-  roll?: { formula: string; total: number; dice: Array<{ sides: number; value: number }>; modifier: number; label?: string };
+  /** R17: `dropped` dice are kept out of the total (kh/kl), `exploded` came from a `!`, `success` counted for a `>`/`<`. */
+  roll?: { formula: string; total: number; dice: Array<{ sides: number; value: number; dropped?: boolean; exploded?: boolean; success?: boolean }>; modifier: number; label?: string; successes?: number; /** R17: rows drawn from a rollable table (then there are no dice). */ drawn?: string[] };
   /** A resolved attack (type "action"): the 판정 card with every die and what was applied. */
   action?: AttackResolution;
   /** This card replaces an earlier one (a DM palette edit, a confirmation, an undo). */

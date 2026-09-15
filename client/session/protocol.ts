@@ -10,9 +10,9 @@ import type { Tracker, TrackerTurn } from "../campaign/tracker";
 import type { ActionKind } from "../rules/actions";
 import type { CastMethod } from "../character/play";
 import type { AttackOverrides } from "../rules/resolve";
-import type { CampaignSettings, ChatMessage, PlayerRole } from "../campaign/model";
+import type { CampaignSettings, ChatMessage, Macro, PlayerRole, RollTable } from "../campaign/model";
 
-export const PROTOCOL_VERSION = 16;
+export const PROTOCOL_VERSION = 17;
 
 export interface Presence { userId: string; displayName: string; role: PlayerRole; color: string; connected: boolean }
 
@@ -32,6 +32,10 @@ export interface TableSnapshot {
   playerPageId?: string;
   pageBookmarks: Record<string, string>;
   tracker: Tracker;
+  /** R17: campaign macros this viewer may run (the GM's own, plus shared ones for players). */
+  macros: Macro[];
+  /** R17: rollable tables — the GM sees the rows, a player only the names (the host draws). */
+  tables: RollTable[];
   lastEventN: number;
 }
 
@@ -41,7 +45,7 @@ export interface ActorRef { entryId?: string; pageId?: string; tokenId?: string 
 export type AttackRef = { source: "weapon"; attackId: string } | { source: "npc"; actionName: string } | { source: "spell"; spellId: string; slotLevel?: number };
 export interface AttackRiders { sneak?: boolean; smiteSlot?: number; /** R12: the Cleave mastery's follow-up attack (no ability modifier to damage). */ cleave?: boolean }
 
-export interface RollPayload { formula: string; total: number; dice: Array<{ sides: number; value: number }>; modifier: number; label?: string }
+export interface RollPayload { formula: string; total: number; /** R17: a die kept out of the total (kh/kl), one that came from an explosion, or one that counted as a success. */ dice: Array<{ sides: number; value: number; dropped?: boolean; exploded?: boolean; success?: boolean }>; modifier: number; label?: string; /** R17: set when the formula counts successes instead of summing. */ successes?: number; /** R17: rows drawn from a rollable table. */ drawn?: string[] }
 
 export type ClientCommand =
   | { type: "hello"; protocol: number; userId: string; displayName: string; joinCode: string; lastEventN?: number; hostSecret?: string }
@@ -72,6 +76,11 @@ export type ClientCommand =
   | { type: "token.put"; pageId: string; token: Token }
   | { type: "token.remove"; pageId: string; id: string }
   /** Replace the tracker (GM): open/close, reorder, edit values, add custom rows, clear. */
+  /** R17: the GM saves the campaign's macros / rollable tables. */
+  | { type: "table.macros"; macros: Macro[] }
+  | { type: "table.tables"; tables: RollTable[] }
+  /** R17: draw `count` rows from a rollable table; the host rolls, because players never hold the rows. */
+  | { type: "chat.table"; name: string; count: number; mode: "public" | "gm" | "self" }
   | { type: "tracker.set"; tracker: Tracker }
   /** Add (or refresh) a token's turn. With `rollBonus` the host rolls 1d20 + bonus and posts the card; else `initiative` (default 0). */
   | { type: "tracker.add"; turn: Omit<TrackerTurn, "id" | "initiative"> & { initiative?: number }; rollBonus?: number }
@@ -115,6 +124,8 @@ export type TableEvent =
   | { n: number; type: "presence"; player: Presence }
   | { n: number; type: "chat"; message: ChatMessage }
   | { n: number; type: "settings"; settings: CampaignSettings }
+  | { n: number; type: "macros"; macros: Macro[] }
+  | { n: number; type: "tables"; tables: RollTable[] }
   | { n: number; type: "journal"; entry: JournalEntry }
   | { n: number; type: "journal.removed"; id: string }
   | { n: number; type: "journal.show"; id: string; by: string }
