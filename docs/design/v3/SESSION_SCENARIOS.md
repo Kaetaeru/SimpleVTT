@@ -1,6 +1,6 @@
 # 캠페인·테이블 검증 시나리오 (M4, Roll20 모델)
 
-`ROLL20_MODEL.md`·`ROLL20_TABLE_SPEC.md` 기준. 자동 시나리오는 `scripts/capture-client-table.mjs`(SC-1~8)와 `scripts/capture-client-journal.mjs`(SC-13~19), `scripts/capture-client-art.mjs`(SC-22~25), `scripts/capture-client-pages.mjs`(SC-27~32) — 같은 PC의 DM 탭 + 플레이어 탭, BroadcastChannel — 와 `tests/client/table.test.ts`·`tests/client/journal.test.ts`·`tests/client/art.test.ts`·`tests/client/pages.test.ts`(호스트 + 클라이언트 시뮬레이션)가 돌린다. 기대 결과는 두 탭 **모두**에서 확인한다. LAN·하마치는 exe에서 §B로.
+`ROLL20_MODEL.md`·`ROLL20_TABLE_SPEC.md` 기준. 자동 시나리오는 `scripts/capture-client-table.mjs`(SC-1~8)와 `scripts/capture-client-journal.mjs`(SC-13~19), `scripts/capture-client-art.mjs`(SC-22~25), `scripts/capture-client-pages.mjs`(SC-27~32), `scripts/capture-client-tracker.mjs`(SC-34~38) — 같은 PC의 DM 탭 + 플레이어 탭, BroadcastChannel — 와 `tests/client/table.test.ts`·`tests/client/journal.test.ts`·`tests/client/art.test.ts`·`tests/client/pages.test.ts`·`tests/client/tracker.test.ts`(호스트 + 클라이언트 시뮬레이션)가 돌린다. 기대 결과는 두 탭 **모두**에서 확인한다. LAN·하마치는 exe에서 §B로.
 
 ## A. 자동 (두 탭, 한 PC)
 
@@ -39,6 +39,12 @@
 | SC-31 | GM 레이어와 핑 | 토큰을 GM 레이어로 → 토큰 레이어로; DM Shift+클릭 | GM 레이어에 있는 동안 플레이어에게 사라짐. 핑 파장이 양쪽에 | capture 50, pages.test |
 | SC-32 | 페이지 설정·토큰 창 | DM 페이지 설정(이름·격자 끄기); 플레이어 토큰 우클릭 → 토큰 설정 | 이름과 격자 변경이 플레이어에게 반영. 플레이어의 토큰 창은 GM 필드가 읽기 전용 | capture 51–52 |
 | SC-33 | 파티 나누기 | DM "파티 나누기"로 한 명을 다른 페이지로 | 그 사람만 그 페이지, 나머지는 리본. 다른 페이지의 핑은 안 보임 | pages.test |
+| SC-34 | 컴펜디움 → NPC | DM 컴펜디움에서 "goblin" 검색 → "놓기" | 저널 "괴물" 폴더에 NPC(스탯 블록 사본), 페이지에 토큰(자기 HP 7/7, 비연결 바). NPC 창에 스탯 블록과 행동 굴림 버튼 | capture 53, tracker.test |
+| SC-35 | 캐릭터 토큰 | 플레이어가 캐릭터를 만들고 토큰을 놓음 | (SC-28과 같음) | capture |
+| SC-36 | 전투 시작·대상 지정 | DM "턴 트래커" → "전투 시작" → 과녁 모드에서 토큰 둘 클릭 → 확정 | 트래커 창이 플레이어에게도 열리고, 각 토큰의 이니셔티브가 호스트에서 굴려져 채팅 카드와 트래커 행(정렬)이 된다 | capture 54–55, tracker.test |
+| SC-37 | 다음 턴 = 규칙 처리 | DM "▶ 다음 턴" 반복 | 현재 턴 토큰에 테두리(양쪽), 한 바퀴 돌면 "라운드 2"(채팅·창). 턴 끝: 효과 라운드 진행. 턴 시작: NPC 재충전 굴림·전설 행동 초기화, 0 HP PC는 죽음 내성 자동 굴림 카드 | capture 56, tracker.test |
+| SC-38 | 토큰 액션 줄 | 토큰을 선택하면 위에 액션 줄 | NPC: 이니셔티브·공격(명중/피해)·내성 행동(DC) 버튼이 채팅 카드로. PC: 이니셔티브·공격 버튼. 자기가 못 고치는 토큰엔 줄이 없다 | capture 57–58 |
+| SC-39 | 권한 | 플레이어가 남의 토큰 턴 추가, 다음 턴 | 거절 | tracker.test |
 
 ## B. 수동 (exe, LAN·하마치)
 
@@ -55,4 +61,4 @@
 - R3 남은 것: 항목 끌어서 정렬, 아바타를 아트 라이브러리에서 고르기(R4), 캐릭터 → 캔버스 끌어 놓기(R5).
 - R4 남은 것: 안 쓰는 이미지 정리(GC) 화면, 아트를 캔버스에 끌어 토큰/배경으로(R5).
 - R5 남은 것: 육각 격자 그리기, 격자 라벨 표시, 다중 선택 드래그 박스, Ctrl+C/V, 경유점(Waypoints), 시야·빛의 실제 효과(동적 조명).
-- R6 턴 트래커: 트래커 동기, 다음 턴에 효과 라운드 진행.
+- R6 남은 것: 행 끌어서 정렬(지금은 ▲▼), 전설 행동 프롬프트, 상태 종료 내성 프롬프트, 시작 시 피해, 지연/준비 행동, 트래커 창 크기 조절.

@@ -6,6 +6,7 @@
  */
 import type { CharacterRuntime } from "../character/runtime";
 import type { CharacterSource } from "../character/types";
+import type { MonsterView } from "../compendium/monsters";
 import type { PlayerRole } from "./model";
 
 /** "all" = every player, otherwise the listed user ids (empty = nobody but the GM). */
@@ -48,12 +49,33 @@ export interface JournalCharacter extends JournalBase {
   defaultToken?: Partial<import("./page").Token>;
 }
 
-export type JournalEntry = JournalHandout | JournalCharacter;
+/** Play state of a monster sheet (its tokens usually carry their own HP, D78; this is the sheet's own). */
+export interface NpcRuntime {
+  hp: { current: number; max: number; temp: number };
+  conditions: string[];
+  /** Legendary actions spent this round (reset at the monster's turn start). */
+  legendaryUsed: number;
+  /** Recharge actions spent and waiting for their roll (action name → true = spent). */
+  spent: Record<string, boolean>;
+  updatedAt: string;
+}
+
+/** A monster from the compendium as a journal entry (Roll20's NPC sheet), with its own copy of the stat block. */
+export interface JournalNpc extends JournalBase {
+  kind: "npc";
+  monsterId: string;
+  statBlock: MonsterView;
+  runtime: NpcRuntime;
+  bio: string;
+  defaultToken?: Partial<import("./page").Token>;
+}
+
+export type JournalEntry = JournalHandout | JournalCharacter | JournalNpc;
 
 export interface JournalViewer { userId: string; role: PlayerRole }
 
 const randomId = (prefix: string) => `${prefix}_${typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID().slice(0, 12) : Math.random().toString(36).slice(2, 14)}`;
-export const newJournalId = (kind: JournalEntry["kind"]) => randomId(kind === "handout" ? "jh" : "jc");
+export const newJournalId = (kind: JournalEntry["kind"]) => randomId(kind === "handout" ? "jh" : kind === "npc" ? "jn" : "jc");
 
 export const audienceIncludes = (audience: Audience, userId: string) => audience === "all" || audience.includes(userId);
 
@@ -77,6 +99,14 @@ export function newJournalCharacter(campaignId: string, createdBy: string, sourc
   return { id: newJournalId("character"), kind: "character", campaignId, name: source.name || "이름 없는 캐릭터", avatar: source.portrait, folder: "", canView: [owner], canEdit: [owner], gmNotes: "", archived: false, tags: [], createdBy, createdAt: now, updatedAt: now, bio: source.notes?.backstory ?? "", source, runtime, vaultId: options.vaultId };
 }
 
+export const newNpcRuntime = (monster: MonsterView, now = new Date().toISOString()): NpcRuntime => ({ hp: { current: monster.hp, max: monster.hp, temp: 0 }, conditions: [], legendaryUsed: 0, spent: {}, updatedAt: now });
+
+/** An NPC from a compendium monster: GM-only, in the 괴물 folder, named after the monster. */
+export function newJournalNpc(campaignId: string, createdBy: string, monster: MonsterView, options: { name?: string; now?: string } = {}): JournalNpc {
+  const now = options.now ?? new Date().toISOString();
+  return { id: newJournalId("npc"), kind: "npc", campaignId, name: options.name ?? monster.name, folder: "괴물", canView: [], canEdit: [], gmNotes: "", archived: false, tags: [monster.typeText, `CR ${monster.crText}`], createdBy, createdAt: now, updatedAt: now, monsterId: monster.id, statBlock: monster, runtime: newNpcRuntime(monster, now), bio: "" };
+}
+
 /**
  * Merge a player's edit into the stored entry: only the fields a controller may touch change (name, avatar, body,
  * the character's source and runtime, tags). Permissions, folder, GM notes and archive stay the GM's.
@@ -85,6 +115,7 @@ export function mergePlayerEdit(stored: JournalEntry, incoming: JournalEntry, no
   const base = { ...stored, name: incoming.name, avatar: incoming.avatar, tags: incoming.tags, updatedAt: now };
   if (stored.kind === "handout" && incoming.kind === "handout") return { ...base, kind: "handout", notes: incoming.notes };
   if (stored.kind === "character" && incoming.kind === "character") return { ...base, kind: "character", bio: incoming.bio, source: incoming.source, runtime: incoming.runtime, vaultId: stored.vaultId, defaultToken: incoming.defaultToken ?? stored.defaultToken };
+  if (stored.kind === "npc" && incoming.kind === "npc") return { ...base, kind: "npc", monsterId: stored.monsterId, statBlock: stored.statBlock, bio: incoming.bio, runtime: incoming.runtime, defaultToken: incoming.defaultToken ?? stored.defaultToken };
   return stored;
 }
 

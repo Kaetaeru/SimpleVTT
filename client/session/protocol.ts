@@ -6,9 +6,10 @@
 import type { ArtAsset } from "../campaign/art";
 import type { JournalEntry } from "../campaign/journal";
 import type { Page, Token } from "../campaign/page";
+import type { Tracker, TrackerTurn } from "../campaign/tracker";
 import type { CampaignSettings, ChatMessage, PlayerRole } from "../campaign/model";
 
-export const PROTOCOL_VERSION = 5;
+export const PROTOCOL_VERSION = 6;
 
 export interface Presence { userId: string; displayName: string; role: PlayerRole; color: string; connected: boolean }
 
@@ -27,6 +28,7 @@ export interface TableSnapshot {
   pages: Page[];
   playerPageId?: string;
   pageBookmarks: Record<string, string>;
+  tracker: Tracker;
   lastEventN: number;
 }
 
@@ -61,6 +63,12 @@ export type ClientCommand =
   | { type: "token.put"; pageId: string; token: Token }
   | { type: "token.remove"; pageId: string; id: string }
   | { type: "ping"; pageId: string; x: number; y: number }
+  /** Replace the tracker (GM): open/close, reorder, edit values, add custom rows, clear. */
+  | { type: "tracker.set"; tracker: Tracker }
+  /** Add (or refresh) a token's turn. With `rollBonus` the host rolls 1d20 + bonus and posts the card; else `initiative` (default 0). */
+  | { type: "tracker.add"; turn: Omit<TrackerTurn, "id" | "initiative"> & { initiative?: number }; rollBonus?: number }
+  /** "다음 턴" (GM): turn-end and turn-start processing, then the highlight moves. */
+  | { type: "tracker.next" }
   | { type: "bye" };
 
 export type TableEvent =
@@ -78,6 +86,7 @@ export type TableEvent =
   | { n: number; type: "token"; pageId: string; token: Token }
   | { n: number; type: "token.removed"; pageId: string; id: string }
   | { n: number; type: "ping"; pageId: string; x: number; y: number; by: string; color: string }
+  | { n: number; type: "tracker"; tracker: Tracker }
   | { n: number; type: "kicked"; userId: string }
   | { n: number; type: "closed" };
 

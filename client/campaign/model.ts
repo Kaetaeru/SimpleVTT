@@ -6,6 +6,7 @@
 import type { ArtAsset } from "./art";
 import type { JournalEntry } from "./journal";
 import type { Page } from "./page";
+import type { Tracker } from "./tracker";
 
 export type PlayerRole = "gm" | "player";
 
@@ -47,6 +48,8 @@ export interface Campaign {
   playerPageId?: string;
   /** Split the party: a player sent to another page than the ribbon. */
   pageBookmarks?: Record<string, string>;
+  /** The turn tracker (ROLL20_TABLE_SPEC.md §6). */
+  tracker?: Tracker;
 }
 
 /** One chat message of the archive (Roll20 chat types), stored per campaign in month files (§7). */
@@ -152,6 +155,7 @@ export function isStoredDocument(value: unknown): value is StoredDocument {
     case "chat": return typeof doc.campaignId === "string" && Array.isArray(doc.messages);
     case "handout": return typeof doc.campaignId === "string" && typeof doc.name === "string" && "canView" in doc && typeof doc.notes === "string";
     case "character": return typeof doc.campaignId === "string" && typeof doc.name === "string" && "canView" in doc && typeof doc.source === "object" && typeof doc.runtime === "object";
+    case "npc": return typeof doc.campaignId === "string" && typeof doc.name === "string" && "canView" in doc && typeof doc.statBlock === "object" && typeof doc.runtime === "object";
     case "art": return typeof doc.campaignId === "string" && typeof doc.name === "string" && typeof doc.hash === "string" && typeof doc.mime === "string";
     case "page": return typeof doc.campaignId === "string" && typeof doc.name === "string" && Array.isArray(doc.tokens) && typeof doc.grid === "object";
     default: return false;

@@ -11,6 +11,9 @@ import type { JournalCharacter, JournalEntry } from "../campaign/journal";
 import { canEdit, canView, mergePlayerEdit, projectEntry } from "../campaign/journal";
 import type { Page, Token } from "../campaign/page";
 import { controlsToken, mergeControllerTokenEdit, playerPageId, projectPage, projectToken } from "../campaign/page";
+import type { Tracker } from "../campaign/tracker";
+import { advanceTurn, emptyTracker, newTurn, withoutToken, withTurn } from "../campaign/tracker";
+import { advanceRound, recordDeathSave, resetDeathSaves } from "../character/play";
 import type { Campaign, ChatMessage, PlayerRole } from "../campaign/model";
 import { newMessageId, withPlayer, withPlayerKicked, withPlayerRole } from "../campaign/model";
 import { rollFormula } from "../character/dice";
@@ -82,6 +85,7 @@ export class TableHost {
   get journal() { return [...this.journalEntries.values()]; }
   get art() { return [...this.artAssets.values()]; }
   get pageList() { return [...this.pages.values()].sort((a, b) => a.order - b.order); }
+  get tracker(): Tracker { return this.campaign.tracker ?? emptyTracker(); }
 
   attach(carrier: Transport) {
     if (this.transports.includes(carrier)) return;
@@ -122,6 +126,7 @@ export class TableHost {
       pages: this.pageList.map((page) => projectPage(page, viewer, this.campaign)).filter((page): page is Page => page !== null),
       playerPageId: this.campaign.playerPageId,
       pageBookmarks: this.campaign.pageBookmarks ?? {},
+      tracker: this.tracker,
       lastEventN: this.n,
     };
   }
@@ -225,12 +230,12 @@ export class TableHost {
       }
       case "journal.put": {
         const incoming = command.entry;
-        if (!incoming || typeof incoming.id !== "string" || (incoming.kind !== "handout" && incoming.kind !== "character")) return refuse("저널 항목 형식이 아닙니다");
+        if (!incoming || typeof incoming.id !== "string" || (incoming.kind !== "handout" && incoming.kind !== "character" && incoming.kind !== "npc")) return refuse("저널 항목 형식이 아닙니다");
         const stored = this.journalEntries.get(incoming.id);
         const now = this.now();
         if (isGm) { this.storeEntry({ ...incoming, campaignId: this.campaign.id, updatedAt: now, createdAt: stored?.createdAt ?? incoming.createdAt ?? now }); return; }
         if (!stored) {
-          if (incoming.kind !== "character") return refuse("핸드아웃은 GM만 만듭니다");
+          if (incoming.kind !== "character") return refuse("핸드아웃과 NPC는 GM만 만듭니다");
           if (!this.campaign.settings.playersCanCreateCharacters) return refuse("이 캠페인에서는 플레이어가 캐릭터를 만들 수 없습니다 (캠페인 설정)");
           // A player's new character is theirs: in their journal, controlled by them, in the root folder.
           this.storeEntry({ ...incoming, campaignId: this.campaign.id, folder: "", canView: [userId], canEdit: [userId], gmNotes: "", archived: false, createdBy: userId, createdAt: now, updatedAt: now });
@@ -360,6 +365,37 @@ export class TableHost {
         this.pages.set(page.id, next);
         this.options.onPage?.({ page: next });
         this.emit({ type: "token.removed", pageId: page.id, id: command.id });
+        const tracker = withoutToken(this.tracker, page.id, command.id);
+        if (tracker !== this.tracker && tracker.turns.length !== this.tracker.turns.length) this.setTracker(tracker);
+        return;
+      }
+      case "tracker.set": {
+        if (!isGm) return refuse("GM만 턴 트래커를 고칩니다");
+        const incoming = command.tracker;
+        if (!incoming || !Array.isArray(incoming.turns)) return refuse("트래커 형식이 아닙니다");
+        this.setTracker({ ...incoming, current: Math.min(incoming.current, incoming.turns.length - 1) });
+        return;
+      }
+      case "tracker.add": {
+        const turn = command.turn;
+        if (!turn || typeof turn.name !== "string") return refuse("턴 형식이 아닙니다");
+        if (!isGm) {
+          const page = turn.pageId ? this.pages.get(turn.pageId) : undefined;
+          const token = page?.tokens.find((item) => item.id === turn.tokenId);
+          if (!token || !controlsToken(token, this.viewer(userId), this.journal)) return refuse("자기 토큰만 트래커에 넣을 수 있습니다");
+        }
+        let initiative = turn.initiative ?? 0;
+        if (command.rollBonus !== undefined) {
+          const die = 1 + Math.floor((this.options.random ?? Math.random)() * 20);
+          initiative = die + command.rollBonus;
+          this.say({ type: "rollresult", who: player.displayName, playerId: userId, content: `${turn.name} · 이니셔티브`, roll: { formula: `1d20${command.rollBonus >= 0 ? "+" : "-"}${Math.abs(command.rollBonus)}`, total: initiative, dice: [{ sides: 20, value: die }], modifier: command.rollBonus, label: `${turn.name} · 이니셔티브` } });
+        }
+        this.setTracker(withTurn(this.tracker, newTurn({ ...turn, initiative })));
+        return;
+      }
+      case "tracker.next": {
+        if (!isGm) return refuse("GM만 턴을 넘깁니다");
+        this.nextTurn();
         return;
       }
       case "ping": {
@@ -371,6 +407,50 @@ export class TableHost {
       }
       default: return;
     }
+  }
+
+  private setTracker(tracker: Tracker) {
+    this.setCampaign({ ...this.campaign, tracker, updatedAt: this.now() });
+    this.emit({ type: "tracker", tracker });
+  }
+
+  /**
+   * "다음 턴" as a rules step (D87): the actor whose turn ends advances its effect rounds; the actor whose turn
+   * starts rolls recharges (NPC), resets legendary actions, and a PC at 0 HP rolls a death save (D92, automatic).
+   */
+  private nextTurn() {
+    const result = advanceTurn(this.tracker);
+    const random = this.options.random ?? Math.random;
+    const ended = result.ended?.entryId ? this.journalEntries.get(result.ended.entryId) : undefined;
+    if (ended?.kind === "character" && ended.runtime.effects?.length) this.storeEntry({ ...ended, runtime: advanceRound(ended.runtime), updatedAt: this.now() });
+    if (result.roundWrapped) this.say({ type: "system", who: "", content: `라운드 ${result.tracker.round}` });
+    if (result.started) this.say({ type: "system", who: "", content: `${result.started.name}의 턴` });
+    const started = result.started?.entryId ? this.journalEntries.get(result.started.entryId) : undefined;
+    if (started?.kind === "character") {
+      const runtime = started.runtime;
+      if (runtime.hp.current <= 0 && runtime.deathSaves.success < 3 && runtime.deathSaves.failure < 3) {
+        const die = 1 + Math.floor(random() * 20);
+        let next = runtime;
+        let note: string;
+        if (die === 20) { next = resetDeathSaves({ ...runtime, hp: { ...runtime.hp, current: 1 } }); note = "20! HP 1로 깨어남"; }
+        else if (die === 1) { next = recordDeathSave(recordDeathSave(runtime, false), false); note = "1! 실패 2회"; }
+        else { next = recordDeathSave(runtime, die >= 10); note = die >= 10 ? "성공" : "실패"; }
+        this.say({ type: "rollresult", who: "", content: `${started.name} · 죽음 내성 (${note})`, roll: { formula: "1d20", total: die, dice: [{ sides: 20, value: die }], modifier: 0, label: `${started.name} · 죽음 내성 — ${note} (${next.deathSaves.success}/${next.deathSaves.failure})` } });
+        this.storeEntry({ ...started, runtime: next, updatedAt: this.now() });
+      }
+    } else if (started?.kind === "npc") {
+      let runtime = { ...started.runtime, legendaryUsed: 0, spent: { ...started.runtime.spent } };
+      for (const action of [...started.statBlock.actions, ...started.statBlock.bonusActions, ...started.statBlock.legendaryActions]) {
+        const recharge = action.timing?.recharge;
+        if (!recharge || !runtime.spent[action.name]) continue;
+        const die = 1 + Math.floor(random() * recharge.sides);
+        if (die >= recharge.min) { runtime.spent[action.name] = false; this.say({ type: "system", who: "", content: `${started.name}: ${action.name} 재충전 (d${recharge.sides}=${die})` }); }
+        else this.say({ type: "system", who: "", content: `${started.name}: ${action.name} 재충전 실패 (d${recharge.sides}=${die}, ${recharge.min}+ 필요)` });
+      }
+      runtime = { ...runtime, updatedAt: this.now() };
+      this.storeEntry({ ...started, runtime, updatedAt: this.now() });
+    }
+    this.setTracker(result.tracker);
   }
 
   /** The ribbon or a bookmark moved: every mirror learns it, then every page is resent so each player ends up with exactly their page. */

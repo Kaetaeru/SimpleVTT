@@ -4,7 +4,8 @@
  * and markers are the sheet's conditions, D84). Players see only the page their ribbon (or a split-the-party
  * bookmark) points at, never the GM layer, and move only tokens they control.
  */
-import type { Audience, JournalCharacter, JournalEntry, JournalViewer } from "./journal";
+import { sizeCells } from "../compendium/monsters";
+import type { Audience, JournalCharacter, JournalEntry, JournalNpc, JournalViewer } from "./journal";
 import { audienceIncludes, canEdit } from "./journal";
 
 export type Layer = "map" | "objects" | "gm";
@@ -121,6 +122,15 @@ export function tokenForCharacter(entry: JournalCharacter, at: { x: number; y: n
   const { id: _ignored, ...base } = entry.defaultToken ?? {};
   return newToken({ ...base, name: entry.name, represents: entry.id, image: entry.avatar ?? base.image, x: at.x, y: at.y, layer: "objects" });
 }
+
+/** A token for an NPC: sized by the monster, bars unlinked (each token has its own HP, D78), controlled by the GM only. */
+export function tokenForNpc(entry: JournalNpc, at: { x: number; y: number }): Token {
+  const { id: _ignored, ...base } = entry.defaultToken ?? {};
+  const cells = sizeCells(entry.statBlock.size);
+  return newToken({ w: cells, h: cells, ...base, name: entry.name, represents: entry.id, image: entry.avatar ?? base.image, x: at.x, y: at.y, layer: "objects", controlledBy: [], bars: [{ value: entry.statBlock.hp, max: entry.statBlock.hp, visible: true, editable: false }, emptyBar(), emptyBar()], vision: { sight: true } });
+}
+
+export const tokenForEntry = (entry: JournalEntry, at: { x: number; y: number }) => (entry.kind === "character" ? tokenForCharacter(entry, at) : entry.kind === "npc" ? tokenForNpc(entry, at) : null);
 
 /** Who controls a token: the token's own list, or (inherit) the character's 고칠 수 있는 사람. GM always. */
 export function controlsToken(token: Token, viewer: JournalViewer, journal: JournalEntry[]): boolean {

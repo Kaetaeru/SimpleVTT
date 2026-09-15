@@ -12,6 +12,7 @@ import { copyText, Notice, Pill } from "../ui/components";
 import { useDice } from "../ui/dice/DiceProvider";
 import { ArtTab } from "./ArtPanel";
 import { JournalTab, JournalWindows, type JournalWindow } from "./JournalPanel";
+import { CompendiumTab } from "./CompendiumPanel";
 import { PageCanvas } from "./PageCanvas";
 
 export function TableScreen() {
@@ -30,7 +31,7 @@ function Table() {
   const snapshot = c.table.snapshot!;
   const isGm = snapshot.players.find((player) => player.userId === c.userId)?.role === "gm";
   const [copied, setCopied] = useState(false);
-  const [tab, setTab] = useState<"chat" | "journal" | "art">("chat");
+  const [tab, setTab] = useState<"chat" | "journal" | "art" | "compendium">("chat");
   const [windows, setWindows] = useState<JournalWindow[]>([]);
   const openEntry = useCallback((id: string) => setWindows((list) => { const existing = list.find((item) => item.kind === "entry" && item.id === id); const rest = existing ? list.filter((item) => item !== existing) : list; return [...rest, existing ?? { key: `entry:${id}`, kind: "entry", id }]; }), []);
   const openToken = useCallback((pageId: string, tokenId: string) => setWindows((list) => { const key = `token:${pageId}:${tokenId}`; const existing = list.find((item) => item.key === key); return [...list.filter((item) => item.key !== key), existing ?? { key, kind: "token", pageId, tokenId }]; }), []);
@@ -38,6 +39,9 @@ function Table() {
   const openNewCharacter = useCallback(() => setWindows((list) => (list.some((item) => item.kind === "new-character") ? list : [...list, { key: `new:${Date.now()}`, kind: "new-character" }])), []);
   const closeWindow = useCallback((key: string) => setWindows((list) => list.filter((item) => item.key !== key)), []);
   const focusWindow = useCallback((key: string) => setWindows((list) => { const item = list.find((entry) => entry.key === key); return item && list[list.length - 1] !== item ? [...list.filter((entry) => entry !== item), item] : list; }), []);
+  // The tracker window follows the tracker's open flag (the GM opens it for everyone, §6.1).
+  const trackerOpen = snapshot.tracker.open;
+  useEffect(() => { setWindows((list) => { const has = list.some((item) => item.kind === "tracker"); if (trackerOpen && !has) return [...list, { key: "tracker", kind: "tracker" }]; if (!trackerOpen && has) return list.filter((item) => item.kind !== "tracker"); return list; }); }, [trackerOpen]);
   // "플레이어에게 보여주기": the GM's request opens the entry here.
   const shows = c.table.shows;
   useEffect(() => { for (const id of shows) { openEntry(id); c.dismissShow(id); } }, [shows, openEntry, c]);
@@ -57,6 +61,7 @@ function Table() {
           </span>
         ) : null}
         <div className="cl-actions">
+          {isGm ? <button type="button" className={`cl-btn${trackerOpen ? " primary" : ""}`} onClick={() => c.setTracker({ ...snapshot.tracker, open: !trackerOpen })} title="열면 모든 참가자에게 뜹니다">턴 트래커{snapshot.tracker.turns.length ? ` · 라운드 ${snapshot.tracker.round}` : ""}</button> : null}
           {c.table.role === "host" ? <button type="button" className="cl-btn quiet" onClick={() => navigate({ screen: "campaign", id: snapshot.campaignId })}>캠페인 설정</button> : null}
           <button type="button" className="cl-btn danger" onClick={() => { c.leave(); navigate({ screen: "campaigns" }); }}>{c.table.role === "host" ? "게임 닫기" : "나가기"}</button>
         </div>
@@ -73,9 +78,9 @@ function Table() {
             <button type="button" role="tab" aria-selected={tab === "chat"} className={tab === "chat" ? "active" : ""} onClick={() => setTab("chat")}>채팅</button>
             <button type="button" role="tab" aria-selected={tab === "journal"} className={tab === "journal" ? "active" : ""} onClick={() => setTab("journal")}>저널{snapshot.journal.length ? <small className="cl-quiet"> {snapshot.journal.filter((entry) => !entry.archived).length}</small> : null}</button>
             <button type="button" role="tab" aria-selected={tab === "art"} className={tab === "art" ? "active" : ""} onClick={() => setTab("art")}>아트{snapshot.art.length ? <small className="cl-quiet"> {snapshot.art.length}</small> : null}</button>
-            <button type="button" role="tab" disabled title="R6">컴펜디움</button>
+            <button type="button" role="tab" aria-selected={tab === "compendium"} className={tab === "compendium" ? "active" : ""} onClick={() => setTab("compendium")}>컴펜디움</button>
           </div>
-          {tab === "chat" ? <ChatTab isGm={isGm} /> : tab === "journal" ? <JournalTab onOpen={openEntry} onNewCharacter={openNewCharacter} /> : <ArtTab />}
+          {tab === "chat" ? <ChatTab isGm={isGm} /> : tab === "journal" ? <JournalTab onOpen={openEntry} onNewCharacter={openNewCharacter} /> : tab === "art" ? <ArtTab /> : <CompendiumTab onOpenEntry={openEntry} />}
         </aside>
       </div>
     </div>

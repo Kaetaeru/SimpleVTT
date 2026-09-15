@@ -9,6 +9,7 @@ import type { ArtAsset } from "../campaign/art";
 import { ART_LIMIT, ART_MIMES, chunkText, hashText, newArtAsset } from "../campaign/art";
 import type { JournalCharacter, JournalEntry } from "../campaign/journal";
 import type { Page, Token } from "../campaign/page";
+import type { Tracker, TrackerTurn } from "../campaign/tracker";
 import { deriveCharacter } from "../character/derive";
 import type { Campaign, ChatArchive, ChatMessage, JoinedCampaign, PlayerRole } from "../campaign/model";
 import { chatArchiveId, emptyChatArchive, isStoredDocument, newCampaign, newJoinCode, repairCampaign } from "../campaign/model";
@@ -85,6 +86,9 @@ export interface CampaignsState {
   putToken: (pageId: string, token: Token) => void;
   removeToken: (pageId: string, id: string) => void;
   ping: (pageId: string, x: number, y: number) => void;
+  setTracker: (tracker: Tracker) => void;
+  addTurn: (turn: Omit<TrackerTurn, "id" | "initiative"> & { initiative?: number }, rollBonus?: number) => void;
+  nextTurn: () => void;
 }
 
 const CampaignsContext = createContext<CampaignsState | null>(null);
@@ -369,6 +373,9 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
   const putToken = useCallback((pageId: string, token: Token) => send({ type: "token.put", pageId, token }), [send]);
   const removeToken = useCallback((pageId: string, id: string) => send({ type: "token.remove", pageId, id }), [send]);
   const ping = useCallback((pageId: string, x: number, y: number) => send({ type: "ping", pageId, x, y }), [send]);
+  const setTracker = useCallback((tracker: Tracker) => send({ type: "tracker.set", tracker }), [send]);
+  const addTurn = useCallback((turn: Omit<TrackerTurn, "id" | "initiative"> & { initiative?: number }, rollBonus?: number) => send({ type: "tracker.add", turn, rollBonus }), [send]);
+  const nextTurn = useCallback(() => send({ type: "tracker.next" }), [send]);
   const updateArt = useCallback((id: string, patch: { name?: string; folder?: string; tags?: string[] }) => send({ type: "art.update", id, ...patch }), [send]);
   const removeArt = useCallback((id: string) => send({ type: "art.remove", id }), [send]);
   const requestArt = useCallback((id: string) => {
@@ -400,8 +407,8 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
   const table = useMemo<TableState>(() => ({ role, status: client ? client.status : "idle", reason: client?.reason ?? null, campaignId, snapshot: client?.snapshot ?? null, invite, invites, transportNote, refusals, shows, artUrls, artPending, pings }),
   // eslint-disable-next-line react-hooks/exhaustive-deps
   [role, client, campaignId, invite, invites, transportNote, refusals, shows, artUrls, artPending, pings, tick]);
-  const value = useMemo<CampaignsState>(() => ({ userId, displayName, setDisplayName, campaigns, joined, archives, journals, arts, pages, createCampaign, updateCampaign, deleteCampaign, regenerateJoinCode, forgetJoined, table, launch, join, leave, say, sendRoll, setRole, kick, putJournal, removeJournal, showJournal, dismissShow, uploadArt, updateArt, removeArt, requestArt, putPage, removePage, setRibbon, setBookmark, putToken, removeToken, ping }),
-    [userId, displayName, setDisplayName, campaigns, joined, archives, journals, arts, pages, createCampaign, updateCampaign, deleteCampaign, regenerateJoinCode, forgetJoined, table, launch, join, leave, say, sendRoll, setRole, kick, putJournal, removeJournal, showJournal, dismissShow, uploadArt, updateArt, removeArt, requestArt, putPage, removePage, setRibbon, setBookmark, putToken, removeToken, ping]);
+  const value = useMemo<CampaignsState>(() => ({ userId, displayName, setDisplayName, campaigns, joined, archives, journals, arts, pages, createCampaign, updateCampaign, deleteCampaign, regenerateJoinCode, forgetJoined, table, launch, join, leave, say, sendRoll, setRole, kick, putJournal, removeJournal, showJournal, dismissShow, uploadArt, updateArt, removeArt, requestArt, putPage, removePage, setRibbon, setBookmark, putToken, removeToken, ping, setTracker, addTurn, nextTurn }),
+    [userId, displayName, setDisplayName, campaigns, joined, archives, journals, arts, pages, createCampaign, updateCampaign, deleteCampaign, regenerateJoinCode, forgetJoined, table, launch, join, leave, say, sendRoll, setRole, kick, putJournal, removeJournal, showJournal, dismissShow, uploadArt, updateArt, removeArt, requestArt, putPage, removePage, setRibbon, setBookmark, putToken, removeToken, ping, setTracker, addTurn, nextTurn]);
   return <CampaignsContext.Provider value={value}>{children}</CampaignsContext.Provider>;
 }
 

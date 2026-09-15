@@ -3,6 +3,7 @@
  * number for a reconnect, and reports refusals (wrong code, kicked).
  */
 import { ChunkAssembler } from "../campaign/art";
+import { emptyTracker } from "../campaign/tracker";
 import type { ClientCommand, HostMessage, TableEvent, TableSnapshot } from "./protocol";
 import { PROTOCOL_VERSION, isHostMessage } from "./protocol";
 import type { Transport } from "./transport";
@@ -77,7 +78,7 @@ export class TableClient {
         this.refusal = null;
         break;
       case "events":
-        if (!this.snapshotState) this.snapshotState = { campaignId: "", name: "", settings: { playersCanCreateCharacters: true, playersCanExportToVault: true, chatAvatars: true }, players: [], chat: [], journal: [], art: [], pages: [], pageBookmarks: {}, lastEventN: 0 };
+        if (!this.snapshotState) this.snapshotState = { campaignId: "", name: "", settings: { playersCanCreateCharacters: true, playersCanExportToVault: true, chatAvatars: true }, players: [], chat: [], journal: [], art: [], pages: [], pageBookmarks: {}, tracker: emptyTracker(), lastEventN: 0 };
         this.statusState = "joined";
         for (const event of message.events) this.applyEvent(event);
         break;
@@ -140,6 +141,7 @@ export class TableClient {
       }
       case "token.removed": state.pages = state.pages.map((item) => (item.id === event.pageId ? { ...item, tokens: item.tokens.filter((token) => token.id !== event.id) } : item)); break;
       case "ping": for (const listener of [...this.pingListeners]) listener(event); break;
+      case "tracker": state.tracker = event.tracker; break;
       case "journal.show": for (const listener of [...this.showListeners]) listener(event.id); break;
       case "kicked": state.players = state.players.filter((item) => item.userId !== event.userId); if (event.userId === this.options.userId) { this.statusState = "refused"; this.refusal = "GM이 내보냈습니다"; } break;
       case "closed": this.statusState = "closed"; break;

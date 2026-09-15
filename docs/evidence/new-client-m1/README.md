@@ -56,3 +56,9 @@ Chromium이 Vite 개발 서버(포트 1430)에서 마법사를 처음부터 끝�
 - `50-ping-player.png` — DM의 Shift+클릭 핑이 플레이어 화면에
 - `51-token-settings-player.png` — 플레이어의 토큰 설정 창(기본/고급 탭): GM 전용 필드는 읽기 전용
 - `52-page-settings-dm.png` — 페이지 설정(이름·격자 끄기) 반영 뒤 DM 화면 (`node scripts/capture-client-pages.mjs`, 시나리오 SC-27~32)
+- `53-compendium-goblin-npc-sheet.png` — 컴펜디움에서 놓은 고블린: 저널 "괴물" 폴더의 NPC 창(스탯 블록, HP 입력, 상태, 행동마다 명중/피해 굴림 버튼)과 페이지의 토큰(7/7)
+- `54-targeting-mode.png` — "전투 시작"의 대상 지정 모드: 과녁 배너, 고른 토큰에 붉은 점선(2개 선택), 확정/취소
+- `55-tracker-after-initiative.png` — 트래커 창(정렬된 행, 이니셔티브 편집, ▲▼, 삭제)과 채팅의 이니셔티브 카드
+- `56-tracker-player-round-2.png` — 플레이어 화면: 읽기 전용 트래커, 현재 턴 토큰 테두리, 라운드 2
+- `57-action-bar-goblin.png` — DM이 고블린 토큰을 선택했을 때의 액션 줄(이니셔티브·시미터 명중/피해·단궁)과 채팅의 명중 카드
+- `58-action-bar-player.png` — 플레이어의 자기 캐릭터 액션 줄 (`node scripts/capture-client-tracker.mjs`, 시나리오 SC-34~38)

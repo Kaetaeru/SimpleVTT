@@ -6,15 +6,21 @@
  */
 import { useEffect, useMemo, useRef, useState, type DragEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { useCampaigns } from "../app/campaigns";
+import { useClient } from "../app/context";
 import type { JournalCharacter, JournalEntry } from "../campaign/journal";
-import { canEdit, canView } from "../campaign/journal";
+import { canEdit, canView, newJournalNpc } from "../campaign/journal";
+import { deriveCharacter } from "../character/derive";
+import type { RollSpec } from "../character/dice";
+import { damageFormula, monsterById } from "../compendium/monsters";
+import { useDice } from "../ui/dice/DiceProvider";
 import type { Layer, Page, Token, TokenBar, TokenMarker } from "../campaign/page";
-import { ALL_MARKERS, applyBarInput, cellDistance, clampToPage, controlsToken, isConditionMarker, MARKER_GLYPH, newPage, newToken, playerPageId, snap, tokenForCharacter } from "../campaign/page";
+import { ALL_MARKERS, applyBarInput, cellDistance, clampToPage, controlsToken, isConditionMarker, MARKER_GLYPH, newPage, newToken, playerPageId, snap, tokenForEntry, tokenForNpc } from "../campaign/page";
 import { toggleCondition } from "../character/play";
 import { Modal, Notice } from "../ui/components";
 import { ART_DRAG_TYPE, ArtImage, ArtPicker } from "./ArtPanel";
 
 export const JOURNAL_DRAG_TYPE = "application/x-simplevtt-journal";
+export const COMPENDIUM_DRAG_TYPE = "application/x-simplevtt-monster";
 const ZOOMS = [0.25, 0.4, 0.5, 0.65, 0.8, 1, 1.25, 1.5, 2, 2.5];
 const LAYER_KO: Record<Layer, string> = { map: "지도", objects: "토큰", gm: "GM" };
 const BAR_COLORS = ["#3fb950", "#58a6ff", "#f85149"];
@@ -49,6 +55,8 @@ export function PageCanvas({ onOpenEntry, onOpenToken, onOpenPageSettings }: Can
   const [drag, setDrag] = useState<{ tokenId: string; startX: number; startY: number; originX: number; originY: number; x: number; y: number; snap: boolean } | null>(null);
   const viewport = useRef<HTMLDivElement>(null);
   const [reveal, setReveal] = useState<string | null>(null);
+  const [targeting, setTargeting] = useState<TargetingState | null>(null);
+  const { catalog } = useClient();
   // A token placed from the journal scrolls into view (the page centre is usually off-screen).
   useEffect(() => {
     if (!reveal) return;
@@ -80,8 +88,10 @@ export function PageCanvas({ onOpenEntry, onOpenToken, onOpenPageSettings }: Can
       else if (event.key === "Delete" || event.key === "Backspace") { event.preventDefault(); for (const id of selected) { const token = page.tokens.find((item) => item.id === id); if (token && controlsToken(token, viewer, journal)) c.removeToken(page.id, id); } setSelected([]); }
       else if (event.key === "Escape") { setSelected([]); setMenu(null); }
     };
+    const onEscape = (event: KeyboardEvent) => { if (event.key === "Escape" && targeting) { targeting.resolve([]); setTargeting(null); } };
+    window.addEventListener("keydown", onEscape);
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    return () => { window.removeEventListener("keydown", onKey); window.removeEventListener("keydown", onEscape); };
   });
 
   const cellAt = (event: { clientX: number; clientY: number }) => {
@@ -98,6 +108,14 @@ export function PageCanvas({ onOpenEntry, onOpenToken, onOpenPageSettings }: Can
   };
   const onTokenPointerDown = (event: ReactPointerEvent, token: Token) => {
     if (!page || event.button !== 0) return;
+    if (targeting) {
+      event.stopPropagation();
+      if (targeting.multi && event.shiftKey) { setTargeting({ ...targeting, picked: targeting.picked.includes(token.id) ? targeting.picked.filter((id) => id !== token.id) : [...targeting.picked, token.id] }); return; }
+      if (targeting.multi) { setTargeting({ ...targeting, picked: targeting.picked.includes(token.id) ? targeting.picked : [...targeting.picked, token.id] }); return; }
+      targeting.resolve([token.id]);
+      setTargeting(null);
+      return;
+    }
     if (event.shiftKey) { const at = cellAt(event); c.ping(page.id, at.x, at.y); return; }
     event.stopPropagation();
     setMenu(null);
@@ -129,19 +147,24 @@ export function PageCanvas({ onOpenEntry, onOpenToken, onOpenPageSettings }: Can
     const at = cellAt(event);
     const journalId = event.dataTransfer.getData(JOURNAL_DRAG_TYPE);
     const artId = event.dataTransfer.getData(ART_DRAG_TYPE);
+    const monsterId = event.dataTransfer.getData(COMPENDIUM_DRAG_TYPE);
     if (journalId) placeCharacter(journalId, at);
+    else if (monsterId && isGm) { const monster = monsterById(monsterId); if (monster) { const count = journal.filter((entry) => entry.kind === "npc" && entry.monsterId === monster.id).length; const npc = newJournalNpc(snapshot.campaignId, viewer.userId, monster, { name: count ? `${monster.name} ${count + 1}` : monster.name }); c.putJournal(npc); placeTokenAt(tokenForNpc(npc, { x: 0, y: 0 }), at); } }
     else if (artId && isGm) { const token = newToken({ name: snapshot.art.find((asset) => asset.id === artId)?.name ?? "이미지", image: `art:${artId}`, layer, x: snap(at.x - 0.5), y: snap(at.y - 0.5) }); c.putToken(page.id, { ...token, ...clampToPage(page, token) }); }
   };
-  const placeCharacter = (journalId: string, at?: { x: number; y: number }) => {
+  const placeTokenAt = (token: Token, at?: { x: number; y: number }) => {
     if (!page) return;
-    const entry = journal.find((item) => item.id === journalId);
-    if (!entry || entry.kind !== "character") return;
     const spot = at ?? { x: page.width / 2, y: page.height / 2 };
-    const token = tokenForCharacter(entry, { x: snap(spot.x - 0.5), y: snap(spot.y - 0.5) });
-    const placed = { ...token, ...clampToPage(page, token), layer: isGm ? (layer === "gm" ? "gm" : "objects") : "objects", z: Math.max(0, ...page.tokens.map((item) => item.z + 1)) } as Token;
+    const positioned = { ...token, x: snap(spot.x - token.w / 2), y: snap(spot.y - token.h / 2) };
+    const placed = { ...positioned, ...clampToPage(page, positioned), layer: isGm ? (layer === "gm" ? "gm" : "objects") : "objects", z: Math.max(0, ...page.tokens.map((item) => item.z + 1)) } as Token;
     c.putToken(page.id, placed);
     setSelected([placed.id]);
     setReveal(placed.id);
+  };
+  const placeCharacter = (journalId: string, at?: { x: number; y: number }) => {
+    const entry = journal.find((item) => item.id === journalId);
+    const token = entry ? tokenForEntry(entry, { x: 0, y: 0 }) : null;
+    if (token) placeTokenAt(token, at);
   };
   const zoomBy = (direction: 1 | -1) => setZoom((current) => { const index = ZOOMS.indexOf(current); const next = ZOOMS[Math.min(ZOOMS.length - 1, Math.max(0, (index < 0 ? ZOOMS.indexOf(1) : index) + direction))]; return next; });
   const onWheel = (event: React.WheelEvent) => { if (event.ctrlKey || event.metaKey) { event.preventDefault(); zoomBy(event.deltaY < 0 ? 1 : -1); } };
@@ -196,12 +219,12 @@ export function PageCanvas({ onOpenEntry, onOpenToken, onOpenPageSettings }: Can
           <button type="button" className="cl-tool" title="안개 (R9)" disabled>☁</button>
           <button type="button" className="cl-tool" title="자 (R9)" disabled>📏</button>
         </div>
-        <div className="cl-canvas-viewport" ref={viewport} onWheel={onWheel} onDragOver={(event) => { const types = [...event.dataTransfer.types]; if (types.includes(JOURNAL_DRAG_TYPE) || types.includes(ART_DRAG_TYPE)) event.preventDefault(); }} onDrop={onDrop}>
+        <div className={`cl-canvas-viewport${targeting ? " targeting" : ""}`} ref={viewport} onWheel={onWheel} onDragOver={(event) => { const types = [...event.dataTransfer.types]; if (types.includes(JOURNAL_DRAG_TYPE) || types.includes(ART_DRAG_TYPE)) event.preventDefault(); }} onDrop={onDrop}>
           <div className="cl-canvas-scaler" style={{ width: page.width * cell * zoom, height: page.height * cell * zoom }}>
             <div className="cl-canvas-page" style={{ ...pageStyle, transform: `scale(${zoom})` }} onPointerDown={onPagePointerDown} onContextMenu={(event) => { if (!(event.target as HTMLElement).closest(".cl-token")) event.preventDefault(); }}>
               {page.background.image ? <ArtImage src={page.background.image} className="cl-canvas-bg" /> : null}
               {sortedTokens.map((token) => (
-                <TokenView key={token.id} token={token} page={page} cell={cell} selected={selected.includes(token.id)} dragging={drag?.tokenId === token.id ? drag : null} movable={mayMove(token)} journal={journal}
+                <TokenView key={token.id} token={token} page={page} cell={cell} selected={selected.includes(token.id)} picked={targeting?.picked.includes(token.id) ?? false} turn={snapshot.tracker.turns[snapshot.tracker.current]?.tokenId === token.id} dragging={drag?.tokenId === token.id ? drag : null} movable={mayMove(token)} journal={journal}
                   onPointerDown={(event) => onTokenPointerDown(event, token)} onPointerMove={onTokenPointerMove} onPointerUp={onTokenPointerUp}
                   onContextMenu={(event) => { event.preventDefault(); event.stopPropagation(); setSelected([token.id]); const box = viewport.current!.getBoundingClientRect(); setMenu({ tokenId: token.id, x: event.clientX - box.left + viewport.current!.scrollLeft, y: event.clientY - box.top + viewport.current!.scrollTop }); }}
                   onDoubleClick={() => { if (token.represents && journal.some((entry) => entry.id === token.represents)) onOpenEntry(token.represents); else if (controlsToken(token, viewer, journal)) onOpenToken(page.id, token.id); }} />
@@ -210,9 +233,17 @@ export function PageCanvas({ onOpenEntry, onOpenToken, onOpenPageSettings }: Can
             </div>
           </div>
           {menuToken ? <TokenMenu token={menuToken} page={page} at={menu!} onClose={() => setMenu(null)} onOpenToken={() => onOpenToken(page.id, menuToken.id)} onOpenEntry={onOpenEntry} /> : null}
+          {targeting ? (
+            <div className="cl-targeting-banner" role="status" data-multi={targeting.multi ? "1" : "0"} data-picked={targeting.picked.length}>
+              <span>🎯 {targeting.prompt}</span>
+              {targeting.multi ? <><span className="cl-quiet cl-small">{targeting.picked.length}개 선택</span><button type="button" className="cl-btn small primary" disabled={!targeting.picked.length} onClick={() => { targeting.resolve(targeting.picked); setTargeting(null); }}>확정</button></> : null}
+              <button type="button" className="cl-btn small quiet" onClick={() => { targeting.resolve([]); setTargeting(null); }}>취소 (Esc)</button>
+            </div>
+          ) : null}
+          {!targeting && selected.length === 1 && page.tokens.some((token) => token.id === selected[0]) ? <ActionBar token={page.tokens.find((token) => token.id === selected[0])!} page={page} onOpenEntry={onOpenEntry} /> : null}
         </div>
       </div>
-      <PlaceCharacterBridge onPlace={(id) => placeCharacter(id)} />
+      <PlaceCharacterBridge onPlace={(id) => placeCharacter(id)} onPlaceToken={(token) => placeTokenAt(token)} onTargets={(request) => { setSelected([]); setMenu(null); setTargeting({ ...request, picked: [] }); }} />
     </div>
   );
 }
@@ -230,18 +261,61 @@ function hexWithAlpha(hex: string, alpha: number) {
   return `rgba(${(value >> 16) & 255}, ${(value >> 8) & 255}, ${value & 255}, ${alpha})`;
 }
 
-/** Lets the journal's "토큰 놓기" button reach the canvas without threading props through the table. */
+/** Lets the journal, the compendium and the tracker reach the canvas without threading props through the table. */
+interface TargetingState { prompt: string; multi: boolean; picked: string[]; resolve: (ids: string[]) => void }
 const placeListeners = new Set<(id: string) => void>();
+const placeTokenListeners = new Set<(token: Token) => void>();
+const targetListeners = new Set<(request: Omit<TargetingState, "picked">) => void>();
 export const placeCharacterToken = (journalId: string) => { for (const listener of [...placeListeners]) listener(journalId); return placeListeners.size > 0; };
-function PlaceCharacterBridge({ onPlace }: { onPlace: (id: string) => void }) {
-  useEffect(() => { placeListeners.add(onPlace); return () => { placeListeners.delete(onPlace); }; }, [onPlace]);
+export const placeToken = (token: Token) => { for (const listener of [...placeTokenListeners]) listener(token); return placeTokenListeners.size > 0; };
+/** Targeting mode (§12.1): the crosshair banner appears, the promise resolves with the clicked token ids ([] when cancelled). */
+export const requestTargets = (prompt: string, options: { multi?: boolean } = {}) => new Promise<string[]>((resolve) => { if (!targetListeners.size) { resolve([]); return; } for (const listener of [...targetListeners]) listener({ prompt, multi: Boolean(options.multi), resolve }); });
+function PlaceCharacterBridge({ onPlace, onPlaceToken, onTargets }: { onPlace: (id: string) => void; onPlaceToken: (token: Token) => void; onTargets: (request: Omit<TargetingState, "picked">) => void }) {
+  useEffect(() => { placeListeners.add(onPlace); placeTokenListeners.add(onPlaceToken); targetListeners.add(onTargets); return () => { placeListeners.delete(onPlace); placeTokenListeners.delete(onPlaceToken); targetListeners.delete(onTargets); }; }, [onPlace, onPlaceToken, onTargets]);
   return null;
+}
+
+/* ---------- Token action bar (D88): the sheet's buttons above the canvas for the selected token ---------- */
+
+function ActionBar({ token, page, onOpenEntry }: { token: Token; page: Page; onOpenEntry: (id: string) => void }) {
+  const c = useCampaigns();
+  const dice = useDice();
+  const { catalog } = useClient();
+  const { viewer, snapshot } = useViewer();
+  const entry = token.represents ? snapshot.journal.find((item) => item.id === token.represents) : undefined;
+  const controls = controlsToken(token, viewer, snapshot.journal);
+  const derived = useMemo(() => (entry?.kind === "character" ? deriveCharacter(entry.source, catalog, { equipped: entry.runtime.equipped, inventory: entry.runtime.inventory, effects: entry.runtime.effects }) : null), [entry, catalog]);
+  if (!controls || !entry || entry.kind === "handout") return null;
+  const roll = async (spec: RollSpec) => { const result = await dice.roll(spec); c.sendRoll({ formula: result.formula, total: result.total, dice: result.dice.map((die) => ({ sides: die.sides, value: die.value })), modifier: result.modifier, label: `${token.name} · ${result.label}${result.note ? ` (${result.note})` : ""}` }); };
+  const d20 = (bonus: number) => `1d20${bonus >= 0 ? "+" : "-"}${Math.abs(bonus)}`;
+  const initiativeBonus = derived ? derived.initiative : entry.kind === "npc" ? entry.statBlock.initiativeBonus : 0;
+  const inTracker = snapshot.tracker.turns.some((turn) => turn.tokenId === token.id && turn.pageId === page.id);
+  return (
+    <div className="cl-action-bar" role="toolbar" aria-label={`${token.name} 액션`}>
+      <strong className="cl-small">{token.name}</strong>
+      <button type="button" className="cl-btn small" onClick={() => c.addTurn({ name: token.name, tokenId: token.id, pageId: page.id, entryId: entry.id, image: token.image }, initiativeBonus)} title="1d20 + 이니셔티브 보너스를 굴려 트래커에 넣습니다">이니셔티브 {initiativeBonus >= 0 ? "+" : ""}{initiativeBonus}{inTracker ? " ↻" : ""}</button>
+      {derived ? derived.attacks.map((attack) => (
+        <span key={attack.id} className="cl-action-group">
+          <button type="button" className="cl-btn small" onClick={() => void roll({ label: `${attack.name} 명중`, formula: d20(attack.attackBonus), kind: "attack" })} title="R7에서 대상 지정과 판정으로 이어집니다">{attack.name} {attack.attackBonus >= 0 ? "+" : ""}{attack.attackBonus}</button>
+          <button type="button" className="cl-btn small quiet" onClick={() => void roll({ label: `${attack.name} 피해`, formula: `${attack.damage.split(" ")[0]}${attack.damageBonus ? `${attack.damageBonus > 0 ? "+" : "-"}${Math.abs(attack.damageBonus)}` : ""}`, note: attack.damageType, kind: "damage" })}>피해</button>
+        </span>
+      )) : null}
+      {entry.kind === "npc" ? entry.statBlock.actions.filter((action) => action.kind === "attack" || action.kind === "save").map((action) => (
+        <span key={action.name} className="cl-action-group">
+          {action.kind === "attack" && action.attack ? <button type="button" className="cl-btn small" onClick={() => void roll({ label: `${action.name} 명중`, formula: d20(action.attack!.bonus), kind: "attack" })} disabled={Boolean(action.timing?.recharge && entry.runtime.spent[action.name])}>{action.name} {action.attack.bonus >= 0 ? "+" : ""}{action.attack.bonus}</button> : null}
+          {action.kind === "save" && action.save ? <button type="button" className="cl-btn small" disabled={Boolean(action.timing?.recharge && entry.runtime.spent[action.name])} onClick={() => { const damage = action.save!.failDamage?.[0]; if (damage) void roll({ label: `${action.name} 피해`, formula: damageFormula(damage), note: `${damage.type} · DC ${action.save!.dc}`, kind: "damage" }); if (action.timing?.recharge) c.putJournal({ ...entry, runtime: { ...entry.runtime, spent: { ...entry.runtime.spent, [action.name]: true } } }); }}>{action.name} DC {action.save.dc}{action.timing?.recharge && entry.runtime.spent[action.name] ? " (재충전 대기)" : ""}</button> : null}
+          {action.kind === "attack" && action.attack ? action.attack.damage.map((damage, index) => <button type="button" key={index} className="cl-btn small quiet" onClick={() => void roll({ label: `${action.name} 피해`, formula: damageFormula(damage), note: damage.type, kind: "damage" })}>피해</button>) : null}
+        </span>
+      )) : null}
+      <button type="button" className="cl-btn small quiet" onClick={() => onOpenEntry(entry.id)}>시트</button>
+    </div>
+  );
 }
 
 /* ---------- Token ---------- */
 
-function TokenView({ token, page, cell, selected, dragging, movable, journal, onPointerDown, onPointerMove, onPointerUp, onContextMenu, onDoubleClick }: {
-  token: Token; page: Page; cell: number; selected: boolean; dragging: { x: number; y: number; originX: number; originY: number } | null; movable: boolean; journal: JournalEntry[];
+function TokenView({ token, page, cell, selected, picked, turn, dragging, movable, journal, onPointerDown, onPointerMove, onPointerUp, onContextMenu, onDoubleClick }: {
+  token: Token; page: Page; cell: number; selected: boolean; picked: boolean; turn: boolean; dragging: { x: number; y: number; originX: number; originY: number } | null; movable: boolean; journal: JournalEntry[];
   onPointerDown: (event: ReactPointerEvent) => void; onPointerMove: (event: ReactPointerEvent) => void; onPointerUp: () => void; onContextMenu: (event: React.MouseEvent) => void; onDoubleClick: () => void;
 }) {
   const x = dragging ? dragging.x : token.x;
@@ -258,7 +332,7 @@ function TokenView({ token, page, cell, selected, dragging, movable, journal, on
   const distance = dragging ? cellDistance({ x: dragging.originX, y: dragging.originY }, { x, y }) * page.scale : 0;
   const aura = (index: 0 | 1) => { const item = token.auras[index]; if (!item || item.radius <= 0) return null; const radiusCells = item.radius / page.scale; const size = (token.w + radiusCells * 2) * cell; return <span key={index} className={`cl-aura${item.square ? " square" : ""}`} style={{ width: size, height: size, left: -radiusCells * cell, top: -radiusCells * cell, background: hexWithAlpha(item.color, 0.22), borderColor: item.color }} />; };
   return (
-    <div className={`cl-token layer-${token.layer}${selected ? " selected" : ""}${movable ? " movable" : ""}${token.locked ? " locked" : ""}`} data-token-id={token.id} data-token-name={token.name}
+    <div className={`cl-token layer-${token.layer}${selected ? " selected" : ""}${picked ? " picked" : ""}${turn ? " turn" : ""}${movable ? " movable" : ""}${token.locked ? " locked" : ""}`} data-token-id={token.id} data-token-name={token.name}
       style={{ left: x * cell, top: y * cell, width: token.w * cell, height: token.h * cell, zIndex: 10 + layerOrder(token.layer) * 1000 + token.z }}
       onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp} onContextMenu={onContextMenu} onDoubleClick={onDoubleClick} title={token.showName ? token.name : undefined}>
       {aura(0)}{aura(1)}
@@ -336,7 +410,7 @@ function TokenMenu({ token, page, at, onClose, onOpenToken, onOpenEntry }: { tok
         {character && canEdit(character, viewer) ? <button type="button" className="cl-btn small" title="이 토큰의 설정을 캐릭터의 기본 토큰으로 저장" onClick={() => { const { id: _id, x: _x, y: _y, z: _z, represents: _r, ...rest } = token; c.putJournal({ ...character, defaultToken: rest, updatedAt: new Date().toISOString() }); onClose(); }}>기본 토큰으로 저장</button> : null}
         {isGm ? <button type="button" className="cl-btn small" onClick={() => { const copy = { ...token, id: newToken({ name: "" }).id, x: Math.min(page.width - token.w, token.x + 1), z: token.z + 1 }; put(copy); onClose(); }}>복제</button> : null}
         {isGm ? <button type="button" className="cl-btn small" onClick={() => put({ ...token, locked: !token.locked })}>{token.locked ? "잠금 해제" : "잠금"}</button> : null}
-        <button type="button" className="cl-btn small" disabled title="R6 턴 트래커">턴 트래커에 추가</button>
+        {controls ? <button type="button" className="cl-btn small" onClick={() => { c.addTurn({ name: token.name, tokenId: token.id, pageId: page.id, entryId: token.represents, image: token.image }); onClose(); }} title="이니셔티브 0으로 넣습니다 (액션 줄의 '이니셔티브'는 굴려서 넣습니다)">턴 트래커에 추가</button> : null}
         {controls ? <button type="button" className="cl-btn small danger" onClick={() => { c.removeToken(page.id, token.id); onClose(); }}>삭제</button> : null}
       </div>
     </div>
