@@ -141,6 +141,8 @@ export function CampaignDetailScreen({ id }: { id: string }) {
         <div className="cl-card">
           <h3 className="cl-muted">채팅 보관함</h3>
           <p className="cl-muted cl-small">{c.archives[campaign.id]?.messages.length ?? 0}개의 메시지가 저장돼 있습니다. 테이블의 채팅 탭에서 지난 기록을 그대로 봅니다.</p>
+          <h3 className="cl-muted" style={{ marginTop: 12 }}>저널</h3>
+          <p className="cl-muted cl-small">저널 항목 {(c.journals[campaign.id] ?? []).length}개 (핸드아웃 {(c.journals[campaign.id] ?? []).filter((entry) => entry.kind === "handout").length} · 캐릭터 {(c.journals[campaign.id] ?? []).filter((entry) => entry.kind === "character").length}). 테이블의 저널 탭에서 다룹니다.</p>
           <h3 className="cl-muted" style={{ marginTop: 12 }}>위험</h3>
           <button type="button" className="cl-btn danger" onClick={() => { if (confirm(`"${campaign.name}" 캠페인을 삭제할까요? 채팅 보관함도 지워집니다.`)) { if (running) c.leave(); void c.deleteCampaign(campaign.id); navigate({ screen: "campaigns" }); } }}>캠페인 삭제</button>
         </div>

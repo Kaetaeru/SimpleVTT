@@ -5,6 +5,7 @@
  * campaign's fixed code (D71); presence and chat are written into the campaign documents as they happen.
  */
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import type { JournalEntry } from "../campaign/journal";
 import type { Campaign, ChatArchive, ChatMessage, JoinedCampaign, PlayerRole } from "../campaign/model";
 import { chatArchiveId, emptyChatArchive, newCampaign, newJoinCode } from "../campaign/model";
 import { TableClient, type TableStatus } from "../session/client";
@@ -26,6 +27,8 @@ export interface TableState {
   invites: string[];
   transportNote: string | null;
   refusals: string[];
+  /** Entries the GM asked to open on this viewer ("플레이어에게 보여주기"), oldest first; the table consumes them. */
+  shows: string[];
 }
 
 export interface CampaignsState {
@@ -35,6 +38,8 @@ export interface CampaignsState {
   campaigns: Campaign[];
   joined: JoinedCampaign[];
   archives: Record<string, ChatArchive>;
+  /** Journal entries of my campaigns, by campaign id (the host's copy). */
+  journals: Record<string, JournalEntry[]>;
   createCampaign: (name: string) => Promise<Campaign>;
   updateCampaign: (campaign: Campaign) => Promise<void>;
   deleteCampaign: (id: string) => Promise<void>;
@@ -48,6 +53,11 @@ export interface CampaignsState {
   sendRoll: (roll: RollPayload, mode?: "public" | "gm" | "self") => void;
   setRole: (userId: string, role: PlayerRole) => void;
   kick: (userId: string) => void;
+  putJournal: (entry: JournalEntry) => void;
+  removeJournal: (id: string) => void;
+  showJournal: (id: string) => void;
+  /** Drop a consumed "show" request. */
+  dismissShow: (id: string) => void;
 }
 
 const CampaignsContext = createContext<CampaignsState | null>(null);
@@ -71,6 +81,8 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
   const [displayName, setDisplayNameState] = useState(() => { try { return localStorage.getItem("simplevtt-display-name") ?? ""; } catch { return ""; } });
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [archives, setArchives] = useState<Record<string, ChatArchive>>({});
+  const [journals, setJournals] = useState<Record<string, JournalEntry[]>>({});
+  const [shows, setShows] = useState<string[]>([]);
   const [joined, setJoined] = useState<JoinedCampaign[]>([]);
   const [role, setRoleState] = useState<"host" | "player" | null>(null);
   const [campaignId, setCampaignId] = useState<string | null>(null);
@@ -85,6 +97,8 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
   campaignsRef.current = campaigns;
   const archivesRef = useRef(archives);
   archivesRef.current = archives;
+  const journalsRef = useRef(journals);
+  journalsRef.current = journals;
   const bump = useCallback(() => setTick((value) => value + 1), []);
 
   useEffect(() => {
@@ -95,6 +109,9 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
       if (cancelled) return;
       setCampaigns(docs.filter((doc): doc is Campaign => doc.kind === "campaign").sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)));
       setArchives(Object.fromEntries(docs.filter((doc): doc is ChatArchive => doc.kind === "chat").map((doc) => [doc.campaignId, doc])));
+      const byCampaign: Record<string, JournalEntry[]> = {};
+      for (const doc of docs) if (doc.kind === "handout" || doc.kind === "character") (byCampaign[doc.campaignId] ??= []).push(doc);
+      setJournals(byCampaign);
       setJoined(joinedRows ?? []);
     })();
     return () => { cancelled = true; };
@@ -116,8 +133,11 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
   const deleteCampaign = useCallback(async (id: string) => {
     setCampaigns((list) => list.filter((item) => item.id !== id));
     setArchives((map) => { const { [id]: _gone, ...rest } = map; return rest; });
+    const entries = journalsRef.current[id] ?? [];
+    setJournals((map) => { const { [id]: _gone, ...rest } = map; return rest; });
     await store?.deleteDocument(id);
     await store?.deleteDocument(chatArchiveId(id));
+    for (const entry of entries) await store?.deleteDocument(entry.id);
   }, [store]);
   const regenerateJoinCode = useCallback(async (id: string) => { const campaign = campaignsRef.current.find((item) => item.id === id); if (campaign) await updateCampaign({ ...campaign, joinCode: newJoinCode() }); }, [updateCampaign]);
   const saveJoined = useCallback(async (list: JoinedCampaign[]) => { setJoined(list); await store?.putSetting("joined-campaigns", list); }, [store]);
@@ -127,6 +147,7 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
     clientRef.current = client;
     client.subscribe(bump);
     client.onRefused((reason, commandType) => { if (commandType === "hello" || commandType === "kicked") return; setRefusals((list) => [reason, ...list].slice(0, 5)); window.setTimeout(() => setRefusals((list) => list.filter((item) => item !== reason)), 6000); });
+    client.onShow((id) => setShows((list) => (list.includes(id) ? list : [...list, id])));
   }, [bump]);
 
   const leave = useCallback(() => {
@@ -139,6 +160,7 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
     setInvite(null);
     setInvites([]);
     setTransportNote(null);
+    setShows([]);
     bump();
   }, [bump]);
 
@@ -166,7 +188,12 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
       hostUserId: userId,
       hostSecret,
       archive: archivesRef.current[campaign.id]?.messages ?? [],
+      journal: journalsRef.current[campaign.id] ?? [],
       onCampaign: (next) => { void saveCampaign(next); },
+      onJournal: (change) => {
+        if ("entry" in change) { setJournals((map) => { const list = map[campaign.id] ?? []; const index = list.findIndex((item) => item.id === change.entry.id); return { ...map, [campaign.id]: index >= 0 ? list.map((item, at) => (at === index ? change.entry : item)) : [...list, change.entry] }; }); void store?.putDocument(change.entry); }
+        else { setJournals((map) => ({ ...map, [campaign.id]: (map[campaign.id] ?? []).filter((item) => item.id !== change.removed) })); void store?.deleteDocument(change.removed); }
+      },
       onChat: (message) => { pendingChat.current.push(message); if (archiveTimer.current !== null) window.clearTimeout(archiveTimer.current); archiveTimer.current = window.setTimeout(() => { archiveTimer.current = null; flushArchive(campaign.id); }, 500); },
     });
     hostRef.current = host;
@@ -192,7 +219,7 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
       } catch (error) { setTransportNote(`LAN 호스트를 열지 못했습니다: ${error instanceof Error ? error.message : String(error)}`); }
       bump();
     } else setTransportNote("브라우저에서는 같은 PC의 다른 탭만 참가할 수 있습니다. LAN·하마치는 exe에서 열립니다.");
-  }, [attachClient, bump, displayName, flushArchive, leave, saveCampaign, userId]);
+  }, [attachClient, bump, displayName, flushArchive, leave, saveCampaign, store, userId]);
 
   const join = useCallback(async (inviteText: string) => {
     const parsed: Invite | null = decodeInvite(inviteText);
@@ -228,15 +255,19 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
   const sendRoll = useCallback((roll: RollPayload, mode: "public" | "gm" | "self" = "public") => send({ type: "chat.roll", roll, mode }), [send]);
   const setRole = useCallback((target: string, nextRole: PlayerRole) => send({ type: "player.role", userId: target, role: nextRole }), [send]);
   const kick = useCallback((target: string) => send({ type: "player.kick", userId: target }), [send]);
+  const putJournal = useCallback((entry: JournalEntry) => send({ type: "journal.put", entry }), [send]);
+  const removeJournal = useCallback((id: string) => send({ type: "journal.remove", id }), [send]);
+  const showJournal = useCallback((id: string) => send({ type: "journal.show", id }), [send]);
+  const dismissShow = useCallback((id: string) => setShows((list) => list.filter((item) => item !== id)), []);
 
   useEffect(() => () => { clientRef.current?.leave(); hostRef.current?.close(); }, []);
 
   const client = clientRef.current;
-  const table = useMemo<TableState>(() => ({ role, status: client ? client.status : "idle", reason: client?.reason ?? null, campaignId, snapshot: client?.snapshot ?? null, invite, invites, transportNote, refusals }),
+  const table = useMemo<TableState>(() => ({ role, status: client ? client.status : "idle", reason: client?.reason ?? null, campaignId, snapshot: client?.snapshot ?? null, invite, invites, transportNote, refusals, shows }),
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  [role, client, campaignId, invite, invites, transportNote, refusals, tick]);
-  const value = useMemo<CampaignsState>(() => ({ userId, displayName, setDisplayName, campaigns, joined, archives, createCampaign, updateCampaign, deleteCampaign, regenerateJoinCode, forgetJoined, table, launch, join, leave, say, sendRoll, setRole, kick }),
-    [userId, displayName, setDisplayName, campaigns, joined, archives, createCampaign, updateCampaign, deleteCampaign, regenerateJoinCode, forgetJoined, table, launch, join, leave, say, sendRoll, setRole, kick]);
+  [role, client, campaignId, invite, invites, transportNote, refusals, shows, tick]);
+  const value = useMemo<CampaignsState>(() => ({ userId, displayName, setDisplayName, campaigns, joined, archives, journals, createCampaign, updateCampaign, deleteCampaign, regenerateJoinCode, forgetJoined, table, launch, join, leave, say, sendRoll, setRole, kick, putJournal, removeJournal, showJournal, dismissShow }),
+    [userId, displayName, setDisplayName, campaigns, joined, archives, journals, createCampaign, updateCampaign, deleteCampaign, regenerateJoinCode, forgetJoined, table, launch, join, leave, say, sendRoll, setRole, kick, putJournal, removeJournal, showJournal, dismissShow]);
   return <CampaignsContext.Provider value={value}>{children}</CampaignsContext.Provider>;
 }
 

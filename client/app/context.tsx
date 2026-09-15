@@ -6,8 +6,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { createCatalog } from "../catalog";
 import type { ContentCatalog } from "../catalog/catalog";
 import type { RuleModuleJson } from "../catalog/types";
-import { deriveCharacter } from "../character/derive";
-import { initialRuntime, reconcileRuntime, type CharacterRuntime } from "../character/runtime";
+import type { CharacterRuntime } from "../character/runtime";
+import { resolveRuntime } from "../character/save";
 import type { CharacterSource } from "../character/types";
 import { openClientStore, type CharacterRecord, type ClientStore, type InstalledModuleRecord } from "../storage/store";
 
@@ -123,18 +123,8 @@ export function ClientProvider({ children, store: presetStore, initialRoute }: {
     const run = async () => {
       if (!store) throw new Error("store not ready");
       const existing = await store.getCharacter(source.id);
-      const stored = existing?.runtime;
-      // Maxima the runtime is reconciled against are the base sheet (worn items and bag, no effects), so maxSeen always
-      // means "base maximum last seen" and a level-up raises current HP by the real gain.
-      const baseFor = (rt: CharacterRuntime | undefined) => deriveCharacter(source, catalog, rt ? { equipped: rt.equipped, inventory: rt.inventory } : {});
-      let nextRuntime: CharacterRuntime;
-      if (typeof runtime === "function") nextRuntime = runtime(stored ?? initialRuntime(baseFor(undefined)));
-      else if (runtime) nextRuntime = runtime;
-      else nextRuntime = stored ? reconcileRuntime(stored, baseFor(stored)) : initialRuntime(baseFor(undefined));
-      // Current HP never exceeds the maximum in force (Aid ended, a long rest taken with Aid up, an effect dropped).
-      const live = nextRuntime.effects?.length ? deriveCharacter(source, catalog, { equipped: nextRuntime.equipped, inventory: nextRuntime.inventory, effects: nextRuntime.effects }) : baseFor(nextRuntime);
-      if (nextRuntime.hp.current > live.hp.max) nextRuntime = { ...nextRuntime, hp: { ...nextRuntime.hp, current: live.hp.max } };
-      const record: CharacterRecord = { id: source.id, source, runtime: { ...nextRuntime, characterId: source.id }, savedAt: new Date().toISOString() };
+      const nextRuntime = resolveRuntime(source, catalog, existing?.runtime, runtime);
+      const record: CharacterRecord = { id: source.id, source, runtime: nextRuntime, savedAt: new Date().toISOString() };
       await store.putCharacter(record);
       setCharacters(await store.listCharacters());
       return record;

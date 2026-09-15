@@ -1,19 +1,24 @@
 /**
  * Wire protocol of a launched campaign table (ROLL20_MODEL.md §0, §6, §8). There is no session object: the host
  * launches a campaign, players enter with the campaign's fixed join code, and the host numbers every event.
+ * Journal entries travel whole (they are small JSON); the host projects them per viewer (GM notes, permissions).
  */
-import type { ChatMessage, PlayerRole } from "../campaign/model";
+import type { JournalEntry } from "../campaign/journal";
+import type { CampaignSettings, ChatMessage, PlayerRole } from "../campaign/model";
 
-export const PROTOCOL_VERSION = 2;
+export const PROTOCOL_VERSION = 3;
 
 export interface Presence { userId: string; displayName: string; role: PlayerRole; color: string; connected: boolean }
 
 export interface TableSnapshot {
   campaignId: string;
   name: string;
+  settings: CampaignSettings;
   players: Presence[];
   /** The archive as this viewer may see it (whispers and GM rolls filtered), newest last. */
   chat: ChatMessage[];
+  /** Journal entries this viewer may see (GM notes stripped for players). */
+  journal: JournalEntry[];
   lastEventN: number;
 }
 
@@ -25,11 +30,20 @@ export type ClientCommand =
   | { type: "chat.roll"; roll: RollPayload; mode: "public" | "gm" | "self" }
   | { type: "player.role"; userId: string; role: PlayerRole }
   | { type: "player.kick"; userId: string }
+  /** Create or replace a journal entry. Players may create characters (when the campaign allows) and edit what they control. */
+  | { type: "journal.put"; entry: JournalEntry }
+  | { type: "journal.remove"; id: string }
+  /** "플레이어에게 보여주기": open the entry on every viewer who can see it. */
+  | { type: "journal.show"; id: string }
   | { type: "bye" };
 
 export type TableEvent =
   | { n: number; type: "presence"; player: Presence }
   | { n: number; type: "chat"; message: ChatMessage }
+  | { n: number; type: "settings"; settings: CampaignSettings }
+  | { n: number; type: "journal"; entry: JournalEntry }
+  | { n: number; type: "journal.removed"; id: string }
+  | { n: number; type: "journal.show"; id: string; by: string }
   | { n: number; type: "kicked"; userId: string }
   | { n: number; type: "closed" };
 

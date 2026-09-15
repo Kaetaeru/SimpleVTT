@@ -2,7 +2,7 @@
  * The launched table (ROLL20_MODEL.md §3): header with the campaign, presence and the invite; the page area
  * (pages and tokens come in R5); the sidebar with the Chat tab — Roll20 commands, roll cards, whispers, GM rolls.
  */
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useCampaigns } from "../app/campaigns";
 import { useClient } from "../app/context";
 import type { ChatMessage } from "../campaign/model";
@@ -10,6 +10,7 @@ import { parseFormula } from "../character/dice";
 import { describeChatRoll, parseChatInput } from "../session/chat";
 import { copyText, Notice, Pill } from "../ui/components";
 import { useDice } from "../ui/dice/DiceProvider";
+import { JournalTab, JournalWindows, type JournalWindow } from "./JournalPanel";
 
 export function TableScreen() {
   const { navigate } = useClient();
@@ -27,6 +28,15 @@ function Table() {
   const snapshot = c.table.snapshot!;
   const isGm = snapshot.players.find((player) => player.userId === c.userId)?.role === "gm";
   const [copied, setCopied] = useState(false);
+  const [tab, setTab] = useState<"chat" | "journal">("chat");
+  const [windows, setWindows] = useState<JournalWindow[]>([]);
+  const openEntry = useCallback((id: string) => setWindows((list) => { const existing = list.find((item) => item.kind === "entry" && item.id === id); const rest = existing ? list.filter((item) => item !== existing) : list; return [...rest, existing ?? { key: `entry:${id}`, kind: "entry", id }]; }), []);
+  const openNewCharacter = useCallback(() => setWindows((list) => (list.some((item) => item.kind === "new-character") ? list : [...list, { key: `new:${Date.now()}`, kind: "new-character" }])), []);
+  const closeWindow = useCallback((key: string) => setWindows((list) => list.filter((item) => item.key !== key)), []);
+  const focusWindow = useCallback((key: string) => setWindows((list) => { const item = list.find((entry) => entry.key === key); return item && list[list.length - 1] !== item ? [...list.filter((entry) => entry !== item), item] : list; }), []);
+  // "플레이어에게 보여주기": the GM's request opens the entry here.
+  const shows = c.table.shows;
+  useEffect(() => { for (const id of shows) { openEntry(id); c.dismissShow(id); } }, [shows, openEntry, c]);
   return (
     <div className="cl-page cl-table">
       <div className="cl-page-head">
@@ -49,15 +59,21 @@ function Table() {
       </div>
       {c.table.role === "host" && c.table.transportNote ? <Notice tone="warn">{c.table.transportNote}</Notice> : null}
       {c.table.refusals.length ? <div className="cl-toasts">{c.table.refusals.map((reason, index) => <Notice tone="bad" key={`${reason}-${index}`}>{reason}</Notice>)}</div> : null}
+      <JournalWindows windows={windows} onClose={closeWindow} onFocus={focusWindow} onOpen={openEntry} />
       <div className="cl-table-grid">
         <section className="cl-table-main">
           <div className="cl-page-canvas">
-            <p className="cl-quiet">페이지(지도)와 토큰은 다음 단계(R5)에서 이 자리에 옵니다. 지금은 채팅으로 굴리고 말합니다.</p>
+            <p className="cl-quiet">페이지(지도)와 토큰은 다음 단계(R5)에서 이 자리에 옵니다. 지금은 저널의 캐릭터 시트로 운용하고, 채팅으로 굴리고 말합니다.</p>
           </div>
         </section>
         <aside className="cl-sidebar">
-          <div className="cl-sidebar-tabs" role="tablist"><button type="button" role="tab" aria-selected="true" className="active">채팅</button><button type="button" role="tab" disabled title="R3">저널</button><button type="button" role="tab" disabled title="R4">아트</button><button type="button" role="tab" disabled title="R6">컴펜디움</button></div>
-          <ChatTab isGm={isGm} />
+          <div className="cl-sidebar-tabs" role="tablist">
+            <button type="button" role="tab" aria-selected={tab === "chat"} className={tab === "chat" ? "active" : ""} onClick={() => setTab("chat")}>채팅</button>
+            <button type="button" role="tab" aria-selected={tab === "journal"} className={tab === "journal" ? "active" : ""} onClick={() => setTab("journal")}>저널{snapshot.journal.length ? <small className="cl-quiet"> {snapshot.journal.filter((entry) => !entry.archived).length}</small> : null}</button>
+            <button type="button" role="tab" disabled title="R4">아트</button>
+            <button type="button" role="tab" disabled title="R6">컴펜디움</button>
+          </div>
+          {tab === "chat" ? <ChatTab isGm={isGm} /> : <JournalTab onOpen={openEntry} onNewCharacter={openNewCharacter} />}
         </aside>
       </div>
     </div>

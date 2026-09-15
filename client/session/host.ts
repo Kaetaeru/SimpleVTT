@@ -1,8 +1,12 @@
 /**
  * The launched table's authority (the DM's app). Validates the campaign's fixed join code, refuses kicked players,
- * keeps presence, turns chat commands into archive messages, applies GM-only player management, and numbers every
- * event for the mirrors. Persistence happens through callbacks: the campaign (players) and the chat archive.
+ * keeps presence, turns chat commands into archive messages, applies GM-only player management, holds the journal
+ * with its two permission fields, and numbers every event for the mirrors. Every event is projected per viewer
+ * when sent (chat visibility, journal permissions and GM notes), also on a reconnect replay. Persistence happens
+ * through callbacks: the campaign (players), the chat archive and journal entries.
  */
+import type { JournalEntry } from "../campaign/journal";
+import { canEdit, canView, mergePlayerEdit, projectEntry } from "../campaign/journal";
 import type { Campaign, ChatMessage, PlayerRole } from "../campaign/model";
 import { newMessageId, withPlayer, withPlayerKicked, withPlayerRole } from "../campaign/model";
 import { rollFormula } from "../character/dice";
@@ -14,14 +18,18 @@ import type { Transport } from "./transport";
 const EVENT_BUFFER = 5000;
 const SNAPSHOT_CHAT = 300;
 type DistributiveOmit<T, K extends keyof T> = T extends unknown ? Omit<T, K> : never;
+type Viewer = { userId: string; role: PlayerRole };
 
 export interface TableHostOptions {
   campaign: Campaign;
   hostUserId: string;
   hostSecret?: string;
   archive?: ChatMessage[];
+  journal?: JournalEntry[];
   onCampaign?: (campaign: Campaign) => void;
   onChat?: (message: ChatMessage) => void;
+  /** An entry was created or changed (persist it), or removed (`{ removed: id }`). */
+  onJournal?: (change: { entry: JournalEntry } | { removed: string }) => void;
   now?: () => string;
   random?: () => number;
 }
@@ -29,11 +37,13 @@ export interface TableHostOptions {
 export class TableHost {
   private campaign: Campaign;
   private chat: ChatMessage[];
+  private journalEntries: Map<string, JournalEntry>;
   private readonly connected = new Set<string>();
   private readonly peerUsers = new Map<string, string>();
   private readonly peerTransports = new Map<string, Transport>();
   private readonly transports: Transport[] = [];
   private readonly unsubscribe: Array<() => void> = [];
+  /** Buffered unprojected; projected per viewer when sent or replayed. */
   private events: TableEvent[] = [];
   private n = 0;
   private readonly listeners = new Set<(event: TableEvent) => void>();
@@ -42,6 +52,7 @@ export class TableHost {
   constructor(transport: Transport | Transport[], private readonly options: TableHostOptions) {
     this.campaign = options.campaign;
     this.chat = [...(options.archive ?? [])];
+    this.journalEntries = new Map((options.journal ?? []).map((entry) => [entry.id, entry]));
     this.now = options.now ?? (() => new Date().toISOString());
     this.connected.add(options.hostUserId);
     for (const carrier of Array.isArray(transport) ? transport : [transport]) this.attach(carrier);
@@ -49,6 +60,7 @@ export class TableHost {
 
   get state() { return this.campaign; }
   get archive() { return this.chat; }
+  get journal() { return [...this.journalEntries.values()]; }
 
   attach(carrier: Transport) {
     if (this.transports.includes(carrier)) return;
@@ -61,15 +73,31 @@ export class TableHost {
 
   /** The campaign document changed outside (GM edited settings or the code): take it, re-check kicked players. */
   updateCampaign(campaign: Campaign) {
+    const before = this.campaign;
     this.campaign = campaign;
     for (const [peerId, userId] of [...this.peerUsers]) {
       if (campaign.players.find((player) => player.userId === userId)?.kicked) { this.reply(peerId, { type: "refused", reason: "GM이 내보냈습니다", commandType: "kicked" }); this.peerLeft(peerId); }
     }
     for (const player of campaign.players) this.emit({ type: "presence", player: this.presence(player.userId) });
+    if (JSON.stringify(before.settings) !== JSON.stringify(campaign.settings)) this.emit({ type: "settings", settings: campaign.settings });
+    // A role change alters what each viewer may see: resend the journal so mirrors converge.
+    if (before.players.some((player) => player.role !== campaign.players.find((item) => item.userId === player.userId)?.role)) for (const entry of this.journalEntries.values()) this.emit({ type: "journal", entry });
   }
 
-  snapshot(viewer: { userId: string; role: PlayerRole }): TableSnapshot {
-    return { campaignId: this.campaign.id, name: this.campaign.name, players: this.campaign.players.filter((player) => !player.kicked).map((player) => this.presence(player.userId)), chat: this.chat.filter((message) => visibleTo(message, viewer)).slice(-SNAPSHOT_CHAT), lastEventN: this.n };
+  /** The GM's own app edits an entry directly (same rules as a GM command). */
+  putJournal(entry: JournalEntry) { this.storeEntry({ ...entry, campaignId: this.campaign.id, updatedAt: this.now() }); }
+  removeJournal(id: string) { this.dropEntry(id); }
+
+  snapshot(viewer: Viewer): TableSnapshot {
+    return {
+      campaignId: this.campaign.id,
+      name: this.campaign.name,
+      settings: this.campaign.settings,
+      players: this.campaign.players.filter((player) => !player.kicked).map((player) => this.presence(player.userId)),
+      chat: this.chat.filter((message) => visibleTo(message, viewer)).slice(-SNAPSHOT_CHAT),
+      journal: [...this.journalEntries.values()].map((entry) => projectEntry(entry, viewer)).filter((entry): entry is JournalEntry => entry !== null),
+      lastEventN: this.n,
+    };
   }
 
   close() {
@@ -84,6 +112,7 @@ export class TableHost {
   }
 
   private roleOf(userId: string): PlayerRole { return this.campaign.players.find((item) => item.userId === userId)?.role ?? "player"; }
+  private viewer(userId: string): Viewer { return { userId, role: this.roleOf(userId) }; }
 
   private setCampaign(campaign: Campaign) { this.campaign = campaign; this.options.onCampaign?.(campaign); }
 
@@ -99,9 +128,9 @@ export class TableHost {
       this.setCampaign(withPlayer(this.campaign, { userId: command.userId, displayName: command.displayName.trim() || "플레이어" }, this.now()));
       this.peerUsers.set(peerId, command.userId);
       this.connected.add(command.userId);
-      const viewer = { userId: command.userId, role: this.roleOf(command.userId) };
+      const viewer = this.viewer(command.userId);
       const since = command.lastEventN;
-      if (since !== undefined && since < this.n && this.events.length && this.events[0].n <= since + 1) this.reply(peerId, { type: "events", events: this.events.filter((event) => event.n > since && this.eventVisible(event, viewer)) });
+      if (since !== undefined && since < this.n && this.events.length && this.events[0].n <= since + 1) this.reply(peerId, { type: "events", events: this.events.filter((event) => event.n > since).map((event) => this.project(event, viewer)).filter((event): event is TableEvent => event !== null) });
       else this.reply(peerId, { type: "welcome", snapshot: this.snapshot(viewer) });
       this.emit({ type: "presence", player: this.presence(command.userId) });
       if (!isHostUser) this.say({ type: "system", who: "", content: `${this.presence(command.userId).displayName} 입장${isNew ? " (처음)" : ""}` });
@@ -117,6 +146,7 @@ export class TableHost {
     const player = this.campaign.players.find((item) => item.userId === userId);
     if (!player) return;
     const isGm = player.role === "gm";
+    const refuse = (reason: string) => this.reply(peerId, { type: "refused", reason, commandType: command.type });
     switch (command.type) {
       case "chat.say": {
         const input = parseChatInput(command.text);
@@ -129,12 +159,12 @@ export class TableHost {
           }
           case "whisper": {
             const target = input.target.toLowerCase() === "gm" ? "gm" : this.campaign.players.find((item) => item.displayName.toLowerCase() === input.target.toLowerCase())?.userId;
-            if (!target) return this.reply(peerId, { type: "refused", reason: `"${input.target}"라는 참가자가 없습니다 (/w gm 도 됩니다)`, commandType: command.type });
+            if (!target) return refuse(`"${input.target}"라는 참가자가 없습니다 (/w gm 도 됩니다)`);
             this.say({ type: "whisper", who: player.displayName, playerId: userId, target, content: input.text });
             return;
           }
           case "emote": this.say({ type: "emote", who: player.displayName, playerId: userId, content: input.text }); return;
-          case "desc": if (!isGm) return this.reply(peerId, { type: "refused", reason: "/desc 는 GM만 씁니다", commandType: command.type }); this.say({ type: "desc", who: player.displayName, playerId: userId, content: input.text }); return;
+          case "desc": if (!isGm) return refuse("/desc 는 GM만 씁니다"); this.say({ type: "desc", who: player.displayName, playerId: userId, content: input.text }); return;
           case "roll": {
             const roll = rollFormula({ label: input.label ?? "", formula: input.formula }, this.options.random);
             this.say({ type: input.mode === "gm" ? "gmroll" : "rollresult", who: player.displayName, playerId: userId, target: input.mode === "self" ? userId : undefined, content: input.label ?? "", roll: { formula: input.formula, total: roll.total, dice: roll.dice.map((die) => ({ sides: die.sides, value: die.value })), modifier: roll.modifier, label: input.label } });
@@ -149,16 +179,17 @@ export class TableHost {
         return;
       }
       case "player.role": {
-        if (!isGm) return this.reply(peerId, { type: "refused", reason: "GM만 역할을 바꿉니다", commandType: command.type });
-        if (command.userId === this.options.hostUserId && command.role !== "gm") return this.reply(peerId, { type: "refused", reason: "호스트는 GM에서 내릴 수 없습니다", commandType: command.type });
+        if (!isGm) return refuse("GM만 역할을 바꿉니다");
+        if (command.userId === this.options.hostUserId && command.role !== "gm") return refuse("호스트는 GM에서 내릴 수 없습니다");
         this.setCampaign(withPlayerRole(this.campaign, command.userId, command.role));
         this.emit({ type: "presence", player: this.presence(command.userId) });
         this.say({ type: "system", who: "", content: `${this.presence(command.userId).displayName} → ${command.role === "gm" ? "GM" : "플레이어"}` });
+        for (const entry of this.journalEntries.values()) this.emit({ type: "journal", entry });
         return;
       }
       case "player.kick": {
-        if (!isGm) return this.reply(peerId, { type: "refused", reason: "GM만 내보냅니다", commandType: command.type });
-        if (command.userId === this.options.hostUserId) return this.reply(peerId, { type: "refused", reason: "호스트는 내보낼 수 없습니다", commandType: command.type });
+        if (!isGm) return refuse("GM만 내보냅니다");
+        if (command.userId === this.options.hostUserId) return refuse("호스트는 내보낼 수 없습니다");
         const name = this.presence(command.userId).displayName;
         this.setCampaign(withPlayerKicked(this.campaign, command.userId, true));
         for (const [otherPeer, otherUser] of [...this.peerUsers]) if (otherUser === command.userId) { this.reply(otherPeer, { type: "refused", reason: "GM이 내보냈습니다", commandType: "kicked" }); this.peerLeft(otherPeer); }
@@ -166,8 +197,49 @@ export class TableHost {
         this.say({ type: "system", who: "", content: `${name} 내보냄` });
         return;
       }
+      case "journal.put": {
+        const incoming = command.entry;
+        if (!incoming || typeof incoming.id !== "string" || (incoming.kind !== "handout" && incoming.kind !== "character")) return refuse("저널 항목 형식이 아닙니다");
+        const stored = this.journalEntries.get(incoming.id);
+        const now = this.now();
+        if (isGm) { this.storeEntry({ ...incoming, campaignId: this.campaign.id, updatedAt: now, createdAt: stored?.createdAt ?? incoming.createdAt ?? now }); return; }
+        if (!stored) {
+          if (incoming.kind !== "character") return refuse("핸드아웃은 GM만 만듭니다");
+          if (!this.campaign.settings.playersCanCreateCharacters) return refuse("이 캠페인에서는 플레이어가 캐릭터를 만들 수 없습니다 (캠페인 설정)");
+          // A player's new character is theirs: in their journal, controlled by them, in the root folder.
+          this.storeEntry({ ...incoming, campaignId: this.campaign.id, folder: "", canView: [userId], canEdit: [userId], gmNotes: "", archived: false, createdBy: userId, createdAt: now, updatedAt: now });
+          this.say({ type: "system", who: "", content: `${player.displayName}이(가) 캐릭터 "${incoming.name}"을(를) 만들었습니다` });
+          return;
+        }
+        if (!canEdit(stored, this.viewer(userId))) return refuse("이 항목을 고칠 권한이 없습니다");
+        this.storeEntry(mergePlayerEdit(stored, incoming, now));
+        return;
+      }
+      case "journal.remove": {
+        if (!isGm) return refuse("GM만 저널 항목을 지웁니다");
+        this.dropEntry(command.id);
+        return;
+      }
+      case "journal.show": {
+        if (!isGm) return refuse("GM만 플레이어에게 보여줍니다");
+        if (!this.journalEntries.has(command.id)) return refuse("그 항목이 없습니다");
+        this.emit({ type: "journal.show", id: command.id, by: userId });
+        return;
+      }
       default: return;
     }
+  }
+
+  private storeEntry(entry: JournalEntry) {
+    this.journalEntries.set(entry.id, entry);
+    this.options.onJournal?.({ entry });
+    this.emit({ type: "journal", entry });
+  }
+
+  private dropEntry(id: string) {
+    if (!this.journalEntries.delete(id)) return;
+    this.options.onJournal?.({ removed: id });
+    this.emit({ type: "journal.removed", id });
   }
 
   private say(body: Omit<ChatMessage, "id" | "at">) {
@@ -188,14 +260,25 @@ export class TableHost {
     this.say({ type: "system", who: "", content: `${player.displayName} 연결 끊김` });
   }
 
-  private eventVisible(event: TableEvent, viewer: { userId: string; role: PlayerRole }) { return event.type !== "chat" || visibleTo(event.message, viewer); }
+  /**
+   * The event as one viewer receives it: chat by Roll20 visibility; a journal entry projected (GM notes stripped),
+   * or turned into a removal when this viewer may not see it (so a mirror that had it drops it); a "show" only to
+   * those who can see the entry.
+   */
+  private project(event: TableEvent, viewer: Viewer): TableEvent | null {
+    switch (event.type) {
+      case "chat": return visibleTo(event.message, viewer) ? event : null;
+      case "journal": { const entry = projectEntry(event.entry, viewer); return entry ? { ...event, entry } : { n: event.n, type: "journal.removed", id: event.entry.id }; }
+      case "journal.show": { const entry = this.journalEntries.get(event.id); return entry && canView(entry, viewer) ? event : null; }
+      default: return event;
+    }
+  }
 
   private emit(body: DistributiveOmit<TableEvent, "n">) {
     this.n += 1;
     const event = { ...body, n: this.n } as TableEvent;
     this.events = [...this.events, event].slice(-EVENT_BUFFER);
-    // Chat is projected per peer (whispers, GM rolls); other events go to everyone.
-    for (const [peerId, userId] of this.peerUsers) if (this.eventVisible(event, { userId, role: this.roleOf(userId) })) this.reply(peerId, { type: "events", events: [event] });
+    for (const [peerId, userId] of this.peerUsers) { const projected = this.project(event, this.viewer(userId)); if (projected) this.reply(peerId, { type: "events", events: [projected] }); }
     for (const listener of [...this.listeners]) listener(event);
   }
 

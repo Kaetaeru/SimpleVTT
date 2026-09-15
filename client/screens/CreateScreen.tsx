@@ -22,8 +22,18 @@ const STEPS: Array<{ id: StepId; label: string }> = [
 ];
 const ALIGNMENTS = ["질서 선", "중립 선", "혼돈 선", "질서 중립", "중립", "혼돈 중립", "질서 악", "중립 악", "혼돈 악"];
 
-export function CreateScreen({ existing, initialStep }: { existing?: CharacterSource; initialStep?: StepId }) {
+export interface CreateScreenProps {
+  existing?: CharacterSource;
+  initialStep?: StepId;
+  /** Embedded (a journal window at the table): the finished source goes here instead of the library, no draft, no navigation. */
+  onSave?: (source: CharacterSource) => Promise<void> | void;
+  onClose?: () => void;
+  title?: string;
+}
+
+export function CreateScreen({ existing, initialStep, onSave, onClose, title }: CreateScreenProps) {
   const { catalog, navigate, saveCharacter, getDraft, putDraft, characters, store } = useClient();
+  const embedded = Boolean(onSave);
   const [source, setSource] = useState<CharacterSource>(() => existing ?? emptySource());
   const [step, setStep] = useState<StepId>(initialStep ?? "basics");
   const [draftLoaded, setDraftLoaded] = useState(Boolean(existing));
@@ -36,7 +46,7 @@ export function CreateScreen({ existing, initialStep }: { existing?: CharacterSo
   savedIds.current = characters.map((record) => record.id);
   const restored = useRef(false);
   useEffect(() => {
-    if (existing || restored.current || !store) return;
+    if (existing || embedded || restored.current || !store) return;
     restored.current = true;
     let cancelled = false;
     getDraft().then((draft) => {
@@ -45,9 +55,9 @@ export function CreateScreen({ existing, initialStep }: { existing?: CharacterSo
       setDraftLoaded(true);
     });
     return () => { cancelled = true; };
-  }, [existing, getDraft, store]);
+  }, [existing, embedded, getDraft, store]);
   useEffect(() => {
-    if (existing || !draftLoaded || typeof window === "undefined") return;
+    if (existing || embedded || !draftLoaded || typeof window === "undefined") return;
     window.clearTimeout(draftTimer.current);
     draftTimer.current = window.setTimeout(() => { void putDraft(source); }, 400);
     return () => window.clearTimeout(draftTimer.current);
@@ -80,7 +90,9 @@ export function CreateScreen({ existing, initialStep }: { existing?: CharacterSo
     if (derived.validation.blocking.length) return;
     setSaving(true);
     try {
-      const record = await saveCharacter({ ...source, updatedAt: new Date().toISOString() });
+      const stamped = { ...source, updatedAt: new Date().toISOString() };
+      if (onSave) { await onSave(stamped); return; }
+      const record = await saveCharacter(stamped);
       if (!existing) await putDraft(undefined);
       navigate({ screen: "sheet", id: record.id });
     } finally { setSaving(false); }
@@ -88,13 +100,13 @@ export function CreateScreen({ existing, initialStep }: { existing?: CharacterSo
 
   const stepIndex = STEPS.findIndex((item) => item.id === step);
   return (
-    <div className="cl-page">
+    <div className={embedded ? "cl-sheet-embedded" : "cl-page"}>
       <div className="cl-page-head">
-        <h1>{existing ? "캐릭터 편집" : "새 캐릭터"}</h1>
+        <h1>{title ?? (existing ? "캐릭터 편집" : "새 캐릭터")}</h1>
         <span className="cl-sub">{derived.name || "이름 없음"} · {derived.level}레벨</span>
         <div className="cl-actions">
           <button type="button" className="cl-btn" onClick={fillRemaining} title="남은 선택을 첫 항목으로 채웁니다 (나중에 바꿀 수 있음)">남은 선택 빠르게 채우기</button>
-          <button type="button" className="cl-btn quiet" onClick={() => navigate(existing ? { screen: "sheet", id: existing.id } : { screen: "library" })}>닫기</button>
+          <button type="button" className="cl-btn quiet" onClick={() => (onClose ? onClose() : navigate(existing ? { screen: "sheet", id: existing.id } : { screen: "library" }))}>닫기</button>
           <button type="button" className="cl-btn primary" disabled={derived.validation.blocking.length > 0 || saving} onClick={save} title={derived.validation.blocking[0]}>저장</button>
         </div>
       </div>
@@ -125,7 +137,7 @@ export function CreateScreen({ existing, initialStep }: { existing?: CharacterSo
           ) : null}
           <div className="cl-row" style={{ justifyContent: "space-between" }}>
             <button type="button" className="cl-btn" disabled={stepIndex === 0} onClick={() => setStep(STEPS[stepIndex - 1].id)}>← 이전</button>
-            {stepIndex < STEPS.length - 1 ? <button type="button" className="cl-btn primary" onClick={() => setStep(STEPS[stepIndex + 1].id)}>다음 →</button> : <button type="button" className="cl-btn primary" disabled={derived.validation.blocking.length > 0 || saving} onClick={save}>저장하고 시트 열기</button>}
+            {stepIndex < STEPS.length - 1 ? <button type="button" className="cl-btn primary" onClick={() => setStep(STEPS[stepIndex + 1].id)}>다음 →</button> : <button type="button" className="cl-btn primary" disabled={derived.validation.blocking.length > 0 || saving} onClick={save}>{embedded ? "저장" : "저장하고 시트 열기"}</button>}
           </div>
         </div>
         <aside className="cl-preview">

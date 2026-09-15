@@ -39,3 +39,10 @@ Chromium이 Vite 개발 서버(포트 1430)에서 마법사를 처음부터 끝�
 - `33-campaign-archive.png` — 게임을 닫은 뒤 캠페인 상세의 채팅 보관함 개수
 - `34-table-relaunched-history.png` — 다시 "게임 시작"한 테이블에 보관된 채팅이 그대로
 - `35-join-wrong-code.png` — 잘못된 코드는 "참가 코드가 맞지 않습니다" (`node scripts/capture-client-table.mjs`, 시나리오 SC-1~8)
+- `36-journal-handout-gm.png` — DM의 핸드아웃 창: 이름·본문 편집(서식 안내)·GM 노트, 볼 수 있는 사람/고칠 수 있는 사람, 폴더·태그, 플레이어에게 보여주기·보관·삭제. 오른쪽 저널 목록에 "GM만"
+- `37-journal-handout-player.png` — 플레이어에게 열린 같은 핸드아웃: 제목·굵게·목록·저널 링크(@[늑대 소굴], 아직 없는 항목은 흐리게)가 서식대로, GM 노트 없음, 편집 버튼 없음
+- `38-journal-character-sheet-player.png` — 플레이어가 테이블에서 만든 캐릭터의 창(정보·시트·속성 탭): 시트 탭에 운용 패널(HP·휴식·효과·상태·기록)과 시트
+- `39-journal-dm-sees-hp-and-roll.png` — DM이 연 같은 캐릭터: 플레이어의 `-5` 뒤 HP 23/28과 기록, 채팅에 "앨리스의 파이터 · 이니셔티브" 굴림 카드
+- `40-journal-character-info-export.png` — 정보 탭: 소개, "라이브러리로 내보내기" 뒤 저장 알림
+- `41-library-after-vault-export.png` — 플레이어의 캐릭터 화면에 내보낸 사본
+- `42-journal-after-relaunch.png` — 게임을 닫고 다시 시작한 DM 테이블의 저널 목록(핸드아웃 + 캐릭터, 문서에서 복원) (`node scripts/capture-client-journal.mjs`, 시나리오 SC-13~19)

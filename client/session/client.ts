@@ -17,6 +17,7 @@ export class TableClient {
   private lastEventN = 0;
   private readonly listeners = new Set<() => void>();
   private readonly refusedListeners = new Set<(reason: string, commandType?: string) => void>();
+  private readonly showListeners = new Set<(id: string) => void>();
   private readonly unsubscribe: Array<() => void> = [];
 
   constructor(private readonly transport: Transport, private readonly options: TableClientOptions) {
@@ -40,6 +41,8 @@ export class TableClient {
   send(command: ClientCommand) { this.transport.send("host", command); }
   subscribe(listener: () => void) { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; }
   onRefused(listener: (reason: string, commandType?: string) => void) { this.refusedListeners.add(listener); return () => { this.refusedListeners.delete(listener); }; }
+  /** The GM pressed "플레이어에게 보여주기" on an entry this viewer can see. */
+  onShow(listener: (id: string) => void) { this.showListeners.add(listener); return () => { this.showListeners.delete(listener); }; }
 
   leave() {
     if (this.statusState === "joined") this.send({ type: "bye" });
@@ -58,7 +61,7 @@ export class TableClient {
         this.refusal = null;
         break;
       case "events":
-        if (!this.snapshotState) this.snapshotState = { campaignId: "", name: "", players: [], chat: [], lastEventN: 0 };
+        if (!this.snapshotState) this.snapshotState = { campaignId: "", name: "", settings: { playersCanCreateCharacters: true, playersCanExportToVault: true, chatAvatars: true }, players: [], chat: [], journal: [], lastEventN: 0 };
         this.statusState = "joined";
         for (const event of message.events) this.applyEvent(event);
         break;
@@ -82,6 +85,14 @@ export class TableClient {
         break;
       }
       case "chat": state.chat = [...state.chat, event.message].slice(-500); break;
+      case "settings": state.settings = event.settings; break;
+      case "journal": {
+        const index = state.journal.findIndex((item) => item.id === event.entry.id);
+        state.journal = index >= 0 ? state.journal.map((item, at) => (at === index ? event.entry : item)) : [...state.journal, event.entry];
+        break;
+      }
+      case "journal.removed": state.journal = state.journal.filter((item) => item.id !== event.id); break;
+      case "journal.show": for (const listener of [...this.showListeners]) listener(event.id); break;
       case "kicked": state.players = state.players.filter((item) => item.userId !== event.userId); if (event.userId === this.options.userId) { this.statusState = "refused"; this.refusal = "GM이 내보냈습니다"; } break;
       case "closed": this.statusState = "closed"; break;
     }
