@@ -2,7 +2,7 @@
  * App state: the store (IndexedDB or memory), the catalog rebuilt from installed modules, the character list and a
  * hash router (#/, #/new, #/edit/<id>, #/sheet/<id>, #/contents) so a reload keeps the screen.
  */
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createCatalog } from "../catalog";
 import type { ContentCatalog } from "../catalog/catalog";
 import type { RuleModuleJson } from "../catalog/types";
@@ -51,7 +51,8 @@ export interface ClientState {
   theme: "dark" | "light";
   navigate: (route: Route) => void;
   setTheme: (theme: "dark" | "light") => void;
-  saveCharacter: (source: CharacterSource, runtime?: CharacterRuntime) => Promise<CharacterRecord>;
+  /** Save a source with its runtime. Pass an updater to build the runtime from the stored one (safe after an await). */
+  saveCharacter: (source: CharacterSource, runtime?: CharacterRuntime | ((current: CharacterRuntime) => CharacterRuntime)) => Promise<CharacterRecord>;
   deleteCharacter: (id: string) => Promise<void>;
   installModule: (module: RuleModuleJson, fileName?: string) => Promise<void>;
   removeModule: (moduleId: string) => Promise<void>;
@@ -106,17 +107,32 @@ export function ClientProvider({ children, store: presetStore, initialRoute }: {
 
   const setTheme = useCallback((next: "dark" | "light") => { setThemeState(next); void store?.putSetting("theme", next); }, [store]);
 
-  const saveCharacter = useCallback(async (source: CharacterSource, runtime?: CharacterRuntime) => {
-    if (!store) throw new Error("store not ready");
-    const existing = await store.getCharacter(source.id);
-    const base = runtime ?? existing?.runtime;
-    // Reconcile against the sheet as it is in play (worn items, bag, effects in force) so an Aid +5 is not clamped away.
-    const derived = deriveCharacter(source, catalog, base ? { equipped: base.equipped, inventory: base.inventory, effects: base.effects } : {});
-    const nextRuntime = runtime ?? (existing ? reconcileRuntime(existing.runtime, derived) : initialRuntime(derived));
-    const record: CharacterRecord = { id: source.id, source, runtime: { ...nextRuntime, characterId: source.id }, savedAt: new Date().toISOString() };
-    await store.putCharacter(record);
-    setCharacters(await store.listCharacters());
-    return record;
+  // Saves run one after another: each reads the stored runtime after the previous write, so an updater never
+  // works from a stale runtime (a roll settling while the HP box was used in the meantime).
+  const saveQueue = useRef<Promise<unknown>>(Promise.resolve());
+  const saveCharacter = useCallback((source: CharacterSource, runtime?: CharacterRuntime | ((current: CharacterRuntime) => CharacterRuntime)) => {
+    const run = async () => {
+      if (!store) throw new Error("store not ready");
+      const existing = await store.getCharacter(source.id);
+      const stored = existing?.runtime;
+      // Maxima the runtime is reconciled against are the base sheet (worn items and bag, no effects), so maxSeen always
+      // means "base maximum last seen" and a level-up raises current HP by the real gain.
+      const baseFor = (rt: CharacterRuntime | undefined) => deriveCharacter(source, catalog, rt ? { equipped: rt.equipped, inventory: rt.inventory } : {});
+      let nextRuntime: CharacterRuntime;
+      if (typeof runtime === "function") nextRuntime = runtime(stored ?? initialRuntime(baseFor(undefined)));
+      else if (runtime) nextRuntime = runtime;
+      else nextRuntime = stored ? reconcileRuntime(stored, baseFor(stored)) : initialRuntime(baseFor(undefined));
+      // Current HP never exceeds the maximum in force (Aid ended, a long rest taken with Aid up, an effect dropped).
+      const live = nextRuntime.effects?.length ? deriveCharacter(source, catalog, { equipped: nextRuntime.equipped, inventory: nextRuntime.inventory, effects: nextRuntime.effects }) : baseFor(nextRuntime);
+      if (nextRuntime.hp.current > live.hp.max) nextRuntime = { ...nextRuntime, hp: { ...nextRuntime.hp, current: live.hp.max } };
+      const record: CharacterRecord = { id: source.id, source, runtime: { ...nextRuntime, characterId: source.id }, savedAt: new Date().toISOString() };
+      await store.putCharacter(record);
+      setCharacters(await store.listCharacters());
+      return record;
+    };
+    const next = saveQueue.current.then(run, run);
+    saveQueue.current = next.catch(() => undefined);
+    return next;
   }, [store, catalog]);
 
   const deleteCharacter = useCallback(async (id: string) => {

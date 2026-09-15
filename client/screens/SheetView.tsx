@@ -58,60 +58,7 @@ export function SheetView({ derived, catalog, runtime, compact = false, actions 
   const gold = runtime ? runtime.gold : derived.gold;
   const [casting, setCasting] = useState<string | null>(null);
   const isActive = (key: string) => Boolean(runtime?.effects?.some((effect) => effect.key === key));
-  const groupIds = (ids: string[]) => {
-    const groups = new Map<number, string[]>();
-    for (const id of ids) { const level = spellLevel(id); groups.set(level, [...(groups.get(level) ?? []), id]); }
-    return [...groups.entries()].sort((a, b) => a[0] - b[0]);
-  };
-  /** Ways to pay for a spell right now: slots at or above its level with uses left, the pact slot, ritual, a free-cast pool. */
-  const castOptions = (spell: SpellView): Array<{ label: string; method: CastMethod }> => {
-    if (spell.level === 0) return [{ label: "소마법", method: { kind: "cantrip" } }];
-    const options: Array<{ label: string; method: CastMethod }> = [];
-    for (const [level, count] of Object.entries(derived.spellSlots).map(([key, value]) => [Number(key), value] as const).sort((a, b) => a[0] - b[0])) {
-      const left = count - (runtime?.slotsUsed[level] ?? 0);
-      if (level >= spell.level && left > 0) options.push({ label: `${level}레벨 슬롯 (${left})`, method: { kind: "slot", level } });
-    }
-    if (derived.pactMagic && derived.pactMagic.level >= spell.level && derived.pactMagic.count - (runtime?.pactSlotsUsed ?? 0) > 0) options.push({ label: `계약 슬롯 ${derived.pactMagic.level}레벨 (${derived.pactMagic.count - (runtime?.pactSlotsUsed ?? 0)})`, method: { kind: "pact" } });
-    for (const resource of derived.resources) {
-      const left = resource.max - (runtime?.resourcesUsed[resource.id] ?? 0);
-      if (left > 0 && (resource.id.endsWith(`.${spell.id}`) || resource.id.endsWith(`.${spell.id.split(".").pop()}`)) && resource.label.includes("무료")) options.push({ label: `${resource.label} (${left})`, method: { kind: "resource", id: resource.id } });
-    }
-    if (spell.ritual) options.push({ label: "의식 (슬롯 없이, +10분)", method: { kind: "ritual" } });
-    return options;
-  };
-  const SpellRows = ({ ids, castable }: { ids: string[]; castable: boolean }) => (
-    <>
-      {groupIds(ids).map(([level, group]) => (
-        <div className="cl-spell-group" key={level}>
-          <span className="cl-quiet cl-small">{level === 0 ? "소마법" : `${level}레벨`}</span>
-          {group.map((id) => {
-            const spell = catalog.spellById(id);
-            const name = spellName(id);
-            const duration = parseDuration(spell?.duration);
-            const active = isActive(effectKeyForSpell(id));
-            const options = spell && live && castable ? castOptions(spell) : [];
-            return (
-              <div className={`cl-spell-row${active ? " active" : ""}`} key={id}>
-                <span className="cl-spell-name">{name}{spell?.ritual ? <span className="cl-quiet cl-small"> 의식</span> : null}{duration.concentration ? <Pill tone="accent">집중</Pill> : null}</span>
-                {spell ? <span className="cl-quiet cl-small cl-spell-meta">{spell.castingTime.split(/[—,]/)[0]} · {spell.duration}</span> : null}
-                {live && castable && spell ? (
-                  active ? <button type="button" className="cl-btn small danger" onClick={() => actions!.endEffect(effectKeyForSpell(id))}>종료</button>
-                  : options.length === 1 ? <button type="button" className="cl-btn small primary" onClick={() => actions!.castSpell(spell, options[0].method)}>시전</button>
-                  : <button type="button" className="cl-btn small primary" disabled={options.length === 0} title={options.length === 0 ? "쓸 수 있는 슬롯이 없습니다" : undefined} onClick={() => setCasting(casting === id ? null : id)}>시전{options.length > 1 ? " ▾" : ""}</button>
-                ) : null}
-                {casting === id && options.length > 1 ? (
-                  <div className="cl-cast-picker" role="group" aria-label={`${name} 시전 방법`}>
-                    {options.map((option) => <button type="button" key={option.label} className="cl-btn small" onClick={() => { actions!.castSpell(spell!, option.method); setCasting(null); }}>{option.label}</button>)}
-                    <button type="button" className="cl-btn small quiet" onClick={() => setCasting(null)}>취소</button>
-                  </div>
-                ) : null}
-              </div>
-            );
-          })}
-        </div>
-      ))}
-    </>
-  );
+  const spellRows = (ids: string[]) => <SpellRows ids={ids} catalog={catalog} derived={derived} runtime={runtime} actions={actions} casting={casting} setCasting={setCasting} />;
   return (
     <div className={`cl-sheet${compact ? " compact" : ""}`}>
       <div className="cl-sheet-head">
@@ -287,9 +234,9 @@ export function SheetView({ derived, catalog, runtime, compact = false, actions 
                     <span className="cl-name">{entry.className}</span>
                     <span className="cl-quiet cl-small">{ABILITY_KO[entry.ability]} · DC <Explain terms={entry.saveDcTerms} total={entry.saveDc} label={`${entry.className} 내성 DC`}>{entry.saveDc}</Explain> · 명중 <Explain terms={entry.attackTerms} total={entry.attackBonus} label={`${entry.className} 주문 명중`}>{signed(entry.attackBonus)}</Explain></span>
                   </div>
-                  {entry.cantrips.length ? <div className="cl-spell-level"><h4>소마법 {entry.cantripsMax ? `(${entry.cantrips.length}/${entry.cantripsMax})` : ""}</h4>{live ? <SpellRows ids={entry.cantrips} castable /> : <div className="cl-small">{entry.cantrips.map(spellName).join(", ")}</div>}</div> : null}
-                  {entry.alwaysPrepared.length ? <div className="cl-spell-level"><h4>항상 준비</h4>{live ? <SpellRows ids={entry.alwaysPrepared} castable /> : byLevel(entry.alwaysPrepared).map(([level, names]) => <div className="cl-small" key={level}><span className="cl-quiet">{level}레벨</span> {names.join(", ")}</div>)}</div> : null}
-                  {entry.preparedMax ? <div className="cl-spell-level"><h4>준비 주문 ({entry.prepared.length}/{entry.preparedMax})</h4>{live ? <SpellRows ids={entry.prepared} castable /> : byLevel(entry.prepared).map(([level, names]) => <div className="cl-small" key={level}><span className="cl-quiet">{level}레벨</span> {names.join(", ")}</div>)}</div> : null}
+                  {entry.cantrips.length ? <div className="cl-spell-level"><h4>소마법 {entry.cantripsMax ? `(${entry.cantrips.length}/${entry.cantripsMax})` : ""}</h4>{live ? spellRows(entry.cantrips) : <div className="cl-small">{entry.cantrips.map(spellName).join(", ")}</div>}</div> : null}
+                  {entry.alwaysPrepared.length ? <div className="cl-spell-level"><h4>항상 준비</h4>{live ? spellRows(entry.alwaysPrepared) : byLevel(entry.alwaysPrepared).map(([level, names]) => <div className="cl-small" key={level}><span className="cl-quiet">{level}레벨</span> {names.join(", ")}</div>)}</div> : null}
+                  {entry.preparedMax ? <div className="cl-spell-level"><h4>준비 주문 ({entry.prepared.length}/{entry.preparedMax})</h4>{live ? spellRows(entry.prepared) : byLevel(entry.prepared).map(([level, names]) => <div className="cl-small" key={level}><span className="cl-quiet">{level}레벨</span> {names.join(", ")}</div>)}</div> : null}
                   {entry.spellbook ? <div className="cl-spell-level"><h4>주문서 ({entry.spellbook.length}) <span className="cl-quiet">— 준비한 주문만 시전</span></h4>{byLevel(entry.spellbook).map(([level, names]) => <div className="cl-small" key={level}><span className="cl-quiet">{level}레벨</span> {names.join(", ")}</div>)}</div> : null}
                 </div>
               ))}
@@ -338,6 +285,65 @@ export function SheetView({ derived, catalog, runtime, compact = false, actions 
         </div>
       </div>
     </div>
+  );
+}
+
+/** Ways to pay for a spell right now: slots at or above its level with uses left, the pact slot, a free-cast pool, ritual. */
+function castOptions(spell: SpellView, derived: DerivedCharacter, runtime: CharacterRuntime | undefined): Array<{ label: string; method: CastMethod }> {
+  if (spell.level === 0) return [{ label: "소마법", method: { kind: "cantrip" } }];
+  const options: Array<{ label: string; method: CastMethod }> = [];
+  for (const [level, count] of Object.entries(derived.spellSlots).map(([key, value]) => [Number(key), value] as const).sort((a, b) => a[0] - b[0])) {
+    const left = count - (runtime?.slotsUsed[level] ?? 0);
+    if (level >= spell.level && left > 0) options.push({ label: `${level}레벨 슬롯 (${left})`, method: { kind: "slot", level } });
+  }
+  if (derived.pactMagic && derived.pactMagic.level >= spell.level && derived.pactMagic.count - (runtime?.pactSlotsUsed ?? 0) > 0) options.push({ label: `계약 슬롯 ${derived.pactMagic.level}레벨 (${derived.pactMagic.count - (runtime?.pactSlotsUsed ?? 0)})`, method: { kind: "pact" } });
+  for (const resource of derived.resources) {
+    const left = resource.max - (runtime?.resourcesUsed[resource.id] ?? 0);
+    if (left > 0 && (resource.id.endsWith(`.${spell.id}`) || resource.id.endsWith(`.${spell.id.split(".").pop()}`)) && resource.label.includes("무료")) options.push({ label: `${resource.label} (${left})`, method: { kind: "resource", id: resource.id } });
+  }
+  if (spell.ritual) options.push({ label: "의식 (슬롯 없이, +10분)", method: { kind: "ritual" } });
+  return options;
+}
+
+/** Spell rows grouped by level with a "시전" button (or a picker when several ways to pay exist) and "종료" while the spell is in effect. */
+function SpellRows({ ids, catalog, derived, runtime, actions, casting, setCasting }: { ids: string[]; catalog: ContentCatalog; derived: DerivedCharacter; runtime?: CharacterRuntime; actions?: SheetActions; casting: string | null; setCasting: (id: string | null) => void }) {
+  const live = Boolean(actions && runtime);
+  const spellLevel = (id: string) => catalog.spellById(id)?.level ?? 0;
+  const groups = new Map<number, string[]>();
+  for (const id of ids) { const level = spellLevel(id); groups.set(level, [...(groups.get(level) ?? []), id]); }
+  const isActive = (key: string) => Boolean(runtime?.effects?.some((effect) => effect.key === key));
+  return (
+    <>
+      {[...groups.entries()].sort((a, b) => a[0] - b[0]).map(([level, group]) => (
+        <div className="cl-spell-group" key={level}>
+          <span className="cl-quiet cl-small">{level === 0 ? "소마법" : `${level}레벨`}</span>
+          {group.map((id) => {
+            const spell = catalog.spellById(id);
+            const name = spell?.name ?? catalog.name(id);
+            const duration = parseDuration(spell?.duration);
+            const active = isActive(effectKeyForSpell(id));
+            const options = spell && live ? castOptions(spell, derived, runtime) : [];
+            return (
+              <div className={`cl-spell-row${active ? " active" : ""}`} key={id}>
+                <span className="cl-spell-name">{name}{spell?.ritual ? <span className="cl-quiet cl-small"> 의식</span> : null}{duration.concentration ? <Pill tone="accent">집중</Pill> : null}</span>
+                {spell ? <span className="cl-quiet cl-small cl-spell-meta">{spell.castingTime.split(/[—,]/)[0]} · {spell.duration}</span> : null}
+                {live && spell ? (
+                  active ? <button type="button" className="cl-btn small danger" onClick={() => actions!.endEffect(effectKeyForSpell(id))}>종료</button>
+                  : options.length === 1 ? <button type="button" className="cl-btn small primary" onClick={() => actions!.castSpell(spell, options[0].method)}>시전</button>
+                  : <button type="button" className="cl-btn small primary" disabled={options.length === 0} title={options.length === 0 ? "쓸 수 있는 슬롯이 없습니다" : undefined} onClick={() => setCasting(casting === id ? null : id)}>시전{options.length > 1 ? " ▾" : ""}</button>
+                ) : null}
+                {casting === id && options.length > 1 ? (
+                  <div className="cl-cast-picker" role="group" aria-label={`${name} 시전 방법`}>
+                    {options.map((option) => <button type="button" key={option.label} className="cl-btn small" onClick={() => { actions!.castSpell(spell!, option.method); setCasting(null); }}>{option.label}</button>)}
+                    <button type="button" className="cl-btn small quiet" onClick={() => setCasting(null)}>취소</button>
+                  </div>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+      ))}
+    </>
   );
 }
 

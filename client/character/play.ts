@@ -4,7 +4,7 @@
  * pure function (runtime, derived) → runtime that also appends a log line, so the sheet can show what happened.
  */
 import type { FeatureActivation, ParsedDuration } from "../rules/activation";
-import { effectKeyForFeature, effectKeyForSpell, parseDuration } from "../rules/activation";
+import { durationInRounds, effectKeyForFeature, effectKeyForSpell, parseDuration } from "../rules/activation";
 import type { ActiveEffect, CharacterRuntime } from "./runtime";
 import { emptyInventoryPatch } from "./runtime";
 import type { DerivedCharacter } from "./types";
@@ -100,7 +100,7 @@ export function shortRest(runtime: CharacterRuntime, derived: DerivedCharacter, 
     else if (resource.restore.short > 0) { resourcesUsed[resource.id] = Math.max(0, used - resource.restore.short); restored.push(`${resource.label} ${Math.min(used, resource.restore.short)}회`); }
   }
   if (derived.pactMagic && next.pactSlotsUsed > 0) restored.push("계약 마법 슬롯");
-  const ended = (next.effects ?? []).filter((effect) => effect.rounds !== undefined || effect.concentration);
+  const ended = (next.effects ?? []).filter((effect) => effect.concentration || (durationInRounds(effect.duration) ?? Infinity) <= 600);
   return stamp({ ...next, resourcesUsed, pactSlotsUsed: 0, effects: (next.effects ?? []).filter((effect) => !ended.includes(effect)) }, `짧은 휴식${restored.length ? ` — 회복: ${restored.join(", ")}` : ""}${ended.length ? ` — 종료: ${ended.map((effect) => effect.name).join(", ")}` : ""}`);
 }
 
@@ -291,8 +291,9 @@ export function useFeature(runtime: CharacterRuntime, derived: DerivedCharacter,
     next = { ...next, resourcesUsed: { ...next.resourcesUsed, [resource.id]: used + spend } };
     parts.push(activation.points ? `${spend}점 사용, ${resource.max - used - spend}/${resource.max} 남음` : `${resource.max - used - 1}/${resource.max} 남음`);
   }
-  if (activation.heal && extras.healRoll !== undefined) { next = applyHealing(next, derived, extras.healRoll); parts.push(`${extras.healRoll} 회복`); }
-  if (activation.tempHp && extras.tempRoll !== undefined) { next = grantTempHp(next, extras.tempRoll); parts.push(`임시 HP ${extras.tempRoll}`); }
+  // The caller decides what was rolled or chosen (Second Wind roll, Lay on Hands points on self); apply whatever it passed.
+  if (extras.healRoll !== undefined) { next = applyHealing(next, derived, extras.healRoll); parts.push(`${extras.healRoll} 회복`); }
+  if (extras.tempRoll !== undefined) { next = grantTempHp(next, extras.tempRoll); parts.push(`임시 HP ${extras.tempRoll}`); }
   const duration = activation.duration?.(derived);
   if (duration && !duration.instantaneous) {
     next = startEffect(next, { key: effectKeyForFeature(feature.id), name: feature.name, source: "feature", duration: duration.text, concentration: duration.concentration, rounds: duration.rounds });

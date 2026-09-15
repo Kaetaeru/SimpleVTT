@@ -15,15 +15,21 @@ export interface ParsedDuration {
 
 const ROUNDS_PER: Array<[RegExp, number]> = [[/(\d+)\s*라운드/, 1], [/(\d+)\s*분/, 10], [/(\d+)\s*시간/, 600], [/(\d+)\s*일/, 14400]];
 
+/** The duration in rounds when the text names a length ("1분" → 10, "1시간" → 600, "1일" → 14400); undefined for "특수", "무효화될 때까지" and the like. */
+export function durationInRounds(text: string | undefined): number | undefined {
+  const value = (text ?? "").trim();
+  for (const [pattern, perUnit] of ROUNDS_PER) {
+    const match = pattern.exec(value);
+    if (match) return Number(match[1]) * perUnit;
+  }
+  return undefined;
+}
+
 export function parseDuration(text: string | undefined): ParsedDuration {
   const value = (text ?? "").trim();
   if (!value || value === "즉시" || value === "순간") return { text: value || "즉시", instantaneous: true, concentration: false };
   const concentration = /집중/.test(value);
-  let rounds: number | undefined;
-  for (const [pattern, perUnit] of ROUNDS_PER) {
-    const match = pattern.exec(value);
-    if (match) { rounds = Number(match[1]) * perUnit; break; }
-  }
+  const rounds = durationInRounds(value);
   return { text: value, instantaneous: false, concentration, rounds: rounds !== undefined && rounds <= 100 ? rounds : undefined };
 }
 

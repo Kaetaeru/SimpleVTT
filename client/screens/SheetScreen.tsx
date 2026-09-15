@@ -34,9 +34,9 @@ export function SheetScreen({ id }: { id: string }) {
   if (!record || !derived) return <div className="cl-page"><Notice tone="bad">캐릭터를 찾을 수 없습니다.</Notice><button type="button" className="cl-btn" onClick={() => navigate({ screen: "library" })}>라이브러리로</button></div>;
   const runtime = record.runtime;
   const commit = (next: CharacterRuntime) => { if (next !== runtime) void saveCharacter(record.source, next); };
-  const rollAndLog = async (spec: RollSpec) => { const result = await dice.roll(spec); void saveCharacter(record.source, noteLog(latestRuntime(), describeRoll(result))); return result; };
-  // Rolls resolve later; read the freshest runtime from the record list at that moment.
-  const latestRuntime = () => characters.find((item) => item.id === id)?.runtime ?? runtime;
+  // Rolls resolve seconds later; anything saved meanwhile (HP box, a pip) must not be overwritten, so the log line is
+  // written by an updater against the stored runtime.
+  const rollAndLog = async (spec: RollSpec) => { const result = await dice.roll(spec); void saveCharacter(record.source, (current) => noteLog(current, describeRoll(result))); return result; };
   const hpPreview = applyHpCommand(runtime, derived, hpInput);
   const submitHp = () => { if (hpPreview) { commit(hpPreview); setHpInput(""); } };
 
@@ -58,12 +58,12 @@ export function SheetScreen({ id }: { id: string }) {
     endEffect: (key) => commit(endEffect(runtime, key)),
     castSpell: (spell, method) => {
       const next = castSpell(runtime, derived, { id: spell.id, name: spell.name, level: spell.level, duration: spell.duration, ritual: spell.ritual }, method);
-      if (next) commit(withEffectStart(next)); else alert("그 방법으로는 시전할 수 없습니다 (슬롯이나 횟수가 없습니다).");
+      if (next) commit(withEffectStart(runtime, next)); else alert("그 방법으로는 시전할 수 없습니다 (슬롯이나 횟수가 없습니다).");
     },
   };
   /** An effect that just started may change the sheet at once (Aid: +5 max HP and +5 current HP). */
-  const withEffectStart = (next: CharacterRuntime) => {
-    const started = (next.effects ?? []).filter((effect) => !(runtime.effects ?? []).some((item) => item.key === effect.key));
+  const withEffectStart = (previous: CharacterRuntime, next: CharacterRuntime) => {
+    const started = (next.effects ?? []).filter((effect) => !(previous.effects ?? []).some((item) => item.key === effect.key));
     let out = next;
     for (const effect of started) {
       const application = effectApplication(effect, derived, catalog);
@@ -91,8 +91,10 @@ export function SheetScreen({ id }: { id: string }) {
     }
     if (activation.heal) extras.healRoll = (await dice.roll({ label: feature.name, formula: activation.heal(derived), note: "회복", kind: "custom" })).total;
     if (activation.tempHp) extras.tempRoll = (await dice.roll({ label: feature.name, formula: activation.tempHp(derived), note: "임시 HP", kind: "custom" })).total;
-    const next = useFeature(latestRuntime(), derived, feature, activation.points ? { ...activation, heal: undefined } : activation, extras);
-    if (next) commit(withEffectStart(next)); else alert("남은 횟수가 없습니다.");
+    // Applied against the stored runtime: the dice took a while and the sheet may have changed meanwhile.
+    let refused = false;
+    await saveCharacter(record.source, (current) => { const next = useFeature(current, derived, feature, activation, extras); if (!next) { refused = true; return current; } return withEffectStart(current, next); });
+    if (refused) alert("남은 횟수가 없습니다.");
   };
 
   const remove = async () => {
@@ -111,7 +113,7 @@ export function SheetScreen({ id }: { id: string }) {
       const result = await dice.roll({ label: `히트 다이스 ${count}${die}`, formula: `${count}${die}`, note: `건강 ${derived.abilities.con.modifier >= 0 ? "+" : ""}${derived.abilities.con.modifier} ×${count}`, kind: "hit-die" });
       for (const rolled of result.dice) spends.push({ die, roll: rolled.value });
     }
-    commit(shortRest(latestRuntime(), derived, spends));
+    void saveCharacter(record.source, (current) => shortRest(current, derived, spends));
   };
   const submitCustomRoll = () => {
     if (!parseFormula(customRoll)) return;

@@ -128,6 +128,8 @@ const describe = (label: string, value?: number, dice?: string) => (dice ? `+${d
 export function applyActiveEffects(derived: DerivedCharacter, effects: ActiveEffect[], catalog: ContentCatalog): DerivedCharacter {
   let next: DerivedCharacter = { ...derived, activeEffects: [], checkTerms: [...derived.checkTerms] };
   const applied: AppliedEffect[] = [];
+  // AC terms added by effects so far, so a replacement base (Mage Armor) compares against the real base and keeps them.
+  const acEffectTerms: Term[] = [];
   for (const effect of effects) {
     const application = effectApplication(effect, next, catalog);
     if (!application) { applied.push({ key: effect.key, name: effect.name, applied: false, notes: ["규칙 없음 — 설명대로 수동 적용"] }); continue; }
@@ -135,18 +137,19 @@ export function applyActiveEffects(derived: DerivedCharacter, effects: ActiveEff
     const label = effect.name;
 
     if (application.ac) {
-      let terms = [...next.ac.terms];
+      let baseTerms = next.ac.terms.filter((item) => !acEffectTerms.includes(item));
       let source = next.ac.source;
-      const shield = terms.find((item) => item.label === "방패");
+      const shield = baseTerms.find((item) => item.label === "방패");
       const wearingArmor = next.inventory.some((item) => item.equipped && item.kind === "armor");
       if (application.ac.unarmoredBase !== undefined && !wearingArmor) {
         const dex = next.abilities.dex.modifier;
         const candidate = application.ac.unarmoredBase + dex + (shield?.value ?? 0);
-        if (candidate > sum(terms)) { terms = [{ label, value: application.ac.unarmoredBase }, { label: "민첩 수정치", value: dex }, ...(shield ? [shield] : [])]; source = label; notes.push(`AC ${application.ac.unarmoredBase} + 민첩`); }
+        if (candidate > sum(baseTerms)) { baseTerms = [{ label, value: application.ac.unarmoredBase }, { label: "민첩 수정치", value: dex }, ...(shield ? [shield] : [])]; source = label; notes.push(`AC ${application.ac.unarmoredBase} + 민첩`); }
         else notes.push("AC: 지금 AC가 더 높아 적용 안 됨");
       }
-      if (application.ac.add) { terms.push({ label, value: application.ac.add }); notes.push(`AC +${application.ac.add}`); }
-      if (application.ac.min !== undefined && sum(terms) < application.ac.min) { terms.push({ label: `${label} (최소 ${application.ac.min})`, value: application.ac.min - sum(terms) }); notes.push(`AC 최소 ${application.ac.min}`); }
+      if (application.ac.add) { acEffectTerms.push({ label, value: application.ac.add }); notes.push(`AC +${application.ac.add}`); }
+      let terms = [...baseTerms, ...acEffectTerms];
+      if (application.ac.min !== undefined && sum(terms) < application.ac.min) { const floor = { label: `${label} (최소 ${application.ac.min})`, value: application.ac.min - sum(terms) }; acEffectTerms.push(floor); terms = [...terms, floor]; notes.push(`AC 최소 ${application.ac.min}`); }
       next = { ...next, ac: { ...next.ac, value: sum(terms), terms, source } };
     }
     if (application.attack || application.damage) {
@@ -197,7 +200,7 @@ export function applyActiveEffects(derived: DerivedCharacter, effects: ActiveEff
       if (application.spellDc) notes.push(`주문 DC +${application.spellDc}`);
       if (application.spellAttack) notes.push(`주문 명중 +${application.spellAttack}`);
     }
-    if (application.resistances?.length) { next = { ...next, defenses: { ...next.defenses, resistances: [...next.defenses.resistances, ...application.resistances.filter((type) => !next.defenses.resistances.includes(type)).map((type) => `${type} (${label})`)] } }; notes.push(`저항: ${application.resistances.join("·")}`); }
+    if (application.resistances?.length) { const has = (type: string) => next.defenses.resistances.some((line) => line === type || line.startsWith(`${type} (`)); next = { ...next, defenses: { ...next.defenses, resistances: [...next.defenses.resistances, ...application.resistances.filter((type) => !has(type)).map((type) => `${type} (${label})`)] } }; notes.push(`저항: ${application.resistances.join("·")}`); }
     if (application.conditionImmunities?.length) { next = { ...next, defenses: { ...next.defenses, conditionImmunities: [...next.defenses.conditionImmunities, ...application.conditionImmunities.map((condition) => `${condition} (${label})`)] } }; notes.push(`상태 면역: ${application.conditionImmunities.join("·")}`); }
     if (application.darkvision) { next = { ...next, senses: { ...next.senses, darkvision: Math.max(next.senses.darkvision ?? 0, application.darkvision) } }; notes.push(`암시야 ${application.darkvision}ft`); }
     notes.push(...(application.notes ?? []));
