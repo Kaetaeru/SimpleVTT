@@ -640,3 +640,7 @@ span.cl-tracker-init{display:inline-grid;place-items:center}
 /* R17: one row drawn from a rollable table. */
 .cl-roll-drawn{padding:2px 0;font-size:var(--text-s)}
 .cl-roll-drawn + .cl-roll-drawn{border-top:1px dashed var(--line)}
+
+/* R18: the in-world clock in the table header. */
+.cl-clock{flex-wrap:wrap;align-items:center}
+.cl-clock-now{font-variant-numeric:tabular-nums;font-weight:600;padding:2px 6px;border:1px solid var(--line);border-radius:var(--radius-s);background:var(--surface)}

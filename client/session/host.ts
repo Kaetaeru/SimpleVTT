@@ -27,8 +27,8 @@ import { spellExec } from "../compendium/spells";
 import { startEffect } from "../character/play";
 import type { CastMethod } from "../character/play";
 import type { TrackerTurn } from "../campaign/tracker";
-import type { Campaign, ChatMessage, PlayerRole } from "../campaign/model";
-import { newMessageId, withPlayer, withPlayerKicked, withPlayerRole } from "../campaign/model";
+import type { Campaign, CampaignClock, ChatMessage, PlayerRole } from "../campaign/model";
+import { advanceClock, clockText, emptyClock, newMessageId, withPlayer, withPlayerKicked, withPlayerRole } from "../campaign/model";
 import { rollFormula } from "../character/dice";
 import { ABILITY_KO, type AbilityKey } from "../catalog/types";
 import { parseChatInput, renderInline, visibleTo } from "./chat";
@@ -37,6 +37,13 @@ import { PROTOCOL_VERSION, isClientCommand } from "./protocol";
 import type { Transport } from "./transport";
 import { summonRule } from "../rules/summons";
 import { monsterById } from "../compendium/monsters";
+
+/** R18: "10분" / "1시간 30분" / "8시간" for the chat line. */
+const describeMinutes = (minutes: number) => {
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  return `${hours ? `${hours}시간` : ""}${hours && rest ? " " : ""}${rest || !hours ? `${rest}분` : ""}`;
+};
 
 /** R16: the 2024 Counterspell — a reaction that makes the other caster roll a Constitution save. */
 const COUNTERSPELL = "dnd.srd521.spell.counterspell";
@@ -74,6 +81,8 @@ export interface TableHostOptions {
   pcSpell?: (entry: JournalCharacter, spellId: string, method?: CastMethod) => { spec: SpellCastSpec; casterStats: CasterStats; spend: (runtime: CharacterRuntime) => CharacterRuntime | null } | null;
   /** R11: whether the character can cast this reaction spell right now (knows it, has a slot) — the cast method to use, or null. */
   pcReactionSpell?: (entry: JournalCharacter, spellId: string) => CastMethod | null;
+  /** R18: run a short or long rest on one sheet (the catalog lives outside the host). */
+  pcRest?: (entry: JournalCharacter, kind: "short" | "long") => CharacterRuntime | null;
   /** R10: an item in the character's bag as a table use (healing formula, consumed) and how to take it out of the bag. */
   pcItem?: (entry: JournalCharacter, instanceId: string) => { name: string; heal?: string; text: string; consumes: boolean; consume: (runtime: CharacterRuntime) => CharacterRuntime } | null;
   now?: () => string;
@@ -127,6 +136,8 @@ export class TableHost {
   get art() { return [...this.artAssets.values()]; }
   get pageList() { return [...this.pages.values()].sort((a, b) => a.order - b.order); }
   get tracker(): Tracker { return this.campaign.tracker ?? emptyTracker(); }
+  /** R18: the in-world clock (D115). */
+  get clock(): CampaignClock { return this.campaign.clock ?? emptyClock(); }
 
   attach(carrier: Transport) {
     if (this.transports.includes(carrier)) return;
@@ -168,6 +179,7 @@ export class TableHost {
       playerPageId: this.campaign.playerPageId,
       pageBookmarks: this.campaign.pageBookmarks ?? {},
       tracker: this.tracker,
+      clock: this.clock,
       // R17: a player sees only shared macros, and a table's name without its rows (the host draws).
       macros: (this.campaign.macros ?? []).filter((macro) => viewer.role === "gm" || macro.shared),
       tables: (this.campaign.tables ?? []).map((table) => (viewer.role === "gm" ? table : { ...table, rows: [] })),
@@ -411,6 +423,39 @@ export class TableHost {
         this.emit({ type: "token.removed", pageId: page.id, id: command.id });
         const tracker = withoutToken(this.tracker, page.id, command.id);
         if (tracker !== this.tracker && tracker.turns.length !== this.tracker.turns.length) this.setTracker(tracker);
+        return;
+      }
+      case "table.clock": {
+        if (!isGm) return refuse("시간은 DM이 옮깁니다");
+        const minutes = Math.max(0, Math.min(60 * 24 * 30, Math.floor(command.minutes) || 0));
+        if (!minutes) return refuse("옮길 시간이 없습니다");
+        this.passTime(minutes);
+        this.say({ type: "system", who: "", content: `${describeMinutes(minutes)}이(가) 지납니다 — ${clockText(this.clock)}` });
+        return;
+      }
+      case "table.rest": {
+        if (!isGm) return refuse("휴식은 DM이 시작합니다 (플레이어는 제안할 수 있습니다)");
+        const long = command.kind === "long";
+        const rested: string[] = [];
+        for (const entry of [...this.journalEntries.values()]) {
+          if (entry.kind !== "character" || entry.archived) continue;
+          const runtime = this.options.pcRest?.(entry, command.kind);
+          if (!runtime) continue;
+          this.storeEntry({ ...entry, runtime: { ...runtime, updatedAt: this.now() }, updatedAt: this.now() });
+          rested.push(entry.name);
+        }
+        // R18: a long rest also gives the monsters their day back — per-day spells and traits, legendary resistance, recharges.
+        if (long) for (const entry of [...this.journalEntries.values()]) {
+          if (entry.kind !== "npc") continue;
+          this.storeEntry({ ...entry, runtime: { ...entry.runtime, uses: {}, spent: {}, legendaryUsed: 0, legendaryResistanceUsed: 0, endSaves: [], updatedAt: this.now() }, updatedAt: this.now() });
+        }
+        this.passTime(long ? 8 * 60 : 60);
+        this.say({ type: "system", who: "", content: `${long ? "긴 휴식" : "짧은 휴식"} — ${rested.length ? rested.join(", ") : "쉰 캐릭터 없음"}${long ? " · NPC의 하루 횟수도 돌아왔습니다" : ""} · ${clockText(this.clock)}` });
+        return;
+      }
+      case "act.rest": {
+        // A player asks; the DM runs it. Everyone sees the ask, so nobody rests behind the table's back.
+        this.say({ type: "system", who: "", content: `${player.displayName}이(가) ${command.kind === "long" ? "긴 휴식" : "짧은 휴식"}을 제안합니다 — DM이 시작할 수 있습니다` });
         return;
       }
       case "table.macros": {
@@ -1302,6 +1347,24 @@ export class TableHost {
     if (this.actions.size > 200) this.actions.delete(this.actions.keys().next().value as string);
   }
 
+  /**
+   * R18 (D115): move the in-world clock and let time do its work — a timed effect whose rounds have run out ends
+   * (one minute is ten rounds), and the table hears about the new time.
+   */
+  private passTime(minutes: number) {
+    const clock = advanceClock(this.clock, minutes);
+    this.setCampaign({ ...this.campaign, clock, updatedAt: this.now() });
+    this.emit({ type: "clock", clock });
+    const rounds = Math.min(minutes * 10, 6000);
+    for (const entry of [...this.journalEntries.values()]) {
+      if (entry.kind !== "character" || !entry.runtime.effects?.length) continue;
+      let runtime = entry.runtime;
+      const longest = Math.max(0, ...runtime.effects.map((effect) => (effect.rounds ?? 0) - effect.elapsed));
+      for (let at = 0; at < Math.min(rounds, longest + 1) && runtime.effects.some((effect) => effect.rounds !== undefined); at += 1) runtime = advanceRound(runtime);
+      if (runtime !== entry.runtime) this.storeEntry({ ...entry, runtime: { ...runtime, updatedAt: this.now() }, updatedAt: this.now() });
+    }
+  }
+
   private setTracker(tracker: Tracker) {
     this.setCampaign({ ...this.campaign, tracker, updatedAt: this.now() });
     this.emit({ type: "tracker", tracker });
@@ -1486,6 +1549,7 @@ export class TableHost {
     switch (event.type) {
       case "chat": return visibleTo(event.message, viewer) ? event : null;
       // R17: a player gets only the shared macros, and a table's name without its rows.
+      case "clock": return event;
       case "macros": return viewer.role === "gm" ? event : { ...event, macros: event.macros.filter((macro) => macro.shared) };
       case "tables": return viewer.role === "gm" ? event : { ...event, tables: event.tables.map((table) => ({ ...table, rows: [] })) };
       case "journal": { const entry = projectEntry(event.entry, viewer); return entry ? { ...event, entry } : { n: event.n, type: "journal.removed", id: event.entry.id }; }

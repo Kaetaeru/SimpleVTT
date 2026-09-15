@@ -71,6 +71,19 @@ export interface Campaign {
   macros?: Macro[];
   /** R17: rollable tables; players may roll on them but never see the rows. */
   tables?: RollTable[];
+  /** R18: the in-world clock — the day since the campaign started and the minute of that day. */
+  clock?: CampaignClock;
+}
+
+/** R18 (D115): in-world time. The DM moves it; timed effects run out and rests happen on it. */
+export interface CampaignClock { day: number; minute: number }
+export const emptyClock = (): CampaignClock => ({ day: 1, minute: 8 * 60 });
+/** "2일차 14:30" */
+export const clockText = (clock: CampaignClock) => `${clock.day}일차 ${String(Math.floor(clock.minute / 60) % 24).padStart(2, "0")}:${String(clock.minute % 60).padStart(2, "0")}`;
+/** Move the clock by whole minutes; a day rolls over at 24 hours. */
+export function advanceClock(clock: CampaignClock, minutes: number): CampaignClock {
+  const total = clock.day * 24 * 60 + clock.minute + Math.max(0, Math.floor(minutes));
+  return { day: Math.floor(total / (24 * 60)), minute: total % (24 * 60) };
 }
 
 /** One chat message of the archive (Roll20 chat types), stored per campaign in month files (§7). */

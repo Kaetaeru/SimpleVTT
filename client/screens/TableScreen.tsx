@@ -10,6 +10,7 @@ import { monsterById } from "../compendium/monsters";
 import { summonRule, summonsNothing } from "../rules/summons";
 import { useClient } from "../app/context";
 import type { ChatMessage, Macro, RollTable } from "../campaign/model";
+import { clockText } from "../campaign/model";
 import { PromptChoices } from "./Notify";
 import { ABILITY_KO } from "../catalog/types";
 import type { AttackResolution } from "../rules/resolve";
@@ -69,6 +70,7 @@ function Table() {
             <button type="button" className="cl-btn small" onClick={async () => { setCopied(await copyText(c.table.invite ?? "")); window.setTimeout(() => setCopied(false), 2000); }}>{copied ? "복사됨" : "복사"}</button>
           </span>
         ) : null}
+        <ClockStrip isGm={isGm} />
         <div className="cl-actions">
           {isGm ? <button type="button" className={`cl-btn${trackerOpen ? " primary" : ""}`} onClick={() => c.setTracker({ ...snapshot.tracker, open: !trackerOpen })} title="열면 모든 참가자에게 뜹니다">턴 트래커{snapshot.tracker.turns.length ? ` · 라운드 ${snapshot.tracker.round}` : ""}</button> : null}
           {c.table.role === "host" ? <button type="button" className="cl-btn quiet" onClick={() => navigate({ screen: "campaign", id: snapshot.campaignId })}>캠페인 설정</button> : null}
@@ -139,6 +141,32 @@ function ChatTab({ isGm }: { isGm: boolean }) {
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * R18 (D115): the in-world clock. Everyone reads the time; the DM moves it and starts the table's rests. A player
+ * can only ask — the ask goes to the chat so the whole table sees it, and the DM decides.
+ */
+function ClockStrip({ isGm }: { isGm: boolean }) {
+  const c = useCampaigns();
+  const clock = c.table.snapshot!.clock;
+  return (
+    <span className="cl-clock cl-row cl-small" style={{ gap: 4 }}>
+      <span className="cl-clock-now" title="게임 속 시간">🕒 {clockText(clock)}</span>
+      {isGm ? (
+        <>
+          {[{ label: "+10분", minutes: 10 }, { label: "+1시간", minutes: 60 }].map((step) => <button type="button" key={step.label} className="cl-btn small quiet" onClick={() => c.advanceTime(step.minutes)}>{step.label}</button>)}
+          <button type="button" className="cl-btn small" title="1시간이 지나고 모든 캐릭터가 짧은 휴식을 합니다" onClick={() => c.tableRest("short")}>짧은 휴식</button>
+          <button type="button" className="cl-btn small" title="8시간이 지나고 모든 캐릭터와 NPC의 하루가 돌아옵니다" onClick={() => { if (confirm("긴 휴식: 모든 캐릭터의 HP·슬롯·횟수와 NPC의 하루 횟수가 돌아옵니다. 진행할까요?")) c.tableRest("long"); }}>긴 휴식</button>
+        </>
+      ) : (
+        <>
+          <button type="button" className="cl-btn small quiet" onClick={() => c.askRest("short")}>짧은 휴식 제안</button>
+          <button type="button" className="cl-btn small quiet" onClick={() => c.askRest("long")}>긴 휴식 제안</button>
+        </>
+      )}
+    </span>
   );
 }
 

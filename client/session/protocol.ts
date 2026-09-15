@@ -10,9 +10,9 @@ import type { Tracker, TrackerTurn } from "../campaign/tracker";
 import type { ActionKind } from "../rules/actions";
 import type { CastMethod } from "../character/play";
 import type { AttackOverrides } from "../rules/resolve";
-import type { CampaignSettings, ChatMessage, Macro, PlayerRole, RollTable } from "../campaign/model";
+import type { CampaignClock, CampaignSettings, ChatMessage, Macro, PlayerRole, RollTable } from "../campaign/model";
 
-export const PROTOCOL_VERSION = 17;
+export const PROTOCOL_VERSION = 18;
 
 export interface Presence { userId: string; displayName: string; role: PlayerRole; color: string; connected: boolean }
 
@@ -36,6 +36,8 @@ export interface TableSnapshot {
   macros: Macro[];
   /** R17: rollable tables — the GM sees the rows, a player only the names (the host draws). */
   tables: RollTable[];
+  /** R18: the in-world clock everyone sees. */
+  clock: CampaignClock;
   lastEventN: number;
 }
 
@@ -76,6 +78,12 @@ export type ClientCommand =
   | { type: "token.put"; pageId: string; token: Token }
   | { type: "token.remove"; pageId: string; id: string }
   /** Replace the tracker (GM): open/close, reorder, edit values, add custom rows, clear. */
+  /** R18: the GM moves the in-world clock; timed effects run out as it passes. */
+  | { type: "table.clock"; minutes: number }
+  /** R18: the GM runs a rest for the whole table. */
+  | { type: "table.rest"; kind: "short" | "long" }
+  /** R18: a player asks for one; the DM decides. */
+  | { type: "act.rest"; kind: "short" | "long" }
   /** R17: the GM saves the campaign's macros / rollable tables. */
   | { type: "table.macros"; macros: Macro[] }
   | { type: "table.tables"; tables: RollTable[] }
@@ -124,6 +132,7 @@ export type TableEvent =
   | { n: number; type: "presence"; player: Presence }
   | { n: number; type: "chat"; message: ChatMessage }
   | { n: number; type: "settings"; settings: CampaignSettings }
+  | { n: number; type: "clock"; clock: CampaignClock }
   | { n: number; type: "macros"; macros: Macro[] }
   | { n: number; type: "tables"; tables: RollTable[] }
   | { n: number; type: "journal"; entry: JournalEntry }
