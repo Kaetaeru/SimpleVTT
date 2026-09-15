@@ -396,7 +396,7 @@ function ActDialog({ ask, onDone }: { ask: ActAsk; onDone: (answer: ActAnswer | 
 }
 
 /** A small popover menu: one button, a list of choices with hints; closes on choice, Esc or a click outside. */
-function Dropdown({ label, items, disabled, tone }: { label: string; items: Array<{ key: string; label: string; hint?: string; disabled?: boolean; onSelect: () => void }>; disabled?: boolean; tone?: "primary" }) {
+function Dropdown({ label, items, disabled, tone, up = false }: { label: string; items: Array<{ key: string; label: string; hint?: string; disabled?: boolean; onSelect: () => void }>; disabled?: boolean; tone?: "primary"; /** Open above the button (menus on the command bar at the bottom of the board). */ up?: boolean }) {
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -408,7 +408,7 @@ function Dropdown({ label, items, disabled, tone }: { label: string; items: Arra
     return () => { document.removeEventListener("pointerdown", onDown); document.removeEventListener("keydown", onKey); };
   }, [open]);
   return (
-    <div className="cl-dd" ref={box}>
+    <div className={`cl-dd${up ? " up" : ""}`} ref={box}>
       <button type="button" className={`cl-btn small${tone === "primary" ? " primary" : ""}${open ? " active" : ""}`} aria-haspopup="menu" aria-expanded={open} disabled={disabled || !items.length} onClick={() => setOpen((value) => !value)}>{label} ▾</button>
       {open ? (
         <div className="cl-dd-menu" role="menu" aria-label={label}>
@@ -515,14 +515,14 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
         </div>
         <div className="cl-cmd-group">
           <span className="cl-cmd-label">행동</span>
-          <Dropdown label="행동" disabled={off} items={ACTIONS.filter((def) => !["grapple", "shove", "escape"].includes(def.kind)).map((def) => ({ key: def.kind, label: def.name, hint: def.summary, onSelect: () => void take(def) }))} />
-          <Dropdown label="추가 행동" disabled={off} items={bonusItems} />
+          <Dropdown up label="행동" disabled={off} items={ACTIONS.filter((def) => !["grapple", "shove", "escape"].includes(def.kind)).map((def) => ({ key: def.kind, label: def.name, hint: def.summary, onSelect: () => void take(def) }))} />
+          <Dropdown up label="추가 행동" disabled={off} items={bonusItems} />
         </div>
         <div className="cl-cmd-group">
           <span className="cl-cmd-label">시트</span>
-          <Dropdown label="판정" items={checkItems} />
-          <Dropdown label="특성" disabled={Boolean(blocked)} items={featureItems} />
-          <Dropdown label="아이템" disabled={Boolean(blocked)} items={itemItems} />
+          <Dropdown up label="판정" items={checkItems} />
+          <Dropdown up label="특성" disabled={Boolean(blocked)} items={featureItems} />
+          <Dropdown up label="아이템" disabled={Boolean(blocked)} items={itemItems} />
           {!inTracker ? <button type="button" className="cl-btn small" onClick={() => c.addTurn({ name: token.name, tokenId: token.id, pageId: page.id, entryId: entry.id, image: token.image }, initiativeBonus)} title="1d20 + 이니셔티브 보너스를 굴려 트래커에 넣습니다">이니셔티브 {initiativeBonus >= 0 ? "+" : ""}{initiativeBonus}</button> : null}
           <button type="button" className="cl-btn small quiet" onClick={() => onOpenEntry(entry.id)}>시트 열기</button>
         </div>

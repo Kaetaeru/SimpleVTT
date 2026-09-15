@@ -629,3 +629,19 @@ span.cl-tracker-init{display:inline-grid;place-items:center}
 .cl-toasts{top:auto;bottom:14px}
 .cl-canvas.has-tracker .cl-toasts{top:auto;bottom:14px}
 .cl-waiting-note{left:14px;transform:none}
+
+/* ---- T6: the table fills the window; menus on the command bar open upward ---- */
+.cl-page.cl-table{max-width:none;height:calc(100vh - 52px);box-sizing:border-box;padding:10px 16px 12px;gap:10px;overflow:hidden}
+.cl-table .cl-page-head{gap:10px}
+.cl-table .cl-table-grid{flex:1;min-height:0;grid-template-columns:minmax(0,1fr) clamp(320px,24vw,440px)}
+.cl-table .cl-table-main{min-height:0;display:flex;flex-direction:column}
+.cl-table .cl-canvas{height:auto;flex:1;min-height:0}
+.cl-table .cl-sidebar{position:static;max-height:none;min-height:0;height:100%}
+/* cards and the stage grow with the window */
+.cl-scene{max-width:none;padding-left:clamp(14px,2vw,40px);padding-right:clamp(14px,2vw,40px)}
+.cl-scene-card{width:clamp(88px,7vw,140px)}
+.cl-scene-portrait{width:100%;height:auto;aspect-ratio:24/31}
+.cl-scene-glyph svg{width:clamp(36px,3vw,56px);height:auto}
+.cl-scene-cards{max-height:38vh}
+.cl-dd.up .cl-dd-menu{top:auto;bottom:calc(100% + 4px)}
+.cl-cmd .cl-dd-menu{z-index:80}
