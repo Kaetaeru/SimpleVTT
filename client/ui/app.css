@@ -249,3 +249,25 @@ details.cl-details[open]>summary{color:var(--text)}
 /* Option detail floats over the next rows instead of pushing them down (hover no longer moves the row under the cursor). */
 .cl-option-wrap{position:relative}
 .cl-option-detail{position:absolute;left:12px;right:8px;top:100%;z-index:6;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-s);box-shadow:0 10px 24px rgba(0,0,0,.35);margin:2px 0 0;pointer-events:none}
+/* Session: lobby, table layout, party cards, shared log. */
+.cl-nav-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--good,#4caf7d);margin-left:6px;vertical-align:middle}
+.cl-code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:var(--text-xs);background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-s);padding:2px 6px;user-select:all}
+.cl-session-grid{display:grid;grid-template-columns:260px minmax(0,1fr) 300px;gap:14px;align-items:start}
+.cl-session-side{display:flex;flex-direction:column;gap:12px;position:sticky;top:8px}
+.cl-session-main{min-width:0}
+.cl-party-card{padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius-s);background:var(--surface-2);cursor:pointer;display:flex;flex-direction:column;gap:4px}
+.cl-party-card:hover{border-color:var(--line-2)}
+.cl-party-card.selected{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.cl-party-card .cl-name{font-weight:600}
+.cl-party-card .cl-hpbar{height:6px;margin:0}
+.cl-dm-quick{margin-top:8px;padding-top:8px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:4px}
+.cl-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--line-2)}
+.cl-dot.on{background:var(--good,#4caf7d)}
+.cl-session-logcard{display:flex;flex-direction:column;gap:8px}
+.cl-session-log{max-height:60vh;overflow:auto}
+.cl-session-log .kind-dm{color:var(--bad,#c0504d)}
+.cl-session-log .kind-dice{color:var(--accent)}
+.cl-session-log .kind-chat{color:var(--text)}
+.cl-session-log .kind-system{color:var(--quiet)}
+.cl-toasts{display:flex;flex-direction:column;gap:4px;margin-bottom:8px}
+@media (max-width:1100px){.cl-session-grid{grid-template-columns:1fr}.cl-session-side{position:static}}

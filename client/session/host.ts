@@ -29,15 +29,25 @@ export class SessionHost {
   private readonly listeners = new Set<(event: SessionEvent) => void>();
   private readonly unsubscribe: Array<() => void> = [];
   private readonly now: () => string;
+  private readonly transports: Transport[];
+  /** Which carrier each peer arrived on (the host's own seat comes through an in-process hub, players through the channel or TCP). */
+  private readonly peerTransports = new Map<string, Transport>();
 
-  constructor(private readonly transport: Transport, private readonly options: HostOptions) {
+  constructor(transport: Transport | Transport[], private readonly options: HostOptions) {
     this.sessionId = options.sessionId;
     this.token = options.token;
     this.hostUserId = options.hostUserId;
     this.now = options.now ?? (() => new Date().toISOString());
     this.participants.set(options.hostUserId, { userId: options.hostUserId, name: options.hostName, role: "host", connected: true, characterIds: [] });
-    this.unsubscribe.push(transport.onMessage((from, message) => { if (isClientCommand(message)) this.handle(from, message); }));
-    this.unsubscribe.push(transport.onPeer((peerId, state) => { if (state === "disconnected") this.peerLeft(peerId); }));
+    this.transports = Array.isArray(transport) ? transport : [transport];
+    for (const carrier of this.transports) this.attach(carrier);
+  }
+
+  /** Add a carrier while the session runs (the TCP host coming up after the local seat). */
+  attach(carrier: Transport) {
+    if (!this.transports.includes(carrier)) this.transports.push(carrier);
+    this.unsubscribe.push(carrier.onMessage((from, message) => { if (isClientCommand(message)) { this.peerTransports.set(from, carrier); this.handle(from, message); } }));
+    this.unsubscribe.push(carrier.onPeer((peerId, state) => { if (state === "disconnected") this.peerLeft(peerId); }));
   }
 
   /** Local listeners (the host's own UI mirror) receive every event too. */
@@ -52,11 +62,8 @@ export class SessionHost {
   close() {
     this.emit({ type: "closed" });
     for (const off of this.unsubscribe) off();
-    this.transport.close();
+    for (const carrier of this.transports) carrier.close();
   }
-
-  /** The host's own commands (its UI) go through the same path as a peer's, as user `hostUserId`. */
-  handleLocal(command: ClientCommand) { this.apply(this.hostUserId, command, "local"); }
 
   private handle(peerId: string, command: ClientCommand) {
     if (command.type === "hello") {
@@ -168,12 +175,11 @@ export class SessionHost {
     this.n += 1;
     const event = { ...body, n: this.n } as SessionEvent;
     this.events = [...this.events, event].slice(-EVENT_BUFFER);
-    this.transport.send("*", { type: "events", events: [event] } satisfies HostMessage);
+    for (const carrier of this.transports) carrier.send("*", { type: "events", events: [event] } satisfies HostMessage);
     for (const listener of [...this.listeners]) listener(event);
   }
 
   private reply(peerId: string, message: HostMessage) {
-    if (peerId === "local") { for (const listener of [...this.listeners]) listener({ n: this.n, type: "log", entry: { n: this.n, at: this.now(), kind: "system", text: message.type === "refused" ? `거절: ${message.reason}` : message.type } }); return; }
-    this.transport.send(peerId, message);
+    (this.peerTransports.get(peerId) ?? this.transports[0]).send(peerId, message);
   }
 }
