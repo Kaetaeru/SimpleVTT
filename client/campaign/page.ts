@@ -78,6 +78,8 @@ export interface Page {
   fog: { enabled: boolean };
   /** "scene" = Theatre of the Mind: tokens are icons on a board, positions and distances are not tracked. Missing = grid. */
   layout?: "grid" | "scene";
+  /** R13: a few lines the DM writes for the scene ("비 오는 밤, 여관 뒷마당…"), shown on the stage card. */
+  description?: string;
   archived: boolean;
   tokens: Token[];
   createdAt: string;

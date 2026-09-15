@@ -570,11 +570,13 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
   const block = entry.kind === "npc" ? entry.statBlock : null;
   const routine = block?.actions.find((action) => action.kind === "multiattack" && action.multiattack?.routine?.length)?.multiattack?.routine?.filter((step) => block!.actions.some((action) => action.name === step.name && action.kind === "attack" && action.attack)) ?? [];
   const multiattack = async () => {
-    const picked = await requestTargets(`다중공격 (${routine.map((step) => `${step.name}×${step.count}`).join(", ")}) — 대상을 클릭하세요`, { multi: false, exclude: token.id });
+    // R13: several targets share the routine in order (찢기 1 → A, 찢기 2 → B, 찢기 3 → A …).
+    const picked = await requestTargets(`다중공격 (${routine.map((step) => `${step.name}×${step.count}`).join(", ")}) — 대상을 클릭하세요 (여러 명이면 차례로 배분)`, { multi: true, exclude: token.id });
     if (!picked.length) return;
     let overrides: AttackOverrides | undefined;
     if (isGm) { const answer = await requestAttackOptions({ name: "다중공격", sneak: false, slots: [], gm: true }); if (answer === null) return; overrides = answer.overrides ?? {}; }
-    for (const step of routine) for (let n = 0; n < step.count; n += 1) await attackWith({ source: "npc", actionName: step.name }, { targets: picked, overrides: overrides ?? {} });
+    let at = 0;
+    for (const step of routine) for (let n = 0; n < step.count; n += 1) { await attackWith({ source: "npc", actionName: step.name }, { targets: [picked[at % picked.length]], overrides: overrides ?? {} }); at += 1; }
   };
   const saveActions = block?.actions.filter((action) => action.kind === "save" && action.save) ?? [];
   const npcSaveWith = async (actionName: string, legendary = false) => {
@@ -944,6 +946,7 @@ function SceneBoard({ page, tokens, selected, targeting, turnTokenId, acting, jo
       {row("NPC", "npc", others, isGm ? "컴펜디움이나 저널의 NPC를 끌어 놓거나 \"놓기\"를 누르면 여기에 섭니다." : "아직 상대가 없습니다.")}
       <div className="cl-scene-stage" aria-label="장면">
         <span className="cl-scene-chip cl-scene-title">{page.name}</span>
+        {page.description ? <p className="cl-scene-desc">{page.description}</p> : null}
         {page.background.image ? <ArtImage src={page.background.image} className="cl-scene-backdrop" alt={page.name} /> : <span className="cl-scene-placeholder" aria-hidden="true"><svg viewBox="0 0 24 24" width="44" height="44" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="3" y="4" width="18" height="16" rx="2.5" /><circle cx="9" cy="10" r="1.8" /><path d="M3.5 18.5 9 13l3.5 3.5L16 13l4.5 5" strokeLinejoin="round" /></svg>{isGm ? <small>⋯ → 페이지 설정 → 배경 이미지</small> : null}</span>}
       </div>
       {row("플레이어", "pc", party, "저널의 \"토큰\"이나 끌어 놓기로 캐릭터를 세웁니다.")}
@@ -1137,7 +1140,7 @@ function TokenMenu({ token, page, at, onClose, onOpenToken, onOpenEntry }: { tok
         {character && canView(character, viewer) ? <button type="button" className="cl-btn small" onClick={() => { onOpenEntry(character.id); onClose(); }}>시트 열기</button> : null}
         {controls ? <button type="button" className="cl-btn small" onClick={() => { onOpenToken(); onClose(); }}>토큰 설정</button> : null}
         {isGm ? <select className="cl-select" style={{ height: 26 }} aria-label="레이어로 이동" value={token.layer} onChange={(event) => put({ ...token, layer: event.target.value as Layer })}>{(["map", "objects", "gm"] as Layer[]).map((item) => <option key={item} value={item}>{LAYER_KO[item]} 레이어</option>)}</select> : null}
-        {controls ? <><button type="button" className="cl-btn small" onClick={() => reorder(1)}>앞으로</button><button type="button" className="cl-btn small" onClick={() => reorder(-1)}>뒤로</button></> : null}
+        {controls ? <><button type="button" className="cl-btn small" onClick={() => reorder(1)} title={isScene(page) ? "줄에서 오른쪽으로" : "위로 올리기"}>{isScene(page) ? "▶ 오른쪽으로" : "앞으로"}</button><button type="button" className="cl-btn small" onClick={() => reorder(-1)} title={isScene(page) ? "줄에서 왼쪽으로" : "아래로 내리기"}>{isScene(page) ? "◀ 왼쪽으로" : "뒤로"}</button></> : null}
         {character && canEdit(character, viewer) ? <button type="button" className="cl-btn small" title="이 토큰의 설정을 캐릭터의 기본 토큰으로 저장" onClick={() => { const { id: _id, x: _x, y: _y, z: _z, represents: _r, ...rest } = token; c.putJournal({ ...character, defaultToken: rest, updatedAt: new Date().toISOString() }); onClose(); }}>기본 토큰으로 저장</button> : null}
         {isGm ? <button type="button" className="cl-btn small" onClick={() => { const copy = { ...token, id: newToken({ name: "" }).id, x: Math.min(page.width - token.w, token.x + 1), z: token.z + 1 }; put(copy); onClose(); }}>복제</button> : null}
         {isGm ? <button type="button" className="cl-btn small" onClick={() => put({ ...token, locked: !token.locked })}>{token.locked ? "잠금 해제" : "잠금"}</button> : null}
@@ -1287,6 +1290,7 @@ export function PageSettingsWindow({ pageId, onClose }: { pageId: string; onClos
           {draft.grid.type !== "square" ? <span className="cl-quiet cl-small">육각 격자는 정사각 칸으로 그려지고 맞춤만 됩니다 (그리기 R9에서).</span> : null}
         </div>
         <div className="cl-field"><label htmlFor={`pg-bg-${draft.id}`}>배경색</label><input id={`pg-bg-${draft.id}`} type="color" value={draft.background.color} onChange={(event) => edit({ background: { ...draft.background, color: event.target.value } })} /></div>
+        {isScene(draft) ? <div className="cl-field" style={{ gridColumn: "1 / -1" }}><label htmlFor="cl-scene-desc">장면 설명</label><textarea id="cl-scene-desc" className="cl-input" rows={3} value={draft.description ?? ""} placeholder="비 오는 밤, 여관 뒷마당. 횃불 하나가 흔들린다…" onChange={(event) => edit({ description: event.target.value })} /></div> : null}
         <div className="cl-field"><label>배경 이미지</label><div className="cl-row" style={{ gap: 6 }}><span className="cl-art-thumb" style={{ width: 40, height: 40 }}>{draft.background.image ? <ArtImage src={draft.background.image} /> : null}</span><button type="button" className="cl-btn small" onClick={() => setPicking(true)}>라이브러리에서</button>{draft.background.image ? <button type="button" className="cl-btn small quiet" onClick={() => edit({ background: { ...draft.background, image: undefined } })}>지우기</button> : null}</div></div>
         <div className="cl-field"><label>안개 (Fog of War)</label><label className="cl-row cl-small" style={{ gap: 4 }}><input type="checkbox" checked={draft.fog.enabled} onChange={(event) => edit({ fog: { enabled: event.target.checked } })} /> 켜기 (R9에서 그려집니다)</label></div>
         <div className="cl-field"><label>동적 조명</label><span className="cl-quiet cl-small">이후 단계.</span></div>

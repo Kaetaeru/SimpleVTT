@@ -3,7 +3,7 @@
  * roll landed, a mark was set) and approvals that wait for an answer from one side (an opportunity attack
  * offered to you, a player's result the DM must apply). Both sit over the board; the chat keeps the record.
  */
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useCampaigns } from "../app/campaigns";
 import { useClient } from "../app/context";
 import { canEdit } from "../campaign/journal";
@@ -40,6 +40,8 @@ export function toastText(message: ChatMessage): { text: string; tone: "info" | 
 export function ToastLayer({ boardShowsResults = false }: { boardShowsResults?: boolean }) {
   const c = useCampaigns();
   const chat = c.table.snapshot?.chat ?? [];
+  const toastMs = Math.max(1, c.table.snapshot?.settings.toastSeconds ?? TOAST_MS / 1000) * 1000;
+  const toastCount = Math.max(1, c.table.snapshot?.settings.toastCount ?? 3);
   const seen = useRef<Set<string> | null>(null);
   const [toasts, setToasts] = useState<Array<{ id: string; text: string; tone: "info" | "good" | "bad" }>>([]);
   useEffect(() => {
@@ -50,9 +52,9 @@ export function ToastLayer({ boardShowsResults = false }: { boardShowsResults?: 
     const shownOnBoard = (message: ChatMessage) => boardShowsResults && (message.type === "action" || message.type === "act" || message.type === "spell" || message.type === "prompt" || (message.type === "system" && /의 턴$/.test(message.content)));
     const next = fresh.filter((message) => !shownOnBoard(message)).map((message) => ({ message, toast: toastText(message) })).filter((item): item is { message: ChatMessage; toast: { text: string; tone: "info" | "good" | "bad" } } => Boolean(item.toast)).map((item) => ({ id: item.message.id, ...item.toast }));
     if (!next.length) return;
-    setToasts((list) => [...list, ...next].slice(-3));
-    for (const toast of next) setTimeout(() => setToasts((list) => list.filter((item) => item.id !== toast.id)), TOAST_MS);
-  }, [chat, boardShowsResults]);
+    setToasts((list) => [...list, ...next].slice(-toastCount));
+    for (const toast of next) setTimeout(() => setToasts((list) => list.filter((item) => item.id !== toast.id)), toastMs);
+  }, [chat, boardShowsResults, toastMs, toastCount]);
   if (!toasts.length) return null;
   return (
     <div className="cl-toasts" aria-live="polite" aria-label="알림">
@@ -116,8 +118,25 @@ export function PromptChoices({ message, compact = false }: { message: ChatMessa
  * first result waiting for 적용 — one at a time, centred over a dimmed board, because someone is waiting. When the
  * other side is choosing, a quiet note says so instead.
  */
+/** R13: Enter takes the first (primary) choice of the approval, Escape the last ("안 함"/"취소"); typing in an input is left alone. */
+function approvalKeys(element: HTMLDivElement | null) {
+  if (!element) return;
+  const onKey = (event: KeyboardEvent) => {
+    if ((event.target as HTMLElement | null)?.closest("input, textarea, select")) return;
+    const buttons = [...element.querySelectorAll<HTMLButtonElement>(".cl-approval button:not(:disabled)")];
+    if (!buttons.length) return;
+    if (event.key === "Enter") { event.preventDefault(); (buttons.find((button) => button.classList.contains("primary")) ?? buttons[0]).click(); }
+    if (event.key === "Escape") { event.preventDefault(); buttons[buttons.length - 1].click(); }
+  };
+  document.addEventListener("keydown", onKey);
+  // React calls a ref callback with null on unmount: remove the listener then.
+  approvalNodes.set(element, () => document.removeEventListener("keydown", onKey));
+}
+const approvalNodes = new Map<HTMLDivElement, () => void>();
+
 export function ApprovalLayer() {
   const c = useCampaigns();
+  const approvalRef = useCallback((element: HTMLDivElement | null) => { if (element) approvalKeys(element); else for (const [node, cleanup] of approvalNodes) { cleanup(); approvalNodes.delete(node); } }, []);
   const snapshot = c.table.snapshot!;
   const isGm = snapshot.players.find((player) => player.userId === c.userId)?.role === "gm";
   const superseded = useMemo(() => new Set(snapshot.chat.map((message) => message.supersedes).filter((id): id is string => Boolean(id))), [snapshot.chat]);
@@ -131,7 +150,7 @@ export function ApprovalLayer() {
     return theirs ? <div className="cl-waiting-note" role="status">⏳ {theirs.prompt!.reactor.name}의 {theirs.prompt!.kind === "shield" ? "방패 반응" : "기회 공격"} 선택을 기다리는 중…</div> : null;
   }
   return (
-    <div className="cl-approval-overlay" role="dialog" aria-modal="false" aria-label="승인">
+    <div className="cl-approval-overlay" role="dialog" aria-modal="false" aria-label="승인" ref={approvalRef}>
       <div className="cl-approval">
         <div className="cl-approval-head">{first ? "당신의 답을 기다립니다" : "DM 확인"}{(mine.length + waiting.length) > 1 ? <small> +{mine.length + waiting.length - 1}</small> : null}</div>
         {first ? (

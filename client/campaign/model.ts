@@ -34,6 +34,9 @@ export interface CampaignSettings {
   dmConfirmsResults?: boolean;
   /** D95: "totm" (Theatre of the Mind, the default) plays on scenes without distances; "grid" on maps. */
   tableMode?: "totm" | "grid";
+  /** R13: how long a toast stays (seconds, default 4) and how many at once (default 3). */
+  toastSeconds?: number;
+  toastCount?: number;
 }
 
 export interface Campaign {

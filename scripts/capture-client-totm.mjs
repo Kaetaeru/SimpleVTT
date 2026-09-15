@@ -271,8 +271,9 @@ try {
   const dragonBar = dm.getByRole("toolbar", { name: "성인 황동 드래곤 액션" });
   await dragonBar.waitFor();
   await dragonBar.getByRole("button", { name: /다중공격/ }).click();
-  await dm.locator(".cl-targeting-banner").waitFor();
+  await dm.locator(".cl-targeting-banner[data-multi='1']").waitFor();
   await iconOf(dm, "마법사").click();
+  await dm.locator(".cl-targeting-banner").getByRole("button", { name: "확정" }).click();
   await dm.getByLabel("반드시").waitFor({ timeout: 10000 });
   await dm.getByRole("button", { name: "공격", exact: true }).click();
   const rendHead = "성인 황동 드래곤 → 마법사: 찢기";
