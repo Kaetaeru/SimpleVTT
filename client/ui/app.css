@@ -654,3 +654,7 @@ span.cl-tracker-init{display:inline-grid;place-items:center}
 .cl-spell-row{margin-top:4px}
 .cl-spell-then{display:block;padding-left:10px}
 .cl-spell-then:empty{display:none}
+/* R9: the command bar folds to two rows on a narrow window; grid tokens get the same result floats; ×N and routine hints on attack buttons. */
+@media (max-width:1100px){.cl-cmd{flex-wrap:wrap;gap:8px 12px}.cl-cmd-groups{order:3;flex-basis:100%}.cl-cmd-end{margin-left:auto}}
+.cl-grid-float{left:auto;top:auto;z-index:5000;font-size:15px}
+.cl-btn .cl-extra{margin-left:5px;font-size:10px;font-weight:600;opacity:.8}

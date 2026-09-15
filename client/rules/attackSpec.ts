@@ -14,6 +14,8 @@ import type { MonsterAction } from "../compendium/monsters";
 import { damageFormula } from "../compendium/monsters";
 import type { AttackRiders } from "../session/protocol";
 import type { AttackSpec, Combatant, DamagePart } from "./resolve";
+import type { SpellDuration, SpellExec, SpellPrimary } from "../compendium/spells";
+import type { CasterStats, SpellCastSpec } from "./spellcast";
 
 const diceOf = (terms: Array<{ dice?: string }>) => terms.filter((term) => term.dice).map((term) => `+${term.dice}`).join("");
 
@@ -81,3 +83,29 @@ export function npcAttackSpec(entry: JournalNpc, actionName: string): AttackSpec
 }
 
 export const derivedOf = (entry: JournalCharacter, catalog: ContentCatalog) => deriveCharacter(entry.source, catalog, { equipped: entry.runtime.equipped, inventory: entry.runtime.inventory, effects: entry.runtime.effects });
+
+/**
+ * R9 (D103): an NPC's save action — a breath weapon, a gaze, a legendary sweep — as a spell execution, so the table
+ * resolves it like a save spell: every target rolls the save against the block's DC, one damage roll for all (half
+ * or nothing on a success), the block's fail conditions land as marks. `level` 0, `spellId` "npc:<name>".
+ */
+export function npcSaveExec(entry: JournalNpc, actionName: string): { spec: SpellCastSpec; casterStats: CasterStats; action: MonsterAction } | null {
+  const block = entry.statBlock;
+  const action = [...block.actions, ...block.legendaryActions, ...block.bonusActions, ...block.reactions].find((item) => item.name === actionName);
+  if (!action || action.kind !== "save" || !action.save) return null;
+  const save = action.save;
+  const parts = (save.failDamage ?? []).map((part) => ({ damageType: part.type, dice: { count: part.count, sides: part.sides, ...(part.flat ? { flat: part.flat } : {}) } }));
+  const duration: SpellDuration = { kind: "special" };
+  const successDamage = save.successDamage === "none" ? "none" : "half";
+  const primary: SpellPrimary = parts.length === 1
+    ? { kind: "save-damage", saveAbility: save.ability, damageType: parts[0].damageType, dice: parts[0].dice, successDamage }
+    : parts.length > 1
+      ? { kind: "save-compound-damage", saveAbility: save.ability, components: parts, successDamage }
+      : { kind: "save-effect", saveAbility: save.ability, summary: save.failText, duration };
+  const exec: SpellExec = {
+    spellId: `npc:${action.name}`, baseLevel: 0, castingEconomy: "action",
+    targeting: { kind: "creature", minTargets: 1, maxTargets: 64, ...(save.areaFeet ? { rangeFeet: save.areaFeet } : {}) },
+    primary, effects: (save.failConditions ?? []).map((conditionId) => ({ conditionId, trigger: "failed-save" as const, duration })),
+  };
+  return { spec: { spellId: exec.spellId, name: action.name, level: 0, exec }, casterStats: { attackBonus: 0, saveDc: save.dc, modifier: 0, level: 1 }, action };
+}

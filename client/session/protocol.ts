@@ -12,7 +12,7 @@ import type { CastMethod } from "../character/play";
 import type { AttackOverrides } from "../rules/resolve";
 import type { CampaignSettings, ChatMessage, PlayerRole } from "../campaign/model";
 
-export const PROTOCOL_VERSION = 10;
+export const PROTOCOL_VERSION = 11;
 
 export interface Presence { userId: string; displayName: string; role: PlayerRole; color: string; connected: boolean }
 
@@ -79,13 +79,17 @@ export type ClientCommand =
   /** "다음 턴" (GM, or the current turn's controller as "턴 마침"): turn-end and turn-start processing, then the highlight moves. */
   | { type: "tracker.next" }
   /** Attack (§12.2): the host resolves and applies, one card per target. */
-  | { type: "act.attack"; attacker: ActorRef; targets: ActorRef[]; attack: AttackRef; riders?: AttackRiders; overrides?: AttackOverrides; /** Answering an opportunity prompt (the prompt's message id): the attack is the reactor's reaction. */ reaction?: string }
+  | { type: "act.attack"; attacker: ActorRef; targets: ActorRef[]; attack: AttackRef; riders?: AttackRiders; overrides?: AttackOverrides; /** Answering an opportunity prompt (the prompt's message id): the attack is the reactor's reaction. */ reaction?: string; /** R9: the readied action goes off (the 준비 mark is spent as the reaction). */ readied?: boolean }
   /** D96: `mover` leaves `from`'s reach (the 벗어남 button); the host asks `from`'s controller for an opportunity attack. */
   | { type: "act.provoke"; mover: ActorRef; from: ActorRef }
   /** The reactor's controller lets the opportunity go. */
   | { type: "act.decline"; messageId: string }
   /** D102: cast a spell at the chosen targets; the host pays the slot, resolves every target and applies. */
-  | { type: "act.cast"; caster: ActorRef; spellId: string; targets: ActorRef[]; method?: CastMethod; overrides?: AttackOverrides }
+  | { type: "act.cast"; caster: ActorRef; spellId: string; targets: ActorRef[]; method?: CastMethod; overrides?: AttackOverrides; readied?: boolean }
+  /** R9 (D103): an NPC's save action (breath, gaze …) at the chosen targets — resolved like a save spell; recharge is spent. */
+  | { type: "act.npcSave"; actor: ActorRef; actionName: string; targets: ActorRef[] }
+  /** R9 (D104): a legendary action from the pool (reset at the monster's turn start); a save action takes targets, the rest is a card. */
+  | { type: "act.legendary"; actor: ActorRef; name: string; targets?: ActorRef[] }
   /** D97: one of the official actions (dash, dodge, help, hide, grapple …) on the actor's turn; the host resolves and marks. */
   | { type: "act.action"; actor: ActorRef; kind: ActionKind; target?: ActorRef; skill?: string; dc?: number; note?: string; choice?: string; bonus?: boolean }
   /** DM palette: re-resolve a card with overrides (same dice unless `reroll`), superseding it. */

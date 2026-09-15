@@ -61,6 +61,8 @@ export interface SpellResolution {
   caster: { id: string; name: string; kind: "pc" | "npc" };
   concentration: boolean;
   economy: SpellExec["castingEconomy"];
+  /** R9: "action" when an NPC's save action (a breath weapon) was resolved through the spell path. */
+  source?: "spell" | "action";
   targets: SpellTargetResult[];
   note?: string;
   applied: boolean;

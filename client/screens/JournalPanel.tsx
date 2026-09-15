@@ -19,7 +19,7 @@ import { ArtDropZone, ArtImage, ArtPicker } from "./ArtPanel";
 import { CreateScreen } from "./CreateScreen";
 import { NpcWindow } from "./NpcSheet";
 import { TrackerWindow } from "./TrackerWindow";
-import { journalDragProps, PageSettingsWindow, placeCharacterToken, requestTargets, TokenWindow } from "./PageCanvas";
+import { journalDragProps, PageSettingsWindow, placeCharacterToken, requestAttackOptions, requestTargets, TokenWindow } from "./PageCanvas";
 import { hasSmite, hasSneakAttack, smiteSlots, weaponRange } from "../rules/attackSpec";
 import { isScene } from "../campaign/page";
 import { SheetPlay } from "./SheetPlay";
@@ -401,8 +401,10 @@ function CharacterWindow({ entry, onClose, onOpen }: { entry: JournalCharacter; 
     if (!targets.length || !page) return;
     const sneak = hasSneakAttack(derived, attack);
     const slots = hasSmite(derived) ? smiteSlots(derived, entry.runtime) : [];
-    const riders = sneak || slots.length ? { sneak: sneak && confirm("암습을 얹을까요? (유리하거나 아군이 대상 옆에 있을 때, 턴당 한 번)"), smiteSlot: slots.length ? Number(prompt(`신성한 강타 슬롯 레벨 (${slots.map((slot) => `${slot.level}: ${slot.free}`).join(", ")}; 비우면 안 씀)`, "") || 0) || undefined : undefined } : undefined;
-    c.attack({ entryId: entry.id, pageId: page.id, tokenId: token?.id }, targets.map((id) => ({ pageId: page.id, tokenId: id })), { source: "weapon", attackId: attack.id }, riders);
+    // R9: the same pre-roll dialog as the command bar — riders for a player, plus 유리·엄폐·반드시 for the DM (D95).
+    let answer: Awaited<ReturnType<typeof requestAttackOptions>> | undefined;
+    if (viewer.isGm || sneak || slots.length) { answer = await requestAttackOptions({ name: attack.name, sneak, slots, gm: viewer.isGm }); if (answer === null) return; }
+    c.attack({ entryId: entry.id, pageId: page.id, tokenId: token?.id }, targets.map((id) => ({ pageId: page.id, tokenId: id })), { source: "weapon", attackId: attack.id }, answer?.riders, { overrides: answer?.overrides });
   };
   if (wizard) return <CreateScreen existing={entry.source} initialStep="classes" onSave={saveEdited} onClose={() => setWizard(false)} title={`편집 · ${entry.name}`} />;
   return (

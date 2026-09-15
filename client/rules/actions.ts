@@ -9,7 +9,7 @@ import { ABILITY_KO } from "../catalog/types";
 import type { DerivedCharacter } from "../character/types";
 import type { MonsterView } from "../compendium/monsters";
 
-export type ActionKind = "dash" | "disengage" | "dodge" | "help" | "hide" | "influence" | "search" | "study" | "utilize" | "ready" | "grapple" | "shove" | "escape";
+export type ActionKind = "dash" | "disengage" | "dodge" | "help" | "hide" | "influence" | "search" | "study" | "utilize" | "ready" | "grapple" | "shove" | "escape" | /** R9: a legendary action card (not in ACTIONS). */ "legendary";
 
 export interface ActionDef {
   kind: ActionKind;
@@ -170,6 +170,8 @@ export function resolveAction(input: ActInput): ActResult {
       const result = check(`${input.actor.name} · ${ABILITY_KO[SKILL_ABILITY_OF[skill]]}(${SKILL_KO[skill]})`, bonus, dc);
       return { ...base, check: result, text: result.success ? "붙잡힘에서 벗어났습니다." : "벗어나지 못했습니다.", actorUnmarks: result.success ? ["붙잡힘"] : [] };
     }
+    default:
+      return { ...base, text: input.note ?? "" };
   }
 }
 

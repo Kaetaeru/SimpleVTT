@@ -171,7 +171,7 @@ function SpellCard({ message, time, color }: { message: ChatMessage; time: strin
     <div className={`cl-chat-msg spell${message.undone ? " undone" : ""}`} data-spell-id={message.id}>
       <span className="cl-at">{time}</span>{message.who ? <span className="cl-who" style={{ color }}>{message.who}</span> : null}{message.undone ? <Pill tone="bad">되돌림</Pill> : !spell.applied ? <Pill tone="accent">DM 확인 대기</Pill> : null}
       <div className="cl-act-card">
-        <div className="cl-roll-head">✨ <strong>{spell.name}</strong>{spell.level ? <span className="cl-quiet cl-small"> {spell.level}레벨</span> : <span className="cl-quiet cl-small"> 소마법</span>} · {spell.caster.name}{spell.concentration ? <Pill tone="accent">집중</Pill> : null}{spell.economy === "bonus-action" ? <Pill>추가 행동</Pill> : spell.economy === "reaction" ? <Pill>반응</Pill> : null}</div>
+        <div className="cl-roll-head">{spell.source === "action" ? "☄" : "✨"} <strong>{spell.name}</strong>{spell.source === "action" ? <span className="cl-quiet cl-small"> NPC 행동</span> : spell.level ? <span className="cl-quiet cl-small"> {spell.level}레벨</span> : <span className="cl-quiet cl-small"> 소마법</span>} · {spell.caster.name}{spell.concentration ? <Pill tone="accent">집중</Pill> : null}{spell.economy === "bonus-action" ? <Pill>추가 행동</Pill> : spell.economy === "reaction" ? <Pill>반응</Pill> : null}</div>
         {spell.targets.map((row) => (
           <div className="cl-small cl-spell-row" key={row.target.id}>
             <strong>{row.target.name}</strong>

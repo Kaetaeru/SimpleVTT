@@ -1,9 +1,9 @@
 /**
- * Theatre of the Mind on one PC (SESSION_SCENARIOS.md SC-44..49, 53): a new campaign opens in TotM mode; "+ 장면" makes
+ * Theatre of the Mind on one PC (SESSION_SCENARIOS.md SC-44..49, 53..55): a new campaign opens in TotM mode; "+ 장면" makes
  * a scene with no grid; a goblin from the compendium and the player's character appear as icons; the player's ⚔
  * resolves without any distance; the DM's ⚔ opens the pre-roll dialog and "반드시 치명타" forces a crit; on the
  * player's turn the 벗어남 button on the goblin's icon asks the DM for an opportunity attack, which lands as a
- * reaction card; the turn panel (D97) shows the official actions on your turn. Writes 63-69 to docs/evidence/new-client-m1.
+ * reaction card; the turn panel (D97) shows the official actions on your turn. Writes 63-70 to docs/evidence/new-client-m1.
  *
  *   node scripts/capture-client-totm.mjs
  */
@@ -167,6 +167,13 @@ try {
   check(await dm.locator(".cl-toast", { hasText: "회피" }).count() === 0, "no toast for what the board shows (the act floats over the card)");
   await iconOf(dm, "앨리스의 파이터").locator(".cl-marker[title='회피']").waitFor({ timeout: 15000 });
   check(true, "회피 lands as a card and a mark on the DM's screen");
+  // R9: 준비 — the readied action waits as a ⏳ mark and goes off on someone else's turn (SC-55).
+  await panel.getByRole("button", { name: /^행동/ }).click();
+  await player.getByRole("menuitem", { name: /^준비/ }).click();
+  await player.getByLabel("조건 → 행동").fill("고블린이 다가오면 → 대검");
+  await player.getByRole("button", { name: "준비", exact: true }).click();
+  await iconOf(dm, "앨리스의 파이터").locator(".cl-marker[title='준비']").waitFor({ timeout: 15000 });
+  check(true, "준비 leaves a ⏳ mark on the fighter");
   await panel.getByRole("button", { name: /^행동/ }).click();
   await player.getByRole("menuitem", { name: /^영향/ }).click();
   await player.getByLabel("기술").selectOption("intimidation");
@@ -196,6 +203,19 @@ try {
   await dmPanel.waitFor({ timeout: 10000 });
   check(await player.getByRole("region", { name: "고블린 전사의 턴" }).count() === 0, "the player has no panel on the goblin's turn");
   await dm.screenshot({ path: path.join(OUT, "68-turn-panel-dm-goblin.png") });
+  // SC-55 (R9): on the goblin's turn the fighter's quiet bar says the readied action can go off; ⚔ is back on for it.
+  const waitingBar = player.getByRole("region", { name: "앨리스의 파이터 대기" });
+  await waitingBar.waitFor({ timeout: 10000 });
+  check((await waitingBar.innerText()).includes("준비한 행동"), "the free-mode bar announces the readied action");
+  await waitingBar.getByRole("button", { name: /^⚔ 대검/ }).click();
+  await player.locator(".cl-targeting-banner").waitFor();
+  await iconOf(player, "고블린 전사").click();
+  await player.locator(".cl-targeting-banner").getByRole("button", { name: "확정" }).click();
+  const readiedHead = "앨리스의 파이터 → 고블린 전사: 대검 · 준비한 행동";
+  await cardOf(dm, readiedHead).waitFor({ timeout: 15000 });
+  await dm.waitForTimeout(600);
+  check(await iconOf(dm, "앨리스의 파이터").locator(".cl-marker[title='준비']").count() === 0, "the readied action is spent with the mark");
+  check(await waitingBar.getByRole("button", { name: /^⚔ 대검/ }).isDisabled(), "and the attack buttons go quiet again (the reaction is used)");
   await dmPanel.getByRole("button", { name: "붙잡기" }).click();
   await dm.locator(".cl-targeting-banner").waitFor();
   await iconOf(dm, "앨리스의 파이터").click();
@@ -232,6 +252,46 @@ try {
   check(!(await iconOf(dm, "고블린 전사").innerText()).includes("10/10"), "the goblin's HP fell from the fireball on the DM's screen");
   check((await iconOf(player, "고블린 전사").locator(".cl-scene-gauge").innerText()) === (await iconOf(dm, "고블린 전사").locator(".cl-scene-gauge").innerText()), "the player's HP bar agrees with the DM's");
   await dm.screenshot({ path: path.join(OUT, "69-totm-spell-fireball.png") });
+
+  // SC-54 (R9, D103/D104): the DM's dragon — 다중공격 runs the routine (three 찢기 cards, one pre-roll dialog), ☄ 화염 브레스
+  // rolls every target's save like a spell and waits for its recharge, 👑 전설 spends the per-round pool.
+  await tab(dm, "컴펜디움").click();
+  await dm.getByLabel("컴펜디움 검색").fill("brass");
+  await dm.getByLabel("성인 황동 드래곤 캔버스에 놓기", { exact: true }).click();
+  await iconOf(player, "성인 황동 드래곤").waitFor({ timeout: 10000 });
+  await tab(dm, "채팅").click();
+  await iconOf(dm, "성인 황동 드래곤").click();
+  const dragonBar = dm.getByRole("toolbar", { name: "성인 황동 드래곤 액션" });
+  await dragonBar.waitFor();
+  await dragonBar.getByRole("button", { name: /다중공격/ }).click();
+  await dm.locator(".cl-targeting-banner").waitFor();
+  await iconOf(dm, "마법사").click();
+  await dm.getByLabel("반드시").waitFor({ timeout: 10000 });
+  await dm.getByRole("button", { name: "공격", exact: true }).click();
+  const rendHead = "성인 황동 드래곤 → 마법사: 찢기";
+  await cardOf(player, rendHead).nth(2).waitFor({ timeout: 20000 });
+  check(await cardOf(player, rendHead).count() === 3, "다중공격 makes three 찢기 cards from one click and one dialog");
+  // Targeting clears the selection, so the bar went back to the goblin's turn: pick the dragon again.
+  await iconOf(dm, "성인 황동 드래곤").click();
+  await dragonBar.waitFor();
+  await dragonBar.getByRole("button", { name: /화염 브레스/ }).click();
+  await dm.locator(".cl-targeting-banner[data-multi='1']").waitFor();
+  await iconOf(dm, "마법사").click();
+  await iconOf(dm, "고블린 전사").click();
+  await dm.locator(".cl-targeting-banner").getByRole("button", { name: "확정" }).click();
+  const breath = player.locator(".cl-chat-msg.spell", { hasText: "화염 브레스" });
+  await breath.waitFor({ timeout: 15000 });
+  const breathText = await breath.innerText();
+  check(breathText.includes("NPC 행동") && breathText.includes("vs DC 18") && breathText.includes("마법사") && breathText.includes("고블린 전사"), "the breath is a save card for both targets against DC 18");
+  await iconOf(dm, "성인 황동 드래곤").click();
+  await dragonBar.waitFor();
+  check((await dragonBar.getByRole("button", { name: /화염 브레스/ }).innerText()).includes("재충전 대기"), "the breath waits for its recharge");
+  await dragonBar.getByRole("button", { name: /전설 3\/3/ }).click();
+  await dm.getByRole("menuitem", { name: /^급습/ }).click();
+  await dm.locator(".cl-chat-msg.act", { hasText: "전설 행동 · 급습" }).waitFor({ timeout: 15000 });
+  await dragonBar.getByRole("button", { name: /전설 2\/3/ }).waitFor({ timeout: 10000 });
+  check(true, "a legendary action is a card and the pool shows 2/3");
+  await dm.screenshot({ path: path.join(OUT, "70-totm-dragon-multiattack-breath-legendary.png") });
 
   await browser.close();
   if (failures.length) { console.error(`${failures.length} failure(s)`); process.exitCode = 1; } else console.log("done");

@@ -15,7 +15,7 @@ import type { Tracker } from "../campaign/tracker";
 import { advanceTurn, emptyTracker, newTurn, withoutToken, withTurn } from "../campaign/tracker";
 import { advanceRound, endEffect, noteLog, recordDeathSave, resetDeathSaves } from "../character/play";
 import type { CharacterRuntime } from "../character/runtime";
-import { npcAttackSpec, npcCombatant } from "../rules/attackSpec";
+import { npcAttackSpec, npcCombatant, npcSaveExec } from "../rules/attackSpec";
 import type { AttackOverrides, AttackResolution, AttackSpec, Combatant } from "../rules/resolve";
 import { describeResolution, diceFrom, resolveAttack } from "../rules/resolve";
 import type { ActorRef, AttackRef, AttackRiders } from "./protocol";
@@ -431,6 +431,8 @@ export class TableHost {
         if (!attackerEntry) return refuse("공격자를 찾을 수 없습니다");
         if (!isGm && !this.mayAct(userId, command.attacker, attackerEntry.entry)) return refuse("자기 캐릭터로만 공격할 수 있습니다");
         if (!command.targets?.length) return refuse("대상이 없습니다");
+        // In combat a player attacks on their turn; out of turn only as a reaction (an opportunity prompt or a readied action).
+        if (!isGm && !command.reaction && !command.readied && this.tracker.turns.length && this.turnOf(command.attacker)?.id !== this.tracker.turns[this.tracker.current]?.id) return refuse("자기 턴에만 공격할 수 있습니다 (남의 턴에는 기회 공격·준비한 행동만)");
         let prepared = this.prepareAttack(attackerEntry, command.attack, command.riders ?? {});
         if (!prepared) return refuse("그 공격을 찾을 수 없습니다");
         // D95: players may declare advantage/disadvantage; cover and forced outcomes are the DM's (pre-roll or palette).
@@ -447,6 +449,12 @@ export class TableHost {
           if (prepared.spec.mode !== "melee") return refuse("기회 공격은 근접 공격으로만 합니다");
           prepared = { ...prepared, spec: { ...prepared.spec, name: `${prepared.spec.name} · 기회 공격` } };
         }
+        // R9: a readied action goes off out of turn as the reaction; the 준비 mark is the ticket.
+        if (command.readied) {
+          if (!this.conditionsOf(attackerEntry).includes("준비")) return refuse("준비한 행동이 없습니다");
+          if (this.reactionUsed(command.attacker)) return refuse("이번 라운드의 반응을 이미 썼습니다");
+          prepared = { ...prepared, spec: { ...prepared.spec, name: `${prepared.spec.name} · 준비한 행동` } };
+        }
         let firstCardId: string | undefined;
         command.targets.forEach((ref, index) => {
           const targetEntry = this.resolveActor(ref);
@@ -457,7 +465,8 @@ export class TableHost {
         if (promptMessage && firstCardId) {
           this.say({ ...promptMessage, prompt: { ...promptMessage.prompt!, outcome: { attacked: firstCardId } }, supersedes: promptMessage.id, content: `${promptMessage.content} → 기회 공격` });
           this.markReactionUsed(command.attacker);
-        } else if (firstCardId) this.markUsed(command.attacker, "action");
+        } else if (command.readied && firstCardId) { this.markReactionUsed(command.attacker); this.mark(attackerEntry, ["준비"], false); }
+        else if (firstCardId) this.markUsed(command.attacker, "action");
         // Attacking spends 도움 and ends 은신 (D97).
         if (firstCardId) this.mark(attackerEntry, [...TURN_MARKS.onAttack], false);
         return;
@@ -471,6 +480,7 @@ export class TableHost {
         const prepared = this.prepareSpell(caster, command.spellId, command.method);
         if (!prepared) return refuse("그 주문을 시전할 수 없습니다 (모르는 주문이거나 슬롯이 없습니다)");
         const exec = prepared.spec.exec;
+        if (!isGm && !command.readied && exec.castingEconomy !== "reaction" && this.tracker.turns.length && this.turnOf(command.caster)?.id !== this.tracker.turns[this.tracker.current]?.id) return refuse("자기 턴에만 시전할 수 있습니다 (남의 턴에는 반응 주문·준비한 행동만)");
         const targetRefs = command.targets.length ? command.targets : exec.targeting.allowedRelations?.every((relation) => relation === "self") ? [command.caster] : [];
         if (targetRefs.length < Math.min(1, exec.targeting.minTargets)) return refuse("대상이 없습니다");
         if (targetRefs.length > exec.targeting.maxTargets) return refuse(`대상은 최대 ${exec.targeting.maxTargets}명입니다`);
@@ -488,22 +498,43 @@ export class TableHost {
         if (casterBefore.kind === "character") { const next = prepared.spend(casterBefore.runtime); if (!next) return refuse("슬롯이나 횟수가 없습니다"); this.storeEntry({ ...casterBefore, runtime: { ...next, updatedAt: this.now() }, updatedAt: this.now() }); }
         else if (resolution.concentration) this.mark(caster, ["집중"], true);
         const restoreCaster = () => { const current = this.journalEntries.get(casterBefore.id); if (current?.kind === "character" && casterBefore.kind === "character") this.storeEntry({ ...current, runtime: { ...current.runtime, slotsUsed: casterBefore.runtime.slotsUsed, pactSlotsUsed: casterBefore.runtime.pactSlotsUsed, resourcesUsed: casterBefore.runtime.resourcesUsed, effects: casterBefore.runtime.effects }, updatedAt: this.now() }); else if (casterBefore.kind === "npc" && resolution.concentration) this.mark(caster, ["집중"], false); };
-        if (exec.castingEconomy === "reaction") this.markReactionUsed(command.caster); else this.markUsed(command.caster, exec.castingEconomy === "bonus-action" ? "bonus" : "action");
-        const messageId = newMessageId();
-        const apply = () => {
-          const restores: Array<() => void> = [restoreCaster];
-          resolution.targets.forEach((row, index) => { const restore = this.applySpellRow(row, rows[index].target, resolution); if (restore) restores.push(restore); });
-          const applied = { ...resolution, applied: true };
-          this.spells.set(messageId, { resolution: applied, restore: () => { for (const restore of restores.reverse()) restore(); } });
-          this.sayWithId(messageId, { type: "spell", who: player.displayName, playerId: userId, content: describeSpell(applied), spell: applied });
-          if (this.spells.size > 100) this.spells.delete(this.spells.keys().next().value as string);
-        };
-        if (waits) {
-          this.spells.set(messageId, { resolution, restore: restoreCaster, apply: () => { this.spells.delete(messageId); apply(); } });
-          this.sayWithId(messageId, { type: "spell", who: player.displayName, playerId: userId, content: `${describeSpell(resolution)} (DM 확인 대기)`, spell: resolution });
+        if (command.readied) { this.markReactionUsed(command.caster); this.mark(caster, ["준비"], false); }
+        else if (exec.castingEconomy === "reaction") this.markReactionUsed(command.caster); else this.markUsed(command.caster, exec.castingEconomy === "bonus-action" ? "bonus" : "action");
+        this.postSpell(resolution, rows.map((row) => row.target), restoreCaster, waits, player.displayName, userId);
+        return;
+      }
+      case "act.npcSave": {
+        const actor = this.resolveActor(command.actor);
+        if (!actor) return refuse("행동하는 쪽을 찾을 수 없습니다");
+        if (!isGm && !this.mayAct(userId, command.actor, actor.entry)) return refuse("자기 캐릭터로만 행동할 수 있습니다");
+        this.runNpcSave(actor, command.actionName, command.targets, { by: userId, isGm, displayName: player.displayName, refuse });
+        return;
+      }
+      case "act.legendary": {
+        const actor = this.resolveActor(command.actor);
+        if (!actor) return refuse("행동하는 쪽을 찾을 수 없습니다");
+        if (!isGm && !this.mayAct(userId, command.actor, actor.entry)) return refuse("자기 캐릭터로만 행동할 수 있습니다");
+        if (actor.entry.kind !== "npc") return refuse("전설 행동은 스탯 블록이 있는 NPC의 것입니다");
+        const block = actor.entry.statBlock;
+        const action = block.legendaryActions.find((item) => item.name === command.name);
+        if (!action) return refuse("그 전설 행동을 찾을 수 없습니다");
+        const per = block.legendaryActionsPerRound ?? 0;
+        const cost = action.legendaryCost ?? 1;
+        const used = actor.entry.runtime.legendaryUsed;
+        if (used + cost > per) return refuse(`이번 라운드의 전설 행동이 부족합니다 (${Math.max(0, per - used)}/${per} 남음, ${cost} 필요)`);
+        const blocked = cannotAct(this.conditionsOf(actor));
+        if (blocked) return refuse(`${blocked} 상태라 행동할 수 없습니다`);
+        const spendPool = () => { const current = this.journalEntries.get(actor.entry.id); if (current?.kind === "npc") this.storeEntry({ ...current, runtime: { ...current.runtime, legendaryUsed: current.runtime.legendaryUsed + cost, updatedAt: this.now() }, updatedAt: this.now() }); };
+        if (action.kind === "save" && action.save) {
+          if (!command.targets?.length) return refuse("대상이 없습니다");
+          const posted = this.runNpcSave(actor, action.name, command.targets, { by: userId, isGm, displayName: player.displayName, refuse, legendary: `${used + cost}/${per}` });
+          if (posted) spendPool();
           return;
         }
-        apply();
+        spendPool();
+        const name = actor.token?.name ?? actor.entry.name;
+        const result = { kind: "legendary" as const, name: `전설 행동 · ${action.name}`, actor: { name }, text: `${action.text} (전설 행동 ${used + cost}/${per})`, actorMarks: [], targetMarks: [], actorUnmarks: [] };
+        this.say({ type: "act", who: player.displayName, playerId: userId, content: describeAct(result), act: result });
         return;
       }
       case "act.action": {
@@ -720,6 +751,53 @@ export class TableHost {
     const level = method?.kind === "slot" ? method.level : entry.slotLevel ?? exec.baseLevel;
     const cr = block.cr;
     return { spec: { spellId, name: entry.name, level, exec }, casterStats: { attackBonus: casting.dc - 8, saveDc: casting.dc, modifier: Math.floor((block.abilities[casting.ability] - 10) / 2), level: cr >= 17 ? 17 : cr >= 11 ? 11 : cr >= 5 ? 5 : 1 }, spend: (runtime) => runtime };
+  }
+
+  /** A resolved spell (or an NPC save action) becomes a card: applied now, or held for the DM (D90) with its restores. */
+  private postSpell(resolution: SpellResolution, targets: Array<{ entry: JournalEntry; token?: Token; page?: Page }>, restoreCaster: () => void, waits: boolean, displayName: string, userId: string) {
+    const messageId = newMessageId();
+    const apply = () => {
+      const restores: Array<() => void> = [restoreCaster];
+      resolution.targets.forEach((row, index) => { const restore = this.applySpellRow(row, targets[index], resolution); if (restore) restores.push(restore); });
+      const applied = { ...resolution, applied: true };
+      this.spells.set(messageId, { resolution: applied, restore: () => { for (const restore of restores.reverse()) restore(); } });
+      this.sayWithId(messageId, { type: "spell", who: displayName, playerId: userId, content: describeSpell(applied), spell: applied });
+      if (this.spells.size > 100) this.spells.delete(this.spells.keys().next().value as string);
+    };
+    if (waits) {
+      this.spells.set(messageId, { resolution, restore: restoreCaster, apply: () => { this.spells.delete(messageId); apply(); } });
+      this.sayWithId(messageId, { type: "spell", who: displayName, playerId: userId, content: `${describeSpell(resolution)} (DM 확인 대기)`, spell: resolution });
+      return messageId;
+    }
+    apply();
+    return messageId;
+  }
+
+  /** R9 (D103): an NPC's save action at its targets through the spell resolver; recharge is spent and comes back on undo. Returns the card id. */
+  private runNpcSave(actor: { entry: JournalEntry; token?: Token; page?: Page }, actionName: string, targetRefs: ActorRef[], options: { by: string; isGm: boolean; displayName: string; refuse: (reason: string) => void; legendary?: string }): string | undefined {
+    const { refuse } = options;
+    if (actor.entry.kind !== "npc") { refuse("스탯 블록이 있는 NPC만 쓸 수 있는 행동입니다"); return undefined; }
+    const prepared = npcSaveExec(actor.entry, actionName);
+    if (!prepared) { refuse("그 행동을 찾을 수 없습니다"); return undefined; }
+    const blocked = cannotAct(this.conditionsOf(actor));
+    if (blocked) { refuse(`${blocked} 상태라 행동할 수 없습니다`); return undefined; }
+    const recharge = Boolean(prepared.action.timing?.recharge);
+    if (recharge && actor.entry.runtime.spent[actionName]) { refuse(`${actionName}은(는) 재충전을 기다리는 중입니다`); return undefined; }
+    if (!targetRefs.length) { refuse("대상이 없습니다"); return undefined; }
+    const targets = targetRefs.map((ref) => this.resolveActor(ref)).filter((item): item is NonNullable<typeof item> => Boolean(item));
+    if (targets.length !== targetRefs.length) { refuse("대상을 찾을 수 없습니다"); return undefined; }
+    const casterCombatant = this.combatantOf(actor);
+    if (!casterCombatant) { refuse("행동하는 쪽의 능력치를 알 수 없습니다"); return undefined; }
+    const rows = targets.map((target) => ({ target, combatant: this.combatantOf(target), stats: this.statsOf(target) }));
+    if (rows.some((row) => !row.combatant || !row.stats)) { refuse("대상의 능력치를 알 수 없습니다"); return undefined; }
+    const waits = Boolean(this.campaign.settings.dmConfirmsResults) && !options.isGm;
+    const spec = options.legendary ? { ...prepared.spec, name: `${prepared.spec.name} · 전설 행동 ${options.legendary}` } : prepared.spec;
+    const resolution: SpellResolution = { ...resolveSpell({ caster: casterCombatant, casterStats: prepared.casterStats, spec, targets: rows.map((row) => ({ combatant: row.combatant!, stats: row.stats! })), dice: diceFrom(this.options.random ?? Math.random), apply: !waits }), source: "action" };
+    const entryId = actor.entry.id;
+    const setSpent = (spent: boolean) => { const current = this.journalEntries.get(entryId); if (current?.kind === "npc") this.storeEntry({ ...current, runtime: { ...current.runtime, spent: { ...current.runtime.spent, [actionName]: spent }, updatedAt: this.now() }, updatedAt: this.now() }); };
+    if (recharge) setSpent(true);
+    if (!options.legendary) this.markUsed({ entryId, pageId: actor.page?.id, tokenId: actor.token?.id }, "action");
+    return this.postSpell(resolution, rows.map((row) => row.target), () => { if (recharge) setSpent(false); }, waits, options.displayName, options.by);
   }
 
   /** Write one target's part of a spell (damage, healing, temp HP, conditions, a lasting effect); returns the undo. */

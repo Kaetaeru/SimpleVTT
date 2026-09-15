@@ -298,6 +298,7 @@ export function PageCanvas({ onOpenEntry, onOpenToken, onOpenPageSettings, onOpe
                   onContextMenu={(event) => { event.preventDefault(); event.stopPropagation(); setSelected([token.id]); const box = viewport.current!.getBoundingClientRect(); setMenu({ tokenId: token.id, x: event.clientX - box.left + viewport.current!.scrollLeft, y: event.clientY - box.top + viewport.current!.scrollTop }); }}
                   onDoubleClick={() => { if (token.represents && journal.some((entry) => entry.id === token.represents)) onOpenEntry(token.represents); else if (controlsToken(token, viewer, journal)) onOpenToken(page.id, token.id); }} />
               ))}
+              <GridFloats page={page} journal={journal} cell={cell} />
               {c.table.pings.filter((ping) => ping.pageId === page.id).map((ping) => <span key={ping.id} className="cl-ping" style={{ left: ping.x * cell, top: ping.y * cell, borderColor: ping.color }} aria-label="핑" />)}
             </div>
           </div>
@@ -352,11 +353,11 @@ function PlaceCharacterBridge({ onPlace, onPlaceToken, onTargets }: { onPlace: (
 
 
 /** ⚔: pick targets (range dims tokens on a grid, never on a scene), the pre-roll dialog (riders; the DM's 유리/불리·엄폐·반드시 — D95), then the host resolves (§12.2). Shared by the action bar and the turn panel. */
-function makeAttackWith({ c, token, page, entry, derived, isGm }: { c: ReturnType<typeof useCampaigns>; token: Token; page: Page; entry: JournalEntry; derived: ReturnType<typeof deriveCharacter> | null; isGm: boolean }) {
-  return async (ref: AttackRef) => {
+function makeAttackWith({ c, token, page, entry, derived, isGm, readied }: { c: ReturnType<typeof useCampaigns>; token: Token; page: Page; entry: JournalEntry; derived: ReturnType<typeof deriveCharacter> | null; isGm: boolean; /** R9: the attack is the readied action going off (a reaction). */ readied?: boolean }) {
+  return async (ref: AttackRef, options: { targets?: string[]; overrides?: AttackOverrides } = {}) => {
     const range = ref.source === "weapon" && derived ? weaponRange(derived.attacks.find((item) => item.id === ref.attackId)!) : ref.source === "npc" && entry.kind === "npc" ? (() => { const spec = npcAttackSpec(entry, ref.actionName); return spec ? { rangeFeet: spec.rangeFeet ?? 5, longRangeFeet: spec.longRangeFeet } : null; })() : null;
     const name = ref.source === "weapon" && derived ? derived.attacks.find((item) => item.id === ref.attackId)!.name : ref.source === "npc" ? ref.actionName : "공격";
-    const targets = await requestTargets(`${name} — 대상을 클릭하세요`, { multi: true, exclude: token.id, from: range && !isScene(page) ? { tokenId: token.id, rangeFeet: range.rangeFeet, longRangeFeet: range.longRangeFeet } : undefined });
+    const targets = options.targets ?? await requestTargets(`${name} — 대상을 클릭하세요${readied ? " (준비한 행동)" : ""}`, { multi: true, exclude: token.id, from: range && !isScene(page) ? { tokenId: token.id, rangeFeet: range.rangeFeet, longRangeFeet: range.longRangeFeet } : undefined });
     if (!targets.length) return;
     let sneak = false;
     let slots: Array<{ level: number; free: number }> = [];
@@ -366,8 +367,9 @@ function makeAttackWith({ c, token, page, entry, derived, isGm }: { c: ReturnTyp
       slots = hasSmite(derived) ? smiteSlots(derived, entry.runtime) : [];
     }
     let answer: AttackAnswer | null | undefined;
-    if (isGm || sneak || slots.length) { answer = await requestAttackOptions({ name, sneak, slots, gm: isGm }); if (answer === null) return; }
-    c.attack({ entryId: entry.id, pageId: page.id, tokenId: token.id }, targets.map((id) => ({ pageId: page.id, tokenId: id })), ref, answer?.riders, { overrides: answer?.overrides });
+    if (options.overrides) answer = { overrides: options.overrides };
+    else if (isGm || sneak || slots.length) { answer = await requestAttackOptions({ name, sneak, slots, gm: isGm }); if (answer === null) return; }
+    c.attack({ entryId: entry.id, pageId: page.id, tokenId: token.id }, targets.map((id) => ({ pageId: page.id, tokenId: id })), ref, answer?.riders, { overrides: answer?.overrides, readied });
   };
 }
 
@@ -455,12 +457,16 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
   const tracker = snapshot.tracker;
   const turn = tracker.turns[tracker.current];
   const inCombat = tracker.turns.length > 0;
-  const attackWith = makeAttackWith({ c, token, page, entry, derived, isGm });
   const me = { entryId: entry.id, pageId: page.id, tokenId: token.id };
   const conditions = new Set([...(entry.runtime.conditions ?? []), ...token.markers.map((marker) => marker.name)]);
   const blocked = cannotAct([...conditions]);
+  const myRow = tracker.turns.find((item) => item.tokenId === token.id && item.pageId === page.id);
+  // R9: a readied action (⏳) may go off out of turn as the reaction — attacks and spells come back on for that.
+  const readiedNow = mode === "free" && inCombat && conditions.has("준비") && !myRow?.reactionUsed && !blocked;
+  const attackWith = makeAttackWith({ c, token, page, entry, derived, isGm, readied: readiedNow });
   // Out of turn during combat a player may only roll checks and read the sheet; the DM may do anything.
   const off = Boolean(blocked) || (mode === "free" && inCombat && !isGm);
+  const offAttack = off && !readiedNow;
   const freeHand = derived ? hasFreeHand(derived.inventory) : true;
   const rollToChat = async (spec: RollSpec) => { const result = await dice.roll(spec); c.sendRoll({ formula: result.formula, total: result.total, dice: result.dice.map((die) => ({ sides: die.sides, value: die.value })), modifier: result.modifier, label: `${token.name} · ${result.label}${result.note ? ` (${result.note})` : ""}` }); return result; };
   const d20 = (bonus: number) => `1d20${bonus >= 0 ? "+" : "-"}${Math.abs(bonus)}`;
@@ -520,7 +526,7 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
     const selfOnly = exec.targeting.allowedRelations?.every((relation) => relation === "self");
     let targets: string[] = selfOnly ? [token.id] : [];
     if (!selfOnly) {
-      targets = await requestTargets(`${name} — 대상을 클릭하세요${exec.targeting.maxTargets > 1 ? ` (최대 ${exec.targeting.maxTargets >= 64 ? "범위 안 전부" : `${exec.targeting.maxTargets}명`})` : ""}`, { multi: exec.targeting.maxTargets > 1, exclude: exec.targeting.allowedRelations?.includes("self") ? undefined : token.id });
+      targets = await requestTargets(`${name} — 대상을 클릭하세요${exec.targeting.maxTargets > 1 ? ` (최대 ${exec.targeting.maxTargets >= 64 ? "범위 안 전부" : `${exec.targeting.maxTargets}명`})` : ""}`, { multi: exec.targeting.maxTargets > 1, from: !isScene(page) && exec.targeting.rangeFeet ? { tokenId: token.id, rangeFeet: exec.targeting.rangeFeet } : undefined, exclude: exec.targeting.allowedRelations?.includes("self") ? undefined : token.id });
       if (!targets.length) return;
       if (targets.length > exec.targeting.maxTargets) targets = targets.slice(0, exec.targeting.maxTargets);
     }
@@ -535,17 +541,39 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
     }
     let overrides: AttackOverrides | undefined;
     if (isGm && exec.primary.kind === "attack-damage") { const answer = await requestAttackOptions({ name, sneak: false, slots: [], gm: true }); if (answer === null) return; overrides = answer.overrides; }
-    c.cast(me, spellId, targets.map((id) => ({ pageId: page.id, tokenId: id })), method, overrides);
+    c.cast(me, spellId, targets.map((id) => ({ pageId: page.id, tokenId: id })), method, overrides, readiedNow || undefined);
   };
   const spellItems = entry.kind === "character" && derived
     ? castableSpells(derived).map((id) => ({ id, view: catalog.spellById(id), exec: spellExec(id)! })).sort((a, b) => (a.view?.level ?? 0) - (b.view?.level ?? 0) || (a.view?.name ?? "").localeCompare(b.view?.name ?? "", "ko")).map(({ id, view, exec }) => ({ key: id, label: `${view?.level ? `${view.level}레벨 ` : "소마법 "}${view?.name ?? id}`, hint: describeSpellExec(exec), onSelect: () => void castIt(id, view?.name ?? id) }))
     : entry.kind === "npc"
       ? (entry.statBlock.actions.find((action) => action.kind === "spellcasting" && action.spellcasting)?.spellcasting?.lists ?? []).flatMap((list) => list.entries.filter((item) => item.spellId && spellExec(item.spellId)).map((item) => ({ key: `${list.frequency}:${item.spellId}`, label: `${item.name}${item.slotLevel ? ` (${item.slotLevel}레벨)` : ""}`, hint: `${list.frequency === "at-will" ? "의지대로" : list.frequency === "per-day" ? `${list.uses ?? 1}/일` : list.frequency} · ${describeSpellExec(spellExec(item.spellId!)!)}`, onSelect: () => void castIt(item.spellId!, item.name) })))
       : [];
+  // R9: the stat block's multiattack routine as one button (each attack its own card, one pre-roll dialog for all), its save
+  // actions (breath, gaze) resolved like save spells (D103), and its legendary actions from the per-round pool (D104).
+  const block = entry.kind === "npc" ? entry.statBlock : null;
+  const routine = block?.actions.find((action) => action.kind === "multiattack" && action.multiattack?.routine?.length)?.multiattack?.routine?.filter((step) => block!.actions.some((action) => action.name === step.name && action.kind === "attack" && action.attack)) ?? [];
+  const multiattack = async () => {
+    const picked = await requestTargets(`다중공격 (${routine.map((step) => `${step.name}×${step.count}`).join(", ")}) — 대상을 클릭하세요`, { multi: false, exclude: token.id });
+    if (!picked.length) return;
+    let overrides: AttackOverrides | undefined;
+    if (isGm) { const answer = await requestAttackOptions({ name: "다중공격", sneak: false, slots: [], gm: true }); if (answer === null) return; overrides = answer.overrides ?? {}; }
+    for (const step of routine) for (let n = 0; n < step.count; n += 1) await attackWith({ source: "npc", actionName: step.name }, { targets: picked, overrides: overrides ?? {} });
+  };
+  const saveActions = block?.actions.filter((action) => action.kind === "save" && action.save) ?? [];
+  const npcSaveWith = async (actionName: string, legendary = false) => {
+    const picked = await requestTargets(`${actionName} — 범위 안의 대상을 클릭하세요 (여러 명)`, { multi: true, exclude: token.id });
+    if (!picked.length) return;
+    const refs = picked.map((id) => ({ pageId: page.id, tokenId: id }));
+    if (legendary) c.legendary(me, actionName, refs); else c.npcSave(me, actionName, refs);
+  };
+  const legendaryPer = block?.legendaryActionsPerRound ?? 0;
+  const legendaryLeft = entry.kind === "npc" ? Math.max(0, legendaryPer - entry.runtime.legendaryUsed) : 0;
+  const legendaryItems = (block?.legendaryActions ?? []).map((action) => ({ key: action.name, label: `${action.name}${(action.legendaryCost ?? 1) > 1 ? ` (${action.legendaryCost})` : ""}`, hint: action.text.slice(0, 80), disabled: (action.legendaryCost ?? 1) > legendaryLeft, onSelect: () => { if (action.kind === "save" && action.save) void npcSaveWith(action.name, true); else c.legendary(me, action.name); } }));
+  const extraAttacks = derived ? (derived.features.some((feature) => feature.nameEn === "Two Extra Attacks") ? 3 : derived.features.some((feature) => feature.nameEn === "Extra Attack") ? 2 : 1) : 1;
   const initiativeBonus = derived ? derived.initiative : entry.kind === "npc" ? entry.statBlock.initiativeBonus : 0;
   const inTracker = tracker.turns.some((item) => item.tokenId === token.id && item.pageId === page.id);
   const chip = (label: string, used: boolean | undefined) => <span className={`cl-econ${used ? " used" : ""}`} title={used ? `${label} 사용함` : `${label} 남음`}><i />{label}</span>;
-  const status = mode === "turn" ? (isGm ? `${token.name}의 턴` : "당신의 턴") : inCombat ? `${turn?.name ?? "…"}의 턴 · 기다리는 중` : "전투 전";
+  const status = mode === "turn" ? (isGm ? `${token.name}의 턴` : "당신의 턴") : readiedNow ? "⏳ 준비한 행동 — 지금 발동" : inCombat ? `${turn?.name ?? "…"}의 턴 · 기다리는 중` : "전투 전";
   return (
     <div className={`cl-cmd ${mode}`} role="region" aria-label={mode === "turn" ? `${token.name}의 턴` : `${token.name} 대기`}>
       <div className="cl-cmd-who">
@@ -557,10 +585,13 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
       <div className="cl-cmd-groups" role="toolbar" aria-label={`${token.name} 액션`}>
         <div className="cl-cmd-group attack">
           <span className="cl-cmd-label">공격</span>
-          {derived ? derived.attacks.map((attack) => <button type="button" key={attack.id} className="cl-btn small attack" disabled={off} onClick={() => void attackWith({ source: "weapon", attackId: attack.id })}>⚔ {attack.name} <b>{attack.attackBonus >= 0 ? "+" : ""}{attack.attackBonus}</b></button>) : null}
-          {entry.kind === "npc" ? entry.statBlock.actions.filter((action) => action.kind === "attack" && action.attack).map((action) => <button type="button" key={action.name} className="cl-btn small attack" disabled={off || Boolean(action.timing?.recharge && entry.runtime.spent[action.name])} onClick={() => void attackWith({ source: "npc", actionName: action.name })}>⚔ {action.name} <b>{action.attack!.bonus >= 0 ? "+" : ""}{action.attack!.bonus}</b></button>) : null}
+          {derived ? derived.attacks.map((attack) => <button type="button" key={attack.id} className="cl-btn small attack" disabled={offAttack} title={extraAttacks > 1 ? `추가 공격: 공격 행동 하나로 ${extraAttacks}번 — 버튼을 ${extraAttacks}번 누르세요` : undefined} onClick={() => void attackWith({ source: "weapon", attackId: attack.id })}>⚔ {attack.name} <b>{attack.attackBonus >= 0 ? "+" : ""}{attack.attackBonus}</b>{extraAttacks > 1 ? <small className="cl-extra">×{extraAttacks}</small> : null}</button>) : null}
+          {entry.kind === "npc" && routine.length ? <button type="button" className="cl-btn small attack" disabled={offAttack} title={block?.actions.find((action) => action.kind === "multiattack")?.text} onClick={() => void multiattack()}>⚔⚔ 다중공격 <small className="cl-extra">{routine.map((step) => `${step.name}×${step.count}`).join(" ")}</small></button> : null}
+          {entry.kind === "npc" ? entry.statBlock.actions.filter((action) => action.kind === "attack" && action.attack).map((action) => <button type="button" key={action.name} className="cl-btn small attack" disabled={offAttack || Boolean(action.timing?.recharge && entry.runtime.spent[action.name])} onClick={() => void attackWith({ source: "npc", actionName: action.name })}>⚔ {action.name} <b>{action.attack!.bonus >= 0 ? "+" : ""}{action.attack!.bonus}</b></button>) : null}
           {ACTIONS.filter((def) => def.kind === "grapple" || def.kind === "shove" || def.kind === "escape").map((def) => { const needsHand = (def.kind === "grapple" || def.kind === "shove") && !freeHand; return <button type="button" key={def.kind} className="cl-btn small" disabled={off || needsHand || (def.kind === "escape" && !conditions.has("붙잡힘"))} title={needsHand ? "빈 손이 없습니다 (보조 손이나 양손 무기를 내려놓으세요)" : def.summary} onClick={() => void take(def)}>{def.name}</button>; })}
-          <Dropdown up label="✨ 마법" disabled={off || !spellItems.length} items={spellItems} />
+          {saveActions.map((action) => { const waiting = Boolean(action.timing?.recharge && entry.kind === "npc" && entry.runtime.spent[action.name]); return <button type="button" key={action.name} className="cl-btn small attack" disabled={off || waiting} title={`${action.text.slice(0, 160)}${waiting ? " — 재충전 대기" : ""}`} onClick={() => void npcSaveWith(action.name)}>☄ {action.name} <b>DC {action.save!.dc}</b>{waiting ? <small className="cl-extra">재충전 대기</small> : null}</button>; })}
+          <Dropdown up label="✨ 마법" disabled={offAttack || !spellItems.length} items={spellItems} />
+          {legendaryPer ? <Dropdown up label={`👑 전설 ${legendaryLeft}/${legendaryPer}`} disabled={off || !inCombat || !legendaryLeft} items={legendaryItems} /> : null}
         </div>
         <div className="cl-cmd-group">
           <span className="cl-cmd-label">행동</span>
@@ -827,6 +858,16 @@ function useCardFloats(page: Page, journal: JournalEntry[]) {
  * players' cards along the bottom. What matters most is what stands out (D100): the acting card is larger with a
  * gold ring; in targeting mode only candidates stay lit; results float over the card they happened to.
  */
+/** R9: the same result floats (−7, 빗나감, 사망 …) over grid tokens, anchored at the token's top centre. */
+function GridFloats({ page, journal, cell }: { page: Page; journal: JournalEntry[]; cell: number }) {
+  const floats = useCardFloats(page, journal);
+  return (
+    <>
+      {floats.map((item, index) => { const token = page.tokens.find((candidate) => candidate.id === item.tokenId); if (!token) return null; return <span key={item.id} className={`cl-float cl-grid-float ${item.tone}`} style={{ left: (token.x + token.w / 2) * cell, top: token.y * cell + 8, animationDelay: `${index * 120}ms` }}>{item.text}</span>; })}
+    </>
+  );
+}
+
 function SceneBoard({ page, tokens, selected, targeting, turnTokenId, acting, journal, isGm, onPointerDown, onPointerDownBoard, onContextMenu, onDoubleClick, onLeave }: {
   page: Page; tokens: Token[]; selected: string[]; targeting: TargetingState | null; turnTokenId?: string; acting?: Token; journal: JournalEntry[]; isGm: boolean;
   onPointerDown: (event: ReactPointerEvent, token: Token) => void; onPointerDownBoard: () => void; onContextMenu: (event: React.MouseEvent, token: Token) => void; onDoubleClick: (token: Token) => void; onLeave: (token: Token) => void;
