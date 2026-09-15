@@ -271,3 +271,8 @@ details.cl-details[open]>summary{color:var(--text)}
 .cl-session-log .kind-system{color:var(--quiet)}
 .cl-toasts{display:flex;flex-direction:column;gap:4px;margin-bottom:8px}
 @media (max-width:1100px){.cl-session-grid{grid-template-columns:1fr}.cl-session-side{position:static}}
+.cl-invites{display:inline-block;position:relative}
+.cl-invites summary{cursor:pointer;font-size:var(--text-xs)}
+.cl-invites[open]{position:absolute;z-index:5;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-s);padding:6px 8px;box-shadow:var(--elev-1)}
+.cl-session-main .cl-play{grid-template-columns:1fr 1fr}
+@media (max-width:1400px){.cl-session-main .cl-play{grid-template-columns:1fr}}

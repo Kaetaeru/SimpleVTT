@@ -22,11 +22,13 @@ function Lobby() {
   const [name, setName] = useState("우리 테이블");
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
   const [display, setDisplay] = useState(session.displayName);
   const commitName = () => { if (display.trim() && display.trim() !== session.displayName) session.setDisplayName(display.trim()); };
+  const join = async () => { commitName(); setBusy(true); setError(await session.joinSession(code)); setBusy(false); };
   return (
     <div className="cl-page">
-      <div className="cl-page-head"><h1>세션</h1><span className="cl-sub">같은 PC의 다른 탭에서 바로 시험할 수 있고, LAN·하마치 연결은 exe에서 열립니다.</span></div>
+      <div className="cl-page-head"><h1>세션</h1><span className="cl-sub">exe에서는 같은 네트워크(LAN)와 하마치로, 브라우저에서는 같은 PC의 다른 탭으로 연결합니다.</span></div>
       <div className="cl-card" style={{ maxWidth: 520 }}>
         <div className="cl-field"><label htmlFor="cl-display-name">내 이름 (참가자 표시)</label><input id="cl-display-name" className="cl-input" value={display} placeholder="예: 민수" onChange={(event) => setDisplay(event.target.value)} onBlur={commitName} /></div>
       </div>
@@ -35,14 +37,14 @@ function Lobby() {
           <h3>세션 열기 (DM)</h3>
           <p className="cl-muted cl-small">이 탭이 호스트가 됩니다. 초대 코드를 플레이어에게 보내세요.</p>
           <div className="cl-field"><label htmlFor="cl-session-name">세션 이름</label><input id="cl-session-name" className="cl-input" value={name} onChange={(event) => setName(event.target.value)} /></div>
-          <button type="button" className="cl-btn primary" onClick={() => { commitName(); session.openSession(name); }}>세션 열기</button>
+          <button type="button" className="cl-btn primary" onClick={() => { commitName(); void session.openSession(name); }}>세션 열기</button>
         </div>
         <div className="cl-card">
           <h3>세션 참가 (플레이어)</h3>
           <p className="cl-muted cl-small">DM에게 받은 초대 코드를 붙여넣으세요. 들어간 뒤 라이브러리의 캐릭터를 데려옵니다.</p>
-          <div className="cl-field"><label htmlFor="cl-invite">초대 코드</label><input id="cl-invite" className="cl-input" placeholder="tab:sess_x1-K7QX3M" value={code} onChange={(event) => setCode(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { commitName(); setError(session.joinSession(code)); } }} /></div>
+          <div className="cl-field"><label htmlFor="cl-invite">초대 코드</label><input id="cl-invite" className="cl-input" placeholder="tab:sess_x1-K7QX3M" value={code} onChange={(event) => setCode(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void join(); }} /></div>
           {error ? <Notice tone="bad">{error}</Notice> : null}
-          <button type="button" className="cl-btn primary" disabled={!code.trim()} onClick={() => { commitName(); setError(session.joinSession(code)); }}>참가</button>
+          <button type="button" className="cl-btn primary" disabled={!code.trim() || busy} onClick={() => void join()}>{busy ? "연결 중…" : "참가"}</button>
         </div>
       </div>
     </div>
@@ -79,9 +81,11 @@ function Table() {
           <span className="cl-quiet">초대 코드</span>
           <code className="cl-code">{session.invite}</code>
           <button type="button" className="cl-btn small" onClick={async () => { setCopied(await copyText(session.invite ?? "")); window.setTimeout(() => setCopied(false), 2000); }}>{copied ? "복사됨" : "복사"}</button>
+          {session.invites.length > 1 ? <details className="cl-invites"><summary className="cl-quiet">다른 주소 {session.invites.length - 1}</summary>{session.invites.filter((item) => item !== session.invite).map((item) => <div key={item} className="cl-row" style={{ gap: 4 }}><code className="cl-code">{item}</code><button type="button" className="cl-btn small" onClick={() => void copyText(item)}>복사</button></div>)}</details> : null}
         </span>
         <div className="cl-actions"><button type="button" className="cl-btn danger" onClick={session.leaveSession}>{isHost ? "세션 닫기" : "나가기"}</button></div>
       </div>
+      {isHost && session.transportNote ? <Notice tone="warn">{session.transportNote}</Notice> : null}
       {session.refusals.length ? <div className="cl-toasts">{session.refusals.map((reason, index) => <Notice tone="bad" key={`${reason}-${index}`}>{reason}</Notice>)}</div> : null}
 
       <div className="cl-session-grid">

@@ -82,11 +82,11 @@ jobs:
           target_commitish: ${{ github.sha }}
           prerelease: true
           body: |
-            새 클라이언트 M1 빌드 — 캐릭터 생성·시트·JSON·모듈 설치 (commit ${{ github.sha }}).
+            새 클라이언트 빌드 — 캐릭터 생성·시트·JSON·모듈 설치·세션(LAN/하마치) (commit ${{ github.sha }}).
 
             - `${{ steps.stage.outputs.name }}`: 설치 없이 실행하는 단일 실행 파일. Windows 10/11의 WebView2 런타임이 필요합니다.
             - SHA-256: `${{ steps.stage.outputs.sha256 }}`
-            - 화면: 캐릭터(라이브러리) → 새 캐릭터(마법사 7단계, 오른쪽에 실시간 시트) → 시트. 콘텐츠 화면에서 RuleModule JSON(PHB 보충 모듈 등)을 설치합니다.
+            - 화면: 캐릭터(라이브러리) → 새 캐릭터(마법사 7단계, 오른쪽에 실시간 시트) → 시트 → 세션(DM이 열고 초대 코드 `IP:41230-TOKEN`으로 참가, LAN·하마치). 콘텐츠 화면에서 RuleModule JSON(PHB 보충 모듈 등)을 설치합니다.\n- 세션 호스트는 TCP 41230 포트를 엽니다. 첫 실행 때 Windows 방화벽 허용을 눌러 주세요.
             - 저장은 이 PC의 IndexedDB(WebView2)입니다. JSON 내보내기로 백업하세요.
           files: |
             exe-artifact/${{ steps.stage.outputs.name }}
