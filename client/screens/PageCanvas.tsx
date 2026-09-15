@@ -17,6 +17,7 @@ import type { RollSpec } from "../character/dice";
 import { damageFormula, monsterById } from "../compendium/monsters";
 import { useDice } from "../ui/dice/DiceProvider";
 import type { Layer, Page, Token, TokenBar, TokenMarker } from "../campaign/page";
+import type { TrackerTurn } from "../campaign/tracker";
 import { ALL_MARKERS, applyBarInput, cellDistance, clampToPage, controlsToken, isConditionMarker, isScene, MARKER_GLYPH, newPage, newScene, newToken, playerPageId, snap, tokenForEntry, tokenForNpc } from "../campaign/page";
 import type { Advantage, AttackOverrides } from "../rules/resolve";
 import { ACTIONS, actionDef, cannotAct, npcStats, pcStats, skillBonus, SKILL_ABILITY_OF, SKILL_KO, type ActionDef } from "../rules/actions";
@@ -843,24 +844,55 @@ function SceneIcon({ token, kind, journal, ac, selected, picked, candidate, turn
   );
 }
 
-/** Who acts now and who is next (D100): a ribbon over the board on every screen; the DM's editable window opens from it. */
+/**
+ * The turn order bar, Baldur's Gate 3 style (D101): the acting creature first and large in a gold frame, the rest
+ * following left to right in smaller square portraits — red frames for enemies, blue for the party — each with a
+ * thin health bar and a temp-HP ring; consecutive party members are linked into a group with hollow/filled turn
+ * arrows; the fallen go grey. The DM's editable window opens from the end of the bar.
+ */
 function TurnRibbon({ page, onOpenTracker }: { page: Page; onOpenTracker?: () => void }) {
   const c = useCampaigns();
   const { snapshot, isGm } = useViewer();
   const tracker = snapshot.tracker;
-  const order = tracker.turns.map((turn, index) => ({ turn, index })).filter(({ turn }) => !turn.custom);
+  const rows = tracker.turns.map((turn, index) => ({ turn, index })).filter(({ turn }) => !turn.custom);
   const currentIndex = tracker.current;
-  const upcoming = order.length ? [...order.filter(({ index }) => index >= currentIndex), ...order.filter(({ index }) => index < currentIndex)] : [];
+  const rotated = rows.length ? [...rows.filter(({ index }) => index >= currentIndex), ...rows.filter(({ index }) => index < currentIndex)] : [];
   const tokenOf = (tokenId?: string) => page.tokens.find((token) => token.id === tokenId);
+  const sideOf = (turn: TrackerTurn): "pc" | "npc" => (snapshot.journal.find((entry) => entry.id === turn.entryId)?.kind === "character" || tokenOf(turn.tokenId)?.represents && snapshot.journal.find((entry) => entry.id === tokenOf(turn.tokenId)?.represents)?.kind === "character" ? "pc" : "npc");
+  // Consecutive party members share a group (BG3's linked initiative): the bracket spans them.
+  const groups: Array<{ start: number; end: number }> = [];
+  rotated.forEach(({ turn }, at) => { const side = sideOf(turn); const last = groups[groups.length - 1]; if (side === "pc" && last && last.end === at - 1 && sideOf(rotated[last.end].turn) === "pc") last.end = at; else if (side === "pc") groups.push({ start: at, end: at }); });
+  const linked = new Set<number>(); for (const group of groups) if (group.end > group.start) for (let at = group.start; at <= group.end; at += 1) linked.add(at);
   return (
     <div className="cl-turn-ribbon" role="list" aria-label="이니셔티브 순서">
-      <span className="cl-turn-ribbon-round">라운드 {tracker.round}</span>
-      {upcoming.map(({ turn, index }, at) => { const token = tokenOf(turn.tokenId); const now = index === currentIndex; return (
-        <span key={turn.id} role="listitem" className={`cl-turn-ribbon-item${now ? " now" : ""}`} data-turn-name={turn.name} title={`${turn.name} · 이니셔티브 ${turn.initiative}`}>
-          <span className="cl-turn-ribbon-avatar">{token?.image ? <ArtImage src={token.image} alt="" /> : (turn.name || "?").slice(0, 1)}</span>
-          {now ? <span className="cl-turn-ribbon-name">{turn.name}<small>지금</small></span> : at === 1 ? <span className="cl-turn-ribbon-name next"><small>다음</small>{turn.name}</span> : null}
-        </span>
-      ); })}
+      <span className="cl-turn-ribbon-round" title={`라운드 ${tracker.round}`}>{tracker.round}<small>라운드</small></span>
+      <div className="cl-turn-ribbon-track">
+        {rotated.map(({ turn, index }, at) => {
+          const token = tokenOf(turn.tokenId);
+          const side = sideOf(turn);
+          const hp = token?.bars[0];
+          const fraction = hp && hp.max ? Math.max(0, Math.min(1, (hp.value ?? 0) / hp.max)) : null;
+          const temp = token?.bars.find((bar) => bar.link === "temp");
+          const tempRing = temp && temp.value && hp?.max ? Math.min(1, temp.value / hp.max) : 0;
+          const down = fraction === 0 || token?.markers.some((marker) => marker.name === "사망" || marker.name === "무의식");
+          const now = index === currentIndex;
+          const acted = index < currentIndex;
+          const inGroup = linked.has(at);
+          const groupStart = groups.some((group) => group.start === at && group.end > group.start);
+          const groupEnd = groups.some((group) => group.end === at && group.end > group.start);
+          return (
+            <span key={turn.id} role="listitem" className={`cl-turn-ribbon-item ${side}${now ? " now" : ""}${acted ? " acted" : ""}${down ? " down" : ""}${inGroup ? " linked" : ""}${groupStart ? " group-start" : ""}${groupEnd ? " group-end" : ""}`} data-turn-name={turn.name} title={`${turn.name} · 이니셔티브 ${turn.initiative}${down ? " · 쓰러짐" : ""}`}>
+              <span className="cl-turn-ribbon-frame">
+                {tempRing ? <span className="cl-turn-ribbon-temp" style={{ background: `conic-gradient(#7dd3fc ${Math.round(tempRing * 360)}deg, transparent 0)` }} aria-label="임시 HP" /> : null}
+                <span className="cl-turn-ribbon-portrait">{token?.image ? <ArtImage src={token.image} alt="" /> : <span className="cl-turn-ribbon-glyph">{side === "npc" ? SKULL : PERSON}</span>}{down ? <span className="cl-turn-ribbon-down">✖</span> : null}</span>
+                {fraction !== null ? <span className="cl-turn-ribbon-hp"><i style={{ width: `${Math.round(fraction * 100)}%` }} /></span> : null}
+              </span>
+              {inGroup ? <span className={`cl-turn-ribbon-arrow${acted || now ? " filled" : ""}`} aria-hidden="true">{acted ? "⌛" : now ? "▲" : "△"}</span> : null}
+              {now ? <span className="cl-turn-ribbon-name">{turn.name}</span> : null}
+            </span>
+          );
+        })}
+      </div>
       {isGm ? <span className="cl-turn-ribbon-tools"><button type="button" className="cl-btn small primary" onClick={() => c.nextTurn()}>▶ 다음 턴</button><button type="button" className="cl-btn small quiet" onClick={() => onOpenTracker?.()} title="이니셔티브 편집·전투 시작">트래커</button></span> : null}
     </div>
   );

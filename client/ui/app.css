@@ -552,19 +552,42 @@ span.cl-tracker-init{display:inline-grid;place-items:center}
 .cl-float.bad{color:#ff8a8a;border-color:rgba(229,72,77,.7)}
 .cl-float.info{color:#e9ecf2}
 @keyframes cl-float{0%{opacity:0;transform:translate(-50%,-30%) scale(.8)}12%{opacity:1;transform:translate(-50%,-50%) scale(1.08)}20%{transform:translate(-50%,-50%) scale(1)}75%{opacity:1}100%{opacity:0;transform:translate(-50%,-110%)}}
-/* the initiative ribbon: who acts now, who is next */
-.cl-turn-ribbon{position:absolute;left:50%;top:8px;transform:translateX(-50%);z-index:30;display:flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:rgba(20,23,29,.92);border:1px solid rgba(255,255,255,.12);box-shadow:0 6px 18px rgba(0,0,0,.4);backdrop-filter:blur(6px);max-width:calc(100% - 40px);overflow:hidden}
-.cl-turn-ribbon-round{font-size:11px;color:var(--muted);padding-right:6px;border-right:1px solid rgba(255,255,255,.12);white-space:nowrap}
-.cl-turn-ribbon-item{display:inline-flex;align-items:center;gap:6px;opacity:.55}
-.cl-turn-ribbon-item.now{opacity:1}
-.cl-turn-ribbon-avatar{width:22px;height:22px;border-radius:50%;overflow:hidden;background:var(--surface-2);border:1px solid rgba(255,255,255,.2);display:grid;place-items:center;font-size:11px;font-weight:700}
-.cl-turn-ribbon-avatar img{width:100%;height:100%;object-fit:cover}
-.cl-turn-ribbon-item.now .cl-turn-ribbon-avatar{width:30px;height:30px;border:2px solid #ffd166;box-shadow:0 0 10px rgba(255,209,102,.6)}
-.cl-turn-ribbon-name{display:flex;flex-direction:column;line-height:1.05;font-size:12px;font-weight:700;white-space:nowrap}
-.cl-turn-ribbon-name small{font-size:9px;font-weight:600;color:#ffd166;letter-spacing:.06em}
-.cl-turn-ribbon-name.next{font-weight:500;font-size:11px;color:var(--muted)}
-.cl-turn-ribbon-name.next small{color:var(--muted)}
-.cl-turn-ribbon-tools{display:inline-flex;gap:4px;margin-left:6px;padding-left:8px;border-left:1px solid rgba(255,255,255,.12)}
+/* the turn order bar, BG3 style (D101) */
+.cl-turn-ribbon{position:absolute;left:50%;top:6px;transform:translateX(-50%);z-index:30;display:flex;align-items:flex-end;gap:10px;padding:6px 12px 8px;border-radius:12px;background:linear-gradient(180deg,rgba(24,20,14,.95),rgba(14,12,9,.95));border:1px solid rgba(214,178,94,.35);box-shadow:0 8px 22px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,225,160,.08);max-width:calc(100% - 40px)}
+.cl-turn-ribbon-round{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;min-width:30px;padding:0 4px 4px 0;border-right:1px solid rgba(214,178,94,.25);color:#e8d29a;font-weight:800;font-size:16px;line-height:1}
+.cl-turn-ribbon-round small{font-size:9px;font-weight:600;letter-spacing:.06em;color:#9a8a62;margin-top:2px}
+.cl-turn-ribbon-track{display:flex;align-items:flex-end;gap:6px;overflow:hidden}
+.cl-turn-ribbon-item{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;transition:transform .2s ease,opacity .2s ease}
+.cl-turn-ribbon-frame{position:relative;width:38px;padding:2px;border-radius:7px;background:linear-gradient(180deg,#3a3126,#1c1812);border:1px solid rgba(255,255,255,.08);box-shadow:0 2px 6px rgba(0,0,0,.5)}
+.cl-turn-ribbon-item.npc .cl-turn-ribbon-frame{border-color:#b83a3a;box-shadow:0 0 0 1px rgba(184,58,58,.35),0 2px 6px rgba(0,0,0,.5)}
+.cl-turn-ribbon-item.pc .cl-turn-ribbon-frame{border-color:#4f86c6;box-shadow:0 0 0 1px rgba(79,134,198,.35),0 2px 6px rgba(0,0,0,.5)}
+.cl-turn-ribbon-portrait{position:relative;display:block;width:100%;aspect-ratio:1;border-radius:5px;overflow:hidden;background:#151922;display:grid;place-items:center}
+.cl-turn-ribbon-portrait img{width:100%;height:100%;object-fit:cover;display:block}
+.cl-turn-ribbon-glyph{color:#c9ced8;opacity:.9;transform:scale(.7)}
+.cl-turn-ribbon-hp{display:block;height:4px;margin-top:2px;border-radius:2px;background:rgba(0,0,0,.6);overflow:hidden}
+.cl-turn-ribbon-hp>i{display:block;height:100%;background:linear-gradient(90deg,#c0392b,#e05a4b)}
+.cl-turn-ribbon-item.pc .cl-turn-ribbon-hp>i{background:linear-gradient(90deg,#4f86c6,#7fb0e8)}
+.cl-turn-ribbon-temp{position:absolute;inset:-4px;border-radius:10px;-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#000 calc(100% - 3px));mask:radial-gradient(farthest-side,transparent calc(100% - 3px),#000 calc(100% - 3px));pointer-events:none}
+.cl-turn-ribbon-down{position:absolute;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.55);color:#e5484d;font-weight:900;font-size:18px}
+.cl-turn-ribbon-item.down .cl-turn-ribbon-portrait{filter:grayscale(1) brightness(.6)}
+.cl-turn-ribbon-item.acted{opacity:.55}
+/* the acting creature: first, large, gold ornate frame, name beneath */
+.cl-turn-ribbon-item.now{margin-right:6px}
+.cl-turn-ribbon-item.now .cl-turn-ribbon-frame{width:62px;padding:3px;border-radius:9px;border:2px solid #e8c56a;background:linear-gradient(180deg,#6d5623,#2c2210);box-shadow:0 0 0 1px #3a2c10,0 0 0 3px rgba(232,197,106,.35),0 0 18px rgba(232,197,106,.55),0 4px 10px rgba(0,0,0,.6)}
+.cl-turn-ribbon-item.now .cl-turn-ribbon-frame::before,.cl-turn-ribbon-item.now .cl-turn-ribbon-frame::after{content:"";position:absolute;left:50%;transform:translateX(-50%);width:18px;height:4px;border-radius:2px;background:#e8c56a}
+.cl-turn-ribbon-item.now .cl-turn-ribbon-frame::before{top:-5px}
+.cl-turn-ribbon-item.now .cl-turn-ribbon-frame::after{bottom:-5px}
+.cl-turn-ribbon-item.now .cl-turn-ribbon-glyph{transform:scale(1)}
+.cl-turn-ribbon-name{margin-top:3px;max-width:96px;font-size:11px;font-weight:700;color:#f3e6bf;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 2px #000}
+/* linked party members: one bracket, hollow arrows until they act */
+.cl-turn-ribbon-item.linked::after{content:"";position:absolute;left:-3px;right:-3px;bottom:-4px;height:6px;border-bottom:2px solid rgba(79,134,198,.8)}
+.cl-turn-ribbon-item.group-start::after{border-left:2px solid rgba(79,134,198,.8);border-bottom-left-radius:4px;left:0}
+.cl-turn-ribbon-item.group-end::after{border-right:2px solid rgba(79,134,198,.8);border-bottom-right-radius:4px;right:0}
+.cl-turn-ribbon-arrow{font-size:9px;line-height:1;color:#8fb6e6;height:10px}
+.cl-turn-ribbon-arrow.filled{color:#4f86c6}
+.cl-turn-ribbon-tools{display:inline-flex;gap:4px;margin-left:4px;padding-left:10px;padding-bottom:4px;border-left:1px solid rgba(214,178,94,.25)}
+.cl-canvas.has-tracker .cl-toasts{top:96px}
+.cl-canvas.scene-mode.has-tracker .cl-scene{padding-top:98px}
 /* the command bar: loud on your turn, quiet otherwise */
 .cl-cmd{display:flex;align-items:center;gap:14px;padding:8px 14px;border-top:1px solid var(--line);background:var(--surface);min-height:58px}
 .cl-cmd.turn{background:linear-gradient(90deg,rgba(255,209,102,.16),rgba(255,209,102,.04) 40%,transparent);border-top:2px solid #ffd166;box-shadow:inset 0 1px 0 rgba(255,209,102,.4)}
@@ -601,3 +624,8 @@ span.cl-tracker-init{display:inline-grid;place-items:center}
 .cl-toasts{top:10px}
 .cl-canvas.has-tracker .cl-toasts{top:58px}
 .cl-canvas.scene-mode.has-tracker .cl-scene{padding-top:60px}
+
+/* T5: toasts live at the bottom of the board so they never sit on the turn order bar or the targeting banner */
+.cl-toasts{top:auto;bottom:14px}
+.cl-canvas.has-tracker .cl-toasts{top:auto;bottom:14px}
+.cl-waiting-note{left:14px;transform:none}
