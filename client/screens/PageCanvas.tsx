@@ -28,6 +28,10 @@ import type { CharacterRuntime } from "../character/runtime";
 import { resolveRuntime } from "../character/save";
 import type { DerivedFeature, DerivedItem } from "../character/types";
 import { itemUse } from "../rules/items";
+import { castableSpells } from "../rules/spellcast";
+import { describeSpellExec, spellExec } from "../compendium/spells";
+import type { CastMethod } from "../character/play";
+import { castOptions } from "./SheetView";
 import { ApprovalLayer, ToastLayer } from "./Notify";
 import { hasSmite, hasSneakAttack, npcAttackSpec, smiteSlots, weaponRange } from "../rules/attackSpec";
 import type { AttackRef, AttackRiders } from "../session/protocol";
@@ -220,9 +224,9 @@ export function PageCanvas({ onOpenEntry, onOpenToken, onOpenPageSettings, onOpe
   // D97: the turn panel — a player's own character's turn; for the DM, the turn of anyone no player controls.
   const players = snapshot.players.filter((player) => player.role !== "gm");
   const myTurn = turnToken && (isGm ? !players.some((player) => controlsToken(turnToken, { userId: player.userId, role: "player" }, journal)) : controlsToken(turnToken, viewer, journal)) ? turnToken : undefined;
-  // The command bar's creature: my turn's, else my selection, else (a player) my only creature on the scene.
+  // The command bar's creature: a creature of mine I selected on purpose (the DM runs many), else my turn's, else (a player) my only creature on the scene.
   const mine = page.tokens.filter((token) => token.represents && token.layer !== "map" && controlsToken(token, viewer, journal));
-  const commandToken = myTurn ?? (selected.length === 1 ? page.tokens.find((token) => token.id === selected[0] && token.represents && controlsToken(token, viewer, journal)) : undefined) ?? (!isGm && mine.length === 1 ? mine[0] : undefined);
+  const commandToken = (selected.length === 1 ? page.tokens.find((token) => token.id === selected[0] && token.represents && controlsToken(token, viewer, journal)) : undefined) ?? myTurn ?? (!isGm && mine.length === 1 ? mine[0] : undefined);
   const sortedTokens = [...page.tokens].sort((a, b) => layerOrder(a.layer) - layerOrder(b.layer) || a.z - b.z);
   const rangeOf = (token: Token): "in" | "long" | "out" | null => {
     if (!targeting?.from || isScene(page)) return null;
@@ -313,6 +317,7 @@ export function PageCanvas({ onOpenEntry, onOpenToken, onOpenPageSettings, onOpe
       {scene && commandToken ? <CommandBar token={commandToken} page={page} mode={myTurn && commandToken.id === myTurn.id ? "turn" : "free"} onOpenEntry={onOpenEntry} /> : null}
       <AttackAskBridge />
       <ActAskBridge />
+      <CastAskBridge />
       <PlaceCharacterBridge onPlace={(id) => placeCharacter(id)} onPlaceToken={(token) => placeTokenAt(token)} onTargets={(request) => { setSelected([]); setMenu(null); setTargeting({ ...request, picked: [] }); }} />
     </div>
   );
@@ -419,6 +424,20 @@ function Dropdown({ label, items, disabled, tone, up = false }: { label: string;
   );
 }
 
+interface CastAsk { name: string; options: Array<{ label: string; method: CastMethod }>; resolve: (method: CastMethod | null) => void }
+const castAskListeners = new Set<(ask: CastAsk) => void>();
+const requestCastMethod = (ask: Omit<CastAsk, "resolve">) => new Promise<CastMethod | null>((resolve) => { if (!castAskListeners.size) { resolve(ask.options[0]?.method ?? null); return; } for (const listener of [...castAskListeners]) listener({ ...ask, resolve }); });
+function CastAskBridge() {
+  const [ask, setAsk] = useState<CastAsk | null>(null);
+  useEffect(() => { castAskListeners.add(setAsk); return () => { castAskListeners.delete(setAsk); }; }, []);
+  if (!ask) return null;
+  return (
+    <RiderModal title={`${ask.name} — 어떻게 시전할까요`} onClose={() => { ask.resolve(null); setAsk(null); }}>
+      <div className="cl-list" style={{ gap: 6 }}>{ask.options.map((option) => <button type="button" key={option.label} className="cl-btn primary" onClick={() => { ask.resolve(option.method); setAsk(null); }}>{option.label}</button>)}</div>
+    </RiderModal>
+  );
+}
+
 /**
  * The command bar (D100): the one place to act on a scene. In "turn" mode it is the loudest thing on screen —
  * "당신의 턴", the attacks in red, the action list, the sheet menus and a big 턴 마침. In "free" mode (someone else's
@@ -494,6 +513,35 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
     ...usable.filter((item) => item.bonus).map((item) => ({ key: item.feature.id, label: item.feature.name, hint: item.left !== undefined ? `${item.left}/${item.pool!.max}` : undefined, disabled: item.left !== undefined && item.left <= 0, onSelect: () => void useIt(item.feature) })),
     { key: "note", label: "기록…", hint: "다른 추가 행동을 쓴 것으로 남김", onSelect: () => void take({ ...actionDef("utilize"), name: "추가 행동", text: "무엇을" }, true) },
   ];
+  // 마법 (D102): the sheet's castable spells or the stat block's lists; targets from the board, the slot from a dialog.
+  const castIt = async (spellId: string, name: string) => {
+    const exec = spellExec(spellId);
+    if (!exec) return;
+    const selfOnly = exec.targeting.allowedRelations?.every((relation) => relation === "self");
+    let targets: string[] = selfOnly ? [token.id] : [];
+    if (!selfOnly) {
+      targets = await requestTargets(`${name} — 대상을 클릭하세요${exec.targeting.maxTargets > 1 ? ` (최대 ${exec.targeting.maxTargets >= 64 ? "범위 안 전부" : `${exec.targeting.maxTargets}명`})` : ""}`, { multi: exec.targeting.maxTargets > 1, exclude: exec.targeting.allowedRelations?.includes("self") ? undefined : token.id });
+      if (!targets.length) return;
+      if (targets.length > exec.targeting.maxTargets) targets = targets.slice(0, exec.targeting.maxTargets);
+    }
+    let method: CastMethod | undefined;
+    if (entry.kind === "character" && derived) {
+      const view = catalog.spellById(spellId);
+      const options = view ? castOptions(view, derived, currentRuntime()) : [];
+      if (!options.length) { alert("슬롯이나 횟수가 없습니다."); return; }
+      const chosen = options.length === 1 ? options[0].method : await requestCastMethod({ name, options });
+      if (!chosen) return;
+      method = chosen;
+    }
+    let overrides: AttackOverrides | undefined;
+    if (isGm && exec.primary.kind === "attack-damage") { const answer = await requestAttackOptions({ name, sneak: false, slots: [], gm: true }); if (answer === null) return; overrides = answer.overrides; }
+    c.cast(me, spellId, targets.map((id) => ({ pageId: page.id, tokenId: id })), method, overrides);
+  };
+  const spellItems = entry.kind === "character" && derived
+    ? castableSpells(derived).map((id) => ({ id, view: catalog.spellById(id), exec: spellExec(id)! })).sort((a, b) => (a.view?.level ?? 0) - (b.view?.level ?? 0) || (a.view?.name ?? "").localeCompare(b.view?.name ?? "", "ko")).map(({ id, view, exec }) => ({ key: id, label: `${view?.level ? `${view.level}레벨 ` : "소마법 "}${view?.name ?? id}`, hint: describeSpellExec(exec), onSelect: () => void castIt(id, view?.name ?? id) }))
+    : entry.kind === "npc"
+      ? (entry.statBlock.actions.find((action) => action.kind === "spellcasting" && action.spellcasting)?.spellcasting?.lists ?? []).flatMap((list) => list.entries.filter((item) => item.spellId && spellExec(item.spellId)).map((item) => ({ key: `${list.frequency}:${item.spellId}`, label: `${item.name}${item.slotLevel ? ` (${item.slotLevel}레벨)` : ""}`, hint: `${list.frequency === "at-will" ? "의지대로" : list.frequency === "per-day" ? `${list.uses ?? 1}/일` : list.frequency} · ${describeSpellExec(spellExec(item.spellId!)!)}`, onSelect: () => void castIt(item.spellId!, item.name) })))
+      : [];
   const initiativeBonus = derived ? derived.initiative : entry.kind === "npc" ? entry.statBlock.initiativeBonus : 0;
   const inTracker = tracker.turns.some((item) => item.tokenId === token.id && item.pageId === page.id);
   const chip = (label: string, used: boolean | undefined) => <span className={`cl-econ${used ? " used" : ""}`} title={used ? `${label} 사용함` : `${label} 남음`}><i />{label}</span>;
@@ -512,7 +560,7 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
           {derived ? derived.attacks.map((attack) => <button type="button" key={attack.id} className="cl-btn small attack" disabled={off} onClick={() => void attackWith({ source: "weapon", attackId: attack.id })}>⚔ {attack.name} <b>{attack.attackBonus >= 0 ? "+" : ""}{attack.attackBonus}</b></button>) : null}
           {entry.kind === "npc" ? entry.statBlock.actions.filter((action) => action.kind === "attack" && action.attack).map((action) => <button type="button" key={action.name} className="cl-btn small attack" disabled={off || Boolean(action.timing?.recharge && entry.runtime.spent[action.name])} onClick={() => void attackWith({ source: "npc", actionName: action.name })}>⚔ {action.name} <b>{action.attack!.bonus >= 0 ? "+" : ""}{action.attack!.bonus}</b></button>) : null}
           {ACTIONS.filter((def) => def.kind === "grapple" || def.kind === "shove" || def.kind === "escape").map((def) => { const needsHand = (def.kind === "grapple" || def.kind === "shove") && !freeHand; return <button type="button" key={def.kind} className="cl-btn small" disabled={off || needsHand || (def.kind === "escape" && !conditions.has("붙잡힘"))} title={needsHand ? "빈 손이 없습니다 (보조 손이나 양손 무기를 내려놓으세요)" : def.summary} onClick={() => void take(def)}>{def.name}</button>; })}
-          <button type="button" className="cl-btn small" disabled title="주문·마법 (R8)">✨ 마법</button>
+          <Dropdown up label="✨ 마법" disabled={off || !spellItems.length} items={spellItems} />
         </div>
         <div className="cl-cmd-group">
           <span className="cl-cmd-label">행동</span>
@@ -629,7 +677,7 @@ function TurnPanel({ token, page, onOpenEntry }: { token: Token; page: Page; onO
         <Dropdown label="특성" disabled={off} items={featureItems} />
         <Dropdown label="아이템" disabled={off} items={itemItems} />
         <Dropdown label="추가 행동" disabled={off} items={bonusItems} />
-        <button type="button" className="cl-btn small" disabled title="주문·마법 (R8)">✨ 마법</button>
+        <button type="button" className="cl-btn small" disabled title="주문은 장면 방식의 커맨드 바에서 시전합니다 (격자는 보류)">✨ 마법</button>
       </div>
     </div>
   );
@@ -748,6 +796,17 @@ function useCardFloats(page: Page, journal: JournalEntry[]) {
         const hit = result.outcome === "hit" || result.outcome === "crit";
         next.push({ id: message.id, tokenId, text: !result.applied ? "DM 확인 대기" : result.outcome === "crit" ? `치명타 −${result.damageTotal}` : hit ? `−${result.damageTotal}` : result.outcome === "fumble" ? "자동 실패" : "빗나감", tone: !result.applied ? "info" : result.outcome === "crit" ? "crit" : hit ? "hit" : "miss" });
         if (result.downed) next.push({ id: `${message.id}:down`, tokenId, text: result.downed === "dead" ? "사망" : result.downed === "instant-death" ? "즉사" : "쓰러짐", tone: "bad" });
+      } else if (message.type === "spell" && message.spell && !message.undone && !message.supersedes) {
+        for (const row of message.spell.targets) {
+          const tokenId = row.target.tokenId ?? byEntry(row.target.id) ?? byName(row.target.name);
+          if (!tokenId) continue;
+          const dmg = row.attack ? (row.attack.outcome === "hit" || row.attack.outcome === "crit" ? row.attack.damageTotal : -1) : row.damage ? row.damage.damageTotal : undefined;
+          const text = !message.spell.applied ? "DM 확인 대기" : row.healed !== undefined ? `+${row.healed}` : row.tempHp !== undefined ? `임시 +${row.tempHp}` : row.attack && dmg === -1 ? "빗나감" : row.save && dmg !== undefined ? `${dmg ? `−${dmg} ` : ""}${row.save.success ? "내성 ✓" : "내성 ✗"}` : dmg !== undefined ? `−${dmg}` : row.effect ? row.effect.name : row.marks.join(" · ") || message.spell.name;
+          const tone: CardFloat["tone"] = !message.spell.applied ? "info" : row.healed !== undefined || row.tempHp !== undefined ? "good" : row.attack?.outcome === "crit" ? "crit" : dmg && dmg > 0 ? "hit" : row.marks.length ? "bad" : "info";
+          next.push({ id: `${message.id}:${row.target.id}`, tokenId, text, tone });
+          const downed = row.attack?.downed ?? row.damage?.downed;
+          if (downed) next.push({ id: `${message.id}:${row.target.id}:down`, tokenId, text: downed === "dead" ? "사망" : "쓰러짐", tone: "bad" });
+        }
       } else if (message.type === "act" && message.act) {
         const act = message.act;
         const tokenId = byName(act.actor.name);

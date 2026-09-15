@@ -7,6 +7,7 @@ import { useCampaigns } from "../app/campaigns";
 import { useClient } from "../app/context";
 import type { ChatMessage } from "../campaign/model";
 import { PromptChoices } from "./Notify";
+import { ABILITY_KO } from "../catalog/types";
 import type { AttackResolution } from "../rules/resolve";
 import { damageTypeKo } from "../rules/resolve";
 import { parseFormula } from "../character/dice";
@@ -137,6 +138,7 @@ function ChatLine({ message, me, color, targetName }: { message: ChatMessage; me
     case "action": return <ActionCard message={message} time={time} color={color} />;
     case "prompt": return <PromptCard message={message} time={time} color={color} />;
     case "act": return <ActCard message={message} time={time} color={color} />;
+    case "spell": return <SpellCard message={message} time={time} color={color} />;
     case "system": return <div className="cl-chat-msg system"><span className="cl-at">{time}</span>{message.content}</div>;
     case "desc": return <div className="cl-chat-msg desc"><span className="cl-at">{time}</span>{message.content}</div>;
     case "emote": return <div className="cl-chat-msg emote"><span className="cl-at">{time}</span><span className="cl-swatch" style={{ background: color }} /><em>{message.who} {message.content}</em></div>;
@@ -157,6 +159,43 @@ function ChatLine({ message, me, color, targetName }: { message: ChatMessage; me
     }
     default: return <div className={`cl-chat-msg${mine ? " mine" : ""}`}><span className="cl-at">{time}</span><span className="cl-who" style={{ color }}>{message.who}</span><div>{message.content}</div></div>;
   }
+}
+
+/** D102: a spell's card — one row per target: the spell attack's dice, the save vs DC, damage after resistances, healing, the effect started. */
+function SpellCard({ message, time, color }: { message: ChatMessage; time: string; color?: string }) {
+  const c = useCampaigns();
+  const snapshot = c.table.snapshot!;
+  const isGm = snapshot.players.find((player) => player.userId === c.userId)?.role === "gm";
+  const spell = message.spell!;
+  return (
+    <div className={`cl-chat-msg spell${message.undone ? " undone" : ""}`} data-spell-id={message.id}>
+      <span className="cl-at">{time}</span>{message.who ? <span className="cl-who" style={{ color }}>{message.who}</span> : null}{message.undone ? <Pill tone="bad">되돌림</Pill> : !spell.applied ? <Pill tone="accent">DM 확인 대기</Pill> : null}
+      <div className="cl-act-card">
+        <div className="cl-roll-head">✨ <strong>{spell.name}</strong>{spell.level ? <span className="cl-quiet cl-small"> {spell.level}레벨</span> : <span className="cl-quiet cl-small"> 소마법</span>} · {spell.caster.name}{spell.concentration ? <Pill tone="accent">집중</Pill> : null}{spell.economy === "bonus-action" ? <Pill>추가 행동</Pill> : spell.economy === "reaction" ? <Pill>반응</Pill> : null}</div>
+        {spell.targets.map((row) => (
+          <div className="cl-small cl-spell-row" key={row.target.id}>
+            <strong>{row.target.name}</strong>
+            {row.attack ? <> <span className={`cl-die d20${row.attack.kept === 20 ? " crit" : row.attack.kept === 1 ? " fumble" : ""}`}>{row.attack.kept}</span><span className="cl-mod">{row.attack.attack.bonus >= 0 ? "+" : "−"}{Math.abs(row.attack.attack.bonus)}</span><span className="cl-eq">=</span><strong>{row.attack.attackTotal}</strong> <span className="cl-quiet">vs AC {row.attack.targetAc}</span> <Pill tone={row.attack.outcome === "hit" || row.attack.outcome === "crit" ? "good" : "bad"}>{row.attack.outcome === "crit" ? "치명타" : row.attack.outcome === "hit" ? "적중" : row.attack.outcome === "fumble" ? "자동 실패" : "빗나감"}</Pill>{row.attack.damage.length ? <> {row.attack.damage.flatMap((part) => part.dice).map((die, at) => <span key={at} className="cl-die small">{die}</span>)} = 피해 {row.attack.damageTotal}{row.attack.damage.some((part) => part.adjustment) ? ` (${row.attack.damage.filter((part) => part.adjustment).map((part) => part.adjustment).join(", ")})` : ""}</> : null}</> : null}
+            {row.save ? <> {ABILITY_KO[row.save.ability]} 내성 <span className={`cl-die d20${row.save.d20 === 20 ? " crit" : row.save.d20 === 1 ? " fumble" : ""}`}>{row.save.d20}</span><span className="cl-mod">{row.save.bonus >= 0 ? "+" : "−"}{Math.abs(row.save.bonus)}</span><span className="cl-eq">=</span><strong>{row.save.total}</strong> <span className="cl-quiet">vs DC {row.save.dc}</span> <Pill tone={row.save.success ? "good" : "bad"}>{row.save.success ? "성공" : "실패"}</Pill></> : null}
+            <span className="cl-spell-then">
+            {row.damage && row.damage.damage.length ? <> {row.damage.damage.flatMap((part) => part.dice).map((die, at) => <span key={at} className="cl-die small">{die}</span>)} = 피해 {row.damage.damageTotal}{row.save?.success ? " (절반)" : ""}{row.damage.damage.some((part) => part.adjustment) ? ` (${row.damage.damage.filter((part) => part.adjustment).map((part) => part.adjustment).join(", ")})` : ""}{row.projectiles ? ` · 화살 ${row.projectiles}` : ""}</> : row.damage && row.save?.success ? " 피해 없음" : null}
+            {row.healed !== undefined ? <> 회복 <strong>{row.healed}</strong> <span className="cl-quiet">({row.note})</span></> : null}
+            {row.tempHp !== undefined ? <> 임시 HP <strong>{row.tempHp}</strong> <span className="cl-quiet">({row.note})</span></> : null}
+            {row.hpAfter !== row.hpBefore ? <span className="cl-quiet"> · HP {row.hpBefore} → {row.hpAfter}</span> : null}
+            {row.marks.length ? <span> · 부여: {row.marks.join(", ")}</span> : null}
+            {row.effect ? <span> · {row.effect.name} ({row.effect.duration})</span> : null}
+            {(row.attack?.concentration ?? row.damage?.concentration) ? <span> · 집중 {(row.attack?.concentration ?? row.damage?.concentration)!.success ? "유지" : "실패"}</span> : null}
+            {(row.attack?.downed ?? row.damage?.downed) ? <span style={{ color: "var(--bad)" }}> · {(row.attack?.downed ?? row.damage?.downed) === "dead" ? "사망" : "쓰러짐"}</span> : null}
+            {row.note && row.mode === "effect" ? <span className="cl-quiet"> · {row.note}</span> : null}
+            </span>
+          </div>
+        ))}
+        {spell.note ? <div className="cl-small cl-quiet">{spell.note}</div> : null}
+        {isGm && !message.undone && spell.applied ? <div className="cl-row" style={{ gap: 4 }}><button type="button" className="cl-btn small danger" onClick={() => c.undoAction(message.id)}>되돌리기</button></div> : null}
+        {isGm && !message.undone && !spell.applied ? <div className="cl-row" style={{ gap: 4 }}><button type="button" className="cl-btn small primary" onClick={() => c.confirmAction(message.id)}>적용</button><button type="button" className="cl-btn small quiet" onClick={() => c.undoAction(message.id)}>취소</button></div> : null}
+      </div>
+    </div>
+  );
 }
 
 /** D97: an official action's card — the check with its die, what happened, what was marked. */

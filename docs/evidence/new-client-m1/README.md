@@ -72,3 +72,4 @@ Chromium이 Vite 개발 서버(포트 1430)에서 마법사를 처음부터 끝�
 - `66-totm-opportunity-attack-player.png` — 플레이어 화면: "시미터 · 기회 공격" 판정 카드와 "기회 공격" 배지가 붙은 프롬프트 (`node scripts/capture-client-totm.mjs`, 시나리오 SC-44~47)
 - `67-turn-panel-player.png` — 플레이어 화면, 자기 턴: 보드 위 BG3식 턴 순서 바(맨 앞 금테 큰 초상 = 지금, 이어서 작은 초상, 붉은/푸른 테, HP 바), 확대·금테의 자기 카드, 아래 금색 커맨드 바("당신의 턴", 빨간 공격 묶음, 행동·추가 행동, 시트 메뉴, 큰 턴 마침), 굴림 토스트
 - `68-turn-panel-dm-goblin.png` — DM 화면, 고블린의 턴: 턴 순서 바(고블린이 맨 앞 금테, 끝에 ▶ 다음 턴·트래커), 행동 중인 고블린 카드, DM이 연 트래커 창, 고블린의 커맨드 바(시미터·단궁·붙잡기…), 붙잡기 카드(대상의 내성 vs DC) (`node scripts/capture-client-totm.mjs`, 시나리오 SC-48~49)
+- `69-totm-spell-fireball.png` — DM 화면, 고블린의 턴에 DM이 마법사를 골라 파이어볼을 고블린·파이터에게: 채팅의 주문 카드("✨ 파이어볼 4레벨 · 마법사", 대상마다 민첩 내성 vs DC 14와 성공/실패 배지, 피해 주사위 9개, 피해 32 → 고블린 HP 10 → 0 사망 / 파이터는 절반 16, HP 28 → 12, 되돌리기), 아이콘 위 떠오름과 HP 바, NPC 줄의 고블린은 ✖ 사망 (`node scripts/capture-client-totm.mjs`, 시나리오 SC-53)

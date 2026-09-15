@@ -645,3 +645,12 @@ span.cl-tracker-init{display:inline-grid;place-items:center}
 .cl-scene-cards{max-height:38vh}
 .cl-dd.up .cl-dd-menu{top:auto;bottom:calc(100% + 4px)}
 .cl-cmd .cl-dd-menu{z-index:80}
+
+/* R8: spell cards */
+.cl-spell-row{display:flex;flex-wrap:wrap;align-items:center;gap:4px;padding:3px 0;border-top:1px dashed var(--line)}
+.cl-spell-row:first-of-type{border-top:0}
+.cl-chat-msg.spell.undone .cl-act-card{opacity:.6}
+/* R8: a spell row = who and the attack/save on the first line, then what happened (dice, HP, marks) on its own line. */
+.cl-spell-row{margin-top:4px}
+.cl-spell-then{display:block;padding-left:10px}
+.cl-spell-then:empty{display:none}

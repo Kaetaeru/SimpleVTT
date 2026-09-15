@@ -294,7 +294,7 @@ export function SheetView({ derived, catalog, runtime, compact = false, actions 
 }
 
 /** Ways to pay for a spell right now: slots at or above its level with uses left, the pact slot, a free-cast pool, ritual. */
-function castOptions(spell: SpellView, derived: DerivedCharacter, runtime: CharacterRuntime | undefined): Array<{ label: string; method: CastMethod }> {
+export function castOptions(spell: SpellView, derived: DerivedCharacter, runtime: CharacterRuntime | undefined): Array<{ label: string; method: CastMethod }> {
   if (spell.level === 0) return [{ label: "소마법", method: { kind: "cantrip" } }];
   const options: Array<{ label: string; method: CastMethod }> = [];
   for (const [level, count] of Object.entries(derived.spellSlots).map(([key, value]) => [Number(key), value] as const).sort((a, b) => a[0] - b[0])) {

@@ -30,6 +30,7 @@ export function toastText(message: ChatMessage): { text: string; tone: "info" | 
       return { text: `${result.attacker.name} → ${result.target.name}: ${result.attack.name} ${result.outcome === "crit" ? "치명타" : hit ? "적중" : "빗나감"}${hit ? ` · 피해 ${result.damageTotal} (HP ${result.hpAfter})` : ""}${result.applied ? "" : " · DM 확인 대기"}`, tone: hit ? "bad" : "info" };
     }
     case "prompt": return message.prompt?.outcome ? null : { text: message.content, tone: "info" };
+    case "spell": { const spell = message.spell!; if (message.undone) return { text: `되돌림: ${spell.caster.name}의 ${spell.name}`, tone: "info" }; return { text: `${spell.caster.name}: ${spell.name} → ${spell.targets.map((row) => row.target.name).join(", ")}${spell.applied ? "" : " · DM 확인 대기"}`, tone: "info" }; }
     default: return null;
   }
 }
@@ -45,7 +46,7 @@ export function ToastLayer({ boardShowsResults = false }: { boardShowsResults?: 
     const fresh = chat.filter((message) => !seen.current!.has(message.id));
     if (!fresh.length) return;
     for (const message of fresh) seen.current.add(message.id);
-    const shownOnBoard = (message: ChatMessage) => boardShowsResults && (message.type === "action" || message.type === "act" || message.type === "prompt" || (message.type === "system" && /의 턴$/.test(message.content)));
+    const shownOnBoard = (message: ChatMessage) => boardShowsResults && (message.type === "action" || message.type === "act" || message.type === "spell" || message.type === "prompt" || (message.type === "system" && /의 턴$/.test(message.content)));
     const next = fresh.filter((message) => !shownOnBoard(message)).map((message) => ({ message, toast: toastText(message) })).filter((item): item is { message: ChatMessage; toast: { text: string; tone: "info" | "good" | "bad" } } => Boolean(item.toast)).map((item) => ({ id: item.message.id, ...item.toast }));
     if (!next.length) return;
     setToasts((list) => [...list, ...next].slice(-3));
@@ -106,7 +107,7 @@ export function ApprovalLayer() {
   const isGm = snapshot.players.find((player) => player.userId === c.userId)?.role === "gm";
   const superseded = useMemo(() => new Set(snapshot.chat.map((message) => message.supersedes).filter((id): id is string => Boolean(id))), [snapshot.chat]);
   const prompts = snapshot.chat.filter((message) => message.type === "prompt" && !message.prompt?.outcome && !superseded.has(message.id));
-  const waiting = isGm ? snapshot.chat.filter((message) => message.type === "action" && message.action && !message.action.applied && !message.undone && !superseded.has(message.id)) : [];
+  const waiting = isGm ? snapshot.chat.filter((message) => ((message.type === "action" && message.action && !message.action.applied) || (message.type === "spell" && message.spell && !message.spell.applied)) && !message.undone && !superseded.has(message.id)) : [];
   const mine = prompts.filter((message) => promptIsMine(message, snapshot, c.userId));
   const first = mine[0];
   const firstWait = waiting[0];
@@ -125,8 +126,9 @@ export function ApprovalLayer() {
           </>
         ) : (
           <>
-            <div className="cl-approval-body"><strong>{firstWait!.action!.attacker.name}</strong> → <strong>{firstWait!.action!.target.name}</strong>: {firstWait!.action!.attack.name} — {firstWait!.action!.outcome === "crit" ? "치명타" : firstWait!.action!.outcome === "hit" ? "적중" : "빗나감"}{firstWait!.action!.damageTotal ? ` · 피해 ${firstWait!.action!.damageTotal}` : ""}</div>
-            <div className="cl-row" style={{ gap: 6 }}><button type="button" className="cl-btn primary" onClick={() => c.confirmAction(firstWait!.id)}>적용</button><button type="button" className="cl-btn" onClick={() => c.adjustAction(firstWait!.id, { outcome: "miss" })}>빗나감으로</button><button type="button" className="cl-btn quiet" onClick={() => c.undoAction(firstWait!.id)}>취소</button></div>
+            {firstWait!.action ? <div className="cl-approval-body"><strong>{firstWait!.action.attacker.name}</strong> → <strong>{firstWait!.action.target.name}</strong>: {firstWait!.action.attack.name} — {firstWait!.action.outcome === "crit" ? "치명타" : firstWait!.action.outcome === "hit" ? "적중" : "빗나감"}{firstWait!.action.damageTotal ? ` · 피해 ${firstWait!.action.damageTotal}` : ""}</div>
+              : <div className="cl-approval-body"><strong>{firstWait!.spell!.caster.name}</strong>: {firstWait!.spell!.name} → {firstWait!.spell!.targets.map((row) => row.target.name).join(", ")}</div>}
+            <div className="cl-row" style={{ gap: 6 }}><button type="button" className="cl-btn primary" onClick={() => c.confirmAction(firstWait!.id)}>적용</button>{firstWait!.action ? <button type="button" className="cl-btn" onClick={() => c.adjustAction(firstWait!.id, { outcome: "miss" })}>빗나감으로</button> : null}<button type="button" className="cl-btn quiet" onClick={() => c.undoAction(firstWait!.id)}>취소</button></div>
           </>
         )}
       </div>

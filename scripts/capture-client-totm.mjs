@@ -1,9 +1,9 @@
 /**
- * Theatre of the Mind on one PC (SESSION_SCENARIOS.md SC-44..47): a new campaign opens in TotM mode; "+ 장면" makes
+ * Theatre of the Mind on one PC (SESSION_SCENARIOS.md SC-44..49, 53): a new campaign opens in TotM mode; "+ 장면" makes
  * a scene with no grid; a goblin from the compendium and the player's character appear as icons; the player's ⚔
  * resolves without any distance; the DM's ⚔ opens the pre-roll dialog and "반드시 치명타" forces a crit; on the
  * player's turn the 벗어남 button on the goblin's icon asks the DM for an opportunity attack, which lands as a
- * reaction card; the turn panel (D97) shows the official actions on your turn. Writes 63-68 to docs/evidence/new-client-m1.
+ * reaction card; the turn panel (D97) shows the official actions on your turn. Writes 63-69 to docs/evidence/new-client-m1.
  *
  *   node scripts/capture-client-totm.mjs
  */
@@ -159,6 +159,7 @@ try {
   await panel.waitFor({ timeout: 10000 });
   check(await dm.getByRole("region", { name: "앨리스의 파이터의 턴" }).count() === 0, "the DM has no panel for a player's character");
   check((await panel.innerText()).includes("붙잡기") && (await panel.innerText()).includes("행동"), "the panel shows attacks, unarmed options and the menus");
+  check(await panel.getByRole("button", { name: /마법/ }).isDisabled(), "a fighter has no spells: ✨ 마법 stays off (D102)");
   await panel.getByRole("button", { name: /^행동/ }).click();
   check(await player.getByRole("menuitem", { name: /^질주/ }).count() === 1, "the 행동 menu lists the official actions");
   await player.getByRole("menuitem", { name: /^회피/ }).click();
@@ -201,6 +202,36 @@ try {
   await dm.locator(".cl-chat-msg.act", { hasText: "붙잡기" }).waitFor({ timeout: 15000 });
   check(await dm.locator(".cl-canvas-viewport.scene").evaluate((el) => el.scrollHeight <= el.clientHeight + 1), "the scene never scrolls: it fits the frame");
   check((await dm.locator(".cl-chat-msg.act", { hasText: "붙잡기" }).last().innerText()).includes("내성"), "붙잡기 rolls the target's save against the DC");
+
+  // SC-53 (D102): the DM places a mage; ✨ 마법 lists its stat-block spells; 파이어볼 at the goblin and the fighter rolls one damage die
+  // for both, each saves against the mage's DC, and the HP bars fall on both screens.
+  await tab(dm, "컴펜디움").click();
+  await dm.getByLabel("컴펜디움 검색").fill("mage");
+  await dm.getByLabel("마법사 캔버스에 놓기", { exact: true }).click();
+  await iconOf(player, "마법사").waitFor({ timeout: 10000 });
+  await tab(dm, "채팅").click();
+  await iconOf(dm, "마법사").click();
+  const mageBar = dm.getByRole("toolbar", { name: "마법사 액션" });
+  await mageBar.waitFor();
+  await mageBar.getByRole("button", { name: /마법/ }).click();
+  const fireball = dm.getByRole("menuitem", { name: /파이어볼/ });
+  await fireball.waitFor({ timeout: 5000 });
+  check((await fireball.getAttribute("title") ?? "").includes("2/일") && (await fireball.getAttribute("title") ?? "").includes("민첩 내성"), "the menu says how often and what the spell asks for");
+  await fireball.click();
+  await dm.locator(".cl-targeting-banner[data-multi='1']").waitFor();
+  await iconOf(dm, "고블린 전사").click();
+  await iconOf(dm, "앨리스의 파이터").click();
+  await dm.locator(".cl-targeting-banner[data-picked='2']").waitFor({ timeout: 10000 });
+  await dm.locator(".cl-targeting-banner").getByRole("button", { name: "확정" }).click();
+  const spellCard = player.locator(".cl-chat-msg.spell", { hasText: "파이어볼" });
+  await spellCard.waitFor({ timeout: 15000 });
+  await dm.locator(".cl-chat-msg.spell", { hasText: "파이어볼" }).waitFor({ timeout: 15000 });
+  const spellText = await spellCard.innerText();
+  check(spellCard && spellText.includes("고블린 전사") && spellText.includes("앨리스의 파이터") && /DC \d+/.test(spellText), "the spell card shows both targets' saves against the mage's DC");
+  await dm.waitForTimeout(800);
+  check(!(await iconOf(dm, "고블린 전사").innerText()).includes("10/10"), "the goblin's HP fell from the fireball on the DM's screen");
+  check((await iconOf(player, "고블린 전사").locator(".cl-scene-gauge").innerText()) === (await iconOf(dm, "고블린 전사").locator(".cl-scene-gauge").innerText()), "the player's HP bar agrees with the DM's");
+  await dm.screenshot({ path: path.join(OUT, "69-totm-spell-fireball.png") });
 
   await browser.close();
   if (failures.length) { console.error(`${failures.length} failure(s)`); process.exitCode = 1; } else console.log("done");

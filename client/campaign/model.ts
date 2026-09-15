@@ -9,6 +9,7 @@ import type { Page } from "./page";
 import type { Tracker } from "./tracker";
 import type { ActResult } from "../rules/actions";
 import type { AttackResolution } from "../rules/resolve";
+import type { SpellResolution } from "../rules/spellcast";
 
 export type PlayerRole = "gm" | "player";
 
@@ -71,7 +72,7 @@ export interface ReactionPrompt {
 export interface ChatMessage {
   id: string;
   at: string;
-  type: "general" | "whisper" | "emote" | "desc" | "rollresult" | "gmroll" | "system" | "action" | "prompt" | "act";
+  type: "general" | "whisper" | "emote" | "desc" | "rollresult" | "gmroll" | "system" | "action" | "prompt" | "act" | "spell";
   /** Display name at the time. */
   who: string;
   playerId?: string;
@@ -89,6 +90,8 @@ export interface ChatMessage {
   prompt?: ReactionPrompt;
   /** One of the official actions taken on a turn (type "act", D97): the check, what it did, what it marked. */
   act?: ActResult;
+  /** A spell cast at the table (type "spell", D102): every target's attack, save, damage, healing or effect. */
+  spell?: SpellResolution;
 }
 
 export interface ChatArchive {

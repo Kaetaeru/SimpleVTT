@@ -181,47 +181,54 @@ export function resolveAttack(attacker: Combatant, target: Combatant, spec: Atta
   const beyondLong = spec.mode === "ranged" && target.distanceFeet !== undefined && spec.longRangeFeet !== undefined && target.distanceFeet > spec.longRangeFeet;
   if (beyondLong && !overrides.outcome) { outcome = "miss"; reasons.push("최대 사거리 밖"); }
   const hit = outcome === "hit" || outcome === "crit";
-  const damage: DamageResult[] = [];
-  if (hit) {
-    const parts = [...spec.damage, ...(spec.riders ?? [])];
-    parts.forEach((part, index) => {
-      const fixedDice = options.fixed?.damage[index];
-      let rolled: { dice: number[]; total: number };
-      if (fixedDice) { rolled = { dice: fixedDice, total: fixedDice.reduce((sum, value) => sum + value, 0) + flatOf(part.formula) }; }
-      else rolled = rollParts(part.formula, options.dice, outcome === "crit" && part.critDoubles !== false);
-      const raw = Math.max(0, rolled.total);
-      const immune = listCovers(target.defenses.immunities, part.type);
-      const resist = !immune && listCovers(target.defenses.resistances, part.type);
-      const vulnerable = !immune && listCovers(target.defenses.vulnerabilities, part.type);
-      const adjusted = immune ? 0 : resist && vulnerable ? raw : resist ? Math.floor(raw / 2) : vulnerable ? raw * 2 : raw;
-      damage.push({ part, dice: rolled.dice, rolled: raw, adjusted, adjustment: immune ? "면역" : resist && !vulnerable ? "저항" : vulnerable && !resist ? "취약" : null });
-    });
-  }
-  let damageTotal = damage.reduce((sum, item) => sum + item.adjusted, 0);
-  if (overrides.damageScale !== undefined) damageTotal = Math.floor(damageTotal * overrides.damageScale);
-  if (overrides.damageDelta) damageTotal = Math.max(0, damageTotal + overrides.damageDelta);
-  const absorbed = Math.min(target.hp.temp, damageTotal);
-  const hpLost = Math.min(target.hp.current, damageTotal - absorbed);
-  const hpAfter = target.hp.current - hpLost;
-  const tempAfter = target.hp.temp - absorbed;
-  let concentration: AttackResolution["concentration"];
-  if (hit && damageTotal > 0 && target.concentration) {
-    const dc = Math.max(10, Math.floor(damageTotal / 2));
-    const d20 = options.dice.d(20);
-    const total = d20 + target.conSave;
-    concentration = { effect: target.concentration, dc, d20, total, success: total >= dc };
-  }
-  let downed: AttackResolution["downed"];
-  if (hit && hpAfter === 0 && target.hp.current > 0) {
-    const overflow = damageTotal - absorbed - target.hp.current;
-    downed = target.kind === "npc" ? "dead" : overflow >= target.hp.max ? "instant-death" : "unconscious";
-  }
+  const outcomeDamage = hit ? applyDamage(target, [...spec.damage, ...(spec.riders ?? [])], options.dice, { fixed: options.fixed?.damage, crit: outcome === "crit", scale: overrides.damageScale, delta: overrides.damageDelta }) : noDamage(target);
+  const { damage, damageTotal, absorbed, hpLost, hpAfter, tempAfter, concentration, downed } = outcomeDamage;
   return {
     attacker: { id: attacker.id, name: attacker.name, kind: attacker.kind }, target: { id: target.id, name: target.name, kind: target.kind },
     attack: { name: spec.name, source: spec.source, mode: spec.mode, bonus: spec.attackBonus },
     advantage, reasons, d20s, kept, cover, attackTotal, targetAc, outcome, damage, damageTotal, absorbed, hpLost, hpBefore: target.hp.current, hpAfter, tempAfter, concentration, downed,
     inflicted: hit ? spec.inflicts ?? [] : [], overrides: Object.keys(overrides).length ? overrides : undefined, distanceFeet: target.distanceFeet, applied: options.apply ?? true,
   };
+}
+
+/** What a hit (or a failed save) does to the target: dice per part, resistances, temp HP first, concentration, 0 HP. Shared by weapon attacks and spells. */
+export interface DamageOutcome { damage: DamageResult[]; damageTotal: number; absorbed: number; hpLost: number; hpBefore: number; hpAfter: number; tempAfter: number; concentration?: AttackResolution["concentration"]; downed?: AttackResolution["downed"] }
+export const noDamage = (target: Combatant): DamageOutcome => ({ damage: [], damageTotal: 0, absorbed: 0, hpLost: 0, hpBefore: target.hp.current, hpAfter: target.hp.current, tempAfter: target.hp.temp });
+export function applyDamage(target: Combatant, parts: DamagePart[], dice: DiceSource, options: { fixed?: number[][]; crit?: boolean; scale?: number; delta?: number; /** Halve after resistances (a successful save). */ half?: boolean } = {}): DamageOutcome {
+  const damage: DamageResult[] = [];
+  parts.forEach((part, index) => {
+    const fixedDice = options.fixed?.[index];
+    let rolled: { dice: number[]; total: number };
+    if (fixedDice) { rolled = { dice: fixedDice, total: fixedDice.reduce((sum, value) => sum + value, 0) + flatOf(part.formula) }; }
+    else rolled = rollParts(part.formula, dice, Boolean(options.crit) && part.critDoubles !== false);
+    const raw = Math.max(0, rolled.total);
+    const immune = listCovers(target.defenses.immunities, part.type);
+    const resist = !immune && listCovers(target.defenses.resistances, part.type);
+    const vulnerable = !immune && listCovers(target.defenses.vulnerabilities, part.type);
+    const adjusted = immune ? 0 : resist && vulnerable ? raw : resist ? Math.floor(raw / 2) : vulnerable ? raw * 2 : raw;
+    damage.push({ part, dice: rolled.dice, rolled: raw, adjusted, adjustment: immune ? "면역" : resist && !vulnerable ? "저항" : vulnerable && !resist ? "취약" : null });
+  });
+  let damageTotal = damage.reduce((sum, item) => sum + item.adjusted, 0);
+  if (options.half) damageTotal = Math.floor(damageTotal / 2);
+  if (options.scale !== undefined) damageTotal = Math.floor(damageTotal * options.scale);
+  if (options.delta) damageTotal = Math.max(0, damageTotal + options.delta);
+  const absorbed = Math.min(target.hp.temp, damageTotal);
+  const hpLost = Math.min(target.hp.current, damageTotal - absorbed);
+  const hpAfter = target.hp.current - hpLost;
+  const tempAfter = target.hp.temp - absorbed;
+  let concentration: AttackResolution["concentration"];
+  if (damageTotal > 0 && target.concentration) {
+    const dc = Math.max(10, Math.floor(damageTotal / 2));
+    const d20 = dice.d(20);
+    const total = d20 + target.conSave;
+    concentration = { effect: target.concentration, dc, d20, total, success: total >= dc };
+  }
+  let downed: AttackResolution["downed"];
+  if (hpAfter === 0 && target.hp.current > 0) {
+    const overflow = damageTotal - absorbed - target.hp.current;
+    downed = target.kind === "npc" ? "dead" : overflow >= target.hp.max ? "instant-death" : "unconscious";
+  }
+  return { damage, damageTotal, absorbed, hpLost, hpBefore: target.hp.current, hpAfter, tempAfter, concentration, downed };
 }
 
 const flatOf = (formula: string) => { let total = 0; for (const term of formula.replace(/\s+/g, "").replace(/\(.*?\)/g, "").match(/[+-]?[^+-]+/g) ?? []) if (/^[+-]?\d+$/.test(term)) total += Number(term); return total; };

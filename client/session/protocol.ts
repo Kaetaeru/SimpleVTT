@@ -8,10 +8,11 @@ import type { JournalEntry } from "../campaign/journal";
 import type { Page, Token } from "../campaign/page";
 import type { Tracker, TrackerTurn } from "../campaign/tracker";
 import type { ActionKind } from "../rules/actions";
+import type { CastMethod } from "../character/play";
 import type { AttackOverrides } from "../rules/resolve";
 import type { CampaignSettings, ChatMessage, PlayerRole } from "../campaign/model";
 
-export const PROTOCOL_VERSION = 9;
+export const PROTOCOL_VERSION = 10;
 
 export interface Presence { userId: string; displayName: string; role: PlayerRole; color: string; connected: boolean }
 
@@ -83,6 +84,8 @@ export type ClientCommand =
   | { type: "act.provoke"; mover: ActorRef; from: ActorRef }
   /** The reactor's controller lets the opportunity go. */
   | { type: "act.decline"; messageId: string }
+  /** D102: cast a spell at the chosen targets; the host pays the slot, resolves every target and applies. */
+  | { type: "act.cast"; caster: ActorRef; spellId: string; targets: ActorRef[]; method?: CastMethod; overrides?: AttackOverrides }
   /** D97: one of the official actions (dash, dodge, help, hide, grapple …) on the actor's turn; the host resolves and marks. */
   | { type: "act.action"; actor: ActorRef; kind: ActionKind; target?: ActorRef; skill?: string; dc?: number; note?: string; choice?: string; bonus?: boolean }
   /** DM palette: re-resolve a card with overrides (same dice unless `reroll`), superseding it. */
