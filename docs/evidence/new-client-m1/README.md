@@ -50,3 +50,9 @@ Chromium이 Vite 개발 서버(포트 1430)에서 마법사를 처음부터 끝�
 - `44-art-handout-avatar-player.png` — 플레이어에게 보여진 핸드아웃 창의 아바타(호스트에서 조각으로 받은 원본), 플레이어 아트 탭에도 그 이미지
 - `45-art-library-gm-two-uploads.png` — DM 아트 탭: 자기 이미지와 플레이어가 올린 "지연의 초상"(올린 사람 배지)
 - `46-art-library-player-after-reload.png` — 새로고침·재입장 뒤 플레이어 아트 탭: 두 이미지가 캐시에서 바로 (`node scripts/capture-client-art.mjs`, 시나리오 SC-22~25)
+- `47-page-created-ribbon.png` — DM 테이블: 페이지 줄(첫 페이지에 🎗 리본), 페이지 도구(추가·복제·설정·보관·보관함·파티 나누기), 왼쪽 도구막대(선택·지도/토큰/GM 레이어·확대), 격자 캔버스
+- `48-token-placed-player.png` — 플레이어가 저널에서 놓은 캐릭터 토큰(이름표, HP 바)
+- `49-token-bar-and-marker-dm.png` — DM 화면: 시트 HP −5 뒤 바 23/28, 우클릭 메뉴에서 켠 ☠ 중독 마커(시트 상태와 같은 것)
+- `50-ping-player.png` — DM의 Shift+클릭 핑이 플레이어 화면에
+- `51-token-settings-player.png` — 플레이어의 토큰 설정 창(기본/고급 탭): GM 전용 필드는 읽기 전용
+- `52-page-settings-dm.png` — 페이지 설정(이름·격자 끄기) 반영 뒤 DM 화면 (`node scripts/capture-client-pages.mjs`, 시나리오 SC-27~32)

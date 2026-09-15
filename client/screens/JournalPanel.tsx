@@ -17,11 +17,12 @@ import type { CharacterSource } from "../character/types";
 import { Modal, Notice, Pill, signed } from "../ui/components";
 import { ArtDropZone, ArtImage, ArtPicker } from "./ArtPanel";
 import { CreateScreen } from "./CreateScreen";
+import { journalDragProps, PageSettingsWindow, placeCharacterToken, TokenWindow } from "./PageCanvas";
 import { SheetPlay } from "./SheetPlay";
 import { SheetView } from "./SheetView";
 
 /** What the table shows as windows: a journal entry, or the wizard for a new character. */
-export type JournalWindow = { key: string; kind: "entry"; id: string } | { key: string; kind: "new-character" };
+export type JournalWindow = { key: string; kind: "entry"; id: string } | { key: string; kind: "new-character" } | { key: string; kind: "token"; pageId: string; tokenId: string } | { key: string; kind: "page-settings"; pageId: string };
 
 function useViewer() {
   const c = useCampaigns();
@@ -60,12 +61,13 @@ export function JournalTab({ onOpen, onNewCharacter }: { onOpen: (id: string) =>
         <>
           {folder.folders.map((child) => renderFolder(child, folder.path ? depth + 1 : depth))}
           {folder.entries.map((entry) => (
-            <button type="button" key={entry.id} className="cl-journal-row" style={{ paddingLeft: 8 + (folder.path ? depth + 1 : depth) * 12 }} onClick={() => onOpen(entry.id)} title={entry.kind === "handout" ? "핸드아웃" : "캐릭터"}>
+            <div key={entry.id} className="cl-journal-row" style={{ paddingLeft: 8 + (folder.path ? depth + 1 : depth) * 12 }} role="button" tabIndex={0} onClick={() => onOpen(entry.id)} onKeyDown={(event) => { if (event.key === "Enter") onOpen(entry.id); }} title={entry.kind === "handout" ? "핸드아웃" : "캐릭터 (캔버스로 끌어 놓으면 토큰이 됩니다)"} {...journalDragProps(entry)}>
               <EntryAvatar entry={entry} />
               <span className="cl-journal-name">{entry.name || "(이름 없음)"}</span>
               {entry.kind === "character" ? <span className="cl-quiet cl-small">{characterLine(entry, catalog)}</span> : null}
+              {entry.kind === "character" && canEdit(entry, { userId, role: isGm ? "gm" : "player" }) ? <button type="button" className="cl-btn small quiet" title="지금 보는 페이지 가운데에 이 캐릭터의 토큰을 놓습니다" aria-label={`${entry.name} 토큰 놓기`} onClick={(event) => { event.stopPropagation(); if (!placeCharacterToken(entry.id)) alert("열린 페이지가 없습니다."); }}>토큰</button> : null}
               {isGm ? <AudiencePill audience={entry.canView} players={snapshot.players.filter((player) => player.role !== "gm").length} /> : null}
-            </button>
+            </div>
           ))}
         </>
       )}
@@ -129,7 +131,10 @@ export function JournalWindows({ windows, onClose, onFocus, onOpen }: { windows:
     <div className="cl-windows">
       {windows.map((window, index) => (
         <FloatingWindow key={window.key} index={index} zIndex={10 + index} onClose={() => onClose(window.key)} onFocus={() => onFocus(window.key)} wide={window.kind === "new-character" || window.kind === "entry"}>
-          {window.kind === "entry" ? <EntryWindow id={window.id} onClose={() => onClose(window.key)} onOpen={onOpen} /> : <NewCharacterWindow onClose={() => onClose(window.key)} onOpen={onOpen} />}
+          {window.kind === "entry" ? <EntryWindow id={window.id} onClose={() => onClose(window.key)} onOpen={onOpen} />
+            : window.kind === "token" ? <TitledWindow title="토큰 설정"><TokenWindow pageId={window.pageId} tokenId={window.tokenId} onClose={() => onClose(window.key)} /></TitledWindow>
+            : window.kind === "page-settings" ? <TitledWindow title="페이지 설정"><PageSettingsWindow pageId={window.pageId} onClose={() => onClose(window.key)} /></TitledWindow>
+            : <NewCharacterWindow onClose={() => onClose(window.key)} onOpen={onOpen} />}
         </FloatingWindow>
       ))}
     </div>
@@ -163,6 +168,11 @@ function useWindowTitle(title: string) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => { const slot = ref.current?.closest(".cl-window")?.querySelector("[data-window-title]"); if (slot) slot.textContent = title; }, [title]);
   return ref;
+}
+
+function TitledWindow({ title, children }: { title: string; children: ReactNode }) {
+  const ref = useWindowTitle(title);
+  return <div ref={ref}>{children}</div>;
 }
 
 function NewCharacterWindow({ onClose, onOpen }: { onClose: () => void; onOpen: (id: string) => void }) {

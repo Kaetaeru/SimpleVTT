@@ -5,9 +5,10 @@
  */
 import type { ArtAsset } from "../campaign/art";
 import type { JournalEntry } from "../campaign/journal";
+import type { Page, Token } from "../campaign/page";
 import type { CampaignSettings, ChatMessage, PlayerRole } from "../campaign/model";
 
-export const PROTOCOL_VERSION = 4;
+export const PROTOCOL_VERSION = 5;
 
 export interface Presence { userId: string; displayName: string; role: PlayerRole; color: string; connected: boolean }
 
@@ -22,6 +23,10 @@ export interface TableSnapshot {
   journal: JournalEntry[];
   /** Art the viewer may see: their own uploads, and what visible entries reference (everything for the GM). */
   art: ArtAsset[];
+  /** Pages the viewer may see: every page for the GM, the page their ribbon/bookmark points at for a player. */
+  pages: Page[];
+  playerPageId?: string;
+  pageBookmarks: Record<string, string>;
   lastEventN: number;
 }
 
@@ -45,6 +50,17 @@ export type ClientCommand =
   | { type: "art.remove"; id: string }
   /** Ask for the bytes of an asset this viewer may see; the host answers this peer with art.data chunks. */
   | { type: "art.fetch"; id: string }
+  /** Page settings (GM). Tokens in the payload are ignored for an existing page — token.* changes them. */
+  | { type: "page.put"; page: Page }
+  | { type: "page.remove"; id: string }
+  /** Move the player ribbon (GM). */
+  | { type: "page.ribbon"; pageId: string }
+  /** Split the party: send one player to a page, or null to rejoin the ribbon (GM). */
+  | { type: "page.bookmark"; userId: string; pageId: string | null }
+  /** Create or replace a token. A controller's put is merged (position, rotation, markers, editable bars). */
+  | { type: "token.put"; pageId: string; token: Token }
+  | { type: "token.remove"; pageId: string; id: string }
+  | { type: "ping"; pageId: string; x: number; y: number }
   | { type: "bye" };
 
 export type TableEvent =
@@ -56,6 +72,12 @@ export type TableEvent =
   | { n: number; type: "journal.show"; id: string; by: string }
   | { n: number; type: "art"; asset: ArtAsset }
   | { n: number; type: "art.removed"; id: string }
+  | { n: number; type: "page"; page: Page }
+  | { n: number; type: "page.removed"; id: string }
+  | { n: number; type: "ribbon"; playerPageId?: string; pageBookmarks: Record<string, string> }
+  | { n: number; type: "token"; pageId: string; token: Token }
+  | { n: number; type: "token.removed"; pageId: string; id: string }
+  | { n: number; type: "ping"; pageId: string; x: number; y: number; by: string; color: string }
   | { n: number; type: "kicked"; userId: string }
   | { n: number; type: "closed" };
 

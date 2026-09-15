@@ -343,3 +343,65 @@ input.cl-journal-title{height:36px}
 .cl-art-badge{position:absolute;top:6px;right:6px;font-size:10px;padding:1px 5px;border-radius:999px;background:var(--overlay);border:1px solid var(--line)}
 .cl-art-details{border-top:1px solid var(--line);padding:8px;background:var(--surface)}
 .cl-journal-avatar-field.drag-over{outline:2px dashed var(--accent);outline-offset:2px;border-radius:var(--radius-m)}
+
+/* pages and tokens (R5) */
+.cl-canvas{display:flex;flex-direction:column;height:calc(100vh - 150px);min-height:480px;border:1px solid var(--line);border-radius:var(--radius-m);background:var(--surface);overflow:hidden}
+.cl-canvas-empty{height:100%;min-height:420px;border:1px dashed var(--line-2);border-radius:var(--radius-m);display:grid;place-items:center;gap:8px;padding:24px;text-align:center}
+.cl-page-bar{display:flex;align-items:center;gap:8px;padding:6px 8px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.cl-page-strip{display:flex;gap:4px;flex:1;flex-wrap:wrap}
+.cl-page-chip{display:inline-flex;align-items:center;gap:4px;height:28px;padding:0 10px;border:1px solid var(--line);border-radius:var(--radius-s);background:var(--surface-2);color:var(--muted);cursor:pointer;font-size:var(--text-xs)}
+.cl-page-chip.active{color:var(--text);border-color:var(--accent);box-shadow:inset 0 -2px 0 var(--accent)}
+.cl-page-chip.archived{opacity:.5;text-decoration:line-through}
+.cl-ribbon{color:#e5484d}
+.cl-ribbon-move{display:none;padding:0 5px;border-radius:999px;background:var(--surface-3);color:var(--quiet);font-size:10px}
+.cl-page-chip:hover .cl-ribbon-move{display:inline}
+.cl-canvas-body{display:flex;flex:1;min-height:0}
+.cl-toolbar{display:flex;flex-direction:column;gap:2px;padding:6px 4px;border-right:1px solid var(--line);background:var(--surface)}
+.cl-tool{width:34px;height:34px;border:1px solid transparent;border-radius:var(--radius-s);background:transparent;color:var(--muted);cursor:pointer;font-size:16px}
+.cl-tool.small{font-size:10px}
+.cl-tool:hover{background:var(--surface-2);color:var(--text)}
+.cl-tool.active{background:var(--surface-3);color:var(--text);border-color:var(--line-2)}
+.cl-tool:disabled{opacity:.35;cursor:default}
+.cl-tool-gap{height:8px}
+.cl-canvas-viewport{flex:1;min-width:0;overflow:auto;position:relative;background:#3a3d44;background-image:radial-gradient(circle,#474b53 1px,transparent 1px);background-size:14px 14px}
+.cl-canvas-scaler{position:relative;margin:24px}
+.cl-canvas-page{position:absolute;left:0;top:0;transform-origin:0 0;box-shadow:0 0 0 1px rgba(0,0,0,.4),0 12px 40px rgba(0,0,0,.45);user-select:none;touch-action:none}
+.cl-canvas-bg{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;pointer-events:none}
+.cl-token{position:absolute;box-sizing:border-box;cursor:default;touch-action:none}
+.cl-token.movable{cursor:grab}
+.cl-token.movable:active{cursor:grabbing}
+.cl-token-body{position:absolute;inset:0;border-radius:8px;overflow:hidden;background:var(--surface-2);border:2px solid rgba(0,0,0,.5);display:grid;place-items:center}
+.cl-token.layer-map .cl-token-body{border-color:transparent;border-radius:0;background:transparent}
+.cl-token.layer-gm{opacity:.75}
+.cl-token.layer-gm .cl-token-body{border:2px dashed #ffb347}
+.cl-token.selected .cl-token-body{outline:3px solid var(--accent);outline-offset:1px}
+.cl-token-img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
+.cl-token-initial{font-size:28px;font-weight:700;color:var(--text)}
+.cl-token-tint{position:absolute;inset:0;opacity:.35;mix-blend-mode:multiply;pointer-events:none}
+.cl-token-lock{position:absolute;left:2px;top:2px;font-size:12px}
+.cl-token-name{position:absolute;left:50%;top:100%;transform:translateX(-50%);margin-top:2px;padding:1px 6px;border-radius:999px;background:rgba(0,0,0,.7);color:#fff;font-size:11px;white-space:nowrap;pointer-events:none}
+.cl-token-distance{position:absolute;left:50%;bottom:100%;transform:translateX(-50%);margin-bottom:26px;padding:1px 6px;border-radius:4px;background:var(--accent);color:var(--on-accent);font-size:11px;white-space:nowrap;pointer-events:none}
+.cl-token-bars{position:absolute;left:0;right:0;display:flex;flex-direction:column;gap:2px;pointer-events:none}
+.cl-token-bars.above{bottom:100%;margin-bottom:3px}
+.cl-token-bars.below{top:100%;margin-top:18px}
+.cl-token-bar{position:relative;display:block;height:9px;border:1px solid;border-radius:5px;background:rgba(0,0,0,.6);overflow:hidden}
+.cl-token-bar>span{display:block;height:100%}
+.cl-token-bar>small{position:absolute;inset:0;font-size:8px;line-height:8px;text-align:center;color:#fff;text-shadow:0 0 2px #000}
+.cl-token-markers{position:absolute;right:-2px;top:-2px;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:1px;max-width:100%;pointer-events:none}
+.cl-marker{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:rgba(255,255,255,.92);border:1px solid rgba(0,0,0,.35);font-size:12px;line-height:1;position:relative;color:#000}
+.cl-marker small{position:absolute;right:-3px;bottom:-3px;font-size:8px;background:#e5484d;color:#fff;border-radius:50%;width:10px;height:10px;line-height:10px;text-align:center}
+.cl-aura{position:absolute;border-radius:50%;border:1px solid;pointer-events:none}
+.cl-aura.square{border-radius:4px}
+.cl-ping{position:absolute;width:0;height:0;border:3px solid;border-radius:50%;transform:translate(-50%,-50%);pointer-events:none;animation:cl-ping 1.6s ease-out 1 forwards}
+@keyframes cl-ping{0%{width:10px;height:10px;opacity:1}100%{width:160px;height:160px;opacity:0}}
+.cl-token-menu{position:absolute;z-index:50;min-width:300px;max-width:380px;padding:8px 10px;background:var(--overlay);border:1px solid var(--line-2);border-radius:var(--radius-m);box-shadow:var(--elev-2);display:flex;flex-direction:column;gap:8px}
+.cl-token-menu-head{display:flex;align-items:center;justify-content:space-between}
+.cl-token-menu-bars{display:flex;flex-direction:column;gap:4px}
+.cl-token-menu-markers{display:flex;flex-wrap:wrap;gap:3px}
+.cl-marker-btn{position:relative;width:28px;height:28px;border:1px solid var(--line);border-radius:6px;background:var(--surface-2);cursor:pointer;font-size:14px;line-height:1}
+.cl-marker-btn.on{border-color:var(--accent);background:var(--accent-soft)}
+.cl-marker-btn:disabled{opacity:.5;cursor:default}
+.cl-marker-btn small{position:absolute;right:-3px;bottom:-3px;font-size:9px;background:#e5484d;color:#fff;border-radius:50%;width:12px;height:12px;line-height:12px}
+.cl-token-menu-actions{display:flex;flex-wrap:wrap;gap:4px}
+.cl-journal-row{cursor:pointer}
+.cl-journal-row[draggable=true]{cursor:grab}

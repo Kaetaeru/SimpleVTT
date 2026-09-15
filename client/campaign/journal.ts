@@ -44,6 +44,8 @@ export interface JournalCharacter extends JournalBase {
   runtime: CharacterRuntime;
   /** Set by "라이브러리에서 가져오기": the library id the copy came from (export offers to overwrite it). */
   vaultId?: string;
+  /** "기본 토큰으로 저장": what a token dragged from this character starts as (ROLL20_TABLE_SPEC.md §3.3). */
+  defaultToken?: Partial<import("./page").Token>;
 }
 
 export type JournalEntry = JournalHandout | JournalCharacter;
@@ -82,7 +84,7 @@ export function newJournalCharacter(campaignId: string, createdBy: string, sourc
 export function mergePlayerEdit(stored: JournalEntry, incoming: JournalEntry, now = new Date().toISOString()): JournalEntry {
   const base = { ...stored, name: incoming.name, avatar: incoming.avatar, tags: incoming.tags, updatedAt: now };
   if (stored.kind === "handout" && incoming.kind === "handout") return { ...base, kind: "handout", notes: incoming.notes };
-  if (stored.kind === "character" && incoming.kind === "character") return { ...base, kind: "character", bio: incoming.bio, source: incoming.source, runtime: incoming.runtime, vaultId: stored.vaultId };
+  if (stored.kind === "character" && incoming.kind === "character") return { ...base, kind: "character", bio: incoming.bio, source: incoming.source, runtime: incoming.runtime, vaultId: stored.vaultId, defaultToken: incoming.defaultToken ?? stored.defaultToken };
   return stored;
 }
 

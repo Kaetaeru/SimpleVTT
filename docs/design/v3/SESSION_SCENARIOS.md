@@ -1,6 +1,6 @@
 # 캠페인·테이블 검증 시나리오 (M4, Roll20 모델)
 
-`ROLL20_MODEL.md`·`ROLL20_TABLE_SPEC.md` 기준. 자동 시나리오는 `scripts/capture-client-table.mjs`(SC-1~8)와 `scripts/capture-client-journal.mjs`(SC-13~19), `scripts/capture-client-art.mjs`(SC-22~25) — 같은 PC의 DM 탭 + 플레이어 탭, BroadcastChannel — 와 `tests/client/table.test.ts`·`tests/client/journal.test.ts`·`tests/client/art.test.ts`(호스트 + 클라이언트 시뮬레이션)가 돌린다. 기대 결과는 두 탭 **모두**에서 확인한다. LAN·하마치는 exe에서 §B로.
+`ROLL20_MODEL.md`·`ROLL20_TABLE_SPEC.md` 기준. 자동 시나리오는 `scripts/capture-client-table.mjs`(SC-1~8)와 `scripts/capture-client-journal.mjs`(SC-13~19), `scripts/capture-client-art.mjs`(SC-22~25), `scripts/capture-client-pages.mjs`(SC-27~32) — 같은 PC의 DM 탭 + 플레이어 탭, BroadcastChannel — 와 `tests/client/table.test.ts`·`tests/client/journal.test.ts`·`tests/client/art.test.ts`·`tests/client/pages.test.ts`(호스트 + 클라이언트 시뮬레이션)가 돌린다. 기대 결과는 두 탭 **모두**에서 확인한다. LAN·하마치는 exe에서 §B로.
 
 ## A. 자동 (두 탭, 한 PC)
 
@@ -32,6 +32,13 @@
 | SC-24 | 플레이어 업로드와 관리 | 플레이어가 초상 업로드 → 이름·폴더 바꾸기 | GM 카드에 올린 사람 이름. 이름 변경이 GM에게 반영. 다른 플레이어는 못 보고 못 고침 | capture 45, art.test |
 | SC-25 | 캐시 | 플레이어 새로고침 → 다시 입장 → 아트 탭 | 두 이미지가 캐시(IndexedDB `assets`)에서 바로 뜬다 | capture 46 |
 | SC-26 | 크기 제한·권한 | 20MB 초과 업로드, 숨긴 항목의 이미지 fetch | 거절 | art.test |
+| SC-27 | 페이지와 리본 | DM "+ 페이지" | 첫 페이지에 플레이어 리본이 놓이고 플레이어 화면에 격자가 나타난다. 리본 전에는 "GM이 아직 페이지를 열지 않았습니다" | capture 47, pages.test |
+| SC-28 | 캐릭터 토큰 | 플레이어: 저널의 "토큰"(또는 캔버스로 끌어 놓기) | 토큰이 페이지 가운데에 놓이고 화면이 그리로 스크롤. DM 토큰에 HP 바(현재/최대, D78) | capture 48, pages.test |
+| SC-29 | 이동 | 플레이어가 토큰을 두 칸 끌기 | 격자 맞춤, 끄는 동안 거리 "10 ft", DM 화면의 토큰이 같은 자리로. 다른 플레이어·잠긴 토큰은 못 움직임 | capture, pages.test |
+| SC-30 | 바와 마커 = 시트 | 시트 HP −5; DM이 토큰 우클릭 → 마커 중독 | 토큰 바가 23/28로; 시트의 상태 "중독"이 켜지고 플레이어 토큰에 ☠ 마커 (D84). 편집 가능한 hp 바를 고치면 시트 HP가 바뀌고 채팅에 남는다 | capture 49, pages.test |
+| SC-31 | GM 레이어와 핑 | 토큰을 GM 레이어로 → 토큰 레이어로; DM Shift+클릭 | GM 레이어에 있는 동안 플레이어에게 사라짐. 핑 파장이 양쪽에 | capture 50, pages.test |
+| SC-32 | 페이지 설정·토큰 창 | DM 페이지 설정(이름·격자 끄기); 플레이어 토큰 우클릭 → 토큰 설정 | 이름과 격자 변경이 플레이어에게 반영. 플레이어의 토큰 창은 GM 필드가 읽기 전용 | capture 51–52 |
+| SC-33 | 파티 나누기 | DM "파티 나누기"로 한 명을 다른 페이지로 | 그 사람만 그 페이지, 나머지는 리본. 다른 페이지의 핑은 안 보임 | pages.test |
 
 ## B. 수동 (exe, LAN·하마치)
 
@@ -47,5 +54,5 @@
 
 - R3 남은 것: 항목 끌어서 정렬, 아바타를 아트 라이브러리에서 고르기(R4), 캐릭터 → 캔버스 끌어 놓기(R5).
 - R4 남은 것: 안 쓰는 이미지 정리(GC) 화면, 아트를 캔버스에 끌어 토큰/배경으로(R5).
-- R5 페이지·토큰: 플레이어 리본, 토큰 이동 권한, 바 연결/미연결(몹), GM 레이어 비가시.
+- R5 남은 것: 육각 격자 그리기, 격자 라벨 표시, 다중 선택 드래그 박스, Ctrl+C/V, 경유점(Waypoints), 시야·빛의 실제 효과(동적 조명).
 - R6 턴 트래커: 트래커 동기, 다음 턴에 효과 라운드 진행.

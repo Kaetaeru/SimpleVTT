@@ -5,6 +5,7 @@
  */
 import type { ArtAsset } from "./art";
 import type { JournalEntry } from "./journal";
+import type { Page } from "./page";
 
 export type PlayerRole = "gm" | "player";
 
@@ -42,6 +43,10 @@ export interface Campaign {
   createdAt: string;
   updatedAt: string;
   lastLaunchedAt?: string;
+  /** The page the player ribbon sits on (D81). */
+  playerPageId?: string;
+  /** Split the party: a player sent to another page than the ribbon. */
+  pageBookmarks?: Record<string, string>;
 }
 
 /** One chat message of the archive (Roll20 chat types), stored per campaign in month files (§7). */
@@ -75,7 +80,7 @@ export interface JoinedCampaign {
   lastSeenAt: string;
 }
 
-export type StoredDocument = Campaign | ChatArchive | JournalEntry | ArtAsset;
+export type StoredDocument = Campaign | ChatArchive | JournalEntry | ArtAsset | Page;
 
 export const PLAYER_COLORS = ["#e0a458", "#7fb3d5", "#a3c585", "#d98cb3", "#c3a6ff", "#f28b82", "#8fd3c8", "#f6c177"];
 
@@ -148,6 +153,7 @@ export function isStoredDocument(value: unknown): value is StoredDocument {
     case "handout": return typeof doc.campaignId === "string" && typeof doc.name === "string" && "canView" in doc && typeof doc.notes === "string";
     case "character": return typeof doc.campaignId === "string" && typeof doc.name === "string" && "canView" in doc && typeof doc.source === "object" && typeof doc.runtime === "object";
     case "art": return typeof doc.campaignId === "string" && typeof doc.name === "string" && typeof doc.hash === "string" && typeof doc.mime === "string";
+    case "page": return typeof doc.campaignId === "string" && typeof doc.name === "string" && Array.isArray(doc.tokens) && typeof doc.grid === "object";
     default: return false;
   }
 }

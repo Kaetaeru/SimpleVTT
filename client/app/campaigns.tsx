@@ -7,7 +7,9 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { ArtAsset } from "../campaign/art";
 import { ART_LIMIT, ART_MIMES, chunkText, hashText, newArtAsset } from "../campaign/art";
-import type { JournalEntry } from "../campaign/journal";
+import type { JournalCharacter, JournalEntry } from "../campaign/journal";
+import type { Page, Token } from "../campaign/page";
+import { deriveCharacter } from "../character/derive";
 import type { Campaign, ChatArchive, ChatMessage, JoinedCampaign, PlayerRole } from "../campaign/model";
 import { chatArchiveId, emptyChatArchive, isStoredDocument, newCampaign, newJoinCode, repairCampaign } from "../campaign/model";
 import { TableClient, type TableStatus } from "../session/client";
@@ -35,6 +37,8 @@ export interface TableState {
   artUrls: Record<string, string>;
   /** Fetches in flight (for "자료 받는 중 n"). */
   artPending: number;
+  /** Pings seen in the last moments (the canvas animates them). */
+  pings: Array<{ id: string; pageId: string; x: number; y: number; color: string; by: string; at: number }>;
 }
 
 export interface CampaignsState {
@@ -48,6 +52,8 @@ export interface CampaignsState {
   journals: Record<string, JournalEntry[]>;
   /** Art metadata of my campaigns, by campaign id (the host's copy; bytes are in the store by hash). */
   arts: Record<string, ArtAsset[]>;
+  /** Pages of my campaigns, by campaign id (the host's copy). */
+  pages: Record<string, Page[]>;
   createCampaign: (name: string) => Promise<Campaign>;
   updateCampaign: (campaign: Campaign) => Promise<void>;
   deleteCampaign: (id: string) => Promise<void>;
@@ -72,6 +78,13 @@ export interface CampaignsState {
   removeArt: (id: string) => void;
   /** Make sure the bytes of an asset are on this viewer (cache, else the host); the URL lands in table.artUrls. */
   requestArt: (id: string) => void;
+  putPage: (page: Page) => void;
+  removePage: (id: string) => void;
+  setRibbon: (pageId: string) => void;
+  setBookmark: (userId: string, pageId: string | null) => void;
+  putToken: (pageId: string, token: Token) => void;
+  removeToken: (pageId: string, id: string) => void;
+  ping: (pageId: string, x: number, y: number) => void;
 }
 
 const CampaignsContext = createContext<CampaignsState | null>(null);
@@ -94,13 +107,15 @@ function scopedId(key: string) {
 }
 
 export function CampaignsProvider({ children }: { children: ReactNode }) {
-  const { store, ready } = useClient();
+  const { store, ready, catalog } = useClient();
   const [userId] = useState(() => (typeof window === "undefined" ? newUserId() : scopedId("simplevtt-user-id")));
   const [displayName, setDisplayNameState] = useState(() => { try { return webStorage("local")?.getItem("simplevtt-display-name") ?? ""; } catch { return ""; } });
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [archives, setArchives] = useState<Record<string, ChatArchive>>({});
   const [journals, setJournals] = useState<Record<string, JournalEntry[]>>({});
   const [arts, setArts] = useState<Record<string, ArtAsset[]>>({});
+  const [pages, setPages] = useState<Record<string, Page[]>>({});
+  const [pings, setPings] = useState<TableState["pings"]>([]);
   const [shows, setShows] = useState<string[]>([]);
   const [artUrls, setArtUrls] = useState<Record<string, string>>({});
   const [artPending, setArtPending] = useState(0);
@@ -123,6 +138,10 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
   journalsRef.current = journals;
   const artsRef = useRef(arts);
   artsRef.current = arts;
+  const pagesRef = useRef(pages);
+  pagesRef.current = pages;
+  const catalogRef = useRef(catalog);
+  catalogRef.current = catalog;
   const bump = useCallback(() => setTick((value) => value + 1), []);
 
   useEffect(() => {
@@ -140,12 +159,15 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
       setArchives(Object.fromEntries(docs.filter((doc): doc is ChatArchive => doc.kind === "chat").map((doc) => [doc.campaignId, doc])));
       const byCampaign: Record<string, JournalEntry[]> = {};
       const artByCampaign: Record<string, ArtAsset[]> = {};
+      const pagesByCampaign: Record<string, Page[]> = {};
       for (const doc of docs) {
         if (doc.kind === "handout" || doc.kind === "character") (byCampaign[doc.campaignId] ??= []).push(doc);
         else if (doc.kind === "art") (artByCampaign[doc.campaignId] ??= []).push(doc);
+        else if (doc.kind === "page") (pagesByCampaign[doc.campaignId] ??= []).push(doc);
       }
       setJournals(byCampaign);
       setArts(artByCampaign);
+      setPages(pagesByCampaign);
       setJoined(Array.isArray(joinedRows) ? joinedRows.filter((row) => row && typeof row.campaignId === "string" && typeof row.invite === "string") : []);
     })();
     return () => { cancelled = true; };
@@ -169,12 +191,15 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
     setArchives((map) => { const { [id]: _gone, ...rest } = map; return rest; });
     const entries = journalsRef.current[id] ?? [];
     const assets = artsRef.current[id] ?? [];
+    const pageDocs = pagesRef.current[id] ?? [];
     setJournals((map) => { const { [id]: _gone, ...rest } = map; return rest; });
     setArts((map) => { const { [id]: _gone, ...rest } = map; return rest; });
+    setPages((map) => { const { [id]: _gone, ...rest } = map; return rest; });
     await store?.deleteDocument(id);
     await store?.deleteDocument(chatArchiveId(id));
     for (const entry of entries) await store?.deleteDocument(entry.id);
     for (const asset of assets) await store?.deleteDocument(asset.id);
+    for (const page of pageDocs) await store?.deleteDocument(page.id);
   }, [store]);
   const regenerateJoinCode = useCallback(async (id: string) => { const campaign = campaignsRef.current.find((item) => item.id === id); if (campaign) await updateCampaign({ ...campaign, joinCode: newJoinCode() }); }, [updateCampaign]);
   const saveJoined = useCallback(async (list: JoinedCampaign[]) => { setJoined(list); await store?.putSetting("joined-campaigns", list); }, [store]);
@@ -185,6 +210,11 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
     client.subscribe(bump);
     client.onRefused((reason, commandType) => { if (commandType === "hello" || commandType === "kicked") return; setRefusals((list) => [reason, ...list].slice(0, 5)); window.setTimeout(() => setRefusals((list) => list.filter((item) => item !== reason)), 6000); });
     client.onShow((id) => setShows((list) => (list.includes(id) ? list : [...list, id])));
+    client.onPing((ping) => {
+      const id = `ping_${Math.random().toString(36).slice(2, 8)}`;
+      setPings((list) => [...list, { id, pageId: ping.pageId, x: ping.x, y: ping.y, color: ping.color, by: ping.by, at: Date.now() }]);
+      window.setTimeout(() => setPings((list) => list.filter((item) => item.id !== id)), 2500);
+    });
   }, [bump]);
 
   const leave = useCallback(() => {
@@ -230,6 +260,12 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
       archive: archivesRef.current[campaign.id]?.messages ?? [],
       journal: journalsRef.current[campaign.id] ?? [],
       art: artsRef.current[campaign.id] ?? [],
+      pages: pagesRef.current[campaign.id] ?? [],
+      onPage: (change) => {
+        if ("page" in change) { setPages((map) => { const list = map[campaign.id] ?? []; const index = list.findIndex((item) => item.id === change.page.id); return { ...map, [campaign.id]: index >= 0 ? list.map((item, at) => (at === index ? change.page : item)) : [...list, change.page] }; }); void store?.putDocument(change.page); }
+        else { setPages((map) => ({ ...map, [campaign.id]: (map[campaign.id] ?? []).filter((item) => item.id !== change.removed) })); void store?.deleteDocument(change.removed); }
+      },
+      attributeOf: (entry, link) => attributeOf(entry, link, catalogRef.current),
       artData: {
         get: async (hash) => (await store?.getAsset(hash))?.dataUrl,
         put: async (hash, dataUrl) => { await store?.putAsset({ hash, dataUrl, bytes: dataUrl.length, savedAt: new Date().toISOString() }); },
@@ -326,6 +362,13 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
     chunks.forEach((data, index) => client.send({ type: "art.chunk", id: asset.id, index, total: chunks.length, data }));
     return asset.id;
   }, [store, userId]);
+  const putPage = useCallback((page: Page) => send({ type: "page.put", page }), [send]);
+  const removePage = useCallback((id: string) => send({ type: "page.remove", id }), [send]);
+  const setRibbon = useCallback((pageId: string) => send({ type: "page.ribbon", pageId }), [send]);
+  const setBookmark = useCallback((target: string, pageId: string | null) => send({ type: "page.bookmark", userId: target, pageId }), [send]);
+  const putToken = useCallback((pageId: string, token: Token) => send({ type: "token.put", pageId, token }), [send]);
+  const removeToken = useCallback((pageId: string, id: string) => send({ type: "token.remove", pageId, id }), [send]);
+  const ping = useCallback((pageId: string, x: number, y: number) => send({ type: "ping", pageId, x, y }), [send]);
   const updateArt = useCallback((id: string, patch: { name?: string; folder?: string; tags?: string[] }) => send({ type: "art.update", id, ...patch }), [send]);
   const removeArt = useCallback((id: string) => send({ type: "art.remove", id }), [send]);
   const requestArt = useCallback((id: string) => {
@@ -354,12 +397,22 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
   useEffect(() => () => { clientRef.current?.leave(); hostRef.current?.close(); }, []);
 
   const client = clientRef.current;
-  const table = useMemo<TableState>(() => ({ role, status: client ? client.status : "idle", reason: client?.reason ?? null, campaignId, snapshot: client?.snapshot ?? null, invite, invites, transportNote, refusals, shows, artUrls, artPending }),
+  const table = useMemo<TableState>(() => ({ role, status: client ? client.status : "idle", reason: client?.reason ?? null, campaignId, snapshot: client?.snapshot ?? null, invite, invites, transportNote, refusals, shows, artUrls, artPending, pings }),
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  [role, client, campaignId, invite, invites, transportNote, refusals, shows, artUrls, artPending, tick]);
-  const value = useMemo<CampaignsState>(() => ({ userId, displayName, setDisplayName, campaigns, joined, archives, journals, arts, createCampaign, updateCampaign, deleteCampaign, regenerateJoinCode, forgetJoined, table, launch, join, leave, say, sendRoll, setRole, kick, putJournal, removeJournal, showJournal, dismissShow, uploadArt, updateArt, removeArt, requestArt }),
-    [userId, displayName, setDisplayName, campaigns, joined, archives, journals, arts, createCampaign, updateCampaign, deleteCampaign, regenerateJoinCode, forgetJoined, table, launch, join, leave, say, sendRoll, setRole, kick, putJournal, removeJournal, showJournal, dismissShow, uploadArt, updateArt, removeArt, requestArt]);
+  [role, client, campaignId, invite, invites, transportNote, refusals, shows, artUrls, artPending, pings, tick]);
+  const value = useMemo<CampaignsState>(() => ({ userId, displayName, setDisplayName, campaigns, joined, archives, journals, arts, pages, createCampaign, updateCampaign, deleteCampaign, regenerateJoinCode, forgetJoined, table, launch, join, leave, say, sendRoll, setRole, kick, putJournal, removeJournal, showJournal, dismissShow, uploadArt, updateArt, removeArt, requestArt, putPage, removePage, setRibbon, setBookmark, putToken, removeToken, ping }),
+    [userId, displayName, setDisplayName, campaigns, joined, archives, journals, arts, pages, createCampaign, updateCampaign, deleteCampaign, regenerateJoinCode, forgetJoined, table, launch, join, leave, say, sendRoll, setRole, kick, putJournal, removeJournal, showJournal, dismissShow, uploadArt, updateArt, removeArt, requestArt, putPage, removePage, setRibbon, setBookmark, putToken, removeToken, ping]);
   return <CampaignsContext.Provider value={value}>{children}</CampaignsContext.Provider>;
+}
+
+/** Token bar links (D78): what a character attribute is worth right now. */
+export function attributeOf(entry: JournalCharacter, link: string, catalog: ReturnType<typeof useClient>["catalog"]): { value?: number; max?: number } | undefined {
+  const runtime = entry.runtime;
+  if (link === "hp") { const derived = deriveCharacter(entry.source, catalog, { equipped: runtime.equipped, inventory: runtime.inventory, effects: runtime.effects }); return { value: runtime.hp.current, max: derived.hp.max }; }
+  if (link === "temp") return { value: runtime.hp.temp };
+  if (link === "ac") return { value: deriveCharacter(entry.source, catalog, { equipped: runtime.equipped, inventory: runtime.inventory, effects: runtime.effects }).ac.value };
+  if (link === "exhaustion") return { value: runtime.exhaustion, max: 6 };
+  return undefined;
 }
 
 /** Dimensions and a small thumbnail (≤128px, webp) of an image data URL; null where there is no DOM. */

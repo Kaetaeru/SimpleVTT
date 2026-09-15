@@ -12,6 +12,7 @@ import { copyText, Notice, Pill } from "../ui/components";
 import { useDice } from "../ui/dice/DiceProvider";
 import { ArtTab } from "./ArtPanel";
 import { JournalTab, JournalWindows, type JournalWindow } from "./JournalPanel";
+import { PageCanvas } from "./PageCanvas";
 
 export function TableScreen() {
   const { navigate } = useClient();
@@ -32,6 +33,8 @@ function Table() {
   const [tab, setTab] = useState<"chat" | "journal" | "art">("chat");
   const [windows, setWindows] = useState<JournalWindow[]>([]);
   const openEntry = useCallback((id: string) => setWindows((list) => { const existing = list.find((item) => item.kind === "entry" && item.id === id); const rest = existing ? list.filter((item) => item !== existing) : list; return [...rest, existing ?? { key: `entry:${id}`, kind: "entry", id }]; }), []);
+  const openToken = useCallback((pageId: string, tokenId: string) => setWindows((list) => { const key = `token:${pageId}:${tokenId}`; const existing = list.find((item) => item.key === key); return [...list.filter((item) => item.key !== key), existing ?? { key, kind: "token", pageId, tokenId }]; }), []);
+  const openPageSettings = useCallback((pageId: string) => setWindows((list) => { const key = `page:${pageId}`; const existing = list.find((item) => item.key === key); return [...list.filter((item) => item.key !== key), existing ?? { key, kind: "page-settings", pageId }]; }), []);
   const openNewCharacter = useCallback(() => setWindows((list) => (list.some((item) => item.kind === "new-character") ? list : [...list, { key: `new:${Date.now()}`, kind: "new-character" }])), []);
   const closeWindow = useCallback((key: string) => setWindows((list) => list.filter((item) => item.key !== key)), []);
   const focusWindow = useCallback((key: string) => setWindows((list) => { const item = list.find((entry) => entry.key === key); return item && list[list.length - 1] !== item ? [...list.filter((entry) => entry !== item), item] : list; }), []);
@@ -63,9 +66,7 @@ function Table() {
       <JournalWindows windows={windows} onClose={closeWindow} onFocus={focusWindow} onOpen={openEntry} />
       <div className="cl-table-grid">
         <section className="cl-table-main">
-          <div className="cl-page-canvas">
-            <p className="cl-quiet">페이지(지도)와 토큰은 다음 단계(R5)에서 이 자리에 옵니다. 지금은 저널의 캐릭터 시트로 운용하고, 채팅으로 굴리고 말합니다.</p>
-          </div>
+          <PageCanvas onOpenEntry={openEntry} onOpenToken={openToken} onOpenPageSettings={openPageSettings} />
         </section>
         <aside className="cl-sidebar">
           <div className="cl-sidebar-tabs" role="tablist">

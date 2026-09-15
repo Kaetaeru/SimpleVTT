@@ -7,8 +7,10 @@
  */
 import type { ArtAsset } from "../campaign/art";
 import { ART_LIMIT, artVisible, canManageArt, ChunkAssembler, chunkText } from "../campaign/art";
-import type { JournalEntry } from "../campaign/journal";
+import type { JournalCharacter, JournalEntry } from "../campaign/journal";
 import { canEdit, canView, mergePlayerEdit, projectEntry } from "../campaign/journal";
+import type { Page, Token } from "../campaign/page";
+import { controlsToken, mergeControllerTokenEdit, playerPageId, projectPage, projectToken } from "../campaign/page";
 import type { Campaign, ChatMessage, PlayerRole } from "../campaign/model";
 import { newMessageId, withPlayer, withPlayerKicked, withPlayerRole } from "../campaign/model";
 import { rollFormula } from "../character/dice";
@@ -36,6 +38,10 @@ export interface TableHostOptions {
   /** An entry was created or changed (persist it), or removed (`{ removed: id }`). */
   onJournal?: (change: { entry: JournalEntry } | { removed: string }) => void;
   onArt?: (change: { asset: ArtAsset } | { removed: string }) => void;
+  pages?: Page[];
+  onPage?: (change: { page: Page } | { removed: string }) => void;
+  /** Linked bars (D78): the host app derives a character's attribute values with its catalog; hp is at least current/max. */
+  attributeOf?: (entry: JournalCharacter, link: string) => { value?: number; max?: number } | undefined;
   now?: () => string;
   random?: () => number;
 }
@@ -45,6 +51,7 @@ export class TableHost {
   private chat: ChatMessage[];
   private journalEntries: Map<string, JournalEntry>;
   private artAssets: Map<string, ArtAsset>;
+  private pages: Map<string, Page>;
   /** Uploads in flight: metadata waiting for its chunks. */
   private readonly uploads = new Map<string, { asset: ArtAsset; by: string }>();
   private readonly assembler = new ChunkAssembler();
@@ -64,6 +71,7 @@ export class TableHost {
     this.chat = [...(options.archive ?? [])];
     this.journalEntries = new Map((options.journal ?? []).map((entry) => [entry.id, entry]));
     this.artAssets = new Map((options.art ?? []).map((asset) => [asset.id, asset]));
+    this.pages = new Map((options.pages ?? []).map((page) => [page.id, page]));
     this.now = options.now ?? (() => new Date().toISOString());
     this.connected.add(options.hostUserId);
     for (const carrier of Array.isArray(transport) ? transport : [transport]) this.attach(carrier);
@@ -73,6 +81,7 @@ export class TableHost {
   get archive() { return this.chat; }
   get journal() { return [...this.journalEntries.values()]; }
   get art() { return [...this.artAssets.values()]; }
+  get pageList() { return [...this.pages.values()].sort((a, b) => a.order - b.order); }
 
   attach(carrier: Transport) {
     if (this.transports.includes(carrier)) return;
@@ -92,6 +101,7 @@ export class TableHost {
     }
     for (const player of campaign.players) this.emit({ type: "presence", player: this.presence(player.userId) });
     if (JSON.stringify(before.settings) !== JSON.stringify(campaign.settings)) this.emit({ type: "settings", settings: campaign.settings });
+    if (before.playerPageId !== campaign.playerPageId || JSON.stringify(before.pageBookmarks ?? {}) !== JSON.stringify(campaign.pageBookmarks ?? {})) this.emitRibbon();
     // A role change alters what each viewer may see: resend the journal so mirrors converge.
     if (before.players.some((player) => player.role !== campaign.players.find((item) => item.userId === player.userId)?.role)) for (const entry of this.journalEntries.values()) this.emit({ type: "journal", entry });
   }
@@ -109,6 +119,9 @@ export class TableHost {
       chat: this.chat.filter((message) => visibleTo(message, viewer)).slice(-SNAPSHOT_CHAT),
       journal: [...this.journalEntries.values()].map((entry) => projectEntry(entry, viewer)).filter((entry): entry is JournalEntry => entry !== null),
       art: [...this.artAssets.values()].filter((asset) => artVisible(asset, viewer, this.journal)),
+      pages: this.pageList.map((page) => projectPage(page, viewer, this.campaign)).filter((page): page is Page => page !== null),
+      playerPageId: this.campaign.playerPageId,
+      pageBookmarks: this.campaign.pageBookmarks ?? {},
       lastEventN: this.n,
     };
   }
@@ -280,7 +293,136 @@ export class TableHost {
         void this.sendArt(peerId, asset);
         return;
       }
+      case "page.put": {
+        if (!isGm) return refuse("GM만 페이지를 만들고 고칩니다");
+        const incoming = command.page;
+        if (!incoming || typeof incoming.id !== "string" || typeof incoming.grid !== "object") return refuse("페이지 형식이 아닙니다");
+        const stored = this.pages.get(incoming.id);
+        const page: Page = { ...incoming, kind: "page", campaignId: this.campaign.id, tokens: stored ? stored.tokens : (incoming.tokens ?? []), createdAt: stored?.createdAt ?? incoming.createdAt ?? this.now(), updatedAt: this.now() };
+        this.storePage(page);
+        return;
+      }
+      case "page.remove": {
+        if (!isGm) return refuse("GM만 페이지를 지웁니다");
+        if (!this.pages.delete(command.id)) return refuse("그 페이지가 없습니다");
+        this.options.onPage?.({ removed: command.id });
+        this.emit({ type: "page.removed", id: command.id });
+        if (this.campaign.playerPageId === command.id) { this.setCampaign({ ...this.campaign, playerPageId: undefined, updatedAt: this.now() }); this.emitRibbon(); }
+        return;
+      }
+      case "page.ribbon": {
+        if (!isGm) return refuse("GM만 플레이어 리본을 옮깁니다");
+        if (!this.pages.has(command.pageId)) return refuse("그 페이지가 없습니다");
+        this.setCampaign({ ...this.campaign, playerPageId: command.pageId, updatedAt: this.now() });
+        this.emitRibbon();
+        return;
+      }
+      case "page.bookmark": {
+        if (!isGm) return refuse("GM만 파티를 나눕니다");
+        if (command.pageId && !this.pages.has(command.pageId)) return refuse("그 페이지가 없습니다");
+        const bookmarks = { ...(this.campaign.pageBookmarks ?? {}) };
+        if (command.pageId) bookmarks[command.userId] = command.pageId; else delete bookmarks[command.userId];
+        this.setCampaign({ ...this.campaign, pageBookmarks: bookmarks, updatedAt: this.now() });
+        this.emitRibbon();
+        return;
+      }
+      case "token.put": {
+        const page = this.pages.get(command.pageId);
+        if (!page) return refuse("그 페이지가 없습니다");
+        const incoming = command.token;
+        if (!incoming || typeof incoming.id !== "string" || !Array.isArray(incoming.bars)) return refuse("토큰 형식이 아닙니다");
+        const stored = page.tokens.find((token) => token.id === incoming.id);
+        const viewer = this.viewer(userId);
+        let next: Token;
+        if (isGm) next = this.withLinkedBars(incoming);
+        else if (!stored) {
+          // A player may put their own character on the page they are on.
+          const entry = incoming.represents ? this.journalEntries.get(incoming.represents) : undefined;
+          if (page.id !== playerPageId(this.campaign, viewer)) return refuse("지금 보는 페이지에만 토큰을 놓을 수 있습니다");
+          if (!entry || !canEdit(entry, viewer)) return refuse("자기 캐릭터의 토큰만 놓을 수 있습니다");
+          next = this.withLinkedBars({ ...incoming, layer: "objects", controlledBy: "inherit", gmNotes: "", locked: false });
+        } else {
+          if (!controlsToken(stored, viewer, this.journal)) return refuse("이 토큰을 움직일 권한이 없습니다");
+          if (stored.locked) return refuse("잠긴 토큰입니다");
+          next = mergeControllerTokenEdit(stored, incoming);
+          this.applyBarEditsToCharacter(stored, next, userId);
+          next = this.withLinkedBars(next);
+        }
+        this.storeToken(page, next);
+        return;
+      }
+      case "token.remove": {
+        const page = this.pages.get(command.pageId);
+        const stored = page?.tokens.find((token) => token.id === command.id);
+        if (!page || !stored) return refuse("그 토큰이 없습니다");
+        if (!controlsToken(stored, this.viewer(userId), this.journal)) return refuse("이 토큰을 지울 권한이 없습니다");
+        const next = { ...page, tokens: page.tokens.filter((token) => token.id !== command.id), updatedAt: this.now() };
+        this.pages.set(page.id, next);
+        this.options.onPage?.({ page: next });
+        this.emit({ type: "token.removed", pageId: page.id, id: command.id });
+        return;
+      }
+      case "ping": {
+        const page = this.pages.get(command.pageId);
+        if (!page) return;
+        if (!isGm && page.id !== playerPageId(this.campaign, this.viewer(userId))) return;
+        this.emit({ type: "ping", pageId: page.id, x: command.x, y: command.y, by: userId, color: player.color });
+        return;
+      }
       default: return;
+    }
+  }
+
+  /** The ribbon or a bookmark moved: every mirror learns it, then every page is resent so each player ends up with exactly their page. */
+  private emitRibbon() {
+    this.emit({ type: "ribbon", playerPageId: this.campaign.playerPageId, pageBookmarks: this.campaign.pageBookmarks ?? {} });
+    for (const page of this.pages.values()) this.emit({ type: "page", page });
+  }
+
+  private storePage(page: Page) {
+    this.pages.set(page.id, page);
+    this.options.onPage?.({ page });
+    this.emit({ type: "page", page });
+  }
+
+  private storeToken(page: Page, token: Token) {
+    const index = page.tokens.findIndex((item) => item.id === token.id);
+    const next: Page = { ...page, tokens: index >= 0 ? page.tokens.map((item, at) => (at === index ? token : item)) : [...page.tokens, token], updatedAt: this.now() };
+    this.pages.set(page.id, next);
+    this.options.onPage?.({ page: next });
+    this.emit({ type: "token", pageId: page.id, token });
+  }
+
+  /** Bars linked to a character attribute mirror the sheet (D78). */
+  private withLinkedBars(token: Token): Token {
+    const entry = token.represents ? this.journalEntries.get(token.represents) : undefined;
+    if (!entry || entry.kind !== "character" || !this.options.attributeOf) return token;
+    return { ...token, bars: token.bars.map((bar) => { if (!bar.link) return bar; const attribute = this.options.attributeOf!(entry, bar.link); return attribute ? { ...bar, value: attribute.value, max: attribute.max } : bar; }) as Token["bars"] };
+  }
+
+  /** A controller changed a linked, editable bar (bar 1 = hp): the character's sheet takes the value. */
+  private applyBarEditsToCharacter(before: Token, after: Token, userId: string) {
+    const entry = after.represents ? this.journalEntries.get(after.represents) : undefined;
+    if (!entry || entry.kind !== "character") return;
+    for (let index = 0; index < 3; index += 1) {
+      const bar = after.bars[index];
+      if (bar.link !== "hp" || !bar.editable || bar.value === undefined || bar.value === before.bars[index].value) continue;
+      const runtime = { ...entry.runtime, hp: { ...entry.runtime.hp, current: Math.max(0, bar.value) }, updatedAt: this.now() };
+      const player = this.campaign.players.find((item) => item.userId === userId);
+      this.storeEntry({ ...entry, runtime, updatedAt: this.now() });
+      this.say({ type: "system", who: "", content: `${player?.displayName ?? "?"}: ${entry.name} HP ${before.bars[index].value ?? "?"} → ${bar.value}` });
+    }
+  }
+
+  /** Tokens representing a changed character refresh their linked bars. */
+  private refreshTokensOf(entry: JournalEntry) {
+    if (entry.kind !== "character") return;
+    for (const page of this.pages.values()) {
+      for (const token of page.tokens) {
+        if (token.represents !== entry.id) continue;
+        const next = this.withLinkedBars({ ...token, name: token.name === entry.name ? token.name : token.name, image: token.image ?? entry.avatar });
+        if (JSON.stringify(next.bars) !== JSON.stringify(token.bars)) this.storeToken(this.pages.get(page.id)!, next);
+      }
     }
   }
 
@@ -308,6 +450,7 @@ export class TableHost {
     // The entry's avatar may now be visible to more (or fewer) viewers: resend that asset so mirrors converge.
     const ref = entry.avatar;
     if (ref?.startsWith("art:")) { const asset = this.artAssets.get(ref.slice(4)); if (asset) this.emit({ type: "art", asset }); }
+    this.refreshTokensOf(entry);
   }
 
   private dropEntry(id: string) {
@@ -345,6 +488,14 @@ export class TableHost {
       case "journal": { const entry = projectEntry(event.entry, viewer); return entry ? { ...event, entry } : { n: event.n, type: "journal.removed", id: event.entry.id }; }
       case "journal.show": { const entry = this.journalEntries.get(event.id); return entry && canView(entry, viewer) ? event : null; }
       case "art": return artVisible(event.asset, viewer, this.journal) ? event : { n: event.n, type: "art.removed", id: event.asset.id };
+      case "page": { const page = projectPage(event.page, viewer, this.campaign); return page ? { ...event, page } : { n: event.n, type: "page.removed", id: event.page.id }; }
+      case "token": { if (viewer.role === "gm") return event; const page = this.pages.get(event.pageId); if (!page || page.archived || page.id !== playerPageId(this.campaign, viewer)) return null; const token = projectToken(event.token, viewer); return token ? { ...event, token } : { n: event.n, type: "token.removed", pageId: event.pageId, id: event.token.id }; }
+      case "token.removed": case "ping": { if (viewer.role === "gm") return event; return event.pageId === playerPageId(this.campaign, viewer) ? event : null; }
+      case "ribbon": {
+        if (viewer.role === "gm") return event;
+        // A player's page changed: they get their new page whole (the mirror replaces what it had).
+        return event;
+      }
       default: return event;
     }
   }
