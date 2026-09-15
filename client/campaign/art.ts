@@ -50,6 +50,35 @@ export function artVisible(asset: ArtAsset, viewer: JournalViewer, journal: Jour
 
 export const canManageArt = (asset: ArtAsset, viewer: JournalViewer) => viewer.role === "gm" || asset.ownerId === viewer.userId;
 
+/**
+ * R20: every art id the campaign still points at — a sheet's portrait, a token's picture, a scene's background, a
+ * character's default token, and any `art:<id>` written into a handout's text or an entry's notes. What is left over
+ * is what "안 쓰는 그림 정리" offers to delete.
+ */
+export function usedArtIds(journal: JournalEntry[], pages: Array<{ background?: { image?: string }; tokens: Array<{ image?: string }> }>): Set<string> {
+  const used = new Set<string>();
+  const add = (ref: string | undefined) => { const id = artIdOf(ref); if (id) used.add(id); };
+  const scan = (text: string | undefined) => { for (const match of text?.matchAll(/art:([A-Za-z0-9_-]+)/g) ?? []) used.add(match[1]); };
+  for (const entry of journal) {
+    add(entry.avatar);
+    add((entry as { defaultToken?: { image?: string } }).defaultToken?.image);
+    scan(entry.gmNotes);
+    scan((entry as { notes?: string }).notes);
+    scan((entry as { bio?: string }).bio);
+  }
+  for (const page of pages) {
+    add(page.background?.image);
+    for (const token of page.tokens) add(token.image);
+  }
+  return used;
+}
+
+/** The assets nothing points at any more, oldest first. */
+export function unusedArt(assets: ArtAsset[], journal: JournalEntry[], pages: Array<{ background?: { image?: string }; tokens: Array<{ image?: string }> }>): ArtAsset[] {
+  const used = usedArtIds(journal, pages);
+  return assets.filter((asset) => !used.has(asset.id)).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+}
+
 /** Split a data URL into base64-sized text chunks; `join` puts them back. */
 export function chunkText(text: string, size = ART_CHUNK): string[] {
   const out: string[] = [];

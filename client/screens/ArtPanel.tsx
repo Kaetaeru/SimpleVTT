@@ -6,7 +6,7 @@
 import { useMemo, useRef, useState, type DragEvent, type ReactNode } from "react";
 import { useArtUrl, useCampaigns } from "../app/campaigns";
 import type { ArtAsset } from "../campaign/art";
-import { artRef, canManageArt } from "../campaign/art";
+import { artRef, canManageArt, unusedArt } from "../campaign/art";
 import { Modal, Notice, Pill } from "../ui/components";
 
 export const ART_DRAG_TYPE = "application/x-simplevtt-art";
@@ -53,11 +53,14 @@ export function ArtTab() {
   const [folder, setFolder] = useState<string>("");
   const [selected, setSelected] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
+  // R20: the GM can see at a glance what nothing points at any more, and clear it out.
+  const [cleaning, setCleaning] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
   const assets = viewer.snapshot.art;
   const folders = useMemo(() => [...new Set(assets.map((asset) => asset.folder).filter(Boolean))].sort((a, b) => a.localeCompare(b, "ko")), [assets]);
   const shown = assets.filter((asset) => (!folder || asset.folder === folder) && (!query.trim() || asset.name.toLowerCase().includes(query.trim().toLowerCase()) || asset.tags.some((tag) => tag.includes(query.trim())))).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const current = selected ? assets.find((asset) => asset.id === selected) ?? null : null;
+  const unused = useMemo(() => unusedArt(assets, viewer.snapshot.journal, viewer.snapshot.pages), [assets, viewer.snapshot.journal, viewer.snapshot.pages]);
   const onDrop = (event: DragEvent) => { event.preventDefault(); setDragOver(false); const files = [...event.dataTransfer.files].filter((file) => file.type.startsWith("image/")); if (files.length) void upload(files); };
   return (
     <div className={`cl-art${dragOver ? " drag-over" : ""}`} onDragOver={(event) => { if ([...event.dataTransfer.types].includes("Files")) { event.preventDefault(); setDragOver(true); } }} onDragLeave={() => setDragOver(false)} onDrop={onDrop}
@@ -75,7 +78,25 @@ export function ArtTab() {
           <input ref={fileInput} type="file" accept="image/png,image/jpeg,image/gif,image/webp" multiple hidden aria-label="이미지 파일" onChange={(event) => { const files = [...(event.target.files ?? [])]; event.target.value = ""; if (files.length) void upload(files); }} />
           <span className="cl-quiet cl-small">파일을 여기에 끌어 놓거나 붙여넣어도 됩니다 · 20MB까지</span>
           {c.table.artPending ? <Pill tone="accent">자료 받는 중 {c.table.artPending}</Pill> : null}
+          {viewer.isGm ? <button type="button" className="cl-btn small quiet" style={{ marginLeft: "auto" }} onClick={() => setCleaning((value) => !value)}>{cleaning ? "정리 닫기" : `안 쓰는 그림 정리${unused.length ? ` (${unused.length})` : ""}`}</button> : null}
         </div>
+        {cleaning && viewer.isGm ? (
+          <div className="cl-card cl-small" style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            {unused.length ? <>
+              <span className="cl-quiet">시트의 초상화·토큰 그림·장면 배경·기본 토큰과 글 속의 <code>art:</code> 어디에도 쓰이지 않는 {unused.length}장입니다 ({Math.round(unused.reduce((sum, asset) => sum + asset.bytes, 0) / 1024)} KB).</span>
+              {unused.slice(0, 12).map((asset) => (
+                <div className="cl-row" key={asset.id} style={{ gap: 6 }}>
+                  {asset.thumb ? <img src={asset.thumb} alt="" width={24} height={24} style={{ objectFit: "cover", borderRadius: 3 }} /> : null}
+                  <span style={{ flex: 1 }}>{asset.name}</span>
+                  <span className="cl-quiet">{Math.round(asset.bytes / 1024)} KB</span>
+                  <button type="button" className="cl-btn small danger" aria-label={`${asset.name} 지우기`} onClick={() => c.removeArt(asset.id)}>지우기</button>
+                </div>
+              ))}
+              {unused.length > 12 ? <span className="cl-quiet">…그리고 {unused.length - 12}장 더</span> : null}
+              <button type="button" className="cl-btn small danger" onClick={() => { if (confirm(`쓰이지 않는 그림 ${unused.length}장을 모두 지울까요? 되돌릴 수 없습니다.`)) for (const asset of unused) c.removeArt(asset.id); }}>모두 지우기 ({unused.length})</button>
+            </> : <span className="cl-quiet">쓰이지 않는 그림이 없습니다.</span>}
+          </div>
+        ) : null}
         {error ? <Notice tone="bad">{error}</Notice> : null}
       </div>
       <div className="cl-art-grid" role="list">

@@ -4,10 +4,10 @@
   "version": "0.1.0",
   "identifier": "dev.simplevtt.app",
   "build": {
-    "beforeDevCommand": "npm run dev",
-    "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "npm run build",
-    "frontendDist": "../dist"
+    "beforeDevCommand": "npm run dev:client",
+    "devUrl": "http://localhost:1430",
+    "beforeBuildCommand": "npm run build:client",
+    "frontendDist": "../dist-client"
   },
   "app": {
     "windows": [

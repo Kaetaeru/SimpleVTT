@@ -31,6 +31,16 @@ export function TrackerWindow({ onClose }: { onClose: () => void }) {
     const currentId = tracker.turns[tracker.current]?.id;
     set({ ...tracker, turns, sorted: false, current: currentId ? turns.findIndex((item) => item.id === currentId) : tracker.current });
   };
+  /** R20: drop a row onto another — the dragged turn lands at that place and the current turn follows its creature. */
+  const moveTo = (from: number, to: number) => {
+    if (from === to || from < 0 || to < 0 || from >= tracker.turns.length || to >= tracker.turns.length) return;
+    const turns = [...tracker.turns];
+    const [moved] = turns.splice(from, 1);
+    turns.splice(to, 0, moved);
+    const currentId = tracker.turns[tracker.current]?.id;
+    set({ ...tracker, turns, sorted: false, current: currentId ? turns.findIndex((item) => item.id === currentId) : tracker.current });
+  };
+  const [dragging, setDragging] = useState<number | null>(null);
   /** 전투 시작: choose tokens on the canvas, roll initiative for each on the host (PC: sheet bonus; NPC: stat block). */
   const startCombat = async () => {
     setBusy(true);
@@ -63,7 +73,11 @@ export function TrackerWindow({ onClose }: { onClose: () => void }) {
       {tracker.turns.length === 0 ? <p className="cl-quiet cl-small">{isGm ? "토큰을 우클릭해 \"턴 트래커에 추가\"하거나, \"전투 시작\"으로 토큰을 골라 이니셔티브를 굴리세요. 다음 턴이 규칙 처리를 합니다 (효과 라운드·재충전·죽음 내성)." : "GM이 전투를 시작하면 순서가 여기에 나타납니다."}</p> : (
         <ol className="cl-tracker-list">
           {tracker.turns.map((turn, index) => (
-            <li key={turn.id} className={`cl-tracker-row${index === tracker.current ? " current" : ""}${turn.custom ? " custom" : ""}`} data-turn-name={turn.name}>
+            <li key={turn.id} className={`cl-tracker-row${index === tracker.current ? " current" : ""}${turn.custom ? " custom" : ""}${dragging === index ? " dragging" : ""}`} data-turn-name={turn.name}
+              draggable={isGm} onDragStart={(event) => { setDragging(index); event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", String(index)); }}
+              onDragEnd={() => setDragging(null)}
+              onDragOver={(event) => { if (isGm && dragging !== null) { event.preventDefault(); event.dataTransfer.dropEffect = "move"; } }}
+              onDrop={(event) => { if (!isGm) return; event.preventDefault(); const from = dragging ?? Number(event.dataTransfer.getData("text/plain")); setDragging(null); moveTo(from, index); }}>
               <span className="cl-tracker-avatar">{turn.image ? <ArtImage src={turn.image} /> : turn.custom ? "⏱" : (turn.name || "?").slice(0, 1)}</span>
               <span className="cl-tracker-name">{turn.name}{turn.custom && turn.formula ? <span className="cl-quiet cl-small"> ({turn.formula})</span> : null}</span>
               {isGm ? <input className="cl-input cl-tracker-init" aria-label={`${turn.name} 이니셔티브`} value={turn.initiative} onChange={(event) => update(turn, { initiative: Number(event.target.value) || 0 })} /> : <span className="cl-tracker-init">{turn.initiative}</span>}
