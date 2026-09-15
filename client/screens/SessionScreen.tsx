@@ -6,6 +6,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useClient } from "../app/context";
 import { useSession } from "../app/session";
+import { newCampaign, type CampaignDocData, type DocumentBase } from "../campaign/types";
 import { deriveLive } from "../character/ops";
 import type { SessionCharacter } from "../session/protocol";
 import { copyText, Notice, Pill } from "../ui/components";
@@ -19,7 +20,12 @@ export function SessionScreen() {
 
 function Lobby() {
   const session = useSession();
-  const [name, setName] = useState("우리 테이블");
+  const { documents, putDocument, navigate } = useClient();
+  const campaigns = documents.filter((doc): doc is DocumentBase<"campaign", CampaignDocData> => doc.kind === "campaign");
+  const [campaignId, setCampaignId] = useState<string>(campaigns[0]?.id ?? "");
+  const [newTitle, setNewTitle] = useState("");
+  const chosen = campaigns.find((doc) => doc.id === campaignId) ?? campaigns[0];
+  const createAndOpen = async () => { const doc = newCampaign(newTitle.trim() || "새 캠페인"); await putDocument(doc); setCampaignId(doc.id); setNewTitle(""); };
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -35,9 +41,23 @@ function Lobby() {
       <div className="cl-grid-2">
         <div className="cl-card">
           <h3>세션 열기 (DM)</h3>
-          <p className="cl-muted cl-small">이 탭이 호스트가 됩니다. 초대 코드를 플레이어에게 보내세요.</p>
-          <div className="cl-field"><label htmlFor="cl-session-name">세션 이름</label><input id="cl-session-name" className="cl-input" value={name} onChange={(event) => setName(event.target.value)} /></div>
-          <button type="button" className="cl-btn primary" onClick={() => { commitName(); void session.openSession(name); }}>세션 열기</button>
+          <p className="cl-muted cl-small">세션은 캠페인에 속합니다. 참가자·파티·세션 기록이 그 캠페인에 남고, 다음 세션에서 그대로 이어집니다.</p>
+          {campaigns.length ? (
+            <div className="cl-field"><label htmlFor="cl-campaign-pick">캠페인</label>
+              <select id="cl-campaign-pick" className="cl-select" value={chosen?.id ?? ""} onChange={(event) => setCampaignId(event.target.value)}>
+                {campaigns.map((doc) => <option key={doc.id} value={doc.id}>{doc.data.title} · 파티 {doc.data.party.length} · 세션 {doc.data.sessions.length}</option>)}
+              </select>
+            </div>
+          ) : <p className="cl-quiet cl-small">아직 캠페인이 없습니다. 아래에서 하나 만드세요.</p>}
+          {chosen ? <p className="cl-muted cl-small">{chosen.data.players.length ? `지난 참가자: ${chosen.data.players.map((player) => player.name).join(", ")}` : "아직 참가자가 없습니다."}{chosen.data.party.length ? ` · 파티: ${chosen.data.party.map((member) => member.source.name).join(", ")}` : ""}</p> : null}
+          <div className="cl-row" style={{ gap: 6 }}>
+            <button type="button" className="cl-btn primary" disabled={!chosen} onClick={() => { commitName(); if (chosen) void session.openSession(chosen.id); }}>세션 열기</button>
+            {chosen ? <button type="button" className="cl-btn quiet" onClick={() => navigate({ screen: "campaign", id: chosen.id })}>캠페인 보기</button> : null}
+          </div>
+          <div className="cl-row" style={{ gap: 6, marginTop: 8 }}>
+            <input className="cl-input" style={{ flex: 1 }} placeholder="새 캠페인 이름" aria-label="새 캠페인 이름" value={newTitle} onChange={(event) => setNewTitle(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void createAndOpen(); }} />
+            <button type="button" className="cl-btn" onClick={() => void createAndOpen()}>새 캠페인</button>
+          </div>
         </div>
         <div className="cl-card">
           <h3>세션 참가 (플레이어)</h3>

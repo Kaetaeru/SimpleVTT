@@ -3,6 +3,7 @@
  * hash router (#/, #/new, #/edit/<id>, #/sheet/<id>, #/contents) so a reload keeps the screen.
  */
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import type { CampaignDocument } from "../campaign/types";
 import { createCatalog } from "../catalog";
 import type { ContentCatalog } from "../catalog/catalog";
 import type { RuleModuleJson } from "../catalog/types";
@@ -18,6 +19,8 @@ export type Route =
   | { screen: "sheet"; id: string }
   | { screen: "levelup"; id: string }
   | { screen: "session" }
+  | { screen: "campaigns" }
+  | { screen: "campaign"; id: string }
   | { screen: "contents" };
 
 export function parseRoute(hash: string): Route {
@@ -29,6 +32,8 @@ export function parseRoute(hash: string): Route {
   if (parts[0] === "levelup" && parts[1]) return { screen: "levelup", id: decodeURIComponent(parts[1]) };
   if (parts[0] === "contents") return { screen: "contents" };
   if (parts[0] === "session") return { screen: "session" };
+  if (parts[0] === "campaigns") return { screen: "campaigns" };
+  if (parts[0] === "campaign" && parts[1]) return { screen: "campaign", id: decodeURIComponent(parts[1]) };
   return { screen: "library" };
 }
 
@@ -40,6 +45,8 @@ export function routeHash(route: Route) {
     case "levelup": return `#/levelup/${encodeURIComponent(route.id)}`;
     case "contents": return "#/contents";
     case "session": return "#/session";
+    case "campaigns": return "#/campaigns";
+    case "campaign": return `#/campaign/${encodeURIComponent(route.id)}`;
     default: return "#/";
   }
 }
@@ -50,6 +57,10 @@ export interface ClientState {
   catalog: ContentCatalog;
   modules: InstalledModuleRecord[];
   characters: CharacterRecord[];
+  /** Campaign documents (campaigns, later NPCs, handouts, scenes) — CAMPAIGN_RESOURCES.md §2. */
+  documents: CampaignDocument[];
+  putDocument: (doc: CampaignDocument) => Promise<void>;
+  deleteDocument: (id: string) => Promise<void>;
   route: Route;
   theme: "dark" | "light";
   navigate: (route: Route) => void;
@@ -69,6 +80,7 @@ export function ClientProvider({ children, store: presetStore, initialRoute }: {
   const [store, setStore] = useState<ClientStore | null>(presetStore ?? null);
   const [modules, setModules] = useState<InstalledModuleRecord[]>([]);
   const [characters, setCharacters] = useState<CharacterRecord[]>([]);
+  const [documents, setDocuments] = useState<CampaignDocument[]>([]);
   const [ready, setReady] = useState(false);
   const [theme, setThemeState] = useState<"dark" | "light">("dark");
   const [route, setRoute] = useState<Route>(() => initialRoute ?? (typeof location === "undefined" ? { screen: "library" } : parseRoute(location.hash)));
@@ -79,10 +91,11 @@ export function ClientProvider({ children, store: presetStore, initialRoute }: {
       const opened = presetStore ?? (await openClientStore());
       if (cancelled) return;
       setStore(opened);
-      const [moduleRows, characterRows, savedTheme] = await Promise.all([opened.listModules(), opened.listCharacters(), opened.getSetting<"dark" | "light">("theme")]);
+      const [moduleRows, characterRows, documentRows, savedTheme] = await Promise.all([opened.listModules(), opened.listCharacters(), opened.listDocuments(), opened.getSetting<"dark" | "light">("theme")]);
       if (cancelled) return;
       setModules(moduleRows);
       setCharacters(characterRows);
+      setDocuments(documentRows);
       if (savedTheme) setThemeState(savedTheme);
       setReady(true);
     })();
@@ -156,11 +169,23 @@ export function ClientProvider({ children, store: presetStore, initialRoute }: {
     setModules(await store.listModules());
   }, [store]);
 
+  const putDocument = useCallback(async (doc: CampaignDocument) => {
+    if (!store) return;
+    const stamped = { ...doc, version: doc.version + 1, updatedAt: new Date().toISOString() } as CampaignDocument;
+    await store.putDocument(stamped);
+    setDocuments((list) => { const index = list.findIndex((item) => item.id === stamped.id); return index >= 0 ? list.map((item, at) => (at === index ? stamped : item)) : [...list, stamped]; });
+  }, [store]);
+  const deleteDocument = useCallback(async (id: string) => {
+    if (!store) return;
+    await store.deleteDocument(id);
+    setDocuments((list) => list.filter((item) => item.id !== id));
+  }, [store]);
+
   const getDraft = useCallback(async () => store?.getSetting<CharacterSource>("creation-draft"), [store]);
   const putDraft = useCallback(async (source: CharacterSource | undefined) => { await store?.putSetting("creation-draft", source ?? null); }, [store]);
 
-  const value = useMemo<ClientState>(() => ({ ready, store, catalog, modules, characters, route, theme, navigate, setTheme, saveCharacter, deleteCharacter, installModule, removeModule, getDraft, putDraft }),
-    [ready, store, catalog, modules, characters, route, theme, navigate, setTheme, saveCharacter, deleteCharacter, installModule, removeModule, getDraft, putDraft]);
+  const value = useMemo<ClientState>(() => ({ ready, store, catalog, modules, characters, documents, putDocument, deleteDocument, route, theme, navigate, setTheme, saveCharacter, deleteCharacter, installModule, removeModule, getDraft, putDraft }),
+    [ready, store, catalog, modules, characters, documents, putDocument, deleteDocument, route, theme, navigate, setTheme, saveCharacter, deleteCharacter, installModule, removeModule, getDraft, putDraft]);
   return <ClientContext.Provider value={value}>{children}</ClientContext.Provider>;
 }
 

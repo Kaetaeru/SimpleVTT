@@ -276,3 +276,4 @@ details.cl-details[open]>summary{color:var(--text)}
 .cl-invites[open]{position:absolute;z-index:5;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-s);padding:6px 8px;box-shadow:var(--elev-1)}
 .cl-session-main .cl-play{grid-template-columns:1fr 1fr}
 @media (max-width:1400px){.cl-session-main .cl-play{grid-template-columns:1fr}}
+.cl-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}

@@ -4,6 +4,7 @@
  * (D60). The carrier is BroadcastChannel today (tabs on one PC); the TCP carrier plugs into the same place.
  */
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { campaignWithSession, seedFromCampaign, type CampaignDoc } from "../campaign/sessionSync";
 import type { SheetOp } from "../character/ops";
 import type { CharacterRuntime } from "../character/runtime";
 import type { CharacterSource } from "../character/types";
@@ -32,7 +33,10 @@ export interface SessionState {
   userId: string;
   displayName: string;
   setDisplayName: (name: string) => void;
-  openSession: (name: string) => Promise<void>;
+  /** Open a session of a campaign: its party and players are seeded; everything that happens is written into it. */
+  openSession: (campaignId: string) => Promise<void>;
+  /** The campaign this session belongs to (host side). */
+  campaignId: string | null;
   joinSession: (inviteText: string) => Promise<string | null>;
   leaveSession: () => void;
   bringCharacter: (record: CharacterRecord) => void;
@@ -61,7 +65,9 @@ function tabScoped(key: string, make: () => string) {
 const newUserId = () => `user_${Math.random().toString(36).slice(2, 10)}`;
 
 export function SessionProvider({ children }: { children: ReactNode }) {
-  const { catalog, saveCharacter } = useClient();
+  const { catalog, saveCharacter, documents, putDocument } = useClient();
+  const documentsRef = useRef(documents);
+  documentsRef.current = documents;
   const [userId] = useState(() => (typeof sessionStorage === "undefined" ? newUserId() : tabScoped("simplevtt-user-id", newUserId)));
   const [displayName, setDisplayNameState] = useState(() => { try { return localStorage.getItem("simplevtt-display-name") ?? ""; } catch { return ""; } });
   const [role, setRole] = useState<SessionRole | null>(null);
@@ -73,6 +79,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const hostRef = useRef<SessionHost | null>(null);
   const clientRef = useRef<SessionClient | null>(null);
   const hubRef = useRef<MemoryHub | null>(null);
+  const [campaignId, setCampaignId] = useState<string | null>(null);
+  const recordRef = useRef<{ campaignId: string; id: string; startedAt: string } | null>(null);
+  const persistTimer = useRef<number | null>(null);
   const bump = useCallback(() => setTick((value) => value + 1), []);
 
   const setDisplayName = useCallback((name: string) => { setDisplayNameState(name); try { localStorage.setItem("simplevtt-display-name", name); } catch { /* private window */ } }, []);
@@ -85,7 +94,25 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     client.onCharacter((_characterId, source: CharacterSource, runtime: CharacterRuntime) => { void saveCharacter(source, runtime); });
   }, [bump, saveCharacter]);
 
+  /** Fold the host state into the campaign document (debounced while events stream; at once on close). */
+  const persistCampaign = useCallback((final = false) => {
+    const host = hostRef.current;
+    const record = recordRef.current;
+    if (!host || !record) return;
+    const write = () => {
+      const campaign = documentsRef.current.find((doc) => doc.id === record.campaignId && doc.kind === "campaign") as CampaignDoc | undefined;
+      if (!campaign) return;
+      void putDocument(campaignWithSession(campaign, host.snapshot(), final ? { ...record, endedAt: new Date().toISOString() } : record));
+    };
+    if (persistTimer.current !== null) window.clearTimeout(persistTimer.current);
+    if (final) { persistTimer.current = null; write(); return; }
+    persistTimer.current = window.setTimeout(() => { persistTimer.current = null; write(); }, 600);
+  }, [putDocument]);
+
   const leaveSession = useCallback(() => {
+    if (hostRef.current && recordRef.current) persistCampaign(true);
+    recordRef.current = null;
+    setCampaignId(null);
     clientRef.current?.leave();
     hostRef.current?.close();
     clientRef.current = null;
@@ -96,10 +123,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setInvites([]);
     setTransportNote(null);
     bump();
-  }, [bump]);
+  }, [bump, persistCampaign]);
 
-  const openSession = useCallback(async (name: string) => {
+  const openSession = useCallback(async (campaignIdToOpen: string) => {
+    const campaign = documentsRef.current.find((doc) => doc.id === campaignIdToOpen && doc.kind === "campaign") as CampaignDoc | undefined;
+    if (!campaign) return;
     leaveSession();
+    const name = campaign.data.title;
     const sessionId = newSessionId();
     const token = newToken();
     const hostSecret = newToken() + newToken();
@@ -108,7 +138,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     hubRef.current = hub;
     const carriers = [hub.hostEndpoint(), ...(BroadcastChannelTransport.available() ? [new BroadcastChannelTransport(sessionId, "host")] : [])];
     const host = new SessionHost(carriers, { sessionId, name: name || "세션", token, hostUserId: userId, hostName: displayName || "DM", catalog, hostSecret });
+    host.seed(seedFromCampaign(campaign));
     hostRef.current = host;
+    recordRef.current = { campaignId: campaign.id, id: sessionId, startedAt: new Date().toISOString() };
+    setCampaignId(campaign.id);
+    host.onEvent(() => persistCampaign());
+    persistCampaign();
     const mirror = new SessionClient(hub.connect("host-seat"), { userId, name: displayName || "DM", token, hostSecret });
     attachClient(mirror);
     setRole("host");
@@ -131,7 +166,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       }
       bump();
     } else setTransportNote("브라우저에서는 같은 PC의 다른 탭만 참가할 수 있습니다. LAN·하마치는 exe에서 열립니다.");
-  }, [attachClient, bump, catalog, displayName, leaveSession, userId]);
+  }, [attachClient, bump, catalog, displayName, leaveSession, persistCampaign, userId]);
 
   const joinSession = useCallback(async (inviteText: string) => {
     const parsed: Invite | null = decodeInvite(inviteText);
@@ -178,6 +213,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     invite,
     invites,
     transportNote,
+    campaignId,
     snapshot: client?.snapshot ?? null,
     userId,
     displayName,
@@ -192,7 +228,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     say,
     refusals,
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [role, client, invite, invites, transportNote, userId, displayName, setDisplayName, openSession, joinSession, leaveSession, bringCharacter, removeCharacter, dispatchOp, advanceRound, say, refusals, tick]);
+  }), [role, client, invite, invites, transportNote, campaignId, userId, displayName, setDisplayName, openSession, joinSession, leaveSession, bringCharacter, removeCharacter, dispatchOp, advanceRound, say, refusals, tick]);
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }
 

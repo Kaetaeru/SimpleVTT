@@ -43,6 +43,16 @@ export class SessionHost {
     for (const carrier of this.transports) this.attach(carrier);
   }
 
+  /** Seed from the campaign: last-seen party members (owners shown as disconnected until they rejoin) and known players. */
+  seed(input: { characters: Array<{ characterId: string; ownerUserId: string; source: SessionCharacter["source"]; runtime: SessionCharacter["runtime"] }>; players: Array<{ userId: string; name: string }> }) {
+    for (const player of input.players) if (!this.participants.has(player.userId)) this.participants.set(player.userId, { userId: player.userId, name: player.name, role: "player", connected: false, characterIds: [] });
+    for (const member of input.characters) {
+      this.characters.set(member.characterId, { characterId: member.characterId, ownerUserId: member.ownerUserId, source: member.source, runtime: member.runtime, version: 1 });
+      const owner = this.participants.get(member.ownerUserId);
+      if (owner && !owner.characterIds.includes(member.characterId)) owner.characterIds = [...owner.characterIds, member.characterId];
+    }
+  }
+
   /** Add a carrier while the session runs (the TCP host coming up after the local seat). */
   attach(carrier: Transport) {
     if (!this.transports.includes(carrier)) this.transports.push(carrier);
@@ -97,6 +107,7 @@ export class SessionHost {
         const characterId = command.source.id;
         const existing = this.characters.get(characterId);
         if (existing && existing.ownerUserId !== userId && !isHost) return this.reply(peerId, { type: "refused", reason: "다른 참가자의 캐릭터입니다", commandType: command.type });
+        // A player bringing a character the campaign already knows replaces the campaign's snapshot with their copy (D67).
         const character: SessionCharacter = { characterId, ownerUserId: existing?.ownerUserId ?? userId, source: command.source, runtime: command.runtime, version: (existing?.version ?? 0) + 1 };
         this.characters.set(characterId, character);
         if (!participant.characterIds.includes(characterId)) { participant.characterIds = [...participant.characterIds, characterId]; this.emit({ type: "participant", participant: { ...participant } }); }

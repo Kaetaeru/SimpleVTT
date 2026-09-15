@@ -53,7 +53,22 @@ export interface SceneDocData { background?: string; grid: { size: number; offse
 export interface RollTableDocData { formula: string; rows: Array<{ from: number; to: number; text: string }> }
 export interface FolderDocData { kindFilter?: DocumentKind }
 export interface PartyStashDocData { gold: number; items: EmbeddedItem[] }
-export interface CampaignDocData { title: string; ruleset: string; moduleIds: string[]; players: Array<{ userId: string; name: string }>; settings: { partySheetsVisible: boolean; dmApprovesRejoin: boolean } }
+/** One line of a session's shared log as kept in the campaign (same shape as the wire entry). */
+export interface CampaignLogEntry { n: number; at: string; userId?: string; who?: string; kind: "system" | "sheet" | "dice" | "dm" | "chat"; text: string }
+/** A played (or running) session of the campaign: when, how many rounds, and its shared log. */
+export interface CampaignSessionRecord { id: string; startedAt: string; endedAt?: string; round: number; log: CampaignLogEntry[] }
+/** A player character as the campaign last saw it (the player's copy stays the original, D60). */
+export interface CampaignPartyMember { characterId: string; ownerUserId: string; source: CharacterSource; runtime: CharacterRuntime; savedAt: string }
+export interface CampaignDocData {
+  title: string;
+  ruleset: string;
+  moduleIds: string[];
+  /** Everyone who has joined a session of this campaign; they are recognized on rejoin (§4). */
+  players: Array<{ userId: string; name: string; lastSeenAt?: string }>;
+  party: CampaignPartyMember[];
+  sessions: CampaignSessionRecord[];
+  settings: { partySheetsVisible: boolean; dmApprovesRejoin: boolean };
+}
 
 export type CampaignDocument =
   | DocumentBase<"campaign", CampaignDocData>
@@ -89,4 +104,8 @@ export function hpBand(current: number, max: number): HpBand {
   if (max <= 0) return "healthy";
   const ratio = current / max;
   return ratio > 0.5 ? "healthy" : ratio > 0.2 ? "hurt" : "critical";
+}
+
+export function newCampaign(title: string): DocumentBase<"campaign", CampaignDocData> {
+  return makeDocument("campaign", title, { title, ruleset: "dnd.srd-5.2.1", moduleIds: [], players: [], party: [], sessions: [], settings: { partySheetsVisible: true, dmApprovesRejoin: false } }, { default: "none" });
 }

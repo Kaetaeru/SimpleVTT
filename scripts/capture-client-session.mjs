@@ -1,6 +1,6 @@
 /**
  * Session verification on one PC: a host tab and a player tab in the same browser profile (BroadcastChannel carrier).
- * Runs SESSION_SCENARIOS.md SC-1..SC-6 and writes 28-33 to docs/evidence/new-client-m1. Fails loudly on any
+ * Runs SESSION_SCENARIOS.md SC-0..SC-9 and writes 28-35 to docs/evidence/new-client-m1. Fails loudly on any
  * mismatch between the two tabs.
  *
  *   node scripts/capture-client-session.mjs
@@ -55,10 +55,13 @@ try {
   await createCharacter(host, "그로크", "드워프", "군인", "dnd.srd521.class.barbarian", 3);
   await createCharacter(player, "브란", "인간", "신앙 수행자", "dnd.srd521.class.cleric", 3);
 
-  // SC-1: host opens a session and gets an invite code.
+  // SC-0/SC-1: host makes a campaign in the lobby and opens a session of it; the invite code appears.
   await host.goto(`${base}#/session`);
   await host.getByLabel("내 이름 (참가자 표시)").fill("DM 민수");
-  await host.getByLabel("세션 이름").fill("검증 테이블");
+  await host.getByLabel("새 캠페인 이름").fill("검증 테이블");
+  await host.getByRole("button", { name: "새 캠페인" }).click();
+  await host.getByLabel("캠페인").waitFor();
+  check((await host.getByLabel("캠페인").inputValue()).length > 0, "new campaign is selected in the lobby");
   await host.getByRole("button", { name: "세션 열기" }).click();
   await host.getByRole("heading", { name: "검증 테이블" }).waitFor();
   const invite = (await host.locator(".cl-code").first().textContent())?.trim() ?? "";
@@ -129,6 +132,26 @@ try {
   check(libraryHp?.startsWith(playerHp?.split("/")[0] ?? "x"), `library sheet kept the session HP (${libraryHp})`);
   check(await player.locator(".cl-log").first().getByText(/DM: 피해 7/).isVisible(), "library log kept the DM line");
   await player.screenshot({ path: path.join(OUT, "33-session-writeback-library.png") });
+
+  // SC-8: the host closes the session; the campaign keeps the party, the player and the session log.
+  await host.getByRole("button", { name: "세션 닫기" }).click();
+  await host.goto(`${base}#/campaigns`);
+  await host.locator(".cl-card.clickable", { hasText: "검증 테이블" }).first().click();
+  await host.getByText("세션 기록").first().waitFor();
+  check(await host.locator(".cl-party-card", { hasText: "브란" }).isVisible(), "campaign party keeps 브란");
+  check(await host.getByText("플레이어 지연").first().isVisible(), "campaign remembers the player");
+  await host.locator(".cl-feature", { hasText: /^세션 1/ }).first().locator(".cl-head").click();
+  await host.locator(".cl-session-log").getByText(/DM: 피해 7/).first().waitFor({ timeout: 5000 });
+  check(true, "campaign session record holds the shared log");
+  await host.screenshot({ path: path.join(OUT, "34-campaign-after-session.png") });
+
+  // SC-9: the next session of the same campaign starts with the party already seeded (owner shown offline).
+  await host.getByRole("button", { name: "세션 열기" }).click();
+  await host.getByRole("heading", { name: "검증 테이블" }).waitFor();
+  await host.locator(".cl-party-card", { hasText: "브란" }).waitFor({ timeout: 10000 });
+  check(await host.locator(".cl-party-card", { hasText: "브란" }).getByText("14/21").isVisible(), "seeded party shows last-seen HP");
+  await host.screenshot({ path: path.join(OUT, "35-session-seeded-from-campaign.png") });
+  await host.getByRole("button", { name: "세션 닫기" }).click();
 
   await browser.close();
   if (failures.length) { console.error(`${failures.length} failure(s)`); process.exitCode = 1; } else console.log("done");

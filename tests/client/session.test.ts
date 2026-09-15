@@ -164,3 +164,43 @@ test("applyOp covers the sheet: a cast with a rolled temp HP, a refused op leave
   runtime = applyOp(runtime, cleric.source, cat, { type: "hp.temp", amount: 6 }).runtime;
   assert.equal(runtime.hp.temp, 6);
 });
+
+test("a campaign remembers players, the party as last seen, and the session's log; the next session is seeded from it", async () => {
+  const { campaignWithSession, seedFromCampaign } = await import("../../client/campaign/sessionSync");
+  const { newCampaign } = await import("../../client/campaign/types");
+  const { hub, host } = stage();
+  const alice = new SessionClient(hub.connect("p1"), { userId: "alice", name: "앨리스", token: "ABC234" });
+  await tick();
+  const fighter = build({ classes: "fighter", level: 3 });
+  alice.send({ type: "character.join", source: fighter.source, runtime: initialRuntime(fighter.derived) });
+  await tick();
+  alice.send({ type: "sheet.op", characterId: fighter.source.id, op: { type: "hp.damage", amount: 4 } });
+  await tick();
+  let campaign = newCampaign("잃어버린 광산");
+  campaign = campaignWithSession(campaign, host.snapshot(), { id: "sess_1", startedAt: "2026-09-15T03:00:00.000Z" });
+  assert.deepEqual(campaign.data.players.map((player) => player.userId), ["alice"], "the host is not a player");
+  assert.equal(campaign.data.party[0].runtime.hp.current, fighter.derived.hp.max - 4);
+  assert.equal(campaign.data.sessions.length, 1);
+  assert.ok(campaign.data.sessions[0].log.some((entry) => entry.text.includes("피해 4")));
+  campaign = campaignWithSession(campaign, host.snapshot(), { id: "sess_1", startedAt: "2026-09-15T03:00:00.000Z", endedAt: "2026-09-15T04:00:00.000Z" });
+  assert.equal(campaign.data.sessions.length, 1, "the same session record is updated, not duplicated");
+  assert.ok(campaign.data.sessions[0].endedAt);
+
+  // Next session: seeded party shows before its owner returns; the returning player's copy replaces the snapshot.
+  const hub2 = new MemoryHub();
+  const host2 = new SessionHost(hub2.hostEndpoint(), { sessionId: "sess_2", name: "잃어버린 광산", token: "ABC234", hostUserId: "dm", hostName: "DM", catalog: catalog() });
+  host2.seed(seedFromCampaign(campaign));
+  const state = host2.snapshot();
+  assert.equal(state.characters.length, 1);
+  assert.equal(state.participants.find((item) => item.userId === "alice")?.connected, false);
+  const bob = new SessionClient(hub2.connect("p2"), { userId: "bob", name: "밥", token: "ABC234" });
+  await tick();
+  assert.equal(bob.snapshot!.characters[0].runtime.hp.current, fighter.derived.hp.max - 4, "a newcomer sees the party as the campaign last saw it");
+  const alice2 = new SessionClient(hub2.connect("p1"), { userId: "alice", name: "앨리스", token: "ABC234" });
+  await tick();
+  const healed = { ...initialRuntime(fighter.derived) };
+  alice2.send({ type: "character.join", source: fighter.source, runtime: healed });
+  await tick();
+  assert.equal(bob.snapshot!.characters[0].runtime.hp.current, fighter.derived.hp.max, "the player's own copy wins (D67)");
+  assert.equal(host2.snapshot().characters.length, 1, "no duplicate character");
+});

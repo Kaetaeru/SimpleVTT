@@ -36,4 +36,6 @@ Chromium이 Vite 개발 서버(포트 1430)에서 마법사를 처음부터 끝�
 - `30-session-player-cast.png` — 플레이어가 자기 시트에서 축복을 시전: 호스트 탭의 파티 카드에 배지, 공용 기록에 시전 줄
 - `31-session-dm-damage.png` — DM이 플레이어 카드를 고르고 "피해 7": 두 탭의 HP가 같고 플레이어 기록에 "DM: 피해 7"
 - `32-session-round-chat.png` — DM "다음 라운드"로 라운드 1, 양방향 채팅
-- `33-session-writeback-library.png` — 플레이어가 나간 뒤 라이브러리 시트에 세션 HP와 DM 기록이 그대로 (`node scripts/capture-client-session.mjs`, 시나리오 SC-1~7)
+- `33-session-writeback-library.png` — 플레이어가 나간 뒤 라이브러리 시트에 세션 HP와 DM 기록이 그대로 
+- `34-campaign-after-session.png` — DM이 세션을 닫은 뒤 캠페인 화면: 파티(마지막 HP), 참가자, 세션 기록 1건을 펼쳐 공용 기록(DM 줄 포함)
+- `35-session-seeded-from-campaign.png` — 같은 캠페인으로 다시 연 세션: 파티 카드가 지난 HP로 미리 보임 (`node scripts/capture-client-session.mjs`, 시나리오 SC-0~9)
