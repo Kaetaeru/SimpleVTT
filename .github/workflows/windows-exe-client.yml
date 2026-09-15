@@ -2,19 +2,11 @@ name: Windows EXE (new client, M1)
 
 # Builds the new client (docs/design/v3/NEW_CLIENT.md) as a single Windows executable and publishes it as a GitHub
 # pre-release. The client gate (typecheck, boundary, tests) runs first on the same runner.
+# Runs only when started by hand (Actions → Run workflow) — the owner asks for an exe when they want one
+# (2026-09-15); pushes no longer build.
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - claude/practical-newton-rye61w
-    paths:
-      - ".github/workflows/windows-exe-client.yml"
-      - "client/**"
-      - "tests/client/**"
-      - "vite.client.config.ts"
-      - "tsconfig.client.json"
-      - "src-tauri/tauri.client.conf.json"
 
 permissions:
   contents: write
