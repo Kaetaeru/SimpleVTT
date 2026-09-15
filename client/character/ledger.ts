@@ -84,6 +84,7 @@ export class Ledger {
   senses: { darkvision?: number; blindsight?: number; truesight?: number } = {};
   size = "medium";
   hpPerLevelBonus = 0;
+  hpPerLevelSource: string | undefined;
   hpFlatBonus = 0;
   initiativeBonus = 0;
   private instanceCounter = 0;
@@ -128,7 +129,11 @@ export class Ledger {
     this.features.push(feature);
   }
 
-  addResource(resource: DerivedResource) {
+  /** Register a pool; the short-rest restore rule is read from the recovery text unless given. */
+  addResource(input: Omit<DerivedResource, "restore"> & { restore?: DerivedResource["restore"] }) {
+    const text = input.recovery;
+    const short: DerivedResource["restore"]["short"] = input.restore?.short ?? (text.includes("짧은 휴식마다 1회") ? 1 : text.includes("절반") ? Math.ceil(input.max / 2) : text.startsWith("짧은 휴식") ? "all" : 0);
+    const resource: DerivedResource = { ...input, restore: { short } };
     const existing = this.resources.findIndex((item) => item.id === resource.id);
     if (existing >= 0) this.resources[existing] = resource; else this.resources.push(resource);
   }

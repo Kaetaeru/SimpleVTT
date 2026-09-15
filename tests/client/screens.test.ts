@@ -20,7 +20,7 @@ test("the sheet view renders every section of a level-5 life cleric with descrip
   const { derived } = build({ species: "dwarf", background: "acolyte", classes: "cleric", level: 5, abilities: { wis: 16, con: 14 } }, { "class.2.subclass": ["dnd.srd521.subclass.cleric.life-domain"] });
   const html = renderToStaticMarkup(createElement(SheetView, { derived, catalog: catalog(), runtime: initialRuntime(derived) }));
   const text = strip(html);
-  for (const needle of ["테스트", "드워프", derived.background!.name, "클레릭 (생명 권역) 5", "숙련 보너스 +3", "최대 HP", String(derived.hp.max), "AC", "패시브 지각", "암시야 120", "기술", "숙련", "방어", "독", "자원", "신성 변환", "장비", "공격", "주문", "DC", "항상 준비", "Bless", "종족 특성", "드워프의 강인함", "직업 특성", "서브클래스 특성", "생명 보존", "재주", "마법 입문자"]) {
+  for (const needle of ["테스트", "드워프", derived.background!.name, "클레릭 (생명 권역) 5", "숙련 보너스 +3", "최대 HP", String(derived.hp.max), "AC", "패시브 지각", "암시야 120", "기술", "숙련", "방어", "독", "자원", "신성 변환", "가방", "공격", "주문", "DC", "항상 준비", "Bless", "종족 특성", "드워프의 강인함", "직업 특성", "서브클래스 특성", "생명 보존", "재주", "마법 입문자"]) {
     assert.ok(text.includes(needle), `missing "${needle}"`);
   }
   assert.ok(html.includes(`title="${derived.hp.breakdown.join("\n")}"`) || html.includes("1레벨 클레릭 d8"), "HP breakdown is attached as a title");

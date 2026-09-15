@@ -1,8 +1,11 @@
 /**
- * CharacterRuntime: the mutable state of play (current HP, slots and resources used, conditions, equipped items),
- * persisted next to the source and reconciled against the derived character whenever the source changes.
+ * CharacterRuntime: the mutable state of play (current HP, slots and resources used, conditions, equipped items,
+ * bag changes, a short activity log), persisted next to the source and reconciled against the derived character
+ * whenever the source changes.
  */
-import type { DerivedCharacter } from "./types";
+import type { DerivedCharacter, InventoryPatch } from "./types";
+
+export interface RuntimeLogEntry { at: string; text: string }
 
 export interface CharacterRuntime {
   schema: 2;
@@ -19,8 +22,12 @@ export interface CharacterRuntime {
   equipped: { armor?: string; shield?: string; mainHand?: string; offHand?: string };
   attuned: string[];
   gold: number;
+  inventory: InventoryPatch;
+  log: RuntimeLogEntry[];
   updatedAt: string;
 }
+
+export const emptyInventoryPatch = (): InventoryPatch => ({ removed: [], quantities: {}, extra: [] });
 
 export function initialRuntime(derived: DerivedCharacter): CharacterRuntime {
   const armor = derived.inventory.find((item) => item.equipped && item.kind === "armor");
@@ -41,6 +48,8 @@ export function initialRuntime(derived: DerivedCharacter): CharacterRuntime {
     equipped: { armor: armor?.instanceId, shield: shield?.instanceId, mainHand: weapon?.instanceId },
     attuned: [],
     gold: derived.gold,
+    inventory: emptyInventoryPatch(),
+    log: [],
     updatedAt: new Date().toISOString(),
   };
 }
@@ -67,6 +76,8 @@ export function reconcileRuntime(runtime: CharacterRuntime, derived: DerivedChar
     pactSlotsUsed: Math.min(runtime.pactSlotsUsed, derived.pactMagic?.count ?? 0),
     resourcesUsed,
     hitDiceSpent,
+    inventory: runtime.inventory ?? emptyInventoryPatch(),
+    log: runtime.log ?? [],
     equipped: { armor: keep(runtime.equipped.armor), shield: keep(runtime.equipped.shield), mainHand: keep(runtime.equipped.mainHand), offHand: keep(runtime.equipped.offHand) },
     updatedAt: new Date().toISOString(),
   };

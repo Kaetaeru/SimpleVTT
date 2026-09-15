@@ -59,7 +59,7 @@ export function applySpecies(ledger: Ledger) {
     if (trait.minLevel && ledger.level < trait.minLevel) continue;
     ledger.addFeature({ id: trait.id, name: trait.name, nameEn: trait.nameEn, source: "species", sourceLabel, level: trait.minLevel, description: trait.description, descriptionSource: trait.descriptionSource });
     const traitKey = trait.id.split(".trait.").pop() ?? trait.id;
-    if (traitKey === "dwarven-toughness") ledger.hpPerLevelBonus += 1;
+    if (traitKey === "dwarven-toughness") { ledger.hpPerLevelBonus += 1; ledger.hpPerLevelSource = trait.name; }
     if (traitKey === "poison-resistance") ledger.resistances.add("poison");
     if (traitKey === "trance") ledger.flags.add("trance");
     const resource = SPECIES_TRAIT_RESOURCES[traitKey];

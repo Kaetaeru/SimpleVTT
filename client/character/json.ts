@@ -5,7 +5,7 @@
  */
 import type { ContentCatalog } from "../catalog/catalog";
 import { ABILITY_KEYS } from "../catalog/types";
-import { initialRuntime, type CharacterRuntime } from "./runtime";
+import { emptyInventoryPatch, initialRuntime, type CharacterRuntime } from "./runtime";
 import type { CharacterSource, DerivedCharacter } from "./types";
 
 export const CHARACTER_FILE_FORMAT = "simplevtt.character";
@@ -155,8 +155,21 @@ function validateRuntime(value: unknown, errors: string[], warnings: string[]): 
     equipped: compact({ armor: pick("armor"), shield: pick("shield"), mainHand: pick("mainHand"), offHand: pick("offHand") }),
     attuned: isStringArray(value.attuned) ? value.attuned : [],
     gold: typeof value.gold === "number" ? value.gold : 0,
+    inventory: parseInventoryPatch(value.inventory),
+    log: Array.isArray(value.log) ? value.log.filter((entry): entry is { at: string; text: string } => isObject(entry) && typeof entry.at === "string" && typeof entry.text === "string") : [],
     updatedAt: typeof value.updatedAt === "string" ? value.updatedAt : new Date().toISOString(),
   };
+}
+
+function parseInventoryPatch(value: unknown): CharacterRuntime["inventory"] {
+  if (!isObject(value)) return emptyInventoryPatch();
+  const quantities: Record<string, number> = {};
+  if (isObject(value.quantities)) for (const [key, count] of Object.entries(value.quantities)) if (Number.isInteger(count)) quantities[key] = count as number;
+  const extra = Array.isArray(value.extra)
+    ? value.extra.filter((item): item is { instanceId: string; itemId?: string; name: string; quantity: number } => isObject(item) && typeof item.instanceId === "string" && typeof item.name === "string" && Number.isInteger(item.quantity))
+      .map((item) => ({ instanceId: item.instanceId, itemId: typeof item.itemId === "string" ? item.itemId : undefined, name: item.name, quantity: item.quantity }))
+    : [];
+  return { removed: isStringArray(value.removed) ? value.removed : [], quantities, extra };
 }
 
 /** Content ids the source names that the catalog does not know — the modules to install before the sheet works. */

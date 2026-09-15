@@ -65,6 +65,8 @@ CHARACTER_SYSTEM §3.1의 모든 행에 더해:
 
 화면 규약: 마법사는 원본만 바꾸고(`setChoice`/`addLevel`…) 매 변경마다 `deriveCharacter`를 다시 돌려 오른쪽 시트와 검증을 갱신한다. 막힘(blocking)이 하나라도 있으면 저장 버튼이 잠긴다(수락 6). 새 캐릭터 초안은 설정 키 `creation-draft`에 자동 저장되어 창을 닫아도 남는다. "남은 선택 빠르게 채우기"는 `autofill`이다. 시트의 현재 HP만 런타임을 바꾼다(나머지 운용은 M2).
 
+**M2 착수 (2026-09-15, 소유자 지시 "숫자 출처 추적 + 오프라인 세션처럼 시트 조작")**: 파생값마다 `terms`(가산 항목)를 붙여 시트에서 마우스를 올리면 출처가 나온다(HP·AC·이니셔티브·속도·패시브 지각·능력치·내성·기술·공격 명중/피해·주문 DC/명중). 시트는 런타임을 직접 조작한다: 피해/회복/설정/임시 HP, 히트 다이스 소비, 짧은 휴식(자원 회복 규칙 `restore.short`, 계약 슬롯)·긴 휴식(전부 회복, 히트 다이스 절반, 탈진 −1), 슬롯·자원 핍 클릭, 금화 증감, 아이템 추가(카탈로그 검색 또는 직접 입력)·수량·버리기·착용(AC·공격에 반영), 상태 토글, 탈진, 죽음 내성, 영웅적 영감, 활동 기록 200줄. 연산은 `client/character/play.ts`의 순수 함수이고 `play.test.ts`가 덮는다. 런타임 스키마에 `inventory`(제거·수량·추가)와 `log`가 추가됐다(JSON v2 호환, 없으면 빈 값).
+
 엔진의 선택 id 규약(원본 `choices` 맵의 키): `origin.languages`, `origin.species.<choice>`(`origin.species.lineage`…), `origin.background.abilityMode|abilityPlus2|abilityPlus1|tool`, `class.<트랙>.skills|expertise|fighting-style|subclass|asi|epic-boon|...`, 직업 전체 풀은 첫 트랙에 붙는다(`class.<첫 트랙>.weapon-mastery|invocations|metamagic|cantrips|spells|spellbook`), 재주 하위 선택은 `feat.<부여 위치>.<재주 id>.<항목>`, 장비는 `equipment.class|background[.<옵션>.<n>]`. 답은 항상 옵션 id 배열이고, 옵션 밖의 답은 무시된다(모듈 제거·레벨 되돌림에도 안전).
 
 M1에서 단순화한 것: 반복 가능한 기원술(고통스러운 폭발 등)은 한 번만 고른다. 준비 주문은 최대치보다 적어도 막지 않는다(규칙대로). ASI 후보에서 기원 재주를 뺀다(소유자 결정; 규칙상은 허용).

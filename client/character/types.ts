@@ -77,7 +77,10 @@ export interface DerivedFeature {
   descriptionSource?: "module" | "srd-summary";
 }
 
-export interface DerivedSkill { id: string; name: string; ability: AbilityKey; proficient: boolean; expertise: boolean; bonus: number }
+/** One addend of a derived number, so the sheet can show where it came from ("민첩 +2", "숙련 보너스 +3"). */
+export interface Term { label: string; value: number }
+
+export interface DerivedSkill { id: string; name: string; ability: AbilityKey; proficient: boolean; expertise: boolean; bonus: number; terms: Term[] }
 
 export interface DerivedAttack {
   id: string;
@@ -85,8 +88,10 @@ export interface DerivedAttack {
   itemId?: string;
   ability: AbilityKey;
   attackBonus: number;
+  attackTerms: Term[];
   damage: string;
   damageBonus: number;
+  damageTerms: Term[];
   damageType: string;
   properties: string[];
   mastery?: string;
@@ -102,7 +107,9 @@ export interface DerivedSpellcasting {
   className: string;
   ability: AbilityKey;
   saveDc: number;
+  saveDcTerms: Term[];
   attackBonus: number;
+  attackTerms: Term[];
   cantrips: string[];
   prepared: string[];
   alwaysPrepared: string[];
@@ -111,9 +118,25 @@ export interface DerivedSpellcasting {
   cantripsMax: number;
 }
 
-export interface DerivedResource { id: string; label: string; max: number; recovery: string; source: string }
+export interface DerivedResource {
+  id: string;
+  label: string;
+  max: number;
+  /** Human recovery text ("짧은 휴식"). */
+  recovery: string;
+  /** Machine recovery: what a short rest gives back (`all`, a number of uses, or nothing); a long rest always restores all. */
+  restore: { short: "all" | number | 0 };
+  source: string;
+}
 
-export interface DerivedItem { instanceId: string; itemId: string; name: string; kind: string; quantity: number; equipped?: boolean; wieldSlot?: "main-hand" | "off-hand" | "two-hand"; source: string }
+export interface DerivedItem { instanceId: string; itemId: string; name: string; kind: string; quantity: number; equipped?: boolean; wieldSlot?: "main-hand" | "off-hand" | "two-hand"; source: string; custom?: boolean }
+
+/** Runtime-side changes to the bag: items removed, quantities changed, items added during play. */
+export interface InventoryPatch {
+  removed: string[];
+  quantities: Record<string, number>;
+  extra: Array<{ instanceId: string; itemId?: string; name: string; quantity: number }>;
+}
 
 export interface DerivedCharacter {
   id: string;
@@ -125,14 +148,16 @@ export interface DerivedCharacter {
   background: { id: string; name: string } | null;
   classes: Array<{ classId: string; name: string; level: number; subclassId?: string; subclassName?: string; hitDie: number }>;
   abilities: Record<AbilityKey, { score: number; modifier: number; base: number; bonuses: Array<{ source: string; value: number }> }>;
-  hp: { max: number; breakdown: string[] };
-  ac: { value: number; source: string; breakdown: string[] };
-  speed: { walk: number; climb?: number; swim?: number; fly?: number };
+  hp: { max: number; breakdown: string[]; terms: Term[] };
+  ac: { value: number; source: string; breakdown: string[]; terms: Term[] };
+  speed: { walk: number; climb?: number; swim?: number; fly?: number; terms: Term[] };
   senses: { darkvision?: number; blindsight?: number; truesight?: number };
   size: string;
   initiative: number;
+  initiativeTerms: Term[];
   passivePerception: number;
-  saves: Record<AbilityKey, { proficient: boolean; bonus: number }>;
+  passivePerceptionTerms: Term[];
+  saves: Record<AbilityKey, { proficient: boolean; bonus: number; terms: Term[] }>;
   skills: DerivedSkill[];
   proficiencies: { armor: string[]; weapons: string[]; tools: string[]; languages: string[] };
   features: DerivedFeature[];

@@ -93,7 +93,7 @@ export function applyFeat(ledger: Ledger, feat: FeatView, instance: FeatInstance
   if (typeof config.truesight === "number") ledger.senses.truesight = Math.max(ledger.senses.truesight ?? 0, config.truesight);
   if (typeof config.darkvision === "number") ledger.senses.darkvision = Math.max(ledger.senses.darkvision ?? 0, config.darkvision);
   if (typeof config.speedBonus === "number") ledger.speedBonus += config.speedBonus;
-  if (typeof config.hitPointsPerLevel === "number") ledger.hpPerLevelBonus += config.hitPointsPerLevel;
+  if (typeof config.hitPointsPerLevel === "number") { ledger.hpPerLevelBonus += config.hitPointsPerLevel; ledger.hpPerLevelSource = feat.name; }
   for (const key of ABILITY_KEYS) {
     const save = config[`${key}SaveProficiency`];
     if (save === true && !ledger.saves.has(key)) ledger.saves.set(key, feat.name);
