@@ -7,6 +7,20 @@ import type { DerivedCharacter, InventoryPatch } from "./types";
 
 export interface RuntimeLogEntry { at: string; text: string }
 
+/** A feature or spell in effect (Rage, Bless): ended by its "종료" button, by the round counter, or by a rest. */
+export interface ActiveEffect {
+  /** `feature:<featureId>` or `spell:<spellId>`. */
+  key: string;
+  name: string;
+  source: "feature" | "spell";
+  duration: string;
+  concentration: boolean;
+  /** Round counter when the duration is short enough to track (10 rounds for one minute). */
+  rounds?: number;
+  elapsed: number;
+  startedAt: string;
+}
+
 export interface CharacterRuntime {
   schema: 2;
   characterId: string;
@@ -24,6 +38,7 @@ export interface CharacterRuntime {
   gold: number;
   inventory: InventoryPatch;
   log: RuntimeLogEntry[];
+  effects: ActiveEffect[];
   updatedAt: string;
 }
 
@@ -50,6 +65,7 @@ export function initialRuntime(derived: DerivedCharacter): CharacterRuntime {
     gold: derived.gold,
     inventory: emptyInventoryPatch(),
     log: [],
+    effects: [],
     updatedAt: new Date().toISOString(),
   };
 }
@@ -78,6 +94,7 @@ export function reconcileRuntime(runtime: CharacterRuntime, derived: DerivedChar
     hitDiceSpent,
     inventory: runtime.inventory ?? emptyInventoryPatch(),
     log: runtime.log ?? [],
+    effects: runtime.effects ?? [],
     equipped: { armor: keep(runtime.equipped.armor), shield: keep(runtime.equipped.shield), mainHand: keep(runtime.equipped.mainHand), offHand: keep(runtime.equipped.offHand) },
     updatedAt: new Date().toISOString(),
   };

@@ -4,10 +4,12 @@
  * offline session feel. `compact` is the wizard's live preview: one column, read-only.
  */
 import { useState } from "react";
-import type { ContentCatalog } from "../catalog/catalog";
+import type { ContentCatalog, SpellView } from "../catalog/catalog";
 import { ABILITY_KEYS, ABILITY_KO } from "../catalog/types";
+import type { CastMethod } from "../character/play";
 import type { CharacterRuntime } from "../character/runtime";
 import type { DerivedCharacter, DerivedFeature } from "../character/types";
+import { effectKeyForFeature, effectKeyForSpell, featureActivation, parseDuration } from "../rules/activation";
 import { Pill, signed } from "../ui/components";
 import { Explain } from "../ui/Explain";
 
@@ -29,6 +31,12 @@ export interface SheetActions {
   openAddItem: () => void;
   /** Roll dice with the overlay: label, formula ("1d20+5"), note. */
   roll: (label: string, formula: string, note?: string, kind?: "check" | "attack" | "damage" | "save" | "initiative" | "custom") => void;
+  /** "사용" on a feature: spend its pool, heal/temp HP rolls, start its effect. */
+  useFeature: (feature: DerivedFeature) => void;
+  /** "종료" on an effect (feature or spell) by its key. */
+  endEffect: (key: string) => void;
+  /** "시전": spend the chosen slot/pool and start the spell's effect when it lasts. */
+  castSpell: (spell: SpellView, method: CastMethod) => void;
 }
 
 const d20 = (bonus: number) => `1d20${bonus >= 0 ? "+" : "-"}${Math.abs(bonus)}`;
@@ -46,6 +54,62 @@ export function SheetView({ derived, catalog, runtime, compact = false, actions 
   };
   const live = Boolean(actions && runtime);
   const gold = runtime ? runtime.gold : derived.gold;
+  const [casting, setCasting] = useState<string | null>(null);
+  const isActive = (key: string) => Boolean(runtime?.effects?.some((effect) => effect.key === key));
+  const groupIds = (ids: string[]) => {
+    const groups = new Map<number, string[]>();
+    for (const id of ids) { const level = spellLevel(id); groups.set(level, [...(groups.get(level) ?? []), id]); }
+    return [...groups.entries()].sort((a, b) => a[0] - b[0]);
+  };
+  /** Ways to pay for a spell right now: slots at or above its level with uses left, the pact slot, ritual, a free-cast pool. */
+  const castOptions = (spell: SpellView): Array<{ label: string; method: CastMethod }> => {
+    if (spell.level === 0) return [{ label: "소마법", method: { kind: "cantrip" } }];
+    const options: Array<{ label: string; method: CastMethod }> = [];
+    for (const [level, count] of Object.entries(derived.spellSlots).map(([key, value]) => [Number(key), value] as const).sort((a, b) => a[0] - b[0])) {
+      const left = count - (runtime?.slotsUsed[level] ?? 0);
+      if (level >= spell.level && left > 0) options.push({ label: `${level}레벨 슬롯 (${left})`, method: { kind: "slot", level } });
+    }
+    if (derived.pactMagic && derived.pactMagic.level >= spell.level && derived.pactMagic.count - (runtime?.pactSlotsUsed ?? 0) > 0) options.push({ label: `계약 슬롯 ${derived.pactMagic.level}레벨 (${derived.pactMagic.count - (runtime?.pactSlotsUsed ?? 0)})`, method: { kind: "pact" } });
+    for (const resource of derived.resources) {
+      const left = resource.max - (runtime?.resourcesUsed[resource.id] ?? 0);
+      if (left > 0 && (resource.id.endsWith(`.${spell.id}`) || resource.id.endsWith(`.${spell.id.split(".").pop()}`)) && resource.label.includes("무료")) options.push({ label: `${resource.label} (${left})`, method: { kind: "resource", id: resource.id } });
+    }
+    if (spell.ritual) options.push({ label: "의식 (슬롯 없이, +10분)", method: { kind: "ritual" } });
+    return options;
+  };
+  const SpellRows = ({ ids, castable }: { ids: string[]; castable: boolean }) => (
+    <>
+      {groupIds(ids).map(([level, group]) => (
+        <div className="cl-spell-group" key={level}>
+          <span className="cl-quiet cl-small">{level === 0 ? "소마법" : `${level}레벨`}</span>
+          {group.map((id) => {
+            const spell = catalog.spellById(id);
+            const name = spellName(id);
+            const duration = parseDuration(spell?.duration);
+            const active = isActive(effectKeyForSpell(id));
+            const options = spell && live && castable ? castOptions(spell) : [];
+            return (
+              <div className={`cl-spell-row${active ? " active" : ""}`} key={id}>
+                <span className="cl-spell-name">{name}{spell?.ritual ? <span className="cl-quiet cl-small"> 의식</span> : null}{duration.concentration ? <Pill tone="accent">집중</Pill> : null}</span>
+                {spell ? <span className="cl-quiet cl-small cl-spell-meta">{spell.castingTime.split(/[—,]/)[0]} · {spell.duration}</span> : null}
+                {live && castable && spell ? (
+                  active ? <button type="button" className="cl-btn small danger" onClick={() => actions!.endEffect(effectKeyForSpell(id))}>종료</button>
+                  : options.length === 1 ? <button type="button" className="cl-btn small primary" onClick={() => actions!.castSpell(spell, options[0].method)}>시전</button>
+                  : <button type="button" className="cl-btn small primary" disabled={options.length === 0} title={options.length === 0 ? "쓸 수 있는 슬롯이 없습니다" : undefined} onClick={() => setCasting(casting === id ? null : id)}>시전{options.length > 1 ? " ▾" : ""}</button>
+                ) : null}
+                {casting === id && options.length > 1 ? (
+                  <div className="cl-cast-picker" role="group" aria-label={`${name} 시전 방법`}>
+                    {options.map((option) => <button type="button" key={option.label} className="cl-btn small" onClick={() => { actions!.castSpell(spell!, option.method); setCasting(null); }}>{option.label}</button>)}
+                    <button type="button" className="cl-btn small quiet" onClick={() => setCasting(null)}>취소</button>
+                  </div>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+      ))}
+    </>
+  );
   return (
     <div className={`cl-sheet${compact ? " compact" : ""}`}>
       <div className="cl-sheet-head">
@@ -221,10 +285,10 @@ export function SheetView({ derived, catalog, runtime, compact = false, actions 
                     <span className="cl-name">{entry.className}</span>
                     <span className="cl-quiet cl-small">{ABILITY_KO[entry.ability]} · DC <Explain terms={entry.saveDcTerms} total={entry.saveDc} label={`${entry.className} 내성 DC`}>{entry.saveDc}</Explain> · 명중 <Explain terms={entry.attackTerms} total={entry.attackBonus} label={`${entry.className} 주문 명중`}>{signed(entry.attackBonus)}</Explain></span>
                   </div>
-                  {entry.cantrips.length ? <div className="cl-spell-level"><h4>소마법 {entry.cantripsMax ? `(${entry.cantrips.length}/${entry.cantripsMax})` : ""}</h4><div className="cl-small">{entry.cantrips.map(spellName).join(", ")}</div></div> : null}
-                  {entry.alwaysPrepared.length ? <div className="cl-spell-level"><h4>항상 준비</h4>{byLevel(entry.alwaysPrepared).map(([level, names]) => <div className="cl-small" key={level}><span className="cl-quiet">{level}레벨</span> {names.join(", ")}</div>)}</div> : null}
-                  {entry.preparedMax ? <div className="cl-spell-level"><h4>준비 주문 ({entry.prepared.length}/{entry.preparedMax})</h4>{byLevel(entry.prepared).map(([level, names]) => <div className="cl-small" key={level}><span className="cl-quiet">{level}레벨</span> {names.join(", ")}</div>)}</div> : null}
-                  {entry.spellbook ? <div className="cl-spell-level"><h4>주문서 ({entry.spellbook.length})</h4>{byLevel(entry.spellbook).map(([level, names]) => <div className="cl-small" key={level}><span className="cl-quiet">{level}레벨</span> {names.join(", ")}</div>)}</div> : null}
+                  {entry.cantrips.length ? <div className="cl-spell-level"><h4>소마법 {entry.cantripsMax ? `(${entry.cantrips.length}/${entry.cantripsMax})` : ""}</h4>{live ? <SpellRows ids={entry.cantrips} castable /> : <div className="cl-small">{entry.cantrips.map(spellName).join(", ")}</div>}</div> : null}
+                  {entry.alwaysPrepared.length ? <div className="cl-spell-level"><h4>항상 준비</h4>{live ? <SpellRows ids={entry.alwaysPrepared} castable /> : byLevel(entry.alwaysPrepared).map(([level, names]) => <div className="cl-small" key={level}><span className="cl-quiet">{level}레벨</span> {names.join(", ")}</div>)}</div> : null}
+                  {entry.preparedMax ? <div className="cl-spell-level"><h4>준비 주문 ({entry.prepared.length}/{entry.preparedMax})</h4>{live ? <SpellRows ids={entry.prepared} castable /> : byLevel(entry.prepared).map(([level, names]) => <div className="cl-small" key={level}><span className="cl-quiet">{level}레벨</span> {names.join(", ")}</div>)}</div> : null}
+                  {entry.spellbook ? <div className="cl-spell-level"><h4>주문서 ({entry.spellbook.length}) <span className="cl-quiet">— 준비한 주문만 시전</span></h4>{byLevel(entry.spellbook).map(([level, names]) => <div className="cl-small" key={level}><span className="cl-quiet">{level}레벨</span> {names.join(", ")}</div>)}</div> : null}
                 </div>
               ))}
             </section>
@@ -240,13 +304,26 @@ export function SheetView({ derived, catalog, runtime, compact = false, actions 
                   {features.map((feature) => {
                     const key = `${feature.sourceLabel}|${feature.id}`;
                     const open = compact ? false : (openFeatures[key] ?? true);
+                    const activation = live ? featureActivation(feature, derived) : undefined;
+                    const pool = activation?.resourceId ? derived.resources.find((resource) => resource.id === activation.resourceId) : undefined;
+                    const left = pool ? pool.max - (runtime?.resourcesUsed[pool.id] ?? 0) : undefined;
+                    const active = isActive(effectKeyForFeature(feature.id));
                     return (
-                      <div className="cl-feature" key={key}>
+                      <div className={`cl-feature${active ? " active" : ""}`} key={key}>
                         <div className="cl-head" onClick={() => setOpenFeatures((state) => ({ ...state, [key]: !open }))} style={{ cursor: compact ? "default" : "pointer" }}>
                           <span className="cl-name">{feature.name}</span>
                           {feature.nameEn && feature.nameEn !== feature.name ? <span className="cl-quiet cl-small">{feature.nameEn}</span> : null}
                           {feature.level ? <Pill>{feature.level}레벨</Pill> : null}
+                          {active ? <Pill tone="accent">진행 중</Pill> : null}
                           <span className="cl-src">{feature.sourceLabel}</span>
+                          {activation ? (
+                            <span className="cl-row cl-use" style={{ gap: 4 }} onClick={(event) => event.stopPropagation()}>
+                              {pool ? <span className="cl-quiet cl-small">{left}/{pool.max}</span> : null}
+                              {activation.note ? <span className="cl-quiet cl-small cl-use-note">{activation.note}</span> : null}
+                              {active ? <button type="button" className="cl-btn small danger" onClick={() => actions!.endEffect(effectKeyForFeature(feature.id))}>종료</button> : null}
+                              <button type="button" className="cl-btn small primary" disabled={left !== undefined && left <= 0} title={left !== undefined && left <= 0 ? "남은 횟수가 없습니다" : undefined} onClick={() => actions!.useFeature(feature)}>{active ? "다시 사용" : "사용"}</button>
+                            </span>
+                          ) : null}
                         </div>
                         {open && feature.description ? <div className="cl-desc">{feature.description}</div> : null}
                       </div>

@@ -5,7 +5,7 @@
  */
 import type { ContentCatalog } from "../catalog/catalog";
 import { ABILITY_KEYS } from "../catalog/types";
-import { emptyInventoryPatch, initialRuntime, type CharacterRuntime } from "./runtime";
+import { emptyInventoryPatch, initialRuntime, type ActiveEffect, type CharacterRuntime } from "./runtime";
 import type { CharacterSource, DerivedCharacter } from "./types";
 
 export const CHARACTER_FILE_FORMAT = "simplevtt.character";
@@ -157,6 +157,10 @@ function validateRuntime(value: unknown, errors: string[], warnings: string[]): 
     gold: typeof value.gold === "number" ? value.gold : 0,
     inventory: parseInventoryPatch(value.inventory),
     log: Array.isArray(value.log) ? value.log.filter((entry): entry is { at: string; text: string } => isObject(entry) && typeof entry.at === "string" && typeof entry.text === "string") : [],
+    effects: Array.isArray(value.effects)
+      ? value.effects.filter((entry): entry is ActiveEffect => isObject(entry) && typeof entry.key === "string" && typeof entry.name === "string" && (entry.source === "feature" || entry.source === "spell") && typeof entry.duration === "string")
+        .map((entry) => ({ key: entry.key, name: entry.name, source: entry.source, duration: entry.duration, concentration: entry.concentration === true, rounds: Number.isInteger(entry.rounds) ? entry.rounds : undefined, elapsed: Number.isInteger(entry.elapsed) ? entry.elapsed : 0, startedAt: typeof entry.startedAt === "string" ? entry.startedAt : new Date().toISOString() }))
+      : [],
     updatedAt: typeof value.updatedAt === "string" ? value.updatedAt : new Date().toISOString(),
   };
 }

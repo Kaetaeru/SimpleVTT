@@ -3,7 +3,9 @@
  * rests, spell slots, resources, gold, bag changes, equip, conditions, death saves, inspiration. Every operation is a
  * pure function (runtime, derived) → runtime that also appends a log line, so the sheet can show what happened.
  */
-import type { CharacterRuntime } from "./runtime";
+import type { FeatureActivation, ParsedDuration } from "../rules/activation";
+import { effectKeyForFeature, effectKeyForSpell, parseDuration } from "../rules/activation";
+import type { ActiveEffect, CharacterRuntime } from "./runtime";
 import { emptyInventoryPatch } from "./runtime";
 import type { DerivedCharacter } from "./types";
 
@@ -98,7 +100,8 @@ export function shortRest(runtime: CharacterRuntime, derived: DerivedCharacter, 
     else if (resource.restore.short > 0) { resourcesUsed[resource.id] = Math.max(0, used - resource.restore.short); restored.push(`${resource.label} ${Math.min(used, resource.restore.short)}회`); }
   }
   if (derived.pactMagic && next.pactSlotsUsed > 0) restored.push("계약 마법 슬롯");
-  return stamp({ ...next, resourcesUsed, pactSlotsUsed: 0 }, `짧은 휴식${restored.length ? ` — 회복: ${restored.join(", ")}` : ""}`);
+  const ended = (next.effects ?? []).filter((effect) => effect.rounds !== undefined || effect.concentration);
+  return stamp({ ...next, resourcesUsed, pactSlotsUsed: 0, effects: (next.effects ?? []).filter((effect) => !ended.includes(effect)) }, `짧은 휴식${restored.length ? ` — 회복: ${restored.join(", ")}` : ""}${ended.length ? ` — 종료: ${ended.map((effect) => effect.name).join(", ")}` : ""}`);
 }
 
 /** Long rest: full HP, no temp HP, all slots and pools, half the hit dice (at least one), one exhaustion level less. */
@@ -121,7 +124,8 @@ export function longRest(runtime: CharacterRuntime, derived: DerivedCharacter): 
     hitDiceSpent,
     exhaustion: Math.max(0, runtime.exhaustion - 1),
     deathSaves: { success: 0, failure: 0 },
-  }, `긴 휴식 — HP ${derived.hp.max}/${derived.hp.max}, 슬롯·자원 전부 회복, 히트 다이스 절반 회복`);
+    effects: [],
+  }, `긴 휴식 — HP ${derived.hp.max}/${derived.hp.max}, 슬롯·자원 전부 회복, 히트 다이스 절반 회복${(runtime.effects ?? []).length ? `, 효과 종료: ${runtime.effects.map((effect) => effect.name).join(", ")}` : ""}`);
 }
 
 // ---- slots and resources
@@ -242,4 +246,95 @@ export function resetDeathSaves(runtime: CharacterRuntime): CharacterRuntime {
 
 export function setInspiration(runtime: CharacterRuntime, value: boolean): CharacterRuntime {
   return runtime.heroicInspiration === value ? runtime : stamp({ ...runtime, heroicInspiration: value }, value ? "영웅적 영감 획득" : "영웅적 영감 사용");
+}
+
+// ---- effects (features and spells in effect), feature use, spell casting
+
+/** Start (or restart) an effect. A concentration effect ends any other concentration effect first. */
+export function startEffect(runtime: CharacterRuntime, effect: Omit<ActiveEffect, "elapsed" | "startedAt">): CharacterRuntime {
+  let next = runtime;
+  const effects = [...(next.effects ?? [])];
+  if (effect.concentration) {
+    for (const other of effects.filter((item) => item.concentration && item.key !== effect.key)) next = stamp(next, `집중 종료: ${other.name} (${effect.name}에 집중)`);
+  }
+  const kept = effects.filter((item) => item.key !== effect.key && !(effect.concentration && item.concentration));
+  return { ...next, effects: [...kept, { ...effect, elapsed: 0, startedAt: new Date().toISOString() }] };
+}
+
+export function endEffect(runtime: CharacterRuntime, key: string, reason?: string): CharacterRuntime {
+  const effect = (runtime.effects ?? []).find((item) => item.key === key);
+  if (!effect) return runtime;
+  return stamp({ ...runtime, effects: runtime.effects.filter((item) => item.key !== key) }, `${effect.source === "spell" ? "주문 종료" : "종료"}: ${effect.name}${reason ? ` (${reason})` : ""}`);
+}
+
+/** One round passes: every counted effect advances; those that reach their duration end. */
+export function advanceRound(runtime: CharacterRuntime): CharacterRuntime {
+  const effects = runtime.effects ?? [];
+  if (effects.length === 0) return runtime;
+  let next: CharacterRuntime = { ...runtime, effects: effects.map((effect) => (effect.rounds !== undefined ? { ...effect, elapsed: effect.elapsed + 1 } : effect)) };
+  for (const effect of next.effects.filter((item) => item.rounds !== undefined && item.elapsed >= (item.rounds ?? 0))) next = endEffect(next, effect.key, "지속 시간 끝");
+  return stamp(next, `라운드 진행 (${next.effects.filter((effect) => effect.rounds !== undefined).map((effect) => `${effect.name} ${effect.elapsed}/${effect.rounds}`).join(", ") || "진행 중인 효과 없음"})`);
+}
+
+export interface FeatureUseExtras { healRoll?: number; tempRoll?: number; points?: number }
+
+/** Press "사용" on a feature: spend the pool (one use or a number of points), heal or grant temp HP from a roll, start its timed effect, log. */
+export function useFeature(runtime: CharacterRuntime, derived: DerivedCharacter, feature: { id: string; name: string }, activation: FeatureActivation, extras: FeatureUseExtras = {}): CharacterRuntime | null {
+  let next = runtime;
+  const parts: string[] = [];
+  if (activation.resourceId) {
+    const resource = derived.resources.find((item) => item.id === activation.resourceId);
+    if (!resource) return null;
+    const used = next.resourcesUsed[resource.id] ?? 0;
+    const spend = activation.points ? Math.max(1, Math.floor(extras.points ?? 1)) : 1;
+    if (used + spend > resource.max) return null;
+    next = { ...next, resourcesUsed: { ...next.resourcesUsed, [resource.id]: used + spend } };
+    parts.push(activation.points ? `${spend}점 사용, ${resource.max - used - spend}/${resource.max} 남음` : `${resource.max - used - 1}/${resource.max} 남음`);
+  }
+  if (activation.heal && extras.healRoll !== undefined) { next = applyHealing(next, derived, extras.healRoll); parts.push(`${extras.healRoll} 회복`); }
+  if (activation.tempHp && extras.tempRoll !== undefined) { next = grantTempHp(next, extras.tempRoll); parts.push(`임시 HP ${extras.tempRoll}`); }
+  const duration = activation.duration?.(derived);
+  if (duration && !duration.instantaneous) {
+    next = startEffect(next, { key: effectKeyForFeature(feature.id), name: feature.name, source: "feature", duration: duration.text, concentration: duration.concentration, rounds: duration.rounds });
+    parts.push(duration.text);
+  }
+  return stamp(next, `사용: ${feature.name}${parts.length ? ` (${parts.join(" · ")})` : ""}`);
+}
+
+export interface SpellSummary { id: string; name: string; level: number; duration?: string; ritual?: boolean }
+export type CastMethod = { kind: "slot"; level: number } | { kind: "pact" } | { kind: "ritual" } | { kind: "cantrip" } | { kind: "resource"; id: string };
+
+/** Cast a spell: spend the slot, pact slot, free-cast pool or nothing (cantrip, ritual); a lasting spell becomes an effect. Null when the cost cannot be paid. */
+export function castSpell(runtime: CharacterRuntime, derived: DerivedCharacter, spell: SpellSummary, method: CastMethod): CharacterRuntime | null {
+  let next = runtime;
+  let how = "";
+  switch (method.kind) {
+    case "slot": {
+      const max = derived.spellSlots[method.level] ?? 0;
+      const used = next.slotsUsed[method.level] ?? 0;
+      if (method.level < spell.level || used >= max) return null;
+      next = { ...next, slotsUsed: { ...next.slotsUsed, [method.level]: used + 1 } };
+      how = `${method.level}레벨 슬롯, 남은 ${max - used - 1}/${max}`;
+      break;
+    }
+    case "pact": {
+      if (!derived.pactMagic || next.pactSlotsUsed >= derived.pactMagic.count || derived.pactMagic.level < spell.level) return null;
+      next = { ...next, pactSlotsUsed: next.pactSlotsUsed + 1 };
+      how = `계약 슬롯 ${derived.pactMagic.level}레벨, 남은 ${derived.pactMagic.count - next.pactSlotsUsed}/${derived.pactMagic.count}`;
+      break;
+    }
+    case "ritual": if (!spell.ritual) return null; how = "의식, 슬롯 없이 (+10분)"; break;
+    case "cantrip": if (spell.level !== 0) return null; how = "소마법"; break;
+    case "resource": {
+      const resource = derived.resources.find((item) => item.id === method.id);
+      const used = next.resourcesUsed[method.id] ?? 0;
+      if (!resource || used >= resource.max) return null;
+      next = { ...next, resourcesUsed: { ...next.resourcesUsed, [method.id]: used + 1 } };
+      how = `${resource.label}, 남은 ${resource.max - used - 1}/${resource.max}`;
+      break;
+    }
+  }
+  const duration: ParsedDuration = parseDuration(spell.duration);
+  if (!duration.instantaneous) next = startEffect(next, { key: effectKeyForSpell(spell.id), name: spell.name, source: "spell", duration: duration.text, concentration: duration.concentration, rounds: duration.rounds });
+  return stamp(next, `시전: ${spell.name} (${how})${duration.instantaneous ? "" : ` — ${duration.text}`}`);
 }

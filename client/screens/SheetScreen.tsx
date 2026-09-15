@@ -9,11 +9,12 @@ import { describeRoll, parseFormula, type RollSpec } from "../character/dice";
 import { useDice } from "../ui/dice/DiceProvider";
 import { exportCharacterFile, serializeCharacterFile } from "../character/json";
 import {
-  addItem, adjustGold, applyHpCommand, clearTempHp, CONDITIONS, hitDiceAvailable, longRest, noteLog, recordDeathSave, removeItem, resetDeathSaves,
+  addItem, adjustGold, advanceRound, applyHpCommand, castSpell, clearTempHp, CONDITIONS, endEffect, hitDiceAvailable, longRest, noteLog, recordDeathSave, removeItem, resetDeathSaves,
   restorePactSlot, restoreResource, restoreSpellSlot, setCurrentHp, setExhaustion, setGold, setInspiration, setItemQuantity, shortRest, toggleCondition, toggleEquip,
-  usePactSlot, useResource, useSpellSlot,
+  useFeature, usePactSlot, useResource, useSpellSlot,
 } from "../character/play";
 import type { CharacterRuntime } from "../character/runtime";
+import { featureActivation } from "../rules/activation";
 import { copyText, downloadText, Modal, Notice, Pill } from "../ui/components";
 import { SheetView, ValidationList, type SheetActions } from "./SheetView";
 
@@ -52,6 +53,32 @@ export function SheetScreen({ id }: { id: string }) {
     removeItem: (instanceId) => commit(removeItem(runtime, derived, instanceId)),
     openAddItem: () => setAdding({ query: "", custom: "", quantity: "1" }),
     roll: (label, formula, note, kind) => { void rollAndLog({ label, formula, note, kind }); },
+    useFeature: (feature) => { void activateFeature(feature); },
+    endEffect: (key) => commit(endEffect(runtime, key)),
+    castSpell: (spell, method) => {
+      const next = castSpell(runtime, derived, { id: spell.id, name: spell.name, level: spell.level, duration: spell.duration, ritual: spell.ritual }, method);
+      if (next) commit(next); else alert("그 방법으로는 시전할 수 없습니다 (슬롯이나 횟수가 없습니다).");
+    },
+  };
+  /** "사용": ask for points when the pool is spent by amount, roll heal/temp HP through the overlay, then apply. */
+  const activateFeature = async (feature: Parameters<SheetActions["useFeature"]>[0]) => {
+    const activation = featureActivation(feature, derived);
+    if (!activation) return;
+    const extras: { healRoll?: number; tempRoll?: number; points?: number } = {};
+    if (activation.points && activation.resourceId) {
+      const pool = derived.resources.find((resource) => resource.id === activation.resourceId);
+      const left = pool ? pool.max - (runtime.resourcesUsed[pool.id] ?? 0) : 0;
+      const answer = prompt(`${feature.name}: 몇 점을 쓸까요? (남은 ${left})`, String(Math.min(left, 5)));
+      if (answer === null) return;
+      const points = Number(answer);
+      if (!Number.isInteger(points) || points < 1 || points > left) { alert("1 이상, 남은 점수 이하의 정수를 넣어 주세요."); return; }
+      extras.points = points;
+      if (confirm(`${points}점을 자신에게 써서 HP를 ${points} 회복할까요? (취소: 다른 대상)`)) extras.healRoll = points;
+    }
+    if (activation.heal) extras.healRoll = (await dice.roll({ label: feature.name, formula: activation.heal(derived), note: "회복", kind: "custom" })).total;
+    if (activation.tempHp) extras.tempRoll = (await dice.roll({ label: feature.name, formula: activation.tempHp(derived), note: "임시 HP", kind: "custom" })).total;
+    const next = useFeature(latestRuntime(), derived, feature, activation.points ? { ...activation, heal: undefined } : activation, extras);
+    if (next) commit(next); else alert("남은 횟수가 없습니다.");
   };
 
   const remove = async () => {
@@ -122,6 +149,23 @@ export function SheetScreen({ id }: { id: string }) {
             <button type="button" className="cl-btn" disabled={!parseFormula(customRoll)} onClick={submitCustomRoll}>굴림</button>
             {["1d20", "1d12", "1d10", "1d8", "1d6", "1d4"].map((formula) => <button type="button" key={formula} className="cl-btn small" onClick={() => void rollAndLog({ label: "주사위", formula, kind: "custom" })}>{formula.slice(1)}</button>)}
           </div>
+        </div>
+        <div className="cl-card">
+          <h3 className="cl-muted" style={{ display: "flex", gap: 8, alignItems: "center" }}>진행 중인 효과 <Pill>{runtime.effects?.length ?? 0}</Pill>
+            <button type="button" className="cl-btn small" style={{ marginLeft: "auto" }} disabled={!runtime.effects?.length} title="라운드가 지나면 라운드로 세는 효과가 하나씩 줄고, 다 되면 저절로 끝납니다." onClick={() => commit(advanceRound(runtime))}>다음 라운드</button>
+          </h3>
+          {runtime.effects?.length ? (
+            <div className="cl-effects">
+              {runtime.effects.map((effect) => (
+                <div className="cl-effect" key={effect.key}>
+                  <span className="cl-name">{effect.name}</span>
+                  {effect.concentration ? <Pill tone="accent">집중</Pill> : null}
+                  <span className="cl-quiet cl-small">{effect.rounds !== undefined ? `${effect.elapsed}/${effect.rounds} 라운드 · ` : ""}{effect.duration}</span>
+                  <button type="button" className="cl-btn small danger" style={{ marginLeft: "auto" }} onClick={() => commit(endEffect(runtime, effect.key))}>종료</button>
+                </div>
+              ))}
+            </div>
+          ) : <p className="cl-quiet cl-small">격노·주문처럼 지속되는 것을 사용하면 여기에 나타나고, 종료 버튼이나 라운드 진행으로 끝냅니다.</p>}
         </div>
         <div className="cl-card">
           <h3 className="cl-muted">상태</h3>

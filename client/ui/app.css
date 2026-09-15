@@ -226,3 +226,18 @@ details.cl-details[open]>summary{color:var(--text)}
 .cl-hp-roll .cl-big{font-size:var(--text-xl);font-weight:700;min-width:36px;text-align:center}
 
 .cl-hp-slider{width:100%;accent-color:var(--accent);margin:0}
+
+/* Feature use and spell casting on the live sheet; active effects. */
+.cl-feature.active{border-color:var(--accent)}
+.cl-feature .cl-use{margin-left:auto;align-items:center}
+.cl-use-note{max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cl-spell-group{display:flex;flex-direction:column;gap:2px;margin-bottom:4px}
+.cl-spell-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:3px 6px;border-radius:var(--radius-s);border:1px solid transparent}
+.cl-spell-row:hover{background:var(--surface-2)}
+.cl-spell-row.active{border-color:var(--accent)}
+.cl-spell-row .cl-spell-name{font-weight:600;display:inline-flex;gap:4px;align-items:center}
+.cl-spell-row .cl-spell-meta{flex:1;min-width:120px}
+.cl-cast-picker{flex-basis:100%;display:flex;flex-wrap:wrap;gap:4px;padding:4px 0 2px}
+.cl-effects{display:flex;flex-direction:column;gap:4px}
+.cl-effect{display:flex;align-items:center;gap:8px;padding:4px 8px;border:1px solid var(--accent);border-radius:var(--radius-s);background:color-mix(in srgb,var(--accent) 8%,var(--surface))}
+.cl-effect .cl-name{font-weight:600}
