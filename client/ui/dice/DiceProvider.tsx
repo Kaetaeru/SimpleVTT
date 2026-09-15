@@ -62,14 +62,17 @@ function DiceOverlay({ result, onSettled, onFinished }: { result: RollResult; on
   const [fading, setFading] = useState(false);
   const [reel, setReel] = useState<number | null>(null);
   const settledRef = useRef(false);
+  const reelTimer = useRef<number | null>(null);
   const rawTotal = result.total - result.modifier;
-  const dice: PhysicsDie[] = result.dice.map((die) => ({ sides: physicalSides(die.sides), value: die.value }));
+  // Stable per roll: the physics component rebuilds its scene whenever this array identity changes.
+  const dice = useMemo<PhysicsDie[]>(() => result.dice.map((die) => ({ sides: physicalSides(die.sides), value: die.value })), [result.id, result.dice]);
   const sides = result.dice[0]?.sides;
   const notation = sides && result.dice.every((die) => die.sides === sides) ? `${result.dice.length === 1 ? "" : result.dice.length}d${sides}` : result.dice.map((die) => `d${die.sides}`).join(" + ");
   const tone = resolved ? (result.natural === 20 ? "natural-20" : result.natural === 1 ? "natural-1" : "normal") : "normal";
   const settle = useCallback(() => {
     if (settledRef.current) return;
     settledRef.current = true;
+    if (reelTimer.current !== null) { window.clearInterval(reelTimer.current); reelTimer.current = null; }
     setReel(rawTotal);
     setResolved(true);
     onSettled();
@@ -77,9 +80,9 @@ function DiceOverlay({ result, onSettled, onFinished }: { result: RollResult; on
   }, [rawTotal, onSettled, onFinished]);
   useEffect(() => {
     const upper = Math.max(2, result.dice.reduce((sum, die) => sum + die.sides, 0));
-    const reelTimer = window.setInterval(() => setReel(1 + Math.floor(Math.random() * upper)), 42);
+    reelTimer.current = window.setInterval(() => setReel(1 + Math.floor(Math.random() * upper)), 42);
     const fallback = window.setTimeout(settle, reduced || dice.length === 0 ? 180 : 4000);
-    return () => { window.clearInterval(reelTimer); window.clearTimeout(fallback); };
+    return () => { if (reelTimer.current !== null) window.clearInterval(reelTimer.current); window.clearTimeout(fallback); };
   }, [result.id, reduced, dice.length, settle, result.dice]);
   return createPortal(
     <div className={`visual-dice-overlay v09 standalone-roll ${fading ? "is-fading" : ""}`.trim()} data-phase={resolved ? "resolved" : "rolling"} onClick={settle}>

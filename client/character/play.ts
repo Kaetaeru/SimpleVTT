@@ -51,6 +51,21 @@ export function clearTempHp(runtime: CharacterRuntime): CharacterRuntime {
   return runtime.hp.temp === 0 ? runtime : stamp({ ...runtime, hp: { ...runtime.hp, temp: 0 } }, "임시 HP 제거");
 }
 
+/**
+ * One-box HP edit: "12" sets current HP, "-4" damages, "+4" heals, "++4" grants temporary HP. Returns null for
+ * anything else.
+ */
+export function applyHpCommand(runtime: CharacterRuntime, derived: DerivedCharacter, text: string): CharacterRuntime | null {
+  const value = text.trim();
+  let match = /^\+\+(\d+)$/.exec(value);
+  if (match) return grantTempHp(runtime, Number(match[1]));
+  match = /^([+-])(\d+)$/.exec(value);
+  if (match) return match[1] === "-" ? applyDamage(runtime, derived, Number(match[2])) : applyHealing(runtime, derived, Number(match[2]));
+  match = /^(\d+)$/.exec(value);
+  if (match) return setCurrentHp(runtime, derived, Number(match[1]));
+  return null;
+}
+
 // ---- hit dice and rests
 
 export const hitDiceAvailable = (runtime: CharacterRuntime, derived: DerivedCharacter) =>

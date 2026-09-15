@@ -9,7 +9,7 @@ import { describeRoll, parseFormula, type RollSpec } from "../character/dice";
 import { useDice } from "../ui/dice/DiceProvider";
 import { exportCharacterFile, serializeCharacterFile } from "../character/json";
 import {
-  addItem, adjustGold, applyDamage, applyHealing, clearTempHp, CONDITIONS, grantTempHp, hitDiceAvailable, longRest, noteLog, recordDeathSave, removeItem, resetDeathSaves,
+  addItem, adjustGold, applyHpCommand, clearTempHp, CONDITIONS, hitDiceAvailable, longRest, noteLog, recordDeathSave, removeItem, resetDeathSaves,
   restorePactSlot, restoreResource, restoreSpellSlot, setCurrentHp, setExhaustion, setGold, setInspiration, setItemQuantity, shortRest, toggleCondition, toggleEquip,
   usePactSlot, useResource, useSpellSlot,
 } from "../character/play";
@@ -23,7 +23,7 @@ export function SheetScreen({ id }: { id: string }) {
   const derived = useMemo(() => (record ? deriveCharacter(record.source, catalog, { equipped: record.runtime.equipped, inventory: record.runtime.inventory }) : null), [record, catalog]);
   const [exporting, setExporting] = useState<string | null>(null);
   const [hpInput, setHpInput] = useState("");
-  const [tempInput, setTempInput] = useState("");
+
   const [resting, setResting] = useState<{ spends: Record<string, number> } | null>(null);
   const [adding, setAdding] = useState<{ query: string; custom: string; quantity: string } | null>(null);
   const [showLog, setShowLog] = useState(true);
@@ -35,7 +35,8 @@ export function SheetScreen({ id }: { id: string }) {
   const rollAndLog = async (spec: RollSpec) => { const result = await dice.roll(spec); void saveCharacter(record.source, noteLog(latestRuntime(), describeRoll(result))); return result; };
   // Rolls resolve later; read the freshest runtime from the record list at that moment.
   const latestRuntime = () => characters.find((item) => item.id === id)?.runtime ?? runtime;
-  const hpNumber = () => { const value = Number(hpInput); return Number.isFinite(value) && hpInput.trim() ? Math.abs(Math.floor(value)) : null; };
+  const hpPreview = applyHpCommand(runtime, derived, hpInput);
+  const submitHp = () => { if (hpPreview) { commit(hpPreview); setHpInput(""); } };
 
   const actions: SheetActions = {
     useSlot: (level) => commit(useSpellSlot(runtime, derived, level)),
@@ -101,13 +102,11 @@ export function SheetScreen({ id }: { id: string }) {
             <span className="cl-quiet cl-small" style={{ marginLeft: "auto" }}>히트 다이스 {Object.entries(available).map(([die, count]) => `${count}/${derived.hitDice[die]} ${die}`).join(" · ")}</span>
           </div>
           <div className={`cl-hpbar${hpRatio <= 0.25 ? " bad" : hpRatio <= 0.5 ? " warn" : ""}`}><span style={{ width: `${Math.round(hpRatio * 100)}%` }} /></div>
+          <input type="range" className="cl-hp-slider" min={0} max={derived.hp.max} value={runtime.hp.current} aria-label="현재 HP 슬라이더" onChange={(event) => commit(setCurrentHp(runtime, derived, Number(event.target.value)))} />
           <div className="cl-row" style={{ gap: 6 }}>
-            <input className="cl-input" style={{ width: 80 }} placeholder="양" aria-label="HP 양" value={hpInput} onChange={(event) => setHpInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && hpNumber() !== null) { commit(applyDamage(runtime, derived, hpNumber()!)); setHpInput(""); } }} />
-            <button type="button" className="cl-btn danger" disabled={hpNumber() === null} onClick={() => { commit(applyDamage(runtime, derived, hpNumber()!)); setHpInput(""); }}>피해</button>
-            <button type="button" className="cl-btn" disabled={hpNumber() === null} onClick={() => { commit(applyHealing(runtime, derived, hpNumber()!)); setHpInput(""); }}>회복</button>
-            <button type="button" className="cl-btn" disabled={hpNumber() === null} onClick={() => { commit(setCurrentHp(runtime, derived, hpNumber()!)); setHpInput(""); }}>설정</button>
-            <input className="cl-input" style={{ width: 70 }} placeholder="임시" aria-label="임시 HP" value={tempInput} onChange={(event) => setTempInput(event.target.value)} />
-            <button type="button" className="cl-btn" disabled={!tempInput.trim() || Number.isNaN(Number(tempInput))} onClick={() => { commit(grantTempHp(runtime, Number(tempInput))); setTempInput(""); }}>임시 HP</button>
+            <input className="cl-input" style={{ width: 110 }} placeholder="12 · -4 · +4 · ++4" aria-label="HP 입력" title="숫자: 현재 HP 설정 · -4: 피해 · +4: 회복 · ++4: 임시 HP" value={hpInput} onChange={(event) => setHpInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") submitHp(); }} />
+            <button type="button" className="cl-btn primary" disabled={!hpPreview} onClick={submitHp}>적용</button>
+            <span className="cl-quiet cl-small">{hpInput.trim() ? (hpPreview ? `→ HP ${hpPreview.hp.current}/${derived.hp.max}${hpPreview.hp.temp !== runtime.hp.temp ? ` · 임시 ${hpPreview.hp.temp}` : ""}` : "형식: 12 / -4 / +4 / ++4") : "숫자 = 설정 · −4 피해 · +4 회복 · ++4 임시 HP"}</span>
           </div>
           <div className="cl-row" style={{ gap: 6 }}>
             <button type="button" className="cl-btn" onClick={() => setResting({ spends: {} })}>짧은 휴식</button>

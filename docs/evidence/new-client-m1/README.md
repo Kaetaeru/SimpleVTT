@@ -19,7 +19,7 @@ Chromium이 Vite 개발 서버(포트 1430)에서 마법사를 처음부터 끝�
 - `13-sheet-installed-content.png`
 - `14-library-two-characters.png`
 - `15-library-light-theme.png`
-- `16-sheet-play-ac-provenance.png` — 시트 운용: 피해·임시 HP·중독·아이템 추가/장비·금화 뒤, AC에 마우스를 올려 출처(사슬 셔츠 13 · 민첩 +2 · 방패 +2)
+- `16-sheet-play-ac-provenance.png` — 시트 운용: HP 입력 `-9`·`++4`(슬라이더 위 한 칸)·중독·아이템 추가/장비·금화 뒤, AC에 마우스를 올려 출처(사슬 셔츠 13 · 민첩 +2 · 방패 +2)
 - `17-sheet-attack-provenance.png` — 명중 굴림 출처(근력 수정치 · 숙련 보너스)
 - `18-sheet-short-rest.png` — 짧은 휴식 대화상자(히트 다이스 선택)
 - `19-sheet-after-rest-log.png` — 휴식 뒤 HP·히트 다이스·기록 (`node scripts/capture-client-play.mjs`)

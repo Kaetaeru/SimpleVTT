@@ -224,3 +224,5 @@ details.cl-details[open]>summary{color:var(--text)}
 .cl-roll:hover{background:var(--accent-soft);border-color:var(--accent)}
 .cl-hp-roll{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius-s);background:var(--surface)}
 .cl-hp-roll .cl-big{font-size:var(--text-xl);font-weight:700;min-width:36px;text-align:center}
+
+.cl-hp-slider{width:100%;accent-color:var(--accent);margin:0}

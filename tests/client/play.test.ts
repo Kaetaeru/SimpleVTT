@@ -123,3 +123,19 @@ test("every derived number carries provenance terms that add up to it", () => {
   assert.ok(dwarf.hp.terms.some((term) => term.label.includes("드워프의 강인함") && term.value === 3));
   void ids;
 });
+
+test("the HP box understands set, damage, heal and temporary HP", async () => {
+  const { applyHpCommand } = await import("../../client/character/play");
+  const { derived } = build({ classes: "fighter", level: 2 });
+  let runtime = initialRuntime(derived);
+  runtime = applyHpCommand(runtime, derived, "-4")!;
+  assert.equal(runtime.hp.current, derived.hp.max - 4);
+  runtime = applyHpCommand(runtime, derived, "+2")!;
+  assert.equal(runtime.hp.current, derived.hp.max - 2);
+  runtime = applyHpCommand(runtime, derived, "++5")!;
+  assert.equal(runtime.hp.temp, 5);
+  runtime = applyHpCommand(runtime, derived, "7")!;
+  assert.equal(runtime.hp.current, 7);
+  assert.equal(applyHpCommand(runtime, derived, "abc"), null);
+  assert.equal(applyHpCommand(runtime, derived, ""), null);
+});
