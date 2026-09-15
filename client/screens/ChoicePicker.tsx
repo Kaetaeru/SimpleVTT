@@ -51,7 +51,7 @@ export function ChoicePicker({ choice, onToggle, onClear }: { choice: ChoiceRequ
                   const isSelected = selected.has(option.id);
                   const disabled = Boolean(option.disabledReason) || (!isSelected && full && choice.count > 1);
                   return (
-                    <div key={option.id}>
+                    <div key={option.id} className="cl-option-wrap">
                       <button
                         type="button"
                         role="option"

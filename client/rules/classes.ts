@@ -90,12 +90,16 @@ export interface ClassResourceRule {
   column?: string;
   maximum?: (level: number, abilityMod: (key: AbilityKey) => number) => number;
   recovery: "short-rest" | "long-rest" | "short-rest:1" | "short-rest:half";
+  /** Recovery that replaces `recovery` from a class level (Font of Inspiration: Bardic Inspiration on a short rest from 5). */
+  recoveryFrom?: { level: number; recovery: "short-rest" | "long-rest" };
   minLevel: number;
+  /** English spell name this pool casts for free. */
+  spell?: string;
 }
 
 export const CLASS_RESOURCES: ClassResourceRule[] = [
   { id: "resource.barbarian.rage", label: "격노", classSlug: "barbarian", column: COLUMN.rage, recovery: "short-rest:1", minLevel: 1 },
-  { id: "resource.bard.bardic-inspiration", label: "바드의 영감", classSlug: "bard", maximum: (_level, mod) => Math.max(1, mod("cha")), recovery: "long-rest", minLevel: 1 },
+  { id: "resource.bard.bardic-inspiration", label: "바드의 영감", classSlug: "bard", maximum: (_level, mod) => Math.max(1, mod("cha")), recovery: "long-rest", recoveryFrom: { level: 5, recovery: "short-rest" }, minLevel: 1 },
   { id: "resource.cleric.channel-divinity", label: "신성 변환", classSlug: "cleric", column: COLUMN.channelDivinity, recovery: "short-rest:1", minLevel: 2 },
   { id: "resource.cleric.divine-intervention", label: "신성 개입", classSlug: "cleric", maximum: () => 1, recovery: "long-rest", minLevel: 10 },
   { id: "resource.druid.wild-shape", label: "야생 변신", classSlug: "druid", column: COLUMN.wildShape, recovery: "short-rest:1", minLevel: 2 },
@@ -105,18 +109,18 @@ export const CLASS_RESOURCES: ClassResourceRule[] = [
   { id: "resource.monk.focus", label: "기 점수", classSlug: "monk", column: COLUMN.focusPoints, recovery: "short-rest", minLevel: 2 },
   { id: "resource.paladin.lay-on-hands", label: "안수", classSlug: "paladin", maximum: (level) => level * 5, recovery: "long-rest", minLevel: 1 },
   { id: "resource.paladin.channel-divinity", label: "신성 변환", classSlug: "paladin", column: COLUMN.channelDivinity, recovery: "short-rest:1", minLevel: 3 },
-  { id: "resource.ranger.favored-enemy", label: "주적 (Hunter's Mark 무료 시전)", classSlug: "ranger", column: COLUMN.favoredEnemy, recovery: "long-rest", minLevel: 1 },
+  { id: "resource.ranger.favored-enemy", label: "주적 (사냥꾼의 표식 무료 시전)", classSlug: "ranger", column: COLUMN.favoredEnemy, recovery: "long-rest", minLevel: 1, spell: "Hunter's Mark" },
   { id: "resource.sorcerer.sorcery-points", label: "마법 점수", classSlug: "sorcerer", column: COLUMN.sorceryPoints, recovery: "long-rest", minLevel: 2 },
   { id: "resource.sorcerer.innate-sorcery", label: "선천 마법", classSlug: "sorcerer", maximum: () => 2, recovery: "long-rest", minLevel: 1 },
   { id: "resource.warlock.magical-cunning", label: "마법적 책략", classSlug: "warlock", maximum: () => 1, recovery: "long-rest", minLevel: 2 },
   { id: "resource.wizard.arcane-recovery", label: "비전 회복", classSlug: "wizard", maximum: () => 1, recovery: "long-rest", minLevel: 1 },
   { id: "resource.rogue.stroke-of-luck", label: "행운의 일격", classSlug: "rogue", maximum: () => 1, recovery: "short-rest", minLevel: 20 },
   { id: "resource.monk.uncanny-metabolism", label: "경이로운 신진대사", classSlug: "monk", maximum: () => 1, recovery: "long-rest", minLevel: 2 },
-  { id: "resource.paladin.smite", label: "팔라딘의 강타 (무료 시전)", classSlug: "paladin", maximum: () => 1, recovery: "long-rest", minLevel: 2 },
-  { id: "resource.paladin.faithful-steed", label: "충직한 군마 (무료 시전)", classSlug: "paladin", maximum: () => 1, recovery: "long-rest", minLevel: 5 },
+  { id: "resource.paladin.smite", label: "팔라딘의 강타 (신성한 강타 무료 시전)", classSlug: "paladin", maximum: () => 1, recovery: "long-rest", minLevel: 2, spell: "Divine Smite" },
+  { id: "resource.paladin.faithful-steed", label: "충직한 군마 (군마 찾기 무료 시전)", classSlug: "paladin", maximum: () => 1, recovery: "long-rest", minLevel: 5, spell: "Find Steed" },
   { id: "resource.ranger.tireless", label: "지치지 않음", classSlug: "ranger", maximum: (_level, mod) => Math.max(1, mod("wis")), recovery: "long-rest", minLevel: 10 },
   { id: "resource.ranger.natures-veil", label: "자연의 장막", classSlug: "ranger", maximum: (_level, mod) => Math.max(1, mod("wis")), recovery: "long-rest", minLevel: 14 },
-  { id: "resource.warlock.contact-patron", label: "후원자와 접촉 (무료 시전)", classSlug: "warlock", maximum: () => 1, recovery: "long-rest", minLevel: 9 },
+  { id: "resource.warlock.contact-patron", label: "후원자와 접촉 (이계 접촉 무료 시전)", classSlug: "warlock", maximum: () => 1, recovery: "long-rest", minLevel: 9, spell: "Contact Other Plane" },
   { id: "resource.druid.wild-resurgence", label: "야생의 부활 (슬롯 회복)", classSlug: "druid", maximum: () => 1, recovery: "long-rest", minLevel: 5 },
   { id: "resource.barbarian.relentless-rage", label: "불굴의 격노 DC", classSlug: "barbarian", maximum: () => 10, recovery: "short-rest", minLevel: 11 },
 ];

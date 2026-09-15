@@ -246,3 +246,6 @@ details.cl-details[open]>summary{color:var(--text)}
 .cl-effect-notes{display:flex;flex-wrap:wrap;gap:4px 10px;font-size:var(--text-xs);color:var(--muted)}
 .cl-effect-notes span::before{content:"· "}
 .cl-dice-tag{font-size:var(--text-xs);color:var(--accent);margin-left:2px}
+/* Option detail floats over the next rows instead of pushing them down (hover no longer moves the row under the cursor). */
+.cl-option-wrap{position:relative}
+.cl-option-detail{position:absolute;left:12px;right:8px;top:100%;z-index:6;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--radius-s);box-shadow:0 10px 24px rgba(0,0,0,.35);margin:2px 0 0;pointer-events:none}

@@ -212,7 +212,7 @@ function applyLevelRow(ledger: Ledger, cls: ClassView, state: ClassState, row: C
       if (picked) {
         const entry = classSpellEntry(ledger, cls);
         entry.alwaysPrepared.add(picked);
-        ledger.addResource({ id: `resource.warlock.arcanum.${spellLevel}`, label: `신비한 비전 ${spellLevel}레벨 (${catalog.spellById(picked)?.name ?? picked})`, max: 1, recovery: "긴 휴식", source: cls.name });
+        ledger.addResource({ id: `resource.warlock.arcanum.${spellLevel}`, label: `신비한 비전 ${spellLevel}레벨 (${catalog.spellById(picked)?.name ?? picked}) 무료 시전`, max: 1, recovery: "긴 휴식", source: cls.name, freeCastSpellId: picked });
       }
     }
     if (key === "magical-secrets") ledger.flags.add(`magical-secrets:${cls.id}`);
@@ -370,7 +370,8 @@ function applyClassWide(ledger: Ledger, cls: ClassView, state: ClassState) {
     if (rule.classSlug !== cls.slug || level < rule.minLevel) continue;
     const max = rule.column ? numericColumn(row.columns[rule.column]) : rule.maximum ? rule.maximum(level, (key) => ledger.abilityMod(key)) : 0;
     if (max <= 0) continue;
-    ledger.addResource({ id: rule.id, label: rule.label, max, recovery: RECOVERY_KO[rule.recovery] ?? rule.recovery, source: cls.name });
+    const recovery = rule.recoveryFrom && level >= rule.recoveryFrom.level ? rule.recoveryFrom.recovery : rule.recovery;
+    ledger.addResource({ id: rule.id, label: rule.label, max, recovery: RECOVERY_KO[recovery] ?? recovery, source: cls.name, freeCastSpellId: rule.spell ? catalog.spellByName(rule.spell)?.id : undefined });
   }
 
   applyClassSpellcasting(ledger, cls, state, row);

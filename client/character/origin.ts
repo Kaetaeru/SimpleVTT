@@ -114,7 +114,7 @@ export function applySpecies(ledger: Ledger) {
       entry.alwaysPrepared.add(spell.id);
       entry.freeCasts.push(spell.id);
       const usesPb = species.id.endsWith("gnome");
-      ledger.addResource({ id: `resource.species.spell.${spell.id}`, label: `${spell.name} 무료 시전`, max: usesPb ? ledger.proficiencyBonus : 1, recovery: "긴 휴식", source: species.name });
+      ledger.addResource({ id: `resource.species.spell.${spell.id}`, label: `${spell.name} 무료 시전`, max: usesPb ? ledger.proficiencyBonus : 1, recovery: "긴 휴식", source: species.name, freeCastSpellId: spell.id });
     }
     if (!castingAbility && species.choices.some((choice) => choice.options === "spellcasting-ability")) ledger.warnings.push("종족 주문의 시전 능력치를 고르세요.");
   }

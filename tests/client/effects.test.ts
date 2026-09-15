@@ -106,3 +106,64 @@ test("review fixes: Lay on Hands heals on self, Mage Armor keeps earlier AC bonu
   runtime = shortRest(runtime, wizard.derived);
   assert.deepEqual(runtime.effects.map((item) => item.name), ["마법 갑옷"], "one hour ends on a short rest, eight hours survives");
 });
+
+test("coverage audit fixes: Rage 10 minutes, subclass and metamagic spend pools, free-cast pools reach the spell row, Aura of Protection and Roving, cast hooks", async () => {
+  const { useFeature, castSpell } = await import("../../client/character/play");
+  const { castHook } = await import("../../client/rules/effects");
+  const { featureRuleKey } = await import("../../client/rules/activation");
+  const cat = catalog();
+  const barbarian = build({ classes: "barbarian", level: 3 }).derived;
+  const rage = barbarian.features.find((feature) => feature.id.endsWith("barbarian.rage"))!;
+  assert.equal(featureActivation(rage, barbarian)!.duration!(barbarian).rounds, 100);
+
+  const cleric = build({ classes: "cleric", level: 3 }, { "class.0.subclass": ["dnd.srd521.subclass.cleric.life-domain"] }).derived;
+  const preserve = cleric.features.find((feature) => feature.id.endsWith("preserve-life"));
+  assert.ok(preserve, "life domain grants Preserve Life at 3");
+  assert.equal(featureRuleKey(preserve!.id), "cleric.life-domain.preserve-life");
+  const preserveActivation = featureActivation(preserve!, cleric)!;
+  assert.equal(preserveActivation.resourceId, "resource.cleric.channel-divinity");
+  assert.equal(preserveActivation.roll!(cleric).formula, "15");
+  let rt = initialRuntime(cleric);
+  rt = useFeature(rt, cleric, preserve!, preserveActivation, { rolled: { label: "회복 총량", total: 15 } })!;
+  assert.equal(rt.resourcesUsed["resource.cleric.channel-divinity"], 1);
+  assert.ok(rt.log.at(-1)!.text.includes("15"));
+
+  const sorcerer = build({ classes: "sorcerer", level: 3 }).derived;
+  const quickened = sorcerer.features.find((feature) => feature.source === "metamagic" && feature.id.endsWith("quickened-spell")) ?? sorcerer.features.find((feature) => feature.source === "metamagic")!;
+  const metaActivation = featureActivation(quickened, sorcerer)!;
+  assert.equal(metaActivation.resourceId, "resource.sorcerer.sorcery-points");
+  let sr = initialRuntime(sorcerer);
+  sr = useFeature(sr, sorcerer, quickened, metaActivation)!;
+  assert.equal(sr.resourcesUsed["resource.sorcerer.sorcery-points"], metaActivation.cost);
+
+  const paladin = build({ classes: "paladin", level: 2 }).derived;
+  const smitePool = paladin.resources.find((resource) => resource.id === "resource.paladin.smite")!;
+  assert.equal(smitePool.freeCastSpellId, cat.spellByName("Divine Smite")!.id, "the pool names the spell it casts");
+  let pr = initialRuntime(paladin);
+  pr = castSpell(pr, paladin, cat.spellByName("Divine Smite")!, { kind: "resource", id: smitePool.id })!;
+  assert.equal(pr.resourcesUsed[smitePool.id], 1);
+  assert.equal(castHook(cat.spellByName("Divine Smite")!, 2, paladin)!.damage!.formula, "3d8");
+  assert.equal(castHook(cat.spellByName("False Life")!, 1, paladin)!.tempHp, "2d4+4");
+
+  const paladin6 = build({ classes: "paladin", level: 6, abilities: { cha: 16 } }).derived;
+  assert.ok(paladin6.saves.dex.terms.some((term) => term.label.startsWith("보호의 오라") && term.value === paladin6.abilities.cha.modifier));
+  const ranger6 = build({ classes: "ranger", level: 6 }).derived;
+  assert.ok(ranger6.speed.terms.some((term) => term.label.startsWith("로빙")));
+  assert.equal(ranger6.speed.climb, ranger6.speed.walk);
+
+  const bard5 = build({ classes: "bard", level: 5 }).derived;
+  assert.equal(bard5.resources.find((resource) => resource.id === "resource.bard.bardic-inspiration")!.restore.short, "all", "Font of Inspiration: back on a short rest from 5");
+
+  const druid = build({ classes: "druid", level: 4 }).derived;
+  const wildShape = druid.features.find((feature) => feature.id.endsWith("druid.wild-shape"))!;
+  assert.equal(featureActivation(wildShape, druid)!.tempHp!(druid), "4");
+});
+
+test("a cantrip known from Magic Initiate is not offered again to the class picker", () => {
+  const { derived } = build({ classes: "cleric", level: 3, background: "acolyte" });
+  const feat = derived.spellcasting.find((entry) => entry.source === "feat");
+  const cleric = derived.spellcasting.find((entry) => entry.source === "class")!;
+  if (feat) for (const id of feat.cantrips) assert.ok(!cleric.cantrips.includes(id), `${id} picked twice`);
+  const choice = derived.choices.find((item) => item.id === "class.0.cantrips")!;
+  if (feat) for (const id of feat.cantrips) assert.ok(choice.options.find((option) => option.id === id)?.disabledReason, `${id} should be marked as already known`);
+});

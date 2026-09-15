@@ -65,7 +65,7 @@ export function applyFeat(ledger: Ledger, feat: FeatView, instance: FeatInstance
       for (const id of spells) {
         entry.alwaysPrepared.add(id);
         entry.freeCasts.push(id);
-        ledger.addResource({ id: `resource.${prefix}.${id}`, label: `${feat.name}: ${catalog.spellById(id)?.name ?? id} 무료 시전`, max: 1, recovery: "긴 휴식", source: feat.name });
+        ledger.addResource({ id: `resource.${prefix}.${id}`, label: `${feat.name}: ${catalog.spellById(id)?.name ?? id} 무료 시전`, max: 1, recovery: "긴 휴식", source: feat.name, freeCastSpellId: id });
       }
     }
   }

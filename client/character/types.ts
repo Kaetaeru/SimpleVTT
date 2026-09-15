@@ -144,6 +144,8 @@ export interface DerivedResource {
   /** Machine recovery: what a short rest gives back (`all`, a number of uses, or nothing); a long rest always restores all. */
   restore: { short: "all" | number | 0 };
   source: string;
+  /** Spell this pool casts for free (Paladin's Smite, Find Steed, Mystic Arcanum, species/feat spells): the spell row offers it. */
+  freeCastSpellId?: string;
 }
 
 export interface DerivedItem { instanceId: string; itemId: string; name: string; kind: string; quantity: number; equipped?: boolean; wieldSlot?: "main-hand" | "off-hand" | "two-hand"; source: string; custom?: boolean }

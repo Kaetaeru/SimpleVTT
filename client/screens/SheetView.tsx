@@ -13,6 +13,9 @@ import { effectKeyForFeature, effectKeyForSpell, featureActivation, parseDuratio
 import { Pill, signed } from "../ui/components";
 import { Explain } from "../ui/Explain";
 
+const PROPERTY_KO: Record<string, string> = { light: "경량", heavy: "중량", finesse: "교묘", thrown: "투척", versatile: "다용도", "two-handed": "양손", reach: "간격", ammunition: "탄약", loading: "장전", special: "특수", nick: "닉", "숙련 없음": "숙련 없음" };
+const propertyKo = (property: string) => PROPERTY_KO[property] ?? property;
+
 const SOURCE_ORDER: DerivedFeature["source"][] = ["species", "background", "class", "subclass", "feat", "invocation", "metamagic"];
 const SOURCE_KO: Record<DerivedFeature["source"], string> = { species: "종족 특성", background: "배경", class: "직업 특성", subclass: "서브클래스 특성", feat: "재주", invocation: "섬뜩한 기원술", metamagic: "메타매직" };
 
@@ -199,7 +202,7 @@ export function SheetView({ derived, catalog, runtime, compact = false, actions 
                     <td>{attack.name}{attack.masteryActive ? <Pill tone="accent">통달 {attack.mastery}</Pill> : null}</td>
                     <td className="num"><Explain terms={attack.attackTerms} total={attack.attackBonus} label={`${attack.name} 명중`}>{signed(attack.attackBonus)}</Explain>{live ? <RollButton onClick={() => actions!.roll(`${attack.name} 명중`, d20(attack.attackBonus, attack.attackTerms), undefined, "attack")} /> : null}</td>
                     <td>{attack.damage} <Explain terms={attack.damageTerms} total={attack.damageBonus} label={`${attack.name} 피해 보너스`}>{signed(attack.damageBonus)}</Explain> {attack.damageType}{live ? <RollButton label="피해" onClick={() => actions!.roll(`${attack.name} 피해`, `${attack.damage.split(" ")[0]}${attack.damageBonus ? `${attack.damageBonus > 0 ? "+" : "-"}${Math.abs(attack.damageBonus)}` : ""}${diceOf(attack.damageTerms)}`, attack.damageType, "damage")} /> : null}</td>
-                    <td className="cl-quiet cl-small">{[...attack.properties, attack.range ? `사거리 ${attack.range}` : ""].filter(Boolean).join(", ")}</td>
+                    <td className="cl-quiet cl-small">{[...attack.properties.map(propertyKo), attack.range ? `사거리 ${attack.range}` : ""].filter(Boolean).join(", ")}</td>
                   </tr>
                 ))}
               </tbody>
@@ -299,7 +302,7 @@ function castOptions(spell: SpellView, derived: DerivedCharacter, runtime: Chara
   if (derived.pactMagic && derived.pactMagic.level >= spell.level && derived.pactMagic.count - (runtime?.pactSlotsUsed ?? 0) > 0) options.push({ label: `계약 슬롯 ${derived.pactMagic.level}레벨 (${derived.pactMagic.count - (runtime?.pactSlotsUsed ?? 0)})`, method: { kind: "pact" } });
   for (const resource of derived.resources) {
     const left = resource.max - (runtime?.resourcesUsed[resource.id] ?? 0);
-    if (left > 0 && (resource.id.endsWith(`.${spell.id}`) || resource.id.endsWith(`.${spell.id.split(".").pop()}`)) && resource.label.includes("무료")) options.push({ label: `${resource.label} (${left})`, method: { kind: "resource", id: resource.id } });
+    if (left > 0 && resource.freeCastSpellId === spell.id) options.push({ label: `${resource.label} (${left})`, method: { kind: "resource", id: resource.id } });
   }
   if (spell.ritual) options.push({ label: "의식 (슬롯 없이, +10분)", method: { kind: "ritual" } });
   return options;

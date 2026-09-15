@@ -9,13 +9,14 @@ import { describeRoll, parseFormula, type RollSpec } from "../character/dice";
 import { useDice } from "../ui/dice/DiceProvider";
 import { exportCharacterFile, serializeCharacterFile } from "../character/json";
 import {
-  addItem, adjustGold, advanceRound, applyHealing, applyHpCommand, castSpell, clearTempHp, CONDITIONS, endEffect, hitDiceAvailable, longRest, noteLog, recordDeathSave, removeItem, resetDeathSaves,
+  addItem, adjustGold, advanceRound, applyHealing, applyHpCommand, castSpell, clearTempHp, CONDITIONS, endEffect, grantTempHp, hitDiceAvailable, longRest, noteLog, recordDeathSave, removeItem, resetDeathSaves,
   restorePactSlot, restoreResource, restoreSpellSlot, setCurrentHp, setExhaustion, setGold, setInspiration, setItemQuantity, shortRest, toggleCondition, toggleEquip,
   useFeature, usePactSlot, useResource, useSpellSlot,
 } from "../character/play";
+import type { FeatureUseExtras } from "../character/play";
 import type { CharacterRuntime } from "../character/runtime";
 import { featureActivation } from "../rules/activation";
-import { effectApplication } from "../rules/effects";
+import { castHook, effectApplication, type CastHook } from "../rules/effects";
 import { copyText, downloadText, Modal, Notice, Pill } from "../ui/components";
 import { SheetView, ValidationList, type SheetActions } from "./SheetView";
 
@@ -25,6 +26,8 @@ export function SheetScreen({ id }: { id: string }) {
   const derived = useMemo(() => (record ? deriveCharacter(record.source, catalog, { equipped: record.runtime.equipped, inventory: record.runtime.inventory, effects: record.runtime.effects }) : null), [record, catalog]);
   const [exporting, setExporting] = useState<string | null>(null);
   const [hpInput, setHpInput] = useState("");
+  const [sliderHp, setSliderHp] = useState<number | null>(null);
+  const [copied, setCopied] = useState<string | null>(null);
 
   const [resting, setResting] = useState<{ spends: Record<string, number> } | null>(null);
   const [adding, setAdding] = useState<{ query: string; custom: string; quantity: string } | null>(null);
@@ -38,6 +41,8 @@ export function SheetScreen({ id }: { id: string }) {
   // written by an updater against the stored runtime.
   const rollAndLog = async (spec: RollSpec) => { const result = await dice.roll(spec); void saveCharacter(record.source, (current) => noteLog(current, describeRoll(result))); return result; };
   const hpPreview = applyHpCommand(runtime, derived, hpInput);
+  // The slider previews while dragging and writes one log line on release.
+  const commitSlider = () => { if (sliderHp !== null) { commit(setCurrentHp(runtime, derived, sliderHp)); setSliderHp(null); } };
   const submitHp = () => { if (hpPreview) { commit(hpPreview); setHpInput(""); } };
 
   const actions: SheetActions = {
@@ -58,9 +63,28 @@ export function SheetScreen({ id }: { id: string }) {
     endEffect: (key) => commit(endEffect(runtime, key)),
     castSpell: (spell, method) => {
       const next = castSpell(runtime, derived, { id: spell.id, name: spell.name, level: spell.level, duration: spell.duration, ritual: spell.ritual }, method);
-      if (next) commit(withEffectStart(runtime, next)); else alert("그 방법으로는 시전할 수 없습니다 (슬롯이나 횟수가 없습니다).");
+      if (!next) { alert("그 방법으로는 시전할 수 없습니다 (슬롯이나 횟수가 없습니다)."); return; }
+      const slotLevel = method.kind === "slot" ? method.level : method.kind === "pact" ? derived.pactMagic?.level ?? spell.level : spell.level;
+      const hook = castHook(spell, slotLevel, derived);
+      commit(withEffectStart(runtime, next));
+      if (hook) void applyCastHook(spell.name, hook);
     },
   };
+  /** Rolls a cast's own dice (False Life temp HP, Divine Smite damage) through the overlay and applies/logs them against the stored runtime. */
+  const applyCastHook = async (name: string, hook: CastHook) => {
+    const lines: string[] = [];
+    const logLines = (current: CharacterRuntime) => lines.splice(0).reduce((acc, line) => noteLog(acc, line), current);
+    if (hook.tempHp) {
+      const total = await rollTotal({ label: `${name} 임시 HP`, formula: hook.tempHp, kind: "custom" }, lines);
+      await saveCharacter(record.source, (current) => grantTempHp(logLines(current), total));
+    }
+    if (hook.damage) {
+      const total = await rollTotal({ label: `${name} 피해`, formula: hook.damage.formula, note: hook.damage.type, kind: "damage" }, lines);
+      await saveCharacter(record.source, (current) => noteLog(logLines(current), `${name} 피해 ${total} ${hook.damage!.type}${hook.notes?.length ? ` (${hook.notes.join(" · ")})` : ""}`));
+    } else if (hook.notes?.length) await saveCharacter(record.source, (current) => noteLog(current, `${name}: ${hook.notes!.join(" · ")}`));
+  };
+  /** A formula with dice goes through the overlay; a plain number (temp HP = level) is applied at once. */
+  const rollTotal = async (spec: RollSpec, lines?: string[]) => { const parsed = parseFormula(spec.formula); if (parsed && parsed.dice.length === 0) return parsed.modifier; const result = await dice.roll(spec); lines?.push(describeRoll(result)); return result.total; };
   /** An effect that just started may change the sheet at once (Aid: +5 max HP and +5 current HP). */
   const withEffectStart = (previous: CharacterRuntime, next: CharacterRuntime) => {
     const started = (next.effects ?? []).filter((effect) => !(previous.effects ?? []).some((item) => item.key === effect.key));
@@ -78,7 +102,7 @@ export function SheetScreen({ id }: { id: string }) {
   const activateFeature = async (feature: Parameters<SheetActions["useFeature"]>[0]) => {
     const activation = featureActivation(feature, derived);
     if (!activation) return;
-    const extras: { healRoll?: number; tempRoll?: number; points?: number } = {};
+    const extras: FeatureUseExtras = {};
     if (activation.points && activation.resourceId) {
       const pool = derived.resources.find((resource) => resource.id === activation.resourceId);
       const left = pool ? pool.max - (runtime.resourcesUsed[pool.id] ?? 0) : 0;
@@ -89,11 +113,13 @@ export function SheetScreen({ id }: { id: string }) {
       extras.points = points;
       if (confirm(`${points}점을 자신에게 써서 HP를 ${points} 회복할까요? (취소: 다른 대상)`)) extras.healRoll = points;
     }
-    if (activation.heal) extras.healRoll = (await dice.roll({ label: feature.name, formula: activation.heal(derived), note: "회복", kind: "custom" })).total;
-    if (activation.tempHp) extras.tempRoll = (await dice.roll({ label: feature.name, formula: activation.tempHp(derived), note: "임시 HP", kind: "custom" })).total;
+    const lines: string[] = [];
+    if (activation.heal) extras.healRoll = await rollTotal({ label: feature.name, formula: activation.heal(derived), note: "회복", kind: "custom" }, lines);
+    if (activation.tempHp) extras.tempRoll = await rollTotal({ label: feature.name, formula: activation.tempHp(derived), note: "임시 HP", kind: "custom" }, lines);
+    if (activation.roll) { const roll = activation.roll(derived); extras.rolled = { label: roll.label, total: await rollTotal({ label: roll.label, formula: roll.formula, kind: "custom" }, lines) }; }
     // Applied against the stored runtime: the dice took a while and the sheet may have changed meanwhile.
     let refused = false;
-    await saveCharacter(record.source, (current) => { const next = useFeature(current, derived, feature, activation, extras); if (!next) { refused = true; return current; } return withEffectStart(current, next); });
+    await saveCharacter(record.source, (current) => { const next = useFeature(lines.reduce((acc, line) => noteLog(acc, line), current), derived, feature, activation, extras); if (!next) { refused = true; return current; } return withEffectStart(current, next); });
     if (refused) alert("남은 횟수가 없습니다.");
   };
 
@@ -145,7 +171,9 @@ export function SheetScreen({ id }: { id: string }) {
             <span className="cl-quiet cl-small" style={{ marginLeft: "auto" }}>히트 다이스 {Object.entries(available).map(([die, count]) => `${count}/${derived.hitDice[die]} ${die}`).join(" · ")}</span>
           </div>
           <div className={`cl-hpbar${hpRatio <= 0.25 ? " bad" : hpRatio <= 0.5 ? " warn" : ""}`}><span style={{ width: `${Math.round(hpRatio * 100)}%` }} /></div>
-          <input type="range" className="cl-hp-slider" min={0} max={derived.hp.max} value={runtime.hp.current} aria-label="현재 HP 슬라이더" onChange={(event) => commit(setCurrentHp(runtime, derived, Number(event.target.value)))} />
+          <input type="range" className="cl-hp-slider" min={0} max={derived.hp.max} value={sliderHp ?? runtime.hp.current} aria-label="현재 HP 슬라이더" title={`${sliderHp ?? runtime.hp.current} / ${derived.hp.max}`}
+            onChange={(event) => setSliderHp(Number(event.target.value))}
+            onMouseUp={() => commitSlider()} onTouchEnd={() => commitSlider()} onKeyUp={() => commitSlider()} onBlur={() => commitSlider()} />
           <div className="cl-row" style={{ gap: 6 }}>
             <input className="cl-input" style={{ width: 110 }} placeholder="12 · -4 · +4 · ++4" aria-label="HP 입력" title="숫자: 현재 HP 설정 · -4: 피해 · +4: 회복 · ++4: 임시 HP" value={hpInput} onChange={(event) => setHpInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") submitHp(); }} />
             <button type="button" className="cl-btn primary" disabled={!hpPreview} onClick={submitHp}>적용</button>
@@ -217,10 +245,11 @@ export function SheetScreen({ id }: { id: string }) {
       <SheetView derived={derived} catalog={catalog} runtime={runtime} actions={actions} />
 
       {exporting ? (
-        <Modal title="JSON 내보내기" onClose={() => setExporting(null)} actions={<>
-          <button type="button" className="cl-btn" onClick={() => void copyText(exporting)}>복사</button>
+        <Modal title="JSON 내보내기" onClose={() => { setExporting(null); setCopied(null); }} actions={<>
+          <button type="button" className="cl-btn" onClick={async () => setCopied((await copyText(exporting)) ? "클립보드에 복사했습니다." : "복사할 수 없습니다. 아래 텍스트를 직접 선택하세요.")}>복사</button>
           <button type="button" className="cl-btn primary" onClick={() => downloadText(`${record.source.name || "character"}.simplevtt.json`, exporting)}>파일로 저장</button>
         </>}>
+          {copied ? <Notice tone={copied.startsWith("클립보드") ? "good" : "bad"}>{copied}</Notice> : null}
           <pre>{exporting}</pre>
         </Modal>
       ) : null}

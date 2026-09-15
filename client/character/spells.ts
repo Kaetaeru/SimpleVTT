@@ -64,7 +64,10 @@ export function applyClassSpellcasting(ledger: Ledger, cls: ClassView, state: Cl
   }
 
   if (entry.cantripsMax > 0) {
-    const picked = ledger.ask({ ...ask, id: `class.${first}.cantrips`, label: `${cls.name} 소마법`, count: entry.cantripsMax, options: spellOptions(catalog, lists, [0], undefined, (spell) => (entry.extraCantrips.has(spell.id) ? "이미 앎" : undefined)) });
+    // A cantrip already known from a feat, the species or another class is not worth a pick here.
+    const knownElsewhere = new Set<string>();
+    for (const other of ledger.spellcasting.values()) { for (const id of other.extraCantrips) knownElsewhere.add(id); if (other.key !== entry.key) for (const id of other.cantrips) knownElsewhere.add(id); }
+    const picked = ledger.ask({ ...ask, id: `class.${first}.cantrips`, label: `${cls.name} 소마법`, count: entry.cantripsMax, options: spellOptions(catalog, lists, [0], undefined, (spell) => (knownElsewhere.has(spell.id) ? "이미 앎" : undefined)) });
     for (const id of picked) entry.cantrips.add(id);
   }
 

@@ -109,6 +109,8 @@ function finalize(ledger: Ledger): DerivedCharacter {
   if (hpFloorFix) hpTerms.push({ label: "레벨당 최소 1 보정", value: hpFloorFix });
   if (ledger.hpPerLevelBonus) { hpMax += ledger.hpPerLevelBonus * level; hpBreakdown.push(`레벨당 +${ledger.hpPerLevelBonus} × ${level} = ${ledger.hpPerLevelBonus * level}`); hpTerms.push({ label: `${ledger.hpPerLevelSource ?? "특성"} +${ledger.hpPerLevelBonus} × ${level}레벨`, value: ledger.hpPerLevelBonus * level }); }
   if (ledger.hpFlatBonus) { hpMax += ledger.hpFlatBonus; hpBreakdown.push(`추가 +${ledger.hpFlatBonus}`); hpTerms.push({ label: "추가", value: ledger.hpFlatBonus }); }
+  const draconic = [...ledger.classes.values()].find((state) => state.slug === "sorcerer" && state.level >= 3 && state.subclassId?.endsWith("draconic"));
+  if (draconic) { hpMax += draconic.level; hpBreakdown.push(`용의 회복력 +${draconic.level}`); hpTerms.push({ label: "용의 회복력 (소서러 레벨)", value: draconic.level }); }
 
   // Worn armor and shield.
   const itemOf = (itemId: string) => catalog.itemById(itemId);
@@ -158,18 +160,23 @@ function finalize(ledger: Ledger): DerivedCharacter {
     if (bonus) { walk += bonus; speedTerms.push({ label: "비무장 이동 (몽크)", value: bonus }); }
   }
   if (strengthShort) { walk -= 10; speedTerms.push({ label: `${armorView?.name} 근력 요구치 미달`, value: -10 }); }
+  const roving = [...ledger.classes.values()].some((state) => state.slug === "ranger" && state.level >= 6) && !heavyArmorWorn;
+  if (roving) { walk += 10; speedTerms.push({ label: "로빙 (레인저)", value: 10 }); }
   const speed: DerivedCharacter["speed"] = { walk, terms: speedTerms };
+  if (roving) { speed.climb = walk; speed.swim = walk; }
   if (ledger.extraSpeeds.swim !== undefined) speed.swim = ledger.extraSpeeds.swim < 0 ? walk : ledger.extraSpeeds.swim;
   if (ledger.extraSpeeds.climb !== undefined) speed.climb = ledger.extraSpeeds.climb < 0 ? walk : ledger.extraSpeeds.climb;
   if (ledger.extraSpeeds.fly !== undefined) speed.fly = ledger.extraSpeeds.fly < 0 ? walk : ledger.extraSpeeds.fly;
 
   // Saves and skills.
   const saves = {} as DerivedCharacter["saves"];
+  const auraOfProtection = [...ledger.classes.values()].some((state) => state.slug === "paladin" && state.level >= 6) ? Math.max(1, mod("cha")) : 0;
   for (const key of ABILITY_KEYS) {
     const proficient = ledger.saves.has(key) || ledger.flags.has("all-saves");
     const terms: Term[] = [{ label: `${ABILITY_KO[key]} 수정치`, value: mod(key) }];
     if (proficient) terms.push({ label: `숙련 보너스 (${ledger.saves.get(key) ?? "단련된 생존자"})`, value: pb });
-    saves[key] = { proficient, bonus: mod(key) + (proficient ? pb : 0), terms };
+    if (auraOfProtection) terms.push({ label: "보호의 오라 (매력)", value: auraOfProtection });
+    saves[key] = { proficient, bonus: terms.reduce((total, term) => total + term.value, 0), terms };
   }
   const jack = ledger.flags.has("jack-of-all-trades") ? Math.floor(pb / 2) : 0;
   const skills: DerivedSkill[] = Object.entries(catalog.skills).map(([id, name]) => {

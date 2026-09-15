@@ -151,11 +151,11 @@ test("feature use: Rage spends a use and runs ten rounds; Second Wind heals; Lay
   runtime = useFeature(runtime, derived, rage, activation)!;
   assert.equal(runtime.resourcesUsed["resource.barbarian.rage"], 1);
   assert.equal(runtime.effects.length, 1);
-  assert.equal(runtime.effects[0].rounds, 10);
-  for (let round = 0; round < 9; round += 1) runtime = advanceRound(runtime);
-  assert.equal(runtime.effects[0].elapsed, 9, "still raging after nine rounds");
+  assert.equal(runtime.effects[0].rounds, 100, "Rage lasts 10 minutes in the 2024 rules");
+  for (let round = 0; round < 99; round += 1) runtime = advanceRound(runtime);
+  assert.equal(runtime.effects[0].elapsed, 99, "still raging after 99 rounds");
   runtime = advanceRound(runtime);
-  assert.equal(runtime.effects.length, 0, "rage ends at the tenth round");
+  assert.equal(runtime.effects.length, 0, "rage ends at the hundredth round");
   assert.ok(runtime.log.some((entry) => entry.text.includes("종료: 격노")));
   runtime = useFeature(runtime, derived, rage, activation)!;
   runtime = endEffect(runtime, "feature:barbarian.rage");

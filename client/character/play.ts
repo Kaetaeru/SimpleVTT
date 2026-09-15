@@ -276,7 +276,7 @@ export function advanceRound(runtime: CharacterRuntime): CharacterRuntime {
   return stamp(next, `라운드 진행 (${next.effects.filter((effect) => effect.rounds !== undefined).map((effect) => `${effect.name} ${effect.elapsed}/${effect.rounds}`).join(", ") || "진행 중인 효과 없음"})`);
 }
 
-export interface FeatureUseExtras { healRoll?: number; tempRoll?: number; points?: number }
+export interface FeatureUseExtras { healRoll?: number; tempRoll?: number; points?: number; /** A logged roll ("브레스 무기 피해 14"). */ rolled?: { label: string; total: number } }
 
 /** Press "사용" on a feature: spend the pool (one use or a number of points), heal or grant temp HP from a roll, start its timed effect, log. */
 export function useFeature(runtime: CharacterRuntime, derived: DerivedCharacter, feature: { id: string; name: string }, activation: FeatureActivation, extras: FeatureUseExtras = {}): CharacterRuntime | null {
@@ -286,11 +286,12 @@ export function useFeature(runtime: CharacterRuntime, derived: DerivedCharacter,
     const resource = derived.resources.find((item) => item.id === activation.resourceId);
     if (!resource) return null;
     const used = next.resourcesUsed[resource.id] ?? 0;
-    const spend = activation.points ? Math.max(1, Math.floor(extras.points ?? 1)) : 1;
+    const spend = activation.points ? Math.max(1, Math.floor(extras.points ?? 1)) : activation.cost ?? 1;
     if (used + spend > resource.max) return null;
     next = { ...next, resourcesUsed: { ...next.resourcesUsed, [resource.id]: used + spend } };
-    parts.push(activation.points ? `${spend}점 사용, ${resource.max - used - spend}/${resource.max} 남음` : `${resource.max - used - 1}/${resource.max} 남음`);
+    parts.push(spend > 1 || activation.points ? `${spend}점 사용, ${resource.max - used - spend}/${resource.max} 남음` : `${resource.max - used - 1}/${resource.max} 남음`);
   }
+  if (extras.rolled) parts.push(`${extras.rolled.label} ${extras.rolled.total}`);
   // The caller decides what was rolled or chosen (Second Wind roll, Lay on Hands points on self); apply whatever it passed.
   if (extras.healRoll !== undefined) { next = applyHealing(next, derived, extras.healRoll); parts.push(`${extras.healRoll} 회복`); }
   if (extras.tempRoll !== undefined) { next = grantTempHp(next, extras.tempRoll); parts.push(`임시 HP ${extras.tempRoll}`); }
