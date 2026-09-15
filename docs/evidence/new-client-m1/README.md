@@ -68,7 +68,7 @@ Chromium이 Vite 개발 서버(포트 1430)에서 마법사를 처음부터 끝�
 - `62-goblin-hits-fighter-player.png` — 고블린의 시미터가 파이터를 적중: 연결 바 25/28, 시트 HP 25/28, 카드의 HP 28 → 25 (`node scripts/capture-client-attack.mjs`, 시나리오 SC-40~42)
 - `63-totm-scene-targeting.png` — 장면(TotM) 무대: 위 NPC 카드 줄, 가운데 장면 카드(이름 칩·배경 자리·라운드/턴 칩), 아래 플레이어 카드 줄; 카드는 AC 방패 배지와 아래에서 차오르는 HP 게이지. 플레이어의 ⚔ 대검 과녁 모드(사거리 판단 없음), 고른 고블린에 점선
 - `64-totm-dm-preroll-dialog.png` — DM의 "판정 전 조정" 대화: 유리·불리(자동/보통/유리/불리), 엄폐(없음/+2/+5), 반드시(주사위대로/적중/치명타/빗나감)
-- `65-totm-opportunity-prompt-dm.png` — 플레이어가 고블린 아이콘의 "🏃 벗어남"을 누른 뒤 DM 채팅의 프롬프트 카드("⚔ 시미터 (기회 공격)" / "안 함"), 트래커의 현재 턴, 강제 치명타 카드(vs AC 18 (엄폐 +2))
+- `65-totm-opportunity-prompt-dm.png` — 플레이어가 고블린 아이콘의 "🏃 벗어남"을 누른 뒤 DM 화면: 보드 오른쪽 아래 승인 도크("⚔ 시미터" / "안 함")와 채팅의 같은 프롬프트 카드, 이니셔티브·턴 토스트, 강제 치명타 카드(vs AC 18 (엄폐 +2))
 - `66-totm-opportunity-attack-player.png` — 플레이어 화면: "시미터 · 기회 공격" 판정 카드와 "기회 공격" 배지가 붙은 프롬프트 (`node scripts/capture-client-totm.mjs`, 시나리오 SC-44~47)
-- `67-turn-panel-player.png` — 플레이어 화면, 자기 캐릭터의 턴: 보드 위 턴 패널(행동·추가 행동·반응 칩, 공격/행동/추가 행동 묶음, 턴 마침), 회피 카드와 위협 판정 카드, 아이콘의 🛡 마크
+- `67-turn-panel-player.png` — 플레이어 화면, 자기 캐릭터의 턴: 한 줄 턴 패널(⚔ 무기·붙잡기·밀치기·벗어나기 | 행동·판정·특성·아이템·추가 행동 ▾ | 턴 마침, 행동 경제 칩), 회피·영향 카드, 운동 판정 카드, 행동 폭증·재기의 바람 사용 토스트, 아이콘의 🛡 마크
 - `68-turn-panel-dm-goblin.png` — DM 화면, 고블린의 턴: 고블린의 턴 패널(시미터·붙잡기·밀치기·행동 목록), 붙잡기 카드(대상의 내성 주사위 vs DC) (`node scripts/capture-client-totm.mjs`, 시나리오 SC-48~49)

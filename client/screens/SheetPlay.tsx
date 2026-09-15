@@ -10,15 +10,14 @@ import { describeRoll, parseFormula, type RollResult, type RollSpec } from "../c
 import { useDice } from "../ui/dice/DiceProvider";
 import { exportCharacterFile, serializeCharacterFile } from "../character/json";
 import {
-  addItem, adjustGold, advanceRound, applyHealing, applyHpCommand, castSpell, clearTempHp, CONDITIONS, endEffect, grantTempHp, hitDiceAvailable, longRest, noteLog, recordDeathSave, removeItem, resetDeathSaves,
+  addItem, adjustGold, advanceRound, applyHpCommand, castSpell, clearTempHp, CONDITIONS, endEffect, grantTempHp, hitDiceAvailable, longRest, noteLog, recordDeathSave, removeItem, resetDeathSaves,
   restorePactSlot, restoreResource, restoreSpellSlot, setCurrentHp, setExhaustion, setGold, setInspiration, setItemQuantity, shortRest, toggleCondition, toggleEquip,
-  useFeature, usePactSlot, useResource, useSpellSlot,
+  usePactSlot, useResource, useSpellSlot,
 } from "../character/play";
-import type { FeatureUseExtras } from "../character/play";
 import type { CharacterRuntime } from "../character/runtime";
 import type { CharacterSource, DerivedAttack } from "../character/types";
-import { featureActivation } from "../rules/activation";
-import { castHook, effectApplication, type CastHook } from "../rules/effects";
+import { castHook, type CastHook } from "../rules/effects";
+import { activateFeature as activateFeatureShared, rollTotal as rollTotalShared, withEffectStart as withEffectStartShared } from "../character/activate";
 import { copyText, downloadText, Modal, Notice, Pill } from "../ui/components";
 import { SheetView, ValidationList, type SheetActions } from "./SheetView";
 
@@ -101,44 +100,12 @@ export function SheetPlay({ source, runtime, catalog, save, onRolled, savedAt, t
       await save((current) => noteLog(logLines(current), `${name} 피해 ${total} ${hook.damage!.type}${hook.notes?.length ? ` (${hook.notes.join(" · ")})` : ""}`));
     } else if (hook.notes?.length) await save((current) => noteLog(current, `${name}: ${hook.notes!.join(" · ")}`));
   };
-  /** A formula with dice goes through the overlay; a plain number (temp HP = level) is applied at once. */
-  const rollTotal = async (spec: RollSpec, lines?: string[]) => { const parsed = parseFormula(spec.formula); if (parsed && parsed.dice.length === 0) return parsed.modifier; const result = await rollDice(spec); lines?.push(describeRoll(result)); return result.total; };
-  /** An effect that just started may change the sheet at once (Aid: +5 max HP and +5 current HP). */
-  const withEffectStart = (previous: CharacterRuntime, next: CharacterRuntime) => {
-    const started = (next.effects ?? []).filter((effect) => !(previous.effects ?? []).some((item) => item.key === effect.key));
-    let out = next;
-    for (const effect of started) {
-      const application = effectApplication(effect, derived, catalog);
-      if (application?.onStart?.heal) {
-        const live = deriveCharacter(source, catalog, { equipped: out.equipped, inventory: out.inventory, effects: out.effects });
-        out = applyHealing(out, live, application.onStart.heal);
-      }
-    }
-    return out;
-  };
-  /** "사용": ask for points when the pool is spent by amount, roll heal/temp HP through the overlay, then apply. */
+  const rollTotal = (spec: RollSpec, lines?: string[]) => rollTotalShared(rollDice, spec, lines);
+  const withEffectStart = (previous: CharacterRuntime, next: CharacterRuntime) => withEffectStartShared(source, catalog, derived, previous, next);
+  /** "사용": the shared activation flow (points prompt, heal/temp HP/logged dice through the overlay, applied against the stored runtime). */
   const activateFeature = async (feature: Parameters<SheetActions["useFeature"]>[0]) => {
-    const activation = featureActivation(feature, derived);
-    if (!activation) return;
-    const extras: FeatureUseExtras = {};
-    if (activation.points && activation.resourceId) {
-      const pool = derived.resources.find((resource) => resource.id === activation.resourceId);
-      const left = pool ? pool.max - (runtime.resourcesUsed[pool.id] ?? 0) : 0;
-      const answer = prompt(`${feature.name}: 몇 점을 쓸까요? (남은 ${left})`, String(Math.min(left, 5)));
-      if (answer === null) return;
-      const points = Number(answer);
-      if (!Number.isInteger(points) || points < 1 || points > left) { alert("1 이상, 남은 점수 이하의 정수를 넣어 주세요."); return; }
-      extras.points = points;
-      if (confirm(`${points}점을 자신에게 써서 HP를 ${points} 회복할까요? (취소: 다른 대상)`)) extras.healRoll = points;
-    }
-    const lines: string[] = [];
-    if (activation.heal) extras.healRoll = await rollTotal({ label: feature.name, formula: activation.heal(derived), note: "회복", kind: "custom" }, lines);
-    if (activation.tempHp) extras.tempRoll = await rollTotal({ label: feature.name, formula: activation.tempHp(derived), note: "임시 HP", kind: "custom" }, lines);
-    if (activation.roll) { const roll = activation.roll(derived); extras.rolled = { label: roll.label, total: await rollTotal({ label: roll.label, formula: roll.formula, kind: "custom" }, lines) }; }
-    // Applied against the stored runtime: the dice took a while and the sheet may have changed meanwhile.
-    let refused = false;
-    await save((current) => { const next = useFeature(lines.reduce((acc, line) => noteLog(acc, line), current), derived, feature, activation, extras); if (!next) { refused = true; return current; } return withEffectStart(current, next); });
-    if (refused) alert("남은 횟수가 없습니다.");
+    const outcome = await activateFeatureShared(feature, { source, catalog, derived, runtime, rollDice, save: (updater) => save(updater) });
+    if (outcome === "refused") alert("남은 횟수가 없습니다.");
   };
 
   const text = () => serializeCharacterFile(exportCharacterFile(source, runtime, derived));

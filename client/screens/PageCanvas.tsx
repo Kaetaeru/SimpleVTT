@@ -19,8 +19,15 @@ import { useDice } from "../ui/dice/DiceProvider";
 import type { Layer, Page, Token, TokenBar, TokenMarker } from "../campaign/page";
 import { ALL_MARKERS, applyBarInput, cellDistance, clampToPage, controlsToken, isConditionMarker, isScene, MARKER_GLYPH, newPage, newScene, newToken, playerPageId, snap, tokenForEntry, tokenForNpc } from "../campaign/page";
 import type { Advantage, AttackOverrides } from "../rules/resolve";
-import { ACTIONS, actionDef, cannotAct, SKILL_ABILITY_OF, SKILL_KO, type ActionDef } from "../rules/actions";
-import { ABILITY_KO } from "../catalog/types";
+import { ACTIONS, actionDef, cannotAct, npcStats, pcStats, skillBonus, SKILL_ABILITY_OF, SKILL_KO, type ActionDef } from "../rules/actions";
+import { ABILITY_KEYS, ABILITY_KO } from "../catalog/types";
+import { activateFeature, usableFeatures } from "../character/activate";
+import { applyHealing, noteLog, setItemQuantity } from "../character/play";
+import type { CharacterRuntime } from "../character/runtime";
+import { resolveRuntime } from "../character/save";
+import type { DerivedFeature, DerivedItem } from "../character/types";
+import { itemUse } from "../rules/items";
+import { ApprovalLayer, ToastLayer } from "./Notify";
 import { hasSmite, hasSneakAttack, npcAttackSpec, smiteSlots, weaponRange } from "../rules/attackSpec";
 import type { AttackRef, AttackRiders } from "../session/protocol";
 import { Modal as RiderModal } from "../ui/components";
@@ -245,6 +252,8 @@ export function PageCanvas({ onOpenEntry, onOpenToken, onOpenPageSettings }: Can
       ) : <div className="cl-page-bar"><span className="cl-small"><strong>{page.name}</strong> <span className="cl-quiet">{scene ? "장면 · 위치와 거리는 DM이 말로" : `${page.width}×${page.height} · 1칸 = ${page.scale} ${page.unit}`}</span></span></div>}
       {myTurn ? <TurnPanel token={myTurn} page={page} onOpenEntry={onOpenEntry} /> : null}
       <div className="cl-canvas-body">
+        <ToastLayer />
+        <ApprovalLayer />
         <div className="cl-toolbar" role="toolbar" aria-label="도구">
           <button type="button" className="cl-tool active" title="선택·이동">⬚</button>
           {isGm ? (scene ? ["objects", "gm"] : ["map", "objects", "gm"]) .map((item) => item as Layer).map((item) => <button type="button" key={item} className={`cl-tool${layer === item ? " active" : ""}`} title={`${LAYER_KO[item]} 레이어`} aria-label={`${LAYER_KO[item]} 레이어`} aria-pressed={layer === item} onClick={() => { setLayer(item); setSelected([]); }}>{item === "map" ? "🗺" : item === "objects" ? "♟" : "👁"}</button>) : null}
@@ -372,22 +381,61 @@ function ActDialog({ ask, onDone }: { ask: ActAsk; onDone: (answer: ActAnswer | 
   );
 }
 
+/** A small popover menu: one button, a list of choices with hints; closes on choice, Esc or a click outside. */
+function Dropdown({ label, items, disabled, tone }: { label: string; items: Array<{ key: string; label: string; hint?: string; disabled?: boolean; onSelect: () => void }>; disabled?: boolean; tone?: "primary" }) {
+  const [open, setOpen] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (event: PointerEvent) => { if (!box.current?.contains(event.target as Node)) setOpen(false); };
+    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") setOpen(false); };
+    document.addEventListener("pointerdown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => { document.removeEventListener("pointerdown", onDown); document.removeEventListener("keydown", onKey); };
+  }, [open]);
+  return (
+    <div className="cl-dd" ref={box}>
+      <button type="button" className={`cl-btn small${tone === "primary" ? " primary" : ""}${open ? " active" : ""}`} aria-haspopup="menu" aria-expanded={open} disabled={disabled || !items.length} onClick={() => setOpen((value) => !value)}>{label} ▾</button>
+      {open ? (
+        <div className="cl-dd-menu" role="menu" aria-label={label}>
+          {items.map((item) => <button type="button" key={item.key} role="menuitem" className="cl-dd-item" disabled={item.disabled} title={item.hint} onClick={() => { setOpen(false); item.onSelect(); }}><span>{item.label}</span>{item.hint ? <small>{item.hint}</small> : null}</button>)}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 /**
  * The turn panel: shown when the current turn is yours — a player's own character, or for the DM any creature no
- * player controls. 공격 lists the sheet's attacks; the rest is the 2024 action list. The economy chips only inform.
+ * player controls. One row: the sheet's attacks and unarmed options, then menus for the 2024 action list, checks,
+ * features, items and bonus actions (D97, D98). The economy chips only inform.
  */
 function TurnPanel({ token, page, onOpenEntry }: { token: Token; page: Page; onOpenEntry: (id: string) => void }) {
   const c = useCampaigns();
+  const dice = useDice();
   const { catalog } = useClient();
   const { snapshot, isGm } = useViewer();
   const entry = token.represents ? snapshot.journal.find((item) => item.id === token.represents) : undefined;
   const derived = useMemo(() => (entry?.kind === "character" ? deriveCharacter(entry.source, catalog, { equipped: entry.runtime.equipped, inventory: entry.runtime.inventory, effects: entry.runtime.effects }) : null), [entry, catalog]);
+  const latest = useRef<{ runtime: CharacterRuntime; sentAt: string } | null>(null);
   if (!entry || entry.kind === "handout") return null;
   const turn = snapshot.tracker.turns[snapshot.tracker.current];
   const attackWith = makeAttackWith({ c, token, page, entry, derived, isGm });
   const me = { entryId: entry.id, pageId: page.id, tokenId: token.id };
   const conditions = new Set([...(entry.runtime.conditions ?? []), ...token.markers.map((marker) => marker.name)]);
   const blocked = cannotAct([...conditions]);
+  const off = Boolean(blocked);
+  const rollToChat = async (spec: RollSpec) => { const result = await dice.roll(spec); c.sendRoll({ formula: result.formula, total: result.total, dice: result.dice.map((die) => ({ sides: die.sides, value: die.value })), modifier: result.modifier, label: `${token.name} · ${result.label}${result.note ? ` (${result.note})` : ""}` }); return result; };
+  const d20 = (bonus: number) => `1d20${bonus >= 0 ? "+" : "-"}${Math.abs(bonus)}`;
+  // The sheet's runtime is saved against the newest we know (the host's echo or what we sent since).
+  const currentRuntime = () => (entry.kind === "character" && latest.current && latest.current.sentAt > entry.updatedAt ? latest.current.runtime : (entry as JournalCharacter).runtime);
+  const saveRuntime = (input: (current: CharacterRuntime) => CharacterRuntime) => {
+    if (entry.kind !== "character") return;
+    const runtime = { ...resolveRuntime(entry.source, catalog, currentRuntime(), input), updatedAt: new Date().toISOString() };
+    const sentAt = new Date().toISOString();
+    latest.current = { runtime, sentAt };
+    c.putJournal({ ...entry, runtime, updatedAt: sentAt });
+  };
   const take = async (def: ActionDef, bonus = false) => {
     let target: string | undefined;
     if (def.target) {
@@ -399,8 +447,40 @@ function TurnPanel({ token, page, onOpenEntry }: { token: Token; page: Page; onO
     if ((def.skills && def.skills.length > 1) || def.text || def.choice || (isGm && (def.skills || def.kind === "escape"))) { answer = await requestActOptions({ def, gm: isGm }); if (answer === null) return; }
     c.act(me, def.kind, { target: target ? { pageId: page.id, tokenId: target } : undefined, skill: answer?.skill ?? def.skills?.[0], dc: answer?.dc, note: answer?.note, choice: answer?.choice, bonus });
   };
+  // 판정: saves and skills from the sheet or the stat block (untrained skills use the ability modifier).
+  const stats = entry.kind === "npc" ? npcStats(entry.statBlock) : derived ? pcStats(derived) : null;
+  const checkItems = stats ? [
+    ...ABILITY_KEYS.map((key) => ({ key: `save:${key}`, label: `${ABILITY_KO[key]} 내성`, hint: `${stats.saves[key] >= 0 ? "+" : ""}${stats.saves[key]}`, onSelect: () => void rollToChat({ label: `${ABILITY_KO[key]} 내성`, formula: d20(stats.saves[key]), kind: "save" }) })),
+    ...Object.keys(SKILL_KO).map((id) => { const bonus = skillBonus(stats, id); return { key: `skill:${id}`, label: `${ABILITY_KO[SKILL_ABILITY_OF[id]]}(${SKILL_KO[id]})`, hint: `${bonus >= 0 ? "+" : ""}${bonus}`, onSelect: () => void rollToChat({ label: `${ABILITY_KO[SKILL_ABILITY_OF[id]]}(${SKILL_KO[id]})`, formula: d20(bonus), kind: "check" }) }; }),
+  ] : [];
+  // 특성: the sheet's usable features (class, species, feats) with their remaining uses; NPC traits are reminders.
+  const usable = entry.kind === "character" && derived ? usableFeatures(derived, entry.runtime) : [];
+  const useIt = async (feature: DerivedFeature) => {
+    if (entry.kind !== "character" || !derived) return;
+    const outcome = await activateFeature(feature, { source: entry.source, catalog, derived, runtime: currentRuntime(), rollDice: rollToChat, save: saveRuntime });
+    if (outcome === "refused") alert("남은 횟수가 없습니다.");
+    if (outcome === "done") c.say(`/em ${token.name}: ${feature.name} 사용`);
+  };
+  const featureItems = entry.kind === "npc"
+    ? entry.statBlock.traits.map((trait) => ({ key: trait.name, label: trait.name, hint: trait.text.slice(0, 60), onSelect: () => c.say(`/em ${token.name}: ${trait.name}`) }))
+    : usable.filter((item) => !item.bonus).map((item) => ({ key: item.feature.id, label: item.feature.name, hint: item.left !== undefined ? `${item.left}/${item.pool!.max}${item.activation.note ? ` · ${item.activation.note}` : ""}` : item.activation.note, disabled: item.left !== undefined && item.left <= 0, onSelect: () => void useIt(item.feature) }));
+  // 아이템: the bag; potions heal, consumables are spent, the rest is logged.
+  const items = entry.kind === "character" && derived ? derived.inventory.filter((item) => item.quantity > 0 && !["weapon", "armor", "shield"].includes(item.kind)) : [];
+  const useItem = async (item: DerivedItem) => {
+    if (entry.kind !== "character" || !derived) return;
+    const use = itemUse(item);
+    let healed: number | undefined;
+    if (use.heal) healed = (await rollToChat({ label: use.text, formula: use.heal, note: "회복", kind: "custom" })).total;
+    saveRuntime((current) => { let next = noteLog(current, `${use.text}${healed !== undefined ? ` — ${healed} 회복` : ""}`); if (healed !== undefined) next = applyHealing(next, derived, healed); if (use.consumes) next = setItemQuantity(next, derived, item.instanceId, item.quantity - 1); return next; });
+    c.say(`/em ${token.name}: ${use.text}${healed !== undefined ? ` (${healed} 회복)` : ""}`);
+  };
+  const itemItems = items.map((item) => ({ key: item.instanceId, label: item.name, hint: `${item.quantity > 1 ? `×${item.quantity} · ` : ""}${itemUse(item).heal ? `회복 ${itemUse(item).heal}` : itemUse(item).consumes ? "소모" : "기록"}`, onSelect: () => void useItem(item) }));
+  const bonusItems = [
+    ...(entry.kind === "npc" ? entry.statBlock.bonusActions.map((action) => ({ key: action.name, label: `${action.kind === "attack" && action.attack ? "⚔ " : ""}${action.name}`, hint: action.text?.slice(0, 60), onSelect: () => { if (action.kind === "attack" && action.attack) void attackWith({ source: "npc", actionName: action.name }); else c.act(me, "utilize", { note: action.name, bonus: true }); } })) : []),
+    ...usable.filter((item) => item.bonus).map((item) => ({ key: item.feature.id, label: item.feature.name, hint: item.left !== undefined ? `${item.left}/${item.pool!.max}` : undefined, disabled: item.left !== undefined && item.left <= 0, onSelect: () => void useIt(item.feature) })),
+    { key: "note", label: "기록…", hint: "다른 추가 행동을 쓴 것으로 남김", onSelect: () => void take({ ...actionDef("utilize"), name: "추가 행동", text: "무엇을" }, true) },
+  ];
   const chip = (label: string, used: boolean | undefined) => <span className={`cl-econ${used ? " used" : ""}`} title={used ? `${label} 사용함` : `${label} 남음`}><i />{label}</span>;
-  const bonusActions = entry.kind === "npc" ? entry.statBlock.bonusActions : [];
   return (
     <div className="cl-turn-panel" role="region" aria-label={`${token.name}의 턴`}>
       <div className="cl-turn-head">
@@ -411,29 +491,17 @@ function TurnPanel({ token, page, onOpenEntry }: { token: Token; page: Page; onO
         <button type="button" className="cl-btn small quiet" onClick={() => onOpenEntry(entry.id)}>시트</button>
         <button type="button" className="cl-btn small primary" onClick={() => c.nextTurn()} title="턴을 마치고 다음 차례로">턴 마침 ▶</button>
       </div>
-      <div className="cl-turn-groups">
-        <div className="cl-turn-group">
-          <h5>공격 <small>Attack</small></h5>
-          <div className="cl-turn-btns">
-            {derived ? derived.attacks.map((attack) => <button type="button" key={attack.id} className="cl-btn small primary" disabled={Boolean(blocked)} onClick={() => void attackWith({ source: "weapon", attackId: attack.id })}>⚔ {attack.name} {attack.attackBonus >= 0 ? "+" : ""}{attack.attackBonus}</button>) : null}
-            {entry.kind === "npc" ? entry.statBlock.actions.filter((action) => action.kind === "attack" && action.attack).map((action) => <button type="button" key={action.name} className="cl-btn small primary" disabled={Boolean(blocked) || Boolean(action.timing?.recharge && entry.runtime.spent[action.name])} onClick={() => void attackWith({ source: "npc", actionName: action.name })}>⚔ {action.name} {action.attack!.bonus >= 0 ? "+" : ""}{action.attack!.bonus}</button>) : null}
-            {ACTIONS.filter((def) => def.kind === "grapple" || def.kind === "shove" || def.kind === "escape").map((def) => <button type="button" key={def.kind} className="cl-btn small" disabled={Boolean(blocked) || (def.kind === "escape" && !conditions.has("붙잡힘"))} title={def.summary} onClick={() => void take(def)}>{def.name}</button>)}
-            <button type="button" className="cl-btn small" disabled title="주문·마법 (R8)">✨ 마법</button>
-          </div>
-        </div>
-        <div className="cl-turn-group">
-          <h5>행동 <small>Action</small></h5>
-          <div className="cl-turn-btns">
-            {ACTIONS.filter((def) => !["grapple", "shove", "escape"].includes(def.kind)).map((def) => <button type="button" key={def.kind} className="cl-btn small" disabled={Boolean(blocked)} title={`${def.en} — ${def.summary}`} onClick={() => void take(def)}>{def.name}</button>)}
-          </div>
-        </div>
-        <div className="cl-turn-group">
-          <h5>추가 행동 <small>Bonus</small></h5>
-          <div className="cl-turn-btns">
-            {bonusActions.map((action) => action.kind === "attack" && action.attack ? <button type="button" key={action.name} className="cl-btn small primary" disabled={Boolean(blocked)} onClick={() => void attackWith({ source: "npc", actionName: action.name })}>⚔ {action.name}</button> : <button type="button" key={action.name} className="cl-btn small" disabled={Boolean(blocked)} title={action.text} onClick={() => c.act(me, "utilize", { note: action.name, bonus: true })}>{action.name}</button>)}
-            <button type="button" className="cl-btn small quiet" disabled={Boolean(blocked)} title="시트의 추가 행동(특성·주문)을 쓴 것으로 기록" onClick={() => void take({ ...actionDef("utilize"), name: "추가 행동", text: "무엇을" }, true)}>기록…</button>
-          </div>
-        </div>
+      <div className="cl-turn-row">
+        {derived ? derived.attacks.map((attack) => <button type="button" key={attack.id} className="cl-btn small primary" disabled={off} onClick={() => void attackWith({ source: "weapon", attackId: attack.id })}>⚔ {attack.name} {attack.attackBonus >= 0 ? "+" : ""}{attack.attackBonus}</button>) : null}
+        {entry.kind === "npc" ? entry.statBlock.actions.filter((action) => action.kind === "attack" && action.attack).map((action) => <button type="button" key={action.name} className="cl-btn small primary" disabled={off || Boolean(action.timing?.recharge && entry.runtime.spent[action.name])} onClick={() => void attackWith({ source: "npc", actionName: action.name })}>⚔ {action.name} {action.attack!.bonus >= 0 ? "+" : ""}{action.attack!.bonus}</button>) : null}
+        {ACTIONS.filter((def) => def.kind === "grapple" || def.kind === "shove" || def.kind === "escape").map((def) => <button type="button" key={def.kind} className="cl-btn small" disabled={off || (def.kind === "escape" && !conditions.has("붙잡힘"))} title={def.summary} onClick={() => void take(def)}>{def.name}</button>)}
+        <span className="cl-turn-sep" />
+        <Dropdown label="행동" disabled={off} items={ACTIONS.filter((def) => !["grapple", "shove", "escape"].includes(def.kind)).map((def) => ({ key: def.kind, label: def.name, hint: def.summary, onSelect: () => void take(def) }))} />
+        <Dropdown label="판정" items={checkItems} />
+        <Dropdown label="특성" disabled={off} items={featureItems} />
+        <Dropdown label="아이템" disabled={off} items={itemItems} />
+        <Dropdown label="추가 행동" disabled={off} items={bonusItems} />
+        <button type="button" className="cl-btn small" disabled title="주문·마법 (R8)">✨ 마법</button>
       </div>
     </div>
   );

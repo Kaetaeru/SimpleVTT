@@ -355,7 +355,7 @@ input.cl-journal-title{height:36px}
 .cl-ribbon{color:#e5484d}
 .cl-ribbon-move{display:none;padding:0 5px;border-radius:999px;background:var(--surface-3);color:var(--quiet);font-size:10px}
 .cl-page-chip:hover .cl-ribbon-move{display:inline}
-.cl-canvas-body{display:flex;flex:1;min-height:0}
+.cl-canvas-body{display:flex;flex:1;min-height:0;position:relative}
 .cl-toolbar{display:flex;flex-direction:column;gap:2px;padding:6px 4px;border-right:1px solid var(--line);background:var(--surface)}
 .cl-tool{width:34px;height:34px;border:1px solid transparent;border-radius:var(--radius-s);background:transparent;color:var(--muted);cursor:pointer;font-size:16px}
 .cl-tool.small{font-size:10px}
@@ -454,10 +454,10 @@ span.cl-tracker-init{display:inline-grid;place-items:center}
 .cl-palette{display:flex;flex-wrap:wrap;gap:3px;padding-top:4px;border-top:1px dashed var(--line)}
 
 /* ---- T1: Theatre-of-the-Mind scene board (D95) and opportunity prompts (D96) ---- */
-.cl-canvas-viewport.scene{background:var(--surface);background-image:none;overflow:auto}
-.cl-scene{min-height:100%;padding:18px 22px;display:grid;grid-template-rows:auto 1fr auto;gap:16px;max-width:1100px;margin:0 auto;box-sizing:border-box}
+.cl-canvas-viewport.scene{background:var(--surface);background-image:none;overflow:hidden}
+.cl-scene{height:100%;padding:14px 22px;display:grid;grid-template-rows:auto minmax(120px,1fr) auto;gap:12px;max-width:1100px;margin:0 auto;box-sizing:border-box;overflow:hidden}
 .cl-scene-row h4{margin:0 0 8px;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
-.cl-scene-cards{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start;min-height:118px}
+.cl-scene-cards{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-start;min-height:60px;max-height:34vh;overflow:hidden}
 .cl-scene-hint{align-self:center;padding:8px 2px}
 .cl-scene-card{position:relative;width:96px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:manipulation}
 .cl-scene-portrait{position:relative;width:96px;height:124px;border-radius:14px;overflow:hidden;background:linear-gradient(180deg,#1b1f27,#141820);border:1px solid rgba(255,255,255,.08);box-shadow:0 6px 18px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.05);transition:transform .12s ease,box-shadow .12s ease,border-color .12s ease}
@@ -480,7 +480,7 @@ span.cl-tracker-init{display:inline-grid;place-items:center}
 .cl-scene-card.layer-gm .cl-scene-portrait{border:1px dashed #ffb347}
 .cl-scene-leave{font:inherit;font-size:11px;padding:3px 8px;border-radius:999px;border:1px solid var(--line-2);background:var(--surface-2);color:var(--text);cursor:pointer;white-space:nowrap}
 .cl-scene-leave:hover{border-color:var(--accent);color:var(--accent)}
-.cl-scene-stage{position:relative;min-height:220px;border-radius:16px;border:1px solid rgba(255,255,255,.08);background:linear-gradient(180deg,#171a21,#111419);box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 8px 24px rgba(0,0,0,.3);overflow:hidden;display:grid;place-items:center}
+.cl-scene-stage{position:relative;min-height:120px;border-radius:16px;border:1px solid rgba(255,255,255,.08);background:linear-gradient(180deg,#171a21,#111419);box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 8px 24px rgba(0,0,0,.3);overflow:hidden;display:grid;place-items:center}
 .cl-scene-backdrop{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
 .cl-scene-placeholder{display:flex;flex-direction:column;align-items:center;gap:8px;color:#6d7483}
 .cl-scene-placeholder small{font-size:11px;opacity:.8}
@@ -490,7 +490,7 @@ span.cl-tracker-init{display:inline-grid;place-items:center}
 .cl-chat-msg.prompt .cl-prompt-card{margin-top:4px;padding:8px 10px;border-radius:var(--radius-m);border:1px solid var(--line-2);background:var(--surface-2);display:flex;flex-direction:column;gap:6px}
 
 /* ---- T2: turn panel (D97) and action cards ---- */
-.cl-turn-panel{margin:0 0 6px;padding:8px 12px;border-radius:var(--radius-m);border:1px solid rgba(255,209,102,.45);background:linear-gradient(180deg,rgba(255,209,102,.10),rgba(255,209,102,.03));display:flex;flex-direction:column;gap:8px}
+.cl-turn-panel{margin:0 0 6px;padding:6px 12px;border-radius:var(--radius-m);border:1px solid rgba(255,209,102,.45);background:linear-gradient(180deg,rgba(255,209,102,.10),rgba(255,209,102,.03));display:flex;flex-direction:column;gap:6px}
 .cl-turn-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .cl-turn-econ{display:inline-flex;gap:6px;margin-left:6px}
 .cl-econ{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--muted)}
@@ -502,3 +502,21 @@ span.cl-tracker-init{display:inline-grid;place-items:center}
 .cl-turn-group h5 small{font-weight:400;text-transform:none;letter-spacing:0;opacity:.7;margin-left:4px}
 .cl-turn-btns{display:flex;flex-wrap:wrap;gap:4px}
 .cl-chat-msg.act .cl-act-card{margin-top:4px;padding:8px 10px;border-radius:var(--radius-m);border:1px solid var(--line-2);background:var(--surface-2);display:flex;flex-direction:column;gap:4px}
+
+/* ---- T3: compact turn row, menus, toasts and approvals (D98–D99) ---- */
+.cl-turn-row{display:flex;flex-wrap:wrap;align-items:center;gap:4px}
+.cl-turn-sep{width:1px;height:20px;background:var(--line-2);margin:0 6px}
+.cl-dd{position:relative}
+.cl-dd-menu{position:absolute;left:0;top:calc(100% + 4px);z-index:60;min-width:220px;max-height:320px;overflow:auto;padding:4px;background:var(--overlay);border:1px solid var(--line-2);border-radius:var(--radius-m);box-shadow:var(--elev-2);display:flex;flex-direction:column}
+.cl-dd-item{display:flex;align-items:baseline;justify-content:space-between;gap:10px;width:100%;padding:6px 8px;border:0;border-radius:6px;background:transparent;color:var(--text);font:inherit;font-size:12px;text-align:left;cursor:pointer}
+.cl-dd-item:hover,.cl-dd-item:focus-visible{background:var(--surface-2)}
+.cl-dd-item:disabled{opacity:.45;cursor:default}
+.cl-dd-item small{color:var(--muted);font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px}
+.cl-toasts{position:absolute;left:50%;top:10px;transform:translateX(-50%);z-index:55;display:flex;flex-direction:column;gap:6px;align-items:center;pointer-events:none;max-width:min(92%,560px)}
+.cl-toast{pointer-events:auto;padding:6px 12px;border-radius:999px;background:rgba(20,23,29,.92);border:1px solid rgba(255,255,255,.14);color:#e9ecf2;font-size:12px;box-shadow:0 6px 18px rgba(0,0,0,.4);backdrop-filter:blur(6px);animation:cl-toast-in .18s ease-out;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.cl-toast.good{border-color:rgba(63,185,80,.6)}
+.cl-toast.bad{border-color:rgba(229,72,77,.6)}
+@keyframes cl-toast-in{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+.cl-approvals{position:absolute;right:12px;bottom:12px;z-index:56;display:flex;flex-direction:column;gap:8px;max-width:360px;pointer-events:none}
+.cl-approvals:empty{display:none}
+.cl-approval{pointer-events:auto;padding:8px 10px;border-radius:var(--radius-m);background:rgba(20,23,29,.95);border:1px solid rgba(255,209,102,.55);box-shadow:0 8px 24px rgba(0,0,0,.45);display:flex;flex-direction:column;gap:6px;animation:cl-toast-in .18s ease-out}
