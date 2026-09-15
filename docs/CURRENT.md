@@ -23,7 +23,7 @@ Updated: 2026-09-14 Asia/Seoul
 - 검사: `npm run test:client` 40건(전수 행렬: 종족 9 × 직업 12 × 배경 4 × L1·L5 + 직업 12 × L1~20, 설치 모듈 흐름, JSON 왕복, 저장소, 화면 렌더). 증거 캡처 15장 `docs/evidence/new-client-m1/`.
 - exe: 워크플로 `windows-exe-client.yml` → 프리릴리스 `client-m1-*` (`SimpleVTT-client-<sha>.exe`). 옛 V2 미리보기 exe 워크플로는 그대로 있다.
 - 소유자가 보고한 세 문제(레벨업에 기원 재주, 종족 특성 미표시, 드워프 HP)는 새 엔진에서 검사 항목으로 고정됐다(`derive.test.ts`, `matrix.test.ts`, `install.test.ts`).
-- 다음: M2 시트 운용(사용량·가방·휴식·레벨업 UI 다듬기) → M3 테이블 이식 → M4 멀티세션.
+- 다음: M4 멀티세션(LAN·하마치, 소유자 결정 2026-09-15) — 설계 `docs/design/v3/CAMPAIGN_RESOURCES.md`(카탈로그→라이브러리→캠페인→세션 네 층, 문서 모델, 자산 해시 저장·청크 전송, 권한 4단계 투영, 명령→이벤트 동기화, 초대 코드) → S1 문서 모델부터. M3 테이블 커널 이식은 장면 문서 위에.
 
 ## 현재 실제 상태
 
