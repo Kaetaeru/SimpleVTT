@@ -602,7 +602,7 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
       <div className="cl-cmd-groups" role="toolbar" aria-label={`${token.name} 액션`}>
         <div className="cl-cmd-group attack">
           <span className="cl-cmd-label">공격</span>
-          {derived ? derived.attacks.map((attack) => <button type="button" key={attack.id} className="cl-btn small attack" disabled={offAttack} title={extraAttacks > 1 ? `추가 공격: 공격 행동 하나로 ${extraAttacks}번 — 버튼을 ${extraAttacks}번 누르세요` : undefined} onClick={() => void attackWith({ source: "weapon", attackId: attack.id })}>⚔ {attack.name} <b>{attack.attackBonus >= 0 ? "+" : ""}{attack.attackBonus}</b>{extraAttacks > 1 ? <small className="cl-extra">×{extraAttacks}</small> : null}</button>) : null}
+          {derived ? derived.attacks.map((attack) => <button type="button" key={attack.id} className="cl-btn small attack" disabled={offAttack} title={extraAttacks > 1 ? `추가 공격: 공격 행동 하나로 ${extraAttacks}번 — 버튼을 ${extraAttacks}번 누르세요` : undefined} onClick={() => void attackWith({ source: "weapon", attackId: attack.id })}>⚔ {attack.name} <b>{attack.attackBonus >= 0 ? "+" : ""}{attack.attackBonus}</b>{extraAttacks > 1 ? <small className="cl-extra">×{extraAttacks}</small> : null}{attack.masteryActive && attack.mastery ? <small className="cl-extra" title={`무기 통달: ${attack.mastery}`}>⚒{attack.mastery}</small> : null}</button>) : null}
           {entry.kind === "npc" && routine.length ? <button type="button" className="cl-btn small attack" disabled={offAttack} title={block?.actions.find((action) => action.kind === "multiattack")?.text} onClick={() => void multiattack()}>⚔⚔ 다중공격 <small className="cl-extra">{routine.map((step) => `${step.name}×${step.count}`).join(" ")}</small></button> : null}
           {entry.kind === "npc" ? entry.statBlock.actions.filter((action) => action.kind === "attack" && action.attack).map((action) => <button type="button" key={action.name} className="cl-btn small attack" disabled={offAttack || Boolean(action.timing?.recharge && entry.runtime.spent[action.name])} onClick={() => void attackWith({ source: "npc", actionName: action.name })}>⚔ {action.name} <b>{action.attack!.bonus >= 0 ? "+" : ""}{action.attack!.bonus}</b></button>) : null}
           {ACTIONS.filter((def) => def.kind === "grapple" || def.kind === "shove" || def.kind === "escape").map((def) => { const needsHand = (def.kind === "grapple" || def.kind === "shove") && !freeHand; return <button type="button" key={def.kind} className="cl-btn small" disabled={off || needsHand || (def.kind === "escape" && !conditions.has("붙잡힘"))} title={needsHand ? "빈 손이 없습니다 (보조 손이나 양손 무기를 내려놓으세요)" : def.summary} onClick={() => void take(def)}>{def.name}</button>; })}
@@ -875,6 +875,28 @@ function useCardFloats(page: Page, journal: JournalEntry[]) {
  * players' cards along the bottom. What matters most is what stands out (D100): the acting card is larger with a
  * gold ring; in targeting mode only candidates stay lit; results float over the card they happened to.
  */
+/* ---------- R12: a card points at its creature; a ribbon row points at its cards ---------- */
+
+type Highlight = { entryId?: string; tokenId?: string } | null;
+const highlightListeners = new Set<(value: Highlight) => void>();
+/** Hovering a chat card lights the creature it is about on the board. */
+export const setHighlight = (value: Highlight) => { for (const listener of highlightListeners) listener(value); };
+function useHighlight() {
+  const [value, setValue] = useState<Highlight>(null);
+  useEffect(() => { highlightListeners.add(setValue); return () => { highlightListeners.delete(setValue); }; }, []);
+  return value;
+}
+const highlights = (value: Highlight, token: Token) => Boolean(value && ((value.tokenId && value.tokenId === token.id) || (value.entryId && token.represents === value.entryId)));
+/** Clicking a ribbon row scrolls the chat to that creature's latest card and flashes it. */
+export const flashCardsFor = (name: string) => {
+  const cards = [...document.querySelectorAll<HTMLElement>(".cl-chat-list .cl-chat-msg")].filter((element) => (element.textContent ?? "").includes(name));
+  const last = cards[cards.length - 1];
+  if (!last) return;
+  last.scrollIntoView({ block: "center", behavior: "smooth" });
+  last.classList.add("cl-flash");
+  window.setTimeout(() => last.classList.remove("cl-flash"), 1600);
+};
+
 /** R9: the same result floats (−7, 빗나감, 사망 …) over grid tokens, anchored at the token's top centre. */
 function GridFloats({ page, journal, cell }: { page: Page; journal: JournalEntry[]; cell: number }) {
   const floats = useCardFloats(page, journal);
@@ -893,6 +915,7 @@ function SceneBoard({ page, tokens, selected, targeting, turnTokenId, acting, jo
   const { catalog } = useClient();
   const snapshot = c.table.snapshot!;
   const floats = useCardFloats(page, journal);
+  const highlight = useHighlight();
   const visible = tokens.filter((token) => token.layer !== "map");
   const party = visible.filter((token) => journal.find((entry) => entry.id === token.represents)?.kind === "character");
   const others = visible.filter((token) => !party.includes(token));
@@ -907,7 +930,7 @@ function SceneBoard({ page, tokens, selected, targeting, turnTokenId, acting, jo
   const inCombat = snapshot.tracker.turns.length > 0;
   const card = (kind: "pc" | "npc") => (token: Token) => (
     <SceneIcon key={token.id} token={token} kind={kind} journal={journal} ac={token.represents ? acOf.get(token.represents) : undefined} selected={selected.includes(token.id)} picked={targeting?.picked.includes(token.id) ?? false}
-      candidate={targeting ? targeting.exclude !== token.id : null} turn={turnTokenId === token.id} dimmed={inCombat && !targeting && turnTokenId !== undefined && turnTokenId !== token.id} floats={floats.filter((item) => item.tokenId === token.id)}
+      candidate={targeting ? targeting.exclude !== token.id : null} turn={turnTokenId === token.id} dimmed={inCombat && !targeting && turnTokenId !== undefined && turnTokenId !== token.id} floats={floats.filter((item) => item.tokenId === token.id)} highlighted={highlights(highlight, token)}
       leave={Boolean(acting && acting.id !== token.id && token.represents && !targeting)} onPointerDown={(event) => onPointerDown(event, token)} onContextMenu={(event) => onContextMenu(event, token)} onDoubleClick={() => onDoubleClick(token)} onLeave={() => onLeave(token)} />
   );
   const row = (label: string, kind: "pc" | "npc", list: Token[], hint: string) => (
@@ -931,9 +954,9 @@ function SceneBoard({ page, tokens, selected, targeting, turnTokenId, acting, jo
 const SKULL = <svg viewBox="0 0 24 24" width="40" height="40" fill="currentColor" aria-hidden="true"><path d="M12 2a8 8 0 0 0-8 8c0 2.6 1.3 4.9 3.3 6.3V19a1 1 0 0 0 1 1h1v1.2a.8.8 0 0 0 .8.8h3.8a.8.8 0 0 0 .8-.8V20h1a1 1 0 0 0 1-1v-2.7A8 8 0 0 0 12 2Zm-3.2 12a2.2 2.2 0 1 1 0-4.4 2.2 2.2 0 0 1 0 4.4Zm6.4 0a2.2 2.2 0 1 1 0-4.4 2.2 2.2 0 0 1 0 4.4ZM12 17.2l-1.3-2.4h2.6L12 17.2Z" /></svg>;
 const PERSON = <svg viewBox="0 0 24 24" width="40" height="40" fill="currentColor" aria-hidden="true"><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0Z" /></svg>;
 
-function SceneIcon({ token, kind, journal, ac, selected, picked, candidate, turn, dimmed, floats, leave, onPointerDown, onContextMenu, onDoubleClick, onLeave }: {
+function SceneIcon({ token, kind, journal, ac, selected, picked, candidate, turn, dimmed, floats, highlighted = false, leave, onPointerDown, onContextMenu, onDoubleClick, onLeave }: {
   token: Token; kind: "pc" | "npc"; journal: JournalEntry[]; ac?: number; selected: boolean; picked: boolean; /** null: no targeting; true/false: lit or dimmed. */ candidate: boolean | null; turn: boolean; dimmed: boolean; floats: CardFloat[]; leave: boolean;
-  onPointerDown: (event: ReactPointerEvent) => void; onContextMenu: (event: React.MouseEvent) => void; onDoubleClick: () => void; onLeave: () => void;
+  onPointerDown: (event: ReactPointerEvent) => void; onContextMenu: (event: React.MouseEvent) => void; onDoubleClick: () => void; onLeave: () => void; highlighted?: boolean;
 }) {
   const entry = token.represents ? journal.find((item) => item.id === token.represents) : undefined;
   const character = entry?.kind === "character" ? entry : undefined;
@@ -946,7 +969,7 @@ function SceneIcon({ token, kind, journal, ac, selected, picked, candidate, turn
   const fraction = hp && hp.max ? Math.max(0, Math.min(1, (hp.value ?? 0) / hp.max)) : null;
   const down = fraction === 0 || markers.some((marker) => marker.name === "사망" || marker.name === "무의식");
   return (
-    <div className={`cl-scene-card ${kind}${selected ? " selected" : ""}${picked ? " picked" : ""}${candidate === true ? " candidate" : candidate === false ? " not-candidate" : ""}${turn ? " turn" : ""}${dimmed ? " dimmed" : ""}${token.layer === "gm" ? " layer-gm" : ""}${down ? " down" : ""}`} data-token-id={token.id} data-token-name={token.name} title={token.name}
+    <div className={`cl-scene-card ${kind}${selected ? " selected" : ""}${picked ? " picked" : ""}${candidate === true ? " candidate" : candidate === false ? " not-candidate" : ""}${turn ? " turn" : ""}${dimmed ? " dimmed" : ""}${token.layer === "gm" ? " layer-gm" : ""}${down ? " down" : ""}${highlighted ? " highlight" : ""}`} data-token-id={token.id} data-token-name={token.name} title={token.name}
       onPointerDown={onPointerDown} onContextMenu={onContextMenu} onDoubleClick={onDoubleClick}>
       {turn ? <span className="cl-scene-now">행동 중</span> : null}
       <div className="cl-scene-portrait">
@@ -1002,7 +1025,7 @@ function TurnRibbon({ page, onOpenTracker }: { page: Page; onOpenTracker?: () =>
           const currentToken = tokenOf(tracker.turns[currentIndex]?.tokenId);
           const canSwap = inGroup && !now && !acted && at > 0 && linked.has(0) && groups.some((group) => group.start === 0 && at <= group.end) && (isGm || (token ? controlsToken(token, viewer, snapshot.journal) : false) || (currentToken ? controlsToken(currentToken, viewer, snapshot.journal) : false));
           return (
-            <span key={turn.id} role="listitem" className={`cl-turn-ribbon-item ${side}${now ? " now" : ""}${acted ? " acted" : ""}${down ? " down" : ""}${inGroup ? " linked" : ""}${groupStart ? " group-start" : ""}${groupEnd ? " group-end" : ""}`} data-turn-name={turn.name} title={`${turn.name} · 이니셔티브 ${turn.initiative}${down ? " · 쓰러짐" : ""}`}>
+            <span key={turn.id} role="listitem" className={`cl-turn-ribbon-item ${side}${now ? " now" : ""}${acted ? " acted" : ""}${down ? " down" : ""}${inGroup ? " linked" : ""}${groupStart ? " group-start" : ""}${groupEnd ? " group-end" : ""}`} onClick={() => flashCardsFor(turn.name)} data-turn-name={turn.name} title={`${turn.name} · 이니셔티브 ${turn.initiative}${down ? " · 쓰러짐" : ""}`}>
               <span className="cl-turn-ribbon-frame">
                 {tempRing ? <span className="cl-turn-ribbon-temp" style={{ background: `conic-gradient(#7dd3fc ${Math.round(tempRing * 360)}deg, transparent 0)` }} aria-label="임시 HP" /> : null}
                 <span className="cl-turn-ribbon-portrait">{token?.image ? <ArtImage src={token.image} alt="" /> : <span className="cl-turn-ribbon-glyph">{side === "npc" ? SKULL : PERSON}</span>}{down ? <span className="cl-turn-ribbon-down">✖</span> : null}</span>

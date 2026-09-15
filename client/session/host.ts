@@ -85,7 +85,7 @@ export class TableHost {
   private readonly assembler = new ChunkAssembler();
   /** Applied action cards, newest last: inputs to re-resolve and a restore closure for undo. */
   /** Spell cards that can still be undone (or, D90, applied). */
-  private readonly spells = new Map<string, { resolution: SpellResolution; restore: () => void; apply?: () => void }>();
+  private readonly spells = new Map<string, { resolution: SpellResolution; restore: () => void; apply?: () => void; /** R12: per-target undo and what was cast, for Legendary Resistance re-application. */ rows?: Array<(() => void) | null>; restoreCaster?: () => void; context?: { spec: SpellCastSpec; casterStats: CasterStats; who: string; playerId?: string } }>();
   /** R11: attacks held while the target decides on Shield (prompt id → everything needed to finish the attack). */
   private readonly held = new Map<string, { inputs: { attacker: ActorRef; targets: ActorRef[]; attack: AttackRef; riders?: AttackRiders; by: string; targetIndex: number }; attacker: { entry: JournalEntry; token?: Token; page?: Page }; target: { entry: JournalEntry; token?: Token; page?: Page }; spec: AttackSpec; overrides?: AttackOverrides; resolution: AttackResolution; supersedes?: string }>();
   private readonly actions = new Map<string, { inputs: { attacker: ActorRef; targets: ActorRef[]; attack: AttackRef; riders?: AttackRiders; by: string; targetIndex: number }; resolution: AttackResolution; restore: () => void }>();
@@ -497,8 +497,8 @@ export class TableHost {
           this.markReactionUsed(command.attacker);
         } else if (command.readied && firstCardId) { this.markReactionUsed(command.attacker); this.mark(attackerEntry, ["준비"], false); }
         else if (firstCardId) this.markUsed(command.attacker, "action");
-        // Attacking spends 도움 and ends 은신 (D97).
-        if (firstCardId) this.mark(attackerEntry, [...TURN_MARKS.onAttack], false);
+        // Attacking spends 도움 and ends 은신 (D97); R12: it also spends 약화 (Sap) on the attacker and 교란 (Vex) the attacker had on the target.
+        if (firstCardId) this.mark(attackerEntry, [...TURN_MARKS.onAttack, "약화"], false);
         return;
       }
       case "act.cast": {
@@ -540,7 +540,7 @@ export class TableHost {
         const restoreCaster = () => { restoreNpcUse?.(); const current = this.journalEntries.get(casterBefore.id); if (current?.kind === "character" && casterBefore.kind === "character") this.storeEntry({ ...current, runtime: { ...current.runtime, slotsUsed: casterBefore.runtime.slotsUsed, pactSlotsUsed: casterBefore.runtime.pactSlotsUsed, resourcesUsed: casterBefore.runtime.resourcesUsed, effects: casterBefore.runtime.effects }, updatedAt: this.now() }); else if (casterBefore.kind === "npc" && resolution.concentration) this.mark(caster, ["집중"], false); };
         if (command.readied) { this.markReactionUsed(command.caster); this.mark(caster, ["준비"], false); }
         else if (exec.castingEconomy === "reaction") this.markReactionUsed(command.caster); else this.markUsed(command.caster, exec.castingEconomy === "bonus-action" ? "bonus" : "action");
-        this.postSpell(resolution, rows.map((row) => row.target), restoreCaster, waits, player.displayName, userId);
+        this.postSpell(resolution, rows.map((row) => row.target), restoreCaster, waits, player.displayName, userId, { spec: prepared.spec, casterStats: prepared.casterStats });
         if (heldPrompt) { this.say({ ...heldPrompt, prompt: { ...heldPrompt.prompt!, outcome: { shielded: true } }, supersedes: heldPrompt.id, content: `${heldPrompt.content} → 방패 시전` }); this.releaseHeld(heldPrompt.id, true); }
         return;
       }
@@ -576,6 +576,41 @@ export class TableHost {
         const name = actor.token?.name ?? actor.entry.name;
         const result = { kind: "legendary" as const, name: `전설 행동 · ${action.name}`, actor: { name }, text: `${action.text} (전설 행동 ${used + cost}/${per})`, actorMarks: [], targetMarks: [], actorUnmarks: [] };
         this.say({ type: "act", who: player.displayName, playerId: userId, content: describeAct(result), act: result });
+        return;
+      }
+      case "act.resist": {
+        if (!isGm) return refuse("전설 저항은 DM이 결정합니다");
+        const record = this.spells.get(command.messageId);
+        if (!record || !record.resolution.applied || !record.rows || !record.context) return refuse("적용된 주문 카드가 아닙니다");
+        const index = record.resolution.targets.findIndex((row) => row.target.id === command.targetId);
+        const row = index >= 0 ? record.resolution.targets[index] : undefined;
+        if (!row || !row.save || row.save.success) return refuse("실패한 내성이 있는 대상이 아닙니다");
+        const page = row.target.tokenId ? [...this.pages.values()].find((item) => item.tokens.some((token) => token.id === row.target.tokenId)) : undefined;
+        const target = this.resolveActor({ entryId: row.target.id, pageId: page?.id, tokenId: row.target.tokenId });
+        if (!target || target.entry.kind !== "npc") return refuse("전설 저항은 스탯 블록이 있는 NPC의 것입니다");
+        const block = target.entry.statBlock;
+        const used = target.entry.runtime.legendaryResistanceUsed ?? 0;
+        if (!block.legendaryResistance || used >= block.legendaryResistance) return refuse("전설 저항이 남지 않았습니다");
+        const casterActor = this.resolveActor({ entryId: record.resolution.caster.id });
+        const casterCombatant = casterActor ? this.combatantOf(casterActor) : null;
+        if (!casterCombatant) return refuse("시전자를 찾을 수 없습니다");
+        record.rows[index]?.();
+        const live = this.resolveActor({ entryId: row.target.id, pageId: page?.id, tokenId: row.target.tokenId }) ?? target;
+        const combatant = this.combatantOf(live);
+        const stats = this.statsOf(live);
+        if (!combatant || !stats) return refuse("대상의 능력치를 알 수 없습니다");
+        const again = resolveSpell({ caster: casterCombatant, casterStats: record.context.casterStats, spec: record.context.spec, targets: [{ combatant, stats }], dice: diceFrom(this.options.random ?? Math.random), fixedDamage: row.damage?.damage.map((part) => part.dice), forceSaveSuccess: true, apply: true });
+        const newRow = { ...again.targets[0], save: { ...again.targets[0].save!, d20: row.save.d20, bonus: row.save.bonus, total: row.save.total, legendary: true } };
+        const targetName = live.token?.name ?? live.entry.name;
+        const resolution: SpellResolution = { ...record.resolution, targets: record.resolution.targets.map((item, at) => (at === index ? newRow : item)), note: [record.resolution.note, `${targetName}: 전설 저항 (${used + 1}/${block.legendaryResistance})`].filter(Boolean).join(" · ") };
+        record.rows[index] = this.applySpellRow(newRow, live, resolution);
+        const rows = record.rows;
+        const restoreCaster = record.restoreCaster ?? (() => undefined);
+        this.spells.set(command.messageId, { ...record, resolution, restore: () => { for (const restore of [...rows].reverse()) restore?.(); restoreCaster(); } });
+        const current = this.journalEntries.get(live.entry.id);
+        if (current?.kind === "npc") this.storeEntry({ ...current, runtime: { ...current.runtime, legendaryResistanceUsed: used + 1, updatedAt: this.now() }, updatedAt: this.now() });
+        this.sayWithId(command.messageId, { type: "spell", who: record.context.who, playerId: record.context.playerId, content: describeSpell(resolution), spell: resolution });
+        this.say({ type: "system", who: "", content: `${targetName}: 전설 저항으로 ${resolution.name}의 내성에 성공 (${block.legendaryResistance - used - 1}/${block.legendaryResistance} 남음)` });
         return;
       }
       case "act.item": {
@@ -748,8 +783,8 @@ export class TableHost {
   }
 
   private combatantOf(actor: { entry: JournalEntry; token?: Token }): Combatant | null {
-    if (actor.entry.kind === "npc") return { ...npcCombatant(actor.entry, actor.token), tokenId: actor.token?.id, grappledBy: actor.token?.markers.find((marker) => marker.name === "붙잡힘")?.from };
-    if (actor.entry.kind === "character" && this.options.pcCombatant) { const base = this.options.pcCombatant(actor.entry); return { ...base, name: actor.token?.name ?? actor.entry.name, conditions: [...new Set([...base.conditions, ...(actor.token?.markers.map((marker) => marker.name) ?? [])])], tokenId: actor.token?.id, grappledBy: actor.token?.markers.find((marker) => marker.name === "붙잡힘")?.from }; }
+    if (actor.entry.kind === "npc") return { ...npcCombatant(actor.entry, actor.token), tokenId: actor.token?.id, grappledBy: actor.token?.markers.find((marker) => marker.name === "붙잡힘")?.from, vexedBy: actor.token?.markers.find((marker) => marker.name === "교란")?.from };
+    if (actor.entry.kind === "character" && this.options.pcCombatant) { const base = this.options.pcCombatant(actor.entry); return { ...base, name: actor.token?.name ?? actor.entry.name, conditions: [...new Set([...base.conditions, ...(actor.token?.markers.map((marker) => marker.name) ?? [])])], tokenId: actor.token?.id, grappledBy: actor.token?.markers.find((marker) => marker.name === "붙잡힘")?.from, vexedBy: actor.token?.markers.find((marker) => marker.name === "교란")?.from }; }
     return null;
   }
 
@@ -766,7 +801,7 @@ export class TableHost {
     // D95: a scene (Theatre of the Mind) tracks no positions, so range never decides; the DM adjusts by hand.
     if (attacker.token && target.token && attacker.page && target.page && attacker.page.id === target.page.id && !isScene(attacker.page)) targetCombatant.distanceFeet = Math.max(0, cellDistance(centre(attacker.token), centre(target.token)) - (attacker.token.w + target.token.w) / 2 + 1) * attacker.page.scale;
     const waits = Boolean(this.campaign.settings.dmConfirmsResults) && this.roleOf(inputs.by) !== "gm";
-    const resolution = resolveAttack(attackerCombatant, targetCombatant, prepared.spec, { dice: diceFrom(this.options.random ?? Math.random), overrides, fixed, apply: !waits });
+    const resolution: AttackResolution = { ...resolveAttack(attackerCombatant, targetCombatant, prepared.spec, { dice: diceFrom(this.options.random ?? Math.random), overrides, fixed, apply: !waits }), attackRef: inputs.attack, attackerRef: inputs.attacker };
     // Riders with a cost (a smite slot) are paid once per attack, by the first target's card.
     if (spend && attacker.entry.kind === "character") { const before = attacker.entry; this.storeEntry({ ...before, runtime: spend(before.runtime), updatedAt: this.now() }); }
     const player = this.campaign.players.find((item) => item.userId === inputs.by);
@@ -878,13 +913,12 @@ export class TableHost {
   }
 
   /** A resolved spell (or an NPC save action) becomes a card: applied now, or held for the DM (D90) with its restores. */
-  private postSpell(resolution: SpellResolution, targets: Array<{ entry: JournalEntry; token?: Token; page?: Page }>, restoreCaster: () => void, waits: boolean, displayName: string, userId: string) {
+  private postSpell(resolution: SpellResolution, targets: Array<{ entry: JournalEntry; token?: Token; page?: Page }>, restoreCaster: () => void, waits: boolean, displayName: string, userId: string, context?: { spec: SpellCastSpec; casterStats: CasterStats }) {
     const messageId = newMessageId();
     const apply = () => {
-      const restores: Array<() => void> = [restoreCaster];
-      resolution.targets.forEach((row, index) => { const restore = this.applySpellRow(row, targets[index], resolution); if (restore) restores.push(restore); });
+      const rows = resolution.targets.map((row, index) => this.applySpellRow(row, targets[index], resolution));
       const applied = { ...resolution, applied: true };
-      this.spells.set(messageId, { resolution: applied, restore: () => { for (const restore of restores.reverse()) restore(); } });
+      this.spells.set(messageId, { resolution: applied, rows, restoreCaster, context: context ? { ...context, who: displayName, playerId: userId } : undefined, restore: () => { for (const restore of [...rows].reverse()) restore?.(); restoreCaster(); } });
       this.sayWithId(messageId, { type: "spell", who: displayName, playerId: userId, content: describeSpell(applied), spell: applied });
       if (this.spells.size > 100) this.spells.delete(this.spells.keys().next().value as string);
     };
@@ -921,7 +955,7 @@ export class TableHost {
     const setSpent = (spent: boolean) => { const current = this.journalEntries.get(entryId); if (current?.kind === "npc") this.storeEntry({ ...current, runtime: { ...current.runtime, spent: { ...current.runtime.spent, [actionName]: spent }, updatedAt: this.now() }, updatedAt: this.now() }); };
     if (recharge) setSpent(true);
     if (!options.legendary) this.markUsed({ entryId, pageId: actor.page?.id, tokenId: actor.token?.id }, "action");
-    return this.postSpell(resolution, rows.map((row) => row.target), () => { if (recharge) setSpent(false); }, waits, options.displayName, options.by);
+    return this.postSpell(resolution, rows.map((row) => row.target), () => { if (recharge) setSpent(false); }, waits, options.displayName, options.by, { spec, casterStats: prepared.casterStats });
   }
 
   /** Write one target's part of a spell (damage, healing, temp HP, conditions, a lasting effect); returns the undo. */
@@ -1028,7 +1062,7 @@ export class TableHost {
   /** Write the result into the target (PC sheet or NPC token/sheet) and post the card; remember how to undo it. */
   private applyResolution(resolution: AttackResolution, target: { entry: JournalEntry; token?: Token; page?: Page }, attacker: { entry: JournalEntry; token?: Token }, messageId: string, confirming: boolean, inputs?: { attacker: ActorRef; targets: ActorRef[]; attack: AttackRef; riders?: AttackRiders; by: string; targetIndex: number }, supersedes?: string, who?: string) {
     const restores: Array<() => void> = [];
-    const hit = resolution.outcome === "hit" || resolution.outcome === "crit";
+    const hit = resolution.outcome === "hit" || resolution.outcome === "crit" || Boolean(resolution.mastery?.grazed);
     if (hit && target.entry.kind === "character") {
       const before = target.entry;
       let runtime: CharacterRuntime = { ...before.runtime, hp: { ...before.runtime.hp, current: resolution.hpAfter, temp: resolution.tempAfter } };
@@ -1057,6 +1091,11 @@ export class TableHost {
       }
     }
     if (hit && resolution.downed) this.releaseGrapples(target.page, target.token?.id);
+    // R12: a Vex mark the wielder already had on this target is spent by this attack unless the hit renews it.
+    const hadVex = target.token?.markers.some((marker) => marker.name === "교란" && marker.from === attacker.token?.id);
+    if (hadVex && !resolution.mastery?.marks.includes("교란") && target.page) this.mark({ entry: target.entry, token: target.token, page: target.page }, ["교란"], false);
+    // Mastery marks (교란·약화·둔화) sit on the target with the wielder as `from`; the wielder's next turn start clears them.
+    if (resolution.mastery?.marks.length && target.page) { const marks = resolution.mastery.marks; const targetActor = { entry: target.entry, token: target.token, page: target.page }; this.mark(targetActor, marks, true, attacker.token?.id); restores.push(() => this.mark({ ...targetActor, token: this.pages.get(target.page!.id)?.tokens.find((item) => item.id === target.token?.id) }, marks, false)); }
     const applied = { ...resolution, applied: true };
     if (inputs) this.actions.set(messageId, { inputs, resolution: applied, restore: () => { for (const restore of restores.reverse()) restore(); } });
     else { const existing = this.actions.get(messageId); if (existing) this.actions.set(messageId, { ...existing, resolution: applied, restore: () => { for (const restore of restores.reverse()) restore(); } }); }
@@ -1113,7 +1152,7 @@ export class TableHost {
     // 도움 the starting creature granted ends now (until the start of the helper's next turn).
     if (startedActor?.token && startedActor.page) {
       const page = this.pages.get(startedActor.page.id);
-      if (page) for (const token of page.tokens) { const kept = token.markers.filter((marker) => !(marker.name === "도움" && marker.from === startedActor.token!.id)); if (kept.length !== token.markers.length) this.storeToken(page, { ...token, markers: kept }); }
+      if (page) for (const token of page.tokens) { const kept = token.markers.filter((marker) => !(["도움", "교란", "약화", "둔화"].includes(marker.name) && marker.from === startedActor.token!.id)); if (kept.length !== token.markers.length) this.storeToken(page, { ...token, markers: kept }); }
     }
     // The reaction and the action economy come back at the start of the creature's turn.
     const startedId = result.started?.id;

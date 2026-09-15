@@ -34,7 +34,7 @@ export interface SpellCastSpec {
   exec: SpellExec;
 }
 
-export interface SpellSave { ability: AbilityKey; d20: number; bonus: number; total: number; dc: number; success: boolean; /** R10: the save was rolled with advantage and why (회피 on a DEX save). */ advantage?: string; dropped?: number }
+export interface SpellSave { ability: AbilityKey; d20: number; bonus: number; total: number; dc: number; success: boolean; /** R10: the save was rolled with advantage and why (회피 on a DEX save). */ advantage?: string; dropped?: number; /** R12: the failure was turned into a success by Legendary Resistance. */ legendary?: boolean }
 export interface SpellEffectStart { key: string; name: string; concentration: boolean; duration: string; rounds?: number; /** R10: the target repeats this save at the end of each of its turns and ends the effect on a success. */ endSave?: { ability: AbilityKey; dc: number } }
 
 /** R10: the SRD text that lets a target repeat the save at the end of each of its turns (hold person, blindness/deafness, sleep breath …). */
@@ -91,6 +91,9 @@ export interface CastInput {
   /** The DM's pre-roll choices for spell attacks (유리/불리·엄폐·반드시). */
   overrides?: AttackOverrides;
   apply?: boolean;
+  /** R12 (Legendary Resistance): the target's save counts as a success; the area damage dice stay as first rolled. */
+  forceSaveSuccess?: boolean;
+  fixedDamage?: number[][];
 }
 
 /** Resolve the spell against every target. */
@@ -102,7 +105,7 @@ export function resolveSpell(input: CastInput): SpellResolution {
   const effectStart = (duration?: SpellDuration): SpellEffectStart => ({ key: `spell:${spec.spellId}`, name: spec.name, concentration: Boolean(exec.concentration), duration: durationText(duration), rounds: roundsOf(duration), ...(endSave ? { endSave } : {}) });
   const base = (target: Combatant): SpellTargetResult => ({ target: { id: target.id, name: target.name, kind: target.kind, tokenId: target.tokenId }, mode: "note", hpBefore: target.hp.current, hpAfter: target.hp.current, tempAfter: target.hp.temp, marks: [] });
   // R10: 회피 (Dodge) gives advantage on Dexterity saves.
-  const save = (target: Combatant, stats: ActorStats, ability: string): SpellSave => { const key = (ability in ABILITY_KO ? ability : "dex") as AbilityKey; const dodging = key === "dex" && (target.conditions.includes("회피") || target.effects.includes("회피")); const first = dice.d(20); const second = dodging ? dice.d(20) : undefined; const d20 = second !== undefined ? Math.max(first, second) : first; const bonus = stats.saves[key] ?? 0; const total = d20 + bonus; return { ability: key, d20, bonus, total, dc: casterStats.saveDc, success: total >= casterStats.saveDc, ...(second !== undefined ? { advantage: "회피", dropped: Math.min(first, second) } : {}) }; };
+  const save = (target: Combatant, stats: ActorStats, ability: string): SpellSave => { const key = (ability in ABILITY_KO ? ability : "dex") as AbilityKey; const dodging = key === "dex" && (target.conditions.includes("회피") || target.effects.includes("회피")); const first = dice.d(20); const second = dodging ? dice.d(20) : undefined; const d20 = second !== undefined ? Math.max(first, second) : first; const bonus = stats.saves[key] ?? 0; const total = d20 + bonus; return { ability: key, d20, bonus, total, dc: casterStats.saveDc, success: input.forceSaveSuccess ? true : total >= casterStats.saveDc, ...(input.forceSaveSuccess && total < casterStats.saveDc ? { legendary: true } : {}), ...(second !== undefined ? { advantage: "회피", dropped: Math.min(first, second) } : {}) }; };
   const conditionMarks = (trigger: "failed-save" | "hit" | "always") => (exec.effects ?? []).filter((effect) => effect.trigger === trigger || effect.trigger === "always").map((effect) => CONDITION_KO[effect.conditionId] ?? effect.conditionId);
   const afterDamage = (row: SpellTargetResult, outcome: DamageOutcome) => { row.damage = outcome; row.hpAfter = outcome.hpAfter; row.tempAfter = outcome.tempAfter; };
   const targets: SpellTargetResult[] = [];
@@ -141,7 +144,7 @@ export function resolveSpell(input: CastInput): SpellResolution {
     case "save-damage": case "save-compound-damage": {
       const parts: DamagePart[] = primary.kind === "save-damage" ? [{ formula: formulaOf(primary.dice, spec.level, exec, casterStats), type: primary.damageType, label: spec.name }] : primary.components.map((component) => ({ formula: formulaOf(component.dice, spec.level, exec, casterStats), type: component.damageType, label: spec.name }));
       // One damage roll for the whole area: the same dice hit everyone (5e), halved for those who save.
-      const rolled = parts.map((part) => { const match = /^(\d+)d(\d+)/.exec(part.formula)!; return Array.from({ length: Number(match[1]) }, () => dice.d(Number(match[2]))); });
+      const rolled = input.fixedDamage ?? parts.map((part) => { const match = /^(\d+)d(\d+)/.exec(part.formula)!; return Array.from({ length: Number(match[1]) }, () => dice.d(Number(match[2]))); });
       for (const { combatant, stats } of all) {
         const row = base(combatant);
         row.mode = "save";

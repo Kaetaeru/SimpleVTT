@@ -4,6 +4,8 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useCampaigns } from "../app/campaigns";
+import { controlsToken } from "../campaign/page";
+import type { SpellTargetResult } from "../rules/spellcast";
 import { useClient } from "../app/context";
 import type { ChatMessage } from "../campaign/model";
 import { PromptChoices } from "./Notify";
@@ -17,7 +19,7 @@ import { useDice } from "../ui/dice/DiceProvider";
 import { ArtTab } from "./ArtPanel";
 import { JournalTab, JournalWindows, type JournalWindow } from "./JournalPanel";
 import { CompendiumTab } from "./CompendiumPanel";
-import { PageCanvas } from "./PageCanvas";
+import { PageCanvas, requestTargets, setHighlight } from "./PageCanvas";
 
 export function TableScreen() {
   const { navigate } = useClient();
@@ -167,14 +169,16 @@ function SpellCard({ message, time, color }: { message: ChatMessage; time: strin
   const snapshot = c.table.snapshot!;
   const isGm = snapshot.players.find((player) => player.userId === c.userId)?.role === "gm";
   const spell = message.spell!;
+  // R12: a monster with Legendary Resistance left may turn a failed save into a success (DM).
+  const resistLeft = (row: SpellTargetResult) => { const entry = snapshot.journal.find((item) => item.id === row.target.id); return entry?.kind === "npc" ? Math.max(0, (entry.statBlock.legendaryResistance ?? 0) - (entry.runtime.legendaryResistanceUsed ?? 0)) : 0; };
   return (
     <div className={`cl-chat-msg spell${message.undone ? " undone" : ""}`} data-spell-id={message.id}>
       <span className="cl-at">{time}</span>{message.who ? <span className="cl-who" style={{ color }}>{message.who}</span> : null}{message.undone ? <Pill tone="bad">되돌림</Pill> : !spell.applied ? <Pill tone="accent">DM 확인 대기</Pill> : null}
       <div className="cl-act-card">
         <div className="cl-roll-head">{spell.source === "action" ? "☄" : "✨"} <strong>{spell.name}</strong>{spell.source === "action" ? <span className="cl-quiet cl-small"> NPC 행동</span> : spell.level ? <span className="cl-quiet cl-small"> {spell.level}레벨</span> : <span className="cl-quiet cl-small"> 소마법</span>} · {spell.caster.name}{spell.concentration ? <Pill tone="accent">집중</Pill> : null}{spell.economy === "bonus-action" ? <Pill>추가 행동</Pill> : spell.economy === "reaction" ? <Pill>반응</Pill> : null}</div>
         {spell.targets.map((row) => (
-          <div className="cl-small cl-spell-row" key={row.target.id}>
-            <strong>{row.target.name}</strong>
+          <div className="cl-small cl-spell-row" key={row.target.id} onMouseEnter={() => setHighlight({ entryId: row.target.id, tokenId: row.target.tokenId })} onMouseLeave={() => setHighlight(null)}>
+            <strong>{row.target.name}</strong>{row.save?.legendary ? <Pill tone="accent">전설 저항</Pill> : null}{resistLeft(row) > 0 && isGm && spell.applied && !message.undone && row.save && !row.save.success ? <button type="button" className="cl-btn small" onClick={() => c.resist(message.id, row.target.id)} title="전설 저항: 실패한 내성을 성공으로">전설 저항 ({resistLeft(row)})</button> : null}
             {row.attack ? <> <span className={`cl-die d20${row.attack.kept === 20 ? " crit" : row.attack.kept === 1 ? " fumble" : ""}`}>{row.attack.kept}</span><span className="cl-mod">{row.attack.attack.bonus >= 0 ? "+" : "−"}{Math.abs(row.attack.attack.bonus)}</span><span className="cl-eq">=</span><strong>{row.attack.attackTotal}</strong> <span className="cl-quiet">vs AC {row.attack.targetAc}</span> <Pill tone={row.attack.outcome === "hit" || row.attack.outcome === "crit" ? "good" : "bad"}>{row.attack.outcome === "crit" ? "치명타" : row.attack.outcome === "hit" ? "적중" : row.attack.outcome === "fumble" ? "자동 실패" : "빗나감"}</Pill>{row.attack.damage.length ? <> {row.attack.damage.flatMap((part) => part.dice).map((die, at) => <span key={at} className="cl-die small">{die}</span>)} = 피해 {row.attack.damageTotal}{row.attack.damage.some((part) => part.adjustment) ? ` (${row.attack.damage.filter((part) => part.adjustment).map((part) => part.adjustment).join(", ")})` : ""}</> : null}</> : null}
             {row.save ? <> {ABILITY_KO[row.save.ability]} 내성 <span className={`cl-die d20${row.save.d20 === 20 ? " crit" : row.save.d20 === 1 ? " fumble" : ""}`}>{row.save.d20}</span><span className="cl-mod">{row.save.bonus >= 0 ? "+" : "−"}{Math.abs(row.save.bonus)}</span><span className="cl-eq">=</span><strong>{row.save.total}</strong> <span className="cl-quiet">vs DC {row.save.dc}</span> <Pill tone={row.save.success ? "good" : "bad"}>{row.save.success ? "성공" : "실패"}</Pill>{row.save.advantage ? <span className="cl-quiet cl-small"> ({row.save.advantage} 유리, {row.save.dropped} 버림)</span> : null}</> : null}
             <span className="cl-spell-then">
@@ -239,8 +243,17 @@ function ActionCard({ message, time, color }: { message: ChatMessage; time: stri
   const [palette, setPalette] = useState(false);
   const outcome = result.outcome === "crit" ? "치명타" : result.outcome === "hit" ? "적중" : result.outcome === "fumble" ? "자동 실패" : "빗나감";
   const tone = result.outcome === "crit" || result.outcome === "hit" ? "good" : "bad";
+  // R12: the Cleave follow-up belongs to whoever controls the attacker; the card offers it once the hit landed.
+  const attackerToken = result.attackerRef?.tokenId ? snapshot.pages.flatMap((page) => page.tokens).find((token) => token.id === result.attackerRef!.tokenId) : undefined;
+  const cleaveMine = isGm || (attackerToken ? controlsToken(attackerToken, { userId: c.userId, role: "player" }, snapshot.journal) : false);
+  const cleave = async () => {
+    if (!result.attackRef || !result.attackerRef) return;
+    const picked = await requestTargets("쪼개기 — 5 ft 안의 다른 대상을 클릭하세요", { multi: false, exclude: result.attackerRef.tokenId });
+    if (!picked.length) return;
+    c.attack(result.attackerRef, [{ pageId: result.attackerRef.pageId, tokenId: picked[0] }], result.attackRef, { cleave: true });
+  };
   return (
-    <div className={`cl-chat-msg action${message.undone ? " undone" : ""}`} data-action-id={message.id}>
+    <div className={`cl-chat-msg action${message.undone ? " undone" : ""}`} data-action-id={message.id} onMouseEnter={() => setHighlight({ entryId: result.target.id })} onMouseLeave={() => setHighlight(null)}>
       <span className="cl-at">{time}</span>{message.who ? <span className="cl-who" style={{ color }}>{message.who}</span> : null}{message.undone ? <Pill tone="bad">되돌림</Pill> : !result.applied ? <Pill tone="accent">DM 확인 대기</Pill> : null}
       <div className="cl-action-card">
         <div className="cl-roll-head"><Pill tone={tone}>{outcome}{result.damage.length && (result.outcome === "hit" || result.outcome === "crit") ? ` · 피해 ${result.damageTotal}` : ""}</Pill> {result.attacker.name} → {result.target.name}: {result.attack.name}{result.distanceFeet !== undefined ? <span className="cl-quiet cl-small"> · {result.distanceFeet} ft</span> : null}</div>
@@ -260,6 +273,13 @@ function ActionCard({ message, time, color }: { message: ChatMessage; time: stri
             {result.concentration ? <div className="cl-small">집중({result.concentration.effect}) 내성 DC {result.concentration.dc}: d20 {result.concentration.d20} {result.concentration.total >= 0 ? "+" : ""}{result.concentration.total - result.concentration.d20} = {result.concentration.total} → {result.concentration.success ? "유지" : "실패 (효과 종료)"}</div> : null}
             {result.inflicted.length ? <div className="cl-small">부여: {result.inflicted.join(", ")}</div> : null}
             {result.downed ? <div className="cl-small" style={{ color: "var(--bad)" }}>{result.downed === "dead" ? "HP 0 — 사망" : result.downed === "instant-death" ? "대량 피해 — 즉사" : "HP 0 — 무의식·넘어짐, 죽음 내성 시작"}</div> : null}
+          </div>
+        ) : null}
+        {result.mastery ? (
+          <div className="cl-small cl-mastery">⚒ 통달 · <strong>{result.mastery.label}</strong>
+            {result.mastery.save ? <> — 건강 내성 <span className={`cl-die d20${result.mastery.save.d20 === 20 ? " crit" : result.mastery.save.d20 === 1 ? " fumble" : ""}`}>{result.mastery.save.d20}</span><span className="cl-mod">{result.mastery.save.bonus >= 0 ? "+" : "−"}{Math.abs(result.mastery.save.bonus)}</span><span className="cl-eq">=</span><strong>{result.mastery.save.total}</strong> <span className="cl-quiet">vs DC {result.mastery.save.dc}</span> <Pill tone={result.mastery.save.success ? "good" : "bad"}>{result.mastery.save.success ? "성공" : "실패"}</Pill></> : null}
+            {result.mastery.note ? <span className="cl-quiet"> — {result.mastery.note}</span> : null}
+            {result.mastery.kind === "cleave" && (result.outcome === "hit" || result.outcome === "crit") && result.attackRef && result.attackerRef && !message.undone && result.applied && cleaveMine ? <button type="button" className="cl-btn small attack" onClick={() => void cleave()}>쪼개기 → 다른 대상</button> : null}
           </div>
         ) : null}
         {result.overrides?.note ? <div className="cl-small cl-quiet">DM 메모: {result.overrides.note}</div> : null}

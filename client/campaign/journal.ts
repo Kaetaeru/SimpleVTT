@@ -58,6 +58,8 @@ export interface NpcRuntime {
   legendaryUsed: number;
   /** Recharge actions spent and waiting for their roll (action name → true = spent). */
   spent: Record<string, boolean>;
+  /** R12: Legendary Resistance uses spent today (the sheet's 초기화 clears it). */
+  legendaryResistanceUsed?: number;
   /** R10: per-day spells used (spell id → count); the sheet's 초기화 clears it. */
   uses?: Record<string, number>;
   /** R10: effects the NPC may shake off with a save at the end of its turns. */

@@ -314,7 +314,7 @@ function weaponAttack(ledger: Ledger, view: ItemView, abilities: DerivedCharacte
   return {
     id: `attack.${view.id}`, name: view.name, itemId: view.id, ability, attackBonus, attackTerms,
     damage: versatile ? `${weapon.damage} (양손 ${versatile})` : weapon.damage, damageBonus: abilities[ability].modifier, damageTerms, damageType: damageTypeKo(weapon.damageType),
-    properties: readable, mastery, masteryActive: ledger.weaponMasteries.has(view.id), range: ammunition ?? thrown,
+    properties: readable, mastery, masteryKey: weapon.mastery, masteryActive: ledger.weaponMasteries.has(view.id), range: ammunition ?? thrown,
     ...(proficient ? {} : { properties: [...readable, "숙련 없음"] }),
   };
 }

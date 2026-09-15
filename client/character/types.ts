@@ -114,6 +114,8 @@ export interface DerivedAttack {
   damageType: string;
   properties: string[];
   mastery?: string;
+  /** The mastery property's rule key (graze, topple, vex, sap, slow, push, nick, cleave) for the table. */
+  masteryKey?: string;
   masteryActive: boolean;
   range?: string;
 }

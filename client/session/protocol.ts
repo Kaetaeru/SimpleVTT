@@ -39,7 +39,7 @@ export interface TableSnapshot {
 export interface ActorRef { entryId?: string; pageId?: string; tokenId?: string }
 /** Which attack: a sheet attack row, an NPC action, or (R8) a spell. */
 export type AttackRef = { source: "weapon"; attackId: string } | { source: "npc"; actionName: string } | { source: "spell"; spellId: string; slotLevel?: number };
-export interface AttackRiders { sneak?: boolean; smiteSlot?: number }
+export interface AttackRiders { sneak?: boolean; smiteSlot?: number; /** R12: the Cleave mastery's follow-up attack (no ability modifier to damage). */ cleave?: boolean }
 
 export interface RollPayload { formula: string; total: number; dice: Array<{ sides: number; value: number }>; modifier: number; label?: string }
 
@@ -94,6 +94,8 @@ export type ClientCommand =
   | { type: "act.legendary"; actor: ActorRef; name: string; targets?: ActorRef[] }
   /** R10: use an item from the actor's bag on a creature (a potion poured into an ally's mouth); the host rolls and applies. */
   | { type: "act.item"; actor: ActorRef; target?: ActorRef; instanceId: string }
+  /** R12 (DM): a monster spends Legendary Resistance on a failed save in a spell card — that row is re-applied as a success. */
+  | { type: "act.resist"; messageId: string; targetId: string }
   /** D97: one of the official actions (dash, dodge, help, hide, grapple …) on the actor's turn; the host resolves and marks. */
   | { type: "act.action"; actor: ActorRef; kind: ActionKind; target?: ActorRef; skill?: string; dc?: number; note?: string; choice?: string; bonus?: boolean }
   /** DM palette: re-resolve a card with overrides (same dice unless `reroll`), superseding it. */

@@ -71,11 +71,12 @@ export function NpcWindow({ entry, onClose, onOpen: _onOpen }: { entry: JournalN
           {block.legendaryActionsPerRound ? <div className="cl-row cl-small" style={{ gap: 6 }}><span>전설 행동 {block.legendaryActionsPerRound - runtime.legendaryUsed}/{block.legendaryActionsPerRound} 남음</span><button type="button" className="cl-btn small" disabled={runtime.legendaryUsed >= block.legendaryActionsPerRound} onClick={() => save({ legendaryUsed: runtime.legendaryUsed + 1 })}>1 사용</button><button type="button" className="cl-btn small quiet" onClick={() => save({ legendaryUsed: 0 })}>초기화</button>{block.legendaryResistance ? <Pill>전설 저항 {block.legendaryResistance}/일</Pill> : null}</div> : null}
         </div>
       ) : null}
+      {editable && block.legendaryResistance ? <div className="cl-row cl-small" style={{ gap: 6 }}><span>전설 저항 {Math.max(0, block.legendaryResistance - (runtime.legendaryResistanceUsed ?? 0))}/{block.legendaryResistance} 남음</span><span className="cl-quiet">— 주문 카드의 실패한 내성에서 "전설 저항"으로 씁니다</span><button type="button" className="cl-btn small quiet" onClick={() => save({ legendaryResistanceUsed: 0 })}>초기화</button></div> : null}
       {editable && perDay.length ? (
         <div className="cl-card cl-row cl-small" style={{ gap: 8, flexWrap: "wrap", alignItems: "center" }}>
           <span className="cl-quiet">주문 횟수 (일)</span>
           {perDay.map((item) => <Pill key={item.spellId} tone={(runtime.uses?.[item.spellId] ?? 0) >= item.uses ? "bad" : "good"}>{item.name} {Math.max(0, item.uses - (runtime.uses?.[item.spellId] ?? 0))}/{item.uses}</Pill>)}
-          <button type="button" className="cl-btn small" onClick={() => save({ uses: {} })} title="긴 휴식: 하루 횟수를 모두 되돌립니다">횟수 초기화</button>
+          <button type="button" className="cl-btn small" onClick={() => save({ uses: {}, legendaryResistanceUsed: 0 })} title="긴 휴식: 하루 횟수와 전설 저항을 모두 되돌립니다">횟수 초기화</button>
         </div>
       ) : null}
       <StatBlock block={block} runtime={editable ? runtime : undefined} onRoll={editable ? roll : undefined} onSpend={editable ? (name, spent) => save({ spent: { ...runtime.spent, [name]: spent } }) : undefined} />

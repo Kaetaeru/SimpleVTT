@@ -86,12 +86,12 @@ export interface Page {
 
 /** Roll20's default set plus the 5e conditions and a few named markers fixed by D84. */
 export const CONDITION_MARKERS = ["장님", "매혹", "귀머거리", "공포", "붙잡힘", "행동불능", "투명", "마비", "석화", "중독", "넘어짐", "포박", "충격", "무의식"] as const;
-export const NAMED_MARKERS = ["집중", "사망", "은신", "엄폐 1/2", "엄폐 3/4"] as const;
+export const NAMED_MARKERS = ["집중", "사망", "은신", "엄폐 1/2", "엄폐 3/4", "교란", "약화", "둔화"] as const;
 export const DOT_MARKERS = ["빨강", "파랑", "초록", "갈색", "보라", "분홍", "노랑"] as const;
 export const MARKER_GLYPH: Record<string, string> = {
   장님: "🙈", 매혹: "💗", 귀머거리: "🙉", 공포: "😱", 붙잡힘: "✊", 행동불능: "💫", 투명: "👻", 마비: "⚡", 석화: "🗿", 중독: "☠", 넘어짐: "⬇", 포박: "⛓", 충격: "💥", 무의식: "💤",
   집중: "🎯", 사망: "✖", 은신: "🕶", "엄폐 1/2": "◧", "엄폐 3/4": "◨",
-  회피: "🛡", 이탈: "🌀", 도움: "🤝", 준비: "⏳", 질주: "💨",
+  회피: "🛡", 이탈: "🌀", 도움: "🤝", 준비: "⏳", 질주: "💨", 교란: "🎯", 약화: "😵", 둔화: "🐌",
   빨강: "🔴", 파랑: "🔵", 초록: "🟢", 갈색: "🟤", 보라: "🟣", 분홍: "🩷", 노랑: "🟡",
 };
 export const ALL_MARKERS: string[] = [...CONDITION_MARKERS, ...NAMED_MARKERS, ...DOT_MARKERS];

@@ -63,8 +63,10 @@ export function pcAttackSpec(entry: JournalCharacter, derived: DerivedCharacter,
   const attack = derived.attacks.find((item) => item.id === attackId);
   if (!attack) return null;
   const range = weaponRange(attack);
-  const bonusText = attack.damageBonus ? `${attack.damageBonus > 0 ? "+" : "-"}${Math.abs(attack.damageBonus)}` : "";
-  const damage: DamagePart[] = [{ formula: `${attack.damage.split(" ")[0]}${bonusText}${diceOf(attack.damageTerms)}`, type: attack.damageType, label: attack.name }];
+  // R12: a Cleave follow-up adds no ability modifier to its damage.
+  const cleave = Boolean(riders.cleave && attack.masteryActive && attack.masteryKey === "cleave");
+  const bonusText = attack.damageBonus && !cleave ? `${attack.damageBonus > 0 ? "+" : "-"}${Math.abs(attack.damageBonus)}` : "";
+  const damage: DamagePart[] = [{ formula: `${attack.damage.split(" ")[0]}${bonusText}${diceOf(attack.damageTerms)}`, type: attack.damageType, label: cleave ? `${attack.name} (쪼개기)` : attack.name }];
   const extra: DamagePart[] = [];
   const spenders: Array<(runtime: CharacterRuntime) => CharacterRuntime> = [];
   if (riders.sneak && hasSneakAttack(derived, attack)) extra.push({ formula: `${sneakDice(derived)}d6`, type: attack.damageType, label: "암습" });
@@ -73,7 +75,9 @@ export function pcAttackSpec(entry: JournalCharacter, derived: DerivedCharacter,
     extra.push({ formula: `${Math.min(5, 1 + level)}d8`, type: "광휘", label: `신성한 강타 (${level}레벨 슬롯)` });
     spenders.push((runtime) => useSpellSlot(runtime, derived, level));
   }
-  return { spec: { name: attack.name, source: "weapon", attackBonus: attack.attackBonus, mode: range.mode, rangeFeet: range.rangeFeet, longRangeFeet: range.longRangeFeet, damage, riders: extra }, spend: (runtime) => spenders.reduce((acc, spend) => spend(acc), runtime) };
+  const abilityMod = derived.abilities[attack.ability].modifier;
+  const mastery = attack.masteryActive && attack.masteryKey && !cleave ? attack.masteryKey : undefined;
+  return { spec: { name: cleave ? `${attack.name} · 쪼개기` : attack.name, source: "weapon", attackBonus: attack.attackBonus, mode: range.mode, rangeFeet: range.rangeFeet, longRangeFeet: range.longRangeFeet, damage, riders: extra, ...(mastery ? { mastery, abilityMod, masteryDc: 8 + abilityMod + derived.proficiencyBonus } : {}) }, spend: (runtime) => spenders.reduce((acc, spend) => spend(acc), runtime) };
 }
 
 export function npcAttackSpec(entry: JournalNpc, actionName: string): AttackSpec | null {

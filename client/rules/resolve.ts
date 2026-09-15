@@ -5,6 +5,7 @@
  * dice doubled on a crit, riders, resistance/immunity/vulnerability per damage type, temp HP before HP, a
  * concentration save when a concentrating target takes damage (D92: automatic), and 0 HP consequences.
  */
+import type { ActorRef, AttackRef } from "../session/protocol";
 export type Advantage = "advantage" | "disadvantage" | "normal";
 
 export interface CombatantDefenses { resistances: string[]; immunities: string[]; vulnerabilities: string[] }
@@ -28,6 +29,8 @@ export interface Combatant {
   tokenId?: string;
   /** Token id of whoever holds this creature in a grapple (2024: attacks against anyone else are at disadvantage). */
   grappledBy?: string;
+  /** R12: token id of the wielder whose Vex mastery gave advantage against this creature. */
+  vexedBy?: string;
   /** Cells from the attacker (undefined when either has no token). */
   distanceFeet?: number;
 }
@@ -47,7 +50,15 @@ export interface AttackSpec {
   riders?: DamagePart[];
   /** Conditions the hit inflicts (from NPC riders or masteries). */
   inflicts?: string[];
+  /** R12 (2024 weapon mastery): the active mastery property's key, the wielder's ability modifier and the mastery save DC (8 + mod + PB). */
+  mastery?: string;
+  abilityMod?: number;
+  masteryDc?: number;
 }
+
+/** R12: what a mastery did on this attack. */
+export interface MasteryResult { kind: string; label: string; /** Graze: damage dealt on a miss. */ grazed?: number; /** Topple: the target's CON save. */ save?: { d20: number; bonus: number; total: number; dc: number; success: boolean }; /** Marks put on the target (from the wielder). */ marks: string[]; note?: string }
+export const MASTERY_LABEL: Record<string, string> = { cleave: "쪼개기", graze: "스치기", nick: "베기", push: "밀치기", sap: "약화", slow: "둔화", topple: "넘어뜨리기", vex: "교란" };
 
 export interface AttackOverrides {
   advantage?: Advantage;
@@ -85,6 +96,11 @@ export interface AttackResolution {
   tempAfter: number;
   /** Concentration check made because damage landed on a concentrating target. */
   concentration?: { effect: string; dc: number; d20: number; total: number; success: boolean };
+  /** R12: what the weapon mastery did (graze damage, topple save, marks). */
+  mastery?: MasteryResult;
+  /** R12: how this attack was asked for, so a card can offer the Cleave follow-up. */
+  attackRef?: AttackRef;
+  attackerRef?: ActorRef;
   /** What happened at 0 HP. */
   downed?: "unconscious" | "dead" | "instant-death";
   inflicted: string[];
@@ -125,6 +141,8 @@ export function suggestAdvantage(attacker: Combatant, target: Combatant, spec: A
   if (has(attacker, "투명")) plus.push("공격자 투명");
   if (effect(attacker, "은신")) plus.push("공격자 은신");
   if (effect(attacker, "도움")) plus.push("도움 받음");
+  if (has(attacker, "약화")) minus.push("약화 (Sap): 다음 공격 불리");
+  if (target.vexedBy && attacker.tokenId && target.vexedBy === attacker.tokenId) plus.push("교란 (Vex): 이 대상에게 유리");
   if (has(target, "넘어짐")) (spec.mode === "melee" ? plus : minus).push(spec.mode === "melee" ? "대상 넘어짐 (근접)" : "대상 넘어짐 (원거리)");
   for (const name of ["마비", "석화", "포박", "충격", "행동불능", "무의식"]) if (has(target, name)) plus.push(`대상 ${name}`);
   if (has(target, "장님")) plus.push("대상 장님");
@@ -163,7 +181,7 @@ function rollParts(formula: string, dice: DiceSource, doubleDice: boolean): { di
 
 /* ---------- resolution ---------- */
 
-export interface ResolveOptions { dice: DiceSource; overrides?: AttackOverrides; apply?: boolean; /** Fixed d20s and damage dice from an earlier resolution (palette edits keep the rolls). */ fixed?: { d20s: number[]; damage: number[][] } }
+export interface ResolveOptions { dice: DiceSource; overrides?: AttackOverrides; apply?: boolean; /** Fixed d20s and damage dice from an earlier resolution (palette edits keep the rolls). */ fixed?: { masteryD20?: number; d20s: number[]; damage: number[][] } }
 
 export function resolveAttack(attacker: Combatant, target: Combatant, spec: AttackSpec, options: ResolveOptions): AttackResolution {
   const overrides = options.overrides ?? {};
@@ -181,13 +199,32 @@ export function resolveAttack(attacker: Combatant, target: Combatant, spec: Atta
   const beyondLong = spec.mode === "ranged" && target.distanceFeet !== undefined && spec.longRangeFeet !== undefined && target.distanceFeet > spec.longRangeFeet;
   if (beyondLong && !overrides.outcome) { outcome = "miss"; reasons.push("최대 사거리 밖"); }
   const hit = outcome === "hit" || outcome === "crit";
-  const outcomeDamage = hit ? applyDamage(target, [...spec.damage, ...(spec.riders ?? [])], options.dice, { fixed: options.fixed?.damage, crit: outcome === "crit", scale: overrides.damageScale, delta: overrides.damageDelta }) : noDamage(target);
+  // R12: weapon mastery — Graze deals the ability modifier on a miss; on a hit Topple asks for a CON save, Vex/Sap/Slow mark the target, Push is a note.
+  let mastery: MasteryResult | undefined;
+  const grazes = !hit && spec.mastery === "graze" && (spec.abilityMod ?? 0) > 0;
+  const outcomeDamage = hit
+    ? applyDamage(target, [...spec.damage, ...(spec.riders ?? [])], options.dice, { fixed: options.fixed?.damage, crit: outcome === "crit", scale: overrides.damageScale, delta: overrides.damageDelta })
+    : grazes ? applyDamage(target, [{ formula: String(spec.abilityMod), type: spec.damage[0]?.type ?? "타격", label: "스치기", critDoubles: false }], options.dice, { fixed: options.fixed?.damage, scale: overrides.damageScale, delta: overrides.damageDelta }) : noDamage(target);
   const { damage, damageTotal, absorbed, hpLost, hpAfter, tempAfter, concentration, downed } = outcomeDamage;
+  const inflicted = hit ? [...(spec.inflicts ?? [])] : [];
+  if (grazes) mastery = { kind: "graze", label: MASTERY_LABEL.graze, grazed: damageTotal, marks: [], note: `빗나갔지만 ${damageTotal} 피해` };
+  else if (hit && spec.mastery) {
+    switch (spec.mastery) {
+      case "topple": { const d20 = options.fixed?.masteryD20 ?? options.dice.d(20); const total = d20 + target.conSave; const dc = spec.masteryDc ?? 10; const success = total >= dc; if (!success && !target.conditions.includes("넘어짐")) inflicted.push("넘어짐"); mastery = { kind: "topple", label: MASTERY_LABEL.topple, save: { d20, bonus: target.conSave, total, dc, success }, marks: [], note: success ? "건강 내성 성공" : "건강 내성 실패 → 넘어짐" }; break; }
+      case "vex": mastery = { kind: "vex", label: MASTERY_LABEL.vex, marks: ["교란"], note: "다음 자기 턴 끝까지 이 대상에게 공격 유리" }; break;
+      case "sap": mastery = { kind: "sap", label: MASTERY_LABEL.sap, marks: ["약화"], note: "대상의 다음 공격 굴림 불리" }; break;
+      case "slow": mastery = { kind: "slow", label: MASTERY_LABEL.slow, marks: ["둔화"], note: "대상의 이동 속도 −10 ft (다음 자기 턴 시작까지)" }; break;
+      case "push": mastery = { kind: "push", label: MASTERY_LABEL.push, marks: [], note: "대상을 10 ft 밀어냄 (대형 이하)" }; break;
+      case "cleave": mastery = { kind: "cleave", label: MASTERY_LABEL.cleave, marks: [], note: "5 ft 안의 다른 대상에게 한 번 더 (피해에 능력 수정치 없음, 턴당 1회)" }; break;
+      case "nick": mastery = { kind: "nick", label: MASTERY_LABEL.nick, marks: [], note: "가벼운 무기의 추가 공격을 공격 행동 안에서 (추가 행동 소비 없음)" }; break;
+      default: break;
+    }
+  }
   return {
     attacker: { id: attacker.id, name: attacker.name, kind: attacker.kind }, target: { id: target.id, name: target.name, kind: target.kind },
     attack: { name: spec.name, source: spec.source, mode: spec.mode, bonus: spec.attackBonus },
     advantage, reasons, d20s, kept, cover, attackTotal, targetAc, outcome, damage, damageTotal, absorbed, hpLost, hpBefore: target.hp.current, hpAfter, tempAfter, concentration, downed,
-    inflicted: hit ? spec.inflicts ?? [] : [], overrides: Object.keys(overrides).length ? overrides : undefined, distanceFeet: target.distanceFeet, applied: options.apply ?? true,
+    inflicted, mastery, overrides: Object.keys(overrides).length ? overrides : undefined, distanceFeet: target.distanceFeet, applied: options.apply ?? true,
   };
 }
 
