@@ -127,3 +127,21 @@ test("invite codes carry the campaign's fixed code for tab and tcp carriers", ()
   assert.equal(visibleTo({ id: "m", at: "", type: "whisper", who: "a", playerId: "a", target: "gm", content: "x" }, { userId: "b", role: "player" }), false);
   assert.equal(visibleTo({ id: "m", at: "", type: "whisper", who: "a", playerId: "a", target: "gm", content: "x" }, { userId: "c", role: "gm" }), true);
 });
+
+test("documents of another shape are skipped and older rows of this shape are repaired", async () => {
+  const { isStoredDocument, repairCampaign } = await import("../../client/campaign/model");
+  const rejectedBuild = { schema: 1, id: "doc_1", kind: "campaign", name: "옛 캠페인", version: 1, updatedAt: "2026-09-15T00:00:00Z", ownership: { default: "none", users: {} }, data: { players: [] } };
+  const rejectedHandout = { schema: 1, id: "doc_2", kind: "handout", name: "옛 핸드아웃", version: 1, updatedAt: "", ownership: {}, data: { blocks: [] } };
+  assert.equal(isStoredDocument(rejectedBuild), false);
+  assert.equal(isStoredDocument(rejectedHandout), false);
+  assert.equal(isStoredDocument({ id: "x", kind: "scene" }), false);
+  const current = newCampaign("지금", { userId: "dm", displayName: "DM" });
+  assert.equal(isStoredDocument(current), true);
+  assert.equal(isStoredDocument({ id: "chat_x", kind: "chat", campaignId: "x", messages: [] }), true);
+  const older = { ...current, settings: { playersCanCreateCharacters: false } as unknown as typeof current.settings, description: undefined as unknown as string, players: [{ userId: "u1", displayName: "누구" } as unknown as typeof current.players[number]] };
+  const repaired = repairCampaign(older);
+  assert.deepEqual(repaired.settings, { playersCanCreateCharacters: false, playersCanExportToVault: true, chatAvatars: true });
+  assert.equal(repaired.description, "");
+  assert.equal(repaired.players[0].role, "player");
+  assert.ok(repaired.players[0].color && repaired.players[0].joinedAt);
+});

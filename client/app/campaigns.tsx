@@ -7,7 +7,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { JournalEntry } from "../campaign/journal";
 import type { Campaign, ChatArchive, ChatMessage, JoinedCampaign, PlayerRole } from "../campaign/model";
-import { chatArchiveId, emptyChatArchive, newCampaign, newJoinCode } from "../campaign/model";
+import { chatArchiveId, emptyChatArchive, isStoredDocument, newCampaign, newJoinCode, repairCampaign } from "../campaign/model";
 import { TableClient, type TableStatus } from "../session/client";
 import { TableHost } from "../session/host";
 import type { ClientCommand, Invite, RollPayload, TableSnapshot } from "../session/protocol";
@@ -63,22 +63,26 @@ export interface CampaignsState {
 const CampaignsContext = createContext<CampaignsState | null>(null);
 
 const newUserId = () => `user_${Math.random().toString(36).slice(2, 10)}`;
+/** Web storage can be absent or throw on access (a sandboxed frame, blocked site data): every use is guarded. */
+function webStorage(kind: "local" | "session"): Storage | null {
+  try { return kind === "local" ? window.localStorage : window.sessionStorage; } catch { return null; }
+}
 /** Browser tabs get their own id (DM and a player on one PC for verification); the exe keeps one id per PC. */
 function scopedId(key: string) {
   try {
-    const store = tauriAvailable() ? localStorage : sessionStorage;
-    const existing = store.getItem(key);
+    const store = webStorage(tauriAvailable() ? "local" : "session");
+    const existing = store?.getItem(key);
     if (existing) return existing;
     const value = newUserId();
-    store.setItem(key, value);
+    store?.setItem(key, value);
     return value;
   } catch { return newUserId(); }
 }
 
 export function CampaignsProvider({ children }: { children: ReactNode }) {
   const { store, ready } = useClient();
-  const [userId] = useState(() => (typeof sessionStorage === "undefined" ? newUserId() : scopedId("simplevtt-user-id")));
-  const [displayName, setDisplayNameState] = useState(() => { try { return localStorage.getItem("simplevtt-display-name") ?? ""; } catch { return ""; } });
+  const [userId] = useState(() => (typeof window === "undefined" ? newUserId() : scopedId("simplevtt-user-id")));
+  const [displayName, setDisplayNameState] = useState(() => { try { return webStorage("local")?.getItem("simplevtt-display-name") ?? ""; } catch { return ""; } });
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [archives, setArchives] = useState<Record<string, ChatArchive>>({});
   const [journals, setJournals] = useState<Record<string, JournalEntry[]>>({});
@@ -105,19 +109,24 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
     if (!store || !ready) return;
     let cancelled = false;
     (async () => {
-      const [docs, joinedRows] = await Promise.all([store.listDocuments(), store.getSetting<JoinedCampaign[]>("joined-campaigns")]);
+      const [rows, joinedRows] = await Promise.all([store.listDocuments(), store.getSetting<JoinedCampaign[]>("joined-campaigns")]);
       if (cancelled) return;
-      setCampaigns(docs.filter((doc): doc is Campaign => doc.kind === "campaign").sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)));
+      // Rows of another shape (the rejected first campaign build, or a newer build) are skipped; the current
+      // build's screens never see them.
+      const docs = (rows as unknown[]).filter(isStoredDocument);
+      const skipped = rows.length - docs.length;
+      if (skipped) console.warn(`campaigns: skipped ${skipped} stored document(s) of another shape`);
+      setCampaigns(docs.filter((doc): doc is Campaign => doc.kind === "campaign").map(repairCampaign).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)));
       setArchives(Object.fromEntries(docs.filter((doc): doc is ChatArchive => doc.kind === "chat").map((doc) => [doc.campaignId, doc])));
       const byCampaign: Record<string, JournalEntry[]> = {};
       for (const doc of docs) if (doc.kind === "handout" || doc.kind === "character") (byCampaign[doc.campaignId] ??= []).push(doc);
       setJournals(byCampaign);
-      setJoined(joinedRows ?? []);
+      setJoined(Array.isArray(joinedRows) ? joinedRows.filter((row) => row && typeof row.campaignId === "string" && typeof row.invite === "string") : []);
     })();
     return () => { cancelled = true; };
   }, [store, ready]);
 
-  const setDisplayName = useCallback((name: string) => { setDisplayNameState(name); try { localStorage.setItem("simplevtt-display-name", name); } catch { /* private window */ } }, []);
+  const setDisplayName = useCallback((name: string) => { setDisplayNameState(name); try { webStorage("local")?.setItem("simplevtt-display-name", name); } catch { /* private window */ } }, []);
 
   const saveCampaign = useCallback(async (campaign: Campaign) => {
     setCampaigns((list) => { const index = list.findIndex((item) => item.id === campaign.id); const next = index >= 0 ? list.map((item, at) => (at === index ? campaign : item)) : [campaign, ...list]; return next; });

@@ -131,3 +131,36 @@ export function withPlayerKicked(campaign: Campaign, userId: string, kicked: boo
 
 /** The GM who created the campaign (first gm). */
 export const campaignOwner = (campaign: Campaign) => campaign.players.find((item) => item.role === "gm") ?? campaign.players[0];
+
+/**
+ * Only documents of the current shape are loaded. Rows from the rejected first campaign build (envelopes with
+ * `data`, ownership maps) or from a newer build are skipped and reported, never rendered — a campaign card must not
+ * take the app down with a missing field.
+ */
+export function isStoredDocument(value: unknown): value is StoredDocument {
+  if (typeof value !== "object" || value === null) return false;
+  const doc = value as Record<string, unknown>;
+  if (typeof doc.id !== "string") return false;
+  switch (doc.kind) {
+    case "campaign": return typeof doc.name === "string" && typeof doc.joinCode === "string" && Array.isArray(doc.players) && typeof doc.settings === "object" && doc.settings !== null;
+    case "chat": return typeof doc.campaignId === "string" && Array.isArray(doc.messages);
+    case "handout": return typeof doc.campaignId === "string" && typeof doc.name === "string" && "canView" in doc && typeof doc.notes === "string";
+    case "character": return typeof doc.campaignId === "string" && typeof doc.name === "string" && "canView" in doc && typeof doc.source === "object" && typeof doc.runtime === "object";
+    default: return false;
+  }
+}
+
+/** Fill fields a slightly older row of the current shape may lack, so screens can rely on them. */
+export function repairCampaign(campaign: Campaign): Campaign {
+  const now = campaign.updatedAt ?? new Date().toISOString();
+  return {
+    ...campaign,
+    ruleset: campaign.ruleset ?? "dnd.srd-5.2.1",
+    moduleIds: campaign.moduleIds ?? [],
+    description: campaign.description ?? "",
+    createdAt: campaign.createdAt ?? now,
+    updatedAt: now,
+    settings: { playersCanCreateCharacters: true, playersCanExportToVault: true, chatAvatars: true, ...(campaign.settings as Partial<CampaignSettings>) },
+    players: campaign.players.filter((player) => player && typeof player.userId === "string").map((player, index) => ({ ...player, displayName: player.displayName ?? "플레이어", role: player.role === "gm" ? "gm" : "player", color: player.color ?? PLAYER_COLORS[index % PLAYER_COLORS.length], joinedAt: player.joinedAt ?? now })),
+  };
+}

@@ -1,4 +1,4 @@
-import type { ReactElement } from "react";
+import { Component, type ErrorInfo, type ReactElement, type ReactNode } from "react";
 import { useClient } from "./context";
 import { ContentsScreen } from "../screens/ContentsScreen";
 import { CreateScreen } from "../screens/CreateScreen";
@@ -11,7 +11,28 @@ import { DiceProvider } from "../ui/dice/DiceProvider";
 import { CampaignsProvider, useCampaigns } from "./campaigns";
 
 export function App() {
-  return <CampaignsProvider><AppBody /></CampaignsProvider>;
+  return <ScreenErrorBoundary><CampaignsProvider><AppBody /></CampaignsProvider></ScreenErrorBoundary>;
+}
+
+/** A crash in a screen shows what broke and a way out instead of a white page. */
+class ScreenErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
+  state = { error: null as Error | null };
+  static getDerivedStateFromError(error: Error) { return { error }; }
+  componentDidCatch(error: Error, info: ErrorInfo) { console.error("screen crashed", error, info.componentStack); }
+  render() {
+    if (!this.state.error) return this.props.children;
+    return (
+      <div className="cl-page" role="alert">
+        <h1>화면을 그리다가 오류가 났습니다</h1>
+        <pre>{this.state.error.message}</pre>
+        <div className="cl-row" style={{ gap: 8 }}>
+          <button type="button" className="cl-btn primary" onClick={() => { location.hash = "#/"; this.setState({ error: null }); }}>캐릭터 화면으로</button>
+          <button type="button" className="cl-btn" onClick={() => location.reload()}>새로고침</button>
+        </div>
+        <p className="cl-quiet cl-small">이 메시지가 계속 나오면 브라우저의 사이트 데이터(IndexedDB `simplevtt-client`)를 지우고 다시 여세요. 캐릭터는 먼저 JSON으로 내보내 두세요.</p>
+      </div>
+    );
+  }
 }
 
 function AppBody() {
