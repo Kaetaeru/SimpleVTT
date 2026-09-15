@@ -1,7 +1,7 @@
 /**
  * Dice roller for the client: `useDice().roll(spec)` rolls in code, shows the physics dice overlay (copied from the
  * earlier client) with the result reel, and resolves once the dice have settled. Rolls queue; the overlay is one at a
- * time. Reduced motion skips the physics and shows the result at once.
+ * time. Reduced motion shortens the physics to a guided settle; without WebGL the component shows DOM dice.
  */
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
@@ -81,12 +81,13 @@ function DiceOverlay({ result, onSettled, onFinished }: { result: RollResult; on
   useEffect(() => {
     const upper = Math.max(2, result.dice.reduce((sum, die) => sum + die.sides, 0));
     reelTimer.current = window.setInterval(() => setReel(1 + Math.floor(Math.random() * upper)), 42);
-    const fallback = window.setTimeout(settle, reduced || dice.length === 0 ? 180 : 4000);
+    // Reduced motion still shows the dice (a short, guided settle) — only the tumble is skipped.
+    const fallback = window.setTimeout(settle, dice.length === 0 ? 180 : reduced ? 1500 : 4000);
     return () => { if (reelTimer.current !== null) window.clearInterval(reelTimer.current); window.clearTimeout(fallback); };
   }, [result.id, reduced, dice.length, settle, result.dice]);
   return createPortal(
     <div className={`visual-dice-overlay v09 standalone-roll ${fading ? "is-fading" : ""}`.trim()} data-phase={resolved ? "resolved" : "rolling"} onClick={settle}>
-      {dice.length > 0 && !reduced ? <PhysicsDice3D key={result.id} dice={dice} cinematic className="visual-dice-world" onResolved={settle} /> : null}
+      {dice.length > 0 ? <PhysicsDice3D key={result.id} dice={dice} cinematic reducedMotion={reduced} className="visual-dice-world" onResolved={settle} /> : null}
       <div className={`visual-roll-notice ${resolved ? "resolved rolling-complete" : "rolling"} ${tone}`} role="status" aria-live="polite">
         <div className="visual-roll-notice-core">
           <span className="visual-roll-label">{result.label}</span>

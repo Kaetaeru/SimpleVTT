@@ -115,3 +115,21 @@
 :root[data-motion="reduced"] .visual-roll-notice.rolling .visual-roll-reel b{animation:none}
 @media (prefers-reduced-motion: reduce) { .visual-die-shell { animation:none; transform:none; }.visual-dice-overlay:not(.v09) { animation:none; }.visual-roll-notice.rolling .visual-roll-reel b{animation:none} }
 @media (max-width:700px) { .visual-dice-table { gap:10px; }.visual-die-scene { width:70px; transform:scale(.9); }.visual-dice-overlay-card { width:calc(100vw - 24px); padding:14px 10px; }.visual-roll-notice{top:10px;max-width:calc(100vw - 16px)}.visual-roll-notice-core{min-width:162px;grid-template-columns:minmax(58px,1fr) 38px 46px}.visual-roll-notice.resolved .visual-roll-notice-extension{width:250px;grid-template-columns:172px 18px 58px}.visual-roll-formula{padding-left:7px;padding-right:7px} }
+
+/* DOM dice when WebGL is unavailable: same values, a short tumble, clip-path silhouettes per die kind. */
+.physics-dice-fallback{display:grid;place-items:center;align-content:center;gap:12px;pointer-events:none}
+.physics-dice-fallback-row{display:flex;flex-wrap:wrap;justify-content:center;gap:18px}
+.fallback-die{width:118px;height:118px;display:grid;place-items:center;background:linear-gradient(150deg,#e8a24a,#b8641c 60%,#7a3e0c);clip-path:polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%);filter:drop-shadow(0 18px 22px rgba(0,0,0,.45));animation:fallback-die-tumble 1100ms cubic-bezier(.2,.8,.3,1) both}
+.fallback-die.sides-4{clip-path:polygon(50% 4%,98% 96%,2% 96%)}
+.fallback-die.sides-6{clip-path:inset(0 round 18px)}
+.fallback-die.sides-8{clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%)}
+.fallback-die.sides-10{clip-path:polygon(50% 0,100% 40%,78% 100%,22% 100%,0 40%)}
+.fallback-die.sides-12{clip-path:polygon(50% 0,98% 35%,80% 100%,20% 100%,2% 35%)}
+.fallback-die-face{display:grid;justify-items:center;color:#fff8ee;text-shadow:0 1px 2px rgba(0,0,0,.6)}
+.fallback-die-face b{font-size:44px;line-height:1;font-weight:800}
+.fallback-die-face small{font-size:11px;letter-spacing:.08em;opacity:.85;margin-top:4px}
+.fallback-die.sides-4 .fallback-die-face{padding-top:28px}
+.physics-dice-fallback-note{font-size:11px;color:var(--muted,#9aa3ad);background:color-mix(in srgb,var(--surface,#151a1f) 90%,transparent);padding:4px 10px;border-radius:999px}
+.physics-dice-fallback.still .fallback-die{animation:none}
+@keyframes fallback-die-tumble{0%{transform:translateY(-260px) rotate(-540deg) scale(.6);opacity:0}25%{opacity:1}70%{transform:translateY(24px) rotate(40deg) scale(1.04)}100%{transform:translateY(0) rotate(0) scale(1)}}
+@media (prefers-reduced-motion: reduce){.fallback-die{animation:none}}

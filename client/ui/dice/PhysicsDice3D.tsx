@@ -1,5 +1,5 @@
 // Copied from src/PhysicsDice3D.tsx (the client must not import src/): three.js + cannon-es physics dice, unchanged.
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import * as CANNON from "cannon-es";
 import { mergeVertices } from "three/examples/jsm/utils/BufferGeometryUtils.js";
@@ -35,6 +35,7 @@ const PRODUCT_PHYSICS={
   spawnHeight:3,
 } as const;
 const GUIDANCE_START_MS=680;
+const FALLBACK_TUMBLE_MS=1100;
 const CONVERGENCE_LOCK_MS=980;
 const CONVERGENCE_DURATION_MS=220;
 const CONVERGENCE_STAGGER_MS=18;
@@ -231,11 +232,20 @@ function cleanupGroup(group:THREE.Group) {
 export function PhysicsDice3D({dice,compact=false,reducedMotion=false,cinematic=false,className="",onResolved}:{dice:PhysicsDie[];compact?:boolean;reducedMotion?:boolean;cinematic?:boolean;className?:string;onResolved?:()=>void}) {
   const hostRef=useRef<HTMLDivElement>(null);
   const onResolvedRef=useRef(onResolved);
+  const [webglFailed,setWebglFailed]=useState(false);
   useEffect(()=>{onResolvedRef.current=onResolved;},[onResolved]);
+  // No WebGL (blocked, software rendering off, a very old GPU): DOM dice with the same values instead of nothing.
+  useEffect(()=>{
+    if (!webglFailed) return;
+    const timer=window.setTimeout(()=>onResolvedRef.current?.(),reducedMotion?120:FALLBACK_TUMBLE_MS);
+    return ()=>window.clearTimeout(timer);
+  },[webglFailed,dice,reducedMotion]);
   useEffect(()=>{
     const host=hostRef.current;
-    if (!host||!dice.length) return;
-    const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:"high-performance"});
+    if (!host||!dice.length||webglFailed) return;
+    let renderer:THREE.WebGLRenderer;
+    try { renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:"high-performance"}); }
+    catch (error) { console.warn("[dice] WebGL unavailable, using DOM dice",error); setWebglFailed(true); return; }
     renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
     renderer.shadowMap.enabled=true;
     renderer.shadowMap.type=THREE.PCFSoftShadowMap;
@@ -414,6 +424,16 @@ export function PhysicsDice3D({dice,compact=false,reducedMotion=false,cinematic=
       runtimes.forEach((runtime)=>{world.removeBody(runtime.body);cleanupGroup(runtime.mesh);scene.remove(runtime.mesh);});
       removeWalls(); world.removeBody(floorBody); floorMesh.geometry.dispose(); (floorMesh.material as THREE.Material).dispose(); renderer.dispose(); renderer.domElement.remove();
     };
-  },[dice,compact,reducedMotion,cinematic]);
+  },[dice,compact,reducedMotion,cinematic,webglFailed]);
+  if (webglFailed) {
+    return (
+      <div className={`physics-dice-canvas physics-dice-fallback ${compact?"compact":""} ${cinematic?"cinematic":""} ${reducedMotion?"still":""} ${className}`.trim()} role="img" aria-label={dice.map((die)=>`d${die.sides} ${die.value}`).join(", ")}>
+        <div className="physics-dice-fallback-row">
+          {dice.map((die,index)=><div key={index} className={`fallback-die sides-${die.sides}`} style={{animationDelay:`${index*70}ms`}}><span className="fallback-die-face"><b>{die.value}</b><small>d{die.sides}</small></span></div>)}
+        </div>
+        <span className="physics-dice-fallback-note">3D 주사위를 쓸 수 없는 환경(WebGL 없음) — 간단 주사위로 표시합니다</span>
+      </div>
+    );
+  }
   return <div ref={hostRef} className={`physics-dice-canvas ${compact?"compact":""} ${cinematic?"cinematic":""} ${className}`.trim()} role="img" aria-label={dice.map((die)=>`d${die.sides} ${die.value}`).join(", ")}/>;
 }
