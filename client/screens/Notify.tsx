@@ -87,7 +87,7 @@ export function promptIsMine(message: ChatMessage, snapshot: { players: Array<{ 
 /** Buttons for the side a prompt is addressed to: the reactor's melee attacks as the reaction, or 안 함. Null when it is not yours or already answered. */
 const COUNTERSPELL_ID = "dnd.srd521.spell.counterspell";
 /** What a prompt is asking for, in one word. */
-export const promptLabel = (kind: ReactionPrompt["kind"]) => (kind === "shield" ? "방패 반응" : kind === "counterspell" ? "주문 차단" : "기회 공격");
+export const promptLabel = (kind: ReactionPrompt["kind"]) => (kind === "shield" ? "방패 반응" : kind === "counterspell" ? "주문 차단" : kind === "death-save" ? "죽음 내성" : "기회 공격");
 
 export function PromptChoices({ message, compact = false }: { message: ChatMessage; compact?: boolean }) {
   const c = useCampaigns();
@@ -114,6 +114,15 @@ export function PromptChoices({ message, compact = false }: { message: ChatMessa
   }, [prompt.kind, reactorEntry, catalog]);
   const shield = prompt.kind === "shield" ? reaction : null;
   if (prompt.outcome || !controls) return null;
+  // R29 (D154): the one roll that decides whether the character lives is the player's to make. The host still
+  // rolls the die — pressing the button is what belongs to them, and it used to be an anonymous line in the log.
+  if (prompt.kind === "death-save") {
+    return (
+      <div className="cl-row" style={{ gap: 4, flexWrap: "wrap" }}>
+        <button type="button" className="cl-btn small primary" onClick={() => c.rollDeathSave(message.id)}>💀 죽음 내성 굴리기 (1d20 · 10 이상 성공)</button>
+      </div>
+    );
+  }
   if (prompt.kind === "counterspell") {
     const slot = reactorEntry?.kind === "npc" ? { kind: "slot" as const, level: 3 } : reaction;
     return (
@@ -196,6 +205,7 @@ export function ApprovalLayer() {
           <>
             {first.prompt!.kind === "counterspell" ? <div className="cl-approval-body">🚫 <strong>{first.prompt!.mover.name}</strong>이(가) {first.prompt!.spell?.name}{first.prompt!.spell ? ` (${first.prompt!.spell.level}레벨)` : ""}을(를) 시전하려 합니다.<br />주문 차단을 하시겠습니까?</div>
               : first.prompt!.kind === "shield" ? <div className="cl-approval-body">🛡 <strong>{first.prompt!.mover.name}</strong>의 {first.prompt!.attack?.name}이(가) <strong>{first.prompt!.reactor.name}</strong>에게 적중했습니다 (명중 {first.prompt!.attack?.total} vs AC {first.prompt!.attack?.ac}).<br />방패를 시전하시겠습니까?</div>
+              : first.prompt!.kind === "death-save" ? <div className="cl-approval-body">💀 <strong>{first.prompt!.reactor.name}</strong>은(는) 쓰러져 있습니다.<br />죽음 내성을 굴리세요 (성공 3번이면 안정, 실패 3번이면 사망).</div>
               : <div className="cl-approval-body">🏃 <strong>{first.prompt!.mover.name}</strong>이(가) <strong>{first.prompt!.reactor.name}</strong>에게서 벗어납니다.<br />기회 공격을 하시겠습니까?</div>}
             <PromptChoices message={first} compact />
           </>

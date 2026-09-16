@@ -38,6 +38,11 @@ export interface CampaignSettings {
   chatAvatars: boolean;
   /** D90: results wait for the GM's "적용" instead of landing at once. */
   dmConfirmsResults?: boolean;
+  /**
+   * R29 (D154): a downed character's death save is their player's to make. The host still rolls the die — the
+   * player presses the button on their own card. Off means the host rolls it at the start of their turn, as before.
+   */
+  playersRollDeathSaves?: boolean;
   /** R13: how long a toast stays (seconds, default 4) and how many at once (default 3). */
   toastSeconds?: number;
   toastCount?: number;
@@ -96,7 +101,7 @@ export function advanceClock(clock: CampaignClock, minutes: number): CampaignClo
 /** "○○이(가) △△에게서 벗어남": the reactor's controller may take an opportunity attack or let it go. */
 export interface ReactionPrompt {
   /** "opportunity": the mover leaves the reactor's reach (D96). "shield": the mover's attack hit the reactor, who may cast Shield (R11). "counterspell": the mover is casting and the reactor may counter it (R16). */
-  kind: "opportunity" | "shield" | "counterspell";
+  kind: "opportunity" | "shield" | "counterspell" | "death-save";
   mover: { name: string; entryId?: string; pageId?: string; tokenId?: string };
   reactor: { name: string; entryId?: string; pageId?: string; tokenId?: string };
   /** The held attack (shield prompts): what hit and by how much. */
@@ -104,7 +109,7 @@ export interface ReactionPrompt {
   /** R16: the held spell (counterspell prompts): what is being cast and at what level. */
   spell?: { name: string; level: number };
   /** Filled once answered: the attack card id, or declined; for shield: whether it was cast; for counterspell: whether it landed. */
-  outcome?: { attacked?: string; declined?: boolean; shielded?: boolean; countered?: boolean; card?: string };
+  outcome?: { attacked?: string; declined?: boolean; shielded?: boolean; countered?: boolean; card?: string; rolled?: string };
 }
 
 export interface ChatMessage {

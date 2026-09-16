@@ -12,7 +12,7 @@ import type { CastMethod } from "../character/play";
 import type { AttackOverrides } from "../rules/resolve";
 import type { CampaignClock, CampaignSettings, ChatMessage, Macro, PlayerRole, RollTable } from "../campaign/model";
 
-export const PROTOCOL_VERSION = 22;
+export const PROTOCOL_VERSION = 23;
 
 export interface Presence { userId: string; displayName: string; role: PlayerRole; color: string; connected: boolean }
 
@@ -111,6 +111,10 @@ export type ClientCommand =
   | { type: "act.provoke"; mover: ActorRef; from: ActorRef }
   /** The reactor's controller lets the opportunity go. */
   | { type: "act.decline"; messageId: string }
+  /** R29 (D155): declare a reaction of your own (Uncanny Dodge, Absorb Elements, Protection …) — the host spends it and posts the card. */
+  | { type: "act.react"; actor: ActorRef; name: string; note?: string; formula?: string }
+  /** R29 (D154): the downed character's player rolls their own death save; the host rolls the die and applies it. */
+  | { type: "act.deathSave"; messageId: string }
   /** D102: cast a spell at the chosen targets; the host pays the slot, resolves every target and applies. */
   | { type: "act.cast"; caster: ActorRef; spellId: string; targets: ActorRef[]; method?: CastMethod; overrides?: AttackOverrides; readied?: boolean; /** R11: answering a shield prompt (its message id): the reaction spell against the held attack. */ reaction?: string }
   /** R9 (D103): an NPC's save action (breath, gaze …) at the chosen targets — resolved like a save spell; recharge is spent. */

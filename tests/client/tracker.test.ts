@@ -139,9 +139,18 @@ test("host: opening the tracker reaches players; initiative rolls into rows; 다
   dm.send({ type: "tracker.next" });
   await tick();
   assert.equal(host.tracker.round, 2);
+  // R29 (D154): the save is the player's to make — the turn opens with a card addressed to them, and pressing it
+  // is what rolls. Nothing is rolled behind their back.
+  const card = [...alice.snapshot!.chat].reverse().find((message) => message.prompt?.kind === "death-save")!;
+  assert.ok(card, "the downed character's player is asked");
+  const waiting = host.journal.find((entry) => entry.id === pc.id);
+  assert.ok(waiting?.kind === "character" && waiting.runtime.deathSaves.success + waiting.runtime.deathSaves.failure === 0, "and nothing was rolled for them");
+  alice.send({ type: "act.deathSave", messageId: card.id });
+  await tick();
   const downed = host.journal.find((entry) => entry.id === pc.id);
-  assert.ok(downed?.kind === "character" && downed.runtime.deathSaves.success + downed.runtime.deathSaves.failure >= 1, "a PC at 0 HP rolled a death save at its turn start");
+  assert.ok(downed?.kind === "character" && downed.runtime.deathSaves.success + downed.runtime.deathSaves.failure >= 1, "pressing it rolls the save");
   assert.ok(dm.snapshot!.chat.some((message) => message.roll?.label?.includes("죽음 내성")));
+  assert.ok(alice.snapshot!.chat.some((message) => message.supersedes === card.id), "and the card is answered");
   assert.ok(dm.snapshot!.chat.some((message) => message.content === "라운드 2"));
   // Removing the dragon's token drops its row.
   dm.send({ type: "token.remove", pageId: cave.id, id: npcToken.id });

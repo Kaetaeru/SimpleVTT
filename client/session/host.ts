@@ -1072,6 +1072,39 @@ export class TableHost {
         this.say({ type: "prompt", who: player.displayName, playerId: userId, content: `${moverName}이(가) ${fromName}에게서 벗어납니다 — ${fromName}의 기회 공격?`, prompt: { kind: "opportunity", mover: { name: moverName, ...command.mover }, reactor: { name: fromName, ...command.from } } });
         return;
       }
+      case "act.deathSave": {
+        const promptMessage = this.chat.find((message) => message.id === command.messageId && message.type === "prompt");
+        if (!promptMessage?.prompt || promptMessage.prompt.kind !== "death-save" || this.promptAnswered(command.messageId)) return refuse("그 죽음 내성은 더 이상 열려 있지 않습니다");
+        const downed = this.resolveActor(promptMessage.prompt.reactor);
+        if (!downed) return refuse("쓰러진 쪽을 찾을 수 없습니다");
+        if (!isGm && !this.mayAct(userId, promptMessage.prompt.reactor, downed.entry)) return refuse("그 인물의 조종자만 죽음 내성을 굴립니다");
+        if (!this.rollDeathSave(downed.entry.id, player.displayName)) return refuse("지금은 죽음 내성을 굴릴 상태가 아닙니다");
+        this.say({ ...promptMessage, prompt: { ...promptMessage.prompt, outcome: { rolled: userId } }, supersedes: promptMessage.id, content: `${promptMessage.content} → ${player.displayName}이(가) 굴림` });
+        return;
+      }
+      case "act.react": {
+        // R29 (D155): out of turn a player had exactly three reactions and all three had to be offered to them.
+        // Uncanny Dodge, Absorb Elements, Hellish Rebuke, Protection — none had a button, a prompt or a command.
+        const actor = this.resolveActor(command.actor);
+        if (!actor) return refuse("반응하는 쪽을 찾을 수 없습니다");
+        if (!isGm && !this.mayAct(userId, command.actor, actor.entry)) return refuse("자기 캐릭터로만 반응할 수 있습니다");
+        const stopped = cannotAct(this.conditionsOf(actor));
+        if (stopped) return refuse(`${stopped} 상태라 반응할 수 없습니다`);
+        if (this.reactionUsed(command.actor)) return refuse("이번 라운드의 반응을 이미 썼습니다");
+        const name = String(command.name ?? "").trim().slice(0, LIMITS.name);
+        if (!name) return refuse("무슨 반응인지 적으세요");
+        const who = actor.token?.name ?? actor.entry.name;
+        this.markReactionUsed(command.actor);
+        if (command.formula) {
+          const wrong = parseFormula(command.formula) ? null : "읽을 수 없는 주사위 식입니다";
+          if (wrong) return refuse(wrong);
+          const rolled = rollFormula({ label: `${who} · ${name}`, formula: command.formula }, this.options.random);
+          this.say({ type: "rollresult", who: player.displayName, playerId: userId, content: `${who} · 반응: ${name}`, roll: { formula: command.formula, total: rolled.total, dice: rolled.dice.map((die) => ({ sides: die.sides, value: die.value })), modifier: rolled.modifier, label: `${who} · 반응: ${name}` } });
+        } else {
+          this.say({ type: "emote", who: player.displayName, playerId: userId, content: `${who}: 반응 — ${name}${command.note ? ` (${String(command.note).slice(0, LIMITS.name)})` : ""}` });
+        }
+        return;
+      }
       case "act.decline": {
         const promptMessage = this.chat.find((message) => message.id === command.messageId && message.type === "prompt");
         if (!promptMessage?.prompt || this.promptAnswered(command.messageId)) return refuse("그 프롬프트는 더 이상 열려 있지 않습니다");
@@ -1223,6 +1256,34 @@ export class TableHost {
   private promptAnswered(promptId: string) { return this.chat.some((message) => message.supersedes === promptId); }
 
   private turnOf(ref: ActorRef) { return this.tracker.turns.find((turn) => (ref.tokenId ? turn.tokenId === ref.tokenId && turn.pageId === ref.pageId : Boolean(ref.entryId) && turn.entryId === ref.entryId)); }
+  private needsDeathSave(entry: JournalCharacter) {
+    const runtime = entry.runtime;
+    return runtime.hp.current <= 0 && runtime.deathSaves.success < 3 && runtime.deathSaves.failure < 3;
+  }
+
+  /** Who the death-save card is addressed to: a connected player who controls the character, else nobody (the host rolls). */
+  private deathSaveOwner(entry: JournalCharacter, ref: ActorRef) {
+    return this.campaign.players.find((player) => player.role !== "gm" && !player.kicked && this.connected.has(player.userId) && this.mayAct(player.userId, ref, entry))?.userId ?? null;
+  }
+
+  /** R29 (D154): the host rolls the d20 — the player owns the moment, not the dice. */
+  private rollDeathSave(entryId: string, who: string) {
+    const entry = this.journalEntries.get(entryId);
+    if (entry?.kind !== "character" || !this.needsDeathSave(entry)) return false;
+    const runtime = entry.runtime;
+    const die = 1 + Math.floor((this.options.random ?? Math.random)() * 20);
+    let next = runtime;
+    let note: string;
+    // R28 (D149): "깨어남" now takes 무의식 off too — it used to stay on, handing every attacker advantage and
+    // turning every melee hit into a critical against a character who had just stood up.
+    if (die === 20) { next = wakeUp({ ...runtime, hp: { ...runtime.hp, current: 1 } }); note = "20! HP 1로 깨어남"; }
+    else if (die === 1) { next = recordDeathSave(recordDeathSave(runtime, false), false); note = "1! 실패 2회"; }
+    else { next = recordDeathSave(runtime, die >= 10); note = die >= 10 ? "성공" : "실패"; }
+    this.say({ type: "rollresult", who, content: `${entry.name} · 죽음 내성 (${note})`, roll: { formula: "1d20", total: die, dice: [{ sides: 20, value: die }], modifier: 0, label: `${entry.name} · 죽음 내성 — ${note} (${next.deathSaves.success}/${next.deathSaves.failure})` } });
+    this.storeEntry({ ...entry, runtime: { ...next, updatedAt: this.now() }, updatedAt: this.now() });
+    return true;
+  }
+
   private reactionUsed(ref: ActorRef) { return Boolean(this.turnOf(ref)?.reactionUsed); }
   private markReactionUsed(ref: ActorRef) {
     const turn = this.turnOf(ref);
@@ -1730,18 +1791,13 @@ export class TableHost {
     if (result.started) this.say({ type: "system", who: "", content: `${result.started.name}의 턴` });
     const started = result.started?.entryId ? this.journalEntries.get(result.started.entryId) : undefined;
     if (started?.kind === "character") {
-      const runtime = started.runtime;
-      if (runtime.hp.current <= 0 && runtime.deathSaves.success < 3 && runtime.deathSaves.failure < 3) {
-        const die = 1 + Math.floor(random() * 20);
-        let next = runtime;
-        let note: string;
-        // R28 (D149): "깨어남" now takes 무의식 off too — it used to stay on, handing every attacker advantage and
-        // turning every melee hit into a critical against a character who had just stood up.
-        if (die === 20) { next = wakeUp({ ...runtime, hp: { ...runtime.hp, current: 1 } }); note = "20! HP 1로 깨어남"; }
-        else if (die === 1) { next = recordDeathSave(recordDeathSave(runtime, false), false); note = "1! 실패 2회"; }
-        else { next = recordDeathSave(runtime, die >= 10); note = die >= 10 ? "성공" : "실패"; }
-        this.say({ type: "rollresult", who: "", content: `${started.name} · 죽음 내성 (${note})`, roll: { formula: "1d20", total: die, dice: [{ sides: 20, value: die }], modifier: 0, label: `${started.name} · 죽음 내성 — ${note} (${next.deathSaves.success}/${next.deathSaves.failure})` } });
-        this.storeEntry({ ...started, runtime: next, updatedAt: this.now() });
+      // R29 (D154): the save belongs to the player. When someone is there to make it, the turn opens with their
+      // card instead of an anonymous line nobody rolled; the DM can always take it over or the setting can be off.
+      if (this.needsDeathSave(started)) {
+        const ref: ActorRef = { entryId: started.id, pageId: result.started?.pageId, tokenId: result.started?.tokenId };
+        const owner = this.campaign.settings.playersRollDeathSaves === false ? null : this.deathSaveOwner(started, ref);
+        if (owner) this.say({ type: "prompt", who: "", content: `${started.name}은(는) 쓰러져 있습니다 — 죽음 내성`, prompt: { kind: "death-save", mover: { name: started.name, ...ref }, reactor: { name: started.name, ...ref } } });
+        else this.rollDeathSave(started.id, "");
       }
     } else if (started?.kind === "npc") {
       let runtime = { ...started.runtime, legendaryUsed: 0, spent: { ...started.runtime.spent } };

@@ -454,6 +454,27 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
     if (outcome === "refused") alert("남은 횟수가 없습니다.");
     if (outcome === "done") { c.say(`/em ${token.name}: ${feature.name} 사용`); if (bonus) c.spendEconomy(me, "bonus"); }
   };
+  /**
+   * R29 (D155): the reaction menu. A player used to have exactly three reactions and all three had to be offered to
+   * them by the host — Uncanny Dodge, Absorb Elements, Hellish Rebuke, Protection had no button anywhere. Reaction
+   * features come from the activation notes; anything else is declared by name so the table (and the DM's palette)
+   * can act on it. The host spends the reaction and posts the card.
+   */
+  const reactionItems = [
+    ...usable.filter((item) => item.activation.note?.includes("반응")).map((item) => ({
+      key: `reaction:${item.feature.id}`,
+      label: item.feature.name,
+      hint: `${item.left !== undefined ? `${item.left}/${item.pool!.max} · ` : ""}${item.activation.note ?? ""}`,
+      disabled: item.left !== undefined && item.left <= 0,
+      onSelect: () => { const formula = item.activation.roll?.(derived!)?.formula; c.react(me, item.feature.name, formula ? { formula } : { note: item.activation.note }); if (item.activation.resourceId) void useIt(item.feature); },
+    })),
+    { key: "reaction:free", label: "직접 적기…", hint: "이름 (그리고 원하면 주사위 식)", onSelect: () => {
+      const name = window.prompt("어떤 반응입니까? (예: 오싹한 회피, 원소 흡수, 지옥의 응징)")?.trim();
+      if (!name) return;
+      const formula = window.prompt(`${name} — 굴릴 주사위가 있으면 적으세요 (예: 2d10+3). 없으면 비워 두세요.`)?.trim();
+      c.react(me, name, formula ? { formula } : {});
+    } },
+  ];
   const featureItems = entry.kind === "npc"
     ? entry.statBlock.traits.map((trait) => { const most = entry.runtime.traitUses?.[trait.name]; const used = entry.runtime.uses?.[`trait:${trait.name}`] ?? 0; return { key: trait.name, label: trait.name, hint: `${most ? `${Math.max(0, most - used)}/${most} 남음 · ` : ""}${trait.text.slice(0, 60)}`, disabled: most !== undefined && used >= most, onSelect: () => c.useTrait(me, trait.name) }; })
     : usable.filter((item) => !item.bonus).map((item) => ({ key: item.feature.id, label: item.feature.name, hint: item.left !== undefined ? `${item.left}/${item.pool!.max}${item.activation.note ? ` · ${item.activation.note}` : ""}` : item.activation.note, disabled: item.left !== undefined && item.left <= 0, onSelect: () => void useIt(item.feature) }));
@@ -574,6 +595,8 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
         <div className="cl-cmd-group">
           <span className="cl-cmd-label">시트</span>
           <Dropdown up label="판정" items={checkItems} />
+          {/* R29 (D155): the reaction is the one thing a player needs out of turn, so the menu is there in combat. */}
+          {entry.kind === "character" && inCombat ? <Dropdown up label={turn?.reactionUsed ? "반응 (씀)" : "반응"} disabled={Boolean(blocked) || Boolean(turn?.reactionUsed)} items={reactionItems} /> : null}
           <Dropdown up label="특성" disabled={Boolean(blocked)} items={featureItems} />
           <Dropdown up label="아이템" disabled={Boolean(blocked)} items={itemItems} />
           {!inTracker ? <button type="button" className="cl-btn small" onClick={() => c.addTurn({ name: token.name, tokenId: token.id, pageId: page.id, entryId: entry.id, image: token.image }, initiativeBonus)} title="1d20 + 이니셔티브 보너스를 굴려 트래커에 넣습니다">이니셔티브 {initiativeBonus >= 0 ? "+" : ""}{initiativeBonus}</button> : null}
