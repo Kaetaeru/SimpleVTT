@@ -33,6 +33,20 @@ export function Modal({ title, onClose, children, actions }: { title: string; on
   );
 }
 
+/**
+ * R64 (D199): how a sheet treats one thing a hit offers. Shared by the on-hit window and the sheet, and free of any
+ * table context so the character screen can show it too. `allowAlways` is false for what spends a chosen slot.
+ */
+export function HitPolicySelect({ label, value, allowAlways = true, onChange }: { label: string; value: "ask" | "always" | "never"; allowAlways?: boolean; onChange: (value: "ask" | "always" | "never") => void }) {
+  return (
+    <select className="cl-select cl-policy" aria-label={`${label} 설정`} value={value} onChange={(event) => onChange(event.target.value as "ask" | "always" | "never")} style={{ width: "auto" }}>
+      <option value="ask">매번 묻기</option>
+      {allowAlways ? <option value="always">항상 사용</option> : null}
+      <option value="never">쓰지 않음</option>
+    </select>
+  );
+}
+
 export const signed = (value: number) => (value >= 0 ? `+${value}` : `−${Math.abs(value)}`);
 
 /** Copy text to the clipboard where available; returns whether it worked. */

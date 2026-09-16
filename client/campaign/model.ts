@@ -122,7 +122,7 @@ export interface ReactionPrompt {
    * R63 (D198): the window a hit opens for the attacker. The reactor is the attacker (their controller answers), the
    * mover is the creature that was hit, and `offers` are what may still be added now that the hit is known.
    */
-  onHit?: { outcome: "hit" | "crit"; offers: HitOffer[] };
+  onHit?: { outcome: "hit" | "crit"; offers: HitOffer[]; /** R64 (D199): what the attacker's sheet takes without asking, by name, so the window can say so. */ auto?: string[] };
   /** Filled once answered: the attack card id, or declined; for shield: whether it was cast; for counterspell: whether it landed. R63: `chosen` names what an on-hit window added. */
   outcome?: { attacked?: string; declined?: boolean; shielded?: boolean; countered?: boolean; card?: string; rolled?: string; chosen?: string[] };
 }

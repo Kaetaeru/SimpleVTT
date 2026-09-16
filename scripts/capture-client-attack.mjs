@@ -126,6 +126,8 @@ try {
   await letHitGo(player, cardOf(player, head), async () => {
     await player.screenshot({ path: path.join(OUT, "79-on-hit-window-player.png") });
     check((await player.locator(".cl-approval").innerText()).includes("야만적 공격자"), "the hit window offers 야만적 공격자");
+    // R64 (D199): each offer carries its standing answer, so the question can stop being asked.
+    check(await player.locator(".cl-approval select[aria-label='야만적 공격자 설정']").count() === 1, "the offer has a 매번 묻기/항상 사용/쓰지 않음 setting");
   });
   await cardOf(dm, head).waitFor({ timeout: 15000 });
   await cardOf(player, head).waitFor({ timeout: 15000 });

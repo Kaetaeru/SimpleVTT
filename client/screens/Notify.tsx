@@ -13,7 +13,7 @@ import { deriveCharacter } from "../character/derive";
 import { weaponRange } from "../rules/attackSpec";
 import { cheapestCast } from "../rules/spellcast";
 import type { ActorRef, AttackRef } from "../session/protocol";
-import { Pill } from "../ui/components";
+import { HitPolicySelect, Pill } from "../ui/components";
 
 const TOAST_MS = 4200;
 
@@ -97,6 +97,17 @@ export const promptLabel = (kind: ReactionPrompt["kind"]) => (kind === "shield" 
 function HitChoices({ message }: { message: ChatMessage }) {
   const c = useCampaigns();
   const offers = message.prompt!.onHit?.offers ?? [];
+  const auto = message.prompt!.onHit?.auto ?? [];
+  // R64 (D199): the attacker's sheet, so a choice here can become its standing answer.
+  const entry = c.table.snapshot!.journal.find((item) => item.id === message.prompt!.reactor.entryId);
+  const policyOf = (key: string) => (entry?.kind === "character" ? entry.runtime.hitPolicy?.[key] ?? "ask" : "ask");
+  const setPolicy = (key: string, policy: "ask" | "always" | "never") => {
+    if (entry?.kind !== "character") return;
+    const now = new Date().toISOString();
+    c.putJournal({ ...entry, runtime: { ...entry.runtime, hitPolicy: { ...(entry.runtime.hitPolicy ?? {}), [key]: policy }, updatedAt: now }, updatedAt: now });
+    // Setting it here answers this hit the same way: "always" ticks it, "never" unticks it.
+    setPicked((list) => (policy === "always" ? [...new Set([...list, key])] : policy === "never" ? list.filter((item) => item !== key) : list));
+  };
   const [picked, setPicked] = useState<string[]>([]);
   const [facts, setFacts] = useState<string[]>([]);
   const smite = offers.find((offer) => offer.key === "smite");
@@ -106,10 +117,13 @@ function HitChoices({ message }: { message: ChatMessage }) {
     <div className="cl-hit-choices" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
       {offers.map((offer) => (
         <div key={offer.key}>
-          <label className="cl-row cl-small" style={{ gap: 6 }}>
-            <input type="checkbox" checked={picked.includes(offer.key)} onChange={(event) => setPicked((list) => toggle(list, offer.key, event.target.checked))} />
-            <strong>{offer.label}</strong>{offer.hint ? <span className="cl-quiet">{offer.hint}</span> : null}
-          </label>
+          <div className="cl-row" style={{ gap: 6, justifyContent: "space-between", flexWrap: "wrap" }}>
+            <label className="cl-row cl-small" style={{ gap: 6 }}>
+              <input type="checkbox" checked={picked.includes(offer.key)} onChange={(event) => setPicked((list) => toggle(list, offer.key, event.target.checked))} />
+              <strong>{offer.label}</strong>{offer.hint ? <span className="cl-quiet">{offer.hint}</span> : null}
+            </label>
+            {entry?.kind === "character" ? <HitPolicySelect label={offer.label} value={policyOf(offer.key)} allowAlways={!offer.slots} onChange={(policy) => setPolicy(offer.key, policy)} /> : null}
+          </div>
           {picked.includes(offer.key) && offer.slots?.length ? (
             <select className="cl-select" aria-label={`${offer.label} 슬롯`} style={{ marginLeft: 22, width: "auto" }} value={slot} onChange={(event) => setSlot(Number(event.target.value))}>
               {offer.slots.map((item) => <option key={item.level} value={item.level}>{item.level}레벨 슬롯 ({item.free} 남음)</option>)}
@@ -123,6 +137,7 @@ function HitChoices({ message }: { message: ChatMessage }) {
           )) : null}
         </div>
       ))}
+      {auto.length ? <p className="cl-quiet cl-small" style={{ margin: 0 }}>항상 사용: {auto.join(", ")} — 고르지 않아도 적용됩니다.</p> : null}
       <div className="cl-row" style={{ gap: 4 }}>
         <button type="button" className="cl-btn small primary" disabled={!picked.length} onClick={() => c.hitChoice(message.id, picked, facts, picked.includes("smite") ? slot : undefined)}>적용</button>
         <button type="button" className="cl-btn small" onClick={() => c.declineReaction(message.id)}>안 함</button>

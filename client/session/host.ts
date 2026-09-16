@@ -23,7 +23,7 @@ import type { ActorRef, AttackRef, AttackRiders } from "./protocol";
 import { isConditionMarker } from "../campaign/page";
 import type { ActResult } from "../rules/actions";
 import { ACTIONS, cannotAct, describeAct, npcStats, resolveAction, TURN_MARKS, type ActorStats } from "../rules/actions";
-import { smiteFiendBonus, withHitChoices } from "../rules/attackSpec";
+import { smiteFiendBonus, splitHitOffers, withHitChoices } from "../rules/attackSpec";
 import { describeSpell, resolveSpell, type CasterStats, type SpellCastSpec, type SpellResolution, type SpellTargetResult } from "../rules/spellcast";
 import { spellExec } from "../compendium/spells";
 import { startEffect } from "../character/play";
@@ -1365,8 +1365,9 @@ export class TableHost {
         const target = this.resolveActor(held.inputs.targets[held.inputs.targetIndex]);
         if (!attacker || attacker.entry.kind !== "character" || !target || held.inputs.attack.source !== "weapon") return refuse("공격자나 대상이 더 없습니다");
         if (!isGm && !this.mayAct(userId, held.inputs.attacker, attacker.entry)) return refuse("공격자의 조종자만 답할 수 있습니다");
-        const offers = this.options.pcHitOffers?.(attacker.entry, held.inputs.attack.attackId, held.inputs.riders ?? {}) ?? [];
-        const offered = new Map(offers.map((offer) => [offer.key, offer]));
+        // R64 (D199): the window only ever offered the "ask" ones; the "always" ones ride along without a checkbox.
+        const { ask, auto } = splitHitOffers(attacker.entry.runtime, this.options.pcHitOffers?.(attacker.entry, held.inputs.attack.attackId, held.inputs.riders ?? {}) ?? []);
+        const offered = new Map(ask.map((offer) => [offer.key, offer]));
         const smiteSlot = command.choices.includes("smite") && offered.get("smite")?.slots?.some((slot) => slot.level === command.smiteSlot) ? command.smiteSlot : undefined;
         const picked = [...new Set(command.choices)].filter((key) => offered.has(key) && (key !== "smite" || smiteSlot));
         const confirmable = new Set(picked.flatMap((key) => (offered.get(key)!.facts ?? []).map((fact) => fact.id)));
@@ -1374,25 +1375,7 @@ export class TableHost {
         const labels = picked.map((key) => `${offered.get(key)!.label}${key === "smite" ? ` (${smiteSlot}레벨 슬롯)` : ""}`);
         this.held.delete(command.messageId);
         this.say({ ...promptMessage, prompt: { ...promptMessage.prompt, outcome: picked.length ? { chosen: labels } : { declined: true } }, supersedes: promptMessage.id, content: `${promptMessage.content} → ${labels.length ? labels.join(", ") : "안 함"}` });
-        if (!picked.length) { this.finishAttack({ ...held, attacker, target }); return; }
-        const answer = { choices: picked, facts, smiteSlot };
-        const riders = withHitChoices(held.inputs.riders ?? {}, answer);
-        let prepared = this.prepareAttack(attacker, held.inputs.attack, riders);
-        // Only the new choices are paid now; the declared riders were paid when the attack was made.
-        const fresh = this.prepareAttack(attacker, held.inputs.attack, withHitChoices({ cleave: riders.cleave, offHand: riders.offHand }, answer));
-        const attackerCombatant = this.combatantOf(attacker);
-        const targetCombatant = this.combatantOf(target);
-        if (!prepared || !attackerCombatant || !targetCombatant) { this.finishAttack({ ...held, attacker, target }); return; }
-        const fiendBonus = target.entry.kind === "npc" ? smiteFiendBonus(prepared.spec, target.entry.statBlock.creatureType) : null;
-        if (fiendBonus) prepared = { ...prepared, spec: { ...prepared.spec, riders: [...(prepared.spec.riders ?? []), fiendBonus] } };
-        // A reaction that raised the AC (방패, 공격 흘리기) already had its say; keep the AC the card was decided against.
-        const decidedAc = held.resolution.targetAc - held.resolution.cover;
-        if (targetCombatant.ac < decidedAc) targetCombatant.ac = decidedAc;
-        const crit = held.resolution.outcome === "crit";
-        const parts = [...prepared.spec.damage, ...(prepared.spec.riders ?? []), ...(crit ? prepared.spec.critRiders ?? [] : [])];
-        const resolution = resolveAttack(attackerCombatant, targetCombatant, prepared.spec, { dice: diceFrom(this.options.random ?? Math.random), overrides: held.overrides, fixed: { d20s: held.resolution.d20s, damage: carryDice(held.resolution.damage, parts), ...(held.resolution.mastery?.save ? { masteryD20: held.resolution.mastery.save.d20 } : {}) }, apply: !held.waits, rerollOnce: true });
-        if (fresh?.spend) { const before = attacker.entry; this.storeEntry({ ...before, runtime: fresh.spend(before.runtime), updatedAt: this.now() }); }
-        this.finishAttack({ ...held, inputs: { ...held.inputs, riders }, attacker: this.resolveActor(held.inputs.attacker) ?? attacker, target, resolution });
+        this.takeHitChoices({ ...held, attacker, target }, { choices: picked, facts, smiteSlot }, auto);
         return;
       }
       case "act.decline": {
@@ -1558,7 +1541,9 @@ export class TableHost {
     const { inputs, attacker, target, resolution } = held;
     const landed = resolution.outcome === "hit" || resolution.outcome === "crit";
     if (allowOnHit && landed && attacker.entry.kind === "character" && inputs.attack.source === "weapon" && this.options.pcHitOffers) {
-      const offers = this.options.pcHitOffers(attacker.entry, inputs.attack.attackId, inputs.riders ?? {});
+      // R64 (D199): what the player set to "always" is taken without a window; "never" is not offered at all.
+      const { ask: offers, auto } = splitHitOffers(attacker.entry.runtime, this.options.pcHitOffers(attacker.entry, inputs.attack.attackId, inputs.riders ?? {}));
+      if (!offers.length && auto.length) return this.takeHitChoices(held, { choices: [] }, auto);
       if (offers.length) {
         const promptId = newMessageId();
         this.held.set(promptId, { ...held, stage: "on-hit" });
@@ -1566,11 +1551,39 @@ export class TableHost {
         const attackerName = attacker.token?.name ?? attacker.entry.name;
         const targetName = target.token?.name ?? target.entry.name;
         const crit = resolution.outcome === "crit";
-        this.sayWithId(promptId, { type: "prompt", who: player?.displayName ?? "", playerId: inputs.by, content: `${attackerName}의 ${held.spec.name}이(가) ${targetName}에게 ${crit ? "치명타" : "명중"} — ${offers.map((offer) => offer.label).join(" / ")}?`, prompt: { kind: "on-hit", mover: { name: targetName, ...inputs.targets[inputs.targetIndex] }, reactor: { name: attackerName, ...inputs.attacker }, attack: { name: held.spec.name, total: resolution.attackTotal, ac: resolution.targetAc }, onHit: { outcome: crit ? "crit" : "hit", offers } } });
+        this.sayWithId(promptId, { type: "prompt", who: player?.displayName ?? "", playerId: inputs.by, content: `${attackerName}의 ${held.spec.name}이(가) ${targetName}에게 ${crit ? "치명타" : "명중"} — ${offers.map((offer) => offer.label).join(" / ")}?`, prompt: { kind: "on-hit", mover: { name: targetName, ...inputs.targets[inputs.targetIndex] }, reactor: { name: attackerName, ...inputs.attacker }, attack: { name: held.spec.name, total: resolution.attackTotal, ac: resolution.targetAc }, onHit: { outcome: crit ? "crit" : "hit", offers, ...(auto.length ? { auto: auto.map((offer) => offer.label) } : {}) } } });
         return promptId;
       }
     }
     return this.finishAttack(held);
+  }
+
+  /**
+   * R63 (D198), R64 (D199): the held swing with what the attacker chose, plus what their sheet takes without asking,
+   * resolved again on the same d20 and the same dice (new parts roll fresh, a reroll chosen now happens once). Only
+   * these choices are paid for now; whatever was declared before the roll already was.
+   */
+  private takeHitChoices(held: { inputs: { attacker: ActorRef; targets: ActorRef[]; attack: AttackRef; riders?: AttackRiders; by: string; targetIndex: number }; attacker: { entry: JournalEntry; token?: Token; page?: Page }; target: { entry: JournalEntry; token?: Token; page?: Page }; spec: AttackSpec; overrides?: AttackOverrides; resolution: AttackResolution; supersedes?: string; waits?: boolean }, answer: { choices: string[]; facts?: string[]; smiteSlot?: number }, auto: HitOffer[]): string {
+    const all = { choices: [...answer.choices, ...auto.map((offer) => offer.key)], facts: [...(answer.facts ?? []), ...auto.flatMap((offer) => (offer.facts ?? []).map((fact) => fact.id))], smiteSlot: answer.smiteSlot };
+    if (!all.choices.length) return this.finishAttack(held);
+    const attacker = this.resolveActor(held.inputs.attacker) ?? held.attacker;
+    const target = this.resolveActor(held.inputs.targets[held.inputs.targetIndex]) ?? held.target;
+    const riders = withHitChoices(held.inputs.riders ?? {}, all);
+    let prepared = this.prepareAttack(attacker, held.inputs.attack, riders);
+    const fresh = this.prepareAttack(attacker, held.inputs.attack, withHitChoices({ cleave: riders.cleave, offHand: riders.offHand }, all));
+    const attackerCombatant = this.combatantOf(attacker);
+    const targetCombatant = this.combatantOf(target);
+    if (!prepared || !attackerCombatant || !targetCombatant) return this.finishAttack({ ...held, attacker, target });
+    const fiendBonus = target.entry.kind === "npc" ? smiteFiendBonus(prepared.spec, target.entry.statBlock.creatureType) : null;
+    if (fiendBonus) prepared = { ...prepared, spec: { ...prepared.spec, riders: [...(prepared.spec.riders ?? []), fiendBonus] } };
+    // A reaction that raised the AC (방패, 공격 흘리기) already had its say; keep the AC the card was decided against.
+    const decidedAc = held.resolution.targetAc - held.resolution.cover;
+    if (targetCombatant.ac < decidedAc) targetCombatant.ac = decidedAc;
+    const crit = held.resolution.outcome === "crit";
+    const parts = [...prepared.spec.damage, ...(prepared.spec.riders ?? []), ...(crit ? prepared.spec.critRiders ?? [] : [])];
+    const resolution = resolveAttack(attackerCombatant, targetCombatant, prepared.spec, { dice: diceFrom(this.options.random ?? Math.random), overrides: held.overrides, fixed: { d20s: held.resolution.d20s, damage: carryDice(held.resolution.damage, parts), ...(held.resolution.mastery?.save ? { masteryD20: held.resolution.mastery.save.d20 } : {}) }, apply: !held.waits, rerollOnce: true });
+    if (fresh?.spend && attacker.entry.kind === "character") { const before = attacker.entry; this.storeEntry({ ...before, runtime: fresh.spend(before.runtime), updatedAt: this.now() }); }
+    return this.finishAttack({ ...held, inputs: { ...held.inputs, riders }, attacker: this.resolveActor(held.inputs.attacker) ?? attacker, target, resolution });
   }
 
   /** The card, applied now or (D90) waiting for the DM. */
@@ -1858,7 +1871,12 @@ export class TableHost {
     const attacker = this.resolveActor(held.inputs.attacker) ?? held.attacker;
     const target = this.resolveActor(held.inputs.targets[held.inputs.targetIndex]) ?? held.target;
     // R63 (D198): the attacker let the on-hit window go ("안 함") — the card lands as it was rolled.
-    if (held.stage === "on-hit") { this.finishAttack({ ...held, attacker, target }); return; }
+    // R64 (D199): "안 함" answers the checkboxes; what the sheet takes without asking still lands.
+    if (held.stage === "on-hit") {
+      const auto = attacker.entry.kind === "character" && held.inputs.attack.source === "weapon" ? splitHitOffers(attacker.entry.runtime, this.options.pcHitOffers?.(attacker.entry, held.inputs.attack.attackId, held.inputs.riders ?? {}) ?? []).auto : [];
+      this.takeHitChoices({ ...held, attacker, target }, { choices: [] }, auto);
+      return;
+    }
     let resolution = held.resolution;
     let overrides = held.overrides;
     // R54 (D189): Shield's +5 and a contract reaction's own bonus take the same road — re-resolve with the same dice

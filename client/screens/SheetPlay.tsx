@@ -19,7 +19,8 @@ import type { CharacterSource, DerivedAttack } from "../character/types";
 import { castHook, type CastHook } from "../rules/effects";
 import { remainingText } from "../rules/activation";
 import { activateFeature as activateFeatureShared, rollTotal as rollTotalShared, withEffectStart as withEffectStartShared } from "../character/activate";
-import { copyText, downloadText, Modal, Notice, Pill } from "../ui/components";
+import { copyText, downloadText, HitPolicySelect, Modal, Notice, Pill } from "../ui/components";
+import { allHitOffers } from "../rules/attackSpec";
 import { SheetView, ValidationList, type SheetActions } from "./SheetView";
 
 export interface SheetPlayProps {
@@ -58,6 +59,8 @@ export function SheetPlay({ source, runtime, catalog, save, onRolled, savedAt, t
   // written by an updater against the stored runtime.
   const rollAndLog = async (spec: RollSpec) => { const result = await rollDice(spec); void save((current) => noteLog(current, describeRoll(result))); return result; };
   const hpPreview = applyHpCommand(runtime, derived, hpInput);
+  // R64 (D199): what this sheet may be asked after a hit, so its standing answers can be set (and a "never" undone).
+  const hitSettings = useMemo(() => allHitOffers({ runtime }, derived), [runtime, derived]);
   // The slider previews while dragging and writes one log line on release.
   const commitSlider = () => { if (sliderHp !== null) { commit(setCurrentHp(runtime, derived, sliderHp)); setSliderHp(null); } };
   const submitHp = () => { if (hpPreview) { commit(hpPreview); setHpInput(""); } };
@@ -213,6 +216,20 @@ export function SheetPlay({ source, runtime, catalog, save, onRolled, savedAt, t
             </div>
           ) : null}
         </div>
+        {hitSettings.length ? (
+          <div className="cl-card">
+            <h3 className="cl-muted">명중 후 선택</h3>
+            <p className="cl-quiet cl-small" style={{ marginTop: 0 }}>명중했을 때 묻는 것들입니다. 묻지 않고 늘 쓰려면 "항상 사용", 묻지도 쓰지도 않으려면 "쓰지 않음".</p>
+            <div className="cl-list" style={{ gap: 4 }}>
+              {hitSettings.map((offer) => (
+                <div key={offer.key} className="cl-row cl-small" style={{ gap: 6, justifyContent: "space-between", flexWrap: "wrap" }}>
+                  <span><strong>{offer.label}</strong> <span className="cl-quiet">{offer.hint}</span></span>
+                  <HitPolicySelect label={offer.label} value={runtime.hitPolicy?.[offer.key] ?? "ask"} allowAlways={!offer.slots} onChange={(policy) => commit({ ...runtime, hitPolicy: { ...(runtime.hitPolicy ?? {}), [offer.key]: policy } })} />
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
         <div className="cl-card">
           <h3 className="cl-muted" style={{ display: "flex", gap: 8 }}>기록 <button type="button" className="cl-btn quiet small" onClick={() => setShowLog((value) => !value)}>{showLog ? "접기" : "펼치기"}</button></h3>
           {showLog ? (

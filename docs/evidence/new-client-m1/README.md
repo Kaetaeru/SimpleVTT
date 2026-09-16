@@ -1,6 +1,6 @@
 # 새 클라이언트 M1 증거 (자동 캡처)
 
-생성: 2026-09-16T17:28:40.152Z · `node --import tsx scripts/capture-client-m1.mjs`
+생성: 2026-09-16T17:39:37.595Z · `node --import tsx scripts/capture-client-m1.mjs`
 
 Chromium이 Vite 개발 서버(포트 1430)에서 마법사를 처음부터 끝까지 진행하고, 보충 모듈(합성 픽스처)을 설치한 뒤 설치 콘텐츠로 캐릭터를 만든다.
 
@@ -19,4 +19,3 @@ Chromium이 Vite 개발 서버(포트 1430)에서 마법사를 처음부터 끝�
 - `13-sheet-installed-content.png`
 - `14-library-two-characters.png`
 - `15-library-light-theme.png`
-- `79-on-hit-window-player.png` — R63 (D198): 명중 후 선택 창 (야만적 공격자)

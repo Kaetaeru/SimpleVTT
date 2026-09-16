@@ -27,8 +27,15 @@ export interface CharacterRuntime {
   inventory: InventoryPatch;
   log: RuntimeLogEntry[];
   effects: ActiveEffect[];
+  /**
+   * R64 (D199): what to do with each thing a hit offers (`sneak`, `smite`, `savage`, a contract rule key) — ask every
+   * time (the default, and what a missing key means), take it without asking, or never offer it.
+   */
+  hitPolicy?: Record<string, HitPolicy>;
   updatedAt: string;
 }
+
+export type HitPolicy = "ask" | "always" | "never";
 
 export const emptyInventoryPatch = (): InventoryPatch => ({ removed: [], quantities: {}, extra: [] });
 

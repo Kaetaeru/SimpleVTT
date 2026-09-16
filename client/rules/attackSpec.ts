@@ -7,7 +7,7 @@ import type { JournalCharacter, JournalNpc } from "../campaign/journal";
 import type { Token } from "../campaign/page";
 import type { ContentCatalog } from "../catalog/catalog";
 import { deriveCharacter } from "../character/derive";
-import type { CharacterRuntime } from "../character/runtime";
+import type { CharacterRuntime, HitPolicy } from "../character/runtime";
 import { spendResource, useSpellSlot } from "../character/play";
 import { offeredRiders, riderFitsAttack } from "./attackRiders";
 import type { HitOffer } from "../campaign/model";
@@ -162,7 +162,7 @@ export function pcAttackSpec(entry: JournalCharacter, derived: DerivedCharacter,
  * instead of being ticked blind before the dice. `already` is what the attack was declared with, so nothing is offered
  * twice.
  */
-export function hitOffers(entry: JournalCharacter, derived: DerivedCharacter, attackId: string, already: AttackRiders = {}): HitOffer[] {
+export function hitOffers(entry: Pick<JournalCharacter, "runtime">, derived: DerivedCharacter, attackId: string, already: AttackRiders = {}): HitOffer[] {
   const attack = derived.attacks.find((item) => item.id === attackId);
   if (!attack) return [];
   const offers: HitOffer[] = [];
@@ -192,6 +192,25 @@ export function withHitChoices(riders: AttackRiders, answer: { choices: string[]
   };
 }
 const HIT_BUILT_INS = new Set(["sneak", "smite", "savage"]);
+
+/**
+ * R64 (D199): the player's standing answer for one offer. 신성한 강타 is never "always" — it spends a slot the player
+ * has to pick, so taking it unasked would choose for them.
+ */
+export const hitPolicyOf = (runtime: CharacterRuntime, offer: HitOffer): HitPolicy => {
+  const policy = runtime.hitPolicy?.[offer.key] ?? "ask";
+  return policy === "always" && offer.slots ? "ask" : policy;
+};
+/** R64 (D199): the offers to put in the window, and the ones taken without asking (their facts taken as confirmed). */
+export function splitHitOffers(runtime: CharacterRuntime, offers: HitOffer[]): { ask: HitOffer[]; auto: HitOffer[] } {
+  return { ask: offers.filter((offer) => hitPolicyOf(runtime, offer) === "ask"), auto: offers.filter((offer) => hitPolicyOf(runtime, offer) === "always") };
+}
+/** R64 (D199): every offer this sheet can make on any of its attacks, once each — what the sheet lists for its settings. */
+export function allHitOffers(entry: Pick<JournalCharacter, "runtime">, derived: DerivedCharacter): HitOffer[] {
+  const seen = new Map<string, HitOffer>();
+  for (const attack of derived.attacks) for (const offer of hitOffers(entry, derived, attack.id)) if (!seen.has(offer.key)) seen.set(offer.key, offer);
+  return [...seen.values()];
+}
 
 export function npcAttackSpec(entry: JournalNpc, actionName: string): AttackSpec | null {
   const action: MonsterAction | undefined = [...entry.statBlock.actions, ...entry.statBlock.bonusActions, ...entry.statBlock.legendaryActions, ...entry.statBlock.reactions, ...entry.statBlock.traits].find((item) => item.name === actionName);
