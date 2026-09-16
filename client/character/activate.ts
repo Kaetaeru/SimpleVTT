@@ -11,7 +11,8 @@ import type { CharacterRuntime } from "./runtime";
 import type { CharacterSource, DerivedCharacter, DerivedFeature } from "./types";
 import { featureActivation, featureRuleKey } from "../rules/activation";
 import { characterScope } from "../rules/contract";
-import { contractDurations, contractRemovals, featureContract } from "../rules/contractActivation";
+import { contractDurations, contractOutcome, contractRemovals, featureContract } from "../rules/contractActivation";
+import { applyContractOutcome } from "./contractOutcome";
 import { effectApplication } from "../rules/effects";
 
 export interface ActivateDeps {
@@ -78,7 +79,10 @@ export async function activateFeature(feature: DerivedFeature, deps: ActivateDep
     // R39 (D179): a contract may end other effects as part of the use (a new Wild Shape replacing the last one).
     const contract = featureContract(deps.catalog, featureRuleKey(feature.id));
     const ended = contract ? contractRemovals(contract, characterScope(derived)).reduce((acc, key) => endEffect(acc, key, feature.name), next) : next;
-    return withEffectStart(deps.source, deps.catalog, derived, current, ended);
+    // R41 (D181): the rest of the vocabulary that lands on a sheet — conditions taken off, a hit-point maximum moved,
+    // stabilising, standing up, an item granted. Everything the contract says happens; what it does not say is untouched.
+    const settled = contract ? applyContractOutcome(ended, derived, deps.catalog, contractOutcome(contract, characterScope(derived)), feature.name) : ended;
+    return withEffectStart(deps.source, deps.catalog, derived, current, settled);
   });
   return refused ? "refused" : "done";
 }

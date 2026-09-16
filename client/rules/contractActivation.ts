@@ -48,7 +48,12 @@ export function selectorMatches(selector: string, key: string) {
 
 /** The duration source `featureActivation` takes: a lookup from feature rule key to the effect its contract starts. */
 export const contractDurations = (catalog: { contractFor(key: string): CommonPlayContract | undefined }, scope: Scope) =>
-  (ruleKey: string, label = ruleKey) => { const contract = featureContract(catalog, ruleKey); return contract ? { duration: contractDuration(contract, scope), use: contractUse(contract, scope, label) } : undefined; };
+  (ruleKey: string, label = ruleKey) => {
+    const contract = featureContract(catalog, ruleKey);
+    if (!contract) return undefined;
+    // R41 (D181): a contract that only takes conditions off is still a reason for the feature to have a button.
+    return { duration: contractDuration(contract, scope), use: contractUse(contract, scope, label), acts: !emptyOutcome(contractOutcome(contract, scope)) };
+  };
 
 /**
  * A feature's contract, whether it was written against the feature's rule key (`fighter.action-surge`, the kind
@@ -101,3 +106,50 @@ export function contractUse(contract: CommonPlayContract, scope: Scope, label: s
   }
   return found ? use : undefined;
 }
+
+/**
+ * R41 (D181): everything else a use does, worked out but not yet applied anywhere. The four groups are separated by
+ * where they would land: a sheet (conditions, hit-point maximum, stabilising, standing up, granted content), the
+ * table (movement, a question for the DM, artifacts on the board) and an NPC's own turn (a recharge roll).
+ */
+export interface ContractOutcome {
+  conditionsRemoved: string[];
+  hpMaximumDelta: number;
+  stabilize: boolean;
+  deathSave: boolean;
+  stand: boolean;
+  grants: string[];
+  /** Lines for the card: movement and anything the table has to decide. */
+  notes: string[];
+  recharges: Array<{ resourceId: string; die: string; succeedsOn: number[] }>;
+  artifacts: Array<{ kind: string; monsterId?: string; name?: string; count?: number; artifact?: string; amount?: number }>;
+}
+
+export function contractOutcome(contract: CommonPlayContract, scope: Scope): ContractOutcome {
+  const out: ContractOutcome = { conditionsRemoved: [], hpMaximumDelta: 0, stabilize: false, deathSave: false, stand: false, grants: [], notes: [], recharges: [], artifacts: [] };
+  const number = (expr: Parameters<typeof evaluate>[0], fallback = 0) => { const value = evaluate(expr, scope); return typeof value === "number" ? value : fallback; };
+  for (const operation of operationsOf(contract)) {
+    if (!live(operation, scope)) continue;
+    switch (operation.kind) {
+      case "condition.remove": out.conditionsRemoved.push(operation.condition); break;
+      case "hp.maximum.change": out.hpMaximumDelta += number(operation.amount); break;
+      case "life.stabilize": out.stabilize = true; break;
+      case "life.death-save": out.deathSave = true; break;
+      case "movement.stand": out.stand = true; break;
+      case "content.grant": out.grants.push(operation.contentId); break;
+      case "resource.recharge": out.recharges.push({ resourceId: operation.resourceId, die: operation.die, succeedsOn: operation.succeedsOn }); break;
+      case "movement.relocate": out.notes.push(operation.note ?? `${operation.mode}${operation.distance ? ` ${number(operation.distance)}피트` : ""}`); break;
+      case "movement.grant": out.notes.push(operation.note ?? `이동 ${number(operation.distance)}피트`); break;
+      case "adjudication.request": out.notes.push(operation.question); break;
+      case "artifact.spawn": out.artifacts.push({ kind: operation.kind, monsterId: operation.template.monsterId, name: operation.template.name, count: operation.template.count ? number(operation.template.count, 1) : 1 }); break;
+      case "artifact.damage": case "artifact.repair": case "artifact.relocate": case "artifact.update": case "artifact.remove":
+        out.artifacts.push({ kind: operation.kind, artifact: operation.artifact, amount: operation.amount ? number(operation.amount) : undefined }); break;
+      default: break;
+    }
+  }
+  return out;
+}
+
+/** Nothing to do: the contract asked for none of these. */
+export const emptyOutcome = (outcome: ContractOutcome) =>
+  !outcome.conditionsRemoved.length && !outcome.hpMaximumDelta && !outcome.stabilize && !outcome.deathSave && !outcome.stand && !outcome.grants.length && !outcome.notes.length && !outcome.recharges.length && !outcome.artifacts.length;

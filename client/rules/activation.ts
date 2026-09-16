@@ -149,7 +149,7 @@ const ACTIVE_WORDING = /(추가 행동|반응 ?행동|반응|행동)(으로|을 
 const NOT_ACTIVATABLE = new Set(["monk.martial-arts", "invocation.investment-of-the-chain-master", "rogue.sneak-attack", "rogue.cunning-strike", "fighter.extra-attack"]);
 
 /** R39 (D179): looks a feature rule key up in the catalog's contracts and returns the duration it starts, if any. */
-export type ContractDurationSource = (ruleKey: string) => { duration?: ParsedDuration; use?: { resourceId?: string; cost?: number; heal?: string; tempHp?: string; roll?: { label: string; formula: string } } } | undefined;
+export type ContractDurationSource = (ruleKey: string) => { duration?: ParsedDuration; use?: { resourceId?: string; cost?: number; heal?: string; tempHp?: string; roll?: { label: string; formula: string } }; /** R41: the contract does something on use even if it spends nothing and starts nothing. */ acts?: boolean } | undefined;
 
 /** The activation for a feature: from the table, else a pool named after the feature, else a log-only use for features worded as an action. */
 export function featureActivation(feature: DerivedFeature, derived: DerivedCharacter, contract?: ContractDurationSource): FeatureActivation | undefined {
@@ -158,7 +158,7 @@ export function featureActivation(feature: DerivedFeature, derived: DerivedChara
   // R40 (D180): and where it ships `resource.change`, `healing.apply`, `temp-hp.grant` or `damage.apply`, those are
   // the pool it spends and the dice it rolls. Whatever the contract does not say, the table still answers.
   const fromContract = contract?.(key);
-  if (fromContract?.duration || fromContract?.use) {
+  if (fromContract?.duration || fromContract?.use || fromContract?.acts) {
     const table = FEATURE_ACTIVATIONS[key];
     const use = fromContract.use;
     return {

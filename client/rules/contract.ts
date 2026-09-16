@@ -90,7 +90,20 @@ export type ContractOperation =
   /** R40 (D180): dice rolled and applied as healing or temporary hit points; `dice` and `amount` add up to the formula. */
   | { kind: "temp-hp.grant"; dice?: string; amount?: Expr; target: string; when?: Expr }
   /** R40 (D180): dice rolled and logged as damage a feature deals (Breath Weapon), without choosing who takes it. */
-  | { kind: "damage.apply"; dice?: string; amount?: Expr; damageType: string; target: string; when?: Expr };
+  | { kind: "damage.apply"; dice?: string; amount?: Expr; damageType: string; target: string; when?: Expr }
+  /** R41 (D181): the last of the vocabulary — the rest of what a contract may ask this engine to do. */
+  | { kind: "condition.remove"; condition: string; target: string; when?: Expr }
+  | { kind: "hp.maximum.change"; amount: Expr; target: string; when?: Expr }
+  | { kind: "life.stabilize"; target: string; when?: Expr }
+  | { kind: "life.death-save"; when?: Expr }
+  | { kind: "resource.recharge"; resourceId: string; die: string; succeedsOn: number[]; when?: Expr }
+  | { kind: "movement.stand"; target: string; when?: Expr }
+  | { kind: "movement.relocate"; mode: string; target: string; distance?: Expr; note?: string; when?: Expr }
+  | { kind: "movement.grant"; target: string; distance: Expr; note?: string; when?: Expr }
+  | { kind: "content.grant"; contentId: string; target: string; when?: Expr }
+  | { kind: "adjudication.request"; question: string; when?: Expr }
+  | { kind: "artifact.spawn"; template: { monsterId?: string; name?: string; count?: Expr }; when?: Expr }
+  | { kind: "artifact.remove" | "artifact.repair" | "artifact.damage" | "artifact.relocate" | "artifact.update"; artifact: string; amount?: Expr; damageType?: string; placementRef?: string; metadataPatch?: Record<string, unknown>; when?: Expr };
 
 /** The saving throw an entry point forces before its operations run. */
 export interface ContractTest {
@@ -159,9 +172,23 @@ export const KNOWN_FACTS = new Set(["attack.weapon.ranged", "attack.weapon.melee
  * R36 (D176): the two numbers the plan (§14.1) is scored on. `COMPUTED` are the operation kinds this executor turns
  * into a value; `APPLIED` are the ones a call site actually carries to the table. They are deliberately separate —
  * an operation the executor understands but nobody applies changes nothing, and saying otherwise would be a lie.
+ *
+ * R41 (D181): these count *kinds*, not schema definitions — the grammar has 26 definitions and 27 kinds, because
+ * `condition.apply` and `condition.remove` share one. Kinds are what a contract actually writes, so kinds are what
+ * the scoreboard counts.
  */
-export const COMPUTED_OPERATIONS = ["economy.modify", "condition.apply", "healing.apply", "roll.modify", "property.modify", "effect.apply", "effect.remove", "effect.suppress", "resource.change", "temp-hp.grant", "damage.apply"] as const;
-export const APPLIED_OPERATIONS = ["economy.modify", "roll.modify", "property.modify", "effect.apply", "effect.remove", "effect.suppress", "resource.change", "temp-hp.grant", "damage.apply", "healing.apply"] as const;
+export const COMPUTED_OPERATIONS = [
+  "economy.modify", "condition.apply", "condition.remove", "healing.apply", "roll.modify", "property.modify",
+  "effect.apply", "effect.remove", "effect.suppress", "resource.change", "resource.recharge", "temp-hp.grant",
+  "damage.apply", "hp.maximum.change", "life.stabilize", "life.death-save", "movement.stand", "movement.relocate",
+  "movement.grant", "content.grant", "adjudication.request", "artifact.spawn", "artifact.damage", "artifact.repair",
+  "artifact.relocate", "artifact.update", "artifact.remove",
+] as const;
+export const APPLIED_OPERATIONS = [
+  "economy.modify", "roll.modify", "property.modify", "effect.apply", "effect.remove", "effect.suppress",
+  "resource.change", "resource.recharge", "temp-hp.grant", "damage.apply", "healing.apply", "condition.remove",
+  "hp.maximum.change", "life.stabilize", "movement.stand", "content.grant",
+] as const;
 
 const OPERATION_KINDS = new Set<string>(COMPUTED_OPERATIONS);
 /** R39 (D179): `until-duration` is the only lifetime this engine counts; the rest end on something it cannot see. */
@@ -182,7 +209,32 @@ function parseOperations(raw: unknown, path: string, unsupported: string[]): Con
     if (!OPERATION_KINDS.has(kind)) { unsupported.push(`${at}: ${kind || "이름 없는 연산"}`); return; }
     if (kind === "economy.modify") { out.push({ kind, bucket: String(operation.bucket ?? ""), amount: (operation.amount as Expr) ?? { value: 0 } }); return; }
     if (kind === "condition.apply") { out.push({ kind, condition: String(operation.condition ?? ""), target: String(operation.target ?? "target"), when: isExpr(operation.when) ? operation.when : undefined }); return; }
+    if (kind === "condition.remove") { out.push({ kind, condition: String(operation.condition ?? ""), target: String(operation.target ?? "self"), when: isExpr(operation.when) ? operation.when : undefined }); return; }
     if (kind === "healing.apply") { out.push({ kind, dice: operation.dice ? String(operation.dice) : undefined, amount: isExpr(operation.amount) ? operation.amount : typeof operation.amount === "number" ? { value: operation.amount } : undefined, target: String(operation.target ?? "self"), when: isExpr(operation.when) ? operation.when : undefined }); return; }
+    const expr = (raw: unknown, fallback = 0) => (isExpr(raw) ? raw : { value: raw === undefined ? fallback : raw });
+    if (kind === "hp.maximum.change") { out.push({ kind, amount: expr(operation.amount), target: String(operation.target ?? "self"), when: isExpr(operation.when) ? operation.when : undefined }); return; }
+    if (kind === "life.stabilize") { out.push({ kind, target: String(operation.target ?? "self"), when: isExpr(operation.when) ? operation.when : undefined }); return; }
+    if (kind === "life.death-save") { out.push({ kind, when: isExpr(operation.when) ? operation.when : undefined }); return; }
+    if (kind === "resource.recharge") {
+      const resource = String(operation.resource ?? "");
+      if (!resource) { unsupported.push(`${at}: resource.recharge에 resource가 없습니다`); return; }
+      out.push({ kind, resourceId: resourceIdOf(resource), die: String(operation.die ?? "1d6"), succeedsOn: (Array.isArray(operation.succeedsOn) ? operation.succeedsOn : [6]).map(Number), when: isExpr(operation.when) ? operation.when : undefined });
+      return;
+    }
+    if (kind === "movement.stand") { out.push({ kind, target: String(operation.target ?? "self"), when: isExpr(operation.when) ? operation.when : undefined }); return; }
+    if (kind === "movement.relocate") { out.push({ kind, mode: String(operation.mode ?? "teleport"), target: String(operation.target ?? "self"), distance: isExpr(operation.distance) ? operation.distance : operation.distance === undefined ? undefined : { value: operation.distance }, note: operation.note ? String(operation.note) : undefined, when: isExpr(operation.when) ? operation.when : undefined }); return; }
+    if (kind === "movement.grant") { out.push({ kind, target: String(operation.target ?? "self"), distance: expr(operation.distance), note: operation.note ? String(operation.note) : undefined, when: isExpr(operation.when) ? operation.when : undefined }); return; }
+    if (kind === "content.grant") { out.push({ kind, contentId: String(operation.contentId ?? ""), target: String(operation.target ?? "self"), when: isExpr(operation.when) ? operation.when : undefined }); return; }
+    if (kind === "adjudication.request") { out.push({ kind, question: String((operation.interaction as { prompt?: string } | undefined)?.prompt ?? operation.question ?? "표에서 판단"), when: isExpr(operation.when) ? operation.when : undefined }); return; }
+    if (kind === "artifact.spawn") {
+      const template = (operation.template ?? {}) as Record<string, unknown>;
+      out.push({ kind, template: { monsterId: template.monsterId ? String(template.monsterId) : undefined, name: template.name ? String(template.name) : undefined, count: template.count === undefined ? undefined : expr(template.count, 1) }, when: isExpr(operation.when) ? operation.when : undefined });
+      return;
+    }
+    if (kind === "artifact.remove" || kind === "artifact.repair" || kind === "artifact.damage" || kind === "artifact.relocate" || kind === "artifact.update") {
+      out.push({ kind, artifact: String(operation.artifact ?? ""), amount: operation.amount === undefined ? undefined : expr(operation.amount), damageType: operation.damageType ? String(operation.damageType) : undefined, placementRef: operation.placementRef ? String(operation.placementRef) : undefined, metadataPatch: (operation.metadataPatch as Record<string, unknown> | undefined), when: isExpr(operation.when) ? operation.when : undefined });
+      return;
+    }
     if (kind === "resource.change") {
       const resource = String(operation.resource ?? "");
       if (!resource) { unsupported.push(`${at}: resource.change에 resource가 없습니다`); return; }

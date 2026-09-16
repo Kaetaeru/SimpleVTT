@@ -52,10 +52,14 @@ function coverage() {
 test("plan: the schema's operation vocabulary is 26, and the executor's share of it is counted twice (D176)", () => {
   const schema = JSON.parse(readFileSync("schemas/common-play-contract.schema.json", "utf8")) as { $defs: Record<string, unknown> };
   const operation = schema.$defs.operation as { oneOf?: unknown[]; anyOf?: unknown[] };
-  assert.equal((operation.oneOf ?? operation.anyOf ?? []).length, 26, "the contract grammar's operation count — the denominator of the plan");
-  assert.deepEqual([...COMPUTED_OPERATIONS].sort(), ["condition.apply", "damage.apply", "economy.modify", "effect.apply", "effect.remove", "effect.suppress", "healing.apply", "property.modify", "resource.change", "roll.modify", "temp-hp.grant"]);
-  // An operation the executor understands but nobody applies changes nothing at the table, and is not counted as if it did.
-  assert.deepEqual([...APPLIED_OPERATIONS].sort(), ["damage.apply", "economy.modify", "effect.apply", "effect.remove", "effect.suppress", "healing.apply", "property.modify", "resource.change", "roll.modify", "temp-hp.grant"]);
+  // 26 definitions, 27 kinds: condition.apply and condition.remove share one. Kinds are what a contract writes, so
+  // kinds are what the scoreboard counts.
+  assert.equal((operation.oneOf ?? operation.anyOf ?? []).length, 26, "the contract grammar's operation definitions");
+  assert.equal(COMPUTED_OPERATIONS.length, 27, "every kind those definitions allow");
+  // Everything is read; what is left is the kinds with no call site yet.
+  const waiting = COMPUTED_OPERATIONS.filter((kind) => !(APPLIED_OPERATIONS as readonly string[]).includes(kind));
+  assert.equal(APPLIED_OPERATIONS.length + waiting.length, COMPUTED_OPERATIONS.length);
+  assert.equal(APPLIED_OPERATIONS.length, 16);
   for (const applied of APPLIED_OPERATIONS) assert.ok((COMPUTED_OPERATIONS as readonly string[]).includes(applied), applied);
 });
 
@@ -65,8 +69,8 @@ test("plan: the document's scoreboard is the measured one (D176)", () => {
   const covered = counts.contract;
   // The four headline numbers, exactly as §14.1 prints them.
   for (const row of [
-    `| ${COMPUTED_OPERATIONS.length} / 26 |`,
-    `| ${APPLIED_OPERATIONS.length} / 26 |`,
+    `| ${COMPUTED_OPERATIONS.length} / 27 |`,
+    `| ${APPLIED_OPERATIONS.length} / 27 |`,
     `| ${OPEN_SLOTS.length} / ${SLOTS.length} |`,
     `| ${covered} / ${total} |`,
   ]) assert.ok(spec.includes(row), `§14.1의 점수판이 측정값과 다릅니다: ${row} 가 없습니다`);
