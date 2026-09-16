@@ -22,7 +22,7 @@ const SCOPES: Record<string, (attack: DerivedAttack) => boolean> = {
 export const PROPERTIES = [
   "ac.bonus", "ac.unarmored-base", "ac.minimum",
   "attack-roll.bonus", "damage.bonus", "saving-throw.bonus", "ability-check.bonus", "skill.<id>.bonus",
-  "speed.walk", "speed.fly", "hp.maximum", "spell.save-dc", "spell.attack-roll.bonus",
+  "speed.walk", "speed.fly", "hp.maximum", "spell.save-dc", "spell.attack-roll.bonus", "attack-roll.crit-range",
   "senses.darkvision", "resistance", "condition-immunity",
 ] as const;
 
@@ -68,6 +68,7 @@ export function contractEffect(contract: CommonPlayContract, scope: Scope): { ap
       case "spell.save-dc": application.spellDc = number(operation, scope); break;
       case "spell.attack-roll.bonus": application.spellAttack = number(operation, scope); break;
       case "senses.darkvision": application.darkvision = number(operation, scope); break;
+      case "attack-roll.crit-range": application.critRange = Math.min(application.critRange ?? 20, number(operation, scope) ?? 20); break;
       case "resistance": application.resistances = [...(application.resistances ?? []), text(operation, scope) ?? ""]; break;
       case "condition-immunity": application.conditionImmunities = [...(application.conditionImmunities ?? []), text(operation, scope) ?? ""]; break;
       default: unknown.push(operation.property);

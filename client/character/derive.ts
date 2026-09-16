@@ -13,7 +13,7 @@ import { COLUMN, numericColumn } from "../rules/classes";
 import { MASTERY_KO, SKILL_ABILITY, weaponIsProficient } from "./choices";
 import { applyEquipment } from "./equipment";
 import { Ledger } from "./ledger";
-import { applyActiveEffects } from "../rules/effects";
+import { applyPassiveContracts, applyActiveEffects } from "../rules/effects";
 import { applyBackground, applyLanguages, applySpecies, damageTypeKo } from "./origin";
 import { dieMinimumCovers } from "./featRules";
 import { validateAbilities } from "./source";
@@ -48,7 +48,9 @@ export function deriveCharacter(source: CharacterSource, catalog: ContentCatalog
   if (options.inventory) applyInventoryPatch(ledger, options.inventory);
   if (options.equipped) applyEquipState(ledger, options.equipped);
   const derived = finalize(ledger);
-  return options.effects?.length ? applyActiveEffects(derived, options.effects, catalog) : derived;
+  // R43 (D183): passives first (they are always on), then whatever is running right now.
+  const passive = applyPassiveContracts(derived, catalog);
+  return options.effects?.length ? applyActiveEffects(passive, options.effects, catalog) : passive;
 }
 
 function applyInventoryPatch(ledger: Ledger, patch: InventoryPatch) {

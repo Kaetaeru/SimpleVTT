@@ -29,9 +29,12 @@ test("effects: every authored contract produces exactly what the hand-written ru
   // Contracts that say what an effect *does*; the ones that only say when it ends (R39) are a different question.
   const keys = [...cat.contracts.keys()].filter((key) => (key.startsWith("spell:") || key.startsWith("feature:")) && contractEffect(cat.contractFor(key)!, scope).hasProperties);
   assert.ok(keys.length >= 14, `${keys.length} effect contracts`);
+  assert.ok(keys.filter((key) => EFFECT_RULES[key]).length >= 14, "and at least fourteen of them have a rule to be checked against");
+  // R43: some contracts are for rules that never had a hand-written function (향상된 치명타); there is nothing to
+  // compare those against, and the point of this test is that where both exist they agree.
   for (const key of keys) {
     const rule = EFFECT_RULES[key];
-    assert.ok(rule, `${key}: 계약은 있는데 대조할 손으로 쓴 규칙이 없습니다`);
+    if (!rule) continue;
     const { application, unknown } = contractEffect(cat.contractFor(key)!, scope);
     assert.deepEqual(unknown, [], `${key}: 실행기가 모르는 property`);
     const expected = rule({ derived, classLevel: () => 5, name: key });

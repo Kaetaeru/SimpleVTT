@@ -224,6 +224,8 @@ export interface DerivedCharacter {
    * the catalog key that produced them, holding the feat's name so the card can say what paid for the reroll.
    */
   featEffects: DerivedFeatEffects;
+  /** R43 (D183): the lowest d20 that is a critical hit for this character (19 with 향상된 치명타). */
+  critRange?: number;
   hitDice: Record<string, number>;
   choices: ChoiceRequest[];
   validation: { blocking: string[]; warnings: string[] };

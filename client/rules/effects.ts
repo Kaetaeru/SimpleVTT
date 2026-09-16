@@ -11,7 +11,7 @@ import type { ActiveEffect, AppliedEffect, DerivedAttack, DerivedCharacter, Term
 import { featureRuleKey } from "./activation";
 import { characterScope } from "./contract";
 import { contractEffect } from "./contractEffects";
-import { contractSuppressions, selectorMatches } from "./contractActivation";
+import { contractSuppressions, featureContract, selectorMatches } from "./contractActivation";
 
 interface EffectContext { derived: DerivedCharacter; classLevel: (slug: string) => number; name: string }
 
@@ -33,6 +33,8 @@ export interface EffectApplication {
   spellAttack?: number;
   /** Club/quarterstaff attacks use the best spellcasting ability and a bigger die (Shillelagh). */
   shillelagh?: boolean;
+  /** R43 (D183): the lowest d20 that counts as a critical hit (Improved Critical 19, Superior Critical 18). */
+  critRange?: number;
   /** Korean damage type labels. */
   resistances?: string[];
   conditionImmunities?: string[];
@@ -143,6 +145,24 @@ export function effectRuleKey(effect: ActiveEffect, catalog: ContentCatalog): st
   return `spell:${spellSlug(spell?.nameEn ?? spellId.split(".").pop() ?? spellId)}`;
 }
 
+/**
+ * R43 (D183): the features whose contract changes a number all the time rather than while an effect runs — 향상된
+ * 치명타 and its kin. They are always-on effects, so they go through the same merge, just without being listed as
+ * something the player could end.
+ */
+export function applyPassiveContracts(derived: DerivedCharacter, catalog: ContentCatalog): DerivedCharacter {
+  const passives: ActiveEffect[] = [];
+  for (const feature of derived.features) {
+    const contract = featureContract(catalog, featureRuleKey(feature.id));
+    if (!contract) continue;
+    const { hasProperties } = contractEffect(contract, characterScope(derived));
+    const starts = contract.entryPoints.some((entry) => entry.operations.some((operation) => operation.kind === "effect.apply"));
+    if (!hasProperties || starts) continue;
+    passives.push({ key: `feature:${featureRuleKey(feature.id)}`, name: feature.name, source: "feature", duration: "상시", concentration: false, elapsed: 0, startedAt: "" });
+  }
+  return passives.length ? applyActiveEffects(derived, passives, catalog, { list: false }) : derived;
+}
+
 /** The application an effect would make, or undefined when there is no rule for it. */
 export function effectApplication(effect: ActiveEffect, derived: DerivedCharacter, catalog: ContentCatalog): EffectApplication | undefined {
   const key = effectRuleKey(effect, catalog);
@@ -166,8 +186,8 @@ const term = (label: string, value?: number, dice?: string): Term | null => (dic
 const describe = (label: string, value?: number, dice?: string) => (dice ? `+${dice}` : value !== undefined ? `${value >= 0 ? "+" : ""}${value}` : "") + ` ${label}`;
 
 /** Apply every effect in force to a derived character: new arrays, totals recomputed from terms, a summary per effect. */
-export function applyActiveEffects(derived: DerivedCharacter, effects: ActiveEffect[], catalog: ContentCatalog): DerivedCharacter {
-  let next: DerivedCharacter = { ...derived, activeEffects: [], checkTerms: [...derived.checkTerms] };
+export function applyActiveEffects(derived: DerivedCharacter, effects: ActiveEffect[], catalog: ContentCatalog, options: { list?: boolean } = {}): DerivedCharacter {
+  let next: DerivedCharacter = { ...derived, activeEffects: options.list === false ? derived.activeEffects : [], checkTerms: [...derived.checkTerms] };
   const applied: AppliedEffect[] = [];
   // AC terms added by effects so far, so a replacement base (Mage Armor) compares against the real base and keeps them.
   const acEffectTerms: Term[] = [];
@@ -269,8 +289,10 @@ export function applyActiveEffects(derived: DerivedCharacter, effects: ActiveEff
     if (application.darkvision) { next = { ...next, senses: { ...next.senses, darkvision: Math.max(next.senses.darkvision ?? 0, application.darkvision) } }; notes.push(`암시야 ${application.darkvision}ft`); }
     notes.push(...(application.notes ?? []));
     // R28 (D153): an application that carries nothing but prose is the table's to run, and says so.
+    // R43 (D183): 향상된 치명타 lowers the die that counts as a critical hit; the lowest wins if two effects say so.
+    if (application.critRange !== undefined) { next = { ...next, critRange: Math.min(next.critRange ?? 20, application.critRange) }; notes.push(`치명타 범위 ${application.critRange}–20`); }
     const mechanical = Object.keys(application).some((field) => field !== "notes" && application[field as keyof typeof application] !== undefined);
     applied.push({ key: effect.key, name: effect.name, applied: true, notes, ...(mechanical ? {} : { narrative: true }) });
   }
-  return { ...next, activeEffects: applied };
+  return { ...next, activeEffects: options.list === false ? next.activeEffects : applied };
 }

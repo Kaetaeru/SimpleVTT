@@ -87,6 +87,8 @@ export interface AttackSpec {
   masteryDc?: number;
   /** R32 (D166): 야만적 공격자 — this swing rerolls its weapon dice and keeps the better set. */
   savage?: boolean;
+  /** R43 (D183): the lowest d20 that is a critical hit for this attacker (19 with Improved Critical). */
+  critRange?: number;
 }
 
 /** R12: what a mastery did on this attack. */
@@ -231,7 +233,9 @@ export function resolveAttack(attacker: Combatant, target: Combatant, spec: Atta
   const exhausted = 2 * Math.max(0, attacker.exhaustion ?? 0);
   const attackTotal = kept + spec.attackBonus - exhausted + (overrides.rollDelta ?? 0);
   if (exhausted) reasons.push(`탈진 ${attacker.exhaustion}단계 (−${exhausted})`);
-  let outcome: AttackResolution["outcome"] = kept === 20 ? "crit" : kept === 1 ? "fumble" : attackTotal >= targetAc ? "hit" : "miss";
+  // R43 (D183): 향상된 치명타 lowers the number a d20 has to reach for a critical hit; 20 is the default.
+  const critRange = Math.max(2, Math.min(20, spec.critRange ?? 20));
+  let outcome: AttackResolution["outcome"] = kept >= critRange ? "crit" : kept === 1 ? "fumble" : attackTotal >= targetAc ? "hit" : "miss";
   if (outcome === "hit" && autoCrit(target, spec)) { outcome = "crit"; reasons.push(`대상 ${target.conditions.includes("마비") ? "마비" : "무의식"}: 5ft 안의 적중은 치명타`); }
   if (overrides.outcome) outcome = overrides.outcome;
   const hit = outcome === "hit" || outcome === "crit";
