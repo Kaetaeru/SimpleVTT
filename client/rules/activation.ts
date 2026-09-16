@@ -88,6 +88,12 @@ const FEATURE_ACTIVATIONS: Record<string, FeatureActivation> = {
  * `dnd.srd521.feature.<class>.<subclass>.<key>` → `<class>.<subclass>.<key>`; species `<speciesId>.trait.<key>` → `species.<key>`.
  */
 export function featureRuleKey(featureId: string) {
+  // R51 (D186): a feat's feature id carries the slot it was chosen in — `feat.background.dnd.srd521.feat.alert`,
+  // `feat.class.3.asi.<id>`. The rule belongs to the feat, not the slot, so the slot comes off and the key names its
+  // own namespace (`feat:alert`). Until this, a feat could never meet a contract: the slot prefix made every key
+  // unique to the character that happened to pick it up there.
+  const feat = /\.feat\.(.+)$/.exec(featureId);
+  if (feat) return `feat:${feat[1]}`;
   const cls = /^[a-z-]+\.\d+\.(.+)$/.exec(featureId);
   if (cls) return cls[1];
   const sub = /^dnd\.[a-z0-9]+\.feature\.(.+)$/.exec(featureId);
@@ -136,5 +142,11 @@ export function featureActivation(feature: DerivedFeature, derived: DerivedChara
   return undefined;
 }
 
-export const effectKeyForFeature = (featureId: string) => `feature:${featureRuleKey(featureId)}`;
+/**
+ * R51 (D186): a rule key that already names its namespace (`feat:great-weapon-master`) keeps it; everything else is a
+ * class, subclass or species feature and gets `feature:`. Every caller that turns a rule key into a contract or an
+ * effect key goes through here, so the two spellings cannot drift apart.
+ */
+export const qualifyRuleKey = (ruleKey: string) => (ruleKey.includes(":") ? ruleKey : `feature:${ruleKey}`);
+export const effectKeyForFeature = (featureId: string) => qualifyRuleKey(featureRuleKey(featureId));
 export const effectKeyForSpell = (spellId: string) => `spell:${spellId}`;

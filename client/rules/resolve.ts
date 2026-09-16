@@ -56,6 +56,11 @@ export interface Combatant {
   grappledBy?: string;
   /** R12: token id of the wielder whose Vex mastery gave advantage against this creature. */
   vexedBy?: string;
+  /**
+   * R51 (D186): damage this creature simply does not take, per damage type — 중갑 달인 takes 숙련 보너스 less
+   * bludgeoning, piercing and slashing while in heavy armour. Subtracted after resistance, never below zero.
+   */
+  reduction?: Array<{ types: string[]; amount: number; source: string }>;
 }
 
 export interface DamagePart {
@@ -69,6 +74,8 @@ export interface DamagePart {
    * as `fighting-style:great-weapon-fighting` and read by nothing, so the style did nothing at all.
    */
   dieMinimum?: number;
+  /** R51 (D186): this damage is not halved by the target's resistance (원소 숙련자, 독 제조자). */
+  ignoresResistance?: boolean;
 }
 
 export interface AttackSpec {
@@ -108,7 +115,7 @@ export interface AttackOverrides {
   note?: string;
 }
 
-export interface DamageResult { part: DamagePart; dice: number[]; rolled: number; adjusted: number; adjustment: "저항" | "면역" | "취약" | null }
+export interface DamageResult { part: DamagePart; dice: number[]; rolled: number; adjusted: number; /** R51 (D186): what changed the number — a defence, or a flat reduction naming its source. */ adjustment: "저항" | "면역" | "취약" | string | null }
 
 export interface AttackResolution {
   attacker: { id: string; name: string; kind: "pc" | "npc" };
@@ -201,17 +208,34 @@ const autoCrit = (target: Combatant, spec: AttackSpec) => (target.conditions.inc
 export interface DiceSource { d(sides: number): number }
 export const diceFrom = (random: () => number): DiceSource => ({ d: (sides) => 1 + Math.floor(random() * sides) });
 
-function rollParts(formula: string, dice: DiceSource, doubleDice: boolean, dieMinimum = 0): { dice: number[]; total: number } {
+/**
+ * Roll a damage formula. `kept` are dice from an earlier resolution of this same part: each one is reused in order
+ * and only the dice the formula still asks for beyond them are rolled fresh.
+ *
+ * R51 (D186): that reuse is the whole point. Every path that resolves a card a second time — the DM palette, the
+ * Shield reaction, a 구조 재굴림 — hands the first roll's dice back so the numbers do not jump around. It used to
+ * hand them to a branch that skipped the crit logic entirely, so "치명타" from the palette doubled nothing. Reusing
+ * die-by-die instead means a hit promoted to a critical rolls the extra dice it now needs, and a critical demoted
+ * to a hit drops them, while every die the player already saw keeps its face.
+ */
+function rollParts(formula: string, dice: DiceSource, doubleDice: boolean, dieMinimum = 0, kept?: number[]): { dice: number[]; total: number } {
   const clean = formula.replace(/\s+/g, "").replace(/\(.*?\)/g, "");
   const rolled: number[] = [];
   let total = 0;
+  let at = 0;
   for (const term of clean.match(/[+-]?[^+-]+/g) ?? []) {
     const sign = term.startsWith("-") ? -1 : 1;
     const body = term.replace(/^[+-]/, "");
     const die = /^(\d*)d(\d+)$/.exec(body);
     if (die) {
       const count = (Number(die[1] || 1)) * (doubleDice ? 2 : 1);
-      for (let index = 0; index < count; index += 1) { const value = Math.max(dieMinimum, dice.d(Number(die[2]))); rolled.push(value); total += sign * value; }
+      for (let index = 0; index < count; index += 1) {
+        const reuse = kept?.[at];
+        at += 1;
+        const value = reuse !== undefined ? reuse : Math.max(dieMinimum, dice.d(Number(die[2])));
+        rolled.push(value);
+        total += sign * value;
+      }
     } else if (/^\d+$/.test(body)) total += sign * Number(body);
   }
   return { dice: rolled, total };
@@ -275,17 +299,17 @@ export function applyDamage(target: Combatant, parts: DamagePart[], dice: DiceSo
   const damage: DamageResult[] = [];
   parts.forEach((part, index) => {
     const fixedDice = options.fixed?.[index];
-    let rolled: { dice: number[]; total: number };
-    if (fixedDice) { rolled = { dice: fixedDice, total: fixedDice.reduce((sum, value) => sum + value, 0) + flatOf(part.formula) }; }
-    else {
-      const weaponDice = part.critDoubles !== false;
-      rolled = rollParts(part.formula, dice, Boolean(options.crit) && weaponDice, part.dieMinimum ?? 0);
-      // R32 (D166): 야만적 공격자 — once per turn, roll the weapon's damage dice twice and use either. Only the
-      // weapon's own dice reroll; a flat rider is not "the weapon's damage dice".
-      if (options.savage && weaponDice) {
-        const again = rollParts(part.formula, dice, Boolean(options.crit) && weaponDice, part.dieMinimum ?? 0);
-        if (again.total > rolled.total) rolled = again;
-      }
+    const weaponDice = part.critDoubles !== false;
+    const doubles = Boolean(options.crit) && weaponDice;
+    // R51 (D186): the earlier roll's dice are reused face by face, so promoting or demoting a critical hit changes
+    // how many dice the part has without changing the ones already shown.
+    let rolled = rollParts(part.formula, dice, doubles, part.dieMinimum ?? 0, fixedDice);
+    // R32 (D166): 야만적 공격자 — once per turn, roll the weapon's damage dice twice and use either. Only the
+    // weapon's own dice reroll; a flat rider is not "the weapon's damage dice". A re-resolution keeps the dice it
+    // was handed, so the reroll does not happen twice for the same swing.
+    if (options.savage && weaponDice && !fixedDice) {
+      const again = rollParts(part.formula, dice, doubles, part.dieMinimum ?? 0);
+      if (again.total > rolled.total) rolled = again;
     }
     const rawRolled = Math.max(0, rolled.total);
     // R28 (D148): resistance and vulnerability come *last*, after every other modifier — a successful save halves
@@ -293,10 +317,13 @@ export function applyDamage(target: Combatant, parts: DamagePart[], dice: DiceSo
     // instead of 11 → 5 → 10).
     const raw = options.half ? Math.floor(rawRolled / 2) : rawRolled;
     const immune = listCovers(target.defenses.immunities, part.type);
-    const resist = !immune && listCovers(target.defenses.resistances, part.type);
+    const resist = !immune && !part.ignoresResistance && listCovers(target.defenses.resistances, part.type);
     const vulnerable = !immune && listCovers(target.defenses.vulnerabilities, part.type);
-    const adjusted = immune ? 0 : resist && vulnerable ? raw : resist ? Math.floor(raw / 2) : vulnerable ? raw * 2 : raw;
-    damage.push({ part, dice: rolled.dice, rolled: rawRolled, adjusted, adjustment: immune ? "면역" : resist && !vulnerable ? "저항" : vulnerable && !resist ? "취약" : null });
+    const scaled = immune ? 0 : resist && vulnerable ? raw : resist ? Math.floor(raw / 2) : vulnerable ? raw * 2 : raw;
+    // R51 (D186): flat reduction is the last thing that happens, after resistance, and cannot push the part below 0.
+    const reducer = scaled > 0 ? (target.reduction ?? []).find((rule) => rule.types.some((type) => listCovers([type], part.type))) : undefined;
+    const adjusted = Math.max(0, scaled - (reducer?.amount ?? 0));
+    damage.push({ part, dice: rolled.dice, rolled: rawRolled, adjusted, adjustment: immune ? "면역" : resist && !vulnerable ? "저항" : vulnerable && !resist ? "취약" : reducer ? `−${reducer.amount} ${reducer.source}` : null });
   });
   let damageTotal = damage.reduce((sum, item) => sum + item.adjusted, 0);
   if (options.scale !== undefined) damageTotal = Math.floor(damageTotal * options.scale);
@@ -324,8 +351,6 @@ export function applyDamage(target: Combatant, parts: DamagePart[], dice: DiceSo
   }
   return { damage, damageTotal, absorbed, hpLost, hpBefore: target.hp.current, hpAfter, tempAfter, concentration, downed, deathFailures };
 }
-
-const flatOf = (formula: string) => { let total = 0; for (const term of formula.replace(/\s+/g, "").replace(/\(.*?\)/g, "").match(/[+-]?[^+-]+/g) ?? []) if (/^[+-]?\d+$/.test(term)) total += Number(term); return total; };
 
 /** One-line summary for the chat archive and logs. */
 export function describeResolution(result: AttackResolution) {

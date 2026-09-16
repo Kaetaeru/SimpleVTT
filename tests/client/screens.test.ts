@@ -60,7 +60,7 @@ test("the app renders the library, the wizard and the contents screen against a 
   const wizard = strip(renderToStaticMarkup(createElement(ClientProvider, { store, initialRoute: { screen: "new" }, children: createElement(App) })));
   for (const needle of ["새 캐릭터", "기본", "종족", "배경", "능력치", "직업·레벨", "언어·장비", "검토·저장", "이름", "검증", "이름을 정하세요"]) assert.ok(wizard.includes(needle), `wizard missing "${needle}"`);
   const contents = strip(renderToStaticMarkup(createElement(ClientProvider, { store, initialRoute: { screen: "contents" }, children: createElement(App) })));
-  assert.ok(contents.includes("내장 SRD 5.2.1 모듈 37개"));
+  assert.ok(contents.includes("내장 SRD 5.2.1 모듈 38개"));
   assert.ok(contents.includes("dnd.srd-5.2.1.classes"));
   void ids;
 });

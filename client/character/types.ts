@@ -228,6 +228,15 @@ export interface DerivedCharacter {
   /** R43 (D183): the lowest d20 that is a critical hit for this character (19 with 향상된 치명타). */
   critRange?: number;
   /**
+   * R51 (D186): what is worn, so a contract can ask. 평갑 달인 and 중갑 달인 are both written as "while wearing
+   * <training> armour"; without this the expression grammar had no way to see the armour at all.
+   */
+  armor?: { name: string; training: string; /** The armour's Dexterity cap is actually costing this character AC. */ dexCapped: boolean; shield: boolean };
+  /** R51 (D186): damage this character simply does not take, per type (중갑 달인). Reaches the resolver as `Combatant.reduction`. */
+  damageReduction?: Array<{ types: string[]; amount: number; source: string }>;
+  /** R51 (D186): damage types whose resistance this character's own damage ignores (원소 숙련자, 독 제조자). */
+  ignoresResistance?: string[];
+  /**
    * R49 (D184): what each of this character's features' contracts says about using it, worked out at derivation and
    * carried as plain data. Without this every caller of `featureActivation` would have to remember to hand it the
    * catalog, and the one that forgot would silently lose the feature's rule.

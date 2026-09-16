@@ -18,6 +18,17 @@ const SCOPES: Record<string, (attack: DerivedAttack) => boolean> = {
   ranged: (attack) => Boolean(attack.range),
   /** R49 (D184): 격노's bonus — a Strength attack that is not fired from a bow. */
   "strength-melee": (attack) => attack.ability === "str" && !attack.properties.includes("ammunition"),
+  // R51 (D186): the PHB feats narrow themselves by weapon property, not by ability. 결투 wants "one-handed melee",
+  // 투척 무기 전투 wants Thrown, 대형 무기 달인 wants Heavy — each one is a property the weapon already carries.
+  heavy: (attack) => attack.properties.includes("heavy"),
+  light: (attack) => attack.properties.includes("light"),
+  finesse: (attack) => attack.properties.includes("finesse"),
+  thrown: (attack) => attack.properties.includes("thrown"),
+  "two-handed": (attack) => attack.properties.includes("two-handed"),
+  /** No weapon in hand at all: 비무장 전투 and 선술집 싸움꾼. */
+  unarmed: (attack) => !attack.itemId,
+  /** 결투: a melee weapon held in one hand. Whether the other hand is empty is the table's to see. */
+  "one-handed-melee": (attack) => Boolean(attack.itemId) && !attack.range && !attack.properties.includes("two-handed"),
 };
 
 /** Every property this engine can change, and where it lands on the sheet. */
@@ -25,7 +36,9 @@ export const PROPERTIES = [
   "ac.bonus", "ac.unarmored-base", "ac.minimum",
   "attack-roll.bonus", "damage.bonus", "saving-throw.bonus", "ability-check.bonus", "skill.<id>.bonus",
   "speed.walk", "speed.fly", "speed.climb", "speed.fly-as-walk", "weapon.shillelagh", "hp.maximum", "spell.save-dc", "spell.attack-roll.bonus", "attack-roll.crit-range",
-  "senses.darkvision", "resistance", "condition-immunity",
+  "senses.darkvision", "senses.blindsight", "resistance", "condition-immunity",
+  // R51 (D186): what the PHB feats needed and the vocabulary did not have.
+  "damage-taken.reduce", "damage.ignore-resistance",
 ] as const;
 
 const number = (operation: Extract<ContractOperation, { kind: "property.modify" }>, scope: Scope) => {
@@ -78,6 +91,12 @@ export function contractEffect(contract: CommonPlayContract, scope: Scope): { ap
       case "spell.save-dc": application.spellDc = number(operation, scope); break;
       case "spell.attack-roll.bonus": application.spellAttack = number(operation, scope); break;
       case "senses.darkvision": application.darkvision = number(operation, scope); break;
+      case "senses.blindsight": application.blindsight = number(operation, scope); break;
+      // R51 (D186): 중갑 달인 — so many less of each of the three weapon damage types. `damageTypes` carries the
+      // list, since a reduction that names no type would silently apply to everything.
+      case "damage-taken.reduce": application.damageReduction = { types: (operation.damageTypes ?? []) as string[], amount: number(operation, scope) ?? 0 }; break;
+      // R51 (D186): 원소 숙련자, 독 제조자 — this character's own damage of these types is not resisted.
+      case "damage.ignore-resistance": application.ignoresResistance = [...(application.ignoresResistance ?? []), text(operation, scope) ?? ""]; break;
       case "attack-roll.crit-range": application.critRange = Math.min(application.critRange ?? 20, number(operation, scope) ?? 20); break;
       case "resistance": application.resistances = [...(application.resistances ?? []), text(operation, scope) ?? ""]; break;
       case "condition-immunity": application.conditionImmunities = [...(application.conditionImmunities ?? []), text(operation, scope) ?? ""]; break;

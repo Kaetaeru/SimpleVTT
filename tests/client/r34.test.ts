@@ -30,7 +30,8 @@ const contract = (key: string) => catalog().contractFor(key)!;
 
 test("contracts: all eight SRD contracts are read, and what this executor cannot run is named (D171)", () => {
   // R38 added a second family of contracts (standing effects, keyed `spell:`/`feature:`); these are the feature ones.
-  const all = new Map([...catalog().contracts].filter(([key]) => !key.startsWith("spell:") && !key.startsWith("feature:")));
+  // R51 (D186) added a third, keyed `feat:` — the same grammar, reached through the feat's own rule key.
+  const all = new Map([...catalog().contracts].filter(([key]) => !key.startsWith("spell:") && !key.startsWith("feature:") && !key.startsWith("feat:")));
   assert.deepEqual([...all.keys()].sort(), [
     "bard.college-of-lore.cutting-words",
     "bard.college-of-lore.peerless-skill",
@@ -64,6 +65,8 @@ test("contracts: a contract's payment and the hand-written activation spend the 
     "bard.college-of-lore.cutting-words": build({ name: "b", classes: "bard", level: 6 }, { "class.2.subclass": ["dnd.srd521.subclass.bard.college-of-lore"] }),
     "bard.college-of-lore.peerless-skill": build({ name: "b", classes: "bard", level: 14 }, { "class.2.subclass": ["dnd.srd521.subclass.bard.college-of-lore"] }),
     "warlock.fiend.dark-ones-own-luck": build({ name: "w", classes: "warlock", level: 6 }, { "class.2.subclass": ["dnd.srd521.subclass.warlock.fiend-patron"] }),
+    // R51 (D186): a feat's pool is granted by the feat's own config, and its contract spends that same id.
+    "feat:epic.fate": build({ name: "f", classes: "fighter", level: 19 }, { "class.18.epic-boon": ["dnd.srd521.feat.epic.fate"] }),
   };
   const gaps: string[] = [];
   for (const [key, item] of catalog().contracts) {

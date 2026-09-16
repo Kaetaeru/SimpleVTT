@@ -15,6 +15,7 @@ import m_dnd_srd_5_2_1_equipment_simple_melee from "../../content/modules/dnd-sr
 import m_dnd_srd_5_2_1_equipment_simple_ranged from "../../content/modules/dnd-srd-5.2.1.equipment-simple-ranged/module.json";
 import m_dnd_srd_5_2_1_equipment_starting_utility from "../../content/modules/dnd-srd-5.2.1.equipment-starting-utility/module.json";
 import m_dnd_srd_5_2_1_equipment_tools from "../../content/modules/dnd-srd-5.2.1.equipment-tools/module.json";
+import m_dnd_srd_5_2_1_feat_common_play from "../../content/modules/dnd-srd-5.2.1.feat-common-play/module.json";
 import m_dnd_srd_5_2_1_feats from "../../content/modules/dnd-srd-5.2.1.feats/module.json";
 import m_dnd_srd_5_2_1_origins from "../../content/modules/dnd-srd-5.2.1.origins/module.json";
 import m_dnd_srd_5_2_1_spells_a_alarm_alter from "../../content/modules/dnd-srd-5.2.1.spells-a-alarm-alter/module.json";
@@ -54,6 +55,7 @@ export const BUILTIN_MODULE_JSON: readonly unknown[] = [
   m_dnd_srd_5_2_1_equipment_simple_ranged,
   m_dnd_srd_5_2_1_equipment_starting_utility,
   m_dnd_srd_5_2_1_equipment_tools,
+  m_dnd_srd_5_2_1_feat_common_play,
   m_dnd_srd_5_2_1_feats,
   m_dnd_srd_5_2_1_origins,
   m_dnd_srd_5_2_1_spells_a_alarm_alter,

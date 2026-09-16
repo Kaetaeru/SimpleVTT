@@ -113,8 +113,11 @@ test("feats: 시트에 적히는 줄과 '표에서 판단' 표시가 config에�
   assert.equal(archery.execution, "derived");
   assert.ok(archery.rules?.some((line) => line.includes("+2")), JSON.stringify(archery.rules));
   // 붙잡기 전문가 is prose the table adjudicates; the sheet must not dress its ability increase up as the whole feat.
-  assert.equal(featExecutionStatus(configOf("grappler")), "descriptive");
+  // R51 (D186): it now ships a contract that prints those three clauses, so its status is `common-play` — the config
+  // notes are unchanged, because the contract adds lines rather than replacing what the config already said.
+  assert.equal(featExecutionStatus(configOf("grappler")), "common-play");
   assert.deepEqual(featNotes(configOf("grappler")), ["만들기·레벨업에서 고른 값이 시트에 반영됩니다"]);
+  assert.equal(featExecutionStatus(configOf("epic.dimensional-travel")), "descriptive", "a feat with no contract and no key is still prose");
   assert.equal(featExecutionStatus(configOf("savage-attacker")), "pre-roll");
   assert.equal(featExecutionStatus(configOf("epic.truesight")), "derived");
   assert.ok(featNotes(configOf("epic.truesight")).some((line) => line.includes("진시야 60")), JSON.stringify(featNotes(configOf("epic.truesight"))));

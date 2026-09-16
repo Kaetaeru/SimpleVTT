@@ -60,7 +60,9 @@ export function deriveCharacter(source: CharacterSource, catalog: ContentCatalog
     if (found) featureContracts[key] = found;
     // R50 (D185): the sheet's line for this feature, written from its contract — the same thing R33 did for feats.
     const contract = featureContract(catalog, key);
-    if (contract) { const summary = contractSummary(contract, characterScope(derived)); feature.rules = summary.rules; feature.execution = summary.execution; }
+    // R51 (D186): a feat already carries the lines its own config produced (R33); the contract's join them rather
+    // than replacing them, so a feat that is half config and half contract says both halves.
+    if (contract) { const summary = contractSummary(contract, characterScope(derived)); feature.rules = [...(feature.rules ?? []), ...summary.rules]; feature.execution = summary.execution; }
   }
   derived.featureContracts = featureContracts;
   // R43 (D183): passives first (they are always on), then whatever is running right now.
@@ -302,6 +304,10 @@ function finalize(ledger: Ledger): DerivedCharacter {
       conditionImmunities: [...ledger.conditionImmunities].map((condition) => CONDITION_KO[condition] ?? condition),
     },
     inventory: ledger.inventory,
+    // R51 (D186): what is worn, so a contract may say "while wearing medium armour" without the engine hardcoding it.
+    ...(armorView?.armor
+      ? { armor: { name: armorView.name, training: armorView.armor.training, dexCapped: armorView.armor.dexMax !== undefined && dex > armorView.armor.dexMax, shield: Boolean(shieldView) } }
+      : { armor: { name: "방어구 없음", training: "none", dexCapped: false, shield: Boolean(shieldView) } }),
     gold: ledger.gold,
     weaponMasteries: [...ledger.weaponMasteries].map((id) => catalog.itemById(id)?.name ?? id),
     // R33 (D168): the two feat rules that only bite once a swing is being rolled travel with the sheet to the table.

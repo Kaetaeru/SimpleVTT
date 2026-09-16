@@ -8,7 +8,7 @@ import type { ContentCatalog } from "../catalog/catalog";
 import type { AbilityKey } from "../catalog/types";
 import { ABILITY_KEYS } from "../catalog/types";
 import type { ActiveEffect, AppliedEffect, DerivedAttack, DerivedCharacter, Term } from "../character/types";
-import { featureRuleKey } from "./activation";
+import { featureRuleKey, qualifyRuleKey } from "./activation";
 import { characterScope } from "./contract";
 import { contractEffect } from "./contractEffects";
 import { contractSuppressions, featureContract, selectorMatches } from "./contractActivation";
@@ -39,6 +39,12 @@ export interface EffectApplication {
   resistances?: string[];
   conditionImmunities?: string[];
   darkvision?: number;
+  /** R51 (D186): 맹목 전투, 잠행자 — sight that does not need eyes, in feet. */
+  blindsight?: number;
+  /** R51 (D186): 중갑 달인 — this much off every hit of these damage types. */
+  damageReduction?: { types: string[]; amount: number };
+  /** R51 (D186): 원소 숙련자, 독 제조자 — damage types this character deals that ignore resistance. */
+  ignoresResistance?: string[];
   /** What the rule cannot put in a number (advantage, extra action, immunities). */
   notes?: string[];
   /** Applied once when the effect starts (Aid: +5 current HP with the +5 maximum). */
@@ -73,7 +79,7 @@ export function castHook(spell: { nameEn: string }, slotLevel: number, derived: 
 const spellSlug = (nameEn: string) => nameEn.toLowerCase().replace(/[’']/g, "").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 
 export function effectRuleKey(effect: ActiveEffect, catalog: ContentCatalog): string {
-  if (effect.source === "feature") return `feature:${featureRuleKey(effect.key.replace(/^feature:/, ""))}`;
+  if (effect.source === "feature") return qualifyRuleKey(featureRuleKey(effect.key.replace(/^feature:/, "")));
   const spellId = effect.key.replace(/^spell:/, "");
   const spell = catalog.spellById(spellId);
   return `spell:${spellSlug(spell?.nameEn ?? spellId.split(".").pop() ?? spellId)}`;
@@ -92,7 +98,7 @@ export function applyPassiveContracts(derived: DerivedCharacter, catalog: Conten
     const { hasProperties } = contractEffect(contract, characterScope(derived));
     const starts = contract.entryPoints.some((entry) => entry.operations.some((operation) => operation.kind === "effect.apply"));
     if (!hasProperties || starts) continue;
-    passives.push({ key: `feature:${featureRuleKey(feature.id)}`, name: feature.name, source: "feature", duration: "상시", concentration: false, elapsed: 0, startedAt: "" });
+    passives.push({ key: qualifyRuleKey(featureRuleKey(feature.id)), name: feature.name, source: "feature", duration: "상시", concentration: false, elapsed: 0, startedAt: "" });
   }
   return passives.length ? applyActiveEffects(derived, passives, catalog, { list: false }) : derived;
 }
@@ -221,6 +227,17 @@ export function applyActiveEffects(derived: DerivedCharacter, effects: ActiveEff
     if (application.resistances?.length) { const has = (type: string) => next.defenses.resistances.some((line) => line === type || line.startsWith(`${type} (`)); next = { ...next, defenses: { ...next.defenses, resistances: [...next.defenses.resistances, ...application.resistances.filter((type) => !has(type)).map((type) => `${type} (${label})`)] } }; notes.push(`저항: ${application.resistances.join("·")}`); }
     if (application.conditionImmunities?.length) { next = { ...next, defenses: { ...next.defenses, conditionImmunities: [...next.defenses.conditionImmunities, ...application.conditionImmunities.map((condition) => `${condition} (${label})`)] } }; notes.push(`상태 면역: ${application.conditionImmunities.join("·")}`); }
     if (application.darkvision) { next = { ...next, senses: { ...next.senses, darkvision: Math.max(next.senses.darkvision ?? 0, application.darkvision) } }; notes.push(`암시야 ${application.darkvision}ft`); }
+    if (application.blindsight) { next = { ...next, senses: { ...next.senses, blindsight: Math.max(next.senses.blindsight ?? 0, application.blindsight) } }; notes.push(`맹시 ${application.blindsight}ft`); }
+    // R51 (D186): flat damage reduction travels to the table as `Combatant.reduction`; the sheet only records it.
+    if (application.damageReduction?.amount) {
+      const rule = { types: application.damageReduction.types, amount: application.damageReduction.amount, source: label };
+      next = { ...next, damageReduction: [...(next.damageReduction ?? []), rule] };
+      notes.push(`받는 피해 −${rule.amount} (${rule.types.join("·") || "모든 유형"})`);
+    }
+    if (application.ignoresResistance?.length) {
+      next = { ...next, ignoresResistance: [...new Set([...(next.ignoresResistance ?? []), ...application.ignoresResistance])] };
+      notes.push(`${application.ignoresResistance.join("·")} 저항 무시`);
+    }
     notes.push(...(application.notes ?? []));
     // R28 (D153): an application that carries nothing but prose is the table's to run, and says so.
     // R43 (D183): 향상된 치명타 lowers the die that counts as a critical hit; the lowest wins if two effects say so.

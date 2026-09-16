@@ -95,6 +95,20 @@ export function applyFeat(ledger: Ledger, feat: FeatView, instance: FeatInstance
     ledger.flags.add(`fighting-style:${slug}`);
   }
 
+  /**
+   * R51 (D186): a feat may carry its own pools. `resources: [{ id, label, max, reset }]`, where `max` is a number or
+   * `"proficiency-bonus"`. Until this a feat could describe a per-rest ability but had nothing to spend, which is
+   * exactly why 운명의 은총's own `execution.reason` reads "needs feat-granted resources … before the 2d4
+   * interceptor can be paid". A contract keyed `feat:<slug>` names the same id in its `payments`.
+   */
+  const pools = config.resources as Array<{ id?: string; label?: string; max?: number | string; reset?: string }> | undefined;
+  for (const pool of pools ?? []) {
+    const slug = feat.id.split(".").pop() ?? feat.id;
+    const id = pool.id ?? `resource.feat.${slug}`;
+    const max = pool.max === "proficiency-bonus" ? ledger.proficiencyBonus : typeof pool.max === "number" ? pool.max : 1;
+    if (max > 0) ledger.addResource({ id, label: pool.label ?? feat.name, max, recovery: resetKo(pool.reset ?? "long-rest"), source: feat.name });
+  }
+
   // R33 (D168): the mechanical numbers. Every one of these keys used to sit in the code as a constant next to a
   // `fighting-style:` flag; an installed feat carrying the same key now gets the same treatment without a code change.
   const armorAc = config.armorAcBonus;

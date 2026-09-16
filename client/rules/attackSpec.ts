@@ -28,6 +28,8 @@ export function pcCombatant(entry: JournalCharacter, derived: DerivedCharacter):
     conditions: runtime.conditions, defenses: derived.defenses, conSave: derived.saves.con.bonus, concentration: concentration?.name, effects: (runtime.effects ?? []).map((effect) => effect.name),
     // R28 (D147): exhaustion reaches the dice at last.
     exhaustion: runtime.exhaustion,
+    // R51 (D186): 중갑 달인 — flat reduction per damage type, from whatever effect or feat contract granted it.
+    ...(derived.damageReduction?.length ? { reduction: derived.damageReduction } : {}),
   };
 }
 
@@ -106,7 +108,9 @@ export function pcAttackSpec(entry: JournalCharacter, derived: DerivedCharacter,
   const dropsAbilityMod = cleave || (offHand && !offHandKeeps);
   const bonusText = attack.damageBonus && !dropsAbilityMod ? `${attack.damageBonus > 0 ? "+" : "-"}${Math.abs(attack.damageBonus)}` : "";
   // R32 (D165): 대형 무기 전투 travels with the weapon's own damage part.
-  const damage: DamagePart[] = [{ formula: `${attack.damage.split(" ")[0]}${bonusText}${diceOf(attack.damageTerms)}`, type: attack.damageType, label: cleave ? `${attack.name} (쪼개기)` : offHand ? `${attack.name} (보조 손)` : attack.name, ...(attack.dieMinimum ? { dieMinimum: attack.dieMinimum } : {}) }];
+  // R51 (D186): 독 제조자 and its kin — a damage type this sheet's own damage is never resisted for.
+  const ignores = (type: string) => (derived.ignoresResistance ?? []).includes(type);
+  const damage: DamagePart[] = [{ formula: `${attack.damage.split(" ")[0]}${bonusText}${diceOf(attack.damageTerms)}`, type: attack.damageType, label: cleave ? `${attack.name} (쪼개기)` : offHand ? `${attack.name} (보조 손)` : attack.name, ...(attack.dieMinimum ? { dieMinimum: attack.dieMinimum } : {}), ...(ignores(attack.damageType) ? { ignoresResistance: true } : {}) }];
   const extra: DamagePart[] = [];
   const spenders: Array<(runtime: CharacterRuntime) => CharacterRuntime> = [];
   if (riders.sneak && hasSneakAttack(derived, attack)) extra.push({ formula: `${sneakDice(derived)}d6`, type: attack.damageType, label: "암습" });

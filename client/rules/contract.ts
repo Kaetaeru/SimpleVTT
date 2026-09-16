@@ -74,7 +74,7 @@ export type ContractOperation =
    * by how much. `scope` narrows it to some attacks, `abilities` to some saves, and `note` carries the part of the
    * rule that is not a number.
    */
-  | { kind: "property.modify"; property: string; operation: string; value?: Expr; dice?: string; scope?: string; abilities?: string[]; note?: string; when?: Expr }
+  | { kind: "property.modify"; property: string; operation: string; value?: Expr; dice?: string; scope?: string; abilities?: string[]; /** R51 (D186): the damage types a `damage-taken.reduce` applies to. */ damageTypes?: string[]; note?: string; when?: Expr }
   /**
    * R39 (D179): the standing effect a use starts. `template` carries what the sheet needs to show and count it;
    * `lifetime` says how it ends — `until-duration` is the only one with a round counter, the rest are conditions the
@@ -202,7 +202,8 @@ export const LIFETIME_KO: Record<string, string> = {
   "until-duration": "시간이 다할 때까지", "until-consumed": "쓸 때까지", "until-destroyed": "부서질 때까지", "until-state": "상태가 바뀔 때까지",
   "until-event": "그 일이 일어날 때까지", "until-source-recast": "다시 시전할 때까지", "with-parent": "근원이 끝날 때까지", durable: "계속", "world-persistent": "세계에 남음",
 };
-const ROLL_MODES = new Set(["add-die", "add-flat", "reroll", "subtract-die"]);
+// R51 (D186): `set-die` replaces the d20 with a fixed face (전투 기량의 은총 turns a miss into a 20).
+const ROLL_MODES = new Set(["add-die", "add-flat", "reroll", "set-die", "subtract-die"]);
 
 function parseOperations(raw: unknown, path: string, unsupported: string[]): ContractOperation[] {
   const list = Array.isArray(raw) ? raw : [];
@@ -278,12 +279,12 @@ function parseOperations(raw: unknown, path: string, unsupported: string[]): Con
       // A bare number, string or boolean is the literal it looks like; only an object is read as an expression.
       const literal = operation.value;
       const value = isExpr(literal) ? literal : literal === undefined ? undefined : { value: literal };
-      out.push({ kind, property, operation: op, value, dice: operation.dice ? String(operation.dice) : undefined, scope: operation.scope ? String(operation.scope) : undefined, abilities: Array.isArray(operation.abilities) ? operation.abilities.map(String) : undefined, note: operation.note ? String(operation.note) : undefined, when: isExpr(operation.when) ? operation.when : undefined });
+      out.push({ kind, property, operation: op, value, dice: operation.dice ? String(operation.dice) : undefined, scope: operation.scope ? String(operation.scope) : undefined, abilities: Array.isArray(operation.abilities) ? operation.abilities.map(String) : undefined, damageTypes: Array.isArray(operation.damageTypes) ? operation.damageTypes.map(String) : undefined, note: operation.note ? String(operation.note) : undefined, when: isExpr(operation.when) ? operation.when : undefined });
       return;
     }
     const mode = String(operation.mode ?? "");
     if (!ROLL_MODES.has(mode)) { unsupported.push(`${at}: roll.modify ${mode || "모드 없음"}`); return; }
-    out.push({ kind: "roll.modify", mode, dice: operation.dice ? String(operation.dice) : undefined, value: isExpr(operation.value) ? operation.value : undefined, diceResourceId: operation.diceResource ? resourceIdOf(String(operation.diceResource)) : undefined, when: isExpr(operation.when) ? operation.when : undefined });
+    out.push({ kind: "roll.modify", mode, dice: operation.dice ? String(operation.dice) : undefined, value: isExpr(operation.value) ? operation.value : operation.value === undefined ? undefined : { value: operation.value }, diceResourceId: operation.diceResource ? resourceIdOf(String(operation.diceResource)) : undefined, when: isExpr(operation.when) ? operation.when : undefined });
   });
   return out;
 }
@@ -403,11 +404,18 @@ export interface ScopeCharacter {
   abilities: Record<string, { modifier: number }>;
   saves: Record<string, { bonus: number }>;
   classes: Array<{ classId: string; level: number }>;
+  /** R51 (D186): total character level, for a feat whose number is written against it (강인함). */
+  level?: number;
+  /** R51 (D186): what is worn, for a feat written as "while wearing <training> armour". */
+  armor?: { training: string; dexCapped: boolean; shield: boolean };
 }
 
 /**
  * The named values a contract may read off a character: `proficiency.bonus`, `ability.str.modifier`,
  * `save.dex.modifier`, `actor.class-level:<classId>`. `extra` carries what only the moment knows (`test.outcome`).
+ *
+ * R51 (D186): `actor.level`, `armor.training`, `armor.dex-capped` and `equipment.shield` joined them, because the
+ * PHB feats are written against what the character is wearing and how far along they are, not only their class.
  */
 export function characterScope(character: ScopeCharacter, extra: Record<string, ExprValue> = {}): Scope {
   return (ref) => {
@@ -419,6 +427,10 @@ export function characterScope(character: ScopeCharacter, extra: Record<string, 
     if (save) return character.saves[save[1]]?.bonus;
     const level = /^actor\.class-level:(.+)$/.exec(ref);
     if (level) return character.classes.find((entry) => entry.classId === level[1])?.level ?? 0;
+    if (ref === "actor.level") return character.level ?? character.classes.reduce((sum, entry) => sum + entry.level, 0);
+    if (ref === "armor.training") return character.armor?.training ?? "none";
+    if (ref === "armor.dex-capped") return Boolean(character.armor?.dexCapped);
+    if (ref === "equipment.shield") return Boolean(character.armor?.shield);
     return undefined;
   };
 }
@@ -472,6 +484,16 @@ export function planRollModify(operations: ContractOperation[], scope: Scope, di
         if (sides === undefined) break;
         plan.delta -= sides;
         plan.parts.push(`−${sides}`);
+        break;
+      }
+      // R51 (D186): 전투 기량의 은총 — "change the d20 to a 20". The mode the SRD feat's own `execution.reason`
+      // asked for by name ("needs a force-hit roll mode"); it replaces the die rather than adding to the total, so a
+      // forced 20 is a natural 20 and crits.
+      case "set-die": {
+        const value = Number(evaluate(operation.value, scope));
+        if (!Number.isFinite(value)) break;
+        plan.d20 = value;
+        plan.parts.push(`d20 → ${value}`);
         break;
       }
       case "add-flat": {

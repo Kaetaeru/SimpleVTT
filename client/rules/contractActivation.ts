@@ -7,7 +7,7 @@
  * the same idea: one takes an effect off, the other leaves it on the sheet but stops it counting for anything.
  */
 import { COUNTED_LIFETIME, evaluate, LIFETIME_KO, type CommonPlayContract, type ContractOperation, type Scope } from "./contract";
-import type { ParsedDuration } from "./activation";
+import { qualifyRuleKey, type ParsedDuration } from "./activation";
 
 const operationsOf = (contract: CommonPlayContract) => [...contract.entryPoints.flatMap((entry) => entry.operations), ...contract.interceptors.flatMap((item) => item.operations)];
 const live = (operation: ContractOperation, scope: Scope) => !("when" in operation && operation.when) || evaluate((operation as { when?: Parameters<typeof evaluate>[0] }).when, scope) === true;
@@ -61,7 +61,7 @@ export const contractDurations = (catalog: { contractFor(key: string): CommonPla
  * effect it starts does). One feature, two ways of naming it, one lookup.
  */
 export const featureContract = (catalog: { contractFor(key: string): CommonPlayContract | undefined }, ruleKey: string) =>
-  catalog.contractFor(`feature:${ruleKey}`) ?? catalog.contractFor(ruleKey);
+  catalog.contractFor(qualifyRuleKey(ruleKey)) ?? catalog.contractFor(ruleKey);
 
 /**
  * R40 (D180): what a use costs and what it does to hit points, read from the contract's own operations. The shape is

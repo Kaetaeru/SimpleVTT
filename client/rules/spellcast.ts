@@ -25,6 +25,8 @@ export interface CasterStats {
   modifier: number;
   /** Character level (cantrip scaling at 5/11/17); for NPCs the level a stat block implies. */
   level: number;
+  /** R51 (D186): damage types this caster's own spells are never resisted for (원소 숙련자). */
+  ignoresResistance?: string[];
 }
 
 export interface SpellCastSpec {
@@ -111,6 +113,9 @@ export function resolveSpell(input: CastInput): SpellResolution {
   const primary = exec.primary;
   const endSave = repeatsSaveAtTurnEnd(exec) && "saveAbility" in primary ? { ability: ((primary as { saveAbility: string }).saveAbility in ABILITY_KO ? (primary as { saveAbility: string }).saveAbility : "wis") as AbilityKey, dc: casterStats.saveDc } : undefined;
   const effectStart = (duration?: SpellDuration): SpellEffectStart => ({ key: `spell:${spec.spellId}`, name: spec.name, concentration: Boolean(exec.concentration), duration: durationText(duration), rounds: roundsOf(duration), ...(endSave ? { endSave } : {}) });
+  // R51 (D186): 원소 숙련자 — "your spells ignore resistance to the chosen damage type". Applied where the parts are
+  // built, so every shape of spell damage (attack, save, projectiles, components) goes through the same door.
+  const unresisted = (part: DamagePart): DamagePart => ((casterStats.ignoresResistance ?? []).includes(part.type) ? { ...part, ignoresResistance: true } : part);
   const base = (target: Combatant): SpellTargetResult => ({ target: { id: target.id, name: target.name, kind: target.kind, tokenId: target.tokenId }, mode: "note", hpBefore: target.hp.current, hpAfter: target.hp.current, tempAfter: target.hp.temp, marks: [] });
   // R10: 회피 (Dodge) gives advantage on Dexterity saves.
   const save = (target: Combatant, stats: ActorStats, ability: string): SpellSave => { const key = (ability in ABILITY_KO ? ability : "dex") as AbilityKey;
@@ -137,7 +142,7 @@ export function resolveSpell(input: CastInput): SpellResolution {
       for (const { combatant } of all) {
         const row = base(combatant);
         row.mode = "attack";
-        const attack = resolveAttack(caster, combatant, { name: spec.name, source: "spell", attackBonus: casterStats.attackBonus, mode: (exec.targeting.rangeFeet ?? 0) > 5 ? "ranged" : "melee", damage: [{ formula, type: primary.damageType, label: spec.name }], inflicts: conditionMarks("hit", combatant) }, { dice, overrides: input.overrides, apply: input.apply });
+        const attack = resolveAttack(caster, combatant, { name: spec.name, source: "spell", attackBonus: casterStats.attackBonus, mode: (exec.targeting.rangeFeet ?? 0) > 5 ? "ranged" : "melee", damage: [unresisted({ formula, type: primary.damageType, label: spec.name })], inflicts: conditionMarks("hit", combatant) }, { dice, overrides: input.overrides, apply: input.apply });
         row.attack = attack; row.hpAfter = attack.hpAfter; row.tempAfter = attack.tempAfter; row.marks = attack.inflicted;
         if ((attack.outcome === "hit" || attack.outcome === "crit") && exec.trackedEffects?.some((effect) => effect.trigger === "hit")) row.effect = effectStart(exec.trackedEffects.find((effect) => effect.trigger === "hit")!.duration);
         targets.push(row);
@@ -153,7 +158,7 @@ export function resolveSpell(input: CastInput): SpellResolution {
         const row = rows.get(combatant.id) ?? base(combatant);
         row.mode = "attack";
         const live = { ...combatant, hp: { ...combatant.hp, current: row.hpAfter, temp: row.tempAfter } };
-        const attack = resolveAttack(caster, live, { name: `${spec.name} ${n + 1}`, source: "spell", attackBonus: casterStats.attackBonus, mode: "ranged", damage: [{ formula: `${primary.dicePerAttack.count}d${primary.dicePerAttack.sides}`, type: primary.damageType, label: spec.name }] }, { dice, overrides: input.overrides, apply: input.apply });
+        const attack = resolveAttack(caster, live, { name: `${spec.name} ${n + 1}`, source: "spell", attackBonus: casterStats.attackBonus, mode: "ranged", damage: [unresisted({ formula: `${primary.dicePerAttack.count}d${primary.dicePerAttack.sides}`, type: primary.damageType, label: spec.name })] }, { dice, overrides: input.overrides, apply: input.apply });
         row.attack = row.attack ? { ...attack, damageTotal: row.attack.damageTotal + attack.damageTotal, d20s: [...row.attack.d20s, ...attack.d20s], damage: [...row.attack.damage, ...attack.damage], outcome: attack.outcome === "hit" || attack.outcome === "crit" ? attack.outcome : row.attack.outcome, hpBefore: row.hpBefore } : attack;
         row.hpAfter = attack.hpAfter; row.tempAfter = attack.tempAfter;
         rows.set(combatant.id, row);
@@ -162,7 +167,7 @@ export function resolveSpell(input: CastInput): SpellResolution {
       break;
     }
     case "save-damage": case "save-compound-damage": {
-      const parts: DamagePart[] = primary.kind === "save-damage" ? [{ formula: formulaOf(primary.dice, spec.level, exec, casterStats), type: primary.damageType, label: spec.name }] : primary.components.map((component) => ({ formula: formulaOf(component.dice, spec.level, exec, casterStats), type: component.damageType, label: spec.name }));
+      const parts: DamagePart[] = (primary.kind === "save-damage" ? [{ formula: formulaOf(primary.dice, spec.level, exec, casterStats), type: primary.damageType, label: spec.name }] : primary.components.map((component) => ({ formula: formulaOf(component.dice, spec.level, exec, casterStats), type: component.damageType, label: spec.name }))).map(unresisted);
       // One damage roll for the whole area: the same dice hit everyone (5e), halved for those who save.
       const rolled = input.fixedDamage ?? parts.map((part) => { const match = /^(\d+)d(\d+)/.exec(part.formula)!; return Array.from({ length: Number(match[1]) }, () => dice.d(Number(match[2]))); });
       for (const { combatant, stats } of all) {
@@ -222,7 +227,7 @@ export function resolveSpell(input: CastInput): SpellResolution {
         const row = base(combatant);
         row.mode = "projectiles";
         row.projectiles = per.get(combatant.id) ?? 0;
-        const parts: DamagePart[] = Array.from({ length: row.projectiles }, (_, index) => ({ formula: `1d${primary.projectileDice.sides}${primary.projectileDice.flat ? `+${primary.projectileDice.flat}` : ""}`, type: primary.damageType, label: `${spec.name} ${index + 1}` }));
+        const parts: DamagePart[] = Array.from({ length: row.projectiles }, (_, index) => unresisted({ formula: `1d${primary.projectileDice.sides}${primary.projectileDice.flat ? `+${primary.projectileDice.flat}` : ""}`, type: primary.damageType, label: `${spec.name} ${index + 1}` }));
         afterDamage(row, row.projectiles ? applyDamage(combatant, parts, dice) : noDamage(combatant));
         targets.push(row);
       }
@@ -368,7 +373,7 @@ export function pcSpell(entry: { runtime: CharacterRuntime }, derived: DerivedCh
   const level = chosen.kind === "slot" ? chosen.level : chosen.kind === "pact" ? derived.pactMagic?.level ?? view.level : view.level;
   return {
     spec: { spellId, name: view.name, level, exec },
-    casterStats: list ? { attackBonus: list.attackBonus, saveDc: list.saveDc, modifier: derived.abilities[list.ability].modifier, level: derived.level } : { ...scrollStats(view.level), modifier: 0, level: derived.level },
+    casterStats: { ...(list ? { attackBonus: list.attackBonus, saveDc: list.saveDc, modifier: derived.abilities[list.ability].modifier, level: derived.level } : { ...scrollStats(view.level), modifier: 0, level: derived.level }), ...(derived.ignoresResistance?.length ? { ignoresResistance: derived.ignoresResistance } : {}) },
     spend: (runtime) => castSpell(runtime, derived, { id: view.id, name: view.name, level: view.level, duration: view.duration, ritual: view.ritual }, chosen),
   };
 }
