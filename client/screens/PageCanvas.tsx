@@ -883,7 +883,7 @@ function SceneBoard({ page, tokens, selected, targeting, turnTokenId, acting, jo
       leave={Boolean(acting && acting.id !== token.id && token.represents && !targeting)} onPointerDown={(event) => onPointerDown(event, token)} onContextMenu={(event) => onContextMenu(event, token)} onDoubleClick={() => onDoubleClick(token)} onLeave={() => onLeave(token)} />
   );
   const row = (label: string, kind: "pc" | "npc", list: Token[], hint: string) => (
-    <section className="cl-scene-row" aria-label={label}>
+    <section className={`cl-scene-row ${kind}`} aria-label={label}>
       <h4>{label}{list.length ? <span className="cl-quiet"> {list.length}</span> : null}</h4>
       <div className="cl-scene-cards">{list.length ? list.map(card(kind)) : <span className="cl-scene-hint cl-quiet cl-small">{hint}</span>}</div>
     </section>
@@ -928,8 +928,10 @@ function SceneIcon({ token, kind, journal, ac, selected, picked, candidate, turn
       onPointerDown={onPointerDown} onContextMenu={onContextMenu} onDoubleClick={onDoubleClick}>
       {turn ? <span className="cl-scene-now">행동 중</span> : null}
       <div className="cl-scene-portrait">
-        {fraction !== null ? <span className="cl-scene-gauge" style={{ height: `${Math.round(fraction * 100)}%` }} aria-hidden="true" /> : null}
         {token.image ? <ArtImage src={token.image} className="cl-scene-art" alt={token.name} /> : <span className="cl-scene-glyph">{kind === "npc" ? SKULL : PERSON}</span>}
+        {/* R69 (D204): Baldur's Gate style — a translucent red tide over the portrait rises with the hit points lost.
+            A creature at full health shows its face clean; the lower it gets, the more of it is under the red. */}
+        {fraction !== null ? <span className="cl-scene-gauge" style={{ height: `${Math.round((1 - fraction) * 100)}%` }} aria-hidden="true" /> : null}
         {ac !== undefined ? <span className="cl-scene-ac" title={`AC ${ac}`} aria-label={`AC ${ac}`}><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3Z" fill="#161a21" stroke="#8b93a3" strokeWidth="1.4" /></svg><b>{ac}</b></span> : null}
         {markers.length ? <div className="cl-scene-markers">{markers.slice(0, 6).map((marker) => <span key={marker.name} className="cl-marker" title={marker.name}>{MARKER_GLYPH[marker.name] ?? "•"}{marker.badge !== undefined ? <small>{marker.badge}</small> : null}</span>)}</div> : null}
         <span className="cl-scene-name">{token.name}{hp && (hp.value !== undefined || hp.max !== undefined) ? <small>{hp.value ?? "?"}{hp.max !== undefined ? `/${hp.max}` : ""}</small> : null}</span>
