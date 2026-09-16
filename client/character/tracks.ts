@@ -368,6 +368,7 @@ function applyClassWide(ledger: Ledger, cls: ClassView, state: ClassState) {
 
   for (const rule of CLASS_RESOURCES) {
     if (rule.classSlug !== cls.slug || level < rule.minLevel) continue;
+    if (rule.subclassId && state.subclassId !== rule.subclassId) continue;
     const max = rule.column ? numericColumn(row.columns[rule.column]) : rule.maximum ? rule.maximum(level, (key) => ledger.abilityMod(key)) : 0;
     if (max <= 0) continue;
     const recovery = rule.recoveryFrom && level >= rule.recoveryFrom.level ? rule.recoveryFrom.recovery : rule.recovery;

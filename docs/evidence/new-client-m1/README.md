@@ -1,6 +1,6 @@
 # 새 클라이언트 M1 증거 (자동 캡처)
 
-생성: 2026-09-16T05:41:38.330Z · `node --import tsx scripts/capture-client-m1.mjs`
+생성: 2026-09-16T05:59:08.774Z · `node --import tsx scripts/capture-client-m1.mjs`
 
 Chromium이 Vite 개발 서버(포트 1430)에서 마법사를 처음부터 끝까지 진행하고, 보충 모듈(합성 픽스처)을 설치한 뒤 설치 콘텐츠로 캐릭터를 만든다.
 

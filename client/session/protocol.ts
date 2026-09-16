@@ -126,7 +126,7 @@ export type ClientCommand =
   /** R12 (DM): a monster spends Legendary Resistance on a failed save in a spell card — that row is re-applied as a success. */
   /** R19: use one of an NPC's traits — spends a use when the DM gave that trait a per-day count. */
   /** R23: something on the sheet (a feature with a 추가 행동 note) spent this turn's action or bonus action. */
-  | { type: "act.spend"; actor: ActorRef; which: "action" | "bonus" }
+  | { type: "act.spend"; actor: ActorRef; which: "action" | "bonus"; /** R34 (D171): give the bucket back instead of spending it — a contract's `economy.modify` with a positive amount (행동 폭증). */ grant?: boolean; /** What granted it, for the log. */ source?: string }
   | { type: "act.trait"; actor: ActorRef; name: string }
   /** R16: put a summoned creature on the summoner's scene — its own journal entry, controlled by the summoner's controller. */
   | { type: "act.summon"; summoner: ActorRef; monsterId: string; count?: number; spellId?: string }

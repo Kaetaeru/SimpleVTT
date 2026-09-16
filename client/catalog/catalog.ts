@@ -10,6 +10,7 @@ import type {
   AbilityKey, CatalogEntry, CreationIndexJson, EntryJson, IndexClassChoiceJson, IndexClassJson, IndexSpeciesSemanticsJson,
   ProgressionCatalogJson, ProgressionLevelRowJson, RuleModuleJson, SpellPresentationJson,
 } from "./types";
+import { parseContract, type CommonPlayContract } from "../rules/contract";
 
 export interface FeatureRecord {
   /** Stable id such as `fighter.second-wind` or `dnd.srd521.feature.cleric.life-domain.preserve-life`. */
@@ -233,6 +234,11 @@ export class ContentCatalog {
   readonly classOptions: Record<string, ClassOptionDefinition[]>;
   readonly index: CreationIndexJson;
   readonly warnings: string[] = [];
+  /**
+   * R34 (D171): every `common-play` contract in the installed content, keyed by the feature rule key it belongs to
+   * (`fighter.action-surge`). The client used to import these modules and read nothing out of them.
+   */
+  readonly contracts = new Map<string, CommonPlayContract>();
   private readonly spellIdByName = new Map<string, string>();
   /** Module spell ids that name a presentation-catalog spell under a different slug. */
   readonly spellAliases = new Map<string, string>();
@@ -264,10 +270,14 @@ export class ContentCatalog {
       };
       if (this.entries.has(raw.id) && scope === "installed") this.warnings.push(`설치 모듈 ${module.moduleId}의 ${raw.id}가 기존 항목을 덮어씁니다.`);
       this.entries.set(raw.id, entry);
+      const contract = mechanic<Record<string, unknown>>(entry, "common-play");
+      if (contract) { const parsed = parseContract(contract, entry.id); this.contracts.set(parsed.ruleKey, parsed); }
     }
   }
 
   entry(id: string) { return this.entries.get(id); }
+  /** R34 (D171): the contract for a feature rule key (`featureRuleKey(feature.id)`), when the content ships one. */
+  contractFor(ruleKey: string) { return this.contracts.get(ruleKey); }
   name(id: string) { return this.entries.get(id)?.name ?? this.spellById(id)?.name ?? id; }
   byCategory(category: string) { return [...this.entries.values()].filter((entry) => entry.category === category); }
 

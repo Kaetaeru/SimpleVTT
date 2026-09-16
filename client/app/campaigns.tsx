@@ -117,7 +117,8 @@ export interface CampaignsState {
   /** R17: draw rows from a rollable table; the host rolls and posts the result. */
   rollTable: (name: string, count?: number, mode?: "public" | "gm" | "self") => void;
   /** R23: tell the table that a sheet-side use spent this turn's action or bonus action. */
-  spendEconomy: (actor: ActorRef, which: "action" | "bonus") => void;
+  /** R34 (D171): `grant` hands the bucket back instead of spending it (행동 폭증). */
+  spendEconomy: (actor: ActorRef, which: "action" | "bonus", options?: { grant?: boolean; source?: string }) => void;
   /** R19: use an NPC trait; a per-day count the DM set is spent. */
   useTrait: (actor: ActorRef, name: string) => void;
   /** R16: put a summoned creature on the board (its own journal entry, controlled by the summoner's controller). */
@@ -503,7 +504,7 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
   const saveMacros = useCallback((macros: Macro[]) => send({ type: "table.macros", macros }), [send]);
   const saveTables = useCallback((tables: RollTable[]) => send({ type: "table.tables", tables }), [send]);
   const rollTable = useCallback((name: string, count = 1, mode: "public" | "gm" | "self" = "public") => send({ type: "chat.table", name, count, mode }), [send]);
-  const spendEconomy = useCallback((actor: ActorRef, which: "action" | "bonus") => send({ type: "act.spend", actor, which }), [send]);
+  const spendEconomy = useCallback((actor: ActorRef, which: "action" | "bonus", options: { grant?: boolean; source?: string } = {}) => send({ type: "act.spend", actor, which, ...options }), [send]);
   const useTrait = useCallback((actor: ActorRef, name: string) => send({ type: "act.trait", actor, name }), [send]);
   const summon = useCallback((summoner: ActorRef, monsterId: string, options: { count?: number; spellId?: string } = {}) => send({ type: "act.summon", summoner, monsterId, ...(options.count ? { count: options.count } : {}), ...(options.spellId ? { spellId: options.spellId } : {}) }), [send]);
   const dismissSummons = useCallback((summoner: ActorRef, spellId?: string) => send({ type: "act.dismiss", summoner, ...(spellId ? { spellId } : {}) }), [send]);

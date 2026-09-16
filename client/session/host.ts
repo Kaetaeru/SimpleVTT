@@ -876,6 +876,13 @@ export class TableHost {
         const actor = this.resolveActor(command.actor);
         if (!actor) return refuse("그 인물을 찾을 수 없습니다");
         if (!isGm && !this.mayAct(userId, command.actor, actor.entry)) return refuse("자기 캐릭터의 행동만 씁니다");
+        // R34 (D171): 행동 폭증's contract says `economy.modify action.extra.non-magic +1`. Until now that was a
+        // sentence of prose next to the button and the turn's 행동 chip stayed spent.
+        if (command.grant) {
+          this.markUnused(command.actor, command.which === "bonus" ? "bonus" : "action");
+          this.say({ type: "system", who: "", content: `${actor.entry.name}: ${command.source ?? "특성"} — 이번 턴에 ${command.which === "bonus" ? "추가 행동" : "행동"} 하나를 더 씁니다` });
+          return;
+        }
         this.markUsed(command.actor, command.which === "bonus" ? "bonus" : "action");
         return;
       }
@@ -1361,6 +1368,12 @@ export class TableHost {
     this.say({ type: "system", who: "", content: `${entry.name}의 격노가 끝났습니다 (${reason})` });
   }
 
+  /** R34 (D171): the other direction — a contract handed this turn its action back. */
+  private markUnused(ref: ActorRef, which: "action" | "bonus") {
+    const turn = this.turnOf(ref);
+    if (!turn || this.tracker.turns[this.tracker.current]?.id !== turn.id) return;
+    this.setTracker({ ...this.tracker, turns: this.tracker.turns.map((item) => (item.id === turn.id ? { ...item, [which === "action" ? "actionUsed" : "bonusUsed"]: false } : item)) });
+  }
   private markUsed(ref: ActorRef, which: "action" | "bonus") {
     const turn = this.turnOf(ref);
     if (!turn || this.tracker.turns[this.tracker.current]?.id !== turn.id) return;

@@ -7,7 +7,8 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type DragEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useCampaigns } from "../app/campaigns";
-import { remainingText } from "../rules/activation";
+import { featureRuleKey, remainingText } from "../rules/activation";
+import { characterScope, economyBucketOf, runEntryPoint } from "../rules/contract";
 import { useClient } from "../app/context";
 import type { JournalCharacter, JournalEntry, Pending } from "../campaign/journal";
 import { canEdit, canView, newJournalNpc, pendingFor, pendingValue } from "../campaign/journal";
@@ -463,7 +464,18 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
     if (entry.kind !== "character" || !derived) return;
     const outcome = await activateFeature(feature, { source: entry.source, catalog, derived, runtime: currentRuntime(), rollDice: rollToChat, save: saveRuntime });
     if (outcome === "refused") alert("남은 횟수가 없습니다.");
-    if (outcome === "done") { c.say(`/em ${token.name}: ${feature.name} 사용`); if (bonus) c.spendEconomy(me, "bonus"); }
+    if (outcome !== "done") return;
+    c.say(`/em ${token.name}: ${feature.name} 사용`);
+    if (bonus) c.spendEconomy(me, "bonus");
+    // R34 (D171): the feature's own contract, when the content ships one. 행동 폭증's `economy.modify` is the first
+    // one that reaches the table: the turn gets its 행동 back instead of a sentence telling the player it did.
+    const contract = catalog.contractFor(featureRuleKey(feature.id));
+    const run = contract ? runEntryPoint(contract, contract.entryPoints[0]?.id ?? "", characterScope(derived)) : null;
+    for (const effect of run?.effects ?? []) {
+      if (effect.kind !== "economy" || effect.amount <= 0) continue;
+      const which = economyBucketOf(effect.bucket);
+      if (which === "action" || which === "bonus") c.spendEconomy(me, which, { grant: true, source: feature.name });
+    }
   };
   /**
    * R29 (D155): the reaction menu. A player used to have exactly three reactions and all three had to be offered to

@@ -93,6 +93,8 @@ export interface ClassResourceRule {
   /** Recovery that replaces `recovery` from a class level (Font of Inspiration: Bardic Inspiration on a short rest from 5). */
   recoveryFrom?: { level: number; recovery: "short-rest" | "long-rest" };
   minLevel: number;
+  /** R34 (D172): a pool a subclass grants — only created when the character took that subclass. */
+  subclassId?: string;
   /** English spell name this pool casts for free. */
   spell?: string;
 }
@@ -123,4 +125,7 @@ export const CLASS_RESOURCES: ClassResourceRule[] = [
   { id: "resource.warlock.contact-patron", label: "후원자와 접촉 (이계 접촉 무료 시전)", classSlug: "warlock", maximum: () => 1, recovery: "long-rest", minLevel: 9, spell: "Contact Other Plane" },
   { id: "resource.druid.wild-resurgence", label: "야생의 부활 (슬롯 회복)", classSlug: "druid", maximum: () => 1, recovery: "long-rest", minLevel: 5 },
   { id: "resource.barbarian.relentless-rage", label: "불굴의 격노 DC", classSlug: "barbarian", maximum: () => 10, recovery: "short-rest", minLevel: 11 },
+  // R34 (D172): the pool the fiend patron's contract pays from. It named `resource:warlock.fiend.dark-ones-own-luck`
+  // and nothing in the client ever created it, so the feature could not be spent at all.
+  { id: "resource.warlock.fiend.dark-ones-own-luck", label: "어둠의 존재의 행운", classSlug: "warlock", subclassId: "dnd.srd521.subclass.warlock.fiend-patron", maximum: (_level, mod) => Math.max(1, mod("cha")), recovery: "long-rest", minLevel: 6 },
 ];
