@@ -64,7 +64,7 @@ export interface ContractPayment {
 export type ContractOperation =
   | { kind: "economy.modify"; bucket: string; amount: Expr }
   | { kind: "condition.apply"; condition: string; target: string; when?: Expr }
-  | { kind: "healing.apply"; amount: Expr; target: string; when?: Expr }
+  | { kind: "healing.apply"; dice?: string; amount?: Expr; target: string; when?: Expr }
   | { kind: "roll.modify"; mode: string; dice?: string; value?: Expr; diceResourceId?: string; when?: Expr }
   /**
    * R38 (D178): the general modifier. `property` names what changes in this engine's vocabulary (`ac.bonus`,
@@ -82,7 +82,15 @@ export type ContractOperation =
   /** R39 (D179): end an effect by key — a new Wild Shape replacing the last one. */
   | { kind: "effect.remove"; selector: string; target: string; when?: Expr }
   /** R39 (D179): pause an effect without ending it (an antimagic field); the sheet shows it, greyed, with the reason. */
-  | { kind: "effect.suppress"; selector: string; suppressed: boolean; reason: string; when?: Expr };
+  | { kind: "effect.suppress"; selector: string; suppressed: boolean; reason: string; when?: Expr }
+  /**
+   * R40 (D180): the pool a use spends or gives back. A negative `amount` spends; `resource` is the client's pool id.
+   */
+  | { kind: "resource.change"; resourceId: string; amount: Expr; target: string; when?: Expr }
+  /** R40 (D180): dice rolled and applied as healing or temporary hit points; `dice` and `amount` add up to the formula. */
+  | { kind: "temp-hp.grant"; dice?: string; amount?: Expr; target: string; when?: Expr }
+  /** R40 (D180): dice rolled and logged as damage a feature deals (Breath Weapon), without choosing who takes it. */
+  | { kind: "damage.apply"; dice?: string; amount?: Expr; damageType: string; target: string; when?: Expr };
 
 /** The saving throw an entry point forces before its operations run. */
 export interface ContractTest {
@@ -152,8 +160,8 @@ export const KNOWN_FACTS = new Set(["attack.weapon.ranged", "attack.weapon.melee
  * into a value; `APPLIED` are the ones a call site actually carries to the table. They are deliberately separate —
  * an operation the executor understands but nobody applies changes nothing, and saying otherwise would be a lie.
  */
-export const COMPUTED_OPERATIONS = ["economy.modify", "condition.apply", "healing.apply", "roll.modify", "property.modify", "effect.apply", "effect.remove", "effect.suppress"] as const;
-export const APPLIED_OPERATIONS = ["economy.modify", "roll.modify", "property.modify", "effect.apply", "effect.remove", "effect.suppress"] as const;
+export const COMPUTED_OPERATIONS = ["economy.modify", "condition.apply", "healing.apply", "roll.modify", "property.modify", "effect.apply", "effect.remove", "effect.suppress", "resource.change", "temp-hp.grant", "damage.apply"] as const;
+export const APPLIED_OPERATIONS = ["economy.modify", "roll.modify", "property.modify", "effect.apply", "effect.remove", "effect.suppress", "resource.change", "temp-hp.grant", "damage.apply", "healing.apply"] as const;
 
 const OPERATION_KINDS = new Set<string>(COMPUTED_OPERATIONS);
 /** R39 (D179): `until-duration` is the only lifetime this engine counts; the rest end on something it cannot see. */
@@ -174,7 +182,21 @@ function parseOperations(raw: unknown, path: string, unsupported: string[]): Con
     if (!OPERATION_KINDS.has(kind)) { unsupported.push(`${at}: ${kind || "이름 없는 연산"}`); return; }
     if (kind === "economy.modify") { out.push({ kind, bucket: String(operation.bucket ?? ""), amount: (operation.amount as Expr) ?? { value: 0 } }); return; }
     if (kind === "condition.apply") { out.push({ kind, condition: String(operation.condition ?? ""), target: String(operation.target ?? "target"), when: isExpr(operation.when) ? operation.when : undefined }); return; }
-    if (kind === "healing.apply") { out.push({ kind, amount: (operation.amount as Expr) ?? { value: 0 }, target: String(operation.target ?? "self"), when: isExpr(operation.when) ? operation.when : undefined }); return; }
+    if (kind === "healing.apply") { out.push({ kind, dice: operation.dice ? String(operation.dice) : undefined, amount: isExpr(operation.amount) ? operation.amount : typeof operation.amount === "number" ? { value: operation.amount } : undefined, target: String(operation.target ?? "self"), when: isExpr(operation.when) ? operation.when : undefined }); return; }
+    if (kind === "resource.change") {
+      const resource = String(operation.resource ?? "");
+      if (!resource) { unsupported.push(`${at}: resource.change에 resource가 없습니다`); return; }
+      const raw = operation.amount;
+      out.push({ kind, resourceId: resourceIdOf(resource), amount: isExpr(raw) ? raw : { value: typeof raw === "number" ? raw : (raw as { value?: number } | undefined)?.value ?? 0 }, target: String(operation.target ?? "self"), when: isExpr(operation.when) ? operation.when : undefined });
+      return;
+    }
+    if (kind === "temp-hp.grant" || kind === "damage.apply") {
+      const raw = operation.amount;
+      const amount = isExpr(raw) ? raw : raw === undefined ? undefined : { value: raw };
+      if (kind === "damage.apply") out.push({ kind, dice: operation.dice ? String(operation.dice) : undefined, amount, damageType: String(operation.damageType ?? "타격"), target: String(operation.target ?? "target"), when: isExpr(operation.when) ? operation.when : undefined });
+      else out.push({ kind, dice: operation.dice ? String(operation.dice) : undefined, amount, target: String(operation.target ?? "self"), when: isExpr(operation.when) ? operation.when : undefined });
+      return;
+    }
     if (kind === "effect.apply") {
       const template = (operation.template ?? {}) as Record<string, unknown>;
       out.push({ kind, lifetime: String(operation.lifetime ?? "until-duration"), target: String(operation.target ?? "self"), when: isExpr(operation.when) ? operation.when : undefined, template: {
@@ -299,6 +321,7 @@ export function runEntryPoint(contract: CommonPlayContract, entryId: string, sco
     if (operation.kind === "economy.modify") effects.push({ kind: "economy", bucket: operation.bucket, amount: numeric(evaluate(operation.amount, scope)) || 0 });
     else if (operation.kind === "condition.apply") effects.push({ kind: "condition", condition: operation.condition, target: operation.target });
     else if (operation.kind === "healing.apply") effects.push({ kind: "heal", amount: numeric(evaluate(operation.amount, scope)) || 0, target: operation.target });
+    else continue;
   }
   return { effects, ...(entry.test ? { test: entry.test, testDc: numeric(evaluate(entry.test.dc, scope)) || 0 } : {}) };
 }

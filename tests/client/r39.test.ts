@@ -46,10 +46,10 @@ test("effects: only until-duration gets a counter; the rest print their reason (
   const made = build({ name: "r", classes: "ranger", level: 20 });
   const scope = characterScope(made.derived);
   // 주적 is concentration up to an hour: a duration the table watches, with no countdown invented for it.
-  const favored = contractDurations(cat, scope)("ranger.favored-enemy")!;
+  const favored = contractDurations(cat, scope)("ranger.favored-enemy")!.duration!;
   assert.deepEqual(favored, { text: "집중, 최대 1시간", instantaneous: false, concentration: true });
   // 격노 states its rounds, so it counts.
-  const rage = contractDurations(cat, characterScope(build({ name: "b", classes: "barbarian", level: 5 }).derived))("barbarian.rage")!;
+  const rage = contractDurations(cat, characterScope(build({ name: "b", classes: "barbarian", level: 5 }).derived))("barbarian.rage")!.duration!;
   assert.equal(rage.rounds, 100);
   assert.equal(contractDurations(cat, scope)("없는.특성"), undefined);
 });
