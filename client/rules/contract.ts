@@ -103,7 +103,13 @@ export type ContractOperation =
   | { kind: "movement.relocate"; mode: string; target: string; distance?: Expr; note?: string; when?: Expr }
   | { kind: "movement.grant"; target: string; distance: Expr; note?: string; when?: Expr }
   | { kind: "content.grant"; contentId: string; target: string; when?: Expr }
-  | { kind: "adjudication.request"; question: string; when?: Expr }
+  /**
+   * R57 (D192): a question for the table. With `fact` it stops being prose and becomes a **checkbox**: the app asks
+   * it at the moment named (`pre-roll`, `reaction`), and the operations written `when: {ref: "fact:<id>"}` run only
+   * if the player ticked it. That is how a rule gated on where people are standing runs in a scene with no
+   * positions (D109) — the app does every number, the person answers the one fact it cannot see.
+   */
+  | { kind: "adjudication.request"; question: string; fact?: { id: string; at: string }; when?: Expr }
   | { kind: "artifact.spawn"; template: { monsterId?: string; name?: string; count?: Expr }; when?: Expr }
   | { kind: "artifact.remove" | "artifact.repair" | "artifact.damage" | "artifact.relocate" | "artifact.update"; artifact: string; amount?: Expr; damageType?: string; placementRef?: string; metadataPatch?: Record<string, unknown>; when?: Expr };
 
@@ -213,6 +219,8 @@ export const LIFETIME_KO: Record<string, string> = {
   "until-event": "그 일이 일어날 때까지", "until-source-recast": "다시 시전할 때까지", "with-parent": "근원이 끝날 때까지", durable: "계속", "world-persistent": "세계에 남음",
 };
 // R51 (D186): `set-die` replaces the d20 with a fixed face (전투 기량의 은총 turns a miss into a 20).
+/** R57 (D192): the moments this engine can put a declared fact in front of somebody. */
+export const FACT_MOMENTS = new Set(["pre-roll", "reaction"]);
 const ROLL_MODES = new Set(["add-die", "add-flat", "reroll", "set-die", "subtract-die"]);
 
 function parseOperations(raw: unknown, path: string, unsupported: string[]): ContractOperation[] {
@@ -241,7 +249,12 @@ function parseOperations(raw: unknown, path: string, unsupported: string[]): Con
     if (kind === "movement.relocate") { out.push({ kind, mode: String(operation.mode ?? "teleport"), target: String(operation.target ?? "self"), distance: isExpr(operation.distance) ? operation.distance : operation.distance === undefined ? undefined : { value: operation.distance }, note: operation.note ? String(operation.note) : undefined, when: isExpr(operation.when) ? operation.when : undefined }); return; }
     if (kind === "movement.grant") { out.push({ kind, target: String(operation.target ?? "self"), distance: expr(operation.distance), note: operation.note ? String(operation.note) : undefined, when: isExpr(operation.when) ? operation.when : undefined }); return; }
     if (kind === "content.grant") { out.push({ kind, contentId: String(operation.contentId ?? ""), target: String(operation.target ?? "self"), when: isExpr(operation.when) ? operation.when : undefined }); return; }
-    if (kind === "adjudication.request") { out.push({ kind, question: String((operation.interaction as { prompt?: string } | undefined)?.prompt ?? operation.question ?? "표에서 판단"), when: isExpr(operation.when) ? operation.when : undefined }); return; }
+    if (kind === "adjudication.request") {
+      const fact = operation.fact as { id?: string; at?: string } | undefined;
+      if (fact && !FACT_MOMENTS.has(String(fact.at ?? ""))) { unsupported.push(`${at}: fact.at ${String(fact.at)}`); return; }
+      out.push({ kind, question: String((operation.interaction as { prompt?: string } | undefined)?.prompt ?? operation.question ?? "표에서 판단"), ...(fact?.id ? { fact: { id: String(fact.id), at: String(fact.at) } } : {}), when: isExpr(operation.when) ? operation.when : undefined });
+      return;
+    }
     if (kind === "artifact.spawn") {
       const template = (operation.template ?? {}) as Record<string, unknown>;
       out.push({ kind, template: { monsterId: template.monsterId ? String(template.monsterId) : undefined, name: template.name ? String(template.name) : undefined, count: template.count === undefined ? undefined : expr(template.count, 1) }, when: isExpr(operation.when) ? operation.when : undefined });

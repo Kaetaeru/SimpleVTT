@@ -117,7 +117,7 @@ export interface ReactionPrompt {
    * R54 (D189): the reactions a contract opened this window for — what each one is called and, in one line, what it
    * would do. The Shield spell rides here too when the reactor can cast it, so a player sees one question, not two.
    */
-  guard?: { features: Array<{ name: string; hint: string }>; shield?: boolean };
+  guard?: { features: Array<{ name: string; hint: string; /** R57 (D192): facts the reactor confirms by pressing the button — the hint already spells them out. */ facts?: Array<{ id: string; question: string }> }>; shield?: boolean; /** R57 (D192): which window this is — the reactor's own skin, or an ally's. */ trigger?: string };
   /** Filled once answered: the attack card id, or declined; for shield: whether it was cast; for counterspell: whether it landed. */
   outcome?: { attacked?: string; declined?: boolean; shielded?: boolean; countered?: boolean; card?: string; rolled?: string };
 }

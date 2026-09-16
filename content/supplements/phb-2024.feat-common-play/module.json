@@ -212,14 +212,25 @@
         },
         "operations": [
          {
+          "kind": "adjudication.request",
+          "question": "대상을 향해 직선으로 10피트 이상 이동했다",
+          "fact": {
+           "id": "charged",
+           "at": "pre-roll"
+          }
+         },
+         {
           "kind": "damage.apply",
           "dice": "1d8",
           "damageType": "weapon",
-          "target": "attack-target"
+          "target": "attack-target",
+          "when": {
+           "ref": "fact:charged"
+          }
          },
          {
           "kind": "adjudication.request",
-          "question": "대상을 향해 직선으로 10피트 이상 이동했을 때 — 대신 10피트 밀기를 골라도 됩니다"
+          "question": "피해 대신 10피트 밀기를 골라도 됩니다"
          }
         ]
        }
@@ -350,7 +361,7 @@
          },
          {
           "kind": "adjudication.request",
-          "question": "적에게 붙어 있어도 쇠뇌 공격에 불리 없음"
+          "question": "근접 사격: 이 앱은 그 불리를 애초에 적용하지 않습니다 (장면에 거리가 없음) — 이미 효과가 난 셈입니다"
          }
         ]
        }
@@ -469,16 +480,23 @@
         },
         "operations": [
          {
+          "kind": "adjudication.request",
+          "question": "기교 무기를 들고 있고, 맞은 것이 근접 공격이다",
+          "fact": {
+           "id": "finesse-in-hand",
+           "at": "reaction"
+          }
+         },
+         {
           "kind": "property.modify",
           "property": "ac.bonus",
           "operation": "add",
           "value": {
            "ref": "proficiency.bonus"
+          },
+          "when": {
+           "ref": "fact:finesse-in-hand"
           }
-         },
-         {
-          "kind": "adjudication.request",
-          "question": "기교 무기를 들고 근접 공격에 맞았을 때만"
          }
         ]
        }
@@ -744,16 +762,23 @@
         },
         "operations": [
          {
+          "kind": "adjudication.request",
+          "question": "자신의 턴에 공격 행동의 일부로 휘두른다",
+          "fact": {
+           "id": "attack-action",
+           "at": "pre-roll"
+          }
+         },
+         {
           "kind": "damage.apply",
           "amount": {
            "ref": "proficiency.bonus"
           },
           "damageType": "weapon",
-          "target": "attack-target"
-         },
-         {
-          "kind": "adjudication.request",
-          "question": "자신의 턴에 공격 행동의 일부로 중량 무기를 명중시켰을 때"
+          "target": "attack-target",
+          "when": {
+           "ref": "fact:attack-action"
+          }
          }
         ]
        }
@@ -999,14 +1024,43 @@
       "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
       "schemaVersion": "0.2-draft",
       "id": "feat:interception",
-      "entryPoints": [
+      "interceptors": [
        {
-        "id": "rule",
-        "invocation": "manual",
+        "id": "guard",
+        "timing": "reaction.window",
+        "slot": "reaction",
+        "trigger": "attack.hit-ally",
+        "interaction": {
+         "id": "use",
+         "kind": "choice",
+         "responder": "actor-owner",
+         "mode": "blocking",
+         "input": {
+          "type": "boolean"
+         },
+         "revalidate": "if-revision-changed",
+         "stalePolicy": "reject"
+        },
         "operations": [
          {
           "kind": "adjudication.request",
-          "question": "5피트 안의 다른 이가 맞았을 때 반응으로 피해 1d10 + 숙련 감소 — 장면에 위치가 없어 표에서 선언합니다"
+          "question": "맞은 사람에게서 5피트 안에 있고, 방패나 무기를 들고 있다",
+          "fact": {
+           "id": "within-5ft",
+           "at": "reaction"
+          }
+         },
+         {
+          "kind": "property.modify",
+          "property": "damage-taken.reduce",
+          "operation": "add",
+          "dice": "1d10",
+          "value": {
+           "ref": "proficiency.bonus"
+          },
+          "when": {
+           "ref": "fact:within-5ft"
+          }
          }
         ]
        }
@@ -1905,7 +1959,7 @@
          },
          {
           "kind": "adjudication.request",
-          "question": "적에게 붙어 있어도, 장거리여도 원거리 공격에 불리 없음"
+          "question": "근접 사격·장거리 사격: 이 앱은 그 불리를 애초에 적용하지 않습니다 (장면에 거리가 없음) — 이미 효과가 난 셈입니다"
          }
         ]
        }
@@ -2184,7 +2238,7 @@
          },
          {
           "kind": "adjudication.request",
-          "question": "적에게 붙어 있어도 주문 공격에 불리 없음"
+          "question": "근접 시전: 이 앱은 그 불리를 애초에 적용하지 않습니다 (장면에 거리가 없음) — 이미 효과가 난 셈입니다"
          },
          {
           "kind": "adjudication.request",
@@ -2234,7 +2288,11 @@
         "operations": [
          {
           "kind": "adjudication.request",
-          "question": "명중시키면 대상을 5피트 밀 수 있습니다 (턴당 한 번)"
+          "question": "명중하면 대상을 5피트 민다 (빈 공간이 있다)",
+          "fact": {
+           "id": "push-5ft",
+           "at": "pre-roll"
+          }
          }
         ]
        }

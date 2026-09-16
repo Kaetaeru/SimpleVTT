@@ -12,8 +12,8 @@ import type { CastMethod } from "../character/play";
 import type { AttackOverrides } from "../rules/resolve";
 import type { CampaignClock, CampaignSettings, ChatMessage, Macro, PlayerRole, RollTable } from "../campaign/model";
 
-// R54 (D189): 28 — `act.guard`, the reaction a contract declared for itself.
-export const PROTOCOL_VERSION = 28;
+// R57 (D192): 29 — declared facts travel with the riders and with a taken reaction.
+export const PROTOCOL_VERSION = 29;
 
 export interface Presence { userId: string; displayName: string; role: PlayerRole; color: string; connected: boolean }
 
@@ -56,7 +56,7 @@ export type AttackRef = { source: "weapon"; attackId: string } | { source: "npc"
  * rule keys of `pre-roll-attack` entry points the player ticked in the dialog, resolved against the sheet's own
  * `attackRiders`. A key the sheet does not offer is ignored rather than trusted.
  */
-export interface AttackRiders { contracts?: string[]; sneak?: boolean; smiteSlot?: number; /** R12: the Cleave mastery's follow-up attack (no ability modifier to damage). */ cleave?: boolean; /** R32 (D166): 야만적 공격자 — reroll this swing's weapon damage dice and keep the better set. */ savage?: boolean; /** R33 (D168): the off-hand swing of a two-weapon set — no ability modifier on its damage without 쌍수 전투. */ offHand?: boolean }
+export interface AttackRiders { contracts?: string[]; /** R57 (D192): ids of the facts the player confirmed in the dialog ("I moved ten feet in a straight line"). */ facts?: string[]; sneak?: boolean; smiteSlot?: number; /** R12: the Cleave mastery's follow-up attack (no ability modifier to damage). */ cleave?: boolean; /** R32 (D166): 야만적 공격자 — reroll this swing's weapon damage dice and keep the better set. */ savage?: boolean; /** R33 (D168): the off-hand swing of a two-weapon set — no ability modifier on its damage without 쌍수 전투. */ offHand?: boolean }
 
 export interface RollPayload { formula: string; total: number; /** R17: a die kept out of the total (kh/kl), one that came from an explosion, or one that counted as a success. */ dice: Array<{ sides: number; value: number; dropped?: boolean; exploded?: boolean; success?: boolean }>; modifier: number; label?: string; /** R17: set when the formula counts successes instead of summing. */ successes?: number; /** R17: rows drawn from a rollable table. */ drawn?: string[] }
 
@@ -114,7 +114,7 @@ export type ClientCommand =
   /** Attack (§12.2): the host resolves and applies, one card per target. */
   | { type: "act.attack"; attacker: ActorRef; targets: ActorRef[]; attack: AttackRef; riders?: AttackRiders; overrides?: AttackOverrides; /** Answering an opportunity prompt (the prompt's message id): the attack is the reactor's reaction. */ reaction?: string; /** R9: the readied action goes off (the 준비 mark is spent as the reaction). */ readied?: boolean }
   /** R54 (D189): take a reaction a contract declared (`reaction.window`) against the attack the prompt is holding. */
-  | { type: "act.guard"; messageId: string; feature: string }
+  | { type: "act.guard"; messageId: string; feature: string; /** R57 (D192): the facts the reactor confirmed when taking it. */ facts?: string[] }
   /** D96: `mover` leaves `from`'s reach (the 벗어남 button); the host asks `from`'s controller for an opportunity attack. */
   | { type: "act.provoke"; mover: ActorRef; from: ActorRef }
   /** The reactor's controller lets the opportunity go. */

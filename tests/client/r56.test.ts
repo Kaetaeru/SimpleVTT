@@ -85,7 +85,7 @@ test("R56: every supplement feat has a contract, and every contract parses (D191
   }
   assert.deepEqual(gaps, [], "this executor can run every part of every contract it ships");
   // The rest are prose the table judges — a mount, a kitchen, or five feet the scene cannot measure (D109).
-  assert.equal(mechanical, 24, "feats carrying at least one mechanical operation");
+  assert.equal(mechanical, 25, "feats carrying at least one mechanical operation (R57 turned 가로막기's prose into a gated reduction)");
 });
 
 test("R56: 대형 무기 달인 is a checkbox on a heavy weapon and a bonus action on a critical (D191)", () => {
@@ -96,13 +96,13 @@ test("R56: 대형 무기 달인 is a checkbox on a heavy weapon and a bonus acti
   // The pre-roll seam (R52): offered on a Heavy weapon, adding the proficiency bonus.
   const offered = offeredRiders(derived, sword);
   assert.deepEqual(offered.map((rider) => rider.key), ["feat:great-weapon-master"], JSON.stringify(derived.attackRiders));
-  assert.deepEqual(offered[0].damage, [{ formula: String(derived.proficiencyBonus), type: "weapon" }]);
+  assert.deepEqual(offered[0].damage, [{ formula: String(derived.proficiencyBonus), type: "weapon", factId: "attack-action" }], "R57 (D192): gated on the fact the app cannot see");
   assert.equal(offered[0].oncePerTurn, true);
   const light = derived.attacks.find((attack) => !attack.properties.includes("heavy") && attack.itemId);
   if (light) assert.deepEqual(offeredRiders(derived, light).map((rider) => rider.key), [], light.name);
 
   // Declared, it reaches the spec as a damage part of the weapon's own type.
-  const spec = pcAttackSpec({ runtime } as never, derived, sword.id, { contracts: ["feat:great-weapon-master"] }, catalog)!.spec;
+  const spec = pcAttackSpec({ runtime } as never, derived, sword.id, { contracts: ["feat:great-weapon-master"], facts: ["attack-action"] }, catalog)!.spec;
   const rider = spec.riders!.find((part) => part.label === "대형 무기 달인")!;
   assert.ok(rider, JSON.stringify(spec.riders));
   assert.equal(rider.formula, String(derived.proficiencyBonus));
@@ -138,7 +138,9 @@ test("R56: 방어적 결투가 opens a reaction window, and 명사수 ignores co
   const offers = pcGuards({ runtime: duellist.runtime }, duellist.derived, duellist.catalog, "attack.hit-self");
   assert.deepEqual(offers.map((offer) => offer.feature), ["방어적 결투가"]);
   assert.equal(offers[0].acBonus, duellist.derived.proficiencyBonus);
-  assert.ok(offers[0].notes.some((note) => note.includes("기교 무기")), JSON.stringify(offers[0].notes));
+  // R57 (D192): the finesse weapon is a fact the reactor confirms, not a line they read.
+  assert.equal(offers[0].acBonusFact, "finesse-in-hand");
+  assert.ok(offers[0].facts.some((fact) => fact.question.includes("기교 무기")), JSON.stringify(offers[0].facts));
 
   const shooter = withFeat("sharpshooter", "명사수");
   assert.equal(shooter.derived.ignoresCover, true, JSON.stringify(shooter.derived.activeEffects));

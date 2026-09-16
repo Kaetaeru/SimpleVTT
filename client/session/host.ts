@@ -1316,15 +1316,21 @@ export class TableHost {
         if (!reactor || reactor.entry.kind !== "character") return refuse("반응자를 찾을 수 없습니다");
         if (!isGm && !this.mayAct(userId, promptMessage.prompt.reactor, reactor.entry)) return refuse("반응자의 조종자만 답할 수 있습니다");
         if (this.reactionUsed(promptMessage.prompt.reactor)) return refuse("이번 라운드의 반응을 이미 썼습니다");
-        const offer = (this.options.pcGuards?.(reactor.entry, "attack.hit-self") ?? []).find((item) => item.feature === command.feature);
+        const trigger = (promptMessage.prompt.guard?.trigger as ReactionTrigger | undefined) ?? "attack.hit-self";
+        const offer = (this.options.pcGuards?.(reactor.entry, trigger) ?? []).find((item) => item.feature === command.feature);
         if (!offer) return refuse("그 반응은 지금 쓸 수 없습니다");
+        // R57 (D192): a number the contract gated on a fact only counts when the reactor confirmed it.
+        const confirmed = new Set(command.facts ?? []);
+        const acBonus = offer.acBonusFact && !confirmed.has(offer.acBonusFact) ? undefined : offer.acBonus;
+        const reduceFormula = offer.reduceFact && !confirmed.has(offer.reduceFact) ? undefined : offer.reduce;
+        if (offer.facts.length && !offer.facts.every((fact) => confirmed.has(fact.id)) && acBonus === undefined && !reduceFormula) return refuse("확인해야 할 조건이 남아 있습니다");
         const paid = this.options.pcPayContract?.(reactor.entry, offer.payments, "success");
         if (paid === null) return refuse("남은 횟수가 없습니다");
         if (paid) this.storeEntry({ ...reactor.entry, runtime: { ...paid, updatedAt: this.now() }, updatedAt: this.now() });
         this.markReactionUsed(promptMessage.prompt.reactor);
-        const rolled = offer.reduce ? rollGuard(offer.reduce, this.options.random ?? Math.random) : 0;
-        this.say({ ...promptMessage, prompt: { ...promptMessage.prompt, outcome: { rolled: userId } }, supersedes: promptMessage.id, content: `${promptMessage.content} → ${command.feature}${offer.acBonus ? ` (AC +${offer.acBonus})` : ""}${offer.reduce ? ` (피해 −${rolled})` : ""}` });
-        this.releaseHeld(command.messageId, false, { acBonus: offer.acBonus, reduce: rolled, label: command.feature });
+        const rolled = reduceFormula ? rollGuard(reduceFormula, this.options.random ?? Math.random) : 0;
+        this.say({ ...promptMessage, prompt: { ...promptMessage.prompt, outcome: { rolled: userId } }, supersedes: promptMessage.id, content: `${promptMessage.content} → ${command.feature}${acBonus ? ` (AC +${acBonus})` : ""}${reduceFormula ? ` (피해 −${rolled})` : ""}` });
+        this.releaseHeld(command.messageId, false, { acBonus, reduce: rolled, label: command.feature });
         return;
       }
       case "act.decline": {
@@ -1461,13 +1467,20 @@ export class TableHost {
     const canShield = !waits && resolution.outcome === "hit" && target.entry.kind === "character" && !fixed && !this.reactionUsed(targetRef) && Boolean(this.options.pcReactionSpell?.(target.entry, "dnd.srd521.spell.shield"));
     const guards = !waits && resolution.outcome === "hit" && target.entry.kind === "character" && !fixed && !this.reactionUsed(targetRef)
       ? this.options.pcGuards?.(target.entry, "attack.hit-self") ?? [] : [];
-    if (canShield || guards.length) {
+    // R57 (D192): if the creature that was hit has nothing to answer with, a bystander whose contract declares
+    // `attack.hit-ally` is asked instead. The target is always asked first — it is their skin — and only one window
+    // opens per swing, because the card is held once and a second holder would fight the first over it.
+    const bystander = !waits && resolution.outcome === "hit" && !fixed && !canShield && !guards.length ? this.bystanderGuard(target) : undefined;
+    if (canShield || guards.length || bystander) {
       const promptId = newMessageId();
       const attackerName = attacker.token?.name ?? attacker.entry.name;
       const targetName = target.token?.name ?? target.entry.name;
       this.held.set(promptId, { inputs, attacker, target, spec: prepared.spec, overrides, resolution, supersedes });
-      const offered = [...(canShield ? ["방패"] : []), ...guards.map((guard) => guard.feature)];
-      this.sayWithId(promptId, { type: "prompt", who: player?.displayName ?? "", playerId: inputs.by, content: `${attackerName}의 ${prepared.spec.name}이(가) ${targetName}에게 적중 (${resolution.attackTotal} vs AC ${resolution.targetAc}) — ${offered.join(" / ")} 반응?`, prompt: { kind: canShield ? "shield" : "guard", mover: { name: attackerName, ...inputs.attacker }, reactor: { name: targetName, ...targetRef }, attack: { name: prepared.spec.name, total: resolution.attackTotal, ac: resolution.targetAc }, ...(guards.length ? { guard: { features: guards.map((guard) => ({ name: guard.feature, hint: guardHint(guard) })), shield: canShield } } : {}) } });
+      const offers = bystander ? bystander.offers : guards;
+      const reactorRef = bystander ? this.refOf(bystander.actor) : targetRef;
+      const reactorName = bystander ? bystander.actor.token?.name ?? bystander.actor.entry.name : targetName;
+      const offered = [...(canShield ? ["방패"] : []), ...offers.map((guard) => guard.feature)];
+      this.sayWithId(promptId, { type: "prompt", who: player?.displayName ?? "", playerId: inputs.by, content: `${attackerName}의 ${prepared.spec.name}이(가) ${targetName}에게 적중 (${resolution.attackTotal} vs AC ${resolution.targetAc}) — ${bystander ? `${reactorName}의 ` : ""}${offered.join(" / ")} 반응?`, prompt: { kind: canShield ? "shield" : "guard", mover: { name: attackerName, ...inputs.attacker }, reactor: { name: reactorName, ...reactorRef }, attack: { name: prepared.spec.name, total: resolution.attackTotal, ac: resolution.targetAc }, ...(offers.length ? { guard: { features: offers.map((guard) => ({ name: guard.feature, hint: guardHint(guard), ...(guard.facts.length ? { facts: guard.facts } : {}) })), shield: canShield, trigger: bystander ? "attack.hit-ally" : "attack.hit-self" } } : {}) } });
       return promptId;
     }
     const messageId = newMessageId();
@@ -1691,6 +1704,24 @@ export class TableHost {
   }
 
   /** R11: finish an attack held for a Shield answer — re-resolved against the raised AC (same dice) when the shield went up, else as rolled. */
+  /**
+   * R57 (D192): the first character on this page, other than the one that was hit, whose contract wants to answer an
+   * attack on somebody else (가로막기 and its kin). Whether they are close enough is the fact they confirm.
+   */
+  private bystanderGuard(target: { entry: JournalEntry; token?: Token; page?: Page }) {
+    if (!target.page || !this.options.pcGuards) return undefined;
+    for (const token of target.page.tokens) {
+      if (token.id === target.token?.id || !token.represents) continue;
+      const entry = this.journalEntries.get(token.represents);
+      if (entry?.kind !== "character") continue;
+      const actor = { entry, token, page: target.page };
+      if (this.reactionUsed(this.refOf(actor))) continue;
+      const offers = this.options.pcGuards(entry, "attack.hit-ally");
+      if (offers.length) return { actor, offers };
+    }
+    return undefined;
+  }
+
   private releaseHeld(promptId: string, shielded: boolean, guard?: { acBonus?: number; reduce: number; label: string }) {
     const held = this.held.get(promptId);
     if (!held) return;

@@ -143,7 +143,7 @@ export interface CampaignsState {
   cast: (caster: ActorRef, spellId: string, targets: ActorRef[], method?: CastMethod, overrides?: AttackOverrides, readied?: boolean, reaction?: string) => void;
   declineReaction: (messageId: string) => void;
   /** R54 (D189): take a reaction this character's own contract declared against the attack the prompt is holding. */
-  guard: (messageId: string, feature: string) => void;
+  guard: (messageId: string, feature: string, facts?: string[]) => void;
   adjustAction: (messageId: string, overrides: AttackOverrides, reroll?: boolean) => void;
   undoAction: (messageId: string) => void;
   confirmAction: (messageId: string) => void;
@@ -534,7 +534,7 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
   const cast = useCallback((caster: ActorRef, spellId: string, targets: ActorRef[], method?: CastMethod, overrides?: AttackOverrides, readied?: boolean, reaction?: string) => send({ type: "act.cast", caster, spellId, targets, method, overrides, readied, reaction }), [send]);
   const act = useCallback((actor: ActorRef, kind: ActionKind, options: { target?: ActorRef; skill?: string; dc?: number; note?: string; choice?: string; bonus?: boolean } = {}) => send({ type: "act.action", actor, kind, ...options }), [send]);
   const declineReaction = useCallback((messageId: string) => send({ type: "act.decline", messageId }), [send]);
-  const guard = useCallback((messageId: string, feature: string) => send({ type: "act.guard", messageId, feature }), [send]);
+  const guard = useCallback((messageId: string, feature: string, facts?: string[]) => send({ type: "act.guard", messageId, feature, ...(facts?.length ? { facts } : {}) }), [send]);
   const adjustAction = useCallback((messageId: string, overrides: AttackOverrides, reroll?: boolean) => send({ type: "act.adjust", messageId, overrides, reroll }), [send]);
   const undoAction = useCallback((messageId: string) => send({ type: "act.undo", messageId }), [send]);
   const confirmAction = useCallback((messageId: string) => send({ type: "act.confirm", messageId }), [send]);

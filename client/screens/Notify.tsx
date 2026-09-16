@@ -148,7 +148,7 @@ export function PromptChoices({ message, compact = false }: { message: ChatMessa
       <div className="cl-row" style={{ gap: 4, flexWrap: "wrap" }}>
         {reactionUsed ? <span className="cl-quiet cl-small">이번 라운드의 반응을 이미 썼습니다</span> : <>
           {shield ? <button type="button" className="cl-btn small primary" onClick={() => c.cast(ref(prompt.reactor), "dnd.srd521.spell.shield", [ref(prompt.reactor)], shield, undefined, undefined, message.id)}>🛡 방패 시전 ({shield.kind === "slot" ? `${shield.level}레벨 슬롯` : "계약 슬롯"}) — AC +5{prompt.attack && prompt.attack.total < prompt.attack.ac + 5 ? " → 빗나감" : " (그래도 적중)"}</button> : null}
-          {(prompt.guard?.features ?? []).map((feature) => <button type="button" key={feature.name} className="cl-btn small primary" onClick={() => c.guard(message.id, feature.name)}>🛡 {feature.name}{feature.hint ? ` — ${feature.hint}` : ""}</button>)}
+          {(prompt.guard?.features ?? []).map((feature) => <button type="button" key={feature.name} className="cl-btn small primary" onClick={() => c.guard(message.id, feature.name, feature.facts?.map((fact) => fact.id))}>🛡 {feature.name}{feature.hint ? ` — ${feature.hint}` : ""}</button>)}
           {!shield && !(prompt.guard?.features ?? []).length ? <span className="cl-quiet cl-small">슬롯이 없습니다</span> : null}
         </>}
         <button type="button" className="cl-btn small" onClick={() => c.declineReaction(message.id)}>안 함</button>

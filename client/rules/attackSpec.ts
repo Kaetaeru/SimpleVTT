@@ -130,7 +130,11 @@ export function pcAttackSpec(entry: JournalCharacter, derived: DerivedCharacter,
   for (const key of riders.contracts ?? []) {
     const rider = (derived.attackRiders ?? []).find((item) => item.key === key);
     if (!rider || !riderFitsAttack(rider, attack)) continue;
-    for (const part of rider.damage) extra.push({ formula: part.formula, type: part.type === "weapon" ? attack.damageType : part.type, label: rider.label, critDoubles: /d\d/.test(part.formula) });
+    // R57 (D192): a part gated on a declared fact lands only if the player ticked it in the dialog.
+    for (const part of rider.damage) {
+      if (part.factId && !(riders.facts ?? []).includes(part.factId)) continue;
+      extra.push({ formula: part.formula, type: part.type === "weapon" ? attack.damageType : part.type, label: rider.label, critDoubles: /d\d/.test(part.formula) });
+    }
     if (rider.resourceId && rider.cost) { const { resourceId, cost, label } = rider; spenders.push((runtime) => spendResource(runtime, derived, resourceId, cost, label)); }
   }
   // R55 (D190): the advantage a contract declared for *this* weapon — 무모한 공격 is Strength melee only.

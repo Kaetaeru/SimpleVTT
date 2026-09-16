@@ -19,8 +19,12 @@ import { characterScope, evaluate, type ContractPayment, type Scope } from "./co
 import { featureRuleKey } from "./activation";
 import { featureContract } from "./contractActivation";
 
-/** The moments this engine can actually open a window at. */
-export const REACTION_TRIGGERS = ["attack.hit-self"] as const;
+/**
+ * The moments this engine can actually open a window at. `attack.hit-ally` is R57's (D192) addition: the swing landed
+ * on somebody else, and a bystander's contract wants to answer it. Whether they are close enough is a fact the
+ * bystander confirms, because the scene has no positions to check it against (D109).
+ */
+export const REACTION_TRIGGERS = ["attack.hit-self", "attack.hit-ally"] as const;
 export type ReactionTrigger = (typeof REACTION_TRIGGERS)[number];
 
 export interface GuardOffer {
@@ -31,8 +35,13 @@ export interface GuardOffer {
   acBonus?: number;
   /** Damage it takes off, as a formula the host rolls ("1d10+8"). */
   reduce?: string;
+  /** R57 (D192): facts those two numbers wait on — unticked, the reaction does nothing but say its line. */
+  acBonusFact?: string;
+  reduceFact?: string;
   /** What the contract says that is not a number. */
   notes: string[];
+  /** R57 (D192): facts the reactor confirms as they take it; anything gated on one waits for the tick. */
+  facts: Array<{ id: string; question: string }>;
   payments: ContractPayment[];
   scope: Scope;
 }
@@ -56,19 +65,26 @@ export function pcGuards(entry: { runtime: CharacterRuntime }, derived: DerivedC
     for (const item of contract.interceptors) {
       if (item.timing !== "reaction.window" || item.trigger !== trigger) continue;
       if (item.when && evaluate(item.when, scope) !== true) continue;
-      const offer: GuardOffer = { feature: feature.name, ruleKey, notes: [], payments: contract.payments, scope };
+      const offer: GuardOffer = { feature: feature.name, ruleKey, notes: [], facts: [], payments: contract.payments, scope };
+      // R57 (D192): a fact this window declares is a checkbox on the prompt; what depends on it waits for the answer.
+      const declared = new Set(item.operations.flatMap((operation) => (operation.kind === "adjudication.request" && operation.fact?.at === "reaction" ? [`fact:${operation.fact.id}`] : [])));
+      const gatedBy = (operation: { when?: unknown }) => { const ref = operation.when && typeof operation.when === "object" && "ref" in operation.when ? String((operation.when as { ref: string }).ref) : ""; return declared.has(ref) ? ref.slice(5) : undefined; };
       for (const operation of item.operations) {
-        if ("when" in operation && operation.when && evaluate(operation.when, scope) !== true) continue;
+        const factId = gatedBy(operation as { when?: unknown });
+        if (!factId && "when" in operation && operation.when && evaluate(operation.when, scope) !== true) continue;
         if (operation.kind === "property.modify" && operation.property === "ac.bonus") {
           const value = Number(evaluate(operation.value, scope));
-          if (Number.isFinite(value)) offer.acBonus = (offer.acBonus ?? 0) + value;
+          if (Number.isFinite(value)) { offer.acBonus = (offer.acBonus ?? 0) + value; if (factId) offer.acBonusFact = factId; }
         } else if (operation.kind === "property.modify" && operation.property === "damage-taken.reduce") {
           const flat = Number(evaluate(operation.value, scope));
           const parts = [operation.dice, Number.isFinite(flat) && flat ? `${flat > 0 ? "+" : ""}${flat}` : ""].filter(Boolean);
-          if (parts.length) offer.reduce = parts.join("");
-        } else if (operation.kind === "adjudication.request") offer.notes.push(operation.question);
+          if (parts.length) { offer.reduce = parts.join(""); if (factId) offer.reduceFact = factId; }
+        } else if (operation.kind === "adjudication.request") {
+          if (operation.fact?.at === "reaction") offer.facts.push({ id: operation.fact.id, question: operation.question });
+          else offer.notes.push(operation.question);
+        }
       }
-      if (offer.acBonus === undefined && !offer.reduce && !offer.notes.length) continue;
+      if (offer.acBonus === undefined && !offer.reduce && !offer.notes.length && !offer.facts.length) continue;
       const payable = offer.payments.every((payment) => payment.kind !== "resource" || !payment.resourceId || poolLeft(derived, entry.runtime, payment.resourceId) > 0);
       if (payable) offers.push(offer);
     }
@@ -78,7 +94,7 @@ export function pcGuards(entry: { runtime: CharacterRuntime }, derived: DerivedC
 
 /** One line for the prompt, so the player can choose without opening their sheet. */
 export const guardHint = (offer: GuardOffer) =>
-  [offer.acBonus ? `AC +${offer.acBonus}` : "", offer.reduce ? `피해 −${offer.reduce}` : "", ...offer.notes].filter(Boolean).join(" · ");
+  [offer.acBonus ? `AC +${offer.acBonus}` : "", offer.reduce ? `피해 −${offer.reduce}` : "", ...offer.notes, ...offer.facts.map((fact) => fact.question)].filter(Boolean).join(" · ");
 
 /** Roll a plain `NdX+M` formula with the host's own roller, so a reaction's number is as reproducible as any other. */
 export function rollGuard(formula: string, random: () => number): number {

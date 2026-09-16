@@ -30,8 +30,13 @@ export interface ContractRider {
   oncePerTurn: boolean;
   /** Effects that must already be running for this to be offered (광란 needs 격노 and 무모한 공격). */
   requiresEffects: string[];
-  /** Extra damage parts. `type` of `"weapon"` means "the same type this weapon deals". */
-  damage: Array<{ formula: string; type: string }>;
+  /**
+   * Extra damage parts. `type` of `"weapon"` means "the same type this weapon deals"; `factId` means the part only
+   * lands when the player ticked that fact (R57 — 돌격자's 1d8 needs the ten feet the scene cannot measure).
+   */
+  damage: Array<{ formula: string; type: string; factId?: string }>;
+  /** R57 (D192): the facts this rider asks the player to confirm, each a checkbox next to it. */
+  facts: Array<{ id: string; question: string }>;
   resourceId?: string;
   cost: number;
 }
@@ -56,21 +61,29 @@ export function contractRiders(contract: CommonPlayContract, key: string, label:
     if (entry.invocation !== "pre-roll-attack" || !entry.attack) continue;
     const rider: ContractRider = {
       key, label, hint: "", ...(entry.attack.scope ? { scope: entry.attack.scope } : {}),
-      oncePerTurn: entry.attack.oncePerTurn, requiresEffects: entry.attack.requiresEffects, damage: [], cost: 0,
+      oncePerTurn: entry.attack.oncePerTurn, requiresEffects: entry.attack.requiresEffects, damage: [], facts: [], cost: 0,
     };
     const hints: string[] = [];
+    // R57 (D192): a fact this entry point declares is a checkbox, not prose; an operation gated on one carries the
+    // fact's id rather than being evaluated now, because only the player at the moment knows the answer.
+    const declared = new Set(entry.operations.flatMap((operation) => (operation.kind === "adjudication.request" && operation.fact?.at === "pre-roll" ? [`fact:${operation.fact.id}`] : [])));
+    const gatedOn = (operation: { when?: unknown }) => (operation.when && typeof operation.when === "object" && "ref" in operation.when && declared.has(String((operation.when as { ref: string }).ref)) ? String((operation.when as { ref: string }).ref).slice(5) : undefined);
     for (const operation of entry.operations) {
-      if ("when" in operation && operation.when && evaluate(operation.when, scope) !== true) continue;
+      const factId = gatedOn(operation as { when?: unknown });
+      if (!factId && "when" in operation && operation.when && evaluate(operation.when, scope) !== true) continue;
       if (operation.kind === "damage.apply") {
         const formula = formulaOf(operation, scope);
-        if (formula) rider.damage.push({ formula, type: operation.damageType });
+        if (formula) rider.damage.push({ formula, type: operation.damageType, ...(factId ? { factId } : {}) });
       } else if (operation.kind === "resource.change") {
         const amount = Number(evaluate(operation.amount, scope));
         if (Number.isFinite(amount) && amount < 0) { rider.resourceId = operation.resourceId; rider.cost = -amount; }
-      } else if (operation.kind === "adjudication.request") hints.push(operation.question);
+      } else if (operation.kind === "adjudication.request") {
+        if (operation.fact?.at === "pre-roll") rider.facts.push({ id: operation.fact.id, question: operation.question });
+        else hints.push(operation.question);
+      }
     }
     rider.hint = [...rider.damage.map((part) => `피해 +${part.formula}`), ...hints, ...(rider.oncePerTurn ? ["턴당 한 번"] : [])].join(" · ");
-    if (rider.damage.length || hints.length) riders.push(rider);
+    if (rider.damage.length || hints.length || rider.facts.length) riders.push(rider);
   }
   return riders;
 }

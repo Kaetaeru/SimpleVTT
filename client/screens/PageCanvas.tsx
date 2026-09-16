@@ -694,6 +694,8 @@ function AttackDialog({ ask, onDone }: { ask: AttackAsk; onDone: (answer: Attack
   const [sneak, setSneak] = useState(ask.sneak);
   // R52 (D187): the open half — one checkbox per rider a contract declared, keyed by its rule key.
   const [declared, setDeclared] = useState<string[]>([]);
+  // R57 (D192): and one per fact a rider asks about, because the scene cannot see where anyone is standing.
+  const [facts, setFacts] = useState<string[]>([]);
   const [savage, setSavage] = useState(false);
   const [offHand, setOffHand] = useState(false);
   const [slot, setSlot] = useState<number>(0);
@@ -705,7 +707,7 @@ function AttackDialog({ ask, onDone }: { ask: AttackAsk; onDone: (answer: Attack
     if (advantage !== "auto") overrides.advantage = advantage;
     if (ask.gm && cover) overrides.cover = cover;
     if (ask.gm && outcome) overrides.outcome = outcome;
-    onDone({ riders: { sneak: ask.sneak && sneak, savage: Boolean(ask.savage) && savage, offHand: Boolean(ask.offHand) && offHand, smiteSlot: slot || undefined, ...(declared.length ? { contracts: declared } : {}) }, overrides: Object.keys(overrides).length ? overrides : undefined });
+    onDone({ riders: { sneak: ask.sneak && sneak, savage: Boolean(ask.savage) && savage, offHand: Boolean(ask.offHand) && offHand, smiteSlot: slot || undefined, ...(declared.length ? { contracts: declared } : {}), ...(facts.length ? { facts } : {}) }, overrides: Object.keys(overrides).length ? overrides : undefined });
   };
   return (
     <RiderModal title={`${ask.name} — 판정 전 조정`} onClose={() => onDone(null)} actions={<button type="button" className="cl-btn primary" onClick={done}>공격</button>}>
@@ -728,10 +730,19 @@ function AttackDialog({ ask, onDone }: { ask: AttackAsk; onDone: (answer: Attack
       {/* R52 (D187): 광란, 대형 무기 달인의 중량 무기 숙달 and every other "declare it before the roll" rule the
           content ships. The list is the sheet's own, so a rule the character does not have never appears. */}
       {(ask.riders ?? []).map((rider) => (
-        <label key={rider.key} className="cl-row cl-small" style={{ gap: 6 }}>
-          <input type="checkbox" checked={declared.includes(rider.key)} onChange={(event) => setDeclared((current) => (event.target.checked ? [...current, rider.key] : current.filter((key) => key !== rider.key)))} />
-          {rider.label}{rider.hint ? ` (${rider.hint})` : ""}
-        </label>
+        <div key={rider.key}>
+          <label className="cl-row cl-small" style={{ gap: 6 }}>
+            <input type="checkbox" checked={declared.includes(rider.key)} onChange={(event) => setDeclared((current) => (event.target.checked ? [...current, rider.key] : current.filter((key) => key !== rider.key)))} />
+            {rider.label}{rider.hint ? ` (${rider.hint})` : ""}
+          </label>
+          {/* R57 (D192): the facts it turns on. Shown only once the rider itself is ticked, indented under it. */}
+          {declared.includes(rider.key) ? rider.facts.map((fact) => (
+            <label key={fact.id} className="cl-row cl-small" style={{ gap: 6, paddingLeft: 22 }}>
+              <input type="checkbox" checked={facts.includes(fact.id)} onChange={(event) => setFacts((current) => (event.target.checked ? [...current, fact.id] : current.filter((id) => id !== fact.id)))} />
+              {fact.question}
+            </label>
+          )) : null}
+        </div>
       ))}
       {ask.slots.length ? <div className="cl-field"><label>신성한 강타 (적중 시 슬롯 소비, 2d8 + 슬롯 레벨당 1d8 광휘)</label><select className="cl-select" aria-label="강타 슬롯" value={slot} onChange={(event) => setSlot(Number(event.target.value))}><option value={0}>안 씀</option>{ask.slots.map((item) => <option key={item.level} value={item.level}>{item.level}레벨 슬롯 ({item.free} 남음)</option>)}</select></div> : null}
       {ask.notes?.length ? <div className="cl-field"><label>자리에 따라 (표에서 판단)</label><ul className="cl-quiet cl-small" style={{ margin: 0, paddingLeft: 18 }}>{ask.notes.map((note) => <li key={note}>{note}</li>)}</ul></div> : null}
