@@ -46,7 +46,8 @@ try {
   const rage = page.locator(".cl-feature", { hasText: "격노" }).first();
   await rage.getByRole("button", { name: "사용", exact: true }).click();
   for (let i = 0; i < 3; i++) await page.getByRole("button", { name: "다음 라운드" }).click();
-  await page.getByText("3/100 라운드").waitFor();
+  // R30 (D156): the counter reads as time now, not as a raw round count — 100 rounds less 3 is "10분 남음".
+  await page.locator(".cl-effect", { hasText: "격노" }).first().getByText("10분 남음").waitFor();
   await page.screenshot({ path: path.join(OUT, "24-sheet-rage-rounds.png") });
   // Rage on the numbers: the damage bonus of the first Strength weapon carries a "격노 +2" term.
   const rageRow = page.locator(".cl-table tr", { hasText: "격노" }).filter({ has: page.locator(".cl-explain") }).first();

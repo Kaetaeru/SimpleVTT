@@ -17,6 +17,7 @@ import {
 import type { CharacterRuntime } from "../character/runtime";
 import type { CharacterSource, DerivedAttack } from "../character/types";
 import { castHook, type CastHook } from "../rules/effects";
+import { remainingText } from "../rules/activation";
 import { activateFeature as activateFeatureShared, rollTotal as rollTotalShared, withEffectStart as withEffectStartShared } from "../character/activate";
 import { copyText, downloadText, Modal, Notice, Pill } from "../ui/components";
 import { SheetView, ValidationList, type SheetActions } from "./SheetView";
@@ -187,7 +188,8 @@ export function SheetPlay({ source, runtime, catalog, save, onRolled, savedAt, t
                       {/* R28 (D153): "표에서 판단" is an effect whose whole rule is the text below it — the engine
                           changes no number for it. "적용됨" means the sheet really carries it. */}
                       {summary && !summary.applied ? <Pill tone="bad">수동</Pill> : summary?.narrative ? <Pill tone="accent">표에서 판단</Pill> : <Pill tone="good">적용됨</Pill>}
-                      <span className="cl-quiet cl-small">{effect.rounds !== undefined ? `${effect.elapsed}/${effect.rounds} 라운드 · ` : ""}{effect.duration}</span>
+                      {/* R30 (D156): "4800라운드 중 3" is not a thing anyone says — the counter comes back as time. */}
+                      <span className="cl-quiet cl-small">{effect.rounds !== undefined ? `${remainingText(effect.rounds, effect.elapsed)} · ` : ""}{effect.duration}</span>
                       <button type="button" className="cl-btn small danger" style={{ marginLeft: "auto" }} onClick={() => commit(endEffect(runtime, effect.key))}>종료</button>
                     </div>
                     {summary?.notes.length ? <div className="cl-effect-notes">{summary.notes.map((note) => <span key={note}>{note}</span>)}</div> : null}

@@ -4,6 +4,7 @@
  * journal entry. Also renders a read-only stat block for the compendium tab.
  */
 import { useMemo, useState } from "react";
+import { remainingText } from "../rules/activation";
 import { useCampaigns } from "../app/campaigns";
 import type { JournalEntry, JournalNpc, NpcRuntime } from "../campaign/journal";
 import { canEdit } from "../campaign/journal";
@@ -69,6 +70,19 @@ export function NpcWindow({ entry, onClose, onOpen: _onOpen }: { entry: JournalN
           </div>
           <div className="cl-cond">{CONDITION_MARKERS.map((condition) => <button type="button" key={condition} className={runtime.conditions.includes(condition) ? "on" : ""} onClick={() => save({ conditions: runtime.conditions.includes(condition) ? runtime.conditions.filter((item) => item !== condition) : [...runtime.conditions, condition] })}>{MARKER_GLYPH[condition]} {condition}</button>)}</div>
           {block.legendaryActionsPerRound ? <div className="cl-row cl-small" style={{ gap: 6 }}><span>전설 행동 {block.legendaryActionsPerRound - runtime.legendaryUsed}/{block.legendaryActionsPerRound} 남음</span><button type="button" className="cl-btn small" disabled={runtime.legendaryUsed >= block.legendaryActionsPerRound} onClick={() => save({ legendaryUsed: runtime.legendaryUsed + 1 })}>1 사용</button><button type="button" className="cl-btn small quiet" onClick={() => save({ legendaryUsed: 0 })}>초기화</button>{block.legendaryResistance ? <Pill>전설 저항 {block.legendaryResistance}/일</Pill> : null}</div> : null}
+        </div>
+      ) : null}
+      {/* R30 (D157): a monster carries timed effects now, so the sheet shows them with what is left and an 종료. */}
+      {editable && (runtime.effects ?? []).length ? (
+        <div className="cl-card cl-row cl-small" style={{ gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+          <span className="cl-quiet">걸려 있는 효과</span>
+          {(runtime.effects ?? []).map((effect) => (
+            <span key={effect.key} className="cl-row" style={{ gap: 4 }}>
+              <Pill tone="accent">{effect.name}</Pill>
+              <span className="cl-quiet">{remainingText(effect.rounds, effect.elapsed) ?? effect.duration}</span>
+              <button type="button" className="cl-btn small danger" onClick={() => save({ effects: (runtime.effects ?? []).filter((item) => item.key !== effect.key), endSaves: (runtime.endSaves ?? []).filter((item) => item.key !== effect.key), conditions: runtime.conditions.filter((name) => !(runtime.endSaves ?? []).find((item) => item.key === effect.key)?.conditions.includes(name)) })}>종료</button>
+            </span>
+          ))}
         </div>
       ) : null}
       {editable && block.legendaryResistance ? <div className="cl-row cl-small" style={{ gap: 6 }}><span>전설 저항 {Math.max(0, block.legendaryResistance - (runtime.legendaryResistanceUsed ?? 0))}/{block.legendaryResistance} 남음</span><span className="cl-quiet">— 주문 카드의 실패한 내성에서 "전설 저항"으로 씁니다</span><button type="button" className="cl-btn small quiet" onClick={() => save({ legendaryResistanceUsed: 0 })}>초기화</button></div> : null}

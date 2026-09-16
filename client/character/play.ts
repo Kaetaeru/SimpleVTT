@@ -4,7 +4,7 @@
  * pure function (runtime, derived) → runtime that also appends a log line, so the sheet can show what happened.
  */
 import type { FeatureActivation, ParsedDuration } from "../rules/activation";
-import { durationInRounds, effectKeyForFeature, effectKeyForSpell, parseDuration } from "../rules/activation";
+import { durationInRounds, effectKeyForFeature, effectKeyForSpell, parseDuration, remainingText } from "../rules/activation";
 import type { ActiveEffect, CharacterRuntime } from "./runtime";
 import { emptyInventoryPatch } from "./runtime";
 import type { DerivedCharacter } from "./types";
@@ -283,12 +283,30 @@ export function endEffect(runtime: CharacterRuntime, key: string, reason?: strin
 }
 
 /** One round passes: every counted effect advances; those that reach their duration end. */
-export function advanceRound(runtime: CharacterRuntime): CharacterRuntime {
+/**
+ * R30 (D156): ageing timed effects is the same arithmetic for a character sheet and for a monster's runtime, so it
+ * lives in one place: add the rounds, hand back whatever ran out. The caller writes the log line it wants.
+ */
+export function ageEffects<T extends { effects?: ActiveEffect[] }>(runtime: T, rounds = 1): { runtime: T; ended: ActiveEffect[]; running: ActiveEffect[] } {
   const effects = runtime.effects ?? [];
-  if (effects.length === 0) return runtime;
-  let next: CharacterRuntime = { ...runtime, effects: effects.map((effect) => (effect.rounds !== undefined ? { ...effect, elapsed: effect.elapsed + 1 } : effect)) };
-  for (const effect of next.effects.filter((item) => item.rounds !== undefined && item.elapsed >= (item.rounds ?? 0))) next = endEffect(next, effect.key, "지속 시간 끝");
-  return stamp(next, `라운드 진행 (${next.effects.filter((effect) => effect.rounds !== undefined).map((effect) => `${effect.name} ${effect.elapsed}/${effect.rounds}`).join(", ") || "진행 중인 효과 없음"})`);
+  if (!effects.length || rounds <= 0) return { runtime, ended: [], running: effects.filter((effect) => effect.rounds !== undefined) };
+  const aged = effects.map((effect) => (effect.rounds !== undefined ? { ...effect, elapsed: effect.elapsed + rounds } : effect));
+  const ended = aged.filter((effect) => effect.rounds !== undefined && effect.elapsed >= effect.rounds);
+  const kept = aged.filter((effect) => !ended.includes(effect));
+  return { runtime: { ...runtime, effects: kept }, ended, running: kept.filter((effect) => effect.rounds !== undefined) };
+}
+
+/**
+ * Time passes for this sheet's effects. `rounds` is how much (one round by default, ten per in-world minute), so
+ * the turn tracker and the DM's clock age the same effects through the same door (R30, D156).
+ */
+export function advanceRound(runtime: CharacterRuntime, rounds = 1): CharacterRuntime {
+  if (!(runtime.effects ?? []).length || rounds <= 0) return runtime;
+  const aged = ageEffects(runtime, rounds);
+  let next = aged.runtime;
+  for (const effect of aged.ended) next = stamp(next, `${effect.source === "spell" ? "주문 종료" : "종료"}: ${effect.name} (지속 시간 끝)`);
+  const running = aged.running.map((effect) => `${effect.name} ${remainingText(effect.rounds, effect.elapsed)}`);
+  return stamp(next, `${rounds === 1 ? "라운드 진행" : `${rounds}라운드 지남`} (${running.join(", ") || "진행 중인 효과 없음"})`);
 }
 
 export interface FeatureUseExtras { healRoll?: number; tempRoll?: number; points?: number; /** A logged roll ("브레스 무기 피해 14"). */ rolled?: { label: string; total: number } }

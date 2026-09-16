@@ -43,7 +43,8 @@ export function npcCombatant(entry: JournalNpc, token?: Token): Combatant {
   return {
     id: entry.id, name: token?.name ?? entry.name, kind: "npc", ac: block.ac, hp,
     conditions: [...new Set([...entry.runtime.conditions, ...markers])], defenses: { resistances: block.damageResistances, immunities: block.damageImmunities, vulnerabilities: block.damageVulnerabilities, conditionImmunities: block.conditionImmunities },
-    conSave: block.saves.con, effects: [],
+    // R30 (D157): what the monster is under reaches the resolver, the way a character's effects always have.
+    conSave: block.saves.con, effects: (entry.runtime.effects ?? []).map((effect) => effect.name),
   };
 }
 

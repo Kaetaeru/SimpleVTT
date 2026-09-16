@@ -142,7 +142,7 @@ test("the HP box understands set, damage, heal and temporary HP", async () => {
 
 test("feature use: Rage spends a use and runs ten rounds; Second Wind heals; Lay on Hands spends points", async () => {
   const { advanceRound, endEffect, useFeature } = await import("../../client/character/play");
-  const { featureActivation, parseDuration } = await import("../../client/rules/activation");
+  const { featureActivation, parseDuration, remainingText } = await import("../../client/rules/activation");
   const { derived } = build({ classes: "barbarian", level: 3 });
   const rage = derived.features.find((feature) => feature.id.endsWith("barbarian.rage"))!;
   const activation = featureActivation(rage, derived)!;
@@ -186,8 +186,16 @@ test("feature use: Rage spends a use and runs ten rounds; Second Wind heals; Lay
 
   assert.deepEqual(parseDuration("집중, 최대 1분"), { text: "집중, 최대 1분", instantaneous: false, concentration: true, rounds: 10 });
   assert.deepEqual(parseDuration("즉시"), { text: "즉시", instantaneous: true, concentration: false });
-  assert.equal(parseDuration("8시간").rounds, undefined, "hours are not counted in rounds");
+  // R30 (D156): a long duration is counted too — it used to lose its counter past a hundred rounds and then sat on
+  // the sheet for ever. A round is six seconds, so eight hours is 4,800 of them and a long rest really ends it.
+  assert.equal(parseDuration("8시간").rounds, 4800, "hours are counted in rounds now");
+  assert.equal(parseDuration("1시간").rounds, 600);
   assert.equal(parseDuration("1라운드").rounds, 1);
+  assert.equal(parseDuration("무효화될 때까지").rounds, undefined, "only a named length gets a counter");
+  assert.equal(remainingText(4800, 0), "8시간 남음");
+  assert.equal(remainingText(4800, 4500), "30분 남음");
+  assert.equal(remainingText(100, 95), "5라운드 남음");
+  assert.equal(remainingText(undefined, 0), null);
 });
 
 test("casting: slots are spent by level, rituals and cantrips are free, concentration replaces concentration, rests end effects", async () => {

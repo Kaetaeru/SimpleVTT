@@ -6,6 +6,7 @@
  */
 import type { AbilityKey } from "../catalog/types";
 import type { CharacterRuntime } from "../character/runtime";
+import type { ActiveEffect } from "../character/types";
 import type { CharacterSource } from "../character/types";
 import type { MonsterView } from "../compendium/monsters";
 import type { PlayerRole } from "./model";
@@ -72,6 +73,11 @@ export interface NpcRuntime {
   traitUses?: Record<string, number>;
   /** R10: effects the NPC may shake off with a save at the end of its turns. */
   endSaves?: Array<{ key: string; name: string; ability: AbilityKey; dc: number; conditions: string[] }>;
+  /**
+   * R30 (D157): timed effects on a monster. A PC's sheet has carried these since the start; a monster had nowhere
+   * to put one, so a Hold Person on an ogre was a marker that never expired and a duration nobody was counting.
+   */
+  effects?: ActiveEffect[];
   updatedAt: string;
 }
 

@@ -651,3 +651,8 @@ span.cl-tracker-init{display:inline-grid;place-items:center}
 .cl-window{resize:both;overflow:hidden;min-width:280px;min-height:140px}
 .cl-tracker-row[draggable="true"]{cursor:grab}
 .cl-tracker-row.dragging{opacity:.45}
+
+/* R30 (D158): what a creature is under, on its card — the DM should not have to open a sheet to see it. */
+.cl-scene-effects{position:absolute;left:4px;right:4px;bottom:22px;display:flex;flex-wrap:wrap;gap:3px;justify-content:center;pointer-events:none}
+.cl-scene-effect{font-size:10px;line-height:1;padding:2px 5px;border-radius:999px;background:rgba(20,23,29,.92);border:1px solid rgba(255,209,102,.5);color:#ffd166;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.cl-scene-effect small{margin-left:3px;opacity:.75;font-weight:700}

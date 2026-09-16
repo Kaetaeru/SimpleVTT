@@ -13,7 +13,7 @@ import type { Page, Token } from "../campaign/page";
 import { controlsToken, mergeControllerTokenEdit, playerPageId, projectPage, projectToken, tokenForNpc } from "../campaign/page";
 import type { Tracker } from "../campaign/tracker";
 import { advanceTurn, emptyTracker, newTurn, withoutToken, withTurn } from "../campaign/tracker";
-import { advanceRound, endEffect, noteLog, recordDeathSave, wakeUp } from "../character/play";
+import { advanceRound, ageEffects, endEffect, noteLog, recordDeathSave, wakeUp } from "../character/play";
 import type { CharacterRuntime } from "../character/runtime";
 import type { ActiveEffect } from "../character/types";
 import { npcAttackSpec, npcCombatant, npcSaveExec } from "../rules/attackSpec";
@@ -1299,6 +1299,39 @@ export class TableHost {
    */
   private refOf(actor: { entry: JournalEntry; token?: Token; page?: Page }): ActorRef { return { entryId: actor.entry.id, pageId: actor.page?.id, tokenId: actor.token?.id }; }
 
+  /**
+   * R30 (D156/D157): let this much time pass for one creature's timed effects — a character's sheet through
+   * `advanceRound` (which keeps its log), a monster through the same arithmetic, and the conditions an effect
+   * carried come off with it (on the sheet and on its token).
+   */
+  private ageEffectsOf(entry: JournalEntry, rounds: number) {
+    if (entry.kind === "character") {
+      const runtime = advanceRound(entry.runtime, rounds);
+      if (runtime !== entry.runtime) this.storeEntry({ ...entry, runtime: { ...runtime, updatedAt: this.now() }, updatedAt: this.now() });
+      return;
+    }
+    if (entry.kind !== "npc" || !entry.runtime.effects?.length) return;
+    const aged = ageEffects(entry.runtime, rounds);
+    if (!aged.ended.length) { if (aged.runtime !== entry.runtime) this.storeEntry({ ...entry, runtime: { ...aged.runtime, updatedAt: this.now() }, updatedAt: this.now() }); return; }
+    const keys = aged.ended.map((effect) => effect.key);
+    const names = aged.ended.map((effect) => effect.name);
+    const shed = [...names, ...aged.ended.flatMap((effect) => effect.endSave?.conditions ?? [])];
+    this.storeEntry({ ...entry, runtime: {
+      ...aged.runtime,
+      conditions: entry.runtime.conditions.filter((name) => !shed.includes(name)),
+      endSaves: (entry.runtime.endSaves ?? []).filter((item) => !keys.includes(item.key)),
+      updatedAt: this.now(),
+    }, updatedAt: this.now() });
+    for (const page of this.pages.values()) {
+      for (const token of page.tokens) {
+        if (token.represents !== entry.id) continue;
+        const kept = token.markers.filter((marker) => !shed.includes(marker.name));
+        if (kept.length !== token.markers.length) this.storeToken(page, { ...token, markers: kept });
+      }
+    }
+    this.say({ type: "system", who: "", content: `${entry.name}: ${names.join(", ")} 지속 시간 끝` });
+  }
+
   /** R28 (D151): whoever attacked, forced a save or took damage keeps their rage alive this round. */
   private ragingDeeds(actors: Array<{ entry: JournalEntry; token?: Token; page?: Page } | undefined>) {
     for (const actor of actors) {
@@ -1535,11 +1568,17 @@ export class TableHost {
     // R10: an effect the NPC may shake off at the end of its turns is remembered on its runtime.
     const npcBefore = target.entry;
     let restoreEndSaves: () => void = () => undefined;
-    if (row.effect?.endSave) {
-      const endSaves = [...(npcBefore.runtime.endSaves ?? []).filter((item) => item.key !== row.effect!.key), { key: row.effect.key, name: row.effect.name, ability: row.effect.endSave.ability, dc: row.effect.endSave.dc, conditions: row.marks }];
-      this.storeEntry({ ...npcBefore, runtime: { ...npcBefore.runtime, endSaves, updatedAt: now }, updatedAt: now });
+    // R30 (D157): a monster carries its timed effects now — a Hold Person on an ogre has a duration that runs out
+    // instead of being a marker nobody was counting. The end-save row (R10) is written in the same breath.
+    if (row.effect) {
       const key = row.effect.key;
-      restoreEndSaves = () => { const current = this.journalEntries.get(npcBefore.id); if (current?.kind === "npc") this.storeEntry({ ...current, runtime: { ...current.runtime, endSaves: (current.runtime.endSaves ?? []).filter((item) => item.key !== key), updatedAt: this.now() }, updatedAt: this.now() }); };
+      const already = (npcBefore.runtime.effects ?? []).some((effect) => effect.key === key);
+      const started: ActiveEffect = { key, name: row.effect.name, source: "spell", duration: row.effect.duration, concentration: false, rounds: row.effect.rounds, elapsed: 0, startedAt: now, ...(row.effect.endSave ? { endSave: { ...row.effect.endSave, conditions: row.marks } } : {}) };
+      const endSaves = row.effect.endSave
+        ? [...(npcBefore.runtime.endSaves ?? []).filter((item) => item.key !== key), { key, name: row.effect.name, ability: row.effect.endSave.ability, dc: row.effect.endSave.dc, conditions: row.marks }]
+        : npcBefore.runtime.endSaves;
+      this.storeEntry({ ...npcBefore, runtime: { ...npcBefore.runtime, effects: already ? npcBefore.runtime.effects : [...(npcBefore.runtime.effects ?? []), started], endSaves, updatedAt: now }, updatedAt: now });
+      restoreEndSaves = () => { const current = this.journalEntries.get(npcBefore.id); if (current?.kind === "npc") this.storeEntry({ ...current, runtime: { ...current.runtime, endSaves: (current.runtime.endSaves ?? []).filter((item) => item.key !== key), effects: already ? current.runtime.effects : (current.runtime.effects ?? []).filter((effect) => effect.key !== key), updatedAt: this.now() }, updatedAt: this.now() }); };
     }
     const token = target.token;
     const bar = token?.bars[0];
@@ -1559,7 +1598,7 @@ export class TableHost {
     const added = marks.filter((name) => !before.runtime.conditions.includes(name));
     const conditions = [...before.runtime.conditions.filter((name) => !clears.includes(name)), ...added];
     this.storeEntry({ ...before, runtime: { ...before.runtime, hp: { ...before.runtime.hp, current: row.hpAfter, temp: row.tempHp ?? row.tempAfter }, conditions, updatedAt: now }, updatedAt: now });
-    const delta = { hp: before.runtime.hp.current - row.hpAfter, temp: before.runtime.hp.temp - (row.tempHp ?? row.tempAfter), conditions: added, endSaveKeys: row.effect?.endSave ? [row.effect.key] : [] };
+    const delta = { hp: before.runtime.hp.current - row.hpAfter, temp: before.runtime.hp.temp - (row.tempHp ?? row.tempAfter), conditions: added, endSaveKeys: row.effect?.endSave ? [row.effect.key] : [], effectKeys: row.effect ? [row.effect.key] : [] };
     return () => this.undoOnNpc(before.id, delta);
   }
 
@@ -1598,7 +1637,9 @@ export class TableHost {
       if (success) shed.push(item.name, ...item.conditions); else kept.push(item);
     }
     const current = this.journalEntries.get(actor.entry.id);
-    if (current?.kind === "npc") this.storeEntry({ ...current, runtime: { ...current.runtime, endSaves: kept, conditions: current.runtime.conditions.filter((condition) => !shed.includes(condition)), updatedAt: this.now() }, updatedAt: this.now() });
+    // R30 (D157): shaking an effect off takes it out of the monster's effect list too, not only its end-save row.
+    const shedKeys = actor.entry.runtime.endSaves.filter((item) => shed.includes(item.name)).map((item) => item.key);
+    if (current?.kind === "npc") this.storeEntry({ ...current, runtime: { ...current.runtime, endSaves: kept, effects: (current.runtime.effects ?? []).filter((effect) => !shedKeys.includes(effect.key)), conditions: current.runtime.conditions.filter((condition) => !shed.includes(condition)), updatedAt: this.now() }, updatedAt: this.now() });
     if (shed.length && actor.token && actor.page) { const page = this.pages.get(actor.page.id); const token = page?.tokens.find((item) => item.id === actor.token!.id); if (page && token) this.storeToken(page, { ...token, markers: token.markers.filter((marker) => !shed.includes(marker.name)) }); }
   }
   private actorOfTurn(turn: TrackerTurn | undefined) { return turn ? this.resolveActor({ entryId: turn.entryId, pageId: turn.pageId, tokenId: turn.tokenId }) : null; }
@@ -1644,12 +1685,13 @@ export class TableHost {
     this.storeEntry({ ...current, runtime: { ...noteLog(next, delta.note), updatedAt: this.now() }, updatedAt: this.now() });
   }
 
-  private undoOnNpc(entryId: string, delta: { hp: number; temp: number; conditions: string[]; endSaveKeys?: string[] }) {
+  private undoOnNpc(entryId: string, delta: { hp: number; temp: number; conditions: string[]; endSaveKeys?: string[]; effectKeys?: string[] }) {
     const current = this.journalEntries.get(entryId);
     if (current?.kind !== "npc") return;
     const runtime = current.runtime;
     this.storeEntry({ ...current, runtime: {
       ...runtime,
+      effects: (runtime.effects ?? []).filter((effect) => !(delta.effectKeys ?? []).includes(effect.key)),
       hp: { ...runtime.hp, current: Math.max(0, Math.min(runtime.hp.max, runtime.hp.current + delta.hp)), temp: Math.max(0, runtime.hp.temp + delta.temp) },
       conditions: runtime.conditions.filter((name) => !delta.conditions.includes(name)),
       endSaves: (runtime.endSaves ?? []).filter((item) => !(delta.endSaveKeys ?? []).includes(item.key)),
@@ -1763,13 +1805,12 @@ export class TableHost {
     const clock = advanceClock(this.clock, minutes);
     this.setCampaign({ ...this.campaign, clock, updatedAt: this.now() });
     this.emit({ type: "clock", clock });
-    const rounds = Math.min(minutes * 10, 6000);
+    // R30 (D156): one step of however many rounds, instead of a loop capped at six thousand — an eight-hour effect
+    // is 4,800 rounds and it now really runs out when the party takes a long rest.
+    const rounds = minutes * 10;
     for (const entry of [...this.journalEntries.values()]) {
-      if (entry.kind !== "character" || !entry.runtime.effects?.length) continue;
-      let runtime = entry.runtime;
-      const longest = Math.max(0, ...runtime.effects.map((effect) => (effect.rounds ?? 0) - effect.elapsed));
-      for (let at = 0; at < Math.min(rounds, longest + 1) && runtime.effects.some((effect) => effect.rounds !== undefined); at += 1) runtime = advanceRound(runtime);
-      if (runtime !== entry.runtime) this.storeEntry({ ...entry, runtime: { ...runtime, updatedAt: this.now() }, updatedAt: this.now() });
+      if (entry.kind === "handout" || !entry.runtime.effects?.length) continue;
+      this.ageEffectsOf(entry, rounds);
     }
   }
 
@@ -1786,7 +1827,7 @@ export class TableHost {
     const result = advanceTurn(this.tracker);
     const random = this.options.random ?? Math.random;
     const ended = result.ended?.entryId ? this.journalEntries.get(result.ended.entryId) : undefined;
-    if (ended?.kind === "character" && ended.runtime.effects?.length) this.storeEntry({ ...ended, runtime: advanceRound(ended.runtime), updatedAt: this.now() });
+    if (ended && ended.kind !== "handout" && ended.runtime.effects?.length) this.ageEffectsOf(ended, 1);
     if (result.roundWrapped) this.say({ type: "system", who: "", content: `라운드 ${result.tracker.round}` });
     if (result.started) this.say({ type: "system", who: "", content: `${result.started.name}의 턴` });
     const started = result.started?.entryId ? this.journalEntries.get(result.started.entryId) : undefined;

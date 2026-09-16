@@ -15,6 +15,20 @@ export interface ParsedDuration {
 
 const ROUNDS_PER: Array<[RegExp, number]> = [[/(\d+)\s*라운드/, 1], [/(\d+)\s*분/, 10], [/(\d+)\s*시간/, 600], [/(\d+)\s*일/, 14400]];
 
+/**
+ * R30 (D156): what is left of a timed effect, in the unit a person would say it in — rounds while a fight is
+ * running, minutes and hours once it is longer than that.
+ */
+export function remainingText(rounds: number | undefined, elapsed: number): string | null {
+  if (rounds === undefined) return null;
+  const left = Math.max(0, rounds - elapsed);
+  if (left <= 10) return `${left}라운드 남음`;
+  if (left < 600) return `${Math.ceil(left / 10)}분 남음`;
+  const hours = Math.floor(left / 600);
+  const minutes = Math.ceil((left % 600) / 10);
+  return `${hours}시간${minutes ? ` ${minutes}분` : ""} 남음`;
+}
+
 /** The duration in rounds when the text names a length ("1분" → 10, "1시간" → 600, "1일" → 14400); undefined for "특수", "무효화될 때까지" and the like. */
 export function durationInRounds(text: string | undefined): number | undefined {
   const value = (text ?? "").trim();
@@ -29,8 +43,11 @@ export function parseDuration(text: string | undefined): ParsedDuration {
   const value = (text ?? "").trim();
   if (!value || value === "즉시" || value === "순간") return { text: value || "즉시", instantaneous: true, concentration: false };
   const concentration = /집중/.test(value);
+  // R30 (D156): a duration longer than a hundred rounds used to lose its counter entirely, so an eight-hour effect
+  // sat on the sheet for ever and only a person could end it. Everything that names a length is counted now; the
+  // display turns a big number back into hours and minutes (a round is six seconds, a minute is ten rounds).
   const rounds = durationInRounds(value);
-  return { text: value, instantaneous: false, concentration, rounds: rounds !== undefined && rounds <= 100 ? rounds : undefined };
+  return { text: value, instantaneous: false, concentration, rounds };
 }
 
 export interface FeatureActivation {

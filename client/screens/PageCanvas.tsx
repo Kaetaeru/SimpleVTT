@@ -7,6 +7,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type DragEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useCampaigns } from "../app/campaigns";
+import { remainingText } from "../rules/activation";
 import { useClient } from "../app/context";
 import type { JournalCharacter, JournalEntry, Pending } from "../campaign/journal";
 import { canEdit, canView, newJournalNpc, pendingFor, pendingValue } from "../campaign/journal";
@@ -461,6 +462,15 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
    * can act on it. The host spends the reaction and posts the card.
    */
   const reactionItems = [
+    // R30 (D159): a monster's reactions (받아넘기기 …) are on its stat block and had no button anywhere — only the
+    // NPC sheet's text. They join the same menu, and the host spends the reaction the same way.
+    ...(entry.kind === "npc" ? entry.statBlock.reactions.map((action) => ({
+      key: `npc-reaction:${action.name}`,
+      label: action.name,
+      hint: action.text.slice(0, 80),
+      disabled: false,
+      onSelect: () => { if (action.kind === "attack" && action.attack) void attackWith({ source: "npc", actionName: action.name }); else c.react(me, action.name, { note: action.text.slice(0, 80) }); },
+    })) : []),
     ...usable.filter((item) => item.activation.note?.includes("반응")).map((item) => ({
       key: `reaction:${item.feature.id}`,
       label: item.feature.name,
@@ -596,7 +606,7 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
           <span className="cl-cmd-label">시트</span>
           <Dropdown up label="판정" items={checkItems} />
           {/* R29 (D155): the reaction is the one thing a player needs out of turn, so the menu is there in combat. */}
-          {entry.kind === "character" && inCombat ? <Dropdown up label={turn?.reactionUsed ? "반응 (씀)" : "반응"} disabled={Boolean(blocked) || Boolean(turn?.reactionUsed)} items={reactionItems} /> : null}
+          {inCombat ? <Dropdown up label={turn?.reactionUsed ? "반응 (씀)" : "반응"} disabled={Boolean(blocked) || Boolean(turn?.reactionUsed)} items={reactionItems} /> : null}
           <Dropdown up label="특성" disabled={Boolean(blocked)} items={featureItems} />
           <Dropdown up label="아이템" disabled={Boolean(blocked)} items={itemItems} />
           {!inTracker ? <button type="button" className="cl-btn small" onClick={() => c.addTurn({ name: token.name, tokenId: token.id, pageId: page.id, entryId: entry.id, image: token.image }, initiativeBonus)} title="1d20 + 이니셔티브 보너스를 굴려 트래커에 넣습니다">이니셔티브 {initiativeBonus >= 0 ? "+" : ""}{initiativeBonus}</button> : null}
@@ -797,6 +807,11 @@ function SceneIcon({ token, kind, journal, ac, selected, picked, candidate, turn
     const conditions: TokenMarker[] = character.runtime.conditions.filter((name) => isConditionMarker(name)).map((name) => ({ name }));
     return [...conditions, ...token.markers.filter((marker) => !isConditionMarker(marker.name))];
   }, [character, token.markers]);
+  /**
+   * R30 (D158): what a creature is under used to live on its sheet alone, so the DM had to open a window to answer
+   * "is the ogre still held?". The running effects sit on its card now, with what is left of each one.
+   */
+  const running = useMemo(() => (entry && entry.kind !== "handout" ? (entry.runtime.effects ?? []) : []), [entry]);
   const hp = token.bars[0];
   const fraction = hp && hp.max ? Math.max(0, Math.min(1, (hp.value ?? 0) / hp.max)) : null;
   const down = fraction === 0 || markers.some((marker) => marker.name === "사망" || marker.name === "무의식");
@@ -810,6 +825,7 @@ function SceneIcon({ token, kind, journal, ac, selected, picked, candidate, turn
         {ac !== undefined ? <span className="cl-scene-ac" title={`AC ${ac}`} aria-label={`AC ${ac}`}><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3Z" fill="#161a21" stroke="#8b93a3" strokeWidth="1.4" /></svg><b>{ac}</b></span> : null}
         {markers.length ? <div className="cl-scene-markers">{markers.slice(0, 6).map((marker) => <span key={marker.name} className="cl-marker" title={marker.name}>{MARKER_GLYPH[marker.name] ?? "•"}{marker.badge !== undefined ? <small>{marker.badge}</small> : null}</span>)}</div> : null}
         <span className="cl-scene-name">{token.name}{hp && (hp.value !== undefined || hp.max !== undefined) ? <small>{hp.value ?? "?"}{hp.max !== undefined ? `/${hp.max}` : ""}</small> : null}</span>
+        {running.length ? <div className="cl-scene-effects">{running.slice(0, 3).map((effect) => <span key={effect.key} className="cl-scene-effect" title={`${effect.name} — ${remainingText(effect.rounds, effect.elapsed) ?? effect.duration}${effect.concentration ? " · 집중" : ""}`}>{effect.concentration ? "🎯 " : ""}{effect.name}{effect.rounds !== undefined ? <small>{Math.max(0, effect.rounds - effect.elapsed) <= 10 ? `${Math.max(0, effect.rounds - effect.elapsed)}R` : `${Math.ceil(Math.max(0, effect.rounds - effect.elapsed) / 10)}분`}</small> : null}</span>)}{running.length > 3 ? <span className="cl-scene-effect" title={running.slice(3).map((effect) => effect.name).join(", ")}>+{running.length - 3}</span> : null}</div> : null}
         {floats.map((item, index) => <span key={item.id} className={`cl-float ${item.tone}`} style={{ animationDelay: `${index * 120}ms` }}>{item.text}</span>)}
       </div>
       {leave ? <button type="button" className="cl-scene-leave" aria-label={`${token.name}에게서 벗어남`} title="이동으로 이 상대의 사정거리를 벗어납니다 — 상대에게 기회 공격을 물어봅니다 (D96)" onPointerDown={(event) => event.stopPropagation()} onClick={(event) => { event.stopPropagation(); onLeave(); }}>🏃 벗어남</button> : null}
