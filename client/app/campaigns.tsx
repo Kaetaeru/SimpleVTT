@@ -18,6 +18,7 @@ import { TableHost } from "../session/host";
 import type { ActorRef, AttackRef, AttackRiders, ClientCommand, Invite, RollPayload, TableSnapshot } from "../session/protocol";
 import { derivedOf, pcAttackSpec, pcCombatant, pcConcentrationKey } from "../rules/attackSpec";
 import { attackAftermath, emptyAftermath } from "../rules/attackAftermath";
+import { pcGuards } from "../rules/contractReactions";
 import { payContract, pcRescues } from "../rules/contractUse";
 import { tableOutcome } from "../rules/contractTable";
 import { pcStats, type ActionKind } from "../rules/actions";
@@ -141,6 +142,8 @@ export interface CampaignsState {
   /** D102: cast a spell at targets; the host pays and resolves. */
   cast: (caster: ActorRef, spellId: string, targets: ActorRef[], method?: CastMethod, overrides?: AttackOverrides, readied?: boolean, reaction?: string) => void;
   declineReaction: (messageId: string) => void;
+  /** R54 (D189): take a reaction this character's own contract declared against the attack the prompt is holding. */
+  guard: (messageId: string, feature: string) => void;
   adjustAction: (messageId: string, overrides: AttackOverrides, reroll?: boolean) => void;
   undoAction: (messageId: string) => void;
   confirmAction: (messageId: string) => void;
@@ -360,6 +363,8 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
       pcCombatant: (entry) => pcCombatant(entry, derivedOf(entry, catalogRef.current)),
       pcConcentrationKey,
       pcAttackSpec: (entry, attackId, riders) => pcAttackSpec(entry, derivedOf(entry, catalogRef.current), attackId, riders, catalogRef.current),
+      // R54 (D189): the reactions this sheet's contracts open a window for.
+      pcGuards: (entry, trigger) => pcGuards(entry, derivedOf(entry, catalogRef.current), catalogRef.current, trigger),
       // R53 (D188): what the attacker's contracts do once the swing has landed.
       pcAftermath: (entry, attackId, outcomes) => { const derived = derivedOf(entry, catalogRef.current); const attack = derived.attacks.find((item) => item.id === attackId); return attack ? attackAftermath(derived, catalogRef.current, attack, outcomes) : emptyAftermath(); },
       pcStats: (entry) => pcStats(derivedOf(entry, catalogRef.current)),
@@ -529,6 +534,7 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
   const cast = useCallback((caster: ActorRef, spellId: string, targets: ActorRef[], method?: CastMethod, overrides?: AttackOverrides, readied?: boolean, reaction?: string) => send({ type: "act.cast", caster, spellId, targets, method, overrides, readied, reaction }), [send]);
   const act = useCallback((actor: ActorRef, kind: ActionKind, options: { target?: ActorRef; skill?: string; dc?: number; note?: string; choice?: string; bonus?: boolean } = {}) => send({ type: "act.action", actor, kind, ...options }), [send]);
   const declineReaction = useCallback((messageId: string) => send({ type: "act.decline", messageId }), [send]);
+  const guard = useCallback((messageId: string, feature: string) => send({ type: "act.guard", messageId, feature }), [send]);
   const adjustAction = useCallback((messageId: string, overrides: AttackOverrides, reroll?: boolean) => send({ type: "act.adjust", messageId, overrides, reroll }), [send]);
   const undoAction = useCallback((messageId: string) => send({ type: "act.undo", messageId }), [send]);
   const confirmAction = useCallback((messageId: string) => send({ type: "act.confirm", messageId }), [send]);
@@ -563,7 +569,7 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
   const table = useMemo<TableState>(() => ({ role, status: client ? client.status : "idle", reason: client?.reason ?? null, campaignId, snapshot: client?.snapshot ?? null, invite, invites, transportNote, refusals, shows, artUrls, artPending }),
   // eslint-disable-next-line react-hooks/exhaustive-deps
   [role, client, campaignId, invite, invites, transportNote, refusals, shows, artUrls, artPending, tick]);
-  const value = useMemo<CampaignsState>(() => ({ userId, seat, displayName, setDisplayName, campaigns, joined, archives, journals, arts, pages, createCampaign, updateCampaign, deleteCampaign, regenerateJoinCode, forgetJoined, table, launch, join, leave, say, sendRoll, setRole, kick, putJournal, removeJournal, grantJournal, showJournal, dismissShow, uploadArt, updateArt, removeArt, requestArt, putPage, removePage, setRibbon, setBookmark, putToken, removeToken, setTracker, addTurn, nextTurn, swapTurn, attack, npcSave, legendary, useItem, useTrait, spendEconomy, advanceTime, tableRest, askRest, saveMacros, saveTables, rollTable, summon, dismissSummons, resist, provoke, act, cast, declineReaction, react, rollDeathSave, rescueRoll, runContract, adjustAction, undoAction, confirmAction }),
+  const value = useMemo<CampaignsState>(() => ({ userId, seat, displayName, setDisplayName, campaigns, joined, archives, journals, arts, pages, createCampaign, updateCampaign, deleteCampaign, regenerateJoinCode, forgetJoined, table, launch, join, leave, say, sendRoll, setRole, kick, putJournal, removeJournal, grantJournal, showJournal, dismissShow, uploadArt, updateArt, removeArt, requestArt, putPage, removePage, setRibbon, setBookmark, putToken, removeToken, setTracker, addTurn, nextTurn, swapTurn, attack, npcSave, legendary, useItem, useTrait, spendEconomy, advanceTime, tableRest, askRest, saveMacros, saveTables, rollTable, summon, dismissSummons, resist, provoke, act, cast, declineReaction, guard, react, rollDeathSave, rescueRoll, runContract, adjustAction, undoAction, confirmAction }),
     [userId, seat, displayName, setDisplayName, campaigns, joined, archives, journals, arts, pages, createCampaign, updateCampaign, deleteCampaign, regenerateJoinCode, forgetJoined, table, launch, join, leave, say, sendRoll, setRole, kick, putJournal, removeJournal, grantJournal, showJournal, dismissShow, uploadArt, updateArt, removeArt, requestArt, putPage, removePage, setRibbon, setBookmark, putToken, removeToken, setTracker, addTurn, nextTurn, swapTurn, attack, npcSave, legendary, useItem, useTrait, spendEconomy, advanceTime, tableRest, askRest, saveMacros, saveTables, rollTable, summon, dismissSummons, resist, adjustAction, undoAction, confirmAction]);
   return <CampaignsContext.Provider value={value}>{children}</CampaignsContext.Provider>;
 }

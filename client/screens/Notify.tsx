@@ -87,7 +87,7 @@ export function promptIsMine(message: ChatMessage, snapshot: { players: Array<{ 
 /** Buttons for the side a prompt is addressed to: the reactor's melee attacks as the reaction, or 안 함. Null when it is not yours or already answered. */
 const COUNTERSPELL_ID = "dnd.srd521.spell.counterspell";
 /** What a prompt is asking for, in one word. */
-export const promptLabel = (kind: ReactionPrompt["kind"]) => (kind === "shield" ? "방패 반응" : kind === "counterspell" ? "주문 차단" : kind === "death-save" ? "죽음 내성" : kind === "rescue" ? "판정 다시 굴리기" : "기회 공격");
+export const promptLabel = (kind: ReactionPrompt["kind"]) => (kind === "shield" ? "방패 반응" : kind === "guard" ? "반응" : kind === "counterspell" ? "주문 차단" : kind === "death-save" ? "죽음 내성" : kind === "rescue" ? "판정 다시 굴리기" : "기회 공격");
 
 export function PromptChoices({ message, compact = false }: { message: ChatMessage; compact?: boolean }) {
   const c = useCampaigns();
@@ -142,10 +142,15 @@ export function PromptChoices({ message, compact = false }: { message: ChatMessa
       </div>
     );
   }
-  if (prompt.kind === "shield") {
+  // R11 (Shield) and R54 (D189, a contract's own reaction) answer the same window: the attack that just hit.
+  if (prompt.kind === "shield" || prompt.kind === "guard") {
     return (
       <div className="cl-row" style={{ gap: 4, flexWrap: "wrap" }}>
-        {reactionUsed ? <span className="cl-quiet cl-small">이번 라운드의 반응을 이미 썼습니다</span> : shield ? <button type="button" className="cl-btn small primary" onClick={() => c.cast(ref(prompt.reactor), "dnd.srd521.spell.shield", [ref(prompt.reactor)], shield, undefined, undefined, message.id)}>🛡 방패 시전 ({shield.kind === "slot" ? `${shield.level}레벨 슬롯` : "계약 슬롯"}) — AC +5{prompt.attack && prompt.attack.total < prompt.attack.ac + 5 ? " → 빗나감" : " (그래도 적중)"}</button> : <span className="cl-quiet cl-small">슬롯이 없습니다</span>}
+        {reactionUsed ? <span className="cl-quiet cl-small">이번 라운드의 반응을 이미 썼습니다</span> : <>
+          {shield ? <button type="button" className="cl-btn small primary" onClick={() => c.cast(ref(prompt.reactor), "dnd.srd521.spell.shield", [ref(prompt.reactor)], shield, undefined, undefined, message.id)}>🛡 방패 시전 ({shield.kind === "slot" ? `${shield.level}레벨 슬롯` : "계약 슬롯"}) — AC +5{prompt.attack && prompt.attack.total < prompt.attack.ac + 5 ? " → 빗나감" : " (그래도 적중)"}</button> : null}
+          {(prompt.guard?.features ?? []).map((feature) => <button type="button" key={feature.name} className="cl-btn small primary" onClick={() => c.guard(message.id, feature.name)}>🛡 {feature.name}{feature.hint ? ` — ${feature.hint}` : ""}</button>)}
+          {!shield && !(prompt.guard?.features ?? []).length ? <span className="cl-quiet cl-small">슬롯이 없습니다</span> : null}
+        </>}
         <button type="button" className="cl-btn small" onClick={() => c.declineReaction(message.id)}>안 함</button>
       </div>
     );
@@ -214,7 +219,7 @@ export function ApprovalLayer() {
         {first ? (
           <>
             {first.prompt!.kind === "counterspell" ? <div className="cl-approval-body">🚫 <strong>{first.prompt!.mover.name}</strong>이(가) {first.prompt!.spell?.name}{first.prompt!.spell ? ` (${first.prompt!.spell.level}레벨)` : ""}을(를) 시전하려 합니다.<br />주문 차단을 하시겠습니까?</div>
-              : first.prompt!.kind === "shield" ? <div className="cl-approval-body">🛡 <strong>{first.prompt!.mover.name}</strong>의 {first.prompt!.attack?.name}이(가) <strong>{first.prompt!.reactor.name}</strong>에게 적중했습니다 (명중 {first.prompt!.attack?.total} vs AC {first.prompt!.attack?.ac}).<br />방패를 시전하시겠습니까?</div>
+              : first.prompt!.kind === "shield" || first.prompt!.kind === "guard" ? <div className="cl-approval-body">🛡 <strong>{first.prompt!.mover.name}</strong>의 {first.prompt!.attack?.name}이(가) <strong>{first.prompt!.reactor.name}</strong>에게 적중했습니다 (명중 {first.prompt!.attack?.total} vs AC {first.prompt!.attack?.ac}).<br />방패를 시전하시겠습니까?</div>
               : first.prompt!.kind === "rescue" ? <div className="cl-approval-body">🎲 <strong>{first.prompt!.reactor.name}</strong>의 내성이 실패했습니다 ({first.prompt!.rescue?.roll}).<br />특성을 써서 다시 굴릴 수 있습니다.</div>
               : first.prompt!.kind === "death-save" ? <div className="cl-approval-body">💀 <strong>{first.prompt!.reactor.name}</strong>은(는) 쓰러져 있습니다.<br />죽음 내성을 굴리세요 (성공 3번이면 안정, 실패 3번이면 사망).</div>
               : <div className="cl-approval-body">🏃 <strong>{first.prompt!.mover.name}</strong>이(가) <strong>{first.prompt!.reactor.name}</strong>에게서 벗어납니다.<br />기회 공격을 하시겠습니까?</div>}

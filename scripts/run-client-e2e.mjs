@@ -23,6 +23,20 @@ if (!(await portOpen(PORT))) {
   if (!(await portOpen(PORT))) { console.error(`vite did not come up on ${PORT}`); process.exit(1); }
 }
 
+// R54: the first script used to pay Vite's cold-start compile out of its own timeout, which made whichever script
+// ran second (capture-client-attack.mjs, alphabetically) fail perhaps one run in two. Ask for the page once and wait
+// for it to be served before anything is measured.
+async function warm() {
+  for (let attempt = 0; attempt < 40; attempt += 1) {
+    try {
+      const response = await fetch(`http://127.0.0.1:${PORT}/`);
+      if (response.ok) { await response.text(); return; }
+    } catch { /* not up yet */ }
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+}
+await warm();
+
 const failed = [];
 const started = Date.now();
 try {

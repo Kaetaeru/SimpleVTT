@@ -38,6 +38,7 @@ import type { ClientCommand, HostMessage, Presence, RollPayload, TableEvent, Tab
 import { PROTOCOL_VERSION, isClientCommand } from "./protocol";
 import { economyBucketOf, planRollModify, type ContractPayment } from "../rules/contract";
 import type { AttackAftermath, AttackOutcomeKind } from "../rules/attackAftermath";
+import { guardHint, rollGuard, type GuardOffer, type ReactionTrigger } from "../rules/contractReactions";
 import type { RescueOffer, RollFamily } from "../rules/contractUse";
 import type { Transport } from "./transport";
 import { summonRule } from "../rules/summons";
@@ -114,6 +115,8 @@ export interface TableHostOptions {
   pcAttackSpec?: (entry: JournalCharacter, attackId: string, riders: AttackRiders) => { spec: AttackSpec; spend: (runtime: CharacterRuntime) => CharacterRuntime } | null;
   /** R53 (D188): what the attacker's own contracts do once the swing has landed — marks, turn economy, table calls. */
   pcAftermath?: (entry: JournalCharacter, attackId: string, outcomes: AttackOutcomeKind[]) => AttackAftermath;
+  /** R54 (D189): the reactions this character's contracts open a window for at this moment. */
+  pcGuards?: (entry: JournalCharacter, trigger: ReactionTrigger) => GuardOffer[];
   /** The official actions (D97) need a PC's ability modifiers, saves and skills from the derived sheet. */
   pcStats?: (entry: JournalCharacter) => ActorStats;
   /** Spells (D102): the spec and caster stats for a spell the PC can cast, and how its cost is paid (null when it cannot). */
@@ -1301,6 +1304,29 @@ export class TableHost {
         }
         return;
       }
+      /**
+       * R54 (D189): the reactor takes a reaction their own contract declared. The held attack is resolved again with
+       * the AC the reaction adds — the same dice, so only the AC moved — and whatever damage it takes off comes off
+       * the card. The pool the contract names is spent, the reaction is marked used, and the prompt closes.
+       */
+      case "act.guard": {
+        const promptMessage = this.chat.find((message) => message.id === command.messageId && message.type === "prompt");
+        if (!promptMessage?.prompt || this.promptAnswered(command.messageId)) return refuse("그 프롬프트는 더 이상 열려 있지 않습니다");
+        const reactor = this.resolveActor(promptMessage.prompt.reactor);
+        if (!reactor || reactor.entry.kind !== "character") return refuse("반응자를 찾을 수 없습니다");
+        if (!isGm && !this.mayAct(userId, promptMessage.prompt.reactor, reactor.entry)) return refuse("반응자의 조종자만 답할 수 있습니다");
+        if (this.reactionUsed(promptMessage.prompt.reactor)) return refuse("이번 라운드의 반응을 이미 썼습니다");
+        const offer = (this.options.pcGuards?.(reactor.entry, "attack.hit-self") ?? []).find((item) => item.feature === command.feature);
+        if (!offer) return refuse("그 반응은 지금 쓸 수 없습니다");
+        const paid = this.options.pcPayContract?.(reactor.entry, offer.payments, "success");
+        if (paid === null) return refuse("남은 횟수가 없습니다");
+        if (paid) this.storeEntry({ ...reactor.entry, runtime: { ...paid, updatedAt: this.now() }, updatedAt: this.now() });
+        this.markReactionUsed(promptMessage.prompt.reactor);
+        const rolled = offer.reduce ? rollGuard(offer.reduce, this.options.random ?? Math.random) : 0;
+        this.say({ ...promptMessage, prompt: { ...promptMessage.prompt, outcome: { rolled: userId } }, supersedes: promptMessage.id, content: `${promptMessage.content} → ${command.feature}${offer.acBonus ? ` (AC +${offer.acBonus})` : ""}${offer.reduce ? ` (피해 −${rolled})` : ""}` });
+        this.releaseHeld(command.messageId, false, { acBonus: offer.acBonus, reduce: rolled, label: command.feature });
+        return;
+      }
       case "act.decline": {
         const promptMessage = this.chat.find((message) => message.id === command.messageId && message.type === "prompt");
         if (!promptMessage?.prompt || this.promptAnswered(command.messageId)) return refuse("그 프롬프트는 더 이상 열려 있지 않습니다");
@@ -1430,12 +1456,18 @@ export class TableHost {
     const player = this.campaign.players.find((item) => item.userId === inputs.by);
     // R11: a hit on a caster who can still cast Shield is held until they answer (their reaction, +5 AC, maybe a miss).
     const targetRef = inputs.targets[inputs.targetIndex];
-    if (!waits && resolution.outcome === "hit" && target.entry.kind === "character" && !fixed && !this.reactionUsed(targetRef) && this.options.pcReactionSpell?.(target.entry, "dnd.srd521.spell.shield")) {
+    // R54 (D189): the same window now carries whatever the target's own contracts declared for "an attack hit me",
+    // so 공격 비껴내기 and the Shield spell are one question rather than one question and a house rule.
+    const canShield = !waits && resolution.outcome === "hit" && target.entry.kind === "character" && !fixed && !this.reactionUsed(targetRef) && Boolean(this.options.pcReactionSpell?.(target.entry, "dnd.srd521.spell.shield"));
+    const guards = !waits && resolution.outcome === "hit" && target.entry.kind === "character" && !fixed && !this.reactionUsed(targetRef)
+      ? this.options.pcGuards?.(target.entry, "attack.hit-self") ?? [] : [];
+    if (canShield || guards.length) {
       const promptId = newMessageId();
       const attackerName = attacker.token?.name ?? attacker.entry.name;
       const targetName = target.token?.name ?? target.entry.name;
       this.held.set(promptId, { inputs, attacker, target, spec: prepared.spec, overrides, resolution, supersedes });
-      this.sayWithId(promptId, { type: "prompt", who: player?.displayName ?? "", playerId: inputs.by, content: `${attackerName}의 ${prepared.spec.name}이(가) ${targetName}에게 적중 (${resolution.attackTotal} vs AC ${resolution.targetAc}) — 방패 반응?`, prompt: { kind: "shield", mover: { name: attackerName, ...inputs.attacker }, reactor: { name: targetName, ...targetRef }, attack: { name: prepared.spec.name, total: resolution.attackTotal, ac: resolution.targetAc } } });
+      const offered = [...(canShield ? ["방패"] : []), ...guards.map((guard) => guard.feature)];
+      this.sayWithId(promptId, { type: "prompt", who: player?.displayName ?? "", playerId: inputs.by, content: `${attackerName}의 ${prepared.spec.name}이(가) ${targetName}에게 적중 (${resolution.attackTotal} vs AC ${resolution.targetAc}) — ${offered.join(" / ")} 반응?`, prompt: { kind: canShield ? "shield" : "guard", mover: { name: attackerName, ...inputs.attacker }, reactor: { name: targetName, ...targetRef }, attack: { name: prepared.spec.name, total: resolution.attackTotal, ac: resolution.targetAc }, ...(guards.length ? { guard: { features: guards.map((guard) => ({ name: guard.feature, hint: guardHint(guard) })), shield: canShield } } : {}) } });
       return promptId;
     }
     const messageId = newMessageId();
@@ -1659,19 +1691,25 @@ export class TableHost {
   }
 
   /** R11: finish an attack held for a Shield answer — re-resolved against the raised AC (same dice) when the shield went up, else as rolled. */
-  private releaseHeld(promptId: string, shielded: boolean) {
+  private releaseHeld(promptId: string, shielded: boolean, guard?: { acBonus?: number; reduce: number; label: string }) {
     const held = this.held.get(promptId);
     if (!held) return;
     this.held.delete(promptId);
     const attacker = this.resolveActor(held.inputs.attacker) ?? held.attacker;
     const target = this.resolveActor(held.inputs.targets[held.inputs.targetIndex]) ?? held.target;
     let resolution = held.resolution;
-    if (shielded) {
+    // R54 (D189): Shield's +5 and a contract reaction's own bonus take the same road — re-resolve with the same dice
+    // and a higher AC, so a hit that is now a miss really misses. `damageDelta` is how a reaction that soaks damage
+    // instead of raising AC reaches the card.
+    const acBonus = shielded ? 5 : guard?.acBonus ?? 0;
+    const note = shielded ? "방패 반응: AC +5" : guard ? `${guard.label}${guard.acBonus ? `: AC +${guard.acBonus}` : ""}${guard.reduce ? `: 피해 −${guard.reduce}` : ""}` : "";
+    if (acBonus || guard?.reduce) {
       const attackerCombatant = this.combatantOf(attacker);
       const targetCombatant = this.combatantOf(target);
       if (attackerCombatant && targetCombatant) {
-        if (targetCombatant.ac < held.resolution.targetAc + 5) targetCombatant.ac = held.resolution.targetAc + 5;
-        resolution = resolveAttack(attackerCombatant, targetCombatant, held.spec, { dice: diceFrom(this.options.random ?? Math.random), overrides: { ...(held.overrides ?? {}), note: [held.overrides?.note, "방패 반응: AC +5"].filter(Boolean).join(" · ") }, fixed: { d20s: held.resolution.d20s, damage: held.resolution.damage.map((part) => part.dice) }, apply: true });
+        if (acBonus && targetCombatant.ac < held.resolution.targetAc + acBonus) targetCombatant.ac = held.resolution.targetAc + acBonus;
+        const overrides = { ...(held.overrides ?? {}), ...(guard?.reduce ? { damageDelta: (held.overrides?.damageDelta ?? 0) - guard.reduce } : {}), note: [held.overrides?.note, note].filter(Boolean).join(" · ") };
+        resolution = resolveAttack(attackerCombatant, targetCombatant, held.spec, { dice: diceFrom(this.options.random ?? Math.random), overrides, fixed: { d20s: held.resolution.d20s, damage: held.resolution.damage.map((part) => part.dice) }, apply: true });
       }
     }
     const player = this.campaign.players.find((item) => item.userId === held.inputs.by);

@@ -12,8 +12,8 @@ import type { CastMethod } from "../character/play";
 import type { AttackOverrides } from "../rules/resolve";
 import type { CampaignClock, CampaignSettings, ChatMessage, Macro, PlayerRole, RollTable } from "../campaign/model";
 
-// R52 (D187): 27 — `AttackRiders.contracts`, the riders a contract declares for the pre-roll dialog.
-export const PROTOCOL_VERSION = 27;
+// R54 (D189): 28 — `act.guard`, the reaction a contract declared for itself.
+export const PROTOCOL_VERSION = 28;
 
 export interface Presence { userId: string; displayName: string; role: PlayerRole; color: string; connected: boolean }
 
@@ -113,6 +113,8 @@ export type ClientCommand =
   | { type: "tracker.swap"; turnId: string }
   /** Attack (§12.2): the host resolves and applies, one card per target. */
   | { type: "act.attack"; attacker: ActorRef; targets: ActorRef[]; attack: AttackRef; riders?: AttackRiders; overrides?: AttackOverrides; /** Answering an opportunity prompt (the prompt's message id): the attack is the reactor's reaction. */ reaction?: string; /** R9: the readied action goes off (the 준비 mark is spent as the reaction). */ readied?: boolean }
+  /** R54 (D189): take a reaction a contract declared (`reaction.window`) against the attack the prompt is holding. */
+  | { type: "act.guard"; messageId: string; feature: string }
   /** D96: `mover` leaves `from`'s reach (the 벗어남 button); the host asks `from`'s controller for an opportunity attack. */
   | { type: "act.provoke"; mover: ActorRef; from: ActorRef }
   /** The reactor's controller lets the opportunity go. */

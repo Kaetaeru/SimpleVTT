@@ -138,6 +138,8 @@ export interface ContractInterceptor {
   slot: string;
   /** R53 (D188): the weapon filter an `attack.resolved` interceptor narrows itself to (`piercing`, `heavy` …). */
   scope?: string;
+  /** R54 (D189): which moment a `reaction.window` interceptor opens on (`attack.hit-self`). */
+  trigger?: string;
   /** Which kinds of d20 roll this may touch; empty means every kind at that timing. */
   families: string[];
   /** Which outcomes it may touch (`failure` for a rescue, `success` for Cutting Words); empty means either. */
@@ -358,6 +360,7 @@ export function parseContract(config: Record<string, unknown>, entryId: string):
     interceptors.push({
       id: String(raw.id ?? `interceptor${index}`), timing: String(raw.timing ?? ""), slot: String(raw.slot ?? ""),
       ...(raw.scope ? { scope: String(raw.scope) } : {}),
+      ...(raw.trigger ? { trigger: String(raw.trigger) } : {}),
       families: (Array.isArray(raw.families) ? raw.families : []).map(String),
       outcomes: (Array.isArray(raw.outcomes) ? raw.outcomes : []).map(String),
       asks: Boolean(raw.interaction), factQueries,
