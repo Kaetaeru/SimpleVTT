@@ -123,6 +123,11 @@ export interface TableHostOptions {
    */
   pcRescues?: (entry: JournalCharacter, family: RollFamily, outcome: "success" | "failure") => RescueOffer[];
   pcPayContract?: (entry: JournalCharacter, payments: ContractPayment[], outcome: "success" | "failure") => CharacterRuntime | null;
+  /**
+   * R42 (D182): what a feature's contract asks the *table* for — conditions on a target, creatures spawned or
+   * dismissed, movement, and the questions the DM settles. The host owns no catalog, so this arrives as a function.
+   */
+  pcContractOutcome?: (entry: JournalCharacter, ruleKey: string) => { label: string; conditionsApplied: string[]; conditionsRemoved: string[]; deathSave: boolean; notes: string[]; artifacts: Array<{ kind: string; monsterId?: string; count?: number }> } | null;
   /** R18: run a short or long rest on one sheet (the catalog lives outside the host). */
   pcRest?: (entry: JournalCharacter, kind: "short" | "long") => CharacterRuntime | null;
   /** R10: an item in the character's bag as a table use (healing formula, consumed) and how to take it out of the bag. */
@@ -927,6 +932,40 @@ export class TableHost {
         this.say({ type: "emote", who: player.displayName, playerId: userId, content: `${name}: ${trait.name} (${most - used - 1}/${most} 남음)` });
         return;
       }
+      case "act.contract": {
+        // R42 (D182): the table-level half of a contract. The sheet applies its own half when the feature is used;
+        // this puts on the conditions, spawns what it spawns, and writes down what the DM has to settle.
+        const actor = this.resolveActor(command.actor);
+        if (!actor) return refuse("그 인물을 찾을 수 없습니다");
+        if (!isGm && !this.mayAct(userId, command.actor, actor.entry)) return refuse("자기 캐릭터의 특성만 쓸 수 있습니다");
+        if (actor.entry.kind !== "character") return refuse("시트가 있는 캐릭터의 계약입니다");
+        const outcome = this.options.pcContractOutcome?.(actor.entry, String(command.ruleKey).slice(0, LIMITS.name));
+        if (!outcome) return refuse("그 특성에는 표에서 할 일이 없습니다");
+        const who = actor.token?.name ?? actor.entry.name;
+        const targets = (command.targets ?? []).slice(0, LIMITS.targets).map((ref) => this.resolveActor(ref)).filter((found): found is NonNullable<typeof found> => Boolean(found));
+        for (const target of targets) {
+          this.mark(target, outcome.conditionsApplied, true, actor.token?.id);
+          this.mark(target, outcome.conditionsRemoved, false);
+        }
+        const lines: string[] = [];
+        if (outcome.conditionsApplied.length && targets.length) lines.push(`${targets.map((target) => target.token?.name ?? target.entry.name).join(", ")}: ${outcome.conditionsApplied.join("·")}`);
+        for (const artifact of outcome.artifacts) {
+          if (artifact.kind === "artifact.spawn" && artifact.monsterId) {
+            const spawned = this.summonInto(actor, artifact.monsterId, Math.max(1, Math.min(8, artifact.count ?? 1)), outcome.label);
+            if (spawned.length) lines.push(`소환: ${spawned.join(", ")}`);
+            else lines.push(`소환할 수 없었습니다 (${artifact.monsterId})`);
+          } else if (artifact.kind === "artifact.remove") {
+            const gone = this.dismissSummonsOf(actor.entry.id);
+            if (gone.length) lines.push(`돌려보냄: ${gone.join(", ")}`);
+          } else lines.push(`${artifact.kind} — 표에서 처리`);
+        }
+        if (outcome.deathSave) { this.rollDeathSave(actor.entry.id, player.displayName); lines.push("죽음 내성"); }
+        lines.push(...outcome.notes);
+        this.say({ type: "act", who: player.displayName, playerId: userId, content: `${who}: ${outcome.label}${lines.length ? ` — ${lines.join(" · ")}` : ""}`, act: {
+          kind: "legendary", name: outcome.label, actor: { name: who }, text: lines.join(" · ") || outcome.label, actorMarks: [], targetMarks: outcome.conditionsApplied, actorUnmarks: [],
+        } });
+        return;
+      }
       case "act.summon": {
         const summoner = this.resolveActor(command.summoner);
         if (!summoner) return refuse("소환하는 쪽을 찾을 수 없습니다");
@@ -1664,6 +1703,36 @@ export class TableHost {
    * happen next (불굴 rerolls, 어둠의 존재의 행운 adds a d10); the host only asks whoever owns the sheet, and asks
    * nothing at all when no contract could be paid for.
    */
+  /** R42 (D182): put `count` of a monster on the actor's page as their summons; returns the names placed. */
+  private summonInto(summoner: { entry: JournalEntry; token?: Token; page?: Page }, monsterId: string, count: number, why: string): string[] {
+    const page = summoner.page;
+    const monster = monsterById(monsterId);
+    if (!page || !monster) return [];
+    const controller = summoner.entry.kind === "character" ? summoner.entry.canEdit : [];
+    const placed: string[] = [];
+    for (let at = 0; at < count; at += 1) {
+      const name = count > 1 ? `${monster.name} ${at + 1}` : monster.name;
+      const entry: JournalNpc = { ...newJournalNpc(this.campaign.id, this.options.hostUserId, monster, { name, now: this.now() }), folder: "소환", canView: controller, canEdit: controller, summonedBy: { entryId: summoner.entry.id, name: why } };
+      this.storeEntry(entry);
+      const token = { ...tokenForNpc(entry), controlledBy: controller.length ? controller : ("inherit" as const), z: page.tokens.length + at };
+      this.storeToken(this.pages.get(page.id) ?? page, token);
+      placed.push(name);
+    }
+    return placed;
+  }
+
+  /** R42 (D182): send every creature this one summoned away; returns the names. */
+  private dismissSummonsOf(entryId: string): string[] {
+    const gone: string[] = [];
+    for (const entry of [...this.journalEntries.values()]) {
+      if (entry.kind !== "npc" || entry.summonedBy?.entryId !== entryId) continue;
+      for (const page of [...this.pages.values()]) for (const token of [...page.tokens]) if (token.represents === entry.id) this.dropToken(page.id, token.id);
+      this.dropEntry(entry.id);
+      gone.push(entry.name);
+    }
+    return gone;
+  }
+
   private offerRescue(cardId: string, actor: { entry: JournalEntry; token?: Token; page?: Page }, family: RollFamily, roll: string, what: string) {
     if (!this.options.pcRescues || actor.entry.kind !== "character") return;
     const offers = this.options.pcRescues(actor.entry, family, "failure");

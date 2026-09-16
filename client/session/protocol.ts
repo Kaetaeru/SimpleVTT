@@ -12,7 +12,7 @@ import type { CastMethod } from "../character/play";
 import type { AttackOverrides } from "../rules/resolve";
 import type { CampaignClock, CampaignSettings, ChatMessage, Macro, PlayerRole, RollTable } from "../campaign/model";
 
-export const PROTOCOL_VERSION = 25;
+export const PROTOCOL_VERSION = 26;
 
 export interface Presence { userId: string; displayName: string; role: PlayerRole; color: string; connected: boolean }
 
@@ -133,6 +133,12 @@ export type ClientCommand =
   /** R23: something on the sheet (a feature with a 추가 행동 note) spent this turn's action or bonus action. */
   | { type: "act.spend"; actor: ActorRef; which: "action" | "bonus"; /** R34 (D171): give the bucket back instead of spending it — a contract's `economy.modify` with a positive amount (행동 폭증). */ grant?: boolean; /** What granted it, for the log. */ source?: string }
   | { type: "act.trait"; actor: ActorRef; name: string }
+  /**
+   * R42 (D182): run a feature's contract at the table. The sheet already applies what a sheet can answer; this is
+   * the entry point for the rest — conditions put on a target, a creature spawned or dismissed, movement and the
+   * questions the DM has to settle. `ruleKey` names the feature; the host reads the contract from its own catalog.
+   */
+  | { type: "act.contract"; actor: ActorRef; ruleKey: string; targets?: ActorRef[] }
   /** R16: put a summoned creature on the summoner's scene — its own journal entry, controlled by the summoner's controller. */
   | { type: "act.summon"; summoner: ActorRef; monsterId: string; count?: number; spellId?: string }
   /** R16: send this summoner's creatures away (the spell ended, or the DM says so). */

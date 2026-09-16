@@ -17,8 +17,11 @@ import { APPLIED_OPERATIONS, COMPUTED_OPERATIONS } from "../../client/rules/cont
 
 const SPEC = "docs/design/v3/ROLL20_TABLE_SPEC.md";
 const CLASS_SLUGS = ["barbarian", "bard", "cleric", "druid", "fighter", "monk", "paladin", "ranger", "rogue", "sorcerer", "warlock", "wizard"];
-/** The slots the interceptor grammar defines, and the ones the host opens today. */
-const SLOTS = ["declaration", "targets", "d20.roll", "attack.roll", "attack.outcome", "primary.damage", "secondary.damage", "effects", "movement", "stateChanges"];
+/**
+ * R42 (D182): slots are counted by *demand*, not by how many the grammar lists. Nine of the ten have no contract
+ * asking for them; opening those would be speculation, and a plan that counts speculation is not measuring anything.
+ */
+const WANTED_SLOTS = ["d20.roll", "primary.damage"];
 const OPEN_SLOTS = ["d20.roll"];
 
 /** Every class and subclass feature at level 20, sorted into what the app does with it. */
@@ -59,7 +62,7 @@ test("plan: the schema's operation vocabulary is 26, and the executor's share of
   // Everything is read; what is left is the kinds with no call site yet.
   const waiting = COMPUTED_OPERATIONS.filter((kind) => !(APPLIED_OPERATIONS as readonly string[]).includes(kind));
   assert.equal(APPLIED_OPERATIONS.length + waiting.length, COMPUTED_OPERATIONS.length);
-  assert.equal(APPLIED_OPERATIONS.length, 16);
+  assert.equal(APPLIED_OPERATIONS.length, 27, "R42 opened the table-level entry point, so every kind lands");
   for (const applied of APPLIED_OPERATIONS) assert.ok((COMPUTED_OPERATIONS as readonly string[]).includes(applied), applied);
 });
 
@@ -71,7 +74,7 @@ test("plan: the document's scoreboard is the measured one (D176)", () => {
   for (const row of [
     `| ${COMPUTED_OPERATIONS.length} / 27 |`,
     `| ${APPLIED_OPERATIONS.length} / 27 |`,
-    `| ${OPEN_SLOTS.length} / ${SLOTS.length} |`,
+    `| ${OPEN_SLOTS.length} / ${WANTED_SLOTS.length} |`,
     `| ${covered} / ${total} |`,
   ]) assert.ok(spec.includes(row), `§14.1의 점수판이 측정값과 다릅니다: ${row} 가 없습니다`);
   // And the four-way split of the features.

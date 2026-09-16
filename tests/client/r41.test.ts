@@ -15,16 +15,11 @@ import { contractOutcome, emptyOutcome, featureContract } from "../../client/rul
 import { featureRuleKey } from "../../client/rules/activation";
 import { build, catalog } from "./support";
 
-test("operations: all twenty-six definitions are read, and the ten with no home are still named (D181)", () => {
+test("operations: all twenty-seven kinds are read (D181)", () => {
   // 27 kinds from the grammar's 26 definitions: condition.apply and condition.remove share one.
   assert.equal(COMPUTED_OPERATIONS.length, 27, "every operation kind the grammar defines");
-  assert.equal(APPLIED_OPERATIONS.length, 16);
-  for (const applied of APPLIED_OPERATIONS) assert.ok((COMPUTED_OPERATIONS as readonly string[]).includes(applied), applied);
-  const waiting = COMPUTED_OPERATIONS.filter((kind) => !(APPLIED_OPERATIONS as readonly string[]).includes(kind));
-  assert.deepEqual([...waiting].sort(), [
-    "adjudication.request", "artifact.damage", "artifact.relocate", "artifact.remove", "artifact.repair",
-    "artifact.spawn", "artifact.update", "condition.apply", "life.death-save", "movement.grant", "movement.relocate",
-  ].sort());
+  // R42 gave the last eleven a table-level entry point, so nothing is left computed-only.
+  for (const computed of COMPUTED_OPERATIONS) assert.ok((APPLIED_OPERATIONS as readonly string[]).includes(computed), `${computed}: 닿는 자리가 없습니다`);
 });
 
 test("operations: each new kind parses into something the engine can act on (D181)", () => {

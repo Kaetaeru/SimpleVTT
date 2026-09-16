@@ -188,6 +188,9 @@ export const APPLIED_OPERATIONS = [
   "economy.modify", "roll.modify", "property.modify", "effect.apply", "effect.remove", "effect.suppress",
   "resource.change", "resource.recharge", "temp-hp.grant", "damage.apply", "healing.apply", "condition.remove",
   "hp.maximum.change", "life.stabilize", "movement.stand", "content.grant",
+  // R42 (D182): the table-level entry point (`act.contract`) lands the rest.
+  "condition.apply", "life.death-save", "movement.relocate", "movement.grant", "adjudication.request",
+  "artifact.spawn", "artifact.remove", "artifact.damage", "artifact.repair", "artifact.relocate", "artifact.update",
 ] as const;
 
 const OPERATION_KINDS = new Set<string>(COMPUTED_OPERATIONS);
