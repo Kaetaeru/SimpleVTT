@@ -159,3 +159,69 @@ export function contractOutcome(contract: CommonPlayContract, scope: Scope): Con
 /** Nothing to do: the contract asked for none of these. */
 export const emptyOutcome = (outcome: ContractOutcome) =>
   !outcome.conditionsRemoved.length && !outcome.hpMaximumDelta && !outcome.stabilize && !outcome.deathSave && !outcome.stand && !outcome.grants.length && !outcome.notes.length && !outcome.recharges.length && !outcome.artifacts.length;
+
+/** R50 (D185): what a contract does, in one line each, for the sheet — the same job `featNotes` does for a feat. */
+export function contractSummary(contract: CommonPlayContract, scope: Scope): { rules: string[]; execution: "derived" | "descriptive" } {
+  const rules: string[] = [];
+  const questions: string[] = [];
+  let mechanical = false;
+  const number = (expr: Parameters<typeof evaluate>[0]) => { const value = evaluate(expr, scope); return typeof value === "number" ? value : undefined; };
+  const signed = (value: number | undefined) => (value === undefined ? "" : `${value >= 0 ? "+" : ""}${value}`);
+  for (const operation of operationsOf(contract)) {
+    if (!live(operation, scope)) continue;
+    switch (operation.kind) {
+      case "adjudication.request": questions.push(operation.question); break;
+      case "property.modify": {
+        mechanical = true;
+        const amount = operation.dice ? `+${operation.dice}` : signed(number(operation.value));
+        const WHERE: Record<string, string> = {
+          "ac.bonus": "AC", "ac.unarmored-base": "방어구 없을 때 기본 AC", "ac.minimum": "AC 최소",
+          "attack-roll.bonus": "명중 굴림", "damage.bonus": "피해", "saving-throw.bonus": "내성 굴림", "ability-check.bonus": "능력 판정",
+          "speed.walk": "이동 속도", "speed.fly": "비행 속도", "speed.climb": "등반 속도", "speed.fly-as-walk": "비행 속도 = 이동 속도",
+          "hp.maximum": "최대 HP", "senses.darkvision": "암시야", "attack-roll.crit-range": "치명타 범위",
+          "resistance": "피해 저항", "condition-immunity": "상태 면역", "weapon.shillelagh": "곤봉·육척봉이 주문 능력치를 씀",
+          "spell.save-dc": "주문 내성 DC", "spell.attack-roll.bonus": "주문 명중",
+        };
+        const where = WHERE[operation.property] ?? (operation.property.startsWith("skill.") ? `${operation.property.split(".")[1]} 기술` : operation.property);
+        const value = operation.property === "resistance" || operation.property === "condition-immunity" ? String(evaluate(operation.value, scope) ?? "") : amount;
+        rules.push(`${where}${value ? ` ${value}` : ""}`.trim());
+        break;
+      }
+      case "effect.apply": { mechanical = true; rules.push(`지속 ${operation.template.duration ?? LIFETIME_KO[operation.lifetime] ?? operation.lifetime}`); break; }
+      case "effect.remove": mechanical = true; rules.push("같은 효과를 대체합니다"); break;
+      case "effect.suppress": mechanical = true; rules.push("효과를 멈춥니다"); break;
+      case "resource.change": { mechanical = true; const amount = number(operation.amount) ?? 0; rules.push(amount < 0 ? `${-amount}회 소비` : `${amount}회 회복`); break; }
+      case "healing.apply": mechanical = true; rules.push("회복"); break;
+      case "temp-hp.grant": mechanical = true; rules.push("임시 HP"); break;
+      case "damage.apply": mechanical = true; rules.push("피해 굴림"); break;
+      case "condition.apply": mechanical = true; rules.push(`${operation.condition} 부여`); break;
+      case "condition.remove": mechanical = true; rules.push(`${operation.condition} 해제`); break;
+      case "economy.modify": mechanical = true; rules.push("행동 경제"); break;
+      case "life.stabilize": mechanical = true; rules.push("안정"); break;
+      case "artifact.spawn": mechanical = true; rules.push("소환"); break;
+      case "roll.modify": {
+        const how = operation.mode === "reroll" ? `${operation.dice ?? "1d20"} 재굴림` : operation.mode === "add-die" ? `+${operation.dice}` : operation.mode === "subtract-die" ? `−${operation.dice ?? "주사위"}` : signed(number(operation.value));
+        rules.push(`판정에 ${how}`);
+        mechanical = true;
+        break;
+      }
+      case "movement.grant": mechanical = true; rules.push(operation.note ?? `이동 ${number(operation.distance) ?? 0}피트`); break;
+      case "movement.relocate": mechanical = true; rules.push(operation.note ?? "이동"); break;
+      case "movement.stand": mechanical = true; rules.push("일어섬"); break;
+      case "life.death-save": mechanical = true; rules.push("죽음 내성"); break;
+      case "content.grant": mechanical = true; rules.push("획득"); break;
+      case "resource.recharge": mechanical = true; rules.push("재충전 굴림"); break;
+      case "hp.maximum.change": mechanical = true; rules.push("최대 HP 변화"); break;
+      case "artifact.remove": case "artifact.damage": case "artifact.repair": case "artifact.relocate": case "artifact.update":
+        mechanical = true; rules.push("판 위의 사물"); break;
+      default: break;
+    }
+  }
+  // R50 (D185): a contract the executor cannot run whole (거리·시야를 묻는 것) is not claimed as applied, and the
+  // sheet says which part the table has to answer instead of quietly showing the half that works.
+  if (contract.unsupported.length) {
+    mechanical = false;
+    questions.push(`자리(거리·시야)를 앱이 답할 수 없어 표에서 판단합니다`);
+  }
+  return { rules: [...rules, ...questions], execution: mechanical ? "derived" : "descriptive" };
+}

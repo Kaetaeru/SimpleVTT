@@ -280,7 +280,8 @@ export function SheetView({ derived, catalog, runtime, compact = false, actions 
                           {active ? <Pill tone="accent">진행 중</Pill> : null}
                           {/* R32 (D167): the sheet says which feats and features the app really runs and which the
                               table does. "궁술 +2" and "대형 무기 전투" change a number; "밤의 영혼의 은총" does not. */}
-                          {source === "feat" ? (feature.execution && feature.execution !== "descriptive" ? <span title={featRule(feature) ?? "앱이 이 재주를 적용합니다"}><Pill tone="good">규칙 적용</Pill></span> : <span title={[featRule(feature), "나머지는 표에서 판단합니다 — 앱은 숫자를 바꾸지 않습니다"].filter(Boolean).join(" · ")}><Pill tone="accent">표에서 판단</Pill></span>) : null}
+                          {/* R50 (D185): every feature says what the app does with it, not only the feats. */}
+                          {feature.execution ? (feature.execution && feature.execution !== "descriptive" ? <span title={featRule(feature) ?? "앱이 이 재주를 적용합니다"}><Pill tone="good">규칙 적용</Pill></span> : <span title={[featRule(feature), "나머지는 표에서 판단합니다 — 앱은 숫자를 바꾸지 않습니다"].filter(Boolean).join(" · ")}><Pill tone="accent">표에서 판단</Pill></span>) : null}
                           <span className="cl-src">{feature.sourceLabel}</span>
                           {activation ? (
                             <span className="cl-row cl-use" style={{ gap: 4 }} onClick={(event) => event.stopPropagation()}>

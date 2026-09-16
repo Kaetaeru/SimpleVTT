@@ -16,7 +16,7 @@ import { Ledger } from "./ledger";
 import { applyPassiveContracts, applyActiveEffects } from "../rules/effects";
 import { featureRuleKey } from "../rules/activation";
 import { characterScope } from "../rules/contract";
-import { contractDurations } from "../rules/contractActivation";
+import { contractDurations, contractSummary, featureContract } from "../rules/contractActivation";
 import { applyBackground, applyLanguages, applySpecies, damageTypeKo } from "./origin";
 import { dieMinimumCovers } from "./featRules";
 import { validateAbilities } from "./source";
@@ -58,6 +58,9 @@ export function deriveCharacter(source: CharacterSource, catalog: ContentCatalog
     const key = featureRuleKey(feature.id);
     const found = durations(key, feature.name);
     if (found) featureContracts[key] = found;
+    // R50 (D185): the sheet's line for this feature, written from its contract — the same thing R33 did for feats.
+    const contract = featureContract(catalog, key);
+    if (contract) { const summary = contractSummary(contract, characterScope(derived)); feature.rules = summary.rules; feature.execution = summary.execution; }
   }
   derived.featureContracts = featureContracts;
   // R43 (D183): passives first (they are always on), then whatever is running right now.
