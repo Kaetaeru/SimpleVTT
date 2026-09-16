@@ -41,6 +41,7 @@ function Table() {
   const snapshot = c.table.snapshot!;
   const isGm = snapshot.players.find((player) => player.userId === c.userId)?.role === "gm";
   const [copied, setCopied] = useState(false);
+  const [noteClosed, setNoteClosed] = useState(false);
   const [tab, setTab] = useState<"chat" | "journal" | "art" | "compendium">("chat");
   const [windows, setWindows] = useState<JournalWindow[]>([]);
   const openEntry = useCallback((id: string) => setWindows((list) => { const existing = list.find((item) => item.kind === "entry" && item.id === id); const rest = existing ? list.filter((item) => item !== existing) : list; return [...rest, existing ?? { key: `entry:${id}`, kind: "entry", id }]; }), []);
@@ -67,10 +68,10 @@ function Table() {
           {snapshot.players.map((player) => <span key={player.userId} className={`cl-avatar-chip${player.connected ? "" : " off"}`} style={{ borderColor: player.color }} title={`${player.displayName}${player.role === "gm" ? " (GM)" : ""}${player.connected ? "" : " · 오프라인"}`}><span className="cl-swatch" style={{ background: player.color }} />{player.displayName}{player.role === "gm" ? <small>GM</small> : null}</span>)}
         </span>
         {c.table.role === "host" ? (
-          <span className="cl-row cl-small" style={{ gap: 4 }}>
-            <span className="cl-quiet">참가 코드</span>
-            <code className="cl-code">{c.table.invite}</code>
-            <button type="button" className="cl-btn small" onClick={async () => { setCopied(await copyText(c.table.invite ?? "")); window.setTimeout(() => setCopied(false), 2000); }}>{copied ? "복사됨" : "복사"}</button>
+          <span className="cl-row cl-small cl-invite" style={{ gap: 4 }}>
+            {/* R68 (D203): the code is long and only ever copied; it shows as much as fits and the button says what it is. */}
+            <code className="cl-code" title={`참가 코드: ${c.table.invite ?? ""}`}>{c.table.invite}</code>
+            <button type="button" className="cl-btn small" title="참가 코드를 복사합니다" onClick={async () => { setCopied(await copyText(c.table.invite ?? "")); window.setTimeout(() => setCopied(false), 2000); }}>{copied ? "복사됨" : "참가 코드 복사"}</button>
           </span>
         ) : null}
         <ClockStrip isGm={isGm} />
@@ -84,7 +85,8 @@ function Table() {
       {/* R27 (D145): the table says plainly when it is no longer live, instead of looking exactly like a live one. */}
       {c.table.status === "disconnected" ? <Notice tone="bad">연결이 끊겼습니다. 여기 보이는 것은 마지막으로 받은 상태이고, 지금 누르는 것은 테이블에 전해지지 않습니다 — 다시 연결되면 이어집니다.</Notice> : null}
       {c.table.status === "closed" ? <Notice tone="bad">테이블이 닫혔습니다. 이 화면은 마지막 상태이며 더는 바뀌지 않습니다.</Notice> : null}
-      {c.table.role === "host" && c.table.transportNote ? <Notice tone="warn">{c.table.transportNote}</Notice> : null}
+      {/* R68 (D203): a note the host reads once; it can be closed for the rest of the session. */}
+      {c.table.role === "host" && c.table.transportNote && !noteClosed ? <Notice tone="warn"><span className="cl-row" style={{ gap: 8 }}>{c.table.transportNote}<button type="button" className="cl-btn small quiet" style={{ marginLeft: "auto" }} aria-label="안내 닫기" onClick={() => setNoteClosed(true)}>✕</button></span></Notice> : null}
       {c.table.refusals.length ? <div className="cl-toasts">{c.table.refusals.map((reason, index) => <Notice tone="bad" key={`${reason}-${index}`}>{reason}</Notice>)}</div> : null}
       <JournalWindows windows={windows} onClose={closeWindow} onFocus={focusWindow} onOpen={openEntry} />
       <div className="cl-table-grid">
@@ -160,9 +162,12 @@ function ChatTab({ isGm }: { isGm: boolean }) {
 function ClockStrip({ isGm }: { isGm: boolean }) {
   const c = useCampaigns();
   const clock = c.table.snapshot!.clock;
+  // R68 (D203): the clock is one chip; what moves it (and the rests) opens under it instead of lining the header.
+  const [open, setOpen] = useState(false);
   return (
-    <span className="cl-clock cl-row cl-small" style={{ gap: 4 }}>
-      <span className="cl-clock-now" title="게임 속 시간">🕒 {clockText(clock)}</span>
+    <span className="cl-clock cl-small" style={{ position: "relative" }}>
+      <button type="button" className={`cl-btn small cl-clock-now${open ? " active" : ""}`} title="게임 속 시간 — 시간 넘기기와 휴식" aria-haspopup="true" aria-expanded={open} onClick={() => setOpen((value) => !value)}>🕒 {clockText(clock)} ▾</button>
+      {!open ? null : <span className="cl-clock-menu" onClick={() => setOpen(false)}>
       {isGm ? (
         <>
           {[{ label: "+10분", minutes: 10 }, { label: "+1시간", minutes: 60 }].map((step) => <button type="button" key={step.label} className="cl-btn small quiet" onClick={() => c.advanceTime(step.minutes)}>{step.label}</button>)}
@@ -175,6 +180,7 @@ function ClockStrip({ isGm }: { isGm: boolean }) {
           <button type="button" className="cl-btn small quiet" onClick={() => c.askRest("long")}>긴 휴식 제안</button>
         </>
       )}
+      </span>}
     </span>
   );
 }

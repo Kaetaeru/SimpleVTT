@@ -58,6 +58,8 @@ try {
   // The DM controls are the proof: the tracker button, the clock's rest buttons and the scene tools are GM-only.
   await second.getByRole("button", { name: /^턴 트래커/ }).waitFor({ timeout: 10000 });
   check(true, "the host sees the DM's 턴 트래커 button");
+  // R68 (D203): the rests open under the clock chip.
+  await second.locator(".cl-clock-now").click();
   check(await second.getByRole("button", { name: "긴 휴식" }).isVisible(), "the host sees the DM's rest controls, not a player's 제안 buttons");
   check(!(await second.getByRole("button", { name: "긴 휴식 제안" }).isVisible().catch(() => false)), "and not the player's ask buttons");
   await second.getByRole("button", { name: "+ 장면" }).first().waitFor({ timeout: 10000 });

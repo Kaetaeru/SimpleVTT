@@ -669,5 +669,9 @@ span.cl-tracker-init{display:inline-grid;place-items:center}
 .cl-window.narrow{width:min(420px,94vw)}
 /* R67 (D202): the conditions not on, behind "+ 상태". */
 .cl-cond.picker{margin-top:6px;padding-top:6px;border-top:1px dashed var(--line)}
+/* R68 (D203): a header that fits on one line. */
+.cl-invite .cl-code{max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:middle}
+.cl-clock-menu{position:absolute;top:calc(100% + 4px);left:0;z-index:80;display:flex;flex-direction:column;gap:4px;padding:6px;border-radius:10px;background:var(--overlay);border:1px solid var(--line-2);box-shadow:var(--elev-2);min-width:140px}
+.cl-clock-menu .cl-btn{justify-content:flex-start}
 .cl-toasts{left:auto;right:12px;transform:none;align-items:flex-end;max-width:min(46%,420px)}
 .cl-approval-overlay{align-content:center;gap:10px}
