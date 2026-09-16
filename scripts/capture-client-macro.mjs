@@ -39,7 +39,7 @@ try {
   const code = (await dm.locator(".cl-code").first().textContent())?.trim() ?? "";
   await dm.getByRole("button", { name: "게임 시작" }).click();
   await dm.locator(".cl-chat-input").waitFor();
-  await player.goto(`${base}#/campaigns`);
+  await player.goto(`${base}?seat=player#/campaigns`);
   await player.getByLabel("내 이름 (테이블에서 보이는 이름)").fill("지연");
   await player.getByLabel("참가 코드").fill(code);
   await player.getByRole("button", { name: "입장", exact: true }).click();

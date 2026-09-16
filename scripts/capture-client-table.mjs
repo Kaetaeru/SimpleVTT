@@ -51,7 +51,7 @@ try {
   check((await dm.locator(".cl-code").first().textContent())?.trim() === code, "table shows the same join code");
 
   // SC-3: the player joins by code; presence on both tabs; "참가한 캠페인" remembers it.
-  await player.goto(`${base}#/campaigns`);
+  await player.goto(`${base}?seat=player#/campaigns`);
   await player.getByLabel("내 이름 (테이블에서 보이는 이름)").fill("지연");
   await player.getByLabel("참가 코드").fill(code);
   await player.getByRole("button", { name: "입장", exact: true }).click();
@@ -123,7 +123,7 @@ try {
   // SC-8: a wrong code is refused with a clear message.
   const stranger = await context.newPage();
   stranger.on("dialog", (dialog) => void dialog.accept());
-  await stranger.goto(`${base}#/campaigns`);
+  await stranger.goto(`${base}?seat=stranger#/campaigns`);
   await stranger.getByLabel("참가 코드").fill(code.replace(/-[A-Z0-9]{6}$/, "-ZZZZZZ"));
   await stranger.getByRole("button", { name: "입장", exact: true }).click();
   await stranger.getByText(/참가 코드가 맞지 않습니다/).waitFor({ timeout: 10000 });

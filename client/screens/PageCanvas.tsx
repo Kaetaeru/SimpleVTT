@@ -4,7 +4,8 @@
  * its menu, the 벗어남 button provokes an opportunity attack (D96), and the command bar under the board is where
  * the selected creature acts. The grid map, with its cells, drag-and-snap, layers, zoom and ruler, is gone.
  */
-import { useEffect, useMemo, useRef, useState, type DragEvent, type PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type DragEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { useCampaigns } from "../app/campaigns";
 import { useClient } from "../app/context";
 import type { JournalCharacter, JournalEntry, Pending } from "../campaign/journal";
@@ -37,6 +38,7 @@ import { toggleCondition } from "../character/play";
 import { Modal, Notice } from "../ui/components";
 import { ART_DRAG_TYPE, ArtImage, ArtPicker } from "./ArtPanel";
 import { scrollCheckDc, scrollSpellId } from "../rules/scrolls";
+import { fitOnScreen } from "../ui/place";
 
 export const JOURNAL_DRAG_TYPE = "application/x-simplevtt-journal";
 export const COMPENDIUM_DRAG_TYPE = "application/x-simplevtt-monster";
@@ -193,6 +195,8 @@ export function PageCanvas({ onOpenEntry, onOpenToken, onOpenPageSettings, onOpe
               { key: "settings", label: "장면 설정", hint: "이름·배경 그림·설명", onSelect: () => onOpenPageSettings(page.id) },
               { key: "dup", label: "복제", onSelect: () => { const copy = { ...page, id: newScene(page.campaignId, "", 0).id, name: `${page.name} (복제)`, order: live.length, tokens: page.tokens.map((token) => ({ ...token, id: newToken({ name: token.name }).id })) }; c.putPage(copy); setGmPageId(copy.id); } },
               { key: "archive", label: page.archived ? "보관 해제" : "보관", onSelect: () => c.putPage({ ...page, archived: !page.archived }) },
+              // R22 (D120): a scene can be thrown away, not only archived. The last one cannot go — the table needs somewhere to be.
+              { key: "delete", label: "장면 삭제", hint: live.length > 1 || page.archived ? `${page.name}과(와) 그 위의 아이콘 ${page.tokens.length}개` : "마지막 장면은 지울 수 없습니다 (먼저 새 장면을 만드세요)", disabled: live.length <= 1 && !page.archived, onSelect: () => { if (!confirm(`"${page.name}"을(를) 지울까요? 이 장면 위의 아이콘 ${page.tokens.length}개도 함께 사라지고 되돌릴 수 없습니다.`)) return; const next = pages.find((item) => item.id !== page.id && !item.archived) ?? pages.find((item) => item.id !== page.id); c.removePage(page.id); setGmPageId(next?.id ?? null); } },
               { key: "archived", label: showArchived ? "보관함 숨기기" : "보관함 보기", onSelect: () => setShowArchived((value) => !value) },
               { key: "layer", label: layer === "gm" ? "모두에게 보이게 놓기" : "GM만 보이게 놓기", hint: "새로 놓는 아이콘", onSelect: () => setLayer((value) => (value === "gm" ? "objects" : "gm")) },
             ]} />
@@ -207,7 +211,7 @@ export function PageCanvas({ onOpenEntry, onOpenToken, onOpenPageSettings, onOpe
         <div className={`cl-canvas-viewport scene${targeting ? " targeting" : ""}`} ref={board} onDragOver={(event) => { const types = [...event.dataTransfer.types]; if (types.includes(JOURNAL_DRAG_TYPE) || types.includes(ART_DRAG_TYPE) || types.includes(COMPENDIUM_DRAG_TYPE)) event.preventDefault(); }} onDrop={onDrop}>
           <SceneBoard page={page} tokens={sortedTokens} selected={selected} targeting={targeting} turnTokenId={turnToken?.id} acting={acting} journal={journal} isGm={isGm}
             onPointerDown={onIconPointerDown} onPointerDownBoard={() => { setSelected([]); setMenu(null); }}
-            onContextMenu={(event, token) => { event.preventDefault(); event.stopPropagation(); setSelected([token.id]); const box = board.current!.getBoundingClientRect(); setMenu({ tokenId: token.id, x: event.clientX - box.left, y: event.clientY - box.top }); }}
+            onContextMenu={(event, token) => { event.preventDefault(); event.stopPropagation(); setSelected([token.id]); setMenu({ tokenId: token.id, x: event.clientX, y: event.clientY }); }}
             onDoubleClick={(token) => { if (token.represents && journal.some((entry) => entry.id === token.represents)) onOpenEntry(token.represents); else if (controlsToken(token, viewer, journal)) onOpenToken(page.id, token.id); }}
             onLeave={(token) => { if (acting) c.provoke({ entryId: acting.represents, pageId: page.id, tokenId: acting.id }, { entryId: token.represents, pageId: page.id, tokenId: token.id }); }} />
           {menuToken ? <TokenMenu token={menuToken} page={page} at={menu!} onClose={() => setMenu(null)} onOpenToken={() => onOpenToken(page.id, menuToken.id)} onOpenEntry={onOpenEntry} /> : null}
@@ -295,24 +299,59 @@ function ActDialog({ ask, onDone }: { ask: ActAsk; onDone: (answer: ActAnswer | 
 }
 
 /** A small popover menu: one button, a list of choices with hints; closes on choice, Esc or a click outside. */
+/**
+ * R22 (D119): a floating menu is placed against the WINDOW, not against the board.
+ *
+ * The board is a clipped box (`overflow:hidden`), so a menu drawn inside it lost everything past the bottom edge —
+ * right-clicking a token low on the scene hid the 삭제 button with no way to reach it. These menus go into a portal
+ * on `document.body`, sit `position:fixed` at the pointer, and are nudged back on screen: flipped above the point
+ * when they would fall off the bottom, pulled left when they would fall off the right, never off the top or left.
+ */
+function useOnScreen(at: { x: number; y: number }, open = true) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [placed, setPlaced] = useState(at);
+  useLayoutEffect(() => {
+    const node = ref.current;
+    if (!node || !open) return;
+    const { width, height } = node.getBoundingClientRect();
+    setPlaced(fitOnScreen(at, { width, height }, { width: window.innerWidth, height: window.innerHeight }));
+  }, [at.x, at.y, open]);
+  return { ref, placed };
+}
+
+/**
+ * The menu itself, on `document.body` so no clipped ancestor can cut it off. `ignore` is the button that opened it:
+ * the menu is no longer a DOM child of that button, so without this a press on either would read as "outside" and
+ * close the menu before the click could land on the item.
+ */
+function FloatingMenu({ at, className, label, onClose, ignore, children }: { at: { x: number; y: number }; className: string; label: string; onClose: () => void; ignore?: { current: HTMLElement | null }; children: ReactNode }) {
+  const { ref, placed } = useOnScreen(at);
+  useEffect(() => {
+    const onDown = (event: PointerEvent) => { const target = event.target as Node; if (!ref.current?.contains(target) && !ignore?.current?.contains(target)) onClose(); };
+    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") onClose(); };
+    // A frame later, so the click that opened the menu does not close it again.
+    const timer = window.setTimeout(() => { document.addEventListener("pointerdown", onDown); document.addEventListener("keydown", onKey); }, 0);
+    return () => { window.clearTimeout(timer); document.removeEventListener("pointerdown", onDown); document.removeEventListener("keydown", onKey); };
+  }, [onClose, ref, ignore]);
+  return createPortal(
+    <div className={className} style={{ left: placed.x, top: placed.y }} role="menu" aria-label={label} ref={ref} onContextMenu={(event) => event.preventDefault()}>{children}</div>,
+    document.body,
+  );
+}
+
 function Dropdown({ label, items, disabled, tone, up = false }: { label: string; items: Array<{ key: string; label: string; hint?: string; disabled?: boolean; onSelect: () => void }>; disabled?: boolean; tone?: "primary"; /** Open above the button (menus on the command bar at the bottom of the board). */ up?: boolean }) {
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (event: PointerEvent) => { if (!box.current?.contains(event.target as Node)) setOpen(false); };
-    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") setOpen(false); };
-    document.addEventListener("pointerdown", onDown);
-    document.addEventListener("keydown", onKey);
-    return () => { document.removeEventListener("pointerdown", onDown); document.removeEventListener("keydown", onKey); };
-  }, [open]);
+  // R22 (D119): anchored to the button's place on screen, then nudged to fit — the board clips, the window does not.
+  const [at, setAt] = useState({ x: 0, y: 0 });
+  const anchor = () => { const rect = box.current?.getBoundingClientRect(); if (rect) setAt({ x: rect.left, y: up ? rect.top : rect.bottom + 2 }); };
   return (
     <div className={`cl-dd${up ? " up" : ""}`} ref={box}>
-      <button type="button" className={`cl-btn small${tone === "primary" ? " primary" : ""}${open ? " active" : ""}`} aria-haspopup="menu" aria-expanded={open} disabled={disabled || !items.length} onClick={() => setOpen((value) => !value)}>{label} ▾</button>
+      <button type="button" className={`cl-btn small${tone === "primary" ? " primary" : ""}${open ? " active" : ""}`} aria-haspopup="menu" aria-expanded={open} disabled={disabled || !items.length} onClick={() => { anchor(); setOpen((value) => !value); }}>{label} ▾</button>
       {open ? (
-        <div className="cl-dd-menu" role="menu" aria-label={label}>
+        <FloatingMenu at={at} className="cl-dd-menu" label={label} onClose={() => setOpen(false)} ignore={box}>
           {items.map((item) => <button type="button" key={item.key} role="menuitem" className="cl-dd-item" disabled={item.disabled} title={item.hint} onClick={() => { setOpen(false); item.onSelect(); }}><span>{item.label}</span>{item.hint ? <small>{item.hint}</small> : null}</button>)}
-        </div>
+        </FloatingMenu>
       ) : null}
     </div>
   );
@@ -845,7 +884,7 @@ function TokenMenu({ token, page, at, onClose, onOpenToken, onOpenEntry }: { tok
     onClose();
   };
   return (
-    <div className="cl-token-menu" style={{ left: at.x, top: at.y }} role="menu" aria-label={`토큰 메뉴 ${token.name}`} onPointerDown={(event) => event.stopPropagation()}>
+    <FloatingMenu at={at} className="cl-token-menu" label={`토큰 메뉴 ${token.name}`} onClose={onClose}>
       <div className="cl-token-menu-head"><strong>{token.name}</strong><button type="button" className="cl-btn quiet small" aria-label="메뉴 닫기" onClick={onClose}>✕</button></div>
       {controls ? (
         <div className="cl-token-menu-bars">
@@ -878,7 +917,7 @@ function TokenMenu({ token, page, at, onClose, onOpenToken, onOpenEntry }: { tok
         {controls ? <button type="button" className="cl-btn small" onClick={() => { c.addTurn({ name: token.name, tokenId: token.id, pageId: page.id, entryId: token.represents, image: token.image }); onClose(); }} title="이니셔티브 0으로 넣습니다 (액션 줄의 '이니셔티브'는 굴려서 넣습니다)">턴 트래커에 추가</button> : null}
         {controls ? <button type="button" className="cl-btn small danger" onClick={() => { c.removeToken(page.id, token.id); onClose(); }}>삭제</button> : null}
       </div>
-    </div>
+    </FloatingMenu>
   );
 }
 

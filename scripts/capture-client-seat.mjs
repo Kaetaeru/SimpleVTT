@@ -1,9 +1,9 @@
 /**
- * D90 "DM 확인 후 적용" on one PC (SESSION_SCENARIOS.md SC-43): the campaign setting is on; the player's ⚔ on the
- * goblin makes a card that waits ("DM 확인 대기", HP untouched); the DM's approval overlay applies it. Writes 71 to
- * docs/evidence/new-client-m1.
+ * R22 (SESSION_SCENARIOS.md SC-65): a player stays themselves. The browser keeps one id per profile, so closing the
+ * tab and coming back leaves the player in control of their own character; a second person on the same machine
+ * opens a named seat (`?seat=…`) and that seat is stable too. Writes 77 to docs/evidence/new-client-m1.
  *
- *   node scripts/capture-client-d90.mjs
+ *   node scripts/capture-client-seat.mjs
  */
 import { spawn } from "node:child_process";
 import { createRequire } from "node:module";
@@ -22,8 +22,6 @@ const base = `http://127.0.0.1:${PORT}/`;
 const failures = [];
 const check = (condition, message) => { if (!condition) { failures.push(message); console.error("FAIL:", message); } else console.log("ok:", message); };
 const tab = (page, name) => page.getByRole("tab", { name: new RegExp(`^${name}`) });
-const iconOf = (page, name) => page.locator(`.cl-scene-card[data-token-name="${name}"]`);
-const cardOf = (page, head) => page.locator(".cl-chat-msg.action", { hasText: head });
 
 try {
   const browser = await chromium.launch({ args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"] });
@@ -36,32 +34,26 @@ try {
   }
   await dm.goto(`${base}#/campaigns`);
   await dm.getByLabel("내 이름 (테이블에서 보이는 이름)").fill("DM 민수");
-  await dm.getByLabel("새 캠페인 이름").fill("확인 시험");
+  await dm.getByLabel("새 캠페인 이름").fill("자리 시험");
   await dm.getByRole("button", { name: "새 캠페인" }).click();
-  await dm.getByRole("heading", { name: "확인 시험" }).waitFor();
-  // SC-43: the setting is on before the table opens.
-  await dm.getByLabel(/플레이어의 판정 결과를 DM이 확인/).check();
-  check(await dm.getByLabel(/플레이어의 판정 결과를 DM이 확인/).isChecked(), "the campaign asks the DM to confirm players' results (D90)");
+  await dm.getByRole("heading", { name: "자리 시험" }).waitFor();
   const code = (await dm.locator(".cl-code").first().textContent())?.trim() ?? "";
   await dm.getByRole("button", { name: "게임 시작" }).click();
   await dm.locator(".cl-chat-input").waitFor();
-  await player.goto(`${base}?seat=player#/campaigns`);
+
+  // The player takes a named seat on the same machine and makes a character.
+  await player.goto(`${base}?seat=지연#/campaigns`);
   await player.getByLabel("내 이름 (테이블에서 보이는 이름)").fill("지연");
   await player.getByLabel("참가 코드").fill(code);
   await player.getByRole("button", { name: "입장", exact: true }).click();
   await player.locator(".cl-chat-input").waitFor({ timeout: 10000 });
-  await dm.locator(".cl-avatar-chip", { hasText: "지연" }).waitFor({ timeout: 10000 });
-  await dm.getByRole("button", { name: "+ 장면" }).first().click();
-  await player.locator(".cl-scene").waitFor({ timeout: 10000 });
-  await tab(dm, "컴펜디움").click();
-  await dm.getByLabel("컴펜디움 검색").fill("goblin warrior");
-  await dm.getByLabel("고블린 전사 캔버스에 놓기", { exact: true }).click();
-  await iconOf(player, "고블린 전사").waitFor({ timeout: 10000 });
-  await tab(dm, "채팅").click();
+  const seatId = await player.evaluate(() => window.localStorage.getItem("simplevtt-user-id:지연"));
+  const dmId = await dm.evaluate(() => window.localStorage.getItem("simplevtt-user-id"));
+  check(Boolean(seatId) && Boolean(dmId) && seatId !== dmId, `the named seat is its own person (${dmId} vs ${seatId})`);
   await tab(player, "저널").click();
   await player.getByRole("button", { name: "+ 캐릭터" }).click();
   const wizard = player.locator(".cl-window").last();
-  await wizard.getByLabel("이름").fill("앨리스의 파이터");
+  await wizard.getByLabel("이름").fill("지연의 파이터");
   await wizard.getByRole("button", { name: /^2 종족/ }).click();
   await wizard.getByRole("button", { name: /^드워프/ }).click();
   await wizard.getByRole("button", { name: /^3 배경/ }).click();
@@ -72,39 +64,36 @@ try {
   await wizard.getByRole("button", { name: "표준 배열" }).click();
   await wizard.getByRole("button", { name: /^5 직업·레벨/ }).click();
   await wizard.getByLabel("추가할 직업").selectOption("dnd.srd521.class.fighter");
-  for (let level = 0; level < 3; level += 1) await wizard.getByRole("button", { name: "레벨 추가" }).click();
+  await wizard.getByRole("button", { name: "레벨 추가" }).click();
   await wizard.getByRole("button", { name: "남은 선택 빠르게 채우기" }).click();
   await wizard.getByRole("button", { name: /^7 검토·저장/ }).click();
   await wizard.getByRole("button", { name: "저장", exact: true }).first().click();
-  await player.locator(".cl-window", { hasText: "앨리스의 파이터" }).locator(".cl-hp-big").waitFor({ timeout: 10000 });
+  await player.locator(".cl-window", { hasText: "지연의 파이터" }).locator(".cl-hp-big").waitFor({ timeout: 10000 });
   await player.locator(".cl-window").last().getByLabel("창 닫기").click();
-  await player.getByLabel("앨리스의 파이터 토큰 놓기").click();
-  await iconOf(dm, "앨리스의 파이터").waitFor({ timeout: 10000 });
-  await tab(player, "채팅").click();
 
-  // The player's attack waits for the DM.
-  await iconOf(player, "앨리스의 파이터").click();
-  const playerBar = player.getByRole("toolbar", { name: "앨리스의 파이터 액션" });
-  await playerBar.waitFor();
-  await playerBar.getByRole("button", { name: /^⚔ 대검/ }).click();
-  await player.locator(".cl-targeting-banner").waitFor();
-  await iconOf(player, "고블린 전사").click();
-  await player.locator(".cl-targeting-banner").getByRole("button", { name: "확정" }).click();
-  const head = "앨리스의 파이터 → 고블린 전사: 대검";
-  await cardOf(player, head).waitFor({ timeout: 15000 });
-  check((await cardOf(player, head).innerText()).includes("DM 확인 대기"), "the player's card waits for the DM");
-  check((await iconOf(player, "고블린 전사").innerText()).includes("10/10"), "the goblin's HP is untouched while the card waits");
-  const overlay = dm.locator(".cl-approval-overlay");
-  await overlay.waitFor({ timeout: 15000 });
-  check((await overlay.innerText()).includes("DM 확인"), "the DM's approval overlay asks for the result");
-  await dm.screenshot({ path: path.join(OUT, "71-d90-dm-approval.png") });
-  await overlay.getByRole("button", { name: "적용", exact: true }).click();
-  await player.waitForFunction((head) => { const cards = [...document.querySelectorAll(".cl-chat-msg.action")].filter((el) => (el.textContent ?? "").includes(head)); return cards.length === 1 && !(cards[0].textContent ?? "").includes("DM 확인 대기"); }, head, { timeout: 15000 });
-  check(true, "적용 replaces the waiting card with the applied one (same card, no duplicate)");
-  await dm.locator(".cl-approval-overlay").waitFor({ state: "detached", timeout: 10000 });
-  check(true, "the overlay is gone once applied");
-  const outcome = await cardOf(player, head).last().innerText();
-  check(/치명타|적중|빗나감|자동 실패/.test(outcome), "the applied card carries the outcome");
+  // Close the tab and come back: the same seat, the same person, the character still theirs to edit.
+  await player.close();
+  const again = await context.newPage();
+  again.on("pageerror", (e) => { failures.push(`again page error: ${e.message}`); console.error("again page error:", e.message); });
+  await again.goto(`${base}?seat=지연#/campaigns`);
+  const backId = await again.evaluate(() => window.localStorage.getItem("simplevtt-user-id:지연"));
+  check(backId === seatId, `coming back is the same person (${seatId} → ${backId})`);
+  await again.getByLabel("참가 코드").fill(code);
+  await again.getByRole("button", { name: "입장", exact: true }).click();
+  await again.locator(".cl-chat-input").waitFor({ timeout: 10000 });
+  await tab(again, "저널").click();
+  await again.getByRole("button", { name: "지연의 파이터" }).first().click();
+  const sheet = again.locator(".cl-window", { hasText: "지연의 파이터" }).last();
+  await sheet.waitFor({ timeout: 10000 });
+  // The name is an input only for someone who may edit the sheet; a viewer sees a heading.
+  check(await sheet.getByLabel("이름").isVisible().catch(() => false) || await sheet.getByRole("tab", { name: "시트" }).isVisible(), "the sheet opens for its owner");
+  await tab(again, "저널").click();
+  await again.getByLabel("지연의 파이터 토큰 놓기").waitFor({ timeout: 10000 });
+  check(true, "the player can still place their own character's token — they still control it");
+  await again.screenshot({ path: path.join(OUT, "77-seat-kept.png") });
+  // The party list has one DM and one player, not a pile of ghosts.
+  const chips = await dm.locator(".cl-avatar-chip").allInnerTexts();
+  check(chips.length === 2, `two seats at the table after the round trip: ${JSON.stringify(chips)}`);
 
   await browser.close();
   if (failures.length) { console.error(`${failures.length} failure(s)`); process.exitCode = 1; } else console.log("done");

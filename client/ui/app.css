@@ -361,7 +361,7 @@ input.cl-journal-title{height:36px}
 .cl-canvas-viewport{flex:1;min-width:0;overflow:auto;position:relative;background:#3a3d44;background-image:radial-gradient(circle,#474b53 1px,transparent 1px);background-size:14px 14px}
 .cl-marker{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:rgba(255,255,255,.92);border:1px solid rgba(0,0,0,.35);font-size:12px;line-height:1;position:relative;color:#000}
 .cl-marker small{position:absolute;right:-3px;bottom:-3px;font-size:8px;background:#e5484d;color:#fff;border-radius:50%;width:10px;height:10px;line-height:10px;text-align:center}
-.cl-token-menu{position:absolute;z-index:50;min-width:300px;max-width:380px;padding:8px 10px;background:var(--overlay);border:1px solid var(--line-2);border-radius:var(--radius-m);box-shadow:var(--elev-2);display:flex;flex-direction:column;gap:8px}
+.cl-token-menu{position:fixed;z-index:200;min-width:300px;max-width:min(380px,calc(100vw - 16px));max-height:calc(100vh - 16px);overflow:auto;padding:8px 10px;background:var(--overlay);border:1px solid var(--line-2);border-radius:var(--radius-m);box-shadow:var(--elev-2);display:flex;flex-direction:column;gap:8px}
 .cl-token-menu-head{display:flex;align-items:center;justify-content:space-between}
 .cl-token-menu-bars{display:flex;flex-direction:column;gap:4px}
 .cl-token-menu-markers{display:flex;flex-wrap:wrap;gap:3px}
@@ -468,7 +468,8 @@ span.cl-tracker-init{display:inline-grid;place-items:center}
 .cl-turn-row{display:flex;flex-wrap:wrap;align-items:center;gap:4px}
 .cl-turn-sep{width:1px;height:20px;background:var(--line-2);margin:0 6px}
 .cl-dd{position:relative}
-.cl-dd-menu{position:absolute;left:0;top:calc(100% + 4px);z-index:60;min-width:220px;max-height:320px;overflow:auto;padding:4px;background:var(--overlay);border:1px solid var(--line-2);border-radius:var(--radius-m);box-shadow:var(--elev-2);display:flex;flex-direction:column}
+/* R22 (D119): menus live on document.body at a fixed point, so no clipped ancestor can cut them off. */
+.cl-dd-menu{position:fixed;z-index:200;min-width:220px;max-width:min(360px,calc(100vw - 16px));max-height:min(320px,calc(100vh - 16px));overflow:auto;padding:4px;background:var(--overlay);border:1px solid var(--line-2);border-radius:var(--radius-m);box-shadow:var(--elev-2);display:flex;flex-direction:column}
 .cl-dd-item{display:flex;align-items:baseline;justify-content:space-between;gap:10px;width:100%;padding:6px 8px;border:0;border-radius:6px;background:transparent;color:var(--text);font:inherit;font-size:12px;text-align:left;cursor:pointer}
 .cl-dd-item:hover,.cl-dd-item:focus-visible{background:var(--surface-2)}
 .cl-dd-item:disabled{opacity:.45;cursor:default}
@@ -604,8 +605,6 @@ span.cl-tracker-init{display:inline-grid;place-items:center}
 .cl-scene-portrait{width:100%;height:auto;aspect-ratio:24/31}
 .cl-scene-glyph svg{width:clamp(36px,3vw,56px);height:auto}
 .cl-scene-cards{max-height:38vh}
-.cl-dd.up .cl-dd-menu{top:auto;bottom:calc(100% + 4px)}
-.cl-cmd .cl-dd-menu{z-index:80}
 
 /* R8: spell cards */
 .cl-spell-row{display:flex;flex-wrap:wrap;align-items:center;gap:4px;padding:3px 0;border-top:1px dashed var(--line)}

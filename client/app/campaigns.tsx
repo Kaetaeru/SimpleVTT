@@ -50,6 +50,8 @@ export interface TableState {
 
 export interface CampaignsState {
   userId: string;
+  /** R22: the named seat this tab is using (`?seat=…`), or null for the browser's own person. */
+  seat: string | null;
   displayName: string;
   setDisplayName: (name: string) => void;
   campaigns: Campaign[];
@@ -138,10 +140,31 @@ const newUserId = () => `user_${Math.random().toString(36).slice(2, 10)}`;
 function webStorage(kind: "local" | "session"): Storage | null {
   try { return kind === "local" ? window.localStorage : window.sessionStorage; } catch { return null; }
 }
-/** Browser tabs get their own id (DM and a player on one PC for verification); the exe keeps one id per PC. */
-function scopedId(key: string) {
+/**
+ * R22 (D118): one browser profile is one person, and it stays that person. The id lives in localStorage, so closing
+ * the tab and coming back keeps the DM their DM and a player the owner of their character. Two people on one
+ * machine (or a DM and a player tab for verification) open a second seat with `?seat=<이름>` — that seat gets its
+ * own stable id, so it too survives a reload.
+ *
+ * Where site data is blocked altogether (a sandboxed preview frame) nothing can be remembered and every load is a
+ * new person; the host seat is still the DM, because the host secret says so (D117).
+ */
+export const seatOf = (search = typeof window === "undefined" ? "" : window.location.search) => {
+  try { return new URLSearchParams(search).get("seat")?.trim().slice(0, 24) || null; } catch { return null; }
+};
+export const userIdKey = (seat: string | null) => (seat ? `simplevtt-user-id:${seat}` : "simplevtt-user-id");
+/** The URL of another seat in this browser, for "다른 사람으로 새 탭 열기". */
+export const seatUrl = (seat: string) => {
+  if (typeof window === "undefined") return "";
+  const { origin, pathname, search, hash } = window.location;
+  const params = new URLSearchParams(search);
+  params.set("seat", seat);
+  return `${origin}${pathname}?${params.toString()}${hash}`;
+};
+function storedId(key: string) {
   try {
-    const store = webStorage(tauriAvailable() ? "local" : "session");
+    // The exe and the browser both keep the id per profile; a named seat is simply another key in the same store.
+    const store = webStorage("local") ?? webStorage("session");
     const existing = store?.getItem(key);
     if (existing) return existing;
     const value = newUserId();
@@ -152,8 +175,10 @@ function scopedId(key: string) {
 
 export function CampaignsProvider({ children }: { children: ReactNode }) {
   const { store, ready, catalog } = useClient();
-  const [userId] = useState(() => (typeof window === "undefined" ? newUserId() : scopedId("simplevtt-user-id")));
-  const [displayName, setDisplayNameState] = useState(() => { try { return webStorage("local")?.getItem("simplevtt-display-name") ?? ""; } catch { return ""; } });
+  const [seat] = useState(() => seatOf());
+  const [userId] = useState(() => (typeof window === "undefined" ? newUserId() : storedId(userIdKey(seat))));
+  const nameKey = seat ? `simplevtt-display-name:${seat}` : "simplevtt-display-name";
+  const [displayName, setDisplayNameState] = useState(() => { try { return webStorage("local")?.getItem(nameKey) ?? ""; } catch { return ""; } });
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [archives, setArchives] = useState<Record<string, ChatArchive>>({});
   const [journals, setJournals] = useState<Record<string, JournalEntry[]>>({});
@@ -216,7 +241,7 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
     return () => { cancelled = true; };
   }, [store, ready]);
 
-  const setDisplayName = useCallback((name: string) => { setDisplayNameState(name); try { webStorage("local")?.setItem("simplevtt-display-name", name); } catch { /* private window */ } }, []);
+  const setDisplayName = useCallback((name: string) => { setDisplayNameState(name); try { webStorage("local")?.setItem(nameKey, name); } catch { /* private window */ } }, [nameKey]);
 
   const saveCampaign = useCallback(async (campaign: Campaign) => {
     setCampaigns((list) => { const index = list.findIndex((item) => item.id === campaign.id); const next = index >= 0 ? list.map((item, at) => (at === index ? campaign : item)) : [campaign, ...list]; return next; });
@@ -470,8 +495,8 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
   const table = useMemo<TableState>(() => ({ role, status: client ? client.status : "idle", reason: client?.reason ?? null, campaignId, snapshot: client?.snapshot ?? null, invite, invites, transportNote, refusals, shows, artUrls, artPending }),
   // eslint-disable-next-line react-hooks/exhaustive-deps
   [role, client, campaignId, invite, invites, transportNote, refusals, shows, artUrls, artPending, tick]);
-  const value = useMemo<CampaignsState>(() => ({ userId, displayName, setDisplayName, campaigns, joined, archives, journals, arts, pages, createCampaign, updateCampaign, deleteCampaign, regenerateJoinCode, forgetJoined, table, launch, join, leave, say, sendRoll, setRole, kick, putJournal, removeJournal, showJournal, dismissShow, uploadArt, updateArt, removeArt, requestArt, putPage, removePage, setRibbon, setBookmark, putToken, removeToken, setTracker, addTurn, nextTurn, swapTurn, attack, npcSave, legendary, useItem, useTrait, advanceTime, tableRest, askRest, saveMacros, saveTables, rollTable, summon, dismissSummons, resist, provoke, act, cast, declineReaction, adjustAction, undoAction, confirmAction }),
-    [userId, displayName, setDisplayName, campaigns, joined, archives, journals, arts, pages, createCampaign, updateCampaign, deleteCampaign, regenerateJoinCode, forgetJoined, table, launch, join, leave, say, sendRoll, setRole, kick, putJournal, removeJournal, showJournal, dismissShow, uploadArt, updateArt, removeArt, requestArt, putPage, removePage, setRibbon, setBookmark, putToken, removeToken, setTracker, addTurn, nextTurn, swapTurn, attack, npcSave, legendary, useItem, useTrait, advanceTime, tableRest, askRest, saveMacros, saveTables, rollTable, summon, dismissSummons, resist, adjustAction, undoAction, confirmAction]);
+  const value = useMemo<CampaignsState>(() => ({ userId, seat, displayName, setDisplayName, campaigns, joined, archives, journals, arts, pages, createCampaign, updateCampaign, deleteCampaign, regenerateJoinCode, forgetJoined, table, launch, join, leave, say, sendRoll, setRole, kick, putJournal, removeJournal, showJournal, dismissShow, uploadArt, updateArt, removeArt, requestArt, putPage, removePage, setRibbon, setBookmark, putToken, removeToken, setTracker, addTurn, nextTurn, swapTurn, attack, npcSave, legendary, useItem, useTrait, advanceTime, tableRest, askRest, saveMacros, saveTables, rollTable, summon, dismissSummons, resist, provoke, act, cast, declineReaction, adjustAction, undoAction, confirmAction }),
+    [userId, seat, displayName, setDisplayName, campaigns, joined, archives, journals, arts, pages, createCampaign, updateCampaign, deleteCampaign, regenerateJoinCode, forgetJoined, table, launch, join, leave, say, sendRoll, setRole, kick, putJournal, removeJournal, showJournal, dismissShow, uploadArt, updateArt, removeArt, requestArt, putPage, removePage, setRibbon, setBookmark, putToken, removeToken, setTracker, addTurn, nextTurn, swapTurn, attack, npcSave, legendary, useItem, useTrait, advanceTime, tableRest, askRest, saveMacros, saveTables, rollTable, summon, dismissSummons, resist, adjustAction, undoAction, confirmAction]);
   return <CampaignsContext.Provider value={value}>{children}</CampaignsContext.Provider>;
 }
 

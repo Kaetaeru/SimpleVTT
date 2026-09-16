@@ -45,7 +45,7 @@ try {
   const code = (await dm.locator(".cl-code").first().textContent())?.trim() ?? "";
   await dm.getByRole("button", { name: "게임 시작" }).click();
   await dm.locator(".cl-chat-input").waitFor();
-  await player.goto(`${base}#/campaigns`);
+  await player.goto(`${base}?seat=player#/campaigns`);
   await player.getByLabel("내 이름 (테이블에서 보이는 이름)").fill("지연");
   await player.getByLabel("참가 코드").fill(code);
   await player.getByRole("button", { name: "입장", exact: true }).click();
@@ -130,13 +130,13 @@ try {
   await sheetWindow.getByRole("button", { name: "라이브러리로 내보내기" }).click();
   await sheetWindow.getByText(/내 라이브러리에 저장했습니다/).waitFor();
   await player.screenshot({ path: path.join(OUT, "40-journal-character-info-export.png") });
-  await player.goto(`${base}#/`);
+  await player.goto(`${base}?seat=player#/`);
   await player.locator(".cl-char-card", { hasText: "앨리스의 파이터" }).waitFor({ timeout: 10000 });
   check(true, "the exported character is in the library");
   await player.screenshot({ path: path.join(OUT, "41-library-after-vault-export.png") });
 
   // SC-19: reconnect and relaunch keep the journal.
-  await player.goto(`${base}#/campaigns`);
+  await player.goto(`${base}?seat=player#/campaigns`);
   await player.reload();
   await player.getByRole("button", { name: "다시 입장" }).first().click();
   await player.locator(".cl-chat-input").waitFor({ timeout: 10000 });

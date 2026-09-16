@@ -1,7 +1,10 @@
 /**
- * R21 (SESSION_SCENARIOS.md SC-63): a campaign made in one browser tab, launched from another. The second tab has
- * its own session id, so the campaign's stored owner is not this user — the host used to land at their own table
- * as a plain player. The host seat is the DM. Writes 74 to docs/evidence/new-client-m1.
+ * R21/R22 (SESSION_SCENARIOS.md SC-63): the browser forgot who you were, and you launch your own campaign anyway.
+ *
+ * Since D118 a browser profile keeps one stable id, so the usual case is simply that you stay yourself. This checks
+ * the case that is left: the stored id is gone (site data cleared, or a preview frame that may not store at all).
+ * The campaign is still in IndexedDB and still lists its old owner, so the host arrives as a stranger — and is the
+ * DM anyway, because the host secret says so (D117). Writes 74 to docs/evidence/new-client-m1.
  *
  *   node scripts/capture-client-host-dm.mjs
  */
@@ -26,7 +29,7 @@ try {
   const browser = await chromium.launch({ args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"] });
   const context = await browser.newContext({ viewport: { width: 1500, height: 960 }, locale: "ko-KR" });
 
-  // Tab one makes the campaign and closes. Its user id lived in that tab's sessionStorage and goes with it.
+  // Tab one makes the campaign, then the browser forgets its user id (cleared site data, or a frame that cannot store).
   const first = await context.newPage();
   first.on("pageerror", (e) => { failures.push(`first page error: ${e.message}`); });
   await first.goto(`${base}#/campaigns`);
@@ -34,17 +37,17 @@ try {
   await first.getByLabel("새 캠페인 이름").fill("어제 만든 캠페인");
   await first.getByRole("button", { name: "새 캠페인" }).click();
   await first.getByRole("heading", { name: "어제 만든 캠페인" }).waitFor();
-  const firstId = await first.evaluate(() => window.sessionStorage.getItem("simplevtt-user-id") ?? "?");
+  const firstId = await first.evaluate(() => { const id = window.localStorage.getItem("simplevtt-user-id") ?? "?"; window.localStorage.removeItem("simplevtt-user-id"); return id; });
   await first.close();
 
-  // Tab two is a new session: same browser profile (so the campaign is in IndexedDB), a brand-new user id.
+  // Tab two mints a fresh id (the stored one is gone) but still finds the campaign in IndexedDB.
   const second = await context.newPage();
   second.on("pageerror", (e) => { failures.push(`second page error: ${e.message}`); console.error("second page error:", e.message); });
   second.on("dialog", (dialog) => void dialog.accept());
   await second.goto(`${base}#/campaigns`);
   await second.getByLabel("내 이름 (테이블에서 보이는 이름)").fill("DM 민수");
-  const secondId = await second.evaluate(() => window.sessionStorage.getItem("simplevtt-user-id") ?? "?");
-  check(Boolean(firstId) && firstId !== secondId, `the new tab has its own user id (${firstId} → ${secondId})`);
+  const secondId = await second.evaluate(() => window.localStorage.getItem("simplevtt-user-id") ?? "?");
+  check(Boolean(firstId) && firstId !== secondId, `the forgotten id was replaced by a new one (${firstId} → ${secondId})`);
   const card = second.locator(".cl-card.clickable", { hasText: "어제 만든 캠페인" });
   await card.waitFor({ timeout: 10000 });
   check(true, "the campaign made in the other tab is still listed");

@@ -7,6 +7,7 @@ import { useCampaigns } from "../app/campaigns";
 import { useClient } from "../app/context";
 import type { Campaign } from "../campaign/model";
 import { copyText, Notice, Pill } from "../ui/components";
+import { seatUrl } from "../app/campaigns";
 
 export function CampaignsScreen() {
   const { navigate } = useClient();
@@ -26,6 +27,11 @@ export function CampaignsScreen() {
       <div className="cl-grid-2">
         <div className="cl-card">
           <div className="cl-field"><label htmlFor="cl-display-name">내 이름 (테이블에서 보이는 이름)</label><input id="cl-display-name" className="cl-input" value={display} placeholder="예: 민수" onChange={(event) => setDisplay(event.target.value)} onBlur={commitName} /></div>
+          {/* R22 (D118): this browser is one person and stays that person; a second seat is opened on purpose. */}
+          <div className="cl-row cl-small" style={{ gap: 6, flexWrap: "wrap" }}>
+            <span className="cl-quiet">{c.seat ? `두 번째 자리 "${c.seat}"로 보고 있습니다 — 이 자리도 다시 열면 그대로입니다.` : "이 브라우저는 한 사람입니다. 탭을 닫았다 열어도 같은 사람이라 캐릭터와 DM 권한이 유지됩니다."}</span>
+            <button type="button" className="cl-btn small quiet" title="같은 PC에서 다른 사람으로 들어올 때 (DM과 플레이어를 한 컴퓨터에서 확인할 때도)" onClick={() => { const name = prompt("새 자리 이름 (예: 지연, 2)", c.seat ? "" : "2"); if (name?.trim()) window.open(seatUrl(name.trim()), "_blank", "noopener"); }}>다른 사람으로 새 탭 열기</button>
+          </div>
         </div>
         <div className="cl-card">
           <h3>참가 코드로 입장</h3>
