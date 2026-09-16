@@ -45,6 +45,12 @@ export interface EffectApplication {
   damageReduction?: { types: string[]; amount: number };
   /** R51 (D186): 원소 숙련자, 독 제조자 — damage types this character deals that ignore resistance. */
   ignoresResistance?: string[];
+  /** R55 (D190): reasons this character's attacks are advantaged, each with the weapon filter it applies to. */
+  advantageOn?: Array<{ reason: string; scope?: string }>;
+  /** R55 (D190): reasons attacks *against* this character are advantaged. */
+  grantsAdvantage?: string[];
+  /** R55 (D190): this character's attacks ignore half and three-quarters cover. */
+  ignoresCover?: boolean;
   /** What the rule cannot put in a number (advantage, extra action, immunities). */
   notes?: string[];
   /** Applied once when the effect starts (Aid: +5 current HP with the +5 maximum). */
@@ -234,6 +240,18 @@ export function applyActiveEffects(derived: DerivedCharacter, effects: ActiveEff
       next = { ...next, damageReduction: [...(next.damageReduction ?? []), rule] };
       notes.push(`받는 피해 −${rule.amount} (${rule.types.join("·") || "모든 유형"})`);
     }
+    // R55 (D190): the two sides of an advantage rule, each naming the effect that granted it.
+    if (application.advantageOn?.length) {
+      const named = application.advantageOn.map((item) => ({ reason: item.reason ? `${label}: ${item.reason}` : label, ...(item.scope ? { scope: item.scope } : {}) }));
+      next = { ...next, advantageOn: [...(next.advantageOn ?? []), ...named] };
+      notes.push(`공격 굴림 유리 (${named.map((item) => item.reason).join(", ")})`);
+    }
+    if (application.grantsAdvantage?.length) {
+      const named = application.grantsAdvantage.map((reason) => (reason ? `${label}: ${reason}` : label));
+      next = { ...next, grantsAdvantage: [...(next.grantsAdvantage ?? []), ...named] };
+      notes.push(`이 캐릭터를 향한 공격 유리 (${named.join(", ")})`);
+    }
+    if (application.ignoresCover) { next = { ...next, ignoresCover: true }; notes.push("엄폐 무시"); }
     if (application.ignoresResistance?.length) {
       next = { ...next, ignoresResistance: [...new Set([...(next.ignoresResistance ?? []), ...application.ignoresResistance])] };
       notes.push(`${application.ignoresResistance.join("·")} 저항 무시`);

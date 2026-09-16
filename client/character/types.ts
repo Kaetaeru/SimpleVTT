@@ -237,6 +237,12 @@ export interface DerivedCharacter {
   damageReduction?: Array<{ types: string[]; amount: number; source: string }>;
   /** R51 (D186): damage types whose resistance this character's own damage ignores (원소 숙련자, 독 제조자). */
   ignoresResistance?: string[];
+  /** R55 (D190): reasons this character's attacks are advantaged, each with the weapon filter it applies to. */
+  advantageOn?: Array<{ reason: string; scope?: string }>;
+  /** R55 (D190): reasons attacks against this character are advantaged (무모한 공격's other half). */
+  grantsAdvantage?: string[];
+  /** R55 (D190): this character's attacks ignore half and three-quarters cover (명사수, 주문 저격수). */
+  ignoresCover?: boolean;
   /**
    * R52 (D187): the riders this character's contracts let them declare before an attack roll. Carried on the sheet
    * for the same reason `featureContracts` is: a caller that forgets to ask the catalog would silently lose the rule.

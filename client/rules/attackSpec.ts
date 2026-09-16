@@ -11,6 +11,7 @@ import type { CharacterRuntime } from "../character/runtime";
 import { spendResource, useSpellSlot } from "../character/play";
 import { riderFitsAttack } from "./attackRiders";
 import { critRiders } from "./attackAftermath";
+import { attackScopeFilter } from "./contractEffects";
 import type { DerivedAttack, DerivedCharacter } from "../character/types";
 import type { MonsterAction, MonsterView } from "../compendium/monsters";
 import { damageFormula } from "../compendium/monsters";
@@ -32,6 +33,8 @@ export function pcCombatant(entry: JournalCharacter, derived: DerivedCharacter):
     exhaustion: runtime.exhaustion,
     // R51 (D186): 중갑 달인 — flat reduction per damage type, from whatever effect or feat contract granted it.
     ...(derived.damageReduction?.length ? { reduction: derived.damageReduction } : {}),
+    // R55 (D190): what this character gives away by attacking recklessly — anyone swinging at them gets advantage.
+    ...(derived.grantsAdvantage?.length ? { grantsAdvantage: derived.grantsAdvantage } : {}),
   };
 }
 
@@ -130,6 +133,8 @@ export function pcAttackSpec(entry: JournalCharacter, derived: DerivedCharacter,
     for (const part of rider.damage) extra.push({ formula: part.formula, type: part.type === "weapon" ? attack.damageType : part.type, label: rider.label, critDoubles: /d\d/.test(part.formula) });
     if (rider.resourceId && rider.cost) { const { resourceId, cost, label } = rider; spenders.push((runtime) => spendResource(runtime, derived, resourceId, cost, label)); }
   }
+  // R55 (D190): the advantage a contract declared for *this* weapon — 무모한 공격 is Strength melee only.
+  const advantageOn = (derived.advantageOn ?? []).filter((item) => { if (!item.scope) return true; const filter = attackScopeFilter(item.scope); return filter ? filter(attack) : false; }).map((item) => item.reason);
   const abilityMod = derived.abilities[attack.ability].modifier;
   const mastery = attack.masteryActive && attack.masteryKey && !cleave ? attack.masteryKey : undefined;
   // R32 (D166): 야만적 공격자 — the player asked for the reroll in the pre-roll dialog and has the feat.
@@ -138,7 +143,7 @@ export function pcAttackSpec(entry: JournalCharacter, derived: DerivedCharacter,
   // R53 (D188): what a critical hit adds, from whatever contract said so. Empty for a sheet with no such rule.
   const crits = catalog ? critRiders(derived, catalog, attack) : [];
   const declared = (riders.contracts ?? []).map((key) => (derived.attackRiders ?? []).find((item) => item.key === key)).filter((item) => item && riderFitsAttack(item, attack)).map((item) => item!.label);
-  return { spec: { name: `${cleave ? `${attack.name} · 쪼개기` : offHand ? `${attack.name} · 보조 손` : attack.name}${savageFeat ? ` · ${savageFeat}` : ""}${declared.length ? ` · ${declared.join(" · ")}` : ""}`, source: "weapon", attackBonus: attack.attackBonus, mode: range.mode, damage, riders: extra, ...(derived.critRange ? { critRange: derived.critRange } : {}), ...(crits.length ? { critRiders: crits } : {}), ...(savage ? { savage } : {}), ...(mastery ? { mastery, abilityMod, masteryDc: 8 + abilityMod + derived.proficiencyBonus } : {}) }, spend: (runtime) => spenders.reduce((acc, spend) => spend(acc), runtime) };
+  return { spec: { name: `${cleave ? `${attack.name} · 쪼개기` : offHand ? `${attack.name} · 보조 손` : attack.name}${savageFeat ? ` · ${savageFeat}` : ""}${declared.length ? ` · ${declared.join(" · ")}` : ""}`, source: "weapon", attackBonus: attack.attackBonus, mode: range.mode, damage, riders: extra, ...(derived.critRange ? { critRange: derived.critRange } : {}), ...(crits.length ? { critRiders: crits } : {}), ...(derived.ignoresCover ? { ignoresCover: true } : {}), ...(advantageOn.length ? { advantageOn } : {}), ...(savage ? { savage } : {}), ...(mastery ? { mastery, abilityMod, masteryDc: 8 + abilityMod + derived.proficiencyBonus } : {}) }, spend: (runtime) => spenders.reduce((acc, spend) => spend(acc), runtime) };
 }
 
 export function npcAttackSpec(entry: JournalNpc, actionName: string): AttackSpec | null {

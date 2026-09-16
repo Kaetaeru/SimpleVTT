@@ -43,6 +43,8 @@ export const PROPERTIES = [
   "senses.darkvision", "senses.blindsight", "resistance", "condition-immunity",
   // R51 (D186): what the PHB feats needed and the vocabulary did not have.
   "damage-taken.reduce", "damage.ignore-resistance",
+  // R55 (D190): the three that decide a roll rather than a number.
+  "attack-roll.advantage", "attack-roll.against-me.advantage", "attack-roll.ignore-cover",
 ] as const;
 
 const number = (operation: Extract<ContractOperation, { kind: "property.modify" }>, scope: Scope) => {
@@ -101,6 +103,11 @@ export function contractEffect(contract: CommonPlayContract, scope: Scope): { ap
       // list, since a reduction that names no type would silently apply to everything.
       case "damage-taken.reduce": application.damageReduction = { types: (operation.damageTypes ?? []) as string[], amount: number(operation, scope) ?? 0 }; break;
       // R51 (D186): 원소 숙련자, 독 제조자 — this character's own damage of these types is not resisted.
+      // R55 (D190): 무모한 공격 — my attacks are advantaged, and so are attacks against me. Each reason carries the
+      // effect's own name, so the card says why the second die was rolled instead of just rolling it.
+      case "attack-roll.advantage": application.advantageOn = [...(application.advantageOn ?? []), { reason: operation.note ?? "", ...(operation.scope ? { scope: operation.scope } : {}) }]; break;
+      case "attack-roll.against-me.advantage": application.grantsAdvantage = [...(application.grantsAdvantage ?? []), operation.note ?? ""]; break;
+      case "attack-roll.ignore-cover": application.ignoresCover = true; break;
       case "damage.ignore-resistance": application.ignoresResistance = [...(application.ignoresResistance ?? []), text(operation, scope) ?? ""]; break;
       case "attack-roll.crit-range": application.critRange = Math.min(application.critRange ?? 20, number(operation, scope) ?? 20); break;
       case "resistance": application.resistances = [...(application.resistances ?? []), text(operation, scope) ?? ""]; break;

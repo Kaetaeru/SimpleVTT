@@ -138,10 +138,11 @@ test("R52: a declared rider travels the wire and lands on the table's card (D187
   const base = newCampaign("R52 시험", { userId: "dm", displayName: "DM" });
   const campaign = { ...base, joinCode: "R52AAA" };
   const cat = catalog();
-  // The first d20 is the attack; every damage die after it rolls its maximum, so the arithmetic is exact.
-  let first = true;
-  const dice = { d20: 12 };
-  const random = () => { if (first) { first = false; return (dice.d20 - 0.5) / 20; } return 0.999; };
+  // R55 (D190): 무모한 공격 is advantage now, so the swing rolls two d20s; both are scripted, and every damage die
+  // after them rolls its maximum, so the arithmetic is exact.
+  let taken = 0;
+  const d20s = [12, 9];
+  const random = () => { const at = taken; taken += 1; return at < d20s.length ? (d20s[at] - 0.5) / 20 : 0.999; };
   const host = new TableHost(hub.hostEndpoint(), { campaign, hostUserId: "dm", hostSecret: "s", random,
     attributeOf: (entry, link) => (link === "hp" ? { value: entry.runtime.hp.current, max: entry.runtime.hp.maxSeen } : undefined),
     pcCombatant: (entry) => pcCombatant(entry, derivedOf(entry, cat)), pcConcentrationKey,

@@ -27,6 +27,8 @@ export interface CasterStats {
   level: number;
   /** R51 (D186): damage types this caster's own spells are never resisted for (원소 숙련자). */
   ignoresResistance?: string[];
+  /** R55 (D190): this caster's spell attack rolls ignore half and three-quarters cover (주문 저격수). */
+  ignoresCover?: boolean;
 }
 
 export interface SpellCastSpec {
@@ -142,7 +144,7 @@ export function resolveSpell(input: CastInput): SpellResolution {
       for (const { combatant } of all) {
         const row = base(combatant);
         row.mode = "attack";
-        const attack = resolveAttack(caster, combatant, { name: spec.name, source: "spell", attackBonus: casterStats.attackBonus, mode: (exec.targeting.rangeFeet ?? 0) > 5 ? "ranged" : "melee", damage: [unresisted({ formula, type: primary.damageType, label: spec.name })], inflicts: conditionMarks("hit", combatant) }, { dice, overrides: input.overrides, apply: input.apply });
+        const attack = resolveAttack(caster, combatant, { name: spec.name, source: "spell", attackBonus: casterStats.attackBonus, mode: (exec.targeting.rangeFeet ?? 0) > 5 ? "ranged" : "melee", damage: [unresisted({ formula, type: primary.damageType, label: spec.name })], ...(casterStats.ignoresCover ? { ignoresCover: true } : {}), inflicts: conditionMarks("hit", combatant) }, { dice, overrides: input.overrides, apply: input.apply });
         row.attack = attack; row.hpAfter = attack.hpAfter; row.tempAfter = attack.tempAfter; row.marks = attack.inflicted;
         if ((attack.outcome === "hit" || attack.outcome === "crit") && exec.trackedEffects?.some((effect) => effect.trigger === "hit")) row.effect = effectStart(exec.trackedEffects.find((effect) => effect.trigger === "hit")!.duration);
         targets.push(row);
@@ -373,7 +375,7 @@ export function pcSpell(entry: { runtime: CharacterRuntime }, derived: DerivedCh
   const level = chosen.kind === "slot" ? chosen.level : chosen.kind === "pact" ? derived.pactMagic?.level ?? view.level : view.level;
   return {
     spec: { spellId, name: view.name, level, exec },
-    casterStats: { ...(list ? { attackBonus: list.attackBonus, saveDc: list.saveDc, modifier: derived.abilities[list.ability].modifier, level: derived.level } : { ...scrollStats(view.level), modifier: 0, level: derived.level }), ...(derived.ignoresResistance?.length ? { ignoresResistance: derived.ignoresResistance } : {}) },
+    casterStats: { ...(list ? { attackBonus: list.attackBonus, saveDc: list.saveDc, modifier: derived.abilities[list.ability].modifier, level: derived.level } : { ...scrollStats(view.level), modifier: 0, level: derived.level }), ...(derived.ignoresResistance?.length ? { ignoresResistance: derived.ignoresResistance } : {}), ...(derived.ignoresCover ? { ignoresCover: true } : {}) },
     spend: (runtime) => castSpell(runtime, derived, { id: view.id, name: view.name, level: view.level, duration: view.duration, ritual: view.ritual }, chosen),
   };
 }

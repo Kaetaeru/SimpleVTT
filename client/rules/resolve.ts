@@ -61,6 +61,12 @@ export interface Combatant {
    * bludgeoning, piercing and slashing while in heavy armour. Subtracted after resistance, never below zero.
    */
   reduction?: Array<{ types: string[]; amount: number; source: string }>;
+  /**
+   * R55 (D190): reasons attacks *against* this creature are advantaged, each carrying the name of the rule that said
+   * so. 무모한 공격 is the 2024 trade: the barbarian's own advantage rides on the attack spec, because it is only
+   * their Strength melee swings; what they give away is here, because anyone attacking them gets it.
+   */
+  grantsAdvantage?: string[];
 }
 
 export interface DamagePart {
@@ -102,6 +108,10 @@ export interface AttackSpec {
    * being added to the card afterwards.
    */
   critRiders?: DamagePart[];
+  /** R55 (D190): this attack ignores half and three-quarters cover (명사수, 주문 저격수). */
+  ignoresCover?: boolean;
+  /** R55 (D190): reasons *this* swing is advantaged, already narrowed to the weapon by whatever declared them. */
+  advantageOn?: string[];
 }
 
 /** R12: what a mastery did on this attack. */
@@ -200,6 +210,9 @@ export function suggestAdvantage(attacker: Combatant, target: Combatant, spec: A
   if (has(target, "장님")) plus.push("대상 장님");
   if (has(target, "투명")) minus.push("대상 투명");
   if (effect(target, "회피")) minus.push("대상 회피");
+  // R55 (D190): whatever the two sheets' own contracts declared, on either side of the swing.
+  for (const reason of spec.advantageOn ?? []) plus.push(reason);
+  for (const reason of target.grantsAdvantage ?? []) plus.push(reason);
   if (plus.length && minus.length) return { advantage: "normal", reasons: [...plus, ...minus, "유리·불리가 상쇄"] };
   if (plus.length) return { advantage: "advantage", reasons: plus };
   if (minus.length) return { advantage: "disadvantage", reasons: minus };
@@ -258,7 +271,10 @@ export function resolveAttack(attacker: Combatant, target: Combatant, spec: Atta
   const reasons = [...(overrides.advantage && overrides.advantage !== suggested.advantage ? [...suggested.reasons, `DM: ${advantage === "advantage" ? "유리" : advantage === "disadvantage" ? "불리" : "보통"}`] : suggested.reasons), ...(overrides.note ? [overrides.note] : [])];
   const d20s = options.fixed?.d20s ?? (advantage === "normal" ? [options.dice.d(20)] : [options.dice.d(20), options.dice.d(20)]);
   const kept = advantage === "advantage" ? Math.max(...d20s) : advantage === "disadvantage" ? Math.min(...d20s) : d20s[0];
-  const cover = overrides.cover ?? 0;
+  // R55 (D190): a contract may say this attack ignores cover; the DM's own cover call is what it overrides.
+  const declaredCover = overrides.cover ?? 0;
+  const cover = spec.ignoresCover ? 0 : declaredCover;
+  if (spec.ignoresCover && declaredCover) reasons.push(`엄폐 +${declaredCover} 무시`);
   const targetAc = target.ac + cover;
   const exhausted = 2 * Math.max(0, attacker.exhaustion ?? 0);
   const attackTotal = kept + spec.attackBonus - exhausted + (overrides.rollDelta ?? 0);
