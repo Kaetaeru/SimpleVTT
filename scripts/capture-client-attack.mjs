@@ -35,10 +35,11 @@ const cardOf = (page, head) => page.locator(".cl-chat-msg.action", { hasText: he
 const letHitGo = async (player, cardLocator, onWindow) => {
   for (let at = 0; at < 60; at += 1) {
     if (await cardLocator.count()) return;
-    const choices = player.locator(".cl-approval .cl-hit-choices");
-    if (await choices.count()) { if (onWindow) await onWindow(); await player.locator(".cl-approval").getByRole("button", { name: "안 함" }).click(); }
-    // An older prompt (a check's rescue left unanswered) sits in front of the window; let it go the way Escape would.
-    else if (await player.locator(".cl-approval").count()) await player.locator(".cl-approval button").last().click();
+    // R66 (D201): every prompt addressed to the player is shown, so the window is one card among possibly several.
+    const windowCard = player.locator(".cl-approval", { has: player.locator(".cl-hit-choices") });
+    if (await windowCard.count()) { if (onWindow) await onWindow(); await windowCard.first().getByRole("button", { name: "안 함" }).click(); }
+    // An older prompt (a check's rescue left unanswered) may still be open; let it go the way Escape would.
+    else if (await player.locator(".cl-approval").count()) await player.locator(".cl-approval").first().locator("button").last().click();
     await player.waitForTimeout(250);
   }
   const shown = await player.locator(".cl-approval, .cl-waiting-note").allInnerTexts();
@@ -125,7 +126,7 @@ try {
   const head = "앨리스의 파이터 → 고블린 전사: 대검";
   await letHitGo(player, cardOf(player, head), async () => {
     await player.screenshot({ path: path.join(OUT, "79-on-hit-window-player.png") });
-    check((await player.locator(".cl-approval").innerText()).includes("야만적 공격자"), "the hit window offers 야만적 공격자");
+    check((await player.locator(".cl-approval", { has: player.locator(".cl-hit-choices") }).innerText()).includes("야만적 공격자"), "the hit window offers 야만적 공격자");
     // R64 (D199): each offer carries its standing answer, so the question can stop being asked.
     check(await player.locator(".cl-approval select[aria-label='야만적 공격자 설정']").count() === 1, "the offer has a 매번 묻기/항상 사용/쓰지 않음 setting");
   });
@@ -175,9 +176,12 @@ try {
   await cardOf(dm, head2).waitFor({ timeout: 15000 });
   await cardOf(dm, head2).getByRole("button", { name: /^조정/ }).click();
   await cardOf(dm, head2).getByRole("button", { name: "강제 적중" }).click();
-  await player.waitForFunction(([name, before]) => { const text = document.querySelector(`.cl-scene-card[data-token-name="${name}"] .cl-scene-name small`)?.textContent ?? ""; return text !== before && /^\d+\/\d+$/.test(text); }, ["앨리스의 파이터", pcHp], { timeout: 15000 });
+  // The goblin warrior's scimitar is 1d6−1, so a roll of 1 is a hit for 0: read what the card dealt before waiting on the bar.
+  await dm.locator(".cl-chat-msg.action:not(.undone)", { hasText: head2 }).filter({ hasText: "적중" }).last().waitFor({ timeout: 15000 });
+  const dealt = Number(/피해 (\d+)/.exec(await dm.locator(".cl-chat-msg.action:not(.undone)", { hasText: head2 }).last().innerText())?.[1] ?? "0");
+  if (dealt > 0) await player.waitForFunction(([name, before]) => { const text = document.querySelector(`.cl-scene-card[data-token-name="${name}"] .cl-scene-name small`)?.textContent ?? ""; return text !== before && /^\d+\/\d+$/.test(text); }, ["앨리스의 파이터", pcHp], { timeout: 15000 });
   const pcAfter = await barOf(player, "앨리스의 파이터").innerText();
-  check(pcAfter !== pcHp, `the fighter's linked bar dropped (${pcHp} → ${pcAfter})`);
+  check(dealt > 0 ? pcAfter !== pcHp : pcAfter === pcHp, `the fighter's linked bar follows the card (${dealt} damage: ${pcHp} → ${pcAfter})`);
   await tab(player, "저널").click();
   await player.locator(".cl-journal-row", { hasText: "앨리스의 파이터" }).click();
   const sheet = player.locator(".cl-window", { hasText: "앨리스의 파이터" });

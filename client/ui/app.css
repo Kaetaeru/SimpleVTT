@@ -665,3 +665,7 @@ span.cl-tracker-init{display:inline-grid;place-items:center}
 .cl-scene-effects{position:absolute;left:4px;right:4px;bottom:22px;display:flex;flex-wrap:wrap;gap:3px;justify-content:center;pointer-events:none}
 .cl-scene-effect{font-size:10px;line-height:1;padding:2px 5px;border-radius:999px;background:rgba(20,23,29,.92);border:1px solid rgba(255,209,102,.5);color:#ffd166;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .cl-scene-effect small{margin-left:3px;opacity:.75;font-weight:700}
+/* R66 (D201): nothing that comes and goes sits over the people in the scene. */
+.cl-window.narrow{width:min(420px,94vw)}
+.cl-toasts{left:auto;right:12px;transform:none;align-items:flex-end;max-width:min(46%,420px)}
+.cl-approval-overlay{align-content:center;gap:10px}

@@ -258,6 +258,20 @@ export function ApprovalLayer() {
   const mine = prompts.filter((message) => promptIsMine(message, snapshot, c.userId) && (!isGm || taken.includes(message.id) || promptAnswerer(message, snapshot) === null));
   const first = mine[0];
   const firstWait = waiting[0];
+  /**
+   * R66 (D201): what a prompt asks, in one paragraph. Every prompt addressed to this viewer is shown (up to three),
+   * because showing only the oldest hid the rest — an unanswered rescue sat in front of the window a hit had just
+   * opened, and the player could not see there was a second question.
+   */
+  const bodyOf = (message: ChatMessage) => {
+    const prompt = message.prompt!;
+    return prompt.kind === "counterspell" ? <div className="cl-approval-body">🚫 <strong>{prompt.mover.name}</strong>이(가) {prompt.spell?.name}{prompt.spell ? ` (${prompt.spell.level}레벨)` : ""}을(를) 시전하려 합니다.<br />주문 차단을 하시겠습니까?</div>
+      : prompt.kind === "shield" || prompt.kind === "guard" ? <div className="cl-approval-body">🛡 <strong>{prompt.mover.name}</strong>의 {prompt.attack?.name}이(가) <strong>{prompt.reactor.name}</strong>에게 적중했습니다 (명중 {prompt.attack?.total} vs AC {prompt.attack?.ac}).<br />{prompt.kind === "shield" ? "방패를 시전하시겠습니까?" : "반응을 쓰시겠습니까?"}</div>
+      : prompt.kind === "on-hit" ? <div className="cl-approval-body">⚔ <strong>{prompt.reactor.name}</strong>의 {prompt.attack?.name}이(가) <strong>{prompt.mover.name}</strong>에게 {prompt.onHit?.outcome === "crit" ? <strong>치명타!</strong> : "명중했습니다"} (명중 {prompt.attack?.total} vs AC {prompt.attack?.ac}).<br />더할 것을 고르세요.{prompt.onHit?.outcome === "crit" ? " 추가 주사위도 두 배로 굴립니다." : ""}</div>
+      : prompt.kind === "rescue" ? <div className="cl-approval-body">🎲 <strong>{prompt.reactor.name}</strong>의 굴림이 실패했습니다 ({prompt.rescue?.roll}).<br />특성을 써서 다시 굴릴 수 있습니다.</div>
+      : prompt.kind === "death-save" ? <div className="cl-approval-body">💀 <strong>{prompt.reactor.name}</strong>은(는) 쓰러져 있습니다.<br />죽음 내성을 굴리세요 (성공 3번이면 안정, 실패 3번이면 사망).</div>
+      : <div className="cl-approval-body">🏃 <strong>{prompt.mover.name}</strong>이(가) <strong>{prompt.reactor.name}</strong>에게서 벗어납니다.<br />기회 공격을 하시겠습니까?</div>;
+  };
   if (!first && !firstWait) {
     const theirs = prompts[0];
     if (!theirs) return null;
@@ -272,26 +286,23 @@ export function ApprovalLayer() {
   }
   return (
     <div className="cl-approval-overlay" role="dialog" aria-modal="false" aria-label="승인" ref={approvalRef}>
+      {mine.slice(0, 3).map((message, index) => (
+        <div className="cl-approval" key={message.id}>
+          <div className="cl-approval-head">당신의 답을 기다립니다{index === 0 && mine.length > 3 ? <small> +{mine.length - 3}</small> : null}</div>
+          {bodyOf(message)}
+          <PromptChoices message={message} compact />
+        </div>
+      ))}
+      {first ? null : (
       <div className="cl-approval">
-        <div className="cl-approval-head">{first ? "당신의 답을 기다립니다" : "DM 확인"}{(mine.length + waiting.length) > 1 ? <small> +{mine.length + waiting.length - 1}</small> : null}</div>
-        {first ? (
-          <>
-            {first.prompt!.kind === "counterspell" ? <div className="cl-approval-body">🚫 <strong>{first.prompt!.mover.name}</strong>이(가) {first.prompt!.spell?.name}{first.prompt!.spell ? ` (${first.prompt!.spell.level}레벨)` : ""}을(를) 시전하려 합니다.<br />주문 차단을 하시겠습니까?</div>
-              : first.prompt!.kind === "shield" || first.prompt!.kind === "guard" ? <div className="cl-approval-body">🛡 <strong>{first.prompt!.mover.name}</strong>의 {first.prompt!.attack?.name}이(가) <strong>{first.prompt!.reactor.name}</strong>에게 적중했습니다 (명중 {first.prompt!.attack?.total} vs AC {first.prompt!.attack?.ac}).<br />방패를 시전하시겠습니까?</div>
-              : first.prompt!.kind === "on-hit" ? <div className="cl-approval-body">⚔ <strong>{first.prompt!.reactor.name}</strong>의 {first.prompt!.attack?.name}이(가) <strong>{first.prompt!.mover.name}</strong>에게 {first.prompt!.onHit?.outcome === "crit" ? <strong>치명타!</strong> : "명중했습니다"} (명중 {first.prompt!.attack?.total} vs AC {first.prompt!.attack?.ac}).<br />더할 것을 고르세요.{first.prompt!.onHit?.outcome === "crit" ? " 추가 주사위도 두 배로 굴립니다." : ""}</div>
-              : first.prompt!.kind === "rescue" ? <div className="cl-approval-body">🎲 <strong>{first.prompt!.reactor.name}</strong>의 굴림이 실패했습니다 ({first.prompt!.rescue?.roll}).<br />특성을 써서 다시 굴릴 수 있습니다.</div>
-              : first.prompt!.kind === "death-save" ? <div className="cl-approval-body">💀 <strong>{first.prompt!.reactor.name}</strong>은(는) 쓰러져 있습니다.<br />죽음 내성을 굴리세요 (성공 3번이면 안정, 실패 3번이면 사망).</div>
-              : <div className="cl-approval-body">🏃 <strong>{first.prompt!.mover.name}</strong>이(가) <strong>{first.prompt!.reactor.name}</strong>에게서 벗어납니다.<br />기회 공격을 하시겠습니까?</div>}
-            <PromptChoices message={first} compact />
-          </>
-        ) : (
+        <div className="cl-approval-head">DM 확인{waiting.length > 1 ? <small> +{waiting.length - 1}</small> : null}</div>
           <>
             {firstWait!.action ? <div className="cl-approval-body"><strong>{firstWait!.action.attacker.name}</strong> → <strong>{firstWait!.action.target.name}</strong>: {firstWait!.action.attack.name} — {firstWait!.action.outcome === "crit" ? "치명타" : firstWait!.action.outcome === "hit" ? "적중" : "빗나감"}{firstWait!.action.damageTotal ? ` · 피해 ${firstWait!.action.damageTotal}` : ""}</div>
               : <div className="cl-approval-body"><strong>{firstWait!.spell!.caster.name}</strong>: {firstWait!.spell!.name} → {firstWait!.spell!.targets.map((row) => row.target.name).join(", ")}</div>}
             <div className="cl-row" style={{ gap: 6 }}><button type="button" className="cl-btn primary" onClick={() => c.confirmAction(firstWait!.id)}>적용</button>{firstWait!.action ? <button type="button" className="cl-btn" onClick={() => c.adjustAction(firstWait!.id, { outcome: "miss" })}>빗나감으로</button> : null}<button type="button" className="cl-btn quiet" onClick={() => c.undoAction(firstWait!.id)}>취소</button></div>
           </>
-        )}
       </div>
+      )}
     </div>
   );
 }

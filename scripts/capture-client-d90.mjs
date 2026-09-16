@@ -29,10 +29,11 @@ const tab = (page, name) => page.getByRole("tab", { name: new RegExp(`^${name}`)
 const letHitGo = async (player, cardLocator, onWindow) => {
   for (let at = 0; at < 60; at += 1) {
     if (await cardLocator.count()) return;
-    const choices = player.locator(".cl-approval .cl-hit-choices");
-    if (await choices.count()) { if (onWindow) await onWindow(); await player.locator(".cl-approval").getByRole("button", { name: "안 함" }).click(); }
-    // An older prompt (a check's rescue left unanswered) sits in front of the window; let it go the way Escape would.
-    else if (await player.locator(".cl-approval").count()) await player.locator(".cl-approval button").last().click();
+    // R66 (D201): every prompt addressed to the player is shown, so the window is one card among possibly several.
+    const windowCard = player.locator(".cl-approval", { has: player.locator(".cl-hit-choices") });
+    if (await windowCard.count()) { if (onWindow) await onWindow(); await windowCard.first().getByRole("button", { name: "안 함" }).click(); }
+    // An older prompt (a check's rescue left unanswered) may still be open; let it go the way Escape would.
+    else if (await player.locator(".cl-approval").count()) await player.locator(".cl-approval").first().locator("button").last().click();
     await player.waitForTimeout(250);
   }
   const shown = await player.locator(".cl-approval, .cl-waiting-note").allInnerTexts();

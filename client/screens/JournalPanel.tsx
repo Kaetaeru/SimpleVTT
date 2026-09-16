@@ -134,7 +134,7 @@ export function JournalWindows({ windows, onClose, onFocus, onOpen }: { windows:
   return (
     <div className="cl-windows">
       {windows.map((window, index) => (
-        <FloatingWindow key={window.key} index={index} zIndex={10 + index} onClose={() => onClose(window.key)} onFocus={() => onFocus(window.key)} wide={window.kind === "new-character" || window.kind === "entry"} initial={window.kind === "tracker" ? { x: 40, y: 430 } : undefined}>
+        <FloatingWindow key={window.key} index={index} zIndex={10 + index} onClose={() => onClose(window.key)} onFocus={() => onFocus(window.key)} wide={window.kind === "new-character" || window.kind === "entry"} narrow={window.kind === "tracker"} initial={window.kind === "tracker" ? trackerHome() : undefined}>
           {window.kind === "entry" ? <EntryWindow id={window.id} onClose={() => onClose(window.key)} onOpen={onOpen} />
             : window.kind === "token" ? <TitledWindow title="토큰 설정"><TokenWindow pageId={window.pageId} tokenId={window.tokenId} onClose={() => onClose(window.key)} /></TitledWindow>
             : window.kind === "page-settings" ? <TitledWindow title="페이지 설정"><PageSettingsWindow pageId={window.pageId} onClose={() => onClose(window.key)} /></TitledWindow>
@@ -146,7 +146,13 @@ export function JournalWindows({ windows, onClose, onFocus, onOpen }: { windows:
   );
 }
 
-function FloatingWindow({ children, index, zIndex, onClose, onFocus, wide, initial }: { children: ReactNode; index: number; zIndex: number; onClose: () => void; onFocus: () => void; wide: boolean; initial?: { x: number; y: number } }) {
+/**
+ * R66 (D201): where the turn tracker opens. It used to open at the left of the board, over the NPC and player cards
+ * the scene lines up on that side; it opens at the right now, where the rows leave room, and narrower.
+ */
+const trackerHome = () => ({ x: Math.max(40, (typeof window === "undefined" ? 1280 : window.innerWidth) - 380 - 420 - 24), y: 330 });
+
+function FloatingWindow({ children, index, zIndex, onClose, onFocus, wide, narrow = false, initial }: { children: ReactNode; index: number; zIndex: number; onClose: () => void; onFocus: () => void; wide: boolean; narrow?: boolean; initial?: { x: number; y: number } }) {
   const [position, setPosition] = useState(initial ?? { x: 40 + (index % 6) * 28, y: 70 + (index % 6) * 24 });
   const drag = useRef<{ startX: number; startY: number; x: number; y: number } | null>(null);
   const onPointerDown = (event: React.PointerEvent) => {
@@ -157,7 +163,7 @@ function FloatingWindow({ children, index, zIndex, onClose, onFocus, wide, initi
   const onPointerMove = (event: React.PointerEvent) => { if (drag.current) setPosition({ x: Math.max(0, drag.current.x + event.clientX - drag.current.startX), y: Math.max(52, drag.current.y + event.clientY - drag.current.startY) }); };
   const onPointerUp = () => { drag.current = null; };
   return (
-    <section className={`cl-window${wide ? " wide" : ""}`} style={{ left: position.x, top: position.y, zIndex }} onPointerDownCapture={onFocus} role="dialog">
+    <section className={`cl-window${wide ? " wide" : ""}${narrow ? " narrow" : ""}`} style={{ left: position.x, top: position.y, zIndex }} onPointerDownCapture={onFocus} role="dialog">
       <div className="cl-window-head" onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp}>
         <span className="cl-window-grip" aria-hidden="true">⋮⋮</span>
         <span className="cl-window-title" data-window-title />
