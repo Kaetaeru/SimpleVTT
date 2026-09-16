@@ -61,7 +61,9 @@ const METAMAGIC_COST: Record<string, number> = { "careful-spell": 1, "distant-sp
 
 const FEATURE_ACTIVATIONS: Record<string, FeatureActivation> = {
   "barbarian.reckless-attack": { duration: () => timed("이 턴 (다음 턴 시작까지)", 1), note: "첫 공격 때 결정 · 근력 근접 공격 유리, 받는 공격도 유리" },
-  "barbarian.rage": { resourceId: "resource.barbarian.rage", duration: () => timed("10분 (100라운드)", 100), note: "추가 행동. 턴이 끝날 때 공격도 피해도 없었으면 종료 (추가 행동으로 연장)" },
+  // R28 (D151): the host now watches this — a rage that saw no attack, no forced save and no damage since the
+  // barbarian's last turn ends when their turn does, and re-pressing 격노 (a bonus action) is the extension.
+  "barbarian.rage": { resourceId: "resource.barbarian.rage", duration: () => timed("10분 (100라운드)", 100), note: "추가 행동 · 턴이 끝날 때 그 사이 공격도, 내성을 강요한 것도, 받은 피해도 없었으면 종료 (다시 눌러 연장) · 행동 불가가 되면 즉시 종료" },
   "barbarian.berserker.intimidating-presence": { duration: () => timed("1분 (10라운드)", 10), note: "추가 행동 · 30피트 안의 적, 지혜 내성 아니면 공포" },
   "fighter.tactical-mind": { resourceId: "resource.fighter.second-wind", roll: () => ({ label: "전술적 사고", formula: "1d10" }), note: "실패한 능력 판정에 재기의 바람 1회 소비, +1d10" },
   "monk.deflect-attacks": { roll: (derived) => ({ label: "공격 빗나가게 하기 — 피해 감소", formula: `1d10+${derived.abilities.dex.modifier}+${classLevel(derived, "monk")}` }), note: "반응행동 · 타격/관통/참격 피해를 1d10 + 민첩 + 몽크 레벨 줄임" },

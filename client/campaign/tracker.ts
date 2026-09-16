@@ -19,6 +19,11 @@ export interface TrackerTurn {
   /** Action economy for the current turn (D97): shown, never enforced — extra attacks and features still go. */
   actionUsed?: boolean;
   bonusUsed?: boolean;
+  /**
+   * R28 (D151): 2024 Rage keeps going at the end of your turn only if, since your last turn, you attacked, forced a
+   * saving throw, or took damage. The host sets this when any of those happens and clears it when the turn starts.
+   */
+  ragingDeed?: boolean;
   /** A custom row; `formula` like "+1" changes its value every time it comes around (Roll20's round counter idiom). */
   custom?: boolean;
   formula?: string;

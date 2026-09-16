@@ -569,7 +569,10 @@ span.cl-tracker-init{display:inline-grid;place-items:center}
 .cl-cmd-end{padding:10px 18px;font-size:15px;font-weight:800;background:#ffd166;color:#141008;border-color:#ffd166;white-space:nowrap;box-shadow:0 4px 14px rgba(255,209,102,.35)}
 .cl-cmd-end:hover{background:#ffdc85}
 /* approvals: centred, the board dimmed behind */
-.cl-approval-overlay{position:absolute;inset:0;z-index:70;display:grid;place-items:center;background:rgba(6,8,12,.55);backdrop-filter:blur(2px)}
+/* R27 (D139): the sheet dims the board but never eats its clicks — with DM 확인 on, a queue of cards used to lock
+   the DM out of their own table until it emptied. Only the card itself takes the pointer. */
+.cl-approval-overlay{position:absolute;inset:0;z-index:70;display:grid;place-items:center;background:rgba(6,8,12,.35);pointer-events:none}
+.cl-approval-overlay .cl-approval{pointer-events:auto}
 .cl-approval-overlay .cl-approval{width:min(440px,92%);padding:16px 18px;border:1px solid #ffd166;border-radius:14px;background:rgba(20,23,29,.98);box-shadow:0 18px 50px rgba(0,0,0,.6);display:flex;flex-direction:column;gap:10px;animation:cl-toast-in .18s ease-out}
 .cl-approval-head{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:#ffd166;font-weight:700}
 .cl-approval-head small{color:var(--muted);margin-left:6px}

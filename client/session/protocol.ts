@@ -12,7 +12,7 @@ import type { CastMethod } from "../character/play";
 import type { AttackOverrides } from "../rules/resolve";
 import type { CampaignClock, CampaignSettings, ChatMessage, Macro, PlayerRole, RollTable } from "../campaign/model";
 
-export const PROTOCOL_VERSION = 20;
+export const PROTOCOL_VERSION = 22;
 
 export interface Presence { userId: string; displayName: string; role: PlayerRole; color: string; connected: boolean }
 
@@ -55,7 +55,7 @@ export interface AttackRiders { sneak?: boolean; smiteSlot?: number; /** R12: th
 export interface RollPayload { formula: string; total: number; /** R17: a die kept out of the total (kh/kl), one that came from an explosion, or one that counted as a success. */ dice: Array<{ sides: number; value: number; dropped?: boolean; exploded?: boolean; success?: boolean }>; modifier: number; label?: string; /** R17: set when the formula counts successes instead of summing. */ successes?: number; /** R17: rows drawn from a rollable table. */ drawn?: string[] }
 
 export type ClientCommand =
-  | { type: "hello"; protocol: number; userId: string; displayName: string; joinCode: string; lastEventN?: number; hostSecret?: string; /** R24: the host run the mirror's lastEventN belongs to (D122). */ sessionId?: string }
+  | { type: "hello"; protocol: number; userId: string; displayName: string; joinCode: string; lastEventN?: number; hostSecret?: string; /** R24: the host run the mirror's lastEventN belongs to (D122). */ sessionId?: string; /** R25 (D126): this seat's own secret, minted once and kept, so a user id cannot be claimed by someone else. */ seat?: string }
   /** R24: the mirror noticed a gap in the event numbering (or lost its place) and asks for a whole snapshot (D122). */
   | { type: "resync" }
   | { type: "chat.say"; text: string }
@@ -65,6 +65,8 @@ export type ClientCommand =
   /** Create or replace a journal entry. Players may create characters (when the campaign allows) and edit what they control. */
   | { type: "journal.put"; entry: JournalEntry }
   | { type: "journal.remove"; id: string }
+  /** R27 (D146): hand a creature to another participant (or take it back) — the GM for anything, a controller for their own character. */
+  | { type: "journal.grant"; id: string; userId: string; control: boolean }
   /** "플레이어에게 보여주기": open the entry on every viewer who can see it. */
   | { type: "journal.show"; id: string }
   /** Upload: metadata first, then the data URL in base64 text chunks; the host stores it once every chunk arrived. */

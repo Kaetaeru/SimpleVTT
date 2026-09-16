@@ -103,7 +103,10 @@ try {
   await dm.getByRole("button", { name: /^턴 트래커/ }).click();
   const tracker = dm.locator(".cl-window", { hasText: "턴 트래커" });
   await tracker.waitFor();
-  check(await player.locator(".cl-window", { hasText: "턴 트래커" }).count() === 0, "the player gets no tracker window (the ribbon shows the order once combat starts)");
+  // R27 (D143): the tracker window the DM opens now opens for everyone — a player sees the order and the
+  // initiative numbers, and may fix their own row. Editing controls stay the DM's.
+  check(await player.locator(".cl-window", { hasText: "턴 트래커" }).count() === 1, "the player gets the tracker window too");
+  check(await player.getByRole("button", { name: "▶ 다음 턴" }).count() === 0, "but none of the DM's controls");
   await tracker.getByRole("button", { name: "전투 시작" }).click();
   await dm.locator(".cl-targeting-banner").waitFor();
   const g = await reveal(tokenOf(dm, "고블린 전사"));

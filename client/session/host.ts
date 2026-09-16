@@ -6,15 +6,16 @@
  * through callbacks: the campaign (players), the chat archive and journal entries.
  */
 import type { ArtAsset } from "../campaign/art";
-import { ART_LIMIT, artVisible, canManageArt, ChunkAssembler, chunkText } from "../campaign/art";
+import { ART_CHUNK, ART_LIMIT, ART_MIMES, artVisible, canManageArt, ChunkAssembler, chunkText } from "../campaign/art";
 import type { JournalCharacter, JournalEntry, JournalNpc } from "../campaign/journal";
 import { canEdit, canView, mergePlayerEdit, newJournalNpc, projectEntry } from "../campaign/journal";
 import type { Page, Token } from "../campaign/page";
 import { controlsToken, mergeControllerTokenEdit, playerPageId, projectPage, projectToken, tokenForNpc } from "../campaign/page";
 import type { Tracker } from "../campaign/tracker";
 import { advanceTurn, emptyTracker, newTurn, withoutToken, withTurn } from "../campaign/tracker";
-import { advanceRound, endEffect, noteLog, recordDeathSave, resetDeathSaves } from "../character/play";
+import { advanceRound, endEffect, noteLog, recordDeathSave, wakeUp } from "../character/play";
 import type { CharacterRuntime } from "../character/runtime";
+import type { ActiveEffect } from "../character/types";
 import { npcAttackSpec, npcCombatant, npcSaveExec } from "../rules/attackSpec";
 import type { AttackOverrides, AttackResolution, AttackSpec, Combatant } from "../rules/resolve";
 import { describeResolution, diceFrom, resolveAttack } from "../rules/resolve";
@@ -29,10 +30,10 @@ import type { CastMethod } from "../character/play";
 import type { TrackerTurn } from "../campaign/tracker";
 import type { Campaign, CampaignClock, ChatMessage, PlayerRole } from "../campaign/model";
 import { advanceClock, clockText, emptyClock, newMessageId, withPlayer, withPlayerKicked, withPlayerRole } from "../campaign/model";
-import { rollFormula } from "../character/dice";
+import { parseFormula, rollFormula } from "../character/dice";
 import { ABILITY_KO, type AbilityKey } from "../catalog/types";
 import { parseChatInput, renderInline, visibleTo } from "./chat";
-import type { ClientCommand, HostMessage, Presence, TableEvent, TableSnapshot } from "./protocol";
+import type { ClientCommand, HostMessage, Presence, RollPayload, TableEvent, TableSnapshot } from "./protocol";
 import { PROTOCOL_VERSION, isClientCommand } from "./protocol";
 import type { Transport } from "./transport";
 import { summonRule } from "../rules/summons";
@@ -47,11 +48,41 @@ const describeMinutes = (minutes: number) => {
 
 /** R16: the 2024 Counterspell — a reaction that makes the other caster roll a Constitution save. */
 const COUNTERSPELL = "dnd.srd521.spell.counterspell";
+/** R28 (D151): the effect key a barbarian's 격노 runs under. */
+const RAGE_KEY = "feature:barbarian.rage";
 
 const EVENT_BUFFER = 5000;
 const SNAPSHOT_CHAT = 300;
 /** R24: the host's own log is bounded too (it used to grow for the whole session and was scanned on every prompt). */
 const CHAT_BUFFER = 5000;
+/** R25 (D129): nothing a peer sends is unbounded any more. */
+const LIMITS = { text: 4000, name: 120, targets: 12, dice: 200, markers: 24, playerTokens: 24, playerEntries: 24 };
+
+/**
+ * R25 (D130): `/roll` is rolled by the host, but `chat.roll` carries the result of the roll the sender's own dice
+ * tray animated — so it was taken on trust and a fabricated total was indistinguishable from a real one. The tray
+ * stays where it is; the host now checks the payload against its own formula parser instead.
+ */
+function checkRoll(roll: RollPayload): string | null {
+  if (!roll || typeof roll.formula !== "string" || !Array.isArray(roll.dice) || typeof roll.total !== "number" || typeof roll.modifier !== "number") return "굴림 형식이 아닙니다";
+  if (roll.dice.length > LIMITS.dice) return "주사위가 너무 많습니다";
+  if (!Number.isFinite(roll.total) || !Number.isInteger(roll.modifier)) return "굴림 값이 숫자가 아닙니다";
+  const parsed = parseFormula(roll.formula);
+  if (!parsed) return `"${roll.formula.slice(0, 40)}"은(는) 읽을 수 있는 주사위 식이 아닙니다`;
+  if (roll.modifier !== parsed.modifier) return "보정값이 주사위 식과 다릅니다";
+  const sides = new Set(parsed.dice.map((group) => group.sides));
+  let kept = 0;
+  let successes = 0;
+  for (const die of roll.dice) {
+    if (!Number.isInteger(die.sides) || !Number.isInteger(die.value) || !sides.has(die.sides) || die.value < 1 || die.value > die.sides) return "주사위 눈이 주사위 식과 맞지 않습니다";
+    if (!die.dropped) kept += die.value;
+    if (die.success) successes += 1;
+  }
+  if (roll.successes !== undefined) return roll.successes === successes && roll.total === successes ? null : "성공 개수가 주사위와 맞지 않습니다";
+  // A term with a negative count (`-2d6`) subtracts, so only the bounds can be checked there.
+  if (parsed.dice.some((group) => group.count < 0)) return Math.abs(roll.total) <= kept + Math.abs(roll.modifier) ? null : "합계가 주사위로 나올 수 있는 값이 아닙니다";
+  return roll.total === kept + roll.modifier ? null : "합계가 주사위와 맞지 않습니다";
+}
 type DistributiveOmit<T, K extends keyof T> = T extends unknown ? Omit<T, K> : never;
 type Viewer = { userId: string; role: PlayerRole };
 
@@ -98,7 +129,7 @@ export class TableHost {
   private artAssets: Map<string, ArtAsset>;
   private pages: Map<string, Page>;
   /** Uploads in flight: metadata waiting for its chunks. */
-  private readonly uploads = new Map<string, { asset: ArtAsset; by: string }>();
+  private readonly uploads = new Map<string, { asset: ArtAsset; by: string; got?: number }>();
   private readonly assembler = new ChunkAssembler();
   /** Applied action cards, newest last: inputs to re-resolve and a restore closure for undo. */
   /** Spell cards that can still be undone (or, D90, applied). */
@@ -199,7 +230,7 @@ export class TableHost {
       clock: this.clock,
       // R17: a player sees only shared macros, and a table's name without its rows (the host draws).
       macros: (this.campaign.macros ?? []).filter((macro) => viewer.role === "gm" || macro.shared),
-      tables: (this.campaign.tables ?? []).map((table) => (viewer.role === "gm" ? table : { ...table, rows: [] })),
+      tables: (this.campaign.tables ?? []).filter((table) => viewer.role === "gm" || table.shared).map((table) => (viewer.role === "gm" ? table : { ...table, rows: [] })),
       lastEventN: this.n,
       sessionId: this.sessionId,
     };
@@ -212,8 +243,10 @@ export class TableHost {
   }
 
   private presence(userId: string): Presence {
-    const player = this.campaign.players.find((item) => item.userId === userId)!;
-    return { userId, displayName: player.displayName, role: player.role, color: player.color, connected: this.connected.has(userId) };
+    // R25: this used to be a non-null assertion, so a GM command naming an id nobody holds threw out of the
+    // transport callback — and `handle()` had no guard around it (D127).
+    const player = this.campaign.players.find((item) => item.userId === userId);
+    return { userId, displayName: player?.displayName ?? "?", role: player?.role ?? "player", color: player?.color ?? "#999999", connected: this.connected.has(userId) };
   }
 
   private roleOf(userId: string): PlayerRole { return this.campaign.players.find((item) => item.userId === userId)?.role ?? "player"; }
@@ -221,7 +254,16 @@ export class TableHost {
 
   private setCampaign(campaign: Campaign) { this.campaign = campaign; this.options.onCampaign?.(campaign); }
 
+  /** R25 (D127): nothing a peer sends may take the table down; a command that throws refuses and the host lives on. */
   private handle(peerId: string, command: ClientCommand) {
+    try { this.dispatch(peerId, command); }
+    catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      this.reply(peerId, { type: "refused", reason: `그 명령을 처리하다 문제가 생겼습니다 (${detail})`, commandType: command.type });
+    }
+  }
+
+  private dispatch(peerId: string, command: ClientCommand) {
     if (command.type === "hello") {
       if (command.protocol !== PROTOCOL_VERSION) return this.reply(peerId, { type: "refused", reason: `버전이 다릅니다 (호스트 ${PROTOCOL_VERSION}, 참가자 ${command.protocol}). 같은 빌드를 쓰세요.`, commandType: "hello" });
       if (command.joinCode.toUpperCase() !== this.campaign.joinCode) return this.reply(peerId, { type: "refused", reason: "참가 코드가 맞지 않습니다", commandType: "hello" });
@@ -229,8 +271,11 @@ export class TableHost {
       if (isHostUser && (!this.options.hostSecret || command.hostSecret !== this.options.hostSecret)) return this.reply(peerId, { type: "refused", reason: "호스트와 같은 사용자 id입니다", commandType: "hello" });
       const existing = this.campaign.players.find((player) => player.userId === command.userId);
       if (existing?.kicked) return this.reply(peerId, { type: "refused", reason: "GM이 이 캠페인에서 내보낸 참가자입니다", commandType: "hello" });
+      // R25 (D126): every participant is handed everyone else's user id in their snapshot, so an id alone proves
+      // nothing. The seat that first used an id mints a secret; from then on only that seat may be that person.
+      if (!isHostUser && existing?.seat && command.seat !== existing.seat) return this.reply(peerId, { type: "refused", reason: `"${existing.displayName}" 자리는 이미 다른 기기가 쓰고 있습니다 (처음 들어온 기기에서만 이어집니다)`, commandType: "hello" });
       const isNew = !existing;
-      this.setCampaign(withPlayer(this.campaign, { userId: command.userId, displayName: command.displayName.trim() || "플레이어" }, this.now()));
+      this.setCampaign(withPlayer(this.campaign, { userId: command.userId, displayName: command.displayName.trim().slice(0, 40) || "플레이어", seat: isHostUser ? undefined : command.seat }, this.now()));
       // R21: whoever launched this table is its DM, always. The campaign remembers the user id of the tab that made
       // it, and a browser tab mints a new id every time, so the host would otherwise sit at its own table as a plain
       // player. The host secret is minted per launch and only the launching app has it, so this cannot be borrowed.
@@ -268,6 +313,8 @@ export class TableHost {
     const refuse = (reason: string) => this.reply(peerId, { type: "refused", reason, commandType: command.type });
     switch (command.type) {
       case "chat.say": {
+        if (typeof command.text !== "string") return refuse("글 형식이 아닙니다");
+        if (command.text.length > LIMITS.text) return refuse(`한 번에 ${LIMITS.text}자까지 보낼 수 있습니다`);
         const input = parseChatInput(command.text);
         switch (input.kind) {
           case "empty": return;
@@ -294,11 +341,14 @@ export class TableHost {
       }
       case "chat.roll": {
         const roll = command.roll;
-        this.say({ type: command.mode === "gm" ? "gmroll" : "rollresult", who: player.displayName, playerId: userId, target: command.mode === "self" ? userId : undefined, content: roll.label ?? "", roll });
+        const wrong = checkRoll(roll);
+        if (wrong) return refuse(`${wrong} (굴림은 표에 그대로 올라가므로 호스트가 확인합니다)`);
+        this.say({ type: command.mode === "gm" ? "gmroll" : "rollresult", who: player.displayName, playerId: userId, target: command.mode === "self" ? userId : undefined, content: (roll.label ?? "").slice(0, LIMITS.name), roll: { ...roll, label: roll.label?.slice(0, LIMITS.name) } });
         return;
       }
       case "player.role": {
         if (!isGm) return refuse("GM만 역할을 바꿉니다");
+        if (!this.campaign.players.some((item) => item.userId === command.userId)) return refuse("그런 참가자가 없습니다");
         if (command.userId === this.options.hostUserId && command.role !== "gm") return refuse("호스트는 GM에서 내릴 수 없습니다");
         this.setCampaign(withPlayerRole(this.campaign, command.userId, command.role));
         this.emit({ type: "presence", player: this.presence(command.userId) });
@@ -308,6 +358,7 @@ export class TableHost {
       }
       case "player.kick": {
         if (!isGm) return refuse("GM만 내보냅니다");
+        if (!this.campaign.players.some((item) => item.userId === command.userId)) return refuse("그런 참가자가 없습니다");
         if (command.userId === this.options.hostUserId) return refuse("호스트는 내보낼 수 없습니다");
         const name = this.presence(command.userId).displayName;
         this.setCampaign(withPlayerKicked(this.campaign, command.userId, true));
@@ -337,8 +388,10 @@ export class TableHost {
         if (!stored) {
           if (incoming.kind !== "character") return refuse("핸드아웃과 NPC는 GM만 만듭니다");
           if (!this.campaign.settings.playersCanCreateCharacters) return refuse("이 캠페인에서는 플레이어가 캐릭터를 만들 수 없습니다 (캠페인 설정)");
+          // R25 (D129): one player used to be able to fill the journal with as many entries as they liked.
+          if ([...this.journalEntries.values()].filter((item) => item.createdBy === userId).length >= LIMITS.playerEntries) return refuse(`캐릭터는 한 사람당 ${LIMITS.playerEntries}개까지 만들 수 있습니다`);
           // A player's new character is theirs: in their journal, controlled by them, in the root folder.
-          this.storeEntry({ ...incoming, campaignId: this.campaign.id, folder: "", canView: [userId], canEdit: [userId], gmNotes: "", archived: false, createdBy: userId, createdAt: now, updatedAt: now });
+          this.storeEntry({ ...incoming, name: String(incoming.name ?? "").slice(0, LIMITS.name), campaignId: this.campaign.id, folder: "", canView: [userId], canEdit: [userId], gmNotes: "", archived: false, macros: [], vaultId: undefined, createdBy: userId, createdAt: now, updatedAt: now });
           this.say({ type: "system", who: "", content: `${player.displayName}이(가) 캐릭터 "${incoming.name}"을(를) 만들었습니다` });
           return;
         }
@@ -348,6 +401,27 @@ export class TableHost {
           return refuse(`${stored.name}의 상태가 그 사이 바뀌었습니다 — HP·상태는 그대로 두었습니다 (다시 시도하세요)`);
         }
         this.storeEntry(mergePlayerEdit(stored, incoming, now));
+        return;
+      }
+      case "journal.grant": {
+        // R27 (D146): control is derived from `canEdit`, whose editor was GM-only — so a player could not hand their
+        // character to anyone when they had to leave, and there was no command for it in the protocol at all.
+        const entry = this.journalEntries.get(command.id);
+        if (!entry) return refuse("그 항목이 없습니다");
+        const target = this.campaign.players.find((item) => item.userId === command.userId && !item.kicked);
+        if (!target) return refuse("그런 참가자가 없습니다");
+        if (!isGm) {
+          if (entry.kind !== "character") return refuse("자기 캐릭터만 남에게 맡길 수 있습니다");
+          if (!canEdit(entry, this.viewer(userId))) return refuse("자기 캐릭터만 남에게 맡길 수 있습니다");
+          if (command.userId === userId) return refuse("자기 자신에게는 맡길 수 없습니다");
+        }
+        const add = (audience: JournalEntry["canEdit"]) => (audience === "all" ? "all" : [...new Set([...audience, command.userId])]);
+        const drop = (audience: JournalEntry["canEdit"]) => (audience === "all" ? "all" : audience.filter((id) => id !== command.userId));
+        const next = command.control
+          ? { ...entry, canEdit: add(entry.canEdit), canView: add(entry.canView) }
+          : { ...entry, canEdit: drop(entry.canEdit) };
+        this.storeEntry({ ...next, updatedAt: this.now() } as JournalEntry);
+        this.say({ type: "system", who: "", content: command.control ? `${entry.name}을(를) ${target.displayName}이(가) 맡습니다` : `${target.displayName}이(가) ${entry.name}을(를) 더는 맡지 않습니다` });
         return;
       }
       case "journal.remove": {
@@ -364,8 +438,14 @@ export class TableHost {
       case "art.upload": {
         const asset = command.asset;
         if (!asset || typeof asset.id !== "string" || typeof asset.hash !== "string") return refuse("아트 형식이 아닙니다");
-        if (asset.bytes > ART_LIMIT) return refuse("이미지가 너무 큽니다 (20MB까지)");
+        // R25 (D132): `bytes` is the sender's own word, so the 20 MB limit was decorative — the real bytes arrive
+        // in `art.chunk` and were never measured. Both are checked now, and the type has to be an image we serve.
+        if (!Number.isFinite(asset.bytes) || asset.bytes > ART_LIMIT) return refuse("이미지가 너무 큽니다 (20MB까지)");
+        if (!ART_MIMES.includes(asset.mime)) return refuse(`${asset.mime || "알 수 없는"} 형식은 올릴 수 없습니다 (PNG·JPEG·GIF·WebP)`);
+        if (typeof asset.thumb === "string" && asset.thumb.length > 256 * 1024) return refuse("미리보기가 너무 큽니다");
+        if (!Number.isInteger(command.total) || command.total < 0 || command.total > Math.ceil(ART_LIMIT / ART_CHUNK) + 2) return refuse("아트 조각 수가 올바르지 않습니다");
         if (this.artAssets.has(asset.id)) return refuse("이미 있는 아트 id입니다");
+        if ([...this.uploads.values()].filter((item) => item.by === userId).length >= 4) return refuse("올리는 중인 이미지가 너무 많습니다");
         this.uploads.set(asset.id, { asset: { ...asset, campaignId: this.campaign.id, ownerId: userId, createdAt: this.now(), updatedAt: this.now() }, by: userId });
         if (command.total === 0) void this.finishUpload(asset.id, "");
         return;
@@ -373,6 +453,11 @@ export class TableHost {
       case "art.chunk": {
         const upload = this.uploads.get(command.id);
         if (!upload || upload.by !== userId) return refuse("업로드 중인 아트가 아닙니다");
+        // The assembler allocates from `total`, so an unchecked one froze the host on a single command.
+        if (!Number.isInteger(command.total) || command.total < 1 || command.total > Math.ceil(ART_LIMIT / ART_CHUNK) + 2) return refuse("아트 조각 수가 올바르지 않습니다");
+        if (typeof command.data !== "string" || command.data.length > ART_CHUNK * 2) return refuse("아트 조각이 너무 큽니다");
+        upload.got = (upload.got ?? 0) + command.data.length;
+        if (upload.got > ART_LIMIT) { this.uploads.delete(command.id); this.assembler.drop(command.id); return refuse("이미지가 너무 큽니다 (20MB까지)"); }
         const whole = this.assembler.add(command.id, command.index, command.total, command.data);
         if (whole !== null) void this.finishUpload(command.id, whole);
         return;
@@ -443,7 +528,11 @@ export class TableHost {
         const page = this.pages.get(command.pageId);
         if (!page) return refuse("그 페이지가 없습니다");
         const incoming = command.token;
-        if (!incoming || typeof incoming.id !== "string" || !Array.isArray(incoming.bars)) return refuse("토큰 형식이 아닙니다");
+        if (!incoming || typeof incoming.id !== "string" || !Array.isArray(incoming.bars) || incoming.bars.length !== 3) return refuse("토큰 형식이 아닙니다");
+        // R25 (D129): the arrays and the stage order arrive from the wire; none of it used to be checked at all.
+        if (!Array.isArray(incoming.markers) || incoming.markers.length > LIMITS.markers) return refuse(`마커는 ${LIMITS.markers}개까지 붙일 수 있습니다`);
+        if (!Number.isFinite(incoming.z)) return refuse("토큰 형식이 아닙니다");
+        if (incoming.bars.some((bar) => bar.value !== undefined && !Number.isFinite(bar.value))) return refuse("바 값이 숫자가 아닙니다");
         const stored = page.tokens.find((token) => token.id === incoming.id);
         const viewer = this.viewer(userId);
         let next: Token;
@@ -455,6 +544,7 @@ export class TableHost {
           const entry = incoming.represents ? this.journalEntries.get(incoming.represents) : undefined;
           if (page.id !== playerPageId(this.campaign, viewer)) return refuse("지금 보는 페이지에만 토큰을 놓을 수 있습니다");
           if (!entry || !canEdit(entry, viewer)) return refuse("자기 캐릭터의 토큰만 놓을 수 있습니다");
+          if (page.tokens.filter((item) => item.represents && canEdit(this.journalEntries.get(item.represents) ?? entry, viewer)).length >= LIMITS.playerTokens) return refuse(`한 장면에 놓을 수 있는 토큰 수를 넘었습니다 (${LIMITS.playerTokens}개)`);
           next = this.withLinkedBars({ ...incoming, layer: "objects", controlledBy: "inherit", gmNotes: "", locked: false });
         } else {
           if (!controlsToken(stored, viewer, this.journal)) return refuse("이 토큰을 움직일 권한이 없습니다");
@@ -471,6 +561,8 @@ export class TableHost {
         const stored = page?.tokens.find((token) => token.id === command.id);
         if (!page || !stored) return refuse("그 토큰이 없습니다");
         if (!controlsToken(stored, this.viewer(userId), this.journal)) return refuse("이 토큰을 지울 권한이 없습니다");
+        // R25: only `token.put` used to check this, so a token you could not nudge you could still delete (D131).
+        if (!isGm && stored.locked) return refuse("잠긴 토큰입니다");
         const next = { ...page, tokens: page.tokens.filter((token) => token.id !== command.id), updatedAt: this.now() };
         this.pages.set(page.id, next);
         this.options.onPage?.({ page: next });
@@ -523,7 +615,7 @@ export class TableHost {
       case "table.tables": {
         if (!isGm) return refuse("굴림표는 GM이 만듭니다");
         if (!Array.isArray(command.tables) || command.tables.length > 100) return refuse("굴림표 형식이 아닙니다");
-        const tables = command.tables.map((table) => ({ id: String(table.id), name: String(table.name).slice(0, 40), rows: (table.rows ?? []).slice(0, 200).map((row) => ({ text: String(row.text).slice(0, 300), weight: Math.max(1, Math.min(999, Math.floor(row.weight) || 1)) })) })).filter((table) => table.name);
+        const tables = command.tables.map((table) => ({ id: String(table.id), name: String(table.name).slice(0, 40), shared: Boolean(table.shared), rows: (table.rows ?? []).slice(0, 200).map((row) => ({ text: String(row.text).slice(0, 300), weight: Math.max(1, Math.min(999, Math.floor(row.weight) || 1)) })) })).filter((table) => table.name);
         this.setCampaign({ ...this.campaign, tables, updatedAt: this.now() });
         this.emit({ type: "tables", tables });
         return;
@@ -531,7 +623,9 @@ export class TableHost {
       case "chat.table": {
         // R17: the host draws, because a player never holds the rows.
         const table = (this.campaign.tables ?? []).find((item) => item.name === command.name);
-        if (!table) return refuse(`"${command.name}" 굴림표가 없습니다`);
+        // R25 (D134): the rows are deliberately stripped from a player's snapshot, but the draw itself was open to
+        // anyone who knew the name and printed the row into public chat — a secret table could be enumerated.
+        if (!table || (!isGm && !table.shared)) return refuse(`"${command.name}" 굴림표가 없습니다`);
         const rows = table.rows.filter((row) => row.text.trim());
         if (!rows.length) return refuse(`"${table.name}"에 항목이 없습니다`);
         const count = Math.max(1, Math.min(20, Math.floor(command.count) || 1));
@@ -559,18 +653,25 @@ export class TableHost {
       case "tracker.add": {
         const turn = command.turn;
         if (!turn || typeof turn.name !== "string") return refuse("턴 형식이 아닙니다");
+        let trusted = turn;
         if (!isGm) {
           const page = turn.pageId ? this.pages.get(turn.pageId) : undefined;
           const token = page?.tokens.find((item) => item.id === turn.tokenId);
           if (!token || !controlsToken(token, this.viewer(userId), this.journal)) return refuse("자기 토큰만 트래커에 넣을 수 있습니다");
+          // R25 (D133): only the control of the *token* was checked, and then the whole wire row was stored — so a
+          // player could point their own row at another character's sheet, and the DM's 다음 턴 then rolled that
+          // character's death saves. A player's row is built from the token the host can see, not from the wire.
+          trusted = { ...turn, entryId: token.represents, name: token.name, custom: false, formula: undefined };
         }
-        let initiative = turn.initiative ?? 0;
+        const turnName = String(trusted.name ?? "").slice(0, LIMITS.name);
+        let initiative = trusted.initiative ?? 0;
+        if (!Number.isFinite(initiative)) return refuse("이니셔티브가 숫자가 아닙니다");
         if (command.rollBonus !== undefined) {
           const die = 1 + Math.floor((this.options.random ?? Math.random)() * 20);
           initiative = die + command.rollBonus;
-          this.say({ type: "rollresult", who: player.displayName, playerId: userId, content: `${turn.name} · 이니셔티브`, roll: { formula: `1d20${command.rollBonus >= 0 ? "+" : "-"}${Math.abs(command.rollBonus)}`, total: initiative, dice: [{ sides: 20, value: die }], modifier: command.rollBonus, label: `${turn.name} · 이니셔티브` } });
+          this.say({ type: "rollresult", who: player.displayName, playerId: userId, content: `${turnName} · 이니셔티브`, roll: { formula: `1d20${command.rollBonus >= 0 ? "+" : "-"}${Math.abs(command.rollBonus)}`, total: initiative, dice: [{ sides: 20, value: die }], modifier: command.rollBonus, label: `${turnName} · 이니셔티브` } });
         }
-        this.setTracker(withTurn(this.tracker, newTurn({ ...turn, initiative })));
+        this.setTracker(withTurn(this.tracker, newTurn({ ...trusted, name: turnName, initiative })));
         return;
       }
       case "tracker.swap": {
@@ -613,6 +714,7 @@ export class TableHost {
         const cannotAttack = cannotAct(this.conditionsOf(attackerEntry));
         if (cannotAttack) return refuse(`${cannotAttack} 상태라 공격할 수 없습니다`);
         if (!command.targets?.length) return refuse("대상이 없습니다");
+        if (command.targets.length > LIMITS.targets) return refuse(`한 번에 ${LIMITS.targets}명까지 겨냥할 수 있습니다`);
         // In combat a player attacks on their turn; out of turn only as a reaction (an opportunity prompt or a readied action).
         if (!isGm && !command.reaction && !command.readied && this.tracker.turns.length && this.turnOf(command.attacker)?.id !== this.tracker.turns[this.tracker.current]?.id) return refuse("자기 턴에만 공격할 수 있습니다 (남의 턴에는 기회 공격·준비한 행동만)");
         let prepared = this.prepareAttack(attackerEntry, command.attack, command.riders ?? {});
@@ -712,10 +814,13 @@ export class TableHost {
         const resolution = resolveSpell({ caster: casterCombatant, casterStats: prepared.casterStats, spec: prepared.spec, targets: rows.map((row) => ({ combatant: row.combatant!, stats: row.stats! })), dice: diceFrom(this.options.random ?? Math.random), overrides, apply: !waits });
         // The cost is paid on casting (a slot, concentration on the caster) even when the DM still has to confirm the result.
         const casterBefore = caster.entry;
-        if (casterBefore.kind === "character") { const next = prepared.spend(casterBefore.runtime); if (!next) return refuse("슬롯이나 횟수가 없습니다"); this.storeEntry({ ...casterBefore, runtime: { ...next, updatedAt: this.now() }, updatedAt: this.now() }); }
+        let spent: CharacterRuntime | null = null;
+        if (casterBefore.kind === "character") { const next = prepared.spend(casterBefore.runtime); if (!next) return refuse("슬롯이나 횟수가 없습니다"); spent = next; this.storeEntry({ ...casterBefore, runtime: { ...next, updatedAt: this.now() }, updatedAt: this.now() }); }
         else { if (resolution.concentration) this.mark(caster, ["집중"], true); }
         const restoreNpcUse = casterBefore.kind === "npc" && prepared.npcSpend ? prepared.npcSpend() : undefined;
-        const restoreCaster = () => { restoreNpcUse?.(); const current = this.journalEntries.get(casterBefore.id); if (current?.kind === "character" && casterBefore.kind === "character") this.storeEntry({ ...current, runtime: { ...current.runtime, slotsUsed: casterBefore.runtime.slotsUsed, pactSlotsUsed: casterBefore.runtime.pactSlotsUsed, resourcesUsed: casterBefore.runtime.resourcesUsed, effects: casterBefore.runtime.effects }, updatedAt: this.now() }); else if (casterBefore.kind === "npc" && resolution.concentration) this.mark(caster, ["집중"], false); };
+        // R26 (D136): undoing an old cast used to write the caster's whole pre-cast ledger back, refunding every
+        // slot and charge they had spent in between. It now refunds exactly what this cast took.
+        const restoreCaster = () => { restoreNpcUse?.(); if (casterBefore.kind === "character" && spent) this.undoOnCaster(casterBefore.id, casterBefore.runtime, spent); else if (casterBefore.kind === "npc" && resolution.concentration) this.mark(caster, ["집중"], false); };
         if (command.readied) { this.markReactionUsed(command.caster); this.mark(caster, ["준비"], false); }
         else if (exec.castingEconomy === "reaction") this.markReactionUsed(command.caster); else this.markUsed(command.caster, exec.castingEconomy === "bonus-action" ? "bonus" : "action");
         this.postSpell(resolution, rows.map((row) => row.target), restoreCaster, waits, player.displayName, userId, { spec: prepared.spec, casterStats: prepared.casterStats });
@@ -732,6 +837,8 @@ export class TableHost {
         const actor = this.resolveActor(command.actor);
         if (!actor) return refuse("행동하는 쪽을 찾을 수 없습니다");
         if (!isGm && !this.mayAct(userId, command.actor, actor.entry)) return refuse("자기 캐릭터로만 행동할 수 있습니다");
+        if (!command.targets?.length) return refuse("대상이 없습니다");
+        if (command.targets.length > LIMITS.targets) return refuse(`한 번에 ${LIMITS.targets}명까지 겨냥할 수 있습니다`);
         this.runNpcSave(actor, command.actionName, command.targets, { by: userId, isGm, displayName: player.displayName, refuse });
         return;
       }
@@ -752,6 +859,7 @@ export class TableHost {
         const spendPool = () => { const current = this.journalEntries.get(actor.entry.id); if (current?.kind === "npc") this.storeEntry({ ...current, runtime: { ...current.runtime, legendaryUsed: current.runtime.legendaryUsed + cost, updatedAt: this.now() }, updatedAt: this.now() }); };
         if (action.kind === "save" && action.save) {
           if (!command.targets?.length) return refuse("대상이 없습니다");
+        if (command.targets.length > LIMITS.targets) return refuse(`한 번에 ${LIMITS.targets}명까지 겨냥할 수 있습니다`);
           const posted = this.runNpcSave(actor, action.name, command.targets, { by: userId, isGm, displayName: player.displayName, refuse, legendary: `${used + cost}/${per}` });
           if (posted) spendPool();
           return;
@@ -949,6 +1057,18 @@ export class TableHost {
         const moverName = mover.token?.name ?? mover.entry.name;
         const fromName = from.token?.name ?? from.entry.name;
         if (this.conditionsOf(mover).includes("이탈")) { this.say({ type: "system", who: "", content: `${moverName}이(가) 이탈 중이라 ${fromName}에게서 기회 공격 없이 벗어납니다` }); return; }
+        // R27 (D144): the reactor was never checked, so a prompt opened at creatures that cannot answer it — an
+        // unconscious bandit, a caster with no melee weapon — and the only button was 안 함 while the card sat over
+        // everyone's board. A creature that cannot act, has spent its reaction, or has no melee attack simply does
+        // not get the chance, and the table is told why in one line.
+        const stopped = cannotAct(this.conditionsOf(from));
+        const hasMelee = from.entry.kind === "npc"
+          ? from.entry.statBlock.actions.some((action) => action.kind === "attack" && action.attack && action.attack.mode !== "ranged")
+          : true;
+        if (stopped || !hasMelee || this.reactionUsed(command.from)) {
+          this.say({ type: "system", who: "", content: `${moverName}이(가) ${fromName}에게서 벗어납니다 — ${stopped ? `${fromName}은(는) ${stopped} 상태` : !hasMelee ? `${fromName}에게 근접 공격이 없어` : `${fromName}은(는) 이번 라운드 반응을 이미 써서`} 기회 공격이 없습니다` });
+          return;
+        }
         this.say({ type: "prompt", who: player.displayName, playerId: userId, content: `${moverName}이(가) ${fromName}에게서 벗어납니다 — ${fromName}의 기회 공격?`, prompt: { kind: "opportunity", mover: { name: moverName, ...command.mover }, reactor: { name: fromName, ...command.from } } });
         return;
       }
@@ -967,8 +1087,13 @@ export class TableHost {
         if (!isGm) return refuse("DM 팔레트는 GM만 씁니다");
         const record = this.actions.get(command.messageId);
         if (!record) return refuse("그 카드를 더 고칠 수 없습니다");
+        // R26 (D137): this used to restore and drop the record *first* and only then look for the creatures. When
+        // one of them was gone the palette refused — with the damage already reverted, the record discarded, the
+        // card still reading "applied", and undo then refusing too. Nothing is touched until it can be re-resolved.
+        if (!this.resolveActor(record.inputs.attacker) || !this.resolveActor(record.inputs.targets[record.inputs.targetIndex])) return refuse("공격자나 대상이 더 없습니다 (카드는 그대로 둡니다)");
         record.restore();
         this.actions.delete(command.messageId);
+        // Resolve again *after* the restore: the creatures must be read as they are once this card is off them.
         const attackerEntry = this.resolveActor(record.inputs.attacker);
         const targetEntry = this.resolveActor(record.inputs.targets[record.inputs.targetIndex]);
         const prepared = attackerEntry ? this.prepareAttack(attackerEntry, record.inputs.attack, record.inputs.riders ?? {}) : null;
@@ -1016,19 +1141,36 @@ export class TableHost {
 
   /* ---------- attacks (§12.2) ---------- */
 
-  private resolveActor(ref: ActorRef): { entry: JournalEntry; token?: Token; page?: Page } | null {
+  /**
+   * R25 (D128): the entry id, page and token of an `ActorRef` must describe one creature. They never used to be
+   * cross-checked — the wire's `entryId` won outright while `mayAct` looked only at the token — so pairing your own
+   * token with someone else's sheet id let you cast with their slots, drink their potions and drive a GM-only NPC.
+   */
+  private actorToken(ref: ActorRef, entryId?: string): { token?: Token; page?: Page; ok: boolean } {
     const page = ref.pageId ? this.pages.get(ref.pageId) : undefined;
     const token = page?.tokens.find((item) => item.id === ref.tokenId);
-    const entryId = ref.entryId ?? token?.represents;
+    if (!token) return { page, ok: true };
+    if (!entryId) return { token, page, ok: true };
+    // A token that represents nobody cannot stand in for a sheet: fall back to the sheet's own permissions.
+    if (!token.represents) return { page, ok: true };
+    return { token, page, ok: token.represents === entryId };
+  }
+
+  private resolveActor(ref: ActorRef): { entry: JournalEntry; token?: Token; page?: Page } | null {
+    const page = ref.pageId ? this.pages.get(ref.pageId) : undefined;
+    const onPage = page?.tokens.find((item) => item.id === ref.tokenId);
+    const entryId = ref.entryId ?? onPage?.represents;
     const entry = entryId ? this.journalEntries.get(entryId) : undefined;
     if (!entry || entry.kind === "handout") return null;
+    const { token, ok } = this.actorToken(ref, entry.id);
+    if (!ok) return null;
     return { entry, token, page };
   }
 
   private mayAct(userId: string, ref: ActorRef, entry: JournalEntry) {
     const viewer = this.viewer(userId);
-    const page = ref.pageId ? this.pages.get(ref.pageId) : undefined;
-    const token = page?.tokens.find((item) => item.id === ref.tokenId);
+    const { token, ok } = this.actorToken(ref, entry.id);
+    if (!ok) return false;
     return token ? controlsToken(token, viewer, this.journal) : canEdit(entry, viewer);
   }
 
@@ -1088,6 +1230,43 @@ export class TableHost {
     this.setTracker({ ...this.tracker, turns: this.tracker.turns.map((item) => (item.id === turn.id ? { ...item, reactionUsed: true } : item)) });
   }
   /** Action economy (D97): noted on the current turn's row only, never enforced. */
+  /**
+   * R28 (D151): 2024 Rage. At the end of the barbarian's turn the rage keeps going only if, since their last turn,
+   * they attacked, forced a saving throw, or took damage; otherwise it ends there (pressing 격노 again — a bonus
+   * action — is the extension). Being Incapacitated ends it immediately. Nothing evaluated the rule before: the
+   * activation carried it as a sentence of prose and the effect simply ran its hundred rounds.
+   */
+  private refOf(actor: { entry: JournalEntry; token?: Token; page?: Page }): ActorRef { return { entryId: actor.entry.id, pageId: actor.page?.id, tokenId: actor.token?.id }; }
+
+  /** R28 (D151): whoever attacked, forced a save or took damage keeps their rage alive this round. */
+  private ragingDeeds(actors: Array<{ entry: JournalEntry; token?: Token; page?: Page } | undefined>) {
+    for (const actor of actors) {
+      if (!actor) continue;
+      if (this.rageOf(actor.entry)) this.markRagingDeed(this.refOf(actor));
+      const stopped = cannotAct(this.conditionsOf(actor));
+      if (stopped) this.endRage(this.journalEntries.get(actor.entry.id) ?? actor.entry, `${stopped} 상태`);
+    }
+  }
+
+  private markRagingDeed(ref: ActorRef) {
+    const turn = this.turnOf(ref);
+    if (!turn || turn.ragingDeed) return;
+    this.setTracker({ ...this.tracker, turns: this.tracker.turns.map((item) => (item.id === turn.id ? { ...item, ragingDeed: true } : item)) });
+  }
+
+  private rageOf(entry: JournalEntry) {
+    if (entry.kind !== "character") return undefined;
+    return (entry.runtime.effects ?? []).find((effect) => effect.key === RAGE_KEY);
+  }
+
+  /** End a rage that the rules say is over, and say so once. */
+  private endRage(entry: JournalEntry, reason: string) {
+    const rage = this.rageOf(entry);
+    if (!rage || entry.kind !== "character") return;
+    this.storeEntry({ ...entry, runtime: { ...endEffect(entry.runtime, RAGE_KEY, reason), updatedAt: this.now() }, updatedAt: this.now() });
+    this.say({ type: "system", who: "", content: `${entry.name}의 격노가 끝났습니다 (${reason})` });
+  }
+
   private markUsed(ref: ActorRef, which: "action" | "bonus") {
     const turn = this.turnOf(ref);
     if (!turn || this.tracker.turns[this.tracker.current]?.id !== turn.id) return;
@@ -1209,6 +1388,8 @@ export class TableHost {
     const messageId = newMessageId();
     const apply = () => {
       const rows = resolution.targets.map((row, index) => this.applySpellRow(row, targets[index], resolution));
+      // R28 (D151): forcing a save and taking damage both keep a rage going.
+      this.ragingDeeds([this.resolveActor({ entryId: resolution.caster.id }) ?? undefined, ...targets.filter((_, index) => (resolution.targets[index]?.damage?.damageTotal ?? 0) > 0)]);
       const applied = { ...resolution, applied: true };
       this.spells.set(messageId, { resolution: applied, rows, restoreCaster, context: context ? { ...context, who: displayName, playerId: userId } : undefined, restore: () => { for (const restore of [...rows].reverse()) restore?.(); restoreCaster(); } });
       this.sayWithId(messageId, { type: "spell", who: displayName, playerId: userId, content: describeSpell(applied), spell: applied });
@@ -1261,8 +1442,13 @@ export class TableHost {
       const live = this.journalEntries.get(target.entry.id);
       const before = live?.kind === "character" ? live : target.entry;
       let runtime: CharacterRuntime = { ...before.runtime, hp: { ...before.runtime.hp, current: row.hpAfter, temp: row.tempHp !== undefined ? row.tempHp : row.tempAfter } };
+      // R28 (D149): healed off 0 HP → awake, death saves cleared. (D152) and a spell may name what it ends.
+      if (before.runtime.hp.current === 0 && row.hpAfter > 0) runtime = wakeUp(runtime);
+      const cleared = (row.clears ?? []).filter((name) => runtime.conditions.includes(name));
+      if (cleared.length) runtime = { ...runtime, conditions: runtime.conditions.filter((name) => !cleared.includes(name)), deathSaves: { success: 0, failure: 0 } };
       runtime = noteLog(runtime, line);
-      if (concentrationFailed) { const key = this.options.pcConcentrationKey?.(before); if (key) runtime = endEffect(runtime, key, "집중 실패"); }
+      let dropped: ActiveEffect | undefined;
+      if (concentrationFailed) { const key = this.options.pcConcentrationKey?.(before); if (key) { dropped = (before.runtime.effects ?? []).find((effect) => effect.key === key); runtime = endEffect(runtime, key, "집중 실패"); } }
       for (const condition of row.marks) if (!runtime.conditions.includes(condition)) runtime = { ...runtime, conditions: [...runtime.conditions, condition] };
       if (downed === "unconscious") for (const condition of ["무의식", "넘어짐"]) if (!runtime.conditions.includes(condition)) runtime = { ...runtime, conditions: [...runtime.conditions, condition] };
       runtime = this.takeDeathFailures(runtime, row.attack?.deathFailures ?? row.damage?.deathFailures, row.target.name, resolution.name);
@@ -1270,17 +1456,29 @@ export class TableHost {
       if (row.effect && !(runtime.effects ?? []).some((effect) => effect.key === row.effect!.key)) runtime = startEffect(runtime, { key: row.effect.key, name: row.effect.name, source: "spell", duration: row.effect.duration, concentration: resolution.caster.id === before.id && row.effect.concentration, rounds: row.effect.rounds, ...(row.effect.endSave ? { endSave: { ...row.effect.endSave, conditions: row.marks } } : {}) });
       this.storeEntry({ ...before, runtime: { ...runtime, updatedAt: now }, updatedAt: now });
       if (downed) this.releaseGrapples(target.page, target.token?.id);
-      return () => { const current = this.journalEntries.get(before.id); if (current?.kind === "character") this.storeEntry({ ...current, runtime: { ...current.runtime, hp: before.runtime.hp, conditions: before.runtime.conditions, effects: before.runtime.effects, log: before.runtime.log, deathSaves: before.runtime.deathSaves }, updatedAt: this.now() }); };
+      // R26 (D136): reverse this row, not the sheet as it was — healing, damage, marks and the effect it started.
+      const delta = {
+        hp: before.runtime.hp.current - row.hpAfter,
+        temp: before.runtime.hp.temp - (row.tempHp !== undefined ? row.tempHp : row.tempAfter),
+        conditions: runtime.conditions.filter((name) => !before.runtime.conditions.includes(name)),
+        deathFailures: row.attack?.deathFailures ?? row.damage?.deathFailures,
+        restore: dropped ? [dropped] : [],
+        remove: (runtime.effects ?? []).filter((effect) => !(before.runtime.effects ?? []).some((item) => item.key === effect.key)).map((effect) => effect.key),
+        note: `되돌림: ${resolution.caster.name}의 ${resolution.name}`,
+      };
+      return () => this.undoOnCharacter(before.id, delta);
     }
     if (target.entry.kind !== "npc") return null;
     const marks = [...row.marks, ...(row.effect ? [row.effect.name] : []), ...(downed ? ["사망"] : [])];
+    const clears = row.clears ?? [];
     // R10: an effect the NPC may shake off at the end of its turns is remembered on its runtime.
     const npcBefore = target.entry;
     let restoreEndSaves: () => void = () => undefined;
     if (row.effect?.endSave) {
       const endSaves = [...(npcBefore.runtime.endSaves ?? []).filter((item) => item.key !== row.effect!.key), { key: row.effect.key, name: row.effect.name, ability: row.effect.endSave.ability, dc: row.effect.endSave.dc, conditions: row.marks }];
       this.storeEntry({ ...npcBefore, runtime: { ...npcBefore.runtime, endSaves, updatedAt: now }, updatedAt: now });
-      restoreEndSaves = () => { const current = this.journalEntries.get(npcBefore.id); if (current?.kind === "npc") this.storeEntry({ ...current, runtime: { ...current.runtime, endSaves: npcBefore.runtime.endSaves }, updatedAt: this.now() }); };
+      const key = row.effect.key;
+      restoreEndSaves = () => { const current = this.journalEntries.get(npcBefore.id); if (current?.kind === "npc") this.storeEntry({ ...current, runtime: { ...current.runtime, endSaves: (current.runtime.endSaves ?? []).filter((item) => item.key !== key), updatedAt: this.now() }, updatedAt: this.now() }); };
     }
     const token = target.token;
     const bar = token?.bars[0];
@@ -1289,15 +1487,19 @@ export class TableHost {
       const live = page?.tokens.find((item) => item.id === token.id);
       if (!page || !live) return null;
       const before = live;
-      const markers = [...live.markers, ...marks.filter((name) => !live.markers.some((marker) => marker.name === name)).map((name) => ({ name }))];
+      const added = marks.filter((name) => !live.markers.some((marker) => marker.name === name));
+      const markers = [...live.markers.filter((marker) => !clears.includes(marker.name)), ...added.map((name) => ({ name }))];
       this.storeToken(page, { ...live, bars: [{ ...bar!, value: row.hpAfter }, live.bars[1], live.bars[2]], markers });
       if (downed) this.releaseGrapples(page, token.id);
-      return () => { restoreEndSaves(); const current = this.pages.get(page.id)?.tokens.find((item) => item.id === before.id); if (current && this.pages.get(page.id)) this.storeToken(this.pages.get(page.id)!, { ...current, bars: before.bars, markers: before.markers }); };
+      const delta = { bar: (bar!.value ?? 0) - row.hpAfter, markers: added };
+      return () => { restoreEndSaves(); this.undoOnToken(page.id, before.id, delta); };
     }
     const before = this.journalEntries.get(npcBefore.id) as typeof npcBefore;
-    const conditions = [...before.runtime.conditions, ...marks.filter((name) => !before.runtime.conditions.includes(name))];
+    const added = marks.filter((name) => !before.runtime.conditions.includes(name));
+    const conditions = [...before.runtime.conditions.filter((name) => !clears.includes(name)), ...added];
     this.storeEntry({ ...before, runtime: { ...before.runtime, hp: { ...before.runtime.hp, current: row.hpAfter, temp: row.tempHp ?? row.tempAfter }, conditions, updatedAt: now }, updatedAt: now });
-    return () => { const current = this.journalEntries.get(before.id); if (current?.kind === "npc") this.storeEntry({ ...current, runtime: { ...current.runtime, hp: before.runtime.hp, conditions: before.runtime.conditions, endSaves: npcBefore.runtime.endSaves }, updatedAt: this.now() }); };
+    const delta = { hp: before.runtime.hp.current - row.hpAfter, temp: before.runtime.hp.temp - (row.tempHp ?? row.tempAfter), conditions: added, endSaveKeys: row.effect?.endSave ? [row.effect.key] : [] };
+    return () => this.undoOnNpc(before.id, delta);
   }
 
   /** R10: at the end of a creature's turn it repeats the saves its effects allow; a success ends the effect and its conditions. */
@@ -1356,6 +1558,77 @@ export class TableHost {
    * R15: damage on a PC already at 0 HP is a death-save failure (two from a critical hit); three end the character.
    * The table hears about it, because nothing else on the card says so.
    */
+
+  /**
+   * R26 (D136): reverse exactly what one card wrote, on top of whatever the world is now.
+   *
+   * Every restore closure used to capture the value from before the card and write it back absolutely. So undoing
+   * an older card out of order wrote a stale world over a newer one: a goblin hit twice, the first card undone,
+   * came back at full HP with the second hit's damage gone — and undoing the second card then killed it again.
+   * A delta undoes only this card's own change, so the order no longer matters and later work is left alone.
+   */
+  private undoOnCharacter(entryId: string, delta: { hp: number; temp: number; conditions: string[]; deathFailures?: number; restore?: ActiveEffect[]; remove?: string[]; note: string }) {
+    const current = this.journalEntries.get(entryId);
+    if (current?.kind !== "character") return;
+    const runtime = current.runtime;
+    const effects = (runtime.effects ?? []).filter((effect) => !(delta.remove ?? []).includes(effect.key));
+    for (const effect of delta.restore ?? []) if (!effects.some((item) => item.key === effect.key)) effects.push(effect);
+    const next: CharacterRuntime = {
+      ...runtime,
+      hp: { ...runtime.hp, current: Math.max(0, Math.min(runtime.hp.maxSeen, runtime.hp.current + delta.hp)), temp: Math.max(0, runtime.hp.temp + delta.temp) },
+      conditions: runtime.conditions.filter((name) => !delta.conditions.includes(name)),
+      deathSaves: { ...runtime.deathSaves, failure: Math.max(0, runtime.deathSaves.failure - (delta.deathFailures ?? 0)) },
+      effects,
+    };
+    this.storeEntry({ ...current, runtime: { ...noteLog(next, delta.note), updatedAt: this.now() }, updatedAt: this.now() });
+  }
+
+  private undoOnNpc(entryId: string, delta: { hp: number; temp: number; conditions: string[]; endSaveKeys?: string[] }) {
+    const current = this.journalEntries.get(entryId);
+    if (current?.kind !== "npc") return;
+    const runtime = current.runtime;
+    this.storeEntry({ ...current, runtime: {
+      ...runtime,
+      hp: { ...runtime.hp, current: Math.max(0, Math.min(runtime.hp.max, runtime.hp.current + delta.hp)), temp: Math.max(0, runtime.hp.temp + delta.temp) },
+      conditions: runtime.conditions.filter((name) => !delta.conditions.includes(name)),
+      endSaves: (runtime.endSaves ?? []).filter((item) => !(delta.endSaveKeys ?? []).includes(item.key)),
+      updatedAt: this.now(),
+    }, updatedAt: this.now() });
+  }
+
+  private undoOnToken(pageId: string, tokenId: string, delta: { bar: number; markers: string[] }) {
+    const page = this.pages.get(pageId);
+    const token = page?.tokens.find((item) => item.id === tokenId);
+    if (!page || !token) return;
+    const bar = token.bars[0];
+    const value = bar.value === undefined ? undefined : Math.max(0, Math.min(bar.max ?? Number.MAX_SAFE_INTEGER, bar.value + delta.bar));
+    this.storeToken(page, { ...token, bars: [{ ...bar, value }, token.bars[1], token.bars[2]], markers: token.markers.filter((marker) => !delta.markers.includes(marker.name)) });
+  }
+
+  /** R26: what a cast took off the caster's sheet, so undoing it refunds that and not every slot spent since. */
+  private undoOnCaster(entryId: string, before: CharacterRuntime, after: CharacterRuntime) {
+    const current = this.journalEntries.get(entryId);
+    if (current?.kind !== "character") return;
+    const runtime = current.runtime;
+    const slotsUsed = { ...runtime.slotsUsed };
+    for (const level of new Set([...Object.keys(before.slotsUsed), ...Object.keys(after.slotsUsed)])) {
+      const spent = (after.slotsUsed[Number(level)] ?? 0) - (before.slotsUsed[Number(level)] ?? 0);
+      if (spent) slotsUsed[Number(level)] = Math.max(0, (slotsUsed[Number(level)] ?? 0) - spent);
+    }
+    const resourcesUsed = { ...runtime.resourcesUsed };
+    for (const key of new Set([...Object.keys(before.resourcesUsed), ...Object.keys(after.resourcesUsed)])) {
+      const spent = (after.resourcesUsed[key] ?? 0) - (before.resourcesUsed[key] ?? 0);
+      if (spent) resourcesUsed[key] = Math.max(0, (resourcesUsed[key] ?? 0) - spent);
+    }
+    const started = (after.effects ?? []).filter((effect) => !(before.effects ?? []).some((item) => item.key === effect.key)).map((effect) => effect.key);
+    this.storeEntry({ ...current, runtime: {
+      ...runtime, slotsUsed, resourcesUsed,
+      pactSlotsUsed: Math.max(0, runtime.pactSlotsUsed - (after.pactSlotsUsed - before.pactSlotsUsed)),
+      effects: (runtime.effects ?? []).filter((effect) => !started.includes(effect.key)),
+      updatedAt: this.now(),
+    }, updatedAt: this.now() });
+  }
+
   private takeDeathFailures(runtime: CharacterRuntime, failures: number | undefined, name: string, source: string): CharacterRuntime {
     if (!failures) return runtime;
     let next = runtime;
@@ -1373,13 +1646,16 @@ export class TableHost {
       const before = target.entry;
       let runtime: CharacterRuntime = { ...before.runtime, hp: { ...before.runtime.hp, current: resolution.hpAfter, temp: resolution.tempAfter } };
       runtime = noteLog(runtime, `${resolution.attacker.name}의 ${resolution.attack.name}: 피해 ${resolution.damageTotal}${resolution.absorbed ? ` (임시 HP ${resolution.absorbed} 흡수)` : ""} → HP ${resolution.hpAfter}/${before.runtime.hp.maxSeen}`);
-      if (resolution.concentration && !resolution.concentration.success) { const key = this.options.pcConcentrationKey?.(before); if (key) runtime = endEffect(runtime, key, "집중 실패"); }
+      let dropped: ActiveEffect | undefined;
+      if (resolution.concentration && !resolution.concentration.success) { const key = this.options.pcConcentrationKey?.(before); if (key) { dropped = (before.runtime.effects ?? []).find((effect) => effect.key === key); runtime = endEffect(runtime, key, "집중 실패"); } }
       for (const condition of resolution.inflicted) if (!runtime.conditions.includes(condition)) runtime = { ...runtime, conditions: [...runtime.conditions, condition] };
       if (resolution.downed === "unconscious") for (const condition of ["무의식", "넘어짐"]) if (!runtime.conditions.includes(condition)) runtime = { ...runtime, conditions: [...runtime.conditions, condition] };
       if (resolution.downed === "instant-death") runtime = noteLog(runtime, "대량 피해: 즉사");
       runtime = this.takeDeathFailures(runtime, resolution.deathFailures, resolution.target.name, resolution.attack.name);
       this.storeEntry({ ...before, runtime: { ...runtime, updatedAt: this.now() }, updatedAt: this.now() });
-      restores.push(() => { const current = this.journalEntries.get(before.id); if (current?.kind === "character") this.storeEntry({ ...current, runtime: { ...current.runtime, hp: before.runtime.hp, conditions: before.runtime.conditions, effects: before.runtime.effects, log: before.runtime.log, deathSaves: before.runtime.deathSaves }, updatedAt: this.now() }); });
+      // R26 (D136): the undo is this card's own change, not a photograph of the sheet before it.
+      const delta = { hp: before.runtime.hp.current - resolution.hpAfter, temp: before.runtime.hp.temp - resolution.tempAfter, conditions: runtime.conditions.filter((name) => !before.runtime.conditions.includes(name)), deathFailures: resolution.deathFailures, restore: dropped ? [dropped] : [], note: `되돌림: ${resolution.attacker.name}의 ${resolution.attack.name}` };
+      restores.push(() => this.undoOnCharacter(before.id, delta));
     } else if (hit && target.entry.kind === "npc") {
       const token = target.token;
       const bar = token?.bars[0];
@@ -1389,14 +1665,21 @@ export class TableHost {
         const markers = resolution.downed ? [...token.markers.filter((marker) => marker.name !== "사망"), { name: "사망" }] : token.markers;
         const inflicted = resolution.inflicted.filter((name) => !markers.some((marker) => marker.name === name)).map((name) => ({ name }));
         this.storeToken(page, { ...token, bars: [{ ...bar!, value: resolution.hpAfter }, token.bars[1], token.bars[2]], markers: [...markers, ...inflicted] });
-        restores.push(() => { const current = this.pages.get(page.id)?.tokens.find((item) => item.id === beforeToken.id); if (current && this.pages.get(page.id)) this.storeToken(this.pages.get(page.id)!, { ...current, bars: beforeToken.bars, markers: beforeToken.markers }); });
+        const added = [...(resolution.downed && !beforeToken.markers.some((marker) => marker.name === "사망") ? ["사망"] : []), ...inflicted.map((marker) => marker.name)];
+        const delta = { bar: (bar!.value ?? 0) - resolution.hpAfter, markers: added };
+        restores.push(() => this.undoOnToken(page.id, beforeToken.id, delta));
       } else {
         const before = target.entry;
-        const conditions = [...before.runtime.conditions, ...resolution.inflicted.filter((name) => !before.runtime.conditions.includes(name))];
+        const added = resolution.inflicted.filter((name) => !before.runtime.conditions.includes(name));
+        const conditions = [...before.runtime.conditions, ...added];
         this.storeEntry({ ...before, runtime: { ...before.runtime, hp: { ...before.runtime.hp, current: resolution.hpAfter, temp: resolution.tempAfter }, conditions, updatedAt: this.now() }, updatedAt: this.now() });
-        restores.push(() => { const current = this.journalEntries.get(before.id); if (current?.kind === "npc") this.storeEntry({ ...current, runtime: { ...current.runtime, hp: before.runtime.hp, conditions: before.runtime.conditions }, updatedAt: this.now() }); });
+        const delta = { hp: before.runtime.hp.current - resolution.hpAfter, temp: before.runtime.hp.temp - resolution.tempAfter, conditions: added };
+        restores.push(() => this.undoOnNpc(before.id, delta));
       }
     }
+    // R28 (D151): the attacker attacked and the target took damage — both count for a rage; a rage whose bearer has
+    // just been knocked out or stunned ends there.
+    this.ragingDeeds([attacker as { entry: JournalEntry; token?: Token; page?: Page }, hit ? target : undefined]);
     if (hit && resolution.downed) this.releaseGrapples(target.page, target.token?.id);
     // R12: a Vex mark the wielder already had on this target is spent by this attack unless the hit renews it.
     const hadVex = target.token?.markers.some((marker) => marker.name === "교란" && marker.from === attacker.token?.id);
@@ -1404,8 +1687,9 @@ export class TableHost {
     // Mastery marks (교란·약화·둔화) sit on the target with the wielder as `from`; the wielder's next turn start clears them.
     if (resolution.mastery?.marks.length && target.page) { const marks = resolution.mastery.marks; const targetActor = { entry: target.entry, token: target.token, page: target.page }; this.mark(targetActor, marks, true, attacker.token?.id); restores.push(() => this.mark({ ...targetActor, token: this.pages.get(target.page!.id)?.tokens.find((item) => item.id === target.token?.id) }, marks, false)); }
     const applied = { ...resolution, applied: true };
-    if (inputs) this.actions.set(messageId, { inputs, resolution: applied, restore: () => { for (const restore of restores.reverse()) restore(); } });
-    else { const existing = this.actions.get(messageId); if (existing) this.actions.set(messageId, { ...existing, resolution: applied, restore: () => { for (const restore of restores.reverse()) restore(); } }); }
+    const undo = () => { for (const restore of [...restores].reverse()) restore(); };
+    if (inputs) this.actions.set(messageId, { inputs, resolution: applied, restore: undo });
+    else { const existing = this.actions.get(messageId); if (existing) this.actions.set(messageId, { ...existing, resolution: applied, restore: undo }); }
     this.sayWithId(messageId, { type: "action", who: who ?? "", playerId: inputs?.by, content: describeResolution(applied), action: applied, supersedes: confirming ? undefined : supersedes });
     if (this.actions.size > 200) this.actions.delete(this.actions.keys().next().value as string);
   }
@@ -1451,7 +1735,9 @@ export class TableHost {
         const die = 1 + Math.floor(random() * 20);
         let next = runtime;
         let note: string;
-        if (die === 20) { next = resetDeathSaves({ ...runtime, hp: { ...runtime.hp, current: 1 } }); note = "20! HP 1로 깨어남"; }
+        // R28 (D149): "깨어남" now takes 무의식 off too — it used to stay on, handing every attacker advantage and
+        // turning every melee hit into a critical against a character who had just stood up.
+        if (die === 20) { next = wakeUp({ ...runtime, hp: { ...runtime.hp, current: 1 } }); note = "20! HP 1로 깨어남"; }
         else if (die === 1) { next = recordDeathSave(recordDeathSave(runtime, false), false); note = "1! 실패 2회"; }
         else { next = recordDeathSave(runtime, die >= 10); note = die >= 10 ? "성공" : "실패"; }
         this.say({ type: "rollresult", who: "", content: `${started.name} · 죽음 내성 (${note})`, roll: { formula: "1d20", total: die, dice: [{ sides: 20, value: die }], modifier: 0, label: `${started.name} · 죽음 내성 — ${note} (${next.deathSaves.success}/${next.deathSaves.failure})` } });
@@ -1472,6 +1758,8 @@ export class TableHost {
     // Turn-scoped marks (D97): 이탈·질주 end with the turn; 회피·도움·준비 last until the bearer's next turn starts.
     const endedActor = this.actorOfTurn(result.ended);
     if (endedActor) { this.rollEndSaves(endedActor); this.mark(endedActor, [...TURN_MARKS.endOfTurn], false); }
+    // R28 (D151): the rage is judged at the end of its bearer's turn, on what happened since their last one.
+    if (endedActor && this.rageOf(endedActor.entry) && !result.ended?.ragingDeed) this.endRage(this.journalEntries.get(endedActor.entry.id) ?? endedActor.entry, "그 사이 공격도 피해도 없었음");
     const startedActor = this.actorOfTurn(result.started);
     if (startedActor) this.mark(startedActor, [...TURN_MARKS.startOfTurn], false);
     // 도움 the starting creature granted ends now (until the start of the helper's next turn).
@@ -1480,8 +1768,9 @@ export class TableHost {
       if (page) for (const token of page.tokens) { const kept = token.markers.filter((marker) => !(["도움", "교란", "약화", "둔화"].includes(marker.name) && marker.from === startedActor.token!.id)); if (kept.length !== token.markers.length) this.storeToken(page, { ...token, markers: kept }); }
     }
     // The reaction and the action economy come back at the start of the creature's turn.
+    // R28 (D151): `ragingDeed` is the same kind of per-turn flag, and is cleared with them.
     const startedId = result.started?.id;
-    this.setTracker(startedId ? { ...result.tracker, turns: result.tracker.turns.map((turn) => (turn.id === startedId ? { ...turn, reactionUsed: false, actionUsed: false, bonusUsed: false } : turn)) } : result.tracker);
+    this.setTracker(startedId ? { ...result.tracker, turns: result.tracker.turns.map((turn) => (turn.id === startedId ? { ...turn, reactionUsed: false, actionUsed: false, bonusUsed: false, ragingDeed: false } : turn)) } : result.tracker);
   }
 
   /** The ribbon or a bookmark moved: every mirror learns it, then every page is resent so each player ends up with exactly their page. */
@@ -1520,7 +1809,11 @@ export class TableHost {
     for (let index = 0; index < 3; index += 1) {
       const bar = after.bars[index];
       if (bar.link !== "hp" || !bar.editable || bar.value === undefined || bar.value === before.bars[index].value) continue;
-      const runtime = { ...entry.runtime, hp: { ...entry.runtime.hp, current: Math.max(0, bar.value) }, updatedAt: this.now() };
+      // R25 (D129): the only clamp used to be `Math.max(0, …)`, so a wire value of 999999 (or NaN) went to the sheet.
+      if (!Number.isFinite(bar.value)) continue;
+      const healed = Math.max(0, Math.min(Math.round(bar.value), entry.runtime.hp.maxSeen));
+      const base = { ...entry.runtime, hp: { ...entry.runtime.hp, current: healed } };
+      const runtime = { ...(entry.runtime.hp.current === 0 && healed > 0 ? wakeUp(base) : base), updatedAt: this.now() };
       const player = this.campaign.players.find((item) => item.userId === userId);
       this.storeEntry({ ...entry, runtime, updatedAt: this.now() });
       this.say({ type: "system", who: "", content: `${player?.displayName ?? "?"}: ${entry.name} HP ${before.bars[index].value ?? "?"} → ${bar.value}` });
@@ -1599,6 +1892,8 @@ export class TableHost {
     const userId = this.peerUsers.get(peerId);
     this.peerUsers.delete(peerId);
     if (!userId || [...this.peerUsers.values()].includes(userId)) return;
+    // R25 (D132): a half-finished upload used to sit in the host's process for the rest of the night, once per try.
+    for (const [id, upload] of [...this.uploads]) if (upload.by === userId) { this.uploads.delete(id); this.assembler.drop(id); }
     if (!this.connected.delete(userId)) return;
     const player = this.campaign.players.find((item) => item.userId === userId);
     if (!player || player.kicked) return;
@@ -1617,7 +1912,7 @@ export class TableHost {
       // R17: a player gets only the shared macros, and a table's name without its rows.
       case "clock": return event;
       case "macros": return viewer.role === "gm" ? event : { ...event, macros: event.macros.filter((macro) => macro.shared) };
-      case "tables": return viewer.role === "gm" ? event : { ...event, tables: event.tables.map((table) => ({ ...table, rows: [] })) };
+      case "tables": return viewer.role === "gm" ? event : { ...event, tables: event.tables.filter((table) => table.shared).map((table) => ({ ...table, rows: [] })) };
       case "journal": { const entry = projectEntry(event.entry, viewer); return entry ? { ...event, entry } : { n: event.n, type: "journal.removed", id: event.entry.id }; }
       case "journal.show": { const entry = this.journalEntries.get(event.id); return entry && canView(entry, viewer) ? event : null; }
       case "art": return artVisible(event.asset, viewer, this.journal) ? event : { n: event.n, type: "art.removed", id: event.asset.id };

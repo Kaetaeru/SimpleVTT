@@ -338,6 +338,33 @@ function HandoutWindow({ entry, onClose, onOpen }: { entry: Extract<JournalEntry
   );
 }
 
+/**
+ * R27 (D146): "맡기기" — whoever controls a character may hand it to another participant at the table and take it
+ * back. Before this there was no command for it at all: control comes from `canEdit`, whose only editor was the
+ * GM's own panel, so a player who had to leave could not pass their paladin to anyone.
+ */
+function HandOver({ entry }: { entry: JournalEntry }) {
+  const c = useCampaigns();
+  const { snapshot, userId } = useViewer();
+  const others = snapshot.players.filter((player) => player.userId !== userId && player.role !== "gm");
+  if (!others.length) return null;
+  const holds = (userId: string) => entry.canEdit === "all" || entry.canEdit.includes(userId);
+  return (
+    <div className="cl-field">
+      <label>맡기기</label>
+      <div className="cl-row" style={{ gap: 8, flexWrap: "wrap" }}>
+        {others.map((player) => (
+          <label key={player.userId} className="cl-row cl-small" style={{ gap: 4 }} title={`${player.displayName}이(가) 이 인물을 판에서 움직이고 그 행동을 쓸 수 있습니다`}>
+            <input type="checkbox" checked={holds(player.userId)} onChange={(event) => c.grantJournal(entry.id, player.userId, event.target.checked)} />
+            {player.displayName}
+          </label>
+        ))}
+      </div>
+      <span className="cl-quiet cl-small">자리를 비울 때 다른 참가자에게 맡겨 두면 그 사람이 대신 굴립니다. 언제든 체크를 풀어 되돌릴 수 있습니다.</span>
+    </div>
+  );
+}
+
 export function JournalText({ text, onOpen, empty }: { text: string; onOpen: (id: string) => void; empty?: string }) {
   const { snapshot } = useViewer();
   const blocks = useMemo(() => parseJournalText(text), [text]);
@@ -459,6 +486,7 @@ function CharacterWindow({ entry, onClose, onOpen }: { entry: JournalCharacter; 
           </div>
           <div className="cl-field"><label htmlFor={`cl-bio-${draft.id}`}>소개 (Bio)</label>{editable ? <textarea id={`cl-bio-${draft.id}`} className="cl-textarea" rows={6} value={draft.bio} onChange={(event) => edit({ bio: event.target.value })} placeholder="외모, 성격, 배경 이야기…" /> : <JournalText text={draft.bio} onOpen={onOpen} empty="소개가 없습니다." />}</div>
           {editable ? <SheetMacros entry={entry} /> : null}
+          {editable ? <HandOver entry={entry} /> : null}
           {viewer.isGm ? <GmFields draft={draft} edit={edit} set={set} /> : null}
         </div>
       ) : null}

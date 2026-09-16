@@ -152,9 +152,14 @@ export function PageCanvas({ onOpenEntry, onOpenToken, onOpenPageSettings, onOpe
     if (token) placeTokenAt(token);
   };
 
+  // R27 (D141): with no scene this used to return before the toast and approval layers were even mounted, so a
+  // player whose bookmark pointed at a deleted scene got no board, no toasts and no prompt card — the ogre asked
+  // for an opportunity attack and nothing appeared on their screen. Those layers live above this return now.
   if (!page) {
     return (
       <div className="cl-canvas-empty">
+        <ToastLayer boardShowsResults />
+        <ApprovalLayer />
         {isGm ? <><p className="cl-quiet">아직 장면이 없습니다. 장면을 만들면 플레이어 리본이 그 장면에 놓입니다. 장면에는 위치와 거리가 없고, 등장한 인물만 아이콘으로 섭니다.</p><button type="button" className="cl-btn primary" onClick={() => addScene()}>+ 장면</button></> : <p className="cl-quiet">DM이 장면을 열면 여기에 보입니다.</p>}
       </div>
     );
@@ -545,7 +550,9 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
       <div className="cl-cmd-who">
         <span className="cl-cmd-status">{status}</span>
         <span className="cl-cmd-name">{mode === "turn" && !isGm ? token.name : mode === "turn" ? (tracker.turns.length ? `라운드 ${tracker.round}` : "") : token.name}</span>
-        {mode === "turn" ? <span className="cl-turn-econ">{chip("행동", turn?.actionUsed)}{chip("추가 행동", turn?.bonusUsed)}{chip("반응", turn?.reactionUsed)}</span> : null}
+        {/* R27 (D142): the chips used to appear only on your own turn — exactly when you do not need to ask. Out of
+            turn the reaction is the one that matters ("do you still have it?"), so the row is always there. */}
+        {mode === "turn" || inCombat ? <span className="cl-turn-econ">{chip("행동", turn?.actionUsed)}{chip("추가 행동", turn?.bonusUsed)}{chip("반응", turn?.reactionUsed)}</span> : null}
         {blocked ? <span className="cl-pill bad">{blocked}: 행동 불가</span> : null}
       </div>
       <div className="cl-cmd-groups" role="toolbar" aria-label={`${token.name} 액션`}>

@@ -26,6 +26,8 @@ export function pcCombatant(entry: JournalCharacter, derived: DerivedCharacter):
     // (R11: the Shield spell's +5 AC already comes through the sheet's active effects → derived.ac.)
     id: entry.id, name: entry.name, kind: "pc", ac: derived.ac.value, hp: { current: runtime.hp.current, max: derived.hp.max, temp: runtime.hp.temp },
     conditions: runtime.conditions, defenses: derived.defenses, conSave: derived.saves.con.bonus, concentration: concentration?.name, effects: (runtime.effects ?? []).map((effect) => effect.name),
+    // R28 (D147): exhaustion reaches the dice at last.
+    exhaustion: runtime.exhaustion,
   };
 }
 
@@ -40,7 +42,7 @@ export function npcCombatant(entry: JournalNpc, token?: Token): Combatant {
   const markers = token?.markers.map((marker) => marker.name) ?? [];
   return {
     id: entry.id, name: token?.name ?? entry.name, kind: "npc", ac: block.ac, hp,
-    conditions: [...new Set([...entry.runtime.conditions, ...markers])], defenses: { resistances: block.damageResistances, immunities: block.damageImmunities, vulnerabilities: block.damageVulnerabilities },
+    conditions: [...new Set([...entry.runtime.conditions, ...markers])], defenses: { resistances: block.damageResistances, immunities: block.damageImmunities, vulnerabilities: block.damageVulnerabilities, conditionImmunities: block.conditionImmunities },
     conSave: block.saves.con, effects: [],
   };
 }

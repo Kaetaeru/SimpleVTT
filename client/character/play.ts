@@ -31,17 +31,31 @@ export function applyDamage(runtime: CharacterRuntime, derived: DerivedCharacter
   return current === 0 && runtime.hp.current > 0 ? stamp(next, "HP 0 — 죽음 내성 굴림 시작") : next;
 }
 
+/**
+ * R28 (D149): 1 HP or more and you are no longer dying — the death saves reset and Unconscious ends (Prone does
+ * not; you stood up by yourself or you did not). The death saves were already being reset here, but 무의식 was
+ * added when the character dropped and taken off nowhere, so a healed character kept a condition that hands every
+ * attacker advantage and turns every melee hit into a critical.
+ */
+export function wakeUp(runtime: CharacterRuntime): CharacterRuntime {
+  const conditions = runtime.conditions.filter((name) => name !== "무의식");
+  return { ...runtime, conditions, deathSaves: { success: 0, failure: 0 } };
+}
+
 export function applyHealing(runtime: CharacterRuntime, derived: DerivedCharacter, amount: number): CharacterRuntime {
   const healing = Math.max(0, Math.floor(amount));
   if (healing === 0) return runtime;
   const current = clamp(runtime.hp.current + healing, 0, derived.hp.max);
   const revived = runtime.hp.current === 0 && current > 0;
-  return stamp({ ...runtime, hp: { ...runtime.hp, current }, ...(revived ? { deathSaves: { success: 0, failure: 0 } } : {}) }, `회복 ${healing} → HP ${current}/${derived.hp.max}`);
+  const healed = { ...runtime, hp: { ...runtime.hp, current } };
+  return stamp(revived ? wakeUp(healed) : healed, `회복 ${healing} → HP ${current}/${derived.hp.max}${revived ? " (의식을 되찾음)" : ""}`);
 }
 
 export function setCurrentHp(runtime: CharacterRuntime, derived: DerivedCharacter, value: number): CharacterRuntime {
   const current = clamp(Math.floor(value), 0, derived.hp.max);
-  return stamp({ ...runtime, hp: { ...runtime.hp, current } }, `HP를 ${current}/${derived.hp.max}(으)로 설정`);
+  const revived = runtime.hp.current === 0 && current > 0;
+  const next = { ...runtime, hp: { ...runtime.hp, current } };
+  return stamp(revived ? wakeUp(next) : next, `HP를 ${current}/${derived.hp.max}(으)로 설정${revived ? " (의식을 되찾음)" : ""}`);
 }
 
 /** Temporary HP does not stack: the higher value stays. */

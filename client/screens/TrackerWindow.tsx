@@ -2,10 +2,12 @@
  * The turn tracker window (ROLL20_TABLE_SPEC.md §6): rows with avatar, name and an editable initiative, the current
  * turn highlighted, ▶ 다음 턴, sort, custom rows (a "+1" formula makes a counter), clear, delete, move up/down;
  * 전투 시작 picks tokens on the canvas (targeting mode) and rolls their initiative on the host. The GM opening it
- * opens it on every screen; players see it read-only.
+ * opens it on every screen (R27, D143); a player sees the order read-only, except their own row's initiative — the
+ * one thing they used to be able to see was wrong and not touch.
  */
 import { useState } from "react";
 import { useCampaigns } from "../app/campaigns";
+import { controlsToken } from "../campaign/page";
 import { newTurn, roundCounterTurn, sortTurns, withoutTurn } from "../campaign/tracker";
 import type { Tracker, TrackerTurn } from "../campaign/tracker";
 import { deriveCharacter } from "../character/derive";
@@ -22,7 +24,17 @@ export function TrackerWindow({ onClose }: { onClose: () => void }) {
   const [custom, setCustom] = useState({ name: "", value: "0", formula: "" });
   const [busy, setBusy] = useState(false);
   const set = (next: Tracker) => c.setTracker(next);
-  const update = (turn: TrackerTurn, patch: Partial<TrackerTurn>) => set({ ...tracker, turns: tracker.turns.map((item) => (item.id === turn.id ? { ...item, ...patch } : item)) });
+  // R27 (D143): a player may fix the initiative of a row they control — the host rebuilds the row from their token.
+  const controls = (turn: TrackerTurn) => {
+    if (isGm) return true;
+    if (turn.custom || !turn.tokenId) return false;
+    const token = snapshot.pages.find((page) => page.id === turn.pageId)?.tokens.find((item) => item.id === turn.tokenId);
+    return Boolean(token && controlsToken(token, { userId: c.userId, role: "player" }, snapshot.journal));
+  };
+  const setInitiative = (turn: TrackerTurn, initiative: number) => {
+    if (isGm) { set({ ...tracker, turns: tracker.turns.map((item) => (item.id === turn.id ? { ...item, initiative } : item)) }); return; }
+    c.addTurn({ name: turn.name, tokenId: turn.tokenId, pageId: turn.pageId, entryId: turn.entryId, image: turn.image, initiative });
+  };
   const move = (index: number, direction: -1 | 1) => {
     const target = index + direction;
     if (target < 0 || target >= tracker.turns.length) return;
@@ -68,7 +80,7 @@ export function TrackerWindow({ onClose }: { onClose: () => void }) {
           <button type="button" className="cl-btn small" onClick={() => set({ ...tracker, turns: sortTurns(tracker.turns), sorted: true, current: tracker.current >= 0 ? sortTurns(tracker.turns).findIndex((item) => item.id === tracker.turns[tracker.current]?.id) : -1 })} title="이니셔티브 순 정렬">정렬 ▼</button>
           <button type="button" className="cl-btn small quiet" onClick={() => { if (!tracker.turns.length || confirm("트래커를 비울까요?")) set({ ...tracker, turns: [], current: -1, round: 1 }); }}>비우기</button>
           <button type="button" className="cl-btn small quiet" style={{ marginLeft: "auto" }} onClick={() => { set({ ...tracker, open: false }); onClose(); }}>닫기 (모두)</button>
-        </> : null}
+        </> : <button type="button" className="cl-btn small quiet" style={{ marginLeft: "auto" }} onClick={onClose}>닫기</button>}
       </div>
       {tracker.turns.length === 0 ? <p className="cl-quiet cl-small">{isGm ? "토큰을 우클릭해 \"턴 트래커에 추가\"하거나, \"전투 시작\"으로 토큰을 골라 이니셔티브를 굴리세요. 다음 턴이 규칙 처리를 합니다 (효과 라운드·재충전·죽음 내성)." : "GM이 전투를 시작하면 순서가 여기에 나타납니다."}</p> : (
         <ol className="cl-tracker-list">
@@ -80,7 +92,7 @@ export function TrackerWindow({ onClose }: { onClose: () => void }) {
               onDrop={(event) => { if (!isGm) return; event.preventDefault(); const from = dragging ?? Number(event.dataTransfer.getData("text/plain")); setDragging(null); moveTo(from, index); }}>
               <span className="cl-tracker-avatar">{turn.image ? <ArtImage src={turn.image} /> : turn.custom ? "⏱" : (turn.name || "?").slice(0, 1)}</span>
               <span className="cl-tracker-name">{turn.name}{turn.custom && turn.formula ? <span className="cl-quiet cl-small"> ({turn.formula})</span> : null}</span>
-              {isGm ? <input className="cl-input cl-tracker-init" aria-label={`${turn.name} 이니셔티브`} value={turn.initiative} onChange={(event) => update(turn, { initiative: Number(event.target.value) || 0 })} /> : <span className="cl-tracker-init">{turn.initiative}</span>}
+              {controls(turn) ? <input className="cl-input cl-tracker-init" aria-label={`${turn.name} 이니셔티브`} value={turn.initiative} onChange={(event) => setInitiative(turn, Number(event.target.value) || 0)} /> : <span className="cl-tracker-init">{turn.initiative}</span>}
               {isGm ? <span className="cl-row" style={{ gap: 2 }}><button type="button" className="cl-btn small quiet" aria-label="위로" onClick={() => move(index, -1)}>▲</button><button type="button" className="cl-btn small quiet" aria-label="아래로" onClick={() => move(index, 1)}>▼</button><button type="button" className="cl-btn small quiet" aria-label={`${turn.name} 삭제`} onClick={() => set(withoutTurn(tracker, turn.id))}>✕</button></span> : null}
             </li>
           ))}

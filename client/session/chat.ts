@@ -69,6 +69,9 @@ export function visibleTo(message: ChatMessage, viewer: ChatViewer): boolean {
   if (viewer.role === "gm") return true;
   if (message.type === "whisper") return message.playerId === viewer.userId || message.target === viewer.userId;
   if (message.type === "gmroll") return message.playerId === viewer.userId;
+  // R25: a roll sent with mode "self" carries the roller as its target. There was no branch for it, so it fell
+  // through to "everyone" and the table saw a roll the roller meant to keep to themselves (D135).
+  if (message.type === "rollresult" && message.target) return message.playerId === viewer.userId || message.target === viewer.userId;
   return true;
 }
 

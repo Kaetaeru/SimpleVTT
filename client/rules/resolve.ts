@@ -8,7 +8,23 @@
 import type { ActorRef, AttackRef } from "../session/protocol";
 export type Advantage = "advantage" | "disadvantage" | "normal";
 
-export interface CombatantDefenses { resistances: string[]; immunities: string[]; vulnerabilities: string[] }
+export interface CombatantDefenses {
+  resistances: string[];
+  immunities: string[];
+  vulnerabilities: string[];
+  /**
+   * R28 (D150): conditions the creature cannot be given. The sheet and every stat block have carried this list all
+   * along — the derived character even labels where each one comes from ("공포 (영웅심)") — and no rule read it, so
+   * a zombie could be charmed and a barbarian raging through Heroism could still be frightened.
+   */
+  conditionImmunities?: string[];
+}
+
+/** Whether a condition simply cannot land here; the list may carry the source in brackets ("중독 (드워프)"). */
+export function immuneToCondition(defenses: CombatantDefenses, condition: string) {
+  const want = condition.trim();
+  return (defenses.conditionImmunities ?? []).some((entry) => entry.replace(/\(.*?\)/g, "").trim() === want);
+}
 
 /** What the resolver needs to know about either side; the host builds it from a PC sheet or an NPC token/sheet. */
 export interface Combatant {
@@ -25,6 +41,11 @@ export interface Combatant {
   concentration?: string;
   /** Active effect flags that change attack rolls (회피, 도움 …). */
   effects: string[];
+  /**
+   * R28 (D147): 2024 exhaustion — every level is −2 on every D20 Test (attack rolls, ability checks, saving
+   * throws). It was stored, set, decremented by a long rest and shown on the sheet, and read by no roll anywhere.
+   */
+  exhaustion?: number;
   /** The token on the board, when there is one. */
   tokenId?: string;
   /** Token id of whoever holds this creature in a grapple (2024: attacks against anyone else are at disadvantage). */
@@ -188,7 +209,9 @@ export function resolveAttack(attacker: Combatant, target: Combatant, spec: Atta
   const kept = advantage === "advantage" ? Math.max(...d20s) : advantage === "disadvantage" ? Math.min(...d20s) : d20s[0];
   const cover = overrides.cover ?? 0;
   const targetAc = target.ac + cover;
-  const attackTotal = kept + spec.attackBonus;
+  const exhausted = 2 * Math.max(0, attacker.exhaustion ?? 0);
+  const attackTotal = kept + spec.attackBonus - exhausted;
+  if (exhausted) reasons.push(`탈진 ${attacker.exhaustion}단계 (−${exhausted})`);
   let outcome: AttackResolution["outcome"] = kept === 20 ? "crit" : kept === 1 ? "fumble" : attackTotal >= targetAc ? "hit" : "miss";
   if (outcome === "hit" && autoCrit(target, spec)) { outcome = "crit"; reasons.push(`대상 ${target.conditions.includes("마비") ? "마비" : "무의식"}: 5ft 안의 적중은 치명타`); }
   if (overrides.outcome) outcome = overrides.outcome;
@@ -200,11 +223,11 @@ export function resolveAttack(attacker: Combatant, target: Combatant, spec: Atta
     ? applyDamage(target, [...spec.damage, ...(spec.riders ?? [])], options.dice, { fixed: options.fixed?.damage, crit: outcome === "crit", scale: overrides.damageScale, delta: overrides.damageDelta })
     : grazes ? applyDamage(target, [{ formula: String(spec.abilityMod), type: spec.damage[0]?.type ?? "타격", label: "스치기", critDoubles: false }], options.dice, { fixed: options.fixed?.damage, scale: overrides.damageScale, delta: overrides.damageDelta }) : noDamage(target);
   const { damage, damageTotal, absorbed, hpLost, hpAfter, tempAfter, concentration, downed, deathFailures } = outcomeDamage;
-  const inflicted = hit ? [...(spec.inflicts ?? [])] : [];
+  const inflicted = hit ? (spec.inflicts ?? []).filter((condition) => !immuneToCondition(target.defenses, condition)) : [];
   if (grazes) mastery = { kind: "graze", label: MASTERY_LABEL.graze, grazed: damageTotal, marks: [], note: `빗나갔지만 ${damageTotal} 피해` };
   else if (hit && spec.mastery) {
     switch (spec.mastery) {
-      case "topple": { const d20 = options.fixed?.masteryD20 ?? options.dice.d(20); const total = d20 + target.conSave; const dc = spec.masteryDc ?? 10; const success = total >= dc; if (!success && !target.conditions.includes("넘어짐")) inflicted.push("넘어짐"); mastery = { kind: "topple", label: MASTERY_LABEL.topple, save: { d20, bonus: target.conSave, total, dc, success }, marks: [], note: success ? "건강 내성 성공" : "건강 내성 실패 → 넘어짐" }; break; }
+      case "topple": { const d20 = options.fixed?.masteryD20 ?? options.dice.d(20); const total = d20 + target.conSave; const dc = spec.masteryDc ?? 10; const success = total >= dc; if (!success && !target.conditions.includes("넘어짐") && !immuneToCondition(target.defenses, "넘어짐")) inflicted.push("넘어짐"); mastery = { kind: "topple", label: MASTERY_LABEL.topple, save: { d20, bonus: target.conSave, total, dc, success }, marks: [], note: success ? "건강 내성 성공" : "건강 내성 실패 → 넘어짐" }; break; }
       case "vex": mastery = { kind: "vex", label: MASTERY_LABEL.vex, marks: ["교란"], note: "다음 자기 턴 끝까지 이 대상에게 공격 유리" }; break;
       case "sap": mastery = { kind: "sap", label: MASTERY_LABEL.sap, marks: ["약화"], note: "대상의 다음 공격 굴림 불리" }; break;
       case "slow": mastery = { kind: "slow", label: MASTERY_LABEL.slow, marks: ["둔화"], note: "대상의 이동 속도 −10 ft (다음 자기 턴 시작까지)" }; break;
@@ -232,15 +255,18 @@ export function applyDamage(target: Combatant, parts: DamagePart[], dice: DiceSo
     let rolled: { dice: number[]; total: number };
     if (fixedDice) { rolled = { dice: fixedDice, total: fixedDice.reduce((sum, value) => sum + value, 0) + flatOf(part.formula) }; }
     else rolled = rollParts(part.formula, dice, Boolean(options.crit) && part.critDoubles !== false);
-    const raw = Math.max(0, rolled.total);
+    const rawRolled = Math.max(0, rolled.total);
+    // R28 (D148): resistance and vulnerability come *last*, after every other modifier — a successful save halves
+    // first. The old order doubled for vulnerability and only then halved, which rounds differently (11 → 22 → 11
+    // instead of 11 → 5 → 10).
+    const raw = options.half ? Math.floor(rawRolled / 2) : rawRolled;
     const immune = listCovers(target.defenses.immunities, part.type);
     const resist = !immune && listCovers(target.defenses.resistances, part.type);
     const vulnerable = !immune && listCovers(target.defenses.vulnerabilities, part.type);
     const adjusted = immune ? 0 : resist && vulnerable ? raw : resist ? Math.floor(raw / 2) : vulnerable ? raw * 2 : raw;
-    damage.push({ part, dice: rolled.dice, rolled: raw, adjusted, adjustment: immune ? "면역" : resist && !vulnerable ? "저항" : vulnerable && !resist ? "취약" : null });
+    damage.push({ part, dice: rolled.dice, rolled: rawRolled, adjusted, adjustment: immune ? "면역" : resist && !vulnerable ? "저항" : vulnerable && !resist ? "취약" : null });
   });
   let damageTotal = damage.reduce((sum, item) => sum + item.adjusted, 0);
-  if (options.half) damageTotal = Math.floor(damageTotal / 2);
   if (options.scale !== undefined) damageTotal = Math.floor(damageTotal * options.scale);
   if (options.delta) damageTotal = Math.max(0, damageTotal + options.delta);
   const absorbed = Math.min(target.hp.temp, damageTotal);

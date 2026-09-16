@@ -105,7 +105,7 @@ export function tokenForCharacter(entry: JournalCharacter): Token {
 /** A token for an NPC: bars unlinked (each token has its own HP, D78), controlled by the GM only. */
 export function tokenForNpc(entry: JournalNpc): Token {
   const { id: _ignored, ...base } = entry.defaultToken ?? {};
-  return newToken({ ...base, name: entry.name, represents: entry.id, image: entry.avatar ?? base.image, layer: "objects", controlledBy: [], bars: [{ value: entry.statBlock.hp, max: entry.statBlock.hp, visible: true, editable: false }, emptyBar(), emptyBar()] });
+  return newToken({ ...base, name: entry.name, represents: entry.id, image: entry.avatar ?? base.image, layer: "objects", controlledBy: "inherit", bars: [{ value: entry.statBlock.hp, max: entry.statBlock.hp, visible: true, editable: false }, emptyBar(), emptyBar()] });
 }
 
 export const tokenForEntry = (entry: JournalEntry) => (entry.kind === "character" ? tokenForCharacter(entry) : entry.kind === "npc" ? tokenForNpc(entry) : null);

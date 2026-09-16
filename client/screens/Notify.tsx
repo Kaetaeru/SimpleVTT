@@ -63,6 +63,16 @@ export function ToastLayer({ boardShowsResults = false }: { boardShowsResults?: 
   );
 }
 
+/**
+ * R27 (D140): who the prompt is *for*. `controlsToken`/`canEdit` are true for the GM about everyone, so every
+ * player prompt used to open as a modal on the DM's screen as well — with Enter bound to its primary button, the
+ * DM typing a chat line with focus outside the box could spend a player's slot on Shield. The prompt goes to the
+ * connected player who controls the reactor; the DM may take it over, but only on purpose.
+ */
+export function promptAnswerer(message: ChatMessage, snapshot: { players: Array<{ userId: string; role: "gm" | "player"; connected?: boolean }>; journal: Parameters<typeof canEdit>[0][]; pages: Array<{ id: string; tokens: Parameters<typeof controlsToken>[0][] }> }) {
+  return snapshot.players.find((player) => player.role !== "gm" && player.connected !== false && promptIsMine(message, snapshot, player.userId))?.userId ?? null;
+}
+
 /** Whether this viewer answers the prompt: they control the reactor (the DM for an NPC). */
 export function promptIsMine(message: ChatMessage, snapshot: { players: Array<{ userId: string; role: "gm" | "player" }>; journal: Parameters<typeof canEdit>[0][]; pages: Array<{ id: string; tokens: Parameters<typeof controlsToken>[0][] }> }, userId: string) {
   const prompt = message.prompt;
@@ -137,7 +147,10 @@ export function PromptChoices({ message, compact = false }: { message: ChatMessa
 /** R13: Enter takes the first (primary) choice of the approval, Escape the last ("안 함"/"취소"); typing in an input is left alone. */
 function approvalKeys(element: HTMLDivElement | null) {
   if (!element) return;
+  // R27 (D140): a keystroke already on its way when the card opens must not answer it.
+  const openedAt = Date.now();
   const onKey = (event: KeyboardEvent) => {
+    if (Date.now() - openedAt < 600) return;
     if ((event.target as HTMLElement | null)?.closest("input, textarea, select")) return;
     const buttons = [...element.querySelectorAll<HTMLButtonElement>(".cl-approval button:not(:disabled)")];
     if (!buttons.length) return;
@@ -154,16 +167,26 @@ export function ApprovalLayer() {
   const c = useCampaigns();
   const approvalRef = useCallback((element: HTMLDivElement | null) => { if (element) approvalKeys(element); else for (const [node, cleanup] of approvalNodes) { cleanup(); approvalNodes.delete(node); } }, []);
   const snapshot = c.table.snapshot!;
+  const [taken, setTaken] = useState<string[]>([]);
   const isGm = snapshot.players.find((player) => player.userId === c.userId)?.role === "gm";
   const superseded = useMemo(() => new Set(snapshot.chat.map((message) => message.supersedes).filter((id): id is string => Boolean(id))), [snapshot.chat]);
   const prompts = snapshot.chat.filter((message) => message.type === "prompt" && !message.prompt?.outcome && !superseded.has(message.id));
   const waiting = isGm ? snapshot.chat.filter((message) => ((message.type === "action" && message.action && !message.action.applied) || (message.type === "spell" && message.spell && !message.spell.applied)) && !message.undone && !superseded.has(message.id)) : [];
-  const mine = prompts.filter((message) => promptIsMine(message, snapshot, c.userId));
+  // R27 (D140): a prompt a connected player owns is theirs to answer; the DM's screen says so and offers a takeover.
+  const mine = prompts.filter((message) => promptIsMine(message, snapshot, c.userId) && (!isGm || taken.includes(message.id) || promptAnswerer(message, snapshot) === null));
   const first = mine[0];
   const firstWait = waiting[0];
   if (!first && !firstWait) {
     const theirs = prompts[0];
-    return theirs ? <div className="cl-waiting-note" role="status">⏳ {theirs.prompt!.reactor.name}의 {promptLabel(theirs.prompt!.kind)} 선택을 기다리는 중…</div> : null;
+    if (!theirs) return null;
+    const owner = promptAnswerer(theirs, snapshot);
+    const who = snapshot.players.find((player) => player.userId === owner)?.displayName;
+    return (
+      <div className="cl-waiting-note" role="status">
+        ⏳ {theirs.prompt!.reactor.name}의 {promptLabel(theirs.prompt!.kind)} 선택을 기다리는 중{who ? ` (${who})` : ""}…
+        {isGm && promptIsMine(theirs, snapshot, c.userId) ? <button type="button" className="cl-btn small quiet" style={{ marginLeft: 8 }} onClick={() => setTaken((list) => [...list, theirs.id])}>대신 답하기</button> : null}
+      </div>
+    );
   }
   return (
     <div className="cl-approval-overlay" role="dialog" aria-modal="false" aria-label="승인" ref={approvalRef}>

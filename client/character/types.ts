@@ -97,7 +97,12 @@ export interface ActiveEffect {
 }
 
 /** What an active effect changed on the sheet, for the effects card. `applied` false: no rule yet, apply the text by hand. */
-export interface AppliedEffect { key: string; name: string; applied: boolean; notes: string[] }
+/**
+ * R28 (D153): `narrative` marks an effect the engine cannot put a number on — the whole of its rule is the text in
+ * `notes`, so the table adjudicates it. Two thirds of the effect rules are like this, and nothing used to say which
+ * ones, so "the app tracks the rules" and "the app prints a sentence about the rules" looked identical on screen.
+ */
+export interface AppliedEffect { key: string; name: string; applied: boolean; notes: string[]; narrative?: boolean }
 
 export interface DerivedSkill { id: string; name: string; ability: AbilityKey; proficient: boolean; expertise: boolean; bonus: number; terms: Term[] }
 

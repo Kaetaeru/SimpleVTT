@@ -184,7 +184,9 @@ export function SheetPlay({ source, runtime, catalog, save, onRolled, savedAt, t
                     <div className="cl-row" style={{ gap: 8 }}>
                       <span className="cl-name">{effect.name}</span>
                       {effect.concentration ? <Pill tone="accent">집중</Pill> : null}
-                      {summary && !summary.applied ? <Pill tone="bad">수동</Pill> : <Pill tone="good">적용됨</Pill>}
+                      {/* R28 (D153): "표에서 판단" is an effect whose whole rule is the text below it — the engine
+                          changes no number for it. "적용됨" means the sheet really carries it. */}
+                      {summary && !summary.applied ? <Pill tone="bad">수동</Pill> : summary?.narrative ? <Pill tone="accent">표에서 판단</Pill> : <Pill tone="good">적용됨</Pill>}
                       <span className="cl-quiet cl-small">{effect.rounds !== undefined ? `${effect.elapsed}/${effect.rounds} 라운드 · ` : ""}{effect.duration}</span>
                       <button type="button" className="cl-btn small danger" style={{ marginLeft: "auto" }} onClick={() => commit(endEffect(runtime, effect.key))}>종료</button>
                     </div>

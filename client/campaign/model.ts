@@ -22,6 +22,12 @@ export interface CampaignPlayer {
   lastSeenAt?: string;
   /** Kicked players are refused by the host until the GM lets them back in. */
   kicked?: boolean;
+  /**
+   * R25 (D126): the secret the seat that first used this user id minted, kept by the host only. A snapshot hands
+   * every participant everyone else's user id, so without this anyone with the join code could come back as
+   * someone else — including a GM. Trust on first use: the first `hello` for a user id sets it, later ones must match.
+   */
+  seat?: string;
 }
 
 export interface CampaignSettings {
@@ -44,7 +50,7 @@ export interface CampaignSettings {
 export interface Macro { id: string; name: string; text: string; /** GM macros: shown in every player's macro bar too. */ shared?: boolean }
 
 /** R17 (D114): a rollable table. `/roll 2t[조우]` draws two rows; weights make a row more likely. */
-export interface RollTable { id: string; name: string; rows: Array<{ text: string; weight: number }> }
+export interface RollTable { id: string; name: string; rows: Array<{ text: string; weight: number }>; /** R25: players may draw from a shared table; the GM's own stay the GM's (the rows are never sent either way). */ shared?: boolean }
 
 export interface Campaign {
   id: string;
@@ -183,12 +189,13 @@ export function emptyChatArchive(campaignId: string): ChatArchive {
 }
 
 /** Upsert a player (rejoin keeps role and color; a new one gets the next free color). */
-export function withPlayer(campaign: Campaign, player: { userId: string; displayName: string }, now = new Date().toISOString()): Campaign {
+export function withPlayer(campaign: Campaign, player: { userId: string; displayName: string; seat?: string }, now = new Date().toISOString()): Campaign {
   const index = campaign.players.findIndex((item) => item.userId === player.userId);
-  if (index >= 0) return { ...campaign, updatedAt: now, players: campaign.players.map((item, at) => (at === index ? { ...item, displayName: player.displayName, lastSeenAt: now } : item)) };
+  // R25 (D126): a seat secret is written once — the first time this user id arrives with one — and never replaced.
+  if (index >= 0) return { ...campaign, updatedAt: now, players: campaign.players.map((item, at) => (at === index ? { ...item, displayName: player.displayName, lastSeenAt: now, seat: item.seat ?? player.seat } : item)) };
   const used = new Set(campaign.players.map((item) => item.color));
   const color = PLAYER_COLORS.find((candidate) => !used.has(candidate)) ?? PLAYER_COLORS[campaign.players.length % PLAYER_COLORS.length];
-  return { ...campaign, updatedAt: now, players: [...campaign.players, { userId: player.userId, displayName: player.displayName, role: "player", color, joinedAt: now, lastSeenAt: now }] };
+  return { ...campaign, updatedAt: now, players: [...campaign.players, { userId: player.userId, displayName: player.displayName, role: "player", color, joinedAt: now, lastSeenAt: now, seat: player.seat }] };
 }
 
 export function withPlayerRole(campaign: Campaign, userId: string, role: PlayerRole): Campaign {

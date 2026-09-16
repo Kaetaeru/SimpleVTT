@@ -78,6 +78,7 @@ export interface CampaignsState {
   kick: (userId: string) => void;
   putJournal: (entry: JournalEntry) => void;
   removeJournal: (id: string) => void;
+  grantJournal: (id: string, userId: string, control: boolean) => void;
   showJournal: (id: string) => void;
   /** Drop a consumed "show" request. */
   dismissShow: (id: string) => void;
@@ -155,6 +156,12 @@ export const seatOf = (search = typeof window === "undefined" ? "" : window.loca
   try { return new URLSearchParams(search).get("seat")?.trim().slice(0, 24) || null; } catch { return null; }
 };
 export const userIdKey = (seat: string | null) => (seat ? `simplevtt-user-id:${seat}` : "simplevtt-user-id");
+/**
+ * R25 (D126): the secret that proves this browser profile is the person behind its user id. A snapshot hands every
+ * participant everyone else's user id, so without it the join code alone let anyone come back as anyone — a GM
+ * included. Minted once per seat, next to the id, and never shown in the UI.
+ */
+export const seatKey = (seat: string | null) => (seat ? `simplevtt-seat-secret:${seat}` : "simplevtt-seat-secret");
 /** The URL of another seat in this browser, for "다른 사람으로 새 탭 열기". */
 export const seatUrl = (seat: string) => {
   if (typeof window === "undefined") return "";
@@ -179,6 +186,7 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
   const { store, ready, catalog } = useClient();
   const [seat] = useState(() => seatOf());
   const [userId] = useState(() => (typeof window === "undefined" ? newUserId() : storedId(userIdKey(seat))));
+  const [seatSecret] = useState(() => (typeof window === "undefined" ? newUserId() : storedId(seatKey(seat))));
   const nameKey = seat ? `simplevtt-display-name:${seat}` : "simplevtt-display-name";
   const [displayName, setDisplayNameState] = useState(() => { try { return webStorage("local")?.getItem(nameKey) ?? ""; } catch { return ""; } });
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -374,7 +382,7 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
     });
     hostRef.current = host;
     void saveCampaign(launched);
-    const seat = new TableClient(hub.connect("host-seat"), { userId, displayName: displayName || "DM", joinCode: campaign.joinCode, hostSecret });
+    const seat = new TableClient(hub.connect("host-seat"), { userId, displayName: displayName || "DM", joinCode: campaign.joinCode, hostSecret, seat: seatSecret });
     attachClient(seat);
     setRoleState("host");
     setCampaignId(campaign.id);
@@ -395,7 +403,7 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
       } catch (error) { setTransportNote(`LAN 호스트를 열지 못했습니다: ${error instanceof Error ? error.message : String(error)}`); }
       bump();
     } else setTransportNote("브라우저에서는 같은 PC의 다른 탭만 참가할 수 있습니다. LAN·하마치는 exe에서 열립니다.");
-  }, [attachClient, bump, displayName, flushArchive, leave, saveCampaign, store, userId]);
+  }, [attachClient, bump, displayName, flushArchive, leave, saveCampaign, store, userId, seatSecret]);
 
   const join = useCallback(async (inviteText: string) => {
     const parsed: Invite | null = decodeInvite(inviteText);
@@ -405,7 +413,7 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
     leave();
     try {
       const transport = parsed.carrier === "tcp" ? await TauriTcpTransport.connect(parsed.address) : new BroadcastChannelTransport(parsed.address, "peer");
-      const client = new TableClient(transport, { userId, displayName: displayName || "플레이어", joinCode: parsed.joinCode });
+      const client = new TableClient(transport, { userId, displayName: displayName || "플레이어", joinCode: parsed.joinCode, seat: seatSecret });
       attachClient(client);
       client.subscribe(() => {
         const snapshot = client.snapshot;
@@ -424,15 +432,32 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       return `호스트 ${parsed.address}에 연결하지 못했습니다: ${error instanceof Error ? error.message : String(error)}. 호스트가 캠페인을 시작했는지, 방화벽이 ${DEFAULT_SESSION_PORT} 포트를 허용하는지 확인하세요.`;
     }
-  }, [attachClient, bump, displayName, joined, leave, saveJoined, userId]);
+  }, [attachClient, bump, displayName, joined, leave, saveJoined, userId, seatSecret]);
 
-  const send = useCallback((command: ClientCommand) => { clientRef.current?.send(command); }, []);
+  /**
+   * R27 (D145): a table whose carrier has dropped used to look and behave exactly like a live one — the board still
+   * said 당신의 턴, the buttons still worked, and every command went into a dead socket with nothing said. Sends now
+   * stop at the door and say so, the same way a refusal does.
+   */
+  const send = useCallback((command: ClientCommand) => {
+    const client = clientRef.current;
+    if (!client) return;
+    if (client.status !== "joined") {
+      const reason = client.status === "closed" ? "테이블이 닫혔습니다 — 보내지 못했습니다" : "연결이 끊겼습니다 — 보내지 못했습니다 (다시 연결되면 보내세요)";
+      setRefusals((list) => (list[0] === reason ? list : [reason, ...list].slice(0, 5)));
+      window.setTimeout(() => setRefusals((list) => list.filter((item) => item !== reason)), 6000);
+      return;
+    }
+    client.send(command);
+  }, []);
   const say = useCallback((text: string) => { if (text.trim()) send({ type: "chat.say", text }); }, [send]);
   const sendRoll = useCallback((roll: RollPayload, mode: "public" | "gm" | "self" = "public") => send({ type: "chat.roll", roll, mode }), [send]);
   const setRole = useCallback((target: string, nextRole: PlayerRole) => send({ type: "player.role", userId: target, role: nextRole }), [send]);
   const kick = useCallback((target: string) => send({ type: "player.kick", userId: target }), [send]);
   const putJournal = useCallback((entry: JournalEntry) => send({ type: "journal.put", entry }), [send]);
   const removeJournal = useCallback((id: string) => send({ type: "journal.remove", id }), [send]);
+  /** R27 (D146): hand a creature to another participant, or take it back. */
+  const grantJournal = useCallback((id: string, target: string, control: boolean) => send({ type: "journal.grant", id, userId: target, control }), [send]);
   const showJournal = useCallback((id: string) => send({ type: "journal.show", id }), [send]);
   const dismissShow = useCallback((id: string) => setShows((list) => list.filter((item) => item !== id)), []);
 
@@ -516,8 +541,8 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
   const table = useMemo<TableState>(() => ({ role, status: client ? client.status : "idle", reason: client?.reason ?? null, campaignId, snapshot: client?.snapshot ?? null, invite, invites, transportNote, refusals, shows, artUrls, artPending }),
   // eslint-disable-next-line react-hooks/exhaustive-deps
   [role, client, campaignId, invite, invites, transportNote, refusals, shows, artUrls, artPending, tick]);
-  const value = useMemo<CampaignsState>(() => ({ userId, seat, displayName, setDisplayName, campaigns, joined, archives, journals, arts, pages, createCampaign, updateCampaign, deleteCampaign, regenerateJoinCode, forgetJoined, table, launch, join, leave, say, sendRoll, setRole, kick, putJournal, removeJournal, showJournal, dismissShow, uploadArt, updateArt, removeArt, requestArt, putPage, removePage, setRibbon, setBookmark, putToken, removeToken, setTracker, addTurn, nextTurn, swapTurn, attack, npcSave, legendary, useItem, useTrait, spendEconomy, advanceTime, tableRest, askRest, saveMacros, saveTables, rollTable, summon, dismissSummons, resist, provoke, act, cast, declineReaction, adjustAction, undoAction, confirmAction }),
-    [userId, seat, displayName, setDisplayName, campaigns, joined, archives, journals, arts, pages, createCampaign, updateCampaign, deleteCampaign, regenerateJoinCode, forgetJoined, table, launch, join, leave, say, sendRoll, setRole, kick, putJournal, removeJournal, showJournal, dismissShow, uploadArt, updateArt, removeArt, requestArt, putPage, removePage, setRibbon, setBookmark, putToken, removeToken, setTracker, addTurn, nextTurn, swapTurn, attack, npcSave, legendary, useItem, useTrait, spendEconomy, advanceTime, tableRest, askRest, saveMacros, saveTables, rollTable, summon, dismissSummons, resist, adjustAction, undoAction, confirmAction]);
+  const value = useMemo<CampaignsState>(() => ({ userId, seat, displayName, setDisplayName, campaigns, joined, archives, journals, arts, pages, createCampaign, updateCampaign, deleteCampaign, regenerateJoinCode, forgetJoined, table, launch, join, leave, say, sendRoll, setRole, kick, putJournal, removeJournal, grantJournal, showJournal, dismissShow, uploadArt, updateArt, removeArt, requestArt, putPage, removePage, setRibbon, setBookmark, putToken, removeToken, setTracker, addTurn, nextTurn, swapTurn, attack, npcSave, legendary, useItem, useTrait, spendEconomy, advanceTime, tableRest, askRest, saveMacros, saveTables, rollTable, summon, dismissSummons, resist, provoke, act, cast, declineReaction, adjustAction, undoAction, confirmAction }),
+    [userId, seat, displayName, setDisplayName, campaigns, joined, archives, journals, arts, pages, createCampaign, updateCampaign, deleteCampaign, regenerateJoinCode, forgetJoined, table, launch, join, leave, say, sendRoll, setRole, kick, putJournal, removeJournal, grantJournal, showJournal, dismissShow, uploadArt, updateArt, removeArt, requestArt, putPage, removePage, setRibbon, setBookmark, putToken, removeToken, setTracker, addTurn, nextTurn, swapTurn, attack, npcSave, legendary, useItem, useTrait, spendEconomy, advanceTime, tableRest, askRest, saveMacros, saveTables, rollTable, summon, dismissSummons, resist, adjustAction, undoAction, confirmAction]);
   return <CampaignsContext.Provider value={value}>{children}</CampaignsContext.Provider>;
 }
 

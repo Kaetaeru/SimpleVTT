@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useCampaigns } from "../app/campaigns";
 import { controlsToken } from "../campaign/page";
+import { audienceIncludes } from "../campaign/journal";
 import type { SpellResolution, SpellTargetResult } from "../rules/spellcast";
 import { monsterById } from "../compendium/monsters";
 import { summonRule, summonsNothing } from "../rules/summons";
@@ -50,8 +51,10 @@ function Table() {
   const focusWindow = useCallback((key: string) => setWindows((list) => { const item = list.find((entry) => entry.key === key); return item && list[list.length - 1] !== item ? [...list.filter((entry) => entry !== item), item] : list; }), []);
   // The tracker window follows the tracker's open flag (the GM opens it for everyone, §6.1).
   const trackerOpen = snapshot.tracker.open;
-  useEffect(() => { setWindows((list) => { const has = list.some((item) => item.kind === "tracker"); if (trackerOpen && isGm && !has) return [...list, { key: "tracker", kind: "tracker" }]; if (!trackerOpen && has) return list.filter((item) => item.kind !== "tracker"); return list; }); }, [trackerOpen, isGm]);
-  const openTracker = useCallback(() => { c.setTracker({ ...snapshot.tracker, open: true }); setWindows((list) => (list.some((item) => item.kind === "tracker") ? list : [...list, { key: "tracker", kind: "tracker" }])); }, [c, snapshot.tracker]);
+  useEffect(() => { setWindows((list) => { const has = list.some((item) => item.kind === "tracker"); // R27 (D143): "the GM opens it for everyone" now means everyone — a player could see the order in the ribbon but
+      // never the initiative numbers, and had no way to fix a row the DM typo'd.
+      if (trackerOpen && !has) return [...list, { key: "tracker", kind: "tracker" }]; if (!trackerOpen && has) return list.filter((item) => item.kind !== "tracker"); return list; }); }, [trackerOpen, isGm]);
+  const openTracker = useCallback(() => { if (isGm) c.setTracker({ ...snapshot.tracker, open: true }); setWindows((list) => (list.some((item) => item.kind === "tracker") ? list : [...list, { key: "tracker", kind: "tracker" }])); }, [c, snapshot.tracker, isGm]);
   // "플레이어에게 보여주기": the GM's request opens the entry here.
   const shows = c.table.shows;
   useEffect(() => { for (const id of shows) { openEntry(id); c.dismissShow(id); } }, [shows, openEntry, c]);
@@ -72,11 +75,15 @@ function Table() {
         ) : null}
         <ClockStrip isGm={isGm} />
         <div className="cl-actions">
-          {isGm ? <button type="button" className={`cl-btn${trackerOpen ? " primary" : ""}`} onClick={() => c.setTracker({ ...snapshot.tracker, open: !trackerOpen })} title="열면 모든 참가자에게 뜹니다">턴 트래커{snapshot.tracker.turns.length ? ` · 라운드 ${snapshot.tracker.round}` : ""}</button> : null}
+          {isGm ? <button type="button" className={`cl-btn${trackerOpen ? " primary" : ""}`} onClick={() => c.setTracker({ ...snapshot.tracker, open: !trackerOpen })} title="열면 모든 참가자에게 뜹니다">턴 트래커{snapshot.tracker.turns.length ? ` · 라운드 ${snapshot.tracker.round}` : ""}</button>
+            : trackerOpen ? <button type="button" className="cl-btn" onClick={openTracker} title="순서와 이니셔티브 (내 행만 고칠 수 있습니다)">턴 트래커{snapshot.tracker.turns.length ? ` · 라운드 ${snapshot.tracker.round}` : ""}</button> : null}
           {c.table.role === "host" ? <button type="button" className="cl-btn quiet" onClick={() => navigate({ screen: "campaign", id: snapshot.campaignId })}>캠페인 설정</button> : null}
           <button type="button" className="cl-btn danger" onClick={() => { c.leave(); navigate({ screen: "campaigns" }); }}>{c.table.role === "host" ? "게임 닫기" : "나가기"}</button>
         </div>
       </div>
+      {/* R27 (D145): the table says plainly when it is no longer live, instead of looking exactly like a live one. */}
+      {c.table.status === "disconnected" ? <Notice tone="bad">연결이 끊겼습니다. 여기 보이는 것은 마지막으로 받은 상태이고, 지금 누르는 것은 테이블에 전해지지 않습니다 — 다시 연결되면 이어집니다.</Notice> : null}
+      {c.table.status === "closed" ? <Notice tone="bad">테이블이 닫혔습니다. 이 화면은 마지막 상태이며 더는 바뀌지 않습니다.</Notice> : null}
       {c.table.role === "host" && c.table.transportNote ? <Notice tone="warn">{c.table.transportNote}</Notice> : null}
       {c.table.refusals.length ? <div className="cl-toasts">{c.table.refusals.map((reason, index) => <Notice tone="bad" key={`${reason}-${index}`}>{reason}</Notice>)}</div> : null}
       <JournalWindows windows={windows} onClose={closeWindow} onFocus={focusWindow} onOpen={openEntry} />
@@ -110,7 +117,9 @@ function ChatTab({ isGm }: { isGm: boolean }) {
   const names = useMemo(() => Object.fromEntries(snapshot.players.map((player) => [player.userId, player])), [snapshot.players]);
   // R17: `#이름` runs a macro — the campaign's shared ones plus the macros on sheets this viewer controls.
   const myMacros = useMemo(() => {
-    const mine = snapshot.journal.filter((entry) => entry.canEdit.includes(c.userId) || isGm).flatMap((entry) => (entry.macros ?? []).map((macro) => ({ ...macro, from: entry.name })));
+    // R27: `canEdit` is an Audience — "all" or a list. `"all".includes(userId)` is a substring test that is always
+    // false, so a sheet shared with 모든 플레이어 lost its macros for everyone (D138).
+    const mine = snapshot.journal.filter((entry) => isGm || audienceIncludes(entry.canEdit, c.userId)).flatMap((entry) => (entry.macros ?? []).map((macro) => ({ ...macro, from: entry.name })));
     return [...snapshot.macros.map((macro) => ({ ...macro, from: "캠페인" })), ...mine];
   }, [snapshot.journal, snapshot.macros, c.userId, isGm]);
   const submit = async (typed?: string) => {
@@ -207,6 +216,8 @@ function MacroBar({ macros, tables, isGm, onRun, onTable }: { macros: Array<Macr
               <div className="cl-row" style={{ gap: 4 }}>
                 <input className="cl-input" style={{ width: 130, height: 24 }} aria-label={`굴림표 ${index + 1} 이름`} value={table.name} onChange={(event) => setTables(tables.map((item, at) => (at === index ? { ...item, name: event.target.value } : item)))} />
                 <span className="cl-quiet">{table.rows.length}개 항목 · <code>/roll 1t[{table.name}]</code></span>
+                {/* R25 (D134): a table a player may draw from is shared on purpose, like a macro; the rows stay the GM's. */}
+                <label className="cl-row cl-small" style={{ gap: 2 }} title="플레이어도 이 표를 굴릴 수 있습니다 (항목은 여전히 보이지 않습니다)"><input type="checkbox" checked={Boolean(table.shared)} onChange={(event) => setTables(tables.map((item, at) => (at === index ? { ...item, shared: event.target.checked } : item)))} aria-label={`${table.name} 플레이어에게도`} />공유</label>
                 <button type="button" className="cl-btn small danger" style={{ marginLeft: "auto" }} onClick={() => setTables(tables.filter((_, at) => at !== index))}>표 삭제</button>
               </div>
               {table.rows.map((row, rowAt) => (
@@ -284,7 +295,7 @@ function SummonRow({ spell }: { spell: SpellResolution }) {
     for (const page of snapshot.pages) { const token = page.tokens.find((item) => item.represents === spell.caster.id); if (token) return { entryId: spell.caster.id, pageId: page.id, tokenId: token.id }; }
     return null;
   }, [snapshot.pages, spell.caster.id]);
-  const mine = isGm || Boolean(casterEntry && casterEntry.canEdit.includes(c.userId));
+  const mine = isGm || Boolean(casterEntry && audienceIncludes(casterEntry.canEdit, c.userId));
   const [pick, setPick] = useState("");
   const placed = snapshot.journal.some((item) => item.kind === "npc" && item.summonedBy?.entryId === spell.caster.id && item.summonedBy.spellId === spell.spellId);
   if (nothing) return <div className="cl-small cl-quiet">🌀 {nothing}</div>;

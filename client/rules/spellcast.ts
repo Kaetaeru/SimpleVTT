@@ -14,7 +14,7 @@ import { castSpell, type CastMethod } from "../character/play";
 import type { CharacterRuntime } from "../character/runtime";
 import type { DerivedCharacter } from "../character/types";
 import { spellExec } from "../compendium/spells";
-import { applyDamage, noDamage, resolveAttack, type AttackOverrides, type AttackResolution, type Combatant, type DamageOutcome, type DamagePart, type DiceSource } from "./resolve";
+import { applyDamage, immuneToCondition, noDamage, resolveAttack, type AttackOverrides, type AttackResolution, type Combatant, type DamageOutcome, type DamagePart, type DiceSource } from "./resolve";
 import { scrollStats } from "./scrolls";
 
 export interface CasterStats {
@@ -55,6 +55,8 @@ export interface SpellTargetResult {
   tempAfter: number;
   /** Conditions to put on the target (Korean names). */
   marks: string[];
+  /** R28 (D152): conditions this row *ends* (회복의 마법 언어, and standing back up from a revival). */
+  clears?: string[];
   /** A lasting effect on the target (Bless, Shield, Hold Person's paralysis with its concentration link). */
   effect?: SpellEffectStart;
   note?: string;
@@ -106,8 +108,12 @@ export function resolveSpell(input: CastInput): SpellResolution {
   const effectStart = (duration?: SpellDuration): SpellEffectStart => ({ key: `spell:${spec.spellId}`, name: spec.name, concentration: Boolean(exec.concentration), duration: durationText(duration), rounds: roundsOf(duration), ...(endSave ? { endSave } : {}) });
   const base = (target: Combatant): SpellTargetResult => ({ target: { id: target.id, name: target.name, kind: target.kind, tokenId: target.tokenId }, mode: "note", hpBefore: target.hp.current, hpAfter: target.hp.current, tempAfter: target.hp.temp, marks: [] });
   // R10: 회피 (Dodge) gives advantage on Dexterity saves.
-  const save = (target: Combatant, stats: ActorStats, ability: string): SpellSave => { const key = (ability in ABILITY_KO ? ability : "dex") as AbilityKey; const dodging = key === "dex" && (target.conditions.includes("회피") || target.effects.includes("회피")); const first = dice.d(20); const second = dodging ? dice.d(20) : undefined; const d20 = second !== undefined ? Math.max(first, second) : first; const bonus = stats.saves[key] ?? 0; const total = d20 + bonus; return { ability: key, d20, bonus, total, dc: casterStats.saveDc, success: input.forceSaveSuccess ? true : total >= casterStats.saveDc, ...(input.forceSaveSuccess && total < casterStats.saveDc ? { legendary: true } : {}), ...(second !== undefined ? { advantage: "회피", dropped: Math.min(first, second) } : {}) }; };
-  const conditionMarks = (trigger: "failed-save" | "hit" | "always") => (exec.effects ?? []).filter((effect) => effect.trigger === trigger || effect.trigger === "always").map((effect) => CONDITION_KO[effect.conditionId] ?? effect.conditionId);
+  const save = (target: Combatant, stats: ActorStats, ability: string): SpellSave => { const key = (ability in ABILITY_KO ? ability : "dex") as AbilityKey; const dodging = key === "dex" && (target.conditions.includes("회피") || target.effects.includes("회피")); const first = dice.d(20); const second = dodging ? dice.d(20) : undefined; const d20 = second !== undefined ? Math.max(first, second) : first; const bonus = (stats.saves[key] ?? 0) - 2 * Math.max(0, target.exhaustion ?? 0); const total = d20 + bonus; return { ability: key, d20, bonus, total, dc: casterStats.saveDc, success: input.forceSaveSuccess ? true : total >= casterStats.saveDc, ...(input.forceSaveSuccess && total < casterStats.saveDc ? { legendary: true } : {}), ...(second !== undefined ? { advantage: "회피", dropped: Math.min(first, second) } : {}) }; };
+  // R28 (D150): a condition the target is immune to never lands, whoever asked for it.
+  const conditionMarks = (trigger: "failed-save" | "hit" | "always", target?: Combatant) => (exec.effects ?? [])
+    .filter((effect) => effect.trigger === trigger || effect.trigger === "always")
+    .map((effect) => CONDITION_KO[effect.conditionId] ?? effect.conditionId)
+    .filter((condition) => !target || !immuneToCondition(target.defenses, condition));
   const afterDamage = (row: SpellTargetResult, outcome: DamageOutcome) => { row.damage = outcome; row.hpAfter = outcome.hpAfter; row.tempAfter = outcome.tempAfter; };
   const targets: SpellTargetResult[] = [];
   let note: string | undefined;
@@ -118,7 +124,7 @@ export function resolveSpell(input: CastInput): SpellResolution {
       for (const { combatant } of all) {
         const row = base(combatant);
         row.mode = "attack";
-        const attack = resolveAttack(caster, combatant, { name: spec.name, source: "spell", attackBonus: casterStats.attackBonus, mode: (exec.targeting.rangeFeet ?? 0) > 5 ? "ranged" : "melee", damage: [{ formula, type: primary.damageType, label: spec.name }], inflicts: conditionMarks("hit") }, { dice, overrides: input.overrides, apply: input.apply });
+        const attack = resolveAttack(caster, combatant, { name: spec.name, source: "spell", attackBonus: casterStats.attackBonus, mode: (exec.targeting.rangeFeet ?? 0) > 5 ? "ranged" : "melee", damage: [{ formula, type: primary.damageType, label: spec.name }], inflicts: conditionMarks("hit", combatant) }, { dice, overrides: input.overrides, apply: input.apply });
         row.attack = attack; row.hpAfter = attack.hpAfter; row.tempAfter = attack.tempAfter; row.marks = attack.inflicted;
         if ((attack.outcome === "hit" || attack.outcome === "crit") && exec.trackedEffects?.some((effect) => effect.trigger === "hit")) row.effect = effectStart(exec.trackedEffects.find((effect) => effect.trigger === "hit")!.duration);
         targets.push(row);
@@ -152,7 +158,7 @@ export function resolveSpell(input: CastInput): SpellResolution {
         row.save = save(combatant, stats, primary.saveAbility);
         if (row.save.success && primary.successDamage === "none") afterDamage(row, noDamage(combatant));
         else afterDamage(row, applyDamage(combatant, parts, dice, { fixed: rolled, half: row.save.success }));
-        if (!row.save.success) { row.marks = conditionMarks("failed-save"); if (exec.effects?.length || exec.trackedEffects?.some((effect) => effect.trigger === "failed-save")) row.effect = effectStart(exec.effects?.[0]?.duration ?? exec.trackedEffects?.find((effect) => effect.trigger === "failed-save")?.duration); }
+        if (!row.save.success) { row.marks = conditionMarks("failed-save", combatant); if (exec.effects?.length || exec.trackedEffects?.some((effect) => effect.trigger === "failed-save")) row.effect = effectStart(exec.effects?.[0]?.duration ?? exec.trackedEffects?.find((effect) => effect.trigger === "failed-save")?.duration); }
         targets.push(row);
       }
       break;
@@ -162,7 +168,7 @@ export function resolveSpell(input: CastInput): SpellResolution {
         const row = base(combatant);
         row.mode = "save";
         row.save = save(combatant, stats, primary.saveAbility);
-        if (!row.save.success) { row.marks = conditionMarks("failed-save"); row.effect = effectStart(exec.effects?.[0]?.duration ?? primary.duration); }
+        if (!row.save.success) { row.marks = conditionMarks("failed-save", combatant); row.effect = effectStart(exec.effects?.[0]?.duration ?? primary.duration); }
         row.note = primary.summary;
         targets.push(row);
       }
@@ -215,10 +221,86 @@ export function resolveSpell(input: CastInput): SpellResolution {
         const row = base(combatant);
         row.mode = "effect";
         row.effect = effectStart(duration);
-        row.marks = conditionMarks("always");
+        row.marks = conditionMarks("always", combatant);
         row.note = exec.trackedEffects?.map((effect) => effect.summary).join(" · ") ?? primary.summary;
         targets.push(row);
       }
+      break;
+    }
+    /**
+     * R28 (D152): the last nine spells that fell through to "DM이 효과를 적용합니다" even though the compendium
+     * describes them precisely — 원조, 마법 무효화, 회복의 마법 언어, 죽음의 마법 언어 and the five revivals.
+     */
+    case "maximum-hp": {
+      // 원조: the target's HP maximum and current HP both rise. The card applies the current-HP half; the new
+      // maximum is the table's to keep, because it lasts eight hours and the sheet derives its own maximum.
+      const amount = (primary.amount as number ?? 5) + (primary.amountPerSlotAboveBase as number ?? 0) * Math.max(0, spec.level - (exec.baseLevel ?? spec.level));
+      for (const { combatant } of all) {
+        const row = base(combatant);
+        row.mode = "heal";
+        row.healed = amount;
+        row.hpAfter = combatant.hp.current + amount;
+        row.note = `최대 HP와 현재 HP가 ${amount} 늘어납니다 (8시간)`;
+        targets.push(row);
+      }
+      break;
+    }
+    case "full-healing": {
+      // 회복의 마법 언어: to full, and the conditions the spell names end.
+      for (const { combatant } of all) {
+        const row = base(combatant);
+        row.mode = "heal";
+        row.healed = Math.max(0, combatant.hp.max - combatant.hp.current);
+        row.hpAfter = combatant.hp.max;
+        row.clears = ["매혹", "공포", "마비", "충격", "무의식", "넘어짐"];
+        row.note = "HP 전부 회복 · 매혹·공포·마비·충격 종료, 넘어짐에서 일어남";
+        targets.push(row);
+      }
+      break;
+    }
+    case "power-word-kill": {
+      // 죽음의 마법 언어: 100 HP or fewer and the creature dies outright; otherwise the SRD's fallback damage.
+      for (const { combatant } of all) {
+        const row = base(combatant);
+        if (combatant.hp.current <= 100) {
+          row.mode = "effect";
+          row.hpAfter = 0;
+          row.marks = combatant.kind === "npc" ? ["사망"] : ["무의식", "넘어짐"];
+          row.note = `HP ${combatant.hp.current} ≤ 100 — 즉사`;
+        } else {
+          const fallback = primary.fallbackDamage as { count: number; sides: number } | undefined;
+          row.mode = "save";
+          const outcome = applyDamage(combatant, [{ formula: `${fallback?.count ?? 12}d${fallback?.sides ?? 12}`, type: "psychic", label: spec.name }], dice, { apply: input.apply } as never);
+          afterDamage(row, outcome);
+          row.note = `HP ${combatant.hp.current} > 100 — 피해만`;
+        }
+        targets.push(row);
+      }
+      break;
+    }
+    case "revive": {
+      // 소생·죽은 자 되살리기·환생·부활·완전 부활: back on their feet, death saves cleared.
+      const full = primary.hp === "full";
+      for (const { combatant } of all) {
+        const row = base(combatant);
+        row.mode = "heal";
+        const target = full ? combatant.hp.max : Math.max(1, combatant.hp.current);
+        row.healed = Math.max(0, target - combatant.hp.current);
+        row.hpAfter = target;
+        row.clears = ["사망", "무의식"];
+        row.note = `되살아납니다 (HP ${target}${full ? " — 전부" : ""}) · 죽음 내성 초기화`;
+        targets.push(row);
+      }
+      break;
+    }
+    case "dispel": {
+      // 마법 무효화 stays the table's call, but the card now says what is actually running on the target.
+      for (const { combatant } of all) {
+        const row = base(combatant);
+        row.note = combatant.effects.length ? `걸려 있는 것: ${combatant.effects.join(", ")} — 끝낼 것을 DM이 고릅니다` : "걸려 있는 마법이 없습니다";
+        targets.push(row);
+      }
+      note = `${spec.name}: 3레벨 이하는 자동, 그보다 높으면 시전 능력 판정 DC 10 + 주문 레벨`;
       break;
     }
     default: {

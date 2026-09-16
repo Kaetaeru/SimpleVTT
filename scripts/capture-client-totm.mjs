@@ -135,7 +135,8 @@ try {
   await tracker.locator(".cl-tracker-row[data-turn-name='앨리스의 파이터']").waitFor({ timeout: 10000 });
   for (let n = 0; n < 3 && (await player.locator(".cl-scene-card.turn[data-token-name='앨리스의 파이터']").count()) === 0; n += 1) { await dm.locator(".cl-turn-ribbon").getByRole("button", { name: "▶ 다음 턴" }).click(); await player.waitForTimeout(400); }
   await player.locator(".cl-turn-ribbon .cl-turn-ribbon-item.now[data-turn-name='앨리스의 파이터']").waitFor({ timeout: 10000 });
-  check(await player.locator(".cl-window", { hasText: "턴 트래커" }).count() === 0, "the player reads the ribbon; no tracker window pops up");
+  // R27 (D143): the DM opening the tracker opens it for everyone now; the ribbon is still the at-a-glance order.
+  check(await player.locator(".cl-window", { hasText: "턴 트래커" }).count() === 1, "the player gets the tracker window too");
   await player.locator(".cl-scene-card.turn[data-token-name='앨리스의 파이터']").waitFor({ timeout: 10000 });
   const leave = player.getByRole("button", { name: "고블린 전사에게서 벗어남" });
   await leave.waitFor({ timeout: 10000 });

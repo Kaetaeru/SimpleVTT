@@ -61,6 +61,8 @@ try {
   await dm.getByLabel("조우 1번 가중치").fill("5");
   await dm.getByRole("button", { name: "+ 항목" }).click();
   await dm.getByLabel("조우 2번 항목").fill("아무 일도 없다");
+  // R25 (D134): a table a player may draw from is shared on purpose, like a macro.
+  await dm.getByLabel("조우 플레이어에게도").check();
   await dm.screenshot({ path: path.join(OUT, "72-macro-editor.png") });
 
   // The player's macro bar shows the shared macro and the table, never the private macro or the rows.

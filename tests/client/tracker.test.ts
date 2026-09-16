@@ -68,7 +68,10 @@ test("compendium: monsters are searchable and become NPCs with unlinked tokens s
   const token = tokenForNpc(npc);
   assert.equal(token.bars[0].link, undefined, "monster tokens carry their own HP (unlinked, D78)");
   assert.equal(token.bars[0].value, 21);
-  assert.deepEqual(token.controlledBy, []);
+  // R27 (D146): an NPC token follows its sheet's 고칠 수 있는 사람, so handing an ally to a player is one switch on
+  // the NPC panel rather than three across two screens. An NPC nobody may edit is still the DM's alone.
+  assert.equal(token.controlledBy, "inherit");
+  assert.deepEqual(npc.canEdit, []);
   const dragon = searchMonsters("", { cr: "17" })[0];
   assert.ok(dragon, "CR filter works");
   assert.equal(sizeCells("huge"), 3);

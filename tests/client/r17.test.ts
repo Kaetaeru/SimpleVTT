@@ -97,11 +97,11 @@ async function table() {
 test("host: the GM saves macros and tables; a player sees shared macros and table names but never the rows", async () => {
   const { dm, alice, dice, refusals } = await table();
   dm.send({ type: "table.macros", macros: [{ id: "a", name: "비밀", text: "/gmroll 1d20" }, { id: "b", name: "모두", text: "/roll 1d20", shared: true }] });
-  dm.send({ type: "table.tables", tables: [{ id: "t1", name: "조우", rows: [{ text: "고블린 셋", weight: 3 }, { text: "아무것도 없음", weight: 1 }] }] });
+  dm.send({ type: "table.tables", tables: [{ id: "t1", name: "조우", shared: true, rows: [{ text: "고블린 셋", weight: 3 }, { text: "아무것도 없음", weight: 1 }] }, { id: "t2", name: "비밀 조우", rows: [{ text: "붉은 용", weight: 1 }] }] });
   await tick();
   assert.deepEqual(dm.snapshot!.macros.map((macro) => macro.name), ["비밀", "모두"]);
   assert.deepEqual(alice.snapshot!.macros.map((macro) => macro.name), ["모두"], "a player only gets the shared ones");
-  assert.deepEqual(alice.snapshot!.tables.map((item) => [item.name, item.rows.length]), [["조우", 0]], "the name, never the rows");
+  assert.deepEqual(alice.snapshot!.tables.map((item) => [item.name, item.rows.length]), [["조우", 0]], "the shared table's name, never its rows — and the GM's own table not at all (R25, D134)");
   assert.deepEqual(dm.snapshot!.tables[0].rows.length, 2);
   // A player may still roll on it — the host draws. 3:1 weights: 0.5 lands in the first row.
   dice.value = 0.5;
@@ -117,7 +117,11 @@ test("host: the GM saves macros and tables; a player sees shared macros and tabl
   // Players cannot edit either list, and an unknown table is refused.
   alice.send({ type: "table.macros", macros: [] });
   alice.send({ type: "chat.table", name: "없는 표", count: 1, mode: "public" });
+  // R25 (D134): a table the GM did not share is not drawable either — drawing from it used to print its rows into
+  // public chat, so repeated draws enumerated a secret encounter table.
+  alice.send({ type: "chat.table", name: "비밀 조우", count: 20, mode: "public" });
   await tick();
+  assert.ok(!alice.snapshot!.chat.some((message) => message.content.includes("붉은 용")), "the GM's own table never leaks a row");
   assert.ok(refusals.some((reason) => reason.includes("GM")), JSON.stringify(refusals));
   assert.ok(refusals.some((reason) => reason.includes("굴림표가 없습니다")), JSON.stringify(refusals));
   assert.deepEqual(dm.snapshot!.macros.length, 2, "the player's attempt changed nothing");

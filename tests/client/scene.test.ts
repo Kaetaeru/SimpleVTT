@@ -105,19 +105,18 @@ test("벗어남: the prompt reaches everyone; the reactor's controller attacks a
   const answered = alice.snapshot!.chat.find((message) => message.supersedes === prompt.id)!;
   assert.equal(answered.prompt!.outcome?.attacked, card.id);
   assert.equal(host.state.tracker!.turns[0].reactionUsed, true);
-  // A second 벗어남 this round: the reaction is spent, so the goblin can only decline.
+  // A second 벗어남 this round: the reaction is spent, so (R27, D144) no prompt opens at all — the table is told
+  // in one line instead of everyone staring at a card whose only button is 안 함.
+  const promptsBefore = alice.snapshot!.chat.filter((message) => message.type === "prompt").length;
   alice.send({ type: "act.provoke", mover: pcRef, from: goblinRef });
   await tick();
-  const second = [...alice.snapshot!.chat].reverse().find((message) => message.type === "prompt" && !message.supersedes)!;
-  dm.send({ type: "act.attack", attacker: goblinRef, targets: [pcRef], attack: { source: "npc", actionName: "시미터" }, reaction: second.id });
+  assert.equal(alice.snapshot!.chat.filter((message) => message.type === "prompt").length, promptsBefore, "no unanswerable prompt");
+  const told = [...alice.snapshot!.chat].reverse().find((message) => message.type === "system")!;
+  assert.ok(told.content.includes("반응을 이미 써서") && told.content.includes("기회 공격이 없습니다"), told.content);
+  // And an already-answered prompt still cannot be answered again.
+  dm.send({ type: "act.decline", messageId: prompt.id });
   await tick();
-  assert.equal(dmRefusals.length, 2, "no second reaction this round");
-  dm.send({ type: "act.decline", messageId: second.id });
-  await tick();
-  assert.equal(alice.snapshot!.chat.find((message) => message.supersedes === second.id)!.prompt!.outcome?.declined, true);
-  dm.send({ type: "act.decline", messageId: second.id });
-  await tick();
-  assert.equal(dmRefusals.length, 3, "an answered prompt cannot be answered again");
+  assert.equal(dmRefusals.length, 2, "an answered prompt cannot be answered again");
   // 다음 턴 wraps to the goblin's turn: its reaction comes back.
   dm.send({ type: "tracker.next" });
   await tick();

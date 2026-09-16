@@ -11,7 +11,7 @@ import { emptyClock } from "../campaign/model";
 
 export type TableStatus = "connecting" | "joined" | "refused" | "disconnected" | "closed";
 
-export interface TableClientOptions { userId: string; displayName: string; joinCode: string; hostSecret?: string }
+export interface TableClientOptions { userId: string; displayName: string; joinCode: string; hostSecret?: string; /** R25 (D126): this browser profile's own secret, proving the user id is really theirs. */ seat?: string }
 
 export class TableClient {
   private snapshotState: TableSnapshot | null = null;
@@ -44,7 +44,7 @@ export class TableClient {
   get userId() { return this.options.userId; }
 
   hello() {
-    this.send({ type: "hello", protocol: PROTOCOL_VERSION, userId: this.options.userId, displayName: this.options.displayName, joinCode: this.options.joinCode, lastEventN: this.snapshotState ? this.lastEventN : undefined, sessionId: this.sessionId ?? undefined, hostSecret: this.options.hostSecret });
+    this.send({ type: "hello", protocol: PROTOCOL_VERSION, userId: this.options.userId, displayName: this.options.displayName, joinCode: this.options.joinCode, lastEventN: this.snapshotState ? this.lastEventN : undefined, sessionId: this.sessionId ?? undefined, hostSecret: this.options.hostSecret, seat: this.options.seat });
   }
 
   send(command: ClientCommand) { this.transport.send("host", command); }

@@ -246,7 +246,9 @@ export function applyActiveEffects(derived: DerivedCharacter, effects: ActiveEff
     if (application.conditionImmunities?.length) { next = { ...next, defenses: { ...next.defenses, conditionImmunities: [...next.defenses.conditionImmunities, ...application.conditionImmunities.map((condition) => `${condition} (${label})`)] } }; notes.push(`상태 면역: ${application.conditionImmunities.join("·")}`); }
     if (application.darkvision) { next = { ...next, senses: { ...next.senses, darkvision: Math.max(next.senses.darkvision ?? 0, application.darkvision) } }; notes.push(`암시야 ${application.darkvision}ft`); }
     notes.push(...(application.notes ?? []));
-    applied.push({ key: effect.key, name: effect.name, applied: true, notes });
+    // R28 (D153): an application that carries nothing but prose is the table's to run, and says so.
+    const mechanical = Object.keys(application).some((field) => field !== "notes" && application[field as keyof typeof application] !== undefined);
+    applied.push({ key: effect.key, name: effect.name, applied: true, notes, ...(mechanical ? {} : { narrative: true }) });
   }
   return { ...next, activeEffects: applied };
 }
