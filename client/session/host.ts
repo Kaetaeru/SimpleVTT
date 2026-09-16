@@ -16,7 +16,7 @@ import { advanceTurn, emptyTracker, newTurn, withoutToken, withTurn } from "../c
 import { advanceRound, ageEffects, endEffect, noteLog, recordDeathSave, wakeUp } from "../character/play";
 import type { CharacterRuntime } from "../character/runtime";
 import type { ActiveEffect } from "../character/types";
-import { npcAttackSpec, npcCombatant, npcSaveExec } from "../rules/attackSpec";
+import { npcAttackSpec, npcCombatant, npcSaveExec, regenerationOf } from "../rules/attackSpec";
 import type { AttackOverrides, AttackResolution, AttackSpec, Combatant } from "../rules/resolve";
 import { describeResolution, diceFrom, resolveAttack } from "../rules/resolve";
 import type { ActorRef, AttackRef, AttackRiders } from "./protocol";
@@ -1842,6 +1842,14 @@ export class TableHost {
       }
     } else if (started?.kind === "npc") {
       let runtime = { ...started.runtime, legendaryUsed: 0, spent: { ...started.runtime.spent } };
+      // R31 (D162): 재생 — hit points back at the start of its turn, while it still has any. The sentence that
+      // switches it off (fire, acid, …) is the table's call, so the line says so and the DM can adjust the bar.
+      const regen = regenerationOf(started.statBlock);
+      if (regen && runtime.hp.current > 0 && runtime.hp.current < runtime.hp.max) {
+        const healed = Math.min(regen.amount, runtime.hp.max - runtime.hp.current);
+        runtime = { ...runtime, hp: { ...runtime.hp, current: runtime.hp.current + healed } };
+        this.say({ type: "system", who: "", content: `${started.name}: 재생 +${healed} → HP ${runtime.hp.current}/${runtime.hp.max} (막는 피해를 받았다면 DM이 되돌리세요)` });
+      }
       for (const action of [...started.statBlock.actions, ...started.statBlock.bonusActions, ...started.statBlock.legendaryActions]) {
         const recharge = action.timing?.recharge;
         if (!recharge || !runtime.spent[action.name]) continue;

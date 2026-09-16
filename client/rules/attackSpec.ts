@@ -10,7 +10,7 @@ import { deriveCharacter } from "../character/derive";
 import type { CharacterRuntime } from "../character/runtime";
 import { useSpellSlot } from "../character/play";
 import type { DerivedAttack, DerivedCharacter } from "../character/types";
-import type { MonsterAction } from "../compendium/monsters";
+import type { MonsterAction, MonsterView } from "../compendium/monsters";
 import { damageFormula } from "../compendium/monsters";
 import type { AttackRiders } from "../session/protocol";
 import type { AttackSpec, Combatant, DamagePart } from "./resolve";
@@ -33,6 +33,18 @@ export function pcCombatant(entry: JournalCharacter, derived: DerivedCharacter):
 
 export const pcConcentrationKey = (entry: JournalCharacter) => (entry.runtime.effects ?? []).find((effect) => effect.concentration)?.key;
 
+/**
+ * R31 (D162): 재생 — "regains N hit points at the start of its turn". The number is in the trait's own text, so the
+ * host can heal it at the turn start and say so; the clause that switches it off (fire, acid …) is the table's.
+ */
+export function regenerationOf(block: MonsterView): { amount: number; note: string } | undefined {
+  const trait = block.traits.find((item) => /재생|Regeneration/i.test(item.nameEn ?? item.name));
+  if (!trait) return undefined;
+  const match = /(\d+)\s*(?:\(|점|히트|hit)/.exec(trait.text) ?? /(\d+)/.exec(trait.text);
+  const amount = match ? Number(match[1]) : 0;
+  return amount > 0 ? { amount, note: trait.text } : undefined;
+}
+
 /** An NPC through its token (unlinked bar = the token's own HP, D78) or its sheet. */
 export function npcCombatant(entry: JournalNpc, token?: Token): Combatant {
   const block = entry.statBlock;
@@ -42,6 +54,9 @@ export function npcCombatant(entry: JournalNpc, token?: Token): Combatant {
   const markers = token?.markers.map((marker) => marker.name) ?? [];
   return {
     id: entry.id, name: token?.name ?? entry.name, kind: "npc", ac: block.ac, hp,
+    // R31 (D161): 마법 저항 is on 34 stat blocks and nothing read it — the resolver knows now.
+    magicResistance: block.traits.some((trait) => /마법 저항|Magic Resistance/i.test(trait.nameEn ?? trait.name)),
+    regeneration: regenerationOf(block),
     conditions: [...new Set([...entry.runtime.conditions, ...markers])], defenses: { resistances: block.damageResistances, immunities: block.damageImmunities, vulnerabilities: block.damageVulnerabilities, conditionImmunities: block.conditionImmunities },
     // R30 (D157): what the monster is under reaches the resolver, the way a character's effects always have.
     conSave: block.saves.con, effects: (entry.runtime.effects ?? []).map((effect) => effect.name),
@@ -90,7 +105,7 @@ export function pcAttackSpec(entry: JournalCharacter, derived: DerivedCharacter,
 }
 
 export function npcAttackSpec(entry: JournalNpc, actionName: string): AttackSpec | null {
-  const action: MonsterAction | undefined = [...entry.statBlock.actions, ...entry.statBlock.bonusActions, ...entry.statBlock.legendaryActions, ...entry.statBlock.reactions].find((item) => item.name === actionName);
+  const action: MonsterAction | undefined = [...entry.statBlock.actions, ...entry.statBlock.bonusActions, ...entry.statBlock.legendaryActions, ...entry.statBlock.reactions, ...entry.statBlock.traits].find((item) => item.name === actionName);
   if (!action || action.kind !== "attack" || !action.attack) return null;
   const attack = action.attack;
   return { name: action.name, source: "npc", attackBonus: attack.bonus, mode: attack.mode === "ranged" ? "ranged" : "melee", damage: attack.damage.map((part) => ({ formula: damageFormula(part), type: part.type, label: action.name })), inflicts: attack.riderConditions ?? [] };
@@ -105,7 +120,10 @@ export const derivedOf = (entry: JournalCharacter, catalog: ContentCatalog) => d
  */
 export function npcSaveExec(entry: JournalNpc, actionName: string): { spec: SpellCastSpec; casterStats: CasterStats; action: MonsterAction } | null {
   const block = entry.statBlock;
-  const action = [...block.actions, ...block.legendaryActions, ...block.bonusActions, ...block.reactions].find((item) => item.name === actionName);
+  // R31 (D160): traits were left out of this lookup, so eleven stat-block traits whose save is fully parsed —
+  // 사체 폭발, 악취, 공포 오라, 끔찍한 모습, 죽음의 고통, 횡설수설 — had a DC, an ability, damage and conditions that
+  // no code could ever fire. They resolve like any other save action now.
+  const action = [...block.actions, ...block.legendaryActions, ...block.bonusActions, ...block.reactions, ...block.traits].find((item) => item.name === actionName);
   if (!action || action.kind !== "save" || !action.save) return null;
   const save = action.save;
   const parts = (save.failDamage ?? []).map((part) => ({ damageType: part.type, dice: { count: part.count, sides: part.sides, ...(part.flat ? { flat: part.flat } : {}) } }));

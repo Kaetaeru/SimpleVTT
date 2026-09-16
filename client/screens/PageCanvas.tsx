@@ -257,7 +257,7 @@ function PlaceCharacterBridge({ onPlace, onPlaceToken, onTargets }: { onPlace: (
 
 
 /** ⚔: pick targets (range dims tokens on a grid, never on a scene), the pre-roll dialog (riders; the DM's 유리/불리·엄폐·반드시 — D95), then the host resolves (§12.2). Shared by the action bar and the turn panel. */
-function makeAttackWith({ c, token, page, entry, derived, isGm, readied }: { c: ReturnType<typeof useCampaigns>; token: Token; page: Page; entry: JournalEntry; derived: ReturnType<typeof deriveCharacter> | null; isGm: boolean; /** R9: the attack is the readied action going off (a reaction). */ readied?: boolean }) {
+function makeAttackWith({ c, token, page, entry, derived, isGm, readied, journal }: { c: ReturnType<typeof useCampaigns>; token: Token; page: Page; entry: JournalEntry; derived: ReturnType<typeof deriveCharacter> | null; isGm: boolean; journal: JournalEntry[]; /** R9: the attack is the readied action going off (a reaction). */ readied?: boolean }) {
   return async (ref: AttackRef, options: { targets?: string[]; overrides?: AttackOverrides } = {}) => {
     const name = ref.source === "weapon" && derived ? derived.attacks.find((item) => item.id === ref.attackId)!.name : ref.source === "npc" ? ref.actionName : "공격";
     const targets = options.targets ?? await requestTargets(`${name} — 대상을 클릭하세요${readied ? " (준비한 행동)" : ""}`, { multi: true, exclude: token.id });
@@ -271,7 +271,12 @@ function makeAttackWith({ c, token, page, entry, derived, isGm, readied }: { c: 
     }
     let answer: AttackAnswer | null | undefined;
     if (options.overrides) answer = { overrides: options.overrides };
-    else if (isGm || sneak || slots.length) { answer = await requestAttackOptions({ name, sneak, slots, gm: isGm }); if (answer === null) return; }
+    // R31 (D164): 무리 전술, 태양광 과민성 and the like turn on where people are standing, which a scene without
+    // positions cannot know. They are not silently dropped any more — the dialog names them where the DM chooses.
+    const hit = targets.map((id) => page.tokens.find((item) => item.id === id)?.represents).filter((id): id is string => Boolean(id));
+    const situational = situationalTraits(entry, hit.map((id) => journal.find((candidate) => candidate.id === id)).filter((found): found is JournalEntry => Boolean(found)));
+    if (options.overrides) answer = { overrides: options.overrides };
+    else if (isGm || sneak || slots.length || situational.length) { answer = await requestAttackOptions({ name, sneak, slots, gm: isGm, notes: situational }); if (answer === null) return; }
     c.attack({ entryId: entry.id, pageId: page.id, tokenId: token.id }, targets.map((id) => ({ pageId: page.id, tokenId: id })), ref, answer?.riders, { overrides: answer?.overrides, readied });
   };
 }
@@ -401,7 +406,7 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
   const myRow = tracker.turns.find((item) => item.tokenId === token.id && item.pageId === page.id);
   // R9: a readied action (⏳) may go off out of turn as the reaction — attacks and spells come back on for that.
   const readiedNow = mode === "free" && inCombat && conditions.has("준비") && !myRow?.reactionUsed && !blocked;
-  const attackWith = makeAttackWith({ c, token, page, entry, derived, isGm, readied: readiedNow });
+  const attackWith = makeAttackWith({ c, token, page, entry, derived, isGm, readied: readiedNow, journal: snapshot.journal });
   // Out of turn during combat a player may only roll checks and read the sheet; the DM may do anything.
   const off = Boolean(blocked) || (mode === "free" && inCombat && !isGm);
   const offAttack = off && !readiedNow;
@@ -561,7 +566,9 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
     let at = 0;
     for (const step of routine) for (let n = 0; n < step.count; n += 1) { await attackWith({ source: "npc", actionName: step.name }, { targets: [picked[at % picked.length]], overrides: overrides ?? {} }); at += 1; }
   };
-  const saveActions = block?.actions.filter((action) => action.kind === "save" && action.save) ?? [];
+  // R31 (D160): a trait whose save is fully parsed (사체 폭발, 악취, 공포 오라 …) gets the same ☄ button its
+  // action-shaped cousins have — the data was complete and nothing could fire it.
+  const saveActions = [...(block?.actions ?? []), ...(block?.traits ?? [])].filter((action) => action.kind === "save" && action.save);
   const npcSaveWith = async (actionName: string, legendary = false) => {
     const picked = await requestTargets(`${actionName} — 범위 안의 대상을 클릭하세요 (여러 명)`, { multi: true, exclude: token.id });
     if (!picked.length) return;
@@ -623,10 +630,31 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
  * player controls. One row: the sheet's attacks and unarmed options, then menus for the 2024 action list, checks,
  * features, items and bonus actions (D97, D98). The economy chips only inform.
  */
-interface AttackAsk { name: string; sneak: boolean; slots: Array<{ level: number; free: number }>; gm: boolean; resolve: (answer: AttackAnswer | null) => void }
+interface AttackAsk { name: string; sneak: boolean; slots: Array<{ level: number; free: number }>; gm: boolean; /** R31 (D164): stat-block lines that could change this roll but depend on where everyone is standing. */ notes?: string[]; resolve: (answer: AttackAnswer | null) => void }
 export interface AttackAnswer { riders?: AttackRiders; overrides?: AttackOverrides }
 const attackAskListeners = new Set<(ask: AttackAsk) => void>();
 export const requestAttackOptions = (ask: Omit<AttackAsk, "resolve">) => new Promise<AttackAnswer | null>((resolve) => { if (!attackAskListeners.size) { resolve({}); return; } for (const listener of [...attackAskListeners]) listener({ ...ask, resolve }); });
+/**
+ * R31 (D164): the stat-block traits that would change this attack roll if the table knew where everyone stood.
+ * A scene has no positions (D109), so the app cannot decide them — it names them next to the 유리·불리 buttons
+ * instead of pretending they do not exist.
+ */
+const SITUATIONAL: Array<[RegExp, "attacker" | "target", string]> = [
+  [/무리 전술|Pack Tactics/i, "attacker", "무리 전술 — 동료가 대상에게 붙어 있으면 유리"],
+  [/태양광 과민성|Sunlight Sensitivity/i, "attacker", "태양광 과민성 — 햇빛 아래라면 불리"],
+  [/태양광 과민성|Sunlight Sensitivity/i, "target", "대상이 태양광 과민성 — 햇빛 아래라면 대상의 판정이 불리"],
+  [/은폐|투명|Invisib/i, "target", "대상이 보이지 않는다면 불리"],
+];
+function situationalTraits(attacker: JournalEntry, targets: JournalEntry[]): string[] {
+  const notes: string[] = [];
+  const traitsOf = (entry: JournalEntry) => (entry.kind === "npc" ? entry.statBlock.traits : []);
+  for (const [pattern, side, text] of SITUATIONAL) {
+    const pool = side === "attacker" ? traitsOf(attacker) : targets.flatMap(traitsOf);
+    if (pool.some((trait) => pattern.test(trait.nameEn ?? trait.name)) && !notes.includes(text)) notes.push(text);
+  }
+  return notes;
+}
+
 function AttackAskBridge() {
   const [ask, setAsk] = useState<AttackAsk | null>(null);
   useEffect(() => { attackAskListeners.add(setAsk); return () => { attackAskListeners.delete(setAsk); }; }, []);
@@ -665,6 +693,7 @@ function AttackDialog({ ask, onDone }: { ask: AttackAsk; onDone: (answer: Attack
       ) : null}
       {ask.sneak ? <label className="cl-row cl-small" style={{ gap: 6 }}><input type="checkbox" checked={sneak} onChange={(event) => setSneak(event.target.checked)} /> 암습 (유리하거나 아군이 대상 옆에 있을 때, 턴당 한 번)</label> : null}
       {ask.slots.length ? <div className="cl-field"><label>신성한 강타 (적중 시 슬롯 소비, 2d8 + 슬롯 레벨당 1d8 광휘)</label><select className="cl-select" aria-label="강타 슬롯" value={slot} onChange={(event) => setSlot(Number(event.target.value))}><option value={0}>안 씀</option>{ask.slots.map((item) => <option key={item.level} value={item.level}>{item.level}레벨 슬롯 ({item.free} 남음)</option>)}</select></div> : null}
+      {ask.notes?.length ? <div className="cl-field"><label>자리에 따라 (표에서 판단)</label><ul className="cl-quiet cl-small" style={{ margin: 0, paddingLeft: 18 }}>{ask.notes.map((note) => <li key={note}>{note}</li>)}</ul></div> : null}
       <p className="cl-quiet cl-small">진행 중인 효과의 추가 주사위(격노·사냥꾼의 표식 등)는 저절로 붙습니다. 판정 뒤에도 DM 팔레트로 고칠 수 있습니다.</p>
     </RiderModal>
   );

@@ -46,6 +46,10 @@ export interface Combatant {
    * throws). It was stored, set, decremented by a long rest and shown on the sheet, and read by no roll anywhere.
    */
   exhaustion?: number;
+  /** R31 (D161): 마법 저항 — advantage on saving throws against spells and other magical effects. */
+  magicResistance?: boolean;
+  /** R31 (D162): 재생 — hit points regained at the start of its turn, and the sentence that qualifies it. */
+  regeneration?: { amount: number; note: string };
   /** The token on the board, when there is one. */
   tokenId?: string;
   /** Token id of whoever holds this creature in a grapple (2024: attacks against anyone else are at disadvantage). */
