@@ -51,6 +51,10 @@ export interface EffectApplication {
   grantsAdvantage?: string[];
   /** R55 (D190): this character's attacks ignore half and three-quarters cover. */
   ignoresCover?: boolean;
+  /** R56 (D191): armour and weapon training a feat hands out, and skills it makes expert. */
+  armorTraining?: string[];
+  weaponTraining?: string[];
+  expertise?: string[];
   /** What the rule cannot put in a number (advantage, extra action, immunities). */
   notes?: string[];
   /** Applied once when the effect starts (Aid: +5 current HP with the +5 maximum). */
@@ -252,6 +256,23 @@ export function applyActiveEffects(derived: DerivedCharacter, effects: ActiveEff
       notes.push(`이 캐릭터를 향한 공격 유리 (${named.join(", ")})`);
     }
     if (application.ignoresCover) { next = { ...next, ignoresCover: true }; notes.push("엄폐 무시"); }
+    // R56 (D191): training and expertise land on the sheet's own lists, with the proficiency bonus doubled where
+    // expertise says so — the same arithmetic the derivation does, applied after it.
+    for (const [key, values, label2] of [["armor", application.armorTraining, "방어구 훈련"], ["weapons", application.weaponTraining, "무기 숙련"]] as Array<["armor" | "weapons", string[] | undefined, string]>) {
+      const fresh = (values ?? []).filter((item) => item && !next.proficiencies[key].includes(item));
+      if (!fresh.length) continue;
+      next = { ...next, proficiencies: { ...next.proficiencies, [key]: [...next.proficiencies[key], ...fresh] } };
+      notes.push(`${label2}: ${fresh.join("·")}`);
+    }
+    if (application.expertise?.length) {
+      const wanted = new Set(application.expertise);
+      next = { ...next, skills: next.skills.map((skill) => {
+        if (!wanted.has(skill.id) || skill.expertise || !skill.proficient) return skill;
+        const extra: Term = { label: `${label} (전문화)`, value: next.proficiencyBonus };
+        return { ...skill, expertise: true, terms: [...skill.terms, extra], bonus: skill.bonus + next.proficiencyBonus };
+      }) };
+      notes.push(`전문화: ${application.expertise.join("·")}`);
+    }
     if (application.ignoresResistance?.length) {
       next = { ...next, ignoresResistance: [...new Set([...(next.ignoresResistance ?? []), ...application.ignoresResistance])] };
       notes.push(`${application.ignoresResistance.join("·")} 저항 무시`);

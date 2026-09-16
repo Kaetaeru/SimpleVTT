@@ -45,6 +45,8 @@ export const PROPERTIES = [
   "damage-taken.reduce", "damage.ignore-resistance",
   // R55 (D190): the three that decide a roll rather than a number.
   "attack-roll.advantage", "attack-roll.against-me.advantage", "attack-roll.ignore-cover",
+  // R56 (D191): training a feat hands out. The sheet shows it; nothing else in this engine gates on it yet.
+  "proficiency.armor", "proficiency.weapon", "skill.<id>.expertise",
 ] as const;
 
 const number = (operation: Extract<ContractOperation, { kind: "property.modify" }>, scope: Scope) => {
@@ -78,6 +80,9 @@ export function contractEffect(contract: CommonPlayContract, scope: Scope): { ap
     // `skill.<id>.bonus` names its skill in the property itself, so it never needs an attack filter.
     const skill = /^skill\.([a-z-]+)\.bonus$/.exec(operation.property);
     if (skill) { application.skills = [...(application.skills ?? []), { id: skill[1], value: number(operation, scope) ?? 0 }]; continue; }
+    // R56 (D191): expertise doubles the proficiency bonus on one skill, so it names the skill the same way.
+    const expertise = /^skill\.([a-z-]+)\.expertise$/.exec(operation.property);
+    if (expertise) { application.expertise = [...(application.expertise ?? []), expertise[1]]; continue; }
     const filter = operation.scope ? SCOPES[operation.scope] : undefined;
     if (operation.scope && !filter) { unknown.push(`scope ${operation.scope}`); continue; }
     switch (operation.property) {
@@ -108,6 +113,9 @@ export function contractEffect(contract: CommonPlayContract, scope: Scope): { ap
       case "attack-roll.advantage": application.advantageOn = [...(application.advantageOn ?? []), { reason: operation.note ?? "", ...(operation.scope ? { scope: operation.scope } : {}) }]; break;
       case "attack-roll.against-me.advantage": application.grantsAdvantage = [...(application.grantsAdvantage ?? []), operation.note ?? ""]; break;
       case "attack-roll.ignore-cover": application.ignoresCover = true; break;
+      // R56 (D191): 중갑 훈련, 군용 무기 훈련 and their kin — the sheet's proficiency lists gain a line.
+      case "proficiency.armor": application.armorTraining = [...(application.armorTraining ?? []), text(operation, scope) ?? ""]; break;
+      case "proficiency.weapon": application.weaponTraining = [...(application.weaponTraining ?? []), text(operation, scope) ?? ""]; break;
       case "damage.ignore-resistance": application.ignoresResistance = [...(application.ignoresResistance ?? []), text(operation, scope) ?? ""]; break;
       case "attack-roll.crit-range": application.critRange = Math.min(application.critRange ?? 20, number(operation, scope) ?? 20); break;
       case "resistance": application.resistances = [...(application.resistances ?? []), text(operation, scope) ?? ""]; break;

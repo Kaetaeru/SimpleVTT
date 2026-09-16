@@ -1,0 +1,2821 @@
+{
+ "$schema": "https://simplevtt.local/schemas/rule-module.schema.json",
+ "schemaVersion": "0.1-draft",
+ "moduleId": "phb-2024.feat-common-play",
+ "moduleVersion": "0.1-draft",
+ "rulesProfile": {
+  "id": "dnd.srd-5.2.1",
+  "version": "0.1-draft"
+ },
+ "defaultLocale": "ko-KR",
+ "source": {
+  "document": "Player's Handbook",
+  "version": "2024",
+  "license": "not-srd",
+  "srdDerived": false
+ },
+ "dependencies": [
+  {
+   "moduleId": "phb-2024-supplement",
+   "version": "1"
+  }
+ ],
+ "conflicts": [],
+ "capabilities": [
+  "dnd.effect.property-modify.v1"
+ ],
+ "extensionPoints": [],
+ "content": [
+  {
+   "id": "effect.feat.phb2024.actor",
+   "category": "option",
+   "presentation": {
+    "originalName": "배우",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "배우",
+      "summary": "PHB 2024 재주의 규칙 계약"
+     }
+    }
+   },
+   "tags": [
+    "feat",
+    "common-play",
+    "phb-2024"
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "feat:actor",
+      "entryPoints": [
+       {
+        "id": "rule",
+        "invocation": "manual",
+        "operations": [
+         {
+          "kind": "adjudication.request",
+          "question": "변장한 동안 그 인물이라고 납득시키는 매력(기만·공연) 판정에 유리 — 굴릴 때 선언"
+         },
+         {
+          "kind": "adjudication.request",
+          "question": "소리 흉내: 듣는 쪽이 DC 8 + 매력 + 숙련의 지혜(통찰)로 간파"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "effect.feat.phb2024.athlete",
+   "category": "option",
+   "presentation": {
+    "originalName": "운동선수",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "운동선수",
+      "summary": "PHB 2024 재주의 규칙 계약"
+     }
+    }
+   },
+   "tags": [
+    "feat",
+    "common-play",
+    "phb-2024"
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "feat:athlete",
+      "entryPoints": [
+       {
+        "id": "rule",
+        "invocation": "manual",
+        "operations": [
+         {
+          "kind": "property.modify",
+          "property": "speed.climb",
+          "operation": "add",
+          "value": 0,
+          "note": "이동 속도와 같은 등반 속도"
+         },
+         {
+          "kind": "adjudication.request",
+          "question": "엎드림에서 5피트 이동만으로 일어섬"
+         },
+         {
+          "kind": "adjudication.request",
+          "question": "5피트만 이동한 뒤에도 도움닫기 도약"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "effect.feat.phb2024.blind-fighting",
+   "category": "option",
+   "presentation": {
+    "originalName": "맹목 전투",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "맹목 전투",
+      "summary": "PHB 2024 재주의 규칙 계약"
+     }
+    }
+   },
+   "tags": [
+    "feat",
+    "common-play",
+    "phb-2024"
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "feat:blind-fighting",
+      "entryPoints": [
+       {
+        "id": "rule",
+        "invocation": "manual",
+        "operations": [
+         {
+          "kind": "property.modify",
+          "property": "senses.blindsight",
+          "operation": "add",
+          "value": 10
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "effect.feat.phb2024.charger",
+   "category": "option",
+   "presentation": {
+    "originalName": "돌격자",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "돌격자",
+      "summary": "PHB 2024 재주의 규칙 계약"
+     }
+    }
+   },
+   "tags": [
+    "feat",
+    "common-play",
+    "phb-2024"
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "feat:charger",
+      "entryPoints": [
+       {
+        "id": "rule",
+        "invocation": "manual",
+        "operations": [
+         {
+          "kind": "adjudication.request",
+          "question": "질주 행동 동안 이동 속도 +10"
+         }
+        ]
+       },
+       {
+        "id": "declare",
+        "invocation": "pre-roll-attack",
+        "attack": {
+         "oncePerTurn": true,
+         "requiresEffects": [],
+         "scope": "melee"
+        },
+        "operations": [
+         {
+          "kind": "damage.apply",
+          "dice": "1d8",
+          "damageType": "weapon",
+          "target": "attack-target"
+         },
+         {
+          "kind": "adjudication.request",
+          "question": "대상을 향해 직선으로 10피트 이상 이동했을 때 — 대신 10피트 밀기를 골라도 됩니다"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "effect.feat.phb2024.chef",
+   "category": "option",
+   "presentation": {
+    "originalName": "요리사",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "요리사",
+      "summary": "PHB 2024 재주의 규칙 계약"
+     }
+    }
+   },
+   "tags": [
+    "feat",
+    "common-play",
+    "phb-2024"
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "feat:chef",
+      "entryPoints": [
+       {
+        "id": "rule",
+        "invocation": "manual",
+        "operations": [
+         {
+          "kind": "adjudication.request",
+          "question": "짧은 휴식에 4 + 숙련 보너스 명분의 음식 — 먹고 히트 다이스를 쓰면 1d8 추가 회복"
+         },
+         {
+          "kind": "adjudication.request",
+          "question": "긴 휴식·1시간 작업에 숙련 보너스만큼의 간식 (추가 행동으로 먹고 임시 HP 숙련 보너스)"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "effect.feat.phb2024.crafter",
+   "category": "option",
+   "presentation": {
+    "originalName": "제작자",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "제작자",
+      "summary": "PHB 2024 재주의 규칙 계약"
+     }
+    }
+   },
+   "tags": [
+    "feat",
+    "common-play",
+    "phb-2024"
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "feat:crafter",
+      "entryPoints": [
+       {
+        "id": "rule",
+        "invocation": "manual",
+        "operations": [
+         {
+          "kind": "adjudication.request",
+          "question": "도구 숙련과 할인은 만들기·장보기에서"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "effect.feat.phb2024.crossbow-expert",
+   "category": "option",
+   "presentation": {
+    "originalName": "쇠뇌 전문가",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "쇠뇌 전문가",
+      "summary": "PHB 2024 재주의 규칙 계약"
+     }
+    }
+   },
+   "tags": [
+    "feat",
+    "common-play",
+    "phb-2024"
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "feat:crossbow-expert",
+      "entryPoints": [
+       {
+        "id": "rule",
+        "invocation": "manual",
+        "operations": [
+         {
+          "kind": "adjudication.request",
+          "question": "쇠뇌의 장전 속성 무시"
+         },
+         {
+          "kind": "adjudication.request",
+          "question": "적에게 붙어 있어도 쇠뇌 공격에 불리 없음"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "effect.feat.phb2024.crusher",
+   "category": "option",
+   "presentation": {
+    "originalName": "분쇄자",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "분쇄자",
+      "summary": "PHB 2024 재주의 규칙 계약"
+     }
+    }
+   },
+   "tags": [
+    "feat",
+    "common-play",
+    "phb-2024"
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "feat:crusher",
+      "interceptors": [
+       {
+        "id": "after-hit",
+        "timing": "attack.resolved",
+        "slot": "attack.outcome",
+        "outcomes": [
+         "hit"
+        ],
+        "scope": "bludgeoning",
+        "operations": [
+         {
+          "kind": "adjudication.request",
+          "question": "타격 피해를 준 공격으로 대상을 5피트 빈 공간으로 (턴당 한 번)"
+         }
+        ]
+       },
+       {
+        "id": "after-crit",
+        "timing": "attack.resolved",
+        "slot": "attack.outcome",
+        "outcomes": [
+         "crit"
+        ],
+        "scope": "bludgeoning",
+        "operations": [
+         {
+          "kind": "condition.apply",
+          "condition": "교란",
+          "target": "target"
+         },
+         {
+          "kind": "adjudication.request",
+          "question": "다음 자기 턴 시작까지 이 대상에게 유리"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "effect.feat.phb2024.defensive-duelist",
+   "category": "option",
+   "presentation": {
+    "originalName": "방어적 결투가",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "방어적 결투가",
+      "summary": "PHB 2024 재주의 규칙 계약"
+     }
+    }
+   },
+   "tags": [
+    "feat",
+    "common-play",
+    "phb-2024"
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "feat:defensive-duelist",
+      "interceptors": [
+       {
+        "id": "guard",
+        "timing": "reaction.window",
+        "slot": "reaction",
+        "trigger": "attack.hit-self",
+        "interaction": {
+         "id": "use",
+         "kind": "choice",
+         "responder": "actor-owner",
+         "mode": "blocking",
+         "input": {
+          "type": "boolean"
+         },
+         "revalidate": "if-revision-changed",
+         "stalePolicy": "reject"
+        },
+        "operations": [
+         {
+          "kind": "property.modify",
+          "property": "ac.bonus",
+          "operation": "add",
+          "value": {
+           "ref": "proficiency.bonus"
+          }
+         },
+         {
+          "kind": "adjudication.request",
+          "question": "기교 무기를 들고 근접 공격에 맞았을 때만"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "effect.feat.phb2024.dual-wielder",
+   "category": "option",
+   "presentation": {
+    "originalName": "쌍수 사용자",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "쌍수 사용자",
+      "summary": "PHB 2024 재주의 규칙 계약"
+     }
+    }
+   },
+   "tags": [
+    "feat",
+    "common-play",
+    "phb-2024"
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "feat:dual-wielder",
+      "entryPoints": [
+       {
+        "id": "rule",
+        "invocation": "manual",
+        "operations": [
+         {
+          "kind": "adjudication.request",
+          "question": "공격 행동 뒤 추가 행동으로 다른 무기 한 번 (양손 아님, 수정치가 음수가 아니면 피해에 능력 수정치)"
+         },
+         {
+          "kind": "adjudication.request",
+          "question": "무기 두 개를 한 번에 뽑거나 집어넣음"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "effect.feat.phb2024.dueling",
+   "category": "option",
+   "presentation": {
+    "originalName": "결투",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "결투",
+      "summary": "PHB 2024 재주의 규칙 계약"
+     }
+    }
+   },
+   "tags": [
+    "feat",
+    "common-play",
+    "phb-2024"
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "feat:dueling",
+      "entryPoints": [
+       {
+        "id": "rule",
+        "invocation": "manual",
+        "operations": [
+         {
+          "kind": "property.modify",
+          "property": "damage.bonus",
+          "operation": "add",
+          "value": 2,
+          "scope": "one-handed-melee",
+          "note": "다른 무기를 들지 않은 동안"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "effect.feat.phb2024.durable",
+   "category": "option",
+   "presentation": {
+    "originalName": "튼튼함",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "튼튼함",
+      "summary": "PHB 2024 재주의 규칙 계약"
+     }
+    }
+   },
+   "tags": [
+    "feat",
+    "common-play",
+    "phb-2024"
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "feat:durable",
+      "entryPoints": [
+       {
+        "id": "rule",
+        "invocation": "manual",
+        "operations": [
+         {
+          "kind": "adjudication.request",
+          "question": "죽음 내성 굴림에 유리 — 굴릴 때 선언"
+         },
+         {
+          "kind": "adjudication.request",
+          "question": "추가 행동으로 히트 다이스 하나를 굴려 회복"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "effect.feat.phb2024.elemental-adept",
+   "category": "option",
+   "presentation": {
+    "originalName": "원소 숙련자",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "원소 숙련자",
+      "summary": "PHB 2024 재주의 규칙 계약"
+     }
+    }
+   },
+   "tags": [
+    "feat",
+    "common-play",
+    "phb-2024"
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "feat:elemental-adept",
+      "entryPoints": [
+       {
+        "id": "rule",
+        "invocation": "manual",
+        "operations": [
+         {
+          "kind": "adjudication.request",
+          "question": "고른 피해 유형 하나: 자신의 주문이 그 저항을 무시하고, 그 유형 피해 주사위의 1은 2로"
+         },
+         {
+          "kind": "adjudication.request",
+          "question": "어떤 유형을 골랐는지 시트에 적어 두세요 — 앱은 고름을 기억하지 않습니다"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "effect.feat.phb2024.fey-touched",
+   "category": "option",
+   "presentation": {
+    "originalName": "요정의 손길",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "요정의 손길",
+      "summary": "PHB 2024 재주의 규칙 계약"
+     }
+    }
+   },
+   "tags": [
+    "feat",
+    "common-play",
+    "phb-2024"
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "feat:fey-touched",
+      "entryPoints": [
+       {
+        "id": "rule",
+        "invocation": "manual",
+        "operations": [
+         {
+          "kind": "adjudication.request",
+          "question": "점술·환혹 1레벨 주문 하나와 안개 걸음을 항상 준비, 각각 긴 휴식마다 슬롯 없이 한 번"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "effect.feat.phb2024.great-weapon-master",
+   "category": "option",
+   "presentation": {
+    "originalName": "대형 무기 달인",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "대형 무기 달인",
+      "summary": "PHB 2024 재주의 규칙 계약"
+     }
+    }
+   },
+   "tags": [
+    "feat",
+    "common-play",
+    "phb-2024"
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "feat:great-weapon-master",
+      "entryPoints": [
+       {
+        "id": "declare",
+        "invocation": "pre-roll-attack",
+        "attack": {
+         "oncePerTurn": true,
+         "requiresEffects": [],
+         "scope": "heavy"
+        },
+        "operations": [
+         {
+          "kind": "damage.apply",
+          "amount": {
+           "ref": "proficiency.bonus"
+          },
+          "damageType": "weapon",
+          "target": "attack-target"
+         },
+         {
+          "kind": "adjudication.request",
+          "question": "자신의 턴에 공격 행동의 일부로 중량 무기를 명중시켰을 때"
+         }
+        ]
+       }
+      ],
+      "interceptors": [
+       {
+        "id": "after-crit-downed",
+        "timing": "attack.resolved",
+        "slot": "attack.outcome",
+        "outcomes": [
+         "crit",
+         "downed"
+        ],
+        "scope": "melee",
+        "operations": [
+         {
+          "kind": "economy.modify",
+          "bucket": "bonus-action.extra",
+          "amount": 1
+         },
+         {
+          "kind": "adjudication.request",
+          "question": "같은 무기로 추가 행동 공격 한 번"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "effect.feat.phb2024.healer",
+   "category": "option",
+   "presentation": {
+    "originalName": "치유사",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "치유사",
+      "summary": "PHB 2024 재주의 규칙 계약"
+     }
+    }
+   },
+   "tags": [
+    "feat",
+    "common-play",
+    "phb-2024"
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "feat:healer",
+      "entryPoints": [
+       {
+        "id": "rule",
+        "invocation": "manual",
+        "operations": [
+         {
+          "kind": "adjudication.request",
+          "question": "회복 주사위가 1이면 다시 굴려 새 결과를 씁니다"
+         },
+         {
+          "kind": "adjudication.request",
+          "question": "치유사 가방으로 히트 다이스 하나 + 숙련 보너스만큼 회복 (짧은 휴식마다 한 번)"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "effect.feat.phb2024.heavily-armored",
+   "category": "option",
+   "presentation": {
+    "originalName": "중갑 훈련",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "중갑 훈련",
+      "summary": "PHB 2024 재주의 규칙 계약"
+     }
+    }
+   },
+   "tags": [
+    "feat",
+    "common-play",
+    "phb-2024"
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "feat:heavily-armored",
+      "entryPoints": [
+       {
+        "id": "rule",
+        "invocation": "manual",
+        "operations": [
+         {
+          "kind": "property.modify",
+          "property": "proficiency.armor",
+          "operation": "add",
+          "value": "중갑"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "effect.feat.phb2024.heavy-armor-master",
+   "category": "option",
+   "presentation": {
+    "originalName": "중갑 달인",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "중갑 달인",
+      "summary": "PHB 2024 재주의 규칙 계약"
+     }
+    }
+   },
+   "tags": [
+    "feat",
+    "common-play",
+    "phb-2024"
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "feat:heavy-armor-master",
+      "entryPoints": [
+       {
+        "id": "rule",
+        "invocation": "manual",
+        "operations": [
+         {
+          "kind": "property.modify",
+          "property": "damage-taken.reduce",
+          "operation": "add",
+          "value": {
+           "ref": "proficiency.bonus"
+          },
+          "damageTypes": [
+           "타격",
+           "관통",
+           "참격"
+          ],
+          "when": {
+           "op": "eq",
+           "left": {
+            "ref": "armor.training"
+           },
+           "right": {
+            "value": "heavy"
+           }
+          },
+          "note": "중갑을 입은 동안"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "effect.feat.phb2024.inspiring-leader",
+   "category": "option",
+   "presentation": {
+    "originalName": "고무적인 지도자",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "고무적인 지도자",
+      "summary": "PHB 2024 재주의 규칙 계약"
+     }
+    }
+   },
+   "tags": [
+    "feat",
+    "common-play",
+    "phb-2024"
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "feat:inspiring-leader",
+      "entryPoints": [
+       {
+        "id": "rule",
+        "invocation": "manual",
+        "operations": [
+         {
+          "kind": "adjudication.request",
+          "question": "휴식 끝에 30피트 안 아군 최대 여섯에게 임시 HP (캐릭터 레벨 + 올린 능력치 수정치) — 대상 지정은 표에서"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "effect.feat.phb2024.interception",
+   "category": "option",
+   "presentation": {
+    "originalName": "가로막기",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "가로막기",
+      "summary": "PHB 2024 재주의 규칙 계약"
+     }
+    }
+   },
+   "tags": [
+    "feat",
+    "common-play",
+    "phb-2024"
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "feat:interception",
+      "entryPoints": [
+       {
+        "id": "rule",
+        "invocation": "manual",
+        "operations": [
+         {
+          "kind": "adjudication.request",
+          "question": "5피트 안의 다른 이가 맞았을 때 반응으로 피해 1d10 + 숙련 감소 — 장면에 위치가 없어 표에서 선언합니다"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "effect.feat.phb2024.keen-mind",
+   "category": "option",
+   "presentation": {
+    "originalName": "예리한 정신",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "예리한 정신",
+      "summary": "PHB 2024 재주의 규칙 계약"
+     }
+    }
+   },
+   "tags": [
+    "feat",
+    "common-play",
+    "phb-2024"
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "feat:keen-mind",
+      "entryPoints": [
+       {
+        "id": "rule",
+        "invocation": "manual",
+        "operations": [
+         {
+          "kind": "adjudication.request",
+          "question": "비전학·역사·조사·자연·종교 중 하나에 숙련 또는 전문화 — 만들기·레벨업에서 시트에 반영됩니다"
+         },
+         {
+          "kind": "adjudication.request",
+          "question": "연구 행동을 추가 행동으로"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "effect.feat.phb2024.lightly-armored",
+   "category": "option",
+   "presentation": {
+    "originalName": "경갑 훈련",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "경갑 훈련",
+      "summary": "PHB 2024 재주의 규칙 계약"
+     }
+    }
+   },
+   "tags": [
+    "feat",
+    "common-play",
+    "phb-2024"
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "feat:lightly-armored",
+      "entryPoints": [
+       {
+        "id": "rule",
+        "invocation": "manual",
+        "operations": [
+         {
+          "kind": "property.modify",
+          "property": "proficiency.armor",
+          "operation": "add",
+          "value": "경갑"
+         },
+         {
+          "kind": "property.modify",
+          "property": "proficiency.armor",
+          "operation": "add",
+          "value": "방패"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "effect.feat.phb2024.lucky",
+   "category": "option",
+   "presentation": {
+    "originalName": "행운아",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "행운아",
+      "summary": "PHB 2024 재주의 규칙 계약"
+     }
+    }
+   },
+   "tags": [
+    "feat",
+    "common-play",
+    "phb-2024"
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "feat:lucky",
+      "entryPoints": [
+       {
+        "id": "rule",
+        "invocation": "manual",
+        "operations": [
+         {
+          "kind": "adjudication.request",
+          "question": "행운 점수 (숙련 보너스만큼, 긴 휴식마다 회복) — 유리·불리를 사고 판정을 다시 굴립니다"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "effect.feat.phb2024.mage-slayer",
+   "category": "option",
+   "presentation": {
+    "originalName": "마법사 살해자",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "마법사 살해자",
+      "summary": "PHB 2024 재주의 규칙 계약"
+     }
+    }
+   },
+   "tags": [
+    "feat",
+    "common-play",
+    "phb-2024"
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "feat:mage-slayer",
+      "entryPoints": [
+       {
+        "id": "rule",
+        "invocation": "manual",
+        "operations": [
+         {
+          "kind": "adjudication.request",
+          "question": "집중 중인 대상에게 피해를 주면 그 집중 내성에 불리"
+         },
+         {
+          "kind": "adjudication.request",
+          "question": "지능·지혜·매력 내성에 실패했을 때 대신 성공 (휴식마다 한 번)"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "effect.feat.phb2024.martial-weapon-training",
+   "category": "option",
+   "presentation": {
+    "originalName": "군용 무기 훈련",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "군용 무기 훈련",
+      "summary": "PHB 2024 재주의 규칙 계약"
+     }
+    }
+   },
+   "tags": [
+    "feat",
+    "common-play",
+    "phb-2024"
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "feat:martial-weapon-training",
+      "entryPoints": [
+       {
+        "id": "rule",
+        "invocation": "manual",
+        "operations": [
+         {
+          "kind": "property.modify",
+          "property": "proficiency.weapon",
+          "operation": "add",
+          "value": "군용 무기"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "effect.feat.phb2024.medium-armor-master",
+   "category": "option",
+   "presentation": {
+    "originalName": "평갑 달인",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "평갑 달인",
+      "summary": "PHB 2024 재주의 규칙 계약"
+     }
+    }
+   },
+   "tags": [
+    "feat",
+    "common-play",
+    "phb-2024"
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "feat:medium-armor-master",
+      "entryPoints": [
+       {
+        "id": "rule",
+        "invocation": "manual",
+        "operations": [
+         {
+          "kind": "property.modify",
+          "property": "ac.bonus",
+          "operation": "add",
+          "value": 1,
+          "when": {
+           "op": "all",
+           "args": [
+            {
+             "op": "eq",
+             "left": {
+              "ref": "armor.training"
+             },
+             "right": {
+              "value": "medium"
+             }
+            },
+            {
+             "op": "gte",
+             "left": {
+              "ref": "ability.dex.modifier"
+             },
+             "right": {
+              "value": 3
+             }
+            }
+           ]
+          },
+          "note": "평갑의 민첩 상한이 3"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "effect.feat.phb2024.moderately-armored",
+   "category": "option",
+   "presentation": {
+    "originalName": "평갑 훈련",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "평갑 훈련",
+      "summary": "PHB 2024 재주의 규칙 계약"
+     }
+    }
+   },
+   "tags": [
+    "feat",
+    "common-play",
+    "phb-2024"
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "feat:moderately-armored",
+      "entryPoints": [
+       {
+        "id": "rule",
+        "invocation": "manual",
+        "operations": [
+         {
+          "kind": "property.modify",
+          "property": "proficiency.armor",
+          "operation": "add",
+          "value": "평갑"
+         },
+         {
+          "kind": "property.modify",
+          "property": "proficiency.armor",
+          "operation": "add",
+          "value": "방패"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "effect.feat.phb2024.mounted-combatant",
+   "category": "option",
+   "presentation": {
+    "originalName": "기마 전투원",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "기마 전투원",
+      "summary": "PHB 2024 재주의 규칙 계약"
+     }
+    }
+   },
+   "tags": [
+    "feat",
+    "common-play",
+    "phb-2024"
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "feat:mounted-combatant",
+      "entryPoints": [
+       {
+        "id": "rule",
+        "invocation": "manual",
+        "operations": [
+         {
+          "kind": "adjudication.request",
+          "question": "탈것 규칙은 앱이 다루지 않습니다 — 기마 타격·비켜서기·진로 변경은 표에서"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "effect.feat.phb2024.musician",
+   "category": "option",
+   "presentation": {
+    "originalName": "음악가",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "음악가",
+      "summary": "PHB 2024 재주의 규칙 계약"
+     }
+    }
+   },
+   "tags": [
+    "feat",
+    "common-play",
+    "phb-2024"
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "feat:musician",
+      "entryPoints": [
+       {
+        "id": "rule",
+        "invocation": "manual",
+        "operations": [
+         {
+          "kind": "adjudication.request",
+          "question": "휴식 끝에 숙련 보너스만큼의 아군에게 영웅적 영감"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "effect.feat.phb2024.observant",
+   "category": "option",
+   "presentation": {
+    "originalName": "관찰력",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "관찰력",
+      "summary": "PHB 2024 재주의 규칙 계약"
+     }
+    }
+   },
+   "tags": [
+    "feat",
+    "common-play",
+    "phb-2024"
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "feat:observant",
+      "entryPoints": [
+       {
+        "id": "rule",
+        "invocation": "manual",
+        "operations": [
+         {
+          "kind": "adjudication.request",
+          "question": "통찰·조사·지각 중 하나에 숙련 또는 전문화"
+         },
+         {
+          "kind": "adjudication.request",
+          "question": "수색 행동을 추가 행동으로"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "effect.feat.phb2024.piercer",
+   "category": "option",
+   "presentation": {
+    "originalName": "관통자",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "관통자",
+      "summary": "PHB 2024 재주의 규칙 계약"
+     }
+    }
+   },
+   "tags": [
+    "feat",
+    "common-play",
+    "phb-2024"
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "feat:piercer",
+      "interceptors": [
+       {
+        "id": "after-hit",
+        "timing": "attack.resolved",
+        "slot": "attack.outcome",
+        "outcomes": [
+         "hit"
+        ],
+        "scope": "piercing",
+        "operations": [
+         {
+          "kind": "adjudication.request",
+          "question": "관통 피해 주사위 하나를 다시 굴려 새 결과를 씁니다 (턴당 한 번)"
+         }
+        ]
+       },
+       {
+        "id": "after-crit",
+        "timing": "attack.resolved",
+        "slot": "attack.outcome",
+        "outcomes": [
+         "crit"
+        ],
+        "scope": "piercing",
+        "operations": [
+         {
+          "kind": "adjudication.request",
+          "question": "피해 주사위 하나를 더 굴려 더합니다"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "effect.feat.phb2024.poisoner",
+   "category": "option",
+   "presentation": {
+    "originalName": "독 제조자",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "독 제조자",
+      "summary": "PHB 2024 재주의 규칙 계약"
+     }
+    }
+   },
+   "tags": [
+    "feat",
+    "common-play",
+    "phb-2024"
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "feat:poisoner",
+      "entryPoints": [
+       {
+        "id": "rule",
+        "invocation": "manual",
+        "operations": [
+         {
+          "kind": "property.modify",
+          "property": "damage.ignore-resistance",
+          "operation": "add",
+          "value": "독"
+         },
+         {
+          "kind": "adjudication.request",
+          "question": "독 제조 도구로 약량을 만들고 추가 행동으로 바릅니다 (DC 8 + 숙련 + 민첩)"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "effect.feat.phb2024.polearm-master",
+   "category": "option",
+   "presentation": {
+    "originalName": "장병기 달인",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "장병기 달인",
+      "summary": "PHB 2024 재주의 규칙 계약"
+     }
+    }
+   },
+   "tags": [
+    "feat",
+    "common-play",
+    "phb-2024"
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "feat:polearm-master",
+      "entryPoints": [
+       {
+        "id": "rule",
+        "invocation": "manual",
+        "operations": [
+         {
+          "kind": "adjudication.request",
+          "question": "육척봉·창·중량+장거리 무기로 공격한 뒤 추가 행동으로 자루 끝 근접 공격 (d4 타격)"
+         },
+         {
+          "kind": "adjudication.request",
+          "question": "그 무기의 간격에 들어오는 생물에게 반응으로 근접 공격 — 장면에 위치가 없어 표에서 선언합니다"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "effect.feat.phb2024.protection",
+   "category": "option",
+   "presentation": {
+    "originalName": "보호",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "보호",
+      "summary": "PHB 2024 재주의 규칙 계약"
+     }
+    }
+   },
+   "tags": [
+    "feat",
+    "common-play",
+    "phb-2024"
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "feat:protection",
+      "entryPoints": [
+       {
+        "id": "rule",
+        "invocation": "manual",
+        "operations": [
+         {
+          "kind": "adjudication.request",
+          "question": "5피트 안의 다른 이를 노린 공격에 반응으로 불리 (방패 필요) — 장면에 위치가 없어 표에서 선언합니다"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "effect.feat.phb2024.resilient",
+   "category": "option",
+   "presentation": {
+    "originalName": "회복력",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "회복력",
+      "summary": "PHB 2024 재주의 규칙 계약"
+     }
+    }
+   },
+   "tags": [
+    "feat",
+    "common-play",
+    "phb-2024"
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "feat:resilient",
+      "entryPoints": [
+       {
+        "id": "rule",
+        "invocation": "manual",
+        "operations": [
+         {
+          "kind": "adjudication.request",
+          "question": "올린 능력치의 내성 굴림에 숙련 — 만들기·레벨업에서 시트에 반영됩니다"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "effect.feat.phb2024.ritual-caster",
+   "category": "option",
+   "presentation": {
+    "originalName": "의식 시전자",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "의식 시전자",
+      "summary": "PHB 2024 재주의 규칙 계약"
+     }
+    }
+   },
+   "tags": [
+    "feat",
+    "common-play",
+    "phb-2024"
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "feat:ritual-caster",
+      "entryPoints": [
+       {
+        "id": "rule",
+        "invocation": "manual",
+        "operations": [
+         {
+          "kind": "adjudication.request",
+          "question": "의식 태그 1레벨 주문을 숙련 보너스만큼 항상 준비"
+         },
+         {
+          "kind": "adjudication.request",
+          "question": "긴 휴식마다 한 번, 준비한 의식 하나를 슬롯 없이 보통 시전 시간으로"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "effect.feat.phb2024.sentinel",
+   "category": "option",
+   "presentation": {
+    "originalName": "파수꾼",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "파수꾼",
+      "summary": "PHB 2024 재주의 규칙 계약"
+     }
+    }
+   },
+   "tags": [
+    "feat",
+    "common-play",
+    "phb-2024"
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "feat:sentinel",
+      "entryPoints": [
+       {
+        "id": "rule",
+        "invocation": "manual",
+        "operations": [
+         {
+          "kind": "adjudication.request",
+          "question": "5피트 안의 생물이 이탈하거나 다른 대상을 명중시키면 기회 공격 — 장면에 위치가 없어 표에서 선언합니다"
+         }
+        ]
+       }
+      ],
+      "interceptors": [
+       {
+        "id": "after-hit",
+        "timing": "attack.resolved",
+        "slot": "attack.outcome",
+        "outcomes": [
+         "hit"
+        ],
+        "scope": "melee",
+        "operations": [
+         {
+          "kind": "condition.apply",
+          "condition": "둔화",
+          "target": "target"
+         },
+         {
+          "kind": "adjudication.request",
+          "question": "기회 공격으로 명중시켰다면 대상의 이동 속도가 이번 턴 0"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "effect.feat.phb2024.shadow-touched",
+   "category": "option",
+   "presentation": {
+    "originalName": "그림자의 손길",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "그림자의 손길",
+      "summary": "PHB 2024 재주의 규칙 계약"
+     }
+    }
+   },
+   "tags": [
+    "feat",
+    "common-play",
+    "phb-2024"
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "feat:shadow-touched",
+      "entryPoints": [
+       {
+        "id": "rule",
+        "invocation": "manual",
+        "operations": [
+         {
+          "kind": "adjudication.request",
+          "question": "환영·사령 1레벨 주문 하나와 투명화를 항상 준비, 각각 긴 휴식마다 슬롯 없이 한 번"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "effect.feat.phb2024.sharpshooter",
+   "category": "option",
+   "presentation": {
+    "originalName": "명사수",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "명사수",
+      "summary": "PHB 2024 재주의 규칙 계약"
+     }
+    }
+   },
+   "tags": [
+    "feat",
+    "common-play",
+    "phb-2024"
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "feat:sharpshooter",
+      "entryPoints": [
+       {
+        "id": "rule",
+        "invocation": "manual",
+        "operations": [
+         {
+          "kind": "property.modify",
+          "property": "attack-roll.ignore-cover",
+          "operation": "add",
+          "value": true,
+          "scope": "ranged",
+          "note": "절반·3/4 엄폐 무시"
+         },
+         {
+          "kind": "adjudication.request",
+          "question": "적에게 붙어 있어도, 장거리여도 원거리 공격에 불리 없음"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "effect.feat.phb2024.shield-master",
+   "category": "option",
+   "presentation": {
+    "originalName": "방패 달인",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "방패 달인",
+      "summary": "PHB 2024 재주의 규칙 계약"
+     }
+    }
+   },
+   "tags": [
+    "feat",
+    "common-play",
+    "phb-2024"
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "feat:shield-master",
+      "entryPoints": [
+       {
+        "id": "rule",
+        "invocation": "manual",
+        "operations": [
+         {
+          "kind": "adjudication.request",
+          "question": "민첩 내성에 성공하면 반응으로 피해를 아예 받지 않음 (방패 필요)"
+         }
+        ]
+       }
+      ],
+      "interceptors": [
+       {
+        "id": "after-hit",
+        "timing": "attack.resolved",
+        "slot": "attack.outcome",
+        "outcomes": [
+         "hit"
+        ],
+        "scope": "melee",
+        "operations": [
+         {
+          "kind": "adjudication.request",
+          "question": "장비한 방패로 후려치기: DC 8 + 근력 + 숙련의 근력 내성, 실패면 5피트 밀기 또는 넘어짐 (턴당 한 번)"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "effect.feat.phb2024.skulker",
+   "category": "option",
+   "presentation": {
+    "originalName": "잠행자",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "잠행자",
+      "summary": "PHB 2024 재주의 규칙 계약"
+     }
+    }
+   },
+   "tags": [
+    "feat",
+    "common-play",
+    "phb-2024"
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "feat:skulker",
+      "entryPoints": [
+       {
+        "id": "rule",
+        "invocation": "manual",
+        "operations": [
+         {
+          "kind": "property.modify",
+          "property": "senses.blindsight",
+          "operation": "add",
+          "value": 10
+         },
+         {
+          "kind": "adjudication.request",
+          "question": "전투 중 숨기의 민첩(은신) 판정에 유리"
+         },
+         {
+          "kind": "adjudication.request",
+          "question": "숨은 채로 빗나가도 위치가 드러나지 않음"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "effect.feat.phb2024.slasher",
+   "category": "option",
+   "presentation": {
+    "originalName": "참격자",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "참격자",
+      "summary": "PHB 2024 재주의 규칙 계약"
+     }
+    }
+   },
+   "tags": [
+    "feat",
+    "common-play",
+    "phb-2024"
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "feat:slasher",
+      "interceptors": [
+       {
+        "id": "after-hit",
+        "timing": "attack.resolved",
+        "slot": "attack.outcome",
+        "outcomes": [
+         "hit"
+        ],
+        "scope": "slashing",
+        "operations": [
+         {
+          "kind": "condition.apply",
+          "condition": "둔화",
+          "target": "target"
+         },
+         {
+          "kind": "adjudication.request",
+          "question": "참격 피해로 명중시켜 이동 속도 −10 (턴당 한 번)"
+         }
+        ]
+       },
+       {
+        "id": "after-crit",
+        "timing": "attack.resolved",
+        "slot": "attack.outcome",
+        "outcomes": [
+         "crit"
+        ],
+        "scope": "slashing",
+        "operations": [
+         {
+          "kind": "condition.apply",
+          "condition": "약화",
+          "target": "target"
+         },
+         {
+          "kind": "adjudication.request",
+          "question": "다음 자기 턴 시작까지 대상의 공격 굴림에 불리"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "effect.feat.phb2024.speedy",
+   "category": "option",
+   "presentation": {
+    "originalName": "쾌속",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "쾌속",
+      "summary": "PHB 2024 재주의 규칙 계약"
+     }
+    }
+   },
+   "tags": [
+    "feat",
+    "common-play",
+    "phb-2024"
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "feat:speedy",
+      "entryPoints": [
+       {
+        "id": "rule",
+        "invocation": "manual",
+        "operations": [
+         {
+          "kind": "property.modify",
+          "property": "speed.walk",
+          "operation": "add",
+          "value": 10
+         },
+         {
+          "kind": "adjudication.request",
+          "question": "질주하면 그 턴 험지가 추가 이동을 요구하지 않음"
+         },
+         {
+          "kind": "adjudication.request",
+          "question": "자신을 향한 기회 공격에 불리 — 표에서 선언합니다"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "effect.feat.phb2024.spell-sniper",
+   "category": "option",
+   "presentation": {
+    "originalName": "주문 저격수",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "주문 저격수",
+      "summary": "PHB 2024 재주의 규칙 계약"
+     }
+    }
+   },
+   "tags": [
+    "feat",
+    "common-play",
+    "phb-2024"
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "feat:spell-sniper",
+      "entryPoints": [
+       {
+        "id": "rule",
+        "invocation": "manual",
+        "operations": [
+         {
+          "kind": "property.modify",
+          "property": "attack-roll.ignore-cover",
+          "operation": "add",
+          "value": true,
+          "note": "주문 공격 굴림이 절반·3/4 엄폐 무시"
+         },
+         {
+          "kind": "adjudication.request",
+          "question": "적에게 붙어 있어도 주문 공격에 불리 없음"
+         },
+         {
+          "kind": "adjudication.request",
+          "question": "공격 굴림이 필요한 10피트 이상 주문의 사거리 +60피트"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "effect.feat.phb2024.tavern-brawler",
+   "category": "option",
+   "presentation": {
+    "originalName": "선술집 싸움꾼",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "선술집 싸움꾼",
+      "summary": "PHB 2024 재주의 규칙 계약"
+     }
+    }
+   },
+   "tags": [
+    "feat",
+    "common-play",
+    "phb-2024"
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "feat:tavern-brawler",
+      "entryPoints": [
+       {
+        "id": "declare",
+        "invocation": "pre-roll-attack",
+        "attack": {
+         "oncePerTurn": true,
+         "requiresEffects": [],
+         "scope": "unarmed"
+        },
+        "operations": [
+         {
+          "kind": "adjudication.request",
+          "question": "명중시키면 대상을 5피트 밀 수 있습니다 (턴당 한 번)"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "effect.feat.phb2024.tough",
+   "category": "option",
+   "presentation": {
+    "originalName": "강인함",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "강인함",
+      "summary": "PHB 2024 재주의 규칙 계약"
+     }
+    }
+   },
+   "tags": [
+    "feat",
+    "common-play",
+    "phb-2024"
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "feat:tough",
+      "entryPoints": [
+       {
+        "id": "rule",
+        "invocation": "manual",
+        "operations": [
+         {
+          "kind": "property.modify",
+          "property": "hp.maximum",
+          "operation": "add",
+          "value": {
+           "op": "mul",
+           "args": [
+            {
+             "value": 2
+            },
+            {
+             "ref": "actor.level"
+            }
+           ]
+          },
+          "note": "캐릭터 레벨 × 2"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "effect.feat.phb2024.unarmed-fighting",
+   "category": "option",
+   "presentation": {
+    "originalName": "비무장 전투",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "비무장 전투",
+      "summary": "PHB 2024 재주의 규칙 계약"
+     }
+    }
+   },
+   "tags": [
+    "feat",
+    "common-play",
+    "phb-2024"
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "feat:unarmed-fighting",
+      "entryPoints": [
+       {
+        "id": "rule",
+        "invocation": "manual",
+        "operations": [
+         {
+          "kind": "adjudication.request",
+          "question": "자기 턴 시작에 붙잡고 있는 생물 하나에게 1d4 타격"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "effect.feat.phb2024.war-caster",
+   "category": "option",
+   "presentation": {
+    "originalName": "전투 시전자",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "전투 시전자",
+      "summary": "PHB 2024 재주의 규칙 계약"
+     }
+    }
+   },
+   "tags": [
+    "feat",
+    "common-play",
+    "phb-2024"
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "feat:war-caster",
+      "entryPoints": [
+       {
+        "id": "rule",
+        "invocation": "manual",
+        "operations": [
+         {
+          "kind": "adjudication.request",
+          "question": "집중 유지 건강 내성에 유리 — 굴릴 때 선언"
+         },
+         {
+          "kind": "adjudication.request",
+          "question": "기회 공격 대신 반응으로 그 생물만 노리는 행동 주문 한 번"
+         },
+         {
+          "kind": "adjudication.request",
+          "question": "무기·방패를 들고도 동작 구성요소 수행"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "effect.feat.phb2024.weapon-master",
+   "category": "option",
+   "presentation": {
+    "originalName": "무기 달인",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "무기 달인",
+      "summary": "PHB 2024 재주의 규칙 계약"
+     }
+    }
+   },
+   "tags": [
+    "feat",
+    "common-play",
+    "phb-2024"
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "feat:weapon-master",
+      "entryPoints": [
+       {
+        "id": "rule",
+        "invocation": "manual",
+        "operations": [
+         {
+          "kind": "adjudication.request",
+          "question": "숙련된 단순·군용 무기 하나의 통달 속성을 씁니다 (긴 휴식마다 바꿀 수 있음) — 시트의 무기 숙련에 적어 두세요"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "effect.feat.phb2024.thrown-weapon-fighting",
+   "category": "option",
+   "presentation": {
+    "originalName": "투척 무기 전투",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "투척 무기 전투",
+      "summary": "PHB 2024 재주의 규칙 계약"
+     }
+    }
+   },
+   "tags": [
+    "feat",
+    "common-play",
+    "phb-2024"
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "feat:thrown-weapon-fighting",
+      "entryPoints": [
+       {
+        "id": "rule",
+        "invocation": "manual",
+        "operations": [
+         {
+          "kind": "property.modify",
+          "property": "damage.bonus",
+          "operation": "add",
+          "value": 2,
+          "scope": "thrown",
+          "note": "투척 무기 원거리 명중"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "effect.feat.phb2024.telekinetic",
+   "category": "option",
+   "presentation": {
+    "originalName": "염동력",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "염동력",
+      "summary": "PHB 2024 재주의 규칙 계약"
+     }
+    }
+   },
+   "tags": [
+    "feat",
+    "common-play",
+    "phb-2024"
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "feat:telekinetic",
+      "entryPoints": [
+       {
+        "id": "rule",
+        "invocation": "manual",
+        "operations": [
+         {
+          "kind": "adjudication.request",
+          "question": "마법사의 손을 구성요소 없이, 사거리 +30피트"
+         },
+         {
+          "kind": "adjudication.request",
+          "question": "추가 행동으로 30피트 안의 생물 하나에게 근력 내성 (DC 8 + 올린 능력치 + 숙련), 실패면 5피트 이동"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "effect.feat.phb2024.telepathic",
+   "category": "option",
+   "presentation": {
+    "originalName": "텔레파시 능력",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "텔레파시 능력",
+      "summary": "PHB 2024 재주의 규칙 계약"
+     }
+    }
+   },
+   "tags": [
+    "feat",
+    "common-play",
+    "phb-2024"
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "feat:telepathic",
+      "entryPoints": [
+       {
+        "id": "rule",
+        "invocation": "manual",
+        "operations": [
+         {
+          "kind": "adjudication.request",
+          "question": "60피트 안의 생물에게 텔레파시로 말함 (대상은 답할 수 없음)"
+         },
+         {
+          "kind": "adjudication.request",
+          "question": "생각 탐지를 항상 준비, 긴 휴식마다 슬롯 없이 한 번"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "effect.feat.phb2024.skill-expert",
+   "category": "option",
+   "presentation": {
+    "originalName": "기술 전문가",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "기술 전문가",
+      "summary": "PHB 2024 재주의 규칙 계약"
+     }
+    }
+   },
+   "tags": [
+    "feat",
+    "common-play",
+    "phb-2024"
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "feat:skill-expert",
+      "entryPoints": [
+       {
+        "id": "rule",
+        "invocation": "manual",
+        "operations": [
+         {
+          "kind": "adjudication.request",
+          "question": "기술 하나에 숙련, 숙련된 기술 하나에 전문화 — 만들기·레벨업에서 시트에 반영됩니다"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "effect.feat.phb2024.boon-of-energy-resistance",
+   "category": "option",
+   "presentation": {
+    "originalName": "에너지 저항의 은총",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "에너지 저항의 은총",
+      "summary": "PHB 2024 재주의 규칙 계약"
+     }
+    }
+   },
+   "tags": [
+    "feat",
+    "common-play",
+    "phb-2024"
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "feat:boon-of-energy-resistance",
+      "entryPoints": [
+       {
+        "id": "rule",
+        "invocation": "manual",
+        "operations": [
+         {
+          "kind": "adjudication.request",
+          "question": "고른 두 유형에 저항, 그 유형 피해를 받으면 반응으로 60피트 안의 생물에게 2d12 + 건강 (민첩 내성)"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "effect.feat.phb2024.boon-of-fortitude",
+   "category": "option",
+   "presentation": {
+    "originalName": "강인함의 은총",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "강인함의 은총",
+      "summary": "PHB 2024 재주의 규칙 계약"
+     }
+    }
+   },
+   "tags": [
+    "feat",
+    "common-play",
+    "phb-2024"
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "feat:boon-of-fortitude",
+      "entryPoints": [
+       {
+        "id": "rule",
+        "invocation": "manual",
+        "operations": [
+         {
+          "kind": "property.modify",
+          "property": "hp.maximum",
+          "operation": "add",
+          "value": 40
+         },
+         {
+          "kind": "adjudication.request",
+          "question": "HP를 회복할 때 건강 수정치만큼 추가 (턴당 한 번)"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "effect.feat.phb2024.boon-of-recovery",
+   "category": "option",
+   "presentation": {
+    "originalName": "회복의 은총",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "회복의 은총",
+      "summary": "PHB 2024 재주의 규칙 계약"
+     }
+    }
+   },
+   "tags": [
+    "feat",
+    "common-play",
+    "phb-2024"
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "feat:boon-of-recovery",
+      "entryPoints": [
+       {
+        "id": "rule",
+        "invocation": "manual",
+        "operations": [
+         {
+          "kind": "adjudication.request",
+          "question": "d10 열 개의 풀 — 추가 행동으로 원하는 만큼 굴려 회복, 긴 휴식에 전부 회복"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "effect.feat.phb2024.boon-of-skill",
+   "category": "option",
+   "presentation": {
+    "originalName": "기술의 은총",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "기술의 은총",
+      "summary": "PHB 2024 재주의 규칙 계약"
+     }
+    }
+   },
+   "tags": [
+    "feat",
+    "common-play",
+    "phb-2024"
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "feat:boon-of-skill",
+      "entryPoints": [
+       {
+        "id": "rule",
+        "invocation": "manual",
+        "operations": [
+         {
+          "kind": "adjudication.request",
+          "question": "전문화가 없는 기술 하나에 전문화 — 만들기·레벨업에서 시트에 반영됩니다"
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "effect.feat.phb2024.boon-of-speed",
+   "category": "option",
+   "presentation": {
+    "originalName": "속도의 은총",
+    "defaultLocale": "ko-KR",
+    "locales": {
+     "ko-KR": {
+      "name": "속도의 은총",
+      "summary": "PHB 2024 재주의 규칙 계약"
+     }
+    }
+   },
+   "tags": [
+    "feat",
+    "common-play",
+    "phb-2024"
+   ],
+   "mechanics": [
+    {
+     "kind": "common-play",
+     "config": {
+      "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
+      "schemaVersion": "0.2-draft",
+      "id": "feat:boon-of-speed",
+      "entryPoints": [
+       {
+        "id": "rule",
+        "invocation": "manual",
+        "operations": [
+         {
+          "kind": "property.modify",
+          "property": "speed.walk",
+          "operation": "add",
+          "value": 30
+         }
+        ]
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ]
+}
