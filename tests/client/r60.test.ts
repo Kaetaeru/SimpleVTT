@@ -102,11 +102,11 @@ test("R60: an onCrit rule waits for the critical, and reused dice are never touc
   assert.deepEqual(again.damage[0].dice, [5, 5, 8]);
 });
 
-test("R60: 관통자 declares its reroll in the dialog and its extra die on a critical (D195)", () => {
+test("R60: 관통자 offers its reroll once it hits and adds its extra die on a critical (D195, R63 D198)", () => {
   const { catalog, runtime, derived } = piercerFighter();
   const spear = derived.attacks.find((attack) => attack.itemId?.endsWith(".spear"))!;
   assert.equal(spear.damageType, "관통", spear.damageType);
-  const [rider] = offeredRiders(derived, spear);
+  const [rider] = offeredRiders(derived, spear, { moment: "on-hit" });
   assert.ok(rider, JSON.stringify(derived.attackRiders));
   assert.deepEqual(rider.dice, [{ mode: "reroll-lowest", value: 1, label: "관통자" }]);
   assert.ok(rider.hint.includes("다시 굴림"), rider.hint);

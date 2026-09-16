@@ -87,7 +87,49 @@ export function promptIsMine(message: ChatMessage, snapshot: { players: Array<{ 
 /** Buttons for the side a prompt is addressed to: the reactor's melee attacks as the reaction, or 안 함. Null when it is not yours or already answered. */
 const COUNTERSPELL_ID = "dnd.srd521.spell.counterspell";
 /** What a prompt is asking for, in one word. */
-export const promptLabel = (kind: ReactionPrompt["kind"]) => (kind === "shield" ? "방패 반응" : kind === "guard" ? "반응" : kind === "counterspell" ? "주문 차단" : kind === "death-save" ? "죽음 내성" : kind === "rescue" ? "판정 다시 굴리기" : "기회 공격");
+export const promptLabel = (kind: ReactionPrompt["kind"]) => (kind === "shield" ? "방패 반응" : kind === "guard" ? "반응" : kind === "counterspell" ? "주문 차단" : kind === "death-save" ? "죽음 내성" : kind === "rescue" ? "판정 다시 굴리기" : kind === "on-hit" ? "명중 후 선택" : "기회 공격");
+
+/**
+ * R63 (D198): the attacker's window after a hit. One checkbox per offer, the facts it turns on indented under it, a
+ * slot picker for 신성한 강타. Nothing is ticked for the player: taking a rider is their decision, and "안 함" is
+ * always one press away.
+ */
+function HitChoices({ message }: { message: ChatMessage }) {
+  const c = useCampaigns();
+  const offers = message.prompt!.onHit?.offers ?? [];
+  const [picked, setPicked] = useState<string[]>([]);
+  const [facts, setFacts] = useState<string[]>([]);
+  const smite = offers.find((offer) => offer.key === "smite");
+  const [slot, setSlot] = useState<number>(smite?.slots?.[0]?.level ?? 0);
+  const toggle = (list: string[], key: string, on: boolean) => (on ? [...list, key] : list.filter((item) => item !== key));
+  return (
+    <div className="cl-hit-choices" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      {offers.map((offer) => (
+        <div key={offer.key}>
+          <label className="cl-row cl-small" style={{ gap: 6 }}>
+            <input type="checkbox" checked={picked.includes(offer.key)} onChange={(event) => setPicked((list) => toggle(list, offer.key, event.target.checked))} />
+            <strong>{offer.label}</strong>{offer.hint ? <span className="cl-quiet">{offer.hint}</span> : null}
+          </label>
+          {picked.includes(offer.key) && offer.slots?.length ? (
+            <select className="cl-select" aria-label={`${offer.label} 슬롯`} style={{ marginLeft: 22, width: "auto" }} value={slot} onChange={(event) => setSlot(Number(event.target.value))}>
+              {offer.slots.map((item) => <option key={item.level} value={item.level}>{item.level}레벨 슬롯 ({item.free} 남음)</option>)}
+            </select>
+          ) : null}
+          {picked.includes(offer.key) ? (offer.facts ?? []).map((fact) => (
+            <label key={fact.id} className="cl-row cl-small" style={{ gap: 6, paddingLeft: 22 }}>
+              <input type="checkbox" checked={facts.includes(fact.id)} onChange={(event) => setFacts((list) => toggle(list, fact.id, event.target.checked))} />
+              {fact.question}
+            </label>
+          )) : null}
+        </div>
+      ))}
+      <div className="cl-row" style={{ gap: 4 }}>
+        <button type="button" className="cl-btn small primary" disabled={!picked.length} onClick={() => c.hitChoice(message.id, picked, facts, picked.includes("smite") ? slot : undefined)}>적용</button>
+        <button type="button" className="cl-btn small" onClick={() => c.declineReaction(message.id)}>안 함</button>
+      </div>
+    </div>
+  );
+}
 
 export function PromptChoices({ message, compact = false }: { message: ChatMessage; compact?: boolean }) {
   const c = useCampaigns();
@@ -142,6 +184,7 @@ export function PromptChoices({ message, compact = false }: { message: ChatMessa
       </div>
     );
   }
+  if (prompt.kind === "on-hit") return <HitChoices message={message} />;
   // R11 (Shield) and R54 (D189, a contract's own reaction) answer the same window: the attack that just hit.
   if (prompt.kind === "shield" || prompt.kind === "guard") {
     return (
@@ -220,6 +263,7 @@ export function ApprovalLayer() {
           <>
             {first.prompt!.kind === "counterspell" ? <div className="cl-approval-body">🚫 <strong>{first.prompt!.mover.name}</strong>이(가) {first.prompt!.spell?.name}{first.prompt!.spell ? ` (${first.prompt!.spell.level}레벨)` : ""}을(를) 시전하려 합니다.<br />주문 차단을 하시겠습니까?</div>
               : first.prompt!.kind === "shield" || first.prompt!.kind === "guard" ? <div className="cl-approval-body">🛡 <strong>{first.prompt!.mover.name}</strong>의 {first.prompt!.attack?.name}이(가) <strong>{first.prompt!.reactor.name}</strong>에게 적중했습니다 (명중 {first.prompt!.attack?.total} vs AC {first.prompt!.attack?.ac}).<br />방패를 시전하시겠습니까?</div>
+              : first.prompt!.kind === "on-hit" ? <div className="cl-approval-body">⚔ <strong>{first.prompt!.reactor.name}</strong>의 {first.prompt!.attack?.name}이(가) <strong>{first.prompt!.mover.name}</strong>에게 {first.prompt!.onHit?.outcome === "crit" ? <strong>치명타!</strong> : "명중했습니다"} (명중 {first.prompt!.attack?.total} vs AC {first.prompt!.attack?.ac}).<br />더할 것을 고르세요.{first.prompt!.onHit?.outcome === "crit" ? " 추가 주사위도 두 배로 굴립니다." : ""}</div>
               : first.prompt!.kind === "rescue" ? <div className="cl-approval-body">🎲 <strong>{first.prompt!.reactor.name}</strong>의 내성이 실패했습니다 ({first.prompt!.rescue?.roll}).<br />특성을 써서 다시 굴릴 수 있습니다.</div>
               : first.prompt!.kind === "death-save" ? <div className="cl-approval-body">💀 <strong>{first.prompt!.reactor.name}</strong>은(는) 쓰러져 있습니다.<br />죽음 내성을 굴리세요 (성공 3번이면 안정, 실패 3번이면 사망).</div>
               : <div className="cl-approval-body">🏃 <strong>{first.prompt!.mover.name}</strong>이(가) <strong>{first.prompt!.reactor.name}</strong>에게서 벗어납니다.<br />기회 공격을 하시겠습니까?</div>}

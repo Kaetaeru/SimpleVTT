@@ -9,7 +9,7 @@
 import type { AbilityKey } from "../catalog/types";
 import type { DerivedAttack } from "../character/types";
 import type { EffectApplication } from "./effects";
-import { evaluate, type CommonPlayContract, type ContractOperation, type Scope } from "./contract";
+import { ATTACK_INVOCATIONS, evaluate, type CommonPlayContract, type ContractOperation, type Scope } from "./contract";
 
 /** Attack filters a `property.modify` may narrow itself to. */
 const SCOPES: Record<string, (attack: DerivedAttack) => boolean> = {
@@ -70,8 +70,8 @@ export function contractEffect(contract: CommonPlayContract, scope: Scope): { ap
   const application: EffectApplication = {};
   const unknown: string[] = [];
   const notes: string[] = [];
-  // R52 (D187): a pre-roll rider is not a standing property; it belongs to the attack dialog.
-  const operations = [...contract.entryPoints.filter((entry) => entry.invocation !== "pre-roll-attack").flatMap((entry) => entry.operations), ...contract.interceptors.flatMap((item) => item.operations)];
+  // R52 (D187): a pre-roll rider is not a standing property; it belongs to the attack dialog. R63 (D198): nor an on-hit one.
+  const operations = [...contract.entryPoints.filter((entry) => !ATTACK_INVOCATIONS.has(entry.invocation)).flatMap((entry) => entry.operations), ...contract.interceptors.flatMap((item) => item.operations)];
   let describes = false;
   for (const operation of operations) {
     // R49 (D184): a question for the table is a line on the sheet too — that is what the hand-written rules' `notes`

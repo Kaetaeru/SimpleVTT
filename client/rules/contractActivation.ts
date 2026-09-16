@@ -6,12 +6,13 @@
  * into the `ParsedDuration` the sheet already counts. `effect.remove` and `effect.suppress` are the other two ends of
  * the same idea: one takes an effect off, the other leaves it on the sheet but stops it counting for anything.
  */
-import { COUNTED_LIFETIME, economyAsAction, economyBonusAttack, evaluate, LIFETIME_KO, type CommonPlayContract, type ContractOperation, type Scope } from "./contract";
+import { ATTACK_INVOCATIONS, COUNTED_LIFETIME, economyAsAction, economyBonusAttack, evaluate, LIFETIME_KO, type CommonPlayContract, type ContractOperation, type Scope } from "./contract";
 import { featureRuleKey, qualifyRuleKey, type ParsedDuration } from "./activation";
 
 // R52 (D187): a `pre-roll-attack` entry point is declared in the attack dialog, not pressed on the sheet, so the
 // readers that answer "what does the 사용 button do" leave it out. `contractSummary` still prints it as a rule.
-const livePoints = (contract: CommonPlayContract) => contract.entryPoints.filter((entry) => entry.invocation !== "pre-roll-attack");
+// R63 (D198): so is an `on-hit` one, chosen in the window a hit opens.
+const livePoints = (contract: CommonPlayContract) => contract.entryPoints.filter((entry) => !ATTACK_INVOCATIONS.has(entry.invocation));
 const operationsOf = (contract: CommonPlayContract) => [...livePoints(contract).flatMap((entry) => entry.operations), ...contract.interceptors.flatMap((item) => item.operations)];
 const live = (operation: ContractOperation, scope: Scope) => !("when" in operation && operation.when) || evaluate((operation as { when?: Parameters<typeof evaluate>[0] }).when, scope) === true;
 
@@ -215,14 +216,15 @@ export function contractSummary(contract: CommonPlayContract, scope: Scope): { r
   const signed = (value: number | undefined) => (value === undefined ? "" : `${value >= 0 ? "+" : ""}${value}`);
   // R52 (D187): the pre-roll riders are said first, because that is where the player will meet them.
   for (const entry of contract.entryPoints) {
-    if (entry.invocation !== "pre-roll-attack") continue;
+    if (!ATTACK_INVOCATIONS.has(entry.invocation)) continue;
     mechanical = true;
+    const where = entry.invocation === "on-hit" ? "명중 후 창에서 선택" : "판정 전 창에서 선언";
     for (const operation of entry.operations) {
       if (!live(operation, scope)) continue;
       if (operation.kind === "damage.apply") {
         const count = operation.diceCount === undefined ? undefined : number(operation.diceCount);
         const die = operation.dice ? `${count ?? ""}${operation.dice.startsWith("d") ? operation.dice : operation.dice.replace(/^\d+/, "")}` : String(number(operation.amount) ?? "");
-        rules.push(`판정 전 창에서 선언 — 피해 +${die}`);
+        rules.push(`${where} — 피해 +${die}`);
       } else if (operation.kind === "adjudication.request") questions.push(operation.question);
     }
     if (entry.attack?.oncePerTurn) questions.push("턴당 한 번 (직접 세어 주세요)");

@@ -9,7 +9,8 @@ import type { ContentCatalog } from "../catalog/catalog";
 import { deriveCharacter } from "../character/derive";
 import type { CharacterRuntime } from "../character/runtime";
 import { spendResource, useSpellSlot } from "../character/play";
-import { riderFitsAttack } from "./attackRiders";
+import { offeredRiders, riderFitsAttack } from "./attackRiders";
+import type { HitOffer } from "../campaign/model";
 import { critRiders } from "./attackAftermath";
 import { attackScopeFilter } from "./contractEffects";
 import type { DerivedAttack, DerivedCharacter } from "../character/types";
@@ -154,6 +155,43 @@ export function pcAttackSpec(entry: JournalCharacter, derived: DerivedCharacter,
   const declared = (riders.contracts ?? []).map((key) => (derived.attackRiders ?? []).find((item) => item.key === key)).filter((item) => item && riderFitsAttack(item, attack)).map((item) => item!.label);
   return { spec: { name: `${cleave ? `${attack.name} · 쪼개기` : offHand ? `${attack.name} · 보조 손` : attack.name}${savageFeat ? ` · ${savageFeat}` : ""}${declared.length ? ` · ${declared.join(" · ")}` : ""}`, source: "weapon", attackBonus: attack.attackBonus, mode: range.mode, damage, riders: extra, ...(derived.critRange ? { critRange: derived.critRange } : {}), ...(crits.parts.length ? { critRiders: crits.parts } : {}), ...(diceRules.length ? { diceRules } : {}), ...(derived.ignoresCover ? { ignoresCover: true } : {}), ...(advantageOn.length ? { advantageOn } : {}), ...(savage ? { savage } : {}), ...(mastery ? { mastery, abilityMod, masteryDc: 8 + abilityMod + derived.proficiencyBonus } : {}) }, spend: (runtime) => spenders.reduce((acc, spend) => spend(acc), runtime) };
 }
+
+/**
+ * R63 (D198): what the attacker may still add once the swing has landed. 2024 writes 암습, 신성한 강타, 야만적 공격자
+ * and most feat riders as "when you hit", so they are offered here, where a hit and a critical are already known,
+ * instead of being ticked blind before the dice. `already` is what the attack was declared with, so nothing is offered
+ * twice.
+ */
+export function hitOffers(entry: JournalCharacter, derived: DerivedCharacter, attackId: string, already: AttackRiders = {}): HitOffer[] {
+  const attack = derived.attacks.find((item) => item.id === attackId);
+  if (!attack) return [];
+  const offers: HitOffer[] = [];
+  if (!already.sneak && hasSneakAttack(derived, attack)) offers.push({ key: "sneak", label: "암습", hint: `+${sneakDice(derived)}d6 · 유리하거나 아군이 대상 곁에 있을 때 · 턴당 한 번` });
+  const slots = !already.smiteSlot && hasSmite(derived) ? smiteSlots(derived, entry.runtime) : [];
+  if (slots.length) offers.push({ key: "smite", label: SMITE_LABEL, hint: "슬롯 소비 · 2d8 + 슬롯 레벨당 1d8 광휘", slots });
+  const savage = !already.savage ? savageAttackerFeat(derived) : undefined;
+  if (savage) offers.push({ key: "savage", label: savage, hint: "무기 피해 주사위를 한 번 더 굴려 높은 쪽 · 턴당 한 번" });
+  const runtime = entry.runtime;
+  const riders = offeredRiders(derived, attack, { moment: "on-hit", effects: (runtime.effects ?? []).map((effect) => effect.name), left: (resourceId) => (derived.resources.find((item) => item.id === resourceId)?.max ?? 0) - (runtime.resourcesUsed[resourceId] ?? 0) });
+  for (const rider of riders) if (!(already.contracts ?? []).includes(rider.key)) offers.push({ key: rider.key, label: rider.label, hint: rider.hint, ...(rider.facts.length ? { facts: rider.facts } : {}) });
+  return offers;
+}
+
+/** R63 (D198): the riders an attack carries once the attacker answered the on-hit window. Built-in keys are named; the rest are contract rule keys. */
+export function withHitChoices(riders: AttackRiders, answer: { choices: string[]; facts?: string[]; smiteSlot?: number }): AttackRiders {
+  const picked = new Set(answer.choices);
+  const contracts = [...(riders.contracts ?? []), ...answer.choices.filter((key) => !HIT_BUILT_INS.has(key))];
+  const facts = [...(riders.facts ?? []), ...(answer.facts ?? [])];
+  return {
+    ...riders,
+    ...(picked.has("sneak") ? { sneak: true } : {}),
+    ...(picked.has("savage") ? { savage: true } : {}),
+    ...(picked.has("smite") && answer.smiteSlot ? { smiteSlot: answer.smiteSlot } : {}),
+    ...(contracts.length ? { contracts: [...new Set(contracts)] } : {}),
+    ...(facts.length ? { facts: [...new Set(facts)] } : {}),
+  };
+}
+const HIT_BUILT_INS = new Set(["sneak", "smite", "savage"]);
 
 export function npcAttackSpec(entry: JournalNpc, actionName: string): AttackSpec | null {
   const action: MonsterAction | undefined = [...entry.statBlock.actions, ...entry.statBlock.bonusActions, ...entry.statBlock.legendaryActions, ...entry.statBlock.reactions, ...entry.statBlock.traits].find((item) => item.name === actionName);

@@ -13,7 +13,8 @@ import type { AttackOverrides } from "../rules/resolve";
 import type { CampaignClock, CampaignSettings, ChatMessage, Macro, PlayerRole, RollTable } from "../campaign/model";
 
 // R57 (D192): 29 — declared facts travel with the riders and with a taken reaction.
-export const PROTOCOL_VERSION = 29;
+// R63 (D198): 30 — a hit opens a window for the attacker (`on-hit` prompt, `act.onhit` answer).
+export const PROTOCOL_VERSION = 30;
 
 export interface Presence { userId: string; displayName: string; role: PlayerRole; color: string; connected: boolean }
 
@@ -115,6 +116,8 @@ export type ClientCommand =
   | { type: "act.attack"; attacker: ActorRef; targets: ActorRef[]; attack: AttackRef; riders?: AttackRiders; overrides?: AttackOverrides; /** Answering an opportunity prompt (the prompt's message id): the attack is the reactor's reaction. */ reaction?: string; /** R9: the readied action goes off (the 준비 mark is spent as the reaction). */ readied?: boolean }
   /** R54 (D189): take a reaction a contract declared (`reaction.window`) against the attack the prompt is holding. */
   | { type: "act.guard"; messageId: string; feature: string; /** R57 (D192): the facts the reactor confirmed when taking it. */ facts?: string[] }
+  /** R63 (D198): the attacker answers the window a hit opened — the offers they took, the facts they confirmed, the smite slot. "안 함" is `act.decline`. */
+  | { type: "act.onhit"; messageId: string; choices: string[]; facts?: string[]; smiteSlot?: number }
   /** D96: `mover` leaves `from`'s reach (the 벗어남 button); the host asks `from`'s controller for an opportunity attack. */
   | { type: "act.provoke"; mover: ActorRef; from: ActorRef }
   /** The reactor's controller lets the opportunity go. */

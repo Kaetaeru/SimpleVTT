@@ -21,7 +21,7 @@ import { CreateScreen } from "./CreateScreen";
 import { NpcWindow } from "./NpcSheet";
 import { TrackerWindow } from "./TrackerWindow";
 import { journalDragProps, PageSettingsWindow, placeCharacterToken, requestAttackOptions, requestTargets, TokenWindow } from "./PageCanvas";
-import { hasSmite, hasSneakAttack, smiteSlots, weaponRange } from "../rules/attackSpec";
+import { weaponRange } from "../rules/attackSpec";
 import { SheetPlay } from "./SheetPlay";
 import { SheetView } from "./SheetView";
 
@@ -453,11 +453,10 @@ function CharacterWindow({ entry, onClose, onOpen }: { entry: JournalCharacter; 
     const range = weaponRange(attack);
     const targets = await requestTargets(`${attack.name} 대상을 클릭하세요 (Esc 취소, 여러 대상은 Shift)`, { multi: true });
     if (!targets.length || !page) return;
-    const sneak = hasSneakAttack(derived, attack);
-    const slots = hasSmite(derived) ? smiteSlots(derived, entry.runtime) : [];
-    // R9: the same pre-roll dialog as the command bar — riders for a player, plus 유리·엄폐·반드시 for the DM (D95).
+    // R9: the same pre-roll dialog as the command bar — 유리·엄폐·반드시 for the DM (D95). R63 (D198): 암습 and 신성한
+    // 강타 are asked after the hit, in the window the host opens, so a player's swing from the sheet just rolls.
     let answer: Awaited<ReturnType<typeof requestAttackOptions>> | undefined;
-    if (viewer.isGm || sneak || slots.length) { answer = await requestAttackOptions({ name: attack.name, sneak, slots, gm: viewer.isGm }); if (answer === null) return; }
+    if (viewer.isGm) { answer = await requestAttackOptions({ name: attack.name, gm: true }); if (answer === null) return; }
     c.attack({ entryId: entry.id, pageId: page.id, tokenId: token?.id }, targets.map((id) => ({ pageId: page.id, tokenId: id })), { source: "weapon", attackId: attack.id }, answer?.riders, { overrides: answer?.overrides });
   };
   if (wizard) return <CreateScreen existing={entry.source} initialStep="classes" onSave={saveEdited} onClose={() => setWizard(false)} title={`편집 · ${entry.name}`} />;

@@ -219,8 +219,13 @@ export const LIFETIME_KO: Record<string, string> = {
   "until-event": "그 일이 일어날 때까지", "until-source-recast": "다시 시전할 때까지", "with-parent": "근원이 끝날 때까지", durable: "계속", "world-persistent": "세계에 남음",
 };
 // R51 (D186): `set-die` replaces the d20 with a fixed face (전투 기량의 은총 turns a miss into a 20).
-/** R57 (D192): the moments this engine can put a declared fact in front of somebody. */
-export const FACT_MOMENTS = new Set(["pre-roll", "reaction"]);
+/** R57 (D192): the moments this engine can put a declared fact in front of somebody. R63 (D198): and after a hit. */
+export const FACT_MOMENTS = new Set(["pre-roll", "reaction", "on-hit"]);
+/**
+ * R63 (D198): the entry points that belong to one swing rather than to a button on the sheet. `pre-roll-attack` is
+ * declared before the dice; `on-hit` is chosen once the swing has landed — most 2024 riders say "when you hit".
+ */
+export const ATTACK_INVOCATIONS = new Set(["pre-roll-attack", "on-hit"]);
 const ROLL_MODES = new Set(["add-die", "add-flat", "reroll", "set-die", "subtract-die"]);
 
 function parseOperations(raw: unknown, path: string, unsupported: string[]): ContractOperation[] {
@@ -338,7 +343,8 @@ export function parseContract(config: Record<string, unknown>, entryId: string):
     const entry = item as Record<string, unknown>;
     const invocation = String(entry.invocation ?? "manual");
     // R52 (D187): `pre-roll-attack` is the second invocation this executor runs — the attack dialog offers it.
-    if (invocation !== "manual" && invocation !== "pre-roll-attack") unsupported.push(`entryPoints[${index}].invocation: ${invocation}`);
+    // R63 (D198): `on-hit` is the third — asked after the swing has landed, when a hit and a critical are known.
+    if (invocation !== "manual" && !ATTACK_INVOCATIONS.has(invocation)) unsupported.push(`entryPoints[${index}].invocation: ${invocation}`);
     const attack = entry.attack as { scope?: string; oncePerTurn?: boolean; requiresEffects?: unknown } | undefined;
     let test: ContractTest | undefined;
     const rawTest = entry.test as Record<string, unknown> | undefined;
@@ -356,7 +362,7 @@ export function parseContract(config: Record<string, unknown>, entryId: string):
       id: String(entry.id ?? `entry${index}`), invocation,
       ...(targeting ? { targeting: { from: String(targeting.from ?? "targets"), min: targeting.min ?? 1, max: targeting.max ?? 1 } } : {}),
       ...(test ? { test } : {}),
-      ...(invocation === "pre-roll-attack" ? { attack: { ...(attack?.scope ? { scope: String(attack.scope) } : {}), oncePerTurn: attack?.oncePerTurn !== false, requiresEffects: Array.isArray(attack?.requiresEffects) ? attack!.requiresEffects.map(String) : [] } } : {}),
+      ...(ATTACK_INVOCATIONS.has(invocation) ? { attack: { ...(attack?.scope ? { scope: String(attack.scope) } : {}), oncePerTurn: attack?.oncePerTurn !== false, requiresEffects: Array.isArray(attack?.requiresEffects) ? attack!.requiresEffects.map(String) : [] } } : {}),
       operations: parseOperations(entry.operations, `entryPoints[${index}].operations`, unsupported),
     });
   }

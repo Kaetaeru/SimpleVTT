@@ -211,8 +211,8 @@
         ]
        },
        {
-        "id": "declare",
-        "invocation": "pre-roll-attack",
+        "id": "on-hit",
+        "invocation": "on-hit",
         "attack": {
          "oncePerTurn": true,
          "requiresEffects": [],
@@ -224,7 +224,7 @@
           "question": "대상을 향해 직선으로 10피트 이상 이동했다",
           "fact": {
            "id": "charged",
-           "at": "pre-roll"
+           "at": "on-hit"
           }
          },
          {
@@ -803,20 +803,20 @@
       "id": "feat:great-weapon-master",
       "entryPoints": [
        {
-        "id": "declare",
-        "invocation": "pre-roll-attack",
+        "id": "on-hit",
+        "invocation": "on-hit",
         "attack": {
-         "oncePerTurn": true,
+         "oncePerTurn": false,
          "requiresEffects": [],
          "scope": "heavy"
         },
         "operations": [
          {
           "kind": "adjudication.request",
-          "question": "자신의 턴에 공격 행동의 일부로 휘두른다",
+          "question": "자신의 턴에 공격 행동의 일부로 휘둘렀다",
           "fact": {
            "id": "attack-action",
-           "at": "pre-roll"
+           "at": "on-hit"
           }
          },
          {
@@ -1652,8 +1652,8 @@
       "id": "feat:piercer",
       "entryPoints": [
        {
-        "id": "declare",
-        "invocation": "pre-roll-attack",
+        "id": "on-hit",
+        "invocation": "on-hit",
         "attack": {
          "oncePerTurn": true,
          "requiresEffects": [],
@@ -2390,8 +2390,8 @@
       "id": "feat:tavern-brawler",
       "entryPoints": [
        {
-        "id": "declare",
-        "invocation": "pre-roll-attack",
+        "id": "on-hit",
+        "invocation": "on-hit",
         "attack": {
          "oncePerTurn": true,
          "requiresEffects": [],
@@ -2400,10 +2400,10 @@
         "operations": [
          {
           "kind": "adjudication.request",
-          "question": "명중하면 대상을 5피트 민다 (빈 공간이 있다)",
+          "question": "대상을 5피트 민다 (빈 공간이 있다)",
           "fact": {
            "id": "push-5ft",
-           "at": "pre-roll"
+           "at": "on-hit"
           }
          }
         ]

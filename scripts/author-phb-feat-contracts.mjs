@@ -29,6 +29,11 @@ const INTERACTION = { id: "use", kind: "choice", responder: "actor-owner", mode:
 
 /** A pre-roll rider (R52): declared in the attack dialog, narrowed to a weapon. */
 const rider = (attack, operations) => ({ id: "declare", invocation: "pre-roll-attack", attack: { oncePerTurn: true, requiresEffects: [], ...attack }, operations });
+/**
+ * R63 (D198): an on-hit rider — offered in the window a hit opens, because the feat says "when you hit". The player
+ * decides with the hit and a critical already known, which is what the 2024 text lets them do.
+ */
+const onHit = (attack, operations) => ({ id: "on-hit", invocation: "on-hit", attack: { oncePerTurn: true, requiresEffects: [], ...attack }, operations });
 /** An aftermath (R53): fires once the swing has landed. */
 const after = (outcomes, operations, scope) => ({ id: `after-${outcomes.join("-")}`, timing: "attack.resolved", slot: "attack.outcome", outcomes, ...(scope ? { scope } : {}), operations });
 /** A reaction window (R54). */
@@ -46,8 +51,8 @@ const FEATS = {
   ] },
   athlete: { rules: [modify("speed.climb", { value: 0, note: "이동 속도와 같은 등반 속도" }), ask("엎드림에서 5피트 이동만으로 일어섬"), ask("5피트만 이동한 뒤에도 도움닫기 도약")] },
   "blind-fighting": { rules: [modify("senses.blindsight", { value: 10 })] },
-  charger: { rules: [ask("질주 행동 동안 이동 속도 +10")], pre: [rider({ scope: "melee" }, [
-    fact("charged", "pre-roll", "대상을 향해 직선으로 10피트 이상 이동했다"),
+  charger: { rules: [ask("질주 행동 동안 이동 속도 +10")], pre: [onHit({ scope: "melee" }, [
+    fact("charged", "on-hit", "대상을 향해 직선으로 10피트 이상 이동했다"),
     { kind: "damage.apply", dice: "1d8", damageType: "weapon", target: "attack-target", when: on("charged") },
     ask("피해 대신 10피트 밀기를 골라도 됩니다"),
   ])] },
@@ -80,8 +85,9 @@ const FEATS = {
     rules: [ask("자신이 시전한 주문은 고른 유형에 대한 저항을 무시합니다 (유형 선택은 앱이 기억하지 않습니다)")],
   },
   "fey-touched": { rules: [ask("점술·환혹 1레벨 주문 하나와 안개 걸음을 항상 준비, 각각 긴 휴식마다 슬롯 없이 한 번")] },
-  "great-weapon-master": { pre: [rider({ scope: "heavy" }, [
-    fact("attack-action", "pre-roll", "자신의 턴에 공격 행동의 일부로 휘두른다"),
+  // R63 (D198): the 2024 text has no once-per-turn limit on 중량 무기 숙달 — every such hit may add it.
+  "great-weapon-master": { pre: [onHit({ scope: "heavy", oncePerTurn: false }, [
+    fact("attack-action", "on-hit", "자신의 턴에 공격 행동의 일부로 휘둘렀다"),
     { kind: "damage.apply", amount: PB, damageType: "weapon", target: "attack-target", when: on("attack-action") },
   ])], hooks: [after(["crit", "downed"], [{ kind: "economy.modify", bucket: "bonus-action.attack:heavy", amount: 1 }, ask("같은 무기로 한 번 더")], "melee")] },
   healer: { rules: [
@@ -119,7 +125,7 @@ const FEATS = {
     ask("통찰·조사·지각 중 하나에 숙련 또는 전문화 — 만들기·레벨업에서 시트에 반영됩니다"),
   ] },
   piercer: {
-    pre: [rider({ scope: "piercing" }, [modify("damage.reroll-lowest", { value: 1 }), ask("가장 낮은 주사위를 다시 굴려 새 결과를 씁니다")])],
+    pre: [onHit({ scope: "piercing" }, [modify("damage.reroll-lowest", { value: 1 }), ask("가장 낮은 주사위를 다시 굴려 새 결과를 씁니다")])],
     hooks: [after(["crit"], [modify("damage.extra-die", { value: 1 })], "piercing")],
   },
   poisoner: { rules: [
@@ -147,7 +153,7 @@ const FEATS = {
   slasher: { hooks: [after(["hit"], [{ kind: "condition.apply", condition: "둔화", target: "target" }, ask("참격 피해로 명중시켜 이동 속도 −10 (턴당 한 번)")], "slashing"), after(["crit"], [{ kind: "condition.apply", condition: "약화", target: "target" }, ask("다음 자기 턴 시작까지 대상의 공격 굴림에 불리")], "slashing")] },
   speedy: { rules: [modify("speed.walk", { value: 10 }), ask("질주하면 그 턴 험지가 추가 이동을 요구하지 않음"), ask("자신을 향한 기회 공격에 불리 — 표에서 선언합니다")] },
   "spell-sniper": { rules: [modify("attack-roll.ignore-cover", { value: true, note: "주문 공격 굴림이 절반·3/4 엄폐 무시" }), ask("근접 시전: 이 앱은 그 불리를 애초에 적용하지 않습니다 (장면에 거리가 없음) — 이미 효과가 난 셈입니다"), ask("공격 굴림이 필요한 10피트 이상 주문의 사거리 +60피트")] },
-  "tavern-brawler": { pre: [rider({ scope: "unarmed" }, [fact("push-5ft", "pre-roll", "명중하면 대상을 5피트 민다 (빈 공간이 있다)")])] },
+  "tavern-brawler": { pre: [onHit({ scope: "unarmed" }, [fact("push-5ft", "on-hit", "대상을 5피트 민다 (빈 공간이 있다)")])] },
   tough: { rules: [modify("hp.maximum", { value: { op: "mul", args: [{ value: 2 }, LEVEL] }, note: "캐릭터 레벨 × 2" })] },
   "unarmed-fighting": { rules: [ask("자기 턴 시작에 붙잡고 있는 생물 하나에게 1d4 타격")] },
   "war-caster": { rules: [modify("saving-throw.advantage", { abilities: ["con"], note: "집중 유지" }), ask("기회 공격 대신 반응으로 그 생물만 노리는 행동 주문 한 번"), ask("무기·방패를 들고도 동작 구성요소 수행")] },

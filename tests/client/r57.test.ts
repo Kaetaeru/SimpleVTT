@@ -65,7 +65,8 @@ function fighterWith(slugs: Array<[string, string]>, weapon = "greatsword", name
 test("R57: a declared fact is a checkbox, and what depends on it waits for the tick (D192)", () => {
   const { catalog, runtime, derived } = fighterWith([["charger", "돌격자"]]);
   const sword = derived.attacks.find((attack) => attack.itemId?.endsWith(".greatsword"))!;
-  const [rider] = offeredRiders(derived, sword);
+  // R63 (D198): 돌격자 is asked once the swing has landed.
+  const [rider] = offeredRiders(derived, sword, { moment: "on-hit" });
   assert.ok(rider, JSON.stringify(derived.attackRiders));
   assert.deepEqual(rider.facts, [{ id: "charged", question: "대상을 향해 직선으로 10피트 이상 이동했다" }]);
   assert.deepEqual(rider.damage, [{ formula: "1d8", type: "weapon", factId: "charged" }]);
@@ -81,7 +82,7 @@ test("R57: a declared fact is a checkbox, and what depends on it waits for the t
 test("R57: 대형 무기 달인 asks whether it was the Attack action (D192)", () => {
   const { catalog, runtime, derived } = fighterWith([["great-weapon-master", "대형 무기 달인"]]);
   const sword = derived.attacks.find((attack) => attack.itemId?.endsWith(".greatsword"))!;
-  const [rider] = offeredRiders(derived, sword);
+  const [rider] = offeredRiders(derived, sword, { moment: "on-hit" });
   assert.deepEqual(rider.facts.map((fact) => fact.id), ["attack-action"]);
   const bare = pcAttackSpec({ runtime } as never, derived, sword.id, { contracts: ["feat:great-weapon-master"] }, catalog)!.spec;
   assert.deepEqual(bare.riders, []);
@@ -106,7 +107,8 @@ test("R57: every fact names a moment this engine can ask at (D192)", () => {
       if (operation.kind === "adjudication.request" && operation.fact) moments.add(operation.fact.at);
     }
   }
-  assert.deepEqual([...moments].sort(), ["pre-roll", "reaction"]);
+  // R63 (D198): the feats' own facts moved from the dialog before the dice to the window a hit opens.
+  assert.deepEqual([...moments].sort(), ["on-hit", "reaction"]);
 });
 
 test("R57: an ally being hit opens a window for the bystander who declared one (D192)", async () => {

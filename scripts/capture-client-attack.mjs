@@ -28,6 +28,22 @@ const reveal = async (locator) => { await locator.scrollIntoViewIfNeeded(); retu
 const barOf = (page, name) => tokenOf(page, name).locator(".cl-scene-name small").first();
 /** The live (not superseded) 판정 card whose head matches. */
 const cardOf = (page, head) => page.locator(".cl-chat-msg.action", { hasText: head });
+/**
+ * R63 (D198): a player's landed swing may wait on the window a hit opens (야만적 공격자 from the 군인 background).
+ * Poll for either the card or the window, let the window go, and name what the screen shows if neither comes.
+ */
+const letHitGo = async (player, cardLocator, onWindow) => {
+  for (let at = 0; at < 60; at += 1) {
+    if (await cardLocator.count()) return;
+    const choices = player.locator(".cl-approval .cl-hit-choices");
+    if (await choices.count()) { if (onWindow) await onWindow(); await player.locator(".cl-approval").getByRole("button", { name: "안 함" }).click(); }
+    // An older prompt (a check's rescue left unanswered) sits in front of the window; let it go the way Escape would.
+    else if (await player.locator(".cl-approval").count()) await player.locator(".cl-approval button").last().click();
+    await player.waitForTimeout(250);
+  }
+  const shown = await player.locator(".cl-approval, .cl-waiting-note").allInnerTexts();
+  throw new Error(`neither the card nor the hit window appeared: ${shown.join(" | ") || "(nothing)"}`);
+};
 const pickTarget = async (page, name) => { const box = await reveal(tokenOf(page, name)); await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2); };
 
 try {
@@ -104,9 +120,13 @@ try {
   await player.locator(".cl-targeting-banner[data-picked='1']").waitFor({ timeout: 10000 });
   await player.screenshot({ path: path.join(OUT, "59-attack-targeting-range.png") });
   await player.locator(".cl-targeting-banner").getByRole("button", { name: "확정" }).click();
-  // R32 (D166): 야만적 공격자 (from the 군인 background) opens the pre-roll dialog, like 암습 does for a rogue.
-  await player.getByRole("button", { name: "공격", exact: true }).click();
+  // R63 (D198): a player's swing no longer opens a dialog before the dice. If it lands, 야만적 공격자 (from the 군인
+  // background) is offered in the window the hit opens — the player lets it go and the card is posted.
   const head = "앨리스의 파이터 → 고블린 전사: 대검";
+  await letHitGo(player, cardOf(player, head), async () => {
+    await player.screenshot({ path: path.join(OUT, "79-on-hit-window-player.png") });
+    check((await player.locator(".cl-approval").innerText()).includes("야만적 공격자"), "the hit window offers 야만적 공격자");
+  });
   await cardOf(dm, head).waitFor({ timeout: 15000 });
   await cardOf(player, head).waitFor({ timeout: 15000 });
   const playerCard = await cardOf(player, head).innerText();

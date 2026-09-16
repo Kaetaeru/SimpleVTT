@@ -7,7 +7,7 @@
  */
 import type { ContentCatalog } from "../catalog/catalog";
 import type { DerivedCharacter } from "../character/types";
-import { characterScope, evaluate } from "./contract";
+import { ATTACK_INVOCATIONS, characterScope, evaluate } from "./contract";
 import { contractOutcome, featureContract } from "./contractActivation";
 
 export interface TableOutcome {
@@ -42,7 +42,7 @@ export function tableOutcome(derived: DerivedCharacter, catalog: ContentCatalog,
     return parts.join("") || undefined;
   };
   for (const entry of contract.entryPoints) {
-    if (entry.invocation === "pre-roll-attack") continue;
+    if (ATTACK_INVOCATIONS.has(entry.invocation)) continue;
     for (const operation of entry.operations) {
       if ("when" in operation && operation.when && evaluate(operation.when, scope) !== true) continue;
       if (operation.kind === "condition.apply" && operation.target !== "self") { applied.push(operation.condition); continue; }

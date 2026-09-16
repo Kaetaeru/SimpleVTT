@@ -13,7 +13,7 @@
  */
 import type { ContentCatalog } from "../catalog/catalog";
 import type { DerivedAttack, DerivedCharacter } from "../character/types";
-import { characterScope, evaluate, type CommonPlayContract, type Scope } from "./contract";
+import { ATTACK_INVOCATIONS, characterScope, evaluate, type CommonPlayContract, type Scope } from "./contract";
 import { diceRuleOf, type DiceRule } from "./resolve";
 import { attackScopeFilter } from "./contractEffects";
 import { featureRuleKey } from "./activation";
@@ -32,6 +32,8 @@ export interface ContractRider {
   label: string;
   /** What the player is declaring, for the checkbox. */
   hint: string;
+  /** R63 (D198): when it is asked — in the dialog before the dice, or in the window a hit opens. */
+  moment: "pre-roll" | "on-hit";
   /** Weapon filter, in the same vocabulary `property.modify` uses (`heavy`, `strength-melee`, `unarmed` …). */
   scope?: string;
   oncePerTurn: boolean;
@@ -63,19 +65,20 @@ function formulaOf(operation: { dice?: string; diceCount?: unknown; amount?: unk
   return `${total}d${sides[2]}${Number.isFinite(flat) && flat ? `${flat > 0 ? "+" : ""}${flat}` : ""}`;
 }
 
-/** Every pre-roll rider a contract declares, or an empty list when it declares none. */
+/** Every pre-roll or on-hit rider a contract declares, or an empty list when it declares none. */
 export function contractRiders(contract: CommonPlayContract, key: string, label: string, scope: Scope): ContractRider[] {
   const riders: ContractRider[] = [];
   for (const entry of contract.entryPoints) {
-    if (entry.invocation !== "pre-roll-attack" || !entry.attack) continue;
+    if (!ATTACK_INVOCATIONS.has(entry.invocation) || !entry.attack) continue;
+    const moment = entry.invocation === "on-hit" ? "on-hit" : "pre-roll";
     const rider: ContractRider = {
-      key, label, hint: "", ...(entry.attack.scope ? { scope: entry.attack.scope } : {}),
+      key, label, hint: "", moment, ...(entry.attack.scope ? { scope: entry.attack.scope } : {}),
       oncePerTurn: entry.attack.oncePerTurn, requiresEffects: entry.attack.requiresEffects, damage: [], facts: [], dice: [], cost: 0,
     };
     const hints: string[] = [];
     // R57 (D192): a fact this entry point declares is a checkbox, not prose; an operation gated on one carries the
     // fact's id rather than being evaluated now, because only the player at the moment knows the answer.
-    const declared = new Set(entry.operations.flatMap((operation) => (operation.kind === "adjudication.request" && operation.fact?.at === "pre-roll" ? [`fact:${operation.fact.id}`] : [])));
+    const declared = new Set(entry.operations.flatMap((operation) => (operation.kind === "adjudication.request" && operation.fact?.at === moment ? [`fact:${operation.fact.id}`] : [])));
     const gatedOn = (operation: { when?: unknown }) => (operation.when && typeof operation.when === "object" && "ref" in operation.when && declared.has(String((operation.when as { ref: string }).ref)) ? String((operation.when as { ref: string }).ref).slice(5) : undefined);
     for (const operation of entry.operations) {
       const factId = gatedOn(operation as { when?: unknown });
@@ -91,7 +94,7 @@ export function contractRiders(contract: CommonPlayContract, key: string, label:
         const rule = diceRuleOf(operation.property, Number(evaluate(operation.value, scope)), label);
         if (rule) rider.dice.push(rule);
       } else if (operation.kind === "adjudication.request") {
-        if (operation.fact?.at === "pre-roll") rider.facts.push({ id: operation.fact.id, question: operation.question });
+        if (operation.fact?.at === moment) rider.facts.push({ id: operation.fact.id, question: operation.question });
         else hints.push(operation.question);
       }
     }
@@ -127,9 +130,11 @@ export const riderFitsAttack = (rider: ContractRider, attack: DerivedAttack) => 
  * The riders the dialog should offer for this swing: the weapon fits, the effects it names are running, and the pool
  * it spends has something left. A rider whose effects are not running is not offered rather than offered and refused.
  */
-export function offeredRiders(derived: DerivedCharacter, attack: DerivedAttack, options: { effects?: string[]; left?: (resourceId: string) => number } = {}): ContractRider[] {
+export function offeredRiders(derived: DerivedCharacter, attack: DerivedAttack, options: { effects?: string[]; left?: (resourceId: string) => number; /** R63 (D198): which window is asking; the dialog before the dice by default. */ moment?: ContractRider["moment"] } = {}): ContractRider[] {
   const running = new Set([...(options.effects ?? []), ...derived.activeEffects.map((effect) => effect.name)]);
+  const moment = options.moment ?? "pre-roll";
   return (derived.attackRiders ?? []).filter((rider) => {
+    if (rider.moment !== moment) return false;
     if (!riderFitsAttack(rider, attack)) return false;
     if (rider.requiresEffects.some((name) => !running.has(name))) return false;
     if (rider.resourceId && options.left && options.left(rider.resourceId) < rider.cost) return false;

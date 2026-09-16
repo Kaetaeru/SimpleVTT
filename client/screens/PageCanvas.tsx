@@ -33,7 +33,7 @@ import { describeSpellExec, spellExec } from "../compendium/spells";
 import type { CastMethod } from "../character/play";
 import { castOptions } from "./SheetView";
 import { ApprovalLayer, ToastLayer } from "./Notify";
-import { canOffHand, hasSavageAttacker, hasSmite, hasSneakAttack, npcAttackSpec, smiteSlots, weaponRange } from "../rules/attackSpec";
+import { canOffHand, npcAttackSpec, weaponRange } from "../rules/attackSpec";
 import { offeredRiders, type ContractRider } from "../rules/attackRiders";
 import { tableOutcome } from "../rules/contractTable";
 import { attackScopeFilter } from "../rules/contractEffects";
@@ -266,18 +266,14 @@ function makeAttackWith({ c, token, page, entry, derived, isGm, readied, journal
     const name = ref.source === "weapon" && derived ? derived.attacks.find((item) => item.id === ref.attackId)!.name : ref.source === "npc" ? ref.actionName : "공격";
     const targets = options.targets ?? await requestTargets(`${name} — 대상을 클릭하세요${readied ? " (준비한 행동)" : ""}`, { multi: true, exclude: token.id });
     if (!targets.length) return;
-    let sneak = false;
-    let savage = false;
+    // R63 (D198): 암습, 신성한 강타 and 야만적 공격자 are chosen after the hit now, in the window it opens — this dialog
+    // keeps only what has to be declared before the dice.
     let offHand = false;
-    let slots: Array<{ level: number; free: number }> = [];
     let contractRiderList: ContractRider[] = [];
     if (ref.source === "weapon" && derived && entry.kind === "character") {
       const attack = derived.attacks.find((item) => item.id === ref.attackId)!;
-      sneak = hasSneakAttack(derived, attack);
-      savage = hasSavageAttacker(derived);
       // R33 (D168): a Light weapon can be the off-hand swing, which costs it its ability modifier unless 쌍수 전투 pays.
       offHand = canOffHand(attack);
-      slots = hasSmite(derived) ? smiteSlots(derived, entry.runtime) : [];
       // R52 (D187): the riders the sheet's own contracts offer for this weapon, with what is running and what is left.
       const runtime = entry.runtime;
       contractRiderList = offeredRiders(derived, attack, {
@@ -292,7 +288,7 @@ function makeAttackWith({ c, token, page, entry, derived, isGm, readied, journal
     const hit = targets.map((id) => page.tokens.find((item) => item.id === id)?.represents).filter((id): id is string => Boolean(id));
     const situational = situationalTraits(entry, hit.map((id) => journal.find((candidate) => candidate.id === id)).filter((found): found is JournalEntry => Boolean(found)));
     if (options.overrides) answer = { overrides: options.overrides };
-    else if (isGm || sneak || savage || offHand || slots.length || situational.length || contractRiderList.length) { answer = await requestAttackOptions({ name, sneak, savage, offHand, offHandFeat: derived?.featEffects?.lightOffHandAbilityModifier, slots, gm: isGm, notes: situational, riders: contractRiderList }); if (answer === null) return; }
+    else if (isGm || offHand || situational.length || contractRiderList.length) { answer = await requestAttackOptions({ name, offHand, offHandFeat: derived?.featEffects?.lightOffHandAbilityModifier, gm: isGm, notes: situational, riders: contractRiderList }); if (answer === null) return; }
     c.attack({ entryId: entry.id, pageId: page.id, tokenId: token.id }, targets.map((id) => ({ pageId: page.id, tokenId: id })), ref, answer?.riders, { overrides: answer?.overrides, readied });
   };
 }
@@ -596,7 +592,7 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
       method = chosen;
     }
     let overrides: AttackOverrides | undefined;
-    if (isGm && exec.primary.kind === "attack-damage") { const answer = await requestAttackOptions({ name, sneak: false, slots: [], gm: true }); if (answer === null) return; overrides = answer.overrides; }
+    if (isGm && exec.primary.kind === "attack-damage") { const answer = await requestAttackOptions({ name, gm: true }); if (answer === null) return; overrides = answer.overrides; }
     c.cast(me, spellId, targets.map((id) => ({ pageId: page.id, tokenId: id })), method, overrides, readiedNow || undefined);
   };
   const spellItems = entry.kind === "character" && derived
@@ -613,7 +609,7 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
     const picked = await requestTargets(`다중공격 (${routine.map((step) => `${step.name}×${step.count}`).join(", ")}) — 대상을 클릭하세요 (여러 명이면 차례로 배분)`, { multi: true, exclude: token.id });
     if (!picked.length) return;
     let overrides: AttackOverrides | undefined;
-    if (isGm) { const answer = await requestAttackOptions({ name: "다중공격", sneak: false, slots: [], gm: true }); if (answer === null) return; overrides = answer.overrides ?? {}; }
+    if (isGm) { const answer = await requestAttackOptions({ name: "다중공격", gm: true }); if (answer === null) return; overrides = answer.overrides ?? {}; }
     let at = 0;
     for (const step of routine) for (let n = 0; n < step.count; n += 1) { await attackWith({ source: "npc", actionName: step.name }, { targets: [picked[at % picked.length]], overrides: overrides ?? {} }); at += 1; }
   };
@@ -681,7 +677,7 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
  * player controls. One row: the sheet's attacks and unarmed options, then menus for the 2024 action list, checks,
  * features, items and bonus actions (D97, D98). The economy chips only inform.
  */
-interface AttackAsk { name: string; sneak: boolean; /** R52 (D187): the riders this sheet's contracts let the player declare on this weapon. */ riders?: ContractRider[]; /** R32 (D166): 야만적 공격자 is on this sheet. */ savage?: boolean; /** R33 (D168): this weapon is Light, so it may be swung as the off-hand attack. */ offHand?: boolean; /** R33 (D168): the feat that keeps the ability modifier on that swing, when the sheet has one. */ offHandFeat?: string; slots: Array<{ level: number; free: number }>; gm: boolean; /** R31 (D164): stat-block lines that could change this roll but depend on where everyone is standing. */ notes?: string[]; resolve: (answer: AttackAnswer | null) => void }
+interface AttackAsk { name: string; /** R52 (D187): the riders this sheet's contracts let the player declare on this weapon, before the dice. */ riders?: ContractRider[]; /** R33 (D168): this weapon is Light, so it may be swung as the off-hand attack. */ offHand?: boolean; /** R33 (D168): the feat that keeps the ability modifier on that swing, when the sheet has one. */ offHandFeat?: string; gm: boolean; /** R31 (D164): stat-block lines that could change this roll but depend on where everyone is standing. */ notes?: string[]; resolve: (answer: AttackAnswer | null) => void }
 export interface AttackAnswer { riders?: AttackRiders; overrides?: AttackOverrides }
 const attackAskListeners = new Set<(ask: AttackAsk) => void>();
 export const requestAttackOptions = (ask: Omit<AttackAsk, "resolve">) => new Promise<AttackAnswer | null>((resolve) => { if (!attackAskListeners.size) { resolve({}); return; } for (const listener of [...attackAskListeners]) listener({ ...ask, resolve }); });
@@ -717,14 +713,11 @@ function AttackAskBridge() {
  * 유리/불리 declaration, and for the DM cover and "반드시 적중/치명타/빗나감". Everything else stays automatic.
  */
 function AttackDialog({ ask, onDone }: { ask: AttackAsk; onDone: (answer: AttackAnswer | null) => void }) {
-  const [sneak, setSneak] = useState(ask.sneak);
   // R52 (D187): the open half — one checkbox per rider a contract declared, keyed by its rule key.
   const [declared, setDeclared] = useState<string[]>([]);
   // R57 (D192): and one per fact a rider asks about, because the scene cannot see where anyone is standing.
   const [facts, setFacts] = useState<string[]>([]);
-  const [savage, setSavage] = useState(false);
   const [offHand, setOffHand] = useState(false);
-  const [slot, setSlot] = useState<number>(0);
   const [advantage, setAdvantage] = useState<"auto" | Advantage>("auto");
   const [cover, setCover] = useState<0 | 2 | 5>(0);
   const [outcome, setOutcome] = useState<"" | "hit" | "crit" | "miss">("");
@@ -733,7 +726,7 @@ function AttackDialog({ ask, onDone }: { ask: AttackAsk; onDone: (answer: Attack
     if (advantage !== "auto") overrides.advantage = advantage;
     if (ask.gm && cover) overrides.cover = cover;
     if (ask.gm && outcome) overrides.outcome = outcome;
-    onDone({ riders: { sneak: ask.sneak && sneak, savage: Boolean(ask.savage) && savage, offHand: Boolean(ask.offHand) && offHand, smiteSlot: slot || undefined, ...(declared.length ? { contracts: declared } : {}), ...(facts.length ? { facts } : {}) }, overrides: Object.keys(overrides).length ? overrides : undefined });
+    onDone({ riders: { offHand: Boolean(ask.offHand) && offHand, ...(declared.length ? { contracts: declared } : {}), ...(facts.length ? { facts } : {}) }, overrides: Object.keys(overrides).length ? overrides : undefined });
   };
   return (
     <RiderModal title={`${ask.name} — 판정 전 조정`} onClose={() => onDone(null)} actions={<button type="button" className="cl-btn primary" onClick={done}>공격</button>}>
@@ -748,9 +741,6 @@ function AttackDialog({ ask, onDone }: { ask: AttackAsk; onDone: (answer: Attack
           <div className="cl-field"><label htmlFor="cl-attack-force">반드시</label><select id="cl-attack-force" className="cl-select" value={outcome} onChange={(event) => setOutcome(event.target.value as "" | "hit" | "crit" | "miss")}><option value="">주사위대로</option><option value="hit">반드시 적중</option><option value="crit">반드시 치명타</option><option value="miss">반드시 빗나감</option></select></div>
         </>
       ) : null}
-      {ask.sneak ? <label className="cl-row cl-small" style={{ gap: 6 }}><input type="checkbox" checked={sneak} onChange={(event) => setSneak(event.target.checked)} /> 암습 (유리하거나 아군이 대상 옆에 있을 때, 턴당 한 번)</label> : null}
-      {/* R32 (D166): the feat's whole rule is this checkbox — the host rolls the weapon dice twice and keeps the better. */}
-      {ask.savage ? <label className="cl-row cl-small" style={{ gap: 6 }}><input type="checkbox" checked={savage} onChange={(event) => setSavage(event.target.checked)} /> 야만적 공격자 (무기 피해 주사위를 두 번 굴려 높은 쪽, 턴당 한 번)</label> : null}
       {/* R33 (D168): the off-hand swing. Without 쌍수 전투 it loses the ability modifier; with it the modifier stays. */}
       {ask.offHand ? <label className="cl-row cl-small" style={{ gap: 6 }}><input type="checkbox" checked={offHand} onChange={(event) => setOffHand(event.target.checked)} /> 보조 손 공격 ({ask.offHandFeat ? `${ask.offHandFeat} — 능력 수정치 유지` : "피해에 능력 수정치 없음"})</label> : null}
       {/* R52 (D187): 광란, 대형 무기 달인의 중량 무기 숙달 and every other "declare it before the roll" rule the
@@ -770,9 +760,8 @@ function AttackDialog({ ask, onDone }: { ask: AttackAsk; onDone: (answer: Attack
           )) : null}
         </div>
       ))}
-      {ask.slots.length ? <div className="cl-field"><label>신성한 강타 (적중 시 슬롯 소비, 2d8 + 슬롯 레벨당 1d8 광휘)</label><select className="cl-select" aria-label="강타 슬롯" value={slot} onChange={(event) => setSlot(Number(event.target.value))}><option value={0}>안 씀</option>{ask.slots.map((item) => <option key={item.level} value={item.level}>{item.level}레벨 슬롯 ({item.free} 남음)</option>)}</select></div> : null}
       {ask.notes?.length ? <div className="cl-field"><label>자리에 따라 (표에서 판단)</label><ul className="cl-quiet cl-small" style={{ margin: 0, paddingLeft: 18 }}>{ask.notes.map((note) => <li key={note}>{note}</li>)}</ul></div> : null}
-      <p className="cl-quiet cl-small">진행 중인 효과의 추가 주사위(격노·사냥꾼의 표식 등)는 저절로 붙습니다. 판정 뒤에도 DM 팔레트로 고칠 수 있습니다.</p>
+      <p className="cl-quiet cl-small">진행 중인 효과의 추가 주사위(격노·사냥꾼의 표식 등)는 저절로 붙습니다. 암습·신성한 강타처럼 명중했을 때 고르는 것은 명중한 뒤에 묻습니다. 판정 뒤에도 DM 팔레트로 고칠 수 있습니다.</p>
     </RiderModal>
   );
 }

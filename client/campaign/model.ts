@@ -101,7 +101,7 @@ export function advanceClock(clock: CampaignClock, minutes: number): CampaignClo
 /** "○○이(가) △△에게서 벗어남": the reactor's controller may take an opportunity attack or let it go. */
 export interface ReactionPrompt {
   /** "opportunity": the mover leaves the reactor's reach (D96). "shield": the mover's attack hit the reactor, who may cast Shield (R11). "counterspell": the mover is casting and the reactor may counter it (R16). */
-  kind: "opportunity" | "shield" | "counterspell" | "death-save" | "rescue" | "guard";
+  kind: "opportunity" | "shield" | "counterspell" | "death-save" | "rescue" | "guard" | "on-hit";
   mover: { name: string; entryId?: string; pageId?: string; tokenId?: string };
   reactor: { name: string; entryId?: string; pageId?: string; tokenId?: string };
   /** The held attack (shield prompts): what hit and by how much. */
@@ -118,8 +118,25 @@ export interface ReactionPrompt {
    * would do. The Shield spell rides here too when the reactor can cast it, so a player sees one question, not two.
    */
   guard?: { features: Array<{ name: string; hint: string; /** R57 (D192): facts the reactor confirms by pressing the button — the hint already spells them out. */ facts?: Array<{ id: string; question: string }> }>; shield?: boolean; /** R57 (D192): which window this is — the reactor's own skin, or an ally's. */ trigger?: string };
-  /** Filled once answered: the attack card id, or declined; for shield: whether it was cast; for counterspell: whether it landed. */
-  outcome?: { attacked?: string; declined?: boolean; shielded?: boolean; countered?: boolean; card?: string; rolled?: string };
+  /**
+   * R63 (D198): the window a hit opens for the attacker. The reactor is the attacker (their controller answers), the
+   * mover is the creature that was hit, and `offers` are what may still be added now that the hit is known.
+   */
+  onHit?: { outcome: "hit" | "crit"; offers: HitOffer[] };
+  /** Filled once answered: the attack card id, or declined; for shield: whether it was cast; for counterspell: whether it landed. R63: `chosen` names what an on-hit window added. */
+  outcome?: { attacked?: string; declined?: boolean; shielded?: boolean; countered?: boolean; card?: string; rolled?: string; chosen?: string[] };
+}
+
+/** R63 (D198): one thing the attacker may add after a hit — a built-in rider (`sneak`, `smite`, `savage`) or a contract's rule key. */
+export interface HitOffer {
+  key: string;
+  label: string;
+  /** What it does, in one line. */
+  hint: string;
+  /** Facts the scene cannot see, each a checkbox under it (돌격자's ten feet). */
+  facts?: Array<{ id: string; question: string }>;
+  /** 신성한 강타: the slots it may spend. */
+  slots?: Array<{ level: number; free: number }>;
 }
 
 export interface ChatMessage {

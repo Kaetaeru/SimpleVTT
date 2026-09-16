@@ -18,18 +18,18 @@ import type { CharacterRuntime } from "../character/runtime";
 import type { ActiveEffect } from "../character/types";
 import { npcAttackSpec, npcCombatant, npcSaveExec, regenerationOf } from "../rules/attackSpec";
 import type { AttackOverrides, AttackResolution, AttackSpec, Combatant } from "../rules/resolve";
-import { describeResolution, diceFrom, resolveAttack } from "../rules/resolve";
+import { carryDice, describeResolution, diceFrom, resolveAttack } from "../rules/resolve";
 import type { ActorRef, AttackRef, AttackRiders } from "./protocol";
 import { isConditionMarker } from "../campaign/page";
 import type { ActResult } from "../rules/actions";
 import { ACTIONS, cannotAct, describeAct, npcStats, resolveAction, TURN_MARKS, type ActorStats } from "../rules/actions";
-import { smiteFiendBonus } from "../rules/attackSpec";
+import { smiteFiendBonus, withHitChoices } from "../rules/attackSpec";
 import { describeSpell, resolveSpell, type CasterStats, type SpellCastSpec, type SpellResolution, type SpellTargetResult } from "../rules/spellcast";
 import { spellExec } from "../compendium/spells";
 import { startEffect } from "../character/play";
 import type { CastMethod } from "../character/play";
 import type { TrackerTurn } from "../campaign/tracker";
-import type { Campaign, CampaignClock, ChatMessage, PlayerRole } from "../campaign/model";
+import type { Campaign, CampaignClock, ChatMessage, HitOffer, PlayerRole } from "../campaign/model";
 import { advanceClock, clockText, emptyClock, newMessageId, withPlayer, withPlayerKicked, withPlayerRole } from "../campaign/model";
 import { parseFormula, rollFormula } from "../character/dice";
 import { ABILITY_KO, type AbilityKey } from "../catalog/types";
@@ -117,6 +117,8 @@ export interface TableHostOptions {
   pcAftermath?: (entry: JournalCharacter, attackId: string, outcomes: AttackOutcomeKind[]) => AttackAftermath;
   /** R54 (D189): the reactions this character's contracts open a window for at this moment. */
   pcGuards?: (entry: JournalCharacter, trigger: ReactionTrigger) => GuardOffer[];
+  /** R63 (D198): what this character may still add to a swing that just landed (암습, 신성한 강타, on-hit contracts). */
+  pcHitOffers?: (entry: JournalCharacter, attackId: string, riders: AttackRiders) => HitOffer[];
   /** R58 (D193): the display name of a content id the host has no catalog to look up. */
   contentName?: (contentId: string) => string | undefined;
   /** The official actions (D97) need a PC's ability modifiers, saves and skills from the derived sheet. */
@@ -161,7 +163,7 @@ export class TableHost {
   /** Set for the length of one resumed cast so the same would-be counterspellers are not asked twice. */
   private counterAsked: string[] | null = null;
   /** R11: attacks held while the target decides on Shield (prompt id → everything needed to finish the attack). */
-  private readonly held = new Map<string, { inputs: { attacker: ActorRef; targets: ActorRef[]; attack: AttackRef; riders?: AttackRiders; by: string; targetIndex: number }; attacker: { entry: JournalEntry; token?: Token; page?: Page }; target: { entry: JournalEntry; token?: Token; page?: Page }; spec: AttackSpec; overrides?: AttackOverrides; resolution: AttackResolution; supersedes?: string }>();
+  private readonly held = new Map<string, { inputs: { attacker: ActorRef; targets: ActorRef[]; attack: AttackRef; riders?: AttackRiders; by: string; targetIndex: number }; attacker: { entry: JournalEntry; token?: Token; page?: Page }; target: { entry: JournalEntry; token?: Token; page?: Page }; spec: AttackSpec; overrides?: AttackOverrides; resolution: AttackResolution; supersedes?: string; /** R63 (D198): whose answer holds it — the target's reaction, or the attacker's on-hit choice. */ stage?: "reaction" | "on-hit"; /** R63 (D198): the result waits for the DM once it is let go (D90). */ waits?: boolean }>();
   private readonly actions = new Map<string, { inputs: { attacker: ActorRef; targets: ActorRef[]; attack: AttackRef; riders?: AttackRiders; by: string; targetIndex: number }; resolution: AttackResolution; restore: () => void }>();
   /**
    * R37 (D177): official-action cards that can be redone — the command that made them, who rolled, and the marks the
@@ -1350,6 +1352,49 @@ export class TableHost {
         this.releaseHeld(command.messageId, false, { acBonus, reduce: rolled, label: command.feature });
         return;
       }
+      /**
+       * R63 (D198): the attacker takes what the hit window offered. The offers are asked for again rather than trusted,
+       * the swing is resolved again with the same d20 and the same dice (new parts roll fresh, a reroll chosen now
+       * happens once), and only what was chosen now is paid for — whatever was declared before the roll already was.
+       */
+      case "act.onhit": {
+        const promptMessage = this.chat.find((message) => message.id === command.messageId && message.type === "prompt");
+        const held = this.held.get(command.messageId);
+        if (!promptMessage?.prompt || promptMessage.prompt.kind !== "on-hit" || !held || this.promptAnswered(command.messageId)) return refuse("그 창은 더 이상 열려 있지 않습니다");
+        const attacker = this.resolveActor(held.inputs.attacker);
+        const target = this.resolveActor(held.inputs.targets[held.inputs.targetIndex]);
+        if (!attacker || attacker.entry.kind !== "character" || !target || held.inputs.attack.source !== "weapon") return refuse("공격자나 대상이 더 없습니다");
+        if (!isGm && !this.mayAct(userId, held.inputs.attacker, attacker.entry)) return refuse("공격자의 조종자만 답할 수 있습니다");
+        const offers = this.options.pcHitOffers?.(attacker.entry, held.inputs.attack.attackId, held.inputs.riders ?? {}) ?? [];
+        const offered = new Map(offers.map((offer) => [offer.key, offer]));
+        const smiteSlot = command.choices.includes("smite") && offered.get("smite")?.slots?.some((slot) => slot.level === command.smiteSlot) ? command.smiteSlot : undefined;
+        const picked = [...new Set(command.choices)].filter((key) => offered.has(key) && (key !== "smite" || smiteSlot));
+        const confirmable = new Set(picked.flatMap((key) => (offered.get(key)!.facts ?? []).map((fact) => fact.id)));
+        const facts = (command.facts ?? []).filter((id) => confirmable.has(id));
+        const labels = picked.map((key) => `${offered.get(key)!.label}${key === "smite" ? ` (${smiteSlot}레벨 슬롯)` : ""}`);
+        this.held.delete(command.messageId);
+        this.say({ ...promptMessage, prompt: { ...promptMessage.prompt, outcome: picked.length ? { chosen: labels } : { declined: true } }, supersedes: promptMessage.id, content: `${promptMessage.content} → ${labels.length ? labels.join(", ") : "안 함"}` });
+        if (!picked.length) { this.finishAttack({ ...held, attacker, target }); return; }
+        const answer = { choices: picked, facts, smiteSlot };
+        const riders = withHitChoices(held.inputs.riders ?? {}, answer);
+        let prepared = this.prepareAttack(attacker, held.inputs.attack, riders);
+        // Only the new choices are paid now; the declared riders were paid when the attack was made.
+        const fresh = this.prepareAttack(attacker, held.inputs.attack, withHitChoices({ cleave: riders.cleave, offHand: riders.offHand }, answer));
+        const attackerCombatant = this.combatantOf(attacker);
+        const targetCombatant = this.combatantOf(target);
+        if (!prepared || !attackerCombatant || !targetCombatant) { this.finishAttack({ ...held, attacker, target }); return; }
+        const fiendBonus = target.entry.kind === "npc" ? smiteFiendBonus(prepared.spec, target.entry.statBlock.creatureType) : null;
+        if (fiendBonus) prepared = { ...prepared, spec: { ...prepared.spec, riders: [...(prepared.spec.riders ?? []), fiendBonus] } };
+        // A reaction that raised the AC (방패, 공격 흘리기) already had its say; keep the AC the card was decided against.
+        const decidedAc = held.resolution.targetAc - held.resolution.cover;
+        if (targetCombatant.ac < decidedAc) targetCombatant.ac = decidedAc;
+        const crit = held.resolution.outcome === "crit";
+        const parts = [...prepared.spec.damage, ...(prepared.spec.riders ?? []), ...(crit ? prepared.spec.critRiders ?? [] : [])];
+        const resolution = resolveAttack(attackerCombatant, targetCombatant, prepared.spec, { dice: diceFrom(this.options.random ?? Math.random), overrides: held.overrides, fixed: { d20s: held.resolution.d20s, damage: carryDice(held.resolution.damage, parts), ...(held.resolution.mastery?.save ? { masteryD20: held.resolution.mastery.save.d20 } : {}) }, apply: !held.waits, rerollOnce: true });
+        if (fresh?.spend) { const before = attacker.entry; this.storeEntry({ ...before, runtime: fresh.spend(before.runtime), updatedAt: this.now() }); }
+        this.finishAttack({ ...held, inputs: { ...held.inputs, riders }, attacker: this.resolveActor(held.inputs.attacker) ?? attacker, target, resolution });
+        return;
+      }
       case "act.decline": {
         const promptMessage = this.chat.find((message) => message.id === command.messageId && message.type === "prompt");
         if (!promptMessage?.prompt || this.promptAnswered(command.messageId)) return refuse("그 프롬프트는 더 이상 열려 있지 않습니다");
@@ -1492,7 +1537,7 @@ export class TableHost {
       const promptId = newMessageId();
       const attackerName = attacker.token?.name ?? attacker.entry.name;
       const targetName = target.token?.name ?? target.entry.name;
-      this.held.set(promptId, { inputs, attacker, target, spec: prepared.spec, overrides, resolution, supersedes });
+      this.held.set(promptId, { inputs, attacker, target, spec: prepared.spec, overrides, resolution, supersedes, stage: "reaction" });
       const offers = bystander ? bystander.offers : guards;
       const reactorRef = bystander ? this.refOf(bystander.actor) : targetRef;
       const reactorName = bystander ? bystander.actor.token?.name ?? bystander.actor.entry.name : targetName;
@@ -1500,8 +1545,40 @@ export class TableHost {
       this.sayWithId(promptId, { type: "prompt", who: player?.displayName ?? "", playerId: inputs.by, content: `${attackerName}의 ${prepared.spec.name}이(가) ${targetName}에게 적중 (${resolution.attackTotal} vs AC ${resolution.targetAc}) — ${bystander ? `${reactorName}의 ` : ""}${offered.join(" / ")} 반응?`, prompt: { kind: canShield ? "shield" : "guard", mover: { name: attackerName, ...inputs.attacker }, reactor: { name: reactorName, ...reactorRef }, attack: { name: prepared.spec.name, total: resolution.attackTotal, ac: resolution.targetAc }, ...(offers.length ? { guard: { features: offers.map((guard) => ({ name: guard.feature, hint: guardHint(guard), ...(guard.facts.length ? { facts: guard.facts } : {}) })), shield: canShield, trigger: bystander ? "attack.hit-ally" : "attack.hit-self" } } : {}) } });
       return promptId;
     }
+    // R63 (D198): a palette edit or a rescue re-resolves a card the attacker already answered, so it never asks again.
+    return this.afterReactions({ inputs, attacker, target, spec: prepared.spec, overrides, resolution, supersedes, waits }, !fixed);
+  }
+
+  /**
+   * R63 (D198): the target has had its say. If the swing still landed and the attacker has something to add after a
+   * hit (암습, 신성한 강타, an on-hit contract), the card is held and the attacker asked — with the hit and a critical
+   * already known, which is when 2024 has them decide. Otherwise the card is posted.
+   */
+  private afterReactions(held: { inputs: { attacker: ActorRef; targets: ActorRef[]; attack: AttackRef; riders?: AttackRiders; by: string; targetIndex: number }; attacker: { entry: JournalEntry; token?: Token; page?: Page }; target: { entry: JournalEntry; token?: Token; page?: Page }; spec: AttackSpec; overrides?: AttackOverrides; resolution: AttackResolution; supersedes?: string; waits?: boolean }, allowOnHit: boolean): string {
+    const { inputs, attacker, target, resolution } = held;
+    const landed = resolution.outcome === "hit" || resolution.outcome === "crit";
+    if (allowOnHit && landed && attacker.entry.kind === "character" && inputs.attack.source === "weapon" && this.options.pcHitOffers) {
+      const offers = this.options.pcHitOffers(attacker.entry, inputs.attack.attackId, inputs.riders ?? {});
+      if (offers.length) {
+        const promptId = newMessageId();
+        this.held.set(promptId, { ...held, stage: "on-hit" });
+        const player = this.campaign.players.find((item) => item.userId === inputs.by);
+        const attackerName = attacker.token?.name ?? attacker.entry.name;
+        const targetName = target.token?.name ?? target.entry.name;
+        const crit = resolution.outcome === "crit";
+        this.sayWithId(promptId, { type: "prompt", who: player?.displayName ?? "", playerId: inputs.by, content: `${attackerName}의 ${held.spec.name}이(가) ${targetName}에게 ${crit ? "치명타" : "명중"} — ${offers.map((offer) => offer.label).join(" / ")}?`, prompt: { kind: "on-hit", mover: { name: targetName, ...inputs.targets[inputs.targetIndex] }, reactor: { name: attackerName, ...inputs.attacker }, attack: { name: held.spec.name, total: resolution.attackTotal, ac: resolution.targetAc }, onHit: { outcome: crit ? "crit" : "hit", offers } } });
+        return promptId;
+      }
+    }
+    return this.finishAttack(held);
+  }
+
+  /** The card, applied now or (D90) waiting for the DM. */
+  private finishAttack(held: { inputs: { attacker: ActorRef; targets: ActorRef[]; attack: AttackRef; riders?: AttackRiders; by: string; targetIndex: number }; attacker: { entry: JournalEntry; token?: Token; page?: Page }; target: { entry: JournalEntry; token?: Token; page?: Page }; resolution: AttackResolution; supersedes?: string; waits?: boolean }): string {
+    const { inputs, attacker, target, resolution, supersedes } = held;
+    const player = this.campaign.players.find((item) => item.userId === inputs.by);
     const messageId = newMessageId();
-    if (waits) {
+    if (held.waits) {
       this.actions.set(messageId, { inputs, resolution, restore: () => undefined });
       this.sayWithId(messageId, { type: "action", who: player?.displayName ?? "", playerId: inputs.by, content: `${describeResolution(resolution)} (DM 확인 대기)`, action: resolution, supersedes });
       return messageId;
@@ -1780,7 +1857,10 @@ export class TableHost {
     this.held.delete(promptId);
     const attacker = this.resolveActor(held.inputs.attacker) ?? held.attacker;
     const target = this.resolveActor(held.inputs.targets[held.inputs.targetIndex]) ?? held.target;
+    // R63 (D198): the attacker let the on-hit window go ("안 함") — the card lands as it was rolled.
+    if (held.stage === "on-hit") { this.finishAttack({ ...held, attacker, target }); return; }
     let resolution = held.resolution;
+    let overrides = held.overrides;
     // R54 (D189): Shield's +5 and a contract reaction's own bonus take the same road — re-resolve with the same dice
     // and a higher AC, so a hit that is now a miss really misses. `damageDelta` is how a reaction that soaks damage
     // instead of raising AC reaches the card.
@@ -1791,13 +1871,12 @@ export class TableHost {
       const targetCombatant = this.combatantOf(target);
       if (attackerCombatant && targetCombatant) {
         if (acBonus && targetCombatant.ac < held.resolution.targetAc + acBonus) targetCombatant.ac = held.resolution.targetAc + acBonus;
-        const overrides = { ...(held.overrides ?? {}), ...(guard?.reduce ? { damageDelta: (held.overrides?.damageDelta ?? 0) - guard.reduce } : {}), note: [held.overrides?.note, note].filter(Boolean).join(" · ") };
+        overrides = { ...(held.overrides ?? {}), ...(guard?.reduce ? { damageDelta: (held.overrides?.damageDelta ?? 0) - guard.reduce } : {}), note: [held.overrides?.note, note].filter(Boolean).join(" · ") };
         resolution = resolveAttack(attackerCombatant, targetCombatant, held.spec, { dice: diceFrom(this.options.random ?? Math.random), overrides, fixed: { d20s: held.resolution.d20s, damage: held.resolution.damage.map((part) => part.dice) }, apply: true });
       }
     }
-    const player = this.campaign.players.find((item) => item.userId === held.inputs.by);
-    const messageId = newMessageId();
-    this.applyResolution(resolution, target, attacker, messageId, false, held.inputs, held.supersedes, player?.displayName);
+    // R63 (D198): the target's answer is in; if the swing still landed, the attacker is asked next.
+    this.afterReactions({ ...held, attacker, target, resolution, overrides }, true);
   }
 
   /** A resolved spell (or an NPC save action) becomes a card: applied now, or held for the DM (D90) with its restores. */

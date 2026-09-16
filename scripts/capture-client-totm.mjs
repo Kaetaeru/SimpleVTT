@@ -23,6 +23,22 @@ const base = `http://127.0.0.1:${PORT}/`;
 const failures = [];
 const check = (condition, message) => { if (!condition) { failures.push(message); console.error("FAIL:", message); } else console.log("ok:", message); };
 const tab = (page, name) => page.getByRole("tab", { name: new RegExp(`^${name}`) });
+/**
+ * R63 (D198): a player's landed swing may wait on the window a hit opens (야만적 공격자 from the 군인 background).
+ * Poll for either the card or the window, let the window go, and name what the screen shows if neither comes.
+ */
+const letHitGo = async (player, cardLocator, onWindow) => {
+  for (let at = 0; at < 60; at += 1) {
+    if (await cardLocator.count()) return;
+    const choices = player.locator(".cl-approval .cl-hit-choices");
+    if (await choices.count()) { if (onWindow) await onWindow(); await player.locator(".cl-approval").getByRole("button", { name: "안 함" }).click(); }
+    // An older prompt (a check's rescue left unanswered) sits in front of the window; let it go the way Escape would.
+    else if (await player.locator(".cl-approval").count()) await player.locator(".cl-approval button").last().click();
+    await player.waitForTimeout(250);
+  }
+  const shown = (await player.locator(".cl-approval, .cl-waiting-note").evaluateAll((nodes) => nodes.map((node) => node.textContent))).map((text) => (text ?? "").slice(0, 300));
+  throw new Error(`neither the card nor the hit window appeared: ${shown.join(" | ") || "(nothing)"}`);
+};
 const iconOf = (page, name) => page.locator(`.cl-scene-card[data-token-name="${name}"]`);
 const cardOf = (page, head) => page.locator(".cl-chat-msg.action", { hasText: head });
 
@@ -99,9 +115,10 @@ try {
   await player.locator(".cl-targeting-banner[data-picked='1']").waitFor({ timeout: 10000 });
   await player.screenshot({ path: path.join(OUT, "63-totm-scene-targeting.png") });
   await player.locator(".cl-targeting-banner").getByRole("button", { name: "확정" }).click();
-  // R32 (D166): 야만적 공격자 (from the 군인 background) opens the pre-roll dialog, like 암습 does for a rogue.
-  await player.getByRole("button", { name: "공격", exact: true }).click();
+  // R63 (D198): a player's swing no longer opens a dialog before the dice. If it lands, 야만적 공격자 (from the 군인
+  // background) is offered in the window the hit opens — the player lets it go and the card is posted.
   const head = "앨리스의 파이터 → 고블린 전사: 대검";
+  await letHitGo(player, cardOf(player, head));
   await cardOf(dm, head).waitFor({ timeout: 15000 });
   await cardOf(player, head).waitFor({ timeout: 15000 });
   check(!/\d+ ft/.test(await cardOf(player, head).innerText()), "the card carries no distance");
@@ -213,8 +230,9 @@ try {
   await player.locator(".cl-targeting-banner").waitFor();
   await iconOf(player, "고블린 전사").click();
   await player.locator(".cl-targeting-banner").getByRole("button", { name: "확정" }).click();
-  await player.getByRole("button", { name: "공격", exact: true }).click();
+  // R63 (D198): no dialog before the dice; a hit asks about 야만적 공격자 afterwards, and the player lets it go.
   const readiedHead = "앨리스의 파이터 → 고블린 전사: 대검 · 준비한 행동";
+  await letHitGo(player, cardOf(dm, readiedHead));
   await cardOf(dm, readiedHead).waitFor({ timeout: 15000 });
   await dm.waitForTimeout(600);
   check(await iconOf(dm, "앨리스의 파이터").locator(".cl-marker[title='준비']").count() === 0, "the readied action is spent with the mark");

@@ -383,9 +383,12 @@ function PromptCard({ message, time, color }: { message: ChatMessage; time: stri
       <span className="cl-at">{time}</span>{message.who ? <span className="cl-who" style={{ color }}>{message.who}</span> : null}
       <div className="cl-prompt-card">
         {prompt.kind === "counterspell" ? <div>🚫 {prompt.mover.name}이(가) {prompt.spell?.name}{prompt.spell ? ` (${prompt.spell.level}레벨)` : ""} 시전 — <strong>{prompt.reactor.name}</strong>의 주문 차단?</div>
-          : prompt.kind === "shield" ? <div>🛡 {prompt.mover.name}의 {prompt.attack?.name}이(가) <strong>{prompt.reactor.name}</strong>에게 적중 ({prompt.attack?.total} vs AC {prompt.attack?.ac}) — 방패?</div>
+          : prompt.kind === "shield" || prompt.kind === "guard" ? <div>🛡 {prompt.mover.name}의 {prompt.attack?.name}이(가) <strong>{prompt.reactor.name}</strong>에게 적중 ({prompt.attack?.total} vs AC {prompt.attack?.ac}) — 반응?</div>
+          // R63 (D198): the attacker's own window once the swing landed.
+          : prompt.kind === "on-hit" ? <div>⚔ <strong>{prompt.reactor.name}</strong>의 {prompt.attack?.name}이(가) {prompt.mover.name}에게 {prompt.onHit?.outcome === "crit" ? "치명타" : "명중"} — 명중 후 선택</div>
+          : prompt.kind === "rescue" || prompt.kind === "death-save" ? <div>{message.content}</div>
           : <div>🏃 {prompt.mover.name}이(가) <strong>{prompt.reactor.name}</strong>에게서 벗어납니다</div>}
-        {prompt.outcome ? <Pill tone={prompt.outcome.attacked || prompt.outcome.shielded || prompt.outcome.countered ? "bad" : "accent"}>{prompt.kind === "counterspell" ? (prompt.outcome.countered ? "주문 차단" : prompt.outcome.declined ? "차단 안 함" : "차단 실패") : prompt.kind === "shield" ? (prompt.outcome.shielded ? "방패 시전" : "방패 안 씀") : prompt.outcome.attacked ? "기회 공격" : "기회 공격 안 함"}</Pill> : <PromptChoices message={message} />}
+        {prompt.outcome ? <Pill tone={prompt.outcome.attacked || prompt.outcome.shielded || prompt.outcome.countered || prompt.outcome.chosen?.length ? "bad" : "accent"}>{prompt.kind === "on-hit" ? (prompt.outcome.chosen?.length ? prompt.outcome.chosen.join(" · ") : "안 함") : prompt.kind === "counterspell" ? (prompt.outcome.countered ? "주문 차단" : prompt.outcome.declined ? "차단 안 함" : "차단 실패") : prompt.kind === "shield" ? (prompt.outcome.shielded ? "방패 시전" : "방패 안 씀") : prompt.outcome.attacked ? "기회 공격" : "기회 공격 안 함"}</Pill> : <PromptChoices message={message} />}
       </div>
     </div>
   );

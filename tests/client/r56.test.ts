@@ -88,18 +88,19 @@ test("R56: every supplement feat has a contract, and every contract parses (D191
   assert.equal(mechanical, 38, "feats carrying at least one mechanical operation (R57–R61 each turned prose into numbers)");
 });
 
-test("R56: 대형 무기 달인 is a checkbox on a heavy weapon and a bonus action on a critical (D191)", () => {
+test("R56: 대형 무기 달인 is a choice on a heavy-weapon hit and a bonus action on a critical (D191, R63 D198)", () => {
   const { catalog, runtime, derived } = withFeat("great-weapon-master", "대형 무기 달인");
   const sword = derived.attacks.find((attack) => attack.name === "대검")!;
   assert.ok(sword.properties.includes("heavy"), sword.properties.join("/"));
 
-  // The pre-roll seam (R52): offered on a Heavy weapon, adding the proficiency bonus.
-  const offered = offeredRiders(derived, sword);
+  // R63 (D198): offered in the window a hit opens, on a Heavy weapon, adding the proficiency bonus.
+  const offered = offeredRiders(derived, sword, { moment: "on-hit" });
   assert.deepEqual(offered.map((rider) => rider.key), ["feat:great-weapon-master"], JSON.stringify(derived.attackRiders));
   assert.deepEqual(offered[0].damage, [{ formula: String(derived.proficiencyBonus), type: "weapon", factId: "attack-action" }], "R57 (D192): gated on the fact the app cannot see");
-  assert.equal(offered[0].oncePerTurn, true);
+  assert.equal(offered[0].oncePerTurn, false, "R63 (D198): the 2024 text sets no once-per-turn limit");
+  assert.deepEqual(offeredRiders(derived, sword).map((rider) => rider.key), [], "and not in the dialog before the dice");
   const light = derived.attacks.find((attack) => !attack.properties.includes("heavy") && attack.itemId);
-  if (light) assert.deepEqual(offeredRiders(derived, light).map((rider) => rider.key), [], light.name);
+  if (light) assert.deepEqual(offeredRiders(derived, light, { moment: "on-hit" }).map((rider) => rider.key), [], light.name);
 
   // Declared, it reaches the spec as a damage part of the weapon's own type.
   const spec = pcAttackSpec({ runtime } as never, derived, sword.id, { contracts: ["feat:great-weapon-master"], facts: ["attack-action"] }, catalog)!.spec;
