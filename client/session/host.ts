@@ -21,6 +21,7 @@ import type { AttackOverrides, AttackResolution, AttackSpec, Combatant } from ".
 import { describeResolution, diceFrom, resolveAttack } from "../rules/resolve";
 import type { ActorRef, AttackRef, AttackRiders } from "./protocol";
 import { isConditionMarker } from "../campaign/page";
+import type { ActResult } from "../rules/actions";
 import { ACTIONS, cannotAct, describeAct, npcStats, resolveAction, TURN_MARKS, type ActorStats } from "../rules/actions";
 import { smiteFiendBonus } from "../rules/attackSpec";
 import { describeSpell, resolveSpell, type CasterStats, type SpellCastSpec, type SpellResolution, type SpellTargetResult } from "../rules/spellcast";
@@ -149,6 +150,11 @@ export class TableHost {
   /** R11: attacks held while the target decides on Shield (prompt id → everything needed to finish the attack). */
   private readonly held = new Map<string, { inputs: { attacker: ActorRef; targets: ActorRef[]; attack: AttackRef; riders?: AttackRiders; by: string; targetIndex: number }; attacker: { entry: JournalEntry; token?: Token; page?: Page }; target: { entry: JournalEntry; token?: Token; page?: Page }; spec: AttackSpec; overrides?: AttackOverrides; resolution: AttackResolution; supersedes?: string }>();
   private readonly actions = new Map<string, { inputs: { attacker: ActorRef; targets: ActorRef[]; attack: AttackRef; riders?: AttackRiders; by: string; targetIndex: number }; resolution: AttackResolution; restore: () => void }>();
+  /**
+   * R37 (D177): official-action cards that can be redone — the command that made them, who rolled, and the marks the
+   * result applied, so a rescue can take them off before resolving the action again.
+   */
+  private readonly acts = new Map<string, { command: Extract<ClientCommand, { type: "act.action" }>; result: ActResult; by: string; who: string }>();
   private readonly connected = new Set<string>();
   private readonly peerUsers = new Map<string, string>();
   private readonly peerTransports = new Map<string, Transport>();
@@ -761,6 +767,14 @@ export class TableHost {
         else if (firstCardId) this.markUsed(command.attacker, "action");
         // Attacking spends 도움 and ends 은신 (D97); R12: it also spends 약화 (Sap) on the attacker and 교란 (Vex) the attacker had on the target.
         if (firstCardId) this.mark(attackerEntry, [...TURN_MARKS.onAttack, "약화"], false);
+        // R37 (D177): a miss is a d20 that came out a failure, and 탁월한 기술 says so in its own `families`.
+        if (firstCardId) {
+          const missed = this.actions.get(firstCardId);
+          // A natural 1 misses whatever is added to the roll (2024), so there is nothing to rescue there.
+          if (missed && missed.resolution.outcome === "miss") {
+            this.offerRescue(firstCardId, attackerEntry, "attack-roll", `${missed.resolution.attackTotal} vs AC ${missed.resolution.targetAc}`, `${prepared!.spec.name} 명중 굴림`);
+          }
+        }
         return;
       }
       case "act.cast": {
@@ -1060,7 +1074,15 @@ export class TableHost {
         this.mark(actor, result.actorUnmarks, false);
         if (target) this.mark(target, result.targetMarks, true, actor.token?.id);
         this.markUsed(command.actor, command.bonus ? "bonus" : "action");
-        this.say({ type: "act", who: player.displayName, playerId: userId, content: describeAct(result), act: result });
+        const actId = newMessageId();
+        this.acts.set(actId, { command, result, by: userId, who: player.displayName });
+        if (this.acts.size > 100) this.acts.delete(this.acts.keys().next().value as string);
+        this.sayWithId(actId, { type: "act", who: player.displayName, playerId: userId, content: describeAct(result), act: result });
+        // R37 (D177): 붙잡기·밀치기's roll is the *target's* saving throw, so the question goes to them; every other
+        // official action rolls the actor's own ability check.
+        const rolledBy = command.kind === "grapple" || command.kind === "shove" ? target : actor;
+        const family: RollFamily = command.kind === "grapple" || command.kind === "shove" ? "saving-throw" : "ability-check";
+        if (result.check && result.check.success === false && rolledBy) this.offerRescue(actId, rolledBy, family, `${result.check.label} ${result.check.d20}${result.check.bonus >= 0 ? "+" : "-"}${Math.abs(result.check.bonus)} = ${result.check.total}${result.check.dc === undefined ? "" : ` vs DC ${result.check.dc}`}`, result.name);
         return;
       }
       case "act.provoke": {
@@ -1106,7 +1128,79 @@ export class TableHost {
         const reactor = this.resolveActor(promptMessage.prompt.reactor);
         if (!reactor || reactor.entry.kind !== "character") return refuse("다시 굴릴 인물을 찾을 수 없습니다");
         if (!isGm && !this.mayAct(userId, promptMessage.prompt.reactor, reactor.entry)) return refuse("그 인물의 조종자만 답할 수 있습니다");
-        const card = this.spells.get(promptMessage.prompt.rescue.cardId);
+        const cardId = promptMessage.prompt.rescue.cardId;
+        // R37 (D177): the same command answers three kinds of card. An official action's is the simplest — the
+        // marks it left come off, the action is resolved again from the new roll, and the new marks go on.
+        const act = this.acts.get(cardId);
+        if (act) {
+          const isSave = act.command.kind === "grapple" || act.command.kind === "shove";
+          const family: RollFamily = isSave ? "saving-throw" : "ability-check";
+          const pick = (this.options.pcRescues?.(reactor.entry, family, "failure") ?? []).find((item) => item.feature === command.feature);
+          if (!pick) return refuse("그 특성으로는 다시 굴릴 수 없습니다");
+          const actActor = this.resolveActor(act.command.actor);
+          if (!actActor) return refuse("행동한 쪽을 찾을 수 없습니다");
+          const actTarget = act.command.target ? this.resolveActor(act.command.target) : null;
+          const actorStats = this.statsOf(actActor);
+          if (!actorStats) return refuse("능력치를 알 수 없습니다");
+          const targetStats = actTarget ? this.statsOf(actTarget) : null;
+          if (actTarget && !targetStats) return refuse("대상의 능력치를 알 수 없습니다");
+          const dice = diceFrom(this.options.random ?? Math.random);
+          const plan = planRollModify(pick.interceptor.operations, pick.scope, dice);
+          if (plan.d20 === undefined && !plan.delta) return refuse("이 특성이 이 판정에 더할 것이 없습니다");
+          // Take the old result off before rolling again, so a grapple that now fails leaves no 붙잡힘 behind.
+          this.mark(actActor, act.result.actorMarks, false);
+          if (actTarget) this.mark(actTarget, act.result.targetMarks, false);
+          const redone = resolveAction({
+            kind: act.command.kind, skill: act.command.skill, dc: act.command.dc, note: act.command.note, choice: act.command.choice, bonus: act.command.bonus,
+            random: this.options.random ?? Math.random, forceD20: plan.d20, rollDelta: plan.delta, rescue: command.feature,
+            actor: { name: actActor.token?.name ?? actActor.entry.name, stats: actorStats, conditions: this.conditionsOf(actActor) },
+            target: actTarget && targetStats ? { name: actTarget.token?.name ?? actTarget.entry.name, stats: targetStats, conditions: this.conditionsOf(actTarget) } : undefined,
+          });
+          this.mark(actActor, redone.actorMarks, true);
+          this.mark(actActor, redone.actorUnmarks, false);
+          if (actTarget) this.mark(actTarget, redone.targetMarks, true, actActor.token?.id);
+          const worked = redone.check?.success === true;
+          // Read the sheet *after* the marks moved: paying from the runtime captured before the unmark would write
+          // the 붙잡힘 straight back on.
+          const owner = this.journalEntries.get(reactor.entry.id);
+          const paidAct = owner?.kind === "character" ? this.options.pcPayContract?.(owner, pick.payments, worked ? "success" : "failure") : undefined;
+          if (paidAct === null) return refuse("남은 횟수가 없습니다");
+          if (paidAct && owner?.kind === "character") this.storeEntry({ ...owner, runtime: { ...paidAct, updatedAt: this.now() }, updatedAt: this.now() });
+          this.acts.set(cardId, { ...act, result: redone });
+          this.sayWithId(cardId, { type: "act", who: act.who, playerId: act.by, content: describeAct(redone), act: redone });
+          this.say({ ...promptMessage, prompt: { ...promptMessage.prompt, outcome: { rolled: userId } }, supersedes: promptMessage.id, content: `${promptMessage.content} → ${command.feature}: ${plan.parts.join(", ")} → ${redone.check?.total}${redone.check?.dc === undefined ? "" : ` vs DC ${redone.check.dc}`} — ${worked ? "성공" : "여전히 실패"}` });
+          return;
+        }
+        // R37 (D177): a missed attack. The palette's own re-resolve path (act.adjust) does exactly this already —
+        // restore the card, resolve again, supersede — so the rescue borrows it and only supplies the new numbers.
+        const attackRecord = this.actions.get(cardId);
+        if (attackRecord) {
+          const pick = (this.options.pcRescues?.(reactor.entry, "attack-roll", "failure") ?? []).find((item) => item.feature === command.feature);
+          if (!pick) return refuse("그 특성으로는 다시 굴릴 수 없습니다");
+          if (!sameActor(attackRecord.inputs.attacker, promptMessage.prompt.reactor)) return refuse("그 공격을 한 쪽만 다시 굴립니다");
+          if (!this.resolveActor(attackRecord.inputs.attacker) || !this.resolveActor(attackRecord.inputs.targets[attackRecord.inputs.targetIndex])) return refuse("공격자나 대상이 더 없습니다 (카드는 그대로 둡니다)");
+          const dice = diceFrom(this.options.random ?? Math.random);
+          const plan = planRollModify(pick.interceptor.operations, pick.scope, dice);
+          if (plan.d20 === undefined && !plan.delta) return refuse("이 특성이 이 판정에 더할 것이 없습니다");
+          attackRecord.restore();
+          this.actions.delete(cardId);
+          const shooter = this.resolveActor(attackRecord.inputs.attacker);
+          const victim = this.resolveActor(attackRecord.inputs.targets[attackRecord.inputs.targetIndex]);
+          const ready = shooter ? this.prepareAttack(shooter, attackRecord.inputs.attack, attackRecord.inputs.riders ?? {}) : null;
+          if (!shooter || !victim || !ready) return refuse("공격자나 대상이 더 없습니다");
+          const overrides: AttackOverrides = { ...(attackRecord.resolution.overrides ?? {}), rollDelta: (attackRecord.resolution.overrides?.rollDelta ?? 0) + plan.delta, note: command.feature };
+          // Like the palette's own edit, the re-resolved card is a new message that supersedes the old one.
+          const newCardId = this.runAttack(attackRecord.inputs, shooter, victim, ready, overrides, { d20s: plan.d20 === undefined ? attackRecord.resolution.d20s : [plan.d20], ...(attackRecord.resolution.damage.length ? { damage: attackRecord.resolution.damage.map((item) => item.dice) } : {}) }, cardId);
+          const landed = newCardId ? this.actions.get(newCardId)?.resolution.outcome : undefined;
+          const hit = landed === "hit" || landed === "crit";
+          const sheetNow = this.journalEntries.get(reactor.entry.id);
+          const paidAttack = sheetNow?.kind === "character" ? this.options.pcPayContract?.(sheetNow, pick.payments, hit ? "success" : "failure") : undefined;
+          if (paidAttack === null) return refuse("남은 횟수가 없습니다");
+          if (paidAttack && sheetNow?.kind === "character") this.storeEntry({ ...sheetNow, runtime: { ...paidAttack, updatedAt: this.now() }, updatedAt: this.now() });
+          this.say({ ...promptMessage, prompt: { ...promptMessage.prompt, outcome: { rolled: userId } }, supersedes: promptMessage.id, content: `${promptMessage.content} → ${command.feature}: ${plan.parts.join(", ")} — ${hit ? "적중" : "여전히 빗나감"}` });
+          return;
+        }
+        const card = this.spells.get(cardId);
         if (!card || !card.resolution.applied || !card.rows || !card.context) return refuse("적용된 주문 카드가 아닙니다");
         const at = card.resolution.targets.findIndex((row) => row.target.id === reactor.entry.id && (!reactor.token || row.target.tokenId === reactor.token.id));
         const before = at >= 0 ? card.resolution.targets[at] : undefined;
@@ -1137,8 +1231,8 @@ export class TableHost {
         card.rows[at] = this.applySpellRow(after, live, resolution);
         const rows = card.rows;
         const restoreCaster = card.restoreCaster ?? (() => undefined);
-        this.spells.set(promptMessage.prompt.rescue.cardId, { ...card, resolution, restore: () => { for (const restore of [...rows].reverse()) restore?.(); restoreCaster(); } });
-        this.sayWithId(promptMessage.prompt.rescue.cardId, { type: "spell", who: card.context.who, playerId: card.context.playerId, content: describeSpell(resolution), spell: resolution });
+        this.spells.set(cardId, { ...card, resolution, restore: () => { for (const restore of [...rows].reverse()) restore?.(); restoreCaster(); } });
+        this.sayWithId(cardId, { type: "spell", who: card.context.who, playerId: card.context.playerId, content: describeSpell(resolution), spell: resolution });
         this.say({ ...promptMessage, prompt: { ...promptMessage.prompt, outcome: { rolled: userId } }, supersedes: promptMessage.id, content: `${promptMessage.content} → ${command.feature}: ${plan.parts.join(", ")} → ${after.save?.total} vs DC ${after.save?.dc} — ${worked ? "성공" : "여전히 실패"}` });
         return;
       }
@@ -1279,7 +1373,7 @@ export class TableHost {
     return null;
   }
 
-  private runAttack(inputs: { attacker: ActorRef; targets: ActorRef[]; attack: AttackRef; riders?: AttackRiders; by: string; targetIndex: number }, attacker: { entry: JournalEntry; token?: Token; page?: Page }, target: { entry: JournalEntry; token?: Token; page?: Page }, prepared: { spec: AttackSpec; spend?: (runtime: CharacterRuntime) => CharacterRuntime }, overrides?: AttackOverrides, fixed?: { d20s: number[]; damage: number[][] }, supersedes?: string, spend?: (runtime: CharacterRuntime) => CharacterRuntime): string | undefined {
+  private runAttack(inputs: { attacker: ActorRef; targets: ActorRef[]; attack: AttackRef; riders?: AttackRiders; by: string; targetIndex: number }, attacker: { entry: JournalEntry; token?: Token; page?: Page }, target: { entry: JournalEntry; token?: Token; page?: Page }, prepared: { spec: AttackSpec; spend?: (runtime: CharacterRuntime) => CharacterRuntime }, overrides?: AttackOverrides, fixed?: { d20s: number[]; damage?: number[][] }, supersedes?: string, spend?: (runtime: CharacterRuntime) => CharacterRuntime): string | undefined {
     const attackerCombatant = this.combatantOf(attacker);
     const targetCombatant = this.combatantOf(target);
     if (!attackerCombatant || !targetCombatant) return undefined;
@@ -1570,6 +1664,19 @@ export class TableHost {
    * happen next (불굴 rerolls, 어둠의 존재의 행운 adds a d10); the host only asks whoever owns the sheet, and asks
    * nothing at all when no contract could be paid for.
    */
+  private offerRescue(cardId: string, actor: { entry: JournalEntry; token?: Token; page?: Page }, family: RollFamily, roll: string, what: string) {
+    if (!this.options.pcRescues || actor.entry.kind !== "character") return;
+    const offers = this.options.pcRescues(actor.entry, family, "failure");
+    if (!offers.length) return;
+    const name = actor.token?.name ?? actor.entry.name;
+    this.say({ type: "prompt", who: "", content: `${name}: ${what} 실패 (${roll}) — ${offers.map((offer) => offer.feature).join(" / ")}로 다시 굴릴까요?`, prompt: {
+      kind: "rescue",
+      mover: { name: what },
+      reactor: { name, entryId: actor.entry.id, pageId: actor.page?.id, tokenId: actor.token?.id },
+      rescue: { cardId, features: offers.map((offer) => offer.feature), roll },
+    } });
+  }
+
   private offerRescues(cardId: string, resolution: SpellResolution, targets: Array<{ entry: JournalEntry; token?: Token; page?: Page }>) {
     if (!this.options.pcRescues) return;
     resolution.targets.forEach((row, index) => {

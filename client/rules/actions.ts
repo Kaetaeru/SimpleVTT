@@ -90,7 +90,7 @@ export const unarmedDc = (stats: ActorStats) => 8 + stats.abilities.str + stats.
 /** The target chooses the save; the app takes the better bonus. */
 export const bestOf = <K extends string>(pairs: Array<[K, number]>): [K, number] => pairs.reduce((best, pair) => (pair[1] > best[1] ? pair : best));
 
-export interface ActCheck { label: string; d20: number; bonus: number; total: number; dc?: number; success?: boolean }
+export interface ActCheck { label: string; d20: number; bonus: number; total: number; dc?: number; success?: boolean; /** R37 (D177): a contract was paid to redo this roll, and what paid for it. */ rescue?: string }
 export interface ActResult {
   kind: ActionKind;
   name: string;
@@ -119,6 +119,13 @@ export interface ActInput {
   choice?: string;
   bonus?: boolean;
   random: () => number;
+  /**
+   * R37 (D177): redo this action's d20 from a contract's `roll.modify` — `forceD20` replaces the die, `rollDelta`
+   * is added to the total (extra dice, flat bonuses), and `rescue` names what paid so the card can say it.
+   */
+  forceD20?: number;
+  rollDelta?: number;
+  rescue?: string;
 }
 
 const d20 = (random: () => number) => 1 + Math.floor(random() * 20);
@@ -134,7 +141,7 @@ export const cannotAct = (conditions: string[]) => CANNOT_ACT.find((name) => con
 export function resolveAction(input: ActInput): ActResult {
   const def = actionDef(input.kind);
   const base: ActResult = { kind: input.kind, name: def.name, actor: { name: input.actor.name }, target: input.target ? { name: input.target.name } : undefined, text: "", actorMarks: [], targetMarks: [], actorUnmarks: [], bonus: input.bonus };
-  const check = (label: string, bonus: number, dc?: number): ActCheck => { const die = d20(input.random); const total = die + bonus; return { label, d20: die, bonus, total, dc, success: dc === undefined ? undefined : total >= dc }; };
+  const check = (label: string, bonus: number, dc?: number): ActCheck => { const die = input.forceD20 ?? d20(input.random); const total = die + bonus + (input.rollDelta ?? 0); return { label, d20: die, bonus, total, dc, success: dc === undefined ? undefined : total >= dc, ...(input.rescue ? { rescue: input.rescue } : {}) }; };
   const skillCheck = (skill: string, dc?: number) => check(`${input.actor.name} · ${ABILITY_KO[SKILL_ABILITY_OF[skill] ?? "int"]}(${SKILL_KO[skill] ?? skill})`, skillBonus(input.actor.stats, skill), dc);
   switch (input.kind) {
     case "dash": return { ...base, text: "이번 턴 이동 거리가 두 배가 됩니다.", actorMarks: ["질주"] };

@@ -101,6 +101,8 @@ export interface AttackOverrides {
   damageDelta?: number;
   /** Multiplies the damage total (0, 0.5, 1). */
   damageScale?: number;
+  /** R37 (D177): added to the attack roll's total by a contract's `roll.modify` (탁월한 기술's 1d12). */
+  rollDelta?: number;
   note?: string;
 }
 
@@ -215,7 +217,7 @@ function rollParts(formula: string, dice: DiceSource, doubleDice: boolean, dieMi
 
 /* ---------- resolution ---------- */
 
-export interface ResolveOptions { dice: DiceSource; overrides?: AttackOverrides; apply?: boolean; /** Fixed d20s and damage dice from an earlier resolution (palette edits keep the rolls). */ fixed?: { masteryD20?: number; d20s: number[]; damage: number[][] } }
+export interface ResolveOptions { dice: DiceSource; overrides?: AttackOverrides; apply?: boolean; /** Fixed d20s and damage dice from an earlier resolution (palette edits keep the rolls). */ fixed?: { masteryD20?: number; d20s: number[]; /** R37 (D177): absent when the earlier resolution rolled no damage (a miss being re-resolved). */ damage?: number[][] } }
 
 export function resolveAttack(attacker: Combatant, target: Combatant, spec: AttackSpec, options: ResolveOptions): AttackResolution {
   const overrides = options.overrides ?? {};
@@ -227,7 +229,7 @@ export function resolveAttack(attacker: Combatant, target: Combatant, spec: Atta
   const cover = overrides.cover ?? 0;
   const targetAc = target.ac + cover;
   const exhausted = 2 * Math.max(0, attacker.exhaustion ?? 0);
-  const attackTotal = kept + spec.attackBonus - exhausted;
+  const attackTotal = kept + spec.attackBonus - exhausted + (overrides.rollDelta ?? 0);
   if (exhausted) reasons.push(`탈진 ${attacker.exhaustion}단계 (−${exhausted})`);
   let outcome: AttackResolution["outcome"] = kept === 20 ? "crit" : kept === 1 ? "fumble" : attackTotal >= targetAc ? "hit" : "miss";
   if (outcome === "hit" && autoCrit(target, spec)) { outcome = "crit"; reasons.push(`대상 ${target.conditions.includes("마비") ? "마비" : "무의식"}: 5ft 안의 적중은 치명타`); }
