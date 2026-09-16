@@ -82,8 +82,16 @@ export const hasSmite = (derived: DerivedCharacter) => derived.features.some((fe
 export const smiteSlots = (derived: DerivedCharacter, runtime: CharacterRuntime) => Object.entries(derived.spellSlots).map(([level, max]) => ({ level: Number(level), free: max - (runtime.slotsUsed[Number(level)] ?? 0) })).filter((slot) => slot.free > 0);
 
 /** The attack spec for a sheet attack row, with the chosen riders; `spend` applies their cost to the attacker's runtime. */
-/** R32 (D166): whether this sheet carries 야만적 공격자, so the dialog may offer its once-a-turn reroll. */
-export const hasSavageAttacker = (derived: DerivedCharacter) => derived.features.some((feature) => /야만적 공격자|Savage Attacker/i.test(`${feature.name}${feature.nameEn ?? ""}`));
+/**
+ * R33 (D168): the feat that rerolls weapon damage once a turn, by name, or nothing. R32 matched the feat's name with
+ * a regex; it is the catalog's `oncePerTurn` key now, so a supplement feat with the same key is offered too.
+ */
+export const savageAttackerFeat = (derived: DerivedCharacter) => derived.featEffects?.rerollWeaponDamage;
+export const hasSavageAttacker = (derived: DerivedCharacter) => Boolean(savageAttackerFeat(derived));
+/** R33 (D168): the feat that keeps the ability modifier on a Light weapon's off-hand swing (쌍수 전투), or nothing. */
+export const offHandFeat = (derived: DerivedCharacter) => derived.featEffects?.lightOffHandAbilityModifier;
+/** R33 (D168): a Light weapon can be swung as the off-hand attack, which normally drops its ability modifier. */
+export const canOffHand = (attack: { properties: string[] }) => attack.properties.includes("light");
 
 export function pcAttackSpec(entry: JournalCharacter, derived: DerivedCharacter, attackId: string, riders: AttackRiders = {}): { spec: AttackSpec; spend: (runtime: CharacterRuntime) => CharacterRuntime } | null {
   const attack = derived.attacks.find((item) => item.id === attackId);
@@ -91,9 +99,14 @@ export function pcAttackSpec(entry: JournalCharacter, derived: DerivedCharacter,
   const range = weaponRange(attack);
   // R12: a Cleave follow-up adds no ability modifier to its damage.
   const cleave = Boolean(riders.cleave && attack.masteryActive && attack.masteryKey === "cleave");
-  const bonusText = attack.damageBonus && !cleave ? `${attack.damageBonus > 0 ? "+" : "-"}${Math.abs(attack.damageBonus)}` : "";
+  // R33 (D168): the off-hand swing of a two-weapon set drops its ability modifier — unless a feat carrying
+  // `lightExtraAttackAbilityModifier` puts it back, and "nonnegative" only puts back a modifier that helps.
+  const offHand = Boolean(riders.offHand && canOffHand(attack));
+  const offHandKeeps = offHand && Boolean(offHandFeat(derived)) && attack.damageBonus >= 0;
+  const dropsAbilityMod = cleave || (offHand && !offHandKeeps);
+  const bonusText = attack.damageBonus && !dropsAbilityMod ? `${attack.damageBonus > 0 ? "+" : "-"}${Math.abs(attack.damageBonus)}` : "";
   // R32 (D165): 대형 무기 전투 travels with the weapon's own damage part.
-  const damage: DamagePart[] = [{ formula: `${attack.damage.split(" ")[0]}${bonusText}${diceOf(attack.damageTerms)}`, type: attack.damageType, label: cleave ? `${attack.name} (쪼개기)` : attack.name, ...(attack.dieMinimum ? { dieMinimum: attack.dieMinimum } : {}) }];
+  const damage: DamagePart[] = [{ formula: `${attack.damage.split(" ")[0]}${bonusText}${diceOf(attack.damageTerms)}`, type: attack.damageType, label: cleave ? `${attack.name} (쪼개기)` : offHand ? `${attack.name} (보조 손)` : attack.name, ...(attack.dieMinimum ? { dieMinimum: attack.dieMinimum } : {}) }];
   const extra: DamagePart[] = [];
   const spenders: Array<(runtime: CharacterRuntime) => CharacterRuntime> = [];
   if (riders.sneak && hasSneakAttack(derived, attack)) extra.push({ formula: `${sneakDice(derived)}d6`, type: attack.damageType, label: "암습" });
@@ -106,8 +119,9 @@ export function pcAttackSpec(entry: JournalCharacter, derived: DerivedCharacter,
   const abilityMod = derived.abilities[attack.ability].modifier;
   const mastery = attack.masteryActive && attack.masteryKey && !cleave ? attack.masteryKey : undefined;
   // R32 (D166): 야만적 공격자 — the player asked for the reroll in the pre-roll dialog and has the feat.
-  const savage = Boolean(riders.savage && hasSavageAttacker(derived));
-  return { spec: { name: `${cleave ? `${attack.name} · 쪼개기` : attack.name}${savage ? " · 야만적 공격자" : ""}`, source: "weapon", attackBonus: attack.attackBonus, mode: range.mode, damage, riders: extra, ...(savage ? { savage } : {}), ...(mastery ? { mastery, abilityMod, masteryDc: 8 + abilityMod + derived.proficiencyBonus } : {}) }, spend: (runtime) => spenders.reduce((acc, spend) => spend(acc), runtime) };
+  const savageFeat = riders.savage ? savageAttackerFeat(derived) : undefined;
+  const savage = Boolean(savageFeat);
+  return { spec: { name: `${cleave ? `${attack.name} · 쪼개기` : offHand ? `${attack.name} · 보조 손` : attack.name}${savageFeat ? ` · ${savageFeat}` : ""}`, source: "weapon", attackBonus: attack.attackBonus, mode: range.mode, damage, riders: extra, ...(savage ? { savage } : {}), ...(mastery ? { mastery, abilityMod, masteryDc: 8 + abilityMod + derived.proficiencyBonus } : {}) }, spend: (runtime) => spenders.reduce((acc, spend) => spend(acc), runtime) };
 }
 
 export function npcAttackSpec(entry: JournalNpc, actionName: string): AttackSpec | null {

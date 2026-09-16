@@ -18,19 +18,11 @@ const propertyKo = (property: string) => PROPERTY_KO[property] ?? property;
 
 const SOURCE_ORDER: DerivedFeature["source"][] = ["species", "background", "class", "subclass", "feat", "invocation", "metamagic"];
 /**
- * R32 (D167): what the engine actually does with a feat. Everything not named here is prose the table adjudicates,
- * and the sheet says so rather than letting the two look the same.
+ * R33 (D168): what the engine actually does with a feat. R32 kept this as a hand-written table keyed on the feat's
+ * name; it is the derivation's own answer now, written from the feat catalog's config, so the sheet cannot claim a
+ * rule the engine does not run — nor stay silent about one it does.
  */
-function featRule(feature: { name: string; nameEn?: string }): string | null {
-  const name = `${feature.name}${feature.nameEn ?? ""}`;
-  if (/궁술|Archery/i.test(name)) return "원거리 무기 명중 굴림 +2를 시트가 이미 더합니다";
-  if (/방어|Defense/i.test(name)) return "갑옷을 입은 동안 AC +1을 시트가 이미 더합니다";
-  if (/대형 무기 전투|Great Weapon Fighting/i.test(name)) return "양손·다재 무기의 피해 주사위가 3 미만으로 떨어지지 않습니다";
-  if (/야만적 공격자|Savage Attacker/i.test(name)) return "판정 전 창에서 켜면 무기 피해 주사위를 두 번 굴려 높은 쪽을 씁니다";
-  if (/경계|Alert/i.test(name)) return "이니셔티브에 숙련 보너스를 더합니다 (자리 교대는 표에서 판단)";
-  if (/능력치 향상|Ability Score Improvement|숙련됨|Skilled|마법 입문자|Magic Initiate/i.test(name)) return "만들기·레벨업에서 고른 값이 시트에 반영됩니다";
-  return null;
-}
+const featRule = (feature: DerivedFeature): string | null => (feature.rules?.length ? feature.rules.join(" · ") : null);
 
 const SOURCE_KO: Record<DerivedFeature["source"], string> = { species: "종족 특성", background: "배경", class: "직업 특성", subclass: "서브클래스 특성", feat: "재주", invocation: "섬뜩한 기원술", metamagic: "메타매직" };
 
@@ -286,7 +278,7 @@ export function SheetView({ derived, catalog, runtime, compact = false, actions 
                           {active ? <Pill tone="accent">진행 중</Pill> : null}
                           {/* R32 (D167): the sheet says which feats and features the app really runs and which the
                               table does. "궁술 +2" and "대형 무기 전투" change a number; "밤의 영혼의 은총" does not. */}
-                          {source === "feat" ? (featRule(feature) ? <span title={featRule(feature)!}><Pill tone="good">규칙 적용</Pill></span> : <span title="이 재주는 표에서 판단합니다 — 앱은 숫자를 바꾸지 않습니다"><Pill tone="accent">표에서 판단</Pill></span>) : null}
+                          {source === "feat" ? (feature.execution && feature.execution !== "descriptive" ? <span title={featRule(feature) ?? "앱이 이 재주를 적용합니다"}><Pill tone="good">규칙 적용</Pill></span> : <span title={[featRule(feature), "나머지는 표에서 판단합니다 — 앱은 숫자를 바꾸지 않습니다"].filter(Boolean).join(" · ")}><Pill tone="accent">표에서 판단</Pill></span>) : null}
                           <span className="cl-src">{feature.sourceLabel}</span>
                           {activation ? (
                             <span className="cl-row cl-use" style={{ gap: 4 }} onClick={(event) => event.stopPropagation()}>

@@ -15,6 +15,7 @@ import { applyEquipment } from "./equipment";
 import { Ledger } from "./ledger";
 import { applyActiveEffects } from "../rules/effects";
 import { applyBackground, applyLanguages, applySpecies, damageTypeKo } from "./origin";
+import { dieMinimumCovers } from "./featRules";
 import { validateAbilities } from "./source";
 import { deriveSpellSlots } from "./spells";
 import { applyTracks } from "./tracks";
@@ -128,7 +129,10 @@ function finalize(ledger: Ledger): DerivedCharacter {
   const acCandidates: Array<{ value: number; source: string; breakdown: string[]; terms: Term[] }> = [];
   const dex = mod("dex");
   const shieldBonus = shieldView?.shieldBonus ?? 0;
-  const defenseStyle = ledger.flags.has("fighting-style:defense") ? 1 : 0;
+  // R33 (D168): 방어 전투 방식 and anything else the catalog gives an `armorAcBonus` — the number and the label
+  // both come from the feat, so a second such feat adds instead of being ignored.
+  const armorFeats = ledger.featEffects.armorAcBonus;
+  const defenseStyle = armorFeats.reduce((sum, bonus) => sum + bonus.value, 0);
   if (armorView?.armor) {
     const armor = armorView.armor;
     const dexPart = armor.dexFull ? dex : armor.dexMax !== undefined ? Math.min(dex, armor.dexMax) : 0;
@@ -136,7 +140,7 @@ function finalize(ledger: Ledger): DerivedCharacter {
     const lines = [`${armorView.name} ${armor.base}`, armor.dexFull ? `민첩 ${dex}` : armor.dexMax !== undefined ? `민첩 ${dexPart} (최대 ${armor.dexMax})` : "민첩 없음"];
     const terms: Term[] = [{ label: armorView.name, value: armor.base }, { label: armor.dexFull ? "민첩 수정치" : armor.dexMax !== undefined ? `민첩 수정치 (최대 ${armor.dexMax})` : "민첩 수정치 (중장, 적용 안 함)", value: dexPart }];
     if (shieldBonus) { lines.push(`방패 +${shieldBonus}`); terms.push({ label: shieldView?.name ?? "방패", value: shieldBonus }); }
-    if (defenseStyle) { lines.push("전투 방식(방어) +1"); terms.push({ label: "전투 방식: 방어", value: 1 }); }
+    for (const bonus of armorFeats) { lines.push(`${bonus.source} ${bonus.value > 0 ? "+" : ""}${bonus.value}`); terms.push({ label: bonus.source, value: bonus.value }); }
     acCandidates.push({ value, source: armorView.name, breakdown: lines, terms });
   } else {
     const shieldTerm: Term[] = shieldBonus ? [{ label: shieldView?.name ?? "방패", value: shieldBonus }] : [];
@@ -283,6 +287,11 @@ function finalize(ledger: Ledger): DerivedCharacter {
     inventory: ledger.inventory,
     gold: ledger.gold,
     weaponMasteries: [...ledger.weaponMasteries].map((id) => catalog.itemById(id)?.name ?? id),
+    // R33 (D168): the two feat rules that only bite once a swing is being rolled travel with the sheet to the table.
+    featEffects: {
+      ...(ledger.featEffects.rerollWeaponDamage[0] ? { rerollWeaponDamage: ledger.featEffects.rerollWeaponDamage[0] } : {}),
+      ...(ledger.featEffects.lightOffHandAbilityModifier[0] ? { lightOffHandAbilityModifier: ledger.featEffects.lightOffHandAbilityModifier[0] } : {}),
+    },
     hitDice,
     choices: ledger.choices,
     validation: { blocking, warnings: ledger.warnings },
@@ -300,24 +309,27 @@ function weaponAttack(ledger: Ledger, view: ItemView, abilities: DerivedCharacte
   let ability: AbilityKey = weapon.mode === "ranged" ? "dex" : "str";
   if (finesse || monkWeapon) ability = abilities.dex.modifier >= abilities.str.modifier ? "dex" : "str";
   const proficient = weaponIsProficient(view, ledger.weapons);
-  const archery = ledger.flags.has("fighting-style:archery") && weapon.mode === "ranged" ? 2 : 0;
+  // R33 (D168): 궁술 and its kin come from the catalog's `rangedWeaponAttackBonus`, not a constant.
+  const rangedFeats = weapon.mode === "ranged" ? ledger.featEffects.rangedWeaponAttackBonus : [];
+  const archery = rangedFeats.reduce((sum, bonus) => sum + bonus.value, 0);
   const attackBonus = abilities[ability].modifier + (proficient ? pb : 0) + archery;
   const attackTerms: Term[] = [{ label: `${ABILITY_KO[ability]} 수정치${finesse ? " (교묘)" : monkWeapon ? " (무예)" : ""}`, value: abilities[ability].modifier }];
   if (proficient) attackTerms.push({ label: `숙련 보너스 (${weapon.training === "simple" ? "단순" : "군용"} 무기)`, value: pb });
-  if (archery) attackTerms.push({ label: "전투 방식: 궁술", value: 2 });
+  for (const bonus of rangedFeats) attackTerms.push({ label: bonus.source, value: bonus.value });
   const damageTerms: Term[] = [{ label: `${ABILITY_KO[ability]} 수정치`, value: abilities[ability].modifier }];
   const versatile = properties.find((property) => property.startsWith("versatile:"))?.split(":")[1];
   const thrown = properties.find((property) => property.startsWith("thrown:"))?.split(":")[1];
   const ammunition = properties.find((property) => property.startsWith("ammunition:"))?.split(":")[1];
   const mastery = weapon.mastery ? (MASTERY_KO[weapon.mastery] ?? weapon.mastery) : undefined;
   const readable = properties.map((property) => property.split(":")[0]);
+  const dieMinimum = ledger.featEffects.damageDieMinimum.filter((rule) => dieMinimumCovers(rule, readable)).reduce((best, rule) => Math.max(best, rule.minimum), 0);
   return {
     id: `attack.${view.id}`, name: view.name, itemId: view.id, ability, attackBonus, attackTerms,
     damage: versatile ? `${weapon.damage} (양손 ${versatile})` : weapon.damage, damageBonus: abilities[ability].modifier, damageTerms, damageType: damageTypeKo(weapon.damageType),
     properties: readable, mastery, masteryKey: weapon.mastery, masteryActive: ledger.weaponMasteries.has(view.id), range: ammunition ?? thrown,
-    // R32 (D165): 대형 무기 전투 — a damage die below 3 counts as 3, on a two-handed or versatile weapon. The
-    // ledger flag was set and read by nothing, so the style changed no number at all.
-    ...(ledger.flags.has("fighting-style:great-weapon-fighting") && (properties.includes("two-handed") || versatile) ? { dieMinimum: 3 } : {}),
+    // R33 (D168): 대형 무기 전투 — the minimum and the properties it covers are the catalog's (`damageDieMinimum`,
+    // `weaponPropertiesAny`); R32 had both as constants here. The highest matching minimum wins.
+    ...(dieMinimum ? { dieMinimum } : {}),
     ...(proficient ? {} : { properties: [...readable, "숙련 없음"] }),
   };
 }

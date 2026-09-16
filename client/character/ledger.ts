@@ -8,6 +8,7 @@ import type { AbilityKey } from "../catalog/types";
 import { ABILITY_KEYS } from "../catalog/types";
 import { abilityModifier, proficiencyBonusForLevel, ABILITY_SCORE_MAX } from "../rules/tables";
 import type { ArmorTraining, WeaponTraining } from "../rules/classes";
+import type { FeatBonus, FeatDieMinimum } from "./featRules";
 import type { CharacterSource, ChoiceOption, ChoiceRequest, ChoiceScope, DerivedFeature, DerivedItem, DerivedResource } from "./types";
 
 export interface AbilityBonus { source: string; value: number; cap?: number }
@@ -74,6 +75,20 @@ export class Ledger {
   readonly immunities = new Set<string>();
   readonly conditionImmunities = new Set<string>();
   readonly weaponMasteries = new Set<string>();
+  /**
+   * R33 (D168): the numbers the feat catalog hands the derivation. They are entries rather than a single total so
+   * the sheet's AC and attack breakdowns can name the feat that paid for them, and so a second feat granting the
+   * same key adds instead of overwriting.
+   */
+  readonly featEffects: {
+    armorAcBonus: FeatBonus[];
+    rangedWeaponAttackBonus: FeatBonus[];
+    damageDieMinimum: FeatDieMinimum[];
+    /** Feats whose weapon damage dice may be rerolled once a turn (야만적 공격자). */
+    rerollWeaponDamage: string[];
+    /** Feats that keep the ability modifier on a Light weapon's extra attack (쌍수 전투). */
+    lightOffHandAbilityModifier: string[];
+  } = { armorAcBonus: [], rangedWeaponAttackBonus: [], damageDieMinimum: [], rerollWeaponDamage: [], lightOffHandAbilityModifier: [] };
   readonly inventory: DerivedItem[] = [];
   readonly blocking: string[] = [];
   readonly warnings: string[] = [];

@@ -10,6 +10,7 @@ import { ABILITY_KEYS, ABILITY_KO } from "../catalog/types";
 import { ABILITY_SCORE_MAX } from "../rules/tables";
 import { SPELLCASTING_ABILITY } from "../rules/classes";
 import { abilityOptions, allToolOptions, skillOptions, spellOptions, toolName } from "./choices";
+import { featDieMinimum, featExecutionStatus, featNotes, resetKo } from "./featRules";
 import type { Ledger } from "./ledger";
 
 export interface FeatInstance {
@@ -26,7 +27,9 @@ export function applyFeat(ledger: Ledger, feat: FeatView, instance: FeatInstance
   const { catalog } = ledger;
   const prefix = `feat.${instance.key}.${feat.id}`;
   ledger.feats.push({ id: feat.id, name: feat.name, tier: feat.tier, source: instance.sourceLabel, instanceKey: instance.key });
-  ledger.addFeature({ id: `${prefix}`, name: feat.name, nameEn: feat.nameEn, source: "feat", sourceLabel: instance.sourceLabel, description: feat.description, descriptionSource: feat.scope === "installed" && feat.description ? "module" : "srd-summary" });
+  // R33 (D168): the sheet's line for this feat is written from the same config keys the derivation below reads, so
+  // the two cannot drift; `execution` marks the feats that are prose for the table rather than a number the app applies.
+  ledger.addFeature({ id: `${prefix}`, name: feat.name, nameEn: feat.nameEn, source: "feat", sourceLabel: instance.sourceLabel, description: feat.description, descriptionSource: feat.scope === "installed" && feat.description ? "module" : "srd-summary", rules: featNotes(feat.config), execution: featExecutionStatus(feat.config) });
   const ask = { scope: "feat" as const, sourceLabel: `${instance.sourceLabel} · ${feat.name}`, trackIndex: instance.trackIndex };
   const config = feat.config;
 
@@ -65,7 +68,8 @@ export function applyFeat(ledger: Ledger, feat: FeatView, instance: FeatInstance
       for (const id of spells) {
         entry.alwaysPrepared.add(id);
         entry.freeCasts.push(id);
-        ledger.addResource({ id: `resource.${prefix}.${id}`, label: `${feat.name}: ${catalog.spellById(id)?.name ?? id} 무료 시전`, max: 1, recovery: "긴 휴식", source: feat.name, freeCastSpellId: id });
+        // R33 (D168): the pool refreshes on whatever the catalog's `freeCastReset` says, not on a hardcoded long rest.
+        ledger.addResource({ id: `resource.${prefix}.${id}`, label: `${feat.name}: ${catalog.spellById(id)?.name ?? id} 무료 시전`, max: 1, recovery: resetKo(typeof config.freeCastReset === "string" ? config.freeCastReset : "long-rest"), source: feat.name, freeCastSpellId: id });
       }
     }
   }
@@ -85,11 +89,22 @@ export function applyFeat(ledger: Ledger, feat: FeatView, instance: FeatInstance
 
   // Alert: initiative proficiency.
   if (feat.grants.includes("initiative-proficiency")) ledger.flags.add("initiative-proficiency");
-  // Fighting styles.
+  // Fighting styles keep their flag for the features that name a style by slug; the numbers come from the config below.
   if (feat.tier === "fighting-style") {
     const slug = feat.id.split(".").pop() ?? feat.id;
     ledger.flags.add(`fighting-style:${slug}`);
   }
+
+  // R33 (D168): the mechanical numbers. Every one of these keys used to sit in the code as a constant next to a
+  // `fighting-style:` flag; an installed feat carrying the same key now gets the same treatment without a code change.
+  const armorAc = config.armorAcBonus;
+  if (typeof armorAc === "number") ledger.featEffects.armorAcBonus.push({ source: feat.name, value: armorAc });
+  const rangedAttack = config.rangedWeaponAttackBonus;
+  if (typeof rangedAttack === "number") ledger.featEffects.rangedWeaponAttackBonus.push({ source: feat.name, value: rangedAttack });
+  const dieMinimum = featDieMinimum(config, feat.name);
+  if (dieMinimum) ledger.featEffects.damageDieMinimum.push(dieMinimum);
+  if (config.oncePerTurn === "reroll-weapon-damage-use-either") ledger.featEffects.rerollWeaponDamage.push(feat.name);
+  if (typeof config.lightExtraAttackAbilityModifier === "string") ledger.featEffects.lightOffHandAbilityModifier.push(feat.name);
   if (typeof config.truesight === "number") ledger.senses.truesight = Math.max(ledger.senses.truesight ?? 0, config.truesight);
   if (typeof config.darkvision === "number") ledger.senses.darkvision = Math.max(ledger.senses.darkvision ?? 0, config.darkvision);
   if (typeof config.speedBonus === "number") ledger.speedBonus += config.speedBonus;

@@ -75,6 +75,10 @@ export interface DerivedFeature {
   level?: number;
   description?: string;
   descriptionSource?: "module" | "srd-summary";
+  /** R33 (D168): what the engine does with this feature, written from its catalog config — empty means nothing automatic. */
+  rules?: string[];
+  /** R33 (D168): `descriptive` marks prose the table adjudicates; the sheet says so instead of letting it look applied. */
+  execution?: "derived" | "pre-roll" | "selection" | "common-play" | "descriptive";
 }
 
 /** One addend of a derived number, so the sheet can show where it came from ("민첩 +2", "숙련 보너스 +3"). */
@@ -168,6 +172,14 @@ export interface InventoryPatch {
   extra: Array<{ instanceId: string; itemId?: string; name: string; quantity: number }>;
 }
 
+/** R33 (D168): feat numbers that only matter once a swing is being rolled. */
+export interface DerivedFeatEffects {
+  /** 야만적 공격자: the feat that lets this character reroll a weapon's damage dice once a turn and keep either set. */
+  rerollWeaponDamage?: string;
+  /** 쌍수 전투: the feat that keeps the ability modifier on the Light weapon's extra attack. */
+  lightOffHandAbilityModifier?: string;
+}
+
 export interface DerivedCharacter {
   id: string;
   name: string;
@@ -205,6 +217,11 @@ export interface DerivedCharacter {
   checkTerms: Term[];
   gold: number;
   weaponMasteries: string[];
+  /**
+   * R33 (D168): the feat rules the table reads at roll time rather than the sheet at derivation time. Named after
+   * the catalog key that produced them, holding the feat's name so the card can say what paid for the reroll.
+   */
+  featEffects: DerivedFeatEffects;
   hitDice: Record<string, number>;
   choices: ChoiceRequest[];
   validation: { blocking: string[]; warnings: string[] };
