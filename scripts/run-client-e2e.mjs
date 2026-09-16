@@ -18,7 +18,7 @@ if (!scripts.length) { console.error("no capture scripts matched", filter.join("
 const portOpen = (port) => new Promise((resolve) => { const socket = connect(port, "127.0.0.1"); socket.once("connect", () => { socket.end(); resolve(true); }); socket.once("error", () => resolve(false)); });
 let server = null;
 if (!(await portOpen(PORT))) {
-  server = spawn(process.execPath, [path.resolve("node_modules/vite/bin/vite.js"), "--config", "vite.client.config.ts", "--port", String(PORT), "--strictPort"], { stdio: "ignore", detached: true });
+  server = spawn(process.execPath, [path.resolve("node_modules/vite/bin/vite.js"), "--config", "vite.client.config.ts", "--port", String(PORT), "--strictPort", "--host", "127.0.0.1"], { stdio: "ignore", detached: true });
   for (let at = 0; at < 100 && !(await portOpen(PORT)); at += 1) await new Promise((resolve) => setTimeout(resolve, 300));
   if (!(await portOpen(PORT))) { console.error(`vite did not come up on ${PORT}`); process.exit(1); }
 }
@@ -52,7 +52,8 @@ try {
       for (const line of output.split("\n").filter((line) => /^(FAIL|Error|.*Error:)/.test(line)).slice(0, 6)) console.log(`    ${line}`);
     }
   }
-} finally { if (server) { try { process.kill(-server.pid, "SIGTERM"); } catch { /* already gone */ } } }
+// Windows: Vite binds `localhost` to ::1 only (hence `--host` above), and there are no process groups to signal.
+} finally { if (server) { try { if (process.platform === "win32") server.kill(); else process.kill(-server.pid, "SIGTERM"); } catch { /* already gone */ } } }
 
 console.log(`${scripts.length - failed.length}/${scripts.length} passed in ${Math.round((Date.now() - started) / 1000)}s`);
 if (failed.length) { console.error(`failed: ${failed.join(", ")}`); process.exit(1); }
