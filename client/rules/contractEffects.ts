@@ -47,6 +47,10 @@ export const PROPERTIES = [
   "attack-roll.advantage", "attack-roll.against-me.advantage", "attack-roll.ignore-cover",
   // R56 (D191): training a feat hands out. The sheet shows it; nothing else in this engine gates on it yet.
   "proficiency.armor", "proficiency.weapon", "skill.<id>.expertise",
+  // R61 (D196): the other two kinds of d20 test, after R55 did attack rolls.
+  "ability-check.advantage", "saving-throw.advantage", "skill.<id>.advantage",
+  // R60 (D195): the weapon's own damage dice (read by the rider and crit paths, not as a standing effect).
+  "damage.reroll-lowest", "damage.extra-die", "damage.die-minimum",
 ] as const;
 
 const number = (operation: Extract<ContractOperation, { kind: "property.modify" }>, scope: Scope) => {
@@ -83,6 +87,9 @@ export function contractEffect(contract: CommonPlayContract, scope: Scope): { ap
     // R56 (D191): expertise doubles the proficiency bonus on one skill, so it names the skill the same way.
     const expertise = /^skill\.([a-z-]+)\.expertise$/.exec(operation.property);
     if (expertise) { application.expertise = [...(application.expertise ?? []), expertise[1]]; continue; }
+    // R61 (D196): advantage on one named skill (잠행자's 은신, 배우's 기만·공연).
+    const skillAdvantage = /^skill\.([a-z-]+)\.advantage$/.exec(operation.property);
+    if (skillAdvantage) { application.rollAdvantage = [...(application.rollAdvantage ?? []), { reason: operation.note ?? "", families: ["ability-check"], skills: [skillAdvantage[1]] }]; continue; }
     const filter = operation.scope ? SCOPES[operation.scope] : undefined;
     if (operation.scope && !filter) { unknown.push(`scope ${operation.scope}`); continue; }
     switch (operation.property) {
@@ -113,6 +120,9 @@ export function contractEffect(contract: CommonPlayContract, scope: Scope): { ap
       case "attack-roll.advantage": application.advantageOn = [...(application.advantageOn ?? []), { reason: operation.note ?? "", ...(operation.scope ? { scope: operation.scope } : {}) }]; break;
       case "attack-roll.against-me.advantage": application.grantsAdvantage = [...(application.grantsAdvantage ?? []), operation.note ?? ""]; break;
       case "attack-roll.ignore-cover": application.ignoresCover = true; break;
+      // R61 (D196): advantage on a check or a save, narrowed to the abilities the contract named.
+      case "ability-check.advantage": application.rollAdvantage = [...(application.rollAdvantage ?? []), { reason: operation.note ?? "", families: ["ability-check"], ...(operation.abilities?.length ? { abilities: operation.abilities as AbilityKey[] } : {}) }]; break;
+      case "saving-throw.advantage": application.rollAdvantage = [...(application.rollAdvantage ?? []), { reason: operation.note ?? "", families: ["saving-throw"], ...(operation.abilities?.length ? { abilities: operation.abilities as AbilityKey[] } : {}) }]; break;
       // R56 (D191): 중갑 훈련, 군용 무기 훈련 and their kin — the sheet's proficiency lists gain a line.
       case "proficiency.armor": application.armorTraining = [...(application.armorTraining ?? []), text(operation, scope) ?? ""]; break;
       case "proficiency.weapon": application.weaponTraining = [...(application.weaponTraining ?? []), text(operation, scope) ?? ""]; break;

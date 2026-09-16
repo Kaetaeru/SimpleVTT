@@ -36,6 +36,7 @@ import { ApprovalLayer, ToastLayer } from "./Notify";
 import { canOffHand, hasSavageAttacker, hasSmite, hasSneakAttack, npcAttackSpec, smiteSlots, weaponRange } from "../rules/attackSpec";
 import { offeredRiders, type ContractRider } from "../rules/attackRiders";
 import { tableOutcome } from "../rules/contractTable";
+import { attackScopeFilter } from "../rules/contractEffects";
 import type { AttackRef, AttackRiders } from "../session/protocol";
 import { Modal as RiderModal } from "../ui/components";
 import { toggleCondition } from "../character/play";
@@ -562,7 +563,16 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
     ...(entry.kind === "npc" ? entry.statBlock.bonusActions.map((action) => ({ key: action.name, label: `${action.kind === "attack" && action.attack ? "⚔ " : ""}${action.name}`, hint: action.text?.slice(0, 60), onSelect: () => { if (action.kind === "attack" && action.attack) void attackWith({ source: "npc", actionName: action.name }); else c.act(me, "utilize", { note: action.name, bonus: true }); } })) : []),
     ...usable.filter((item) => item.bonus).map((item) => ({ key: item.feature.id, label: item.feature.name, hint: item.left !== undefined ? `${item.left}/${item.pool!.max}` : undefined, disabled: item.left !== undefined && item.left <= 0, onSelect: () => void useIt(item.feature, true) })),
     // R59 (D194): the official actions a contract moved into this menu (예리한 정신's 빠른 연구, 관찰력's 빠른 수색).
-    ...(derived?.bonusActions ?? []).map((item) => ({ key: `bonus-as:${item.kind}`, label: actionDef(item.kind as ActionKind).name, hint: item.source, onSelect: () => void take(actionDef(item.kind as ActionKind), true) })),
+    ...(derived?.bonusActions ?? []).filter((item) => item.kind !== "attack").map((item) => ({ key: `bonus-as:${item.kind}`, label: actionDef(item.kind as ActionKind).name, hint: item.source, onSelect: () => void take(actionDef(item.kind as ActionKind), true) })),
+    // R61 (D196): one more swing as a bonus action (쌍수 사용자, 장병기 달인, 대형 무기 달인's 베어 넘기기). The
+    // weapons it covers come from the contract's own filter, so a heavy-weapon rule never offers a dagger.
+    ...(derived?.bonusActions ?? []).filter((item) => item.kind === "attack").flatMap((item) => {
+      const filter = item.attackScope && item.attackScope !== "any" ? attackScopeFilter(item.attackScope) : undefined;
+      return (derived?.attacks ?? []).filter((attack) => attack.itemId && (!filter || filter(attack))).map((attack) => ({
+        key: `bonus-attack:${item.source}:${attack.id}`, label: `⚔ ${attack.name}`, hint: `${item.source} · 추가 행동`,
+        onSelect: () => { void attackWith({ source: "weapon", attackId: attack.id }); c.spendEconomy(me, "bonus"); },
+      }));
+    }),
     { key: "note", label: "기록…", hint: "다른 추가 행동을 쓴 것으로 남김", onSelect: () => void take({ ...actionDef("utilize"), name: "추가 행동", text: "무엇을" }, true) },
   ];
   // 마법 (D102): the sheet's castable spells or the stat block's lists; targets from the board, the slot from a dialog.

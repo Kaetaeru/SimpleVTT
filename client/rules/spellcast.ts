@@ -8,7 +8,7 @@
 import type { AbilityKey } from "../catalog/types";
 import { ABILITY_KO } from "../catalog/types";
 import { CONDITION_KO, type SpellDice, type SpellDuration, type SpellExec } from "../compendium/spells";
-import type { ActorStats } from "./actions";
+import { advantageFor, type ActorStats } from "./actions";
 import type { ContentCatalog } from "../catalog/catalog";
 import { castSpell, type CastMethod } from "../character/play";
 import type { CharacterRuntime } from "../character/runtime";
@@ -124,11 +124,14 @@ export function resolveSpell(input: CastInput): SpellResolution {
     const dodging = key === "dex" && (target.conditions.includes("회피") || target.effects.includes("회피"));
     // R31 (D161): 마법 저항 — advantage on this save when what forced it is a spell, not a stat-block action.
     const resistant = Boolean(target.magicResistance) && input.spec.exec.spellId.slice(0, 4) !== "npc:";
-    const advantaged = dodging || resistant;
+    // R61 (D196): and whatever the target's own contracts said about saving throws (전투 시전자's concentration,
+    // 튼튼함's death saves). The reason rides on the row, as 회피 and 마법 저항 already do.
+    const declared = advantageFor(stats, "saving-throw", { ability: key });
+    const advantaged = dodging || resistant || Boolean(declared);
     const first = dice.d(20); const second = advantaged ? dice.d(20) : undefined; const rolled = second !== undefined ? Math.max(first, second) : first;
     // R35 (D174): the rescue replaces the die and adds its own dice before the DC is compared, so a save that was a
     // failure can become a success and the whole row is resolved again from there.
-    const d20 = input.saveAdjust?.d20 ?? rolled; const bonus = (stats.saves[key] ?? 0) - 2 * Math.max(0, target.exhaustion ?? 0); const total = d20 + bonus + (input.saveAdjust?.delta ?? 0); return { ability: key, d20, bonus, total, dc: casterStats.saveDc, success: input.forceSaveSuccess ? true : total >= casterStats.saveDc, ...(input.saveAdjust?.label ? { rescue: input.saveAdjust.label } : {}), ...(input.forceSaveSuccess && total < casterStats.saveDc ? { legendary: true } : {}), ...(second !== undefined ? { advantage: dodging ? "회피" : "마법 저항", dropped: Math.min(first, second) } : {}) }; };
+    const d20 = input.saveAdjust?.d20 ?? rolled; const bonus = (stats.saves[key] ?? 0) - 2 * Math.max(0, target.exhaustion ?? 0); const total = d20 + bonus + (input.saveAdjust?.delta ?? 0); return { ability: key, d20, bonus, total, dc: casterStats.saveDc, success: input.forceSaveSuccess ? true : total >= casterStats.saveDc, ...(input.saveAdjust?.label ? { rescue: input.saveAdjust.label } : {}), ...(input.forceSaveSuccess && total < casterStats.saveDc ? { legendary: true } : {}), ...(second !== undefined ? { advantage: dodging ? "회피" : resistant ? "마법 저항" : declared!.reason, dropped: Math.min(first, second) } : {}) }; };
   // R28 (D150): a condition the target is immune to never lands, whoever asked for it.
   const conditionMarks = (trigger: "failed-save" | "hit" | "always", target?: Combatant) => (exec.effects ?? [])
     .filter((effect) => effect.trigger === trigger || effect.trigger === "always")

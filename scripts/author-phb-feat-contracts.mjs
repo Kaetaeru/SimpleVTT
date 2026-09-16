@@ -39,7 +39,11 @@ const guard = (operations) => ({ id: "guard", timing: "reaction.window", slot: "
  * table judges); `riders` and `hooks` are the two interceptor families; `pre` are pre-roll entry points.
  */
 const FEATS = {
-  actor: { rules: [ask("변장한 동안 그 인물이라고 납득시키는 매력(기만·공연) 판정에 유리 — 굴릴 때 선언"), ask("소리 흉내: 듣는 쪽이 DC 8 + 매력 + 숙련의 지혜(통찰)로 간파")] },
+  actor: { rules: [
+    modify("skill.deception.advantage", { note: "변장한 인물이라고 납득시킬 때" }),
+    modify("skill.performance.advantage", { note: "변장한 인물이라고 납득시킬 때" }),
+    ask("소리 흉내: 듣는 쪽이 DC 8 + 매력 + 숙련의 지혜(통찰)로 간파"),
+  ] },
   athlete: { rules: [modify("speed.climb", { value: 0, note: "이동 속도와 같은 등반 속도" }), ask("엎드림에서 5피트 이동만으로 일어섬"), ask("5피트만 이동한 뒤에도 도움닫기 도약")] },
   "blind-fighting": { rules: [modify("senses.blindsight", { value: 10 })] },
   charger: { rules: [ask("질주 행동 동안 이동 속도 +10")], pre: [rider({ scope: "melee" }, [
@@ -59,13 +63,17 @@ const FEATS = {
     fact("finesse-in-hand", "reaction", "기교 무기를 들고 있고, 맞은 것이 근접 공격이다"),
     modify("ac.bonus", { value: PB, when: on("finesse-in-hand") }),
   ])] },
-  "dual-wielder": { rules: [ask("공격 행동 뒤 추가 행동으로 다른 무기 한 번 (양손 아님, 수정치가 음수가 아니면 피해에 능력 수정치)"), ask("무기 두 개를 한 번에 뽑거나 집어넣음")] },
+  "dual-wielder": { rules: [
+    { kind: "economy.modify", bucket: "bonus-action.attack:one-handed-melee", amount: 1 },
+    ask("공격 행동으로 경량 무기를 휘두른 뒤 — 다른 무기여야 하고, 수정치가 음수가 아니면 피해에 능력 수정치"),
+    ask("무기 두 개를 한 번에 뽑거나 집어넣음"),
+  ] },
   dueling: { rules: [modify("damage.bonus", { value: 2, scope: "one-handed-melee", note: "다른 무기를 들지 않은 동안" })] },
   durable: { rules: [
     { kind: "resource.change", resource: "resource:hit-die", amount: -1, target: "self" },
     { kind: "healing.apply", dice: "1d10", target: "self" },
+    modify("saving-throw.advantage", { abilities: ["con"], note: "죽음 내성" }),
     ask("추가 행동 · 히트 다이스의 크기대로 굴리세요 (여기서는 d10으로 적어 둡니다)"),
-    ask("죽음 내성 굴림에 유리 — 굴릴 때 선언"),
   ] },
   "elemental-adept": {
     pre: [rider({}, [modify("damage.die-minimum", { value: 2 }), ask("고른 유형의 피해일 때만 — 어떤 유형을 골랐는지는 시트에 적어 두세요")])],
@@ -75,7 +83,7 @@ const FEATS = {
   "great-weapon-master": { pre: [rider({ scope: "heavy" }, [
     fact("attack-action", "pre-roll", "자신의 턴에 공격 행동의 일부로 휘두른다"),
     { kind: "damage.apply", amount: PB, damageType: "weapon", target: "attack-target", when: on("attack-action") },
-  ])], hooks: [after(["crit", "downed"], [{ kind: "economy.modify", bucket: "bonus-action.extra", amount: 1 }, ask("같은 무기로 추가 행동 공격 한 번")], "melee")] },
+  ])], hooks: [after(["crit", "downed"], [{ kind: "economy.modify", bucket: "bonus-action.attack:heavy", amount: 1 }, ask("같은 무기로 한 번 더")], "melee")] },
   healer: { rules: [
     toParty("healing.apply", { amount: PB, dice: "1d6" }),
     ask("치유사 가방을 써서 — 대상이 히트 다이스 하나를 소비합니다 (대상마다 짧은 휴식에 한 번)"),
@@ -119,7 +127,11 @@ const FEATS = {
     toParty("content.grant", { contentId: "phb2024.item.poisoner-dose" }),
     ask("1시간 작업과 50 GP로 숙련 보너스만큼 — 추가 행동으로 무기나 탄약에 바릅니다 (DC 8 + 숙련 + 민첩)"),
   ] },
-  "polearm-master": { rules: [ask("육척봉·창·중량+장거리 무기로 공격한 뒤 추가 행동으로 자루 끝 근접 공격 (d4 타격)"), ask("그 무기의 간격에 들어오는 생물에게 반응으로 근접 공격 — 장면에 위치가 없어 표에서 선언합니다")] },
+  "polearm-master": { rules: [
+    { kind: "economy.modify", bucket: "bonus-action.attack:two-handed", amount: 1 },
+    ask("육척봉·창·중량+장거리 무기로 공격한 뒤 — 자루 끝은 d4 타격입니다 (피해는 표에서 고쳐 주세요)"),
+    ask("그 무기의 간격에 들어오는 생물에게 반응으로 근접 공격 — 장면에 위치가 없어 표에서 선언합니다"),
+  ] },
   protection: { rules: [ask("5피트 안의 다른 이를 노린 공격에 반응으로 불리 (방패 필요) — 장면에 위치가 없어 표에서 선언합니다")] },
   resilient: { rules: [ask("올린 능력치의 내성 굴림에 숙련 — 만들기·레벨업에서 시트에 반영됩니다")] },
   "ritual-caster": { rules: [ask("의식 태그 1레벨 주문을 숙련 보너스만큼 항상 준비"), ask("긴 휴식마다 한 번, 준비한 의식 하나를 슬롯 없이 보통 시전 시간으로")] },
@@ -127,14 +139,18 @@ const FEATS = {
   "shadow-touched": { rules: [ask("환영·사령 1레벨 주문 하나와 투명화를 항상 준비, 각각 긴 휴식마다 슬롯 없이 한 번")] },
   sharpshooter: { rules: [modify("attack-roll.ignore-cover", { value: true, scope: "ranged", note: "절반·3/4 엄폐 무시" }), ask("근접 사격·장거리 사격: 이 앱은 그 불리를 애초에 적용하지 않습니다 (장면에 거리가 없음) — 이미 효과가 난 셈입니다")] },
   "shield-master": { hooks: [after(["hit"], [ask("장비한 방패로 후려치기: DC 8 + 근력 + 숙련의 근력 내성, 실패면 5피트 밀기 또는 넘어짐 (턴당 한 번)")], "melee")], rules: [ask("민첩 내성에 성공하면 반응으로 피해를 아예 받지 않음 (방패 필요)")] },
-  skulker: { rules: [modify("senses.blindsight", { value: 10 }), ask("전투 중 숨기의 민첩(은신) 판정에 유리"), ask("숨은 채로 빗나가도 위치가 드러나지 않음")] },
+  skulker: { rules: [
+    modify("senses.blindsight", { value: 10 }),
+    modify("skill.stealth.advantage", { note: "전투 중 숨기 행동" }),
+    ask("숨은 채로 빗나가도 위치가 드러나지 않음"),
+  ] },
   slasher: { hooks: [after(["hit"], [{ kind: "condition.apply", condition: "둔화", target: "target" }, ask("참격 피해로 명중시켜 이동 속도 −10 (턴당 한 번)")], "slashing"), after(["crit"], [{ kind: "condition.apply", condition: "약화", target: "target" }, ask("다음 자기 턴 시작까지 대상의 공격 굴림에 불리")], "slashing")] },
   speedy: { rules: [modify("speed.walk", { value: 10 }), ask("질주하면 그 턴 험지가 추가 이동을 요구하지 않음"), ask("자신을 향한 기회 공격에 불리 — 표에서 선언합니다")] },
   "spell-sniper": { rules: [modify("attack-roll.ignore-cover", { value: true, note: "주문 공격 굴림이 절반·3/4 엄폐 무시" }), ask("근접 시전: 이 앱은 그 불리를 애초에 적용하지 않습니다 (장면에 거리가 없음) — 이미 효과가 난 셈입니다"), ask("공격 굴림이 필요한 10피트 이상 주문의 사거리 +60피트")] },
   "tavern-brawler": { pre: [rider({ scope: "unarmed" }, [fact("push-5ft", "pre-roll", "명중하면 대상을 5피트 민다 (빈 공간이 있다)")])] },
   tough: { rules: [modify("hp.maximum", { value: { op: "mul", args: [{ value: 2 }, LEVEL] }, note: "캐릭터 레벨 × 2" })] },
   "unarmed-fighting": { rules: [ask("자기 턴 시작에 붙잡고 있는 생물 하나에게 1d4 타격")] },
-  "war-caster": { rules: [ask("집중 유지 건강 내성에 유리 — 굴릴 때 선언"), ask("기회 공격 대신 반응으로 그 생물만 노리는 행동 주문 한 번"), ask("무기·방패를 들고도 동작 구성요소 수행")] },
+  "war-caster": { rules: [modify("saving-throw.advantage", { abilities: ["con"], note: "집중 유지" }), ask("기회 공격 대신 반응으로 그 생물만 노리는 행동 주문 한 번"), ask("무기·방패를 들고도 동작 구성요소 수행")] },
   "weapon-master": { rules: [ask("숙련된 단순·군용 무기 하나의 통달 속성을 씁니다 (긴 휴식마다 바꿀 수 있음) — 시트의 무기 숙련에 적어 두세요")] },
   "thrown-weapon-fighting": { rules: [modify("damage.bonus", { value: 2, scope: "thrown", note: "투척 무기 원거리 명중" })] },
   telekinetic: { rules: [ask("마법사의 손을 구성요소 없이, 사거리 +30피트"), ask("추가 행동으로 30피트 안의 생물 하나에게 근력 내성 (DC 8 + 올린 능력치 + 숙련), 실패면 5피트 이동")] },

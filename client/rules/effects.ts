@@ -7,6 +7,7 @@
 import type { ContentCatalog } from "../catalog/catalog";
 import type { AbilityKey } from "../catalog/types";
 import { ABILITY_KEYS } from "../catalog/types";
+import type { RollAdvantage } from "./actions";
 import type { ActiveEffect, AppliedEffect, DerivedAttack, DerivedCharacter, Term } from "../character/types";
 import { featureRuleKey, qualifyRuleKey } from "./activation";
 import { characterScope } from "./contract";
@@ -51,6 +52,8 @@ export interface EffectApplication {
   grantsAdvantage?: string[];
   /** R55 (D190): this character's attacks ignore half and three-quarters cover. */
   ignoresCover?: boolean;
+  /** R61 (D196): reasons this character's checks and saves are advantaged. */
+  rollAdvantage?: RollAdvantage[];
   /** R56 (D191): armour and weapon training a feat hands out, and skills it makes expert. */
   armorTraining?: string[];
   weaponTraining?: string[];
@@ -256,6 +259,11 @@ export function applyActiveEffects(derived: DerivedCharacter, effects: ActiveEff
       notes.push(`이 캐릭터를 향한 공격 유리 (${named.join(", ")})`);
     }
     if (application.ignoresCover) { next = { ...next, ignoresCover: true }; notes.push("엄폐 무시"); }
+    if (application.rollAdvantage?.length) {
+      const named = application.rollAdvantage.map((item) => ({ ...item, reason: item.reason ? `${label}: ${item.reason}` : label }));
+      next = { ...next, rollAdvantage: [...(next.rollAdvantage ?? []), ...named] };
+      notes.push(`유리: ${named.map((item) => item.reason).join(", ")}`);
+    }
     // R56 (D191): training and expertise land on the sheet's own lists, with the proficiency bonus doubled where
     // expertise says so — the same arithmetic the derivation does, applied after it.
     for (const [key, values, label2] of [["armor", application.armorTraining, "방어구 훈련"], ["weapons", application.weaponTraining, "무기 숙련"]] as Array<["armor" | "weapons", string[] | undefined, string]>) {

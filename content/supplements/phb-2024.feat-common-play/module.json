@@ -57,8 +57,16 @@
         "invocation": "manual",
         "operations": [
          {
-          "kind": "adjudication.request",
-          "question": "변장한 동안 그 인물이라고 납득시키는 매력(기만·공연) 판정에 유리 — 굴릴 때 선언"
+          "kind": "property.modify",
+          "property": "skill.deception.advantage",
+          "operation": "add",
+          "note": "변장한 인물이라고 납득시킬 때"
+         },
+         {
+          "kind": "property.modify",
+          "property": "skill.performance.advantage",
+          "operation": "add",
+          "note": "변장한 인물이라고 납득시킬 때"
          },
          {
           "kind": "adjudication.request",
@@ -541,8 +549,13 @@
         "invocation": "manual",
         "operations": [
          {
+          "kind": "economy.modify",
+          "bucket": "bonus-action.attack:one-handed-melee",
+          "amount": 1
+         },
+         {
           "kind": "adjudication.request",
-          "question": "공격 행동 뒤 추가 행동으로 다른 무기 한 번 (양손 아님, 수정치가 음수가 아니면 피해에 능력 수정치)"
+          "question": "공격 행동으로 경량 무기를 휘두른 뒤 — 다른 무기여야 하고, 수정치가 음수가 아니면 피해에 능력 수정치"
          },
          {
           "kind": "adjudication.request",
@@ -642,12 +655,17 @@
           "target": "self"
          },
          {
-          "kind": "adjudication.request",
-          "question": "추가 행동 · 히트 다이스의 크기대로 굴리세요 (여기서는 d10으로 적어 둡니다)"
+          "kind": "property.modify",
+          "property": "saving-throw.advantage",
+          "operation": "add",
+          "abilities": [
+           "con"
+          ],
+          "note": "죽음 내성"
          },
          {
           "kind": "adjudication.request",
-          "question": "죽음 내성 굴림에 유리 — 굴릴 때 선언"
+          "question": "추가 행동 · 히트 다이스의 크기대로 굴리세요 (여기서는 d10으로 적어 둡니다)"
          }
         ]
        }
@@ -828,12 +846,12 @@
         "operations": [
          {
           "kind": "economy.modify",
-          "bucket": "bonus-action.extra",
+          "bucket": "bonus-action.attack:heavy",
           "amount": 1
          },
          {
           "kind": "adjudication.request",
-          "question": "같은 무기로 추가 행동 공격 한 번"
+          "question": "같은 무기로 한 번 더"
          }
         ]
        }
@@ -1761,8 +1779,13 @@
         "invocation": "manual",
         "operations": [
          {
+          "kind": "economy.modify",
+          "bucket": "bonus-action.attack:two-handed",
+          "amount": 1
+         },
+         {
           "kind": "adjudication.request",
-          "question": "육척봉·창·중량+장거리 무기로 공격한 뒤 추가 행동으로 자루 끝 근접 공격 (d4 타격)"
+          "question": "육척봉·창·중량+장거리 무기로 공격한 뒤 — 자루 끝은 d4 타격입니다 (피해는 표에서 고쳐 주세요)"
          },
          {
           "kind": "adjudication.request",
@@ -2150,8 +2173,10 @@
           "value": 10
          },
          {
-          "kind": "adjudication.request",
-          "question": "전투 중 숨기의 민첩(은신) 판정에 유리"
+          "kind": "property.modify",
+          "property": "skill.stealth.advantage",
+          "operation": "add",
+          "note": "전투 중 숨기 행동"
          },
          {
           "kind": "adjudication.request",
@@ -2514,8 +2539,13 @@
         "invocation": "manual",
         "operations": [
          {
-          "kind": "adjudication.request",
-          "question": "집중 유지 건강 내성에 유리 — 굴릴 때 선언"
+          "kind": "property.modify",
+          "property": "saving-throw.advantage",
+          "operation": "add",
+          "abilities": [
+           "con"
+          ],
+          "note": "집중 유지"
          },
          {
           "kind": "adjudication.request",

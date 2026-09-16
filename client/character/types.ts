@@ -5,6 +5,7 @@
 import type { AbilityKey } from "../catalog/types";
 import type { ParsedDuration } from "../rules/activation";
 import type { ContractRider } from "../rules/attackRiders";
+import type { RollAdvantage } from "../rules/actions";
 
 export type AbilityScores = Record<AbilityKey, number>;
 
@@ -243,11 +244,13 @@ export interface DerivedCharacter {
   grantsAdvantage?: string[];
   /** R55 (D190): this character's attacks ignore half and three-quarters cover (명사수, 주문 저격수). */
   ignoresCover?: boolean;
+  /** R61 (D196): reasons this character's ability checks and saving throws are advantaged. */
+  rollAdvantage?: RollAdvantage[];
   /**
    * R59 (D194): official actions a contract said this character may take as a bonus action instead (예리한 정신's
    * 빠른 연구, 관찰력's 빠른 수색). The turn panel offers them in the 추가 행동 menu as well as the action one.
    */
-  bonusActions?: Array<{ kind: string; source: string }>;
+  bonusActions?: Array<{ kind: string; source: string; /** R61 (D196): for `attack`, the weapon filter the extra swing is limited to (`any`, `light`, `heavy` …). */ attackScope?: string }>;
   /**
    * R52 (D187): the riders this character's contracts let them declare before an attack roll. Carried on the sheet
    * for the same reason `featureContracts` is: a caller that forgets to ask the catalog would silently lose the rule.

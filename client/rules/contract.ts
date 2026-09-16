@@ -423,6 +423,11 @@ export function interceptorsFor(contract: CommonPlayContract, timing: string, fa
  * which one, so the turn panel can offer it in both menus instead of the player reading a sentence about it.
  */
 export const economyAsAction = (bucket: string) => /^bonus-action\.as:(.+)$/.exec(bucket)?.[1];
+/**
+ * R61 (D196): `bonus-action.attack:<scope>` says the feature buys one more swing with a weapon of that kind, as a
+ * bonus action. The turn panel offers it as a real attack instead of a sentence about one; `any` means any weapon.
+ */
+export const economyBonusAttack = (bucket: string) => /^bonus-action\.attack:(.+)$/.exec(bucket)?.[1];
 
 export function economyBucketOf(bucket: string): "action" | "bonus" | "reaction" | null {
   const head = bucket.split(".")[0];

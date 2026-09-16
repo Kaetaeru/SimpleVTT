@@ -85,7 +85,7 @@ test("R56: every supplement feat has a contract, and every contract parses (D191
   }
   assert.deepEqual(gaps, [], "this executor can run every part of every contract it ships");
   // The rest are prose the table judges — a mount, a kitchen, or five feet the scene cannot measure (D109).
-  assert.equal(mechanical, 34, "feats carrying at least one mechanical operation (R57–R60 each turned prose into numbers)");
+  assert.equal(mechanical, 38, "feats carrying at least one mechanical operation (R57–R61 each turned prose into numbers)");
 });
 
 test("R56: 대형 무기 달인 is a checkbox on a heavy weapon and a bonus action on a critical (D191)", () => {
@@ -112,7 +112,8 @@ test("R56: 대형 무기 달인 is a checkbox on a heavy weapon and a bonus acti
   // The aftermath seam (R53): a critical or a kill hands back a bonus action.
   assert.deepEqual(attackAftermath(derived, catalog, sword, ["hit"]).economy, [], "a plain hit gives nothing back");
   const cleaved = attackAftermath(derived, catalog, sword, ["hit", "crit"]);
-  assert.deepEqual(cleaved.economy, [{ bucket: "bonus-action.extra", amount: 1, source: "대형 무기 달인" }]);
+  // R61 (D196): the bucket names the weapons the bought swing covers; it is still a bonus action handed back.
+  assert.deepEqual(cleaved.economy, [{ bucket: "bonus-action.attack:heavy", amount: 1, source: "대형 무기 달인" }]);
   assert.deepEqual(attackAftermath(derived, catalog, sword, ["hit", "downed"]).economy, cleaved.economy, "and so does dropping them");
 });
 

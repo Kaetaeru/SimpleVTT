@@ -67,13 +67,45 @@ export const TURN_MARKS = {
 } as const;
 
 /** What the resolver needs from a sheet or stat block. Ability values are modifiers. */
-export interface ActorStats { abilities: Record<AbilityKey, number>; saves: Record<AbilityKey, number>; skills: Record<string, number>; proficiencyBonus: number }
+export interface ActorStats {
+  abilities: Record<AbilityKey, number>;
+  saves: Record<AbilityKey, number>;
+  skills: Record<string, number>;
+  proficiencyBonus: number;
+  /**
+   * R61 (D196): reasons this creature's ability checks and saving throws are advantaged, each carrying the name of
+   * the rule that granted it and what it covers. R55 did this for attack rolls; the same seam reaches the other two
+   * kinds of d20 test now, so 배우's disguise, 튼튼함's death saves and 전투 시전자's concentration are numbers.
+   */
+  advantage?: RollAdvantage[];
+}
+
+export interface RollAdvantage {
+  reason: string;
+  /** Which kind of roll it covers; empty means every kind. */
+  families?: Array<"ability-check" | "saving-throw">;
+  /** Abilities it is limited to (a save, or the ability behind a check); empty means all. */
+  abilities?: AbilityKey[];
+  /** Skill ids it is limited to; empty means all. */
+  skills?: string[];
+}
+
+/** Whether any of these reasons covers this roll, and the first one that does. */
+export function advantageFor(stats: ActorStats, family: "ability-check" | "saving-throw", options: { ability?: AbilityKey; skill?: string } = {}) {
+  return (stats.advantage ?? []).find((item) => {
+    if (item.families?.length && !item.families.includes(family)) return false;
+    if (item.skills?.length) return Boolean(options.skill && item.skills.includes(options.skill));
+    if (item.abilities?.length) return Boolean(options.ability && item.abilities.includes(options.ability));
+    return true;
+  });
+}
 
 export const pcStats = (derived: DerivedCharacter): ActorStats => ({
   abilities: Object.fromEntries(Object.entries(derived.abilities).map(([key, value]) => [key, value.modifier])) as Record<AbilityKey, number>,
   saves: Object.fromEntries(Object.entries(derived.saves).map(([key, value]) => [key, value.bonus])) as Record<AbilityKey, number>,
   skills: Object.fromEntries(derived.skills.map((skill) => [skill.id, skill.bonus])),
   proficiencyBonus: derived.proficiencyBonus,
+  ...(derived.rollAdvantage?.length ? { advantage: derived.rollAdvantage } : {}),
 });
 
 export const npcStats = (block: MonsterView): ActorStats => ({
@@ -90,7 +122,7 @@ export const unarmedDc = (stats: ActorStats) => 8 + stats.abilities.str + stats.
 /** The target chooses the save; the app takes the better bonus. */
 export const bestOf = <K extends string>(pairs: Array<[K, number]>): [K, number] => pairs.reduce((best, pair) => (pair[1] > best[1] ? pair : best));
 
-export interface ActCheck { label: string; d20: number; bonus: number; total: number; dc?: number; success?: boolean; /** R37 (D177): a contract was paid to redo this roll, and what paid for it. */ rescue?: string }
+export interface ActCheck { label: string; d20: number; bonus: number; total: number; dc?: number; success?: boolean; /** R37 (D177): a contract was paid to redo this roll, and what paid for it. */ rescue?: string; /** R61 (D196): how many dice were rolled, the one dropped, and the rule that asked for the second. */ advantage?: number; dropped?: number; reason?: string }
 export interface ActResult {
   kind: ActionKind;
   name: string;
@@ -141,8 +173,18 @@ export const cannotAct = (conditions: string[]) => CANNOT_ACT.find((name) => con
 export function resolveAction(input: ActInput): ActResult {
   const def = actionDef(input.kind);
   const base: ActResult = { kind: input.kind, name: def.name, actor: { name: input.actor.name }, target: input.target ? { name: input.target.name } : undefined, text: "", actorMarks: [], targetMarks: [], actorUnmarks: [], bonus: input.bonus };
-  const check = (label: string, bonus: number, dc?: number): ActCheck => { const die = input.forceD20 ?? d20(input.random); const total = die + bonus + (input.rollDelta ?? 0); return { label, d20: die, bonus, total, dc, success: dc === undefined ? undefined : total >= dc, ...(input.rescue ? { rescue: input.rescue } : {}) }; };
-  const skillCheck = (skill: string, dc?: number) => check(`${input.actor.name} · ${ABILITY_KO[SKILL_ABILITY_OF[skill] ?? "int"]}(${SKILL_KO[skill] ?? skill})`, skillBonus(input.actor.stats, skill), dc);
+  /**
+   * R61 (D196): a contract may say this check is advantaged. Two dice are rolled and the better kept, and the reason
+   * rides on the card — the app does not roll a second die without saying why it did.
+   */
+  const check = (label: string, bonus: number, dc?: number, covers: { ability?: AbilityKey; skill?: string } = {}): ActCheck => {
+    const lucky = input.forceD20 === undefined ? advantageFor(input.actor.stats, "ability-check", covers) : undefined;
+    const rolls = input.forceD20 !== undefined ? [input.forceD20] : lucky ? [d20(input.random), d20(input.random)] : [d20(input.random)];
+    const die = Math.max(...rolls);
+    const total = die + bonus + (input.rollDelta ?? 0);
+    return { label, d20: die, bonus, total, dc, success: dc === undefined ? undefined : total >= dc, ...(rolls.length > 1 ? { advantage: rolls.length, dropped: Math.min(...rolls), reason: lucky!.reason } : {}), ...(input.rescue ? { rescue: input.rescue } : {}) };
+  };
+  const skillCheck = (skill: string, dc?: number) => check(`${input.actor.name} · ${ABILITY_KO[SKILL_ABILITY_OF[skill] ?? "int"]}(${SKILL_KO[skill] ?? skill})`, skillBonus(input.actor.stats, skill), dc, { skill, ability: SKILL_ABILITY_OF[skill] });
   switch (input.kind) {
     case "dash": return { ...base, text: "이번 턴 이동 거리가 두 배가 됩니다.", actorMarks: ["질주"] };
     case "disengage": return { ...base, text: "이번 턴의 이동은 기회 공격을 유발하지 않습니다.", actorMarks: ["이탈"] };
