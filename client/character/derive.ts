@@ -14,6 +14,9 @@ import { MASTERY_KO, SKILL_ABILITY, weaponIsProficient } from "./choices";
 import { applyEquipment } from "./equipment";
 import { Ledger } from "./ledger";
 import { applyPassiveContracts, applyActiveEffects } from "../rules/effects";
+import { featureRuleKey } from "../rules/activation";
+import { characterScope } from "../rules/contract";
+import { contractDurations } from "../rules/contractActivation";
 import { applyBackground, applyLanguages, applySpecies, damageTypeKo } from "./origin";
 import { dieMinimumCovers } from "./featRules";
 import { validateAbilities } from "./source";
@@ -48,6 +51,15 @@ export function deriveCharacter(source: CharacterSource, catalog: ContentCatalog
   if (options.inventory) applyInventoryPatch(ledger, options.inventory);
   if (options.equipped) applyEquipState(ledger, options.equipped);
   const derived = finalize(ledger);
+  // R49 (D184): every feature's contract, worked out once and carried with the sheet.
+  const durations = contractDurations(catalog, characterScope(derived));
+  const featureContracts: NonNullable<DerivedCharacter["featureContracts"]> = {};
+  for (const feature of derived.features) {
+    const key = featureRuleKey(feature.id);
+    const found = durations(key, feature.name);
+    if (found) featureContracts[key] = found;
+  }
+  derived.featureContracts = featureContracts;
   // R43 (D183): passives first (they are always on), then whatever is running right now.
   const passive = applyPassiveContracts(derived, catalog);
   return options.effects?.length ? applyActiveEffects(passive, options.effects, catalog) : passive;

@@ -57,9 +57,12 @@ test("uses: a contract that says nothing about a use leaves the table's answer a
   const cat = catalog();
   const made = build({ name: "b", classes: "barbarian", level: 5 });
   const rage = made.derived.features.find((item) => featureRuleKey(item.id) === "barbarian.rage")!;
-  // 격노's contract carries only `effect.apply`, so its pool still comes from the hand-written table.
+  // 격노's contract carries its pool, its ten minutes and the three things the table decides.
   const after = featureActivation(rage, made.derived, contractDurations(cat, characterScope(made.derived)))!;
   assert.equal(after.resourceId, "resource.barbarian.rage");
   assert.equal(after.duration!(made.derived).rounds, 100);
-  assert.equal(contractUse(featureContract(cat, "barbarian.rage")!, characterScope(made.derived), "격노"), undefined);
+  assert.ok(after.note?.includes("추가 행동으로 연장"), after.note);
+  // A feature whose contract only changes a standing number says nothing about *using* it at all.
+  const fighter = build({ name: "f", classes: "fighter", level: 20 }).derived;
+  assert.equal(contractUse(featureContract(cat, "fighter.champion.improved-critical")!, characterScope(fighter), "향상된 치명타"), undefined);
 });

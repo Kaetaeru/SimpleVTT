@@ -77,57 +77,10 @@ const breathDice = (level: number) => (level >= 17 ? 4 : level >= 11 ? 3 : level
 const METAMAGIC_COST: Record<string, number> = { "careful-spell": 1, "distant-spell": 1, "empowered-spell": 1, "extended-spell": 1, "heightened-spell": 2, "quickened-spell": 2, "seeking-spell": 1, "subtle-spell": 1, "transmuted-spell": 1, "twinned-spell": 1 };
 
 const FEATURE_ACTIVATIONS: Record<string, FeatureActivation> = {
-  "barbarian.reckless-attack": { duration: () => timed("이 턴 (다음 턴 시작까지)", 1), note: "첫 공격 때 결정 · 근력 근접 공격 유리, 받는 공격도 유리" },
-  // R28 (D151): the host now watches this — a rage that saw no attack, no forced save and no damage since the
-  // barbarian's last turn ends when their turn does, and re-pressing 격노 (a bonus action) is the extension.
-  "barbarian.rage": { resourceId: "resource.barbarian.rage", duration: () => timed("10분 (100라운드)", 100), note: "추가 행동 · 턴이 끝날 때 그 사이 공격도, 내성을 강요한 것도, 받은 피해도 없었으면 종료 (다시 눌러 연장) · 행동 불가가 되면 즉시 종료" },
-  "barbarian.berserker.intimidating-presence": { duration: () => timed("1분 (10라운드)", 10), note: "추가 행동 · 30피트 안의 적, 지혜 내성 아니면 공포" },
-  "fighter.tactical-mind": { resourceId: "resource.fighter.second-wind", roll: () => ({ label: "전술적 사고", formula: "1d10" }), note: "실패한 능력 판정에 재기의 바람 1회 소비, +1d10" },
   "monk.deflect-attacks": { roll: (derived) => ({ label: "공격 빗나가게 하기 — 피해 감소", formula: `1d10+${derived.abilities.dex.modifier}+${classLevel(derived, "monk")}` }), note: "반응행동 · 타격/관통/참격 피해를 1d10 + 민첩 + 몽크 레벨 줄임" },
-  "monk.open-hand.quivering-palm": { resourceId: "resource.monk.focus", cost: 4, note: "기 점수 4 · 건강 내성 아니면 10d12" },
-  "monk.superior-defense": { resourceId: "resource.monk.focus", cost: 3, duration: () => timed("1분 (10라운드)", 10), note: "기 점수 3 · 역장 외 모든 피해 저항" },
-  "monk.open-hand.wholeness-of-body": { roll: (derived) => ({ label: "온전한 신체 — 회복", formula: `1d${martialArtsDie(classLevel(derived, "monk"))}+${Math.max(0, derived.abilities.wis.modifier)}` }), note: "추가 행동 · 지혜 수정치 횟수/긴 휴식 · 굴린 만큼 HP 입력에 +N" },
-  "druid.wild-companion": { resourceId: "resource.druid.wild-shape", note: "야생 변신 1회로 사역마 찾기 시전" },
-  "druid.circle-of-the-land.lands-aid": { resourceId: "resource.druid.wild-shape", note: "야생 변신 1회 · 2d6 괴저 / 2d6 회복" },
-  "druid.circle-of-the-land.natures-sanctuary": { resourceId: "resource.druid.wild-shape", duration: () => timed("1분 (10라운드)", 10), note: "야생 변신 1회 · 나무 벽" },
-  "cleric.life-domain.preserve-life": { resourceId: "resource.cleric.channel-divinity", roll: (derived) => ({ label: "생명 보존 — 회복 총량", formula: `${5 * classLevel(derived, "cleric")}` }), note: "신성 변환 1회 · 클레릭 레벨 ×5 HP를 나눠 회복" },
-  "paladin.abjure-foes": { resourceId: "resource.paladin.channel-divinity", note: "신성 변환 1회 · 지혜 내성 아니면 공포" },
-  "paladin.oath-of-devotion.sacred-weapon": { resourceId: "resource.paladin.channel-divinity", duration: () => timed("10분 (100라운드)", 100), note: "신성 변환 1회 · 무기 명중에 매력 수정치" },
-  "paladin.oath-of-devotion.holy-nimbus": { duration: () => timed("10분 (100라운드)", 100), note: "추가 행동 · 긴 휴식마다 1회 (또는 5레벨 슬롯)" },
-  "sorcerer.draconic.dragon-wings": { duration: () => timed("1시간"), note: "추가 행동 · 긴 휴식마다 1회 (또는 3레벨 슬롯) · 비행 60" },
-  "warlock.mystic-arcanum-6": { resourceId: "resource.warlock.arcanum.6" },
-  "warlock.mystic-arcanum-7": { resourceId: "resource.warlock.arcanum.7" },
-  "warlock.mystic-arcanum-8": { resourceId: "resource.warlock.arcanum.8" },
-  "warlock.mystic-arcanum-9": { resourceId: "resource.warlock.arcanum.9" },
   "species.breath-weapon": { resourceId: "resource.species.breath-weapon", roll: (derived) => ({ label: "브레스 무기 피해", formula: `${breathDice(derived.level)}d10` }), note: "공격 행동의 공격 하나 대신 · 민첩 내성 아니면 피해" },
-  "species.draconic-flight": { resourceId: "resource.species.draconic-flight", duration: () => timed("10분 (100라운드)", 100), note: "추가 행동 · 비행 속도 = 이동 속도" },
-  "species.large-form": { resourceId: "resource.species.large-form", duration: () => timed("10분 (100라운드)", 100), note: "추가 행동 · 크기 대형, 속도 +10, 근력 판정·내성 유리" },
-  "species.stonecunning": { resourceId: "resource.species.stonecunning", duration: () => timed("10분 (100라운드)", 100), note: "추가 행동 · 돌 표면 진동 감각 60피트" },
   "species.adrenaline-rush": { resourceId: "resource.species.adrenaline-rush", tempHp: (derived) => `${derived.proficiencyBonus}`, note: "추가 행동 · 질주 + 임시 HP (숙련 보너스)" },
-  "fighter.second-wind": { resourceId: "resource.fighter.second-wind", heal: (derived) => `1d10+${classLevel(derived, "fighter")}`, note: "추가 행동 · 1d10 + 파이터 레벨 회복" },
-  "fighter.action-surge": { resourceId: "resource.fighter.action-surge", note: "이번 턴에 행동 하나 추가" },
-  "fighter.indomitable": { resourceId: "resource.fighter.indomitable", note: "실패한 내성 굴림 재굴림 (+파이터 레벨)" },
-  "bard.bardic-inspiration": { resourceId: "resource.bard.bardic-inspiration", note: "추가 행동 · 아군에게 영감 주사위" },
-  "cleric.channel-divinity": { resourceId: "resource.cleric.channel-divinity" },
-  "cleric.divine-intervention": { resourceId: "resource.cleric.divine-intervention", note: "행동 · 5레벨 이하 클레릭 주문 무료 시전" },
-  "druid.wild-shape": { resourceId: "resource.druid.wild-shape", duration: (derived) => timed(`${Math.max(1, Math.floor(classLevel(derived, "druid") / 2))}시간`), tempHp: (derived) => `${classLevel(derived, "druid")}`, note: "추가 행동 · 야수 형태 · 임시 HP = 드루이드 레벨" },
-  "druid.wild-resurgence": { resourceId: "resource.druid.wild-resurgence" },
-  "monk.focus": { resourceId: "resource.monk.focus", note: "기 점수 1 소비 (질풍 연타 · 인내의 방어 · 바람의 걸음)" },
-  "monk.stunning-strike": { resourceId: "resource.monk.focus", note: "기 점수 1 소비 · 건강 내성 아니면 충격" },
-  "monk.uncanny-metabolism": { resourceId: "resource.monk.uncanny-metabolism", heal: (derived) => `1d${martialArtsDie(classLevel(derived, "monk"))}+${classLevel(derived, "monk")}`, note: "이니셔티브 굴릴 때 · 기 점수 전부 회복 (기 점수는 자원에서 직접 회복) + 무예 주사위 + 몽크 레벨 회복" },
   "paladin.lay-on-hands": { resourceId: "resource.paladin.lay-on-hands", points: true, note: "추가 행동 · 점수만큼 HP 회복 (5점 = 중독 해제)" },
-  "paladin.channel-divinity": { resourceId: "resource.paladin.channel-divinity" },
-  "paladin.smite": { resourceId: "resource.paladin.smite", note: "긴 휴식마다 한 번 슬롯 없이 신성한 강타" },
-  "paladin.faithful-steed": { resourceId: "resource.paladin.faithful-steed" },
-  "ranger.favored-enemy": { resourceId: "resource.ranger.favored-enemy", duration: () => timed("집중, 최대 1시간", undefined, true), note: "사냥꾼의 표식 무료 시전" },
-  "ranger.tireless": { resourceId: "resource.ranger.tireless", tempHp: (derived) => `1d8+${Math.max(0, derived.abilities.wis.modifier)}`, note: "행동 · 임시 HP 1d8 + 지혜" },
-  "ranger.natures-veil": { resourceId: "resource.ranger.natures-veil", duration: () => timed("다음 턴 끝까지", 1), note: "추가 행동 · 투명" },
-  "rogue.stroke-of-luck": { resourceId: "resource.rogue.stroke-of-luck" },
-  "sorcerer.innate-sorcery": { resourceId: "resource.sorcerer.innate-sorcery", duration: () => timed("1분 (10라운드)", 10), note: "추가 행동 · 주문 DC +1, 주문 명중 유리" },
-  "sorcerer.font-of-magic": { resourceId: "resource.sorcerer.sorcery-points", note: "마법 점수 1 소비" },
-  "warlock.magical-cunning": { resourceId: "resource.warlock.magical-cunning", note: "1분 · 계약 슬롯 절반 회복" },
-  "warlock.contact-patron": { resourceId: "resource.warlock.contact-patron" },
-  "wizard.arcane-recovery": { resourceId: "resource.wizard.arcane-recovery", note: "짧은 휴식 중 · 슬롯 회복" },
 };
 
 /**
@@ -149,7 +102,7 @@ const ACTIVE_WORDING = /(추가 행동|반응 ?행동|반응|행동)(으로|을 
 const NOT_ACTIVATABLE = new Set(["monk.martial-arts", "invocation.investment-of-the-chain-master", "rogue.sneak-attack", "rogue.cunning-strike", "fighter.extra-attack"]);
 
 /** R39 (D179): looks a feature rule key up in the catalog's contracts and returns the duration it starts, if any. */
-export type ContractDurationSource = (ruleKey: string) => { duration?: ParsedDuration; use?: { resourceId?: string; cost?: number; heal?: string; tempHp?: string; roll?: { label: string; formula: string } }; /** R41: the contract does something on use even if it spends nothing and starts nothing. */ acts?: boolean } | undefined;
+export type ContractDurationSource = (ruleKey: string) => { duration?: ParsedDuration; use?: { resourceId?: string; cost?: number; heal?: string; tempHp?: string; roll?: { label: string; formula: string }; note?: string }; /** R41: the contract does something on use even if it spends nothing and starts nothing. */ acts?: boolean } | undefined;
 
 /** The activation for a feature: from the table, else a pool named after the feature, else a log-only use for features worded as an action. */
 export function featureActivation(feature: DerivedFeature, derived: DerivedCharacter, contract?: ContractDurationSource): FeatureActivation | undefined {
@@ -157,14 +110,15 @@ export function featureActivation(feature: DerivedFeature, derived: DerivedChara
   // R39 (D179): where the content ships an `effect.apply`, the duration it starts is the contract's, not this table's.
   // R40 (D180): and where it ships `resource.change`, `healing.apply`, `temp-hp.grant` or `damage.apply`, those are
   // the pool it spends and the dice it rolls. Whatever the contract does not say, the table still answers.
-  const fromContract = contract?.(key);
+  // R49 (D184): the sheet carries its own features' contracts, so a caller that does not pass one still gets them.
+  const fromContract = contract?.(key) ?? derived.featureContracts?.[key];
   if (fromContract?.duration || fromContract?.use || fromContract?.acts) {
     const table = FEATURE_ACTIVATIONS[key];
     const use = fromContract.use;
     return {
       ...(table ?? {}), ...(use?.resourceId ? { resourceId: use.resourceId } : {}), ...(use?.cost ? { cost: use.cost } : {}),
       ...(use?.heal ? { heal: () => use.heal! } : {}), ...(use?.tempHp ? { tempHp: () => use.tempHp! } : {}),
-      ...(use?.roll ? { roll: () => use.roll! } : {}),
+      ...(use?.roll ? { roll: () => use.roll! } : {}), ...(use?.note ? { note: use.note } : {}),
       ...(fromContract.duration ? { duration: () => fromContract.duration! } : {}),
     };
   }

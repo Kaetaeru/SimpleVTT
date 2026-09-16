@@ -73,6 +73,8 @@ export interface ContractUse {
   heal?: string;
   tempHp?: string;
   roll?: { label: string; formula: string };
+  /** R49 (D184): the one-line reminder beside the button — what the hand-written row called `note`. */
+  note?: string;
 }
 
 /** `1d10` + `{ref: actor.class-level:…}` becomes "1d10+5"; a bare number becomes "5"; dice alone stay "1d10". */
@@ -104,6 +106,10 @@ export function contractUse(contract: CommonPlayContract, scope: Scope, label: s
       continue;
     }
   }
+  // The questions a contract asks the table are the reminder the sheet used to print from `note`; the turn panel
+  // reads "추가 행동" out of it to know which features cost a bonus action.
+  const questions = operationsOf(contract).filter((operation): operation is Extract<ContractOperation, { kind: "adjudication.request" }> => operation.kind === "adjudication.request" && live(operation, scope)).map((operation) => operation.question);
+  if (questions.length) { use.note = questions.join(" · "); found = true; }
   return found ? use : undefined;
 }
 

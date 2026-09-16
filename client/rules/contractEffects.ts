@@ -16,13 +16,15 @@ const SCOPES: Record<string, (attack: DerivedAttack) => boolean> = {
   weapon: (attack) => Boolean(attack.itemId),
   melee: (attack) => !attack.range,
   ranged: (attack) => Boolean(attack.range),
+  /** R49 (D184): 격노's bonus — a Strength attack that is not fired from a bow. */
+  "strength-melee": (attack) => attack.ability === "str" && !attack.properties.includes("ammunition"),
 };
 
 /** Every property this engine can change, and where it lands on the sheet. */
 export const PROPERTIES = [
   "ac.bonus", "ac.unarmored-base", "ac.minimum",
   "attack-roll.bonus", "damage.bonus", "saving-throw.bonus", "ability-check.bonus", "skill.<id>.bonus",
-  "speed.walk", "speed.fly", "speed.climb", "hp.maximum", "spell.save-dc", "spell.attack-roll.bonus", "attack-roll.crit-range",
+  "speed.walk", "speed.fly", "speed.climb", "speed.fly-as-walk", "weapon.shillelagh", "hp.maximum", "spell.save-dc", "spell.attack-roll.bonus", "attack-roll.crit-range",
   "senses.darkvision", "resistance", "condition-immunity",
 ] as const;
 
@@ -39,13 +41,18 @@ const text = (operation: Extract<ContractOperation, { kind: "property.modify" }>
  * The sheet change a contract's `property.modify` operations make, plus the names of any it could not run. An empty
  * `unknown` and a non-empty application means the contract can stand in for the hand-written rule.
  */
-export function contractEffect(contract: CommonPlayContract, scope: Scope): { application: EffectApplication; unknown: string[]; /** R39: whether the contract says anything at all about what the effect *does*. */ hasProperties: boolean } {
+export function contractEffect(contract: CommonPlayContract, scope: Scope): { application: EffectApplication; unknown: string[]; /** R39/R49: whether the contract says anything at all about what the effect is or does — numbers or prose. */ hasProperties: boolean } {
   const application: EffectApplication = {};
   const unknown: string[] = [];
   const notes: string[] = [];
   const operations = [...contract.entryPoints.flatMap((entry) => entry.operations), ...contract.interceptors.flatMap((item) => item.operations)];
+  let describes = false;
   for (const operation of operations) {
+    // R49 (D184): a question for the table is a line on the sheet too — that is what the hand-written rules' `notes`
+    // were, and an effect whose whole rule is prose is described by its `adjudication.request`s.
+    if (operation.kind === "adjudication.request") { if (!operation.when || evaluate(operation.when, scope) === true) { notes.push(operation.question); describes = true; } continue; }
     if (operation.kind !== "property.modify") continue;
+    describes = true;
     if (operation.when && evaluate(operation.when, scope) !== true) continue;
     if (operation.note) notes.push(operation.note);
     // `skill.<id>.bonus` names its skill in the property itself, so it never needs an attack filter.
@@ -65,6 +72,8 @@ export function contractEffect(contract: CommonPlayContract, scope: Scope): { ap
       case "speed.walk": application.speed = { ...application.speed, ...(operation.operation === "multiply" ? { multiply: number(operation, scope) } : { add: (application.speed?.add ?? 0) + (number(operation, scope) ?? 0) }) }; break;
       case "speed.fly": application.speed = { ...application.speed, fly: number(operation, scope) }; break;
       case "speed.climb": application.speed = { ...application.speed, climbAsWalk: true }; break;
+      case "speed.fly-as-walk": application.speed = { ...application.speed, flyAsWalk: true }; break;
+      case "weapon.shillelagh": application.shillelagh = true; break;
       case "hp.maximum": application.hpMax = (application.hpMax ?? 0) + (number(operation, scope) ?? 0); break;
       case "spell.save-dc": application.spellDc = number(operation, scope); break;
       case "spell.attack-roll.bonus": application.spellAttack = number(operation, scope); break;
@@ -76,8 +85,7 @@ export function contractEffect(contract: CommonPlayContract, scope: Scope): { ap
     }
   }
   if (notes.length) application.notes = notes;
-  const hasProperties = operations.some((operation) => operation.kind === "property.modify");
-  return { application, unknown, hasProperties };
+  return { application, unknown, hasProperties: describes };
 }
 
 /** The attack scopes a `property.modify` may narrow itself to. */

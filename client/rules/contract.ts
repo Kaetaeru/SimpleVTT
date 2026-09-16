@@ -44,6 +44,8 @@ export function evaluate(expr: Expr | undefined, scope: Scope): ExprValue {
     case "all": return args.every((value) => value === true);
     case "any": return args.some((value) => value === true);
     case "not": return left !== true;
+    // R49 (D184): the one primitive the SRD's "by level" tables need — 격노's +2/+3/+4 is two of these nested.
+    case "if": return args[0] === true ? args[1] : args[2];
     default: return undefined;
   }
 }

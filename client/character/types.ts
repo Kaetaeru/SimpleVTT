@@ -3,6 +3,7 @@
  * character (everything computed, never stored) and the runtime (usage). Only source and runtime are persisted.
  */
 import type { AbilityKey } from "../catalog/types";
+import type { ParsedDuration } from "../rules/activation";
 
 export type AbilityScores = Record<AbilityKey, number>;
 
@@ -226,6 +227,12 @@ export interface DerivedCharacter {
   featEffects: DerivedFeatEffects;
   /** R43 (D183): the lowest d20 that is a critical hit for this character (19 with 향상된 치명타). */
   critRange?: number;
+  /**
+   * R49 (D184): what each of this character's features' contracts says about using it, worked out at derivation and
+   * carried as plain data. Without this every caller of `featureActivation` would have to remember to hand it the
+   * catalog, and the one that forgot would silently lose the feature's rule.
+   */
+  featureContracts?: Record<string, { duration?: ParsedDuration; use?: { resourceId?: string; cost?: number; heal?: string; tempHp?: string; roll?: { label: string; formula: string }; note?: string }; acts?: boolean }>;
   hitDice: Record<string, number>;
   choices: ChoiceRequest[];
   validation: { blocking: string[]; warnings: string[] };

@@ -48,7 +48,7 @@ test("plan: the document's scoreboard is the measured one (D176)", () => {
   ]) assert.ok(spec.includes(row), `§14.1의 점수판이 측정값과 다릅니다: ${row} 가 없습니다`);
   // And the four-way split of the features.
   assert.equal(total, 223);
-  assert.deepEqual(counts, { contract: 128, activation: 32, mentioned: 63, silent: 0 });
+  assert.deepEqual(counts, { contract: 157, activation: 10, mentioned: 56, silent: 0 });
   for (const [label, value] of [["계약이 있다", counts.contract], ["사용 버튼이 있다", counts.activation], ["코드가 이름은 안다", counts.mentioned]] as Array<[string, number]>) {
     assert.ok(spec.includes(`| ${label} | ${value} |`), `${label} = ${value}`);
   }
