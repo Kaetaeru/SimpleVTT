@@ -282,7 +282,25 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
     client.onShow((id) => setShows((list) => (list.includes(id) ? list : [...list, id])));
   }, [bump]);
 
+  /** Chat archive writes are coalesced: one document per campaign, appended as messages arrive. */
+  const archiveTimer = useRef<number | null>(null);
+  /** R24: which campaign the pending messages belong to, and the deadline a busy table may not push past. */
+  const archiveFor = useRef<string | null>(null);
+  const archiveDeadline = useRef<number>(0);
+  const pendingChat = useRef<ChatMessage[]>([]);
+  const flushArchive = useCallback((id: string) => {
+    if (archiveTimer.current !== null) { window.clearTimeout(archiveTimer.current); archiveTimer.current = null; }
+    archiveDeadline.current = 0;
+    if (!pendingChat.current.length) return;
+    const current = archivesRef.current[id] ?? emptyChatArchive(id);
+    const next: ChatArchive = { ...current, messages: [...current.messages, ...pendingChat.current.splice(0)].slice(-5000), updatedAt: new Date().toISOString() };
+    setArchives((map) => ({ ...map, [id]: next }));
+    void store?.putDocument(next);
+  }, [store]);
+
   const leave = useCallback(() => {
+    if (archiveFor.current) flushArchive(archiveFor.current);
+    archiveFor.current = null;
     clientRef.current?.leave();
     hostRef.current?.close();
     clientRef.current = null;
@@ -297,18 +315,8 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
     setArtPending(0);
     artRequests.current.clear();
     bump();
-  }, [bump]);
+  }, [bump, flushArchive]);
 
-  /** Chat archive writes are coalesced: one document per campaign, appended as messages arrive. */
-  const archiveTimer = useRef<number | null>(null);
-  const pendingChat = useRef<ChatMessage[]>([]);
-  const flushArchive = useCallback((id: string) => {
-    if (!pendingChat.current.length) return;
-    const current = archivesRef.current[id] ?? emptyChatArchive(id);
-    const next: ChatArchive = { ...current, messages: [...current.messages, ...pendingChat.current.splice(0)].slice(-5000), updatedAt: new Date().toISOString() };
-    setArchives((map) => ({ ...map, [id]: next }));
-    void store?.putDocument(next);
-  }, [store]);
 
   const launch = useCallback(async (id: string) => {
     const campaign = campaignsRef.current.find((item) => item.id === id);
@@ -352,7 +360,17 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
         if ("entry" in change) { setJournals((map) => { const list = map[campaign.id] ?? []; const index = list.findIndex((item) => item.id === change.entry.id); return { ...map, [campaign.id]: index >= 0 ? list.map((item, at) => (at === index ? change.entry : item)) : [...list, change.entry] }; }); void store?.putDocument(change.entry); }
         else { setJournals((map) => ({ ...map, [campaign.id]: (map[campaign.id] ?? []).filter((item) => item.id !== change.removed) })); void store?.deleteDocument(change.removed); }
       },
-      onChat: (message) => { pendingChat.current.push(message); if (archiveTimer.current !== null) window.clearTimeout(archiveTimer.current); archiveTimer.current = window.setTimeout(() => { archiveTimer.current = null; flushArchive(campaign.id); }, 500); },
+      // R24: the 500 ms debounce used to restart on every message, so a busy round starved the write entirely and
+      // closing the app lost it. The coalescing window still applies, but never past a two-second deadline.
+      onChat: (message) => {
+        if (archiveFor.current && archiveFor.current !== campaign.id) flushArchive(archiveFor.current);
+        archiveFor.current = campaign.id;
+        pendingChat.current.push(message);
+        const now = Date.now();
+        if (!archiveDeadline.current) archiveDeadline.current = now + 2000;
+        if (archiveTimer.current !== null) window.clearTimeout(archiveTimer.current);
+        archiveTimer.current = window.setTimeout(() => { archiveTimer.current = null; flushArchive(campaign.id); }, Math.max(0, Math.min(500, archiveDeadline.current - now)));
+      },
     });
     hostRef.current = host;
     void saveCampaign(launched);
@@ -492,7 +510,7 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
     })();
   }, [store]);
 
-  useEffect(() => () => { clientRef.current?.leave(); hostRef.current?.close(); }, []);
+  useEffect(() => () => { if (archiveFor.current) flushArchive(archiveFor.current); clientRef.current?.leave(); hostRef.current?.close(); }, [flushArchive]);
 
   const client = clientRef.current;
   const table = useMemo<TableState>(() => ({ role, status: client ? client.status : "idle", reason: client?.reason ?? null, campaignId, snapshot: client?.snapshot ?? null, invite, invites, transportNote, refusals, shows, artUrls, artPending }),

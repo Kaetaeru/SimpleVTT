@@ -50,6 +50,8 @@ const COUNTERSPELL = "dnd.srd521.spell.counterspell";
 
 const EVENT_BUFFER = 5000;
 const SNAPSHOT_CHAT = 300;
+/** R24: the host's own log is bounded too (it used to grow for the whole session and was scanned on every prompt). */
+const CHAT_BUFFER = 5000;
 type DistributiveOmit<T, K extends keyof T> = T extends unknown ? Omit<T, K> : never;
 type Viewer = { userId: string; role: PlayerRole };
 
@@ -116,6 +118,10 @@ export class TableHost {
   /** Buffered unprojected; projected per viewer when sent or replayed. */
   private events: TableEvent[] = [];
   private n = 0;
+  /** R24 (D122): this run of the host. Event numbers only mean anything within one session id. */
+  private readonly sessionId: string;
+  /** R24: tokens carry the host's write counter so a stale full replace cannot wipe newer controller fields (D123). */
+  private tokenRev = 0;
   private readonly listeners = new Set<(event: TableEvent) => void>();
   private readonly now: () => string;
 
@@ -126,6 +132,9 @@ export class TableHost {
     this.artAssets = new Map((options.art ?? []).map((asset) => [asset.id, asset]));
     this.pages = new Map((options.pages ?? []).map((page) => [page.id, page]));
     this.now = options.now ?? (() => new Date().toISOString());
+    // Not the injected `random` — that one belongs to the dice, and a test's stream must not shift because a host was made.
+    this.sessionId = `s_${this.now()}_${Math.floor(Math.random() * 0xffffffff).toString(36)}`;
+    for (const page of this.pages.values()) for (const token of page.tokens) this.tokenRev = Math.max(this.tokenRev, token.rev ?? 0);
     this.connected.add(options.hostUserId);
     for (const carrier of Array.isArray(transport) ? transport : [transport]) this.attach(carrier);
   }
@@ -158,6 +167,14 @@ export class TableHost {
     for (const player of campaign.players) this.emit({ type: "presence", player: this.presence(player.userId) });
     if (JSON.stringify(before.settings) !== JSON.stringify(campaign.settings)) this.emit({ type: "settings", settings: campaign.settings });
     if (before.playerPageId !== campaign.playerPageId || JSON.stringify(before.pageBookmarks ?? {}) !== JSON.stringify(campaign.pageBookmarks ?? {})) this.emitRibbon();
+    // R24 (D122): the tracker, the clock, macros, tables and the name all live on the campaign document too. Before,
+    // an outside edit (a renamed campaign, a new join code) rolled them back on the host and told no mirror, so the
+    // table silently played two different rounds. Every campaign-level field now emits when it changes.
+    if (before.name !== campaign.name) this.emit({ type: "campaign", name: campaign.name });
+    if (JSON.stringify(before.tracker ?? emptyTracker()) !== JSON.stringify(this.tracker)) this.emit({ type: "tracker", tracker: this.tracker });
+    if (JSON.stringify(before.clock ?? emptyClock()) !== JSON.stringify(this.clock)) this.emit({ type: "clock", clock: this.clock });
+    if (JSON.stringify(before.macros ?? []) !== JSON.stringify(campaign.macros ?? [])) this.emit({ type: "macros", macros: campaign.macros ?? [] });
+    if (JSON.stringify(before.tables ?? []) !== JSON.stringify(campaign.tables ?? [])) this.emit({ type: "tables", tables: campaign.tables ?? [] });
     // A role change alters what each viewer may see: resend the journal so mirrors converge.
     if (before.players.some((player) => player.role !== campaign.players.find((item) => item.userId === player.userId)?.role)) for (const entry of this.journalEntries.values()) this.emit({ type: "journal", entry });
   }
@@ -184,6 +201,7 @@ export class TableHost {
       macros: (this.campaign.macros ?? []).filter((macro) => viewer.role === "gm" || macro.shared),
       tables: (this.campaign.tables ?? []).map((table) => (viewer.role === "gm" ? table : { ...table, rows: [] })),
       lastEventN: this.n,
+      sessionId: this.sessionId,
     };
   }
 
@@ -226,7 +244,9 @@ export class TableHost {
       this.peerUsers.set(peerId, command.userId);
       this.connected.add(command.userId);
       const viewer = this.viewer(command.userId);
-      const since = command.lastEventN;
+      // R24 (D122): only replay when the mirror's numbering belongs to *this* run of the host. A relaunched host
+      // starts at n = 0, so an old lastEventN used to splice a foreign stream into the mirror, permanently.
+      const since = command.sessionId === this.sessionId ? command.lastEventN : undefined;
       if (since !== undefined && since < this.n && this.events.length && this.events[0].n <= since + 1) this.reply(peerId, { type: "events", events: this.events.filter((event) => event.n > since).map((event) => this.project(event, viewer)).filter((event): event is TableEvent => event !== null) });
       else this.reply(peerId, { type: "welcome", snapshot: this.snapshot(viewer) });
       this.emit({ type: "presence", player: this.presence(command.userId) });
@@ -236,6 +256,8 @@ export class TableHost {
     const userId = this.peerUsers.get(peerId);
     if (!userId) return this.reply(peerId, { type: "refused", reason: "먼저 입장하세요", commandType: command.type });
     if (command.type === "bye") { this.peerLeft(peerId); return; }
+    // R24 (D122): the mirror saw a gap in the numbering and asks for the whole state again.
+    if (command.type === "resync") { this.reply(peerId, { type: "welcome", snapshot: this.snapshot(this.viewer(userId)) }); return; }
     this.apply(userId, command, peerId);
   }
 
@@ -299,7 +321,19 @@ export class TableHost {
         if (!incoming || typeof incoming.id !== "string" || (incoming.kind !== "handout" && incoming.kind !== "character" && incoming.kind !== "npc")) return refuse("저널 항목 형식이 아닙니다");
         const stored = this.journalEntries.get(incoming.id);
         const now = this.now();
-        if (isGm) { this.storeEntry({ ...incoming, campaignId: this.campaign.id, updatedAt: now, createdAt: stored?.createdAt ?? incoming.createdAt ?? now }); return; }
+        // R24 (D125): whoever wrote last used to win outright, so a sheet saved against an older runtime erased the
+        // damage the table had just applied. A write whose runtime is stale keeps the stored runtime and says so.
+        const staleRuntime = (): boolean => {
+          if (!stored || stored.kind === "handout" || incoming.kind === "handout" || stored.kind !== incoming.kind) return false;
+          return Boolean(stored.runtime.updatedAt && incoming.runtime.updatedAt && incoming.runtime.updatedAt < stored.runtime.updatedAt);
+        };
+        if (isGm) {
+          const stale = staleRuntime();
+          const entry = stale && stored && stored.kind !== "handout" ? { ...incoming, runtime: stored.runtime } as JournalEntry : incoming;
+          this.storeEntry({ ...entry, campaignId: this.campaign.id, updatedAt: now, createdAt: stored?.createdAt ?? incoming.createdAt ?? now });
+          if (stale) refuse(`${incoming.name}의 상태가 그 사이 바뀌어 HP·상태는 그대로 두었습니다 (시트를 다시 여세요)`);
+          return;
+        }
         if (!stored) {
           if (incoming.kind !== "character") return refuse("핸드아웃과 NPC는 GM만 만듭니다");
           if (!this.campaign.settings.playersCanCreateCharacters) return refuse("이 캠페인에서는 플레이어가 캐릭터를 만들 수 없습니다 (캠페인 설정)");
@@ -309,6 +343,10 @@ export class TableHost {
           return;
         }
         if (!canEdit(stored, this.viewer(userId))) return refuse("이 항목을 고칠 권한이 없습니다");
+        if (staleRuntime() && stored.kind !== "handout" && incoming.kind === stored.kind) {
+          this.storeEntry(mergePlayerEdit(stored, { ...incoming, runtime: stored.runtime } as JournalEntry, now));
+          return refuse(`${stored.name}의 상태가 그 사이 바뀌었습니다 — HP·상태는 그대로 두었습니다 (다시 시도하세요)`);
+        }
         this.storeEntry(mergePlayerEdit(stored, incoming, now));
         return;
       }
@@ -378,7 +416,11 @@ export class TableHost {
         if (!this.pages.delete(command.id)) return refuse("그 페이지가 없습니다");
         this.options.onPage?.({ removed: command.id });
         this.emit({ type: "page.removed", id: command.id });
-        if (this.campaign.playerPageId === command.id) { this.setCampaign({ ...this.campaign, playerPageId: undefined, updatedAt: this.now() }); this.emitRibbon(); }
+        // R24: a split-the-party bookmark pointing at the deleted scene used to survive it, and `playerPageId()`
+        // prefers the bookmark — so that player kept resolving a dead id and saw an empty board forever (D124).
+        const bookmarks = Object.fromEntries(Object.entries(this.campaign.pageBookmarks ?? {}).filter(([, pageId]) => pageId !== command.id));
+        const dropped = Object.keys(this.campaign.pageBookmarks ?? {}).length !== Object.keys(bookmarks).length;
+        if (this.campaign.playerPageId === command.id || dropped) { this.setCampaign({ ...this.campaign, playerPageId: this.campaign.playerPageId === command.id ? undefined : this.campaign.playerPageId, pageBookmarks: bookmarks, updatedAt: this.now() }); this.emitRibbon(); }
         return;
       }
       case "page.ribbon": {
@@ -405,7 +447,9 @@ export class TableHost {
         const stored = page.tokens.find((token) => token.id === incoming.id);
         const viewer = this.viewer(userId);
         let next: Token;
-        if (isGm) next = this.withLinkedBars(incoming);
+        // R24 (D123): a GM edit is a whole-token replace. When it was written against an older rev — the player set a
+        // marker in the same breath — keep the fields a controller owns rather than silently wiping their work.
+        if (isGm) next = this.withLinkedBars(stored && incoming.rev !== stored.rev ? { ...incoming, markers: stored.markers, z: stored.z, bars: stored.bars.map((bar, at) => ({ ...incoming.bars[at], value: bar.value, max: bar.max })) as Token["bars"] } : incoming);
         else if (!stored) {
           // A player may put their own character on the page they are on.
           const entry = incoming.represents ? this.journalEntries.get(incoming.represents) : undefined;
@@ -1453,6 +1497,8 @@ export class TableHost {
   }
 
   private storeToken(page: Page, token: Token) {
+    this.tokenRev += 1;
+    token = { ...token, rev: this.tokenRev };
     const index = page.tokens.findIndex((item) => item.id === token.id);
     const next: Page = { ...page, tokens: index >= 0 ? page.tokens.map((item, at) => (at === index ? token : item)) : [...page.tokens, token], updatedAt: this.now() };
     this.pages.set(page.id, next);
@@ -1543,7 +1589,8 @@ export class TableHost {
   /** Says a card under a fixed id; saying it again under the same id (D90 확인, a held spell applied) replaces the earlier version. */
   private sayWithId(id: string, body: Omit<ChatMessage, "id" | "at">) {
     const message: ChatMessage = { ...body, id, at: this.now() };
-    this.chat = this.chat.some((item) => item.id === id) ? this.chat.map((item) => (item.id === id ? message : item)) : [...this.chat, message];
+    // R24: the in-process log is bounded like the saved archive; the persisted one (campaigns.tsx) keeps the tail.
+    this.chat = this.chat.some((item) => item.id === id) ? this.chat.map((item) => (item.id === id ? message : item)) : [...this.chat, message].slice(-CHAT_BUFFER);
     this.options.onChat?.(message);
     this.emit({ type: "chat", message });
   }

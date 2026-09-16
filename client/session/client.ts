@@ -18,6 +18,10 @@ export class TableClient {
   private statusState: TableStatus = "connecting";
   private refusal: string | null = null;
   private lastEventN = 0;
+  /** R24 (D122): which run of the host `lastEventN` belongs to; a different one means the numbering is unrelated. */
+  private sessionId: string | null = null;
+  /** R24: one resync in flight at a time, so a burst of out-of-order frames asks for the snapshot once. */
+  private resyncing = false;
   private readonly listeners = new Set<() => void>();
   private readonly refusedListeners = new Set<(reason: string, commandType?: string) => void>();
   private readonly showListeners = new Set<(id: string) => void>();
@@ -40,7 +44,7 @@ export class TableClient {
   get userId() { return this.options.userId; }
 
   hello() {
-    this.send({ type: "hello", protocol: PROTOCOL_VERSION, userId: this.options.userId, displayName: this.options.displayName, joinCode: this.options.joinCode, lastEventN: this.snapshotState ? this.lastEventN : undefined, hostSecret: this.options.hostSecret });
+    this.send({ type: "hello", protocol: PROTOCOL_VERSION, userId: this.options.userId, displayName: this.options.displayName, joinCode: this.options.joinCode, lastEventN: this.snapshotState ? this.lastEventN : undefined, sessionId: this.sessionId ?? undefined, hostSecret: this.options.hostSecret });
   }
 
   send(command: ClientCommand) { this.transport.send("host", command); }
@@ -73,11 +77,13 @@ export class TableClient {
       case "welcome":
         this.snapshotState = message.snapshot;
         this.lastEventN = message.snapshot.lastEventN;
+        this.sessionId = message.snapshot.sessionId ?? null;
+        this.resyncing = false;
         this.statusState = "joined";
         this.refusal = null;
         break;
       case "events":
-        if (!this.snapshotState) this.snapshotState = { campaignId: "", name: "", settings: { playersCanCreateCharacters: true, playersCanExportToVault: true, chatAvatars: true }, players: [], chat: [], journal: [], art: [], pages: [], pageBookmarks: {}, tracker: emptyTracker(), macros: [], tables: [], clock: emptyClock(), lastEventN: 0 };
+        if (!this.snapshotState) this.snapshotState = { campaignId: "", name: "", settings: { playersCanCreateCharacters: true, playersCanExportToVault: true, chatAvatars: true }, players: [], chat: [], journal: [], art: [], pages: [], pageBookmarks: {}, tracker: emptyTracker(), macros: [], tables: [], clock: emptyClock(), lastEventN: 0, sessionId: "" };
         this.statusState = "joined";
         for (const event of message.events) this.applyEvent(event);
         break;
@@ -99,8 +105,13 @@ export class TableClient {
   }
 
   private applyEvent(event: TableEvent) {
-    const state = this.snapshotState!;
+    const state = { ...this.snapshotState! };
     if (event.n <= this.lastEventN) return;
+    // R24 (D122): a frame that skips a number means one was dropped on the way. Applying it anyway used to move
+    // `lastEventN` past the hole, so the missing change never came back — the mirror diverged for good. Ask for a
+    // whole snapshot instead and ignore events until it lands.
+    if (this.lastEventN && event.n !== this.lastEventN + 1) { if (!this.resyncing) { this.resyncing = true; this.send({ type: "resync" }); } return; }
+    if (this.resyncing) return;
     this.lastEventN = event.n;
     state.lastEventN = event.n;
     switch (event.type) {
@@ -110,6 +121,7 @@ export class TableClient {
         break;
       }
       case "chat": { const index = state.chat.findIndex((item) => item.id === event.message.id); state.chat = (index >= 0 ? state.chat.map((item, at) => (at === index ? event.message : item)) : [...state.chat, event.message]).slice(-500); break; }
+      case "campaign": state.name = event.name; break;
       case "settings": state.settings = event.settings; break;
       case "clock": state.clock = event.clock; break;
       case "macros": state.macros = event.macros; break;
@@ -147,7 +159,7 @@ export class TableClient {
       case "kicked": state.players = state.players.filter((item) => item.userId !== event.userId); if (event.userId === this.options.userId) { this.statusState = "refused"; this.refusal = "GM이 내보냈습니다"; } break;
       case "closed": this.statusState = "closed"; break;
     }
-    this.snapshotState = { ...state };
+    this.snapshotState = state;
   }
 
   private notify() { for (const listener of [...this.listeners]) listener(); }

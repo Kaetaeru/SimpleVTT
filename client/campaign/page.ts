@@ -42,6 +42,12 @@ export interface Token {
   locked: boolean;
   /** Order within its row on the stage (higher = further right). */
   z: number;
+  /**
+   * R24: the host's write counter for this token (D123). An editor sends back the rev it saw; when the token has
+   * moved on since, the host keeps the fast-moving controller fields (markers, stage order, bar values) instead of
+   * letting a stale full replace wipe them.
+   */
+  rev?: number;
 }
 
 export interface Page {

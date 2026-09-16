@@ -12,7 +12,7 @@ import type { CastMethod } from "../character/play";
 import type { AttackOverrides } from "../rules/resolve";
 import type { CampaignClock, CampaignSettings, ChatMessage, Macro, PlayerRole, RollTable } from "../campaign/model";
 
-export const PROTOCOL_VERSION = 19;
+export const PROTOCOL_VERSION = 20;
 
 export interface Presence { userId: string; displayName: string; role: PlayerRole; color: string; connected: boolean }
 
@@ -39,6 +39,11 @@ export interface TableSnapshot {
   /** R18: the in-world clock everyone sees. */
   clock: CampaignClock;
   lastEventN: number;
+  /**
+   * R24: which run of the host this numbering belongs to. A mirror may only ask for events "since n" when it holds
+   * the same session id; a relaunched host numbers from zero again and its events are a different stream (D122).
+   */
+  sessionId: string;
 }
 
 /** Who acts or is targeted: a journal entry, usually through its token on a page. */
@@ -50,7 +55,9 @@ export interface AttackRiders { sneak?: boolean; smiteSlot?: number; /** R12: th
 export interface RollPayload { formula: string; total: number; /** R17: a die kept out of the total (kh/kl), one that came from an explosion, or one that counted as a success. */ dice: Array<{ sides: number; value: number; dropped?: boolean; exploded?: boolean; success?: boolean }>; modifier: number; label?: string; /** R17: set when the formula counts successes instead of summing. */ successes?: number; /** R17: rows drawn from a rollable table. */ drawn?: string[] }
 
 export type ClientCommand =
-  | { type: "hello"; protocol: number; userId: string; displayName: string; joinCode: string; lastEventN?: number; hostSecret?: string }
+  | { type: "hello"; protocol: number; userId: string; displayName: string; joinCode: string; lastEventN?: number; hostSecret?: string; /** R24: the host run the mirror's lastEventN belongs to (D122). */ sessionId?: string }
+  /** R24: the mirror noticed a gap in the event numbering (or lost its place) and asks for a whole snapshot (D122). */
+  | { type: "resync" }
   | { type: "chat.say"; text: string }
   | { type: "chat.roll"; roll: RollPayload; mode: "public" | "gm" | "self" }
   | { type: "player.role"; userId: string; role: PlayerRole }
@@ -132,6 +139,8 @@ export type ClientCommand =
 
 export type TableEvent =
   | { n: number; type: "presence"; player: Presence }
+  /** R24: campaign-level fields that are not settings — the table's name (D122). */
+  | { n: number; type: "campaign"; name: string }
   | { n: number; type: "chat"; message: ChatMessage }
   | { n: number; type: "settings"; settings: CampaignSettings }
   | { n: number; type: "clock"; clock: CampaignClock }
