@@ -11,6 +11,7 @@ import type { ActiveEffect, AppliedEffect, DerivedAttack, DerivedCharacter, Term
 import { featureRuleKey } from "./activation";
 import { characterScope } from "./contract";
 import { contractEffect } from "./contractEffects";
+import { contractSuppressions, selectorMatches } from "./contractActivation";
 
 interface EffectContext { derived: DerivedCharacter; classLevel: (slug: string) => number; name: string }
 
@@ -149,8 +150,10 @@ export function effectApplication(effect: ActiveEffect, derived: DerivedCharacte
   // left of the ones nobody has written yet. A test asserts the two agree for every effect that has both.
   const contract = catalog.contractFor(key);
   if (contract) {
-    const { application, unknown } = contractEffect(contract, characterScope(derived));
-    if (!unknown.length) return application;
+    // R39: a contract that only says when the effect *ends* (`effect.apply`) says nothing about what it does, so it
+    // must not stand in for a hand-written rule that does. Only `property.modify` makes it the source of truth.
+    const { application, unknown, hasProperties } = contractEffect(contract, characterScope(derived));
+    if (hasProperties && !unknown.length) return application;
   }
   const rule = EFFECT_RULES[key];
   if (!rule) return undefined;
@@ -168,7 +171,16 @@ export function applyActiveEffects(derived: DerivedCharacter, effects: ActiveEff
   const applied: AppliedEffect[] = [];
   // AC terms added by effects so far, so a replacement base (Mage Armor) compares against the real base and keeps them.
   const acEffectTerms: Term[] = [];
+  // R39 (D179): an effect in force may pause others (`effect.suppress`). A paused effect stays on the sheet and
+  // changes nothing, and the card says what is holding it down instead of quietly dropping it.
+  const suppressors = effects.flatMap((effect) => {
+    const contract = catalog.contractFor(effectRuleKey(effect, catalog));
+    return contract ? contractSuppressions(contract, characterScope(next)).filter((item) => item.suppressed).map((item) => ({ ...item, by: effect.name, key: effect.key })) : [];
+  });
+  const pausedBy = (effect: ActiveEffect) => effect.suppressed ?? suppressors.find((item) => item.key !== effect.key && selectorMatches(item.selector, effectRuleKey(effect, catalog)))?.reason;
   for (const effect of effects) {
+    const paused = pausedBy(effect);
+    if (paused) { applied.push({ key: effect.key, name: effect.name, applied: false, notes: [`멈춤 — ${paused}`], narrative: true }); continue; }
     const application = effectApplication(effect, next, catalog);
     if (!application) { applied.push({ key: effect.key, name: effect.name, applied: false, notes: ["규칙 없음 — 설명대로 수동 적용"] }); continue; }
     const notes: string[] = [];

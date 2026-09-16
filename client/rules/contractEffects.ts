@@ -39,7 +39,7 @@ const text = (operation: Extract<ContractOperation, { kind: "property.modify" }>
  * The sheet change a contract's `property.modify` operations make, plus the names of any it could not run. An empty
  * `unknown` and a non-empty application means the contract can stand in for the hand-written rule.
  */
-export function contractEffect(contract: CommonPlayContract, scope: Scope): { application: EffectApplication; unknown: string[] } {
+export function contractEffect(contract: CommonPlayContract, scope: Scope): { application: EffectApplication; unknown: string[]; /** R39: whether the contract says anything at all about what the effect *does*. */ hasProperties: boolean } {
   const application: EffectApplication = {};
   const unknown: string[] = [];
   const notes: string[] = [];
@@ -74,7 +74,8 @@ export function contractEffect(contract: CommonPlayContract, scope: Scope): { ap
     }
   }
   if (notes.length) application.notes = notes;
-  return { application, unknown };
+  const hasProperties = operations.some((operation) => operation.kind === "property.modify");
+  return { application, unknown, hasProperties };
 }
 
 /** The attack scopes a `property.modify` may narrow itself to. */

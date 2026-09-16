@@ -6,10 +6,12 @@
 import type { ContentCatalog } from "../catalog/catalog";
 import { deriveCharacter } from "./derive";
 import { describeRoll, parseFormula, type RollResult, type RollSpec } from "./dice";
-import { applyHealing, noteLog, useFeature, type FeatureUseExtras } from "./play";
+import { applyHealing, endEffect, noteLog, useFeature, type FeatureUseExtras } from "./play";
 import type { CharacterRuntime } from "./runtime";
 import type { CharacterSource, DerivedCharacter, DerivedFeature } from "./types";
-import { featureActivation } from "../rules/activation";
+import { featureActivation, featureRuleKey } from "../rules/activation";
+import { characterScope } from "../rules/contract";
+import { contractDurations, contractRemovals, featureContract } from "../rules/contractActivation";
 import { effectApplication } from "../rules/effects";
 
 export interface ActivateDeps {
@@ -52,7 +54,7 @@ export type ActivateOutcome = "done" | "refused" | "cancelled" | "none";
 
 export async function activateFeature(feature: DerivedFeature, deps: ActivateDeps): Promise<ActivateOutcome> {
   const { derived, runtime, rollDice } = deps;
-  const activation = featureActivation(feature, derived);
+  const activation = featureActivation(feature, derived, contractDurations(deps.catalog, characterScope(derived)));
   if (!activation) return "none";
   const extras: FeatureUseExtras = {};
   if (activation.points && activation.resourceId) {
@@ -73,15 +75,19 @@ export async function activateFeature(feature: DerivedFeature, deps: ActivateDep
   await deps.save((current) => {
     const next = useFeature(lines.reduce((acc, line) => noteLog(acc, line), current), derived, feature, activation, extras);
     if (!next) { refused = true; return current; }
-    return withEffectStart(deps.source, deps.catalog, derived, current, next);
+    // R39 (D179): a contract may end other effects as part of the use (a new Wild Shape replacing the last one).
+    const contract = featureContract(deps.catalog, featureRuleKey(feature.id));
+    const ended = contract ? contractRemovals(contract, characterScope(derived)).reduce((acc, key) => endEffect(acc, key, feature.name), next) : next;
+    return withEffectStart(deps.source, deps.catalog, derived, current, ended);
   });
   return refused ? "refused" : "done";
 }
 
 /** Features the turn panel offers: those with a rule to activate, with their remaining uses. */
-export function usableFeatures(derived: DerivedCharacter, runtime: CharacterRuntime) {
+export function usableFeatures(derived: DerivedCharacter, runtime: CharacterRuntime, catalog?: ContentCatalog) {
+  const durations = catalog ? contractDurations(catalog, characterScope(derived)) : undefined;
   return derived.features.flatMap((feature) => {
-    const activation = featureActivation(feature, derived);
+    const activation = featureActivation(feature, derived, durations);
     if (!activation) return [];
     const pool = activation.resourceId ? derived.resources.find((resource) => resource.id === activation.resourceId) : undefined;
     const left = pool ? pool.max - (runtime.resourcesUsed[pool.id] ?? 0) : undefined;

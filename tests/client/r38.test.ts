@@ -26,7 +26,8 @@ test("effects: every authored contract produces exactly what the hand-written ru
   const cat = catalog();
   const derived = fighter();
   const scope = characterScope(derived);
-  const keys = [...cat.contracts.keys()].filter((key) => key.startsWith("spell:") || key.startsWith("feature:"));
+  // Contracts that say what an effect *does*; the ones that only say when it ends (R39) are a different question.
+  const keys = [...cat.contracts.keys()].filter((key) => (key.startsWith("spell:") || key.startsWith("feature:")) && contractEffect(cat.contractFor(key)!, scope).hasProperties);
   assert.ok(keys.length >= 14, `${keys.length} effect contracts`);
   for (const key of keys) {
     const rule = EFFECT_RULES[key];

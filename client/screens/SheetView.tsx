@@ -10,6 +10,8 @@ import type { CastMethod } from "../character/play";
 import type { CharacterRuntime } from "../character/runtime";
 import type { DerivedAttack, DerivedCharacter, DerivedFeature, Term } from "../character/types";
 import { effectKeyForFeature, effectKeyForSpell, featureActivation, parseDuration } from "../rules/activation";
+import { characterScope } from "../rules/contract";
+import { contractDurations } from "../rules/contractActivation";
 import { Pill, signed } from "../ui/components";
 import { Explain } from "../ui/Explain";
 
@@ -265,7 +267,7 @@ export function SheetView({ derived, catalog, runtime, compact = false, actions 
                   {features.map((feature) => {
                     const key = `${feature.sourceLabel}|${feature.id}`;
                     const open = compact ? false : (openFeatures[key] ?? true);
-                    const activation = live ? featureActivation(feature, derived) : undefined;
+                    const activation = live ? featureActivation(feature, derived, contractDurations(catalog, characterScope(derived))) : undefined;
                     const pool = activation?.resourceId ? derived.resources.find((resource) => resource.id === activation.resourceId) : undefined;
                     const left = pool ? pool.max - (runtime?.resourcesUsed[pool.id] ?? 0) : undefined;
                     const active = isActive(effectKeyForFeature(feature.id));

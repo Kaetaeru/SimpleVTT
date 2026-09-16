@@ -453,7 +453,7 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
     ...ABILITY_KEYS.map((key) => ({ key: `save:${key}`, label: `${ABILITY_KO[key]} 내성`, hint: `${stats.saves[key] >= 0 ? "+" : ""}${stats.saves[key]}`, onSelect: () => void rollToChat({ label: `${ABILITY_KO[key]} 내성`, formula: d20(stats.saves[key]), kind: "save" }) })),
     ...Object.keys(SKILL_KO).map((id) => { const bonus = skillBonus(stats, id); return { key: `skill:${id}`, label: `${ABILITY_KO[SKILL_ABILITY_OF[id]]}(${SKILL_KO[id]})`, hint: `${bonus >= 0 ? "+" : ""}${bonus}${helped ? " · 도움 유리" : ""}`, onSelect: () => void rollCheck({ label: `${ABILITY_KO[SKILL_ABILITY_OF[id]]}(${SKILL_KO[id]})`, formula: d20(bonus), kind: "check" }) }; }),
   ] : [];
-  const usable = entry.kind === "character" && derived ? usableFeatures(derived, entry.runtime) : [];
+  const usable = entry.kind === "character" && derived ? usableFeatures(derived, entry.runtime, catalog) : [];
   /**
    * R23 (D121): a feature is used on the sheet, so the sheet has to tell the table what the turn spent. Without
    * this the 추가 행동 칩 stayed lit all turn after 재기의 바람 or 교활한 행동 — the bonus action looked unused.

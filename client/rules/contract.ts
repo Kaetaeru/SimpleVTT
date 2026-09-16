@@ -72,7 +72,17 @@ export type ContractOperation =
    * by how much. `scope` narrows it to some attacks, `abilities` to some saves, and `note` carries the part of the
    * rule that is not a number.
    */
-  | { kind: "property.modify"; property: string; operation: string; value?: Expr; dice?: string; scope?: string; abilities?: string[]; note?: string; when?: Expr };
+  | { kind: "property.modify"; property: string; operation: string; value?: Expr; dice?: string; scope?: string; abilities?: string[]; note?: string; when?: Expr }
+  /**
+   * R39 (D179): the standing effect a use starts. `template` carries what the sheet needs to show and count it;
+   * `lifetime` says how it ends — `until-duration` is the only one with a round counter, the rest are conditions the
+   * table or another rule decides, and the sheet prints the reason instead of a number.
+   */
+  | { kind: "effect.apply"; template: { key?: string; name?: string; duration?: string; rounds?: number; concentration?: boolean }; lifetime: string; target: string; when?: Expr }
+  /** R39 (D179): end an effect by key — a new Wild Shape replacing the last one. */
+  | { kind: "effect.remove"; selector: string; target: string; when?: Expr }
+  /** R39 (D179): pause an effect without ending it (an antimagic field); the sheet shows it, greyed, with the reason. */
+  | { kind: "effect.suppress"; selector: string; suppressed: boolean; reason: string; when?: Expr };
 
 /** The saving throw an entry point forces before its operations run. */
 export interface ContractTest {
@@ -142,10 +152,16 @@ export const KNOWN_FACTS = new Set(["attack.weapon.ranged", "attack.weapon.melee
  * into a value; `APPLIED` are the ones a call site actually carries to the table. They are deliberately separate —
  * an operation the executor understands but nobody applies changes nothing, and saying otherwise would be a lie.
  */
-export const COMPUTED_OPERATIONS = ["economy.modify", "condition.apply", "healing.apply", "roll.modify", "property.modify"] as const;
-export const APPLIED_OPERATIONS = ["economy.modify", "roll.modify", "property.modify"] as const;
+export const COMPUTED_OPERATIONS = ["economy.modify", "condition.apply", "healing.apply", "roll.modify", "property.modify", "effect.apply", "effect.remove", "effect.suppress"] as const;
+export const APPLIED_OPERATIONS = ["economy.modify", "roll.modify", "property.modify", "effect.apply", "effect.remove", "effect.suppress"] as const;
 
 const OPERATION_KINDS = new Set<string>(COMPUTED_OPERATIONS);
+/** R39 (D179): `until-duration` is the only lifetime this engine counts; the rest end on something it cannot see. */
+export const COUNTED_LIFETIME = "until-duration";
+export const LIFETIME_KO: Record<string, string> = {
+  "until-duration": "시간이 다할 때까지", "until-consumed": "쓸 때까지", "until-destroyed": "부서질 때까지", "until-state": "상태가 바뀔 때까지",
+  "until-event": "그 일이 일어날 때까지", "until-source-recast": "다시 시전할 때까지", "with-parent": "근원이 끝날 때까지", durable: "계속", "world-persistent": "세계에 남음",
+};
 const ROLL_MODES = new Set(["add-die", "add-flat", "reroll", "subtract-die"]);
 
 function parseOperations(raw: unknown, path: string, unsupported: string[]): ContractOperation[] {
@@ -159,6 +175,23 @@ function parseOperations(raw: unknown, path: string, unsupported: string[]): Con
     if (kind === "economy.modify") { out.push({ kind, bucket: String(operation.bucket ?? ""), amount: (operation.amount as Expr) ?? { value: 0 } }); return; }
     if (kind === "condition.apply") { out.push({ kind, condition: String(operation.condition ?? ""), target: String(operation.target ?? "target"), when: isExpr(operation.when) ? operation.when : undefined }); return; }
     if (kind === "healing.apply") { out.push({ kind, amount: (operation.amount as Expr) ?? { value: 0 }, target: String(operation.target ?? "self"), when: isExpr(operation.when) ? operation.when : undefined }); return; }
+    if (kind === "effect.apply") {
+      const template = (operation.template ?? {}) as Record<string, unknown>;
+      out.push({ kind, lifetime: String(operation.lifetime ?? "until-duration"), target: String(operation.target ?? "self"), when: isExpr(operation.when) ? operation.when : undefined, template: {
+        key: template.key ? String(template.key) : undefined, name: template.name ? String(template.name) : undefined,
+        duration: template.duration ? String(template.duration) : undefined,
+        rounds: typeof template.rounds === "number" ? template.rounds : undefined,
+        concentration: template.concentration === true,
+      } });
+      return;
+    }
+    if (kind === "effect.remove" || kind === "effect.suppress") {
+      const selector = String((operation.selector as { key?: string } | string | undefined) instanceof Object ? (operation.selector as { key?: string }).key ?? "" : operation.selector ?? "");
+      if (!selector) { unsupported.push(`${at}: ${kind}에 selector가 없습니다`); return; }
+      if (kind === "effect.remove") out.push({ kind, selector, target: String(operation.target ?? "self"), when: isExpr(operation.when) ? operation.when : undefined });
+      else out.push({ kind, selector, suppressed: operation.suppressed !== false, reason: String(operation.reason ?? ""), when: isExpr(operation.when) ? operation.when : undefined });
+      return;
+    }
     if (kind === "property.modify") {
       const property = String(operation.property ?? "");
       const op = String(operation.operation ?? "add");
@@ -261,6 +294,7 @@ export function runEntryPoint(contract: CommonPlayContract, entryId: string, sco
   for (const operation of entry.operations) {
     // `roll.modify` belongs to an interceptor and `property.modify` to a standing effect; neither is an entry point's doing.
     if (operation.kind === "roll.modify" || operation.kind === "property.modify") continue;
+    if (operation.kind === "effect.apply" || operation.kind === "effect.remove" || operation.kind === "effect.suppress") continue;
     if ("when" in operation && operation.when && evaluate(operation.when, scope) !== true) continue;
     if (operation.kind === "economy.modify") effects.push({ kind: "economy", bucket: operation.bucket, amount: numeric(evaluate(operation.amount, scope)) || 0 });
     else if (operation.kind === "condition.apply") effects.push({ kind: "condition", condition: operation.condition, target: operation.target });

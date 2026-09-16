@@ -148,9 +148,18 @@ const ACTIVE_WORDING = /(추가 행동|반응 ?행동|반응|행동)(으로|을 
 /** Worded like an action but always on (or handled elsewhere): no "사용" button. */
 const NOT_ACTIVATABLE = new Set(["monk.martial-arts", "invocation.investment-of-the-chain-master", "rogue.sneak-attack", "rogue.cunning-strike", "fighter.extra-attack"]);
 
+/** R39 (D179): looks a feature rule key up in the catalog's contracts and returns the duration it starts, if any. */
+export type ContractDurationSource = (ruleKey: string) => ParsedDuration | undefined;
+
 /** The activation for a feature: from the table, else a pool named after the feature, else a log-only use for features worded as an action. */
-export function featureActivation(feature: DerivedFeature, derived: DerivedCharacter): FeatureActivation | undefined {
+export function featureActivation(feature: DerivedFeature, derived: DerivedCharacter, contract?: ContractDurationSource): FeatureActivation | undefined {
   const key = featureRuleKey(feature.id);
+  // R39 (D179): where the content ships an `effect.apply`, the duration it starts is the contract's, not this table's.
+  const fromContract = contract?.(key);
+  if (fromContract) {
+    const table = FEATURE_ACTIVATIONS[key];
+    return { ...(table ?? {}), duration: () => fromContract };
+  }
   if (NOT_ACTIVATABLE.has(key)) return undefined;
   const table = FEATURE_ACTIVATIONS[key];
   if (table) return derived.resources.some((resource) => resource.id === table.resourceId) || !table.resourceId ? table : undefined;
