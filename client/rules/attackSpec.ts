@@ -10,6 +10,7 @@ import { deriveCharacter } from "../character/derive";
 import type { CharacterRuntime } from "../character/runtime";
 import { spendResource, useSpellSlot } from "../character/play";
 import { riderFitsAttack } from "./attackRiders";
+import { critRiders } from "./attackAftermath";
 import type { DerivedAttack, DerivedCharacter } from "../character/types";
 import type { MonsterAction, MonsterView } from "../compendium/monsters";
 import { damageFormula } from "../compendium/monsters";
@@ -96,7 +97,7 @@ export const offHandFeat = (derived: DerivedCharacter) => derived.featEffects?.l
 /** R33 (D168): a Light weapon can be swung as the off-hand attack, which normally drops its ability modifier. */
 export const canOffHand = (attack: { properties: string[] }) => attack.properties.includes("light");
 
-export function pcAttackSpec(entry: JournalCharacter, derived: DerivedCharacter, attackId: string, riders: AttackRiders = {}): { spec: AttackSpec; spend: (runtime: CharacterRuntime) => CharacterRuntime } | null {
+export function pcAttackSpec(entry: JournalCharacter, derived: DerivedCharacter, attackId: string, riders: AttackRiders = {}, catalog?: ContentCatalog): { spec: AttackSpec; spend: (runtime: CharacterRuntime) => CharacterRuntime } | null {
   const attack = derived.attacks.find((item) => item.id === attackId);
   if (!attack) return null;
   const range = weaponRange(attack);
@@ -134,8 +135,10 @@ export function pcAttackSpec(entry: JournalCharacter, derived: DerivedCharacter,
   // R32 (D166): 야만적 공격자 — the player asked for the reroll in the pre-roll dialog and has the feat.
   const savageFeat = riders.savage ? savageAttackerFeat(derived) : undefined;
   const savage = Boolean(savageFeat);
+  // R53 (D188): what a critical hit adds, from whatever contract said so. Empty for a sheet with no such rule.
+  const crits = catalog ? critRiders(derived, catalog, attack) : [];
   const declared = (riders.contracts ?? []).map((key) => (derived.attackRiders ?? []).find((item) => item.key === key)).filter((item) => item && riderFitsAttack(item, attack)).map((item) => item!.label);
-  return { spec: { name: `${cleave ? `${attack.name} · 쪼개기` : offHand ? `${attack.name} · 보조 손` : attack.name}${savageFeat ? ` · ${savageFeat}` : ""}${declared.length ? ` · ${declared.join(" · ")}` : ""}`, source: "weapon", attackBonus: attack.attackBonus, mode: range.mode, damage, riders: extra, ...(derived.critRange ? { critRange: derived.critRange } : {}), ...(savage ? { savage } : {}), ...(mastery ? { mastery, abilityMod, masteryDc: 8 + abilityMod + derived.proficiencyBonus } : {}) }, spend: (runtime) => spenders.reduce((acc, spend) => spend(acc), runtime) };
+  return { spec: { name: `${cleave ? `${attack.name} · 쪼개기` : offHand ? `${attack.name} · 보조 손` : attack.name}${savageFeat ? ` · ${savageFeat}` : ""}${declared.length ? ` · ${declared.join(" · ")}` : ""}`, source: "weapon", attackBonus: attack.attackBonus, mode: range.mode, damage, riders: extra, ...(derived.critRange ? { critRange: derived.critRange } : {}), ...(crits.length ? { critRiders: crits } : {}), ...(savage ? { savage } : {}), ...(mastery ? { mastery, abilityMod, masteryDc: 8 + abilityMod + derived.proficiencyBonus } : {}) }, spend: (runtime) => spenders.reduce((acc, spend) => spend(acc), runtime) };
 }
 
 export function npcAttackSpec(entry: JournalNpc, actionName: string): AttackSpec | null {

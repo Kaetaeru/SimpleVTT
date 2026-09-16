@@ -17,6 +17,7 @@ import { TableClient, type TableStatus } from "../session/client";
 import { TableHost } from "../session/host";
 import type { ActorRef, AttackRef, AttackRiders, ClientCommand, Invite, RollPayload, TableSnapshot } from "../session/protocol";
 import { derivedOf, pcAttackSpec, pcCombatant, pcConcentrationKey } from "../rules/attackSpec";
+import { attackAftermath, emptyAftermath } from "../rules/attackAftermath";
 import { payContract, pcRescues } from "../rules/contractUse";
 import { tableOutcome } from "../rules/contractTable";
 import { pcStats, type ActionKind } from "../rules/actions";
@@ -358,7 +359,9 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
       attributeOf: (entry, link) => attributeOf(entry, link, catalogRef.current),
       pcCombatant: (entry) => pcCombatant(entry, derivedOf(entry, catalogRef.current)),
       pcConcentrationKey,
-      pcAttackSpec: (entry, attackId, riders) => pcAttackSpec(entry, derivedOf(entry, catalogRef.current), attackId, riders),
+      pcAttackSpec: (entry, attackId, riders) => pcAttackSpec(entry, derivedOf(entry, catalogRef.current), attackId, riders, catalogRef.current),
+      // R53 (D188): what the attacker's contracts do once the swing has landed.
+      pcAftermath: (entry, attackId, outcomes) => { const derived = derivedOf(entry, catalogRef.current); const attack = derived.attacks.find((item) => item.id === attackId); return attack ? attackAftermath(derived, catalogRef.current, attack, outcomes) : emptyAftermath(); },
       pcStats: (entry) => pcStats(derivedOf(entry, catalogRef.current)),
       pcSpell: (entry, spellId, method) => pcSpell(entry, derivedOf(entry, catalogRef.current), catalogRef.current, spellId, method),
       // R35 (D174): the contract rescues a sheet could pay for, and what paying one costs it.

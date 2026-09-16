@@ -79,8 +79,8 @@ test("R51: 저항할 수 없는 공격의 은총 reaches the sheet as a rule, no
   assert.ok(boon, made.derived.features.filter((feature) => feature.source === "feat").map((feature) => feature.name).join(", "));
   assert.deepEqual(made.derived.ignoresResistance, ["타격", "관통", "참격"]);
   assert.equal(boon!.execution, "derived", `${boon!.name}: ${JSON.stringify(boon!.rules)}`);
-  // The half the app cannot see is still said out loud rather than dropped.
-  assert.ok(boon!.rules?.some((line) => line.includes("20이 나오면")), JSON.stringify(boon!.rules));
+  // R53 (D188) turned the natural-20 half into a critical-hit rider, so the whole feat is mechanical now.
+  assert.ok(boon!.rules?.some((line) => line.includes("저항 무시") || line.includes("damage.ignore-resistance")), JSON.stringify(boon!.rules));
 });
 
 test("R51: 전투 기량의 은총 offers itself on a miss, and its 20 is a natural 20 (D186)", () => {

@@ -29,6 +29,10 @@ const SCOPES: Record<string, (attack: DerivedAttack) => boolean> = {
   unarmed: (attack) => !attack.itemId,
   /** 결투: a melee weapon held in one hand. Whether the other hand is empty is the table's to see. */
   "one-handed-melee": (attack) => Boolean(attack.itemId) && !attack.range && !attack.properties.includes("two-handed"),
+  // R53 (D188): 분쇄자·관통자·참격자 narrow themselves by the damage type the weapon deals, not by its properties.
+  bludgeoning: (attack) => attack.damageType === "타격",
+  piercing: (attack) => attack.damageType === "관통",
+  slashing: (attack) => attack.damageType === "참격",
 };
 
 /** Every property this engine can change, and where it lands on the sheet. */

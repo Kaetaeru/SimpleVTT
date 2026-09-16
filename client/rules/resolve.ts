@@ -96,6 +96,12 @@ export interface AttackSpec {
   savage?: boolean;
   /** R43 (D183): the lowest d20 that is a critical hit for this attacker (19 with Improved Critical). */
   critRange?: number;
+  /**
+   * R53 (D188): damage that lands only on a critical hit (관통자's extra die, 저항할 수 없는 공격의 은총's ability
+   * score). The resolver has to know about it before it rolls, which is why it travels with the spec rather than
+   * being added to the card afterwards.
+   */
+  critRiders?: DamagePart[];
 }
 
 /** R12: what a mastery did on this attack. */
@@ -267,7 +273,7 @@ export function resolveAttack(attacker: Combatant, target: Combatant, spec: Atta
   let mastery: MasteryResult | undefined;
   const grazes = !hit && spec.mastery === "graze" && (spec.abilityMod ?? 0) > 0;
   const outcomeDamage = hit
-    ? applyDamage(target, [...spec.damage, ...(spec.riders ?? [])], options.dice, { fixed: options.fixed?.damage, crit: outcome === "crit", scale: overrides.damageScale, delta: overrides.damageDelta, savage: spec.savage })
+    ? applyDamage(target, [...spec.damage, ...(spec.riders ?? []), ...(outcome === "crit" ? spec.critRiders ?? [] : [])], options.dice, { fixed: options.fixed?.damage, crit: outcome === "crit", scale: overrides.damageScale, delta: overrides.damageDelta, savage: spec.savage })
     : grazes ? applyDamage(target, [{ formula: String(spec.abilityMod), type: spec.damage[0]?.type ?? "타격", label: "스치기", critDoubles: false }], options.dice, { fixed: options.fixed?.damage, scale: overrides.damageScale, delta: overrides.damageDelta }) : noDamage(target);
   const { damage, damageTotal, absorbed, hpLost, hpAfter, tempAfter, concentration, downed, deathFailures } = outcomeDamage;
   const inflicted = hit ? (spec.inflicts ?? []).filter((condition) => !immuneToCondition(target.defenses, condition)) : [];

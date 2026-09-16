@@ -36,7 +36,8 @@ import { ABILITY_KO, type AbilityKey } from "../catalog/types";
 import { parseChatInput, renderInline, visibleTo } from "./chat";
 import type { ClientCommand, HostMessage, Presence, RollPayload, TableEvent, TableSnapshot } from "./protocol";
 import { PROTOCOL_VERSION, isClientCommand } from "./protocol";
-import { planRollModify, type ContractPayment } from "../rules/contract";
+import { economyBucketOf, planRollModify, type ContractPayment } from "../rules/contract";
+import type { AttackAftermath, AttackOutcomeKind } from "../rules/attackAftermath";
 import type { RescueOffer, RollFamily } from "../rules/contractUse";
 import type { Transport } from "./transport";
 import { summonRule } from "../rules/summons";
@@ -111,6 +112,8 @@ export interface TableHostOptions {
   pcCombatant?: (entry: JournalCharacter) => Combatant;
   pcConcentrationKey?: (entry: JournalCharacter) => string | undefined;
   pcAttackSpec?: (entry: JournalCharacter, attackId: string, riders: AttackRiders) => { spec: AttackSpec; spend: (runtime: CharacterRuntime) => CharacterRuntime } | null;
+  /** R53 (D188): what the attacker's own contracts do once the swing has landed — marks, turn economy, table calls. */
+  pcAftermath?: (entry: JournalCharacter, attackId: string, outcomes: AttackOutcomeKind[]) => AttackAftermath;
   /** The official actions (D97) need a PC's ability modifiers, saves and skills from the derived sheet. */
   pcStats?: (entry: JournalCharacter) => ActorStats;
   /** Spells (D102): the spec and caster stats for a spell the PC can cast, and how its cost is paid (null when it cannot). */
@@ -2055,6 +2058,24 @@ export class TableHost {
     // R12: a Vex mark the wielder already had on this target is spent by this attack unless the hit renews it.
     const hadVex = target.token?.markers.some((marker) => marker.name === "교란" && marker.from === attacker.token?.id);
     if (hadVex && !resolution.mastery?.marks.includes("교란") && target.page) this.mark({ entry: target.entry, token: target.token, page: target.page }, ["교란"], false);
+    // R53 (D188): what the attacker's contracts do now the outcome is known — 강화된 치명타's mark, 저지's stop,
+    // 베어 넘기기's bonus action. The marks land the same way a mastery's do, so undo takes them back the same way.
+    if (hit && inputs && attacker.entry.kind === "character" && this.options.pcAftermath && inputs.attack.source === "weapon") {
+      const outcomes: AttackOutcomeKind[] = ["hit", ...(resolution.outcome === "crit" ? ["crit" as const] : []), ...(resolution.downed ? ["downed" as const] : [])];
+      const after = this.options.pcAftermath(attacker.entry, inputs.attack.attackId, outcomes);
+      if (after.marks.length && target.page) {
+        const targetActor = { entry: target.entry, token: target.token, page: target.page };
+        this.mark(targetActor, after.marks, true, attacker.token?.id);
+        restores.push(() => this.mark({ ...targetActor, token: this.pages.get(target.page!.id)?.tokens.find((item) => item.id === target.token?.id) }, after.marks, false));
+      }
+      for (const grant of after.economy) {
+        const which = economyBucketOf(grant.bucket);
+        if (which !== "action" && which !== "bonus") continue;
+        this.markUnused(this.refOf(attacker as { entry: JournalEntry; token?: Token; page?: Page }), which);
+        this.say({ type: "system", who: "", content: `${attacker.entry.name}: ${grant.source} — 이번 턴에 ${which === "bonus" ? "추가 행동" : "행동"} 하나를 더 씁니다` });
+      }
+      for (const note of after.notes) this.say({ type: "system", who: "", content: `${attacker.entry.name} — ${note}` });
+    }
     // Mastery marks (교란·약화·둔화) sit on the target with the wielder as `from`; the wielder's next turn start clears them.
     if (resolution.mastery?.marks.length && target.page) { const marks = resolution.mastery.marks; const targetActor = { entry: target.entry, token: target.token, page: target.page }; this.mark(targetActor, marks, true, attacker.token?.id); restores.push(() => this.mark({ ...targetActor, token: this.pages.get(target.page!.id)?.tokens.find((item) => item.id === target.token?.id) }, marks, false)); }
     const applied = { ...resolution, applied: true };

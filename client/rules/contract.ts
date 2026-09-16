@@ -136,6 +136,8 @@ export interface ContractInterceptor {
   id: string;
   timing: string;
   slot: string;
+  /** R53 (D188): the weapon filter an `attack.resolved` interceptor narrows itself to (`piercing`, `heavy` …). */
+  scope?: string;
   /** Which kinds of d20 roll this may touch; empty means every kind at that timing. */
   families: string[];
   /** Which outcomes it may touch (`failure` for a rescue, `success` for Cutting Words); empty means either. */
@@ -219,7 +221,7 @@ function parseOperations(raw: unknown, path: string, unsupported: string[]): Con
     const kind = String(operation.kind ?? "");
     const at = `${path}[${index}]`;
     if (!OPERATION_KINDS.has(kind)) { unsupported.push(`${at}: ${kind || "이름 없는 연산"}`); return; }
-    if (kind === "economy.modify") { out.push({ kind, bucket: String(operation.bucket ?? ""), amount: (operation.amount as Expr) ?? { value: 0 } }); return; }
+    if (kind === "economy.modify") { out.push({ kind, bucket: String(operation.bucket ?? ""), amount: isExpr(operation.amount) ? operation.amount : { value: operation.amount ?? 0 } }); return; }
     if (kind === "condition.apply") { out.push({ kind, condition: String(operation.condition ?? ""), target: String(operation.target ?? "target"), when: isExpr(operation.when) ? operation.when : undefined }); return; }
     if (kind === "condition.remove") { out.push({ kind, condition: String(operation.condition ?? ""), target: String(operation.target ?? "self"), when: isExpr(operation.when) ? operation.when : undefined }); return; }
     if (kind === "healing.apply") { out.push({ kind, dice: operation.dice ? String(operation.dice) : undefined, amount: isExpr(operation.amount) ? operation.amount : typeof operation.amount === "number" ? { value: operation.amount } : undefined, target: String(operation.target ?? "self"), when: isExpr(operation.when) ? operation.when : undefined }); return; }
@@ -355,6 +357,7 @@ export function parseContract(config: Record<string, unknown>, entryId: string):
     for (const query of factQueries) if (!KNOWN_FACTS.has(query.fact)) unsupported.push(`interceptors[${index}].factQueries.${query.id}: ${query.fact}`);
     interceptors.push({
       id: String(raw.id ?? `interceptor${index}`), timing: String(raw.timing ?? ""), slot: String(raw.slot ?? ""),
+      ...(raw.scope ? { scope: String(raw.scope) } : {}),
       families: (Array.isArray(raw.families) ? raw.families : []).map(String),
       outcomes: (Array.isArray(raw.outcomes) ? raw.outcomes : []).map(String),
       asks: Boolean(raw.interaction), factQueries,
@@ -410,7 +413,7 @@ export function economyBucketOf(bucket: string): "action" | "bonus" | "reaction"
 /** The shape `characterScope` needs — written structurally so this module stays free of the character engine. */
 export interface ScopeCharacter {
   proficiencyBonus: number;
-  abilities: Record<string, { modifier: number }>;
+  abilities: Record<string, { modifier: number; score?: number }>;
   saves: Record<string, { bonus: number }>;
   classes: Array<{ classId: string; level: number }>;
   /** R51 (D186): total character level, for a feat whose number is written against it (강인함). */
@@ -432,6 +435,9 @@ export function characterScope(character: ScopeCharacter, extra: Record<string, 
     if (ref === "proficiency.bonus") return character.proficiencyBonus;
     const ability = /^ability\.([a-z]{3})\.modifier$/.exec(ref);
     if (ability) return character.abilities[ability[1]]?.modifier;
+    // R53 (D188): the score itself, not the modifier — 저항할 수 없는 공격의 은총 adds the whole 근력 점수.
+    const score = /^ability\.([a-z]{3})\.score$/.exec(ref);
+    if (score) return character.abilities[score[1]]?.score;
     const save = /^save\.([a-z]{3})\.modifier$/.exec(ref);
     if (save) return character.saves[save[1]]?.bonus;
     const level = /^actor\.class-level:(.+)$/.exec(ref);
