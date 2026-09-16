@@ -130,7 +130,15 @@ export function contractRuleKey(id: string) {
 /** Facts this engine can answer about a roll it is intercepting; anything else the table has to decide. */
 export const KNOWN_FACTS = new Set(["attack.weapon.ranged", "attack.weapon.melee"]);
 
-const OPERATION_KINDS = new Set(["economy.modify", "condition.apply", "healing.apply", "roll.modify"]);
+/**
+ * R36 (D176): the two numbers the plan (§14.1) is scored on. `COMPUTED` are the operation kinds this executor turns
+ * into a value; `APPLIED` are the ones a call site actually carries to the table. They are deliberately separate —
+ * an operation the executor understands but nobody applies changes nothing, and saying otherwise would be a lie.
+ */
+export const COMPUTED_OPERATIONS = ["economy.modify", "condition.apply", "healing.apply", "roll.modify"] as const;
+export const APPLIED_OPERATIONS = ["economy.modify", "roll.modify"] as const;
+
+const OPERATION_KINDS = new Set<string>(COMPUTED_OPERATIONS);
 const ROLL_MODES = new Set(["add-die", "add-flat", "reroll", "subtract-die"]);
 
 function parseOperations(raw: unknown, path: string, unsupported: string[]): ContractOperation[] {
