@@ -1,6 +1,8 @@
 # Current — SimpleVTT
 
-Updated: 2026-09-15 Asia/Seoul
+Updated: 2026-09-16 Asia/Seoul
+
+> 새 세션은 **`docs/HANDOFF.md`를 먼저 읽는다** — 진행 방식, 현재 상태, 의도적으로 남겨 둔 미해결 과제.
 
 ## 지금 무엇이 있나
 
@@ -22,13 +24,14 @@ Updated: 2026-09-15 Asia/Seoul
 
 ```
 npm run dev          # 새 클라이언트 (http://localhost:1430)
-npm run gate         # gate:client(타입·경계·단위 136개) + gate:e2e(브라우저 13개)
+npm run gate         # gate:client(타입·경계·단위 307개) + gate:e2e(브라우저 17개)
+                     # ⚠ 두 게이트를 동시에 돌리지 말 것 (가짜 FAIL)
 npm run tauri:build  # exe (dist-client)
 npm run dev:legacy   # 옛 src/ 앱 (기록용)
 ```
 
-증거 스크린샷은 `docs/evidence/new-client-m1/`(73장), 시나리오는 `docs/design/v3/SESSION_SCENARIOS.md`(SC-1~SC-62),
-결정 기록은 `docs/design/v3/ROLL20_TABLE_SPEC.md`(D1~D115)에 있다.
+증거 스크린샷은 `docs/evidence/new-client-m1/`(78장), 시나리오는 `docs/design/v3/SESSION_SCENARIOS.md`(SC-1~SC-62),
+결정 기록은 `docs/design/v3/ROLL20_TABLE_SPEC.md`(D1~D197, 로드맵 R1~R62)에 있다.
 
 ## 남은 것
 
