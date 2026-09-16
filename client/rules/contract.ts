@@ -65,7 +65,14 @@ export type ContractOperation =
   | { kind: "economy.modify"; bucket: string; amount: Expr }
   | { kind: "condition.apply"; condition: string; target: string; when?: Expr }
   | { kind: "healing.apply"; amount: Expr; target: string; when?: Expr }
-  | { kind: "roll.modify"; mode: string; dice?: string; value?: Expr; diceResourceId?: string; when?: Expr };
+  | { kind: "roll.modify"; mode: string; dice?: string; value?: Expr; diceResourceId?: string; when?: Expr }
+  /**
+   * R38 (D178): the general modifier. `property` names what changes in this engine's vocabulary (`ac.bonus`,
+   * `attack-roll.bonus`, `speed.walk`…), `operation` how (`add`, `set`, `multiply`, `minimum`), and `value` or `dice`
+   * by how much. `scope` narrows it to some attacks, `abilities` to some saves, and `note` carries the part of the
+   * rule that is not a number.
+   */
+  | { kind: "property.modify"; property: string; operation: string; value?: Expr; dice?: string; scope?: string; abilities?: string[]; note?: string; when?: Expr };
 
 /** The saving throw an entry point forces before its operations run. */
 export interface ContractTest {
@@ -135,8 +142,8 @@ export const KNOWN_FACTS = new Set(["attack.weapon.ranged", "attack.weapon.melee
  * into a value; `APPLIED` are the ones a call site actually carries to the table. They are deliberately separate —
  * an operation the executor understands but nobody applies changes nothing, and saying otherwise would be a lie.
  */
-export const COMPUTED_OPERATIONS = ["economy.modify", "condition.apply", "healing.apply", "roll.modify"] as const;
-export const APPLIED_OPERATIONS = ["economy.modify", "roll.modify"] as const;
+export const COMPUTED_OPERATIONS = ["economy.modify", "condition.apply", "healing.apply", "roll.modify", "property.modify"] as const;
+export const APPLIED_OPERATIONS = ["economy.modify", "roll.modify", "property.modify"] as const;
 
 const OPERATION_KINDS = new Set<string>(COMPUTED_OPERATIONS);
 const ROLL_MODES = new Set(["add-die", "add-flat", "reroll", "subtract-die"]);
@@ -152,6 +159,16 @@ function parseOperations(raw: unknown, path: string, unsupported: string[]): Con
     if (kind === "economy.modify") { out.push({ kind, bucket: String(operation.bucket ?? ""), amount: (operation.amount as Expr) ?? { value: 0 } }); return; }
     if (kind === "condition.apply") { out.push({ kind, condition: String(operation.condition ?? ""), target: String(operation.target ?? "target"), when: isExpr(operation.when) ? operation.when : undefined }); return; }
     if (kind === "healing.apply") { out.push({ kind, amount: (operation.amount as Expr) ?? { value: 0 }, target: String(operation.target ?? "self"), when: isExpr(operation.when) ? operation.when : undefined }); return; }
+    if (kind === "property.modify") {
+      const property = String(operation.property ?? "");
+      const op = String(operation.operation ?? "add");
+      if (!property) { unsupported.push(`${at}: property.modify에 property가 없습니다`); return; }
+      // A bare number, string or boolean is the literal it looks like; only an object is read as an expression.
+      const literal = operation.value;
+      const value = isExpr(literal) ? literal : literal === undefined ? undefined : { value: literal };
+      out.push({ kind, property, operation: op, value, dice: operation.dice ? String(operation.dice) : undefined, scope: operation.scope ? String(operation.scope) : undefined, abilities: Array.isArray(operation.abilities) ? operation.abilities.map(String) : undefined, note: operation.note ? String(operation.note) : undefined, when: isExpr(operation.when) ? operation.when : undefined });
+      return;
+    }
     const mode = String(operation.mode ?? "");
     if (!ROLL_MODES.has(mode)) { unsupported.push(`${at}: roll.modify ${mode || "모드 없음"}`); return; }
     out.push({ kind: "roll.modify", mode, dice: operation.dice ? String(operation.dice) : undefined, value: isExpr(operation.value) ? operation.value : undefined, diceResourceId: operation.diceResource ? resourceIdOf(String(operation.diceResource)) : undefined, when: isExpr(operation.when) ? operation.when : undefined });
@@ -242,11 +259,12 @@ export function runEntryPoint(contract: CommonPlayContract, entryId: string, sco
   if (!entry) return null;
   const effects: ContractEffect[] = [];
   for (const operation of entry.operations) {
-    if (operation.kind === "roll.modify") continue;
+    // `roll.modify` belongs to an interceptor and `property.modify` to a standing effect; neither is an entry point's doing.
+    if (operation.kind === "roll.modify" || operation.kind === "property.modify") continue;
     if ("when" in operation && operation.when && evaluate(operation.when, scope) !== true) continue;
     if (operation.kind === "economy.modify") effects.push({ kind: "economy", bucket: operation.bucket, amount: numeric(evaluate(operation.amount, scope)) || 0 });
     else if (operation.kind === "condition.apply") effects.push({ kind: "condition", condition: operation.condition, target: operation.target });
-    else effects.push({ kind: "heal", amount: numeric(evaluate(operation.amount, scope)) || 0, target: operation.target });
+    else if (operation.kind === "healing.apply") effects.push({ kind: "heal", amount: numeric(evaluate(operation.amount, scope)) || 0, target: operation.target });
   }
   return { effects, ...(entry.test ? { test: entry.test, testDc: numeric(evaluate(entry.test.dc, scope)) || 0 } : {}) };
 }

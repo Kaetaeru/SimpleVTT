@@ -3,6 +3,7 @@
 import m_dnd_srd_5_2_1_class_feature_common_play from "../../content/modules/dnd-srd-5.2.1.class-feature-common-play/module.json";
 import m_dnd_srd_5_2_1_classes from "../../content/modules/dnd-srd-5.2.1.classes/module.json";
 import m_dnd_srd_5_2_1_core from "../../content/modules/dnd-srd-5.2.1.core/module.json";
+import m_dnd_srd_5_2_1_effect_common_play from "../../content/modules/dnd-srd-5.2.1.effect-common-play/module.json";
 import m_dnd_srd_5_2_1_equipment_adventuring_core from "../../content/modules/dnd-srd-5.2.1.equipment-adventuring-core/module.json";
 import m_dnd_srd_5_2_1_equipment_armor from "../../content/modules/dnd-srd-5.2.1.equipment-armor/module.json";
 import m_dnd_srd_5_2_1_equipment_books from "../../content/modules/dnd-srd-5.2.1.equipment-books/module.json";
@@ -41,6 +42,7 @@ export const BUILTIN_MODULE_JSON: readonly unknown[] = [
   m_dnd_srd_5_2_1_class_feature_common_play,
   m_dnd_srd_5_2_1_classes,
   m_dnd_srd_5_2_1_core,
+  m_dnd_srd_5_2_1_effect_common_play,
   m_dnd_srd_5_2_1_equipment_adventuring_core,
   m_dnd_srd_5_2_1_equipment_armor,
   m_dnd_srd_5_2_1_equipment_books,

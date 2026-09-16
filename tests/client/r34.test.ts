@@ -29,7 +29,8 @@ const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
 const contract = (key: string) => catalog().contractFor(key)!;
 
 test("contracts: all eight SRD contracts are read, and what this executor cannot run is named (D171)", () => {
-  const all = catalog().contracts;
+  // R38 added a second family of contracts (standing effects, keyed `spell:`/`feature:`); these are the feature ones.
+  const all = new Map([...catalog().contracts].filter(([key]) => !key.startsWith("spell:") && !key.startsWith("feature:")));
   assert.deepEqual([...all.keys()].sort(), [
     "bard.college-of-lore.cutting-words",
     "bard.college-of-lore.peerless-skill",

@@ -49,13 +49,13 @@ function coverage() {
   return { counts, perClass, total: seen.size };
 }
 
-test("plan: the schema's operation vocabulary is 26, and this executor computes four of them (D176)", () => {
+test("plan: the schema's operation vocabulary is 26, and the executor's share of it is counted twice (D176)", () => {
   const schema = JSON.parse(readFileSync("schemas/common-play-contract.schema.json", "utf8")) as { $defs: Record<string, unknown> };
   const operation = schema.$defs.operation as { oneOf?: unknown[]; anyOf?: unknown[] };
   assert.equal((operation.oneOf ?? operation.anyOf ?? []).length, 26, "the contract grammar's operation count — the denominator of the plan");
-  assert.deepEqual([...COMPUTED_OPERATIONS].sort(), ["condition.apply", "economy.modify", "healing.apply", "roll.modify"]);
+  assert.deepEqual([...COMPUTED_OPERATIONS].sort(), ["condition.apply", "economy.modify", "healing.apply", "property.modify", "roll.modify"]);
   // An operation the executor understands but nobody applies changes nothing at the table, and is not counted as if it did.
-  assert.deepEqual([...APPLIED_OPERATIONS].sort(), ["economy.modify", "roll.modify"]);
+  assert.deepEqual([...APPLIED_OPERATIONS].sort(), ["economy.modify", "property.modify", "roll.modify"]);
   for (const applied of APPLIED_OPERATIONS) assert.ok((COMPUTED_OPERATIONS as readonly string[]).includes(applied), applied);
 });
 

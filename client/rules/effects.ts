@@ -9,6 +9,8 @@ import type { AbilityKey } from "../catalog/types";
 import { ABILITY_KEYS } from "../catalog/types";
 import type { ActiveEffect, AppliedEffect, DerivedAttack, DerivedCharacter, Term } from "../character/types";
 import { featureRuleKey } from "./activation";
+import { characterScope } from "./contract";
+import { contractEffect } from "./contractEffects";
 
 interface EffectContext { derived: DerivedCharacter; classLevel: (slug: string) => number; name: string }
 
@@ -142,7 +144,15 @@ export function effectRuleKey(effect: ActiveEffect, catalog: ContentCatalog): st
 
 /** The application an effect would make, or undefined when there is no rule for it. */
 export function effectApplication(effect: ActiveEffect, derived: DerivedCharacter, catalog: ContentCatalog): EffectApplication | undefined {
-  const rule = EFFECT_RULES[effectRuleKey(effect, catalog)];
+  const key = effectRuleKey(effect, catalog);
+  // R38 (D178): the contract is the source of truth where the content ships one; the hand-written rule is what is
+  // left of the ones nobody has written yet. A test asserts the two agree for every effect that has both.
+  const contract = catalog.contractFor(key);
+  if (contract) {
+    const { application, unknown } = contractEffect(contract, characterScope(derived));
+    if (!unknown.length) return application;
+  }
+  const rule = EFFECT_RULES[key];
   if (!rule) return undefined;
   const classLevel = (slug: string) => derived.classes.find((cls) => cls.classId.endsWith(`.${slug}`) || cls.classId === slug)?.level ?? 0;
   return rule({ derived, classLevel, name: effect.name });
