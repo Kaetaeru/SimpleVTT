@@ -82,6 +82,9 @@ export const hasSmite = (derived: DerivedCharacter) => derived.features.some((fe
 export const smiteSlots = (derived: DerivedCharacter, runtime: CharacterRuntime) => Object.entries(derived.spellSlots).map(([level, max]) => ({ level: Number(level), free: max - (runtime.slotsUsed[Number(level)] ?? 0) })).filter((slot) => slot.free > 0);
 
 /** The attack spec for a sheet attack row, with the chosen riders; `spend` applies their cost to the attacker's runtime. */
+/** R32 (D166): whether this sheet carries 야만적 공격자, so the dialog may offer its once-a-turn reroll. */
+export const hasSavageAttacker = (derived: DerivedCharacter) => derived.features.some((feature) => /야만적 공격자|Savage Attacker/i.test(`${feature.name}${feature.nameEn ?? ""}`));
+
 export function pcAttackSpec(entry: JournalCharacter, derived: DerivedCharacter, attackId: string, riders: AttackRiders = {}): { spec: AttackSpec; spend: (runtime: CharacterRuntime) => CharacterRuntime } | null {
   const attack = derived.attacks.find((item) => item.id === attackId);
   if (!attack) return null;
@@ -89,7 +92,8 @@ export function pcAttackSpec(entry: JournalCharacter, derived: DerivedCharacter,
   // R12: a Cleave follow-up adds no ability modifier to its damage.
   const cleave = Boolean(riders.cleave && attack.masteryActive && attack.masteryKey === "cleave");
   const bonusText = attack.damageBonus && !cleave ? `${attack.damageBonus > 0 ? "+" : "-"}${Math.abs(attack.damageBonus)}` : "";
-  const damage: DamagePart[] = [{ formula: `${attack.damage.split(" ")[0]}${bonusText}${diceOf(attack.damageTerms)}`, type: attack.damageType, label: cleave ? `${attack.name} (쪼개기)` : attack.name }];
+  // R32 (D165): 대형 무기 전투 travels with the weapon's own damage part.
+  const damage: DamagePart[] = [{ formula: `${attack.damage.split(" ")[0]}${bonusText}${diceOf(attack.damageTerms)}`, type: attack.damageType, label: cleave ? `${attack.name} (쪼개기)` : attack.name, ...(attack.dieMinimum ? { dieMinimum: attack.dieMinimum } : {}) }];
   const extra: DamagePart[] = [];
   const spenders: Array<(runtime: CharacterRuntime) => CharacterRuntime> = [];
   if (riders.sneak && hasSneakAttack(derived, attack)) extra.push({ formula: `${sneakDice(derived)}d6`, type: attack.damageType, label: "암습" });
@@ -101,7 +105,9 @@ export function pcAttackSpec(entry: JournalCharacter, derived: DerivedCharacter,
   }
   const abilityMod = derived.abilities[attack.ability].modifier;
   const mastery = attack.masteryActive && attack.masteryKey && !cleave ? attack.masteryKey : undefined;
-  return { spec: { name: cleave ? `${attack.name} · 쪼개기` : attack.name, source: "weapon", attackBonus: attack.attackBonus, mode: range.mode, damage, riders: extra, ...(mastery ? { mastery, abilityMod, masteryDc: 8 + abilityMod + derived.proficiencyBonus } : {}) }, spend: (runtime) => spenders.reduce((acc, spend) => spend(acc), runtime) };
+  // R32 (D166): 야만적 공격자 — the player asked for the reroll in the pre-roll dialog and has the feat.
+  const savage = Boolean(riders.savage && hasSavageAttacker(derived));
+  return { spec: { name: `${cleave ? `${attack.name} · 쪼개기` : attack.name}${savage ? " · 야만적 공격자" : ""}`, source: "weapon", attackBonus: attack.attackBonus, mode: range.mode, damage, riders: extra, ...(savage ? { savage } : {}), ...(mastery ? { mastery, abilityMod, masteryDc: 8 + abilityMod + derived.proficiencyBonus } : {}) }, spend: (runtime) => spenders.reduce((acc, spend) => spend(acc), runtime) };
 }
 
 export function npcAttackSpec(entry: JournalNpc, actionName: string): AttackSpec | null {

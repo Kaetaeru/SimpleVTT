@@ -119,6 +119,8 @@ export interface DerivedAttack {
   damageType: string;
   properties: string[];
   mastery?: string;
+  /** R32 (D165): 대형 무기 전투 — this weapon's damage dice never roll below 3. */
+  dieMinimum?: number;
   /** The mastery property's rule key (graze, topple, vex, sap, slow, push, nick, cleave) for the table. */
   masteryKey?: string;
   masteryActive: boolean;

@@ -58,7 +58,18 @@ export interface Combatant {
   vexedBy?: string;
 }
 
-export interface DamagePart { formula: string; type: string; label?: string; /** Dice double on a critical hit (weapon/spell dice); a flat rider never does. */ critDoubles?: boolean }
+export interface DamagePart {
+  formula: string;
+  type: string;
+  label?: string;
+  /** Dice double on a critical hit (weapon/spell dice); a flat rider never does. */
+  critDoubles?: boolean;
+  /**
+   * R32 (D165): 대형 무기 전투 — a damage die that rolls below this counts as this. The flag was set on the ledger
+   * as `fighting-style:great-weapon-fighting` and read by nothing, so the style did nothing at all.
+   */
+  dieMinimum?: number;
+}
 
 export interface AttackSpec {
   name: string;
@@ -74,6 +85,8 @@ export interface AttackSpec {
   mastery?: string;
   abilityMod?: number;
   masteryDc?: number;
+  /** R32 (D166): 야만적 공격자 — this swing rerolls its weapon dice and keeps the better set. */
+  savage?: boolean;
 }
 
 /** R12: what a mastery did on this attack. */
@@ -184,7 +197,7 @@ const autoCrit = (target: Combatant, spec: AttackSpec) => (target.conditions.inc
 export interface DiceSource { d(sides: number): number }
 export const diceFrom = (random: () => number): DiceSource => ({ d: (sides) => 1 + Math.floor(random() * sides) });
 
-function rollParts(formula: string, dice: DiceSource, doubleDice: boolean): { dice: number[]; total: number } {
+function rollParts(formula: string, dice: DiceSource, doubleDice: boolean, dieMinimum = 0): { dice: number[]; total: number } {
   const clean = formula.replace(/\s+/g, "").replace(/\(.*?\)/g, "");
   const rolled: number[] = [];
   let total = 0;
@@ -194,7 +207,7 @@ function rollParts(formula: string, dice: DiceSource, doubleDice: boolean): { di
     const die = /^(\d*)d(\d+)$/.exec(body);
     if (die) {
       const count = (Number(die[1] || 1)) * (doubleDice ? 2 : 1);
-      for (let index = 0; index < count; index += 1) { const value = dice.d(Number(die[2])); rolled.push(value); total += sign * value; }
+      for (let index = 0; index < count; index += 1) { const value = Math.max(dieMinimum, dice.d(Number(die[2]))); rolled.push(value); total += sign * value; }
     } else if (/^\d+$/.test(body)) total += sign * Number(body);
   }
   return { dice: rolled, total };
@@ -224,7 +237,7 @@ export function resolveAttack(attacker: Combatant, target: Combatant, spec: Atta
   let mastery: MasteryResult | undefined;
   const grazes = !hit && spec.mastery === "graze" && (spec.abilityMod ?? 0) > 0;
   const outcomeDamage = hit
-    ? applyDamage(target, [...spec.damage, ...(spec.riders ?? [])], options.dice, { fixed: options.fixed?.damage, crit: outcome === "crit", scale: overrides.damageScale, delta: overrides.damageDelta })
+    ? applyDamage(target, [...spec.damage, ...(spec.riders ?? [])], options.dice, { fixed: options.fixed?.damage, crit: outcome === "crit", scale: overrides.damageScale, delta: overrides.damageDelta, savage: spec.savage })
     : grazes ? applyDamage(target, [{ formula: String(spec.abilityMod), type: spec.damage[0]?.type ?? "타격", label: "스치기", critDoubles: false }], options.dice, { fixed: options.fixed?.damage, scale: overrides.damageScale, delta: overrides.damageDelta }) : noDamage(target);
   const { damage, damageTotal, absorbed, hpLost, hpAfter, tempAfter, concentration, downed, deathFailures } = outcomeDamage;
   const inflicted = hit ? (spec.inflicts ?? []).filter((condition) => !immuneToCondition(target.defenses, condition)) : [];
@@ -252,13 +265,22 @@ export function resolveAttack(attacker: Combatant, target: Combatant, spec: Atta
 /** What a hit (or a failed save) does to the target: dice per part, resistances, temp HP first, concentration, 0 HP. Shared by weapon attacks and spells. */
 export interface DamageOutcome { damage: DamageResult[]; damageTotal: number; absorbed: number; hpLost: number; hpBefore: number; hpAfter: number; tempAfter: number; concentration?: AttackResolution["concentration"]; downed?: AttackResolution["downed"]; /** Death-save failures the damage caused on a PC already at 0 HP (2 from a critical hit). */ deathFailures?: number }
 export const noDamage = (target: Combatant): DamageOutcome => ({ damage: [], damageTotal: 0, absorbed: 0, hpLost: 0, hpBefore: target.hp.current, hpAfter: target.hp.current, tempAfter: target.hp.temp });
-export function applyDamage(target: Combatant, parts: DamagePart[], dice: DiceSource, options: { fixed?: number[][]; crit?: boolean; scale?: number; delta?: number; /** Halve after resistances (a successful save). */ half?: boolean } = {}): DamageOutcome {
+export function applyDamage(target: Combatant, parts: DamagePart[], dice: DiceSource, options: { fixed?: number[][]; crit?: boolean; scale?: number; delta?: number; /** Halve after resistances (a successful save). */ half?: boolean; /** R32 (D166): 야만적 공격자 — roll the weapon dice twice and keep the better. */ savage?: boolean } = {}): DamageOutcome {
   const damage: DamageResult[] = [];
   parts.forEach((part, index) => {
     const fixedDice = options.fixed?.[index];
     let rolled: { dice: number[]; total: number };
     if (fixedDice) { rolled = { dice: fixedDice, total: fixedDice.reduce((sum, value) => sum + value, 0) + flatOf(part.formula) }; }
-    else rolled = rollParts(part.formula, dice, Boolean(options.crit) && part.critDoubles !== false);
+    else {
+      const weaponDice = part.critDoubles !== false;
+      rolled = rollParts(part.formula, dice, Boolean(options.crit) && weaponDice, part.dieMinimum ?? 0);
+      // R32 (D166): 야만적 공격자 — once per turn, roll the weapon's damage dice twice and use either. Only the
+      // weapon's own dice reroll; a flat rider is not "the weapon's damage dice".
+      if (options.savage && weaponDice) {
+        const again = rollParts(part.formula, dice, Boolean(options.crit) && weaponDice, part.dieMinimum ?? 0);
+        if (again.total > rolled.total) rolled = again;
+      }
+    }
     const rawRolled = Math.max(0, rolled.total);
     // R28 (D148): resistance and vulnerability come *last*, after every other modifier — a successful save halves
     // first. The old order doubled for vulnerability and only then halved, which rounds differently (11 → 22 → 11

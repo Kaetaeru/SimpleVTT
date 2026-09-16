@@ -104,6 +104,8 @@ try {
   await player.locator(".cl-targeting-banner[data-picked='1']").waitFor({ timeout: 10000 });
   await player.screenshot({ path: path.join(OUT, "59-attack-targeting-range.png") });
   await player.locator(".cl-targeting-banner").getByRole("button", { name: "확정" }).click();
+  // R32 (D166): 야만적 공격자 (from the 군인 background) opens the pre-roll dialog, like 암습 does for a rogue.
+  await player.getByRole("button", { name: "공격", exact: true }).click();
   const head = "앨리스의 파이터 → 고블린 전사: 대검";
   await cardOf(dm, head).waitFor({ timeout: 15000 });
   await cardOf(player, head).waitFor({ timeout: 15000 });

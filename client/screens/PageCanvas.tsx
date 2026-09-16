@@ -32,7 +32,7 @@ import { describeSpellExec, spellExec } from "../compendium/spells";
 import type { CastMethod } from "../character/play";
 import { castOptions } from "./SheetView";
 import { ApprovalLayer, ToastLayer } from "./Notify";
-import { hasSmite, hasSneakAttack, npcAttackSpec, smiteSlots, weaponRange } from "../rules/attackSpec";
+import { hasSavageAttacker, hasSmite, hasSneakAttack, npcAttackSpec, smiteSlots, weaponRange } from "../rules/attackSpec";
 import type { AttackRef, AttackRiders } from "../session/protocol";
 import { Modal as RiderModal } from "../ui/components";
 import { toggleCondition } from "../character/play";
@@ -263,10 +263,12 @@ function makeAttackWith({ c, token, page, entry, derived, isGm, readied, journal
     const targets = options.targets ?? await requestTargets(`${name} — 대상을 클릭하세요${readied ? " (준비한 행동)" : ""}`, { multi: true, exclude: token.id });
     if (!targets.length) return;
     let sneak = false;
+    let savage = false;
     let slots: Array<{ level: number; free: number }> = [];
     if (ref.source === "weapon" && derived && entry.kind === "character") {
       const attack = derived.attacks.find((item) => item.id === ref.attackId)!;
       sneak = hasSneakAttack(derived, attack);
+      savage = hasSavageAttacker(derived);
       slots = hasSmite(derived) ? smiteSlots(derived, entry.runtime) : [];
     }
     let answer: AttackAnswer | null | undefined;
@@ -276,7 +278,7 @@ function makeAttackWith({ c, token, page, entry, derived, isGm, readied, journal
     const hit = targets.map((id) => page.tokens.find((item) => item.id === id)?.represents).filter((id): id is string => Boolean(id));
     const situational = situationalTraits(entry, hit.map((id) => journal.find((candidate) => candidate.id === id)).filter((found): found is JournalEntry => Boolean(found)));
     if (options.overrides) answer = { overrides: options.overrides };
-    else if (isGm || sneak || slots.length || situational.length) { answer = await requestAttackOptions({ name, sneak, slots, gm: isGm, notes: situational }); if (answer === null) return; }
+    else if (isGm || sneak || savage || slots.length || situational.length) { answer = await requestAttackOptions({ name, sneak, savage, slots, gm: isGm, notes: situational }); if (answer === null) return; }
     c.attack({ entryId: entry.id, pageId: page.id, tokenId: token.id }, targets.map((id) => ({ pageId: page.id, tokenId: id })), ref, answer?.riders, { overrides: answer?.overrides, readied });
   };
 }
@@ -630,7 +632,7 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
  * player controls. One row: the sheet's attacks and unarmed options, then menus for the 2024 action list, checks,
  * features, items and bonus actions (D97, D98). The economy chips only inform.
  */
-interface AttackAsk { name: string; sneak: boolean; slots: Array<{ level: number; free: number }>; gm: boolean; /** R31 (D164): stat-block lines that could change this roll but depend on where everyone is standing. */ notes?: string[]; resolve: (answer: AttackAnswer | null) => void }
+interface AttackAsk { name: string; sneak: boolean; /** R32 (D166): 야만적 공격자 is on this sheet. */ savage?: boolean; slots: Array<{ level: number; free: number }>; gm: boolean; /** R31 (D164): stat-block lines that could change this roll but depend on where everyone is standing. */ notes?: string[]; resolve: (answer: AttackAnswer | null) => void }
 export interface AttackAnswer { riders?: AttackRiders; overrides?: AttackOverrides }
 const attackAskListeners = new Set<(ask: AttackAsk) => void>();
 export const requestAttackOptions = (ask: Omit<AttackAsk, "resolve">) => new Promise<AttackAnswer | null>((resolve) => { if (!attackAskListeners.size) { resolve({}); return; } for (const listener of [...attackAskListeners]) listener({ ...ask, resolve }); });
@@ -667,6 +669,7 @@ function AttackAskBridge() {
  */
 function AttackDialog({ ask, onDone }: { ask: AttackAsk; onDone: (answer: AttackAnswer | null) => void }) {
   const [sneak, setSneak] = useState(ask.sneak);
+  const [savage, setSavage] = useState(false);
   const [slot, setSlot] = useState<number>(0);
   const [advantage, setAdvantage] = useState<"auto" | Advantage>("auto");
   const [cover, setCover] = useState<0 | 2 | 5>(0);
@@ -676,7 +679,7 @@ function AttackDialog({ ask, onDone }: { ask: AttackAsk; onDone: (answer: Attack
     if (advantage !== "auto") overrides.advantage = advantage;
     if (ask.gm && cover) overrides.cover = cover;
     if (ask.gm && outcome) overrides.outcome = outcome;
-    onDone({ riders: { sneak: ask.sneak && sneak, smiteSlot: slot || undefined }, overrides: Object.keys(overrides).length ? overrides : undefined });
+    onDone({ riders: { sneak: ask.sneak && sneak, savage: Boolean(ask.savage) && savage, smiteSlot: slot || undefined }, overrides: Object.keys(overrides).length ? overrides : undefined });
   };
   return (
     <RiderModal title={`${ask.name} — 판정 전 조정`} onClose={() => onDone(null)} actions={<button type="button" className="cl-btn primary" onClick={done}>공격</button>}>
@@ -692,6 +695,8 @@ function AttackDialog({ ask, onDone }: { ask: AttackAsk; onDone: (answer: Attack
         </>
       ) : null}
       {ask.sneak ? <label className="cl-row cl-small" style={{ gap: 6 }}><input type="checkbox" checked={sneak} onChange={(event) => setSneak(event.target.checked)} /> 암습 (유리하거나 아군이 대상 옆에 있을 때, 턴당 한 번)</label> : null}
+      {/* R32 (D166): the feat's whole rule is this checkbox — the host rolls the weapon dice twice and keeps the better. */}
+      {ask.savage ? <label className="cl-row cl-small" style={{ gap: 6 }}><input type="checkbox" checked={savage} onChange={(event) => setSavage(event.target.checked)} /> 야만적 공격자 (무기 피해 주사위를 두 번 굴려 높은 쪽, 턴당 한 번)</label> : null}
       {ask.slots.length ? <div className="cl-field"><label>신성한 강타 (적중 시 슬롯 소비, 2d8 + 슬롯 레벨당 1d8 광휘)</label><select className="cl-select" aria-label="강타 슬롯" value={slot} onChange={(event) => setSlot(Number(event.target.value))}><option value={0}>안 씀</option>{ask.slots.map((item) => <option key={item.level} value={item.level}>{item.level}레벨 슬롯 ({item.free} 남음)</option>)}</select></div> : null}
       {ask.notes?.length ? <div className="cl-field"><label>자리에 따라 (표에서 판단)</label><ul className="cl-quiet cl-small" style={{ margin: 0, paddingLeft: 18 }}>{ask.notes.map((note) => <li key={note}>{note}</li>)}</ul></div> : null}
       <p className="cl-quiet cl-small">진행 중인 효과의 추가 주사위(격노·사냥꾼의 표식 등)는 저절로 붙습니다. 판정 뒤에도 DM 팔레트로 고칠 수 있습니다.</p>

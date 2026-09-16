@@ -315,6 +315,9 @@ function weaponAttack(ledger: Ledger, view: ItemView, abilities: DerivedCharacte
     id: `attack.${view.id}`, name: view.name, itemId: view.id, ability, attackBonus, attackTerms,
     damage: versatile ? `${weapon.damage} (양손 ${versatile})` : weapon.damage, damageBonus: abilities[ability].modifier, damageTerms, damageType: damageTypeKo(weapon.damageType),
     properties: readable, mastery, masteryKey: weapon.mastery, masteryActive: ledger.weaponMasteries.has(view.id), range: ammunition ?? thrown,
+    // R32 (D165): 대형 무기 전투 — a damage die below 3 counts as 3, on a two-handed or versatile weapon. The
+    // ledger flag was set and read by nothing, so the style changed no number at all.
+    ...(ledger.flags.has("fighting-style:great-weapon-fighting") && (properties.includes("two-handed") || versatile) ? { dieMinimum: 3 } : {}),
     ...(proficient ? {} : { properties: [...readable, "숙련 없음"] }),
   };
 }

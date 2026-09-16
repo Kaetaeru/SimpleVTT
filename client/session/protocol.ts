@@ -50,7 +50,7 @@ export interface TableSnapshot {
 export interface ActorRef { entryId?: string; pageId?: string; tokenId?: string }
 /** Which attack: a sheet attack row, an NPC action, or (R8) a spell. */
 export type AttackRef = { source: "weapon"; attackId: string } | { source: "npc"; actionName: string } | { source: "spell"; spellId: string; slotLevel?: number };
-export interface AttackRiders { sneak?: boolean; smiteSlot?: number; /** R12: the Cleave mastery's follow-up attack (no ability modifier to damage). */ cleave?: boolean }
+export interface AttackRiders { sneak?: boolean; smiteSlot?: number; /** R12: the Cleave mastery's follow-up attack (no ability modifier to damage). */ cleave?: boolean; /** R32 (D166): 야만적 공격자 — reroll this swing's weapon damage dice and keep the better set. */ savage?: boolean }
 
 export interface RollPayload { formula: string; total: number; /** R17: a die kept out of the total (kh/kl), one that came from an explosion, or one that counted as a success. */ dice: Array<{ sides: number; value: number; dropped?: boolean; exploded?: boolean; success?: boolean }>; modifier: number; label?: string; /** R17: set when the formula counts successes instead of summing. */ successes?: number; /** R17: rows drawn from a rollable table. */ drawn?: string[] }
 
