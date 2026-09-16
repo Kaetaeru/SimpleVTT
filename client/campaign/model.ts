@@ -101,13 +101,18 @@ export function advanceClock(clock: CampaignClock, minutes: number): CampaignClo
 /** "○○이(가) △△에게서 벗어남": the reactor's controller may take an opportunity attack or let it go. */
 export interface ReactionPrompt {
   /** "opportunity": the mover leaves the reactor's reach (D96). "shield": the mover's attack hit the reactor, who may cast Shield (R11). "counterspell": the mover is casting and the reactor may counter it (R16). */
-  kind: "opportunity" | "shield" | "counterspell" | "death-save";
+  kind: "opportunity" | "shield" | "counterspell" | "death-save" | "rescue";
   mover: { name: string; entryId?: string; pageId?: string; tokenId?: string };
   reactor: { name: string; entryId?: string; pageId?: string; tokenId?: string };
   /** The held attack (shield prompts): what hit and by how much. */
   attack?: { name: string; total: number; ac: number };
   /** R16: the held spell (counterspell prompts): what is being cast and at what level. */
   spell?: { name: string; level: number };
+  /**
+   * R35 (D174): the failed roll a contract may redo — the card it belongs to, the feature that would pay for it, and
+   * what the roll was, so the player can decide without scrolling back.
+   */
+  rescue?: { cardId: string; features: string[]; roll: string };
   /** Filled once answered: the attack card id, or declined; for shield: whether it was cast; for counterspell: whether it landed. */
   outcome?: { attacked?: string; declined?: boolean; shielded?: boolean; countered?: boolean; card?: string; rolled?: string };
 }

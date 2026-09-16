@@ -35,6 +35,8 @@ import { ABILITY_KO, type AbilityKey } from "../catalog/types";
 import { parseChatInput, renderInline, visibleTo } from "./chat";
 import type { ClientCommand, HostMessage, Presence, RollPayload, TableEvent, TableSnapshot } from "./protocol";
 import { PROTOCOL_VERSION, isClientCommand } from "./protocol";
+import { planRollModify, type ContractPayment } from "../rules/contract";
+import type { RescueOffer, RollFamily } from "../rules/contractUse";
 import type { Transport } from "./transport";
 import { summonRule } from "../rules/summons";
 import { monsterById } from "../compendium/monsters";
@@ -114,6 +116,12 @@ export interface TableHostOptions {
   pcSpell?: (entry: JournalCharacter, spellId: string, method?: CastMethod) => { spec: SpellCastSpec; casterStats: CasterStats; spend: (runtime: CharacterRuntime) => CharacterRuntime | null } | null;
   /** R11: whether the character can cast this reaction spell right now (knows it, has a slot) — the cast method to use, or null. */
   pcReactionSpell?: (entry: JournalCharacter, spellId: string) => CastMethod | null;
+  /**
+   * R35 (D174): the contract rescues this sheet could pay for a d20 of this family that came out this way, and what
+   * paying one costs it. The host owns no catalog, so both arrive as functions like every other sheet question.
+   */
+  pcRescues?: (entry: JournalCharacter, family: RollFamily, outcome: "success" | "failure") => RescueOffer[];
+  pcPayContract?: (entry: JournalCharacter, payments: ContractPayment[], outcome: "success" | "failure") => CharacterRuntime | null;
   /** R18: run a short or long rest on one sheet (the catalog lives outside the host). */
   pcRest?: (entry: JournalCharacter, kind: "short" | "long") => CharacterRuntime | null;
   /** R10: an item in the character's bag as a table use (healing formula, consumed) and how to take it out of the bag. */
@@ -1089,6 +1097,51 @@ export class TableHost {
         this.say({ ...promptMessage, prompt: { ...promptMessage.prompt, outcome: { rolled: userId } }, supersedes: promptMessage.id, content: `${promptMessage.content} → ${player.displayName}이(가) 굴림` });
         return;
       }
+      case "act.rescue": {
+        // R35 (D174): the contract's own `roll.modify` runs here — the die it names is rerolled, the dice it adds
+        // are rolled, and the whole target row is resolved again from the new total. The damage that the failed save
+        // caused is taken back first, exactly as Legendary Resistance does it (R12).
+        const promptMessage = this.chat.find((message) => message.id === command.messageId && message.type === "prompt");
+        if (!promptMessage?.prompt || promptMessage.prompt.kind !== "rescue" || !promptMessage.prompt.rescue || this.promptAnswered(command.messageId)) return refuse("그 판정은 더 이상 다시 굴릴 수 없습니다");
+        const reactor = this.resolveActor(promptMessage.prompt.reactor);
+        if (!reactor || reactor.entry.kind !== "character") return refuse("다시 굴릴 인물을 찾을 수 없습니다");
+        if (!isGm && !this.mayAct(userId, promptMessage.prompt.reactor, reactor.entry)) return refuse("그 인물의 조종자만 답할 수 있습니다");
+        const card = this.spells.get(promptMessage.prompt.rescue.cardId);
+        if (!card || !card.resolution.applied || !card.rows || !card.context) return refuse("적용된 주문 카드가 아닙니다");
+        const at = card.resolution.targets.findIndex((row) => row.target.id === reactor.entry.id && (!reactor.token || row.target.tokenId === reactor.token.id));
+        const before = at >= 0 ? card.resolution.targets[at] : undefined;
+        if (!before?.save || before.save.success || before.save.rescue) return refuse("다시 굴릴 내성이 없습니다");
+        const offer = (this.options.pcRescues?.(reactor.entry, "saving-throw", "failure") ?? []).find((item) => item.feature === command.feature);
+        if (!offer) return refuse("그 특성으로는 다시 굴릴 수 없습니다");
+        const casterActor = this.resolveActor({ entryId: card.resolution.caster.id });
+        const casterCombatant = casterActor ? this.combatantOf(casterActor) : null;
+        if (!casterCombatant) return refuse("시전자를 찾을 수 없습니다");
+        const dice = diceFrom(this.options.random ?? Math.random);
+        const plan = planRollModify(offer.interceptor.operations, offer.scope, dice);
+        if (plan.d20 === undefined && !plan.delta) return refuse("이 특성이 이 판정에 더할 것이 없습니다");
+        card.rows[at]?.();
+        const undone = this.resolveActor(promptMessage.prompt.reactor) ?? reactor;
+        const combatant = this.combatantOf(undone);
+        const stats = this.statsOf(undone);
+        if (!combatant || !stats) return refuse("능력치를 알 수 없습니다");
+        const again = resolveSpell({ caster: casterCombatant, casterStats: card.context.casterStats, spec: card.context.spec, targets: [{ combatant, stats }], dice, fixedDamage: before.damage?.damage.map((part) => part.dice), saveAdjust: { d20: plan.d20, delta: plan.delta, label: command.feature }, apply: true });
+        const after = again.targets[0];
+        const worked = Boolean(after.save?.success);
+        // 전술적 사고 and 탁월한 기술 charge nothing for a rescue that did not work; the contract's `onlyOn` says so.
+        const paid = this.options.pcPayContract?.(undone.entry as JournalCharacter, offer.payments, worked ? "success" : "failure");
+        if (paid === null) return refuse("남은 횟수가 없습니다");
+        if (paid) this.storeEntry({ ...(undone.entry as JournalCharacter), runtime: { ...paid, updatedAt: this.now() }, updatedAt: this.now() });
+        const live = this.resolveActor(promptMessage.prompt.reactor) ?? undone;
+        const who = live.token?.name ?? live.entry.name;
+        const resolution: SpellResolution = { ...card.resolution, targets: card.resolution.targets.map((row, index) => (index === at ? after : row)), note: [card.resolution.note, `${who}: ${command.feature}`].filter(Boolean).join(" · ") };
+        card.rows[at] = this.applySpellRow(after, live, resolution);
+        const rows = card.rows;
+        const restoreCaster = card.restoreCaster ?? (() => undefined);
+        this.spells.set(promptMessage.prompt.rescue.cardId, { ...card, resolution, restore: () => { for (const restore of [...rows].reverse()) restore?.(); restoreCaster(); } });
+        this.sayWithId(promptMessage.prompt.rescue.cardId, { type: "spell", who: card.context.who, playerId: card.context.playerId, content: describeSpell(resolution), spell: resolution });
+        this.say({ ...promptMessage, prompt: { ...promptMessage.prompt, outcome: { rolled: userId } }, supersedes: promptMessage.id, content: `${promptMessage.content} → ${command.feature}: ${plan.parts.join(", ")} → ${after.save?.total} vs DC ${after.save?.dc} — ${worked ? "성공" : "여전히 실패"}` });
+        return;
+      }
       case "act.react": {
         // R29 (D155): out of turn a player had exactly three reactions and all three had to be offered to them.
         // Uncanny Dodge, Absorb Elements, Hellish Rebuke, Protection — none had a button, a prompt or a command.
@@ -1500,6 +1553,7 @@ export class TableHost {
       const applied = { ...resolution, applied: true };
       this.spells.set(messageId, { resolution: applied, rows, restoreCaster, context: context ? { ...context, who: displayName, playerId: userId } : undefined, restore: () => { for (const restore of [...rows].reverse()) restore?.(); restoreCaster(); } });
       this.sayWithId(messageId, { type: "spell", who: displayName, playerId: userId, content: describeSpell(applied), spell: applied });
+      this.offerRescues(messageId, applied, targets);
       if (this.spells.size > 100) this.spells.delete(this.spells.keys().next().value as string);
     };
     if (waits) {
@@ -1509,6 +1563,31 @@ export class TableHost {
     }
     apply();
     return messageId;
+  }
+
+  /**
+   * R35 (D174): the `d20.roll` slot, opened on a player character's failed saving throw. The contracts say what may
+   * happen next (불굴 rerolls, 어둠의 존재의 행운 adds a d10); the host only asks whoever owns the sheet, and asks
+   * nothing at all when no contract could be paid for.
+   */
+  private offerRescues(cardId: string, resolution: SpellResolution, targets: Array<{ entry: JournalEntry; token?: Token; page?: Page }>) {
+    if (!this.options.pcRescues) return;
+    resolution.targets.forEach((row, index) => {
+      const save = row.save;
+      if (!save || save.success || save.rescue) return;
+      const actor = targets[index];
+      if (!actor || actor.entry.kind !== "character") return;
+      const offers = this.options.pcRescues!(actor.entry, "saving-throw", "failure");
+      if (!offers.length) return;
+      const name = actor.token?.name ?? actor.entry.name;
+      const roll = `${save.d20}${save.bonus >= 0 ? "+" : "-"}${Math.abs(save.bonus)} = ${save.total} vs DC ${save.dc}`;
+      this.say({ type: "prompt", who: "", content: `${name}: ${resolution.name}의 ${ABILITY_KO[save.ability]} 내성 실패 (${roll}) — ${offers.map((offer) => offer.feature).join(" / ")}로 다시 굴릴까요?`, prompt: {
+        kind: "rescue",
+        mover: { name: resolution.caster.name, entryId: resolution.caster.id },
+        reactor: { name, entryId: actor.entry.id, pageId: actor.page?.id, tokenId: actor.token?.id },
+        rescue: { cardId, features: offers.map((offer) => offer.feature), roll },
+      } });
+    });
   }
 
   /** R9 (D103): an NPC's save action at its targets through the spell resolver; recharge is spent and comes back on undo. Returns the card id. */

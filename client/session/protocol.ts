@@ -12,7 +12,7 @@ import type { CastMethod } from "../character/play";
 import type { AttackOverrides } from "../rules/resolve";
 import type { CampaignClock, CampaignSettings, ChatMessage, Macro, PlayerRole, RollTable } from "../campaign/model";
 
-export const PROTOCOL_VERSION = 24;
+export const PROTOCOL_VERSION = 25;
 
 export interface Presence { userId: string; displayName: string; role: PlayerRole; color: string; connected: boolean }
 
@@ -115,6 +115,11 @@ export type ClientCommand =
   | { type: "act.react"; actor: ActorRef; name: string; note?: string; formula?: string }
   /** R29 (D154): the downed character's player rolls their own death save; the host rolls the die and applies it. */
   | { type: "act.deathSave"; messageId: string }
+  /**
+   * R35 (D174): answer a 구조 prompt — spend the named feature's contract to redo the failed save it names. The host
+   * pays the contract's `payments`, applies its `roll.modify` operations and resolves that target again.
+   */
+  | { type: "act.rescue"; messageId: string; feature: string }
   /** D102: cast a spell at the chosen targets; the host pays the slot, resolves every target and applies. */
   | { type: "act.cast"; caster: ActorRef; spellId: string; targets: ActorRef[]; method?: CastMethod; overrides?: AttackOverrides; readied?: boolean; /** R11: answering a shield prompt (its message id): the reaction spell against the held attack. */ reaction?: string }
   /** R9 (D103): an NPC's save action (breath, gaze …) at the chosen targets — resolved like a save spell; recharge is spent. */

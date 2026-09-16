@@ -35,7 +35,7 @@ export interface SpellCastSpec {
   exec: SpellExec;
 }
 
-export interface SpellSave { ability: AbilityKey; d20: number; bonus: number; total: number; dc: number; success: boolean; /** R10: the save was rolled with advantage and why (회피 on a DEX save). */ advantage?: string; dropped?: number; /** R12: the failure was turned into a success by Legendary Resistance. */ legendary?: boolean }
+export interface SpellSave { ability: AbilityKey; d20: number; bonus: number; total: number; dc: number; success: boolean; /** R10: the save was rolled with advantage and why (회피 on a DEX save). */ advantage?: string; dropped?: number; /** R12: the failure was turned into a success by Legendary Resistance. */ legendary?: boolean; /** R35 (D174): a contract was paid to redo this save, and what paid for it. */ rescue?: string }
 export interface SpellEffectStart { key: string; name: string; concentration: boolean; duration: string; rounds?: number; /** R10: the target repeats this save at the end of each of its turns and ends the effect on a success. */ endSave?: { ability: AbilityKey; dc: number } }
 
 /** R10: the SRD text that lets a target repeat the save at the end of each of its turns (hold person, blindness/deafness, sleep breath …). */
@@ -96,6 +96,11 @@ export interface CastInput {
   apply?: boolean;
   /** R12 (Legendary Resistance): the target's save counts as a success; the area damage dice stay as first rolled. */
   forceSaveSuccess?: boolean;
+  /**
+   * R35 (D174): a contract rescued this save after the fact (불굴, 어둠의 존재의 행운). `d20` replaces the die that
+   * was rolled and `delta` is added to the total; `label` names what paid for it, so the card says so.
+   */
+  saveAdjust?: { d20?: number; delta?: number; label?: string };
   fixedDamage?: number[][];
 }
 
@@ -113,7 +118,10 @@ export function resolveSpell(input: CastInput): SpellResolution {
     // R31 (D161): 마법 저항 — advantage on this save when what forced it is a spell, not a stat-block action.
     const resistant = Boolean(target.magicResistance) && input.spec.exec.spellId.slice(0, 4) !== "npc:";
     const advantaged = dodging || resistant;
-    const first = dice.d(20); const second = advantaged ? dice.d(20) : undefined; const d20 = second !== undefined ? Math.max(first, second) : first; const bonus = (stats.saves[key] ?? 0) - 2 * Math.max(0, target.exhaustion ?? 0); const total = d20 + bonus; return { ability: key, d20, bonus, total, dc: casterStats.saveDc, success: input.forceSaveSuccess ? true : total >= casterStats.saveDc, ...(input.forceSaveSuccess && total < casterStats.saveDc ? { legendary: true } : {}), ...(second !== undefined ? { advantage: dodging ? "회피" : "마법 저항", dropped: Math.min(first, second) } : {}) }; };
+    const first = dice.d(20); const second = advantaged ? dice.d(20) : undefined; const rolled = second !== undefined ? Math.max(first, second) : first;
+    // R35 (D174): the rescue replaces the die and adds its own dice before the DC is compared, so a save that was a
+    // failure can become a success and the whole row is resolved again from there.
+    const d20 = input.saveAdjust?.d20 ?? rolled; const bonus = (stats.saves[key] ?? 0) - 2 * Math.max(0, target.exhaustion ?? 0); const total = d20 + bonus + (input.saveAdjust?.delta ?? 0); return { ability: key, d20, bonus, total, dc: casterStats.saveDc, success: input.forceSaveSuccess ? true : total >= casterStats.saveDc, ...(input.saveAdjust?.label ? { rescue: input.saveAdjust.label } : {}), ...(input.forceSaveSuccess && total < casterStats.saveDc ? { legendary: true } : {}), ...(second !== undefined ? { advantage: dodging ? "회피" : "마법 저항", dropped: Math.min(first, second) } : {}) }; };
   // R28 (D150): a condition the target is immune to never lands, whoever asked for it.
   const conditionMarks = (trigger: "failed-save" | "hit" | "always", target?: Combatant) => (exec.effects ?? [])
     .filter((effect) => effect.trigger === trigger || effect.trigger === "always")

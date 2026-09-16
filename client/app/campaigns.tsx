@@ -17,6 +17,7 @@ import { TableClient, type TableStatus } from "../session/client";
 import { TableHost } from "../session/host";
 import type { ActorRef, AttackRef, AttackRiders, ClientCommand, Invite, RollPayload, TableSnapshot } from "../session/protocol";
 import { derivedOf, pcAttackSpec, pcCombatant, pcConcentrationKey } from "../rules/attackSpec";
+import { payContract, pcRescues } from "../rules/contractUse";
 import { pcStats, type ActionKind } from "../rules/actions";
 import { castableSpells, cheapestCast, pcSpell } from "../rules/spellcast";
 import { itemUse } from "../rules/items";
@@ -81,6 +82,8 @@ export interface CampaignsState {
   grantJournal: (id: string, userId: string, control: boolean) => void;
   react: (actor: ActorRef, name: string, options?: { note?: string; formula?: string }) => void;
   rollDeathSave: (messageId: string) => void;
+  /** R35 (D174): spend a contract to redo the failed save the prompt names. */
+  rescueRoll: (messageId: string, feature: string) => void;
   showJournal: (id: string) => void;
   /** Drop a consumed "show" request. */
   dismissShow: (id: string) => void;
@@ -355,6 +358,9 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
       pcAttackSpec: (entry, attackId, riders) => pcAttackSpec(entry, derivedOf(entry, catalogRef.current), attackId, riders),
       pcStats: (entry) => pcStats(derivedOf(entry, catalogRef.current)),
       pcSpell: (entry, spellId, method) => pcSpell(entry, derivedOf(entry, catalogRef.current), catalogRef.current, spellId, method),
+      // R35 (D174): the contract rescues a sheet could pay for, and what paying one costs it.
+      pcRescues: (entry, family, outcome) => pcRescues(entry, derivedOf(entry, catalogRef.current), catalogRef.current, family, outcome),
+      pcPayContract: (entry, payments, outcome) => payContract(entry.runtime, derivedOf(entry, catalogRef.current), payments, outcome),
       pcRest: (entry, kind) => { const derived = derivedOf(entry, catalogRef.current); return kind === "long" ? longRest(entry.runtime, derived) : shortRest(entry.runtime, derived); },
       pcReactionSpell: (entry, spellId) => { const derived = derivedOf(entry, catalogRef.current); if (!castableSpells(derived).includes(spellId)) return null; const view = catalogRef.current.spellById(spellId); return view ? cheapestCast(derived, entry.runtime, view.level) : null; },
       pcItem: (entry, instanceId) => { const derived = derivedOf(entry, catalogRef.current); const item = derived.inventory.find((candidate) => candidate.instanceId === instanceId); if (!item || item.quantity <= 0) return null; const use = itemUse(item); return { name: item.name, heal: use.heal, text: use.text, consumes: use.consumes, consume: (runtime) => (use.consumes ? setItemQuantity(runtime, derived, instanceId, item.quantity - 1) : runtime) }; },
@@ -464,6 +470,7 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
   /** R29 (D155): declare a reaction of your own; (D154) roll your own death save. */
   const react = useCallback((actor: ActorRef, name: string, options: { note?: string; formula?: string } = {}) => send({ type: "act.react", actor, name, ...options }), [send]);
   const rollDeathSave = useCallback((messageId: string) => send({ type: "act.deathSave", messageId }), [send]);
+  const rescueRoll = useCallback((messageId: string, feature: string) => send({ type: "act.rescue", messageId, feature }), [send]);
   const showJournal = useCallback((id: string) => send({ type: "journal.show", id }), [send]);
   const dismissShow = useCallback((id: string) => setShows((list) => list.filter((item) => item !== id)), []);
 
@@ -547,7 +554,7 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
   const table = useMemo<TableState>(() => ({ role, status: client ? client.status : "idle", reason: client?.reason ?? null, campaignId, snapshot: client?.snapshot ?? null, invite, invites, transportNote, refusals, shows, artUrls, artPending }),
   // eslint-disable-next-line react-hooks/exhaustive-deps
   [role, client, campaignId, invite, invites, transportNote, refusals, shows, artUrls, artPending, tick]);
-  const value = useMemo<CampaignsState>(() => ({ userId, seat, displayName, setDisplayName, campaigns, joined, archives, journals, arts, pages, createCampaign, updateCampaign, deleteCampaign, regenerateJoinCode, forgetJoined, table, launch, join, leave, say, sendRoll, setRole, kick, putJournal, removeJournal, grantJournal, showJournal, dismissShow, uploadArt, updateArt, removeArt, requestArt, putPage, removePage, setRibbon, setBookmark, putToken, removeToken, setTracker, addTurn, nextTurn, swapTurn, attack, npcSave, legendary, useItem, useTrait, spendEconomy, advanceTime, tableRest, askRest, saveMacros, saveTables, rollTable, summon, dismissSummons, resist, provoke, act, cast, declineReaction, react, rollDeathSave, adjustAction, undoAction, confirmAction }),
+  const value = useMemo<CampaignsState>(() => ({ userId, seat, displayName, setDisplayName, campaigns, joined, archives, journals, arts, pages, createCampaign, updateCampaign, deleteCampaign, regenerateJoinCode, forgetJoined, table, launch, join, leave, say, sendRoll, setRole, kick, putJournal, removeJournal, grantJournal, showJournal, dismissShow, uploadArt, updateArt, removeArt, requestArt, putPage, removePage, setRibbon, setBookmark, putToken, removeToken, setTracker, addTurn, nextTurn, swapTurn, attack, npcSave, legendary, useItem, useTrait, spendEconomy, advanceTime, tableRest, askRest, saveMacros, saveTables, rollTable, summon, dismissSummons, resist, provoke, act, cast, declineReaction, react, rollDeathSave, rescueRoll, adjustAction, undoAction, confirmAction }),
     [userId, seat, displayName, setDisplayName, campaigns, joined, archives, journals, arts, pages, createCampaign, updateCampaign, deleteCampaign, regenerateJoinCode, forgetJoined, table, launch, join, leave, say, sendRoll, setRole, kick, putJournal, removeJournal, grantJournal, showJournal, dismissShow, uploadArt, updateArt, removeArt, requestArt, putPage, removePage, setRibbon, setBookmark, putToken, removeToken, setTracker, addTurn, nextTurn, swapTurn, attack, npcSave, legendary, useItem, useTrait, spendEconomy, advanceTime, tableRest, askRest, saveMacros, saveTables, rollTable, summon, dismissSummons, resist, adjustAction, undoAction, confirmAction]);
   return <CampaignsContext.Provider value={value}>{children}</CampaignsContext.Provider>;
 }

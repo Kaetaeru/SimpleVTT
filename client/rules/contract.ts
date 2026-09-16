@@ -65,7 +65,7 @@ export type ContractOperation =
   | { kind: "economy.modify"; bucket: string; amount: Expr }
   | { kind: "condition.apply"; condition: string; target: string; when?: Expr }
   | { kind: "healing.apply"; amount: Expr; target: string; when?: Expr }
-  | { kind: "roll.modify"; mode: string; dice?: string; value?: Expr; diceResourceId?: string };
+  | { kind: "roll.modify"; mode: string; dice?: string; value?: Expr; diceResourceId?: string; when?: Expr };
 
 /** The saving throw an entry point forces before its operations run. */
 export interface ContractTest {
@@ -146,7 +146,7 @@ function parseOperations(raw: unknown, path: string, unsupported: string[]): Con
     if (kind === "healing.apply") { out.push({ kind, amount: (operation.amount as Expr) ?? { value: 0 }, target: String(operation.target ?? "self"), when: isExpr(operation.when) ? operation.when : undefined }); return; }
     const mode = String(operation.mode ?? "");
     if (!ROLL_MODES.has(mode)) { unsupported.push(`${at}: roll.modify ${mode || "모드 없음"}`); return; }
-    out.push({ kind: "roll.modify", mode, dice: operation.dice ? String(operation.dice) : undefined, value: isExpr(operation.value) ? operation.value : undefined, diceResourceId: operation.diceResource ? resourceIdOf(String(operation.diceResource)) : undefined });
+    out.push({ kind: "roll.modify", mode, dice: operation.dice ? String(operation.dice) : undefined, value: isExpr(operation.value) ? operation.value : undefined, diceResourceId: operation.diceResource ? resourceIdOf(String(operation.diceResource)) : undefined, when: isExpr(operation.when) ? operation.when : undefined });
   });
   return out;
 }
@@ -281,4 +281,68 @@ export function characterScope(character: ScopeCharacter, extra: Record<string, 
     if (level) return character.classes.find((entry) => entry.classId === level[1])?.level ?? 0;
     return undefined;
   };
+}
+
+/** R35 (D174): what a contract's `roll.modify` operations do to one d20 once the dice have spoken. */
+export interface RollModifyPlan {
+  /** A fresh d20 replaces the first one (불굴). */
+  d20?: number;
+  /** Added to the total (extra dice, flat bonuses); negative for `subtract-die`. */
+  delta: number;
+  /** One phrase per operation, for the card ("1d20 재굴림 → 14", "+1d10 = 7"). */
+  parts: string[];
+}
+
+/**
+ * Work out an interceptor's effect on a roll. `dice.d(sides)` is the host's own roller, so the result is as
+ * reproducible as everything else it rolls; `poolDie` answers `subtract-die`'s `diceResource` (the bard's
+ * inspiration die), which this engine does not track yet and which therefore contributes nothing rather than a guess.
+ */
+export function planRollModify(operations: ContractOperation[], scope: Scope, dice: { d: (sides: number) => number }, poolDie?: (resourceId: string) => number | undefined): RollModifyPlan {
+  const plan: RollModifyPlan = { delta: 0, parts: [] };
+  const rollDice = (formula: string) => {
+    const match = /^(\d*)d(\d+)$/.exec(formula.trim());
+    if (!match) return null;
+    const count = Number(match[1] || 1);
+    const sides = Number(match[2]);
+    let total = 0;
+    for (let index = 0; index < count; index += 1) total += dice.d(sides);
+    return { total, sides, count };
+  };
+  for (const operation of operations) {
+    if (operation.kind !== "roll.modify") continue;
+    if (operation.when && evaluate(operation.when, scope) !== true) continue;
+    switch (operation.mode) {
+      case "reroll": {
+        const rolled = rollDice(operation.dice ?? "1d20");
+        if (!rolled) break;
+        plan.d20 = rolled.total;
+        plan.parts.push(`${operation.dice ?? "1d20"} 재굴림 → ${rolled.total}`);
+        break;
+      }
+      case "add-die": {
+        const rolled = rollDice(operation.dice ?? "");
+        if (!rolled) break;
+        plan.delta += rolled.total;
+        plan.parts.push(`+${operation.dice} = ${rolled.total}`);
+        break;
+      }
+      case "subtract-die": {
+        const sides = operation.dice ? rollDice(operation.dice)?.total : operation.diceResourceId ? poolDie?.(operation.diceResourceId) : undefined;
+        if (sides === undefined) break;
+        plan.delta -= sides;
+        plan.parts.push(`−${sides}`);
+        break;
+      }
+      case "add-flat": {
+        const value = Number(evaluate(operation.value, scope));
+        if (!Number.isFinite(value)) break;
+        plan.delta += value;
+        plan.parts.push(`${value >= 0 ? "+" : ""}${value}`);
+        break;
+      }
+      default: break;
+    }
+  }
+  return plan;
 }
