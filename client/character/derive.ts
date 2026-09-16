@@ -17,6 +17,7 @@ import { applyPassiveContracts, applyActiveEffects } from "../rules/effects";
 import { featureRuleKey } from "../rules/activation";
 import { characterScope } from "../rules/contract";
 import { contractDurations, contractSummary, featureContract } from "../rules/contractActivation";
+import { characterRiders } from "../rules/attackRiders";
 import { applyBackground, applyLanguages, applySpecies, damageTypeKo } from "./origin";
 import { dieMinimumCovers } from "./featRules";
 import { validateAbilities } from "./source";
@@ -65,6 +66,8 @@ export function deriveCharacter(source: CharacterSource, catalog: ContentCatalog
     if (contract) { const summary = contractSummary(contract, characterScope(derived)); feature.rules = [...(feature.rules ?? []), ...summary.rules]; feature.execution = summary.execution; }
   }
   derived.featureContracts = featureContracts;
+  // R52 (D187): what this sheet may declare in the attack dialog, worked out once and carried with it.
+  derived.attackRiders = characterRiders(derived, catalog);
   // R43 (D183): passives first (they are always on), then whatever is running right now.
   const passive = applyPassiveContracts(derived, catalog);
   return options.effects?.length ? applyActiveEffects(passive, options.effects, catalog) : passive;

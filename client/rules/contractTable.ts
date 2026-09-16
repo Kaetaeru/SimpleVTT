@@ -27,6 +27,7 @@ export function tableOutcome(derived: DerivedCharacter, catalog: ContentCatalog,
   const outcome = contractOutcome(contract, scope);
   const applied: string[] = [];
   for (const entry of contract.entryPoints) {
+    if (entry.invocation === "pre-roll-attack") continue;
     for (const operation of entry.operations) {
       if (operation.kind !== "condition.apply") continue;
       if (operation.when && evaluate(operation.when, scope) !== true) continue;

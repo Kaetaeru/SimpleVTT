@@ -309,6 +309,19 @@ export function advanceRound(runtime: CharacterRuntime, rounds = 1): CharacterRu
   return stamp(next, `${rounds === 1 ? "라운드 진행" : `${rounds}라운드 지남`} (${running.join(", ") || "진행 중인 효과 없음"})`);
 }
 
+/**
+ * R52 (D187): spend a pool by id, for a rider declared in the attack dialog rather than pressed on the sheet. The
+ * pool is capped at its own maximum, so a rider can never overdraw what `useFeature` would have refused.
+ */
+export function spendResource(runtime: CharacterRuntime, derived: DerivedCharacter, resourceId: string, cost: number, label: string): CharacterRuntime {
+  const resource = derived.resources.find((item) => item.id === resourceId);
+  if (!resource || cost <= 0) return runtime;
+  const used = runtime.resourcesUsed[resourceId] ?? 0;
+  const spend = Math.min(cost, resource.max - used);
+  if (spend <= 0) return runtime;
+  return stamp({ ...runtime, resourcesUsed: { ...runtime.resourcesUsed, [resourceId]: used + spend } }, `${label}: ${resource.max - used - spend}/${resource.max} 남음`);
+}
+
 export interface FeatureUseExtras { healRoll?: number; tempRoll?: number; points?: number; /** A logged roll ("브레스 무기 피해 14"). */ rolled?: { label: string; total: number } }
 
 /** Press "사용" on a feature: spend the pool (one use or a number of points), heal or grant temp HP from a roll, start its timed effect, log. */

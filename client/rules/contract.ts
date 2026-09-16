@@ -92,7 +92,7 @@ export type ContractOperation =
   /** R40 (D180): dice rolled and applied as healing or temporary hit points; `dice` and `amount` add up to the formula. */
   | { kind: "temp-hp.grant"; dice?: string; amount?: Expr; target: string; when?: Expr }
   /** R40 (D180): dice rolled and logged as damage a feature deals (Breath Weapon), without choosing who takes it. */
-  | { kind: "damage.apply"; dice?: string; amount?: Expr; damageType: string; target: string; when?: Expr }
+  | { kind: "damage.apply"; dice?: string; /** R52 (D187): how many of `dice` to roll, when a level table decides it (광란's 격노 피해 보너스만큼의 d6). */ diceCount?: Expr; amount?: Expr; damageType: string; target: string; when?: Expr }
   /** R41 (D181): the last of the vocabulary — the rest of what a contract may ask this engine to do. */
   | { kind: "condition.remove"; condition: string; target: string; when?: Expr }
   | { kind: "hp.maximum.change"; amount: Expr; target: string; when?: Expr }
@@ -124,6 +124,12 @@ export interface ContractEntryPoint {
   targeting?: { from: string; min: number; max: number };
   test?: ContractTest;
   operations: ContractOperation[];
+  /**
+   * R52 (D187): an entry point invoked as `pre-roll-attack` is declared in the attack dialog before the dice, not
+   * pressed on the sheet. `scope` is the weapon filter it applies to (the same vocabulary `property.modify` uses),
+   * `requiresEffects` the effects that must already be running, and `oncePerTurn` the budget the player keeps.
+   */
+  attack?: { scope?: string; oncePerTurn: boolean; requiresEffects: string[] };
 }
 
 export interface ContractInterceptor {
@@ -251,7 +257,7 @@ function parseOperations(raw: unknown, path: string, unsupported: string[]): Con
     if (kind === "temp-hp.grant" || kind === "damage.apply") {
       const raw = operation.amount;
       const amount = isExpr(raw) ? raw : raw === undefined ? undefined : { value: raw };
-      if (kind === "damage.apply") out.push({ kind, dice: operation.dice ? String(operation.dice) : undefined, amount, damageType: String(operation.damageType ?? "타격"), target: String(operation.target ?? "target"), when: isExpr(operation.when) ? operation.when : undefined });
+      if (kind === "damage.apply") out.push({ kind, dice: operation.dice ? String(operation.dice) : undefined, diceCount: isExpr(operation.diceCount) ? operation.diceCount : operation.diceCount === undefined ? undefined : { value: operation.diceCount }, amount, damageType: String(operation.damageType ?? "타격"), target: String(operation.target ?? "target"), when: isExpr(operation.when) ? operation.when : undefined });
       else out.push({ kind, dice: operation.dice ? String(operation.dice) : undefined, amount, target: String(operation.target ?? "self"), when: isExpr(operation.when) ? operation.when : undefined });
       return;
     }
@@ -314,7 +320,9 @@ export function parseContract(config: Record<string, unknown>, entryId: string):
   for (const [index, item] of (Array.isArray(config.entryPoints) ? config.entryPoints : []).entries()) {
     const entry = item as Record<string, unknown>;
     const invocation = String(entry.invocation ?? "manual");
-    if (invocation !== "manual") unsupported.push(`entryPoints[${index}].invocation: ${invocation}`);
+    // R52 (D187): `pre-roll-attack` is the second invocation this executor runs — the attack dialog offers it.
+    if (invocation !== "manual" && invocation !== "pre-roll-attack") unsupported.push(`entryPoints[${index}].invocation: ${invocation}`);
+    const attack = entry.attack as { scope?: string; oncePerTurn?: boolean; requiresEffects?: unknown } | undefined;
     let test: ContractTest | undefined;
     const rawTest = entry.test as Record<string, unknown> | undefined;
     if (rawTest) {
@@ -331,6 +339,7 @@ export function parseContract(config: Record<string, unknown>, entryId: string):
       id: String(entry.id ?? `entry${index}`), invocation,
       ...(targeting ? { targeting: { from: String(targeting.from ?? "targets"), min: targeting.min ?? 1, max: targeting.max ?? 1 } } : {}),
       ...(test ? { test } : {}),
+      ...(invocation === "pre-roll-attack" ? { attack: { ...(attack?.scope ? { scope: String(attack.scope) } : {}), oncePerTurn: attack?.oncePerTurn !== false, requiresEffects: Array.isArray(attack?.requiresEffects) ? attack!.requiresEffects.map(String) : [] } } : {}),
       operations: parseOperations(entry.operations, `entryPoints[${index}].operations`, unsupported),
     });
   }

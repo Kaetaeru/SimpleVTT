@@ -4,6 +4,7 @@
  */
 import type { AbilityKey } from "../catalog/types";
 import type { ParsedDuration } from "../rules/activation";
+import type { ContractRider } from "../rules/attackRiders";
 
 export type AbilityScores = Record<AbilityKey, number>;
 
@@ -236,6 +237,11 @@ export interface DerivedCharacter {
   damageReduction?: Array<{ types: string[]; amount: number; source: string }>;
   /** R51 (D186): damage types whose resistance this character's own damage ignores (원소 숙련자, 독 제조자). */
   ignoresResistance?: string[];
+  /**
+   * R52 (D187): the riders this character's contracts let them declare before an attack roll. Carried on the sheet
+   * for the same reason `featureContracts` is: a caller that forgets to ask the catalog would silently lose the rule.
+   */
+  attackRiders?: ContractRider[];
   /**
    * R49 (D184): what each of this character's features' contracts says about using it, worked out at derivation and
    * carried as plain data. Without this every caller of `featureActivation` would have to remember to hand it the

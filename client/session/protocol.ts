@@ -12,7 +12,8 @@ import type { CastMethod } from "../character/play";
 import type { AttackOverrides } from "../rules/resolve";
 import type { CampaignClock, CampaignSettings, ChatMessage, Macro, PlayerRole, RollTable } from "../campaign/model";
 
-export const PROTOCOL_VERSION = 26;
+// R52 (D187): 27 — `AttackRiders.contracts`, the riders a contract declares for the pre-roll dialog.
+export const PROTOCOL_VERSION = 27;
 
 export interface Presence { userId: string; displayName: string; role: PlayerRole; color: string; connected: boolean }
 
@@ -50,7 +51,12 @@ export interface TableSnapshot {
 export interface ActorRef { entryId?: string; pageId?: string; tokenId?: string }
 /** Which attack: a sheet attack row, an NPC action, or (R8) a spell. */
 export type AttackRef = { source: "weapon"; attackId: string } | { source: "npc"; actionName: string } | { source: "spell"; spellId: string; slotLevel?: number };
-export interface AttackRiders { sneak?: boolean; smiteSlot?: number; /** R12: the Cleave mastery's follow-up attack (no ability modifier to damage). */ cleave?: boolean; /** R32 (D166): 야만적 공격자 — reroll this swing's weapon damage dice and keep the better set. */ savage?: boolean; /** R33 (D168): the off-hand swing of a two-weapon set — no ability modifier on its damage without 쌍수 전투. */ offHand?: boolean }
+/**
+ * R52 (D187): the five named riders are the ones this engine has always known by name; `contracts` is the open half —
+ * rule keys of `pre-roll-attack` entry points the player ticked in the dialog, resolved against the sheet's own
+ * `attackRiders`. A key the sheet does not offer is ignored rather than trusted.
+ */
+export interface AttackRiders { contracts?: string[]; sneak?: boolean; smiteSlot?: number; /** R12: the Cleave mastery's follow-up attack (no ability modifier to damage). */ cleave?: boolean; /** R32 (D166): 야만적 공격자 — reroll this swing's weapon damage dice and keep the better set. */ savage?: boolean; /** R33 (D168): the off-hand swing of a two-weapon set — no ability modifier on its damage without 쌍수 전투. */ offHand?: boolean }
 
 export interface RollPayload { formula: string; total: number; /** R17: a die kept out of the total (kh/kl), one that came from an explosion, or one that counted as a success. */ dice: Array<{ sides: number; value: number; dropped?: boolean; exploded?: boolean; success?: boolean }>; modifier: number; label?: string; /** R17: set when the formula counts successes instead of summing. */ successes?: number; /** R17: rows drawn from a rollable table. */ drawn?: string[] }
 

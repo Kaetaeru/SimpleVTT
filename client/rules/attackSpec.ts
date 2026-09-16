@@ -8,7 +8,8 @@ import type { Token } from "../campaign/page";
 import type { ContentCatalog } from "../catalog/catalog";
 import { deriveCharacter } from "../character/derive";
 import type { CharacterRuntime } from "../character/runtime";
-import { useSpellSlot } from "../character/play";
+import { spendResource, useSpellSlot } from "../character/play";
+import { riderFitsAttack } from "./attackRiders";
 import type { DerivedAttack, DerivedCharacter } from "../character/types";
 import type { MonsterAction, MonsterView } from "../compendium/monsters";
 import { damageFormula } from "../compendium/monsters";
@@ -120,12 +121,21 @@ export function pcAttackSpec(entry: JournalCharacter, derived: DerivedCharacter,
     extra.push({ formula: `${1 + level}d8`, type: "광휘", label: `${SMITE_LABEL} (${level}레벨 슬롯)` });
     spenders.push((runtime) => useSpellSlot(runtime, derived, level));
   }
+  // R52 (D187): the open half of the riders — whatever the player ticked in the dialog, matched against the riders
+  // this sheet actually offers. A key the sheet does not carry is dropped, so the wire cannot invent damage.
+  for (const key of riders.contracts ?? []) {
+    const rider = (derived.attackRiders ?? []).find((item) => item.key === key);
+    if (!rider || !riderFitsAttack(rider, attack)) continue;
+    for (const part of rider.damage) extra.push({ formula: part.formula, type: part.type === "weapon" ? attack.damageType : part.type, label: rider.label, critDoubles: /d\d/.test(part.formula) });
+    if (rider.resourceId && rider.cost) { const { resourceId, cost, label } = rider; spenders.push((runtime) => spendResource(runtime, derived, resourceId, cost, label)); }
+  }
   const abilityMod = derived.abilities[attack.ability].modifier;
   const mastery = attack.masteryActive && attack.masteryKey && !cleave ? attack.masteryKey : undefined;
   // R32 (D166): 야만적 공격자 — the player asked for the reroll in the pre-roll dialog and has the feat.
   const savageFeat = riders.savage ? savageAttackerFeat(derived) : undefined;
   const savage = Boolean(savageFeat);
-  return { spec: { name: `${cleave ? `${attack.name} · 쪼개기` : offHand ? `${attack.name} · 보조 손` : attack.name}${savageFeat ? ` · ${savageFeat}` : ""}`, source: "weapon", attackBonus: attack.attackBonus, mode: range.mode, damage, riders: extra, ...(derived.critRange ? { critRange: derived.critRange } : {}), ...(savage ? { savage } : {}), ...(mastery ? { mastery, abilityMod, masteryDc: 8 + abilityMod + derived.proficiencyBonus } : {}) }, spend: (runtime) => spenders.reduce((acc, spend) => spend(acc), runtime) };
+  const declared = (riders.contracts ?? []).map((key) => (derived.attackRiders ?? []).find((item) => item.key === key)).filter((item) => item && riderFitsAttack(item, attack)).map((item) => item!.label);
+  return { spec: { name: `${cleave ? `${attack.name} · 쪼개기` : offHand ? `${attack.name} · 보조 손` : attack.name}${savageFeat ? ` · ${savageFeat}` : ""}${declared.length ? ` · ${declared.join(" · ")}` : ""}`, source: "weapon", attackBonus: attack.attackBonus, mode: range.mode, damage, riders: extra, ...(derived.critRange ? { critRange: derived.critRange } : {}), ...(savage ? { savage } : {}), ...(mastery ? { mastery, abilityMod, masteryDc: 8 + abilityMod + derived.proficiencyBonus } : {}) }, spend: (runtime) => spenders.reduce((acc, spend) => spend(acc), runtime) };
 }
 
 export function npcAttackSpec(entry: JournalNpc, actionName: string): AttackSpec | null {

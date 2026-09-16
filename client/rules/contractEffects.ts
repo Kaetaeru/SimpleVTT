@@ -58,7 +58,8 @@ export function contractEffect(contract: CommonPlayContract, scope: Scope): { ap
   const application: EffectApplication = {};
   const unknown: string[] = [];
   const notes: string[] = [];
-  const operations = [...contract.entryPoints.flatMap((entry) => entry.operations), ...contract.interceptors.flatMap((item) => item.operations)];
+  // R52 (D187): a pre-roll rider is not a standing property; it belongs to the attack dialog.
+  const operations = [...contract.entryPoints.filter((entry) => entry.invocation !== "pre-roll-attack").flatMap((entry) => entry.operations), ...contract.interceptors.flatMap((item) => item.operations)];
   let describes = false;
   for (const operation of operations) {
     // R49 (D184): a question for the table is a line on the sheet too — that is what the hand-written rules' `notes`
@@ -109,3 +110,5 @@ export function contractEffect(contract: CommonPlayContract, scope: Scope): { ap
 
 /** The attack scopes a `property.modify` may narrow itself to. */
 export const attackScopes = () => Object.keys(SCOPES);
+/** R52 (D187): the same filters, for a pre-roll rider that narrows itself to a weapon the same way. */
+export const attackScopeFilter = (scope: string) => SCOPES[scope];
