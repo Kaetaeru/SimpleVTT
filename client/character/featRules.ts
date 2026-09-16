@@ -73,6 +73,21 @@ export function featNotes(config: Record<string, unknown>): string[] {
   const resistances = strings(config.resistances);
   if (resistances.length) notes.push(`${resistances.map(damageTypeKo).join("·")} 피해 저항`);
   if (typeof config.freeCastReset === "string") notes.push(`고른 주문을 ${resetKo(config.freeCastReset)}마다 한 번 슬롯 없이 시전합니다`);
+  // R62 (D197): the choice keys a patch module may add. Each one is a question the wizard asks, so the sheet says so.
+  if (config.allSkillProficiencies === true) notes.push("모든 기술에 숙련");
+  const expertise = config.expertiseChoice as { count?: number } | undefined;
+  if (expertise) notes.push(`숙련된 기술 ${expertise.count ?? 1}개에 전문화`);
+  const saveChoice = config.saveProficiencyChoice as { follows?: string } | undefined;
+  if (saveChoice) notes.push(saveChoice.follows === "ability-increase" ? "올린 능력치의 내성 굴림에 숙련" : "고른 능력치의 내성 굴림에 숙련");
+  const resistanceChoice = config.resistanceChoice as { count?: number } | undefined;
+  if (resistanceChoice) notes.push(`고른 피해 유형 ${resistanceChoice.count ?? 1}가지에 저항`);
+  const ignoreChoice = config.ignoreResistanceChoice as { count?: number } | undefined;
+  if (ignoreChoice) notes.push("자신의 피해가 고른 유형의 저항을 무시합니다");
+  const masteryChoice = config.weaponMasteryChoice as { count?: number } | undefined;
+  if (masteryChoice) notes.push(`무기 ${masteryChoice.count ?? 1}종의 통달 속성을 씁니다`);
+  const granted = [...strings(config.grantCantrips), ...strings(config.grantSpells)];
+  if (granted.length) notes.push("고른 주문을 항상 준비합니다");
+  if (config.grantSpellChoice) notes.push("만들기·레벨업에서 고른 주문을 항상 준비합니다");
   if (config.abilityIncrease || config.proficiencyChoice || config.choices) notes.push("만들기·레벨업에서 고른 값이 시트에 반영됩니다");
   return notes;
 }

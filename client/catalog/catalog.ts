@@ -200,6 +200,34 @@ function presentationOf(entry: EntryJson) {
   return { name: locale?.name ?? entry.presentation?.originalName ?? entry.id, nameEn: entry.presentation?.originalName ?? entry.id, summary: locale?.summary, description: locale?.description };
 }
 
+/**
+ * R62 (D197): merge a patch entry onto the one already in the catalog. Mechanics are matched by kind and their
+ * configs shallow-merged with the patch winning; a kind the patch does not mention is kept whole, and so is the
+ * presentation unless the patch brings its own. A patch that only carries `feat-definition` therefore adds machine
+ * keys to somebody else's feat without touching a word of its text.
+ */
+function patchEntry(existing: CatalogEntry, patch: CatalogEntry, raw: EntryJson): CatalogEntry {
+  const mechanics = [
+    ...existing.mechanics.map((item) => {
+      const incoming = patch.mechanics.find((candidate) => candidate.kind === item.kind);
+      return incoming ? { ...item, config: { ...(item.config ?? {}), ...(incoming.config ?? {}) } } : item;
+    }),
+    ...patch.mechanics.filter((item) => !existing.mechanics.some((candidate) => candidate.kind === item.kind)),
+  ];
+  const named = Boolean(raw.presentation);
+  return {
+    ...existing,
+    ...(named ? { name: patch.name, nameEn: patch.nameEn, summary: patch.summary, description: patch.description } : {}),
+    tags: [...new Set([...existing.tags, ...patch.tags])],
+    mechanics,
+    relationships: patch.relationships.length ? patch.relationships : existing.relationships,
+    progressionContributions: patch.progressionContributions.length ? patch.progressionContributions : existing.progressionContributions,
+    // The text is still the module that wrote it; only the scope changes, so an installed patch is removable.
+    moduleId: existing.moduleId,
+    scope: patch.scope,
+  };
+}
+
 function mechanic<T = Record<string, unknown>>(entry: { mechanics: Array<{ kind: string; config?: Record<string, unknown> }> }, kind: string): T | undefined {
   return entry.mechanics.find((item) => item.kind === kind)?.config as T | undefined;
 }
@@ -268,10 +296,16 @@ export class ContentCatalog {
         tags: raw.tags ?? [], mechanics: raw.mechanics ?? [], relationships: raw.relationships ?? [], progressionContributions: raw.progressionContributions ?? [],
         moduleId: module.moduleId, scope,
       };
-      if (this.entries.has(raw.id) && scope === "installed") this.warnings.push(`설치 모듈 ${module.moduleId}의 ${raw.id}가 기존 항목을 덮어씁니다.`);
-      this.entries.set(raw.id, entry);
-      const contract = mechanic<Record<string, unknown>>(entry, "common-play");
-      if (contract) { const parsed = parseContract(contract, entry.id); this.contracts.set(parsed.ruleKey, parsed); }
+      const existing = this.entries.get(raw.id);
+      // R62 (D197): a module may *patch* an entry instead of replacing it. Where both carry the same mechanic kind,
+      // the configs are merged with the newer one winning key by key, and anything the patch leaves out — the
+      // presentation, the description, the other mechanics — is kept. That is what lets a small module fill in the
+      // machine-readable half of somebody else's content without restating its text.
+      if (existing && scope === "installed") this.entries.set(raw.id, patchEntry(existing, entry, raw));
+      else this.entries.set(raw.id, entry);
+      const merged = this.entries.get(raw.id)!;
+      const contract = mechanic<Record<string, unknown>>(merged, "common-play");
+      if (contract) { const parsed = parseContract(contract, merged.id); this.contracts.set(parsed.ruleKey, parsed); }
     }
   }
 

@@ -9,7 +9,7 @@ import type { AbilityKey } from "../catalog/types";
 import { ABILITY_KEYS, ABILITY_KO } from "../catalog/types";
 import { ABILITY_SCORE_MAX } from "../rules/tables";
 import { SPELLCASTING_ABILITY } from "../rules/classes";
-import { abilityOptions, allToolOptions, skillOptions, spellOptions, toolName } from "./choices";
+import { abilityOptions, allToolOptions, damageTypeOptions, skillOptions, spellOptions, toolName, weaponMasteryOptions } from "./choices";
 import { featDieMinimum, featExecutionStatus, featNotes, resetKo } from "./featRules";
 import type { Ledger } from "./ledger";
 
@@ -43,12 +43,14 @@ export function applyFeat(ledger: Ledger, feat: FeatView, instance: FeatInstance
     for (const key of picked) ledger.addAbilityBonus(key as AbilityKey, amount, instance.sourceLabel, ABILITY_SCORE_MAX);
   }
 
+  /** R62 (D197): which ability this feat raised. 회복력's save and the spell feats' casting ability are both "the ability you increased". */
+  let raised: AbilityKey | undefined;
   // Generic ability increase (general feats +1 to one of a set, epic boons +1 up to 30).
   if (feat.abilityIncrease) {
     const keys = feat.abilityIncrease.any ?? ABILITY_KEYS;
     const cap = feat.abilityIncrease.maximum ?? ABILITY_SCORE_MAX;
-    const key = keys.length === 1 ? keys[0] : ledger.askOne({ ...ask, id: `${prefix}.ability`, label: `+${feat.abilityIncrease.amount} 능력치`, options: abilityOptions(keys, (item) => ledger.abilityScore(item), feat.abilityIncrease.amount, cap) });
-    if (key) ledger.addAbilityBonus(key as AbilityKey, feat.abilityIncrease.amount, `${instance.sourceLabel} · ${feat.name}`, cap);
+    raised = (keys.length === 1 ? keys[0] : ledger.askOne({ ...ask, id: `${prefix}.ability`, label: `+${feat.abilityIncrease.amount} 능력치`, options: abilityOptions(keys, (item) => ledger.abilityScore(item), feat.abilityIncrease.amount, cap) })) as AbilityKey | undefined;
+    if (raised) ledger.addAbilityBonus(raised, feat.abilityIncrease.amount, `${instance.sourceLabel} · ${feat.name}`, cap);
   }
 
   // Magic Initiate and similar: a spell list, cantrips, level-1 spells, a casting ability.
@@ -75,15 +77,110 @@ export function applyFeat(ledger: Ledger, feat: FeatView, instance: FeatInstance
   }
 
   // Skilled and similar: proficiency choices among skills and tools.
-  const proficiencyChoice = config.proficiencyChoice as { count: number; kinds: string[] } | undefined;
+  /**
+   * R62 (D197): `skills` narrows the list to the ones the feat names (예리한 정신's five, 관찰력's three), and
+   * `upgradeToExpertise` is those two feats' second sentence — "숙련이 없다면 숙련을, 이미 숙련되어 있다면
+   * 전문화를". Without it the pick silently did nothing for a character who already had the skill.
+   */
+  const proficiencyChoice = config.proficiencyChoice as { count: number; kinds: string[]; skills?: string[]; upgradeToExpertise?: boolean } | undefined;
   if (proficiencyChoice) {
+    const skills = proficiencyChoice.skills?.length ? proficiencyChoice.skills : "any";
     const options = [
-      ...(proficiencyChoice.kinds.includes("skill") ? skillOptions(catalog, "any", (id) => ledger.hasSkill(id)) : []),
+      ...(proficiencyChoice.kinds.includes("skill") ? skillOptions(catalog, skills, (id) => ledger.hasSkill(id) && !proficiencyChoice.upgradeToExpertise) : []),
       ...(proficiencyChoice.kinds.includes("tool") ? allToolOptions(catalog, (id) => ledger.tools.has(id)) : []),
     ];
-    const picked = ledger.ask({ ...ask, id: `${prefix}.proficiencies`, label: "숙련 (기술 또는 도구)", count: proficiencyChoice.count, options });
+    const label = proficiencyChoice.kinds.includes("tool") ? "숙련 (기술 또는 도구)" : proficiencyChoice.upgradeToExpertise ? "숙련 (이미 숙련이면 전문화)" : "기술 숙련";
+    const picked = ledger.ask({ ...ask, id: `${prefix}.proficiencies`, label, count: proficiencyChoice.count, options });
     for (const id of picked) {
-      if (catalog.skills[id]) ledger.addSkill(id, feat.name); else ledger.tools.set(id, toolName(catalog, id));
+      if (!catalog.skills[id]) { ledger.tools.set(id, toolName(catalog, id)); continue; }
+      if (proficiencyChoice.upgradeToExpertise && ledger.hasSkill(id)) ledger.addExpertise(id, feat.name);
+      else ledger.addSkill(id, feat.name);
+    }
+  }
+
+  /** R62 (D197): 기술의 은총 — proficiency in every skill, no question to ask. */
+  if (config.allSkillProficiencies === true) for (const id of Object.keys(catalog.skills)) if (!ledger.hasSkill(id)) ledger.addSkill(id, feat.name);
+
+  /**
+   * R62 (D197): expertise on a skill this character is already proficient in. `expertiseChoice: { count }` asks for
+   * that many; a skill without proficiency is not offered, because expertise doubles a bonus that has to exist.
+   */
+  const expertiseChoice = config.expertiseChoice as { count?: number; skills?: string[] } | undefined;
+  if (expertiseChoice) {
+    const options = skillOptions(catalog, expertiseChoice.skills?.length ? expertiseChoice.skills : "any", (id) => !ledger.hasSkill(id) || ledger.hasExpertise(id));
+    const picked = ledger.ask({ ...ask, id: `${prefix}.expertise`, label: "전문화 (숙련된 기술)", count: expertiseChoice.count ?? 1, options });
+    for (const id of picked) ledger.addExpertise(id, feat.name);
+  }
+
+  /**
+   * R62 (D197): 회복력 — "위에서 올린 능력치의 내성 굴림에 숙련". `follows: "ability-increase"` takes the ability
+   * the feat already asked for rather than asking a second time; `any` is there for a feat that does ask.
+   */
+  const saveChoice = config.saveProficiencyChoice as { any?: string[]; follows?: string } | undefined;
+  if (saveChoice) {
+    if (saveChoice.follows === "ability-increase") { if (raised && !ledger.saves.has(raised)) ledger.saves.set(raised, feat.name); }
+    else {
+      const keys = (saveChoice.any?.length ? saveChoice.any : [...ABILITY_KEYS]).filter((key): key is AbilityKey => (ABILITY_KEYS as readonly string[]).includes(key));
+      const picked = ledger.ask({ ...ask, id: `${prefix}.save`, label: "내성 굴림 숙련", count: 1, options: abilityOptions(keys) });
+      for (const key of picked) if (!ledger.saves.has(key as AbilityKey)) ledger.saves.set(key as AbilityKey, feat.name);
+    }
+  }
+
+  /** R62 (D197): 에너지 저항의 은총 — resistance to damage types the player picks, rather than a fixed list. */
+  const resistanceChoice = config.resistanceChoice as { count?: number; any?: string[] } | undefined;
+  if (resistanceChoice?.any?.length) {
+    const picked = ledger.ask({ ...ask, id: `${prefix}.resistances`, label: "저항할 피해 유형", count: resistanceChoice.count ?? 1, options: damageTypeOptions(resistanceChoice.any, (type) => ledger.resistances.has(type)) });
+    for (const type of picked) ledger.resistances.add(type);
+  }
+
+  /**
+   * R62 (D197): 원소 숙련자 — "자신이 시전한 주문은 선택한 피해 유형에 대한 저항을 무시한다". The resolver has
+   * carried `ignoresResistance` since R51; what was missing was anything that could name the type.
+   */
+  const ignoreChoice = config.ignoreResistanceChoice as { count?: number; any?: string[] } | undefined;
+  if (ignoreChoice?.any?.length) {
+    const picked = ledger.ask({ ...ask, id: `${prefix}.ignore-resistance`, label: "저항을 무시할 피해 유형", count: ignoreChoice.count ?? 1, options: damageTypeOptions(ignoreChoice.any, (type) => ledger.ignoresResistance.has(type)) });
+    for (const type of picked) ledger.ignoresResistance.add(type);
+  }
+
+  /** R62 (D197): 무기 달인 — one more weapon whose mastery property this character may use. */
+  const masteryChoice = config.weaponMasteryChoice as { count?: number; filter?: string } | undefined;
+  if (masteryChoice) {
+    const picked = ledger.ask({ ...ask, id: `${prefix}.weapon-mastery`, label: "무기 통달", description: "고른 무기의 통달 속성을 쓸 수 있습니다. 긴 휴식마다 하나를 바꿀 수 있습니다.", count: masteryChoice.count ?? 1, options: weaponMasteryOptions(catalog, masteryChoice.filter ?? "all-simple-or-martial", ledger.weapons) });
+    for (const id of picked) ledger.weaponMasteries.add(id);
+  }
+
+  /**
+   * R62 (D197): spells a feat simply hands over. `grantCantrips` are learned outright (염동력's 마법사의 손);
+   * `grantSpells` are always prepared with one free casting per long rest each (요정의 손길's 안개 걸음, 그림자의
+   * 손길's 투명화, 텔레파시 능력's 생각 탐지); `grantSpellChoice` asks for a filtered list (의식 시전자's rituals).
+   * The school-restricted half of 요정의 손길 and 그림자의 손길 stays the table's: a school is not in the index.
+   * The casting ability is "이 재주로 올린 능력치" unless the config names one.
+   */
+  const strings = (value: unknown) => (Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : []);
+  const grantCantrips = strings(config.grantCantrips);
+  const grantSpells = strings(config.grantSpells);
+  const grantChoice = config.grantSpellChoice as { count?: number | string; spellList?: string[]; levels?: number[]; ritual?: boolean } | undefined;
+  if (grantCantrips.length || grantSpells.length || grantChoice) {
+    const ability = (config.grantSpellAbility as AbilityKey | undefined) ?? raised ?? "cha";
+    const lists = (grantChoice?.spellList?.length ? grantChoice.spellList : ["wizard"]).map((slug) => catalog.classBySlug(slug)).filter((item) => item !== undefined);
+    const anchor = lists[0];
+    if (anchor) {
+      const entry = ledger.spellcastingEntry(`feat:${instance.key}:${feat.id}:grant`, () => ({ classId: anchor.id, className: feat.name, ability, cantripsMax: 0, preparedMax: 0 }));
+      entry.ability = ability;
+      for (const id of grantCantrips) entry.cantrips.add(id);
+      for (const id of grantSpells) {
+        entry.alwaysPrepared.add(id);
+        entry.freeCasts.push(id);
+        ledger.addResource({ id: `resource.${prefix}.${id}`, label: `${feat.name}: ${catalog.spellById(id)?.name ?? id} 무료 시전`, max: 1, recovery: resetKo(typeof config.freeCastReset === "string" ? config.freeCastReset : "long-rest"), source: feat.name, freeCastSpellId: id });
+      }
+      if (grantChoice) {
+        const count = grantChoice.count === "proficiency-bonus" ? ledger.proficiencyBonus : typeof grantChoice.count === "number" ? grantChoice.count : 1;
+        const levels = grantChoice.levels?.length ? grantChoice.levels : [1];
+        const options = spellOptions(catalog, lists.map((item) => item.id), levels, (spell) => !grantChoice.ritual || spell.ritual);
+        const picked = ledger.ask({ ...ask, id: `${prefix}.granted-spells`, label: grantChoice.ritual ? "의식 주문 (항상 준비)" : "주문 (항상 준비)", count, options });
+        for (const id of picked) entry.alwaysPrepared.add(id);
+      }
     }
   }
 

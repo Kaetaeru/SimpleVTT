@@ -1,0 +1,406 @@
+{
+ "$schema": "https://simplevtt.local/schemas/rule-module.schema.json",
+ "schemaVersion": "0.1-draft",
+ "moduleId": "phb-2024.feat-config-patch",
+ "moduleVersion": "0.1-draft",
+ "rulesProfile": {
+  "id": "dnd.srd-5.2.1",
+  "version": "0.1-draft"
+ },
+ "defaultLocale": "ko-KR",
+ "source": {
+  "document": "Player's Handbook",
+  "version": "2024",
+  "license": "not-srd",
+  "srdDerived": false
+ },
+ "dependencies": [
+  {
+   "moduleId": "phb-2024-supplement",
+   "version": "1"
+  }
+ ],
+ "conflicts": [],
+ "capabilities": [],
+ "extensionPoints": [],
+ "content": [
+  {
+   "id": "phb2024.feat.resilient",
+   "category": "feat",
+   "tags": [
+    "feat",
+    "phb-2024",
+    "config-patch"
+   ],
+   "mechanics": [
+    {
+     "kind": "feat-definition",
+     "config": {
+      "saveProficiencyChoice": {
+       "follows": "ability-increase"
+      },
+      "execution": {
+       "status": "derived",
+       "reason": "R62 (D197): the save follows the ability this feat raised — no second question"
+      },
+      "patchNote": "올린 능력치의 내성 굴림 숙련"
+     }
+    }
+   ]
+  },
+  {
+   "id": "phb2024.feat.skill-expert",
+   "category": "feat",
+   "tags": [
+    "feat",
+    "phb-2024",
+    "config-patch"
+   ],
+   "mechanics": [
+    {
+     "kind": "feat-definition",
+     "config": {
+      "proficiencyChoice": {
+       "count": 1,
+       "kinds": [
+        "skill"
+       ]
+      },
+      "expertiseChoice": {
+       "count": 1
+      },
+      "execution": {
+       "status": "selection",
+       "reason": "R62 (D197): both picks are asked at creation and land on the sheet"
+      },
+      "patchNote": "기술 하나에 숙련, 숙련된 기술 하나에 전문화"
+     }
+    }
+   ]
+  },
+  {
+   "id": "phb2024.feat.boon-of-skill",
+   "category": "feat",
+   "tags": [
+    "feat",
+    "phb-2024",
+    "config-patch"
+   ],
+   "mechanics": [
+    {
+     "kind": "feat-definition",
+     "config": {
+      "allSkillProficiencies": true,
+      "expertiseChoice": {
+       "count": 1
+      },
+      "execution": {
+       "status": "selection",
+       "reason": "R62 (D197): every skill is granted; the expertise is asked at creation"
+      },
+      "patchNote": "모든 기술에 숙련, 전문화 하나"
+     }
+    }
+   ]
+  },
+  {
+   "id": "phb2024.feat.keen-mind",
+   "category": "feat",
+   "tags": [
+    "feat",
+    "phb-2024",
+    "config-patch"
+   ],
+   "mechanics": [
+    {
+     "kind": "feat-definition",
+     "config": {
+      "proficiencyChoice": {
+       "count": 1,
+       "kinds": [
+        "skill"
+       ],
+       "skills": [
+        "arcana",
+        "history",
+        "investigation",
+        "nature",
+        "religion"
+       ],
+       "upgradeToExpertise": true
+      },
+      "execution": {
+       "status": "selection",
+       "reason": "R62 (D197): the pick upgrades to expertise when the skill is already proficient"
+      },
+      "patchNote": "학식 — 다섯 기술 중 하나에 숙련 또는 전문화"
+     }
+    }
+   ]
+  },
+  {
+   "id": "phb2024.feat.observant",
+   "category": "feat",
+   "tags": [
+    "feat",
+    "phb-2024",
+    "config-patch"
+   ],
+   "mechanics": [
+    {
+     "kind": "feat-definition",
+     "config": {
+      "proficiencyChoice": {
+       "count": 1,
+       "kinds": [
+        "skill"
+       ],
+       "skills": [
+        "insight",
+        "investigation",
+        "perception"
+       ],
+       "upgradeToExpertise": true
+      },
+      "execution": {
+       "status": "selection",
+       "reason": "R62 (D197): the pick upgrades to expertise when the skill is already proficient"
+      },
+      "patchNote": "예리한 관찰자 — 세 기술 중 하나에 숙련 또는 전문화"
+     }
+    }
+   ]
+  },
+  {
+   "id": "phb2024.feat.weapon-master",
+   "category": "feat",
+   "tags": [
+    "feat",
+    "phb-2024",
+    "config-patch"
+   ],
+   "mechanics": [
+    {
+     "kind": "feat-definition",
+     "config": {
+      "weaponMasteryChoice": {
+       "count": 1,
+       "filter": "all-simple-or-martial"
+      },
+      "execution": {
+       "status": "selection",
+       "reason": "R62 (D197): the chosen weapon's mastery property becomes active on the sheet"
+      },
+      "patchNote": "통달 속성 — 숙련된 단순·군용 무기 한 종류"
+     }
+    }
+   ]
+  },
+  {
+   "id": "phb2024.feat.elemental-adept",
+   "category": "feat",
+   "tags": [
+    "feat",
+    "phb-2024",
+    "config-patch"
+   ],
+   "mechanics": [
+    {
+     "kind": "feat-definition",
+     "config": {
+      "ignoreResistanceChoice": {
+       "count": 1,
+       "any": [
+        "acid",
+        "cold",
+        "fire",
+        "lightning",
+        "thunder"
+       ]
+      },
+      "execution": {
+       "status": "common-play",
+       "reason": "R62 (D197): the chosen type reaches the resolver as `ignoresResistance`; the die-minimum stays on the contract"
+      },
+      "patchNote": "에너지 숙련 — 고른 유형의 저항을 무시"
+     }
+    }
+   ]
+  },
+  {
+   "id": "phb2024.feat.boon-of-energy-resistance",
+   "category": "feat",
+   "tags": [
+    "feat",
+    "phb-2024",
+    "config-patch"
+   ],
+   "mechanics": [
+    {
+     "kind": "feat-definition",
+     "config": {
+      "resistanceChoice": {
+       "count": 2,
+       "any": [
+        "acid",
+        "cold",
+        "fire",
+        "lightning",
+        "necrotic",
+        "poison",
+        "psychic",
+        "radiant",
+        "thunder"
+       ]
+      },
+      "execution": {
+       "status": "common-play",
+       "reason": "R62 (D197): the two types land in the sheet's defenses; 에너지 전환 stays the table's reaction"
+      },
+      "patchNote": "에너지 저항 — 두 유형에 저항"
+     }
+    }
+   ]
+  },
+  {
+   "id": "phb2024.feat.fey-touched",
+   "category": "feat",
+   "tags": [
+    "feat",
+    "phb-2024",
+    "config-patch"
+   ],
+   "mechanics": [
+    {
+     "kind": "feat-definition",
+     "config": {
+      "grantSpells": [
+       "dnd.srd521.spell.misty-step"
+      ],
+      "freeCastReset": "long-rest",
+      "execution": {
+       "status": "selection",
+       "reason": "R62 (D197): 안개 걸음 is always prepared with one free casting; the school-restricted pick stays the table's"
+      },
+      "patchNote": "요정 마법 — 안개 걸음을 항상 준비"
+     }
+    }
+   ]
+  },
+  {
+   "id": "phb2024.feat.shadow-touched",
+   "category": "feat",
+   "tags": [
+    "feat",
+    "phb-2024",
+    "config-patch"
+   ],
+   "mechanics": [
+    {
+     "kind": "feat-definition",
+     "config": {
+      "grantSpells": [
+       "dnd.srd521.spell.invisibility"
+      ],
+      "freeCastReset": "long-rest",
+      "execution": {
+       "status": "selection",
+       "reason": "R62 (D197): 투명화 is always prepared with one free casting; the school-restricted pick stays the table's"
+      },
+      "patchNote": "그림자 마법 — 투명화를 항상 준비"
+     }
+    }
+   ]
+  },
+  {
+   "id": "phb2024.feat.telepathic",
+   "category": "feat",
+   "tags": [
+    "feat",
+    "phb-2024",
+    "config-patch"
+   ],
+   "mechanics": [
+    {
+     "kind": "feat-definition",
+     "config": {
+      "grantSpells": [
+       "dnd.srd521.spell.detect-thoughts"
+      ],
+      "freeCastReset": "long-rest",
+      "execution": {
+       "status": "selection",
+       "reason": "R62 (D197): 생각 탐지 is always prepared with one free casting per long rest"
+      },
+      "patchNote": "생각 탐지를 항상 준비"
+     }
+    }
+   ]
+  },
+  {
+   "id": "phb2024.feat.telekinetic",
+   "category": "feat",
+   "tags": [
+    "feat",
+    "phb-2024",
+    "config-patch"
+   ],
+   "mechanics": [
+    {
+     "kind": "feat-definition",
+     "config": {
+      "grantCantrips": [
+       "dnd.srd521.spell.mage-hand"
+      ],
+      "execution": {
+       "status": "selection",
+       "reason": "R62 (D197): the cantrip is learned; the range bonus and 염동 밀치기 stay on the contract"
+      },
+      "patchNote": "소규모 염동력 — 마법사의 손을 배움"
+     }
+    }
+   ]
+  },
+  {
+   "id": "phb2024.feat.ritual-caster",
+   "category": "feat",
+   "tags": [
+    "feat",
+    "phb-2024",
+    "config-patch"
+   ],
+   "mechanics": [
+    {
+     "kind": "feat-definition",
+     "config": {
+      "grantSpellChoice": {
+       "count": "proficiency-bonus",
+       "spellList": [
+        "cleric",
+        "druid",
+        "wizard"
+       ],
+       "levels": [
+        1
+       ],
+       "ritual": true
+      },
+      "resources": [
+       {
+        "id": "resource.feat.ritual-caster",
+        "label": "빠른 의식",
+        "max": 1,
+        "reset": "long-rest"
+       }
+      ],
+      "execution": {
+       "status": "selection",
+       "reason": "R62 (D197): the ritual spells are asked at creation; 빠른 의식 becomes a per-long-rest pool"
+      },
+      "patchNote": "의식 주문 — 숙련 보너스만큼 항상 준비"
+     }
+    }
+   ]
+  }
+ ]
+}

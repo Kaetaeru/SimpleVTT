@@ -314,6 +314,8 @@ function finalize(ledger: Ledger): DerivedCharacter {
     ...(armorView?.armor
       ? { armor: { name: armorView.name, training: armorView.armor.training, dexCapped: armorView.armor.dexMax !== undefined && dex > armorView.armor.dexMax, shield: Boolean(shieldView) } }
       : { armor: { name: "방어구 없음", training: "none", dexCapped: false, shield: Boolean(shieldView) } }),
+    // R62 (D197): 원소 숙련자's element. The resolver has read this since R51; nothing could fill it until a feat asked.
+    ...(ledger.ignoresResistance.size ? { ignoresResistance: [...ledger.ignoresResistance] } : {}),
     gold: ledger.gold,
     weaponMasteries: [...ledger.weaponMasteries].map((id) => catalog.itemById(id)?.name ?? id),
     // R33 (D168): the two feat rules that only bite once a swing is being rolled travel with the sheet to the table.

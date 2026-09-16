@@ -72,6 +72,8 @@ export class Ledger {
   readonly classes = new Map<string, ClassState>();
   readonly flags = new Set<string>();
   readonly resistances = new Set<string>();
+  /** R62 (D197): damage types this character's own damage ignores resistance to (원소 숙련자). */
+  readonly ignoresResistance = new Set<string>();
   readonly immunities = new Set<string>();
   readonly conditionImmunities = new Set<string>();
   readonly weaponMasteries = new Set<string>();

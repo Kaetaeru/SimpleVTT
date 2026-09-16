@@ -7,6 +7,7 @@ import type { ContentCatalog, FeatTier, FeatView, ItemView, SpellView } from "..
 import type { AbilityKey } from "../catalog/types";
 import { ABILITY_KEYS, ABILITY_KO } from "../catalog/types";
 import { ABILITY_SCORE_MAX } from "../rules/tables";
+import { damageTypeKey, damageTypeKo } from "../rules/resolve";
 import type { WeaponTraining } from "../rules/classes";
 import type { ChoiceOption } from "./types";
 
@@ -31,6 +32,14 @@ export function skillOptions(catalog: ContentCatalog, filter?: string[] | "any",
     id, name: catalog.skills[id] ?? id, nameEn: id, group: ABILITY_KO[SKILL_ABILITY[id] ?? "int"],
     ...(taken?.(id) ? { disabledReason: "이미 숙련" } : {}),
   }));
+}
+
+/**
+ * R62 (D197): damage types as choice options, for the feats that ask the player to name one (원소 숙련자's element,
+ * 에너지 저항의 은총's two). Ids stay canonical English; the label is the Korean the rest of the sheet prints.
+ */
+export function damageTypeOptions(types: string[], taken?: (type: string) => boolean): ChoiceOption[] {
+  return types.map((type) => ({ id: damageTypeKey(type), name: damageTypeKo(type), nameEn: damageTypeKey(type), ...(taken?.(damageTypeKey(type)) ? { disabledReason: "이미 선택" } : {}) }));
 }
 
 export function abilityOptions(keys: readonly AbilityKey[] = ABILITY_KEYS, scoreOf?: (key: AbilityKey) => number, increase = 1, cap = ABILITY_SCORE_MAX): ChoiceOption[] {
