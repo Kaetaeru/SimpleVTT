@@ -14,9 +14,16 @@
 import type { ContentCatalog } from "../catalog/catalog";
 import type { DerivedAttack, DerivedCharacter } from "../character/types";
 import { characterScope, evaluate, type CommonPlayContract, type Scope } from "./contract";
+import { diceRuleOf, type DiceRule } from "./resolve";
 import { attackScopeFilter } from "./contractEffects";
 import { featureRuleKey } from "./activation";
 import { featureContract } from "./contractActivation";
+
+const DICE_RULE_KO: Record<DiceRule["mode"], (value: number) => string> = {
+  "reroll-lowest": (value) => `피해 주사위 ${value}개 다시 굴림`,
+  "extra-die": (value) => `피해 주사위 ${value}개 추가`,
+  "die-minimum": (value) => `피해 주사위 최소 ${value}`,
+};
 
 export interface ContractRider {
   /** The rule key, which is what travels over the wire in `AttackRiders.contracts`. */
@@ -37,6 +44,8 @@ export interface ContractRider {
   damage: Array<{ formula: string; type: string; factId?: string }>;
   /** R57 (D192): the facts this rider asks the player to confirm, each a checkbox next to it. */
   facts: Array<{ id: string; question: string }>;
+  /** R60 (D195): what declaring it does to the weapon's own damage dice. */
+  dice: DiceRule[];
   resourceId?: string;
   cost: number;
 }
@@ -61,7 +70,7 @@ export function contractRiders(contract: CommonPlayContract, key: string, label:
     if (entry.invocation !== "pre-roll-attack" || !entry.attack) continue;
     const rider: ContractRider = {
       key, label, hint: "", ...(entry.attack.scope ? { scope: entry.attack.scope } : {}),
-      oncePerTurn: entry.attack.oncePerTurn, requiresEffects: entry.attack.requiresEffects, damage: [], facts: [], cost: 0,
+      oncePerTurn: entry.attack.oncePerTurn, requiresEffects: entry.attack.requiresEffects, damage: [], facts: [], dice: [], cost: 0,
     };
     const hints: string[] = [];
     // R57 (D192): a fact this entry point declares is a checkbox, not prose; an operation gated on one carries the
@@ -77,13 +86,17 @@ export function contractRiders(contract: CommonPlayContract, key: string, label:
       } else if (operation.kind === "resource.change") {
         const amount = Number(evaluate(operation.amount, scope));
         if (Number.isFinite(amount) && amount < 0) { rider.resourceId = operation.resourceId; rider.cost = -amount; }
+      } else if (operation.kind === "property.modify") {
+        // R60 (D195): a rule that touches the weapon's own dice rather than adding a part of its own.
+        const rule = diceRuleOf(operation.property, Number(evaluate(operation.value, scope)), label);
+        if (rule) rider.dice.push(rule);
       } else if (operation.kind === "adjudication.request") {
         if (operation.fact?.at === "pre-roll") rider.facts.push({ id: operation.fact.id, question: operation.question });
         else hints.push(operation.question);
       }
     }
-    rider.hint = [...rider.damage.map((part) => `피해 +${part.formula}`), ...hints, ...(rider.oncePerTurn ? ["턴당 한 번"] : [])].join(" · ");
-    if (rider.damage.length || hints.length || rider.facts.length) riders.push(rider);
+    rider.hint = [...rider.damage.map((part) => `피해 +${part.formula}`), ...rider.dice.map((rule) => DICE_RULE_KO[rule.mode](rule.value)), ...hints, ...(rider.oncePerTurn ? ["턴당 한 번"] : [])].join(" · ");
+    if (rider.damage.length || rider.dice.length || hints.length || rider.facts.length) riders.push(rider);
   }
   return riders;
 }

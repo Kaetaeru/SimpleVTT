@@ -112,6 +112,20 @@ export interface AttackSpec {
   ignoresCover?: boolean;
   /** R55 (D190): reasons *this* swing is advantaged, already narrowed to the weapon by whatever declared them. */
   advantageOn?: string[];
+  /**
+   * R60 (D195): what a rule does to this swing's own damage dice — reroll the lowest and keep the new one, roll an
+   * extra die of the same size, or treat anything below a floor as that floor. They touch the weapon's dice only; a
+   * flat rider is not "the weapon's damage dice", and an `onCrit` rule waits for a critical hit.
+   */
+  diceRules?: DiceRule[];
+}
+
+export interface DiceRule {
+  mode: "reroll-lowest" | "extra-die" | "die-minimum";
+  /** How many dice, or the floor for `die-minimum`. */
+  value: number;
+  label: string;
+  onCrit?: boolean;
 }
 
 /** R12: what a mastery did on this attack. */
@@ -260,6 +274,44 @@ function rollParts(formula: string, dice: DiceSource, doubleDice: boolean, dieMi
   return { dice: rolled, total };
 }
 
+/**
+ * R60 (D195): apply a swing's dice rules to one part's roll. `die` is the part's own die size, read from its formula,
+ * so an extra die is the weapon's die and not a guess. The total is rebuilt from the dice, which is why a part whose
+ * formula subtracts dice is left alone — nothing in this content does that, and guessing would be worse than not.
+ */
+function applyDiceRules(rolled: { dice: number[]; total: number }, part: DamagePart, dice: DiceSource, rules: DiceRule[], crit: boolean, kept?: number[]): { dice: number[]; total: number } {
+  const match = /(\d*)d(\d+)/.exec(part.formula.replace(/\s+/g, ""));
+  if (!match || !rolled.dice.length) return rolled;
+  const sides = Number(match[2]);
+  const flat = rolled.total - rolled.dice.reduce((sum, value) => sum + value, 0);
+  let faces = [...rolled.dice];
+  // R60 (D195): on a re-resolution the dice the card already showed come back in `kept`. The formula's own dice were
+  // taken from it by `rollParts`; whatever is left over is what these rules added the first time, and reusing it is
+  // what keeps a card's numbers still. A reroll never happens twice for the same swing, for the same reason.
+  let surplus = (kept ?? []).slice(rolled.dice.length);
+  const reuse = () => (surplus.length ? surplus.shift()! : dice.d(sides));
+  for (const rule of rules) {
+    if (rule.onCrit && !crit) continue;
+    if (rule.mode === "die-minimum") faces = faces.map((value) => Math.max(value, rule.value));
+    else if (rule.mode === "reroll-lowest") {
+      if (kept) continue;
+      for (let at = 0; at < Math.max(1, rule.value); at += 1) {
+        const lowest = faces.reduce((best, value, index) => (value < faces[best] ? index : best), 0);
+        faces[lowest] = dice.d(sides);
+      }
+    } else if (rule.mode === "extra-die") for (let at = 0; at < Math.max(1, rule.value); at += 1) faces.push(reuse());
+  }
+  surplus = [];
+  return { dice: faces, total: faces.reduce((sum, value) => sum + value, 0) + flat };
+}
+
+/** R60 (D195): the three `property.modify` names that mean "do this to the weapon's own damage dice". */
+export function diceRuleOf(property: string, value: number, label: string, onCrit = false): DiceRule | null {
+  const mode = property === "damage.reroll-lowest" ? "reroll-lowest" : property === "damage.extra-die" ? "extra-die" : property === "damage.die-minimum" ? "die-minimum" : null;
+  if (!mode) return null;
+  return { mode, value: Number.isFinite(value) && value > 0 ? value : mode === "die-minimum" ? 2 : 1, label, ...(onCrit ? { onCrit: true } : {}) };
+}
+
 /* ---------- resolution ---------- */
 
 export interface ResolveOptions { dice: DiceSource; overrides?: AttackOverrides; apply?: boolean; /** Fixed d20s and damage dice from an earlier resolution (palette edits keep the rolls). */ fixed?: { masteryD20?: number; d20s: number[]; /** R37 (D177): absent when the earlier resolution rolled no damage (a miss being re-resolved). */ damage?: number[][] } }
@@ -289,7 +341,7 @@ export function resolveAttack(attacker: Combatant, target: Combatant, spec: Atta
   let mastery: MasteryResult | undefined;
   const grazes = !hit && spec.mastery === "graze" && (spec.abilityMod ?? 0) > 0;
   const outcomeDamage = hit
-    ? applyDamage(target, [...spec.damage, ...(spec.riders ?? []), ...(outcome === "crit" ? spec.critRiders ?? [] : [])], options.dice, { fixed: options.fixed?.damage, crit: outcome === "crit", scale: overrides.damageScale, delta: overrides.damageDelta, savage: spec.savage })
+    ? applyDamage(target, [...spec.damage, ...(spec.riders ?? []), ...(outcome === "crit" ? spec.critRiders ?? [] : [])], options.dice, { fixed: options.fixed?.damage, crit: outcome === "crit", scale: overrides.damageScale, delta: overrides.damageDelta, savage: spec.savage, ...(spec.diceRules?.length ? { diceRules: spec.diceRules } : {}) })
     : grazes ? applyDamage(target, [{ formula: String(spec.abilityMod), type: spec.damage[0]?.type ?? "타격", label: "스치기", critDoubles: false }], options.dice, { fixed: options.fixed?.damage, scale: overrides.damageScale, delta: overrides.damageDelta }) : noDamage(target);
   const { damage, damageTotal, absorbed, hpLost, hpAfter, tempAfter, concentration, downed, deathFailures } = outcomeDamage;
   const inflicted = hit ? (spec.inflicts ?? []).filter((condition) => !immuneToCondition(target.defenses, condition)) : [];
@@ -317,7 +369,7 @@ export function resolveAttack(attacker: Combatant, target: Combatant, spec: Atta
 /** What a hit (or a failed save) does to the target: dice per part, resistances, temp HP first, concentration, 0 HP. Shared by weapon attacks and spells. */
 export interface DamageOutcome { damage: DamageResult[]; damageTotal: number; absorbed: number; hpLost: number; hpBefore: number; hpAfter: number; tempAfter: number; concentration?: AttackResolution["concentration"]; downed?: AttackResolution["downed"]; /** Death-save failures the damage caused on a PC already at 0 HP (2 from a critical hit). */ deathFailures?: number }
 export const noDamage = (target: Combatant): DamageOutcome => ({ damage: [], damageTotal: 0, absorbed: 0, hpLost: 0, hpBefore: target.hp.current, hpAfter: target.hp.current, tempAfter: target.hp.temp });
-export function applyDamage(target: Combatant, parts: DamagePart[], dice: DiceSource, options: { fixed?: number[][]; crit?: boolean; scale?: number; delta?: number; /** Halve after resistances (a successful save). */ half?: boolean; /** R32 (D166): 야만적 공격자 — roll the weapon dice twice and keep the better. */ savage?: boolean } = {}): DamageOutcome {
+export function applyDamage(target: Combatant, parts: DamagePart[], dice: DiceSource, options: { fixed?: number[][]; crit?: boolean; scale?: number; delta?: number; /** Halve after resistances (a successful save). */ half?: boolean; /** R32 (D166): 야만적 공격자 — roll the weapon dice twice and keep the better. */ savage?: boolean; /** R60 (D195): what a rule does to the weapon's own dice. */ diceRules?: DiceRule[] } = {}): DamageOutcome {
   const damage: DamageResult[] = [];
   parts.forEach((part, index) => {
     const fixedDice = options.fixed?.[index];
@@ -333,6 +385,10 @@ export function applyDamage(target: Combatant, parts: DamagePart[], dice: DiceSo
       const again = rollParts(part.formula, dice, doubles, part.dieMinimum ?? 0);
       if (again.total > rolled.total) rolled = again;
     }
+    // R60 (D195): the rules that touch the weapon's own dice, in the order the 2024 text implies — a floor first
+    // (it changes what "lowest" means), then the reroll, then the extra die. A reused set of dice is left alone, so
+    // re-resolving a card never quietly rerolls something the player already saw.
+    if (weaponDice && options.diceRules?.length) rolled = applyDiceRules(rolled, part, dice, options.diceRules, Boolean(options.crit), fixedDice);
     const rawRolled = Math.max(0, rolled.total);
     // R28 (D148): resistance and vulnerability come *last*, after every other modifier — a successful save halves
     // first. The old order doubled for vulnerability and only then halved, which rounds differently (11 → 22 → 11

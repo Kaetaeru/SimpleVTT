@@ -18,7 +18,7 @@ import { characterScope, evaluate, type CommonPlayContract, type ContractOperati
 import { attackScopeFilter } from "./contractEffects";
 import { featureRuleKey } from "./activation";
 import { featureContract } from "./contractActivation";
-import type { DamagePart } from "./resolve";
+import { diceRuleOf, type DamagePart, type DiceRule } from "./resolve";
 
 export type AttackOutcomeKind = "hit" | "crit" | "downed";
 
@@ -66,10 +66,17 @@ function walk(derived: DerivedCharacter, catalog: ContentCatalog, attack: Derive
  * They go into the `AttackSpec` because the resolver has to know about them before it rolls; `critDoubles: false`
  * keeps them from being doubled a second time by the critical that caused them.
  */
-export function critRiders(derived: DerivedCharacter, catalog: ContentCatalog, attack: DerivedAttack): DamagePart[] {
+export function critRiders(derived: DerivedCharacter, catalog: ContentCatalog, attack: DerivedAttack): { parts: DamagePart[]; dice: DiceRule[] } {
   const parts: DamagePart[] = [];
+  const dice: DiceRule[] = [];
   walk(derived, catalog, attack, ["crit"], (operations, label, scope) => {
     for (const operation of operations) {
+      // R60 (D195): a critical that adds a die of the weapon's own size rather than a part of its own (관통자).
+      if (operation.kind === "property.modify") {
+        const rule = diceRuleOf(operation.property, Number(evaluate(operation.value, scope)), `${label} (치명타)`, true);
+        if (rule) dice.push(rule);
+        continue;
+      }
       if (operation.kind !== "damage.apply") continue;
       if (operation.when && evaluate(operation.when, scope) !== true) continue;
       const flat = operation.amount === undefined ? undefined : Number(evaluate(operation.amount, scope));
@@ -79,7 +86,7 @@ export function critRiders(derived: DerivedCharacter, catalog: ContentCatalog, a
       parts.push({ formula, type: operation.damageType === "weapon" ? attack.damageType : operation.damageType, label: `${label} (치명타)`, critDoubles: false });
     }
   });
-  return parts;
+  return { parts, dice };
 }
 
 /** What the swing does to the target and to the attacker's turn once the outcome is known. */

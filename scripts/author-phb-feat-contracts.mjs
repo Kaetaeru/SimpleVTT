@@ -67,7 +67,10 @@ const FEATS = {
     ask("추가 행동 · 히트 다이스의 크기대로 굴리세요 (여기서는 d10으로 적어 둡니다)"),
     ask("죽음 내성 굴림에 유리 — 굴릴 때 선언"),
   ] },
-  "elemental-adept": { rules: [ask("고른 피해 유형 하나: 자신의 주문이 그 저항을 무시하고, 그 유형 피해 주사위의 1은 2로"), ask("어떤 유형을 골랐는지 시트에 적어 두세요 — 앱은 고름을 기억하지 않습니다")] },
+  "elemental-adept": {
+    pre: [rider({}, [modify("damage.die-minimum", { value: 2 }), ask("고른 유형의 피해일 때만 — 어떤 유형을 골랐는지는 시트에 적어 두세요")])],
+    rules: [ask("자신이 시전한 주문은 고른 유형에 대한 저항을 무시합니다 (유형 선택은 앱이 기억하지 않습니다)")],
+  },
   "fey-touched": { rules: [ask("점술·환혹 1레벨 주문 하나와 안개 걸음을 항상 준비, 각각 긴 휴식마다 슬롯 없이 한 번")] },
   "great-weapon-master": { pre: [rider({ scope: "heavy" }, [
     fact("attack-action", "pre-roll", "자신의 턴에 공격 행동의 일부로 휘두른다"),
@@ -107,7 +110,10 @@ const FEATS = {
     { kind: "economy.modify", bucket: "bonus-action.as:search", amount: 1 },
     ask("통찰·조사·지각 중 하나에 숙련 또는 전문화 — 만들기·레벨업에서 시트에 반영됩니다"),
   ] },
-  piercer: { hooks: [after(["hit"], [ask("관통 피해 주사위 하나를 다시 굴려 새 결과를 씁니다 (턴당 한 번)")], "piercing"), after(["crit"], [ask("피해 주사위 하나를 더 굴려 더합니다")], "piercing")] },
+  piercer: {
+    pre: [rider({ scope: "piercing" }, [modify("damage.reroll-lowest", { value: 1 }), ask("가장 낮은 주사위를 다시 굴려 새 결과를 씁니다")])],
+    hooks: [after(["crit"], [modify("damage.extra-die", { value: 1 })], "piercing")],
+  },
   poisoner: { rules: [
     modify("damage.ignore-resistance", { value: "독" }),
     toParty("content.grant", { contentId: "phb2024.item.poisoner-dose" }),

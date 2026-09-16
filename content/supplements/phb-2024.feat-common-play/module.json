@@ -688,11 +688,27 @@
         "operations": [
          {
           "kind": "adjudication.request",
-          "question": "고른 피해 유형 하나: 자신의 주문이 그 저항을 무시하고, 그 유형 피해 주사위의 1은 2로"
+          "question": "자신이 시전한 주문은 고른 유형에 대한 저항을 무시합니다 (유형 선택은 앱이 기억하지 않습니다)"
+         }
+        ]
+       },
+       {
+        "id": "declare",
+        "invocation": "pre-roll-attack",
+        "attack": {
+         "oncePerTurn": true,
+         "requiresEffects": []
+        },
+        "operations": [
+         {
+          "kind": "property.modify",
+          "property": "damage.die-minimum",
+          "operation": "add",
+          "value": 2
          },
          {
           "kind": "adjudication.request",
-          "question": "어떤 유형을 골랐는지 시트에 적어 두세요 — 앱은 고름을 기억하지 않습니다"
+          "question": "고른 유형의 피해일 때만 — 어떤 유형을 골랐는지는 시트에 적어 두세요"
          }
         ]
        }
@@ -1616,22 +1632,30 @@
       "$schema": "https://simplevtt.local/schemas/common-play-contract.schema.json",
       "schemaVersion": "0.2-draft",
       "id": "feat:piercer",
-      "interceptors": [
+      "entryPoints": [
        {
-        "id": "after-hit",
-        "timing": "attack.resolved",
-        "slot": "attack.outcome",
-        "outcomes": [
-         "hit"
-        ],
-        "scope": "piercing",
+        "id": "declare",
+        "invocation": "pre-roll-attack",
+        "attack": {
+         "oncePerTurn": true,
+         "requiresEffects": [],
+         "scope": "piercing"
+        },
         "operations": [
          {
+          "kind": "property.modify",
+          "property": "damage.reroll-lowest",
+          "operation": "add",
+          "value": 1
+         },
+         {
           "kind": "adjudication.request",
-          "question": "관통 피해 주사위 하나를 다시 굴려 새 결과를 씁니다 (턴당 한 번)"
+          "question": "가장 낮은 주사위를 다시 굴려 새 결과를 씁니다"
          }
         ]
-       },
+       }
+      ],
+      "interceptors": [
        {
         "id": "after-crit",
         "timing": "attack.resolved",
@@ -1642,8 +1666,10 @@
         "scope": "piercing",
         "operations": [
          {
-          "kind": "adjudication.request",
-          "question": "피해 주사위 하나를 더 굴려 더합니다"
+          "kind": "property.modify",
+          "property": "damage.extra-die",
+          "operation": "add",
+          "value": 1
          }
         ]
        }

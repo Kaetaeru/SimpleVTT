@@ -145,9 +145,14 @@ export function pcAttackSpec(entry: JournalCharacter, derived: DerivedCharacter,
   const savageFeat = riders.savage ? savageAttackerFeat(derived) : undefined;
   const savage = Boolean(savageFeat);
   // R53 (D188): what a critical hit adds, from whatever contract said so. Empty for a sheet with no such rule.
-  const crits = catalog ? critRiders(derived, catalog, attack) : [];
+  const crits = catalog ? critRiders(derived, catalog, attack) : { parts: [], dice: [] };
+  // R60 (D195): the rules that touch this swing's own dice — declared riders first, then whatever a critical adds.
+  const diceRules = [
+    ...(riders.contracts ?? []).flatMap((key) => { const rider = (derived.attackRiders ?? []).find((item) => item.key === key); return rider && riderFitsAttack(rider, attack) ? rider.dice : []; }),
+    ...crits.dice,
+  ];
   const declared = (riders.contracts ?? []).map((key) => (derived.attackRiders ?? []).find((item) => item.key === key)).filter((item) => item && riderFitsAttack(item, attack)).map((item) => item!.label);
-  return { spec: { name: `${cleave ? `${attack.name} · 쪼개기` : offHand ? `${attack.name} · 보조 손` : attack.name}${savageFeat ? ` · ${savageFeat}` : ""}${declared.length ? ` · ${declared.join(" · ")}` : ""}`, source: "weapon", attackBonus: attack.attackBonus, mode: range.mode, damage, riders: extra, ...(derived.critRange ? { critRange: derived.critRange } : {}), ...(crits.length ? { critRiders: crits } : {}), ...(derived.ignoresCover ? { ignoresCover: true } : {}), ...(advantageOn.length ? { advantageOn } : {}), ...(savage ? { savage } : {}), ...(mastery ? { mastery, abilityMod, masteryDc: 8 + abilityMod + derived.proficiencyBonus } : {}) }, spend: (runtime) => spenders.reduce((acc, spend) => spend(acc), runtime) };
+  return { spec: { name: `${cleave ? `${attack.name} · 쪼개기` : offHand ? `${attack.name} · 보조 손` : attack.name}${savageFeat ? ` · ${savageFeat}` : ""}${declared.length ? ` · ${declared.join(" · ")}` : ""}`, source: "weapon", attackBonus: attack.attackBonus, mode: range.mode, damage, riders: extra, ...(derived.critRange ? { critRange: derived.critRange } : {}), ...(crits.parts.length ? { critRiders: crits.parts } : {}), ...(diceRules.length ? { diceRules } : {}), ...(derived.ignoresCover ? { ignoresCover: true } : {}), ...(advantageOn.length ? { advantageOn } : {}), ...(savage ? { savage } : {}), ...(mastery ? { mastery, abilityMod, masteryDc: 8 + abilityMod + derived.proficiencyBonus } : {}) }, spend: (runtime) => spenders.reduce((acc, spend) => spend(acc), runtime) };
 }
 
 export function npcAttackSpec(entry: JournalNpc, actionName: string): AttackSpec | null {
