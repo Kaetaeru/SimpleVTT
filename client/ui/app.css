@@ -667,5 +667,7 @@ span.cl-tracker-init{display:inline-grid;place-items:center}
 .cl-scene-effect small{margin-left:3px;opacity:.75;font-weight:700}
 /* R66 (D201): nothing that comes and goes sits over the people in the scene. */
 .cl-window.narrow{width:min(420px,94vw)}
+/* R67 (D202): the conditions not on, behind "+ 상태". */
+.cl-cond.picker{margin-top:6px;padding-top:6px;border-top:1px dashed var(--line)}
 .cl-toasts{left:auto;right:12px;transform:none;align-items:flex-end;max-width:min(46%,420px)}
 .cl-approval-overlay{align-content:center;gap:10px}

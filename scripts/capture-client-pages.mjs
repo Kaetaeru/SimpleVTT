@@ -98,8 +98,9 @@ try {
   // SC-30: HP -5 on the sheet → the bar on the DM's token drops; the DM toggles 중독 on the token → the sheet shows it.
   await player.locator(".cl-journal-row", { hasText: "앨리스의 파이터" }).click();
   const sheet = player.locator(".cl-window", { hasText: "앨리스의 파이터" });
-  await sheet.getByLabel("HP 입력").fill("-5");
-  await sheet.getByRole("button", { name: "적용", exact: true }).first().click();
+  // R67 (D202): an amount and a button, not a signed command in one box.
+  await sheet.getByLabel("HP 입력").fill("5");
+  await sheet.getByRole("button", { name: "피해", exact: true }).first().click();
   const [cur, max] = barText.split("/").map(Number);
   await dm.waitForFunction(([name, expected]) => document.querySelector(`.cl-scene-card[data-token-name="${name}"] .cl-scene-name small`)?.textContent === expected, ["앨리스의 파이터", `${cur - 5}/${max}`], { timeout: 10000 });
   check(true, `the token bar follows the sheet (${cur - 5}/${max})`);

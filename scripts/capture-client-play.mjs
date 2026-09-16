@@ -42,7 +42,10 @@ try {
   await page.getByLabel("HP 입력").fill("++4");
   await page.getByLabel("HP 입력").press("Enter");
   await page.getByRole("group", { name: /\/3$/ }).first().locator("button").first().click().catch(() => {});
-  await page.getByRole("button", { name: "중독" }).click();
+  // R67 (D202): only the conditions that are on are shown; the rest open behind "+ 상태".
+  await page.getByRole("button", { name: "+ 상태" }).click();
+  await page.getByRole("button", { name: "중독", exact: true }).click();
+  await page.getByRole("button", { name: "중독 ✕" }).waitFor({ timeout: 10000 });
   await page.getByRole("button", { name: "아이템 추가" }).click();
   await page.getByLabel("아이템 검색").fill("장검");
   await page.getByRole("button", { name: /^장검/ }).first().click();

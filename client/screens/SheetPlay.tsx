@@ -64,6 +64,10 @@ export function SheetPlay({ source, runtime, catalog, save, onRolled, savedAt, t
   // The slider previews while dragging and writes one log line on release.
   const commitSlider = () => { if (sliderHp !== null) { commit(setCurrentHp(runtime, derived, sliderHp)); setSliderHp(null); } };
   const submitHp = () => { if (hpPreview) { commit(hpPreview); setHpInput(""); } };
+  // R67 (D202): the buttons read the box as an amount; a leading sign typed out of habit is ignored.
+  const hpAmount = /^[+-]{0,2}(\d+)$/.exec(hpInput.trim())?.[1] ?? "";
+  const applyHp = (command: string) => { const next = applyHpCommand(runtime, derived, command); if (next) { commit(next); setHpInput(""); } };
+  const [pickingCondition, setPickingCondition] = useState(false);
 
   const actions: SheetActions = {
     attack: onAttack,
@@ -144,6 +148,9 @@ export function SheetPlay({ source, runtime, catalog, save, onRolled, savedAt, t
       </div>
       {derived.validation.blocking.length || derived.validation.warnings.length ? <div className="cl-card"><ValidationList derived={derived} /></div> : null}
 
+
+      {/* R67 (D202): the play tools sit under who this is and the numbers that matter in a fight. */}
+      <SheetView derived={derived} catalog={catalog} runtime={runtime} actions={actions} playPanel={(
       <div className="cl-play">
         <div className="cl-card">
           <div className="cl-row">
@@ -156,9 +163,14 @@ export function SheetPlay({ source, runtime, catalog, save, onRolled, savedAt, t
             onChange={(event) => setSliderHp(Number(event.target.value))}
             onMouseUp={() => commitSlider()} onTouchEnd={() => commitSlider()} onKeyUp={() => commitSlider()} onBlur={() => commitSlider()} />
           <div className="cl-row" style={{ gap: 6 }}>
-            <input className="cl-input" style={{ width: 110 }} placeholder="12 · -4 · +4 · ++4" aria-label="HP 입력" title="숫자: 현재 HP 설정 · -4: 피해 · +4: 회복 · ++4: 임시 HP" value={hpInput} onChange={(event) => setHpInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") submitHp(); }} />
-            <button type="button" className="cl-btn primary" disabled={!hpPreview} onClick={submitHp}>적용</button>
-            <span className="cl-quiet cl-small">{hpInput.trim() ? (hpPreview ? `→ HP ${hpPreview.hp.current}/${derived.hp.max}${hpPreview.hp.temp !== runtime.hp.temp ? ` · 임시 ${hpPreview.hp.temp}` : ""}` : "형식: 12 / -4 / +4 / ++4") : "숫자 = 설정 · −4 피해 · +4 회복 · ++4 임시 HP"}</span>
+            {/* R67 (D202): a number and what to do with it, instead of one box with four meanings. Enter still takes the
+                short forms (-4 피해, +4 회복, ++4 임시 HP, 12 설정) for whoever types them. */}
+            <input className="cl-input" style={{ width: 72 }} inputMode="numeric" placeholder="숫자" aria-label="HP 입력" title="숫자를 넣고 피해·회복·임시 HP·설정을 누르세요 (Enter: -4 피해 · +4 회복 · ++4 임시 · 12 설정)" value={hpInput} onChange={(event) => setHpInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") submitHp(); }} />
+            <button type="button" className="cl-btn small danger" disabled={!hpAmount} onClick={() => applyHp(`-${hpAmount}`)}>피해</button>
+            <button type="button" className="cl-btn small" disabled={!hpAmount} onClick={() => applyHp(`+${hpAmount}`)}>회복</button>
+            <button type="button" className="cl-btn small" disabled={!hpAmount} onClick={() => applyHp(`++${hpAmount}`)}>임시 HP</button>
+            <button type="button" className="cl-btn small quiet" disabled={!/^\d+$/.test(hpInput.trim())} onClick={() => applyHp(hpInput.trim())}>설정</button>
+            {hpInput.trim() && hpPreview ? <span className="cl-quiet cl-small">Enter → HP {hpPreview.hp.current}/{derived.hp.max}{hpPreview.hp.temp !== runtime.hp.temp ? ` · 임시 ${hpPreview.hp.temp}` : ""}</span> : null}
           </div>
           <div className="cl-row" style={{ gap: 6 }}>
             <button type="button" className="cl-btn" onClick={() => setResting({ spends: {} })}>짧은 휴식</button>
@@ -203,10 +215,18 @@ export function SheetPlay({ source, runtime, catalog, save, onRolled, savedAt, t
           ) : <p className="cl-quiet cl-small">격노·주문처럼 지속되는 것을 사용하면 여기에 나타나고, 종료 버튼이나 라운드 진행으로 끝냅니다.</p>}
         </div>
         <div className="cl-card">
-          <h3 className="cl-muted">상태</h3>
+          {/* R67 (D202): the conditions that are on, each one press from off; the other sixteen wait behind "+ 상태". */}
+          <h3 className="cl-muted" style={{ display: "flex", gap: 8, alignItems: "center" }}>상태
+            <button type="button" className="cl-btn small quiet" style={{ marginLeft: "auto" }} aria-expanded={pickingCondition} onClick={() => setPickingCondition((open) => !open)}>{pickingCondition ? "닫기" : "+ 상태"}</button>
+          </h3>
           <div className="cl-cond">
-            {CONDITIONS.map((condition) => <button type="button" key={condition} className={runtime.conditions.includes(condition) ? "on" : ""} onClick={() => commit(toggleCondition(runtime, condition))}>{condition}</button>)}
+            {runtime.conditions.length ? runtime.conditions.map((condition) => <button type="button" key={condition} className="on" title="눌러서 해제" onClick={() => commit(toggleCondition(runtime, condition))}>{condition} ✕</button>) : <span className="cl-quiet cl-small">걸린 상태가 없습니다.</span>}
           </div>
+          {pickingCondition ? (
+            <div className="cl-cond picker">
+              {CONDITIONS.filter((condition) => !runtime.conditions.includes(condition)).map((condition) => <button type="button" key={condition} onClick={() => commit(toggleCondition(runtime, condition))}>{condition}</button>)}
+            </div>
+          ) : null}
           {runtime.hp.current === 0 || runtime.deathSaves.success || runtime.deathSaves.failure ? (
             <div className="cl-row" style={{ gap: 6 }}>
               <span className="cl-small">죽음 내성 성공 {runtime.deathSaves.success}/3 · 실패 {runtime.deathSaves.failure}/3</span>
@@ -239,8 +259,7 @@ export function SheetPlay({ source, runtime, catalog, save, onRolled, savedAt, t
           ) : null}
         </div>
       </div>
-
-      <SheetView derived={derived} catalog={catalog} runtime={runtime} actions={actions} />
+      )} />
 
       {exporting ? (
         <Modal title="JSON 내보내기" onClose={() => { setExporting(null); setCopied(null); }} actions={<>

@@ -110,8 +110,9 @@ try {
 
   // SC-17: HP -5 and a roll from the window: the DM's copy updates and the roll card names the character.
   const before = Number((await sheetWindow.locator(".cl-hp-big").innerText()).split("/")[0]);
-  await sheetWindow.getByLabel("HP 입력").fill("-5");
-  await sheetWindow.getByRole("button", { name: "적용", exact: true }).first().click();
+  // R67 (D202): an amount and a button, not a signed command in one box.
+  await sheetWindow.getByLabel("HP 입력").fill("5");
+  await sheetWindow.getByRole("button", { name: "피해", exact: true }).first().click();
   await dm.locator(".cl-journal-row", { hasText: "앨리스의 파이터" }).click();
   const dmSheet = topWindow(dm);
   await dmSheet.locator(".cl-hp-big").waitFor();

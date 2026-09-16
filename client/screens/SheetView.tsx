@@ -3,7 +3,7 @@
  * addends). With `actions` the sheet is live: slots, resources, gold and the bag can be changed in place — the
  * offline session feel. `compact` is the wizard's live preview: one column, read-only.
  */
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import type { ContentCatalog, SpellView } from "../catalog/catalog";
 import { ABILITY_KEYS, ABILITY_KO } from "../catalog/types";
 import type { CastMethod } from "../character/play";
@@ -57,7 +57,7 @@ export interface SheetActions {
 const d20 = (bonus: number, terms: Term[] = []) => `1d20${bonus >= 0 ? "+" : "-"}${Math.abs(bonus)}${diceOf(terms)}`;
 const diceOf = (terms: Term[]) => terms.filter((term) => term.dice).map((term) => `+${term.dice}`).join("");
 
-export function SheetView({ derived, catalog, runtime, compact = false, actions }: { derived: DerivedCharacter; catalog: ContentCatalog; runtime?: CharacterRuntime; compact?: boolean; actions?: SheetActions }) {
+export function SheetView({ derived, catalog, runtime, compact = false, actions, playPanel }: { derived: DerivedCharacter; catalog: ContentCatalog; runtime?: CharacterRuntime; compact?: boolean; actions?: SheetActions; /** R67 (D202): what the play sheet puts between the stat strip and the abilities. */ playPanel?: ReactNode }) {
   const [openFeatures, setOpenFeatures] = useState<Record<string, boolean>>({});
   const [goldInput, setGoldInput] = useState("");
   const classLine = derived.classes.map((cls) => `${cls.name}${cls.subclassName ? ` (${cls.subclassName})` : ""} ${cls.level}`).join(" / ") || "직업 없음";
@@ -96,6 +96,8 @@ export function SheetView({ derived, catalog, runtime, compact = false, actions 
         <Stat label="패시브 지각" value={<Explain terms={derived.passivePerceptionTerms} total={derived.passivePerception} label="패시브 지각">{derived.passivePerception}</Explain>} />
         <Stat label="감각" value={derived.senses.darkvision ? `암시야 ${derived.senses.darkvision}` : "—"} sub={[derived.senses.blindsight ? `맹안시야 ${derived.senses.blindsight}` : "", derived.senses.truesight ? `진실시야 ${derived.senses.truesight}` : ""].filter(Boolean).join(" · ") || undefined} />
       </div>
+
+      {playPanel}
 
       <div className="cl-ability-grid">
         {ABILITY_KEYS.map((key) => {
