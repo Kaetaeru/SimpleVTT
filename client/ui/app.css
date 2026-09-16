@@ -559,6 +559,15 @@ span.cl-tracker-init{display:inline-grid;place-items:center}
 .cl-cmd-name{font-weight:600;font-size:13px}
 .cl-cmd.free .cl-cmd-name{color:var(--muted)}
 .cl-cmd-groups{display:flex;flex-wrap:wrap;align-items:center;gap:12px;flex:1;min-width:0}
+/* R65 (D200): the turn panel as rows, one per part of the turn. */
+.cl-cmd-rows{display:flex;flex-direction:column;gap:4px;flex:1;min-width:0}
+.cl-cmd-row{display:flex;flex-wrap:wrap;align-items:center;gap:4px;padding:3px 8px;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06)}
+.cl-cmd-row.attack{border-color:rgba(229,72,77,.35);background:rgba(229,72,77,.06)}
+.cl-cmd-row.quiet{background:transparent;border-color:transparent}
+.cl-cmd-row>.cl-cmd-label{min-width:74px;display:inline-flex;align-items:center}
+.cl-cmd-row .cl-btn.feature{border-color:rgba(122,162,255,.35)}
+.cl-uses{margin-left:6px;padding:0 5px;border-radius:8px;background:rgba(255,255,255,.08);font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums}
+.cl-cmd.free .cl-cmd-row{opacity:.85}
 .cl-cmd-group{display:flex;flex-wrap:wrap;align-items:center;gap:4px;padding:4px 8px;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06)}
 .cl-cmd-group.attack{border-color:rgba(229,72,77,.35);background:rgba(229,72,77,.06)}
 .cl-cmd-label{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-right:4px}

@@ -102,6 +102,8 @@ try {
   await player.locator(".cl-window").last().getByLabel("창 닫기").click();
   await player.getByLabel("앨리스의 파이터 토큰 놓기").click();
   await iconOf(dm, "앨리스의 파이터").waitFor({ timeout: 10000 });
+  // The DM's screen seeing the token says nothing about the player's: wait for the player's own row before counting.
+  await player.locator(".cl-scene-row[aria-label='플레이어'] .cl-scene-card[data-token-name='앨리스의 파이터']").waitFor({ timeout: 10000 }).catch(() => {});
   check(await player.locator(".cl-scene-row[aria-label='플레이어'] .cl-scene-card[data-token-name='앨리스의 파이터']").count() === 1, "the fighter is in the 플레이어 row");
   await tab(player, "채팅").click();
 
@@ -178,8 +180,8 @@ try {
   await panel.waitFor({ timeout: 10000 });
   check(await dm.getByRole("region", { name: "앨리스의 파이터의 턴" }).count() === 0, "the DM has no panel for a player's character");
   check((await panel.innerText()).includes("붙잡기") && (await panel.innerText()).includes("행동"), "the panel shows attacks, unarmed options and the menus");
-  check(await panel.getByRole("button", { name: /마법/ }).isDisabled(), "a fighter has no spells: ✨ 마법 stays off (D102)");
-  await panel.getByRole("button", { name: /^행동/ }).click();
+  check(await panel.getByRole("button", { name: /^✨ 마법/ }).isDisabled(), "a fighter has no spells: ✨ 마법 stays off (D102)");
+  await panel.getByRole("button", { name: /^공식 행동/ }).click();
   check(await player.getByRole("menuitem", { name: /^질주/ }).count() === 1, "the 행동 menu lists the official actions");
   await player.getByRole("menuitem", { name: /^회피/ }).click();
   await player.locator(".cl-chat-msg.act", { hasText: "회피" }).waitFor({ timeout: 15000 });
@@ -187,13 +189,13 @@ try {
   await iconOf(dm, "앨리스의 파이터").locator(".cl-marker[title='회피']").waitFor({ timeout: 15000 });
   check(true, "회피 lands as a card and a mark on the DM's screen");
   // R9: 준비 — the readied action waits as a ⏳ mark and goes off on someone else's turn (SC-55).
-  await panel.getByRole("button", { name: /^행동/ }).click();
+  await panel.getByRole("button", { name: /^공식 행동/ }).click();
   await player.getByRole("menuitem", { name: /^준비/ }).click();
   await player.getByLabel("조건 → 행동").fill("고블린이 다가오면 → 대검");
   await player.getByRole("button", { name: "준비", exact: true }).click();
   await iconOf(dm, "앨리스의 파이터").locator(".cl-marker[title='준비']").waitFor({ timeout: 15000 });
   check(true, "준비 leaves a ⏳ mark on the fighter");
-  await panel.getByRole("button", { name: /^행동/ }).click();
+  await panel.getByRole("button", { name: /^공식 행동/ }).click();
   await player.getByRole("menuitem", { name: /^영향/ }).click();
   await player.getByLabel("기술").selectOption("intimidation");
   await player.getByRole("button", { name: "영향", exact: true }).last().click();
@@ -204,12 +206,11 @@ try {
   await player.locator(".cl-roll-card", { hasText: "근력(운동)" }).waitFor({ timeout: 15000 });
   await dm.locator(".cl-toast", { hasText: "근력(운동)" }).waitFor({ timeout: 15000 });
   check(true, "판정 rolls a skill check into chat and a toast tells the DM");
-  await panel.getByRole("button", { name: /^특성/ }).click();
-  await player.getByRole("menuitem", { name: /행동 폭증/ }).click();
+  // R65 (D200): features are buttons on their row — 행동 폭증 costs nothing of the turn, so it sits with the actions.
+  await panel.getByRole("button", { name: /^행동 폭증/ }).click();
   await player.locator(".cl-chat-msg.emote", { hasText: "행동 폭증" }).waitFor({ timeout: 20000 });
   check(true, "특성 uses the fighter's Action Surge and tells the table");
-  await panel.getByRole("button", { name: /^추가 행동/ }).click();
-  await player.getByRole("menuitem", { name: /재기의 바람/ }).click();
+  await panel.getByRole("button", { name: /^재기의 바람/ }).click();
   await player.locator(".cl-chat-msg.emote", { hasText: "재기의 바람" }).waitFor({ timeout: 20000 });
   check(await player.locator(".cl-roll-card", { hasText: "재기의 바람" }).count() >= 1, "추가 행동 uses Second Wind: the heal roll lands in chat");
   await player.screenshot({ path: path.join(OUT, "67-turn-panel-player.png") });
@@ -254,7 +255,7 @@ try {
   await iconOf(dm, "마법사").click();
   const mageBar = dm.getByRole("toolbar", { name: "마법사 액션" });
   await mageBar.waitFor();
-  await mageBar.getByRole("button", { name: /마법/ }).click();
+  await mageBar.getByRole("button", { name: /^✨ 마법/ }).click();
   const fireball = dm.getByRole("menuitem", { name: /파이어볼/ });
   await fireball.waitFor({ timeout: 5000 });
   check((await fireball.getAttribute("title") ?? "").includes("2/2 남음") && (await fireball.getAttribute("title") ?? "").includes("민첩 내성"), "the menu says how often and what the spell asks for");
@@ -276,7 +277,7 @@ try {
   // R10: the mage's per-day list counts the cast — the menu now says 1/2 left.
   await iconOf(dm, "마법사").click();
   await mageBar.waitFor();
-  await mageBar.getByRole("button", { name: /마법/ }).click();
+  await mageBar.getByRole("button", { name: /^✨ 마법/ }).click();
   await dm.getByRole("menuitem", { name: /파이어볼/ }).waitFor({ timeout: 5000 });
   check((await dm.getByRole("menuitem", { name: /파이어볼/ }).getAttribute("title") ?? "").includes("1/2 남음"), "the per-day spell shows its remaining uses after the cast");
   await dm.keyboard.press("Escape");

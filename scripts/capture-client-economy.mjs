@@ -90,15 +90,15 @@ try {
   check(!(await chipUsed(player, "추가 행동")), "the turn starts with the bonus action in hand");
   check(!(await chipUsed(player, "행동")), "and the action too");
 
-  // 재기의 바람 from the 추가 행동 menu: a bonus action, so the chip must go out.
-  await bar.getByRole("button", { name: /^추가 행동/ }).click();
-  const menu = player.locator(".cl-dd-menu");
-  await menu.waitFor();
-  await menu.getByRole("menuitem", { name: /재기의 바람/ }).click();
+  // 재기의 바람 on the 추가 행동 row: a bonus action, so the chip must go out.
+  // R65 (D200): it is a button on the row now, with its uses beside it, not an entry in a menu.
+  check((await bar.getByRole("button", { name: /^재기의 바람/ }).innerText()).includes("2/2"), "the row shows 재기의 바람 with its uses");
+  await bar.getByRole("button", { name: /^재기의 바람/ }).click();
   await player.waitForFunction(() => { const chip = [...document.querySelectorAll(".cl-econ")].find((item) => item.textContent?.includes("추가 행동")); return chip?.className.includes("used") ?? false; }, null, { timeout: 10000 });
   check(true, "using 재기의 바람 spends the bonus action");
   check(!(await chipUsed(player, "행동")), "and leaves the action alone");
-  check((await bar.getByRole("button", { name: /추가 행동 \(씀\)/ }).count()) === 1, "the menu button says it is spent");
+  await bar.getByRole("button", { name: /^재기의 바람/ }).filter({ hasText: "1/2" }).waitFor({ timeout: 10000 });
+  check(true, "and the button counts the use");
   await player.screenshot({ path: path.join(OUT, "78-bonus-action-spent.png") });
 
   // Coming round to this turn again hands the economy back.

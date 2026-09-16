@@ -87,6 +87,20 @@ export async function activateFeature(feature: DerivedFeature, deps: ActivateDep
   return refused ? "refused" : "done";
 }
 
+/**
+ * R65 (D200): which part of the turn a use belongs to. The content carries no economy payments yet, so the
+ * activation note decides — "추가 행동" and "반응" are written there; a bare "행동" is the action; anything else
+ * (행동 폭증, 기 점수 소비) costs nothing of the turn by itself and sits with the actions.
+ */
+export type FeatureEconomy = "action" | "bonus" | "reaction" | "free";
+export function featureEconomy(note: string | undefined): FeatureEconomy {
+  const text = note ?? "";
+  if (/추가 행동|Bonus/i.test(text)) return "bonus";
+  if (/반응/.test(text)) return "reaction";
+  if (/(^|[\s·])행동($|[\s·])/.test(text)) return "action";
+  return "free";
+}
+
 /** Features the turn panel offers: those with a rule to activate, with their remaining uses. */
 export function usableFeatures(derived: DerivedCharacter, runtime: CharacterRuntime, catalog?: ContentCatalog) {
   const durations = catalog ? contractDurations(catalog, characterScope(derived)) : undefined;
@@ -95,6 +109,12 @@ export function usableFeatures(derived: DerivedCharacter, runtime: CharacterRunt
     if (!activation) return [];
     const pool = activation.resourceId ? derived.resources.find((resource) => resource.id === activation.resourceId) : undefined;
     const left = pool ? pool.max - (runtime.resourcesUsed[pool.id] ?? 0) : undefined;
-    return [{ feature, activation, pool, left, bonus: Boolean(activation.note && /추가 행동|Bonus/i.test(activation.note)) }];
+    // R65 (D200): whether pressing it does anything — a pool, dice, an effect, healing, or a contract operation that is
+    // not just a sentence. The rest ("서브클래스: 챔피언", a passive's reminder) belongs on the sheet, not on a button.
+    const contract = catalog ? featureContract(catalog, featureRuleKey(feature.id)) : undefined;
+    const pressable = Boolean(activation.resourceId || activation.points || activation.roll || activation.duration || activation.heal || activation.tempHp || activation.hitDie
+      || contract?.entryPoints.some((entry) => entry.invocation === "manual" && entry.operations.some((operation) => operation.kind !== "adjudication.request")));
+    const economy = featureEconomy(activation.note);
+    return [{ feature, activation, pool, left, bonus: economy === "bonus", economy, pressable }];
   });
 }

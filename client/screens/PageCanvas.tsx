@@ -363,6 +363,9 @@ function FloatingMenu({ at, className, label, onClose, ignore, children }: { at:
   );
 }
 
+/** R65 (D200): one thing the turn panel can press — a row button or a menu entry. */
+interface PanelItem { key: string; label: string; hint?: string; uses?: string; disabled?: boolean; onSelect: () => void }
+
 function Dropdown({ label, items, disabled, tone, up = false }: { label: string; items: Array<{ key: string; label: string; hint?: string; disabled?: boolean; onSelect: () => void }>; disabled?: boolean; tone?: "primary"; /** Open above the button (menus on the command bar at the bottom of the board). */ up?: boolean }) {
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLDivElement>(null);
@@ -502,7 +505,7 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
    * features come from the activation notes; anything else is declared by name so the table (and the DM's palette)
    * can act on it. The host spends the reaction and posts the card.
    */
-  const reactionItems = [
+  const reactionItems: PanelItem[] = [
     // R30 (D159): a monster's reactions (받아넘기기 …) are on its stat block and had no button anywhere — only the
     // NPC sheet's text. They join the same menu, and the host spends the reaction the same way.
     ...(entry.kind === "npc" ? entry.statBlock.reactions.map((action) => ({
@@ -512,23 +515,26 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
       disabled: false,
       onSelect: () => { if (action.kind === "attack" && action.attack) void attackWith({ source: "npc", actionName: action.name }); else c.react(me, action.name, { note: action.text.slice(0, 80) }); },
     })) : []),
-    ...usable.filter((item) => item.activation.note?.includes("반응")).map((item) => ({
+    ...usable.filter((item) => item.economy === "reaction" && item.pressable).map((item) => ({
       key: `reaction:${item.feature.id}`,
       label: item.feature.name,
+      uses: item.left !== undefined ? `${item.left}/${item.pool!.max}` : undefined,
       hint: `${item.left !== undefined ? `${item.left}/${item.pool!.max} · ` : ""}${item.activation.note ?? ""}`,
       disabled: item.left !== undefined && item.left <= 0,
       onSelect: () => { const formula = item.activation.roll?.(derived!)?.formula; c.react(me, item.feature.name, formula ? { formula } : { note: item.activation.note }); if (item.activation.resourceId) void useIt(item.feature); },
     })),
-    { key: "reaction:free", label: "직접 적기…", hint: "이름 (그리고 원하면 주사위 식)", onSelect: () => {
+    { key: "reaction:free", label: "직접 적기…", uses: undefined as string | undefined, disabled: false, hint: "이름 (그리고 원하면 주사위 식)", onSelect: () => {
       const name = window.prompt("어떤 반응입니까? (예: 오싹한 회피, 원소 흡수, 지옥의 응징)")?.trim();
       if (!name) return;
       const formula = window.prompt(`${name} — 굴릴 주사위가 있으면 적으세요 (예: 2d10+3). 없으면 비워 두세요.`)?.trim();
       c.react(me, name, formula ? { formula } : {});
     } },
   ];
-  const featureItems = entry.kind === "npc"
-    ? entry.statBlock.traits.map((trait) => { const most = entry.runtime.traitUses?.[trait.name]; const used = entry.runtime.uses?.[`trait:${trait.name}`] ?? 0; return { key: trait.name, label: trait.name, hint: `${most ? `${Math.max(0, most - used)}/${most} 남음 · ` : ""}${trait.text.slice(0, 60)}`, disabled: most !== undefined && used >= most, onSelect: () => c.useTrait(me, trait.name) }; })
-    : usable.filter((item) => !item.bonus).map((item) => ({ key: item.feature.id, label: item.feature.name, hint: item.left !== undefined ? `${item.left}/${item.pool!.max}${item.activation.note ? ` · ${item.activation.note}` : ""}` : item.activation.note, disabled: item.left !== undefined && item.left <= 0, onSelect: () => void useIt(item.feature) }));
+  const featureItems: PanelItem[] = entry.kind === "npc"
+    // R65 (D200): a stat block's traits are mostly passive text; only the ones with uses to count become buttons.
+    ? entry.statBlock.traits.filter((trait) => entry.runtime.traitUses?.[trait.name] !== undefined).map((trait) => { const most = entry.runtime.traitUses?.[trait.name]; const used = entry.runtime.uses?.[`trait:${trait.name}`] ?? 0; return { key: trait.name, label: trait.name, hint: `${most ? `${Math.max(0, most - used)}/${most} 남음 · ` : ""}${trait.text.slice(0, 60)}`, disabled: most !== undefined && used >= most, onSelect: () => c.useTrait(me, trait.name) }; })
+    // R65 (D200): only what pressing does something for, and only what is not a bonus action or a reaction (those have rows).
+    : usable.filter((item) => item.pressable && (item.economy === "action" || item.economy === "free")).map((item) => ({ key: item.feature.id, label: item.feature.name, uses: item.left !== undefined ? `${item.left}/${item.pool!.max}` : undefined, hint: item.left !== undefined ? `${item.left}/${item.pool!.max}${item.activation.note ? ` · ${item.activation.note}` : ""}` : item.activation.note, disabled: item.left !== undefined && item.left <= 0, onSelect: () => void useIt(item.feature) }));
   const items = entry.kind === "character" && derived ? derived.inventory.filter((item) => item.quantity > 0 && !["weapon", "armor", "shield"].includes(item.kind)) : [];
   const useItem = async (item: DerivedItem) => {
     if (entry.kind !== "character" || !derived) return;
@@ -555,9 +561,9 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
     }
     return { key: item.instanceId, label: item.name, hint: `${item.quantity > 1 ? `×${item.quantity} · ` : ""}${itemUse(item).heal ? `회복 ${itemUse(item).heal}` : itemUse(item).consumes ? "소모" : "기록"}`, onSelect: () => void useItem(item) };
   });
-  const bonusItems = [
+  const bonusItems: PanelItem[] = [
     ...(entry.kind === "npc" ? entry.statBlock.bonusActions.map((action) => ({ key: action.name, label: `${action.kind === "attack" && action.attack ? "⚔ " : ""}${action.name}`, hint: action.text?.slice(0, 60), onSelect: () => { if (action.kind === "attack" && action.attack) void attackWith({ source: "npc", actionName: action.name }); else c.act(me, "utilize", { note: action.name, bonus: true }); } })) : []),
-    ...usable.filter((item) => item.bonus).map((item) => ({ key: item.feature.id, label: item.feature.name, hint: item.left !== undefined ? `${item.left}/${item.pool!.max}` : undefined, disabled: item.left !== undefined && item.left <= 0, onSelect: () => void useIt(item.feature, true) })),
+    ...usable.filter((item) => item.bonus && item.pressable).map((item) => ({ key: item.feature.id, label: item.feature.name, uses: item.left !== undefined ? `${item.left}/${item.pool!.max}` : undefined, hint: item.activation.note, disabled: item.left !== undefined && item.left <= 0, onSelect: () => void useIt(item.feature, true) })),
     // R59 (D194): the official actions a contract moved into this menu (예리한 정신's 빠른 연구, 관찰력's 빠른 수색).
     ...(derived?.bonusActions ?? []).filter((item) => item.kind !== "attack").map((item) => ({ key: `bonus-as:${item.kind}`, label: actionDef(item.kind as ActionKind).name, hint: item.source, onSelect: () => void take(actionDef(item.kind as ActionKind), true) })),
     // R61 (D196): one more swing as a bonus action (쌍수 사용자, 장병기 달인, 대형 무기 달인's 베어 넘기기). The
@@ -637,12 +643,13 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
         <span className="cl-cmd-name">{mode === "turn" && !isGm ? token.name : mode === "turn" ? (tracker.turns.length ? `라운드 ${tracker.round}` : "") : token.name}</span>
         {/* R27 (D142): the chips used to appear only on your own turn — exactly when you do not need to ask. Out of
             turn the reaction is the one that matters ("do you still have it?"), so the row is always there. */}
-        {mode === "turn" || inCombat ? <span className="cl-turn-econ">{chip("행동", turn?.actionUsed)}{chip("추가 행동", turn?.bonusUsed)}{chip("반응", turn?.reactionUsed)}</span> : null}
         {blocked ? <span className="cl-pill bad">{blocked}: 행동 불가</span> : null}
       </div>
-      <div className="cl-cmd-groups" role="toolbar" aria-label={`${token.name} 액션`}>
-        <div className="cl-cmd-group attack">
-          <span className="cl-cmd-label">공격</span>
+      {/* R65 (D200): one row per part of the turn, labelled with whether it is still in hand. What can be pressed is a
+          button with its uses left, not an entry in a menu that has to be opened to be found. */}
+      <div className={`cl-cmd-rows${mode === "turn" || inCombat ? " cl-turn-econ" : ""}`} role="toolbar" aria-label={`${token.name} 액션`}>
+        <div className="cl-cmd-row attack">
+          <span className="cl-cmd-label">{mode === "turn" || inCombat ? chip("행동", turn?.actionUsed) : "행동"}</span>
           {derived ? derived.attacks.map((attack) => <button type="button" key={attack.id} className="cl-btn small attack" disabled={offAttack} title={extraAttacks > 1 ? `추가 공격: 공격 행동 하나로 ${extraAttacks}번 — 버튼을 ${extraAttacks}번 누르세요` : undefined} onClick={() => void attackWith({ source: "weapon", attackId: attack.id })}>⚔ {attack.name} <b>{attack.attackBonus >= 0 ? "+" : ""}{attack.attackBonus}</b>{extraAttacks > 1 ? <small className="cl-extra">×{extraAttacks}</small> : null}{attack.masteryActive && attack.mastery ? <small className="cl-extra" title={`무기 통달: ${attack.mastery}`}>⚒{attack.mastery}</small> : null}</button>) : null}
           {entry.kind === "npc" && routine.length ? <button type="button" className="cl-btn small attack" disabled={offAttack} title={block?.actions.find((action) => action.kind === "multiattack")?.text} onClick={() => void multiattack()}>⚔⚔ 다중공격 <small className="cl-extra">{routine.map((step) => `${step.name}×${step.count}`).join(" ")}</small></button> : null}
           {entry.kind === "npc" ? entry.statBlock.actions.filter((action) => action.kind === "attack" && action.attack).map((action) => <button type="button" key={action.name} className="cl-btn small attack" disabled={offAttack || Boolean(action.timing?.recharge && entry.runtime.spent[action.name])} onClick={() => void attackWith({ source: "npc", actionName: action.name })}>⚔ {action.name} <b>{action.attack!.bonus >= 0 ? "+" : ""}{action.attack!.bonus}</b></button>) : null}
@@ -650,19 +657,24 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
           {saveActions.map((action) => { const waiting = Boolean(action.timing?.recharge && entry.kind === "npc" && entry.runtime.spent[action.name]); return <button type="button" key={action.name} className="cl-btn small attack" disabled={off || waiting} title={`${action.text.slice(0, 160)}${waiting ? " — 재충전 대기" : ""}`} onClick={() => void npcSaveWith(action.name)}>☄ {action.name} <b>DC {action.save!.dc}</b>{waiting ? <small className="cl-extra">재충전 대기</small> : null}</button>; })}
           <Dropdown up label="✨ 마법" disabled={offAttack || !spellItems.length} items={spellItems} />
           {legendaryPer ? <Dropdown up label={`👑 전설 ${legendaryLeft}/${legendaryPer}`} disabled={off || !inCombat || !legendaryLeft} items={legendaryItems} /> : null}
+          <Dropdown up label="공식 행동" disabled={off} items={ACTIONS.filter((def) => !["grapple", "shove", "escape"].includes(def.kind)).map((def) => ({ key: def.kind, label: def.name, hint: def.summary, onSelect: () => void take(def) }))} />
+          {featureItems.map((item) => <button type="button" key={item.key} className="cl-btn small feature" disabled={Boolean(blocked) || item.disabled} title={item.hint} onClick={item.onSelect}>{item.label}{item.uses ? <small className="cl-uses">{item.uses}</small> : null}</button>)}
         </div>
-        <div className="cl-cmd-group">
-          <span className="cl-cmd-label">행동</span>
-          <Dropdown up label={turn?.actionUsed ? "행동 (씀)" : "행동"} disabled={off} items={ACTIONS.filter((def) => !["grapple", "shove", "escape"].includes(def.kind)).map((def) => ({ key: def.kind, label: def.name, hint: def.summary, onSelect: () => void take(def) }))} />
-          <Dropdown up label={turn?.bonusUsed ? "추가 행동 (씀)" : "추가 행동"} disabled={off} items={bonusItems} />
+        <div className="cl-cmd-row">
+          <span className="cl-cmd-label">{mode === "turn" || inCombat ? chip("추가 행동", turn?.bonusUsed) : "추가 행동"}</span>
+          {bonusItems.map((item) => <button type="button" key={item.key} className={`cl-btn small${item.key === "note" ? " quiet" : " feature"}`} disabled={off || item.disabled} title={item.hint} onClick={item.onSelect}>{item.label}{item.uses ? <small className="cl-uses">{item.uses}</small> : null}</button>)}
         </div>
-        <div className="cl-cmd-group">
-          <span className="cl-cmd-label">시트</span>
+        {/* R29 (D155): the reaction is the one thing a player needs out of turn, so the row is there in combat. */}
+        {inCombat ? (
+          <div className="cl-cmd-row">
+            <span className="cl-cmd-label">{chip("반응", turn?.reactionUsed)}</span>
+            {reactionItems.map((item) => <button type="button" key={item.key} className={`cl-btn small${item.key === "reaction:free" ? " quiet" : " feature"}`} disabled={Boolean(blocked) || Boolean(turn?.reactionUsed) || item.disabled} title={item.hint} onClick={item.onSelect}>{item.label}{item.uses ? <small className="cl-uses">{item.uses}</small> : null}</button>)}
+          </div>
+        ) : null}
+        <div className="cl-cmd-row quiet">
+          <span className="cl-cmd-label">그 밖</span>
           <Dropdown up label="판정" items={checkItems} />
-          {/* R29 (D155): the reaction is the one thing a player needs out of turn, so the menu is there in combat. */}
-          {inCombat ? <Dropdown up label={turn?.reactionUsed ? "반응 (씀)" : "반응"} disabled={Boolean(blocked) || Boolean(turn?.reactionUsed)} items={reactionItems} /> : null}
-          <Dropdown up label="특성" disabled={Boolean(blocked)} items={featureItems} />
-          <Dropdown up label="아이템" disabled={Boolean(blocked)} items={itemItems} />
+          <Dropdown up label="아이템" disabled={Boolean(blocked) || !itemItems.length} items={itemItems} />
           {!inTracker ? <button type="button" className="cl-btn small" onClick={() => c.addTurn({ name: token.name, tokenId: token.id, pageId: page.id, entryId: entry.id, image: token.image }, initiativeBonus)} title="1d20 + 이니셔티브 보너스를 굴려 트래커에 넣습니다">이니셔티브 {initiativeBonus >= 0 ? "+" : ""}{initiativeBonus}</button> : null}
           <button type="button" className="cl-btn small quiet" onClick={() => onOpenEntry(entry.id)}>시트 열기</button>
         </div>
