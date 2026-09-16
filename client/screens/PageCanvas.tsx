@@ -195,8 +195,9 @@ export function PageCanvas({ onOpenEntry, onOpenToken, onOpenPageSettings, onOpe
               { key: "settings", label: "장면 설정", hint: "이름·배경 그림·설명", onSelect: () => onOpenPageSettings(page.id) },
               { key: "dup", label: "복제", onSelect: () => { const copy = { ...page, id: newScene(page.campaignId, "", 0).id, name: `${page.name} (복제)`, order: live.length, tokens: page.tokens.map((token) => ({ ...token, id: newToken({ name: token.name }).id })) }; c.putPage(copy); setGmPageId(copy.id); } },
               { key: "archive", label: page.archived ? "보관 해제" : "보관", onSelect: () => c.putPage({ ...page, archived: !page.archived }) },
-              // R22 (D120): a scene can be thrown away, not only archived. The last one cannot go — the table needs somewhere to be.
-              { key: "delete", label: "장면 삭제", hint: live.length > 1 || page.archived ? `${page.name}과(와) 그 위의 아이콘 ${page.tokens.length}개` : "마지막 장면은 지울 수 없습니다 (먼저 새 장면을 만드세요)", disabled: live.length <= 1 && !page.archived, onSelect: () => { if (!confirm(`"${page.name}"을(를) 지울까요? 이 장면 위의 아이콘 ${page.tokens.length}개도 함께 사라지고 되돌릴 수 없습니다.`)) return; const next = pages.find((item) => item.id !== page.id && !item.archived) ?? pages.find((item) => item.id !== page.id); c.removePage(page.id); setGmPageId(next?.id ?? null); } },
+              // R23 (D120): any scene can be thrown away, the only one included — the board falls back to its empty
+              // state with "+ 장면" right there, so there is nothing to protect the DM from.
+              { key: "delete", label: "장면 삭제", hint: `${page.name}과(와) 그 위의 아이콘 ${page.tokens.length}개${pages.length === 1 ? " · 마지막 장면입니다" : ""}`, onSelect: () => { if (!confirm(`"${page.name}"을(를) 지울까요? 이 장면 위의 아이콘 ${page.tokens.length}개도 함께 사라지고 되돌릴 수 없습니다.`)) return; const next = pages.find((item) => item.id !== page.id && !item.archived) ?? pages.find((item) => item.id !== page.id); c.removePage(page.id); setGmPageId(next?.id ?? null); } },
               { key: "archived", label: showArchived ? "보관함 숨기기" : "보관함 보기", onSelect: () => setShowArchived((value) => !value) },
               { key: "layer", label: layer === "gm" ? "모두에게 보이게 놓기" : "GM만 보이게 놓기", hint: "새로 놓는 아이콘", onSelect: () => setLayer((value) => (value === "gm" ? "objects" : "gm")) },
             ]} />
@@ -436,11 +437,17 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
     ...Object.keys(SKILL_KO).map((id) => { const bonus = skillBonus(stats, id); return { key: `skill:${id}`, label: `${ABILITY_KO[SKILL_ABILITY_OF[id]]}(${SKILL_KO[id]})`, hint: `${bonus >= 0 ? "+" : ""}${bonus}${helped ? " · 도움 유리" : ""}`, onSelect: () => void rollCheck({ label: `${ABILITY_KO[SKILL_ABILITY_OF[id]]}(${SKILL_KO[id]})`, formula: d20(bonus), kind: "check" }) }; }),
   ] : [];
   const usable = entry.kind === "character" && derived ? usableFeatures(derived, entry.runtime) : [];
-  const useIt = async (feature: DerivedFeature) => {
+  /**
+   * R23 (D121): a feature is used on the sheet, so the sheet has to tell the table what the turn spent. Without
+   * this the 추가 행동 칩 stayed lit all turn after 재기의 바람 or 교활한 행동 — the bonus action looked unused.
+   * Only a 추가 행동 is claimed: the activation notes say which features are bonus actions, and nothing in the data
+   * separates a feature that costs an action from one that is free, so those are left to the table.
+   */
+  const useIt = async (feature: DerivedFeature, bonus = false) => {
     if (entry.kind !== "character" || !derived) return;
     const outcome = await activateFeature(feature, { source: entry.source, catalog, derived, runtime: currentRuntime(), rollDice: rollToChat, save: saveRuntime });
     if (outcome === "refused") alert("남은 횟수가 없습니다.");
-    if (outcome === "done") c.say(`/em ${token.name}: ${feature.name} 사용`);
+    if (outcome === "done") { c.say(`/em ${token.name}: ${feature.name} 사용`); if (bonus) c.spendEconomy(me, "bonus"); }
   };
   const featureItems = entry.kind === "npc"
     ? entry.statBlock.traits.map((trait) => { const most = entry.runtime.traitUses?.[trait.name]; const used = entry.runtime.uses?.[`trait:${trait.name}`] ?? 0; return { key: trait.name, label: trait.name, hint: `${most ? `${Math.max(0, most - used)}/${most} 남음 · ` : ""}${trait.text.slice(0, 60)}`, disabled: most !== undefined && used >= most, onSelect: () => c.useTrait(me, trait.name) }; })
@@ -473,7 +480,7 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
   });
   const bonusItems = [
     ...(entry.kind === "npc" ? entry.statBlock.bonusActions.map((action) => ({ key: action.name, label: `${action.kind === "attack" && action.attack ? "⚔ " : ""}${action.name}`, hint: action.text?.slice(0, 60), onSelect: () => { if (action.kind === "attack" && action.attack) void attackWith({ source: "npc", actionName: action.name }); else c.act(me, "utilize", { note: action.name, bonus: true }); } })) : []),
-    ...usable.filter((item) => item.bonus).map((item) => ({ key: item.feature.id, label: item.feature.name, hint: item.left !== undefined ? `${item.left}/${item.pool!.max}` : undefined, disabled: item.left !== undefined && item.left <= 0, onSelect: () => void useIt(item.feature) })),
+    ...usable.filter((item) => item.bonus).map((item) => ({ key: item.feature.id, label: item.feature.name, hint: item.left !== undefined ? `${item.left}/${item.pool!.max}` : undefined, disabled: item.left !== undefined && item.left <= 0, onSelect: () => void useIt(item.feature, true) })),
     { key: "note", label: "기록…", hint: "다른 추가 행동을 쓴 것으로 남김", onSelect: () => void take({ ...actionDef("utilize"), name: "추가 행동", text: "무엇을" }, true) },
   ];
   // 마법 (D102): the sheet's castable spells or the stat block's lists; targets from the board, the slot from a dialog.
@@ -554,8 +561,8 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
         </div>
         <div className="cl-cmd-group">
           <span className="cl-cmd-label">행동</span>
-          <Dropdown up label="행동" disabled={off} items={ACTIONS.filter((def) => !["grapple", "shove", "escape"].includes(def.kind)).map((def) => ({ key: def.kind, label: def.name, hint: def.summary, onSelect: () => void take(def) }))} />
-          <Dropdown up label="추가 행동" disabled={off} items={bonusItems} />
+          <Dropdown up label={turn?.actionUsed ? "행동 (씀)" : "행동"} disabled={off} items={ACTIONS.filter((def) => !["grapple", "shove", "escape"].includes(def.kind)).map((def) => ({ key: def.kind, label: def.name, hint: def.summary, onSelect: () => void take(def) }))} />
+          <Dropdown up label={turn?.bonusUsed ? "추가 행동 (씀)" : "추가 행동"} disabled={off} items={bonusItems} />
         </div>
         <div className="cl-cmd-group">
           <span className="cl-cmd-label">시트</span>

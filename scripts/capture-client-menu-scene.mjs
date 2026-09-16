@@ -84,12 +84,14 @@ try {
   await dm.waitForFunction(() => document.querySelectorAll(".cl-page-chip").length === 1, null, { timeout: 5000 });
   check(true, `the scene was deleted (${names.length} scenes → one left)`);
 
-  // The last scene refuses to go: the table needs somewhere to be.
+  // Even the last scene goes: the board falls back to its empty state with "+ 장면" right there.
   await dm.getByRole("button", { name: "⋯" }).click();
-  const lastItem = dm.locator(".cl-dd-menu").getByRole("menuitem", { name: /장면 삭제/ });
-  await lastItem.waitFor();
-  check(await lastItem.isDisabled(), "the last scene cannot be deleted");
-  await dm.keyboard.press("Escape");
+  await dm.locator(".cl-dd-menu").getByRole("menuitem", { name: /장면 삭제/ }).click();
+  await dm.locator(".cl-canvas-empty").waitFor({ timeout: 5000 });
+  check((await dm.locator(".cl-page-chip").count()) === 0, "the last scene can be deleted too");
+  await dm.getByRole("button", { name: "+ 장면" }).first().click();
+  await dm.locator(".cl-scene").waitFor({ timeout: 5000 });
+  check(true, "and a new scene starts the board again");
 
   await browser.close();
   if (failures.length) { console.error(`${failures.length} failure(s)`); process.exitCode = 1; } else console.log("done");

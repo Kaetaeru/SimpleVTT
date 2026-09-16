@@ -12,7 +12,7 @@ import type { CastMethod } from "../character/play";
 import type { AttackOverrides } from "../rules/resolve";
 import type { CampaignClock, CampaignSettings, ChatMessage, Macro, PlayerRole, RollTable } from "../campaign/model";
 
-export const PROTOCOL_VERSION = 18;
+export const PROTOCOL_VERSION = 19;
 
 export interface Presence { userId: string; displayName: string; role: PlayerRole; color: string; connected: boolean }
 
@@ -112,6 +112,8 @@ export type ClientCommand =
   | { type: "act.item"; actor: ActorRef; target?: ActorRef; instanceId: string }
   /** R12 (DM): a monster spends Legendary Resistance on a failed save in a spell card — that row is re-applied as a success. */
   /** R19: use one of an NPC's traits — spends a use when the DM gave that trait a per-day count. */
+  /** R23: something on the sheet (a feature with a 추가 행동 note) spent this turn's action or bonus action. */
+  | { type: "act.spend"; actor: ActorRef; which: "action" | "bonus" }
   | { type: "act.trait"; actor: ActorRef; name: string }
   /** R16: put a summoned creature on the summoner's scene — its own journal entry, controlled by the summoner's controller. */
   | { type: "act.summon"; summoner: ActorRef; monsterId: string; count?: number; spellId?: string }

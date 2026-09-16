@@ -718,6 +718,15 @@ export class TableHost {
         this.say({ type: "act", who: player.displayName, playerId: userId, content: describeAct(result), act: result });
         return;
       }
+      case "act.spend": {
+        // R23 (D121): features are used on the sheet, so the sheet has to say what the turn spent — otherwise the
+        // 추가 행동 chip stayed lit all turn after 재기의 바람 or 교활한 행동.
+        const actor = this.resolveActor(command.actor);
+        if (!actor) return refuse("그 인물을 찾을 수 없습니다");
+        if (!isGm && !this.mayAct(userId, command.actor, actor.entry)) return refuse("자기 캐릭터의 행동만 씁니다");
+        this.markUsed(command.actor, command.which === "bonus" ? "bonus" : "action");
+        return;
+      }
       case "act.trait": {
         const actor = this.resolveActor(command.actor);
         if (!actor) return refuse("그 크리처를 찾을 수 없습니다");
