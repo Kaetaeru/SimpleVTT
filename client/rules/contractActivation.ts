@@ -6,8 +6,8 @@
  * into the `ParsedDuration` the sheet already counts. `effect.remove` and `effect.suppress` are the other two ends of
  * the same idea: one takes an effect off, the other leaves it on the sheet but stops it counting for anything.
  */
-import { COUNTED_LIFETIME, evaluate, LIFETIME_KO, type CommonPlayContract, type ContractOperation, type Scope } from "./contract";
-import { qualifyRuleKey, type ParsedDuration } from "./activation";
+import { COUNTED_LIFETIME, economyAsAction, evaluate, LIFETIME_KO, type CommonPlayContract, type ContractOperation, type Scope } from "./contract";
+import { featureRuleKey, qualifyRuleKey, type ParsedDuration } from "./activation";
 
 // R52 (D187): a `pre-roll-attack` entry point is declared in the attack dialog, not pressed on the sheet, so the
 // readers that answer "what does the 사용 button do" leave it out. `contractSummary` still prints it as a rule.
@@ -59,6 +59,30 @@ export const contractDurations = (catalog: { contractFor(key: string): CommonPla
   };
 
 /**
+ * R59 (D194): the official actions this character's contracts let them take as a bonus action instead. 예리한 정신's
+ * 빠른 연구 and 관찰력's 빠른 수색 were sentences on the sheet; the turn panel offers them in both menus now.
+ */
+export function contractBonusActions(derived: { features: Array<{ id: string; name: string }> }, catalog: { contractFor(key: string): CommonPlayContract | undefined }) {
+  const out: Array<{ kind: string; source: string }> = [];
+  const seen = new Set<string>();
+  for (const feature of derived.features) {
+    const key = featureRuleKey(feature.id);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const contract = featureContract(catalog, key);
+    if (!contract) continue;
+    for (const entry of contract.entryPoints) {
+      for (const operation of entry.operations) {
+        if (operation.kind !== "economy.modify") continue;
+        const kind = economyAsAction(operation.bucket);
+        if (kind && !out.some((item) => item.kind === kind)) out.push({ kind, source: feature.name });
+      }
+    }
+  }
+  return out;
+}
+
+/**
  * A feature's contract, whether it was written against the feature's rule key (`fighter.action-surge`, the kind
  * `class-feature-common-play` ships) or against its effect key (`feature:barbarian.rage`, the kind that says what the
  * effect it starts does). One feature, two ways of naming it, one lookup.
@@ -78,7 +102,16 @@ export interface ContractUse {
   roll?: { label: string; formula: string };
   /** R49 (D184): the one-line reminder beside the button — what the hand-written row called `note`. */
   note?: string;
+  /**
+   * R59 (D194): the reserved resource id `resource:hit-die`. A hit die is not a pool like the others — the sheet
+   * already carries one per die size and a rest gives them back — so a contract that spends one says so by name and
+   * the sheet spends its largest unspent die and rolls it.
+   */
+  hitDie?: boolean;
 }
+
+/** R59 (D194): the id a contract uses to mean "one of this character's hit dice". */
+export const HIT_DIE_RESOURCE = "resource.hit-die";
 
 /** `1d10` + `{ref: actor.class-level:…}` becomes "1d10+5"; a bare number becomes "5"; dice alone stay "1d10". */
 function formula(dice: string | undefined, amount: Parameters<typeof evaluate>[0], scope: Scope): string | undefined {
@@ -98,7 +131,10 @@ export function contractUse(contract: CommonPlayContract, scope: Scope, label: s
       const amount = evaluate(operation.amount, scope);
       const spent = typeof amount === "number" ? -amount : 0;
       // A negative amount spends the pool; a positive one gives it back, which a use never does to its own cost.
-      if (spent > 0) { use.resourceId = operation.resourceId; if (spent > 1) use.cost = spent; found = true; }
+      if (spent > 0) {
+        if (operation.resourceId === HIT_DIE_RESOURCE) { use.hitDie = true; found = true; continue; }
+        use.resourceId = operation.resourceId; if (spent > 1) use.cost = spent; found = true;
+      }
       continue;
     }
     if (operation.kind === "healing.apply") { use.heal = formula(operation.dice, operation.amount, scope); found = true; continue; }

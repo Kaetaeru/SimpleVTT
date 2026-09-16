@@ -322,6 +322,12 @@ export function spendResource(runtime: CharacterRuntime, derived: DerivedCharact
   return stamp({ ...runtime, resourcesUsed: { ...runtime.resourcesUsed, [resourceId]: used + spend } }, `${label}: ${resource.max - used - spend}/${resource.max} 남음`);
 }
 
+/** R59 (D194): the biggest hit die this sheet still has, or nothing when they are all spent. */
+export function spendableHitDie(runtime: CharacterRuntime, derived: DerivedCharacter): string | undefined {
+  const sizes = Object.keys(derived.hitDice).sort((a, b) => Number(b.slice(1)) - Number(a.slice(1)));
+  return sizes.find((die) => (runtime.hitDiceSpent[die] ?? 0) < derived.hitDice[die]);
+}
+
 export interface FeatureUseExtras { healRoll?: number; tempRoll?: number; points?: number; /** A logged roll ("브레스 무기 피해 14"). */ rolled?: { label: string; total: number } }
 
 /** Press "사용" on a feature: spend the pool (one use or a number of points), heal or grant temp HP from a roll, start its timed effect, log. */
@@ -336,6 +342,13 @@ export function useFeature(runtime: CharacterRuntime, derived: DerivedCharacter,
     if (used + spend > resource.max) return null;
     next = { ...next, resourcesUsed: { ...next.resourcesUsed, [resource.id]: used + spend } };
     parts.push(spend > 1 || activation.points ? `${spend}점 사용, ${resource.max - used - spend}/${resource.max} 남음` : `${resource.max - used - 1}/${resource.max} 남음`);
+  }
+  // R59 (D194): a hit die is spent from the sheet's own pool, largest first, and a rest gives it back like any other.
+  if (activation.hitDie) {
+    const die = spendableHitDie(next, derived);
+    if (!die) return null;
+    next = { ...next, hitDiceSpent: { ...next.hitDiceSpent, [die]: (next.hitDiceSpent[die] ?? 0) + 1 } };
+    parts.push(`히트 다이스 ${die} 소비`);
   }
   if (extras.rolled) parts.push(`${extras.rolled.label} ${extras.rolled.total}`);
   // The caller decides what was rolled or chosen (Second Wind roll, Lay on Hands points on self); apply whatever it passed.

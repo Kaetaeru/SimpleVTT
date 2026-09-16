@@ -61,7 +61,12 @@ const FEATS = {
   ])] },
   "dual-wielder": { rules: [ask("공격 행동 뒤 추가 행동으로 다른 무기 한 번 (양손 아님, 수정치가 음수가 아니면 피해에 능력 수정치)"), ask("무기 두 개를 한 번에 뽑거나 집어넣음")] },
   dueling: { rules: [modify("damage.bonus", { value: 2, scope: "one-handed-melee", note: "다른 무기를 들지 않은 동안" })] },
-  durable: { rules: [ask("죽음 내성 굴림에 유리 — 굴릴 때 선언"), ask("추가 행동으로 히트 다이스 하나를 굴려 회복")] },
+  durable: { rules: [
+    { kind: "resource.change", resource: "resource:hit-die", amount: -1, target: "self" },
+    { kind: "healing.apply", dice: "1d10", target: "self" },
+    ask("추가 행동 · 히트 다이스의 크기대로 굴리세요 (여기서는 d10으로 적어 둡니다)"),
+    ask("죽음 내성 굴림에 유리 — 굴릴 때 선언"),
+  ] },
   "elemental-adept": { rules: [ask("고른 피해 유형 하나: 자신의 주문이 그 저항을 무시하고, 그 유형 피해 주사위의 1은 2로"), ask("어떤 유형을 골랐는지 시트에 적어 두세요 — 앱은 고름을 기억하지 않습니다")] },
   "fey-touched": { rules: [ask("점술·환혹 1레벨 주문 하나와 안개 걸음을 항상 준비, 각각 긴 휴식마다 슬롯 없이 한 번")] },
   "great-weapon-master": { pre: [rider({ scope: "heavy" }, [
@@ -83,7 +88,10 @@ const FEATS = {
     fact("within-5ft", "reaction", "맞은 사람에게서 5피트 안에 있고, 방패나 무기를 들고 있다"),
     modify("damage-taken.reduce", { dice: "1d10", value: PB, when: on("within-5ft") }),
   ]), trigger: "attack.hit-ally" }] },
-  "keen-mind": { rules: [ask("비전학·역사·조사·자연·종교 중 하나에 숙련 또는 전문화 — 만들기·레벨업에서 시트에 반영됩니다"), ask("연구 행동을 추가 행동으로")] },
+  "keen-mind": { rules: [
+    { kind: "economy.modify", bucket: "bonus-action.as:study", amount: 1 },
+    ask("비전학·역사·조사·자연·종교 중 하나에 숙련 또는 전문화 — 만들기·레벨업에서 시트에 반영됩니다"),
+  ] },
   "lightly-armored": { rules: [modify("proficiency.armor", { value: "경갑" }), modify("proficiency.armor", { value: "방패" })] },
   lucky: { rules: [ask("행운 점수 (숙련 보너스만큼, 긴 휴식마다 회복) — 유리·불리를 사고 판정을 다시 굴립니다")] },
   "mage-slayer": { rules: [ask("집중 중인 대상에게 피해를 주면 그 집중 내성에 불리"), ask("지능·지혜·매력 내성에 실패했을 때 대신 성공 (휴식마다 한 번)")] },
@@ -95,7 +103,10 @@ const FEATS = {
     toParty("condition.apply", { condition: "영웅적 영감" }),
     ask("짧은 휴식이나 긴 휴식을 끝낼 때, 숙련된 악기로 연주를 들려준 아군에게"),
   ] },
-  observant: { rules: [ask("통찰·조사·지각 중 하나에 숙련 또는 전문화"), ask("수색 행동을 추가 행동으로")] },
+  observant: { rules: [
+    { kind: "economy.modify", bucket: "bonus-action.as:search", amount: 1 },
+    ask("통찰·조사·지각 중 하나에 숙련 또는 전문화 — 만들기·레벨업에서 시트에 반영됩니다"),
+  ] },
   piercer: { hooks: [after(["hit"], [ask("관통 피해 주사위 하나를 다시 굴려 새 결과를 씁니다 (턴당 한 번)")], "piercing"), after(["crit"], [ask("피해 주사위 하나를 더 굴려 더합니다")], "piercing")] },
   poisoner: { rules: [
     modify("damage.ignore-resistance", { value: "독" }),

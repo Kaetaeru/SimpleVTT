@@ -20,7 +20,7 @@ import type { Layer, Page, Token, TokenBar, TokenMarker } from "../campaign/page
 import type { TrackerTurn } from "../campaign/tracker";
 import { ALL_MARKERS, applyBarInput, controlsToken, isConditionMarker, MARKER_GLYPH, newScene, newToken, playerPageId, tokenForEntry, tokenForNpc } from "../campaign/page";
 import type { Advantage, AttackOverrides } from "../rules/resolve";
-import { ACTIONS, actionDef, cannotAct, hasFreeHand, npcStats, pcStats, skillBonus, SKILL_ABILITY_OF, SKILL_KO, type ActionDef } from "../rules/actions";
+import { ACTIONS, actionDef, cannotAct, hasFreeHand, npcStats, pcStats, skillBonus, SKILL_ABILITY_OF, SKILL_KO, type ActionDef, type ActionKind } from "../rules/actions";
 import { ABILITY_KEYS, ABILITY_KO } from "../catalog/types";
 import { activateFeature, usableFeatures } from "../character/activate";
 import { applyHealing, noteLog, setItemQuantity } from "../character/play";
@@ -561,6 +561,8 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
   const bonusItems = [
     ...(entry.kind === "npc" ? entry.statBlock.bonusActions.map((action) => ({ key: action.name, label: `${action.kind === "attack" && action.attack ? "⚔ " : ""}${action.name}`, hint: action.text?.slice(0, 60), onSelect: () => { if (action.kind === "attack" && action.attack) void attackWith({ source: "npc", actionName: action.name }); else c.act(me, "utilize", { note: action.name, bonus: true }); } })) : []),
     ...usable.filter((item) => item.bonus).map((item) => ({ key: item.feature.id, label: item.feature.name, hint: item.left !== undefined ? `${item.left}/${item.pool!.max}` : undefined, disabled: item.left !== undefined && item.left <= 0, onSelect: () => void useIt(item.feature, true) })),
+    // R59 (D194): the official actions a contract moved into this menu (예리한 정신's 빠른 연구, 관찰력's 빠른 수색).
+    ...(derived?.bonusActions ?? []).map((item) => ({ key: `bonus-as:${item.kind}`, label: actionDef(item.kind as ActionKind).name, hint: item.source, onSelect: () => void take(actionDef(item.kind as ActionKind), true) })),
     { key: "note", label: "기록…", hint: "다른 추가 행동을 쓴 것으로 남김", onSelect: () => void take({ ...actionDef("utilize"), name: "추가 행동", text: "무엇을" }, true) },
   ];
   // 마법 (D102): the sheet's castable spells or the stat block's lists; targets from the board, the slot from a dialog.

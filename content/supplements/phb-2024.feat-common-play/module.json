@@ -631,12 +631,23 @@
         "invocation": "manual",
         "operations": [
          {
-          "kind": "adjudication.request",
-          "question": "죽음 내성 굴림에 유리 — 굴릴 때 선언"
+          "kind": "resource.change",
+          "resource": "resource:hit-die",
+          "amount": -1,
+          "target": "self"
+         },
+         {
+          "kind": "healing.apply",
+          "dice": "1d10",
+          "target": "self"
          },
          {
           "kind": "adjudication.request",
-          "question": "추가 행동으로 히트 다이스 하나를 굴려 회복"
+          "question": "추가 행동 · 히트 다이스의 크기대로 굴리세요 (여기서는 d10으로 적어 둡니다)"
+         },
+         {
+          "kind": "adjudication.request",
+          "question": "죽음 내성 굴림에 유리 — 굴릴 때 선언"
          }
         ]
        }
@@ -1138,12 +1149,13 @@
         "invocation": "manual",
         "operations": [
          {
-          "kind": "adjudication.request",
-          "question": "비전학·역사·조사·자연·종교 중 하나에 숙련 또는 전문화 — 만들기·레벨업에서 시트에 반영됩니다"
+          "kind": "economy.modify",
+          "bucket": "bonus-action.as:study",
+          "amount": 1
          },
          {
           "kind": "adjudication.request",
-          "question": "연구 행동을 추가 행동으로"
+          "question": "비전학·역사·조사·자연·종교 중 하나에 숙련 또는 전문화 — 만들기·레벨업에서 시트에 반영됩니다"
          }
         ]
        }
@@ -1564,12 +1576,13 @@
         "invocation": "manual",
         "operations": [
          {
-          "kind": "adjudication.request",
-          "question": "통찰·조사·지각 중 하나에 숙련 또는 전문화"
+          "kind": "economy.modify",
+          "bucket": "bonus-action.as:search",
+          "amount": 1
          },
          {
           "kind": "adjudication.request",
-          "question": "수색 행동을 추가 행동으로"
+          "question": "통찰·조사·지각 중 하나에 숙련 또는 전문화 — 만들기·레벨업에서 시트에 반영됩니다"
          }
         ]
        }

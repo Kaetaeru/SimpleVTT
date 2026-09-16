@@ -66,6 +66,8 @@ export interface FeatureActivation {
   tempHp?: (derived: DerivedCharacter) => string;
   /** Short reminder shown next to the button ("추가 행동"). */
   note?: string;
+  /** R59 (D194): the use spends one of this character's hit dice and heals by what it rolls (튼튼함's 신속한 회복). */
+  hitDie?: boolean;
 }
 
 const classLevel = (derived: DerivedCharacter, slug: string) => derived.classes.find((cls) => cls.classId.endsWith(`.${slug}`) || cls.classId === slug)?.level ?? 0;
@@ -108,7 +110,7 @@ const ACTIVE_WORDING = /(추가 행동|반응 ?행동|반응|행동)(으로|을 
 const NOT_ACTIVATABLE = new Set(["monk.martial-arts", "invocation.investment-of-the-chain-master", "rogue.sneak-attack", "rogue.cunning-strike", "fighter.extra-attack"]);
 
 /** R39 (D179): looks a feature rule key up in the catalog's contracts and returns the duration it starts, if any. */
-export type ContractDurationSource = (ruleKey: string) => { duration?: ParsedDuration; use?: { resourceId?: string; cost?: number; heal?: string; tempHp?: string; roll?: { label: string; formula: string }; note?: string }; /** R41: the contract does something on use even if it spends nothing and starts nothing. */ acts?: boolean } | undefined;
+export type ContractDurationSource = (ruleKey: string) => { duration?: ParsedDuration; use?: { resourceId?: string; cost?: number; heal?: string; tempHp?: string; roll?: { label: string; formula: string }; note?: string; hitDie?: boolean }; /** R41: the contract does something on use even if it spends nothing and starts nothing. */ acts?: boolean } | undefined;
 
 /** The activation for a feature: from the table, else a pool named after the feature, else a log-only use for features worded as an action. */
 export function featureActivation(feature: DerivedFeature, derived: DerivedCharacter, contract?: ContractDurationSource): FeatureActivation | undefined {
@@ -125,6 +127,8 @@ export function featureActivation(feature: DerivedFeature, derived: DerivedChara
       ...(table ?? {}), ...(use?.resourceId ? { resourceId: use.resourceId } : {}), ...(use?.cost ? { cost: use.cost } : {}),
       ...(use?.heal ? { heal: () => use.heal! } : {}), ...(use?.tempHp ? { tempHp: () => use.tempHp! } : {}),
       ...(use?.roll ? { roll: () => use.roll! } : {}), ...(use?.note ? { note: use.note } : {}),
+      // R59 (D194): a use that spends a hit die rolls it and heals by the result.
+      ...(use?.hitDie ? { hitDie: true } : {}),
       ...(fromContract.duration ? { duration: () => fromContract.duration! } : {}),
     };
   }

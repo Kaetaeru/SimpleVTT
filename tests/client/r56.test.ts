@@ -85,7 +85,7 @@ test("R56: every supplement feat has a contract, and every contract parses (D191
   }
   assert.deepEqual(gaps, [], "this executor can run every part of every contract it ships");
   // The rest are prose the table judges — a mount, a kitchen, or five feet the scene cannot measure (D109).
-  assert.equal(mechanical, 29, "feats carrying at least one mechanical operation (R57 gated 가로막기, R58 aimed four more at other people)");
+  assert.equal(mechanical, 32, "feats carrying at least one mechanical operation (R57 gated 가로막기, R58 aimed four at other people, R59 gave three a hit die or a moved action)");
 });
 
 test("R56: 대형 무기 달인 is a checkbox on a heavy weapon and a bonus action on a critical (D191)", () => {

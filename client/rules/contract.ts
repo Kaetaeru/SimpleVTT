@@ -418,6 +418,12 @@ export function interceptorsFor(contract: CommonPlayContract, timing: string, fa
 }
 
 /** Which turn bucket a contract's economy name refers to, or nothing when this engine does not track it. */
+/**
+ * R59 (D194): `bonus-action.as:<action>` says an official action may be taken as a bonus action. The bucket names
+ * which one, so the turn panel can offer it in both menus instead of the player reading a sentence about it.
+ */
+export const economyAsAction = (bucket: string) => /^bonus-action\.as:(.+)$/.exec(bucket)?.[1];
+
 export function economyBucketOf(bucket: string): "action" | "bonus" | "reaction" | null {
   const head = bucket.split(".")[0];
   if (head === "action") return "action";
