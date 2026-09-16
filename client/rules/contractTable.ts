@@ -17,7 +17,16 @@ export interface TableOutcome {
   deathSave: boolean;
   notes: string[];
   artifacts: Array<{ kind: string; monsterId?: string; count?: number }>;
+  /**
+   * R58 (D193): what the use does to the people it was aimed at. 고무적인 지도자 hands out temporary hit points,
+   * 치유사 heals, 요리사 and 독 제조자 put an item in somebody's bag. `max` is how many may be chosen, when the rule
+   * says so. Everything here needs a target, which is why it could not live on the sheet.
+   */
+  party: { tempHp?: string; heal?: string; grants: string[]; max?: number };
 }
+
+/** Whether an operation is aimed at somebody other than the user. */
+const atOthers = (target: string) => target === "allies" || target === "party" || target === "target" || target === "targets";
 
 /** What this feature's contract asks the table for, or null when it asks for nothing. */
 export function tableOutcome(derived: DerivedCharacter, catalog: ContentCatalog, ruleKey: string): TableOutcome | null {
@@ -26,14 +35,26 @@ export function tableOutcome(derived: DerivedCharacter, catalog: ContentCatalog,
   const scope = characterScope(derived);
   const outcome = contractOutcome(contract, scope);
   const applied: string[] = [];
+  const party: TableOutcome["party"] = { grants: [] };
+  const formula = (operation: { dice?: string; amount?: unknown }) => {
+    const flat = operation.amount === undefined ? undefined : Number(evaluate(operation.amount as never, scope));
+    const parts = [operation.dice, Number.isFinite(flat) && flat ? `${operation.dice ? (flat > 0 ? "+" : "-") : ""}${Math.abs(flat as number)}` : ""].filter(Boolean);
+    return parts.join("") || undefined;
+  };
   for (const entry of contract.entryPoints) {
     if (entry.invocation === "pre-roll-attack") continue;
     for (const operation of entry.operations) {
-      if (operation.kind !== "condition.apply") continue;
-      if (operation.when && evaluate(operation.when, scope) !== true) continue;
-      if (operation.target !== "self") applied.push(operation.condition);
+      if ("when" in operation && operation.when && evaluate(operation.when, scope) !== true) continue;
+      if (operation.kind === "condition.apply" && operation.target !== "self") { applied.push(operation.condition); continue; }
+      // R58 (D193): the half aimed at other people. The sheet cannot answer any of it — it does not know who.
+      if (!("target" in operation) || !atOthers(operation.target)) continue;
+      if (operation.kind === "temp-hp.grant") party.tempHp = formula(operation);
+      else if (operation.kind === "healing.apply") party.heal = formula(operation);
+      else if (operation.kind === "content.grant") party.grants.push(operation.contentId);
     }
   }
+  const targets = contract.entryPoints.find((entry) => entry.targeting)?.targeting;
+  if (targets?.max) party.max = targets.max;
   const table: TableOutcome = {
     label: derived.features.find((feature) => feature.id.endsWith(ruleKey))?.name ?? ruleKey,
     conditionsApplied: applied,
@@ -41,7 +62,9 @@ export function tableOutcome(derived: DerivedCharacter, catalog: ContentCatalog,
     deathSave: outcome.deathSave,
     notes: outcome.notes,
     artifacts: outcome.artifacts.map((item) => ({ kind: item.kind, monsterId: item.monsterId, count: item.count })),
+    party,
   };
-  const asks = table.conditionsApplied.length || table.deathSave || table.notes.length || table.artifacts.length;
+  const asks = table.conditionsApplied.length || table.deathSave || table.notes.length || table.artifacts.length
+    || party.tempHp || party.heal || party.grants.length;
   return asks ? table : null;
 }

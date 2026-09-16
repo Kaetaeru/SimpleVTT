@@ -373,6 +373,8 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
       pcRescues: (entry, family, outcome) => pcRescues(entry, derivedOf(entry, catalogRef.current), catalogRef.current, family, outcome),
       // R42 (D182): the table-level half of a feature's contract.
       pcContractOutcome: (entry, ruleKey) => tableOutcome(derivedOf(entry, catalogRef.current), catalogRef.current, ruleKey),
+      // R58 (D193): the host owns no catalog, so it asks for the name of an id a contract handed somebody.
+      contentName: (contentId) => catalogRef.current.itemById(contentId)?.name ?? catalogRef.current.entry(contentId)?.name,
       pcPayContract: (entry, payments, outcome) => payContract(entry.runtime, derivedOf(entry, catalogRef.current), payments, outcome),
       pcRest: (entry, kind) => { const derived = derivedOf(entry, catalogRef.current); return kind === "long" ? longRest(entry.runtime, derived) : shortRest(entry.runtime, derived); },
       pcReactionSpell: (entry, spellId) => { const derived = derivedOf(entry, catalogRef.current); if (!castableSpells(derived).includes(spellId)) return null; const view = catalogRef.current.spellById(spellId); return view ? cheapestCast(derived, entry.runtime, view.level) : null; },

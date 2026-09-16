@@ -35,6 +35,7 @@ import { castOptions } from "./SheetView";
 import { ApprovalLayer, ToastLayer } from "./Notify";
 import { canOffHand, hasSavageAttacker, hasSmite, hasSneakAttack, npcAttackSpec, smiteSlots, weaponRange } from "../rules/attackSpec";
 import { offeredRiders, type ContractRider } from "../rules/attackRiders";
+import { tableOutcome } from "../rules/contractTable";
 import type { AttackRef, AttackRiders } from "../session/protocol";
 import { Modal as RiderModal } from "../ui/components";
 import { toggleCondition } from "../character/play";
@@ -475,6 +476,19 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
     if (outcome !== "done") return;
     c.say(`/em ${token.name}: ${feature.name} 사용`);
     if (bonus) c.spendEconomy(me, "bonus");
+    // R58 (D193): the half of the contract that belongs to the board. R42 built it and the host has answered it ever
+    // since; nothing called it, so a feature that puts a condition on somebody or hands out temporary hit points did
+    // its sheet half and stopped. When it needs people, the targeting mode asks for them first.
+    const table = derived ? tableOutcome(derived, catalog, featureRuleKey(feature.id)) : null;
+    if (table) {
+      const wantsTargets = table.conditionsApplied.length || table.party.tempHp || table.party.heal || table.party.grants.length;
+      let picked: string[] = [];
+      if (wantsTargets) {
+        picked = await requestTargets(`${feature.name} — 대상을 클릭하세요${table.party.max ? ` (최대 ${table.party.max}명)` : ""}`, { multi: true });
+        if (!picked.length) return;
+      }
+      c.runContract(me, featureRuleKey(feature.id), picked.map((id) => ({ pageId: page.id, tokenId: id })));
+    }
     // R34 (D171): the feature's own contract, when the content ships one. 행동 폭증's `economy.modify` is the first
     // one that reaches the table: the turn gets its 행동 back instead of a sentence telling the player it did.
     const contract = catalog.contractFor(featureRuleKey(feature.id));

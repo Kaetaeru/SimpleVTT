@@ -21,6 +21,9 @@ const ask = (question) => ({ kind: "adjudication.request", question });
  */
 const fact = (id, at, question) => ({ kind: "adjudication.request", question, fact: { id, at } });
 const on = (id) => ({ ref: `fact:${id}` });
+/** R58 (D193): what a use does to the people it was aimed at — the table asks who, then applies it. */
+const toParty = (kind, extra) => ({ kind, target: "allies", ...extra });
+const targeting = (max) => ({ from: "targets", min: 1, max });
 const modify = (property, extra = {}) => ({ kind: "property.modify", property, operation: "add", ...extra });
 const INTERACTION = { id: "use", kind: "choice", responder: "actor-owner", mode: "blocking", input: { type: "boolean" }, revalidate: "if-revision-changed", stalePolicy: "reject" };
 
@@ -44,7 +47,11 @@ const FEATS = {
     { kind: "damage.apply", dice: "1d8", damageType: "weapon", target: "attack-target", when: on("charged") },
     ask("피해 대신 10피트 밀기를 골라도 됩니다"),
   ])] },
-  chef: { rules: [ask("짧은 휴식에 4 + 숙련 보너스 명분의 음식 — 먹고 히트 다이스를 쓰면 1d8 추가 회복"), ask("긴 휴식·1시간 작업에 숙련 보너스만큼의 간식 (추가 행동으로 먹고 임시 HP 숙련 보너스)")] },
+  chef: { rules: [
+    toParty("content.grant", { contentId: "phb2024.item.chef-treat" }),
+    ask("긴 휴식이나 1시간 작업으로 숙련 보너스만큼의 간식 — 추가 행동으로 먹고 임시 HP 숙련 보너스"),
+    ask("짧은 휴식에는 4 + 숙련 보너스 명분의 음식: 먹고 히트 다이스를 쓰면 1d8 추가 회복"),
+  ] },
   crafter: { rules: [ask("도구 숙련과 할인은 만들기·장보기에서")] },
   "crossbow-expert": { rules: [ask("쇠뇌의 장전 속성 무시"), ask("근접 사격: 이 앱은 그 불리를 애초에 적용하지 않습니다 (장면에 거리가 없음) — 이미 효과가 난 셈입니다")] },
   crusher: { hooks: [after(["hit"], [ask("타격 피해를 준 공격으로 대상을 5피트 빈 공간으로 (턴당 한 번)")], "bludgeoning"), after(["crit"], [{ kind: "condition.apply", condition: "교란", target: "target" }, ask("다음 자기 턴 시작까지 이 대상에게 유리")], "bludgeoning")] },
@@ -61,10 +68,17 @@ const FEATS = {
     fact("attack-action", "pre-roll", "자신의 턴에 공격 행동의 일부로 휘두른다"),
     { kind: "damage.apply", amount: PB, damageType: "weapon", target: "attack-target", when: on("attack-action") },
   ])], hooks: [after(["crit", "downed"], [{ kind: "economy.modify", bucket: "bonus-action.extra", amount: 1 }, ask("같은 무기로 추가 행동 공격 한 번")], "melee")] },
-  healer: { rules: [ask("회복 주사위가 1이면 다시 굴려 새 결과를 씁니다"), ask("치유사 가방으로 히트 다이스 하나 + 숙련 보너스만큼 회복 (짧은 휴식마다 한 번)")] },
+  healer: { rules: [
+    toParty("healing.apply", { amount: PB, dice: "1d6" }),
+    ask("치유사 가방을 써서 — 대상이 히트 다이스 하나를 소비합니다 (대상마다 짧은 휴식에 한 번)"),
+    ask("회복 주사위가 1이면 다시 굴려 새 결과를 씁니다"),
+  ], targeting: targeting(1) },
   "heavily-armored": { rules: [modify("proficiency.armor", { value: "중갑" })] },
   "heavy-armor-master": { rules: [modify("damage-taken.reduce", { value: PB, damageTypes: ["타격", "관통", "참격"], when: { op: "eq", left: { ref: "armor.training" }, right: { value: "heavy" } }, note: "중갑을 입은 동안" })] },
-  "inspiring-leader": { rules: [ask("휴식 끝에 30피트 안 아군 최대 여섯에게 임시 HP (캐릭터 레벨 + 올린 능력치 수정치) — 대상 지정은 표에서")] },
+  "inspiring-leader": { rules: [
+    toParty("temp-hp.grant", { amount: { op: "add", args: [LEVEL, { ref: "ability.cha.modifier" }] } }),
+    ask("짧은 휴식이나 긴 휴식을 끝낼 때, 연설을 들은 30피트 안의 아군에게"),
+  ], targeting: targeting(6) },
   interception: { guards: [{ ...guard([
     fact("within-5ft", "reaction", "맞은 사람에게서 5피트 안에 있고, 방패나 무기를 들고 있다"),
     modify("damage-taken.reduce", { dice: "1d10", value: PB, when: on("within-5ft") }),
@@ -77,10 +91,17 @@ const FEATS = {
   "medium-armor-master": { rules: [modify("ac.bonus", { value: 1, when: { op: "all", args: [{ op: "eq", left: { ref: "armor.training" }, right: { value: "medium" } }, { op: "gte", left: { ref: "ability.dex.modifier" }, right: { value: 3 } }] }, note: "평갑의 민첩 상한이 3" })] },
   "moderately-armored": { rules: [modify("proficiency.armor", { value: "평갑" }), modify("proficiency.armor", { value: "방패" })] },
   "mounted-combatant": { rules: [ask("탈것 규칙은 앱이 다루지 않습니다 — 기마 타격·비켜서기·진로 변경은 표에서")] },
-  musician: { rules: [ask("휴식 끝에 숙련 보너스만큼의 아군에게 영웅적 영감")] },
+  musician: { rules: [
+    toParty("condition.apply", { condition: "영웅적 영감" }),
+    ask("짧은 휴식이나 긴 휴식을 끝낼 때, 숙련된 악기로 연주를 들려준 아군에게"),
+  ] },
   observant: { rules: [ask("통찰·조사·지각 중 하나에 숙련 또는 전문화"), ask("수색 행동을 추가 행동으로")] },
   piercer: { hooks: [after(["hit"], [ask("관통 피해 주사위 하나를 다시 굴려 새 결과를 씁니다 (턴당 한 번)")], "piercing"), after(["crit"], [ask("피해 주사위 하나를 더 굴려 더합니다")], "piercing")] },
-  poisoner: { rules: [modify("damage.ignore-resistance", { value: "독" }), ask("독 제조 도구로 약량을 만들고 추가 행동으로 바릅니다 (DC 8 + 숙련 + 민첩)")] },
+  poisoner: { rules: [
+    modify("damage.ignore-resistance", { value: "독" }),
+    toParty("content.grant", { contentId: "phb2024.item.poisoner-dose" }),
+    ask("1시간 작업과 50 GP로 숙련 보너스만큼 — 추가 행동으로 무기나 탄약에 바릅니다 (DC 8 + 숙련 + 민첩)"),
+  ] },
   "polearm-master": { rules: [ask("육척봉·창·중량+장거리 무기로 공격한 뒤 추가 행동으로 자루 끝 근접 공격 (d4 타격)"), ask("그 무기의 간격에 들어오는 생물에게 반응으로 근접 공격 — 장면에 위치가 없어 표에서 선언합니다")] },
   protection: { rules: [ask("5피트 안의 다른 이를 노린 공격에 반응으로 불리 (방패 필요) — 장면에 위치가 없어 표에서 선언합니다")] },
   resilient: { rules: [ask("올린 능력치의 내성 굴림에 숙련 — 만들기·레벨업에서 시트에 반영됩니다")] },
@@ -182,7 +203,7 @@ const content = Object.entries(FEATS).map(([slug, spec]) => ({
       $schema: "https://simplevtt.local/schemas/common-play-contract.schema.json",
       schemaVersion: "0.2-draft",
       id: `feat:${slug}`,
-      ...(spec.rules?.length || spec.pre?.length ? { entryPoints: [...(spec.rules?.length ? [{ id: "rule", invocation: "manual", operations: spec.rules }] : []), ...(spec.pre ?? [])] } : {}),
+      ...(spec.rules?.length || spec.pre?.length ? { entryPoints: [...(spec.rules?.length ? [{ id: "rule", invocation: "manual", ...(spec.targeting ? { targeting: spec.targeting } : {}), operations: spec.rules }] : []), ...(spec.pre ?? [])] } : {}),
       ...(spec.hooks?.length || spec.guards?.length ? { interceptors: [...(spec.hooks ?? []), ...(spec.guards ?? [])] } : {}),
     },
   }],

@@ -65,7 +65,7 @@ test("table: act.contract puts the conditions on the target and the summons on t
     pcStats: (entry) => pcStats(derivedOf(entry, cat)),
     pcContractOutcome: (entry, ruleKey) => (ruleKey === "test.table" ? {
       label: "시험 특성", conditionsApplied: ["공포"], conditionsRemoved: [], deathSave: false,
-      notes: ["30피트 안의 적만"], artifacts: [{ kind: "artifact.spawn", monsterId: "dnd.srd521.monster.wolf", count: 2 }],
+      notes: ["30피트 안의 적만"], artifacts: [{ kind: "artifact.spawn", monsterId: "dnd.srd521.monster.wolf", count: 2 }], party: { grants: [] },
     } : null) });
   const dm = new TableClient(hub.connect("dm-seat"), { userId: "dm", displayName: "DM", joinCode: "R42AAA", hostSecret: "s" });
   const alice = new TableClient(hub.connect("p1"), { userId: "alice", displayName: "앨리스", joinCode: "R42AAA", seat: "a" });

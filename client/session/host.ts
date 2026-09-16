@@ -117,6 +117,8 @@ export interface TableHostOptions {
   pcAftermath?: (entry: JournalCharacter, attackId: string, outcomes: AttackOutcomeKind[]) => AttackAftermath;
   /** R54 (D189): the reactions this character's contracts open a window for at this moment. */
   pcGuards?: (entry: JournalCharacter, trigger: ReactionTrigger) => GuardOffer[];
+  /** R58 (D193): the display name of a content id the host has no catalog to look up. */
+  contentName?: (contentId: string) => string | undefined;
   /** The official actions (D97) need a PC's ability modifiers, saves and skills from the derived sheet. */
   pcStats?: (entry: JournalCharacter) => ActorStats;
   /** Spells (D102): the spec and caster stats for a spell the PC can cast, and how its cost is paid (null when it cannot). */
@@ -133,7 +135,7 @@ export interface TableHostOptions {
    * R42 (D182): what a feature's contract asks the *table* for — conditions on a target, creatures spawned or
    * dismissed, movement, and the questions the DM settles. The host owns no catalog, so this arrives as a function.
    */
-  pcContractOutcome?: (entry: JournalCharacter, ruleKey: string) => { label: string; conditionsApplied: string[]; conditionsRemoved: string[]; deathSave: boolean; notes: string[]; artifacts: Array<{ kind: string; monsterId?: string; count?: number }> } | null;
+  pcContractOutcome?: (entry: JournalCharacter, ruleKey: string) => { label: string; conditionsApplied: string[]; conditionsRemoved: string[]; deathSave: boolean; notes: string[]; artifacts: Array<{ kind: string; monsterId?: string; count?: number }>; /** R58 (D193): what the use does to the people it was aimed at. */ party: { tempHp?: string; heal?: string; grants: string[]; max?: number } } | null;
   /** R18: run a short or long rest on one sheet (the catalog lives outside the host). */
   pcRest?: (entry: JournalCharacter, kind: "short" | "long") => CharacterRuntime | null;
   /** R10: an item in the character's bag as a table use (healing formula, consumed) and how to take it out of the bag. */
@@ -965,6 +967,21 @@ export class TableHost {
             if (gone.length) lines.push(`돌려보냄: ${gone.join(", ")}`);
           } else lines.push(`${artifact.kind} — 표에서 처리`);
         }
+        // R58 (D193): the half aimed at other people. Temporary hit points, healing and an item in the bag all need
+        // a target, which is why none of them could be settled on the user's own sheet.
+        const party = outcome.party;
+        if (targets.length && (party.tempHp || party.heal || party.grants.length)) {
+          const dice = this.options.random ?? Math.random;
+          const capped = party.max ? targets.slice(0, party.max) : targets;
+          for (const target of capped) {
+            const given: string[] = [];
+            if (party.tempHp) { const amount = rollGuard(party.tempHp, dice); this.grantTempHp(target, amount); given.push(`임시 HP ${amount}`); }
+            if (party.heal) { const amount = rollGuard(party.heal, dice); this.healActor(target, amount); given.push(`회복 ${amount}`); }
+            for (const contentId of party.grants) { const name = this.grantContent(target, contentId, outcome.label); given.push(name); }
+            if (given.length) lines.push(`${target.token?.name ?? target.entry.name}: ${given.join(", ")}`);
+          }
+          if (party.max && targets.length > party.max) lines.push(`${party.max}명까지만 적용했습니다`);
+        } else if (party.tempHp || party.heal || party.grants.length) lines.push("대상을 고르지 않았습니다");
         if (outcome.deathSave) { this.rollDeathSave(actor.entry.id, player.displayName); lines.push("죽음 내성"); }
         lines.push(...outcome.notes);
         this.say({ type: "act", who: player.displayName, playerId: userId, content: `${who}: ${outcome.label}${lines.length ? ` — ${lines.join(" · ")}` : ""}`, act: {
@@ -1539,6 +1556,41 @@ export class TableHost {
    * activation carried it as a sentence of prose and the effect simply ran its hundred rounds.
    */
   private refOf(actor: { entry: JournalEntry; token?: Token; page?: Page }): ActorRef { return { entryId: actor.entry.id, pageId: actor.page?.id, tokenId: actor.token?.id }; }
+
+  /** R58 (D193): temporary hit points do not stack — the larger pool wins, as 2024 says. */
+  private grantTempHp(target: { entry: JournalEntry; token?: Token; page?: Page }, amount: number) {
+    const entry = target.entry;
+    if (entry.kind === "handout" || amount <= 0 || entry.runtime.hp.temp >= amount) return;
+    if (entry.kind === "character") this.storeEntry({ ...entry, runtime: { ...entry.runtime, hp: { ...entry.runtime.hp, temp: amount }, updatedAt: this.now() }, updatedAt: this.now() });
+    else this.storeEntry({ ...entry, runtime: { ...entry.runtime, hp: { ...entry.runtime.hp, temp: amount }, updatedAt: this.now() }, updatedAt: this.now() });
+  }
+
+  /** R58 (D193): healing, capped at the maximum the sheet or the stat block carries. */
+  private healActor(target: { entry: JournalEntry; token?: Token; page?: Page }, amount: number) {
+    const entry = target.entry;
+    if (entry.kind === "handout" || amount <= 0) return;
+    if (entry.kind === "character") {
+      const hp = entry.runtime.hp;
+      this.storeEntry({ ...entry, runtime: { ...entry.runtime, hp: { ...hp, current: Math.min(hp.maxSeen, hp.current + amount) }, updatedAt: this.now() }, updatedAt: this.now() });
+    } else {
+      const hp = entry.runtime.hp;
+      this.storeEntry({ ...entry, runtime: { ...entry.runtime, hp: { ...hp, current: Math.min(hp.max, hp.current + amount) }, updatedAt: this.now() }, updatedAt: this.now() });
+    }
+  }
+
+  /**
+   * R58 (D193): an item the use put in somebody's bag (요리사's snack, 독 제조자's dose). The host owns no catalog,
+   * so an id it cannot name is carried as a line rather than dropped — the name is the app's only claim here.
+   */
+  private grantContent(target: { entry: JournalEntry; token?: Token; page?: Page }, contentId: string, label: string) {
+    const name = this.options.contentName?.(contentId) ?? contentId;
+    if (target.entry.kind !== "character") return `${name} (표에서 처리)`;
+    const runtime = target.entry.runtime;
+    const extra = [...runtime.inventory.extra, { instanceId: `${contentId}:${this.now()}:${runtime.inventory.extra.length}`, itemId: contentId, name, quantity: 1 }];
+    this.storeEntry({ ...target.entry, runtime: { ...runtime, inventory: { ...runtime.inventory, extra }, updatedAt: this.now() }, updatedAt: this.now() });
+    void label;
+    return name;
+  }
 
   /**
    * R30 (D156/D157): let this much time pass for one creature's timed effects — a character's sheet through

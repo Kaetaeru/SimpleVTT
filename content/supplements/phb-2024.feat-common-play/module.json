@@ -270,12 +270,17 @@
         "invocation": "manual",
         "operations": [
          {
-          "kind": "adjudication.request",
-          "question": "짧은 휴식에 4 + 숙련 보너스 명분의 음식 — 먹고 히트 다이스를 쓰면 1d8 추가 회복"
+          "kind": "content.grant",
+          "target": "allies",
+          "contentId": "phb2024.item.chef-treat"
          },
          {
           "kind": "adjudication.request",
-          "question": "긴 휴식·1시간 작업에 숙련 보너스만큼의 간식 (추가 행동으로 먹고 임시 HP 숙련 보너스)"
+          "question": "긴 휴식이나 1시간 작업으로 숙련 보너스만큼의 간식 — 추가 행동으로 먹고 임시 HP 숙련 보너스"
+         },
+         {
+          "kind": "adjudication.request",
+          "question": "짧은 휴식에는 4 + 숙련 보너스 명분의 음식: 먹고 히트 다이스를 쓰면 1d8 추가 회복"
          }
         ]
        }
@@ -839,14 +844,27 @@
        {
         "id": "rule",
         "invocation": "manual",
+        "targeting": {
+         "from": "targets",
+         "min": 1,
+         "max": 1
+        },
         "operations": [
          {
-          "kind": "adjudication.request",
-          "question": "회복 주사위가 1이면 다시 굴려 새 결과를 씁니다"
+          "kind": "healing.apply",
+          "target": "allies",
+          "amount": {
+           "ref": "proficiency.bonus"
+          },
+          "dice": "1d6"
          },
          {
           "kind": "adjudication.request",
-          "question": "치유사 가방으로 히트 다이스 하나 + 숙련 보너스만큼 회복 (짧은 휴식마다 한 번)"
+          "question": "치유사 가방을 써서 — 대상이 히트 다이스 하나를 소비합니다 (대상마다 짧은 휴식에 한 번)"
+         },
+         {
+          "kind": "adjudication.request",
+          "question": "회복 주사위가 1이면 다시 굴려 새 결과를 씁니다"
          }
         ]
        }
@@ -987,10 +1005,30 @@
        {
         "id": "rule",
         "invocation": "manual",
+        "targeting": {
+         "from": "targets",
+         "min": 1,
+         "max": 6
+        },
         "operations": [
          {
+          "kind": "temp-hp.grant",
+          "target": "allies",
+          "amount": {
+           "op": "add",
+           "args": [
+            {
+             "ref": "actor.level"
+            },
+            {
+             "ref": "ability.cha.modifier"
+            }
+           ]
+          }
+         },
+         {
           "kind": "adjudication.request",
-          "question": "휴식 끝에 30피트 안 아군 최대 여섯에게 임시 HP (캐릭터 레벨 + 올린 능력치 수정치) — 대상 지정은 표에서"
+          "question": "짧은 휴식이나 긴 휴식을 끝낼 때, 연설을 들은 30피트 안의 아군에게"
          }
         ]
        }
@@ -1480,8 +1518,13 @@
         "invocation": "manual",
         "operations": [
          {
+          "kind": "condition.apply",
+          "target": "allies",
+          "condition": "영웅적 영감"
+         },
+         {
           "kind": "adjudication.request",
-          "question": "휴식 끝에 숙련 보너스만큼의 아군에게 영웅적 영감"
+          "question": "짧은 휴식이나 긴 휴식을 끝낼 때, 숙련된 악기로 연주를 들려준 아군에게"
          }
         ]
        }
@@ -1633,8 +1676,13 @@
           "value": "독"
          },
          {
+          "kind": "content.grant",
+          "target": "allies",
+          "contentId": "phb2024.item.poisoner-dose"
+         },
+         {
           "kind": "adjudication.request",
-          "question": "독 제조 도구로 약량을 만들고 추가 행동으로 바릅니다 (DC 8 + 숙련 + 민첩)"
+          "question": "1시간 작업과 50 GP로 숙련 보너스만큼 — 추가 행동으로 무기나 탄약에 바릅니다 (DC 8 + 숙련 + 민첩)"
          }
         ]
        }
