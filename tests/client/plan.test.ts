@@ -48,7 +48,7 @@ test("plan: the document's scoreboard is the measured one (D176)", () => {
   ]) assert.ok(spec.includes(row), `§14.1의 점수판이 측정값과 다릅니다: ${row} 가 없습니다`);
   // And the four-way split of the features.
   assert.equal(total, 223);
-  assert.deepEqual(counts, { contract: 100, activation: 32, mentioned: 63, silent: 28 });
+  assert.deepEqual(counts, { contract: 116, activation: 32, mentioned: 63, silent: 12 });
   for (const [label, value] of [["계약이 있다", counts.contract], ["사용 버튼이 있다", counts.activation], ["코드가 이름은 안다", counts.mentioned]] as Array<[string, number]>) {
     assert.ok(spec.includes(`| ${label} | ${value} |`), `${label} = ${value}`);
   }
@@ -62,11 +62,11 @@ test("plan: every authoring slice is sized from the real silent-feature count (D
   const KO: Record<string, string> = { fighter: "파이터", barbarian: "바바리안", monk: "몽크", rogue: "로그", wizard: "위저드", sorcerer: "소서러", cleric: "클레릭", druid: "드루이드", paladin: "팔라딘", ranger: "레인저", bard: "바드", warlock: "워락" };
   // R42~R47 pair the classes up; each row prints "a + b" and those are the numbers measured here.
   // The rows for the slices still to come; a class whose slice has landed has no row left (R43+).
-  const pairs: Array<[string, string]> = [["paladin", "ranger"], ["bard", "warlock"]];
+  const pairs: Array<[string, string]> = [["bard", "warlock"]];
   for (const [left, right] of pairs) {
     const row = `| ${KO[left]} · ${KO[right]} | ${perClass[left]} + ${perClass[right]} |`;
     assert.ok(spec.includes(row), `저작 슬라이스 줄이 측정값과 다릅니다: ${row}`);
   }
-  for (const done of ["파이터 · 바바리안", "몽크 · 로그", "위저드 · 소서러", "클레릭 · 드루이드"]) assert.ok(!spec.includes(`| ${done} |`), "끝난 직업은 앞으로 표에 남아 있지 않습니다");
+  for (const done of ["파이터 · 바바리안", "몽크 · 로그", "위저드 · 소서러", "클레릭 · 드루이드", "팔라딘 · 레인저"]) assert.ok(!spec.includes(`| ${done} |`), "끝난 직업은 앞으로 표에 남아 있지 않습니다");
 
 });

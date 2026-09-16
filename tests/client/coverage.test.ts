@@ -13,7 +13,7 @@ import { readFileSync } from "node:fs";
 import { classCoverage } from "./support";
 
 /** Classes whose authoring slice has landed; each one must stay at zero once it gets there. */
-const AUTHORED = ["fighter", "barbarian", "monk", "rogue", "wizard", "sorcerer", "cleric", "druid"];
+const AUTHORED = ["fighter", "barbarian", "monk", "rogue", "wizard", "sorcerer", "cleric", "druid", "paladin", "ranger"];
 
 test("coverage: every class whose authoring slice has landed says something about every feature (D183)", () => {
   const { silent } = classCoverage();
@@ -21,7 +21,7 @@ test("coverage: every class whose authoring slice has landed says something abou
   // And the classes still to come are counted, so the plan's table cannot drift from the code.
   const spec = readFileSync("docs/design/v3/ROLL20_TABLE_SPEC.md", "utf8");
   const KO: Record<string, string> = { fighter: "파이터", barbarian: "바바리안", monk: "몽크", rogue: "로그", wizard: "위저드", sorcerer: "소서러", cleric: "클레릭", druid: "드루이드", paladin: "팔라딘", ranger: "레인저", bard: "바드", warlock: "워락" };
-  for (const [left, right] of [["paladin", "ranger"], ["bard", "warlock"]] as Array<[string, string]>) {
+  for (const [left, right] of [["bard", "warlock"]] as Array<[string, string]>) {
     const row = `| ${KO[left]} · ${KO[right]} | ${silent[left].length} + ${silent[right].length} |`;
     assert.ok(spec.includes(row), `저작 슬라이스 줄이 측정값과 다릅니다: ${row}`);
   }
