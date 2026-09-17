@@ -1,0 +1,53 @@
+{
+ "$schema": "https://simplevtt.local/schemas/rule-module.schema.json",
+ "schemaVersion": "0.1-draft",
+ "moduleId": "test.v09-storm",
+ "moduleVersion": "1",
+ "rulesProfile": { "id": "dnd.srd-5.2.1", "version": "0.1-draft" },
+ "defaultLocale": "ko-KR",
+ "dependencies": [{ "moduleId": "dnd.srd-5.2.1.core" }],
+ "content": [
+  {
+   "id": "test.subclass.fighter.storm-blade", "category": "subclass",
+   "presentation": { "originalName": "Storm Blade", "defaultLocale": "ko-KR", "locales": { "ko-KR": { "name": "폭풍 칼날", "summary": "우레를 두른 검객." } } },
+   "relationships": [{ "kind": "parent", "target": "dnd.srd521.class.fighter" }],
+   "progressionContributions": [{ "track": "class.fighter.level", "threshold": 3, "grants": ["test.feature.storm-blade.thunder-strike"] }]
+  },
+  {
+   "id": "test.feature.storm-blade.thunder-strike", "category": "option",
+   "presentation": { "originalName": "Thunder Strike", "defaultLocale": "ko-KR", "locales": { "ko-KR": { "name": "우레 일격", "summary": "턴당 한 번 무기 명중에 1d6 천둥 피해." } } }
+  },
+  {
+   "id": "effect.feature.test.storm-blade.thunder-strike", "category": "option",
+   "presentation": { "originalName": "Thunder Strike", "defaultLocale": "ko-KR", "locales": { "ko-KR": { "name": "우레 일격" } } },
+   "mechanics": [{ "kind": "common-play", "config": { "id": "feature:test.feature.storm-blade.thunder-strike", "entryPoints": [
+    { "id": "on-hit", "invocation": "on-hit", "attack": { "oncePerTurn": true, "requiresEffects": [], "scope": "weapon" }, "operations": [
+     { "kind": "damage.apply", "dice": "1d6", "damageType": "thunder", "target": "attack-target" }
+    ] }
+   ] } }]
+  },
+  {
+   "id": "test.spell.frost-lance", "category": "spell",
+   "presentation": { "originalName": "Frost Lance", "defaultLocale": "ko-KR", "locales": { "ko-KR": { "name": "서리 창" } } },
+   "mechanics": [
+    { "kind": "spell-definition", "config": { "level": 1, "school": "evocation", "castingTimeText": "행동", "rangeText": "60피트", "durationText": "즉시", "classes": ["wizard"] } },
+    { "kind": "spell-mechanic", "config": { "baseLevel": 1, "castingEconomy": "action", "targeting": { "kind": "creature", "rangeFeet": 60, "minTargets": 1, "maxTargets": 1 }, "primary": { "kind": "save-damage", "saveAbility": "con", "damageType": "cold", "dice": { "count": 3, "sides": 8, "dicePerSlotAboveBase": 1 }, "successDamage": "half" } } }
+   ]
+  },
+  {
+   "id": "test.spell.bone-ward", "category": "spell",
+   "presentation": { "originalName": "Bone Ward", "defaultLocale": "ko-KR", "locales": { "ko-KR": { "name": "뼈 방벽" } } },
+   "mechanics": [
+    { "kind": "spell-definition", "config": { "level": 1, "school": "abjuration", "castingTimeText": "반응", "rangeText": "자신", "durationText": "1라운드", "classes": ["wizard"] } },
+    { "kind": "spell-mechanic", "config": { "reaction": { "trigger": "attack.hit-self" } } }
+   ]
+  },
+  {
+   "id": "effect.spell.test.bone-ward", "category": "option",
+   "presentation": { "originalName": "Bone Ward", "defaultLocale": "ko-KR", "locales": { "ko-KR": { "name": "뼈 방벽" } } },
+   "mechanics": [{ "kind": "common-play", "config": { "id": "spell:test.spell.bone-ward", "entryPoints": [
+    { "id": "while-active", "invocation": "manual", "operations": [{ "kind": "property.modify", "property": "ac.bonus", "operation": "add", "value": 10 }] }
+   ] } }]
+  }
+ ]
+}

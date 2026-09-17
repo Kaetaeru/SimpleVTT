@@ -10,22 +10,13 @@ import { ART_LIMIT, ART_MIMES, chunkText, hashText, newArtAsset } from "../campa
 import type { JournalCharacter, JournalEntry } from "../campaign/journal";
 import type { Page, Token } from "../campaign/page";
 import type { Tracker, TrackerTurn } from "../campaign/tracker";
-import { deriveCharacter } from "../character/derive";
 import type { Campaign, ChatArchive, ChatMessage, JoinedCampaign, Macro, PlayerRole, RollTable } from "../campaign/model";
 import { chatArchiveId, emptyChatArchive, isStoredDocument, newCampaign, newJoinCode, repairCampaign } from "../campaign/model";
 import { TableClient, type TableStatus } from "../session/client";
 import { TableHost } from "../session/host";
+import { pcHostOptions } from "../session/pcHost";
 import type { ActorRef, AttackRef, AttackRiders, ClientCommand, Invite, RollPayload, TableSnapshot } from "../session/protocol";
-import { derivedOf, hitOffers, pcAttackSpec, pcCombatant, pcConcentrationKey } from "../rules/attackSpec";
-import { attackAftermath, emptyAftermath } from "../rules/attackAftermath";
-import { pcGuards } from "../rules/contractReactions";
-import { payContract, pcRescues } from "../rules/contractUse";
-import { tableOutcome } from "../rules/contractTable";
-import { pcStats, type ActionKind } from "../rules/actions";
-import { castableSpells, cheapestCast, pcSpell } from "../rules/spellcast";
-import { itemUse } from "../rules/items";
-import { longRest, setItemQuantity, shortRest } from "../character/play";
-import { restFeatures, spentSlots, useRestFeature } from "../character/rest";
+import type { ActionKind } from "../rules/actions";
 import type { CastMethod } from "../character/play";
 import type { AttackOverrides } from "../rules/resolve";
 import { contentHash, decodeInvite, encodeInvite } from "../session/protocol";
@@ -374,38 +365,8 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
         if ("page" in change) { setPages((map) => { const list = map[campaign.id] ?? []; const index = list.findIndex((item) => item.id === change.page.id); return { ...map, [campaign.id]: index >= 0 ? list.map((item, at) => (at === index ? change.page : item)) : [...list, change.page] }; }); void store?.putDocument(change.page); }
         else { setPages((map) => ({ ...map, [campaign.id]: (map[campaign.id] ?? []).filter((item) => item.id !== change.removed) })); void store?.deleteDocument(change.removed); }
       },
-      attributeOf: (entry, link) => attributeOf(entry, link, catalogRef.current),
-      pcCombatant: (entry) => pcCombatant(entry, derivedOf(entry, catalogRef.current)),
-      pcConcentrationKey,
-      pcAttackSpec: (entry, attackId, riders) => pcAttackSpec(entry, derivedOf(entry, catalogRef.current), attackId, riders, catalogRef.current),
-      // R54 (D189): the reactions this sheet's contracts open a window for.
-      pcGuards: (entry, trigger) => pcGuards(entry, derivedOf(entry, catalogRef.current), catalogRef.current, trigger),
-      // R63 (D198): what the attacker may add once a swing has landed.
-      pcHitOffers: (entry, attackId, riders) => hitOffers(entry, derivedOf(entry, catalogRef.current), attackId, riders, catalogRef.current),
-      pcAttackActionAttacks: (entry) => derivedOf(entry, catalogRef.current).attackActionAttacks ?? 1,
-      // R53 (D188): what the attacker's contracts do once the swing has landed.
-      pcAftermath: (entry, attackId, outcomes) => { const derived = derivedOf(entry, catalogRef.current); const attack = derived.attacks.find((item) => item.id === attackId); return attack ? attackAftermath(derived, catalogRef.current, attack, outcomes) : emptyAftermath(); },
-      pcStats: (entry) => pcStats(derivedOf(entry, catalogRef.current)),
-      pcSpell: (entry, spellId, method) => pcSpell(entry, derivedOf(entry, catalogRef.current), catalogRef.current, spellId, method),
-      // R35 (D174): the contract rescues a sheet could pay for, and what paying one costs it.
-      pcRescues: (entry, family, outcome) => pcRescues(entry, derivedOf(entry, catalogRef.current), catalogRef.current, family, outcome),
-      // R42 (D182): the table-level half of a feature's contract.
-      pcContractOutcome: (entry, ruleKey) => tableOutcome(derivedOf(entry, catalogRef.current), catalogRef.current, ruleKey),
-      // R58 (D193): the host owns no catalog, so it asks for the name of an id a contract handed somebody.
-      contentName: (contentId) => catalogRef.current.itemById(contentId)?.name ?? catalogRef.current.entry(contentId)?.name,
-      pcPayContract: (entry, payments, outcome) => payContract(entry.runtime, derivedOf(entry, catalogRef.current), payments, outcome),
-      pcTriggers: (entry, event) => {
-        const derived = derivedOf(entry, catalogRef.current);
-        return restFeatures(derived, entry.runtime, catalogRef.current, event).filter((feature) => !feature.unavailable).map((feature) => ({ featureId: feature.featureId, name: feature.name, ...(feature.note ? { note: feature.note } : {}), ...(feature.heal ? { heal: feature.heal } : {}), ...(feature.slotLevels ? { slotLevels: feature.slotLevels, spent: spentSlots(derived, entry.runtime) } : {}) }));
-      },
-      pcTriggerApply: (entry, event, choice, roll) => {
-        const derived = derivedOf(entry, catalogRef.current);
-        const feature = restFeatures(derived, entry.runtime, catalogRef.current, event).find((item) => item.featureId === choice.featureId);
-        return feature ? useRestFeature(entry.runtime, derived, feature, feature.slotLevels ? choice.slots : undefined, feature.heal ? roll(feature.heal) : undefined) : null;
-      },
-      pcRest: (entry, kind) => { const derived = derivedOf(entry, catalogRef.current); return kind === "long" ? longRest(entry.runtime, derived) : shortRest(entry.runtime, derived); },
-      pcReactionSpell: (entry, spellId) => { const derived = derivedOf(entry, catalogRef.current); if (!castableSpells(derived).includes(spellId)) return null; const view = catalogRef.current.spellById(spellId); return view ? cheapestCast(derived, entry.runtime, view.level) : null; },
-      pcItem: (entry, instanceId) => { const derived = derivedOf(entry, catalogRef.current); const item = derived.inventory.find((candidate) => candidate.instanceId === instanceId); if (!item || item.quantity <= 0) return null; const use = itemUse(item, catalogRef.current); return { name: item.name, heal: use.heal, text: use.text, consumes: use.consumes, consume: (runtime) => (use.consumes ? setItemQuantity(runtime, derived, instanceId, item.quantity - 1) : runtime) }; },
+      // V2 (D254): the character half of the host's wiring, shared with the host-path tests.
+      ...pcHostOptions(() => catalogRef.current),
       // R83 (D217): the host offers the modules it plays with, so players need not install them by hand.
       contentModules: () => installedRef.current.map((row) => row.module),
       artData: {
@@ -629,16 +590,6 @@ export function CampaignsProvider({ children }: { children: ReactNode }) {
   const value = useMemo<CampaignsState>(() => ({ userId, seat, displayName, setDisplayName, campaigns, joined, archives, journals, arts, pages, createCampaign, updateCampaign, deleteCampaign, regenerateJoinCode, forgetJoined, table, launch, join, leave, say, sendRoll, setRole, kick, putJournal, removeJournal, grantJournal, showJournal, dismissShow, uploadArt, updateArt, removeArt, requestArt, putPage, removePage, setRibbon, setBookmark, putToken, removeToken, setTracker, addTurn, nextTurn, swapTurn, attack, npcSave, legendary, useItem, useTrait, spendEconomy, advanceTime, tableRest, askRest, saveMacros, saveTables, rollTable, summon, dismissSummons, resist, provoke, act, cast, zone, declineReaction, guard, hitChoice, triggerChoice, react, rollDeathSave, rescueRoll, runContract, adjustAction, undoAction, confirmAction }),
     [userId, seat, displayName, setDisplayName, campaigns, joined, archives, journals, arts, pages, createCampaign, updateCampaign, deleteCampaign, regenerateJoinCode, forgetJoined, table, launch, join, leave, say, sendRoll, setRole, kick, putJournal, removeJournal, grantJournal, showJournal, dismissShow, uploadArt, updateArt, removeArt, requestArt, putPage, removePage, setRibbon, setBookmark, putToken, removeToken, setTracker, addTurn, nextTurn, swapTurn, attack, npcSave, legendary, useItem, useTrait, spendEconomy, advanceTime, tableRest, askRest, saveMacros, saveTables, rollTable, summon, dismissSummons, resist, hitChoice, triggerChoice, adjustAction, undoAction, confirmAction]);
   return <CampaignsContext.Provider value={value}>{children}</CampaignsContext.Provider>;
-}
-
-/** Token bar links (D78): what a character attribute is worth right now. */
-export function attributeOf(entry: JournalCharacter, link: string, catalog: ReturnType<typeof useClient>["catalog"]): { value?: number; max?: number } | undefined {
-  const runtime = entry.runtime;
-  if (link === "hp") { const derived = deriveCharacter(entry.source, catalog, { equipped: runtime.equipped, inventory: runtime.inventory, effects: runtime.effects }); return { value: runtime.hp.current, max: derived.hp.max }; }
-  if (link === "temp") return { value: runtime.hp.temp };
-  if (link === "ac") return { value: deriveCharacter(entry.source, catalog, { equipped: runtime.equipped, inventory: runtime.inventory, effects: runtime.effects }).ac.value };
-  if (link === "exhaustion") return { value: runtime.exhaustion, max: 6 };
-  return undefined;
 }
 
 /** Dimensions and a small thumbnail (≤128px, webp) of an image data URL; null where there is no DOM. */
