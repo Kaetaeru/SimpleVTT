@@ -58,8 +58,9 @@ test("R52: 광란 is offered on the swing it belongs to, and nowhere else (D187)
   const bow = derived.attacks.find((attack) => attack.name.includes("단궁"))!;
   assert.equal(riderFitsAttack(rider!, axe), true, "a Strength melee weapon");
   assert.equal(riderFitsAttack(rider!, bow), false, "a bow is not");
-  assert.deepEqual(offeredRiders(derived, axe).map((item) => item.key), [FRENZY]);
-  assert.deepEqual(offeredRiders(derived, bow).map((item) => item.key), []);
+  // V4o (D277): the window that offers it is the on-hit one, because 광란 is about the first target you hit.
+  assert.deepEqual(offeredRiders(derived, axe, { moment: "on-hit" }).map((item) => item.key), [FRENZY]);
+  assert.deepEqual(offeredRiders(derived, bow, { moment: "on-hit" }).map((item) => item.key), []);
 });
 
 test("R52: without 격노 and 무모한 공격 running, 광란 is not offered at all (D187)", () => {
@@ -68,10 +69,11 @@ test("R52: without 격노 and 무모한 공격 running, 광란 is not offered at
   const derived = deriveCharacter(made.source, catalog(), { equipped: runtime.equipped, inventory: runtime.inventory });
   const axe = derived.attacks.find((attack) => attack.name.includes("도끼"))!;
   assert.ok((derived.attackRiders ?? []).some((item) => item.key === FRENZY), "the sheet still carries it");
-  assert.deepEqual(offeredRiders(derived, axe).map((item) => item.key), [], "but the dialog will not offer it");
+  assert.deepEqual(offeredRiders(derived, axe, { moment: "on-hit" }).map((item) => item.key), [], "but the window will not offer it");
   // Rage alone is not enough — the 2024 rule needs Reckless Attack too.
-  assert.deepEqual(offeredRiders(derived, axe, { effects: ["격노"] }).map((item) => item.key), []);
-  assert.deepEqual(offeredRiders(derived, axe, { effects: ["격노", "무모한 공격"] }).map((item) => item.key), [FRENZY]);
+  assert.deepEqual(offeredRiders(derived, axe, { moment: "on-hit", effects: ["격노"] }).map((item) => item.key), []);
+  // V4o (D277): 광란 is about the first target you *hit*, so it is offered in the on-hit window.
+  assert.deepEqual(offeredRiders(derived, axe, { moment: "on-hit", effects: ["격노", "무모한 공격"] }).map((item) => item.key), [FRENZY]);
 });
 
 test("R52: the dice scale with the level table, and the damage type follows the weapon (D187)", () => {
@@ -102,7 +104,7 @@ test("R52: a rider the sheet does not offer is dropped rather than trusted (D187
 test("R52: a contract's pre-roll entry point is not a button on the sheet (D187)", () => {
   const { derived } = berserker();
   const frenzy = derived.features.find((feature) => feature.name === "광란")!;
-  assert.ok(frenzy.rules?.some((line) => line.includes("판정 전 창에서 선언") && line.includes("2d6")), JSON.stringify(frenzy.rules));
+  assert.ok(frenzy.rules?.some((line) => line.includes("2d6")), JSON.stringify(frenzy.rules));
   // Its damage must not leak into the sheet as a standing bonus, and it must not offer a 사용 button that rolls it.
   const axe = derived.attacks.find((attack) => attack.name.includes("도끼"))!;
   assert.equal(axe.damageTerms.some((term) => term.label === "광란"), false, JSON.stringify(axe.damageTerms));

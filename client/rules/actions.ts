@@ -80,6 +80,8 @@ export interface ActorStats {
   advantage?: RollAdvantage[];
   /** H3 (D240): saves whose total is at least this ability score (불굴의 힘). */
   minimumScore?: Partial<Record<AbilityKey, number>>;
+  /** V4o (D277): ability checks of these abilities total at least the score (불굴의 힘). */
+  minimumCheckScore?: Partial<Record<AbilityKey, number>>;
   /** V3c (D257): on a check in one of these skills, a d20 below `value` counts as `value` (믿음직한 재능). */
   checkMinimum?: { value: number; skills: string[] };
   /** V4h (D270): a death save of at least this counts as a 20 (생존자). */
@@ -118,6 +120,7 @@ export const pcStats = (derived: DerivedCharacter): ActorStats => ({
   ...(derived.rollAdvantage?.length ? { advantage: derived.rollAdvantage } : {}),
   ...(derived.checkMinimumD20 ? { checkMinimum: { value: derived.checkMinimumD20, skills: derived.skills.filter((skill) => skill.proficient).map((skill) => skill.id) } } : {}),
   ...(derived.minimumScoreRolls?.length ? { minimumScore: Object.fromEntries(derived.minimumScoreRolls.map((key) => [key, derived.abilities[key].score])) } : {}),
+  ...(derived.minimumScoreChecks?.length ? { minimumCheckScore: Object.fromEntries(derived.minimumScoreChecks.map((key) => [key, derived.abilities[key].score])) } : {}),
   ...(derived.deathSaveCritRange ? { deathSaveCritRange: derived.deathSaveCritRange } : {}),
 });
 
@@ -197,7 +200,10 @@ export function resolveAction(input: ActInput): ActResult {
     // V3c (D257): 믿음직한 재능 — a proficient check's d20 below the floor counts as the floor.
     const floor = covers.skill && input.actor.stats.checkMinimum?.skills.includes(covers.skill) ? input.actor.stats.checkMinimum.value : 0;
     const die = Math.max(rolled, floor);
-    const total = die + bonus + (input.rollDelta ?? 0);
+    // V4o (D277): 불굴의 힘 — a Strength check totals at least the Strength score, and a Strength skill is one.
+    const checkAbility = covers.ability ?? (covers.skill ? SKILL_ABILITY_OF[covers.skill] : undefined);
+    const least = checkAbility ? input.actor.stats.minimumCheckScore?.[checkAbility] ?? 0 : 0;
+    const total = Math.max(die + bonus + (input.rollDelta ?? 0), least);
     return { label, d20: die, bonus, total, dc, success: dc === undefined ? undefined : total >= dc, ...(rolls.length > 1 ? { advantage: rolls.length, dropped: Math.min(...rolls), reason: lucky!.reason } : {}), ...(input.rescue ? { rescue: input.rescue } : {}) };
   };
   const skillCheck = (skill: string, dc?: number) => check(`${input.actor.name} · ${ABILITY_KO[SKILL_ABILITY_OF[skill] ?? "int"]}(${SKILL_KO[skill] ?? skill})`, skillBonus(input.actor.stats, skill), dc, { skill, ability: SKILL_ABILITY_OF[skill] });
@@ -233,7 +239,7 @@ export function resolveAction(input: ActInput): ActResult {
     case "escape": {
       const dc = input.dc ?? (input.target ? unarmedDc(input.target.stats) : 12);
       const [skill, bonus] = bestOf<string>([["athletics", skillBonus(input.actor.stats, "athletics")], ["acrobatics", skillBonus(input.actor.stats, "acrobatics")]]);
-      const result = check(`${input.actor.name} · ${ABILITY_KO[SKILL_ABILITY_OF[skill]]}(${SKILL_KO[skill]})`, bonus, dc);
+      const result = check(`${input.actor.name} · ${ABILITY_KO[SKILL_ABILITY_OF[skill]]}(${SKILL_KO[skill]})`, bonus, dc, { skill });
       return { ...base, check: result, text: result.success ? "붙잡힘에서 벗어났습니다." : "벗어나지 못했습니다.", actorUnmarks: result.success ? ["붙잡힘"] : [] };
     }
     default:

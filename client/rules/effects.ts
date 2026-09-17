@@ -42,6 +42,8 @@ export interface EffectApplication {
    * effect that already carries a chosen `form`, the stat block the sheet takes its numbers from.
    */
   form?: { creatureTypes: string[]; maxCr: number; swimFrom?: number; flyFrom?: number; level: number };
+  /** V4o (D277): these skills may be rolled with this ability instead of their own (원초적 지식). */
+  skillAbility?: { skills: string[]; ability: AbilityKey };
   /** R43 (D183): the lowest d20 that counts as a critical hit (Improved Critical 19, Superior Critical 18). */
   critRange?: number;
   /** R95 (D230): 회피술 — a Dexterity save for half damage takes none on a success and half on a failure. */
@@ -69,6 +71,8 @@ export interface EffectApplication {
   schoolDamageModifier?: Array<{ school: string; classSlug: string }>;
   /** H3 (D240): abilities whose saves total at least the ability score. */
   minimumScoreRolls?: AbilityKey[];
+  /** V4o (D277): abilities whose checks total at least the score (불굴의 힘). */
+  minimumScoreChecks?: AbilityKey[];
   /** V3c (D257): the lowest d20 a proficient check counts (믿음직한 재능). */
   checkMinimumD20?: number;
   /** V3f (D260): reasons opportunity attacks against the bearer are at disadvantage. */
@@ -162,7 +166,7 @@ export function effectRuleKey(effect: ActiveEffect, catalog: ContentCatalog): st
  * 치명타 and its kin. They are always-on effects, so they go through the same merge, just without being listed as
  * something the player could end.
  */
-export function applyPassiveContracts(derived: DerivedCharacter, catalog: ContentCatalog): DerivedCharacter {
+export function applyPassiveContracts(derived: DerivedCharacter, catalog: ContentCatalog, /** V4o (D277): the effects running right now, so a passive that waits for one can see it (원초적 지식). */ running: string[] = []): DerivedCharacter {
   const passives: ActiveEffect[] = [];
   for (const feature of derived.features) {
     const contract = featureContract(catalog, featureRuleKey(feature.id));
@@ -173,11 +177,11 @@ export function applyPassiveContracts(derived: DerivedCharacter, catalog: Conten
     // H2 (D239): a feature taken for something (a cantrip) runs once per target, with the target in its scope.
     for (const target of feature.targets?.length ? feature.targets : [undefined]) passives.push({ key: qualifyRuleKey(featureRuleKey(feature.id)), name: feature.name, source: "feature", duration: "상시", concentration: false, elapsed: 0, startedAt: "", ...(target ? { target } : {}) });
   }
-  return passives.length ? applyActiveEffects(derived, passives, catalog, { list: false }) : derived;
+  return passives.length ? applyActiveEffects(derived, passives, catalog, { list: false, running }) : derived;
 }
 
 /** The application an effect would make, or undefined when there is no rule for it. */
-export function effectApplication(effect: ActiveEffect, derived: DerivedCharacter, catalog: ContentCatalog): EffectApplication | undefined {
+export function effectApplication(effect: ActiveEffect, derived: DerivedCharacter, catalog: ContentCatalog, /** V4o (D277): the effects running right now, for a `when` that waits for one (원초적 지식 needs 격노). */ running: string[] = []): EffectApplication | undefined {
   const key = effectRuleKey(effect, catalog);
   // R38 (D178): the contract is the source of truth where the content ships one; the hand-written rule is what is
   // left of the ones nobody has written yet. A test asserts the two agree for every effect that has both.
@@ -185,7 +189,9 @@ export function effectApplication(effect: ActiveEffect, derived: DerivedCharacte
   if (contract) {
     // R39: a contract that only says when the effect *ends* (`effect.apply`) says nothing about what it does, so it
     // must not stand in for a hand-written rule that does. Only `property.modify` makes it the source of truth.
-    const { application, unknown, hasProperties } = contractEffect(contract, characterScope(derived, effect.target ? { "effect.target": effect.target } : {}));
+    const names = [...running, ...derived.activeEffects.map((item) => item.name)];
+    const extra = { ...(effect.target ? { "effect.target": effect.target } : {}), ...Object.fromEntries(names.map((name) => [`effect.running:${name}`, true])) };
+    const { application, unknown, hasProperties } = contractEffect(contract, characterScope(derived, extra));
     if (hasProperties && !unknown.length) return application;
   }
   return undefined;
@@ -230,7 +236,7 @@ export function formOptions(spec: NonNullable<EffectApplication["form"]>) {
   });
 }
 
-export function applyActiveEffects(derived: DerivedCharacter, effects: ActiveEffect[], catalog: ContentCatalog, options: { list?: boolean; /** R75 (D210): applications given directly (a pasted magic item), keyed by effect key. */ inline?: Record<string, EffectApplication> } = {}): DerivedCharacter {
+export function applyActiveEffects(derived: DerivedCharacter, effects: ActiveEffect[], catalog: ContentCatalog, options: { list?: boolean; /** R75 (D210): applications given directly (a pasted magic item), keyed by effect key. */ inline?: Record<string, EffectApplication>; /** V4o (D277): effects running elsewhere, for a property that waits for one. */ running?: string[] } = {}): DerivedCharacter {
   let next: DerivedCharacter = { ...derived, activeEffects: options.list === false ? derived.activeEffects : [], checkTerms: [...derived.checkTerms] };
   const applied: AppliedEffect[] = [];
   // AC terms added by effects so far, so a replacement base (Mage Armor) compares against the real base and keeps them.
@@ -245,7 +251,7 @@ export function applyActiveEffects(derived: DerivedCharacter, effects: ActiveEff
   for (const effect of effects) {
     const paused = pausedBy(effect);
     if (paused) { applied.push({ key: effect.key, name: effect.name, applied: false, notes: [`멈춤 — ${paused}`], narrative: true }); continue; }
-    const application = options.inline?.[effect.key] ?? effectApplication(effect, next, catalog);
+    const application = options.inline?.[effect.key] ?? effectApplication(effect, next, catalog, [...(options.running ?? []), ...effects.map((item) => item.name)]);
     if (!application) { applied.push({ key: effect.key, name: effect.name, applied: false, notes: ["규칙 없음 — 설명대로 수동 적용"] }); continue; }
     const notes: string[] = [];
     const label = effect.name;
@@ -424,6 +430,17 @@ export function applyActiveEffects(derived: DerivedCharacter, effects: ActiveEff
     if (application.revealDefenses?.length) { next = { ...next, revealDefenses: [...new Set([...(next.revealDefenses ?? []), ...application.revealDefenses])] }; notes.push("표식 주문 대상의 저항·면역·취약을 앎"); }
     if (application.attunementBonus) { next = { ...next, attunementBonus: (next.attunementBonus ?? 0) + application.attunementBonus }; notes.push(`조율 슬롯 +${application.attunementBonus}`); }
     if (application.checkMinimumD20) { next = { ...next, checkMinimumD20: Math.max(next.checkMinimumD20 ?? 0, application.checkMinimumD20) }; notes.push(`숙련 판정 d20 최소 ${application.checkMinimumD20}`); }
+    if (application.skillAbility) {
+      const { skills, ability } = application.skillAbility;
+      const swap = next.abilities[ability].modifier;
+      next = { ...next, skills: next.skills.map((skill) => {
+        if (!skills.includes(skill.id)) return skill;
+        const own = next.abilities[skill.ability].modifier;
+        return { ...skill, bonus: skill.bonus - own + swap, terms: [...skill.terms.filter((item) => item.value !== own), { label: `${label} (${ability})`, value: swap }] };
+      }) };
+      notes.push(`${skills.length}개 기술을 ${ability}(으)로`);
+    }
+    if (application.minimumScoreChecks?.length) { next = { ...next, minimumScoreChecks: [...new Set([...(next.minimumScoreChecks ?? []), ...application.minimumScoreChecks])] }; notes.push(`${application.minimumScoreChecks.join("·")} 판정 최소 능력치`); }
     if (application.minimumScoreRolls?.length) { next = { ...next, minimumScoreRolls: [...new Set([...(next.minimumScoreRolls ?? []), ...application.minimumScoreRolls])] }; notes.push(`${application.minimumScoreRolls.join("·")} 내성은 최소 능력치 점수`); }
     if (application.schoolDamageModifier?.length) { next = { ...next, schoolDamageModifier: [...(next.schoolDamageModifier ?? []), ...application.schoolDamageModifier] }; notes.push("그 학파 주문 피해 한 번에 주문 능력 수정치"); }
     if (application.elusive) { next = { ...next, elusive: true }; notes.push("나를 향한 공격에 유리 없음"); }

@@ -79,6 +79,7 @@
 - `roll.modify`의 `diceSides`(식이 정하는 주사위 크기) · 인터셉터 사실의 `unknownPolicy: "ask"`와 `question` · 남의 성공을 깎는 창(`rescue.interfere`) (D274)
 - 속성 `saving-throw.advantage-vs-condition` · 시점 `long-rest`와 `longRestGains` · 속성 `heroic-inspiration.gain`을 긴 휴식이 적용 (D275)
 - 계산 사실 `target.grappled` · 재주 풀의 `freeCastMaxLevel`(레벨 이하 아무 주문 무료 시전) (D276)
+- 속성 `ability-check.minimum-score`·`skill.ability-swap` · 조건 참조 `effect.running:<이름>` (D277)
 - `language.grant` · `senses.*`(truesight, devils-sight) · `speed.swim/climb`
 - `ac.unarmored-formula` { abilities, shieldAllowed }
 

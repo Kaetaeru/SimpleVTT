@@ -628,3 +628,34 @@ test("V4n: feats — 저항할 수 없는 공격 uses the score it raised, 그�
   assert.ok(cast, "4레벨 주문을 그 풀로 시전할 수 있다");
   assert.equal(cast!.resourcesUsed[pool.id], 1);
 });
+
+test("V4o: 불굴의 힘 floors a Strength check, 원초적 지식 rolls five skills with Strength while raging, 생각 없는 격노 is an immunity (D277)", async () => {
+  const { pcStats, resolveAction } = await import("../../client/rules/actions");
+  const cat = catalog();
+  const barbarian = build({ name: "바바리안", classes: "barbarian", level: 18, abilities: { str: 20, dex: 12 } });
+  const raging = (source: typeof barbarian.source) => deriveCharacter(source, cat, { effects: [{ key: "feature:barbarian.rage", name: "격노", source: "feature", duration: "10분", concentration: false, rounds: 100, elapsed: 0, startedAt: "" }] });
+
+  // 불굴의 힘: a Strength check never totals less than the Strength score, and a save still does not change.
+  const stats = pcStats(barbarian.derived);
+  assert.equal(stats.minimumCheckScore?.str, barbarian.derived.abilities.str.score);
+  const escape = resolveAction({ kind: "escape", actor: { name: "바바리안", stats, conditions: ["붙잡힘"] }, random: () => 0, dc: 30 });
+  assert.ok((escape.check?.total ?? 0) >= barbarian.derived.abilities.str.score, JSON.stringify(escape.check));
+
+  // 원초적 지식: while raging, Stealth is rolled with Strength — and only while raging.
+  const quiet = barbarian.derived.skills.find((skill) => skill.id === "stealth")!;
+  const loud = raging(barbarian.source).skills.find((skill) => skill.id === "stealth")!;
+  assert.equal(loud.bonus - quiet.bonus, barbarian.derived.abilities.str.modifier - barbarian.derived.abilities.dex.modifier, JSON.stringify([quiet.bonus, loud.bonus]));
+
+  // 생각 없는 격노: a raging berserker is immune to 매혹 and 공포 rather than pressing a button to shed them.
+  const berserker = build({ name: "광전사", classes: "barbarian", level: 6, choices: { "class.2.subclass": ["dnd.srd521.subclass.barbarian.path-of-the-berserker"] } });
+  const mad = raging(berserker.source);
+  assert.ok(["매혹", "공포"].every((condition) => mad.defenses.conditionImmunities.some((name) => name.startsWith(condition))), JSON.stringify(mad.defenses.conditionImmunities));
+  assert.ok(!berserker.derived.defenses.conditionImmunities.some((name) => name.startsWith("공포")), "격노하지 않으면 면역이 아니다");
+
+  // 광란: the extra dice are offered once the swing has landed, not before it is rolled.
+  const { offeredRiders } = await import("../../client/rules/attackRiders");
+  const axe = berserker.derived.attacks.find((attack) => attack.ability === "str" && !attack.range)!;
+  const effects = ["격노", "무모한 공격"];
+  assert.deepEqual(offeredRiders(berserker.derived, axe, { moment: "pre-roll", effects }).map((rider) => rider.key), []);
+  assert.deepEqual(offeredRiders(berserker.derived, axe, { moment: "on-hit", effects }).map((rider) => rider.key), ["barbarian.berserker.frenzy"]);
+});

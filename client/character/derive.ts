@@ -85,7 +85,7 @@ export function deriveCharacter(source: CharacterSource, catalog: ContentCatalog
   // R59 (D194): official actions a contract said may be taken as a bonus action instead.
   derived.bonusActions = contractBonusActions(derived, catalog);
   // R43 (D183): passives first (they are always on), then whatever is running right now.
-  const passive = applyPassiveContracts(derived, catalog);
+  const passive = applyPassiveContracts(derived, catalog, (options.effects ?? []).map((effect) => effect.name));
   // R75 (D210): pasted magic items, as always-on effects while attuned (and worn, for armour).
   const magic = passive.inventory.filter(customItemActive);
   const equipped = magic.length ? applyActiveEffects(passive, magic.map((item) => ({ key: `item:${item.instanceId}`, name: item.name, source: "feature" as const, duration: "상시", concentration: false, elapsed: 0, startedAt: "" })), catalog, { list: false, inline: Object.fromEntries(magic.map((item) => [`item:${item.instanceId}`, customItemApplication(item)])) }) : passive;

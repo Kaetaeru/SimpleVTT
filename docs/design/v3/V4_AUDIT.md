@@ -17,8 +17,8 @@ V0.9 계획의 V4 슬라이스가 처리할 구멍 전수 목록. 직업군별�
 - ✔ D264 대상 표식 효과(다음 내성 불리, 다른 이의 다음 명중 +5, 기회 공격 불가, 속도 감소, 다음 명중 유리)가 없다. — [new-grammar]
 - 계약 치유에 최상급 치유(최대값)가 적용되지 않는다. — [host-hook]
 - (D266: `hp.zero.hold` ✔ 불굴의 격노·끈질긴 인내, 보호자의 선물·죽음 방비 남음) 전투 중 0 HP가 되는 순간의 가로채기(무모한 격노, 보호자의 선물)가 없다. — [new-grammar + host-hook]
-- 야생 변신 형태(능력치 덮어쓰기)가 없다. — [new-grammar + picker]
-- 슬롯↔점수 변환(마법의 원천)이 없다. — [new-grammar + picker]
+- ✔ D273 야생 변신 형태(능력치 덮어쓰기)가 없다. — [new-grammar + picker]
+- ✔ D272 슬롯↔점수 변환(마법의 원천)이 없다. — [new-grammar + picker]
 - 메타매직이 시전 창에 없다. — [picker]
 - ✔ D263 계약의 `adjudication.request` 문구에 계산된 수치를 붙이는 수단이 없었다. — `amount`.
 
@@ -27,13 +27,13 @@ V0.9 계획의 V4 슬라이스가 처리할 구멍 전수 목록. 직업군별�
 - (D265: 근력 유리·유지 조건은 계약으로, 시전 금지는 남음) rage (1) — 근력 판정·내성 유리가 문구뿐(속성 있음). 주문 시전·집중 금지, 조기 종료 조건, 연장이 문구. — [data-fix + host-hook]
 - ✔ D265 persistent-rage (15) — 수동 +1 버튼. 규칙은 이니셔티브 때 전부 회복, 긴 휴식당 1회. — [data-fix]
 - ✔ D264 berserker.intimidating-presence (14) — 추가 행동·지혜 내성·공포·반복 내성·긴 휴식 1회·격노로 회복 없음. — [new-grammar]
-- berserker.mindless-rage (6) — 언제든 누르는 해제 버튼. 격노 중 면역이어야. — [new-grammar] 효과 중 조건부 속성.
-- berserker.frenzy (3) — 판정 전이지만 "처음 맞힌 대상"이라 명중 창이어야. 턴당 1회 안 셈. — [data-fix + host-hook]
+- ✔ D277 berserker.mindless-rage (6) — 언제든 누르는 해제 버튼. 격노 중 면역이어야. — [new-grammar] 효과 중 조건부 속성.
+- ✔ D277 berserker.frenzy (3) — 판정 전이지만 "처음 맞힌 대상"이라 명중 창이어야. 턴당 1회 안 셈. — [data-fix + host-hook]
 - brutal-strike 계열 (9/13/17) — 턴당 1회·효과 수 제한 안 셈, 절뚝·휘청·무너뜨림 효과가 문구. — [new-grammar + host-hook]
 - ✔ D267 berserker.retaliation (10) — 피해 받음 반응 창 없음. — [host-hook + button]
 - ✔ D265 primal-champion (20) — cap 24, SRD는 25. — [data-fix]
-- indomitable-might (18) — 근력 판정 최소값이 문구. — [new-grammar] `ability-check.minimum-score`.
-- primal-knowledge (3) — 격노 중 기술을 근력으로가 없음. — [new-grammar]
+- ✔ D277 indomitable-might (18) — 근력 판정 최소값이 문구. — [new-grammar] `ability-check.minimum-score`.
+- ✔ D277 primal-knowledge (3) — 격노 중 기술을 근력으로가 없음. — [new-grammar]
 
 ## 파이터
 - action-surge / -2 (2/17) — 턴당 1회 안 셈, 없는 자원 `fighter.action-surge.turn`을 결제로 씀, 마법 행동 제외 없음. — [host-hook]

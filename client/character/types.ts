@@ -280,6 +280,8 @@ export interface DerivedCharacter {
   studiedAttacks?: boolean;
   /** H3 (D240): abilities whose saves total at least the ability score (불굴의 힘). */
   minimumScoreRolls?: AbilityKey[];
+  /** V4o (D277): abilities whose *checks* total at least the ability score (불굴의 힘). */
+  minimumScoreChecks?: AbilityKey[];
   /** V3c (D257): the lowest d20 an ability check the character is proficient in counts (믿음직한 재능). */
   checkMinimumD20?: number;
   /** V3f (D260): reasons opportunity attacks against the character are at disadvantage. */
