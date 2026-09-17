@@ -196,7 +196,25 @@
           }
         ]
       },
-      "executionScope": "Authored: up to six creatures in the 40-foot cube (the DM validates the cube) save against Wisdom; a failure is a tracked concentration effect. The speed, AC, reaction, action, and spell-failure penalties and the repeat saves are not enforced."
+      "executionScope": "V4g (D269): up to six creatures save against Wisdom; a failure gives −2 on Dexterity saves while the caster concentrates, repeated at the end of each of its turns. The −2 AC (the engine takes no negative AC bonus), half speed, no reactions and one action or bonus action are the DM.",
+      "trackedEffects": [
+        {
+          "summary": "민첩 내성 −2 (AC −2·속도·행동 제한은 DM)",
+          "trigger": "failed-save",
+          "duration": {
+            "kind": "concentration"
+          },
+          "modifier": {
+            "family": "saving-throw",
+            "scope": "actor",
+            "ability": "dex",
+            "bonus": {
+              "flat": 2,
+              "sign": -1
+            }
+          }
+        }
+      ]
     },
     {
       "spellId": "dnd.srd521.spell.mass-heal",

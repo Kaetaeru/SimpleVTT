@@ -71,6 +71,7 @@
 - 인터셉터 { oncePerTurn, naturalOnly } · `roll.modify` 모드 `force-success` · `effect.apply.template.rescueDie` → 표 `effects`, `ActiveEffect.rescue` · 속성 `hp.zero.hold` { hp, save {ability, dc, step, stepResource}, resource, requiresEffect } (D266)
 - 가드 속성 `reaction.strike-back` · 속성 `aura.grant` { name, conditionImmunities } — 토큰 표식(from = 오라 주인 토큰)으로 내성 보너스·상태 면역 (D267)
 - 주문 색인 `spell-variants.json` / 모듈 spell-mechanic `variants` { id, label, patch } · `act.cast.variant` · `ActiveEffect.variant` · 주문 효과 방어 `bearerDefenses` (D268)
+- 주문 정의 `removesConditions`(표의 해제), 지속 색인의 `primary` 재사용, 반복 내성 색인 추가 (D269)
 - `language.grant` · `senses.*`(truesight, devils-sight) · `speed.swim/climb`
 - `ac.unarmored-formula` { abilities, shieldAllowed }
 

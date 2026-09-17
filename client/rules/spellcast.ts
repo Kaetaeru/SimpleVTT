@@ -13,7 +13,7 @@ import type { ContentCatalog } from "../catalog/catalog";
 import { castSpell, type CastMethod } from "../character/play";
 import type { CharacterRuntime } from "../character/runtime";
 import type { DerivedCharacter } from "../character/types";
-import { repeatSaveOf, spellExec, sustainedExec } from "../compendium/spells";
+import { creaturesOf, repeatSaveOf, spellExec, sustainedExec, sustainOf, weaponSpellOf } from "../compendium/spells";
 import { applyDamage, immuneToCondition, noDamage, resolveAttack, rollFormula as rollSigned, type AttackOverrides, type AttackResolution, type Combatant, type DamageOutcome, type DamagePart, type DiceSource } from "./resolve";
 import { scrollStats } from "./scrolls";
 import { effectRuleKey } from "./effects";
@@ -31,7 +31,8 @@ const spellDamageTypes = (exec: SpellExec): string[] => (exec.primary.kind === "
 
 export function spellIsJudged(exec: SpellExec, catalog: ContentCatalog, derived: DerivedCharacter): boolean {
   if (exec.primary.kind !== "tracked-effect") return false;
-  if (exec.effects?.length || exec.summon || exec.sustain || exec.onHit) return false;
+  // V4g (D269): what an index says about the spell counts too (a sustain, placed creatures, a weapon spell).
+  if (exec.effects?.length || exec.summon || exec.onHit || sustainOf(exec) || creaturesOf(exec.spellId) || weaponSpellOf(exec.spellId) || exec.removesConditions?.length) return false;
   if ((exec.trackedEffects ?? []).some((part) => Object.keys(part).some((key) => !FLAVOUR_KEYS.has(key)))) return false;
   const contract = catalog.contractFor(effectRuleKey({ key: `spell:${exec.spellId}`, name: "", source: "spell", duration: "", concentration: false, elapsed: 0, startedAt: "" }, catalog));
   if (!contract) return true;
@@ -313,6 +314,8 @@ export function resolveSpell(input: CastInput): SpellResolution {
       const duration = exec.trackedEffects?.[0]?.duration ?? primary.duration;
       for (const { combatant } of all) {
         const row = base(combatant);
+        // V4g (D269): the conditions the spell ends (하급 회복).
+        if (exec.removesConditions?.length) row.clears = exec.removesConditions.map((id) => CONDITION_KO[id] ?? id);
         row.mode = "effect";
         row.effect = effectStart(duration);
         row.marks = conditionMarks("always", combatant);

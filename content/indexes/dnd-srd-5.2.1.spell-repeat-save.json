@@ -1,9 +1,12 @@
 {
- "description": "H6c (D250): spells whose target repeats the spell's save at the end of each of its turns, ending the spell on itself on a success. A module spell may write \"repeatSave\": \"turn-end\" in its spell-mechanic config.",
- "spells": {
-  "dnd.srd521.spell.blindness-deafness": "turn-end",
-  "dnd.srd521.spell.hold-monster": "turn-end",
-  "dnd.srd521.spell.hold-person": "turn-end",
-  "dnd.srd521.spell.sleep": "turn-end"
- }
+  "description": "H6c (D250): spells whose target repeats the spell's save at the end of each of its turns, ending the spell on itself on a success. A module spell may write \"repeatSave\": \"turn-end\" in its spell-mechanic config.",
+  "spells": {
+    "dnd.srd521.spell.blindness-deafness": "turn-end",
+    "dnd.srd521.spell.hold-monster": "turn-end",
+    "dnd.srd521.spell.hold-person": "turn-end",
+    "dnd.srd521.spell.sleep": "turn-end",
+    "dnd.srd521.spell.slow": "turn-end",
+    "dnd.srd521.spell.hideous-laughter": "turn-end",
+    "dnd.srd521.spell.ray-of-enfeeblement": "turn-end"
+  }
 }

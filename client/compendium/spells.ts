@@ -54,6 +54,8 @@ export interface SpellExec {
   reaction?: SpellReaction;
   /** H6c (D250): the target repeats the save at the end of each of its turns (see `repeatSaveOf`). */
   repeatSave?: "turn-end";
+  /** V4g (D269): the conditions the spell ends on its targets (하급 회복). */
+  removesConditions?: string[];
   /** V4f (D268): what the caster chooses when casting (a module spell's own list). */
   variants?: SpellVariant[];
   /** R77 (D212): set on the execution of a repeat — what it costs, and that it is not a new casting. */

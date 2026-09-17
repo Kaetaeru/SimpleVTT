@@ -1,13 +1,88 @@
 {
   "$comment": "R77 (D212): how a concentration spell is used again without a slot while it lasts. A concentration spell that deals damage repeats its first effect by default: single-target spells with the economy they were cast with, area spells as a free roll when a creature enters or starts its turn there (economy none). This file lists only the spells that differ from that default. false: the spell has no repeat. A module may put the same object under its spell-mechanic config as \"sustain\".",
   "spells": {
-    "dnd.srd521.spell.arcane-sword": { "economy": "bonus-action", "note": "추가 행동으로 검을 옮기고 다시 공격" },
-    "dnd.srd521.spell.heat-metal": { "economy": "bonus-action", "note": "추가 행동으로 다시 피해" },
-    "dnd.srd521.spell.conjure-fey": { "economy": "bonus-action", "note": "추가 행동으로 순간이동 후 다시 공격" },
-    "dnd.srd521.spell.call-lightning": { "economy": "action", "note": "행동으로 번개를 다시 부름" },
-    "dnd.srd521.spell.sunbeam": { "economy": "action", "note": "행동으로 광선을 다시 발사" },
-    "dnd.srd521.spell.phantasmal-killer": { "economy": "none", "note": "대상의 턴이 끝날 때 내성 실패 시 피해" },
+    "dnd.srd521.spell.arcane-sword": {
+      "economy": "bonus-action",
+      "note": "추가 행동으로 검을 옮기고 다시 공격"
+    },
+    "dnd.srd521.spell.heat-metal": {
+      "economy": "bonus-action",
+      "note": "추가 행동으로 다시 피해"
+    },
+    "dnd.srd521.spell.conjure-fey": {
+      "economy": "bonus-action",
+      "note": "추가 행동으로 순간이동 후 다시 공격"
+    },
+    "dnd.srd521.spell.call-lightning": {
+      "economy": "action",
+      "note": "행동으로 번개를 다시 부름"
+    },
+    "dnd.srd521.spell.sunbeam": {
+      "economy": "action",
+      "note": "행동으로 광선을 다시 발사"
+    },
+    "dnd.srd521.spell.phantasmal-killer": {
+      "economy": "none",
+      "note": "대상의 턴이 끝날 때 내성 실패 시 피해"
+    },
     "dnd.srd521.spell.mind-spike": false,
-    "dnd.srd521.spell.spike-growth": { "economy": "none", "move": 5, "primary": { "kind": "automatic-projectiles", "damageType": "piercing", "projectileDice": { "sides": 4 }, "baseProjectiles": 2 }, "note": "구역 안에서 5피트 움직일 때마다 2d4 관통" }
+    "dnd.srd521.spell.spike-growth": {
+      "economy": "none",
+      "move": 5,
+      "primary": {
+        "kind": "automatic-projectiles",
+        "damageType": "piercing",
+        "projectileDice": {
+          "sides": 4
+        },
+        "baseProjectiles": 2
+      },
+      "note": "구역 안에서 5피트 움직일 때마다 2d4 관통"
+    },
+    "dnd.srd521.spell.flaming-sphere": {
+      "economy": "bonus-action",
+      "primary": {
+        "kind": "save-damage",
+        "saveAbility": "dex",
+        "damageType": "fire",
+        "dice": {
+          "count": 2,
+          "sides": 6,
+          "dicePerSlotAboveBase": 1
+        },
+        "successDamage": "half"
+      },
+      "note": "추가 행동으로 들이받기 · 5피트 안에서 턴을 끝낸 생물에게도 이 굴림"
+    },
+    "dnd.srd521.spell.conjure-woodland-beings": {
+      "economy": "none",
+      "primary": {
+        "kind": "save-damage",
+        "saveAbility": "wis",
+        "damageType": "force",
+        "dice": {
+          "count": 5,
+          "sides": 8,
+          "dicePerSlotAboveBase": 1
+        },
+        "successDamage": "half"
+      },
+      "note": "오라에 들어오거나 그 안에서 턴을 끝낸 생물 — 생물마다 턴당 한 번"
+    },
+    "dnd.srd521.spell.delayed-blast-fireball": {
+      "economy": "none",
+      "primary": {
+        "kind": "save-damage",
+        "saveAbility": "dex",
+        "damageType": "fire",
+        "dice": {
+          "count": 12,
+          "sides": 6,
+          "dicePerSlotAboveBase": 1
+        },
+        "successDamage": "half"
+      },
+      "note": "구슬이 터질 때 · 기다린 턴마다 +1d6은 DM 팔레트"
+    }
   }
 }

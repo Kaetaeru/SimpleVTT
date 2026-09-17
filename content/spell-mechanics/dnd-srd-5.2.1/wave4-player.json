@@ -1,0 +1,377 @@
+{
+ "schemaVersion": 1,
+ "source": "V4g (D269): spells whose catalog execution rolled no damage or pointed the wrong way",
+ "definitions": [
+  {
+   "spellId": "dnd.srd521.spell.vitriolic-sphere",
+   "baseLevel": 4,
+   "runtimeSupport": "combat-executable",
+   "castingEconomy": "action",
+   "targeting": {
+    "kind": "creature",
+    "rangeFeet": 150,
+    "minTargets": 1,
+    "maxTargets": 64,
+    "allowedRelations": [
+     "self",
+     "ally",
+     "enemy",
+     "neutral"
+    ],
+    "requiresSight": false,
+    "directTarget": false
+   },
+   "primary": {
+    "kind": "save-damage",
+    "saveAbility": "dex",
+    "damageType": "acid",
+    "dice": {
+     "count": 10,
+     "sides": 4,
+     "dicePerSlotAboveBase": 2
+    },
+    "successDamage": "half"
+   },
+   "concentration": false,
+   "executionScope": "V4g (D269): 10d4 acid (+2d4 per slot above 4th), half on a Dexterity save. The 5d4 at the end of a failed creature's next turn is the DM's (palette).",
+   "components": {
+    "verbal": true,
+    "somatic": true,
+    "materials": [
+     {}
+    ]
+   },
+   "ritual": false
+  },
+  {
+   "spellId": "dnd.srd521.spell.befuddlement",
+   "baseLevel": 8,
+   "runtimeSupport": "combat-executable",
+   "castingEconomy": "action",
+   "targeting": {
+    "kind": "creature",
+    "rangeFeet": 150,
+    "minTargets": 1,
+    "maxTargets": 1,
+    "allowedRelations": [
+     "self",
+     "ally",
+     "enemy",
+     "neutral"
+    ],
+    "requiresSight": true,
+    "directTarget": true
+   },
+   "primary": {
+    "kind": "save-damage",
+    "saveAbility": "int",
+    "damageType": "psychic",
+    "dice": {
+     "count": 10,
+     "sides": 12
+    },
+    "successDamage": "half"
+   },
+   "concentration": false,
+   "executionScope": "V4g (D269): 10d12 psychic, half on an Intelligence save. On a failure the target cannot cast spells or take the Magic action — the DM tracks it.",
+   "components": {
+    "verbal": true,
+    "somatic": true,
+    "materials": [
+     {}
+    ]
+   },
+   "ritual": false
+  },
+  {
+   "spellId": "dnd.srd521.spell.dispel-evil-and-good",
+   "baseLevel": 5,
+   "runtimeSupport": "combat-executable",
+   "castingEconomy": "action",
+   "targeting": {
+    "kind": "creature",
+    "rangeFeet": 0,
+    "minTargets": 1,
+    "maxTargets": 1,
+    "allowedRelations": [
+     "self"
+    ],
+    "directTarget": true
+   },
+   "primary": {
+    "kind": "tracked-effect",
+    "summary": "지속시간 동안 천상체, 원소, 요정, 악마와 언데드는 당신을 대상으로 하는 명중 굴림에 불리점을 받는다. 다음 특수 기능 중 하나를 사용해 주문을 일찍 끝낼 수 있다.",
+    "duration": {
+     "kind": "concentration"
+    }
+   },
+   "concentration": true,
+   "trackedEffects": [
+    {
+     "summary": "지속시간 동안 천상체, 원소, 요정, 악마와 언데드는 당신을 대상으로 하는 명중 굴림에 불리점을 받는다. 다음 특수 기능 중 하나를 사용해 주문을 일찍 끝낼 수 있다.",
+     "trigger": "always",
+     "duration": {
+      "kind": "concentration"
+     },
+     "modifier": {
+      "family": "attack-roll",
+      "rollState": "disadvantage",
+      "scope": "target"
+     }
+    }
+   ],
+   "executionScope": "V4g (D269): celestials, elementals, fey, fiends and undead attack the caster at disadvantage (applied to every attacker; the creature type is the DM's). The dismissal options are the DM's.",
+   "components": {
+    "verbal": true,
+    "somatic": true,
+    "materials": [
+     {}
+    ]
+   },
+   "ritual": false
+  },
+  {
+   "spellId": "dnd.srd521.spell.ray-of-enfeeblement",
+   "baseLevel": 2,
+   "runtimeSupport": "combat-executable",
+   "castingEconomy": "action",
+   "targeting": {
+    "kind": "creature",
+    "rangeFeet": 60,
+    "minTargets": 1,
+    "maxTargets": 1,
+    "allowedRelations": [
+     "self",
+     "ally",
+     "enemy",
+     "neutral"
+    ],
+    "requiresSight": false,
+    "directTarget": true
+   },
+   "primary": {
+    "kind": "save-effect",
+    "saveAbility": "con",
+    "summary": "사거리 내의 크리처 하나에게 쇠약 에너지의 광선을 쏜다. 대상은 건강 내성 굴림을 한다. 성공하면 당신의 다음 턴이 시작될 때까지 자신이 하는 다음 명중 굴림에 불리점을 받는다.",
+    "duration": {
+     "kind": "concentration"
+    }
+   },
+   "concentration": true,
+   "trackedEffects": [
+    {
+     "summary": "근력 판정·내성 불리 (피해 −1d8은 DM 팔레트)",
+     "trigger": "failed-save",
+     "duration": {
+      "kind": "concentration"
+     },
+     "modifier": {
+      "family": "ability-check",
+      "rollState": "disadvantage",
+      "scope": "actor",
+      "ability": "str"
+     }
+    },
+    {
+     "summary": "근력 내성 불리",
+     "trigger": "failed-save",
+     "duration": {
+      "kind": "concentration"
+     },
+     "modifier": {
+      "family": "saving-throw",
+      "rollState": "disadvantage",
+      "scope": "actor",
+      "ability": "str"
+     }
+    }
+   ],
+   "executionScope": "V4g (D269): a failed Constitution save gives disadvantage on Strength checks and saves, repeated at the end of each of its turns; a success makes its next attack roll disadvantaged (the DM's). The −1d8 on its damage is the DM's.",
+   "components": {
+    "verbal": true,
+    "somatic": true
+   },
+   "ritual": false
+  },
+  {
+   "spellId": "dnd.srd521.spell.beacon-of-hope",
+   "baseLevel": 3,
+   "runtimeSupport": "combat-executable",
+   "castingEconomy": "action",
+   "targeting": {
+    "kind": "creature",
+    "rangeFeet": 30,
+    "minTargets": 1,
+    "maxTargets": 64,
+    "allowedRelations": [
+     "self",
+     "ally",
+     "enemy",
+     "neutral"
+    ],
+    "requiresSight": false,
+    "directTarget": true
+   },
+   "primary": {
+    "kind": "tracked-effect",
+    "summary": "지혜 내성·죽음 내성 유리, 치유는 최대값",
+    "duration": {
+     "kind": "concentration"
+    }
+   },
+   "concentration": true,
+   "trackedEffects": [
+    {
+     "summary": "지혜 내성 유리",
+     "trigger": "always",
+     "duration": {
+      "kind": "concentration"
+     },
+     "modifier": {
+      "family": "saving-throw",
+      "rollState": "advantage",
+      "scope": "actor",
+      "ability": "wis"
+     }
+    }
+   ],
+   "executionScope": "V4g (D269): the chosen creatures get advantage on Wisdom saves while the caster concentrates, with no save. Death-save advantage and maximized healing are the DM's.",
+   "components": {
+    "verbal": true,
+    "somatic": true
+   },
+   "ritual": false
+  },
+  {
+   "spellId": "dnd.srd521.spell.flaming-sphere",
+   "baseLevel": 2,
+   "runtimeSupport": "combat-executable",
+   "castingEconomy": "action",
+   "targeting": {
+    "kind": "creature",
+    "rangeFeet": 60,
+    "minTargets": 1,
+    "maxTargets": 1,
+    "allowedRelations": [
+     "self",
+     "ally",
+     "enemy",
+     "neutral"
+    ],
+    "requiresSight": false,
+    "directTarget": true
+   },
+   "primary": {
+    "kind": "tracked-effect",
+    "summary": "사거리 내 지면의 빈 공간에 지름 5피트인 불의 구체를 만든다. 구체는 지속시간 동안 유지된다. 구체에서 5피트 이내에서 자신의 턴을 끝낸 크리처는 민첩 내성 굴림을 한다. 실패하면 2d6 화염 피해를 받고, 성공하면 절반의 피해를 받는다.",
+    "duration": {
+     "kind": "concentration"
+    }
+   },
+   "concentration": true,
+   "trackedEffects": [
+    {
+     "summary": "사거리 내 지면의 빈 공간에 지름 5피트인 불의 구체를 만든다. 구체는 지속시간 동안 유지된다. 구체에서 5피트 이내에서 자신의 턴을 끝낸 크리처는 민첩 내성 굴림을 한다. 실패하면 2d6 화염 피해를 받고, 성공하면 절반의 피해를 받는다.",
+     "trigger": "failed-save",
+     "duration": {
+      "kind": "concentration"
+     }
+    }
+   ],
+   "executionScope": "V4g (D269): the sphere is placed; its 2d6 fire (+1d6 per slot above 2nd, half on a Dexterity save) is the repeat — a bonus action to ram, or a creature ending its turn next to it.",
+   "components": {
+    "verbal": true,
+    "somatic": true,
+    "materials": [
+     {}
+    ]
+   },
+   "ritual": false
+  },
+  {
+   "spellId": "dnd.srd521.spell.conjure-woodland-beings",
+   "baseLevel": 4,
+   "runtimeSupport": "combat-executable",
+   "castingEconomy": "action",
+   "targeting": {
+    "kind": "creature",
+    "rangeFeet": 0,
+    "minTargets": 1,
+    "maxTargets": 1,
+    "allowedRelations": [
+     "self"
+    ],
+    "directTarget": true
+   },
+   "primary": {
+    "kind": "tracked-effect",
+    "summary": "자연 정령들을 불러내 지속시간 동안 당신에게서 10피트까지 날아다니게 한다. 오라가 볼 수 있는 크리처의 공간으로 들어가거나, 볼 수 있는 크리처가 오라에 들어오거나 그 안에서 자신의 턴을 끝낼 때 그 크리처에게 지혜 내성 굴림을 강요할 수 있다. 실패하면 5d8 역장 피해를 받고, 성공하면 절반의 피해를 받는다. 크리처 하나는 턴마다 한 번만 이 내성 굴림을 한다.",
+    "duration": {
+     "kind": "concentration"
+    }
+   },
+   "concentration": true,
+   "trackedEffects": [
+    {
+     "summary": "자연 정령들을 불러내 지속시간 동안 당신에게서 10피트까지 날아다니게 한다. 오라가 볼 수 있는 크리처의 공간으로 들어가거나, 볼 수 있는 크리처가 오라에 들어오거나 그 안에서 자신의 턴을 끝낼 때 그 크리처에게 지혜 내성 굴림을 강요할 수 있다. 실패하면 5d8 역장 피해를 받고, 성공하면 절반의 피해를 받는다. 크리처 하나는 턴마다 한 번만 이 내성 굴림을 한다.",
+     "trigger": "failed-save",
+     "duration": {
+      "kind": "concentration"
+     }
+    }
+   ],
+   "executionScope": "V4g (D269): the aura is placed; its 5d8 force (+1d8 per slot above 4th, half on a Wisdom save) is the repeat when a creature enters or ends its turn in it.",
+   "components": {
+    "verbal": true,
+    "somatic": true
+   },
+   "ritual": false
+  },
+  {
+   "spellId": "dnd.srd521.spell.delayed-blast-fireball",
+   "baseLevel": 7,
+   "runtimeSupport": "combat-executable",
+   "castingEconomy": "action",
+   "targeting": {
+    "kind": "creature",
+    "rangeFeet": 150,
+    "minTargets": 1,
+    "maxTargets": 64,
+    "allowedRelations": [
+     "self",
+     "ally",
+     "enemy",
+     "neutral"
+    ],
+    "requiresSight": false,
+    "directTarget": false
+   },
+   "primary": {
+    "kind": "tracked-effect",
+    "summary": "노란 광선이 번쩍인 뒤 사거리 내에서 선택한 지점에 빛나는 구슬로 응축되어 지속시간 동안 유지된다. 주문이 끝나면 구슬이 폭발한다. 그 지점을 중심으로 반지름 20피트인 구체 안의 각 크리처는 민첩 내성 굴림을 한다. 실패하면 누적된 총 화염 피해를 받고, 성공하면 절반의 피해를 받는다.",
+    "duration": {
+     "kind": "concentration"
+    }
+   },
+   "concentration": true,
+   "trackedEffects": [
+    {
+     "summary": "노란 광선이 번쩍인 뒤 사거리 내에서 선택한 지점에 빛나는 구슬로 응축되어 지속시간 동안 유지된다. 주문이 끝나면 구슬이 폭발한다. 그 지점을 중심으로 반지름 20피트인 구체 안의 각 크리처는 민첩 내성 굴림을 한다. 실패하면 누적된 총 화염 피해를 받고, 성공하면 절반의 피해를 받는다.",
+     "trigger": "failed-save",
+     "duration": {
+      "kind": "concentration"
+     }
+    }
+   ],
+   "executionScope": "V4g (D269): the bead is placed; its 12d6 fire (+1d6 per slot above 7th, half on a Dexterity save) is the repeat when it explodes. The 1d6 it gains each turn is the DM's (palette).",
+   "components": {
+    "verbal": true,
+    "somatic": true,
+    "materials": [
+     {}
+    ]
+   },
+   "ritual": false
+  }
+ ]
+}

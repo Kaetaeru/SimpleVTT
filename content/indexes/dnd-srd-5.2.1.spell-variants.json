@@ -959,6 +959,46 @@
      }
     }
    ]
+  },
+  "dnd.srd521.spell.lesser-restoration": {
+   "variants": [
+    {
+     "id": "blinded",
+     "label": "실명 해제",
+     "patch": {
+      "removesConditions": [
+       "blinded"
+      ]
+     }
+    },
+    {
+     "id": "deafened",
+     "label": "청각상실 해제",
+     "patch": {
+      "removesConditions": [
+       "deafened"
+      ]
+     }
+    },
+    {
+     "id": "paralyzed",
+     "label": "마비 해제",
+     "patch": {
+      "removesConditions": [
+       "paralyzed"
+      ]
+     }
+    },
+    {
+     "id": "poisoned",
+     "label": "중독 해제",
+     "patch": {
+      "removesConditions": [
+       "poisoned"
+      ]
+     }
+    }
+   ]
   }
  }
 }

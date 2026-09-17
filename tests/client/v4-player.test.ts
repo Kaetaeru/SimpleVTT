@@ -380,3 +380,28 @@ test("V4f: a spell cast with a chosen variant keeps it — 에너지 보호's co
   assert.equal(held.runtime.hp.current, 1, JSON.stringify(t.host.archive.slice(-3).map((message) => message.content)));
   assert.ok(!held.runtime.effects.some((effect) => effect.key === "spell:dnd.srd521.spell.death-ward"), "the ward is spent");
 });
+
+test("V4g: save spells that rolled nothing now deal their damage, a spell that ends a condition ends the chosen one, and index rules count as rules (D269)", async () => {
+  const { spellExec } = await import("../../client/compendium/spells");
+  const { spellIsJudged } = await import("../../client/rules/spellcast");
+  const cat = catalog();
+  const wizard = build({ name: "위저드", classes: "wizard", level: 15 }).derived;
+  for (const id of ["spike-growth", "find-familiar", "true-strike"]) assert.equal(spellIsJudged(spellExec(`dnd.srd521.spell.${id}`)!, cat, wizard), false, id);
+  const t = await table([{ classes: "wizard", level: 15 }, { classes: "cleric", level: 5, runtime: (runtime) => ({ ...runtime, conditions: ["중독", "실명"] }) }], [dummy("허수아비", 300)]);
+  const hp = () => t.host.pageList.find((page) => page.id === t.scene.id)!.tokens.find((token) => token.id === t.ref(2).tokenId)!.bars[0].value ?? 0;
+  const before = hp();
+  t.dm.send({ type: "act.cast", caster: t.ref(0), spellId: "dnd.srd521.spell.vitriolic-sphere", targets: [t.ref(2)], method: { kind: "slot", level: 4 } });
+  await tick();
+  assert.ok(hp() < before, JSON.stringify(t.host.archive.slice(-2).map((message) => message.content)));
+  // 화염 방패 aside, the sphere spells place first and roll on the repeat.
+  t.dm.send({ type: "act.cast", caster: t.ref(0), spellId: "dnd.srd521.spell.flaming-sphere", targets: [t.ref(2)], method: { kind: "slot", level: 2 } });
+  await tick();
+  const placed = hp();
+  t.dm.send({ type: "act.cast", caster: t.ref(0), spellId: "dnd.srd521.spell.flaming-sphere", targets: [t.ref(2)], method: { kind: "sustain" } });
+  await tick();
+  assert.ok(hp() < placed, "the repeat burns it");
+  t.dm.send({ type: "act.cast", caster: t.ref(1), spellId: "dnd.srd521.spell.lesser-restoration", targets: [t.ref(1)], method: { kind: "slot", level: 2 }, variant: "poisoned" });
+  await tick();
+  const cleric = t.entry(1) as ReturnType<typeof newJournalCharacter>;
+  assert.deepEqual(cleric.runtime.conditions, ["실명"], JSON.stringify(t.host.archive.slice(-2).map((message) => message.content)));
+});
