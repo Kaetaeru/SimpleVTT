@@ -85,7 +85,7 @@ export type ContractOperation =
    * `lifetime` says how it ends — `until-duration` is the only one with a round counter, the rest are conditions the
    * table or another rule decides, and the sheet prints the reason instead of a number.
    */
-  | { kind: "effect.apply"; template: { key?: string; name?: string; duration?: string; rounds?: number; concentration?: boolean; /** V3e (D259): the effect ends when its bearer makes this roll (안정된 조준: its next attack). */ consumeOn?: "attack" | "cast"; /** V4d (D266): the bearer may add this die to one failed d20 test, which ends the effect (바드의 영감). */ rescueDie?: Expr }; lifetime: string; target: string; when?: Expr }
+  | { kind: "effect.apply"; template: { key?: string; name?: string; duration?: string; rounds?: number; concentration?: boolean; /** V3e (D259): the effect ends when its bearer makes this roll (안정된 조준: its next attack). */ consumeOn?: "attack" | "cast" | "attack-or-cast"; /** V4d (D266): the bearer may add this die to one failed d20 test, which ends the effect (바드의 영감). */ rescueDie?: Expr }; lifetime: string; target: string; when?: Expr }
   /** R39 (D179): end an effect by key — a new Wild Shape replacing the last one. */
   | { kind: "effect.remove"; selector: string; target: string; when?: Expr }
   /** R39 (D179): pause an effect without ending it (an antimagic field); the sheet shows it, greyed, with the reason. */
@@ -352,7 +352,7 @@ function parseOperations(raw: unknown, path: string, unsupported: string[]): Con
         duration: template.duration ? String(template.duration) : undefined,
         rounds: typeof template.rounds === "number" ? template.rounds : undefined,
         concentration: template.concentration === true,
-        ...(template.consumeOn === "attack" || template.consumeOn === "cast" ? { consumeOn: template.consumeOn as "attack" | "cast" } : {}),
+        ...(template.consumeOn === "attack" || template.consumeOn === "cast" || template.consumeOn === "attack-or-cast" ? { consumeOn: template.consumeOn } : {}),
         ...(isExpr(template.rescueDie) ? { rescueDie: template.rescueDie } : {}),
       } });
       return;

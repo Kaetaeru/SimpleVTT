@@ -83,6 +83,7 @@
 - 계약 치유의 최대값(시트·표 양쪽) · 직업 풀의 `freeCastMaxLevel` · 경제 버킷 `free.attack:<범위>` (D278)
 - 풀의 `freeCastSpellIds`(이름 붙은 주문 목록만 무료 시전) (D279)
 - 속성 `spell.metamagic`(시전에 무엇을 바꾸는지) · `metamagicOptions` 리더 · 시전 명령의 `metamagic` · 해석기의 `saveDisadvantage` (D280)
+- `weapon.shillelagh`의 무기 목록·주사위를 데이터로(§2 위반 제거) · 주문 종료 `termination.bearerAttacksOrCasts`와 `consumeOn: "attack-or-cast"` (D281)
 - `language.grant` · `senses.*`(truesight, devils-sight) · `speed.swim/climb`
 - `ac.unarmored-formula` { abilities, shieldAllowed }
 

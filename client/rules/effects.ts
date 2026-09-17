@@ -36,7 +36,8 @@ export interface EffectApplication {
   spellcastingClass?: string;
   spellAttack?: number;
   /** Club/quarterstaff attacks use the best spellcasting ability and a bigger die (Shillelagh). */
-  shillelagh?: boolean;
+  /** V4s (D281): the weapons this effect arms with the caster's spellcasting ability, and the die they deal (나무 몽둥이). */
+  shillelagh?: { itemIds: string[]; dice: string };
   /**
    * V4k (D273): the creatures this use may turn its user into (야생 변신) — the pool the picker lists, and, on an
    * effect that already carries a chosen `form`, the stat block the sheet takes its numbers from.
@@ -346,14 +347,15 @@ export function applyActiveEffects(derived: DerivedCharacter, effects: ActiveEff
     if (application.shillelagh) {
       const best = next.spellcasting.reduce<{ mod: number; label: string } | null>((acc, entry) => { const mod = next.abilities[entry.ability].modifier; return !acc || mod > acc.mod ? { mod, label: entry.ability } : acc; }, null);
       if (best) {
-        const die = next.level >= 17 ? "1d20" : next.level >= 11 ? "1d12" : next.level >= 5 ? "1d10" : "1d8";
+        const die = application.shillelagh.dice;
+        const armed = application.shillelagh.itemIds;
         next = { ...next, attacks: next.attacks.map((attack) => {
-          if (!attack.itemId || !/\.(club|quarterstaff)$/.test(attack.itemId)) return attack;
+          if (!attack.itemId || !armed.includes(attack.itemId)) return attack;
           const delta = best.mod - next.abilities[attack.ability].modifier;
           const hit: Term = { label: `${label} (주문 능력치로)`, value: delta };
           return { ...attack, damage: die, attackTerms: [...attack.attackTerms, hit], attackBonus: sum([...attack.attackTerms, hit]), damageTerms: [...attack.damageTerms, hit], damageBonus: sum([...attack.damageTerms, hit]) };
         }) };
-        notes.push(`곤봉·육척봉: 주문 능력치, 피해 ${die}`);
+        notes.push(`${next.attacks.filter((attack) => attack.itemId && armed.includes(attack.itemId)).map((attack) => attack.name).join("·") || "무기"}: 주문 능력치, 피해 ${die}`);
       }
     }
     if (application.resistances?.length) { const has = (type: string) => next.defenses.resistances.some((line) => line === type || line.startsWith(`${type} (`)); next = { ...next, defenses: { ...next.defenses, resistances: [...next.defenses.resistances, ...application.resistances.filter((type) => !has(type)).map((type) => `${type} (${label})`)] } }; notes.push(`저항: ${application.resistances.join("·")}`); }

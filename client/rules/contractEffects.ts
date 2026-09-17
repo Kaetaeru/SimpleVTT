@@ -124,7 +124,8 @@ export function contractEffect(contract: CommonPlayContract, scope: Scope): { ap
       case "speed.fly": application.speed = { ...application.speed, fly: number(operation, scope) }; break;
       case "speed.climb": application.speed = { ...application.speed, climbAsWalk: true }; break;
       case "speed.fly-as-walk": application.speed = { ...application.speed, flyAsWalk: true }; break;
-      case "weapon.shillelagh": application.shillelagh = true; break;
+      // V4s (D281): the spell names the weapons it arms and the die they roll — neither is in the code.
+      case "weapon.shillelagh": { const p = operation.params ?? {}; const itemIds = Array.isArray(p.items) ? p.items.map(String) : []; if (itemIds.length && operation.dice) application.shillelagh = { itemIds, dice: operation.dice }; break; }
       case "hp.maximum": application.hpMax = (application.hpMax ?? 0) + (number(operation, scope) ?? 0); break;
       // H5d (D247): hit points healed once, when the effect starts (원조).
       case "hp.heal-on-start": application.onStart = { heal: (application.onStart?.heal ?? 0) + (number(operation, scope) ?? 0) }; break;

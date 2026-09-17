@@ -347,6 +347,7 @@ test("V4e: 보복 opens an attack back; 보호의 오라 marked on an ally adds 
 
 test("V4f: a spell cast with a chosen variant keeps it — 에너지 보호's cold resistance halves cold, 화염 방패 burns a melee attacker, 죽음 방비 holds at 1 (D268)", async () => {
   const { variantsOf } = await import("../../client/compendium/spells");
+  const { castSpell: castSpellFromSheet } = await import("../../client/character/play");
   assert.deepEqual(variantsOf("dnd.srd521.spell.protection-from-energy").map((variant) => variant.id), ["acid", "cold", "fire", "lightning", "thunder"]);
   const frost = dummy("서리 거인", 300, { actions: [{ name: "얼음 도끼", attack: { mode: "melee", bonus: 30, rangeFeet: 5, damage: [{ formula: "20", type: "cold" }] } }] });
   const t = await table([{ classes: "wizard", level: 9 }, { classes: "fighter", level: 9 }], [frost]);
@@ -735,4 +736,36 @@ test("V4r: a metamagic rides on the cast — 고조된 주문 spends its points 
   assert.equal(row.save?.disadvantage, heightened.name, JSON.stringify(row.save));
   const sheet = t.entry(0) as ReturnType<typeof newJournalCharacter>;
   assert.equal(sheet.runtime.resourcesUsed["resource.sorcerer.sorcery-points"], 2, "마법 점수 2점");
+});
+
+test("V4s: 나무 몽둥이 reads its weapons and dice from the spell, 투명화 ends when its bearer attacks, and 마법 무기 has its slot variants (D281)", async () => {
+  const { variantsOf } = await import("../../client/compendium/spells");
+  const { castSpell: castSpellFromSheet } = await import("../../client/character/play");
+  const cat = catalog();
+
+  // 나무 몽둥이: no weapon ids in the code — the spell names the club and the quarterstaff, and the die is its own.
+  const druid = build({ name: "드루이드", classes: "druid", level: 11, abilities: { wis: 18 }, equipment: { mode: "loadout" } });
+  const armed = deriveCharacter(druid.source, cat, { effects: [{ key: "spell:dnd.srd521.spell.shillelagh", name: "나무 몽둥이", source: "spell", duration: "1분", concentration: false, rounds: 10, elapsed: 0, startedAt: "" }] });
+  const staff = armed.attacks.find((attack) => attack.itemId?.endsWith("quarterstaff"));
+  if (staff) assert.equal(staff.damage, "1d12", JSON.stringify([staff.name, staff.damage]));
+
+  // 투명화: the spell's own data says the effect ends when its bearer attacks or casts, and a cast carries that.
+  const { spellExec } = await import("../../client/compendium/spells");
+  const invisibility = cat.spellByName("Invisibility")?.id ?? "dnd.srd521.spell.invisibility";
+  assert.equal(spellExec(invisibility)?.effects?.[0].termination?.bearerAttacksOrCasts, true);
+  const wizard = build({ name: "위저드", classes: "wizard", level: 5, abilities: { int: 16 } });
+  const cast = castSpellFromSheet(initialRuntime(wizard.derived), wizard.derived, { id: invisibility, name: "투명화", level: 2, duration: "집중, 최대 1시간", consumeOn: "attack-or-cast" }, { kind: "slot", level: 2 })!;
+  assert.equal((cast.effects ?? []).find((effect) => effect.key === `spell:${invisibility}`)?.consumeOn, "attack-or-cast");
+
+  // …and the table sheds it when that bearer swings.
+  const t = await table([{ classes: "wizard", level: 5, abilities: { int: 16 }, runtime: (runtime) => ({ ...runtime, effects: [{ key: `spell:${invisibility}`, name: "투명화", source: "spell", duration: "집중, 최대 1시간", concentration: true, rounds: 600, elapsed: 0, startedAt: "", consumeOn: "attack-or-cast" }] }) }], [dummy("좀비", 40)], () => 0.5);
+  const blade = t.made[0].derived.attacks[0];
+  t.dm.send({ type: "act.attack", attacker: t.ref(0), targets: [t.ref(1)], attack: { source: "weapon", attackId: blade.id }, overrides: { outcome: "hit" } });
+  await tick();
+  for (const prompt of openHits(t)) t.dm.send({ type: "act.decline", messageId: prompt.id });
+  await tick();
+  assert.ok(!((t.entry(0) as ReturnType<typeof newJournalCharacter>).runtime.effects ?? []).some((effect) => effect.key === `spell:${invisibility}`), JSON.stringify((t.entry(0) as ReturnType<typeof newJournalCharacter>).runtime.effects));
+
+  // 마법 무기: the bigger slots are variants the caster picks, not a sentence.
+  assert.deepEqual(variantsOf("dnd.srd521.spell.magic-weapon").map((variant) => variant.id), ["plus-two", "plus-three"]);
 });

@@ -399,7 +399,7 @@ export function useFeature(runtime: CharacterRuntime, derived: DerivedCharacter,
   return stamp(next, `사용: ${feature.name}${parts.length ? ` (${parts.join(" · ")})` : ""}`);
 }
 
-export interface SpellSummary { id: string; name: string; level: number; duration?: string; ritual?: boolean }
+export interface SpellSummary { id: string; name: string; level: number; duration?: string; ritual?: boolean; /** V4s (D281): the effect ends when its bearer attacks or casts (투명화). */ consumeOn?: "attack" | "cast" | "attack-or-cast" }
 export type CastMethod = { kind: "slot"; level: number } | { kind: "pact" } | { kind: "ritual" } | { kind: "cantrip" } | { kind: "resource"; id: string } | { kind: "scroll"; instanceId: string } | /** R77 (D212): using a spell in effect again — no cost, no new effect. */ { kind: "sustain" };
 
 /** Cast a spell: spend the slot, pact slot, free-cast pool or nothing (cantrip, ritual); a lasting spell becomes an effect. Null when the cost cannot be paid. */
@@ -449,6 +449,6 @@ export function castSpell(runtime: CharacterRuntime, derived: DerivedCharacter, 
     }
   }
   const duration: ParsedDuration = parseDuration(spell.duration);
-  if (!duration.instantaneous) next = startEffect(next, { key: effectKeyForSpell(spell.id), name: spell.name, source: "spell", duration: duration.text, concentration: duration.concentration, rounds: duration.rounds, level: method.kind === "slot" ? method.level : method.kind === "pact" ? derived.pactMagic?.level ?? spell.level : spell.level });
+  if (!duration.instantaneous) next = startEffect(next, { key: effectKeyForSpell(spell.id), name: spell.name, source: "spell", duration: duration.text, concentration: duration.concentration, rounds: duration.rounds, ...(spell.consumeOn ? { consumeOn: spell.consumeOn } : {}), level: method.kind === "slot" ? method.level : method.kind === "pact" ? derived.pactMagic?.level ?? spell.level : spell.level });
   return stamp(next, `시전: ${spell.name} (${how})${duration.instantaneous ? "" : ` — ${duration.text}`}`);
 }

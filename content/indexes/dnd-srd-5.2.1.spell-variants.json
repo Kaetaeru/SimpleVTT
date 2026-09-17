@@ -999,6 +999,102 @@
      }
     }
    ]
+  },
+  "dnd.srd521.spell.magic-weapon": {
+   "variants": [
+    {
+     "id": "plus-two",
+     "label": "4레벨 이상 슬롯 (+2)",
+     "patch": {
+      "trackedEffects": [
+       {
+        "summary": "무기 명중 굴림 +2",
+        "trigger": "always",
+        "duration": {
+         "kind": "hours",
+         "amount": 1
+        },
+        "modifier": {
+         "family": "attack-roll",
+         "scope": "actor",
+         "bonus": {
+          "flat": 2
+         }
+        }
+       },
+       {
+        "summary": "무기 피해 +2",
+        "trigger": "always",
+        "duration": {
+         "kind": "hours",
+         "amount": 1
+        },
+        "modifier": {
+         "family": "damage",
+         "scope": "actor",
+         "bonus": {
+          "flat": 2
+         }
+        }
+       }
+      ],
+      "primary": {
+       "kind": "tracked-effect",
+       "summary": "무기가 마법 무기가 되어 명중 굴림과 피해 굴림에 +2를 얻는다.",
+       "duration": {
+        "kind": "hours",
+        "amount": 1
+       }
+      }
+     }
+    },
+    {
+     "id": "plus-three",
+     "label": "6레벨 이상 슬롯 (+3)",
+     "patch": {
+      "trackedEffects": [
+       {
+        "summary": "무기 명중 굴림 +3",
+        "trigger": "always",
+        "duration": {
+         "kind": "hours",
+         "amount": 1
+        },
+        "modifier": {
+         "family": "attack-roll",
+         "scope": "actor",
+         "bonus": {
+          "flat": 3
+         }
+        }
+       },
+       {
+        "summary": "무기 피해 +3",
+        "trigger": "always",
+        "duration": {
+         "kind": "hours",
+         "amount": 1
+        },
+        "modifier": {
+         "family": "damage",
+         "scope": "actor",
+         "bonus": {
+          "flat": 3
+         }
+        }
+       }
+      ],
+      "primary": {
+       "kind": "tracked-effect",
+       "summary": "무기가 마법 무기가 되어 명중 굴림과 피해 굴림에 +3을 얻는다.",
+       "duration": {
+        "kind": "hours",
+        "amount": 1
+       }
+      }
+     }
+    }
+   ]
   }
  }
 }

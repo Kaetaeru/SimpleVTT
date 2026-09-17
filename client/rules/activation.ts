@@ -12,7 +12,7 @@ export interface ParsedDuration {
   /** Rounds to count down when the duration is short enough to track turn by turn (≤ 100 rounds). */
   rounds?: number;
   /** V3e (D259): the effect ends when its bearer next attacks. */
-  consumeOn?: "attack" | "cast";
+  consumeOn?: "attack" | "cast" | "attack-or-cast";
 }
 
 const ROUNDS_PER: Array<[RegExp, number]> = [[/(\d+)\s*라운드/, 1], [/(\d+)\s*분/, 10], [/(\d+)\s*시간/, 600], [/(\d+)\s*일/, 14400]];

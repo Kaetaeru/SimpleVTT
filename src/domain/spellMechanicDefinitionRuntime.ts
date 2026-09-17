@@ -216,8 +216,8 @@ function parsePrimary(value:unknown,label:string):SpellPrimaryMechanic {
 function parseTermination(value:unknown,label:string) {
   if(value===undefined)return undefined;
   const raw=object(value,label);
-  onlyKeys(raw,label,["targetTakesDamage"]);
-  return {...(raw.targetTakesDamage!==undefined?{targetTakesDamage:optionalBoolean(raw.targetTakesDamage,`${label}.targetTakesDamage`)}:{})};
+  onlyKeys(raw,label,["targetTakesDamage","bearerAttacksOrCasts"]);
+  return {...(raw.targetTakesDamage!==undefined?{targetTakesDamage:optionalBoolean(raw.targetTakesDamage,`${label}.targetTakesDamage`)}:{}),...(raw.bearerAttacksOrCasts!==undefined?{bearerAttacksOrCasts:optionalBoolean(raw.bearerAttacksOrCasts,`${label}.bearerAttacksOrCasts`)}:{})};
 }
 
 function parseConditionEffect(value:unknown,label:string):SpellConditionEffectDefinition {

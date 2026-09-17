@@ -37,7 +37,7 @@ export interface SpellExec {
   targeting: { kind: string; rangeFeet?: number; minTargets: number; maxTargets: number; allowedRelations?: string[]; directTarget?: boolean; requiresSight?: boolean };
   primary: SpellPrimary;
   concentration?: boolean;
-  effects?: Array<{ conditionId: string; trigger: "failed-save" | "hit" | "always"; duration?: SpellDuration }>;
+  effects?: Array<{ conditionId: string; trigger: "failed-save" | "hit" | "always"; duration?: SpellDuration; /** V4s (D281): the effect ends when its bearer attacks or casts (투명화). */ termination?: { targetTakesDamage?: boolean; bearerAttacksOrCasts?: boolean } }>;
   trackedEffects?: Array<{ summary: string; trigger: "failed-save" | "hit" | "always"; duration?: SpellDuration } & SpellBearerPart>;
   ritual?: boolean;
   /** R77 (D212): how the spell is used again while it lasts, when that differs from the default (see `sustainOf`). */

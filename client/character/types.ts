@@ -118,7 +118,7 @@ export interface ActiveEffect {
   /** R85 (D220): the turn that counts its rounds — the caster ("until the end of your next turn") or the bearer. */
   anchor?: { who: "source" | "bearer"; boundary: "start" | "end" };
   /** V3e (D259): the effect ends when its bearer next attacks (안정된 조준). */
-  consumeOn?: "attack" | "cast";
+  consumeOn?: "attack" | "cast" | "attack-or-cast";
   /** R85 (D220): conditions the effect put on the bearer, which come off with it. */
   conditions?: string[];
   /** V4d (D266): a die the bearer may add to one failed d20 test, spending the effect (바드의 영감). */
