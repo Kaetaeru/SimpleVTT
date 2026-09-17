@@ -17,6 +17,7 @@ import { offeredRiders, riderFitsAttack } from "./attackRiders";
 import type { HitOffer } from "../campaign/model";
 import { critRiders } from "./attackAftermath";
 import { attackScopeFilter } from "./contractEffects";
+import { PACT_SLOT_RESOURCE } from "./contract";
 import type { ActiveEffect, DerivedAttack, DerivedCharacter } from "../character/types";
 import type { MonsterAction, MonsterView } from "../compendium/monsters";
 import { damageFormula } from "../compendium/monsters";
@@ -261,6 +262,8 @@ export function pcAttackSpec(entry: JournalCharacter, derived: DerivedCharacter,
     ...chosen.flatMap((key) => { const rider = (derived.attackRiders ?? []).find((item) => item.key === key); return rider && riderFitsAttack(rider, attack) ? rider.dice : []; }),
     ...crits.dice,
   ];
+  // V4i (D271): a declared rider's save-less condition lands with the hit (마력의 강타's 넘어짐).
+  for (const key of chosen) { const rider = (derived.attackRiders ?? []).find((item) => item.key === key); if (rider && riderFitsAttack(rider, attack)) inflicts.push(...(rider.conditions ?? [])); }
   const hitMarks = chosen.flatMap((key) => { const rider = (derived.attackRiders ?? []).find((item) => item.key === key); return rider && riderFitsAttack(rider, attack) ? (rider.marks ?? []).map((mark) => ({ label: rider.label, mark })) : []; });
   const hitSaves = chosen.flatMap((key) => { const rider = (derived.attackRiders ?? []).find((item) => item.key === key); return rider && riderFitsAttack(rider, attack) ? rider.saves.map((save) => ({ label: rider.label, ...save })) : []; });
   const declared = chosen.map((key) => (derived.attackRiders ?? []).find((item) => item.key === key)).filter((item) => item && riderFitsAttack(item, attack)).map((item) => item!.label);
@@ -305,7 +308,7 @@ export function hitOffers(entry: Pick<JournalCharacter, "runtime">, derived: Der
   const savage = !already.savage ? savageAttackerFeat(derived) : undefined;
   if (savage) offers.push({ key: "savage", label: savage, oncePerTurn: true, hint: "무기 피해 주사위를 한 번 더 굴려 높은 쪽 · 턴당 한 번" });
   const runtime = entry.runtime;
-  const riders = offeredRiders(derived, attack, { moment: "on-hit", effects: (runtime.effects ?? []).map((effect) => effect.name), left: (resourceId) => (derived.resources.find((item) => item.id === resourceId)?.max ?? 0) - (runtime.resourcesUsed[resourceId] ?? 0) });
+  const riders = offeredRiders(derived, attack, { moment: "on-hit", effects: (runtime.effects ?? []).map((effect) => effect.name), left: (resourceId) => (resourceId === PACT_SLOT_RESOURCE ? (derived.pactMagic?.count ?? 0) - runtime.pactSlotsUsed : (derived.resources.find((item) => item.id === resourceId)?.max ?? 0) - (runtime.resourcesUsed[resourceId] ?? 0)) });
   for (const rider of riders) if (!(already.contracts ?? []).includes(rider.key)) offers.push({ key: rider.key, label: rider.label, hint: rider.hint, ...(rider.oncePerTurn ? { oncePerTurn: true } : {}), ...(rider.facts.length ? { facts: rider.facts } : {}) });
   return offers;
 }

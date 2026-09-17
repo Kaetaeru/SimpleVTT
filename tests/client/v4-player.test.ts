@@ -34,7 +34,7 @@ async function table(pcs: Array<{ classes: string; level: number; choices?: Reco
   await tick();
   const scene = newScene(campaign.id, "전장", 0);
   dm.send({ type: "page.put", page: scene });
-  const made = pcs.map((pc, index) => build({ name: `PC${index}`, classes: pc.classes, level: pc.level, abilities: { con: 14, ...(pc.abilities ?? {}) }, ...(pc.species ? { species: pc.species } : {}) }, pc.choices ?? {}));
+  const made = pcs.map((pc, index) => build({ name: `PC${index}`, classes: pc.classes, level: pc.level, abilities: { con: 14, ...(pc.abilities ?? {}) }, ...(pc.species ? { species: pc.species } : {}), choices: pc.choices ?? {} }, pc.choices ?? {}));
   const sheets = made.map((one, index) => newJournalCharacter(campaign.id, "dm", one.source, (pcs[index].runtime ?? ((runtime) => runtime))(initialRuntime(one.derived))));
   const monsters = npcs.map((json) => newJournalNpc(campaign.id, "dm", (parseCustomMonster(JSON.stringify(json)) as { monster: Parameters<typeof newJournalNpc>[2] }).monster));
   for (const entry of [...sheets, ...monsters]) dm.send({ type: "journal.put", entry });
@@ -438,4 +438,37 @@ test("V4h: a turn ends one condition, the sneak attack reads its own advantage, 
   const eleven = build({ name: "로그", classes: "rogue", level: 11 });
   const better = pcAttackSpec(newJournalCharacter("c", "p", eleven.source, initialRuntime(eleven.derived)), eleven.derived, eleven.derived.attacks.find((attack) => attack.properties.includes("finesse"))!.id, { contracts: ["rogue.sneak-attack", "rogue.cunning-strike#trip", "rogue.cunning-strike#poison"], facts: ["sneak-advantage"] }, catalog())!.spec;
   assert.equal(better.hitSaves?.length, 2, "two from 11");
+});
+
+test("V4i: an invocation's free cast never runs out, 마귀의 시야 sees 120 feet, and 마력의 강타 rides a hit for a pact slot (D271)", async () => {
+  const { castSpell } = await import("../../client/character/play");
+  const picks = ["invocation.pact-of-the-blade", "invocation.armor-of-shadows", "invocation.devils-sight", "invocation.eldritch-smite", "invocation.thirsting-blade"];
+  const t = await table([{ classes: "warlock", level: 5, abilities: { cha: 16, dex: 14 }, choices: { "class.0.invocations": picks } }], [dummy("좀비", 60)], () => 0);
+  const warlock = t.made[0].derived;
+
+  // 그림자의 갑옷: a pool of one that recovers 무제한, so the same cast can be paid for again and again.
+  const shadows = warlock.resources.find((resource) => resource.atWill)!;
+  assert.equal(shadows.recovery, "무제한");
+  const armor = { id: shadows.freeCastSpellId!, name: "마법사의 갑옷", level: 1 };
+  let runtime = initialRuntime(warlock);
+  for (let cast = 0; cast < 3; cast += 1) runtime = castSpell(runtime, warlock, armor, { kind: "resource", id: shadows.id })!;
+  assert.ok(runtime.log.at(-1)!.text.includes("무제한"), runtime.log.at(-1)!.text);
+
+  // 마귀의 시야, 갈증의 검: darkvision on the sheet and a second swing in the Attack action.
+  assert.ok((warlock.senses.darkvision ?? 0) >= 120, String(warlock.senses.darkvision));
+  assert.equal(warlock.attackActionAttacks, 2);
+
+  // 마력의 강타: the on-hit window offers it, and taking it spends a pact slot for 2d8 force plus 넘어짐.
+  const blade = warlock.attacks[0];
+  t.dm.send({ type: "act.attack", attacker: t.ref(0), targets: [t.ref(1)], attack: { source: "weapon", attackId: blade.id }, overrides: { outcome: "hit" } });
+  await tick();
+  const window = openHits(t)[0];
+  assert.ok(window.prompt!.onHit!.offers.some((offer) => offer.key === "invocation.eldritch-smite#smite"), JSON.stringify(window.prompt!.onHit!.offers.map((offer) => offer.key)));
+  const before = t.host.pageList.find((page) => page.id === t.scene.id)!.tokens.find((token) => token.id === t.ref(1).tokenId)!.bars[0].value ?? 0;
+  t.dm.send({ type: "act.onhit", messageId: window.id, choices: ["invocation.eldritch-smite#smite"] });
+  await tick();
+  const after = t.host.pageList.find((page) => page.id === t.scene.id)!.tokens.find((token) => token.id === t.ref(1).tokenId)!.bars[0].value ?? 0;
+  assert.ok(after < before, JSON.stringify(lastCard(t).reasons));
+  assert.ok(markers(t, 1).includes("넘어짐"), JSON.stringify(markers(t, 1)));
+  assert.equal((t.entry(0) as ReturnType<typeof newJournalCharacter>).runtime.pactSlotsUsed, 1);
 });

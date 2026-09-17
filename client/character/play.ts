@@ -9,6 +9,7 @@ import type { ActiveEffect, CharacterRuntime } from "./runtime";
 import { emptyInventoryPatch } from "./runtime";
 import type { DerivedCharacter } from "./types";
 import { scrollSpellId } from "../rules/scrolls";
+import { PACT_SLOT_RESOURCE } from "../rules/contract";
 import type { CustomItem } from "./customItem";
 
 const MAX_LOG = 200;
@@ -331,6 +332,8 @@ export function advanceRound(runtime: CharacterRuntime, rounds = 1): CharacterRu
  * pool is capped at its own maximum, so a rider can never overdraw what `useFeature` would have refused.
  */
 export function spendResource(runtime: CharacterRuntime, derived: DerivedCharacter, resourceId: string, cost: number, label: string): CharacterRuntime {
+  // V4i (D271): R78's reserved ids are counters, not pools — a Pact Magic slot has its own (마력의 강타).
+  if (resourceId === PACT_SLOT_RESOURCE) { let next = runtime; for (let step = 0; step < cost; step += 1) next = usePactSlot(next, derived); return next; }
   const resource = derived.resources.find((item) => item.id === resourceId);
   if (!resource || cost <= 0) return runtime;
   const used = runtime.resourcesUsed[resourceId] ?? 0;

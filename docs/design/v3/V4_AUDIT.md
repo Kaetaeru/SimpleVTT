@@ -130,9 +130,9 @@ V0.9 계획의 V4 슬라이스가 처리할 구멍 전수 목록. 직업군별�
 - elemental-affinity (6) — 멀티클래스 시 능력치 오류. — [data-fix]
 
 ## 워락
-- fiend.hurl-through-hell (14) — 수동 버튼 즉시 피해. 명중 창·매력 내성·행동불능·마귀 제외·긴 휴식 1회·계약 슬롯 회복 없음. — [data-fix]
-- 계약 없는 기원: pact-of-the-blade, thirsting-blade, devouring-blade, eldritch-smite, lifedrinker, eldritch-mind, devils-sight, armor-of-shadows, ascendant-step, fiendish-vigor, mask-of-many-faces, master-of-myriad-forms, misty-visions, one-with-shadows, otherworldly-leap, visions-of-distant-realms, whispers-of-the-grave, repelling-blast, eldritch-spear, pact-of-the-chain, investment-of-the-chain-master, gift-of-the-protectors. — [data-fix + new-grammar] 무제한 무료 시전 `grant.resource` `atWill`, 계약 슬롯 탑승 비용.
-- gift-of-the-depths (5) — 수중 호흡·무료 시전 없음. — [data-fix]
+- ✔ D271 fiend.hurl-through-hell (14) — 수동 버튼 즉시 피해. 명중 창·매력 내성·행동불능·마귀 제외·긴 휴식 1회·계약 슬롯 회복 없음. — [data-fix]
+- ✔ D271 계약 없는 기원: pact-of-the-blade, thirsting-blade, devouring-blade, eldritch-smite, lifedrinker, eldritch-mind, devils-sight, armor-of-shadows, ascendant-step, fiendish-vigor, mask-of-many-faces, master-of-myriad-forms, misty-visions, one-with-shadows, otherworldly-leap, visions-of-distant-realms, whispers-of-the-grave, repelling-blast, eldritch-spear, pact-of-the-chain, investment-of-the-chain-master, gift-of-the-protectors. — [data-fix + new-grammar] 무제한 무료 시전 `grant.resource` `atWill`, 계약 슬롯 탑승 비용.
+- ✔ D271 gift-of-the-depths (5) — 수중 호흡·무료 시전 없음. — [data-fix]
 - (D265: 역장 제외·문구 ✔, 휴식 창 선택 남음) fiend.fiendish-resilience (10) — 역장 제외, 2014 문구, 휴식 창 선택 없음. — [data-fix + picker]
 - ✔ D263 fiend.dark-ones-blessing (3) — 10피트(5피트 아님), 처치 카드 버튼. — [data-fix] D263 근처 처치 제시.
 - ✔ D265 contact-patron (9), mystic-arcanum-6..9 — 수동 소비 줄이 무료 시전과 이중 소비. — [data-fix]

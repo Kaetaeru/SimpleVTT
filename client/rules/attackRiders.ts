@@ -53,6 +53,8 @@ export interface ContractRider {
   saves: Array<{ ability: string; dc: number; condition: string; duration?: ConditionDuration; repeatSave?: "turn-end"; successMark?: TargetMark }>;
   /** V4b (D264): marks a hit leaves on the target (휘청이는 일격, 무너뜨리는 일격). */
   marks?: TargetMark[];
+  /** V4i (D271): conditions a hit puts on the target with no save of its own (마력의 강타's 넘어짐). */
+  conditions?: string[];
   resourceId?: string;
   cost: number;
   /** V3e (D259): this rider gives up this many dice of another rider it must be taken with (교활한 일격 from 암습). */
@@ -122,6 +124,10 @@ export function contractRiders(contract: CommonPlayContract, key: string, label:
         // R60 (D195): a rule that touches the weapon's own dice rather than adding a part of its own.
         const rule = diceRuleOf(operation.property, Number(evaluate(operation.value, scope)), label);
         if (rule) rider.dice.push(rule);
+      } else if (operation.kind === "condition.apply" && !operation.save && operation.target === "attack-target") {
+        // V4i (D271): no save at all — the condition simply lands (마력의 강타 knocks it prone).
+        rider.conditions = [...(rider.conditions ?? []), operation.condition];
+        hints.push(`명중하면 ${CONDITION_KO[operation.condition] ?? operation.condition}`);
       } else if (operation.kind === "condition.apply" && operation.save && operation.target === "attack-target") {
         const dc = Number(evaluate(operation.save.dc, scope));
         if (Number.isFinite(dc)) rider.saves.push({ ability: operation.save.ability, dc, condition: operation.condition, ...(operation.duration ? { duration: operation.duration } : {}), ...(operation.repeatSave ? { repeatSave: operation.repeatSave } : {}), ...(operation.successMark ? { successMark: operation.successMark } : {}) });

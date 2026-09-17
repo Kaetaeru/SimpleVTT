@@ -73,6 +73,7 @@
 - 주문 색인 `spell-variants.json` / 모듈 spell-mechanic `variants` { id, label, patch } · `act.cast.variant` · `ActiveEffect.variant` · 주문 효과 방어 `bearerDefenses` (D268)
 - 주문 정의 `removesConditions`(표의 해제), 지속 색인의 `primary` 재사용, 반복 내성 색인 추가 (D269)
 - 시점 `turn-end`(pcTurnEnd) · 속성 `death-save.crit-range`, `rider.forgo-limit` · 가드 속성 `reaction.redirect` · 사실 `orAsk`와 계산 사실 `attack.advantage` (D270)
+- `grant.resource`의 `atWill` · 명중 창 효과의 예약 자원 결제(`resource.pact-slot`) · 내성 없는 `condition.apply`가 명중과 함께 붙는 상태(`ContractRider.conditions`) (D271)
 - `language.grant` · `senses.*`(truesight, devils-sight) · `speed.swim/climb`
 - `ac.unarmored-formula` { abilities, shieldAllowed }
 
