@@ -327,7 +327,6 @@ function finalize(ledger: Ledger): DerivedCharacter {
       : { armor: { name: "방어구 없음", training: "none", dexCapped: false, shield: Boolean(shieldView) } }),
     // R62 (D197): 원소 숙련자's element. The resolver has read this since R51; nothing could fill it until a feat asked.
     ...(ledger.ignoresResistance.size ? { ignoresResistance: [...ledger.ignoresResistance] } : {}),
-    ...([...ledger.flags].some((flag) => flag.startsWith("invocation:agonizing-blast:")) ? { cantripDamageModifier: [...ledger.flags].filter((flag) => flag.startsWith("invocation:agonizing-blast:")).map((flag) => flag.slice("invocation:agonizing-blast:".length)) } : {}),
     gold: ledger.gold,
     weaponMasteries: [...ledger.weaponMasteries].map((id) => catalog.itemById(id)?.name ?? id),
     // R33 (D168): the two feat rules that only bite once a swing is being rolled travel with the sheet to the table.

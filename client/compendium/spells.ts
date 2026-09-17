@@ -7,6 +7,7 @@ import catalogJson from "../../src/generated/spellExecutionCatalog.generated.jso
 import sustainJson from "../../content/indexes/dnd-srd-5.2.1.spell-sustain.json";
 import onHitJson from "../../content/indexes/dnd-srd-5.2.1.spell-on-hit.json";
 import bearerJson from "../../content/indexes/dnd-srd-5.2.1.spell-bearer.json";
+import weaponSpellJson from "../../content/indexes/dnd-srd-5.2.1.spell-weapon.json";
 import type { SpellSummon } from "./summonTemplate";
 
 export interface SpellDice { count: number; sides: number; flat?: number; dicePerSlotAboveBase?: number; flatPerSlotAboveBase?: number; cantripScaling?: boolean; addSpellcastingModifier?: boolean }
@@ -39,6 +40,8 @@ export interface SpellExec {
   sustain?: Partial<SpellSustain> | false;
   /** R82 (D218): cast right after a weapon hit (the smites) — offered in the on-hit window. */
   onHit?: SpellOnHit;
+  /** H2 (D239): cast through a weapon attack (진실의 일격). */
+  weaponSpell?: WeaponSpell;
   /** R84 (D219): the creature a summon spell brings, as a template filled in at the cast (compendium/summonTemplate.ts). */
   summon?: SpellSummon;
   /** R77 (D212): set on the execution of a repeat — what it costs, and that it is not a new casting. */
@@ -71,6 +74,14 @@ export interface SpellBearerPart {
 const BUILTIN_BEARER = (bearerJson as unknown as { spells: Record<string, SpellBearerPart[]> }).spells;
 /** R90 (D225): the lasting-effect parts of a spell — the catalog's, plus what the SRD index adds (유도 화살's advantage). */
 export const bearerPartsOf = (spellId: string): SpellBearerPart[] => [...(spellExec(spellId)?.trackedEffects ?? []), ...(BUILTIN_BEARER[spellId] ?? [])];
+
+/**
+ * H2 (D239): a spell cast through a weapon attack — the attack and damage use the spellcasting ability of the list
+ * that knows it, and from each character `level` on its extra dice are the step's.
+ */
+export interface WeaponSpell { ability: "spellcasting"; damageType?: string; extraDice?: Array<{ level: number; dice: string }> }
+const BUILTIN_WEAPON_SPELLS = (weaponSpellJson as unknown as { spells: Record<string, WeaponSpell> }).spells;
+export const weaponSpellOf = (spellId: string): WeaponSpell | undefined => spellExec(spellId)?.weaponSpell ?? BUILTIN_WEAPON_SPELLS[spellId];
 
 /** R77 (D212): a concentration spell used again without a slot — its economy, and a different effect when it has one. */
 export interface SpellSustain { economy: "action" | "bonus-action" | "none"; primary?: SpellPrimary; note?: string; /** R89 (D224): the repeat happens per this many feet moved inside the area (가시 성장), not on entering. */ move?: number }

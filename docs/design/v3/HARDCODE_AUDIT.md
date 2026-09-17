@@ -22,14 +22,14 @@
 
 | # | 위치 | 지금 | JSON 목표 | 필요한 문법 |
 |---|---|---|---|---|
-| S1 | `rules/attackSpec.ts` `HUNTERS_MARK`, `effects.ts`·`contractEffects.ts` `hunters-mark.die/advantage/keeps-concentration` | 사냥꾼의 표식 주문 ID 상수, 그 주문 전용 속성 이름 | 계약 `property.modify` `marked-spell.die` / `marked-spell.advantage` / `concentration.damage-immune`, 값에 `spellId` | 속성에 대상 주문 ID 매개변수 |
-| S2 | `attackSpec.ts` `TRUE_STRIKE`, `trueStrikeList`, `PageCanvas.tsx` 체크박스, `protocol.ts` `trueStrike` | 진실의 일격 ID와 전용 라이더 | 주문 메커닉 `weaponSpell: { ability: "spellcasting", extraDice: [{ level: 5, dice: "1d6", type: "radiant" }, …] }`, 판정 전 창은 "무기 주문" 목록을 읽음 | `weapon-spell` 주문 메커닉 + `AttackRiders.weaponSpell: spellId` |
-| S3 | `character/derive.ts` `invocation:agonizing-blast:` 플래그 파싱, `spellcast.ts` `damageModifier` | 기원술 이름을 코드가 읽음 | 기원술 계약 `property.modify` `spell.damage.ability-modifier` + 고른 대상 소마법 참조 | 선택된 대상 주문을 참조하는 속성 |
+| S1 ✔ H2 | `rules/attackSpec.ts` `HUNTERS_MARK`, `effects.ts`·`contractEffects.ts` `hunters-mark.die/advantage/keeps-concentration` | 사냥꾼의 표식 주문 ID 상수, 그 주문 전용 속성 이름 | 계약 `property.modify` `marked-spell.die` / `marked-spell.advantage` / `concentration.damage-immune`, 값에 `spellId` | 속성에 대상 주문 ID 매개변수 |
+| S2 ✔ H2 | `attackSpec.ts` `TRUE_STRIKE`, `trueStrikeList`, `PageCanvas.tsx` 체크박스, `protocol.ts` `trueStrike` | 진실의 일격 ID와 전용 라이더 | 주문 메커닉 `weaponSpell: { ability: "spellcasting", extraDice: [{ level: 5, dice: "1d6", type: "radiant" }, …] }`, 판정 전 창은 "무기 주문" 목록을 읽음 | `weapon-spell` 주문 메커닉 + `AttackRiders.weaponSpell: spellId` |
+| S3 ✔ H2 | `character/derive.ts` `invocation:agonizing-blast:` 플래그 파싱, `spellcast.ts` `damageModifier` | 기원술 이름을 코드가 읽음 | 기원술 계약 `property.modify` `spell.damage.ability-modifier` + 고른 대상 소마법 참조 | 선택된 대상 주문을 참조하는 속성 |
 | S4 | `tracks.ts` `picked === "thaumaturge"/"magician"/"protector"/"warden"`, `wis-skill-bonus:` 플래그 | 질서 선택지 ID 분기 | 선택지 계약: `proficiency.weapon/armor`, `cantrips.bonus`, `skill.<id>.bonus` 값 `max(1, wis)` | 기존 문법(표현식 `max`) |
 | S5 | `tracks.ts` `key === "body-and-mind"/"slippery-mind"/"scholar"`, 전승 학파 `bonus-proficiencies` | 특성 키 분기 | 특성 계약 `ability.score.bonus`(상한), `saving-throw.proficiency`, `choice.expertise`(목록), `choice.skills`(개수) | 만들기 단계 연산 (§3) |
 | S6 ✔ H1 | `attackSpec.ts` `traitPatterns`, `monsterAuras`(R103, 커밋 전), `regenerationOf`, `magicResistance` 정규식, `NpcSheet.tsx` 특성 힌트 | 영문 특성 이름·한국어 설명문 정규식 | SRD 색인 `monster-traits.json`: `{ monsterId: [{ pattern: "absorb", type: "lightning" }, { pattern: "undead-fortitude" }, { pattern: "bloodied-advantage" }, { pattern: "evasion" }, { pattern: "magic-resistance" }, { pattern: "regeneration", amount: 10 }, { pattern: "aura-damage", dice: "1d10", type: "fire", when: "owner-turn-end" }] }`. 사용자 NPC JSON(D209)도 같은 `traits[].pattern` 사용 | 패턴 실행기(코드) + 색인(데이터) |
-| S7 | `host.ts` `WOUNDED_FACT = "target-below-max-hp"` | 사실 ID를 호스트가 이름으로 앎 | 계약 `when: { ref: "target.hp.below-max" }` — 스코프 참조로 표에서 계산되는 사실 | 명중 창 스코프에 대상 참조 |
-| S8 | `resolve.ts`·`spellcast.ts` 행동불능 목록 리터럴 중복 | 규칙 어휘인데 여러 곳에 복제 | 코드 유지하되 **한 곳**(`CANNOT_ACT` 재사용) — JSON 아님 | — |
+| S7 ✔ H2 | `host.ts` `WOUNDED_FACT = "target-below-max-hp"` | 사실 ID를 호스트가 이름으로 앎 | 계약 `when: { ref: "target.hp.below-max" }` — 스코프 참조로 표에서 계산되는 사실 | 명중 창 스코프에 대상 참조 |
+| S8 ✔ H2 | `resolve.ts`·`spellcast.ts` 행동불능 목록 리터럴 중복 | 규칙 어휘인데 여러 곳에 복제 | 코드 유지하되 **한 곳**(`CANNOT_ACT` 재사용) — JSON 아님 | — |
 
 ### 2.2 세션 이전부터 있던 하드코딩
 

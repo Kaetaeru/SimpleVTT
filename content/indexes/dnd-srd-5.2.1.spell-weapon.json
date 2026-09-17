@@ -1,0 +1,6 @@
+{
+ "description": "H2 (D239): spells cast through a weapon attack. ability spellcasting = the attack and damage use the spellcasting modifier of the list that knows the spell; extraDice by character level, the highest step reached counts.",
+ "spells": {
+  "dnd.srd521.spell.true-strike": { "ability": "spellcasting", "damageType": "radiant", "extraDice": [{ "level": 5, "dice": "1d6" }, { "level": 11, "dice": "2d6" }, { "level": 17, "dice": "3d6" }] }
+ }
+}

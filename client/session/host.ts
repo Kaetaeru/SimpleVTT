@@ -24,7 +24,7 @@ import type { ActorRef, AttackRef, AttackRiders } from "./protocol";
 import { isConditionMarker } from "../campaign/page";
 import type { ActResult } from "../rules/actions";
 import { ACTIONS, advantageFor, cannotAct, describeAct, npcStats, resolveAction, TURN_MARKS, type ActorStats } from "../rules/actions";
-import { bearerRolls, HUNTERS_MARK, monsterAuras, smiteFiendBonus, splitHitOffers, withHitChoices } from "../rules/attackSpec";
+import { bearerRolls, monsterAuras, smiteFiendBonus, splitHitOffers, withHitChoices } from "../rules/attackSpec";
 import { describeSpell, resolveSpell, type CasterStats, type SpellCastSpec, type SpellResolution, type SpellTargetResult } from "../rules/spellcast";
 import { onHitOf, spellExec, sustainedExec, sustainOf, type SpellExec } from "../compendium/spells";
 import { summonMonster } from "../compendium/summonTemplate";
@@ -159,8 +159,6 @@ export interface TableHostOptions {
   setTimer?: (ms: number, run: () => void) => void;
 }
 
-/** R92 (D227): the on-hit fact the host answers itself from the target hit points. */
-const WOUNDED_FACT = "target-below-max-hp";
 /** H1 (D238): the mark a suppressed regeneration leaves until the creature's next turn start. */
 const REGEN_SUPPRESSED = "trait:regeneration-suppressed";
 
@@ -1582,9 +1580,9 @@ export class TableHost {
   private perTargetRiders(spec: AttackSpec, attacker: { entry: JournalEntry }, target: { entry: JournalEntry }, targetCombatant: Combatant, attackerCombatant?: Combatant): AttackSpec {
     const fiendBonus = target.entry.kind === "npc" ? smiteFiendBonus(spec, target.entry.statBlock.creatureType) : null;
     const mine = (targetCombatant.markedBy ?? []).filter((mark) => mark.from === attacker.entry.id);
-    // R98 (D233): 적 학살자 rolls a d10 for the mark, and 정밀한 사냥꾼 gives advantage against the marked creature.
-    const marks = mine.map((mark): DamagePart => ({ formula: mark.spellId === HUNTERS_MARK && attackerCombatant?.markDie ? mark.formula.replace(/d[0-9]+/, `d${attackerCombatant.markDie}`) : mark.formula, type: mark.type, label: mark.label }));
-    const precise = attackerCombatant?.markAdvantage && mine.some((mark) => mark.spellId === HUNTERS_MARK) ? ["정밀한 사냥꾼"] : [];
+    // H2 (D239): the attacker's sheet may change the mark's die (적 학살자) or give advantage against it (정밀한 사냥꾼), per marking spell.
+    const marks = mine.map((mark): DamagePart => { const die = attackerCombatant?.markedSpellDice?.[mark.spellId]; return { formula: die ? mark.formula.replace(/d[0-9]+/, `d${die}`) : mark.formula, type: mark.type, label: mark.label }; });
+    const precise = mine.filter((mark) => attackerCombatant?.markedSpellAdvantage?.includes(mark.spellId)).map((mark) => `${mark.label} 대상`);
     // R99 (D234): 연구된 공격 — the attack after a miss against this creature has advantage.
     if (attackerCombatant?.studiedAttacks && this.studied.get(attacker.entry.id) === target.entry.id) precise.push("연구된 공격");
     return fiendBonus || marks.length || precise.length ? { ...spec, riders: [...(spec.riders ?? []), ...(fiendBonus ? [fiendBonus] : []), ...marks], ...(precise.length ? { advantageOn: [...(spec.advantageOn ?? []), ...precise] } : {}) } : spec;
@@ -1598,16 +1596,21 @@ export class TableHost {
   private hitOffersFor(entry: JournalCharacter, attackId: string, riders: AttackRiders, target: { entry: JournalEntry; token?: Token }): HitOffer[] {
     const used = this.turnUses.get(entry.id);
     const spent = used && used.mark === this.turnMark() ? used.keys : [];
-    // R92 (D227): a fact the table can see is not asked — 거상 학살자 is offered only against a wounded creature, with no checkbox.
-    const wounded = this.wounded(target);
+    // H2 (D239): a fact the table computes (`auto`) is never asked — the offer drops when it is false, and shows
+    // without the checkbox when it is true (거상 학살자 only against a wounded creature).
     return (this.options.pcHitOffers?.(entry, attackId, riders) ?? [])
       .filter((offer) => !(offer.oncePerTurn && spent.includes(offer.key)))
-      .filter((offer) => wounded || !offer.facts?.some((fact) => fact.id === WOUNDED_FACT))
-      .map((offer) => { const facts = offer.facts?.filter((fact) => fact.id !== WOUNDED_FACT); return facts?.length === offer.facts?.length ? offer : { ...offer, facts: facts?.length ? facts : undefined }; });
+      .filter((offer) => (offer.facts ?? []).every((fact) => !fact.auto || this.targetFact(fact.auto, target)))
+      .map((offer) => { const facts = offer.facts?.filter((fact) => !fact.auto); return facts?.length === offer.facts?.length ? offer : { ...offer, facts: facts?.length ? facts : undefined }; });
   }
 
-  /** R92 (D227): the creature has lost hit points (거상 학살자). */
-  private wounded(actor: { entry: JournalEntry; token?: Token }) { const hp = this.combatantOf(actor)?.hp; return Boolean(hp && hp.current < hp.max); }
+  /** H2 (D239): the facts about a target the table computes, by their scope name. An unknown name is never true. */
+  private targetFact(ref: string, actor: { entry: JournalEntry; token?: Token }): boolean {
+    const combatant = this.combatantOf(actor);
+    if (!combatant) return false;
+    if (ref === "target.hp.below-max") return combatant.hp.current < combatant.hp.max;
+    return false;
+  }
 
   private turnMark() { return this.tracker.turns.length ? `${this.tracker.round}:${this.tracker.current}` : undefined; }
 
@@ -1701,7 +1704,13 @@ export class TableHost {
     const all = { choices: [...answer.choices, ...auto.map((offer) => offer.key)], facts: [...(answer.facts ?? []), ...auto.flatMap((offer) => (offer.facts ?? []).map((fact) => fact.id))], smiteSlot: answer.smiteSlot, spellSmite: answer.spellSmite };
     if (!all.choices.length) return this.finishAttack(held);
     this.useThisTurn(held.attacker.entry.id, all.choices);
-    if (this.wounded(held.target)) all.facts.push(WOUNDED_FACT);
+    // H2 (D239): the computed facts of what was chosen count as confirmed.
+    if (held.attacker.entry.kind === "character" && held.inputs.attack.source === "weapon") {
+      for (const offer of this.options.pcHitOffers?.(held.attacker.entry, held.inputs.attack.attackId, held.inputs.riders ?? {}) ?? []) {
+        if (!all.choices.includes(offer.key)) continue;
+        for (const fact of offer.facts ?? []) if (fact.auto && this.targetFact(fact.auto, held.target)) all.facts.push(fact.id);
+      }
+    }
     const attacker = this.resolveActor(held.inputs.attacker) ?? held.attacker;
     const target = this.resolveActor(held.inputs.targets[held.inputs.targetIndex]) ?? held.target;
     const riders = withHitChoices(held.inputs.riders ?? {}, all);

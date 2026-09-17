@@ -141,6 +141,12 @@ export class Ledger {
   hasSkill(id: string) { return (this.skills.get(id)?.proficient.length ?? 0) > 0; }
   hasExpertise(id: string) { return (this.skills.get(id)?.expertise.length ?? 0) > 0; }
 
+  /** H2 (D239): record what a feature was taken for; a repeatable option picked twice keeps both. */
+  addFeatureTarget(featureId: string, target: string) {
+    const feature = this.features.find((item) => item.id === featureId);
+    if (feature && !(feature.targets ?? []).includes(target)) feature.targets = [...(feature.targets ?? []), target];
+  }
+
   addFeature(feature: DerivedFeature) {
     if (this.features.some((item) => item.id === feature.id && item.sourceLabel === feature.sourceLabel)) return;
     this.features.push(feature);

@@ -1164,6 +1164,16 @@
             "unique-by-source",
             "profile-policy"
           ]
+        },
+        "spell": {
+          "type": "string",
+          "minLength": 1,
+          "description": "H2 (D239): the spell id a property is about (marked-spell.*, concentration.damage-immune)."
+        },
+        "school": {
+          "type": "string",
+          "minLength": 1,
+          "description": "H2 (D239): the spell school a property is about."
         }
       },
       "additionalProperties": false
@@ -1697,10 +1707,24 @@
         "save": {
           "description": "R94 (D229): the target resists with this saving throw; the condition lands only on a failure, until the start of the source's next turn.",
           "type": "object",
-          "required": ["ability", "dc"],
+          "required": [
+            "ability",
+            "dc"
+          ],
           "properties": {
-            "ability": { "enum": ["str", "dex", "con", "int", "wis", "cha"] },
-            "dc": { "$ref": "#/$defs/expression" }
+            "ability": {
+              "enum": [
+                "str",
+                "dex",
+                "con",
+                "int",
+                "wis",
+                "cha"
+              ]
+            },
+            "dc": {
+              "$ref": "#/$defs/expression"
+            }
           },
           "additionalProperties": false
         },
@@ -1834,6 +1858,33 @@
         },
         "when": {
           "$ref": "#/$defs/predicate"
+        },
+        "question": {
+          "type": "string"
+        },
+        "fact": {
+          "type": "object",
+          "required": [
+            "id",
+            "at"
+          ],
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "at": {
+              "enum": [
+                "pre-roll",
+                "reaction",
+                "on-hit"
+              ]
+            },
+            "auto": {
+              "type": "string",
+              "description": "H2 (D239): a fact the table computes (target.hp.below-max); never asked."
+            }
+          },
+          "additionalProperties": false
         }
       },
       "additionalProperties": false

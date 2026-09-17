@@ -8,7 +8,7 @@
 import type { AbilityKey } from "../catalog/types";
 import { ABILITY_KO } from "../catalog/types";
 import { CONDITION_KO, type SpellDice, type SpellDuration, type SpellExec } from "../compendium/spells";
-import { advantageFor, type ActorStats } from "./actions";
+import { advantageFor, CANNOT_ACT, type ActorStats } from "./actions";
 import type { ContentCatalog } from "../catalog/catalog";
 import { castSpell, type CastMethod } from "../character/play";
 import type { CharacterRuntime } from "../character/runtime";
@@ -228,7 +228,7 @@ export function resolveSpell(input: CastInput): SpellResolution {
         row.mode = "save";
         row.save = save(combatant, stats, primary.saveAbility);
         // R95 (D230): 회피술 — on a Dexterity save that halves, nothing on a success and half on a failure, unless incapacitated.
-        const evades = Boolean(combatant.evasion) && row.save.ability === "dex" && primary.successDamage === "half" && !["행동불능", "충격", "마비", "석화", "무의식"].some((name) => combatant.conditions.includes(name));
+        const evades = Boolean(combatant.evasion) && row.save.ability === "dex" && primary.successDamage === "half" && !CANNOT_ACT.some((name) => combatant.conditions.includes(name));
         // R98 (D233): 강력한 소마법 turns a cantrip success-for-nothing into half.
         const noneOnSuccess = primary.successDamage === "none" && !potent;
         if (row.save.success && (noneOnSuccess || evades)) afterDamage(row, noDamage(combatant));
@@ -445,7 +445,7 @@ export function pcSpell(entry: { runtime: CharacterRuntime }, derived: DerivedCh
   const level = chosen.kind === "slot" ? chosen.level : chosen.kind === "pact" ? derived.pactMagic?.level ?? view.level : chosen.kind === "sustain" ? entry.runtime.effects?.find((effect) => effect.key === `spell:${spellId}`)?.level ?? view.level : view.level;
   return {
     spec: { spellId, name: view.name, level, exec, ...(spellIsJudged(exec, catalog, derived) ? { judged: true } : {}) },
-    casterStats: { ...(list ? { attackBonus: list.attackBonus, saveDc: list.saveDc, modifier: derived.abilities[list.ability].modifier, level: derived.level } : { ...scrollStats(view.level), modifier: 0, level: derived.level }), ...(derived.ignoresResistance?.length ? { ignoresResistance: derived.ignoresResistance } : {}), ...(derived.ignoresCover ? { ignoresCover: true } : {}), ...(derived.cantripDamageModifier?.includes(spellId) || (view.level === 0 && list && derived.cantripModifierClasses?.some((slug) => list.classId?.endsWith(`.${slug}`))) ? { damageModifier: true } : {}), ...(derived.healingSlotBonus ? { healingSlotBonus: true } : {}), ...(derived.healingMaximized ? { healingMaximized: true } : {}), ...(derived.potentCantrip ? { potentCantrip: true } : {}), ...(view.school === "evocation" && list && derived.evocationModifierClasses?.some((slug) => list.classId?.endsWith(`.${slug}`)) ? { damageBonusOnce: derived.abilities[list.ability].modifier } : {}) },
+    casterStats: { ...(list ? { attackBonus: list.attackBonus, saveDc: list.saveDc, modifier: derived.abilities[list.ability].modifier, level: derived.level } : { ...scrollStats(view.level), modifier: 0, level: derived.level }), ...(derived.ignoresResistance?.length ? { ignoresResistance: derived.ignoresResistance } : {}), ...(derived.ignoresCover ? { ignoresCover: true } : {}), ...(derived.spellDamageModifier?.includes(spellId) || (view.level === 0 && list && derived.cantripModifierClasses?.some((slug) => list.classId?.endsWith(`.${slug}`))) ? { damageModifier: true } : {}), ...(derived.healingSlotBonus ? { healingSlotBonus: true } : {}), ...(derived.healingMaximized ? { healingMaximized: true } : {}), ...(derived.potentCantrip ? { potentCantrip: true } : {}), ...(list && derived.schoolDamageModifier?.some((rule) => rule.school === view.school && list.classId?.endsWith(`.${rule.classSlug}`)) ? { damageBonusOnce: derived.abilities[list.ability].modifier } : {}) },
     spend: (runtime) => castSpell(runtime, derived, { id: view.id, name: view.name, level: view.level, duration: view.duration, ritual: view.ritual }, chosen),
   };
 }

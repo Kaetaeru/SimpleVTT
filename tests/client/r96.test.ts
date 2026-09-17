@@ -56,11 +56,11 @@ test("R100: 진실의 일격 swings with the spellcasting ability and adds its r
   const weapon = made.derived.attacks.find((attack) => attack.itemId)!;
   assert.ok(weapon, made.derived.attacks.map((attack) => attack.name).join(", "));
   const plain = pcAttackSpec(entry, made.derived, weapon.id, {}, catalog())!.spec;
-  const strike = pcAttackSpec(entry, made.derived, weapon.id, { trueStrike: true }, catalog())!.spec;
+  const strike = pcAttackSpec(entry, made.derived, weapon.id, { weaponSpell: "dnd.srd521.spell.true-strike" }, catalog())!.spec;
   const swap = made.derived.abilities.int.modifier - made.derived.abilities[weapon.ability].modifier;
   assert.equal(strike.attackBonus, plain.attackBonus + swap);
-  assert.deepEqual(strike.riders?.map((part) => [part.label, part.formula, part.type]), [["진실의 일격", "1d6", "광휘"]]);
-  assert.ok(strike.name.includes("진실의 일격"));
+  assert.deepEqual(strike.riders?.map((part) => [part.label, part.formula, part.type]), [[catalog().spellById("dnd.srd521.spell.true-strike")!.name, "1d6", "광휘"]]);
+  assert.ok(strike.name.includes(catalog().spellById("dnd.srd521.spell.true-strike")!.name));
 });
 
 test("R101: a spell nothing computes says DM 판정 on its card; one the rules run does not (D236)", async () => {

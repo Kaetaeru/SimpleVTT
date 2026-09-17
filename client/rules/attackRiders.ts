@@ -46,7 +46,7 @@ export interface ContractRider {
    */
   damage: Array<{ formula: string; type: string; factId?: string }>;
   /** R57 (D192): the facts this rider asks the player to confirm, each a checkbox next to it. */
-  facts: Array<{ id: string; question: string }>;
+  facts: Array<{ id: string; question: string; auto?: string }>;
   /** R60 (D195): what declaring it does to the weapon's own damage dice. */
   dice: DiceRule[];
   /** R94 (D229): a save the target makes when this rider lands, and the condition a failure puts on it (기절 타격). */
@@ -102,7 +102,7 @@ export function contractRiders(contract: CommonPlayContract, key: string, label:
         const dc = Number(evaluate(operation.save.dc, scope));
         if (Number.isFinite(dc)) rider.saves.push({ ability: operation.save.ability, dc, condition: operation.condition });
       } else if (operation.kind === "adjudication.request") {
-        if (operation.fact?.at === moment) rider.facts.push({ id: operation.fact.id, question: operation.question });
+        if (operation.fact?.at === moment) rider.facts.push({ id: operation.fact.id, question: operation.question, ...(operation.fact.auto ? { auto: operation.fact.auto } : {}) });
         else hints.push(operation.question);
       }
     }

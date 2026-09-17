@@ -46,16 +46,18 @@ export interface EffectApplication {
   healingMaximized?: boolean;
   /** R96 (D231): attacks against this character cannot have advantage unless it is incapacitated (포착 불가). */
   elusive?: boolean;
-  /** R98 (D233): 사냥꾼의 표식 rolls this die (적 학살자), gives advantage (정밀한 사냥꾼), and survives damage (끈질긴 사냥꾼). */
-  markDie?: number;
-  markAdvantage?: boolean;
-  markKeepsConcentration?: boolean;
+  /** H2 (D239): per marking spell id, the die its extra damage rolls (적 학살자); the marking spells whose target this character attacks with advantage (정밀한 사냥꾼); the spells whose concentration damage never breaks (끈질긴 사냥꾼). */
+  markedSpellDice?: Record<string, number>;
+  markedSpellAdvantage?: string[];
+  concentrationDamageImmune?: string[];
+  /** H2 (D239): spells whose damage adds the spellcasting modifier (고통스러운 폭발, from the feature's target). */
+  spellDamageModifier?: string[];
   /** R98 (D233): a damage cantrip deals half on a miss or a successful save (강력한 소마법). */
   potentCantrip?: boolean;
   /** R99 (D234): a miss gives advantage on the next attack against that creature (연구된 공격). */
   studiedAttacks?: boolean;
-  /** R98 (D233): class slugs whose evocation spells add the spellcasting modifier to one damage roll (강화된 방출). */
-  evocationModifierClasses?: string[];
+  /** H2 (D239): a school of one class's spells adds the spellcasting modifier to one damage roll (강화된 방출). */
+  schoolDamageModifier?: Array<{ school: string; classSlug: string }>;
   /** R72 (D207): how many attacks one Attack action makes (Extra Attack 2, the fighter's 3 and 4); the most wins. */
   attackActionAttacks?: number;
   /** Korean damage type labels. */
@@ -133,7 +135,8 @@ export function applyPassiveContracts(derived: DerivedCharacter, catalog: Conten
     const { hasProperties } = contractEffect(contract, characterScope(derived));
     const starts = contract.entryPoints.some((entry) => entry.operations.some((operation) => operation.kind === "effect.apply"));
     if (!hasProperties || starts) continue;
-    passives.push({ key: qualifyRuleKey(featureRuleKey(feature.id)), name: feature.name, source: "feature", duration: "상시", concentration: false, elapsed: 0, startedAt: "" });
+    // H2 (D239): a feature taken for something (a cantrip) runs once per target, with the target in its scope.
+    for (const target of feature.targets?.length ? feature.targets : [undefined]) passives.push({ key: qualifyRuleKey(featureRuleKey(feature.id)), name: feature.name, source: "feature", duration: "상시", concentration: false, elapsed: 0, startedAt: "", ...(target ? { target } : {}) });
   }
   return passives.length ? applyActiveEffects(derived, passives, catalog, { list: false }) : derived;
 }
@@ -147,7 +150,7 @@ export function effectApplication(effect: ActiveEffect, derived: DerivedCharacte
   if (contract) {
     // R39: a contract that only says when the effect *ends* (`effect.apply`) says nothing about what it does, so it
     // must not stand in for a hand-written rule that does. Only `property.modify` makes it the source of truth.
-    const { application, unknown, hasProperties } = contractEffect(contract, characterScope(derived));
+    const { application, unknown, hasProperties } = contractEffect(contract, characterScope(derived, effect.target ? { "effect.target": effect.target } : {}));
     if (hasProperties && !unknown.length) return application;
   }
   const rule = EFFECT_RULES[key];
@@ -313,12 +316,13 @@ export function applyActiveEffects(derived: DerivedCharacter, effects: ActiveEff
     if (application.cantripModifierClasses?.length) { next = { ...next, cantripModifierClasses: [...new Set([...(next.cantripModifierClasses ?? []), ...application.cantripModifierClasses])] }; notes.push("소마법 피해에 주문 능력 수정치"); }
     if (application.healingSlotBonus) { next = { ...next, healingSlotBonus: true }; notes.push("슬롯 치유 주문 +2+슬롯 레벨"); }
     if (application.healingMaximized) { next = { ...next, healingMaximized: true }; notes.push("치유 주사위 최대값"); }
-    if (application.markDie) { next = { ...next, markDie: Math.max(next.markDie ?? 6, application.markDie) }; notes.push(`사냥꾼의 표식 d${application.markDie}`); }
-    if (application.markAdvantage) { next = { ...next, markAdvantage: true }; notes.push("표식한 대상 공격에 유리"); }
-    if (application.markKeepsConcentration) { next = { ...next, markKeepsConcentration: true }; notes.push("피해로 사냥꾼의 표식 집중이 깨지지 않음"); }
+    if (application.markedSpellDice) { next = { ...next, markedSpellDice: { ...(next.markedSpellDice ?? {}), ...application.markedSpellDice } }; notes.push(`표식 추가 피해 d${Object.values(application.markedSpellDice).join("/d")}`); }
+    if (application.markedSpellAdvantage?.length) { next = { ...next, markedSpellAdvantage: [...new Set([...(next.markedSpellAdvantage ?? []), ...application.markedSpellAdvantage])] }; notes.push("표식한 대상 공격에 유리"); }
+    if (application.concentrationDamageImmune?.length) { next = { ...next, concentrationDamageImmune: [...new Set([...(next.concentrationDamageImmune ?? []), ...application.concentrationDamageImmune])] }; notes.push("피해로 그 주문의 집중이 깨지지 않음"); }
+    if (application.spellDamageModifier?.length) { next = { ...next, spellDamageModifier: [...new Set([...(next.spellDamageModifier ?? []), ...application.spellDamageModifier])] }; notes.push("고른 주문의 피해에 주문 능력 수정치"); }
     if (application.studiedAttacks) { next = { ...next, studiedAttacks: true }; notes.push("빗나간 대상에게 다음 공격 유리"); }
     if (application.potentCantrip) { next = { ...next, potentCantrip: true }; notes.push("피해 소마법: 빗나감·내성 성공에도 절반"); }
-    if (application.evocationModifierClasses?.length) { next = { ...next, evocationModifierClasses: [...new Set([...(next.evocationModifierClasses ?? []), ...application.evocationModifierClasses])] }; notes.push("방출술 피해 한 번에 주문 능력 수정치"); }
+    if (application.schoolDamageModifier?.length) { next = { ...next, schoolDamageModifier: [...(next.schoolDamageModifier ?? []), ...application.schoolDamageModifier] }; notes.push("그 학파 주문 피해 한 번에 주문 능력 수정치"); }
     if (application.elusive) { next = { ...next, elusive: true }; notes.push("나를 향한 공격에 유리 없음"); }
     if (application.evasion) { next = { ...next, evasion: true }; notes.push("회피술: 민첩 내성 절반 피해 — 성공 0, 실패 절반"); }
     if (application.critRange !== undefined) { next = { ...next, critRange: Math.min(next.critRange ?? 20, application.critRange) }; notes.push(`치명타 범위 ${application.critRange}–20`); }

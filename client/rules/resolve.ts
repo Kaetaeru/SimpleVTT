@@ -6,6 +6,7 @@
  * concentration save when a concentrating target takes damage (D92: automatic), and 0 HP consequences.
  */
 import type { ActorRef, AttackRef } from "../session/protocol";
+import { CANNOT_ACT } from "./actions";
 export type Advantage = "advantage" | "disadvantage" | "normal";
 
 export interface CombatantDefenses {
@@ -82,8 +83,8 @@ export interface Combatant {
   /** R90 (D225): damage the caster who marked this creature adds when they hit it (사냥꾼의 표식, 주술). */
   markedBy?: Array<{ from: string; formula: string; type: string; label: string; spellId: string }>;
   /** R98 (D233): this attacker hunter mark rolls this die (적 학살자) and gives advantage (정밀한 사냥꾼). */
-  markDie?: number;
-  markAdvantage?: boolean;
+  markedSpellDice?: Record<string, number>;
+  markedSpellAdvantage?: string[];
   /** R99 (D234): 연구된 공격. */
   studiedAttacks?: boolean;
   /** H1 (D238): monster trait rules — damage types that heal instead, a save to stay at 1 HP, advantage while bloodied. */
@@ -264,7 +265,7 @@ export function suggestAdvantage(attacker: Combatant, target: Combatant, spec: A
   for (const reason of target.grantsDisadvantage ?? []) minus.push(reason);
   for (const state of (attacker.rollStates ?? []).filter((item) => item.on === "attack")) (state.state === "advantage" ? plus : minus).push(`공격자 ${state.label}`);
   // R96 (D231): 포착 불가 takes every reason for advantage away, unless the creature is incapacitated.
-  if (target.elusive && plus.length && !["행동불능", "충격", "마비", "석화", "무의식"].some((name) => has(target, name))) plus.length = 0;
+  if (target.elusive && plus.length && !CANNOT_ACT.some((name) => has(target, name))) plus.length = 0;
   if (plus.length && minus.length) return { advantage: "normal", reasons: [...plus, ...minus, "유리·불리가 상쇄"] };
   if (plus.length) return { advantage: "advantage", reasons: plus };
   if (minus.length) return { advantage: "disadvantage", reasons: minus };

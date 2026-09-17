@@ -33,7 +33,7 @@ import { describeSpellExec, spellExec, sustainedExec, sustainOf } from "../compe
 import type { CastMethod } from "../character/play";
 import { castOptions } from "./SheetView";
 import { ApprovalLayer, ToastLayer } from "./Notify";
-import { canOffHand, monsterAuras, npcAttackSpec, trueStrikeList, weaponRange } from "../rules/attackSpec";
+import { canOffHand, monsterAuras, npcAttackSpec, weaponRange, weaponSpells } from "../rules/attackSpec";
 import { traitRules } from "../compendium/monsterTraits";
 import { offeredRiders, type ContractRider } from "../rules/attackRiders";
 import { tableOutcome } from "../rules/contractTable";
@@ -277,14 +277,14 @@ function makeAttackWith({ c, token, page, entry, derived, isGm, readied, journal
     // R63 (D198): 암습, 신성한 강타 and 야만적 공격자 are chosen after the hit now, in the window it opens — this dialog
     // keeps only what has to be declared before the dice.
     let offHand = false;
-    let trueStrike = false;
+    let weaponSpellIds: string[] = [];
     let contractRiderList: ContractRider[] = [];
     if (ref.source === "weapon" && derived && entry.kind === "character") {
       const attack = derived.attacks.find((item) => item.id === ref.attackId)!;
       // R33 (D168): a Light weapon can be the off-hand swing, which costs it its ability modifier unless 쌍수 전투 pays.
       offHand = canOffHand(attack);
-      // R100 (D235): 진실의 일격 is cast with the weapon, so it is declared here.
-      trueStrike = Boolean(trueStrikeList(derived));
+      // H2 (D239): a spell cast through a weapon (진실의 일격) is declared here, before the dice.
+      weaponSpellIds = weaponSpells(derived).map((item) => item.spellId);
       // R52 (D187): the riders the sheet's own contracts offer for this weapon, with what is running and what is left.
       const runtime = entry.runtime;
       contractRiderList = offeredRiders(derived, attack, {
@@ -299,7 +299,7 @@ function makeAttackWith({ c, token, page, entry, derived, isGm, readied, journal
     const hit = targets.map((id) => page.tokens.find((item) => item.id === id)?.represents).filter((id): id is string => Boolean(id));
     const situational = situationalTraits(entry, hit.map((id) => journal.find((candidate) => candidate.id === id)).filter((found): found is JournalEntry => Boolean(found)));
     if (options.overrides) answer = { overrides: options.overrides };
-    else if (isGm || offHand || trueStrike || situational.length || contractRiderList.length) { answer = await requestAttackOptions({ name, offHand, trueStrike, offHandFeat: derived?.featEffects?.lightOffHandAbilityModifier, gm: isGm, notes: situational, riders: contractRiderList }); if (answer === null) return; }
+    else if (isGm || offHand || weaponSpellIds.length || situational.length || contractRiderList.length) { answer = await requestAttackOptions({ name, offHand, weaponSpells: weaponSpellIds, offHandFeat: derived?.featEffects?.lightOffHandAbilityModifier, gm: isGm, notes: situational, riders: contractRiderList }); if (answer === null) return; }
     c.attack({ entryId: entry.id, pageId: page.id, tokenId: token.id }, targets.map((id) => ({ pageId: page.id, tokenId: id })), ref, answer?.riders, { overrides: answer?.overrides, readied });
   };
 }
@@ -748,7 +748,7 @@ function CommandBar({ token, page, mode, onOpenEntry }: { token: Token; page: Pa
  * player controls. One row: the sheet's attacks and unarmed options, then menus for the 2024 action list, checks,
  * features, items and bonus actions (D97, D98). The economy chips only inform.
  */
-interface AttackAsk { name: string; /** R100 (D235): the attacker knows 진실의 일격. */ trueStrike?: boolean; /** R52 (D187): the riders this sheet's contracts let the player declare on this weapon, before the dice. */ riders?: ContractRider[]; /** R33 (D168): this weapon is Light, so it may be swung as the off-hand attack. */ offHand?: boolean; /** R33 (D168): the feat that keeps the ability modifier on that swing, when the sheet has one. */ offHandFeat?: string; gm: boolean; /** R31 (D164): stat-block lines that could change this roll but depend on where everyone is standing. */ notes?: SituationAsk[]; resolve: (answer: AttackAnswer | null) => void }
+interface AttackAsk { name: string; /** H2 (D239): the weapon spells the attacker knows. */ weaponSpells?: string[]; /** R52 (D187): the riders this sheet's contracts let the player declare on this weapon, before the dice. */ riders?: ContractRider[]; /** R33 (D168): this weapon is Light, so it may be swung as the off-hand attack. */ offHand?: boolean; /** R33 (D168): the feat that keeps the ability modifier on that swing, when the sheet has one. */ offHandFeat?: string; gm: boolean; /** R31 (D164): stat-block lines that could change this roll but depend on where everyone is standing. */ notes?: SituationAsk[]; resolve: (answer: AttackAnswer | null) => void }
 export interface AttackAnswer { riders?: AttackRiders; overrides?: AttackOverrides }
 const attackAskListeners = new Set<(ask: AttackAsk) => void>();
 export const requestAttackOptions = (ask: Omit<AttackAsk, "resolve">) => new Promise<AttackAnswer | null>((resolve) => { if (!attackAskListeners.size) { resolve({}); return; } for (const listener of [...attackAskListeners]) listener({ ...ask, resolve }); });
@@ -790,7 +790,8 @@ function AttackDialog({ ask, onDone }: { ask: AttackAsk; onDone: (answer: Attack
   // R57 (D192): and one per fact a rider asks about, because the scene cannot see where anyone is standing.
   const [facts, setFacts] = useState<string[]>([]);
   const [offHand, setOffHand] = useState(false);
-  const [trueStrike, setTrueStrike] = useState(false);
+  const [weaponSpell, setWeaponSpell] = useState("");
+  const { catalog } = useClient();
   const [situations, setSituations] = useState<string[]>([]);
   const [advantage, setAdvantage] = useState<"auto" | Advantage>("auto");
   const [cover, setCover] = useState<0 | 2 | 5>(0);
@@ -802,7 +803,7 @@ function AttackDialog({ ask, onDone }: { ask: AttackAsk; onDone: (answer: Attack
     if (confirmed.length) overrides.situational = confirmed;
     if (ask.gm && cover) overrides.cover = cover;
     if (ask.gm && outcome) overrides.outcome = outcome;
-    onDone({ riders: { offHand: Boolean(ask.offHand) && offHand, ...(ask.trueStrike && trueStrike ? { trueStrike: true } : {}), ...(declared.length ? { contracts: declared } : {}), ...(facts.length ? { facts } : {}) }, overrides: Object.keys(overrides).length ? overrides : undefined });
+    onDone({ riders: { offHand: Boolean(ask.offHand) && offHand, ...(weaponSpell && ask.weaponSpells?.includes(weaponSpell) ? { weaponSpell } : {}), ...(declared.length ? { contracts: declared } : {}), ...(facts.length ? { facts } : {}) }, overrides: Object.keys(overrides).length ? overrides : undefined });
   };
   return (
     <RiderModal title={`${ask.name} — 판정 전 조정`} onClose={() => onDone(null)} actions={<button type="button" className="cl-btn primary" onClick={done}>공격</button>}>
@@ -819,7 +820,7 @@ function AttackDialog({ ask, onDone }: { ask: AttackAsk; onDone: (answer: Attack
       ) : null}
       {/* R33 (D168): the off-hand swing. Without 쌍수 전투 it loses the ability modifier; with it the modifier stays. */}
       {ask.offHand ? <label className="cl-row cl-small" style={{ gap: 6 }}><input type="checkbox" checked={offHand} onChange={(event) => setOffHand(event.target.checked)} /> 보조 손 공격 ({ask.offHandFeat ? `${ask.offHandFeat} — 능력 수정치 유지` : "피해에 능력 수정치 없음"})</label> : null}
-      {ask.trueStrike ? <label className="cl-row cl-small" style={{ gap: 6 }}><input type="checkbox" checked={trueStrike} onChange={(event) => setTrueStrike(event.target.checked)} /> 진실의 일격으로 (주문 능력치로 명중·피해, 5레벨부터 광휘 추가 · 행동)</label> : null}
+      {ask.weaponSpells?.length ? <div className="cl-field"><label htmlFor="cl-attack-weapon-spell">무기로 거는 주문</label><select id="cl-attack-weapon-spell" className="cl-select" value={weaponSpell} onChange={(event) => setWeaponSpell(event.target.value)}><option value="">없음 (보통 공격)</option>{ask.weaponSpells.map((spellId) => <option key={spellId} value={spellId}>{catalog.spellById(spellId)?.name ?? spellId} — 주문 능력치로 명중·피해 · 행동</option>)}</select></div> : null}
       {/* R52 (D187): 광란, 대형 무기 달인의 중량 무기 숙달 and every other "declare it before the roll" rule the
           content ships. The list is the sheet's own, so a rule the character does not have never appears. */}
       {(ask.riders ?? []).map((rider) => (

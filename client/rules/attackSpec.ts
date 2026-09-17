@@ -11,7 +11,7 @@ import type { CharacterRuntime, HitPolicy } from "../character/runtime";
 import { castSpell, spendResource, useSpellSlot } from "../character/play";
 import { CONDITION_KO, onHitOf, spellExec, type SpellOnHit } from "../compendium/spells";
 import { damageTypeKo } from "./resolve";
-import { bearerPartsOf } from "../compendium/spells";
+import { bearerPartsOf, weaponSpellOf } from "../compendium/spells";
 import { traitRules } from "../compendium/monsterTraits";
 import { offeredRiders, riderFitsAttack } from "./attackRiders";
 import type { HitOffer } from "../campaign/model";
@@ -26,9 +26,6 @@ import type { SpellDuration, SpellExec, SpellPrimary } from "../compendium/spell
 import type { CasterStats, SpellCastSpec } from "./spellcast";
 
 const diceOf = (terms: Array<{ dice?: string }>) => terms.filter((term) => term.dice).map((term) => `+${term.dice}`).join("");
-
-/** R98 (D233): the SRD spell the hunter features name. */
-export const HUNTERS_MARK = "dnd.srd521.spell.hunter-s-mark";
 
 type BearerRolls = Pick<Combatant, "d20Dice" | "rollStates" | "grantsAdvantage" | "grantsDisadvantage" | "consumable" | "markedBy">;
 /**
@@ -65,8 +62,8 @@ export function bearerRolls(effects: ActiveEffect[] = [], flat: boolean): Bearer
 export function pcCombatant(entry: JournalCharacter, derived: DerivedCharacter): Combatant {
   const runtime = entry.runtime;
   const bearer = bearerRolls(runtime.effects, false);
-  // R98 (D233): 끈질긴 사냥꾼 — damage does not break the concentration on 사냥꾼의 표식, so the table asks no save for it.
-  const concentration = (runtime.effects ?? []).find((effect) => effect.concentration && !(derived.markKeepsConcentration && effect.key === `spell:${HUNTERS_MARK}`));
+  // H2 (D239): a concentration the sheet says damage never breaks (끈질긴 사냥꾼) asks no save.
+  const concentration = (runtime.effects ?? []).find((effect) => effect.concentration && !(derived.concentrationDamageImmune ?? []).some((spellId) => effect.key === `spell:${spellId}`));
   return {
     // (R11: the Shield spell's +5 AC already comes through the sheet's active effects → derived.ac.)
     id: entry.id, name: entry.name, kind: "pc", ac: derived.ac.value, hp: { current: runtime.hp.current, max: derived.hp.max, temp: runtime.hp.temp },
@@ -75,8 +72,8 @@ export function pcCombatant(entry: JournalCharacter, derived: DerivedCharacter):
     exhaustion: runtime.exhaustion,
     ...(derived.evasion ? { evasion: true } : {}),
     ...(derived.elusive ? { elusive: true } : {}),
-    ...(derived.markDie ? { markDie: derived.markDie } : {}),
-    ...(derived.markAdvantage ? { markAdvantage: true } : {}),
+    ...(derived.markedSpellDice ? { markedSpellDice: derived.markedSpellDice } : {}),
+    ...(derived.markedSpellAdvantage?.length ? { markedSpellAdvantage: derived.markedSpellAdvantage } : {}),
     ...(derived.studiedAttacks ? { studiedAttacks: true } : {}),
     // R51 (D186): 중갑 달인 — flat reduction per damage type, from whatever effect or feat contract granted it.
     ...(derived.damageReduction?.length ? { reduction: derived.damageReduction } : {}),
@@ -132,9 +129,8 @@ export function weaponRange(attack: DerivedAttack): { mode: "melee" | "ranged" }
 }
 
 const sneakDice = (derived: DerivedCharacter) => { const rogue = derived.classes.find((cls) => cls.classId.endsWith(".rogue")); return rogue ? Math.ceil(rogue.level / 2) : 0; };
-/** R100 (D235): 진실의 일격, and the spellcasting list that knows it. */
-export const TRUE_STRIKE = "dnd.srd521.spell.true-strike";
-export const trueStrikeList = (derived: DerivedCharacter) => derived.spellcasting.find((list) => list.cantrips.includes(TRUE_STRIKE));
+/** H2 (D239): the spells this sheet can cast through a weapon attack, with the list that knows each. */
+export const weaponSpells = (derived: DerivedCharacter) => derived.spellcasting.flatMap((list) => [...new Set([...list.cantrips, ...list.prepared, ...list.alwaysPrepared])].flatMap((spellId) => { const rule = weaponSpellOf(spellId); return rule ? [{ spellId, list, rule }] : []; }));
 
 export const hasSneakAttack = (derived: DerivedCharacter, attack: DerivedAttack) => sneakDice(derived) > 0 && (attack.properties.includes("finesse") || weaponRange(attack).mode === "ranged");
 export const SMITE_LABEL = "신성한 강타";
@@ -170,9 +166,10 @@ export function pcAttackSpec(entry: JournalCharacter, derived: DerivedCharacter,
   const offHand = Boolean(riders.offHand && canOffHand(attack));
   const offHandKeeps = offHand && Boolean(offHandFeat(derived)) && attack.damageBonus >= 0;
   const dropsAbilityMod = cleave || (offHand && !offHandKeeps);
-  // R100 (D235): 진실의 일격 swaps Strength or Dexterity for the spellcasting ability on both rolls.
-  const strikeList = riders.trueStrike ? trueStrikeList(derived) : undefined;
-  const swap = strikeList ? derived.abilities[strikeList.ability].modifier - derived.abilities[attack.ability].modifier : 0;
+  // H2 (D239): a weapon spell swaps Strength or Dexterity for the spellcasting ability on both rolls.
+  const strike = riders.weaponSpell ? weaponSpells(derived).find((item) => item.spellId === riders.weaponSpell) : undefined;
+  const strikeName = strike ? catalog?.spellById(strike.spellId)?.name ?? strike.spellId : "";
+  const swap = strike ? derived.abilities[strike.list.ability].modifier - derived.abilities[attack.ability].modifier : 0;
   const damageBonus = attack.damageBonus + (dropsAbilityMod ? 0 : swap);
   const bonusText = damageBonus && !dropsAbilityMod ? `${damageBonus > 0 ? "+" : "-"}${Math.abs(damageBonus)}` : "";
   // R32 (D165): 대형 무기 전투 travels with the weapon's own damage part.
@@ -181,7 +178,8 @@ export function pcAttackSpec(entry: JournalCharacter, derived: DerivedCharacter,
   const damage: DamagePart[] = [{ formula: `${attack.damage.split(" ")[0]}${bonusText}${diceOf(attack.damageTerms)}`, type: attack.damageType, label: cleave ? `${attack.name} (쪼개기)` : offHand ? `${attack.name} (보조 손)` : attack.name, ...(attack.dieMinimum ? { dieMinimum: attack.dieMinimum } : {}), ...(ignores(attack.damageType) ? { ignoresResistance: true } : {}) }];
   const extra: DamagePart[] = [];
   const spenders: Array<(runtime: CharacterRuntime) => CharacterRuntime> = [];
-  if (strikeList && derived.level >= 5) extra.push({ formula: `${derived.level >= 17 ? 3 : derived.level >= 11 ? 2 : 1}d6`, type: "광휘", label: "진실의 일격" });
+  const strikeDice = strike?.rule.extraDice?.filter((step) => derived.level >= step.level).at(-1);
+  if (strike && strikeDice) extra.push({ formula: strikeDice.dice, type: damageTypeKo(strike.rule.damageType ?? attack.damageType), label: strikeName });
   if (riders.sneak && hasSneakAttack(derived, attack)) extra.push({ formula: `${sneakDice(derived)}d6`, type: attack.damageType, label: "암습" });
   if (riders.smiteSlot && hasSmite(derived) && (derived.spellSlots[riders.smiteSlot] ?? 0) > 0) {
     const level = riders.smiteSlot;
@@ -230,7 +228,7 @@ export function pcAttackSpec(entry: JournalCharacter, derived: DerivedCharacter,
   ];
   const hitSaves = (riders.contracts ?? []).flatMap((key) => { const rider = (derived.attackRiders ?? []).find((item) => item.key === key); return rider && riderFitsAttack(rider, attack) ? rider.saves.map((save) => ({ label: rider.label, ...save })) : []; });
   const declared = (riders.contracts ?? []).map((key) => (derived.attackRiders ?? []).find((item) => item.key === key)).filter((item) => item && riderFitsAttack(item, attack)).map((item) => item!.label);
-  if (strikeList) declared.unshift("진실의 일격");
+  if (strike) declared.unshift(strikeName);
   return { spec: { name: `${cleave ? `${attack.name} · 쪼개기` : offHand ? `${attack.name} · 보조 손` : attack.name}${savageFeat ? ` · ${savageFeat}` : ""}${declared.length ? ` · ${declared.join(" · ")}` : ""}`, source: "weapon", attackBonus: attack.attackBonus + swap, mode: range.mode, damage, riders: extra, ...(inflicts.length ? { inflicts } : {}), ...(derived.critRange ? { critRange: derived.critRange } : {}), ...(crits.parts.length ? { critRiders: crits.parts } : {}), ...(diceRules.length ? { diceRules } : {}), ...(hitSaves.length ? { hitSaves } : {}), ...(derived.ignoresCover ? { ignoresCover: true } : {}), ...(advantageOn.length ? { advantageOn } : {}), ...(savage ? { savage } : {}), ...(mastery ? { mastery, abilityMod, masteryDc: 8 + abilityMod + derived.proficiencyBonus } : {}) }, spend: (runtime) => spenders.reduce((acc, spend) => spend(acc), runtime) };
 }
 

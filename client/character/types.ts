@@ -83,6 +83,8 @@ export interface DerivedFeature {
   rules?: string[];
   /** R33 (D168): `descriptive` marks prose the table adjudicates; the sheet says so instead of letting it look applied. */
   execution?: "derived" | "pre-roll" | "selection" | "common-play" | "descriptive";
+  /** H2 (D239): what an option was taken for — each pick of a repeatable one adds a target (고통스러운 폭발's cantrips). */
+  targets?: string[];
 }
 
 /** One addend of a derived number, so the sheet can show where it came from ("민첩 +2", "숙련 보너스 +3"). */
@@ -116,6 +118,8 @@ export interface ActiveEffect {
   conditions?: string[];
   /** R90 (D225): this creature is under the spell (a target), not only concentrating on it — its dice change. */
   bearer?: boolean;
+  /** H2 (D239): the choice the feature behind a passive effect was made for (the cantrip 고통스러운 폭발 names). */
+  target?: string;
 }
 
 /** What an active effect changed on the sheet, for the effects card. `applied` false: no rule yet, apply the text by hand. */
@@ -249,13 +253,13 @@ export interface DerivedCharacter {
   healingSlotBonus?: boolean;
   healingMaximized?: boolean;
   elusive?: boolean;
-  /** R98 (D233): see EffectApplication. */
-  markDie?: number;
-  markAdvantage?: boolean;
-  markKeepsConcentration?: boolean;
+  /** H2 (D239): see EffectApplication. */
+  markedSpellDice?: Record<string, number>;
+  markedSpellAdvantage?: string[];
+  concentrationDamageImmune?: string[];
   potentCantrip?: boolean;
   studiedAttacks?: boolean;
-  evocationModifierClasses?: string[];
+  schoolDamageModifier?: Array<{ school: string; classSlug: string }>;
   /** R72 (D207): attacks per Attack action, from whatever contract says so (1 when none does). */
   attackActionAttacks?: number;
   /**
@@ -267,8 +271,8 @@ export interface DerivedCharacter {
   damageReduction?: Array<{ types: string[]; amount: number; source: string }>;
   /** R51 (D186): damage types whose resistance this character's own damage ignores (원소 숙련자, 독 제조자). */
   ignoresResistance?: string[];
-  /** R93 (D228): cantrips whose damage adds the spellcasting modifier (고통스러운 폭발 picked for them). */
-  cantripDamageModifier?: string[];
+  /** H2 (D239): spells whose damage adds the spellcasting modifier (a feature that names them, 고통스러운 폭발). */
+  spellDamageModifier?: string[];
   /** R55 (D190): reasons this character's attacks are advantaged, each with the weapon filter it applies to. */
   advantageOn?: Array<{ reason: string; scope?: string }>;
   /** R55 (D190): reasons attacks against this character are advantaged (무모한 공격's other half). */

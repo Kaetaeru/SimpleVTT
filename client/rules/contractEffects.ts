@@ -48,7 +48,9 @@ export const PROPERTIES = [
   // R96 (D231): 강력한 주문 시전, 생명의 제자, 최상급 치유, 포착 불가.
   "spell.cantrip-damage.ability-modifier", "healing.spell-slot-bonus", "healing.maximize", "attack-roll.against-me.no-advantage", "initiative.advantage",
   // R98 (D233): 적 학살자, 정밀한 사냥꾼, 끈질긴 사냥꾼, 강력한 소마법, 강화된 방출.
-  "hunters-mark.die", "hunters-mark.advantage", "hunters-mark.keeps-concentration", "spell.cantrip-potent", "spell.evocation-damage.ability-modifier",
+  "spell.cantrip-potent",
+  // H2 (D239): content-neutral — the spell or school they are about is a parameter in the data.
+  "marked-spell.die", "marked-spell.advantage", "concentration.damage-immune", "spell.damage.ability-modifier", "spell.school-damage.ability-modifier",
   // R99 (D234): 연구된 공격.
   "attack-roll.studied",
   // R55 (D190): the three that decide a roll rather than a number.
@@ -134,12 +136,13 @@ export function contractEffect(contract: CommonPlayContract, scope: Scope): { ap
       case "spell.cantrip-damage.ability-modifier": application.cantripModifierClasses = [...(application.cantripModifierClasses ?? []), text(operation, scope) ?? ""]; break;
       case "healing.spell-slot-bonus": application.healingSlotBonus = true; break;
       case "initiative.advantage": application.rollAdvantage = [...(application.rollAdvantage ?? []), { reason: operation.note ?? "", families: ["ability-check"], skills: ["initiative"] }]; break;
-      case "hunters-mark.die": application.markDie = number(operation, scope); break;
-      case "hunters-mark.advantage": application.markAdvantage = true; break;
-      case "hunters-mark.keeps-concentration": application.markKeepsConcentration = true; break;
+      case "marked-spell.die": if (operation.spell) application.markedSpellDice = { ...(application.markedSpellDice ?? {}), [operation.spell]: number(operation, scope) ?? 6 }; break;
+      case "marked-spell.advantage": if (operation.spell) application.markedSpellAdvantage = [...(application.markedSpellAdvantage ?? []), operation.spell]; break;
+      case "concentration.damage-immune": if (operation.spell) application.concentrationDamageImmune = [...(application.concentrationDamageImmune ?? []), operation.spell]; break;
+      case "spell.damage.ability-modifier": { const spell = operation.spell ?? text(operation, scope); if (spell) application.spellDamageModifier = [...(application.spellDamageModifier ?? []), spell]; break; }
       case "attack-roll.studied": application.studiedAttacks = true; break;
       case "spell.cantrip-potent": application.potentCantrip = true; break;
-      case "spell.evocation-damage.ability-modifier": application.evocationModifierClasses = [...(application.evocationModifierClasses ?? []), text(operation, scope) ?? ""]; break;
+      case "spell.school-damage.ability-modifier": if (operation.school) application.schoolDamageModifier = [...(application.schoolDamageModifier ?? []), { school: operation.school, classSlug: text(operation, scope) ?? "" }]; break;
       case "healing.maximize": application.healingMaximized = true; break;
       case "attack-roll.against-me.no-advantage": application.elusive = true; break;
       // R61 (D196): advantage on a check or a save, narrowed to the abilities the contract named.

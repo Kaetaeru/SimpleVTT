@@ -77,7 +77,7 @@ export type ContractOperation =
    * by how much. `scope` narrows it to some attacks, `abilities` to some saves, and `note` carries the part of the
    * rule that is not a number.
    */
-  | { kind: "property.modify"; property: string; operation: string; value?: Expr; dice?: string; scope?: string; abilities?: string[]; /** R51 (D186): the damage types a `damage-taken.reduce` applies to. */ damageTypes?: string[]; note?: string; when?: Expr }
+  | { kind: "property.modify"; property: string; operation: string; value?: Expr; /** H2 (D239): the spell a property is about (`marked-spell.die`), as a content id in the data. */ spell?: string; /** H2 (D239): the spell school a property is about. */ school?: string; dice?: string; scope?: string; abilities?: string[]; /** R51 (D186): the damage types a `damage-taken.reduce` applies to. */ damageTypes?: string[]; note?: string; when?: Expr }
   /**
    * R39 (D179): the standing effect a use starts. `template` carries what the sheet needs to show and count it;
    * `lifetime` says how it ends — `until-duration` is the only one with a round counter, the rest are conditions the
@@ -112,7 +112,7 @@ export type ContractOperation =
    * if the player ticked it. That is how a rule gated on where people are standing runs in a scene with no
    * positions (D109) — the app does every number, the person answers the one fact it cannot see.
    */
-  | { kind: "adjudication.request"; question: string; fact?: { id: string; at: string }; when?: Expr }
+  | { kind: "adjudication.request"; question: string; /** H2 (D239): `auto` names a fact the table computes itself (`target.hp.below-max`), so it is never asked. */ fact?: { id: string; at: string; auto?: string }; when?: Expr }
   | { kind: "artifact.spawn"; template: { monsterId?: string; name?: string; count?: Expr }; when?: Expr }
   | { kind: "artifact.remove" | "artifact.repair" | "artifact.damage" | "artifact.relocate" | "artifact.update"; artifact: string; amount?: Expr; damageType?: string; placementRef?: string; metadataPatch?: Record<string, unknown>; when?: Expr };
 
@@ -273,9 +273,9 @@ function parseOperations(raw: unknown, path: string, unsupported: string[]): Con
     if (kind === "movement.grant") { out.push({ kind, target: String(operation.target ?? "self"), distance: expr(operation.distance), note: operation.note ? String(operation.note) : undefined, when: isExpr(operation.when) ? operation.when : undefined }); return; }
     if (kind === "content.grant") { out.push({ kind, contentId: String(operation.contentId ?? ""), target: String(operation.target ?? "self"), when: isExpr(operation.when) ? operation.when : undefined }); return; }
     if (kind === "adjudication.request") {
-      const fact = operation.fact as { id?: string; at?: string } | undefined;
+      const fact = operation.fact as { id?: string; at?: string; auto?: string } | undefined;
       if (fact && !FACT_MOMENTS.has(String(fact.at ?? ""))) { unsupported.push(`${at}: fact.at ${String(fact.at)}`); return; }
-      out.push({ kind, question: String((operation.interaction as { prompt?: string } | undefined)?.prompt ?? operation.question ?? "표에서 판단"), ...(fact?.id ? { fact: { id: String(fact.id), at: String(fact.at) } } : {}), when: isExpr(operation.when) ? operation.when : undefined });
+      out.push({ kind, question: String((operation.interaction as { prompt?: string } | undefined)?.prompt ?? operation.question ?? "표에서 판단"), ...(fact?.id ? { fact: { id: String(fact.id), at: String(fact.at), ...(fact.auto ? { auto: String(fact.auto) } : {}) } } : {}), when: isExpr(operation.when) ? operation.when : undefined });
       return;
     }
     if (kind === "artifact.spawn") {
@@ -325,7 +325,7 @@ function parseOperations(raw: unknown, path: string, unsupported: string[]): Con
       // A bare number, string or boolean is the literal it looks like; only an object is read as an expression.
       const literal = operation.value;
       const value = isExpr(literal) ? literal : literal === undefined ? undefined : { value: literal };
-      out.push({ kind, property, operation: op, value, dice: operation.dice ? String(operation.dice) : undefined, scope: operation.scope ? String(operation.scope) : undefined, abilities: Array.isArray(operation.abilities) ? operation.abilities.map(String) : undefined, damageTypes: Array.isArray(operation.damageTypes) ? operation.damageTypes.map(String) : undefined, note: operation.note ? String(operation.note) : undefined, when: isExpr(operation.when) ? operation.when : undefined });
+      out.push({ kind, property, operation: op, value, ...(operation.spell ? { spell: String(operation.spell) } : {}), ...(operation.school ? { school: String(operation.school) } : {}), dice: operation.dice ? String(operation.dice) : undefined, scope: operation.scope ? String(operation.scope) : undefined, abilities: Array.isArray(operation.abilities) ? operation.abilities.map(String) : undefined, damageTypes: Array.isArray(operation.damageTypes) ? operation.damageTypes.map(String) : undefined, note: operation.note ? String(operation.note) : undefined, when: isExpr(operation.when) ? operation.when : undefined });
       return;
     }
     const mode = String(operation.mode ?? "");

@@ -106,7 +106,7 @@ test("R98: a level-20 hunter marks with a d10, attacks the mark with advantage, 
   const card = t.lastCard();
   const name = t.foe().runtime.effects?.find((effect) => effect.key === `spell:${MARK}`)?.name;
   assert.ok(card.damage.some((part) => part.part.label === name && part.part.formula === "1d10"), JSON.stringify(card.damage.map((part) => [part.part.label, part.part.formula])));
-  assert.ok(card.reasons.includes("정밀한 사냥꾼"), JSON.stringify(card.reasons));
+  assert.ok(card.reasons.includes(`${name} 대상`), JSON.stringify(card.reasons));
   const ranger = t.dm.snapshot!.journal.find((entry) => entry.id === t.refs.pc.entryId) as JournalCharacter;
   assert.equal(pcCombatant(ranger, derivedOf(ranger, catalog())).concentration, undefined, "끈질긴 사냥꾼: no concentration save for the mark");
 });
