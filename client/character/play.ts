@@ -207,11 +207,11 @@ export function addItem(runtime: CharacterRuntime, item: { itemId?: string; name
 }
 
 /** R75 (D210): attune to a pasted magic item, or end the attunement. Three at once is the rule; the fourth is refused. */
-export function toggleAttune(runtime: CharacterRuntime, instanceId: string): CharacterRuntime {
+export function toggleAttune(runtime: CharacterRuntime, instanceId: string, limit = 3): CharacterRuntime {
   const patch = patchOf(runtime);
   const target = patch.extra.find((item) => item.instanceId === instanceId);
   if (!target?.custom?.attunement) return runtime;
-  if (!target.attuned && patch.extra.filter((item) => item.attuned && !patch.removed.includes(item.instanceId)).length >= 3) return stamp(runtime, `조율할 수 없음: ${target.custom.name} (이미 3개 조율 중)`);
+  if (!target.attuned && patch.extra.filter((item) => item.attuned && !patch.removed.includes(item.instanceId)).length >= limit) return stamp(runtime, `조율할 수 없음: ${target.custom.name} (이미 ${limit}개 조율 중)`);
   const extra = patch.extra.map((item) => (item.instanceId === instanceId ? { ...item, attuned: !item.attuned } : item));
   return stamp({ ...runtime, inventory: { ...patch, extra } }, `${target.attuned ? "조율 해제" : "조율"}: ${target.custom.name}`);
 }

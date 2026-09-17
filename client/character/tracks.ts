@@ -262,9 +262,10 @@ export function applyGainContract(ledger: Ledger, owner: ClassView | undefined, 
         break;
       }
       case "choice.spells": {
-        const casters = catalog.classes.filter((item) => item.casterKind !== "none").map((item) => item.id);
-        const level = Number(p.level ?? 0);
-        const picked = ledger.ask({ ...ask, id, label: `${label} (${amount}개)`, ...description, count: amount, options: spellOptions(catalog, casters, [level], p.ritual === true ? (spell) => spell.ritual : undefined) });
+        // V3h (D262): `classes` narrows the lists and `levels` widens the level (마법의 발견).
+        const casters = strings(p.classes).length ? strings(p.classes) : catalog.classes.filter((item) => item.casterKind !== "none").map((item) => item.id);
+        const levels = Array.isArray(p.levels) ? p.levels.map(Number) : [Number(p.level ?? 0)];
+        const picked = ledger.ask({ ...ask, id, label: `${label} (${amount}개)`, ...description, count: amount, options: spellOptions(catalog, casters, levels, p.ritual === true ? (spell) => spell.ritual : undefined) });
         const entry = classSpellEntry(ledger, cls);
         for (const spellId of picked) (p.into === "alwaysPrepared" ? entry.alwaysPrepared : entry.extraCantrips).add(spellId);
         break;
@@ -300,6 +301,8 @@ export function applyGainContract(ledger: Ledger, owner: ClassView | undefined, 
       case "grant.ritual-casting": classSpellEntry(ledger, cls).ritualFromSpellbook = true; break;
       // V3g (D261): extra spellbook picks of one school; the count is worked out with the final class level (방출술 전문가).
       case "grant.spellbook-picks": { const entry = classSpellEntry(ledger, cls); entry.schoolPicks = [...(entry.schoolPicks ?? []), { id: String(p.id ?? "school-picks"), label, school: String(p.school ?? ""), count: operation.value }]; break; }
+      // V3h (D262): named spells, always prepared (창조의 언어).
+      case "grant.spells": { const entry = classSpellEntry(ledger, cls); for (const spellId of strings(p.spells)) { const spell = catalog.spellById(spellId); if (spell) (p.into === "cantrips" ? entry.extraCantrips : entry.alwaysPrepared).add(spell.id); else ledger.warnings.push(`${featureName}: 주문 ${spellId} 없음`); } break; }
       case "grant.spell-lists":
       default: ledger.warnings.push(`${featureName}: 알 수 없는 획득 연산 ${operation.property}`);
     }

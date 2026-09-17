@@ -73,6 +73,7 @@ export function pcCombatant(entry: JournalCharacter, derived: DerivedCharacter):
     ...(derived.evasion ? { evasion: true } : {}),
     ...(derived.elusive ? { elusive: true } : {}),
     ...(derived.opportunityDisadvantage?.length ? { opportunityDisadvantage: derived.opportunityDisadvantage } : {}),
+    ...(derived.hitDefense ? { hitDefense: derived.hitDefense } : {}),
     ...(derived.markedSpellDice ? { markedSpellDice: derived.markedSpellDice } : {}),
     ...(derived.markedSpellAdvantage?.length ? { markedSpellAdvantage: derived.markedSpellAdvantage } : {}),
     ...(derived.studiedAttacks ? { studiedAttacks: true } : {}),
@@ -216,6 +217,11 @@ export function pcAttackSpec(entry: JournalCharacter, derived: DerivedCharacter,
   const abilityMod = derived.abilities[attack.ability].modifier;
   // V3f (D260): a rider may swap the mastery property this swing uses (전술 통달).
   const masterySwap = chosen.map((key) => (derived.attackRiders ?? []).find((item) => item.key === key)?.mastery).find(Boolean);
+  // V3h (D262): a rider that gives up advantage (잔혹한 일격), or deals the weapon's damage as another type (강화된 타격).
+  const fitting = chosen.map((key) => (derived.attackRiders ?? []).find((item) => item.key === key)).filter((item) => item && riderFitsAttack(item, attack));
+  const forgoAdvantage = fitting.find((item) => item!.forgoAdvantage)?.label;
+  const typeSwap = fitting.map((item) => item!.damageType).find(Boolean);
+  if (typeSwap) { const { ignoresResistance: _dropped, ...part } = damage[0]; damage[0] = { ...part, type: typeSwap, ...(ignores(typeSwap) ? { ignoresResistance: true } : {}) }; }
   const mastery = attack.masteryActive && attack.masteryKey && !cleave ? masterySwap ?? attack.masteryKey : undefined;
   // R32 (D166): 야만적 공격자 — the player asked for the reroll in the pre-roll dialog and has the feat.
   const savageFeat = riders.savage ? savageAttackerFeat(derived) : undefined;
@@ -230,7 +236,7 @@ export function pcAttackSpec(entry: JournalCharacter, derived: DerivedCharacter,
   const hitSaves = chosen.flatMap((key) => { const rider = (derived.attackRiders ?? []).find((item) => item.key === key); return rider && riderFitsAttack(rider, attack) ? rider.saves.map((save) => ({ label: rider.label, ...save })) : []; });
   const declared = chosen.map((key) => (derived.attackRiders ?? []).find((item) => item.key === key)).filter((item) => item && riderFitsAttack(item, attack)).map((item) => item!.label);
   if (strike) declared.unshift(strikeName);
-  return { spec: { name: `${cleave ? `${attack.name} · 쪼개기` : offHand ? `${attack.name} · 보조 손` : attack.name}${savageFeat ? ` · ${savageFeat}` : ""}${declared.length ? ` · ${declared.join(" · ")}` : ""}`, source: "weapon", attackBonus: attack.attackBonus + swap, mode: range.mode, damage, riders: extra, ...(versusRiders.length ? { versusRiders } : {}), ...(inflicts.length ? { inflicts } : {}), ...(derived.critRange ? { critRange: derived.critRange } : {}), ...(crits.parts.length ? { critRiders: crits.parts } : {}), ...(diceRules.length ? { diceRules } : {}), ...(hitSaves.length ? { hitSaves } : {}), ...(derived.ignoresCover ? { ignoresCover: true } : {}), ...(advantageOn.length ? { advantageOn } : {}), ...(savage ? { savage } : {}), ...(mastery ? { mastery, abilityMod, masteryDc: 8 + abilityMod + derived.proficiencyBonus } : {}) }, spend: (runtime) => spenders.reduce((acc, spend) => spend(acc), runtime) };
+  return { spec: { name: `${cleave ? `${attack.name} · 쪼개기` : offHand ? `${attack.name} · 보조 손` : attack.name}${savageFeat ? ` · ${savageFeat}` : ""}${declared.length ? ` · ${declared.join(" · ")}` : ""}`, source: "weapon", attackBonus: attack.attackBonus + swap, mode: range.mode, damage, riders: extra, ...(versusRiders.length ? { versusRiders } : {}), ...(inflicts.length ? { inflicts } : {}), ...(derived.critRange ? { critRange: derived.critRange } : {}), ...(crits.parts.length ? { critRiders: crits.parts } : {}), ...(diceRules.length ? { diceRules } : {}), ...(hitSaves.length ? { hitSaves } : {}), ...(derived.ignoresCover ? { ignoresCover: true } : {}), ...(advantageOn.length ? { advantageOn } : {}), ...(forgoAdvantage ? { forgoAdvantage } : {}), ...(savage ? { savage } : {}), ...(mastery ? { mastery, abilityMod, masteryDc: 8 + abilityMod + derived.proficiencyBonus } : {}) }, spend: (runtime) => spenders.reduce((acc, spend) => spend(acc), runtime) };
 }
 
 /**

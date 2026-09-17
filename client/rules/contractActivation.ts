@@ -261,7 +261,12 @@ export function contractSummary(contract: CommonPlayContract, scope: Scope): { r
       } else if (operation.kind === "property.modify" && operation.property === "mastery.replace") {
         rules.push(`${where} — 이번 공격의 통달 속성을 ${String(operation.params?.mastery ?? "")}(으)로`);
       } else if (operation.kind === "property.modify" && operation.property === "rider.forgo-dice") {
-        rules.push(`${where} — 함께 고른 명중 피해의 주사위 ${number(operation.value) ?? 0}개 포기`);
+        const dice = number(operation.value) ?? 0;
+        rules.push(dice ? `${where} — 함께 고른 명중 피해의 주사위 ${dice}개 포기` : `${where} — 함께 고른 공격에만`);
+      } else if (operation.kind === "property.modify" && operation.property === "attack-roll.forgo-advantage") {
+        rules.push(`${where} — 이 공격의 유리를 포기`);
+      } else if (operation.kind === "property.modify" && operation.property === "damage.type.replace") {
+        rules.push(`${where} — 무기 피해 유형을 ${String(operation.params?.type ?? "")}(으)로`);
       } else if (operation.kind === "adjudication.request") questions.push(operation.question);
     }
     if (entry.attack?.oncePerTurn) questions.push("턴당 한 번 (직접 세어 주세요)");
@@ -275,6 +280,7 @@ export function contractSummary(contract: CommonPlayContract, scope: Scope): { r
   }
   // V3c (D257): what the start of the owner's turn does by itself.
   for (const operation of contract.entryPoints.filter((item) => item.invocation === TURN_START_INVOCATION).flatMap((item) => item.operations)) {
+    if (operation.kind === "property.modify" && operation.property === "heroic-inspiration.gain") { mechanical = true; rules.push("전투 중 턴 시작에 자동 — 영웅적 영감이 없으면 얻음"); continue; }
     if (operation.kind !== "healing.apply") continue;
     mechanical = true;
     rules.push(`턴 시작에 자동 — HP ${operation.dice ?? ""}${operation.amount ? `${operation.dice ? "+" : ""}${number(operation.amount) ?? 0}` : ""} 회복 (조건이 맞을 때)`);
@@ -311,6 +317,8 @@ export function contractSummary(contract: CommonPlayContract, scope: Scope): { r
           "hp.maximum": "최대 HP", "hp.heal-on-start": "시작할 때 회복", "senses.darkvision": "암시야", "attack-roll.crit-range": "치명타 범위",
           "resistance": "피해 저항", "condition-immunity": "상태 면역", "weapon.shillelagh": "곤봉·육척봉이 주문 능력치를 씀",
           "spell.save-dc": "주문 내성 DC", "spell.attack-roll.bonus": "주문 명중",
+          "spell.damage.maximize": "이 레벨 이하 주문의 피해 주사위 최대값", "attack-roll.against-me.after-hit-disadvantage": "나를 맞힌 생물은 이번 턴 다른 공격이 불리",
+          "initiative.extra-turn": "전투 첫 라운드에 이니셔티브를 바꾼 턴 하나 더", "attunement.slots": "조율 슬롯",
         };
         const where = WHERE[operation.property] ?? (operation.property.startsWith("skill.") ? `${operation.property.split(".")[1]} 기술` : operation.property);
         const value = operation.property === "resistance" || operation.property === "condition-immunity" ? String(evaluate(operation.value, scope) ?? "") : amount;

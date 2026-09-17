@@ -76,6 +76,9 @@ export interface Combatant {
   grantsDisadvantage?: string[];
   /** V3f (D260): reasons an opportunity attack against this creature is at disadvantage (기회 공격 회피). */
   opportunityDisadvantage?: string[];
+  /** V3h (D262): a creature that hit this one has disadvantage on its other attacks against it this turn (다중 공격 방어) — the rule's name, and who hit. */
+  hitDefense?: string;
+  hitDefenseFrom?: string[];
   /** R90 (D225): dice a spell it is under adds to its own attack rolls or saves (축복 +1d4, 액운 −1d4). */
   d20Dice?: Array<{ on: "attack" | "save"; dice: string; label: string }>;
   /** R90 (D225): advantage or disadvantage on its own attack rolls or saves, from a spell it is under. */
@@ -142,6 +145,8 @@ export interface AttackSpec {
   ignoresCover?: boolean;
   /** R55 (D190): reasons *this* swing is advantaged, already narrowed to the weapon by whatever declared them. */
   advantageOn?: string[];
+  /** V3h (D262): the attacker gave up any advantage on this swing, and the rule that asked it to (잔혹한 일격). */
+  forgoAdvantage?: string;
   /**
    * R60 (D195): what a rule does to this swing's own damage dice — reroll the lowest and keep the new one, roll an
    * extra die of the same size, or treat anything below a floor as that floor. They touch the weapon's dice only; a
@@ -270,9 +275,11 @@ export function suggestAdvantage(attacker: Combatant, target: Combatant, spec: A
   // R90 (D225): spells on either side — 흐림 on the target, 액운·잔혹한 조롱·예지 on the attacker.
   for (const reason of target.grantsDisadvantage ?? []) minus.push(reason);
   if (spec.opportunity) for (const reason of target.opportunityDisadvantage ?? []) minus.push(`기회 공격: ${reason}`);
+  if (target.hitDefense && attacker.tokenId && target.hitDefenseFrom?.includes(attacker.tokenId)) minus.push(target.hitDefense);
   for (const state of (attacker.rollStates ?? []).filter((item) => item.on === "attack")) (state.state === "advantage" ? plus : minus).push(`공격자 ${state.label}`);
   // R96 (D231): 포착 불가 takes every reason for advantage away, unless the creature is incapacitated.
   if (target.elusive && plus.length && !CANNOT_ACT.some((name) => has(target, name))) plus.length = 0;
+  if (spec.forgoAdvantage && plus.length) { plus.length = 0; return minus.length ? { advantage: "disadvantage", reasons: [...minus, `${spec.forgoAdvantage}: 유리 포기`] } : { advantage: "normal", reasons: [`${spec.forgoAdvantage}: 유리 포기`] }; }
   if (plus.length && minus.length) return { advantage: "normal", reasons: [...plus, ...minus, "유리·불리가 상쇄"] };
   if (plus.length) return { advantage: "advantage", reasons: plus };
   if (minus.length) return { advantage: "disadvantage", reasons: minus };

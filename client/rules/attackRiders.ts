@@ -57,6 +57,10 @@ export interface ContractRider {
   forgo?: { key: string; dice: number };
   /** V3f (D260): the weapon mastery property this swing uses instead of the weapon's own (전술 통달). */
   mastery?: string;
+  /** V3h (D262): declaring this gives up any advantage on the swing (잔혹한 일격). */
+  forgoAdvantage?: boolean;
+  /** V3h (D262): the weapon's own damage deals this type instead (강화된 타격). */
+  damageType?: string;
 }
 
 const SAVE_KO: Record<string, string> = { str: "근력", dex: "민첩", con: "건강", int: "지능", wis: "지혜", cha: "매력" };
@@ -102,7 +106,12 @@ export function contractRiders(contract: CommonPlayContract, key: string, label:
         if (operation.params?.mastery) { rider.mastery = String(operation.params.mastery); hints.push(`통달 속성을 ${String(operation.params.mastery)}(으)로`); }
       } else if (operation.kind === "property.modify" && operation.property === "rider.forgo-dice") {
         const dice = Number(evaluate(operation.value, scope));
-        if (operation.params?.rider && Number.isFinite(dice)) { rider.forgo = { key: String(operation.params.rider), dice }; hints.push(`주사위 ${dice}개 포기`); }
+        // V3h (D262): zero dice still ties this rider to the other one (잔혹한 일격's effects need the strike itself).
+        if (operation.params?.rider && Number.isFinite(dice)) { rider.forgo = { key: String(operation.params.rider), dice }; if (dice) hints.push(`주사위 ${dice}개 포기`); }
+      } else if (operation.kind === "property.modify" && operation.property === "attack-roll.forgo-advantage") {
+        rider.forgoAdvantage = true; hints.push("이 공격의 유리 포기");
+      } else if (operation.kind === "property.modify" && operation.property === "damage.type.replace") {
+        if (operation.params?.type) { rider.damageType = String(operation.params.type); hints.push(`무기 피해 유형을 ${String(operation.params.type)}(으)로`); }
       } else if (operation.kind === "property.modify") {
         // R60 (D195): a rule that touches the weapon's own dice rather than adding a part of its own.
         const rule = diceRuleOf(operation.property, Number(evaluate(operation.value, scope)), label);

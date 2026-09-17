@@ -72,8 +72,10 @@ export function pcHostOptions(catalog: () => ContentCatalog): Partial<TableHostO
       return derived.features.flatMap((feature) => (featureContract(catalog(), featureRuleKey(feature.id))?.entryPoints ?? [])
         .filter((point) => point.invocation === TURN_START_INVOCATION)
         .flatMap((point) => point.operations)
-        .flatMap((operation) => (operation.kind === "healing.apply" && (!operation.when || evaluate(operation.when, scope) === true) ? [{ label: feature.name, amount: Number(evaluate(operation.amount, scope)) || 0, max: derived.hp.max }] : [])));
+        .flatMap((operation) => ("when" in operation && operation.when && evaluate(operation.when, scope) !== true ? [] : operation.kind === "healing.apply" ? [{ label: feature.name, amount: Number(evaluate(operation.amount, scope)) || 0, max: derived.hp.max }] : operation.kind === "property.modify" && operation.property === "heroic-inspiration.gain" ? [{ label: feature.name, amount: 0, max: derived.hp.max, inspiration: true }] : [])));
     },
+    pcExtraTurns: (entry) => derivedOf(entry, catalog()).extraTurns ?? [],
+    pcHitDefense: (entry) => derivedOf(entry, catalog()).hitDefense,
     pcItem: (entry, instanceId) => { const derived = derivedOf(entry, catalog()); const item = derived.inventory.find((candidate) => candidate.instanceId === instanceId); if (!item || item.quantity <= 0) return null; const use = itemUse(item, catalog()); return { name: item.name, heal: use.heal, text: use.text, consumes: use.consumes, consume: (runtime) => (use.consumes ? setItemQuantity(runtime, derived, instanceId, item.quantity - 1) : runtime) }; },
   };
 }

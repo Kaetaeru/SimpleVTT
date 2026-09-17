@@ -29,6 +29,8 @@ export interface TrackerTurn {
   /** A custom row; `formula` like "+1" changes its value every time it comes around (Roll20's round counter idiom). */
   custom?: boolean;
   formula?: string;
+  /** V3h (D262): a second turn for the same token that leaves the tracker when this round ends (도둑의 반사신경). */
+  extra?: { untilRound: number };
 }
 
 export interface Tracker {
@@ -53,7 +55,7 @@ export const sortTurns = (turns: TrackerTurn[]) => [...turns].sort((a, b) => b.i
 /** Add or replace the turn of a token (same token → same row, new initiative). Sorted lists stay sorted; the current turn keeps pointing at the same row. */
 export function withTurn(tracker: Tracker, turn: TrackerTurn): Tracker {
   const currentId = tracker.turns[tracker.current]?.id;
-  const existing = turn.tokenId ? tracker.turns.find((item) => item.tokenId === turn.tokenId && item.pageId === turn.pageId) : tracker.turns.find((item) => item.id === turn.id);
+  const existing = turn.tokenId ? tracker.turns.find((item) => item.tokenId === turn.tokenId && item.pageId === turn.pageId && !item.extra === !turn.extra) : tracker.turns.find((item) => item.id === turn.id);
   const next = existing ? tracker.turns.map((item) => (item === existing ? { ...existing, ...turn, id: existing.id } : item)) : [...tracker.turns, turn];
   const turns = tracker.sorted ? sortTurns(next) : next;
   return { ...tracker, turns, current: currentId ? turns.findIndex((item) => item.id === currentId) : tracker.current };
@@ -87,7 +89,8 @@ export function advanceTurn(tracker: Tracker): AdvanceResult {
   if (next >= turns.length) {
     next = 0;
     roundWrapped = true;
-    turns = turns.map((turn) => (turn.custom && turn.formula ? { ...turn, initiative: applyFormula(turn.initiative, turn.formula) } : turn));
+    turns = turns.filter((turn) => !turn.extra || turn.extra.untilRound > tracker.round).map((turn) => (turn.custom && turn.formula ? { ...turn, initiative: applyFormula(turn.initiative, turn.formula) } : turn));
+    if (!turns.length) return { tracker: { ...tracker, turns, current: -1, round: tracker.round + 1 }, ended, roundWrapped: true };
   }
   const started = turns[next];
   return { tracker: { ...tracker, turns, current: next, round: roundWrapped ? tracker.round + 1 : tracker.round }, ended, started, roundWrapped };

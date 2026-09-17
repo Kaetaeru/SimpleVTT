@@ -134,7 +134,11 @@ export interface TableHostOptions {
   /** R11: whether the character can cast this reaction spell right now (knows it, has a slot) — the cast method to use, or null. */
   pcReactionSpell?: (entry: JournalCharacter, spellId: string) => CastMethod | null;
   /** V3c (D257): the healing the sheet's turn-start contracts give now, with the maximum it stops at. */
-  pcTurnStart?: (entry: JournalCharacter) => Array<{ label: string; amount: number; max: number }>;
+  pcTurnStart?: (entry: JournalCharacter) => Array<{ label: string; amount: number; max: number; /** V3h (D262): gain Heroic Inspiration if the sheet lacks it (영웅적 전사). */ inspiration?: boolean }>;
+  /** V3h (D262): the extra first-round turns this sheet takes, with their initiative offsets (도둑의 반사신경). */
+  pcExtraTurns?: (entry: JournalCharacter) => Array<{ offset: number; label: string }>;
+  /** V3h (D262): who hits this sheet attacks it at disadvantage for the rest of the turn — the rule's name, or nothing. */
+  pcHitDefense?: (entry: JournalCharacter) => string | undefined;
   /**
    * R35 (D174): the contract rescues this sheet could pay for a d20 of this family that came out this way, and what
    * paying one costs it. The host owns no catalog, so both arrive as functions like every other sheet question.
@@ -163,6 +167,9 @@ export interface TableHostOptions {
 
 /** H1 (D238): the mark a suppressed regeneration leaves until the creature's next turn start. */
 const REGEN_SUPPRESSED = "trait:regeneration-suppressed";
+
+/** V3h (D262): the token marker that remembers who hit a sheet with a rule like 다중 공격 방어 (a UI word, not content). */
+const HIT_DEFENSE_MARK = "맞힌 뒤 불리";
 
 export class TableHost {
   private campaign: Campaign;
@@ -748,6 +755,12 @@ export class TableHost {
           this.say({ type: "rollresult", who: player.displayName, playerId: userId, content: `${turnName} · 이니셔티브`, roll: { formula: `1d20${command.rollBonus >= 0 ? "+" : "-"}${Math.abs(command.rollBonus)}`, total: initiative, dice: [{ sides: 20, value: die }], modifier: command.rollBonus, label: `${turnName} · 이니셔티브` } });
         }
         this.setTracker(withTurn(this.tracker, newTurn({ ...trusted, name: turnName, initiative })));
+        // V3h (D262): a sheet that acts twice in its first round gets its second row, gone when the round ends.
+        const joining = trusted.entryId ? this.journalEntries.get(trusted.entryId) : undefined;
+        if (joining?.kind === "character" && trusted.tokenId) for (const extra of this.options.pcExtraTurns?.(joining) ?? []) {
+          if (this.tracker.turns.some((item) => item.extra && item.tokenId === trusted.tokenId && item.pageId === trusted.pageId)) break;
+          this.setTracker(withTurn(this.tracker, newTurn({ ...trusted, name: `${turnName} (${extra.label})`, initiative: initiative + extra.offset, extra: { untilRound: this.tracker.round } })));
+        }
         // R81 (D215): a rolled initiative is the moment 경이로운 신진대사 waits for.
         const rolling = command.rollBonus !== undefined && trusted.entryId ? this.journalEntries.get(trusted.entryId) : undefined;
         if (rolling?.kind === "character") this.offerTriggers(rolling, "initiative", { pageId: trusted.pageId, tokenId: trusted.tokenId });
@@ -1568,7 +1581,7 @@ export class TableHost {
 
   private combatantOf(actor: { entry: JournalEntry; token?: Token }): Combatant | null {
     if (actor.entry.kind === "npc") return { ...npcCombatant(actor.entry, actor.token), tokenId: actor.token?.id, grappledBy: actor.token?.markers.find((marker) => marker.name === "붙잡힘")?.from, vexedBy: actor.token?.markers.find((marker) => marker.name === "교란")?.from };
-    if (actor.entry.kind === "character" && this.options.pcCombatant) { const base = this.options.pcCombatant(actor.entry); return { ...base, name: actor.token?.name ?? actor.entry.name, conditions: [...new Set([...base.conditions, ...(actor.token?.markers.map((marker) => marker.name) ?? [])])], tokenId: actor.token?.id, grappledBy: actor.token?.markers.find((marker) => marker.name === "붙잡힘")?.from, vexedBy: actor.token?.markers.find((marker) => marker.name === "교란")?.from }; }
+    if (actor.entry.kind === "character" && this.options.pcCombatant) { const base = this.options.pcCombatant(actor.entry); return { ...base, name: actor.token?.name ?? actor.entry.name, conditions: [...new Set([...base.conditions, ...(actor.token?.markers.filter((marker) => marker.name !== HIT_DEFENSE_MARK).map((marker) => marker.name) ?? [])])], tokenId: actor.token?.id, hitDefenseFrom: actor.token?.markers.filter((marker) => marker.name === HIT_DEFENSE_MARK && marker.from).map((marker) => marker.from!), grappledBy: actor.token?.markers.find((marker) => marker.name === "붙잡힘")?.from, vexedBy: actor.token?.markers.find((marker) => marker.name === "교란")?.from }; }
     return null;
   }
 
@@ -2606,6 +2619,10 @@ export class TableHost {
     // just been knocked out or stunned ends there.
     this.ragingDeeds([attacker as { entry: JournalEntry; token?: Token; page?: Page }, hit ? target : undefined]);
     if (hit && resolution.downed) this.releaseGrapples(target.page, target.token?.id);
+    // V3h (D262): 다중 공격 방어 — the creature that hit this sheet is marked on it until that creature's turn ends.
+    // ponytail: one mark per token, so only the first creature to hit in a turn is remembered; per-attacker marks if tables need more.
+    const defense = hit && target.entry.kind === "character" && attacker.token && target.page ? this.options.pcHitDefense?.(target.entry) : undefined;
+    if (defense && target.page) { const targetActor = { entry: target.entry, token: target.token, page: target.page }; this.mark(targetActor, [HIT_DEFENSE_MARK], true, attacker.token!.id); restores.push(() => this.mark({ ...targetActor, token: this.pages.get(target.page!.id)?.tokens.find((item) => item.id === target.token?.id) }, [HIT_DEFENSE_MARK], false)); }
     // R12: a Vex mark the wielder already had on this target is spent by this attack unless the hit renews it.
     const hadVex = target.token?.markers.some((marker) => marker.name === "교란" && marker.from === attacker.token?.id);
     if (hadVex && !resolution.mastery?.marks.includes("교란") && target.page) this.mark({ entry: target.entry, token: target.token, page: target.page }, ["교란"], false);
@@ -2676,6 +2693,10 @@ export class TableHost {
       // V3c (D257): what the sheet's contracts do by themselves at the start of the turn (생존자's healing).
       for (const heal of this.options.pcTurnStart?.(started) ?? []) {
         const live = this.journalEntries.get(started.id);
+        if (live?.kind === "character" && heal.inspiration) {
+          if (!live.runtime.heroicInspiration) { this.storeEntry({ ...live, runtime: { ...live.runtime, heroicInspiration: true, updatedAt: this.now() }, updatedAt: this.now() }); this.say({ type: "system", who: "", content: `${live.name}: ${heal.label} — 영웅적 영감을 얻음` }); }
+          continue;
+        }
         if (live?.kind !== "character" || heal.amount <= 0) continue;
         const current = live.runtime.hp.current;
         const next = Math.min(heal.max, current + heal.amount);
@@ -2745,6 +2766,8 @@ export class TableHost {
     }
     if (result.started?.entryId) this.tickAnchored(result.started.entryId, "start");
     const endedActor = this.actorOfTurn(result.ended);
+    // V3h (D262): the disadvantage 다중 공격 방어 gave lasts until the end of the hitter's turn.
+    if (endedActor?.token && endedActor.page) { const page = this.pages.get(endedActor.page.id); if (page) for (const token of page.tokens) { const kept = token.markers.filter((marker) => !(marker.name === HIT_DEFENSE_MARK && marker.from === endedActor.token!.id)); if (kept.length !== token.markers.length) this.storeToken(page, { ...token, markers: kept }); } }
     if (endedActor) { this.rollEndSaves(endedActor); this.mark(endedActor, [...TURN_MARKS.endOfTurn], false); }
     // R28 (D151): the rage is judged at the end of its bearer's turn, on what happened since their last one.
     if (endedActor && this.rageOf(endedActor.entry) && !result.ended?.ragingDeed) this.endRage(this.journalEntries.get(endedActor.entry.id) ?? endedActor.entry, "그 사이 공격도 피해도 없었음");

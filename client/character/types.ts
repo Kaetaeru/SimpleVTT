@@ -273,6 +273,12 @@ export interface DerivedCharacter {
   checkMinimumD20?: number;
   /** V3f (D260): reasons opportunity attacks against the character are at disadvantage. */
   opportunityDisadvantage?: string[];
+  /** V3h (D262): who hits this character attacks it at disadvantage for the rest of that turn, and the rule's name. */
+  hitDefense?: string;
+  /** V3h (D262): turns this character takes again in its first round of combat, at an initiative offset. */
+  extraTurns?: Array<{ offset: number; label: string }>;
+  /** V3h (D262): magic items attuned at once beyond the three the rules allow. */
+  attunementBonus?: number;
   /** H3d (D242): damage types whose spells add the spellcasting modifier to one damage roll (원소의 친화력). */
   damageTypeModifier?: string[];
   schoolDamageModifier?: Array<{ school: string; classSlug: string }>;

@@ -274,3 +274,84 @@ test("V3g: 주문 숙련 casts at will, 의식 숙련 casts spellbook rituals, �
   }
   assert.deepEqual(sheet.effects.map((effect) => effect.name), ["마귀의 회복력: 냉기"]);
 });
+
+test("V3h: 잔혹한 일격 trades advantage for dice, 강화된 타격 deals force, 다중 공격 방어, 도둑의 반사신경, 영웅적 전사, spell grants (D262)", async () => {
+  const { pcAttackSpec, pcCombatant } = await import("../../client/rules/attackSpec");
+  const { resolveAttack, diceFrom } = await import("../../client/rules/resolve");
+  const { deriveCharacter } = await import("../../client/character/derive");
+  const cat = catalog();
+  // 잔혹한 일격: with 무모한 공격 running, the strike gives up the advantage and adds 1d10 (2d10 at 17); its effects need it.
+  const reckless = { key: "feature:barbarian.reckless-attack", name: "무모한 공격", source: "feature" as const, duration: "이 턴", concentration: false, rounds: 1, elapsed: 0, startedAt: "" };
+  const swing = (level: number, contracts: string[]) => {
+    const made = build({ name: "바바리안", classes: "barbarian", level });
+    const derived = deriveCharacter(made.source, cat, { effects: [reckless] });
+    const entry = newJournalCharacter("c", "p", made.source, { ...initialRuntime(derived), effects: [reckless] });
+    const axe = derived.attacks.find((attack) => attack.itemId && attack.ability === "str")!;
+    return { derived, entry, spec: pcAttackSpec(entry, derived, axe.id, { contracts }, cat)!.spec };
+  };
+  const nine = swing(9, ["barbarian.brutal-strike#strike", "barbarian.brutal-strike#forceful"]);
+  assert.ok(nine.spec.riders?.some((part) => part.formula === "1d10"), JSON.stringify(nine.spec.riders));
+  assert.ok(nine.spec.name.includes("강타"));
+  const monk = build({ name: "몽크", classes: "monk", level: 6 });
+  const monkEntry = newJournalCharacter("c", "p", monk.source, initialRuntime(monk.derived));
+  const target = pcCombatant(monkEntry, monk.derived);
+  const attacker = pcCombatant(nine.entry, nine.derived);
+  const forgone = resolveAttack(attacker, target, nine.spec, { dice: diceFrom(() => 0.5) });
+  assert.equal(forgone.advantage, "normal", JSON.stringify(forgone.reasons));
+  assert.ok(forgone.reasons.some((reason) => reason.includes("유리 포기")));
+  assert.equal(resolveAttack(attacker, target, swing(9, []).spec, { dice: diceFrom(() => 0.5) }).advantage, "advantage", "무모한 공격 alone keeps its advantage");
+  assert.ok(!swing(9, ["barbarian.brutal-strike#forceful"]).spec.name.includes("강타"), "an effect without the strike is dropped");
+  assert.ok(swing(17, ["barbarian.brutal-strike#strike"]).spec.riders?.some((part) => part.formula === "2d10"));
+  // 강화된 타격: the unarmed strike deals force.
+  const unarmed = monk.derived.attacks.find((attack) => !attack.itemId)!;
+  assert.equal(pcAttackSpec(monkEntry, monk.derived, unarmed.id, { contracts: ["monk.empowered-strikes#force"] }, cat)!.spec.damage[0].type, "역장");
+  // 마법 물건 사용, 창조의 언어, 마법의 발견.
+  assert.equal(build({ name: "도둑", classes: "rogue", level: 13 }, { "class.2.subclass": ["dnd.srd521.subclass.rogue.thief"] }).derived.attunementBonus, 1);
+  const bard = build({ name: "바드", classes: "bard", level: 20 }, { "class.2.subclass": ["dnd.srd521.subclass.bard.college-of-lore"] }).derived;
+  const bardList = bard.spellcasting.find((entry) => entry.source === "class")!;
+  assert.ok(["dnd.srd521.spell.power-word-heal", "dnd.srd521.spell.power-word-kill"].every((id) => bardList.alwaysPrepared.includes(id)), JSON.stringify(bardList.alwaysPrepared));
+  const discoveries = bard.choices.find((choice) => choice.id.endsWith(".magical-discoveries"))!;
+  assert.equal(discoveries?.count, 2, bard.choices.map((choice) => choice.id).join(", "));
+
+  // 다중 공격 방어 at the table: the second swing of the creature that hit is at disadvantage, until its turn ends.
+  const t = await soloTable("ranger", 7, { "class.2.subclass": ["dnd.srd521.subclass.ranger.hunter"], "class.6.subclass.defensive-tactics": ["multiattack-defense"] }, () => 0.5);
+  const parsed = parseCustomMonster(JSON.stringify({ name: "오우거", ac: 11, hp: 60, abilities: { str: 18, dex: 8, con: 16, int: 5, wis: 7, cha: 7 }, actions: [{ name: "몽둥이", attack: { mode: "melee", bonus: 20, rangeFeet: 5, damage: [{ formula: "1d4", type: "bludgeoning" }] } }] }));
+  const npc = newJournalNpc(t.pc.campaignId, "dm", (parsed as { monster: Parameters<typeof newJournalNpc>[2] }).monster);
+  t.dm.send({ type: "journal.put", entry: npc });
+  await tick();
+  const npcToken = tokenForNpc(npc);
+  t.dm.send({ type: "token.put", pageId: t.scene.id, token: npcToken });
+  await tick();
+  const npcRef = { entryId: npc.id, pageId: t.scene.id, tokenId: npcToken.id };
+  const cards = () => t.host.archive.filter((message) => message.type === "action" && message.action);
+  t.dm.send({ type: "act.attack", attacker: npcRef, targets: [t.ref], attack: { source: "npc", actionName: "몽둥이" } });
+  await tick();
+  assert.ok(!cards().at(-1)!.action!.reasons.some((reason) => reason.includes("다중 공격 방어")));
+  t.dm.send({ type: "act.attack", attacker: npcRef, targets: [t.ref], attack: { source: "npc", actionName: "몽둥이" } });
+  await tick();
+  assert.equal(cards().at(-1)!.action!.advantage, "disadvantage", JSON.stringify(cards().at(-1)!.action!.reasons));
+  t.dm.send({ type: "tracker.add", turn: { name: "오우거", tokenId: npcToken.id, pageId: t.scene.id, entryId: npc.id, initiative: 20 } });
+  t.dm.send({ type: "tracker.add", turn: { name: "레인저", tokenId: t.token.id, pageId: t.scene.id, entryId: t.pc.id, initiative: 10 } });
+  t.dm.send({ type: "tracker.next" });
+  t.dm.send({ type: "tracker.next" });
+  await tick();
+  const marks = (t.host as unknown as { pages: Map<string, { tokens: Array<{ id: string; markers: Array<{ name: string }> }> }> }).pages.get(t.scene.id)!.tokens.find((token) => token.id === t.token.id)!.markers;
+  assert.ok(!marks.some((marker) => marker.name === "맞힌 뒤 불리"), "gone when the ogre's turn ended");
+
+  // 도둑의 반사신경: a second row at initiative − 10 for the first round only.
+  const thief = await soloTable("rogue", 17, { "class.2.subclass": ["dnd.srd521.subclass.rogue.thief"] }, () => 0.5);
+  thief.dm.send({ type: "tracker.add", turn: { name: "도둑", tokenId: thief.token.id, pageId: thief.scene.id, entryId: thief.pc.id, initiative: 18 } });
+  await tick();
+  const tracker = () => (thief.host as unknown as { tracker: { turns: Array<{ initiative: number; extra?: unknown }>; round: number } }).tracker;
+  assert.deepEqual(tracker().turns.map((turn) => turn.initiative), [18, 8]);
+  for (let step = 0; step < 3; step += 1) thief.dm.send({ type: "tracker.next" });
+  await tick();
+  assert.deepEqual(tracker().turns.map((turn) => turn.initiative), [18], "the extra row leaves with round 1");
+
+  // 영웅적 전사: the turn starts with Heroic Inspiration.
+  const champion = await soloTable("fighter", 10, { "class.2.subclass": ["dnd.srd521.subclass.fighter.champion"] }, () => 0.5);
+  champion.dm.send({ type: "tracker.add", turn: { name: "투사", tokenId: champion.token.id, pageId: champion.scene.id, entryId: champion.pc.id, initiative: 10 } });
+  champion.dm.send({ type: "tracker.next" });
+  await tick();
+  assert.equal(champion.sheet().runtime.heroicInspiration, true);
+});
